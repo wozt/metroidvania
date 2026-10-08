@@ -288,9 +288,8 @@ static bool apply_aria_loader(GbaTransitionTarget *target,
     if (frame > TARGET_LOADER_FRAME_LIMIT) {
         char detail[sizeof(target->error)];
         snprintf(detail, sizeof(detail),
-                 "Aria loader timeout after %u frames: mode=%u stage=%u "
-                 "phase=%u:%u ready=%u control=%u room=%u:%u "
-                 "position=%08x,%08x wanted=%08x,%08x "
+                 "Aria timeout %u: mode=%u:%u phase=%u:%u ready=%u ctl=%u "
+                 "room=%u:%u pos=%08x,%08x expected=%08x,%08x "
                  "staged=%08x:%u,%u:%u,%u",
                  TARGET_LOADER_FRAME_LIMIT,
                  state.game_mode, state.game_mode_stage,

@@ -161,12 +161,24 @@ Every diagnostic validates pointers, bounds and slot capacities. Scanner and
 probe output contains metadata only. The authoritative format reference is
 `third_party/mzm/docs/samus/graphics.md` plus the pinned implementation.
 
+## Runtime state anchors
+
+The authentic mGBA backend also exposes a read-only Samus state view. The
+matching MZM ELF places `gSamusData` at IWRAM `0x030013D4`; the decoder reads
+the verified 32-byte structure and exposes pose, standing status, arm-cannon
+direction, facing direction, quarter-pixel position, and signed velocity. It
+combines those fields with verified mode, location, difficulty, and equipment
+globals to reject startup transients before reporting a gameplay-ready state.
+
+Run `./build/fusion_dev --authentic-probe` to exercise the live decoder after
+the deterministic snapshot check. The probe only reads active WRAM. It does
+not write memory, persist a savestate, or import values into `SessionState`.
+
 ## Remaining work
 
 - Add the one-frame spin-jump transition when the prototype gains explicit
   animation state transitions.
 - Extend recipes to aim directions, crouch, morph ball, damage, suits and
   effect overlays as gameplay needs them.
-- Build the separate Aria/Soma extraction chain; MZM addresses and assumptions
-  must not be reused for Aria.
+- Keep MZM state addresses and assumptions out of the separate Aria adapter.
 - Keep extracted outputs local and ignored.

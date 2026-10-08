@@ -1,5 +1,6 @@
 #include "core/backend.h"
 #include "core/session.h"
+#include "mzm/state.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -11,6 +12,7 @@ int main(void)
     FusionBackend invalid = gba_backend_create((WorldKind)99, "missing.gba");
     FusionBackend missing = gba_backend_create(WORLD_METROID, "missing.gba");
     FusionBackendSnapshot snapshot = {0};
+    MzmStateView state_view;
 
     session_init(&session);
     assert(invalid.failed);
@@ -22,6 +24,8 @@ int main(void)
     assert(missing.failed);
     assert(missing.error[0]);
     assert(!missing.ops->capture_state(&missing, &snapshot));
+    assert(!gba_backend_read_mzm_state(&missing, &state_view));
+    assert(!gba_backend_read_mzm_state(&invalid, &state_view));
     missing.ops->shutdown(&missing);
     missing.ops->shutdown(&missing);
 

@@ -36,6 +36,28 @@ The C code is tightly coupled to GBA addresses, registers, global buffers, and
 VBlank timing. Gameplay rules can be reused after abstraction, but this source
 tree is not directly usable as a Linux library.
 
+Verified runtime-state anchors from the byte-identical local build:
+
+| Symbol | IWRAM address | Size |
+|---|---:|---:|
+| `gDifficulty` | `0x0300002C` | 1 byte |
+| `gCurrentArea`, `gCurrentRoom`, `gLastDoorUsed` | `0x03000054` | 3 bytes |
+| `gMainGameMode`, `gSubGameMode1` | `0x03000C70` | 4 bytes |
+| `gSamusData` | `0x030013D4` | 32 bytes |
+| `gEquipment` | `0x03001530` | 20 bytes |
+
+The Samus subset uses offsets 0/1/2 for pose, standing status, and arm-cannon
+direction; 14 for direction; 18/20 for quarter-pixel X/Y; and 22/24 for signed
+velocities. The equipment subset contains maximum energy/missiles at offsets
+0/2, maximum super missiles/power bombs at 4/5, current counts at 6/8/10/11,
+and equipment flags at 12/14. These layouts were traced to the pinned
+structures and confirmed through the matching ELF symbol table.
+
+An input-free live trace reached demo gameplay at frame 3033 with mode 11,
+submode 1, area 0, room 28, position `(470,639)` in native quarter pixels,
+energy `399/399`, and pose 0. This is diagnostic evidence only; the adapter is
+read-only and does not treat the demo state as cross-engine session state.
+
 ## Castlevania: Aria of Sorrow - `testyourmine/cvaos`
 
 - URL: <https://github.com/testyourmine/cvaos>
@@ -145,8 +167,9 @@ or tracked by this repository.
 
 - Final native or recompiled runtime strategy for each game beyond the mGBA
   integration proof.
-- Engine-specific field extraction from the controlled mGBA snapshots.
-- Minimal transition fields for both games, to be established with Ghidra and
-  runtime instrumentation.
+- Equivalent engine-specific field extraction for Aria; the first verified MZM
+  read-only view is complete.
+- Minimal writable transition fields for both games, to be established with
+  Ghidra and runtime instrumentation after ownership rules are defined.
 - Licensing and redistribution status of code generated from a ROM; legal
   review is required before distribution.

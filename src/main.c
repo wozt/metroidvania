@@ -6,6 +6,7 @@
 #include "core/save.h"
 #include "core/session.h"
 #include "gba/runtime.h"
+#include "mzm/state.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -39,6 +40,7 @@ static uint64_t hash_frame(const GbaFrameView *frame)
 }
 
 static bool run_authentic_probe(const char *label, const char *rom_path,
+                                bool inspect_mzm_state,
                                 char *error, size_t error_size)
 {
     GbaRuntime runtime = {0};
@@ -104,7 +106,37 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
            (unsigned long long)initial_hash, snapshot.size,
            (unsigned long long)restored_hash,
            forward_hash == restored_hash ? "yes" : "no");
-    success = nonzero != 0 && forward_hash == restored_hash;
+    if (!nonzero || forward_hash != restored_hash) {
+        snprintf(error, error_size, "GBA snapshot replay diverged");
+        goto cleanup;
+    }
+    if (inspect_mzm_state) {
+        MzmStateView state_view;
+        unsigned timeline_frame;
+        bool found = false;
+        for (timeline_frame = 331; timeline_frame <= 6000; ++timeline_frame) {
+            if (!gba_runtime_step(&runtime, 0) ||
+                !mzm_state_read(&runtime, &state_view, error, error_size))
+                goto cleanup;
+            if (state_view.gameplay_state_ready) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            snprintf(error, error_size, "MZM did not reach a verified gameplay state");
+            goto cleanup;
+        }
+        printf("MZM state probe: frame=%u mode=%u submode=%d area=%u room=%u "
+               "position=%u,%u subpixels=%u,%u energy=%u/%u pose=%u\n",
+               timeline_frame, state_view.game_mode, state_view.sub_game_mode,
+               state_view.area, state_view.room,
+               state_view.x_subpixels / 4u, state_view.y_subpixels / 4u,
+               state_view.x_subpixels, state_view.y_subpixels,
+               state_view.current_energy, state_view.max_energy,
+               state_view.pose);
+    }
+    success = true;
 
 cleanup:
     gba_runtime_snapshot_dispose(&snapshot);
@@ -178,9 +210,9 @@ int main(int argc, char **argv)
     }
     if (validate_only) return 0;
     if (authentic_probe) {
-        if (!run_authentic_probe("Metroid: Zero Mission", metroid_path,
+        if (!run_authentic_probe("Metroid: Zero Mission", metroid_path, true,
                                  error, sizeof(error)) ||
-            !run_authentic_probe("Castlevania: Aria of Sorrow", aria_path,
+            !run_authentic_probe("Castlevania: Aria of Sorrow", aria_path, false,
                                  error, sizeof(error))) {
             fprintf(stderr, "Authentic GBA probe failed: %s\n", error);
             return 4;

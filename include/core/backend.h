@@ -8,6 +8,7 @@
 #include "core/types.h"
 
 typedef struct FusionBackend FusionBackend;
+typedef struct MzmStateView MzmStateView;
 
 #define FUSION_BACKEND_SNAPSHOT_VERSION 1u
 
@@ -45,6 +46,7 @@ struct FusionBackend {
 FusionBackend metroid_backend_create(void);
 FusionBackend castlevania_backend_create(void);
 FusionBackend gba_backend_create(WorldKind world, const char *rom_path);
+bool gba_backend_read_mzm_state(FusionBackend *backend, MzmStateView *out);
 /* Disposes snapshot data allocated by a backend; safe to call repeatedly. */
 void fusion_backend_snapshot_dispose(FusionBackendSnapshot *snapshot);
 

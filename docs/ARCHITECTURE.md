@@ -71,9 +71,29 @@ format. This prevents diagnostic fields from masquerading as authoritative game
 state and avoids writing ROM-derived working memory before a persistence policy
 exists.
 
+## Read-only authentic state observation
+
+`GbaRuntime` exposes a bounded read operation for EWRAM and IWRAM only. It
+requires an active runtime, rejects I/O and ROM addresses, and caps each read at
+4 KiB. The Zero Mission adapter uses this boundary to decode a small set of
+fields whose addresses and layouts were verified against the pinned source and
+a byte-identical matching ELF: game mode, location, Samus pose and movement,
+and equipment counters.
+
+`MzmStateView` preserves native units, including quarter-pixel coordinates and
+signed velocities. It distinguishes a recognized gameplay mode, internally
+plausible values, and a gameplay-ready state with an active submode and a
+nonzero position. These checks prevent transient initialization memory from
+being presented as a usable transition state.
+
+This observation path is deliberately one-way. It neither writes emulated
+memory nor copies values into `SessionState`; authority remains with the active
+MZM runtime. A future transition adapter must define ownership, conversions,
+and rollback rules explicitly before any state is imported or changed.
+
 ## Replacing the stubs
 
-1. Identify verified engine fields inside the controlled mGBA snapshots.
+1. Complete the equivalent verified state view for Aria.
 2. Place controlled VRAM/OAM/palette and memory access behind a backend-owned
    host abstraction.
 3. Add adapters between verified engine state and `SessionState` without

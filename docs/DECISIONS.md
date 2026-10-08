@@ -88,3 +88,17 @@ restore require the runtime to be active and the payload to match mGBA's exact
 state size under a 16 MiB ceiling. F5/F9 remain disabled in authentic mode.
 Persistent or cross-version savestates require a separate format, ROM identity,
 integrity checks, migration rules, and a proprietary-data policy.
+
+## D-012 - Read-only verified engine state first
+
+Decision: expose verified engine fields through backend-owned, read-only views
+before designing any cross-engine state mutation. Runtime memory access is
+limited to active GBA WRAM, bounded to 4 KiB per call, and unavailable for ROM
+or hardware I/O ranges. The first view covers Zero Mission mode, location,
+Samus movement/pose, and equipment fields matched to the pinned source and an
+exact local build.
+
+The view reports native units and separates raw decoding, plausibility, and
+gameplay readiness. It does not modify `SessionState`, save files, or emulated
+memory. A write or transition adapter requires a later decision defining field
+ownership, conversion, validation, and rollback.

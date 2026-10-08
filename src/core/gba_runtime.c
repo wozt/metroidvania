@@ -140,6 +140,31 @@ bool gba_runtime_frame(const GbaRuntime *runtime, GbaFrameView *out)
     return true;
 }
 
+static bool is_wram_range(uint32_t address, size_t size,
+                          uint32_t start, uint32_t end)
+{
+    size_t region_size = (size_t)(end - start);
+    return address >= start && size <= region_size &&
+           (size_t)(address - start) <= region_size - size;
+}
+
+bool gba_runtime_read_memory(const GbaRuntime *runtime, uint32_t address,
+                             void *out, size_t size)
+{
+    struct mCore *core;
+    uint8_t *bytes = out;
+    size_t index;
+    if (!runtime || !runtime->active || !runtime->core || !runtime->rom_loaded ||
+        !out || !size || size > GBA_MEMORY_READ_MAX_SIZE ||
+        (!is_wram_range(address, size, UINT32_C(0x02000000), UINT32_C(0x02040000)) &&
+         !is_wram_range(address, size, UINT32_C(0x03000000), UINT32_C(0x03008000))))
+        return false;
+    core = runtime->core;
+    for (index = 0; index < size; ++index)
+        bytes[index] = (uint8_t)core->busRead8(core, address + (uint32_t)index);
+    return true;
+}
+
 bool gba_runtime_capture(GbaRuntime *runtime, GbaRuntimeSnapshot *snapshot,
                          char *error, size_t error_size)
 {

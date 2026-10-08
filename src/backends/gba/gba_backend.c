@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "core/backend.h"
 #include "gba/runtime.h"
+#include "mzm/state.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -205,4 +206,19 @@ FusionBackend gba_backend_create(WorldKind world, const char *rom_path)
     state->rom_path = rom_path;
     backend.state = state;
     return backend;
+}
+
+bool gba_backend_read_mzm_state(FusionBackend *backend, MzmStateView *out)
+{
+    GbaBackendState *state;
+    if (!backend || backend->world != WORLD_METROID || !backend->state ||
+        !out || backend->failed) {
+        if (backend)
+            snprintf(backend->error, sizeof(backend->error),
+                     "invalid MZM state view request");
+        return false;
+    }
+    state = backend->state;
+    return mzm_state_read(&state->runtime, out,
+                          backend->error, sizeof(backend->error));
 }

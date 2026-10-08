@@ -7,14 +7,17 @@
    after generating and recompiling its clean-room BIOS. Adoption remains
    limited to a project-owned adapter around licensed components; the
    unlicensed root host code is excluded. See `docs/ARIA_RECOMP_EVALUATION.md`.
-2. Prototype an Aria backend that boots, advances exactly one frame, and exposes
-   a framebuffer without modifying gameplay.
-3. Evaluate an equivalent route for MZM: source port through a HAL or static
-   recompilation. Produce measured evidence before selecting one.
-4. Define minimal snapshots and clean shutdown behavior for both runtimes.
+2. **Integrated baseline:** mGBA boots both verified ROMs, advances frames,
+   exposes authentic framebuffers, follows the exclusive backend lifecycle,
+   and supports memory-only deterministic snapshots.
+3. **First state view:** verified MZM mode, location, Samus, and equipment
+   fields are observable through bounded read-only WRAM access.
+4. Build the equivalent verified Aria state view, then define explicit field
+   ownership and rollback before any cross-engine mutation.
 
 Exit criterion: one authentic room from each ROM can be loaded independently
-with verified timing, input, and rendering. The current rectangles do not count.
+with verified timing, input, rendering, and a minimal read-only state view. The
+MZM view is complete; Aria state extraction remains.
 
 ## P1 - Two engines and transitions
 

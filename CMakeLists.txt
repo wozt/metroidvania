@@ -18,6 +18,7 @@ add_library(fusion_core STATIC
     src/core/sha1.c
     src/core/rom.c
     src/core/gba_runtime.c
+    src/backends/metroid/mzm_state.c
     src/backends/castlevania/aria_runtime.c
 )
 target_include_directories(fusion_core PUBLIC include)
@@ -99,6 +100,13 @@ if(BUILD_TESTING)
         target_compile_options(fusion_gba_backend_tests PRIVATE -Werror)
     endif()
     add_test(NAME gba_backend_failure_paths COMMAND fusion_gba_backend_tests)
+    add_executable(fusion_mzm_state_tests tests/test_mzm_state.c)
+    target_link_libraries(fusion_mzm_state_tests PRIVATE fusion_core)
+    target_compile_options(fusion_mzm_state_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_mzm_state_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME mzm_state_decoder COMMAND fusion_mzm_state_tests)
     add_executable(fusion_room_tests tests/test_room.c src/core/room_sim.c src/core/room_sprite.c)
     target_include_directories(fusion_room_tests PRIVATE include src)
     target_link_libraries(fusion_room_tests PRIVATE fusion_core SDL3::SDL3)

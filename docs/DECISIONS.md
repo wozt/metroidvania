@@ -147,3 +147,18 @@ a checkpoint before applying, verify after applying, and roll back on either a
 partial-apply or verification failure. Rollback failure is a distinct terminal
 result. The transaction contract is tested only with synthetic state for now;
 authentic backends intentionally provide no apply operation.
+
+## D-016 - Describe native arrivals instead of copying live coordinates
+
+Decision: transition plan version 2 records the native entry mechanism for each
+engine. MZM targets an area and door index, allowing `RoomLoad`/`RoomReset` to
+select the room and calculate Samus's arrival. Aria targets its deferred room
+record: room pointer, camera origin, and player-local coordinates. The common
+Q16.16 target position is derived evidence, not the primary write mechanism.
+
+This replaces the first candidate coordinates, which were sampled after engine
+updates. In particular, the MZM demo restores saved Samus state after door 60
+is resolved, so its visible position is not the door arrival. The selected
+descriptors are source-traced and reproduced from authentic memory, but no
+runtime apply operation is enabled until the loader triggers and all dependent
+state are verified.

@@ -31,9 +31,9 @@ Working today:
   games, and an interactive mGBA video mode.
 - read-only transition observations with explicit source-local and
   character-owned fields;
-- versioned cross-world plans using two ROM-observed candidate anchors and a
-  tested preflight/checkpoint/apply/verify/rollback contract. Authentic
-  backends still expose no target-engine importer.
+- versioned cross-world plans using engine-native MZM door and Aria staged-room
+  descriptors, plus a tested preflight/checkpoint/apply/verify/rollback
+  contract. Authentic backends still expose no target-engine importer.
 
 ## Debian 13 prerequisites
 
@@ -76,9 +76,10 @@ each game to its first gameplay-ready state and prints verified mode, room,
 position, and character fields read directly from WRAM. The Aria path supplies
 deterministic A/Start pulses to begin a new game without loading a save.
 The probe also projects each verified engine state into a common Q16.16
-observation, maps it to the candidate anchor in the opposite world, and prints
-the planned target room, position, and character health. Planning does not
-authorize or perform a transition write. Run `--authentic-video-test`
+observation, maps it to the native arrival descriptor in the opposite world,
+and prints the planned room, derived position, character health, and engine
+entry data. Planning does not authorize or perform a transition write. Run
+`--authentic-video-test`
 for interactive authentic ROM output; `M` suspends the current runtime and
 switches to the other one. The mode does not load or write save files. GBA
 controls are arrows, `Space`/`X` for A, `J`/`Z` for B, `Enter` for Start, right

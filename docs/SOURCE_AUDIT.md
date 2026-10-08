@@ -54,9 +54,11 @@ and equipment flags at 12/14. These layouts were traced to the pinned
 structures and confirmed through the matching ELF symbol table.
 
 An input-free live trace reached demo gameplay at frame 3033 with mode 11,
-submode 1, area 0, room 28, position `(470,639)` in native quarter pixels,
-energy `399/399`, and pose 0. This is diagnostic evidence only; the adapter is
-read-only and does not treat the demo state as cross-engine session state.
+submode 1, area 0, room 28, door index 60, position `(470,639)` in native
+quarter pixels, energy `399/399`, and pose 0. Demo 2 stores that exact position
+and overwrites the arrival calculated by `RoomReset`. Without the demo override,
+Brinstar door 60 selects room 28 and the native formula yields `(288,511)`.
+This is diagnostic evidence only; the adapter remains read-only.
 
 ## Castlevania: Aria of Sorrow - `testyourmine/cvaos`
 
@@ -96,6 +98,8 @@ Verified runtime-state anchors from the byte-identical local build:
 | game mode and update stage | `0x02000010` | 2 bytes |
 | in-game phase and phase stage | `0x02000064` | 2 bytes |
 | current area and room | `0x0200009E` | 2 bytes |
+| staged camera and player-local arrival | `0x02000334` | 8 bytes |
+| staged room pointer | `0x020003CC` | 4 bytes |
 | gameplay control flags | `0x0200A074` | 1 byte |
 | background-1 camera X/Y | `0x0200A098` | 8 bytes |
 | active player entity pointer | `0x02013110` | 4 bytes |
@@ -116,6 +120,13 @@ addition. A deterministic A/Start boot trace reached normal in-game phase 1
 with the player-control flag enabled at frame 1022: mode 4, area 0, room 0,
 room position `(0x00A80000,0x02BF0000)`, HP `320/320`, MP `80/80`, level 1,
 and animation 81 frame 0.
+
+The same trace retained the native staged arrival for area 0 room 0: room
+pointer `0x0850EF9C`, camera `(32,512)`, and player-local `(120,141)`. The
+pointer is entry zero in the area-zero table reached through `sUnk_0850EF08`.
+`sub_0800EBE0` consumes this record by selecting the room, restoring player-local
+coordinates, and applying the camera origin. The resulting arrival coordinate
+is `(152,653)` before later gameplay or cutscene movement.
 
 ## Reproducible upstream build check
 
@@ -195,10 +206,9 @@ or tracked by this repository.
 
 - Final native or recompiled runtime strategy for each game beyond the mGBA
   integration proof.
-- Minimal writable transition fields and engine-owned entry routines for both
-  games. Read-only views, field ownership, candidate anchors, and target-side
-  rollback semantics are now defined, but neither candidate is certified for
-  writes.
+- Loader triggers and their complete dependent state for MZM door 60 and the
+  Aria staged-room record. The native descriptors and target-side rollback
+  semantics are defined, but neither authentic apply path is enabled.
 - Source-runtime recovery and backend lifecycle composition around the target
   transaction; target rollback alone does not make a complete world switch.
 - Licensing and redistribution status of code generated from a ROM; legal

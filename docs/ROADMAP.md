@@ -21,14 +21,17 @@
 6. **Planning baseline:** map each source observation to a ROM-observed
    candidate anchor in the other world and enforce a target-side
    preflight/checkpoint/apply/verify/rollback contract.
-7. Verify engine-native door arrivals and minimal writable state before enabling
+7. **Native arrival descriptors:** replace sampled gameplay coordinates with
+   Brinstar door 60 and Aria's Entrance staged-room record, both source-traced
+   and reproduced from authentic memory.
+8. Verify each loader trigger and its complete dependent state before enabling
    either authentic target adapter.
 
 Exit criterion: one authentic room from each ROM can be loaded independently
 with verified timing, input, rendering, and a minimal read-only state view.
 Both views, the ownership projection, and the target transaction contract are
-complete. Engine-specific door-arrival verification is next; authentic imports
-remain disabled.
+complete. Native arrival descriptors are also verified; loader-trigger and
+dependent-state verification is next. Authentic imports remain disabled.
 
 ## P1 - Two engines and transitions
 

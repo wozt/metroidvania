@@ -126,11 +126,22 @@ destination spawn and support validation plus rollback before any write occurs.
 `FusionTransitionPlan` replaces the source-local location and position with an
 explicit target anchor while preserving the observed character and that
 character's raw health. A zero-health observation cannot become a plan because
-resurrection policy remains undefined. The current catalog contains two
-candidates reproduced by the authentic probe: MZM Brinstar room `0:28` at
-`(0x00758000,0x009FC000)` and Aria Entrance room `0:0` at
-`(0x00A80000,0x02BF0000)`. These are observed gameplay-ready points, not yet
-certified door arrivals or collision-safe write targets.
+resurrection policy remains undefined.
+
+Plan schema version 2 carries engine-native arrival descriptors instead of
+copying later gameplay coordinates. MZM uses Brinstar door index 60. Its source
+door record selects room `0:28`, and `RoomReset` derives `(288,511)` native
+quarter-pixels, or `(0x00480000,0x007FC000)` in Q16.16. The authentic demo probe
+also reports door 60, but then the demo loader deliberately overwrites Samus
+with its saved `(470,639)` position; that demo-only value is not the target
+anchor.
+
+Aria uses its deferred room-arrival record: room pointer `0x0850EF9C` for
+Entrance `0:0`, camera `(32,512)`, and player-local `(120,141)`. The native load
+path combines those components into `(152,653)`, or
+`(0x00980000,0x028D0000)`. All five values were read back from the authentic
+runtime at its first gameplay-ready state, and the room pointer matches entry
+zero of the ROM's area-zero room table.
 
 The target transaction contract is `preflight -> capture checkpoint -> apply ->
 verify`. Preflight and verification must not mutate state. Because apply may
@@ -141,14 +152,15 @@ treat the last case as recoverable success.
 
 The contract is exercised with a synthetic target, including partial-apply and
 verification failures. Neither authentic backend registers these operations,
-so no MZM or Aria memory can be written through this path. A complete world
+so no MZM or Aria memory can be written through this path. The native loader
+trigger and its full dependent state are not yet verified. A complete world
 switch must later compose this target transaction with the source snapshot and
 exclusive backend lifecycle.
 
 ## Replacing the stubs
 
-1. Verify one engine-native door arrival in each world and the minimal writable
-   state needed to reach it.
+1. Verify the loader trigger and complete dependent state for the selected MZM
+   door and Aria staged-room arrival.
 2. Implement target adapters behind the transactional contract, then compose
    them with source snapshot and backend lifecycle rollback.
 3. Place controlled VRAM/OAM/palette and memory access behind a backend-owned

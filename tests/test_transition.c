@@ -120,6 +120,8 @@ int main(void)
         .values_plausible = true,
         .gameplay_state_ready = true,
     };
+    MzmStateView mzm_evidence;
+    AriaStateView aria_evidence;
     FusionTransitionObservation observation = {0};
     FusionTransitionObservation unchanged;
     FusionTransitionObservation dead;
@@ -130,6 +132,8 @@ int main(void)
     FakeTransitionTarget target;
 
     assert(!fusion_transition_observe_mzm(NULL, &observation));
+    assert(!fusion_transition_mzm_arrival_evidence_valid(NULL));
+    assert(!fusion_transition_aria_arrival_evidence_valid(NULL));
     assert(!fusion_transition_observe_mzm(&mzm, NULL));
     assert(fusion_transition_observe_mzm(&mzm, &observation));
     assert(fusion_transition_observation_valid(&observation));
@@ -149,17 +153,26 @@ int main(void)
     assert(fusion_transition_plan_build(&observation, WORLD_CASTLEVANIA,
                                         &mzm_to_aria));
     assert(fusion_transition_plan_valid(&mzm_to_aria));
+    assert(mzm_to_aria.version == FUSION_TRANSITION_PLAN_VERSION);
     assert(mzm_to_aria.target_world == WORLD_CASTLEVANIA);
     assert(mzm_to_aria.target_character == CHARACTER_SAMUS);
     assert(mzm_to_aria.target_anchor ==
-           FUSION_TRANSITION_ANCHOR_ARIA_ENTRANCE_PROBE);
+           FUSION_TRANSITION_ANCHOR_ARIA_ENTRANCE_STAGED_ARRIVAL);
+    assert(mzm_to_aria.arrival_kind ==
+           FUSION_TRANSITION_ARRIVAL_ARIA_STAGED_ROOM);
     assert(mzm_to_aria.target_area == 0 && mzm_to_aria.target_room == 0);
-    assert(mzm_to_aria.target_position_x_q16 == UINT32_C(0x00a80000));
-    assert(mzm_to_aria.target_position_y_q16 == UINT32_C(0x02bf0000));
+    assert(mzm_to_aria.target_door == 0);
+    assert(mzm_to_aria.target_room_pointer == UINT32_C(0x0850ef9c));
+    assert(mzm_to_aria.target_camera_x == 0x20);
+    assert(mzm_to_aria.target_camera_y == 0x200);
+    assert(mzm_to_aria.target_player_x == 0x78);
+    assert(mzm_to_aria.target_player_y == 0x8d);
+    assert(mzm_to_aria.target_position_x_q16 == UINT32_C(0x00980000));
+    assert(mzm_to_aria.target_position_y_q16 == UINT32_C(0x028d0000));
     assert(mzm_to_aria.target_health == 299 &&
            mzm_to_aria.target_max_health == 399);
     assert(strcmp(fusion_transition_anchor_name(mzm_to_aria.target_anchor),
-                  "Aria Entrance probe") == 0);
+                  "Aria Entrance staged arrival") == 0);
 
     assert(fusion_transition_observe_aria(&aria, &observation));
     assert(fusion_transition_observation_valid(&observation));
@@ -174,16 +187,45 @@ int main(void)
     assert(fusion_transition_plan_valid(&aria_to_mzm));
     assert(aria_to_mzm.target_character == CHARACTER_SOMA);
     assert(aria_to_mzm.target_anchor ==
-           FUSION_TRANSITION_ANCHOR_MZM_BRINSTAR_PROBE);
+           FUSION_TRANSITION_ANCHOR_MZM_BRINSTAR_DOOR_60);
+    assert(aria_to_mzm.arrival_kind ==
+           FUSION_TRANSITION_ARRIVAL_MZM_DOOR);
     assert(aria_to_mzm.target_area == 0 && aria_to_mzm.target_room == 28);
-    assert(aria_to_mzm.target_position_x_q16 == UINT32_C(0x00758000));
-    assert(aria_to_mzm.target_position_y_q16 == UINT32_C(0x009fc000));
+    assert(aria_to_mzm.target_door == 60);
+    assert(aria_to_mzm.target_room_pointer == 0);
+    assert(aria_to_mzm.target_camera_x == 0 &&
+           aria_to_mzm.target_camera_y == 0);
+    assert(aria_to_mzm.target_player_x == 0 &&
+           aria_to_mzm.target_player_y == 0);
+    assert(aria_to_mzm.target_position_x_q16 == UINT32_C(0x00480000));
+    assert(aria_to_mzm.target_position_y_q16 == UINT32_C(0x007fc000));
     assert(aria_to_mzm.target_health == 320 &&
            aria_to_mzm.target_max_health == 420);
     assert(strcmp(fusion_transition_anchor_name(aria_to_mzm.target_anchor),
-                  "MZM Brinstar probe") == 0);
+                  "MZM Brinstar door 60") == 0);
     assert(strcmp(fusion_transition_anchor_name(FUSION_TRANSITION_ANCHOR_NONE),
                   "Unknown transition anchor") == 0);
+
+    mzm_evidence = mzm;
+    mzm_evidence.area = 0;
+    mzm_evidence.room = 28;
+    mzm_evidence.last_door = 60;
+    assert(fusion_transition_mzm_arrival_evidence_valid(&mzm_evidence));
+    mzm_evidence.last_door = 59;
+    assert(!fusion_transition_mzm_arrival_evidence_valid(&mzm_evidence));
+
+    aria_evidence = aria;
+    aria_evidence.area = 0;
+    aria_evidence.room = 0;
+    aria_evidence.staged_camera_x = 0x20;
+    aria_evidence.staged_camera_y = 0x200;
+    aria_evidence.staged_player_x = 0x78;
+    aria_evidence.staged_player_y = 0x8d;
+    aria_evidence.staged_room_pointer = UINT32_C(0x0850ef9c);
+    aria_evidence.staged_arrival_plausible = true;
+    assert(fusion_transition_aria_arrival_evidence_valid(&aria_evidence));
+    aria_evidence.staged_room_pointer += 4;
+    assert(!fusion_transition_aria_arrival_evidence_valid(&aria_evidence));
 
     unchanged_plan = mzm_to_aria;
     assert(!fusion_transition_plan_build(&mzm_to_aria.source, WORLD_METROID,
@@ -192,9 +234,15 @@ int main(void)
     mzm_to_aria.target_room = 1;
     assert(!fusion_transition_plan_valid(&mzm_to_aria));
     mzm_to_aria = unchanged_plan;
+    mzm_to_aria.target_room_pointer += 4;
+    assert(!fusion_transition_plan_valid(&mzm_to_aria));
+    mzm_to_aria = unchanged_plan;
     mzm_to_aria.target_health--;
     assert(!fusion_transition_plan_valid(&mzm_to_aria));
     mzm_to_aria = unchanged_plan;
+
+    aria_to_mzm.target_door--;
+    assert(!fusion_transition_plan_valid(&aria_to_mzm));
 
     dead = mzm_to_aria.source;
     dead.health = 0;

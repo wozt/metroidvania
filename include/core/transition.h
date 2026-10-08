@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #define FUSION_TRANSITION_OBSERVATION_VERSION 1u
-#define FUSION_TRANSITION_PLAN_VERSION 1u
+#define FUSION_TRANSITION_PLAN_VERSION 2u
 
 typedef struct MzmStateView MzmStateView;
 typedef struct AriaStateView AriaStateView;
@@ -36,10 +36,21 @@ typedef struct {
 
 typedef enum {
     FUSION_TRANSITION_ANCHOR_NONE = 0,
-    FUSION_TRANSITION_ANCHOR_MZM_BRINSTAR_PROBE = 1,
-    FUSION_TRANSITION_ANCHOR_ARIA_ENTRANCE_PROBE = 2,
+    FUSION_TRANSITION_ANCHOR_MZM_BRINSTAR_DOOR_60 = 1,
+    FUSION_TRANSITION_ANCHOR_ARIA_ENTRANCE_STAGED_ARRIVAL = 2,
 } FusionTransitionAnchorId;
 
+typedef enum {
+    FUSION_TRANSITION_ARRIVAL_NONE = 0,
+    FUSION_TRANSITION_ARRIVAL_MZM_DOOR,
+    FUSION_TRANSITION_ARRIVAL_ARIA_STAGED_ROOM,
+} FusionTransitionArrivalKind;
+
+/*
+ * MZM door arrivals use target_area and target_door. Aria staged-room arrivals
+ * use target_room_pointer plus camera/player coordinates. Unused native fields
+ * must remain zero; target_position is the derived common Q16.16 coordinate.
+ */
 typedef struct {
     uint32_t version;
     FusionTransitionObservation source;
@@ -47,8 +58,15 @@ typedef struct {
     CharacterKind target_character;
     uint32_t target_fields;
     FusionTransitionAnchorId target_anchor;
+    FusionTransitionArrivalKind arrival_kind;
     uint8_t target_area;
     uint8_t target_room;
+    uint8_t target_door;
+    uint32_t target_room_pointer;
+    uint16_t target_camera_x;
+    uint16_t target_camera_y;
+    uint16_t target_player_x;
+    uint16_t target_player_y;
     uint32_t target_position_x_q16;
     uint32_t target_position_y_q16;
     int32_t target_health;
@@ -80,6 +98,8 @@ bool fusion_transition_observe_mzm(const MzmStateView *view,
                                    FusionTransitionObservation *out);
 bool fusion_transition_observe_aria(const AriaStateView *view,
                                     FusionTransitionObservation *out);
+bool fusion_transition_mzm_arrival_evidence_valid(const MzmStateView *view);
+bool fusion_transition_aria_arrival_evidence_valid(const AriaStateView *view);
 bool fusion_transition_observation_valid(
     const FusionTransitionObservation *observation);
 bool fusion_transition_plan_build(const FusionTransitionObservation *source,

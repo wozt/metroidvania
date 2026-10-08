@@ -18,29 +18,44 @@ enum {
 
 typedef struct {
     FusionTransitionAnchorId id;
+    FusionTransitionArrivalKind arrival_kind;
     WorldKind world;
     uint8_t area;
     uint8_t room;
+    uint8_t door;
+    uint32_t room_pointer;
+    uint16_t camera_x;
+    uint16_t camera_y;
+    uint16_t player_x;
+    uint16_t player_y;
     uint32_t x_q16;
     uint32_t y_q16;
 } TransitionAnchor;
 
-static const TransitionAnchor MZM_BRINSTAR_PROBE_ANCHOR = {
-    .id = FUSION_TRANSITION_ANCHOR_MZM_BRINSTAR_PROBE,
+static const TransitionAnchor MZM_BRINSTAR_DOOR_60_ANCHOR = {
+    .id = FUSION_TRANSITION_ANCHOR_MZM_BRINSTAR_DOOR_60,
+    .arrival_kind = FUSION_TRANSITION_ARRIVAL_MZM_DOOR,
     .world = WORLD_METROID,
     .area = 0,
     .room = 28,
-    .x_q16 = UINT32_C(0x00758000),
-    .y_q16 = UINT32_C(0x009fc000),
+    .door = 60,
+    .x_q16 = UINT32_C(0x00480000),
+    .y_q16 = UINT32_C(0x007fc000),
 };
 
-static const TransitionAnchor ARIA_ENTRANCE_PROBE_ANCHOR = {
-    .id = FUSION_TRANSITION_ANCHOR_ARIA_ENTRANCE_PROBE,
+static const TransitionAnchor ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR = {
+    .id = FUSION_TRANSITION_ANCHOR_ARIA_ENTRANCE_STAGED_ARRIVAL,
+    .arrival_kind = FUSION_TRANSITION_ARRIVAL_ARIA_STAGED_ROOM,
     .world = WORLD_CASTLEVANIA,
     .area = 0,
     .room = 0,
-    .x_q16 = UINT32_C(0x00a80000),
-    .y_q16 = UINT32_C(0x02bf0000),
+    .room_pointer = UINT32_C(0x0850ef9c),
+    .camera_x = 0x20,
+    .camera_y = 0x200,
+    .player_x = 0x78,
+    .player_y = 0x8d,
+    .x_q16 = UINT32_C(0x00980000),
+    .y_q16 = UINT32_C(0x028d0000),
 };
 
 static FusionTransitionObservation observation_base(
@@ -119,19 +134,47 @@ bool fusion_transition_observe_aria(const AriaStateView *view,
     return true;
 }
 
+bool fusion_transition_mzm_arrival_evidence_valid(const MzmStateView *view)
+{
+    return view && view->gameplay_active && view->values_plausible &&
+           view->gameplay_state_ready &&
+           view->area == MZM_BRINSTAR_DOOR_60_ANCHOR.area &&
+           view->room == MZM_BRINSTAR_DOOR_60_ANCHOR.room &&
+           view->last_door == MZM_BRINSTAR_DOOR_60_ANCHOR.door;
+}
+
+bool fusion_transition_aria_arrival_evidence_valid(const AriaStateView *view)
+{
+    return view && view->gameplay_active && view->values_plausible &&
+           view->gameplay_state_ready && view->staged_arrival_plausible &&
+           view->area == ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR.area &&
+           view->room == ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR.room &&
+           view->staged_room_pointer ==
+               ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR.room_pointer &&
+           view->staged_camera_x ==
+               ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR.camera_x &&
+           view->staged_camera_y ==
+               ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR.camera_y &&
+           view->staged_player_x ==
+               ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR.player_x &&
+           view->staged_player_y ==
+               ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR.player_y;
+}
+
 static const TransitionAnchor *anchor_for_world(WorldKind world)
 {
-    if (world == WORLD_METROID) return &MZM_BRINSTAR_PROBE_ANCHOR;
-    if (world == WORLD_CASTLEVANIA) return &ARIA_ENTRANCE_PROBE_ANCHOR;
+    if (world == WORLD_METROID) return &MZM_BRINSTAR_DOOR_60_ANCHOR;
+    if (world == WORLD_CASTLEVANIA)
+        return &ARIA_ENTRANCE_STAGED_ARRIVAL_ANCHOR;
     return NULL;
 }
 
 const char *fusion_transition_anchor_name(FusionTransitionAnchorId anchor)
 {
-    if (anchor == FUSION_TRANSITION_ANCHOR_MZM_BRINSTAR_PROBE)
-        return "MZM Brinstar probe";
-    if (anchor == FUSION_TRANSITION_ANCHOR_ARIA_ENTRANCE_PROBE)
-        return "Aria Entrance probe";
+    if (anchor == FUSION_TRANSITION_ANCHOR_MZM_BRINSTAR_DOOR_60)
+        return "MZM Brinstar door 60";
+    if (anchor == FUSION_TRANSITION_ANCHOR_ARIA_ENTRANCE_STAGED_ARRIVAL)
+        return "Aria Entrance staged arrival";
     return "Unknown transition anchor";
 }
 
@@ -148,9 +191,17 @@ bool fusion_transition_plan_valid(const FusionTransitionPlan *plan)
         plan->target_health <= 0)
         return false;
     anchor = anchor_for_world(plan->target_world);
-    return anchor && plan->target_anchor == anchor->id &&
+    return anchor && plan->target_world == anchor->world &&
+           plan->target_anchor == anchor->id &&
+           plan->arrival_kind == anchor->arrival_kind &&
            plan->target_area == anchor->area &&
            plan->target_room == anchor->room &&
+           plan->target_door == anchor->door &&
+           plan->target_room_pointer == anchor->room_pointer &&
+           plan->target_camera_x == anchor->camera_x &&
+           plan->target_camera_y == anchor->camera_y &&
+           plan->target_player_x == anchor->player_x &&
+           plan->target_player_y == anchor->player_y &&
            plan->target_position_x_q16 == anchor->x_q16 &&
            plan->target_position_y_q16 == anchor->y_q16;
 }
@@ -172,8 +223,15 @@ bool fusion_transition_plan_build(const FusionTransitionObservation *source,
     plan.target_character = source->source_character;
     plan.target_fields = TRANSITION_TARGET_FIELDS;
     plan.target_anchor = anchor->id;
+    plan.arrival_kind = anchor->arrival_kind;
     plan.target_area = anchor->area;
     plan.target_room = anchor->room;
+    plan.target_door = anchor->door;
+    plan.target_room_pointer = anchor->room_pointer;
+    plan.target_camera_x = anchor->camera_x;
+    plan.target_camera_y = anchor->camera_y;
+    plan.target_player_x = anchor->player_x;
+    plan.target_player_y = anchor->player_y;
     plan.target_position_x_q16 = anchor->x_q16;
     plan.target_position_y_q16 = anchor->y_q16;
     plan.target_health = source->health;

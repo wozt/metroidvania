@@ -10,6 +10,8 @@
 #define ARIA_MODE_DATA_SIZE 2u
 #define ARIA_GAMEPLAY_DATA_SIZE 2u
 #define ARIA_LOCATION_DATA_SIZE 2u
+#define ARIA_STAGED_ARRIVAL_DATA_SIZE 8u
+#define ARIA_STAGED_ROOM_POINTER_SIZE 4u
 #define ARIA_CAMERA_DATA_SIZE 8u
 #define ARIA_PLAYER_POINTER_SIZE 4u
 #define ARIA_PROGRESSION_DATA_SIZE 46u
@@ -20,6 +22,8 @@ typedef struct {
     uint8_t gameplay[ARIA_GAMEPLAY_DATA_SIZE];
     uint8_t control_flags;
     uint8_t location[ARIA_LOCATION_DATA_SIZE];
+    uint8_t staged_arrival[ARIA_STAGED_ARRIVAL_DATA_SIZE];
+    uint8_t staged_room_pointer[ARIA_STAGED_ROOM_POINTER_SIZE];
     uint8_t camera[ARIA_CAMERA_DATA_SIZE];
     uint8_t player_pointer[ARIA_PLAYER_POINTER_SIZE];
     uint8_t progression[ARIA_PROGRESSION_DATA_SIZE];
@@ -34,6 +38,12 @@ typedef struct AriaStateView {
     bool player_control_enabled;
     uint8_t area;
     uint8_t room;
+    uint16_t staged_camera_x;
+    uint16_t staged_camera_y;
+    uint16_t staged_player_x;
+    uint16_t staged_player_y;
+    uint32_t staged_room_pointer;
+    bool staged_arrival_plausible;
     uint32_t player_entity_address;
     uint32_t x_position_fixed;
     uint32_t y_position_fixed;

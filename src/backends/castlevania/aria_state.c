@@ -8,6 +8,8 @@ enum {
     ARIA_MODE_ADDRESS = 0x02000010,
     ARIA_GAMEPLAY_ADDRESS = 0x02000064,
     ARIA_LOCATION_ADDRESS = 0x0200009e,
+    ARIA_STAGED_ARRIVAL_ADDRESS = 0x02000334,
+    ARIA_STAGED_ROOM_POINTER_ADDRESS = 0x020003cc,
     ARIA_CONTROL_FLAGS_ADDRESS = 0x0200a074,
     ARIA_CAMERA_ADDRESS = 0x0200a098,
     ARIA_PLAYER_POINTER_ADDRESS = 0x02013110,
@@ -58,6 +60,13 @@ static bool player_entity_address_valid(uint32_t address)
     return offset % ARIA_ENTITY_SIZE == 0;
 }
 
+static bool room_pointer_plausible(uint32_t address)
+{
+    return address >= UINT32_C(0x08000000) &&
+           address < UINT32_C(0x08800000) &&
+           address % sizeof(uint32_t) == 0;
+}
+
 static void set_error(char *error, size_t error_size, const char *message)
 {
     if (error && error_size) snprintf(error, error_size, "%s", message);
@@ -77,6 +86,12 @@ bool aria_state_read(const GbaRuntime *runtime, AriaStateView *out,
                                  bytes.gameplay, sizeof(bytes.gameplay)) ||
         !gba_runtime_read_memory(runtime, ARIA_LOCATION_ADDRESS,
                                  bytes.location, sizeof(bytes.location)) ||
+        !gba_runtime_read_memory(runtime, ARIA_STAGED_ARRIVAL_ADDRESS,
+                                 bytes.staged_arrival,
+                                 sizeof(bytes.staged_arrival)) ||
+        !gba_runtime_read_memory(runtime, ARIA_STAGED_ROOM_POINTER_ADDRESS,
+                                 bytes.staged_room_pointer,
+                                 sizeof(bytes.staged_room_pointer)) ||
         !gba_runtime_read_memory(runtime, ARIA_CONTROL_FLAGS_ADDRESS,
                                  &bytes.control_flags,
                                  sizeof(bytes.control_flags)) ||
@@ -124,6 +139,13 @@ bool aria_state_decode(const AriaStateBytes *bytes, AriaStateView *out)
     view.player_control_enabled = (bytes->control_flags & (1u << 1)) != 0;
     view.area = bytes->location[0];
     view.room = bytes->location[1];
+    view.staged_camera_x = read_u16(bytes->staged_arrival, 0);
+    view.staged_camera_y = read_u16(bytes->staged_arrival, 2);
+    view.staged_player_x = read_u16(bytes->staged_arrival, 4);
+    view.staged_player_y = read_u16(bytes->staged_arrival, 6);
+    view.staged_room_pointer = read_u32(bytes->staged_room_pointer, 0);
+    view.staged_arrival_plausible =
+        room_pointer_plausible(view.staged_room_pointer);
     view.player_entity_address = read_u32(bytes->player_pointer, 0);
     view.player_entity_valid =
         player_entity_address_valid(view.player_entity_address);

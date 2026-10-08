@@ -32,7 +32,7 @@ The MPL-2.0 mGBA system library provides an interim authentic execution path.
 | Verified MZM state view | Read-only proof integrated | Exact IWRAM symbols expose mode, location, Samus movement/pose, and equipment without mutating runtime or `SessionState` |
 | Verified Aria state view | Read-only proof integrated | Exact EWRAM offsets expose mode, location, player movement/animation, progression, and equipment with validated entity indirection |
 | Transition observation | Read-only projection integrated | Source-local location/position and character-owned health use an explicit versioned schema; no importer or shared field yet |
-| Transition plan | Target contract integrated | Two ROM-observed candidate anchors and tested target rollback semantics; authentic backends expose no apply operation |
+| Transition plan | Native descriptors integrated | MZM door 60 and Aria's staged Entrance record replace sampled coordinates; authentic backends expose no apply operation |
 | Original assets, maps, and audio | Partial, local-only | Verified Samus and Soma idle/run/jump/attack recipes; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
@@ -106,11 +106,12 @@ source room `0:28`, position `(0x00758000,0x009FC000)`, and Samus health
 marked source-local, health is character-owned, and the shared-field mask is
 empty.
 
-Each observation also produced a versioned plan for the opposite world. Samus
-mapped to the Aria Entrance candidate at room `0:0`, position
-`(0x00A80000,0x02BF0000)`, with health `399/399`. Soma mapped to the MZM
-Brinstar candidate at room `0:28`, position
-`(0x00758000,0x009FC000)`, with health `320/320`. The probe only prints these
+Each observation also produced a version-2 plan for the opposite world. Samus
+mapped to Aria Entrance room `0:0` through room pointer `0x0850EF9C`, camera
+`(32,512)`, and player-local `(120,141)`, producing target position
+`(0x00980000,0x028D0000)` with health `399/399`. Soma mapped to MZM Brinstar
+room `0:28` through door 60, whose native formula produces
+`(0x00480000,0x007FC000)` with health `320/320`. The probe only prints these
 plans; neither authentic backend implements their target operations.
 
 Upstream build verification used local clones under `/tmp`, a locally built
@@ -138,8 +139,8 @@ loop. No proprietary content is committed.
 
 ## Risks and next actions
 
-1. **P0 - Target adapter research:** verify engine-native door arrival paths,
-   collision-safe anchors, and the minimal writable fields for both engines.
+1. **P0 - Loader trigger research:** verify the complete dependent state needed
+   to invoke MZM and Aria room loading safely from each selected descriptor.
 2. **P0 - Native strategy:** evaluate source HAL or compatible recompilation
    paths while keeping mGBA as the verified baseline.
 3. **P1 - Controller transaction:** compose target rollback with source
@@ -150,8 +151,8 @@ loop. No proprietary content is committed.
 
 ## Open, non-blocking questions
 
-- Can each observed candidate be promoted to an engine-native, collision-safe
-  door arrival, or should a neighboring door record replace it?
+- Can each native loader be entered through existing engine state alone, or is
+  a backend-owned call gate required?
 - What resurrection policy and progression flags should be shared?
 
 ## Next milestone acceptance criteria
@@ -169,8 +170,23 @@ is bound to the backend interface and now has a controlled, memory-only snapshot
 boundary. The MZM and Aria state views and read-only ownership projection are
 complete. Destination-specific plans and target rollback semantics are also
 defined and tested without authentic writes. The next milestone is verifying
-engine-native target adapters and full lifecycle recovery, not persistent
-savestates or unguarded memory writes.
+loader triggers, engine-native target adapters, and full lifecycle recovery,
+not persistent savestates or unguarded memory writes.
+
+## Patch 019 - engine-native arrival descriptors
+
+- Replaced sampled target coordinates with a version-2 plan carrying each
+  engine's native room-entry representation.
+- Selected MZM Brinstar door 60 and derived its room-28 arrival through the
+  source `RoomReset` formula; confirmed the live demo uses door 60 before its
+  saved Samus state overrides that position.
+- Added a bounded Aria read of the staged room pointer, camera origin, and
+  player-local coordinates. The authentic trace reproduced the exact Entrance
+  record and its area-zero room-table pointer.
+- Made the authentic probe reject either plan if the live door or staged-room
+  evidence diverges from the selected descriptor.
+- Kept both authentic backends read-only. Loader triggers and their complete
+  dependent state remain the next gate.
 
 ## Patch 018 - candidate anchors and target transaction
 

@@ -36,6 +36,11 @@ int main(void)
     bytes.control_flags = 1u << 1;
     bytes.location[0] = 11;
     bytes.location[1] = 63;
+    write_u16(bytes.staged_arrival, 0, 0x20);
+    write_u16(bytes.staged_arrival, 2, 0x200);
+    write_u16(bytes.staged_arrival, 4, 0x78);
+    write_u16(bytes.staged_arrival, 6, 0x8d);
+    write_u32(bytes.staged_room_pointer, 0, 0x0850ef9c);
     write_u32(bytes.camera, 0, 0x00100000);
     write_u32(bytes.camera, 4, 0x00200000);
     write_u32(bytes.player_pointer, 0, 0x020005ec);
@@ -69,6 +74,10 @@ int main(void)
     assert(view.in_game_phase == 1 && view.in_game_phase_stage == 0);
     assert(view.player_control_enabled);
     assert(view.area == 11 && view.room == 63);
+    assert(view.staged_camera_x == 0x20 && view.staged_camera_y == 0x200);
+    assert(view.staged_player_x == 0x78 && view.staged_player_y == 0x8d);
+    assert(view.staged_room_pointer == UINT32_C(0x0850ef9c));
+    assert(view.staged_arrival_plausible);
     assert(view.player_entity_address == UINT32_C(0x020005ec));
     assert(view.x_position_fixed == 0x00740000);
     assert(view.y_position_fixed == 0x00e80000);
@@ -83,6 +92,12 @@ int main(void)
     assert(view.equipped_blue_soul == 11 && view.equipped_yellow_soul == 12);
     assert(view.equipped_armor == 13 && view.equipped_accessory == 14);
     assert(view.current_experience == 123456 && view.current_gold == 654321);
+
+    write_u32(bytes.staged_room_pointer, 0, 0x02000000);
+    assert(aria_state_decode(&bytes, &view));
+    assert(!view.staged_arrival_plausible);
+    assert(view.values_plausible && view.gameplay_state_ready);
+    write_u32(bytes.staged_room_pointer, 0, 0x0850ef9c);
 
     bytes.control_flags = 0;
     assert(aria_state_decode(&bytes, &view));

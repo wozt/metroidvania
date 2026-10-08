@@ -57,7 +57,7 @@ static void print_transition_observation(
 static void print_transition_plan(const FusionTransitionPlan *plan)
 {
     printf("Transition plan: %s -> %s/%s anchor=%s target-room=%u:%u "
-           "q16=%08x,%08x health=%d/%d\n",
+           "q16=%08x,%08x health=%d/%d",
            world_name(plan->source.source_world),
            world_name(plan->target_world),
            character_name(plan->target_character),
@@ -66,6 +66,16 @@ static void print_transition_plan(const FusionTransitionPlan *plan)
            (unsigned)plan->target_position_x_q16,
            (unsigned)plan->target_position_y_q16,
            plan->target_health, plan->target_max_health);
+    if (plan->arrival_kind == FUSION_TRANSITION_ARRIVAL_MZM_DOOR) {
+        printf(" entry=mzm-door:%u", plan->target_door);
+    } else if (plan->arrival_kind ==
+               FUSION_TRANSITION_ARRIVAL_ARIA_STAGED_ROOM) {
+        printf(" entry=aria-stage:%08x:%u,%u:%u,%u",
+               (unsigned)plan->target_room_pointer,
+               plan->target_camera_x, plan->target_camera_y,
+               plan->target_player_x, plan->target_player_y);
+    }
+    putchar('\n');
 }
 
 static bool run_authentic_probe(const char *label, const char *rom_path,
@@ -159,13 +169,19 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
             goto cleanup;
         }
         printf("MZM state probe: frame=%u mode=%u submode=%d area=%u room=%u "
+               "door=%u "
                "position=%u,%u subpixels=%u,%u energy=%u/%u pose=%u\n",
                timeline_frame, state_view.game_mode, state_view.sub_game_mode,
-               state_view.area, state_view.room,
+               state_view.area, state_view.room, state_view.last_door,
                state_view.x_subpixels / 4u, state_view.y_subpixels / 4u,
                state_view.x_subpixels, state_view.y_subpixels,
                state_view.current_energy, state_view.max_energy,
                state_view.pose);
+        if (!fusion_transition_mzm_arrival_evidence_valid(&state_view)) {
+            snprintf(error, error_size,
+                     "MZM native arrival evidence did not match door 60");
+            goto cleanup;
+        }
         if (!fusion_transition_observe_mzm(&state_view, &transition)) {
             snprintf(error, error_size, "cannot project the MZM transition observation");
             goto cleanup;
@@ -207,12 +223,16 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
             goto cleanup;
         }
         printf("Aria state probe: frame=%u mode=%u stage=%u phase=%u:%u "
-               "area=%u room=%u "
+               "area=%u room=%u staged=%08x:%u,%u:%u,%u:%s "
                "position=%u,%u fixed=%08x,%08x hp=%d/%u mp=%d/%u "
                "level=%u animation=%u:%u\n",
                timeline_frame, state_view.game_mode,
                state_view.game_mode_stage, state_view.in_game_phase,
                state_view.in_game_phase_stage, state_view.area, state_view.room,
+               (unsigned)state_view.staged_room_pointer,
+               state_view.staged_camera_x, state_view.staged_camera_y,
+               state_view.staged_player_x, state_view.staged_player_y,
+               state_view.staged_arrival_plausible ? "valid" : "invalid",
                state_view.x_position_fixed / 65536,
                state_view.y_position_fixed / 65536,
                (unsigned)state_view.x_position_fixed,
@@ -221,6 +241,11 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
                state_view.current_mp, state_view.max_mp,
                state_view.current_level, state_view.animation_id,
                state_view.animation_frame);
+        if (!fusion_transition_aria_arrival_evidence_valid(&state_view)) {
+            snprintf(error, error_size,
+                     "Aria native arrival evidence did not match Entrance");
+            goto cleanup;
+        }
         if (!fusion_transition_observe_aria(&state_view, &transition)) {
             snprintf(error, error_size, "cannot project the Aria transition observation");
             goto cleanup;

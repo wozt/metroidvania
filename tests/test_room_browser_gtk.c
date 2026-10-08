@@ -32,7 +32,7 @@ static void test_shared_browser_shells(void)
         GtkWidget *popover = g_object_get_data(G_OBJECT(pages[i]), "mv-create-popover");
         g_assert_true(GTK_IS_MENU_BUTTON(menu));
         g_assert_true(GTK_IS_POPOVER(popover));
-        g_assert_true(gtk_menu_button_get_popover(GTK_MENU_BUTTON(menu)) == GTK_WIDGET(popover));
+        g_assert_true(gtk_menu_button_get_popover(GTK_MENU_BUTTON(menu)) == GTK_POPOVER(popover));
         g_assert_false(gtk_widget_get_parent(popover) == list);
     }
     g_test_message("0058: removing Aria rooms page");

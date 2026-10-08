@@ -204,3 +204,13 @@ and the proprietary-file guard passed.
   failed to link. It is not evidence of a remaining crash in patch 0058.
 - The browser implementation is unchanged; rebuild must succeed before CTest
   results are considered meaningful. GTK4 runtime verification is pending.
+
+## Patch 0060 - correct GTK popover return type
+
+- GTK4's `gtk_menu_button_get_popover()` returns `GtkPopover *`, not
+  `GtkWidget *`. Compare against `GTK_POPOVER(popover)` in the browser GTK
+  regression test so `-Werror=compare-distinct-pointer-types` no longer blocks
+  the test binary from linking.
+- Correct the incorrect patch 0059 assertion and retain the 0058 diagnostics.
+- The GTK browser crash is **not confirmed fixed** until the newly linked
+  test executable passes on Debian. Do not rely on a stale CTest binary.

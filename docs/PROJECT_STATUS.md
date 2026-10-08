@@ -108,3 +108,12 @@ The current backends are integration boundaries and test doubles.
 - explicit documentation of native, recompiled, interpreted, or emulated paths
   and every fallback;
 - existing automated tests remain green and the license audit is updated.
+
+## Runtime adapter milestone (contract only)
+
+Added an SDL-independent Aria runtime API with open/step/frame/close operations,
+240x160 RGBA8888 framebuffer validation and deterministic fake-driver tests.
+No authentic Aria runtime is integrated, no game code is executed by this API,
+and no ROM or proprietary assets are redistributed. A real implementation must
+pass license review (GPL-3.0-only compatibility), local ROM verification,
+frame tests and backend lifecycle tests before being enabled.

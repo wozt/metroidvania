@@ -12,6 +12,7 @@ add_library(fusion_core STATIC
     src/core/save.c
     src/core/sha1.c
     src/core/rom.c
+    src/backends/castlevania/aria_runtime.c
 )
 target_include_directories(fusion_core PUBLIC include)
 
@@ -41,6 +42,9 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(fusion_aria_runtime_tests tests/test_aria_runtime.c)
+    target_link_libraries(fusion_aria_runtime_tests PRIVATE fusion_core)
+    add_test(NAME aria_runtime_contract COMMAND fusion_aria_runtime_tests)
     add_executable(fusion_core_tests tests/test_core.c)
     target_link_libraries(fusion_core_tests PRIVATE fusion_core)
     target_compile_options(fusion_core_tests PRIVATE -Wall -Wextra -Wpedantic)

@@ -320,24 +320,75 @@ static bool apply_aria_loader(GbaTransitionTarget *target,
                             health, sizeof(health)))
         return false;
 
-    if (!gba_runtime_step(target->runtime, 0) ||
-        !aria_state_read(target->runtime, &after,
-                         target->error, sizeof(target->error))) {
-        set_error(target, "Aria in-room arrival frame execution failed");
+    /* The staged arrival descriptor is input to the room loader, not a
+     * persistent post-frame invariant.  Only require its exact identity at
+     * preflight, before touching emulated memory.  The running game may
+     * update staging fields on the next frame.  Verify the stable state
+     * instead: actual player, room, position and imported health.
+     *
+     * The initial Entrance transition may temporarily disable control; let
+     * it settle within a bounded window, but never accept a missing player,
+     * mismatched location, drift, or altered health.  Any failure invokes
+     * the existing checkpoint rollback at the transaction boundary.
+     */
+    {
+        enum { ARIA_IN_ROOM_SETTLE_LIMIT = 240 };
+        unsigned frame;
+        for (frame = 1; frame <= ARIA_IN_ROOM_SETTLE_LIMIT; ++frame) {
+            if (!gba_runtime_step(target->runtime, 0) ||
+                !aria_state_read(target->runtime, &after,
+                                 target->error, sizeof(target->error))) {
+                set_error(target, "Aria in-room arrival frame execution failed");
+                return false;
+            }
+            if (!after.gameplay_active || !after.values_plausible ||
+                !after.player_entity_valid || after.current_character != 0 ||
+                after.area != plan->target_area ||
+                after.room != plan->target_room ||
+                after.x_position_fixed != plan->target_position_x_q16 ||
+                after.y_position_fixed != plan->target_position_y_q16 ||
+                after.current_hp != plan->target_health ||
+                after.max_hp != plan->target_max_health) {
+                char detail[sizeof(target->error)];
+                snprintf(detail, sizeof(detail),
+                         "Aria arrival frame %u mismatch: phase=%u:%u "
+                         "ready=%u ctl=%u player=%08x room=%u:%u "
+                         "pos=%08x,%08x hp=%d/%u",
+                         frame, after.in_game_phase, after.in_game_phase_stage,
+                         (unsigned)after.gameplay_state_ready,
+                         (unsigned)after.player_control_enabled,
+                         (unsigned)after.player_entity_address,
+                         after.area, after.room,
+                         (unsigned)after.x_position_fixed,
+                         (unsigned)after.y_position_fixed,
+                         after.current_hp, after.max_hp);
+                set_error(target, detail);
+                return false;
+            }
+            if (after.gameplay_state_ready) {
+                target->loader_frames = frame;
+                fprintf(stderr, "Aria arrival: verified in-room placement "
+                        "after %u frame(s), native room loader not invoked\n",
+                        frame);
+                return true;
+            }
+        }
+        {
+            char detail[sizeof(target->error)];
+            snprintf(detail, sizeof(detail),
+                     "Aria in-room settle timeout: phase=%u:%u ready=%u "
+                     "ctl=%u player=%08x pos=%08x,%08x hp=%d/%u",
+                     after.in_game_phase, after.in_game_phase_stage,
+                     (unsigned)after.gameplay_state_ready,
+                     (unsigned)after.player_control_enabled,
+                     (unsigned)after.player_entity_address,
+                     (unsigned)after.x_position_fixed,
+                     (unsigned)after.y_position_fixed,
+                     after.current_hp, after.max_hp);
+            set_error(target, detail);
+        }
         return false;
     }
-    if (!gba_transition_aria_same_room_compatible(&after, plan) ||
-        after.x_position_fixed != plan->target_position_x_q16 ||
-        after.y_position_fixed != plan->target_position_y_q16 ||
-        after.current_hp != plan->target_health ||
-        after.max_hp != plan->target_max_health) {
-        set_error(target, "Aria in-room arrival failed post-frame verification");
-        return false;
-    }
-    target->loader_frames = 1;
-    fprintf(stderr, "Aria arrival: verified in-room placement, "
-            "native room loader not invoked\n");
-    return true;
 }
 
 static bool target_apply(void *context, const FusionTransitionPlan *plan)

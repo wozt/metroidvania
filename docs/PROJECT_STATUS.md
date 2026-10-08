@@ -445,3 +445,15 @@ frame tests and backend lifecycle tests before being enabled.
   and camera-incompatible positions are rejected without writes. This does
   **not** implement general native cross-room loading or guest characters.
 - Added a ROM-free regression test for the same-room gate.
+
+## Patch 0027 - verify stable Aria in-room arrival state
+
+- Keep the strict Entrance descriptor and valid player checks **before** any
+  checkpointed write.  Staged-room fields are transient loader inputs, not
+  guaranteed post-frame invariants.
+- After in-room placement and HP transfer, validate the stable entity, room,
+  exact Q16.16 position and health each frame; allow up to 240 frames for
+  temporary loss of player control before requiring gameplay readiness.
+- Reject any invalid state immediately with actual observed values.  The
+  existing transaction rollback remains mandatory; cross-room loading is
+  still unsupported. No ROM-derived bytes are added to Git.

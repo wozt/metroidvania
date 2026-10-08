@@ -66,6 +66,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 # GTK4 is an optional editor dependency; the PC game builds without GTK.
+include(CTest)
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
     pkg_check_modules(GTK4 QUIET IMPORTED_TARGET gtk4)
@@ -76,6 +77,31 @@ if(PkgConfig_FOUND)
         target_compile_options(fusion_map_editor PRIVATE -Wall -Wextra -Wpedantic)
         if(FUSION_WARNINGS_AS_ERRORS)
             target_compile_options(fusion_map_editor PRIVATE -Werror)
+        endif()
+        if(BUILD_TESTING)
+            add_executable(fusion_native_workspace_gtk_tests
+                tests/test_native_workspace_gtk.c editor/native_workspace.c)
+            target_compile_definitions(fusion_native_workspace_gtk_tests
+                PRIVATE FUSION_NATIVE_WORKSPACE_TESTING)
+            target_include_directories(fusion_native_workspace_gtk_tests
+                PRIVATE include editor)
+            target_link_libraries(fusion_native_workspace_gtk_tests
+                PRIVATE fusion_core PkgConfig::GTK4)
+            target_compile_options(fusion_native_workspace_gtk_tests
+                PRIVATE -Wall -Wextra -Wpedantic)
+            if(FUSION_WARNINGS_AS_ERRORS)
+                target_compile_options(fusion_native_workspace_gtk_tests PRIVATE -Werror)
+            endif()
+            find_program(XVFB_RUN_EXECUTABLE xvfb-run)
+            if(XVFB_RUN_EXECUTABLE)
+                add_test(NAME native_workspace_gtk_lifecycle
+                    COMMAND ${XVFB_RUN_EXECUTABLE} -a
+                            $<TARGET_FILE:fusion_native_workspace_gtk_tests>)
+                set_tests_properties(native_workspace_gtk_lifecycle PROPERTIES
+                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                    ENVIRONMENT
+                        "XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config;ASAN_OPTIONS=detect_leaks=0:abort_on_error=1;UBSAN_OPTIONS=halt_on_error=1")
+            endif()
         endif()
     else()
         message(STATUS "GTK4 not found: optional fusion_map_editor disabled")
@@ -89,7 +115,6 @@ if(FUSION_WARNINGS_AS_ERRORS)
     target_compile_options(fusion_mzm_room_viewer PRIVATE -Werror)
 endif()
 
-include(CTest)
 if(BUILD_TESTING)
     add_executable(fusion_aria_runtime_tests tests/test_aria_runtime.c)
     target_link_libraries(fusion_aria_runtime_tests PRIVATE fusion_core)

@@ -23,12 +23,16 @@ struct NativeWorkspace {
     GPtrArray *documents;
     GtkNotebook *center, *right;
     struct NativeWorkspace *owner; /* non-NULL on a document */
+    guint references;
+    GCancellable *import_cancellable;
+    GSubprocess *import_process;
+    gboolean closing;
     char *identity;
 
     GtkWidget *page, *palette_page, *canvas, *palette, *status;
     GtkWidget *layer, *brush, *zoom, *scroller, *grid_button;
     GtkWidget *tools[TOOL_COUNT];
-    GtkWidget *tab_title;
+    GtkWidget *tab_title, *close_button, *save_button;
     NativeMap *map, *stroke_before;
     NativeMap **undo, **redo;
     unsigned undo_count, redo_count;
@@ -45,6 +49,16 @@ struct NativeWorkspace {
     unsigned char *background_pixels;
     gboolean background_visible;
 };
+
+static NativeWorkspace *document_ref(NativeWorkspace *doc)
+{
+    g_return_val_if_fail(doc != NULL, NULL);
+    g_return_val_if_fail(doc->owner != NULL, NULL);
+    ++doc->references;
+    return doc;
+}
+
+static void history_clear(NativeMap **stack, unsigned *count);
 
 static void message(NativeWorkspace *doc, const char *text)
 {
@@ -66,6 +80,31 @@ static void discard_background(NativeWorkspace *doc)
     doc->background = NULL;
     g_free(doc->background_pixels);
     doc->background_pixels = NULL;
+}
+
+static void document_destroy(NativeWorkspace *doc)
+{
+    if (!doc) return;
+    g_clear_object(&doc->import_cancellable);
+    g_clear_object(&doc->import_process);
+    history_clear(doc->undo, &doc->undo_count);
+    history_clear(doc->redo, &doc->redo_count);
+    discard_atlas(doc);
+    discard_background(doc);
+    free(doc->undo);
+    free(doc->redo);
+    free(doc->map);
+    free(doc->stroke_before);
+    g_free(doc->override_path);
+    g_free(doc->identity);
+    free(doc);
+}
+
+static void document_unref(NativeWorkspace *doc)
+{
+    if (!doc) return;
+    g_return_if_fail(doc->references > 0);
+    if (--doc->references == 0) document_destroy(doc);
 }
 
 static void load_background(NativeWorkspace *doc, const char *filename)
@@ -290,7 +329,7 @@ static void mark_changed(NativeWorkspace *doc)
     doc->unsaved = TRUE;
     update_title(doc);
     gtk_widget_queue_draw(doc->canvas);
-    message(doc, "Modifications non enregistrées — Ctrl+S ou bouton Enregistrer");
+    message(doc, "Unsaved changes - press Ctrl+S or use the Save button");
 }
 
 static void history_clear(NativeMap **stack, unsigned *count)
@@ -670,48 +709,61 @@ static void save_clicked(GtkButton *button, gpointer userdata)
     if (native_map_save(doc->map, doc->override_path, error, sizeof(error))) {
         doc->unsaved = FALSE;
         update_title(doc);
-        message(doc, "Override sauvegardé. La ROM et l'import initial sont intacts.");
+        message(doc, "Override saved. The ROM and initial import remain unchanged.");
     } else {
         message(doc, error);
     }
+}
+
+static void remove_notebook_page(GtkWidget **page_slot)
+{
+    GtkWidget *page = *page_slot;
+    if (!page) return;
+    *page_slot = NULL;
+    GtkWidget *parent = gtk_widget_get_parent(page);
+    if (!GTK_IS_NOTEBOOK(parent)) return;
+
+    /* Keep the page alive until gtk_notebook_remove_page() has completed all
+     * synchronous widget teardown and signal emission. */
+    g_object_ref(page);
+    int index = gtk_notebook_page_num(GTK_NOTEBOOK(parent), page);
+    if (index >= 0) gtk_notebook_remove_page(GTK_NOTEBOOK(parent), index);
+    g_object_unref(page);
+}
+
+static gboolean close_document(NativeWorkspace *doc)
+{
+    NativeWorkspace *manager;
+    if (!doc || doc->closing) return FALSE;
+    if (doc->unsaved) {
+        message(doc, "Unsaved changes: save before closing this tab.");
+        return FALSE;
+    }
+
+    doc->closing = TRUE;
+    manager = doc->owner;
+    if (doc->import_cancellable) g_cancellable_cancel(doc->import_cancellable);
+    if (doc->import_process) g_subprocess_force_exit(doc->import_process);
+    remove_notebook_page(&doc->page);
+    remove_notebook_page(&doc->palette_page);
+    for (guint i = 0; manager && manager->documents &&
+                            i < manager->documents->len; ++i) {
+        if (g_ptr_array_index(manager->documents, i) == doc) {
+            g_ptr_array_remove_index(manager->documents, i);
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 static void close_clicked(GtkButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
     (void)button;
-    if (doc->busy || doc->drawing) return;
-    if (doc->unsaved) {
-        message(doc, "Modifications non sauvegardées : enregistre avant de fermer l'onglet.");
-        return;
-    }
-    NativeWorkspace *manager = doc->owner;
-    GtkWidget *parent = gtk_widget_get_parent(doc->page);
-    if (GTK_IS_NOTEBOOK(parent)) {
-        gtk_notebook_remove_page(GTK_NOTEBOOK(parent),
-                                 gtk_notebook_page_num(GTK_NOTEBOOK(parent), doc->page));
-    }
-    parent = gtk_widget_get_parent(doc->palette_page);
-    if (GTK_IS_NOTEBOOK(parent)) {
-        gtk_notebook_remove_page(GTK_NOTEBOOK(parent),
-                                 gtk_notebook_page_num(GTK_NOTEBOOK(parent), doc->palette_page));
-    }
-    for (guint i = 0; i < manager->documents->len; ++i) {
-        if (g_ptr_array_index(manager->documents, i) == doc) {
-            g_ptr_array_remove_index(manager->documents, i);
-            break;
-        }
-    }
-    history_clear(doc->undo, &doc->undo_count);
-    history_clear(doc->redo, &doc->redo_count);
-    discard_atlas(doc);
-    free(doc->undo);
-    free(doc->redo);
-    free(doc->map);
-    free(doc->stroke_before);
-    g_free(doc->override_path);
-    g_free(doc->identity);
-    free(doc);
+    /* The array can release its owner reference while this signal is active. */
+    document_ref(doc);
+    close_document(doc);
+    document_unref(doc);
 }
 
 static void focus_page(GtkWidget *page)
@@ -764,22 +816,24 @@ static void document_build(NativeWorkspace *doc)
         "color-select-symbolic", "edit-select-all-symbolic", "transform-move-symbolic"
     };
     static const char *const names[TOOL_COUNT] = {
-        "Crayon (dessiner)", "Gomme (effacer)", "Pot de peinture (remplissage)",
-        "Pipette (prélever un motif)", "Sélection rectangulaire (glisser pour déplacer)",
-        "Main (déplacer la vue)"
+        "Pencil (draw)", "Eraser", "Fill bucket",
+        "Eyedropper (pick a metatile)", "Rectangle selection (drag to move)",
+        "Hand (pan the view)"
     };
     GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
     GtkWidget *tools = gtk_flow_box_new();
     GtkWidget *scroll = gtk_scrolled_window_new();
     GtkWidget *palette_scroll = gtk_scrolled_window_new();
     GtkWidget *palette = gtk_drawing_area_new();
-    GtkWidget *undo = icon_button("edit-undo-symbolic", "Annuler");
-    GtkWidget *redo = icon_button("edit-redo-symbolic", "Rétablir");
-    GtkWidget *save = icon_button("document-save-symbolic", "Enregistrer l'override (Ctrl+S)");
-    GtkWidget *grid = icon_toggle("view-grid-symbolic", "Afficher / masquer la grille (G)");
-    GtkWidget *background = icon_toggle("image-x-generic-symbolic", "Afficher BG2 / BG3 (fond, aperçu expérimental)");
+    GtkWidget *undo = icon_button("edit-undo-symbolic", "Undo");
+    GtkWidget *redo = icon_button("edit-redo-symbolic", "Redo");
+    GtkWidget *save = icon_button("document-save-symbolic", "Save override (Ctrl+S)");
+    doc->save_button = save;
+    GtkWidget *grid = icon_toggle("view-grid-symbolic", "Show or hide the grid (G)");
+    GtkWidget *background = icon_toggle("image-x-generic-symbolic", "Show BG2 / BG3 (experimental background preview)");
     GtkWidget *tab_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-    GtkWidget *close = icon_button("window-close-symbolic", "Fermer cet onglet");
+    GtkWidget *close = icon_button("window-close-symbolic", "Close this tab");
+    doc->close_button = close;
     doc->tab_title = gtk_label_new(doc->identity);
     gtk_box_append(GTK_BOX(tab_box), doc->tab_title);
     gtk_box_append(GTK_BOX(tab_box), close);
@@ -810,7 +864,7 @@ static void document_build(NativeWorkspace *doc)
     doc->zoom = gtk_spin_button_new_with_range(50, 400, 25);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(doc->zoom), 200);
     GtkWidget *values = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    gtk_box_append(GTK_BOX(values), gtk_label_new("Calque"));
+    gtk_box_append(GTK_BOX(values), gtk_label_new("Layer"));
     gtk_box_append(GTK_BOX(values), doc->layer);
     gtk_box_append(GTK_BOX(values), gtk_label_new("Metatile"));
     gtk_box_append(GTK_BOX(values), doc->brush);
@@ -842,7 +896,7 @@ static void document_build(NativeWorkspace *doc)
     gtk_widget_set_hexpand(scroll, TRUE);
     gtk_widget_set_vexpand(scroll, TRUE);
     gtk_box_append(GTK_BOX(page), scroll);
-    doc->status = gtk_label_new("Importation en cours…");
+    doc->status = gtk_label_new("Import in progress...");
     gtk_label_set_xalign(GTK_LABEL(doc->status), 0);
     gtk_label_set_wrap(GTK_LABEL(doc->status), TRUE);
     gtk_box_append(GTK_BOX(page), doc->status);
@@ -867,7 +921,7 @@ static void document_build(NativeWorkspace *doc)
     gtk_widget_set_vexpand(palette_scroll, TRUE);
     doc->palette = palette;
     doc->palette_page = palette_scroll;
-    GtkWidget *palette_label = gtk_label_new("Metatiles natifs");
+    GtkWidget *palette_label = gtk_label_new("Native metatiles");
     gtk_notebook_append_page(doc->owner->right, palette_scroll, palette_label);
     gtk_notebook_set_tab_reorderable(doc->owner->right, palette_scroll, TRUE);
     gtk_notebook_set_tab_detachable(doc->owner->right, palette_scroll, TRUE);
@@ -899,7 +953,7 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
              "assets/extracted/overrides/metroid/%s_%03u.mvnative",
              area_lower, number);
     NativeMap *temporary = calloc(1, sizeof(*temporary));
-    if (!temporary) { message(doc, "Mémoire insuffisante"); return; }
+    if (!temporary) { message(doc, "Out of memory"); return; }
     const char *source = g_file_test(over, G_FILE_TEST_IS_REGULAR) ? over : base;
     if (!native_map_load(temporary, source, error, sizeof(error))) {
         message(doc, error);
@@ -908,7 +962,7 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     }
     snprintf(atlas, sizeof(atlas), "assets/extracted/%s", temporary->atlas);
     if (!load_atlas(doc, atlas)) {
-        message(doc, "Impossible de charger l'atlas authentique de cette salle");
+        message(doc, "Unable to load this room's authentic atlas");
         free(temporary);
         return;
     }
@@ -940,10 +994,10 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     resize_room(doc);
     gtk_widget_queue_draw(doc->palette);
     update_title(doc);
-    gchar *summary = g_strdup_printf("%s — %u metatiles d'origine, BG1/BG2. %s",
+    gchar *summary = g_strdup_printf("%s - %u original metatiles, BG1/BG2. %s",
                                      doc->map->room_id, doc->map->tile_count,
                                      strcmp(source, over) == 0 ?
-                                     "Override précédent restauré." : "Copie privée créée.");
+                                     "Previous override restored." : "Private copy created.");
     message(doc, summary);
     g_free(summary);
     focus_page(doc->page);
@@ -959,16 +1013,19 @@ static void imported(GObject *object, GAsyncResult *result, gpointer userdata)
     gboolean succeeded = g_subprocess_communicate_utf8_finish(
         proc, result, &out, &err, &error);
     doc->busy = FALSE;
-    if (succeeded && g_subprocess_get_successful(proc)) {
+    g_clear_object(&doc->import_cancellable);
+    g_clear_object(&doc->import_process);
+    if (!doc->closing && succeeded && g_subprocess_get_successful(proc)) {
         const char *area = g_object_get_data(G_OBJECT(proc), "native-area");
         unsigned number = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(proc), "native-room"));
         open_room(doc, area, number);
-    } else {
-        message(doc, error ? error->message : err ? err : "Échec de l'importation");
+    } else if (!doc->closing) {
+        message(doc, error ? error->message : err ? err : "Import failed");
     }
     if (error) g_error_free(error);
     g_free(out);
     g_free(err);
+    document_unref(doc);
 }
 
 static void start_import(NativeWorkspace *doc, const char *area, unsigned number)
@@ -986,10 +1043,13 @@ static void start_import(NativeWorkspace *doc, const char *area, unsigned number
         return;
     }
     doc->busy = TRUE;
-    message(doc, "Importation des données vérifiées de la ROM…");
+    message(doc, "Importing verified ROM data...");
+    doc->import_cancellable = g_cancellable_new();
+    doc->import_process = g_object_ref(proc);
     g_object_set_data_full(G_OBJECT(proc), "native-area", g_strdup(area), g_free);
     g_object_set_data(G_OBJECT(proc), "native-room", GUINT_TO_POINTER(number));
-    g_subprocess_communicate_utf8_async(proc, NULL, NULL, imported, doc);
+    g_subprocess_communicate_utf8_async(proc, NULL, doc->import_cancellable,
+                                        imported, document_ref(doc));
     g_object_unref(proc);
 }
 
@@ -997,7 +1057,7 @@ NativeWorkspace *native_workspace_new(void)
 {
     NativeWorkspace *manager = calloc(1, sizeof(*manager));
     if (!manager) return NULL;
-    manager->documents = g_ptr_array_new();
+    manager->documents = g_ptr_array_new_with_free_func((GDestroyNotify)document_unref);
     return manager;
 }
 
@@ -1006,6 +1066,31 @@ void native_workspace_build(NativeWorkspace *manager, GtkWidget *center, GtkWidg
     if (!manager || !GTK_IS_NOTEBOOK(center) || !GTK_IS_NOTEBOOK(right)) return;
     manager->center = GTK_NOTEBOOK(center);
     manager->right = GTK_NOTEBOOK(right);
+}
+
+static NativeWorkspace *create_document(NativeWorkspace *manager, char *identity)
+{
+    NativeWorkspace *doc = calloc(1, sizeof(*doc));
+    if (!doc) {
+        g_free(identity);
+        return NULL;
+    }
+    doc->owner = manager;
+    doc->references = 1;
+    doc->identity = identity;
+    doc->map = calloc(1, sizeof(NativeMap));
+    doc->stroke_before = calloc(1, sizeof(NativeMap));
+    doc->undo = calloc(HISTORY_LIMIT, sizeof(*doc->undo));
+    doc->redo = calloc(HISTORY_LIMIT, sizeof(*doc->redo));
+    if (!doc->map || !doc->stroke_before || !doc->undo || !doc->redo) {
+        document_destroy(doc);
+        return NULL;
+    }
+    doc->scale = 2.0;
+    doc->last_x = doc->last_y = -1;
+    g_ptr_array_add(manager->documents, doc);
+    document_build(doc);
+    return doc;
 }
 
 void native_workspace_import_async(NativeWorkspace *manager, const char *area, unsigned number)
@@ -1025,24 +1110,103 @@ void native_workspace_import_async(NativeWorkspace *manager, const char *area, u
             return;
         }
     }
-    NativeWorkspace *doc = calloc(1, sizeof(*doc));
-    if (!doc) { g_free(identity); return; }
-    doc->owner = manager;
-    doc->identity = identity;
-    doc->map = calloc(1, sizeof(NativeMap));
-    doc->stroke_before = calloc(1, sizeof(NativeMap));
-    doc->undo = calloc(HISTORY_LIMIT, sizeof(*doc->undo));
-    doc->redo = calloc(HISTORY_LIMIT, sizeof(*doc->redo));
-    if (!doc->map || !doc->stroke_before || !doc->undo || !doc->redo) {
-        free(doc->map); free(doc->stroke_before); free(doc->undo); free(doc->redo);
-        g_free(doc->identity); free(doc); return;
-    }
-    doc->scale = 2.0;
-    doc->last_x = doc->last_y = -1;
-    g_ptr_array_add(manager->documents, doc);
-    document_build(doc);
-    start_import(doc, area, number);
+    NativeWorkspace *doc = create_document(manager, identity);
+    if (doc) start_import(doc, area, number);
 }
+
+#ifdef FUSION_NATIVE_WORKSPACE_TESTING
+guint native_workspace_test_document_count(const NativeWorkspace *manager)
+{
+    return manager && manager->documents ? manager->documents->len : 0;
+}
+
+gboolean native_workspace_test_add_document(NativeWorkspace *manager,
+                                             const char *identity)
+{
+    if (!manager || !manager->documents || !manager->center || !manager->right ||
+        !identity || !identity[0]) return FALSE;
+    return create_document(manager, g_strdup(identity)) != NULL;
+}
+
+gboolean native_workspace_test_close_document(NativeWorkspace *manager, guint index)
+{
+    if (!manager || !manager->documents || index >= manager->documents->len) return FALSE;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    document_ref(doc);
+    gboolean closed = close_document(doc);
+    document_unref(doc);
+    return closed;
+}
+
+gboolean native_workspace_test_activate_close(NativeWorkspace *manager, guint index)
+{
+    if (!manager || !manager->documents || index >= manager->documents->len) return FALSE;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    g_signal_emit_by_name(doc->close_button, "clicked");
+    return TRUE;
+}
+
+gboolean native_workspace_test_prepare_modified(NativeWorkspace *manager, guint index,
+                                                 const char *override_path)
+{
+    if (!manager || !manager->documents || index >= manager->documents->len ||
+        !override_path || !override_path[0]) return FALSE;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    memset(doc->map, 0, sizeof(*doc->map));
+    snprintf(doc->map->room_id, sizeof(doc->map->room_id), "mzm:test:001");
+    snprintf(doc->map->atlas, sizeof(doc->map->atlas),
+             "rooms/metroid/tilesets/test_atlas.bmp");
+    doc->map->tile_count = 1;
+    doc->map->width[0] = doc->map->height[0] = 1;
+    doc->map->width[1] = doc->map->height[1] = 1;
+    g_free(doc->override_path);
+    doc->override_path = g_strdup(override_path);
+    doc->ready = TRUE;
+    doc->unsaved = TRUE;
+    update_title(doc);
+    return TRUE;
+}
+
+void native_workspace_test_activate_save(NativeWorkspace *manager, guint index)
+{
+    if (!manager || !manager->documents || index >= manager->documents->len) return;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    g_signal_emit_by_name(doc->save_button, "clicked");
+}
+
+void native_workspace_test_set_unsaved(NativeWorkspace *manager, guint index,
+                                        gboolean unsaved)
+{
+    if (!manager || !manager->documents || index >= manager->documents->len) return;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    doc->unsaved = unsaved;
+    update_title(doc);
+}
+
+static void move_page_for_test(GtkWidget *page, GtkNotebook *target)
+{
+    GtkWidget *parent = gtk_widget_get_parent(page);
+    if (!GTK_IS_NOTEBOOK(parent) || GTK_NOTEBOOK(parent) == target) return;
+    GtkWidget *label = gtk_notebook_get_tab_label(GTK_NOTEBOOK(parent), page);
+    g_object_ref(page);
+    if (label) g_object_ref(label);
+    gtk_notebook_detach_tab(GTK_NOTEBOOK(parent), page);
+    gtk_notebook_append_page(target, page, label);
+    if (label) g_object_unref(label);
+    g_object_unref(page);
+}
+
+gboolean native_workspace_test_move_document(NativeWorkspace *manager, guint index,
+                                              GtkWidget *center, GtkWidget *right)
+{
+    if (!manager || !manager->documents || index >= manager->documents->len ||
+        !GTK_IS_NOTEBOOK(center) || !GTK_IS_NOTEBOOK(right)) return FALSE;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    move_page_for_test(doc->page, GTK_NOTEBOOK(center));
+    move_page_for_test(doc->palette_page, GTK_NOTEBOOK(right));
+    return TRUE;
+}
+#endif
 
 void native_workspace_free(NativeWorkspace *manager)
 {
@@ -1050,14 +1214,10 @@ void native_workspace_free(NativeWorkspace *manager)
     if (manager->documents) {
         for (guint i = 0; i < manager->documents->len; ++i) {
             NativeWorkspace *doc = g_ptr_array_index(manager->documents, i);
-            history_clear(doc->undo, &doc->undo_count);
-            history_clear(doc->redo, &doc->redo_count);
-            discard_atlas(doc);
-            discard_background(doc);
-            free(doc->undo); free(doc->redo);
-            free(doc->map); free(doc->stroke_before);
-            g_free(doc->override_path); g_free(doc->identity);
-            free(doc);
+            doc->closing = TRUE;
+            doc->owner = NULL;
+            if (doc->import_cancellable) g_cancellable_cancel(doc->import_cancellable);
+            if (doc->import_process) g_subprocess_force_exit(doc->import_process);
         }
         g_ptr_array_free(manager->documents, TRUE);
     }

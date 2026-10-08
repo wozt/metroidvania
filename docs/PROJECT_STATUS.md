@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-08**.
 
+## Patch 0043 - native room tab lifetime fix
+
+- Native room documents now have one explicit owner reference in the workspace
+  array and a separate reference for every asynchronous ROM import.
+- Closing a tab cancels and terminates an in-flight importer, safely removes
+  both notebook pages, and releases all map history, atlas, and BG3 resources
+  through one destruction path. The close-button callback keeps a temporary
+  reference while GTK tears down its widgets.
+- Added a ROM-independent GTK lifecycle regression covering close/reopen, five
+  documents closed in different orders, the unsaved-change guard, save then
+  close, cross-dock and detached-window page moves, shutdown with several open
+  documents, and close during asynchronous import. It runs through Xvfb in
+  CTest when GTK4 and Xvfb are available.
+- ASan/UBSan report no project memory error in the lifecycle suite. Leak tools
+  only report process-global allocations rooted in Fontconfig, GLib modules,
+  the dynamic loader, and the software graphics stack; no reported loss has a
+  project allocation frame. Those external caches are excluded from the
+  sanitizer CTest target.
+- The unrelated local GTK setting warning about the obsolete `gtk-modules` key
+  is avoided in the test environment and is not the heap-corruption cause.
+
 ## Patch 0034 - PC-first title and editable save-room graph
 
 - New global title screen in the **default simulated PC frontend**, with a
@@ -200,12 +221,14 @@ loop. No proprietary content is committed.
 
 ## Risks and next actions
 
-1. **P0 - Loader trigger research:** verify the complete dependent state needed
-   to invoke MZM and Aria room loading safely from each selected descriptor.
+1. **P0 - Product specification:** establish the story bible, concurrent
+   three-track timeline, verified boss/savepoint matrix, progression gates,
+   cutscene format, and editor/engine roadmap required by the current brief.
 2. **P0 - Native strategy:** evaluate source HAL or compatible recompilation
    paths while keeping mGBA as the verified baseline.
-3. **P1 - Controller transaction:** compose target rollback with source
-   snapshot restoration and exclusive backend lifecycle recovery.
+3. **P1 - Interzone vertical slice:** implement the two inverted prologues,
+   first dimensional encounters, meeting, dual-character presence, and explicit
+   save-room portal travel without restoring unrestricted `M` switching.
 4. **P1 - Tests:** add frame traces, render captures, and real lifecycle tests.
 5. **P2 - Content:** implement guest-character adaptations, progression, and
    synergy hooks.

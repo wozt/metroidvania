@@ -40,7 +40,7 @@ if(GTK4_FOUND)
         editor/native_workspace.c
         editor/world_atlas.c
         editor/story_workspace.c
-        editor/aria_browser.c
+        editor/room_browser.c
     )
     target_include_directories(fusion_map_editor PRIVATE include editor)
     target_link_libraries(fusion_map_editor
@@ -76,11 +76,28 @@ if(BUILD_TESTING)
             PRIVATE fusion_native_editor_core PkgConfig::GTK4)
         fusion_enable_warnings(fusion_native_workspace_gtk_tests)
 
+        add_executable(fusion_room_browser_gtk_tests
+            tests/test_room_browser_gtk.c
+            editor/room_browser.c
+            editor/native_workspace.c
+        )
+        target_include_directories(fusion_room_browser_gtk_tests PRIVATE include editor)
+        target_link_libraries(fusion_room_browser_gtk_tests
+            PRIVATE fusion_native_editor_core PkgConfig::GTK4)
+        fusion_enable_warnings(fusion_room_browser_gtk_tests)
+
         find_program(XVFB_RUN_EXECUTABLE xvfb-run)
         if(XVFB_RUN_EXECUTABLE)
             add_test(NAME native_workspace_gtk_lifecycle
                 COMMAND ${XVFB_RUN_EXECUTABLE} -a
                         $<TARGET_FILE:fusion_native_workspace_gtk_tests>)
+            add_test(NAME room_browser_gtk_contract
+                COMMAND ${XVFB_RUN_EXECUTABLE} -a
+                        $<TARGET_FILE:fusion_room_browser_gtk_tests>)
+            set_tests_properties(room_browser_gtk_contract PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                ENVIRONMENT
+                    "XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config;GTK_A11Y=test")
             set_tests_properties(native_workspace_gtk_lifecycle PROPERTIES
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                 ENVIRONMENT

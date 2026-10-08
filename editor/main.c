@@ -3,7 +3,7 @@
 #include "native_workspace.h"
 #include "world_atlas.h"
 #include "story_workspace.h"
-#include "aria_browser.h"
+#include "room_browser.h"
 
 #include <gtk/gtk.h>
 #include <stdio.h>
@@ -12,8 +12,6 @@
 typedef struct {
     NativeWorkspace *native_workspace;
     GtkWidget *native_page;
-    GtkWidget *native_details;
-    GtkWidget *native_preview;
     GtkWidget *asset_page;
     GtkWidget *asset_actor;
     GtkWidget *asset_action;
@@ -27,8 +25,6 @@ typedef struct {
     GtkWidget *center_dock;
     GtkWidget *right_dock;
     GtkWidget *subtitle;
-    char selected_native_area[32];
-    unsigned selected_native_index;
     int responsive_mode;
     int small_focus;
     int seen_width;
@@ -153,149 +149,6 @@ static void build_assets_tab(Editor *editor, GtkWidget *dock)
     asset_update_preview(editor);
 }
 
-static void open_selected_native_room(Editor *editor)
-{
-    if (!editor->native_workspace || !editor->selected_native_area[0]) return;
-    editor->small_focus = 0;
-    apply_responsive(editor);
-    native_workspace_import_async(editor->native_workspace,
-                                  editor->selected_native_area,
-                                  editor->selected_native_index);
-}
-
-static void native_row_selected(GtkListBox *list, GtkListBoxRow *row,
-                                gpointer userdata)
-{
-    Editor *editor = userdata;
-    const char *details;
-    const char *area;
-    const char *preview;
-    (void)list;
-
-    if (!row || !editor->native_details) return;
-    details = g_object_get_data(G_OBJECT(row), "native-room-details");
-    area = g_object_get_data(G_OBJECT(row), "native-area");
-    preview = g_object_get_data(G_OBJECT(row), "native-room-preview");
-    if (details) gtk_label_set_text(GTK_LABEL(editor->native_details), details);
-    if (area) {
-        snprintf(editor->selected_native_area,
-                 sizeof(editor->selected_native_area), "%s", area);
-        editor->selected_native_index = GPOINTER_TO_UINT(
-            g_object_get_data(G_OBJECT(row), "native-index"));
-    }
-    if (preview && g_file_test(preview, G_FILE_TEST_IS_REGULAR))
-        gtk_picture_set_filename(GTK_PICTURE(editor->native_preview), preview);
-    else
-        gtk_picture_set_paintable(GTK_PICTURE(editor->native_preview), NULL);
-}
-
-static void native_open_clicked(GtkButton *button, gpointer userdata)
-{
-    (void)button;
-    open_selected_native_room(userdata);
-}
-
-static void native_row_activated(GtkListBox *list, GtkListBoxRow *row,
-                                 gpointer userdata)
-{
-    native_row_selected(list, row, userdata);
-    open_selected_native_room(userdata);
-}
-
-static void build_native_rooms_tab(Editor *editor, GtkWidget *dock)
-{
-    GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-    GtkWidget *scroll = gtk_scrolled_window_new();
-    GtkWidget *list = gtk_list_box_new();
-    GtkWidget *open = gtk_button_new_with_label("Open room in a new tab");
-    GtkWidget *preview = gtk_picture_new();
-    gchar *contents = NULL;
-    gchar **lines;
-    gsize length = 0;
-    size_t index;
-
-    editor->native_page = page;
-    editor->native_preview = preview;
-    editor->native_details = gtk_label_new(
-        "Choose a room to inspect its source descriptors.");
-    gtk_widget_set_margin_start(page, 12);
-    gtk_widget_set_margin_end(page, 12);
-    gtk_widget_set_margin_top(page, 12);
-    gtk_box_append(GTK_BOX(page), gtk_label_new(
-        "Zero Mission native room browser | double-click to edit BG1/BG2 privately"));
-    gtk_box_append(GTK_BOX(page), open);
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), list);
-    gtk_widget_set_vexpand(scroll, TRUE);
-    gtk_box_append(GTK_BOX(page), scroll);
-    gtk_widget_set_size_request(preview, 200, 160);
-    gtk_picture_set_can_shrink(GTK_PICTURE(preview), TRUE);
-    gtk_box_append(GTK_BOX(page), preview);
-    gtk_label_set_wrap(GTK_LABEL(editor->native_details), TRUE);
-    gtk_label_set_xalign(GTK_LABEL(editor->native_details), 0.0f);
-    gtk_box_append(GTK_BOX(page), editor->native_details);
-    g_signal_connect(open, "clicked", G_CALLBACK(native_open_clicked), editor);
-
-    if (!g_file_get_contents("assets/extracted/rooms/metroid/rooms.tsv",
-                             &contents, &length, NULL)) {
-        gtk_label_set_text(GTK_LABEL(editor->native_details),
-            "Room catalog unavailable. Run the local asset importer first.");
-        gtk_notebook_append_page(GTK_NOTEBOOK(dock), page,
-                                 gtk_label_new("Native rooms"));
-        return;
-    }
-
-    lines = g_strsplit(contents, "\n", -1);
-    for (index = 0; lines[index]; ++index) {
-        gchar **parts;
-        GtkWidget *label;
-        GtkWidget *row;
-        gchar *name;
-        gchar *details;
-        gchar *lower_area;
-        gchar *filename;
-        unsigned room;
-
-        if (!lines[index][0] || lines[index][0] == '#') continue;
-        parts = g_strsplit(lines[index], "|", -1);
-        if (g_strv_length(parts) != 10) {
-            g_strfreev(parts);
-            continue;
-        }
-        room = (unsigned)g_ascii_strtoull(parts[1], NULL, 10);
-        name = g_strdup_printf("%s / room %s    tileset %s    %s",
-                               parts[0], parts[1], parts[2], parts[3]);
-        details = g_strdup_printf(
-            "Area: %s  room: %s    source tileset: %s\n"
-            "Music: %s\nBG1: %s\nBG2: %s\nClipdata: %s\n"
-            "Default spriteset: %s\nWorld map position: %s,%s",
-            parts[0], parts[1], parts[2], parts[3], parts[4], parts[5],
-            parts[6], parts[7], parts[8], parts[9]);
-        lower_area = g_ascii_strdown(parts[0], -1);
-        filename = g_strdup_printf(
-            "assets/extracted/rooms/metroid/previews/%s_%03u_bg1.bmp",
-            lower_area, room);
-        g_free(lower_area);
-
-        label = gtk_label_new(name);
-        gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
-        row = gtk_list_box_row_new();
-        gtk_list_box_row_set_child(GTK_LIST_BOX_ROW(row), label);
-        g_object_set_data_full(G_OBJECT(row), "native-room-details", details, g_free);
-        g_object_set_data_full(G_OBJECT(row), "native-area",
-                               g_strdup(parts[0]), g_free);
-        g_object_set_data(G_OBJECT(row), "native-index", GUINT_TO_POINTER(room));
-        g_object_set_data_full(G_OBJECT(row), "native-room-preview", filename, g_free);
-        gtk_list_box_append(GTK_LIST_BOX(list), row);
-        g_free(name);
-        g_strfreev(parts);
-    }
-    g_strfreev(lines);
-    g_free(contents);
-    g_signal_connect(list, "row-selected", G_CALLBACK(native_row_selected), editor);
-    g_signal_connect(list, "row-activated", G_CALLBACK(native_row_activated), editor);
-    gtk_notebook_append_page(GTK_NOTEBOOK(dock), page, gtk_label_new("Native rooms"));
-}
-
 static GtkWidget *new_dock(GtkApplication *application);
 
 static GtkNotebook *create_floating_dock(GtkNotebook *notebook, GtkWidget *page,
@@ -386,11 +239,11 @@ static void build_explorer(Editor *editor, GtkWidget *dock)
     gtk_widget_set_margin_top(root, 12);
     gtk_box_append(GTK_BOX(root), gtk_label_new("PROJECT / METROID VANIA"));
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
-    explorer_button(root, editor, "Zero Mission native rooms", "native");
+    explorer_button(root, editor, "Zero rooms", "native");
     explorer_button(root, editor, "Global maps / both worlds", "world-map");
     explorer_button(root, editor, "Event orchestration", "events");
     explorer_button(root, editor, "Cutscene editor", "cutscenes");
-    explorer_button(root, editor, "Aria / native rooms", "aria");
+    explorer_button(root, editor, "Aria rooms", "aria");
     explorer_button(root, editor, "Local ROM visuals", "assets");
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
     gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
@@ -405,7 +258,7 @@ static void build_inspector(GtkWidget *dock)
     GtkWidget *text = gtk_label_new(
         "Active native scope\n\n"
         "Zero Mission: BG1/BG2 metatile editing and world atlas.\n\n"
-        "Aria: native room browser and partial ROM-derived BG preview; editing is pending.\n\n"
+        "Aria: same native document editor; original graphics remain partially decoded.\n\n"
         "Boss, entity, collision, music and cutscene editing are pending.");
     gtk_widget_set_margin_start(root, 14);
     gtk_widget_set_margin_end(root, 14);
@@ -549,11 +402,11 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_paned_set_position(GTK_PANED(outer_split), 275);
     gtk_paned_set_position(GTK_PANED(inner_split), 980);
 
-    build_native_rooms_tab(editor, center);
+    editor->native_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ZERO);
     native_workspace_build(editor->native_workspace, center, right);
     editor->world_map_page = world_atlas_build(center, editor->native_workspace, editor->world_badge);
     story_workspace_build(center, &editor->events_page, &editor->cutscenes_page);
-    editor->aria_page = aria_browser_build(center, editor->native_workspace);
+    editor->aria_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ARIA);
     build_assets_tab(editor, right);
     build_inspector(right);
     build_explorer(editor, left);

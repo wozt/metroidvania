@@ -13,7 +13,7 @@ typedef struct {
     GtkWidget *world_badge;
     guint world, area;
     guint selection;
-    gboolean selected, busy, pending_generation;
+    gboolean selected, busy, pending_generation, changing_world;
     guint size;
 } WorldGrid;
 static const char *const worlds[]={"Zero Mission", "Aria of Sorrow", NULL};
@@ -97,16 +97,21 @@ static void grid_rebuild(WorldGrid *w)
     /* Blank grid slots preserve original positional gaps between real cells. */
     if(xmax>90 || ymax>90){gtk_label_set_text(GTK_LABEL(w->status),"Original map bounds exceed safe preview limits.");return;}
     guint side=w->size;
+    guint stride=xmax+1;
+    guint *lookup=g_new0(guint,stride*(ymax+1));
+    for(guint i=0;i<w->cells->len;++i){
+        const MapCell *c=&g_array_index(w->cells,MapCell,i);
+        if(c->area!=w->area)continue;
+        guint pos=c->y*stride+c->x;
+        if(!lookup[pos])lookup[pos]=i+1;
+    }
     for(guint y=0;y<=ymax;++y){
         for(guint x=0;x<=xmax;++x){
             GtkWidget *cell=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
             gtk_widget_set_size_request(cell,(int)side,(int)side);
             gtk_widget_add_css_class(cell,"mv-map-cell");
-            guint best=G_MAXUINT;
-            for(guint i=0;i<w->cells->len;++i){
-                const MapCell *c=&g_array_index(w->cells,MapCell,i);
-                if(c->area==w->area && c->x==x && c->y==y){best=i;break;}
-            }
+            guint entry=lookup[y*stride+x];
+            guint best=entry ? entry-1 : G_MAXUINT;
             if(best!=G_MAXUINT){
                 MapCell c=g_array_index(w->cells,MapCell,best);
                 char path[256];
@@ -139,6 +144,7 @@ static void grid_rebuild(WorldGrid *w)
             gtk_grid_attach(GTK_GRID(w->grid),cell,(int)x,(int)y,1,1);
         }
     }
+    g_free(lookup);
     char info[300];
     snprintf(info,sizeof(info),"%s / %s | %u verified case markers (%u cached graphic previews). "
              "%s Double-click a case to edit. Generation runs in background.",
@@ -147,56 +153,92 @@ static void grid_rebuild(WorldGrid *w)
     gtk_label_set_text(GTK_LABEL(w->status),info);
 }
 static void begin_generation(WorldGrid *w);
-static void generator_finished(GObject *object,GAsyncResult *result,gpointer userdata)
+
+static void generator_finished(GObject *object, GAsyncResult *result, gpointer userdata)
 {
-    GtkWidget *page=GTK_WIDGET(userdata);
-    WorldGrid *w=g_object_get_data(G_OBJECT(page),"mv-world-grid");
-    GError *error=NULL;
-    gboolean ok=g_subprocess_wait_finish(G_SUBPROCESS(object),result,&error);
-    if(w){
-        w->busy=FALSE;
-        if(!ok || !g_subprocess_get_successful(G_SUBPROCESS(object)))
-            gtk_label_set_text(GTK_LABEL(w->status),error?error->message:
-                "Some source-data formats could not be generated; see original room tools.");
-        if (reload_rows(w)) grid_rebuild(w);
+    GtkWidget *page = GTK_WIDGET(userdata);
+    WorldGrid *w = g_object_get_data(G_OBJECT(page), "mv-world-grid");
+    GSubprocess *proc = G_SUBPROCESS(object);
+    GError *error = NULL;
+    gchar *out = NULL, *err = NULL;
+    gboolean ok = g_subprocess_communicate_utf8_finish(proc, result, &out, &err, &error);
+    guint generated_world = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(proc), "mv-world"));
+    guint generated_budget = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(proc), "mv-budget"));
+    gboolean success = ok && g_subprocess_get_successful(proc);
+    if (w) {
+        w->busy = FALSE;
+        if (generated_world == w->world) {
+            if (success) {
+                if (reload_rows(w)) grid_rebuild(w);
+                else gtk_label_set_text(GTK_LABEL(w->status),
+                    "No verified cells for this world. Check the local catalog.");
+            } else {
+                gchar *diagnostic = g_strdup_printf(
+                    "Map generation failed: %.500s",
+                    error ? error->message : (err && *err ? err : "Unknown index/decoder failure"));
+                gtk_label_set_text(GTK_LABEL(w->status), diagnostic);
+                g_free(diagnostic);
+            }
+        }
         if (w->pending_generation) {
             w->pending_generation = FALSE;
             begin_generation(w);
+        } else if (success && generated_world == w->world && generated_budget == 0) {
+            /* First present the verified cells, then render graphics separately. */
+            begin_generation(w);
         }
     }
-    if(error)g_error_free(error);
+    g_clear_error(&error);
+    g_free(out);
+    g_free(err);
     g_object_unref(page);
 }
+
 static void begin_generation(WorldGrid *w)
 {
     if (w->busy) { w->pending_generation = TRUE; return; }
-    gchar *area=g_strdup_printf("%u",w->area);
-    GError *error=NULL;
-    GSubprocess *process=g_subprocess_new(G_SUBPROCESS_FLAGS_STDOUT_SILENCE|
-        G_SUBPROCESS_FLAGS_STDERR_SILENCE,&error,"python3","-m","scripts.world_overview",
-        "--world",world_code(w),"--area",area,"--budget","6",NULL);
+    gchar *area = g_strdup_printf("%u", w->area);
+    char index_path[128];
+    snprintf(index_path, sizeof(index_path), "assets/extracted/world_overview/%s.tsv",
+             world_code(w));
+    /* Missing index: budget zero skips slow graphics and publishes cells first. */
+    guint budget = g_file_test(index_path, G_FILE_TEST_IS_REGULAR) ? 6u : 0u;
+    gchar *budget_arg = g_strdup_printf("%u", budget);
+    GError *error = NULL;
+    GSubprocess *proc = g_subprocess_new(
+        G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
+        &error, "python3", "-m", "scripts.world_overview",
+        "--world", world_code(w), "--area", area, "--budget", budget_arg, NULL);
     g_free(area);
-    if (!process) {
+    g_free(budget_arg);
+    if (!proc) {
         gtk_label_set_text(GTK_LABEL(w->status),
-                           error ? error->message : "Cannot start generator");
-        if (error) g_error_free(error);
+            error ? error->message : "Unable to start native map generator");
+        g_clear_error(&error);
         return;
     }
-    w->busy=TRUE;
-    g_subprocess_wait_async(process,NULL,generator_finished,g_object_ref(w->page));
-    g_object_unref(process);
+    w->busy = TRUE;
+    if (budget == 0)
+        gtk_label_set_text(GTK_LABEL(w->status), "Indexing verified original map cells...");
+    g_object_set_data(G_OBJECT(proc), "mv-world", GUINT_TO_POINTER(w->world));
+    g_object_set_data(G_OBJECT(proc), "mv-budget", GUINT_TO_POINTER(budget));
+    g_subprocess_communicate_utf8_async(proc, NULL, NULL,
+                                        generator_finished, g_object_ref(w->page));
+    g_object_unref(proc);
 }
 static void world_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
 {
     WorldGrid *w=userdata;(void)pspec;
     w->world=gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
     if(w->world>1)return;
+    w->changing_world=TRUE;
     GtkStringList *list=gtk_string_list_new(NULL);
     for(guint i=0;i<area_count(w);++i)gtk_string_list_append(list,area_name(w,i));
     gtk_drop_down_set_model(GTK_DROP_DOWN(w->area_select),G_LIST_MODEL(list));
     g_object_unref(list);
     w->area=0;w->selected=FALSE;
     gtk_drop_down_set_selected(GTK_DROP_DOWN(w->area_select),0);
+    w->changing_world=FALSE;
     g_object_set_data(G_OBJECT(w->page),"mv-world-mode",GINT_TO_POINTER(w->world?2:1));
     if(w->world_badge)gtk_label_set_text(GTK_LABEL(w->world_badge),
         w->world?"● ARIA OF SORROW":"● METROID: ZERO MISSION");
@@ -213,6 +255,7 @@ static void world_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
 static void area_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
 {
     WorldGrid *w=userdata;(void)pspec;
+    if(w->changing_world)return;
     guint area=gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
     if(area>=area_count(w))return;
     w->area=area;w->selected=FALSE;

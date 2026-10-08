@@ -70,10 +70,10 @@ for animation in idle run jump attack; do
 done
 ```
 
-To generate all four verified Soma animation states locally:
+To generate the four primary Soma states and both movement transitions locally:
 
 ```sh
-for animation in idle run jump attack; do
+for animation in idle run jump attack run_start run_stop; do
   python3 scripts/aos_soma_sprite.py \
     --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
     --animation "$animation" \
@@ -82,9 +82,10 @@ done
 ```
 
 The SDL3 room renderer discovers the ignored BMPs automatically and uses the
-source-defined per-frame durations for all four states of both characters. It
-keeps its colored rectangle fallback when files are absent. No extracted pixels
-are tracked.
+source-defined per-frame durations for all four primary states of both
+characters. Soma additionally uses the verified start/stop transitions around
+its run loop. It keeps its colored rectangle fallback when files are absent.
+No extracted pixels are tracked.
 
 Controls: arrow keys or `A`/`D` to move, `Space` to jump, `J` to attack,
 `Tab` to swap characters, `M` to change worlds, `F3` for the debug overlay,

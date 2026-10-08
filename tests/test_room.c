@@ -78,6 +78,48 @@ static void test_verified_animation_timing(void)
     assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_ATTACK, 14.f / 60.f) == 4);
     assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_ATTACK, 27.f / 60.f) == 8);
     assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_ATTACK, 48.f / 60.f) == 0);
+    assert(room_sprite_duration_ticks(CHARACTER_SOMA, SPRITE_RUN_START) == 8);
+    assert(room_sprite_duration_ticks(CHARACTER_SOMA, SPRITE_RUN_STOP) == 86);
+    assert(room_sprite_duration_ticks(CHARACTER_SOMA, SPRITE_ATTACK) == 48);
+    assert(room_sprite_duration_ticks(CHARACTER_SAMUS, SPRITE_ATTACK) == 8);
+}
+
+static void test_soma_movement_animation_transitions(void)
+{
+    assert(room_sprite_select_animation(CHARACTER_SAMUS, SPRITE_IDLE,
+                                        true, true, false, 0) == SPRITE_RUN);
+    assert(room_sprite_select_animation(CHARACTER_SOMA, SPRITE_IDLE,
+                                        true, true, false, 0) == SPRITE_RUN_START);
+    assert(room_sprite_select_animation(CHARACTER_SOMA, SPRITE_RUN_START,
+                                        true, true, false, 7.f / 60.f) == SPRITE_RUN_START);
+    assert(room_sprite_select_animation(CHARACTER_SOMA, SPRITE_RUN_START,
+                                        true, true, false, 8.f / 60.f) == SPRITE_RUN);
+    assert(room_sprite_select_animation(CHARACTER_SOMA, SPRITE_RUN,
+                                        false, true, false, 0) == SPRITE_RUN_STOP);
+    assert(room_sprite_select_animation(CHARACTER_SOMA, SPRITE_RUN_STOP,
+                                        false, true, false, 85.f / 60.f) == SPRITE_RUN_STOP);
+    assert(room_sprite_select_animation(CHARACTER_SOMA, SPRITE_RUN_STOP,
+                                        false, true, false, 86.f / 60.f) == SPRITE_IDLE);
+    assert(room_sprite_select_animation(CHARACTER_SOMA, SPRITE_RUN_STOP,
+                                        true, true, false, 1.f) == SPRITE_RUN_START);
+    assert(room_sprite_select_animation(CHARACTER_SOMA, SPRITE_IDLE,
+                                        false, true, true, 0) == SPRITE_ATTACK);
+}
+
+static void test_attack_uses_character_animation_duration(void)
+{
+    SessionState session;
+    RoomRuntime runtime;
+    RoomDefinition definition = test_room();
+    FusionInput input = {.attack_pressed = true};
+    session_init(&session);
+    session.active_character = CHARACTER_SOMA;
+    session.worlds[WORLD_METROID].target_hp = 0;
+    room_runtime_init(&runtime, &definition);
+    room_enter(&runtime, &session.worlds[WORLD_METROID]);
+    room_tick(&runtime, &session, &input, 0);
+    assert(runtime.attack_animation_time > 0.79f);
+    assert(runtime.attack_animation_time < 0.81f);
 }
 
 int main(void)
@@ -85,6 +127,8 @@ int main(void)
     test_switch_corrects_collision_deterministically();
     test_switch_refused_without_safe_position();
     test_verified_animation_timing();
+    test_soma_movement_animation_transitions();
+    test_attack_uses_character_animation_duration();
     puts("Collision and deterministic swap tests passed.");
     return 0;
 }

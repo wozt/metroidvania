@@ -57,9 +57,10 @@ ctest --test-dir build --output-on-failure
 SDL_VIDEODRIVER=dummy timeout 2s ./build/fusion_dev
 ```
 
-Normal and AddressSanitizer/UndefinedBehaviorSanitizer builds passed all 4 tests.
-Both ROMs were accepted. The SDL smoke test remained active for two seconds and
-was stopped by `timeout` with the expected status 124 and no runtime error.
+Normal and AddressSanitizer/UndefinedBehaviorSanitizer builds passed all 7 CTest
+targets, and all 60 Python tests passed. Both ROMs were accepted. The SDL smoke
+test remained active for two seconds and was stopped by `timeout` with the
+expected status 124 and no runtime error.
 
 Upstream build verification used local clones under `/tmp`, a locally built
 `agbcc`, and symlinks to the ignored ROM files. Both `make` invocations exited
@@ -218,6 +219,10 @@ frame tests and backend lifecycle tests before being enabled.
   palette bank 1; Soma's body palette matched OBJ palette bank 0. The runtime
   used for comparison remains research-only and is not integrated.
 - SDL asset discovery now uses the exact Soma idle/run/jump/attack durations.
-- Movement animations 26 (start) and 25 (stop) are identified but are not yet
-  represented by the prototype's simple idle/run state machine.
+- Movement animations 26 (start, 3 frames / 8 updates) and 25 (stop, 9 frames /
+  86 updates) are extracted and represented by one-shot transitions around the
+  continuous run loop.
+- Attack animation lifetime is independent from the target-hit flash. Soma now
+  displays its complete 48-update attack and Samus its complete 8-update attack,
+  including misses and attacks after the diagnostic target is destroyed.
 - Extracted pixels remain ignored and are never committed.

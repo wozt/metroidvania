@@ -36,6 +36,7 @@ typedef struct {
     bool on_ground;
     float damage_cooldown;
     float attack_flash;
+    float attack_animation_time;
     char notice[128];
     float notice_time;
 } RoomRuntime;

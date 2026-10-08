@@ -26,7 +26,9 @@ KNIFE_ANIMATION_DESCRIPTOR = 0x0822B6C0
 KNIFE_CELL_ANCHOR = (32, 47)
 SOMA_ANIMATIONS = {
     "idle": {"segments": ((0, None),), "frame_count": 4},
+    "run_start": {"segments": ((26, None),), "frame_count": 3},
     "run": {"segments": ((1, None),), "frame_count": 17},
+    "run_stop": {"segments": ((25, None),), "frame_count": 9},
     # A normal jump observed on level ground: takeoff, airborne, then landing.
     "jump": {"segments": ((50, None), (12, 2), (13, None)), "frame_count": 12},
     # The first body segment and knife animation both last exactly 27 updates.

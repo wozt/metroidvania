@@ -5,7 +5,15 @@
 #include <stdbool.h>
 #include "core/types.h"
 
-enum { SPRITE_IDLE, SPRITE_RUN, SPRITE_JUMP, SPRITE_ATTACK, SPRITE_STATE_COUNT };
+enum {
+    SPRITE_IDLE,
+    SPRITE_RUN,
+    SPRITE_JUMP,
+    SPRITE_ATTACK,
+    SPRITE_RUN_START,
+    SPRITE_RUN_STOP,
+    SPRITE_STATE_COUNT
+};
 enum { SPRITE_MAX_FRAMES = 17 };
 
 typedef struct {
@@ -16,6 +24,10 @@ typedef struct {
 
 void room_sprites_load(RoomSprites *sprites, SDL_Renderer *renderer);
 unsigned room_sprite_frame_index(CharacterKind character, int action, float elapsed);
+unsigned room_sprite_duration_ticks(CharacterKind character, int action);
+int room_sprite_select_animation(CharacterKind character, int current,
+                                 bool moving, bool on_ground, bool attacking,
+                                 float elapsed);
 bool room_sprites_draw(RoomSprites *sprites, SDL_Renderer *renderer,
                        CharacterKind character, int action, float elapsed,
                        bool facing_left, float center_x, float feet_y,

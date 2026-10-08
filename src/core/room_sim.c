@@ -134,6 +134,8 @@ void room_tick(RoomRuntime *runtime, SessionState *session,
     else if (direction > 0) runtime->facing_left = false;
     if (runtime->notice_time > 0) runtime->notice_time -= dt;
     if (runtime->attack_flash > 0) runtime->attack_flash -= dt;
+    if (runtime->attack_animation_time > 0)
+        runtime->attack_animation_time -= dt;
     if (runtime->damage_cooldown > 0) runtime->damage_cooldown -= dt;
 
     if (input->switch_character_pressed) {
@@ -145,6 +147,7 @@ void room_tick(RoomRuntime *runtime, SessionState *session,
                 set_notice(runtime, "Swap rejected: no safe position");
                 character = old;
             } else {
+                runtime->attack_animation_time = 0;
                 set_notice(runtime, "Character swapped without reloading the room");
             }
         } else {
@@ -175,6 +178,10 @@ void room_tick(RoomRuntime *runtime, SessionState *session,
     if (input->damage_pressed) {
         session_damage_active(session, 25);
         set_notice(runtime, "Diagnostic damage: -25 HP");
+    }
+    if (input->attack_pressed) {
+        runtime->attack_animation_time =
+            room_sprite_duration_ticks(character, SPRITE_ATTACK) / 60.f;
     }
     if (input->attack_pressed && world->target_hp > 0) {
         float actor_center = world->actor_x;
@@ -229,9 +236,10 @@ void room_render(RoomRuntime *runtime, const SessionState *session,
         SDL_RenderFillRect(renderer, &runtime->definition.target);
     }
     /* Visual-only animation; collision physics remain entirely unchanged. */
-    int animation = runtime->attack_flash > 0 ? SPRITE_ATTACK :
-        !runtime->on_ground ? SPRITE_JUMP :
-        fabsf(world->actor_vx) > 1.f ? SPRITE_RUN : SPRITE_IDLE;
+    int animation = room_sprite_select_animation(
+        character, runtime->animation_state, fabsf(world->actor_vx) > 1.f,
+        runtime->on_ground, runtime->attack_animation_time > 0,
+        runtime->animation_clock);
     if (runtime->animation_state != animation ||
         runtime->animation_character != character) {
         runtime->animation_state = animation;

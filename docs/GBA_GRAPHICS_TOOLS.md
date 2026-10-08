@@ -65,8 +65,9 @@ The pinned matching USA build establishes this exact chain:
   durations `30, 11, 11, 11` at 60 Hz;
 - animation 1 at `0x0822A7CC` is the 17-frame continuous run loop, with
   exact per-frame durations totaling 56 updates;
-- movement starts with animation 26 (`68, 69, 70`) and stops through animation
-  25; those transitions are verified but not yet modeled by the prototype;
+- movement starts with animation 26 (`68, 69, 70`) for `2, 3, 3` updates and
+  stops through animation 25 (`26, 65, 66, 67, 25, 26, 15, 12, 13`) for
+  `4, 5, 8, 7, 7, 9, 13, 14, 19` updates;
 - a normal level-ground jump combines animation 50, the first two frames of
   animation 12, and animation 13 into a 12-frame, 61-update sequence;
 - the standing knife attack combines body animation 4 (27 updates) with body
@@ -88,10 +89,11 @@ The knife is not part of Soma's 64x64 body cell. Its independent chain is:
 
 The extractor merges every body and knife boundary. This produces 11 complete
 attack images with durations `3, 2, 3, 6, 2, 3, 3, 5, 7, 7, 7`, totaling the
-original 48 updates. Generate all four states with:
+original 48 updates. Generate the four primary states and both movement
+transitions with:
 
 ```sh
-for animation in idle run jump attack; do
+for animation in idle run jump attack run_start run_stop; do
   python3 scripts/aos_soma_sprite.py \
     --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
     --animation "$animation" \
@@ -101,9 +103,10 @@ done
 
 Each animation uses the union of its opaque cell bounds, retaining the native
 relative anchor while removing identical transparent margins: 18x34 for idle,
-28x33 for run, 29x36 for jump, and 51x34 for the body-plus-knife attack. Live
-research captures independently confirmed that idle frames 12 and 13, run
-frame 99, and jump frame 118 each match all 2,048 corresponding OBJ VRAM bytes.
+28x33 for run, 29x36 for jump, 51x34 for the body-plus-knife attack, 20x34 for
+the run start, and 29x34 for the run stop. Live research captures independently
+confirmed that idle frames 12 and 13, run frame 99, and jump frame 118 each
+match all 2,048 corresponding OBJ VRAM bytes.
 Knife frame 12 also matches all 128 live VRAM bytes at OBJ tile 818, and its 32
 palette bytes match OBJ palette bank 1. Soma's body palette matches OBJ palette
 bank 0. The research runtime is not part of this repository or its runtime;

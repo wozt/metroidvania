@@ -3,11 +3,13 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char *const names[] = {"idle", "run", "jump", "attack"};
+static const char *const names[] = {
+    "idle", "run", "jump", "attack", "run_start", "run_stop"
+};
 static const char *const actors[] = {"samus", "soma"};
 static const unsigned frame_counts[FUSION_CHARACTER_COUNT][SPRITE_STATE_COUNT] = {
-    [CHARACTER_SAMUS] = {4, 10, 8, 3},
-    [CHARACTER_SOMA] = {4, 17, 12, 11},
+    [CHARACTER_SAMUS] = {4, 10, 8, 3, 0, 0},
+    [CHARACTER_SOMA] = {4, 17, 12, 11, 3, 9},
 };
 /* Verified durations use the games' native 60 Hz update unit. */
 static const unsigned char frame_durations[FUSION_CHARACTER_COUNT]
@@ -24,20 +26,33 @@ static const unsigned char frame_durations[FUSION_CHARACTER_COUNT]
         [SPRITE_RUN] = {4, 3, 4, 3, 4, 3, 4, 3, 4, 3, 4, 2, 2, 3, 3, 4, 3},
         [SPRITE_JUMP] = {5, 5, 7, 7, 2, 5, 5, 5, 5, 3, 5, 7},
         [SPRITE_ATTACK] = {3, 2, 3, 6, 2, 3, 3, 5, 7, 7, 7},
+        [SPRITE_RUN_START] = {2, 3, 3},
+        [SPRITE_RUN_STOP] = {4, 5, 8, 7, 7, 9, 13, 14, 19},
     },
 };
+
+unsigned room_sprite_duration_ticks(CharacterKind character, int action)
+{
+    unsigned cycle = 0;
+    if ((unsigned)character >= FUSION_CHARACTER_COUNT ||
+        action < 0 || action >= SPRITE_STATE_COUNT)
+        return 0;
+    for (unsigned i = 0; i < frame_counts[character][action]; ++i)
+        cycle += frame_durations[character][action][i];
+    return cycle;
+}
 
 unsigned room_sprite_frame_index(CharacterKind character, int action, float elapsed)
 {
     unsigned count;
-    unsigned cycle = 0;
+    unsigned cycle;
     unsigned tick;
     if ((unsigned)character >= FUSION_CHARACTER_COUNT ||
         action < 0 || action >= SPRITE_STATE_COUNT)
         return 0;
     count = frame_counts[character][action];
-    for (unsigned i = 0; i < count; ++i)
-        cycle += frame_durations[character][action][i];
+    cycle = room_sprite_duration_ticks(character, action);
+    if (!count || !cycle) return 0;
     /* Avoid losing exact frame boundaries to binary float representation. */
     tick = (unsigned)(elapsed > 0 ? elapsed * 60.f + 0.0001f : 0) % cycle;
     for (unsigned i = 0; i < count; ++i) {
@@ -46,6 +61,29 @@ unsigned room_sprite_frame_index(CharacterKind character, int action, float elap
         tick -= duration;
     }
     return 0;
+}
+
+int room_sprite_select_animation(CharacterKind character, int current,
+                                 bool moving, bool on_ground, bool attacking,
+                                 float elapsed)
+{
+    unsigned elapsed_ticks = (unsigned)(elapsed > 0 ? elapsed * 60.f + 0.0001f : 0);
+    if (attacking) return SPRITE_ATTACK;
+    if (!on_ground) return SPRITE_JUMP;
+    if (character != CHARACTER_SOMA) return moving ? SPRITE_RUN : SPRITE_IDLE;
+    if (moving) {
+        if (current == SPRITE_RUN) return SPRITE_RUN;
+        if (current == SPRITE_RUN_START &&
+            elapsed_ticks < room_sprite_duration_ticks(character, SPRITE_RUN_START))
+            return SPRITE_RUN_START;
+        return current == SPRITE_RUN_START ? SPRITE_RUN : SPRITE_RUN_START;
+    }
+    if (current == SPRITE_RUN || current == SPRITE_RUN_START)
+        return SPRITE_RUN_STOP;
+    if (current == SPRITE_RUN_STOP &&
+        elapsed_ticks < room_sprite_duration_ticks(character, SPRITE_RUN_STOP))
+        return SPRITE_RUN_STOP;
+    return SPRITE_IDLE;
 }
 
 void room_sprites_close(RoomSprites *sprites)

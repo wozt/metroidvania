@@ -178,3 +178,10 @@ frame tests and backend lifecycle tests before being enabled.
   must be created locally from personally supplied game data.
 - A colored rectangle remains the explicit fallback when assets are absent.
 - Next: implement verified ROM-specific palette/tile/OAM extraction for both games.
+
+## Patch 011 - local GBA 4bpp inspector
+
+- Added a SHA-1-gated raw 4bpp/BGR555 tile viewer; output is local and ignored.
+- Added synthetic decoding and bounds tests. No ROM assets are committed.
+- Tile grids are **not** assembled character sprites: OAM, animation and graphics
+  pointers still need ROM-specific interpretation.

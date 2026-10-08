@@ -148,3 +148,13 @@ frame tests and backend lifecycle tests before being enabled.
 - This tests the full host-side video path, not authentic game execution.
 - Neither `gbarecomp` nor unlicensed Aria frontend code is included.
 - Next milestone: a legally compatible authentic execution driver.
+
+## Patch 008 - transactional save loading
+
+- F9 now validates into a candidate session before leaving the active backend.
+- Invalid, truncated, or trailing save data leaves the live session unchanged.
+- V1 payload validation covers version, character health, and target HP invariants.
+- Core regression tests cover corrupted files and unmodified caller state.
+- Existing binary save v1 format is retained. No ROM or proprietary data added.
+- Note: backend entry failure currently aborts the session; rollback on entry
+  failure remains a future lifecycle enhancement.

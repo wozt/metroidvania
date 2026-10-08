@@ -114,14 +114,19 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Save failed: %s\n", error);
         }
         if (input.load_pressed) {
-            WorldKind old_world = session.active_world;
-            active->ops->leave_world(active, &session);
-            if (!load_session("fusion-save-v1.bin", &session, error, sizeof(error))) {
+            SessionState candidate;
+            if (!load_session("fusion-save-v1.bin", &candidate, error, sizeof(error))) {
                 fprintf(stderr, "Load failed: %s\n", error);
-                session.active_world = old_world;
+            } else {
+                /* Only commit after the file has passed validation. */
+                active->ops->leave_world(active, &session);
+                session = candidate;
+                active = &backends[session.active_world];
+                if (!active->ops->enter_world(active, &session)) {
+                    fprintf(stderr, "Cannot enter restored world: %s\n", active->name);
+                    running = false;
+                }
             }
-            active = &backends[session.active_world];
-            active->ops->enter_world(active, &session);
         }
         if (input.switch_world_pressed) {
             active->ops->leave_world(active, &session);

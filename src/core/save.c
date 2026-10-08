@@ -61,10 +61,33 @@ bool load_session(const char *path, SessionState *session,
         fclose(file);
         return fail(error, error_size, "truncated save file");
     }
-    fclose(file);
-    if (loaded.active_world >= FUSION_WORLD_COUNT ||
+    /* Reject unexpected trailing bytes (including partial extra records). */
+    if (fgetc(file) != EOF || ferror(file)) {
+        fclose(file);
+        return fail(error, error_size, "trailing or unreadable save data");
+    }
+    if (fclose(file) != 0)
+        return fail(error, error_size, "save close failed");
+    if (loaded.version != FUSION_SAVE_VERSION ||
+        loaded.active_world >= FUSION_WORLD_COUNT ||
         loaded.active_character >= FUSION_CHARACTER_COUNT)
         return fail(error, error_size, "invalid save values");
+    for (size_t i = 0; i < FUSION_CHARACTER_COUNT; ++i) {
+        const CharacterState *c = &loaded.characters[i];
+        if (c->max_hp <= 0 || c->hp < 0 || c->hp > c->max_hp ||
+            c->available != (c->hp > 0))
+            return fail(error, error_size, "invalid character health");
+    }
+    for (size_t i = 0; i < FUSION_WORLD_COUNT; ++i) {
+        const WorldState *w = &loaded.worlds[i];
+        if (w->target_max_hp <= 0 || w->target_hp < 0 ||
+            w->target_hp > w->target_max_hp)
+            return fail(error, error_size, "invalid world target health");
+    }
+    if (!loaded.characters[loaded.active_character].available &&
+        (loaded.characters[CHARACTER_SAMUS].available ||
+         loaded.characters[CHARACTER_SOMA].available))
+        return fail(error, error_size, "active character unavailable");
     *session = loaded;
     return true;
 }

@@ -49,8 +49,38 @@ static void test_world_persistence_and_save(void)
     unlink(path);
 }
 
+static void test_corrupt_save_keeps_session(void)
+{
+    const char *path = "/tmp/fusion-core-test-corrupt.bin";
+    SessionState original, out;
+    char error[128];
+    FILE *file;
+    session_init(&original);
+    original.worlds[WORLD_METROID].target_hp = 27;
+    assert(save_session(path, &original, error, sizeof(error)));
+
+    /* A formerly accepted file with extra data is now rejected. */
+    file = fopen(path, "ab");
+    assert(file);
+    assert(fputc('X', file) != EOF);
+    assert(fclose(file) == 0);
+    session_init(&out);
+    out.worlds[WORLD_METROID].target_hp = 13;
+    assert(!load_session(path, &out, error, sizeof(error)));
+    assert(out.worlds[WORLD_METROID].target_hp == 13);
+    unlink(path);
+
+    /* Invalid payload must not mutate the caller. */
+    original.characters[CHARACTER_SOMA].hp = -7;
+    assert(save_session(path, &original, error, sizeof(error)));
+    assert(!load_session(path, &out, error, sizeof(error)));
+    assert(out.worlds[WORLD_METROID].target_hp == 13);
+    unlink(path);
+}
+
 int main(void)
 {
+    test_corrupt_save_keeps_session();
     test_separate_health_and_ko();
     test_character_switch_preserves_world();
     test_world_persistence_and_save();

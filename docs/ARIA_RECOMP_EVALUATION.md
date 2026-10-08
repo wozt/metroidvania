@@ -21,13 +21,12 @@ authentic.
 
 The `gbarecomp` license restricts use to noncommercial purposes. In addition,
 the root `ariaOfSorrow-recomp` checkout has no license file covering its own
-host code. These are product-level constraints, not build details. The project
-owner has confirmed a noncommercial intent and selected PolyForm Noncommercial
-1.0.0 for project-authored code. This matches the `gbarecomp` license. The root
-host code remains unavailable for reuse, so integration must be implemented
-independently around `gbarecomp`, the MIT-licensed `cvaos` data, and locally
-generated ROM-derived output. The complete dependency tree and notices must
-still be reviewed before distribution.
+host code. These are product-level constraints, not build details. The project has since selected GPL-3.0-only for original project-authored code.
+The PolyForm runtime cannot be integrated into a combined GPLv3-only
+application under the presently documented license. This AOT reproduction is
+research evidence only. The unlicensed root host code remains unavailable for
+reuse. A GPL-compatible alternative or separately granted permission is
+required before integration, alongside a complete dependency and notices audit.
 
 ## Reproduction environment
 
@@ -119,8 +118,10 @@ and packaging checks. It does not replace a complete gameplay playthrough.
 
 ## Integration implications
 
-The AOT route is technically viable enough for an isolated backend proof of
-concept. Integration still requires all of the following:
+The AOT route was technically reproduced in isolation, but its current
+PolyForm runtime is NOT authorized for integration into this GPLv3-only project.
+If a compatible alternative or additional permission is obtained, integration
+would still require all of the following:
 
 1. a project-owned adapter that does not copy the unlicensed root host code;
 2. a reproducible external generation pipeline that never commits ROM-derived

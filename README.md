@@ -75,8 +75,10 @@ of any future patch or distributable package must be reviewed separately.
 
 ## License
 
-Project-authored code and documentation are licensed under PolyForm
-Noncommercial 1.0.0; see [`LICENSE`](LICENSE). Personal, hobby, research, and
-other noncommercial uses are permitted. Commercial use is not permitted.
-Third-party submodules and system libraries retain their own licenses. No
-license in this repository grants rights to ROMs or proprietary game content.
+Original project-authored code and documentation are licensed under
+**GNU GPL v3.0 only** (`GPL-3.0-only`); see [`LICENSE`](LICENSE).
+GPLv3 permits commercial use subject to its conditions. Third-party code retains
+its own license terms. In particular, PolyForm-licensed `gbarecomp` is a
+**research-only reference**, not a permitted GPLv3 runtime dependency at
+present. See [`LICENSES.md`](LICENSES.md) for integration restrictions.
+No license here grants rights to ROMs or proprietary game content.

@@ -1,42 +1,51 @@
-# Licenses and rights
+# Licenses and third-party boundaries
 
-## Code in this repository
+## Project-owned files
 
-Project-authored code and documentation are licensed under PolyForm
-Noncommercial 1.0.0; see `LICENSE`. This matches the license of the selected
-`gbarecomp` runtime and permits the project's intended personal, research,
-experimental, and hobby use. It does not permit commercial use and does not
-relicense any dependency, ROM-derived output, or proprietary game content.
+Original project-authored code and documentation are licensed under
+**GNU General Public License version 3.0 only** (`GPL-3.0-only`). See `LICENSE`.
+Copyright (c) 2026 wozt and contributors, for their respective contributions.
+This change applies only to material the project contributors are authorized
+to license. Previously distributed copies retain their earlier license grants.
 
-## Submodules
+## Reviewed dependencies
 
-- `third_party/mzm`: MIT license, copyright YohannDR 2025; see its `LICENSE`
-  file at the pinned revision.
-- `third_party/cvaos`: MIT license, copyright testyourmine 2026; see its
-  `LICENSE` file at the pinned revision.
-- SDL3: used as a system library; refer to the zlib license shipped with the
-  installed version.
+- `third_party/mzm`: MIT; retain its original copyright and license.
+- `third_party/cvaos`: MIT; retain its original copyright and license.
+- SDL3 system library: zlib license; retain applicable notices.
 
-A decompilation license covers code published by its authors, not Nintendo or
-Konami ROMs, graphics, audio, or other copyrighted data. This repository grants
-no rights to those works.
+These files are not relicensed as GPL simply by being referenced or shipped
+separately. MIT-licensed code may be incorporated under GPLv3 requirements
+while preserving MIT notices.
 
-## References not integrated
+## Research-only / blocked integrations
 
-The audit reproduced `ariaOfSorrow-recomp`. Its root checkout has no license
-file covering its host code, while its `gbarecomp` runtime uses the PolyForm
-Noncommercial 1.0.0 license. The audit also identified
-`metroid-zero-mission-pc-edition`, a VBA-M derivative under GPLv2 with additional
-components. Neither is a dependency of this repository. Any integration would
-require file-by-file review and a license compatibility decision.
+- `sergiomanzur/gbarecomp`: audited revision uses **PolyForm Noncommercial
+  1.0.0**. Its restriction on commercial purposes is incompatible with
+  distributing a combined GPLv3-only program under GPL terms. **Do not copy,
+  compile into, link with, or distribute its runtime as part of this project**
+  unless a compatible license or explicit sufficient permission is obtained.
+  Standalone experiments must remain separate and respect upstream terms.
+- `sergiomanzur/ariaOfSorrow-recomp`: root frontend has no confirmed license
+  authorizing reuse; do not import its unlicensed host implementation.
+- `metroid-zero-mission-pc-edition`: emulator-based derivative; not a dependency.
+  Requires separate file-by-file license review before any contemplated reuse.
 
-The project owner has confirmed a noncommercial project intent and selected the
-same PolyForm Noncommercial 1.0.0 terms for project-authored code. This resolves
-the direct license mismatch with `gbarecomp`. It does not grant permission to
-copy the unlicensed `ariaOfSorrow-recomp` root host code. Integration must use
-our own adapter around the licensed `gbarecomp` and MIT-licensed `cvaos`
-components, while preserving all third-party notices.
+Technical research results in `docs/` are not a license grant. For an authentic
+Aria integration, prefer independently written GPL-compatible hardware/runtime
+abstractions, appropriately licensed source ports, or ask the relevant authors
+for compatible licensing. Review any generated output and other transitive
+components separately.
 
-Authoritative references:
+## Proprietary game content
 
-- <https://polyformproject.org/licenses/noncommercial/1.0.0/>.
+Users must provide their own legitimately obtained supported ROM files locally.
+No Nintendo or Konami ROMs, graphics, audio, level data, extracted binaries,
+BIOS images, or proprietary game files may be committed or distributed.
+Neither this GPL license nor upstream source licenses grant rights to those
+works. Distribution of a future patch or game binary requires separate review.
+
+## Upstream references
+
+- <https://www.gnu.org/licenses/gpl-3.0.html>
+- <https://polyformproject.org/licenses/noncommercial/1.0.0/>

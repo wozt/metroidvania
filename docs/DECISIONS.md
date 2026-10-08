@@ -54,3 +54,13 @@ project-authored code and documentation use PolyForm Noncommercial 1.0.0. This
 matches `gbarecomp` and the project's personal, hobby, research, and
 noncommercial intent. Third-party code and generated ROM-derived output retain
 their own terms and are not relicensed.
+
+## D-009 - GPL-3.0-only migration (supersedes D-008)
+
+Decision: license original project-authored code and documentation under
+GPL-3.0-only instead of PolyForm Noncommercial. Historical D-005/D-008
+explain earlier decisions but no longer authorize integrating `gbarecomp`.
+The PolyForm runtime is incompatible with a combined GPLv3-only release
+without a separate compatible grant. Do not integrate it. The unlicensed
+Aria host frontend remains excluded. Preserve all third-party licenses, and
+require user-supplied ROMs without redistribution of copyrighted game data.

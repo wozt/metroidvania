@@ -101,11 +101,11 @@ or tracked by this repository.
   so the clean-room BIOS generation step is mandatory for the zero-fallback
   result.
 - Its root checkout has no license file covering the host code. It depends on
-  `gbarecomp` under PolyForm Noncommercial 1.0.0, plus SDL2 and C++20. Adoption
-  imposes a noncommercial constraint accepted by the project owner and now
-  matched by this project's license. The unlicensed root host code remains
-  excluded; integration must use a project-owned adapter and still needs a
-  complete dependency and notice review.
+  `gbarecomp` under PolyForm Noncommercial 1.0.0, plus SDL2 and C++20. The
+  current project's GPL-3.0-only license does **not** match this noncommercial
+  runtime: incorporating it into a combined GPLv3-only deliverable is blocked
+  pending a compatible grant or a separate GPL-compatible implementation.
+  Unlicensed root frontend code remains excluded.
 - Full commands, revisions, counters, limitations, and integration gates are
   recorded in [`ARIA_RECOMP_EVALUATION.md`](ARIA_RECOMP_EVALUATION.md).
 

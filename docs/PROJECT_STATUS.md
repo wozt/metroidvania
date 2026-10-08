@@ -9,7 +9,7 @@ backend at a time. Personal USA ROMs are mandatory and remain local. Upstream
 sources are isolated as submodules. Linux/SDL3 is the initial target; physical
 GBA support is a later, unproven feasibility study. All project commits,
 documentation, comments, UI text, and diagnostics are written in English.
-Project-authored code and documentation use PolyForm Noncommercial 1.0.0.
+Original project-authored code and documentation use GPL-3.0-only. PolyForm-licensed `gbarecomp` is research-only and blocked from integration.
 
 ## Actual state
 
@@ -24,7 +24,7 @@ Project-authored code and documentation use PolyForm Noncommercial 1.0.0.
 | HP, KO, and persistence | Done | Core tests and version-1 save data |
 | Collision-safe character swap | Done | Deterministic offsets and rejection test |
 | HUD, debug, and synergy | Partial | Dual HP and overlay; synergy explicitly a placeholder |
-| Authentic Aria engine | Feasibility reproduced, not integrated | Standalone AOT Linux runtime: 36/36 tests, nonempty framebuffer, zero fallback after clean-room BIOS recompilation; project license now matches `gbarecomp`; unlicensed root host code excluded |
+| Authentic Aria engine | Feasibility reproduced, not integrated | Standalone AOT Linux runtime: 36/36 tests, nonempty framebuffer, zero fallback after clean-room BIOS recompilation; PolyForm runtime incompatible with current GPLv3-only policy; unlicensed root host code excluded |
 | Authentic MZM engine | Not started | No runtime strategy selected |
 | Original assets, maps, and audio | Not started | No extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
@@ -82,9 +82,9 @@ The current backends are integration boundaries and test doubles.
 
 ## Risks and next actions
 
-1. **P0 - Product blocker:** build a project-owned adapter exposing one-frame
-   stepping, input, framebuffer, reset, and shutdown behind an isolated Aria
-   backend proof of concept without copying the unlicensed root host code.
+1. **P0 - Product blocker:** identify a GPLv3-compatible Aria execution
+   strategy before implementing a project-owned adapter. Do not incorporate
+   PolyForm-licensed `gbarecomp` or unlicensed root frontend code.
 2. **P0 - Technical:** select source HAL or recompilation for MZM after a proof
    of concept.
 3. **P1 - State:** inventory EWRAM/IWRAM, room globals, and snapshot boundaries
@@ -128,3 +128,14 @@ frame tests and backend lifecycle tests before being enabled.
 - GPLv3 licensing remains a separate required audit: do not incorporate
   PolyForm Noncommercial code or unlicensed frontend files.
 - Next: a GPL-compatible driver producing authentic user-ROM frames.
+
+## GPLv3 license migration
+
+- Original project-authored material moved to GPL-3.0-only; prior PolyForm
+  grants for previous recipients are not revoked.
+- MIT submodules remain unchanged, with their original notices.
+- The earlier PolyForm-based Aria integration plan is blocked pending a
+  separately licensed runtime, sufficient permission, or an independent
+  GPL-compatible solution. Earlier AOT measurements remain research evidence.
+- No gameplay source, extracted game content, or build implementation changed.
+- Run the existing project build/tests after applying this documentation patch.

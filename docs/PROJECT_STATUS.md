@@ -16,6 +16,23 @@ Last updated: **2026-10-08**.
 - All mGBA proof modes remain available as diagnostic tools. Legacy authentic
   interactive world switching is still unrestricted **research only**.
 
+
+## Patch 0037 - decomp-driven asset provenance and native sprite preview
+
+- Local-only importer SHA-1 checks both exact USA ROMs and uses each pinned
+  decompilation's database offsets and sizes to extract identified **raw**
+  regions; output paths are validated and symlink redirects refused.
+- Reuses the project's verified Power Suit/Soma OAM decoders to render real
+  animation BMPs, including Soma's composited knife during attack.
+- Creates an ignored provenance catalog identifying original ROM offsets,
+  raw/undecoded status, decoded sprite frame durations, and decomp reference
+  source paths for maps/sprites/audio/cutscenes.
+- GTK4 editor has an Original sprites tab to view the real frames.
+- No claim that full room backgrounds, music, enemies/stats, world maps,
+  cutscenes or game logic have already been converted; both source-decomp
+  databases have different coverage and raw binary is not an editable room.
+- The existing local-only ROM and extracted asset exclusion rules remain.
+
 ## Fixed vision and decisions
 
 The project targets a real crossover with two distinct engines and one active

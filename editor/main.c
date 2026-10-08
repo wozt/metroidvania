@@ -9,6 +9,11 @@ typedef struct {
     FusionWorldGraph graph;
     FusionTilemap tilemaps[2];
     GtkWidget *tile_canvas;
+    GtkWidget *asset_actor;
+    GtkWidget *asset_action;
+    GtkWidget *asset_frame;
+    GtkWidget *asset_picture;
+    GtkWidget *asset_status;
     GtkWidget *tile_status;
     int selected_world, selected_layer, selected_brush;
     double tile_drag_x, tile_drag_y;
@@ -309,6 +314,130 @@ static void build_tile_tab(Editor *ed, GtkWidget *tabs)
     gtk_notebook_append_page(GTK_NOTEBOOK(tabs), root, gtk_label_new("Tile painter"));
 }
 
+
+/* Preview of local, ROM-derived animation BMPs; never writes proprietary data. */
+static const char *const asset_actor_names[] = {
+    "Samus", "Soma", "Metroid native reference", "Aria native reference", NULL
+};
+static const char *const asset_animation_names[] = {
+    "idle", "run", "jump", "attack", "run_start", "run_stop", NULL
+};
+static const unsigned asset_frame_counts[2][6] = {
+    {4, 10, 8, 3, 0, 0}, {4, 17, 12, 11, 3, 9}
+};
+
+static void asset_update_preview(Editor *ed)
+{
+    guint actor = gtk_drop_down_get_selected(GTK_DROP_DOWN(ed->asset_actor));
+    guint action = gtk_drop_down_get_selected(GTK_DROP_DOWN(ed->asset_action));
+    unsigned count, frame;
+    char path[256];
+    char message[360];
+    if (actor >= 4) return;
+    if (actor >= 2) {
+        const char *reference = actor == 2
+            ? "captures/arrival-preview/mzm-after.bmp"
+            : "captures/arrival-preview/aria-after.bmp";
+        if (g_file_test(reference, G_FILE_TEST_IS_REGULAR)) {
+            gtk_picture_set_filename(GTK_PICTURE(ed->asset_picture), reference);
+            snprintf(message, sizeof(message),
+                     "REAL engine framebuffer: %s | reference frame, NOT editable map data",
+                     reference);
+        } else {
+            gtk_picture_set_paintable(GTK_PICTURE(ed->asset_picture), NULL);
+            snprintf(message, sizeof(message),
+                     "No native room capture: run ./build/fusion_dev --authentic-arrival-preview");
+        }
+        gtk_label_set_text(GTK_LABEL(ed->asset_status), message);
+        return;
+    }
+    if (action >= 6) return;
+    count = asset_frame_counts[actor][action];
+    if (!count) {
+        gtk_picture_set_paintable(GTK_PICTURE(ed->asset_picture), NULL);
+        gtk_label_set_text(GTK_LABEL(ed->asset_status),
+                           "Animation not available for this character");
+        return;
+    }
+    gtk_spin_button_set_range(GTK_SPIN_BUTTON(ed->asset_frame), 0, count - 1);
+    frame = (unsigned)gtk_spin_button_get_value_as_int(
+        GTK_SPIN_BUTTON(ed->asset_frame));
+    snprintf(path, sizeof(path), "assets/extracted/sprites/%s/%s_%u.bmp",
+             actor == 0 ? "samus" : "soma", asset_animation_names[action], frame);
+    if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
+        gtk_picture_set_filename(GTK_PICTURE(ed->asset_picture), path);
+        snprintf(message, sizeof(message),
+                 "REAL ROM sprite: %s | frame %u/%u | source asset, not a dummy rectangle",
+                 path, frame + 1, count);
+    } else {
+        gtk_picture_set_paintable(GTK_PICTURE(ed->asset_picture), NULL);
+        snprintf(message, sizeof(message),
+                 "Sprite not extracted: %s | run python3 scripts/import_game_assets.py --scope sprites",
+                 path);
+    }
+    gtk_label_set_text(GTK_LABEL(ed->asset_status), message);
+}
+
+static void asset_dropdown_changed(GObject *object, GParamSpec *pspec,
+                                   gpointer userdata)
+{
+    (void)object;
+    (void)pspec;
+    asset_update_preview(userdata);
+}
+
+static void asset_frame_changed(GtkSpinButton *button, gpointer userdata)
+{
+    (void)button;
+    asset_update_preview(userdata);
+}
+
+static void asset_refresh_clicked(GtkButton *button, gpointer userdata)
+{
+    (void)button;
+    asset_update_preview(userdata);
+}
+
+static void build_assets_tab(Editor *ed, GtkWidget *tabs)
+{
+    GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    GtkWidget *bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *refresh = gtk_button_new_with_label("Refresh local sprites");
+    GtkWidget *scroll = gtk_scrolled_window_new();
+    ed->asset_actor = gtk_drop_down_new_from_strings(asset_actor_names);
+    ed->asset_action = gtk_drop_down_new_from_strings(asset_animation_names);
+    ed->asset_frame = gtk_spin_button_new_with_range(0, 16, 1);
+    ed->asset_picture = gtk_picture_new();
+    ed->asset_status = gtk_label_new("Load ROM-extracted BMPs using the local importer");
+    gtk_picture_set_can_shrink(GTK_PICTURE(ed->asset_picture), TRUE);
+    gtk_widget_set_size_request(ed->asset_picture, 480, 370);
+    gtk_widget_set_hexpand(ed->asset_picture, TRUE);
+    gtk_widget_set_vexpand(ed->asset_picture, TRUE);
+    gtk_box_append(GTK_BOX(bar), gtk_label_new("Character:"));
+    gtk_box_append(GTK_BOX(bar), ed->asset_actor);
+    gtk_box_append(GTK_BOX(bar), gtk_label_new("Animation:"));
+    gtk_box_append(GTK_BOX(bar), ed->asset_action);
+    gtk_box_append(GTK_BOX(bar), gtk_label_new("Frame:"));
+    gtk_box_append(GTK_BOX(bar), ed->asset_frame);
+    gtk_box_append(GTK_BOX(bar), refresh);
+    gtk_box_append(GTK_BOX(root), bar);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), ed->asset_picture);
+    gtk_widget_set_vexpand(scroll, TRUE);
+    gtk_box_append(GTK_BOX(root), scroll);
+    gtk_box_append(GTK_BOX(root), ed->asset_status);
+    gtk_box_append(GTK_BOX(root), gtk_label_new(
+        "Extracted animation viewer: room, enemy, item, music and cutscene decoding still pending"));
+    g_signal_connect(ed->asset_actor, "notify::selected",
+                     G_CALLBACK(asset_dropdown_changed), ed);
+    g_signal_connect(ed->asset_action, "notify::selected",
+                     G_CALLBACK(asset_dropdown_changed), ed);
+    g_signal_connect(ed->asset_frame, "value-changed",
+                     G_CALLBACK(asset_frame_changed), ed);
+    g_signal_connect(refresh, "clicked", G_CALLBACK(asset_refresh_clicked), ed);
+    gtk_notebook_append_page(GTK_NOTEBOOK(tabs), root, gtk_label_new("ROM visuals"));
+    asset_update_preview(ed);
+}
+
 static void activate(GtkApplication *app, gpointer user_data)
 {
     Editor *ed = user_data;
@@ -354,6 +483,7 @@ static void activate(GtkApplication *app, gpointer user_data)
     ed->status = gtk_label_new("Drag room nodes to arrange; this is not a tilemap editor yet.");
     gtk_box_append(GTK_BOX(graph_tab), ed->status);
     build_tile_tab(ed, tabs);
+    build_assets_tab(ed, tabs);
     gtk_window_present(GTK_WINDOW(window));
 }
 

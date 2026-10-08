@@ -181,6 +181,9 @@ if(BUILD_TESTING)
     add_test(NAME verify_roms_python
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
                 python3 -m unittest tests.test_verify_roms)
+    add_test(NAME asset_import_contract
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+                python3 -m unittest tests.test_asset_import)
     add_test(NAME no_proprietary_files
         COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/check_no_proprietary.py
                 ${CMAKE_SOURCE_DIR})

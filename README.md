@@ -49,6 +49,43 @@ portals; terrain tiles are **visual only**, and these are project-authored
 palette colors, **not** extracted original sprites or real game rooms.
 Restart the game after saving to view edits. GTK4 remains optional at build.
 
+
+## Patch 0037 - verified local ROM asset import (first usable visuals)
+
+The two original ROMs contain many more resources than the original character
+animations. Import **only your own verified USA ROMs** into ignored local files:
+
+```sh
+python3 scripts/import_game_assets.py --scope all
+./build/fusion_map_editor
+./build/fusion_dev
+```
+
+The importer uses the **pinned decompilation `database.json` offsets** to copy
+known raw regions into `assets/extracted/raw/metroid/` and
+`assets/extracted/raw/aria/` and writes a private JSON provenance catalog at
+`assets/extracted/catalog.json`. It also calls the project's existing verified
+sprite decoders for Samus (idle/run/jump/attack) and Soma (six animations,
+including attack/knife). The GTK4 **ROM visuals** tab displays those
+real, locally decoded frames. It can also show the two native engine frame
+references created by `./build/fusion_dev --authentic-arrival-preview` (these
+are 240x160 framebuffer previews, NOT imported or editable room data). The PC demo rooms automatically display the
+Samus/Soma BMPs instead of placeholder character boxes where extraction
+succeeds. The maps' colored tile placeholders remain for now.
+
+**A raw binary block is not an editable visual game asset.** The current
+Metroid decomp database describes many more raw regions than the sparse Aria
+database. Neither database supplies an end-to-end visual exporter for **every
+original room, enemy/object, stat, track, sound effect, world map or cutscene**.
+`catalog.json` distinguishes decoded BMP frames from raw/unknown blocks, and
+also indexes relevant decomp source paths. This patch does **not** claim to
+have decoded all original content or created a completed game editor. Those
+are the following milestones, using the catalog as the entry point.
+
+**Do not stage** `assets/extracted/`, ROMs, generated sounds or textures. They
+are git-ignored and must stay local. The code and documentation are safe to
+commit; distribution of extracted copyrighted assets is not authorized here.
+
 ## Honest status
 
 The default executable is an **SDL3 integration harness**, not yet a native

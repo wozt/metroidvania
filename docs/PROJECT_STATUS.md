@@ -33,6 +33,15 @@ Last updated: **2026-10-08**.
   databases have different coverage and raw binary is not an editable room.
 - The existing local-only ROM and extracted asset exclusion rules remain.
 
+## Patch 0039 - first original MZM BG1/BG2 decoder
+
+- Decodes original MZM two-pass RLE and LZ77 4bpp tiles using pinned
+  decomp descriptors; previews real Brinstar 33 BG1/BG2 bitmaps.
+- Adds GTK4 native room image previews and a standalone SDL3 bitmap
+  viewer. This is a partial renderer; common tiles, BG0/BG3, NPCs,
+  and collision semantics remain outstanding.
+- Private derived pixels remain under ignored assets/extracted/.
+
 ## Fixed vision and decisions
 
 The project targets a real crossover with two distinct engines and one active

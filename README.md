@@ -95,6 +95,15 @@ symbols, and default spritesets. The generated catalog is private and ignored.
 This does **not** decode room tile pixels, collision layers, enemies, or
 sounds; Aria native room structure is still under research.
 
+## Patch 0039 — real MZM room graphics (partial)
+
+Run `python3 scripts/mzm_room_render.py --area Brinstar --room 33`
+after `python3 scripts/import_game_assets.py --scope all`.
+Open the **Native rooms** GTK4 tab or use `./build/fusion_mzm_room_viewer`
+with the generated `brinstar_033_bg1.bmp`. This reconstructs genuine
+BG1/BG2 metatile graphics, but not common tiles, BG0/BG3, or objects.
+See `docs/RENDER_MZM_ROOMS.md`. All outputs are private.
+
 ## Honest status
 
 The default executable is an **SDL3 integration harness**, not yet a native

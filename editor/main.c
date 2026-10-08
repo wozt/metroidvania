@@ -16,6 +16,7 @@ typedef struct {
     GtkWidget *asset_status;
     GtkWidget *tile_status;
     GtkWidget *native_details;
+    GtkWidget *native_preview;
     int selected_world, selected_layer, selected_brush;
     double tile_drag_x, tile_drag_y;
     const char *path;
@@ -449,6 +450,12 @@ static void native_row_selected(GtkListBox *list, GtkListBoxRow *row, gpointer u
     if (!row || !ed->native_details) return;
     details = g_object_get_data(G_OBJECT(row), "native-room-details");
     if (details) gtk_label_set_text(GTK_LABEL(ed->native_details), details);
+    if (ed->native_preview) {
+        const char *preview_path = g_object_get_data(G_OBJECT(row), "native-room-preview");
+        if (preview_path && g_file_test(preview_path, G_FILE_TEST_IS_REGULAR))
+            gtk_picture_set_filename(GTK_PICTURE(ed->native_preview), preview_path);
+        else gtk_picture_set_paintable(GTK_PICTURE(ed->native_preview), NULL);
+    }
 }
 
 static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
@@ -456,6 +463,7 @@ static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
     GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
     GtkWidget *scroll = gtk_scrolled_window_new();
     GtkWidget *list = gtk_list_box_new();
+    GtkWidget *preview = gtk_picture_new();
     gchar *contents = NULL;
     gchar **lines;
     gsize length = 0;
@@ -465,6 +473,10 @@ static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), list);
     gtk_widget_set_vexpand(scroll, TRUE);
     gtk_box_append(GTK_BOX(page), scroll);
+    gtk_widget_set_size_request(preview, 420, 220);
+    gtk_picture_set_can_shrink(GTK_PICTURE(preview), TRUE);
+    gtk_box_append(GTK_BOX(page), preview);
+    ed->native_preview = preview;
     ed->native_details = gtk_label_new("Choose a room to inspect its source pointers and music ID.");
     gtk_label_set_wrap(GTK_LABEL(ed->native_details), TRUE);
     gtk_label_set_xalign(GTK_LABEL(ed->native_details), 0.0f);
@@ -506,6 +518,12 @@ static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
         gtk_list_box_row_set_child(GTK_LIST_BOX_ROW(row), label);
         g_object_set_data_full(G_OBJECT(row), "native-room-details",
                                details, g_free);
+        {
+            gchar *filename = g_strdup_printf(
+                "assets/extracted/rooms/metroid/previews/%s_%03u_bg1.bmp",
+                g_ascii_strdown(parts[0], -1), (unsigned)g_ascii_strtoull(parts[1], NULL, 10));
+            g_object_set_data_full(G_OBJECT(row), "native-room-preview", filename, g_free);
+        }
         gtk_list_box_append(GTK_LIST_BOX(list), row);
         g_free(name);
         g_strfreev(parts);

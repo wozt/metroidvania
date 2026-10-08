@@ -274,3 +274,15 @@ frame tests and backend lifecycle tests before being enabled.
   cannon pointers, signed muzzle offsets, VRAM slots, layer order, and cropping.
 - Next: enumerate verified standing frames, then run, jump, and attack with
   their per-frame cannon records.
+
+## Patch 0024 - complete verified Samus idle cycle
+
+- Extended the exact standing recipe across the four live animation records;
+  the source sequence is `0, 1, 2, 1`, with a 16-update duration per record.
+- Added one-command generation of `idle_0.bmp` through `idle_3.bmp` under the
+  ignored SDL asset directory. The duplicate fourth image is intentional and
+  preserves the original animation order.
+- SDL now plays Samus's idle assets at `60 / 16 = 3.75` frames per second.
+  Soma and unverified action previews retain their existing temporary cadence.
+- Next: implement the verified running sequence and its per-frame arm-cannon
+  OAM, then select a canonical midair and shooting sequence.

@@ -5,6 +5,9 @@
 
 static const char *const names[] = {"idle", "run", "jump", "attack"};
 static const char *const actors[] = {"samus", "soma"};
+/* MZM's verified Power Suit standing cycle holds each of its four frames for
+ * 16 updates at 60 Hz. Other states retain the temporary preview cadence. */
+static const float samus_idle_frame_rate = 60.f / 16.f;
 
 void room_sprites_close(RoomSprites *sprites)
 {
@@ -60,7 +63,9 @@ bool room_sprites_draw(RoomSprites *sprites, SDL_Renderer *renderer,
         action < 0 || action >= SPRITE_STATE_COUNT || target_height <= 0) return false;
     room_sprites_load(sprites, renderer);
     /* Use an available frame of the action; fall back to idle for incomplete sheets. */
-    n = elapsed > 0 ? (int)(elapsed * 9.f) : 0;
+    float frame_rate = character == CHARACTER_SAMUS && action == SPRITE_IDLE
+        ? samus_idle_frame_rate : 9.f;
+    n = elapsed > 0 ? (int)(elapsed * frame_rate) : 0;
     idx = (unsigned)n % SPRITE_FRAMES;
     for (unsigned i = 0; i < SPRITE_FRAMES; ++i) {
         texture = sprites->frames[character][action][(idx + i) % SPRITE_FRAMES];

@@ -7,6 +7,7 @@ from scripts.mzm_samus_sprite import (
     ordered_entries,
     parse_arm_cannon_animation,
     stage_arm_cannon,
+    make_power_suit_idle_right,
 )
 
 
@@ -40,6 +41,10 @@ class SamusSpriteTests(unittest.TestCase):
         cropped, width, height = crop_rgba(rgba, 4, 3)
         self.assertEqual((width, height), (1, 1))
         self.assertEqual(cropped, b"\x01\x02\x03\xff")
+
+    def test_reject_invalid_idle_frame(self):
+        with self.assertRaisesRegex(ValueError, "0..3"):
+            make_power_suit_idle_right(bytes(64), 4)
 
 
 if __name__ == "__main__":

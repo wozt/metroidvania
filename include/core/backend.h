@@ -9,6 +9,7 @@
 
 typedef struct FusionBackend FusionBackend;
 typedef struct MzmStateView MzmStateView;
+typedef struct AriaStateView AriaStateView;
 
 #define FUSION_BACKEND_SNAPSHOT_VERSION 1u
 
@@ -47,6 +48,7 @@ FusionBackend metroid_backend_create(void);
 FusionBackend castlevania_backend_create(void);
 FusionBackend gba_backend_create(WorldKind world, const char *rom_path);
 bool gba_backend_read_mzm_state(FusionBackend *backend, MzmStateView *out);
+bool gba_backend_read_aria_state(FusionBackend *backend, AriaStateView *out);
 /* Disposes snapshot data allocated by a backend; safe to call repeatedly. */
 void fusion_backend_snapshot_dispose(FusionBackendSnapshot *snapshot);
 

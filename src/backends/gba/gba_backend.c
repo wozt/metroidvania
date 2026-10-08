@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "core/backend.h"
+#include "aria/state.h"
 #include "gba/runtime.h"
 #include "mzm/state.h"
 
@@ -221,4 +222,19 @@ bool gba_backend_read_mzm_state(FusionBackend *backend, MzmStateView *out)
     state = backend->state;
     return mzm_state_read(&state->runtime, out,
                           backend->error, sizeof(backend->error));
+}
+
+bool gba_backend_read_aria_state(FusionBackend *backend, AriaStateView *out)
+{
+    GbaBackendState *state;
+    if (!backend || backend->world != WORLD_CASTLEVANIA || !backend->state ||
+        !out || backend->failed) {
+        if (backend)
+            snprintf(backend->error, sizeof(backend->error),
+                     "invalid Aria state view request");
+        return false;
+    }
+    state = backend->state;
+    return aria_state_read(&state->runtime, out,
+                           backend->error, sizeof(backend->error));
 }

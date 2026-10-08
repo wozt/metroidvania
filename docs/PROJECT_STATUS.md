@@ -30,6 +30,7 @@ The MPL-2.0 mGBA system library provides an interim authentic execution path.
 | Authentic MZM execution | Emulated proof integrated | mGBA executes the verified ROM with input and 240x160 output; native source-port route remains unresolved |
 | Authentic state boundary | Memory-only proof | Versioned/world-typed 397,312-byte snapshots replay deterministically; no persistent format |
 | Verified MZM state view | Read-only proof integrated | Exact IWRAM symbols expose mode, location, Samus movement/pose, and equipment without mutating runtime or `SessionState` |
+| Verified Aria state view | Read-only proof integrated | Exact EWRAM offsets expose mode, location, player movement/animation, progression, and equipment with validated entity indirection |
 | Original assets, maps, and audio | Partial, local-only | Verified Samus and Soma idle/run/jump/attack recipes; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
@@ -63,17 +64,18 @@ SDL_VIDEODRIVER=dummy timeout 2s ./build/fusion_dev
 SDL_VIDEODRIVER=dummy timeout 2s ./build/fusion_dev --authentic-video-test
 ```
 
-Normal and AddressSanitizer/UndefinedBehaviorSanitizer builds passed all 10 CTest
+Normal and AddressSanitizer/UndefinedBehaviorSanitizer builds passed all 11 CTest
 targets, and all 60 Python tests passed. Both ROMs were accepted. The SDL smoke
 test remained active for two seconds and was stopped by `timeout` with the
 expected status 124 and no runtime error.
 
 The mGBA runtime adapter adds an eighth CTest target, its backend adapter adds a
-ninth, and the pure MZM decoder adds a tenth. The runtime and backend tests
-cover ROM-free failure paths. The local authentic probe executed each validated
-ROM for 300 frames and reproduced hashes `5ca363153253eb90` (Zero Mission) and
-`ce393be405213e55` (Aria). An SDL dummy-driver authentic-mode smoke test remained
-active for two seconds and was stopped by `timeout` with status 124.
+ninth, and the pure MZM and Aria decoders add the tenth and eleventh. The runtime
+and backend tests cover ROM-free failure paths. The local authentic probe
+executed each validated ROM for 300 frames and reproduced hashes
+`5ca363153253eb90` (Zero Mission) and `ce393be405213e55` (Aria). An SDL
+dummy-driver authentic-mode smoke test remained active for two seconds and was
+stopped by `timeout` with status 124.
 
 The extended authentic probe captured each runtime at frame 300, advanced 30
 frames, restored the snapshot, and replayed the same 30 frames. Zero Mission
@@ -85,6 +87,13 @@ frame 3033: mode 11, submode 1, area 0, room 28, native position `(470,639)`
 (truncated display position `(117,159)`), energy `399/399`, and pose 0. The
 values come from a bounded read-only WRAM view matched to the pinned source and
 exact local build.
+
+The deterministic Aria boot trace supplied periodic A/Start pulses without
+loading a save and reached a gameplay-ready state at frame 1022: mode 4, stage
+0, normal in-game phase 1, area 0, room 0, 16.16 room position
+`(0x00A80000,0x02BF0000)`, HP `320/320`, MP `80/80`, level 1, and animation 81
+frame 0. The player-control flag was enabled, and the player pointer was
+validated as an exact entity-array slot before its fields were read.
 
 Upstream build verification used local clones under `/tmp`, a locally built
 `agbcc`, and symlinks to the ignored ROM files. Both `make` invocations exited
@@ -111,20 +120,20 @@ loop. No proprietary content is committed.
 
 ## Risks and next actions
 
-1. **P0 - Aria state bridge:** identify and verify the equivalent minimal Aria
-   fields before adding any `SessionState` adapter.
+1. **P0 - Transition design:** define ownership, conversion, validation, and
+   rollback for the minimal fields before adding any `SessionState` adapter.
 2. **P0 - Native strategy:** evaluate source HAL or compatible recompilation
    paths while keeping mGBA as the verified baseline.
-3. **P1 - Research:** inventory EWRAM/IWRAM, room globals, and snapshot boundaries
-   in Ghidra for both ROMs.
+3. **P1 - Research:** verify door and progression flags needed for the first
+   cross-world transition in both engines.
 4. **P1 - Tests:** add frame traces, render captures, and real lifecycle tests.
 5. **P2 - Content:** implement guest-character adaptations, progression, and
    synergy hooks.
 
 ## Open, non-blocking questions
 
-- Which minimal Aria fields can be verified without depending on provisional
-  symbol names?
+- Which engine fields remain authoritative during a world transition, and which
+  subset belongs to shared `SessionState`?
 - What resurrection policy and progression flags should be shared?
 
 ## Next milestone acceptance criteria
@@ -139,9 +148,20 @@ loop. No proprietary content is committed.
 
 These criteria are satisfied by the interim emulated proof. Authentic execution
 is bound to the backend interface and now has a controlled, memory-only snapshot
-boundary. The first MZM read-only state extraction is complete. The next
-milestone is an equivalent Aria view and an explicit transition ownership
-design, not persistent savestates.
+boundary. The MZM and Aria read-only state extractions are complete. The next
+milestone is an explicit transition ownership design, not persistent savestates
+or unguarded memory writes.
+
+## Patch 016 - verified Aria state view
+
+- Added a pure decoder for verified Aria mode, location, player entity,
+  animation, movement, progression, equipment, HP/MP, experience, and gold.
+- Validated the dynamic player pointer against exact entity-array bounds and
+  alignment before following it.
+- Reconstructed room position with the source's camera-plus-entity 16.16
+  calculation and exposed the read-only view through the Castlevania backend.
+- Extended the authentic probe with deterministic A/Start input to reach and
+  report a real initialized Aria state without loading or writing a save.
 
 ## Patch 015 - verified Zero Mission state view
 

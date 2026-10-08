@@ -89,6 +89,34 @@ Large EWRAM aggregates, direct register access, and provisional symbols make a
 direct source port risky. Static recompilation deserves an isolated proof of
 concept before the backend is changed.
 
+Verified runtime-state anchors from the byte-identical local build:
+
+| Field | EWRAM address | Size |
+|---|---:|---:|
+| game mode and update stage | `0x02000010` | 2 bytes |
+| in-game phase and phase stage | `0x02000064` | 2 bytes |
+| current area and room | `0x0200009E` | 2 bytes |
+| gameplay control flags | `0x0200A074` | 1 byte |
+| background-1 camera X/Y | `0x0200A098` | 8 bytes |
+| active player entity pointer | `0x02013110` | 4 bytes |
+| character progression subset | `0x02013266` | 46 bytes |
+| active player entity | dynamic verified slot | 112-byte subset |
+
+The matching ELF places the `gEwramData` pointer at ROM address `0x084F0B14`;
+its initialized value is `0x02000000`. The progression subset exposes current
+character, equipment, level, signed current HP/MP, maxima, experience, and
+gold. The player pointer must be aligned to a `0x84`-byte slot in the 224-entry
+entity array at `0x020004E4`. The decoded entity subset includes its 16.16
+position and velocity plus animation ID, frame, counter, and flags.
+
+The source's `GetEntityRoomXPositionWhole` and
+`GetEntityRoomYPositionWhole` add the background-1 camera position to the
+entity-relative coordinates. The adapter performs the same fixed-point
+addition. A deterministic A/Start boot trace reached normal in-game phase 1
+with the player-control flag enabled at frame 1022: mode 4, area 0, room 0,
+room position `(0x00A80000,0x02BF0000)`, HP `320/320`, MP `80/80`, level 1,
+and animation 81 frame 0.
+
 ## Reproducible upstream build check
 
 Both pinned source trees were cloned into temporary workspaces, leaving the
@@ -167,9 +195,9 @@ or tracked by this repository.
 
 - Final native or recompiled runtime strategy for each game beyond the mGBA
   integration proof.
-- Equivalent engine-specific field extraction for Aria; the first verified MZM
-  read-only view is complete.
-- Minimal writable transition fields for both games, to be established with
-  Ghidra and runtime instrumentation after ownership rules are defined.
+- Minimal writable transition fields for both games, now that verified
+  read-only MZM and Aria views exist.
+- Ownership, conversion, and rollback rules for any future transition write;
+  read-only observation does not settle those policies.
 - Licensing and redistribution status of code generated from a ROM; legal
   review is required before distribution.

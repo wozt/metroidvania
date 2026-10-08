@@ -76,9 +76,8 @@ exists.
 `GbaRuntime` exposes a bounded read operation for EWRAM and IWRAM only. It
 requires an active runtime, rejects I/O and ROM addresses, and caps each read at
 4 KiB. The Zero Mission adapter uses this boundary to decode a small set of
-fields whose addresses and layouts were verified against the pinned source and
-a byte-identical matching ELF: game mode, location, Samus pose and movement,
-and equipment counters.
+fields whose addresses and layouts were verified against the pinned sources and
+byte-identical matching ELFs.
 
 `MzmStateView` preserves native units, including quarter-pixel coordinates and
 signed velocities. It distinguishes a recognized gameplay mode, internally
@@ -86,14 +85,25 @@ plausible values, and a gameplay-ready state with an active submode and a
 nonzero position. These checks prevent transient initialization memory from
 being presented as a usable transition state.
 
+`AriaStateView` decodes mode and location, Soma/Julius progression, HP/MP,
+equipment, animation state, and 16.16 fixed-point movement. Aria stores its
+player through a dynamic pointer into a 224-entry entity array. The adapter
+accepts only exact `0x84`-byte slot boundaries inside that array before reading
+the entity, then combines its screen-relative position with background-1 camera
+coordinates to reproduce the source's room-position calculation.
+Gameplay readiness additionally requires the normal in-game phase and the
+source's player-control-enable flag, preventing a valid entity created during
+room initialization from being reported too early.
+
 This observation path is deliberately one-way. It neither writes emulated
-memory nor copies values into `SessionState`; authority remains with the active
-MZM runtime. A future transition adapter must define ownership, conversions,
-and rollback rules explicitly before any state is imported or changed.
+memory nor copies values into `SessionState`; authority remains with the
+respective active engine runtime. A future transition adapter must define
+ownership, conversions, and rollback rules explicitly before any state is
+imported or changed.
 
 ## Replacing the stubs
 
-1. Complete the equivalent verified state view for Aria.
+1. Define field ownership and rollback for a minimal transition adapter.
 2. Place controlled VRAM/OAM/palette and memory access behind a backend-owned
    host abstraction.
 3. Add adapters between verified engine state and `SessionState` without

@@ -27,8 +27,8 @@ Working today:
 - deterministic collision correction or a rejected unsafe swap;
 - versioned save data, dual HUD, placeholder synergy gauge, and debug overlay;
 - strict local validation of both ROMs, with no network transfer.
-- reproducible authentic ROM probes, a read-only verified Zero Mission state
-  view, and an interactive mGBA video mode.
+- reproducible authentic ROM probes, read-only verified state views for both
+  games, and an interactive mGBA video mode.
 
 ## Debian 13 prerequisites
 
@@ -66,17 +66,18 @@ Use `--aria` and `--metroid` to supply different local paths.
 `--validate-only` validates both files without opening a window.
 `--authentic-probe` executes each ROM for 300 frames in sequence, captures an
 in-memory runtime snapshot, advances 30 frames, restores it, replays those
-frames, and prints the framebuffer hashes and replay result. For Zero Mission,
-it then advances to the first gameplay-ready state and prints verified
-mode, room, position, energy, and pose fields read directly from WRAM. Run
+frames, and prints the framebuffer hashes and replay result. It then advances
+each game to its first gameplay-ready state and prints verified mode, room,
+position, and character fields read directly from WRAM. The Aria path supplies
+deterministic A/Start pulses to begin a new game without loading a save. Run
 `--authentic-video-test` for interactive authentic ROM output; `M` suspends the
 current runtime and switches to the other one. The mode does not load or write
 save files. GBA controls are arrows, `Space`/`X` for A, `J`/`Z` for B, `Enter`
 for Start, right Shift for Select, and `U`/`I` for L/R.
 
 Snapshots are currently process-local only. They are not written by F5/F9 and
-are not a supported save format. The Zero Mission state view is also read-only:
-it does not update `SessionState` or write back to emulated memory.
+are not a supported save format. Both engine state views are also read-only:
+they do not update `SessionState` or write back to emulated memory.
 
 To generate all four verified Power Suit animation states locally:
 

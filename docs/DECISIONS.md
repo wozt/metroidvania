@@ -102,3 +102,16 @@ The view reports native units and separates raw decoding, plausibility, and
 gameplay readiness. It does not modify `SessionState`, save files, or emulated
 memory. A write or transition adapter requires a later decision defining field
 ownership, conversion, validation, and rollback.
+
+## D-013 - Validate indirect Aria entities before decoding
+
+Decision: the Aria state view may follow the live player pointer only when it
+identifies an exact slot in the verified EWRAM entity array. Valid slots start
+at `0x020004E4`, have a stride of `0x84`, and remain inside the 224-entry array.
+Null, misaligned, and out-of-range pointers produce a non-ready state and are
+never dereferenced.
+
+Room position is reconstructed in native 16.16 fixed point by adding the
+background-1 camera coordinates to the player's screen-relative entity
+coordinates, matching the pinned source helpers. The resulting view remains
+read-only and does not authorize mutation of entity or progression memory.

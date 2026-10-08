@@ -12,12 +12,15 @@
    and supports memory-only deterministic snapshots.
 3. **First state view:** verified MZM mode, location, Samus, and equipment
    fields are observable through bounded read-only WRAM access.
-4. Build the equivalent verified Aria state view, then define explicit field
-   ownership and rollback before any cross-engine mutation.
+4. **Second state view:** verified Aria mode, location, player entity,
+   progression, animation, and movement fields are observable through bounded
+   read-only EWRAM access with dynamic-pointer validation.
+5. Define explicit field ownership and rollback before any cross-engine
+   mutation.
 
 Exit criterion: one authentic room from each ROM can be loaded independently
-with verified timing, input, rendering, and a minimal read-only state view. The
-MZM view is complete; Aria state extraction remains.
+with verified timing, input, rendering, and a minimal read-only state view.
+Both views are complete; transition ownership design is next.
 
 ## P1 - Two engines and transitions
 

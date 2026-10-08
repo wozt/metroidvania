@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 
 #include "aria/preview.h"
+#include "aria/state.h"
 #include "core/backend.h"
 #include "core/rom.h"
 #include "core/save.h"
@@ -40,7 +41,7 @@ static uint64_t hash_frame(const GbaFrameView *frame)
 }
 
 static bool run_authentic_probe(const char *label, const char *rom_path,
-                                bool inspect_mzm_state,
+                                WorldKind state_world,
                                 char *error, size_t error_size)
 {
     GbaRuntime runtime = {0};
@@ -110,7 +111,7 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
         snprintf(error, error_size, "GBA snapshot replay diverged");
         goto cleanup;
     }
-    if (inspect_mzm_state) {
+    if (state_world == WORLD_METROID) {
         MzmStateView state_view;
         unsigned timeline_frame;
         bool found = false;
@@ -135,6 +136,48 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
                state_view.x_subpixels, state_view.y_subpixels,
                state_view.current_energy, state_view.max_energy,
                state_view.pose);
+    } else {
+        AriaStateView state_view;
+        unsigned timeline_frame;
+        bool entered_game = false;
+        bool found = false;
+        for (timeline_frame = 331; timeline_frame <= 12000; ++timeline_frame) {
+            uint16_t keys = 0;
+            if (timeline_frame % 90 == 0) {
+                if (entered_game)
+                    keys = 1u << 0;
+                else
+                    keys = ((timeline_frame / 90) & 1u)
+                        ? (1u << 0) : (1u << 3);
+            }
+            if (!gba_runtime_step(&runtime, keys) ||
+                !aria_state_read(&runtime, &state_view, error, error_size))
+                goto cleanup;
+            if (state_view.gameplay_active) entered_game = true;
+            if (state_view.gameplay_state_ready) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            snprintf(error, error_size, "Aria did not reach a verified gameplay state");
+            goto cleanup;
+        }
+        printf("Aria state probe: frame=%u mode=%u stage=%u phase=%u:%u "
+               "area=%u room=%u "
+               "position=%u,%u fixed=%08x,%08x hp=%d/%u mp=%d/%u "
+               "level=%u animation=%u:%u\n",
+               timeline_frame, state_view.game_mode,
+               state_view.game_mode_stage, state_view.in_game_phase,
+               state_view.in_game_phase_stage, state_view.area, state_view.room,
+               state_view.x_position_fixed / 65536,
+               state_view.y_position_fixed / 65536,
+               (unsigned)state_view.x_position_fixed,
+               (unsigned)state_view.y_position_fixed,
+               state_view.current_hp, state_view.max_hp,
+               state_view.current_mp, state_view.max_mp,
+               state_view.current_level, state_view.animation_id,
+               state_view.animation_frame);
     }
     success = true;
 
@@ -210,9 +253,11 @@ int main(int argc, char **argv)
     }
     if (validate_only) return 0;
     if (authentic_probe) {
-        if (!run_authentic_probe("Metroid: Zero Mission", metroid_path, true,
+        if (!run_authentic_probe("Metroid: Zero Mission", metroid_path,
+                                 WORLD_METROID,
                                  error, sizeof(error)) ||
-            !run_authentic_probe("Castlevania: Aria of Sorrow", aria_path, false,
+            !run_authentic_probe("Castlevania: Aria of Sorrow", aria_path,
+                                 WORLD_CASTLEVANIA,
                                  error, sizeof(error))) {
             fprintf(stderr, "Authentic GBA probe failed: %s\n", error);
             return 4;

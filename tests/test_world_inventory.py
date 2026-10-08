@@ -72,14 +72,37 @@ class WorldInventoryTests(unittest.TestCase):
             self.assertTrue(boss["classification"], boss["id"])
             self.assertTrue(boss["decode_state"], boss["id"])
 
-    def test_unverified_aria_rom_fields_stay_empty(self):
+    def test_aria_bosses_have_verified_native_identities(self):
+        expected = {
+            "aria.creaking_skull": (0, 10, 0x21, 240),
+            "aria.manticore": (1, 6, 0x36, 440),
+            "aria.great_armor": (2, 15, 0x3C, 650),
+            "aria.big_golem": (3, 19, 0x45, 1200),
+            "aria.headhunter": (4, 11, 0x6A, 700),
+            "aria.julius": (5, 6, 0x6E, 6000),
+            "aria.death": (6, 7, 0x6B, 4444),
+            "aria.legion": (7, 37, 0x6C, 5000),
+            "aria.balore": (8, 1, 0x6D, 4000),
+            "aria.graham": (9, 4, 0x6F, 5000),
+            "aria.chaos": (11, 20, 0x70, 9999),
+        }
         for boss in self.bosses:
             if boss["game"] != "aria_of_sorrow":
                 continue
-            self.assertIn("unverified", boss["decode_state"], boss["id"])
-            self.assertEqual(boss["source_rooms"], [], boss["id"])
-            self.assertEqual(boss["rom_addresses"], [], boss["id"])
-            self.assertEqual(boss["stats"], {}, boss["id"])
+            area, room, entity_id, health = expected[boss["id"]]
+            self.assertNotIn("unverified", boss["decode_state"], boss["id"])
+            self.assertEqual(boss["source_rooms"][0]["engine_area"], area)
+            self.assertEqual(boss["source_rooms"][0]["room"], room)
+            self.assertGreaterEqual(len(boss["rom_addresses"]), 3)
+            self.assertEqual(boss["native_identity"]["kind"], "enemy")
+            self.assertEqual(boss["native_identity"]["entity_id"], entity_id)
+            self.assertEqual(boss["stats"]["kind"], "enemy_table_raw")
+            self.assertEqual(boss["stats"]["health"], health)
+        chaos = next(boss for boss in self.bosses if boss["id"] == "aria.chaos")
+        self.assertEqual(
+            [(room["room"], room["phase"]) for room in chaos["source_rooms"]],
+            [(20, "first_phase"), (22, "second_phase")],
+        )
 
     def test_boss_rush_encounter_is_explicitly_excluded(self):
         excluded = {entry["id"] for entry in self.data["excluded_encounters"]}

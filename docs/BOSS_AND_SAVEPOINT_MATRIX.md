@@ -1,7 +1,7 @@
 # Boss and savepoint matrix
 
-Status: verified Zero Mission inventory, verified Aria savepoints, and
-provisional Aria boss metadata.
+Status: verified Zero Mission inventory, verified Aria native boss identities,
+and verified Aria savepoints.
 
 The machine-readable source is `data/story/world_inventory.toml`. This document
 separates three kinds of information:
@@ -23,9 +23,9 @@ must use the separate `cross_world_link` field.
   `src/data/sprite_data.c`, `include/constants/event.h`, and the individual
   sprite AI files.
 - Aria technical baseline: `third_party/cvaos` at commit
-  `bc23d849d578c35ae12a5cec4e66549c3021a5be`. Its current naming coverage
-  confirms the Graham/Julius/Chaos event branches and Chaos music, but does not
-  yet expose a trustworthy named room/boss table for all eleven encounters.
+  `bc23d849d578c35ae12a5cec4e66549c3021a5be`, combined with the exact USA ROM.
+  The room directory and entity lists locate encounters; the enemy function
+  table and named create/update symbols independently establish identities.
 - Aria roster and route classification:
   [bluberry's boss guide](https://gamefaqs.gamespot.com/gba/589456-castlevania-aria-of-sorrow/faqs/25095)
   and [Zenalasca's route guide](https://gamefaqs.gamespot.com/gba/589456-castlevania-aria-of-sorrow/faqs/56284).
@@ -65,24 +65,26 @@ is still marked unverified rather than guessed.
 
 ## Aria of Sorrow: eleven campaign bosses
 
-| ID | Boss | Guide-verified zone | Original-route role | Project campaign role |
-|---|---|---|---|---|
-| `aria.creaking_skull` | Creaking Skull | Castle Corridor | first linear boss | Samus prologue boss |
-| `aria.manticore` | Manticore | Chapel | early route | required roster encounter |
-| `aria.great_armor` | Great Armor | Study | unlocks Malphas route | required roster encounter |
-| `aria.big_golem` | Big Golem | Dance Hall | grants Skeleton Blaze route | required roster encounter |
-| `aria.headhunter` | Headhunter | Inner Quarters | optional in original route | required full-roster encounter |
-| `aria.death` | Death | Clock Tower | grants Skula route | required roster encounter |
-| `aria.legion` | Legion | Underground Cemetery | optional in original route | required full-roster encounter |
-| `aria.balore` | Balore | The Arena | grants Giant Bat soul | required true-route gate |
-| `aria.graham` | Graham Jones | Top Floor | bad/true branch pivot | mandatory true branch |
-| `aria.julius` | Julius Belmont | Floating Garden mist door | true-route confrontation | mandatory true route |
-| `aria.chaos` | Chaos | Chaotic Realm | true final boss | mandatory true final |
+| ID | Boss | Native room | Entity ID | Raw table health | Project campaign role |
+|---|---|---:|---:|---:|---|
+| `aria.creaking_skull` | Creaking Skull | 0:10 `(14,21)` | `0x21` | 240 | Samus prologue boss |
+| `aria.manticore` | Manticore | 1:6 `(45,18)` | `0x36` | 440 | required roster encounter |
+| `aria.great_armor` | Great Armor | 2:15 `(43,27)` | `0x3c` | 650 | required roster encounter |
+| `aria.big_golem` | Big Golem | 3:19 `(7,19)` | `0x45` | 1200 | required roster encounter |
+| `aria.headhunter` | Headhunter | 4:11 `(18,10)` | `0x6a` | 700 | required full-roster encounter |
+| `aria.death` | Death | 6:7 `(35,5)` | `0x6b` | 4444 | required roster encounter |
+| `aria.legion` | Legion | 7:37 `(25,33)` | `0x6c` | 5000 | required full-roster encounter |
+| `aria.balore` | Balore | 8:1 `(2,31)` | `0x6d` | 4000 | required true-route gate |
+| `aria.graham` | Graham Jones | 9:4 `(25,3)` | `0x6f` | 5000 | mandatory true branch |
+| `aria.julius` | Julius Belmont | 5:6 `(19,2)` | `0x6e` | 6000 | mandatory true route |
+| `aria.chaos` | Chaos | 11:20 and 11:22 | `0x70` | 9999 | mandatory true final |
 
 The Aria table is exhaustive for the requested campaign roster, including the
-bad/true Graham branch and post-Graham route. Original room IDs, coordinates,
-entity IDs, ROM addresses, boss stats, flags, and resource pointers remain
-`unverified` until extracted from ROM structures or named decompilation data.
+bad/true Graham branch and post-Graham route. The importer distinguishes the
+campaign placements from later ordinary Creaking Skull, Manticore, Great Armor
+and Big Golem placements. Chaos rooms 20 and 22 are its two phase descriptors.
+Health is the raw `u16` at enemy-table offset `0x0c`; attacks, completion flags,
+music outside confirmed Chaos music, and resource semantics remain unresolved.
 
 Man-Eater is tracked as a Boss Rush encounter outside this eleven-boss campaign
 matrix. It must not silently become a story requirement.
@@ -140,15 +142,16 @@ Each structured entry records its global map coordinate and resolved ROM room
 pointer. Engine area 7 is deliberately named `Underground region`: the engine's
 `Water Vein` region spans the published Underground Reservoir, Underground
 Cemetery and Forbidden Area, and this extraction alone does not prove their
-sub-boundaries. Graphics, music, connections, access gates and crossover links
-remain blank until separately decoded.
+sub-boundaries. The private `MV_AOS_WORLD_2` catalog now contains all 343 room
+descriptors, 725 resolved transitions, 2,336 entity placements, background
+records and graphics/palette references. Savepoint access gates and authored
+crossover links remain blank until separately decoded or designed.
 
 ## Remaining verification work
 
-1. Map all eleven Aria bosses to stable room/entity IDs, ROM addresses, flags,
-   stats, attacks, music, resources, and spawn conditions.
-2. Decode Aria room descriptors, connections, music and entities for the 17
-   save rooms, then cross-check their entry coordinates at runtime.
+1. Resolve Aria boss completion flags, attacks, music and resource semantics.
+2. Decode access gates around the 17 Aria save rooms and cross-check entry
+   coordinates in a future native runtime.
 3. Resolve the two Imago room variants and verify which runtime condition selects
    each record.
 4. Extract door connections and access gates for all 29 MZM savepoints.

@@ -52,9 +52,12 @@ metatile work files. Full collision, entities, animations, effects and scripts
 are not reconstructed.
 
 Aria currently has verified character sprites and a structural world decoder.
-The decoder reads the global `64x35` map, distinguishes save and warp flags,
-and resolves room pointers through the twelve-area directory. Native room
-descriptors, tilemaps, connections and entities remain to be decoded.
+The decoder reads the global `64x35` map and all 343 rooms through the
+twelve-area directory. It resolves bounded room descriptors, three background
+records per room, graphics/palette references, 2,336 entity placements and 725
+transitions. It also identifies all eleven campaign bosses through their native
+enemy records. Tilemap pixels, collision, music and executable behavior remain
+private-source reconstruction work; there is no Aria renderer yet.
 
 ## Future runtime boundary
 

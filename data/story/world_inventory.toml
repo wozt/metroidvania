@@ -4,7 +4,7 @@ status = "partial_verified"
 
 [coverage]
 mzm_bosses = "verified_source"
-aria_bosses = "verified_guide"
+aria_bosses = "verified_rom_room_entity_identity"
 mzm_savepoints = "verified_source"
 aria_savepoints = "verified_rom_map_table"
 
@@ -240,21 +240,22 @@ zone = "Castle Corridor"
 classification = ["boss", "first_linear_boss"]
 campaign_required = true
 original_requirement = "mandatory"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Castle Corridor", engine_area = 0, room = 10, map_x = 14, map_y = 21 }]
+rom_addresses = ["0x0850f58c", "0x08510e94", "0x080e9ae8"]
 spawn_conditions = []
 prerequisites = []
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 240 }
 attacks = []
 music = []
 resources = []
 sequences = []
 reward = ["fusion:ancient_dimensional_mechanism"]
 flags = []
-decode_state = "verified_guide_rom_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "Samus prologue boss and dimensional mechanism trigger"
-sources = ["aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x21, create_symbol = "EnemyCreakingSkullCreate", update_symbol = "EnemyCreakingSkullUpdate" }
 
 [[bosses]]
 id = "aria.manticore"
@@ -264,21 +265,22 @@ zone = "Chapel"
 classification = ["boss"]
 campaign_required = true
 original_requirement = "standard_route"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Chapel", engine_area = 1, room = 6, map_x = 45, map_y = 18 }]
+rom_addresses = ["0x08511dcc", "0x08512844", "0x080e9ddc"]
 spawn_conditions = []
 prerequisites = []
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 440 }
 attacks = []
 music = []
 resources = []
 sequences = []
 reward = []
 flags = []
-decode_state = "verified_guide_rom_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "early castle boss"
-sources = ["aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x36, create_symbol = "EnemyManticoreCreate", update_symbol = "EnemyManticoreUpdate" }
 
 [[bosses]]
 id = "aria.great_armor"
@@ -288,21 +290,22 @@ zone = "Study"
 classification = ["boss"]
 campaign_required = true
 original_requirement = "standard_route"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Study", engine_area = 2, room = 15, map_x = 43, map_y = 27 }]
+rom_addresses = ["0x085134ac", "0x08513d98", "0x080e9eb4"]
 spawn_conditions = []
 prerequisites = []
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 650 }
 attacks = []
 music = []
 resources = []
 sequences = []
 reward = ["route to Malphas soul"]
 flags = []
-decode_state = "verified_guide_rom_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "early castle progression"
-sources = ["aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x3c, create_symbol = "EnemyGreatArmorCreate", update_symbol = "EnemyGreatArmorUpdate" }
 
 [[bosses]]
 id = "aria.big_golem"
@@ -312,21 +315,22 @@ zone = "Dance Hall"
 classification = ["boss"]
 campaign_required = true
 original_requirement = "standard_route"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Dance Hall", engine_area = 3, room = 19, map_x = 7, map_y = 19 }]
+rom_addresses = ["0x08514b48", "0x08515824", "0x080e9ff8"]
 spawn_conditions = []
 prerequisites = ["Malphas route"]
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 1200 }
 attacks = []
 music = []
 resources = []
 sequences = []
 reward = ["Skeleton Blaze soul"]
 flags = []
-decode_state = "verified_guide_rom_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "castle traversal progression"
-sources = ["aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x45, create_symbol = "EnemyBigGolemCreate", update_symbol = "EnemyBigGolemUpdate" }
 
 [[bosses]]
 id = "aria.headhunter"
@@ -336,21 +340,22 @@ zone = "Inner Quarters"
 classification = ["boss", "originally_optional"]
 campaign_required = true
 original_requirement = "optional"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Inner Quarters", engine_area = 4, room = 11, map_x = 18, map_y = 10 }]
+rom_addresses = ["0x08516200", "0x08516dc4", "0x080ea52c"]
 spawn_conditions = []
 prerequisites = ["Skeleton Blaze route in standard play"]
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 700 }
 attacks = []
 music = []
 resources = []
 sequences = []
 reward = []
 flags = []
-decode_state = "verified_guide_rom_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "required full-roster encounter"
-sources = ["aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x6a, create_symbol = "EnemyHeadhunterCreate", update_symbol = "EnemyHeadhunterUpdate" }
 
 [[bosses]]
 id = "aria.death"
@@ -360,21 +365,22 @@ zone = "Clock Tower"
 classification = ["major_boss"]
 campaign_required = true
 original_requirement = "standard_route"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Clock Tower", engine_area = 6, room = 7, map_x = 35, map_y = 5 }]
+rom_addresses = ["0x08518838", "0x08519b94", "0x080ea550"]
 spawn_conditions = []
 prerequisites = ["Undine route"]
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 4444 }
 attacks = []
 music = []
 resources = []
 sequences = []
 reward = ["Skula soul"]
 flags = []
-decode_state = "verified_guide_rom_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "castle traversal progression"
-sources = ["aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x6b, create_symbol = "EnemyDeathCreate", update_symbol = "EnemyDeathUpdate" }
 
 [[bosses]]
 id = "aria.legion"
@@ -384,21 +390,22 @@ zone = "Underground Cemetery"
 classification = ["boss", "originally_optional"]
 campaign_required = true
 original_requirement = "optional"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Underground region", engine_area = 7, room = 37, map_x = 25, map_y = 33 }]
+rom_addresses = ["0x0851bfd4", "0x0851de8c", "0x080ea574"]
 spawn_conditions = []
 prerequisites = ["Skula route"]
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 5000 }
 attacks = []
 music = []
 resources = []
 sequences = []
 reward = ["Legion soul"]
 flags = []
-decode_state = "verified_guide_rom_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "required full-roster encounter"
-sources = ["aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x6c, create_symbol = "EnemyLegionCreate", update_symbol = "EnemyLegionUpdate" }
 
 [[bosses]]
 id = "aria.balore"
@@ -408,21 +415,22 @@ zone = "The Arena"
 classification = ["major_boss", "true_route_gate"]
 campaign_required = true
 original_requirement = "mandatory_true_route"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "The Arena", engine_area = 8, room = 1, map_x = 2, map_y = 31 }]
+rom_addresses = ["0x0851e528", "0x0851f1fc", "0x080ea598"]
 spawn_conditions = []
 prerequisites = ["Skula route"]
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 4000 }
 attacks = []
 music = []
 resources = []
 sequences = []
 reward = ["Giant Bat soul"]
 flags = []
-decode_state = "verified_guide_rom_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "required soul gate for Graham true branch"
-sources = ["aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x6d, create_symbol = "EnemyBaloreCreate", update_symbol = "EnemyBaloreUpdate" }
 
 [[bosses]]
 id = "aria.graham"
@@ -432,21 +440,22 @@ zone = "Top Floor"
 classification = ["major_boss", "branch_boss"]
 campaign_required = true
 original_requirement = "mandatory_branch_pivot"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Top Floor", engine_area = 9, room = 4, map_x = 25, map_y = 3 }]
+rom_addresses = ["0x0851fd70", "0x08520cd8", "0x080ea5e0"]
 spawn_conditions = ["ending branch depends on equipped souls"]
 prerequisites = ["Giant Bat route", "Flame Demon soul", "Succubus soul", "Giant Bat soul"]
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 5000 }
 attacks = []
 music = []
 resources = []
 sequences = ["bad ending branch", "true ending branch"]
 reward = ["true-route access when the three required souls are equipped"]
 flags = []
-decode_state = "guide_verified_cvaos_event_named_room_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "false-final and true-route branch pivot"
-sources = ["aria_decomp", "aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x6f, create_symbol = "EnemyGrahamCreate", update_symbol = "EnemyGrahamUpdate" }
 
 [[bosses]]
 id = "aria.julius"
@@ -456,21 +465,22 @@ zone = "Floating Garden"
 classification = ["major_boss", "true_route_boss"]
 campaign_required = true
 original_requirement = "mandatory_true_route"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Floating Garden", engine_area = 5, room = 6, map_x = 19, map_y = 2 }]
+rom_addresses = ["0x085176f8", "0x08518020", "0x080ea5bc"]
 spawn_conditions = ["post-Graham true branch"]
 prerequisites = ["Graham true branch"]
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 6000 }
 attacks = []
 music = []
 resources = []
 sequences = ["mist-door confrontation"]
 reward = ["Chaotic Realm access"]
 flags = []
-decode_state = "guide_verified_cvaos_event_named_room_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "true-route confrontation"
-sources = ["aria_decomp", "aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x6e, create_symbol = "EnemyBelmontCreate", update_symbol = "EnemyBelmontUpdate" }
 
 [[bosses]]
 id = "aria.chaos"
@@ -480,21 +490,22 @@ zone = "Chaotic Realm"
 classification = ["true_final_boss"]
 campaign_required = true
 original_requirement = "mandatory_true_route"
-source_rooms = []
-rom_addresses = []
+source_rooms = [{ area = "Chaotic Realm boss", engine_area = 11, room = 20, map_x = 12, map_y = 36, phase = "first_phase" }, { area = "Chaotic Realm boss", engine_area = 11, room = 22, map_x = 13, map_y = 36, phase = "second_phase" }]
+rom_addresses = ["0x08522abc", "0x08523b90", "0x08522bdc", "0x08523c2c", "0x080ea604"]
 spawn_conditions = []
 prerequisites = ["Julius confrontation", "Chaotic Realm traversal"]
 capabilities = []
-stats = {}
+stats = { kind = "enemy_table_raw", health = 9999 }
 attacks = []
 music = ["MUS_31 / Battle Against Chaos"]
 resources = []
 sequences = ["true ending"]
 reward = []
 flags = []
-decode_state = "guide_verified_cvaos_event_and_music_named_room_identity_unverified"
+decode_state = "verified_rom_room_entity_identity_and_health"
 story_role = "Aria true final boss"
-sources = ["aria_decomp", "aria_boss_guide", "aria_route_guide"]
+sources = ["aria_decomp", "aria_rom_us", "aria_boss_guide", "aria_route_guide"]
+native_identity = { kind = "enemy", entity_id = 0x70, create_symbol = "EnemyChaosCreate", update_symbol = "EnemyChaosUpdate", second_phase_create_symbol = "EnemyChaos2Create", second_phase_update_symbol = "EnemyChaos2Update" }
 
 [[excluded_encounters]]
 id = "aria.man_eater"

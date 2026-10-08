@@ -2,8 +2,8 @@
 
 ## P0 - Complete structural inventories
 
-- decode Aria room records, connections, graphics references and entity lists;
-- map all eleven Aria campaign bosses to verified room/entity identities;
+- decoded: Aria room records, transitions, graphics references and entity lists;
+- verified: all eleven Aria campaign bosses have stable room/entity identities;
 - resolve MZM Imago room variants;
 - add access gates and connections to both savepoint inventories.
 

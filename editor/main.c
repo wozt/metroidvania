@@ -530,7 +530,7 @@ static void activate(GtkApplication *application, gpointer userdata)
     build_native_rooms_tab(editor, center);
     native_workspace_build(editor->native_workspace, center, right);
     editor->world_map_page = world_atlas_build(center, editor->native_workspace);
-    editor->aria_page = aria_browser_build(center);
+    editor->aria_page = aria_browser_build(center, editor->native_workspace);
     build_assets_tab(editor, right);
     build_inspector(right);
     build_explorer(editor, left);

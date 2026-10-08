@@ -13,11 +13,6 @@
 enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN, TOOL_COUNT };
 #define HISTORY_LIMIT 16u
 
-typedef struct {
-    GtkWidget *popover;
-    guint timer;
-} DelayedTooltip;
-
 struct NativeWorkspace {
     /* The instance returned by native_workspace_new() manages documents. */
     GPtrArray *documents;
@@ -27,6 +22,7 @@ struct NativeWorkspace {
     GCancellable *import_cancellable;
     GSubprocess *import_process;
     gboolean closing;
+    gboolean close_pending;
     char *identity;
 
     GtkWidget *page, *palette_page, *canvas, *palette, *status;
@@ -168,14 +164,19 @@ static gboolean load_atlas(NativeWorkspace *doc, const char *filename)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             const guchar *color = source + (size_t)y * (size_t)stride + (size_t)x * (size_t)channels;
-            uint32_t rgba = 0xff000000u | ((uint32_t)color[0] << 16) |
-                            ((uint32_t)color[1] << 8) | color[2];
+            uint32_t alpha = channels == 4 ? color[3] : 255u;
+            /* Cairo ARGB32 requires premultiplied components. */
+            uint32_t red = ((uint32_t)color[0] * alpha + 127u) / 255u;
+            uint32_t green = ((uint32_t)color[1] * alpha + 127u) / 255u;
+            uint32_t blue = ((uint32_t)color[2] * alpha + 127u) / 255u;
+            uint32_t rgba = (alpha << 24) | (red << 16) | (green << 8) | blue;
             memcpy(pixels + (size_t)y * (size_t)cairo_stride + (size_t)x * 4, &rgba, 4);
         }
     }
     g_object_unref(pixbuf);
     cairo_surface_t *surface = cairo_image_surface_create_for_data(
-        pixels, CAIRO_FORMAT_RGB24, width, height, cairo_stride);
+        pixels, channels == 4 ? CAIRO_FORMAT_ARGB32 : CAIRO_FORMAT_RGB24,
+        width, height, cairo_stride);
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         cairo_surface_destroy(surface);
         g_free(pixels);
@@ -588,57 +589,15 @@ static void palette_click(GtkGestureClick *gesture, int n_press, double x, doubl
         gtk_spin_button_set_value(GTK_SPIN_BUTTON(doc->brush), id);
 }
 
-static gboolean tooltip_timeout(gpointer userdata)
-{
-    DelayedTooltip *tip = userdata;
-    tip->timer = 0;
-    gtk_popover_popup(GTK_POPOVER(tip->popover));
-    return G_SOURCE_REMOVE;
-}
-
-static void tooltip_enter(GtkEventControllerMotion *motion, double x, double y,
-                          gpointer userdata)
-{
-    DelayedTooltip *tip = userdata;
-    (void)motion; (void)x; (void)y;
-    if (tip->timer) g_source_remove(tip->timer);
-    tip->timer = g_timeout_add(1500, tooltip_timeout, tip);
-}
-
-static void tooltip_leave(GtkEventControllerMotion *motion, gpointer userdata)
-{
-    DelayedTooltip *tip = userdata;
-    (void)motion;
-    if (tip->timer) g_source_remove(tip->timer);
-    tip->timer = 0;
-    gtk_popover_popdown(GTK_POPOVER(tip->popover));
-}
-
-static void tooltip_cleanup(gpointer userdata)
-{
-    DelayedTooltip *tip = userdata;
-    if (tip->timer) g_source_remove(tip->timer);
-    g_free(tip);
-}
-
+/* GTK owns the tooltip lifecycle; no manual GtkPopover/timer callbacks.
+ * Preserve the requested delay when this GTK build exposes the setting. */
 static void delayed_tip(GtkWidget *widget, const char *description)
 {
-    DelayedTooltip *tip = g_new0(DelayedTooltip, 1);
-    GtkWidget *popover = gtk_popover_new();
-    GtkWidget *label = gtk_label_new(description);
-    tip->popover = popover;
-    gtk_widget_set_margin_start(label, 8);
-    gtk_widget_set_margin_end(label, 8);
-    gtk_widget_set_margin_top(label, 4);
-    gtk_widget_set_margin_bottom(label, 4);
-    gtk_popover_set_child(GTK_POPOVER(popover), label);
-    gtk_popover_set_autohide(GTK_POPOVER(popover), FALSE);
-    gtk_widget_set_parent(popover, widget);
-    GtkEventController *motion = gtk_event_controller_motion_new();
-    gtk_widget_add_controller(widget, motion);
-    g_signal_connect(motion, "enter", G_CALLBACK(tooltip_enter), tip);
-    g_signal_connect(motion, "leave", G_CALLBACK(tooltip_leave), tip);
-    g_object_set_data_full(G_OBJECT(widget), "native-delayed-tooltip", tip, tooltip_cleanup);
+    gtk_widget_set_tooltip_text(widget, description);
+    GtkSettings *settings = gtk_settings_get_default();
+    if (settings && g_object_class_find_property(G_OBJECT_GET_CLASS(settings),
+                                                   "gtk-tooltip-timeout"))
+        g_object_set(settings, "gtk-tooltip-timeout", 1500, NULL);
     gtk_accessible_update_property(GTK_ACCESSIBLE(widget),
                                    GTK_ACCESSIBLE_PROPERTY_LABEL, description, -1);
 }
@@ -756,14 +715,28 @@ static gboolean close_document(NativeWorkspace *doc)
     return FALSE;
 }
 
+/* Never destroy the GtkButton (and its notebook tab) from its own
+ * "clicked" signal emission. Close at idle, after GTK finishes dispatch. */
+static gboolean close_document_idle(gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    doc->close_pending = FALSE;
+    if (!doc->closing && doc->owner) close_document(doc);
+    return G_SOURCE_REMOVE;
+}
+
 static void close_clicked(GtkButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
     (void)button;
-    /* The array can release its owner reference while this signal is active. */
-    document_ref(doc);
-    close_document(doc);
-    document_unref(doc);
+    if (!doc || doc->closing || doc->close_pending) return;
+    if (doc->unsaved) {
+        message(doc, "Unsaved changes: save before closing this tab.");
+        return;
+    }
+    doc->close_pending = TRUE;
+    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, close_document_idle,
+                    document_ref(doc), (GDestroyNotify)document_unref);
 }
 
 static void focus_page(GtkWidget *page)
@@ -942,16 +915,26 @@ static void document_build(NativeWorkspace *doc)
 static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
 {
     char area_lower[32], base[320], over[320], atlas[420], error[180] = {0};
+    gboolean aria = g_str_has_prefix(doc->identity, "Aria ");
     size_t length = strlen(area);
     if (length >= sizeof(area_lower)) return;
     for (size_t i = 0; i < length; ++i) area_lower[i] = (char)g_ascii_tolower(area[i]);
     area_lower[length] = '\0';
-    snprintf(base, sizeof(base),
-             "assets/extracted/rooms/metroid/workrooms/%s_%03u.mvnative",
-             area_lower, number);
-    snprintf(over, sizeof(over),
-             "assets/extracted/overrides/metroid/%s_%03u.mvnative",
-             area_lower, number);
+    if (aria) {
+        snprintf(base, sizeof(base),
+                 "assets/extracted/rooms/aria/workrooms/area_%02u_room_%03u.mvnative",
+                 (unsigned)atoi(area), number);
+        snprintf(over, sizeof(over),
+                 "assets/extracted/overrides/aria/area_%02u_room_%03u.mvnative",
+                 (unsigned)atoi(area), number);
+    } else {
+        snprintf(base, sizeof(base),
+                 "assets/extracted/rooms/metroid/workrooms/%s_%03u.mvnative",
+                 area_lower, number);
+        snprintf(over, sizeof(over),
+                 "assets/extracted/overrides/metroid/%s_%03u.mvnative",
+                 area_lower, number);
+    }
     NativeMap *temporary = calloc(1, sizeof(*temporary));
     if (!temporary) { message(doc, "Out of memory"); return; }
     const char *source = g_file_test(over, G_FILE_TEST_IS_REGULAR) ? over : base;
@@ -969,9 +952,14 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     *doc->map = *temporary;
     free(temporary);
     char bgpath[420];
-    snprintf(bgpath, sizeof(bgpath),
-             "assets/extracted/rooms/metroid/previews/%s_%03u_bg3.bmp",
-             area_lower, number);
+    if (aria)
+        snprintf(bgpath, sizeof(bgpath),
+                 "assets/extracted/rooms/aria/previews/area_%02u_room_%03u_bg3.bmp",
+                 (unsigned)atoi(area), number);
+    else
+        snprintf(bgpath, sizeof(bgpath),
+                 "assets/extracted/rooms/metroid/previews/%s_%03u_bg3.bmp",
+                 area_lower, number);
     load_background(doc, bgpath);
     history_clear(doc->undo, &doc->undo_count);
     history_clear(doc->redo, &doc->redo_count);
@@ -1033,9 +1021,11 @@ static void start_import(NativeWorkspace *doc, const char *area, unsigned number
     char room_text[16];
     snprintf(room_text, sizeof(room_text), "%u", number);
     GError *error = NULL;
+    const char *importer = g_str_has_prefix(doc->identity, "Aria ") ?
+        "scripts.aos_native_workspace" : "scripts.mzm_native_workspace";
     GSubprocess *proc = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "-m", "scripts.mzm_native_workspace",
+        &error, "python3", "-m", importer,
         "--area", area, "--room", room_text, NULL);
     if (!proc) {
         message(doc, error ? error->message : "Python importer unavailable");
@@ -1114,6 +1104,34 @@ void native_workspace_import_async(NativeWorkspace *manager, const char *area, u
     if (doc) start_import(doc, area, number);
 }
 
+void native_workspace_import_aria_async(NativeWorkspace *manager, unsigned area,
+                                        unsigned number)
+{
+    if (!manager || !manager->documents || !manager->center || !manager->right ||
+        area >= 12 || number >= 1000) return;
+    char *identity = g_strdup_printf("Aria %02u:%03u", area, number);
+    for (guint i = 0; i < manager->documents->len; ++i) {
+        NativeWorkspace *doc = g_ptr_array_index(manager->documents, i);
+        if (g_ascii_strcasecmp(doc->identity, identity) == 0) {
+            focus_page(doc->page);
+            focus_page(doc->palette_page);
+            if (!doc->busy && !doc->ready) {
+                char text[16];
+                snprintf(text, sizeof(text), "%u", area);
+                start_import(doc, text, number);
+            }
+            g_free(identity);
+            return;
+        }
+    }
+    NativeWorkspace *doc = create_document(manager, identity);
+    if (doc) {
+        char text[16];
+        snprintf(text, sizeof(text), "%u", area);
+        start_import(doc, text, number);
+    }
+}
+
 #ifdef FUSION_NATIVE_WORKSPACE_TESTING
 guint native_workspace_test_document_count(const NativeWorkspace *manager)
 {
@@ -1143,6 +1161,9 @@ gboolean native_workspace_test_activate_close(NativeWorkspace *manager, guint in
     if (!manager || !manager->documents || index >= manager->documents->len) return FALSE;
     NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
     g_signal_emit_by_name(doc->close_button, "clicked");
+    /* Run the idle close after the clicked emission, like the GTK event loop. */
+    while (g_main_context_pending(NULL))
+        g_main_context_iteration(NULL, FALSE);
     return TRUE;
 }
 

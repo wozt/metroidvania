@@ -9,14 +9,18 @@ static void err(char *out,size_t n,const char *message)
 {if(out&&n)snprintf(out,n,"%s",message);}
 static bool room_ok(const char *s)
 {
-    if(strncmp(s,"mzm:",4))return false;
+    if(strncmp(s,"mzm:",4) && strncmp(s,"aria:",5))return false;
     for(;*s;s++)if(!((*s>='a'&&*s<='z')||(*s>='0'&&*s<='9')||*s==':'||*s=='_'))return false;
     return true;
 }
 static bool atlas_ok(const char *s)
 {
-    if(strncmp(s,"rooms/metroid/tilesets/",23))return false;
-    if(strstr(s,"..")||strchr(s,'\\')||strchr(s,' ')||!strstr(s,"_atlas.bmp"))return false;
+    if(strncmp(s,"rooms/metroid/tilesets/",strlen("rooms/metroid/tilesets/")) &&
+       strncmp(s,"rooms/aria/tilesets/",strlen("rooms/aria/tilesets/")))return false;
+    size_t n=strlen(s);
+    if(strstr(s,"..")||strchr(s,'\\')||strchr(s,' ')||
+       !((n>=10&&!strcmp(s+n-10,"_atlas.bmp")) ||
+         (n>=10&&!strcmp(s+n-10,"_atlas.png"))))return false;
     for(;*s;s++)if(!(isalnum((unsigned char)*s)||*s=='/'||*s=='_'||*s=='.'))return false;
     return true;
 }

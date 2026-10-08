@@ -1,10 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Read-only Aria room preview. Never writes ROM data or editable overrides. */
 #include "aria_browser.h"
+#include "native_workspace.h"
 #include <stdio.h>
 #include <string.h>
 
 typedef struct {
+    NativeWorkspace *workspace;
     GtkWidget *page;
     GtkWidget *status;
     GtkWidget *details;
@@ -127,10 +129,19 @@ static void render_selected(GtkButton *button, gpointer userdata)
     g_object_unref(process);
 }
 
+static void edit_selected(GtkButton *button, gpointer userdata)
+{
+    AriaBrowser *browser = userdata;
+    (void)button;
+    if (!browser->selected || !browser->workspace) return;
+    native_workspace_import_aria_async(browser->workspace,
+                                       browser->area, browser->room);
+}
+
 static void room_activated(GtkListBox *list, GtkListBoxRow *row, gpointer userdata)
 {
     room_selected(list, row, userdata);
-    render_selected(NULL, userdata);
+    edit_selected(NULL, userdata);
 }
 
 static void populate_rooms(GtkWidget *list, AriaBrowser *browser)
@@ -182,7 +193,7 @@ static void populate_rooms(GtkWidget *list, AriaBrowser *browser)
     g_free(contents);
 }
 
-GtkWidget *aria_browser_build(GtkWidget *center)
+GtkWidget *aria_browser_build(GtkWidget *center, NativeWorkspace *workspace)
 {
     static const char *const modes[] = {
         "Composite", "BG1", "BG2", "BG3", "Collision (diagnostic)", NULL
@@ -195,11 +206,14 @@ GtkWidget *aria_browser_build(GtkWidget *center)
     GtkWidget *image_scroll = gtk_scrolled_window_new();
     GtkWidget *list = gtk_list_box_new();
     browser->page = page;
+    browser->workspace = workspace;
     browser->mode = gtk_drop_down_new_from_strings(modes);
     browser->picture = gtk_picture_new();
     browser->status = gtk_label_new("Load the native Aria catalog to browse rooms.");
     browser->details = gtk_label_new("Choose a room to inspect its ROM-derived metadata.");
     browser->render_button = gtk_button_new_with_label("Render selected room");
+    GtkWidget *edit_button = gtk_button_new_from_icon_name("document-edit-symbolic");
+    gtk_widget_set_tooltip_text(edit_button, "Edit selected Aria room using native tile tools");
     gtk_widget_set_tooltip_text(browser->render_button,
         "Decode original background layers with the verified local USA ROM");
     gtk_widget_set_margin_start(page, 8);
@@ -209,6 +223,7 @@ GtkWidget *aria_browser_build(GtkWidget *center)
     gtk_box_append(GTK_BOX(toolbar), gtk_label_new("Layer:"));
     gtk_box_append(GTK_BOX(toolbar), browser->mode);
     gtk_box_append(GTK_BOX(toolbar), browser->render_button);
+    gtk_box_append(GTK_BOX(toolbar), edit_button);
     gtk_box_append(GTK_BOX(page), toolbar);
     gtk_box_append(GTK_BOX(page), browser->details);
     gtk_label_set_wrap(GTK_LABEL(browser->details), TRUE);
@@ -235,6 +250,7 @@ GtkWidget *aria_browser_build(GtkWidget *center)
     g_signal_connect(list, "row-activated", G_CALLBACK(room_activated), browser);
     g_signal_connect(browser->mode, "notify::selected", G_CALLBACK(mode_changed), browser);
     g_signal_connect(browser->render_button, "clicked", G_CALLBACK(render_selected), browser);
+    g_signal_connect(edit_button, "clicked", G_CALLBACK(edit_selected), browser);
     g_object_set_data_full(G_OBJECT(page), "aria-browser-state", browser, g_free);
     gtk_notebook_append_page(GTK_NOTEBOOK(center), page, gtk_label_new("Aria / Native rooms"));
     gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(center), page, TRUE);

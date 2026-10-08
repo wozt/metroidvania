@@ -86,7 +86,24 @@ After local data extraction, both builds completed successfully. The generated
 Generated ROMs and extracted assets remained in `/tmp`; none were copied into
 or tracked by this repository.
 
-## Additional references checked but not integrated
+## Additional runtimes and references audited
+
+### `mgba-emu/mgba`
+
+- Official project: <https://github.com/mgba-emu/mgba>.
+- Evaluated and integrated Debian library version: 0.10.5+dfsg-1.
+- License: Mozilla Public License 2.0. The project uses the system shared
+  library; no mGBA source is copied into this repository.
+- The public `mCore` API was verified with both supported ROMs: core discovery,
+  32-bit video-buffer attachment, ROM loading, reset, input, frame execution,
+  and teardown all work without a BIOS file or automatic save loading.
+- After 300 input-free frames, Zero Mission produced 38,129 nonzero pixels and
+  hash `5ca363153253eb90`; Aria produced 38,400 and
+  `ce393be405213e55`. Both frames are 240x160. The repository command
+  `fusion_dev --authentic-probe` reproduces this trace locally after ROM
+  validation.
+- mGBA is an interim emulated execution route, not evidence that either engine
+  has been natively ported.
 
 ### `sergiomanzur/ariaOfSorrow-recomp`
 
@@ -120,9 +137,9 @@ or tracked by this repository.
 
 ## Priority unknowns
 
-- Runtime or recompilation strategy for MZM.
-- Aria runtime lifecycle and library integration boundaries; the standalone
-  Linux AOT runtime itself has now been reproduced.
+- Final native or recompiled runtime strategy for each game beyond the mGBA
+  integration proof.
+- Engine-specific state extraction and controlled snapshots from mGBA.
 - Minimal snapshot boundaries for both games, to be established with Ghidra
   and runtime instrumentation.
 - Licensing and redistribution status of code generated from a ROM; legal

@@ -64,3 +64,12 @@ The PolyForm runtime is incompatible with a combined GPLv3-only release
 without a separate compatible grant. Do not integrate it. The unlicensed
 Aria host frontend remains excluded. Preserve all third-party licenses, and
 require user-supplied ROMs without redistribution of copyrighted game data.
+
+## D-010 - mGBA authentic execution proof
+
+Decision: use the MPL-2.0 mGBA shared library as an interim, GPL-compatible
+system dependency for authentic ROM execution. This path is explicitly labeled
+emulated and does not settle the final native backend strategy. It uses only
+locally SHA-1-validated user ROMs, disables automatic save handling, commits no
+game data, and steps only the active world's runtime. The PolyForm runtime and
+unlicensed Aria frontend remain excluded.

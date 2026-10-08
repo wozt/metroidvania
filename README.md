@@ -7,12 +7,14 @@ world; changing worlds suspends the active backend before activating the other.
 
 ## Honest status
 
-The current executable is an **SDL3 integration harness**, not yet a port of
-either game. Its rooms, collisions, and profiles use diagnostic geometry. The
-user's own ROMs are required at launch and verified with SHA-1, but their code
-and maps are not executed yet. Optional local-only pipelines can extract the
-verified Samus and Soma animation sets. Both
-backends display `SIMULATED BACKEND` explicitly.
+The default executable is an **SDL3 integration harness**, not yet a native
+port of either game. Its rooms, collisions, and profiles use diagnostic
+geometry. The opt-in `--authentic-video-test` mode executes the user's verified
+ROMs through the mGBA library and displays their real 240x160 output, one
+suspended/active runtime at a time. This emulated proof is not the final native
+backend architecture. Optional local-only pipelines can extract the verified
+Samus and Soma animation sets. Both diagnostic backends display
+`SIMULATED BACKEND` explicitly.
 
 Working today:
 
@@ -23,11 +25,12 @@ Working today:
 - deterministic collision correction or a rejected unsafe swap;
 - versioned save data, dual HUD, placeholder synergy gauge, and debug overlay;
 - strict local validation of both ROMs, with no network transfer.
+- reproducible 300-frame authentic ROM probes and an interactive mGBA video mode.
 
 ## Debian 13 prerequisites
 
 ```sh
-sudo apt install build-essential cmake libsdl3-dev python3 git
+sudo apt install build-essential cmake libsdl3-dev libmgba-dev python3 git
 ```
 
 Ghidra 12.1.4 is installed on this machine under
@@ -58,6 +61,12 @@ ctest --test-dir build --output-on-failure
 
 Use `--aria` and `--metroid` to supply different local paths.
 `--validate-only` validates both files without opening a window.
+`--authentic-probe` executes each ROM for 300 frames in sequence and prints a
+nonempty-pixel count and deterministic framebuffer hash. Run
+`--authentic-video-test` for interactive authentic ROM output; `M` suspends the
+current runtime and switches to the other one. The mode does not load or write
+save files. GBA controls are arrows, `Space`/`X` for A, `J`/`Z` for B, `Enter`
+for Start, right Shift for Select, and `U`/`I` for L/R.
 
 To generate all four verified Power Suit animation states locally:
 
@@ -109,7 +118,8 @@ of any future patch or distributable package must be reviewed separately.
 Original project-authored code and documentation are licensed under
 **GNU GPL v3.0 only** (`GPL-3.0-only`); see [`LICENSE`](LICENSE).
 GPLv3 permits commercial use subject to its conditions. Third-party code retains
-its own license terms. In particular, PolyForm-licensed `gbarecomp` is a
+its own license terms. mGBA is linked as an MPL-2.0 system library; its source
+and license remain upstream. In particular, PolyForm-licensed `gbarecomp` is a
 **research-only reference**, not a permitted GPLv3 runtime dependency at
 present. See [`LICENSES.md`](LICENSES.md) for integration restrictions.
 No license here grants rights to ROMs or proprietary game content.

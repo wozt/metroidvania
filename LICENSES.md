@@ -13,6 +13,8 @@ to license. Previously distributed copies retain their earlier license grants.
 - `third_party/mzm`: MIT; retain its original copyright and license.
 - `third_party/cvaos`: MIT; retain its original copyright and license.
 - SDL3 system library: zlib license; retain applicable notices.
+- mGBA system library: Mozilla Public License 2.0. The project links against
+  the Debian shared library and does not vendor or relicense mGBA source.
 
 These files are not relicensed as GPL simply by being referenced or shipped
 separately. MIT-licensed code may be incorporated under GPLv3 requirements
@@ -49,3 +51,4 @@ works. Distribution of a future patch or game binary requires separate review.
 
 - <https://www.gnu.org/licenses/gpl-3.0.html>
 - <https://polyformproject.org/licenses/noncommercial/1.0.0/>
+- <https://github.com/mgba-emu/mgba/blob/master/LICENSE>

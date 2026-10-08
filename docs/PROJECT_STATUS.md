@@ -9,7 +9,9 @@ backend at a time. Personal USA ROMs are mandatory and remain local. Upstream
 sources are isolated as submodules. Linux/SDL3 is the initial target; physical
 GBA support is a later, unproven feasibility study. All project commits,
 documentation, comments, UI text, and diagnostics are written in English.
-Original project-authored code and documentation use GPL-3.0-only. PolyForm-licensed `gbarecomp` is research-only and blocked from integration.
+Original project-authored code and documentation use GPL-3.0-only.
+PolyForm-licensed `gbarecomp` is research-only and blocked from integration.
+The MPL-2.0 mGBA system library provides an interim authentic execution path.
 
 ## Actual state
 
@@ -24,8 +26,8 @@ Original project-authored code and documentation use GPL-3.0-only. PolyForm-lice
 | HP, KO, and persistence | Done | Core tests and version-1 save data |
 | Collision-safe character swap | Done | Deterministic offsets and rejection test |
 | HUD, debug, and synergy | Partial | Dual HP and overlay; synergy explicitly a placeholder |
-| Authentic Aria engine | Feasibility reproduced, not integrated | Standalone AOT Linux runtime: 36/36 tests, nonempty framebuffer, zero fallback after clean-room BIOS recompilation; PolyForm runtime incompatible with current GPLv3-only policy; unlicensed root host code excluded |
-| Authentic MZM engine | Not started | No runtime strategy selected |
+| Authentic Aria execution | Emulated proof integrated | mGBA executes the verified ROM with input and 240x160 output; native/AOT route remains unresolved |
+| Authentic MZM execution | Emulated proof integrated | mGBA executes the verified ROM with input and 240x160 output; native source-port route remains unresolved |
 | Original assets, maps, and audio | Partial, local-only | Verified Samus and Soma idle/run/jump/attack recipes; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
@@ -62,6 +64,12 @@ targets, and all 60 Python tests passed. Both ROMs were accepted. The SDL smoke
 test remained active for two seconds and was stopped by `timeout` with the
 expected status 124 and no runtime error.
 
+The mGBA adapter adds an eighth CTest target for ROM-free failure paths. The
+local authentic probe executed each validated ROM for 300 frames and reproduced
+hashes `5ca363153253eb90` (Zero Mission) and `ce393be405213e55` (Aria). An SDL
+dummy-driver authentic-mode smoke test remained active for two seconds and was
+stopped by `timeout` with status 124.
+
 Upstream build verification used local clones under `/tmp`, a locally built
 `agbcc`, and symlinks to the ignored ROM files. Both `make` invocations exited
 successfully and both generated ROMs matched the reference files with `cmp`.
@@ -79,16 +87,17 @@ configured upstream tests passed. See `docs/ARIA_RECOMP_EVALUATION.md`.
 The prototype reads ROMs to authenticate them and optional local tools extract
 verified character graphics. SDL3 draws the rooms, `room_sim.c` supplies
 collisions, and all movement profiles are temporary.
-No original ARM code, asset, room, enemy, boss, audio, or save format is executed.
-The current backends are integration boundaries and test doubles.
+The default diagnostic backends remain integration boundaries and test doubles.
+The opt-in mGBA path now executes original ARM code and renders the ROM's real
+output, but it is still an emulated proof outside the production backend
+contract. No proprietary content is committed.
 
 ## Risks and next actions
 
-1. **P0 - Product blocker:** identify a GPLv3-compatible Aria execution
-   strategy before implementing a project-owned adapter. Do not incorporate
-   PolyForm-licensed `gbarecomp` or unlicensed root frontend code.
-2. **P0 - Technical:** select source HAL or recompilation for MZM after a proof
-   of concept.
+1. **P0 - Integration:** move authentic execution behind the two production
+   backend lifecycles without running the diagnostic simulator concurrently.
+2. **P0 - Native strategy:** evaluate source HAL or compatible recompilation
+   paths while keeping mGBA as the verified baseline.
 3. **P1 - State:** inventory EWRAM/IWRAM, room globals, and snapshot boundaries
    in Ghidra for both ROMs.
 4. **P1 - Tests:** add frame traces, render captures, and real lifecycle tests.
@@ -110,6 +119,19 @@ The current backends are integration boundaries and test doubles.
 - explicit documentation of native, recompiled, interpreted, or emulated paths
   and every fallback;
 - existing automated tests remain green and the license audit is updated.
+
+These criteria are satisfied by the interim emulated proof. The next milestone
+must bind it to the backend interface and define a controlled snapshot boundary.
+
+## Patch 012 - authentic mGBA execution proof
+
+- Added a project-owned adapter around the MPL-2.0 mGBA system library.
+- Both SHA-1-validated ROMs produce authentic 240x160 frames and accept native
+  GBA keypad input; automatic save handling is not enabled.
+- `--authentic-video-test` maintains exactly one active runtime and switches
+  worlds with `M`. `--authentic-probe` produces a reproducible 300-frame trace.
+- Default simulated behavior is unchanged, no ROM-derived bytes are tracked,
+  and the PolyForm/unlicensed implementations remain excluded.
 
 ## Runtime adapter milestone (contract only)
 

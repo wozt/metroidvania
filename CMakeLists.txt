@@ -7,14 +7,21 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 option(FUSION_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 
+find_path(MGBA_INCLUDE_DIR mgba/core/core.h REQUIRED)
+find_library(MGBA_LIBRARY NAMES mgba REQUIRED)
+
 add_library(fusion_core STATIC
     src/core/session.c
     src/core/save.c
     src/core/sha1.c
     src/core/rom.c
+    src/core/gba_runtime.c
     src/backends/castlevania/aria_runtime.c
 )
 target_include_directories(fusion_core PUBLIC include)
+target_include_directories(fusion_core PRIVATE ${MGBA_INCLUDE_DIR})
+target_compile_definitions(fusion_core PRIVATE _DEFAULT_SOURCE)
+target_link_libraries(fusion_core PUBLIC ${MGBA_LIBRARY})
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(fusion_core PRIVATE -Wall -Wextra -Wpedantic)
@@ -74,6 +81,13 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_core_tests PRIVATE fusion_core)
     target_compile_options(fusion_core_tests PRIVATE -Wall -Wextra -Wpedantic)
     add_test(NAME fusion_core COMMAND fusion_core_tests)
+    add_executable(fusion_gba_runtime_tests tests/test_gba_runtime.c)
+    target_link_libraries(fusion_gba_runtime_tests PRIVATE fusion_core)
+    target_compile_options(fusion_gba_runtime_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_gba_runtime_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME gba_runtime_failure_paths COMMAND fusion_gba_runtime_tests)
     add_executable(fusion_room_tests tests/test_room.c src/core/room_sim.c src/core/room_sprite.c)
     target_include_directories(fusion_room_tests PRIVATE include src)
     target_link_libraries(fusion_room_tests PRIVATE fusion_core SDL3::SDL3)

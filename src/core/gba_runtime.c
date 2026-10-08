@@ -1,0 +1,156 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+#include "gba/runtime.h"
+
+#include <mgba/core/core.h>
+#include <mgba/core/log.h>
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+_Static_assert(sizeof(color_t) == sizeof(uint32_t),
+               "mGBA must be built with 32-bit color output");
+
+static void discard_log(struct mLogger *logger, int category,
+                        enum mLogLevel level, const char *format, va_list args)
+{
+    (void)logger;
+    (void)category;
+    (void)level;
+    (void)format;
+    (void)args;
+}
+
+static struct mLogger quiet_logger = {
+    .log = discard_log,
+    .filter = NULL,
+};
+
+static void set_error(char *error, size_t error_size, const char *message)
+{
+    if (error && error_size) snprintf(error, error_size, "%s", message);
+}
+
+bool gba_runtime_open(GbaRuntime *runtime, const char *rom_path,
+                      char *error, size_t error_size)
+{
+    struct mCore *core;
+    struct mCoreOptions options = {0};
+    unsigned width = 0;
+    unsigned height = 0;
+
+    if (!runtime || !rom_path || !rom_path[0]) {
+        set_error(error, error_size, "invalid GBA runtime arguments");
+        return false;
+    }
+    if (runtime->core || runtime->pixels) {
+        set_error(error, error_size, "GBA runtime is already open");
+        return false;
+    }
+
+    mLogSetDefaultLogger(&quiet_logger);
+    core = mCoreFind(rom_path);
+    if (!core) {
+        set_error(error, error_size, "mGBA did not recognize the ROM");
+        return false;
+    }
+    runtime->core = core;
+    if (!core->init(core)) {
+        set_error(error, error_size, "mGBA core initialization failed");
+        /* mGBA exposes no destructor for a core whose init call failed. */
+        runtime->core = NULL;
+        gba_runtime_close(runtime);
+        return false;
+    }
+    runtime->core_initialized = true;
+
+    core->desiredVideoDimensions(core, &width, &height);
+    if (width != GBA_FRAME_WIDTH || height != GBA_FRAME_HEIGHT) {
+        set_error(error, error_size, "mGBA returned an unsupported video size");
+        gba_runtime_close(runtime);
+        return false;
+    }
+    runtime->pixels = calloc((size_t)width * height, sizeof(*runtime->pixels));
+    if (!runtime->pixels) {
+        set_error(error, error_size, "cannot allocate the GBA framebuffer");
+        gba_runtime_close(runtime);
+        return false;
+    }
+    runtime->width = width;
+    runtime->height = height;
+    runtime->stride_pixels = width;
+    core->setVideoBuffer(core, (color_t *)runtime->pixels, width);
+
+    if (!mCoreLoadFile(core, rom_path)) {
+        set_error(error, error_size, "mGBA could not load the ROM");
+        gba_runtime_close(runtime);
+        return false;
+    }
+    runtime->rom_loaded = true;
+
+    mCoreInitConfig(core, "metroidvania-fusion");
+    runtime->config_initialized = true;
+    mCoreConfigMap(&core->config, &options);
+    options.useBios = false;
+    options.skipBios = true;
+    options.videoSync = false;
+    options.audioSync = false;
+    options.mute = true;
+    options.logLevel = mLOG_FATAL;
+    mCoreConfigLoadDefaults(&core->config, &options);
+    mCoreLoadConfig(core);
+    mCoreConfigFreeOpts(&options);
+    core->reset(core);
+    set_error(error, error_size, "");
+    return true;
+}
+
+bool gba_runtime_enter(GbaRuntime *runtime)
+{
+    if (!runtime || !runtime->core || !runtime->rom_loaded || runtime->active)
+        return false;
+    runtime->active = true;
+    return true;
+}
+
+void gba_runtime_leave(GbaRuntime *runtime)
+{
+    if (runtime) runtime->active = false;
+}
+
+bool gba_runtime_step(GbaRuntime *runtime, uint16_t keys_held)
+{
+    struct mCore *core;
+    if (!runtime || !runtime->active || !runtime->core || !runtime->rom_loaded)
+        return false;
+    core = runtime->core;
+    core->setKeys(core, keys_held & 0x03ffu);
+    core->runFrame(core);
+    return true;
+}
+
+bool gba_runtime_frame(const GbaRuntime *runtime, GbaFrameView *out)
+{
+    if (!runtime || !out || !runtime->active || !runtime->pixels ||
+        runtime->width != GBA_FRAME_WIDTH || runtime->height != GBA_FRAME_HEIGHT)
+        return false;
+    *out = (GbaFrameView){runtime->pixels, runtime->width, runtime->height,
+                          runtime->stride_pixels};
+    return true;
+}
+
+void gba_runtime_close(GbaRuntime *runtime)
+{
+    struct mCore *core;
+    if (!runtime) return;
+    core = runtime->core;
+    runtime->active = false;
+    if (core) {
+        if (runtime->rom_loaded) core->unloadROM(core);
+        if (runtime->config_initialized) mCoreConfigDeinit(&core->config);
+        if (runtime->core_initialized) core->deinit(core);
+    }
+    free(runtime->pixels);
+    memset(runtime, 0, sizeof(*runtime));
+}

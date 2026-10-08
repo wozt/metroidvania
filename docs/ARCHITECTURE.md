@@ -38,10 +38,22 @@ revisions match. The next resource layer should expose bounded, read-only
 `RomView` objects and versioned local extractors without writing proprietary
 data into the repository.
 
+The opt-in authentic proof uses one project-owned `GbaRuntime` adapter per ROM
+around the system mGBA library. Both cartridges can remain loaded, but only the
+runtime selected by `SessionState.active_world` is entered and stepped. A world
+switch marks the current runtime inactive before entering the other. Automatic
+save loading is deliberately absent, so this proof neither reads nor writes a
+game save. Its 32-bit 240x160 framebuffer is copied into an SDL3 streaming
+texture; no extracted frame is stored in the repository.
+
+This is an emulated execution path used to unblock authentic frame, input, and
+lifecycle work. It does not make mGBA the final gameplay architecture and does
+not replace the native-source/recompilation investigation.
+
 ## Replacing the stubs
 
-1. Embed a GBA runtime or static recompilation runtime inside the relevant
-   backend.
+1. Move the proven mGBA lifecycle behind each production backend while native
+   source-port or recompilation work continues.
 2. Place VRAM/OAM/palette access, DMA, IRQ/VBlank, audio, and input behind a
    host abstraction.
 3. Define an engine-specific snapshot contract and adapters to `SessionState`.

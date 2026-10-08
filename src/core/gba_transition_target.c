@@ -286,7 +286,26 @@ static bool apply_aria_loader(GbaTransitionTarget *target,
             break;
     }
     if (frame > TARGET_LOADER_FRAME_LIMIT) {
-        set_error(target, "Aria native loader did not reach the planned arrival");
+        char detail[sizeof(target->error)];
+        snprintf(detail, sizeof(detail),
+                 "Aria loader timeout after %u frames: mode=%u stage=%u "
+                 "phase=%u:%u ready=%u control=%u room=%u:%u "
+                 "position=%08x,%08x wanted=%08x,%08x "
+                 "staged=%08x:%u,%u:%u,%u",
+                 TARGET_LOADER_FRAME_LIMIT,
+                 state.game_mode, state.game_mode_stage,
+                 state.in_game_phase, state.in_game_phase_stage,
+                 (unsigned)state.gameplay_state_ready,
+                 (unsigned)state.player_control_enabled,
+                 state.area, state.room,
+                 (unsigned)state.x_position_fixed,
+                 (unsigned)state.y_position_fixed,
+                 (unsigned)plan->target_position_x_q16,
+                 (unsigned)plan->target_position_y_q16,
+                 (unsigned)state.staged_room_pointer,
+                 state.staged_camera_x, state.staged_camera_y,
+                 state.staged_player_x, state.staged_player_y);
+        set_error(target, detail);
         return false;
     }
     target->loader_frames = frame;

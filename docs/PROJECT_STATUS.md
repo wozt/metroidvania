@@ -412,3 +412,11 @@ frame tests and backend lifecycle tests before being enabled.
   displays its complete 48-update attack and Samus its complete 8-update attack,
   including misses and attacks after the diagnostic target is destroyed.
 - Extracted pixels remain ignored and are never committed.
+
+## Patch 0023 - Aria native loader timeout diagnostics
+
+- Retained the exact native arrival verification and bounded loader timeout.
+- On Aria loader timeout, capture the final verified state view (game mode,
+  phase, readiness, room, coordinates, staged arrival) and expected coordinates.
+- Failed transitions still invoke the existing checkpoint rollback contract;
+  diagnostic output is not a substitute for verifying loader trigger behavior.

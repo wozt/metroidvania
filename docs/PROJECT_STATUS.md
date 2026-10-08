@@ -428,3 +428,20 @@ frame tests and backend lifecycle tests before being enabled.
   phase 3:1 stall with null player coordinates at frame 600.
 - No changed loader trigger, frame limit, transaction semantics, or
   checkpoint rollback behavior. The trace is diagnostic only.
+
+## Patch 0026 - guarded Aria same-room arrival
+
+- A local loader trace reached Aria phase `3:1` with a null player pointer,
+  and stayed there through frame 600. The pinned `cvaos` implementation
+  of `GameModeInGameUpdate` calls `sub_080104EC` in phase 3; its stage-1
+  handler `sub_08010350` expects a live player entity.
+- The original code forced phase `0:2` after the destination Entrance room
+  had already bootstrapped. That is not a proven room-loading contract.
+- For a verified, **already-loaded** Entrance room, the target now uses the
+  checkpointed 16-byte player position/velocity write demonstrated by
+  `authentic_preview.c`, followed by bounded health writes, one emulated
+  frame, state verification, and the existing transactional rollback path.
+- Incompatible rooms, uninitialized players, mismatched arrival descriptors,
+  and camera-incompatible positions are rejected without writes. This does
+  **not** implement general native cross-room loading or guest characters.
+- Added a ROM-free regression test for the same-room gate.

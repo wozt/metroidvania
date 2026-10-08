@@ -247,106 +247,96 @@ static bool apply_mzm_loader(GbaTransitionTarget *target,
     return true;
 }
 
+/* An already-loaded target room can accept an in-room arrival safely.
+ * This is NOT a cross-room loader: requiring matching room descriptors avoids
+ * the invalid Aria phase-3 path that loses the player-entity pointer.
+ */
+bool gba_transition_aria_same_room_compatible(const AriaStateView *view,
+                                              const FusionTransitionPlan *plan)
+{
+    if (!view || !plan || !fusion_transition_plan_valid(plan) ||
+        plan->target_world != WORLD_CASTLEVANIA ||
+        plan->arrival_kind != FUSION_TRANSITION_ARRIVAL_ARIA_STAGED_ROOM ||
+        !view->gameplay_state_ready || !view->player_entity_valid ||
+        !view->player_entity_address || view->current_character != 0 ||
+        view->area != plan->target_area || view->room != plan->target_room ||
+        view->staged_room_pointer != plan->target_room_pointer ||
+        view->staged_camera_x != plan->target_camera_x ||
+        view->staged_camera_y != plan->target_camera_y ||
+        view->staged_player_x != plan->target_player_x ||
+        view->staged_player_y != plan->target_player_y ||
+        view->camera_x_fixed > plan->target_position_x_q16 ||
+        view->camera_y_fixed > plan->target_position_y_q16)
+        return false;
+    return true;
+}
+
 static bool apply_aria_loader(GbaTransitionTarget *target,
                               const FusionTransitionPlan *plan)
 {
-    uint8_t phase[2] = {0, 2};
-    uint8_t location[2] = {plan->target_area, plan->target_room};
-    uint8_t staged[8];
-    uint8_t room_pointer[4];
+    enum { ARIA_PLAYER_POSITION_OFFSET = 0x40 };
+    AriaStateView before = {0};
+    AriaStateView immediate = {0};
+    AriaStateView after = {0};
+    uint8_t player[16] = {0};
     uint8_t health[2];
-    AriaStateView state;
-    unsigned frame;
-    unsigned last_mode = UINT32_MAX;
-    unsigned last_phase = UINT32_MAX;
-    unsigned last_stage = UINT32_MAX;
-    unsigned last_control = UINT32_MAX;
 
-    write_u16(staged, 0, plan->target_camera_x);
-    write_u16(staged, 2, plan->target_camera_y);
-    write_u16(staged, 4, plan->target_player_x);
-    write_u16(staged, 6, plan->target_player_y);
-    write_u32(room_pointer, 0, plan->target_room_pointer);
-    if (!checkpointed_write(target, ARIA_LOCATION_ADDRESS,
-                            location, sizeof(location)) ||
-        !checkpointed_write(target, ARIA_STAGED_ARRIVAL_ADDRESS,
-                            staged, sizeof(staged)) ||
-        !checkpointed_write(target, ARIA_STAGED_ROOM_POINTER_ADDRESS,
-                            room_pointer, sizeof(room_pointer)) ||
-        !checkpointed_write(target, ARIA_PHASE_ADDRESS,
-                            phase, sizeof(phase)))
+    if (!aria_state_read(target->runtime, &before,
+                         target->error, sizeof(target->error)))
         return false;
-
-    for (frame = 1; frame <= TARGET_LOADER_FRAME_LIMIT; ++frame) {
-        if (!gba_runtime_step(target->runtime, 0) ||
-            !aria_state_read(target->runtime, &state,
-                             target->error, sizeof(target->error)))
-            return false;
-        /* Log phase changes, plus periodic checkpoints in a stalled loader.
-         * No memory writes, changed timing, or relaxed arrival predicates. */
-        if (frame == 1 || frame % 60 == 0 ||
-            state.game_mode != last_mode ||
-            state.in_game_phase != last_phase ||
-            state.in_game_phase_stage != last_stage ||
-            state.player_control_enabled != last_control) {
-            fprintf(stderr, "Aria loader trace frame=%u mode=%u:%u phase=%u:%u "
-                    "ready=%u control=%u area=%u room=%u "
-                    "pos=%08x,%08x player=%08x staged=%08x\n",
-                    frame, state.game_mode, state.game_mode_stage,
-                    state.in_game_phase, state.in_game_phase_stage,
-                    (unsigned)state.gameplay_state_ready,
-                    (unsigned)state.player_control_enabled,
-                    state.area, state.room,
-                    (unsigned)state.x_position_fixed,
-                    (unsigned)state.y_position_fixed,
-                    (unsigned)state.player_entity_address,
-                    (unsigned)state.staged_room_pointer);
-        }
-        last_mode = state.game_mode;
-        last_phase = state.in_game_phase;
-        last_stage = state.in_game_phase_stage;
-        last_control = state.player_control_enabled;
-        if (state.gameplay_state_ready &&
-            state.area == plan->target_area &&
-            state.room == plan->target_room &&
-            state.x_position_fixed == plan->target_position_x_q16 &&
-            state.y_position_fixed == plan->target_position_y_q16)
-            break;
-    }
-    if (frame > TARGET_LOADER_FRAME_LIMIT) {
-        char detail[sizeof(target->error)];
-        snprintf(detail, sizeof(detail),
-                 "Aria timeout %u: mode=%u:%u phase=%u:%u ready=%u ctl=%u "
-                 "room=%u:%u pos=%08x,%08x expected=%08x,%08x "
-                 "staged=%08x:%u,%u:%u,%u",
-                 TARGET_LOADER_FRAME_LIMIT,
-                 state.game_mode, state.game_mode_stage,
-                 state.in_game_phase, state.in_game_phase_stage,
-                 (unsigned)state.gameplay_state_ready,
-                 (unsigned)state.player_control_enabled,
-                 state.area, state.room,
-                 (unsigned)state.x_position_fixed,
-                 (unsigned)state.y_position_fixed,
-                 (unsigned)plan->target_position_x_q16,
-                 (unsigned)plan->target_position_y_q16,
-                 (unsigned)state.staged_room_pointer,
-                 state.staged_camera_x, state.staged_camera_y,
-                 state.staged_player_x, state.staged_player_y);
-        set_error(target, detail);
+    if (!gba_transition_aria_same_room_compatible(&before, plan)) {
+        set_error(target, "Aria target requires a verified loaded Entrance room; "
+                  "cross-room loading is not implemented");
         return false;
     }
-    target->loader_frames = frame;
+
+    /* Reuse the ROM-tested in-room placement from authentic_preview.c.
+     * Entity coordinates are camera-relative Q16.16; velocities are cleared.
+     * All writes are checkpoint-protected by the target transaction.
+     */
+    write_u32(player, 0, plan->target_position_x_q16 - before.camera_x_fixed);
+    write_u32(player, 4, plan->target_position_y_q16 - before.camera_y_fixed);
+    write_u32(player, 8, 0);
+    write_u32(player, 12, 0);
+    if (!checkpointed_write(target,
+                            before.player_entity_address + ARIA_PLAYER_POSITION_OFFSET,
+                            player, sizeof(player)))
+        return false;
+    if (!aria_state_read(target->runtime, &immediate,
+                         target->error, sizeof(target->error)) ||
+        immediate.x_position_fixed != plan->target_position_x_q16 ||
+        immediate.y_position_fixed != plan->target_position_y_q16 ||
+        immediate.x_velocity_fixed != 0 || immediate.y_velocity_fixed != 0) {
+        set_error(target, "Aria in-room placement failed immediate verification");
+        return false;
+    }
+
     write_u16(health, 0, (uint16_t)plan->target_max_health);
     if (!checkpointed_write(target, ARIA_MAX_HP_ADDRESS,
                             health, sizeof(health)))
         return false;
     write_u16(health, 0, (uint16_t)plan->target_health);
     if (!checkpointed_write(target, ARIA_CURRENT_HP_ADDRESS,
-                            health, sizeof(health)) ||
-        !gba_runtime_step(target->runtime, 0)) {
-        set_error(target, "Aria health import did not complete");
+                            health, sizeof(health)))
+        return false;
+
+    if (!gba_runtime_step(target->runtime, 0) ||
+        !aria_state_read(target->runtime, &after,
+                         target->error, sizeof(target->error))) {
+        set_error(target, "Aria in-room arrival frame execution failed");
         return false;
     }
+    if (!gba_transition_aria_same_room_compatible(&after, plan) ||
+        after.x_position_fixed != plan->target_position_x_q16 ||
+        after.y_position_fixed != plan->target_position_y_q16 ||
+        after.current_hp != plan->target_health ||
+        after.max_hp != plan->target_max_health) {
+        set_error(target, "Aria in-room arrival failed post-frame verification");
+        return false;
+    }
+    target->loader_frames = 1;
+    fprintf(stderr, "Aria arrival: verified in-room placement, "
+            "native room loader not invoked\n");
     return true;
 }
 

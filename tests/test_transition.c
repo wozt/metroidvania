@@ -1,5 +1,6 @@
 #include "aria/state.h"
 #include "core/transition.h"
+#include "gba/transition_target.h"
 #include "mzm/state.h"
 
 #include <assert.h>
@@ -153,6 +154,36 @@ int main(void)
     assert(fusion_transition_plan_build(&observation, WORLD_CASTLEVANIA,
                                         &mzm_to_aria));
     assert(fusion_transition_plan_valid(&mzm_to_aria));
+    /* The native phase-3 loader requires a live player entity. Keep cross-room
+     * and uninitialized contexts rejected rather than faking gameplay-ready. */
+    {
+        AriaStateView entrance = {0};
+        entrance.gameplay_state_ready = true;
+        entrance.player_entity_valid = true;
+        entrance.player_entity_address = UINT32_C(0x020004e4);
+        entrance.current_character = 0;
+        entrance.area = mzm_to_aria.target_area;
+        entrance.room = mzm_to_aria.target_room;
+        entrance.staged_room_pointer = mzm_to_aria.target_room_pointer;
+        entrance.staged_camera_x = mzm_to_aria.target_camera_x;
+        entrance.staged_camera_y = mzm_to_aria.target_camera_y;
+        entrance.staged_player_x = mzm_to_aria.target_player_x;
+        entrance.staged_player_y = mzm_to_aria.target_player_y;
+        entrance.camera_x_fixed = UINT32_C(0x00200000);
+        entrance.camera_y_fixed = UINT32_C(0x02000000);
+        assert(gba_transition_aria_same_room_compatible(&entrance, &mzm_to_aria));
+        entrance.player_entity_address = 0;
+        assert(!gba_transition_aria_same_room_compatible(&entrance, &mzm_to_aria));
+        entrance.player_entity_address = UINT32_C(0x020004e4);
+        entrance.room = 1;
+        assert(!gba_transition_aria_same_room_compatible(&entrance, &mzm_to_aria));
+        entrance.room = mzm_to_aria.target_room;
+        entrance.staged_room_pointer += 4;
+        assert(!gba_transition_aria_same_room_compatible(&entrance, &mzm_to_aria));
+        entrance.staged_room_pointer = mzm_to_aria.target_room_pointer;
+        entrance.camera_x_fixed = mzm_to_aria.target_position_x_q16 + 1;
+        assert(!gba_transition_aria_same_room_compatible(&entrance, &mzm_to_aria));
+    }
     assert(mzm_to_aria.version == FUSION_TRANSITION_PLAN_VERSION);
     assert(mzm_to_aria.target_world == WORLD_CASTLEVANIA);
     assert(mzm_to_aria.target_character == CHARACTER_SAMUS);

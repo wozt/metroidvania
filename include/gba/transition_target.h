@@ -2,6 +2,7 @@
 #define FUSION_GBA_TRANSITION_TARGET_H
 
 #include "core/transition.h"
+#include "aria/state.h"
 #include "gba/runtime.h"
 
 #include <stdbool.h>
@@ -18,6 +19,8 @@ typedef struct {
 void gba_transition_target_init(GbaTransitionTarget *target,
                                 GbaRuntime *runtime, WorldKind world);
 bool gba_transition_target_bootstrap(GbaTransitionTarget *target);
+bool gba_transition_aria_same_room_compatible(
+    const AriaStateView *view, const FusionTransitionPlan *plan);
 const FusionTransitionTargetOps *gba_transition_target_ops(void);
 
 #endif

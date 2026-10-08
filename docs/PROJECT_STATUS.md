@@ -185,3 +185,10 @@ frame tests and backend lifecycle tests before being enabled.
 - Added synthetic decoding and bounds tests. No ROM assets are committed.
 - Tile grids are **not** assembled character sprites: OAM, animation and graphics
   pointers still need ROM-specific interpretation.
+
+## Patch 012 - local GBA OBJ/OAM composition primitives
+
+- Added 4bpp OBJ tile/OAM/BGR555 composition with 1D tile mapping and alpha BMP output.
+- Unit tests cover signed OBJ coordinates, palette banks, tile flips and transparency.
+- Inputs require verified ROM SHA-1 and explicit offsets; no game assets are shipped.
+- Samus top/bottom VRAM staging, arm cannon, and Aria-specific animation chains are not yet reconstructed.

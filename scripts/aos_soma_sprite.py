@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Build a verified Soma idle frame from a personal Aria of Sorrow ROM."""
+"""Build verified Soma animations from a personal Aria of Sorrow ROM."""
 import argparse
 import hashlib
 from pathlib import Path
@@ -18,7 +18,10 @@ EXPECTED_SHA1 = "abd71fe01ebb201bcc133074db1dd8c5253776c7"
 SOMA_GRAPHICS_DESCRIPTOR = 0x080E11D4
 SOMA_PALETTE_DESCRIPTOR = 0x082097D4
 SOMA_ANIMATION_DESCRIPTOR = 0x080E11C4
-SOMA_IDLE_ANIMATION = 0
+SOMA_ANIMATIONS = {
+    "idle": (0, 4),
+    "run": (1, 17),
+}
 CELL_TILES = 8
 SHEET_TILES = 16
 TILE_BYTES = 32
@@ -156,8 +159,8 @@ def crop_rgba(rgba, width, height, bounds):
     return bytes(cropped), cropped_width, cropped_height
 
 
-def idle_canvas_bounds(rom):
-    animation = parse_animation(rom, SOMA_IDLE_ANIMATION)
+def animation_canvas_bounds(rom, animation_index):
+    animation = parse_animation(rom, animation_index)
     palette = load_palette(rom)
     bounds = []
     for frame in animation["frames"]:
@@ -168,16 +171,24 @@ def idle_canvas_bounds(rom):
             max(item[2] for item in bounds), max(item[3] for item in bounds))
 
 
-def make_soma_idle_frame(rom, frame_index=0, canvas_bounds=None):
-    animation = parse_animation(rom, SOMA_IDLE_ANIMATION)
+def make_soma_animation_frame(rom, animation_name, frame_index=0,
+                              canvas_bounds=None):
+    if animation_name not in SOMA_ANIMATIONS:
+        raise ValueError(f"unsupported Soma animation: {animation_name}")
+    animation_index, expected_count = SOMA_ANIMATIONS[animation_name]
+    animation = parse_animation(rom, animation_index)
+    if len(animation["frames"]) != expected_count:
+        raise ValueError(
+            f"unexpected {animation_name} frame count: {len(animation['frames'])}")
     if not 0 <= frame_index < len(animation["frames"]):
         raise ValueError(
-            f"Soma idle frame index must be 0..{len(animation['frames']) - 1}")
+            f"Soma {animation_name} frame index must be "
+            f"0..{len(animation['frames']) - 1}")
     frame = animation["frames"][frame_index]
     tile_data, graphics = extract_cell_tiles(rom, frame["frame_id"])
     palette = load_palette(rom)
     rgba, width, height = decode_cell(tile_data, palette)
-    canvas_bounds = canvas_bounds or idle_canvas_bounds(rom)
+    canvas_bounds = canvas_bounds or animation_canvas_bounds(rom, animation_index)
     rgba, width, height = crop_rgba(rgba, width, height, canvas_bounds)
     metadata = {
         "animation_pointer": animation["animation_pointer"],
@@ -192,15 +203,21 @@ def make_soma_idle_frame(rom, frame_index=0, canvas_bounds=None):
     return to_bmp(rgba, width, height), metadata
 
 
+def make_soma_idle_frame(rom, frame_index=0, canvas_bounds=None):
+    return make_soma_animation_frame(rom, "idle", frame_index, canvas_bounds)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rom", required=True, type=Path)
+    parser.add_argument("--animation", choices=sorted(SOMA_ANIMATIONS),
+                        default="idle")
     parser.add_argument("--frame", type=int, default=0)
     output_group = parser.add_mutually_exclusive_group(required=True)
     output_group.add_argument("--output", type=Path,
                               help="write one BMP selected by --frame")
     output_group.add_argument("--output-dir", type=Path,
-                              help="write the complete four-frame idle cycle")
+                              help="write every frame of the selected animation")
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     allowed = (root / "assets" / "extracted").resolve()
@@ -208,7 +225,9 @@ def main():
         outputs = [(args.frame, args.output.resolve())]
     else:
         output_dir = args.output_dir.resolve()
-        outputs = [(index, output_dir / f"idle_{index}.bmp") for index in range(4)]
+        frame_count = SOMA_ANIMATIONS[args.animation][1]
+        outputs = [(index, output_dir / f"{args.animation}_{index}.bmp")
+                   for index in range(frame_count)]
     for _, output in outputs:
         if output.suffix.lower() != ".bmp" or allowed not in output.parents:
             parser.error(f"output must be a BMP below {allowed}")
@@ -219,10 +238,12 @@ def main():
         rom = args.rom.read_bytes()
         if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
             parser.error("expected unmodified Aria of Sorrow USA ROM")
-        canvas_bounds = idle_canvas_bounds(rom)
+        animation_index = SOMA_ANIMATIONS[args.animation][0]
+        canvas_bounds = animation_canvas_bounds(rom, animation_index)
         results = []
         for index, output in outputs:
-            bitmap, metadata = make_soma_idle_frame(rom, index, canvas_bounds)
+            bitmap, metadata = make_soma_animation_frame(
+                rom, args.animation, index, canvas_bounds)
             output.parent.mkdir(parents=True, exist_ok=True)
             if not output.exists() or output.read_bytes() != bitmap:
                 output.write_bytes(bitmap)
@@ -230,7 +251,7 @@ def main():
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     for index, output, metadata in results:
-        print(f"Wrote verified Soma idle frame {index}: {output}")
+        print(f"Wrote verified Soma {args.animation} frame {index}: {output}")
         print(f"Size={metadata['width']}x{metadata['height']}; "
               f"frame id={metadata['frame_id']}; duration={metadata['duration']}; "
               f"sheet={metadata['sheet_index']}; quadrant={metadata['quadrant']}")

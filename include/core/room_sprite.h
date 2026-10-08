@@ -6,7 +6,7 @@
 #include "core/types.h"
 
 enum { SPRITE_IDLE, SPRITE_RUN, SPRITE_JUMP, SPRITE_ATTACK, SPRITE_STATE_COUNT };
-enum { SPRITE_MAX_FRAMES = 10 };
+enum { SPRITE_MAX_FRAMES = 17 };
 
 typedef struct {
     SDL_Texture *frames[FUSION_CHARACTER_COUNT][SPRITE_STATE_COUNT][SPRITE_MAX_FRAMES];

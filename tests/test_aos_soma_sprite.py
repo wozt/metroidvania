@@ -7,6 +7,7 @@ from scripts.aos_soma_sprite import (
     decode_cell,
     extract_cell_tiles,
     load_palette,
+    make_soma_animation_frame,
     opaque_bounds,
     parse_animation,
 )
@@ -74,6 +75,10 @@ class SomaSpriteTests(unittest.TestCase):
         struct.pack_into("<H", rom, 0x302, 3)
         with self.assertRaisesRegex(ValueError, "unsupported"):
             parse_animation(bytes(rom), 0, BASE + 0x100)
+
+    def test_reject_unknown_animation_name(self):
+        with self.assertRaisesRegex(ValueError, "unsupported Soma animation"):
+            make_soma_animation_frame(b"", "unknown")
 
     def test_crop_preserves_requested_cell_coordinates(self):
         rgba = bytearray(4 * 4 * 4)

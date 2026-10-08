@@ -63,21 +63,29 @@ The pinned matching USA build establishes this exact chain:
 - `0x080E11C4` points to 83 animations through the table at `0x08639660`;
 - animation 0 at `0x0822A7B8` is idle: frame IDs `12, 13, 14, 13` with
   durations `30, 11, 11, 11` at 60 Hz;
+- animation 1 at `0x0822A7CC` is the 17-frame continuous run loop, with
+  exact per-frame durations totaling 56 updates;
+- movement starts with animation 26 (`68, 69, 70`) and stops through animation
+  25; those transitions are verified but not yet modeled by the prototype;
 - frame IDs 12 through 14 use sheet 3 at `0x081664B4`;
 - `0x082097D4` describes the OBJ palettes, with Soma's 16 colors starting at
   `0x082097D8`.
 
-Generate the complete idle cycle with:
+Generate the complete idle and run cycles with:
 
 ```sh
-python3 scripts/aos_soma_sprite.py \
-  --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
-  --output-dir assets/extracted/sprites/soma
+for animation in idle run; do
+  python3 scripts/aos_soma_sprite.py \
+    --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
+    --animation "$animation" \
+    --output-dir assets/extracted/sprites/soma
+done
 ```
 
-The four outputs share the union of their opaque cell bounds (18x34), retaining
-the native relative anchor while removing identical transparent margins. A live
-research capture independently confirmed that frames 12 and 13 each match all
-2,048 corresponding OBJ VRAM bytes and that the 32 palette bytes match OBJ
-palette bank 0. The research runtime is not part of this repository or its
-runtime; only the ROM-derived extractor is project code.
+Each animation uses the union of its opaque cell bounds, retaining the native
+relative anchor while removing identical transparent margins: 18x34 for idle
+and 28x33 for run. Live research captures independently confirmed that idle
+frames 12 and 13 and run frame 99 each match all 2,048 corresponding OBJ VRAM
+bytes; the 32 palette bytes also match OBJ palette bank 0. The research runtime
+is not part of this repository or its runtime; only the ROM-derived extractor
+is project code.

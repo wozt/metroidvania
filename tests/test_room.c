@@ -64,6 +64,11 @@ static void test_verified_animation_timing(void)
     assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_IDLE, 41.f / 60.f) == 2);
     assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_IDLE, 52.f / 60.f) == 3);
     assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_IDLE, 63.f / 60.f) == 0);
+    assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_RUN, 3.f / 60.f) == 0);
+    assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_RUN, 4.f / 60.f) == 1);
+    assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_RUN, 7.f / 60.f) == 2);
+    assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_RUN, 53.f / 60.f) == 16);
+    assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_RUN, 56.f / 60.f) == 0);
 }
 
 int main(void)

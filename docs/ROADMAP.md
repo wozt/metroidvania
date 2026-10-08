@@ -15,12 +15,16 @@
 4. **Second state view:** verified Aria mode, location, player entity,
    progression, animation, and movement fields are observable through bounded
    read-only EWRAM access with dynamic-pointer validation.
-5. Define explicit field ownership and rollback before any cross-engine
-   mutation.
+5. **Ownership baseline:** project both verified views into a common read-only
+   observation. Location and position remain source-local, health remains
+   character-owned, and no field is implicitly shared.
+6. Define destination spawn mapping and transactional rollback before any
+   cross-engine mutation.
 
 Exit criterion: one authentic room from each ROM can be loaded independently
 with verified timing, input, rendering, and a minimal read-only state view.
-Both views are complete; transition ownership design is next.
+Both views and the read-only ownership projection are complete; a safe target
+import design is next.
 
 ## P1 - Two engines and transitions
 

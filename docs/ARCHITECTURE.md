@@ -97,13 +97,34 @@ room initialization from being reported too early.
 
 This observation path is deliberately one-way. It neither writes emulated
 memory nor copies values into `SessionState`; authority remains with the
-respective active engine runtime. A future transition adapter must define
-ownership, conversions, and rollback rules explicitly before any state is
-imported or changed.
+respective active engine runtime. Any future importer must honor explicit
+ownership, conversions, validation, and rollback before state is changed.
+
+## Transition observation boundary
+
+`FusionTransitionObservation` is a versioned, read-only projection shared by
+the two verified state views. It contains only source world and character,
+source area/room, Q16.16 position, and raw character health. MZM quarter-pixel
+positions are shifted left by 14; Aria positions are already 16.16 and are
+copied exactly.
+
+Ownership is encoded alongside the values. Area, room, and position are
+source-local and may only describe the suspended source engine. Health belongs
+to Samus or Soma and retains that engine's raw scale. No field is currently
+classified as shared. Velocity is omitted because its cross-engine unit and
+arrival behavior are not verified; equipment and progression are omitted
+because no merge policy exists.
+
+Projection requires a gameplay-active, plausible, ready engine view. Aria's
+Julius mode is rejected because Julius is not a Fusion participant. The
+projection has no import operation and cannot update `SessionState` or either
+runtime. A later target adapter must map a source observation to an explicit
+destination spawn and support validation plus rollback before any write occurs.
 
 ## Replacing the stubs
 
-1. Define field ownership and rollback for a minimal transition adapter.
+1. Define destination spawn mapping and transactional rollback for a minimal
+   transition importer.
 2. Place controlled VRAM/OAM/palette and memory access behind a backend-owned
    host abstraction.
 3. Add adapters between verified engine state and `SessionState` without

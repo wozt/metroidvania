@@ -6,6 +6,7 @@
 #include "core/rom.h"
 #include "core/save.h"
 #include "core/session.h"
+#include "core/transition.h"
 #include "gba/runtime.h"
 #include "mzm/state.h"
 
@@ -38,6 +39,19 @@ static uint64_t hash_frame(const GbaFrameView *frame)
         }
     }
     return hash;
+}
+
+static void print_transition_observation(
+    const FusionTransitionObservation *observation)
+{
+    printf("Transition observation: %s/%s source-room=%u:%u "
+           "q16=%08x,%08x health=%d/%d\n",
+           world_name(observation->source_world),
+           character_name(observation->source_character),
+           observation->source_area, observation->source_room,
+           (unsigned)observation->position_x_q16,
+           (unsigned)observation->position_y_q16,
+           observation->health, observation->max_health);
 }
 
 static bool run_authentic_probe(const char *label, const char *rom_path,
@@ -113,6 +127,7 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
     }
     if (state_world == WORLD_METROID) {
         MzmStateView state_view;
+        FusionTransitionObservation transition;
         unsigned timeline_frame;
         bool found = false;
         for (timeline_frame = 331; timeline_frame <= 6000; ++timeline_frame) {
@@ -136,8 +151,14 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
                state_view.x_subpixels, state_view.y_subpixels,
                state_view.current_energy, state_view.max_energy,
                state_view.pose);
+        if (!fusion_transition_observe_mzm(&state_view, &transition)) {
+            snprintf(error, error_size, "cannot project the MZM transition observation");
+            goto cleanup;
+        }
+        print_transition_observation(&transition);
     } else {
         AriaStateView state_view;
+        FusionTransitionObservation transition;
         unsigned timeline_frame;
         bool entered_game = false;
         bool found = false;
@@ -178,6 +199,11 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
                state_view.current_mp, state_view.max_mp,
                state_view.current_level, state_view.animation_id,
                state_view.animation_frame);
+        if (!fusion_transition_observe_aria(&state_view, &transition)) {
+            snprintf(error, error_size, "cannot project the Aria transition observation");
+            goto cleanup;
+        }
+        print_transition_observation(&transition);
     }
     success = true;
 

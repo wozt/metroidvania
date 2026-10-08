@@ -115,3 +115,18 @@ Room position is reconstructed in native 16.16 fixed point by adding the
 background-1 camera coordinates to the player's screen-relative entity
 coordinates, matching the pinned source helpers. The resulting view remains
 read-only and does not authorize mutation of entity or progression memory.
+
+## D-014 - Observe transition state before importing it
+
+Decision: project each verified engine view into a common, versioned transition
+observation without adding a target-engine importer. Source area, room, and
+position remain source-local. Raw health belongs to the native character.
+There are currently no shared fields, and no projection value is copied into
+`SessionState` or another runtime.
+
+Positions use unsigned Q16.16 solely as an exact observation format: MZM
+quarter-pixel coordinates shift left by 14, while Aria coordinates copy
+directly. Velocities, equipment, progression, doors, map flags, and bosses stay
+out until their semantics and merge policies are verified. Aria Julius state
+is rejected because the current project character model contains only Samus
+and Soma.

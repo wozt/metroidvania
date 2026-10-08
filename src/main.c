@@ -392,8 +392,7 @@ int main(int argc, char **argv)
     if (authentic_interactive) {
         if (!authentic_interactive_run(metroid_path, aria_path,
                                        error, sizeof(error))) {
-            fprintf(stderr, "Authentic interactive session failed: %s
-", error);
+            fprintf(stderr, "Authentic interactive session failed: %s\n", error);
             return 4;
         }
         return 0;

@@ -192,3 +192,11 @@ frame tests and backend lifecycle tests before being enabled.
 - Unit tests cover signed OBJ coordinates, palette banks, tile flips and transparency.
 - Inputs require verified ROM SHA-1 and explicit offsets; no game assets are shipped.
 - Samus top/bottom VRAM staging, arm cannon, and Aria-specific animation chains are not yet reconstructed.
+
+## Patch 013 - Zero Mission Samus graphics frame staging
+
+- Added a ROM-pointer-aware SamusAnimationData reader and four-part OBJ VRAM
+  staging for shoulders, torso, legs and lower body, using the pinned mzm docs.
+- Bounds checking, slot-capacity validation and deterministic synthetic tests.
+- Requires a verified game frame pointer; OAM, palette and cannon rendering
+  remain unimplemented. No proprietary output is tracked.

@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-08**.
 
+## Patch 0044 - story baseline and concurrent timeline
+
+- Added the first production story bible for the inverted prologues, parallel
+  first bosses, Interzone meeting, persistent two-character party, explicit
+  save-room travel, required true-final routes, separation, solitary secret
+  finals, credits, and combined statistics.
+- Added a human-readable three-track campaign timeline and its versioned TOML
+  source under `data/story/`. Original room IDs remain blank when unverified;
+  project-authored rooms use the explicit `fusion:` namespace.
+- Timeline flags enforce both prologues before the meeting, both midroutes before
+  late progression, both original true finals before separation, and both
+  solitary epilogues before credits. Free global `M` switching is explicitly
+  excluded from the final campaign.
+- Added Python validation for schema completeness, stable event/output IDs,
+  resolvable dependencies, order compatibility, cycle rejection, and all
+  required final-route events.
+
 ## Patch 0043 - native room tab lifetime fix
 
 - Native room documents now have one explicit owner reference in the workspace

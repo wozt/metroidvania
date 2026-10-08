@@ -225,6 +225,9 @@ if(BUILD_TESTING)
     add_test(NAME native_workspace_python
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
                 python3 -m unittest tests.test_native_workspace)
+    add_test(NAME story_timeline_python
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+                python3 -m unittest tests.test_story_timeline)
     add_test(NAME mzm_world_atlas_python
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
                 python3 -m unittest tests.test_mzm_world_atlas)

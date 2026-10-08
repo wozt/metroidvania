@@ -1,0 +1,481 @@
+schema = "metroid-vania-timeline"
+version = 1
+status = "data"
+
+# Order bounds constrain the partial order. They are not frame numbers.
+# Blank source_room values mean that the original room ID is not verified yet.
+
+[[events]]
+id = "shared.start_choice"
+title = "Presentation order chosen"
+act = 0
+track = "shared"
+world = "interzone"
+source_room = "fusion:title"
+character = "player_choice"
+event_type = "choice"
+canonical = true
+original = false
+min_order = 0
+max_order = 0
+requires = []
+sets = ["start_choice_locked"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "cv.samus_displaced"
+title = "Samus enters Dracula's castle"
+act = 0
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "samus"
+event_type = "crossover_divergence"
+canonical = true
+original = false
+min_order = 10
+max_order = 19
+requires = ["start_choice_locked"]
+sets = ["samus_in_castle"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "mzm.soma_displaced"
+title = "Soma enters Zebes"
+act = 0
+track = "metroid"
+world = "zero_mission"
+source_room = ""
+character = "soma"
+event_type = "crossover_divergence"
+canonical = true
+original = false
+min_order = 10
+max_order = 19
+requires = ["start_choice_locked"]
+sets = ["soma_on_zebes"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "cv.creaking_skull"
+title = "Creaking Skull defeated"
+act = 1
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "samus"
+event_type = "boss"
+canonical = true
+original = true
+min_order = 20
+max_order = 29
+requires = ["samus_in_castle"]
+sets = ["creaking_skull_defeated"]
+rewards = ["ancient_dimensional_mechanism"]
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "mzm.deorem"
+title = "Deorem defeated"
+act = 1
+track = "metroid"
+world = "zero_mission"
+source_room = ""
+character = "soma"
+event_type = "boss"
+canonical = true
+original = true
+min_order = 20
+max_order = 29
+requires = ["soma_on_zebes"]
+sets = ["deorem_defeated"]
+rewards = ["deorem_alien_soul"]
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "cv.mechanism_awakened"
+title = "Samus opens a dimensional breach"
+act = 1
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "samus"
+event_type = "portal"
+canonical = true
+original = false
+min_order = 30
+max_order = 39
+requires = ["creaking_skull_defeated"]
+sets = ["samus_breach_ready"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "mzm.alien_soul_awakened"
+title = "Soma opens a dimensional breach"
+act = 1
+track = "metroid"
+world = "zero_mission"
+source_room = ""
+character = "soma"
+event_type = "portal"
+canonical = true
+original = false
+min_order = 30
+max_order = 39
+requires = ["deorem_defeated"]
+sets = ["soma_breach_ready"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "shared.interzone_meeting"
+title = "Samus and Soma meet"
+act = 2
+track = "shared"
+world = "interzone"
+source_room = "fusion:interzone:meeting"
+character = "both"
+event_type = "cutscene"
+canonical = true
+original = false
+min_order = 40
+max_order = 40
+requires = ["samus_breach_ready", "soma_breach_ready"]
+sets = ["pair_formed", "interzone_open"]
+rewards = ["character_switch", "companion_mode"]
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "shared.linked_save_tutorial"
+title = "First linked save-room crossing"
+act = 3
+track = "shared"
+world = "interzone"
+source_room = "fusion:interzone:hub"
+character = "both"
+event_type = "travel_tutorial"
+canonical = true
+original = false
+min_order = 50
+max_order = 69
+requires = ["pair_formed", "interzone_open"]
+sets = ["linked_travel_enabled"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "mzm.early_route"
+title = "Early Zebes route"
+act = 3
+track = "metroid"
+world = "zero_mission"
+source_room = ""
+character = "both"
+event_type = "route"
+canonical = true
+original = false
+min_order = 60
+max_order = 119
+requires = ["linked_travel_enabled"]
+sets = ["mzm_midroute_open"]
+rewards = ["alien_soul_growth"]
+cutscene = "none"
+status = "data"
+
+[[events]]
+id = "cv.early_route"
+title = "Early castle route"
+act = 3
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "both"
+event_type = "route"
+canonical = true
+original = false
+min_order = 60
+max_order = 119
+requires = ["linked_travel_enabled"]
+sets = ["cv_midroute_open"]
+rewards = ["samus_melee_training"]
+cutscene = "none"
+status = "data"
+
+[[events]]
+id = "shared.armor_fragment_gate"
+title = "First paired Chozo armor gate"
+act = 4
+track = "shared"
+world = "interzone"
+source_room = "fusion:interzone:armor_gate"
+character = "both"
+event_type = "progression_gate"
+canonical = true
+original = false
+min_order = 120
+max_order = 179
+requires = ["mzm_midroute_open", "cv_midroute_open"]
+sets = ["shared_armor_enabled"]
+rewards = ["chozo_armor_fragment_01"]
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "mzm.major_boss_route"
+title = "Major Zebes boss route"
+act = 4
+track = "metroid"
+world = "zero_mission"
+source_room = ""
+character = "both"
+event_type = "route"
+canonical = true
+original = true
+min_order = 140
+max_order = 239
+requires = ["shared_armor_enabled"]
+sets = ["mzm_late_route_open"]
+rewards = []
+cutscene = "mixed"
+status = "data"
+
+[[events]]
+id = "cv.major_boss_route"
+title = "Major castle boss route"
+act = 4
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "both"
+event_type = "route"
+canonical = true
+original = true
+min_order = 140
+max_order = 239
+requires = ["shared_armor_enabled"]
+sets = ["cv_late_route_open"]
+rewards = []
+cutscene = "mixed"
+status = "data"
+
+[[events]]
+id = "mzm.mother_brain"
+title = "Mother Brain defeated"
+act = 5
+track = "metroid"
+world = "zero_mission"
+source_room = ""
+character = "both"
+event_type = "boss"
+canonical = true
+original = true
+min_order = 240
+max_order = 299
+requires = ["mzm_late_route_open", "cv_midroute_open"]
+sets = ["mother_brain_defeated"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "cv.three_required_souls"
+title = "Three true-route souls acquired"
+act = 5
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "soma"
+event_type = "progression_gate"
+canonical = true
+original = true
+min_order = 180
+max_order = 239
+requires = ["cv_late_route_open"]
+sets = ["aria_three_required_souls"]
+rewards = ["flame_demon_soul", "giant_bat_soul", "succubus_soul"]
+cutscene = "none"
+status = "data"
+
+[[events]]
+id = "cv.graham_branch"
+title = "Graham true branch entered"
+act = 5
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "both"
+event_type = "branch"
+canonical = true
+original = true
+min_order = 240
+max_order = 299
+requires = ["cv_late_route_open", "mzm_midroute_open", "aria_three_required_souls"]
+sets = ["graham_true_branch"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "mzm.chozodia_route"
+title = "Chozodia and Ruins Test completed"
+act = 6
+track = "metroid"
+world = "zero_mission"
+source_room = ""
+character = "samus"
+event_type = "route"
+canonical = true
+original = true
+min_order = 300
+max_order = 359
+requires = ["mother_brain_defeated"]
+sets = ["ruins_test_complete", "legendary_power_suit"]
+rewards = ["legendary_power_suit"]
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "cv.julius"
+title = "Julius confrontation resolved"
+act = 6
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "soma"
+event_type = "boss"
+canonical = true
+original = true
+min_order = 300
+max_order = 359
+requires = ["graham_true_branch"]
+sets = ["julius_resolved", "chaotic_realm_open"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "mzm.mecha_ridley"
+title = "Original Mecha Ridley defeated"
+act = 6
+track = "metroid"
+world = "zero_mission"
+source_room = ""
+character = "both"
+event_type = "boss"
+canonical = true
+original = true
+min_order = 360
+max_order = 419
+requires = ["legendary_power_suit"]
+sets = ["mzm_true_final_complete"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "cv.chaos"
+title = "Chaos defeated"
+act = 6
+track = "castlevania"
+world = "aria"
+source_room = ""
+character = "soma"
+event_type = "boss"
+canonical = true
+original = true
+min_order = 360
+max_order = 419
+requires = ["julius_resolved", "chaotic_realm_open"]
+sets = ["cv_true_final_complete"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "shared.separation"
+title = "The worlds are separated"
+act = 7
+track = "shared"
+world = "interzone"
+source_room = "fusion:interzone:core"
+character = "both"
+event_type = "cutscene"
+canonical = true
+original = false
+min_order = 420
+max_order = 420
+requires = ["mzm_true_final_complete", "cv_true_final_complete"]
+sets = ["worlds_separated"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "mzm.samus_secret_final"
+title = "Samus defeats the Dracula manifestation"
+act = 8
+track = "metroid"
+world = "zero_mission"
+source_room = "fusion:zebes:dracula_manifestation"
+character = "samus"
+event_type = "secret_boss"
+canonical = true
+original = false
+min_order = 430
+max_order = 469
+requires = ["worlds_separated"]
+sets = ["samus_epilogue_complete"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "cv.soma_secret_final"
+title = "Soma defeats the copied Mecha Ridley"
+act = 8
+track = "castlevania"
+world = "aria"
+source_room = "fusion:castle:mecha_ridley_wing"
+character = "soma"
+event_type = "secret_boss"
+canonical = true
+original = false
+min_order = 430
+max_order = 469
+requires = ["worlds_separated"]
+sets = ["soma_epilogue_complete"]
+rewards = []
+cutscene = "planned"
+status = "data"
+
+[[events]]
+id = "shared.credits"
+title = "Combined ending, credits, and statistics"
+act = 9
+track = "shared"
+world = "interzone"
+source_room = "fusion:credits"
+character = "both"
+event_type = "ending"
+canonical = true
+original = false
+min_order = 500
+max_order = 500
+requires = ["samus_epilogue_complete", "soma_epilogue_complete"]
+sets = ["campaign_complete"]
+rewards = ["completion_statistics"]
+cutscene = "planned"
+status = "data"

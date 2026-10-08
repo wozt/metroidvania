@@ -104,6 +104,17 @@ with the generated `brinstar_033_bg1.bmp`. This reconstructs genuine
 BG1/BG2 metatile graphics, but not common tiles, BG0/BG3, or objects.
 See `docs/RENDER_MZM_ROOMS.md`. All outputs are private.
 
+## Patch 0040 — configurable GTK4 editor workspace
+
+The GTK4 editor now uses a large, three-column workspace with draggable splitters,
+reorderable/detachable notebook tabs, a project explorer and a dedicated asset and
+inspector dock. Tabs can be dragged between dock zones or detached into windows.
+The tile painter supports Pencil, Eraser, Flood fill, Eyedropper, Grid visibility,
+50–200% zoom and per-world undo/redo (one operation per mouse stroke).
+**Edits apply only to original project demo `.mvroom` data**, not native ROM rooms
+or proprietary graphics. ROM previews remain read-only. Original music, maps,
+items, enemies and cutscenes are not yet decoded as editable game data.
+
 ## Honest status
 
 The default executable is an **SDL3 integration harness**, not yet a native

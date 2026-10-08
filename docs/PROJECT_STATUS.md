@@ -42,6 +42,17 @@ Last updated: **2026-10-08**.
   and collision semantics remain outstanding.
 - Private derived pixels remain under ignored assets/extracted/.
 
+## Patch 0040 — GTK4 workspace and tile painting tools
+
+- Editor now has three resizeable GTK4 dock regions with drag-reorderable,
+  cross-dock and detachable tool tabs, Explorer shortcuts and Inspector.
+- Expanded 1680x980 default window and a dedicated center tile painter.
+- Project-only tile editing adds pencil, eraser, flood fill, eyedropper,
+  optional grid, 50–200% zoom, and per-world 16-step undo/redo.
+- The original ROM-derived room previews stay read-only; graphical content
+  remains incomplete, collisions are still the demo's temporary geometry.
+- Added ROM-free tests for painting, bounded flood fill and strokes.
+
 ## Fixed vision and decisions
 
 The project targets a real crossover with two distinct engines and one active

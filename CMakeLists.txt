@@ -22,6 +22,7 @@ add_library(fusion_core STATIC
     src/core/roundtrip_guard.c
     src/core/transition.c
     src/core/world_graph.c
+    src/core/tile_paint.c
     src/core/tilemap.c
     src/backends/metroid/mzm_state.c
     src/backends/castlevania/aria_state.c
@@ -173,6 +174,13 @@ if(BUILD_TESTING)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     add_test(NAME original_mzm_room_decoder COMMAND python3 -m unittest tests.test_mzm_room_render)
     set_tests_properties(original_mzm_room_decoder PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    add_executable(fusion_tile_paint_tests tests/test_tile_paint.c)
+    target_link_libraries(fusion_tile_paint_tests PRIVATE fusion_core)
+    target_compile_options(fusion_tile_paint_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_tile_paint_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME tile_paint_tools COMMAND fusion_tile_paint_tests)
     add_executable(fusion_world_graph_tests tests/test_world_graph.c)
     target_link_libraries(fusion_world_graph_tests PRIVATE fusion_core)
     target_compile_options(fusion_world_graph_tests PRIVATE -Wall -Wextra -Wpedantic)

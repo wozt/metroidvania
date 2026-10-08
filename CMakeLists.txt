@@ -30,6 +30,7 @@ add_executable(fusion_dev
     src/core/room_sim.c
     src/backends/metroid/metroid_backend.c
     src/backends/castlevania/castlevania_backend.c
+    src/backends/castlevania/aria_sdl3_video.c
 )
 target_include_directories(fusion_dev PRIVATE include src)
 target_link_libraries(fusion_dev PRIVATE fusion_core SDL3::SDL3)
@@ -45,6 +46,16 @@ if(BUILD_TESTING)
     add_executable(fusion_aria_runtime_tests tests/test_aria_runtime.c)
     target_link_libraries(fusion_aria_runtime_tests PRIVATE fusion_core)
     add_test(NAME aria_runtime_contract COMMAND fusion_aria_runtime_tests)
+    add_executable(fusion_aria_sdl3_video_tests
+        tests/test_aria_sdl3_video.c
+        src/backends/castlevania/aria_sdl3_video.c)
+    target_include_directories(fusion_aria_sdl3_video_tests PRIVATE include)
+    target_link_libraries(fusion_aria_sdl3_video_tests PRIVATE SDL3::SDL3)
+    target_compile_options(fusion_aria_sdl3_video_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_aria_sdl3_video_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME aria_sdl3_video COMMAND fusion_aria_sdl3_video_tests)
     add_executable(fusion_core_tests tests/test_core.c)
     target_link_libraries(fusion_core_tests PRIVATE fusion_core)
     target_compile_options(fusion_core_tests PRIVATE -Wall -Wextra -Wpedantic)

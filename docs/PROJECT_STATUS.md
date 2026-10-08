@@ -117,3 +117,14 @@ No authentic Aria runtime is integrated, no game code is executed by this API,
 and no ROM or proprietary assets are redistributed. A real implementation must
 pass license review (GPL-3.0-only compatibility), local ROM verification,
 frame tests and backend lifecycle tests before being enabled.
+
+## Patch 005 - SDL3 video bridge
+
+- Added SDL3 streaming-texture presentation for a 240x160 RGBA frame supplied
+  by the existing Aria runtime interface. Nearest scaling, pitch validation,
+  resource cleanup and a software-renderer test are included.
+- This is *only* host-side rendering of synthetic or future runtime pixels.
+  It is not a working Aria runtime and does not integrate `gbarecomp`.
+- GPLv3 licensing remains a separate required audit: do not incorporate
+  PolyForm Noncommercial code or unlicensed frontend files.
+- Next: a GPL-compatible driver producing authentic user-ROM frames.

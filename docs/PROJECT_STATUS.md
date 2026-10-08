@@ -179,139 +179,25 @@ frame tests and backend lifecycle tests before being enabled.
 - A colored rectangle remains the explicit fallback when assets are absent.
 - Next: implement verified ROM-specific palette/tile/OAM extraction for both games.
 
-## Patch 011 - local GBA 4bpp inspector
+## Local GBA graphics toolchain
 
-- Added a SHA-1-gated raw 4bpp/BGR555 tile viewer; output is local and ignored.
-- Added synthetic decoding and bounds tests. No ROM assets are committed.
-- Tile grids are **not** assembled character sprites: OAM, animation and graphics
-  pointers still need ROM-specific interpretation.
+- SHA-1-gated tools preview raw 4bpp/BGR555 tiles and compose standard GBA OBJ
+  data with 1D or 2D mapping, palette banks, flips and alpha BMP output.
+- Synthetic tests cover decoding, bounds, coordinates, mapping and transparency.
+- These are hardware primitives, not character recipes; outputs remain local and
+  ignored. See `docs/GBA_GRAPHICS_TOOLS.md`.
 
-## Patch 012 - local GBA OBJ/OAM composition primitives
+## Verified MZM Samus graphics milestone
 
-- Added 4bpp OBJ tile/OAM/BGR555 composition with 1D tile mapping and alpha BMP output.
-- Unit tests cover signed OBJ coordinates, palette banks, tile flips and transparency.
-- Inputs require verified ROM SHA-1 and explicit offsets; no game assets are shipped.
-- Samus top/bottom VRAM staging, arm cannon, and Aria-specific animation chains are not yet reconstructed.
-
-## Patch 013 - Zero Mission Samus graphics frame staging
-
-- Added a ROM-pointer-aware SamusAnimationData reader and four-part OBJ VRAM
-  staging for shoulders, torso, legs and lower body, using the pinned mzm docs.
-- Bounds checking, slot-capacity validation and deterministic synthetic tests.
-- Requires a verified game frame pointer; OAM, palette and cannon rendering
-  remain unimplemented. No proprietary output is tracked.
-
-## Patch 014 - MZM Samus animation table discovery
-
-- Added a ROM-hash-gated candidate scanner for arrays pointing to plausible
-  Samus animation frames, plus synthetic regression tests.
-- The output is address-only research metadata: no graphics or ROM dumps.
-- Candidate tables must be matched to upstream symbols before assigning poses.
-- Next: verify the chosen pointer chains and decode game-specific OAM.
-
-## Patch 016 - inspect Samus candidate frame tables
-
-- Added read-only inspection of verified-ROM candidate animation tables, frame
-  durations, graphics subset counts and raw OAM prefixes.
-- Does not yet assign poses or assemble copyrighted sprites.
-- Added synthetic tests for bounds, alignment and frame metadata.
-
-## Patch 017 - Samus OAM header diagnostics
-
-- Added a ROM-hash-checked OAM layout probe for candidate Samus frames.
-- Probe compares plausible header sizes and object strides without asserting identity.
-- No ROM data is exported, committed, or embedded.
-
-## Patch 018 - bounded Samus OAM candidates
-
-- Added count-bounded candidate decoding for Samus OAM layout hypotheses.
-- Four small synthetic tests cover count bounds, decoding, and invalid data.
-- No ROM-derived assets are exported and no layout is asserted verified.
-- Next: confirm the raw OAM format against pinned mzm source.
-
-## Patch 0019 - verified raw Samus OAM format
-
-- Confirmed the body OAM layout from pinned `mzm/tools/oam.py`: one
-  16-bit count/flags header followed by six bytes per OBJ entry.
-- Added bounded header/entry decoding and metadata-only ROM inspection.
-- The next milestone is validating Samus palette staging and composing
-  body parts from the per-frame OBJ VRAM banks; no proprietary assets added.
-
-## Patch 0020 - Samus local body composition
-
-- Added a diagnostic ROM-local Samus body composer using four staged VRAM
-  banks and the confirmed raw OAM layout.
-- Requires an explicit, verified 16-color palette offset. Does not infer
-  animations, draw the arm cannon or bundle copyrighted data.
-- Extracted BMP output remains inside ignored `assets/extracted/`.
-
-## Patch 0021 - inspect MZM suit palette candidates
-
-- Added an exact-ROM-hash-checked BGR555 three-row palette scanner and
-  optional local BMP swatch export, plus independent decoder tests.
-- Results are explicitly heuristic. No palette is automatically asserted
-  to be Samus's Power Suit palette; cross-check upstream symbols first.
-- Extracted graphics remain local and ignored by Git.
-
-## Patch 0022 - multi-bank Samus palettes
-
-- The local Samus body compositor now maps up to 16 caller-verified BGR555
-  palette rows into explicit OBJ palette banks and rejects unmatched OAM banks.
-- Defaults preserve the former single-row behavior. Palette detection and
-  arm cannon/effects are not yet implemented.
-
-## Patch 0023 - first complete verified Samus frame
-
-- Matched the Power Suit right-standing frame, default palette, standing arm
-  cannon animation, and forward cannon graphics to exact symbols in a pinned
-  build whose ROM is byte-identical to the required USA ROM.
-- Corrected Samus composition to the game's 2D OBJ mapping. The prior 1D body
-  preview could not reproduce the separated VRAM tile rows correctly.
-- Added full body/cannon staging, raw OAM layer ordering, transparent trimming,
-  and deterministic local BMP generation at the SDL3 loader's `samus/idle_0.bmp`
-  path.
-- Generated pixels remain ignored and local. Synthetic tests cover mapping,
-  cannon pointers, signed muzzle offsets, VRAM slots, layer order, and cropping.
-- Next: enumerate verified standing frames, then run, jump, and attack with
-  their per-frame cannon records.
-
-## Patch 0024 - complete verified Samus idle cycle
-
-- Extended the exact standing recipe across the four live animation records;
-  the source sequence is `0, 1, 2, 1`, with a 16-update duration per record.
-- Added one-command generation of `idle_0.bmp` through `idle_3.bmp` under the
-  ignored SDL asset directory. The duplicate fourth image is intentional and
-  preserves the original animation order.
-- SDL now plays Samus's idle assets at `60 / 16 = 3.75` frames per second.
-  Soma and unverified action previews retain their existing temporary cadence.
-- Next: implement the verified running sequence and its per-frame arm-cannon
-  OAM, then select a canonical midair and shooting sequence.
-
-## Patch 0025 - complete verified Samus running cycle
-
-- Added all ten live records from `sSamusAnim_PowerSuit_Right_Running`, each
-  with the source-defined two-update duration.
-- Verified that the corresponding un-aimed running cannon records intentionally
-  use empty OAM; the visible arm is already part of each body frame. Muzzle
-  offsets are still decoded and reported.
-- Expanded SDL sprite storage and state-specific frame counts to ten. Samus run
-  playback uses the verified 30 frames/s cadence without changing Soma or the
-  still-placeholder jump/attack timing.
-- Batch output uses an OAM-axis-centered common canvas, preventing horizontal
-  jitter and preserving a shared ground line across differently sized frames.
-- Next: choose and verify canonical midair and shooting animation tables.
-
-## Patch 0026 - verified Samus jump and attack cycles
-
-- Selected the source-defined spinning pose for the prototype's normal airborne
-  loop: eight frames with alternating `2,1` update durations and intentionally
-  empty cannon OAM.
-- Selected forward standing shooting for attack: three frames with `2,2,4`
-  durations, verified cannon OAM ordering, and exact default right-facing cannon
-  graphics.
-- SDL now honors per-frame 60 Hz durations rather than reducing each state to a
-  uniform frame rate. Deterministic C tests cover timing boundaries.
-- Visual animation clocks reset on action or character changes; the diagnostic
-  attack lifetime now matches its eight-update source animation.
-- All four prototype Samus states now have a verified, ROM-local extraction
-  path. The original MZM gameplay state machine is still not executed.
+- Built a hash-gated diagnostic chain for animation discovery, frame inspection,
+  four-part OBJ VRAM staging, compact raw OAM decoding, palette inspection and
+  body/cannon composition.
+- Confirmed the two-byte header plus six-byte Samus OAM format, 2D OBJ mapping,
+  Power Suit palette rows, separate cannon slots and front/behind layer flags
+  against pinned source and a byte-identical matching build.
+- Exact ROM-local recipes now generate idle (4), run (10), spin-jump (8) and
+  forward-shooting (3) frames on stable OAM-axis canvases. SDL honors the
+  source-defined 60 Hz durations and falls back when assets are absent.
+- Scanner/probe results remain explicitly provisional until matched to symbols;
+  extracted pixels stay ignored. See `docs/MZM_SAMUS.md` for formats, addresses,
+  commands, limitations and remaining work.

@@ -59,27 +59,15 @@ ctest --test-dir build --output-on-failure
 Use `--aria` and `--metroid` to supply different local paths.
 `--validate-only` validates both files without opening a window.
 
-To generate the first verified Power Suit idle frame locally:
+To generate all four verified Power Suit animation states locally:
 
 ```sh
-python3 scripts/mzm_samus_sprite.py \
-  --rom "roms/Metroid - Zero Mission (USA).gba" \
-  --output-dir assets/extracted/sprites/samus
-
-python3 scripts/mzm_samus_sprite.py \
-  --rom "roms/Metroid - Zero Mission (USA).gba" \
-  --animation run \
-  --output-dir assets/extracted/sprites/samus
-
-python3 scripts/mzm_samus_sprite.py \
-  --rom "roms/Metroid - Zero Mission (USA).gba" \
-  --animation jump \
-  --output-dir assets/extracted/sprites/samus
-
-python3 scripts/mzm_samus_sprite.py \
-  --rom "roms/Metroid - Zero Mission (USA).gba" \
-  --animation attack \
-  --output-dir assets/extracted/sprites/samus
+for animation in idle run jump attack; do
+  python3 scripts/mzm_samus_sprite.py \
+    --rom "roms/Metroid - Zero Mission (USA).gba" \
+    --animation "$animation" \
+    --output-dir assets/extracted/sprites/samus
+done
 ```
 
 The SDL3 room renderer discovers the ignored BMPs automatically and uses the
@@ -95,7 +83,9 @@ Controls: arrow keys or `A`/`D` to move, `Space` to jump, `J` to attack,
 `third_party/mzm` and `third_party/cvaos` are pinned submodules. Their code and
 licenses remain separate from this project. See
 [`docs/SOURCE_AUDIT.md`](docs/SOURCE_AUDIT.md) and the living status document
-[`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md).
+[`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md). Graphics documentation is
+consolidated in [`docs/MZM_SAMUS.md`](docs/MZM_SAMUS.md) and
+[`docs/GBA_GRAPHICS_TOOLS.md`](docs/GBA_GRAPHICS_TOOLS.md).
 
 This repository does not contain and must not distribute ROMs, BIOS images,
 save data, music, maps, sprites, or extracted proprietary data. The legal status

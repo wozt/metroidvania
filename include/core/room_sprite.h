@@ -6,10 +6,10 @@
 #include "core/types.h"
 
 enum { SPRITE_IDLE, SPRITE_RUN, SPRITE_JUMP, SPRITE_ATTACK, SPRITE_STATE_COUNT };
-enum { SPRITE_FRAMES = 4 };
+enum { SPRITE_MAX_FRAMES = 10 };
 
 typedef struct {
-    SDL_Texture *frames[FUSION_CHARACTER_COUNT][SPRITE_STATE_COUNT][SPRITE_FRAMES];
+    SDL_Texture *frames[FUSION_CHARACTER_COUNT][SPRITE_STATE_COUNT][SPRITE_MAX_FRAMES];
     SDL_Renderer *renderer;
     bool attempted;
 } RoomSprites;

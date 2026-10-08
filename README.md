@@ -65,11 +65,16 @@ To generate the first verified Power Suit idle frame locally:
 python3 scripts/mzm_samus_sprite.py \
   --rom "roms/Metroid - Zero Mission (USA).gba" \
   --output-dir assets/extracted/sprites/samus
+
+python3 scripts/mzm_samus_sprite.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --animation run \
+  --output-dir assets/extracted/sprites/samus
 ```
 
-The SDL3 room renderer discovers those four ignored BMPs automatically, plays
-them at their verified 16/60-second cadence, and keeps its colored rectangle
-fallback when they are absent. No extracted pixels are tracked.
+The SDL3 room renderer discovers the ignored BMPs automatically, plays idle at
+16/60 seconds per frame and run at 2/60 seconds per frame, and keeps its colored
+rectangle fallback when they are absent. No extracted pixels are tracked.
 
 Controls: arrow keys or `A`/`D` to move, `Space` to jump, `J` to attack,
 `Tab` to swap characters, `M` to change worlds, `F3` for the debug overlay,

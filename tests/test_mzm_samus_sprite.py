@@ -3,11 +3,13 @@ import struct
 import unittest
 
 from scripts.mzm_samus_sprite import (
+    aligned_canvas_bounds,
     crop_rgba,
     ordered_entries,
     parse_arm_cannon_animation,
     stage_arm_cannon,
     make_power_suit_idle_right,
+    make_power_suit_run_right,
 )
 
 
@@ -38,13 +40,25 @@ class SamusSpriteTests(unittest.TestCase):
     def test_crop_rgba(self):
         rgba = bytearray(4 * 3 * 4)
         rgba[(1 * 4 + 2) * 4:(1 * 4 + 2) * 4 + 4] = b"\x01\x02\x03\xff"
-        cropped, width, height = crop_rgba(rgba, 4, 3)
+        cropped, width, height, left, top = crop_rgba(rgba, 4, 3)
         self.assertEqual((width, height), (1, 1))
+        self.assertEqual((left, top), (2, 1))
         self.assertEqual(cropped, b"\x01\x02\x03\xff")
 
     def test_reject_invalid_idle_frame(self):
         with self.assertRaisesRegex(ValueError, "0..3"):
             make_power_suit_idle_right(bytes(64), 4)
+
+    def test_reject_invalid_run_frame(self):
+        with self.assertRaisesRegex(ValueError, "0..9"):
+            make_power_suit_run_right(bytes(64), 10)
+
+    def test_animation_canvas_preserves_oam_axis(self):
+        bounds = aligned_canvas_bounds([
+            {"pixel_bounds": (-4, -30, 11, 0)},
+            {"pixel_bounds": (-14, -28, 7, 1)},
+        ])
+        self.assertEqual(bounds, (-14, -30, 14, 1))
 
 
 if __name__ == "__main__":

@@ -1,8 +1,7 @@
-# Verified MZM Samus idle frame
+# Verified MZM Samus animations
 
-`scripts/mzm_samus_sprite.py` reconstructs the four-frame Power Suit
-right-standing cycle
-from a user-owned, SHA-1-verified Zero Mission USA ROM. The recipe uses exact
+`scripts/mzm_samus_sprite.py` reconstructs Power Suit animations from a
+user-owned, SHA-1-verified Zero Mission USA ROM. The recipe uses exact
 symbols from the pinned `mzm` source and a matching `mzm_us` build, not scan
 heuristics:
 
@@ -29,6 +28,32 @@ the verified 3.75 frames/s cadence and falls
 back to the diagnostic rectangle when it is absent. The repository contains
 the extraction recipe and synthetic tests only, never the extracted image.
 
-This milestone covers the complete basic idle cycle. Run, jump, and attack
-records still need verified pose tables and per-frame cannon selection. Use
-`--frame N --output path.bmp` to export a single idle record for diagnostics.
+Use `--frame N --output path.bmp` to export a single selected record for
+diagnostics.
+
+## Running
+
+The normal un-aimed right-running cycle is also verified from exact symbols:
+
+- `sSamusAnim_PowerSuit_Right_Running` at `0x08248034`, ten live records;
+- `sArmCannonAnim_Suit_Right_None_Running` at `0x08234120`;
+- two game updates per frame, or 30 frames/s at the GBA update rate.
+
+Every selected cannon record points to `sArmCannonOam_Empty`. This is expected:
+the un-aimed running body records already contain all visible arm pixels, while
+the cannon animation retains muzzle offsets for gameplay. The extractor checks
+the empty OAM header instead of silently dropping a layer.
+
+```sh
+python3 scripts/mzm_samus_sprite.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --animation run \
+  --output-dir assets/extracted/sprites/samus
+```
+
+Batch generation places every frame on a shared transparent canvas centered on
+Samus's OAM X axis, with common top and bottom bounds. SDL can therefore center
+and ground differently sized poses without introducing animation jitter.
+
+Idle and run are complete. Jump and attack still require a canonical source
+pose selection and verification of their cannon/effect layers.

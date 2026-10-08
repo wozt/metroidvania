@@ -286,3 +286,17 @@ frame tests and backend lifecycle tests before being enabled.
   Soma and unverified action previews retain their existing temporary cadence.
 - Next: implement the verified running sequence and its per-frame arm-cannon
   OAM, then select a canonical midair and shooting sequence.
+
+## Patch 0025 - complete verified Samus running cycle
+
+- Added all ten live records from `sSamusAnim_PowerSuit_Right_Running`, each
+  with the source-defined two-update duration.
+- Verified that the corresponding un-aimed running cannon records intentionally
+  use empty OAM; the visible arm is already part of each body frame. Muzzle
+  offsets are still decoded and reported.
+- Expanded SDL sprite storage and state-specific frame counts to ten. Samus run
+  playback uses the verified 30 frames/s cadence without changing Soma or the
+  still-placeholder jump/attack timing.
+- Batch output uses an OAM-axis-centered common canvas, preventing horizontal
+  jitter and preserving a shared ground line across differently sized frames.
+- Next: choose and verify canonical midair and shooting animation tables.

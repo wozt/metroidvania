@@ -343,8 +343,8 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_string_list_append(areas, "All areas");
     for (const char *const *a = area_names(world); *a; ++a)
         gtk_string_list_append(areas, *a);
+    /* gtk_drop_down_new() consumes the model reference. Do not unref it. */
     browser->area_filter = gtk_drop_down_new(G_LIST_MODEL(areas), NULL);
-    g_object_unref(areas);
 
     gtk_widget_set_margin_start(browser->page, 10);
     gtk_widget_set_margin_end(browser->page, 10);

@@ -34,6 +34,19 @@ static void test_shared_browser_shells(void)
         g_assert_true(GTK_IS_POPOVER(popover));
         g_assert_true(gtk_menu_button_get_popover(GTK_MENU_BUTTON(menu)) == GTK_POPOVER(popover));
         g_assert_false(gtk_widget_get_parent(popover) == list);
+        /* GTK4 consumes the GListModel passed to gtk_drop_down_new().
+         * Both dropdowns must retain valid models across construction,
+         * filtering and page teardown (even with no local ROM data). */
+        GtkWidget *toolbar = gtk_widget_get_first_child(pages[i]);
+        g_assert_nonnull(toolbar);
+        GtkWidget *area_filter = gtk_widget_get_next_sibling(
+            gtk_widget_get_first_child(toolbar));
+        g_assert_true(GTK_IS_DROP_DOWN(area_filter));
+        GListModel *model = gtk_drop_down_get_model(GTK_DROP_DOWN(area_filter));
+        g_assert_true(G_IS_LIST_MODEL(model));
+        g_assert_cmpuint(g_list_model_get_n_items(model), ==, i == 0 ? 8u : 13u);
+        gtk_drop_down_set_selected(GTK_DROP_DOWN(area_filter), 1);
+        gtk_drop_down_set_selected(GTK_DROP_DOWN(area_filter), 0);
     }
     /* Exercise filtering and selection during teardown even without
      * local proprietary catalogs. GTK must not use stale toolbar widgets. */

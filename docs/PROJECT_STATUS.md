@@ -229,3 +229,15 @@ and the proprietary-file guard passed.
 - The supplied GDB trace stopped during GTK settings initialization, not the
   CTest Aria tab-removal crash; run the debugger with CTest's isolated
   XDG_CONFIG_HOME if another crash persists. Local GTK4 validation pending.
+
+## Patch 0062 - GTK4 dropdown model ownership
+
+- Fixed a double `g_object_unref()` in the shared Aria/Zero room browser.
+  `gtk_drop_down_new()` takes ownership of the passed `GListModel`,
+  so an additional unref of the `GtkStringList` invalidated its model.
+- The page teardown crash was reproduced in GDB at
+  `g_list_model_get_n_items()`, via the browser's dropdown release.
+- The GTK regression now checks both area models (8 and 13 entries)
+  and changes their selections before removing the two tabs.
+- Build, all six CTest cases, and the proprietary-file guard require
+  validation on the developer's Debian GTK4 environment.

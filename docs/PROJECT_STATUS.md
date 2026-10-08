@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-08**.
+Last updated: **2026-10-09**.
 
 ## Current product state
 
@@ -123,3 +123,14 @@ and the proprietary-file guard passed.
   no world-specific native cutscene runtime or automatic adapter exists yet.
 - Keep room collision, precise Zero Mission map masks, source-accurate layer
   compositing, keyframe UI and native engine adapters on the outstanding list.
+
+## Patch 0054 - GTK native document lifecycle hardening
+
+- Tracked GTK page and label pointers with widget-owned document references
+  so external notebook destruction and detached tools cannot retain stale labels.
+- Closing callbacks now ignore documents during teardown; workspace shutdown
+  detaches outstanding notebook pages before releasing manager ownership.
+- Added lifecycle regressions for external page removal, repeated close/reopen,
+  shutdown with an unsaved modal, and detached notebook cleanup.
+- Build, CTest and on-device GUI verification must be recorded after running
+  the patch locally; no result is claimed here.

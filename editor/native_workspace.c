@@ -61,10 +61,38 @@ static NativeWorkspace *document_ref(NativeWorkspace *doc)
 }
 
 static void history_clear(NativeMap **stack, unsigned *count);
+static void document_unref(NativeWorkspace *doc);
+
+/* GTK owns these widgets. A widget's lifetime holds a document ref. Clear
+ * the borrowed pointer BEFORE releasing that ref so the final widget can
+ * safely release the final document, including detached/external removals. */
+typedef struct {
+    NativeWorkspace *doc;
+    GtkWidget **slot;
+} DocumentWidgetWatch;
+
+static void document_widget_gone(gpointer data)
+{
+    DocumentWidgetWatch *watch = data;
+    *watch->slot = NULL;
+    document_unref(watch->doc);
+    g_free(watch);
+}
+
+static void document_track_widget(NativeWorkspace *doc, GtkWidget **slot,
+                                  GtkWidget *widget)
+{
+    DocumentWidgetWatch *watch = g_new(DocumentWidgetWatch, 1);
+    watch->doc = document_ref(doc);
+    watch->slot = slot;
+    *slot = widget;
+    g_object_set_data_full(G_OBJECT(widget), "native-workspace-document",
+                           watch, document_widget_gone);
+}
 
 static void message(NativeWorkspace *doc, const char *text)
 {
-    if (doc->status) gtk_label_set_text(GTK_LABEL(doc->status), text);
+    if (!doc->closing && doc->status) gtk_label_set_text(GTK_LABEL(doc->status), text);
 }
 
 static void discard_atlas(NativeWorkspace *doc)
@@ -245,6 +273,7 @@ static void selection_outline(NativeWorkspace *doc, cairo_t *cr)
 static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     (void)area; (void)width; (void)height;
     cairo_set_source_rgb(cr, 0.11, 0.13, 0.16);
     cairo_paint(cr);
@@ -324,6 +353,7 @@ static void draw_palette(GtkDrawingArea *area, cairo_t *cr, int width, int heigh
                          gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     (void)area; (void)width; (void)height;
     cairo_set_source_rgb(cr, 0.09, 0.10, 0.12);
     cairo_paint(cr);
@@ -339,7 +369,7 @@ static void draw_palette(GtkDrawingArea *area, cairo_t *cr, int width, int heigh
 
 static void update_title(NativeWorkspace *doc)
 {
-    if (doc->tab_title) {
+    if (!doc->closing && doc->tab_title) {
         gchar *name = g_strdup_printf("%s%s", doc->identity ? doc->identity : "Room",
                                       doc->unsaved ? " *" : "");
         gtk_label_set_text(GTK_LABEL(doc->tab_title), name);
@@ -419,6 +449,7 @@ static void resize_room(NativeWorkspace *doc)
 static void brush_changed(GtkSpinButton *spin, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     doc->brush_id = (unsigned)gtk_spin_button_get_value_as_int(spin);
     if (doc->palette) gtk_widget_queue_draw(doc->palette);
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
@@ -430,6 +461,7 @@ static void brush_changed(GtkSpinButton *spin, gpointer userdata)
 static void layer_changed(GObject *object, GParamSpec *pspec, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     (void)pspec;
     if (doc->drawing) return;
     doc->layer_id = gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
@@ -441,6 +473,7 @@ static void layer_changed(GObject *object, GParamSpec *pspec, gpointer userdata)
 static void zoom_changed(GtkSpinButton *spin, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     if (doc->drawing) return;
     doc->scale = gtk_spin_button_get_value(spin) / 100.0;
     resize_room(doc);
@@ -493,6 +526,7 @@ static void paint_line(NativeWorkspace *doc, int x, int y)
 static void gesture_begin(GtkGestureDrag *gesture, double x, double y, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     (void)gesture;
     if (!doc->ready || doc->drawing) return;
     int cx = 0, cy = 0;
@@ -532,6 +566,7 @@ static void gesture_begin(GtkGestureDrag *gesture, double x, double y, gpointer 
 static void gesture_update(GtkGestureDrag *gesture, double dx, double dy, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     (void)gesture;
     if (!doc->ready || !doc->drawing) return;
     if (doc->panning) {
@@ -567,6 +602,7 @@ static void gesture_update(GtkGestureDrag *gesture, double dx, double dy, gpoint
 static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     (void)gesture; (void)dx; (void)dy;
     if (!doc->drawing) return;
     if (doc->moving && (doc->preview_dx || doc->preview_dy)) {
@@ -615,6 +651,7 @@ static void palette_click(GtkGestureClick *gesture, int n_press, double x, doubl
                           gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     (void)gesture; (void)n_press;
     if (!doc->ready || x < 0 || y < 0) return;
     unsigned column = (unsigned)(x / 24), row = (unsigned)(y / 24);
@@ -629,6 +666,7 @@ static void canvas_hover(GtkEventControllerMotion *controller, double x, double 
                          gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     int col = 0, row = 0;
     (void)controller;
     gboolean valid = get_cell(doc, x, y, &col, &row);
@@ -643,6 +681,7 @@ static void canvas_hover(GtkEventControllerMotion *controller, double x, double 
 static void canvas_leave(GtkEventControllerMotion *controller, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     (void)controller;
     if (doc->pointer_over_canvas) {
         doc->pointer_over_canvas = FALSE;
@@ -685,6 +724,7 @@ static GtkWidget *icon_toggle(const char *icon, const char *description)
 static void tool_toggled(GtkToggleButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     if (doc->drawing) return;
     if (!gtk_toggle_button_get_active(button)) {
         if (doc->tools[doc->tool_id] == GTK_WIDGET(button))
@@ -704,6 +744,7 @@ static void tool_toggled(GtkToggleButton *button, gpointer userdata)
 static void background_toggled(GtkToggleButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     doc->background_visible = gtk_toggle_button_get_active(button);
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
@@ -711,6 +752,7 @@ static void background_toggled(GtkToggleButton *button, gpointer userdata)
 static void grid_toggled(GtkToggleButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
     doc->grid_visible = gtk_toggle_button_get_active(button);
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
@@ -724,7 +766,7 @@ static void redo_clicked(GtkButton *button, gpointer userdata)
 static gboolean save_override(NativeWorkspace *doc)
 {
     char error[160] = {0};
-    if (!doc->ready || !doc->override_path || doc->drawing) return FALSE;
+    if (doc->closing || !doc->ready || !doc->override_path || doc->drawing) return FALSE;
     if (!native_map_save(doc->map, doc->override_path, error, sizeof(error))) {
         message(doc, error);
         if (doc->close_info) gtk_label_set_text(GTK_LABEL(doc->close_info), error);
@@ -936,6 +978,7 @@ static void close_clicked(GtkButton *button, gpointer userdata)
 
 static void focus_page(GtkWidget *page)
 {
+    if (!page) return;
     GtkWidget *parent = gtk_widget_get_parent(page);
     if (GTK_IS_NOTEBOOK(parent)) {
         GtkNotebook *notebook = GTK_NOTEBOOK(parent);
@@ -949,6 +992,7 @@ static gboolean key_pressed(GtkEventControllerKey *controller, guint keyval,
                             guint keycode, GdkModifierType modifiers, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
+    if (doc->closing) return FALSE;
     (void)controller; (void)keycode;
     if (modifiers & GDK_CONTROL_MASK) {
         switch (gdk_keyval_to_lower(keyval)) {
@@ -1003,7 +1047,7 @@ static void document_build(NativeWorkspace *doc)
     GtkWidget *tab_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     GtkWidget *close = icon_button("window-close-symbolic", "Close this tab");
     doc->close_button = close;
-    doc->tab_title = gtk_label_new(doc->identity);
+    document_track_widget(doc, &doc->tab_title, gtk_label_new(doc->identity));
     gtk_box_append(GTK_BOX(tab_box), doc->tab_title);
     gtk_box_append(GTK_BOX(tab_box), close);
     gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(tools), GTK_SELECTION_NONE);
@@ -1069,7 +1113,8 @@ static void document_build(NativeWorkspace *doc)
     gtk_widget_set_hexpand(scroll, TRUE);
     gtk_widget_set_vexpand(scroll, TRUE);
     gtk_box_append(GTK_BOX(page), scroll);
-    doc->status = gtk_label_new("Import in progress...");
+    document_track_widget(doc, &doc->status,
+                          gtk_label_new("Import in progress..."));
     gtk_label_set_xalign(GTK_LABEL(doc->status), 0);
     gtk_label_set_wrap(GTK_LABEL(doc->status), TRUE);
     gtk_box_append(GTK_BOX(page), doc->status);
@@ -1078,7 +1123,7 @@ static void document_build(NativeWorkspace *doc)
     gtk_widget_add_controller(page, keys);
     g_signal_connect(keys, "key-pressed", G_CALLBACK(key_pressed), doc);
     gtk_widget_set_focusable(page, TRUE);
-    doc->page = page;
+    document_track_widget(doc, &doc->page, page);
     g_object_set_data(G_OBJECT(page), "mv-world-mode",
         GINT_TO_POINTER(g_str_has_prefix(doc->identity, "Aria ") ? 2 : 1));
     gtk_notebook_append_page(doc->owner->center, page, tab_box);
@@ -1095,7 +1140,7 @@ static void document_build(NativeWorkspace *doc)
     gtk_widget_set_hexpand(palette_scroll, TRUE);
     gtk_widget_set_vexpand(palette_scroll, TRUE);
     doc->palette = palette;
-    doc->palette_page = palette_scroll;
+    document_track_widget(doc, &doc->palette_page, palette_scroll);
     GtkWidget *palette_label = gtk_label_new("Native metatiles");
     gtk_notebook_append_page(doc->owner->right, palette_scroll, palette_label);
     gtk_notebook_set_tab_reorderable(doc->owner->right, palette_scroll, TRUE);
@@ -1207,11 +1252,12 @@ static void imported(GObject *object, GAsyncResult *result, gpointer userdata)
     doc->busy = FALSE;
     g_clear_object(&doc->import_cancellable);
     g_clear_object(&doc->import_process);
-    if (!doc->closing && succeeded && g_subprocess_get_successful(proc)) {
+    if (!doc->closing && doc->page && doc->palette_page &&
+        succeeded && g_subprocess_get_successful(proc)) {
         const char *area = g_object_get_data(G_OBJECT(proc), "native-area");
         unsigned number = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(proc), "native-room"));
         open_room(doc, area, number);
-    } else if (!doc->closing) {
+    } else if (!doc->closing && doc->page) {
         message(doc, error ? error->message : err ? err : "Import failed");
     }
     if (error) g_error_free(error);
@@ -1457,9 +1503,14 @@ void native_workspace_free(NativeWorkspace *manager)
                 clear_close_dialog_refs(doc);
                 gtk_window_destroy(GTK_WINDOW(dialog));
             }
-            doc->owner = NULL;
             if (doc->import_cancellable) g_cancellable_cancel(doc->import_cancellable);
             if (doc->import_process) g_subprocess_force_exit(doc->import_process);
+            /* Shut down GTK-owned callbacks before releasing manager ownership.
+             * A notebook/page might already have been destroyed by the window;
+             * document_track_widget() guarantees these slots become NULL. */
+            remove_notebook_page(&doc->page);
+            remove_notebook_page(&doc->palette_page);
+            doc->owner = NULL;
         }
         g_ptr_array_free(manager->documents, TRUE);
     }

@@ -75,8 +75,12 @@ static void test_move_then_close_and_shutdown(void)
     g_assert_true(native_workspace_test_close_document(workspace, 0));
     g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 3);
 
-    /* The remaining documents exercise application shutdown with open tabs. */
+    /* Shutdown must detach every document from all notebook owners. */
     native_workspace_free(workspace);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(center)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(other_center)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(other_right)), ==, 0);
     gtk_window_destroy(GTK_WINDOW(detached_window));
 }
 
@@ -140,6 +144,49 @@ static void test_unsaved_close_dialog(void)
     g_free(directory);
 }
 
+
+/* An external GTK notebook removal must not leave dangling page pointers. */
+static void test_external_page_removal_then_shutdown(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 022"));
+    gtk_notebook_remove_page(GTK_NOTEBOOK(center), 0);
+    gtk_notebook_remove_page(GTK_NOTEBOOK(right), 0);
+    native_workspace_free(workspace);
+}
+
+/* Repeated click closes and reopen must never retain dead GtkLabel pointers. */
+static void test_repeated_close_and_reopen(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    for (unsigned i = 0; i < 24; ++i) {
+        g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 022"));
+        g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(center)), ==, 1);
+        g_assert_true(native_workspace_test_activate_close(workspace, 0));
+        g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 0);
+        g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(center)), ==, 0);
+        g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right)), ==, 0);
+    }
+    native_workspace_free(workspace);
+}
+
+/* Cancel an open modal by destroying its parent document/manager. */
+static void test_shutdown_with_unsaved_dialog(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    native_workspace_test_add_document(workspace, "Aria 00:010");
+    native_workspace_test_set_unsaved(workspace, 0, TRUE);
+    g_assert_true(native_workspace_test_activate_close(workspace, 0));
+    g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 1);
+    native_workspace_free(workspace);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(center)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right)), ==, 0);
+    while (g_main_context_pending(NULL)) g_main_context_iteration(NULL, FALSE);
+}
+
 static gboolean stop_loop(gpointer userdata)
 {
     g_main_loop_quit(userdata);
@@ -182,5 +229,11 @@ int main(int argc, char **argv)
                     test_close_during_import);
     g_test_add_func("/native-workspace/unsaved-close-dialog",
                     test_unsaved_close_dialog);
+    g_test_add_func("/native-workspace/external-page-removal",
+                    test_external_page_removal_then_shutdown);
+    g_test_add_func("/native-workspace/repeated-close-reopen",
+                    test_repeated_close_and_reopen);
+    g_test_add_func("/native-workspace/shutdown-with-modal",
+                    test_shutdown_with_unsaved_dialog);
     return g_test_run();
 }

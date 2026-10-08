@@ -1,0 +1,6 @@
+[submodule "third_party/mzm"]
+	path = third_party/mzm
+	url = https://github.com/metroidret/mzm.git
+[submodule "third_party/cvaos"]
+	path = third_party/cvaos
+	url = https://github.com/testyourmine/cvaos.git

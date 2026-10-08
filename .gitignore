@@ -1,0 +1,24 @@
+/build/
+/build-*/
+/.cache/
+/.mcp.json
+/compile_commands.json
+
+# Les ROM et toutes les donnees propriétaires restent locales.
+/roms/*
+!/roms/README.md
+/extracted/
+/assets/extracted/
+*.gba
+*.rom
+*.sav
+*.state
+/fusion-save-v1.bin
+
+# Projets Ghidra locaux.
+*.gpr
+*.rep/
+
+# Python
+__pycache__/
+*.pyc

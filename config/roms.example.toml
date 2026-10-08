@@ -1,0 +1,4 @@
+# Exemple documentaire. L'exécutable accepte actuellement les chemins en CLI.
+[roms]
+aria_us = "roms/Castlevania - Aria of Sorrow (USA).gba"
+zero_mission_us = "roms/Metroid - Zero Mission (USA).gba"

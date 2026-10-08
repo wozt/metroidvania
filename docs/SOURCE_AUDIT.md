@@ -1,100 +1,118 @@
-# Audit des sources
+# Source audit
 
-Observation locale : **2026-10-08**. Les révisions obligatoires sont épinglées
-comme sous-modules et n'ont pas été modifiées.
+Local observation date: **2026-10-08**. Required revisions are pinned as
+submodules and have not been modified.
 
-## Metroid: Zero Mission — `metroidret/mzm`
+## Metroid: Zero Mission - `metroidret/mzm`
 
-- URL : <https://github.com/metroidret/mzm>
-- Révision : `43b7fd52f552e4d38c1521ff9d4df5ee57e61493`
-- Date de révision : 2026-08-23.
-- Licence : MIT (`third_party/mzm/LICENSE`).
-- Statut annoncé par le README : décompilation en cours, 2718/2721 fonctions
-  (99,89 %) et données hors blobs à 100 %. Ce chiffre vient de l'amont ; il n'a
-  pas été recalculé ici.
-- Build GBA : `agbcc`, `binutils-arm-none-eabi`, Python, g++ et baserom ;
-  extraction par `tools/extractor.py`, puis `make`.
-- ROM US documentée : SHA-1 `5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8`.
+- URL: <https://github.com/metroidret/mzm>
+- Revision: `43b7fd52f552e4d38c1521ff9d4df5ee57e61493`
+- Revision date: 2026-08-23.
+- License: MIT (`third_party/mzm/LICENSE`).
+- Upstream status: work-in-progress decompilation, 2718/2721 functions (99.89%)
+  and 100% of data outside blobs. These numbers come from the upstream README
+  and were not independently recalculated.
+- GBA build dependencies: `agbcc`, `binutils-arm-none-eabi`, Python, g++, and a
+  base ROM; extraction uses `tools/extractor.py` before `make`.
+- Documented US ROM: SHA-1 `5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8`.
 
-Points vérifiés :
+Verified entry points:
 
-- boucle et modes : `src/agbmain.c`, `AgbMain`, appel de `InGameHandler` ;
-- scheduling en jeu : `src/in_game.c`, `InGameHandler`,
-  `VBlankCodeInGame`, mises à jour Samus/sprites/projectiles/HUD ;
-- salle : `src/room.c`, `RoomLoad`, `RoomLoadEntry`, `RoomLoadBackgrounds`,
-  `RoomUpdate` ;
-- joueur : `src/samus.c` et `include/samus.h`, notamment `SamusUpdate`,
-  `SamusCheckCollisions`, `SamusUpdatePhysics` ;
-- portes : `src/connection.c` et `src/color_fading.c` ;
-- sauvegarde : `src/save_file.c`, `src/save_file_load.c`,
-  `include/structs/save_file.h` ;
-- matériel : `src/dma.c`, `src/display.c`, macros de registres dans
-  `include/gba.h`, transferts VRAM/OAM dans `src/in_game.c` ;
-- audio : `src/audio.c`, assembleur m4a et données dans `sound/`.
+- main loop and modes: `src/agbmain.c`, `AgbMain`, and `InGameHandler`;
+- in-game scheduling: `src/in_game.c`, `InGameHandler`, `VBlankCodeInGame`,
+  and Samus/sprite/projectile/HUD updates;
+- rooms: `src/room.c`, `RoomLoad`, `RoomLoadEntry`, `RoomLoadBackgrounds`, and
+  `RoomUpdate`;
+- player: `src/samus.c` and `include/samus.h`, including `SamusUpdate`,
+  `SamusCheckCollisions`, and `SamusUpdatePhysics`;
+- doors: `src/connection.c` and `src/color_fading.c`;
+- saves: `src/save_file.c`, `src/save_file_load.c`, and
+  `include/structs/save_file.h`;
+- hardware: `src/dma.c`, `src/display.c`, register macros in `include/gba.h`,
+  and VRAM/OAM transfers in `src/in_game.c`;
+- audio: `src/audio.c`, m4a assembly, and data under `sound/`.
 
-Le C est fortement couplé aux adresses GBA, registres, buffers globaux et au
-timing VBlank. Les règles de gameplay sont réutilisables après abstraction,
-mais ce dépôt n'est pas directement une bibliothèque Linux.
+The C code is tightly coupled to GBA addresses, registers, global buffers, and
+VBlank timing. Gameplay rules can be reused after abstraction, but this source
+tree is not directly usable as a Linux library.
 
-## Castlevania: Aria of Sorrow — `testyourmine/cvaos`
+## Castlevania: Aria of Sorrow - `testyourmine/cvaos`
 
-- URL : <https://github.com/testyourmine/cvaos>
-- Révision : `bc23d849d578c35ae12a5cec4e66549c3021a5be`
-- Date de révision : 2026-08-01.
-- Licence : MIT (`third_party/cvaos/LICENSE`).
-- Statut : décompilation matching en cours de la version USA. Aucun pourcentage
-  de couverture n'est publié dans le README actuel ; plusieurs symboles restent
-  nommés par adresse, donc l'analyse sémantique est moins avancée que celle de
-  MZM.
-- Build GBA : `agbcc`, `binutils-arm-none-eabi`, baserom, extracteur, puis
-  `make`.
-- ROM US documentée : SHA-1 `abd71fe01ebb201bcc133074db1dd8c5253776c7`.
+- URL: <https://github.com/testyourmine/cvaos>
+- Revision: `bc23d849d578c35ae12a5cec4e66549c3021a5be`
+- Revision date: 2026-08-01.
+- License: MIT (`third_party/cvaos/LICENSE`).
+- Status: work-in-progress matching decompilation of the USA revision. The
+  current README publishes no completion percentage, and many symbols still use
+  address-based names, so semantic analysis is less advanced than in MZM.
+- GBA build dependencies: `agbcc`, `binutils-arm-none-eabi`, a base ROM, the
+  extractor, and `make`.
+- Documented US ROM: SHA-1 `abd71fe01ebb201bcc133074db1dd8c5253776c7`.
 
-Points vérifiés :
+Verified entry points:
 
-- boucle et VBlank : `src/main.c`, `AgbMain`, `VblankInterrupt`,
-  `GameModeUpdate` ;
-- jeu : `src/code_0800B700.c`, `GameModeInGameUpdate` ;
-- entrée/entités : `src/code_080009A0.c`, `SetPlayerInput`,
-  `EntityDeleteAll` ;
-- transitions : `src/code_08001194.c`, `CheckRoomTransition` ;
-- DMA/VRAM : `src/code_08001194.c`, `DmaQueue_Process`,
-  `BgCmdBuffer_TransferToVram` ;
-- sauvegarde : `src/code_08012744.c`, `SaveData_LoadSlotFromSram` et
-  `SaveData_SaveSlotToSram`, plus `src/agb_sram.c` ;
-- modèle mémoire : `include/structs/ewram.h` et `gEwramData`.
+- main loop and VBlank: `src/main.c`, `AgbMain`, `VblankInterrupt`, and
+  `GameModeUpdate`;
+- gameplay: `src/code_0800B700.c`, `GameModeInGameUpdate`;
+- input and entities: `src/code_080009A0.c`, `SetPlayerInput`, and
+  `EntityDeleteAll`;
+- transitions: `src/code_08001194.c`, `CheckRoomTransition`;
+- DMA and VRAM: `src/code_08001194.c`, `DmaQueue_Process`, and
+  `BgCmdBuffer_TransferToVram`;
+- saves: `src/code_08012744.c`, `SaveData_LoadSlotFromSram`,
+  `SaveData_SaveSlotToSram`, and `src/agb_sram.c`;
+- memory model: `include/structs/ewram.h` and `gEwramData`.
 
-Les gros agrégats EWRAM, accès registres et nombreux symboles provisoires rendent
-un port source direct risqué. La piste de recompilation statique mérite une
-expérience isolée avant de modifier le backend.
+Large EWRAM aggregates, direct register access, and provisional symbols make a
+direct source port risky. Static recompilation deserves an isolated proof of
+concept before the backend is changed.
 
-## Pistes supplémentaires vérifiées, non intégrées
+## Reproducible upstream build check
+
+Both pinned source trees were cloned into temporary workspaces, leaving the
+submodules untouched. Toolchain used:
+
+- Debian `binutils-arm-none-eabi` 2.44;
+- `jiangzhengwenjz/agbcc` revision
+  `59b966ed1b8f371856dcf99f1546c2fe89c678ca`, built locally outside this
+  repository because it has no clear root license file and includes GCC code.
+
+After local data extraction, both builds completed successfully. The generated
+8 MiB files were byte-for-byte identical to the user's reference ROMs:
+
+- `cvaos_us.gba`: `abd71fe01ebb201bcc133074db1dd8c5253776c7`;
+- `mzm_us.gba`: `5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8`.
+
+Generated ROMs and extracted assets remained in `/tmp`; none were copied into
+or tracked by this repository.
+
+## Additional references checked but not integrated
 
 ### `sergiomanzur/ariaOfSorrow-recomp`
 
-- Révision observée : `f00abd91ee8338b4378e279e1aa4a5a3a8ab8525`
+- Observed revision: `f00abd91ee8338b4378e279e1aa4a5a3a8ab8525`
   (2026-09-18).
-- Le README revendique une recompilation AOT complète, sans instruction
-  interprétée, produite localement depuis la ROM utilisateur. Cette affirmation
-  n'a pas été reproduite par notre build et reste donc **à confirmer**.
-- Dépend de `gbarecomp`, annoncé sous PolyForm Noncommercial 1.0.0, ainsi que de
-  SDL2 et de code C++20. Une adoption imposerait une contrainte non commerciale
-  et une revue de compatibilité.
+- Its README claims complete ahead-of-time recompilation with no interpreted
+  instructions, generated locally from the user's ROM. This claim has not been
+  reproduced by this project and remains **to be confirmed**.
+- It depends on `gbarecomp`, stated to use PolyForm Noncommercial 1.0.0, plus
+  SDL2 and C++20. Adoption would impose a noncommercial constraint and require
+  a compatibility review.
 
 ### `LTSchmiddy/metroid-zero-mission-pc-edition`
 
-- Révision observée : `25cd4a1448ba24fa5b04b314afa51fca25e41b13`
+- Observed revision: `25cd4a1448ba24fa5b04b314afa51fca25e41b13`
   (2020-07-28).
-- Le README confirme une intégration de données du jeu dans VBA-M/SDL2. C'est un
-  emballage/modification d'émulateur, pas un port natif du code décompilé.
-- Base VBA-M sous GPLv2, avec composants additionnels. Le dépôt contient aussi
-  des répertoires d'assets : il ne sera pas importé dans ce projet.
+- Its README confirms that game data is integrated into VBA-M/SDL2. This is an
+  emulator wrapper/modification, not a native port of the decompiled code.
+- The VBA-M base uses GPLv2 with additional components. The repository also
+  contains asset directories and will not be imported here.
 
-## Inconnues prioritaires
+## Priority unknowns
 
-- Runtime/recompilation retenu pour MZM : à confirmer.
-- Exactitude du runtime Aria sous Linux et couverture réelle : à reproduire.
-- Frontières minimales de snapshot des deux jeux : à établir dans Ghidra et par
-  instrumentation.
-- Licences et redistribuabilité du code généré depuis une ROM : avis juridique
-  nécessaire avant diffusion.
+- Runtime or recompilation strategy for MZM.
+- Actual Aria runtime behavior and coverage under Linux.
+- Minimal snapshot boundaries for both games, to be established with Ghidra
+  and runtime instrumentation.
+- Licensing and redistribution status of code generated from a ROM; legal
+  review is required before distribution.

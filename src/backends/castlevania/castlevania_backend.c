@@ -6,7 +6,7 @@
 static bool init(FusionBackend *backend, SessionState *session)
 {
     const RoomDefinition room = {
-        .title = "CASTLEVANIA TEST ROOM (BACKEND SIMULE)",
+        .title = "CASTLEVANIA TEST ROOM (SIMULATED BACKEND)",
         .background = {32, 15, 35, 255}, .accent = {185, 55, 70, 255},
         .solids = {{0,500,960,40}, {170,440,140,20}, {340,390,130,20},
                    {510,340,145,20}, {0,0,20,540}, {940,0,20,540}, {700,470,28,30}},
@@ -38,5 +38,5 @@ static void shutdown(FusionBackend *backend) { free(backend->state); backend->st
 FusionBackend castlevania_backend_create(void)
 {
     static const FusionBackendOps ops = {init, enter, tick, render, leave, shutdown};
-    return (FusionBackend){"Backend Castlevania simulé", WORLD_CASTLEVANIA, &ops, NULL};
+    return (FusionBackend){"Simulated Castlevania backend", WORLD_CASTLEVANIA, &ops, NULL};
 }

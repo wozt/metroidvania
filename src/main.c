@@ -13,7 +13,7 @@
 
 static void usage(const char *program)
 {
-    fprintf(stderr, "Usage: %s [--aria chemin.gba] [--metroid chemin.gba] [--validate-only]\n", program);
+    fprintf(stderr, "Usage: %s [--aria path.gba] [--metroid path.gba] [--validate-only]\n", program);
 }
 
 static void key_event(FusionInput *input, SDL_Keycode key, bool *running, bool *debug)
@@ -60,20 +60,20 @@ int main(int argc, char **argv)
         "5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8", metroid_path};
     for (i = 0; i < 2; ++i) {
         if (!rom_validate(&roms[i], error, sizeof(error))) {
-            fprintf(stderr, "ROM refusée: %s\nConsultez roms/README.md. Aucun fichier ne sera envoyé.\n", error);
+            fprintf(stderr, "ROM rejected: %s\nSee roms/README.md. No file will be uploaded.\n", error);
             return 3;
         }
-        printf("ROM validée localement: %s\n", roms[i].label);
+        printf("ROM validated locally: %s\n", roms[i].label);
     }
     if (validate_only) return 0;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError()); return 4;
     }
-    window = SDL_CreateWindow("Metroidvania Fusion — prototype d'intégration", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    window = SDL_CreateWindow("Metroidvania Fusion - integration prototype", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     renderer = window ? SDL_CreateRenderer(window, NULL) : NULL;
     if (!window || !renderer) {
-        fprintf(stderr, "Création SDL: %s\n", SDL_GetError()); SDL_Quit(); return 4;
+        fprintf(stderr, "SDL creation failed: %s\n", SDL_GetError()); SDL_Quit(); return 4;
     }
     SDL_SetRenderVSync(renderer, 1);
 
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     backends[WORLD_CASTLEVANIA] = castlevania_backend_create();
     for (i = 0; i < 2; ++i) {
         if (!backends[i].ops->init(&backends[i], &session)) {
-            fprintf(stderr, "Initialisation backend impossible: %s\n", backends[i].name);
+            fprintf(stderr, "Backend initialization failed: %s\n", backends[i].name);
             running = false;
         }
     }
@@ -111,13 +111,13 @@ int main(int argc, char **argv)
 
         if (input.save_pressed) {
             if (!save_session("fusion-save-v1.bin", &session, error, sizeof(error)))
-                fprintf(stderr, "Sauvegarde: %s\n", error);
+                fprintf(stderr, "Save failed: %s\n", error);
         }
         if (input.load_pressed) {
             WorldKind old_world = session.active_world;
             active->ops->leave_world(active, &session);
             if (!load_session("fusion-save-v1.bin", &session, error, sizeof(error))) {
-                fprintf(stderr, "Chargement: %s\n", error);
+                fprintf(stderr, "Load failed: %s\n", error);
                 session.active_world = old_world;
             }
             active = &backends[session.active_world];

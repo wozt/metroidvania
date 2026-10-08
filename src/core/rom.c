@@ -19,7 +19,7 @@ bool rom_validate(const RomRequirement *requirement, char *error, size_t error_s
     sha1_hex(digest, actual);
     if (strcmp(actual, requirement->expected_sha1) != 0) {
         if (error_size > 0)
-            snprintf(error, error_size, "%s: SHA-1 inconnu (%s), attendu %s",
+            snprintf(error, error_size, "%s: unknown SHA-1 (%s), expected %s",
                      requirement->label, actual, requirement->expected_sha1);
         return false;
     }

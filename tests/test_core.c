@@ -54,6 +54,6 @@ int main(void)
     test_separate_health_and_ko();
     test_character_switch_preserves_world();
     test_world_persistence_and_save();
-    puts("Tous les tests coeur sont passés.");
+    puts("All core tests passed.");
     return 0;
 }

@@ -1,44 +1,43 @@
 # Metroidvania Fusion
 
-Prototype Linux d'un crossover **Castlevania: Aria of Sorrow × Metroid: Zero
-Mission**. L'architecture impose deux backends séparés : les règles Metroid ne
-sont pas fusionnées avec les règles Castlevania. Le personnage peut changer
-instantanément dans un monde ; un changement de monde suspend le backend actif
-avant d'activer l'autre.
+Linux prototype for a **Castlevania: Aria of Sorrow x Metroid: Zero Mission**
+crossover. The architecture requires two separate backends: Metroid rules are
+not merged with Castlevania rules. Characters can be swapped instantly inside a
+world; changing worlds suspends the active backend before activating the other.
 
-## État honnête
+## Honest status
 
-L'exécutable actuel est un **banc d'intégration SDL3**, pas encore un port des
-deux jeux. Les salles, collisions et profils sont des formes de diagnostic. Les
-ROM personnelles sont désormais obligatoires au lancement et contrôlées par
-SHA-1, mais leur code, leurs cartes et leurs assets ne sont pas encore exécutés.
-Les backends affichent explicitement `BACKEND SIMULE`.
+The current executable is an **SDL3 integration harness**, not yet a port of
+either game. Its rooms, collisions, and profiles use diagnostic geometry. The
+user's own ROMs are required at launch and verified with SHA-1, but their code,
+maps, and assets are not executed yet. Both backends display
+`SIMULATED BACKEND` explicitly.
 
-Déjà fonctionnel :
+Working today:
 
-- deux salles et deux backends distincts ;
-- Samus et Soma dans chacun des deux mondes, avec quatre profils physiques ;
-- PV séparés, KO individuel et poursuite avec l'autre personnage ;
-- cible persistante lors d'un changement de personnage ou d'un aller-retour de monde ;
-- correction déterministe ou refus d'un changement en collision ;
-- sauvegarde versionnée, HUD double, jauge de synergie factice et overlay debug ;
-- validation locale stricte des deux ROM, sans transfert réseau.
+- two rooms and two distinct backends;
+- Samus and Soma in both worlds, with four physics profiles;
+- separate HP, per-character KO, and continuation with the other character;
+- target state preserved across character swaps and world round trips;
+- deterministic collision correction or a rejected unsafe swap;
+- versioned save data, dual HUD, placeholder synergy gauge, and debug overlay;
+- strict local validation of both ROMs, with no network transfer.
 
-## Prérequis Debian 13
+## Debian 13 prerequisites
 
 ```sh
 sudo apt install build-essential cmake libsdl3-dev python3 git
 ```
 
-Ghidra 12.1.4 est installé sur cette machine dans
-`/opt/ghidra_12.1.4_PUBLIC`. Les commandes `ghidra` et
-`ghidra-analyze-headless` sont disponibles dans le `PATH`.
+Ghidra 12.1.4 is installed on this machine under
+`/opt/ghidra_12.1.4_PUBLIC`. The `ghidra` and `ghidra-analyze-headless`
+commands are available on `PATH`.
 
-## ROM personnelles
+## Personal ROMs
 
-Copiez vos deux fichiers légalement obtenus dans `roms/`. Les noms par défaut,
-empreintes et commandes de validation sont décrits dans
-[`roms/README.md`](roms/README.md). Les ROM et extractions sont ignorées par Git.
+Place your two legally obtained files in `roms/`. Default names, fingerprints,
+and validation commands are documented in [`roms/README.md`](roms/README.md).
+ROMs and extracted data are ignored by Git.
 
 ```sh
 python3 scripts/verify_roms.py \
@@ -46,7 +45,7 @@ python3 scripts/verify_roms.py \
   --metroid "roms/Metroid - Zero Mission (USA).gba"
 ```
 
-## Compiler, tester et lancer
+## Build, test, and run
 
 ```sh
 git submodule update --init
@@ -56,21 +55,20 @@ ctest --test-dir build --output-on-failure
 ./build/fusion_dev
 ```
 
-Des chemins différents peuvent être donnés avec `--aria` et `--metroid`.
-`--validate-only` valide sans ouvrir de fenêtre.
+Use `--aria` and `--metroid` to supply different local paths.
+`--validate-only` validates both files without opening a window.
 
-Touches : flèches ou `Q`/`D` pour se déplacer, `Espace` pour sauter, `J` pour
-attaquer, `Tab` pour changer de personnage, `M` pour changer de monde, `F3`
-pour le debug, `K` pour infliger des dégâts de test, `F5`/`F9` pour
-sauvegarder/charger et `Échap` pour quitter.
+Controls: arrow keys or `A`/`D` to move, `Space` to jump, `J` to attack,
+`Tab` to swap characters, `M` to change worlds, `F3` for the debug overlay,
+`K` for diagnostic damage, `F5`/`F9` to save/load, and `Escape` to quit.
 
-## Sources de recherche
+## Research sources
 
-`third_party/mzm` et `third_party/cvaos` sont des sous-modules épinglés. Leur
-code et leurs licences restent indépendants du nôtre. Voir
-[`docs/SOURCE_AUDIT.md`](docs/SOURCE_AUDIT.md) et le suivi vivant
+`third_party/mzm` and `third_party/cvaos` are pinned submodules. Their code and
+licenses remain separate from this project. See
+[`docs/SOURCE_AUDIT.md`](docs/SOURCE_AUDIT.md) and the living status document
 [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md).
 
-Ce dépôt ne contient et ne doit distribuer aucune ROM, image BIOS, sauvegarde,
-musique, carte, sprite ou donnée propriétaire extraite. Le statut juridique
-d'un futur patch ou paquet distribuable devra être examiné séparément.
+This repository does not contain and must not distribute ROMs, BIOS images,
+save data, music, maps, sprites, or extracted proprietary data. The legal status
+of any future patch or distributable package must be reviewed separately.

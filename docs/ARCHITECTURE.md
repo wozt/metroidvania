@@ -1,62 +1,61 @@
 # Architecture
 
-## Principe
+## Core rule
 
-Le projet ne possède jamais deux moteurs actifs. Le contrôleur de session
-appelle le cycle `leave_world` du backend courant, change `active_world`, puis
-appelle `enter_world` sur l'autre backend. Seul le backend actif reçoit `tick`
-et `render`.
+The project never has two active engines. The session controller calls
+`leave_world` on the current backend, updates `active_world`, then calls
+`enter_world` on the other backend. Only the active backend receives `tick` and
+`render` calls.
 
-L'interface dans `include/core/backend.h` expose : `init`, `enter_world`,
-`tick`, `render`, `leave_world` et `shutdown`. Les implémentations sont dans
-`src/backends/metroid/` et `src/backends/castlevania/`. Le code commun
-`room_sim.c` n'est qu'un harnais de test, pas un moteur unifié ni une
-reproduction des jeux.
+The interface in `include/core/backend.h` exposes `init`, `enter_world`, `tick`,
+`render`, `leave_world`, and `shutdown`. Implementations live under
+`src/backends/metroid/` and `src/backends/castlevania/`. Shared
+`room_sim.c` code is only a test harness; it is not a unified engine or a
+reimplementation of either game.
 
-## État
+## State model
 
-`SessionState` sépare trois catégories :
+`SessionState` separates three categories:
 
-- état de chaque personnage : PV, disponibilité, inventaire et capacités ;
-- état de chaque monde : position, vitesse, cible, porte et visite ;
-- état partagé explicite : carte, boss, version et jauge de synergie factice.
+- per-character state: HP, availability, inventory, and abilities;
+- per-world state: position, velocity, target, door, and visitation state;
+- explicitly shared state: map, boss flags, schema version, and placeholder
+  synergy gauge.
 
-Le changement de personnage conserve l'instance de salle. Le nouveau profil
-est testé contre les solides ; une liste d'offsets stable est essayée, puis le
-changement est refusé si aucune position n'est sûre. Les PV ne sont jamais
-copiés d'un personnage à l'autre.
+A character swap preserves the room instance. The new profile is checked
+against solid geometry; a stable list of offsets is tried before rejecting an
+unsafe swap. HP is never copied between characters.
 
-La sauvegarde commence par la signature `FUSION1`, une version et la taille du
-payload. Le format actuel est un prototype dépendant de l'ABI ; avant toute
-compatibilité publique il devra devenir un encodage explicite avec checksum et
-migrations.
+Save files start with the `FUSION1` signature, a version, and payload size. The
+current format is ABI-dependent and intended only for the prototype. Public
+compatibility will require explicit encoding, checksums, and migrations.
 
-## Accès ROM
+## ROM access
 
-`rom_validate` lit localement le fichier par blocs et calcule SHA-1. Aucun octet
-n'est envoyé. Le lancement s'arrête avant SDL si l'une des deux versions USA
-n'est pas reconnue. La prochaine couche devra exposer des vues en lecture seule
-bornées (`RomView`) et des extracteurs versionnés, sans écrire les données dans
-le dépôt.
+`rom_validate` reads each local file in blocks and computes SHA-1. No ROM byte
+is uploaded. Startup stops before SDL initialization unless both supported USA
+revisions match. The next resource layer should expose bounded, read-only
+`RomView` objects and versioned local extractors without writing proprietary
+data into the repository.
 
-## Remplacement progressif des stubs
+## Replacing the stubs
 
-1. Brancher un runtime GBA/recompilation à l'intérieur du backend concerné.
-2. Encapsuler VRAM/OAM/palettes, DMA, IRQ/VBlank, audio et entrées derrière une
-   couche hôte.
-3. Définir un contrat d'instantané par moteur et un adaptateur vers
-   `SessionState`.
-4. Remplacer une salle simulée par une salle réelle minimale, puis les
-   mouvements natifs du personnage du monde.
-5. Ajouter le personnage invité sans faire tourner le second moteur.
+1. Embed a GBA runtime or static recompilation runtime inside the relevant
+   backend.
+2. Place VRAM/OAM/palette access, DMA, IRQ/VBlank, audio, and input behind a
+   host abstraction.
+3. Define an engine-specific snapshot contract and adapters to `SessionState`.
+4. Replace one simulated room with a minimal authentic room, then adopt the
+   native movement rules of that world.
+5. Add the guest character without running the other engine.
 
-Une intégration par recompilation statique est prometteuse pour Aria, mais elle
-doit être évaluée face à sa licence non commerciale et reproduite localement.
-Zero Mission n'a pas encore de runtime natif retenu.
+Static recompilation is promising for Aria, but it must be reproduced locally
+and evaluated against the noncommercial runtime license. No native runtime has
+yet been selected for Zero Mission.
 
-## Synergies
+## Synergy extension points
 
-`synergy_placeholder` réserve l'état de présentation. Les futurs hooks devront
-être des commandes explicites (`support_attack`, `passive_tick`,
-`on_character_swap`) exécutées par le backend actif. Aucun bonus ou soin de
-synergie n'est implémenté aujourd'hui.
+`synergy_placeholder` reserves presentation state. Future hooks should be
+explicit commands such as `support_attack`, `passive_tick`, and
+`on_character_swap`, all executed by the active backend. No synergy buff,
+attack, or healing behavior is implemented today.

@@ -132,13 +132,13 @@ void room_tick(RoomRuntime *runtime, SessionState *session,
             character = session->active_character;
             if (!find_safe_position(runtime, world, character)) {
                 session->active_character = old;
-                set_notice(runtime, "Changement refuse: aucune position sure");
+                set_notice(runtime, "Swap rejected: no safe position");
                 character = old;
             } else {
-                set_notice(runtime, "Personnage change sans recharger la salle");
+                set_notice(runtime, "Character swapped without reloading the room");
             }
         } else {
-            set_notice(runtime, "Autre personnage indisponible (KO)");
+            set_notice(runtime, "Other character unavailable (KO)");
         }
     }
 
@@ -155,16 +155,16 @@ void room_tick(RoomRuntime *runtime, SessionState *session,
         world->actor_y = 420;
         world->actor_vy = 0;
         session_damage_active(session, 15);
-        set_notice(runtime, "Chute: degats sur le personnage actif");
+        set_notice(runtime, "Fall: active character took damage");
     }
     if (overlaps(actor, runtime->definition.hazard) && runtime->damage_cooldown <= 0) {
         session_damage_active(session, 10);
         runtime->damage_cooldown = 0.8f;
-        set_notice(runtime, "Obstacle dangereux: -10 PV");
+        set_notice(runtime, "Hazard: -10 HP");
     }
     if (input->damage_pressed) {
         session_damage_active(session, 25);
-        set_notice(runtime, "Degats de diagnostic: -25 PV");
+        set_notice(runtime, "Diagnostic damage: -25 HP");
     }
     if (input->attack_pressed && world->target_hp > 0) {
         float actor_center = world->actor_x;
@@ -174,9 +174,9 @@ void room_tick(RoomRuntime *runtime, SessionState *session,
             world->target_hp -= damage;
             if (world->target_hp < 0) world->target_hp = 0;
             runtime->attack_flash = 0.12f;
-            set_notice(runtime, world->target_hp == 0 ? "Cible detruite" : "Cible touchee");
+            set_notice(runtime, world->target_hp == 0 ? "Target destroyed" : "Target hit");
         } else {
-            set_notice(runtime, "Cible hors de portee");
+            set_notice(runtime, "Target out of range");
         }
     }
     if (world->target_hp == 0) world->door_open = true;
@@ -231,14 +231,14 @@ void room_render(const RoomRuntime *runtime, const SessionState *session,
     color(renderer, (SDL_Color){245,245,245,255});
     SDL_RenderDebugTextFormat(renderer, 250, 20, "SAMUS %d/%d", session->characters[0].hp, session->characters[0].max_hp);
     SDL_RenderDebugTextFormat(renderer, 250, 48, "SOMA  %d/%d", session->characters[1].hp, session->characters[1].max_hp);
-    SDL_RenderDebugText(renderer, 250, 74, "SYNERGIE (FACTICE / NON IMPLEMENTEE)");
-    SDL_RenderDebugTextFormat(renderer, 20, 100, "%s | %s | CIBLE %d/%d | PORTE %s",
+    SDL_RenderDebugText(renderer, 250, 74, "SYNERGY (PLACEHOLDER / NOT IMPLEMENTED)");
+    SDL_RenderDebugTextFormat(renderer, 20, 100, "%s | %s | TARGET %d/%d | DOOR %s",
         runtime->definition.title, character_name(character), world->target_hp,
-        world->target_max_hp, world->door_open ? "OUVERTE" : "FERMEE");
+        world->target_max_hp, world->door_open ? "OPEN" : "CLOSED");
     SDL_RenderDebugText(renderer, 20, 116,
-        "FLECHES/QD: BOUGER  ESPACE: SAUT  J: ATTAQUE  TAB: PERSO  M: MONDE");
+        "ARROWS/AD: MOVE  SPACE: JUMP  J: ATTACK  TAB: CHARACTER  M: WORLD");
     SDL_RenderDebugText(renderer, 20, 130,
-        "F3: DEBUG  K: DEGATS  F5: SAUVER  F9: CHARGER  ECHAP: QUITTER");
+        "F3: DEBUG  K: DAMAGE  F5: SAVE  F9: LOAD  ESC: QUIT");
     if (runtime->notice_time > 0)
         SDL_RenderDebugText(renderer, 20, 150, runtime->notice);
     if (debug_overlay) {
@@ -248,6 +248,6 @@ void room_render(const RoomRuntime *runtime, const SessionState *session,
         SDL_RenderDebugTextFormat(renderer, 20, 170,
             "DEBUG backend=%s pos=(%.1f,%.1f) vel=(%.1f,%.1f) sol=%s fps=%.1f",
             world_name(session->active_world), world->actor_x, world->actor_y,
-            world->actor_vx, world->actor_vy, runtime->on_ground ? "oui" : "non", fps);
+            world->actor_vx, world->actor_vy, runtime->on_ground ? "yes" : "no", fps);
     }
 }

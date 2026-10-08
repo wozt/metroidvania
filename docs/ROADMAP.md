@@ -1,42 +1,42 @@
-# Feuille de route
+# Roadmap
 
-## P0 — Première logique authentique
+## P0 - First authentic logic
 
-1. Reproduire sous Linux le build et les tests de `ariaOfSorrow-recomp` dans un
-   bac isolé, documenter chaque dépendance et confirmer zéro fallback interprété.
-2. Prototyper un backend Aria qui démarre, avance exactement une frame et rend
-   un framebuffer, sans encore modifier le gameplay.
-3. Étudier une voie équivalente pour MZM : port source avec HAL ou recompilation
-   statique. Produire une comparaison mesurée avant de choisir.
-4. Définir les snapshots minimaux et l'arrêt propre de chaque runtime.
+1. Reproduce the `ariaOfSorrow-recomp` Linux build and tests in an isolated
+   workspace, document every dependency, and confirm whether any interpreter
+   fallback remains.
+2. Prototype an Aria backend that boots, advances exactly one frame, and exposes
+   a framebuffer without modifying gameplay.
+3. Evaluate an equivalent route for MZM: source port through a HAL or static
+   recompilation. Produce measured evidence before selecting one.
+4. Define minimal snapshots and clean shutdown behavior for both runtimes.
 
-Critère de sortie : une salle authentique issue de chaque ROM peut être chargée
-séparément, avec timing, entrées et rendu vérifiés. Les rectangles actuels ne
-comptent pas.
+Exit criterion: one authentic room from each ROM can be loaded independently
+with verified timing, input, and rendering. The current rectangles do not count.
 
-## P1 — Deux moteurs et transition
+## P1 - Two engines and transitions
 
-- encapsuler mémoire, PPU, DMA, VBlank, audio et sauvegarde par backend ;
-- faire l'aller-retour Aria → MZM → Aria avec état restauré ;
-- comparer traces déterministes et captures à une référence ;
-- garantir qu'aucun backend suspendu ne touche rendu ou simulation.
+- encapsulate memory, PPU, DMA, VBlank, audio, and save behavior per backend;
+- complete an Aria -> MZM -> Aria round trip with restored state;
+- compare deterministic traces and captures against a reference;
+- ensure a suspended backend never affects rendering or simulation.
 
-## P2 — Personnages invités
+## P2 - Guest characters
 
-- conserver Soma natif dans Aria et Samus native dans MZM ;
-- définir Samus/Aria puis Soma/MZM par adaptation locale, sans démarrer le
-  second moteur ;
-- tables de capacités, animations, dégâts et collisions testées.
+- preserve native Soma in Aria and native Samus in MZM;
+- implement Samus-in-Aria and Soma-in-MZM as local adaptations without starting
+  the second engine;
+- test ability, animation, damage, and collision tables.
 
-## P3 — Progression et contenu
+## P3 - Progression and content
 
-- schéma stable de sauvegarde croisée et migrations ;
-- cartes, portes, boss et flags partagés explicitement ;
-- résurrection configurable ;
-- premiers hooks de synergie, chacun marqué expérimental.
+- stable cross-game save schema and migrations;
+- explicit shared map, door, boss, and progression flags;
+- configurable resurrection policy;
+- first synergy hooks, each marked experimental.
 
-## P4 — Distribution et étude GBA
+## P4 - Distribution and GBA study
 
-- pipeline local sans assets, manifeste de licences et analyse juridique ;
-- mesures de performance, reproductibilité et paquets Linux ;
-- seulement ensuite, budget mémoire/ROM et prototype de linker GBA.
+- asset-free local pipeline, license manifest, and legal review;
+- performance measurements, reproducibility, and Linux packages;
+- only then, a GBA ROM/RAM budget and linker prototype.

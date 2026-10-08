@@ -54,6 +54,6 @@ int main(void)
 {
     test_switch_corrects_collision_deterministically();
     test_switch_refused_without_safe_position();
-    puts("Tests de collision et changement déterministe passés.");
+    puts("Collision and deterministic swap tests passed.");
     return 0;
 }

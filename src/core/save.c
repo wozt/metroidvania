@@ -33,7 +33,7 @@ bool save_session(const char *path, const SessionState *session,
     if (fwrite(&header, sizeof(header), 1, file) != 1 ||
         fwrite(session, sizeof(*session), 1, file) != 1) {
         fclose(file);
-        return fail(error, error_size, "écriture de sauvegarde incomplète");
+        return fail(error, error_size, "incomplete save write");
     }
     if (fclose(file) != 0)
         return fail(error, error_size, strerror(errno));
@@ -55,16 +55,16 @@ bool load_session(const char *path, SessionState *session,
         header.version != FUSION_SAVE_VERSION ||
         header.payload_size != sizeof(loaded)) {
         fclose(file);
-        return fail(error, error_size, "format de sauvegarde inconnu ou incompatible");
+        return fail(error, error_size, "unknown or incompatible save format");
     }
     if (fread(&loaded, sizeof(loaded), 1, file) != 1) {
         fclose(file);
-        return fail(error, error_size, "sauvegarde tronquée");
+        return fail(error, error_size, "truncated save file");
     }
     fclose(file);
     if (loaded.active_world >= FUSION_WORLD_COUNT ||
         loaded.active_character >= FUSION_CHARACTER_COUNT)
-        return fail(error, error_size, "valeurs de sauvegarde invalides");
+        return fail(error, error_size, "invalid save values");
     *session = loaded;
     return true;
 }

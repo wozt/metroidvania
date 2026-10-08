@@ -6,7 +6,7 @@
 static bool init(FusionBackend *backend, SessionState *session)
 {
     const RoomDefinition room = {
-        .title = "METROID TEST ROOM (BACKEND SIMULE)",
+        .title = "METROID TEST ROOM (SIMULATED BACKEND)",
         .background = {12, 24, 42, 255}, .accent = {230, 115, 35, 255},
         .solids = {{0,500,960,40}, {210,420,180,20}, {490,350,170,20},
                    {720,455,34,45}, {0,0,20,540}, {940,0,20,540}},
@@ -38,5 +38,5 @@ static void shutdown(FusionBackend *backend) { free(backend->state); backend->st
 FusionBackend metroid_backend_create(void)
 {
     static const FusionBackendOps ops = {init, enter, tick, render, leave, shutdown};
-    return (FusionBackend){"Backend Metroid simulé", WORLD_METROID, &ops, NULL};
+    return (FusionBackend){"Simulated Metroid backend", WORLD_METROID, &ops, NULL};
 }

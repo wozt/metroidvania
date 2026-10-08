@@ -1,21 +1,21 @@
-# Exigences ROM
+# ROM requirements
 
-Seules deux révisions sont acceptées :
+Only two revisions are currently accepted:
 
-| Jeu | Région | Taille observée | SHA-1 |
+| Game | Region | Observed size | SHA-1 |
 |---|---:|---:|---|
-| Castlevania: Aria of Sorrow | USA | 8 388 608 octets | `abd71fe01ebb201bcc133074db1dd8c5253776c7` |
-| Metroid: Zero Mission | USA | 8 388 608 octets | `5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8` |
+| Castlevania: Aria of Sorrow | USA | 8,388,608 bytes | `abd71fe01ebb201bcc133074db1dd8c5253776c7` |
+| Metroid: Zero Mission | USA | 8,388,608 bytes | `5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8` |
 
-Les empreintes sont celles documentées par les dépôts amont et ont été
-confirmées sur les deux fichiers locaux le 2026-10-08. Les noms ne constituent
-pas une preuve : seul le contenu haché est accepté.
+These fingerprints are documented by the upstream repositories and were
+confirmed against both local files on 2026-10-08. Filenames are not evidence;
+only content hashes are accepted.
 
-Les scripts lisent les ROM localement. Aucun upload, télémétrie ou requête
-contenant leurs octets n'est effectué. Les futurs artefacts extraits doivent
-rester dans `extracted/`, ignoré par Git. Le contrôle `no_proprietary_files`
-refuse les extensions ROM et les gros fichiers hors sous-modules.
+Validation scripts read ROMs locally. They perform no uploads, telemetry, or
+requests containing ROM bytes. Future extracted artifacts must stay under the
+Git-ignored `extracted/` directory. The `no_proprietary_files` check rejects ROM
+extensions and large files outside submodules.
 
-Le mode réel futur devra exiger ces contrôles avant extraction ou génération de
-code. Une région différente doit être refusée jusqu'à ce qu'un audit, des
-symboles et des tests spécifiques existent.
+Future authentic runtime modes must apply these checks before extraction or
+code generation. Other regions remain unsupported until they have dedicated
+symbols, audits, and tests.

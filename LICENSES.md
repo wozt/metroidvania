@@ -1,28 +1,28 @@
-# Licences et droits
+# Licenses and rights
 
-## Code de ce dépôt
+## Code in this repository
 
-Aucune licence de distribution n'a encore été choisie pour le code propre au
-projet. En attendant une décision explicite, tous les droits sont réservés.
-Cette absence de licence ne modifie pas les licences des dépendances.
+No distribution license has been selected yet for the project's own code. All
+rights are reserved until an explicit decision is made. This does not alter the
+licenses of any dependency.
 
-## Sous-modules
+## Submodules
 
-- `third_party/mzm` : licence MIT, copyright YohannDR 2025 ; voir son fichier
-  `LICENSE` à la révision épinglée.
-- `third_party/cvaos` : licence MIT, copyright testyourmine 2026 ; voir son
-  fichier `LICENSE` à la révision épinglée.
-- SDL3 : utilisée comme bibliothèque système ; consulter la licence zlib de la
-  version installée.
+- `third_party/mzm`: MIT license, copyright YohannDR 2025; see its `LICENSE`
+  file at the pinned revision.
+- `third_party/cvaos`: MIT license, copyright testyourmine 2026; see its
+  `LICENSE` file at the pinned revision.
+- SDL3: used as a system library; refer to the zlib license shipped with the
+  installed version.
 
-La licence d'une décompilation couvre le code publié par ses auteurs, pas les
-œuvres, ROM, graphismes, sons ni autres données de Nintendo ou Konami. Le dépôt
-principal n'accorde aucun droit sur ces éléments.
+A decompilation license covers code published by its authors, not Nintendo or
+Konami ROMs, graphics, audio, or other copyrighted data. This repository grants
+no rights to those works.
 
-## Références non intégrées
+## References not integrated
 
-L'audit a repéré `ariaOfSorrow-recomp`, dont le runtime `gbarecomp` est annoncé
-sous PolyForm Noncommercial 1.0.0, et `metroid-zero-mission-pc-edition`, dérivé
-de VBA-M sous GPLv2 avec composants additionnels. Ils ne sont pas des
-dépendances de ce dépôt. Toute intégration exigerait une revue fichier par
-fichier et une décision de compatibilité de licence.
+The audit identified `ariaOfSorrow-recomp`, whose `gbarecomp` runtime is stated
+to use the PolyForm Noncommercial 1.0.0 license, and
+`metroid-zero-mission-pc-edition`, a VBA-M derivative under GPLv2 with additional
+components. Neither is a dependency of this repository. Any integration would
+require file-by-file review and a license compatibility decision.

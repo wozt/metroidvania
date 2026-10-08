@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validation locale stricte des deux ROM prises en charge."""
+"""Strict local validation for the two supported ROM revisions."""
 
 from __future__ import annotations
 
@@ -24,11 +24,11 @@ def sha1_file(path: Path) -> str:
 def validate(kind: str, path: Path) -> tuple[bool, str]:
     label, expected = EXPECTED[kind]
     if not path.is_file():
-        return False, f"{label}: fichier absent: {path}"
+        return False, f"{label}: file not found: {path}"
     actual = sha1_file(path)
     if actual != expected:
-        return False, f"{label}: SHA-1 inconnu {actual} (attendu {expected})"
-    return True, f"{label}: ROM valide ({actual})"
+        return False, f"{label}: unknown SHA-1 {actual} (expected {expected})"
+    return True, f"{label}: valid ROM ({actual})"
 
 
 def main() -> int:

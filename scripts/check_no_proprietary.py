@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Échoue si le dépôt suivi semble contenir une ROM ou un gros asset extrait."""
+"""Fail if tracked or unignored files look like ROMs or extracted assets."""
 
 from __future__ import annotations
 
@@ -23,14 +23,14 @@ def main() -> int:
         relative = raw.decode("utf-8", errors="replace")
         path = root / relative
         if path.suffix.lower() in FORBIDDEN:
-            failures.append(f"extension interdite: {relative}")
+            failures.append(f"forbidden extension: {relative}")
         if path.is_file() and path.stat().st_size > 4 * 1024 * 1024 and not relative.startswith("third_party/"):
-            failures.append(f"fichier > 4 Mio hors sous-module: {relative}")
+            failures.append(f"file larger than 4 MiB outside submodules: {relative}")
     if failures:
-        print("Fuite potentielle de données propriétaires:", file=sys.stderr)
+        print("Potential proprietary data leak:", file=sys.stderr)
         print("\n".join(f"- {item}" for item in failures), file=sys.stderr)
         return 1
-    print("Contrôle anti-fuite: aucun fichier propriétaire suivi détecté.")
+    print("Leak check passed: no tracked proprietary file detected.")
     return 0
 
 

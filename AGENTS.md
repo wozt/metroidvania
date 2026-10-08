@@ -1,10 +1,9 @@
-# Consignes de travail du dépôt
+# Repository working rules
 
-- Répondre et documenter le projet en français.
-- Ne jamais indexer, committer, pousser ni transférer une ROM, un BIOS, une
-  sauvegarde ou des données propriétaires extraites.
-- À la fin de chaque cycle de travail significatif : exécuter les vérifications
-  pertinentes, mettre à jour `docs/PROJECT_STATUS.md`, créer un commit descriptif
-  puis pousser la branche courante par SSH vers `origin`.
-- Ne pas publier de release ni modifier l'historique distant sans demande
-  explicite.
+- Write all commits, documentation, code comments, UI text, and diagnostics in English.
+- Never stage, commit, push, or transfer ROMs, BIOS images, save files, or
+  extracted proprietary data.
+- At the end of every meaningful work cycle, run the relevant checks, update
+  `docs/PROJECT_STATUS.md`, create a descriptive commit, and push the current
+  branch to `origin` over SSH.
+- Do not publish releases or rewrite remote history without an explicit request.

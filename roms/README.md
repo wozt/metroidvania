@@ -1,15 +1,15 @@
-# ROM locales
+# Local ROMs
 
-Placez ici vos copies personnelles, obtenues légalement. Ce répertoire est ignoré
-par Git, à l'exception de ce fichier. Ne transmettez jamais les ROM dans un ticket,
-un chat, une CI ou un service externe.
+Place your own legally obtained dumps here. Git ignores this directory except
+for this file. Never send ROMs through an issue, chat, CI system, or external
+service.
 
-Versions actuellement acceptées :
+Currently supported revisions:
 
-- `Castlevania - Aria of Sorrow (USA).gba` — SHA-1 `abd71fe01ebb201bcc133074db1dd8c5253776c7`
-- `Metroid - Zero Mission (USA).gba` — SHA-1 `5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8`
+- `Castlevania - Aria of Sorrow (USA).gba` - SHA-1 `abd71fe01ebb201bcc133074db1dd8c5253776c7`
+- `Metroid - Zero Mission (USA).gba` - SHA-1 `5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8`
 
-Validation locale :
+Local validation:
 
 ```sh
 python3 scripts/verify_roms.py \
@@ -17,4 +17,4 @@ python3 scripts/verify_roms.py \
   --metroid "roms/Metroid - Zero Mission (USA).gba"
 ```
 
-Le prototype refuse de lancer une salle si les deux empreintes ne correspondent pas.
+The prototype refuses to launch a room unless both fingerprints match.

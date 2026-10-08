@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-option(FUSION_WARNINGS_AS_ERRORS "Traiter les avertissements comme des erreurs" ON)
+option(FUSION_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 
 add_library(fusion_core STATIC
     src/core/session.c

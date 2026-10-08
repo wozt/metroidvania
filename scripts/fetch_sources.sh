@@ -3,7 +3,7 @@ set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 if [ ! -f "$root/.gitmodules" ]; then
-    echo "Erreur: .gitmodules absent; exécutez ce script depuis le dépôt." >&2
+    echo "Error: .gitmodules is missing; run this script from the repository." >&2
     exit 1
 fi
 git -C "$root" submodule sync --recursive

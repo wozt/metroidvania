@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 
+#include "aria/preview.h"
 #include "core/backend.h"
 #include "core/rom.h"
 #include "core/save.h"
@@ -13,7 +14,7 @@
 
 static void usage(const char *program)
 {
-    fprintf(stderr, "Usage: %s [--aria path.gba] [--metroid path.gba] [--validate-only]\n", program);
+    fprintf(stderr, "Usage: %s [--aria path.gba] [--metroid path.gba] [--validate-only] [--aria-video-test]\n", program);
 }
 
 static void key_event(FusionInput *input, SDL_Keycode key, bool *running, bool *debug)
@@ -37,6 +38,8 @@ int main(int argc, char **argv)
     const char *aria_path = "roms/Castlevania - Aria of Sorrow (USA).gba";
     const char *metroid_path = "roms/Metroid - Zero Mission (USA).gba";
     bool validate_only = false;
+    bool aria_video_test = false;
+    AriaPreview preview = {0};
     RomRequirement roms[2];
     char error[256];
     SessionState session;
@@ -52,6 +55,7 @@ int main(int argc, char **argv)
         if (strcmp(argv[i], "--aria") == 0 && i + 1 < argc) aria_path = argv[++i];
         else if (strcmp(argv[i], "--metroid") == 0 && i + 1 < argc) metroid_path = argv[++i];
         else if (strcmp(argv[i], "--validate-only") == 0) validate_only = true;
+        else if (strcmp(argv[i], "--aria-video-test") == 0) aria_video_test = true;
         else { usage(argv[0]); return 2; }
     }
     roms[0] = (RomRequirement){ROM_ARIA_US, "Castlevania: Aria of Sorrow USA",
@@ -76,6 +80,15 @@ int main(int argc, char **argv)
         fprintf(stderr, "SDL creation failed: %s\n", SDL_GetError()); SDL_Quit(); return 4;
     }
     SDL_SetRenderVSync(renderer, 1);
+    if (aria_video_test) {
+        if (!aria_preview_open(&preview, renderer)) {
+            fprintf(stderr, "Synthetic Aria preview initialization failed: %s\n", SDL_GetError());
+            SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); SDL_Quit();
+            return 4;
+        }
+        SDL_SetWindowTitle(window, "Metroidvania Fusion - SYNTHETIC Aria video test");
+        puts("SYNTHETIC VIDEO TEST ONLY - NO ORIGINAL ARIA ENGINE IS RUNNING");
+    }
 
     session_init(&session);
     backends[WORLD_METROID] = metroid_backend_create();
@@ -136,11 +149,24 @@ int main(int argc, char **argv)
             active->ops->enter_world(active, &session);
         }
         active->ops->tick(active, &session, &input, dt);
-        active->ops->render(active, &session, renderer, debug, fps);
+        if (aria_video_test && session.active_world == WORLD_CASTLEVANIA) {
+            uint16_t gba_keys = (uint16_t)((input.left ? (1u << 5) : 0u) |
+                                           (input.right ? (1u << 4) : 0u) |
+                                           (input.jump_pressed ? 1u : 0u));
+            int output_w = WINDOW_WIDTH, output_h = WINDOW_HEIGHT;
+            SDL_GetRenderOutputSize(renderer, &output_w, &output_h);
+            if (!aria_preview_draw(&preview, renderer, gba_keys, output_w, output_h)) {
+                fprintf(stderr, "Synthetic video preview failed: %s\n", SDL_GetError());
+                running = false;
+            }
+        } else {
+            active->ops->render(active, &session, renderer, debug, fps);
+        }
         SDL_RenderPresent(renderer);
     }
 
     for (i = 0; i < 2; ++i) backends[i].ops->shutdown(&backends[i]);
+    aria_preview_close(&preview);
     SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); SDL_Quit();
     return 0;
 }

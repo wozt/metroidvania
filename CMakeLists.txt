@@ -24,6 +24,7 @@ add_library(fusion_core STATIC
     src/core/world_graph.c
     src/core/tile_paint.c
     src/core/native_map.c
+    src/core/native_selection.c
     src/core/tilemap.c
     src/backends/metroid/mzm_state.c
     src/backends/castlevania/aria_state.c
@@ -189,6 +190,13 @@ if(BUILD_TESTING)
         target_compile_options(fusion_native_map_tests PRIVATE -Werror)
     endif()
     add_test(NAME native_map_contract COMMAND fusion_native_map_tests)
+    add_executable(fusion_native_selection_tests tests/test_native_selection.c)
+    target_link_libraries(fusion_native_selection_tests PRIVATE fusion_core)
+    target_compile_options(fusion_native_selection_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_native_selection_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME native_selection_contract COMMAND fusion_native_selection_tests)
     add_test(NAME native_workspace_python
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
                 python3 -m unittest tests.test_native_workspace)

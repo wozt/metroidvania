@@ -625,6 +625,7 @@ static void build_assets_tab(Editor *ed, GtkWidget *tabs)
 
 /* Read-only browser of original Zero Mission RoomEntryRom descriptors.
  * Graphics have NOT been decoded from the ROM; do not fake a rendered room. */
+static void open_selected_native_room(Editor *ed);
 static void native_row_selected(GtkListBox *list, GtkListBoxRow *row, gpointer userdata)
 {
     Editor *ed = userdata;
@@ -644,13 +645,19 @@ static void native_row_selected(GtkListBox *list, GtkListBoxRow *row, gpointer u
             gtk_picture_set_filename(GTK_PICTURE(ed->native_preview), preview_path);
         else gtk_picture_set_paintable(GTK_PICTURE(ed->native_preview), NULL);
     }
+    /* Single-click opens its own central document instead of only metadata. */
+    if (area) open_selected_native_room(ed);
 }
 
 static void open_selected_native_room(Editor *ed)
 {
-    if (ed->native_workspace && ed->selected_native_area[0])
+    if (ed->native_workspace && ed->selected_native_area[0]) {
+        /* Unhide the central dock for narrow responsive layouts. */
+        ed->small_focus = 0;
+        apply_responsive(ed);
         native_workspace_import_async(ed->native_workspace,
                                       ed->selected_native_area, ed->selected_native_index);
+    }
 }
 static void native_open_clicked(GtkButton *button, gpointer userdata)
 { (void)button; open_selected_native_room(userdata); }
@@ -665,7 +672,7 @@ static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
     GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
     GtkWidget *scroll = gtk_scrolled_window_new();
     GtkWidget *list = gtk_list_box_new();
-    GtkWidget *open = gtk_button_new_with_label("Open selected original room in Native tile painter");
+    GtkWidget *open = gtk_button_new_with_label("Ouvrir la salle dans un nouvel onglet");
     GtkWidget *preview = gtk_picture_new();
     gchar *contents = NULL;
     gchar **lines;

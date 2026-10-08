@@ -112,7 +112,7 @@ static void test_create_room_dialogs(void)
             gtk_widget_get_first_child(toolbar));
         gtk_drop_down_set_selected(GTK_DROP_DOWN(area_filter), 2);
         guint before = g_list_model_get_n_items(windows);
-        gtk_button_clicked(GTK_BUTTON(action));
+        g_signal_emit_by_name(action, "clicked");
         g_assert_cmpuint(g_list_model_get_n_items(windows), ==, before + 1);
         GtkWindow *dialog = NULL;
         for (guint n = 0; n < g_list_model_get_n_items(windows); ++n) {

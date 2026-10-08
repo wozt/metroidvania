@@ -274,3 +274,12 @@ and the proprietary-file guard passed.
   rooms. Existing draft browsing, editing and engine adapters remain pending.
 - Added an Xvfb GTK4 form-opening test for both worlds without writing assets.
 - Run local build, CTest and proprietary-file guard before considering verified.
+
+## Patch 0065 - GTK4 button activation in create-room test
+
+- GTK4 does not expose the old `gtk_button_clicked()` GTK3 helper.
+- The GTK4 regression test uses `g_signal_emit_by_name(action, "clicked")`
+  to exercise the real create-room action signal without proprietary assets.
+- Only test code and documentation changed; the existing editor dialog and
+  Python authored-room contract are not modified.
+- Run the developer's GTK4 build, CTest and proprietary-file guard to verify.

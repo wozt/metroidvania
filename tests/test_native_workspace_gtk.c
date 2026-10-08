@@ -24,8 +24,12 @@ static void test_close_and_reopen(void)
     g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 1);
     g_assert_true(native_workspace_test_activate_close(workspace, 0));
     g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(center)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right)), ==, 0);
     g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 022"));
     g_assert_true(native_workspace_test_close_document(workspace, 0));
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(center)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right)), ==, 0);
 
     native_workspace_free(workspace);
 }
@@ -50,6 +54,8 @@ static void test_close_order_and_unsaved_guard(void)
     g_assert_true(native_workspace_test_close_document(workspace, 1));
     g_assert_true(native_workspace_test_close_document(workspace, 0));
     g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(center)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right)), ==, 0);
 
     native_workspace_free(workspace);
 }
@@ -72,8 +78,14 @@ static void test_move_then_close_and_shutdown(void)
     g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 033"));
     g_assert_true(native_workspace_test_move_document(workspace, 0,
                                                        other_center, other_right));
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(center)), ==, 3);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right)), ==, 3);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(other_center)), ==, 1);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(other_right)), ==, 1);
     g_assert_true(native_workspace_test_close_document(workspace, 0));
     g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 3);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(other_center)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(other_right)), ==, 0);
 
     /* Shutdown must detach every document from all notebook owners. */
     native_workspace_free(workspace);

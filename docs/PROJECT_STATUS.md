@@ -134,3 +134,13 @@ and the proprietary-file guard passed.
   shutdown with an unsaved modal, and detached notebook cleanup.
 - Build, CTest and on-device GUI verification must be recorded after running
   the patch locally; no result is claimed here.
+
+## Patch 0055 - GTK4 notebook owner resolution
+
+- Fixed closing, selecting and moving native room tabs by finding the owning
+  GtkNotebook in the widget ancestor chain rather than requiring it as the
+  immediate widget parent.
+- Tightened GTK lifecycle tests: they now assert that pages are actually
+  removed from *both* dock notebooks, including detached docks, not merely
+  removed from the document manager's bookkeeping.
+- Build, CTest and real GTK4 reproduction still require local validation.

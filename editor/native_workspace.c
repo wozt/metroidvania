@@ -789,7 +789,8 @@ static void remove_notebook_page(GtkWidget **page_slot)
     GtkWidget *page = *page_slot;
     if (!page) return;
     *page_slot = NULL;
-    GtkWidget *parent = gtk_widget_get_parent(page);
+    /* In GTK4 the page is not guaranteed to be a direct notebook child. */
+    GtkWidget *parent = gtk_widget_get_ancestor(page, GTK_TYPE_NOTEBOOK);
     if (!GTK_IS_NOTEBOOK(parent)) return;
 
     /* Keep the page alive until gtk_notebook_remove_page() has completed all
@@ -979,7 +980,7 @@ static void close_clicked(GtkButton *button, gpointer userdata)
 static void focus_page(GtkWidget *page)
 {
     if (!page) return;
-    GtkWidget *parent = gtk_widget_get_parent(page);
+    GtkWidget *parent = gtk_widget_get_ancestor(page, GTK_TYPE_NOTEBOOK);
     if (GTK_IS_NOTEBOOK(parent)) {
         GtkNotebook *notebook = GTK_NOTEBOOK(parent);
         gtk_notebook_set_current_page(notebook, gtk_notebook_page_num(notebook, page));
@@ -1468,7 +1469,7 @@ void native_workspace_test_set_unsaved(NativeWorkspace *manager, guint index,
 
 static void move_page_for_test(GtkWidget *page, GtkNotebook *target)
 {
-    GtkWidget *parent = gtk_widget_get_parent(page);
+    GtkWidget *parent = gtk_widget_get_ancestor(page, GTK_TYPE_NOTEBOOK);
     if (!GTK_IS_NOTEBOOK(parent) || GTK_NOTEBOOK(parent) == target) return;
     GtkWidget *label = gtk_notebook_get_tab_label(GTK_NOTEBOOK(parent), page);
     g_object_ref(page);

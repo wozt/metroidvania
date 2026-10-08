@@ -195,3 +195,12 @@ and the proprietary-file guard passed.
 - The GTK test now emits progress diagnostics around both browsers' creation
   and removal, to identify the failing phase if a crash persists.
 - A successful GTK4 build/CTest run on Debian is required before committing.
+
+## Patch 0059 - GTK4 room browser test type correction
+
+- Fixed the GTK4 room browser test's `-Werror=compare-distinct-pointer-types`
+  by comparing `GtkWidget *` to `GtkWidget *` explicitly.
+- The previous CTest run used the old test executable because the new test
+  failed to link. It is not evidence of a remaining crash in patch 0058.
+- The browser implementation is unchanged; rebuild must succeed before CTest
+  results are considered meaningful. GTK4 runtime verification is pending.

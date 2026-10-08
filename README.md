@@ -9,8 +9,9 @@ world; changing worlds suspends the active backend before activating the other.
 
 The current executable is an **SDL3 integration harness**, not yet a port of
 either game. Its rooms, collisions, and profiles use diagnostic geometry. The
-user's own ROMs are required at launch and verified with SHA-1, but their code,
-maps, and assets are not executed yet. Both backends display
+user's own ROMs are required at launch and verified with SHA-1, but their code
+and maps are not executed yet. An optional local-only pipeline can extract one
+verified Samus frame from the user's ROM. Both backends display
 `SIMULATED BACKEND` explicitly.
 
 Working today:
@@ -57,6 +58,17 @@ ctest --test-dir build --output-on-failure
 
 Use `--aria` and `--metroid` to supply different local paths.
 `--validate-only` validates both files without opening a window.
+
+To generate the first verified Power Suit idle frame locally:
+
+```sh
+python3 scripts/mzm_samus_sprite.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --output assets/extracted/sprites/samus/idle_0.bmp
+```
+
+The SDL3 room renderer discovers that ignored BMP automatically and keeps its
+colored rectangle fallback when it is absent. No extracted pixels are tracked.
 
 Controls: arrow keys or `A`/`D` to move, `Space` to jump, `J` to attack,
 `Tab` to swap characters, `M` to change worlds, `F3` for the debug overlay,

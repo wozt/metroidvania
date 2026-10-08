@@ -26,7 +26,7 @@ Original project-authored code and documentation use GPL-3.0-only. PolyForm-lice
 | HUD, debug, and synergy | Partial | Dual HP and overlay; synergy explicitly a placeholder |
 | Authentic Aria engine | Feasibility reproduced, not integrated | Standalone AOT Linux runtime: 36/36 tests, nonempty framebuffer, zero fallback after clean-room BIOS recompilation; PolyForm runtime incompatible with current GPLv3-only policy; unlicensed root host code excluded |
 | Authentic MZM engine | Not started | No runtime strategy selected |
-| Original assets, maps, and audio | Not started | No extracted asset is tracked |
+| Original assets, maps, and audio | Partial, local-only | One verified complete Samus idle-frame recipe; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
 ## History
@@ -259,3 +259,18 @@ frame tests and backend lifecycle tests before being enabled.
   palette rows into explicit OBJ palette banks and rejects unmatched OAM banks.
 - Defaults preserve the former single-row behavior. Palette detection and
   arm cannon/effects are not yet implemented.
+
+## Patch 0023 - first complete verified Samus frame
+
+- Matched the Power Suit right-standing frame, default palette, standing arm
+  cannon animation, and forward cannon graphics to exact symbols in a pinned
+  build whose ROM is byte-identical to the required USA ROM.
+- Corrected Samus composition to the game's 2D OBJ mapping. The prior 1D body
+  preview could not reproduce the separated VRAM tile rows correctly.
+- Added full body/cannon staging, raw OAM layer ordering, transparent trimming,
+  and deterministic local BMP generation at the SDL3 loader's `samus/idle_0.bmp`
+  path.
+- Generated pixels remain ignored and local. Synthetic tests cover mapping,
+  cannon pointers, signed muzzle offsets, VRAM slots, layer order, and cropping.
+- Next: enumerate verified standing frames, then run, jump, and attack with
+  their per-frame cannon records.

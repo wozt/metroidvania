@@ -3,8 +3,8 @@
 """Compose a ROM-local GBA 4bpp OBJ sprite from verified OAM and tile offsets.
 
 This is a hardware-format decoder, not a game-specific animation extractor.
-Inputs are never inferred or redistributed. Assumes 1D OBJ mapping and
-uncompressed graphics; affine OBJ entries and 8bpp OBJ are rejected.
+Inputs are never inferred or redistributed. Supports 1D and 2D OBJ mapping
+with uncompressed graphics; affine OBJ entries and 8bpp OBJ are rejected.
 """
 import argparse
 import hashlib
@@ -44,22 +44,26 @@ def unpack_oam(raw):
                 vflip=bool(a1 & 0x2000), priority=(a2 >> 10) & 3)
 
 
-def compose(tiles, palettes, entries, origin_x, origin_y, canvas_w, canvas_h):
+def compose(tiles, palettes, entries, origin_x, origin_y, canvas_w, canvas_h,
+            mapping="1d"):
     if canvas_w < 1 or canvas_h < 1 or canvas_w > 512 or canvas_h > 512:
         raise ValueError('invalid canvas size')
     if len(palettes) != 512:
         raise ValueError('expected 256 BGR555 OBJ palette entries')
     if not tiles or len(tiles) % 32:
         raise ValueError('tile data must be 4bpp aligned')
+    if mapping not in ("1d", "2d"):
+        raise ValueError('OBJ mapping must be 1d or 2d')
     rgba = bytearray(canvas_w * canvas_h * 4)
-    # OBJ 1D tile allocation: each successive row skips width/8 tile blocks.
-    # The 10-bit OAM tile number counts 32-byte blocks in 4bpp mode.
+    # In 1D mode rows follow the object width; in 2D mode each tile row has
+    # the hardware's fixed 32-tile stride. Tile numbers count 32-byte blocks.
     for entry in reversed(entries):  # OAM index zero has highest priority.
         for iy in range(entry['h']):
             for ix in range(entry['w']):
                 sx = entry['w'] - 1 - ix if entry['hflip'] else ix
                 sy = entry['h'] - 1 - iy if entry['vflip'] else iy
-                tile = entry['tile'] + (sy // 8) * (entry['w'] // 8) + sx // 8
+                row_stride = entry['w'] // 8 if mapping == "1d" else 32
+                tile = entry['tile'] + (sy // 8) * row_stride + sx // 8
                 off = tile * 32 + (sy % 8) * 4 + (sx % 8) // 2
                 if off >= len(tiles):
                     raise ValueError(f'OBJ tile {tile} outside supplied tile region')
@@ -108,6 +112,7 @@ def main():
     p.add_argument('--origin-y', type=int, default=0)
     p.add_argument('--width', type=int, default=64)
     p.add_argument('--height', type=int, default=64)
+    p.add_argument('--mapping', choices=('1d', '2d'), default='1d')
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args()
     if not (1 <= a.tile_count <= 1024 and 1 <= a.oam_count <= 128):
@@ -125,7 +130,8 @@ def main():
         oam = bounded_slice(data, a.oam_offset, a.oam_count * 8, 'OAM')
         entries = [unpack_oam(oam[i:i + 8]) for i in range(0, len(oam), 8)]
         bmp = to_bmp(compose(tiles, palette, entries,
-                             a.origin_x, a.origin_y, a.width, a.height), a.width, a.height)
+                             a.origin_x, a.origin_y, a.width, a.height,
+                             a.mapping), a.width, a.height)
     except ValueError as exc:
         p.error(str(exc))
     output.parent.mkdir(parents=True, exist_ok=True)

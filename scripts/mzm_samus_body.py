@@ -34,7 +34,10 @@ def make_body(rom, frame_pointer, palette_offset, width=128, height=128,
                      if not first_bank <= e["bank"] < first_bank + palette_rows})
     if absent:
         raise ValueError("OAM uses unloaded OBJ palette banks: " + repr(absent))
-    rgba = compose(vram, palette, oam["entries"], origin_x, origin_y, width, height)
+    # Zero Mission uses 2D OBJ mapping. The separated lower-body VRAM slot at
+    # tile row 0x20 is direct evidence: a multi-row OBJ advances 32 tiles.
+    rgba = compose(vram, palette, oam["entries"], origin_x, origin_y, width, height,
+                   "2d")
     return to_bmp(rgba, width, height), meta, oam
 
 

@@ -4,7 +4,8 @@ Run `python3 -m unittest tests.test_gba_oam` before attempting extraction.
 
 `scripts/gba_oam.py` reads an exact-hash-verified personal ROM and combines
 uncompressed 4bpp OBJ graphics, a 256-color (16-bank) BGR555 OBJ palette,
-and consecutive eight-byte OAM entries using **1D mapping**. It supports
+and consecutive eight-byte OAM entries using selectable **1D or 2D mapping**.
+Use `--mapping 2d` for Zero Mission's Samus staging layout. It supports
 normal square/horizontal/vertical OBJ sizes, flips and transparency. It rejects
 affine OBJ and 8bpp mode. Neither the ROM offsets nor the animation pointer
 chains are guessed. No proprietary bytes or outputs belong in Git.
@@ -17,7 +18,7 @@ python3 scripts/gba_oam.py --character samus \
   --tiles-offset 0xVERIFIED --tile-count 256 \
   --palette-offset 0xVERIFIED \
   --oam-offset 0xVERIFIED --oam-count 3 \
-  --origin-x -32 --origin-y -32 --width 64 --height 64 \
+  --origin-x -32 --origin-y -32 --width 64 --height 64 --mapping 2d \
   --output assets/extracted/sprites/samus/idle_0.bmp
 ```
 
@@ -30,4 +31,5 @@ hardware-format primitive shared by both games, not a complete extractor.
 
 The result is a 32-bit BGRA BMP with explicit alpha masks; SDL3 supports this
 format for sprite transparency. Do not commit generated images. Verified
-ROM-specific sprite assembly and animation timing remain the next milestone.
+ROM-specific sprite assembly is implemented separately for the first MZM idle
+frame; broader animation timing remains a later milestone.

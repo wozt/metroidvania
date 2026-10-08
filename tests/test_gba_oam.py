@@ -30,6 +30,24 @@ class OamTests(unittest.TestCase):
         self.assertEqual(bmp[:2], b'BM')
         self.assertEqual(bmp[122:126], bytes([0, 0, 255, 255]))
 
+    def test_two_dimensional_mapping_uses_32_tile_row_stride(self):
+        tiles = bytearray(34 * 32)
+        tiles[2 * 32] = 0x01
+        tiles[32 * 32] = 0x02
+        palette = bytearray(512)
+        struct.pack_into('<H', palette, 2, 0x001f)
+        struct.pack_into('<H', palette, 4, 0x03e0)
+        entry = unpack_oam(struct.pack('<4H', 0, 0x4000, 0, 0))
+        one_d = compose(tiles, palette, [entry], 0, 0, 16, 16, "1d")
+        two_d = compose(tiles, palette, [entry], 0, 0, 16, 16, "2d")
+        second_row = (8 * 16) * 4
+        self.assertEqual(list(one_d[second_row:second_row + 4]), [255, 0, 0, 255])
+        self.assertEqual(list(two_d[second_row:second_row + 4]), [0, 255, 0, 255])
+
+    def test_invalid_mapping(self):
+        with self.assertRaisesRegex(ValueError, 'mapping'):
+            compose(bytes(32), bytes(512), [], 0, 0, 1, 1, "invalid")
+
 
 if __name__ == '__main__':
     unittest.main()

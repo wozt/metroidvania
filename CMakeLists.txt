@@ -9,8 +9,10 @@ option(FUSION_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 
 find_path(MGBA_INCLUDE_DIR mgba/core/core.h REQUIRED)
 find_library(MGBA_LIBRARY NAMES mgba REQUIRED)
+find_package(SDL3 CONFIG REQUIRED)
 
 add_library(fusion_core STATIC
+    src/core/backend.c
     src/core/session.c
     src/core/save.c
     src/core/sha1.c
@@ -21,7 +23,7 @@ add_library(fusion_core STATIC
 target_include_directories(fusion_core PUBLIC include)
 target_include_directories(fusion_core PRIVATE ${MGBA_INCLUDE_DIR})
 target_compile_definitions(fusion_core PRIVATE _DEFAULT_SOURCE)
-target_link_libraries(fusion_core PUBLIC ${MGBA_LIBRARY})
+target_link_libraries(fusion_core PUBLIC ${MGBA_LIBRARY} SDL3::Headers)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(fusion_core PRIVATE -Wall -Wextra -Wpedantic)
@@ -29,8 +31,6 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(fusion_core PRIVATE -Werror)
     endif()
 endif()
-
-find_package(SDL3 CONFIG REQUIRED)
 
 add_executable(fusion_dev
     src/main.c

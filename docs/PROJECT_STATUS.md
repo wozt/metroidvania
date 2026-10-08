@@ -28,6 +28,7 @@ The MPL-2.0 mGBA system library provides an interim authentic execution path.
 | HUD, debug, and synergy | Partial | Dual HP and overlay; synergy explicitly a placeholder |
 | Authentic Aria execution | Emulated proof integrated | mGBA executes the verified ROM with input and 240x160 output; native/AOT route remains unresolved |
 | Authentic MZM execution | Emulated proof integrated | mGBA executes the verified ROM with input and 240x160 output; native source-port route remains unresolved |
+| Authentic state boundary | Memory-only proof | Versioned/world-typed 397,312-byte snapshots replay deterministically; no persistent format |
 | Original assets, maps, and audio | Partial, local-only | Verified Samus and Soma idle/run/jump/attack recipes; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
@@ -71,6 +72,11 @@ hashes `5ca363153253eb90` (Zero Mission) and `ce393be405213e55` (Aria). An SDL
 dummy-driver authentic-mode smoke test remained active for two seconds and was
 stopped by `timeout` with status 124.
 
+The extended authentic probe captured each runtime at frame 300, advanced 30
+frames, restored the snapshot, and replayed the same 30 frames. Zero Mission
+reproduced hash `d2bee3834e3048a7`; Aria reproduced
+`ce393be405213e55`. Both mGBA state buffers were 397,312 bytes.
+
 Upstream build verification used local clones under `/tmp`, a locally built
 `agbcc`, and symlinks to the ignored ROM files. Both `make` invocations exited
 successfully and both generated ROMs matched the reference files with `cmp`.
@@ -96,8 +102,8 @@ loop. No proprietary content is committed.
 
 ## Risks and next actions
 
-1. **P0 - State boundary:** define controlled snapshots and verified
-   engine-to-`SessionState` adapters without enabling unsafe mixed saves.
+1. **P0 - State bridge:** identify and verify the minimal engine fields needed
+   for world transitions before adding any `SessionState` adapter.
 2. **P0 - Native strategy:** evaluate source HAL or compatible recompilation
    paths while keeping mGBA as the verified baseline.
 3. **P1 - Research:** inventory EWRAM/IWRAM, room globals, and snapshot boundaries
@@ -123,8 +129,19 @@ loop. No proprietary content is committed.
 - existing automated tests remain green and the license audit is updated.
 
 These criteria are satisfied by the interim emulated proof. Authentic execution
-is now bound to the backend interface; the next milestone is a controlled
-snapshot boundary.
+is bound to the backend interface and now has a controlled, memory-only snapshot
+boundary. The next milestone is verified state extraction, not persistent
+savestates.
+
+## Patch 014 - memory-only authentic snapshots
+
+- Added bounded mGBA capture/restore operations and a versioned, world-typed
+  snapshot in the shared backend contract.
+- Cross-world restoration is rejected; diagnostic backends deliberately expose
+  no snapshot implementation.
+- The authentic probe now proves deterministic 30-frame replay for both ROMs.
+- Snapshots remain process-local, are disposed explicitly, and are never
+  connected to F5/F9 or written to disk.
 
 ## Patch 013 - authentic backend lifecycle
 

@@ -3,10 +3,22 @@
 
 #include <SDL3/SDL.h>
 
+#include <stddef.h>
+
 #include "core/types.h"
 
 typedef struct FusionBackend FusionBackend;
 
+#define FUSION_BACKEND_SNAPSHOT_VERSION 1u
+
+typedef struct {
+    uint32_t version;
+    WorldKind world;
+    uint8_t *data;
+    size_t size;
+} FusionBackendSnapshot;
+
+/* Snapshot callbacks are optional. Capture requires a zero-initialized output. */
 typedef struct {
     bool (*init)(FusionBackend *backend, SessionState *session);
     bool (*enter_world)(FusionBackend *backend, SessionState *session);
@@ -14,6 +26,9 @@ typedef struct {
                  const FusionInput *input, float dt);
     void (*render)(FusionBackend *backend, const SessionState *session,
                    SDL_Renderer *renderer, bool debug_overlay, float fps);
+    bool (*capture_state)(FusionBackend *backend, FusionBackendSnapshot *out);
+    bool (*restore_state)(FusionBackend *backend,
+                          const FusionBackendSnapshot *snapshot);
     void (*leave_world)(FusionBackend *backend, SessionState *session);
     void (*shutdown)(FusionBackend *backend);
 } FusionBackendOps;
@@ -30,5 +45,7 @@ struct FusionBackend {
 FusionBackend metroid_backend_create(void);
 FusionBackend castlevania_backend_create(void);
 FusionBackend gba_backend_create(WorldKind world, const char *rom_path);
+/* Disposes snapshot data allocated by a backend; safe to call repeatedly. */
+void fusion_backend_snapshot_dispose(FusionBackendSnapshot *snapshot);
 
 #endif

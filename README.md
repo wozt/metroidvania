@@ -63,12 +63,16 @@ ctest --test-dir build --output-on-failure
 
 Use `--aria` and `--metroid` to supply different local paths.
 `--validate-only` validates both files without opening a window.
-`--authentic-probe` executes each ROM for 300 frames in sequence and prints a
-nonempty-pixel count and deterministic framebuffer hash. Run
+`--authentic-probe` executes each ROM for 300 frames in sequence, captures an
+in-memory runtime snapshot, advances 30 frames, restores it, replays those
+frames, and prints the framebuffer hashes and replay result. Run
 `--authentic-video-test` for interactive authentic ROM output; `M` suspends the
 current runtime and switches to the other one. The mode does not load or write
 save files. GBA controls are arrows, `Space`/`X` for A, `J`/`Z` for B, `Enter`
 for Start, right Shift for Select, and `U`/`I` for L/R.
+
+Snapshots are currently process-local only. They are not written by F5/F9 and
+are not a supported save format.
 
 To generate all four verified Power Suit animation states locally:
 

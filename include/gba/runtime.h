@@ -7,6 +7,7 @@
 
 #define GBA_FRAME_WIDTH 240u
 #define GBA_FRAME_HEIGHT 160u
+#define GBA_SNAPSHOT_MAX_SIZE (16u * 1024u * 1024u)
 
 typedef struct {
     const uint32_t *rgba32;
@@ -14,6 +15,11 @@ typedef struct {
     uint32_t height;
     uint32_t stride_pixels;
 } GbaFrameView;
+
+typedef struct {
+    uint8_t *data;
+    size_t size;
+} GbaRuntimeSnapshot;
 
 typedef struct {
     void *core;
@@ -34,6 +40,13 @@ bool gba_runtime_enter(GbaRuntime *runtime);
 void gba_runtime_leave(GbaRuntime *runtime);
 bool gba_runtime_step(GbaRuntime *runtime, uint16_t keys_held);
 bool gba_runtime_frame(const GbaRuntime *runtime, GbaFrameView *out);
+/* Capture requires a zero-initialized snapshot and transfers ownership to it. */
+bool gba_runtime_capture(GbaRuntime *runtime, GbaRuntimeSnapshot *snapshot,
+                         char *error, size_t error_size);
+bool gba_runtime_restore(GbaRuntime *runtime,
+                         const GbaRuntimeSnapshot *snapshot,
+                         char *error, size_t error_size);
+void gba_runtime_snapshot_dispose(GbaRuntimeSnapshot *snapshot);
 void gba_runtime_close(GbaRuntime *runtime);
 
 #endif

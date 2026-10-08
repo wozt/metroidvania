@@ -79,3 +79,12 @@ instances and follows the same enter/tick/render/leave contract as the
 diagnostic implementations. The controller contains no separate mGBA frame
 loop. Held GBA input and backend failure reporting are part of the shared
 contract.
+
+## D-011 - Memory-only authentic snapshots
+
+Decision: expose versioned, world-typed backend snapshots for authentic mGBA
+runtimes, but keep them in memory and outside `SessionState`. Capture and
+restore require the runtime to be active and the payload to match mGBA's exact
+state size under a 16 MiB ceiling. F5/F9 remain disabled in authentic mode.
+Persistent or cross-version savestates require a separate format, ROM identity,
+integrity checks, migration rules, and a proprietary-data policy.

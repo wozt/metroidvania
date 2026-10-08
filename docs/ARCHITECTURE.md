@@ -55,10 +55,25 @@ This is an emulated execution path used to unblock authentic frame, input, and
 lifecycle work. It does not make mGBA the final gameplay architecture and does
 not replace the native-source/recompilation investigation.
 
+## Authentic snapshot boundary
+
+The shared backend contract has optional `capture_state` and `restore_state`
+operations. Authentic snapshots carry a schema version, the owning world, and
+an opaque mGBA state buffer. Capture and restore are accepted only while that
+runtime is active at a frame boundary. Restore rejects a different world,
+schema, empty buffer, oversized buffer, or any size other than the current
+mGBA core's exact state size. Ownership is explicit and ends through
+`fusion_backend_snapshot_dispose`.
+
+Snapshots are memory-only and valid only inside the current process. They are
+not embedded in `SessionState`, accepted by F5/F9, or treated as a stable file
+format. This prevents diagnostic fields from masquerading as authoritative game
+state and avoids writing ROM-derived working memory before a persistence policy
+exists.
+
 ## Replacing the stubs
 
-1. Define engine-specific snapshot and state-extraction boundaries for the
-   mGBA baseline.
+1. Identify verified engine fields inside the controlled mGBA snapshots.
 2. Place controlled VRAM/OAM/palette and memory access behind a backend-owned
    host abstraction.
 3. Add adapters between verified engine state and `SessionState` without

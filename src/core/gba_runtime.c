@@ -140,6 +140,73 @@ bool gba_runtime_frame(const GbaRuntime *runtime, GbaFrameView *out)
     return true;
 }
 
+bool gba_runtime_capture(GbaRuntime *runtime, GbaRuntimeSnapshot *snapshot,
+                         char *error, size_t error_size)
+{
+    struct mCore *core;
+    size_t state_size;
+    uint8_t *data;
+    if (!runtime || !snapshot || snapshot->data || snapshot->size ||
+        !runtime->active || !runtime->core || !runtime->rom_loaded) {
+        set_error(error, error_size, "invalid GBA snapshot capture state");
+        return false;
+    }
+    core = runtime->core;
+    state_size = core->stateSize(core);
+    if (!state_size || state_size > GBA_SNAPSHOT_MAX_SIZE) {
+        set_error(error, error_size, "mGBA returned an invalid snapshot size");
+        return false;
+    }
+    data = malloc(state_size);
+    if (!data) {
+        set_error(error, error_size, "cannot allocate the GBA snapshot");
+        return false;
+    }
+    if (!core->saveState(core, data)) {
+        free(data);
+        set_error(error, error_size, "mGBA snapshot capture failed");
+        return false;
+    }
+    snapshot->data = data;
+    snapshot->size = state_size;
+    set_error(error, error_size, "");
+    return true;
+}
+
+bool gba_runtime_restore(GbaRuntime *runtime,
+                         const GbaRuntimeSnapshot *snapshot,
+                         char *error, size_t error_size)
+{
+    struct mCore *core;
+    size_t state_size;
+    if (!runtime || !snapshot || !snapshot->data || !snapshot->size ||
+        snapshot->size > GBA_SNAPSHOT_MAX_SIZE || !runtime->active ||
+        !runtime->core || !runtime->rom_loaded) {
+        set_error(error, error_size, "invalid GBA snapshot restore state");
+        return false;
+    }
+    core = runtime->core;
+    state_size = core->stateSize(core);
+    if (snapshot->size != state_size) {
+        set_error(error, error_size, "GBA snapshot size does not match the runtime");
+        return false;
+    }
+    if (!core->loadState(core, snapshot->data)) {
+        set_error(error, error_size, "mGBA snapshot restore failed");
+        return false;
+    }
+    set_error(error, error_size, "");
+    return true;
+}
+
+void gba_runtime_snapshot_dispose(GbaRuntimeSnapshot *snapshot)
+{
+    if (!snapshot) return;
+    free(snapshot->data);
+    snapshot->data = NULL;
+    snapshot->size = 0;
+}
+
 void gba_runtime_close(GbaRuntime *runtime)
 {
     struct mCore *core;

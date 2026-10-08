@@ -42,34 +42,74 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
                                 char *error, size_t error_size)
 {
     GbaRuntime runtime = {0};
+    GbaRuntimeSnapshot snapshot = {0};
     GbaFrameView frame;
+    uint64_t initial_hash;
+    uint64_t forward_hash;
+    uint64_t restored_hash;
     unsigned index;
     size_t nonzero = 0;
     size_t pixel_count;
+    bool success = false;
 
-    if (!gba_runtime_open(&runtime, rom_path, error, error_size) ||
-        !gba_runtime_enter(&runtime)) {
-        gba_runtime_close(&runtime);
-        return false;
+    if (!gba_runtime_open(&runtime, rom_path, error, error_size))
+        goto cleanup;
+    if (!gba_runtime_enter(&runtime)) {
+        snprintf(error, error_size, "cannot enter the GBA probe runtime");
+        goto cleanup;
     }
     for (index = 0; index < 300; ++index) {
         if (!gba_runtime_step(&runtime, 0)) {
-            gba_runtime_close(&runtime);
-            return false;
+            snprintf(error, error_size, "initial GBA probe execution failed");
+            goto cleanup;
         }
     }
     if (!gba_runtime_frame(&runtime, &frame)) {
-        gba_runtime_close(&runtime);
-        return false;
+        snprintf(error, error_size, "initial GBA probe frame failed");
+        goto cleanup;
     }
     pixel_count = (size_t)frame.width * frame.height;
     for (index = 0; index < pixel_count; ++index)
         if (frame.rgba32[index]) ++nonzero;
-    printf("Authentic probe: %s frames=300 size=%ux%u nonzero=%zu hash=%016llx\n",
+    initial_hash = hash_frame(&frame);
+    if (!gba_runtime_capture(&runtime, &snapshot, error, error_size))
+        goto cleanup;
+    for (index = 0; index < 30; ++index) {
+        if (!gba_runtime_step(&runtime, 0)) {
+            snprintf(error, error_size, "forward GBA probe execution failed");
+            goto cleanup;
+        }
+    }
+    if (!gba_runtime_frame(&runtime, &frame)) {
+        snprintf(error, error_size, "forward GBA probe frame failed");
+        goto cleanup;
+    }
+    forward_hash = hash_frame(&frame);
+    if (!gba_runtime_restore(&runtime, &snapshot, error, error_size))
+        goto cleanup;
+    for (index = 0; index < 30; ++index) {
+        if (!gba_runtime_step(&runtime, 0)) {
+            snprintf(error, error_size, "restored GBA probe execution failed");
+            goto cleanup;
+        }
+    }
+    if (!gba_runtime_frame(&runtime, &frame)) {
+        snprintf(error, error_size, "restored GBA probe frame failed");
+        goto cleanup;
+    }
+    restored_hash = hash_frame(&frame);
+    printf("Authentic probe: %s frames=300 size=%ux%u nonzero=%zu "
+           "hash=%016llx snapshot=%zu replay=%016llx match=%s\n",
            label, frame.width, frame.height, nonzero,
-           (unsigned long long)hash_frame(&frame));
+           (unsigned long long)initial_hash, snapshot.size,
+           (unsigned long long)restored_hash,
+           forward_hash == restored_hash ? "yes" : "no");
+    success = nonzero != 0 && forward_hash == restored_hash;
+
+cleanup:
+    gba_runtime_snapshot_dispose(&snapshot);
     gba_runtime_close(&runtime);
-    return nonzero != 0;
+    return success;
 }
 
 static void key_event(FusionInput *input, SDL_Keycode key, bool *running, bool *debug)

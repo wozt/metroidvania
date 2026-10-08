@@ -117,6 +117,43 @@ static void render(FusionBackend *backend, const SessionState *session,
         fail(backend, "mGBA framebuffer presentation failed");
 }
 
+static bool capture_state(FusionBackend *backend, FusionBackendSnapshot *out)
+{
+    GbaBackendState *state = backend->state;
+    GbaRuntimeSnapshot runtime_snapshot = {0};
+    if (!state || !out || out->data || out->size || backend->failed) {
+        snprintf(backend->error, sizeof(backend->error),
+                 "invalid backend snapshot capture state");
+        return false;
+    }
+    if (!gba_runtime_capture(&state->runtime, &runtime_snapshot,
+                             backend->error, sizeof(backend->error)))
+        return false;
+    out->version = FUSION_BACKEND_SNAPSHOT_VERSION;
+    out->world = backend->world;
+    out->data = runtime_snapshot.data;
+    out->size = runtime_snapshot.size;
+    return true;
+}
+
+static bool restore_state(FusionBackend *backend,
+                          const FusionBackendSnapshot *snapshot)
+{
+    GbaBackendState *state = backend->state;
+    GbaRuntimeSnapshot runtime_snapshot;
+    if (!state || !snapshot || snapshot->version != FUSION_BACKEND_SNAPSHOT_VERSION ||
+        snapshot->world != backend->world || !snapshot->data || !snapshot->size ||
+        backend->failed) {
+        snprintf(backend->error, sizeof(backend->error),
+                 "backend snapshot does not match the active world");
+        return false;
+    }
+    runtime_snapshot.data = snapshot->data;
+    runtime_snapshot.size = snapshot->size;
+    return gba_runtime_restore(&state->runtime, &runtime_snapshot,
+                               backend->error, sizeof(backend->error));
+}
+
 static void leave(FusionBackend *backend, SessionState *session)
 {
     GbaBackendState *state = backend->state;
@@ -137,7 +174,16 @@ static void shutdown(FusionBackend *backend)
 
 FusionBackend gba_backend_create(WorldKind world, const char *rom_path)
 {
-    static const FusionBackendOps ops = {init, enter, tick, render, leave, shutdown};
+    static const FusionBackendOps ops = {
+        .init = init,
+        .enter_world = enter,
+        .tick = tick,
+        .render = render,
+        .capture_state = capture_state,
+        .restore_state = restore_state,
+        .leave_world = leave,
+        .shutdown = shutdown,
+    };
     GbaBackendState *state;
     FusionBackend backend = {
         .name = world == WORLD_METROID ? "Authentic Metroid mGBA backend"

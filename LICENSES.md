@@ -45,7 +45,9 @@ Users must provide their own legitimately obtained supported ROM files locally.
 No Nintendo or Konami ROMs, graphics, audio, level data, extracted binaries,
 BIOS images, or proprietary game files may be committed or distributed.
 Neither this GPL license nor upstream source licenses grant rights to those
-works. Distribution of a future patch or game binary requires separate review.
+works. Emulator snapshots can contain ROM-derived memory and must also remain
+local; the current implementation never writes them to disk. Distribution of a
+future patch or game binary requires separate review.
 
 ## Upstream references
 

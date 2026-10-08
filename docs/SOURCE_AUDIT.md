@@ -105,6 +105,11 @@ or tracked by this repository.
 - mGBA is an interim emulated execution route, not evidence that either engine
   has been natively ported. Its project-owned adapter now implements the same
   exclusive backend lifecycle as the diagnostic engines.
+- The public fixed-size `stateSize`, `saveState`, and `loadState` operations were
+  exercised in memory for both supported ROMs. Version 0.10.5 returned 397,312
+  bytes. Replaying 30 frames after restore reproduced the pre-restore forward
+  hash for both games. This is a same-process determinism result, not a portable
+  savestate compatibility claim.
 
 ### `sergiomanzur/ariaOfSorrow-recomp`
 
@@ -140,8 +145,8 @@ or tracked by this repository.
 
 - Final native or recompiled runtime strategy for each game beyond the mGBA
   integration proof.
-- Engine-specific state extraction and controlled snapshots from mGBA.
-- Minimal snapshot boundaries for both games, to be established with Ghidra
-  and runtime instrumentation.
+- Engine-specific field extraction from the controlled mGBA snapshots.
+- Minimal transition fields for both games, to be established with Ghidra and
+  runtime instrumentation.
 - Licensing and redistribution status of code generated from a ROM; legal
   review is required before distribution.

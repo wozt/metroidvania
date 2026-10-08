@@ -48,3 +48,36 @@ calling the generic compositor.
 The output is a 32-bit BGRA BMP with explicit alpha masks accepted by SDL3.
 Run `python3 -m unittest tests.test_gba_oam` after changing the primitive. Never
 commit generated images or substitute guessed offsets.
+
+## Aria of Sorrow Soma cell extraction
+
+`scripts/aos_soma_sprite.py` implements the first hash-gated Soma recipe. Unlike
+Samus, Soma's player graphics are stored as complete 64x64 cells. Each graphics
+resource is an uncompressed 128x128 4bpp sheet containing four cells. The game
+copies the selected quadrant into 2D OBJ VRAM and draws it as two 64x32 objects.
+
+The pinned matching USA build establishes this exact chain:
+
+- `sub_08014628` initializes Soma;
+- `0x080E11D4` describes 37 graphics sheets;
+- `0x080E11C4` points to 83 animations through the table at `0x08639660`;
+- animation 0 at `0x0822A7B8` is idle: frame IDs `12, 13, 14, 13` with
+  durations `30, 11, 11, 11` at 60 Hz;
+- frame IDs 12 through 14 use sheet 3 at `0x081664B4`;
+- `0x082097D4` describes the OBJ palettes, with Soma's 16 colors starting at
+  `0x082097D8`.
+
+Generate the first complete cell with:
+
+```sh
+python3 scripts/aos_soma_sprite.py \
+  --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
+  --frame 0 \
+  --output assets/extracted/sprites/soma/idle_0.bmp
+```
+
+The output remains a full 64x64 cell so its native animation anchor is not
+lost. A live research capture independently confirmed that frame 13's 2,048
+tile bytes match the corresponding OBJ VRAM bytes and that the 32 palette bytes
+match OBJ palette bank 0. The research runtime is not part of this repository
+or its runtime; only the ROM-derived extractor is project code.

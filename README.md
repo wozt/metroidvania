@@ -10,9 +10,9 @@ world; changing worlds suspends the active backend before activating the other.
 The current executable is an **SDL3 integration harness**, not yet a port of
 either game. Its rooms, collisions, and profiles use diagnostic geometry. The
 user's own ROMs are required at launch and verified with SHA-1, but their code
-and maps are not executed yet. An optional local-only pipeline can extract one
-verified Samus frame from the user's ROM. Both backends display
-`SIMULATED BACKEND` explicitly.
+and maps are not executed yet. Optional local-only pipelines can extract the
+verified Samus animation set and a first verified Soma idle frame. Both
+backends display `SIMULATED BACKEND` explicitly.
 
 Working today:
 
@@ -68,6 +68,15 @@ for animation in idle run jump attack; do
     --animation "$animation" \
     --output-dir assets/extracted/sprites/samus
 done
+```
+
+To generate the first verified Soma idle frame locally:
+
+```sh
+python3 scripts/aos_soma_sprite.py \
+  --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
+  --frame 0 \
+  --output assets/extracted/sprites/soma/idle_0.bmp
 ```
 
 The SDL3 room renderer discovers the ignored BMPs automatically and uses the

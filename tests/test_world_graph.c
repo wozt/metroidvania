@@ -11,7 +11,7 @@ int main(void)
     const char *a = "metroid:demo:save_01";
     const char *b = "aria:demo:save_01";
     const char *path = "graph-test-output.mvg";
-    assert(fusion_graph_load(&graph, "data/world_graph.mvg", error, sizeof(error)));
+    assert(fusion_graph_load(&graph, "tests/fixtures/world_graph_sample.mvg", error, sizeof(error)));
     assert(fusion_graph_valid(&graph));
     assert(graph.room_count == 2 && graph.link_count == 1);
     assert(fusion_graph_travel_allowed(&graph, a, b, true));

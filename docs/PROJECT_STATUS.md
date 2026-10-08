@@ -564,3 +564,11 @@ frame tests and backend lifecycle tests before being enabled.
 - Terrain is visual only: existing simulated platforms/hazards/portals remain
   authoritative for collisions. Native engine/map importing is not yet done.
 
+## Patch 0036 - restore graph and isolate graph contract fixture
+
+- Restore the accidentally deleted `data/world_graph.mvg` sample without
+  overwriting a graph that may already have been edited in GTK4.
+- Run `world_graph_contract` against a committed, immutable sample under
+  `tests/fixtures/` instead of the editable game project graph.
+- Keep the sample files as original project metadata only; no ROM maps or
+  proprietary extracted content are added.

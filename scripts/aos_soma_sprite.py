@@ -132,7 +132,43 @@ def decode_cell(tile_data, palette):
     return bytes(rgba), width, height
 
 
-def make_soma_idle_frame(rom, frame_index=0):
+def opaque_bounds(rgba, width, height):
+    points = [(x, y) for y in range(height) for x in range(width)
+              if rgba[(y * width + x) * 4 + 3]]
+    if not points:
+        raise ValueError("Soma cell is fully transparent")
+    return (min(x for x, _ in points), min(y for _, y in points),
+            max(x for x, _ in points) + 1, max(y for _, y in points) + 1)
+
+
+def crop_rgba(rgba, width, height, bounds):
+    left, top, right, bottom = bounds
+    if not (0 <= left < right <= width and 0 <= top < bottom <= height):
+        raise ValueError("invalid Soma cell crop bounds")
+    cropped_width = right - left
+    cropped_height = bottom - top
+    cropped = bytearray(cropped_width * cropped_height * 4)
+    for y in range(top, bottom):
+        source = (y * width + left) * 4
+        target = (y - top) * cropped_width * 4
+        cropped[target:target + cropped_width * 4] = \
+            rgba[source:source + cropped_width * 4]
+    return bytes(cropped), cropped_width, cropped_height
+
+
+def idle_canvas_bounds(rom):
+    animation = parse_animation(rom, SOMA_IDLE_ANIMATION)
+    palette = load_palette(rom)
+    bounds = []
+    for frame in animation["frames"]:
+        tiles, _ = extract_cell_tiles(rom, frame["frame_id"])
+        rgba, width, height = decode_cell(tiles, palette)
+        bounds.append(opaque_bounds(rgba, width, height))
+    return (min(item[0] for item in bounds), min(item[1] for item in bounds),
+            max(item[2] for item in bounds), max(item[3] for item in bounds))
+
+
+def make_soma_idle_frame(rom, frame_index=0, canvas_bounds=None):
     animation = parse_animation(rom, SOMA_IDLE_ANIMATION)
     if not 0 <= frame_index < len(animation["frames"]):
         raise ValueError(
@@ -141,6 +177,8 @@ def make_soma_idle_frame(rom, frame_index=0):
     tile_data, graphics = extract_cell_tiles(rom, frame["frame_id"])
     palette = load_palette(rom)
     rgba, width, height = decode_cell(tile_data, palette)
+    canvas_bounds = canvas_bounds or idle_canvas_bounds(rom)
+    rgba, width, height = crop_rgba(rgba, width, height, canvas_bounds)
     metadata = {
         "animation_pointer": animation["animation_pointer"],
         "frame_index": frame_index,
@@ -148,6 +186,7 @@ def make_soma_idle_frame(rom, frame_index=0):
         "duration": frame["duration"],
         "width": width,
         "height": height,
+        "pixel_bounds": canvas_bounds,
         **graphics,
     }
     return to_bmp(rgba, width, height), metadata
@@ -157,30 +196,44 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rom", required=True, type=Path)
     parser.add_argument("--frame", type=int, default=0)
-    parser.add_argument("--output", required=True, type=Path)
+    output_group = parser.add_mutually_exclusive_group(required=True)
+    output_group.add_argument("--output", type=Path,
+                              help="write one BMP selected by --frame")
+    output_group.add_argument("--output-dir", type=Path,
+                              help="write the complete four-frame idle cycle")
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     allowed = (root / "assets" / "extracted").resolve()
-    output = args.output.resolve()
-    if output.suffix.lower() != ".bmp" or allowed not in output.parents:
-        parser.error(f"output must be a BMP below {allowed}")
-    if any(path.is_symlink() for path in (output, *output.parents)
-           if path == allowed or allowed in path.parents):
-        parser.error("symlink output path refused")
+    if args.output:
+        outputs = [(args.frame, args.output.resolve())]
+    else:
+        output_dir = args.output_dir.resolve()
+        outputs = [(index, output_dir / f"idle_{index}.bmp") for index in range(4)]
+    for _, output in outputs:
+        if output.suffix.lower() != ".bmp" or allowed not in output.parents:
+            parser.error(f"output must be a BMP below {allowed}")
+        if any(path.is_symlink() for path in (output, *output.parents)
+               if path == allowed or allowed in path.parents):
+            parser.error("symlink output path refused")
     try:
         rom = args.rom.read_bytes()
         if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
             parser.error("expected unmodified Aria of Sorrow USA ROM")
-        bitmap, metadata = make_soma_idle_frame(rom, args.frame)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        if not output.exists() or output.read_bytes() != bitmap:
-            output.write_bytes(bitmap)
+        canvas_bounds = idle_canvas_bounds(rom)
+        results = []
+        for index, output in outputs:
+            bitmap, metadata = make_soma_idle_frame(rom, index, canvas_bounds)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            if not output.exists() or output.read_bytes() != bitmap:
+                output.write_bytes(bitmap)
+            results.append((index, output, metadata))
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
-    print(f"Wrote verified Soma idle frame {args.frame}: {output}")
-    print(f"Size={metadata['width']}x{metadata['height']}; "
-          f"frame id={metadata['frame_id']}; duration={metadata['duration']}; "
-          f"sheet={metadata['sheet_index']}; quadrant={metadata['quadrant']}")
+    for index, output, metadata in results:
+        print(f"Wrote verified Soma idle frame {index}: {output}")
+        print(f"Size={metadata['width']}x{metadata['height']}; "
+              f"frame id={metadata['frame_id']}; duration={metadata['duration']}; "
+              f"sheet={metadata['sheet_index']}; quadrant={metadata['quadrant']}")
 
 
 if __name__ == "__main__":

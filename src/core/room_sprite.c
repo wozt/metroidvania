@@ -9,12 +9,23 @@ static const unsigned frame_counts[FUSION_CHARACTER_COUNT][SPRITE_STATE_COUNT] =
     [CHARACTER_SAMUS] = {4, 10, 8, 3},
     [CHARACTER_SOMA] = {4, 4, 4, 4},
 };
-/* Source-defined durations in 60 Hz game updates. */
-static const unsigned char samus_frame_durations[SPRITE_STATE_COUNT][SPRITE_MAX_FRAMES] = {
-    [SPRITE_IDLE] = {16, 16, 16, 16},
-    [SPRITE_RUN] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-    [SPRITE_JUMP] = {2, 1, 2, 1, 2, 1, 2, 1},
-    [SPRITE_ATTACK] = {2, 2, 4},
+/* Verified durations use the games' native 60 Hz update unit. */
+static const unsigned char frame_durations[FUSION_CHARACTER_COUNT]
+                                                  [SPRITE_STATE_COUNT]
+                                                  [SPRITE_MAX_FRAMES] = {
+    [CHARACTER_SAMUS] = {
+        [SPRITE_IDLE] = {16, 16, 16, 16},
+        [SPRITE_RUN] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+        [SPRITE_JUMP] = {2, 1, 2, 1, 2, 1, 2, 1},
+        [SPRITE_ATTACK] = {2, 2, 4},
+    },
+    [CHARACTER_SOMA] = {
+        [SPRITE_IDLE] = {30, 11, 11, 11},
+        /* Temporary timing for states whose authentic graphics are absent. */
+        [SPRITE_RUN] = {7, 7, 7, 6},
+        [SPRITE_JUMP] = {7, 7, 7, 6},
+        [SPRITE_ATTACK] = {7, 7, 7, 6},
+    },
 };
 
 unsigned room_sprite_frame_index(CharacterKind character, int action, float elapsed)
@@ -26,15 +37,12 @@ unsigned room_sprite_frame_index(CharacterKind character, int action, float elap
         action < 0 || action >= SPRITE_STATE_COUNT)
         return 0;
     count = frame_counts[character][action];
-    if (character != CHARACTER_SAMUS) {
-        int frame = elapsed > 0 ? (int)(elapsed * 9.f) : 0;
-        return (unsigned)frame % count;
-    }
     for (unsigned i = 0; i < count; ++i)
-        cycle += samus_frame_durations[action][i];
-    tick = (unsigned)(elapsed > 0 ? elapsed * 60.f : 0) % cycle;
+        cycle += frame_durations[character][action][i];
+    /* Avoid losing exact frame boundaries to binary float representation. */
+    tick = (unsigned)(elapsed > 0 ? elapsed * 60.f + 0.0001f : 0) % cycle;
     for (unsigned i = 0; i < count; ++i) {
-        unsigned duration = samus_frame_durations[action][i];
+        unsigned duration = frame_durations[character][action][i];
         if (tick < duration) return i;
         tick -= duration;
     }
@@ -100,7 +108,14 @@ bool room_sprites_draw(RoomSprites *sprites, SDL_Renderer *renderer,
         texture = sprites->frames[character][action][(idx + i) % count];
         if (texture) break;
     }
-    if (!texture) texture = sprites->frames[character][SPRITE_IDLE][0];
+    if (!texture) {
+        count = frame_counts[character][SPRITE_IDLE];
+        idx = room_sprite_frame_index(character, SPRITE_IDLE, elapsed);
+        for (unsigned i = 0; i < count; ++i) {
+            texture = sprites->frames[character][SPRITE_IDLE][(idx + i) % count];
+            if (texture) break;
+        }
+    }
     if (!texture || !SDL_GetTextureSize(texture, &width, &height) || height <= 0) return false;
     width *= target_height / height;
     dst = (SDL_FRect){center_x - width * .5f, feet_y - target_height, width, target_height};

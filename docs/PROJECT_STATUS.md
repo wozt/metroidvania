@@ -26,7 +26,7 @@ Original project-authored code and documentation use GPL-3.0-only. PolyForm-lice
 | HUD, debug, and synergy | Partial | Dual HP and overlay; synergy explicitly a placeholder |
 | Authentic Aria engine | Feasibility reproduced, not integrated | Standalone AOT Linux runtime: 36/36 tests, nonempty framebuffer, zero fallback after clean-room BIOS recompilation; PolyForm runtime incompatible with current GPLv3-only policy; unlicensed root host code excluded |
 | Authentic MZM engine | Not started | No runtime strategy selected |
-| Original assets, maps, and audio | Partial, local-only | Verified Samus idle/run/jump/attack recipes and first Soma idle frame; no extracted asset is tracked |
+| Original assets, maps, and audio | Partial, local-only | Verified Samus idle/run/jump/attack recipes and Soma idle cycle; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
 ## History
@@ -209,9 +209,12 @@ frame tests and backend lifecycle tests before being enabled.
   graphics, palette, and animation descriptors used by the USA ROM.
 - Decoded the native 128x128 sheet / four 64x64 cell format and idle sequence
   (`12, 13, 14, 13` with durations `30, 11, 11, 11`).
-- Added a SHA-1-gated extractor for the first complete idle frame. A live
-  research capture matched all 2,048 staged tile bytes and all 32 palette bytes
-  against OBJ VRAM and palette RAM. The runtime used for comparison remains
-  research-only and is not integrated.
-- The next graphics cycle is the complete idle animation followed by SDL asset
-  discovery for Soma; extracted pixels remain ignored.
+- Added a SHA-1-gated extractor for the complete four-frame idle cycle on a
+  stable 18x34 canvas. Live research captures matched all 2,048 staged tile
+  bytes for frames 12 and 13 and all 32 palette bytes against OBJ VRAM and
+  palette RAM. The runtime used for comparison remains research-only and is not
+  integrated.
+- SDL asset discovery now uses the exact Soma idle durations and falls back to
+  the animated idle cycle while other authentic Soma states are absent.
+- The next graphics cycle is Soma's run sequence; extracted pixels remain
+  ignored.

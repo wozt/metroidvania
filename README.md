@@ -11,7 +11,7 @@ The current executable is an **SDL3 integration harness**, not yet a port of
 either game. Its rooms, collisions, and profiles use diagnostic geometry. The
 user's own ROMs are required at launch and verified with SHA-1, but their code
 and maps are not executed yet. Optional local-only pipelines can extract the
-verified Samus animation set and a first verified Soma idle frame. Both
+verified Samus animation set and the verified Soma idle cycle. Both
 backends display `SIMULATED BACKEND` explicitly.
 
 Working today:
@@ -70,18 +70,18 @@ for animation in idle run jump attack; do
 done
 ```
 
-To generate the first verified Soma idle frame locally:
+To generate the verified Soma idle cycle locally:
 
 ```sh
 python3 scripts/aos_soma_sprite.py \
   --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
-  --frame 0 \
-  --output assets/extracted/sprites/soma/idle_0.bmp
+  --output-dir assets/extracted/sprites/soma
 ```
 
 The SDL3 room renderer discovers the ignored BMPs automatically and uses the
-source-defined per-frame durations for all four Samus states. It keeps its
-colored rectangle fallback when files are absent. No extracted pixels are tracked.
+source-defined per-frame durations for all four Samus states and Soma's idle
+cycle. It keeps its colored rectangle fallback when files are absent. No
+extracted pixels are tracked.
 
 Controls: arrow keys or `A`/`D` to move, `Space` to jump, `J` to attack,
 `Tab` to swap characters, `M` to change worlds, `F3` for the debug overlay,

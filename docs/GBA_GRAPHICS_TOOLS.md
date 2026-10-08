@@ -67,17 +67,17 @@ The pinned matching USA build establishes this exact chain:
 - `0x082097D4` describes the OBJ palettes, with Soma's 16 colors starting at
   `0x082097D8`.
 
-Generate the first complete cell with:
+Generate the complete idle cycle with:
 
 ```sh
 python3 scripts/aos_soma_sprite.py \
   --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
-  --frame 0 \
-  --output assets/extracted/sprites/soma/idle_0.bmp
+  --output-dir assets/extracted/sprites/soma
 ```
 
-The output remains a full 64x64 cell so its native animation anchor is not
-lost. A live research capture independently confirmed that frame 13's 2,048
-tile bytes match the corresponding OBJ VRAM bytes and that the 32 palette bytes
-match OBJ palette bank 0. The research runtime is not part of this repository
-or its runtime; only the ROM-derived extractor is project code.
+The four outputs share the union of their opaque cell bounds (18x34), retaining
+the native relative anchor while removing identical transparent margins. A live
+research capture independently confirmed that frames 12 and 13 each match all
+2,048 corresponding OBJ VRAM bytes and that the 32 palette bytes match OBJ
+palette bank 0. The research runtime is not part of this repository or its
+runtime; only the ROM-derived extractor is project code.

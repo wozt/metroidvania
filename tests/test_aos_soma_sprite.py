@@ -3,9 +3,11 @@ import struct
 import unittest
 
 from scripts.aos_soma_sprite import (
+    crop_rgba,
     decode_cell,
     extract_cell_tiles,
     load_palette,
+    opaque_bounds,
     parse_animation,
 )
 
@@ -72,6 +74,15 @@ class SomaSpriteTests(unittest.TestCase):
         struct.pack_into("<H", rom, 0x302, 3)
         with self.assertRaisesRegex(ValueError, "unsupported"):
             parse_animation(bytes(rom), 0, BASE + 0x100)
+
+    def test_crop_preserves_requested_cell_coordinates(self):
+        rgba = bytearray(4 * 4 * 4)
+        rgba[(2 * 4 + 1) * 4:(2 * 4 + 1) * 4 + 4] = b"\x01\x02\x03\xff"
+        bounds = opaque_bounds(rgba, 4, 4)
+        cropped, width, height = crop_rgba(rgba, 4, 4, bounds)
+        self.assertEqual(bounds, (1, 2, 2, 3))
+        self.assertEqual((width, height), (1, 1))
+        self.assertEqual(cropped, b"\x01\x02\x03\xff")
 
 
 if __name__ == "__main__":

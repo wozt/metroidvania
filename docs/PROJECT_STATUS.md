@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-08**.
 
+## Patch 0045 - verified boss and savepoint inventory
+
+- Added one versioned inventory for all nine requested Zero Mission encounters
+  and all eleven Aria campaign bosses, including the Graham branch, Julius and
+  Chaos. Man-Eater is explicitly retained as Boss Rush content outside the
+  campaign roster.
+- Mapped Zero Mission boss rooms, coordinates, engine symbols, event flags and
+  raw primary-sprite statistics against the pinned decompilation. Ambiguous
+  Imago room selection remains visibly unresolved instead of being guessed.
+- Enumerated all 29 Zero Mission rooms whose active sprite data contains a save
+  platform: 4 Brinstar, 5 Kraid, 5 Norfair, 4 Ridley, 3 Tourian and 8 Chozodia.
+  Each has a stable ID, source room, map coordinate, graphics and music symbol.
+- Aria boss locations and savepoints remain explicitly unverified until its
+  exact ROM room/entity tables are decoded. The inventory contains no invented
+  addresses, room IDs, coordinates, statistics or completion flags.
+- Added schema and completeness tests for both boss rosters, the excluded Boss
+  Rush encounter, all MZM savepoint records, unique identifiers and the empty
+  Aria technical fields.
+
 ## Patch 0044 - story baseline and concurrent timeline
 
 - Added the first production story bible for the inverted prologues, parallel

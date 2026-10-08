@@ -1,0 +1,1065 @@
+schema = "metroid-vania-world-inventory"
+version = 1
+status = "partial_verified"
+
+[coverage]
+mzm_bosses = "verified_source"
+aria_bosses = "verified_guide"
+mzm_savepoints = "verified_source"
+aria_savepoints = "unverified"
+
+[sources]
+mzm_decomp = "third_party/mzm@43b7fd52f552e4d38c1521ff9d4df5ee57e61493"
+aria_decomp = "third_party/cvaos@bc23d849d578c35ae12a5cec4e66549c3021a5be"
+mzm_guide = "https://metroid.retropixel.net/games/metroidzm/bosses.php"
+aria_boss_guide = "https://gamefaqs.gamespot.com/gba/589456-castlevania-aria-of-sorrow/faqs/25095"
+aria_route_guide = "https://gamefaqs.gamespot.com/gba/589456-castlevania-aria-of-sorrow/faqs/56284"
+
+[[bosses]]
+id = "mzm.deorem"
+game = "zero_mission"
+name = "Deorem"
+zone = "Brinstar"
+classification = ["boss", "multi_location"]
+campaign_required = true
+original_requirement = "early_boss"
+source_rooms = [{ area = "Brinstar", room = 12, map_x = 13, map_y = 12 }, { area = "Brinstar", room = 19, map_x = 22, map_y = 8 }]
+rom_addresses = []
+spawn_conditions = []
+prerequisites = []
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 1, contact_damage = 12 }
+attacks = []
+music = ["MUSIC_BRINSTAR"]
+resources = ["PSPRITE_DEOREM_FIRST_LOCATION", "PSPRITE_DEOREM_SECOND_LOCATION", "sSpriteset32", "sSpriteset44"]
+sequences = ["repeat between two locations until killed"]
+reward = ["Charge Beam", "fusion:deorem_alien_soul"]
+flags = ["EVENT_DEOREM_ENCOUNTERED_AT_FIRST_LOCATION_OR_KILLED", "EVENT_DEOREM_ENCOUNTERED_AT_SECOND_LOCATION_OR_KILLED", "EVENT_DEOREM_KILLED_AT_SECOND_LOCATION"]
+decode_state = "verified_source"
+story_role = "Soma prologue boss and dimensional-soul trigger"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "mzm.mua"
+game = "zero_mission"
+name = "Mua / Acid Worm"
+zone = "Kraid"
+classification = ["boss", "sequence_break_skippable"]
+campaign_required = true
+original_requirement = "skippable_by_sequence_break"
+source_rooms = [{ area = "Kraid", room = 5, map_x = 12, map_y = 3 }]
+rom_addresses = []
+spawn_conditions = ["EVENT_ZIPLINES_ACTIVATED selects spriteset 70"]
+prerequisites = ["zipline activation in standard route"]
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 600, contact_damage = 10 }
+attacks = ["clamp lunge", "spores", "acid-room pressure"]
+music = ["MUSIC_KRAID"]
+resources = ["PSPRITE_ACID_WORM", "sSpriteset70"]
+sequences = []
+reward = []
+flags = ["EVENT_ACID_WORM_KILLED"]
+decode_state = "verified_source"
+story_role = "major Zero Mission encounter"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "mzm.kraid"
+game = "zero_mission"
+name = "Kraid"
+zone = "Kraid"
+classification = ["major_boss"]
+campaign_required = true
+original_requirement = "required_for_tourian_statue"
+source_rooms = [{ area = "Kraid", room = 30, map_x = 9, map_y = 12 }]
+rom_addresses = []
+spawn_conditions = ["fight-entry cutscene while EVENT_KRAID_KILLED is clear"]
+prerequisites = []
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 300, contact_damage = 20 }
+attacks = ["nails", "belly spikes", "claw swipe"]
+music = ["MUSIC_KRAID", "MUSIC_KRAID_BATTLE_WITH_INTRO"]
+resources = ["PSPRITE_KRAID", "sSpriteset7"]
+sequences = ["CUTSCENE_KRAID_RISING"]
+reward = []
+flags = ["EVENT_KRAID_KILLED"]
+decode_state = "verified_source"
+story_role = "major Zero Mission gate"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "mzm.kiru_giru"
+game = "zero_mission"
+name = "Kiru Giru / Imago larva"
+zone = "Norfair"
+classification = ["special_encounter", "rescue"]
+campaign_required = true
+original_requirement = "route_encounter"
+source_rooms = [{ area = "Norfair", room = 42, map_x = 19, map_y = 11 }]
+rom_addresses = []
+spawn_conditions = []
+prerequisites = []
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 30, contact_damage = 20 }
+attacks = []
+music = ["MUSIC_5F"]
+resources = ["PSPRITE_IMAGO_LARVA_RIGHT", "PSPRITE_IMAGO_LARVA_LEFT", "sSpriteset41"]
+sequences = ["free the larva from the Tangle Vines"]
+reward = []
+flags = ["EVENT_CATERPILLAR_KILLED"]
+decode_state = "verified_source"
+story_role = "special encounter preceding Imago"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "mzm.imago"
+game = "zero_mission"
+name = "Imago"
+zone = "Ridley"
+classification = ["boss", "room_variant_unresolved"]
+campaign_required = true
+original_requirement = "optional_or_sequence_dependent"
+source_rooms = [{ area = "Ridley", room = 19, map_x = 9, map_y = 0 }, { area = "Ridley", room = 27, map_x = 9, map_y = 0 }]
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Kiru Giru encounter in standard route"]
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 750, contact_damage = 10 }
+attacks = ["needle projectiles", "flight", "stinger attacks"]
+music = ["MUSIC_RIDLEY"]
+resources = ["PSPRITE_IMAGO", "sSpriteset74"]
+sequences = []
+reward = ["Super Missile Tank in standard route"]
+flags = ["EVENT_IMAGO_KILLED"]
+decode_state = "verified_source_variant_relationship_unverified"
+story_role = "major Zero Mission encounter"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "mzm.ridley"
+game = "zero_mission"
+name = "Ridley"
+zone = "Ridley"
+classification = ["major_boss"]
+campaign_required = true
+original_requirement = "required_for_tourian_statue"
+source_rooms = [{ area = "Ridley", room = 12, map_x = 7, map_y = 6 }]
+rom_addresses = []
+spawn_conditions = []
+prerequisites = []
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 1000, contact_damage = 30 }
+attacks = ["fireballs", "tail stab", "claw grab"]
+music = ["MUSIC_RIDLEY", "MUSIC_RIDLEY_BATTLE"]
+resources = ["PSPRITE_RIDLEY", "sSpriteset55"]
+sequences = []
+reward = []
+flags = ["EVENT_RIDLEY_KILLED"]
+decode_state = "verified_source"
+story_role = "major Zero Mission gate"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "mzm.mother_brain"
+game = "zero_mission"
+name = "Mother Brain"
+zone = "Tourian"
+classification = ["major_boss", "apparent_final"]
+campaign_required = true
+original_requirement = "mandatory"
+source_rooms = [{ area = "Tourian", room = 4, map_x = 19, map_y = 10 }]
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Kraid and Ridley statue route"]
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 700, contact_damage = 20 }
+attacks = ["eye beam", "defensive Rinkas and cannons"]
+music = ["MUSIC_MOTHER_BRAIN_BATTLE"]
+resources = ["PSPRITE_MOTHER_BRAIN", "sSpriteset67"]
+sequences = ["Zebes escape"]
+reward = []
+flags = ["EVENT_MOTHER_BRAIN_KILLED", "EVENT_ESCAPED_ZEBES"]
+decode_state = "verified_source"
+story_role = "false solution before Chozodia"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "mzm.ruins_test"
+game = "zero_mission"
+name = "Ruins Test"
+zone = "Chozodia"
+classification = ["special_trial", "mandatory"]
+campaign_required = true
+original_requirement = "mandatory_post_tourian"
+source_rooms = [{ area = "Chozodia", room = 42, map_x = 5, map_y = 3 }]
+rom_addresses = []
+spawn_conditions = ["EVENT_FULLY_POWERED_SUIT_OBTAINED is clear"]
+prerequisites = ["post-Tourian suitless route"]
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 100, contact_damage = 50 }
+attacks = ["symbols", "reflection", "ghost lightning"]
+music = ["MUSIC_BRINSTAR_REMIX"]
+resources = ["PSPRITE_RUINS_TEST", "sSpriteset77"]
+sequences = ["CUTSCENE_BEFORE_RUINS_TEST"]
+reward = ["Legendary Power Suit", "activation of Unknown Items"]
+flags = ["EVENT_FULLY_POWERED_SUIT_OBTAINED"]
+decode_state = "verified_source"
+story_role = "mandatory true-route transformation"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "mzm.mecha_ridley"
+game = "zero_mission"
+name = "Mecha Ridley"
+zone = "Chozodia"
+classification = ["true_final_boss"]
+campaign_required = true
+original_requirement = "mandatory"
+source_rooms = [{ area = "Chozodia", room = 72, map_x = 23, map_y = 0 }]
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Legendary Power Suit route"]
+capabilities = []
+stats = { kind = "primary_sprite_raw", health = 360, contact_damage = 0 }
+attacks = ["laser", "missiles", "fireballs", "claw and tail parts"]
+music = ["MUSIC_54", "MUSIC_MECHA_RIDLEY_BATTLE"]
+resources = ["PSPRITE_MECHA_RIDLEY", "sSpriteset101"]
+sequences = ["final Chozodia escape"]
+reward = []
+flags = ["EVENT_MECHA_RIDLEY_KILLED", "EVENT_ESCAPED_CHOZODIA"]
+decode_state = "verified_source"
+story_role = "Zero Mission true final boss"
+sources = ["mzm_decomp", "mzm_guide"]
+
+[[bosses]]
+id = "aria.creaking_skull"
+game = "aria_of_sorrow"
+name = "Creaking Skull"
+zone = "Castle Corridor"
+classification = ["boss", "first_linear_boss"]
+campaign_required = true
+original_requirement = "mandatory"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = []
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = []
+reward = ["fusion:ancient_dimensional_mechanism"]
+flags = []
+decode_state = "verified_guide_rom_identity_unverified"
+story_role = "Samus prologue boss and dimensional mechanism trigger"
+sources = ["aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.manticore"
+game = "aria_of_sorrow"
+name = "Manticore"
+zone = "Chapel"
+classification = ["boss"]
+campaign_required = true
+original_requirement = "standard_route"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = []
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = []
+reward = []
+flags = []
+decode_state = "verified_guide_rom_identity_unverified"
+story_role = "early castle boss"
+sources = ["aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.great_armor"
+game = "aria_of_sorrow"
+name = "Great Armor"
+zone = "Study"
+classification = ["boss"]
+campaign_required = true
+original_requirement = "standard_route"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = []
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = []
+reward = ["route to Malphas soul"]
+flags = []
+decode_state = "verified_guide_rom_identity_unverified"
+story_role = "early castle progression"
+sources = ["aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.big_golem"
+game = "aria_of_sorrow"
+name = "Big Golem"
+zone = "Dance Hall"
+classification = ["boss"]
+campaign_required = true
+original_requirement = "standard_route"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Malphas route"]
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = []
+reward = ["Skeleton Blaze soul"]
+flags = []
+decode_state = "verified_guide_rom_identity_unverified"
+story_role = "castle traversal progression"
+sources = ["aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.headhunter"
+game = "aria_of_sorrow"
+name = "Headhunter"
+zone = "Inner Quarters"
+classification = ["boss", "originally_optional"]
+campaign_required = true
+original_requirement = "optional"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Skeleton Blaze route in standard play"]
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = []
+reward = []
+flags = []
+decode_state = "verified_guide_rom_identity_unverified"
+story_role = "required full-roster encounter"
+sources = ["aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.death"
+game = "aria_of_sorrow"
+name = "Death"
+zone = "Clock Tower"
+classification = ["major_boss"]
+campaign_required = true
+original_requirement = "standard_route"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Undine route"]
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = []
+reward = ["Skula soul"]
+flags = []
+decode_state = "verified_guide_rom_identity_unverified"
+story_role = "castle traversal progression"
+sources = ["aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.legion"
+game = "aria_of_sorrow"
+name = "Legion"
+zone = "Underground Cemetery"
+classification = ["boss", "originally_optional"]
+campaign_required = true
+original_requirement = "optional"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Skula route"]
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = []
+reward = ["Legion soul"]
+flags = []
+decode_state = "verified_guide_rom_identity_unverified"
+story_role = "required full-roster encounter"
+sources = ["aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.balore"
+game = "aria_of_sorrow"
+name = "Balore"
+zone = "The Arena"
+classification = ["major_boss", "true_route_gate"]
+campaign_required = true
+original_requirement = "mandatory_true_route"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Skula route"]
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = []
+reward = ["Giant Bat soul"]
+flags = []
+decode_state = "verified_guide_rom_identity_unverified"
+story_role = "required soul gate for Graham true branch"
+sources = ["aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.graham"
+game = "aria_of_sorrow"
+name = "Graham Jones"
+zone = "Top Floor"
+classification = ["major_boss", "branch_boss"]
+campaign_required = true
+original_requirement = "mandatory_branch_pivot"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = ["ending branch depends on equipped souls"]
+prerequisites = ["Giant Bat route", "Flame Demon soul", "Succubus soul", "Giant Bat soul"]
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = ["bad ending branch", "true ending branch"]
+reward = ["true-route access when the three required souls are equipped"]
+flags = []
+decode_state = "guide_verified_cvaos_event_named_room_identity_unverified"
+story_role = "false-final and true-route branch pivot"
+sources = ["aria_decomp", "aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.julius"
+game = "aria_of_sorrow"
+name = "Julius Belmont"
+zone = "Floating Garden"
+classification = ["major_boss", "true_route_boss"]
+campaign_required = true
+original_requirement = "mandatory_true_route"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = ["post-Graham true branch"]
+prerequisites = ["Graham true branch"]
+capabilities = []
+stats = {}
+attacks = []
+music = []
+resources = []
+sequences = ["mist-door confrontation"]
+reward = ["Chaotic Realm access"]
+flags = []
+decode_state = "guide_verified_cvaos_event_named_room_identity_unverified"
+story_role = "true-route confrontation"
+sources = ["aria_decomp", "aria_boss_guide", "aria_route_guide"]
+
+[[bosses]]
+id = "aria.chaos"
+game = "aria_of_sorrow"
+name = "Chaos"
+zone = "Chaotic Realm"
+classification = ["true_final_boss"]
+campaign_required = true
+original_requirement = "mandatory_true_route"
+source_rooms = []
+rom_addresses = []
+spawn_conditions = []
+prerequisites = ["Julius confrontation", "Chaotic Realm traversal"]
+capabilities = []
+stats = {}
+attacks = []
+music = ["MUS_31 / Battle Against Chaos"]
+resources = []
+sequences = ["true ending"]
+reward = []
+flags = []
+decode_state = "guide_verified_cvaos_event_and_music_named_room_identity_unverified"
+story_role = "Aria true final boss"
+sources = ["aria_decomp", "aria_boss_guide", "aria_route_guide"]
+
+[[excluded_encounters]]
+id = "aria.man_eater"
+game = "aria_of_sorrow"
+name = "Man-Eater"
+classification = ["boss_rush_only"]
+reason = "Outside the eleven-boss story campaign roster"
+sources = ["aria_boss_guide"]
+
+[savepoint_coverage.zero_mission]
+status = "verified_source"
+expected_count = 29
+method = "Rooms whose active sprite data contains a save-platform sprite"
+
+[savepoint_coverage.aria_of_sorrow]
+status = "unverified"
+expected_count = 0
+method = "Pending exact ROM room and entity table decoding"
+
+[[savepoints]]
+id = "mzm.save.brinstar.33"
+game = "zero_mission"
+area = "Brinstar"
+room = 33
+map_x = 27
+map_y = 7
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.brinstar.34"
+game = "zero_mission"
+area = "Brinstar"
+room = 34
+map_x = 13
+map_y = 9
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.brinstar.36"
+game = "zero_mission"
+area = "Brinstar"
+room = 36
+map_x = 11
+map_y = 15
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.brinstar.39"
+game = "zero_mission"
+area = "Brinstar"
+room = 39
+map_x = 20
+map_y = 4
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.kraid.20"
+game = "zero_mission"
+area = "Kraid"
+room = 20
+map_x = 11
+map_y = 13
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.kraid.31"
+game = "zero_mission"
+area = "Kraid"
+room = 31
+map_x = 8
+map_y = 6
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.kraid.32"
+game = "zero_mission"
+area = "Kraid"
+room = 32
+map_x = 4
+map_y = 14
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.kraid.36"
+game = "zero_mission"
+area = "Kraid"
+room = 36
+map_x = 17
+map_y = 9
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.kraid.39"
+game = "zero_mission"
+area = "Kraid"
+room = 39
+map_x = 14
+map_y = 2
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.norfair.36"
+game = "zero_mission"
+area = "Norfair"
+room = 36
+map_x = 10
+map_y = 8
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.norfair.39"
+game = "zero_mission"
+area = "Norfair"
+room = 39
+map_x = 15
+map_y = 5
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.norfair.41"
+game = "zero_mission"
+area = "Norfair"
+room = 41
+map_x = 14
+map_y = 11
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.norfair.44"
+game = "zero_mission"
+area = "Norfair"
+room = 44
+map_x = 15
+map_y = 3
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.norfair.45"
+game = "zero_mission"
+area = "Norfair"
+room = 45
+map_x = 21
+map_y = 12
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.ridley.1"
+game = "zero_mission"
+area = "Ridley"
+room = 1
+map_x = 14
+map_y = 3
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.ridley.20"
+game = "zero_mission"
+area = "Ridley"
+room = 20
+map_x = 11
+map_y = 7
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.ridley.24"
+game = "zero_mission"
+area = "Ridley"
+room = 24
+map_x = 3
+map_y = 5
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.ridley.25"
+game = "zero_mission"
+area = "Ridley"
+room = 25
+map_x = 19
+map_y = 8
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.tourian.6"
+game = "zero_mission"
+area = "Tourian"
+room = 6
+map_x = 26
+map_y = 11
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.tourian.11"
+game = "zero_mission"
+area = "Tourian"
+room = 11
+map_x = 21
+map_y = 3
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.tourian.17"
+game = "zero_mission"
+area = "Tourian"
+room = 17
+map_x = 29
+map_y = 6
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.chozodia.4"
+game = "zero_mission"
+area = "Chozodia"
+room = 4
+map_x = 18
+map_y = 15
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.chozodia.15"
+game = "zero_mission"
+area = "Chozodia"
+room = 15
+map_x = 23
+map_y = 8
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.chozodia.21"
+game = "zero_mission"
+area = "Chozodia"
+room = 21
+map_x = 18
+map_y = 9
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.chozodia.27"
+game = "zero_mission"
+area = "Chozodia"
+room = 27
+map_x = 4
+map_y = 20
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.chozodia.40"
+game = "zero_mission"
+area = "Chozodia"
+room = 40
+map_x = 7
+map_y = 7
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.chozodia.61"
+game = "zero_mission"
+area = "Chozodia"
+room = 61
+map_x = 17
+map_y = 2
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.chozodia.74"
+game = "zero_mission"
+area = "Chozodia"
+room = 74
+map_x = 11
+map_y = 22
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "mzm.save.chozodia.75"
+game = "zero_mission"
+area = "Chozodia"
+room = 75
+map_x = 1
+map_y = 12
+type = "save_platform"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
+music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
+verification = "verified_source"
+sources = ["mzm_decomp"]
+cross_world_link = ""

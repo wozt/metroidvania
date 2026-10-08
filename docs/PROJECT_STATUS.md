@@ -420,3 +420,11 @@ frame tests and backend lifecycle tests before being enabled.
   phase, readiness, room, coordinates, staged arrival) and expected coordinates.
 - Failed transitions still invoke the existing checkpoint rollback contract;
   diagnostic output is not a substitute for verifying loader trigger behavior.
+
+## Patch 0025 - bounded Aria loader state trace
+
+- Added read-only loader tracing on Aria mode, phase, stage, and control
+  changes, with samples every 60 frames. This targets the observed Aria
+  phase 3:1 stall with null player coordinates at frame 600.
+- No changed loader trigger, frame limit, transaction semantics, or
+  checkpoint rollback behavior. The trace is diagnostic only.

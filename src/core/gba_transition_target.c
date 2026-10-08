@@ -257,6 +257,10 @@ static bool apply_aria_loader(GbaTransitionTarget *target,
     uint8_t health[2];
     AriaStateView state;
     unsigned frame;
+    unsigned last_mode = UINT32_MAX;
+    unsigned last_phase = UINT32_MAX;
+    unsigned last_stage = UINT32_MAX;
+    unsigned last_control = UINT32_MAX;
 
     write_u16(staged, 0, plan->target_camera_x);
     write_u16(staged, 2, plan->target_camera_y);
@@ -278,6 +282,30 @@ static bool apply_aria_loader(GbaTransitionTarget *target,
             !aria_state_read(target->runtime, &state,
                              target->error, sizeof(target->error)))
             return false;
+        /* Log phase changes, plus periodic checkpoints in a stalled loader.
+         * No memory writes, changed timing, or relaxed arrival predicates. */
+        if (frame == 1 || frame % 60 == 0 ||
+            state.game_mode != last_mode ||
+            state.in_game_phase != last_phase ||
+            state.in_game_phase_stage != last_stage ||
+            state.player_control_enabled != last_control) {
+            fprintf(stderr, "Aria loader trace frame=%u mode=%u:%u phase=%u:%u "
+                    "ready=%u control=%u area=%u room=%u "
+                    "pos=%08x,%08x player=%08x staged=%08x\n",
+                    frame, state.game_mode, state.game_mode_stage,
+                    state.in_game_phase, state.in_game_phase_stage,
+                    (unsigned)state.gameplay_state_ready,
+                    (unsigned)state.player_control_enabled,
+                    state.area, state.room,
+                    (unsigned)state.x_position_fixed,
+                    (unsigned)state.y_position_fixed,
+                    (unsigned)state.player_entity_address,
+                    (unsigned)state.staged_room_pointer);
+        }
+        last_mode = state.game_mode;
+        last_phase = state.in_game_phase;
+        last_stage = state.in_game_phase_stage;
+        last_control = state.player_control_enabled;
         if (state.gameplay_state_ready &&
             state.area == plan->target_area &&
             state.room == plan->target_room &&

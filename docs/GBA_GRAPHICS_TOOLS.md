@@ -67,14 +67,16 @@ The pinned matching USA build establishes this exact chain:
   exact per-frame durations totaling 56 updates;
 - movement starts with animation 26 (`68, 69, 70`) and stops through animation
   25; those transitions are verified but not yet modeled by the prototype;
+- a normal level-ground jump combines animation 50, the first two frames of
+  animation 12, and animation 13 into a 12-frame, 61-update sequence;
 - frame IDs 12 through 14 use sheet 3 at `0x081664B4`;
 - `0x082097D4` describes the OBJ palettes, with Soma's 16 colors starting at
   `0x082097D8`.
 
-Generate the complete idle and run cycles with:
+Generate the complete idle, run, and normal-jump cycles with:
 
 ```sh
-for animation in idle run; do
+for animation in idle run jump; do
   python3 scripts/aos_soma_sprite.py \
     --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
     --animation "$animation" \
@@ -83,9 +85,9 @@ done
 ```
 
 Each animation uses the union of its opaque cell bounds, retaining the native
-relative anchor while removing identical transparent margins: 18x34 for idle
-and 28x33 for run. Live research captures independently confirmed that idle
-frames 12 and 13 and run frame 99 each match all 2,048 corresponding OBJ VRAM
-bytes; the 32 palette bytes also match OBJ palette bank 0. The research runtime
-is not part of this repository or its runtime; only the ROM-derived extractor
-is project code.
+relative anchor while removing identical transparent margins: 18x34 for idle,
+28x33 for run, and 29x36 for jump. Live research captures independently
+confirmed that idle frames 12 and 13, run frame 99, and jump frame 118 each
+match all 2,048 corresponding OBJ VRAM bytes; the 32 palette bytes also match
+OBJ palette bank 0. The research runtime is not part of this repository or its
+runtime; only the ROM-derived extractor is project code.

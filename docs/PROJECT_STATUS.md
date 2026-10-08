@@ -26,7 +26,7 @@ Original project-authored code and documentation use GPL-3.0-only. PolyForm-lice
 | HUD, debug, and synergy | Partial | Dual HP and overlay; synergy explicitly a placeholder |
 | Authentic Aria engine | Feasibility reproduced, not integrated | Standalone AOT Linux runtime: 36/36 tests, nonempty framebuffer, zero fallback after clean-room BIOS recompilation; PolyForm runtime incompatible with current GPLv3-only policy; unlicensed root host code excluded |
 | Authentic MZM engine | Not started | No runtime strategy selected |
-| Original assets, maps, and audio | Partial, local-only | Verified Samus idle/run/jump/attack recipes and Soma idle/run cycles; no extracted asset is tracked |
+| Original assets, maps, and audio | Partial, local-only | Verified Samus idle/run/jump/attack recipes and Soma idle/run/jump cycles; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
 ## History
@@ -210,13 +210,14 @@ frame tests and backend lifecycle tests before being enabled.
 - Decoded the native 128x128 sheet / four 64x64 cell format and idle sequence
   (`12, 13, 14, 13` with durations `30, 11, 11, 11`).
 - Added SHA-1-gated extraction for the four-frame idle cycle on a stable 18x34
-  canvas and the 17-frame run loop on a stable 28x33 canvas. Live research
-  captures matched all 2,048 staged tile bytes for idle frames 12 and 13 and
-  run frame 99; all 32 palette bytes also matched OBJ palette RAM. The runtime
+  canvas, the 17-frame run loop on a stable 28x33 canvas, and the 12-frame
+  normal jump on a stable 29x36 canvas. Live research captures matched all
+  2,048 staged tile bytes for idle frames 12 and 13, run frame 99, and jump
+  frame 118; all 32 palette bytes also matched OBJ palette RAM. The runtime
   used for comparison remains research-only and is not integrated.
-- SDL asset discovery now uses the exact Soma idle/run durations and falls back
-  to animated idle while jump and attack graphics are absent.
+- SDL asset discovery now uses the exact Soma idle/run/jump durations and falls
+  back to animated idle while attack graphics are absent.
 - Movement animations 26 (start) and 25 (stop) are identified but are not yet
   represented by the prototype's simple idle/run state machine.
-- The next graphics cycle is Soma's jump sequence; extracted pixels remain
+- The next graphics cycle is Soma's attack sequence; extracted pixels remain
   ignored.

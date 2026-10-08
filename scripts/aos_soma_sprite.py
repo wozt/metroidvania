@@ -19,8 +19,10 @@ SOMA_GRAPHICS_DESCRIPTOR = 0x080E11D4
 SOMA_PALETTE_DESCRIPTOR = 0x082097D4
 SOMA_ANIMATION_DESCRIPTOR = 0x080E11C4
 SOMA_ANIMATIONS = {
-    "idle": (0, 4),
-    "run": (1, 17),
+    "idle": {"segments": ((0, None),), "frame_count": 4},
+    "run": {"segments": ((1, None),), "frame_count": 17},
+    # A normal jump observed on level ground: takeoff, airborne, then landing.
+    "jump": {"segments": ((50, None), (12, 2), (13, None)), "frame_count": 12},
 }
 CELL_TILES = 8
 SHEET_TILES = 16
@@ -159,11 +161,31 @@ def crop_rgba(rgba, width, height, bounds):
     return bytes(cropped), cropped_width, cropped_height
 
 
-def animation_canvas_bounds(rom, animation_index):
-    animation = parse_animation(rom, animation_index)
+def animation_frames(rom, animation_name):
+    if animation_name not in SOMA_ANIMATIONS:
+        raise ValueError(f"unsupported Soma animation: {animation_name}")
+    definition = SOMA_ANIMATIONS[animation_name]
+    frames = []
+    for animation_index, limit in definition["segments"]:
+        animation = parse_animation(rom, animation_index)
+        selected = animation["frames"] if limit is None else animation["frames"][:limit]
+        for frame in selected:
+            frames.append({
+                **frame,
+                "animation_index": animation_index,
+                "animation_pointer": animation["animation_pointer"],
+            })
+    if len(frames) != definition["frame_count"]:
+        raise ValueError(
+            f"unexpected {animation_name} frame count: {len(frames)}")
+    return frames
+
+
+def animation_canvas_bounds(rom, animation_name):
+    frames = animation_frames(rom, animation_name)
     palette = load_palette(rom)
     bounds = []
-    for frame in animation["frames"]:
+    for frame in frames:
         tiles, _ = extract_cell_tiles(rom, frame["frame_id"])
         rgba, width, height = decode_cell(tiles, palette)
         bounds.append(opaque_bounds(rgba, width, height))
@@ -173,25 +195,20 @@ def animation_canvas_bounds(rom, animation_index):
 
 def make_soma_animation_frame(rom, animation_name, frame_index=0,
                               canvas_bounds=None):
-    if animation_name not in SOMA_ANIMATIONS:
-        raise ValueError(f"unsupported Soma animation: {animation_name}")
-    animation_index, expected_count = SOMA_ANIMATIONS[animation_name]
-    animation = parse_animation(rom, animation_index)
-    if len(animation["frames"]) != expected_count:
-        raise ValueError(
-            f"unexpected {animation_name} frame count: {len(animation['frames'])}")
-    if not 0 <= frame_index < len(animation["frames"]):
+    frames = animation_frames(rom, animation_name)
+    if not 0 <= frame_index < len(frames):
         raise ValueError(
             f"Soma {animation_name} frame index must be "
-            f"0..{len(animation['frames']) - 1}")
-    frame = animation["frames"][frame_index]
+            f"0..{len(frames) - 1}")
+    frame = frames[frame_index]
     tile_data, graphics = extract_cell_tiles(rom, frame["frame_id"])
     palette = load_palette(rom)
     rgba, width, height = decode_cell(tile_data, palette)
-    canvas_bounds = canvas_bounds or animation_canvas_bounds(rom, animation_index)
+    canvas_bounds = canvas_bounds or animation_canvas_bounds(rom, animation_name)
     rgba, width, height = crop_rgba(rgba, width, height, canvas_bounds)
     metadata = {
-        "animation_pointer": animation["animation_pointer"],
+        "animation_index": frame["animation_index"],
+        "animation_pointer": frame["animation_pointer"],
         "frame_index": frame_index,
         "frame_id": frame["frame_id"],
         "duration": frame["duration"],
@@ -225,7 +242,7 @@ def main():
         outputs = [(args.frame, args.output.resolve())]
     else:
         output_dir = args.output_dir.resolve()
-        frame_count = SOMA_ANIMATIONS[args.animation][1]
+        frame_count = SOMA_ANIMATIONS[args.animation]["frame_count"]
         outputs = [(index, output_dir / f"{args.animation}_{index}.bmp")
                    for index in range(frame_count)]
     for _, output in outputs:
@@ -238,8 +255,7 @@ def main():
         rom = args.rom.read_bytes()
         if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
             parser.error("expected unmodified Aria of Sorrow USA ROM")
-        animation_index = SOMA_ANIMATIONS[args.animation][0]
-        canvas_bounds = animation_canvas_bounds(rom, animation_index)
+        canvas_bounds = animation_canvas_bounds(rom, args.animation)
         results = []
         for index, output in outputs:
             bitmap, metadata = make_soma_animation_frame(

@@ -7,7 +7,7 @@ static const char *const names[] = {"idle", "run", "jump", "attack"};
 static const char *const actors[] = {"samus", "soma"};
 static const unsigned frame_counts[FUSION_CHARACTER_COUNT][SPRITE_STATE_COUNT] = {
     [CHARACTER_SAMUS] = {4, 10, 8, 3},
-    [CHARACTER_SOMA] = {4, 17, 4, 4},
+    [CHARACTER_SOMA] = {4, 17, 12, 4},
 };
 /* Verified durations use the games' native 60 Hz update unit. */
 static const unsigned char frame_durations[FUSION_CHARACTER_COUNT]
@@ -22,8 +22,8 @@ static const unsigned char frame_durations[FUSION_CHARACTER_COUNT]
     [CHARACTER_SOMA] = {
         [SPRITE_IDLE] = {30, 11, 11, 11},
         [SPRITE_RUN] = {4, 3, 4, 3, 4, 3, 4, 3, 4, 3, 4, 2, 2, 3, 3, 4, 3},
-        /* Temporary timing for states whose authentic graphics are absent. */
-        [SPRITE_JUMP] = {7, 7, 7, 6},
+        [SPRITE_JUMP] = {5, 5, 7, 7, 2, 5, 5, 5, 5, 3, 5, 7},
+        /* Temporary timing for the state whose authentic graphics are absent. */
         [SPRITE_ATTACK] = {7, 7, 7, 6},
     },
 };

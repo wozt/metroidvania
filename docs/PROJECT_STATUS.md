@@ -208,3 +208,10 @@ frame tests and backend lifecycle tests before being enabled.
 - The output is address-only research metadata: no graphics or ROM dumps.
 - Candidate tables must be matched to upstream symbols before assigning poses.
 - Next: verify the chosen pointer chains and decode game-specific OAM.
+
+## Patch 016 - inspect Samus candidate frame tables
+
+- Added read-only inspection of verified-ROM candidate animation tables, frame
+  durations, graphics subset counts and raw OAM prefixes.
+- Does not yet assign poses or assemble copyrighted sprites.
+- Added synthetic tests for bounds, alignment and frame metadata.

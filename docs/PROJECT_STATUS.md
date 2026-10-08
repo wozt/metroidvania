@@ -215,3 +215,9 @@ frame tests and backend lifecycle tests before being enabled.
   durations, graphics subset counts and raw OAM prefixes.
 - Does not yet assign poses or assemble copyrighted sprites.
 - Added synthetic tests for bounds, alignment and frame metadata.
+
+## Patch 017 - Samus OAM header diagnostics
+
+- Added a ROM-hash-checked OAM layout probe for candidate Samus frames.
+- Probe compares plausible header sizes and object strides without asserting identity.
+- No ROM data is exported, committed, or embedded.

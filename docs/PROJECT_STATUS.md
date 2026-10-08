@@ -228,3 +228,11 @@ frame tests and backend lifecycle tests before being enabled.
 - Four small synthetic tests cover count bounds, decoding, and invalid data.
 - No ROM-derived assets are exported and no layout is asserted verified.
 - Next: confirm the raw OAM format against pinned mzm source.
+
+## Patch 0019 - verified raw Samus OAM format
+
+- Confirmed the body OAM layout from pinned `mzm/tools/oam.py`: one
+  16-bit count/flags header followed by six bytes per OBJ entry.
+- Added bounded header/entry decoding and metadata-only ROM inspection.
+- The next milestone is validating Samus palette staging and composing
+  body parts from the per-frame OBJ VRAM banks; no proprietary assets added.

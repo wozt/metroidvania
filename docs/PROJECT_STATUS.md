@@ -158,3 +158,23 @@ frame tests and backend lifecycle tests before being enabled.
 - Existing binary save v1 format is retained. No ROM or proprietary data added.
 - Note: backend entry failure currently aborts the session; rollback on entry
   failure remains a future lifecycle enhancement.
+
+## Patch 009 - opt-in Aria video preview
+
+- `fusion_dev --aria-video-test` uses the real AriaRuntime contract and SDL3
+  video bridge while visiting the Castlevania simulated world (M switches worlds).
+- Pixels are synthetic, generated from an independent GPLv3-owned driver;
+  **NO original Aria gameplay, ROM data, or copyrighted assets are executed**.
+- Both user ROMs must still pass local SHA-1 checks before the application starts.
+- Default behavior and existing simulated rooms remain unchanged.
+- Next: evaluate an authentic, GPL-compatible execution implementation.
+
+## Patch 010 - optional local sprite animations
+
+- Added an SDL3 BMP sprite renderer driven by idle/run/jump/attack simulation states.
+- Both characters work in both test rooms without changing collisions or KO behavior.
+- Frame files are loaded only from ignored `assets/extracted/sprites/` paths.
+- No ROM extraction/decoding is implemented by this patch; actual sprite BMPs
+  must be created locally from personally supplied game data.
+- A colored rectangle remains the explicit fallback when assets are absent.
+- Next: implement verified ROM-specific palette/tile/OAM extraction for both games.

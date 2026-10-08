@@ -28,9 +28,11 @@ find_package(SDL3 CONFIG REQUIRED)
 add_executable(fusion_dev
     src/main.c
     src/core/room_sim.c
+    src/core/room_sprite.c
     src/backends/metroid/metroid_backend.c
     src/backends/castlevania/castlevania_backend.c
     src/backends/castlevania/aria_sdl3_video.c
+    src/backends/castlevania/aria_preview.c
 )
 target_include_directories(fusion_dev PRIVATE include src)
 target_link_libraries(fusion_dev PRIVATE fusion_core SDL3::SDL3)
@@ -72,7 +74,7 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_core_tests PRIVATE fusion_core)
     target_compile_options(fusion_core_tests PRIVATE -Wall -Wextra -Wpedantic)
     add_test(NAME fusion_core COMMAND fusion_core_tests)
-    add_executable(fusion_room_tests tests/test_room.c src/core/room_sim.c)
+    add_executable(fusion_room_tests tests/test_room.c src/core/room_sim.c src/core/room_sprite.c)
     target_include_directories(fusion_room_tests PRIVATE include src)
     target_link_libraries(fusion_room_tests PRIVATE fusion_core SDL3::SDL3)
     target_compile_options(fusion_room_tests PRIVATE -Wall -Wextra -Wpedantic)

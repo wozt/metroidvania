@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 
 #include "core/types.h"
+#include "core/room_sprite.h"
 
 #define ROOM_MAX_SOLIDS 12
 
@@ -27,6 +28,9 @@ typedef struct {
 typedef struct {
     RoomDefinition definition;
     bool active;
+    RoomSprites sprites;
+    float animation_clock;
+    bool facing_left;
     bool on_ground;
     float damage_cooldown;
     float attack_flash;
@@ -37,9 +41,10 @@ typedef struct {
 void room_runtime_init(RoomRuntime *runtime, const RoomDefinition *definition);
 void room_enter(RoomRuntime *runtime, WorldState *world);
 void room_leave(RoomRuntime *runtime, WorldState *world);
+void room_runtime_shutdown(RoomRuntime *runtime);
 void room_tick(RoomRuntime *runtime, SessionState *session,
                const FusionInput *input, float dt);
-void room_render(const RoomRuntime *runtime, const SessionState *session,
+void room_render(RoomRuntime *runtime, const SessionState *session,
                  SDL_Renderer *renderer, bool debug_overlay, float fps);
 
 #endif

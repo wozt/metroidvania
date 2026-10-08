@@ -72,6 +72,11 @@ void room_leave(RoomRuntime *runtime, WorldState *world)
     runtime->active = false;
 }
 
+void room_runtime_shutdown(RoomRuntime *runtime)
+{
+    if (runtime) room_sprites_close(&runtime->sprites);
+}
+
 static void move_horizontal(RoomRuntime *runtime, WorldState *world,
                             CharacterKind character, float dt)
 {
@@ -122,6 +127,9 @@ void room_tick(RoomRuntime *runtime, SessionState *session,
     SDL_FRect actor;
 
     if (!runtime->active) return;
+    runtime->animation_clock += dt;
+    if (direction < 0) runtime->facing_left = true;
+    else if (direction > 0) runtime->facing_left = false;
     if (runtime->notice_time > 0) runtime->notice_time -= dt;
     if (runtime->attack_flash > 0) runtime->attack_flash -= dt;
     if (runtime->damage_cooldown > 0) runtime->damage_cooldown -= dt;
@@ -197,7 +205,7 @@ static void bar(SDL_Renderer *renderer, float x, float y, float width, float hei
     color(renderer, (SDL_Color){220, 220, 220, 255}); SDL_RenderRect(renderer, &back);
 }
 
-void room_render(const RoomRuntime *runtime, const SessionState *session,
+void room_render(RoomRuntime *runtime, const SessionState *session,
                  SDL_Renderer *renderer, bool debug_overlay, float fps)
 {
     const WorldState *world = &session->worlds[session->active_world];
@@ -218,7 +226,16 @@ void room_render(const RoomRuntime *runtime, const SessionState *session,
         color(renderer, runtime->attack_flash > 0 ? (SDL_Color){255,255,255,255} : runtime->definition.accent);
         SDL_RenderFillRect(renderer, &runtime->definition.target);
     }
-    color(renderer, actor_color); SDL_RenderFillRect(renderer, &actor);
+    /* Visual-only animation; collision physics remain entirely unchanged. */
+    int animation = runtime->attack_flash > 0 ? SPRITE_ATTACK :
+        !runtime->on_ground ? SPRITE_JUMP :
+        fabsf(world->actor_vx) > 1.f ? SPRITE_RUN : SPRITE_IDLE;
+    if (!room_sprites_draw(&runtime->sprites, renderer, character, animation,
+                           runtime->animation_clock, runtime->facing_left,
+                           world->actor_x, world->actor_y, actor.h * 1.3f)) {
+        color(renderer, actor_color);
+        SDL_RenderFillRect(renderer, &actor);
+    }
 
     bar(renderer, 20, 18, 220, 18,
         (float)session->characters[CHARACTER_SAMUS].hp / session->characters[CHARACTER_SAMUS].max_hp,

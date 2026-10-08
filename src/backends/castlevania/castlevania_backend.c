@@ -33,7 +33,12 @@ static void render(FusionBackend *backend, const SessionState *session, SDL_Rend
 { room_render(backend->state, session, renderer, debug, fps); }
 static void leave(FusionBackend *backend, SessionState *session)
 { room_leave(backend->state, &session->worlds[WORLD_CASTLEVANIA]); }
-static void shutdown(FusionBackend *backend) { free(backend->state); backend->state = NULL; }
+static void shutdown(FusionBackend *backend)
+{
+    room_runtime_shutdown(backend->state);
+    free(backend->state);
+    backend->state = NULL;
+}
 
 FusionBackend castlevania_backend_create(void)
 {

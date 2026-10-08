@@ -252,3 +252,10 @@ frame tests and backend lifecycle tests before being enabled.
 - Results are explicitly heuristic. No palette is automatically asserted
   to be Samus's Power Suit palette; cross-check upstream symbols first.
 - Extracted graphics remain local and ignored by Git.
+
+## Patch 0022 - multi-bank Samus palettes
+
+- The local Samus body compositor now maps up to 16 caller-verified BGR555
+  palette rows into explicit OBJ palette banks and rejects unmatched OAM banks.
+- Defaults preserve the former single-row behavior. Palette detection and
+  arm cannon/effects are not yet implemented.

@@ -6,11 +6,12 @@ status = "partial_verified"
 mzm_bosses = "verified_source"
 aria_bosses = "verified_guide"
 mzm_savepoints = "verified_source"
-aria_savepoints = "unverified"
+aria_savepoints = "verified_rom_map_table"
 
 [sources]
 mzm_decomp = "third_party/mzm@43b7fd52f552e4d38c1521ff9d4df5ee57e61493"
 aria_decomp = "third_party/cvaos@bc23d849d578c35ae12a5cec4e66549c3021a5be"
+aria_rom_us = "Aria of Sorrow USA SHA-1 abd71fe01ebb201bcc133074db1dd8c5253776c7"
 mzm_guide = "https://metroid.retropixel.net/games/metroidzm/bosses.php"
 aria_boss_guide = "https://gamefaqs.gamespot.com/gba/589456-castlevania-aria-of-sorrow/faqs/25095"
 aria_route_guide = "https://gamefaqs.gamespot.com/gba/589456-castlevania-aria-of-sorrow/faqs/56284"
@@ -509,9 +510,9 @@ expected_count = 29
 method = "Rooms whose active sprite data contains a save-platform sprite"
 
 [savepoint_coverage.aria_of_sorrow]
-status = "unverified"
-expected_count = 0
-method = "Pending exact ROM room and entity table decoding"
+status = "verified_rom_map_table"
+expected_count = 17
+method = "Global 64x35 map save flag plus bounded room-directory lookup"
 
 [[savepoints]]
 id = "mzm.save.brinstar.33"
@@ -1062,4 +1063,361 @@ graphics = ["PSPRITE_SAVE_PLATFORM_CHOZODIA"]
 music = ["MUSIC_SAVE_ELEVATOR_ROOM_2"]
 verification = "verified_source"
 sources = ["mzm_decomp"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.5.11"
+game = "aria_of_sorrow"
+area = "Floating Garden"
+engine_area = 5
+room = 11
+map_x = 19
+map_y = 1
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x085179d0"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.6.31"
+game = "aria_of_sorrow"
+area = "Clock Tower"
+engine_area = 6
+room = 31
+map_x = 38
+map_y = 5
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x085196e0"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.9.22"
+game = "aria_of_sorrow"
+area = "Top Floor"
+engine_area = 9
+room = 22
+map_x = 29
+map_y = 6
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x085209b8"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.4.20"
+game = "aria_of_sorrow"
+area = "Inner Quarters"
+engine_area = 4
+room = 20
+map_x = 15
+map_y = 10
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x08516768"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.6.15"
+game = "aria_of_sorrow"
+area = "Clock Tower"
+engine_area = 6
+room = 15
+map_x = 39
+map_y = 11
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x08518d28"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.3.21"
+game = "aria_of_sorrow"
+area = "Dance Hall"
+engine_area = 3
+room = 21
+map_x = 9
+map_y = 13
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x08514c70"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.0.31"
+game = "aria_of_sorrow"
+area = "Castle Corridor"
+engine_area = 0
+room = 31
+map_x = 40
+map_y = 16
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x0851021c"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.3.22"
+game = "aria_of_sorrow"
+area = "Dance Hall"
+engine_area = 3
+room = 22
+map_x = 10
+map_y = 19
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x08514ce8"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.5.12"
+game = "aria_of_sorrow"
+area = "Floating Garden"
+engine_area = 5
+room = 12
+map_x = 29
+map_y = 20
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x08517a48"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.1.14"
+game = "aria_of_sorrow"
+area = "Chapel"
+engine_area = 1
+room = 14
+map_x = 48
+map_y = 20
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x085122fc"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.0.14"
+game = "aria_of_sorrow"
+area = "Castle Corridor"
+engine_area = 0
+room = 14
+map_x = 17
+map_y = 21
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x0850f7ec"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.0.36"
+game = "aria_of_sorrow"
+area = "Castle Corridor"
+engine_area = 0
+room = 36
+map_x = 9
+map_y = 22
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x08510504"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.2.12"
+game = "aria_of_sorrow"
+area = "Study"
+engine_area = 2
+room = 12
+map_x = 39
+map_y = 26
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x085132d4"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.7.39"
+game = "aria_of_sorrow"
+area = "Underground region"
+engine_area = 7
+room = 39
+map_x = 18
+map_y = 27
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x0851c0d4"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.7.48"
+game = "aria_of_sorrow"
+area = "Underground region"
+engine_area = 7
+room = 48
+map_x = 27
+map_y = 28
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x0851c6b4"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.8.21"
+game = "aria_of_sorrow"
+area = "The Arena"
+engine_area = 8
+room = 21
+map_x = 2
+map_y = 29
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x0851f128"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
+cross_world_link = ""
+
+[[savepoints]]
+id = "aria.save.7.41"
+game = "aria_of_sorrow"
+area = "Underground region"
+engine_area = 7
+room = 41
+map_x = 24
+map_y = 33
+type = "save_room_flag"
+access = []
+gates = []
+boss_context = []
+capabilities = ["save"]
+connections = []
+graphics = []
+music = []
+room_pointer = "0x0851c1cc"
+verification = "verified_rom_map_table"
+sources = ["aria_decomp", "aria_rom_us"]
 cross_world_link = ""

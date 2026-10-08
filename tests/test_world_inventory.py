@@ -134,21 +134,57 @@ class WorldInventoryTests(unittest.TestCase):
         self.assertEqual(len(locations), len(set(locations)))
         for point in self.savepoints:
             self.assertEqual(required - point.keys(), set(), point["id"])
-            self.assertEqual(
-                point["id"],
-                f"mzm.save.{point['area'].lower()}.{point['room']}",
-            )
-            self.assertEqual(point["type"], "save_platform")
+            if point["game"] == "zero_mission":
+                self.assertEqual(
+                    point["id"],
+                    f"mzm.save.{point['area'].lower()}.{point['room']}",
+                )
+                self.assertEqual(point["type"], "save_platform")
+                self.assertEqual(point["verification"], "verified_source")
+            else:
+                self.assertEqual(
+                    point["id"],
+                    f"aria.save.{point['engine_area']}.{point['room']}",
+                )
+                self.assertEqual(point["type"], "save_room_flag")
             self.assertIn("save", point["capabilities"])
-            self.assertEqual(point["verification"], "verified_source")
             self.assertEqual(point["cross_world_link"], "")
 
-    def test_aria_savepoints_make_no_unverified_claims(self):
+    def test_aria_savepoints_match_verified_map_table(self):
         aria = [point for point in self.savepoints if point["game"] == "aria_of_sorrow"]
         coverage = self.data["savepoint_coverage"]["aria_of_sorrow"]
-        self.assertEqual(aria, [])
-        self.assertEqual(coverage["status"], "unverified")
-        self.assertEqual(coverage["expected_count"], 0)
+        expected = {
+            (5, 11, 19, 1, "0x085179d0"),
+            (6, 31, 38, 5, "0x085196e0"),
+            (9, 22, 29, 6, "0x085209b8"),
+            (4, 20, 15, 10, "0x08516768"),
+            (6, 15, 39, 11, "0x08518d28"),
+            (3, 21, 9, 13, "0x08514c70"),
+            (0, 31, 40, 16, "0x0851021c"),
+            (3, 22, 10, 19, "0x08514ce8"),
+            (5, 12, 29, 20, "0x08517a48"),
+            (1, 14, 48, 20, "0x085122fc"),
+            (0, 14, 17, 21, "0x0850f7ec"),
+            (0, 36, 9, 22, "0x08510504"),
+            (2, 12, 39, 26, "0x085132d4"),
+            (7, 39, 18, 27, "0x0851c0d4"),
+            (7, 48, 27, 28, "0x0851c6b4"),
+            (8, 21, 2, 29, "0x0851f128"),
+            (7, 41, 24, 33, "0x0851c1cc"),
+        }
+        actual = {
+            (
+                point["engine_area"], point["room"], point["map_x"],
+                point["map_y"], point["room_pointer"],
+            )
+            for point in aria
+        }
+        self.assertEqual(actual, expected)
+        self.assertTrue(
+            all(point["verification"] == "verified_rom_map_table" for point in aria)
+        )
+        self.assertEqual(coverage["status"], "verified_rom_map_table")
+        self.assertEqual(coverage["expected_count"], len(aria))
 
 
 if __name__ == "__main__":

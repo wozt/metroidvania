@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-08**.
 
+## Patch 0046 - Aria ROM savepoint directory
+
+- Added a hash-gated structural importer for Aria's global `64x35` map table
+  and twelve-area room-pointer directory. It validates every encoded area,
+  room and GBA ROM pointer before emitting metadata under the ignored private
+  asset tree; it never copies graphics, audio, maps or other ROM payload.
+- Verified the source-defined save and warp flag bits against the exact USA ROM.
+  The result is 17 unique save rooms and 8 warp rooms, with stable IDs, global
+  coordinates and resolved room pointers.
+- Added all 17 Aria savepoints to the shared world inventory. The three rooms in
+  engine area 7 retain the conservative `Underground region` label until the
+  published subregion boundaries are independently decoded.
+- Added ROM-free importer failure-path tests and exact inventory regression data
+  so pointer bounds, bit semantics, counts and all 17 records cannot drift.
+
 ## Patch 0045 - verified boss and savepoint inventory
 
 - Added one versioned inventory for all nine requested Zero Mission encounters

@@ -231,6 +231,9 @@ if(BUILD_TESTING)
     add_test(NAME world_inventory_python
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
                 python3 -m unittest tests.test_world_inventory)
+    add_test(NAME aos_world_import_python
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+                python3 -m unittest tests.test_aos_world_import)
     add_test(NAME mzm_world_atlas_python
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
                 python3 -m unittest tests.test_mzm_world_atlas)

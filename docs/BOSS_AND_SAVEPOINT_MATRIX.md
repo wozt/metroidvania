@@ -1,6 +1,7 @@
 # Boss and savepoint matrix
 
-Status: verified Zero Mission inventory and provisional Aria inventory.
+Status: verified Zero Mission inventory, verified Aria savepoints, and
+provisional Aria boss metadata.
 
 The machine-readable source is `data/story/world_inventory.toml`. This document
 separates three kinds of information:
@@ -112,20 +113,42 @@ Structured entries include stable ID, area, source room, map coordinate, platfor
 symbol, music symbol, and verification source. Access requirements, adjacent
 doors, boss context, and crossover destinations remain empty until verified.
 
-## Aria savepoint coverage
+## Aria savepoints
 
-Aria savepoints are not yet listed. Visual map counting is explicitly rejected.
-The required next extraction must identify save-room records from the exact USA
-ROM's room/entity structures, assign stable region/room IDs and coordinates, and
-then cross-check the result against runtime observation. Until that pipeline
-exists, the coverage state is `unverified` and the matrix makes no completeness
-claim for Aria save rooms.
+The exact USA ROM contains a global `64x35` map table at `0x08116650`.
+`GetSaveRoomFlagFromMapPosition` proves bit 15 is the save-room flag, while
+`GetRoomPointer` resolves the encoded area and room through the twelve-entry
+directory at `0x0850EF08`. The hash-gated importer in
+`scripts/import_aos_world.py` performs bounded lookups through both tables and
+finds 17 unique save rooms. It also independently finds eight bit-14 warp rooms.
+
+| Engine area | Project area name | Room IDs | Count |
+|---:|---|---|---:|
+| 0 | Castle Corridor | 14, 31, 36 | 3 |
+| 1 | Chapel | 14 | 1 |
+| 2 | Study | 12 | 1 |
+| 3 | Dance Hall | 21, 22 | 2 |
+| 4 | Inner Quarters | 20 | 1 |
+| 5 | Floating Garden | 11, 12 | 2 |
+| 6 | Clock Tower | 15, 31 | 2 |
+| 7 | Underground region | 39, 41, 48 | 3 |
+| 8 | The Arena | 21 | 1 |
+| 9 | Top Floor | 22 | 1 |
+| **Total** | | | **17** |
+
+Each structured entry records its global map coordinate and resolved ROM room
+pointer. Engine area 7 is deliberately named `Underground region`: the engine's
+`Water Vein` region spans the published Underground Reservoir, Underground
+Cemetery and Forbidden Area, and this extraction alone does not prove their
+sub-boundaries. Graphics, music, connections, access gates and crossover links
+remain blank until separately decoded.
 
 ## Remaining verification work
 
-1. Decode the Aria area/room/entity tables and derive its complete savepoint set.
-2. Map all eleven Aria bosses to stable room/entity IDs, ROM addresses, flags,
+1. Map all eleven Aria bosses to stable room/entity IDs, ROM addresses, flags,
    stats, attacks, music, resources, and spawn conditions.
+2. Decode Aria room descriptors, connections, music and entities for the 17
+   save rooms, then cross-check their entry coordinates at runtime.
 3. Resolve the two Imago room variants and verify which runtime condition selects
    each record.
 4. Extract door connections and access gates for all 29 MZM savepoints.

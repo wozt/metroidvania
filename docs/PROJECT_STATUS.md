@@ -221,3 +221,10 @@ frame tests and backend lifecycle tests before being enabled.
 - Added a ROM-hash-checked OAM layout probe for candidate Samus frames.
 - Probe compares plausible header sizes and object strides without asserting identity.
 - No ROM data is exported, committed, or embedded.
+
+## Patch 018 - bounded Samus OAM candidates
+
+- Added count-bounded candidate decoding for Samus OAM layout hypotheses.
+- Four small synthetic tests cover count bounds, decoding, and invalid data.
+- No ROM-derived assets are exported and no layout is asserted verified.
+- Next: confirm the raw OAM format against pinned mzm source.

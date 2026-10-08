@@ -457,3 +457,16 @@ frame tests and backend lifecycle tests before being enabled.
 - Reject any invalid state immediately with actual observed values.  The
   existing transaction rollback remains mandatory; cross-room loading is
   still unsupported. No ROM-derived bytes are added to Git.
+
+## Patch 028 - bounded Aria entrance input probe
+
+- The Aria Entrance same-room arrival still requires a checkpoint, valid
+  character entity, exact target location, position, HP, and restored control.
+- The initial gameplay startup may relinquish control after its first ready
+  frame. Reuse the already existing Entrance preview's sparse A-input cadence
+  (one frame every 90 frames) only while controls are disabled; never hold A.
+- Retain a bounded 540-frame settling window and reject any invariant drift.
+  A missing ready state still fails the transaction and triggers rollback.
+- Emit bounded periodic state/animation traces. This is a diagnostic hypothesis,
+  not a claim that the input pulses fix the engine's control flag.
+- Added pure unit assertions for the input schedule.

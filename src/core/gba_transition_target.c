@@ -251,6 +251,14 @@ static bool apply_mzm_loader(GbaTransitionTarget *target,
  * This is NOT a cross-room loader: requiring matching room descriptors avoids
  * the invalid Aria phase-3 path that loses the player-entity pointer.
  */
+/* Aria's normal Entrance context preview already sends isolated A pulses
+ * every 90 frames while startup scripting settles.  Reuse that schedule
+ * ONLY when the engine has not enabled character control; never hold A. */
+uint16_t gba_transition_aria_settle_input(unsigned frame, bool control_enabled)
+{
+    return frame && !control_enabled && frame % 90u == 0u ? UINT16_C(1) : 0;
+}
+
 bool gba_transition_aria_same_room_compatible(const AriaStateView *view,
                                               const FusionTransitionPlan *plan)
 {
@@ -332,10 +340,14 @@ static bool apply_aria_loader(GbaTransitionTarget *target,
      * the existing checkpoint rollback at the transaction boundary.
      */
     {
-        enum { ARIA_IN_ROOM_SETTLE_LIMIT = 240 };
+        enum { ARIA_IN_ROOM_SETTLE_LIMIT = 540 };
         unsigned frame;
         for (frame = 1; frame <= ARIA_IN_ROOM_SETTLE_LIMIT; ++frame) {
-            if (!gba_runtime_step(target->runtime, 0) ||
+            const bool previously_controllable = frame == 1
+                ? before.player_control_enabled : after.player_control_enabled;
+            const uint16_t keys = gba_transition_aria_settle_input(
+                frame, previously_controllable);
+            if (!gba_runtime_step(target->runtime, keys) ||
                 !aria_state_read(target->runtime, &after,
                                  target->error, sizeof(target->error))) {
                 set_error(target, "Aria in-room arrival frame execution failed");
@@ -364,6 +376,21 @@ static bool apply_aria_loader(GbaTransitionTarget *target,
                          after.current_hp, after.max_hp);
                 set_error(target, detail);
                 return false;
+            }
+            /* Record the normal startup state and any input pulse.  This is
+             * an observation, not proof of a completed cross-room loader. */
+            if (frame == 1 || keys || frame % 90u == 0u) {
+                fprintf(stderr, "Aria settle frame=%u A=%u phase=%u:%u "
+                        "ready=%u ctl=%u room=%u:%u pos=%08x,%08x "
+                        "animation=%u:%u\n",
+                        frame, (unsigned)(keys != 0),
+                        after.in_game_phase, after.in_game_phase_stage,
+                        (unsigned)after.gameplay_state_ready,
+                        (unsigned)after.player_control_enabled,
+                        after.area, after.room,
+                        (unsigned)after.x_position_fixed,
+                        (unsigned)after.y_position_fixed,
+                        after.animation_id, after.animation_frame);
             }
             if (after.gameplay_state_ready) {
                 target->loader_frames = frame;

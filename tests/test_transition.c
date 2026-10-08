@@ -367,6 +367,15 @@ int main(void)
     observation.version++;
     assert(!fusion_transition_observation_valid(&observation));
 
+    assert(gba_transition_aria_settle_input(0, false) == 0);
+    assert(gba_transition_aria_settle_input(1, false) == 0);
+    assert(gba_transition_aria_settle_input(89, false) == 0);
+    assert(gba_transition_aria_settle_input(90, false) == 1u);
+    assert(gba_transition_aria_settle_input(90, true) == 0);
+    assert(gba_transition_aria_settle_input(91, false) == 0);
+    assert(gba_transition_aria_settle_input(180, false) == 1u);
+    assert(gba_transition_aria_settle_input(540, false) == 1u);
+
     puts("Transition contract tests passed.");
     return 0;
 }

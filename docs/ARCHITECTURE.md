@@ -71,7 +71,7 @@ format. This prevents diagnostic fields from masquerading as authoritative game
 state and avoids writing ROM-derived working memory before a persistence policy
 exists.
 
-## Read-only authentic state observation
+## Authentic state observation
 
 `GbaRuntime` exposes a bounded read operation for EWRAM and IWRAM only. It
 requires an active runtime, rejects I/O and ROM addresses, and caps each read at
@@ -99,6 +99,23 @@ This observation path is deliberately one-way. It neither writes emulated
 memory nor copies values into `SessionState`; authority remains with the
 respective active engine runtime. Any future importer must honor explicit
 ownership, conversions, validation, and rollback before state is changed.
+
+## Checkpointed arrival preview
+
+The diagnostic arrival preview is a narrow exception to the runtime's normal
+read-only use. A write is accepted only for an active runtime, only in EWRAM or
+IWRAM, only up to 16 bytes, and only when the caller supplies an in-memory
+checkpoint whose size exactly matches that core. The preview writes native
+position and zero velocity fields, advances one engine frame, captures the
+result, then restores the checkpoint and verifies the original position.
+
+MZM is previewed inside the already-loaded Brinstar room at door 60's derived
+coordinate. Aria is previewed inside the already-loaded Entrance room at the
+staged record's derived absolute coordinate while retaining the current camera
+for an in-room move. Neither path triggers a room loader, changes a save,
+imports health or progression, mutates `SessionState`, or enables writes through
+an authentic backend. Captures are local, ignored artifacts rather than project
+assets.
 
 ## Transition observation boundary
 

@@ -45,6 +45,8 @@ typedef struct AriaStateView {
     uint32_t staged_room_pointer;
     bool staged_arrival_plausible;
     uint32_t player_entity_address;
+    uint32_t camera_x_fixed;
+    uint32_t camera_y_fixed;
     uint32_t x_position_fixed;
     uint32_t y_position_fixed;
     int32_t x_velocity_fixed;

@@ -59,6 +59,9 @@ quarter pixels, energy `399/399`, and pose 0. Demo 2 stores that exact position
 and overwrites the arrival calculated by `RoomReset`. Without the demo override,
 Brinstar door 60 selects room 28 and the native formula yields `(288,511)`.
 This is diagnostic evidence only; the adapter remains read-only.
+The separate checkpointed arrival preview can temporarily place native Samus
+at `(288,511)` inside this already-loaded room, but it restores the complete
+runtime snapshot and does not expose a backend import operation.
 
 ## Castlevania: Aria of Sorrow - `testyourmine/cvaos`
 
@@ -127,6 +130,9 @@ pointer is entry zero in the area-zero table reached through `sUnk_0850EF08`.
 `sub_0800EBE0` consumes this record by selecting the room, restoring player-local
 coordinates, and applying the camera origin. The resulting arrival coordinate
 is `(152,653)` before later gameplay or cutscene movement.
+The checkpointed preview temporarily reproduces that absolute coordinate in
+the already-loaded Entrance room while retaining the live camera, then restores
+and verifies the original runtime position.
 
 ## Reproducible upstream build check
 
@@ -208,7 +214,8 @@ or tracked by this repository.
   integration proof.
 - Loader triggers and their complete dependent state for MZM door 60 and the
   Aria staged-room record. The native descriptors and target-side rollback
-  semantics are defined, but neither authentic apply path is enabled.
+  semantics are defined, and their coordinates have checkpointed in-room
+  previews, but neither authentic loader/apply path is enabled.
 - Source-runtime recovery and backend lifecycle composition around the target
   transaction; target rollback alone does not make a complete world switch.
 - Licensing and redistribution status of code generated from a ROM; legal

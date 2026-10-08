@@ -9,6 +9,7 @@
 #define GBA_FRAME_HEIGHT 160u
 #define GBA_SNAPSHOT_MAX_SIZE (16u * 1024u * 1024u)
 #define GBA_MEMORY_READ_MAX_SIZE 4096u
+#define GBA_MEMORY_WRITE_MAX_SIZE 16u
 
 typedef struct {
     const uint32_t *rgba32;
@@ -46,6 +47,10 @@ bool gba_runtime_read_memory(const GbaRuntime *runtime, uint32_t address,
 /* Capture requires a zero-initialized snapshot and transfers ownership to it. */
 bool gba_runtime_capture(GbaRuntime *runtime, GbaRuntimeSnapshot *snapshot,
                          char *error, size_t error_size);
+/* Diagnostic writes require a matching in-memory checkpoint for rollback. */
+bool gba_runtime_write_memory_checkpointed(
+    GbaRuntime *runtime, const GbaRuntimeSnapshot *checkpoint,
+    uint32_t address, const void *data, size_t size);
 bool gba_runtime_restore(GbaRuntime *runtime,
                          const GbaRuntimeSnapshot *snapshot,
                          char *error, size_t error_size);

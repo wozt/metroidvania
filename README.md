@@ -33,7 +33,10 @@ Working today:
   character-owned fields;
 - versioned cross-world plans using engine-native MZM door and Aria staged-room
   descriptors, plus a tested preflight/checkpoint/apply/verify/rollback
-  contract. Authentic backends still expose no target-engine importer.
+  contract;
+- a local checkpointed arrival preview that moves the native character to the
+  selected coordinate, captures before/after frames, and rolls the runtime
+  back. Authentic backends still expose no target-engine importer.
 
 ## Debian 13 prerequisites
 
@@ -79,7 +82,13 @@ The probe also projects each verified engine state into a common Q16.16
 observation, maps it to the native arrival descriptor in the opposite world,
 and prints the planned room, derived position, character health, and engine
 entry data. Planning does not authorize or perform a transition write. Run
-`--authentic-video-test`
+`--authentic-arrival-preview` to exercise the selected coordinates inside the
+already-loaded native rooms. It writes five ignored BMPs under
+`captures/arrival-preview/`, verifies the position after one engine frame, and
+adds a later Aria context frame before restoring the pre-write in-memory
+snapshot. This is a diagnostic position preview, not a room-loader transition
+or a guest-character implementation.
+Run `--authentic-video-test`
 for interactive authentic ROM output; `M` suspends the current runtime and
 switches to the other one. The mode does not load or write save files. GBA
 controls are arrows, `Space`/`X` for A, `J`/`Z` for B, `Enter` for Start, right
@@ -87,7 +96,10 @@ Shift for Select, and `U`/`I` for L/R.
 
 Snapshots are currently process-local only. They are not written by F5/F9 and
 are not a supported save format. Both engine state views are also read-only:
-they do not update `SessionState` or write back to emulated memory.
+they do not update `SessionState` or write back to emulated memory. The arrival
+preview is the only write path: it accepts at most 16 WRAM bytes per operation,
+requires a matching in-memory checkpoint, and always verifies rollback before
+exit.
 
 To generate all four verified Power Suit animation states locally:
 

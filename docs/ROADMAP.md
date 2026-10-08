@@ -24,14 +24,18 @@
 7. **Native arrival descriptors:** replace sampled gameplay coordinates with
    Brinstar door 60 and Aria's Entrance staged-room record, both source-traced
    and reproduced from authentic memory.
-8. Verify each loader trigger and its complete dependent state before enabling
+8. **Checkpointed coordinate preview:** place each native character at the
+   selected coordinate inside its already-loaded room, capture the authentic
+   frame, and verify complete in-memory rollback.
+9. Verify each loader trigger and its complete dependent state before enabling
    either authentic target adapter.
 
 Exit criterion: one authentic room from each ROM can be loaded independently
 with verified timing, input, rendering, and a minimal read-only state view.
 Both views, the ownership projection, and the target transaction contract are
-complete. Native arrival descriptors are also verified; loader-trigger and
-dependent-state verification is next. Authentic imports remain disabled.
+complete. Native arrival descriptors and their in-room coordinate previews are
+also verified; loader-trigger and dependent-state verification is next.
+Authentic imports remain disabled.
 
 ## P1 - Two engines and transitions
 

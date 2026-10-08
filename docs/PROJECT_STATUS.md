@@ -63,6 +63,7 @@ ctest --test-dir build --output-on-failure
 ./build/fusion_dev --validate-only
 SDL_VIDEODRIVER=dummy timeout 2s ./build/fusion_dev
 ./build/fusion_dev --authentic-probe
+./build/fusion_dev --authentic-arrival-preview
 SDL_VIDEODRIVER=dummy timeout 2s ./build/fusion_dev --authentic-video-test
 ```
 
@@ -98,6 +99,15 @@ loading a save and reached a gameplay-ready state at frame 1022: mode 4, stage
 `(0x00A80000,0x02BF0000)`, HP `320/320`, MP `80/80`, level 1, and animation 81
 frame 0. The player-control flag was enabled, and the player pointer was
 validated as an exact entity-array slot before its fields were read.
+
+The checkpointed arrival preview moved native Samus from quarter-pixel
+coordinates `(470,639)` to door 60's `(288,511)` and native Soma from room
+position `(168,703)` to the Entrance record's derived `(152,653)`. Both values
+remained exact after one engine frame, and the Aria position remained exact for
+the 180 additional frames used to clear the entry pixelation. Each runtime was
+then restored to its original position from its process-local checkpoint. Five
+authentic 240x160 BMPs were written under the ignored
+`captures/arrival-preview/` directory; no save or extracted asset was produced.
 
 Both live states projected into the same read-only Q16.16 schema. MZM produced
 source room `0:28`, position `(0x00758000,0x009FC000)`, and Samus health
@@ -169,9 +179,28 @@ These criteria are satisfied by the interim emulated proof. Authentic execution
 is bound to the backend interface and now has a controlled, memory-only snapshot
 boundary. The MZM and Aria state views and read-only ownership projection are
 complete. Destination-specific plans and target rollback semantics are also
-defined and tested without authentic writes. The next milestone is verifying
+defined and tested without an authentic importer. A 16-byte, WRAM-only,
+checkpoint-required diagnostic write now proves the selected coordinate and
+rollback inside each already-loaded room. The next milestone is verifying
 loader triggers, engine-native target adapters, and full lifecycle recovery,
 not persistent savestates or unguarded memory writes.
+
+## Patch 020 - checkpointed authentic arrival preview
+
+- Added an opt-in local preview that reaches each verified gameplay state,
+  captures its native framebuffer, injects the selected position and zero
+  velocity, advances one engine frame, and captures the result.
+- Added a later Aria context frame so the already-loaded Entrance room remains
+  inspectable even though its first gameplay-ready frame is mid-transition.
+- Restricted diagnostic writes to 16 bytes in EWRAM or IWRAM and required a
+  matching in-memory runtime checkpoint before every write.
+- Restored and verified each original engine position before closing the
+  runtime. The path cannot write saves, mutate `SessionState`, or run through
+  an authentic backend importer.
+- Exposed Aria's decoded camera origin so the Entrance absolute coordinate can
+  be previewed without replacing the live camera.
+- Kept all ROM-derived BMP captures under ignored `captures/`; no proprietary
+  data is committed.
 
 ## Patch 019 - engine-native arrival descriptors
 

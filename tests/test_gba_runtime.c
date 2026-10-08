@@ -27,6 +27,13 @@ int main(void)
                                     error, 1));
     assert(!gba_runtime_read_memory(&runtime, UINT32_C(0x03000000),
                                     error, GBA_MEMORY_READ_MAX_SIZE + 1u));
+    assert(!gba_runtime_write_memory_checkpointed(
+        &runtime, &snapshot, UINT32_C(0x03000000), error, 1));
+    assert(!gba_runtime_write_memory_checkpointed(
+        &runtime, &snapshot, UINT32_C(0x04000000), error, 1));
+    assert(!gba_runtime_write_memory_checkpointed(
+        &runtime, &snapshot, UINT32_C(0x03000000), error,
+        GBA_MEMORY_WRITE_MAX_SIZE + 1u));
     assert(!gba_runtime_capture(&runtime, &snapshot, error, sizeof(error)));
     assert(!gba_runtime_restore(&runtime, &snapshot, error, sizeof(error)));
     snapshot.data = malloc(1);

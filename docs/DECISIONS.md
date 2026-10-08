@@ -162,3 +162,18 @@ is resolved, so its visible position is not the door arrival. The selected
 descriptors are source-traced and reproduced from authentic memory, but no
 runtime apply operation is enabled until the loader triggers and all dependent
 state are verified.
+
+## D-017 - Permit only checkpointed diagnostic position writes
+
+Decision: allow a local arrival-coordinate preview without exposing a general
+authentic backend importer. The runtime accepts at most 16 bytes per write,
+only in EWRAM or IWRAM, and only when supplied with an in-memory checkpoint
+whose size matches the active mGBA core. The preview may update verified native
+position and velocity fields, advance one frame, and save ignored framebuffer
+captures. It must restore the checkpoint and verify the original position
+before returning success.
+
+This exception demonstrates that both selected coordinates survive one engine
+frame inside their already-loaded rooms. It does not trigger either room
+loader, copy health or progression, mutate `SessionState`, expose mutation on
+`FusionBackend`, persist a savestate, or certify a cross-world transition.

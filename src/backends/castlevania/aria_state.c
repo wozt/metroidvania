@@ -149,11 +149,13 @@ bool aria_state_decode(const AriaStateBytes *bytes, AriaStateView *out)
     view.player_entity_address = read_u32(bytes->player_pointer, 0);
     view.player_entity_valid =
         player_entity_address_valid(view.player_entity_address);
+    view.camera_x_fixed = read_u32(bytes->camera, 0);
+    view.camera_y_fixed = read_u32(bytes->camera, 4);
     if (view.player_entity_valid) {
         entity_x = read_u32(entity, 0x40);
         entity_y = read_u32(entity, 0x44);
-        view.x_position_fixed = read_u32(bytes->camera, 0) + entity_x;
-        view.y_position_fixed = read_u32(bytes->camera, 4) + entity_y;
+        view.x_position_fixed = view.camera_x_fixed + entity_x;
+        view.y_position_fixed = view.camera_y_fixed + entity_y;
         view.x_velocity_fixed = read_s32(entity, 0x48);
         view.y_velocity_fixed = read_s32(entity, 0x4c);
         view.animation_flags = entity[0x6c];

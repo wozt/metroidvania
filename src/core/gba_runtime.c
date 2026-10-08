@@ -165,6 +165,26 @@ bool gba_runtime_read_memory(const GbaRuntime *runtime, uint32_t address,
     return true;
 }
 
+bool gba_runtime_write_memory_checkpointed(
+    GbaRuntime *runtime, const GbaRuntimeSnapshot *checkpoint,
+    uint32_t address, const void *data, size_t size)
+{
+    struct mCore *core;
+    const uint8_t *bytes = data;
+    size_t index;
+    if (!runtime || !checkpoint || !runtime->active || !runtime->core ||
+        !runtime->rom_loaded || !checkpoint->data || !checkpoint->size ||
+        !data || !size || size > GBA_MEMORY_WRITE_MAX_SIZE ||
+        (!is_wram_range(address, size, UINT32_C(0x02000000), UINT32_C(0x02040000)) &&
+         !is_wram_range(address, size, UINT32_C(0x03000000), UINT32_C(0x03008000))))
+        return false;
+    core = runtime->core;
+    if (checkpoint->size != core->stateSize(core)) return false;
+    for (index = 0; index < size; ++index)
+        core->busWrite8(core, address + (uint32_t)index, bytes[index]);
+    return true;
+}
+
 bool gba_runtime_capture(GbaRuntime *runtime, GbaRuntimeSnapshot *snapshot,
                          char *error, size_t error_size)
 {

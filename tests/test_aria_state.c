@@ -79,6 +79,8 @@ int main(void)
     assert(view.staged_room_pointer == UINT32_C(0x0850ef9c));
     assert(view.staged_arrival_plausible);
     assert(view.player_entity_address == UINT32_C(0x020005ec));
+    assert(view.camera_x_fixed == 0x00100000);
+    assert(view.camera_y_fixed == 0x00200000);
     assert(view.x_position_fixed == 0x00740000);
     assert(view.y_position_fixed == 0x00e80000);
     assert(view.x_velocity_fixed == -0x18000);

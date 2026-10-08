@@ -9,6 +9,7 @@
 !/roms/README.md
 /extracted/
 /assets/extracted/
+/captures/
 *.gba
 *.rom
 *.sav

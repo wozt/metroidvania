@@ -2,6 +2,7 @@
 
 #include "aria/preview.h"
 #include "aria/state.h"
+#include "core/authentic_preview.h"
 #include "core/backend.h"
 #include "core/rom.h"
 #include "core/save.h"
@@ -19,7 +20,8 @@
 static void usage(const char *program)
 {
     fprintf(stderr, "Usage: %s [--aria path.gba] [--metroid path.gba] [--validate-only] "
-                    "[--aria-video-test | --authentic-video-test | --authentic-probe]\n",
+                    "[--aria-video-test | --authentic-video-test | --authentic-probe | "
+                    "--authentic-arrival-preview]\n",
             program);
 }
 
@@ -291,6 +293,7 @@ int main(int argc, char **argv)
     bool aria_video_test = false;
     bool authentic_video_test = false;
     bool authentic_probe = false;
+    bool authentic_arrival_preview = false;
     AriaPreview preview = {0};
     RomRequirement roms[2];
     char error[256];
@@ -311,11 +314,13 @@ int main(int argc, char **argv)
         else if (strcmp(argv[i], "--aria-video-test") == 0) aria_video_test = true;
         else if (strcmp(argv[i], "--authentic-video-test") == 0) authentic_video_test = true;
         else if (strcmp(argv[i], "--authentic-probe") == 0) authentic_probe = true;
+        else if (strcmp(argv[i], "--authentic-arrival-preview") == 0)
+            authentic_arrival_preview = true;
         else { usage(argv[0]); return 2; }
     }
     if ((aria_video_test ? 1 : 0) + (authentic_video_test ? 1 : 0) +
-        (authentic_probe ? 1 : 0) > 1) {
-        fprintf(stderr, "Choose only one video test mode.\n");
+        (authentic_probe ? 1 : 0) + (authentic_arrival_preview ? 1 : 0) > 1) {
+        fprintf(stderr, "Choose only one execution mode.\n");
         return 2;
     }
     roms[0] = (RomRequirement){ROM_ARIA_US, "Castlevania: Aria of Sorrow USA",
@@ -338,6 +343,15 @@ int main(int argc, char **argv)
                                  WORLD_CASTLEVANIA,
                                  error, sizeof(error))) {
             fprintf(stderr, "Authentic GBA probe failed: %s\n", error);
+            return 4;
+        }
+        return 0;
+    }
+    if (authentic_arrival_preview) {
+        if (!authentic_arrival_preview_generate(
+                metroid_path, aria_path, "captures/arrival-preview",
+                error, sizeof(error))) {
+            fprintf(stderr, "Authentic arrival preview failed: %s\n", error);
             return 4;
         }
         return 0;

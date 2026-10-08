@@ -37,6 +37,7 @@ endif()
 
 add_executable(fusion_dev
     src/main.c
+    src/core/authentic_preview.c
     src/core/room_sim.c
     src/core/room_sprite.c
     src/backends/metroid/metroid_backend.c

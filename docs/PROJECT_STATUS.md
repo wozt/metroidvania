@@ -499,3 +499,23 @@ frame tests and backend lifecycle tests before being enabled.
 - **Scope limit:** Aria still uses its native Soma entity. This is a proof of
   runtime suspension, arrival, and return, not a playable guest-character
   crossover or arbitrary cross-room loader.
+
+## Patch 0031 - replay-verified Aria outer checkpoint restoration
+
+- The first ROM-backed `--authentic-roundtrip-probe` succeeded in entering
+  Aria, importing `399/399` HP, resuming MZM byte-for-byte unchanged, and
+  running/restoring one MZM frame. It then failed the Aria outer checkpoint
+  comparison, without identifying whether serialization or gameplay diverged.
+- Retain serialized byte comparison as a reported diagnostic, not the only
+  post-loadState acceptance criterion. Require exact decoded Aria state fields
+  and sixteen frame-by-frame full-framebuffer hashes from identical checkpoint
+  restores (one baseline before arrival and one after the round trip).
+- Reject a changed decoded state, replay-frame divergence, failed restore, or
+  lost exclusive runtime ownership. Rewind the baseline before applying the
+  transaction and rewind Aria again after replay; cleanup restores both saved
+  checkpoints on every exit path. No ROM or proprietary bytes are written.
+- This change has ROM-free tests for decoded-state comparison and framebuffer
+  hashing; whether the original mismatch is harmless mGBA serialization
+  normalization is a hypothesis until the real-ROM replay passes.
+- The target still uses a native Soma entity and a verified same-room arrival.
+  Guest Samus and arbitrary room loading remain unimplemented.

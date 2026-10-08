@@ -2,6 +2,7 @@
 #define FUSION_ROUNDTRIP_GUARD_H
 
 #include "gba/runtime.h"
+#include "aria/state.h"
 
 #include <stdbool.h>
 
@@ -11,5 +12,12 @@ bool fusion_roundtrip_exclusive(const GbaRuntime *active,
 /* Full saved-state equality is stronger than matching only coordinates. */
 bool fusion_roundtrip_snapshot_equal(const GbaRuntimeSnapshot *a,
                                      const GbaRuntimeSnapshot *b);
+
+/* Decoded state equality is checked separately from serialized bytes:
+ * mGBA state serialization may canonicalize some internal fields on load. */
+bool fusion_roundtrip_aria_view_equal(const AriaStateView *a,
+                                      const AriaStateView *b);
+/* Deterministic full-frame hashes reject an incorrectly restored visual state. */
+bool fusion_roundtrip_frame_hash(const GbaFrameView *frame, uint64_t *out);
 
 #endif

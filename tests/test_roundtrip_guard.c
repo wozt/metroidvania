@@ -36,6 +36,38 @@ int main(void)
     assert(!fusion_roundtrip_snapshot_equal(&original, &short_state));
     assert(!fusion_roundtrip_snapshot_equal(&original, &empty));
     assert(!fusion_roundtrip_snapshot_equal(NULL, &matching));
+    {
+        static uint32_t pixels[GBA_FRAME_WIDTH * GBA_FRAME_HEIGHT] = {0};
+        GbaFrameView frame = {pixels, GBA_FRAME_WIDTH, GBA_FRAME_HEIGHT,
+                              GBA_FRAME_WIDTH};
+        uint64_t hash_before = 0;
+        uint64_t hash_after = 0;
+        AriaStateView before = {0};
+        AriaStateView after = {0};
+        before.game_mode = after.game_mode = 4;
+        before.in_game_phase = after.in_game_phase = 1;
+        before.gameplay_state_ready = after.gameplay_state_ready = true;
+        before.current_hp = after.current_hp = 320;
+        before.max_hp = after.max_hp = 320;
+        before.player_entity_address = after.player_entity_address =
+            UINT32_C(0x020004e4);
+        assert(fusion_roundtrip_aria_view_equal(&before, &after));
+        after.current_hp--;
+        assert(!fusion_roundtrip_aria_view_equal(&before, &after));
+        after.current_hp++;
+        after.player_control_enabled = true;
+        assert(!fusion_roundtrip_aria_view_equal(&before, &after));
+        assert(!fusion_roundtrip_aria_view_equal(NULL, &after));
+        assert(fusion_roundtrip_frame_hash(&frame, &hash_before));
+        pixels[0] = 1;
+        assert(fusion_roundtrip_frame_hash(&frame, &hash_after));
+        assert(hash_after != hash_before);
+        frame.stride_pixels = GBA_FRAME_WIDTH - 1;
+        assert(!fusion_roundtrip_frame_hash(&frame, &hash_after));
+        assert(!fusion_roundtrip_frame_hash(NULL, &hash_after));
+        frame.stride_pixels = GBA_FRAME_WIDTH;
+        assert(!fusion_roundtrip_frame_hash(&frame, NULL));
+    }
     puts("Round-trip guards passed.");
     return 0;
 }

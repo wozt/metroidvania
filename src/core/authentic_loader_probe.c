@@ -236,6 +236,29 @@ cleanup:
     return success;
 }
 
+
+/* Snapshot bytes after a loadState can differ even when the restored game
+ * behaves identically. Record a full rendered frame on each of several
+ * identically-input replay frames; compare before and after the handoff. */
+enum { ARIA_ROUNDTRIP_REPLAY_FRAMES = 16 };
+
+static bool sample_aria_replay(GbaRuntime *runtime,
+                               uint64_t hashes[ARIA_ROUNDTRIP_REPLAY_FRAMES],
+                               char *error, size_t error_size)
+{
+    unsigned frame;
+    for (frame = 0; frame < ARIA_ROUNDTRIP_REPLAY_FRAMES; ++frame) {
+        GbaFrameView view;
+        if (!gba_runtime_step(runtime, 0) ||
+            !gba_runtime_frame(runtime, &view) ||
+            !fusion_roundtrip_frame_hash(&view, &hashes[frame])) {
+            set_error(error, error_size, "roundtrip: Aria replay frame unavailable");
+            return false;
+        }
+    }
+    return true;
+}
+
 /* ROM-backed, opt-in lifecycle proof, intentionally distinct from a playable
  * guest-character transfer. The Aria instance still contains its native Soma
  * entity; the imported health and location are diagnostic only. */
@@ -256,6 +279,11 @@ bool authentic_roundtrip_probe_run(const char *metroid_path,
     AriaStateView target_before = {0};
     AriaStateView target_arrived = {0};
     AriaStateView target_restored = {0};
+    AriaStateView target_reference_restored = {0};
+    uint64_t target_reference_frames[ARIA_ROUNDTRIP_REPLAY_FRAMES] = {0};
+    uint64_t target_replayed_frames[ARIA_ROUNDTRIP_REPLAY_FRAMES] = {0};
+    bool target_byte_identical;
+    unsigned replay_frame;
     FusionTransitionTransactionResult transaction;
     bool success = false;
     bool cleanup_ok = true;
@@ -321,6 +349,22 @@ bool authentic_roundtrip_probe_run(const char *metroid_path,
                                  "roundtrip: Aria checkpoint rejected");
         goto cleanup;
     }
+    /* Establish a reference replay from a loadState-restored baseline.
+     * Rewind before running the actual target transaction. */
+    if (!gba_runtime_restore(&runtimes[WORLD_CASTLEVANIA],
+                             &target_checkpoint, error, error_size) ||
+        !sample_aria_replay(&runtimes[WORLD_CASTLEVANIA],
+                            target_reference_frames, error, error_size) ||
+        !gba_runtime_restore(&runtimes[WORLD_CASTLEVANIA],
+                             &target_checkpoint, error, error_size) ||
+        !aria_state_read(&runtimes[WORLD_CASTLEVANIA],
+                         &target_reference_restored, error, error_size) ||
+        !fusion_roundtrip_aria_view_equal(&target_before,
+                                          &target_reference_restored)) {
+        if (!error[0]) set_error(error, error_size,
+                  "roundtrip: Aria checkpoint failed baseline restore");
+        goto cleanup;
+    }
     transaction = fusion_transition_apply_transaction(
         &plan, gba_transition_target_ops(), &targets[WORLD_CASTLEVANIA]);
     if (transaction != FUSION_TRANSITION_TRANSACTION_COMMITTED) {
@@ -380,7 +424,9 @@ bool authentic_roundtrip_probe_run(const char *metroid_path,
     gba_runtime_leave(&runtimes[WORLD_METROID]);
 
     /* Restore Aria's original (pre-import) state even after a successful
-     * transaction. This is a probe, so neither side should retain the visit. */
+     * transaction. Compare decoded memory AND deterministic replay. A byte
+     * comparison is still reported, but re-serializing a loaded mGBA state
+     * is not assumed to reproduce identical internal serialized metadata. */
     if (!gba_runtime_enter(&runtimes[WORLD_CASTLEVANIA]) ||
         !fusion_roundtrip_exclusive(&runtimes[WORLD_CASTLEVANIA],
                                     &runtimes[WORLD_METROID]) ||
@@ -388,21 +434,49 @@ bool authentic_roundtrip_probe_run(const char *metroid_path,
                              &target_checkpoint, error, error_size) ||
         !gba_runtime_capture(&runtimes[WORLD_CASTLEVANIA],
                              &target_restored_checkpoint, error, error_size) ||
-        !fusion_roundtrip_snapshot_equal(&target_checkpoint,
-                                         &target_restored_checkpoint) ||
+        !aria_state_read(&runtimes[WORLD_CASTLEVANIA], &target_restored,
+                         error, error_size)) {
+        if (!error[0]) set_error(error, error_size,
+                                 "roundtrip: Aria restore/capture failed");
+        goto cleanup;
+    }
+    target_byte_identical = fusion_roundtrip_snapshot_equal(
+        &target_checkpoint, &target_restored_checkpoint);
+    if (!fusion_roundtrip_aria_view_equal(&target_before, &target_restored)) {
+        set_error(error, error_size,
+                  "roundtrip: Aria decoded state differs after restore");
+        goto cleanup;
+    }
+    if (!sample_aria_replay(&runtimes[WORLD_CASTLEVANIA],
+                            target_replayed_frames, error, error_size))
+        goto cleanup;
+    for (replay_frame = 0; replay_frame < ARIA_ROUNDTRIP_REPLAY_FRAMES;
+         ++replay_frame) {
+        if (target_reference_frames[replay_frame] !=
+            target_replayed_frames[replay_frame]) {
+            snprintf(error, error_size,
+                     "roundtrip: Aria replay diverged at frame %u "
+                     "(expected=%016llx actual=%016llx)",
+                     replay_frame + 1,
+                     (unsigned long long)target_reference_frames[replay_frame],
+                     (unsigned long long)target_replayed_frames[replay_frame]);
+            goto cleanup;
+        }
+    }
+    if (!gba_runtime_restore(&runtimes[WORLD_CASTLEVANIA],
+                             &target_checkpoint, error, error_size) ||
         !aria_state_read(&runtimes[WORLD_CASTLEVANIA], &target_restored,
                          error, error_size) ||
-        target_restored.x_position_fixed != target_before.x_position_fixed ||
-        target_restored.y_position_fixed != target_before.y_position_fixed ||
-        target_restored.current_hp != target_before.current_hp ||
-        target_restored.max_hp != target_before.max_hp) {
+        !fusion_roundtrip_aria_view_equal(&target_before, &target_restored)) {
         if (!error[0]) set_error(error, error_size,
-                                 "roundtrip: Aria rollback verification failed");
+                      "roundtrip: Aria post-replay restore failed");
         goto cleanup;
     }
     gba_runtime_leave(&runtimes[WORLD_CASTLEVANIA]);
-    printf("Roundtrip: Aria outer rollback verified checkpoint=%zu\n",
-           target_restored_checkpoint.size);
+    printf("Roundtrip: Aria outer rollback verified checkpoint=%zu "
+           "state=match replay=%u frames serialized-bytes=%s\n",
+           target_restored_checkpoint.size, ARIA_ROUNDTRIP_REPLAY_FRAMES,
+           target_byte_identical ? "identical" : "different");
     puts("Roundtrip: MZM -> Aria -> MZM lifecycle verified; "
          "guest character transfer NOT implemented");
     success = true;

@@ -18,6 +18,7 @@ add_library(fusion_core STATIC
     src/core/sha1.c
     src/core/rom.c
     src/core/gba_runtime.c
+    src/core/gba_transition_target.c
     src/core/transition.c
     src/backends/metroid/mzm_state.c
     src/backends/castlevania/aria_state.c
@@ -37,6 +38,7 @@ endif()
 
 add_executable(fusion_dev
     src/main.c
+    src/core/authentic_loader_probe.c
     src/core/authentic_preview.c
     src/core/room_sim.c
     src/core/room_sprite.c

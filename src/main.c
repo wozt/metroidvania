@@ -2,6 +2,7 @@
 
 #include "aria/preview.h"
 #include "aria/state.h"
+#include "core/authentic_loader_probe.h"
 #include "core/authentic_preview.h"
 #include "core/backend.h"
 #include "core/rom.h"
@@ -21,7 +22,7 @@ static void usage(const char *program)
 {
     fprintf(stderr, "Usage: %s [--aria path.gba] [--metroid path.gba] [--validate-only] "
                     "[--aria-video-test | --authentic-video-test | --authentic-probe | "
-                    "--authentic-arrival-preview]\n",
+                    "--authentic-arrival-preview | --authentic-loader-probe]\n",
             program);
 }
 
@@ -294,6 +295,7 @@ int main(int argc, char **argv)
     bool authentic_video_test = false;
     bool authentic_probe = false;
     bool authentic_arrival_preview = false;
+    bool authentic_loader_probe = false;
     AriaPreview preview = {0};
     RomRequirement roms[2];
     char error[256];
@@ -316,10 +318,13 @@ int main(int argc, char **argv)
         else if (strcmp(argv[i], "--authentic-probe") == 0) authentic_probe = true;
         else if (strcmp(argv[i], "--authentic-arrival-preview") == 0)
             authentic_arrival_preview = true;
+        else if (strcmp(argv[i], "--authentic-loader-probe") == 0)
+            authentic_loader_probe = true;
         else { usage(argv[0]); return 2; }
     }
     if ((aria_video_test ? 1 : 0) + (authentic_video_test ? 1 : 0) +
-        (authentic_probe ? 1 : 0) + (authentic_arrival_preview ? 1 : 0) > 1) {
+        (authentic_probe ? 1 : 0) + (authentic_arrival_preview ? 1 : 0) +
+        (authentic_loader_probe ? 1 : 0) > 1) {
         fprintf(stderr, "Choose only one execution mode.\n");
         return 2;
     }
@@ -352,6 +357,14 @@ int main(int argc, char **argv)
                 metroid_path, aria_path, "captures/arrival-preview",
                 error, sizeof(error))) {
             fprintf(stderr, "Authentic arrival preview failed: %s\n", error);
+            return 4;
+        }
+        return 0;
+    }
+    if (authentic_loader_probe) {
+        if (!authentic_loader_probe_run(metroid_path, aria_path,
+                                         error, sizeof(error))) {
+            fprintf(stderr, "Authentic loader probe failed: %s\n", error);
             return 4;
         }
         return 0;

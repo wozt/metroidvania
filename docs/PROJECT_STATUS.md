@@ -551,3 +551,16 @@ frame tests and backend lifecycle tests before being enabled.
   instantiate Samus inside Aria or Soma inside MZM, implement arbitrary
   cross-room loading, save cross-world progress to disk, or run a guest
   character physics adapter. ROMs and extracted assets remain local.
+
+## Patch 0035 - editable layered PC tilemaps
+
+- Added the strict versioned `MVTILE 1` format (30x17 cells of 32 px,
+  background/terrain/foreground, tiles 0..4), atomic persistence and ROM-free
+  roundtrip/malformed-file tests.
+- GTK4 map editor gains a separate tile painting tab per demo room with click,
+  drag, layer/brush selection and explicit save. The graph editor is retained.
+- SDL3 sample backends now draw tilemap layers through the shared PC C loader.
+  No GBA ROM, graphics, tileset or original level data is included or modified.
+- Terrain is visual only: existing simulated platforms/hazards/portals remain
+  authoritative for collisions. Native engine/map importing is not yet done.
+

@@ -21,6 +21,7 @@ static bool init(FusionBackend *backend, SessionState *session)
     (void)session;
     if (!runtime) return false;
     room_runtime_init(runtime, &room);
+    (void)room_runtime_load_tiles(runtime, "data/maps/aria_demo_save.mvroom", WORLD_CASTLEVANIA);
     backend->state = runtime;
     return true;
 }

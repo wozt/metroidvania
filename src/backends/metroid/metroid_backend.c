@@ -21,6 +21,7 @@ static bool init(FusionBackend *backend, SessionState *session)
     (void)session;
     if (!runtime) return false;
     room_runtime_init(runtime, &room);
+    (void)room_runtime_load_tiles(runtime, "data/maps/metroid_demo_save.mvroom", WORLD_METROID);
     backend->state = runtime;
     return true;
 }

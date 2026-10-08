@@ -60,6 +60,51 @@ void room_runtime_init(RoomRuntime *runtime, const RoomDefinition *definition)
     runtime->animation_character = (CharacterKind)FUSION_CHARACTER_COUNT;
 }
 
+bool room_runtime_load_tiles(RoomRuntime *runtime, const char *path,
+                             WorldKind world)
+{
+    FusionTilemap candidate = {0};
+    char error[160];
+    if (!runtime || !path ||
+        !fusion_tilemap_load(&candidate, path, error, sizeof(error)) ||
+        candidate.world != world) {
+        fprintf(stderr, "PC tilemap: cannot load %s\n", path ? path : "(null)");
+        return false;
+    }
+    runtime->tilemap = candidate;
+    runtime->tilemap_loaded = true;
+    return true;
+}
+
+/* The first tilemap iteration draws authored color tiles, not ROM textures.
+ * The existing demo rectangles remain authoritative for collisions. */
+static void draw_tile_layer(RoomRuntime *runtime, SDL_Renderer *renderer,
+                            unsigned layer)
+{
+    unsigned y, x;
+    if (!runtime->tilemap_loaded) return;
+    for (y = 0; y < FUSION_TILE_ROWS; ++y)
+        for (x = 0; x < FUSION_TILE_COLS; ++x) {
+            uint8_t rgba[4];
+            unsigned tile = runtime->tilemap.tiles[layer][y][x];
+            SDL_FRect rect = {(float)(x * FUSION_TILE_SIZE),
+                              (float)(y * FUSION_TILE_SIZE),
+                              (float)FUSION_TILE_SIZE,
+                              (float)FUSION_TILE_SIZE};
+            if (!tile || !fusion_tile_color(runtime->tilemap.world,
+                                           layer, tile, rgba)) continue;
+            SDL_SetRenderDrawColor(renderer, rgba[0], rgba[1], rgba[2], 255);
+            SDL_RenderFillRect(renderer, &rect);
+            if (layer == FUSION_LAYER_TERRAIN) {
+                SDL_SetRenderDrawColor(renderer,
+                    rgba[0] > 18 ? rgba[0] - 18 : 0,
+                    rgba[1] > 18 ? rgba[1] - 18 : 0,
+                    rgba[2] > 18 ? rgba[2] - 18 : 0, 255);
+                SDL_RenderRect(renderer, &rect);
+            }
+        }
+}
+
 void room_enter(RoomRuntime *runtime, WorldState *world)
 {
     runtime->active = true;
@@ -225,9 +270,13 @@ void room_render(RoomRuntime *runtime, const SessionState *session,
     int i;
 
     color(renderer, runtime->definition.background); SDL_RenderClear(renderer);
-    color(renderer, (SDL_Color){82, 88, 100, 255});
-    for (i = 0; i < runtime->definition.solid_count; ++i)
-        SDL_RenderFillRect(renderer, &runtime->definition.solids[i]);
+    draw_tile_layer(runtime, renderer, FUSION_LAYER_BACK);
+    draw_tile_layer(runtime, renderer, FUSION_LAYER_TERRAIN);
+    if (!runtime->tilemap_loaded) {
+        color(renderer, (SDL_Color){82, 88, 100, 255});
+        for (i = 0; i < runtime->definition.solid_count; ++i)
+            SDL_RenderFillRect(renderer, &runtime->definition.solids[i]);
+    }
     color(renderer, (SDL_Color){190, 55, 55, 255}); SDL_RenderFillRect(renderer, &runtime->definition.hazard);
     color(renderer, world->door_open ? (SDL_Color){55, 210, 110, 255} : (SDL_Color){130, 60, 155, 255});
     SDL_RenderFillRect(renderer, &runtime->definition.portal);
@@ -256,6 +305,7 @@ void room_render(RoomRuntime *runtime, const SessionState *session,
         SDL_RenderFillRect(renderer, &actor);
     }
 
+    draw_tile_layer(runtime, renderer, FUSION_LAYER_FRONT);
     bar(renderer, 20, 18, 220, 18,
         (float)session->characters[CHARACTER_SAMUS].hp / session->characters[CHARACTER_SAMUS].max_hp,
         (SDL_Color){240, 160, 30, 255});

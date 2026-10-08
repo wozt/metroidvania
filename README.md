@@ -37,6 +37,18 @@ mGBA stays available strictly as a reference engine for ROM-backed diagnostic
 probes. The target architecture is a PC-native renderer with separate world
 mechanics and a common editable room graph.
 
+## Patch 0035 - layered PC-only tilemaps
+
+The GTK4 editor now has **World graph** and **Tile painter** tabs. The painter
+edits three layers (`Background`, `Terrain`, `Foreground`) for each local demo
+save room, with palette values `0` (erase) through `4`. Click/drag to paint,
+then **Save current tilemap**. Files live under `data/maps/*.mvroom` and are
+strictly validated `MVTILE 1` text; `fusion_dev` loads them on startup.
+The demo game still uses its original procedural collision rectangles and
+portals; terrain tiles are **visual only**, and these are project-authored
+palette colors, **not** extracted original sprites or real game rooms.
+Restart the game after saving to view edits. GTK4 remains optional at build.
+
 ## Honest status
 
 The default executable is an **SDL3 integration harness**, not yet a native

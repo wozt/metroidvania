@@ -5,6 +5,7 @@
 
 #include "core/types.h"
 #include "core/room_sprite.h"
+#include "core/tilemap.h"
 
 #define ROOM_MAX_SOLIDS 12
 
@@ -29,6 +30,8 @@ typedef struct {
     RoomDefinition definition;
     bool active;
     RoomSprites sprites;
+    FusionTilemap tilemap;
+    bool tilemap_loaded;
     float animation_clock;
     int animation_state;
     CharacterKind animation_character;
@@ -42,6 +45,8 @@ typedef struct {
 } RoomRuntime;
 
 void room_runtime_init(RoomRuntime *runtime, const RoomDefinition *definition);
+bool room_runtime_load_tiles(RoomRuntime *runtime, const char *path,
+                             WorldKind world);
 void room_enter(RoomRuntime *runtime, WorldState *world);
 void room_leave(RoomRuntime *runtime, WorldState *world);
 void room_runtime_shutdown(RoomRuntime *runtime);

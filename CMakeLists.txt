@@ -22,6 +22,7 @@ add_library(fusion_core STATIC
     src/core/roundtrip_guard.c
     src/core/transition.c
     src/core/world_graph.c
+    src/core/tilemap.c
     src/backends/metroid/mzm_state.c
     src/backends/castlevania/aria_state.c
     src/backends/castlevania/aria_runtime.c
@@ -154,6 +155,15 @@ if(BUILD_TESTING)
         target_compile_options(fusion_roundtrip_guard_tests PRIVATE -Werror)
     endif()
     add_test(NAME roundtrip_guard_contract COMMAND fusion_roundtrip_guard_tests)
+    add_executable(fusion_tilemap_tests tests/test_tilemap.c)
+    target_link_libraries(fusion_tilemap_tests PRIVATE fusion_core)
+    target_compile_options(fusion_tilemap_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_tilemap_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME tilemap_contract COMMAND fusion_tilemap_tests)
+    set_tests_properties(tilemap_contract PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     add_executable(fusion_world_graph_tests tests/test_world_graph.c)
     target_link_libraries(fusion_world_graph_tests PRIVATE fusion_core)
     target_compile_options(fusion_world_graph_tests PRIVATE -Wall -Wextra -Wpedantic)

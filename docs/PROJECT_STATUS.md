@@ -236,3 +236,11 @@ frame tests and backend lifecycle tests before being enabled.
 - Added bounded header/entry decoding and metadata-only ROM inspection.
 - The next milestone is validating Samus palette staging and composing
   body parts from the per-frame OBJ VRAM banks; no proprietary assets added.
+
+## Patch 0020 - Samus local body composition
+
+- Added a diagnostic ROM-local Samus body composer using four staged VRAM
+  banks and the confirmed raw OAM layout.
+- Requires an explicit, verified 16-color palette offset. Does not infer
+  animations, draw the arm cannon or bundle copyrighted data.
+- Extracted BMP output remains inside ignored `assets/extracted/`.

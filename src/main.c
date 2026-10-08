@@ -54,6 +54,20 @@ static void print_transition_observation(
            observation->health, observation->max_health);
 }
 
+static void print_transition_plan(const FusionTransitionPlan *plan)
+{
+    printf("Transition plan: %s -> %s/%s anchor=%s target-room=%u:%u "
+           "q16=%08x,%08x health=%d/%d\n",
+           world_name(plan->source.source_world),
+           world_name(plan->target_world),
+           character_name(plan->target_character),
+           fusion_transition_anchor_name(plan->target_anchor),
+           plan->target_area, plan->target_room,
+           (unsigned)plan->target_position_x_q16,
+           (unsigned)plan->target_position_y_q16,
+           plan->target_health, plan->target_max_health);
+}
+
 static bool run_authentic_probe(const char *label, const char *rom_path,
                                 WorldKind state_world,
                                 char *error, size_t error_size)
@@ -128,6 +142,7 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
     if (state_world == WORLD_METROID) {
         MzmStateView state_view;
         FusionTransitionObservation transition;
+        FusionTransitionPlan plan;
         unsigned timeline_frame;
         bool found = false;
         for (timeline_frame = 331; timeline_frame <= 6000; ++timeline_frame) {
@@ -156,9 +171,16 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
             goto cleanup;
         }
         print_transition_observation(&transition);
+        if (!fusion_transition_plan_build(&transition, WORLD_CASTLEVANIA,
+                                          &plan)) {
+            snprintf(error, error_size, "cannot build the MZM transition plan");
+            goto cleanup;
+        }
+        print_transition_plan(&plan);
     } else {
         AriaStateView state_view;
         FusionTransitionObservation transition;
+        FusionTransitionPlan plan;
         unsigned timeline_frame;
         bool entered_game = false;
         bool found = false;
@@ -204,6 +226,11 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
             goto cleanup;
         }
         print_transition_observation(&transition);
+        if (!fusion_transition_plan_build(&transition, WORLD_METROID, &plan)) {
+            snprintf(error, error_size, "cannot build the Aria transition plan");
+            goto cleanup;
+        }
+        print_transition_plan(&plan);
     }
     success = true;
 

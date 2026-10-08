@@ -121,17 +121,43 @@ projection has no import operation and cannot update `SessionState` or either
 runtime. A later target adapter must map a source observation to an explicit
 destination spawn and support validation plus rollback before any write occurs.
 
+## Transition plan and target transaction
+
+`FusionTransitionPlan` replaces the source-local location and position with an
+explicit target anchor while preserving the observed character and that
+character's raw health. A zero-health observation cannot become a plan because
+resurrection policy remains undefined. The current catalog contains two
+candidates reproduced by the authentic probe: MZM Brinstar room `0:28` at
+`(0x00758000,0x009FC000)` and Aria Entrance room `0:0` at
+`(0x00A80000,0x02BF0000)`. These are observed gameplay-ready points, not yet
+certified door arrivals or collision-safe write targets.
+
+The target transaction contract is `preflight -> capture checkpoint -> apply ->
+verify`. Preflight and verification must not mutate state. Because apply may
+fail after a partial mutation, either an apply or verification failure invokes
+rollback before the checkpoint is released. The result distinguishes a clean
+rejection, commit, successful rollback, and rollback failure; callers must not
+treat the last case as recoverable success.
+
+The contract is exercised with a synthetic target, including partial-apply and
+verification failures. Neither authentic backend registers these operations,
+so no MZM or Aria memory can be written through this path. A complete world
+switch must later compose this target transaction with the source snapshot and
+exclusive backend lifecycle.
+
 ## Replacing the stubs
 
-1. Define destination spawn mapping and transactional rollback for a minimal
-   transition importer.
-2. Place controlled VRAM/OAM/palette and memory access behind a backend-owned
+1. Verify one engine-native door arrival in each world and the minimal writable
+   state needed to reach it.
+2. Implement target adapters behind the transactional contract, then compose
+   them with source snapshot and backend lifecycle rollback.
+3. Place controlled VRAM/OAM/palette and memory access behind a backend-owned
    host abstraction.
-3. Add adapters between verified engine state and `SessionState` without
+4. Add adapters between verified engine state and `SessionState` without
    pretending the diagnostic state is authoritative.
-4. Select one authentic room, then adopt the native movement rules of that
+5. Select one authentic room, then adopt the native movement rules of that
    world.
-5. Add the guest character without running the other engine.
+6. Add the guest character without running the other engine.
 
 Static recompilation remains a promising Aria research route, but the reproduced
 PolyForm runtime is blocked from this GPLv3 project. No final native runtime has

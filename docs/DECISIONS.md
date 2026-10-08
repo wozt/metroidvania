@@ -130,3 +130,20 @@ directly. Velocities, equipment, progression, doors, map flags, and bosses stay
 out until their semantics and merge policies are verified. Aria Julius state
 is rejected because the current project character model contains only Samus
 and Soma.
+
+## D-015 - Plan against observed anchors and require target rollback
+
+Decision: build a versioned cross-world plan before any target mutation. The
+plan preserves the source character and raw character-owned health, but replaces
+source-local location and position with a named anchor in the destination
+world. Zero-health observations are rejected rather than inventing a
+resurrection rule. Initial candidates are the exact gameplay-ready points
+reproduced by the authentic probes in MZM Brinstar room `0:28` and Aria
+Entrance room `0:0`. They are evidence-backed planning coordinates, not yet
+certified write targets.
+
+Every future target adapter must implement side-effect-free preflight, capture
+a checkpoint before applying, verify after applying, and roll back on either a
+partial-apply or verification failure. Rollback failure is a distinct terminal
+result. The transaction contract is tested only with synthetic state for now;
+authentic backends intentionally provide no apply operation.

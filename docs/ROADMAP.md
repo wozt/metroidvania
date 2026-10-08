@@ -18,13 +18,17 @@
 5. **Ownership baseline:** project both verified views into a common read-only
    observation. Location and position remain source-local, health remains
    character-owned, and no field is implicitly shared.
-6. Define destination spawn mapping and transactional rollback before any
-   cross-engine mutation.
+6. **Planning baseline:** map each source observation to a ROM-observed
+   candidate anchor in the other world and enforce a target-side
+   preflight/checkpoint/apply/verify/rollback contract.
+7. Verify engine-native door arrivals and minimal writable state before enabling
+   either authentic target adapter.
 
 Exit criterion: one authentic room from each ROM can be loaded independently
 with verified timing, input, rendering, and a minimal read-only state view.
-Both views and the read-only ownership projection are complete; a safe target
-import design is next.
+Both views, the ownership projection, and the target transaction contract are
+complete. Engine-specific door-arrival verification is next; authentic imports
+remain disabled.
 
 ## P1 - Two engines and transitions
 

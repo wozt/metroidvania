@@ -195,9 +195,11 @@ or tracked by this repository.
 
 - Final native or recompiled runtime strategy for each game beyond the mGBA
   integration proof.
-- Minimal writable transition fields for both games, now that verified
-  read-only MZM and Aria views exist.
-- Ownership, conversion, and rollback rules for any future transition write;
-  read-only observation does not settle those policies.
+- Minimal writable transition fields and engine-owned entry routines for both
+  games. Read-only views, field ownership, candidate anchors, and target-side
+  rollback semantics are now defined, but neither candidate is certified for
+  writes.
+- Source-runtime recovery and backend lifecycle composition around the target
+  transaction; target rollback alone does not make a complete world switch.
 - Licensing and redistribution status of code generated from a ROM; legal
   review is required before distribution.

@@ -32,6 +32,7 @@ The MPL-2.0 mGBA system library provides an interim authentic execution path.
 | Verified MZM state view | Read-only proof integrated | Exact IWRAM symbols expose mode, location, Samus movement/pose, and equipment without mutating runtime or `SessionState` |
 | Verified Aria state view | Read-only proof integrated | Exact EWRAM offsets expose mode, location, player movement/animation, progression, and equipment with validated entity indirection |
 | Transition observation | Read-only projection integrated | Source-local location/position and character-owned health use an explicit versioned schema; no importer or shared field yet |
+| Transition plan | Target contract integrated | Two ROM-observed candidate anchors and tested target rollback semantics; authentic backends expose no apply operation |
 | Original assets, maps, and audio | Partial, local-only | Verified Samus and Soma idle/run/jump/attack recipes; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
@@ -71,8 +72,9 @@ test remained active for two seconds and was stopped by `timeout` with the
 expected status 124 and no runtime error.
 
 The mGBA runtime adapter adds an eighth CTest target, its backend adapter adds a
-ninth, the pure MZM and Aria decoders add the tenth and eleventh, and transition
-projection adds the twelfth. The runtime and backend tests cover ROM-free
+ninth, the pure MZM and Aria decoders add the tenth and eleventh, and the
+transition observation/planning/transaction contract adds the twelfth. The
+runtime and backend tests cover ROM-free
 failure paths. The local authentic probe
 executed each validated ROM for 300 frames and reproduced hashes
 `5ca363153253eb90` (Zero Mission) and `ce393be405213e55` (Aria). An SDL
@@ -104,6 +106,13 @@ source room `0:28`, position `(0x00758000,0x009FC000)`, and Samus health
 marked source-local, health is character-owned, and the shared-field mask is
 empty.
 
+Each observation also produced a versioned plan for the opposite world. Samus
+mapped to the Aria Entrance candidate at room `0:0`, position
+`(0x00A80000,0x02BF0000)`, with health `399/399`. Soma mapped to the MZM
+Brinstar candidate at room `0:28`, position
+`(0x00758000,0x009FC000)`, with health `320/320`. The probe only prints these
+plans; neither authentic backend implements their target operations.
+
 Upstream build verification used local clones under `/tmp`, a locally built
 `agbcc`, and symlinks to the ignored ROM files. Both `make` invocations exited
 successfully and both generated ROMs matched the reference files with `cmp`.
@@ -129,20 +138,20 @@ loop. No proprietary content is committed.
 
 ## Risks and next actions
 
-1. **P0 - Target import design:** define destination spawn anchors and a
-   transactional validate/apply/rollback contract before any runtime write.
+1. **P0 - Target adapter research:** verify engine-native door arrival paths,
+   collision-safe anchors, and the minimal writable fields for both engines.
 2. **P0 - Native strategy:** evaluate source HAL or compatible recompilation
    paths while keeping mGBA as the verified baseline.
-3. **P1 - Research:** verify door and progression flags needed for the first
-   cross-world transition in both engines.
+3. **P1 - Controller transaction:** compose target rollback with source
+   snapshot restoration and exclusive backend lifecycle recovery.
 4. **P1 - Tests:** add frame traces, render captures, and real lifecycle tests.
 5. **P2 - Content:** implement guest-character adaptations, progression, and
    synergy hooks.
 
 ## Open, non-blocking questions
 
-- Which explicit door or spawn anchor should receive the first cross-world
-  arrival in each engine?
+- Can each observed candidate be promoted to an engine-native, collision-safe
+  door arrival, or should a neighboring door record replace it?
 - What resurrection policy and progression flags should be shared?
 
 ## Next milestone acceptance criteria
@@ -158,8 +167,23 @@ loop. No proprietary content is committed.
 These criteria are satisfied by the interim emulated proof. Authentic execution
 is bound to the backend interface and now has a controlled, memory-only snapshot
 boundary. The MZM and Aria state views and read-only ownership projection are
-complete. The next milestone is a destination-specific import plan with
-rollback, not persistent savestates or unguarded memory writes.
+complete. Destination-specific plans and target rollback semantics are also
+defined and tested without authentic writes. The next milestone is verifying
+engine-native target adapters and full lifecycle recovery, not persistent
+savestates or unguarded memory writes.
+
+## Patch 018 - candidate anchors and target transaction
+
+- Added versioned plans that preserve the source character and health while
+  replacing source-local coordinates with an explicit destination anchor;
+  zero-health observations are rejected without inventing resurrection policy.
+- Registered the exact MZM Brinstar and Aria Entrance points reproduced by the
+  authentic probes as candidates, without claiming door or collision safety.
+- Added a target transaction contract with preflight, checkpoint, apply,
+  verification, rollback, and checkpoint disposal.
+- Covered clean rejection, commit, partial-apply rollback, verification
+  rollback, and rollback failure with a synthetic target. Authentic backends
+  still expose no mutation callback.
 
 ## Patch 017 - read-only transition observations
 

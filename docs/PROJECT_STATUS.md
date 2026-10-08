@@ -94,3 +94,10 @@ and the proprietary-file guard passed.
 - Never substitute fake geometry for missing original data without an explicit
   diagnostic label.
 - Never call extracted metadata a completed native gameplay feature.
+
+## Patch 0051 - confirm close and live tile stamp
+
+- Native MZM and Aria documents display their real selected metatile as a semi-transparent cursor preview on hover; no painting occurs before mouse press.
+- Picking a metatile from a room or the palette switches back to the Pencil stamp tool.
+- Unsaved tab close offers Cancel, Discard changes, or Save and close in a GTK4 modal window; failed writes keep the document open.
+- Additional GTK lifecycle test covers cancel, save and discard; private ROM-derived assets and overrides are never committed.

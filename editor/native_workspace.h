@@ -12,6 +12,7 @@ guint native_workspace_test_document_count(const NativeWorkspace *w);
 gboolean native_workspace_test_add_document(NativeWorkspace *w, const char *identity);
 gboolean native_workspace_test_close_document(NativeWorkspace *w, guint index);
 gboolean native_workspace_test_activate_close(NativeWorkspace *w, guint index);
+gboolean native_workspace_test_choose_close(NativeWorkspace *w, guint index, guint choice);
 gboolean native_workspace_test_prepare_modified(NativeWorkspace *w, guint index,
                                                  const char *override_path);
 void native_workspace_test_activate_save(NativeWorkspace *w, guint index);

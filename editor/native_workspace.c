@@ -23,6 +23,12 @@ struct NativeWorkspace {
     GSubprocess *import_process;
     gboolean closing;
     gboolean close_pending;
+    gboolean close_choice_pending;
+    GtkWidget *close_dialog, *close_info;
+    GtkWidget *close_buttons[3]; /* Cancel, Discard, Save */
+    gboolean pointer_over_canvas;
+    int hover_col, hover_row;
+    gboolean pick_to_pencil;
     char *identity;
 
     GtkWidget *page, *palette_page, *canvas, *palette, *status;
@@ -295,6 +301,23 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
         cairo_stroke(cr);
     }
     selection_outline(doc, cr);
+    /* Display the selected, original 16x16 tile under the pointer without
+     * changing the map until the user presses the primary mouse button. */
+    if (doc->pointer_over_canvas && doc->tool_id == TOOL_PENCIL &&
+        doc->brush_id < doc->map->tile_count) {
+        double x = doc->hover_col * cell;
+        double y = doc->hover_row * cell;
+        cairo_save(cr);
+        cairo_push_group(cr);
+        stamp(doc, cr, doc->brush_id, x, y, doc->scale);
+        cairo_pop_group_to_source(cr);
+        cairo_paint_with_alpha(cr, 0.68);
+        cairo_set_source_rgba(cr, 1.0, 0.85, 0.3, 0.95);
+        cairo_set_line_width(cr, 1.5);
+        cairo_rectangle(cr, x + 0.75, y + 0.75, cell - 1.5, cell - 1.5);
+        cairo_stroke(cr);
+        cairo_restore(cr);
+    }
 }
 
 static void draw_palette(GtkDrawingArea *area, cairo_t *cr, int width, int height,
@@ -397,7 +420,11 @@ static void brush_changed(GtkSpinButton *spin, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
     doc->brush_id = (unsigned)gtk_spin_button_get_value_as_int(spin);
-    gtk_widget_queue_draw(doc->palette);
+    if (doc->palette) gtk_widget_queue_draw(doc->palette);
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
+    if (doc->ready && !doc->drawing && doc->tools[TOOL_PENCIL] &&
+        doc->tool_id != TOOL_PENCIL)
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[TOOL_PENCIL]), TRUE);
 }
 
 static void layer_changed(GObject *object, GParamSpec *pspec, gpointer userdata)
@@ -435,8 +462,11 @@ static void paint_cell(NativeWorkspace *doc, int x, int y)
     if (native_map_edit(doc->map, doc->layer_id, x, y,
                         doc->tool_id, doc->brush_id, &picked))
         mark_changed(doc);
-    if (doc->tool_id == TOOL_PICK && picked < doc->map->tile_count)
+    if (doc->tool_id == TOOL_PICK && picked < doc->map->tile_count) {
         gtk_spin_button_set_value(GTK_SPIN_BUTTON(doc->brush), picked);
+        /* A picker click first finishes its gesture; then it becomes a stamp. */
+        doc->pick_to_pencil = TRUE;
+    }
 }
 
 static void paint_line(NativeWorkspace *doc, int x, int y)
@@ -558,6 +588,10 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
     doc->preview_dx = doc->preview_dy = 0;
     doc->selecting = doc->moving = doc->panning = FALSE;
     doc->drawing = FALSE;
+    if (doc->pick_to_pencil) {
+        doc->pick_to_pencil = FALSE;
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[TOOL_PENCIL]), TRUE);
+    }
     gtk_widget_queue_draw(doc->canvas);
 }
 
@@ -585,8 +619,35 @@ static void palette_click(GtkGestureClick *gesture, int n_press, double x, doubl
     if (!doc->ready || x < 0 || y < 0) return;
     unsigned column = (unsigned)(x / 24), row = (unsigned)(y / 24);
     unsigned id = row * 16 + column;
-    if (column < 16 && id < doc->map->tile_count)
+    if (column < 16 && id < doc->map->tile_count) {
         gtk_spin_button_set_value(GTK_SPIN_BUTTON(doc->brush), id);
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[TOOL_PENCIL]), TRUE);
+    }
+}
+
+static void canvas_hover(GtkEventControllerMotion *controller, double x, double y,
+                         gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    int col = 0, row = 0;
+    (void)controller;
+    gboolean valid = get_cell(doc, x, y, &col, &row);
+    if (valid != doc->pointer_over_canvas ||
+        (valid && (doc->hover_col != col || doc->hover_row != row))) {
+        doc->pointer_over_canvas = valid;
+        if (valid) { doc->hover_col = col; doc->hover_row = row; }
+        gtk_widget_queue_draw(doc->canvas);
+    }
+}
+
+static void canvas_leave(GtkEventControllerMotion *controller, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    (void)controller;
+    if (doc->pointer_over_canvas) {
+        doc->pointer_over_canvas = FALSE;
+        gtk_widget_queue_draw(doc->canvas);
+    }
 }
 
 /* GTK owns the tooltip lifecycle; no manual GtkPopover/timer callbacks.
@@ -637,6 +698,7 @@ static void tool_toggled(GtkToggleButton *button, gpointer userdata)
             gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[i]), FALSE);
         }
     }
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
 
 static void background_toggled(GtkToggleButton *button, gpointer userdata)
@@ -659,19 +721,25 @@ static void undo_clicked(GtkButton *button, gpointer userdata)
 static void redo_clicked(GtkButton *button, gpointer userdata)
 { (void)button; history_step(userdata, TRUE); }
 
+static gboolean save_override(NativeWorkspace *doc)
+{
+    char error[160] = {0};
+    if (!doc->ready || !doc->override_path || doc->drawing) return FALSE;
+    if (!native_map_save(doc->map, doc->override_path, error, sizeof(error))) {
+        message(doc, error);
+        if (doc->close_info) gtk_label_set_text(GTK_LABEL(doc->close_info), error);
+        return FALSE;
+    }
+    doc->unsaved = FALSE;
+    update_title(doc);
+    message(doc, "Override saved. The ROM and initial import remain unchanged.");
+    return TRUE;
+}
+
 static void save_clicked(GtkButton *button, gpointer userdata)
 {
-    NativeWorkspace *doc = userdata;
-    char error[160] = {0};
     (void)button;
-    if (!doc->ready || !doc->override_path || doc->drawing) return;
-    if (native_map_save(doc->map, doc->override_path, error, sizeof(error))) {
-        doc->unsaved = FALSE;
-        update_title(doc);
-        message(doc, "Override saved. The ROM and initial import remain unchanged.");
-    } else {
-        message(doc, error);
-    }
+    (void)save_override(userdata);
 }
 
 static void remove_notebook_page(GtkWidget **page_slot)
@@ -725,13 +793,131 @@ static gboolean close_document_idle(gpointer userdata)
     return G_SOURCE_REMOVE;
 }
 
+/* Keep the document alive for the entire modal dialog lifetime. Never
+ * destroy the dialog from a GtkButton::clicked handler: schedule the response
+ * to run after GTK has finished processing that click. */
+static void clear_close_dialog_refs(NativeWorkspace *doc)
+{
+    doc->close_dialog = NULL;
+    doc->close_info = NULL;
+    for (unsigned i = 0; i < 3; ++i) doc->close_buttons[i] = NULL;
+}
+
+/* GTK4 has GtkWindow::close-request, not the old GtkWidget::destroy signal. */
+static gboolean confirm_dialog_close_request(GtkWindow *window, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    if (doc->close_dialog == GTK_WIDGET(window)) clear_close_dialog_refs(doc);
+    return FALSE; /* GTK performs the default window close. */
+}
+
+typedef struct {
+    NativeWorkspace *doc;
+    int action;
+} CloseChoice;
+
+static gboolean confirm_choice_idle(gpointer userdata)
+{
+    CloseChoice *choice = userdata;
+    NativeWorkspace *doc = choice->doc;
+    doc->close_choice_pending = FALSE;
+    if (!doc->closing && doc->owner && doc->close_dialog) {
+        gboolean should_close = FALSE;
+        if (choice->action == 0) {
+            /* Cancel: retain all edits. */
+        } else if (choice->action == 1) {
+            /* Discard: do not write any override to disk. */
+            doc->unsaved = FALSE;
+            update_title(doc);
+            should_close = TRUE;
+        } else if (choice->action == 2) {
+            should_close = save_override(doc);
+        }
+        if (choice->action != 2 || should_close) {
+            GtkWidget *dialog = doc->close_dialog;
+            clear_close_dialog_refs(doc);
+            gtk_window_destroy(GTK_WINDOW(dialog));
+        }
+        if (should_close && !doc->closing && !doc->close_pending) {
+            doc->close_pending = TRUE;
+            g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, close_document_idle,
+                            document_ref(doc), (GDestroyNotify)document_unref);
+        }
+    }
+    document_unref(doc);
+    g_free(choice);
+    return G_SOURCE_REMOVE;
+}
+
+static void confirm_button_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    if (!doc || doc->closing || !doc->owner || doc->close_choice_pending) return;
+    CloseChoice *choice = g_new0(CloseChoice, 1);
+    choice->doc = document_ref(doc);
+    choice->action = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "close-choice"));
+    doc->close_choice_pending = TRUE;
+    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, confirm_choice_idle, choice, NULL);
+}
+
+static void prompt_unsaved_close(NativeWorkspace *doc)
+{
+    if (doc->close_dialog) {
+        gtk_window_present(GTK_WINDOW(doc->close_dialog));
+        return;
+    }
+    GtkWidget *dialog = gtk_window_new();
+    GtkRoot *root = gtk_widget_get_root(doc->page);
+    if (GTK_IS_WINDOW(root))
+        gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(root));
+    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+    gtk_window_set_title(GTK_WINDOW(dialog), "Unsaved room changes");
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 420, -1);
+    GtkWidget *layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    GtkWidget *buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gchar *title = g_strdup_printf("Close %s?", doc->identity ? doc->identity : "room");
+    GtkWidget *heading = gtk_label_new(title);
+    g_free(title);
+    gtk_widget_add_css_class(heading, "title-3");
+    gtk_label_set_xalign(GTK_LABEL(heading), 0);
+    doc->close_info = gtk_label_new(
+        "This room contains unsaved changes. Save, discard, or cancel closing.");
+    gtk_label_set_wrap(GTK_LABEL(doc->close_info), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(doc->close_info), 0);
+    gtk_widget_set_margin_start(layout, 18);
+    gtk_widget_set_margin_end(layout, 18);
+    gtk_widget_set_margin_top(layout, 18);
+    gtk_widget_set_margin_bottom(layout, 18);
+    gtk_box_append(GTK_BOX(layout), heading);
+    gtk_box_append(GTK_BOX(layout), doc->close_info);
+    const char *labels[] = {"Cancel", "Discard changes", "Save and close"};
+    for (int i = 0; i < 3; ++i) {
+        GtkWidget *button = gtk_button_new_with_label(labels[i]);
+        doc->close_buttons[i] = button;
+        g_object_set_data(G_OBJECT(button), "close-choice", GINT_TO_POINTER(i));
+        g_signal_connect(button, "clicked", G_CALLBACK(confirm_button_clicked), doc);
+        if (i == 2) gtk_widget_add_css_class(button, "suggested-action");
+        if (i == 1) gtk_widget_add_css_class(button, "destructive-action");
+        gtk_box_append(GTK_BOX(buttons), button);
+    }
+    gtk_box_append(GTK_BOX(layout), buttons);
+    gtk_window_set_child(GTK_WINDOW(dialog), layout);
+    doc->close_dialog = dialog;
+    /* The window owns a strong document ref until its GObject is finalized. */
+    g_object_set_data_full(G_OBJECT(dialog), "native-room-close-doc",
+                           document_ref(doc), (GDestroyNotify)document_unref);
+    g_signal_connect(dialog, "close-request",
+                     G_CALLBACK(confirm_dialog_close_request), doc);
+    gtk_window_present(GTK_WINDOW(dialog));
+}
+
 static void close_clicked(GtkButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
     (void)button;
-    if (!doc || doc->closing || doc->close_pending) return;
+    if (!doc || doc->closing || doc->close_pending || doc->close_choice_pending) return;
     if (doc->unsaved) {
-        message(doc, "Unsaved changes: save before closing this tab.");
+        prompt_unsaved_close(doc);
         return;
     }
     doc->close_pending = TRUE;
@@ -853,11 +1039,15 @@ static void document_build(NativeWorkspace *doc)
     gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(doc->canvas), draw_room, doc, NULL);
     GtkGesture *drag = gtk_gesture_drag_new();
     GtkGesture *click = gtk_gesture_click_new();
+    GtkEventController *hover = gtk_event_controller_motion_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(drag), GDK_BUTTON_PRIMARY);
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), GDK_BUTTON_PRIMARY);
     gtk_gesture_group(drag, click);
     gtk_widget_add_controller(doc->canvas, GTK_EVENT_CONTROLLER(drag));
     gtk_widget_add_controller(doc->canvas, GTK_EVENT_CONTROLLER(click));
+    gtk_widget_add_controller(doc->canvas, hover);
+    g_signal_connect(hover, "motion", G_CALLBACK(canvas_hover), doc);
+    g_signal_connect(hover, "leave", G_CALLBACK(canvas_leave), doc);
     g_signal_connect(drag, "drag-begin", G_CALLBACK(gesture_begin), doc);
     g_signal_connect(drag, "drag-update", G_CALLBACK(gesture_update), doc);
     g_signal_connect(drag, "drag-end", G_CALLBACK(gesture_end), doc);
@@ -972,6 +1162,8 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     doc->unsaved = FALSE;
     doc->brush_id = doc->layer_id = 0;
     doc->has_selection = FALSE;
+    doc->pointer_over_canvas = FALSE;
+    doc->pick_to_pencil = FALSE;
     doc->preview_dx = doc->preview_dy = 0;
     gtk_spin_button_set_range(GTK_SPIN_BUTTON(doc->brush), 0,
                               doc->map->tile_count - 1);
@@ -1167,6 +1359,18 @@ gboolean native_workspace_test_activate_close(NativeWorkspace *manager, guint in
     return TRUE;
 }
 
+gboolean native_workspace_test_choose_close(NativeWorkspace *manager, guint index,
+                                            guint choice)
+{
+    if (!manager || !manager->documents || index >= manager->documents->len || choice >= 3)
+        return FALSE;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    if (!doc->close_dialog || !doc->close_buttons[choice]) return FALSE;
+    g_signal_emit_by_name(doc->close_buttons[choice], "clicked");
+    while (g_main_context_pending(NULL)) g_main_context_iteration(NULL, FALSE);
+    return TRUE;
+}
+
 gboolean native_workspace_test_prepare_modified(NativeWorkspace *manager, guint index,
                                                  const char *override_path)
 {
@@ -1236,6 +1440,11 @@ void native_workspace_free(NativeWorkspace *manager)
         for (guint i = 0; i < manager->documents->len; ++i) {
             NativeWorkspace *doc = g_ptr_array_index(manager->documents, i);
             doc->closing = TRUE;
+            if (doc->close_dialog) {
+                GtkWidget *dialog = doc->close_dialog;
+                clear_close_dialog_refs(doc);
+                gtk_window_destroy(GTK_WINDOW(dialog));
+            }
             doc->owner = NULL;
             if (doc->import_cancellable) g_cancellable_cancel(doc->import_cancellable);
             if (doc->import_process) g_subprocess_force_exit(doc->import_process);

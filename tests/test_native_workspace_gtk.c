@@ -102,6 +102,44 @@ static void test_save_modified_then_close(void)
     g_free(directory);
 }
 
+/* Closing an edited document must offer Save, Discard and Cancel,
+ * never silently refuse to close or silently throw away changes. */
+static void test_unsaved_close_dialog(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    gchar *directory = g_dir_make_tmp("fusion-native-confirm-XXXXXX", NULL);
+    g_assert_nonnull(directory);
+    gchar *path = g_build_filename(directory, "aria_room.mvnative", NULL);
+    g_assert_true(native_workspace_test_add_document(workspace, "Aria 00:010"));
+    g_assert_true(native_workspace_test_prepare_modified(workspace, 0, path));
+
+    /* Cancel keeps the document open and modified. */
+    g_assert_true(native_workspace_test_activate_close(workspace, 0));
+    g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 1);
+    g_assert_true(native_workspace_test_choose_close(workspace, 0, 0));
+    g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 1);
+
+    /* Save and close persists the local override, then closes. */
+    g_assert_true(native_workspace_test_activate_close(workspace, 0));
+    g_assert_true(native_workspace_test_choose_close(workspace, 0, 2));
+    g_assert_true(g_file_test(path, G_FILE_TEST_IS_REGULAR));
+    g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 0);
+
+    /* Discard does not overwrite the existing saved file. */
+    g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 033"));
+    g_assert_true(native_workspace_test_prepare_modified(workspace, 0, path));
+    g_assert_true(native_workspace_test_activate_close(workspace, 0));
+    g_assert_true(native_workspace_test_choose_close(workspace, 0, 1));
+    g_assert_cmpuint(native_workspace_test_document_count(workspace), ==, 0);
+
+    native_workspace_free(workspace);
+    g_assert_cmpint(g_remove(path), ==, 0);
+    g_assert_cmpint(g_rmdir(directory), ==, 0);
+    g_free(path);
+    g_free(directory);
+}
+
 static gboolean stop_loop(gpointer userdata)
 {
     g_main_loop_quit(userdata);
@@ -139,5 +177,7 @@ int main(int argc, char **argv)
                     test_save_modified_then_close);
     g_test_add_func("/native-workspace/close-during-import",
                     test_close_during_import);
+    g_test_add_func("/native-workspace/unsaved-close-dialog",
+                    test_unsaved_close_dialog);
     return g_test_run();
 }

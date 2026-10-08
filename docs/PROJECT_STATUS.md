@@ -144,3 +144,44 @@ and the proprietary-file guard passed.
   removed from *both* dock notebooks, including detached docks, not merely
   removed from the document manager's bookkeeping.
 - Build, CTest and real GTK4 reproduction still require local validation.
+
+## Patch 0056 - one room browser per world, one implementation
+
+- **Zero rooms** and **Aria rooms** are instances of the same GTK4 room browser:
+  area selection, source metadata, layer previews, async rendering, double-click
+  to open the same editable native document tools, and identical close behavior.
+- The right-click menu exposes the future **Create room** entry as disabled.
+  It must not create pretend playable rooms: a verified authored-room schema,
+  spatial/door validation, export adapter and consuming native gameplay runtime
+  are required before it can be enabled for either world.
+- The Aria global map is indexed separately (preview budget 0) before costly
+  room preview generation; subprocess decoder errors are shown in the GUI.
+  Existing map generation remains asynchronous, private and original-coordinate.
+- Shared room browser GUI regression is added to CTest under Xvfb.
+
+## Unified player systems - accepted requirements, pending implementation
+
+- One character-independent capability interface: acquired powers, abilities,
+  inventory flags, unlock conditions and per-world game mechanics.
+- Player-specific presentation and rules: Samus upgrades, ammo/energy and
+  equipment versus Soma souls, MP/HP, attributes, items and abilities.
+- One status/menu framework with different views, stats and controls depending
+  on which playable character is active. No fabricated equivalence of stats.
+- Native controller support, configurable mapping, keyboard/controller parity,
+  in-editor input preview and runtime gamepad navigation; SDL3 input backend
+  must be attached only once engine input/action contracts exist.
+- Cross-world abilities, room requirements and cutscene/event conditions must
+  reference a shared canonical schema with world-specific adapters and checks.
+- Export only project-authored assets. Never write ROMs or claim unfinished
+  player systems exist in native gameplay yet.
+
+## Patch 0057 - GTK4 room browser context lifetime
+
+- Fixed a GTK4 ownership violation in the shared Zero/Aria browser: the
+  future Create room popover was parented directly to GtkListBox. GTK4 expects
+  GtkListBoxRow children, and filtering may dereference non-row widgets.
+- A GtkOverlay now owns the popover, while the scrolled room list remains the
+  overlay's regular child. Right-click popup coordinates are translated from
+  the list into the overlay's coordinate space.
+- The browser GTK regression now checks popover parenting for both games and
+  repeats browser creation/destruction. Local GTK4 build and CTest must confirm.

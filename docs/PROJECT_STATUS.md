@@ -260,3 +260,17 @@ and the proprietary-file guard passed.
   step is connecting the common authoring form and editable project-owned
   room layers to this contract, then validated native engine adapters.
 - Developer GTK4, CTest and proprietary-file verification remain required.
+
+## Patch 0064 - GTK4 create-room draft form
+
+- Enabled Create room in the shared Zero/Aria room browser context menu.
+- A common GTK4 dialog collects area, slug, name and 1..8 screen dimensions;
+  the active area is preselected independently for each game.
+- Saving invokes `python3 -m scripts.authored_rooms create` with a separate
+  argument vector (no shell) and asynchronous completion/error feedback.
+- Duplicate IDs and private output paths are validated by the existing
+  create-only Python schema; no ROM, original room or engine assets are changed.
+- This creates **unplayable project drafts**, not native renderable/playable
+  rooms. Existing draft browsing, editing and engine adapters remain pending.
+- Added an Xvfb GTK4 form-opening test for both worlds without writing assets.
+- Run local build, CTest and proprietary-file guard before considering verified.

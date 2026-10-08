@@ -306,6 +306,269 @@ static void populate_rooms(RoomBrowser *browser)
     g_free(message);
 }
 
+/* One shared draft creation dialog. The Python schema remains authoritative.
+ * No native gameplay, collision, layers or source-ROM editing is claimed. */
+typedef struct {
+    RoomWorld world;
+    GtkWidget *window, *area, *slug, *name, *width, *height;
+    GtkWidget *feedback, *submit, *cancel;
+    GWeakRef page_ref;
+} RoomDraftForm;
+
+typedef struct {
+    GWeakRef window_ref;
+    GWeakRef page_ref;
+    gchar *identity;
+} RoomDraftJob;
+
+static void room_draft_form_free(gpointer userdata)
+{
+    RoomDraftForm *form = userdata;
+    g_weak_ref_clear(&form->page_ref);
+    g_free(form);
+}
+
+static void room_draft_job_free(RoomDraftJob *job)
+{
+    g_weak_ref_clear(&job->window_ref);
+    g_weak_ref_clear(&job->page_ref);
+    g_free(job->identity);
+    g_free(job);
+}
+
+static gboolean valid_draft_slug(const char *slug)
+{
+    size_t length = strlen(slug);
+    if (length < 1 || length > 40 || slug[0] < 'a' || slug[0] > 'z')
+        return FALSE;
+    for (size_t i = 1; i < length; ++i) {
+        char c = slug[i];
+        if ((c < 'a' || c > 'z') && (c < '0' || c > '9') &&
+            c != '-' && c != '_') return FALSE;
+    }
+    return TRUE;
+}
+
+static gboolean valid_draft_name(const char *name)
+{
+    if (!g_utf8_validate(name, -1, NULL)) return FALSE;
+    glong count = g_utf8_strlen(name, -1);
+    if (count < 1 || count > 80 || g_str_has_prefix(name, " ") ||
+        g_str_has_suffix(name, " ")) return FALSE;
+    for (const char *p = name; *p; p = g_utf8_next_char(p)) {
+        gunichar c = g_utf8_get_char(p);
+        if (c < 32 || c == 127 || c == '|') return FALSE;
+    }
+    return TRUE;
+}
+
+static void room_draft_done(GObject *object, GAsyncResult *result, gpointer userdata)
+{
+    RoomDraftJob *job = userdata;
+    GError *error = NULL;
+    gchar *output = NULL, *diagnostic = NULL;
+    gboolean communicated = g_subprocess_communicate_utf8_finish(
+        G_SUBPROCESS(object), result, &output, &diagnostic, &error);
+    gboolean created = communicated && g_subprocess_get_successful(G_SUBPROCESS(object));
+    GtkWidget *window = g_weak_ref_get(&job->window_ref);
+    GtkWidget *page = g_weak_ref_get(&job->page_ref);
+
+    if (created && page && GTK_IS_WINDOW(gtk_widget_get_root(page))) {
+        RoomBrowser *browser = g_object_get_data(G_OBJECT(page), "mv-room-browser-state");
+        if (browser) {
+            gchar *message = g_strdup_printf(
+                "Created private draft %s (NOT playable). Run scripts.authored_rooms list to inspect it.",
+                job->identity);
+            gtk_label_set_text(GTK_LABEL(browser->status), message);
+            g_free(message);
+        }
+    }
+
+    if (window && GTK_IS_WINDOW(window)) {
+        RoomDraftForm *form = g_object_get_data(G_OBJECT(window), "mv-room-draft-form");
+        if (form && created) {
+            gtk_window_destroy(GTK_WINDOW(window));
+        } else if (form) {
+            const char *reason = error ? error->message : diagnostic;
+            gchar *message = g_strdup_printf("Create failed: %.650s",
+                reason && *reason ? reason : "Unknown Python error");
+            gtk_label_set_text(GTK_LABEL(form->feedback), message);
+            g_free(message);
+            gtk_widget_set_sensitive(form->submit, TRUE);
+            gtk_widget_set_sensitive(form->cancel, TRUE);
+            gtk_window_set_deletable(GTK_WINDOW(window), TRUE);
+        }
+    }
+    g_clear_object(&page);
+    g_clear_object(&window);
+    g_clear_error(&error);
+    g_free(output);
+    g_free(diagnostic);
+    room_draft_job_free(job);
+}
+
+static void room_draft_cancel(GtkButton *button, gpointer userdata)
+{
+    RoomDraftForm *form = userdata;
+    (void)button;
+    gtk_window_destroy(GTK_WINDOW(form->window));
+}
+
+static void room_draft_submit(GtkButton *button, gpointer userdata)
+{
+    RoomDraftForm *form = userdata;
+    const char *slug = gtk_editable_get_text(GTK_EDITABLE(form->slug));
+    const char *name = gtk_editable_get_text(GTK_EDITABLE(form->name));
+    guint area = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->area));
+    char area_buf[12], width_buf[12], height_buf[12];
+    const char *world = form->world == ROOM_WORLD_ARIA ? "aria" : "zero_mission";
+    (void)button;
+    if (!valid_draft_slug(slug)) {
+        gtk_label_set_text(GTK_LABEL(form->feedback),
+            "Slug: lowercase a-z first, then a-z, 0-9, '-' or '_'; max 40 characters.");
+        return;
+    }
+    if (!valid_draft_name(name)) {
+        gtk_label_set_text(GTK_LABEL(form->feedback),
+            "Name: 1-80 printable characters, no outer spaces or '|'.");
+        return;
+    }
+    if (area >= (form->world == ROOM_WORLD_ARIA ? 12u : 7u)) {
+        gtk_label_set_text(GTK_LABEL(form->feedback), "Invalid area selection.");
+        return;
+    }
+    if (!g_file_test("scripts/authored_rooms.py", G_FILE_TEST_IS_REGULAR)) {
+        gtk_label_set_text(GTK_LABEL(form->feedback),
+            "Run the editor from the metroidvania project root (scripts/authored_rooms.py missing).");
+        return;
+    }
+
+    snprintf(area_buf, sizeof(area_buf), "%u", area);
+    snprintf(width_buf, sizeof(width_buf), "%d",
+             gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->width)));
+    snprintf(height_buf, sizeof(height_buf), "%d",
+             gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->height)));
+    GError *error = NULL;
+    /* Argument vector; no shell, no ROM file paths, create-only Python CLI. */
+    GSubprocess *process = g_subprocess_new(
+        G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
+        &error, "python3", "-m", "scripts.authored_rooms", "create",
+        "--world", world, "--area", area_buf, "--slug", slug,
+        "--name", name, "--width-screens", width_buf,
+        "--height-screens", height_buf, NULL);
+    if (!process) {
+        gtk_label_set_text(GTK_LABEL(form->feedback),
+            error ? error->message : "Failed to launch Python.");
+        g_clear_error(&error);
+        return;
+    }
+
+    RoomDraftJob *job = g_new0(RoomDraftJob, 1);
+    job->identity = g_strdup_printf("%s:%02u:%s", world, area, slug);
+    g_weak_ref_init(&job->window_ref, form->window);
+    GtkWidget *page = g_weak_ref_get(&form->page_ref);
+    g_weak_ref_init(&job->page_ref, page);
+    g_clear_object(&page);
+    gtk_widget_set_sensitive(form->submit, FALSE);
+    gtk_widget_set_sensitive(form->cancel, FALSE);
+    gtk_window_set_deletable(GTK_WINDOW(form->window), FALSE);
+    gtk_label_set_text(GTK_LABEL(form->feedback), "Creating private draft...");
+    g_subprocess_communicate_utf8_async(process, NULL, NULL, room_draft_done, job);
+    g_object_unref(process);
+}
+
+static void room_draft_grid_row(GtkGrid *grid, int row,
+                                const char *label, GtkWidget *field)
+{
+    GtkWidget *text = gtk_label_new(label);
+    gtk_label_set_xalign(GTK_LABEL(text), 0.0f);
+    gtk_widget_set_hexpand(field, TRUE);
+    gtk_grid_attach(grid, text, 0, row, 1, 1);
+    gtk_grid_attach(grid, field, 1, row, 1, 1);
+}
+
+static void room_draft_open(GtkButton *button, gpointer userdata)
+{
+    GtkWidget *page = GTK_WIDGET(userdata);
+    RoomBrowser *browser = g_object_get_data(G_OBJECT(page), "mv-room-browser-state");
+    if (!browser) return;
+    (void)button;
+    GtkPopover *popover = g_object_get_data(G_OBJECT(page), "mv-create-popover");
+    if (GTK_IS_POPOVER(popover)) gtk_popover_popdown(popover);
+
+    RoomDraftForm *form = g_new0(RoomDraftForm, 1);
+    form->world = browser->world;
+    g_weak_ref_init(&form->page_ref, page);
+    form->window = gtk_window_new();
+    gtk_window_set_title(GTK_WINDOW(form->window),
+        form->world == ROOM_WORLD_ARIA ? "Create Aria room draft" : "Create Zero room draft");
+    gtk_window_set_default_size(GTK_WINDOW(form->window), 440, 340);
+    gtk_window_set_modal(GTK_WINDOW(form->window), TRUE);
+    GtkRoot *root = gtk_widget_get_root(page);
+    if (GTK_IS_WINDOW(root)) {
+        gtk_window_set_transient_for(GTK_WINDOW(form->window), GTK_WINDOW(root));
+        gtk_window_set_destroy_with_parent(GTK_WINDOW(form->window), TRUE);
+    }
+
+    GtkWidget *body = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    GtkWidget *grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
+    gtk_widget_set_margin_start(body, 18);
+    gtk_widget_set_margin_end(body, 18);
+    gtk_widget_set_margin_top(body, 18);
+    gtk_widget_set_margin_bottom(body, 18);
+    gtk_window_set_child(GTK_WINDOW(form->window), body);
+    GtkWidget *warning = gtk_label_new(
+        "Project-authored draft only. No graphics, collision or gameplay runtime is created.");
+    gtk_label_set_wrap(GTK_LABEL(warning), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(warning), 0.0f);
+    gtk_box_append(GTK_BOX(body), warning);
+    gtk_box_append(GTK_BOX(body), grid);
+
+    GtkStringList *areas = gtk_string_list_new(area_names(form->world));
+    /* gtk_drop_down_new() consumes its model reference. */
+    form->area = gtk_drop_down_new(G_LIST_MODEL(areas), NULL);
+    guint selected_area = gtk_drop_down_get_selected(GTK_DROP_DOWN(browser->area_filter));
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->area),
+        selected_area > 0 ? selected_area - 1 : 0);
+    form->slug = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(form->slug), "my_new_room");
+    gtk_entry_set_max_length(GTK_ENTRY(form->slug), 40);
+    form->name = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(form->name), "Room name");
+    gtk_entry_set_max_length(GTK_ENTRY(form->name), 80);
+    form->width = gtk_spin_button_new_with_range(1, 8, 1);
+    form->height = gtk_spin_button_new_with_range(1, 8, 1);
+    room_draft_grid_row(GTK_GRID(grid), 0, "Area", form->area);
+    room_draft_grid_row(GTK_GRID(grid), 1, "Slug", form->slug);
+    room_draft_grid_row(GTK_GRID(grid), 2, "Name", form->name);
+    room_draft_grid_row(GTK_GRID(grid), 3, "Width (screens)", form->width);
+    room_draft_grid_row(GTK_GRID(grid), 4, "Height (screens)", form->height);
+
+    form->feedback = gtk_label_new("Creates a validated, non-playable JSON draft.");
+    gtk_label_set_xalign(GTK_LABEL(form->feedback), 0.0f);
+    gtk_label_set_wrap(GTK_LABEL(form->feedback), TRUE);
+    gtk_box_append(GTK_BOX(body), form->feedback);
+    GtkWidget *actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    gtk_widget_set_halign(actions, GTK_ALIGN_END);
+    form->cancel = gtk_button_new_with_label("Cancel");
+    form->submit = gtk_button_new_with_label("Create draft");
+    gtk_box_append(GTK_BOX(actions), form->cancel);
+    gtk_box_append(GTK_BOX(actions), form->submit);
+    gtk_box_append(GTK_BOX(body), actions);
+    g_signal_connect(form->cancel, "clicked", G_CALLBACK(room_draft_cancel), form);
+    g_signal_connect(form->submit, "clicked", G_CALLBACK(room_draft_submit), form);
+
+    g_object_set_data_full(G_OBJECT(form->window), "mv-room-draft-form",
+                           form, room_draft_form_free);
+    /* Non-owning test inspection handles; window owns these controls. */
+    g_object_set_data(G_OBJECT(form->window), "mv-room-draft-world",
+                      GUINT_TO_POINTER((guint)form->world + 1));
+    g_object_set_data(G_OBJECT(form->window), "mv-room-draft-area", form->area);
+    gtk_window_present(GTK_WINDOW(form->window));
+}
+
 static void show_context(GtkGestureClick *gesture, gint presses,
                          double x, double y, gpointer userdata)
 {
@@ -381,13 +644,12 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_label_set_wrap(GTK_LABEL(browser->status), TRUE);
     gtk_box_append(GTK_BOX(browser->page), browser->status);
 
-    /* Explicit future extension point, without pretending there is a runtime. */
+    /* Draft creation is available; gameplay/export remains unavailable. */
     GtkWidget *popover = gtk_popover_new();
     GtkWidget *note = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
     GtkWidget *create = gtk_button_new_with_label("Create room...");
     GtkWidget *hint = gtk_label_new(
-        "Unavailable: authored-room schema and native engine adapter are pending.");
-    gtk_widget_set_sensitive(create, FALSE);
+        "Creates a private project draft only. Native gameplay is not implemented.");
     gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
     gtk_widget_set_size_request(hint, 245, -1);
     gtk_box_append(GTK_BOX(note), create);
@@ -396,6 +658,9 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     /* GtkMenuButton owns its popover and correctly manages its lifecycle. */
     gtk_menu_button_set_popover(GTK_MENU_BUTTON(menu_button), popover);
     g_object_set_data(G_OBJECT(browser->page), "mv-create-popover", popover);
+    g_object_set_data(G_OBJECT(browser->page), "mv-create-room-action", create);
+    g_signal_connect_object(create, "clicked", G_CALLBACK(room_draft_open),
+                            browser->page, 0);
     g_object_set_data(G_OBJECT(browser->page), "mv-room-browser-menu-button", menu_button);
     GtkGesture *right_click = gtk_gesture_click_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(right_click), GDK_BUTTON_SECONDARY);

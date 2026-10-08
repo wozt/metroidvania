@@ -79,3 +79,16 @@ schema/provenance/identity, **not** collision, spawning, source assets or
 engine compatibility. These are next milestones, not completed features.
 GTK Create room stays disabled until the editor can open authored drafts and
 both game adapters can validate/export them to a consuming native runtime.
+
+### Patch 0064: GTK4 draft creation (editor UI)
+
+- In either original-room browser, right-click the room list (or use the menu
+  button) and choose **Create room...**.
+- Choose area, slug, name and dimensions (1..8 source-screen units each).
+- The draft is saved using `scripts.authored_rooms create` under the private,
+  ignored `assets/extracted/authored_rooms` directory. Existing drafts are never
+  overwritten. Reuse `python3 -m scripts.authored_rooms list` to inspect them.
+- The GTK form is an authoring entry point only, **not** a tile/collision editor
+  or a working game-room loader; neither original ROM content nor gameplay is
+  fabricated. Adding saved drafts to the room browser and actual native editor
+  is reserved for later phases.

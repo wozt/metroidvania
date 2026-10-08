@@ -90,6 +90,54 @@ static void test_repeated_browser_lifecycle(void)
     }
 }
 
+/* Only inspect GTK controls: test must never write real private room drafts. */
+static void test_create_room_dialogs(void)
+{
+    GtkWidget *center = gtk_notebook_new();
+    GtkWidget *right = gtk_notebook_new();
+    NativeWorkspace *ws = native_workspace_new();
+    native_workspace_build(ws, center, right);
+    GtkWidget *pages[2] = {
+        room_browser_build(center, ws, ROOM_WORLD_ZERO),
+        room_browser_build(center, ws, ROOM_WORLD_ARIA),
+    };
+    GListModel *windows = gtk_window_get_toplevels();
+    for (guint world = 0; world < G_N_ELEMENTS(pages); ++world) {
+        GtkWidget *page = pages[world];
+        GtkWidget *action = g_object_get_data(G_OBJECT(page), "mv-create-room-action");
+        g_assert_true(GTK_IS_BUTTON(action));
+        g_assert_true(gtk_widget_get_sensitive(action));
+        GtkWidget *toolbar = gtk_widget_get_first_child(page);
+        GtkWidget *area_filter = gtk_widget_get_next_sibling(
+            gtk_widget_get_first_child(toolbar));
+        gtk_drop_down_set_selected(GTK_DROP_DOWN(area_filter), 2);
+        guint before = g_list_model_get_n_items(windows);
+        gtk_button_clicked(GTK_BUTTON(action));
+        g_assert_cmpuint(g_list_model_get_n_items(windows), ==, before + 1);
+        GtkWindow *dialog = NULL;
+        for (guint n = 0; n < g_list_model_get_n_items(windows); ++n) {
+            GtkWindow *candidate = GTK_WINDOW(g_list_model_get_item(windows, n));
+            if (GPOINTER_TO_UINT(g_object_get_data(
+                    G_OBJECT(candidate), "mv-room-draft-world")) == world + 1) {
+                dialog = candidate;
+                break;
+            }
+            g_object_unref(candidate);
+        }
+        g_assert_nonnull(dialog);
+        GtkWidget *area = g_object_get_data(G_OBJECT(dialog), "mv-room-draft-area");
+        g_assert_true(GTK_IS_DROP_DOWN(area));
+        g_assert_cmpuint(gtk_drop_down_get_selected(GTK_DROP_DOWN(area)), ==, 1);
+        gtk_window_destroy(dialog);
+        g_object_unref(dialog);
+    }
+    gtk_notebook_remove_page(GTK_NOTEBOOK(center), 1);
+    gtk_notebook_remove_page(GTK_NOTEBOOK(center), 0);
+    native_workspace_free(ws);
+    g_object_unref(g_object_ref_sink(center));
+    g_object_unref(g_object_ref_sink(right));
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -97,5 +145,6 @@ int main(int argc, char **argv)
     gtk_init();
     g_test_add_func("/room-browser/shared-shells", test_shared_browser_shells);
     g_test_add_func("/room-browser/repeated-lifecycle", test_repeated_browser_lifecycle);
+    g_test_add_func("/room-browser/create-draft-form", test_create_room_dialogs);
     return g_test_run();
 }

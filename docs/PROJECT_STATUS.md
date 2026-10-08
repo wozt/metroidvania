@@ -244,3 +244,11 @@ frame tests and backend lifecycle tests before being enabled.
 - Requires an explicit, verified 16-color palette offset. Does not infer
   animations, draw the arm cannon or bundle copyrighted data.
 - Extracted BMP output remains inside ignored `assets/extracted/`.
+
+## Patch 0021 - inspect MZM suit palette candidates
+
+- Added an exact-ROM-hash-checked BGR555 three-row palette scanner and
+  optional local BMP swatch export, plus independent decoder tests.
+- Results are explicitly heuristic. No palette is automatically asserted
+  to be Samus's Power Suit palette; cross-check upstream symbols first.
+- Extracted graphics remain local and ignored by Git.

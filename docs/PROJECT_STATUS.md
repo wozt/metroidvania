@@ -241,3 +241,22 @@ and the proprietary-file guard passed.
   and changes their selections before removing the two tabs.
 - Build, all six CTest cases, and the proprietary-file guard require
   validation on the developer's Debian GTK4 environment.
+
+## Patch 0063 - shared private authored-room draft contract
+
+- Added a strict versioned `metroidvania.authored-room` schema shared by Zero
+  Mission and Aria, with stable world/area/slug identity and explicit metadata
+  separating project-authored geometry from verified original ROM content.
+- New `scripts.authored_rooms` can create, validate and list draft documents
+  under ignored `assets/extracted/authored_rooms/<world>/<area>/`. Files are
+  create-only, with duplicate rejection, input bounds and symlink guards.
+- Drafts specify intended screen dimensions but contain no invented original
+  assets, collision, entities or source-room data. They are deliberately marked
+  `draft_not_playable`; game export fails closed until native engine adapters
+  and spatial/collision validation exist.
+- Added ROM-independent tests for both worlds, all areas, path traversal,
+  duplicate IDs, malformed drafts and engine-readiness misrepresentation.
+- **The GTK Create room action is intentionally still disabled**. The next
+  step is connecting the common authoring form and editable project-owned
+  room layers to this contract, then validated native engine adapters.
+- Developer GTK4, CTest and proprietary-file verification remain required.

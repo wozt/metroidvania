@@ -55,3 +55,27 @@ Common authoring tools must preserve each game's original mechanics.
 5. Character-specific stats panels in one menu framework.
 6. Device-independent actions and controller/keyboard parity.
 7. Native event/cutscene adapters using the common schema.
+
+## Implemented baseline: authored-room drafts (patch 0063)
+
+The first versioned shared schema is `metroidvania.authored-room` v1. The draft
+format is intentionally small and **not an exportable native game room**.
+Project-authored rooms have stable identities, a world and original engine-area
+index, an author-chosen GBA screen size and a private project-owned file.
+Existing ROM rooms remain separate; no original room geometry is inferred.
+
+Create a private draft without supplying a ROM:
+
+```sh
+python3 -m scripts.authored_rooms create --world zero_mission --area 0 \
+  --slug custom_hall --name "Custom Hall" --width-screens 2 --height-screens 1
+python3 -m scripts.authored_rooms create --world aria --area 0 \
+  --slug custom_hall --name "Custom Hall" --width-screens 2 --height-screens 1
+python3 -m scripts.authored_rooms list --world aria
+```
+
+Files are saved in ignored `assets/extracted/authored_rooms/`. `validate` checks
+schema/provenance/identity, **not** collision, spawning, source assets or
+engine compatibility. These are next milestones, not completed features.
+GTK Create room stays disabled until the editor can open authored drafts and
+both game adapters can validate/export them to a consuming native runtime.

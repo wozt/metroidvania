@@ -55,5 +55,34 @@ Batch generation places every frame on a shared transparent canvas centered on
 Samus's OAM X axis, with common top and bottom bounds. SDL can therefore center
 and ground differently sized poses without introducing animation jitter.
 
-Idle and run are complete. Jump and attack still require a canonical source
-pose selection and verification of their cannon/effect layers.
+## Jump and attack
+
+The prototype's airborne state uses the normal right-facing spin loop, the
+canonical un-aimed jump after its one-frame starting transition:
+
+- `sSamusAnim_PowerSuit_Right_Spinning` at `0x0824FE58`, eight live records;
+- `sArmCannonAnim_Suit_Right_Spinning` at `0x08234F38`, all empty OAM;
+- frame durations `2, 1, 2, 1, 2, 1, 2, 1` game updates.
+
+The attack state uses the forward-shooting standing animation:
+
+- `sSamusAnim_PowerSuit_Right_Shooting` at `0x08248884`, three live records;
+- `sArmCannonAnim_Suit_Right_Shooting` at `0x082344B0`;
+- forward-right default cannon graphics at `0x0823236C` and `0x082324AC`;
+- frame durations `2, 2, 4` game updates.
+
+```sh
+python3 scripts/mzm_samus_sprite.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --animation jump --output-dir assets/extracted/sprites/samus
+
+python3 scripts/mzm_samus_sprite.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --animation attack --output-dir assets/extracted/sprites/samus
+```
+
+SDL resets its local animation clock when the action or character changes, so
+shooting begins on record zero. This is still a visual integration over the
+prototype physics, not execution of the original MZM state machine. The
+one-record `SPOSE_STARTING_SPIN_JUMP` transition is not replayed on every spin
+loop; it remains a future state-transition refinement.

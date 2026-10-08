@@ -9,6 +9,8 @@ from scripts.mzm_samus_sprite import (
     parse_arm_cannon_animation,
     stage_arm_cannon,
     make_power_suit_idle_right,
+    make_power_suit_attack_right,
+    make_power_suit_jump_right,
     make_power_suit_run_right,
 )
 
@@ -52,6 +54,12 @@ class SamusSpriteTests(unittest.TestCase):
     def test_reject_invalid_run_frame(self):
         with self.assertRaisesRegex(ValueError, "0..9"):
             make_power_suit_run_right(bytes(64), 10)
+
+    def test_reject_invalid_jump_and_attack_frames(self):
+        with self.assertRaisesRegex(ValueError, "0..7"):
+            make_power_suit_jump_right(bytes(64), 8)
+        with self.assertRaisesRegex(ValueError, "0..2"):
+            make_power_suit_attack_right(bytes(64), 3)
 
     def test_animation_canvas_preserves_oam_axis(self):
         bounds = aligned_canvas_bounds([

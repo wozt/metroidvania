@@ -22,16 +22,24 @@ except ModuleNotFoundError:
 # the SHA-1-gated USA ROM only, so they are never applied to another revision.
 POWER_SUIT_IDLE_RIGHT_FRAME = 0x08248744
 POWER_SUIT_RUN_RIGHT_FRAME = 0x08248034
+POWER_SUIT_JUMP_RIGHT_FRAME = 0x0824FE58
+POWER_SUIT_ATTACK_RIGHT_FRAME = 0x08248884
 POWER_SUIT_DEFAULT_PALETTE_OFFSET = 0x002376A8
 ARM_CANNON_IDLE_RIGHT_ANIMATION = 0x08234430
 ARM_CANNON_RUN_RIGHT_ANIMATION = 0x08234120
+ARM_CANNON_JUMP_RIGHT_ANIMATION = 0x08234F38
+ARM_CANNON_ATTACK_RIGHT_ANIMATION = 0x082344B0
 ARM_CANNON_FORWARD_UPPER_GFX = 0x082337EC
 ARM_CANNON_FORWARD_LOWER_GFX = 0x082338AC
+ARM_CANNON_FORWARD_RIGHT_UPPER_GFX = 0x0823236C
+ARM_CANNON_FORWARD_RIGHT_LOWER_GFX = 0x082324AC
 ARM_CANNON_GFX_BYTES = 64
 ARM_CANNON_UPPER_VRAM = 0x800
 ARM_CANNON_LOWER_VRAM = 0xC00
 POWER_SUIT_IDLE_FRAME_COUNT = 4
 POWER_SUIT_RUN_FRAME_COUNT = 10
+POWER_SUIT_JUMP_FRAME_COUNT = 8
+POWER_SUIT_ATTACK_FRAME_COUNT = 3
 SAMUS_ANIMATION_RECORD_BYTES = 16
 ARM_CANNON_ANIMATION_RECORD_BYTES = 8
 
@@ -188,10 +196,39 @@ def make_power_suit_run_right(rom, frame_index=0, canvas_bounds=None):
     )
 
 
+def make_power_suit_jump_right(rom, frame_index=0, canvas_bounds=None):
+    if not 0 <= frame_index < POWER_SUIT_JUMP_FRAME_COUNT:
+        raise ValueError("Power Suit jump frame index must be 0..7")
+    return _make_power_suit_frame(
+        rom,
+        POWER_SUIT_JUMP_RIGHT_FRAME + frame_index * SAMUS_ANIMATION_RECORD_BYTES,
+        "jump",
+        ARM_CANNON_JUMP_RIGHT_ANIMATION +
+        frame_index * ARM_CANNON_ANIMATION_RECORD_BYTES,
+        canvas_bounds=canvas_bounds,
+    )
+
+
+def make_power_suit_attack_right(rom, frame_index=0, canvas_bounds=None):
+    if not 0 <= frame_index < POWER_SUIT_ATTACK_FRAME_COUNT:
+        raise ValueError("Power Suit attack frame index must be 0..2")
+    return _make_power_suit_frame(
+        rom,
+        POWER_SUIT_ATTACK_RIGHT_FRAME + frame_index * SAMUS_ANIMATION_RECORD_BYTES,
+        "attack",
+        ARM_CANNON_ATTACK_RIGHT_ANIMATION +
+        frame_index * ARM_CANNON_ANIMATION_RECORD_BYTES,
+        (ARM_CANNON_FORWARD_RIGHT_UPPER_GFX,
+         ARM_CANNON_FORWARD_RIGHT_LOWER_GFX),
+        canvas_bounds,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rom", required=True, type=Path)
-    parser.add_argument("--animation", choices=("idle", "run"), default="idle")
+    parser.add_argument("--animation", choices=("idle", "run", "jump", "attack"),
+                        default="idle")
     output_group = parser.add_mutually_exclusive_group(required=True)
     output_group.add_argument("--output", type=Path,
                               help="write one BMP selected by --frame")
@@ -202,6 +239,8 @@ def main():
     builders = {
         "idle": (POWER_SUIT_IDLE_FRAME_COUNT, make_power_suit_idle_right),
         "run": (POWER_SUIT_RUN_FRAME_COUNT, make_power_suit_run_right),
+        "jump": (POWER_SUIT_JUMP_FRAME_COUNT, make_power_suit_jump_right),
+        "attack": (POWER_SUIT_ATTACK_FRAME_COUNT, make_power_suit_attack_right),
     }
     frame_count, builder = builders[args.animation]
     if not 0 <= args.frame < frame_count:

@@ -50,10 +50,23 @@ static void test_switch_refused_without_safe_position(void)
     assert(session.worlds[WORLD_METROID].actor_x == 50.0f);
 }
 
+static void test_verified_samus_animation_timing(void)
+{
+    assert(room_sprite_frame_index(CHARACTER_SAMUS, SPRITE_IDLE, 15.f / 60.f) == 0);
+    assert(room_sprite_frame_index(CHARACTER_SAMUS, SPRITE_IDLE, 16.f / 60.f) == 1);
+    assert(room_sprite_frame_index(CHARACTER_SAMUS, SPRITE_RUN, 2.f / 60.f) == 1);
+    assert(room_sprite_frame_index(CHARACTER_SAMUS, SPRITE_JUMP, 2.f / 60.f) == 1);
+    assert(room_sprite_frame_index(CHARACTER_SAMUS, SPRITE_JUMP, 3.f / 60.f) == 2);
+    assert(room_sprite_frame_index(CHARACTER_SAMUS, SPRITE_ATTACK, 4.f / 60.f) == 2);
+    assert(room_sprite_frame_index(CHARACTER_SAMUS, SPRITE_ATTACK, 8.f / 60.f) == 0);
+    assert(room_sprite_frame_index(CHARACTER_SOMA, SPRITE_IDLE, 1.f / 9.f) == 1);
+}
+
 int main(void)
 {
     test_switch_corrects_collision_deterministically();
     test_switch_refused_without_safe_position();
+    test_verified_samus_animation_timing();
     puts("Collision and deterministic swap tests passed.");
     return 0;
 }

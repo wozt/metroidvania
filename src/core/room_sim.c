@@ -56,6 +56,8 @@ void room_runtime_init(RoomRuntime *runtime, const RoomDefinition *definition)
 {
     memset(runtime, 0, sizeof(*runtime));
     runtime->definition = *definition;
+    runtime->animation_state = -1;
+    runtime->animation_character = (CharacterKind)FUSION_CHARACTER_COUNT;
 }
 
 void room_enter(RoomRuntime *runtime, WorldState *world)
@@ -181,7 +183,7 @@ void room_tick(RoomRuntime *runtime, SessionState *session,
             int damage = character == CHARACTER_SAMUS ? 14 : 18;
             world->target_hp -= damage;
             if (world->target_hp < 0) world->target_hp = 0;
-            runtime->attack_flash = 0.12f;
+            runtime->attack_flash = 8.f / 60.f;
             set_notice(runtime, world->target_hp == 0 ? "Target destroyed" : "Target hit");
         } else {
             set_notice(runtime, "Target out of range");
@@ -230,6 +232,12 @@ void room_render(RoomRuntime *runtime, const SessionState *session,
     int animation = runtime->attack_flash > 0 ? SPRITE_ATTACK :
         !runtime->on_ground ? SPRITE_JUMP :
         fabsf(world->actor_vx) > 1.f ? SPRITE_RUN : SPRITE_IDLE;
+    if (runtime->animation_state != animation ||
+        runtime->animation_character != character) {
+        runtime->animation_state = animation;
+        runtime->animation_character = character;
+        runtime->animation_clock = 0;
+    }
     if (!room_sprites_draw(&runtime->sprites, renderer, character, animation,
                            runtime->animation_clock, runtime->facing_left,
                            world->actor_x, world->actor_y, actor.h * 1.3f)) {

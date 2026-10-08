@@ -26,7 +26,7 @@ Original project-authored code and documentation use GPL-3.0-only. PolyForm-lice
 | HUD, debug, and synergy | Partial | Dual HP and overlay; synergy explicitly a placeholder |
 | Authentic Aria engine | Feasibility reproduced, not integrated | Standalone AOT Linux runtime: 36/36 tests, nonempty framebuffer, zero fallback after clean-room BIOS recompilation; PolyForm runtime incompatible with current GPLv3-only policy; unlicensed root host code excluded |
 | Authentic MZM engine | Not started | No runtime strategy selected |
-| Original assets, maps, and audio | Partial, local-only | One verified complete Samus idle-frame recipe; no extracted asset is tracked |
+| Original assets, maps, and audio | Partial, local-only | Verified Samus idle/run/jump/attack recipes; no extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
 
 ## History
@@ -300,3 +300,18 @@ frame tests and backend lifecycle tests before being enabled.
 - Batch output uses an OAM-axis-centered common canvas, preventing horizontal
   jitter and preserving a shared ground line across differently sized frames.
 - Next: choose and verify canonical midair and shooting animation tables.
+
+## Patch 0026 - verified Samus jump and attack cycles
+
+- Selected the source-defined spinning pose for the prototype's normal airborne
+  loop: eight frames with alternating `2,1` update durations and intentionally
+  empty cannon OAM.
+- Selected forward standing shooting for attack: three frames with `2,2,4`
+  durations, verified cannon OAM ordering, and exact default right-facing cannon
+  graphics.
+- SDL now honors per-frame 60 Hz durations rather than reducing each state to a
+  uniform frame rate. Deterministic C tests cover timing boundaries.
+- Visual animation clocks reset on action or character changes; the diagnostic
+  attack lifetime now matches its eight-update source animation.
+- All four prototype Samus states now have a verified, ROM-local extraction
+  path. The original MZM gameplay state machine is still not executed.

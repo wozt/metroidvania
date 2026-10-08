@@ -70,11 +70,21 @@ python3 scripts/mzm_samus_sprite.py \
   --rom "roms/Metroid - Zero Mission (USA).gba" \
   --animation run \
   --output-dir assets/extracted/sprites/samus
+
+python3 scripts/mzm_samus_sprite.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --animation jump \
+  --output-dir assets/extracted/sprites/samus
+
+python3 scripts/mzm_samus_sprite.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --animation attack \
+  --output-dir assets/extracted/sprites/samus
 ```
 
-The SDL3 room renderer discovers the ignored BMPs automatically, plays idle at
-16/60 seconds per frame and run at 2/60 seconds per frame, and keeps its colored
-rectangle fallback when they are absent. No extracted pixels are tracked.
+The SDL3 room renderer discovers the ignored BMPs automatically and uses the
+source-defined per-frame durations for all four Samus states. It keeps its
+colored rectangle fallback when files are absent. No extracted pixels are tracked.
 
 Controls: arrow keys or `A`/`D` to move, `Space` to jump, `J` to attack,
 `Tab` to swap characters, `M` to change worlds, `F3` for the debug overlay,

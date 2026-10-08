@@ -30,6 +30,8 @@ typedef struct {
     bool active;
     RoomSprites sprites;
     float animation_clock;
+    int animation_state;
+    CharacterKind animation_character;
     bool facing_left;
     bool on_ground;
     float damage_cooldown;

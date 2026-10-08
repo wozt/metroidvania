@@ -5,14 +5,41 @@
 
 static const char *const names[] = {"idle", "run", "jump", "attack"};
 static const char *const actors[] = {"samus", "soma"};
-/* MZM's verified Power Suit standing cycle holds each of its four frames for
- * 16 updates at 60 Hz; its running cycle holds ten frames for two updates. */
-static const float samus_idle_frame_rate = 60.f / 16.f;
-static const float samus_run_frame_rate = 60.f / 2.f;
 static const unsigned frame_counts[FUSION_CHARACTER_COUNT][SPRITE_STATE_COUNT] = {
-    [CHARACTER_SAMUS] = {4, 10, 4, 4},
+    [CHARACTER_SAMUS] = {4, 10, 8, 3},
     [CHARACTER_SOMA] = {4, 4, 4, 4},
 };
+/* Source-defined durations in 60 Hz game updates. */
+static const unsigned char samus_frame_durations[SPRITE_STATE_COUNT][SPRITE_MAX_FRAMES] = {
+    [SPRITE_IDLE] = {16, 16, 16, 16},
+    [SPRITE_RUN] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+    [SPRITE_JUMP] = {2, 1, 2, 1, 2, 1, 2, 1},
+    [SPRITE_ATTACK] = {2, 2, 4},
+};
+
+unsigned room_sprite_frame_index(CharacterKind character, int action, float elapsed)
+{
+    unsigned count;
+    unsigned cycle = 0;
+    unsigned tick;
+    if ((unsigned)character >= FUSION_CHARACTER_COUNT ||
+        action < 0 || action >= SPRITE_STATE_COUNT)
+        return 0;
+    count = frame_counts[character][action];
+    if (character != CHARACTER_SAMUS) {
+        int frame = elapsed > 0 ? (int)(elapsed * 9.f) : 0;
+        return (unsigned)frame % count;
+    }
+    for (unsigned i = 0; i < count; ++i)
+        cycle += samus_frame_durations[action][i];
+    tick = (unsigned)(elapsed > 0 ? elapsed * 60.f : 0) % cycle;
+    for (unsigned i = 0; i < count; ++i) {
+        unsigned duration = samus_frame_durations[action][i];
+        if (tick < duration) return i;
+        tick -= duration;
+    }
+    return 0;
+}
 
 void room_sprites_close(RoomSprites *sprites)
 {
@@ -62,20 +89,13 @@ bool room_sprites_draw(RoomSprites *sprites, SDL_Renderer *renderer,
     SDL_Texture *texture = NULL;
     float width, height;
     SDL_FRect dst;
-    int n;
     unsigned count, idx;
     if (!sprites || !renderer || (unsigned)character >= FUSION_CHARACTER_COUNT ||
         action < 0 || action >= SPRITE_STATE_COUNT || target_height <= 0) return false;
     room_sprites_load(sprites, renderer);
     /* Use an available frame of the action; fall back to idle for incomplete sheets. */
     count = frame_counts[character][action];
-    float frame_rate = 9.f;
-    if (character == CHARACTER_SAMUS && action == SPRITE_IDLE)
-        frame_rate = samus_idle_frame_rate;
-    else if (character == CHARACTER_SAMUS && action == SPRITE_RUN)
-        frame_rate = samus_run_frame_rate;
-    n = elapsed > 0 ? (int)(elapsed * frame_rate) : 0;
-    idx = (unsigned)n % count;
+    idx = room_sprite_frame_index(character, action, elapsed);
     for (unsigned i = 0; i < count; ++i) {
         texture = sprites->frames[character][action][(idx + i) % count];
         if (texture) break;

@@ -15,6 +15,7 @@ typedef struct {
 } RoomSprites;
 
 void room_sprites_load(RoomSprites *sprites, SDL_Renderer *renderer);
+unsigned room_sprite_frame_index(CharacterKind character, int action, float elapsed);
 bool room_sprites_draw(RoomSprites *sprites, SDL_Renderer *renderer,
                        CharacterKind character, int action, float elapsed,
                        bool facing_left, float center_x, float feet_y,

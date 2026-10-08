@@ -35,11 +35,21 @@ static void test_shared_browser_shells(void)
         g_assert_true(gtk_menu_button_get_popover(GTK_MENU_BUTTON(menu)) == GTK_POPOVER(popover));
         g_assert_false(gtk_widget_get_parent(popover) == list);
     }
-    g_test_message("0058: removing Aria rooms page");
+    /* Exercise filtering and selection during teardown even without
+     * local proprietary catalogs. GTK must not use stale toolbar widgets. */
+    for (guint i = 0; i < G_N_ELEMENTS(pages); ++i) {
+        GtkListBox *list = GTK_LIST_BOX(g_object_get_data(
+            G_OBJECT(pages[i]), "mv-room-browser-list"));
+        GtkWidget *row = gtk_list_box_row_new();
+        gtk_list_box_append(list, row);
+        gtk_list_box_select_row(list, GTK_LIST_BOX_ROW(row));
+        g_assert_true(gtk_list_box_get_selected_row(list) == GTK_LIST_BOX_ROW(row));
+    }
+    g_test_message("0061: removing selected Aria rooms page");
     gtk_notebook_remove_page(GTK_NOTEBOOK(center), 1);
-    g_test_message("0058: removing Zero rooms page");
+    g_test_message("0061: removing selected Zero rooms page");
     gtk_notebook_remove_page(GTK_NOTEBOOK(center), 0);
-    g_test_message("0058: freeing shared workspace");
+    g_test_message("0061: freeing shared workspace");
     native_workspace_free(ws);
     g_test_message("0058: shared shells complete");
 }

@@ -214,3 +214,18 @@ and the proprietary-file guard passed.
 - Correct the incorrect patch 0059 assertion and retain the 0058 diagnostics.
 - The GTK browser crash is **not confirmed fixed** until the newly linked
   test executable passes on Debian. Do not rely on a stale CTest binary.
+
+## Patch 0061 - GTK4 browser teardown ownership
+
+- The shared Aria/Zero browser explicitly retains the filtered list and its
+  referenced dropdowns, status labels, preview and menu button until the
+  notebook page finalizes. GTK can otherwise destroy a toolbar before the
+  GtkListBox callbacks that still read its controls.
+- The page's state finalizer disconnects signal handlers and removes the list
+  filter before releasing widget references; this is GTK lifetime hardening,
+  not a change to private room data or playable world geometry.
+- The browser GTK contract now selects synthetic rows before closing both tabs,
+  exercising the close path without requiring local extracted ROM assets.
+- The supplied GDB trace stopped during GTK settings initialization, not the
+  CTest Aria tab-removal crash; run the debugger with CTest's isolated
+  XDG_CONFIG_HOME if another crash persists. Local GTK4 validation pending.

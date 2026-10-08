@@ -13,6 +13,30 @@ typedef struct {
     guint area, room;
 } RoomBrowser;
 
+/* A notebook page owns RoomBrowser, but GTK destroys children in tree
+ * order. Keep controls alive until the page's finalizer has finished all
+ * child teardown callbacks (particularly GtkListBox filtering/selection). */
+static void room_browser_state_free(gpointer userdata)
+{
+    RoomBrowser *browser = userdata;
+    /* Disconnect callbacks before releasing any referenced GTK child. */
+    g_signal_handlers_disconnect_by_data(browser->list, browser);
+    gtk_list_box_set_filter_func(GTK_LIST_BOX(browser->list), NULL, NULL, NULL);
+    g_signal_handlers_disconnect_by_data(browser->mode, browser);
+    g_signal_handlers_disconnect_by_data(browser->area_filter, browser);
+    g_signal_handlers_disconnect_by_data(browser->render_button, browser);
+
+    g_object_unref(browser->list);
+    g_object_unref(browser->mode);
+    g_object_unref(browser->area_filter);
+    g_object_unref(browser->render_button);
+    g_object_unref(browser->status);
+    g_object_unref(browser->details);
+    g_object_unref(browser->picture);
+    g_object_unref(browser->context_menu_button);
+    g_free(browser);
+}
+
 static const char *const zero_areas[] = {
     "Brinstar", "Kraid", "Norfair", "Ridley", "Tourian", "Crateria", "Chozodia", NULL
 };
@@ -388,7 +412,19 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     g_signal_connect(browser->render_button, "clicked", G_CALLBACK(render_selected), browser);
     g_signal_connect(open, "clicked", G_CALLBACK(edit_selected), browser);
 
-    g_object_set_data_full(G_OBJECT(browser->page), "mv-room-browser-state", browser, g_free);
+    /* The GTK container may dispose the toolbar before the filtered list.
+     * Independent strong references prevent callbacks from seeing stale
+     * GtkDropDown/GtkLabel/GtkPicture pointers during page destruction. */
+    g_object_ref(browser->list);
+    g_object_ref(browser->mode);
+    g_object_ref(browser->area_filter);
+    g_object_ref(browser->render_button);
+    g_object_ref(browser->status);
+    g_object_ref(browser->details);
+    g_object_ref(browser->picture);
+    g_object_ref(browser->context_menu_button);
+    g_object_set_data_full(G_OBJECT(browser->page), "mv-room-browser-state",
+                           browser, room_browser_state_free);
     g_object_set_data(G_OBJECT(browser->page), "mv-world-mode",
                       GUINT_TO_POINTER(world == ROOM_WORLD_ARIA ? 2 : 1));
     g_object_set_data(G_OBJECT(browser->page), "mv-room-browser-list", browser->list);

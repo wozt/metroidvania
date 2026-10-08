@@ -174,7 +174,9 @@ NativeWorkspace *native_workspace_new(void)
 }
 void native_workspace_free(NativeWorkspace *w)
 {
-    if(!w)return;discard_atlas(w);g_free(w->override);
+    if (!w) return;
+    discard_atlas(w);
+    g_free(w->override);
     free(w->map);free(w->before);free(w->undo);free(w);
 }
 void native_workspace_build(NativeWorkspace *w,GtkWidget *center,GtkWidget *right)
@@ -241,7 +243,10 @@ static void open_room(NativeWorkspace *w,const char *area,unsigned room)
 {
     char area_lower[32],base[300],over[300],atlas[400],error[180]={0};
     size_t n=strlen(area);if(n>=sizeof(area_lower))return;
-    for(size_t i=0;i<n;i++)area_lower[i]=(char)g_ascii_tolower(area[i]);area_lower[n]=0;
+    for (size_t i = 0; i < n; ++i) {
+        area_lower[i] = (char)g_ascii_tolower(area[i]);
+    }
+    area_lower[n] = 0;
     snprintf(base,sizeof(base),"assets/extracted/rooms/metroid/workrooms/%s_%03u.mvnative",area_lower,room);
     snprintf(over,sizeof(over),"assets/extracted/overrides/metroid/%s_%03u.mvnative",area_lower,room);
     NativeMap *temporary=calloc(1,sizeof(NativeMap));if(!temporary){msg(w,"Out of memory");return;}
@@ -281,7 +286,9 @@ static void imported(GObject *object,GAsyncResult *result,gpointer data)
         unsigned room=GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(p),"room"));
         open_room(w,area,room);
     }else msg(w,e?e->message:err?err:"Room import failed");
-    if(e)g_error_free(e);g_free(out);g_free(err);
+    if (e) g_error_free(e);
+    g_free(out);
+    g_free(err);
 }
 void native_workspace_import_async(NativeWorkspace *w,const char *area,unsigned room)
 {

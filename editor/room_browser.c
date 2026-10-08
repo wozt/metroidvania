@@ -8,7 +8,7 @@ typedef struct {
     NativeWorkspace *workspace;
     RoomWorld world;
     GtkWidget *page, *list, *status, *details, *picture;
-    GtkWidget *render_button, *mode, *area_filter, *context_overlay;
+    GtkWidget *render_button, *mode, *area_filter, *context_menu_button;
     gboolean selected, busy;
     guint area, room;
 } RoomBrowser;
@@ -286,17 +286,12 @@ static void show_context(GtkGestureClick *gesture, gint presses,
                          double x, double y, gpointer userdata)
 {
     RoomBrowser *browser = userdata;
-    GtkPopover *popover = g_object_get_data(G_OBJECT(browser->page), "mv-create-popover");
-    graphene_point_t pointer = GRAPHENE_POINT_INIT((float)x, (float)y);
-    graphene_point_t in_overlay;
-    (void)gesture; (void)presses;
-    /* GTK4 list boxes only own GtkListBoxRow children. The popover is
-     * owned by the overlay, so translate list coordinates into its space. */
-    if (!gtk_widget_compute_point(browser->list, browser->context_overlay,
-                                  &pointer, &in_overlay)) return;
-    GdkRectangle rect = {(int)in_overlay.x, (int)in_overlay.y, 1, 1};
-    gtk_popover_set_pointing_to(popover, &rect);
-    gtk_popover_popup(popover);
+    (void)gesture; (void)presses; (void)x; (void)y;
+    /* GtkMenuButton is a supported GtkPopover host in GTK4. Do not attach
+     * native popovers to GtkListBox or to a GtkOverlay allocation slot. */
+    if (browser->context_menu_button &&
+        gtk_widget_get_root(browser->context_menu_button))
+        gtk_menu_button_popup(GTK_MENU_BUTTON(browser->context_menu_button));
 }
 
 GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
@@ -317,9 +312,9 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     GtkWidget *toolbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *layout = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
     GtkWidget *left = gtk_scrolled_window_new();
-    GtkWidget *overlay = gtk_overlay_new();
     GtkWidget *right = gtk_scrolled_window_new();
-    browser->context_overlay = overlay;
+    GtkWidget *menu_button = gtk_menu_button_new();
+    browser->context_menu_button = menu_button;
     GtkStringList *areas = gtk_string_list_new(NULL);
     gtk_string_list_append(areas, "All areas");
     for (const char *const *a = area_names(world); *a; ++a)
@@ -337,6 +332,9 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_box_append(GTK_BOX(toolbar), browser->mode);
     gtk_box_append(GTK_BOX(toolbar), browser->render_button);
     gtk_box_append(GTK_BOX(toolbar), open);
+    gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(menu_button), "view-more-symbolic");
+    gtk_widget_set_tooltip_text(menu_button, "Room actions (also via right-click)");
+    gtk_box_append(GTK_BOX(toolbar), menu_button);
     gtk_box_append(GTK_BOX(browser->page), toolbar);
     gtk_label_set_xalign(GTK_LABEL(browser->details), 0.0f);
     gtk_label_set_wrap(GTK_LABEL(browser->details), TRUE);
@@ -348,8 +346,7 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(left),
                                    GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
     gtk_widget_set_size_request(left, 250, -1);
-    gtk_overlay_set_child(GTK_OVERLAY(overlay), left);
-    gtk_paned_set_start_child(GTK_PANED(layout), overlay);
+    gtk_paned_set_start_child(GTK_PANED(layout), left);
     gtk_paned_set_end_child(GTK_PANED(layout), right);
     gtk_paned_set_position(GTK_PANED(layout), 360);
     gtk_picture_set_can_shrink(GTK_PICTURE(browser->picture), TRUE);
@@ -372,12 +369,10 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_box_append(GTK_BOX(note), create);
     gtk_box_append(GTK_BOX(note), hint);
     gtk_popover_set_child(GTK_POPOVER(popover), note);
-    /* Never gtk_widget_set_parent(popover, browser->list): GtkListBox
-     * assumes all its direct children are GtkListBoxRow instances, and
-     * invalidate_filter() can crash while casting an inserted popover. */
-    gtk_overlay_add_overlay(GTK_OVERLAY(overlay), popover);
+    /* GtkMenuButton owns its popover and correctly manages its lifecycle. */
+    gtk_menu_button_set_popover(GTK_MENU_BUTTON(menu_button), popover);
     g_object_set_data(G_OBJECT(browser->page), "mv-create-popover", popover);
-    g_object_set_data(G_OBJECT(browser->page), "mv-room-browser-overlay", overlay);
+    g_object_set_data(G_OBJECT(browser->page), "mv-room-browser-menu-button", menu_button);
     GtkGesture *right_click = gtk_gesture_click_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(right_click), GDK_BUTTON_SECONDARY);
     gtk_widget_add_controller(browser->list, GTK_EVENT_CONTROLLER(right_click));

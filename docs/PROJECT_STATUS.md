@@ -185,3 +185,13 @@ and the proprietary-file guard passed.
   the list into the overlay's coordinate space.
 - The browser GTK regression now checks popover parenting for both games and
   repeats browser creation/destruction. Local GTK4 build and CTest must confirm.
+
+## Patch 0058 - native room context menu ownership
+
+- Changed the shared room browsers to use `GtkMenuButton` as the popover host,
+  instead of placing a `GtkPopover` in a `GtkOverlay` allocation slot.
+- The right-click shortcut opens the same anchored menu. Authored-room creation
+  remains disabled until its native engine adapter and schema exist.
+- The GTK test now emits progress diagnostics around both browsers' creation
+  and removal, to identify the failing phase if a crash persists.
+- A successful GTK4 build/CTest run on Debian is required before committing.

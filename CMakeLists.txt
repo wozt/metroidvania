@@ -23,6 +23,7 @@ add_library(fusion_core STATIC
     src/core/transition.c
     src/core/world_graph.c
     src/core/tile_paint.c
+    src/core/native_map.c
     src/core/tilemap.c
     src/backends/metroid/mzm_state.c
     src/backends/castlevania/aria_state.c
@@ -68,7 +69,7 @@ find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
     pkg_check_modules(GTK4 QUIET IMPORTED_TARGET gtk4)
     if(GTK4_FOUND)
-        add_executable(fusion_map_editor editor/main.c)
+        add_executable(fusion_map_editor editor/main.c editor/native_workspace.c)
         target_include_directories(fusion_map_editor PRIVATE include)
         target_link_libraries(fusion_map_editor PRIVATE fusion_core PkgConfig::GTK4)
         target_compile_options(fusion_map_editor PRIVATE -Wall -Wextra -Wpedantic)
@@ -181,6 +182,16 @@ if(BUILD_TESTING)
         target_compile_options(fusion_tile_paint_tests PRIVATE -Werror)
     endif()
     add_test(NAME tile_paint_tools COMMAND fusion_tile_paint_tests)
+    add_executable(fusion_native_map_tests tests/test_native_map.c)
+    target_link_libraries(fusion_native_map_tests PRIVATE fusion_core)
+    target_compile_options(fusion_native_map_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_native_map_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME native_map_contract COMMAND fusion_native_map_tests)
+    add_test(NAME native_workspace_python
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+                python3 -m unittest tests.test_native_workspace)
     add_executable(fusion_world_graph_tests tests/test_world_graph.c)
     target_link_libraries(fusion_world_graph_tests PRIVATE fusion_core)
     target_compile_options(fusion_world_graph_tests PRIVATE -Wall -Wextra -Wpedantic)

@@ -3,6 +3,7 @@
 #include "core/world_graph.h"
 #include "core/tilemap.h"
 #include "core/tile_paint.h"
+#include "native_workspace.h"
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +29,11 @@ typedef struct {
     GtkWidget *tile_brush_selector, *tile_tool_selector, *tile_zoom_selector;
     GtkWidget *inspector_label;
     GtkWidget *tile_page, *graph_page, *native_page, *asset_page;
+    NativeWorkspace *native_workspace;
+    char selected_native_area[32];
+    unsigned selected_native_index;
+    GtkWidget *left_dock, *center_dock, *right_dock, *subtitle;
+    int responsive_mode, small_focus, seen_width;
     const char *path;
     GtkWidget *canvas;
     GtkWidget *status;
@@ -35,6 +41,8 @@ typedef struct {
     int dragging;
     int start_x, start_y;
 } Editor;
+
+static void apply_responsive(Editor *ed);
 
 static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height,
                  gpointer user_data)
@@ -397,6 +405,9 @@ static void tile_save_clicked(GtkButton *button, gpointer userdata)
         gtk_label_set_text(GTK_LABEL(ed->tile_status), error);
 }
 
+static void toolbar_add(GtkWidget *flow, GtkWidget *child)
+{ gtk_flow_box_insert(GTK_FLOW_BOX(flow), child, -1); }
+
 static void build_tile_tab(Editor *ed, GtkWidget *tabs)
 {
     static const char *const worlds[] = {"Metroid / demo save", "Aria / demo save", NULL};
@@ -408,8 +419,14 @@ static void build_tile_tab(Editor *ed, GtkWidget *tabs)
         "Pencil", "Eraser", "Flood fill", "Eyedropper", NULL
     };
     GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-    GtkWidget *toolbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    GtkWidget *second = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *toolbar = gtk_flow_box_new();
+    GtkWidget *second = gtk_flow_box_new();
+    gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(toolbar), GTK_SELECTION_NONE);
+    gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(second), GTK_SELECTION_NONE);
+    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(toolbar), 12);
+    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(second), 12);
+    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(toolbar), 6);
+    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(second), 6);
     GtkWidget *world = gtk_drop_down_new_from_strings(worlds);
     GtkWidget *layer = gtk_drop_down_new_from_strings(layers);
     GtkWidget *brush = gtk_drop_down_new_from_strings(brushes);
@@ -431,20 +448,20 @@ static void build_tile_tab(Editor *ed, GtkWidget *tabs)
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(zoom), 100);
     gtk_box_append(GTK_BOX(root), toolbar);
     gtk_box_append(GTK_BOX(root), second);
-    gtk_box_append(GTK_BOX(toolbar), gtk_label_new("WORLD"));
-    gtk_box_append(GTK_BOX(toolbar), world);
-    gtk_box_append(GTK_BOX(toolbar), gtk_label_new("LAYER"));
-    gtk_box_append(GTK_BOX(toolbar), layer);
-    gtk_box_append(GTK_BOX(toolbar), gtk_label_new("TOOL"));
-    gtk_box_append(GTK_BOX(toolbar), tool);
-    gtk_box_append(GTK_BOX(toolbar), gtk_label_new("BRUSH"));
-    gtk_box_append(GTK_BOX(toolbar), brush);
-    gtk_box_append(GTK_BOX(second), gtk_label_new("ZOOM %"));
-    gtk_box_append(GTK_BOX(second), zoom);
-    gtk_box_append(GTK_BOX(second), grid);
-    gtk_box_append(GTK_BOX(second), undo);
-    gtk_box_append(GTK_BOX(second), redo);
-    gtk_box_append(GTK_BOX(second), save);
+    toolbar_add(toolbar, gtk_label_new("WORLD"));
+    toolbar_add(toolbar, world);
+    toolbar_add(toolbar, gtk_label_new("LAYER"));
+    toolbar_add(toolbar, layer);
+    toolbar_add(toolbar, gtk_label_new("TOOL"));
+    toolbar_add(toolbar, tool);
+    toolbar_add(toolbar, gtk_label_new("BRUSH"));
+    toolbar_add(toolbar, brush);
+    toolbar_add(second, gtk_label_new("ZOOM %"));
+    toolbar_add(second, zoom);
+    toolbar_add(second, grid);
+    toolbar_add(second, undo);
+    toolbar_add(second, redo);
+    toolbar_add(second, save);
     ed->tile_canvas = gtk_drawing_area_new();
     gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(ed->tile_canvas),
                                        FUSION_TILE_COLS * FUSION_TILE_SIZE);
@@ -616,6 +633,11 @@ static void native_row_selected(GtkListBox *list, GtkListBoxRow *row, gpointer u
     if (!row || !ed->native_details) return;
     details = g_object_get_data(G_OBJECT(row), "native-room-details");
     if (details) gtk_label_set_text(GTK_LABEL(ed->native_details), details);
+    const char *area = g_object_get_data(G_OBJECT(row), "native-area");
+    if (area) {
+        snprintf(ed->selected_native_area, sizeof(ed->selected_native_area), "%s", area);
+        ed->selected_native_index = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(row), "native-index"));
+    }
     if (ed->native_preview) {
         const char *preview_path = g_object_get_data(G_OBJECT(row), "native-room-preview");
         if (preview_path && g_file_test(preview_path, G_FILE_TEST_IS_REGULAR))
@@ -624,18 +646,35 @@ static void native_row_selected(GtkListBox *list, GtkListBoxRow *row, gpointer u
     }
 }
 
+static void open_selected_native_room(Editor *ed)
+{
+    if (ed->native_workspace && ed->selected_native_area[0])
+        native_workspace_import_async(ed->native_workspace,
+                                      ed->selected_native_area, ed->selected_native_index);
+}
+static void native_open_clicked(GtkButton *button, gpointer userdata)
+{ (void)button; open_selected_native_room(userdata); }
+static void native_row_activated(GtkListBox *list, GtkListBoxRow *row, gpointer userdata)
+{
+    Editor *ed = userdata;
+    native_row_selected(list, row, ed);
+    open_selected_native_room(ed);
+}
 static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
 {
     GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
     GtkWidget *scroll = gtk_scrolled_window_new();
     GtkWidget *list = gtk_list_box_new();
+    GtkWidget *open = gtk_button_new_with_label("Open selected original room in Native tile painter");
     GtkWidget *preview = gtk_picture_new();
     gchar *contents = NULL;
     gchar **lines;
     gsize length = 0;
     size_t i;
     gtk_box_append(GTK_BOX(page), gtk_label_new(
-        "Original Zero Mission room descriptors (graphics and collisions NOT decoded)"));
+        "Zero Mission source room browser | double-click to edit BG1/BG2 privately"));
+    gtk_box_append(GTK_BOX(page), open);
+    g_signal_connect(open, "clicked", G_CALLBACK(native_open_clicked), ed);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), list);
     gtk_widget_set_vexpand(scroll, TRUE);
     gtk_box_append(GTK_BOX(page), scroll);
@@ -685,6 +724,9 @@ static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
         gtk_list_box_row_set_child(GTK_LIST_BOX_ROW(row), label);
         g_object_set_data_full(G_OBJECT(row), "native-room-details",
                                details, g_free);
+        g_object_set_data_full(G_OBJECT(row), "native-area", g_strdup(parts[0]), g_free);
+        g_object_set_data(G_OBJECT(row), "native-index",
+                          GUINT_TO_POINTER((guint)g_ascii_strtoull(parts[1], NULL, 10)));
         {
             gchar *filename = g_strdup_printf(
                 "assets/extracted/rooms/metroid/previews/%s_%03u_bg1.bmp",
@@ -698,6 +740,7 @@ static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
     g_strfreev(lines);
     g_free(contents);
     g_signal_connect(list, "row-selected", G_CALLBACK(native_row_selected), ed);
+    g_signal_connect(list, "row-activated", G_CALLBACK(native_row_activated), ed);
     gtk_notebook_append_page(GTK_NOTEBOOK(tabs), page,
                              gtk_label_new("Native rooms"));
 }
@@ -767,6 +810,11 @@ static void explorer_action(GtkButton *button, gpointer userdata)
         focus_dock_page(ed->tile_page);
     }
     refresh_inspector(ed);
+    /* A narrow explorer navigation must reveal the center dock. */
+    if (ed->responsive_mode == 0) {
+        ed->small_focus = 0;
+        apply_responsive(ed);
+    }
 }
 
 static void explorer_button(GtkWidget *parent, Editor *ed,
@@ -826,6 +874,72 @@ static void build_inspector(Editor *ed, GtkWidget *dock)
     refresh_inspector(ed);
 }
 
+
+/* PATCH0041_RESPONSIVE: width-aware docks + explicit sidebar focus controls.
+ * A tiny drawing area receives an allocation on each window resize. UI mutations
+ * are scheduled via an idle callback, outside the drawing callback. */
+static void apply_responsive(Editor *ed)
+{
+    gboolean left=TRUE,center=TRUE,right=TRUE;
+    if(ed->responsive_mode==0){
+        left=ed->small_focus==1;
+        center=ed->small_focus==0;
+        right=ed->small_focus==2;
+    }else if(ed->responsive_mode==1){
+        left=ed->small_focus!=2;
+        right=ed->small_focus==2;
+    }else{
+        left=ed->small_focus!=1;
+        right=ed->small_focus!=2;
+    }
+    gtk_widget_set_visible(ed->left_dock,left);
+    gtk_widget_set_visible(ed->center_dock,center);
+    gtk_widget_set_visible(ed->right_dock,right);
+    gtk_widget_set_visible(ed->subtitle,ed->responsive_mode==2);
+}
+static gboolean responsive_idle(gpointer userdata)
+{
+    Editor *ed=userdata;
+    int new_mode=ed->seen_width<920?0:ed->seen_width<1450?1:2;
+    if(ed->responsive_mode!=new_mode){
+        ed->responsive_mode=new_mode;
+        ed->small_focus=0;
+    }
+    apply_responsive(ed);
+    return G_SOURCE_REMOVE;
+}
+static void responsive_sensor(GtkDrawingArea *area,cairo_t *cr,int width,int height,gpointer userdata)
+{
+    Editor *ed=userdata;
+    (void)area;(void)cr;(void)width;(void)height;
+    GtkRoot *root=gtk_widget_get_root(GTK_WIDGET(area));
+    if(!GTK_IS_WINDOW(root))return;
+    int w=gtk_widget_get_width(GTK_WIDGET(root));
+    if(w>0&&w!=ed->seen_width){ed->seen_width=w;g_idle_add(responsive_idle,ed);}
+}
+static void responsive_button(GtkButton *button,gpointer userdata)
+{
+    Editor *ed=userdata;
+    int requested=GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button),"focus"));
+    if(ed->responsive_mode==0){
+        ed->small_focus=(ed->small_focus==requested)?0:requested;
+    }else if(ed->responsive_mode==1){
+        ed->small_focus=(ed->small_focus==requested)?0:requested;
+    }else if(requested==0){
+        ed->small_focus=0;
+    }else{
+        ed->small_focus=(ed->small_focus==requested)?0:requested;
+    }
+    apply_responsive(ed);
+}
+static GtkWidget *make_responsive_button(Editor *ed,const char *text,int focus)
+{
+    GtkWidget *b=gtk_button_new_with_label(text);
+    g_object_set_data(G_OBJECT(b),"focus",GINT_TO_POINTER(focus));
+    g_signal_connect(b,"clicked",G_CALLBACK(responsive_button),ed);
+    return b;
+}
+
 static void activate(GtkApplication *app, gpointer user_data)
 {
     Editor *ed = user_data;
@@ -844,6 +958,9 @@ static void activate(GtkApplication *app, gpointer user_data)
     GtkGesture *drag;
     gtk_window_set_title(GTK_WINDOW(window), "Metroid Vania - PC World Editor");
     gtk_window_set_default_size(GTK_WINDOW(window), 1680, 980);
+    ed->left_dock=left;ed->center_dock=center;ed->right_dock=right;
+    ed->subtitle=subtitle;ed->responsive_mode=2;ed->small_focus=0;
+
     gtk_window_set_child(GTK_WINDOW(window), root);
     gtk_widget_set_margin_start(header, 14);
     gtk_widget_set_margin_end(header, 14);
@@ -852,6 +969,15 @@ static void activate(GtkApplication *app, gpointer user_data)
     gtk_widget_set_hexpand(subtitle, TRUE);
     gtk_label_set_xalign(GTK_LABEL(subtitle), 1);
     gtk_box_append(GTK_BOX(header), title);
+    gtk_box_append(GTK_BOX(header), make_responsive_button(ed,"Explorer",1));
+    gtk_box_append(GTK_BOX(header), make_responsive_button(ed,"Canvas",0));
+    gtk_box_append(GTK_BOX(header), make_responsive_button(ed,"Inspector",2));
+    GtkWidget *sensor=gtk_drawing_area_new();
+    gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(sensor),1);
+    gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(sensor),1);
+    gtk_widget_set_hexpand(sensor,TRUE);
+    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(sensor),responsive_sensor,ed,NULL);
+    gtk_box_append(GTK_BOX(header),sensor);
     gtk_box_append(GTK_BOX(header), subtitle);
     gtk_box_append(GTK_BOX(root), header);
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
@@ -861,6 +987,10 @@ static void activate(GtkApplication *app, gpointer user_data)
     gtk_paned_set_end_child(GTK_PANED(split_left), split_right);
     gtk_paned_set_start_child(GTK_PANED(split_right), center);
     gtk_paned_set_end_child(GTK_PANED(split_right), right);
+    gtk_paned_set_shrink_start_child(GTK_PANED(split_left), TRUE);
+    gtk_paned_set_shrink_end_child(GTK_PANED(split_left), TRUE);
+    gtk_paned_set_shrink_start_child(GTK_PANED(split_right), TRUE);
+    gtk_paned_set_shrink_end_child(GTK_PANED(split_right), TRUE);
     gtk_paned_set_position(GTK_PANED(split_left), 275);
     gtk_paned_set_position(GTK_PANED(split_right), 980);
     gtk_paned_set_resize_start_child(GTK_PANED(split_left), FALSE);
@@ -874,7 +1004,11 @@ static void activate(GtkApplication *app, gpointer user_data)
     gtk_widget_set_hexpand(ed->canvas, TRUE);
     gtk_widget_set_vexpand(ed->canvas, TRUE);
     gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(ed->canvas), draw, ed, NULL);
-    gtk_box_append(GTK_BOX(graph_tab), ed->canvas);
+    GtkWidget *graph_scroll=gtk_scrolled_window_new();
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(graph_scroll),ed->canvas);
+    gtk_widget_set_hexpand(graph_scroll,TRUE);
+    gtk_widget_set_vexpand(graph_scroll,TRUE);
+    gtk_box_append(GTK_BOX(graph_tab), graph_scroll);
     drag = gtk_gesture_drag_new();
     gtk_widget_add_controller(ed->canvas, GTK_EVENT_CONTROLLER(drag));
     g_signal_connect(drag, "drag-begin", G_CALLBACK(begin_drag), ed);
@@ -899,6 +1033,7 @@ static void activate(GtkApplication *app, gpointer user_data)
     build_inspector(ed, right);
     build_assets_tab(ed, right);
     ed->asset_page = gtk_notebook_get_nth_page(GTK_NOTEBOOK(right), 1);
+    native_workspace_build(ed->native_workspace, center, right);
     build_explorer(ed, left);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(center), 1);
     gtk_window_present(GTK_WINDOW(window));
@@ -912,6 +1047,8 @@ int main(int argc, char **argv)
     int code;
     editor.path = argc > 1 ? argv[1] : "data/world_graph.mvg";
     editor.dragging = -1;
+    editor.native_workspace=native_workspace_new();
+    if(!editor.native_workspace){fputs("Native workspace allocation failed\n",stderr);return 1;}
     if (!fusion_graph_load(&editor.graph, editor.path, error, sizeof(error))) {
         fprintf(stderr, "Map editor: %s (%s)\n", error, editor.path);
         return 1;
@@ -930,5 +1067,6 @@ int main(int argc, char **argv)
     g_signal_connect(app, "activate", G_CALLBACK(activate), &editor);
     code = g_application_run(G_APPLICATION(app), 1, argv);
     g_object_unref(app);
+    native_workspace_free(editor.native_workspace);
     return code;
 }

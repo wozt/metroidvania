@@ -601,6 +601,18 @@ frame tests and backend lifecycle tests before being enabled.
 - Terrain is visual only: existing simulated platforms/hazards/portals remain
   authoritative for collisions. Native engine/map importing is not yet done.
 
+## Patch 0041 - responsive dock layout and native metatile workspace
+
+- Automatically adapt dock visibility at 1450px and 920px, with explicit
+  Explorer/Canvas/Inspector focus controls and wrapping toolbars.
+- Import original Zero Mission BG1/BG2 decoded metatile indices into private
+  `MVNATIVE 1` workroom files and authentic metatile atlas BMPs, using pinned
+  decomp room/tileset references, no ROM redistribution.
+- Select a source room from GTK, edit its true 16x16 blocks, and save only a
+  separate ignored override. Original ROMs and base imports are untouched.
+- Native editor is not yet a native PC level renderer; BG0/BG3, animated
+  graphics, entity editing, Aria native rooms and collision integration remain.
+
 ## Patch 0036 - restore graph and isolate graph contract fixture
 
 - Restore the accidentally deleted `data/world_graph.mvg` sample without

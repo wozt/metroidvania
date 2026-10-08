@@ -115,6 +115,25 @@ The tile painter supports Pencil, Eraser, Flood fill, Eyedropper, Grid visibilit
 or proprietary graphics. ROM previews remain read-only. Original music, maps,
 items, enemies and cutscenes are not yet decoded as editable game data.
 
+## Patch 0041 - responsive native room editing
+
+The GTK4 three-dock workspace now reflows at 1450 and 920 px: wide view
+shows sidebars, medium hides the inspector, and narrow focuses one section.
+Explorer / Canvas / Inspector in the header allow changing section when narrow.
+The demo painter toolbar wraps instead of pushing the window's minimum width.
+
+Run `python3 scripts/import_game_assets.py --scope all` once. In the GTK
+**Native rooms** pane, double-click a Zero Mission room (e.g. Brinstar 33) or
+use the Open button. The asynchronous importer creates a private native
+metatile atlas and BG1/BG2 workroom from the pinned decomp. **Native tile
+painter** draws real 16x16 metatiles, and the **Native metatiles** tab selects
+an existing block. Pencil, eraser, flood fill, eyedropper, zoom and single-step
+undo/redo toggle are supported. Save writes ONLY to ignored
+`assets/extracted/overrides/metroid/*.mvnative` files. Original ROMs, source
+blocks and base workrooms are never modified. Native map editing is not yet
+wired into the normal SDL3 game or full BG0/BG3 compositing; original common
+GBA graphics and several effects remain unresolved.
+
 ## Honest status
 
 The default executable is an **SDL3 integration harness**, not yet a native

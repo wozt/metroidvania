@@ -83,7 +83,7 @@ if(BUILD_TESTING)
             set_tests_properties(native_workspace_gtk_lifecycle PROPERTIES
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                 ENVIRONMENT
-                    "XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config;ASAN_OPTIONS=detect_leaks=0:abort_on_error=1;UBSAN_OPTIONS=halt_on_error=1")
+                    "XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config;GTK_A11Y=test;ASAN_OPTIONS=detect_leaks=0:abort_on_error=1;UBSAN_OPTIONS=halt_on_error=1")
         endif()
     endif()
 

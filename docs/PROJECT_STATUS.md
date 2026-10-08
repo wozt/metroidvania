@@ -79,6 +79,14 @@ and the proprietary-file guard passed.
 - This does not imply the graphics reconstruction is complete; unsupported
   affine modes, animation, blending and entities remain explicitly unfinished.
 
+## Patch 0052 - deterministic accessibility backend for GTK tests
+
+- The unsaved-close dialog test is run with GTK_A11Y=test instead of
+  trying to connect to the desktop AT-SPI bus under Xvfb. This is
+  restricted to the GTK test binary/CTest, never the production editor.
+- The modal close workflow itself remains tested; GTK criticals and
+  memory errors are still fatal. Real GTK4 validation is pending.
+
 ## Immediate priorities
 
 1. Decode Aria tilemap/collision payloads into private native room work files.

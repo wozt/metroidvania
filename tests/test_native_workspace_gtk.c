@@ -167,6 +167,9 @@ static void test_close_during_import(void)
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
+    /* GTK_A11Y=test is GTK's documented backend for automated tests.
+     * The Xvfb session need not connect to the user's AT-SPI bus. */
+    g_setenv("GTK_A11Y", "test", TRUE);
     gtk_init();
     g_test_add_func("/native-workspace/close-and-reopen", test_close_and_reopen);
     g_test_add_func("/native-workspace/close-order-and-unsaved-guard",

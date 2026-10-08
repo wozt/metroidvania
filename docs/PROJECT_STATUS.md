@@ -9,6 +9,7 @@ backend at a time. Personal USA ROMs are mandatory and remain local. Upstream
 sources are isolated as submodules. Linux/SDL3 is the initial target; physical
 GBA support is a later, unproven feasibility study. All project commits,
 documentation, comments, UI text, and diagnostics are written in English.
+Project-authored code and documentation use PolyForm Noncommercial 1.0.0.
 
 ## Actual state
 
@@ -23,7 +24,7 @@ documentation, comments, UI text, and diagnostics are written in English.
 | HP, KO, and persistence | Done | Core tests and version-1 save data |
 | Collision-safe character swap | Done | Deterministic offsets and rejection test |
 | HUD, debug, and synergy | Partial | Dual HP and overlay; synergy explicitly a placeholder |
-| Authentic Aria engine | Not started | AOT route audited but not reproduced |
+| Authentic Aria engine | Feasibility reproduced, not integrated | Standalone AOT Linux runtime: 36/36 tests, nonempty framebuffer, zero fallback after clean-room BIOS recompilation; project license now matches `gbarecomp`; unlicensed root host code excluded |
 | Authentic MZM engine | Not started | No runtime strategy selected |
 | Original assets, maps, and audio | Not started | No extracted asset is tracked |
 | Physical GBA port | Not started | Feasibility unknown |
@@ -39,6 +40,12 @@ documentation, comments, UI text, and diagnostics are written in English.
 - 2026-10-08 - Installed the ARM binutils toolchain and reproduced matching GBA
   builds for both pinned decompilations in temporary workspaces.
 - 2026-10-08 - Standardized all project-authored text on English.
+- 2026-10-08 - Reproduced the isolated Aria AOT Linux build, its clean-room
+  BIOS path, all 36 configured tests, and a zero-fallback authentic framebuffer
+  capture without adding generated or proprietary files to the repository.
+- 2026-10-08 - Adopted PolyForm Noncommercial 1.0.0 for project-authored code
+  and documentation, matching `gbarecomp` and the confirmed noncommercial
+  project intent.
 
 ## Commands and observed results
 
@@ -58,6 +65,14 @@ Upstream build verification used local clones under `/tmp`, a locally built
 `agbcc`, and symlinks to the ignored ROM files. Both `make` invocations exited
 successfully and both generated ROMs matched the reference files with `cmp`.
 
+The separate `ariaOfSorrow-recomp` evaluation also ran under `/tmp`. Its
+cartridge pass generated 12,736 AOT functions. A placeholder-BIOS run exposed
+three interpreted BIOS addresses; generating and recompiling the clean-room
+BIOS removed them. With runtime self-healing disabled, 300 frames completed
+with nonempty palette, VRAM, and OAM, zero dispatch misses, and zero interpreted
+instructions. A TCP capture returned a 240 x 160 nonempty framebuffer. All 36
+configured upstream tests passed. See `docs/ARIA_RECOMP_EVALUATION.md`.
+
 ## Gap between the prototype and authentic games
 
 The prototype currently reads ROMs only to authenticate them. SDL3 draws the
@@ -67,20 +82,19 @@ The current backends are integration boundaries and test doubles.
 
 ## Risks and next actions
 
-1. **P0 - Product blocker:** integrate one authentic Aria frame, then MZM.
-2. **P0 - License:** decide whether PolyForm Noncommercial is acceptable before
-   adopting `gbarecomp`.
-3. **P0 - Technical:** select source HAL or recompilation for MZM after a proof
+1. **P0 - Product blocker:** build a project-owned adapter exposing one-frame
+   stepping, input, framebuffer, reset, and shutdown behind an isolated Aria
+   backend proof of concept without copying the unlicensed root host code.
+2. **P0 - Technical:** select source HAL or recompilation for MZM after a proof
    of concept.
-4. **P1 - State:** inventory EWRAM/IWRAM, room globals, and snapshot boundaries
+3. **P1 - State:** inventory EWRAM/IWRAM, room globals, and snapshot boundaries
    in Ghidra for both ROMs.
-5. **P1 - Tests:** add frame traces, render captures, and real lifecycle tests.
-6. **P2 - Content:** implement guest-character adaptations, progression, and
+4. **P1 - Tests:** add frame traces, render captures, and real lifecycle tests.
+5. **P2 - Content:** implement guest-character adaptations, progression, and
    synergy hooks.
 
 ## Open, non-blocking questions
 
-- Is a strictly noncommercial dependency acceptable for this project?
 - Should the first authentic runtime milestone prioritize Aria's more advanced
   AOT route or MZM's more readable C decompilation?
 - What resurrection policy and progression flags should be shared?

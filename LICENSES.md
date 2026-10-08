@@ -2,9 +2,11 @@
 
 ## Code in this repository
 
-No distribution license has been selected yet for the project's own code. All
-rights are reserved until an explicit decision is made. This does not alter the
-licenses of any dependency.
+Project-authored code and documentation are licensed under PolyForm
+Noncommercial 1.0.0; see `LICENSE`. This matches the license of the selected
+`gbarecomp` runtime and permits the project's intended personal, research,
+experimental, and hobby use. It does not permit commercial use and does not
+relicense any dependency, ROM-derived output, or proprietary game content.
 
 ## Submodules
 
@@ -21,8 +23,20 @@ no rights to those works.
 
 ## References not integrated
 
-The audit identified `ariaOfSorrow-recomp`, whose `gbarecomp` runtime is stated
-to use the PolyForm Noncommercial 1.0.0 license, and
+The audit reproduced `ariaOfSorrow-recomp`. Its root checkout has no license
+file covering its host code, while its `gbarecomp` runtime uses the PolyForm
+Noncommercial 1.0.0 license. The audit also identified
 `metroid-zero-mission-pc-edition`, a VBA-M derivative under GPLv2 with additional
 components. Neither is a dependency of this repository. Any integration would
 require file-by-file review and a license compatibility decision.
+
+The project owner has confirmed a noncommercial project intent and selected the
+same PolyForm Noncommercial 1.0.0 terms for project-authored code. This resolves
+the direct license mismatch with `gbarecomp`. It does not grant permission to
+copy the unlicensed `ariaOfSorrow-recomp` root host code. Integration must use
+our own adapter around the licensed `gbarecomp` and MIT-licensed `cvaos`
+components, while preserving all third-party notices.
+
+Authoritative references:
+
+- <https://polyformproject.org/licenses/noncommercial/1.0.0/>.

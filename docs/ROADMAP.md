@@ -2,9 +2,11 @@
 
 ## P0 - First authentic logic
 
-1. Reproduce the `ariaOfSorrow-recomp` Linux build and tests in an isolated
-   workspace, document every dependency, and confirm whether any interpreter
-   fallback remains.
+1. **Reproduced:** the `ariaOfSorrow-recomp` Linux build and all 36 configured
+   tests pass in an isolated workspace. A 300-frame run is fully static only
+   after generating and recompiling its clean-room BIOS. Adoption remains
+   limited to a project-owned adapter around licensed components; the
+   unlicensed root host code is excluded. See `docs/ARIA_RECOMP_EVALUATION.md`.
 2. Prototype an Aria backend that boots, advances exactly one frame, and exposes
    a framebuffer without modifying gameplay.
 3. Evaluate an equivalent route for MZM: source port through a HAL or static

@@ -72,3 +72,11 @@ licenses remain separate from this project. See
 This repository does not contain and must not distribute ROMs, BIOS images,
 save data, music, maps, sprites, or extracted proprietary data. The legal status
 of any future patch or distributable package must be reviewed separately.
+
+## License
+
+Project-authored code and documentation are licensed under PolyForm
+Noncommercial 1.0.0; see [`LICENSE`](LICENSE). Personal, hobby, research, and
+other noncommercial uses are permitted. Commercial use is not permitted.
+Third-party submodules and system libraries retain their own licenses. No
+license in this repository grants rights to ROMs or proprietary game content.

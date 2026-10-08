@@ -27,7 +27,14 @@ introduced if a selected recompilation runtime requires it.
 
 Decision: audit `ariaOfSorrow-recomp`, but do not integrate it until its Linux
 behavior is reproduced and the PolyForm Noncommercial constraint is accepted.
-Upstream claims do not count as local validation.
+Upstream claims do not count as local validation. The Linux build, framebuffer,
+zero-fallback path, and 36 configured tests were reproduced on 2026-10-08. The
+technical validation is complete, and the project owner has confirmed a
+noncommercial intent. Project-authored code now uses the same PolyForm
+Noncommercial 1.0.0 terms as `gbarecomp`, so that runtime may be evaluated for
+integration. The evaluated root repository still has no license file covering
+its own host code; none of that host code may be copied. The integration must
+use a project-owned adapter around licensed components.
 
 ## D-006 - Official Ghidra distribution
 
@@ -39,3 +46,11 @@ installed under `/opt/ghidra_12.1.4_PUBLIC`.
 
 Decision updated on 2026-10-08 at the project owner's request: commits,
 documentation, code comments, UI text, and diagnostics are written in English.
+
+## D-008 - PolyForm Noncommercial 1.0.0
+
+Decision updated on 2026-10-08 at the project owner's request:
+project-authored code and documentation use PolyForm Noncommercial 1.0.0. This
+matches `gbarecomp` and the project's personal, hobby, research, and
+noncommercial intent. Third-party code and generated ROM-derived output retain
+their own terms and are not relicensed.

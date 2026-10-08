@@ -92,12 +92,22 @@ or tracked by this repository.
 
 - Observed revision: `f00abd91ee8338b4378e279e1aa4a5a3a8ab8525`
   (2026-09-18).
-- Its README claims complete ahead-of-time recompilation with no interpreted
-  instructions, generated locally from the user's ROM. This claim has not been
-  reproduced by this project and remains **to be confirmed**.
-- It depends on `gbarecomp`, stated to use PolyForm Noncommercial 1.0.0, plus
-  SDL2 and C++20. Adoption would impose a noncommercial constraint and require
-  a compatibility review.
+- Its ahead-of-time Linux build was reproduced locally from the user's ROM.
+  The cartridge pass emitted 12,736 functions, and a 300-frame cold run after
+  recompiling the generated clean-room BIOS reported zero dispatch misses and
+  zero interpreted instructions. A TCP capture returned a nonempty 240 x 160
+  framebuffer. All 36 configured upstream tests passed.
+- The placeholder BIOS build did use the interpreter for three BIOS addresses,
+  so the clean-room BIOS generation step is mandatory for the zero-fallback
+  result.
+- Its root checkout has no license file covering the host code. It depends on
+  `gbarecomp` under PolyForm Noncommercial 1.0.0, plus SDL2 and C++20. Adoption
+  imposes a noncommercial constraint accepted by the project owner and now
+  matched by this project's license. The unlicensed root host code remains
+  excluded; integration must use a project-owned adapter and still needs a
+  complete dependency and notice review.
+- Full commands, revisions, counters, limitations, and integration gates are
+  recorded in [`ARIA_RECOMP_EVALUATION.md`](ARIA_RECOMP_EVALUATION.md).
 
 ### `LTSchmiddy/metroid-zero-mission-pc-edition`
 
@@ -111,7 +121,8 @@ or tracked by this repository.
 ## Priority unknowns
 
 - Runtime or recompilation strategy for MZM.
-- Actual Aria runtime behavior and coverage under Linux.
+- Aria runtime lifecycle and library integration boundaries; the standalone
+  Linux AOT runtime itself has now been reproduced.
 - Minimal snapshot boundaries for both games, to be established with Ghidra
   and runtime instrumentation.
 - Licensing and redistribution status of code generated from a ROM; legal

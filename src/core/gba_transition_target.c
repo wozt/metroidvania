@@ -79,13 +79,25 @@ static bool bootstrap_mzm(GbaTransitionTarget *target)
     return false;
 }
 
+/* A single gameplay-ready frame is not proof of a stable destination.
+ * During new-game startup, Aria can briefly enable player control and then
+ * enter an introductory sequence.  Probe an unmodified runtime first, and
+ * accept an Entrance destination only after sustained native readiness.
+ * This function performs no WRAM writes and cannot bypass the cutscene.
+ */
 static bool bootstrap_aria(GbaTransitionTarget *target)
 {
-    AriaStateView state;
+    enum { ARIA_BOOTSTRAP_READY_WINDOW = 90, ARIA_BOOTSTRAP_FRAME_LIMIT = 12000 };
+    AriaStateView state = {0};
     bool entered_game = false;
     unsigned frame;
-    for (frame = 1; frame <= 12000; ++frame) {
+    unsigned ready_streak = 0;
+    unsigned longest_streak = 0;
+    unsigned first_ready = 0;
+
+    for (frame = 1; frame <= ARIA_BOOTSTRAP_FRAME_LIMIT; ++frame) {
         uint16_t keys = 0;
+        bool candidate;
         if (frame > 330 && frame % 90 == 0) {
             if (entered_game)
                 keys = 1u << 0;
@@ -97,12 +109,46 @@ static bool bootstrap_aria(GbaTransitionTarget *target)
                              target->error, sizeof(target->error)))
             return false;
         if (state.gameplay_active) entered_game = true;
-        if (state.gameplay_state_ready) {
-            target->loader_frames = frame;
-            return true;
+        if (state.gameplay_state_ready && !first_ready) {
+            first_ready = frame;
+            fprintf(stderr, "Aria bootstrap: first ready frame=%u phase=%u:%u "
+                    "room=%u:%u control=%u animation=%u:%u\n",
+                    frame, state.in_game_phase, state.in_game_phase_stage,
+                    state.area, state.room,
+                    (unsigned)state.player_control_enabled,
+                    state.animation_id, state.animation_frame);
+        }
+        candidate = state.gameplay_state_ready &&
+                    state.player_entity_valid &&
+                    state.player_control_enabled &&
+                    state.area == 0 && state.room == 0 &&
+                    state.staged_room_pointer == UINT32_C(0x0850ef9c);
+        if (candidate) {
+            if (ready_streak < ARIA_BOOTSTRAP_READY_WINDOW)
+                ++ready_streak;
+            if (ready_streak > longest_streak)
+                longest_streak = ready_streak;
+            if (ready_streak == ARIA_BOOTSTRAP_READY_WINDOW) {
+                target->loader_frames = frame;
+                fprintf(stderr, "Aria bootstrap: stable gameplay for %u "
+                        "frames (first-ready=%u accepted=%u)\n",
+                        ready_streak, first_ready, frame);
+                return true;
+            }
+        } else {
+            ready_streak = 0;
         }
     }
-    set_error(target, "Aria bootstrap did not reach gameplay");
+    /* The last observed state is intentionally reported, even if a brief
+     * ready frame was seen earlier.  Do not proceed to arrival WRAM writes.
+     */
+    snprintf(target->error, sizeof(target->error),
+             "Aria bootstrap not stable: first=%u longest=%u/%u "
+             "lastphase=%u:%u ctl=%u room=%u:%u anim=%u:%u",
+             first_ready, longest_streak, ARIA_BOOTSTRAP_READY_WINDOW,
+             state.in_game_phase, state.in_game_phase_stage,
+             (unsigned)state.player_control_enabled,
+             state.area, state.room, state.animation_id, state.animation_frame);
     return false;
 }
 

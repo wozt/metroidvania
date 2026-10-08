@@ -470,3 +470,14 @@ frame tests and backend lifecycle tests before being enabled.
 - Emit bounded periodic state/animation traces. This is a diagnostic hypothesis,
   not a claim that the input pulses fix the engine's control flag.
 - Added pure unit assertions for the input schedule.
+
+## Patch 029 - sustained authentic Aria bootstrap
+
+- The Aria target bootstrap no longer treats a single frame with the player
+  control bit set as proof of a stable, playable destination.
+- Before any target transaction, the unmodified Aria runtime must remain
+  gameplay-ready in the verified Entrance room for 90 consecutive frames.
+- The probe reports the first ready frame, the longest stable interval,
+  and the final phase/control/animation when stabilization never occurs.
+- This is a diagnostic and safety-gating change, not a claim that the Aria
+  introduction or native cross-room loading is fixed. No ROM data is written.

@@ -139,3 +139,12 @@ frame tests and backend lifecycle tests before being enabled.
   GPL-compatible solution. Earlier AOT measurements remain research evidence.
 - No gameplay source, extracted game content, or build implementation changed.
 - Run the existing project build/tests after applying this documentation patch.
+
+## Patch 007 - Aria runtime / SDL3 integrated pipeline test
+
+- Added a ROM-free integration test that opens a synthetic runtime driver,
+  steps ten frames, validates frame views, uploads them to SDL3 and renders
+  them using the software renderer under the dummy video driver.
+- This tests the full host-side video path, not authentic game execution.
+- Neither `gbarecomp` nor unlicensed Aria frontend code is included.
+- Next milestone: a legally compatible authentic execution driver.

@@ -56,6 +56,18 @@ if(BUILD_TESTING)
         target_compile_options(fusion_aria_sdl3_video_tests PRIVATE -Werror)
     endif()
     add_test(NAME aria_sdl3_video COMMAND fusion_aria_sdl3_video_tests)
+    add_executable(fusion_aria_pipeline_tests
+        tests/test_aria_pipeline.c
+        src/backends/castlevania/aria_sdl3_video.c)
+    target_include_directories(fusion_aria_pipeline_tests PRIVATE include)
+    target_link_libraries(fusion_aria_pipeline_tests PRIVATE fusion_core SDL3::SDL3)
+    target_compile_options(fusion_aria_pipeline_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_aria_pipeline_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME aria_runtime_sdl3_pipeline COMMAND fusion_aria_pipeline_tests)
+    set_tests_properties(aria_runtime_sdl3_pipeline PROPERTIES
+        ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_RENDER_DRIVER=software")
     add_executable(fusion_core_tests tests/test_core.c)
     target_link_libraries(fusion_core_tests PRIVATE fusion_core)
     target_compile_options(fusion_core_tests PRIVATE -Wall -Wextra -Wpedantic)

@@ -298,9 +298,12 @@ def render_background(background: dict, vram: bytes, palette: bytes) -> tuple[by
 
 def composite_backgrounds(rendered: list[tuple[dict, bytes]]) -> tuple[int, int, bytes]:
     """Build a static-origin diagnostic composite using native depth keys."""
-    primary = next((item for item in rendered if item[0]["layer"] == 1), None)
-    if primary is None:
-        raise ValueError("room has no decodable BG1 layer")
+    # Some original rooms have no text BG1. Display the first available
+    # native layer rather than rejecting an otherwise decodable room.
+    if not rendered:
+        raise ValueError("room has no supported text background layers")
+    primary = next((item for item in rendered if item[0]["layer"] == 1),
+                   rendered[0])
     width = primary[0]["width_tiles"] * 8
     height = primary[0]["height_tiles"] * 8
     rgb = bytearray(width * height * 3)

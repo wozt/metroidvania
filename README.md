@@ -59,7 +59,7 @@ Run the active editor:
 
 The editor currently supports Zero Mission native room browsing, BG1/BG2
 metatile editing in private overrides, the decoded MZM world atlas, and local
-Samus/Soma sprite previews. Aria native room rendering and editing are pending.
+Samus/Soma sprite previews. Aria has a read-only, on-demand BG1/BG2/BG3 preview browser; full rendering and editing remain pending.
 
 ## Current verified data
 

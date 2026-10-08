@@ -71,6 +71,14 @@ class AriaRoomRenderTests(unittest.TestCase):
         self.assertEqual((width, height), (8, 8))
         self.assertEqual(rgb[:3], bytes([255, 0, 0]))
 
+    def test_composite_without_bg1_uses_original_available_layer(self):
+        bg = {"layer": 2, "width_tiles": 1, "height_tiles": 1, "depth_key": 2}
+        width, height, rgb = composite_backgrounds([(bg, bytes([0, 255, 0, 255]) * 64)])
+        self.assertEqual((width, height), (8, 8))
+        self.assertEqual(rgb[:3], bytes([0, 255, 0]))
+        with self.assertRaisesRegex(ValueError, "no supported text background"):
+            composite_backgrounds([])
+
 
 if __name__ == "__main__":
     unittest.main()

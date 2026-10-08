@@ -39,6 +39,7 @@ if(GTK4_FOUND)
         editor/main.c
         editor/native_workspace.c
         editor/world_atlas.c
+        editor/aria_browser.c
     )
     target_include_directories(fusion_map_editor PRIVATE include editor)
     target_link_libraries(fusion_map_editor

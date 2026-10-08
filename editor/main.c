@@ -2,6 +2,7 @@
 /* GTK4 workspace for decoded native rooms and locally extracted assets. */
 #include "native_workspace.h"
 #include "world_atlas.h"
+#include "aria_browser.h"
 
 #include <gtk/gtk.h>
 #include <stdio.h>
@@ -19,6 +20,7 @@ typedef struct {
     GtkWidget *asset_picture;
     GtkWidget *asset_status;
     GtkWidget *world_map_page;
+    GtkWidget *aria_page;
     GtkWidget *left_dock;
     GtkWidget *center_dock;
     GtkWidget *right_dock;
@@ -352,6 +354,7 @@ static void explorer_action(GtkButton *button, gpointer userdata)
     else if (strcmp(action, "world-map") == 0)
         focus_dock_page(editor->world_map_page);
     else if (strcmp(action, "assets") == 0) focus_dock_page(editor->asset_page);
+    else if (strcmp(action, "aria") == 0) focus_dock_page(editor->aria_page);
     if (editor->responsive_mode == 0) {
         editor->small_focus = 0;
         apply_responsive(editor);
@@ -381,6 +384,7 @@ static void build_explorer(Editor *editor, GtkWidget *dock)
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
     explorer_button(root, editor, "Zero Mission native rooms", "native");
     explorer_button(root, editor, "Zero Mission world map", "world-map");
+    explorer_button(root, editor, "Aria / native rooms", "aria");
     explorer_button(root, editor, "Local ROM visuals", "assets");
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
     gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
@@ -395,7 +399,7 @@ static void build_inspector(GtkWidget *dock)
     GtkWidget *text = gtk_label_new(
         "Active native scope\n\n"
         "Zero Mission: BG1/BG2 metatile editing and world atlas.\n\n"
-        "Aria: save-room directory metadata only. Native room rendering and editing are pending.\n\n"
+        "Aria: native room browser and partial ROM-derived BG preview; editing is pending.\n\n"
         "Boss, entity, collision, music and cutscene editing are pending.");
     gtk_widget_set_margin_start(root, 14);
     gtk_widget_set_margin_end(root, 14);
@@ -526,6 +530,7 @@ static void activate(GtkApplication *application, gpointer userdata)
     build_native_rooms_tab(editor, center);
     native_workspace_build(editor->native_workspace, center, right);
     editor->world_map_page = world_atlas_build(center, editor->native_workspace);
+    editor->aria_page = aria_browser_build(center);
     build_assets_tab(editor, right);
     build_inspector(right);
     build_explorer(editor, left);

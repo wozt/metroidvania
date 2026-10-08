@@ -422,6 +422,8 @@ def write_catalog(catalog: dict) -> Path:
 
     relative = "rooms/aria/world.json"
     write_generated(relative, (json.dumps(catalog, indent=2) + "\n").encode())
+    from scripts.aos_room_index import write_index
+    write_index(catalog)
     return ROOT / "assets/extracted" / relative
 
 

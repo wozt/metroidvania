@@ -14,7 +14,7 @@ game frontend.
 | Boss inventory | Verified native identities | 9 MZM encounters and all 11 Aria campaign bosses source/ROM-mapped |
 | Savepoints | Verified metadata | 29 MZM platform rooms and 17 Aria map-flag rooms |
 | MZM rooms | Partial | descriptors, atlas, BG1/BG2 editing and experimental BG3 |
-| Aria rooms | Structural inventory | 343 descriptors, 725 transitions, 2,336 entities and graphics references |
+| Aria rooms | Structural inventory + preview | 343 descriptors, 725 transitions, 2,336 entities; experimental background renderer |
 | Character assets | Partial | local verified Samus and Soma animation extraction |
 | GTK4 editor | Active | native MZM documents, safe tab lifetime, atlas and asset previews |
 | Native gameplay engines | Not started | no player physics, combat, entities or room runtime yet |
@@ -69,6 +69,15 @@ guard passed. The active editor binary has no mGBA linkage.
 Patch 0048 validation on 2026-10-08: CTest passed `5/5`, the Python suite passed
 `85/85`, the exact-ROM Aria import completed with 343 rooms and 2,336 entities,
 and the proprietary-file guard passed.
+
+## Patch 0049 - Aria native room previews
+
+- Added a verified, generated index for all native Aria rooms, with save/boss markers.
+- Added a read-only GTK4 browser with asynchronous on-demand graphics decoding,
+  BG1/BG2/BG3 selection, composite preview and diagnostic collision preview.
+- A room lacking BG1 may now composite another successfully decoded text layer.
+- This does not imply the graphics reconstruction is complete; unsupported
+  affine modes, animation, blending and entities remain explicitly unfinished.
 
 ## Immediate priorities
 

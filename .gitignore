@@ -3,6 +3,7 @@
 /.cache/
 /.mcp.json
 /compile_commands.json
+/screenshots/
 
 # ROMs and all proprietary data remain local.
 /roms/*

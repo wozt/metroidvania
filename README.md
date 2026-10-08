@@ -86,6 +86,15 @@ are the following milestones, using the catalog as the entry point.
 are git-ignored and must stay local. The code and documentation are safe to
 commit; distribution of extracted copyrighted assets is not authorized here.
 
+## Patch 0038 - Native room descriptor catalog
+
+Run `python3 scripts/import_game_assets.py --scope all` to index the pinned
+Zero Mission source `RoomEntryRom` metadata. The GTK4 **Native rooms** tab
+then lists real room numbers, tileset references, music symbols, clipdata
+symbols, and default spritesets. The generated catalog is private and ignored.
+This does **not** decode room tile pixels, collision layers, enemies, or
+sounds; Aria native room structure is still under research.
+
 ## Honest status
 
 The default executable is an **SDL3 integration harness**, not yet a native

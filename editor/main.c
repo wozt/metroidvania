@@ -15,6 +15,7 @@ typedef struct {
     GtkWidget *asset_picture;
     GtkWidget *asset_status;
     GtkWidget *tile_status;
+    GtkWidget *native_details;
     int selected_world, selected_layer, selected_brush;
     double tile_drag_x, tile_drag_y;
     const char *path;
@@ -438,6 +439,84 @@ static void build_assets_tab(Editor *ed, GtkWidget *tabs)
     asset_update_preview(ed);
 }
 
+/* Read-only browser of original Zero Mission RoomEntryRom descriptors.
+ * Graphics have NOT been decoded from the ROM; do not fake a rendered room. */
+static void native_row_selected(GtkListBox *list, GtkListBoxRow *row, gpointer userdata)
+{
+    Editor *ed = userdata;
+    const char *details;
+    (void)list;
+    if (!row || !ed->native_details) return;
+    details = g_object_get_data(G_OBJECT(row), "native-room-details");
+    if (details) gtk_label_set_text(GTK_LABEL(ed->native_details), details);
+}
+
+static void build_native_rooms_tab(Editor *ed, GtkWidget *tabs)
+{
+    GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    GtkWidget *scroll = gtk_scrolled_window_new();
+    GtkWidget *list = gtk_list_box_new();
+    gchar *contents = NULL;
+    gchar **lines;
+    gsize length = 0;
+    size_t i;
+    gtk_box_append(GTK_BOX(page), gtk_label_new(
+        "Original Zero Mission room descriptors (graphics and collisions NOT decoded)"));
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), list);
+    gtk_widget_set_vexpand(scroll, TRUE);
+    gtk_box_append(GTK_BOX(page), scroll);
+    ed->native_details = gtk_label_new("Choose a room to inspect its source pointers and music ID.");
+    gtk_label_set_wrap(GTK_LABEL(ed->native_details), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(ed->native_details), 0.0f);
+    gtk_box_append(GTK_BOX(page), ed->native_details);
+    if (!g_file_get_contents("assets/extracted/rooms/metroid/rooms.tsv",
+                             &contents, &length, NULL)) {
+        gtk_label_set_text(GTK_LABEL(ed->native_details),
+            "Room catalog unavailable. Run: python3 scripts/import_game_assets.py --scope all");
+        gtk_notebook_append_page(GTK_NOTEBOOK(tabs), page,
+                                 gtk_label_new("Native rooms"));
+        return;
+    }
+    lines = g_strsplit(contents, "\n", -1);
+    for (i = 0; lines[i]; ++i) {
+        gchar **parts;
+        GtkWidget *label;
+        GtkWidget *row;
+        gchar *name;
+        gchar *details;
+        if (!lines[i][0] || lines[i][0] == '#') continue;
+        parts = g_strsplit(lines[i], "|", -1);
+        if (g_strv_length(parts) != 10) {
+            g_strfreev(parts);
+            continue;
+        }
+        name = g_strdup_printf("%s / room %s    tileset %s    %s",
+                               parts[0], parts[1], parts[2], parts[3]);
+        details = g_strdup_printf(
+            "Area: %s  room: %s    source tile set: %s\n"
+            "Native music symbol: %s\nBG1: %s\nBG2: %s\n"
+            "Clipdata: %s\nDefault spriteset: %s\n"
+            "World map position: %s,%s\n"
+            "These are original source references, not editable native map pixels.",
+            parts[0], parts[1], parts[2], parts[3], parts[4], parts[5],
+            parts[6], parts[7], parts[8], parts[9]);
+        label = gtk_label_new(name);
+        gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
+        row = gtk_list_box_row_new();
+        gtk_list_box_row_set_child(GTK_LIST_BOX_ROW(row), label);
+        g_object_set_data_full(G_OBJECT(row), "native-room-details",
+                               details, g_free);
+        gtk_list_box_append(GTK_LIST_BOX(list), row);
+        g_free(name);
+        g_strfreev(parts);
+    }
+    g_strfreev(lines);
+    g_free(contents);
+    g_signal_connect(list, "row-selected", G_CALLBACK(native_row_selected), ed);
+    gtk_notebook_append_page(GTK_NOTEBOOK(tabs), page,
+                             gtk_label_new("Native rooms"));
+}
+
 static void activate(GtkApplication *app, gpointer user_data)
 {
     Editor *ed = user_data;
@@ -483,6 +562,7 @@ static void activate(GtkApplication *app, gpointer user_data)
     ed->status = gtk_label_new("Drag room nodes to arrange; this is not a tilemap editor yet.");
     gtk_box_append(GTK_BOX(graph_tab), ed->status);
     build_tile_tab(ed, tabs);
+    build_native_rooms_tab(ed, tabs);
     build_assets_tab(ed, tabs);
     gtk_window_present(GTK_WINDOW(window));
 }

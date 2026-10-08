@@ -171,6 +171,7 @@ if(BUILD_TESTING)
         target_compile_options(fusion_world_graph_tests PRIVATE -Werror)
     endif()
     add_test(NAME world_graph_contract COMMAND fusion_world_graph_tests)
+    add_test(NAME native_room_descriptors COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR} python3 -m unittest tests.test_native_rooms)
     set_tests_properties(world_graph_contract PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     add_executable(fusion_room_tests tests/test_room.c src/core/room_sim.c src/core/room_sprite.c)

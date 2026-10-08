@@ -589,3 +589,13 @@ frame tests and backend lifecycle tests before being enabled.
   `tests/fixtures/` instead of the editable game project graph.
 - Keep the sample files as original project metadata only; no ROM maps or
   proprietary extracted content are added.
+
+## Patch 0038 - original MZM room metadata browser
+
+- Parse pinned Zero Mission `RoomEntryRom` tables (all declared areas),
+  validating room index sequences and required source descriptors.
+- Export private, ignored JSON/TSV indices after authentic asset import.
+- Add GTK4 **Native rooms** browser of original tileset, music, clipdata,
+  backgrounds and default spriteset references. Original room pixels
+  and gameplay entities remain undecoded and non-editable.
+- Add standalone ROM-free parser tests. No proprietary pixels tracked.

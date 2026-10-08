@@ -230,6 +230,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.scope in ("all", "sprites"):
         manifest["decoded_sprites"] = render_sprites(roms)
     counts = Counter(item["role"] for item in manifest["raw_entries"])
+    # Original RoomEntryRom descriptors, not decoded room pixels.
+    if args.scope == "all":
+        from scripts.import_mzm_rooms import run as import_mzm_rooms
+        native_rooms = import_mzm_rooms()
+        manifest["native_rooms"] = {"metroid": {
+            "count": native_rooms["count"],
+            "status": "DECOMP_ROOM_DESCRIPTOR_ONLY",
+            "catalog": "rooms/metroid/catalog.json"}}
     manifest["summary"] = {
         "raw_blocks": len(manifest["raw_entries"]),
         "raw_bytes": sum(item["length"] for item in manifest["raw_entries"]),
@@ -258,6 +266,8 @@ def main() -> int:
     print(f"Raw decomp-identified blocks: {summary['raw_blocks']} "
           f"({summary['raw_bytes']} bytes, format NOT decoded)")
     print(f"Decoded native sprite frames: {summary['decoded_sprite_frames']}")
+    if "native_rooms" in manifest:
+        print(f"Original MZM room descriptors: {manifest['native_rooms']['metroid']['count']} (metadata only)")
     print(f"Private catalog: {OUTPUT / 'catalog.json'}")
     print("Complete maps, creature stats, audio, and cutscenes remain UNDECODED.")
     return 0

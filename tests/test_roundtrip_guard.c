@@ -68,6 +68,22 @@ int main(void)
         frame.stride_pixels = GBA_FRAME_WIDTH;
         assert(!fusion_roundtrip_frame_hash(&frame, NULL));
     }
+    assert(fusion_roundtrip_switch_action(&metroid, &aria, false) ==
+           FUSION_ROUNDTRIP_SWITCH_REJECTED);
+    metroid.active = true;
+    assert(fusion_roundtrip_switch_action(&metroid, &aria, false) ==
+           FUSION_ROUNDTRIP_SWITCH_ARRIVAL);
+    assert(fusion_roundtrip_switch_action(&metroid, &aria, true) ==
+           FUSION_ROUNDTRIP_SWITCH_RESUME);
+    aria.active = true;
+    assert(fusion_roundtrip_switch_action(&metroid, &aria, true) ==
+           FUSION_ROUNDTRIP_SWITCH_REJECTED);
+    metroid.active = false;
+    assert(fusion_roundtrip_switch_action(&aria, &metroid, true) ==
+           FUSION_ROUNDTRIP_SWITCH_RESUME);
+    assert(fusion_roundtrip_switch_action(&aria, &aria, false) ==
+           FUSION_ROUNDTRIP_SWITCH_REJECTED);
+    aria.active = false;
     puts("Round-trip guards passed.");
     return 0;
 }

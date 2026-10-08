@@ -40,6 +40,7 @@ endif()
 add_executable(fusion_dev
     src/main.c
     src/core/authentic_loader_probe.c
+    src/core/authentic_interactive.c
     src/core/authentic_preview.c
     src/core/room_sim.c
     src/core/room_sprite.c

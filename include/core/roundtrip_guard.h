@@ -20,4 +20,15 @@ bool fusion_roundtrip_aria_view_equal(const AriaStateView *a,
 /* Deterministic full-frame hashes reject an incorrectly restored visual state. */
 bool fusion_roundtrip_frame_hash(const GbaFrameView *frame, uint64_t *out);
 
+
+/* Select first-entry transactional arrival or preservation of a paused world. */
+typedef enum {
+    FUSION_ROUNDTRIP_SWITCH_REJECTED = 0,
+    FUSION_ROUNDTRIP_SWITCH_ARRIVAL,
+    FUSION_ROUNDTRIP_SWITCH_RESUME,
+} FusionRoundtripSwitchAction;
+FusionRoundtripSwitchAction fusion_roundtrip_switch_action(
+    const GbaRuntime *source, const GbaRuntime *destination,
+    bool destination_visited);
+
 #endif

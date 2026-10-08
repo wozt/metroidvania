@@ -519,3 +519,21 @@ frame tests and backend lifecycle tests before being enabled.
   normalization is a hypothesis until the real-ROM replay passes.
 - The target still uses a native Soma entity and a verified same-room arrival.
   Guest Samus and arbitrary room loading remain unimplemented.
+
+## Patch 0032 - opt-in interactive authentic SDL3 world handoff
+
+- New `--authentic-interactive` mode boots MZM and Aria sequentially using
+  their verified native gameplay readiness gates, then displays native GBA
+  video in SDL3. The existing `--authentic-video-test` is unchanged.
+- Press `M` to suspend one mGBA runtime and enter the other. The first
+  MZM -> Aria entry uses the previously verified transactional same-room
+  arrival with imported health. A visited world resumes its saved native
+  runtime without overwriting local position, progression, or health.
+- A checkpoint is captured when leaving each world; returning to a paused
+  world verifies the decoded state (and MZM serialized checkpoint) before
+  resuming. Only one runtime may execute frames at a time. Failed
+  transactions preserve the source when possible; rollback failures are fatal.
+- This mode displays the **native character** in each engine. It does NOT
+  instantiate Samus inside Aria or Soma inside MZM, implement arbitrary
+  cross-room loading, save cross-world progress to disk, or run a guest
+  character physics adapter. ROMs and extracted assets remain local.

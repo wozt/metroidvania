@@ -88,3 +88,14 @@ bool fusion_roundtrip_frame_hash(const GbaFrameView *frame, uint64_t *out)
     *out = hash;
     return true;
 }
+
+
+FusionRoundtripSwitchAction fusion_roundtrip_switch_action(
+    const GbaRuntime *source, const GbaRuntime *destination,
+    bool destination_visited)
+{
+    if (!fusion_roundtrip_exclusive(source, destination))
+        return FUSION_ROUNDTRIP_SWITCH_REJECTED;
+    return destination_visited ? FUSION_ROUNDTRIP_SWITCH_RESUME
+                               : FUSION_ROUNDTRIP_SWITCH_ARRIVAL;
+}

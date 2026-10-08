@@ -162,3 +162,19 @@ and license remain upstream. In particular, PolyForm-licensed `gbarecomp` is a
 **research-only reference**, not a permitted GPLv3 runtime dependency at
 present. See [`LICENSES.md`](LICENSES.md) for integration restrictions.
 No license here grants rights to ROMs or proprietary game content.
+
+### Interactive native-world switching (experimental)
+
+With both locally validated USA ROMs available, launch:
+
+```sh
+./build/fusion_dev --authentic-interactive
+```
+
+`M` switches worlds; `Esc` exits. Arrow keys move, `Space` is GBA A, `J`
+is GBA B, `Enter` is Start, `Right Shift` is Select, `U` is L and `I` is R.
+The first switch into Aria uses the verified Entrance same-room arrival;
+returning to a previously visited world resumes its untouched native state.
+Only one mGBA runtime runs at a time. The character is still Samus in Metroid
+and Soma in Castlevania; **this is not yet a guest-character crossover**.
+The normal `--authentic-video-test` remains available unchanged.

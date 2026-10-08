@@ -111,6 +111,13 @@ def export(area: str, number: int) -> dict:
             'atlas':str(OUTPUT/atlas_rel),'base':str(OUTPUT/map_rel),
             'override':str(OUTPUT/override_rel),'unresolved_atlas_cells':missing,
             'limitations':'BG0, BG3, common tiles and animated palette omitted; edit blocks BG1/BG2 only'}
+    # BG3 is a read-only optional preview. Any unsupported layer must never
+    # block room editing or overwrite saved user overrides.
+    try:
+        from scripts.mzm_bg3_preview import render_room
+        info["background"] = render_room(area, number)
+    except (ValueError, OSError, IndexError, KeyError) as exc:
+        info["background"] = {"status": "NOT_DECODED", "reason": str(exc)}
     print(json.dumps(info))
     return info
 

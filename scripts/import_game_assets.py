@@ -234,10 +234,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.scope == "all":
         from scripts.import_mzm_rooms import run as import_mzm_rooms
         native_rooms = import_mzm_rooms()
+        from scripts.mzm_world_atlas import run as import_mzm_world_atlas
+        native_world_atlas = import_mzm_world_atlas()
         manifest["native_rooms"] = {"metroid": {
             "count": native_rooms["count"],
             "status": "DECOMP_ROOM_DESCRIPTOR_ONLY",
-            "catalog": "rooms/metroid/catalog.json"}}
+            "catalog": "rooms/metroid/catalog.json",
+            "world_atlas": "rooms/metroid/world_atlas.json",
+            "native_door_links": len(native_world_atlas["connections"])}}
     manifest["summary"] = {
         "raw_blocks": len(manifest["raw_entries"]),
         "raw_bytes": sum(item["length"] for item in manifest["raw_entries"]),

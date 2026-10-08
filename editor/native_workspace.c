@@ -41,6 +41,9 @@ struct NativeWorkspace {
     char *override_path;
     cairo_surface_t *atlas;
     unsigned char *atlas_pixels;
+    cairo_surface_t *background;
+    unsigned char *background_pixels;
+    gboolean background_visible;
 };
 
 static void message(NativeWorkspace *doc, const char *text)
@@ -54,6 +57,54 @@ static void discard_atlas(NativeWorkspace *doc)
     doc->atlas = NULL;
     g_free(doc->atlas_pixels);
     doc->atlas_pixels = NULL;
+}
+
+/* Optional private BG3 preview, never an authored/ROM-modifying layer. */
+static void discard_background(NativeWorkspace *doc)
+{
+    if (doc->background) cairo_surface_destroy(doc->background);
+    doc->background = NULL;
+    g_free(doc->background_pixels);
+    doc->background_pixels = NULL;
+}
+
+static void load_background(NativeWorkspace *doc, const char *filename)
+{
+    discard_background(doc);
+    GError *error = NULL;
+    GdkPixbuf *pix = gdk_pixbuf_new_from_file(filename, &error);
+    if (!pix) {
+        if (error) g_error_free(error);
+        return;
+    }
+    int w = gdk_pixbuf_get_width(pix), h = gdk_pixbuf_get_height(pix);
+    int channels = gdk_pixbuf_get_n_channels(pix);
+    if (w < 8 || h < 8 || w > 2048 || h > 2048 || channels < 3) {
+        g_object_unref(pix);
+        return;
+    }
+    int stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, w);
+    unsigned char *pixels = g_malloc0((size_t)stride * (size_t)h);
+    const guchar *src = gdk_pixbuf_read_pixels(pix);
+    int ps = gdk_pixbuf_get_rowstride(pix);
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            const guchar *q = src + (size_t)y * (size_t)ps + (size_t)x * (size_t)channels;
+            uint32_t rgb = 0xff000000u | ((uint32_t)q[0] << 16) |
+                           ((uint32_t)q[1] << 8) | q[2];
+            memcpy(pixels + (size_t)y * (size_t)stride + (size_t)x * 4, &rgb, 4);
+        }
+    }
+    g_object_unref(pix);
+    cairo_surface_t *surface = cairo_image_surface_create_for_data(
+        pixels, CAIRO_FORMAT_RGB24, w, h, stride);
+    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
+        cairo_surface_destroy(surface);
+        g_free(pixels);
+        return;
+    }
+    doc->background = surface;
+    doc->background_pixels = pixels;
 }
 
 static gboolean load_atlas(NativeWorkspace *doc, const char *filename)
@@ -156,10 +207,33 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
     unsigned columns = doc->map->width[layer];
     unsigned rows = doc->map->height[layer];
     double cell = 16.0 * doc->scale;
+    if (doc->background && doc->background_visible) {
+        cairo_save(cr);
+        cairo_scale(cr, doc->scale, doc->scale);
+        cairo_set_source_surface(cr, doc->background, 0, 0);
+        cairo_pattern_set_extend(cairo_get_source(cr), CAIRO_EXTEND_REPEAT);
+        cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
+        cairo_rectangle(cr, 0, 0, columns * 16, rows * 16);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+    /* When editing BG1, display the actual decoded BG2 blocks behind it. */
+    if (doc->background_visible && layer == 0) {
+        unsigned bw = doc->map->width[1], bh = doc->map->height[1];
+        for (unsigned y = 0; y < bh; ++y) {
+            for (unsigned x = 0; x < bw; ++x) {
+                unsigned id = doc->map->blocks[1][y * bw + x];
+                if (id && id < doc->map->tile_count)
+                    stamp(doc, cr, id, x * cell, y * cell, doc->scale);
+            }
+        }
+    }
     for (unsigned y = 0; y < rows; ++y) {
         for (unsigned x = 0; x < columns; ++x) {
             unsigned id = doc->map->blocks[layer][y * columns + x];
-            stamp(doc, cr, id, x * cell, y * cell, doc->scale);
+            /* Transparent/empty metatile zero leaves BG2 or BG3 visible. */
+            if (id != 0 || !doc->background_visible)
+                stamp(doc, cr, id, x * cell, y * cell, doc->scale);
             if (id >= doc->map->tile_count) {
                 cairo_set_source_rgba(cr, 1, 0.1, 0.25, 0.45);
                 cairo_rectangle(cr, x * cell, y * cell, cell, cell);
@@ -567,6 +641,13 @@ static void tool_toggled(GtkToggleButton *button, gpointer userdata)
     }
 }
 
+static void background_toggled(GtkToggleButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    doc->background_visible = gtk_toggle_button_get_active(button);
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
+}
+
 static void grid_toggled(GtkToggleButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
@@ -696,6 +777,7 @@ static void document_build(NativeWorkspace *doc)
     GtkWidget *redo = icon_button("edit-redo-symbolic", "Rétablir");
     GtkWidget *save = icon_button("document-save-symbolic", "Enregistrer l'override (Ctrl+S)");
     GtkWidget *grid = icon_toggle("view-grid-symbolic", "Afficher / masquer la grille (G)");
+    GtkWidget *background = icon_toggle("image-x-generic-symbolic", "Afficher BG2 / BG3 (fond, aperçu expérimental)");
     GtkWidget *tab_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     GtkWidget *close = icon_button("window-close-symbolic", "Fermer cet onglet");
     doc->tab_title = gtk_label_new(doc->identity);
@@ -713,6 +795,9 @@ static void document_build(NativeWorkspace *doc)
     }
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[TOOL_PENCIL]), TRUE);
     doc->grid_button = grid;
+    doc->background_visible = TRUE;
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(background), TRUE);
+    gtk_flow_box_insert(GTK_FLOW_BOX(tools), background, -1);
     doc->grid_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(grid), TRUE);
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL), -1);
@@ -790,6 +875,7 @@ static void document_build(NativeWorkspace *doc)
     g_signal_connect(doc->brush, "value-changed", G_CALLBACK(brush_changed), doc);
     g_signal_connect(doc->zoom, "value-changed", G_CALLBACK(zoom_changed), doc);
     g_signal_connect(grid, "toggled", G_CALLBACK(grid_toggled), doc);
+    g_signal_connect(background, "toggled", G_CALLBACK(background_toggled), doc);
     g_signal_connect(undo, "clicked", G_CALLBACK(undo_clicked), doc);
     g_signal_connect(redo, "clicked", G_CALLBACK(redo_clicked), doc);
     g_signal_connect(save, "clicked", G_CALLBACK(save_clicked), doc);
@@ -828,6 +914,11 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     }
     *doc->map = *temporary;
     free(temporary);
+    char bgpath[420];
+    snprintf(bgpath, sizeof(bgpath),
+             "assets/extracted/rooms/metroid/previews/%s_%03u_bg3.bmp",
+             area_lower, number);
+    load_background(doc, bgpath);
     history_clear(doc->undo, &doc->undo_count);
     history_clear(doc->redo, &doc->redo_count);
     g_free(doc->override_path);
@@ -962,6 +1053,7 @@ void native_workspace_free(NativeWorkspace *manager)
             history_clear(doc->undo, &doc->undo_count);
             history_clear(doc->redo, &doc->redo_count);
             discard_atlas(doc);
+            discard_background(doc);
             free(doc->undo); free(doc->redo);
             free(doc->map); free(doc->stroke_before);
             g_free(doc->override_path); g_free(doc->identity);

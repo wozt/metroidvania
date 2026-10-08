@@ -70,7 +70,7 @@ find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
     pkg_check_modules(GTK4 QUIET IMPORTED_TARGET gtk4)
     if(GTK4_FOUND)
-        add_executable(fusion_map_editor editor/main.c editor/native_workspace.c)
+        add_executable(fusion_map_editor editor/main.c editor/native_workspace.c editor/world_atlas.c)
         target_include_directories(fusion_map_editor PRIVATE include)
         target_link_libraries(fusion_map_editor PRIVATE fusion_core PkgConfig::GTK4)
         target_compile_options(fusion_map_editor PRIVATE -Wall -Wextra -Wpedantic)
@@ -200,6 +200,12 @@ if(BUILD_TESTING)
     add_test(NAME native_workspace_python
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
                 python3 -m unittest tests.test_native_workspace)
+    add_test(NAME mzm_world_atlas_python
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+                python3 -m unittest tests.test_mzm_world_atlas)
+    add_test(NAME mzm_bg3_preview_python
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+                python3 -m unittest tests.test_mzm_bg3_preview)
     add_executable(fusion_world_graph_tests tests/test_world_graph.c)
     target_link_libraries(fusion_world_graph_tests PRIVATE fusion_core)
     target_compile_options(fusion_world_graph_tests PRIVATE -Wall -Wextra -Wpedantic)

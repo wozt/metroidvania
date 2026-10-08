@@ -4,6 +4,7 @@
 #include "core/tilemap.h"
 #include "core/tile_paint.h"
 #include "native_workspace.h"
+#include "world_atlas.h"
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,6 +30,7 @@ typedef struct {
     GtkWidget *tile_brush_selector, *tile_tool_selector, *tile_zoom_selector;
     GtkWidget *inspector_label;
     GtkWidget *tile_page, *graph_page, *native_page, *asset_page;
+    GtkWidget *world_map_page;
     NativeWorkspace *native_workspace;
     char selected_native_area[32];
     unsigned selected_native_index;
@@ -807,6 +809,7 @@ static void explorer_action(GtkButton *button, gpointer userdata)
     if (!action) return;
     if (strcmp(action, "graph") == 0) focus_dock_page(ed->graph_page);
     else if (strcmp(action, "native") == 0) focus_dock_page(ed->native_page);
+    else if (strcmp(action, "world-map") == 0) focus_dock_page(ed->world_map_page);
     else if (strcmp(action, "assets") == 0) focus_dock_page(ed->asset_page);
     else if (strcmp(action, "metroid") == 0 || strcmp(action, "aria") == 0) {
         ed->selected_world = strcmp(action, "aria") == 0;
@@ -857,6 +860,7 @@ static void build_explorer(Editor *ed, GtkWidget *dock)
     explorer_button(root, ed, "Metroid / editable demo room", "metroid");
     explorer_button(root, ed, "Aria / editable demo room", "aria");
     explorer_button(root, ed, "Zero Mission / native rooms", "native");
+    explorer_button(root, ed, "Original MZM world map", "world-map");
     explorer_button(root, ed, "Authentic ROM visuals", "assets");
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
     gtk_box_append(GTK_BOX(root), hint);
@@ -1041,6 +1045,7 @@ static void activate(GtkApplication *app, gpointer user_data)
     build_assets_tab(ed, right);
     ed->asset_page = gtk_notebook_get_nth_page(GTK_NOTEBOOK(right), 1);
     native_workspace_build(ed->native_workspace, center, right);
+    ed->world_map_page = world_atlas_build(center, ed->native_workspace);
     build_explorer(ed, left);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(center), 1);
     gtk_window_present(GTK_WINDOW(window));

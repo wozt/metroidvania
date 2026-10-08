@@ -3,11 +3,14 @@ import struct
 import unittest
 
 from scripts.aos_soma_sprite import (
+    compose_rgba_layers,
     crop_rgba,
     decode_cell,
     extract_cell_tiles,
+    extract_knife_frame,
     load_palette,
     make_soma_animation_frame,
+    merge_attack_frames,
     opaque_bounds,
     parse_animation,
 )
@@ -88,6 +91,53 @@ class SomaSpriteTests(unittest.TestCase):
         self.assertEqual(bounds, (1, 2, 2, 3))
         self.assertEqual((width, height), (1, 1))
         self.assertEqual(cropped, b"\x01\x02\x03\xff")
+
+    def test_extract_single_component_knife_frame(self):
+        rom = bytearray(0xB000)
+        graphics = 0xA000
+        records = 0xA900
+        component = 0xAA00
+        animation = 0xAB00
+        struct.pack_into("<BBBB", rom, graphics, 0, 4, 16, 4)
+        source = graphics + 4 + (1 * 16 + 2) * 32
+        rom[source:source + 64] = bytes([0x11]) * 64
+        struct.pack_into("<HHIII", rom, animation,
+                         1, 1, BASE + records, 0, BASE + 0xAC00)
+        rom[records + 5] = 1
+        struct.pack_into("<I", rom, records + 12, BASE + component)
+        struct.pack_into("<bbHBBBBI", rom, component,
+                         -5, -6, 0, 16, 8, 16, 8, 0x301)
+        tiles, metadata = extract_knife_frame(
+            bytes(rom), 0, BASE + graphics, BASE + animation)
+        self.assertEqual(tiles, bytes([0x11]) * 64)
+        self.assertEqual(metadata["position"], (27, 41))
+        self.assertEqual((metadata["width"], metadata["height"]), (16, 8))
+        self.assertEqual(metadata["source_pointer"], BASE + source)
+
+    def test_attack_timeline_merges_body_and_weapon_boundaries(self):
+        body = [{"frame_id": frame_id, "duration": duration}
+                for frame_id, duration in zip(
+                    (20, 21, 136, 22, 137, 23, 24, 25, 26),
+                    (5, 9, 2, 3, 3, 5, 7, 7, 7))]
+        weapon = [{"frame_id": frame_id, "duration": duration}
+                  for frame_id, duration in zip(
+                      range(9, 15), (3, 2, 3, 6, 5, 8))]
+        merged = merge_attack_frames(body, weapon, 6)
+        self.assertEqual([frame["duration"] for frame in merged],
+                         [3, 2, 3, 6, 2, 3, 3, 5, 7, 7, 7])
+        self.assertEqual([frame["weapon_frame_id"] for frame in merged],
+                         [9, 10, 11, 12, 13, 13, 14, 14,
+                          None, None, None])
+
+    def test_composite_draws_later_opaque_layer_on_top(self):
+        clear_red = bytes((255, 0, 0, 0))
+        opaque_blue = bytes((0, 0, 255, 255))
+        rgba, width, height = compose_rgba_layers([
+            (clear_red, 1, 1, 0, 0),
+            (opaque_blue, 1, 1, 0, 0),
+        ], (0, 0, 1, 1))
+        self.assertEqual((width, height), (1, 1))
+        self.assertEqual(rgba, opaque_blue)
 
 
 if __name__ == "__main__":

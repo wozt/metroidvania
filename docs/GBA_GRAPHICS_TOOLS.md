@@ -69,14 +69,29 @@ The pinned matching USA build establishes this exact chain:
   25; those transitions are verified but not yet modeled by the prototype;
 - a normal level-ground jump combines animation 50, the first two frames of
   animation 12, and animation 13 into a 12-frame, 61-update sequence;
+- the standing knife attack combines body animation 4 (27 updates) with body
+  recovery animation 5 (21 updates); the six offensive body poses use frame
+  IDs `20, 21, 136, 22, 137, 23`, followed by recovery IDs `24, 25, 26`;
 - frame IDs 12 through 14 use sheet 3 at `0x081664B4`;
 - `0x082097D4` describes the OBJ palettes, with Soma's 16 colors starting at
   `0x082097D8`.
 
-Generate the complete idle, run, and normal-jump cycles with:
+The knife is not part of Soma's 64x64 body cell. Its independent chain is:
+
+- weapon entry 0 at `0x08505D3C`, which selects graphics resource 4 and
+  animation resource 4;
+- the uncompressed 128x32 4bpp sheet at `0x081AC54C`;
+- animation descriptor `0x0822B6C0`, whose animation 0 uses frame IDs
+  `9..14` for `3, 2, 3, 6, 5, 8` updates;
+- palette descriptor `0x082098B8`, palette 0, staged as OBJ palette bank 1;
+- one OAM component per pose, placed relative to the same origin as Soma.
+
+The extractor merges every body and knife boundary. This produces 11 complete
+attack images with durations `3, 2, 3, 6, 2, 3, 3, 5, 7, 7, 7`, totaling the
+original 48 updates. Generate all four states with:
 
 ```sh
-for animation in idle run jump; do
+for animation in idle run jump attack; do
   python3 scripts/aos_soma_sprite.py \
     --rom "roms/Castlevania - Aria of Sorrow (USA).gba" \
     --animation "$animation" \
@@ -86,8 +101,10 @@ done
 
 Each animation uses the union of its opaque cell bounds, retaining the native
 relative anchor while removing identical transparent margins: 18x34 for idle,
-28x33 for run, and 29x36 for jump. Live research captures independently
-confirmed that idle frames 12 and 13, run frame 99, and jump frame 118 each
-match all 2,048 corresponding OBJ VRAM bytes; the 32 palette bytes also match
-OBJ palette bank 0. The research runtime is not part of this repository or its
-runtime; only the ROM-derived extractor is project code.
+28x33 for run, 29x36 for jump, and 51x34 for the body-plus-knife attack. Live
+research captures independently confirmed that idle frames 12 and 13, run
+frame 99, and jump frame 118 each match all 2,048 corresponding OBJ VRAM bytes.
+Knife frame 12 also matches all 128 live VRAM bytes at OBJ tile 818, and its 32
+palette bytes match OBJ palette bank 1. Soma's body palette matches OBJ palette
+bank 0. The research runtime is not part of this repository or its runtime;
+only the ROM-derived extractor is project code.

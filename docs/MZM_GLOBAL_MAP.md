@@ -33,6 +33,6 @@ common palette banks, layers, scroll offsets, animated tiles, clipping and
 blend may be unresolved. Missing resources do not block editing. The generated
 BG3 `.bmp` and ALL original ROM data remain local and ignored by Git.
 
-The current map covers original MZM's seven normal areas only. Aria of Sorrow
-worlds require a separate decoder; the existing cross-world demo graph remains
-unchanged. No extracted/proprietary assets are committed.
+The current map covers original MZM's seven normal areas only. Aria uses its
+own structural decoder and does not share this atlas representation. No
+extracted or proprietary assets are committed.

@@ -1,44 +1,36 @@
-# Metroid Vania — éditeur GTK4 de salles natives
+# Native editor workspace
 
-## Ouverture d'une salle
+Build and open the GTK4 editor:
 
-L'onglet **Native rooms** liste les salles de Zero Mission identifiées dans la décompilation.
-Cliquer une ligne ouvre sa **propre page centrale** (un double-clic et le bouton
-Open ont le même résultat). Chaque salle possède un état de travail, un atlas
-et une palette indépendants. Les pages sont réorganisables/détachables.
+```sh
+python3 scripts/import_game_assets.py --scope all
+cmake -S . -B build
+cmake --build build -j"$(nproc)"
+./build/fusion_map_editor
+```
 
-## Outils
+The workspace has three responsive docks. Tabs can be reordered, moved between
+docks, or detached into separate windows.
 
-- B : crayon (dessin continu sur les metatiles natifs)
-- E : gomme (bloc 0)
-- F : remplissage contigu
-- I : pipette
-- V : sélection rectangulaire ; cliquer dans la sélection puis glisser
-  pour **déplacer les blocs** du calque actif (les cellules source sont vidées)
-- H : main pour déplacer la vue sans modifier la salle
-- G : afficher ou masquer la grille
-- Ctrl+Z / Ctrl+Y (ou Ctrl+Maj+Z) : annuler et rétablir
-- Ctrl+S : enregistrer la copie de travail
+## Active tools
 
-Les commandes de la barre d'outils utilisent des pictogrammes accessibles
-et des infobulles affichées après **1 500 ms** de survol. Leurs groupes se
-répartissent sur plusieurs lignes lorsque l'espace diminue.
+- **Native rooms** browses pinned Zero Mission room descriptors and opens a
+  room as an asynchronous document.
+- **Native room** edits decoded BG1/BG2 16x16 metatile layers with pencil,
+  eraser, fill, eyedropper, selection move, zoom, grid and undo/redo.
+- **Native metatiles** selects blocks from the room's locally rendered atlas.
+- **MZM world map** displays source room coordinates and door-derived links.
+- **ROM visuals** previews locally extracted Samus and Soma animation frames.
 
-BG1 et BG2 sont éditables séparément. La palette de metatiles apparaît dans
-un onglet **Metatiles natifs** du panneau latéral ; cliquer un motif sélectionne
-le bloc à appliquer.
+Saving creates an ignored override under
+`assets/extracted/overrides/metroid/`. The base import, ROM and upstream source
+remain untouched.
 
-## Protection des données originales
+## Current limitations
 
-Le fichier enregistré reste privé :
-`assets/extracted/overrides/metroid/<zone>_<index>.mvnative`.
-Les fichiers de base `workrooms/`, les captures, la ROM et les sous-modules
-de décompilation ne sont jamais modifiés. Fermer un onglet avec des changements
-non enregistrés est refusé. La sauvegarde est propre à chaque salle.
-
-## Limitations
-
-La sélection déplace actuellement des blocs (pas des pixels individuels).
-Les collisions, les entités, les musiques et BG0/BG3 ne sont pas éditables.
-L'éditeur natif reste pour Zero Mission ; Aria nécessite un importeur distinct.
-Les modifications de salle ne sont pas encore raccordées au jeu SDL3 principal.
+- BG0, full BG3 composition, animated graphics and several palette effects are
+  incomplete.
+- Collision, doors, entities, boss parameters, scripts, music and cutscenes are
+  not editable.
+- Aria has save-room metadata but no native room renderer/editor yet.
+- Editor output is not consumed by a native gameplay runtime yet.

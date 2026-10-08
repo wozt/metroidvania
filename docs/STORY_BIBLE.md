@@ -186,7 +186,7 @@ validated data. Dialogue localization is separate from event logic.
 - Do not implement world travel as free `M` switching.
 - Do not complete one source campaign before beginning meaningful progression
   in the other.
-- Do not present mGBA execution as the final PC engine.
+- Do not present emulated execution as the final PC engine.
 - Do not invent original room IDs, ROM addresses, statistics, or flags.
 - Do not let companion recovery cross a locked door or satisfy a gate.
 - Do not collapse Samus and Soma into one inventory or one movement model.

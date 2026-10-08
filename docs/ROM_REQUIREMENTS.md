@@ -16,6 +16,6 @@ requests containing ROM bytes. Future extracted artifacts must stay under the
 Git-ignored `extracted/` directory. The `no_proprietary_files` check rejects ROM
 extensions and large files outside submodules.
 
-Future authentic runtime modes must apply these checks before extraction or
-code generation. Other regions remain unsupported until they have dedicated
-symbols, audits, and tests.
+Every importer must apply these checks before extraction or code generation.
+Other regions remain unsupported until they have dedicated symbols, audits,
+and tests.

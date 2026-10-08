@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(metroidvania_fusion VERSION 0.1.0 LANGUAGES C)
+project(metroidvania_fusion VERSION 0.2.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -7,260 +7,91 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 option(FUSION_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 
-find_path(MGBA_INCLUDE_DIR mgba/core/core.h REQUIRED)
-find_library(MGBA_LIBRARY NAMES mgba REQUIRED)
-find_package(SDL3 CONFIG REQUIRED)
+function(fusion_enable_warnings target)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+        if(FUSION_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE -Werror)
+        endif()
+    endif()
+endfunction()
 
-add_library(fusion_core STATIC
-    src/core/backend.c
-    src/core/session.c
-    src/core/save.c
-    src/core/sha1.c
-    src/core/rom.c
-    src/core/gba_runtime.c
-    src/core/gba_transition_target.c
-    src/core/roundtrip_guard.c
-    src/core/transition.c
-    src/core/world_graph.c
-    src/core/tile_paint.c
+add_library(fusion_native_editor_core STATIC
     src/core/native_map.c
     src/core/native_selection.c
-    src/core/tilemap.c
-    src/backends/metroid/mzm_state.c
-    src/backends/castlevania/aria_state.c
-    src/backends/castlevania/aria_runtime.c
 )
-target_include_directories(fusion_core PUBLIC include)
-target_include_directories(fusion_core PRIVATE ${MGBA_INCLUDE_DIR})
-target_compile_definitions(fusion_core PRIVATE _DEFAULT_SOURCE)
-target_link_libraries(fusion_core PUBLIC ${MGBA_LIBRARY} SDL3::Headers)
+target_include_directories(fusion_native_editor_core PUBLIC include)
+fusion_enable_warnings(fusion_native_editor_core)
 
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(fusion_core PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_core PRIVATE -Werror)
-    endif()
-endif()
+find_package(SDL3 CONFIG REQUIRED)
+add_executable(fusion_mzm_room_viewer src/tools/mzm_room_viewer.c)
+target_link_libraries(fusion_mzm_room_viewer PRIVATE SDL3::SDL3)
+fusion_enable_warnings(fusion_mzm_room_viewer)
 
-add_executable(fusion_dev
-    src/main.c
-    src/core/title_screen.c
-    src/core/authentic_loader_probe.c
-    src/core/authentic_interactive.c
-    src/core/authentic_preview.c
-    src/core/room_sim.c
-    src/core/room_sprite.c
-    src/backends/metroid/metroid_backend.c
-    src/backends/castlevania/castlevania_backend.c
-    src/backends/gba/gba_backend.c
-    src/backends/castlevania/aria_sdl3_video.c
-    src/backends/castlevania/aria_preview.c
-)
-target_include_directories(fusion_dev PRIVATE include src)
-target_link_libraries(fusion_dev PRIVATE fusion_core SDL3::SDL3)
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(fusion_dev PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_dev PRIVATE -Werror)
-    endif()
-endif()
-
-# GTK4 is an optional editor dependency; the PC game builds without GTK.
 include(CTest)
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
     pkg_check_modules(GTK4 QUIET IMPORTED_TARGET gtk4)
-    if(GTK4_FOUND)
-        add_executable(fusion_map_editor editor/main.c editor/native_workspace.c editor/world_atlas.c)
-        target_include_directories(fusion_map_editor PRIVATE include)
-        target_link_libraries(fusion_map_editor PRIVATE fusion_core PkgConfig::GTK4)
-        target_compile_options(fusion_map_editor PRIVATE -Wall -Wextra -Wpedantic)
-        if(FUSION_WARNINGS_AS_ERRORS)
-            target_compile_options(fusion_map_editor PRIVATE -Werror)
-        endif()
-        if(BUILD_TESTING)
-            add_executable(fusion_native_workspace_gtk_tests
-                tests/test_native_workspace_gtk.c editor/native_workspace.c)
-            target_compile_definitions(fusion_native_workspace_gtk_tests
-                PRIVATE FUSION_NATIVE_WORKSPACE_TESTING)
-            target_include_directories(fusion_native_workspace_gtk_tests
-                PRIVATE include editor)
-            target_link_libraries(fusion_native_workspace_gtk_tests
-                PRIVATE fusion_core PkgConfig::GTK4)
-            target_compile_options(fusion_native_workspace_gtk_tests
-                PRIVATE -Wall -Wextra -Wpedantic)
-            if(FUSION_WARNINGS_AS_ERRORS)
-                target_compile_options(fusion_native_workspace_gtk_tests PRIVATE -Werror)
-            endif()
-            find_program(XVFB_RUN_EXECUTABLE xvfb-run)
-            if(XVFB_RUN_EXECUTABLE)
-                add_test(NAME native_workspace_gtk_lifecycle
-                    COMMAND ${XVFB_RUN_EXECUTABLE} -a
-                            $<TARGET_FILE:fusion_native_workspace_gtk_tests>)
-                set_tests_properties(native_workspace_gtk_lifecycle PROPERTIES
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                    ENVIRONMENT
-                        "XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config;ASAN_OPTIONS=detect_leaks=0:abort_on_error=1;UBSAN_OPTIONS=halt_on_error=1")
-            endif()
-        endif()
-    else()
-        message(STATUS "GTK4 not found: optional fusion_map_editor disabled")
-    endif()
 endif()
 
-add_executable(fusion_mzm_room_viewer src/tools/mzm_room_viewer.c)
-target_link_libraries(fusion_mzm_room_viewer PRIVATE SDL3::SDL3)
-target_compile_options(fusion_mzm_room_viewer PRIVATE -Wall -Wextra -Wpedantic)
-if(FUSION_WARNINGS_AS_ERRORS)
-    target_compile_options(fusion_mzm_room_viewer PRIVATE -Werror)
+if(GTK4_FOUND)
+    add_executable(fusion_map_editor
+        editor/main.c
+        editor/native_workspace.c
+        editor/world_atlas.c
+    )
+    target_include_directories(fusion_map_editor PRIVATE include editor)
+    target_link_libraries(fusion_map_editor
+        PRIVATE fusion_native_editor_core PkgConfig::GTK4)
+    fusion_enable_warnings(fusion_map_editor)
+elseif(NOT PkgConfig_FOUND)
+    message(STATUS "pkg-config not found: optional fusion_map_editor disabled")
+else()
+    message(STATUS "GTK4 not found: optional fusion_map_editor disabled")
 endif()
 
 if(BUILD_TESTING)
-    add_executable(fusion_aria_runtime_tests tests/test_aria_runtime.c)
-    target_link_libraries(fusion_aria_runtime_tests PRIVATE fusion_core)
-    add_test(NAME aria_runtime_contract COMMAND fusion_aria_runtime_tests)
-    add_executable(fusion_aria_sdl3_video_tests
-        tests/test_aria_sdl3_video.c
-        src/backends/castlevania/aria_sdl3_video.c)
-    target_include_directories(fusion_aria_sdl3_video_tests PRIVATE include)
-    target_link_libraries(fusion_aria_sdl3_video_tests PRIVATE SDL3::SDL3)
-    target_compile_options(fusion_aria_sdl3_video_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_aria_sdl3_video_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME aria_sdl3_video COMMAND fusion_aria_sdl3_video_tests)
-    add_executable(fusion_aria_pipeline_tests
-        tests/test_aria_pipeline.c
-        src/backends/castlevania/aria_sdl3_video.c)
-    target_include_directories(fusion_aria_pipeline_tests PRIVATE include)
-    target_link_libraries(fusion_aria_pipeline_tests PRIVATE fusion_core SDL3::SDL3)
-    target_compile_options(fusion_aria_pipeline_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_aria_pipeline_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME aria_runtime_sdl3_pipeline COMMAND fusion_aria_pipeline_tests)
-    set_tests_properties(aria_runtime_sdl3_pipeline PROPERTIES
-        ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_RENDER_DRIVER=software")
-    add_executable(fusion_core_tests tests/test_core.c)
-    target_link_libraries(fusion_core_tests PRIVATE fusion_core)
-    target_compile_options(fusion_core_tests PRIVATE -Wall -Wextra -Wpedantic)
-    add_test(NAME fusion_core COMMAND fusion_core_tests)
-    add_executable(fusion_gba_runtime_tests tests/test_gba_runtime.c)
-    target_link_libraries(fusion_gba_runtime_tests PRIVATE fusion_core)
-    target_compile_options(fusion_gba_runtime_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_gba_runtime_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME gba_runtime_failure_paths COMMAND fusion_gba_runtime_tests)
-    add_executable(fusion_gba_backend_tests
-        tests/test_gba_backend.c
-        src/backends/gba/gba_backend.c)
-    target_include_directories(fusion_gba_backend_tests PRIVATE include)
-    target_link_libraries(fusion_gba_backend_tests PRIVATE fusion_core SDL3::SDL3)
-    target_compile_options(fusion_gba_backend_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_gba_backend_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME gba_backend_failure_paths COMMAND fusion_gba_backend_tests)
-    add_executable(fusion_mzm_state_tests tests/test_mzm_state.c)
-    target_link_libraries(fusion_mzm_state_tests PRIVATE fusion_core)
-    target_compile_options(fusion_mzm_state_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_mzm_state_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME mzm_state_decoder COMMAND fusion_mzm_state_tests)
-    add_executable(fusion_aria_state_tests tests/test_aria_state.c)
-    target_link_libraries(fusion_aria_state_tests PRIVATE fusion_core)
-    target_compile_options(fusion_aria_state_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_aria_state_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME aria_state_decoder COMMAND fusion_aria_state_tests)
-    add_executable(fusion_transition_tests tests/test_transition.c)
-    target_link_libraries(fusion_transition_tests PRIVATE fusion_core)
-    target_compile_options(fusion_transition_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_transition_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME transition_contract COMMAND fusion_transition_tests)
-    add_executable(fusion_roundtrip_guard_tests tests/test_roundtrip_guard.c)
-    target_link_libraries(fusion_roundtrip_guard_tests PRIVATE fusion_core)
-    target_compile_options(fusion_roundtrip_guard_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_roundtrip_guard_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME roundtrip_guard_contract COMMAND fusion_roundtrip_guard_tests)
-    add_executable(fusion_tilemap_tests tests/test_tilemap.c)
-    target_link_libraries(fusion_tilemap_tests PRIVATE fusion_core)
-    target_compile_options(fusion_tilemap_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_tilemap_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME tilemap_contract COMMAND fusion_tilemap_tests)
-    set_tests_properties(tilemap_contract PROPERTIES
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-    add_test(NAME original_mzm_room_decoder COMMAND python3 -m unittest tests.test_mzm_room_render)
-    set_tests_properties(original_mzm_room_decoder PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-    add_executable(fusion_tile_paint_tests tests/test_tile_paint.c)
-    target_link_libraries(fusion_tile_paint_tests PRIVATE fusion_core)
-    target_compile_options(fusion_tile_paint_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_tile_paint_tests PRIVATE -Werror)
-    endif()
-    add_test(NAME tile_paint_tools COMMAND fusion_tile_paint_tests)
     add_executable(fusion_native_map_tests tests/test_native_map.c)
-    target_link_libraries(fusion_native_map_tests PRIVATE fusion_core)
-    target_compile_options(fusion_native_map_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_native_map_tests PRIVATE -Werror)
-    endif()
+    target_link_libraries(fusion_native_map_tests PRIVATE fusion_native_editor_core)
+    fusion_enable_warnings(fusion_native_map_tests)
     add_test(NAME native_map_contract COMMAND fusion_native_map_tests)
+
     add_executable(fusion_native_selection_tests tests/test_native_selection.c)
-    target_link_libraries(fusion_native_selection_tests PRIVATE fusion_core)
-    target_compile_options(fusion_native_selection_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_native_selection_tests PRIVATE -Werror)
-    endif()
+    target_link_libraries(fusion_native_selection_tests PRIVATE fusion_native_editor_core)
+    fusion_enable_warnings(fusion_native_selection_tests)
     add_test(NAME native_selection_contract COMMAND fusion_native_selection_tests)
-    add_test(NAME native_workspace_python
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest tests.test_native_workspace)
-    add_test(NAME story_timeline_python
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest tests.test_story_timeline)
-    add_test(NAME world_inventory_python
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest tests.test_world_inventory)
-    add_test(NAME aos_world_import_python
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest tests.test_aos_world_import)
-    add_test(NAME mzm_world_atlas_python
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest tests.test_mzm_world_atlas)
-    add_test(NAME mzm_bg3_preview_python
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest tests.test_mzm_bg3_preview)
-    add_executable(fusion_world_graph_tests tests/test_world_graph.c)
-    target_link_libraries(fusion_world_graph_tests PRIVATE fusion_core)
-    target_compile_options(fusion_world_graph_tests PRIVATE -Wall -Wextra -Wpedantic)
-    if(FUSION_WARNINGS_AS_ERRORS)
-        target_compile_options(fusion_world_graph_tests PRIVATE -Werror)
+
+    if(GTK4_FOUND)
+        add_executable(fusion_native_workspace_gtk_tests
+            tests/test_native_workspace_gtk.c
+            editor/native_workspace.c
+        )
+        target_compile_definitions(fusion_native_workspace_gtk_tests
+            PRIVATE FUSION_NATIVE_WORKSPACE_TESTING)
+        target_include_directories(fusion_native_workspace_gtk_tests
+            PRIVATE include editor)
+        target_link_libraries(fusion_native_workspace_gtk_tests
+            PRIVATE fusion_native_editor_core PkgConfig::GTK4)
+        fusion_enable_warnings(fusion_native_workspace_gtk_tests)
+
+        find_program(XVFB_RUN_EXECUTABLE xvfb-run)
+        if(XVFB_RUN_EXECUTABLE)
+            add_test(NAME native_workspace_gtk_lifecycle
+                COMMAND ${XVFB_RUN_EXECUTABLE} -a
+                        $<TARGET_FILE:fusion_native_workspace_gtk_tests>)
+            set_tests_properties(native_workspace_gtk_lifecycle PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                ENVIRONMENT
+                    "XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config;ASAN_OPTIONS=detect_leaks=0:abort_on_error=1;UBSAN_OPTIONS=halt_on_error=1")
+        endif()
     endif()
-    add_test(NAME world_graph_contract COMMAND fusion_world_graph_tests)
-    add_test(NAME native_room_descriptors COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR} python3 -m unittest tests.test_native_rooms)
-    set_tests_properties(world_graph_contract PROPERTIES
+
+    add_test(NAME python_tooling_and_data
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+                python3 -m unittest discover -s tests -v)
+    set_tests_properties(python_tooling_and_data PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-    add_executable(fusion_room_tests tests/test_room.c src/core/room_sim.c src/core/room_sprite.c)
-    target_include_directories(fusion_room_tests PRIVATE include src)
-    target_link_libraries(fusion_room_tests PRIVATE fusion_core SDL3::SDL3)
-    target_compile_options(fusion_room_tests PRIVATE -Wall -Wextra -Wpedantic)
-    add_test(NAME fusion_room_collisions COMMAND fusion_room_tests)
-    add_test(NAME verify_roms_python
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest tests.test_verify_roms)
-    add_test(NAME asset_import_contract
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest tests.test_asset_import)
+
     add_test(NAME no_proprietary_files
         COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/check_no_proprietary.py
                 ${CMAKE_SOURCE_DIR})

@@ -1,65 +1,53 @@
 # Roadmap
 
-## P0 - First authentic logic
+## P0 - Complete structural inventories
 
-1. **Reproduced:** the `ariaOfSorrow-recomp` Linux build and all 36 configured
-   tests pass in an isolated workspace. A 300-frame run is fully static only
-   after generating and recompiling its clean-room BIOS. Adoption remains
-   limited to a project-owned adapter around licensed components; the
-   unlicensed root host code is excluded. See `docs/ARIA_RECOMP_EVALUATION.md`.
-2. **Integrated baseline:** mGBA boots both verified ROMs, advances frames,
-   exposes authentic framebuffers, follows the exclusive backend lifecycle,
-   and supports memory-only deterministic snapshots.
-3. **First state view:** verified MZM mode, location, Samus, and equipment
-   fields are observable through bounded read-only WRAM access.
-4. **Second state view:** verified Aria mode, location, player entity,
-   progression, animation, and movement fields are observable through bounded
-   read-only EWRAM access with dynamic-pointer validation.
-5. **Ownership baseline:** project both verified views into a common read-only
-   observation. Location and position remain source-local, health remains
-   character-owned, and no field is implicitly shared.
-6. **Planning baseline:** map each source observation to a ROM-observed
-   candidate anchor in the other world and enforce a target-side
-   preflight/checkpoint/apply/verify/rollback contract.
-7. **Native arrival descriptors:** replace sampled gameplay coordinates with
-   Brinstar door 60 and Aria's Entrance staged-room record, both source-traced
-   and reproduced from authentic memory.
-8. **Checkpointed coordinate preview:** place each native character at the
-   selected coordinate inside its already-loaded room, capture the authentic
-   frame, and verify complete in-memory rollback.
-9. Verify each loader trigger and its complete dependent state before enabling
-   either authentic target adapter.
+- decode Aria room records, connections, graphics references and entity lists;
+- map all eleven Aria campaign bosses to verified room/entity identities;
+- resolve MZM Imago room variants;
+- add access gates and connections to both savepoint inventories.
 
-Exit criterion: one authentic room from each ROM can be loaded independently
-with verified timing, input, rendering, and a minimal read-only state view.
-Both views, the ownership projection, and the target transaction contract are
-complete. Native arrival descriptors and their in-room coordinate previews are
-also verified; loader-trigger and dependent-state verification is next.
-Authentic imports remain disabled.
+Exit criterion: boss and savepoint records for both games have stable native
+identities and no invented technical fields.
 
-## P1 - Two engines and transitions
+## P1 - Native room reconstruction
 
-- encapsulate memory, PPU, DMA, VBlank, audio, and save behavior per backend;
-- complete an Aria -> MZM -> Aria round trip with restored state;
-- compare deterministic traces and captures against a reference;
-- ensure a suspended backend never affects rendering or simulation.
+- complete Zero Mission collision, entities, animated graphics and effects;
+- build the equivalent Aria room renderer and local override format;
+- display and edit doors, objects, enemies, music and scripts in GTK4;
+- validate reconstructed rooms against reference captures.
 
-## P2 - Guest characters
+Exit criterion: one representative room from each game renders and collides
+natively from imported data with verified entities and transitions.
 
-- preserve native Soma in Aria and native Samus in MZM;
-- implement Samus-in-Aria and Soma-in-MZM as local adaptations without starting
-  the second engine;
-- test ability, animation, damage, and collision tables.
+## P2 - Two native gameplay kernels
 
-## P3 - Progression and content
+- define separate MZM and Aria engine adapters;
+- implement native player movement, collision, damage and room lifecycle;
+- preserve each world's timing and mechanical rules;
+- implement native Samus in MZM and native Soma in Aria first.
 
-- stable cross-game save schema and migrations;
-- explicit shared map, door, boss, and progression flags;
-- configurable resurrection policy;
-- first synergy hooks, each marked experimental.
+Exit criterion: each native character can complete a source-authentic test path
+in its own engine without emulation.
 
-## P4 - Distribution and GBA study
+## P3 - Crossover prologues
 
-- asset-free local pipeline, license manifest, and legal review;
-- performance measurements, reproducibility, and Linux packages;
-- only then, a GBA ROM/RAM budget and linker prototype.
+- implement Samus against Creaking Skull in Aria rules;
+- implement Soma against mandatory Deorem in MZM rules;
+- add both portal rewards and the authored Interzone scene;
+- persist order-independent prologue completion.
+
+## P4 - Duo campaign
+
+- instantiate both protagonists in one active world engine;
+- add character switching, companion AI and softlock recovery;
+- implement cross-equipment and alien soul mappings;
+- connect verified save rooms through authored world links;
+- implement the full concurrent timeline and both secret epilogues.
+
+## P5 - Production
+
+- complete content verification and balancing;
+- version persistent saves and migrations;
+- add accessibility, input configuration, credits and combined statistics;
+- ship only source/tools and require local extraction of proprietary assets.

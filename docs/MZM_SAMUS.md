@@ -8,10 +8,10 @@ under ignored `assets/extracted/`; never commit ROM bytes or extracted images.
 ## Current result
 
 `scripts/mzm_samus_sprite.py` reconstructs the four Power Suit animations used
-by the SDL prototype. The addresses below come from exact symbols in the pinned
+by the local asset preview. The addresses below come from exact symbols in the pinned
 `mzm` source and a matching `mzm_us` build, not from scan heuristics.
 
-| Prototype state | MZM source animation | Frame address | Cannon animation | Frames | Durations at 60 Hz |
+| Preview state | MZM source animation | Frame address | Cannon animation | Frames | Durations at 60 Hz |
 |---|---|---:|---:|---:|---|
 | Idle | `sSamusAnim_PowerSuit_Right_Standing` | `0x08248744` | `0x08234430` | 4 | `16,16,16,16` |
 | Run | `sSamusAnim_PowerSuit_Right_Running` | `0x08248034` | `0x08234120` | 10 | ten times `2` |
@@ -35,9 +35,8 @@ done
 ```
 
 Use `--frame N --output assets/extracted/previews/frame.bmp` to export one
-record for diagnostics. SDL loads the state files automatically, honors their
-source-defined durations, resets timing on action or character changes, and
-keeps the rectangle fallback when files are absent.
+record for diagnostics. The GTK4 asset viewer displays the generated frames;
+their source-defined durations are retained as metadata for the future runtime.
 
 Batch output uses a shared transparent canvas centered on Samus's OAM X axis,
 with common vertical bounds per animation. This preserves the game-space anchor
@@ -47,8 +46,8 @@ use empty cannon OAM because their visible arm pixels are already in the body.
 
 The jump state represents the repeating `SPOSE_SPINNING` section. The separate
 one-record `SPOSE_STARTING_SPIN_JUMP` transition is not replayed on every loop.
-This remains visual integration over prototype physics, not execution of the
-original MZM state machine.
+This is verified visual extraction, not execution of the original MZM state
+machine.
 
 ## Verified data formats
 
@@ -97,88 +96,34 @@ python3 scripts/mzm_samus_body.py \
   --output assets/extracted/previews/samus_body.bmp
 ```
 
-## Diagnostic workflow
+## Active diagnostic workflow
 
-The final recipes above should be used for normal development. The following
-tools remain useful when investigating additional poses; their candidate output
-is not proof until matched to pinned source symbols or a matching ELF/map.
+Stage a source-verified record into a local OBJ VRAM dump:
 
-1. Discover plausible pointer tables:
+```sh
+python3 scripts/mzm_samus_frame.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --frame-pointer 0xVERIFIED \
+  --output assets/extracted/mzm/samus_frame_vram.bin
+```
 
-   ```sh
-   python3 scripts/mzm_samus_scan.py \
-     --rom "roms/Metroid - Zero Mission (USA).gba" \
-     --min-frames 3 --max-results 30
-   ```
+Decode its confirmed compact OAM format:
 
-2. Inspect a candidate table without exporting graphics:
+```sh
+python3 scripts/mzm_samus_oam_decode.py \
+  --rom "roms/Metroid - Zero Mission (USA).gba" \
+  --frame-pointer 0xVERIFIED
+```
 
-   ```sh
-   python3 scripts/mzm_samus_inspect.py \
-     --rom "roms/Metroid - Zero Mission (USA).gba" \
-     --table 0xVERIFIED --max-frames 24
-   ```
-
-3. Stage a verified record into a local OBJ VRAM dump:
-
-   ```sh
-   python3 scripts/mzm_samus_frame.py \
-     --rom "roms/Metroid - Zero Mission (USA).gba" \
-     --frame-pointer 0xVERIFIED \
-     --output assets/extracted/mzm/samus_frame_vram.bin
-   ```
-
-4. Probe historical OAM hypotheses or decode the now-confirmed format:
-
-   ```sh
-   python3 scripts/mzm_samus_oam_probe.py \
-     --rom "roms/Metroid - Zero Mission (USA).gba" \
-     --frame-pointer 0xVERIFIED --limit 6
-
-   python3 scripts/mzm_samus_oam_layout.py \
-     --rom "roms/Metroid - Zero Mission (USA).gba" \
-     --frame-pointer 0xVERIFIED --max-entries 16
-
-   python3 scripts/mzm_samus_oam_decode.py \
-     --rom "roms/Metroid - Zero Mission (USA).gba" \
-     --frame-pointer 0xVERIFIED
-   ```
-
-5. Search or preview palette candidates, then verify them against
-   `src/data/samus/samus_palette_data.c` and matching binary symbols:
-
-   ```sh
-   python3 scripts/mzm_samus_palette_scan.py \
-     --rom "roms/Metroid - Zero Mission (USA).gba" --max-results 25
-
-   python3 scripts/mzm_samus_palette_scan.py \
-     --rom "roms/Metroid - Zero Mission (USA).gba" \
-     --offset 0xVERIFIED \
-     --output assets/extracted/previews/palette.bmp
-   ```
-
-Every diagnostic validates pointers, bounds and slot capacities. Scanner and
-probe output contains metadata only. The authoritative format reference is
+Every active diagnostic validates pointers, bounds and slot capacities. The
+authoritative format reference is
 `third_party/mzm/docs/samus/graphics.md` plus the pinned implementation.
-
-## Runtime state anchors
-
-The authentic mGBA backend also exposes a read-only Samus state view. The
-matching MZM ELF places `gSamusData` at IWRAM `0x030013D4`; the decoder reads
-the verified 32-byte structure and exposes pose, standing status, arm-cannon
-direction, facing direction, quarter-pixel position, and signed velocity. It
-combines those fields with verified mode, location, difficulty, and equipment
-globals to reject startup transients before reporting a gameplay-ready state.
-
-Run `./build/fusion_dev --authentic-probe` to exercise the live decoder after
-the deterministic snapshot check. The probe only reads active WRAM. It does
-not write memory, persist a savestate, or import values into `SessionState`.
 
 ## Remaining work
 
-- Add the one-frame spin-jump transition when the prototype gains explicit
+- Add the one-frame spin-jump transition when the native engine gains explicit
   animation state transitions.
 - Extend recipes to aim directions, crouch, morph ball, damage, suits and
   effect overlays as gameplay needs them.
-- Keep MZM state addresses and assumptions out of the separate Aria adapter.
+- Keep MZM formats and assumptions out of the separate Aria engine.
 - Keep extracted outputs local and ignored.

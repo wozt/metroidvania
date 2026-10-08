@@ -11,6 +11,7 @@
 /extracted/
 /assets/extracted/
 /captures/
+/legacy/
 *.gba
 *.rom
 *.sav

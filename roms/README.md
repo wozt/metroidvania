@@ -17,4 +17,4 @@ python3 scripts/verify_roms.py \
   --metroid "roms/Metroid - Zero Mission (USA).gba"
 ```
 
-The prototype refuses to launch a room unless both fingerprints match.
+Importers reject unknown revisions before reading any game structure.

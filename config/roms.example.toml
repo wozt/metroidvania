@@ -1,4 +1,4 @@
-# Documentation example. The executable currently accepts paths through the CLI.
+# Documentation example for local importer paths.
 [roms]
 aria_us = "roms/Castlevania - Aria of Sorrow (USA).gba"
 zero_mission_us = "roms/Metroid - Zero Mission (USA).gba"

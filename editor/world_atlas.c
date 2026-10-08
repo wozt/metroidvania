@@ -164,13 +164,13 @@ static void atlas_select(AtlasUI *u, gint index)
     if (index >= 0) {
         const AtlasRoom *r = &g_array_index(u->rooms, AtlasRoom, index);
         gchar *message = g_strdup_printf(
-            "%s — salle %03u | minimap %u,%u | tileset %u | %s\n"
-            "Clique une salle pour la sélectionner ; double-clique pour l'ouvrir. "
-            "Les traits représentent uniquement les portes internes décodées.",
+            "%s — room %03u | minimap %u,%u | tileset %u | %s\n"
+            "Click a room to select it; double-click to open it. "
+            "Lines represent decoded internal doors only.",
             area_names[r->area], r->room, r->x, r->y, r->tileset, r->music);
         gtk_label_set_text(GTK_LABEL(u->details), message);
         g_free(message);
-    } else gtk_label_set_text(GTK_LABEL(u->details), "Choisis une salle sur la carte.");
+    } else gtk_label_set_text(GTK_LABEL(u->details), "Choose a room on the map.");
     gtk_widget_queue_draw(u->canvas);
 }
 static void atlas_click(GtkGestureClick *gesture, gint presses,

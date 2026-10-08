@@ -73,3 +73,9 @@ emulated and does not settle the final native backend strategy. It uses only
 locally SHA-1-validated user ROMs, disables automatic save handling, commits no
 game data, and steps only the active world's runtime. The PolyForm runtime and
 unlicensed Aria frontend remain excluded.
+
+Implementation update: authentic execution is owned by `FusionBackend`
+instances and follows the same enter/tick/render/leave contract as the
+diagnostic implementations. The controller contains no separate mGBA frame
+loop. Held GBA input and backend failure reporting are part of the shared
+contract.

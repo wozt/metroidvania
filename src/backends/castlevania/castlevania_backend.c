@@ -43,5 +43,9 @@ static void shutdown(FusionBackend *backend)
 FusionBackend castlevania_backend_create(void)
 {
     static const FusionBackendOps ops = {init, enter, tick, render, leave, shutdown};
-    return (FusionBackend){"Simulated Castlevania backend", WORLD_CASTLEVANIA, &ops, NULL};
+    return (FusionBackend){
+        .name = "Simulated Castlevania backend",
+        .world = WORLD_CASTLEVANIA,
+        .ops = &ops,
+    };
 }

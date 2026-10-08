@@ -13,6 +13,11 @@ The interface in `include/core/backend.h` exposes `init`, `enter_world`, `tick`,
 `room_sim.c` code is only a test harness; it is not a unified engine or a
 reimplementation of either game.
 
+The same interface now carries held GBA controls and backend failure state.
+`src/backends/gba/gba_backend.c` owns each authentic runtime and its SDL3
+streaming texture. The controller chooses either two simulated backends or two
+authentic backends at startup, then uses one common lifecycle and render loop.
+
 ## State model
 
 `SessionState` separates three categories:
@@ -52,18 +57,19 @@ not replace the native-source/recompilation investigation.
 
 ## Replacing the stubs
 
-1. Move the proven mGBA lifecycle behind each production backend while native
-   source-port or recompilation work continues.
-2. Place VRAM/OAM/palette access, DMA, IRQ/VBlank, audio, and input behind a
+1. Define engine-specific snapshot and state-extraction boundaries for the
+   mGBA baseline.
+2. Place controlled VRAM/OAM/palette and memory access behind a backend-owned
    host abstraction.
-3. Define an engine-specific snapshot contract and adapters to `SessionState`.
-4. Replace one simulated room with a minimal authentic room, then adopt the
-   native movement rules of that world.
+3. Add adapters between verified engine state and `SessionState` without
+   pretending the diagnostic state is authoritative.
+4. Select one authentic room, then adopt the native movement rules of that
+   world.
 5. Add the guest character without running the other engine.
 
-Static recompilation is promising for Aria, but it must be reproduced locally
-and evaluated against the noncommercial runtime license. No native runtime has
-yet been selected for Zero Mission.
+Static recompilation remains a promising Aria research route, but the reproduced
+PolyForm runtime is blocked from this GPLv3 project. No final native runtime has
+yet been selected for either game.
 
 ## Synergy extension points
 

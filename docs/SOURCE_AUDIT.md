@@ -103,7 +103,8 @@ or tracked by this repository.
   `fusion_dev --authentic-probe` reproduces this trace locally after ROM
   validation.
 - mGBA is an interim emulated execution route, not evidence that either engine
-  has been natively ported.
+  has been natively ported. Its project-owned adapter now implements the same
+  exclusive backend lifecycle as the diagnostic engines.
 
 ### `sergiomanzur/ariaOfSorrow-recomp`
 

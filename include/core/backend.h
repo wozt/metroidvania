@@ -23,9 +23,12 @@ struct FusionBackend {
     WorldKind world;
     const FusionBackendOps *ops;
     void *state;
+    bool failed;
+    char error[160];
 };
 
 FusionBackend metroid_backend_create(void);
 FusionBackend castlevania_backend_create(void);
+FusionBackend gba_backend_create(WorldKind world, const char *rom_path);
 
 #endif

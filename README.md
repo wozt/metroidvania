@@ -11,8 +11,10 @@ The default executable is an **SDL3 integration harness**, not yet a native
 port of either game. Its rooms, collisions, and profiles use diagnostic
 geometry. The opt-in `--authentic-video-test` mode executes the user's verified
 ROMs through the mGBA library and displays their real 240x160 output, one
-suspended/active runtime at a time. This emulated proof is not the final native
-backend architecture. Optional local-only pipelines can extract the verified
+suspended/active runtime at a time. The simulated and authentic implementations
+share the same backend lifecycle; no separate emulation loop exists in the
+controller. This emulated proof is not the final native backend architecture.
+Optional local-only pipelines can extract the verified
 Samus and Soma animation sets. Both diagnostic backends display
 `SIMULATED BACKEND` explicitly.
 

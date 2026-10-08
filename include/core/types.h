@@ -51,6 +51,14 @@ typedef struct {
 typedef struct {
     bool left;
     bool right;
+    bool up;
+    bool down;
+    bool jump_held;
+    bool attack_held;
+    bool start_held;
+    bool select_held;
+    bool left_shoulder_held;
+    bool right_shoulder_held;
     bool jump_pressed;
     bool attack_pressed;
     bool switch_character_pressed;

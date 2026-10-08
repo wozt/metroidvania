@@ -72,54 +72,14 @@ static bool run_authentic_probe(const char *label, const char *rom_path,
     return nonzero != 0;
 }
 
-static uint16_t gba_keys(const bool *keys)
-{
-    return (uint16_t)(
-        ((keys[SDL_SCANCODE_SPACE] || keys[SDL_SCANCODE_X]) ? (1u << 0) : 0u) |
-        ((keys[SDL_SCANCODE_J] || keys[SDL_SCANCODE_Z]) ? (1u << 1) : 0u) |
-        (keys[SDL_SCANCODE_RSHIFT] ? (1u << 2) : 0u) |
-        (keys[SDL_SCANCODE_RETURN] ? (1u << 3) : 0u) |
-        ((keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_D]) ? (1u << 4) : 0u) |
-        ((keys[SDL_SCANCODE_LEFT] || keys[SDL_SCANCODE_Q] ||
-          keys[SDL_SCANCODE_A]) ? (1u << 5) : 0u) |
-        (keys[SDL_SCANCODE_UP] ? (1u << 6) : 0u) |
-        (keys[SDL_SCANCODE_DOWN] ? (1u << 7) : 0u) |
-        (keys[SDL_SCANCODE_I] ? (1u << 8) : 0u) |
-        (keys[SDL_SCANCODE_U] ? (1u << 9) : 0u));
-}
-
-static bool present_gba_frame(SDL_Renderer *renderer, SDL_Texture *texture,
-                              const GbaFrameView *frame)
-{
-    int output_width = WINDOW_WIDTH;
-    int output_height = WINDOW_HEIGHT;
-    float scale;
-    SDL_FRect destination;
-
-    if (!renderer || !texture || !frame || !frame->rgba32 ||
-        frame->width != GBA_FRAME_WIDTH || frame->height != GBA_FRAME_HEIGHT)
-        return false;
-    if (!SDL_GetRenderOutputSize(renderer, &output_width, &output_height))
-        return false;
-    scale = SDL_min((float)output_width / GBA_FRAME_WIDTH,
-                    (float)output_height / GBA_FRAME_HEIGHT);
-    destination.w = GBA_FRAME_WIDTH * scale;
-    destination.h = GBA_FRAME_HEIGHT * scale;
-    destination.x = ((float)output_width - destination.w) * 0.5f;
-    destination.y = ((float)output_height - destination.h) * 0.5f;
-    return SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255) &&
-           SDL_RenderClear(renderer) &&
-           SDL_UpdateTexture(texture, NULL, frame->rgba32,
-                             (int)(frame->stride_pixels * sizeof(uint32_t))) &&
-           SDL_RenderTexture(renderer, texture, NULL, &destination);
-}
-
 static void key_event(FusionInput *input, SDL_Keycode key, bool *running, bool *debug)
 {
     switch (key) {
         case SDLK_ESCAPE: *running = false; break;
-        case SDLK_SPACE: input->jump_pressed = true; break;
-        case SDLK_J: input->attack_pressed = true; break;
+        case SDLK_SPACE:
+        case SDLK_X: input->jump_pressed = true; break;
+        case SDLK_J:
+        case SDLK_Z: input->attack_pressed = true; break;
         case SDLK_TAB: input->switch_character_pressed = true; break;
         case SDLK_M: input->switch_world_pressed = true; break;
         case SDLK_F3: input->debug_pressed = true; *debug = !*debug; break;
@@ -139,14 +99,12 @@ int main(int argc, char **argv)
     bool authentic_video_test = false;
     bool authentic_probe = false;
     AriaPreview preview = {0};
-    GbaRuntime gba_runtimes[FUSION_WORLD_COUNT] = {{0}};
     RomRequirement roms[2];
     char error[256];
     SessionState session;
     FusionBackend backends[2] = {{0}};
     SDL_Window *window;
     SDL_Renderer *renderer;
-    SDL_Texture *gba_texture = NULL;
     bool running = true;
     bool debug = true;
     int exit_code = 0;
@@ -211,45 +169,30 @@ int main(int argc, char **argv)
 
     session_init(&session);
     if (authentic_video_test) {
-        const char *paths[FUSION_WORLD_COUNT] = {metroid_path, aria_path};
-        for (i = 0; i < (int)FUSION_WORLD_COUNT; ++i) {
-            if (!gba_runtime_open(&gba_runtimes[i], paths[i], error, sizeof(error))) {
-                fprintf(stderr, "Authentic GBA runtime initialization failed: %s\n", error);
-                running = false;
-                exit_code = 4;
-                break;
-            }
-        }
-        if (running && !gba_runtime_enter(&gba_runtimes[session.active_world])) {
-            fprintf(stderr, "Cannot activate the initial GBA runtime.\n");
-            running = false;
-            exit_code = 4;
-        }
-        if (running) {
-            gba_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-                                            SDL_TEXTUREACCESS_STREAMING,
-                                            (int)GBA_FRAME_WIDTH, (int)GBA_FRAME_HEIGHT);
-            if (!gba_texture) {
-                fprintf(stderr, "GBA texture creation failed: %s\n", SDL_GetError());
-                running = false;
-                exit_code = 4;
-            }
-            else SDL_SetTextureScaleMode(gba_texture, SDL_SCALEMODE_NEAREST);
-        }
+        backends[WORLD_METROID] = gba_backend_create(WORLD_METROID, metroid_path);
+        backends[WORLD_CASTLEVANIA] = gba_backend_create(WORLD_CASTLEVANIA, aria_path);
         SDL_SetWindowTitle(window, "Metroidvania Fusion - AUTHENTIC ROM video test");
         puts("AUTHENTIC ROM VIDEO TEST - mGBA execution, one active world at a time");
     } else {
         backends[WORLD_METROID] = metroid_backend_create();
         backends[WORLD_CASTLEVANIA] = castlevania_backend_create();
-        for (i = 0; i < 2; ++i) {
-            if (!backends[i].ops->init(&backends[i], &session)) {
-                fprintf(stderr, "Backend initialization failed: %s\n", backends[i].name);
-                running = false;
-            }
+    }
+    for (i = 0; i < 2; ++i) {
+        if (!backends[i].ops->init(&backends[i], &session)) {
+            fprintf(stderr, "Backend initialization failed: %s: %s\n",
+                    backends[i].name,
+                    backends[i].error[0] ? backends[i].error : "unknown error");
+            running = false;
+            exit_code = 4;
         }
-        if (running)
-            backends[session.active_world].ops->enter_world(
-                &backends[session.active_world], &session);
+    }
+    if (running &&
+        !backends[session.active_world].ops->enter_world(
+            &backends[session.active_world], &session)) {
+        fprintf(stderr, "Cannot enter initial backend: %s\n",
+                backends[session.active_world].error);
+        running = false;
+        exit_code = 4;
     }
     previous = SDL_GetTicks();
     while (running) {
@@ -271,40 +214,22 @@ int main(int argc, char **argv)
         keys = SDL_GetKeyboardState(NULL);
         input.left = keys[SDL_SCANCODE_LEFT] || keys[SDL_SCANCODE_Q] || keys[SDL_SCANCODE_A];
         input.right = keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_D];
-
-        if (authentic_video_test) {
-            GbaRuntime *runtime = &gba_runtimes[session.active_world];
-            GbaFrameView frame;
-            if (input.switch_world_pressed) {
-                gba_runtime_leave(runtime);
-                session.active_world = session.active_world == WORLD_METROID
-                    ? WORLD_CASTLEVANIA : WORLD_METROID;
-                runtime = &gba_runtimes[session.active_world];
-                if (!gba_runtime_enter(runtime)) {
-                    fprintf(stderr, "Cannot activate the selected GBA runtime.\n");
-                    running = false;
-                    exit_code = 5;
-                }
-            }
-            if (running &&
-                (!gba_runtime_step(runtime, gba_keys(keys)) ||
-                 !gba_runtime_frame(runtime, &frame) ||
-                 !present_gba_frame(renderer, gba_texture, &frame))) {
-                fprintf(stderr, "Authentic GBA frame failed: %s\n", SDL_GetError());
-                running = false;
-                exit_code = 5;
-            }
-            SDL_RenderPresent(renderer);
-            continue;
-        }
+        input.up = keys[SDL_SCANCODE_UP];
+        input.down = keys[SDL_SCANCODE_DOWN];
+        input.jump_held = keys[SDL_SCANCODE_SPACE] || keys[SDL_SCANCODE_X];
+        input.attack_held = keys[SDL_SCANCODE_J] || keys[SDL_SCANCODE_Z];
+        input.start_held = keys[SDL_SCANCODE_RETURN];
+        input.select_held = keys[SDL_SCANCODE_RSHIFT];
+        input.left_shoulder_held = keys[SDL_SCANCODE_U];
+        input.right_shoulder_held = keys[SDL_SCANCODE_I];
 
         active = &backends[session.active_world];
 
-        if (input.save_pressed) {
+        if (!authentic_video_test && input.save_pressed) {
             if (!save_session("fusion-save-v1.bin", &session, error, sizeof(error)))
                 fprintf(stderr, "Save failed: %s\n", error);
         }
-        if (input.load_pressed) {
+        if (!authentic_video_test && input.load_pressed) {
             SessionState candidate;
             if (!load_session("fusion-save-v1.bin", &candidate, error, sizeof(error))) {
                 fprintf(stderr, "Load failed: %s\n", error);
@@ -324,33 +249,37 @@ int main(int argc, char **argv)
             session.active_world = session.active_world == WORLD_METROID
                 ? WORLD_CASTLEVANIA : WORLD_METROID;
             active = &backends[session.active_world];
-            active->ops->enter_world(active, &session);
+            if (!active->ops->enter_world(active, &session)) {
+                fprintf(stderr, "Cannot enter backend: %s\n", active->error);
+                running = false;
+                exit_code = 5;
+            }
         }
-        active->ops->tick(active, &session, &input, dt);
+        if (running) active->ops->tick(active, &session, &input, dt);
         if (aria_video_test && session.active_world == WORLD_CASTLEVANIA) {
-            uint16_t gba_keys = (uint16_t)((input.left ? (1u << 5) : 0u) |
-                                           (input.right ? (1u << 4) : 0u) |
-                                           (input.jump_pressed ? 1u : 0u));
+            uint16_t preview_keys = (uint16_t)((input.left ? (1u << 5) : 0u) |
+                                               (input.right ? (1u << 4) : 0u) |
+                                               (input.jump_held ? 1u : 0u));
             int output_w = WINDOW_WIDTH, output_h = WINDOW_HEIGHT;
             SDL_GetRenderOutputSize(renderer, &output_w, &output_h);
-            if (!aria_preview_draw(&preview, renderer, gba_keys, output_w, output_h)) {
+            if (!aria_preview_draw(&preview, renderer, preview_keys, output_w, output_h)) {
                 fprintf(stderr, "Synthetic video preview failed: %s\n", SDL_GetError());
                 running = false;
             }
-        } else {
+        } else if (running) {
             active->ops->render(active, &session, renderer, debug, fps);
+        }
+        if (active->failed) {
+            fprintf(stderr, "Backend runtime failed: %s: %s\n",
+                    active->name, active->error);
+            running = false;
+            exit_code = 5;
         }
         SDL_RenderPresent(renderer);
     }
 
-    if (authentic_video_test) {
-        for (i = 0; i < (int)FUSION_WORLD_COUNT; ++i)
-            gba_runtime_close(&gba_runtimes[i]);
-    } else {
-        for (i = 0; i < 2; ++i) backends[i].ops->shutdown(&backends[i]);
-    }
+    for (i = 0; i < 2; ++i) backends[i].ops->shutdown(&backends[i]);
     aria_preview_close(&preview);
-    if (gba_texture) SDL_DestroyTexture(gba_texture);
     SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); SDL_Quit();
     return exit_code;
 }

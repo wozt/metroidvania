@@ -38,6 +38,7 @@ add_executable(fusion_dev
     src/core/room_sprite.c
     src/backends/metroid/metroid_backend.c
     src/backends/castlevania/castlevania_backend.c
+    src/backends/gba/gba_backend.c
     src/backends/castlevania/aria_sdl3_video.c
     src/backends/castlevania/aria_preview.c
 )
@@ -88,6 +89,16 @@ if(BUILD_TESTING)
         target_compile_options(fusion_gba_runtime_tests PRIVATE -Werror)
     endif()
     add_test(NAME gba_runtime_failure_paths COMMAND fusion_gba_runtime_tests)
+    add_executable(fusion_gba_backend_tests
+        tests/test_gba_backend.c
+        src/backends/gba/gba_backend.c)
+    target_include_directories(fusion_gba_backend_tests PRIVATE include)
+    target_link_libraries(fusion_gba_backend_tests PRIVATE fusion_core SDL3::SDL3)
+    target_compile_options(fusion_gba_backend_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_gba_backend_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME gba_backend_failure_paths COMMAND fusion_gba_backend_tests)
     add_executable(fusion_room_tests tests/test_room.c src/core/room_sim.c src/core/room_sprite.c)
     target_include_directories(fusion_room_tests PRIVATE include src)
     target_link_libraries(fusion_room_tests PRIVATE fusion_core SDL3::SDL3)

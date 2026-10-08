@@ -20,7 +20,7 @@ The MPL-2.0 mGBA system library provides an interim authentic execution path.
 | Validation of both ROMs | Done | Python and C SHA-1 checks; rejection before SDL |
 | `mzm` and `cvaos` sources | Done | Pinned submodules and targeted audit |
 | Matching upstream GBA builds | Done | Both generated ROMs match references byte for byte |
-| Two-backend interface | Done | Exclusive init/enter/tick/render/leave/shutdown lifecycle |
+| Two-backend interface | Done | Simulated and mGBA implementations share the exclusive init/enter/tick/render/leave/shutdown lifecycle |
 | Two diagnostic rooms | Done | SDL3, distinct geometry, ROMs required |
 | Four character/world profiles | Done, simulated | Separate parameters, not original physics |
 | HP, KO, and persistence | Done | Core tests and version-1 save data |
@@ -64,7 +64,8 @@ targets, and all 60 Python tests passed. Both ROMs were accepted. The SDL smoke
 test remained active for two seconds and was stopped by `timeout` with the
 expected status 124 and no runtime error.
 
-The mGBA adapter adds an eighth CTest target for ROM-free failure paths. The
+The mGBA runtime adapter adds an eighth CTest target and its backend adapter
+adds a ninth, both covering ROM-free failure paths. The
 local authentic probe executed each validated ROM for 300 frames and reproduced
 hashes `5ca363153253eb90` (Zero Mission) and `ce393be405213e55` (Aria). An SDL
 dummy-driver authentic-mode smoke test remained active for two seconds and was
@@ -89,16 +90,17 @@ verified character graphics. SDL3 draws the rooms, `room_sim.c` supplies
 collisions, and all movement profiles are temporary.
 The default diagnostic backends remain integration boundaries and test doubles.
 The opt-in mGBA path now executes original ARM code and renders the ROM's real
-output, but it is still an emulated proof outside the production backend
-contract. No proprietary content is committed.
+output, but it is still an emulated proof rather than the final native backend
+strategy. It now runs through the shared backend contract and common controller
+loop. No proprietary content is committed.
 
 ## Risks and next actions
 
-1. **P0 - Integration:** move authentic execution behind the two production
-   backend lifecycles without running the diagnostic simulator concurrently.
+1. **P0 - State boundary:** define controlled snapshots and verified
+   engine-to-`SessionState` adapters without enabling unsafe mixed saves.
 2. **P0 - Native strategy:** evaluate source HAL or compatible recompilation
    paths while keeping mGBA as the verified baseline.
-3. **P1 - State:** inventory EWRAM/IWRAM, room globals, and snapshot boundaries
+3. **P1 - Research:** inventory EWRAM/IWRAM, room globals, and snapshot boundaries
    in Ghidra for both ROMs.
 4. **P1 - Tests:** add frame traces, render captures, and real lifecycle tests.
 5. **P2 - Content:** implement guest-character adaptations, progression, and
@@ -106,8 +108,8 @@ contract. No proprietary content is committed.
 
 ## Open, non-blocking questions
 
-- Should the first authentic runtime milestone prioritize Aria's more advanced
-  AOT route or MZM's more readable C decompilation?
+- Which engine should receive the first verified state bridge: MZM's more
+  readable C decompilation or Aria's more advanced AOT research path?
 - What resurrection policy and progression flags should be shared?
 
 ## Next milestone acceptance criteria
@@ -120,8 +122,22 @@ contract. No proprietary content is committed.
   and every fallback;
 - existing automated tests remain green and the license audit is updated.
 
-These criteria are satisfied by the interim emulated proof. The next milestone
-must bind it to the backend interface and define a controlled snapshot boundary.
+These criteria are satisfied by the interim emulated proof. Authentic execution
+is now bound to the backend interface; the next milestone is a controlled
+snapshot boundary.
+
+## Patch 013 - authentic backend lifecycle
+
+- Replaced the special authentic loop in `main.c` with project-owned mGBA
+  implementations of the shared `FusionBackend` contract.
+- Held GBA controls and backend error propagation now cross the common
+  controller boundary.
+- Each authentic backend owns its runtime and SDL texture. World switching
+  always calls `leave_world` before `enter_world`, and only the selected backend
+  receives `tick` and `render`.
+- Added ROM-free backend failure tests. A local two-ROM lifecycle test executed
+  and rendered 60 Zero Mission frames, suspended that backend, then executed
+  and rendered 60 Aria frames without an error.
 
 ## Patch 012 - authentic mGBA execution proof
 

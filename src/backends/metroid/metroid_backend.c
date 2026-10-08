@@ -43,5 +43,9 @@ static void shutdown(FusionBackend *backend)
 FusionBackend metroid_backend_create(void)
 {
     static const FusionBackendOps ops = {init, enter, tick, render, leave, shutdown};
-    return (FusionBackend){"Simulated Metroid backend", WORLD_METROID, &ops, NULL};
+    return (FusionBackend){
+        .name = "Simulated Metroid backend",
+        .world = WORLD_METROID,
+        .ops = &ops,
+    };
 }

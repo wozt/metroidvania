@@ -768,6 +768,15 @@ static gboolean close_document(NativeWorkspace *doc)
     }
 
     doc->closing = TRUE;
+    /* A pending confirmation dialog owns a document reference. Releasing it
+     * before tearing down the room prevents a stale modal owning dead widgets. */
+    if (doc->close_dialog) {
+        GtkWidget *dialog = doc->close_dialog;
+        doc->close_dialog = NULL;
+        doc->close_info = NULL;
+        for (unsigned i = 0; i < 3; ++i) doc->close_buttons[i] = NULL;
+        gtk_window_destroy(GTK_WINDOW(dialog));
+    }
     manager = doc->owner;
     if (doc->import_cancellable) g_cancellable_cancel(doc->import_cancellable);
     if (doc->import_process) g_subprocess_force_exit(doc->import_process);
@@ -944,6 +953,7 @@ static gboolean key_pressed(GtkEventControllerKey *controller, guint keyval,
     if (modifiers & GDK_CONTROL_MASK) {
         switch (gdk_keyval_to_lower(keyval)) {
         case GDK_KEY_s: save_clicked(NULL, doc); return TRUE;
+        case GDK_KEY_w: close_clicked(NULL, doc); return TRUE;
         case GDK_KEY_z: history_step(doc, (modifiers & GDK_SHIFT_MASK) != 0); return TRUE;
         case GDK_KEY_y: history_step(doc, TRUE); return TRUE;
         default: break;
@@ -1069,6 +1079,8 @@ static void document_build(NativeWorkspace *doc)
     g_signal_connect(keys, "key-pressed", G_CALLBACK(key_pressed), doc);
     gtk_widget_set_focusable(page, TRUE);
     doc->page = page;
+    g_object_set_data(G_OBJECT(page), "mv-world-mode",
+        GINT_TO_POINTER(g_str_has_prefix(doc->identity, "Aria ") ? 2 : 1));
     gtk_notebook_append_page(doc->owner->center, page, tab_box);
     gtk_notebook_set_tab_reorderable(doc->owner->center, page, TRUE);
     gtk_notebook_set_tab_detachable(doc->owner->center, page, TRUE);

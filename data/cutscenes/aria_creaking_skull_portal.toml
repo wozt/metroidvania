@@ -1,0 +1,32 @@
+schema = "metroid-vania-cutscene"
+version = 1
+id = "aria_creaking_skull_portal"
+world = "aria"
+room = "aria:00:010"
+status = "authored_not_executable"
+
+[[actors]]
+id = "samus"
+x = 100
+y = 120
+animation = "idle_right"
+
+[[steps]]
+type = "animation"
+actor = "samus"
+name = "pickup_ancient_mechanism"
+
+[[steps]]
+type = "dialogue"
+actor = "samus"
+portrait = "samus_helmet"
+text = "Ce mécanisme ne ressemble à aucune technologie Chozo connue."
+
+[[steps]]
+type = "portal"
+id = "aria_first_portal"
+
+[[steps]]
+type = "set_flag"
+flag = "samus_breach_ready"
+value = true

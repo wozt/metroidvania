@@ -1,0 +1,32 @@
+schema = "metroid-vania-cutscene"
+version = 1
+id = "mzm_deorem_soul_portal"
+world = "zero_mission"
+room = "unresolved_deorem_room"
+status = "authored_not_executable"
+
+[[actors]]
+id = "soma"
+x = 110
+y = 120
+animation = "idle_left"
+
+[[steps]]
+type = "animation"
+actor = "soma"
+name = "absorb_alien_soul"
+
+[[steps]]
+type = "dialogue"
+actor = "soma"
+portrait = "soma_surprised"
+text = "Une âme... sur cette planète ?"
+
+[[steps]]
+type = "portal"
+id = "mzm_first_portal"
+
+[[steps]]
+type = "set_flag"
+flag = "soma_breach_ready"
+value = true

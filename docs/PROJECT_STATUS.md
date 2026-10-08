@@ -109,3 +109,17 @@ and the proprietary-file guard passed.
 - Picking a metatile from a room or the palette switches back to the Pencil stamp tool.
 - Unsaved tab close offers Cancel, Discard changes, or Save and close in a GTK4 modal window; failed writes keep the document open.
 - Additional GTK lifecycle test covers cancel, save and discard; private ROM-derived assets and overrides are never committed.
+
+## Patch 0053 - common native world and narrative workspaces
+
+- One original-coordinate *cell grid* for MZM and Aria. Aria cells are
+  original 64x35 map occupancy; MZM currently exposes only room anchors.
+- Bounded private ROM pixel-preview generation starts when a world or region is
+  opened; only supported source data produces thumbnails.
+- Native room tabs use one toolset for both worlds, and Ctrl+W routes through
+  unsaved-edit confirmation with dialog teardown before close.
+- GTK4 now exposes three-track event orchestration and a TOML-based shared
+  cutscene editor with validate-before-save. These are **data editing tools**;
+  no world-specific native cutscene runtime or automatic adapter exists yet.
+- Keep room collision, precise Zero Mission map masks, source-accurate layer
+  compositing, keyframe UI and native engine adapters on the outstanding list.

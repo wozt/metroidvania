@@ -1,0 +1,44 @@
+schema = "metroid-vania-cutscene"
+version = 1
+id = "interzone_first_meeting"
+world = "interzone"
+room = "fusion:interzone:meeting"
+status = "authored_not_executable"
+
+# Project-owned steps are portable between the two future native engines.
+# The target world adapter will translate actions to its native primitives.
+[[actors]]
+id = "samus"
+x = 80
+y = 120
+animation = "idle_right"
+
+[[actors]]
+id = "soma"
+x = 200
+y = 120
+animation = "idle_left"
+
+[[steps]]
+type = "move"
+actor = "samus"
+x = 110
+y = 120
+animation = "walk_right"
+
+[[steps]]
+type = "dialogue"
+actor = "soma"
+portrait = "soma_surprised"
+text = "Qui êtes-vous ?"
+
+[[steps]]
+type = "dialogue"
+actor = "samus"
+portrait = "samus_neutral"
+text = "La question est plutôt : où sommes-nous ?"
+
+[[steps]]
+type = "set_flag"
+flag = "pair_formed"
+value = true

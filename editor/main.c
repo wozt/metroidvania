@@ -2,6 +2,7 @@
 /* GTK4 workspace for decoded native rooms and locally extracted assets. */
 #include "native_workspace.h"
 #include "world_atlas.h"
+#include "story_workspace.h"
 #include "aria_browser.h"
 
 #include <gtk/gtk.h>
@@ -20,6 +21,7 @@ typedef struct {
     GtkWidget *asset_picture;
     GtkWidget *asset_status;
     GtkWidget *world_map_page;
+    GtkWidget *events_page, *cutscenes_page, *world_badge;
     GtkWidget *aria_page;
     GtkWidget *left_dock;
     GtkWidget *center_dock;
@@ -354,6 +356,8 @@ static void explorer_action(GtkButton *button, gpointer userdata)
     else if (strcmp(action, "world-map") == 0)
         focus_dock_page(editor->world_map_page);
     else if (strcmp(action, "assets") == 0) focus_dock_page(editor->asset_page);
+    else if (strcmp(action, "events") == 0) focus_dock_page(editor->events_page);
+    else if (strcmp(action, "cutscenes") == 0) focus_dock_page(editor->cutscenes_page);
     else if (strcmp(action, "aria") == 0) focus_dock_page(editor->aria_page);
     if (editor->responsive_mode == 0) {
         editor->small_focus = 0;
@@ -383,7 +387,9 @@ static void build_explorer(Editor *editor, GtkWidget *dock)
     gtk_box_append(GTK_BOX(root), gtk_label_new("PROJECT / METROID VANIA"));
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
     explorer_button(root, editor, "Zero Mission native rooms", "native");
-    explorer_button(root, editor, "Zero Mission world map", "world-map");
+    explorer_button(root, editor, "Global maps / both worlds", "world-map");
+    explorer_button(root, editor, "Event orchestration", "events");
+    explorer_button(root, editor, "Cutscene editor", "cutscenes");
     explorer_button(root, editor, "Aria / native rooms", "aria");
     explorer_button(root, editor, "Local ROM visuals", "assets");
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
@@ -478,6 +484,19 @@ static GtkWidget *make_responsive_button(Editor *editor,
     return button;
 }
 
+static void center_page_changed(GtkNotebook *tabs, GtkWidget *page,
+                                guint index, gpointer userdata)
+{
+    Editor *editor = userdata;
+    (void)tabs; (void)index;
+    unsigned mode = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(page), "mv-world-mode"));
+    if (page == editor->aria_page) mode = 2;
+    else if (page == editor->native_page) mode = 1;
+    const char *name = mode == 2 ? "● ARIA OF SORROW" :
+                       mode == 1 ? "● METROID: ZERO MISSION" : "◇ SHARED WORKSPACE";
+    gtk_label_set_text(GTK_LABEL(editor->world_badge), name);
+}
+
 static void activate(GtkApplication *application, gpointer userdata)
 {
     Editor *editor = userdata;
@@ -490,6 +509,8 @@ static void activate(GtkApplication *application, gpointer userdata)
     GtkWidget *outer_split = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
     GtkWidget *inner_split = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
     GtkWidget *sensor = gtk_drawing_area_new();
+    editor->world_badge = gtk_label_new("● METROID: ZERO MISSION");
+    gtk_widget_add_css_class(editor->world_badge, "title-4");
 
     editor->left_dock = left;
     editor->center_dock = center;
@@ -506,6 +527,7 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_widget_set_margin_top(header, 8);
     gtk_widget_set_margin_bottom(header, 8);
     gtk_box_append(GTK_BOX(header), gtk_label_new("METROID VANIA / NATIVE EDITOR"));
+    gtk_box_append(GTK_BOX(header), editor->world_badge);
     gtk_box_append(GTK_BOX(header), make_responsive_button(editor, "Explorer", 1));
     gtk_box_append(GTK_BOX(header), make_responsive_button(editor, "Canvas", 0));
     gtk_box_append(GTK_BOX(header), make_responsive_button(editor, "Inspector", 2));
@@ -529,11 +551,13 @@ static void activate(GtkApplication *application, gpointer userdata)
 
     build_native_rooms_tab(editor, center);
     native_workspace_build(editor->native_workspace, center, right);
-    editor->world_map_page = world_atlas_build(center, editor->native_workspace);
+    editor->world_map_page = world_atlas_build(center, editor->native_workspace, editor->world_badge);
+    story_workspace_build(center, &editor->events_page, &editor->cutscenes_page);
     editor->aria_page = aria_browser_build(center, editor->native_workspace);
     build_assets_tab(editor, right);
     build_inspector(right);
     build_explorer(editor, left);
+    g_signal_connect(center, "switch-page", G_CALLBACK(center_page_changed), editor);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(center), 0);
     gtk_window_present(GTK_WINDOW(window));
 }

@@ -9,6 +9,8 @@
 #include "core/rom.h"
 #include "core/save.h"
 #include "core/session.h"
+#include "core/title_screen.h"
+#include "core/world_graph.h"
 #include "core/transition.h"
 #include "gba/runtime.h"
 #include "mzm/state.h"
@@ -304,6 +306,7 @@ int main(int argc, char **argv)
     RomRequirement roms[2];
     char error[256];
     SessionState session;
+    FusionWorldGraph graph = {0};
     FusionBackend backends[2] = {{0}};
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -417,7 +420,31 @@ int main(int argc, char **argv)
         puts("SYNTHETIC VIDEO TEST ONLY - NO ORIGINAL ARIA ENGINE IS RUNNING");
     }
 
+    /* The PC-first prototype starts at a global title, not in Metroid.
+     * The legacy mGBA modes remain research tools and do not use this UI. */
     session_init(&session);
+    if (!authentic_video_test && !aria_video_test) {
+        WorldKind initial_world;
+        if (!fusion_title_choose(renderer, &initial_world)) {
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            return 0;
+        }
+        session.active_world = initial_world;
+        session.active_character = initial_world == WORLD_METROID
+            ? CHARACTER_SAMUS : CHARACTER_SOMA;
+        if (!fusion_graph_load(&graph, "data/world_graph.mvg",
+                               error, sizeof(error))) {
+            fprintf(stderr, "PC graph load failed: %s\n", error);
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            return 4;
+        }
+        printf("PC session: selected start world=%s (demo rooms)\n",
+               world_name(initial_world));
+    }
     if (authentic_video_test) {
         backends[WORLD_METROID] = gba_backend_create(WORLD_METROID, metroid_path);
         backends[WORLD_CASTLEVANIA] = gba_backend_create(WORLD_CASTLEVANIA, aria_path);
@@ -495,6 +522,26 @@ int main(int argc, char **argv)
             }
         }
         if (input.switch_world_pressed) {
+            bool permitted = authentic_video_test;
+            if (!authentic_video_test && !aria_video_test) {
+                /* Patch 0034: Only the designated SAVE PAD at the far right
+                 * of each demonstration room can use this demo graph link.
+                 * This is intentionally NOT a real original-game save room. */
+                const WorldState *position = &session.worlds[session.active_world];
+                const bool on_save_pad = position->actor_x >= 860.f &&
+                    position->actor_x <= 940.f &&
+                    position->actor_y >= 370.f && position->actor_y <= 520.f;
+                const char *source_id = session.active_world == WORLD_METROID
+                    ? "metroid:demo:save_01" : "aria:demo:save_01";
+                const char *target_id = session.active_world == WORLD_METROID
+                    ? "aria:demo:save_01" : "metroid:demo:save_01";
+                permitted = fusion_graph_travel_allowed(&graph, source_id,
+                                                         target_id, on_save_pad);
+                if (!permitted)
+                    fprintf(stderr, "Save-room travel denied: stand at the "
+                            "right-hand demo save pad and enable its link\n");
+            }
+            if (permitted) {
             active->ops->leave_world(active, &session);
             session.active_world = session.active_world == WORLD_METROID
                 ? WORLD_CASTLEVANIA : WORLD_METROID;
@@ -503,6 +550,7 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Cannot enter backend: %s\n", active->error);
                 running = false;
                 exit_code = 5;
+            }
             }
         }
         if (running) active->ops->tick(active, &session, &input, dt);

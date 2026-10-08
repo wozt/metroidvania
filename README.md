@@ -5,6 +5,38 @@ crossover. The architecture requires two separate backends: Metroid rules are
 not merged with Castlevania rules. Characters can be swapped instantly inside a
 world; changing worlds suspends the active backend before activating the other.
 
+## PC-first direction (patch 0034)
+
+`./build/fusion_dev` now opens a **global SDL3 title menu**. Choose Metroid or
+Castlevania with Left/Right + Enter, or click a card. The two initial rooms
+remain **project-authored diagnostic rooms**, not decoded original maps.
+`M` is no longer a global teleport in the PC prototype: it only works while
+standing near the right-hand **SAVE PAD** in a demo room and when the
+bidirectional link is enabled in `data/world_graph.mvg`. All other rooms/points
+reject travel. The separate `--authentic-interactive` mode is a legacy **mGBA
+research tool**, not gameplay, and its `M` key behavior is unchanged.
+
+The project-authored `MVGRAPH 1` file defines room IDs, world ownership, save
+flags, editor coordinates and bidirectional links. These are **sample graph
+nodes**, not original Metroid/Aria save-room addresses. For the optional GTK4
+first-stage graph editor install `libgtk-4-dev`, reconfigure CMake, then run:
+
+```sh
+sudo apt install libgtk-4-dev
+cmake -S . -B build
+cmake --build build -j"$(nproc)"
+./build/fusion_map_editor
+```
+
+Drag the two nodes, toggle the save-room link and press **Save graph**. The
+next game launch reads these settings. This first editor is **not a tilemap
+editor** yet: ROM map import, collision painting and native PC renderer remain
+separate future work. GTK4 is optional for building `fusion_dev`.
+
+mGBA stays available strictly as a reference engine for ROM-backed diagnostic
+probes. The target architecture is a PC-native renderer with separate world
+mechanics and a common editable room graph.
+
 ## Honest status
 
 The default executable is an **SDL3 integration harness**, not yet a native

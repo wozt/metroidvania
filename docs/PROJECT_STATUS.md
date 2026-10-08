@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-08**.
 
+## Patch 0034 - PC-first title and editable save-room graph
+
+- New global title screen in the **default simulated PC frontend**, with a
+  player-selected starting world; no implicit Metroid-first gameplay start.
+- Removed free `M` switching from the simulated gameplay flow. The demo mode
+  gates it to an explicit right-hand save pad and a validated enabled graph
+  connection. The original-game save rooms are NOT yet extracted or wired.
+- New strict, versioned, ROM-independent `MVGRAPH 1` room/link manifest.
+  Shared pure-C parser, writer and travel validator plus a CTest contract.
+- Optional GTK4 `fusion_map_editor` graph viewer: drag nodes, toggle its demo
+  link, and save changes. No map tiles, objects, or original room import yet.
+- All mGBA proof modes remain available as diagnostic tools. Legacy authentic
+  interactive world switching is still unrestricted **research only**.
+
 ## Fixed vision and decisions
 
 The project targets a real crossover with two distinct engines and one active

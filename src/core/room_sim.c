@@ -231,6 +231,9 @@ void room_render(RoomRuntime *runtime, const SessionState *session,
     color(renderer, (SDL_Color){190, 55, 55, 255}); SDL_RenderFillRect(renderer, &runtime->definition.hazard);
     color(renderer, world->door_open ? (SDL_Color){55, 210, 110, 255} : (SDL_Color){130, 60, 155, 255});
     SDL_RenderFillRect(renderer, &runtime->definition.portal);
+    SDL_SetRenderDrawColor(renderer, 205, 242, 192, 255);
+    SDL_RenderDebugText(renderer, runtime->definition.portal.x - 14.f,
+                        runtime->definition.portal.y - 18.f, "SAVE PAD");
     if (world->target_hp > 0) {
         color(renderer, runtime->attack_flash > 0 ? (SDL_Color){255,255,255,255} : runtime->definition.accent);
         SDL_RenderFillRect(renderer, &runtime->definition.target);
@@ -269,7 +272,7 @@ void room_render(RoomRuntime *runtime, const SessionState *session,
         runtime->definition.title, character_name(character), world->target_hp,
         world->target_max_hp, world->door_open ? "OPEN" : "CLOSED");
     SDL_RenderDebugText(renderer, 20, 116,
-        "ARROWS/AD: MOVE  SPACE: JUMP  J: ATTACK  TAB: CHARACTER  M: WORLD");
+        "ARROWS/AD: MOVE SPACE: JUMP J: ATTACK TAB: CHARACTER M: SAVE LINK");
     SDL_RenderDebugText(renderer, 20, 130,
         "F3: DEBUG  K: DAMAGE  F5: SAVE  F9: LOAD  ESC: QUIT");
     if (runtime->notice_time > 0)

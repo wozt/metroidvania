@@ -21,6 +21,7 @@ add_library(fusion_core STATIC
     src/core/gba_transition_target.c
     src/core/roundtrip_guard.c
     src/core/transition.c
+    src/core/world_graph.c
     src/backends/metroid/mzm_state.c
     src/backends/castlevania/aria_state.c
     src/backends/castlevania/aria_runtime.c
@@ -39,6 +40,7 @@ endif()
 
 add_executable(fusion_dev
     src/main.c
+    src/core/title_screen.c
     src/core/authentic_loader_probe.c
     src/core/authentic_interactive.c
     src/core/authentic_preview.c
@@ -56,6 +58,23 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(fusion_dev PRIVATE -Wall -Wextra -Wpedantic)
     if(FUSION_WARNINGS_AS_ERRORS)
         target_compile_options(fusion_dev PRIVATE -Werror)
+    endif()
+endif()
+
+# GTK4 is an optional editor dependency; the PC game builds without GTK.
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(GTK4 QUIET IMPORTED_TARGET gtk4)
+    if(GTK4_FOUND)
+        add_executable(fusion_map_editor editor/main.c)
+        target_include_directories(fusion_map_editor PRIVATE include)
+        target_link_libraries(fusion_map_editor PRIVATE fusion_core PkgConfig::GTK4)
+        target_compile_options(fusion_map_editor PRIVATE -Wall -Wextra -Wpedantic)
+        if(FUSION_WARNINGS_AS_ERRORS)
+            target_compile_options(fusion_map_editor PRIVATE -Werror)
+        endif()
+    else()
+        message(STATUS "GTK4 not found: optional fusion_map_editor disabled")
     endif()
 endif()
 
@@ -135,6 +154,15 @@ if(BUILD_TESTING)
         target_compile_options(fusion_roundtrip_guard_tests PRIVATE -Werror)
     endif()
     add_test(NAME roundtrip_guard_contract COMMAND fusion_roundtrip_guard_tests)
+    add_executable(fusion_world_graph_tests tests/test_world_graph.c)
+    target_link_libraries(fusion_world_graph_tests PRIVATE fusion_core)
+    target_compile_options(fusion_world_graph_tests PRIVATE -Wall -Wextra -Wpedantic)
+    if(FUSION_WARNINGS_AS_ERRORS)
+        target_compile_options(fusion_world_graph_tests PRIVATE -Werror)
+    endif()
+    add_test(NAME world_graph_contract COMMAND fusion_world_graph_tests)
+    set_tests_properties(world_graph_contract PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     add_executable(fusion_room_tests tests/test_room.c src/core/room_sim.c src/core/room_sprite.c)
     target_include_directories(fusion_room_tests PRIVATE include src)
     target_link_libraries(fusion_room_tests PRIVATE fusion_core SDL3::SDL3)

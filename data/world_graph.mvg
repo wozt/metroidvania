@@ -1,0 +1,5 @@
+# Project-authored SAMPLE rooms, not extracted from either original game.
+MVGRAPH 1
+ROOM metroid:demo:save_01 0 1 190 165
+ROOM aria:demo:save_01 1 1 550 165
+LINK metroid:demo:save_01 aria:demo:save_01 1

@@ -88,6 +88,12 @@ already-loaded native rooms. It writes five ignored BMPs under
 adds a later Aria context frame before restoring the pre-write in-memory
 snapshot. This is a diagnostic position preview, not a room-loader transition
 or a guest-character implementation.
+To test the strictly exclusive, memory-only MZM -> Aria -> MZM
+round-trip, run `./build/fusion_dev --authentic-roundtrip-probe`.
+It verifies suspended-source byte equality and restores the
+original Aria checkpoint after the diagnostic arrival. This is
+not a playable guest-character transfer or cross-room loader.
+
 Run `--authentic-video-test`
 for interactive authentic ROM output; `M` suspends the current runtime and
 switches to the other one. The mode does not load or write save files. GBA

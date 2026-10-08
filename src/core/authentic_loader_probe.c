@@ -3,6 +3,7 @@
 
 #include "aria/state.h"
 #include "core/transition.h"
+#include "core/roundtrip_guard.h"
 #include "gba/runtime.h"
 #include "gba/transition_target.h"
 #include "mzm/state.h"
@@ -230,6 +231,211 @@ bool authentic_loader_probe_run(const char *metroid_path,
     set_error(error, error_size, "");
 
 cleanup:
+    gba_runtime_close(&runtimes[WORLD_CASTLEVANIA]);
+    gba_runtime_close(&runtimes[WORLD_METROID]);
+    return success;
+}
+
+/* ROM-backed, opt-in lifecycle proof, intentionally distinct from a playable
+ * guest-character transfer. The Aria instance still contains its native Soma
+ * entity; the imported health and location are diagnostic only. */
+bool authentic_roundtrip_probe_run(const char *metroid_path,
+                                   const char *aria_path,
+                                   char *error, size_t error_size)
+{
+    GbaRuntime runtimes[2] = {{0}};
+    GbaTransitionTarget targets[2];
+    GbaRuntimeSnapshot source_checkpoint = {0};
+    GbaRuntimeSnapshot target_checkpoint = {0};
+    GbaRuntimeSnapshot returned_checkpoint = {0};
+    GbaRuntimeSnapshot target_restored_checkpoint = {0};
+    FusionTransitionObservation observations[2];
+    FusionTransitionPlan plan = {0};
+    MzmStateView source_before = {0};
+    MzmStateView source_returned = {0};
+    AriaStateView target_before = {0};
+    AriaStateView target_arrived = {0};
+    AriaStateView target_restored = {0};
+    FusionTransitionTransactionResult transaction;
+    bool success = false;
+    bool cleanup_ok = true;
+    char cleanup_error[256] = {0};
+    unsigned world;
+    if (!metroid_path || !aria_path || !error || !error_size)
+        return false;
+    error[0] = '\0';
+    if (!gba_runtime_open(&runtimes[WORLD_METROID], metroid_path,
+                          error, error_size) ||
+        !gba_runtime_open(&runtimes[WORLD_CASTLEVANIA], aria_path,
+                          error, error_size))
+        goto cleanup;
+    gba_transition_target_init(&targets[WORLD_METROID],
+                               &runtimes[WORLD_METROID], WORLD_METROID);
+    gba_transition_target_init(&targets[WORLD_CASTLEVANIA],
+                               &runtimes[WORLD_CASTLEVANIA], WORLD_CASTLEVANIA);
+    if (!bootstrap_and_observe_mzm(&runtimes[WORLD_METROID],
+                                   &targets[WORLD_METROID],
+                                   &observations[WORLD_METROID],
+                                   error, error_size) ||
+        !bootstrap_and_observe_aria(&runtimes[WORLD_CASTLEVANIA],
+                                    &targets[WORLD_CASTLEVANIA],
+                                    &observations[WORLD_CASTLEVANIA],
+                                    error, error_size))
+        goto cleanup;
+    if (runtimes[WORLD_METROID].active ||
+        runtimes[WORLD_CASTLEVANIA].active ||
+        !fusion_transition_plan_build(&observations[WORLD_METROID],
+                                      WORLD_CASTLEVANIA, &plan)) {
+        set_error(error, error_size, "roundtrip: invalid bootstrap/plan");
+        goto cleanup;
+    }
+
+    /* MZM -> suspended. No other runtime may execute while this checkpoint
+     * is captured, and no source frame may execute during the Aria visit. */
+    if (!gba_runtime_enter(&runtimes[WORLD_METROID]) ||
+        !fusion_roundtrip_exclusive(&runtimes[WORLD_METROID],
+                                    &runtimes[WORLD_CASTLEVANIA]) ||
+        !mzm_state_read(&runtimes[WORLD_METROID], &source_before,
+                        error, error_size) ||
+        !gba_runtime_capture(&runtimes[WORLD_METROID],
+                             &source_checkpoint, error, error_size)) {
+        if (!error[0]) set_error(error, error_size,
+                                 "roundtrip: MZM checkpoint rejected");
+        goto cleanup;
+    }
+    printf("Roundtrip: MZM departure room=%u:%u hp=%u/%u checkpoint=%zu\n",
+           source_before.area, source_before.room, source_before.current_energy,
+           source_before.max_energy, source_checkpoint.size);
+    gba_runtime_leave(&runtimes[WORLD_METROID]);
+
+    /* Visit Aria, use the already verified same-room arrival transaction,
+     * and retain an OUTER checkpoint so a successful commit remains reversible. */
+    if (!gba_runtime_enter(&runtimes[WORLD_CASTLEVANIA]) ||
+        !fusion_roundtrip_exclusive(&runtimes[WORLD_CASTLEVANIA],
+                                    &runtimes[WORLD_METROID]) ||
+        !aria_state_read(&runtimes[WORLD_CASTLEVANIA], &target_before,
+                         error, error_size) ||
+        !gba_runtime_capture(&runtimes[WORLD_CASTLEVANIA],
+                             &target_checkpoint, error, error_size)) {
+        if (!error[0]) set_error(error, error_size,
+                                 "roundtrip: Aria checkpoint rejected");
+        goto cleanup;
+    }
+    transaction = fusion_transition_apply_transaction(
+        &plan, gba_transition_target_ops(), &targets[WORLD_CASTLEVANIA]);
+    if (transaction != FUSION_TRANSITION_TRANSACTION_COMMITTED) {
+        snprintf(error, error_size,
+                 "roundtrip: Aria arrival failed (%d): %.160s",
+                 (int)transaction, targets[WORLD_CASTLEVANIA].error);
+        goto cleanup;
+    }
+    if (!aria_state_read(&runtimes[WORLD_CASTLEVANIA], &target_arrived,
+                         error, error_size) ||
+        !target_arrived.gameplay_state_ready ||
+        target_arrived.x_position_fixed != plan.target_position_x_q16 ||
+        target_arrived.y_position_fixed != plan.target_position_y_q16 ||
+        target_arrived.current_hp != plan.target_health ||
+        target_arrived.max_hp != plan.target_max_health) {
+        set_error(error, error_size,
+                  "roundtrip: Aria committed state verification failed");
+        goto cleanup;
+    }
+    printf("Roundtrip: Aria arrived room=%u:%u hp=%d/%u (native Soma entity)\n",
+           target_arrived.area, target_arrived.room,
+           target_arrived.current_hp, target_arrived.max_hp);
+    gba_runtime_leave(&runtimes[WORLD_CASTLEVANIA]);
+
+    /* Aria -> MZM: resume the SUSPENDED source, not a newly booted instance.
+     * Its complete mGBA saved-state bytes must be unchanged across the visit. */
+    if (!gba_runtime_enter(&runtimes[WORLD_METROID]) ||
+        !fusion_roundtrip_exclusive(&runtimes[WORLD_METROID],
+                                    &runtimes[WORLD_CASTLEVANIA]) ||
+        !gba_runtime_capture(&runtimes[WORLD_METROID],
+                             &returned_checkpoint, error, error_size) ||
+        !mzm_state_read(&runtimes[WORLD_METROID], &source_returned,
+                        error, error_size) ||
+        !fusion_roundtrip_snapshot_equal(&source_checkpoint,
+                                         &returned_checkpoint) ||
+        source_returned.area != source_before.area ||
+        source_returned.room != source_before.room ||
+        source_returned.x_subpixels != source_before.x_subpixels ||
+        source_returned.y_subpixels != source_before.y_subpixels ||
+        source_returned.current_energy != source_before.current_energy ||
+        source_returned.max_energy != source_before.max_energy) {
+        if (!error[0]) set_error(error, error_size,
+                                 "roundtrip: suspended MZM state changed");
+        goto cleanup;
+    }
+    printf("Roundtrip: MZM resumed unchanged checkpoint=%zu position=%u,%u\n",
+           returned_checkpoint.size, source_returned.x_subpixels,
+           source_returned.y_subpixels);
+    /* Prove one native frame can execute on re-entry, then undo that frame. */
+    if (!gba_runtime_step(&runtimes[WORLD_METROID], 0) ||
+        !gba_runtime_restore(&runtimes[WORLD_METROID], &source_checkpoint,
+                             error, error_size)) {
+        if (!error[0]) set_error(error, error_size,
+                                 "roundtrip: MZM resume/restore failed");
+        goto cleanup;
+    }
+    gba_runtime_leave(&runtimes[WORLD_METROID]);
+
+    /* Restore Aria's original (pre-import) state even after a successful
+     * transaction. This is a probe, so neither side should retain the visit. */
+    if (!gba_runtime_enter(&runtimes[WORLD_CASTLEVANIA]) ||
+        !fusion_roundtrip_exclusive(&runtimes[WORLD_CASTLEVANIA],
+                                    &runtimes[WORLD_METROID]) ||
+        !gba_runtime_restore(&runtimes[WORLD_CASTLEVANIA],
+                             &target_checkpoint, error, error_size) ||
+        !gba_runtime_capture(&runtimes[WORLD_CASTLEVANIA],
+                             &target_restored_checkpoint, error, error_size) ||
+        !fusion_roundtrip_snapshot_equal(&target_checkpoint,
+                                         &target_restored_checkpoint) ||
+        !aria_state_read(&runtimes[WORLD_CASTLEVANIA], &target_restored,
+                         error, error_size) ||
+        target_restored.x_position_fixed != target_before.x_position_fixed ||
+        target_restored.y_position_fixed != target_before.y_position_fixed ||
+        target_restored.current_hp != target_before.current_hp ||
+        target_restored.max_hp != target_before.max_hp) {
+        if (!error[0]) set_error(error, error_size,
+                                 "roundtrip: Aria rollback verification failed");
+        goto cleanup;
+    }
+    gba_runtime_leave(&runtimes[WORLD_CASTLEVANIA]);
+    printf("Roundtrip: Aria outer rollback verified checkpoint=%zu\n",
+           target_restored_checkpoint.size);
+    puts("Roundtrip: MZM -> Aria -> MZM lifecycle verified; "
+         "guest character transfer NOT implemented");
+    success = true;
+    set_error(error, error_size, "");
+
+cleanup:
+    /* Always restore both probe-owned checkpoints before releasing the ROMs.
+     * The generic transaction owns and disposes its own inner checkpoint. */
+    gba_runtime_leave(&runtimes[WORLD_METROID]);
+    gba_runtime_leave(&runtimes[WORLD_CASTLEVANIA]);
+    for (world = 0; world < 2; ++world) {
+        GbaRuntimeSnapshot *saved = world == WORLD_METROID
+            ? &source_checkpoint : &target_checkpoint;
+        if (!saved->data) continue;
+        if (!gba_runtime_enter(&runtimes[world]) ||
+            !gba_runtime_restore(&runtimes[world], saved,
+                                 cleanup_error, sizeof(cleanup_error))) {
+            cleanup_ok = false;
+        }
+        gba_runtime_leave(&runtimes[world]);
+    }
+    if (!cleanup_ok) {
+        char message[256];
+        snprintf(message, sizeof(message),
+                 "roundtrip: cleanup checkpoint restore failed: %.170s",
+                 cleanup_error);
+        set_error(error, error_size, message);
+        success = false;
+    }
+    gba_runtime_snapshot_dispose(&target_restored_checkpoint);
+    gba_runtime_snapshot_dispose(&returned_checkpoint);
+    gba_runtime_snapshot_dispose(&target_checkpoint);
+    gba_runtime_snapshot_dispose(&source_checkpoint);
     gba_runtime_close(&runtimes[WORLD_CASTLEVANIA]);
     gba_runtime_close(&runtimes[WORLD_METROID]);
     return success;

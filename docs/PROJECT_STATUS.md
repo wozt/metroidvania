@@ -481,3 +481,21 @@ frame tests and backend lifecycle tests before being enabled.
   and the final phase/control/animation when stabilization never occurs.
 - This is a diagnostic and safety-gating change, not a claim that the Aria
   introduction or native cross-room loading is fixed. No ROM data is written.
+
+## Patch 0030 - exclusive authentic round-trip lifecycle proof
+
+- Added `--authentic-roundtrip-probe` as a separate, ROM-validated diagnostic.
+- Bootstrap both worlds independently, then execute the ordered sequence
+  MZM departure -> suspended MZM -> checkpointed Aria same-room arrival ->
+  resume original MZM -> restore both initial runtime checkpoints.
+- Enforce exclusive active runtime state at every handoff, compare **complete**
+  MZM mGBA snapshots across the period when it was suspended, and prove that
+  one MZM frame can run after re-entry before restoring its checkpoint.
+- Compare the Aria outer checkpoint after undoing a committed arrival, in
+  addition to its native position/HP view. Any failure initiates cleanup
+  restoration for every checkpoint already captured.
+- Added ROM-free tests for exclusive lifecycle gating and byte-accurate
+  snapshot equality. The command never writes ROMs, saves, or assets.
+- **Scope limit:** Aria still uses its native Soma entity. This is a proof of
+  runtime suspension, arrival, and return, not a playable guest-character
+  crossover or arbitrary cross-room loader.

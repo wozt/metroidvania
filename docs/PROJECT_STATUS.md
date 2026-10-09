@@ -880,3 +880,11 @@ and the proprietary-file guard passed.
 - This is a visual, hypothetical all-events snapshot, not a saved game state.
   More complete event engine state/door runtime mutation is future work.
 - Source-only Python regressions cover event flags and security tile indices.
+
+## Patch 0101 - Aria original screen-transition geometry
+
+- Use 256x256 screen/map blocks rather than the 240x160 LCD viewport.
+- Preserve native screen identity. Draw approximate edge markers only where
+  room extent and boundary can be determined; never assert pixel precision.
+- Invalid native coordinates are inspector-only, not fabricated exits.
+- Aria-only import, no ROM edits or changes to Zero Mission.

@@ -226,6 +226,54 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
     return rows
 
 
+def aria_transition_geometry(room: dict, transition: dict) -> tuple[int, int, str]:
+    """Place a native screen-level transition marker at its 256px-room boundary.
+
+    Aria's 16-byte door records identify a SCREEN coordinate, not the exact
+    pixel of the physical doorway. The engine backgrounds contain 256x256px
+    map screens, not the 240x160px visible GBA viewport. Do not invent an
+    exact Y for left/right edges or X for top/bottom edges: show the middle
+    of the *specified screen segment* with an explicit edge identifier.
+
+    Source coordinates -1/width and -1/height represent outside-screen
+    edges. When there is no trustworthy room extent, preserve a bounded
+    screen-level diagnostic instead of inventing an edge/direction.
+    """
+    sx = int(transition['source_screen_x'])
+    sy = int(transition['source_screen_y'])
+    extent = None
+    for layer in (1, 2, 3):
+        for bg in room.get('backgrounds', []):
+            if bg.get('layer') != layer:
+                continue
+            w, h = bg.get('width_screens'), bg.get('height_screens')
+            if type(w) is int and type(h) is int and 1 <= w <= 16 and 1 <= h <= 16:
+                extent = (w, h)
+                break
+        if extent is not None:
+            break
+
+    side = 'screen-location-only'
+    if extent is not None:
+        w, h = extent
+        if sx == -1 and 0 <= sy < h:
+            return 0, sy * 256 + 120, 'left-edge'
+        if sx == w and 0 <= sy < h:
+            return w * 256 - 16, sy * 256 + 120, 'right-edge'
+        if sy == -1 and 0 <= sx < w:
+            return sx * 256 + 120, 0, 'top-edge'
+        if sy == h and 0 <= sx < w:
+            return sx * 256 + 120, h * 256 - 16, 'bottom-edge'
+        if 0 <= sx < w and 0 <= sy < h:
+            return sx * 256 + 120, sy * 256 + 120, side
+        # Corrupt/unsupported source screen: do not draw a fake door.
+        raise ValueError(f'Aria source screen ({sx}, {sy}) is outside room extent {extent}')
+
+    # Missing background dimensions: a positive coordinate can only locate
+    # a screen-level region, never an exact door or known outer boundary.
+    return max(0, sx * 256 + 120), max(0, sy * 256 + 120), side
+
+
 def build_aria(room: dict, enemy_names: dict[int, str] | None = None) -> list[tuple]:
     rows = []
     for index, entity in enumerate(room['entities']):
@@ -252,13 +300,25 @@ def build_aria(room: dict, enemy_names: dict[int, str] | None = None) -> list[tu
                      max(0, entity['y'] - 8), 16, 16,
                      'native', native, label, details))
     for index, transition in enumerate(room['transitions']):
-        x = max(0, int(transition['source_screen_x']) * 240)
-        y = max(0, int(transition['source_screen_y']) * 160)
+        # The source position is the 256x256 screen beyond or inside a
+        # boundary. Never use the visible LCD size (240x160) as map scale.
+        try:
+            x, y, placement = aria_transition_geometry(room, transition)
+        except (ValueError, TypeError, KeyError):
+            # Invalid/unknown source geometry is preserved in the data tab
+            # but not drawn as a misleading door on top of the level.
+            x = y = 0
+            placement = 'unresolved'
         details = (f"pointer={transition['entry_pointer']}; target="
                    f"{transition['target_engine_area']}:{transition['target_room']}; "
-                   f"load=({transition['load_x']},{transition['load_y']})")
-        rows.append(('DOOR', index, x, y, 16, 16, 'screen-anchor',
-                     str(index), f'Transition {index}', details))
+                   f"load=({transition['load_x']},{transition['load_y']}); "
+                   f"source_screen=({transition['source_screen_x']},"
+                   f"{transition['source_screen_y']}); placement={placement}; "
+                   "native_screen=256x256; pixel_exact=false")
+        annotation_kind = 'DOOR' if placement not in ('unresolved',) else 'OTHER'
+        rows.append((annotation_kind, index, x, y, 16, 16,
+                     f'transition-{placement}', str(index),
+                     f"Transition {index} ({placement})", details))
     return rows
 
 

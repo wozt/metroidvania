@@ -86,9 +86,104 @@ def build_aria(catalog: dict) -> list[tuple[int,int,int,int,int,int]]:
     return out
 
 
-def output_rows(world:str, rows:list[tuple[int,int,int,int,int,int]])->bytes:
-    head='# Verified original minimap cells. MZM entries are anchors, not bounds.\n# area|room|x|y|save|warp\n'
-    return (head+'\n'.join('|'.join(map(str,row)) for row in rows)+'\n').encode('utf-8')
+def native_mzm_clip_dimensions() -> dict[tuple[int, int], tuple[int, int]]:
+    """Only use decoded, project-private native clipdata; no guessed footprints.
+
+    The original minimap derives tile coordinates from local room coordinates
+    plus RoomEntryRom.mapX/mapY (pinned metroidret/mzm src/minimap.c).
+    One minimap unit is 15x10 blocks. Clipdata RLE gives room bounds in
+    16-pixel blocks; background images are NOT a substitute for collision bounds.
+    """
+    from scripts.mzm_room_render import room_blob, rle_room
+    catalog = OUTPUT / 'rooms/metroid/rooms.tsv'
+    if not catalog.is_file():
+        return {}
+    found = {}
+    for line in catalog.read_text(encoding='utf-8').splitlines():
+        if not line or line.startswith('#'):
+            continue
+        cols = line.split('|')
+        if len(cols) != 10 or cols[0] not in MZM_AREAS:
+            raise ValueError('malformed verified MZM descriptor catalog')
+        area = MZM_AREAS.index(cols[0])
+        try:
+            room = int(cols[1])
+        except ValueError as exc:
+            raise ValueError('invalid MZM room ID in descriptor catalog') from exc
+        if not 0 <= room < 256:
+            raise ValueError('MZM descriptor room index out of bounds')
+        try:
+            width, height, _ = rle_room(room_blob(cols[6]))
+        except (ValueError, OSError, IndexError):
+            # Unavailable or not yet decoded original clipdata -> anchor only.
+            continue
+        found[(area, room)] = (width, height)
+    return found
+
+
+def expand_mzm_clip_cells(anchors: list[tuple[int, int, int, int, int, int]],
+                          dimensions: dict[tuple[int, int], tuple[int, int]]) -> list[tuple[int, ...]]:
+    """Safely expand verified MZM minimap origins with native clipdata bounds.
+
+    No room may claim another room's anchor or overlapping native bounds.
+    Ambiguous candidates stay anchors; all derived cells carry provenance=1.
+    """
+    if not anchors:
+        raise ValueError('empty MZM room atlas')
+    anchor_coords = {}
+    for area, room, x, y, *_ in anchors:
+        anchor_coords.setdefault((area, x, y), set()).add((area, room))
+    candidates = {}
+    for area, room, x, y, save, warp in anchors:
+        blocks = dimensions.get((area, room))
+        if blocks is None:
+            continue
+        bw, bh = blocks
+        if (type(bw) is not int or type(bh) is not int or
+                not 1 <= bw <= 128 or not 1 <= bh <= 128):
+            continue
+        width, height = (bw + 14) // 15, (bh + 9) // 10
+        if x + width > 32 or y + height > 32:
+            continue
+        points = {(area, xx, yy)
+                  for yy in range(y, y + height)
+                  for xx in range(x, x + width)}
+        if any(other != {(area, room)} for point in points
+               if (other := anchor_coords.get(point)) is not None):
+            continue
+        candidates[(area, room)] = points
+    owners = {}
+    for owner, points in candidates.items():
+        for point in points:
+            owners.setdefault(point, set()).add(owner)
+    conflicting = {owner for group in owners.values() if len(group) > 1
+                   for owner in group}
+    out = []
+    for area, room, x, y, save, warp in anchors:
+        owner = (area, room)
+        if owner in candidates and owner not in conflicting:
+            for _, xx, yy in sorted(candidates[owner], key=lambda t: (t[2], t[1])):
+                out.append((area, room, xx, yy, save, warp, 1))
+        else:
+            out.append((area, room, x, y, save, warp, 0))
+    return out
+
+
+def output_rows(world: str, rows: list[tuple[int, ...]]) -> bytes:
+    # Last field is provenance: 0=original MZM origin only, 1=verified native
+    # MZM clipdata rectangle, 2=original Aria minimap cell. Legacy callers
+    # supplying six integers are supported without ambiguity.
+    default = 2 if world == 'aria' else 0
+    encoded = []
+    for row in rows:
+        if len(row) == 6:
+            row = (*row, default)
+        if len(row) != 7 or row[6] not in (0, 1, 2):
+            raise ValueError('invalid world overview provenance row')
+        encoded.append('|'.join(map(str, row)))
+    head = ('# Native minimap cells; provenance 0=MZM origin, 1=MZM clip bounds, 2=Aria cell.\n'
+            '# area|room|x|y|save|warp|provenance\n')
+    return (head + '\n'.join(encoded) + '\n').encode('utf-8')
 
 
 def index(world: str)->int:
@@ -96,7 +191,8 @@ def index(world: str)->int:
         from scripts.mzm_world_atlas import run
         src=OUTPUT/'rooms/metroid/world_atlas.tsv'
         if not src.is_file(): run()
-        rows=build_mzm(src.read_text(encoding='utf-8'))
+        anchors = build_mzm(src.read_text(encoding='utf-8'))
+        rows = expand_mzm_clip_cells(anchors, native_mzm_clip_dimensions())
     else:
         from scripts.import_aos_world import decode_world, DEFAULT_ROM
         p=OUTPUT/'rooms/aria/world.json'

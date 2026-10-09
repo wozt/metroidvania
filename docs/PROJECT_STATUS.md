@@ -317,3 +317,22 @@ and the proprietary-file guard passed.
 - Increased the Global maps diagnostic excerpt from 500 to 2048 characters.
 - Added source-only Aria map-contract regression cases and GTK browser label
   selection checks. Real Debian GTK4 compilation/CTest is still required.
+
+## Patch 0068 - truthful multi-cell global-map room spans
+
+- Aria rooms sharing native minimap cell identity render as spanning rectangles
+  in the GTK grid rather than six repeated identical full-room thumbnails.
+  Irregular original shapes are partitioned into exact occupied rectangles;
+  no missing cell is filled and clicking any segment selects the whole room.
+- Zero Mission original minimap mapX/mapY are offsets from local player
+  screen-grid coordinates (pinned src/minimap.c). If verified local Clipdata
+  RLE can be decoded, its 16px block width/height supplies a conservative
+  rectangular room footprint in 15x10 block units. All ambiguous/overlapping,
+  missing or out-of-bounds candidate spans revert to original anchor-only.
+- Source-provenance is preserved per generated map row (0=MZM anchor only,
+  1=validated native MZM clipdata extent, 2=original Aria minimap cell).
+  Existing six-field indexes remain readable by the GTK browser.
+- Preview images are shown at most once for a complete rectangular room;
+  nonrectangular fragments never repeat a misleading full-room screenshot.
+- Python tests cover 2x3 spans, coordinate conflict fallback, bounds,
+  Aria L-shaped cells and provenance. Runtime GTK4 tests remain mandatory.

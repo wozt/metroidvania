@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct { guint area, room, x, y, save, warp; } MapCell;
+typedef struct { guint area, room, x, y, save, warp, provenance; } MapCell;
 typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
@@ -37,11 +37,17 @@ static gboolean reload_rows(WorldGrid *w)
     lines=contents; split=g_strsplit(lines,"\n",-1);
     g_array_set_size(w->cells,0);
     for(guint i=0;split[i];++i){
-        MapCell c={0}; char excess; guint a,r,x,y,s,v;
+        MapCell c={0}; char excess; guint a,r,x,y,s,v,provenance=0;
         if (!split[i][0] || split[i][0]=='#') continue;
-        if(sscanf(split[i],"%u|%u|%u|%u|%u|%u%c",&a,&r,&x,&y,&s,&v,&excess)!=6 ||
-           a>=area_count(w) || r>=1000 || x>=128 || y>=128 || s>1 || v>1)continue;
+        int fields=sscanf(split[i],"%u|%u|%u|%u|%u|%u|%u%c",
+                          &a,&r,&x,&y,&s,&v,&provenance,&excess);
+        if (fields != 7 && fields != 6) continue; /* also read legacy 6-field indexes */
+        if (fields == 6) provenance = w->world ? 2u : 0u;
+        if (a>=area_count(w) || r>=1000 || x>=128 || y>=128 || s>1 || v>1 ||
+            provenance>2 || (w->world && provenance!=2) ||
+            (!w->world && provenance==2)) continue;
         c.area=a;c.room=r;c.x=x;c.y=y;c.save=s;c.warp=v;
+        c.provenance=provenance;
         g_array_append_val(w->cells,c);
     }
     g_strfreev(split);g_free(contents);
@@ -57,22 +63,51 @@ static void selected_open(WorldGrid *w)
 }
 static void selected_open_click(GtkButton *b,gpointer data)
 { (void)b;selected_open(data); }
-static void grid_clicked(GtkGestureClick *g,gint presses,double x,double y,gpointer data)
+static guint room_cells_in_area(const WorldGrid *w, guint area, guint room)
 {
-    WorldGrid *w=data; (void)x;(void)y;
-    guint n=GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(g))),"mv-grid-index"));
-    if(n==0 || n>w->cells->len)return;
-    if (w->selected_cell)
-        gtk_widget_remove_css_class(w->selected_cell, "mv-selected");
-    w->selected_cell = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(g));
-    gtk_widget_add_css_class(w->selected_cell, "mv-selected");
-    w->selection=n-1;w->selected=TRUE;
-    MapCell c=g_array_index(w->cells,MapCell,w->selection);
-    char msg[400];snprintf(msg,sizeof(msg),"%s / %s room %03u / minimap case (%u,%u) %s %s%s",
-        worlds[w->world],area_name(w,c.area),c.room,c.x,c.y,c.save?"[SAVE]":"",c.warp?"[WARP]":"",
-        w->world?"":" | MZM anchor only; original footprint not decoded");
-    gtk_label_set_text(GTK_LABEL(w->details),msg);
-    if(presses>=2)selected_open(w);
+    guint n = 0;
+    for (guint i = 0; i < w->cells->len; ++i) {
+        const MapCell *c = &g_array_index(w->cells, MapCell, i);
+        if (c->area == area && c->room == room) ++n;
+    }
+    return n;
+}
+
+static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, gpointer data)
+{
+    WorldGrid *w = data;
+    (void)x; (void)y;
+    GtkWidget *widget = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(g));
+    guint n = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(widget), "mv-grid-index"));
+    if (!n || n > w->cells->len) return;
+    w->selection = n - 1;
+    w->selected = TRUE;
+    MapCell c = g_array_index(w->cells, MapCell, w->selection);
+    /* Selection applies to every segment of the same native room, including
+     * irregular and disconnected Aria shapes. Never erase source cell gaps. */
+    w->selected_cell = widget;
+    for (GtkWidget *child = gtk_widget_get_first_child(w->grid); child;
+         child = gtk_widget_get_next_sibling(child)) {
+        guint index = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(child), "mv-grid-index"));
+        if (!index || index > w->cells->len) continue;
+        MapCell other = g_array_index(w->cells, MapCell, index - 1);
+        if (other.area == c.area && other.room == c.room)
+            gtk_widget_add_css_class(child, "mv-selected");
+        else
+            gtk_widget_remove_css_class(child, "mv-selected");
+    }
+    const char *source = c.provenance == 2 ? "original minimap cells" :
+                         c.provenance == 1 ? "native clipdata bounds" :
+                         "original map anchor ONLY (extent unavailable)";
+    gchar *message = g_strdup_printf(
+        "%s / %s / room %03u | %u mapped case(s), clicked (%u,%u) "
+        "%s %s | %s",
+        worlds[w->world], area_name(w, c.area), c.room,
+        room_cells_in_area(w, c.area, c.room), c.x, c.y,
+        c.save ? "[SAVE]" : "", c.warp ? "[WARP]" : "", source);
+    gtk_label_set_text(GTK_LABEL(w->details), message);
+    g_free(message);
+    if (presses >= 2) selected_open(w);
 }
 static gboolean has_image(const WorldGrid *w,const MapCell *c,char *dest,size_t n)
 {
@@ -84,73 +119,154 @@ static void grid_rebuild(WorldGrid *w)
 {
     GtkWidget *child;
     w->selected_cell = NULL;
-    while((child=gtk_widget_get_first_child(w->grid)))gtk_grid_remove(GTK_GRID(w->grid),child);
-    guint xmax=0,ymax=0,total=0,thumbs=0;
-    for(guint i=0;i<w->cells->len;++i){
-        MapCell *c=&g_array_index(w->cells,MapCell,i);
-        if(c->area!=w->area)continue;
-        if(c->x>xmax)xmax=c->x;
-        if(c->y>ymax)ymax=c->y;
+    while ((child = gtk_widget_get_first_child(w->grid)))
+        gtk_grid_remove(GTK_GRID(w->grid), child);
+    guint xmax = 0, ymax = 0, total = 0, anchor_only = 0;
+    for (guint i = 0; i < w->cells->len; ++i) {
+        const MapCell *c = &g_array_index(w->cells, MapCell, i);
+        if (c->area != w->area) continue;
+        xmax = MAX(xmax, c->x);
+        ymax = MAX(ymax, c->y);
         ++total;
+        if (c->provenance == 0) ++anchor_only;
     }
-    if(total==0){gtk_label_set_text(GTK_LABEL(w->status),"No original map cells available. Import the local ROM first.");return;}
-    /* Blank grid slots preserve original positional gaps between real cells. */
-    if(xmax>90 || ymax>90){gtk_label_set_text(GTK_LABEL(w->status),"Original map bounds exceed safe preview limits.");return;}
-    guint side=w->size;
-    guint stride=xmax+1;
-    guint *lookup=g_new0(guint,stride*(ymax+1));
-    for(guint i=0;i<w->cells->len;++i){
-        const MapCell *c=&g_array_index(w->cells,MapCell,i);
-        if(c->area!=w->area)continue;
-        guint pos=c->y*stride+c->x;
-        if(!lookup[pos])lookup[pos]=i+1;
+    if (!total) {
+        gtk_label_set_text(GTK_LABEL(w->status),
+            "No original map cells available. Import the local ROM first.");
+        return;
     }
-    for(guint y=0;y<=ymax;++y){
-        for(guint x=0;x<=xmax;++x){
-            GtkWidget *cell=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
-            gtk_widget_set_size_request(cell,(int)side,(int)side);
-            gtk_widget_add_css_class(cell,"mv-map-cell");
-            guint entry=lookup[y*stride+x];
-            guint best=entry ? entry-1 : G_MAXUINT;
-            if(best!=G_MAXUINT){
-                MapCell c=g_array_index(w->cells,MapCell,best);
-                char path[256];
-                gtk_widget_add_css_class(cell,"mv-occupied");
-                if(c.save)gtk_widget_add_css_class(cell,"mv-save");
-                if(c.warp)gtk_widget_add_css_class(cell,"mv-warp");
-                if (w->selected && w->selection == best) {
+    if (xmax > 90 || ymax > 90) {
+        gtk_label_set_text(GTK_LABEL(w->status),
+            "Original map bounds exceed safe preview limits.");
+        return;
+    }
+    guint stride = xmax + 1;
+    guint count = stride * (ymax + 1);
+    guint *lookup = g_new0(guint, count);
+    gboolean *covered = g_new0(gboolean, count);
+    guint overlapping = 0, groups = 0, thumbs = 0;
+    for (guint i = 0; i < w->cells->len; ++i) {
+        const MapCell *c = &g_array_index(w->cells, MapCell, i);
+        if (c->area != w->area) continue;
+        guint pos = c->y * stride + c->x;
+        if (lookup[pos]) {
+            ++overlapping; /* Never silently fabricate stacked room ownership. */
+            continue;
+        }
+        lookup[pos] = i + 1;
+    }
+    /* Partition each room's occupied cells into exact, non-overlapping
+     * rectangles. A large 2x3 room becomes ONE GtkGrid child spanning 2x3,
+     * while L/T-shaped rooms are split without filling nonexistent cells. */
+    for (guint y = 0; y <= ymax; ++y) {
+        for (guint x = 0; x <= xmax; ++x) {
+            guint pos = y * stride + x;
+            if (covered[pos]) continue;
+            guint entry = lookup[pos];
+            if (!entry) {
+                GtkWidget *empty = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+                gtk_widget_add_css_class(empty, "mv-map-cell");
+                gtk_widget_set_size_request(empty, (int)w->size, (int)w->size);
+                gtk_grid_attach(GTK_GRID(w->grid), empty, (int)x, (int)y, 1, 1);
+                covered[pos] = TRUE;
+                continue;
+            }
+            const MapCell *c = &g_array_index(w->cells, MapCell, entry - 1);
+            guint width = 1, height = 1;
+            for (guint xx = x + 1; xx <= xmax; ++xx) {
+                guint spot = y * stride + xx, next = lookup[spot];
+                if (covered[spot] || !next) break;
+                const MapCell *other = &g_array_index(w->cells, MapCell, next - 1);
+                if (other->room != c->room || other->area != c->area ||
+                    other->provenance != c->provenance) break;
+                ++width;
+            }
+            for (guint yy = y + 1; yy <= ymax; ++yy) {
+                gboolean full = TRUE;
+                for (guint xx = x; xx < x + width; ++xx) {
+                    guint spot = yy * stride + xx, next = lookup[spot];
+                    if (covered[spot] || !next) { full = FALSE; break; }
+                    const MapCell *other = &g_array_index(w->cells, MapCell, next - 1);
+                    if (other->room != c->room || other->area != c->area ||
+                        other->provenance != c->provenance) { full = FALSE; break; }
+                }
+                if (!full) break;
+                ++height;
+            }
+            gboolean save = FALSE, warp = FALSE;
+            for (guint yy = y; yy < y + height; ++yy)
+                for (guint xx = x; xx < x + width; ++xx) {
+                    guint spot = yy * stride + xx;
+                    const MapCell *part = &g_array_index(w->cells, MapCell, lookup[spot] - 1);
+                    save |= part->save != 0;
+                    warp |= part->warp != 0;
+                    covered[spot] = TRUE;
+                }
+            GtkWidget *cell = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+            gtk_widget_add_css_class(cell, "mv-map-cell");
+            gtk_widget_add_css_class(cell, "mv-occupied");
+            gtk_widget_add_css_class(cell, "mv-room-footprint");
+            if (c->provenance == 0) gtk_widget_add_css_class(cell, "mv-anchor-only");
+            if (save) gtk_widget_add_css_class(cell, "mv-save");
+            if (warp) gtk_widget_add_css_class(cell, "mv-warp");
+            if (w->selected && w->selection < w->cells->len) {
+                const MapCell *selected = &g_array_index(w->cells, MapCell, w->selection);
+                if (selected->area == c->area && selected->room == c->room) {
                     gtk_widget_add_css_class(cell, "mv-selected");
                     w->selected_cell = cell;
                 }
-                if(has_image(w,&c,path,sizeof(path))){
-                    GtkWidget *p=gtk_picture_new_for_filename(path);
-                    gtk_picture_set_can_shrink(GTK_PICTURE(p),TRUE);
-                    gtk_widget_set_size_request(p,(int)side-4,(int)side-4);
-                    gtk_box_append(GTK_BOX(cell),p);
-                    ++thumbs;
-                }else{
-                    char name[14];snprintf(name,sizeof(name),"%u",c.room);
-                    GtkWidget *label=gtk_label_new(name);
-                    gtk_widget_set_halign(label,GTK_ALIGN_CENTER);
-                    gtk_widget_set_valign(label,GTK_ALIGN_CENTER);
-                    gtk_box_append(GTK_BOX(cell),label);
-                }
-                g_object_set_data(G_OBJECT(cell),"mv-grid-index",GUINT_TO_POINTER(best+1));
-                GtkGesture *click=gtk_gesture_click_new();
-                gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click),GDK_BUTTON_PRIMARY);
-                gtk_widget_add_controller(cell,GTK_EVENT_CONTROLLER(click));
-                g_signal_connect(click,"pressed",G_CALLBACK(grid_clicked),w);
             }
-            gtk_grid_attach(GTK_GRID(w->grid),cell,(int)x,(int)y,1,1);
+            gtk_widget_set_size_request(cell, (int)(w->size * width),
+                                        (int)(w->size * height));
+            guint room_cells = room_cells_in_area(w, c->area, c->room);
+            /* A single full-room preview is meaningful only when the exact
+             * occupied rectangle is complete. No duplicated whole-room images
+             * on disconnected segments or unverified MZM anchor markers. */
+            char path[256];
+            if (c->provenance != 0 && room_cells == width * height &&
+                has_image(w, c, path, sizeof(path))) {
+                GtkWidget *picture = gtk_picture_new_for_filename(path);
+                gtk_picture_set_can_shrink(GTK_PICTURE(picture), TRUE);
+                gtk_widget_set_size_request(picture, (int)(w->size * width) - 4,
+                                             (int)(w->size * height) - 4);
+                gtk_box_append(GTK_BOX(cell), picture);
+                ++thumbs;
+            } else {
+                gchar *name = g_strdup_printf("%u%s", c->room,
+                        room_cells > width * height ? " …" : "");
+                GtkWidget *label = gtk_label_new(name);
+                gtk_widget_set_halign(label, GTK_ALIGN_CENTER);
+                gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+                gtk_widget_set_vexpand(label, TRUE);
+                gtk_box_append(GTK_BOX(cell), label);
+                g_free(name);
+            }
+            gchar *tip = g_strdup_printf("Room %u: %u verified case(s); %ux%u displayed segment; %s",
+                c->room, room_cells, width, height,
+                c->provenance == 2 ? "original Aria map" :
+                c->provenance == 1 ? "native MZM clip bounds" : "MZM anchor only");
+            gtk_widget_set_tooltip_text(cell, tip);
+            g_free(tip);
+            g_object_set_data(G_OBJECT(cell), "mv-grid-index", GUINT_TO_POINTER(entry));
+            GtkGesture *click = gtk_gesture_click_new();
+            gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), GDK_BUTTON_PRIMARY);
+            gtk_widget_add_controller(cell, GTK_EVENT_CONTROLLER(click));
+            g_signal_connect(click, "pressed", G_CALLBACK(grid_clicked), w);
+            gtk_grid_attach(GTK_GRID(w->grid), cell, (int)x, (int)y,
+                            (int)width, (int)height);
+            ++groups;
         }
     }
+    g_free(covered);
     g_free(lookup);
-    char info[300];
-    snprintf(info,sizeof(info),"%s / %s | %u verified case markers (%u cached graphic previews). "
-             "%s Double-click a case to edit. Generation runs in background.",
-             worlds[w->world],area_name(w,w->area),total,thumbs,
-             w->world?"Aria: original 64x35 minimap cells.":"MZM: anchors only, NOT exact room geometry.");
-    gtk_label_set_text(GTK_LABEL(w->status),info);
+    gchar *message = g_strdup_printf(
+        "%s / %s | %u occupied case(s), %u room segments, %u previews; "
+        "%u anchor-only case(s), %u overlapping source coordinates. "
+        "Multi-case rooms retain their actual positions. Double-click to edit.",
+        worlds[w->world], area_name(w, w->area), total, groups, thumbs,
+        anchor_only, overlapping);
+    gtk_label_set_text(GTK_LABEL(w->status), message);
+    g_free(message);
 }
 static void begin_generation(WorldGrid *w);
 
@@ -282,7 +398,9 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
         ".mv-occupied{background:#345968;border:1px solid #6c9da6;}"
         ".mv-save{border:2px solid #71d0a3;}"
         ".mv-warp{border:2px solid #b7a1eb;}"
-        ".mv-selected{border:3px solid #f4cc58;}"};
+        ".mv-selected{border:3px solid #f4cc58;}"
+        ".mv-room-footprint{border:2px solid #91b8c7;}"
+        ".mv-anchor-only{border:2px dashed #d7a564;}"};
     GtkCssProvider *provider=gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider,css);
     GdkDisplay *display=gdk_display_get_default();

@@ -150,6 +150,22 @@ static guint room_cells_in_area(const WorldGrid *w, guint area, guint room)
     return n;
 }
 
+/* One rectangle per consecutive room footprint, just like the Aria atlas.
+ * MZM 0/1 are both verified room anchors/ownership; unowned native cells
+ * and different project drafts must never be silently fused. */
+static gboolean same_atlas_group(const WorldGrid *w, const MapCell *a, const MapCell *b)
+{
+    if (!a || !b || a->area != b->area || a->room != b->room || a->room == 999)
+        return FALSE;
+    if (a->provenance == 3 || b->provenance == 3) return FALSE;
+    if (a->provenance == 4 || b->provenance == 4)
+        return a->provenance == 4 && b->provenance == 4 &&
+               strcmp(a->draft_id, b->draft_id) == 0;
+    if (!w->world)
+        return a->provenance <= 1 && b->provenance <= 1;
+    return a->provenance == b->provenance;
+}
+
 static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, gpointer data)
 {
     WorldGrid *w = data;
@@ -713,24 +729,20 @@ static void grid_rebuild(WorldGrid *w)
             }
             const MapCell *c = &g_array_index(w->cells, MapCell, entry - 1);
             guint width = 1, height = 1;
-            for (guint xx = x + 1; w->world && c->provenance != 3 && xx <= xmax; ++xx) {
+            for (guint xx = x + 1; c->provenance != 3 && c->room != 999 && xx <= xmax; ++xx) {
                 guint spot = y * stride + xx, next = lookup[spot];
                 if (covered[spot] || !next) break;
                 const MapCell *other = &g_array_index(w->cells, MapCell, next - 1);
-                if (other->room != c->room || other->area != c->area ||
-                    other->provenance != c->provenance ||
-                    (c->provenance == 4 && strcmp(c->draft_id, other->draft_id) != 0)) break;
+                if (!same_atlas_group(w, c, other)) break;
                 ++width;
             }
-            for (guint yy = y + 1; w->world && c->provenance != 3 && yy <= ymax; ++yy) {
+            for (guint yy = y + 1; c->provenance != 3 && c->room != 999 && yy <= ymax; ++yy) {
                 gboolean full = TRUE;
                 for (guint xx = x; xx < x + width; ++xx) {
                     guint spot = yy * stride + xx, next = lookup[spot];
                     if (covered[spot] || !next) { full = FALSE; break; }
                     const MapCell *other = &g_array_index(w->cells, MapCell, next - 1);
-                    if (other->room != c->room || other->area != c->area ||
-                        other->provenance != c->provenance ||
-                        (c->provenance == 4 && strcmp(c->draft_id, other->draft_id) != 0)) { full = FALSE; break; }
+                    if (!same_atlas_group(w, c, other)) { full = FALSE; break; }
                 }
                 if (!full) break;
                 ++height;
@@ -769,9 +781,51 @@ static void grid_rebuild(WorldGrid *w)
              * occupied rectangle is complete. No duplicated whole-room images
              * on disconnected segments or unverified MZM anchor markers. */
             char path[256];
-            if (c->provenance != 0 && c->provenance != 3 && c->provenance != 4 &&
-                (w->world ? room_cells == width * height : TRUE) &&
-                has_image(w, c, path, sizeof(path))) {
+            if (!w->world && c->provenance <= 1 && c->room != 999) {
+                /* MZM room mosaic: one actual GTK child for the whole
+                 * rectangular footprint, not bordered children per case.
+                 * Each 240x160 native screen retains its exact atlas slot. */
+                GtkWidget *mosaic = gtk_grid_new();
+                gtk_grid_set_column_homogeneous(GTK_GRID(mosaic), TRUE);
+                gtk_grid_set_row_homogeneous(GTK_GRID(mosaic), TRUE);
+                gtk_grid_set_column_spacing(GTK_GRID(mosaic), 0);
+                gtk_grid_set_row_spacing(GTK_GRID(mosaic), 0);
+                gtk_widget_set_hexpand(mosaic, TRUE);
+                gtk_widget_set_vexpand(mosaic, TRUE);
+                for (guint local_y = 0; local_y < height; ++local_y) {
+                    for (guint local_x = 0; local_x < width; ++local_x) {
+                        guint tile_entry = lookup[(y + local_y) * stride + x + local_x];
+                        const MapCell *part = &g_array_index(w->cells, MapCell, tile_entry - 1);
+                        GtkWidget *tile = gtk_overlay_new();
+                        gtk_widget_set_hexpand(tile, TRUE);
+                        gtk_widget_set_vexpand(tile, TRUE);
+                        char tile_path[256];
+                        if (part->provenance == 1 && has_image(w, part, tile_path, sizeof(tile_path))) {
+                            GtkWidget *picture = gtk_picture_new_for_filename(tile_path);
+                            gtk_picture_set_can_shrink(GTK_PICTURE(picture), TRUE);
+                            gtk_widget_set_size_request(picture,
+                                (int)w->size - 4, (int)w->size - 4);
+                            /* This is a single map case, not a room-wide image. */
+                            gtk_picture_set_content_fit(GTK_PICTURE(picture), GTK_CONTENT_FIT_FILL);
+                            gtk_overlay_set_child(GTK_OVERLAY(tile), picture);
+                            ++thumbs;
+                        } else {
+                            /* Unknown original graphics stay blank, never stretched. */
+                            GtkWidget *label = gtk_label_new(width == 1 && height == 1 ?
+                                "room" : "");
+                            gtk_widget_set_halign(label, GTK_ALIGN_CENTER);
+                            gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+                            gtk_overlay_set_child(GTK_OVERLAY(tile), label);
+                        }
+                        if (show_doors) map_cell_door_badge(tile, native_doors, part);
+                        gtk_grid_attach(GTK_GRID(mosaic), tile,
+                                        (int)local_x, (int)local_y, 1, 1);
+                    }
+                }
+                gtk_box_append(GTK_BOX(cell_content), mosaic);
+            } else if (c->provenance != 0 && c->provenance != 3 && c->provenance != 4 &&
+                       room_cells == width * height &&
+                       has_image(w, c, path, sizeof(path))) {
                 GtkWidget *picture = gtk_picture_new_for_filename(path);
                 gtk_picture_set_can_shrink(GTK_PICTURE(picture), TRUE);
                 gtk_picture_set_content_fit(GTK_PICTURE(picture), GTK_CONTENT_FIT_CONTAIN);
@@ -803,7 +857,8 @@ static void grid_rebuild(WorldGrid *w)
                 c->ownership[0] ? "; ownership: " : "", c->ownership);
             gtk_widget_set_tooltip_text(cell, tip);
             g_free(tip);
-            if (show_doors) map_cell_door_badge(cell, native_doors, c);
+            if (show_doors && (w->world || c->provenance > 1))
+                map_cell_door_badge(cell, native_doors, c);
             g_object_set_data(G_OBJECT(cell), "mv-grid-index", GUINT_TO_POINTER(entry));
             map_context_enable(cell, w, x, y, width, height);
             GtkGesture *click = gtk_gesture_click_new();

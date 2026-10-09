@@ -66,6 +66,14 @@ def main() -> int:
     print("Private native-sized viewer interchange:", result["package_dir"])
     print("Partial ORIGINAL BG1 (not packaged):", native.OUTPUT /
           source["layers"]["Bg1"]["path"])
+    composite = source.get('composite', {})
+    if composite.get('status') == 'PARTIAL_BG1_OVER_BG2_DIAGNOSTIC':
+        print("BG1-over-BG2 diagnostic (not packaged):", native.OUTPUT / composite['path'])
+        print("Visibility counts:", {key: composite[key] for key in
+              ('bg1_visible_pixels', 'bg2_visible_pixels', 'unresolved_pixels')})
+        print("BG layer order/priority is not yet verified against the GBA renderer.")
+    else:
+        print("BG1+BG2 composite unavailable:", composite.get('reason', 'not decoded'))
     if args.demo_overlays:
         print("NOTE: synthetic project collision/object/door overlays ENABLED.")
     else:

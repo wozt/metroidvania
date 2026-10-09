@@ -262,7 +262,16 @@ def palette_color(palette: bytes, bank: int, index: int) -> tuple[int, int, int]
 
 def render_layer(width: int, height: int, blocks: tuple[int, ...],
                  table: list[tuple[int, int, int, int]], gfx: bytes,
-                 palette: bytes, base: int) -> tuple[bytearray, int, int]:
+                 palette: bytes, base: int,
+                 *, visibility: bytearray | None = None) -> tuple[bytearray, int, int]:
+    """Original diagnostic RGB; optional per-pixel visibility for composites.
+
+    GBA 4bpp palette index 0 is transparent on text backgrounds. Unresolved
+    gfx/palettes are also hidden, never guessed or turned opaque. Old RGB
+    callers keep their exact former behavior.
+    """
+    if visibility is not None and len(visibility) != width * 16 * height * 16:
+        raise ValueError('visibility buffer does not match layer dimensions')
     tw, th = width * 16, height * 16
     rgb = bytearray(tw * th * 3)
     unresolved = 0
@@ -293,9 +302,41 @@ def render_layer(width: int, height: int, blocks: tuple[int, ...],
                             dst = ((by * 16 + cell_y * 8 + y) * tw +
                                    bx * 16 + cell_x * 8 + x) * 3
                             rgb[dst:dst + 3] = bytes(color)
+                            if visibility is not None and color_index != 0:
+                                visibility[dst // 3] = 1
                             painted += 1
     return rgb, unresolved, painted
 
+
+
+# PATCH_0126_PARTIAL_NATIVE_BG_COMPOSITE. A diagnostic layer order, NOT verified
+# hardware priority/blending. No pixel is taken from an unrelated room.
+def compose_partial_bg12(bg1_rgb: bytes, bg1_mask: bytes,
+                         bg2_rgb: bytes, bg2_mask: bytes) -> tuple[bytearray, dict]:
+    """Put known, nontransparent BG1 pixels above known BG2 pixels.
+
+    Missing/unresolved pixels remain black and count as unknown. This does NOT
+    emulate GBA BG priority, window masks, BG3, sprites or color effects.
+    """
+    length = len(bg1_mask)
+    if (not length or len(bg2_mask) != length or
+            len(bg1_rgb) != length * 3 or len(bg2_rgb) != length * 3 or
+            any(bit not in (0, 1) for bit in bg1_mask) or
+            any(bit not in (0, 1) for bit in bg2_mask)):
+        raise ValueError('invalid BG1/BG2 pixel coverage buffers')
+    output = bytearray(length * 3)
+    front = behind = unknown = 0
+    for i in range(length):
+        if bg1_mask[i]:
+            output[i*3:i*3+3] = bg1_rgb[i*3:i*3+3]
+            front += 1
+        elif bg2_mask[i]:
+            output[i*3:i*3+3] = bg2_rgb[i*3:i*3+3]
+            behind += 1
+        else:
+            unknown += 1
+    return output, {"bg1_visible_pixels": front, "bg2_visible_pixels": behind,
+                    "unresolved_pixels": unknown}
 
 def bmp24(width: int, height: int, rgb: bytes) -> bytes:
     if not 0 < width <= 4096 or not 0 < height <= 4096 or len(rgb) != width*height*3:
@@ -379,14 +420,40 @@ def decode_room(area: str, number: int, *, write_outputs: bool = True) -> dict:
               'limitations': ['common GBA tiles and palette rows 0..2 not decoded',
                               'BG0, BG3, blending, animated graphics and entities omitted',
                               'rendered BG1/BG2 images are independent opaque diagnostic previews']}
+    layer_pixels = {}
+    layer_coverage = {}
     for layer, (w,h,blocks) in block_maps.items():
-        image, missing, painted = render_layer(w,h,blocks,table,gfx,palette,base)
+        mask = bytearray(w * 16 * h * 16)
+        image, missing, painted = render_layer(
+            w,h,blocks,table,gfx,palette,base,visibility=mask)
+        layer_pixels[layer] = image
+        layer_coverage[layer] = mask
         rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_{layer.lower()}.bmp'
         bitmap = bmp24(w*16,h*16,image)
         if write_outputs:
             write_generated(rel, bitmap)
         layers[layer].update({'path': rel, 'unresolved_pixels_or_cells': missing,
                               'painted_pixels': painted})
+    # A composite is possible only if the two source layer dimensions agree.
+    # Do not resize or shift one original layer to force a match.
+    if ('Bg2' in block_maps and block_maps['Bg1'][:2] == block_maps['Bg2'][:2]):
+        w, h = block_maps['Bg1'][:2]
+        merged, coverage = compose_partial_bg12(
+            layer_pixels['Bg1'], layer_coverage['Bg1'],
+            layer_pixels['Bg2'], layer_coverage['Bg2'])
+        rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_bg12_composite.bmp'
+        if write_outputs:
+            write_generated(rel, bmp24(w*16, h*16, merged))
+        result['composite'] = {
+            'status': 'PARTIAL_BG1_OVER_BG2_DIAGNOSTIC', 'path': rel,
+            'width': w*16, 'height': h*16, **coverage,
+            'caveat': 'BG1-over-BG2 order is diagnostic, not verified GBA hardware priority; BG0/BG3, sprites, common gfx, palette effects and blending unavailable',
+        }
+    else:
+        result['composite'] = {
+            'status': 'UNAVAILABLE',
+            'reason': 'BG2 not decoded or dimensions differ from BG1; no invented placement',
+        }
     clip_width, clip_height, clip_blocks = rle_room(room_blob(fields['pClipData']))
     collision_rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_collision.bmp'
     collision_bitmap = collision_preview(clip_width, clip_height, clip_blocks)

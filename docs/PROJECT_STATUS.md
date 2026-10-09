@@ -1209,3 +1209,21 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Authentic native collision/object placement, missing palette rows, BG0/BG3,
   animation and GBA layer priority/compositing are still NOT rendered in SDL3.
   We do not mistake a partial native BMP for the complete game framebuffer.
+
+
+## Patch 0126 - transparent indexed-color BG1/BG2 diagnostic composite
+
+- MZM BG1 and BG2 retain authentic decoded RGB diagnostic previews. An optional
+  per-pixel visibility buffer now records the GBA 4bpp transparent palette index
+  zero separately from decoded opaque pixels and missing raw resources.
+- When BG1 and BG2 have matching source dimensions, a private diagnostic BMP
+  `*_bg12_composite.bmp` displays decoded BG1 opaque pixels over decoded BG2
+  pixels. Unknown pixels remain black and are counted, not reconstructed.
+- The independent SDL3 room viewer auto-discovers this local diagnostic and
+  selects it by default when present; `3` selects the composite, `1`/`2` the
+  individual layers, `0` the data-only view, `C`/`M` project overlays. Explicit
+  `--composite` inputs require exact dimension equality.
+- Layer ordering here is **only a diagnostic convention**: original per-room GBA
+  BG priorities, scrolling, BG0/BG3, color effects, sprites, common graphics
+  and native entity/door placement are not reconstructed and not claimed.
+- ROMs and derived BMP pixels are never added to committed project exports.

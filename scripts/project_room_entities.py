@@ -153,6 +153,13 @@ def save(root: Path, doc: dict) -> Path:
 def create(doc: dict, kind: str, x: int, y: int, label: str,
            native_type: str = "unassigned") -> dict:
     validate(doc, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
+    if not isinstance(native_type, str) or not NATIVE_TYPE.fullmatch(native_type):
+        raise ValueError("invalid native type token")
+    if native_type != "unassigned" and not any(
+        record["native_type"] == native_type
+        for record in catalog_options(doc["world"], kind)
+    ):
+        raise ValueError("native constructor absent or incompatible with world/role")
     if len(doc["entities"]) >= MAX_ENTITIES:
         raise ValueError("project entity limit reached")
     entry = {"id": doc["next_id"], "kind": kind, "x": x, "y": y,
@@ -185,6 +192,86 @@ def delete(doc: dict, eid: int) -> None:
     doc["entities"] = entries
 
 
+# PATCH_0080_NATIVE_CATALOG_BINDING
+def catalog_options(world: str, kind: str, records: list[dict] | None = None) -> list[dict]:
+    """Read only verified native definitions. A role never becomes an engine encoder.
+
+    `records` permits ROM-free tests. Aria special actors and doors follow the
+    same native kind/id semantics as the room annotation exporter.
+    """
+    if world not in ("mzm", "aria") or kind not in KINDS:
+        raise ValueError("unsupported native catalog scope")
+    if records is None:
+        from scripts import object_catalog as native
+        records = (native.build_mzm() if world == "mzm" else
+                   native.build_aria(native.load_aria(), native.load_aria_enemy_names()))
+    result = []
+    seen = set()
+    for record in records:
+        token = record.get("native_type", "")
+        name = record.get("name", "")
+        category = record.get("category", "")
+        if not isinstance(token, str) or not NATIVE_TYPE.fullmatch(token):
+            continue
+        if world == "mzm":
+            # mzm catalog categories are based on pinned sprite ID + native stats.
+            role = {"Enemy / actor": "ENEMY", "Item / pickup": "ITEM",
+                    "Upgrade / ability": "ITEM", "World object": "OBJECT"}.get(category)
+        else:
+            # The catalog token contains the native Aria kind, not a graphics ID.
+            group, separator, identifier = token.partition(":")
+            if not separator:
+                continue
+            try:
+                entity_id = int(identifier, 16)
+            except ValueError:
+                continue
+            if group == "enemy" or (group == "special-object" and entity_id in (10, 11)):
+                role = "ENEMY"
+            elif group in ("pickup", "hard-mode-pickup", "all-souls-reward"):
+                role = "ITEM"
+            elif group == "special-object" and entity_id in (0, 2, 3, 4, 5, 6):
+                role = "DOOR"  # Dedicated door editor is not implemented yet.
+            elif group in ("special-object", "generic-candle"):
+                role = "OBJECT"
+            else:
+                role = None
+        if role != kind or token in seen:
+            continue
+        try:
+            _text(name[:80], 80, "catalog display name")
+            _text(str(category)[:160], 160, "catalog category")
+        except ValueError:
+            continue
+        seen.add(token)
+        result.append({"native_type": token, "name": name[:80],
+                       "category": str(category)[:160]})
+    return sorted(result, key=lambda e: (e["name"].casefold(), e["native_type"]))
+
+
+def assign(doc: dict, eid: int, native_type: str,
+           records: list[dict] | None = None) -> None:
+    """Assign a source-catalog identity to ONE authored marker, atomically in memory."""
+    validate(doc, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
+    old = next((e for e in doc["entities"] if e["id"] == eid), None)
+    if old is None:
+        raise ValueError("unknown project entity id")
+    if native_type == "unassigned":
+        name = old["label"]  # Do not invent an identity for legacy project markers.
+    else:
+        candidate = next((e for e in catalog_options(doc["world"], old["kind"], records)
+                          if e["native_type"] == native_type), None)
+        if candidate is None:
+            raise ValueError("native type missing or category does not match this game")
+        name = candidate["name"]
+    edited = [{**e, "native_type": native_type, "label": name}
+              if e["id"] == eid else e for e in doc["entities"]]
+    changed = {**doc, "entities": edited}
+    validate(changed, changed["world"], changed["area"], changed["room"],
+             changed["width_px"], changed["height_px"])
+    doc.update(changed)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
@@ -207,16 +294,33 @@ def main(argv: list[str] | None = None) -> int:
     moving.add_argument("--y", type=int, required=True)
     removal = sub.add_parser("delete")
     removal.add_argument("--id", type=int, required=True)
+    catalog = sub.add_parser("catalog", help="list available native definitions by role")
+    catalog.add_argument("--kind", choices=KINDS, required=True)
+    assigning = sub.add_parser("assign", help="bind one authored entity to a validated native ID")
+    assigning.add_argument("--id", type=int, required=True)
+    assigning.add_argument("--native-type", required=True)
     args = parser.parse_args(argv)
     try:
         doc = load(args.root, args.world, args.area, args.room, args.width, args.height)
         if args.action == "list":
             for e in doc["entities"]:
                 print(f"{e['id']}\t{e['kind']}\t{e['x']}\t{e['y']}\t{e['label']}\t{e['native_type']}")
+        elif args.action == "catalog":
+            for record in catalog_options(args.world, args.kind):
+                print(f"{record['native_type']}\t{record['name']}\t{record['category']}")
         elif args.action == "create":
+            if args.native_type != "unassigned":
+                # Do not permit arbitrary constructor text in project documents.
+                choices = catalog_options(args.world, args.kind)
+                if not any(e["native_type"] == args.native_type for e in choices):
+                    raise ValueError("native type missing or incompatible with entity kind")
             entity = create(doc, args.kind, args.x, args.y, args.label, args.native_type)
             save(args.root, doc)
             print(f"CREATED {entity['id']}")
+        elif args.action == "assign":
+            assign(doc, args.id, args.native_type)
+            save(args.root, doc)
+            print(f"ASSIGNED {args.id}")
         elif args.action == "move":
             move(doc, args.id, args.x, args.y)
             save(args.root, doc)

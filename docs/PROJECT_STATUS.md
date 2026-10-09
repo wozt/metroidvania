@@ -556,3 +556,17 @@ and the proprietary-file guard passed.
   schema/geometry constraints, symlinks, and non-mutation of original annotations.
 - All tests, GTK4 compilation and proprietary-file guard must pass on Debian
   before Auto AI PyPatch commits/pushes this change.
+
+## Patch 0080 - validated native constructor binding for project markers
+
+- Zero and Aria project ENEMY/ITEM/OBJECT markers now select a native definition
+  from the matching source catalog instead of accepting invented type strings.
+- MZM uses source-derived primary-sprite roles; Aria uses native kind/ID and
+  excludes door constructors from the generic OBJECT editor.
+- Existing project markers can be rebound through their context menu. The
+  project-owned room JSON retains stable ID, room and coordinates, and gains a
+  validated reference plus source display name; originals are untouched.
+- Catalog absence falls back to a clearly unassigned project marker. No
+  sprite preview or gameplay encoder is claimed where none exists.
+- ROM-free Python regression tests cover category boundaries, assignments and
+  fail-closed wrong-game/wrong-role IDs. GTK4 build/CTest required on Debian.

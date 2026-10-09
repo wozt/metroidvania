@@ -301,3 +301,19 @@ and the proprietary-file guard passed.
   CLI TSV contract is independently tested with isolated temporary files.
 - GTK4 CMake build, CTest and proprietary-file guard still require local
   verification on the developer's Debian workstation.
+
+## Patch 0067 - source-faithful Aria global map and copyable GTK4 diagnostics
+
+- Fixed Aria global-map generation for `MV_AOS_WORLD_2`: the importer stores
+  original minimap occupancy as `rooms[*].map_cells`, rather than the
+  previously expected top-level `map_cells`. Existing private `world.json`
+  catalogs now work without re-importing the ROM.
+- The generator validates original 64x35 coordinates, flags, unique occupied
+  positions, and the imported `mapped_cells` total; it never infers footprints.
+  Existing optional top-level cell catalogs are still accepted.
+- Made informational/status/error/help labels selectable and Ctrl+C-copyable
+  across Global maps, room browsers and creation dialogs, native room editor,
+  story/cutscene workspace, Explorer, Inspector, and ROM visuals.
+- Increased the Global maps diagnostic excerpt from 500 to 2048 characters.
+- Added source-only Aria map-contract regression cases and GTK browser label
+  selection checks. Real Debian GTK4 compilation/CTest is still required.

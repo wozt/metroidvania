@@ -231,6 +231,7 @@ static void story_tab_build(GtkWidget *center,const char *name,const char *sourc
             "Common actions: move, animation, dialogue, wait, sound, music, portal, camera, choice, set_flag. "
             "Set world = zero_mission / aria / interzone; adapters will map these to the target native engine later.");
         gtk_label_set_wrap(GTK_LABEL(help),TRUE);
+    gtk_label_set_selectable(GTK_LABEL(help), TRUE);
         gtk_label_set_xalign(GTK_LABEL(help),0);
         gtk_box_append(GTK_BOX(page),help);
     }
@@ -241,6 +242,7 @@ static void story_tab_build(GtkWidget *center,const char *name,const char *sourc
     gtk_widget_set_hexpand(source_scroll,TRUE);
     gtk_box_append(GTK_BOX(page),source_scroll);
     gtk_label_set_wrap(GTK_LABEL(tab->status),TRUE);
+    gtk_label_set_selectable(GTK_LABEL(tab->status), TRUE);
     gtk_label_set_xalign(GTK_LABEL(tab->status),0);
     gtk_box_append(GTK_BOX(page),tab->status);
     g_signal_connect(save,"clicked",G_CALLBACK(validate_save),tab);

@@ -174,7 +174,7 @@ static void generator_finished(GObject *object, GAsyncResult *result, gpointer u
                     "No verified cells for this world. Check the local catalog.");
             } else {
                 gchar *diagnostic = g_strdup_printf(
-                    "Map generation failed: %.500s",
+                    "Map generation failed: %.2048s",
                     error ? error->message : (err && *err ? err : "Unknown index/decoder failure"));
                 gtk_label_set_text(GTK_LABEL(w->status), diagnostic);
                 g_free(diagnostic);
@@ -319,7 +319,9 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_widget_set_hexpand(scroller,TRUE);gtk_widget_set_vexpand(scroller,TRUE);
     gtk_box_append(GTK_BOX(root),scroller);
     gtk_label_set_wrap(GTK_LABEL(w->details),TRUE);
+    gtk_label_set_selectable(GTK_LABEL(w->details), TRUE);
     gtk_label_set_wrap(GTK_LABEL(w->status),TRUE);
+    gtk_label_set_selectable(GTK_LABEL(w->status), TRUE);
     gtk_label_set_xalign(GTK_LABEL(w->details),0);
     gtk_label_set_xalign(GTK_LABEL(w->status),0);
     gtk_box_append(GTK_BOX(root),w->details);

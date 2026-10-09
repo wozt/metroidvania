@@ -119,7 +119,9 @@ static void build_assets_tab(Editor *editor, GtkWidget *dock)
     gtk_widget_set_margin_end(root, 12);
     gtk_widget_set_margin_top(root, 12);
     gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(notice), TRUE);
     gtk_label_set_wrap(GTK_LABEL(editor->asset_status), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(editor->asset_status), TRUE);
     gtk_picture_set_can_shrink(GTK_PICTURE(editor->asset_picture), TRUE);
     gtk_widget_set_size_request(editor->asset_picture, 180, 230);
     gtk_widget_set_hexpand(editor->asset_picture, TRUE);
@@ -247,6 +249,7 @@ static void build_explorer(Editor *editor, GtkWidget *dock)
     explorer_button(root, editor, "Local ROM visuals", "assets");
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
     gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(hint), TRUE);
     gtk_label_set_xalign(GTK_LABEL(hint), 0.0f);
     gtk_box_append(GTK_BOX(root), hint);
     gtk_notebook_append_page(GTK_NOTEBOOK(dock), root, gtk_label_new("Explorer"));
@@ -264,6 +267,7 @@ static void build_inspector(GtkWidget *dock)
     gtk_widget_set_margin_end(root, 14);
     gtk_widget_set_margin_top(root, 14);
     gtk_label_set_wrap(GTK_LABEL(text), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(text), TRUE);
     gtk_label_set_xalign(GTK_LABEL(text), 0.0f);
     gtk_box_append(GTK_BOX(root), gtk_label_new("PROJECT STATUS"));
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));

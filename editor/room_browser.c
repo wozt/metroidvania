@@ -688,6 +688,7 @@ static void room_draft_open(GtkButton *button, gpointer userdata)
     GtkWidget *warning = gtk_label_new(
         "Project-authored draft only. No graphics, collision or gameplay runtime is created.");
     gtk_label_set_wrap(GTK_LABEL(warning), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(warning), TRUE);
     gtk_label_set_xalign(GTK_LABEL(warning), 0.0f);
     gtk_box_append(GTK_BOX(body), warning);
     gtk_box_append(GTK_BOX(body), grid);
@@ -715,6 +716,7 @@ static void room_draft_open(GtkButton *button, gpointer userdata)
     form->feedback = gtk_label_new("Creates a validated, non-playable JSON draft.");
     gtk_label_set_xalign(GTK_LABEL(form->feedback), 0.0f);
     gtk_label_set_wrap(GTK_LABEL(form->feedback), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(form->feedback), TRUE);
     gtk_box_append(GTK_BOX(body), form->feedback);
     GtkWidget *actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
     gtk_widget_set_halign(actions, GTK_ALIGN_END);
@@ -796,6 +798,7 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_box_append(GTK_BOX(browser->page), toolbar);
     gtk_label_set_xalign(GTK_LABEL(browser->details), 0.0f);
     gtk_label_set_wrap(GTK_LABEL(browser->details), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(browser->details), TRUE);
     gtk_box_append(GTK_BOX(browser->page), browser->details);
     gtk_widget_set_hexpand(layout, TRUE);
     gtk_widget_set_vexpand(layout, TRUE);
@@ -813,6 +816,7 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(right), browser->picture);
     gtk_label_set_xalign(GTK_LABEL(browser->status), 0.0f);
     gtk_label_set_wrap(GTK_LABEL(browser->status), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(browser->status), TRUE);
     gtk_box_append(GTK_BOX(browser->page), browser->status);
 
     /* Draft creation is available; gameplay/export remains unavailable. */
@@ -822,6 +826,7 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     GtkWidget *hint = gtk_label_new(
         "Creates a private project draft only. Native gameplay is not implemented.");
     gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(hint), TRUE);
     gtk_widget_set_size_request(hint, 245, -1);
     gtk_box_append(GTK_BOX(note), create);
     gtk_box_append(GTK_BOX(note), hint);

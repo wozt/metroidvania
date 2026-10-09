@@ -935,6 +935,7 @@ static void prompt_unsaved_close(NativeWorkspace *doc)
     doc->close_info = gtk_label_new(
         "This room contains unsaved changes. Save, discard, or cancel closing.");
     gtk_label_set_wrap(GTK_LABEL(doc->close_info), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(doc->close_info), TRUE);
     gtk_label_set_xalign(GTK_LABEL(doc->close_info), 0);
     gtk_widget_set_margin_start(layout, 18);
     gtk_widget_set_margin_end(layout, 18);
@@ -1118,6 +1119,7 @@ static void document_build(NativeWorkspace *doc)
                           gtk_label_new("Import in progress..."));
     gtk_label_set_xalign(GTK_LABEL(doc->status), 0);
     gtk_label_set_wrap(GTK_LABEL(doc->status), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(doc->status), TRUE);
     gtk_box_append(GTK_BOX(page), doc->status);
     GtkEventController *keys = gtk_event_controller_key_new();
     gtk_event_controller_set_propagation_phase(keys, GTK_PHASE_CAPTURE);

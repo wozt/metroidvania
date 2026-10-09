@@ -34,6 +34,13 @@ static void test_shared_browser_shells(void)
         g_assert_true(GTK_IS_POPOVER(popover));
         g_assert_true(gtk_menu_button_get_popover(GTK_MENU_BUTTON(menu)) == GTK_POPOVER(popover));
         g_assert_false(gtk_widget_get_parent(popover) == list);
+        GtkWidget *details = gtk_widget_get_next_sibling(
+            gtk_widget_get_first_child(pages[i]));
+        GtkWidget *status = gtk_widget_get_last_child(pages[i]);
+        g_assert_true(GTK_IS_LABEL(details));
+        g_assert_true(GTK_IS_LABEL(status));
+        g_assert_true(gtk_label_get_selectable(GTK_LABEL(details)));
+        g_assert_true(gtk_label_get_selectable(GTK_LABEL(status)));
         /* GTK4 consumes the GListModel passed to gtk_drop_down_new().
          * Both dropdowns must retain valid models across construction,
          * filtering and page teardown (even with no local ROM data). */

@@ -33,14 +33,56 @@ def build_mzm(tsv: str) -> list[tuple[int,int,int,int,int,int]]:
 
 
 def build_aria(catalog: dict) -> list[tuple[int,int,int,int,int,int]]:
-    if catalog.get('format')!='MV_AOS_WORLD_2': raise ValueError('wrong Aria world format')
-    out=[]
-    for c in catalog['map_cells']:
-        area,room,x,y=(int(c[k]) for k in ('engine_area','room','map_x','map_y'))
-        if not(0<=area<12 and 0<=room<1000 and 0<=x<64 and 0<=y<35):
+    """Use verified Aria minimap cells from the imported native room catalog.
+
+    MV_AOS_WORLD_2 stores cells under rooms[*].map_cells. Also accept a
+    top-level map_cells array for compatible catalogs, without synthesizing
+    room footprints, coordinates, or unverified connections.
+    """
+    if not isinstance(catalog, dict) or catalog.get('format') != 'MV_AOS_WORLD_2':
+        raise ValueError('wrong Aria world format')
+    cells = catalog.get('map_cells')
+    if cells is None:
+        rooms = catalog.get('rooms')
+        if not isinstance(rooms, list):
+            raise ValueError('Aria catalog has no native room map cells')
+        cells = []
+        for room in rooms:
+            if not isinstance(room, dict) or not isinstance(room.get('map_cells'), list):
+                raise ValueError('invalid Aria room map_cells')
+            for cell in room['map_cells']:
+                if not isinstance(cell, dict):
+                    raise ValueError('invalid Aria native map cell')
+                cells.append({
+                    'engine_area': room.get('engine_area'),
+                    'room': room.get('room'),
+                    **cell,
+                })
+    if not isinstance(cells, list):
+        raise ValueError('Aria map_cells must be a list')
+    out = []
+    occupied = set()
+    for cell in cells:
+        if not isinstance(cell, dict):
+            raise ValueError('invalid Aria native map cell')
+        keys = ('engine_area', 'room', 'map_x', 'map_y')
+        if any(type(cell.get(key)) is not int for key in keys):
+            raise ValueError('Aria native map coordinates must be integers')
+        area, room, x, y = (cell[key] for key in keys)
+        if not (0 <= area < 12 and 0 <= room < 1000 and
+                0 <= x < 64 and 0 <= y < 35):
             raise ValueError('invalid Aria original minimap cell')
-        out.append((area,room,x,y,int(bool(c['save'])),int(bool(c['warp']))))
-    if not out: raise ValueError('empty Aria map')
+        if type(cell.get('save')) is not bool or type(cell.get('warp')) is not bool:
+            raise ValueError('Aria native save/warp flags must be booleans')
+        if (x, y) in occupied:
+            raise ValueError('duplicate Aria original minimap coordinate')
+        occupied.add((x, y))
+        out.append((area, room, x, y, int(cell['save']), int(cell['warp'])))
+    if not out:
+        raise ValueError('empty Aria map')
+    count = catalog.get('mapped_cells')
+    if count is not None and (type(count) is not int or count != len(out)):
+        raise ValueError('Aria mapped_cells count differs from verified native cells')
     return out
 
 

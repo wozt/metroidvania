@@ -806,3 +806,17 @@ and the proprietary-file guard passed.
 - Correct GTK global-map preview prefetch callback to use its existing `out` subprocess output buffer, fixing two undeclared `output` references.
 - Update the earlier minimap-source regression to expect provenance 1 for an original ROM-backed room anchor, consistent with patch 0092.
 - No changes to native minimap coordinates, private renders, ROMs or project data; validate with CMake, CTest and the proprietary guard.
+
+## Patch 0096 - verified Zero Mission door transitions in global map
+
+- Escape separator pipes in compound native door type labels, and extend
+  the ignored private `world_overview/mzm_doors.tsv` with destination
+  room and destination door only for native intra-area door-table targets.
+  Out-of-area links, invalid indices and sentinel targets remain unresolved.
+- Keep backward compatibility for earlier six-column TSV indexes; regenerate
+  after import to populate target-room navigation.
+- Add a read-only, expandable GTK door inspector for the selected MZM room.
+  Open verified destination rooms directly in the native workroom editor;
+  never create guessed area links or modify original ROM data.
+- Native map door labels now include known destination IDs in their tooltips.
+  Rendering authentic hatch sprites remains separate work.

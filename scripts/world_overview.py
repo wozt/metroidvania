@@ -505,9 +505,10 @@ def mzm_global_doors(anchors: list[tuple[int, int, int, int, int, int]]) -> byte
     rooms = decode_room_descriptors(ROOM_SOURCE.read_text(encoding='utf-8'))
     tables = decode_door_tables(ROOM_SOURCE.read_text(encoding='utf-8'), rooms)
     origins = {(a, r): (x, y) for a, r, x, y, *_ in anchors}
-    lines = ['# area|room|door_index|map_x|map_y|native_type']
+    lines = ['# area|room|door_index|map_x|map_y|native_type|destination_room|destination_door']
     for area, name in enumerate(MZM_AREAS):
-        for door in tables[name]:
+        entries = tables[name]
+        for door in entries:
             if 'DOOR_TYPE_NONE' in door['type']:
                 continue
             origin = origins.get((area, door['sourceRoom']))
@@ -516,9 +517,21 @@ def mzm_global_doors(anchors: list[tuple[int, int, int, int, int, int]]) -> byte
             x, y = origin
             x += max(0, door['xStart'] - 2) // 15
             y += max(0, door['yStart'] - 2) // 10
+            # destinationDoor is an index into the current *area* table,
+            # except for area connections and other unresolved cases.
+            # A NONE sentinel cannot ever be a navigable destination.
+            destination_room = '-'
+            destination_door = '-'
+            target_index = door['destinationDoor']
+            if ('DOOR_TYPE_AREA_CONNECTION' not in door['type'] and
+                    0 <= target_index < len(entries) and
+                    'DOOR_TYPE_NONE' not in entries[target_index]['type']):
+                destination_room = str(entries[target_index]['sourceRoom'])
+                destination_door = str(target_index)
             if 0 <= x < 32 and 0 <= y < 32:
                 lines.append(f"{area}|{door['sourceRoom']}|{door['index']}|"
-                             f"{x}|{y}|{door['type']}")
+                             f"{x}|{y}|{door['type'].replace('|', '+')}|"
+                             f"{destination_room}|{destination_door}")
     return ('\n'.join(lines) + '\n').encode('utf-8')
 
 

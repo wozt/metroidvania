@@ -10,13 +10,14 @@ typedef struct {
 } MapCell;
 typedef struct {
     guint area, room, index, x, y;
+    guint target_room, target_door; /* G_MAXUINT = unverified connection. */
     char type[96];
 } NativeMapDoor;
 typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
     GtkWidget *page, *grid, *details, *status, *world_select, *area_select, *zoom;
-    GtkWidget *doors_toggle;
+    GtkWidget *doors_toggle, *door_expander, *door_list;
     GtkWidget *selected_cell, *scroller, *popup;
     double drag_hstart, drag_vstart, pending_h, pending_v;
     guint pan_tick;
@@ -166,6 +167,8 @@ static gboolean same_atlas_group(const WorldGrid *w, const MapCell *a, const Map
     return a->provenance == b->provenance;
 }
 
+static void selected_room_doors_refresh(WorldGrid *w);
+
 static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, gpointer data)
 {
     WorldGrid *w = data;
@@ -220,6 +223,7 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
         c.ownership[0] ? " | progression variants: " : "", c.ownership);
     gtk_label_set_text(GTK_LABEL(w->details), message);
     g_free(message);
+    selected_room_doors_refresh(w);
     if (presses >= 2) selected_open(w);
 }
 static gboolean has_image(const WorldGrid *w,const MapCell *c,char *dest,size_t n)
@@ -241,15 +245,22 @@ static GArray *load_mzm_doors(void)
     gchar **lines = g_strsplit(contents, "\n", -1);
     for (guint i = 0; lines[i] && i < 2048; ++i) {
         if (!*lines[i] || *lines[i] == '#') continue;
-        gchar **fields = g_strsplit(lines[i], "|", 7);
+        gchar **fields = g_strsplit(lines[i], "|", 9);
+        guint n = g_strv_length(fields);
         NativeMapDoor door = {0};
-        if (g_strv_length(fields) == 6 &&
+        door.target_room = G_MAXUINT;
+        door.target_door = G_MAXUINT;
+        if ((n == 6 || n == 8) &&
             parse_uint(fields[0], &door.area) && door.area < 7 &&
             parse_uint(fields[1], &door.room) && door.room < 1000 &&
             parse_uint(fields[2], &door.index) && door.index < 4096 &&
             parse_uint(fields[3], &door.x) && door.x < 32 &&
             parse_uint(fields[4], &door.y) && door.y < 32 &&
-            strlen(fields[5]) < sizeof(door.type)) {
+            strlen(fields[5]) < sizeof(door.type) &&
+            (n != 8 ||
+             ((strcmp(fields[6], "-") == 0 && strcmp(fields[7], "-") == 0) ||
+              (parse_uint(fields[6], &door.target_room) && door.target_room < 1000 &&
+               parse_uint(fields[7], &door.target_door) && door.target_door < 4096)))) {
             g_strlcpy(door.type, fields[5], sizeof(door.type));
             g_array_append_val(doors, door);
         }
@@ -258,6 +269,72 @@ static GArray *load_mzm_doors(void)
     g_strfreev(lines);
     g_free(contents);
     return doors;
+}
+
+/* Native MZM connections are read-only. Do not turn event/area exits
+ * into fictional destinations. Open only targets verified in the door table. */
+static void map_door_target_open(GtkButton *button, gpointer data)
+{
+    WorldGrid *w = data;
+    guint a = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-target-area"));
+    guint r = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-target-room"));
+    if (w->world || a == 0 || a > 7 || r == 0 || r > 1000) return;
+    native_workspace_import_async(w->workspace, mzm_areas[a - 1], r - 1);
+}
+
+static void selected_room_doors_refresh(WorldGrid *w)
+{
+    if (!w->door_list || !w->door_expander) return;
+    GtkWidget *child;
+    while ((child = gtk_widget_get_first_child(w->door_list)))
+        gtk_box_remove(GTK_BOX(w->door_list), child);
+    if (w->world || !w->selected || w->selection >= w->cells->len) {
+        gtk_expander_set_expanded(GTK_EXPANDER(w->door_expander), FALSE);
+        return;
+    }
+    const MapCell *room = &g_array_index(w->cells, MapCell, w->selection);
+    if (room->room >= 998 || room->area >= 7 || room->provenance >= 3) {
+        gtk_expander_set_expanded(GTK_EXPANDER(w->door_expander), FALSE);
+        return;
+    }
+    GArray *doors = load_mzm_doors();
+    guint found = 0;
+    for (guint i = 0; i < doors->len; ++i) {
+        const NativeMapDoor *door = &g_array_index(doors, NativeMapDoor, i);
+        if (door->area != room->area || door->room != room->room) continue;
+        GtkWidget *line = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        gchar *description = door->target_room == G_MAXUINT ?
+            g_strdup_printf("D%u at (%u,%u) - destination unknown", door->index,
+                            door->x, door->y) :
+            g_strdup_printf("D%u at (%u,%u) -> room %03u / D%u", door->index,
+                            door->x, door->y, door->target_room, door->target_door);
+        GtkWidget *label = gtk_label_new(description);
+        gtk_label_set_xalign(GTK_LABEL(label), 0);
+        gtk_widget_set_hexpand(label, TRUE);
+        gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
+        gtk_widget_set_tooltip_text(label, door->type);
+        gtk_box_append(GTK_BOX(line), label);
+        if (door->target_room != G_MAXUINT) {
+            GtkWidget *open = gtk_button_new_with_label("Open target");
+            g_object_set_data(G_OBJECT(open), "mv-target-area",
+                              GUINT_TO_POINTER(door->area + 1));
+            g_object_set_data(G_OBJECT(open), "mv-target-room",
+                              GUINT_TO_POINTER(door->target_room + 1));
+            g_signal_connect(open, "clicked", G_CALLBACK(map_door_target_open), w);
+            gtk_box_append(GTK_BOX(line), open);
+        }
+        gtk_box_append(GTK_BOX(w->door_list), line);
+        g_free(description);
+        ++found;
+    }
+    if (!found) gtk_box_append(GTK_BOX(w->door_list),
+                              gtk_label_new("No native doors in this room."));
+    gchar *heading = g_strdup_printf("Native doors / %s / room %03u (%u)",
+                                     mzm_areas[room->area], room->room, found);
+    gtk_expander_set_label(GTK_EXPANDER(w->door_expander), heading);
+    gtk_expander_set_expanded(GTK_EXPANDER(w->door_expander), TRUE);
+    g_free(heading);
+    g_array_free(doors, TRUE);
 }
 
 static void map_cell_door_badge(GtkWidget *cell, const GArray *doors, const MapCell *c)
@@ -269,8 +346,13 @@ static void map_cell_door_badge(GtkWidget *cell, const GArray *doors, const MapC
         if (door->area != c->area || door->x != c->x || door->y != c->y) continue;
         if (!count) first = door->index;
         if (count) g_string_append(tip, "; ");
-        g_string_append_printf(tip, "D%u (room %u; %s)",
-                               door->index, door->room, door->type);
+        if (door->target_room == G_MAXUINT)
+            g_string_append_printf(tip, "D%u (room %u; target unknown; %s)",
+                                   door->index, door->room, door->type);
+        else
+            g_string_append_printf(tip, "D%u (room %u -> room %u / D%u; %s)",
+                                   door->index, door->room, door->target_room,
+                                   door->target_door, door->type);
         ++count;
     }
     if (count) {
@@ -984,9 +1066,11 @@ static void world_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
     g_object_unref(list);
     w->area=w->world ? G_MAXUINT : 0u;
     gtk_widget_set_visible(w->doors_toggle, w->world == 0);
+    gtk_widget_set_visible(w->door_expander, w->world == 0);
     w->prefetching=TRUE;
     w->next_preview_area=0;
     w->selected=FALSE;
+    selected_room_doors_refresh(w);
     gtk_drop_down_set_selected(GTK_DROP_DOWN(w->area_select),0);
     w->changing_world=FALSE;
     g_object_set_data(G_OBJECT(w->page),"mv-world-mode",GINT_TO_POINTER(w->world?2:1));
@@ -1010,6 +1094,7 @@ static void area_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
     guint area = w->world ? (selected == 0 ? G_MAXUINT : selected - 1) : selected;
     if(area != G_MAXUINT && area>=area_count(w))return;
     w->area=area;w->selected=FALSE;
+    selected_room_doors_refresh(w);
     if (reload_rows(w)) grid_rebuild(w);
     else {
         GtkWidget *child;
@@ -1107,6 +1192,16 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     g_signal_connect(wheel, "scroll", G_CALLBACK(map_scroll), w);
     w->status=gtk_label_new("Reading verified original minimap cases…");
     w->details=gtk_label_new("Double-click a case to edit it in the shared room editor.");
+    w->door_expander = gtk_expander_new("Native doors / select a Zero Mission room");
+    GtkWidget *door_scroller = gtk_scrolled_window_new();
+    w->door_list = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    gtk_widget_set_margin_start(w->door_list, 8);
+    gtk_widget_set_margin_end(w->door_list, 8);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(door_scroller), w->door_list);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(door_scroller),
+                                   GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    gtk_widget_set_size_request(door_scroller, -1, 120);
+    gtk_expander_set_child(GTK_EXPANDER(w->door_expander), door_scroller);
     w->world_select=gtk_drop_down_new_from_strings(worlds);
     w->area_select=gtk_drop_down_new_from_strings(mzm_areas);
     w->zoom=gtk_spin_button_new_with_range(22,64,6);
@@ -1132,6 +1227,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_label_set_xalign(GTK_LABEL(w->details),0);
     gtk_label_set_xalign(GTK_LABEL(w->status),0);
     gtk_box_append(GTK_BOX(root),w->details);
+    gtk_box_append(GTK_BOX(root),w->door_expander);
     gtk_box_append(GTK_BOX(root),w->status);
     g_object_set_data_full(G_OBJECT(root),"mv-world-grid",w,world_free);
     g_object_set_data(G_OBJECT(root),"mv-world-mode",GINT_TO_POINTER(1));

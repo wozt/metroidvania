@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import unittest
-from scripts.mzm_bg3_preview import preview
+from scripts.mzm_bg3_preview import preview, analyze_references
 
 
 def litlz(data):
@@ -22,6 +22,22 @@ class BG3PreviewTests(unittest.TestCase):
         self.assertEqual(image[:2],b'BM')
         self.assertEqual(report['visible_pixels'],256*256)
         self.assertEqual(report['unresolved_tiles'],0)
+    def test_reference_diagnostics(self):
+        data = (0x0001).to_bytes(2, 'little') * 512 + (0x300a).to_bytes(2, 'little') * 512
+        report = analyze_references(data, 16, 0)
+        self.assertEqual(report['total_cells'], 1024)
+        self.assertEqual(report['referenced_graphics_cells'], 1024)
+        self.assertEqual(report['common_palette_cells'], 512)
+        self.assertEqual(report['tileset_palette_cells'], 512)
+        self.assertEqual(report['palette_banks'], [0, 3])
+
+    def test_missing_palette_not_fabricated(self):
+        gfx = bytes([0x11] * 32)
+        base = (0xfde0 - len(gfx) - 0xc000) // 32
+        bg = bytes(4) + litlz(base.to_bytes(2, 'little') * 1024)
+        with self.assertRaisesRegex(ValueError, 'palette-missing pixels=65536'):
+            preview(bg, litlz(gfx), b'')
+
     def test_fail_closed(self):
         with self.assertRaises(ValueError): preview(b'bad',b'',b'')
 

@@ -48,8 +48,43 @@ def tileset_background_resource(tileset: int) -> bytes:
     return native.read_raw(f'tilesets/{match.group(1)}_bg.gfx.lz')
 
 
+# PATCH_0128_BG3_DIAGNOSTICS: distinguish missing graphics from missing
+# palette data. Do not silently pick a different charbase or invent pixels.
+def analyze_references(map_data: bytes, tile_count: int, base: int) -> dict:
+    if len(map_data) not in (2048, 4096):
+        raise ValueError('unexpected BG3 tilemap size')
+    counts = {'total_cells': len(map_data) // 2,
+              'referenced_graphics_cells': 0,
+              'missing_graphics_cells': 0,
+              'common_palette_cells': 0,
+              'tileset_palette_cells': 0}
+    banks = set()
+    for (word,) in struct.iter_unpack('<H', map_data):
+        index = word & 1023
+        bank = (word >> 12) & 15
+        banks.add(bank)
+        if base <= index < base + tile_count:
+            counts['referenced_graphics_cells'] += 1
+        else:
+            counts['missing_graphics_cells'] += 1
+        if bank < 3:
+            counts['common_palette_cells'] += 1
+        else:
+            counts['tileset_palette_cells'] += 1
+    counts['palette_banks'] = sorted(banks)
+    counts['graphics_base_tile'] = base
+    counts['graphics_tile_count'] = tile_count
+    # Diagnostic only: alternatives are NOT automatically selected as correct.
+    counts['candidate_base_coverage'] = {
+        str(candidate): sum(candidate <= (word & 1023) < candidate + tile_count
+                            for (word,) in struct.iter_unpack('<H', map_data))
+        for candidate in (0, 192, 704, base)
+    }
+    return counts
+
+
 def preview(bg3_blob: bytes, background_gfx: bytes, palette: bytes) -> tuple[bytes, dict]:
-    # Pinned MZM src/room.c: gCurrentRoomEntry.bg3Size=*data; LZ stream at data+4.
+    # BG3 size/header layout from native RoomLoadBg3 data path.
     if len(bg3_blob) < 9:
         raise ValueError('BG3 header too short')
     map_data = native.lz77(bg3_blob[4:])
@@ -58,46 +93,67 @@ def preview(bg3_blob: bytes, background_gfx: bytes, palette: bytes) -> tuple[byt
     gfx = native.lz77(background_gfx)
     if not gfx or len(gfx) % 32:
         raise ValueError('BG3 background graphics not 4bpp tile-aligned')
-    # RoomLoadTileset loads BG3 gfx into end of VRAM, charbase=3 candidate.
+    # Original location candidate; do not treat it as hardware-verified.
     base_byte = 0xfde0 - len(gfx) - 0xc000
     if base_byte < 0 or base_byte % 32:
         raise ValueError('BG3 charbase offset not tile aligned')
     base = base_byte // 32
+    report = analyze_references(map_data, len(gfx) // 32, base)
     tw = 32
     th = len(map_data) // (tw * 2)
-    pixels = bytearray(tw*8*th*8*3)
+    pixels = bytearray(tw * 8 * th * 8 * 3)
     visible = 0
-    unresolved = 0
-    for i in range(tw*th):
-        word = struct.unpack_from('<H', map_data, i*2)[0]
+    unresolved_tiles = 0
+    missing_palette_pixels = 0
+    transparent_pixels = 0
+    missing_graphics_cells = 0
+    for i, (word,) in enumerate(struct.iter_unpack('<H', map_data)):
         tile = (word & 1023) - base
         bank = word >> 12
-        if tile < 0 or tile >= len(gfx)//32 or bank < 3 or bank > 15:
-            unresolved += 1
+        if tile < 0 or tile >= len(gfx) // 32:
+            missing_graphics_cells += 1
+            unresolved_tiles += 1
             continue
-        x0 = (i % tw)*8
-        y0 = (i // tw)*8
+        x0 = (i % tw) * 8
+        y0 = (i // tw) * 8
         for y in range(8):
             for x in range(8):
-                tx = 7-x if word & 0x400 else x
-                ty = 7-y if word & 0x800 else y
+                tx = 7 - x if word & 0x400 else x
+                ty = 7 - y if word & 0x800 else y
                 index = native.tile_pixel(gfx, tile, tx, ty)
                 if index == 0:
+                    transparent_pixels += 1
                     continue
                 color = native.palette_color(palette, bank, index)
                 if color is None:
-                    unresolved += 1
+                    missing_palette_pixels += 1
                     continue
-                dst = ((y0+y) * tw*8 + x0+x)*3
-                pixels[dst:dst+3] = bytes(color)
+                dst = ((y0 + y) * tw * 8 + x0 + x) * 3
+                pixels[dst:dst + 3] = bytes(color)
                 visible += 1
-    if visible == 0:
-        raise ValueError('BG3 no visible validated tiles in available palette')
-    return native.bmp24(tw*8, th*8, pixels), {
-        'status': 'EXPERIMENTAL_BG3_TEXT_MAP', 'visible_pixels': visible,
-        'unresolved_tiles': unresolved, 'width': tw*8, 'height': th*8,
-        'caveat': 'Charbase/palette origin inferred; animated BG3, scrolling and blend not reproduced'
-    }
+    report.update({
+        'status': 'EXPERIMENTAL_BG3_TEXT_MAP' if visible else 'BG3_UNRESOLVED',
+        'visible_pixels': visible,
+        'unresolved_tiles': unresolved_tiles + missing_palette_pixels,
+        'missing_graphics_cells': missing_graphics_cells,
+        'missing_palette_pixels': missing_palette_pixels,
+        'transparent_pixels': transparent_pixels,
+        'width': tw * 8, 'height': th * 8,
+        'caveat': ('BG3 charbase/priority/scroll are not verified against GBA hardware; '
+                   'common palette rows 0..2 are not yet decoded'),
+    })
+    if not visible:
+        raise ValueError(
+            'BG3 has no validated visible pixels: '
+            f"graphics-missing cells={missing_graphics_cells}/{report['total_cells']}; "
+            f"palette-missing pixels={missing_palette_pixels}; "
+            f"transparent pixels={transparent_pixels}; "
+            f"palette banks={report['palette_banks']}; "
+            f"candidate base coverage={report['candidate_base_coverage']}. "
+            'Missing common GBA graphics/palette resources must be recovered '
+            'from the native loader; do not infer colors or select a base blindly.'
+        )
+    return native.bmp24(tw * 8, th * 8, pixels), report
 
 
 def render_room(area: str, room_number: int) -> dict:

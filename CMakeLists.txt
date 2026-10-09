@@ -101,6 +101,7 @@ if(BUILD_TESTING)
         add_executable(fusion_native_workspace_gtk_tests
             tests/test_native_workspace_gtk.c
             editor/native_workspace.c
+            editor/world_atlas.c
         )
         target_compile_definitions(fusion_native_workspace_gtk_tests
             PRIVATE FUSION_NATIVE_WORKSPACE_TESTING)
@@ -114,6 +115,7 @@ if(BUILD_TESTING)
             tests/test_room_browser_gtk.c
             editor/room_browser.c
             editor/native_workspace.c
+            editor/world_atlas.c
         )
         target_include_directories(fusion_room_browser_gtk_tests PRIVATE include editor)
         target_compile_definitions(fusion_room_browser_gtk_tests

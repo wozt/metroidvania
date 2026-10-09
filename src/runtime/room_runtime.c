@@ -67,7 +67,7 @@ static bool blocked(const Room *r, float x, float y, float w, float h) {
 
 
 /* PATCH_0138_NATIVE_CLIPDATA: opt-in original MZM source sidecar.
- * Native type 5 (CLIPDATA_SOLID) is a full solid tile according to the
+ * Native type 16 (CLIPDATA_SOLID) is a full solid tile according to the
  * pinned sClipdataCollisionTypes table. Other native codes are retained but
  * deliberately not converted into guessed full-block geometry. */
 static bool parse_native_source(const char *path, Room *room,
@@ -101,7 +101,7 @@ static bool parse_native_source(const char *path, Room *room,
             (kind == 'A' && (code < 1 || code > 7)) ||
             added >= MAX_MARKS) goto failure;
         ++added;
-        if (kind == 'N' && code == 5) {
+        if (kind == 'N' && code == 16) {
             if (room->count >= MAX_MARKS) goto failure;
             room->collisions[room->count++] = (Collision){x,y,w,h,1};
             ++solid;
@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
         free(room); return 2;
     }
     if (native_source)
-        printf("Native source: %zu records, %zu verified full-solid cells (Clipdata 5)\n",
+        printf("Native source: %zu records, %zu verified full-solid cells (Clipdata 16)\n",
                native_records,native_solids);
     if (check) {
         float spawn_x = 0.f, spawn_y = 0.f;

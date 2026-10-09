@@ -33,10 +33,18 @@ class MapDoorTargetPicker0106(unittest.TestCase):
 
     def test_form_does_not_save_on_pick(self):
         start = self.workspace.index('static void project_door_map_picked_0106(')
-        end = self.workspace.index('static void project_door_editor_open_0102(', start)
+        # Limit this test to the map selection callback, not to every helper
+        # inserted before the project-door form (0115 adds return-link logic).
+        end = self.workspace.index('static void project_door_pick_map_0106(', start)
         body = self.workspace[start:end]
         self.assertNotIn('project_command(', body)
         self.assertNotIn('project_reload(', body)
+        # The button that starts map picking must also remain read-only.
+        picker_end = self.workspace.index('\n}\n', end) + len('\n}\n')
+        picker = self.workspace[end:picker_end]
+        self.assertIn('world_atlas_begin_room_pick(', picker)
+        self.assertNotIn('project_command(', picker)
+        self.assertNotIn('project_reload(', picker)
         self.assertIn('gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->target_door), 0)', body)
         self.assertIn('gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->spawn_x), 0)', body)
         self.assertIn('"Pick room on global map"', self.workspace)

@@ -92,6 +92,24 @@ static void test_native_doors_default_visible(void)
     native_workspace_free(workspace);
 }
 
+static void test_hatch_preview_lifetime(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 010"));
+    GtkWidget *page = gtk_notebook_get_nth_page(GTK_NOTEBOOK(center), 0);
+    GtkWidget *animate = find_room_toggle(page, "Animate hatches");
+    g_assert_nonnull(animate);
+    g_assert_true(gtk_widget_get_visible(animate));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(animate), TRUE);
+    g_assert_true(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(animate)));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(animate), FALSE);
+    g_assert_false(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(animate)));
+    /* Free the document while its timeout is active: no dangling callback. */
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(animate), TRUE);
+    native_workspace_free(workspace);
+}
+
 static void test_close_and_reopen(void)
 {
     GtkWidget *center, *right;
@@ -355,6 +373,8 @@ int main(int argc, char **argv)
                     test_nested_editor_tab_focus_and_close);
     g_test_add_func("/native-workspace/native-doors-default-visible",
                     test_native_doors_default_visible);
+    g_test_add_func("/native-workspace/hatch-preview-lifetime",
+                    test_hatch_preview_lifetime);
     g_test_add_func("/native-workspace/native-door-bitflags-imported",
                     test_native_door_bitflags_imported);
     g_test_add_func("/native-workspace/close-and-reopen", test_close_and_reopen);

@@ -92,8 +92,36 @@ def common_inputs(mother_ship: bool = False) -> tuple[bytes, bytes, bytes]:
     return tilemap, graphics, palette
 
 
+def hatch_metatile_index(style: str, facing_right: bool,
+                         state: str = "closed", step: int = 0) -> int:
+    """Exact indices used by ConnectionUpdateHatchAnimation in Zero Mission.
+
+    The engine ORs the common-tile flag 0x400 into some frame values;
+    this is a Clipdata flag, not part of the metatile table offset.
+    """
+    if style not in HATCH_BASES or type(facing_right) is not bool:
+        raise ValueError("invalid native hatch style/orientation")
+    if state == 'closed' and step == 0:
+        return HATCH_BASES[style] + int(facing_right)
+    base = 0x16 if facing_right else 0x11
+    if state == 'opening' and 1 <= step <= 4:
+        index = base + step - 1
+    elif state == 'closing' and 1 <= step <= 3:
+        index = base + 3 - step
+        if style != 'no_hatch':
+            index += 0x40
+    else:
+        raise ValueError("unsupported native hatch animation state/frame")
+    if style == 'no_hatch':
+        index += 0x80
+    if not 0 <= index <= 0xCF:
+        raise ValueError("hatch frame outside native common tilemap")
+    return index
+
+
 def render_hatch(tilemap: bytes, graphics: bytes, palette: bytes,
-                 style: str, facing_right: bool) -> bytes:
+                 style: str, facing_right: bool,
+                 state: str = "closed", step: int = 0) -> bytes:
     """Authentic 16x64 BG1 hatch pixels, using the game's four metatiles.
 
     The output is an RGBA PNG with palette-index zero transparent. Refuse
@@ -103,7 +131,7 @@ def render_hatch(tilemap: bytes, graphics: bytes, palette: bytes,
         raise ValueError("unrecognized native hatch")
     if len(tilemap) != 0x680 or len(graphics) != 0x1000 or len(palette) != 96:
         raise ValueError("invalid verified MZM common graphics inputs")
-    first_index = HATCH_BASES[style] + int(facing_right)
+    first_index = hatch_metatile_index(style, facing_right, state, step)
     pixels = bytearray(16 * 64 * 4)
     for metatile_y in range(4):
         index = first_index + 16 * metatile_y
@@ -155,6 +183,24 @@ def export_hatches() -> int:
                     continue
                 write_generated(path, image)
                 count += 1
+                # Genuine source animation frames. No interpolated graphics:
+                # currentAnimationFrame is 1..4 for opening and 1..3 for
+                # closing; step 4 of closing returns to the closed tilemap.
+                for state, max_step in (('opening', 4), ('closing', 3)):
+                    for step in range(1, max_step + 1):
+                        animated = f"{name}_{state}_{step}"
+                        frame_path = (
+                            f"sprite_previews/mzm_hatches/{folder}/{animated}.png")
+                        try:
+                            frame = render_hatch(tilemap, graphics, palette,
+                                                 style, facing_right, state, step)
+                        except ValueError:
+                            # Some original common graphics are genuinely absent
+                            # from the currently decoded family. Preserve the
+                            # original closed image as a safe preview fallback.
+                            continue
+                        write_generated(frame_path, frame)
+                        count += 1
     if not count:
         raise ValueError("no genuine common hatch graphics could be decoded")
     return count

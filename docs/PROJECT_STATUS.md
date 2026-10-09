@@ -850,3 +850,17 @@ and the proprietary-file guard passed.
 - Add synthetic pixel/PNG and Clipdata identity regressions.
 - Opening/closing animation and event-dependent palette switching remain future
   work; CMake/CTest and private-ROM guard still required locally.
+
+## Patch 0099 - native Zero Mission hatch animation preview
+
+- Reconstruct the original hatch opening/closing BG1 metatile indices from
+  `ConnectionUpdateHatchAnimation` (four opening frames, three intermediate
+  closing frames, return to the closed native tilemap).
+- Export private ROM-derived PNG frames using the same verified common source
+  graphics as the closed hatch, without inferred animation art.
+- Add an optional, read-only `Animate hatches` toggle to MZM workrooms only.
+  The GTK animation uses a short preview loop, not gameplay/event simulation;
+  the timer is cleaned up when a room closes.
+- Keep closed hatch artwork as fallback for missing original frames; preserve
+  Aria workrooms, map overview and authored collision/door overrides.
+- Add native index/pixel regression tests and a GTK document-timer test.

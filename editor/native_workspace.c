@@ -66,6 +66,9 @@ struct NativeWorkspace {
     double scale, pointer_x, pointer_y, pan_horizontal, pan_vertical;
     double pending_pan_horizontal, pending_pan_vertical;
     guint pan_tick;
+    guint hatch_preview_timer;
+    guint hatch_preview_phase;
+    gboolean hatch_preview_playing;
     char *override_path;
     char *annotations_path, *project_area;
     guint project_room, project_move_id, project_drag_id;
@@ -164,6 +167,10 @@ static void discard_collision(NativeWorkspace *doc)
 static void document_destroy(NativeWorkspace *doc)
 {
     if (!doc) return;
+    if (doc->hatch_preview_timer) {
+        g_source_remove(doc->hatch_preview_timer);
+        doc->hatch_preview_timer = 0;
+    }
     annotation_popup_close(doc);
     if (doc->pan_tick && doc->canvas)
         gtk_widget_remove_tick_callback(doc->canvas, doc->pan_tick);
@@ -1771,6 +1778,32 @@ static gchar *room_sprite_path(NativeWorkspace *doc, const RoomAnnotation *item)
         if (!valid) return NULL;
         const char *family = strstr(item->details, "hatch_family=mothership") ?
                              "mothership" : "zebes";
+        /* Keep closed native hatch graphics as the default, including when
+         * a particular animation frame was not decoded from private assets. */
+        if (doc->hatch_preview_playing && doc->hatch_preview_phase >= 1 &&
+            doc->hatch_preview_phase <= 10) {
+            const char *state = NULL;
+            guint step = 0;
+            if (doc->hatch_preview_phase <= 4) {
+                state = "opening";
+                step = doc->hatch_preview_phase;
+            } else if (doc->hatch_preview_phase >= 8 &&
+                       doc->hatch_preview_phase <= 10) {
+                state = "closing";
+                step = doc->hatch_preview_phase - 7;
+            } else if (doc->hatch_preview_phase <= 7) {
+                state = "opening";
+                step = 4;
+            }
+            if (state) {
+                gchar *frame_path = g_strdup_printf(
+                    "assets/extracted/sprite_previews/mzm_hatches/%s/%s_%s_%u.png",
+                    family, name, state, step);
+                if (g_file_test(frame_path, G_FILE_TEST_IS_REGULAR))
+                    return frame_path;
+                g_free(frame_path);
+            }
+        }
         return g_strdup_printf(
             "assets/extracted/sprite_previews/mzm_hatches/%s/%s.png",
             family, name);
@@ -2631,6 +2664,36 @@ static void overlay_toggled(GtkToggleButton *button, gpointer userdata)
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
 
+/* Preview playback is independent of the game's runtime doors/events.
+ * GTK main-context source is canceled as soon as the document is destroyed. */
+static gboolean hatch_preview_tick(gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    if (doc->closing || !doc->canvas || !doc->hatch_preview_playing) {
+        doc->hatch_preview_timer = 0;
+        return G_SOURCE_REMOVE;
+    }
+    doc->hatch_preview_phase = (doc->hatch_preview_phase + 1) % 14;
+    if (doc->ready && doc->overlays[OVERLAY_DOORS] && !doc->project_aria)
+        gtk_widget_queue_draw(doc->canvas);
+    return G_SOURCE_CONTINUE;
+}
+
+static void hatch_preview_toggled(GtkToggleButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    if (doc->closing || g_str_has_prefix(doc->identity, "Aria ")) return;
+    doc->hatch_preview_playing = gtk_toggle_button_get_active(button);
+    doc->hatch_preview_phase = 0;
+    if (doc->hatch_preview_timer) {
+        g_source_remove(doc->hatch_preview_timer);
+        doc->hatch_preview_timer = 0;
+    }
+    if (doc->hatch_preview_playing)
+        doc->hatch_preview_timer = g_timeout_add(50, hatch_preview_tick, doc);
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
+}
+
 static void grid_toggled(GtkToggleButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
@@ -3019,6 +3082,14 @@ static void document_build(NativeWorkspace *doc)
     }
     /* Trigger structures are not decoded for either engine yet. */
     gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);
+    GtkWidget *hatch_preview = gtk_toggle_button_new_with_label("Animate hatches");
+    gtk_widget_set_tooltip_text(hatch_preview,
+        "Preview original opening/closing hatch metatiles; read-only, not gameplay");
+    gtk_widget_set_visible(hatch_preview,
+        !g_str_has_prefix(doc->identity, "Aria "));
+    gtk_flow_box_insert(GTK_FLOW_BOX(tools), hatch_preview, -1);
+    g_signal_connect(hatch_preview, "toggled",
+                     G_CALLBACK(hatch_preview_toggled), doc);
     doc->grid_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(grid), TRUE);
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL), -1);

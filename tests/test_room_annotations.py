@@ -37,10 +37,10 @@ class RoomAnnotationTests(unittest.TestCase):
             'source_screen_y': 1, 'target_engine_area': 3, 'target_room': 7,
             'load_x': 12, 'load_y': 20,
         }]}
-        rows = build_aria(room)
+        rows = build_aria(room, {9: 'Blue Crow'})
         self.assertEqual(rows[0][0:6], ('ENTITY', 0, 32, 48, 16, 16))
         self.assertEqual(rows[1][0:6], ('DOOR', 0, 480, 160, 16, 16))
-        self.assertIn(b'Aria entity 1:9', serialize(rows))
+        self.assertIn(b'Blue Crow', serialize(rows))
 
     def test_aria_entity_marker_stays_inside_room_origin(self):
         room = {'entities': [{

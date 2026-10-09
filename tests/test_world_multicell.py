@@ -5,6 +5,7 @@ from scripts.world_overview import (
     build_aria,
     expand_mzm_clip_cells,
     output_rows,
+    parse_mzm_scroll_regions,
     resolve_mzm_minimap_cells,
 )
 
@@ -65,6 +66,36 @@ class MulticellWorldTests(unittest.TestCase):
         self.assertEqual(rows[0][1], 999)
         self.assertEqual(rows[0][8], 'ambiguous:1,2')
         self.assertEqual(report['ambiguous_native_cells'], 1)
+
+    def test_native_scroll_bounds_replace_overlarge_clip_rectangle(self):
+        anchors = [(0, 1, 2, 2, 0, 0), (0, 2, 3, 1, 0, 0)]
+        native = [(0, 999, 3, 2, 0, 0, 3, 0x155)]
+        scrolls = {(0, 1): [(2, 16, 2, 11, 255, 255, 255, 255)]}
+        rows, report = resolve_mzm_minimap_cells(
+            anchors, {(0, 1): (34, 14), (0, 2): (19, 24)}, native,
+            scroll_regions=scrolls)
+        self.assertEqual(rows[0][1], 2)
+        self.assertEqual(report['scroll_bounded_rooms'], 1)
+
+    def test_door_coordinate_disambiguates_overlapping_native_cell(self):
+        anchors = [(0, 1, 2, 2, 0, 0), (0, 2, 3, 1, 0, 0)]
+        native = [(0, 999, 3, 2, 0, 0, 3, 0x155)]
+        rows, report = resolve_mzm_minimap_cells(
+            anchors, {(0, 1): (34, 14), (0, 2): (19, 24)}, native,
+            direct_evidence={(0, 2): {(0, 3, 2)}})
+        self.assertEqual(rows[0][1], 2)
+        self.assertEqual(report['native_evidence_resolutions'], 1)
+
+    def test_scroll_parser_preserves_breakable_bound_extension(self):
+        source = '''
+const u8 sNorfair_5_Scrolls[SCROLL_DATA_SIZE(1)] = {
+    16, 1,
+    2, 16, 2, 11, 4, 11, 3, 19,
+};
+'''
+        self.assertEqual(parse_mzm_scroll_regions(source, 'Norfair'), {
+            16: [(2, 16, 2, 11, 4, 11, 3, 19)],
+        })
 
     def test_aria_native_multi_cells_never_fill_holes(self):
         cat = {'format': 'MV_AOS_WORLD_2', 'mapped_cells': 3, 'rooms': [

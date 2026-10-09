@@ -9,10 +9,17 @@ ROM-derived pixels are generated privately, and never staged for Git.
 from __future__ import annotations
 import argparse
 import json
+import re
 from pathlib import Path
-from scripts.import_game_assets import OUTPUT, write_generated
+from scripts.import_game_assets import OUTPUT, ROOT, write_generated
+from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
+from scripts.mzm_world_atlas import decode_door_tables
 
 MZM_AREAS = ('Brinstar','Kraid','Norfair','Ridley','Tourian','Crateria','Chozodia')
+MZM_ROOMS_ROOT = ROOT / 'third_party/mzm/src/data/rooms'
+MZM_SCROLL_RE = re.compile(
+    r'const u8 s([A-Za-z]+)_\d+_Scrolls\[SCROLL_DATA_SIZE\((\d+)\)\]\s*=\s*'
+    r'\{(.*?)\n\};', re.S)
 
 
 def build_mzm(tsv: str) -> list[tuple[int,int,int,int,int,int]]:
@@ -125,6 +132,114 @@ def native_mzm_clip_dimensions() -> dict[tuple[int, int], tuple[int, int]]:
     return found
 
 
+def parse_mzm_scroll_regions(source: str, expected_area: str) -> dict[int, list[tuple[int, ...]]]:
+    """Decode room scroll rectangles from one or more pinned room sources."""
+    found = {}
+    for match in MZM_SCROLL_RE.finditer(source):
+        area, declared, body = match.groups()
+        if area != expected_area:
+            raise ValueError(f'unexpected MZM scroll area {area}, wanted {expected_area}')
+        clean = re.sub(r'//[^\n]*', '', body)
+        tokens = re.findall(r'UCHAR_MAX|\b\d+\b', clean)
+        values = [255 if token == 'UCHAR_MAX' else int(token) for token in tokens]
+        count = int(declared)
+        if len(values) != 2 + count * 8 or values[1] != count:
+            raise ValueError(f'incomplete {area} scroll data')
+        room = values[0]
+        if not 0 <= room < 256 or room in found:
+            raise ValueError(f'invalid or duplicate {area} scroll room {room}')
+        regions = []
+        for offset in range(2, len(values), 8):
+            region = tuple(values[offset:offset + 8])
+            x_start, x_end, y_start, y_end, _, _, direction, extension = region
+            if (x_start > x_end or y_start > y_end or
+                    direction not in (0, 1, 2, 3, 255) or
+                    any(not 0 <= value <= 255 for value in region)):
+                raise ValueError(f'invalid {area} scroll bounds for room {room}')
+            if direction == 255 and extension != 255:
+                raise ValueError(f'orphan {area} scroll extension for room {room}')
+            regions.append(region)
+        found[room] = regions
+    return found
+
+
+def native_mzm_scroll_regions() -> dict[tuple[int, int], list[tuple[int, ...]]]:
+    """Load every custom room scroll from the pinned Zero Mission source."""
+    found = {}
+    for area_index, area in enumerate(MZM_AREAS):
+        directory = MZM_ROOMS_ROOT / area.lower()
+        if not directory.is_dir():
+            continue
+        source = '\n'.join(path.read_text(encoding='utf-8')
+                           for path in sorted(directory.glob('*.c')))
+        for room, regions in parse_mzm_scroll_regions(source, area).items():
+            found[(area_index, room)] = regions
+    return found
+
+
+def _scroll_local_cells(regions: list[tuple[int, ...]]) -> set[tuple[int, int]]:
+    """Project native block-space scroll bounds through the minimap formula."""
+    cells = set()
+    for region in regions:
+        bounds = list(region[:4])
+        variants = [bounds]
+        direction, extension = region[6], region[7]
+        if direction in (0, 1, 2, 3) and extension != 255:
+            extended = bounds.copy()
+            extended[direction] = extension
+            variants.append(extended)
+        for x_start, x_end, y_start, y_end in variants:
+            if x_start > x_end or y_start > y_end:
+                continue
+            for block_y in range(y_start, y_end + 1):
+                for block_x in range(x_start, x_end + 1):
+                    cells.add((max(0, block_x - 2) // 15,
+                               max(0, block_y - 2) // 10))
+    return cells
+
+
+def native_mzm_room_evidence(
+        anchors: list[tuple[int, int, int, int, int, int]]) -> dict[tuple[int, int], set[tuple[int, int, int]]]:
+    """Project native doors and sprite placements into per-room map evidence."""
+    from scripts.room_annotations import PLACEMENT_ITEM_RE, PLACEMENT_RE
+
+    rooms = decode_room_descriptors(ROOM_SOURCE.read_text(encoding='utf-8'))
+    tables = decode_door_tables(ROOM_SOURCE.read_text(encoding='utf-8'), rooms)
+    origins = {(area, room): (x, y) for area, room, x, y, *_ in anchors}
+    evidence = {}
+    for area_index, area in enumerate(MZM_AREAS):
+        for door in tables[area]:
+            room = door['sourceRoom']
+            origin = origins.get((area_index, room))
+            if origin is None:
+                continue
+            x, y = origin
+            # All blocks touched by the door are native evidence for its source
+            # room. Set projection avoids favoring an arbitrary door edge.
+            points = evidence.setdefault((area_index, room), set())
+            for block_y in range(door['yStart'], door['yEnd'] + 1):
+                for block_x in range(door['xStart'], door['xEnd'] + 1):
+                    points.add((area_index,
+                                x + max(0, block_x - 2) // 15,
+                                y + max(0, block_y - 2) // 10))
+        directory = MZM_ROOMS_ROOT / area.lower()
+        for path in sorted(directory.glob('*.c')):
+            source = path.read_text(encoding='utf-8')
+            for match in PLACEMENT_RE.finditer(source):
+                source_area, room_text, _, body = match.groups()
+                room = int(room_text)
+                origin = origins.get((area_index, room))
+                if source_area != area or origin is None:
+                    continue
+                x, y = origin
+                points = evidence.setdefault((area_index, room), set())
+                for block_y, block_x, _ in PLACEMENT_ITEM_RE.findall(body):
+                    points.add((area_index,
+                                x + max(0, int(block_x) - 2) // 15,
+                                y + max(0, int(block_y) - 2) // 10))
+    return evidence
+
+
 def expand_mzm_clip_cells(anchors: list[tuple[int, int, int, int, int, int]],
                           dimensions: dict[tuple[int, int], tuple[int, int]]) -> list[tuple[int, ...]]:
     """Expand engine room bounds when no native minimap is available.
@@ -180,7 +295,10 @@ def expand_mzm_clip_cells(anchors: list[tuple[int, int, int, int, int, int]],
 def resolve_mzm_minimap_cells(
         anchors: list[tuple[int, int, int, int, int, int]],
         dimensions: dict[tuple[int, int], tuple[int, int]],
-        native: list[tuple[int, ...]]) -> tuple[list[tuple], dict]:
+        native: list[tuple[int, ...]],
+        scroll_regions: dict[tuple[int, int], list[tuple[int, ...]]] | None = None,
+        direct_evidence: dict[tuple[int, int], set[tuple[int, int, int]]] | None = None,
+        ) -> tuple[list[tuple], dict]:
     """Join engine geometry to original minimap occupancy without guessing.
 
     Rooms sharing a RoomEntryRom map origin are recorded as progression
@@ -194,7 +312,10 @@ def resolve_mzm_minimap_cells(
     if len(native_by_position) != len(native):
         raise ValueError('duplicate native MZM minimap coordinate')
 
+    scroll_regions = scroll_regions or {}
+    direct_evidence = direct_evidence or {}
     families = {}
+    scroll_bounded_rooms = 0
     for area, room, x, y, save, warp in anchors:
         family = families.setdefault((area, x, y), {
             'area': area, 'x': x, 'y': y, 'rooms': [], 'points': set(),
@@ -203,22 +324,28 @@ def resolve_mzm_minimap_cells(
         family['rooms'].append(room)
         family['save'] |= bool(save)
         family['warp'] |= bool(warp)
-        bounds = dimensions.get((area, room))
-        if bounds is None:
-            continue
-        width, height = bounds
-        if (type(width) is not int or type(height) is not int or
-                width < 19 or height < 14 or
-                (width - 4) % 15 or (height - 4) % 10):
-            continue
-        screens_x, screens_y = (width - 4) // 15, (height - 4) // 10
-        if not 1 <= screens_x <= 32 or not 1 <= screens_y <= 32:
-            continue
-        for yy in range(y, y + screens_y):
-            for xx in range(x, x + screens_x):
-                point = (area, xx, yy)
-                if point in native_by_position:
-                    family['points'].add(point)
+        regions = scroll_regions.get((area, room))
+        if regions is not None:
+            local_cells = _scroll_local_cells(regions)
+            scroll_bounded_rooms += 1
+        else:
+            bounds = dimensions.get((area, room))
+            if bounds is None:
+                continue
+            width, height = bounds
+            if (type(width) is not int or type(height) is not int or
+                    width < 19 or height < 14 or
+                    (width - 4) % 15 or (height - 4) % 10):
+                continue
+            screens_x, screens_y = (width - 4) // 15, (height - 4) // 10
+            if not 1 <= screens_x <= 32 or not 1 <= screens_y <= 32:
+                continue
+            local_cells = {(xx, yy) for yy in range(screens_y)
+                           for xx in range(screens_x)}
+        for local_x, local_y in local_cells:
+            point = (area, x + local_x, y + local_y)
+            if point in native_by_position:
+                family['points'].add(point)
 
     claims = {}
     for key, family in families.items():
@@ -228,6 +355,7 @@ def resolve_mzm_minimap_cells(
     rows = []
     ambiguity_records = []
     owned_count = 0
+    evidence_resolutions = 0
     for point, source in sorted(native_by_position.items()):
         area, _, x, y, _, _, _, tile = source
         candidates = claims.get(point, [])
@@ -238,6 +366,13 @@ def resolve_mzm_minimap_cells(
         elif len(anchored) == 1:
             # RoomEntryRom.mapX/mapY is direct evidence for the origin cell.
             owner = anchored[0]
+        elif len(candidates) > 1:
+            evidenced = [key for key in candidates
+                         if any(point in direct_evidence.get((key[0], room), set())
+                                for room in families[key]['rooms'])]
+            if len(evidenced) == 1:
+                owner = evidenced[0]
+                evidence_resolutions += 1
         if owner is not None:
             family = families[owner]
             rooms = sorted(set(family['rooms']))
@@ -275,14 +410,19 @@ def resolve_mzm_minimap_cells(
         'owned_native_cells': owned_count,
         'unassigned_native_cells': len(native) - owned_count,
         'ambiguous_native_cells': len(ambiguity_records),
+        'scroll_bounded_rooms': scroll_bounded_rooms,
+        'native_evidence_cells': len({point for points in direct_evidence.values()
+                                      for point in points}),
+        'native_evidence_resolutions': evidence_resolutions,
         'variant_families': [
             {'area': family['area'], 'map_x': family['x'], 'map_y': family['y'],
              'rooms': sorted(set(family['rooms']))}
             for family in families.values() if len(set(family['rooms'])) > 1
         ],
         'ambiguities': ambiguity_records,
-        'method': ('RoomEntryRom origins plus exact Clipdata playable dimensions, '
-                   'intersected with original pause-minimap occupancy'),
+        'method': ('RoomEntryRom origins plus native room scroll bounds, with exact '
+                   'Clipdata dimensions as fallback, door/sprite disambiguation, '
+                   'and original pause-minimap occupancy'),
     }
     return rows, report
 
@@ -347,7 +487,7 @@ def native_mzm_minimap_cells() -> list[tuple[int, ...]]:
 
 def output_rows(world: str, rows: list[tuple]) -> bytes:
     # 8th field: native minimap tile code (0 when unknown). Provenance:
-    # 0=original MZM anchor, 1=decoded MZM clip bounds, 2=original Aria cell,
+    # 0=original MZM anchor, 1=decoded MZM room geometry, 2=original Aria cell,
     # 3=MZM original pause-screen map tile with unknown room ownership.
     default = 2 if world == 'aria' else 0
     encoded = []
@@ -362,7 +502,7 @@ def output_rows(world: str, rows: list[tuple]) -> bytes:
                     or '|' in row[8] or '\n' in row[8] or len(row[8]) > 180))):
             raise ValueError('invalid world overview provenance/tile row')
         encoded.append('|'.join(map(str, row)))
-    head = ('# Original map cells; provenance 0=anchor, 1=clip, 2=Aria, 3=MZM minimap tile.\n'
+    head = ('# Original map cells; provenance 0=anchor, 1=MZM geometry, 2=Aria, 3=MZM minimap tile.\n'
             '# area|room|x|y|save|warp|provenance|native_tile|variants_or_ambiguity\n')
     return (head + '\n'.join(encoded) + '\n').encode('utf-8')
 
@@ -376,7 +516,8 @@ def index(world: str)->int:
         native = native_mzm_minimap_cells()
         if native:
             rows, report = resolve_mzm_minimap_cells(
-                anchors, native_mzm_clip_dimensions(), native)
+                anchors, native_mzm_clip_dimensions(), native,
+                native_mzm_scroll_regions(), native_mzm_room_evidence(anchors))
             write_generated('world_overview/mzm_ownership.json',
                             (json.dumps(report, indent=2) + '\n').encode('utf-8'))
         else:

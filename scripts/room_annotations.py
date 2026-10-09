@@ -14,6 +14,7 @@ from pathlib import Path
 from scripts.import_game_assets import OUTPUT, ROOT, write_generated
 from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.mzm_world_atlas import AREAS, DOOR_RE, FIELD_RE, ITEM_RE, REQUIRED
+from scripts.object_catalog import aria_entity_identity, load_aria_enemy_names
 
 SPRITESET_SOURCE = ROOT / 'third_party/mzm/src/data/spriteset.c'
 ROOMS_ROOT = ROOT / 'third_party/mzm/src/data/rooms'
@@ -138,17 +139,19 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
     return rows
 
 
-def build_aria(room: dict) -> list[tuple]:
+def build_aria(room: dict, enemy_names: dict[int, str] | None = None) -> list[tuple]:
     rows = []
     for index, entity in enumerate(room['entities']):
         kind = int(entity['kind'])
         entity_id = int(entity['entity_id'])
-        native = f'kind-{kind}:id-{entity_id}'
+        label, category = aria_entity_identity(kind, entity_id, enemy_names)
+        native = f'kind-{kind:02X}:id-{entity_id:02X}'
         details = (f"pointer={entity['entry_pointer']}; persistent={entity['persistent_index']}; "
-                   f"flags=0x{entity['flags']:02x}; parameters={entity['parameters']}")
+                   f"flags=0x{entity['flags']:02x}; parameters={entity['parameters']}; "
+                   f"category={category}")
         rows.append(('ENTITY', index, max(0, entity['x'] - 8),
                      max(0, entity['y'] - 8), 16, 16,
-                     'native', native, f'Aria entity {kind}:{entity_id}', details))
+                     'native', native, label, details))
     for index, transition in enumerate(room['transitions']):
         x = max(0, int(transition['source_screen_x']) * 240)
         y = max(0, int(transition['source_screen_y']) * 160)
@@ -180,5 +183,5 @@ def export_mzm(area: str, room: int) -> str:
 
 def export_aria(room: dict) -> str:
     path = f"rooms/aria/annotations/area_{room['engine_area']:02}_room_{room['room']:03}.tsv"
-    write_generated(path, serialize(build_aria(room)))
+    write_generated(path, serialize(build_aria(room, load_aria_enemy_names())))
     return path

@@ -54,7 +54,9 @@ Zero Mission currently has room descriptors, original minimap structure,
 partial BG1/BG2 rendering, experimental BG3 reconstruction and editable local
 metatile work files. Collision, doors, default entities and event-dependent
 spriteset variants are inspectable. The object catalog exposes all primary
-sprite identities and raw health/damage/weakness expressions. Object graphics,
+sprite identities and raw health/damage/weakness expressions. Zero Mission
+global-map ownership prefers native scroll regions and direct door/sprite
+coordinates, with Clipdata dimensions only as fallback. Object graphics,
 behavior and authoring encoders are not reconstructed.
 
 Aria currently has verified character sprites and a structural world decoder.
@@ -64,8 +66,10 @@ records per room, graphics/palette references, 2,336 entity placements and 725
 transitions. It also identifies all eleven campaign bosses through their native
 enemy records. The editor can inspect room entities, their parameters,
 transitions and collision while the common catalog groups native types and
-placement counts. Object graphics, music and executable behavior remain
-private-source reconstruction work; room rendering is still incomplete.
+placement counts. Enemy names are joined from the verified ROM constructor
+table to pinned cvaos symbols; other entity kinds expose their decoded semantic
+role. Object graphics, music and executable behavior remain private-source
+reconstruction work; room rendering is still incomplete.
 
 ## Future runtime boundary
 

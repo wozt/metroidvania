@@ -481,3 +481,22 @@ and the proprietary-file guard passed.
 - Validation: 160 Python tests and all six CTest targets pass; the GTK4 editor
   was smoke-tested under Xvfb with the object catalog, Brinstar 023 annotations
   and object overlays rendered from local private data.
+
+## Patch 0076 - semantic object identities and scroll-bounded MZM placement
+
+- Aria catalog and room overlays no longer expose opaque `kind/id` labels.
+  Enemy IDs are resolved through the hash-verified ROM constructor table and
+  named pinned cvaos symbols; bosses, ordinary enemies, special objects,
+  candles and conditional pickup classes now have semantic display names.
+- Zero Mission object labels remain based on the pinned primary-sprite enum,
+  with numeric variants formatted for readability and unused types sorted away
+  from the main catalog entries.
+- Zero Mission global-map ownership now uses all 138 native custom-scroll room
+  records before falling back to Clipdata rectangles. Door and sprite
+  coordinates provide direct evidence where source-derived regions overlap.
+- With the current verified private input, owned native minimap cells increase
+  from 1,015 to 1,065 of 1,180. Ambiguous cells fall from 37 to 8; the remaining
+  overlaps stay explicitly unassigned instead of receiving a guessed room.
+- The GTK catalog and corrected Brinstar overview were smoke-tested under Xvfb.
+  Validation passes 165 Python tests, all six CTest targets and the
+  proprietary-data guard.

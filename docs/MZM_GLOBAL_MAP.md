@@ -1,19 +1,25 @@
 # Zero Mission global map reconstruction
 
-The Global maps GTK tab joins three independent native sources instead of
+The Global maps GTK tab joins independent native sources instead of
 guessing room rectangles:
 
 - `RoomEntryRom.mapX/mapY` supplies each room's global origin.
-- decoded Clipdata dimensions supply engine geometry; the four-block guard
-  border is removed before dividing by the native 15x10-block screen size;
+- native scroll records supply the traversable room regions, including
+  breakable-block and elevator extensions;
+- decoded Clipdata dimensions supply a conservative fallback when a room has
+  no custom scroll record; the four-block guard border is removed before
+  dividing by the native 15x10-block screen size;
+- native door and sprite-placement coordinates provide direct room evidence
+  when two candidate regions overlap;
 - original 32x32 pause-minimap tilemaps decide which candidate cells actually
   exist.
 
 Only the intersection of engine geometry and original minimap occupancy is
 assigned to a room. Irregular holes remain holes. When engine rectangles
-overlap, an exact `mapX/mapY` origin can disambiguate its own cell; all other
-unproved cells stay visibly unassigned. Rooms sharing an origin are exposed as
-progression variants rather than silently merged. The ignored private
+overlap, an exact `mapX/mapY` origin or unique door/sprite evidence can
+disambiguate a cell; all other unproved cells stay visibly unassigned. Rooms
+sharing an origin are exposed as progression variants rather than silently
+merged. The ignored private
 `world_overview/mzm_ownership.json` report lists every variant family and
 ambiguity.
 

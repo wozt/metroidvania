@@ -29,7 +29,9 @@ docks, or detached into separate windows.
   supports drag panning and Ctrl+wheel zoom, and launches known room editors.
 - **Object catalog** shows the native definitions used by both games in two
   columns. Zero Mission health/damage/weakness expressions and Aria placement
-  counts/known boss health are inspectable.
+  counts/known boss health are inspectable. Aria enemy IDs are resolved through
+  the verified ROM constructor table and pinned named symbols; special objects,
+  candles and pickup classes use semantic labels instead of raw kind/ID pairs.
 - **ROM visuals** previews locally extracted Samus and Soma animation frames.
 
 Saving a native room creates an ignored override under

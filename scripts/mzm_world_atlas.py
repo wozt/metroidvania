@@ -21,7 +21,8 @@ REQUIRED = ('type', 'sourceRoom', 'destinationDoor', 'xStart', 'xEnd', 'yStart',
 AREAS = ('Brinstar', 'Kraid', 'Norfair', 'Ridley', 'Tourian', 'Crateria', 'Chozodia')
 
 
-def decode_doors(source: str, rooms: list[dict]) -> tuple[list[dict], dict]:
+def decode_door_tables(source: str, rooms: list[dict]) -> dict[str, list[dict]]:
+    """Decode every native door entry, including self and area connections."""
     counts = {r['area']: 0 for r in rooms}
     for room in rooms:
         counts[room['area']] += 1
@@ -53,6 +54,11 @@ def decode_doors(source: str, rooms: list[dict]) -> tuple[list[dict], dict]:
         tables[area] = entries
     if any(area not in tables for area in AREAS):
         raise ValueError('missing original area door table')
+    return tables
+
+
+def decode_doors(source: str, rooms: list[dict]) -> tuple[list[dict], dict]:
+    tables = decode_door_tables(source, rooms)
     connections = []
     unresolved = 0
     for area in AREAS:

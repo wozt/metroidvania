@@ -188,7 +188,7 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
             gtk_widget_remove_css_class(child, "mv-selected");
     }
     const char *source = c.provenance == 2 ? "original minimap cells" :
-                         c.provenance == 1 ? "native Clipdata/minimap intersection" :
+                         c.provenance == 1 ? "native room geometry/minimap intersection" :
                          "original map anchor ONLY (extent unavailable)";
     gchar *message = g_strdup_printf(
         "%s / %s / room %03u | %u mapped case(s), clicked (%u,%u) "
@@ -727,7 +727,7 @@ static void grid_rebuild(WorldGrid *w)
                 c->room, room_cells, width, height,
                 c->provenance == 2 ? "original Aria map" :
                 c->provenance == 3 ? "original MZM minimap tile (room unknown)" :
-                c->provenance == 1 ? "native MZM Clipdata/minimap intersection" : "MZM anchor only",
+                c->provenance == 1 ? "native MZM scroll/Clipdata and minimap intersection" : "MZM anchor only",
                 c->ownership[0] ? "; ownership: " : "", c->ownership);
             gtk_widget_set_tooltip_text(cell, tip);
             g_free(tip);

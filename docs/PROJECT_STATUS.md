@@ -617,3 +617,16 @@ and the proprietary-file guard passed.
   any formatted item name undecodable. Provides item-name diagnostic counts.
 - No attempt to fake enemy sprites, souls without verifiable icons, or
   executable ROM changes. All modified assets remain private and ignored.
+
+## Patch 0084 - Aria item-name CLI and GTK4 widget lifecycle
+
+- Move `scripts.aria_item_details`' `__main__` entrypoint below all native
+  decoder functions; direct `python3 -m scripts.aria_item_details` no longer
+  crashes with an undefined `item_name` before reporting genuine ROM status.
+- Track `Room data` list/status widgets with their document lifetime, including
+  closing or detaching their right-side palette notebook page while a room is open.
+- Guard popup selection callbacks with weak-tracked child widgets; disconnect
+  callbacks when the form is destroyed to prevent stale GTK4 label accesses.
+- Add ROM-free execution tests for direct module entrypoint and GTK lifecycle
+  source contracts; no item placement or commercial source data is changed.
+- GTK4 runtime still requires local testing after Auto AI PyPatch compilation.

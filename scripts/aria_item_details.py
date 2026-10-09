@@ -102,18 +102,6 @@ def diagnose_names(rom: bytes) -> tuple[int, int, list[str]]:
     return correct, total, failures
 
 
-if __name__ == '__main__':
-    from scripts.import_game_assets import verified_rom
-    from scripts.import_aos_world import DEFAULT_ROM, EXPECTED_SHA1
-    verified = verified_rom(DEFAULT_ROM, EXPECTED_SHA1)
-    okay, total, errors = diagnose_names(verified)
-    print(f'Aria item/soul names decoded: {okay}/{total}')
-    for failure in errors:
-        print('  ', failure)
-    if okay < total:
-        raise SystemExit(1)
-
-
 def item_name(rom: bytes, subtype: int, item_id: int) -> str:
     if subtype not in _ITEM_RANGES:
         raise ValueError("Aria item family has no indexed text names")
@@ -142,3 +130,16 @@ def named_options(rom: bytes) -> list[dict]:
                                 "category": f"{mode} / {FAMILY_NAMES[subtype]}",
                                 "item_id": item_id})
     return options
+
+
+# PATCH_0084_ARIA_GTK_LIFETIMES: CLI entrypoint MUST follow item_name/named_options.
+if __name__ == '__main__':
+    from scripts.import_game_assets import verified_rom
+    from scripts.import_aos_world import DEFAULT_ROM, EXPECTED_SHA1
+    verified = verified_rom(DEFAULT_ROM, EXPECTED_SHA1)
+    okay, total, errors = diagnose_names(verified)
+    print(f'Aria item/soul names decoded: {okay}/{total}')
+    for failure in errors:
+        print('  ', failure)
+    if okay < total:
+        raise SystemExit(1)

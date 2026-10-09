@@ -534,6 +534,22 @@ typedef struct {
 static void project_creation_destroy(gpointer data)
 {
     ProjectCreation *form = data;
+    /* Disconnect GTK4 selection and spin callbacks before freeing userdata. */
+    if (form->native_type)
+        g_signal_handlers_disconnect_matched(form->native_type, G_SIGNAL_MATCH_DATA,
+                                             0, 0, NULL, NULL, form);
+    if (form->item_id)
+        g_signal_handlers_disconnect_matched(form->item_id, G_SIGNAL_MATCH_DATA,
+                                             0, 0, NULL, NULL, form);
+    GtkWidget **slots[] = {&form->name, &form->native_type,
+                            &form->catalog_description, &form->selected_icon,
+                            &form->item_id, &form->param0, &form->param1,
+                            &form->flags};
+    for (guint i = 0; i < G_N_ELEMENTS(slots); ++i) {
+        if (*slots[i])
+            g_object_remove_weak_pointer(G_OBJECT(*slots[i]),
+                                         (gpointer *)slots[i]);
+    }
     if (form->catalog_ids) g_ptr_array_free(form->catalog_ids, TRUE);
     if (form->catalog_item_ids) g_array_free(form->catalog_item_ids, TRUE);
     if (form->catalog_names) g_ptr_array_free(form->catalog_names, TRUE);
@@ -702,7 +718,8 @@ static void project_row_bind(GtkSignalListItemFactory *factory,
 
 static void project_item_fields_update(ProjectCreation *form, const char *token)
 {
-    if (!form->item_id) return;
+    if (!form->item_id || !form->param0 || !form->param1 || !form->flags)
+        return;
     gboolean eligible = FALSE;
     guint max_id = 0;
     if (form->doc->project_aria && form->kind == OVERLAY_ITEMS && token) {
@@ -732,7 +749,8 @@ static void project_specific_icon_refresh(GtkSpinButton *spin, gpointer userdata
 {
     (void)spin;
     ProjectCreation *form = userdata;
-    if (!form->selected_icon || !form->item_id || !form->catalog_ids) return;
+    if (form->doc->closing || !form->native_type || !form->selected_icon ||
+        !form->item_id || !form->catalog_ids) return;
     guint selection = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->native_type));
     if (selection >= form->catalog_ids->len) return;
     const char *token = g_ptr_array_index(form->catalog_ids, selection);
@@ -764,6 +782,8 @@ static void project_catalog_changed(GObject *object, GParamSpec *pspec,
 {
     ProjectCreation *form = userdata;
     (void)pspec;
+    if (form->doc->closing || !form->native_type || !form->catalog_description)
+        return;  /* Selection notification during window teardown. */
     guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
     if (!selected || !form->catalog_ids || selected >= form->catalog_ids->len) {
         gtk_label_set_text(GTK_LABEL(form->catalog_description),
@@ -969,6 +989,17 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     }
     gtk_box_append(GTK_BOX(layout), form->catalog_description);
     gtk_box_append(GTK_BOX(layout), save);
+    /* Child widgets may be finalized independently during window teardown.
+     * GObject weak pointers clear the form slots before a late callback. */
+    GtkWidget **borrowed[] = {&form->name, &form->native_type,
+                              &form->catalog_description, &form->selected_icon,
+                              &form->item_id, &form->param0, &form->param1,
+                              &form->flags};
+    for (guint i = 0; i < G_N_ELEMENTS(borrowed); ++i) {
+        if (*borrowed[i])
+            g_object_add_weak_pointer(G_OBJECT(*borrowed[i]),
+                                      (gpointer *)borrowed[i]);
+    }
     gtk_window_set_child(GTK_WINDOW(window), layout);
     g_object_set_data_full(G_OBJECT(window), "mv-project-create-form", form,
                            project_creation_destroy);
@@ -2570,8 +2601,10 @@ static void document_build(NativeWorkspace *doc)
     gtk_widget_set_hexpand(palette_scroll, TRUE);
     gtk_widget_set_vexpand(palette_scroll, TRUE);
     doc->palette = palette;
-    doc->annotations_list = data_list;
-    doc->annotations_status = gtk_label_new("Native room data imports with the room.");
+    /* PATCH_0084_ARIA_GTK_LIFETIMES: the right-side editor widgets are borrowed. */
+    document_track_widget(doc, &doc->annotations_list, data_list);
+    document_track_widget(doc, &doc->annotations_status,
+                          gtk_label_new("Native room data imports with the room."));
     gtk_label_set_xalign(GTK_LABEL(doc->annotations_status), 0);
     gtk_label_set_wrap(GTK_LABEL(doc->annotations_status), TRUE);
     gtk_label_set_selectable(GTK_LABEL(doc->annotations_status), TRUE);

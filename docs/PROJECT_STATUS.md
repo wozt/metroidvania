@@ -767,3 +767,16 @@ and the proprietary-file guard passed.
   round-trip tests. Validation: all 234 Python tests and all nine CTest targets
   pass, including GTK lifecycle/no-display entry points and the proprietary-file
   guard. No ROM, native annotation or extracted proprietary asset is modified.
+
+## Patch 0091 - show native Zero Mission doors by default
+
+- Fix GTK room documents opening with every native annotation overlay hidden.
+  Enemy, item, object, door and event markers are now visible on first open;
+  walls and unknown records stay opt-in, and undecoded triggers stay disabled.
+  Users can still independently hide/show any enabled category.
+- Ignore the real `DOOR_TYPE_NONE` MZM table sentinel instead of drawing a
+  non-door at (0,0). Preserve original door indices for destinations.
+- Add an actual GTK toggle interaction regression and a synthetic native MZM
+  door-table parser test. No ROM, extracted image or private override is changed.
+- Native doors are purple diagnostic outlines with D indices; decoding and
+  displaying their authentic graphical hatch sprites is still separate work.

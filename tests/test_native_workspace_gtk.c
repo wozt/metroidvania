@@ -15,6 +15,51 @@ static NativeWorkspace *new_workspace(GtkWidget **center_out, GtkWidget **right_
     return workspace;
 }
 
+/* Find real category toggle widgets; this does not inspect source text. */
+static GtkWidget *find_room_toggle(GtkWidget *root, const char *label)
+{
+    if (GTK_IS_TOGGLE_BUTTON(root) &&
+        g_strcmp0(gtk_button_get_label(GTK_BUTTON(root)), label) == 0)
+        return root;
+    for (GtkWidget *child = gtk_widget_get_first_child(root); child;
+         child = gtk_widget_get_next_sibling(child)) {
+        GtkWidget *found = find_room_toggle(child, label);
+        if (found) return found;
+    }
+    return NULL;
+}
+
+static void test_native_doors_default_visible(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    const char *rooms[] = {"Brinstar 022", "Aria 00:010"};
+    for (guint i = 0; i < G_N_ELEMENTS(rooms); ++i) {
+        g_assert_true(native_workspace_test_add_document(workspace, rooms[i]));
+        GtkWidget *page = gtk_notebook_get_nth_page(GTK_NOTEBOOK(center), (gint)i);
+        g_assert_nonnull(page);
+        GtkWidget *doors = find_room_toggle(page, "Doors");
+        g_assert_nonnull(doors);
+        g_assert_true(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(doors)));
+        const char *const labels[] = {"Enemies", "Items", "Objects", "Events"};
+        for (guint j = 0; j < G_N_ELEMENTS(labels); ++j) {
+            const char *label = labels[j];
+            GtkWidget *toggle = find_room_toggle(page, label);
+            g_assert_nonnull(toggle);
+            g_assert_true(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(toggle)));
+        }
+        GtkWidget *triggers = find_room_toggle(page, "Triggers");
+        g_assert_nonnull(triggers);
+        g_assert_false(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(triggers)));
+        /* User remains able to hide and restore the door overlay. */
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doors), FALSE);
+        g_assert_false(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(doors)));
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doors), TRUE);
+        g_assert_true(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(doors)));
+    }
+    native_workspace_free(workspace);
+}
+
 static void test_close_and_reopen(void)
 {
     GtkWidget *center, *right;
@@ -276,6 +321,8 @@ int main(int argc, char **argv)
     gtk_init();
     g_test_add_func("/native-workspace/nested-editor-tabs",
                     test_nested_editor_tab_focus_and_close);
+    g_test_add_func("/native-workspace/native-doors-default-visible",
+                    test_native_doors_default_visible);
     g_test_add_func("/native-workspace/close-and-reopen", test_close_and_reopen);
     g_test_add_func("/native-workspace/close-order-and-unsaved-guard",
                     test_close_order_and_unsaved_guard);

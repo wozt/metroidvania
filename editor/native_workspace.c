@@ -2972,6 +2972,15 @@ static void document_build(NativeWorkspace *doc)
         g_object_set_data(G_OBJECT(overlay_buttons[i]), "overlay-kind", GUINT_TO_POINTER(i));
         gtk_flow_box_insert(GTK_FLOW_BOX(tools), overlay_buttons[i], -1);
         g_signal_connect(overlay_buttons[i], "toggled", G_CALLBACK(overlay_toggled), doc);
+        /* PATCH_0091_NATIVE_DOORS_DEFAULT_VISIBLE:
+         * GTK toggle buttons start inactive, so native annotations previously
+         * loaded from both ROMs were invisible even when the import succeeded.
+         * Enable the useful native markers by default, especially MZM doors.
+         * Leave wall diagnostics, unknown records and undecoded triggers off;
+         * users can freely toggle individual categories afterwards. */
+        if (i == OVERLAY_ENEMIES || i == OVERLAY_ITEMS ||
+            i == OVERLAY_OBJECTS || i == OVERLAY_DOORS || i == OVERLAY_EVENTS)
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(overlay_buttons[i]), TRUE);
     }
     /* Trigger structures are not decoded for either engine yet. */
     gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);

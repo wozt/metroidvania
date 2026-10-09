@@ -73,6 +73,11 @@ def _mzm_door_entries(source: str, area: str, room: int) -> list[dict]:
         fields = {key: value.strip() for key, value in FIELD_RE.findall(item.group(1))}
         if not all(key in fields for key in REQUIRED):
             raise ValueError(f'{area} door {index}: missing fields')
+        # The last native table entry can be a DOOR_TYPE_NONE sentinel with
+        # sourceRoom=0 and zero geometry. Never display it as a real door.
+        # Keep enumerate(index) stable: destinationDoor uses original indices.
+        if fields['type'] == 'DOOR_TYPE_NONE':
+            continue
         if fields['sourceRoom'].isdecimal() and int(fields['sourceRoom']) == room:
             numeric = {key: int(fields[key]) for key in REQUIRED[1:]
                        if fields[key].isdecimal()}

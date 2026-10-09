@@ -2,6 +2,7 @@
 import unittest
 
 from scripts.room_annotations import (
+    _mzm_door_entries,
     build_aria,
     parse_mzm_placements,
     parse_mzm_spritesets,
@@ -26,6 +27,38 @@ class RoomAnnotationTests(unittest.TestCase):
     def test_mzm_room_without_placements_is_valid(self):
         self.assertEqual(parse_mzm_placements(
             'const u8 unrelated[] = { 0 };', 'Brinstar', 7), {})
+
+    def test_mzm_real_door_and_none_sentinel(self):
+        source = """const struct Door sBrinstarDoors[3] = {
+            {
+                .type = DOOR_TYPE_CLOSED_HATCH | DOOR_TYPE_NORMAL,
+                .sourceRoom = 7,
+                .xStart = 2, .xEnd = 2,
+                .yStart = 15, .yEnd = 18,
+                .destinationDoor = 2,
+            },
+            {
+                .type = DOOR_TYPE_AREA_CONNECTION | DOOR_TYPE_NORMAL,
+                .sourceRoom = 9,
+                .xStart = 10, .xEnd = 12,
+                .yStart = 4, .yEnd = 4,
+                .destinationDoor = 0,
+            },
+            {
+                .type = DOOR_TYPE_NONE,
+                .sourceRoom = 0,
+                .xStart = 0, .xEnd = 0,
+                .yStart = 0, .yEnd = 0,
+                .destinationDoor = 0,
+            }
+};"""
+        self.assertEqual(_mzm_door_entries(source, "Brinstar", 7), [{
+            "index": 0, "type": "DOOR_TYPE_CLOSED_HATCH | DOOR_TYPE_NORMAL",
+            "sourceRoom": 7, "destinationDoor": 2, "xStart": 2, "xEnd": 2,
+            "yStart": 15, "yEnd": 18,
+        }])
+        self.assertEqual(_mzm_door_entries(source, "Brinstar", 9)[0]["index"], 1)
+        self.assertEqual(_mzm_door_entries(source, "Brinstar", 0), [])
 
     def test_aria_entities_and_transition_anchors(self):
         room = {'entities': [{

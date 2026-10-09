@@ -167,10 +167,13 @@ def validate(doc: object, world: str, area: str, room: int,
         ids.add(eid)
         if entity["kind"] not in KINDS:
             raise ValueError("unknown entity kind")
+        # Aria's native object-placement grid is 8px; Zero Mission uses 16px.
+        # Keep the existing 16x16 project marker collision/bounds footprint.
+        entity_step = 8 if world == "aria" else 16
         for axis, limit in (("x", width), ("y", height)):
             value = _int(entity[axis], 0, limit - 16, axis)
-            if value % 16:
-                raise ValueError(f"{axis} must be aligned to 16 pixels")
+            if value % entity_step:
+                raise ValueError(f"{axis} must align to {entity_step} pixels")
         _text(entity["label"], 80, "entity label")
         if not isinstance(entity["native_type"], str) or not NATIVE_TYPE.fullmatch(entity["native_type"]):
             raise ValueError("invalid native type token")

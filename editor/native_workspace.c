@@ -13,7 +13,7 @@
 #include <glib/gstdio.h>
 #include <sys/stat.h>
 
-enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN, TOOL_COUNT };
+enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN, TOOL_GRAB, TOOL_COUNT };
 enum { OVERLAY_COLLISION, OVERLAY_ENEMIES, OVERLAY_ITEMS, OVERLAY_OBJECTS,
        OVERLAY_DOORS, OVERLAY_EVENTS, OVERLAY_TRIGGERS, OVERLAY_OTHER,
        OVERLAY_COUNT };
@@ -80,7 +80,7 @@ struct NativeWorkspace {
     guint project_drag_array_index;
     int project_drag_origin_x, project_drag_origin_y;
     gboolean project_aria, project_move_pending, project_click_consumed;
-    gboolean dragging_project;
+    gboolean dragging_project, dragging_native;
     GtkWidget *overlay_buttons[OVERLAY_COUNT];
     cairo_surface_t *atlas;
     unsigned char *atlas_pixels;
@@ -617,8 +617,90 @@ static guint project_load_doors(NativeWorkspace *doc)
     return count;
 }
 
+/* PATCH_0107_NATIVE_GRAB_POSITIONS: native source data stays immutable.
+ * A private GKeyFile contains only positions, with a source identity check.
+ * No original room resource, entity constructor, or ROM is ever rewritten. */
+static gchar *native_position_path_0107(NativeWorkspace *doc)
+{
+    if (!doc->project_area || doc->project_room > 999) return NULL;
+    return g_strdup_printf(
+        "assets/extracted/overrides/%s/annotation_positions/%s_%03u.ini",
+        doc->project_aria ? "aria" : "metroid",
+        doc->project_area, doc->project_room);
+}
+
+static gchar *native_position_group_0107(const RoomAnnotation *item)
+{
+    return g_strdup_printf("native_%u_%u", item->kind, item->index);
+}
+
+static void native_positions_apply_0107(NativeWorkspace *doc)
+{
+    gchar *path = native_position_path_0107(doc);
+    if (!path) return;
+    GKeyFile *file = g_key_file_new();
+    if (g_key_file_load_from_file(file, path, G_KEY_FILE_NONE, NULL)) {
+        guint count = doc->annotations ? doc->annotations->len : 0;
+        int step = doc->project_aria ? 8 : 16;
+        int room_width = (int)doc->map->width[0] * 16;
+        int room_height = (int)doc->map->height[0] * 16;
+        for (guint i = 0; i < count; ++i) {
+            RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation, i);
+            if (item->project_owned) continue;
+            gchar *group = native_position_group_0107(item);
+            gchar *type = g_key_file_get_string(file, group, "native_type", NULL);
+            gchar *variant = g_key_file_get_string(file, group, "variant", NULL);
+            GError *ex = NULL, *ey = NULL;
+            gint x = g_key_file_get_integer(file, group, "x", &ex);
+            gint y = g_key_file_get_integer(file, group, "y", &ey);
+            if (!ex && !ey && !g_strcmp0(type, item->native_type) &&
+                !g_strcmp0(variant, item->variant) && x >= 0 && y >= 0 &&
+                x % step == 0 && y % step == 0 &&
+                x + (int)item->width <= room_width &&
+                y + (int)item->height <= room_height) {
+                item->x = x;
+                item->y = y;
+            }
+            g_clear_error(&ex);
+            g_clear_error(&ey);
+            g_free(type);
+            g_free(variant);
+            g_free(group);
+        }
+    }
+    g_key_file_unref(file);
+    g_free(path);
+}
+
+static gboolean native_position_save_0107(NativeWorkspace *doc,
+                                           const RoomAnnotation *item, int x, int y)
+{
+    if (!item || item->project_owned || !doc->annotations_path) return FALSE;
+    gchar *path = native_position_path_0107(doc);
+    if (!path) return FALSE;
+    GKeyFile *file = g_key_file_new();
+    (void)g_key_file_load_from_file(file, path, G_KEY_FILE_NONE, NULL);
+    gchar *group = native_position_group_0107(item);
+    g_key_file_set_string(file, group, "native_type", item->native_type);
+    g_key_file_set_string(file, group, "variant", item->variant);
+    g_key_file_set_integer(file, group, "x", x);
+    g_key_file_set_integer(file, group, "y", y);
+    gsize length = 0;
+    gchar *contents = g_key_file_to_data(file, &length, NULL);
+    gchar *directory = g_path_get_dirname(path);
+    gboolean ok = g_mkdir_with_parents(directory, 0700) == 0 &&
+                  contents && g_file_set_contents(path, contents, (gssize)length, NULL);
+    g_free(directory);
+    g_free(contents);
+    g_free(group);
+    g_key_file_unref(file);
+    g_free(path);
+    return ok;
+}
+
 static void project_load(NativeWorkspace *doc)
 {
+    native_positions_apply_0107(doc);
     gchar *output = NULL;
     if (!project_command(doc, "list-previews", NULL, &output)) return;
     guint projects = 0;
@@ -1436,6 +1518,23 @@ static gint project_hit(NativeWorkspace *doc, double x, double y)
         double px = item->x * doc->scale, py = item->y * doc->scale;
         if (x >= px && x < px + item->width * doc->scale &&
             y >= py && y < py + item->height * doc->scale) return (gint)index;
+    }
+    return -1;
+}
+
+/* The Grab tool targets any visible, unshadowed native or authored marker.
+ * Select retains its older project-marker-only behavior. */
+static gint grab_hit_0107(NativeWorkspace *doc, double x, double y)
+{
+    if (!doc->annotations) return -1;
+    for (guint cursor = doc->annotations->len; cursor > 0; --cursor) {
+        guint i = cursor - 1;
+        const RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation, i);
+        if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind] ||
+            item->native_overridden) continue;
+        double px = item->x * doc->scale, py = item->y * doc->scale;
+        if (x >= px && x < px + MAX(4.0, item->width * doc->scale) &&
+            y >= py && y < py + MAX(4.0, item->height * doc->scale)) return (gint)i;
     }
     return -1;
 }
@@ -2911,12 +3010,15 @@ static void gesture_begin(GtkGestureDrag *gesture, double x, double y, gpointer 
     if (doc->closing) return;
     (void)gesture;
     if (!doc->ready || doc->drawing || doc->project_click_consumed) return;
-    /* Select-and-drag works only for project-owned markers. */
-    if (doc->tool_id == TOOL_SELECT) {
-        gint marker = project_hit(doc, x, y);
+    /* Grab supports every native/project marker, with source-specific snap.
+     * Select retains the legacy project-only marker behavior. */
+    if (doc->tool_id == TOOL_GRAB || doc->tool_id == TOOL_SELECT) {
+        gint marker = doc->tool_id == TOOL_GRAB ? grab_hit_0107(doc, x, y) :
+                                                   project_hit(doc, x, y);
         if (marker >= 0) {
             RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation, (guint)marker);
             doc->dragging_project = TRUE;
+            doc->dragging_native = !item->project_owned;
             doc->drawing = TRUE;
             doc->project_drag_id = item->index;
             doc->project_drag_array_index = (guint)marker;
@@ -2928,6 +3030,7 @@ static void gesture_begin(GtkGestureDrag *gesture, double x, double y, gpointer 
             return;
         }
     }
+    if (doc->tool_id == TOOL_GRAB) return; /* Empty Grab clicks do not paint. */
     int cx = 0, cy = 0;
     if (doc->tool_id != TOOL_PAN && !get_cell(doc, x, y, &cx, &cy)) return;
     doc->drawing = TRUE;
@@ -2971,10 +3074,15 @@ static void gesture_update(GtkGestureDrag *gesture, double dx, double dy, gpoint
     if (doc->dragging_project) {
         RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation,
                                                doc->project_drag_array_index);
-        int x = (int)((doc->project_drag_origin_x + dx / doc->scale) / 16.0) * 16;
-        int y = (int)((doc->project_drag_origin_y + dy / doc->scale) / 16.0) * 16;
-        item->x = CLAMP(x, 0, (int)doc->map->width[0] * 16 - 16);
-        item->y = CLAMP(y, 0, (int)doc->map->height[0] * 16 - 16);
+        int step = doc->project_aria ? 8 : 16;
+        double tx = (doc->project_drag_origin_x + dx / doc->scale) / step;
+        double ty = (doc->project_drag_origin_y + dy / doc->scale) / step;
+        int x = (int)(tx + (tx >= 0 ? 0.5 : -0.5)) * step;
+        int y = (int)(ty + (ty >= 0 ? 0.5 : -0.5)) * step;
+        int limit_x = MAX(0, (int)doc->map->width[0] * 16 - (int)item->width);
+        int limit_y = MAX(0, (int)doc->map->height[0] * 16 - (int)item->height);
+        item->x = CLAMP(x, 0, limit_x / step * step);
+        item->y = CLAMP(y, 0, limit_y / step * step);
         gtk_widget_queue_draw(doc->canvas);
         return;
     }
@@ -3019,11 +3127,34 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
                                                doc->project_drag_array_index);
         int x = item->x, y = item->y;
         guint id = doc->project_drag_id;
+        gboolean native = doc->dragging_native;
+        guint kind = item->kind;
+        /* Save from the original record before reloading any annotation array. */
+        gboolean changed = x != doc->project_drag_origin_x ||
+                           y != doc->project_drag_origin_y;
+        gboolean success = TRUE;
+        if (changed && native)
+            success = native_position_save_0107(doc, item, x, y);
         doc->dragging_project = FALSE;
+        doc->dragging_native = FALSE;
         doc->drawing = FALSE;
-        if (x != doc->project_drag_origin_x || y != doc->project_drag_origin_y)
-            project_move(doc, id, x, y);
-        else gtk_widget_queue_draw(doc->canvas);
+        if (changed && !native && kind == OVERLAY_DOORS) {
+            gchar sid[16], sx[16], sy[16];
+            g_snprintf(sid, sizeof(sid), "%u", id);
+            g_snprintf(sx, sizeof(sx), "%d", x);
+            g_snprintf(sy, sizeof(sy), "%d", y);
+            const char *const opts[] = {"--id", sid, "--x", sx, "--y", sy, NULL};
+            success = project_command(doc, "door-update", opts, NULL);
+        } else if (changed && !native) {
+            success = project_move(doc, id, x, y);
+        }
+        if (changed) {
+            /* project_move() already reloads; no duplicate GTK list rebuild. */
+            if (native || kind == OVERLAY_DOORS) project_reload(doc);
+            message(doc, success ?
+                "Grab saved private marker coordinates. Original ROM unchanged." :
+                "Grab move rejected; restored previous coordinates.");
+        } else gtk_widget_queue_draw(doc->canvas);
         return;
     }
     if (doc->moving && (doc->preview_dx || doc->preview_dy)) {
@@ -3060,14 +3191,15 @@ static void canvas_click_down(GtkGestureClick *click, int n_press,
     NativeWorkspace *doc = userdata;
     (void)n_press;
     if (doc->project_move_pending && doc->ready) {
-        int cx = (int)(x / (16.0 * doc->scale));
-        int cy = (int)(y / (16.0 * doc->scale));
-        if (cx < 0 || cy < 0 || (guint)cx >= doc->map->width[0] ||
-            (guint)cy >= doc->map->height[0]) return;
+        int step = doc->project_aria ? 8 : 16;
+        int cx = (int)(x / (step * doc->scale));
+        int cy = (int)(y / (step * doc->scale));
+        if (cx < 0 || cy < 0 || cx * step + 16 > (int)doc->map->width[0] * 16 ||
+            cy * step + 16 > (int)doc->map->height[0] * 16) return;
         guint id = doc->project_move_id;
         doc->project_move_pending = FALSE;
         doc->project_click_consumed = TRUE;
-        project_move(doc, id, cx * 16, cy * 16);
+        project_move(doc, id, cx * step, cy * step);
         gtk_gesture_set_state(GTK_GESTURE(click), GTK_EVENT_SEQUENCE_CLAIMED);
         return;
     }
@@ -3563,6 +3695,7 @@ static gboolean key_pressed(GtkEventControllerKey *controller, guint keyval,
     case GDK_KEY_i: doc->tool_id = TOOL_PICK; break;
     case GDK_KEY_v: doc->tool_id = TOOL_SELECT; break;
     case GDK_KEY_h: doc->tool_id = TOOL_PAN; break;
+    case GDK_KEY_m: doc->tool_id = TOOL_GRAB; break;
     default: return FALSE;
     }
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[doc->tool_id]), TRUE);
@@ -3574,12 +3707,14 @@ static void document_build(NativeWorkspace *doc)
     static const char *const layers[] = {"BG1", "BG2", NULL};
     static const char *const icons[TOOL_COUNT] = {
         "document-edit-symbolic", "edit-clear-symbolic", "color-fill-symbolic",
-        "color-select-symbolic", "edit-select-all-symbolic", "transform-move-symbolic"
+        "color-select-symbolic", "edit-select-all-symbolic", "transform-move-symbolic",
+        "input-mouse-symbolic"
     };
     static const char *const names[TOOL_COUNT] = {
         "Pencil (draw)", "Eraser", "Fill bucket",
         "Eyedropper (pick a metatile)", "Rectangle selection (drag to move)",
-        "Hand (pan the view)"
+        "Hand (pan the view)",
+        "Grab (M): drag doors, enemies, items and objects; Zero Mission 16px / Aria 8px"
     };
     GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
     GtkWidget *tools = gtk_flow_box_new();

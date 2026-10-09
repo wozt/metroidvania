@@ -932,3 +932,15 @@ and the proprietary-file guard passed.
   selection. Weak pointers prevent dangling map/form/workspace references.
 - No ROM, project data format, runtime engine, minimap grouping or room tile
   rendering changes. Bidirectional linking is not automatic.
+
+## Patch 0107 - Grab entity placements
+
+- Added an explicit GTK Grab tool (M) for visible native and authored entities,
+  objects, items, and doors. Zero Mission snaps to 16px, Aria to 8px.
+- Native placements are private visual authoring overrides saved in ignored
+  GKeyFile documents under `assets/extracted/overrides/*/annotation_positions`;
+  original ROMs, native placement descriptors and transition identities do not
+  change. A native door already adopted by the project remains shadowed.
+- Project entities use the existing validated headless backend; project doors
+  use `door-update`. Aria's validator now permits 8px project entity positions.
+- The feature does not yet implement engine-native entity re-encoding.

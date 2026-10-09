@@ -28,7 +28,7 @@ class NativeMinimapTest(unittest.TestCase):
             tiles[31 * 32 + 20] = 0x15e
             data = struct.pack('<1024H', *tiles)
             (dest / 'brinstar_minimap.tt').write_bytes(literal_lz77(data))
-            with patch.object(world_overview, 'OUTPUT', output):
+            with patch.object(world_overview, 'OUTPUT', output),                  patch('scripts.import_game_assets.ROOT', output):
                 result = world_overview.native_mzm_minimap_cells()
             self.assertEqual(result, [
                 (0, 999, 0, 0, 0, 0, 3, 0x141),
@@ -37,7 +37,8 @@ class NativeMinimapTest(unittest.TestCase):
 
     def test_missing_local_native_data_is_not_invented(self):
         with tempfile.TemporaryDirectory() as directory:
-            with patch.object(world_overview, 'OUTPUT', Path(directory)):
+            isolated_root = Path(directory)
+            with patch.object(world_overview, 'OUTPUT', isolated_root),                  patch('scripts.import_game_assets.ROOT', isolated_root):
                 self.assertEqual(world_overview.native_mzm_minimap_cells(), [])
 
     def test_output_rows_preserve_native_tile_and_legacy_rows(self):

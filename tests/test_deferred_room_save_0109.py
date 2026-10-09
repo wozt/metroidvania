@@ -51,7 +51,8 @@ class DeferredRoomSave0109(unittest.TestCase):
         source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
         for part in ('hand-symbolic', 'room_stage_commit_0109(doc)',
                      'MV_EDITOR_ROOM_STAGE', 'room_stage_path_0109(doc, "ini")',
-                     'if (success) mark_changed(doc);',
+                     'room_history_push_0112(doc->undo',
+                     'if (success && mutation)',
                      'doc->unsaved ? " *" : ""'):
             self.assertIn(part, source)
         self.assertNotIn('"input-mouse-symbolic"', source)

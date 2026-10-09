@@ -52,7 +52,7 @@ class ConnectionGraph0116(unittest.TestCase):
             self.assertEqual(saved.read_bytes(),original)
 
     def test_backend_and_cli_contract(self):
-        self.assertIn('"connection-list"',editor_backend.COMMAND_FIELDS)
+        self.assertIn('connection-list',editor_backend.COMMAND_FIELDS)
         self.assertIn('connection-list',editor_cli.TSV_COMMANDS)
         c=(ROOT/'editor/world_atlas.c').read_text()
         for phrase in ('PATCH_0116_CONNECTION_VISUALIZATION',

@@ -26,6 +26,12 @@ int main(void) {
     /* Neither slope should become a full 16x16 wall. */
     assert(!blocked(r,20.f,17.f,1.f,1.f));
     assert(!blocked(r,44.f,17.f,1.f,1.f));
+    /* PATCH_0144: horizontal motion without SDL or a ROM. */
+    assert(update_horizontal_velocity(0.f, 1.f, 0.1f, 100.f, 200.f, 300.f) == 20.f);
+    assert(update_horizontal_velocity(95.f, 1.f, 0.1f, 100.f, 200.f, 300.f) == 100.f);
+    assert(update_horizontal_velocity(30.f, 0.f, 0.1f, 100.f, 200.f, 300.f) == 0.f);
+    assert(update_horizontal_velocity(-20.f, 1.f, 0.1f, 100.f, 200.f, 300.f) == 0.f);
+    assert(update_horizontal_velocity(-95.f, -1.f, 0.1f, 100.f, 200.f, 300.f) == -100.f);
     free(r);
     return 0;
 }

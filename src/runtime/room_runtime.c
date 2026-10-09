@@ -248,6 +248,25 @@ static void move_grounded_x(const Room *room, float *x, float *y,
     }
 }
 
+/* PATCH_0144_HORIZONTAL_VELOCITY
+ * Provisional acceleration/braking model. The exact GBA parameters are
+ * not verified yet. Kept independent from native slope/collision handling.
+ */
+static float update_horizontal_velocity(float vx, float input,
+                                        float dt, float max_speed,
+                                        float acceleration, float braking) {
+    float target = input * max_speed;
+    float change = (input == 0.f ? braking : acceleration) * dt;
+    if (vx < target) {
+        vx += change;
+        if (vx > target) vx = target;
+    } else if (vx > target) {
+        vx -= change;
+        if (vx < target) vx = target;
+    }
+    return vx;
+}
+
 static float move_axis(const Room *room, float start, float other,
                        float amount, float w, float h, bool vertical,
                        bool *hit) {
@@ -328,7 +347,9 @@ int main(int argc, char **argv) {
     /* Initial gameplay tuning, NOT confirmed Zero Mission physics. */
     const float run_speed=115.f, gravity=650.f, jump_speed=265.f;
     const float terminal_speed=400.f;
-    float vy=0.f;
+    /* Provisional input response, NOT extracted MZM parameters. */
+    const float run_accel=520.f, run_braking=850.f;
+    float vx=0.f, vy=0.f;
     bool grounded=false;
     /* Prefer a grounded, collision-free test spawn near the room centre.
      * This is NOT a verified original Samus entry position. */
@@ -366,10 +387,12 @@ int main(int argc, char **argv) {
                 grounded=false;
             }
             jump_queued=false;
+            vx=update_horizontal_velocity(vx,dx,fixed_step,run_speed,
+                                          run_accel,run_braking);
             if (grounded)
-                move_grounded_x(room,&px,&py,dx*run_speed*fixed_step,pw,ph);
+                move_grounded_x(room,&px,&py,vx*fixed_step,pw,ph);
             else
-                px=move_axis(room,px,py,dx*run_speed*fixed_step,pw,ph,false,&hit);
+                px=move_axis(room,px,py,vx*fixed_step,pw,ph,false,&hit);
             vy=clampf(vy+gravity*fixed_step,-jump_speed,terminal_speed);
             py=move_axis(room,py,px,vy*fixed_step,pw,ph,true,&hit);
             if (hit) {

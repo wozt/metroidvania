@@ -27,6 +27,9 @@ typedef struct {
     GtkWidget *left_dock;
     GtkWidget *center_dock;
     GtkWidget *right_dock;
+    GtkWidget *outer_split, *inner_split;
+    GtkWidget *left_viewport, *center_viewport, *right_viewport;
+    gboolean updating_responsive;
     GtkWidget *subtitle;
     int responsive_mode;
     int small_focus;
@@ -196,6 +199,26 @@ static GtkWidget *new_dock(GtkApplication *application)
     return dock;
 }
 
+/* A GtkNotebook's active page may request more width than is available.
+ * Give the notebook a real, bounded viewport: large toolbars can scroll
+ * within their pane instead of drawing over the adjacent editor. This does
+ * not change the notebook's parent-child tab hierarchy or detach groups. */
+static GtkWidget *dock_viewport(GtkWidget *dock)
+{
+    GtkWidget *scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    gtk_scrolled_window_set_propagate_natural_width(
+        GTK_SCROLLED_WINDOW(scroll), FALSE);
+    gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(scroll), 0);
+    gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll), 0);
+    gtk_widget_set_hexpand(scroll, TRUE);
+    gtk_widget_set_vexpand(scroll, TRUE);
+    gtk_widget_set_overflow(scroll, GTK_OVERFLOW_HIDDEN);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), dock);
+    return scroll;
+}
+
 static void focus_dock_page(GtkWidget *page)
 {
     GtkWidget *parent = page ? gtk_widget_get_parent(page) : NULL;
@@ -281,8 +304,13 @@ static void build_inspector(GtkWidget *dock)
     gtk_notebook_append_page(GTK_NOTEBOOK(dock), root, gtk_label_new("Inspector"));
 }
 
+/* Window breakpoints alone cannot describe the workspace after the user
+ * drags the left splitter. Account for the remaining allocation as well.
+ * Hysteresis avoids a visible right-dock oscillation near the threshold. */
 static void apply_responsive(Editor *editor)
 {
+    if (editor->updating_responsive) return;
+    editor->updating_responsive = TRUE;
     gboolean left = TRUE;
     gboolean center = TRUE;
     gboolean right = TRUE;
@@ -293,11 +321,32 @@ static void apply_responsive(Editor *editor)
     } else if (editor->responsive_mode == 1) {
         left = editor->small_focus != 2;
         right = editor->small_focus == 2;
+    } else if (editor->inner_split) {
+        int remaining = gtk_widget_get_width(editor->inner_split);
+        /* Only show the optional inspector when enough space remains after
+         * the Explorer dock. Always leave the center workbench accessible. */
+        int threshold = gtk_widget_get_visible(editor->right_dock) ? 880 : 1020;
+        if (remaining > 0 && remaining < threshold) right = FALSE;
     }
     gtk_widget_set_visible(editor->left_dock, left);
     gtk_widget_set_visible(editor->center_dock, center);
     gtk_widget_set_visible(editor->right_dock, right);
+    /* Hide the containing viewport too: hiding only the notebook would leave
+     * an empty pane occupying the same width. */
+    gtk_widget_set_visible(editor->left_viewport, left);
+    gtk_widget_set_visible(editor->center_viewport, center);
+    gtk_widget_set_visible(editor->right_viewport, right);
     gtk_widget_set_visible(editor->subtitle, editor->responsive_mode == 2);
+    editor->updating_responsive = FALSE;
+}
+
+/* The Paned position changes even when the window itself does not resize. */
+static void splitter_position_changed(GObject *pane, GParamSpec *spec,
+                                      gpointer userdata)
+{
+    (void)pane;
+    (void)spec;
+    apply_responsive(userdata);
 }
 
 static gboolean responsive_idle(gpointer userdata)
@@ -464,6 +513,8 @@ static void activate(GtkApplication *application, gpointer userdata)
     editor->left_dock = left;
     editor->center_dock = center;
     editor->right_dock = right;
+    editor->outer_split = outer_split;
+    editor->inner_split = inner_split;
     editor->subtitle = gtk_label_new("Native room and asset workspace");
     editor->responsive_mode = 2;
     editor->small_focus = 0;
@@ -491,12 +542,31 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
     gtk_widget_set_vexpand(outer_split, TRUE);
     gtk_box_append(GTK_BOX(root), outer_split);
-    gtk_paned_set_start_child(GTK_PANED(outer_split), left);
+    /* Two resizable splitters with isolated viewport allocations: neither
+     * Explorer nor a long center toolbar may paint on top of its neighbor. */
+    editor->left_viewport = dock_viewport(left);
+    editor->center_viewport = dock_viewport(center);
+    editor->right_viewport = dock_viewport(right);
+    gtk_paned_set_start_child(GTK_PANED(outer_split), editor->left_viewport);
     gtk_paned_set_end_child(GTK_PANED(outer_split), inner_split);
-    gtk_paned_set_start_child(GTK_PANED(inner_split), center);
-    gtk_paned_set_end_child(GTK_PANED(inner_split), right);
+    gtk_paned_set_start_child(GTK_PANED(inner_split), editor->center_viewport);
+    gtk_paned_set_end_child(GTK_PANED(inner_split), editor->right_viewport);
+    gtk_paned_set_resize_start_child(GTK_PANED(outer_split), FALSE);
+    gtk_paned_set_resize_end_child(GTK_PANED(outer_split), TRUE);
+    gtk_paned_set_resize_start_child(GTK_PANED(inner_split), TRUE);
+    gtk_paned_set_resize_end_child(GTK_PANED(inner_split), FALSE);
+    gtk_paned_set_shrink_start_child(GTK_PANED(outer_split), TRUE);
+    gtk_paned_set_shrink_end_child(GTK_PANED(outer_split), TRUE);
+    gtk_paned_set_shrink_start_child(GTK_PANED(inner_split), TRUE);
+    gtk_paned_set_shrink_end_child(GTK_PANED(inner_split), TRUE);
+    gtk_paned_set_wide_handle(GTK_PANED(outer_split), TRUE);
+    gtk_paned_set_wide_handle(GTK_PANED(inner_split), TRUE);
     gtk_paned_set_position(GTK_PANED(outer_split), 275);
     gtk_paned_set_position(GTK_PANED(inner_split), 980);
+    g_signal_connect(outer_split, "notify::position",
+                     G_CALLBACK(splitter_position_changed), editor);
+    g_signal_connect(inner_split, "notify::position",
+                     G_CALLBACK(splitter_position_changed), editor);
 
     /* The outer center notebook is exclusively for permanent workspaces.
      * NativeMap documents are routed into the secondary notebook below it. */

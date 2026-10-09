@@ -409,3 +409,17 @@ and the proprietary-file guard passed.
   the descendant relationship used by `focus_page()`; the GTK runtime test
   remains the authority for actual parent/child notebook activation.
 - Existing room content, generated assets, and Git history remain unchanged.
+
+## Patch 0072 - dock allocation and splitter-aware responsiveness
+
+- Enclosed each existing GTK4 notebook (Explorer, main editor, Inspector) in
+  a scrollable, clipped viewport so oversized toolbars or notebook pages can
+  no longer overdraw another splitter pane. Tab ownership and detach groups
+  are unchanged.
+- Both nested paned splitters explicitly support shrinking their children;
+  horizontal dragging reallocates the middle workspace instead of obscuring it.
+- The optional right Inspector now responds to actual space left by Explorer,
+  not just window-wide breakpoints, and returns when space is restored.
+- Added source-contract regressions for pane boundaries, resize behavior,
+  and preservation of the permanent/temporary notebook arrangement.
+- GTK4 interaction testing on the developer workstation remains necessary.

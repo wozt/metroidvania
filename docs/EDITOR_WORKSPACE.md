@@ -64,7 +64,9 @@ base import, ROMs and upstream source remain unchanged.
 - Project event and trigger regions can be created from the canvas context
   menu, resized and typed in a dedicated form, moved with Grab, inspected and
   deleted. Their trigger/action/reference metadata uses the 16px Zero Mission
-  or 8px Aria grid and the same staged Undo/Redo/Save workflow.
+  or 8px Aria grid and the same staged Undo/Redo/Save workflow. Saving verifies
+  typed timeline, cutscene, entity, event, transition and checkpoint references;
+  missing targets are rejected without replacing the saved room document.
 - Native-record editor shells expose decoded source fields but keep Apply
   disabled. Complete object sprite previews and executable behavior decoding
   are still pending.

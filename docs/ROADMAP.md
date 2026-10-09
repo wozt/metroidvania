@@ -40,7 +40,9 @@ selection on the global map, a shared chronological Undo/Redo and Save/Discard
 for staged room changes. Project enemy/item/object forms atomically edit label,
 snapped position, native reference and available typed item fields in both
 workroom modes. Event/trigger forms edit their region, activation type, action,
-stable reference and one-shot behavior. Native ROM encoders, native trigger
+stable reference and one-shot behavior. Typed action references are resolved
+against timeline, cutscene, entity, event, transition and checkpoint targets
+before new data is saved. Native ROM encoders, native trigger
 extraction, object behavior definitions and a deterministic engine-neutral
 export remain pending. The engine-neutral collision brush suite covers solid,
 one-way, hazard, two floor-slope directions, water and air in both workroom
@@ -51,7 +53,7 @@ validated and exported to an engine-neutral package without ROM mutation.
 
 ## P3 - Story, cutscene and audio workspaces
 
-- complete typed event conditions/actions and cross-reference validation;
+- complete typed event conditions; action cross-reference validation is active;
 - add cutscene tracks, keyframes, preview and deterministic export;
 - inventory native music/SFX, decode private previews and author project audio cues;
 - expose all supported operations through the shared CLI.

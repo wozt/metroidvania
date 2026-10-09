@@ -32,12 +32,14 @@ class ObjectCatalogUiContract(unittest.TestCase):
         source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
         for contract in (
                 '"event-list"',
+                '"event-validate"',
                 '"event-create"',
                 '"event-update"',
                 '"event-delete"',
                 '"Create project event region here..."',
                 '"Create project trigger region here..."',
                 '"Apply event changes"',
+                '"References: timeline:<id>, cutscene:<id>, entity:<id>, event:<id>, "',
                 'project_event_move',
                 'const guint step = doc->project_aria ? 8u : 16u;'):
             self.assertIn(contract, source)

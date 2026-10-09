@@ -30,7 +30,7 @@ TSV_COMMANDS = {
     "room-list", "list-rooms", "placement-list", "entity-list",
     "entity-catalog", "entity-item-settings", "list-assets",
     "collision-list", "door-list", "door-target-list", "door-return-plan", "transition-list",
-    "connection-list", "event-list",
+    "connection-list", "event-list", "event-validate",
 }
 
 
@@ -242,6 +242,10 @@ def _tsv_result(command: str, data: dict) -> str:
                  item["width"], item["height"], item["label"],
                  item["trigger_type"], item["action_type"],
                  item["action_ref"], 1 if item["once"] else 0]
+                for item in data["events"]]
+    elif command == "event-validate":
+        rows = [[item["id"], item["action_type"], item["action_ref"],
+                 1 if item["valid"] else 0, item["reference_status"]]
                 for item in data["events"]]
     elif command == "door-return-plan":
         rows = [[data[key] for key in (

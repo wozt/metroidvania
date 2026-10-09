@@ -21,7 +21,7 @@ from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.room_audit import audit_world, write_private_report
 from scripts.validate_story_assets import validate_scene, validate_timeline
 
-BACKEND_VERSION = "1.6.0"
+BACKEND_VERSION = "1.7.0"
 
 CAPABILITIES = {
     "project-info": "available",
@@ -67,6 +67,7 @@ CAPABILITIES = {
     "collision-validate": "available_project_room_data_only",
     "event-list": "available_project_room_data_only",
     "event-inspect": "available_project_room_data_only",
+    "event-validate": "available_project_room_data_only",
     "event-create": "available_project_room_data_only",
     "event-update": "available_project_room_data_only",
     "event-delete": "available_project_room_data_only",
@@ -147,6 +148,7 @@ COMMAND_FIELDS = {
     "collision-validate": {"world", "area", "room", "width", "height"},
     "event-list": {"world", "area", "room", "width", "height"},
     "event-inspect": {"world", "area", "room", "width", "height", "id"},
+    "event-validate": {"world", "area", "room", "width", "height"},
     "event-create": {"world", "area", "room", "width", "height",
                      "event_kind", "x", "y", "region_width", "region_height",
                      "label", "trigger_type", "action_type", "action_ref", "once"},
@@ -498,6 +500,95 @@ def _transition_validation(document: dict, root: Path = ROOT) -> list[dict]:
     return results
 
 
+def _reject_reference_symlinks(root: Path, path: Path) -> None:
+    current = root
+    for part in path.relative_to(root).parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError(f"symlink story reference component refused: {current}")
+
+
+def _story_reference_ids(root: Path, kind: str) -> set[str]:
+    """Load validated story identifiers without trusting project-side paths."""
+    if kind == "timeline":
+        path = root / "data/story/timeline.toml"
+        _reject_reference_symlinks(root, path)
+        if (not path.is_file() or path.is_symlink()
+                or path.stat().st_size > 1_000_000):
+            return set()
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        validate_timeline(data)
+        return {event["id"] for event in data["events"]}
+    identifiers: set[str] = set()
+    folder = root / "data/cutscenes"
+    _reject_reference_symlinks(root, folder)
+    if not folder.is_dir() or folder.is_symlink():
+        return identifiers
+    for path in sorted(folder.glob("*.toml")):
+        _reject_reference_symlinks(root, path)
+        if path.is_symlink() or path.stat().st_size > 1_000_000:
+            raise ValueError(f"unsafe cutscene reference source: {path}")
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        validate_scene(data)
+        if data["id"] in identifiers:
+            raise ValueError(f"duplicate cutscene ID: {data['id']}")
+        identifiers.add(data["id"])
+    return identifiers
+
+
+def _event_reference_validation(
+        document: dict, event: dict, root: Path = ROOT,
+        story_ids: dict[str, set[str]] | None = None) -> dict[str, Any]:
+    """Resolve one typed project action reference without executing it."""
+    reference = event["action_ref"]
+    prefix, separator, target = reference.partition(":")
+    status = "invalid_reference_syntax"
+    valid = False
+    if separator and target:
+        action = event["action_type"]
+        if action == "story" and prefix in ("timeline", "cutscene"):
+            identifiers = (story_ids[prefix] if story_ids is not None
+                           else _story_reference_ids(root, prefix))
+            valid = target in identifiers
+            status = (f"verified_{prefix}" if valid else f"missing_{prefix}")
+        elif action == "spawn" and prefix == "entity":
+            valid = target.isdecimal() and str(int(target)) == target and any(
+                entity["id"] == int(target) for entity in document["entities"])
+            status = "verified_project_entity" if valid else "missing_project_entity"
+        elif action == "toggle" and prefix == "event":
+            valid = (target.isdecimal() and str(int(target)) == target
+                     and int(target) != event["id"] and any(
+                         candidate["id"] == int(target)
+                         for candidate in document["events"]))
+            status = "verified_project_event" if valid else "missing_or_self_project_event"
+        elif action == "transition" and prefix == "transition":
+            valid = target.isdecimal() and str(int(target)) == target and any(
+                transition["id"] == int(target)
+                for transition in document["transitions"])
+            status = ("verified_project_transition" if valid
+                      else "missing_project_transition")
+        elif action == "checkpoint" and prefix == "checkpoint":
+            valid = bool(re.fullmatch(r"[a-z][a-z0-9_.-]{0,63}", target))
+            status = "valid_checkpoint_key" if valid else "invalid_checkpoint_key"
+        elif action in ("story", "spawn", "toggle", "transition", "checkpoint"):
+            status = f"expected_{action}_reference"
+    return {
+        "id": event["id"], "action_type": event["action_type"],
+        "action_ref": reference, "valid": valid,
+        "reference_status": status, "engine_adapter": "unavailable",
+    }
+
+
+def _event_validation(document: dict, root: Path = ROOT) -> list[dict]:
+    prefixes = {event["action_ref"].partition(":")[0]
+                for event in document["events"]
+                if event["action_type"] == "story"}
+    story_ids = {prefix: _story_reference_ids(root, prefix)
+                 for prefix in prefixes if prefix in ("timeline", "cutscene")}
+    return [_event_reference_validation(document, event, root, story_ids)
+            for event in document["events"]]
+
+
 def _entity_settings(options: dict[str, Any], native_type: Any) -> dict | None:
     keys = ("item_id", "parameter_0", "parameter_1", "flags")
     values = [options.get(key) for key in keys]
@@ -663,6 +754,14 @@ def _project_validation(root: Path) -> dict:
         project_room_entities.validate(
             document, document.get("world"), document.get("area"),
             document.get("room"), document.get("width_px"), document.get("height_px"))
+        event_references = _event_validation(document, root)
+        invalid_event_ids = [record["id"] for record in event_references
+                             if not record["valid"]]
+        if invalid_event_ids:
+            identifiers = ", ".join(str(value) for value in invalid_event_ids)
+            raise ValueError(
+                f"{path.relative_to(root)}: invalid event action reference(s): "
+                f"{identifiers}")
         entity_documents.append({
             "path": str(path.relative_to(root)),
             "entity_count": len(document["entities"]),
@@ -670,6 +769,7 @@ def _project_validation(root: Path) -> dict:
             "door_count": len(document["doors"]),
             "transition_count": len(document["transitions"]),
             "event_count": len(document["events"]),
+            "validated_event_reference_count": len(event_references),
         })
     return {"timeline_events": timeline_count, "cutscenes": scenes,
             "draft_rooms": [room["id"] for room in drafts],
@@ -1061,6 +1161,12 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
         if command == "event-list":
             return {"count": len(document["events"]), "events": document["events"],
                     "engine_adapter": "unavailable"}
+        if command == "event-validate":
+            records = _event_validation(document, root_path)
+            valid_count = sum(record["valid"] for record in records)
+            return {"count": len(records), "valid_count": valid_count,
+                    "invalid_count": len(records) - valid_count,
+                    "events": records, "engine_adapter": "unavailable"}
         event_id = None if command == "event-create" else _integer(
             options.get("id"), "id", 1, 999999)
         current = next((event for event in document["events"]
@@ -1112,6 +1218,12 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
                 document, event_id, **changes)
         else:
             raise AssertionError(f"unhandled event command: {command}")
+        if command in ("event-create", "event-update"):
+            validation = _event_reference_validation(document, changed, root_path)
+            if not validation["valid"]:
+                raise ValueError(
+                    f"invalid {changed['action_type']} action reference "
+                    f"{changed['action_ref']}: {validation['reference_status']}")
         if dry_run:
             return {"event": changed, "persisted": False,
                     "engine_adapter": "unavailable"}

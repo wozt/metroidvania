@@ -507,9 +507,13 @@ def update(doc: dict, eid: int, x: int, y: int, label: str,
 
 def delete(doc: dict, eid: int) -> None:
     validate(doc, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
-    entries = [e for e in doc["entities"] if e["id"] != eid]
-    if len(entries) == len(doc["entities"]):
+    if not any(entity["id"] == eid for entity in doc["entities"]):
         raise ValueError("unknown project entity id")
+    if any(event["action_type"] == "spawn"
+           and event["action_ref"] == f"entity:{eid}"
+           for event in doc["events"]):
+        raise ValueError("entity is referenced by a project event")
+    entries = [e for e in doc["entities"] if e["id"] != eid]
     doc["entities"] = entries
 
 
@@ -733,10 +737,14 @@ def transition_update(doc: dict, transition_id: int, **changes: object) -> dict:
 def transition_delete(doc: dict, transition_id: int) -> None:
     validate(doc, doc["world"], doc["area"], doc["room"],
              doc["width_px"], doc["height_px"])
+    if not any(item["id"] == transition_id for item in doc["transitions"]):
+        raise ValueError("unknown project transition id")
+    if any(event["action_type"] == "transition"
+           and event["action_ref"] == f"transition:{transition_id}"
+           for event in doc["events"]):
+        raise ValueError("transition is referenced by a project event")
     transitions = [item for item in doc["transitions"]
                    if item["id"] != transition_id]
-    if len(transitions) == len(doc["transitions"]):
-        raise ValueError("unknown project transition id")
     doc.update(_validated_candidate(doc, transitions=transitions))
 
 
@@ -782,9 +790,13 @@ def event_update(doc: dict, event_id: int, **changes: object) -> dict:
 def event_delete(doc: dict, event_id: int) -> None:
     validate(doc, doc["world"], doc["area"], doc["room"],
              doc["width_px"], doc["height_px"])
-    events = [event for event in doc["events"] if event["id"] != event_id]
-    if len(events) == len(doc["events"]):
+    if not any(event["id"] == event_id for event in doc["events"]):
         raise ValueError("unknown project event id")
+    if any(event["id"] != event_id and event["action_type"] == "toggle"
+           and event["action_ref"] == f"event:{event_id}"
+           for event in doc["events"]):
+        raise ValueError("event is referenced by another project event")
+    events = [event for event in doc["events"] if event["id"] != event_id]
     doc.update(_validated_candidate(doc, events=events))
 
 

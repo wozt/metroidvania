@@ -1121,3 +1121,21 @@ No automatic reciprocal link or native engine encoder is implemented.
   trigger decoding and gameplay execution are still pending.
 - Added ROM-free schema migration, atomic failure, two-world CLI, GTK lifecycle
   and source-contract coverage.
+
+## Patch 0122 - typed event action reference validation
+
+- Added `event-validate` with structured and TSV diagnostics for every saved
+  room event, while keeping both gameplay adapters explicitly unavailable.
+- New and edited actions now require a matching typed reference: timeline or
+  cutscene for story, project entity for spawn, another project event for
+  toggle, project transition for transition, or a stable checkpoint key.
+- References resolve against the current room plus validated timeline and
+  cutscene sources. Missing targets and event self-references are rejected
+  before the staged room document can replace its saved version.
+- Entity, transition and event deletion now refuses to orphan an existing
+  spawn, transition or toggle action reference.
+- Full project validation now audits every saved event reference. The GTK form
+  documents the accepted prefixes, shows a local rejection state and retains
+  the existing shared Undo/Redo/Save workflow in both workroom modes.
+- Added two-world CLI coverage, atomic persistence checks and resolution tests
+  for every action family without requiring either commercial ROM.

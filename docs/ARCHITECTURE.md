@@ -75,6 +75,11 @@ strict spatial/identity bounds, but deliberately has no ROM or gameplay
 encoder. Entity-only version 1 and room-data version 2 files are migrated in
 memory and preserved until an explicit project write.
 
+Event action references are resolved by the shared backend against the current
+room document and validated story sources. Create/update rejects missing or
+self-referential targets, `event-validate` exposes structured diagnostics, and
+full project validation checks every saved room reference without executing it.
+
 ## Verified native coverage
 
 Zero Mission currently has room descriptors, original minimap structure,

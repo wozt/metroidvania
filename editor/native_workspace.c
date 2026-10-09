@@ -601,6 +601,7 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     else if (!strcmp(action, "delete")) command = "entity-delete";
     else if (!strcmp(action, "assign")) command = "entity-assign";
     else if (!strcmp(action, "event-list") ||
+             !strcmp(action, "event-validate") ||
              !strcmp(action, "event-create") ||
              !strcmp(action, "event-update") ||
              !strcmp(action, "event-delete")) command = action;
@@ -644,13 +645,15 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
         !strcmp(action, "list-previews") || !strcmp(action, "list") ||
         !strcmp(action, "catalog") || !strcmp(action, "item-settings") ||
         !strcmp(action, "collision-list") || !strcmp(action, "door-list") ||
-        !strcmp(action, "transition-list") || !strcmp(action, "event-list") ?
+        !strcmp(action, "transition-list") || !strcmp(action, "event-list") ||
+        !strcmp(action, "event-validate") ?
         "--format=tsv" : "--format=text"));
     g_ptr_array_add(args, NULL);
     gboolean mutation = strcmp(action, "list-previews") && strcmp(action, "list") &&
         strcmp(action, "catalog") && strcmp(action, "item-settings") &&
         strcmp(action, "collision-list") && strcmp(action, "door-list") &&
-        strcmp(action, "transition-list") && strcmp(action, "event-list");
+        strcmp(action, "transition-list") && strcmp(action, "event-list") &&
+        strcmp(action, "event-validate");
     RoomHistorySnapshot *before = mutation ?
         room_history_capture_0112(doc, doc->map) : NULL;
     if (mutation && !before) {
@@ -1646,7 +1649,7 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
 typedef struct {
     NativeWorkspace *doc;
     GtkWidget *window, *kind, *label, *x, *y, *width, *height;
-    GtkWidget *trigger, *action, *reference, *once;
+    GtkWidget *trigger, *action, *reference, *once, *status;
     guint event_id;
 } ProjectEventForm;
 
@@ -1655,6 +1658,9 @@ static const char *const project_trigger_types[] = {
     "room_load", "enter", "leave", "touch", "interact", NULL};
 static const char *const project_action_types[] = {
     "story", "spawn", "toggle", "checkpoint", "transition", NULL};
+static const char *const project_action_examples[] = {
+    "timeline:shared.start_choice", "entity:1", "event:1",
+    "checkpoint:room_key", "transition:1", NULL};
 
 static guint project_event_choice_index(const char *const *choices,
                                         const char *value)
@@ -1671,6 +1677,26 @@ static const char *project_event_choice(GtkWidget *dropdown,
     for (guint i = 0; choices[i]; ++i)
         if (i == selected) return choices[i];
     return choices[0];
+}
+
+static void project_event_action_changed(GObject *object, GParamSpec *parameter,
+                                         gpointer userdata)
+{
+    (void)object;
+    (void)parameter;
+    ProjectEventForm *form = userdata;
+    guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->action));
+    if (selected >= 5) return;
+    const char *current = gtk_editable_get_text(GTK_EDITABLE(form->reference));
+    gtk_entry_set_placeholder_text(GTK_ENTRY(form->reference),
+                                   project_action_examples[selected]);
+    for (guint i = 0; project_action_examples[i]; ++i) {
+        if (!strcmp(current, project_action_examples[i])) {
+            gtk_editable_set_text(GTK_EDITABLE(form->reference),
+                                  project_action_examples[selected]);
+            break;
+        }
+    }
 }
 
 static void project_event_form_destroy(gpointer data)
@@ -1736,7 +1762,12 @@ static void project_event_submit(GtkButton *button, gpointer userdata)
         "--action-type", action, "--action-ref", reference,
         "--once", once, NULL};
     if (!project_command(doc, form->event_id ? "event-update" : "event-create",
-                         form->event_id ? options : create_options, NULL)) return;
+                         form->event_id ? options : create_options, NULL)) {
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "The backend rejected these fields or the typed action reference. "
+            "Check the room status for the exact diagnostic.");
+        return;
+    }
     project_reload(doc);
     message(doc, "Project event changes staged; use Save to commit.");
     g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_close_idle,
@@ -1763,7 +1794,9 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     GtkWidget *outer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
     GtkWidget *notice = gtk_label_new(
         "Project-only event region. It is shared by both worlds but remains "
-        "non-playable until each engine adapter implements its action.");
+        "non-playable until each engine adapter implements its action.\n"
+        "References: timeline:<id>, cutscene:<id>, entity:<id>, event:<id>, "
+        "transition:<id>, or checkpoint:<key>.");
     gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
     gtk_label_set_xalign(GTK_LABEL(notice), 0);
     GtkWidget *grid = gtk_grid_new();
@@ -1782,11 +1815,14 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     form->trigger = gtk_drop_down_new_from_strings(project_trigger_types);
     form->action = gtk_drop_down_new_from_strings(project_action_types);
     form->reference = gtk_entry_new();
+    gtk_widget_set_tooltip_text(form->reference,
+        "The prefix must match the selected action and the referenced project "
+        "record must exist. Checkpoints use a validated stable key.");
     form->once = gtk_check_button_new_with_label("Run only once");
     gtk_editable_set_text(GTK_EDITABLE(form->label), item ? item->label :
         default_kind == OVERLAY_EVENTS ? "New project event" : "New project trigger");
     gtk_editable_set_text(GTK_EDITABLE(form->reference), item ? item->event_ref :
-        default_kind == OVERLAY_EVENTS ? "event.new" : "trigger.new");
+        "timeline:shared.start_choice");
     gtk_drop_down_set_selected(GTK_DROP_DOWN(form->kind), item ?
         project_event_choice_index(project_event_kinds,
             item->kind == OVERLAY_EVENTS ? "EVENT" : "TRIGGER") :
@@ -1797,6 +1833,9 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     gtk_drop_down_set_selected(GTK_DROP_DOWN(form->action),
         project_event_choice_index(project_action_types,
             item ? item->event_action : "story"));
+    g_signal_connect(form->action, "notify::selected",
+                     G_CALLBACK(project_event_action_changed), form);
+    project_event_action_changed(G_OBJECT(form->action), NULL, form);
     gtk_check_button_set_active(GTK_CHECK_BUTTON(form->once),
                                 item ? item->event_once : FALSE);
     project_event_grid_field(GTK_GRID(grid), 0, "Overlay kind", form->kind);
@@ -1809,6 +1848,10 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     project_event_grid_field(GTK_GRID(grid), 7, "Action type", form->action);
     project_event_grid_field(GTK_GRID(grid), 8, "Action reference", form->reference);
     gtk_grid_attach(GTK_GRID(grid), form->once, 1, 9, 1, 1);
+    form->status = gtk_label_new(
+        "Saving validates the reference against the current room and story data.");
+    gtk_label_set_wrap(GTK_LABEL(form->status), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(form->status), 0);
     GtkWidget *apply = gtk_button_new_with_label(item ?
         "Apply event changes" : "Create event region");
     gtk_widget_set_margin_start(outer, 16);
@@ -1817,6 +1860,7 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     gtk_widget_set_margin_bottom(outer, 16);
     gtk_box_append(GTK_BOX(outer), notice);
     gtk_box_append(GTK_BOX(outer), grid);
+    gtk_box_append(GTK_BOX(outer), form->status);
     gtk_box_append(GTK_BOX(outer), apply);
     GtkWidget *scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),

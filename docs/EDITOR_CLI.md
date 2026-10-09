@@ -77,7 +77,9 @@ batch is accepted with `--dry-run=true` because no project document is written.
 | `door-create`, `door-update`, `door-delete` | Project room data | geometry, type, facing; confirmation for delete |
 | `door-link`, `transition-create`, `transition-update` | Project room data | source door and validated native destination |
 | `transition-list`, `transition-validate`, `transition-delete` | Project room data | room scope; confirmation for delete |
-| native collision/door encoding and object-definition/event/cutscene authoring | Unavailable | engine schema or extraction pending |
+| `event-list`, `event-inspect`, `event-validate` | Project room data | room scope; typed reference diagnostics |
+| `event-create`, `event-update`, `event-delete` | Project room data | bounded region, trigger/action fields; confirmation for delete |
+| native collision/door encoding and object-definition/cutscene authoring | Unavailable | engine schema or extraction pending |
 | audio inventory/rendering | Unavailable | native inventory/decoder pending |
 | native gameplay | Unavailable | both engine adapters pending |
 
@@ -121,6 +123,15 @@ Event regions use the room's 16px Zero Mission or 8px Aria placement grid.
 trigger type, action type, stable action reference and one-shot flag. These are
 engine-neutral project instructions: native trigger extraction and both
 gameplay adapters remain unavailable.
+
+New and edited actions must use a typed reference matching their action:
+`story` accepts `timeline:<id>` or `cutscene:<id>`, `spawn` accepts an existing
+`entity:<id>`, `toggle` accepts another `event:<id>`, `transition` accepts an
+existing `transition:<id>`, and `checkpoint` accepts a stable
+`checkpoint:<key>`. `event-validate` reports every saved reference and
+`project-validate` rejects missing targets. The validator resolves project and
+story data only; it does not claim runtime execution. Deleting an entity,
+transition or event is refused while another project event still references it.
 
 Collision coordinates are cell coordinates: 16px in Zero Mission workrooms and
 8px in Aria workrooms. Accepted project semantics are `solid`, `one_way`,

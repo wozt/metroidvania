@@ -12,7 +12,8 @@ import unittest
 from unittest import mock
 
 from scripts.editor_cli import CliUsageError, _safe_output
-from scripts.editor_backend import execute
+from scripts.editor_backend import _event_validation, execute
+from scripts import project_room_entities as project_rooms
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "scripts/editor_cli.py"
@@ -229,7 +230,7 @@ class EditorCliTests(unittest.TestCase):
             self.assertEqual(capabilities.returncode, 0, capabilities.stderr)
             commands = json.loads(capabilities.stdout)["data"]["commands"]
             for command in ("event-list", "event-inspect", "event-create",
-                            "event-update", "event-delete"):
+                            "event-update", "event-delete", "event-validate"):
                 self.assertEqual(commands[command],
                                  "available_project_room_data_only")
             for world, area, step in (("zero_mission", "Brinstar", 16),
@@ -244,26 +245,74 @@ class EditorCliTests(unittest.TestCase):
                         f"--x={step}", f"--y={step}", f"--region-width={step * 2}",
                         f"--region-height={step}", "--label=Checkpoint trigger",
                         "--trigger-type=enter", "--action-type=checkpoint",
-                        "--action-ref=checkpoint.room5", "--once=true", "--format=json")
+                        "--action-ref=checkpoint:room5", "--once=true", "--format=json")
                     self.assertEqual(created.returncode, 0, created.stderr)
                     updated = self.run_cli(
                         "--command=event-update", *scope, "--id=1",
                         "--event-kind=EVENT", "--x=0", "--y=0",
                         f"--region-width={step}", f"--region-height={step}",
-                        "--label=Story event", "--trigger-type=interact",
-                        "--action-type=story", "--action-ref=scene.intro",
+                        "--label=Checkpoint event", "--trigger-type=interact",
+                        "--action-type=checkpoint", "--action-ref=checkpoint:room5_return",
                         "--once=false", "--format=json")
                     self.assertEqual(updated.returncode, 0, updated.stderr)
+                    validation = self.run_cli(
+                        "--command=event-validate", *scope, "--format=tsv")
+                    self.assertEqual(
+                        validation.stdout,
+                        "1\tcheckpoint\tcheckpoint:room5_return\t1\tvalid_checkpoint_key\n")
                     listed = self.run_cli(
                         "--command=event-list", *scope, "--format=tsv")
                     self.assertEqual(
                         listed.stdout,
-                        f"1\tEVENT\t0\t0\t{step}\t{step}\tStory event\t"
-                        "interact\tstory\tscene.intro\t0\n")
+                        f"1\tEVENT\t0\t0\t{step}\t{step}\tCheckpoint event\t"
+                        "interact\tcheckpoint\tcheckpoint:room5_return\t0\n")
+                    rejected = self.run_cli(
+                        "--command=event-update", *scope, "--id=1",
+                        "--action-type=story", "--action-ref=timeline:missing",
+                        "--format=json")
+                    self.assertEqual(rejected.returncode, 4)
+                    unchanged = self.run_cli(
+                        "--command=event-list", *scope, "--format=tsv")
+                    self.assertEqual(unchanged.stdout, listed.stdout)
                     deleted = self.run_cli(
                         "--command=event-delete", *scope, "--id=1",
                         "--confirm=true", "--format=json")
                     self.assertEqual(deleted.returncode, 0, deleted.stderr)
+
+    def test_event_reference_validation_resolves_every_action_family(self):
+        document = project_rooms._new("mzm", "Brinstar", 5, 64, 64)
+        entity = project_rooms.create(
+            document, "ENEMY", 0, 0, "Spawn target")
+        door = project_rooms.door_create(
+            document, 0, 0, 16, 16, "Exit", "normal", "left")
+        transition = project_rooms.transition_create(
+            document, door["id"], "aria", "0", 1, 0, 0, 0)
+        first = project_rooms.event_create(
+            document, "EVENT", 0, 0, 16, 16, "Checkpoint", "enter",
+            "checkpoint", "checkpoint:test_room", False)
+        references = (
+            ("story", "timeline:shared.start_choice"),
+            ("story", "cutscene:interzone_first_meeting"),
+            ("spawn", f"entity:{entity['id']}"),
+            ("toggle", f"event:{first['id']}"),
+            ("transition", f"transition:{transition['id']}"),
+        )
+        for index, (action, reference) in enumerate(references, 1):
+            project_rooms.event_create(
+                document, "TRIGGER", 16, 16, 16, 16,
+                f"Reference {index}", "interact", action, reference, False)
+        records = _event_validation(document, ROOT)
+        self.assertTrue(all(record["valid"] for record in records), records)
+        with self.assertRaisesRegex(ValueError, "referenced by a project event"):
+            project_rooms.delete(document, entity["id"])
+        with self.assertRaisesRegex(ValueError, "referenced by a project event"):
+            project_rooms.transition_delete(document, transition["id"])
+        with self.assertRaisesRegex(ValueError, "referenced by another project event"):
+            project_rooms.event_delete(document, first["id"])
+        document["events"][-1]["action_ref"] = "transition:999"
+        self.assertEqual(
+            _event_validation(document, ROOT)[-1]["reference_status"],
+            "missing_project_transition")
 
     def test_story_save_validates_and_writes_through_backend(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -13,12 +13,6 @@
 typedef struct {
     NativeWorkspace *native_workspace;
     GtkWidget *native_page;
-    GtkWidget *asset_page;
-    GtkWidget *asset_actor;
-    GtkWidget *asset_action;
-    GtkWidget *asset_frame;
-    GtkWidget *asset_picture;
-    GtkWidget *asset_status;
     GtkWidget *world_map_page;
     GtkWidget *object_page;
     GtkWidget *editing_page; /* Permanent top-level entry for opened documents. */
@@ -29,6 +23,7 @@ typedef struct {
     GtkWidget *left_dock;
     GtkWidget *center_dock;
     GtkWidget *right_dock;
+    GtkWidget *navigation_list; /* Vertical selector of center workspaces. */
     GtkWidget *outer_split, *inner_split;
     GtkWidget *left_viewport, *center_viewport, *right_viewport;
     gboolean updating_responsive;
@@ -39,125 +34,6 @@ typedef struct {
 } Editor;
 
 static void apply_responsive(Editor *editor);
-
-static const char *const asset_actor_names[] = {"Samus", "Soma", NULL};
-static const char *const asset_animation_names[] = {
-    "idle", "run", "jump", "attack", "run_start", "run_stop", NULL
-};
-static const unsigned asset_frame_counts[2][6] = {
-    {4, 10, 8, 3, 0, 0},
-    {4, 17, 12, 11, 3, 9},
-};
-
-static void asset_update_preview(Editor *editor)
-{
-    guint actor = gtk_drop_down_get_selected(GTK_DROP_DOWN(editor->asset_actor));
-    guint action = gtk_drop_down_get_selected(GTK_DROP_DOWN(editor->asset_action));
-    unsigned count;
-    unsigned frame;
-    char path[256];
-    char message[360];
-
-    if (actor >= 2 || action >= 6) return;
-    count = asset_frame_counts[actor][action];
-    if (!count) {
-        gtk_picture_set_paintable(GTK_PICTURE(editor->asset_picture), NULL);
-        gtk_label_set_text(GTK_LABEL(editor->asset_status),
-                           "Animation unavailable for this character");
-        return;
-    }
-    gtk_spin_button_set_range(GTK_SPIN_BUTTON(editor->asset_frame), 0, count - 1);
-    frame = (unsigned)gtk_spin_button_get_value_as_int(
-        GTK_SPIN_BUTTON(editor->asset_frame));
-    if (frame >= count) {
-        frame = count - 1;
-        gtk_spin_button_set_value(GTK_SPIN_BUTTON(editor->asset_frame), frame);
-    }
-    snprintf(path, sizeof(path), "assets/extracted/sprites/%s/%s_%u.bmp",
-             actor == 0 ? "samus" : "soma", asset_animation_names[action], frame);
-    if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
-        gtk_picture_set_filename(GTK_PICTURE(editor->asset_picture), path);
-        snprintf(message, sizeof(message),
-                 "Local ROM sprite: %s | frame %u/%u", path, frame + 1, count);
-    } else {
-        gtk_picture_set_paintable(GTK_PICTURE(editor->asset_picture), NULL);
-        snprintf(message, sizeof(message),
-                 "Sprite not extracted: %s | run the local asset importer", path);
-    }
-    gtk_label_set_text(GTK_LABEL(editor->asset_status), message);
-}
-
-static void asset_selection_changed(GObject *object, GParamSpec *spec,
-                                    gpointer userdata)
-{
-    (void)object;
-    (void)spec;
-    asset_update_preview(userdata);
-}
-
-static void asset_frame_changed(GtkSpinButton *button, gpointer userdata)
-{
-    (void)button;
-    asset_update_preview(userdata);
-}
-
-static void asset_refresh_clicked(GtkButton *button, gpointer userdata)
-{
-    (void)button;
-    asset_update_preview(userdata);
-}
-
-static void build_assets_tab(Editor *editor, GtkWidget *dock)
-{
-    GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-    GtkWidget *refresh = gtk_button_new_with_label("Refresh local sprites");
-    GtkWidget *scroll = gtk_scrolled_window_new();
-    GtkWidget *notice = gtk_label_new(
-        "Private ROM-derived preview. Extracted files remain ignored by Git.");
-
-    editor->asset_actor = gtk_drop_down_new_from_strings(asset_actor_names);
-    editor->asset_action = gtk_drop_down_new_from_strings(asset_animation_names);
-    editor->asset_frame = gtk_spin_button_new_with_range(0, 16, 1);
-    editor->asset_picture = gtk_picture_new();
-    editor->asset_status = gtk_label_new(
-        "Load local sprites with: python3 scripts/import_game_assets.py --scope sprites");
-    editor->asset_page = root;
-
-    gtk_widget_set_margin_start(root, 12);
-    gtk_widget_set_margin_end(root, 12);
-    gtk_widget_set_margin_top(root, 12);
-    gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
-    gtk_label_set_selectable(GTK_LABEL(notice), TRUE);
-    gtk_label_set_wrap(GTK_LABEL(editor->asset_status), TRUE);
-    gtk_label_set_selectable(GTK_LABEL(editor->asset_status), TRUE);
-    gtk_picture_set_can_shrink(GTK_PICTURE(editor->asset_picture), TRUE);
-    gtk_widget_set_size_request(editor->asset_picture, 180, 230);
-    gtk_widget_set_hexpand(editor->asset_picture, TRUE);
-    gtk_widget_set_vexpand(editor->asset_picture, TRUE);
-
-    gtk_box_append(GTK_BOX(root), gtk_label_new("Character"));
-    gtk_box_append(GTK_BOX(root), editor->asset_actor);
-    gtk_box_append(GTK_BOX(root), gtk_label_new("Animation"));
-    gtk_box_append(GTK_BOX(root), editor->asset_action);
-    gtk_box_append(GTK_BOX(root), gtk_label_new("Frame"));
-    gtk_box_append(GTK_BOX(root), editor->asset_frame);
-    gtk_box_append(GTK_BOX(root), refresh);
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), editor->asset_picture);
-    gtk_widget_set_vexpand(scroll, TRUE);
-    gtk_box_append(GTK_BOX(root), scroll);
-    gtk_box_append(GTK_BOX(root), editor->asset_status);
-    gtk_box_append(GTK_BOX(root), notice);
-
-    g_signal_connect(editor->asset_actor, "notify::selected",
-                     G_CALLBACK(asset_selection_changed), editor);
-    g_signal_connect(editor->asset_action, "notify::selected",
-                     G_CALLBACK(asset_selection_changed), editor);
-    g_signal_connect(editor->asset_frame, "value-changed",
-                     G_CALLBACK(asset_frame_changed), editor);
-    g_signal_connect(refresh, "clicked", G_CALLBACK(asset_refresh_clicked), editor);
-    gtk_notebook_append_page(GTK_NOTEBOOK(dock), root, gtk_label_new("ROM visuals"));
-    asset_update_preview(editor);
-}
 
 static GtkWidget *new_dock(GtkApplication *application);
 
@@ -219,6 +95,72 @@ static GtkWidget *dock_viewport(GtkWidget *dock)
     gtk_widget_set_overflow(scroll, GTK_OVERFLOW_HIDDEN);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), dock);
     return scroll;
+}
+
+/* PATCH_0087_VERTICAL_WORKSPACE_NAV: left is a compact navigator,
+ * NOT a second notebook containing full-size browser pages. Each page is
+ * owned by the central notebook; its original tab label supplies the title.
+ * This also discovers Map creation, which the world atlas inserts itself. */
+static void navigation_select_for_page(Editor *editor, GtkWidget *page)
+{
+    if (!editor->navigation_list || !page) return;
+    for (GtkWidget *child = gtk_widget_get_first_child(editor->navigation_list);
+         child; child = gtk_widget_get_next_sibling(child)) {
+        if (!GTK_IS_LIST_BOX_ROW(child)) continue;
+        if (g_object_get_data(G_OBJECT(child), "mv-workspace-page") == page) {
+            GtkListBoxRow *current = gtk_list_box_get_selected_row(
+                GTK_LIST_BOX(editor->navigation_list));
+            if (current != GTK_LIST_BOX_ROW(child))
+                gtk_list_box_select_row(GTK_LIST_BOX(editor->navigation_list),
+                                        GTK_LIST_BOX_ROW(child));
+            return;
+        }
+    }
+}
+
+static void navigation_row_selected(GtkListBox *list, GtkListBoxRow *row,
+                                    gpointer userdata)
+{
+    Editor *editor = userdata;
+    (void)list;
+    if (!row) return;
+    GtkWidget *page = g_object_get_data(G_OBJECT(row), "mv-workspace-page");
+    if (!page) return;
+    GtkNotebook *center = GTK_NOTEBOOK(editor->center_dock);
+    gint target = gtk_notebook_page_num(center, page);
+    if (target < 0) return; /* Never navigate to a detached/destroyed page. */
+    if (gtk_notebook_get_current_page(center) != target)
+        gtk_notebook_set_current_page(center, target);
+    if (editor->responsive_mode == 0) {
+        editor->small_focus = 0; /* Narrow layout shows selected content. */
+        apply_responsive(editor);
+    }
+}
+
+static void build_workspace_navigation(Editor *editor)
+{
+    GtkNotebook *center = GTK_NOTEBOOK(editor->center_dock);
+    GtkWidget *list = editor->navigation_list;
+    gint count = gtk_notebook_get_n_pages(center);
+    if (count < 2) g_error("Missing GTK center workspace pages");
+    for (gint i = 0; i < count; ++i) {
+        GtkWidget *page = gtk_notebook_get_nth_page(center, i);
+        const char *title = gtk_notebook_get_tab_label_text(center, page);
+        if (!title || !*title) g_error("Unnamed GTK workspace page");
+        GtkWidget *row = gtk_list_box_row_new();
+        GtkWidget *label = gtk_label_new(title);
+        gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
+        gtk_widget_set_margin_start(label, 12);
+        gtk_widget_set_margin_end(label, 8);
+        gtk_widget_set_margin_top(label, 7);
+        gtk_widget_set_margin_bottom(label, 7);
+        gtk_list_box_row_set_child(GTK_LIST_BOX_ROW(row), label);
+        g_object_set_data(G_OBJECT(row), "mv-workspace-page", page);
+        gtk_list_box_append(GTK_LIST_BOX(list), row);
+    }
+    g_signal_connect(list, "row-selected", G_CALLBACK(navigation_row_selected), editor);
+    gtk_list_box_select_row(GTK_LIST_BOX(list),
+                            gtk_list_box_get_row_at_index(GTK_LIST_BOX(list), 0));
 }
 
 /* PATCH_0086_SOURCE_WORKSPACE_DOCK: permanent browsing tools live in the source dock. */
@@ -348,21 +290,12 @@ static void editor_show_world(Editor *editor, GtkWidget *page)
         mode == 1 ? "● METROID: ZERO MISSION" : "◇ SHARED WORKSPACE");
 }
 
-/* The world badge follows actual browser selection, not removed shortcut
- * buttons. Selecting a document still updates it independently. */
-static void source_page_changed(GtkNotebook *tabs, GtkWidget *page,
-                                guint index, gpointer userdata)
-{
-    Editor *editor = userdata;
-    (void)tabs; (void)index;
-    editor_show_world(editor, page);
-}
-
 static void center_page_changed(GtkNotebook *tabs, GtkWidget *page,
                                 guint index, gpointer userdata)
 {
     Editor *editor = userdata;
     (void)tabs; (void)index;
+    navigation_select_for_page(editor, page);
     if (page == editor->editing_page) {
         GtkNotebook *documents = GTK_NOTEBOOK(editor->editing_dock);
         gint current = gtk_notebook_get_current_page(documents);
@@ -386,6 +319,11 @@ static void editor_document_added(GtkNotebook *tabs, GtkWidget *page,
 {
     Editor *editor = userdata;
     (void)tabs; (void)index;
+    /* Opening a room must show Open editors, not the old room browser. */
+    gint workbench = gtk_notebook_page_num(GTK_NOTEBOOK(editor->center_dock),
+                                          editor->editing_page);
+    if (workbench >= 0)
+        gtk_notebook_set_current_page(GTK_NOTEBOOK(editor->center_dock), workbench);
     if (editor->responsive_mode == 0) {
         editor->small_focus = 0;
         apply_responsive(editor);
@@ -465,7 +403,8 @@ static void activate(GtkApplication *application, gpointer userdata)
     GtkWidget *window = gtk_application_window_new(application);
     GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     GtkWidget *header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
-    GtkWidget *left = new_dock(application);
+    GtkWidget *left = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    GtkWidget *navigation = gtk_list_box_new();
     GtkWidget *center = new_dock(application);
     GtkWidget *right = new_dock(application);
     GtkWidget *outer_split = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
@@ -475,11 +414,23 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_widget_add_css_class(editor->world_badge, "title-4");
 
     editor->left_dock = left;
+    editor->navigation_list = navigation;
+    gtk_list_box_set_selection_mode(GTK_LIST_BOX(navigation), GTK_SELECTION_SINGLE);
+    gtk_widget_add_css_class(navigation, "navigation-sidebar");
+    gtk_widget_set_margin_start(navigation, 4);
+    gtk_widget_set_margin_end(navigation, 4);
+    GtkWidget *navigation_title = gtk_label_new("WORKSPACES");
+    gtk_widget_add_css_class(navigation_title, "dim-label");
+    gtk_label_set_xalign(GTK_LABEL(navigation_title), 0.0f);
+    gtk_widget_set_margin_start(navigation_title, 16);
+    gtk_widget_set_margin_top(navigation_title, 9);
+    gtk_box_append(GTK_BOX(left), navigation_title);
+    gtk_box_append(GTK_BOX(left), navigation);
     editor->center_dock = center;
     editor->right_dock = right;
     editor->outer_split = outer_split;
     editor->inner_split = inner_split;
-    editor->subtitle = gtk_label_new("Source browsers · Open editors · Room tools");
+    editor->subtitle = gtk_label_new("Workspaces · Active editor · Room tools");
     editor->responsive_mode = 2;
     editor->small_focus = 0;
 
@@ -526,35 +477,32 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_paned_set_shrink_end_child(GTK_PANED(inner_split), TRUE);
     gtk_paned_set_wide_handle(GTK_PANED(outer_split), TRUE);
     gtk_paned_set_wide_handle(GTK_PANED(inner_split), TRUE);
-    gtk_paned_set_position(GTK_PANED(outer_split), 490);
+    gtk_paned_set_position(GTK_PANED(outer_split), 225);
     gtk_paned_set_position(GTK_PANED(inner_split), 840);
     g_signal_connect(outer_split, "notify::position",
                      G_CALLBACK(splitter_position_changed), editor);
     g_signal_connect(inner_split, "notify::position",
                      G_CALLBACK(splitter_position_changed), editor);
 
-    /* Source pages are persistent; both room browsers are immediate
-     * neighbors. World/map creation, objects and story tools follow. Open
-     * editors remains the only permanent tab in the central workbench.
-     * Original native room documents still use the nested ephemeral dock. */
-    editor->native_page = room_browser_build(left, editor->native_workspace, ROOM_WORLD_ZERO);
-    editor->aria_page = room_browser_build(left, editor->native_workspace, ROOM_WORLD_ARIA);
-    editor->world_map_page = world_atlas_build(left, editor->native_workspace, editor->world_badge);
-    editor->object_page = object_catalog_build(left);
-    story_workspace_build(left, &editor->events_page, &editor->cutscenes_page);
+    /* Every permanent page stays in ONE central notebook. Hide its
+     * horizontal tabs: the left GtkListBox becomes the sole workspace menu. */
+    gtk_notebook_set_show_tabs(GTK_NOTEBOOK(center), FALSE);
+    editor->native_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ZERO);
+    editor->aria_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ARIA);
+    editor->world_map_page = world_atlas_build(center, editor->native_workspace, editor->world_badge);
+    editor->object_page = object_catalog_build(center);
+    story_workspace_build(center, &editor->events_page, &editor->cutscenes_page);
     build_editor_workbench(editor, application);
     build_palette_workbench(editor, application, right);
     native_workspace_build(editor->native_workspace,
                            editor->editing_dock, editor->palette_dock);
-    build_assets_tab(editor, right);
     build_inspector(right);
     /* Stable sidebar tabs first; transient palette tools remain nested last. */
     gtk_notebook_reorder_child(GTK_NOTEBOOK(right), editor->palette_page, -1);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(right), 0);
-    /* The Explorer shortcut page is gone: these real tabs replace it. */
-    g_signal_connect(left, "switch-page", G_CALLBACK(source_page_changed), editor);
+    /* One left vertical selector, one central page at a time. */
     g_signal_connect(center, "switch-page", G_CALLBACK(center_page_changed), editor);
-    gtk_notebook_set_current_page(GTK_NOTEBOOK(left), 0);
+    build_workspace_navigation(editor);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(center), 0);
     editor_show_world(editor, editor->native_page);
     gtk_window_present(GTK_WINDOW(window));

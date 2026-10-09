@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""Source layout and compact legend regression for patch 0086."""
+"""Source layout and compact legend regression, updated for 0087."""
+# PATCH_0087_TEST_ADAPTED
 from pathlib import Path
 import unittest
 
@@ -19,34 +20,35 @@ class CompactWorkspaceDockTest(unittest.TestCase):
         self.assertNotIn('static void explorer_button(', s)
         self.assertNotIn('build_explorer(editor, left);', s)
         self.assertIn('make_responsive_button(editor, "Sources", 1)', s)
-        self.assertIn('g_signal_connect(left, "switch-page", G_CALLBACK(source_page_changed)', s)
+        self.assertIn('g_signal_connect(list, "row-selected", G_CALLBACK(navigation_row_selected)', s)
         self.assertIn('editor_show_world(editor, editor->native_page);', s)
 
     def test_two_room_browsers_adjacent_and_other_tools_in_sources(self):
         s = self.main
-        zero = 'room_browser_build(left, editor->native_workspace, ROOM_WORLD_ZERO)'
-        aria = 'room_browser_build(left, editor->native_workspace, ROOM_WORLD_ARIA)'
+        zero = 'room_browser_build(center, editor->native_workspace, ROOM_WORLD_ZERO)'
+        aria = 'room_browser_build(center, editor->native_workspace, ROOM_WORLD_ARIA)'
         self.assertIn(zero, s)
         self.assertIn(aria, s)
         self.assertLess(s.index(zero), s.index(aria))
         section = s[s.index(zero):s.index('build_editor_workbench(editor, application);', s.index(zero))]
         self.assertNotIn('world_atlas_build', section[:section.index(aria)])
-        self.assertIn('world_atlas_build(left,', section)
-        self.assertIn('object_catalog_build(left)', section)
-        self.assertIn('story_workspace_build(left,', section)
-        self.assertNotIn('room_browser_build(center,', s)
+        self.assertIn('world_atlas_build(center,', section)
+        self.assertIn('object_catalog_build(center)', section)
+        self.assertIn('story_workspace_build(center,', section)
+        self.assertNotIn('room_browser_build(left,', s)
 
     def test_legacy_object_catalog_contract_tracks_left_dock(self):
         catalog_test = (ROOT / 'tests/test_object_catalog_ui.py').read_text(encoding='utf-8')
-        self.assertIn("self.assertIn('editor->object_page = object_catalog_build(left);', main)",
+        self.assertIn("self.assertIn('editor->object_page = object_catalog_build(center);', main)",
                       catalog_test)
-        self.assertNotIn("self.assertIn('editor->object_page = object_catalog_build(center);', main)",
+        self.assertNotIn("self.assertIn('editor->object_page = object_catalog_build(left);', main)",
                          catalog_test)
 
     def test_room_tabs_remain_in_center_and_tools_on_right(self):
         s = self.main
         self.assertIn('gtk_notebook_append_page(GTK_NOTEBOOK(editor->center_dock), page,', s)
         self.assertIn('gtk_label_new("Open editors")', s)
+        self.assertIn('navigation_select_for_page(editor, page);', s)
         self.assertIn('native_workspace_build(editor->native_workspace,', s)
         self.assertIn('editor->editing_dock, editor->palette_dock);', s)
         self.assertIn('build_palette_workbench(editor, application, right)', s)

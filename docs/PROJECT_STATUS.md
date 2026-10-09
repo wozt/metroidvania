@@ -669,3 +669,20 @@ and the proprietary-file guard passed.
 - Updated layout source tests, including the legacy object-catalog UI check
   to assert that its widget is now constructed in the left source dock.
   ROM source assets and authoring data untouched.
+
+## Patch 0087 - vertical workspaces and selected central view
+
+- Replaces the wrongly horizontal/source-tabs layout of 0086 with one compact
+  GTK4 navigation list on the left, listing actual permanent center pages from
+  Zero rooms and Aria rooms through Map creation, story tools and Open editors.
+- Each selection activates exactly one full-sized central page; center notebook
+  tab labels are hidden. Source browser pages are no longer squeezed into the
+  narrow navigation column. Navigation also synchronizes on programmatic
+  center-page changes and when opening a native room document.
+- Right side retains Inspector and Room palettes, removes redundant ROM visuals
+  UI and its now-unused static callbacks. Private extracted graphics and all
+  actual ROM sprite importers are untouched.
+- Earlier 0086 source-layout tests are updated to assert the corrected design;
+  a dedicated regression asserts navigation mapping, room focus and removal of
+  the ROM visuals page. GTK4/CMake, CTest, all Python tests and proprietary-file
+  guard remain validation gates.

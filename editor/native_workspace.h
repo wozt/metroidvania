@@ -10,6 +10,7 @@ void native_workspace_set_world_atlas(NativeWorkspace *w, GtkWidget *map_page);
 void native_workspace_import_async(NativeWorkspace *w, const char *area, unsigned room);
 void native_workspace_import_aria_async(NativeWorkspace *w, unsigned area, unsigned room);
 #ifdef FUSION_NATIVE_WORKSPACE_TESTING
+gboolean native_workspace_test_shared_history(NativeWorkspace *w, guint index);
 guint native_workspace_test_load_native_doors(NativeWorkspace *w,
                                              guint index, const char *path);
 guint native_workspace_test_document_count(const NativeWorkspace *w);

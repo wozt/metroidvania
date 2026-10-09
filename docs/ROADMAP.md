@@ -32,11 +32,13 @@ features must add their backend contract before their GTK controls are enabled.
 - support create/edit/delete, undo/redo, validation and deterministic export;
 - retain native source records as immutable references.
 
-Current progress: one versioned private room document now supports validated
-semantic collision cells, project doors and cross-world native-room transition
-references in the backend/CLI. GTK exposes collision cell actions and project
-door creation/view/deletion. Native encoders, full property forms, platforms,
-object definitions, triggers and events remain pending.
+Current progress: one versioned private room document covers validated
+collision cells, editable project/native door overrides, cross-world references,
+project entities and 8px Aria / 16px Zero Mission placement. GTK provides a
+unified room editor, Grab, destination selection on the global map, a shared
+chronological Undo/Redo and Save/Discard for staged room changes. Native ROM
+encoders, full collision paint/platforms, object behavior definitions, triggers,
+events and a deterministic engine-neutral export remain pending.
 
 Exit criterion: representative project rooms for both worlds can be authored,
 validated and exported to an engine-neutral package without ROM mutation.

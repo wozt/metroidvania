@@ -362,6 +362,15 @@ static void test_nested_editor_tab_focus_and_close(void)
     g_object_unref(g_object_ref_sink(right_general));
 }
 
+static void test_shared_tile_and_project_history(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 010"));
+    g_assert_true(native_workspace_test_shared_history(workspace, 0));
+    native_workspace_free(workspace);
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -384,6 +393,8 @@ int main(int argc, char **argv)
                     test_move_then_close_and_shutdown);
     g_test_add_func("/native-workspace/save-modified-then-close",
                     test_save_modified_then_close);
+    g_test_add_func("/native-workspace/shared-tile-project-undo-redo",
+                    test_shared_tile_and_project_history);
     g_test_add_func("/native-workspace/close-during-import",
                     test_close_during_import);
     g_test_add_func("/native-workspace/unsaved-close-dialog",

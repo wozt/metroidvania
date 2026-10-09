@@ -33,6 +33,13 @@ typedef struct {
     guint x, y, resolution, type;
 } ProjectCollisionCell;
 
+/* PATCH_0112_SHARED_HISTORY: one chronological undo stack for tiles and overlays.
+ * The stage files are private, per-document authoring state, NEVER the ROM. */
+typedef struct {
+    NativeMap *map;
+    GBytes *stage_json, *stage_ini; /* NULL means the stage file does not exist. */
+} RoomHistorySnapshot;
+
 struct NativeWorkspace {
     /* The instance returned by native_workspace_new() manages documents. */
     GPtrArray *documents;
@@ -60,7 +67,8 @@ struct NativeWorkspace {
     GtkWidget *tools[TOOL_COUNT];
     GtkWidget *tab_title, *close_button, *save_button;
     NativeMap *map, *stroke_before;
-    NativeMap **undo, **redo;
+    RoomHistorySnapshot **undo, **redo;
+    RoomHistorySnapshot *saved_state;
     unsigned undo_count, redo_count;
     gboolean ready, busy, unsaved, drawing, changed, grid_visible;
     gboolean has_selection, selecting, moving, panning;
@@ -106,16 +114,135 @@ static NativeWorkspace *document_ref(NativeWorkspace *doc)
     return doc;
 }
 
-static void history_clear(NativeMap **stack, unsigned *count);
+static void history_clear(RoomHistorySnapshot **stack, unsigned *count);
 static void document_unref(NativeWorkspace *doc);
 static void focus_page(GtkWidget *page);
 static void mark_changed(NativeWorkspace *doc);
+static void update_title(NativeWorkspace *doc);
+static void project_reload(NativeWorkspace *doc);
 
 static gchar *room_stage_path_0109(const NativeWorkspace *doc, const char *suffix)
 {
     if (!doc || !doc->stage_token) return NULL;
     return g_strdup_printf("assets/extracted/.editor_staging/%s.%s",
                            doc->stage_token, suffix);
+}
+static void room_history_free_0112(RoomHistorySnapshot *state)
+{
+    if (!state) return;
+    g_free(state->map);
+    if (state->stage_json) g_bytes_unref(state->stage_json);
+    if (state->stage_ini) g_bytes_unref(state->stage_ini);
+    g_free(state);
+}
+
+static gboolean room_history_read_0112(const char *path, GBytes **bytes)
+{
+    if (!path || g_file_test(path, G_FILE_TEST_IS_SYMLINK)) return FALSE;
+    if (!g_file_test(path, G_FILE_TEST_EXISTS)) return TRUE;
+    if (!g_file_test(path, G_FILE_TEST_IS_REGULAR)) return FALSE;
+    gchar *contents = NULL;
+    gsize length = 0;
+    if (!g_file_get_contents(path, &contents, &length, NULL)) return FALSE;
+    if (length > 4000000u) {
+        g_free(contents);
+        return FALSE;
+    }
+    *bytes = g_bytes_new_take(contents, length);
+    return TRUE;
+}
+
+static RoomHistorySnapshot *room_history_capture_0112(NativeWorkspace *doc,
+                                                        const NativeMap *map)
+{
+    if (!doc || !map || !doc->stage_token) return NULL;
+    RoomHistorySnapshot *state = g_new0(RoomHistorySnapshot, 1);
+    state->map = g_new(NativeMap, 1);
+    *state->map = *map;
+    gchar *json = room_stage_path_0109(doc, "json");
+    gchar *ini = room_stage_path_0109(doc, "ini");
+    gboolean ok = room_history_read_0112(json, &state->stage_json) &&
+                  room_history_read_0112(ini, &state->stage_ini);
+    g_free(json);
+    g_free(ini);
+    if (!ok) {
+        room_history_free_0112(state);
+        return NULL;
+    }
+    return state;
+}
+
+static gboolean room_history_write_0112(const char *path, GBytes *bytes)
+{
+    if (!path || g_file_test(path, G_FILE_TEST_IS_SYMLINK)) return FALSE;
+    if (!bytes) {
+        if (!g_file_test(path, G_FILE_TEST_EXISTS)) return TRUE;
+        return g_remove(path) == 0;
+    }
+    gchar *parent = g_path_get_dirname(path);
+    gboolean ok = !g_file_test(parent, G_FILE_TEST_IS_SYMLINK) &&
+                  g_mkdir_with_parents(parent, 0700) == 0;
+    if (ok) {
+        gsize length = 0;
+        gconstpointer data = g_bytes_get_data(bytes, &length);
+        ok = g_file_set_contents(path, data, (gssize)length, NULL);
+    }
+    g_free(parent);
+    return ok;
+}
+
+/* Failure to restore the second draft rolls the first one back too.
+ * The in-memory tile map is installed only after both drafts are restored. */
+static gboolean room_history_restore_0112(NativeWorkspace *doc,
+                                            const RoomHistorySnapshot *target,
+                                            const RoomHistorySnapshot *previous)
+{
+    gchar *json = room_stage_path_0109(doc, "json");
+    gchar *ini = room_stage_path_0109(doc, "ini");
+    gboolean ok = room_history_write_0112(json, target->stage_json);
+    if (ok && !room_history_write_0112(ini, target->stage_ini)) {
+        (void)room_history_write_0112(json, previous->stage_json);
+        (void)room_history_write_0112(ini, previous->stage_ini);
+        ok = FALSE;
+    }
+    if (ok) *doc->map = *target->map;
+    g_free(json);
+    g_free(ini);
+    return ok;
+}
+
+static gboolean room_history_equal_0112(const RoomHistorySnapshot *a,
+                                         const RoomHistorySnapshot *b)
+{
+    if (!a || !b || memcmp(a->map, b->map, sizeof(NativeMap))) return FALSE;
+    if (!!a->stage_json != !!b->stage_json || !!a->stage_ini != !!b->stage_ini)
+        return FALSE;
+    return (!a->stage_json || g_bytes_equal(a->stage_json, b->stage_json)) &&
+           (!a->stage_ini || g_bytes_equal(a->stage_ini, b->stage_ini));
+}
+
+static void room_history_push_0112(RoomHistorySnapshot **stack, unsigned *count,
+                                    RoomHistorySnapshot *state)
+{
+    if (!state) return;
+    if (*count >= HISTORY_LIMIT) {
+        room_history_free_0112(stack[0]);
+        memmove(stack, stack + 1, (HISTORY_LIMIT - 1) * sizeof(*stack));
+        --*count;
+    }
+    stack[(*count)++] = state;
+}
+
+static void history_clear(RoomHistorySnapshot **stack, unsigned *count)
+{
+    for (unsigned i = 0; i < *count; ++i) room_history_free_0112(stack[i]);
+    *count = 0;
+}
+
+static void room_history_mark_saved_0112(NativeWorkspace *doc)
+{
+    room_history_free_0112(doc->saved_state);
+    doc->saved_state = room_history_capture_0112(doc, doc->map);
 }
 static void annotation_popup_close(NativeWorkspace *doc);
 static void annotation_list_context_pressed(GtkGestureClick *gesture, gint presses,
@@ -192,6 +319,7 @@ static void document_destroy(NativeWorkspace *doc)
     g_clear_object(&doc->import_process);
     history_clear(doc->undo, &doc->undo_count);
     history_clear(doc->redo, &doc->redo_count);
+    room_history_free_0112(doc->saved_state);
     discard_atlas(doc);
     discard_background(doc);
     discard_collision(doc);
@@ -488,6 +616,17 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
         !strcmp(action, "transition-list") ?
         "--format=tsv" : "--format=text"));
     g_ptr_array_add(args, NULL);
+    gboolean mutation = strcmp(action, "list-previews") && strcmp(action, "list") &&
+        strcmp(action, "catalog") && strcmp(action, "item-settings") &&
+        strcmp(action, "collision-list") && strcmp(action, "door-list") &&
+        strcmp(action, "transition-list");
+    RoomHistorySnapshot *before = mutation ?
+        room_history_capture_0112(doc, doc->map) : NULL;
+    if (mutation && !before) {
+        message(doc, "Cannot snapshot room drafts; edit cancelled before writing.");
+        g_ptr_array_free(args, TRUE);
+        return FALSE;
+    }
     gchar *out = NULL, *err = NULL;
     GError *error = NULL;
     gint status = -1;
@@ -507,11 +646,13 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     gboolean success = launched && g_spawn_check_wait_status(status, NULL);
     /* Mark the document dirty only after the staged validator accepted the
      * operation. Read-only commands must not add an unsaved star. */
-    if (success && strcmp(action, "list-previews") && strcmp(action, "list") &&
-        strcmp(action, "catalog") && strcmp(action, "item-settings") &&
-        strcmp(action, "collision-list") && strcmp(action, "door-list") &&
-        strcmp(action, "transition-list"))
+    if (success && mutation) {
+        room_history_push_0112(doc->undo, &doc->undo_count, before);
+        before = NULL;
+        history_clear(doc->redo, &doc->redo_count);
         mark_changed(doc);
+    }
+    room_history_free_0112(before);
     if (!success) {
         gchar *diagnostic = g_strdup_printf("Project room data: %.480s",
             error ? error->message : err && *err ? err : "project validator rejected change");
@@ -2905,37 +3046,41 @@ static void mark_changed(NativeWorkspace *doc)
     message(doc, "Unsaved changes - press Ctrl+S or use the Save button");
 }
 
-static void history_clear(NativeMap **stack, unsigned *count)
-{
-    for (unsigned i = 0; i < *count; ++i) free(stack[i]);
-    *count = 0;
-}
-
-static void history_push(NativeMap **stack, unsigned *count, const NativeMap *state)
-{
-    NativeMap *copy = malloc(sizeof(*copy));
-    if (!copy) return;
-    *copy = *state;
-    if (*count >= HISTORY_LIMIT) {
-        free(stack[0]);
-        memmove(stack, stack + 1, (HISTORY_LIMIT - 1) * sizeof(*stack));
-        *count = HISTORY_LIMIT - 1;
-    }
-    stack[(*count)++] = copy;
-}
-
+/* Reverse one completed action (tile stroke or validated project edit), not
+ * a category-specific stack. Keep the old state if draft restoration fails. */
 static void history_step(NativeWorkspace *doc, gboolean redo)
 {
-    NativeMap **source = redo ? doc->redo : doc->undo;
-    NativeMap **target = redo ? doc->undo : doc->redo;
+    RoomHistorySnapshot **source = redo ? doc->redo : doc->undo;
+    RoomHistorySnapshot **target = redo ? doc->undo : doc->redo;
     unsigned *source_count = redo ? &doc->redo_count : &doc->undo_count;
     unsigned *target_count = redo ? &doc->undo_count : &doc->redo_count;
-    if (!doc->ready || doc->drawing || !*source_count) return;
-    history_push(target, target_count, doc->map);
-    NativeMap *snapshot = source[--(*source_count)];
-    *doc->map = *snapshot;
-    free(snapshot);
-    mark_changed(doc);
+    if (!doc->ready || doc->closing || doc->drawing || !*source_count) return;
+    RoomHistorySnapshot *current = room_history_capture_0112(doc, doc->map);
+    if (!current) {
+        message(doc, "Cannot read room drafts; Undo/Redo cancelled.");
+        return;
+    }
+    RoomHistorySnapshot *wanted = source[*source_count - 1];
+    if (!room_history_restore_0112(doc, wanted, current)) {
+        room_history_free_0112(current);
+        message(doc, "Cannot restore room drafts; history unchanged.");
+        return;
+    }
+    --*source_count;
+    room_history_push_0112(target, target_count, current);
+    room_history_free_0112(wanted);
+    doc->changed = FALSE;
+    if (doc->annotations_path) {
+        annotation_popup_close(doc);
+        project_reload(doc); /* The GTK room list and overlays follow restored drafts. */
+    }
+    RoomHistorySnapshot *after = room_history_capture_0112(doc, doc->map);
+    doc->unsaved = !room_history_equal_0112(after, doc->saved_state);
+    room_history_free_0112(after);
+    update_title(doc);
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
+    message(doc, redo ? "Redo restored. Press Save to commit." :
+                        "Undo restored. Press Save to commit.");
 }
 
 static void begin_edit(NativeWorkspace *doc)
@@ -2947,8 +3092,11 @@ static void begin_edit(NativeWorkspace *doc)
 static void finish_edit(NativeWorkspace *doc)
 {
     if (doc->changed) {
-        history_push(doc->undo, &doc->undo_count, doc->stroke_before);
-        history_clear(doc->redo, &doc->redo_count);
+        RoomHistorySnapshot *before = room_history_capture_0112(doc, doc->stroke_before);
+        if (before) {
+            room_history_push_0112(doc->undo, &doc->undo_count, before);
+            history_clear(doc->redo, &doc->redo_count);
+        } else message(doc, "Tile edit done, but undo snapshot unavailable.");
     }
     doc->changed = FALSE;
 }
@@ -3186,8 +3334,15 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
                            y != doc->project_drag_origin_y;
         gboolean success = TRUE;
         if (changed && native) {
-            success = native_position_save_0107(doc, item, x, y);
-            if (success) mark_changed(doc);
+            RoomHistorySnapshot *before = room_history_capture_0112(doc, doc->map);
+            success = before && native_position_save_0107(doc, item, x, y);
+            if (success) {
+                room_history_push_0112(doc->undo, &doc->undo_count, before);
+                before = NULL;
+                history_clear(doc->redo, &doc->redo_count);
+                mark_changed(doc);
+            }
+            room_history_free_0112(before);
         }
         doc->dragging_project = FALSE;
         doc->dragging_native = FALSE;
@@ -3586,6 +3741,7 @@ static gboolean save_override(NativeWorkspace *doc)
                                "Room overlay write failed; retry Save.");
         return FALSE;
     }
+    room_history_mark_saved_0112(doc);
     doc->unsaved = FALSE;
     update_title(doc);
     message(doc, "Room overlays saved. Original ROM/import files remain unchanged.");
@@ -4212,6 +4368,7 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     g_free(dir);
     doc->ready = TRUE;
     project_reload(doc);
+    room_history_mark_saved_0112(doc);
     doc->unsaved = FALSE;
     doc->brush_id = doc->layer_id = 0;
     doc->has_selection = FALSE;
@@ -4394,6 +4551,73 @@ void native_workspace_import_aria_async(NativeWorkspace *manager, unsigned area,
 }
 
 #ifdef FUSION_NATIVE_WORKSPACE_TESTING
+/* PATCH_0112_TEST_SHARED_HISTORY: tile, JSON draft, then native INI. */
+gboolean native_workspace_test_shared_history(NativeWorkspace *manager, guint index)
+{
+    if (!manager || !manager->documents || index >= manager->documents->len)
+        return FALSE;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    if (!doc->map || !doc->stage_token || doc->ready) return FALSE;
+    doc->ready = TRUE;
+    guint initial_tiles = doc->map->tile_count;
+    room_history_mark_saved_0112(doc);
+    RoomHistorySnapshot *before_tile = room_history_capture_0112(doc, doc->map);
+    if (!before_tile) return FALSE;
+    room_history_push_0112(doc->undo, &doc->undo_count, before_tile);
+    doc->map->tile_count = initial_tiles + 1;
+    mark_changed(doc);
+    RoomHistorySnapshot *before_project = room_history_capture_0112(doc, doc->map);
+    if (!before_project) return FALSE;
+    gchar *stage = room_stage_path_0109(doc, "json");
+    gchar *native = room_stage_path_0109(doc, "ini");
+    gchar *parent = g_path_get_dirname(stage);
+    gboolean ok = g_mkdir_with_parents(parent, 0700) == 0 &&
+                  g_file_set_contents(stage, "{\"test\":true}", -1, NULL);
+    g_free(parent);
+    if (!ok) {
+        room_history_free_0112(before_project);
+        g_free(stage);
+        g_free(native);
+        return FALSE;
+    }
+    room_history_push_0112(doc->undo, &doc->undo_count, before_project);
+    mark_changed(doc);
+    RoomHistorySnapshot *before_native = room_history_capture_0112(doc, doc->map);
+    if (!before_native) {
+        g_free(stage);
+        g_free(native);
+        return FALSE;
+    }
+    if (!g_file_set_contents(native, "[native_0_0]\nx=16\ny=32\n", -1, NULL)) {
+        room_history_free_0112(before_native);
+        g_free(stage);
+        g_free(native);
+        return FALSE;
+    }
+    room_history_push_0112(doc->undo, &doc->undo_count, before_native);
+    mark_changed(doc);
+
+    history_step(doc, FALSE); /* Undo native move only. */
+    ok = doc->map->tile_count == initial_tiles + 1 && doc->unsaved &&
+         g_file_test(stage, G_FILE_TEST_IS_REGULAR) &&
+         !g_file_test(native, G_FILE_TEST_EXISTS);
+    history_step(doc, FALSE); /* Undo project object, retain tile edit. */
+    ok = ok && doc->map->tile_count == initial_tiles + 1 && doc->unsaved &&
+         !g_file_test(stage, G_FILE_TEST_EXISTS);
+    history_step(doc, FALSE); /* Undo tile and remove dirty star. */
+    ok = ok && doc->map->tile_count == initial_tiles && !doc->unsaved;
+    history_step(doc, TRUE); /* Redo tile. */
+    ok = ok && doc->map->tile_count == initial_tiles + 1 && doc->unsaved;
+    history_step(doc, TRUE); /* Redo project object. */
+    ok = ok && g_file_test(stage, G_FILE_TEST_IS_REGULAR) &&
+         !g_file_test(native, G_FILE_TEST_EXISTS);
+    history_step(doc, TRUE); /* Redo native move. */
+    ok = ok && g_file_test(native, G_FILE_TEST_IS_REGULAR) && doc->unsaved;
+    g_free(stage);
+    g_free(native);
+    return ok;
+}
+
 /* Exercise the same read-only annotation importer used for real rooms,
  * without requiring ROM bytes in GTK lifecycle tests. */
 guint native_workspace_test_load_native_doors(NativeWorkspace *manager,

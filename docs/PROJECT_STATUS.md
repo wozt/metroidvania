@@ -967,3 +967,16 @@ and the proprietary-file guard passed.
 - GTK Grab has a symbolic hand icon instead of a mouse.
 - This is a static editor overlay, not a source-ROM encoder. Per-file writes
   are atomic but a multi-file save is not a fully transactional commit.
+
+## Patch 0112 - chronological shared room undo
+
+- One per-tab chronological Undo/Redo history captures a source-independent
+  tile map and both validated temporary project documents (room JSON and native
+  positions INI). Tile painting, Grab and successful backend authoring commands
+  can be reversed in their actual execution order, limited to 16 snapshots.
+- Both stage files retain absence/presence, so undo of the first project edit
+  removes the temporary draft, and redo restores it without ROM changes.
+- A snapshot matching the last saved/opened state removes the dirty star.
+  Save still controls all durable override writes; Undo/Redo never commits.
+- GTK/Xvfb regression exercises Tile -> JSON -> Undo twice -> Redo twice.
+  Native source encoders and atomic multi-file disk commits remain pending.

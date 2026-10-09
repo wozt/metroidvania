@@ -120,6 +120,48 @@ class EditorCliTests(unittest.TestCase):
                 "--format=json")
             self.assertEqual(deleted.returncode, 0, deleted.stderr)
 
+    def test_collision_door_and_transition_cli_round_trip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scope = (
+                "--world=zero_mission", "--area=Brinstar", "--room=7",
+                "--width=64", "--height=32", f"--root={directory}",
+            )
+            collision = self.run_cli(
+                "--command=collision-fill", *scope, "--x=0", "--y=0",
+                "--fill-width=2", "--fill-height=1", "--type=solid",
+                "--format=json")
+            self.assertEqual(collision.returncode, 0, collision.stderr)
+            listed_collision = self.run_cli(
+                "--command=collision-list", *scope, "--format=tsv")
+            self.assertEqual(listed_collision.stdout, "0\t0\tsolid\t16\n1\t0\tsolid\t16\n")
+            door = self.run_cli(
+                "--command=door-create", *scope, "--x=0", "--y=0",
+                "--door-width=16", "--door-height=32", "--label=CLI Gate",
+                "--door-type=portal", "--facing=left", "--format=json")
+            self.assertEqual(door.returncode, 0, door.stderr)
+            transition = self.run_cli(
+                "--command=door-link", *scope, "--source-door-id=1",
+                "--target-world=zero_mission", "--target-area=Brinstar",
+                "--target-room=3", "--target-door-id=0", "--spawn-x=16",
+                "--spawn-y=16", "--format=json")
+            self.assertEqual(transition.returncode, 0, transition.stderr)
+            listed_transition = self.run_cli(
+                "--command=transition-list", *scope, "--format=tsv")
+            self.assertEqual(
+                listed_transition.stdout, "1\t1\tmzm\tBrinstar\t3\t0\t16\t16\n")
+            refused = self.run_cli(
+                "--command=door-delete", *scope, "--id=1", "--confirm=true",
+                "--format=json")
+            self.assertEqual(refused.returncode, 4)
+            removed_transition = self.run_cli(
+                "--command=transition-delete", *scope, "--id=1", "--confirm=true",
+                "--format=json")
+            self.assertEqual(removed_transition.returncode, 0, removed_transition.stderr)
+            removed_door = self.run_cli(
+                "--command=door-delete", *scope, "--id=1", "--confirm=true",
+                "--format=json")
+            self.assertEqual(removed_door.returncode, 0, removed_door.stderr)
+
     def test_story_save_validates_and_writes_through_backend(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

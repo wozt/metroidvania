@@ -47,7 +47,11 @@ base import, ROMs and upstream source remain unchanged.
 
 - BG0, full BG3 composition, animated graphics and several palette effects are
   incomplete.
-- Native objects, doors, events and collision are inspectable but not editable.
+- Native objects, doors, events and collision remain inspectable and immutable.
+  Separate project collision cells can be painted or cleared from the canvas
+  context menu, and project doors can be created, viewed and deleted. Complete
+  property and transition editing is available through the shared CLI while the
+  dedicated GTK forms are still being built. None of this data is playable yet.
   Their typed editor shells expose decoded source fields but keep Apply
   disabled. Object sprite previews and executable behavior decoding are still
   pending.

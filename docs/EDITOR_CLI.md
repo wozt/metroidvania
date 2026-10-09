@@ -70,7 +70,13 @@ batch is accepted with `--dry-run=true` because no project document is written.
 | `entity-delete` | Project markers | room scope, `id`, `confirm=true` |
 | `entity-catalog`, `entity-item-settings` | Native references/project metadata | world, kind/entity scope |
 | `story-validate`, `story-save` | Project data | `kind`, `input`, and save `target` |
-| collision/door/object-definition/event/cutscene authoring | Unavailable | backend schema or extraction pending |
+| `collision-list`, `collision-get`, `collision-validate` | Project room data | room scope and optional cell |
+| `collision-set`, `collision-fill`, `collision-clear` | Project room data | cell/rectangle, semantic type, confirmation for clear |
+| `door-list`, `door-inspect` | Project room data | room scope and optional `id` |
+| `door-create`, `door-update`, `door-delete` | Project room data | geometry, type, facing; confirmation for delete |
+| `door-link`, `transition-create`, `transition-update` | Project room data | source door and validated native destination |
+| `transition-list`, `transition-validate`, `transition-delete` | Project room data | room scope; confirmation for delete |
+| native collision/door encoding and object-definition/event/cutscene authoring | Unavailable | engine schema or extraction pending |
 | audio inventory/rendering | Unavailable | native inventory/decoder pending |
 | native gameplay | Unavailable | both engine adapters pending |
 
@@ -90,13 +96,49 @@ and engine export are not implied by these visual workroom operations.
 | BG1/BG2 tile read, draw, erase and fill | Yes | Same C core | Private override | Private override |
 | Native object catalog | Read-only metadata | Read-only metadata | Yes | Yes |
 | Project entity create/move/assign/delete | Yes | Yes | Markers only | Markers + item fields |
+| Project collision authoring | Full cell/rectangle commands | Cell context actions + overlay | 16px semantic cells | 8px semantic cells |
+| Project doors | Full CRUD + destination links | Create/view/delete | Project data only | Project data only |
+| Project transitions | Full CRUD + target validation | CLI only; form pending | Native target references | Native target references |
 | Timeline/cutscene TOML validate and save | Yes | Yes | Shared project data | Shared project data |
-| Collision, doors and native entity encoding | Unavailable | Read-only overlays | Pending | Pending |
+| Native collision, door and entity encoding | Unavailable | Native overlays remain read-only | Pending | Pending |
 | Audio inventory, decoding and playback | Unavailable | Unavailable | Pending | Pending |
 
 The table describes real current behavior, not the target feature list. A GUI
 control that changes project data must use the backend contract, or in the case
 of the interactive tile canvas, the exact same C core exposed by the backend.
+
+Project room authoring uses one versioned private document per native workroom.
+Version 2 groups entity markers, sparse semantic collision cells, doors and
+transitions instead of multiplying room-side files. Version 1 entity-only files
+are migrated in memory and rewritten only after the next explicit save.
+
+Collision coordinates are cell coordinates: 16px in Zero Mission workrooms and
+8px in Aria workrooms. Accepted project semantics are `solid`, `one_way`,
+`hazard`, `slope_up` and `slope_down`; absence means `empty`. These values are
+authoring intent only. They do not claim equivalence with either ROM's native
+collision bytes and are not playable until the corresponding engine adapter is
+implemented.
+
+```sh
+./build/fusion_editor_cli --command=collision-fill \
+  --world=zero_mission --area=Brinstar --room=3 --width=304 --height=2144 \
+  --x=2 --y=4 --fill-width=6 --fill-height=1 --type=solid --format=json
+
+./build/fusion_editor_cli --command=door-create \
+  --world=zero_mission --area=Brinstar --room=3 --width=304 --height=2144 \
+  --x=0 --y=64 --door-width=16 --door-height=32 \
+  --label="Project gate" --door-type=portal --facing=left --format=json
+
+./build/fusion_editor_cli --command=door-link \
+  --world=zero_mission --area=Brinstar --room=3 --width=304 --height=2144 \
+  --source-door-id=1 --target-world=aria --target-area=0 --target-room=2 \
+  --target-door-id=0 --spawn-x=32 --spawn-y=48 --format=json
+```
+
+Transition creation verifies that the referenced native target room exists.
+`target-door-id=0` explicitly means unspecified. Non-zero target door identities
+remain marked unverified until the target room also has project geometry; the
+engine adapter remains unavailable in either case.
 
 Example native workroom inspection and non-persistent edit validation:
 

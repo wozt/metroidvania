@@ -20,7 +20,7 @@ from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.room_audit import audit_world, write_private_report
 from scripts.validate_story_assets import validate_scene, validate_timeline
 
-BACKEND_VERSION = "1.1.0"
+BACKEND_VERSION = "1.2.0"
 
 CAPABILITIES = {
     "project-info": "available",
@@ -55,8 +55,23 @@ CAPABILITIES = {
     "tile-get": "available_private_native_workspace",
     "tile-set": "available_private_native_workspace",
     "tile-fill": "available_private_native_workspace",
-    "collision-set": "unavailable_schema_pending",
-    "door-create": "unavailable_schema_pending",
+    "collision-list": "available_project_room_data_only",
+    "collision-get": "available_project_room_data_only",
+    "collision-set": "available_project_room_data_only",
+    "collision-fill": "available_project_room_data_only",
+    "collision-clear": "available_project_room_data_only",
+    "collision-validate": "available_project_room_data_only",
+    "door-list": "available_project_room_data_only",
+    "door-inspect": "available_project_room_data_only",
+    "door-create": "available_project_room_data_only",
+    "door-update": "available_project_room_data_only",
+    "door-delete": "available_project_room_data_only",
+    "door-link": "available_project_room_data_only",
+    "transition-list": "available_project_room_data_only",
+    "transition-create": "available_project_room_data_only",
+    "transition-update": "available_project_room_data_only",
+    "transition-delete": "available_project_room_data_only",
+    "transition-validate": "available_project_room_data_only",
     "object-definition-create": "unavailable_schema_pending",
     "event-create": "unavailable_backend_extraction_pending",
     "cutscene-create": "unavailable_backend_extraction_pending",
@@ -103,11 +118,42 @@ COMMAND_FIELDS = {
     "tile-get": {"world", "area", "room", "layer", "x", "y"},
     "tile-set": {"world", "area", "room", "layer", "x", "y", "tile_id"},
     "tile-fill": {"world", "area", "room", "layer", "x", "y", "tile_id"},
+    "collision-list": {"world", "area", "room", "width", "height"},
+    "collision-get": {"world", "area", "room", "width", "height", "x", "y"},
+    "collision-set": {"world", "area", "room", "width", "height", "x", "y",
+                      "collision_type"},
+    "collision-fill": {"world", "area", "room", "width", "height", "x", "y",
+                       "fill_width", "fill_height", "collision_type"},
+    "collision-clear": {"world", "area", "room", "width", "height", "x", "y",
+                        "fill_width", "fill_height", "confirm"},
+    "collision-validate": {"world", "area", "room", "width", "height"},
+    "door-list": {"world", "area", "room", "width", "height"},
+    "door-inspect": {"world", "area", "room", "width", "height", "id"},
+    "door-create": {"world", "area", "room", "width", "height", "x", "y",
+                    "door_width", "door_height", "label", "door_type", "facing"},
+    "door-update": {"world", "area", "room", "width", "height", "id", "x", "y",
+                    "door_width", "door_height", "label", "door_type", "facing"},
+    "door-delete": {"world", "area", "room", "width", "height", "id", "confirm"},
+    "door-link": {"world", "area", "room", "width", "height",
+                  "source_door_id", "target_world", "target_area",
+                  "target_room", "target_door_id", "spawn_x", "spawn_y"},
+    "transition-list": {"world", "area", "room", "width", "height"},
+    "transition-create": {"world", "area", "room", "width", "height",
+                          "source_door_id", "target_world", "target_area",
+                          "target_room", "target_door_id", "spawn_x", "spawn_y"},
+    "transition-update": {"world", "area", "room", "width", "height", "id",
+                          "source_door_id", "target_world", "target_area",
+                          "target_room", "target_door_id", "spawn_x", "spawn_y"},
+    "transition-delete": {"world", "area", "room", "width", "height", "id", "confirm"},
+    "transition-validate": {"world", "area", "room", "width", "height"},
 }
 MUTATING_COMMANDS = {
     "room-create", "room-open", "room-place", "room-move", "room-unplace",
     "entity-create", "entity-move", "entity-delete", "entity-assign", "story-save",
     "tile-set", "tile-fill",
+    "collision-set", "collision-fill", "collision-clear",
+    "door-create", "door-update", "door-delete", "door-link",
+    "transition-create", "transition-update", "transition-delete",
 }
 
 
@@ -232,6 +278,63 @@ def _entity_scope(options: dict[str, Any]) -> tuple[str, str, int, int, int]:
         _integer(options.get("width"), "width", 16, 16384),
         _integer(options.get("height"), "height", 16, 16384),
     )
+
+
+def _room_document(root: Path, options: dict[str, Any]) -> tuple[dict, tuple[str, str, int, int, int]]:
+    scope = _entity_scope(options)
+    return project_room_entities.load(root, *scope), scope
+
+
+def _transition_target(options: dict[str, Any]) -> dict[str, Any]:
+    public_world = _world(options.get("target_world"))
+    area_value = options.get("target_area")
+    if public_world == "zero_mission":
+        if area_value is None:
+            raise ValueError("target_area is required")
+        if str(area_value).isdecimal():
+            index = _integer(area_value, "target_area", 0, 6)
+            area = authored_rooms.AREAS[public_world][index]
+        else:
+            area = next((name for name in authored_rooms.AREAS[public_world]
+                         if name.lower() == str(area_value).lower()), None)
+            if area is None:
+                raise ValueError("unknown Zero Mission target area")
+        internal_world = "mzm"
+    else:
+        area = str(_integer(area_value, "target_area", 0, 11))
+        internal_world = "aria"
+    room = _integer(options.get("target_room"), "target_room", 0, 999)
+    matches = [item for item in _filter_native_rooms(public_world, area)
+               if item["room"] == room]
+    if len(matches) != 1:
+        raise ValueError("transition target room is missing or ambiguous")
+    return {
+        "target_world": internal_world, "target_area": area,
+        "target_room": room,
+        "target_door_id": _integer(
+            options.get("target_door_id", 0), "target_door_id", 0, 999999),
+        "spawn_x": _integer(options.get("spawn_x", 0), "spawn_x", 0, 16383),
+        "spawn_y": _integer(options.get("spawn_y", 0), "spawn_y", 0, 16383),
+    }
+
+
+def _transition_validation(document: dict) -> list[dict]:
+    results = []
+    for transition in document["transitions"]:
+        public_world = ("zero_mission" if transition["target_world"] == "mzm"
+                        else "aria")
+        matches = [item for item in _filter_native_rooms(
+            public_world, transition["target_area"])
+            if item["room"] == transition["target_room"]]
+        results.append({
+            "id": transition["id"], "source_door_id": transition["source_door_id"],
+            "target_exists": len(matches) == 1,
+            "target": f"{public_world}:{transition['target_area']}:{transition['target_room']}",
+            "target_door_status": ("unspecified" if transition["target_door_id"] == 0
+                                   else "unverified_without_target_project_geometry"),
+            "engine_adapter": "unavailable",
+        })
+    return results
 
 
 def _entity_settings(options: dict[str, Any], native_type: Any) -> dict | None:
@@ -392,19 +495,25 @@ def _project_validation(root: Path) -> dict:
     if entity_root.is_symlink():
         raise ValueError("project entity root symlink refused")
     for path in sorted(entity_root.glob("*/entities/*.json")):
-        if path.is_symlink() or path.stat().st_size > 131072:
-            raise ValueError(f"unsafe project entity document: {path}")
-        document = json.loads(path.read_text(encoding="utf-8"))
+        if path.is_symlink() or path.stat().st_size > 4_000_000:
+            raise ValueError(f"unsafe project room document: {path}")
+        document = project_room_entities.migrate(
+            json.loads(path.read_text(encoding="utf-8")))
         project_room_entities.validate(
             document, document.get("world"), document.get("area"),
             document.get("room"), document.get("width_px"), document.get("height_px"))
         entity_documents.append({
             "path": str(path.relative_to(root)),
             "entity_count": len(document["entities"]),
+            "collision_cell_count": len(document["collision"]["cells"]),
+            "door_count": len(document["doors"]),
+            "transition_count": len(document["transitions"]),
         })
     return {"timeline_events": timeline_count, "cutscenes": scenes,
             "draft_rooms": [room["id"] for room in drafts],
             "draft_placements": placements,
+            "project_room_documents": entity_documents,
+            # Compatibility key retained for automation written against backend 1.1.
             "project_entity_documents": entity_documents,
             "engine_adapters": {"zero_mission": "unavailable",
                                 "aria": "unavailable"}}
@@ -715,6 +824,127 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
             return {"entity": changed, "persisted": False}
         path = project_room_entities.save(root_path, document)
         return {"entity": changed, "persisted": True, "path": str(path)}
+    if command.startswith("collision-"):
+        document, _scope = _room_document(root_path, options)
+        resolution = document["collision"]["resolution_px"]
+        if command == "collision-list":
+            return {"resolution_px": resolution,
+                    "grid_width": document["width_px"] // resolution,
+                    "grid_height": document["height_px"] // resolution,
+                    "count": len(document["collision"]["cells"]),
+                    "cells": document["collision"]["cells"],
+                    "engine_adapter": "unavailable"}
+        if command == "collision-validate":
+            return {"status": "valid_project_data_not_playable",
+                    "resolution_px": resolution,
+                    "cell_count": len(document["collision"]["cells"]),
+                    "accepted_types": list(project_room_entities.COLLISION_TYPES),
+                    "engine_adapter": "unavailable"}
+        x = _integer(options.get("x"), "x", 0, 2047)
+        y = _integer(options.get("y"), "y", 0, 2047)
+        if command == "collision-get":
+            return {"x": x, "y": y,
+                    "type": project_room_entities.collision_get(document, x, y),
+                    "resolution_px": resolution}
+        default_extent = None if command == "collision-fill" else 1
+        fill_width = _integer(
+            options.get("fill_width", default_extent), "fill_width", 1, 2048)
+        fill_height = _integer(
+            options.get("fill_height", default_extent), "fill_height", 1, 2048)
+        if command == "collision-clear":
+            if options.get("confirm") is not True:
+                raise ValueError("collision-clear requires --confirm=true")
+            changed = project_room_entities.collision_clear(
+                document, x, y, fill_width, fill_height)
+            collision_type = "empty"
+        else:
+            collision_type = options.get("collision_type")
+            changed = project_room_entities.collision_fill(
+                document, x, y, fill_width, fill_height, collision_type)
+        result = {"x": x, "y": y, "width": fill_width, "height": fill_height,
+                  "type": collision_type, "changed_cells": changed,
+                  "persisted": False, "engine_adapter": "unavailable"}
+        if not dry_run and changed:
+            path = project_room_entities.save(root_path, document)
+            result.update({"persisted": True, "path": str(path)})
+        return result
+    if command.startswith("door-") and command != "door-link":
+        document, _scope = _room_document(root_path, options)
+        if command == "door-list":
+            return {"count": len(document["doors"]), "doors": document["doors"],
+                    "engine_adapter": "unavailable"}
+        door_id = None if command == "door-create" else _integer(
+            options.get("id"), "id", 1, 999999)
+        if command == "door-inspect":
+            door = next((item for item in document["doors"]
+                         if item["id"] == door_id), None)
+            if door is None:
+                raise ValueError("unknown project door id")
+            transition = next((item for item in document["transitions"]
+                               if item["source_door_id"] == door_id), None)
+            return {"door": door, "transition": transition,
+                    "engine_adapter": "unavailable"}
+        if command == "door-delete":
+            if options.get("confirm") is not True:
+                raise ValueError("door-delete requires --confirm=true")
+            project_room_entities.door_delete(document, door_id)
+            changed = {"id": door_id, "deleted": True}
+        else:
+            values = {
+                "x": _integer(options.get("x"), "x", 0, 16383),
+                "y": _integer(options.get("y"), "y", 0, 16383),
+                "width": _integer(options.get("door_width"), "door_width", 8, 16384),
+                "height": _integer(options.get("door_height"), "door_height", 8, 16384),
+                "label": options.get("label"), "door_type": options.get("door_type"),
+                "facing": options.get("facing"),
+            }
+            if command == "door-create":
+                changed = project_room_entities.door_create(document, **values)
+            else:
+                changed = project_room_entities.door_update(document, door_id, **values)
+        result = {"door": changed, "persisted": False,
+                  "engine_adapter": "unavailable"}
+        if not dry_run:
+            path = project_room_entities.save(root_path, document)
+            result.update({"persisted": True, "path": str(path)})
+        return result
+    if command.startswith("transition-") or command == "door-link":
+        document, _scope = _room_document(root_path, options)
+        if command == "transition-list":
+            return {"count": len(document["transitions"]),
+                    "transitions": document["transitions"],
+                    "engine_adapter": "unavailable"}
+        if command == "transition-validate":
+            records = _transition_validation(document)
+            return {"status": ("valid_project_data_not_playable"
+                               if all(item["target_exists"] for item in records)
+                               else "invalid_target"),
+                    "count": len(records), "transitions": records,
+                    "engine_adapter": "unavailable"}
+        transition_id = None if command in ("transition-create", "door-link") else _integer(
+            options.get("id"), "id", 1, 999999)
+        if command == "transition-delete":
+            if options.get("confirm") is not True:
+                raise ValueError("transition-delete requires --confirm=true")
+            project_room_entities.transition_delete(document, transition_id)
+            changed = {"id": transition_id, "deleted": True}
+        else:
+            values = {
+                "source_door_id": _integer(
+                    options.get("source_door_id"), "source_door_id", 1, 999999),
+                **_transition_target(options),
+            }
+            if command in ("transition-create", "door-link"):
+                changed = project_room_entities.transition_create(document, **values)
+            else:
+                changed = project_room_entities.transition_update(
+                    document, transition_id, **values)
+        result = {"transition": changed, "persisted": False,
+                  "engine_adapter": "unavailable"}
+        if not dry_run:
+            path = project_room_entities.save(root_path, document)
+            result.update({"persisted": True, "path": str(path)})
+        return result
     if command in ("story-validate", "story-save"):
         kind = options.get("kind")
         _path, text, data = _input_toml(options.get("input"))

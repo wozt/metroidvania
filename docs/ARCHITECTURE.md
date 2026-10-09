@@ -68,6 +68,12 @@ Canvas and Room-data context menus share the same bounded in-memory annotation
 records; typed editor windows retain their document lifetime safely and cannot
 write native data without an encoder.
 
+Private room authoring uses a single `metroidvania.project-room-data` version 2
+document for entity markers, semantic collision cells, doors and transitions.
+The schema has per-world collision resolution and strict spatial/identity bounds,
+but deliberately has no ROM or gameplay encoder. Entity-only version 1 files
+are migrated in memory and preserved until an explicit project write.
+
 ## Verified native coverage
 
 Zero Mission currently has room descriptors, original minimap structure,

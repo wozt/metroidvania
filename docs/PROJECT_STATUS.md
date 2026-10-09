@@ -17,7 +17,7 @@ game frontend.
 | Aria rooms | Partial, systematically audited | 343 descriptors: 342 partial renders, 1 unsupported affine/non-text room, 0 errors |
 | Character assets | Partial | local verified Samus and Soma animation extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
-| Headless backend | Active foundation | stable CLI envelope, project/catalog/draft/render/audit operations; mutation coverage incomplete |
+| Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
 | Native gameplay engines | Not started | no player physics, combat, entities or room runtime yet |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
@@ -90,7 +90,7 @@ and the proprietary-file guard passed.
 
 ## Immediate priorities
 
-1. Extend the shared backend to tile, collision, door, object and event mutation.
+1. Complete GTK property/link forms and add project platforms.
 2. Define project-owned object/ability/soul schemas and validated encoders.
 3. Complete trigger extraction and attach typed events to room overlays.
 4. Add native audio inventory/preview and cutscene timeline operations.
@@ -741,3 +741,29 @@ and the proprietary-file guard passed.
   round trip and proprietary-file guard. The 0088 exhaustive private audit
   remains MZM 330 partial + 1 unsupported and Aria 342 partial + 1 unsupported,
   with zero decoder errors.
+
+## Patch 0090 - unified project collision, doors and transitions
+
+- Upgraded the existing per-room private entity document to the unified
+  `metroidvania.project-room-data` version 2 schema instead of creating separate
+  sidecar files. It now owns entity markers, sparse semantic collision cells,
+  project doors and transition references. Version 1 documents migrate in
+  memory and remain untouched until an explicit save.
+- Added strict collision list/get/set/fill/clear/validate operations. Zero
+  Mission uses 16px project cells and Aria uses 8px project cells; bounds,
+  duplicate coordinates, semantic types and destructive confirmation are
+  validated. These are project semantics, not rewritten native collision bytes.
+- Added project door list/inspect/create/update/delete and transition
+  list/create/update/delete/validate operations, plus `door-link`. Door geometry,
+  IDs, types, facing, source uniqueness and native target-room existence are
+  checked. Non-zero destination-door IDs remain explicitly unverified without
+  target project geometry, and both engine adapters remain unavailable.
+- GTK room documents load the same backend TSV, render project collision above
+  the immutable native diagnostic overlay, and expose context actions to set or
+  clear collision cells and create/view/delete project doors. Full GTK property
+  and transition-link forms remain pending; the complete operations are already
+  available through the shared headless backend.
+- Added functional migration, collision, door, dependency, persistence and CLI
+  round-trip tests. Validation: all 234 Python tests and all nine CTest targets
+  pass, including GTK lifecycle/no-display entry points and the proprietary-file
+  guard. No ROM, native annotation or extracted proprietary asset is modified.

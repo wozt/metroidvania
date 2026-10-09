@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Versioned private entity placements for the GTK room editor (never ROM export)."""
+"""Unified private room authoring data for the editor (never ROM export)."""
 from __future__ import annotations
 
 import argparse
@@ -11,13 +11,28 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = "metroidvania.project-room-entities"
-VERSION = 1
+SCHEMA = "metroidvania.project-room-data"
+VERSION = 2
+LEGACY_SCHEMA = "metroidvania.project-room-entities"
 KINDS = ("ENEMY", "ITEM", "OBJECT")
 MZM_AREAS = ("Brinstar", "Kraid", "Norfair", "Ridley", "Tourian", "Crateria", "Chozodia")
 NATIVE_TYPE = re.compile(r"[A-Za-z0-9_.:-]{1,64}\Z", re.ASCII)
-DOC_KEYS = {"schema", "version", "world", "area", "room", "width_px", "height_px", "next_id", "entities"}
+DOC_KEYS = {
+    "schema", "version", "world", "area", "room", "width_px", "height_px",
+    "next_id", "entities", "collision", "next_door_id", "doors",
+    "next_transition_id", "transitions",
+}
 ENTITY_KEYS = {"id", "kind", "x", "y", "label", "native_type"}
+COLLISION_KEYS = {"resolution_px", "cells"}
+COLLISION_CELL_KEYS = {"x", "y", "type"}
+COLLISION_TYPES = ("solid", "one_way", "hazard", "slope_up", "slope_down")
+DOOR_KEYS = {"id", "x", "y", "width", "height", "label", "door_type", "facing"}
+DOOR_TYPES = ("normal", "boss", "locked", "portal", "save")
+DOOR_FACINGS = ("left", "right", "up", "down")
+TRANSITION_KEYS = {
+    "id", "source_door_id", "target_world", "target_area", "target_room",
+    "target_door_id", "spawn_x", "spawn_y",
+}
 # PATCH_0081_ARIA_PICKUP_THUMBNAILS
 ITEM_KEYS = {"item_id", "parameter_0", "parameter_1", "flags"}
 ARIA_PICKUP_LIMITS = {0: 0, 1: 255, 2: 31, 3: 58, 4: 44, 5: 55,
@@ -54,6 +69,8 @@ def requested_item_settings(args: argparse.Namespace) -> dict | None:
     return item_settings(args.native_type, *fields)
 
 MAX_ENTITIES = 256
+MAX_DOORS = 128
+MAX_TRANSITIONS = 128
 
 
 def _int(value: object, low: int, high: int, label: str) -> int:
@@ -89,7 +106,31 @@ def _new(world: str, area: str, room: int, width: int, height: int) -> dict:
     _scope(world, area, room, width, height)
     return {"schema": SCHEMA, "version": VERSION, "world": world,
             "area": area, "room": room, "width_px": width, "height_px": height,
-            "next_id": 1, "entities": []}
+            "next_id": 1, "entities": [],
+            "collision": {"resolution_px": 16 if world == "mzm" else 8,
+                          "cells": []},
+            "next_door_id": 1, "doors": [],
+            "next_transition_id": 1, "transitions": []}
+
+
+def migrate(document: object) -> object:
+    """Upgrade the former entity-only room document without touching disk."""
+    if (not isinstance(document, dict) or document.get("schema") != LEGACY_SCHEMA
+            or document.get("version") != 1):
+        return document
+    legacy_keys = {
+        "schema", "version", "world", "area", "room", "width_px", "height_px",
+        "next_id", "entities",
+    }
+    if document.keys() != legacy_keys:
+        raise ValueError("invalid legacy project room document fields")
+    return {
+        **document, "schema": SCHEMA, "version": VERSION,
+        "collision": {"resolution_px": 16 if document.get("world") == "mzm" else 8,
+                      "cells": []},
+        "next_door_id": 1, "doors": [],
+        "next_transition_id": 1, "transitions": [],
+    }
 
 
 def validate(doc: object, world: str, area: str, room: int,
@@ -131,6 +172,87 @@ def validate(doc: object, world: str, area: str, room: int,
         _text(entity["label"], 80, "entity label")
         if not isinstance(entity["native_type"], str) or not NATIVE_TYPE.fullmatch(entity["native_type"]):
             raise ValueError("invalid native type token")
+    collision = doc["collision"]
+    resolution = 16 if world == "mzm" else 8
+    if (not isinstance(collision, dict) or collision.keys() != COLLISION_KEYS
+            or collision["resolution_px"] != resolution
+            or not isinstance(collision["cells"], list)):
+        raise ValueError("invalid project collision document")
+    collision_cells = collision["cells"]
+    maximum_cells = (width // resolution) * (height // resolution)
+    if len(collision_cells) > maximum_cells:
+        raise ValueError("invalid project collision cell count")
+    coordinates = set()
+    for cell in collision_cells:
+        if not isinstance(cell, dict) or cell.keys() != COLLISION_CELL_KEYS:
+            raise ValueError("invalid project collision cell fields")
+        x = _int(cell["x"], 0, width // resolution - 1, "collision x")
+        y = _int(cell["y"], 0, height // resolution - 1, "collision y")
+        if (x, y) in coordinates:
+            raise ValueError("duplicate project collision cell")
+        coordinates.add((x, y))
+        if cell["type"] not in COLLISION_TYPES:
+            raise ValueError("unknown project collision type")
+    next_door_id = _int(doc["next_door_id"], 1, 1000000, "next_door_id")
+    doors = doc["doors"]
+    if not isinstance(doors, list) or len(doors) > MAX_DOORS:
+        raise ValueError("invalid project door count")
+    door_ids = set()
+    for door in doors:
+        if not isinstance(door, dict) or door.keys() != DOOR_KEYS:
+            raise ValueError("invalid project door fields")
+        door_id = _int(door["id"], 1, next_door_id - 1, "door id")
+        if door_id in door_ids:
+            raise ValueError("duplicate project door id")
+        door_ids.add(door_id)
+        for axis, limit in (("x", width), ("y", height)):
+            value = _int(door[axis], 0, limit - resolution, f"door {axis}")
+            if value % resolution:
+                raise ValueError(f"door {axis} must align to collision resolution")
+        for extent, limit, origin in (("width", width, door["x"]),
+                                      ("height", height, door["y"])):
+            value = _int(door[extent], resolution, limit, f"door {extent}")
+            if value % resolution or origin + value > limit:
+                raise ValueError(f"invalid door {extent}")
+        _text(door["label"], 80, "door label")
+        if door["door_type"] not in DOOR_TYPES or door["facing"] not in DOOR_FACINGS:
+            raise ValueError("unknown project door type or facing")
+    next_transition_id = _int(
+        doc["next_transition_id"], 1, 1000000, "next_transition_id")
+    transitions = doc["transitions"]
+    if not isinstance(transitions, list) or len(transitions) > MAX_TRANSITIONS:
+        raise ValueError("invalid project transition count")
+    transition_ids = set()
+    transition_sources = set()
+    for transition in transitions:
+        if not isinstance(transition, dict) or transition.keys() != TRANSITION_KEYS:
+            raise ValueError("invalid project transition fields")
+        transition_id = _int(
+            transition["id"], 1, next_transition_id - 1, "transition id")
+        if transition_id in transition_ids:
+            raise ValueError("duplicate project transition id")
+        transition_ids.add(transition_id)
+        source = _int(transition["source_door_id"], 1, next_door_id - 1,
+                      "source_door_id")
+        if source not in door_ids or source in transition_sources:
+            raise ValueError("transition source door is missing or already linked")
+        transition_sources.add(source)
+        target_world = transition["target_world"]
+        target_area = transition["target_area"]
+        if target_world == "mzm":
+            if target_area not in MZM_AREAS:
+                raise ValueError("invalid transition target area")
+        elif target_world == "aria":
+            if (not isinstance(target_area, str) or not target_area.isdecimal()
+                    or target_area != str(int(target_area))
+                    or not 0 <= int(target_area) <= 11):
+                raise ValueError("invalid transition target area")
+        else:
+            raise ValueError("invalid transition target world")
+        _int(transition["target_room"], 0, 999, "target_room")
+        _int(transition["target_door_id"], 0, 999999, "target_door_id")
+        _int(transition["spawn_x"], 0, 16383, "spawn_x")
+        _int(transition["spawn_y"], 0, 16383, "spawn_y")
     return doc
 
 
@@ -164,13 +286,13 @@ def load(root: Path, world: str, area: str, room: int,
     _check_path(path, root)
     if not path.exists():
         return _new(world, area, room, width, height)
-    if not path.is_file() or path.stat().st_size > 131072:
-        raise ValueError("invalid project entity file")
+    if not path.is_file() or path.stat().st_size > 4_000_000:
+        raise ValueError("invalid project room data file")
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise ValueError("unreadable project entity document") from exc
-    return validate(doc, world, area, room, width, height)
+    return validate(migrate(doc), world, area, room, width, height)
 
 
 def save(root: Path, doc: dict) -> Path:
@@ -235,6 +357,165 @@ def delete(doc: dict, eid: int) -> None:
     if len(entries) == len(doc["entities"]):
         raise ValueError("unknown project entity id")
     doc["entities"] = entries
+
+
+def _validated_candidate(doc: dict, **changes: object) -> dict:
+    candidate = {**doc, **changes}
+    validate(candidate, candidate["world"], candidate["area"], candidate["room"],
+             candidate["width_px"], candidate["height_px"])
+    return candidate
+
+
+def collision_get(doc: dict, x: int, y: int) -> str:
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    resolution = doc["collision"]["resolution_px"]
+    _int(x, 0, doc["width_px"] // resolution - 1, "collision x")
+    _int(y, 0, doc["height_px"] // resolution - 1, "collision y")
+    cell = next((cell for cell in doc["collision"]["cells"]
+                 if cell["x"] == x and cell["y"] == y), None)
+    return cell["type"] if cell else "empty"
+
+
+def collision_fill(doc: dict, x: int, y: int, width: int, height: int,
+                   collision_type: str) -> int:
+    """Set a rectangular sparse project collision region, measured in cells."""
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    if collision_type not in COLLISION_TYPES:
+        raise ValueError("unknown project collision type")
+    resolution = doc["collision"]["resolution_px"]
+    grid_width = doc["width_px"] // resolution
+    grid_height = doc["height_px"] // resolution
+    _int(x, 0, grid_width - 1, "collision x")
+    _int(y, 0, grid_height - 1, "collision y")
+    _int(width, 1, grid_width - x, "collision width")
+    _int(height, 1, grid_height - y, "collision height")
+    cells = {(cell["x"], cell["y"]): cell["type"]
+             for cell in doc["collision"]["cells"]}
+    changed = 0
+    for cell_y in range(y, y + height):
+        for cell_x in range(x, x + width):
+            key = (cell_x, cell_y)
+            if cells.get(key) != collision_type:
+                cells[key] = collision_type
+                changed += 1
+    collision = {"resolution_px": resolution, "cells": [
+        {"x": cell_x, "y": cell_y, "type": value}
+        for (cell_x, cell_y), value in sorted(
+            cells.items(), key=lambda item: (item[0][1], item[0][0]))
+    ]}
+    doc.update(_validated_candidate(doc, collision=collision))
+    return changed
+
+
+def collision_clear(doc: dict, x: int, y: int, width: int, height: int) -> int:
+    """Clear a rectangular project collision region, measured in cells."""
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    resolution = doc["collision"]["resolution_px"]
+    grid_width = doc["width_px"] // resolution
+    grid_height = doc["height_px"] // resolution
+    _int(x, 0, grid_width - 1, "collision x")
+    _int(y, 0, grid_height - 1, "collision y")
+    _int(width, 1, grid_width - x, "collision width")
+    _int(height, 1, grid_height - y, "collision height")
+    retained = [cell for cell in doc["collision"]["cells"]
+                if not (x <= cell["x"] < x + width and
+                        y <= cell["y"] < y + height)]
+    changed = len(doc["collision"]["cells"]) - len(retained)
+    collision = {"resolution_px": resolution, "cells": retained}
+    doc.update(_validated_candidate(doc, collision=collision))
+    return changed
+
+
+def door_create(doc: dict, x: int, y: int, width: int, height: int,
+                label: str, door_type: str, facing: str) -> dict:
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    if len(doc["doors"]) >= MAX_DOORS:
+        raise ValueError("project door limit reached")
+    door = {"id": doc["next_door_id"], "x": x, "y": y,
+            "width": width, "height": height, "label": label,
+            "door_type": door_type, "facing": facing}
+    candidate = _validated_candidate(
+        doc, next_door_id=doc["next_door_id"] + 1,
+        doors=[*doc["doors"], door])
+    doc.update(candidate)
+    return door
+
+
+def door_update(doc: dict, door_id: int, **changes: object) -> dict:
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    allowed = DOOR_KEYS - {"id"}
+    if not changes or not set(changes) <= allowed:
+        raise ValueError("door update requires only editable door fields")
+    current = next((door for door in doc["doors"] if door["id"] == door_id), None)
+    if current is None:
+        raise ValueError("unknown project door id")
+    changed = {**current, **changes}
+    doors = [changed if door["id"] == door_id else door for door in doc["doors"]]
+    doc.update(_validated_candidate(doc, doors=doors))
+    return changed
+
+
+def door_delete(doc: dict, door_id: int) -> None:
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    if any(item["source_door_id"] == door_id for item in doc["transitions"]):
+        raise ValueError("delete the linked transition before deleting its door")
+    doors = [door for door in doc["doors"] if door["id"] != door_id]
+    if len(doors) == len(doc["doors"]):
+        raise ValueError("unknown project door id")
+    doc.update(_validated_candidate(doc, doors=doors))
+
+
+def transition_create(doc: dict, source_door_id: int, target_world: str,
+                      target_area: str, target_room: int, target_door_id: int,
+                      spawn_x: int, spawn_y: int) -> dict:
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    if len(doc["transitions"]) >= MAX_TRANSITIONS:
+        raise ValueError("project transition limit reached")
+    transition = {
+        "id": doc["next_transition_id"], "source_door_id": source_door_id,
+        "target_world": target_world, "target_area": target_area,
+        "target_room": target_room, "target_door_id": target_door_id,
+        "spawn_x": spawn_x, "spawn_y": spawn_y,
+    }
+    candidate = _validated_candidate(
+        doc, next_transition_id=doc["next_transition_id"] + 1,
+        transitions=[*doc["transitions"], transition])
+    doc.update(candidate)
+    return transition
+
+
+def transition_update(doc: dict, transition_id: int, **changes: object) -> dict:
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    allowed = TRANSITION_KEYS - {"id"}
+    if not changes or not set(changes) <= allowed:
+        raise ValueError("transition update requires only editable transition fields")
+    current = next((item for item in doc["transitions"]
+                    if item["id"] == transition_id), None)
+    if current is None:
+        raise ValueError("unknown project transition id")
+    changed = {**current, **changes}
+    transitions = [changed if item["id"] == transition_id else item
+                   for item in doc["transitions"]]
+    doc.update(_validated_candidate(doc, transitions=transitions))
+    return changed
+
+
+def transition_delete(doc: dict, transition_id: int) -> None:
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    transitions = [item for item in doc["transitions"]
+                   if item["id"] != transition_id]
+    if len(transitions) == len(doc["transitions"]):
+        raise ValueError("unknown project transition id")
+    doc.update(_validated_candidate(doc, transitions=transitions))
 
 
 # PATCH_0080_NATIVE_CATALOG_BINDING

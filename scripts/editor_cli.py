@@ -29,6 +29,7 @@ EXIT_OPERATION = 4
 TSV_COMMANDS = {
     "room-list", "list-rooms", "placement-list", "entity-list",
     "entity-catalog", "entity-item-settings", "list-assets",
+    "collision-list", "door-list", "transition-list",
 }
 
 
@@ -99,6 +100,20 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--target")
     parser.add_argument("--layer")
     parser.add_argument("--tile-id", dest="tile_id")
+    parser.add_argument("--type", dest="collision_type")
+    parser.add_argument("--fill-width", dest="fill_width")
+    parser.add_argument("--fill-height", dest="fill_height")
+    parser.add_argument("--door-width", dest="door_width")
+    parser.add_argument("--door-height", dest="door_height")
+    parser.add_argument("--door-type", dest="door_type")
+    parser.add_argument("--facing")
+    parser.add_argument("--source-door-id", dest="source_door_id")
+    parser.add_argument("--target-world", dest="target_world")
+    parser.add_argument("--target-area", dest="target_area")
+    parser.add_argument("--target-room", dest="target_room")
+    parser.add_argument("--target-door-id", dest="target_door_id")
+    parser.add_argument("--spawn-x", dest="spawn_x")
+    parser.add_argument("--spawn-y", dest="spawn_y")
     return parser
 
 
@@ -208,6 +223,18 @@ def _tsv_result(command: str, data: dict) -> str:
                  item["name"], item["category"], item["summary"],
                  item["placements"] if item["placements"] is not None else "-",
                  1 if item["editable"] else 0] for item in data["assets"]]
+    elif command == "collision-list":
+        rows = [[item["x"], item["y"], item["type"], data["resolution_px"]]
+                for item in data["cells"]]
+    elif command == "door-list":
+        rows = [[item["id"], item["x"], item["y"], item["width"], item["height"],
+                 item["label"], item["door_type"], item["facing"]]
+                for item in data["doors"]]
+    elif command == "transition-list":
+        rows = [[item["id"], item["source_door_id"], item["target_world"],
+                 item["target_area"], item["target_room"], item["target_door_id"],
+                 item["spawn_x"], item["spawn_y"]]
+                for item in data["transitions"]]
     else:
         raise CliUsageError(f"TSV output is unavailable for {command}")
     return "".join("\t".join(_safe_tsv_field(field) for field in row) + "\n"

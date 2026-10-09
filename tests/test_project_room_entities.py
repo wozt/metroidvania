@@ -74,7 +74,62 @@ class ProjectEntityTests(unittest.TestCase):
         self.assertIn("Project entity", source)
         self.assertIn('"scripts/editor_cli.py"', source)
         self.assertIn('"entity-create"', source)
+        self.assertIn('"collision-set"', source)
+        self.assertIn('"door-create"', source)
+        self.assertIn("draw_project_collision", source)
         self.assertIn("doc->tool_id == TOOL_SELECT", source)
+
+    def test_legacy_entity_document_migrates_to_unified_room_data(self):
+        path = pe.path_for(self.root, "mzm", "Brinstar", 2, 64, 32)
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({
+            "schema": pe.LEGACY_SCHEMA, "version": 1, "world": "mzm",
+            "area": "Brinstar", "room": 2, "width_px": 64, "height_px": 32,
+            "next_id": 1, "entities": [],
+        }), encoding="utf-8")
+        document = pe.load(self.root, "mzm", "Brinstar", 2, 64, 32)
+        self.assertEqual((document["schema"], document["version"]), (pe.SCHEMA, 2))
+        self.assertEqual(document["collision"], {"resolution_px": 16, "cells": []})
+        self.assertEqual(document["doors"], [])
+        self.assertEqual(document["transitions"], [])
+        self.assertIn(pe.LEGACY_SCHEMA, path.read_text())
+
+    def test_collision_door_transition_round_trip_and_dependencies(self):
+        document = pe.load(self.root, "aria", "0", 8, 64, 32)
+        self.assertEqual(document["collision"]["resolution_px"], 8)
+        self.assertEqual(pe.collision_fill(document, 0, 0, 3, 2, "solid"), 6)
+        self.assertEqual(pe.collision_get(document, 2, 1), "solid")
+        self.assertEqual(pe.collision_fill(document, 1, 0, 1, 1, "hazard"), 1)
+        self.assertEqual(pe.collision_clear(document, 0, 1, 2, 1), 2)
+        door = pe.door_create(document, 0, 0, 8, 16, "Project gate", "portal", "left")
+        transition = pe.transition_create(
+            document, door["id"], "mzm", "Brinstar", 3, 0, 16, 16)
+        with self.assertRaisesRegex(ValueError, "linked transition"):
+            pe.door_delete(document, door["id"])
+        changed = pe.transition_update(document, transition["id"], spawn_x=24)
+        self.assertEqual(changed["spawn_x"], 24)
+        path = pe.save(self.root, document)
+        restored = pe.load(self.root, "aria", "0", 8, 64, 32)
+        self.assertEqual(len(restored["collision"]["cells"]), 4)
+        self.assertEqual(restored["doors"], [door])
+        self.assertEqual(restored["transitions"][0]["spawn_x"], 24)
+        self.assertIn(pe.SCHEMA, path.read_text())
+        pe.transition_delete(restored, transition["id"])
+        pe.door_delete(restored, door["id"])
+        self.assertEqual((restored["doors"], restored["transitions"]), ([], []))
+
+    def test_geometry_rejects_invalid_bounds_types_and_duplicate_links(self):
+        document = pe.load(self.root, "mzm", "Brinstar", 1, 64, 32)
+        with self.assertRaises(ValueError):
+            pe.collision_fill(document, 4, 0, 1, 1, "solid")
+        with self.assertRaises(ValueError):
+            pe.collision_fill(document, 0, 0, 1, 1, "invented")
+        with self.assertRaises(ValueError):
+            pe.door_create(document, 8, 0, 16, 16, "Bad", "normal", "left")
+        door = pe.door_create(document, 0, 0, 16, 16, "Door", "normal", "left")
+        pe.transition_create(document, door["id"], "aria", "0", 1, 0, 0, 0)
+        with self.assertRaisesRegex(ValueError, "already linked"):
+            pe.transition_create(document, door["id"], "aria", "0", 2, 0, 0, 0)
 
 
 if __name__ == "__main__":

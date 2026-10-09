@@ -27,6 +27,10 @@ typedef struct {
     gint preview_item_id; /* Exact authored Aria item identifier; -1 if absent. */
 } RoomAnnotation;
 
+typedef struct {
+    guint x, y, resolution, type;
+} ProjectCollisionCell;
+
 struct NativeWorkspace {
     /* The instance returned by native_workspace_new() manages documents. */
     GPtrArray *documents;
@@ -79,6 +83,7 @@ struct NativeWorkspace {
     unsigned char *collision_pixels;
     gboolean overlays[OVERLAY_COUNT];
     GArray *annotations;
+    GArray *project_collision;
     GHashTable *entity_sprite_cache; /* Private PNG surfaces; includes negative hits. */
     guint selected_annotation;
     gboolean annotation_selected;
@@ -171,6 +176,7 @@ static void document_destroy(NativeWorkspace *doc)
     discard_collision(doc);
     if (doc->entity_sprite_cache) g_hash_table_destroy(doc->entity_sprite_cache);
     if (doc->annotations) g_array_free(doc->annotations, TRUE);
+    if (doc->project_collision) g_array_free(doc->project_collision, TRUE);
     free(doc->undo);
     free(doc->redo);
     free(doc->map);
@@ -393,13 +399,21 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
 {
     if (!doc->ready || !doc->project_area || doc->closing) return FALSE;
     gchar room[16], width[16], height[16];
-    const char *command = !strcmp(action, "list-previews") || !strcmp(action, "list") ?
-        "entity-list" : !strcmp(action, "catalog") ? "entity-catalog" :
-        !strcmp(action, "item-settings") ? "entity-item-settings" :
-        !strcmp(action, "create") ? "entity-create" :
-        !strcmp(action, "move") ? "entity-move" :
-        !strcmp(action, "delete") ? "entity-delete" :
-        !strcmp(action, "assign") ? "entity-assign" : NULL;
+    const char *command = NULL;
+    if (!strcmp(action, "list-previews") || !strcmp(action, "list"))
+        command = "entity-list";
+    else if (!strcmp(action, "catalog")) command = "entity-catalog";
+    else if (!strcmp(action, "item-settings")) command = "entity-item-settings";
+    else if (!strcmp(action, "create")) command = "entity-create";
+    else if (!strcmp(action, "move")) command = "entity-move";
+    else if (!strcmp(action, "delete")) command = "entity-delete";
+    else if (!strcmp(action, "assign")) command = "entity-assign";
+    else if (!strcmp(action, "collision-list") ||
+             !strcmp(action, "collision-set") ||
+             !strcmp(action, "collision-clear") ||
+             !strcmp(action, "door-list") ||
+             !strcmp(action, "door-create") ||
+             !strcmp(action, "door-delete")) command = action;
     if (!command) return FALSE;
     gchar command_option[64];
     snprintf(command_option, sizeof(command_option), "--command=%s", command);
@@ -417,13 +431,15 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     }
     if (!strcmp(action, "list-previews"))
         g_ptr_array_add(args, (gpointer)"--preview=true");
-    if (!strcmp(action, "delete"))
+    if (!strcmp(action, "delete") || !strcmp(action, "door-delete") ||
+        !strcmp(action, "collision-clear"))
         g_ptr_array_add(args, (gpointer)"--confirm=true");
     if (options)
         for (guint i = 0; options[i]; ++i) g_ptr_array_add(args, (gpointer)options[i]);
     g_ptr_array_add(args, (gpointer)(
         !strcmp(action, "list-previews") || !strcmp(action, "list") ||
-        !strcmp(action, "catalog") || !strcmp(action, "item-settings") ?
+        !strcmp(action, "catalog") || !strcmp(action, "item-settings") ||
+        !strcmp(action, "collision-list") || !strcmp(action, "door-list") ?
         "--format=tsv" : "--format=text"));
     g_ptr_array_add(args, NULL);
     gchar *out = NULL, *err = NULL;
@@ -434,7 +450,7 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
                                      &out, &err, &status, &error);
     gboolean success = launched && g_spawn_check_wait_status(status, NULL);
     if (!success) {
-        gchar *diagnostic = g_strdup_printf("Project entities: %.480s",
+        gchar *diagnostic = g_strdup_printf("Project room data: %.480s",
             error ? error->message : err && *err ? err : "project validator rejected change");
         message(doc, diagnostic);
         g_free(diagnostic);
@@ -445,6 +461,111 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     g_clear_error(&error);
     g_ptr_array_free(args, TRUE);
     return success;
+}
+
+static guint project_collision_type(const char *name)
+{
+    if (!strcmp(name, "solid")) return 1;
+    if (!strcmp(name, "one_way")) return 2;
+    if (!strcmp(name, "hazard")) return 3;
+    if (!strcmp(name, "slope_up")) return 4;
+    if (!strcmp(name, "slope_down")) return 5;
+    return 0;
+}
+
+static guint project_load_collision(NativeWorkspace *doc)
+{
+    if (!doc->project_collision)
+        doc->project_collision = g_array_new(FALSE, FALSE, sizeof(ProjectCollisionCell));
+    else g_array_set_size(doc->project_collision, 0);
+    gchar *output = NULL;
+    if (!project_command(doc, "collision-list", NULL, &output)) return 0;
+    gchar **lines = g_strsplit(output ? output : "", "\n", -1);
+    for (guint i = 0; lines[i] && doc->project_collision->len < 24576; ++i) {
+        if (!lines[i][0]) continue;
+        gchar **fields = g_strsplit(lines[i], "\t", 4);
+        ProjectCollisionCell cell = {0};
+        guint type = g_strv_length(fields) == 4 ? project_collision_type(fields[2]) : 0;
+        if (type && parse_unsigned_field(fields[0], &cell.x) &&
+            parse_unsigned_field(fields[1], &cell.y) &&
+            parse_unsigned_field(fields[3], &cell.resolution) &&
+            (cell.resolution == 8 || cell.resolution == 16)) {
+            cell.type = type;
+            g_array_append_val(doc->project_collision, cell);
+        }
+        g_strfreev(fields);
+    }
+    g_strfreev(lines);
+    g_free(output);
+    if (doc->project_collision->len && doc->overlay_buttons[OVERLAY_COLLISION])
+        gtk_toggle_button_set_active(
+            GTK_TOGGLE_BUTTON(doc->overlay_buttons[OVERLAY_COLLISION]), TRUE);
+    return doc->project_collision->len;
+}
+
+static guint project_load_doors(NativeWorkspace *doc)
+{
+    gchar *output = NULL;
+    if (!project_command(doc, "door-list", NULL, &output)) return 0;
+    guint count = 0;
+    gchar **lines = g_strsplit(output ? output : "", "\n", -1);
+    for (guint i = 0; lines[i] && count < 128; ++i) {
+        if (!lines[i][0]) continue;
+        gchar **fields = g_strsplit(lines[i], "\t", 8);
+        RoomAnnotation item = {0};
+        guint x = 0, y = 0;
+        if (g_strv_length(fields) == 8 &&
+            parse_unsigned_field(fields[0], &item.index) && item.index &&
+            parse_unsigned_field(fields[1], &x) &&
+            parse_unsigned_field(fields[2], &y) &&
+            parse_unsigned_field(fields[3], &item.width) && item.width &&
+            parse_unsigned_field(fields[4], &item.height) && item.height &&
+            strlen(fields[5]) < sizeof(item.label) &&
+            strlen(fields[6]) < 48 && strlen(fields[7]) < sizeof(item.variant)) {
+            item.kind = OVERLAY_DOORS;
+            item.project_owned = TRUE;
+            item.x = (int)x;
+            item.y = (int)y;
+            item.preview_item_id = -1;
+            g_strlcpy(item.label, fields[5], sizeof(item.label));
+            g_strlcpy(item.variant, fields[7], sizeof(item.variant));
+            g_snprintf(item.native_type, sizeof(item.native_type),
+                       "project-door:%s", fields[6]);
+            g_snprintf(item.details, sizeof(item.details),
+                       "Private project door; type=%s; facing=%s; no engine adapter.",
+                       fields[6], fields[7]);
+            g_array_append_val(doc->annotations, item);
+            GtkWidget *row = gtk_label_new(NULL);
+            gchar *summary = g_strdup_printf(
+                "[PROJECT] DOOR #%u — %s\n(%u,%u), %ux%u | %s / %s | not engine-ready",
+                item.index, item.label, x, y, item.width, item.height,
+                fields[6], fields[7]);
+            gtk_label_set_text(GTK_LABEL(row), summary);
+            gtk_label_set_xalign(GTK_LABEL(row), 0);
+            gtk_label_set_wrap(GTK_LABEL(row), TRUE);
+            gtk_label_set_selectable(GTK_LABEL(row), TRUE);
+            gtk_widget_set_margin_start(row, 8);
+            gtk_widget_set_margin_bottom(row, 6);
+            g_object_set_data(G_OBJECT(row), "mv-annotation-index",
+                              GUINT_TO_POINTER(doc->annotations->len));
+            GtkGesture *context = gtk_gesture_click_new();
+            gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(context),
+                                          GDK_BUTTON_SECONDARY);
+            gtk_widget_add_controller(row, GTK_EVENT_CONTROLLER(context));
+            g_signal_connect(context, "pressed",
+                             G_CALLBACK(annotation_list_context_pressed), doc);
+            gtk_list_box_append(GTK_LIST_BOX(doc->annotations_list), row);
+            if (doc->overlay_buttons[OVERLAY_DOORS])
+                gtk_toggle_button_set_active(
+                    GTK_TOGGLE_BUTTON(doc->overlay_buttons[OVERLAY_DOORS]), TRUE);
+            g_free(summary);
+            ++count;
+        }
+        g_strfreev(fields);
+    }
+    g_strfreev(lines);
+    g_free(output);
+    return count;
 }
 
 static void project_load(NativeWorkspace *doc)
@@ -512,11 +633,14 @@ static void project_load(NativeWorkspace *doc)
         }
         g_strfreev(fields);
     }
-    if (doc->annotations_status && projects) {
+    guint collision_cells = project_load_collision(doc);
+    guint doors = project_load_doors(doc);
+    if (doc->annotations_status && (projects || collision_cells || doors)) {
         const char *previous = gtk_label_get_text(GTK_LABEL(doc->annotations_status));
         gchar *status = g_strdup_printf(
-            "%s  + %u private project entity/ies (saved separately; not playable).",
-            previous, projects);
+            "%s  + %u project entities, %u collision cells and %u doors "
+            "(one room document; not playable).",
+            previous, projects, collision_cells, doors);
         gtk_label_set_text(GTK_LABEL(doc->annotations_status), status);
         g_free(status);
     }
@@ -1073,6 +1197,57 @@ static void project_context_add(GtkWidget *layout, NativeWorkspace *doc,
     gtk_box_append(GTK_BOX(layout), button);
 }
 
+static void project_collision_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    guint x = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-collision-x"));
+    guint y = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-collision-y"));
+    const char *type = g_object_get_data(G_OBJECT(button), "mv-collision-type");
+    gchar sx[16], sy[16];
+    snprintf(sx, sizeof(sx), "%u", x);
+    snprintf(sy, sizeof(sy), "%u", y);
+    const char *const set_options[] = {"--x", sx, "--y", sy, "--type", type, NULL};
+    const char *const clear_options[] = {"--x", sx, "--y", sy, NULL};
+    gboolean clear = !strcmp(type, "empty");
+    project_popover_defer_close(doc);
+    if (project_command(doc, clear ? "collision-clear" : "collision-set",
+                        clear ? clear_options : set_options, NULL)) {
+        project_reload(doc);
+        message(doc, clear ? "Project collision cell cleared. Native collision unchanged."
+                           : "Project collision cell saved. No engine adapter exists yet.");
+    }
+}
+
+static void project_collision_context_add(GtkWidget *layout, NativeWorkspace *doc,
+                                          const char *label, guint x, guint y,
+                                          const char *type)
+{
+    GtkWidget *button = gtk_button_new_with_label(label);
+    g_object_set_data(G_OBJECT(button), "mv-collision-x", GUINT_TO_POINTER(x));
+    g_object_set_data(G_OBJECT(button), "mv-collision-y", GUINT_TO_POINTER(y));
+    g_object_set_data(G_OBJECT(button), "mv-collision-type", (gpointer)type);
+    g_signal_connect(button, "clicked", G_CALLBACK(project_collision_clicked), doc);
+    gtk_box_append(GTK_BOX(layout), button);
+}
+
+static void project_door_create_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    int x = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "mv-project-x")) - 1;
+    int y = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "mv-project-y")) - 1;
+    gchar sx[16], sy[16];
+    snprintf(sx, sizeof(sx), "%d", x);
+    snprintf(sy, sizeof(sy), "%d", y);
+    const char *const options[] = {
+        "--x", sx, "--y", sy, "--door-width", "16", "--door-height", "16",
+        "--label", "Project door", "--door-type", "normal", "--facing", "left", NULL};
+    project_popover_defer_close(doc);
+    if (project_command(doc, "door-create", options, NULL)) {
+        project_reload(doc);
+        message(doc, "Project door created. Configure/link it through validated room data.");
+    }
+}
+
 static void project_context_empty(NativeWorkspace *doc, GtkWidget *canvas,
                                   double x, double y)
 {
@@ -1087,6 +1262,22 @@ static void project_context_empty(NativeWorkspace *doc, GtkWidget *canvas,
     project_context_add(layout, doc, "Create project enemy here...", px, py, OVERLAY_ENEMIES);
     project_context_add(layout, doc, "Create project item here...", px, py, OVERLAY_ITEMS);
     project_context_add(layout, doc, "Create project object here...", px, py, OVERLAY_OBJECTS);
+    GtkWidget *door = gtk_button_new_with_label("Create project door here");
+    g_object_set_data(G_OBJECT(door), "mv-project-x", GINT_TO_POINTER(px + 1));
+    g_object_set_data(G_OBJECT(door), "mv-project-y", GINT_TO_POINTER(py + 1));
+    g_signal_connect(door, "clicked", G_CALLBACK(project_door_create_clicked), doc);
+    gtk_box_append(GTK_BOX(layout), door);
+    guint resolution = doc->project_aria ? 8u : 16u;
+    guint collision_x = (guint)(x / (resolution * doc->scale));
+    guint collision_y = (guint)(y / (resolution * doc->scale));
+    project_collision_context_add(layout, doc, "Set project collision: solid",
+                                  collision_x, collision_y, "solid");
+    project_collision_context_add(layout, doc, "Set project collision: one-way",
+                                  collision_x, collision_y, "one_way");
+    project_collision_context_add(layout, doc, "Set project collision: hazard",
+                                  collision_x, collision_y, "hazard");
+    project_collision_context_add(layout, doc, "Clear project collision cell",
+                                  collision_x, collision_y, "empty");
     gtk_popover_set_child(GTK_POPOVER(popover), layout);
     gtk_widget_set_parent(popover, canvas);
     GdkRectangle pointer = {(int)x, (int)y, 1, 1};
@@ -1123,6 +1314,7 @@ static void project_assign_native_clicked(GtkButton *button, gpointer userdata)
 typedef struct {
     NativeWorkspace *doc;
     guint id;
+    gboolean door;
 } ProjectDelete;
 
 static gboolean project_delete_idle(gpointer userdata)
@@ -1134,9 +1326,12 @@ static gboolean project_delete_idle(gpointer userdata)
         snprintf(id, sizeof(id), "%u", request->id);
         const char *const options[] = {"--id", id, NULL};
         annotation_popup_close(doc);
-        if (project_command(doc, "delete", options, NULL)) {
+        if (project_command(doc, request->door ? "door-delete" : "delete",
+                            options, NULL)) {
             project_reload(doc);
-            message(doc, "Project entity deleted; original ROM annotations unchanged.");
+            message(doc, request->door ?
+                "Project door deleted; native doors and transitions unchanged." :
+                "Project entity deleted; original ROM annotations unchanged.");
         }
     }
     document_unref(doc);
@@ -1152,6 +1347,7 @@ static void project_delete_clicked(GtkButton *button, gpointer userdata)
     ProjectDelete *request = g_new0(ProjectDelete, 1);
     request->doc = document_ref(doc);
     request->id = item->index;
+    request->door = item->kind == OVERLAY_DOORS;
     /* Do not destroy the right-click GtkPopover during GtkButton::clicked. */
     g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_delete_idle, request, NULL);
 }
@@ -1162,10 +1358,11 @@ static gint project_hit(NativeWorkspace *doc, double x, double y)
     for (guint cursor = doc->annotations->len; cursor > 0; --cursor) {
         guint index = cursor - 1;
         const RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation, index);
-        if (!item->project_owned || !doc->overlays[item->kind]) continue;
+        if (!item->project_owned || item->kind == OVERLAY_DOORS ||
+            !doc->overlays[item->kind]) continue;
         double px = item->x * doc->scale, py = item->y * doc->scale;
-        if (x >= px && x < px + 16 * doc->scale &&
-            y >= py && y < py + 16 * doc->scale) return (gint)index;
+        if (x >= px && x < px + item->width * doc->scale &&
+            y >= py && y < py + item->height * doc->scale) return (gint)index;
     }
     return -1;
 }
@@ -1210,9 +1407,13 @@ static void annotation_window_open(NativeWorkspace *doc,
 
     GtkWidget *layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     GtkWidget *heading = gtk_label_new(title);
-    GtkWidget *notice = gtk_label_new(editor
-        ? "Native source record. Fields are read-only until this type has a validated project encoder."
-        : "Decoded native source information. No ROM or project data is modified.");
+    GtkWidget *notice = gtk_label_new(item->project_owned
+        ? (editor ?
+           "Project-owned record. This summary is read-only; validated property and transition commands are available through the shared headless backend." :
+           "Project-owned room data. It is stored separately and is not executable without an engine adapter.")
+        : (editor ?
+           "Native source record. Fields are read-only until this type has a validated project encoder." :
+           "Decoded native source information. No ROM or project data is modified."));
     GtkWidget *grid = gtk_grid_new();
     GtkWidget *details_heading = gtk_label_new("Decoded details");
     GtkWidget *details = gtk_label_new(item->details);
@@ -1242,7 +1443,7 @@ static void annotation_window_open(NativeWorkspace *doc,
     g_free(source_index);
     g_free(geometry);
 
-    if (editor) {
+    if (editor && !item->project_owned) {
         GtkWidget *apply = gtk_button_new_with_label("Apply project override");
         gtk_widget_set_sensitive(apply, FALSE);
         gtk_widget_set_tooltip_text(apply,
@@ -1356,14 +1557,18 @@ static void annotation_context_show(NativeWorkspace *doc, GtkWidget *relative,
     gtk_box_append(GTK_BOX(layout), annotation_menu_button(
         doc, "Locate in Room data", array_index, G_CALLBACK(annotation_locate_clicked)));
     if (item->project_owned) {
+        if (item->kind >= OVERLAY_ENEMIES && item->kind <= OVERLAY_OBJECTS) {
+            gtk_box_append(GTK_BOX(layout), annotation_menu_button(
+                doc, "Choose native enemy / item / object type…", array_index,
+                G_CALLBACK(project_assign_native_clicked)));
+            gtk_box_append(GTK_BOX(layout), annotation_menu_button(
+                doc, "Move project entity (click destination)", array_index,
+                G_CALLBACK(project_move_start_clicked)));
+        }
         gtk_box_append(GTK_BOX(layout), annotation_menu_button(
-            doc, "Choose native enemy / item / object type…", array_index,
-            G_CALLBACK(project_assign_native_clicked)));
-        gtk_box_append(GTK_BOX(layout), annotation_menu_button(
-            doc, "Move project entity (click destination)", array_index,
-            G_CALLBACK(project_move_start_clicked)));
-        gtk_box_append(GTK_BOX(layout), annotation_menu_button(
-            doc, "Delete project entity", array_index,
+            doc, item->kind == OVERLAY_DOORS ? "Delete project door" :
+                                               "Delete project entity",
+            array_index,
             G_CALLBACK(project_delete_clicked)));
     }
     g_free(editor_label);
@@ -1563,7 +1768,7 @@ static gchar *room_sprite_path(NativeWorkspace *doc, const RoomAnnotation *item)
     }
     guint subtype = 0;
     gint item_id = -1;
-    /* Private project items already have an exact ID in schema-v1 settings. */
+    /* Private project items already have an exact ID in unified room settings. */
     if (item->project_owned) {
         const char *colon = strrchr(native, ':');
         if (!colon || strlen(colon + 1) != 2 ||
@@ -1705,6 +1910,41 @@ static GtkWidget *room_color_legend(void)
     return legend;
 }
 
+static void draw_project_collision(NativeWorkspace *doc, cairo_t *cr)
+{
+    if (!doc->project_collision || !doc->overlays[OVERLAY_COLLISION]) return;
+    for (guint i = 0; i < doc->project_collision->len; ++i) {
+        const ProjectCollisionCell *cell = &g_array_index(
+            doc->project_collision, ProjectCollisionCell, i);
+        double size = cell->resolution * doc->scale;
+        double x = cell->x * size;
+        double y = cell->y * size;
+        double red = 0.15, green = 0.8, blue = 1.0;
+        if (cell->type == 2) { red = 0.2; green = 1.0; blue = 0.45; }
+        else if (cell->type == 3) { red = 1.0; green = 0.2; blue = 0.2; }
+        else if (cell->type >= 4) { red = 1.0; green = 0.62; blue = 0.1; }
+        cairo_save(cr);
+        cairo_rectangle(cr, x + 0.5, y + 0.5, MAX(2.0, size - 1), MAX(2.0, size - 1));
+        cairo_set_source_rgba(cr, red, green, blue, 0.46);
+        cairo_fill_preserve(cr);
+        cairo_set_source_rgba(cr, red, green, blue, 0.96);
+        cairo_set_line_width(cr, 1.5);
+        const double dash[] = {3.0, 2.0};
+        cairo_set_dash(cr, dash, 2, 0);
+        cairo_stroke(cr);
+        if (cell->type == 2) {
+            cairo_move_to(cr, x + 1, y + 2);
+            cairo_line_to(cr, x + size - 1, y + 2);
+            cairo_stroke(cr);
+        } else if (cell->type == 4 || cell->type == 5) {
+            cairo_move_to(cr, x + 1, cell->type == 4 ? y + size - 1 : y + 1);
+            cairo_line_to(cr, x + size - 1, cell->type == 4 ? y + 1 : y + size - 1);
+            cairo_stroke(cr);
+        }
+        cairo_restore(cr);
+    }
+}
+
 static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
 {
     if (!doc->annotations) return;
@@ -1825,6 +2065,7 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
         cairo_paint_with_alpha(cr, 0.58);
         cairo_restore(cr);
     }
+    draw_project_collision(doc, cr);
     draw_annotations(doc, cr);
     if (doc->grid_visible) {
         cairo_set_source_rgba(cr, 1, 1, 1, 0.21);

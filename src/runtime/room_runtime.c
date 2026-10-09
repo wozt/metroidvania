@@ -69,6 +69,29 @@ static float clampf(float x, float low, float high) {
     return x < low ? low : x > high ? high : x;
 }
 
+/* PATCH_0137_PLATFORM_PHYSICS */
+/* First platformer physics approximation, not original MZM constants.
+ * Collision code 1 is explicitly project-authored solid geometry only. */
+static float move_axis(const Room *room, float start, float other,
+                       float amount, float w, float h, bool vertical,
+                       bool *hit) {
+    float position = start;
+    *hit = false;
+    /* At most one world pixel of travel per collision probe to prevent
+     * tunneling through 16-pixel solids even on long frames. */
+    while (amount != 0.f) {
+        float step = clampf(amount, -1.f, 1.f);
+        float candidate = position + step;
+        bool collision = vertical ? blocked(room, other, candidate, w, h) :
+                                    blocked(room, candidate, other, w, h);
+        if (collision) { *hit = true; break; }
+        position = candidate;
+        amount -= step;
+        if (amount < 0.0001f && amount > -0.0001f) amount = 0.f;
+    }
+    return position;
+}
+
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
@@ -106,7 +129,12 @@ int main(int argc, char **argv) {
         if (!texture) { fprintf(stderr,"Texture: %s\n",SDL_GetError());goto cleanup; }
         SDL_SetTextureScaleMode(texture,SDL_SCALEMODE_NEAREST);
     }
-    float px=16,py=16, pw=12,ph=16; const float speed=110.f;
+    float px=16,py=16, pw=12,ph=16;
+    /* Initial gameplay tuning, NOT confirmed Zero Mission physics. */
+    const float run_speed=115.f, gravity=650.f, jump_speed=265.f;
+    const float terminal_speed=400.f;
+    float vy=0.f;
+    bool grounded=false;
     /* Search for a nonblocked spawn; this is a test avatar, not extracted Samus. */
     bool spawn=false;
     for (int y=0;y<=room->height-16 && !spawn;y+=16)
@@ -115,13 +143,20 @@ int main(int argc, char **argv) {
                 px=(float)x;py=(float)y;spawn=true;
             }
     if (!spawn) { fprintf(stderr,"No free avatar spawn found\n"); goto cleanup; }
-    printf("Controls: arrows/WASD = move test avatar; Escape = exit. No gravity/combat yet.\n");
+    printf("Controls: Left/Right or A/D = move; Space/Up/W = jump; Escape = exit. ");
+    printf("Experimental platformer physics; only project code-1 solids block.\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;
+    float accumulator=0.f;
+    const float fixed_step=1.f/120.f;
+    bool jump_queued=false;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT ||
                 (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) running=false;
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                (event.key.key == SDLK_SPACE || event.key.key == SDLK_UP ||
+                 event.key.key == SDLK_W)) jump_queued=true;
         }
         Uint64 current=SDL_GetTicks();
         float dt=clampf((float)(current-previous)/1000.f,0.f,0.05f);
@@ -129,12 +164,24 @@ int main(int argc, char **argv) {
         const bool *keys=SDL_GetKeyboardState(NULL);
         float dx=((keys[SDL_SCANCODE_RIGHT]||keys[SDL_SCANCODE_D]) ? 1.f:0.f)-
                  ((keys[SDL_SCANCODE_LEFT]||keys[SDL_SCANCODE_A]) ? 1.f:0.f);
-        float dy=((keys[SDL_SCANCODE_DOWN]||keys[SDL_SCANCODE_S]) ? 1.f:0.f)-
-                 ((keys[SDL_SCANCODE_UP]||keys[SDL_SCANCODE_W]) ? 1.f:0.f);
-        if (dx && dy) { dx*=0.70710678f;dy*=0.70710678f; }
-        float nx=px+dx*speed*dt,ny=py+dy*speed*dt;
-        if (!blocked(room,nx,py,pw,ph)) px=nx;
-        if (!blocked(room,px,ny,pw,ph)) py=ny;
+        accumulator += dt;
+        while (accumulator >= fixed_step) {
+            bool hit=false;
+            grounded=blocked(room,px,py+1.f,pw,ph);
+            if (jump_queued && grounded) {
+                vy=-jump_speed;
+                grounded=false;
+            }
+            jump_queued=false;
+            px=move_axis(room,px,py,dx*run_speed*fixed_step,pw,ph,false,&hit);
+            vy=clampf(vy+gravity*fixed_step,-jump_speed,terminal_speed);
+            py=move_axis(room,py,px,vy*fixed_step,pw,ph,true,&hit);
+            if (hit) {
+                if (vy>0.f) grounded=true;
+                vy=0.f;
+            }
+            accumulator-=fixed_step;
+        }
         int ow=0,oh=0;
         if (!SDL_GetRenderOutputSize(renderer,&ow,&oh) || ow<=0 || oh<=0) continue;
         float scale=(float)ow/320.f;

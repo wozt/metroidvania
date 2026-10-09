@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 from scripts import mzm_room_render as native
 from scripts import project_room_entities as rooms
 from scripts import project_room_package as package
+from scripts import native_source_overlay
 
 
 def main() -> int:
@@ -61,6 +62,14 @@ def main() -> int:
                                   "Demo exit", "normal", "left")
         rooms.save(root, doc)
         result = package.export(root, doc)
+        native_path = None
+        native_counts = None
+        try:
+            native_path, native_counts = native_source_overlay.write_overlay(
+                ROOT, args.area, args.room, width, height)
+        except (ValueError, OSError, KeyError, IndexError) as native_exc:
+            # The graphical preview can still work without decoded Clipdata.
+            print("Native source overlays unavailable:", native_exc)
     except (ValueError, OSError, KeyError, IndexError) as exc:
         parser.error(str(exc))
     print("Private native-sized viewer interchange:", result["package_dir"])
@@ -79,13 +88,16 @@ def main() -> int:
     else:
         print("NATIVE PREVIEW: no invented collision, entity or door overlays.")
         print("BG1/BG2 are partial separate previews: this is NOT a full GBA composite.")
+    cmd = [str(ROOT / "build/fusion_room_package_viewer")]
+    if native_path:
+        cmd.extend(["--native-source", str(native_path)])
+        print("Native Clipdata and annotation source overlay:", native_counts)
+    cmd.append(str(Path(result["package_dir"]) / "preview.tsv"))
     print("Run from repository root:")
-    print("./build/fusion_room_package_viewer", Path(result["package_dir"]) / "preview.tsv")
+    print(" ".join(cmd))
     if args.launch:
         try:
-            return subprocess.run(
-                [str(ROOT / "build/fusion_room_package_viewer"),
-                 str(Path(result["package_dir"]) / "preview.tsv")],
+            return subprocess.run(cmd,
                 cwd=ROOT, check=False).returncode
         except OSError as exc:
             parser.error(str(exc))

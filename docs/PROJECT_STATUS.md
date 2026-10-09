@@ -1227,3 +1227,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   BG priorities, scrolling, BG0/BG3, color effects, sprites, common graphics
   and native entity/door placement are not reconstructed and not claimed.
 - ROMs and derived BMP pixels are never added to committed project exports.
+
+
+## Patch 0126b - SDL3 native overlay parity
+
+- The SDL3 room viewer accepts a separate, private, opt-in `--native-source`
+  sidecar generated from original MZM Clipdata and native annotations. Its
+  identity and geometry must match the project preview; a mismatch is rejected.
+- Pressing C shows both authored collision and real native Clipdata diagnostic
+  rectangles; M shows real native annotation categories and authored markers.
+  Both overlays now use translucent fills and colored outlines matching GTK4.
+- Raw Clipdata IDs are preserved and colored diagnostically. Red does not imply
+  all native cells share the `solid` game behavior. Native metadata is never
+  bundled into room.json or the content-addressed project preview.
+- If original data are unavailable or the native collision geometry does not
+  align with BG1, the generator reports the limitation and does not invent
+  replacement geometry. Exact full native gameplay rendering remains pending.

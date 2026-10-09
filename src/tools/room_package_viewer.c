@@ -81,6 +81,58 @@ fail:
     return false;
 }
 
+/* PATCH_0126B_NATIVE_SOURCE: real Clipdata/annotation source overlay is kept
+ * separate from the stable project export, with its own strict room identity. */
+static bool load_native_source(const char *path, Preview *preview, size_t *native_count)
+{
+    FILE *file = fopen(path, "rb");
+    char line[256], world[16], area[40], extra;
+    int version, room, width, height;
+    bool finished = false;
+    size_t start = preview->count;
+    if (!file) return false;
+    if (fseek(file, 0, SEEK_END) != 0 || ftell(file) < 0 ||
+        ftell(file) > MAX_PREVIEW_BYTES || fseek(file, 0, SEEK_SET) != 0)
+        goto fail;
+    if (!fgets(line, sizeof(line), file) || !strchr(line, '\n') ||
+        sscanf(line, "MVROOM-SOURCE\t%d\t%15[^\t]\t%39[^\t]\t%d\t%d\t%d %c",
+               &version, world, area, &room, &width, &height, &extra) != 6 ||
+        version != 1 || strcmp(world, preview->world) ||
+        strcmp(area, preview->area) || room != preview->room ||
+        width != preview->width || height != preview->height)
+        goto fail;
+    while (fgets(line, sizeof(line), file)) {
+        Mark mark = {0};
+        if (!strchr(line, '\n') && !feof(file)) goto fail;
+        if (!strcmp(line, "END\n") || !strcmp(line, "END")) {
+            finished = true;
+            break;
+        }
+        if (preview->count >= MAX_MARKS ||
+            sscanf(line, "%c\t%d\t%d\t%d\t%d\t%d %c",
+                   &mark.kind, &mark.x, &mark.y, &mark.width,
+                   &mark.height, &mark.code, &extra) != 6 ||
+            !(mark.kind == 'N' || mark.kind == 'A') ||
+            mark.x < 0 || mark.y < 0 || mark.width <= 0 || mark.height <= 0 ||
+            mark.x > preview->width - mark.width ||
+            mark.y > preview->height - mark.height ||
+            (mark.kind == 'N' &&
+             (mark.code < 1 || mark.code > 65535 || mark.width != 16 ||
+              mark.height != 16 || mark.x % 16 || mark.y % 16)) ||
+            (mark.kind == 'A' && (mark.code < 1 || mark.code > 7)))
+            goto fail;
+        preview->marks[preview->count++] = mark;
+    }
+    if (!finished || fgetc(file) != EOF) goto fail;
+    fclose(file);
+    *native_count = preview->count - start;
+    return true;
+fail:
+    fclose(file);
+    preview->count = start;
+    return false;
+}
+
 /* PATCH_0125_LOCAL_NATIVE_BG: strict opt-in/automatic LOCAL MZM BMP input.
  * Images NEVER enter room.json/preview.tsv; opaque BG1/BG2 are shown separately.
  * The extracted previews are partial and may not match a project-only room. */
@@ -88,6 +140,7 @@ fail:
 
 typedef struct {
     const char *preview_path, *bg1_path, *bg2_path, *composite_path;
+    const char *native_source_path;
     bool check_only, auto_background;
 } Arguments;
 
@@ -95,6 +148,7 @@ static void usage(const char *program)
 {
     fprintf(stderr, "Usage: %s [--check] [--no-auto-bg] "
             "[--bg1 path.bmp] [--bg2 path.bmp] [--composite path.bmp] "
+            "[--native-source path.tsv] "
             "path/to/preview.tsv\n"
             "Only local MZM BG1/BG2 partial ROM previews, not packaged assets or gameplay.\n",
             program);
@@ -110,6 +164,10 @@ static bool parse_arguments(int argc, char **argv, Arguments *a)
             a->check_only = true;
         } else if (!strcmp(value, "--no-auto-bg")) {
             a->auto_background = false;
+        } else if (!strcmp(value, "--native-source")) {
+            if (a->native_source_path || i + 1 >= argc || argv[i + 1][0] == '-')
+                return false;
+            a->native_source_path = argv[++i];
         } else if (!strcmp(value, "--bg1") || !strcmp(value, "--bg2") ||
                    !strcmp(value, "--composite")) {
             const char **slot = !strcmp(value, "--bg1") ? &a->bg1_path :
@@ -207,20 +265,63 @@ static void update_title(SDL_Window *window, int active, bool collisions, bool m
     SDL_SetWindowTitle(window, title);
 }
 
-static void set_mark_color(SDL_Renderer *renderer, const Mark *mark, bool background)
+/* GTK room_legend_draw and draw_project_collision color values, rounded to 8 bit. */
+static void mark_color(const Mark *mark, unsigned char *r,
+                       unsigned char *g, unsigned char *b)
 {
-    unsigned char opacity = background && mark->kind == 'C' ? 130 : 255;
-    switch (mark->kind == 'C' ? mark->code : mark->kind == 'D' ? 8 :
-            mark->kind == 'E' ? 9 : 10) {
-    case 1: SDL_SetRenderDrawColor(renderer, 207, 75, 75, opacity); break;
-    case 2: SDL_SetRenderDrawColor(renderer, 81, 209, 126, opacity); break;
-    case 3: SDL_SetRenderDrawColor(renderer, 233, 110, 32, opacity); break;
-    case 4: case 5: SDL_SetRenderDrawColor(renderer, 221, 164, 80, opacity); break;
-    case 6: SDL_SetRenderDrawColor(renderer, 71, 125, 220, opacity); break;
-    case 7: SDL_SetRenderDrawColor(renderer, 118, 182, 217, opacity); break;
-    case 8: SDL_SetRenderDrawColor(renderer, 209, 144, 233, opacity); break;
-    case 9: SDL_SetRenderDrawColor(renderer, 238, 225, 95, opacity); break;
-    default: SDL_SetRenderDrawColor(renderer, 181, 186, 206, opacity); break;
+    if (mark->kind == 'N') {
+        /* The native collision preview classifies raw Clipdata for DIAGNOSTICS.
+         * It does not pretend every red raw Clipdata type means solid. */
+        if (mark->code >= 6 && mark->code <= 11) {
+            *r = 245; *g = 178; *b = 52;
+        } else if (mark->code >= 33 && mark->code <= 37) {
+            *r = 185; *g = 88; *b = 245;
+        } else { *r = 235; *g = 55; *b = 75; }
+    } else if (mark->kind == 'C') {
+        switch (mark->code) {
+        case 2: *r = 51; *g = 255; *b = 115; break;  /* Platform */
+        case 4: case 5: *r = 255; *g = 158; *b = 26; break; /* Slopes */
+        case 6: *r = 26; *g = 143; *b = 255; break;  /* Water */
+        default: *r = 255; *g = 46; *b = 46; break; /* Wall/hazard */
+        }
+    } else {
+        int role = mark->kind == 'A' ? mark->code :
+                   mark->kind == 'D' ? 4 :
+                   mark->kind == 'E' ? 2 :
+                   mark->kind == 'V' ? 5 : 7;
+        switch (role) {
+        case 1: *r = 255; *g = 77; *b = 77; break; /* Enemy */
+        case 2: *r = 255; *g = 209; *b = 46; break; /* Item or legacy entity */
+        case 3: *r = 51; *g = 230; *b = 115; break; /* Object */
+        case 4: *r = 184; *g = 89; *b = 255; break; /* Door */
+        case 5: *r = 255; *g = 166; *b = 31; break; /* Event */
+        case 6: *r = 51; *g = 204; *b = 255; break; /* Trigger */
+        default: *r = 166; *g = 166; *b = 166; break; /* Other */
+        }
+    }
+}
+
+static void render_overlay_mark(SDL_Renderer *renderer, const Mark *mark,
+                                const SDL_FRect *rect)
+{
+    unsigned char r, g, b;
+    mark_color(mark, &r, &g, &b);
+    if (mark->kind == 'C' && mark->code == 7) return; /* Air erases project override. */
+    SDL_SetRenderDrawColor(renderer, r, g, b,
+                           mark->kind == 'N' ? 148 : mark->kind == 'C' ? 117 : 71);
+    SDL_RenderFillRect(renderer, rect);
+    SDL_SetRenderDrawColor(renderer, r, g, b, 245);
+    SDL_RenderRect(renderer, rect);
+    if (mark->kind == 'C' && mark->code == 2) {
+        /* Platform: extra top edge just like GTK. */
+        SDL_RenderLine(renderer, rect->x, rect->y + 1.0f,
+                       rect->x + rect->w, rect->y + 1.0f);
+    } else if (mark->kind == 'C' && (mark->code == 4 || mark->code == 5)) {
+        /* Slope orientation, matching the two GTK slope brush directions. */
+        SDL_RenderLine(renderer, rect->x,
+                       rect->y + (mark->code == 4 ? rect->h : 0),
+                       rect->x + rect->w,
+                       rect->y + (mark->code == 4 ? 0 : rect->h));
     }
 }
 
@@ -233,6 +334,7 @@ int main(int argc, char **argv)
     SDL_Surface *surfaces[3] = {NULL, NULL, NULL};
     SDL_Texture *textures[3] = {NULL, NULL, NULL};
     bool enabled_collisions = true, enabled_markers = true;
+    size_t native_count = 0;
     int active = 0, result = 1;
     bool invalid = false, hard_failure = false;
     char automatic_paths[3][256] = {{0}};
@@ -247,6 +349,13 @@ int main(int argc, char **argv)
         fprintf(stderr, "Invalid project preview: %s\n", options.preview_path);
         usage(argv[0]);
         return 2;
+    }
+    if (options.native_source_path &&
+        !load_native_source(options.native_source_path, &preview, &native_count)) {
+        fprintf(stderr, "Invalid native source overlay or mismatched room: %s\n",
+                options.native_source_path);
+        result = 2;
+        goto done;
     }
     for (int i = 0; i < 3; ++i) {
         const char *chosen = i == 0 ? options.bg1_path :
@@ -275,6 +384,7 @@ int main(int argc, char **argv)
                surfaces[0] ? "matching" : "absent",
                surfaces[1] ? "matching" : "absent",
                surfaces[2] ? "matching" : "absent");
+        printf("Native source overlay records: %zu (separate private input)\n", native_count);
         result = 0;
         goto done;
     }
@@ -340,16 +450,13 @@ int main(int argc, char **argv)
             SDL_RenderTexture(renderer, textures[active - 1], NULL, &image);
         for (size_t i = 0; i < preview.count; ++i) {
             const Mark *mark = &preview.marks[i];
-            if ((mark->kind == 'C' && !enabled_collisions) ||
-                (mark->kind != 'C' && !enabled_markers)) continue;
+            if (((mark->kind == 'C' || mark->kind == 'N') && !enabled_collisions) ||
+                ((mark->kind != 'C' && mark->kind != 'N') && !enabled_markers))
+                continue;
             SDL_FRect rect = {offset_x + mark->x * scale,
                               offset_y + mark->y * scale,
                               mark->width * scale, mark->height * scale};
-            set_mark_color(renderer, mark, active != 0);
-            if (mark->kind == 'C' && mark->code != 7)
-                SDL_RenderFillRect(renderer, &rect);
-            else
-                SDL_RenderRect(renderer, &rect);
+            render_overlay_mark(renderer, mark, &rect);
         }
         SDL_RenderPresent(renderer);
         SDL_Delay(16);

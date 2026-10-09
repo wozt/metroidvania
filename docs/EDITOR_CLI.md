@@ -71,7 +71,7 @@ batch is accepted with `--dry-run=true` because no project document is written.
 | `entity-catalog`, `entity-item-settings` | Native references/project metadata | world, kind/entity scope |
 | `story-validate`, `story-save` | Project data | `kind`, `input`, and save `target` |
 | `collision-list`, `collision-get`, `collision-validate` | Project room data | room scope and optional cell |
-| `collision-set`, `collision-fill`, `collision-clear` | Project room data | cell/rectangle, semantic type, confirmation for clear |
+| `collision-set`, `collision-fill`, `collision-stroke`, `collision-clear` | Project room data | cell/rectangle/freehand points, semantic type, confirmation for clear |
 | `door-list`, `door-inspect` | Project room data | room scope and optional `id` |
 | `door-create`, `door-update`, `door-delete` | Project room data | geometry, type, facing; confirmation for delete |
 | `door-link`, `transition-create`, `transition-update` | Project room data | source door and validated native destination |
@@ -96,7 +96,7 @@ and engine export are not implied by these visual workroom operations.
 | BG1/BG2 tile read, draw, erase and fill | Yes | Same C core | Private override | Private override |
 | Native object catalog | Read-only metadata | Read-only metadata | Yes | Yes |
 | Project entity create/move/assign/delete | Yes | Yes | Markers only | Markers + item fields |
-| Project collision authoring | Full cell/rectangle commands | Cell context actions + overlay | 16px semantic cells | 8px semantic cells |
+| Project collision authoring | Full cell/rectangle/stroke commands | Freehand brushes + cell context actions | 16px semantic cells | 8px semantic cells |
 | Project doors | Full CRUD + destination links | Create/view/delete | Project data only | Project data only |
 | Project transitions | Full CRUD + target validation | CLI only; form pending | Native target references | Native target references |
 | Timeline/cutscene TOML validate and save | Yes | Yes | Shared project data | Shared project data |
@@ -114,8 +114,11 @@ are migrated in memory and rewritten only after the next explicit save.
 
 Collision coordinates are cell coordinates: 16px in Zero Mission workrooms and
 8px in Aria workrooms. Accepted project semantics are `solid`, `one_way`,
-`hazard`, `slope_up` and `slope_down`; absence means `empty`. These values are
-authoring intent only. They do not claim equivalence with either ROM's native
+`hazard`, `slope_up`, `slope_down`, `water` and `air`; absence means `empty`.
+Explicit `air` masks a native collision cell without changing the ROM, while
+`collision-clear` removes the project override and reveals native provenance
+again. These values are authoring intent only. They do not claim equivalence
+with either ROM's native
 collision bytes and are not playable until the corresponding engine adapter is
 implemented.
 
@@ -123,6 +126,10 @@ implemented.
 ./build/fusion_editor_cli --command=collision-fill \
   --world=zero_mission --area=Brinstar --room=3 --width=304 --height=2144 \
   --x=2 --y=4 --fill-width=6 --fill-height=1 --type=solid --format=json
+
+./build/fusion_editor_cli --command=collision-stroke \
+  --world=zero_mission --area=Brinstar --room=3 --width=304 --height=2144 \
+  --points='2,4;3,4;4,5' --type=water --format=json
 
 ./build/fusion_editor_cli --command=door-create \
   --world=zero_mission --area=Brinstar --room=3 --width=304 --height=2144 \

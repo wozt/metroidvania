@@ -32,9 +32,21 @@ class EditorLayerContract(unittest.TestCase):
         self.assertNotIn('gtk_widget_add_controller(grid, GTK_EVENT_CONTROLLER(pan));', source)
         self.assertNotIn('gtk_widget_add_controller(pan_surface, GTK_EVENT_CONTROLLER(pan));', source)
         self.assertIn('gtk_widget_add_tick_callback(w->scroller, map_pan_frame, w, NULL)', source)
-        self.assertIn('gtk_overlay_set_child(GTK_OVERLAY(map_overlay), grid);', source)
+        self.assertIn('gtk_overlay_set_child(GTK_OVERLAY(map_overlay), w->map_background);', source)
+        self.assertIn('gtk_overlay_add_overlay(GTK_OVERLAY(map_overlay), grid);', source)
         self.assertIn('gtk_box_append(GTK_BOX(canvas_row),map_overlay);', source)
         self.assertIn('gtk_widget_set_can_target(w->connection_canvas, FALSE);', source)
+
+    def test_global_map_uses_one_empty_background_and_wrapping_controls(self):
+        source = (ROOT / 'editor/world_atlas.c').read_text(encoding='utf-8')
+        grid = source.split('static void grid_rebuild(WorldGrid *w)\n{', 1)[1].split(
+            '\nstatic void begin_generation(WorldGrid *w);', 1)[0]
+        self.assertIn('map_background_draw_0117', source)
+        self.assertIn('GtkWidget *grid_extent = gtk_box_new', grid)
+        self.assertNotIn('GtkWidget *empty = gtk_box_new', grid)
+        self.assertIn('GtkWidget *bar=gtk_flow_box_new();', source)
+        self.assertNotIn('gtk_widget_set_size_request(right_space,720,-1);', source)
+        self.assertNotIn('gtk_widget_set_size_request(bottom_space,-1,520);', source)
 
 
 if __name__ == '__main__':

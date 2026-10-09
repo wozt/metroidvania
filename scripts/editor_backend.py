@@ -21,7 +21,7 @@ from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.room_audit import audit_world, write_private_report
 from scripts.validate_story_assets import validate_scene, validate_timeline
 
-BACKEND_VERSION = "1.2.0"
+BACKEND_VERSION = "1.3.0"
 
 CAPABILITIES = {
     "project-info": "available",
@@ -60,6 +60,7 @@ CAPABILITIES = {
     "collision-get": "available_project_room_data_only",
     "collision-set": "available_project_room_data_only",
     "collision-fill": "available_project_room_data_only",
+    "collision-stroke": "available_project_room_data_only",
     "collision-clear": "available_project_room_data_only",
     "collision-validate": "available_project_room_data_only",
     "door-list": "available_project_room_data_only",
@@ -129,6 +130,8 @@ COMMAND_FIELDS = {
                       "collision_type"},
     "collision-fill": {"world", "area", "room", "width", "height", "x", "y",
                        "fill_width", "fill_height", "collision_type"},
+    "collision-stroke": {"world", "area", "room", "width", "height", "points",
+                          "collision_type"},
     "collision-clear": {"world", "area", "room", "width", "height", "x", "y",
                         "fill_width", "fill_height", "confirm"},
     "collision-validate": {"world", "area", "room", "width", "height"},
@@ -161,7 +164,7 @@ MUTATING_COMMANDS = {
     "room-create", "room-open", "room-place", "room-move", "room-unplace",
     "entity-create", "entity-move", "entity-delete", "entity-assign", "story-save",
     "tile-set", "tile-fill",
-    "collision-set", "collision-fill", "collision-clear",
+    "collision-set", "collision-fill", "collision-stroke", "collision-clear",
     "door-create", "door-adopt", "door-update", "door-delete", "door-link",
     "transition-create", "transition-update", "transition-delete",
 }
@@ -179,6 +182,23 @@ def _integer(value: Any, label: str, lower: int = 0, upper: int = 1_000_000) -> 
     if not lower <= parsed <= upper:
         raise ValueError(f"{label} must be in [{lower}, {upper}]")
     return parsed
+
+
+def _collision_points(value: Any) -> list[tuple[int, int]]:
+    """Parse the bounded canonical x,y;x,y wire format used by the GTK brush."""
+    if not isinstance(value, str) or not value or len(value) > 49151:
+        raise ValueError("collision points must be a non-empty bounded string")
+    raw_points = value.split(";")
+    if not 1 <= len(raw_points) <= 4096:
+        raise ValueError("collision stroke must contain 1..4096 points")
+    points: list[tuple[int, int]] = []
+    for raw in raw_points:
+        coordinates = raw.split(",")
+        if len(coordinates) != 2:
+            raise ValueError("invalid collision stroke point")
+        points.append((_integer(coordinates[0], "collision x", 0, 2047),
+                       _integer(coordinates[1], "collision y", 0, 2047)))
+    return points
 
 
 def _world(value: Any) -> str:
@@ -960,6 +980,18 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
                     "cell_count": len(document["collision"]["cells"]),
                     "accepted_types": list(project_room_entities.COLLISION_TYPES),
                     "engine_adapter": "unavailable"}
+        if command == "collision-stroke":
+            collision_type = options.get("collision_type")
+            points = _collision_points(options.get("points"))
+            changed = project_room_entities.collision_stroke(
+                document, points, collision_type)
+            result = {"points": len(set(points)), "type": collision_type,
+                      "changed_cells": changed, "persisted": False,
+                      "engine_adapter": "unavailable"}
+            if not dry_run and changed:
+                path = project_room_entities.save(root_path, document)
+                result.update({"persisted": True, "path": str(path)})
+            return result
         x = _integer(options.get("x"), "x", 0, 2047)
         y = _integer(options.get("y"), "y", 0, 2047)
         if command == "collision-get":

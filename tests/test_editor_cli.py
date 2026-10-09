@@ -131,9 +131,16 @@ class EditorCliTests(unittest.TestCase):
                 "--fill-width=2", "--fill-height=1", "--type=solid",
                 "--format=json")
             self.assertEqual(collision.returncode, 0, collision.stderr)
+            stroke = self.run_cli(
+                "--command=collision-stroke", *scope,
+                "--points=0,0;1,0;1,1;1,1", "--type=water", "--format=json")
+            self.assertEqual(stroke.returncode, 0, stroke.stderr)
+            self.assertEqual(json.loads(stroke.stdout)["data"]["points"], 3)
             listed_collision = self.run_cli(
                 "--command=collision-list", *scope, "--format=tsv")
-            self.assertEqual(listed_collision.stdout, "0\t0\tsolid\t16\n1\t0\tsolid\t16\n")
+            self.assertEqual(
+                listed_collision.stdout,
+                "0\t0\twater\t16\n1\t0\twater\t16\n1\t1\twater\t16\n")
             door = self.run_cli(
                 "--command=door-create", *scope, "--x=0", "--y=0",
                 "--door-width=16", "--door-height=32", "--label=CLI Gate",

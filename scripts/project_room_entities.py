@@ -446,6 +446,45 @@ def collision_fill(doc: dict, x: int, y: int, width: int, height: int,
     return changed
 
 
+def collision_stroke(doc: dict, points: list[tuple[int, int]],
+                     collision_type: str) -> int:
+    """Set one sparse freehand collision stroke, measured in collision cells."""
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    if collision_type not in COLLISION_TYPES:
+        raise ValueError("unknown project collision type")
+    if not isinstance(points, list) or not 1 <= len(points) <= 4096:
+        raise ValueError("collision stroke must contain 1..4096 points")
+    resolution = doc["collision"]["resolution_px"]
+    grid_width = doc["width_px"] // resolution
+    grid_height = doc["height_px"] // resolution
+    unique: list[tuple[int, int]] = []
+    seen: set[tuple[int, int]] = set()
+    for point in points:
+        if (not isinstance(point, tuple) or len(point) != 2
+                or type(point[0]) is not int or type(point[1]) is not int):
+            raise ValueError("invalid collision stroke point")
+        x = _int(point[0], 0, grid_width - 1, "collision x")
+        y = _int(point[1], 0, grid_height - 1, "collision y")
+        if (x, y) not in seen:
+            seen.add((x, y))
+            unique.append((x, y))
+    cells = {(cell["x"], cell["y"]): cell["type"]
+             for cell in doc["collision"]["cells"]}
+    changed = 0
+    for point in unique:
+        if cells.get(point) != collision_type:
+            cells[point] = collision_type
+            changed += 1
+    collision = {"resolution_px": resolution, "cells": [
+        {"x": x, "y": y, "type": value}
+        for (x, y), value in sorted(
+            cells.items(), key=lambda item: (item[0][1], item[0][0]))
+    ]}
+    doc.update(_validated_candidate(doc, collision=collision))
+    return changed
+
+
 def collision_clear(doc: dict, x: int, y: int, width: int, height: int) -> int:
     """Clear a rectangular project collision region, measured in cells."""
     validate(doc, doc["world"], doc["area"], doc["room"],

@@ -104,6 +104,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--type", dest="collision_type")
     parser.add_argument("--fill-width", dest="fill_width")
     parser.add_argument("--fill-height", dest="fill_height")
+    parser.add_argument("--points")
     parser.add_argument("--door-width", dest="door_width")
     parser.add_argument("--door-height", dest="door_height")
     parser.add_argument("--door-type", dest="door_type")

@@ -985,7 +985,7 @@ and the proprietary-file guard passed.
 
 - Room controls use two fixed-width, horizontally scrollable icon strips instead
   of the responsive wrapping tool grid. Icons remain compact across window sizes.
-- Wall (W), Water (U) and Air (A) paint private semantic collision rectangles;
+- Wall (W), Water (U) and Air (A) paint private semantic collision strokes;
   Zero Mission uses 16px cells and Aria uses 8px cells. Drag previews never write
   to disk, and each stroke is one backend mutation and one shared history entry.
 - Water and Air are explicit version-2 project collision semantics; Air overrides
@@ -1033,3 +1033,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   destination document is mutated by planning or by GTK staging.
 - Original native-only door IDs are not substituted for project door IDs;
   gameplay and cross-engine transition adapters remain unavailable.
+
+## Patch 0117 - freehand collision brushes and responsive global map
+
+- Wall and Water now paint continuous freehand cells, including interpolated
+  cells when the pointer moves quickly. One complete gesture is validated and
+  staged as one backend mutation and one shared Undo entry.
+- Wall is rendered red and Water blue. Air is a visible eraser preview while
+  dragging, then becomes an invisible explicit passable override that masks
+  both project collision and the read-only native collision preview below it.
+- The global map no longer creates a GTK widget for every empty map case. One
+  Cairo background owns empty-cell drawing and context targeting, while only
+  occupied room segments remain widgets.
+- Removed the artificial 720x520 scroll padding. The map scroll range now ends
+  at real map bounds, and the crowded control row uses a wrapping GTK flow box
+  so narrow windows form additional rows rather than overflowing horizontally.
+- Native ROM collision and map data remain immutable; engine collision adapters
+  are still unavailable.

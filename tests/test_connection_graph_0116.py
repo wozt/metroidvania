@@ -56,7 +56,7 @@ class ConnectionGraph0116(unittest.TestCase):
         self.assertIn('connection-list',editor_cli.TSV_COMMANDS)
         c=(ROOT/'editor/world_atlas.c').read_text()
         for phrase in ('PATCH_0116_CONNECTION_VISUALIZATION',
-                       'gtk_overlay_set_child(GTK_OVERLAY(map_overlay), grid);',
+                       'gtk_overlay_add_overlay(GTK_OVERLAY(map_overlay), grid);',
                        'gtk_widget_set_can_target(w->connection_canvas, FALSE);',
                        'connection_draw_0116(', 'connections_refresh_0116(',
                        'All links in current map', 'Show connections'):

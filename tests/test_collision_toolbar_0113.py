@@ -23,7 +23,18 @@ class CollisionToolbar0113(unittest.TestCase):
                 self.assertEqual(entities.collision_get(doc, 2, 2), 'empty')
                 entities.validate(doc, world, area, 5, 256, 256)
 
-    def test_fixed_toolbar_and_one_backend_mutation_per_rectangle(self):
+    def test_freehand_stroke_replaces_existing_cells_atomically(self):
+        doc = entities._new('mzm', 'Brinstar', 5, 256, 256)
+        entities.collision_fill(doc, 1, 1, 3, 2, 'solid')
+        points = [(1, 1), (2, 1), (2, 2), (2, 2)]
+        self.assertEqual(entities.collision_stroke(doc, points, 'water'), 3)
+        self.assertEqual(entities.collision_get(doc, 1, 1), 'water')
+        self.assertEqual(entities.collision_get(doc, 2, 2), 'water')
+        self.assertEqual(entities.collision_get(doc, 3, 2), 'solid')
+        self.assertEqual(entities.collision_stroke(doc, points, 'air'), 3)
+        self.assertEqual(entities.collision_get(doc, 1, 1), 'air')
+
+    def test_fixed_toolbar_and_one_backend_mutation_per_stroke(self):
         c = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
         for snippet in (
             'TOOL_WALL, TOOL_WATER, TOOL_AIR',
@@ -32,11 +43,14 @@ class CollisionToolbar0113(unittest.TestCase):
             'gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(visibility_scroll)',
             'collision_icon_toggle_0113(',
             'collision_commit_0113(',
-            'project_command(doc, "collision-fill", args, NULL)',
+            'collision_stroke_line_0117(',
+            'project_command(doc, "collision-stroke", args, NULL)',
             'doc->collision_dragging = FALSE;',
             'case GDK_KEY_u: doc->tool_id = TOOL_WATER;',
             'if (!strcmp(name, "water")) return 6;',
             'if (!strcmp(name, "air")) return 7;',
+            'if (cell->type == 7) continue;',
+            'else cairo_set_source_rgba(cr, 1.0, 0.12, 0.12, 0.48);',
         ):
             self.assertIn(snippet, c)
         # No wrapping GtkFlowBox as main room toolbar.

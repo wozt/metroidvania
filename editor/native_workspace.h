@@ -24,5 +24,7 @@ void native_workspace_test_activate_save(NativeWorkspace *w, guint index);
 void native_workspace_test_set_unsaved(NativeWorkspace *w, guint index, gboolean unsaved);
 gboolean native_workspace_test_move_document(NativeWorkspace *w, guint index,
                                               GtkWidget *center, GtkWidget *right);
+guint native_workspace_test_collision_line(gint x0, gint y0, gint x1, gint y1,
+                                            gint *coordinates, guint capacity);
 #endif
 #endif

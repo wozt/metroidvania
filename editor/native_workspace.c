@@ -86,7 +86,7 @@ struct NativeWorkspace {
     unsigned undo_count, redo_count;
     gboolean ready, busy, unsaved, drawing, changed, grid_visible;
     gboolean has_selection, selecting, moving, panning;
-    gboolean collision_dragging; /* One private collision rectangle per gesture. */
+    gboolean collision_dragging; /* One private collision stroke per gesture. */
     unsigned layer_id, brush_id, tool_id;
     int start_x, start_y, last_x, last_y;
     int sel_x0, sel_y0, sel_x1, sel_y1, preview_dx, preview_dy;
@@ -116,6 +116,7 @@ struct NativeWorkspace {
     gboolean overlays[OVERLAY_COUNT];
     GArray *annotations;
     GArray *project_collision;
+    GArray *collision_stroke; /* ProjectCollisionCell coordinates; type is unused. */
     GHashTable *entity_sprite_cache; /* Private PNG surfaces; includes negative hits. */
     guint selected_annotation;
     gboolean annotation_selected;
@@ -342,6 +343,7 @@ static void document_destroy(NativeWorkspace *doc)
     if (doc->entity_sprite_cache) g_hash_table_destroy(doc->entity_sprite_cache);
     if (doc->annotations) g_array_free(doc->annotations, TRUE);
     if (doc->project_collision) g_array_free(doc->project_collision, TRUE);
+    if (doc->collision_stroke) g_array_free(doc->collision_stroke, TRUE);
     free(doc->undo);
     free(doc->redo);
     free(doc->map);
@@ -593,6 +595,7 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     else if (!strcmp(action, "assign")) command = "entity-assign";
     else if (!strcmp(action, "collision-list") ||
              !strcmp(action, "collision-set") ||
+             !strcmp(action, "collision-stroke") ||
              !strcmp(action, "collision-clear") ||
              !strcmp(action, "door-list") ||
              !strcmp(action, "door-create") ||
@@ -3105,11 +3108,13 @@ static void draw_project_collision(NativeWorkspace *doc, cairo_t *cr)
         double size = cell->resolution * doc->scale;
         double x = cell->x * size;
         double y = cell->y * size;
-        double red = 0.15, green = 0.8, blue = 1.0;
+        /* Explicit air remains in project data so it can mask native walls,
+         * but it is intentionally invisible: in the editor it is the eraser. */
+        if (cell->type == 7) continue;
+        double red = 1.0, green = 0.18, blue = 0.18;
         if (cell->type == 2) { red = 0.2; green = 1.0; blue = 0.45; }
         else if (cell->type == 3) { red = 1.0; green = 0.2; blue = 0.2; }
         else if (cell->type == 6) { red = 0.1; green = 0.56; blue = 1.0; }
-        else if (cell->type == 7) { red = 0.6; green = 0.68; blue = 0.72; }
         else if (cell->type >= 4) { red = 1.0; green = 0.62; blue = 0.1; }
         cairo_save(cr);
         cairo_rectangle(cr, x + 0.5, y + 0.5, MAX(2.0, size - 1), MAX(2.0, size - 1));
@@ -3130,11 +3135,6 @@ static void draw_project_collision(NativeWorkspace *doc, cairo_t *cr)
             cairo_line_to(cr, x + size * 0.35, y + size * 0.30);
             cairo_line_to(cr, x + size * 0.65, y + size * 0.60);
             cairo_line_to(cr, x + size - 1, y + size * 0.4);
-            cairo_stroke(cr);
-        } else if (cell->type == 7) {
-            /* Air is an explicit passable override, NOT removal of an override. */
-            cairo_move_to(cr, x + 2, y + size - 2);
-            cairo_line_to(cr, x + size - 2, y + 2);
             cairo_stroke(cr);
         } else if (cell->type == 4 || cell->type == 5) {
             cairo_move_to(cr, x + 1, cell->type == 4 ? y + size - 1 : y + 1);
@@ -3258,7 +3258,21 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
     if (doc->collision && doc->overlays[OVERLAY_COLLISION]) {
         cairo_save(cr);
         cairo_scale(cr, doc->scale, doc->scale);
+        /* Air cells punch holes in the decoded native collision preview. This
+         * preserves a real passable override while making the tool behave like
+         * the eraser the user sees. */
         cairo_rectangle(cr, 0, 0, columns * 16, rows * 16);
+        if (doc->project_collision) {
+            for (guint i = 0; i < doc->project_collision->len; ++i) {
+                const ProjectCollisionCell *air = &g_array_index(
+                    doc->project_collision, ProjectCollisionCell, i);
+                if (air->type == 7)
+                    cairo_rectangle(cr, air->x * air->resolution,
+                                    air->y * air->resolution,
+                                    air->resolution, air->resolution);
+            }
+        }
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
         cairo_clip(cr);
         cairo_set_operator(cr, CAIRO_OPERATOR_SCREEN);
         cairo_set_source_surface(cr, doc->collision, 0, 0);
@@ -3267,24 +3281,25 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
         cairo_restore(cr);
     }
     draw_project_collision(doc, cr);
-    if (doc->collision_dragging && doc->overlays[OVERLAY_COLLISION]) {
+    if (doc->collision_dragging && doc->overlays[OVERLAY_COLLISION] &&
+        doc->collision_stroke) {
         const double unit = (doc->project_aria ? 8.0 : 16.0) * doc->scale;
-        const int left = MIN(doc->start_x, doc->last_x);
-        const int top = MIN(doc->start_y, doc->last_y);
-        const int wide = abs(doc->last_x - doc->start_x) + 1;
-        const int high = abs(doc->last_y - doc->start_y) + 1;
         cairo_save(cr);
-        cairo_rectangle(cr, left * unit + 0.5, top * unit + 0.5,
-                        wide * unit - 1, high * unit - 1);
-        if (doc->tool_id == TOOL_WATER)
-            cairo_set_source_rgba(cr, 0.1, 0.5, 1.0, 0.40);
-        else if (doc->tool_id == TOOL_AIR)
-            cairo_set_source_rgba(cr, 0.65, 0.7, 0.7, 0.45);
-        else cairo_set_source_rgba(cr, 0.15, 0.85, 1.0, 0.4);
-        cairo_fill_preserve(cr);
-        cairo_set_line_width(cr, 2.0);
-        cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
-        cairo_stroke(cr);
+        for (guint i = 0; i < doc->collision_stroke->len; ++i) {
+            const ProjectCollisionCell *point = &g_array_index(
+                doc->collision_stroke, ProjectCollisionCell, i);
+            cairo_rectangle(cr, point->x * unit + 0.5, point->y * unit + 0.5,
+                            MAX(2.0, unit - 1), MAX(2.0, unit - 1));
+            if (doc->tool_id == TOOL_WATER)
+                cairo_set_source_rgba(cr, 0.1, 0.5, 1.0, 0.48);
+            else if (doc->tool_id == TOOL_AIR)
+                cairo_set_source_rgba(cr, 0.08, 0.09, 0.11, 0.72);
+            else cairo_set_source_rgba(cr, 1.0, 0.12, 0.12, 0.48);
+            cairo_fill_preserve(cr);
+            cairo_set_line_width(cr, 1.5);
+            cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.92);
+            cairo_stroke(cr);
+        }
         cairo_restore(cr);
     }
     draw_annotations(doc, cr);
@@ -3516,8 +3531,8 @@ static void paint_line(NativeWorkspace *doc, int x, int y)
     doc->last_y = y;
 }
 
-/* PATCH_0113_COLLISION_BRUSHES: All positions are in collision cells.
- * A drag stages one validated rectangle (and therefore one undo action).
+/* PATCH_0117_COLLISION_BRUSHES: All positions are in collision cells.
+ * A drag stages one validated freehand stroke (and therefore one undo action).
  * Both original wall overlays and ROM data remain read-only. */
 static gboolean collision_tool_0113(unsigned tool)
 {
@@ -3538,25 +3553,56 @@ static gboolean collision_cell_0113(const NativeWorkspace *doc, double x, double
     return TRUE;
 }
 
+static void collision_stroke_point_0117(NativeWorkspace *doc, int x, int y)
+{
+    if (!doc->collision_stroke)
+        doc->collision_stroke = g_array_new(FALSE, FALSE, sizeof(ProjectCollisionCell));
+    if (doc->collision_stroke->len >= 4096) return;
+    if (doc->collision_stroke->len) {
+        const ProjectCollisionCell *last = &g_array_index(
+            doc->collision_stroke, ProjectCollisionCell,
+            doc->collision_stroke->len - 1);
+        if ((int)last->x == x && (int)last->y == y) return;
+    }
+    ProjectCollisionCell point = {(guint)x, (guint)y, 0, 0};
+    g_array_append_val(doc->collision_stroke, point);
+}
+
+static void collision_stroke_line_0117(NativeWorkspace *doc,
+                                       int x0, int y0, int x1, int y1)
+{
+    int dx = abs(x1 - x0), step_x = x0 < x1 ? 1 : -1;
+    int dy = -abs(y1 - y0), step_y = y0 < y1 ? 1 : -1;
+    int error = dx + dy;
+    for (;;) {
+        collision_stroke_point_0117(doc, x0, y0);
+        if (x0 == x1 && y0 == y1) break;
+        int doubled = error * 2;
+        if (doubled >= dy) { error += dy; x0 += step_x; }
+        if (doubled <= dx) { error += dx; y0 += step_y; }
+    }
+}
+
 static void collision_commit_0113(NativeWorkspace *doc)
 {
-    const int x = MIN(doc->start_x, doc->last_x);
-    const int y = MIN(doc->start_y, doc->last_y);
-    const int width = abs(doc->last_x - doc->start_x) + 1;
-    const int height = abs(doc->last_y - doc->start_y) + 1;
-    gchar sx[16], sy[16], sw[16], sh[16];
-    g_snprintf(sx, sizeof(sx), "%d", x);
-    g_snprintf(sy, sizeof(sy), "%d", y);
-    g_snprintf(sw, sizeof(sw), "%d", width);
-    g_snprintf(sh, sizeof(sh), "%d", height);
+    if (!doc->collision_stroke || !doc->collision_stroke->len) return;
+    GString *points = g_string_sized_new(doc->collision_stroke->len * 8);
+    for (guint i = 0; i < doc->collision_stroke->len; ++i) {
+        const ProjectCollisionCell *point = &g_array_index(
+            doc->collision_stroke, ProjectCollisionCell, i);
+        if (i) g_string_append_c(points, ';');
+        g_string_append_printf(points, "%u,%u", point->x, point->y);
+    }
     const char *kind = doc->tool_id == TOOL_WALL ? "solid" :
                        doc->tool_id == TOOL_WATER ? "water" : "air";
-    const char *const args[] = {"--x", sx, "--y", sy, "--fill-width", sw,
-                                "--fill-height", sh, "--type", kind, NULL};
-    if (project_command(doc, "collision-fill", args, NULL)) {
+    const char *const args[] = {"--points", points->str, "--type", kind, NULL};
+    if (project_command(doc, "collision-stroke", args, NULL)) {
         project_reload(doc);
-        message(doc, "Collision overlay staged. Ctrl+Z to undo; Save to commit.");
+        message(doc, doc->tool_id == TOOL_AIR ?
+            "Air eraser staged. Ctrl+Z to undo; Save to commit." :
+            "Collision brush stroke staged. Ctrl+Z to undo; Save to commit.");
     }
+    g_string_free(points, TRUE);
 }
 
 static void gesture_begin(GtkGestureDrag *gesture, double x, double y, gpointer userdata)
@@ -3569,8 +3615,13 @@ static void gesture_begin(GtkGestureDrag *gesture, double x, double y, gpointer 
         int cx = 0, cy = 0;
         if (!collision_cell_0113(doc, x, y, &cx, &cy)) return;
         doc->drawing = doc->collision_dragging = TRUE;
+        if (!doc->collision_stroke)
+            doc->collision_stroke = g_array_new(FALSE, FALSE,
+                                                sizeof(ProjectCollisionCell));
+        else g_array_set_size(doc->collision_stroke, 0);
         doc->start_x = doc->last_x = cx;
         doc->start_y = doc->last_y = cy;
+        collision_stroke_point_0117(doc, cx, cy);
         doc->pointer_x = x;
         doc->pointer_y = y;
         if (doc->overlay_buttons[OVERLAY_COLLISION])
@@ -3645,6 +3696,7 @@ static void gesture_update(GtkGestureDrag *gesture, double dx, double dy, gpoint
         if (collision_cell_0113(doc, doc->pointer_x + dx, doc->pointer_y + dy,
                                 &cx, &cy) &&
             (cx != doc->last_x || cy != doc->last_y)) {
+            collision_stroke_line_0117(doc, doc->last_x, doc->last_y, cx, cy);
             doc->last_x = cx;
             doc->last_y = cy;
             gtk_widget_queue_draw(doc->canvas);
@@ -5032,6 +5084,22 @@ void native_workspace_import_aria_async(NativeWorkspace *manager, unsigned area,
 }
 
 #ifdef FUSION_NATIVE_WORKSPACE_TESTING
+guint native_workspace_test_collision_line(gint x0, gint y0, gint x1, gint y1,
+                                            gint *coordinates, guint capacity)
+{
+    NativeWorkspace doc = {0};
+    collision_stroke_line_0117(&doc, x0, y0, x1, y1);
+    guint count = doc.collision_stroke ? doc.collision_stroke->len : 0;
+    for (guint i = 0; coordinates && i < MIN(count, capacity); ++i) {
+        const ProjectCollisionCell *point = &g_array_index(
+            doc.collision_stroke, ProjectCollisionCell, i);
+        coordinates[i * 2] = (gint)point->x;
+        coordinates[i * 2 + 1] = (gint)point->y;
+    }
+    if (doc.collision_stroke) g_array_free(doc.collision_stroke, TRUE);
+    return count;
+}
+
 /* PATCH_0112_TEST_SHARED_HISTORY: tile, JSON draft, then native INI. */
 gboolean native_workspace_test_shared_history(NativeWorkspace *manager, guint index)
 {

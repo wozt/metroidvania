@@ -376,6 +376,16 @@ static void test_shared_tile_and_project_history(void)
     native_workspace_free(workspace);
 }
 
+static void test_collision_brush_interpolates_fast_motion(void)
+{
+    gint coordinates[8] = {0};
+    g_assert_cmpuint(native_workspace_test_collision_line(
+        0, 0, 3, 2, coordinates, 4), ==, 4);
+    const gint expected[] = {0, 0, 1, 1, 2, 1, 3, 2};
+    for (guint i = 0; i < G_N_ELEMENTS(expected); ++i)
+        g_assert_cmpint(coordinates[i], ==, expected[i]);
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -400,6 +410,8 @@ int main(int argc, char **argv)
                     test_save_modified_then_close);
     g_test_add_func("/native-workspace/shared-tile-project-undo-redo",
                     test_shared_tile_and_project_history);
+    g_test_add_func("/native-workspace/collision-brush-interpolation",
+                    test_collision_brush_interpolates_fast_motion);
     g_test_add_func("/native-workspace/close-during-import",
                     test_close_during_import);
     g_test_add_func("/native-workspace/unsaved-close-dialog",

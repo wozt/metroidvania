@@ -22,7 +22,8 @@ typedef struct {
 typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
-    GtkWidget *page, *grid, *details, *status, *world_select, *area_select, *zoom;
+    GtkWidget *page, *grid, *map_background, *details, *status;
+    GtkWidget *world_select, *area_select, *zoom;
     GtkWidget *doors_toggle, *door_expander, *door_list;
     GtkWidget *connections_toggle, *connections_all, *connection_list;
     GtkWidget *connection_expander, *connection_canvas;
@@ -38,7 +39,7 @@ typedef struct {
     guint selection;
     gboolean selected, busy, pending_generation, changing_world, prefetching;
     guint next_preview_area;
-    guint size;
+    guint size, grid_columns, grid_rows;
 } WorldGrid;
 static const char *const worlds[]={"Zero Mission", "Aria of Sorrow", NULL};
 static const char *const mzm_areas[]={"Brinstar", "Kraid", "Norfair", "Ridley", "Tourian", "Crateria", "Chozodia", NULL};
@@ -578,6 +579,26 @@ static void map_context_enable(GtkWidget *cell, WorldGrid *w, guint x, guint y,
     g_signal_connect(right, "pressed", G_CALLBACK(map_context_pressed), w);
 }
 
+static void map_background_draw_0117(GtkDrawingArea *area, cairo_t *cr,
+                                     int width, int height, gpointer userdata)
+{
+    WorldGrid *w = userdata;
+    (void)area; (void)width; (void)height;
+    cairo_set_source_rgb(cr, 0.063, 0.098, 0.137);
+    cairo_paint(cr);
+    cairo_set_source_rgb(cr, 0.16, 0.216, 0.263);
+    cairo_set_line_width(cr, 1.0);
+    for (guint x = 0; x <= w->grid_columns; ++x) {
+        cairo_move_to(cr, x * w->size + 0.5, 0);
+        cairo_line_to(cr, x * w->size + 0.5, w->grid_rows * w->size);
+    }
+    for (guint y = 0; y <= w->grid_rows; ++y) {
+        cairo_move_to(cr, 0, y * w->size + 0.5);
+        cairo_line_to(cr, w->grid_columns * w->size, y * w->size + 0.5);
+    }
+    cairo_stroke(cr);
+}
+
 /* Dedicated map-creation workspace shares the existing validated form with
  * both room browsers. Spatial placement gets its own future schema/adapter. */
 static void map_creator_launch(GtkButton *button, gpointer userdata)
@@ -1042,6 +1063,30 @@ static void grid_rebuild(WorldGrid *w)
     }
     guint stride = xmax + 1;
     guint count = stride * (ymax + 1);
+    w->grid_columns = stride;
+    w->grid_rows = ymax + 1;
+    int canvas_width = (int)(w->grid_columns * w->size);
+    int canvas_height = (int)(w->grid_rows * w->size);
+    gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(w->map_background),
+                                       canvas_width);
+    gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(w->map_background),
+                                        canvas_height);
+    gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(w->connection_canvas),
+                                       canvas_width);
+    gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(w->connection_canvas),
+                                        canvas_height);
+    gtk_widget_set_size_request(w->grid, canvas_width, canvas_height);
+    g_object_set_data(G_OBJECT(w->map_background), "mv-span-width",
+                      GUINT_TO_POINTER(w->grid_columns));
+    g_object_set_data(G_OBJECT(w->map_background), "mv-span-height",
+                      GUINT_TO_POINTER(w->grid_rows));
+    /* One transparent span gives GtkGrid its exact coordinate geometry. The
+     * old implementation allocated one GtkBox for every empty case. */
+    GtkWidget *grid_extent = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_widget_set_can_target(grid_extent, FALSE);
+    gtk_widget_set_opacity(grid_extent, 0.0);
+    gtk_grid_attach(GTK_GRID(w->grid), grid_extent, 0, 0,
+                    (int)w->grid_columns, (int)w->grid_rows);
     guint *lookup = g_new0(guint, count);
     gboolean *covered = g_new0(gboolean, count);
     guint overlapping = 0, groups = 0, thumbs = 0;
@@ -1067,11 +1112,6 @@ static void grid_rebuild(WorldGrid *w)
             if (covered[pos]) continue;
             guint entry = lookup[pos];
             if (!entry) {
-                GtkWidget *empty = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-                gtk_widget_add_css_class(empty, "mv-map-cell");
-                gtk_widget_set_size_request(empty, (int)w->size, (int)w->size);
-                map_context_enable(empty, w, x, y, 1, 1);
-                gtk_grid_attach(GTK_GRID(w->grid), empty, (int)x, (int)y, 1, 1);
                 covered[pos] = TRUE;
                 continue;
             }
@@ -1219,6 +1259,7 @@ static void grid_rebuild(WorldGrid *w)
         }
     }
     if (native_doors) g_array_free(native_doors, TRUE);
+    gtk_widget_queue_draw(w->map_background);
     if (w->connection_canvas) gtk_widget_queue_draw(w->connection_canvas);
     g_free(covered);
     g_free(lookup);
@@ -1483,33 +1524,38 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     w->connection_edges = g_array_new(FALSE, FALSE, sizeof(ProjectMapEdge0116));
     w->prefetching=TRUE;
     GtkWidget *root=gtk_box_new(GTK_ORIENTATION_VERTICAL,6);
-    GtkWidget *bar=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,6);
+    GtkWidget *bar=gtk_flow_box_new();
+    gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(bar), GTK_SELECTION_NONE);
+    gtk_flow_box_set_homogeneous(GTK_FLOW_BOX(bar), FALSE);
+    gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(bar), 1);
+    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(bar), 9);
+    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(bar), 6);
+    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(bar), 4);
+    gtk_widget_add_css_class(bar, "toolbar");
     GtkWidget *scroller=gtk_scrolled_window_new();
     GtkWidget *grid=gtk_grid_new();
     GtkWidget *map_overlay = gtk_overlay_new();
+    w->map_background = gtk_drawing_area_new();
     w->connection_canvas = gtk_drawing_area_new();
-    gtk_overlay_set_child(GTK_OVERLAY(map_overlay), grid);
+    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(w->map_background),
+                                   map_background_draw_0117, w, NULL);
+    gtk_overlay_set_child(GTK_OVERLAY(map_overlay), w->map_background);
+    gtk_widget_set_can_target(grid, FALSE);
+    gtk_overlay_add_overlay(GTK_OVERLAY(map_overlay), grid);
     gtk_widget_set_halign(map_overlay, GTK_ALIGN_START);
     gtk_widget_set_valign(map_overlay, GTK_ALIGN_START);
     gtk_widget_set_can_target(w->connection_canvas, FALSE);
     gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(w->connection_canvas),
                                    connection_draw_0116, w, NULL);
     gtk_overlay_add_overlay(GTK_OVERLAY(map_overlay), w->connection_canvas);
-    /* A 32x32 Zero map can fit inside the viewport, leaving nothing to drag.
-     * Padding belongs to a surrounding canvas, NOT to the native cell grid:
-     * room coordinates and per-cell dimensions must remain unchanged. */
+    /* The scrolling surface is exactly the map. Artificial right/bottom
+     * padding used to create large empty scroll ranges and accidental drift. */
     GtkWidget *pan_surface=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
     GtkWidget *canvas_row=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);
-    GtkWidget *right_space=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);
-    GtkWidget *bottom_space=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
-    gtk_widget_set_size_request(right_space,720,-1);
-    gtk_widget_set_size_request(bottom_space,-1,520);
     gtk_widget_set_halign(grid,GTK_ALIGN_START);
     gtk_widget_set_valign(grid,GTK_ALIGN_START);
     gtk_box_append(GTK_BOX(canvas_row),map_overlay);
-    gtk_box_append(GTK_BOX(canvas_row),right_space);
     gtk_box_append(GTK_BOX(pan_surface),canvas_row);
-    gtk_box_append(GTK_BOX(pan_surface),bottom_space);
     gtk_grid_set_row_homogeneous(GTK_GRID(grid), TRUE);
     gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
     GtkWidget *generate=gtk_button_new_with_label("Generate more original previews");
@@ -1532,6 +1578,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     w->doors_toggle = gtk_toggle_button_new_with_label("Show global door IDs");
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w->doors_toggle), FALSE);
     w->page=root;w->grid=grid;w->scroller=scroller;
+    map_context_enable(w->map_background, w, 0, 0, 1, 1);
     GtkGesture *pan = gtk_gesture_drag_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(pan), GDK_BUTTON_PRIMARY);
     gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(pan), GTK_PHASE_CAPTURE);
@@ -1570,17 +1617,23 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     w->area_select=gtk_drop_down_new_from_strings(mzm_areas);
     w->zoom=gtk_spin_button_new_with_range(22,64,6);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->zoom),28);
-    gtk_box_append(GTK_BOX(bar),gtk_label_new("WORLD:"));
-    gtk_box_append(GTK_BOX(bar),w->world_select);
-    gtk_box_append(GTK_BOX(bar),gtk_label_new("Area:"));
-    gtk_box_append(GTK_BOX(bar),w->area_select);
-    gtk_box_append(GTK_BOX(bar),gtk_label_new("Case size:"));
-    gtk_box_append(GTK_BOX(bar),w->zoom);
-    gtk_box_append(GTK_BOX(bar),generate);
-    gtk_box_append(GTK_BOX(bar),open);
-    gtk_box_append(GTK_BOX(bar),w->doors_toggle);
-    gtk_box_append(GTK_BOX(bar),w->connections_toggle);
-    gtk_box_append(GTK_BOX(bar),w->connections_all);
+    GtkWidget *world_group = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    GtkWidget *area_group = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    GtkWidget *zoom_group = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    gtk_box_append(GTK_BOX(world_group),gtk_label_new("WORLD:"));
+    gtk_box_append(GTK_BOX(world_group),w->world_select);
+    gtk_box_append(GTK_BOX(area_group),gtk_label_new("Area:"));
+    gtk_box_append(GTK_BOX(area_group),w->area_select);
+    gtk_box_append(GTK_BOX(zoom_group),gtk_label_new("Case size:"));
+    gtk_box_append(GTK_BOX(zoom_group),w->zoom);
+    gtk_flow_box_append(GTK_FLOW_BOX(bar),world_group);
+    gtk_flow_box_append(GTK_FLOW_BOX(bar),area_group);
+    gtk_flow_box_append(GTK_FLOW_BOX(bar),zoom_group);
+    gtk_flow_box_append(GTK_FLOW_BOX(bar),generate);
+    gtk_flow_box_append(GTK_FLOW_BOX(bar),open);
+    gtk_flow_box_append(GTK_FLOW_BOX(bar),w->doors_toggle);
+    gtk_flow_box_append(GTK_FLOW_BOX(bar),w->connections_toggle);
+    gtk_flow_box_append(GTK_FLOW_BOX(bar),w->connections_all);
     gtk_box_append(GTK_BOX(root),bar);
     gtk_box_append(GTK_BOX(root),w->pick_bar);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller),pan_surface);

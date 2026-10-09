@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from scripts import mzm_room_render as native
+from scripts import mzm_bg3_preview as bg3
 from scripts import project_room_entities as rooms
 from scripts import project_room_package as package
 from scripts import native_source_overlay
@@ -29,6 +30,8 @@ def main() -> int:
     parser.add_argument("--room", default=33, type=int)
     parser.add_argument("--demo-overlays", action="store_true",
                         help="OPT IN to synthetic collision, object and door overlays")
+    parser.add_argument("--decode-bg3", action="store_true",
+                        help="opt in to decoding experimental native BG3")
     parser.add_argument("--launch", action="store_true",
                         help="open the resulting preview in the SDL3 viewer")
     args = parser.parse_args()
@@ -62,6 +65,18 @@ def main() -> int:
                                   "Demo exit", "normal", "left")
         rooms.save(root, doc)
         result = package.export(root, doc)
+        # BG3 is optional and is kept as a *separate* experimental tilemap.
+        # Its scroll offset and hardware priority relative to BG1/BG2 are
+        # unknown; do not blend/align it with the room's coordinates.
+        bg3_report = None
+        bg3_error = None
+        if args.decode_bg3:
+            try:
+                bg3_report = bg3.render_room(args.area, args.room)
+            except (ValueError, OSError, IndexError, KeyError) as exc:
+                bg3_error = str(exc)
+        else:
+            bg3_error = "not requested (use --decode-bg3)"
         native_path = None
         native_counts = None
         try:
@@ -83,6 +98,12 @@ def main() -> int:
         print("BG layer order/priority is not yet verified against the GBA renderer.")
     else:
         print("BG1+BG2 composite unavailable:", composite.get('reason', 'not decoded'))
+    if bg3_report and bg3_report.get("status") == "EXPERIMENTAL_BG3_TEXT_MAP":
+        print("Experimental standalone BG3 (not packaged):",
+              native.OUTPUT / bg3_report["path"])
+        print("BG3 is a separate native tilemap; press 4 in SDL3. Camera offset and priority unknown.")
+    else:
+        print("Standalone BG3 unavailable:", bg3_error or "not decoded")
     if args.demo_overlays:
         print("NOTE: synthetic project collision/object/door overlays ENABLED.")
     else:

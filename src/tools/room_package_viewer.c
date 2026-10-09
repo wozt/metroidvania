@@ -139,7 +139,7 @@ fail:
 #define MAX_BACKGROUND_BYTES (64LL * 1024LL * 1024LL)
 
 typedef struct {
-    const char *preview_path, *bg1_path, *bg2_path, *composite_path;
+    const char *preview_path, *bg1_path, *bg2_path, *composite_path, *bg3_path;
     const char *native_source_path;
     bool check_only, auto_background;
 } Arguments;
@@ -148,9 +148,10 @@ static void usage(const char *program)
 {
     fprintf(stderr, "Usage: %s [--check] [--no-auto-bg] "
             "[--bg1 path.bmp] [--bg2 path.bmp] [--composite path.bmp] "
+            "[--bg3 path.bmp] "
             "[--native-source path.tsv] "
             "path/to/preview.tsv\n"
-            "Only local MZM BG1/BG2 partial ROM previews, not packaged assets or gameplay.\n",
+            "Local MZM diagnostic layers only. BG3 is an independent tilemap, not a room composite.\n",
             program);
 }
 
@@ -169,9 +170,11 @@ static bool parse_arguments(int argc, char **argv, Arguments *a)
                 return false;
             a->native_source_path = argv[++i];
         } else if (!strcmp(value, "--bg1") || !strcmp(value, "--bg2") ||
-                   !strcmp(value, "--composite")) {
+                   !strcmp(value, "--composite") || !strcmp(value, "--bg3")) {
             const char **slot = !strcmp(value, "--bg1") ? &a->bg1_path :
-                                !strcmp(value, "--bg2") ? &a->bg2_path : &a->composite_path;
+                                !strcmp(value, "--bg2") ? &a->bg2_path :
+                                !strcmp(value, "--composite") ? &a->composite_path :
+                                &a->bg3_path;
             if (*slot || i + 1 >= argc || argv[i + 1][0] == '-') return false;
             *slot = argv[++i];
         } else if (value[0] == '-' || a->preview_path) {
@@ -208,15 +211,17 @@ static bool local_mzm_background(const Preview *preview, int layer,
                     lower, preview->room) :
                 snprintf(output, capacity,
                     "assets/extracted/rooms/metroid/previews/%s_%03d_bg%d.bmp",
-                    lower, preview->room, layer);
+                    lower, preview->room, layer == 4 ? 3 : layer);
             return written > 0 && (size_t)written < capacity;
         }
     }
     return false;
 }
 
+/* BG3 is a standalone 256x256 or 256x512 native TEXT tilemap. Its scroll
+ * offsets relative to BG1/BG2 are unverified, so do not stretch it over a room. */
 static SDL_Surface *load_matching_bmp(const char *path, const Preview *preview,
-                                      bool explicit_path, bool *invalid)
+                                      bool explicit_path, bool bg3, bool *invalid)
 {
     struct stat st;
     *invalid = false;
@@ -239,7 +244,15 @@ static SDL_Surface *load_matching_bmp(const char *path, const Preview *preview,
         *invalid = explicit_path;
         return NULL;
     }
-    if (surface->w != preview->width || surface->h != preview->height) {
+    if (bg3 && (surface->w != 256 ||
+                  (surface->h != 256 && surface->h != 512))) {
+        fprintf(stderr, "BG3 diagnostic dimensions invalid: %s (%dx%d; expected 256x256 or 256x512).\n",
+                path, surface->w, surface->h);
+        SDL_DestroySurface(surface);
+        *invalid = explicit_path;
+        return NULL;
+    }
+    if (!bg3 && (surface->w != preview->width || surface->h != preview->height)) {
         fprintf(stderr, "BMP dimensions do not match project room: %s (%dx%d, expected %dx%d). "
                 "Use a project room with matching native dimensions.\n",
                 path, surface->w, surface->h, preview->width, preview->height);
@@ -258,9 +271,10 @@ static void update_title(SDL_Window *window, int active, bool collisions, bool m
     const char *layer = active == 1 ? "authentic partial BG1" :
                         active == 2 ? "authentic partial BG2" :
                         active == 3 ? "partial BG1-over-BG2 (order not verified)" :
+                        active == 4 ? "experimental BG3 (independent native tilemap)" :
                                       "project geometry only";
     snprintf(title, sizeof(title),
-        "Metroid Vania / %s / collision %s / markers %s (1/2/3/0, C, M, Esc)",
+        "Metroid Vania / %s / collision %s / markers %s (1/2/3/4/0, C, M, Esc)",
         layer, collisions ? "ON" : "OFF", markers ? "ON" : "OFF");
     SDL_SetWindowTitle(window, title);
 }
@@ -331,15 +345,15 @@ int main(int argc, char **argv)
     Arguments options = {0};
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
-    SDL_Surface *surfaces[3] = {NULL, NULL, NULL};
-    SDL_Texture *textures[3] = {NULL, NULL, NULL};
+    SDL_Surface *surfaces[4] = {NULL, NULL, NULL, NULL};
+    SDL_Texture *textures[4] = {NULL, NULL, NULL, NULL};
     bool enabled_collisions = true, enabled_markers = true;
     size_t native_count = 0;
     int active = 0, result = 1;
     bool invalid = false, hard_failure = false;
-    char automatic_paths[3][256] = {{0}};
-    const char *background_paths[3] = {NULL, NULL, NULL};
-    bool explicit_background[3] = {false, false, false};
+    char automatic_paths[4][256] = {{0}};
+    const char *background_paths[4] = {NULL, NULL, NULL, NULL};
+    bool explicit_background[4] = {false, false, false, false};
 
     if (!parse_arguments(argc, argv, &options)) {
         usage(argv[0]);
@@ -357,9 +371,10 @@ int main(int argc, char **argv)
         result = 2;
         goto done;
     }
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 4; ++i) {
         const char *chosen = i == 0 ? options.bg1_path :
-                             i == 1 ? options.bg2_path : options.composite_path;
+                             i == 1 ? options.bg2_path :
+                             i == 2 ? options.composite_path : options.bg3_path;
         if (chosen) {
             background_paths[i] = chosen;
             explicit_background[i] = true;
@@ -370,7 +385,7 @@ int main(int argc, char **argv)
         }
         if (!background_paths[i]) continue;
         surfaces[i] = load_matching_bmp(background_paths[i], &preview,
-                                        explicit_background[i], &invalid);
+                                        explicit_background[i], i == 3, &invalid);
         hard_failure |= invalid;
     }
     if (hard_failure) {
@@ -379,11 +394,12 @@ int main(int argc, char **argv)
         goto done;
     }
     if (options.check_only) {
-        printf("MVROOM 1: %dx%d, %zu markers, valid; local BG1=%s BG2=%s BG12=%s\n",
+        printf("MVROOM 1: %dx%d, %zu markers, valid; local BG1=%s BG2=%s BG12=%s BG3=%s\n",
                preview.width, preview.height, preview.count,
                surfaces[0] ? "matching" : "absent",
                surfaces[1] ? "matching" : "absent",
-               surfaces[2] ? "matching" : "absent");
+               surfaces[2] ? "matching" : "absent",
+               surfaces[3] ? "native-tilemap" : "absent");
         printf("Native source overlay records: %zu (separate private input)\n", native_count);
         result = 0;
         goto done;
@@ -399,7 +415,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "SDL3 renderer: %s\n", SDL_GetError());
         goto done;
     }
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 4; ++i) {
         if (!surfaces[i]) continue;
         textures[i] = SDL_CreateTextureFromSurface(renderer, surfaces[i]);
         if (!textures[i]) {
@@ -412,8 +428,10 @@ int main(int argc, char **argv)
     active = textures[2] ? 3 : textures[0] ? 1 : textures[1] ? 2 : 0;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     update_title(window, active, enabled_collisions, enabled_markers);
-    printf("Controls: 1=BG1, 2=BG2, 3=partial composite, 0=no background, "
+    printf("Controls: 1=BG1, 2=BG2, 3=partial composite, "
+           "4=independent experimental BG3, 0=no background, "
            "C=collision, M=door/entity/event markers, Esc=close.\n");
+    printf("BG3 mode is a separate tilemap: room overlays hidden (scroll/priority unverified).\n");
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -429,6 +447,7 @@ int main(int argc, char **argv)
                 case SDLK_1: if (textures[0]) active = 1; break;
                 case SDLK_2: if (textures[1]) active = 2; break;
                 case SDLK_3: if (textures[2]) active = 3; break;
+                case SDLK_4: if (textures[3]) active = 4; break;
                 case SDLK_C: enabled_collisions = !enabled_collisions; break;
                 case SDLK_M: enabled_markers = !enabled_markers; break;
                 default: break;
@@ -438,17 +457,21 @@ int main(int argc, char **argv)
         }
         if (!running || !SDL_GetRenderOutputSize(renderer, &out_width, &out_height))
             break;
-        scale = SDL_min((float)out_width / (float)preview.width,
-                        (float)out_height / (float)preview.height);
-        offset_x = (out_width - preview.width * scale) * 0.5f;
-        offset_y = (out_height - preview.height * scale) * 0.5f;
+        /* BG3 has its own 256x256/512 tilemap dimensions; it must not be
+         * rescaled to the room extent or have room-space markers overlaid. */
+        int display_width = active == 4 ? surfaces[3]->w : preview.width;
+        int display_height = active == 4 ? surfaces[3]->h : preview.height;
+        scale = SDL_min((float)out_width / (float)display_width,
+                        (float)out_height / (float)display_height);
+        offset_x = (out_width - display_width * scale) * 0.5f;
+        offset_y = (out_height - display_height * scale) * 0.5f;
         SDL_FRect image = {offset_x, offset_y,
-                           preview.width * scale, preview.height * scale};
+                           display_width * scale, display_height * scale};
         SDL_SetRenderDrawColor(renderer, 17, 23, 35, 255);
         SDL_RenderClear(renderer);
         if (active && textures[active - 1])
             SDL_RenderTexture(renderer, textures[active - 1], NULL, &image);
-        for (size_t i = 0; i < preview.count; ++i) {
+        for (size_t i = 0; active != 4 && i < preview.count; ++i) {
             const Mark *mark = &preview.marks[i];
             if (((mark->kind == 'C' || mark->kind == 'N') && !enabled_collisions) ||
                 ((mark->kind != 'C' && mark->kind != 'N') && !enabled_markers))
@@ -466,9 +489,11 @@ done:
     SDL_DestroyTexture(textures[0]);
     SDL_DestroyTexture(textures[1]);
     SDL_DestroyTexture(textures[2]);
+    SDL_DestroyTexture(textures[3]);
     SDL_DestroySurface(surfaces[0]);
     SDL_DestroySurface(surfaces[1]);
     SDL_DestroySurface(surfaces[2]);
+    SDL_DestroySurface(surfaces[3]);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();

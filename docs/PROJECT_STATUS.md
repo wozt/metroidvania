@@ -1243,3 +1243,18 @@ No automatic reciprocal link or native engine encoder is implemented.
 - If original data are unavailable or the native collision geometry does not
   align with BG1, the generator reports the limitation and does not invent
   replacement geometry. Exact full native gameplay rendering remains pending.
+
+## Patch 0127 - standalone experimental native BG3 diagnostic
+
+- `scripts.native_room_viewer_demo --decode-bg3` opts in to the existing
+  experimental BG3 text-map decoder. Default no-ROM fixture runs stay pure.
+  Unavailable resources are reported without inventing pixels.
+- SDL3 `4` presents the private 256x256 or 256x512 BG3 tilemap at its **own**
+  dimensions; this is not stretched over BG1/BG2. `1`, `2`, `3`, `0` preserve
+  their previous meanings, and `C`/`M` overlays remain visible in room-space
+  modes but are deliberately hidden in independent BG3 view.
+- `--bg3` allows an explicit bounded local BMP. Automatic lookup is restricted
+  to audited MZM area/room names. Headless `--check` checks BG3 independently
+  of project-room dimensions. No ROM-derived pixels enter room.json or TSV.
+- BG3 character origin/palette decoding is experimental; hardware priority,
+  per-frame scrolling, color effects, BG0 and full GBA compositing remain pending.

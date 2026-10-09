@@ -77,7 +77,7 @@ def merge_visible_background(foreground_bmp: bytes, background_bmp: bytes,
                     bg_visible += 1
                     continue
             black_pixels += 1
-    return bmp24(fw, fh, bytes(output)), {
+    return native.bmp24(fw, fh, bytes(output)), {
         'foreground_visible_pixels': fg_visible,
         'background_visible_pixels': bg_visible,
         'black_pixels': black_pixels,

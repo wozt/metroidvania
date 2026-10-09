@@ -944,3 +944,14 @@ and the proprietary-file guard passed.
 - Project entities use the existing validated headless backend; project doors
   use `door-update`. Aria's validator now permits 8px project entity positions.
 - The feature does not yet implement engine-native entity re-encoding.
+
+## Patch 0108 - Aria BG3 previews
+
+- Export exact, static RGBA BG3 imagery from verified local Aria US ROM
+  using the existing decoded native 4bpp text-layer metadata, graphics and
+  palette. The room editor composites it behind editable BG2/BG1.
+- Keep original transparency (PNG); reject incomplete, oversized or
+  unsupported affine/8bpp BG3 rather than fabricating source imagery.
+- Original Zero Mission BG3 extraction is unchanged and remains partial.
+- Parallax, original blending priorities, room camera and animated
+  backgrounds still need native runtime reconstruction.

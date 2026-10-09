@@ -218,25 +218,31 @@ static gboolean load_preview_surface(const char *filename, cairo_surface_t **tar
     }
     int w = gdk_pixbuf_get_width(pix), h = gdk_pixbuf_get_height(pix);
     int channels = gdk_pixbuf_get_n_channels(pix);
-    if (w < 8 || h < 8 || w > 2048 || h > 2048 || channels < 3) {
+    if (w < 8 || h < 8 || w > 4096 || h > 4096 ||
+        (guint64)w * (guint64)h > 4194304u || (channels != 3 && channels != 4)) {
         g_object_unref(pix);
         return FALSE;
     }
-    int stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, w);
+    cairo_format_t format = channels == 4 ? CAIRO_FORMAT_ARGB32 : CAIRO_FORMAT_RGB24;
+    int stride = cairo_format_stride_for_width(format, w);
     unsigned char *pixels = g_malloc0((size_t)stride * (size_t)h);
     const guchar *src = gdk_pixbuf_read_pixels(pix);
     int ps = gdk_pixbuf_get_rowstride(pix);
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
             const guchar *q = src + (size_t)y * (size_t)ps + (size_t)x * (size_t)channels;
-            uint32_t rgb = 0xff000000u | ((uint32_t)q[0] << 16) |
-                           ((uint32_t)q[1] << 8) | q[2];
-            memcpy(pixels + (size_t)y * (size_t)stride + (size_t)x * 4, &rgb, 4);
+            guint32 alpha = channels == 4 ? q[3] : 255u;
+            /* Cairo ARGB32 requires premultiplied RGB on little endian. */
+            guint32 red = (q[0] * alpha + 127u) / 255u;
+            guint32 green = (q[1] * alpha + 127u) / 255u;
+            guint32 blue = (q[2] * alpha + 127u) / 255u;
+            guint32 argb = (alpha << 24) | (red << 16) | (green << 8) | blue;
+            memcpy(pixels + (size_t)y * (size_t)stride + (size_t)x * 4, &argb, 4);
         }
     }
     g_object_unref(pix);
     cairo_surface_t *surface = cairo_image_surface_create_for_data(
-        pixels, CAIRO_FORMAT_RGB24, w, h, stride);
+        pixels, format, w, h, stride);
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         cairo_surface_destroy(surface);
         g_free(pixels);
@@ -3981,14 +3987,22 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     *doc->map = *temporary;
     free(temporary);
     char bgpath[420];
-    if (aria)
+    if (aria) {
+        /* RGBA BG3 from the verified original Aria ROM. No fake picture when
+         * the source is unsupported; an existing private BMP remains usable. */
         snprintf(bgpath, sizeof(bgpath),
-                 "assets/extracted/rooms/aria/previews/area_%02u_room_%03u_bg3.bmp",
+                 "assets/extracted/rooms/aria/previews/area_%02u_room_%03u_bg3.png",
                  (unsigned)atoi(area), number);
-    else
+        if (!g_file_test(bgpath, G_FILE_TEST_IS_REGULAR))
+            snprintf(bgpath, sizeof(bgpath),
+                     "assets/extracted/rooms/aria/previews/area_%02u_room_%03u_bg3.bmp",
+                     (unsigned)atoi(area), number);
+    } else {
+        /* Zero Mission already decodes private authentic BG3 when supported. */
         snprintf(bgpath, sizeof(bgpath),
                  "assets/extracted/rooms/metroid/previews/%s_%03u_bg3.bmp",
                  area_lower, number);
+    }
     load_background(doc, bgpath);
     char collision_path[420];
     if (aria)

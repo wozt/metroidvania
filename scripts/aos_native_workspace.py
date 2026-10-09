@@ -88,6 +88,28 @@ def serialize(area: int, room: int, layers: dict[str, tuple[int, int, list[int]]
     return ('\n'.join(lines) + '\nEND\n').encode('ascii')
 
 
+def png_background_rgba(width: int, height: int, rgba: bytes) -> bytes:
+    """Lossless private BG3 RGBA preview (transparent native palette index 0).
+
+    Atlas pack_atlas() intentionally uses a much smaller image limit; room
+    backgrounds require their own guarded 4096x4096 maximum writer.
+    """
+    if (not 1 <= width <= 4096 or not 1 <= height <= 4096 or
+            width * height > 4_194_304 or len(rgba) != width * height * 4):
+        raise ValueError('invalid BG3 preview dimensions')
+
+    def chunk(tag: bytes, payload: bytes) -> bytes:
+        return (struct.pack('>I', len(payload)) + tag + payload +
+                struct.pack('>I', zlib.crc32(tag + payload) & 0xFFFFFFFF))
+
+    rows = b''.join(b'\0' + rgba[y * width * 4:(y + 1) * width * 4]
+                    for y in range(height))
+    return (b'\x89PNG\r\n\x1a\n' +
+            chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)) +
+            chunk(b'IDAT', zlib.compress(rows, level=6)) +
+            chunk(b'IEND', b''))
+
+
 def export(rom: bytes, area: int, room_number: int) -> dict:
     if not 0 <= area < 12 or not 0 <= room_number < 1000:
         raise ValueError('invalid Aria room identity')
@@ -118,6 +140,21 @@ def export(rom: bytes, area: int, room_number: int) -> dict:
             rgba = bytes(w * h * 4)
         layers[name] = split_tiles(rgba, w, h, keys, tiles)
     basename = f'area_{area:02d}_room_{room_number:03d}'
+    # BG3 is not a sprite/metatile atlas layer. Decode it independently from
+    # verified ROM VRAM and retain transparency, where the original layer uses
+    # palette index 0. Unsupported affine/8bpp BG3 stays unavailable.
+    bg3_name = None
+    bg3 = bg_layers.get(3)
+    if bg3 and bg3['status'] == 'DECODED_TEXT_BACKGROUND':
+        bg_width = bg3['width_tiles'] * 8
+        bg_height = bg3['height_tiles'] * 8
+        if (1 <= bg_width <= 4096 and 1 <= bg_height <= 4096 and
+                bg_width * bg_height <= 4_194_304):
+            rgba_bg3, unresolved_bg3 = renderer.render_background(bg3, vram, palette)
+            if not unresolved_bg3:
+                bg3_name = f'rooms/aria/previews/{basename}_bg3.png'
+                write_generated(bg3_name,
+                                png_background_rgba(bg_width, bg_height, rgba_bg3))
     atlas_name = f'rooms/aria/tilesets/{basename}_atlas.png'
     workroom_name = f'rooms/aria/workrooms/{basename}.mvnative'
     override_name = f'overrides/aria/{basename}.mvnative'
@@ -138,8 +175,9 @@ def export(rom: bytes, area: int, room_number: int) -> dict:
             'workroom': str(OUTPUT/workroom_name),
             'override': str(OUTPUT/override_name),
             'collision': str(OUTPUT/collision_name) if collision_name else None,
+            'background': str(OUTPUT/bg3_name) if bg3_name else None,
             'annotations': str(OUTPUT/annotations_name),
-            'limitation': 'Visual 16x16 RGBA cells; original 8x8 tile IDs, object graphics, animations, and entity/collision/BG3 editability are not yet preserved.'}
+            'limitation': 'BG3 is a static private visual preview; parallax, affine/8bpp and animated layers are not emulated or re-encoded.'}
 
 
 def main() -> int:

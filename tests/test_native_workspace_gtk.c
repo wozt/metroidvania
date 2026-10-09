@@ -89,6 +89,7 @@ static void test_native_doors_default_visible(void)
         }
         GtkWidget *triggers = find_room_toggle(page, "Triggers");
         g_assert_nonnull(triggers);
+        g_assert_true(gtk_widget_get_sensitive(triggers));
         g_assert_false(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(triggers)));
         /* User remains able to hide and restore the door overlay. */
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doors), FALSE);

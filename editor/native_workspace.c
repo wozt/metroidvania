@@ -38,6 +38,8 @@ typedef struct {
     int x, y;
     guint width, height;
     char variant[48], native_type[96], label[384], details[320];
+    char event_trigger[24], event_action[24], event_ref[96];
+    gboolean event_once;
     gboolean project_owned; /* Original native records remain read-only. */
     gboolean native_overridden; /* Hide only while its private override exists. */
     gint preview_item_id; /* Exact authored Aria item identifier; -1 if absent. */
@@ -598,6 +600,10 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     else if (!strcmp(action, "update")) command = "entity-update";
     else if (!strcmp(action, "delete")) command = "entity-delete";
     else if (!strcmp(action, "assign")) command = "entity-assign";
+    else if (!strcmp(action, "event-list") ||
+             !strcmp(action, "event-create") ||
+             !strcmp(action, "event-update") ||
+             !strcmp(action, "event-delete")) command = action;
     else if (!strcmp(action, "collision-list") ||
              !strcmp(action, "collision-set") ||
              !strcmp(action, "collision-stroke") ||
@@ -629,7 +635,8 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     if (!strcmp(action, "list-previews"))
         g_ptr_array_add(args, (gpointer)"--preview=true");
     if (!strcmp(action, "delete") || !strcmp(action, "door-delete") ||
-        !strcmp(action, "transition-delete") || !strcmp(action, "collision-clear"))
+        !strcmp(action, "transition-delete") || !strcmp(action, "event-delete") ||
+        !strcmp(action, "collision-clear"))
         g_ptr_array_add(args, (gpointer)"--confirm=true");
     if (options)
         for (guint i = 0; options[i]; ++i) g_ptr_array_add(args, (gpointer)options[i]);
@@ -637,13 +644,13 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
         !strcmp(action, "list-previews") || !strcmp(action, "list") ||
         !strcmp(action, "catalog") || !strcmp(action, "item-settings") ||
         !strcmp(action, "collision-list") || !strcmp(action, "door-list") ||
-        !strcmp(action, "transition-list") ?
+        !strcmp(action, "transition-list") || !strcmp(action, "event-list") ?
         "--format=tsv" : "--format=text"));
     g_ptr_array_add(args, NULL);
     gboolean mutation = strcmp(action, "list-previews") && strcmp(action, "list") &&
         strcmp(action, "catalog") && strcmp(action, "item-settings") &&
         strcmp(action, "collision-list") && strcmp(action, "door-list") &&
-        strcmp(action, "transition-list");
+        strcmp(action, "transition-list") && strcmp(action, "event-list");
     RoomHistorySnapshot *before = mutation ?
         room_history_capture_0112(doc, doc->map) : NULL;
     if (mutation && !before) {
@@ -824,6 +831,85 @@ static guint project_load_doors(NativeWorkspace *doc)
     return count;
 }
 
+static guint project_load_events(NativeWorkspace *doc)
+{
+    gchar *output = NULL;
+    if (!project_command(doc, "event-list", NULL, &output)) return 0;
+    guint count = 0;
+    gchar **lines = g_strsplit(output ? output : "", "\n", -1);
+    for (guint i = 0; lines[i] && count < 256; ++i) {
+        if (!lines[i][0]) continue;
+        gchar **fields = g_strsplit(lines[i], "\t", 11);
+        RoomAnnotation item = {0};
+        guint x = 0, y = 0, once = 0;
+        if (g_strv_length(fields) == 11 &&
+            parse_unsigned_field(fields[0], &item.index) && item.index &&
+            (!strcmp(fields[1], "EVENT") || !strcmp(fields[1], "TRIGGER")) &&
+            parse_unsigned_field(fields[2], &x) &&
+            parse_unsigned_field(fields[3], &y) &&
+            parse_unsigned_field(fields[4], &item.width) && item.width &&
+            parse_unsigned_field(fields[5], &item.height) && item.height &&
+            strlen(fields[6]) < sizeof(item.label) &&
+            strlen(fields[7]) < sizeof(item.event_trigger) &&
+            strlen(fields[8]) < sizeof(item.event_action) &&
+            strlen(fields[9]) < sizeof(item.event_ref) &&
+            parse_unsigned_field(fields[10], &once) && once <= 1) {
+            item.kind = !strcmp(fields[1], "EVENT") ?
+                OVERLAY_EVENTS : OVERLAY_TRIGGERS;
+            item.project_owned = TRUE;
+            item.x = (int)x;
+            item.y = (int)y;
+            item.preview_item_id = -1;
+            item.event_once = once != 0;
+            g_strlcpy(item.label, fields[6], sizeof(item.label));
+            g_strlcpy(item.variant, "project", sizeof(item.variant));
+            g_strlcpy(item.native_type, fields[9], sizeof(item.native_type));
+            g_strlcpy(item.event_trigger, fields[7], sizeof(item.event_trigger));
+            g_strlcpy(item.event_action, fields[8], sizeof(item.event_action));
+            g_strlcpy(item.event_ref, fields[9], sizeof(item.event_ref));
+            g_snprintf(item.details, sizeof(item.details),
+                "Private project %s; trigger=%s; action=%s:%s; once=%s; "
+                "no engine adapter.",
+                item.kind == OVERLAY_EVENTS ? "event" : "trigger",
+                item.event_trigger, item.event_action, item.event_ref,
+                item.event_once ? "true" : "false");
+            g_array_append_val(doc->annotations, item);
+            GtkWidget *row = gtk_label_new(NULL);
+            gchar *summary = g_strdup_printf(
+                "[PROJECT] %s #%u — %s\n(%u,%u), %ux%u | %s -> %s:%s | once=%s",
+                fields[1], item.index, item.label, x, y, item.width, item.height,
+                item.event_trigger, item.event_action, item.event_ref,
+                item.event_once ? "true" : "false");
+            gtk_label_set_text(GTK_LABEL(row), summary);
+            gtk_label_set_xalign(GTK_LABEL(row), 0);
+            gtk_label_set_wrap(GTK_LABEL(row), TRUE);
+            gtk_label_set_selectable(GTK_LABEL(row), TRUE);
+            gtk_widget_set_margin_start(row, 8);
+            gtk_widget_set_margin_bottom(row, 6);
+            g_object_set_data(G_OBJECT(row), "mv-annotation-index",
+                              GUINT_TO_POINTER(doc->annotations->len));
+            GtkGesture *context = gtk_gesture_click_new();
+            gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(context),
+                                          GDK_BUTTON_SECONDARY);
+            gtk_widget_add_controller(row, GTK_EVENT_CONTROLLER(context));
+            g_signal_connect(context, "pressed",
+                             G_CALLBACK(annotation_list_context_pressed), doc);
+            gtk_list_box_append(GTK_LIST_BOX(doc->annotations_list), row);
+            if (doc->overlay_buttons[item.kind]) {
+                gtk_widget_set_sensitive(doc->overlay_buttons[item.kind], TRUE);
+                gtk_toggle_button_set_active(
+                    GTK_TOGGLE_BUTTON(doc->overlay_buttons[item.kind]), TRUE);
+            }
+            g_free(summary);
+            ++count;
+        }
+        g_strfreev(fields);
+    }
+    g_strfreev(lines);
+    g_free(output);
+    return count;
+}
+
 /* PATCH_0107_NATIVE_GRAB_POSITIONS: native source data stays immutable.
  * A private GKeyFile contains only positions, with a source identity check.
  * No original room resource, entity constructor, or ROM is ever rewritten. */
@@ -985,12 +1071,13 @@ static void project_load(NativeWorkspace *doc)
     }
     guint collision_cells = project_load_collision(doc);
     guint doors = project_load_doors(doc);
-    if (doc->annotations_status && (projects || collision_cells || doors)) {
+    guint events = project_load_events(doc);
+    if (doc->annotations_status && (projects || collision_cells || doors || events)) {
         const char *previous = gtk_label_get_text(GTK_LABEL(doc->annotations_status));
         gchar *status = g_strdup_printf(
-            "%s  + %u project entities, %u collision cells and %u doors "
+            "%s  + %u project entities, %u collision cells, %u doors and %u events "
             "(one room document; not playable).",
-            previous, projects, collision_cells, doors);
+            previous, projects, collision_cells, doors, events);
         gtk_label_set_text(GTK_LABEL(doc->annotations_status), status);
         g_free(status);
     }
@@ -1018,6 +1105,19 @@ static gboolean project_move(NativeWorkspace *doc, guint id, int x, int y)
     gboolean ok = project_command(doc, "move", options, NULL);
     project_reload(doc);
     if (ok) message(doc, "Project entity moved in preview. Press Save to commit.");
+    return ok;
+}
+
+static gboolean project_event_move(NativeWorkspace *doc, guint id, int x, int y)
+{
+    gchar sid[16], sx[16], sy[16];
+    g_snprintf(sid, sizeof(sid), "%u", id);
+    g_snprintf(sx, sizeof(sx), "%d", x);
+    g_snprintf(sy, sizeof(sy), "%d", y);
+    const char *const options[] = {"--id", sid, "--x", sx, "--y", sy, NULL};
+    gboolean ok = project_command(doc, "event-update", options, NULL);
+    project_reload(doc);
+    if (ok) message(doc, "Project event moved in preview. Press Save to commit.");
     return ok;
 }
 
@@ -1541,6 +1641,194 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     gtk_window_present(GTK_WINDOW(window));
 }
 
+/* Project events and triggers share one engine-neutral region schema in both
+ * workroom modes. Native event records remain immutable annotations. */
+typedef struct {
+    NativeWorkspace *doc;
+    GtkWidget *window, *kind, *label, *x, *y, *width, *height;
+    GtkWidget *trigger, *action, *reference, *once;
+    guint event_id;
+} ProjectEventForm;
+
+static const char *const project_event_kinds[] = {"EVENT", "TRIGGER", NULL};
+static const char *const project_trigger_types[] = {
+    "room_load", "enter", "leave", "touch", "interact", NULL};
+static const char *const project_action_types[] = {
+    "story", "spawn", "toggle", "checkpoint", "transition", NULL};
+
+static guint project_event_choice_index(const char *const *choices,
+                                        const char *value)
+{
+    for (guint i = 0; choices[i]; ++i)
+        if (value && !strcmp(choices[i], value)) return i;
+    return 0;
+}
+
+static const char *project_event_choice(GtkWidget *dropdown,
+                                        const char *const *choices)
+{
+    guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(dropdown));
+    for (guint i = 0; choices[i]; ++i)
+        if (i == selected) return choices[i];
+    return choices[0];
+}
+
+static void project_event_form_destroy(gpointer data)
+{
+    ProjectEventForm *form = data;
+    document_unref(form->doc);
+    g_free(form);
+}
+
+static GtkWidget *project_event_spin(guint maximum, guint step, guint value)
+{
+    GtkWidget *spin = gtk_spin_button_new_with_range(0, maximum, step);
+    gtk_spin_button_set_snap_to_ticks(GTK_SPIN_BUTTON(spin), TRUE);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin), value);
+    return spin;
+}
+
+static void project_event_grid_field(GtkGrid *grid, int row, const char *name,
+                                     GtkWidget *field)
+{
+    GtkWidget *label = gtk_label_new(name);
+    gtk_label_set_xalign(GTK_LABEL(label), 0);
+    gtk_widget_set_hexpand(field, TRUE);
+    gtk_grid_attach(grid, label, 0, row, 1, 1);
+    gtk_grid_attach(grid, field, 1, row, 1, 1);
+}
+
+static void project_event_submit(GtkButton *button, gpointer userdata)
+{
+    (void)button;
+    ProjectEventForm *form = userdata;
+    NativeWorkspace *doc = form->doc;
+    if (doc->closing || !doc->ready) return;
+    gchar id[16], x[16], y[16], width[16], height[16];
+    g_snprintf(id, sizeof(id), "%u", form->event_id);
+    g_snprintf(x, sizeof(x), "%d",
+               gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->x)));
+    g_snprintf(y, sizeof(y), "%d",
+               gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->y)));
+    g_snprintf(width, sizeof(width), "%d",
+               gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->width)));
+    g_snprintf(height, sizeof(height), "%d",
+               gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->height)));
+    const char *label = gtk_editable_get_text(GTK_EDITABLE(form->label));
+    const char *reference = gtk_editable_get_text(GTK_EDITABLE(form->reference));
+    const char *kind = project_event_choice(form->kind, project_event_kinds);
+    const char *trigger = project_event_choice(
+        form->trigger, project_trigger_types);
+    const char *action = project_event_choice(form->action, project_action_types);
+    const char *once = gtk_check_button_get_active(
+        GTK_CHECK_BUTTON(form->once)) ? "true" : "false";
+    const char *const options[] = {
+        form->event_id ? "--id" : NULL, form->event_id ? id : NULL,
+        "--event-kind", kind, "--x", x, "--y", y,
+        "--region-width", width, "--region-height", height,
+        "--label", label, "--trigger-type", trigger,
+        "--action-type", action, "--action-ref", reference,
+        "--once", once, NULL};
+    const char *const create_options[] = {
+        "--event-kind", kind, "--x", x, "--y", y,
+        "--region-width", width, "--region-height", height,
+        "--label", label, "--trigger-type", trigger,
+        "--action-type", action, "--action-ref", reference,
+        "--once", once, NULL};
+    if (!project_command(doc, form->event_id ? "event-update" : "event-create",
+                         form->event_id ? options : create_options, NULL)) return;
+    project_reload(doc);
+    message(doc, "Project event changes staged; use Save to commit.");
+    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_close_idle,
+                    g_object_ref(form->window), g_object_unref);
+}
+
+static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
+                               guint default_kind, int x, int y)
+{
+    if (!doc->ready || doc->closing) return;
+    const guint step = doc->project_aria ? 8u : 16u;
+    const guint room_width = doc->map->width[0] * 16;
+    const guint room_height = doc->map->height[0] * 16;
+    ProjectEventForm *form = g_new0(ProjectEventForm, 1);
+    form->doc = document_ref(doc);
+    form->event_id = item ? item->index : 0;
+    form->window = gtk_window_new();
+    GtkRoot *root = doc->page ? gtk_widget_get_root(doc->page) : NULL;
+    if (GTK_IS_WINDOW(root))
+        gtk_window_set_transient_for(GTK_WINDOW(form->window), GTK_WINDOW(root));
+    gtk_window_set_title(GTK_WINDOW(form->window), item ?
+        "Edit project event / trigger" : "Create project event / trigger");
+    gtk_window_set_default_size(GTK_WINDOW(form->window), 500, 500);
+    GtkWidget *outer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    GtkWidget *notice = gtk_label_new(
+        "Project-only event region. It is shared by both worlds but remains "
+        "non-playable until each engine adapter implements its action.");
+    gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(notice), 0);
+    GtkWidget *grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 7);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    form->kind = gtk_drop_down_new_from_strings(project_event_kinds);
+    form->label = gtk_entry_new();
+    form->x = project_event_spin(room_width - step, step, item ? item->x : x);
+    form->y = project_event_spin(room_height - step, step, item ? item->y : y);
+    form->width = project_event_spin(
+        room_width, step, item ? item->width : step);
+    form->height = project_event_spin(
+        room_height, step, item ? item->height : step);
+    gtk_spin_button_set_range(GTK_SPIN_BUTTON(form->width), step, room_width);
+    gtk_spin_button_set_range(GTK_SPIN_BUTTON(form->height), step, room_height);
+    form->trigger = gtk_drop_down_new_from_strings(project_trigger_types);
+    form->action = gtk_drop_down_new_from_strings(project_action_types);
+    form->reference = gtk_entry_new();
+    form->once = gtk_check_button_new_with_label("Run only once");
+    gtk_editable_set_text(GTK_EDITABLE(form->label), item ? item->label :
+        default_kind == OVERLAY_EVENTS ? "New project event" : "New project trigger");
+    gtk_editable_set_text(GTK_EDITABLE(form->reference), item ? item->event_ref :
+        default_kind == OVERLAY_EVENTS ? "event.new" : "trigger.new");
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->kind), item ?
+        project_event_choice_index(project_event_kinds,
+            item->kind == OVERLAY_EVENTS ? "EVENT" : "TRIGGER") :
+        default_kind == OVERLAY_EVENTS ? 0 : 1);
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->trigger),
+        project_event_choice_index(project_trigger_types,
+            item ? item->event_trigger : "enter"));
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->action),
+        project_event_choice_index(project_action_types,
+            item ? item->event_action : "story"));
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(form->once),
+                                item ? item->event_once : FALSE);
+    project_event_grid_field(GTK_GRID(grid), 0, "Overlay kind", form->kind);
+    project_event_grid_field(GTK_GRID(grid), 1, "Label", form->label);
+    project_event_grid_field(GTK_GRID(grid), 2, "X position", form->x);
+    project_event_grid_field(GTK_GRID(grid), 3, "Y position", form->y);
+    project_event_grid_field(GTK_GRID(grid), 4, "Region width", form->width);
+    project_event_grid_field(GTK_GRID(grid), 5, "Region height", form->height);
+    project_event_grid_field(GTK_GRID(grid), 6, "Trigger type", form->trigger);
+    project_event_grid_field(GTK_GRID(grid), 7, "Action type", form->action);
+    project_event_grid_field(GTK_GRID(grid), 8, "Action reference", form->reference);
+    gtk_grid_attach(GTK_GRID(grid), form->once, 1, 9, 1, 1);
+    GtkWidget *apply = gtk_button_new_with_label(item ?
+        "Apply event changes" : "Create event region");
+    gtk_widget_set_margin_start(outer, 16);
+    gtk_widget_set_margin_end(outer, 16);
+    gtk_widget_set_margin_top(outer, 16);
+    gtk_widget_set_margin_bottom(outer, 16);
+    gtk_box_append(GTK_BOX(outer), notice);
+    gtk_box_append(GTK_BOX(outer), grid);
+    gtk_box_append(GTK_BOX(outer), apply);
+    GtkWidget *scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+                                   GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), outer);
+    gtk_window_set_child(GTK_WINDOW(form->window), scroll);
+    g_object_set_data_full(G_OBJECT(form->window), "mv-project-event-form",
+                           form, project_event_form_destroy);
+    g_signal_connect(apply, "clicked", G_CALLBACK(project_event_submit), form);
+    gtk_window_present(GTK_WINDOW(form->window));
+}
+
 static gboolean project_popover_close_idle(gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
@@ -1572,6 +1860,31 @@ static void project_context_add(GtkWidget *layout, NativeWorkspace *doc,
     g_object_set_data(G_OBJECT(button), "mv-project-y", GINT_TO_POINTER(y + 1));
     g_object_set_data(G_OBJECT(button), "mv-project-kind", GUINT_TO_POINTER(kind));
     g_signal_connect(button, "clicked", G_CALLBACK(project_create_clicked), doc);
+    gtk_box_append(GTK_BOX(layout), button);
+}
+
+static void project_event_create_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    int x = GPOINTER_TO_INT(g_object_get_data(
+        G_OBJECT(button), "mv-project-x")) - 1;
+    int y = GPOINTER_TO_INT(g_object_get_data(
+        G_OBJECT(button), "mv-project-y")) - 1;
+    guint kind = GPOINTER_TO_UINT(g_object_get_data(
+        G_OBJECT(button), "mv-project-kind"));
+    project_popover_defer_close(doc);
+    project_event_open(doc, NULL, kind, x, y);
+}
+
+static void project_event_context_add(GtkWidget *layout, NativeWorkspace *doc,
+                                      const char *label, int x, int y, guint kind)
+{
+    GtkWidget *button = gtk_button_new_with_label(label);
+    g_object_set_data(G_OBJECT(button), "mv-project-x", GINT_TO_POINTER(x + 1));
+    g_object_set_data(G_OBJECT(button), "mv-project-y", GINT_TO_POINTER(y + 1));
+    g_object_set_data(G_OBJECT(button), "mv-project-kind", GUINT_TO_POINTER(kind));
+    g_signal_connect(button, "clicked",
+                     G_CALLBACK(project_event_create_clicked), doc);
     gtk_box_append(GTK_BOX(layout), button);
 }
 
@@ -1669,6 +1982,13 @@ static void project_context_empty(NativeWorkspace *doc, GtkWidget *canvas,
     project_context_add(layout, doc, "Create project enemy here...", px, py, OVERLAY_ENEMIES);
     project_context_add(layout, doc, "Create project item here...", px, py, OVERLAY_ITEMS);
     project_context_add(layout, doc, "Create project object here...", px, py, OVERLAY_OBJECTS);
+    int event_step = doc->project_aria ? 8 : 16;
+    int event_x = (int)(x / (event_step * doc->scale)) * event_step;
+    int event_y = (int)(y / (event_step * doc->scale)) * event_step;
+    project_event_context_add(layout, doc, "Create project event region here...",
+                              event_x, event_y, OVERLAY_EVENTS);
+    project_event_context_add(layout, doc, "Create project trigger region here...",
+                              event_x, event_y, OVERLAY_TRIGGERS);
     GtkWidget *door = gtk_button_new_with_label("Create project door here");
     g_object_set_data(G_OBJECT(door), "mv-project-x", GINT_TO_POINTER(px + 1));
     g_object_set_data(G_OBJECT(door), "mv-project-y", GINT_TO_POINTER(py + 1));
@@ -1708,7 +2028,7 @@ static void project_move_start_clicked(GtkButton *button, gpointer userdata)
 typedef struct {
     NativeWorkspace *doc;
     guint id;
-    gboolean door;
+    guint kind;
 } ProjectDelete;
 
 static gboolean project_delete_idle(gpointer userdata)
@@ -1719,12 +2039,16 @@ static gboolean project_delete_idle(gpointer userdata)
         gchar id[16];
         snprintf(id, sizeof(id), "%u", request->id);
         const char *const options[] = {"--id", id, NULL};
+        const char *action = request->kind == OVERLAY_DOORS ? "door-delete" :
+            request->kind == OVERLAY_EVENTS || request->kind == OVERLAY_TRIGGERS ?
+            "event-delete" : "delete";
         annotation_popup_close(doc);
-        if (project_command(doc, request->door ? "door-delete" : "delete",
-                            options, NULL)) {
+        if (project_command(doc, action, options, NULL)) {
             project_reload(doc);
-            message(doc, request->door ?
+            message(doc, request->kind == OVERLAY_DOORS ?
                 "Project door deleted; native doors and transitions unchanged." :
+                request->kind == OVERLAY_EVENTS || request->kind == OVERLAY_TRIGGERS ?
+                "Project event region deleted; native events unchanged." :
                 "Project entity deleted; original ROM annotations unchanged.");
         }
     }
@@ -1741,7 +2065,7 @@ static void project_delete_clicked(GtkButton *button, gpointer userdata)
     ProjectDelete *request = g_new0(ProjectDelete, 1);
     request->doc = document_ref(doc);
     request->id = item->index;
-    request->door = item->kind == OVERLAY_DOORS;
+    request->kind = item->kind;
     /* Do not destroy the right-click GtkPopover during GtkButton::clicked. */
     g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_delete_idle, request, NULL);
 }
@@ -2553,6 +2877,12 @@ static void annotation_editor_clicked(GtkButton *button, gpointer userdata)
         project_popover_defer_close(doc);
         return;
     }
+    if (item->project_owned && (item->kind == OVERLAY_EVENTS ||
+                                item->kind == OVERLAY_TRIGGERS)) {
+        project_event_open(doc, item, item->kind, item->x, item->y);
+        project_popover_defer_close(doc);
+        return;
+    }
     if (item->kind == OVERLAY_DOORS && !item->project_owned) {
         gchar index[16];
         snprintf(index, sizeof(index), "%u", item->index);
@@ -2666,6 +2996,8 @@ static void annotation_context_show(NativeWorkspace *doc, GtkWidget *relative,
         }
         gtk_box_append(GTK_BOX(layout), annotation_menu_button(
             doc, item->kind == OVERLAY_DOORS ? "Delete project door" :
+                 item->kind == OVERLAY_EVENTS || item->kind == OVERLAY_TRIGGERS ?
+                                               "Delete project event region" :
                                                "Delete project entity",
             array_index,
             G_CALLBACK(project_delete_clicked)));
@@ -3858,11 +4190,14 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
             g_snprintf(sy, sizeof(sy), "%d", y);
             const char *const opts[] = {"--id", sid, "--x", sx, "--y", sy, NULL};
             success = project_command(doc, "door-update", opts, NULL);
+        } else if (changed && !native &&
+                   (kind == OVERLAY_EVENTS || kind == OVERLAY_TRIGGERS)) {
+            success = project_event_move(doc, id, x, y);
         } else if (changed && !native) {
             success = project_move(doc, id, x, y);
         }
         if (changed) {
-            /* project_move() already reloads; no duplicate GTK list rebuild. */
+            /* Entity/event move helpers already reload; doors/native do not. */
             if (native || kind == OVERLAY_DOORS) project_reload(doc);
             message(doc, success ?
                 "Grab: pending coordinates (press Save). Original ROM unchanged." :
@@ -4676,8 +5011,8 @@ static void document_build(NativeWorkspace *doc)
         "Show native pickups, upgrades and items",
         "Show native world objects and props",
         "Show native door sprites, door tables and room transitions",
-        "Show native events (not conditional enemy/item spawn variants)",
-        "Trigger region decoder is not available yet",
+        "Show native and project events (not conditional enemy/item spawn variants)",
+        "Show project trigger regions; native trigger decoding is not available yet",
         "Show unknown or unclassified native entity records"
     };
     GtkWidget *overlay_buttons[OVERLAY_COUNT];
@@ -4746,8 +5081,8 @@ static void document_build(NativeWorkspace *doc)
             i == OVERLAY_OBJECTS || i == OVERLAY_DOORS || i == OVERLAY_EVENTS)
             gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(overlay_buttons[i]), TRUE);
     }
-    /* Trigger structures are not decoded for either engine yet. */
-    gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);
+    /* Native trigger structures are not decoded yet, but the shared project
+     * region schema makes this overlay useful and editable in both modes. */
     GtkWidget *hatch_preview = icon_toggle("media-playback-start-symbolic", "Animate hatches");
     gtk_widget_set_size_request(hatch_preview, 30, 30);
     doc->hatch_animate_button = hatch_preview;

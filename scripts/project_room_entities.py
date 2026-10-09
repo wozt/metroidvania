@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "metroidvania.project-room-data"
-VERSION = 2
+VERSION = 3
 LEGACY_SCHEMA = "metroidvania.project-room-entities"
 KINDS = ("ENEMY", "ITEM", "OBJECT")
 MZM_AREAS = ("Brinstar", "Kraid", "Norfair", "Ridley", "Tourian", "Crateria", "Chozodia")
@@ -20,8 +20,9 @@ NATIVE_TYPE = re.compile(r"[A-Za-z0-9_.:-]{1,64}\Z", re.ASCII)
 DOC_KEYS = {
     "schema", "version", "world", "area", "room", "width_px", "height_px",
     "next_id", "entities", "collision", "next_door_id", "doors",
-    "next_transition_id", "transitions",
+    "next_transition_id", "transitions", "next_event_id", "events",
 }
+V2_DOC_KEYS = DOC_KEYS - {"next_event_id", "events"}
 ENTITY_KEYS = {"id", "kind", "x", "y", "label", "native_type"}
 COLLISION_KEYS = {"resolution_px", "cells"}
 COLLISION_CELL_KEYS = {"x", "y", "type"}
@@ -59,6 +60,14 @@ TRANSITION_KEYS = {
     "id", "source_door_id", "target_world", "target_area", "target_room",
     "target_door_id", "spawn_x", "spawn_y",
 }
+EVENT_KEYS = {
+    "id", "kind", "x", "y", "width", "height", "label",
+    "trigger_type", "action_type", "action_ref", "once",
+}
+EVENT_KINDS = ("EVENT", "TRIGGER")
+TRIGGER_TYPES = ("room_load", "enter", "leave", "touch", "interact")
+ACTION_TYPES = ("story", "spawn", "toggle", "checkpoint", "transition")
+ACTION_REFERENCE = re.compile(r"[A-Za-z0-9_.:-]{1,80}\Z", re.ASCII)
 # PATCH_0081_ARIA_PICKUP_THUMBNAILS
 ITEM_KEYS = {"item_id", "parameter_0", "parameter_1", "flags"}
 ARIA_PICKUP_LIMITS = {0: 0, 1: 255, 2: 31, 3: 58, 4: 44, 5: 55,
@@ -97,6 +106,7 @@ def requested_item_settings(args: argparse.Namespace) -> dict | None:
 MAX_ENTITIES = 256
 MAX_DOORS = 128
 MAX_TRANSITIONS = 128
+MAX_EVENTS = 256
 
 
 def collision_capabilities(world: str) -> dict:
@@ -158,11 +168,18 @@ def _new(world: str, area: str, room: int, width: int, height: int) -> dict:
             "collision": {"resolution_px": 16 if world == "mzm" else 8,
                           "cells": []},
             "next_door_id": 1, "doors": [],
-            "next_transition_id": 1, "transitions": []}
+            "next_transition_id": 1, "transitions": [],
+            "next_event_id": 1, "events": []}
 
 
 def migrate(document: object) -> object:
     """Upgrade the former entity-only room document without touching disk."""
+    if (isinstance(document, dict) and document.get("schema") == SCHEMA
+            and document.get("version") == 2):
+        if document.keys() != V2_DOC_KEYS:
+            raise ValueError("invalid version-2 project room document fields")
+        return {**document, "version": VERSION,
+                "next_event_id": 1, "events": []}
     if (not isinstance(document, dict) or document.get("schema") != LEGACY_SCHEMA
             or document.get("version") != 1):
         return document
@@ -178,6 +195,7 @@ def migrate(document: object) -> object:
                       "cells": []},
         "next_door_id": 1, "doors": [],
         "next_transition_id": 1, "transitions": [],
+        "next_event_id": 1, "events": [],
     }
 
 
@@ -319,6 +337,39 @@ def validate(doc: object, world: str, area: str, room: int,
         _int(transition["target_door_id"], 0, 999999, "target_door_id")
         _int(transition["spawn_x"], 0, 16383, "spawn_x")
         _int(transition["spawn_y"], 0, 16383, "spawn_y")
+    next_event_id = _int(doc["next_event_id"], 1, 1000000, "next_event_id")
+    events = doc["events"]
+    if not isinstance(events, list) or len(events) > MAX_EVENTS:
+        raise ValueError("invalid project event count")
+    event_ids = set()
+    for event in events:
+        if not isinstance(event, dict) or event.keys() != EVENT_KEYS:
+            raise ValueError("invalid project event fields")
+        event_id = _int(event["id"], 1, next_event_id - 1, "event id")
+        if event_id in event_ids:
+            raise ValueError("duplicate project event id")
+        event_ids.add(event_id)
+        if event["kind"] not in EVENT_KINDS:
+            raise ValueError("unknown project event kind")
+        for axis, limit in (("x", width), ("y", height)):
+            value = _int(event[axis], 0, limit - resolution, f"event {axis}")
+            if value % resolution:
+                raise ValueError(f"event {axis} must align to collision resolution")
+        for extent, limit, origin in (("width", width, event["x"]),
+                                      ("height", height, event["y"])):
+            value = _int(event[extent], resolution, limit, f"event {extent}")
+            if value % resolution or origin + value > limit:
+                raise ValueError(f"invalid event {extent}")
+        _text(event["label"], 80, "event label")
+        if event["trigger_type"] not in TRIGGER_TYPES:
+            raise ValueError("unknown project trigger type")
+        if event["action_type"] not in ACTION_TYPES:
+            raise ValueError("unknown project action type")
+        if (not isinstance(event["action_ref"], str)
+                or not ACTION_REFERENCE.fullmatch(event["action_ref"])):
+            raise ValueError("invalid project action reference")
+        if type(event["once"]) is not bool:
+            raise ValueError("event once must be boolean")
     return doc
 
 
@@ -687,6 +738,54 @@ def transition_delete(doc: dict, transition_id: int) -> None:
     if len(transitions) == len(doc["transitions"]):
         raise ValueError("unknown project transition id")
     doc.update(_validated_candidate(doc, transitions=transitions))
+
+
+def event_create(doc: dict, kind: str, x: int, y: int, width: int,
+                 height: int, label: str, trigger_type: str,
+                 action_type: str, action_ref: str, once: bool) -> dict:
+    """Create one engine-neutral event or trigger region."""
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    if len(doc["events"]) >= MAX_EVENTS:
+        raise ValueError("project event limit reached")
+    event = {
+        "id": doc["next_event_id"], "kind": kind,
+        "x": x, "y": y, "width": width, "height": height,
+        "label": label, "trigger_type": trigger_type,
+        "action_type": action_type, "action_ref": action_ref, "once": once,
+    }
+    candidate = _validated_candidate(
+        doc, next_event_id=doc["next_event_id"] + 1,
+        events=[*doc["events"], event])
+    doc.update(candidate)
+    return event
+
+
+def event_update(doc: dict, event_id: int, **changes: object) -> dict:
+    """Atomically update editable fields of one project event region."""
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    allowed = EVENT_KEYS - {"id"}
+    if not changes or not set(changes) <= allowed:
+        raise ValueError("event update requires only editable event fields")
+    current = next((event for event in doc["events"]
+                    if event["id"] == event_id), None)
+    if current is None:
+        raise ValueError("unknown project event id")
+    changed = {**current, **changes}
+    events = [changed if event["id"] == event_id else event
+              for event in doc["events"]]
+    doc.update(_validated_candidate(doc, events=events))
+    return changed
+
+
+def event_delete(doc: dict, event_id: int) -> None:
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    events = [event for event in doc["events"] if event["id"] != event_id]
+    if len(events) == len(doc["events"]):
+        raise ValueError("unknown project event id")
+    doc.update(_validated_candidate(doc, events=events))
 
 
 # PATCH_0080_NATIVE_CATALOG_BINDING

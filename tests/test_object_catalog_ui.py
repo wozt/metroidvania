@@ -22,11 +22,25 @@ class ObjectCatalogUiContract(unittest.TestCase):
         for label in ('"Walls", "Enemies", "Items", "Objects", "Doors", "Events", "Triggers", "Other"',
                       'gtk_label_new("Room data")',
                       'load_annotations(doc, annotations_path)',
-                      'Trigger region decoder is not available yet'):
+                      'Show project trigger regions; native trigger decoding is not available yet'):
             self.assertIn(label, source)
-        self.assertIn(
+        self.assertNotIn(
             'gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);',
             source)
+
+    def test_project_event_regions_share_one_editor_in_both_worlds(self):
+        source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
+        for contract in (
+                '"event-list"',
+                '"event-create"',
+                '"event-update"',
+                '"event-delete"',
+                '"Create project event region here..."',
+                '"Create project trigger region here..."',
+                '"Apply event changes"',
+                'project_event_move',
+                'const guint step = doc->project_aria ? 8u : 16u;'):
+            self.assertIn(contract, source)
 
     def test_room_records_have_context_menu_and_typed_editor_shell(self):
         source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')

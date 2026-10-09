@@ -21,7 +21,7 @@ from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.room_audit import audit_world, write_private_report
 from scripts.validate_story_assets import validate_scene, validate_timeline
 
-BACKEND_VERSION = "1.5.0"
+BACKEND_VERSION = "1.6.0"
 
 CAPABILITIES = {
     "project-info": "available",
@@ -65,6 +65,11 @@ CAPABILITIES = {
     "collision-stroke": "available_project_room_data_only",
     "collision-clear": "available_project_room_data_only",
     "collision-validate": "available_project_room_data_only",
+    "event-list": "available_project_room_data_only",
+    "event-inspect": "available_project_room_data_only",
+    "event-create": "available_project_room_data_only",
+    "event-update": "available_project_room_data_only",
+    "event-delete": "available_project_room_data_only",
     "door-list": "available_project_room_data_only",
     "door-target-list": "available_saved_project_door_targets_only",
     "connection-list": "available_saved_project_connections_only",
@@ -81,7 +86,6 @@ CAPABILITIES = {
     "transition-delete": "available_project_room_data_only",
     "transition-validate": "available_project_room_data_only",
     "object-definition-create": "unavailable_schema_pending",
-    "event-create": "unavailable_backend_extraction_pending",
     "cutscene-create": "unavailable_backend_extraction_pending",
     "audio-list": "unavailable_native_inventory_pending",
     "audio-render": "unavailable_decoder_pending",
@@ -141,6 +145,15 @@ COMMAND_FIELDS = {
     "collision-clear": {"world", "area", "room", "width", "height", "x", "y",
                         "fill_width", "fill_height", "confirm"},
     "collision-validate": {"world", "area", "room", "width", "height"},
+    "event-list": {"world", "area", "room", "width", "height"},
+    "event-inspect": {"world", "area", "room", "width", "height", "id"},
+    "event-create": {"world", "area", "room", "width", "height",
+                     "event_kind", "x", "y", "region_width", "region_height",
+                     "label", "trigger_type", "action_type", "action_ref", "once"},
+    "event-update": {"world", "area", "room", "width", "height", "id",
+                     "event_kind", "x", "y", "region_width", "region_height",
+                     "label", "trigger_type", "action_type", "action_ref", "once"},
+    "event-delete": {"world", "area", "room", "width", "height", "id", "confirm"},
     "door-list": {"world", "area", "room", "width", "height"},
     "door-target-list": {"target_world", "target_area", "target_room"},
     "connection-list": {"world", "area", "room"},
@@ -172,6 +185,7 @@ MUTATING_COMMANDS = {
     "entity-assign", "story-save",
     "tile-set", "tile-fill",
     "collision-set", "collision-fill", "collision-stroke", "collision-clear",
+    "event-create", "event-update", "event-delete",
     "door-create", "door-adopt", "door-update", "door-delete", "door-link",
     "transition-create", "transition-update", "transition-delete",
 }
@@ -655,6 +669,7 @@ def _project_validation(root: Path) -> dict:
             "collision_cell_count": len(document["collision"]["cells"]),
             "door_count": len(document["doors"]),
             "transition_count": len(document["transitions"]),
+            "event_count": len(document["events"]),
         })
     return {"timeline_events": timeline_count, "cutscenes": scenes,
             "draft_rooms": [room["id"] for room in drafts],
@@ -1041,6 +1056,68 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
             path = project_room_entities.save(root_path, document)
             result.update({"persisted": True, "path": str(path)})
         return result
+    if command.startswith("event-"):
+        document, _scope = _room_document(root_path, options)
+        if command == "event-list":
+            return {"count": len(document["events"]), "events": document["events"],
+                    "engine_adapter": "unavailable"}
+        event_id = None if command == "event-create" else _integer(
+            options.get("id"), "id", 1, 999999)
+        current = next((event for event in document["events"]
+                        if event["id"] == event_id), None)
+        if command == "event-inspect":
+            if current is None:
+                raise ValueError("unknown project event id")
+            return {"event": current, "engine_adapter": "unavailable"}
+        if command == "event-delete":
+            if options.get("confirm") is not True:
+                raise ValueError("event-delete requires --confirm=true")
+            project_room_entities.event_delete(document, event_id)
+            changed = {"id": event_id, "deleted": True}
+        elif command == "event-create":
+            fields = {
+                "kind": options.get("event_kind"),
+                "x": _integer(options.get("x"), "x", 0, 16383),
+                "y": _integer(options.get("y"), "y", 0, 16383),
+                "width": _integer(options.get("region_width"), "region_width", 1, 16384),
+                "height": _integer(options.get("region_height"), "region_height", 1, 16384),
+                "label": options.get("label"),
+                "trigger_type": options.get("trigger_type"),
+                "action_type": options.get("action_type"),
+                "action_ref": options.get("action_ref"),
+                "once": options.get("once"),
+            }
+            changed = project_room_entities.event_create(
+                document, fields.pop("kind"), **fields)
+        elif command == "event-update":
+            changes: dict[str, Any] = {}
+            direct = {
+                "event_kind": "kind", "label": "label",
+                "trigger_type": "trigger_type", "action_type": "action_type",
+                "action_ref": "action_ref", "once": "once",
+            }
+            for option, field in direct.items():
+                if option in options:
+                    changes[field] = options[option]
+            numeric = {
+                "x": "x", "y": "y", "region_width": "width",
+                "region_height": "height",
+            }
+            for option, field in numeric.items():
+                if option in options:
+                    changes[field] = _integer(
+                        options[option], option, 0 if option in ("x", "y") else 1,
+                        16383 if option in ("x", "y") else 16384)
+            changed = project_room_entities.event_update(
+                document, event_id, **changes)
+        else:
+            raise AssertionError(f"unhandled event command: {command}")
+        if dry_run:
+            return {"event": changed, "persisted": False,
+                    "engine_adapter": "unavailable"}
+        path = project_room_entities.save(root_path, document)
+        return {"event": changed, "persisted": True, "path": str(path),
+                "engine_adapter": "unavailable"}
     if command == "door-return-plan":
         return _reciprocal_plan_0115(root_path, options)
     if command == "connection-list":

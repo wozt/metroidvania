@@ -88,11 +88,27 @@ class ProjectEntityTests(unittest.TestCase):
             "next_id": 1, "entities": [],
         }), encoding="utf-8")
         document = pe.load(self.root, "mzm", "Brinstar", 2, 64, 32)
-        self.assertEqual((document["schema"], document["version"]), (pe.SCHEMA, 2))
+        self.assertEqual((document["schema"], document["version"]),
+                         (pe.SCHEMA, pe.VERSION))
         self.assertEqual(document["collision"], {"resolution_px": 16, "cells": []})
         self.assertEqual(document["doors"], [])
         self.assertEqual(document["transitions"], [])
+        self.assertEqual(document["events"], [])
         self.assertIn(pe.LEGACY_SCHEMA, path.read_text())
+
+    def test_version_two_room_document_migrates_events_in_memory(self):
+        path = pe.path_for(self.root, "aria", "2", 4, 64, 32)
+        path.parent.mkdir(parents=True)
+        document = pe._new("aria", "2", 4, 64, 32)
+        document["version"] = 2
+        document.pop("next_event_id")
+        document.pop("events")
+        path.write_text(json.dumps(document), encoding="utf-8")
+        migrated = pe.load(self.root, "aria", "2", 4, 64, 32)
+        self.assertEqual(migrated["version"], pe.VERSION)
+        self.assertEqual(migrated["next_event_id"], 1)
+        self.assertEqual(migrated["events"], [])
+        self.assertEqual(json.loads(path.read_text())["version"], 2)
 
     def test_collision_door_transition_round_trip_and_dependencies(self):
         document = pe.load(self.root, "aria", "0", 8, 64, 32)
@@ -130,6 +146,32 @@ class ProjectEntityTests(unittest.TestCase):
         pe.transition_create(document, door["id"], "aria", "0", 1, 0, 0, 0)
         with self.assertRaisesRegex(ValueError, "already linked"):
             pe.transition_create(document, door["id"], "aria", "0", 2, 0, 0, 0)
+
+    def test_event_regions_round_trip_in_both_worlds(self):
+        for world, area, step in (("mzm", "Brinstar", 16), ("aria", "3", 8)):
+            with self.subTest(world=world):
+                document = pe.load(self.root, world, area, 9, 64, 64)
+                event = pe.event_create(
+                    document, "EVENT", step, step, step * 2, step,
+                    "Start encounter", "enter", "spawn", "encounter.alpha", True)
+                trigger = pe.event_create(
+                    document, "TRIGGER", 0, 0, step, step,
+                    "Save checkpoint", "interact", "checkpoint", "save.room9", False)
+                changed = pe.event_update(
+                    document, event["id"], label="Start boss encounter",
+                    action_ref="encounter.boss")
+                self.assertEqual(changed["label"], "Start boss encounter")
+                pe.save(self.root, document)
+                restored = pe.load(self.root, world, area, 9, 64, 64)
+                self.assertEqual(len(restored["events"]), 2)
+                self.assertEqual(restored["events"][0]["action_ref"], "encounter.boss")
+                pe.event_delete(restored, trigger["id"])
+                self.assertEqual([item["id"] for item in restored["events"]],
+                                 [event["id"]])
+                original = json.loads(json.dumps(restored))
+                with self.assertRaises(ValueError):
+                    pe.event_update(restored, event["id"], x=step // 2)
+                self.assertEqual(restored, original)
 
 
 if __name__ == "__main__":

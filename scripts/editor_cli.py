@@ -30,7 +30,7 @@ TSV_COMMANDS = {
     "room-list", "list-rooms", "placement-list", "entity-list",
     "entity-catalog", "entity-item-settings", "list-assets",
     "collision-list", "door-list", "door-target-list", "door-return-plan", "transition-list",
-    "connection-list",
+    "connection-list", "event-list",
 }
 
 
@@ -105,6 +105,13 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--fill-width", dest="fill_width")
     parser.add_argument("--fill-height", dest="fill_height")
     parser.add_argument("--points")
+    parser.add_argument("--event-kind", dest="event_kind")
+    parser.add_argument("--region-width", dest="region_width")
+    parser.add_argument("--region-height", dest="region_height")
+    parser.add_argument("--trigger-type", dest="trigger_type")
+    parser.add_argument("--action-type", dest="action_type")
+    parser.add_argument("--action-ref", dest="action_ref")
+    parser.add_argument("--once", type=_boolean)
     parser.add_argument("--door-width", dest="door_width")
     parser.add_argument("--door-height", dest="door_height")
     parser.add_argument("--door-type", dest="door_type")
@@ -230,6 +237,12 @@ def _tsv_result(command: str, data: dict) -> str:
     elif command == "collision-list":
         rows = [[item["x"], item["y"], item["type"], data["resolution_px"]]
                 for item in data["cells"]]
+    elif command == "event-list":
+        rows = [[item["id"], item["kind"], item["x"], item["y"],
+                 item["width"], item["height"], item["label"],
+                 item["trigger_type"], item["action_type"],
+                 item["action_ref"], 1 if item["once"] else 0]
+                for item in data["events"]]
     elif command == "door-return-plan":
         rows = [[data[key] for key in (
             'source_world', 'source_area', 'source_room', 'source_door_id',

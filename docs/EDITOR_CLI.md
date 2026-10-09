@@ -98,6 +98,7 @@ and engine export are not implied by these visual workroom operations.
 | Native object catalog | Read-only metadata | Read-only metadata | Yes | Yes |
 | Project entity create/update/move/assign/delete | Yes | Yes | Label, 16px position, native reference | Label, 8px position, native reference + item fields |
 | Project collision authoring | Full cell/rectangle/stroke commands + capability matrix | Seven freehand brushes + cell context actions | 16px semantic cells | 8px semantic cells |
+| Project event/trigger regions | Full CRUD with typed triggers/actions | Region form, overlays, Grab and context actions | 16px placement | 8px placement |
 | Project doors | Full CRUD + destination links | Full property form + saved target picker | Project data only | Project data only |
 | Project transitions | Full CRUD + target validation | Destination, unlink and return-link planning | Native target references | Native target references |
 | Timeline/cutscene TOML validate and save | Yes | Yes | Shared project data | Shared project data |
@@ -109,9 +110,17 @@ control that changes project data must use the backend contract, or in the case
 of the interactive tile canvas, the exact same C core exposed by the backend.
 
 Project room authoring uses one versioned private document per native workroom.
-Version 2 groups entity markers, sparse semantic collision cells, doors and
-transitions instead of multiplying room-side files. Version 1 entity-only files
-are migrated in memory and rewritten only after the next explicit save.
+Version 3 groups entity markers, sparse semantic collision cells, doors,
+transitions and typed event/trigger regions instead of multiplying room-side
+files. Version 1 entity-only and version 2 room documents are migrated in
+memory and rewritten only after the next explicit save.
+
+Event regions use the room's 16px Zero Mission or 8px Aria placement grid.
+`event-create`, `event-update`, `event-delete`, `event-list` and
+`event-inspect` share the GTK contract. Each region records an overlay kind,
+trigger type, action type, stable action reference and one-shot flag. These are
+engine-neutral project instructions: native trigger extraction and both
+gameplay adapters remain unavailable.
 
 Collision coordinates are cell coordinates: 16px in Zero Mission workrooms and
 8px in Aria workrooms. Accepted project semantics are `solid`, `one_way`,

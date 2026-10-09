@@ -1103,3 +1103,21 @@ No automatic reciprocal link or native engine encoder is implemented.
   same workflow, with one shared Undo entry and explicit room Save.
 - Added ROM-free tests for MZM and Aria field updates, alignment rejection,
   atomic failure behavior, CLI round trips and the shared GTK contract.
+
+## Patch 0121 - project event and trigger region authoring
+
+- Extended the existing per-room project document to version 3 instead of
+  creating another sidecar. Version 1 and 2 documents migrate in memory and
+  remain untouched until an explicit Save.
+- Added bounded event and trigger regions with a typed activation, action,
+  stable action reference and one-shot flag. Zero Mission uses its 16px grid;
+  Aria uses its 8px grid.
+- Added complete backend and CLI list/inspect/create/update/delete operations,
+  strict validation and an explicit unavailable engine-adapter status.
+- Added room overlays, right-click creation, a responsive property form, Grab
+  movement, context inspection/deletion and shared staged Undo/Redo/Save for
+  both workroom modes.
+- Native event/trigger records and both source ROMs remain immutable. Native
+  trigger decoding and gameplay execution are still pending.
+- Added ROM-free schema migration, atomic failure, two-world CLI, GTK lifecycle
+  and source-contract coverage.

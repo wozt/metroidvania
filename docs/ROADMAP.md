@@ -34,15 +34,17 @@ features must add their backend contract before their GTK controls are enabled.
 
 Current progress: one versioned private room document covers validated
 collision cells, editable project/native door overrides, cross-world references,
-project entities and 8px Aria / 16px Zero Mission placement. GTK provides a
-unified room editor, Grab, destination selection on the global map, a shared
-chronological Undo/Redo and Save/Discard for staged room changes. Project
-enemy/item/object forms atomically edit label, snapped position, native
-reference and available typed item fields in both workroom modes. Native ROM
-encoders, object behavior definitions, triggers, events and a deterministic
-engine-neutral export remain pending. The engine-neutral collision brush suite
-now covers solid, one-way, hazard, two floor-slope directions, water and air in
-both workroom modes, with a machine-readable native-reference matrix.
+project entities, typed project event/trigger regions and 8px Aria / 16px Zero
+Mission placement. GTK provides a unified room editor, Grab, destination
+selection on the global map, a shared chronological Undo/Redo and Save/Discard
+for staged room changes. Project enemy/item/object forms atomically edit label,
+snapped position, native reference and available typed item fields in both
+workroom modes. Event/trigger forms edit their region, activation type, action,
+stable reference and one-shot behavior. Native ROM encoders, native trigger
+extraction, object behavior definitions and a deterministic engine-neutral
+export remain pending. The engine-neutral collision brush suite covers solid,
+one-way, hazard, two floor-slope directions, water and air in both workroom
+modes, with a machine-readable native-reference matrix.
 
 Exit criterion: representative project rooms for both worlds can be authored,
 validated and exported to an engine-neutral package without ROM mutation.

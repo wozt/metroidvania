@@ -22,10 +22,10 @@ docks, or detached into separate windows.
 - Collision authoring has continuous **Wall** (red), **Platform** (green
   one-way), **Water** (blue) and **Air** (passable eraser) brushes. A cell cursor
   previews the exact 16px Zero Mission or 8px Aria target before painting.
-- The room toolbar independently toggles **Walls**, **Objects**, **Doors** and
-  **Events**. **Triggers** is visible but disabled until those native records
-  are decoded. These overlays inspect original data and are not saved as map
-  pixels.
+- The room toolbar independently toggles **Walls**, **Objects**, **Doors**,
+  **Events** and **Triggers**. Native event records remain inspectable, while
+  project event/trigger regions are editable overlays saved in the shared room
+  document rather than as map pixels. Native trigger decoding remains pending.
 - **Room palettes** contains a metatile browser and a **Room data** list with
   native coordinates, dimensions, variants, identities and decoded details.
 - Right-click any visible object, door/transition, event or decoded trigger on
@@ -61,13 +61,18 @@ base import, ROMs and upstream source remain unchanged.
   verified native reference in both modes. Aria pickup forms additionally edit
   the typed item/soul ID, two native parameters and flags. Runtime behavior and
   native stats remain read-only reference data until engine adapters exist.
+- Project event and trigger regions can be created from the canvas context
+  menu, resized and typed in a dedicated form, moved with Grab, inspected and
+  deleted. Their trigger/action/reference metadata uses the 16px Zero Mission
+  or 8px Aria grid and the same staged Undo/Redo/Save workflow.
 - Native-record editor shells expose decoded source fields but keep Apply
   disabled. Complete object sprite previews and executable behavior decoding
   are still pending.
 - Project-object creation and cloning are disabled until a versioned common
   schema and target-engine encoders are validated.
-- Trigger regions, boss parameters, scripts, music and engine-backed cutscene
-  authoring are not yet decoded or editable.
+- Native trigger regions, boss parameters, scripts, music and engine-backed
+  cutscene authoring are not yet decoded or editable. Project trigger regions
+  are authorable but are not consumed by either gameplay engine yet.
 - Editor output is not consumed by a native gameplay runtime yet.
 
 The collision toolbar is shared deliberately: both source formats have verified

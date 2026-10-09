@@ -222,6 +222,49 @@ class EditorCliTests(unittest.TestCase):
                     by_type["one_way"]["native_reference_status"],
                     "verified_exact")
 
+    def test_event_region_cli_round_trip_in_both_worlds(self):
+        with tempfile.TemporaryDirectory() as directory:
+            capabilities = self.run_cli(
+                "--command=capabilities", f"--root={directory}", "--format=json")
+            self.assertEqual(capabilities.returncode, 0, capabilities.stderr)
+            commands = json.loads(capabilities.stdout)["data"]["commands"]
+            for command in ("event-list", "event-inspect", "event-create",
+                            "event-update", "event-delete"):
+                self.assertEqual(commands[command],
+                                 "available_project_room_data_only")
+            for world, area, step in (("zero_mission", "Brinstar", 16),
+                                      ("aria", "3", 8)):
+                with self.subTest(world=world):
+                    scope = (
+                        f"--world={world}", f"--area={area}", "--room=5",
+                        "--width=64", "--height=64", f"--root={directory}",
+                    )
+                    created = self.run_cli(
+                        "--command=event-create", *scope, "--event-kind=TRIGGER",
+                        f"--x={step}", f"--y={step}", f"--region-width={step * 2}",
+                        f"--region-height={step}", "--label=Checkpoint trigger",
+                        "--trigger-type=enter", "--action-type=checkpoint",
+                        "--action-ref=checkpoint.room5", "--once=true", "--format=json")
+                    self.assertEqual(created.returncode, 0, created.stderr)
+                    updated = self.run_cli(
+                        "--command=event-update", *scope, "--id=1",
+                        "--event-kind=EVENT", "--x=0", "--y=0",
+                        f"--region-width={step}", f"--region-height={step}",
+                        "--label=Story event", "--trigger-type=interact",
+                        "--action-type=story", "--action-ref=scene.intro",
+                        "--once=false", "--format=json")
+                    self.assertEqual(updated.returncode, 0, updated.stderr)
+                    listed = self.run_cli(
+                        "--command=event-list", *scope, "--format=tsv")
+                    self.assertEqual(
+                        listed.stdout,
+                        f"1\tEVENT\t0\t0\t{step}\t{step}\tStory event\t"
+                        "interact\tstory\tscene.intro\t0\n")
+                    deleted = self.run_cli(
+                        "--command=event-delete", *scope, "--id=1",
+                        "--confirm=true", "--format=json")
+                    self.assertEqual(deleted.returncode, 0, deleted.stderr)
+
     def test_story_save_validates_and_writes_through_backend(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

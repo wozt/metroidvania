@@ -3531,6 +3531,26 @@ static gboolean room_stage_commit_0109(NativeWorkspace *doc)
 {
     gchar *stage_json = room_stage_path_0109(doc, "json");
     gchar *stage_ini = room_stage_path_0109(doc, "ini");
+    /* PATCH_0110_OPTIONAL_ROOM_STAGING: a room with only metatile edits has
+     * no staged entity JSON or native-position INI. Nothing to commit here;
+     * the .mvnative save already succeeded. Avoid requiring project_area for
+     * headless/GTK lifecycle documents which never imported a native room. */
+    gboolean has_json = stage_json &&
+        g_file_test(stage_json, G_FILE_TEST_IS_REGULAR);
+    gboolean has_ini = stage_ini &&
+        g_file_test(stage_ini, G_FILE_TEST_IS_REGULAR);
+    if (!has_json && !has_ini) {
+        g_free(stage_json);
+        g_free(stage_ini);
+        return TRUE;
+    }
+    /* A present staged override must never be silently ignored. Without
+     * an imported native room identity we cannot derive a safe target. */
+    if (!doc->project_area || !*doc->project_area) {
+        g_free(stage_json);
+        g_free(stage_ini);
+        return FALSE;
+    }
     gchar *name = doc->project_aria ?
         g_strdup_printf("area_%02u_room_%03u.json", (guint)atoi(doc->project_area),
                         doc->project_room) :

@@ -34,6 +34,19 @@ class DeferredRoomSave0109(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'stage token'):
                     pe.load(Path(directory), 'mzm', 'Brinstar', 10, 512, 512)
 
+    def test_overlay_stage_optional_for_metatile_only_save(self):
+        source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
+        block = source.split('static gboolean room_stage_commit_0109(NativeWorkspace *doc)', 1)[1]
+        block = block.split('static gboolean save_override(NativeWorkspace *doc)', 1)[0]
+        self.assertIn('PATCH_0110_OPTIONAL_ROOM_STAGING', block)
+        self.assertIn('if (!has_json && !has_ini)', block)
+        self.assertLess(block.index('if (!has_json && !has_ini)'),
+                        block.index('g_strdup_printf("area_%02u_room_%03u.json"'))
+        self.assertIn('if (!doc->project_area || !*doc->project_area)', block)
+        self.assertIn('return FALSE;', block)
+        # The real GTK Save -> Close regression is also exercised by CTest:
+        # native-workspace/save-modified-then-close and unsaved-close-dialog.
+
     def test_gtk_uses_shared_diskette_and_grab_hand(self):
         source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
         for part in ('hand-symbolic', 'room_stage_commit_0109(doc)',

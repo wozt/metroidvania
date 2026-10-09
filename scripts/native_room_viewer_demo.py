@@ -34,6 +34,11 @@ def main() -> int:
             raise ValueError("original BG1 not decoded for this room")
         width, height = bg1["width_blocks"] * 16, bg1["height_blocks"] * 16
         root = ROOT / "assets/extracted/native_demo_0125"
+        # The entity writer creates descendants but expects this sandbox root to exist.
+        # Keep all generated/project-owned files under the ignored private tree.
+        if root.is_symlink():
+            raise ValueError("native demo root symlink refused")
+        root.mkdir(parents=True, exist_ok=True)
         # Re-create ONLY this explicitly named private demonstration workroom.
         doc = rooms._new("mzm", args.area, args.room, width, height)
         cols, rows = width // 16, height // 16

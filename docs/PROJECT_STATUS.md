@@ -352,3 +352,21 @@ and the proprietary-file guard passed.
   incrementally processes each area's original graphics previews, keeping
   the UI responsive. Generated output stays under ignored private assets.
 - Source and GTK4 regression checks required before final commit/push.
+
+## Patch 0070 - draggable world maps and dedicated map creation tab
+
+- Added left-button drag panning across the true GTK4 scrolled grid, with
+  clamped scroll adjustments and unchanged room double-click activation.
+- Every occupied or empty map cell has a right-click context popover with
+  coordinate copying and project-map creation navigation; verified room cells
+  additionally offer Open room editor. Spanning Aria rooms report the exact
+  clicked minimap case, not just the rectangle origin. Unknown MZM tiles never
+  open arbitrary ROM room IDs.
+- Reopening Global maps reuses the existing Map creation tab instead of
+  creating duplicates.
+- A dedicated Map creation tab now launches the same validated Zero/Aria
+  room draft dialogs; coordinates selected from an empty map cell are shown as
+  **informational only**. Map placement and new-room gameplay adapters remain
+  deliberately unavailable until a separate validated placement contract.
+- Generated or original ROM data are never overwritten by the UI.
+- GTK4 CMake build, CTest and no-proprietary guard are required on Debian.

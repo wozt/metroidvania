@@ -9,7 +9,8 @@ typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
     GtkWidget *page, *grid, *details, *status, *world_select, *area_select, *zoom;
-    GtkWidget *selected_cell;
+    GtkWidget *selected_cell, *scroller, *popup;
+    double drag_hstart, drag_vstart;
     GtkWidget *world_badge;
     guint world, area;
     guint selection;
@@ -128,9 +129,236 @@ static gboolean has_image(const WorldGrid *w,const MapCell *c,char *dest,size_t 
     else snprintf(dest,n,"assets/extracted/rooms/metroid/previews/%s_%03u_bg1.bmp",mzm_slugs[c->area],c->room);
     return g_file_test(dest,G_FILE_TEST_IS_REGULAR);
 }
+/* Mouse navigation is on the grid so panning works over occupied cells.
+ * The adjustment values are clamped within the real scrolled map content. */
+static void map_drag_begin(GtkGestureDrag *drag, double x, double y, gpointer data)
+{
+    WorldGrid *w = data;
+    (void)drag; (void)x; (void)y;
+    GtkAdjustment *h = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(w->scroller));
+    GtkAdjustment *v = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(w->scroller));
+    w->drag_hstart = gtk_adjustment_get_value(h);
+    w->drag_vstart = gtk_adjustment_get_value(v);
+}
+
+static void map_drag_update(GtkGestureDrag *drag, double dx, double dy, gpointer data)
+{
+    WorldGrid *w = data;
+    (void)drag;
+    GtkAdjustment *h = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(w->scroller));
+    GtkAdjustment *v = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(w->scroller));
+    gtk_adjustment_set_value(h, CLAMP(w->drag_hstart - dx,
+        gtk_adjustment_get_lower(h),
+        MAX(gtk_adjustment_get_lower(h),
+            gtk_adjustment_get_upper(h) - gtk_adjustment_get_page_size(h))));
+    gtk_adjustment_set_value(v, CLAMP(w->drag_vstart - dy,
+        gtk_adjustment_get_lower(v),
+        MAX(gtk_adjustment_get_lower(v),
+            gtk_adjustment_get_upper(v) - gtk_adjustment_get_page_size(v))));
+}
+
+static void map_popover_close(WorldGrid *w)
+{
+    if (!w->popup) return;
+    GtkWidget *popup = w->popup;
+    /* An unparented popover may live past this callback. Remove the weak
+     * handle now, not later, so an old popup cannot be reused accidentally. */
+    g_object_remove_weak_pointer(G_OBJECT(popup), (gpointer *)&w->popup);
+    w->popup = NULL;
+    gtk_popover_popdown(GTK_POPOVER(popup));
+    gtk_widget_unparent(popup);
+}
+
+/* Map creation is project-owned: opening a form never edits a ROM and
+ * never assigns a location to a room without a native authoring adapter. */
+static void map_context_action(GtkButton *button, gpointer data)
+{
+    WorldGrid *w = data;
+    guint action = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-map-action"));
+    guint cell_x = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-cell-x"));
+    guint cell_y = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-cell-y"));
+    if (cell_x) --cell_x;
+    if (cell_y) --cell_y;
+    if (action == 1) {
+        selected_open(w);
+    } else if (action == 2) {
+        gchar *coordinates = g_strdup_printf("%s, map cell (%u,%u)",
+            worlds[w->world], cell_x, cell_y);
+        GdkDisplay *display = gdk_display_get_default();
+        if (display) gdk_clipboard_set_text(gdk_display_get_clipboard(display), coordinates);
+        g_free(coordinates);
+    } else if (action == 3) {
+        GtkWidget *notebook = gtk_widget_get_ancestor(w->page, GTK_TYPE_NOTEBOOK);
+        if (GTK_IS_NOTEBOOK(notebook)) {
+            guint total = gtk_notebook_get_n_pages(GTK_NOTEBOOK(notebook));
+            for (guint i = 0; i < total; ++i) {
+                GtkWidget *page = gtk_notebook_get_nth_page(GTK_NOTEBOOK(notebook), (gint)i);
+                GtkWidget *hint = g_object_get_data(G_OBJECT(page), "mv-map-creator-hint");
+                if (!hint) continue;
+                gchar *info = g_strdup_printf(
+                    "Selected %s cell (%u,%u). Choose the game and area below to "
+                    "create a private draft. Cell placement is NOT saved yet.",
+                    worlds[w->world], cell_x, cell_y);
+                gtk_label_set_text(GTK_LABEL(hint), info);
+                g_free(info);
+                gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), (gint)i);
+                break;
+            }
+        }
+    }
+    if (w->popup) gtk_popover_popdown(GTK_POPOVER(w->popup));
+}
+
+static void map_context_add_button(GtkWidget *list, WorldGrid *w, const char *title,
+                                   guint action, guint x, guint y)
+{
+    GtkWidget *button = gtk_button_new_with_label(title);
+    g_object_set_data(G_OBJECT(button), "mv-map-action", GUINT_TO_POINTER(action));
+    g_object_set_data(G_OBJECT(button), "mv-cell-x", GUINT_TO_POINTER(x + 1));
+    g_object_set_data(G_OBJECT(button), "mv-cell-y", GUINT_TO_POINTER(y + 1));
+    g_signal_connect(button, "clicked", G_CALLBACK(map_context_action), w);
+    gtk_box_append(GTK_BOX(list), button);
+}
+
+static void map_context_pressed(GtkGestureClick *gesture, gint n,
+                                double px, double py, gpointer data)
+{
+    WorldGrid *w = data;
+    GtkWidget *cell = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
+    (void)n;
+    map_popover_close(w);
+    guint entry = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(cell), "mv-grid-index"));
+    guint x = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(cell), "mv-cell-x"));
+    guint y = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(cell), "mv-cell-y"));
+    if (x) --x;
+    if (y) --y;
+    /* Spanning Aria rooms contain several minimap cases. Use the actual
+     * pointer position within the displayed rectangle, not its top-left. */
+    guint columns = MAX(1u, GPOINTER_TO_UINT(g_object_get_data(
+        G_OBJECT(cell), "mv-span-width")));
+    guint rows = MAX(1u, GPOINTER_TO_UINT(g_object_get_data(
+        G_OBJECT(cell), "mv-span-height")));
+    guint width = MAX(1, gtk_widget_get_width(cell));
+    guint height = MAX(1, gtk_widget_get_height(cell));
+    x += MIN(columns - 1, (guint)(MAX(0.0, px) * columns / width));
+    y += MIN(rows - 1, (guint)(MAX(0.0, py) * rows / height));
+    gboolean room = FALSE;
+    if (entry && entry <= w->cells->len) {
+        MapCell marker = g_array_index(w->cells, MapCell, entry - 1);
+        room = marker.provenance != 3 && marker.room != 999;
+        if (room) {
+            w->selected = TRUE;
+            w->selection = entry - 1;
+        }
+    }
+    GtkWidget *popover = gtk_popover_new();
+    GtkWidget *actions = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_widget_set_margin_start(actions, 9);
+    gtk_widget_set_margin_end(actions, 9);
+    gtk_widget_set_margin_top(actions, 9);
+    gtk_widget_set_margin_bottom(actions, 9);
+    gtk_popover_set_child(GTK_POPOVER(popover), actions);
+    if (room) map_context_add_button(actions, w, "Open room editor", 1, x, y);
+    map_context_add_button(actions, w, "Create project map...", 3, x, y);
+    map_context_add_button(actions, w, "Copy cell coordinates", 2, x, y);
+    gtk_widget_set_parent(popover, cell);
+    GdkRectangle pointer = {(int)px, (int)py, 1, 1};
+    gtk_popover_set_pointing_to(GTK_POPOVER(popover), &pointer);
+    w->popup = popover;
+    g_object_add_weak_pointer(G_OBJECT(popover), (gpointer *)&w->popup);
+    gtk_popover_popup(GTK_POPOVER(popover));
+}
+
+static void map_context_enable(GtkWidget *cell, WorldGrid *w, guint x, guint y,
+                               guint columns, guint rows)
+{
+    g_object_set_data(G_OBJECT(cell), "mv-cell-x", GUINT_TO_POINTER(x + 1));
+    g_object_set_data(G_OBJECT(cell), "mv-cell-y", GUINT_TO_POINTER(y + 1));
+    g_object_set_data(G_OBJECT(cell), "mv-span-width", GUINT_TO_POINTER(columns));
+    g_object_set_data(G_OBJECT(cell), "mv-span-height", GUINT_TO_POINTER(rows));
+    GtkGesture *right = gtk_gesture_click_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(right), GDK_BUTTON_SECONDARY);
+    gtk_widget_add_controller(cell, GTK_EVENT_CONTROLLER(right));
+    g_signal_connect(right, "pressed", G_CALLBACK(map_context_pressed), w);
+}
+
+/* Dedicated map-creation workspace shares the existing validated form with
+ * both room browsers. Spatial placement gets its own future schema/adapter. */
+static void map_creator_launch(GtkButton *button, gpointer userdata)
+{
+    GtkWidget *center = GTK_WIDGET(userdata);
+    guint target = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-target-world"));
+    guint n = gtk_notebook_get_n_pages(GTK_NOTEBOOK(center));
+    for (guint i = 0; i < n; ++i) {
+        GtkWidget *page = gtk_notebook_get_nth_page(GTK_NOTEBOOK(center), (gint)i);
+        GtkWidget *create = g_object_get_data(G_OBJECT(page), "mv-create-room-action");
+        guint world = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(page), "mv-world-mode"));
+        if (!create || world != target) continue;
+        gtk_notebook_set_current_page(GTK_NOTEBOOK(center), (gint)i);
+        g_signal_emit_by_name(create, "clicked");
+        return;
+    }
+    /* A room browser may be detached in another dock: no stale callback. */
+    GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(center),
+        gtk_notebook_get_current_page(GTK_NOTEBOOK(center)));
+    GtkWidget *hint = tab ? g_object_get_data(G_OBJECT(tab), "mv-map-creator-hint") : NULL;
+    if (GTK_IS_LABEL(hint)) gtk_label_set_text(GTK_LABEL(hint),
+        "Open the matching Zero rooms or Aria rooms browser first, then retry.");
+}
+
+static void map_creator_build(GtkWidget *center)
+{
+    /* Global maps can be opened repeatedly in the same dock. Reuse the
+     * existing authoring page instead of appending duplicate tabs. */
+    guint total = gtk_notebook_get_n_pages(GTK_NOTEBOOK(center));
+    for (guint i = 0; i < total; ++i) {
+        GtkWidget *existing = gtk_notebook_get_nth_page(GTK_NOTEBOOK(center), (gint)i);
+        if (g_object_get_data(G_OBJECT(existing), "mv-map-creator-hint")) return;
+    }
+    GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    GtkWidget *title = gtk_label_new("Map creation / project-authored rooms");
+    gtk_widget_add_css_class(title, "title-3");
+    gtk_label_set_xalign(GTK_LABEL(title), 0);
+    GtkWidget *help = gtk_label_new(
+        "Create private room drafts for either game using the shared authoring "
+        "form. Original global map cells stay read-only. Room collision, "
+        "graphics, native export, and exact placement of new drafts on the "
+        "map are not implemented yet. No fake geometry is created.");
+    gtk_label_set_wrap(GTK_LABEL(help), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(help), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(help), 0);
+    GtkWidget *hint = gtk_label_new(
+        "Right-click any global map case to send its coordinates here. "
+        "These coordinates are informational until a map placement format exists.");
+    gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(hint), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(hint), 0);
+    GtkWidget *buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+    const char *names[] = {"Create Zero Mission room...", "Create Aria room..."};
+    for (guint i = 0; i < 2; ++i) {
+        GtkWidget *button = gtk_button_new_with_label(names[i]);
+        g_object_set_data(G_OBJECT(button), "mv-target-world", GUINT_TO_POINTER(i + 1));
+        g_signal_connect(button, "clicked", G_CALLBACK(map_creator_launch), center);
+        gtk_box_append(GTK_BOX(buttons), button);
+    }
+    gtk_widget_set_margin_start(page, 18);
+    gtk_widget_set_margin_end(page, 18);
+    gtk_widget_set_margin_top(page, 14);
+    gtk_widget_set_margin_bottom(page, 14);
+    gtk_box_append(GTK_BOX(page), title);
+    gtk_box_append(GTK_BOX(page), help);
+    gtk_box_append(GTK_BOX(page), hint);
+    gtk_box_append(GTK_BOX(page), buttons);
+    g_object_set_data(G_OBJECT(page), "mv-map-creator-hint", hint);
+    gtk_notebook_append_page(GTK_NOTEBOOK(center), page, gtk_label_new("Map creation"));
+    gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(center), page, TRUE);
+    gtk_notebook_set_tab_detachable(GTK_NOTEBOOK(center), page, TRUE);
+}
+
 static void grid_rebuild(WorldGrid *w)
 {
     GtkWidget *child;
+    map_popover_close(w);
     w->selected_cell = NULL;
     while ((child = gtk_widget_get_first_child(w->grid)))
         gtk_grid_remove(GTK_GRID(w->grid), child);
@@ -182,6 +410,7 @@ static void grid_rebuild(WorldGrid *w)
                 GtkWidget *empty = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
                 gtk_widget_add_css_class(empty, "mv-map-cell");
                 gtk_widget_set_size_request(empty, (int)w->size, (int)w->size);
+                map_context_enable(empty, w, x, y, 1, 1);
                 gtk_grid_attach(GTK_GRID(w->grid), empty, (int)x, (int)y, 1, 1);
                 covered[pos] = TRUE;
                 continue;
@@ -267,6 +496,7 @@ static void grid_rebuild(WorldGrid *w)
             gtk_widget_set_tooltip_text(cell, tip);
             g_free(tip);
             g_object_set_data(G_OBJECT(cell), "mv-grid-index", GUINT_TO_POINTER(entry));
+            map_context_enable(cell, w, x, y, width, height);
             GtkGesture *click = gtk_gesture_click_new();
             gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), GDK_BUTTON_PRIMARY);
             gtk_widget_add_controller(cell, GTK_EVENT_CONTROLLER(click));
@@ -425,7 +655,13 @@ static void generate_clicked(GtkButton *b,gpointer data)
     begin_generation(w);
 }
 static void world_free(gpointer data)
-{WorldGrid *w=data;g_array_free(w->cells,TRUE);g_free(w);}
+{
+    WorldGrid *w = data;
+    if (w->popup)
+        g_object_remove_weak_pointer(G_OBJECT(w->popup), (gpointer *)&w->popup);
+    g_array_free(w->cells, TRUE);
+    g_free(w);
+}
 GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWidget *indicator)
 {
     static const char css[]={
@@ -455,7 +691,13 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
     GtkWidget *generate=gtk_button_new_with_label("Generate more original previews");
     GtkWidget *open=gtk_button_new_with_label("Open selected room");
-    w->page=root;w->grid=grid;
+    w->page=root;w->grid=grid;w->scroller=scroller;
+    GtkGesture *pan = gtk_gesture_drag_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(pan), GDK_BUTTON_PRIMARY);
+    gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(pan), GTK_PHASE_CAPTURE);
+    gtk_widget_add_controller(grid, GTK_EVENT_CONTROLLER(pan));
+    g_signal_connect(pan, "drag-begin", G_CALLBACK(map_drag_begin), w);
+    g_signal_connect(pan, "drag-update", G_CALLBACK(map_drag_update), w);
     w->status=gtk_label_new("Reading verified original minimap cases…");
     w->details=gtk_label_new("Double-click a case to edit it in the shared room editor.");
     w->world_select=gtk_drop_down_new_from_strings(worlds);
@@ -488,6 +730,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_notebook_append_page(GTK_NOTEBOOK(center),root,gtk_label_new("Global maps"));
     gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(center),root,TRUE);
     gtk_notebook_set_tab_detachable(GTK_NOTEBOOK(center),root,TRUE);
+    map_creator_build(center);
     g_signal_connect(w->world_select,"notify::selected",G_CALLBACK(world_changed),w);
     g_signal_connect(w->area_select,"notify::selected",G_CALLBACK(area_changed),w);
     g_signal_connect(w->zoom,"value-changed",G_CALLBACK(zoom_changed),w);

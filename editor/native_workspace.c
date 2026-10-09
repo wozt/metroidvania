@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <glib/gstdio.h>
+#include <sys/stat.h>
 
 enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN, TOOL_COUNT };
 enum { OVERLAY_COLLISION, OVERLAY_ENEMIES, OVERLAY_ITEMS, OVERLAY_OBJECTS,
@@ -22,6 +24,7 @@ typedef struct {
     guint width, height;
     char variant[48], native_type[96], label[384], details[320];
     gboolean project_owned; /* Original native records remain read-only. */
+    gint preview_item_id; /* Exact authored Aria item identifier; -1 if absent. */
 } RoomAnnotation;
 
 struct NativeWorkspace {
@@ -76,6 +79,7 @@ struct NativeWorkspace {
     unsigned char *collision_pixels;
     gboolean overlays[OVERLAY_COUNT];
     GArray *annotations;
+    GHashTable *entity_sprite_cache; /* Private PNG surfaces; includes negative hits. */
     guint selected_annotation;
     gboolean annotation_selected;
 };
@@ -165,6 +169,7 @@ static void document_destroy(NativeWorkspace *doc)
     discard_atlas(doc);
     discard_background(doc);
     discard_collision(doc);
+    if (doc->entity_sprite_cache) g_hash_table_destroy(doc->entity_sprite_cache);
     if (doc->annotations) g_array_free(doc->annotations, TRUE);
     free(doc->undo);
     free(doc->redo);
@@ -274,6 +279,7 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
         if (!lines[line][0] || lines[line][0] == '#') continue;
         gchar **fields = g_strsplit(lines[line], "|", 11);
         RoomAnnotation item = {0};
+        item.preview_item_id = -1;
         guint source_index, width, height;
         int x, y;
         guint count = g_strv_length(fields);
@@ -425,16 +431,17 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
 static void project_load(NativeWorkspace *doc)
 {
     gchar *output = NULL;
-    if (!project_command(doc, "list", NULL, &output)) return;
+    if (!project_command(doc, "list-previews", NULL, &output)) return;
     guint projects = 0;
     gchar **lines = g_strsplit(output ? output : "", "\n", -1);
     for (guint i = 0; lines[i] && i < 512; ++i) {
         if (!lines[i][0]) continue;
         gchar **fields = g_strsplit(lines[i], "\t", 7);
         guint id = 0;
-        int x = 0, y = 0;
+        int x = 0, y = 0, preview_id = -1;
         RoomAnnotation item = {0};
-        if (g_strv_length(fields) == 6 &&
+        if (g_strv_length(fields) == 7 &&
+            parse_signed_field(fields[6], &preview_id) && preview_id >= -1 && preview_id <= 255 &&
             parse_unsigned_field(fields[0], &id) && id &&
             parse_signed_field(fields[2], &x) &&
             parse_signed_field(fields[3], &y) &&
@@ -450,6 +457,7 @@ static void project_load(NativeWorkspace *doc)
                 item.x = x;
                 item.y = y;
                 item.width = item.height = 16;
+                item.preview_item_id = preview_id;
                 g_strlcpy(item.variant, "project", sizeof(item.variant));
                 g_strlcpy(item.native_type, fields[5], sizeof(item.native_type));
                 g_strlcpy(item.label, fields[4], sizeof(item.label));
@@ -502,6 +510,7 @@ static void project_reload(NativeWorkspace *doc)
     if (!doc->annotations_path) return;
     load_annotations(doc, doc->annotations_path);
     project_load(doc);
+    if (doc->entity_sprite_cache) g_hash_table_remove_all(doc->entity_sprite_cache);
     doc->annotation_selected = FALSE;
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
@@ -1487,6 +1496,183 @@ static void selection_outline(NativeWorkspace *doc, cairo_t *cr)
     cairo_restore(cr);
 }
 
+/* PATCH_0085_ROOM_SPRITE_OVERLAYS
+ * Only render genuine images already decoded from the owner's verified ROM or
+ * explicitly supplied private PNGs. The semantic overlay/category, pixel hitbox,
+ * room collision and read-only flags never depend on an image being available.
+ * Failed PNGs are negatively cached until project_reload/reopening the room. */
+static gboolean room_preview_token(const char *native)
+{
+    if (!native || !*native || strlen(native) > 80) return FALSE;
+    for (const unsigned char *p = (const unsigned char *)native; *p; ++p)
+        if (!g_ascii_isalnum(*p) && *p != '_' && *p != '-' && *p != ':') return FALSE;
+    return TRUE;
+}
+
+static gboolean room_preview_params(const char *details, guint *a)
+{
+    const char *p = strstr(details, "parameters=[");
+    if (!p) return FALSE;
+    unsigned int value = 0;
+    if (sscanf(p, "parameters=[%u", &value) != 1 || value > 65535) return FALSE;
+    *a = value;
+    return TRUE;
+}
+
+static gchar *room_sprite_path(NativeWorkspace *doc, const RoomAnnotation *item)
+{
+    if (item->kind != OVERLAY_ENEMIES && item->kind != OVERLAY_ITEMS) return NULL;
+    if (!room_preview_token(item->native_type)) return NULL;
+    const char *native = item->native_type;
+    if (!doc->project_aria) {
+        /* Native Zero Mission PrimarySprite symbol, not a guessed image ID. */
+        if (!g_str_has_prefix(native, "PSPRITE_")) return NULL;
+        return g_strdup_printf("assets/extracted/sprite_previews/mzm/%s.png", native);
+    }
+    if (item->kind == OVERLAY_ENEMIES) {
+        if (g_str_has_prefix(native, "enemy:") && strlen(native) == 8)
+            return g_strdup_printf("assets/extracted/sprite_previews/aria/%s.png", native);
+        if (g_str_has_prefix(native, "kind-01:id-") && strlen(native) == 13)
+            return g_strdup_printf("assets/extracted/sprite_previews/aria/enemy:%s.png", native + 11);
+        /* Native conditional Aria enemy: subtype 0A/0B, var_a is enemy ID. */
+        if ((!strcmp(native, "kind-02:id-0A") || !strcmp(native, "kind-02:id-0B"))) {
+            guint id = 0;
+            if (room_preview_params(item->details, &id) && id <= 0x70)
+                return g_strdup_printf("assets/extracted/sprite_previews/aria/enemy:%02X.png", id);
+        }
+        return NULL;
+    }
+    guint subtype = 0;
+    gint item_id = -1;
+    /* Private project items already have an exact ID in schema-v1 settings. */
+    if (item->project_owned) {
+        const char *colon = strrchr(native, ':');
+        if (!colon || strlen(colon + 1) != 2 ||
+            !(g_str_has_prefix(native, "pickup:") ||
+              g_str_has_prefix(native, "hard-mode-pickup:") ||
+              g_str_has_prefix(native, "all-souls-reward:"))) return NULL;
+        char *end = NULL;
+        subtype = (guint)g_ascii_strtoull(colon + 1, &end, 16);
+        if (!end || *end) return NULL;
+        item_id = item->preview_item_id;
+    } else if (g_str_has_prefix(native, "kind-04:id-") ||
+               g_str_has_prefix(native, "kind-05:id-") ||
+               g_str_has_prefix(native, "kind-06:id-")) {
+        /* Native Aria: entity_id is pickup subtype, parameter_0 is item ID.
+         * Do not treat souls, money, or candles as item table icons. */
+        if (strlen(native) != 13) return NULL;
+        char *end = NULL;
+        subtype = (guint)g_ascii_strtoull(native + 11, &end, 16);
+        guint param = 0;
+        if (!end || *end || !room_preview_params(item->details, &param) || param > 255)
+            return NULL;
+        item_id = (gint)param;
+    } else return NULL;
+    static const guint counts[] = {0, 0, 32, 59, 45};
+    if (subtype < 2 || subtype > 4 || item_id < 0 || (guint)item_id >= counts[subtype])
+        return NULL;
+    return g_strdup_printf("assets/extracted/sprite_previews/aria/items/%02X_%03d.png",
+                           subtype, item_id);
+}
+
+static cairo_surface_t *room_sprite_surface(NativeWorkspace *doc, const RoomAnnotation *item)
+{
+    gchar *path = room_sprite_path(doc, item);
+    if (!path) return NULL;
+    if (!doc->entity_sprite_cache)
+        doc->entity_sprite_cache = g_hash_table_new_full(
+            g_str_hash, g_str_equal, g_free, (GDestroyNotify)cairo_surface_destroy);
+    if (g_hash_table_contains(doc->entity_sprite_cache, path)) {
+        cairo_surface_t *existing = g_hash_table_lookup(doc->entity_sprite_cache, path);
+        g_free(path);
+        return existing;
+    }
+    cairo_surface_t *image = NULL;
+    GStatBuf st;
+    if (g_stat(path, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0 && st.st_size < 4 * 1024 * 1024) {
+        image = cairo_image_surface_create_from_png(path);
+        if (cairo_surface_status(image) != CAIRO_STATUS_SUCCESS ||
+            cairo_image_surface_get_width(image) < 1 ||
+            cairo_image_surface_get_height(image) < 1 ||
+            cairo_image_surface_get_width(image) > 512 ||
+            cairo_image_surface_get_height(image) > 512) {
+            cairo_surface_destroy(image);
+            image = NULL;
+        }
+    }
+    g_hash_table_insert(doc->entity_sprite_cache, path, image);
+    return image;
+}
+
+static void room_draw_sprite(NativeWorkspace *doc, cairo_t *cr,
+                             const RoomAnnotation *item, double x, double y,
+                             double width, double height)
+{
+    cairo_surface_t *image = room_sprite_surface(doc, item);
+    if (!image) return;
+    double iw = cairo_image_surface_get_width(image);
+    double ih = cairo_image_surface_get_height(image);
+    double size = MIN(MIN(MAX(4.0, width - 6.0), MAX(4.0, height - 6.0)),
+                      48.0 * doc->scale);
+    double factor = MIN(size / iw, size / ih);
+    double dw = iw * factor, dh = ih * factor;
+    cairo_save(cr);
+    cairo_translate(cr, x + (width - dw) * 0.5, y + (height - dh) * 0.5);
+    cairo_scale(cr, factor, factor);
+    cairo_set_source_surface(cr, image, 0, 0);
+    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
+    cairo_paint(cr);
+    cairo_restore(cr);
+}
+
+static void room_legend_draw(GtkDrawingArea *area, cairo_t *cr,
+                             int width, int height, gpointer userdata)
+{
+    (void)area;
+    const guint kind = GPOINTER_TO_UINT(userdata);
+    double r = 0.2, g = 0.9, b = 0.45;
+    if (kind == OVERLAY_ENEMIES) { r = 1.0; g = 0.3; b = 0.3; }
+    else if (kind == OVERLAY_ITEMS) { r = 1.0; g = 0.82; b = 0.18; }
+    else if (kind == OVERLAY_OTHER) { r = 0.65; g = 0.65; b = 0.65; }
+    else if (kind == OVERLAY_DOORS) { r = 0.72; g = 0.35; b = 1.0; }
+    else if (kind == OVERLAY_EVENTS) { r = 1.0; g = 0.65; b = 0.12; }
+    else if (kind == OVERLAY_TRIGGERS) { r = 0.2; g = 0.8; b = 1.0; }
+    cairo_rectangle(cr, 1, 1, MAX(2, width - 2), MAX(2, height - 2));
+    cairo_set_source_rgba(cr, r, g, b, 0.32);
+    cairo_fill_preserve(cr);
+    cairo_set_source_rgb(cr, r, g, b);
+    cairo_set_line_width(cr, 2.0);
+    cairo_stroke(cr);
+}
+
+static GtkWidget *room_color_legend(void)
+{
+    static const char *labels[] = {
+        "Walls/collision", "Enemies", "Items", "Objects", "Doors", "Events",
+        "Triggers (not decoded)", "Other/unknown"};
+    GtkWidget *legend = gtk_flow_box_new();
+    gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(legend), GTK_SELECTION_NONE);
+    gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(legend), 2);
+    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(legend), 8);
+    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(legend), 3);
+    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(legend), 7);
+    for (guint i = 0; i < OVERLAY_COUNT; ++i) {
+        GtkWidget *entry = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+        GtkWidget *color = gtk_drawing_area_new();
+        gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(color), 15);
+        gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(color), 15);
+        gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(color), room_legend_draw,
+                                       GUINT_TO_POINTER(i), NULL);
+        gtk_box_append(GTK_BOX(entry), color);
+        gtk_box_append(GTK_BOX(entry), gtk_label_new(labels[i]));
+        gtk_flow_box_insert(GTK_FLOW_BOX(legend), entry, -1);
+    }
+    gtk_widget_set_tooltip_text(legend,
+        "Colors match the toggles; a real cached sprite overlays the square when available. "
+        "Native entities are read-only; white dashed border = authored project entity.");
+    return legend;
+}
+
 static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
 {
     if (!doc->annotations) return;
@@ -1515,6 +1701,8 @@ static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
             cairo_set_dash(cr, dash, 2, 0);
         }
         cairo_stroke(cr);
+        /* Render authentic sprite INSIDE its colored box, only for an enabled role. */
+        room_draw_sprite(doc, cr, item, x, y, width, height);
         if (item->project_owned) {
             const double dash[] = {3.0, 2.0};
             cairo_set_dash(cr, dash, 2, 0);
@@ -2535,6 +2723,7 @@ static void document_build(NativeWorkspace *doc)
     gtk_widget_set_hexpand(values, FALSE);
     gtk_box_append(GTK_BOX(page), tools);
     gtk_box_append(GTK_BOX(page), values);
+    gtk_box_append(GTK_BOX(page), room_color_legend());
     doc->canvas = gtk_drawing_area_new();
     doc->scroller = scroll;
     gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(doc->canvas), 320);

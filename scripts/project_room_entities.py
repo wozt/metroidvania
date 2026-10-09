@@ -361,6 +361,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--height", required=True, type=int, help="room height in pixels")
     sub = parser.add_subparsers(dest="action", required=True)
     sub.add_parser("list")
+    # PATCH_0085_ROOM_SPRITE_OVERLAYS: extra item identity for PRIVATE GTK previews; original list unchanged.
+    sub.add_parser("list-previews")
     add = sub.add_parser("create")
     add.add_argument("--kind", choices=KINDS, required=True)
     add.add_argument("--x", type=int, required=True)
@@ -390,6 +392,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.action == "list":
             for e in doc["entities"]:
                 print(f"{e['id']}\t{e['kind']}\t{e['x']}\t{e['y']}\t{e['label']}\t{e['native_type']}")
+        elif args.action == "list-previews":
+            for e in doc["entities"]:
+                item_id = e.get("settings", {}).get("item_id", -1)
+                print(f"{e['id']}\t{e['kind']}\t{e['x']}\t{e['y']}\t"
+                      f"{e['label']}\t{e['native_type']}\t{item_id}")
         elif args.action == "catalog":
             # PATCH_0082_ARIA_NAMED_ITEMS: emit one record per real native item.
             if args.world == "aria" and args.kind == "ITEM":

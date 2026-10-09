@@ -630,3 +630,22 @@ and the proprietary-file guard passed.
 - Add ROM-free execution tests for direct module entrypoint and GTK lifecycle
   source contracts; no item placement or commercial source data is changed.
 - GTK4 runtime still requires local testing after Auto AI PyPatch compilation.
+
+## Patch 0085 - color legend and authentic cached room sprites
+
+- Every room tab displays an eight-role color legend, including the decoder status
+  of native triggers and the distinction between native and authored entities.
+- Enemy and item category toggles now control BOTH their colored outlines and
+  native 1D sprite preview PNGs on the room canvas (Cairo nearest-neighbor).
+  Original hitboxes, room collision and read-only native annotations remain intact.
+- Exact Aria item icons (when decoded locally) are matched using pickup subtype
+  plus project item ID or original native placement parameter 0. Conditional
+  Aria enemy ID references and MZM PrimarySprite identities resolve private
+  preview paths without mixing unrelated enemies and items.
+- A per-room bounded, negatively cached Cairo PNG cache avoids re-reading every
+  image each frame; reopening or project edits invalidate cache safely.
+- Native enemy OAM decomposition is NOT finished. Existing genuine previews are
+  shown; an opt-in validated PNG import helper accepts accurately identified
+  enemy sprites from the user's legally extracted assets. Missing sprites leave
+  the color square visible, without substituting unrelated sprites.
+- All original ROM bytes and private copyrighted resources stay untouched.

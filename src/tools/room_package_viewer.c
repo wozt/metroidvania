@@ -307,8 +307,8 @@ int main(int argc, char **argv)
                 case SDLK_0: active = 0; break;
                 case SDLK_1: if (textures[0]) active = 1; break;
                 case SDLK_2: if (textures[1]) active = 2; break;
-                case SDLK_c: enabled_collisions = !enabled_collisions; break;
-                case SDLK_m: enabled_markers = !enabled_markers; break;
+                case SDLK_C: enabled_collisions = !enabled_collisions; break;
+                case SDLK_M: enabled_markers = !enabled_markers; break;
                 default: break;
                 }
                 update_title(window, active, enabled_collisions, enabled_markers);

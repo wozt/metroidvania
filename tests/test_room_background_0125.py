@@ -28,7 +28,7 @@ class LocalBackground0125(unittest.TestCase):
                      "surface->w != preview->width || surface->h != preview->height",
                      "SDL_CreateTextureFromSurface", "SDL_SCALEMODE_NEAREST",
                      "SDL_RenderTexture(renderer, textures[active - 1], NULL, &image)",
-                     "SDLK_c", "SDLK_m", "SDLK_1", "SDLK_2", "--no-auto-bg"):
+                     "SDLK_C", "SDLK_M", "SDLK_1", "SDLK_2", "--no-auto-bg"):
             self.assertIn(term, source)
         self.assertNotIn('SDL_RenderTexture(renderer, textures[0], NULL, &image);', source)
         exporter = (ROOT / "scripts/project_room_package.py").read_text()

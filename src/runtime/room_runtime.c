@@ -267,6 +267,38 @@ static float update_horizontal_velocity(float vx, float input,
     return vx;
 }
 
+
+/* PATCH_0145_MOVEMENT_STATES
+ * Runtime presentation states only; these are NOT original MZM pose IDs.
+ * Deterministic classification allows later pose/animation mapping.
+ */
+typedef enum {
+    RUNTIME_IDLE,
+    RUNTIME_RUNNING,
+    RUNTIME_TURNING,
+    RUNTIME_JUMPING,
+    RUNTIME_FALLING
+} RuntimeMovementState;
+
+static RuntimeMovementState runtime_movement_state(bool grounded, float vx,
+                                                    float vy, float input) {
+    if (!grounded) return vy < -0.1f ? RUNTIME_JUMPING : RUNTIME_FALLING;
+    if (input > 0.f && vx < -0.1f) return RUNTIME_TURNING;
+    if (input < 0.f && vx > 0.1f) return RUNTIME_TURNING;
+    return vx > 0.1f || vx < -0.1f ? RUNTIME_RUNNING : RUNTIME_IDLE;
+}
+
+static const char *runtime_movement_state_name(RuntimeMovementState state) {
+    switch (state) {
+        case RUNTIME_IDLE: return "idle";
+        case RUNTIME_RUNNING: return "running";
+        case RUNTIME_TURNING: return "turning";
+        case RUNTIME_JUMPING: return "jumping";
+        case RUNTIME_FALLING: return "falling";
+    }
+    return "unknown";
+}
+
 static float move_axis(const Room *room, float start, float other,
                        float amount, float w, float h, bool vertical,
                        bool *hit) {
@@ -351,6 +383,7 @@ int main(int argc, char **argv) {
     const float run_accel=520.f, run_braking=850.f;
     float vx=0.f, vy=0.f;
     bool grounded=false;
+    RuntimeMovementState movement_state=RUNTIME_IDLE;
     /* Prefer a grounded, collision-free test spawn near the room centre.
      * This is NOT a verified original Samus entry position. */
     bool spawn = find_spawn(room, pw, ph, &px, &py);
@@ -398,6 +431,16 @@ int main(int argc, char **argv) {
             if (hit) {
                 if (vy>0.f) grounded=true;
                 vy=0.f;
+            }
+            RuntimeMovementState next_state =
+                runtime_movement_state(grounded, vx, vy, dx);
+            if (next_state != movement_state) {
+                movement_state = next_state;
+                char title[128];
+                snprintf(title, sizeof title,
+                         "Metroid Vania - test avatar [%s]",
+                         runtime_movement_state_name(movement_state));
+                SDL_SetWindowTitle(window, title);
             }
             accumulator-=fixed_step;
         }

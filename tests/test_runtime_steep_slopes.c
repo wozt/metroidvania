@@ -32,6 +32,13 @@ int main(void) {
     assert(update_horizontal_velocity(30.f, 0.f, 0.1f, 100.f, 200.f, 300.f) == 0.f);
     assert(update_horizontal_velocity(-20.f, 1.f, 0.1f, 100.f, 200.f, 300.f) == 0.f);
     assert(update_horizontal_velocity(-95.f, -1.f, 0.1f, 100.f, 200.f, 300.f) == -100.f);
+    /* PATCH_0145: verify the provisional state machine, no ROM. */
+    assert(runtime_movement_state(true,0.f,0.f,0.f)==RUNTIME_IDLE);
+    assert(runtime_movement_state(true,40.f,0.f,1.f)==RUNTIME_RUNNING);
+    assert(runtime_movement_state(true,40.f,0.f,-1.f)==RUNTIME_TURNING);
+    assert(runtime_movement_state(false,40.f,-25.f,1.f)==RUNTIME_JUMPING);
+    assert(runtime_movement_state(false,0.f,0.f,0.f)==RUNTIME_FALLING);
+    assert(strcmp(runtime_movement_state_name(RUNTIME_TURNING),"turning")==0);
     free(r);
     return 0;
 }

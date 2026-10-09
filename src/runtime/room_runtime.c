@@ -54,6 +54,32 @@ failure:
     fclose(f); fprintf(stderr, "Invalid room preview: %s\n", path); return false;
 }
 
+/* PATCH_0141_STEEP_SLOPE_COLLISION
+ * The pinned MZM clipdata converter marks the lower triangle solid:
+ * 17 RIGHT_STEEP: local_y >= 15 - local_x;
+ * 18 LEFT_STEEP:  local_y >= local_x.
+ * Sample pixel centres at integer precision in the intersected 16px cell.
+ * Exact GBA subpixel physics and Samus hitbox remain future work.
+ */
+static bool steep_slope_overlap(const Collision *c, float x, float y,
+                                float w, float h) {
+    float left = x > (float)c->x ? x : (float)c->x;
+    float top = y > (float)c->y ? y : (float)c->y;
+    float right = x+w < (float)(c->x+c->w) ? x+w : (float)(c->x+c->w);
+    float bottom = y+h < (float)(c->y+c->h) ? y+h : (float)(c->y+c->h);
+    if (left >= right || top >= bottom) return false;
+    for (int ty = 0; ty < 16; ++ty) {
+        float sy = (float)c->y + (float)ty + 0.5f;
+        if (sy < top || sy >= bottom) continue;
+        for (int tx = 0; tx < 16; ++tx) {
+            float sx = (float)c->x + (float)tx + 0.5f;
+            if (sx < left || sx >= right) continue;
+            if (c->code == 17 ? ty >= 15-tx : ty >= tx) return true;
+        }
+    }
+    return false;
+}
+
 static bool blocked(const Room *r, float x, float y, float w, float h) {
     if (x < 0 || y < 0 || x + w > r->width || y + h > r->height) return true;
     for (size_t i=0; i<r->count; ++i) {
@@ -61,6 +87,8 @@ static bool blocked(const Room *r, float x, float y, float w, float h) {
         /* Only code=1 is treated as a solid rectangle. No native Clipdata guesses. */
         if (c->code == 1 && x < c->x+c->w && x+w > c->x &&
             y < c->y+c->h && y+h > c->y) return true;
+        if ((c->code == 17 || c->code == 18) &&
+            steep_slope_overlap(c, x, y, w, h)) return true;
     }
     return false;
 }
@@ -101,10 +129,12 @@ static bool parse_native_source(const char *path, Room *room,
             (kind == 'A' && (code < 1 || code > 7)) ||
             added >= MAX_MARKS) goto failure;
         ++added;
-        if (kind == 'N' && code == 16) {
+        if (kind == 'N' && (code == 16 || code == 17 || code == 18)) {
             if (room->count >= MAX_MARKS) goto failure;
-            room->collisions[room->count++] = (Collision){x,y,w,h,1};
-            ++solid;
+            /* Preserve the native slope ID; 16 stays a full-solid rectangle. */
+            room->collisions[room->count++] =
+                (Collision){x,y,w,h,code == 16 ? 1 : code};
+            if (code == 16) ++solid;
         }
     }
     if (!ended || fgetc(f) != EOF) goto failure;
@@ -181,6 +211,7 @@ static float move_axis(const Room *room, float start, float other,
     return position;
 }
 
+#ifndef FUSION_RUNTIME_TEST
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
@@ -318,3 +349,4 @@ cleanup:
     if (window) SDL_DestroyWindow(window);
     SDL_Quit();free(room);return rc;
 }
+#endif /* FUSION_RUNTIME_TEST */

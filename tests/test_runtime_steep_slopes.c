@@ -1,0 +1,31 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* ROM-free tests for the verified MZM steep-floor Clipdata geometry. */
+#define FUSION_RUNTIME_TEST 1
+#include "../src/runtime/room_runtime.c"
+#include <assert.h>
+
+int main(void) {
+    /* Keep the translation-unit helpers referenced with -Werror enabled. */
+    (void)parse_room; (void)parse_native_source; (void)find_spawn;
+    (void)clampf; (void)move_axis;
+    Room *r = calloc(1, sizeof *r);
+    assert(r);
+    r->width = 64;
+    r->height = 64;
+    r->count = 2;
+    r->collisions[0] = (Collision){16,16,16,16,17};
+    r->collisions[1] = (Collision){32,16,16,16,18};
+    /* RIGHT_STEEP: lower right solid, upper left air. */
+    assert(!blocked(r,16.f,16.f,1.f,1.f));
+    assert(blocked(r,31.f,16.f,1.f,1.f));
+    assert(blocked(r,16.f,31.f,1.f,1.f));
+    /* LEFT_STEEP: lower left solid, upper right air. */
+    assert(blocked(r,32.f,16.f,1.f,1.f));
+    assert(!blocked(r,47.f,16.f,1.f,1.f));
+    assert(blocked(r,47.f,31.f,1.f,1.f));
+    /* Neither slope should become a full 16x16 wall. */
+    assert(!blocked(r,20.f,17.f,1.f,1.f));
+    assert(!blocked(r,44.f,17.f,1.f,1.f));
+    free(r);
+    return 0;
+}

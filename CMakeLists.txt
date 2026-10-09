@@ -151,6 +151,12 @@ if(BUILD_TESTING)
         endif()
     endif()
 
+    # ROM-free native collision shape regression.
+    add_executable(fusion_runtime_steep_slopes_tests tests/test_runtime_steep_slopes.c)
+    target_link_libraries(fusion_runtime_steep_slopes_tests PRIVATE SDL3::SDL3)
+    fusion_enable_warnings(fusion_runtime_steep_slopes_tests)
+    add_test(NAME runtime_steep_slopes COMMAND fusion_runtime_steep_slopes_tests)
+
     add_test(NAME room_runtime_loader
         COMMAND $<TARGET_FILE:fusion_room_runtime> --check
                 ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)

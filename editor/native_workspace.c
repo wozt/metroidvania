@@ -525,6 +525,7 @@ typedef struct {
     GtkWidget *window, *name, *native_type, *catalog_description;
     GtkWidget *item_id, *param0, *param1, *flags, *selected_icon;
     GPtrArray *catalog_names;
+    GArray *catalog_item_ids; /* index -> exact Aria item ID; -1 = no item ID */
     GPtrArray *catalog_ids; /* selected dropdown index -> validated native token */
     int x, y;
     guint kind, editing_id;
@@ -534,6 +535,7 @@ static void project_creation_destroy(gpointer data)
 {
     ProjectCreation *form = data;
     if (form->catalog_ids) g_ptr_array_free(form->catalog_ids, TRUE);
+    if (form->catalog_item_ids) g_array_free(form->catalog_item_ids, TRUE);
     if (form->catalog_names) g_ptr_array_free(form->catalog_names, TRUE);
     document_unref(form->doc);
     g_free(form);
@@ -628,9 +630,36 @@ static void project_icon_assign(GtkWidget *image, ProjectCreation *form, const c
     gchar *path = project_icon_path(form, token);
     if (path && g_file_test(path, G_FILE_TEST_IS_REGULAR))
         gtk_image_set_from_file(GTK_IMAGE(image), path);
-    else gtk_image_set_from_icon_name(GTK_IMAGE(image), "image-missing-symbolic");
+    else gtk_image_set_from_icon_name(GTK_IMAGE(image), "applications-graphics-symbolic");
     g_free(path);
     gtk_image_set_pixel_size(GTK_IMAGE(image), 28);
+}
+
+/* PATCH_0082_ARIA_NAMED_ITEMS: bind exact item icons and text identities. */
+static void project_row_icon_assign(GtkWidget *image, ProjectCreation *form,
+                                    const char *token, gint item_id)
+{
+    if (form->doc->project_aria && form->kind == OVERLAY_ITEMS &&
+        token && item_id >= 0 && item_id <= 255) {
+        const char *subtype = strrchr(token, ':');
+        if (subtype && strlen(subtype + 1) == 2) {
+            char *end = NULL;
+            guint number = (guint)g_ascii_strtoull(subtype + 1, &end, 16);
+            if (end && !*end && number >= 2 && number <= 4) {
+                gchar *path = g_strdup_printf(
+                    "assets/extracted/sprite_previews/aria/items/%02X_%03d.png",
+                    number, item_id);
+                if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
+                    gtk_image_set_from_file(GTK_IMAGE(image), path);
+                    gtk_image_set_pixel_size(GTK_IMAGE(image), 28);
+                    g_free(path);
+                    return;
+                }
+                g_free(path);
+            }
+        }
+    }
+    project_icon_assign(image, form, token);
 }
 
 static void project_row_setup(GtkSignalListItemFactory *factory,
@@ -638,7 +667,7 @@ static void project_row_setup(GtkSignalListItemFactory *factory,
 {
     (void)factory; (void)userdata;
     GtkWidget *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    GtkWidget *preview = gtk_image_new_from_icon_name("image-missing-symbolic");
+    GtkWidget *preview = gtk_image_new_from_icon_name("applications-graphics-symbolic");
     GtkWidget *label = gtk_label_new("");
     gtk_image_set_pixel_size(GTK_IMAGE(preview), 28);
     gtk_widget_set_size_request(preview, 32, 32);
@@ -663,8 +692,12 @@ static void project_row_bind(GtkSignalListItemFactory *factory,
     GtkStringObject *entry = GTK_STRING_OBJECT(gtk_list_item_get_item(item));
     if (GTK_IS_LABEL(label) && GTK_IS_STRING_OBJECT(entry))
         gtk_label_set_text(GTK_LABEL(label), gtk_string_object_get_string(entry));
-    if (GTK_IS_IMAGE(icon) && form->catalog_ids && index < form->catalog_ids->len)
-        project_icon_assign(icon, form, g_ptr_array_index(form->catalog_ids, index));
+    if (GTK_IS_IMAGE(icon) && form->catalog_ids && index < form->catalog_ids->len) {
+        gint item_id = form->catalog_item_ids && index < form->catalog_item_ids->len ?
+            g_array_index(form->catalog_item_ids, gint, index) : -1;
+        project_row_icon_assign(icon, form,
+            g_ptr_array_index(form->catalog_ids, index), item_id);
+    }
 }
 
 static void project_item_fields_update(ProjectCreation *form, const char *token)
@@ -741,8 +774,17 @@ static void project_catalog_changed(GObject *object, GParamSpec *pspec,
         return;
     }
     const char *token = g_ptr_array_index(form->catalog_ids, selected);
-    if (form->selected_icon) project_icon_assign(form->selected_icon, form, token);
     project_item_fields_update(form, token);
+    if (form->item_id && form->catalog_item_ids && selected < form->catalog_item_ids->len) {
+        gint item_id = g_array_index(form->catalog_item_ids, gint, selected);
+        if (item_id >= 0 && gtk_widget_get_sensitive(form->item_id))
+            gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->item_id), item_id);
+    }
+    if (form->selected_icon) {
+        gint item_id = form->catalog_item_ids && selected < form->catalog_item_ids->len ?
+            g_array_index(form->catalog_item_ids, gint, selected) : -1;
+        project_row_icon_assign(form->selected_icon, form, token, item_id);
+    }
     project_specific_icon_refresh(NULL, form);
     if (!form->editing_id && form->catalog_names && selected < form->catalog_names->len)
         gtk_editable_set_text(GTK_EDITABLE(form->name),
@@ -765,6 +807,7 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     form->editing_id = editing_id;
     form->catalog_ids = g_ptr_array_new_with_free_func(g_free);
     form->catalog_names = g_ptr_array_new_with_free_func(g_free);
+    form->catalog_item_ids = g_array_new(FALSE, FALSE, sizeof(gint));
     GtkWidget *window = gtk_window_new();
     form->window = window;
     GtkRoot *root = doc->page ? gtk_widget_get_root(doc->page) : NULL;
@@ -791,6 +834,17 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     gtk_widget_set_sensitive(form->name, editing_id == 0);
     const char *role = kind == OVERLAY_ENEMIES ? "ENEMY" :
                        kind == OVERLAY_ITEMS ? "ITEM" : "OBJECT";
+    /* Existing project item needs both subtype and item ID to select one row. */
+    guint initial_item_id = 0;
+    if (editing_id && doc->project_aria && kind == OVERLAY_ITEMS) {
+        gchar sid[16];
+        snprintf(sid, sizeof(sid), "%u", editing_id);
+        const char *const item_options[] = {"--id", sid, NULL};
+        gchar *item_output = NULL;
+        if (project_command(doc, "item-settings", item_options, &item_output) && item_output)
+            (void)sscanf(item_output, "%u", &initial_item_id);
+        g_free(item_output);
+    }
     const char *const options[] = {"--kind", role, NULL};
     gchar *output = NULL;
     gboolean catalog_available = project_command(doc, "catalog", options, &output);
@@ -798,20 +852,33 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     g_ptr_array_add(labels, g_strdup("Unassigned (project marker only)"));
     g_ptr_array_add(form->catalog_ids, g_strdup("unassigned"));
     g_ptr_array_add(form->catalog_names, g_strdup(""));
+    gint no_item_id = -1;
+    g_array_append_val(form->catalog_item_ids, no_item_id);
     guint initial = 0;
     if (catalog_available && output) {
         gchar **lines = g_strsplit(output, "\n", -1);
-        for (guint i = 0; lines[i] && i < 1024; ++i) {
-            if (!lines[i][0] || form->catalog_ids->len >= 512) continue;
-            gchar **fields = g_strsplit(lines[i], "\t", 4);
-            if (g_strv_length(fields) == 3 && strlen(fields[0]) <= 64 &&
+        for (guint i = 0; lines[i] && i < 2048; ++i) {
+            if (!lines[i][0] || form->catalog_ids->len >= 1600) continue;
+            gchar **fields = g_strsplit(lines[i], "\t", 5);
+            guint nfields = g_strv_length(fields);
+            if ((nfields == 3 || nfields == 4) && strlen(fields[0]) <= 64 &&
                 strlen(fields[1]) <= 80 && strlen(fields[2]) <= 160) {
                 gchar *display = g_strdup_printf("%s — %s (%s)",
                                                  fields[1], fields[0], fields[2]);
                 g_ptr_array_add(labels, display);
                 g_ptr_array_add(form->catalog_ids, g_strdup(fields[0]));
                 g_ptr_array_add(form->catalog_names, g_strdup(fields[1]));
-                if (current_native && !strcmp(current_native, fields[0]))
+                gint row_item_id = -1;
+                if (nfields == 4 && fields[3][0]) {
+                    char *end = NULL;
+                    gint64 value = g_ascii_strtoll(fields[3], &end, 10);
+                    if (end && !*end && value >= 0 && value <= 255)
+                        row_item_id = (gint)value;
+                }
+                g_array_append_val(form->catalog_item_ids, row_item_id);
+                if (current_native && !strcmp(current_native, fields[0]) &&
+                    (!doc->project_aria || kind != OVERLAY_ITEMS ||
+                     row_item_id < 0 || (guint)row_item_id == initial_item_id))
                     initial = form->catalog_ids->len - 1;
             }
             g_strfreev(fields);
@@ -834,7 +901,7 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     g_object_unref(button_factory);
     g_ptr_array_free(labels, TRUE);
     form->catalog_description = gtk_label_new(catalog_available ?
-        "Select a decoded native type. Sprite preview unavailable." :
+        "Select a named native item. Actual 16x16 icons appear when extracted from your verified ROM." :
         "Catalog unavailable: unassigned marker is still supported.");
     gtk_label_set_wrap(GTK_LABEL(form->catalog_description), TRUE);
     gtk_label_set_xalign(GTK_LABEL(form->catalog_description), 0);
@@ -852,7 +919,7 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     }
     gtk_box_append(GTK_BOX(layout), gtk_label_new("Native definition (read-only catalog)"));
     gtk_box_append(GTK_BOX(layout), form->native_type);
-    form->selected_icon = gtk_image_new_from_icon_name("image-missing-symbolic");
+    form->selected_icon = gtk_image_new_from_icon_name("applications-graphics-symbolic");
     gtk_image_set_pixel_size(GTK_IMAGE(form->selected_icon), 32);
     gtk_box_append(GTK_BOX(layout), form->selected_icon);
     if (doc->project_aria && kind == OVERLAY_ITEMS) {

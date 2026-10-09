@@ -324,6 +324,16 @@ def assign(doc: dict, eid: int, native_type: str,
         if candidate is None:
             raise ValueError("native type missing or category does not match this game")
         name = candidate["name"]
+        if records is None and doc["world"] == "aria" and old["kind"] == "ITEM" and settings:
+            try:
+                from scripts.aria_item_details import item_name
+                from scripts.import_game_assets import verified_rom
+                from scripts.import_aos_world import DEFAULT_ROM, EXPECTED_SHA1
+                subtype = int(native_type.rsplit(":", 1)[1], 16)
+                name = item_name(verified_rom(DEFAULT_ROM, EXPECTED_SHA1),
+                                 subtype, settings["item_id"])
+            except (OSError, ValueError, IndexError):
+                pass  # Existing project labels remain valid without a verified ROM.
     edited = []
     for e in doc["entities"]:
         if e["id"] != eid:
@@ -381,14 +391,26 @@ def main(argv: list[str] | None = None) -> int:
             for e in doc["entities"]:
                 print(f"{e['id']}\t{e['kind']}\t{e['x']}\t{e['y']}\t{e['label']}\t{e['native_type']}")
         elif args.action == "catalog":
+            # PATCH_0082_ARIA_NAMED_ITEMS: emit one record per real native item.
             if args.world == "aria" and args.kind == "ITEM":
                 try:
+                    from scripts.import_game_assets import verified_rom
+                    from scripts.import_aos_world import DEFAULT_ROM, EXPECTED_SHA1
+                    from scripts.aria_item_details import named_options
+                    rom = verified_rom(DEFAULT_ROM, EXPECTED_SHA1)
+                    records = named_options(rom)
                     from scripts.native_sprite_thumbnails import generate_aria_item_thumbnails
-                    generate_aria_item_thumbnails()
-                except (OSError, ValueError, IndexError):
-                    pass  # No verified ROM / decoder: leave honest placeholders.
-            for record in catalog_options(args.world, args.kind):
-                print(f"{record['native_type']}\t{record['name']}\t{record['category']}")
+                    try:
+                        generate_aria_item_thumbnails(rom=rom)
+                    except (OSError, ValueError, IndexError) as exc:
+                        print(f"0082: item icons unavailable: {exc}", file=__import__('sys').stderr)
+                except (OSError, ValueError, IndexError) as exc:
+                    print(f"0082: real Aria names unavailable: {exc}", file=__import__('sys').stderr)
+                    records = catalog_options(args.world, args.kind)
+            else:
+                records = catalog_options(args.world, args.kind)
+            for record in records:
+                print(f"{record['native_type']}\t{record['name']}\t{record['category']}\t{record.get('item_id', -1)}")
         elif args.action == "create":
             if args.native_type != "unassigned":
                 # Do not permit arbitrary constructor text in project documents.

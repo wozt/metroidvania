@@ -592,3 +592,15 @@ and the proprietary-file guard passed.
 - A complete enemy sprite extraction / OAM compositor is not implemented in
   this patch. Genuine enemy PNGs, when already decoded into the documented
   cache, display in the same dropdown factory.
+
+## Patch 0082 - named Aria item choices and per-record thumbnails
+
+- Dropdown offers individual named US-ROM item/soul records (weapon, armor,
+  consumables and four soul types), not merely pickup-category labels.
+  Hard Mode / All Souls variants remain visible as separate condition families.
+- Names are decoded from the verified owner's ROM text pointer table; native
+  constructor subtype and item ID remain separate for schema-v1 compatibility.
+- Aria item thumbnails resolve by selected subtype AND item ID, directly in
+  GTK4 dropdown rows. Actual monster sprite/OAM decoding remains future work.
+- Missing graphics use a neutral diagnostic symbol, not a fake sprite. The
+  original ROM, extraction data and untouched native records remain immutable.

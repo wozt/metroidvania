@@ -20,7 +20,8 @@ typedef struct {
     guint kind, index;
     int x, y;
     guint width, height;
-    char variant[48], native_type[96], label[128], details[320];
+    char variant[48], native_type[96], label[384], details[320];
+    gboolean project_owned; /* Original native records remain read-only. */
 } RoomAnnotation;
 
 struct NativeWorkspace {
@@ -59,6 +60,13 @@ struct NativeWorkspace {
     double pending_pan_horizontal, pending_pan_vertical;
     guint pan_tick;
     char *override_path;
+    char *annotations_path, *project_area;
+    guint project_room, project_move_id, project_drag_id;
+    guint project_drag_array_index;
+    int project_drag_origin_x, project_drag_origin_y;
+    gboolean project_aria, project_move_pending, project_click_consumed;
+    gboolean dragging_project;
+    GtkWidget *overlay_buttons[OVERLAY_COUNT];
     cairo_surface_t *atlas;
     unsigned char *atlas_pixels;
     cairo_surface_t *background;
@@ -163,6 +171,8 @@ static void document_destroy(NativeWorkspace *doc)
     free(doc->map);
     free(doc->stroke_before);
     g_free(doc->override_path);
+    g_free(doc->annotations_path);
+    g_free(doc->project_area);
     g_free(doc->identity);
     free(doc);
 }
@@ -369,6 +379,361 @@ static RoomAnnotation *annotation_from_widget(NativeWorkspace *doc, GtkWidget *w
     return &g_array_index(doc->annotations, RoomAnnotation, encoded - 1);
 }
 
+/* PATCH_0079_PROJECT_ROOM_ENTITIES */
+/* Project entities are versioned private authoring markers. All original ROM
+ * annotations remain read-only. The Python validator owns disk persistence. */
+static gboolean project_command(NativeWorkspace *doc, const char *action,
+                                const char *const *options, gchar **output)
+{
+    if (!doc->ready || !doc->project_area || doc->closing) return FALSE;
+    gchar room[16], width[16], height[16];
+    snprintf(room, sizeof(room), "%u", doc->project_room);
+    snprintf(width, sizeof(width), "%u", doc->map->width[0] * 16);
+    snprintf(height, sizeof(height), "%u", doc->map->height[0] * 16);
+    GPtrArray *args = g_ptr_array_new();
+    const char *const base[] = {
+        "python3", "-m", "scripts.project_room_entities",
+        "--world", doc->project_aria ? "aria" : "mzm",
+        "--area", doc->project_area, "--room", room,
+        "--width", width, "--height", height, action, NULL
+    };
+    for (guint i = 0; base[i]; ++i) g_ptr_array_add(args, (gpointer)base[i]);
+    if (options)
+        for (guint i = 0; options[i]; ++i) g_ptr_array_add(args, (gpointer)options[i]);
+    g_ptr_array_add(args, NULL);
+    gchar *out = NULL, *err = NULL;
+    GError *error = NULL;
+    gint status = -1;
+    gboolean launched = g_spawn_sync(NULL, (gchar **)args->pdata, NULL,
+                                     G_SPAWN_SEARCH_PATH, NULL, NULL,
+                                     &out, &err, &status, &error);
+    gboolean success = launched && g_spawn_check_wait_status(status, NULL);
+    if (!success) {
+        gchar *diagnostic = g_strdup_printf("Project entities: %.480s",
+            error ? error->message : err && *err ? err : "project validator rejected change");
+        message(doc, diagnostic);
+        g_free(diagnostic);
+    }
+    if (output) *output = success ? out : NULL;
+    if (!success || !output) g_free(out);
+    g_free(err);
+    g_clear_error(&error);
+    g_ptr_array_free(args, TRUE);
+    return success;
+}
+
+static void project_load(NativeWorkspace *doc)
+{
+    gchar *output = NULL;
+    if (!project_command(doc, "list", NULL, &output)) return;
+    guint projects = 0;
+    gchar **lines = g_strsplit(output ? output : "", "\n", -1);
+    for (guint i = 0; lines[i] && i < 512; ++i) {
+        if (!lines[i][0]) continue;
+        gchar **fields = g_strsplit(lines[i], "\t", 7);
+        guint id = 0;
+        int x = 0, y = 0;
+        RoomAnnotation item = {0};
+        if (g_strv_length(fields) == 6 &&
+            parse_unsigned_field(fields[0], &id) && id &&
+            parse_signed_field(fields[2], &x) &&
+            parse_signed_field(fields[3], &y) &&
+            x >= 0 && y >= 0 &&
+            strlen(fields[4]) < sizeof(item.label) &&
+            strlen(fields[5]) < sizeof(item.native_type)) {
+            item.kind = !strcmp(fields[1], "ENEMY") ? OVERLAY_ENEMIES :
+                        !strcmp(fields[1], "ITEM") ? OVERLAY_ITEMS :
+                        !strcmp(fields[1], "OBJECT") ? OVERLAY_OBJECTS : OVERLAY_COUNT;
+            if (item.kind < OVERLAY_COUNT) {
+                item.project_owned = TRUE;
+                item.index = id;
+                item.x = x;
+                item.y = y;
+                item.width = item.height = 16;
+                g_strlcpy(item.variant, "project", sizeof(item.variant));
+                g_strlcpy(item.native_type, fields[5], sizeof(item.native_type));
+                g_strlcpy(item.label, fields[4], sizeof(item.label));
+                g_strlcpy(item.details,
+                    "Private project entity (not exportable to ROM). Use Select to drag.",
+                    sizeof(item.details));
+                g_array_append_val(doc->annotations, item);
+                GtkWidget *row = gtk_label_new(NULL);
+                gchar *summary = g_strdup_printf(
+                    "[PROJECT] %s #%u — %s\n(%d,%d) | %s | not engine-ready",
+                    fields[1], id, item.label, x, y, item.native_type);
+                gtk_label_set_text(GTK_LABEL(row), summary);
+                gtk_label_set_xalign(GTK_LABEL(row), 0);
+                gtk_label_set_wrap(GTK_LABEL(row), TRUE);
+                gtk_label_set_selectable(GTK_LABEL(row), TRUE);
+                gtk_widget_set_margin_start(row, 8);
+                gtk_widget_set_margin_bottom(row, 6);
+                g_object_set_data(G_OBJECT(row), "mv-annotation-index",
+                    GUINT_TO_POINTER(doc->annotations->len));
+                GtkGesture *context = gtk_gesture_click_new();
+                gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(context),
+                                              GDK_BUTTON_SECONDARY);
+                gtk_widget_add_controller(row, GTK_EVENT_CONTROLLER(context));
+                g_signal_connect(context, "pressed",
+                                 G_CALLBACK(annotation_list_context_pressed), doc);
+                gtk_list_box_append(GTK_LIST_BOX(doc->annotations_list), row);
+                if (doc->overlay_buttons[item.kind])
+                    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
+                        doc->overlay_buttons[item.kind]), TRUE);
+                g_free(summary);
+                ++projects;
+            }
+        }
+        g_strfreev(fields);
+    }
+    if (doc->annotations_status && projects) {
+        const char *previous = gtk_label_get_text(GTK_LABEL(doc->annotations_status));
+        gchar *status = g_strdup_printf(
+            "%s  + %u private project entity/ies (saved separately; not playable).",
+            previous, projects);
+        gtk_label_set_text(GTK_LABEL(doc->annotations_status), status);
+        g_free(status);
+    }
+    g_strfreev(lines);
+    g_free(output);
+}
+
+static void project_reload(NativeWorkspace *doc)
+{
+    if (!doc->annotations_path) return;
+    load_annotations(doc, doc->annotations_path);
+    project_load(doc);
+    doc->annotation_selected = FALSE;
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
+}
+
+static gboolean project_move(NativeWorkspace *doc, guint id, int x, int y)
+{
+    gchar sid[16], sx[16], sy[16];
+    snprintf(sid, sizeof(sid), "%u", id);
+    snprintf(sx, sizeof(sx), "%d", x);
+    snprintf(sy, sizeof(sy), "%d", y);
+    const char *const options[] = {"--id", sid, "--x", sx, "--y", sy, NULL};
+    gboolean ok = project_command(doc, "move", options, NULL);
+    project_reload(doc);
+    if (ok) message(doc, "Project entity moved and saved. Native room data unchanged.");
+    return ok;
+}
+
+typedef struct {
+    NativeWorkspace *doc;
+    GtkWidget *window, *name, *native_type;
+    int x, y;
+    guint kind;
+} ProjectCreation;
+
+static void project_creation_destroy(gpointer data)
+{
+    ProjectCreation *form = data;
+    document_unref(form->doc);
+    g_free(form);
+}
+
+static gboolean project_close_idle(gpointer data)
+{
+    GtkWidget *window = GTK_WIDGET(data);
+    gtk_window_destroy(GTK_WINDOW(window));
+    return G_SOURCE_REMOVE;
+}
+
+static void project_creation_submit(GtkButton *button, gpointer userdata)
+{
+    ProjectCreation *form = userdata;
+    NativeWorkspace *doc = form->doc;
+    (void)button;
+    if (doc->closing || !doc->ready) return;
+    const char *label = gtk_editable_get_text(GTK_EDITABLE(form->name));
+    const char *native = gtk_editable_get_text(GTK_EDITABLE(form->native_type));
+    const char *kind = form->kind == OVERLAY_ENEMIES ? "ENEMY" :
+                       form->kind == OVERLAY_ITEMS ? "ITEM" : "OBJECT";
+    gchar sx[16], sy[16];
+    snprintf(sx, sizeof(sx), "%d", form->x);
+    snprintf(sy, sizeof(sy), "%d", form->y);
+    const char *const options[] = {"--kind", kind, "--x", sx, "--y", sy,
+                                   "--label", label, "--native-type", native, NULL};
+    if (!project_command(doc, "create", options, NULL)) return;
+    project_reload(doc);
+    message(doc, "Project entity created and saved (not yet exportable to ROM).");
+    /* Destroy after GtkButton dispatch to preserve GTK active-state accounting. */
+    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_close_idle,
+                    g_object_ref(form->window), g_object_unref);
+}
+
+static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind)
+{
+    if (!doc->ready || doc->closing) return;
+    ProjectCreation *form = g_new0(ProjectCreation, 1);
+    form->doc = document_ref(doc);
+    form->x = x;
+    form->y = y;
+    form->kind = kind;
+    GtkWidget *window = gtk_window_new();
+    form->window = window;
+    GtkRoot *root = doc->page ? gtk_widget_get_root(doc->page) : NULL;
+    if (GTK_IS_WINDOW(root)) gtk_window_set_transient_for(GTK_WINDOW(window), GTK_WINDOW(root));
+    gtk_window_set_title(GTK_WINDOW(window), "Create private project entity");
+    gtk_window_set_default_size(GTK_WINDOW(window), 410, -1);
+    GtkWidget *layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    GtkWidget *notice = gtk_label_new(
+        "Project-only marker. Native ROM object constructors are NOT encoded. "
+        "Native type is an optional reference token, not playable behavior.");
+    GtkWidget *position = gtk_label_new(NULL);
+    gchar *pos = g_strdup_printf("Position: %d, %d (16px cell)", x, y);
+    gtk_label_set_text(GTK_LABEL(position), pos);
+    g_free(pos);
+    gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(notice), 0);
+    gtk_label_set_xalign(GTK_LABEL(position), 0);
+    form->name = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(form->name), "Project entity label");
+    gtk_editable_set_text(GTK_EDITABLE(form->name),
+        kind == OVERLAY_ENEMIES ? "New enemy" :
+        kind == OVERLAY_ITEMS ? "New item" : "New object");
+    form->native_type = gtk_entry_new();
+    gtk_editable_set_text(GTK_EDITABLE(form->native_type), "unassigned");
+    gtk_entry_set_placeholder_text(GTK_ENTRY(form->native_type), "Native ID (optional token)");
+    GtkWidget *save = gtk_button_new_with_label("Create and save project entity");
+    gtk_widget_set_margin_start(layout, 16);
+    gtk_widget_set_margin_end(layout, 16);
+    gtk_widget_set_margin_top(layout, 16);
+    gtk_widget_set_margin_bottom(layout, 16);
+    gtk_box_append(GTK_BOX(layout), notice);
+    gtk_box_append(GTK_BOX(layout), position);
+    gtk_box_append(GTK_BOX(layout), gtk_label_new("Label"));
+    gtk_box_append(GTK_BOX(layout), form->name);
+    gtk_box_append(GTK_BOX(layout), gtk_label_new("Native type reference"));
+    gtk_box_append(GTK_BOX(layout), form->native_type);
+    gtk_box_append(GTK_BOX(layout), save);
+    gtk_window_set_child(GTK_WINDOW(window), layout);
+    g_object_set_data_full(G_OBJECT(window), "mv-project-create-form", form,
+                           project_creation_destroy);
+    g_signal_connect(save, "clicked", G_CALLBACK(project_creation_submit), form);
+    gtk_window_present(GTK_WINDOW(window));
+}
+
+static gboolean project_popover_close_idle(gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    if (!doc->closing) annotation_popup_close(doc);
+    return G_SOURCE_REMOVE;
+}
+
+static void project_popover_defer_close(NativeWorkspace *doc)
+{
+    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_popover_close_idle,
+                    document_ref(doc), (GDestroyNotify)document_unref);
+}
+
+static void project_create_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    int x = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "mv-project-x")) - 1;
+    int y = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "mv-project-y")) - 1;
+    guint kind = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-project-kind"));
+    project_popover_defer_close(doc);
+    project_creation_open(doc, x, y, kind);
+}
+
+static void project_context_add(GtkWidget *layout, NativeWorkspace *doc,
+                                const char *label, int x, int y, guint kind)
+{
+    GtkWidget *button = gtk_button_new_with_label(label);
+    g_object_set_data(G_OBJECT(button), "mv-project-x", GINT_TO_POINTER(x + 1));
+    g_object_set_data(G_OBJECT(button), "mv-project-y", GINT_TO_POINTER(y + 1));
+    g_object_set_data(G_OBJECT(button), "mv-project-kind", GUINT_TO_POINTER(kind));
+    g_signal_connect(button, "clicked", G_CALLBACK(project_create_clicked), doc);
+    gtk_box_append(GTK_BOX(layout), button);
+}
+
+static void project_context_empty(NativeWorkspace *doc, GtkWidget *canvas,
+                                  double x, double y)
+{
+    int cx = (int)(x / (16.0 * doc->scale));
+    int cy = (int)(y / (16.0 * doc->scale));
+    if (cx < 0 || cy < 0 || (guint)cx >= doc->map->width[0] ||
+        (guint)cy >= doc->map->height[0]) return;
+    int px = cx * 16, py = cy * 16;
+    annotation_popup_close(doc);
+    GtkWidget *popover = gtk_popover_new();
+    GtkWidget *layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    project_context_add(layout, doc, "Create project enemy here...", px, py, OVERLAY_ENEMIES);
+    project_context_add(layout, doc, "Create project item here...", px, py, OVERLAY_ITEMS);
+    project_context_add(layout, doc, "Create project object here...", px, py, OVERLAY_OBJECTS);
+    gtk_popover_set_child(GTK_POPOVER(popover), layout);
+    gtk_widget_set_parent(popover, canvas);
+    GdkRectangle pointer = {(int)x, (int)y, 1, 1};
+    gtk_popover_set_pointing_to(GTK_POPOVER(popover), &pointer);
+    doc->annotation_popup = popover;
+    g_object_add_weak_pointer(G_OBJECT(popover), (gpointer *)&doc->annotation_popup);
+    gtk_popover_popup(GTK_POPOVER(popover));
+}
+
+static void project_move_start_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    RoomAnnotation *item = annotation_from_widget(doc, GTK_WIDGET(button), NULL);
+    if (item && item->project_owned) {
+        doc->project_move_pending = TRUE;
+        doc->project_move_id = item->index;
+        message(doc, "Project entity: click the destination tile (Esc to cancel).");
+    }
+    project_popover_defer_close(doc);
+}
+
+typedef struct {
+    NativeWorkspace *doc;
+    guint id;
+} ProjectDelete;
+
+static gboolean project_delete_idle(gpointer userdata)
+{
+    ProjectDelete *request = userdata;
+    NativeWorkspace *doc = request->doc;
+    if (!doc->closing && doc->ready) {
+        gchar id[16];
+        snprintf(id, sizeof(id), "%u", request->id);
+        const char *const options[] = {"--id", id, NULL};
+        annotation_popup_close(doc);
+        if (project_command(doc, "delete", options, NULL)) {
+            project_reload(doc);
+            message(doc, "Project entity deleted; original ROM annotations unchanged.");
+        }
+    }
+    document_unref(doc);
+    g_free(request);
+    return G_SOURCE_REMOVE;
+}
+
+static void project_delete_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    RoomAnnotation *item = annotation_from_widget(doc, GTK_WIDGET(button), NULL);
+    if (!item || !item->project_owned) return;
+    ProjectDelete *request = g_new0(ProjectDelete, 1);
+    request->doc = document_ref(doc);
+    request->id = item->index;
+    /* Do not destroy the right-click GtkPopover during GtkButton::clicked. */
+    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_delete_idle, request, NULL);
+}
+
+static gint project_hit(NativeWorkspace *doc, double x, double y)
+{
+    if (!doc->annotations) return -1;
+    for (guint cursor = doc->annotations->len; cursor > 0; --cursor) {
+        guint index = cursor - 1;
+        const RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation, index);
+        if (!item->project_owned || !doc->overlays[item->kind]) continue;
+        double px = item->x * doc->scale, py = item->y * doc->scale;
+        if (x >= px && x < px + 16 * doc->scale &&
+            y >= py && y < py + 16 * doc->scale) return (gint)index;
+    }
+    return -1;
+}
+
 static void annotation_popup_close(NativeWorkspace *doc)
 {
     if (!doc || !doc->annotation_popup) return;
@@ -554,6 +919,14 @@ static void annotation_context_show(NativeWorkspace *doc, GtkWidget *relative,
         doc, editor_label, array_index, G_CALLBACK(annotation_editor_clicked)));
     gtk_box_append(GTK_BOX(layout), annotation_menu_button(
         doc, "Locate in Room data", array_index, G_CALLBACK(annotation_locate_clicked)));
+    if (item->project_owned) {
+        gtk_box_append(GTK_BOX(layout), annotation_menu_button(
+            doc, "Move project entity (click destination)", array_index,
+            G_CALLBACK(project_move_start_clicked)));
+        gtk_box_append(GTK_BOX(layout), annotation_menu_button(
+            doc, "Delete project entity", array_index,
+            G_CALLBACK(project_delete_clicked)));
+    }
     g_free(editor_label);
     g_free(heading_text);
     g_free(summary_text);
@@ -604,6 +977,9 @@ static void annotation_canvas_context_pressed(GtkGestureClick *gesture, gint pre
         gtk_gesture_set_state(GTK_GESTURE(gesture), GTK_EVENT_SEQUENCE_CLAIMED);
         return;
     }
+    /* On empty canvas space, create a real saved project entity. */
+    project_context_empty(doc, gtk_event_controller_get_widget(
+        GTK_EVENT_CONTROLLER(gesture)), x, y);
 }
 
 static gboolean load_atlas(NativeWorkspace *doc, const char *filename)
@@ -728,6 +1104,14 @@ static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
             cairo_set_dash(cr, dash, 2, 0);
         }
         cairo_stroke(cr);
+        if (item->project_owned) {
+            const double dash[] = {3.0, 2.0};
+            cairo_set_dash(cr, dash, 2, 0);
+            cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+            cairo_rectangle(cr, x + 2, y + 2, MAX(2.0, width - 4), MAX(2.0, height - 4));
+            cairo_stroke(cr);
+            cairo_set_dash(cr, NULL, 0, 0);
+        }
         if (doc->annotation_selected && doc->selected_annotation == i) {
             cairo_rectangle(cr, x - 1, y - 1, MAX(6.0, width + 2),
                             MAX(6.0, height + 2));
@@ -1037,7 +1421,24 @@ static void gesture_begin(GtkGestureDrag *gesture, double x, double y, gpointer 
     NativeWorkspace *doc = userdata;
     if (doc->closing) return;
     (void)gesture;
-    if (!doc->ready || doc->drawing) return;
+    if (!doc->ready || doc->drawing || doc->project_click_consumed) return;
+    /* Select-and-drag works only for project-owned markers. */
+    if (doc->tool_id == TOOL_SELECT) {
+        gint marker = project_hit(doc, x, y);
+        if (marker >= 0) {
+            RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation, (guint)marker);
+            doc->dragging_project = TRUE;
+            doc->drawing = TRUE;
+            doc->project_drag_id = item->index;
+            doc->project_drag_array_index = (guint)marker;
+            doc->project_drag_origin_x = item->x;
+            doc->project_drag_origin_y = item->y;
+            doc->annotation_selected = TRUE;
+            doc->selected_annotation = (guint)marker;
+            gtk_widget_queue_draw(doc->canvas);
+            return;
+        }
+    }
     int cx = 0, cy = 0;
     if (doc->tool_id != TOOL_PAN && !get_cell(doc, x, y, &cx, &cy)) return;
     doc->drawing = TRUE;
@@ -1078,6 +1479,16 @@ static void gesture_update(GtkGestureDrag *gesture, double dx, double dy, gpoint
     if (doc->closing) return;
     (void)gesture;
     if (!doc->ready || !doc->drawing) return;
+    if (doc->dragging_project) {
+        RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation,
+                                               doc->project_drag_array_index);
+        int x = (int)((doc->project_drag_origin_x + dx / doc->scale) / 16.0) * 16;
+        int y = (int)((doc->project_drag_origin_y + dy / doc->scale) / 16.0) * 16;
+        item->x = CLAMP(x, 0, (int)doc->map->width[0] * 16 - 16);
+        item->y = CLAMP(y, 0, (int)doc->map->height[0] * 16 - 16);
+        gtk_widget_queue_draw(doc->canvas);
+        return;
+    }
     if (doc->panning) {
         doc->pending_pan_horizontal = doc->pan_horizontal - dx;
         doc->pending_pan_vertical = doc->pan_vertical - dy;
@@ -1114,6 +1525,18 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
     if (doc->closing) return;
     (void)gesture; (void)dx; (void)dy;
     if (!doc->drawing) return;
+    if (doc->dragging_project) {
+        RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation,
+                                               doc->project_drag_array_index);
+        int x = item->x, y = item->y;
+        guint id = doc->project_drag_id;
+        doc->dragging_project = FALSE;
+        doc->drawing = FALSE;
+        if (x != doc->project_drag_origin_x || y != doc->project_drag_origin_y)
+            project_move(doc, id, x, y);
+        else gtk_widget_queue_draw(doc->canvas);
+        return;
+    }
     if (doc->moving && (doc->preview_dx || doc->preview_dy)) {
         if (native_selection_move(doc->map, doc->layer_id,
                                   low(doc->sel_x0, doc->sel_x1),
@@ -1145,14 +1568,32 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
 static void canvas_click_down(GtkGestureClick *click, int n_press,
                               double x, double y, gpointer userdata)
 {
-    (void)click; (void)n_press;
+    NativeWorkspace *doc = userdata;
+    (void)n_press;
+    if (doc->project_move_pending && doc->ready) {
+        int cx = (int)(x / (16.0 * doc->scale));
+        int cy = (int)(y / (16.0 * doc->scale));
+        if (cx < 0 || cy < 0 || (guint)cx >= doc->map->width[0] ||
+            (guint)cy >= doc->map->height[0]) return;
+        guint id = doc->project_move_id;
+        doc->project_move_pending = FALSE;
+        doc->project_click_consumed = TRUE;
+        project_move(doc, id, cx * 16, cy * 16);
+        gtk_gesture_set_state(GTK_GESTURE(click), GTK_EVENT_SEQUENCE_CLAIMED);
+        return;
+    }
     gesture_begin(NULL, x, y, userdata);
 }
 
 static void canvas_click_up(GtkGestureClick *click, int n_press,
                             double x, double y, gpointer userdata)
 {
+    NativeWorkspace *doc = userdata;
     (void)click; (void)n_press; (void)x; (void)y;
+    if (doc->project_click_consumed) {
+        doc->project_click_consumed = FALSE;
+        return;
+    }
     gesture_end(NULL, 0, 0, userdata);
 }
 
@@ -1556,6 +1997,11 @@ static gboolean key_pressed(GtkEventControllerKey *controller, guint keyval,
 {
     NativeWorkspace *doc = userdata;
     if (doc->closing) return FALSE;
+    if (keyval == GDK_KEY_Escape && doc->project_move_pending) {
+        doc->project_move_pending = FALSE;
+        message(doc, "Project move canceled.");
+        return TRUE;
+    }
     (void)controller; (void)keycode;
     if (modifiers & GDK_CONTROL_MASK) {
         switch (gdk_keyval_to_lower(keyval)) {
@@ -1648,6 +2094,7 @@ static void document_build(NativeWorkspace *doc)
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), background, -1);
     for (guint i = 0; i < OVERLAY_COUNT; ++i) {
         overlay_buttons[i] = gtk_toggle_button_new_with_label(overlay_labels[i]);
+        doc->overlay_buttons[i] = overlay_buttons[i];
         gtk_widget_add_css_class(overlay_buttons[i], "flat");
         delayed_tip(overlay_buttons[i], overlay_tips[i]);
         g_object_set_data(G_OBJECT(overlay_buttons[i]), "overlay-kind", GUINT_TO_POINTER(i));
@@ -1847,6 +2294,18 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
         snprintf(annotations_path, sizeof(annotations_path),
                  "assets/extracted/rooms/metroid/annotations/%s_%03u.tsv",
                  area_lower, number);
+    g_free(doc->annotations_path);
+    doc->annotations_path = g_strdup(annotations_path);
+    g_free(doc->project_area);
+    doc->project_area = g_strdup(aria ? area :
+        g_ascii_strcasecmp(area, "brinstar") == 0 ? "Brinstar" :
+        g_ascii_strcasecmp(area, "kraid") == 0 ? "Kraid" :
+        g_ascii_strcasecmp(area, "norfair") == 0 ? "Norfair" :
+        g_ascii_strcasecmp(area, "ridley") == 0 ? "Ridley" :
+        g_ascii_strcasecmp(area, "tourian") == 0 ? "Tourian" :
+        g_ascii_strcasecmp(area, "crateria") == 0 ? "Crateria" : "Chozodia");
+    doc->project_aria = aria;
+    doc->project_room = number;
     load_annotations(doc, annotations_path);
     history_clear(doc->undo, &doc->undo_count);
     history_clear(doc->redo, &doc->redo_count);
@@ -1856,6 +2315,7 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     g_mkdir_with_parents(dir, 0700);
     g_free(dir);
     doc->ready = TRUE;
+    project_reload(doc);
     doc->unsaved = FALSE;
     doc->brush_id = doc->layer_id = 0;
     doc->has_selection = FALSE;

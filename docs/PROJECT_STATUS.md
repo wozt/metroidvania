@@ -536,3 +536,23 @@ and the proprietary-file guard passed.
 - The pre-existing GTK source contract is updated to assert all eight overlay
   labels and the still-disabled native trigger decoder.
 - All records and original graphics remain read-only. No ROM bytes are altered.
+
+## Patch 0079 - editable private room entity markers
+
+- Shared Zero Mission / Aria room editor: right-click empty room pixels to
+  create a project enemy, item or world-object marker; the selected world and
+  verified room geometry are enforced by the project entity validator.
+- Native source annotations are never modified. Private authored entities live
+  in versioned, ignored `assets/extracted/overrides/{metroid,aria}/entities/`
+  JSON documents with stable monotonically increasing IDs and atomic saves.
+- Select tool supports direct mouse drag of project entities. The context menu
+  also offers Move (click destination) and Delete. Coordinates are 16-pixel
+  aligned and bounded to the current native room canvas.
+- Separate dashed white borders and `[PROJECT]` labels distinguish authored
+  markers from read-only native records. Existing native collision and door
+  annotations remain untouched. Creation deliberately does NOT promise gameplay
+  execution or a native-ROM encoder.
+- Python tests validate round-trip create/move/delete, cross-world identity,
+  schema/geometry constraints, symlinks, and non-mutation of original annotations.
+- All tests, GTK4 compilation and proprietary-file guard must pass on Debian
+  before Auto AI PyPatch commits/pushes this change.

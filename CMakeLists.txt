@@ -41,6 +41,10 @@ add_executable(fusion_mzm_room_viewer src/tools/mzm_room_viewer.c)
 target_link_libraries(fusion_mzm_room_viewer PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_mzm_room_viewer)
 
+add_executable(fusion_room_package_viewer src/tools/room_package_viewer.c)
+target_link_libraries(fusion_room_package_viewer PRIVATE SDL3::SDL3)
+fusion_enable_warnings(fusion_room_package_viewer)
+
 include(CTest)
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
@@ -142,6 +146,10 @@ if(BUILD_TESTING)
                     "XDG_CONFIG_HOME=${CMAKE_BINARY_DIR}/test-config;GTK_A11Y=test;ASAN_OPTIONS=detect_leaks=0:abort_on_error=1;UBSAN_OPTIONS=halt_on_error=1")
         endif()
     endif()
+
+    add_test(NAME room_package_loader
+        COMMAND $<TARGET_FILE:fusion_room_package_viewer> --check
+                ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)
 
     add_test(NAME python_tooling_and_data
         COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}

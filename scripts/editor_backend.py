@@ -15,6 +15,7 @@ from typing import Any
 from scripts import authored_rooms
 from scripts import map_placements
 from scripts import project_room_entities
+from scripts import project_room_package
 from scripts import project_connection_graph
 from scripts.import_game_assets import ROOT, verified_rom
 from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
@@ -33,6 +34,7 @@ CAPABILITIES = {
     "list-assets": "available_native_object_metadata",
     "room-list": "available",
     "room-inspect": "available",
+    "room-export": "available_saved_project_room_package_only",
     "room-open": "available_partial_native_workspace",
     "room-create": "available_draft_only",
     "room-validate": "available_draft_only",
@@ -104,6 +106,7 @@ COMMAND_FIELDS = {
     "list-assets": {"world"},
     "room-list": {"world", "area", "source"},
     "room-inspect": {"world", "area", "room", "source"},
+    "room-export": {"world", "area", "room"},
     "room-open": {"world", "area", "room"},
     "room-create": {"world", "area", "slug", "name", "width_screens",
                     "height_screens"},
@@ -184,7 +187,7 @@ COMMAND_FIELDS = {
     "transition-validate": {"world", "area", "room", "width", "height"},
 }
 MUTATING_COMMANDS = {
-    "room-create", "room-open", "room-place", "room-move", "room-unplace",
+    "room-create", "room-open", "room-export", "room-place", "room-move", "room-unplace",
     "entity-create", "entity-move", "entity-update", "entity-delete",
     "entity-assign", "story-save",
     "tile-set", "tile-fill",
@@ -949,6 +952,22 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
         else:
             raise ValueError("source must be native or draft")
         return {"world": world, "source": source, "count": len(rooms), "rooms": rooms}
+    if command == "room-export":
+        # PATCH_0124_ROOM_EXPORT: only the diskette-saved private document.
+        world, area, room, _width, _height = _entity_scope({
+            **options, "width": 16, "height": 16})
+        document = project_room_package.read_saved(root_path, world, area, room)
+        invalid_events = [event["id"] for event in _event_validation(document, root_path)
+                          if not event["valid"]]
+        if invalid_events:
+            raise ValueError(f"room-export unresolved event references: {invalid_events}")
+        if document["transitions"]:
+            transitions = _transition_validation(document, root_path)
+            if any(not record["target_exists"] or
+                   record["target_door_status"] == "missing_target_project_door"
+                   for record in transitions):
+                raise ValueError("room-export has invalid transition destinations")
+        return project_room_package.export(root_path, document, dry_run=dry_run)
     if command == "room-inspect":
         source = options.get("source", "native")
         if source == "draft":

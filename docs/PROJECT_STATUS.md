@@ -1140,6 +1140,26 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Added two-world CLI coverage, atomic persistence checks and resolution tests
   for every action family without requiring either commercial ROM.
 
+
+
+## Patch 0124 — validated deterministic project-room export and SDL3 loader
+
+- `room-export` reads **saved** private project-room version-4 documents and
+  validates their structure, typed event references and target transitions.
+  It explicitly ignores GTK unsaved staging tokens; close/Save still controls
+  what is exportable. `--dry-run=true` computes the intended content-addressed
+  package without writing anything.
+- Two immutable, content-addressed files under ignored `assets/extracted/exports/`:
+  `room.json` (complete project-authored room data, collision, doors, entities,
+  transitions and event conditions) and `preview.tsv` (bounded, pixel-coordinate
+  geometry subset, no labels or proprietary image/ROM/tileset bytes).
+- The `fusion_room_package_viewer` SDL3 utility verifies and displays the preview
+  with colored rectangles. `--check` parses it without a display server.
+  It is a **format-consumption proof**, not gameplay and not a native render.
+- Export does not package BG1/BG2 tile arrays or ROM-derived assets. Those need
+  a separate lawful, validated resource pipeline. Native encoders and both game
+  runtime adapters remain unavailable.
+
 ## Patch 0123 - multiple typed event conditions
 
 - Upgraded the shared room document to version 4. Version 3 events migrate in

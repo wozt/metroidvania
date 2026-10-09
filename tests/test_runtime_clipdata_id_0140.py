@@ -8,7 +8,7 @@ import unittest
 class NativeSolidContract(unittest.TestCase):
     def test_verified_solid_id_and_diagnostic(self):
         code = (Path(__file__).resolve().parents[1] / "src/runtime/room_runtime.c").read_text()
-        self.assertIn("if (kind == 'N' && code == 16) {", code)
+        self.assertIn("if (kind == 'N' && (code == 16 || code == 17 || code == 18)) {", code)
         self.assertIn("verified full-solid cells (Clipdata 16)", code)
         self.assertNotIn("if (kind == 'N' && code == 5)", code)
 

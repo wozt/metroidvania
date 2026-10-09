@@ -191,6 +191,63 @@ static float clampf(float x, float low, float high) {
 /* PATCH_0137_PLATFORM_PHYSICS */
 /* First platformer physics approximation, not original MZM constants.
  * Collision code 1 is explicitly project-authored solid geometry only. */
+/* PATCH_0142_GROUNDED_SLOPE_TRAVERSAL
+ * The original 0137 X/Y separated solver cannot climb an incline.
+ * Allow a grounded avatar near a native slope to step up at most two
+ * pixels and descend along its collision surface, without stepping up
+ * arbitrary rectangular walls. Not yet GBA-exact Samus physics.
+ */
+static bool near_steep_slope(const Room *room, float x, float y,
+                             float w, float h) {
+    for (size_t i = 0; i < room->count; ++i) {
+        const Collision *c = &room->collisions[i];
+        if (c->code != 17 && c->code != 18) continue;
+        if (x < (float)(c->x+c->w) && x+w > (float)c->x &&
+            y+h >= (float)c->y - 2.f &&
+            y+h <= (float)(c->y+c->h) + 2.f) return true;
+    }
+    return false;
+}
+
+static void move_grounded_x(const Room *room, float *x, float *y,
+                            float amount, float w, float h) {
+    while (amount > 0.0001f || amount < -0.0001f) {
+        float step = clampf(amount, -1.f, 1.f);
+        float nx = *x + step;
+        bool has_slope = near_steep_slope(room, *x, *y, w, h) ||
+                         near_steep_slope(room, nx, *y, w, h);
+        float ny = *y;
+        if (blocked(room, nx, ny, w, h)) {
+            bool climbed = false;
+            if (has_slope) {
+                for (int rise = 1; rise <= 2; ++rise) {
+                    float up = *y - (float)rise;
+                    if (!blocked(room, *x, up, w, h) &&
+                        !blocked(room, nx, up, w, h)) {
+                        ny = up;
+                        climbed = true;
+                        break;
+                    }
+                }
+            }
+            if (!climbed) break;
+        }
+        /* A descending slope must remain the source of the supporting floor.
+         * Avoid following drops off ordinary project geometry. */
+        if (has_slope && !blocked(room, nx, ny+1.f, w, h)) {
+            for (int fall = 1; fall <= 2; ++fall) {
+                float down = ny + (float)fall;
+                if (blocked(room, nx, down, w, h)) break;
+                ny = down;
+                if (blocked(room, nx, ny+1.f, w, h)) break;
+            }
+        }
+        *x = nx;
+        *y = ny;
+        amount -= step;
+    }
+}
+
 static float move_axis(const Room *room, float start, float other,
                        float amount, float w, float h, bool vertical,
                        bool *hit) {
@@ -309,7 +366,10 @@ int main(int argc, char **argv) {
                 grounded=false;
             }
             jump_queued=false;
-            px=move_axis(room,px,py,dx*run_speed*fixed_step,pw,ph,false,&hit);
+            if (grounded)
+                move_grounded_x(room,&px,&py,dx*run_speed*fixed_step,pw,ph);
+            else
+                px=move_axis(room,px,py,dx*run_speed*fixed_step,pw,ph,false,&hit);
             vy=clampf(vy+gravity*fixed_step,-jump_speed,terminal_speed);
             py=move_axis(room,py,px,vy*fixed_step,pw,ph,true,&hit);
             if (hit) {

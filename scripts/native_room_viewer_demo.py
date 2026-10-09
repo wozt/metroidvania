@@ -123,7 +123,7 @@ def main() -> int:
     if bg3_report and bg3_report.get("status") == "EXPERIMENTAL_BG3_TEXT_MAP":
         print("Experimental standalone BG3 (not packaged):",
               native.OUTPUT / bg3_report["path"])
-        print("BG3 is a separate native tilemap; press 3 for the black-hole composite or 4 for standalone BG3.")
+        print("BG3 is a separate native tilemap; press 3 in SDL3 for the diagnostic composite; press 4 in SDL3 for standalone BG3.")
         print("Diagnostic placement is top-centered; exact camera offset and priority remain unknown.")
     else:
         print("Standalone BG3 unavailable:", bg3_error or "not decoded")

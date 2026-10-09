@@ -112,6 +112,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--action-type", dest="action_type")
     parser.add_argument("--action-ref", dest="action_ref")
     parser.add_argument("--once", type=_boolean)
+    parser.add_argument("--condition-mode", dest="condition_mode")
+    parser.add_argument("--conditions")
     parser.add_argument("--door-width", dest="door_width")
     parser.add_argument("--door-height", dest="door_height")
     parser.add_argument("--door-type", dest="door_type")
@@ -198,7 +200,7 @@ def _text_result(result: dict) -> str:
 
 def _safe_tsv_field(value: Any) -> str:
     field = str(value)
-    if len(field) > 1000 or any(character in field for character in ("\t", "\n", "\r")):
+    if len(field) > 4096 or any(character in field for character in ("\t", "\n", "\r")):
         raise CliUsageError("unsafe TSV field returned by backend")
     return field
 
@@ -241,11 +243,21 @@ def _tsv_result(command: str, data: dict) -> str:
         rows = [[item["id"], item["kind"], item["x"], item["y"],
                  item["width"], item["height"], item["label"],
                  item["trigger_type"], item["action_type"],
-                 item["action_ref"], 1 if item["once"] else 0]
+                 item["action_ref"], 1 if item["once"] else 0,
+                 item["condition_mode"],
+                 ";".join(
+                     f"{condition['type']},{condition['ref']},"
+                     f"{1 if condition['negated'] else 0}"
+                     for condition in item["conditions"]) or "-"]
                 for item in data["events"]]
     elif command == "event-validate":
         rows = [[item["id"], item["action_type"], item["action_ref"],
-                 1 if item["valid"] else 0, item["reference_status"]]
+                 1 if item["valid"] else 0, item["reference_status"],
+                 item["condition_mode"], item["condition_count"],
+                 1 if item["conditions_valid"] else 0,
+                 ";".join(
+                     f"{condition['index']}:{condition['reference_status']}"
+                     for condition in item["conditions"]) or "-"]
                 for item in data["events"]]
     elif command == "door-return-plan":
         rows = [[data[key] for key in (

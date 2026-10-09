@@ -40,6 +40,10 @@ class ObjectCatalogUiContract(unittest.TestCase):
                 '"Create project trigger region here..."',
                 '"Apply event changes"',
                 '"References: timeline:<id>, cutscene:<id>, entity:<id>, event:<id>, "',
+                '"Add condition"',
+                'project_conditions_json',
+                'project_condition_modes',
+                'project_condition_types',
                 'project_event_move',
                 'const guint step = doc->project_aria ? 8u : 16u;'):
             self.assertIn(contract, source)

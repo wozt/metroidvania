@@ -245,7 +245,13 @@ class EditorCliTests(unittest.TestCase):
                         f"--x={step}", f"--y={step}", f"--region-width={step * 2}",
                         f"--region-height={step}", "--label=Checkpoint trigger",
                         "--trigger-type=enter", "--action-type=checkpoint",
-                        "--action-ref=checkpoint:room5", "--once=true", "--format=json")
+                        "--action-ref=checkpoint:room5", "--once=true",
+                        "--condition-mode=any",
+                        '--conditions=[{"type":"checkpoint_active",'
+                        '"ref":"checkpoint:alpha","negated":false},'
+                        '{"type":"checkpoint_active",'
+                        '"ref":"checkpoint:beta","negated":true}]',
+                        "--format=json")
                     self.assertEqual(created.returncode, 0, created.stderr)
                     updated = self.run_cli(
                         "--command=event-update", *scope, "--id=1",
@@ -253,24 +259,35 @@ class EditorCliTests(unittest.TestCase):
                         f"--region-width={step}", f"--region-height={step}",
                         "--label=Checkpoint event", "--trigger-type=interact",
                         "--action-type=checkpoint", "--action-ref=checkpoint:room5_return",
-                        "--once=false", "--format=json")
+                        "--once=false", "--condition-mode=all",
+                        '--conditions=[{"type":"checkpoint_active",'
+                        '"ref":"checkpoint:alpha","negated":false}]',
+                        "--format=json")
                     self.assertEqual(updated.returncode, 0, updated.stderr)
                     validation = self.run_cli(
                         "--command=event-validate", *scope, "--format=tsv")
                     self.assertEqual(
                         validation.stdout,
-                        "1\tcheckpoint\tcheckpoint:room5_return\t1\tvalid_checkpoint_key\n")
+                        "1\tcheckpoint\tcheckpoint:room5_return\t1\t"
+                        "valid_checkpoint_key\tall\t1\t1\t0:valid_checkpoint_key\n")
                     listed = self.run_cli(
                         "--command=event-list", *scope, "--format=tsv")
                     self.assertEqual(
                         listed.stdout,
                         f"1\tEVENT\t0\t0\t{step}\t{step}\tCheckpoint event\t"
-                        "interact\tcheckpoint\tcheckpoint:room5_return\t0\n")
+                        "interact\tcheckpoint\tcheckpoint:room5_return\t0\tall\t"
+                        "checkpoint_active,checkpoint:alpha,0\n")
                     rejected = self.run_cli(
                         "--command=event-update", *scope, "--id=1",
                         "--action-type=story", "--action-ref=timeline:missing",
                         "--format=json")
                     self.assertEqual(rejected.returncode, 4)
+                    rejected_condition = self.run_cli(
+                        "--command=event-update", *scope, "--id=1",
+                        '--conditions=[{"type":"entity_present",'
+                        '"ref":"entity:999","negated":false}]',
+                        "--format=json")
+                    self.assertEqual(rejected_condition.returncode, 4)
                     unchanged = self.run_cli(
                         "--command=event-list", *scope, "--format=tsv")
                     self.assertEqual(unchanged.stdout, listed.stdout)
@@ -289,7 +306,11 @@ class EditorCliTests(unittest.TestCase):
             document, door["id"], "aria", "0", 1, 0, 0, 0)
         first = project_rooms.event_create(
             document, "EVENT", 0, 0, 16, 16, "Checkpoint", "enter",
-            "checkpoint", "checkpoint:test_room", False)
+            "checkpoint", "checkpoint:test_room", False,
+            conditions=[{
+                "type": "story_flag", "ref": "flag:start_choice_locked",
+                "negated": False,
+            }])
         references = (
             ("story", "timeline:shared.start_choice"),
             ("story", "cutscene:interzone_first_meeting"),
@@ -301,8 +322,26 @@ class EditorCliTests(unittest.TestCase):
             project_rooms.event_create(
                 document, "TRIGGER", 16, 16, 16, 16,
                 f"Reference {index}", "interact", action, reference, False)
+        first["condition_mode"] = "any"
+        first["conditions"] = [
+            {"type": "story_flag", "ref": "flag:start_choice_locked",
+             "negated": False},
+            {"type": "event_complete", "ref": "event:2", "negated": False},
+            {"type": "entity_present", "ref": f"entity:{entity['id']}",
+             "negated": True},
+            {"type": "transition_ready",
+             "ref": f"transition:{transition['id']}", "negated": False},
+            {"type": "checkpoint_active", "ref": "checkpoint:test_room",
+             "negated": False},
+        ]
         records = _event_validation(document, ROOT)
         self.assertTrue(all(record["valid"] for record in records), records)
+        self.assertEqual(
+            [condition["reference_status"]
+             for condition in records[0]["conditions"]],
+            ["verified_story_flag", "verified_project_event",
+             "verified_project_entity", "verified_project_transition",
+             "valid_checkpoint_key"])
         with self.assertRaisesRegex(ValueError, "referenced by a project event"):
             project_rooms.delete(document, entity["id"])
         with self.assertRaisesRegex(ValueError, "referenced by a project event"):

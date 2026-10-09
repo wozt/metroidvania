@@ -68,17 +68,20 @@ Canvas and Room-data context menus share the same bounded in-memory annotation
 records; typed editor windows retain their document lifetime safely and cannot
 write native data without an encoder.
 
-Private room authoring uses a single `metroidvania.project-room-data` version 3
+Private room authoring uses a single `metroidvania.project-room-data` version 4
 document for entity markers, semantic collision cells, doors, transitions and
 typed event/trigger regions. The schema has per-world collision resolution and
 strict spatial/identity bounds, but deliberately has no ROM or gameplay
-encoder. Entity-only version 1 and room-data version 2 files are migrated in
-memory and preserved until an explicit project write.
+encoder. Entity-only version 1 and room-data versions 2/3 are migrated in
+memory and preserved until an explicit project write. Version 4 adds bounded
+ordered condition groups to each event without creating another sidecar.
 
 Event action references are resolved by the shared backend against the current
 room document and validated story sources. Create/update rejects missing or
 self-referential targets, `event-validate` exposes structured diagnostics, and
 full project validation checks every saved room reference without executing it.
+Condition groups use explicit `all`/`any` combination, per-condition negation
+and the same dependency protection as action references.
 
 ## Verified native coverage
 

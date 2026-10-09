@@ -67,6 +67,9 @@ base import, ROMs and upstream source remain unchanged.
   or 8px Aria grid and the same staged Undo/Redo/Save workflow. Saving verifies
   typed timeline, cutscene, entity, event, transition and checkpoint references;
   missing targets are rejected without replacing the saved room document.
+- The same form contains an **All/Any** condition selector and up to 16
+  removable condition rows. Each row has a typed reference and **Not** toggle;
+  an empty **All** group is the explicit unconditional state.
 - Native-record editor shells expose decoded source fields but keep Apply
   disabled. Complete object sprite previews and executable behavior decoding
   are still pending.

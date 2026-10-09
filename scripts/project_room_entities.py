@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "metroidvania.project-room-data"
-VERSION = 3
+VERSION = 4
 LEGACY_SCHEMA = "metroidvania.project-room-entities"
 KINDS = ("ENEMY", "ITEM", "OBJECT")
 MZM_AREAS = ("Brinstar", "Kraid", "Norfair", "Ridley", "Tourian", "Crateria", "Chozodia")
@@ -60,13 +60,20 @@ TRANSITION_KEYS = {
     "id", "source_door_id", "target_world", "target_area", "target_room",
     "target_door_id", "spawn_x", "spawn_y",
 }
-EVENT_KEYS = {
+EVENT_V3_KEYS = {
     "id", "kind", "x", "y", "width", "height", "label",
     "trigger_type", "action_type", "action_ref", "once",
 }
+EVENT_KEYS = EVENT_V3_KEYS | {"condition_mode", "conditions"}
+CONDITION_KEYS = {"type", "ref", "negated"}
 EVENT_KINDS = ("EVENT", "TRIGGER")
 TRIGGER_TYPES = ("room_load", "enter", "leave", "touch", "interact")
 ACTION_TYPES = ("story", "spawn", "toggle", "checkpoint", "transition")
+CONDITION_MODES = ("all", "any")
+CONDITION_TYPES = (
+    "story_flag", "event_complete", "entity_present",
+    "transition_ready", "checkpoint_active",
+)
 ACTION_REFERENCE = re.compile(r"[A-Za-z0-9_.:-]{1,80}\Z", re.ASCII)
 # PATCH_0081_ARIA_PICKUP_THUMBNAILS
 ITEM_KEYS = {"item_id", "parameter_0", "parameter_1", "flags"}
@@ -107,6 +114,7 @@ MAX_ENTITIES = 256
 MAX_DOORS = 128
 MAX_TRANSITIONS = 128
 MAX_EVENTS = 256
+MAX_EVENT_CONDITIONS = 16
 
 
 def collision_capabilities(world: str) -> dict:
@@ -174,6 +182,19 @@ def _new(world: str, area: str, room: int, width: int, height: int) -> dict:
 
 def migrate(document: object) -> object:
     """Upgrade the former entity-only room document without touching disk."""
+    if (isinstance(document, dict) and document.get("schema") == SCHEMA
+            and document.get("version") == 3):
+        if document.keys() != DOC_KEYS:
+            raise ValueError("invalid version-3 project room document fields")
+        events = document.get("events")
+        if (not isinstance(events, list) or any(
+                not isinstance(event, dict) or event.keys() != EVENT_V3_KEYS
+                for event in events)):
+            raise ValueError("invalid version-3 project event fields")
+        return {**document, "version": VERSION, "events": [
+            {**event, "condition_mode": "all", "conditions": []}
+            for event in events
+        ]}
     if (isinstance(document, dict) and document.get("schema") == SCHEMA
             and document.get("version") == 2):
         if document.keys() != V2_DOC_KEYS:
@@ -370,6 +391,29 @@ def validate(doc: object, world: str, area: str, room: int,
             raise ValueError("invalid project action reference")
         if type(event["once"]) is not bool:
             raise ValueError("event once must be boolean")
+        if event["condition_mode"] not in CONDITION_MODES:
+            raise ValueError("unknown project event condition mode")
+        conditions = event["conditions"]
+        if (not isinstance(conditions, list)
+                or len(conditions) > MAX_EVENT_CONDITIONS):
+            raise ValueError("invalid project event condition count")
+        if not conditions and event["condition_mode"] != "all":
+            raise ValueError("an event without conditions must use all mode")
+        condition_identities = set()
+        for condition in conditions:
+            if not isinstance(condition, dict) or condition.keys() != CONDITION_KEYS:
+                raise ValueError("invalid project event condition fields")
+            if condition["type"] not in CONDITION_TYPES:
+                raise ValueError("unknown project event condition type")
+            if (not isinstance(condition["ref"], str)
+                    or not ACTION_REFERENCE.fullmatch(condition["ref"])):
+                raise ValueError("invalid project event condition reference")
+            if type(condition["negated"]) is not bool:
+                raise ValueError("condition negated must be boolean")
+            identity = (condition["type"], condition["ref"], condition["negated"])
+            if identity in condition_identities:
+                raise ValueError("duplicate project event condition")
+            condition_identities.add(identity)
     return doc
 
 
@@ -513,6 +557,10 @@ def delete(doc: dict, eid: int) -> None:
            and event["action_ref"] == f"entity:{eid}"
            for event in doc["events"]):
         raise ValueError("entity is referenced by a project event")
+    if any(condition["type"] == "entity_present"
+           and condition["ref"] == f"entity:{eid}"
+           for event in doc["events"] for condition in event["conditions"]):
+        raise ValueError("entity is referenced by a project event condition")
     entries = [e for e in doc["entities"] if e["id"] != eid]
     doc["entities"] = entries
 
@@ -743,6 +791,10 @@ def transition_delete(doc: dict, transition_id: int) -> None:
            and event["action_ref"] == f"transition:{transition_id}"
            for event in doc["events"]):
         raise ValueError("transition is referenced by a project event")
+    if any(condition["type"] == "transition_ready"
+           and condition["ref"] == f"transition:{transition_id}"
+           for event in doc["events"] for condition in event["conditions"]):
+        raise ValueError("transition is referenced by a project event condition")
     transitions = [item for item in doc["transitions"]
                    if item["id"] != transition_id]
     doc.update(_validated_candidate(doc, transitions=transitions))
@@ -750,7 +802,9 @@ def transition_delete(doc: dict, transition_id: int) -> None:
 
 def event_create(doc: dict, kind: str, x: int, y: int, width: int,
                  height: int, label: str, trigger_type: str,
-                 action_type: str, action_ref: str, once: bool) -> dict:
+                 action_type: str, action_ref: str, once: bool,
+                 condition_mode: str = "all",
+                 conditions: list[dict] | None = None) -> dict:
     """Create one engine-neutral event or trigger region."""
     validate(doc, doc["world"], doc["area"], doc["room"],
              doc["width_px"], doc["height_px"])
@@ -761,6 +815,8 @@ def event_create(doc: dict, kind: str, x: int, y: int, width: int,
         "x": x, "y": y, "width": width, "height": height,
         "label": label, "trigger_type": trigger_type,
         "action_type": action_type, "action_ref": action_ref, "once": once,
+        "condition_mode": condition_mode,
+        "conditions": [] if conditions is None else conditions,
     }
     candidate = _validated_candidate(
         doc, next_event_id=doc["next_event_id"] + 1,
@@ -796,6 +852,12 @@ def event_delete(doc: dict, event_id: int) -> None:
            and event["action_ref"] == f"event:{event_id}"
            for event in doc["events"]):
         raise ValueError("event is referenced by another project event")
+    if any(event["id"] != event_id and any(
+               condition["type"] == "event_complete"
+               and condition["ref"] == f"event:{event_id}"
+               for condition in event["conditions"])
+           for event in doc["events"]):
+        raise ValueError("event is referenced by another project event condition")
     events = [event for event in doc["events"] if event["id"] != event_id]
     doc.update(_validated_candidate(doc, events=events))
 

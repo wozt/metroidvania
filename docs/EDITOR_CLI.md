@@ -112,9 +112,9 @@ control that changes project data must use the backend contract, or in the case
 of the interactive tile canvas, the exact same C core exposed by the backend.
 
 Project room authoring uses one versioned private document per native workroom.
-Version 3 groups entity markers, sparse semantic collision cells, doors,
+Version 4 groups entity markers, sparse semantic collision cells, doors,
 transitions and typed event/trigger regions instead of multiplying room-side
-files. Version 1 entity-only and version 2 room documents are migrated in
+files. Version 1 entity-only and version 2/3 room documents are migrated in
 memory and rewritten only after the next explicit save.
 
 Event regions use the room's 16px Zero Mission or 8px Aria placement grid.
@@ -132,6 +132,15 @@ existing `transition:<id>`, and `checkpoint` accepts a stable
 `project-validate` rejects missing targets. The validator resolves project and
 story data only; it does not claim runtime execution. Deleting an entity,
 transition or event is refused while another project event still references it.
+
+Each event can additionally contain up to 16 ordered conditions combined with
+`all` or `any`; an empty `all` group means unconditional. Conditions support
+`story_flag` (`flag:<id>`), `event_complete` (`event:<id>`), `entity_present`
+(`entity:<id>`), `transition_ready` (`transition:<id>`) and
+`checkpoint_active` (`checkpoint:<key>`), with optional per-condition
+negation. CLI callers pass the exact array through `--conditions=<json>` and
+the combination through `--condition-mode=all|any`. Duplicate, unresolved and
+self-referential conditions are rejected atomically.
 
 Collision coordinates are cell coordinates: 16px in Zero Mission workrooms and
 8px in Aria workrooms. Accepted project semantics are `solid`, `one_way`,

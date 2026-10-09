@@ -151,10 +151,12 @@ COMMAND_FIELDS = {
     "event-validate": {"world", "area", "room", "width", "height"},
     "event-create": {"world", "area", "room", "width", "height",
                      "event_kind", "x", "y", "region_width", "region_height",
-                     "label", "trigger_type", "action_type", "action_ref", "once"},
+                     "label", "trigger_type", "action_type", "action_ref", "once",
+                     "condition_mode", "conditions"},
     "event-update": {"world", "area", "room", "width", "height", "id",
                      "event_kind", "x", "y", "region_width", "region_height",
-                     "label", "trigger_type", "action_type", "action_ref", "once"},
+                     "label", "trigger_type", "action_type", "action_ref", "once",
+                     "condition_mode", "conditions"},
     "event-delete": {"world", "area", "room", "width", "height", "id", "confirm"},
     "door-list": {"world", "area", "room", "width", "height"},
     "door-target-list": {"target_world", "target_area", "target_room"},
@@ -222,6 +224,37 @@ def _collision_points(value: Any) -> list[tuple[int, int]]:
         points.append((_integer(coordinates[0], "collision x", 0, 2047),
                        _integer(coordinates[1], "collision y", 0, 2047)))
     return points
+
+
+def _event_conditions(value: Any) -> list[dict]:
+    """Parse the bounded JSON wire representation used by CLI and GTK."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        if not 2 <= len(value) <= 4096:
+            raise ValueError("conditions must be a bounded JSON array")
+        try:
+            conditions = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise ValueError("conditions must be valid JSON") from exc
+    elif isinstance(value, list):
+        if len(json.dumps(value, separators=(",", ":"))) > 4096:
+            raise ValueError("conditions must be a bounded JSON array")
+        conditions = value
+    else:
+        raise ValueError("conditions must be a JSON array")
+    if (not isinstance(conditions, list)
+            or len(conditions) > project_room_entities.MAX_EVENT_CONDITIONS):
+        raise ValueError("invalid project event condition count")
+    for condition in conditions:
+        if (not isinstance(condition, dict)
+                or set(condition) != project_room_entities.CONDITION_KEYS
+                or condition.get("type") not in project_room_entities.CONDITION_TYPES
+                or not isinstance(condition.get("ref"), str)
+                or not project_room_entities.ACTION_REFERENCE.fullmatch(condition["ref"])
+                or type(condition.get("negated")) is not bool):
+            raise ValueError("invalid project event condition")
+    return conditions
 
 
 def _world(value: Any) -> str:
@@ -536,6 +569,17 @@ def _story_reference_ids(root: Path, kind: str) -> set[str]:
     return identifiers
 
 
+def _timeline_flag_ids(root: Path) -> set[str]:
+    path = root / "data/story/timeline.toml"
+    _reject_reference_symlinks(root, path)
+    if (not path.is_file() or path.is_symlink()
+            or path.stat().st_size > 1_000_000):
+        return set()
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    validate_timeline(data)
+    return {flag for event in data["events"] for flag in event.get("sets", [])}
+
+
 def _event_reference_validation(
         document: dict, event: dict, root: Path = ROOT,
         story_ids: dict[str, set[str]] | None = None) -> dict[str, Any]:
@@ -579,13 +623,81 @@ def _event_reference_validation(
     }
 
 
+def _condition_reference_validation(
+        document: dict, event: dict, condition: dict, index: int,
+        root: Path = ROOT, timeline_flags: set[str] | None = None) -> dict:
+    reference = condition["ref"]
+    prefix, separator, target = reference.partition(":")
+    condition_type = condition["type"]
+    valid = False
+    status = "invalid_reference_syntax"
+    if separator and target:
+        if condition_type == "story_flag" and prefix == "flag":
+            flags = timeline_flags if timeline_flags is not None else _timeline_flag_ids(root)
+            valid = target in flags
+            status = "verified_story_flag" if valid else "missing_story_flag"
+        elif condition_type == "event_complete" and prefix == "event":
+            valid = (target.isdecimal() and str(int(target)) == target
+                     and int(target) != event["id"] and any(
+                         candidate["id"] == int(target)
+                         for candidate in document["events"]))
+            status = "verified_project_event" if valid else "missing_or_self_project_event"
+        elif condition_type == "entity_present" and prefix == "entity":
+            valid = target.isdecimal() and str(int(target)) == target and any(
+                entity["id"] == int(target) for entity in document["entities"])
+            status = "verified_project_entity" if valid else "missing_project_entity"
+        elif condition_type == "transition_ready" and prefix == "transition":
+            valid = target.isdecimal() and str(int(target)) == target and any(
+                transition["id"] == int(target)
+                for transition in document["transitions"])
+            status = ("verified_project_transition" if valid
+                      else "missing_project_transition")
+        elif condition_type == "checkpoint_active" and prefix == "checkpoint":
+            valid = bool(re.fullmatch(r"[a-z][a-z0-9_.-]{0,63}", target))
+            status = "valid_checkpoint_key" if valid else "invalid_checkpoint_key"
+        else:
+            status = f"expected_{condition_type}_reference"
+    return {
+        "index": index, "type": condition_type, "ref": reference,
+        "negated": condition["negated"], "valid": valid,
+        "reference_status": status,
+    }
+
+
+def _event_validation_record(
+        document: dict, event: dict, root: Path = ROOT,
+        story_ids: dict[str, set[str]] | None = None,
+        timeline_flags: set[str] | None = None) -> dict:
+    action = _event_reference_validation(document, event, root, story_ids)
+    conditions = [
+        _condition_reference_validation(
+            document, event, condition, index, root, timeline_flags)
+        for index, condition in enumerate(event["conditions"])
+    ]
+    conditions_valid = all(condition["valid"] for condition in conditions)
+    return {
+        **action,
+        "action_valid": action["valid"],
+        "valid": action["valid"] and conditions_valid,
+        "condition_mode": event["condition_mode"],
+        "condition_count": len(conditions),
+        "conditions_valid": conditions_valid,
+        "conditions": conditions,
+    }
+
+
 def _event_validation(document: dict, root: Path = ROOT) -> list[dict]:
     prefixes = {event["action_ref"].partition(":")[0]
                 for event in document["events"]
                 if event["action_type"] == "story"}
     story_ids = {prefix: _story_reference_ids(root, prefix)
                  for prefix in prefixes if prefix in ("timeline", "cutscene")}
-    return [_event_reference_validation(document, event, root, story_ids)
+    needs_flags = any(
+        condition["type"] == "story_flag"
+        for event in document["events"] for condition in event["conditions"])
+    timeline_flags = _timeline_flag_ids(root) if needs_flags else set()
+    return [_event_validation_record(
+                document, event, root, story_ids, timeline_flags)
             for event in document["events"]]
 
 
@@ -1192,6 +1304,8 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
                 "action_type": options.get("action_type"),
                 "action_ref": options.get("action_ref"),
                 "once": options.get("once"),
+                "condition_mode": options.get("condition_mode", "all"),
+                "conditions": _event_conditions(options.get("conditions")),
             }
             changed = project_room_entities.event_create(
                 document, fields.pop("kind"), **fields)
@@ -1201,6 +1315,7 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
                 "event_kind": "kind", "label": "label",
                 "trigger_type": "trigger_type", "action_type": "action_type",
                 "action_ref": "action_ref", "once": "once",
+                "condition_mode": "condition_mode",
             }
             for option, field in direct.items():
                 if option in options:
@@ -1214,16 +1329,25 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
                     changes[field] = _integer(
                         options[option], option, 0 if option in ("x", "y") else 1,
                         16383 if option in ("x", "y") else 16384)
+            if "conditions" in options:
+                changes["conditions"] = _event_conditions(options["conditions"])
             changed = project_room_entities.event_update(
                 document, event_id, **changes)
         else:
             raise AssertionError(f"unhandled event command: {command}")
         if command in ("event-create", "event-update"):
-            validation = _event_reference_validation(document, changed, root_path)
+            validation = _event_validation_record(document, changed, root_path)
             if not validation["valid"]:
-                raise ValueError(
-                    f"invalid {changed['action_type']} action reference "
-                    f"{changed['action_ref']}: {validation['reference_status']}")
+                if not validation["action_valid"]:
+                    raise ValueError(
+                        f"invalid {changed['action_type']} action reference "
+                        f"{changed['action_ref']}: {validation['reference_status']}")
+                invalid = [condition for condition in validation["conditions"]
+                           if not condition["valid"]]
+                details = ", ".join(
+                    f"{condition['index']}:{condition['reference_status']}"
+                    for condition in invalid)
+                raise ValueError(f"invalid event condition reference(s): {details}")
         if dry_run:
             return {"event": changed, "persisted": False,
                     "engine_adapter": "unavailable"}

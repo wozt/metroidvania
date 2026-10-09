@@ -1139,3 +1139,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   the existing shared Undo/Redo/Save workflow in both workroom modes.
 - Added two-world CLI coverage, atomic persistence checks and resolution tests
   for every action family without requiring either commercial ROM.
+
+## Patch 0123 - multiple typed event conditions
+
+- Upgraded the shared room document to version 4. Version 3 events migrate in
+  memory to an unconditional `all` group and are rewritten only by explicit
+  Save; no additional room-side document was introduced.
+- Added up to 16 ordered conditions per event, combined through `all` or `any`,
+  with individual negation. Supported targets cover story flags, other events,
+  project entities, project transitions and stable checkpoint keys.
+- The GTK form now exposes add/remove condition rows, contextual reference
+  examples, an All/Any selector and Not toggles in both workroom modes.
+- Backend/CLI create, update, list and validate operations carry the complete
+  condition group. Missing, self-referential and duplicate conditions are
+  rejected atomically, and deletion guards prevent orphaned dependencies.
+- Empty `all` is the explicit unconditional state; empty `any` is rejected to
+  avoid ambiguous future runtime behavior. Both gameplay adapters remain
+  unavailable and no native ROM event data is modified.
+- Added version-3 migration, two-world CLI round trips, all condition-family
+  resolution, dependency protection and GTK source-contract coverage.

@@ -110,6 +110,24 @@ class ProjectEntityTests(unittest.TestCase):
         self.assertEqual(migrated["events"], [])
         self.assertEqual(json.loads(path.read_text())["version"], 2)
 
+    def test_version_three_events_migrate_conditions_in_memory(self):
+        path = pe.path_for(self.root, "mzm", "Brinstar", 4, 64, 32)
+        path.parent.mkdir(parents=True)
+        document = pe._new("mzm", "Brinstar", 4, 64, 32)
+        pe.event_create(
+            document, "EVENT", 0, 0, 16, 16, "Legacy event", "enter",
+            "checkpoint", "checkpoint:legacy", False)
+        document["version"] = 3
+        for event in document["events"]:
+            event.pop("condition_mode")
+            event.pop("conditions")
+        path.write_text(json.dumps(document), encoding="utf-8")
+        migrated = pe.load(self.root, "mzm", "Brinstar", 4, 64, 32)
+        self.assertEqual(migrated["version"], pe.VERSION)
+        self.assertEqual(migrated["events"][0]["condition_mode"], "all")
+        self.assertEqual(migrated["events"][0]["conditions"], [])
+        self.assertEqual(json.loads(path.read_text())["version"], 3)
+
     def test_collision_door_transition_round_trip_and_dependencies(self):
         document = pe.load(self.root, "aria", "0", 8, 64, 32)
         self.assertEqual(document["collision"]["resolution_px"], 8)
@@ -172,6 +190,39 @@ class ProjectEntityTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     pe.event_update(restored, event["id"], x=step // 2)
                 self.assertEqual(restored, original)
+
+    def test_event_conditions_protect_referenced_room_records(self):
+        document = pe.load(self.root, "mzm", "Brinstar", 6, 64, 64)
+        entity = pe.create(document, "ENEMY", 0, 0, "Condition entity")
+        door = pe.door_create(
+            document, 0, 0, 16, 16, "Condition door", "normal", "left")
+        transition = pe.transition_create(
+            document, door["id"], "aria", "0", 1, 0, 0, 0)
+        prerequisite = pe.event_create(
+            document, "EVENT", 0, 0, 16, 16, "Prerequisite", "enter",
+            "checkpoint", "checkpoint:prerequisite", False)
+        guarded = pe.event_create(
+            document, "TRIGGER", 16, 16, 16, 16, "Guarded", "interact",
+            "checkpoint", "checkpoint:guarded", True, "any", [
+                {"type": "entity_present", "ref": f"entity:{entity['id']}",
+                 "negated": False},
+                {"type": "event_complete", "ref": f"event:{prerequisite['id']}",
+                 "negated": True},
+                {"type": "transition_ready",
+                 "ref": f"transition:{transition['id']}", "negated": False},
+            ])
+        self.assertEqual((guarded["condition_mode"], len(guarded["conditions"])),
+                         ("any", 3))
+        with self.assertRaisesRegex(ValueError, "event condition"):
+            pe.delete(document, entity["id"])
+        with self.assertRaisesRegex(ValueError, "event condition"):
+            pe.transition_delete(document, transition["id"])
+        with self.assertRaisesRegex(ValueError, "event condition"):
+            pe.event_delete(document, prerequisite["id"])
+        snapshot = json.loads(json.dumps(document))
+        with self.assertRaises(ValueError):
+            pe.event_update(document, guarded["id"], condition_mode="none")
+        self.assertEqual(document, snapshot)
 
 
 if __name__ == "__main__":

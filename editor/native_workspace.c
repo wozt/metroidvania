@@ -39,6 +39,7 @@ typedef struct {
     guint width, height;
     char variant[48], native_type[96], label[384], details[320];
     char event_trigger[24], event_action[24], event_ref[96];
+    char event_condition_mode[8], event_conditions[2048];
     gboolean event_once;
     gboolean project_owned; /* Original native records remain read-only. */
     gboolean native_overridden; /* Hide only while its private override exists. */
@@ -842,10 +843,10 @@ static guint project_load_events(NativeWorkspace *doc)
     gchar **lines = g_strsplit(output ? output : "", "\n", -1);
     for (guint i = 0; lines[i] && count < 256; ++i) {
         if (!lines[i][0]) continue;
-        gchar **fields = g_strsplit(lines[i], "\t", 11);
+        gchar **fields = g_strsplit(lines[i], "\t", 13);
         RoomAnnotation item = {0};
         guint x = 0, y = 0, once = 0;
-        if (g_strv_length(fields) == 11 &&
+        if (g_strv_length(fields) == 13 &&
             parse_unsigned_field(fields[0], &item.index) && item.index &&
             (!strcmp(fields[1], "EVENT") || !strcmp(fields[1], "TRIGGER")) &&
             parse_unsigned_field(fields[2], &x) &&
@@ -856,7 +857,9 @@ static guint project_load_events(NativeWorkspace *doc)
             strlen(fields[7]) < sizeof(item.event_trigger) &&
             strlen(fields[8]) < sizeof(item.event_action) &&
             strlen(fields[9]) < sizeof(item.event_ref) &&
-            parse_unsigned_field(fields[10], &once) && once <= 1) {
+            parse_unsigned_field(fields[10], &once) && once <= 1 &&
+            (!strcmp(fields[11], "all") || !strcmp(fields[11], "any")) &&
+            strlen(fields[12]) < sizeof(item.event_conditions)) {
             item.kind = !strcmp(fields[1], "EVENT") ?
                 OVERLAY_EVENTS : OVERLAY_TRIGGERS;
             item.project_owned = TRUE;
@@ -870,19 +873,30 @@ static guint project_load_events(NativeWorkspace *doc)
             g_strlcpy(item.event_trigger, fields[7], sizeof(item.event_trigger));
             g_strlcpy(item.event_action, fields[8], sizeof(item.event_action));
             g_strlcpy(item.event_ref, fields[9], sizeof(item.event_ref));
+            g_strlcpy(item.event_condition_mode, fields[11],
+                      sizeof(item.event_condition_mode));
+            g_strlcpy(item.event_conditions, fields[12],
+                      sizeof(item.event_conditions));
+            guint condition_count = !strcmp(fields[12], "-") ? 0u : 1u;
+            for (const char *cursor = fields[12]; condition_count && *cursor; ++cursor)
+                if (*cursor == ';') ++condition_count;
             g_snprintf(item.details, sizeof(item.details),
                 "Private project %s; trigger=%s; action=%s:%s; once=%s; "
+                "conditions=%s/%u; "
                 "no engine adapter.",
                 item.kind == OVERLAY_EVENTS ? "event" : "trigger",
                 item.event_trigger, item.event_action, item.event_ref,
-                item.event_once ? "true" : "false");
+                item.event_once ? "true" : "false",
+                item.event_condition_mode, condition_count);
             g_array_append_val(doc->annotations, item);
             GtkWidget *row = gtk_label_new(NULL);
             gchar *summary = g_strdup_printf(
-                "[PROJECT] %s #%u — %s\n(%u,%u), %ux%u | %s -> %s:%s | once=%s",
+                "[PROJECT] %s #%u — %s\n(%u,%u), %ux%u | %s -> %s:%s | "
+                "once=%s | conditions=%s/%u",
                 fields[1], item.index, item.label, x, y, item.width, item.height,
                 item.event_trigger, item.event_action, item.event_ref,
-                item.event_once ? "true" : "false");
+                item.event_once ? "true" : "false",
+                item.event_condition_mode, condition_count);
             gtk_label_set_text(GTK_LABEL(row), summary);
             gtk_label_set_xalign(GTK_LABEL(row), 0);
             gtk_label_set_wrap(GTK_LABEL(row), TRUE);
@@ -1646,12 +1660,21 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
 
 /* Project events and triggers share one engine-neutral region schema in both
  * workroom modes. Native event records remain immutable annotations. */
+typedef struct ProjectEventForm ProjectEventForm;
+
 typedef struct {
+    ProjectEventForm *form;
+    GtkWidget *container, *type, *reference, *negated;
+} ProjectConditionRow;
+
+struct ProjectEventForm {
     NativeWorkspace *doc;
     GtkWidget *window, *kind, *label, *x, *y, *width, *height;
     GtkWidget *trigger, *action, *reference, *once, *status;
+    GtkWidget *condition_mode, *condition_box;
+    GPtrArray *conditions;
     guint event_id;
-} ProjectEventForm;
+};
 
 static const char *const project_event_kinds[] = {"EVENT", "TRIGGER", NULL};
 static const char *const project_trigger_types[] = {
@@ -1661,6 +1684,13 @@ static const char *const project_action_types[] = {
 static const char *const project_action_examples[] = {
     "timeline:shared.start_choice", "entity:1", "event:1",
     "checkpoint:room_key", "transition:1", NULL};
+static const char *const project_condition_modes[] = {"all", "any", NULL};
+static const char *const project_condition_types[] = {
+    "story_flag", "event_complete", "entity_present",
+    "transition_ready", "checkpoint_active", NULL};
+static const char *const project_condition_examples[] = {
+    "flag:start_choice_locked", "event:1", "entity:1",
+    "transition:1", "checkpoint:room_key", NULL};
 
 static guint project_event_choice_index(const char *const *choices,
                                         const char *value)
@@ -1699,10 +1729,128 @@ static void project_event_action_changed(GObject *object, GParamSpec *parameter,
     }
 }
 
+static void project_condition_type_changed(GObject *object, GParamSpec *parameter,
+                                           gpointer userdata)
+{
+    (void)object;
+    (void)parameter;
+    ProjectConditionRow *row = userdata;
+    guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(row->type));
+    if (selected >= 5) return;
+    const char *current = gtk_editable_get_text(GTK_EDITABLE(row->reference));
+    gtk_entry_set_placeholder_text(GTK_ENTRY(row->reference),
+                                   project_condition_examples[selected]);
+    for (guint i = 0; project_condition_examples[i]; ++i) {
+        if (!strcmp(current, project_condition_examples[i])) {
+            gtk_editable_set_text(GTK_EDITABLE(row->reference),
+                                  project_condition_examples[selected]);
+            break;
+        }
+    }
+}
+
+static void project_condition_remove(GtkButton *button, gpointer userdata)
+{
+    (void)button;
+    ProjectConditionRow *row = userdata;
+    ProjectEventForm *form = row->form;
+    gtk_box_remove(GTK_BOX(form->condition_box), row->container);
+    g_ptr_array_remove(form->conditions, row);
+}
+
+static void project_condition_add(ProjectEventForm *form, const char *type,
+                                  const char *reference, gboolean negated)
+{
+    if (form->conditions->len >= 16) {
+        gtk_label_set_text(GTK_LABEL(form->status),
+                           "An event can contain at most 16 conditions.");
+        return;
+    }
+    ProjectConditionRow *row = g_new0(ProjectConditionRow, 1);
+    row->form = form;
+    row->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    row->type = gtk_drop_down_new_from_strings(project_condition_types);
+    row->reference = gtk_entry_new();
+    gtk_widget_set_hexpand(row->reference, TRUE);
+    row->negated = gtk_check_button_new_with_label("Not");
+    GtkWidget *remove = gtk_button_new_from_icon_name("list-remove-symbolic");
+    gtk_widget_set_tooltip_text(remove, "Remove this condition");
+    gtk_box_append(GTK_BOX(row->container), row->type);
+    gtk_box_append(GTK_BOX(row->container), row->reference);
+    gtk_box_append(GTK_BOX(row->container), row->negated);
+    gtk_box_append(GTK_BOX(row->container), remove);
+    gtk_box_append(GTK_BOX(form->condition_box), row->container);
+    g_ptr_array_add(form->conditions, row);
+    gtk_editable_set_text(GTK_EDITABLE(row->reference), reference);
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(row->type),
+        project_event_choice_index(project_condition_types, type));
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(row->negated), negated);
+    g_signal_connect(row->type, "notify::selected",
+                     G_CALLBACK(project_condition_type_changed), row);
+    project_condition_type_changed(G_OBJECT(row->type), NULL, row);
+    g_signal_connect(remove, "clicked", G_CALLBACK(project_condition_remove), row);
+}
+
+static void project_condition_add_clicked(GtkButton *button, gpointer userdata)
+{
+    (void)button;
+    project_condition_add(userdata, "story_flag",
+                          "flag:start_choice_locked", FALSE);
+}
+
+static void project_conditions_load(ProjectEventForm *form, const char *wire)
+{
+    if (!wire || !strcmp(wire, "-")) return;
+    gchar **conditions = g_strsplit(wire, ";", 17);
+    for (guint i = 0; conditions[i] && form->conditions->len < 16; ++i) {
+        gchar **fields = g_strsplit(conditions[i], ",", 3);
+        if (g_strv_length(fields) == 3 &&
+            (!strcmp(fields[2], "0") || !strcmp(fields[2], "1")))
+            project_condition_add(form, fields[0], fields[1],
+                                  !strcmp(fields[2], "1"));
+        g_strfreev(fields);
+    }
+    g_strfreev(conditions);
+}
+
+static gboolean project_reference_token(const char *value)
+{
+    if (!value || !value[0] || strlen(value) > 80) return FALSE;
+    for (const unsigned char *cursor = (const unsigned char *)value;
+         *cursor; ++cursor)
+        if (!g_ascii_isalnum(*cursor) && !strchr("_.:-", *cursor)) return FALSE;
+    return TRUE;
+}
+
+static gchar *project_conditions_json(ProjectEventForm *form)
+{
+    GString *json = g_string_new("[");
+    for (guint i = 0; i < form->conditions->len; ++i) {
+        ProjectConditionRow *row = g_ptr_array_index(form->conditions, i);
+        const char *type = project_event_choice(row->type, project_condition_types);
+        const char *reference = gtk_editable_get_text(GTK_EDITABLE(row->reference));
+        if (!project_reference_token(reference)) {
+            gtk_label_set_text(GTK_LABEL(form->status),
+                "Condition references may contain only letters, digits, _, ., :, and -. ");
+            g_string_free(json, TRUE);
+            return NULL;
+        }
+        if (i) g_string_append_c(json, ',');
+        g_string_append_printf(json,
+            "{\"type\":\"%s\",\"ref\":\"%s\",\"negated\":%s}",
+            type, reference,
+            gtk_check_button_get_active(GTK_CHECK_BUTTON(row->negated)) ?
+                "true" : "false");
+    }
+    g_string_append_c(json, ']');
+    return g_string_free(json, FALSE);
+}
+
 static void project_event_form_destroy(gpointer data)
 {
     ProjectEventForm *form = data;
     document_unref(form->doc);
+    g_ptr_array_free(form->conditions, TRUE);
     g_free(form);
 }
 
@@ -1746,23 +1894,32 @@ static void project_event_submit(GtkButton *button, gpointer userdata)
     const char *trigger = project_event_choice(
         form->trigger, project_trigger_types);
     const char *action = project_event_choice(form->action, project_action_types);
+    const char *condition_mode = project_event_choice(
+        form->condition_mode, project_condition_modes);
     const char *once = gtk_check_button_get_active(
         GTK_CHECK_BUTTON(form->once)) ? "true" : "false";
+    gchar *conditions = project_conditions_json(form);
+    if (!conditions) return;
     const char *const options[] = {
         form->event_id ? "--id" : NULL, form->event_id ? id : NULL,
         "--event-kind", kind, "--x", x, "--y", y,
         "--region-width", width, "--region-height", height,
         "--label", label, "--trigger-type", trigger,
         "--action-type", action, "--action-ref", reference,
-        "--once", once, NULL};
+        "--once", once, "--condition-mode", condition_mode,
+        "--conditions", conditions, NULL};
     const char *const create_options[] = {
         "--event-kind", kind, "--x", x, "--y", y,
         "--region-width", width, "--region-height", height,
         "--label", label, "--trigger-type", trigger,
         "--action-type", action, "--action-ref", reference,
-        "--once", once, NULL};
-    if (!project_command(doc, form->event_id ? "event-update" : "event-create",
-                         form->event_id ? options : create_options, NULL)) {
+        "--once", once, "--condition-mode", condition_mode,
+        "--conditions", conditions, NULL};
+    gboolean ok = project_command(
+        doc, form->event_id ? "event-update" : "event-create",
+        form->event_id ? options : create_options, NULL);
+    g_free(conditions);
+    if (!ok) {
         gtk_label_set_text(GTK_LABEL(form->status),
             "The backend rejected these fields or the typed action reference. "
             "Check the room status for the exact diagnostic.");
@@ -1783,6 +1940,7 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     const guint room_height = doc->map->height[0] * 16;
     ProjectEventForm *form = g_new0(ProjectEventForm, 1);
     form->doc = document_ref(doc);
+    form->conditions = g_ptr_array_new_with_free_func(g_free);
     form->event_id = item ? item->index : 0;
     form->window = gtk_window_new();
     GtkRoot *root = doc->page ? gtk_widget_get_root(doc->page) : NULL;
@@ -1796,7 +1954,8 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
         "Project-only event region. It is shared by both worlds but remains "
         "non-playable until each engine adapter implements its action.\n"
         "References: timeline:<id>, cutscene:<id>, entity:<id>, event:<id>, "
-        "transition:<id>, or checkpoint:<key>.");
+        "transition:<id>, or checkpoint:<key>. Conditions use flag:<id> and "
+        "the same local entity, event, transition, or checkpoint references.");
     gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
     gtk_label_set_xalign(GTK_LABEL(notice), 0);
     GtkWidget *grid = gtk_grid_new();
@@ -1819,6 +1978,8 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
         "The prefix must match the selected action and the referenced project "
         "record must exist. Checkpoints use a validated stable key.");
     form->once = gtk_check_button_new_with_label("Run only once");
+    form->condition_mode = gtk_drop_down_new_from_strings(project_condition_modes);
+    form->condition_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
     gtk_editable_set_text(GTK_EDITABLE(form->label), item ? item->label :
         default_kind == OVERLAY_EVENTS ? "New project event" : "New project trigger");
     gtk_editable_set_text(GTK_EDITABLE(form->reference), item ? item->event_ref :
@@ -1838,6 +1999,9 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     project_event_action_changed(G_OBJECT(form->action), NULL, form);
     gtk_check_button_set_active(GTK_CHECK_BUTTON(form->once),
                                 item ? item->event_once : FALSE);
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->condition_mode),
+        project_event_choice_index(project_condition_modes,
+            item ? item->event_condition_mode : "all"));
     project_event_grid_field(GTK_GRID(grid), 0, "Overlay kind", form->kind);
     project_event_grid_field(GTK_GRID(grid), 1, "Label", form->label);
     project_event_grid_field(GTK_GRID(grid), 2, "X position", form->x);
@@ -1848,10 +2012,21 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     project_event_grid_field(GTK_GRID(grid), 7, "Action type", form->action);
     project_event_grid_field(GTK_GRID(grid), 8, "Action reference", form->reference);
     gtk_grid_attach(GTK_GRID(grid), form->once, 1, 9, 1, 1);
+    project_event_grid_field(GTK_GRID(grid), 10, "Condition mode",
+                             form->condition_mode);
     form->status = gtk_label_new(
-        "Saving validates the reference against the current room and story data.");
+        "Saving validates the action and every condition against the current "
+        "room and story data.");
     gtk_label_set_wrap(GTK_LABEL(form->status), TRUE);
     gtk_label_set_xalign(GTK_LABEL(form->status), 0);
+    GtkWidget *condition_header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *condition_label = gtk_label_new("Conditions");
+    gtk_label_set_xalign(GTK_LABEL(condition_label), 0);
+    gtk_widget_set_hexpand(condition_label, TRUE);
+    GtkWidget *add_condition = gtk_button_new_with_label("Add condition");
+    gtk_box_append(GTK_BOX(condition_header), condition_label);
+    gtk_box_append(GTK_BOX(condition_header), add_condition);
+    project_conditions_load(form, item ? item->event_conditions : "-");
     GtkWidget *apply = gtk_button_new_with_label(item ?
         "Apply event changes" : "Create event region");
     gtk_widget_set_margin_start(outer, 16);
@@ -1860,6 +2035,8 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     gtk_widget_set_margin_bottom(outer, 16);
     gtk_box_append(GTK_BOX(outer), notice);
     gtk_box_append(GTK_BOX(outer), grid);
+    gtk_box_append(GTK_BOX(outer), condition_header);
+    gtk_box_append(GTK_BOX(outer), form->condition_box);
     gtk_box_append(GTK_BOX(outer), form->status);
     gtk_box_append(GTK_BOX(outer), apply);
     GtkWidget *scroll = gtk_scrolled_window_new();
@@ -1869,6 +2046,8 @@ static void project_event_open(NativeWorkspace *doc, const RoomAnnotation *item,
     gtk_window_set_child(GTK_WINDOW(form->window), scroll);
     g_object_set_data_full(G_OBJECT(form->window), "mv-project-event-form",
                            form, project_event_form_destroy);
+    g_signal_connect(add_condition, "clicked",
+                     G_CALLBACK(project_condition_add_clicked), form);
     g_signal_connect(apply, "clicked", G_CALLBACK(project_event_submit), form);
     gtk_window_present(GTK_WINDOW(form->window));
 }

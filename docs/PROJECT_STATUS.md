@@ -423,3 +423,16 @@ and the proprietary-file guard passed.
 - Added source-contract regressions for pane boundaries, resize behavior,
   and preservation of the permanent/temporary notebook arrangement.
 - GTK4 interaction testing on the developer workstation remains necessary.
+
+## Patch 0073 - private spatial placements for authored rooms
+
+- Versioned, ignored, project-owned `assets/extracted/authored_rooms/placements.json`.
+- Only validated existing draft identities may be placed/moved; the native
+  Zero 32x32 per-area and Aria 64x35 shared minimap bounds are enforced.
+- Refuse overlaps with original ROM minimap cells or other project rooms;
+  missing original overview data fails closed rather than inventing geometry.
+- Add a functional private placement panel to Map creation, including a
+  refreshable draft selector and coordinates from the global-map right click.
+- Render project drafts with distinct dashed borders; clicking one never opens
+  an unrelated original ROM room. No playable engine export is implied.
+- Python placement tests and full local GTK4 build/CTest required before push.

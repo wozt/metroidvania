@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct { guint area, room, x, y, save, warp, provenance, tile; } MapCell;
+typedef struct { guint area, room, x, y, save, warp, provenance, tile; char draft_id[96]; } MapCell;
 typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
@@ -54,6 +54,49 @@ static gboolean reload_rows(WorldGrid *w)
         g_array_append_val(w->cells,c);
     }
     g_strfreev(split);g_free(contents);
+    /* Project-authored placements are independent of original ROM occupancy.
+     * Listing is bounded and validated by the versioned Python placement API. */
+    gchar *out = NULL, *err = NULL;
+    GError *spawn_error = NULL;
+    gint exit_status = -1;
+    gchar *argv[] = {"python3", "-m", "scripts.map_placements", "list", "--world",
+                     w->world ? "aria" : "zero_mission", "--format", "tsv", NULL};
+    gboolean launched = g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
+                                     NULL, NULL, &out, &err, &exit_status, &spawn_error);
+    if (launched && g_spawn_check_wait_status(exit_status, NULL) && out) {
+        char **records = g_strsplit(out, "\n", -1);
+        for (guint i = 0; records[i] && i < 4096; ++i) {
+            if (!*records[i]) continue;
+            char **fields = g_strsplit(records[i], "\t", 9);
+            if (g_strv_length(fields) == 8) {
+                guint a, x, y, width, height;
+                if (sscanf(fields[3], "%u", &a) == 1 &&
+                    sscanf(fields[4], "%u", &x) == 1 &&
+                    sscanf(fields[5], "%u", &y) == 1 &&
+                    sscanf(fields[6], "%u", &width) == 1 &&
+                    sscanf(fields[7], "%u", &height) == 1 &&
+                    strlen(fields[0]) < 96 && a < area_count(w) &&
+                    width >= 1 && width <= 8 && height >= 1 && height <= 8 &&
+                    x + width <= (w->world ? 64u : 32u) &&
+                    y + height <= (w->world ? 35u : 32u)) {
+                    for (guint yy = y; yy < y + height; ++yy)
+                        for (guint xx = x; xx < x + width; ++xx) {
+                            MapCell c = {0};
+                            c.area = a; c.room = 998; c.x = xx; c.y = yy;
+                            c.provenance = 4; /* Private project draft only. */
+                            g_strlcpy(c.draft_id, fields[0], sizeof(c.draft_id));
+                            g_array_append_val(w->cells, c);
+                        }
+                }
+            }
+            g_strfreev(fields);
+        }
+        g_strfreev(records);
+    } else if (launched && err && *err) {
+        g_warning("Private draft placement listing failed: %.300s", err);
+    }
+    g_clear_error(&spawn_error);
+    g_free(out); g_free(err);
     return w->cells->len>0;
 }
 
@@ -86,6 +129,15 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
     if (!n || n > w->cells->len) return;
     w->selection = n - 1;
     MapCell c = g_array_index(w->cells, MapCell, w->selection);
+    if (c.provenance == 4) {
+        w->selected = FALSE;
+        gchar *info = g_strdup_printf("PRIVATE DRAFT %s at (%u,%u) | "
+            "Select Map creation to move it. Not playable or ROM-backed.",
+            c.draft_id, c.x, c.y);
+        gtk_label_set_text(GTK_LABEL(w->details), info);
+        g_free(info);
+        return;
+    }
     if (c.provenance == 3 || c.room == 999) {
         w->selected = FALSE;
         gchar *info = g_strdup_printf(
@@ -196,10 +248,16 @@ static void map_context_action(GtkButton *button, gpointer data)
                 GtkWidget *hint = g_object_get_data(G_OBJECT(page), "mv-map-creator-hint");
                 if (!hint) continue;
                 gchar *info = g_strdup_printf(
-                    "Selected %s cell (%u,%u). Choose the game and area below to "
-                    "create a private draft. Cell placement is NOT saved yet.",
+                    "Selected %s cell (%u,%u). Choose an existing private draft "
+                    "below to save its placement or create a new draft first.",
                     worlds[w->world], cell_x, cell_y);
                 gtk_label_set_text(GTK_LABEL(hint), info);
+                GtkWidget *xspin = g_object_get_data(G_OBJECT(page), "mv-placement-x");
+                GtkWidget *yspin = g_object_get_data(G_OBJECT(page), "mv-placement-y");
+                if (GTK_IS_SPIN_BUTTON(xspin))
+                    gtk_spin_button_set_value(GTK_SPIN_BUTTON(xspin), cell_x);
+                if (GTK_IS_SPIN_BUTTON(yspin))
+                    gtk_spin_button_set_value(GTK_SPIN_BUTTON(yspin), cell_y);
                 g_free(info);
                 gtk_notebook_set_current_page(GTK_NOTEBOOK(notebook), (gint)i);
                 break;
@@ -245,7 +303,7 @@ static void map_context_pressed(GtkGestureClick *gesture, gint n,
     gboolean room = FALSE;
     if (entry && entry <= w->cells->len) {
         MapCell marker = g_array_index(w->cells, MapCell, entry - 1);
-        room = marker.provenance != 3 && marker.room != 999;
+        room = marker.provenance != 3 && marker.provenance != 4 && marker.room != 999;
         if (room) {
             w->selected = TRUE;
             w->selection = entry - 1;
@@ -306,6 +364,91 @@ static void map_creator_launch(GtkButton *button, gpointer userdata)
         "Open the matching Zero rooms or Aria rooms browser first, then retry.");
 }
 
+static void grid_rebuild(WorldGrid *w);
+
+static void placement_refresh(GtkButton *button, gpointer userdata)
+{
+    (void)button;
+    GtkWidget *page = GTK_WIDGET(userdata);
+    GtkWidget *choice = g_object_get_data(G_OBJECT(page), "mv-placement-choice");
+    GtkWidget *status = g_object_get_data(G_OBJECT(page), "mv-placement-status");
+    gchar *out = NULL, *err = NULL;
+    GError *error = NULL;
+    gint code = -1;
+    gchar *args[] = {"python3", "-m", "scripts.authored_rooms", "list",
+                     "--format", "tsv", NULL};
+    gboolean ok = g_spawn_sync(NULL, args, NULL, G_SPAWN_SEARCH_PATH,
+                               NULL, NULL, &out, &err, &code, &error);
+    GtkStringList *names = gtk_string_list_new(NULL);
+    if (ok && g_spawn_check_wait_status(code, NULL) && out) {
+        gchar **rows = g_strsplit(out, "\n", -1);
+        for (guint i = 0; rows[i] && i < 4096; ++i) {
+            if (!*rows[i]) continue;
+            gchar **parts = g_strsplit(rows[i], "\t", 5);
+            if (g_strv_length(parts) == 4 && strlen(parts[0]) < 96)
+                gtk_string_list_append(names, parts[0]);
+            g_strfreev(parts);
+        }
+        g_strfreev(rows);
+    }
+    guint count = g_list_model_get_n_items(G_LIST_MODEL(names));
+    gtk_drop_down_set_model(GTK_DROP_DOWN(choice), G_LIST_MODEL(names));
+    if (count) gtk_drop_down_set_selected(GTK_DROP_DOWN(choice), 0);
+    gtk_label_set_text(GTK_LABEL(status), error ? error->message :
+        (ok && g_spawn_check_wait_status(code, NULL) ?
+            (count ? "Select a draft, then place it on an empty original map cell."
+                   : "No drafts yet. Create one using the buttons above, then refresh.") :
+            (err && *err ? err : "Unable to list private drafts")));
+    g_object_unref(names);
+    g_clear_error(&error); g_free(out); g_free(err);
+}
+
+static void placement_save(GtkButton *button, gpointer userdata)
+{
+    (void)button;
+    GtkWidget *page = GTK_WIDGET(userdata);
+    GtkWidget *choice = g_object_get_data(G_OBJECT(page), "mv-placement-choice");
+    GtkWidget *status = g_object_get_data(G_OBJECT(page), "mv-placement-status");
+    GtkWidget *xspin = g_object_get_data(G_OBJECT(page), "mv-placement-x");
+    GtkWidget *yspin = g_object_get_data(G_OBJECT(page), "mv-placement-y");
+    GObject *item = gtk_drop_down_get_selected_item(GTK_DROP_DOWN(choice));
+    if (!GTK_IS_STRING_OBJECT(item)) {
+        gtk_label_set_text(GTK_LABEL(status), "No authored draft selected. Refresh the list.");
+        return;
+    }
+    const char *id = gtk_string_object_get_string(GTK_STRING_OBJECT(item));
+    gchar *x = g_strdup_printf("%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(xspin)));
+    gchar *y = g_strdup_printf("%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(yspin)));
+    gchar *args[] = {"python3", "-m", "scripts.map_placements", "place",
+                     "--id", (gchar *)id, "--x", x, "--y", y, NULL};
+    gchar *out = NULL, *err = NULL;
+    GError *error = NULL;
+    gint code = -1;
+    gboolean ok = g_spawn_sync(NULL, args, NULL, G_SPAWN_SEARCH_PATH,
+                               NULL, NULL, &out, &err, &code, &error);
+    gboolean saved = ok && g_spawn_check_wait_status(code, NULL);
+    gtk_label_set_text(GTK_LABEL(status), error ? error->message :
+        (saved ? "Project placement saved privately. Original ROM untouched." :
+                 (err && *err ? err : "Private placement failed")));
+    if (saved) {
+        GtkWidget *center = gtk_widget_get_ancestor(page, GTK_TYPE_NOTEBOOK);
+        if (GTK_IS_NOTEBOOK(center)) {
+            gint n = gtk_notebook_get_n_pages(GTK_NOTEBOOK(center));
+            for (gint i = 0; i < n; ++i) {
+                GtkWidget *candidate = gtk_notebook_get_nth_page(GTK_NOTEBOOK(center), i);
+                WorldGrid *w = g_object_get_data(G_OBJECT(candidate), "mv-world-grid");
+                if (w) {
+                    reload_rows(w);
+                    grid_rebuild(w);
+                    break;
+                }
+            }
+        }
+    }
+    g_free(x); g_free(y); g_free(out); g_free(err);
+    g_clear_error(&error);
+}
+
 static void map_creator_build(GtkWidget *center)
 {
     /* Global maps can be opened repeatedly in the same dock. Reuse the
@@ -322,14 +465,14 @@ static void map_creator_build(GtkWidget *center)
     GtkWidget *help = gtk_label_new(
         "Create private room drafts for either game using the shared authoring "
         "form. Original global map cells stay read-only. Room collision, "
-        "graphics, native export, and exact placement of new drafts on the "
-        "map are not implemented yet. No fake geometry is created.");
+        "graphics and native export are not implemented. The placement of new drafts "
+        "is stored separately from ROM data and does not make a room playable.");
     gtk_label_set_wrap(GTK_LABEL(help), TRUE);
     gtk_label_set_selectable(GTK_LABEL(help), TRUE);
     gtk_label_set_xalign(GTK_LABEL(help), 0);
     GtkWidget *hint = gtk_label_new(
         "Right-click any global map case to send its coordinates here. "
-        "These coordinates are informational until a map placement format exists.");
+        "These coordinates can now be saved to the private project placement layer.");
     gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
     gtk_label_set_selectable(GTK_LABEL(hint), TRUE);
     gtk_label_set_xalign(GTK_LABEL(hint), 0);
@@ -349,10 +492,41 @@ static void map_creator_build(GtkWidget *center)
     gtk_box_append(GTK_BOX(page), help);
     gtk_box_append(GTK_BOX(page), hint);
     gtk_box_append(GTK_BOX(page), buttons);
+    GtkWidget *separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+    GtkWidget *choice_label = gtk_label_new("Place existing draft on global map");
+    GtkWidget *draft_choice = gtk_drop_down_new(NULL, NULL);
+    GtkWidget *coordinate_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *xspin = gtk_spin_button_new_with_range(0, 63, 1);
+    GtkWidget *yspin = gtk_spin_button_new_with_range(0, 34, 1);
+    GtkWidget *refresh = gtk_button_new_with_label("Refresh private drafts");
+    GtkWidget *save = gtk_button_new_with_label("Save project placement");
+    GtkWidget *placement_status = gtk_label_new("Loading private project drafts...");
+    gtk_label_set_wrap(GTK_LABEL(placement_status), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(placement_status), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(placement_status), 0);
+    gtk_label_set_xalign(GTK_LABEL(choice_label), 0);
+    gtk_box_append(GTK_BOX(coordinate_row), gtk_label_new("X:"));
+    gtk_box_append(GTK_BOX(coordinate_row), xspin);
+    gtk_box_append(GTK_BOX(coordinate_row), gtk_label_new("Y:"));
+    gtk_box_append(GTK_BOX(coordinate_row), yspin);
+    gtk_box_append(GTK_BOX(coordinate_row), save);
+    gtk_box_append(GTK_BOX(page), separator);
+    gtk_box_append(GTK_BOX(page), choice_label);
+    gtk_box_append(GTK_BOX(page), draft_choice);
+    gtk_box_append(GTK_BOX(page), refresh);
+    gtk_box_append(GTK_BOX(page), coordinate_row);
+    gtk_box_append(GTK_BOX(page), placement_status);
+    g_object_set_data(G_OBJECT(page), "mv-placement-choice", draft_choice);
+    g_object_set_data(G_OBJECT(page), "mv-placement-x", xspin);
+    g_object_set_data(G_OBJECT(page), "mv-placement-y", yspin);
+    g_object_set_data(G_OBJECT(page), "mv-placement-status", placement_status);
+    g_signal_connect(refresh, "clicked", G_CALLBACK(placement_refresh), page);
+    g_signal_connect(save, "clicked", G_CALLBACK(placement_save), page);
     g_object_set_data(G_OBJECT(page), "mv-map-creator-hint", hint);
     gtk_notebook_append_page(GTK_NOTEBOOK(center), page, gtk_label_new("Map creation"));
     gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(center), page, TRUE);
     gtk_notebook_set_tab_detachable(GTK_NOTEBOOK(center), page, TRUE);
+    placement_refresh(NULL, page);
 }
 
 static void grid_rebuild(WorldGrid *w)
@@ -422,7 +596,8 @@ static void grid_rebuild(WorldGrid *w)
                 if (covered[spot] || !next) break;
                 const MapCell *other = &g_array_index(w->cells, MapCell, next - 1);
                 if (other->room != c->room || other->area != c->area ||
-                    other->provenance != c->provenance) break;
+                    other->provenance != c->provenance ||
+                    (c->provenance == 4 && strcmp(c->draft_id, other->draft_id) != 0)) break;
                 ++width;
             }
             for (guint yy = y + 1; c->provenance != 3 && yy <= ymax; ++yy) {
@@ -432,7 +607,8 @@ static void grid_rebuild(WorldGrid *w)
                     if (covered[spot] || !next) { full = FALSE; break; }
                     const MapCell *other = &g_array_index(w->cells, MapCell, next - 1);
                     if (other->room != c->room || other->area != c->area ||
-                        other->provenance != c->provenance) { full = FALSE; break; }
+                        other->provenance != c->provenance ||
+                        (c->provenance == 4 && strcmp(c->draft_id, other->draft_id) != 0)) { full = FALSE; break; }
                 }
                 if (!full) break;
                 ++height;
@@ -452,6 +628,7 @@ static void grid_rebuild(WorldGrid *w)
             gtk_widget_add_css_class(cell, "mv-room-footprint");
             if (c->provenance == 0) gtk_widget_add_css_class(cell, "mv-anchor-only");
             if (c->provenance == 3) gtk_widget_add_css_class(cell, "mv-native-minimap");
+            if (c->provenance == 4) gtk_widget_add_css_class(cell, "mv-project-draft");
             if (save) gtk_widget_add_css_class(cell, "mv-save");
             if (warp) gtk_widget_add_css_class(cell, "mv-warp");
             if (w->selected && w->selection < w->cells->len) {
@@ -468,7 +645,7 @@ static void grid_rebuild(WorldGrid *w)
              * occupied rectangle is complete. No duplicated whole-room images
              * on disconnected segments or unverified MZM anchor markers. */
             char path[256];
-            if (c->provenance != 0 && c->provenance != 3 &&
+            if (c->provenance != 0 && c->provenance != 3 && c->provenance != 4 &&
                 room_cells == width * height &&
                 has_image(w, c, path, sizeof(path))) {
                 GtkWidget *picture = gtk_picture_new_for_filename(path);
@@ -478,7 +655,8 @@ static void grid_rebuild(WorldGrid *w)
                 gtk_box_append(GTK_BOX(cell), picture);
                 ++thumbs;
             } else {
-                gchar *name = c->provenance == 3 ? g_strdup("") :
+                gchar *name = c->provenance == 4 ? g_strdup("DRAFT") :
+                    c->provenance == 3 ? g_strdup("") :
                     g_strdup_printf("%u%s", c->room,
                         room_cells > width * height ? " …" : "");
                 GtkWidget *label = gtk_label_new(name);
@@ -488,7 +666,9 @@ static void grid_rebuild(WorldGrid *w)
                 gtk_box_append(GTK_BOX(cell), label);
                 g_free(name);
             }
-            gchar *tip = g_strdup_printf("Room %u: %u verified case(s); %ux%u displayed segment; %s",
+            gchar *tip = c->provenance == 4 ? g_strdup_printf(
+                "PROJECT DRAFT: %s (not playable or ROM-backed)", c->draft_id) :
+                g_strdup_printf("Room %u: %u verified case(s); %ux%u displayed segment; %s",
                 c->room, room_cells, width, height,
                 c->provenance == 2 ? "original Aria map" :
                 c->provenance == 3 ? "original MZM minimap tile (room unknown)" :
@@ -672,7 +852,8 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
         ".mv-selected{border:3px solid #f4cc58;}"
         ".mv-room-footprint{border:2px solid #91b8c7;}"
         ".mv-anchor-only{border:2px dashed #d7a564;}"
-        ".mv-native-minimap{background:#4a7881;border:1px solid #7cacb6;}"};
+        ".mv-native-minimap{background:#4a7881;border:1px solid #7cacb6;}"
+        ".mv-project-draft{background:#425052;border:2px dashed #f4cc58;}"};
     GtkCssProvider *provider=gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider,css);
     GdkDisplay *display=gdk_display_get_default();

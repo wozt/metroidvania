@@ -155,6 +155,11 @@ if(BUILD_TESTING)
         COMMAND $<TARGET_FILE:fusion_room_runtime> --check
                 ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)
 
+    add_test(NAME room_runtime_native_source_0138
+        COMMAND $<TARGET_FILE:fusion_room_runtime> --check
+                --native-source ${CMAKE_SOURCE_DIR}/tests/fixtures/runtime_native_clip_0138.tsv
+                ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)
+
     add_test(NAME room_package_loader
         COMMAND $<TARGET_FILE:fusion_room_package_viewer> --check
                 ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)

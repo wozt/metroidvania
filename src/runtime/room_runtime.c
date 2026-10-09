@@ -65,6 +65,59 @@ static bool blocked(const Room *r, float x, float y, float w, float h) {
     return false;
 }
 
+
+/* PATCH_0138_NATIVE_CLIPDATA: opt-in original MZM source sidecar.
+ * Native type 5 (CLIPDATA_SOLID) is a full solid tile according to the
+ * pinned sClipdataCollisionTypes table. Other native codes are retained but
+ * deliberately not converted into guessed full-block geometry. */
+static bool parse_native_source(const char *path, Room *room,
+                                size_t *native_count, size_t *solid_count) {
+    FILE *f = fopen(path, "rb");
+    if (!f) { perror(path); return false; }
+    char line[256], world[16] = {0}, area[40] = {0}, extra;
+    int version, room_id, width, height;
+    bool ended = false;
+    size_t added = 0, solid = 0;
+    if (fseek(f, 0, SEEK_END) || ftell(f) < 0 || ftell(f) > MAX_FILE_BYTES ||
+        fseek(f, 0, SEEK_SET)) goto failure;
+    if (!fgets(line, sizeof line, f) || !strchr(line, '\n') ||
+        sscanf(line, "MVROOM-SOURCE\t%d\t%15[^\t]\t%39[^\t]\t%d\t%d\t%d %c",
+               &version, world, area, &room_id, &width, &height, &extra) != 6 ||
+        version != 1 || strcmp(world, room->world) || strcmp(area, room->area) ||
+        room_id != room->room || width != room->width || height != room->height ||
+        strcmp(world, "mzm")) goto failure;
+    while (fgets(line, sizeof line, f)) {
+        char kind;
+        int x,y,w,h,code;
+        if (!strchr(line,'\n') && !feof(f)) goto failure;
+        if (!strcmp(line,"END\n") || !strcmp(line,"END")) { ended=true; break; }
+        if (sscanf(line,"%c\t%d\t%d\t%d\t%d\t%d %c",
+                   &kind,&x,&y,&w,&h,&code,&extra) != 6 ||
+            (kind != 'N' && kind != 'A') ||
+            x < 0 || y < 0 || w <= 0 || h <= 0 ||
+            x > room->width-w || y > room->height-h ||
+            (kind == 'N' && (code < 1 || code > 65535 || w != 16 || h != 16 ||
+                              x % 16 || y % 16)) ||
+            (kind == 'A' && (code < 1 || code > 7)) ||
+            added >= MAX_MARKS) goto failure;
+        ++added;
+        if (kind == 'N' && code == 5) {
+            if (room->count >= MAX_MARKS) goto failure;
+            room->collisions[room->count++] = (Collision){x,y,w,h,1};
+            ++solid;
+        }
+    }
+    if (!ended || fgetc(f) != EOF) goto failure;
+    fclose(f);
+    *native_count=added;
+    *solid_count=solid;
+    return true;
+failure:
+    fclose(f);
+    fprintf(stderr,"Invalid or mismatched native source overlay: %s\n",path);
+    return false;
+}
+
 static float clampf(float x, float low, float high) {
     return x < low ? low : x > high ? high : x;
 }
@@ -93,17 +146,18 @@ static float move_axis(const Room *room, float start, float other,
 }
 
 int main(int argc, char **argv) {
-    const char *room_path=NULL, *background=NULL; bool check=false;
+    const char *room_path=NULL, *background=NULL, *native_source=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
+        else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
     if (!room_path || (check && background)) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] preview.tsv\n",argv[0]);
         return 2;
     }
     Room *room=calloc(1,sizeof *room);
@@ -111,6 +165,13 @@ int main(int argc, char **argv) {
     if (!parse_room(room_path,room)) { free(room); return 2; }
     printf("Runtime room %s/%s/%d %dx%d: %zu project collision entries\n",
            room->world,room->area,room->room,room->width,room->height,room->count);
+    size_t native_records=0, native_solids=0;
+    if (native_source && !parse_native_source(native_source,room,&native_records,&native_solids)) {
+        free(room); return 2;
+    }
+    if (native_source)
+        printf("Native source: %zu records, %zu verified full-solid cells (Clipdata 5)\n",
+               native_records,native_solids);
     if (check) { free(room); return 0; }
     if (!SDL_Init(SDL_INIT_VIDEO)) { fprintf(stderr,"SDL_Init: %s\n",SDL_GetError());free(room);return 1; }
     SDL_Window *window=SDL_CreateWindow("Metroid Vania - experimental C11 runtime",

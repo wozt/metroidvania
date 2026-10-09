@@ -51,6 +51,7 @@ struct NativeWorkspace {
     int hover_col, hover_row;
     gboolean pick_to_pencil;
     char *identity;
+    char *stage_token; /* PATCH_0109_DEFER_ROOM_SAVE: unique per open room tab. */
 
     GtkWidget *page, *palette_page, *canvas, *palette, *status;
     GtkWidget *annotations_list, *annotations_status;
@@ -108,6 +109,14 @@ static NativeWorkspace *document_ref(NativeWorkspace *doc)
 static void history_clear(NativeMap **stack, unsigned *count);
 static void document_unref(NativeWorkspace *doc);
 static void focus_page(GtkWidget *page);
+static void mark_changed(NativeWorkspace *doc);
+
+static gchar *room_stage_path_0109(const NativeWorkspace *doc, const char *suffix)
+{
+    if (!doc || !doc->stage_token) return NULL;
+    return g_strdup_printf("assets/extracted/.editor_staging/%s.%s",
+                           doc->stage_token, suffix);
+}
 static void annotation_popup_close(NativeWorkspace *doc);
 static void annotation_list_context_pressed(GtkGestureClick *gesture, gint presses,
                                             double x, double y, gpointer userdata);
@@ -196,6 +205,14 @@ static void document_destroy(NativeWorkspace *doc)
     g_free(doc->override_path);
     g_free(doc->annotations_path);
     g_free(doc->project_area);
+    /* Closing or discarding a room never commits staged edits. */
+    gchar *stage_json = room_stage_path_0109(doc, "json");
+    gchar *stage_ini = room_stage_path_0109(doc, "ini");
+    if (stage_json) (void)g_remove(stage_json);
+    if (stage_ini) (void)g_remove(stage_ini);
+    g_free(stage_json);
+    g_free(stage_ini);
+    g_free(doc->stage_token);
     g_free(doc->identity);
     free(doc);
 }
@@ -474,10 +491,27 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     gchar *out = NULL, *err = NULL;
     GError *error = NULL;
     gint status = -1;
-    gboolean launched = g_spawn_sync(NULL, (gchar **)args->pdata, NULL,
+    /* The normal CLI still writes persisted data directly. Only GTK edits
+     * use a separate file: never touch the live overlay before Save. */
+    gchar **environment = g_get_environ();
+    if (doc->stage_token) {
+        gchar **staged = g_environ_setenv(environment, "MV_EDITOR_ROOM_STAGE",
+                                         doc->stage_token, TRUE);
+        g_strfreev(environment);
+        environment = staged;
+    }
+    gboolean launched = g_spawn_sync(NULL, (gchar **)args->pdata, environment,
                                      G_SPAWN_SEARCH_PATH, NULL, NULL,
                                      &out, &err, &status, &error);
+    g_strfreev(environment);
     gboolean success = launched && g_spawn_check_wait_status(status, NULL);
+    /* Mark the document dirty only after the staged validator accepted the
+     * operation. Read-only commands must not add an unsaved star. */
+    if (success && strcmp(action, "list-previews") && strcmp(action, "list") &&
+        strcmp(action, "catalog") && strcmp(action, "item-settings") &&
+        strcmp(action, "collision-list") && strcmp(action, "door-list") &&
+        strcmp(action, "transition-list"))
+        mark_changed(doc);
     if (!success) {
         gchar *diagnostic = g_strdup_printf("Project room data: %.480s",
             error ? error->message : err && *err ? err : "project validator rejected change");
@@ -644,6 +678,13 @@ static void native_positions_apply_0107(NativeWorkspace *doc)
 {
     gchar *path = native_position_path_0107(doc);
     if (!path) return;
+    gchar *stage = room_stage_path_0109(doc, "ini");
+    if (stage && g_file_test(stage, G_FILE_TEST_IS_REGULAR)) {
+        g_free(path);
+        path = stage;
+        stage = NULL;
+    }
+    g_free(stage);
     GKeyFile *file = g_key_file_new();
     if (g_key_file_load_from_file(file, path, G_KEY_FILE_NONE, NULL)) {
         guint count = doc->annotations ? doc->annotations->len : 0;
@@ -682,10 +723,15 @@ static gboolean native_position_save_0107(NativeWorkspace *doc,
                                            const RoomAnnotation *item, int x, int y)
 {
     if (!item || item->project_owned || !doc->annotations_path) return FALSE;
-    gchar *path = native_position_path_0107(doc);
+    gchar *path = room_stage_path_0109(doc, "ini");
     if (!path) return FALSE;
     GKeyFile *file = g_key_file_new();
-    (void)g_key_file_load_from_file(file, path, G_KEY_FILE_NONE, NULL);
+    /* Keep previous saved native moves when the first staged move occurs. */
+    if (!g_key_file_load_from_file(file, path, G_KEY_FILE_NONE, NULL)) {
+        gchar *live = native_position_path_0107(doc);
+        if (live) (void)g_key_file_load_from_file(file, live, G_KEY_FILE_NONE, NULL);
+        g_free(live);
+    }
     gchar *group = native_position_group_0107(item);
     g_key_file_set_string(file, group, "native_type", item->native_type);
     g_key_file_set_string(file, group, "variant", item->variant);
@@ -804,7 +850,7 @@ static gboolean project_move(NativeWorkspace *doc, guint id, int x, int y)
     const char *const options[] = {"--id", sid, "--x", sx, "--y", sy, NULL};
     gboolean ok = project_command(doc, "move", options, NULL);
     project_reload(doc);
-    if (ok) message(doc, "Project entity moved and saved. Native room data unchanged.");
+    if (ok) message(doc, "Project entity moved in preview. Press Save to commit.");
     return ok;
 }
 
@@ -910,7 +956,7 @@ static void project_creation_submit(GtkButton *button, gpointer userdata)
     }
     if (!success) return;
     project_reload(doc);
-    message(doc, "Project native reference saved (not yet exportable to ROM).");
+    message(doc, "Project native reference pending; use Save to commit.");
     /* Destroy after GtkButton dispatch to preserve GTK active-state accounting. */
     g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_close_idle,
                     g_object_ref(form->window), g_object_unref);
@@ -1381,7 +1427,7 @@ static void project_door_create_clicked(GtkButton *button, gpointer userdata)
     project_popover_defer_close(doc);
     if (project_command(doc, "door-create", options, NULL)) {
         project_reload(doc);
-        message(doc, "Project door created. Right-click the purple project door and choose Edit to configure/link it.");
+        message(doc, "Door pending; right-click its purple marker to configure, then Save.");
     }
 }
 
@@ -1718,8 +1764,8 @@ static void project_door_save_0102(GtkButton *button, gpointer userdata)
     };
     if (project_command(doc, "door-update", options, NULL)) {
         project_reload(doc);
-        gtk_label_set_text(GTK_LABEL(form->status), "Project door saved in private room data.");
-        message(doc, "Project door updated; native ROM data unchanged.");
+        gtk_label_set_text(GTK_LABEL(form->status), "Door properties pending. Press Save in the room editor.");
+        message(doc, "Door update pending. Press Save to commit private data.");
     } else
         gtk_label_set_text(GTK_LABEL(form->status), "Could not save door; check the editor status for validation details.");
 }
@@ -1764,7 +1810,7 @@ static void project_door_link_0102(GtkButton *button, gpointer userdata)
         project_reload(doc);
         gtk_label_set_text(GTK_LABEL(form->status),
             "Destination saved. Target room validated; gameplay adapter still pending.");
-        message(doc, "Project door destination saved (not yet playable).");
+        message(doc, "Door destination pending. Press Save to commit.");
         project_door_fetch_link_0102(form);
     } else
         gtk_label_set_text(GTK_LABEL(form->status),
@@ -1783,7 +1829,7 @@ static void project_door_unlink_0102(GtkButton *button, gpointer userdata)
         form->transition_id = 0;
         gtk_widget_set_sensitive(form->unlink, FALSE);
         project_reload(form->doc);
-        gtk_label_set_text(GTK_LABEL(form->status), "Project destination removed.");
+        gtk_label_set_text(GTK_LABEL(form->status), "Destination unlink pending; press Save.");
     } else
         gtk_label_set_text(GTK_LABEL(form->status), "Destination removal failed.");
 }
@@ -3139,8 +3185,10 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
         gboolean changed = x != doc->project_drag_origin_x ||
                            y != doc->project_drag_origin_y;
         gboolean success = TRUE;
-        if (changed && native)
+        if (changed && native) {
             success = native_position_save_0107(doc, item, x, y);
+            if (success) mark_changed(doc);
+        }
         doc->dragging_project = FALSE;
         doc->dragging_native = FALSE;
         doc->drawing = FALSE;
@@ -3158,7 +3206,7 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
             /* project_move() already reloads; no duplicate GTK list rebuild. */
             if (native || kind == OVERLAY_DOORS) project_reload(doc);
             message(doc, success ?
-                "Grab saved private marker coordinates. Original ROM unchanged." :
+                "Grab: pending coordinates (press Save). Original ROM unchanged." :
                 "Grab move rejected; restored previous coordinates.");
         } else gtk_widget_queue_draw(doc->canvas);
         return;
@@ -3303,10 +3351,53 @@ static GtkWidget *icon_button(const char *icon, const char *description)
     return button;
 }
 
+/* Consistent 24px hand silhouette: do not depend on missing icon themes. */
+static void grab_hand_draw_0109(GtkDrawingArea *area, cairo_t *cr,
+                                int width, int height, gpointer userdata)
+{
+    (void)area; (void)userdata;
+    cairo_save(cr);
+    cairo_translate(cr, width * 0.07, height * 0.04);
+    cairo_scale(cr, width / 24.0, height / 24.0);
+    cairo_set_source_rgb(cr, 0.78, 0.80, 0.83);
+    cairo_set_line_width(cr, 1.8);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+    cairo_move_to(cr, 9, 22);
+    cairo_curve_to(cr, 6, 20, 5, 16, 3, 14);
+    cairo_curve_to(cr, 1, 11, 3, 9, 5, 11);
+    cairo_line_to(cr, 8, 14);
+    cairo_line_to(cr, 8, 4);
+    cairo_curve_to(cr, 8, 2, 11, 2, 11, 4);
+    cairo_line_to(cr, 11, 10);
+    cairo_line_to(cr, 11, 3);
+    cairo_curve_to(cr, 11, 1, 14, 1, 14, 3);
+    cairo_line_to(cr, 14, 10);
+    cairo_line_to(cr, 14, 4);
+    cairo_curve_to(cr, 14, 2, 17, 2, 17, 4);
+    cairo_line_to(cr, 17, 11);
+    cairo_line_to(cr, 17, 6);
+    cairo_curve_to(cr, 17, 4, 20, 4, 20, 6);
+    cairo_line_to(cr, 20, 16);
+    cairo_curve_to(cr, 20, 19, 18, 21, 16, 22);
+    cairo_close_path(cr);
+    cairo_stroke(cr);
+    cairo_restore(cr);
+}
+
 static GtkWidget *icon_toggle(const char *icon, const char *description)
 {
     GtkWidget *button = gtk_toggle_button_new();
-    gtk_button_set_child(GTK_BUTTON(button), gtk_image_new_from_icon_name(icon));
+    if (!strcmp(icon, "hand-symbolic")) {
+        GtkWidget *hand = gtk_drawing_area_new();
+        gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(hand), 24);
+        gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(hand), 24);
+        gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(hand),
+                                       grab_hand_draw_0109, NULL, NULL);
+        gtk_button_set_child(GTK_BUTTON(button), hand);
+    } else {
+        gtk_button_set_child(GTK_BUTTON(button), gtk_image_new_from_icon_name(icon));
+    }
     gtk_widget_add_css_class(button, "flat");
     gtk_widget_set_size_request(button, 34, 34);
     delayed_tip(button, description);
@@ -3415,6 +3506,50 @@ static void undo_clicked(GtkButton *button, gpointer userdata)
 static void redo_clicked(GtkButton *button, gpointer userdata)
 { (void)button; history_step(userdata, TRUE); }
 
+/* PATCH_0109_COMMIT_STAGED_OVERRIDES: private-only, atomic per file. */
+static gboolean room_stage_commit_file_0109(const char *stage, const char *target)
+{
+    if (!stage || !g_file_test(stage, G_FILE_TEST_IS_REGULAR)) return TRUE;
+    gchar *data = NULL;
+    gsize length = 0;
+    if (!g_file_get_contents(stage, &data, &length, NULL) || length > 4000000) {
+        g_free(data);
+        return FALSE;
+    }
+    gchar *directory = g_path_get_dirname(target);
+    gboolean safe = !g_file_test(target, G_FILE_TEST_IS_SYMLINK) &&
+                    !g_file_test(directory, G_FILE_TEST_IS_SYMLINK);
+    gboolean ok = safe && g_mkdir_with_parents(directory, 0700) == 0 &&
+                  g_file_set_contents(target, data, (gssize)length, NULL);
+    g_free(directory);
+    g_free(data);
+    if (ok) (void)g_remove(stage);
+    return ok;
+}
+
+static gboolean room_stage_commit_0109(NativeWorkspace *doc)
+{
+    gchar *stage_json = room_stage_path_0109(doc, "json");
+    gchar *stage_ini = room_stage_path_0109(doc, "ini");
+    gchar *name = doc->project_aria ?
+        g_strdup_printf("area_%02u_room_%03u.json", (guint)atoi(doc->project_area),
+                        doc->project_room) :
+        g_strdup_printf("%s_%03u.json", doc->project_area, doc->project_room);
+    gchar *lower = g_ascii_strdown(name, -1);
+    gchar *target_json = g_strdup_printf("assets/extracted/overrides/%s/entities/%s",
+                                          doc->project_aria ? "aria" : "metroid", lower);
+    gchar *target_ini = native_position_path_0107(doc);
+    gboolean ok = room_stage_commit_file_0109(stage_json, target_json) &&
+                  target_ini && room_stage_commit_file_0109(stage_ini, target_ini);
+    g_free(target_ini);
+    g_free(target_json);
+    g_free(lower);
+    g_free(name);
+    g_free(stage_json);
+    g_free(stage_ini);
+    return ok;
+}
+
 static gboolean save_override(NativeWorkspace *doc)
 {
     char error[160] = {0};
@@ -3424,9 +3559,16 @@ static gboolean save_override(NativeWorkspace *doc)
         if (doc->close_info) gtk_label_set_text(GTK_LABEL(doc->close_info), error);
         return FALSE;
     }
+    if (!room_stage_commit_0109(doc)) {
+        message(doc, "Metatiles saved, but a staged room override failed. Retry Save.");
+        if (doc->close_info)
+            gtk_label_set_text(GTK_LABEL(doc->close_info),
+                               "Room overlay write failed; retry Save.");
+        return FALSE;
+    }
     doc->unsaved = FALSE;
     update_title(doc);
-    message(doc, "Override saved. The ROM and initial import remain unchanged.");
+    message(doc, "Room overlays saved. Original ROM/import files remain unchanged.");
     return TRUE;
 }
 
@@ -3714,7 +3856,7 @@ static void document_build(NativeWorkspace *doc)
     static const char *const icons[TOOL_COUNT] = {
         "document-edit-symbolic", "edit-clear-symbolic", "color-fill-symbolic",
         "color-select-symbolic", "edit-select-all-symbolic", "transform-move-symbolic",
-        "input-mouse-symbolic"
+        "hand-symbolic"
     };
     static const char *const names[TOOL_COUNT] = {
         "Pencil (draw)", "Eraser", "Fill bucket",
@@ -4164,6 +4306,7 @@ static NativeWorkspace *create_document(NativeWorkspace *manager, char *identity
     doc->owner = manager;
     doc->references = 1;
     doc->identity = identity;
+    doc->stage_token = g_uuid_string_random();
     doc->map = calloc(1, sizeof(NativeMap));
     doc->stroke_before = calloc(1, sizeof(NativeMap));
     doc->undo = calloc(HISTORY_LIMIT, sizeof(*doc->undo));

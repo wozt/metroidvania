@@ -300,10 +300,25 @@ def _check_path(path: Path, root: Path, create: bool = False) -> None:
         raise ValueError("project entity symlink refused")
 
 
+# PATCH_0109_DEFER_ROOM_SAVE: private, per-editor-tab staging document.
+def _editor_stage_path(root: Path) -> Path | None:
+    token = os.environ.get("MV_EDITOR_ROOM_STAGE")
+    if token is None:
+        return None
+    if not re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", token):
+        raise ValueError("invalid private room editor stage token")
+    return Path(root) / "assets" / "extracted" / ".editor_staging" / (token + ".json")
+
+
 def load(root: Path, world: str, area: str, room: int,
          width: int, height: int) -> dict:
     path = path_for(root, world, area, room, width, height)
     _check_path(path, root)
+    staged = _editor_stage_path(root)
+    if staged is not None:
+        _check_path(staged, root)
+        if staged.exists():
+            path = staged
     if not path.exists():
         return _new(world, area, room, width, height)
     if not path.is_file() or path.stat().st_size > 4_000_000:
@@ -317,7 +332,9 @@ def load(root: Path, world: str, area: str, room: int,
 
 def save(root: Path, doc: dict) -> Path:
     validate(doc, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
-    path = path_for(root, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
+    path = _editor_stage_path(root)
+    if path is None:
+        path = path_for(root, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
     _check_path(path, root, create=True)
     temporary = None
     try:

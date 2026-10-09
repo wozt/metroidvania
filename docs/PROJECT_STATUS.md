@@ -955,3 +955,15 @@ and the proprietary-file guard passed.
 - Original Zero Mission BG3 extraction is unchanged and remains partial.
 - Parallax, original blending priorities, room camera and animated
   backgrounds still need native runtime reconstruction.
+
+## Patch 0109 - deferred GTK room changes
+
+- Native annotation-position overlays and shared project room data (entities,
+  doors, transitions, collision) are staged independently per open room tab.
+- The native ROM and persisted private overrides remain unchanged until the
+  same diskette / Ctrl+S used for metatiles explicitly commits changes.
+- The tab gets an unsaved star on validated mutations; Save-and-close commits,
+  Discard removes staging files, Cancel preserves pending edits.
+- GTK Grab has a symbolic hand icon instead of a mouse.
+- This is a static editor overlay, not a source-ROM encoder. Per-file writes
+  are atomic but a multi-file save is not a fully transactional commit.

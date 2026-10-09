@@ -189,19 +189,62 @@ def aria_entity_identity(kind: int, entity_id: int,
             'Unknown native type')
 
 
-def _category(symbol: str) -> str:
-    upgrades = ('BEAM', 'BOMB', 'MORPH_BALL', 'POWER_GRIP', 'SPACE_JUMP',
-                'HIGH_JUMP', 'SCREW', 'VARIA', 'CHOZO_STATUE')
-    systems = ('SAVE_', 'MAP_STATION', 'ELEVATOR', 'DOOR', 'BANNER', 'GUNSHIP')
-    if any(token in symbol for token in upgrades):
-        return 'Upgrade / ability'
-    if 'DROP' in symbol or 'TANK' in symbol:
-        return 'Item / pickup'
-    if any(token in symbol for token in systems):
-        return 'World object'
-    if 'UNUSED' in symbol:
-        return 'Unused native type'
-    return 'Enemy / actor'
+def mzm_sprite_kind(symbol: str, stats: dict[str, str] | None = None) -> str:
+    """Conservative native sprite taxonomy. Never confuse conditional spawns
+    with the EVENT/TRIGGER records of the world engine.
+
+    All guesses remain in OTHER: native scripts/ROM are the authority. Source
+    stat expressions help distinguish active enemy sprites from world actors.
+    """
+    if not re.fullmatch(r'PSPRITE_[A-Z0-9_]+', symbol):
+        raise ValueError('invalid MZM native sprite identity')
+    name = symbol.removeprefix('PSPRITE_')
+    if 'UNUSED' in name or 'UNKNOWN' in name:
+        return 'OTHER'
+    # A native sprite representing a door is distinct from a room transition.
+    if 'DOOR' in name or name.endswith('_GATE'):
+        return 'DOOR'
+    if any(token in name for token in (
+        'BOMB_BLOCK', 'MISSILE_BLOCK', 'BEAM_BLOCK', 'BREAKABLE_BLOCK',
+        'CHOZO_STATUE', 'MAP_STATION', 'SAVE_PLATFORM', 'SAVE_STATION',
+        'ELEVATOR', 'GUNSHIP', 'BANNER', 'CONSOLE', 'TERMINAL',
+    )):
+        return 'OBJECT'
+    if ('TANK' in name or 'PICKUP' in name or 'ITEM_DROP' in name or
+            name in {
+                'MORPH_BALL', 'POWER_GRIP', 'BOMBS', 'LONG_BEAM',
+                'ICE_BEAM', 'WAVE_BEAM', 'PLASMA_BEAM', 'CHARGE_BEAM',
+                'VARIA_SUIT', 'GRAVITY_SUIT', 'SPACE_JUMP', 'HIGH_JUMP',
+                'SCREW_ATTACK', 'SPEED_BOOSTER', 'MISSILE_EXPANSION',
+                'SUPER_MISSILE_EXPANSION', 'POWER_BOMB_EXPANSION',
+            }):
+        return 'ITEM'
+    if stats:
+        health = stats.get('SPRITE_STATS_HEALTH', '').strip()
+        damage = stats.get('SPRITE_STATS_DAMAGE', '').strip()
+        # Stat expressions are original source, not a guessed sprite name.
+        if (health and health not in ('0', '0u', '0U', '0x0', '0x00') and
+                damage and damage not in ('0', '0u', '0U', '0x0', '0x00')):
+            return 'ENEMY'
+    # Selected known enemy identities with a reliable native role; other
+    # unidentified actors must not be advertised as proven enemies or items.
+    if name.startswith(('ZOOMER', 'RIPPER', 'SKREE', 'METROID', 'KRAID',
+                        'RIDLEY', 'SPACE_PIRATE', 'WAVER', 'RINKA',
+                        'GEEGA', 'ZEB', 'DESSGEEGA', 'SIDEHOPPER',
+                        'MOTHER_BRAIN')):
+        return 'ENEMY'
+    return 'OTHER'
+
+
+def _category(symbol: str, stats: dict[str, str] | None = None) -> str:
+    role = mzm_sprite_kind(symbol, stats)
+    return {
+        'ENEMY': 'Enemy / actor',
+        'ITEM': 'Item / pickup',
+        'DOOR': 'Door / gate sprite',
+        'OBJECT': 'World object',
+        'OTHER': 'Unclassified native sprite',
+    }[role]
 
 
 def build_mzm() -> list[dict]:
@@ -226,7 +269,7 @@ def build_mzm() -> list[dict]:
         records.append({
             'world': 'Zero Mission', 'native_id': native_id,
             'native_type': symbol, 'name': _label(symbol),
-            'category': _category(symbol),
+            'category': _category(symbol, values),
             'summary': f'health={health}; damage={damage}; weaknesses={weakness}',
             'placements': None,
             'editable': False,

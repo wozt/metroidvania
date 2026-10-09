@@ -11,8 +11,9 @@
 #include <string.h>
 
 enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN, TOOL_COUNT };
-enum { OVERLAY_COLLISION, OVERLAY_OBJECTS, OVERLAY_DOORS, OVERLAY_EVENTS,
-       OVERLAY_TRIGGERS, OVERLAY_COUNT };
+enum { OVERLAY_COLLISION, OVERLAY_ENEMIES, OVERLAY_ITEMS, OVERLAY_OBJECTS,
+       OVERLAY_DOORS, OVERLAY_EVENTS, OVERLAY_TRIGGERS, OVERLAY_OTHER,
+       OVERLAY_COUNT };
 #define HISTORY_LIMIT 16u
 
 typedef struct {
@@ -258,7 +259,7 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
         return;
     }
     gchar **lines = g_strsplit(contents, "\n", -1);
-    guint counts[4] = {0};
+    guint counts[OVERLAY_COUNT] = {0};
     for (guint line = 0; lines[line] && line < 4096; ++line) {
         if (!lines[line][0] || lines[line][0] == '#') continue;
         gchar **fields = g_strsplit(lines[line], "|", 11);
@@ -279,10 +280,14 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
             g_strfreev(fields);
             continue;
         }
-        if (!strcmp(fields[0], "ENTITY")) item.kind = OVERLAY_OBJECTS;
+        if (!strcmp(fields[0], "ENEMY")) item.kind = OVERLAY_ENEMIES;
+        else if (!strcmp(fields[0], "ITEM")) item.kind = OVERLAY_ITEMS;
+        else if (!strcmp(fields[0], "OBJECT")) item.kind = OVERLAY_OBJECTS;
         else if (!strcmp(fields[0], "DOOR")) item.kind = OVERLAY_DOORS;
         else if (!strcmp(fields[0], "EVENT")) item.kind = OVERLAY_EVENTS;
         else if (!strcmp(fields[0], "TRIGGER")) item.kind = OVERLAY_TRIGGERS;
+        else if (!strcmp(fields[0], "OTHER") || !strcmp(fields[0], "ENTITY"))
+            item.kind = OVERLAY_OTHER; /* legacy files stay readable */
         else { g_strfreev(fields); continue; }
         item.index = source_index; item.x = x; item.y = y;
         item.width = width; item.height = height;
@@ -291,12 +296,15 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
         g_strlcpy(item.label, fields[8], sizeof(item.label));
         g_strlcpy(item.details, fields[9], sizeof(item.details));
         g_array_append_val(doc->annotations, item);
-        ++counts[item.kind - OVERLAY_OBJECTS];
+        ++counts[item.kind];
 
         if (doc->annotations_list) {
-            const char *kind = item.kind == OVERLAY_OBJECTS ? "OBJECT" :
+            const char *kind = item.kind == OVERLAY_ENEMIES ? "ENEMY" :
+                               item.kind == OVERLAY_ITEMS ? "ITEM" :
+                               item.kind == OVERLAY_OBJECTS ? "OBJECT" :
                                item.kind == OVERLAY_DOORS ? "DOOR" :
-                               item.kind == OVERLAY_EVENTS ? "EVENT" : "TRIGGER";
+                               item.kind == OVERLAY_EVENTS ? "EVENT" :
+                               item.kind == OVERLAY_TRIGGERS ? "TRIGGER" : "OTHER";
             gchar *summary = g_strdup_printf(
                 "%s %u — %s\n(%d,%d) %ux%u | %s\n%s",
                 kind, item.index, item.label, item.x, item.y,
@@ -324,9 +332,12 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
     }
     if (doc->annotations_status) {
         gchar *summary = g_strdup_printf(
-            "%u native object(s), %u door/transition(s), %u event variant(s), "
-            "%u trigger(s). Read-only source data.",
-            counts[0], counts[1], counts[2], counts[3]);
+            "%u enemies, %u items, %u world objects, %u doors, "
+            "%u events, %u triggers, %u other/unknown. Native source is read-only.",
+            counts[OVERLAY_ENEMIES], counts[OVERLAY_ITEMS],
+            counts[OVERLAY_OBJECTS], counts[OVERLAY_DOORS],
+            counts[OVERLAY_EVENTS], counts[OVERLAY_TRIGGERS],
+            counts[OVERLAY_OTHER]);
         gtk_label_set_text(GTK_LABEL(doc->annotations_status), summary);
         g_free(summary);
     }
@@ -337,8 +348,11 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
 static const char *annotation_kind_name(guint kind)
 {
     switch (kind) {
-    case OVERLAY_OBJECTS: return "Object";
+    case OVERLAY_ENEMIES: return "Enemy";
+    case OVERLAY_ITEMS: return "Item / pickup";
+    case OVERLAY_OBJECTS: return "World object";
     case OVERLAY_DOORS: return "Door / transition";
+    case OVERLAY_OTHER: return "Other / unidentified";
     case OVERLAY_EVENTS: return "Event";
     case OVERLAY_TRIGGERS: return "Trigger";
     default: return "Native record";
@@ -697,7 +711,10 @@ static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
         double width = item->width * doc->scale;
         double height = item->height * doc->scale;
         double red = 0.2, green = 0.9, blue = 0.45;
-        if (item->kind == OVERLAY_DOORS) { red = 0.72; green = 0.35; blue = 1.0; }
+        if (item->kind == OVERLAY_ENEMIES) { red = 1.0; green = 0.3; blue = 0.3; }
+        else if (item->kind == OVERLAY_ITEMS) { red = 1.0; green = 0.82; blue = 0.18; }
+        else if (item->kind == OVERLAY_OTHER) { red = 0.65; green = 0.65; blue = 0.65; }
+        else if (item->kind == OVERLAY_DOORS) { red = 0.72; green = 0.35; blue = 1.0; }
         else if (item->kind == OVERLAY_EVENTS) { red = 1.0; green = 0.65; blue = 0.12; }
         else if (item->kind == OVERLAY_TRIGGERS) { red = 0.2; green = 0.8; blue = 1.0; }
         cairo_save(cr);
@@ -721,9 +738,12 @@ static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
         }
         char id[24];
         snprintf(id, sizeof(id), "%s%u",
+                 item->kind == OVERLAY_ENEMIES ? "N" :
+                 item->kind == OVERLAY_ITEMS ? "I" :
                  item->kind == OVERLAY_OBJECTS ? "O" :
                  item->kind == OVERLAY_DOORS ? "D" :
-                 item->kind == OVERLAY_EVENTS ? "E" : "T", item->index);
+                 item->kind == OVERLAY_EVENTS ? "E" :
+                 item->kind == OVERLAY_TRIGGERS ? "T" : "?", item->index);
         cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
         cairo_set_font_size(cr, 10.0);
         cairo_set_source_rgb(cr, 1, 1, 1);
@@ -1592,14 +1612,17 @@ static void document_build(NativeWorkspace *doc)
     GtkWidget *grid = icon_toggle("view-grid-symbolic", "Show or hide the grid (G)");
     GtkWidget *background = icon_toggle("image-x-generic-symbolic", "Show BG2 / BG3 (experimental background preview)");
     static const char *const overlay_labels[OVERLAY_COUNT] = {
-        "Walls", "Objects", "Doors", "Events", "Triggers"
+        "Walls", "Enemies", "Items", "Objects", "Doors", "Events", "Triggers", "Other"
     };
     static const char *const overlay_tips[OVERLAY_COUNT] = {
-        "Show native collision / wall data",
-        "Show original native objects and entities",
-        "Show original doors and room transitions",
-        "Show event-dependent native object variants",
-        "Show decoded trigger regions (not available yet)"
+        "Show original native collision / wall data",
+        "Show decoded enemy placements, including conditional variants",
+        "Show native pickups, upgrades and items",
+        "Show native world objects and props",
+        "Show native door sprites, door tables and room transitions",
+        "Show native events (not conditional enemy/item spawn variants)",
+        "Trigger region decoder is not available yet",
+        "Show unknown or unclassified native entity records"
     };
     GtkWidget *overlay_buttons[OVERLAY_COUNT];
     GtkWidget *tab_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);

@@ -518,3 +518,21 @@ and the proprietary-file guard passed.
 - Object-menu and editor-window interaction was smoke-tested under Xvfb with
   Brinstar 023. Validation passes 166 Python tests, all six CTest targets and
   the proprietary-data guard.
+
+## Patch 0078 - semantic, independent native entity overlays
+
+- MZM room sprites and Aria entity records use explicit ENEMY/ITEM/OBJECT/DOOR/OTHER
+  annotation kinds. No conditional MZM sprite variant is relabelled as an
+  EVENT: the original variant and event identifiers remain in the details.
+- Items and enemies can be filtered independently of doors, scenery, events,
+  triggers and unknown native actors in the shared GTK room editor.
+- Zero Mission classification consults pinned native sprite identities and
+  source sprite health/damage fields. Unknown types stay OTHER; no fake item
+  or enemy identities are invented. Unparsed special item/trigger tables are
+  not claimed to be decoded. Existing legacy ENTITY files remain viewable
+  under OTHER until their private native annotations are regenerated.
+- Aria native kind/id controls enemy, pickup, special object and door/gate
+  semantics, while separately parsed screen transitions remain DOOR records.
+- The pre-existing GTK source contract is updated to assert all eight overlay
+  labels and the still-disabled native trigger decoder.
+- All records and original graphics remain read-only. No ROM bytes are altered.

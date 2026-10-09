@@ -38,7 +38,7 @@ class RoomAnnotationTests(unittest.TestCase):
             'load_x': 12, 'load_y': 20,
         }]}
         rows = build_aria(room, {9: 'Blue Crow'})
-        self.assertEqual(rows[0][0:6], ('ENTITY', 0, 32, 48, 16, 16))
+        self.assertEqual(rows[0][0:6], ('ENEMY', 0, 32, 48, 16, 16))
         self.assertEqual(rows[1][0:6], ('DOOR', 0, 480, 160, 16, 16))
         self.assertIn(b'Blue Crow', serialize(rows))
 

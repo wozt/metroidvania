@@ -14,7 +14,10 @@ from pathlib import Path
 from scripts.import_game_assets import OUTPUT, ROOT, write_generated
 from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.mzm_world_atlas import AREAS, DOOR_RE, FIELD_RE, ITEM_RE, REQUIRED
-from scripts.object_catalog import aria_entity_identity, load_aria_enemy_names
+from scripts.object_catalog import (
+    aria_entity_identity, build_mzm as build_mzm_catalog,
+    load_aria_enemy_names, mzm_sprite_kind,
+)
 
 SPRITESET_SOURCE = ROOT / 'third_party/mzm/src/data/spriteset.c'
 ROOMS_ROOT = ROOT / 'third_party/mzm/src/data/rooms'
@@ -93,6 +96,10 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
     placements = parse_mzm_placements(room_path.read_text(encoding='utf-8'),
                                       area, room_number)
     spritesets = parse_mzm_spritesets(SPRITESET_SOURCE.read_text(encoding='utf-8'))
+    # Resolve each native sprite against the pinned enum and its actual stats.
+    # The source variant indicates the trigger CONDITION, not the entity kind.
+    known_roles = {entry['native_type']: entry['category']
+                   for entry in build_mzm_catalog()}
     fields = room['fields']
     variants = [
         ('default', 0, fields['pDefaultSpriteData'], fields['defaultSpriteset']),
@@ -119,7 +126,17 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
             if index >= len(definitions):
                 raise ValueError('MZM placement references absent spriteset entry')
             sprite_name, graphics_slot = definitions[index]
-            kind = 'ENTITY' if variant_name == 'default' else 'EVENT'
+            # Independently of the event-dependent spawn variant,
+            # classify the native entity: an enemy remains an enemy.
+            category = known_roles.get(sprite_name)
+            category_to_kind = {
+                'Enemy / actor': 'ENEMY',
+                'Item / pickup': 'ITEM',
+                'Door / gate sprite': 'DOOR',
+                'World object': 'OBJECT',
+                'Unclassified native sprite': 'OTHER',
+            }
+            kind = category_to_kind.get(category, mzm_sprite_kind(sprite_name))
             details = (f'native={sprite_name}; spriteset={spriteset_text}; '
                        f'graphics_slot={graphics_slot}; variant={variant_name}; event={event}')
             rows.append((kind, source_index, x * 16, y * 16, 16, 16,
@@ -149,7 +166,19 @@ def build_aria(room: dict, enemy_names: dict[int, str] | None = None) -> list[tu
         details = (f"pointer={entity['entry_pointer']}; persistent={entity['persistent_index']}; "
                    f"flags=0x{entity['flags']:02x}; parameters={entity['parameters']}; "
                    f"category={category}")
-        rows.append(('ENTITY', index, max(0, entity['x'] - 8),
+        # Native Aria kind is semantic; an ordinary conditional pickup
+        # is still an item, not an event trigger.
+        if kind == 1 or (kind == 2 and entity_id in (0x0A, 0x0B)):
+            annotation_kind = 'ENEMY'
+        elif kind in (4, 5, 6):
+            annotation_kind = 'ITEM'
+        elif kind == 2 and entity_id in (0x00, 0x02, 0x03, 0x04, 0x05, 0x06):
+            annotation_kind = 'DOOR'
+        elif kind in (2, 3):
+            annotation_kind = 'OBJECT'
+        else:
+            annotation_kind = 'OTHER'
+        rows.append((annotation_kind, index, max(0, entity['x'] - 8),
                      max(0, entity['y'] - 8), 16, 16,
                      'native', native, label, details))
     for index, transition in enumerate(room['transitions']):
@@ -167,7 +196,9 @@ def serialize(rows: list[tuple]) -> bytes:
     lines = ['# MV_ROOM_ANNOTATIONS_1',
              '# kind|index|x|y|width|height|variant|native_type|label|details']
     for row in rows:
-        if len(row) != 10 or row[0] not in ('ENTITY', 'DOOR', 'EVENT', 'TRIGGER'):
+        if len(row) != 10 or row[0] not in (
+                'ENTITY', 'ENEMY', 'ITEM', 'OBJECT', 'OTHER',
+                'DOOR', 'EVENT', 'TRIGGER'):
             raise ValueError('invalid room annotation')
         if any(type(value) is not int for value in row[1:6]):
             raise ValueError('invalid room annotation geometry')

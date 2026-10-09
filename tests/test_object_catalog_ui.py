@@ -19,10 +19,10 @@ class ObjectCatalogUiContract(unittest.TestCase):
 
     def test_room_editor_exposes_truthful_native_data_overlays(self):
         source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
-        for label in ('"Walls", "Objects", "Doors", "Events", "Triggers"',
+        for label in ('"Walls", "Enemies", "Items", "Objects", "Doors", "Events", "Triggers", "Other"',
                       'gtk_label_new("Room data")',
                       'load_annotations(doc, annotations_path)',
-                      'Show decoded trigger regions (not available yet)'):
+                      'Trigger region decoder is not available yet'):
             self.assertIn(label, source)
         self.assertIn(
             'gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);',

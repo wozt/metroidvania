@@ -13,6 +13,18 @@
 #include <glib/gstdio.h>
 #include <sys/stat.h>
 
+/* An in-process reverse-link handoff contains only validated saved identifiers.
+ * The destination editor applies it as a normal undoable staged action. */
+typedef struct {
+    gboolean source_aria;
+    char source_area[32];
+    guint source_room, source_door_id;
+    gboolean target_aria;
+    char target_area[32];
+    guint target_room, target_door_id;
+    guint spawn_x, spawn_y;
+} ReverseLinkPending0115;
+
 enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN,
        TOOL_GRAB, TOOL_WALL, TOOL_WATER, TOOL_AIR, TOOL_COUNT };
 enum { OVERLAY_COLLISION, OVERLAY_ENEMIES, OVERLAY_ITEMS, OVERLAY_OBJECTS,
@@ -46,6 +58,7 @@ struct NativeWorkspace {
     GPtrArray *documents;
     GtkNotebook *center, *right;
     GtkWidget *world_atlas_page; /* Weak; map tab may be detached or closed. */
+    ReverseLinkPending0115 *pending_reverse_0115;
     struct NativeWorkspace *owner; /* non-NULL on a document */
     guint references;
     GCancellable *import_cancellable;
@@ -122,6 +135,7 @@ static void focus_page(GtkWidget *page);
 static void mark_changed(NativeWorkspace *doc);
 static void update_title(NativeWorkspace *doc);
 static void project_reload(NativeWorkspace *doc);
+static void project_reverse_apply_0115(NativeWorkspace *doc);
 
 static gchar *room_stage_path_0109(const NativeWorkspace *doc, const char *suffix)
 {
@@ -2160,6 +2174,130 @@ static void project_door_pick_map_0106(GtkButton *button, gpointer userdata)
     gtk_widget_set_visible(form->window, FALSE);
 }
 
+/* PATCH_0115_RECIPROCAL_GTK. Never writes directly to the target's saved data. */
+static gboolean project_reverse_matches_0115(const NativeWorkspace *doc,
+                                                const ReverseLinkPending0115 *req)
+{
+    return doc && req && doc->ready && !doc->closing &&
+           doc->project_aria == req->source_aria &&
+           !g_ascii_strcasecmp(doc->project_area, req->source_area) &&
+           doc->project_room == req->source_room;
+}
+
+static void project_reverse_apply_0115(NativeWorkspace *doc)
+{
+    NativeWorkspace *manager = doc->owner;
+    if (!manager || !project_reverse_matches_0115(doc, manager->pending_reverse_0115))
+        return;
+    ReverseLinkPending0115 *request = manager->pending_reverse_0115;
+    manager->pending_reverse_0115 = NULL; /* exactly once, even on validation error */
+    gchar sid[16], sr[16], td[16], sx[16], sy[16];
+    g_snprintf(sid, sizeof(sid), "%u", request->source_door_id);
+    g_snprintf(sr, sizeof(sr), "%u", request->target_room);
+    g_snprintf(td, sizeof(td), "%u", request->target_door_id);
+    g_snprintf(sx, sizeof(sx), "%u", request->spawn_x);
+    g_snprintf(sy, sizeof(sy), "%u", request->spawn_y);
+    const char *const opts[] = {
+        "--source-door-id", sid,
+        "--target-world", request->target_aria ? "aria" : "zero_mission",
+        "--target-area", request->target_area,
+        "--target-room", sr, "--target-door-id", td,
+        "--spawn-x", sx, "--spawn-y", sy, NULL
+    };
+    gboolean ok = project_command(doc, "door-link", opts, NULL);
+    if (ok) project_reload(doc);
+    message(doc, ok ?
+        "Return link prepared in THIS room (unsaved *). Check then press its diskette."
+        : "Return link rejected (e.g. destination door already linked). No saved file changed.");
+    g_free(request);
+}
+
+static void project_door_prepare_return_0115(GtkButton *button, gpointer userdata)
+{
+    (void)button;
+    ProjectDoorForm *form = userdata;
+    NativeWorkspace *origin = form->doc;
+    NativeWorkspace *manager = origin->owner;
+    if (!manager || origin->closing || !origin->ready) return;
+    if (origin->unsaved) {
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "First save the forward link with the source room diskette.");
+        return;
+    }
+    /* The headless backend verifies the SAVED forward transition and both
+     * saved project doors, plus target room identity and link occupancy. */
+    gchar *area = g_strdup_printf("--area=%s", origin->project_area);
+    gchar *room = g_strdup_printf("--room=%u", origin->project_room);
+    gchar *door = g_strdup_printf("--source-door-id=%u", form->door_id);
+    gchar *argv[] = {"python3", "scripts/editor_cli.py", "--command=door-return-plan",
+        origin->project_aria ? "--world=aria" : "--world=zero_mission",
+        area, room, door, "--format=tsv", NULL};
+    gchar *out = NULL, *err = NULL;
+    GError *error = NULL;
+    gint status = -1;
+    gboolean launched = g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
+                                     NULL, NULL, &out, &err, &status, &error);
+    g_free(area); g_free(room); g_free(door);
+    if (!launched || !g_spawn_check_wait_status(status, NULL)) {
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "Cannot prepare return: save a verified forward link and both doors first;"
+            " target door must not already have a transition.");
+        g_free(out); g_free(err); g_clear_error(&error);
+        return;
+    }
+    gchar **parts = g_strsplit(out ? out : "", "\t", 10);
+    ReverseLinkPending0115 *req = g_new0(ReverseLinkPending0115, 1);
+    guint sr, sd, tr, td, px, py;
+    gboolean ok = g_strv_length(parts) == 10 &&
+        (!g_strcmp0(parts[0], "aria") || !g_strcmp0(parts[0], "zero_mission")) &&
+        (!g_strcmp0(parts[4], "aria") || !g_strcmp0(parts[4], "zero_mission")) &&
+        strlen(parts[1]) < sizeof(req->source_area) &&
+        strlen(parts[5]) < sizeof(req->target_area) &&
+        parse_unsigned_field(parts[2], &sr) && sr <= 999 &&
+        parse_unsigned_field(parts[3], &sd) && sd > 0 &&
+        parse_unsigned_field(parts[6], &tr) && tr <= 999 &&
+        parse_unsigned_field(parts[7], &td) && td > 0 &&
+        parse_unsigned_field(parts[8], &px) &&
+        parse_unsigned_field(g_strstrip(parts[9]), &py);
+    if (!ok) {
+        gtk_label_set_text(GTK_LABEL(form->status), "Invalid backend return-link proposal.");
+        g_free(req); g_strfreev(parts); g_free(out); g_free(err);
+        g_clear_error(&error);
+        return;
+    }
+    req->source_aria = !strcmp(parts[0], "aria");
+    g_strlcpy(req->source_area, parts[1], sizeof(req->source_area));
+    req->source_room = sr;
+    req->source_door_id = sd;
+    req->target_aria = !strcmp(parts[4], "aria");
+    g_strlcpy(req->target_area, parts[5], sizeof(req->target_area));
+    req->target_room = tr;
+    req->target_door_id = td;
+    req->spawn_x = px;
+    req->spawn_y = py;
+    g_strfreev(parts); g_free(out); g_free(err); g_clear_error(&error);
+    /* A new explicit request supersedes an unconsumed old request. */
+    g_free(manager->pending_reverse_0115);
+    manager->pending_reverse_0115 = req;
+    for (guint i = 0; i < manager->documents->len; ++i) {
+        NativeWorkspace *opened = g_ptr_array_index(manager->documents, i);
+        if (project_reverse_matches_0115(opened, req)) {
+            project_reverse_apply_0115(opened);
+            gtk_label_set_text(GTK_LABEL(form->status),
+                "Return link staged in the other room. Save that room separately.");
+            return;
+        }
+    }
+    gtk_label_set_text(GTK_LABEL(form->status),
+        "Opening target room; the return link will be STAGED there."
+        " Save that room with its own diskette.");
+    if (req->source_aria)
+        native_workspace_import_aria_async(manager, (guint)atoi(req->source_area),
+                                           req->source_room);
+    else
+        native_workspace_import_async(manager, req->source_area, req->source_room);
+}
+
 static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnotation *item)
 {
     if (!doc || doc->closing || !doc->ready || !doc->map ||
@@ -2187,6 +2325,7 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
     GtkWidget *link = gtk_button_new_with_label("Save destination");
     GtkWidget *pick = gtk_button_new_with_label("Pick room on global map");
     GtkWidget *list_targets = gtk_button_new_with_label("List saved target doors");
+    GtkWidget *prepare_return = gtk_button_new_with_label("Prepare return link");
     gtk_widget_set_sensitive(pick, form->atlas_page != NULL);
     form->unlink = gtk_button_new_with_label("Unlink");
     GtkWidget *close = gtk_button_new_with_label("Close");
@@ -2262,6 +2401,7 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
     gtk_box_append(GTK_BOX(actions), save);
     gtk_box_append(GTK_BOX(actions), pick);
     gtk_box_append(GTK_BOX(actions), link);
+    gtk_box_append(GTK_BOX(actions), prepare_return);
     gtk_box_append(GTK_BOX(actions), form->unlink);
     gtk_box_append(GTK_BOX(actions), close);
     gtk_box_append(GTK_BOX(outer), actions);
@@ -2278,6 +2418,7 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
     g_signal_connect(form->target_choices, "notify::selected",
                      G_CALLBACK(project_door_target_chosen_0114), form);
     g_signal_connect(link, "clicked", G_CALLBACK(project_door_link_0102), form);
+    g_signal_connect(prepare_return, "clicked", G_CALLBACK(project_door_prepare_return_0115), form);
     g_signal_connect(form->unlink, "clicked", G_CALLBACK(project_door_unlink_0102), form);
     g_signal_connect_swapped(close, "clicked", G_CALLBACK(gtk_window_destroy), form->window);
     gtk_window_present(GTK_WINDOW(form->window));
@@ -4731,6 +4872,7 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
     g_free(summary);
     focus_page(doc->page);
     focus_page(doc->palette_page);
+    project_reverse_apply_0115(doc); /* only if this newly opened room was requested */
 }
 
 static void imported(GObject *object, GAsyncResult *result, gpointer userdata)
@@ -5114,6 +5256,7 @@ void native_workspace_free(NativeWorkspace *manager)
         }
         g_ptr_array_free(manager->documents, TRUE);
     }
+    g_free(manager->pending_reverse_0115);
     if (manager->world_atlas_page)
         g_object_remove_weak_pointer(G_OBJECT(manager->world_atlas_page),
                                      (gpointer *)&manager->world_atlas_page);

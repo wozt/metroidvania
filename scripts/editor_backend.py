@@ -63,6 +63,7 @@ CAPABILITIES = {
     "collision-validate": "available_project_room_data_only",
     "door-list": "available_project_room_data_only",
     "door-target-list": "available_saved_project_door_targets_only",
+    "door-return-plan": "available_project_room_data_only",
     "door-inspect": "available_project_room_data_only",
     "door-create": "available_project_room_data_only",
     "door-adopt": "available_project_room_data_only",
@@ -131,6 +132,7 @@ COMMAND_FIELDS = {
     "collision-validate": {"world", "area", "room", "width", "height"},
     "door-list": {"world", "area", "room", "width", "height"},
     "door-target-list": {"target_world", "target_area", "target_room"},
+    "door-return-plan": {"world", "area", "room", "source_door_id"},
     "door-inspect": {"world", "area", "room", "width", "height", "id"},
     "door-create": {"world", "area", "room", "width", "height", "x", "y",
                     "door_width", "door_height", "label", "door_type", "facing"},
@@ -316,6 +318,78 @@ def _saved_target_doors(root: Path, target: dict[str, Any]) -> list[dict]:
         raise ValueError("invalid saved destination room geometry")
     validated = project_room_entities.validate(raw, world, area, room, width, height)
     return sorted(validated["doors"], key=lambda door: door["id"])
+
+
+# PATCH_0115_RECIPROCAL_PLAN. A read-only plan, never a two-room write.
+# Both source and destination doors and the forward transition must already be
+# saved. The GTK UI subsequently creates the reverse transition only in the
+# destination room's own staged document; its diskette remains mandatory.
+def _saved_room_document_0115(root: Path, identity: dict[str, Any]) -> dict:
+    world, area, room = (identity[key] for key in
+                         ('target_world', 'target_area', 'target_room'))
+    path = project_room_entities.path_for(root, world, area, room, 16, 16)
+    project_room_entities._check_path(path, root)
+    if not path.is_file() or path.stat().st_size > 4_000_000:
+        raise ValueError("save both project doors before preparing the return link")
+    try:
+        raw = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("invalid saved room document") from exc
+    if not isinstance(raw, dict):
+        raise ValueError("invalid saved room document")
+    raw = project_room_entities.migrate(raw)
+    width, height = raw.get('width_px'), raw.get('height_px')
+    if type(width) is not int or type(height) is not int:
+        raise ValueError("invalid saved room geometry")
+    return project_room_entities.validate(raw, world, area, room, width, height)
+
+
+def _reciprocal_plan_0115(root: Path, options: dict[str, Any]) -> dict[str, Any]:
+    original = _transition_target({
+        'target_world': options.get('world'),
+        'target_area': options.get('area'),
+        'target_room': options.get('room'),
+        'target_door_id': options.get('source_door_id'),
+    }, root)
+    original_id = original['target_door_id']
+    if original_id == 0:
+        raise ValueError("a saved source project door is required")
+    origin_doc = _saved_room_document_0115(root, original)
+    source_door = next((door for door in origin_doc['doors']
+                        if door['id'] == original_id), None)
+    if source_door is None:
+        raise ValueError("source project door is missing")
+    forwards = [link for link in origin_doc['transitions']
+                if link['source_door_id'] == original_id]
+    if len(forwards) != 1:
+        raise ValueError("save the forward destination and its source room first")
+    forward = forwards[0]
+    if forward['target_door_id'] == 0:
+        raise ValueError("choose and save an exact destination project door first")
+    target = _transition_target({
+        'target_world': ('zero_mission' if forward['target_world'] == 'mzm' else 'aria'),
+        'target_area': forward['target_area'],
+        'target_room': forward['target_room'],
+        'target_door_id': forward['target_door_id'],
+    }, root)
+    dest_doc = _saved_room_document_0115(root, target)
+    if any(link['source_door_id'] == target['target_door_id']
+           for link in dest_doc['transitions']):
+        raise ValueError("destination project door already has a transition; no overwrite")
+    return {
+        'source_world': ('zero_mission' if target['target_world'] == 'mzm' else 'aria'),
+        'source_area': target['target_area'],
+        'source_room': target['target_room'],
+        'source_door_id': target['target_door_id'],
+        'target_world': ('zero_mission' if original['target_world'] == 'mzm' else 'aria'),
+        'target_area': original['target_area'],
+        'target_room': original['target_room'],
+        'target_door_id': original_id,
+        'spawn_x': source_door['x'],
+        'spawn_y': source_door['y'],
+        'status': 'prepared_only_not_persisted',
+        'engine_adapter': 'unavailable',
+    }
 
 
 def _transition_target(options: dict[str, Any], root: Path = ROOT) -> dict[str, Any]:
@@ -911,6 +985,8 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
             path = project_room_entities.save(root_path, document)
             result.update({"persisted": True, "path": str(path)})
         return result
+    if command == "door-return-plan":
+        return _reciprocal_plan_0115(root_path, options)
     if command == "door-target-list":
         target = _transition_target(options, root_path)
         return {"target": target, "doors": _saved_target_doors(root_path, target),

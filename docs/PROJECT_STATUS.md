@@ -1003,3 +1003,18 @@ silently reused as a project door ID. The target chooser does not change the
 room until the user explicitly saves the destination and then the room.
 No automatic reciprocal link or native engine encoder is implemented.
 
+
+
+## Patch 0115 - staged reciprocal door links
+
+- Added a read-only backend/CLI `door-return-plan` that verifies a previously
+  saved forward link, the exact saved project doors at both ends, and a vacant
+  destination door before producing a reverse-link proposal.
+- Added `Prepare return link` in the GTK project door form. The target room is
+  opened or reused and the reverse link is created **only in that room's
+  per-tab private draft**, with its own dirty star, undo/redo, and diskette.
+- The source room must be explicitly saved before preparing a return link.
+  The two room saves are separate, not a global transaction. No ROM or saved
+  destination document is mutated by planning or by GTK staging.
+- Original native-only door IDs are not substituted for project door IDs;
+  gameplay and cross-engine transition adapters remain unavailable.

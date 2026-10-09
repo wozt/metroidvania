@@ -495,10 +495,10 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
      * use a separate file: never touch the live overlay before Save. */
     gchar **environment = g_get_environ();
     if (doc->stage_token) {
-        gchar **staged = g_environ_setenv(environment, "MV_EDITOR_ROOM_STAGE",
-                                         doc->stage_token, TRUE);
-        g_strfreev(environment);
-        environment = staged;
+        /* g_environ_setenv() takes ownership of its input vector: it may
+         * reuse or free it. Never free the old pointer separately. */
+        environment = g_environ_setenv(environment, "MV_EDITOR_ROOM_STAGE",
+                                      doc->stage_token, TRUE);
     }
     gboolean launched = g_spawn_sync(NULL, (gchar **)args->pdata, environment,
                                      G_SPAWN_SEARCH_PATH, NULL, NULL,

@@ -1,26 +1,45 @@
 # Roadmap
 
-## P0 - Complete structural inventories
+## P0 - Editor stabilization and systematic render audit
 
-- decoded: Aria room records, transitions, graphics references and entity lists;
-- verified: all eleven Aria campaign bosses have stable room/entity identities;
-- resolve MZM Imago room variants;
-- add access gates and connections to both savepoint inventories.
+- keep the vertical workspace navigation and eliminate GTK lifecycle regressions;
+- audit every discovered MZM and Aria room through the real decoders;
+- expose exact success/partial/unsupported/error diagnostics in headless and GTK;
+- correct renderer assumptions only from pinned source or verified ROM evidence.
 
-Exit criterion: boss and savepoint records for both games have stable native
-identities and no invented technical fields.
+Exit criterion: both complete room catalogs produce deterministic structured
+reports with no unexplained decoder errors. **Met for the current private input:**
+MZM 330 partial + 1 unsupported; Aria 342 partial + 1 unsupported; zero errors.
 
-## P1 - Native room reconstruction
+## P1 - Shared backend and automation interface
 
-- complete Zero Mission collision, entities, animated graphics and effects;
-- build the equivalent Aria room renderer and local override format;
-- display and edit doors, objects, enemies, music and scripts in GTK4;
-- validate reconstructed rooms against reference captures.
+- route non-visual editor operations through one validated backend;
+- maintain stable CLI commands, JSON envelopes, batch validation and exit codes;
+- keep GUI/headless project validation and private draft creation behavior aligned;
+- add backend contracts before enabling unavailable editor controls.
 
-Exit criterion: one representative room from each game renders and collides
-natively from imported data with verified entities and transitions.
+Exit criterion: every enabled non-visual operation is scriptable without GTK,
+with functional no-display tests and explicit capability reporting. **In progress:**
+project/world/area/room queries, draft operations, render and audit are available.
 
-## P2 - Two native gameplay kernels
+## P2 - Complete room, object and event authoring
+
+- finish native tile, collision, door, object, trigger and event extraction;
+- define versioned project-owned schemas and validated per-world encoders;
+- support create/edit/delete, undo/redo, validation and deterministic export;
+- retain native source records as immutable references.
+
+Exit criterion: representative project rooms for both worlds can be authored,
+validated and exported to an engine-neutral package without ROM mutation.
+
+## P3 - Story, cutscene and audio workspaces
+
+- complete typed event conditions/actions and cross-reference validation;
+- add cutscene tracks, keyframes, preview and deterministic export;
+- inventory native music/SFX, decode private previews and author project audio cues;
+- expose all supported operations through the shared CLI.
+
+## P4 - Two native gameplay kernels
 
 - define separate MZM and Aria engine adapters;
 - implement native player movement, collision, damage and room lifecycle;
@@ -30,14 +49,14 @@ natively from imported data with verified entities and transitions.
 Exit criterion: each native character can complete a source-authentic test path
 in its own engine without emulation.
 
-## P3 - Crossover prologues
+## P5 - Crossover prologues
 
 - implement Samus against Creaking Skull in Aria rules;
 - implement Soma against mandatory Deorem in MZM rules;
 - add both portal rewards and the authored Interzone scene;
 - persist order-independent prologue completion.
 
-## P4 - Duo campaign
+## P6 - Duo campaign
 
 - instantiate both protagonists in one active world engine;
 - add character switching, companion AI and softlock recovery;
@@ -45,7 +64,7 @@ in its own engine without emulation.
 - connect verified save rooms through authored world links;
 - implement the full concurrent timeline and both secret epilogues.
 
-## P5 - Production
+## P7 - Production
 
 - complete content verification and balancing;
 - version persistent saves and migrations;

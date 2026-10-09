@@ -13,10 +13,11 @@ game frontend.
 | Story | Data baseline | Complete campaign bible and dependency-checked parallel timeline |
 | Boss inventory | Verified native identities | 9 MZM encounters and all 11 Aria campaign bosses source/ROM-mapped |
 | Savepoints | Verified metadata | 29 MZM platform rooms and 17 Aria map-flag rooms |
-| MZM rooms | Partial | descriptors, BG1/BG2 editing, collision, doors and native entity variants |
-| Aria rooms | Structural inventory + preview | 343 descriptors, 725 transitions and 2,336 entity placements |
+| MZM rooms | Partial, systematically audited | 331 descriptors: 330 partial renders, 1 unsupported sentinel, 0 errors |
+| Aria rooms | Partial, systematically audited | 343 descriptors: 342 partial renders, 1 unsupported affine/non-text room, 0 errors |
 | Character assets | Partial | local verified Samus and Soma animation extraction |
-| GTK4 editor | Active | shared room documents, native-data overlays and a two-world object catalog |
+| GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
+| Headless backend | Active foundation | stable CLI envelope, project/catalog/draft/render/audit operations; mutation coverage incomplete |
 | Native gameplay engines | Not started | no player physics, combat, entities or room runtime yet |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
@@ -89,11 +90,11 @@ and the proprietary-file guard passed.
 
 ## Immediate priorities
 
-1. Decode native object graphics and behaviors for truthful catalog previews.
-2. Define the project-owned object/ability/soul schema and validated encoders.
-3. Decode trigger regions and attach them to the common room-data overlays.
-4. Define the native engine contracts around decoded room data.
-5. Implement the two prologues before general dual-character traversal.
+1. Extend the shared backend to tile, collision, door, object and event mutation.
+2. Define project-owned object/ability/soul schemas and validated encoders.
+3. Complete trigger extraction and attach typed events to room overlays.
+4. Add native audio inventory/preview and cutscene timeline operations.
+5. Define the two native engine adapter contracts around validated exported data.
 
 ## Non-negotiable constraints
 
@@ -686,3 +687,28 @@ and the proprietary-file guard passed.
   a dedicated regression asserts navigation mapping, room focus and removal of
   the ROM visuals page. GTK4/CMake, CTest, all Python tests and proprietary-file
   guard remain validation gates.
+
+## Patch 0088 - exhaustive render audit and shared headless backend
+
+- Added a real decoder audit for all discovered rooms, with bounded area-level
+  multiprocessing and structured per-room identities, resource references,
+  layer status, expected dimensions, unresolved references, duration and errors.
+- Corrected MZM native RLE bounds/tails, source-table tileset aliases and test
+  resource paths. Corrected Aria palette resource units as a final row index.
+  Current private audit: MZM 331 rooms (330 partial, 1 unsupported, 0 errors),
+  Aria 343 rooms (342 partial, 1 unsupported, 0 errors).
+- Added `scripts/editor_backend.py`, the stable `fusion_editor_cli` launcher and
+  `fusion_map_editor --headless`. Both run without GTK/display initialization,
+  use strict command options, JSON/error envelopes, bounded batch validation,
+  dry-run behavior and honest unavailable capabilities.
+- Both GTK room browsers now run selected-area or complete-world audits through
+  the shared backend and retain detailed reports only in ignored private output.
+- Rendering caches reuse parsed MZM source/tilesets and decoded Aria resources
+  within a worker. Audits exercise the renderer without producing hundreds of
+  preview images.
+- Native gameplay, full rendering, audio decoding and engine export remain
+  unavailable; the capability matrix and CLI reference state these boundaries.
+- Validation: all 222 Python tests and all eight CTest targets pass, including
+  both no-display native entry points and GTK4 lifecycle coverage. The private
+  exhaustive audits above completed with zero decoder errors, and the tracked
+  proprietary-file guard passed.

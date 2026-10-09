@@ -52,8 +52,18 @@ static void test_shared_browser_shells(void)
         GListModel *model = gtk_drop_down_get_model(GTK_DROP_DOWN(area_filter));
         g_assert_true(G_IS_LIST_MODEL(model));
         g_assert_cmpuint(g_list_model_get_n_items(model), ==, i == 0 ? 8u : 13u);
+        GtkWidget *audit_area = g_object_get_data(
+            G_OBJECT(pages[i]), "mv-audit-area-action");
+        GtkWidget *audit_world = g_object_get_data(
+            G_OBJECT(pages[i]), "mv-audit-world-action");
+        g_assert_true(GTK_IS_BUTTON(audit_area));
+        g_assert_true(GTK_IS_BUTTON(audit_world));
+        g_assert_false(gtk_widget_get_sensitive(audit_area));
+        g_assert_true(gtk_widget_get_sensitive(audit_world));
         gtk_drop_down_set_selected(GTK_DROP_DOWN(area_filter), 1);
+        g_assert_true(gtk_widget_get_sensitive(audit_area));
         gtk_drop_down_set_selected(GTK_DROP_DOWN(area_filter), 0);
+        g_assert_false(gtk_widget_get_sensitive(audit_area));
     }
     /* Exercise filtering and selection during teardown even without
      * local proprietary catalogs. GTK must not use stale toolbar widgets. */

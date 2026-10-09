@@ -6,6 +6,7 @@ from scripts.aos_room_render import (
     GBA_ROM_BASE,
     composite_backgrounds,
     decode_background,
+    load_video_memory,
     lz77_at,
     render_background,
     resource_payload,
@@ -13,6 +14,19 @@ from scripts.aos_room_render import (
 
 
 class AriaRoomRenderTests(unittest.TestCase):
+    def test_palette_resource_units_are_a_final_row_index(self):
+        rom = bytearray(0x100)
+        pointer = GBA_ROM_BASE + 0x20
+        struct.pack_into("<4B", rom, 0x20, 0, 4, 0, 0)
+        rom[0x24:0x44] = bytes(range(32))
+        room = {"graphics_loads": [], "palette_loads": [{
+            "entry_pointer": "0x08000010",
+            "resource_pointer": f"0x{pointer:08x}",
+            "parameters": [0, 0, 1],
+        }]}
+        _vram, palette, _loads = load_video_memory(bytes(rom), room)
+        self.assertEqual(palette[:32], bytes(range(32)))
+
     def test_lz77_pointer_decode_and_compressed_resource_header(self):
         rom = bytearray(0x100)
         stream = bytes([0x10, 8, 0, 0, 0, 0, 4, 0x20, 0, 0, 1, 2, 3])

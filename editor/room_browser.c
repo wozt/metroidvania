@@ -9,6 +9,7 @@ typedef struct {
     RoomWorld world;
     GtkWidget *page, *list, *status, *details, *picture;
     GtkWidget *render_button, *open_button, *mode, *area_filter, *context_menu_button;
+    GtkWidget *audit_area_button, *audit_world_button;
     guint draft_refresh_generation;
     gboolean selected, busy;
     guint area, room;
@@ -26,11 +27,15 @@ static void room_browser_state_free(gpointer userdata)
     g_signal_handlers_disconnect_by_data(browser->mode, browser);
     g_signal_handlers_disconnect_by_data(browser->area_filter, browser);
     g_signal_handlers_disconnect_by_data(browser->render_button, browser);
+    g_signal_handlers_disconnect_by_data(browser->audit_area_button, browser);
+    g_signal_handlers_disconnect_by_data(browser->audit_world_button, browser);
 
     g_object_unref(browser->list);
     g_object_unref(browser->mode);
     g_object_unref(browser->area_filter);
     g_object_unref(browser->render_button);
+    g_object_unref(browser->audit_area_button);
+    g_object_unref(browser->audit_world_button);
     g_object_unref(browser->open_button);
     g_object_unref(browser->status);
     g_object_unref(browser->details);
@@ -165,6 +170,9 @@ static void render_complete(GObject *object, GAsyncResult *result, gpointer user
     guint room = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(process), "mv-room"));
     browser->busy = FALSE;
     gtk_widget_set_sensitive(browser->render_button, browser->selected);
+    gtk_widget_set_sensitive(browser->audit_world_button, TRUE);
+    gtk_widget_set_sensitive(browser->audit_area_button,
+        gtk_drop_down_get_selected(GTK_DROP_DOWN(browser->area_filter)) != 0);
     if (ok && g_subprocess_get_successful(process)) {
         if (browser->selected && browser->area == area && browser->room == room) {
             display_preview(browser);
@@ -185,6 +193,96 @@ static void render_complete(GObject *object, GAsyncResult *result, gpointer user
     g_free(output);
     g_free(diagnostic);
     g_object_unref(browser->page); /* Strong ref retained until async completion. */
+}
+
+static void audit_complete(GObject *object, GAsyncResult *result, gpointer userdata)
+{
+    RoomBrowser *browser = userdata;
+    GError *error = NULL;
+    gchar *output = NULL, *diagnostic = NULL;
+    gboolean ok = g_subprocess_communicate_utf8_finish(
+        G_SUBPROCESS(object), result, &output, &diagnostic, &error);
+    browser->busy = FALSE;
+    gtk_widget_set_sensitive(browser->render_button, browser->selected);
+    gtk_widget_set_sensitive(browser->audit_world_button, TRUE);
+    gtk_widget_set_sensitive(browser->audit_area_button,
+        gtk_drop_down_get_selected(GTK_DROP_DOWN(browser->area_filter)) != 0);
+    if (ok && g_subprocess_get_successful(G_SUBPROCESS(object))) {
+        const gchar *summary = output ? g_strstrip(output) : "";
+        gchar *message = g_strdup_printf(
+            "Render audit complete: %.700s. Detailed private reports are under "
+            "assets/extracted/audits/.", *summary ? summary : "no summary returned");
+        gtk_label_set_text(GTK_LABEL(browser->status), message);
+        g_free(message);
+    } else {
+        const char *reason = error ? error->message : diagnostic;
+        gchar *message = g_strdup_printf("Render audit failed: %.700s",
+            reason && *reason ? reason : "Failed without diagnostic");
+        gtk_label_set_text(GTK_LABEL(browser->status), message);
+        g_free(message);
+    }
+    g_clear_error(&error);
+    g_free(output);
+    g_free(diagnostic);
+    g_object_unref(browser->page);
+}
+
+static void audit_rooms(GtkButton *button, gpointer userdata)
+{
+    RoomBrowser *browser = userdata;
+    gboolean one_area = GTK_WIDGET(button) == browser->audit_area_button;
+    guint selected_area = gtk_drop_down_get_selected(
+        GTK_DROP_DOWN(browser->area_filter));
+    char area_option[64], report_option[96];
+    GError *error = NULL;
+    GSubprocess *process;
+
+    if (browser->busy) return;
+    if (one_area && selected_area == 0) {
+        gtk_label_set_text(GTK_LABEL(browser->status),
+            "Choose one area before starting an area render audit.");
+        return;
+    }
+    if (one_area) {
+        const char *area = browser->world == ROOM_WORLD_ARIA ? NULL :
+            zero_areas[selected_area - 1];
+        if (area)
+            snprintf(area_option, sizeof(area_option), "--area=%s", area);
+        else
+            snprintf(area_option, sizeof(area_option), "--area=%u", selected_area - 1);
+        snprintf(report_option, sizeof(report_option), "--report=%s_area_%02u_ui",
+            browser->world == ROOM_WORLD_ARIA ? "aria" : "zero_mission",
+            selected_area - 1);
+        process = g_subprocess_new(
+            G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
+            &error, "python3", "scripts/editor_cli.py", "--command=room-audit",
+            browser->world == ROOM_WORLD_ARIA ? "--world=aria" : "--world=zero_mission",
+            area_option, report_option, "--workers=1", "--format=text", NULL);
+    } else {
+        snprintf(report_option, sizeof(report_option), "--report=%s_ui",
+            browser->world == ROOM_WORLD_ARIA ? "aria" : "zero_mission");
+        process = g_subprocess_new(
+            G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
+            &error, "python3", "scripts/editor_cli.py", "--command=room-audit",
+            browser->world == ROOM_WORLD_ARIA ? "--world=aria" : "--world=zero_mission",
+            report_option, "--workers=4", "--format=text", NULL);
+    }
+    if (!process) {
+        gtk_label_set_text(GTK_LABEL(browser->status),
+            error ? error->message : "Unable to start render audit.");
+        g_clear_error(&error);
+        return;
+    }
+    browser->busy = TRUE;
+    gtk_widget_set_sensitive(browser->render_button, FALSE);
+    gtk_widget_set_sensitive(browser->audit_area_button, FALSE);
+    gtk_widget_set_sensitive(browser->audit_world_button, FALSE);
+    gtk_label_set_text(GTK_LABEL(browser->status), one_area ?
+        "Auditing every discovered room in the selected area..." :
+        "Auditing every discovered room in this world. This may take several minutes...");
+    g_object_ref(browser->page);
+    g_subprocess_communicate_utf8_async(process, NULL, NULL, audit_complete, browser);
+    g_object_unref(process);
 }
 
 static void render_selected(GtkButton *button, gpointer userdata)
@@ -238,6 +336,9 @@ static void area_changed(GObject *object, GParamSpec *pspec, gpointer userdata)
     (void)object; (void)pspec;
     gtk_list_box_unselect_all(GTK_LIST_BOX(browser->list));
     gtk_list_box_invalidate_filter(GTK_LIST_BOX(browser->list));
+    gtk_widget_set_sensitive(browser->audit_area_button,
+        !browser->busy && gtk_drop_down_get_selected(
+            GTK_DROP_DOWN(browser->area_filter)) != 0);
 }
 
 static void append_room(RoomBrowser *browser, guint area, guint room,
@@ -761,6 +862,8 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     browser->details = gtk_label_new("Select a verified original room.");
     browser->status = gtk_label_new("Loading room catalog...");
     browser->render_button = gtk_button_new_with_label("Render selected room");
+    browser->audit_area_button = gtk_button_new_with_label("Audit area");
+    browser->audit_world_button = gtk_button_new_with_label("Audit world");
     browser->mode = gtk_drop_down_new_from_strings(
         world == ROOM_WORLD_ARIA ? aria_modes : zero_modes);
     GtkWidget *open = gtk_button_new_with_label("Open room in editor");
@@ -768,6 +871,7 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     browser->open_button = open;
     gtk_widget_set_sensitive(open, FALSE);
     gtk_widget_set_sensitive(browser->render_button, FALSE);
+    gtk_widget_set_sensitive(browser->audit_area_button, FALSE);
     GtkWidget *toolbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *layout = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
     GtkWidget *left = gtk_scrolled_window_new();
@@ -790,6 +894,8 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_box_append(GTK_BOX(toolbar), gtk_label_new("Layer:"));
     gtk_box_append(GTK_BOX(toolbar), browser->mode);
     gtk_box_append(GTK_BOX(toolbar), browser->render_button);
+    gtk_box_append(GTK_BOX(toolbar), browser->audit_area_button);
+    gtk_box_append(GTK_BOX(toolbar), browser->audit_world_button);
     gtk_box_append(GTK_BOX(toolbar), open);
     gtk_box_append(GTK_BOX(toolbar), reload);
     gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(menu_button), "view-more-symbolic");
@@ -851,11 +957,17 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
                      G_CALLBACK(area_changed), browser);
     g_signal_connect(browser->mode, "notify::selected", G_CALLBACK(mode_changed), browser);
     g_signal_connect(browser->render_button, "clicked", G_CALLBACK(render_selected), browser);
+    g_signal_connect(browser->audit_area_button, "clicked", G_CALLBACK(audit_rooms), browser);
+    g_signal_connect(browser->audit_world_button, "clicked", G_CALLBACK(audit_rooms), browser);
     g_signal_connect(open, "clicked", G_CALLBACK(edit_selected), browser);
     g_signal_connect_object(reload, "clicked", G_CALLBACK(room_draft_refresh_clicked),
                             browser->page, 0);
     g_object_set_data(G_OBJECT(browser->page), "mv-draft-refresh-action", reload);
     g_object_set_data(G_OBJECT(browser->page), "mv-room-open-action", open);
+    g_object_set_data(G_OBJECT(browser->page), "mv-audit-area-action",
+                      browser->audit_area_button);
+    g_object_set_data(G_OBJECT(browser->page), "mv-audit-world-action",
+                      browser->audit_world_button);
 
     /* The GTK container may dispose the toolbar before the filtered list.
      * Independent strong references prevent callbacks from seeing stale
@@ -864,6 +976,8 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     g_object_ref(browser->mode);
     g_object_ref(browser->area_filter);
     g_object_ref(browser->render_button);
+    g_object_ref(browser->audit_area_button);
+    g_object_ref(browser->audit_world_button);
     g_object_ref(browser->open_button);
     g_object_ref(browser->status);
     g_object_ref(browser->details);

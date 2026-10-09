@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* GTK4 workspace for decoded native rooms and locally extracted assets. */
 #include "native_workspace.h"
+#include "core/editor_cli_launcher.h"
 #include "world_atlas.h"
 #include "story_workspace.h"
 #include "room_browser.h"
@@ -513,7 +514,13 @@ int main(int argc, char **argv)
     Editor editor = {0};
     GtkApplication *application;
     int result;
-    (void)argc;
+    int index;
+
+    for (index = 1; index < argc; ++index) {
+        if (strcmp(argv[index], "--headless") == 0) {
+            return fusion_editor_cli_launch(argc, argv, true);
+        }
+    }
 
     editor.native_workspace = native_workspace_new();
     if (!editor.native_workspace) {

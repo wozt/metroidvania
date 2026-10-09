@@ -57,9 +57,21 @@ Run the active editor:
 ./build/fusion_map_editor
 ```
 
+Run the shared backend without a display server:
+
+```sh
+./build/fusion_editor_cli --command=project-info --format=json
+./build/fusion_map_editor --headless --command=capabilities --format=json
+```
+
+The stable command, batch, JSON and exit-code contracts are documented in
+[`docs/EDITOR_CLI.md`](docs/EDITOR_CLI.md).
+
 The editor currently supports Zero Mission native room browsing, BG1/BG2
 metatile editing in private overrides, the decoded MZM world atlas, and local
-Samus/Soma sprite previews. Aria has a read-only, on-demand BG1/BG2/BG3 preview browser; full rendering and editing remain pending.
+Samus/Soma sprite previews. Both room browsers can render one native room or
+audit an area/world through the shared headless backend. Aria reconstruction
+remains partial; complete rendering and gameplay are not claimed.
 
 ## Current verified data
 

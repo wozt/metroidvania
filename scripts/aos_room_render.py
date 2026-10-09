@@ -106,14 +106,21 @@ def resource_payload(rom: bytes, pointer: int) -> tuple[bytes, dict]:
     }
 
 
-def load_video_memory(rom: bytes, room: dict) -> tuple[bytes, bytes, list[dict]]:
+def load_video_memory(rom: bytes, room: dict,
+                      resource_cache: dict[int, tuple[bytes, dict]] | None = None
+                      ) -> tuple[bytes, bytes, list[dict]]:
     """Apply the room's native graphics and palette load lists."""
     vram = bytearray(VRAM_SIZE)
     palette = bytearray(PALETTE_SIZE)
     loads = []
     for entry in room["graphics_loads"]:
         pointer = int(entry["resource_pointer"], 16)
-        payload, header = resource_payload(rom, pointer)
+        cached = resource_cache.get(pointer) if resource_cache is not None else None
+        if cached is None:
+            cached = resource_payload(rom, pointer)
+            if resource_cache is not None:
+                resource_cache[pointer] = cached
+        payload, header = cached
         destination_block, source_block, block_count = entry["parameters"]
         source = source_block * 0x800
         destination = destination_block * 0x800
@@ -133,13 +140,16 @@ def load_video_memory(rom: bytes, room: dict) -> tuple[bytes, bytes, list[dict]]
     for entry in room["palette_loads"]:
         pointer = int(entry["resource_pointer"], 16)
         offset = _offset(pointer, 4, len(rom))
-        encoding, color_mode, row_count, parameter = struct.unpack_from(
+        encoding, color_mode, final_row_index, parameter = struct.unpack_from(
             "<4B", rom, offset
         )
         if encoding != 0:
             raise ValueError(f"unsupported palette encoding at 0x{pointer:08x}")
         destination_row, source_row, count = entry["parameters"]
-        if source_row + count > row_count or destination_row + count > 16:
+        # The native resource header stores the final valid row index, not a
+        # row count. A value of 41 therefore exposes rows 0 through 41.
+        available_rows = final_row_index + 1
+        if source_row + count > available_rows or destination_row + count > 16:
             raise ValueError(f"palette load exceeds bounds at {entry['entry_pointer']}")
         source = offset + 4 + source_row * 0x20
         length = count * 0x20
@@ -157,7 +167,7 @@ def load_video_memory(rom: bytes, room: dict) -> tuple[bytes, bytes, list[dict]]
                 "pointer": f"0x{pointer:08x}",
                 "encoding": encoding,
                 "color_mode": color_mode,
-                "units": row_count,
+                "units": final_row_index,
                 "parameter": parameter,
             },
         })
@@ -356,12 +366,17 @@ def collision_preview(background: dict) -> bytes:
 
 
 def render_room(rom: bytes, area: int, room_number: int,
-                *, verify_hash: bool = True) -> dict:
+                *, verify_hash: bool = True, world_catalog: dict | None = None,
+                write_outputs: bool = True,
+                resource_cache: dict[int, tuple[bytes, dict]] | None = None) -> dict:
     if not 0 <= area < AREA_COUNT or room_number < 0:
         raise ValueError("invalid Aria room selection")
     if verify_hash and hashlib.sha1(rom, usedforsecurity=False).hexdigest() != EXPECTED_SHA1:
         raise ValueError("expected unmodified Aria of Sorrow USA ROM")
-    world = decode_world(rom, verify_hash=verify_hash)
+    world = world_catalog if world_catalog is not None else decode_world(
+        rom, verify_hash=verify_hash)
+    if world.get("format") != "MV_AOS_WORLD_2":
+        raise ValueError("invalid predecoded Aria world catalog")
     try:
         room = next(
             entry for entry in world["rooms"]
@@ -370,7 +385,7 @@ def render_room(rom: bytes, area: int, room_number: int,
     except StopIteration as exc:
         raise ValueError(f"unknown Aria room {area}:{room_number}") from exc
 
-    vram, palette, loads = load_video_memory(rom, room)
+    vram, palette, loads = load_video_memory(rom, room, resource_cache)
     backgrounds = [decode_background(rom, item) for item in room["backgrounds"]]
     rendered = []
     layer_records = []
@@ -388,19 +403,25 @@ def render_room(rom: bytes, area: int, room_number: int,
             for pixel in range(width * height):
                 rgb[pixel * 3:pixel * 3 + 3] = rgba[pixel * 4:pixel * 4 + 3]
             path = f"{prefix}_bg{background['layer']}.bmp"
-            write_generated(path, bmp24(width, height, rgb))
+            bitmap = bmp24(width, height, rgb)
+            if write_outputs:
+                write_generated(path, bitmap)
             record.update({"path": path, "unresolved_tiles_or_pixels": unresolved})
             rendered.append((background, rgba))
         layer_records.append(record)
 
     width, height, composite = composite_backgrounds(rendered)
     composite_path = f"{prefix}_composite.bmp"
-    write_generated(composite_path, bmp24(width, height, composite))
+    composite_bitmap = bmp24(width, height, composite)
+    if write_outputs:
+        write_generated(composite_path, composite_bitmap)
     bg1 = next(item for item in backgrounds if item["layer"] == 1)
     collision_path = None
     if bg1.get("collision") is not None:
         collision_path = f"{prefix}_collision.bmp"
-        write_generated(collision_path, collision_preview(bg1))
+        collision_bitmap = collision_preview(bg1)
+        if write_outputs:
+            write_generated(collision_path, collision_bitmap)
 
     result = {
         "format": "MV_AOS_RENDER_1",
@@ -420,6 +441,7 @@ def render_room(rom: bytes, area: int, room_number: int,
         "layers": layer_records,
         "entity_count": len(room["entities"]),
         "transition_count": len(room["transitions"]),
+        "outputs_written": write_outputs,
         "limitations": [
             "static-origin composite does not simulate parallax camera movement",
             "affine/8 bpp backgrounds, blending, animation and entities are omitted",
@@ -427,7 +449,8 @@ def render_room(rom: bytes, area: int, room_number: int,
         ],
     }
     metadata_path = f"{prefix}.json"
-    write_generated(metadata_path, (json.dumps(result, indent=2) + "\n").encode())
+    if write_outputs:
+        write_generated(metadata_path, (json.dumps(result, indent=2) + "\n").encode())
     return result
 
 

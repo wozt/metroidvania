@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import struct
 import unittest
-from scripts.mzm_room_render import lz77, rle_room, metatiles, graphic_base, bmp24, render_layer
+from scripts.mzm_room_render import (bmp24, graphic_base, lz77, metatiles,
+                                     render_layer, rle_room,
+                                     tileset_resource_indices)
 
 class RenderTest(unittest.TestCase):
     def test_lz77_literals_and_overlap(self):
@@ -14,6 +16,7 @@ class RenderTest(unittest.TestCase):
         # One 2x2 room, low bytes 1,1,2,2 and high bytes 0.
         blob = bytes([2,2,1,0x82,1,0x82,2,0,1,0x84,0,0])
         self.assertEqual(rle_room(blob),(2,2,(1,1,2,2)))
+        self.assertEqual(rle_room(blob + b'room metadata'),(2,2,(1,1,2,2)))
         with self.assertRaises(ValueError): rle_room(blob[:-2])
     def test_metatile_and_render(self):
         # Header + one four-entry metatile. First byte of gfx makes opaque palette value 1.
@@ -32,5 +35,10 @@ class RenderTest(unittest.TestCase):
     def test_invalid_room(self):
         with self.assertRaises(ValueError):rle_room(bytes([0,0,1,0,1,0]))
         with self.assertRaises(ValueError):metatiles(b'\0\0\0')
+    def test_tileset_aliases_follow_the_native_table(self):
+        resources = tileset_resource_indices()
+        self.assertEqual(len(resources), 79)
+        self.assertEqual(resources[41], (40, 40, 40))
+        self.assertEqual(resources[78], (78, 42, 78))
 
 if __name__=='__main__':unittest.main()

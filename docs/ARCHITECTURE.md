@@ -13,12 +13,17 @@ contain a simulated substitute or an emulated gameplay frontend.
 
 ## Active C components
 
-`fusion_native_editor_core` contains the project-owned native map model and
-selection operations:
+`fusion_native_editor_core` contains the project-owned native map model,
+selection operations and display-independent CLI launcher:
 
 - `src/core/native_map.c`: versioned `MVNATIVE 1` room work files, editing,
   history and atomic override persistence;
 - `src/core/native_selection.c`: bounded rectangular metatile selection moves.
+- `src/core/editor_cli_launcher.c`: replaces the process with the versioned
+  shared Python backend; no GTK initialization occurs on this path.
+
+`fusion_editor_cli` is the native headless entry point. `fusion_map_editor
+--headless` reaches the same backend before creating a `GtkApplication`.
 
 The GTK4 executable is assembled from:
 
@@ -37,6 +42,11 @@ BMPs. It is a research utility, not the future game runtime.
 Python tools validate exact USA ROM fingerprints before reading them. They use
 pinned decompilation symbols and audited ROM offsets to produce private output
 under `assets/extracted/`.
+
+`scripts/editor_backend.py` is the shared operation layer for headless commands
+and GTK subprocess actions. `scripts/room_audit.py` executes real MZM and Aria
+decoders for every discovered room, isolates work by native area and emits a
+structured private report. It does not replace either future gameplay engine.
 
 Tracked outputs contain metadata only:
 

@@ -17,11 +17,18 @@ function(fusion_enable_warnings target)
 endfunction()
 
 add_library(fusion_native_editor_core STATIC
+    src/core/editor_cli_launcher.c
     src/core/native_map.c
     src/core/native_selection.c
 )
 target_include_directories(fusion_native_editor_core PUBLIC include)
+target_compile_definitions(fusion_native_editor_core
+    PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 fusion_enable_warnings(fusion_native_editor_core)
+
+add_executable(fusion_editor_cli src/tools/editor_cli.c)
+target_link_libraries(fusion_editor_cli PRIVATE fusion_native_editor_core)
+fusion_enable_warnings(fusion_editor_cli)
 
 find_package(SDL3 CONFIG REQUIRED)
 add_executable(fusion_mzm_room_viewer src/tools/mzm_room_viewer.c)
@@ -54,6 +61,13 @@ else()
 endif()
 
 if(BUILD_TESTING)
+    add_test(NAME editor_cli_headless
+        COMMAND ${CMAKE_COMMAND} -E env --unset=DISPLAY --unset=WAYLAND_DISPLAY
+                $<TARGET_FILE:fusion_editor_cli>
+                --command=project-info --format=json)
+    set_tests_properties(editor_cli_headless PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
     add_executable(fusion_native_map_tests tests/test_native_map.c)
     target_link_libraries(fusion_native_map_tests PRIVATE fusion_native_editor_core)
     fusion_enable_warnings(fusion_native_map_tests)
@@ -65,6 +79,13 @@ if(BUILD_TESTING)
     add_test(NAME native_selection_contract COMMAND fusion_native_selection_tests)
 
     if(GTK4_FOUND)
+        add_test(NAME map_editor_headless
+            COMMAND ${CMAKE_COMMAND} -E env --unset=DISPLAY --unset=WAYLAND_DISPLAY
+                    $<TARGET_FILE:fusion_map_editor> --headless
+                    --command=project-info --format=json)
+        set_tests_properties(map_editor_headless PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
         add_executable(fusion_native_workspace_gtk_tests
             tests/test_native_workspace_gtk.c
             editor/native_workspace.c

@@ -9,6 +9,7 @@ RoomRleDecompress, the tileset table, and verified-ROM raw imports.
 from __future__ import annotations
 
 import argparse
+from functools import lru_cache
 import json
 import re
 import struct
@@ -27,6 +28,7 @@ MAX_TILES = 1024
 MAX_BLOCKS = 6144
 ROOM_PREFIX = 'raw/metroid/data'
 SYM = re.compile(r'^s([A-Za-z0-9]+)_(\d+)_(Bg[012]|Clipdata)$')
+TILESET_TABLE = ROOT / 'third_party/mzm/src/data/rooms_data.c'
 
 
 def read_raw(name: str) -> bytes:
@@ -84,7 +86,7 @@ def rle_room(data: bytes) -> tuple[int, int, tuple[int, ...]]:
         raise ValueError('truncated room RLE')
     width, height = data[:2]
     total = width * height
-    if not 0 < width <= 128 or not 0 < height <= 128 or not 0 < total <= MAX_BLOCKS:
+    if not 0 < width <= 255 or not 0 < height <= 255 or not 0 < total <= MAX_BLOCKS:
         raise ValueError('invalid room dimensions')
     pos = 2
     halves = []
@@ -121,8 +123,8 @@ def rle_room(data: bytes) -> tuple[int, int, tuple[int, ...]]:
         if len(half) != total:
             raise ValueError(f'room RLE pass length {len(half)} != {total}')
         halves.append(half)
-    if any(data[pos:]):
-        raise ValueError('room RLE has nonzero trailing bytes')
+    # Some native declarations append room-specific metadata after both RLE
+    # passes. RoomRleDecompress stops here, so the renderer does the same.
     return width, height, tuple(halves[0][i] | halves[1][i] << 8 for i in range(total))
 
 
@@ -158,31 +160,87 @@ def graphic_base(words: list[int], tile_count: int) -> tuple[int, int]:
     return base, coverage
 
 
-def read_source_room(area: str, number: int) -> dict:
+@lru_cache(maxsize=1)
+def source_rooms() -> tuple[dict, ...]:
     if not ROOM_SOURCE.is_file():
         raise ValueError('pinned MZM source missing: git submodule update --init')
-    rooms = decode_room_descriptors(ROOM_SOURCE.read_text(encoding='utf-8'))
-    for room in rooms:
+    return tuple(decode_room_descriptors(ROOM_SOURCE.read_text(encoding='utf-8')))
+
+
+def read_source_room(area: str, number: int) -> dict:
+    for room in source_rooms():
         if room['area'].lower() == area.lower() and room['index'] == number:
             return room
     raise ValueError(f'unknown Zero Mission room {area}:{number}')
 
 
+@lru_cache(maxsize=1024)
 def room_blob(symbol: str) -> bytes:
     m = SYM.fullmatch(symbol)
     if not m:
         raise ValueError(f'unsupported room resource symbol: {symbol}')
     area, index, kind = m.groups()
-    name = f'rooms/{area.lower()}/{area.lower()}_{index}_{kind.lower()}.gfx'
+    if area == 'Test':
+        name = f'rooms/test/test_{index}_{kind.lower()}.rle'
+    else:
+        name = f'rooms/{area.lower()}/{area.lower()}_{index}_{kind.lower()}.gfx'
     return read_raw(name)
 
 
+@lru_cache(maxsize=79)
 def tileset_blobs(index: int) -> tuple[bytes, bytes, bytes]:
     if not 0 <= index <= 78:
         raise ValueError('unsupported Zero Mission tileset')
-    return (read_raw(f'tilesets/{index}.gfx.lz'),
-            read_raw(f'tilesets/{index}.pal'),
-            read_raw(f'tilesets/{index}.tm'))
+    graphics, palette, tilemap = tileset_resource_indices()[index]
+
+    def resource_path(resource: int, suffix: str) -> str:
+        if resource == 0:
+            names = {
+                'gfx.lz': 'tileset_0_tiles.gfx.lz',
+                'pal': 'tileset_0.pal',
+                'tm': 'tileset_0.tm',
+            }
+            return f'rooms/test/{names[suffix]}'
+        return f'tilesets/{resource}.{suffix}'
+
+    return (read_raw(resource_path(graphics, 'gfx.lz')),
+            read_raw(resource_path(palette, 'pal')),
+            read_raw(resource_path(tilemap, 'tm')))
+
+
+@lru_cache(maxsize=1)
+def tileset_resource_indices() -> tuple[tuple[int, int, int], ...]:
+    """Resolve table aliases such as tileset 41 reusing tileset 40 data."""
+    if not TILESET_TABLE.is_file():
+        raise ValueError('pinned MZM tileset table missing')
+    source = TILESET_TABLE.read_text(encoding='utf-8')
+    try:
+        table = source.split('const struct TilesetEntry sTilesetEntries[79] = {', 1)[1]
+        table = table.split('\n};', 1)[0]
+    except IndexError as exc:
+        raise ValueError('invalid pinned MZM tileset table') from exc
+    resolved = []
+    fields = ('pTileGraphics', 'pPalette', 'pTilemap')
+    suffixes = ('Gfx', 'Pal', 'Tilemap')
+    for index in range(79):
+        entry = re.search(rf'\[{index}\]\s*=\s*\{{(.*?)\n\s*\}}', table, re.S)
+        if entry is None:
+            raise ValueError(f'missing MZM tileset entry {index}')
+        indices = []
+        for field, suffix in zip(fields, suffixes):
+            match = re.search(
+                rf'\.{field}\s*=\s*sTileset_(\d+)_{suffix}\b', entry.group(1))
+            if match is None:
+                raise ValueError(f'invalid MZM tileset {index} {field}')
+            indices.append(int(match.group(1)))
+        resolved.append(tuple(indices))
+    return tuple(resolved)
+
+
+@lru_cache(maxsize=79)
+def decoded_tileset(index: int) -> tuple[bytes, bytes, tuple[tuple[int, int, int, int], ...]]:
+    compressed, palette, tilemap = tileset_blobs(index)
+    return lz77(compressed), palette, tuple(metatiles(tilemap))
 
 
 def tile_pixel(gfx: bytes, tile_index: int, tx: int, ty: int) -> int:
@@ -261,7 +319,7 @@ def collision_preview(width: int, height: int, blocks: tuple[int, ...]) -> bytes
     nonzero IDs are visible as solid/special Clipdata without claiming that
     every behavior is a physical wall.
     """
-    if not 1 <= width <= 128 or not 1 <= height <= 128 or len(blocks) != width * height:
+    if not 1 <= width <= 255 or not 1 <= height <= 255 or len(blocks) != width * height:
         raise ValueError('invalid MZM Clipdata preview')
     pixel_width, pixel_height = width * 16, height * 16
     rgb = bytearray(pixel_width * pixel_height * 3)
@@ -285,15 +343,13 @@ def collision_preview(width: int, height: int, blocks: tuple[int, ...]) -> bytes
     return bmp24(pixel_width, pixel_height, rgb)
 
 
-def decode_room(area: str, number: int) -> dict:
+def decode_room(area: str, number: int, *, write_outputs: bool = True) -> dict:
     room = read_source_room(area, number)
     fields = room['fields']
     tid = int(fields['tileset'])
-    compressed, palette, mt = tileset_blobs(tid)
-    gfx = lz77(compressed)
+    gfx, palette, table = decoded_tileset(tid)
     if len(gfx) % 32:
         raise ValueError('tileset is not 4bpp 8x8 aligned')
-    table = metatiles(mt)
     layers = {}
     block_maps = {}
     for layer in ('Bg1', 'Bg2'):
@@ -326,19 +382,25 @@ def decode_room(area: str, number: int) -> dict:
     for layer, (w,h,blocks) in block_maps.items():
         image, missing, painted = render_layer(w,h,blocks,table,gfx,palette,base)
         rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_{layer.lower()}.bmp'
-        write_generated(rel, bmp24(w*16,h*16,image))
+        bitmap = bmp24(w*16,h*16,image)
+        if write_outputs:
+            write_generated(rel, bitmap)
         layers[layer].update({'path': rel, 'unresolved_pixels_or_cells': missing,
                               'painted_pixels': painted})
     clip_width, clip_height, clip_blocks = rle_room(room_blob(fields['pClipData']))
     collision_rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_collision.bmp'
-    write_generated(collision_rel, collision_preview(clip_width, clip_height, clip_blocks))
+    collision_bitmap = collision_preview(clip_width, clip_height, clip_blocks)
+    if write_outputs:
+        write_generated(collision_rel, collision_bitmap)
     result['collision'] = {
         'path': collision_rel, 'width_blocks': clip_width,
         'height_blocks': clip_height,
         'meaning': 'diagnostic native Clipdata IDs; not an editable layer',
     }
     rel = f'rooms/metroid/previews/{area.lower()}_{number:03}.json'
-    write_generated(rel, (json.dumps(result, indent=2)+'\n').encode())
+    result['outputs_written'] = write_outputs
+    if write_outputs:
+        write_generated(rel, (json.dumps(result, indent=2)+'\n').encode())
     return result
 
 

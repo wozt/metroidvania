@@ -4287,6 +4287,11 @@ static void document_build(NativeWorkspace *doc)
         doc->overlay_buttons[i] = overlay_buttons[i];
         gtk_widget_add_css_class(overlay_buttons[i], "flat");
         delayed_tip(overlay_buttons[i], overlay_tips[i]);
+        /* PATCH_0113B_SEMANTIC_TOOLBAR_NAMES: compact icon toggles have no
+         * GtkButton label. Preserve category identity for GTK lifecycle
+         * tests and non-visual consumers without reintroducing text. */
+        g_object_set_data(G_OBJECT(overlay_buttons[i]),
+                          "mv-room-toggle-name", (gpointer)overlay_labels[i]);
         g_object_set_data(G_OBJECT(overlay_buttons[i]), "overlay-kind", GUINT_TO_POINTER(i));
         gtk_box_append(GTK_BOX(visibility_tools), overlay_buttons[i]);
         g_signal_connect(overlay_buttons[i], "toggled", G_CALLBACK(overlay_toggled), doc);
@@ -4305,6 +4310,8 @@ static void document_build(NativeWorkspace *doc)
     GtkWidget *hatch_preview = icon_toggle("media-playback-start-symbolic", "Animate hatches");
     gtk_widget_set_size_request(hatch_preview, 30, 30);
     doc->hatch_animate_button = hatch_preview;
+    g_object_set_data(G_OBJECT(hatch_preview),
+                      "mv-room-toggle-name", (gpointer)"Animate hatches");
     gtk_widget_set_tooltip_text(hatch_preview,
         "Preview original opening/closing hatch metatiles; read-only, not gameplay");
     gtk_widget_set_visible(hatch_preview,

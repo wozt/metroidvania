@@ -18,8 +18,13 @@ static NativeWorkspace *new_workspace(GtkWidget **center_out, GtkWidget **right_
 /* Find real category toggle widgets; this does not inspect source text. */
 static GtkWidget *find_room_toggle(GtkWidget *root, const char *label)
 {
+    /* PATCH_0113B_SEMANTIC_TOOLBAR_NAMES: icon-only GTK4 toggles no longer
+     * expose a GtkButton text label. Prefer their stable semantic role,
+     * keeping the former text-label lookup for old room controls. */
     if (GTK_IS_TOGGLE_BUTTON(root) &&
-        g_strcmp0(gtk_button_get_label(GTK_BUTTON(root)), label) == 0)
+        (g_strcmp0(g_object_get_data(G_OBJECT(root), "mv-room-toggle-name"),
+                   label) == 0 ||
+         g_strcmp0(gtk_button_get_label(GTK_BUTTON(root)), label) == 0))
         return root;
     for (GtkWidget *child = gtk_widget_get_first_child(root); child;
          child = gtk_widget_get_next_sibling(child)) {

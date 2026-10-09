@@ -10,7 +10,7 @@ class ObjectCatalogUiContract(unittest.TestCase):
     def test_catalog_is_permanent_and_separates_both_worlds(self):
         main = (ROOT / 'editor/main.c').read_text(encoding='utf-8')
         catalog = (ROOT / 'editor/object_catalog.c').read_text(encoding='utf-8')
-        self.assertIn('editor->object_page = object_catalog_build(center);', main)
+        self.assertIn('editor->object_page = object_catalog_build(left);', main)
         self.assertIn('Zero Mission objects', catalog)
         self.assertIn('Aria of Sorrow objects', catalog)
         self.assertIn('image-missing-symbolic', catalog)

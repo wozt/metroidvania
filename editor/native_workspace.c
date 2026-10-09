@@ -1647,29 +1647,42 @@ static void room_legend_draw(GtkDrawingArea *area, cairo_t *cr,
 
 static GtkWidget *room_color_legend(void)
 {
+    /* PATCH_0086_COMPACT_ROOM_LEGEND: natural-width, left-aligned legend.
+     * This is informational, not a stretching dock/toolbar. On narrow editor
+     * widths GtkFlowBox may wrap instead of growing the entire canvas. */
     static const char *labels[] = {
-        "Walls/collision", "Enemies", "Items", "Objects", "Doors", "Events",
-        "Triggers (not decoded)", "Other/unknown"};
+        "Walls", "Enemy", "Item", "Object", "Door", "Event", "Trigger*", "Other"};
     GtkWidget *legend = gtk_flow_box_new();
     gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(legend), GTK_SELECTION_NONE);
-    gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(legend), 2);
+    gtk_flow_box_set_homogeneous(GTK_FLOW_BOX(legend), FALSE);
+    gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(legend), 1);
     gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(legend), 8);
-    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(legend), 3);
-    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(legend), 7);
+    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(legend), 2);
+    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(legend), 4);
+    gtk_widget_set_halign(legend, GTK_ALIGN_START);
+    gtk_widget_set_hexpand(legend, FALSE);
+    gtk_widget_set_margin_start(legend, 6);
+    gtk_widget_set_margin_bottom(legend, 2);
     for (guint i = 0; i < OVERLAY_COUNT; ++i) {
-        GtkWidget *entry = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+        GtkWidget *entry = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
         GtkWidget *color = gtk_drawing_area_new();
-        gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(color), 15);
-        gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(color), 15);
+        gtk_widget_set_hexpand(entry, FALSE);
+        gtk_widget_set_halign(entry, GTK_ALIGN_START);
+        gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(color), 11);
+        gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(color), 11);
         gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(color), room_legend_draw,
                                        GUINT_TO_POINTER(i), NULL);
+        GtkWidget *name = gtk_label_new(labels[i]);
+        gtk_widget_add_css_class(name, "dim-label");
+        gtk_widget_set_hexpand(name, FALSE);
         gtk_box_append(GTK_BOX(entry), color);
-        gtk_box_append(GTK_BOX(entry), gtk_label_new(labels[i]));
+        gtk_box_append(GTK_BOX(entry), name);
         gtk_flow_box_insert(GTK_FLOW_BOX(legend), entry, -1);
     }
     gtk_widget_set_tooltip_text(legend,
-        "Colors match the toggles; a real cached sprite overlays the square when available. "
-        "Native entities are read-only; white dashed border = authored project entity.");
+        "Colors match the map toggles. Trigger* is not decoded. "
+        "Native markers are read-only; dashed white = project placement. "
+        "Authentic cached sprites appear inside their colored outlines.");
     return legend;
 }
 

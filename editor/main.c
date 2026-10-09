@@ -221,73 +221,7 @@ static GtkWidget *dock_viewport(GtkWidget *dock)
     return scroll;
 }
 
-static void focus_dock_page(GtkWidget *page)
-{
-    GtkWidget *parent = page ? gtk_widget_get_parent(page) : NULL;
-    if (parent && GTK_IS_NOTEBOOK(parent)) {
-        GtkRoot *root;
-        gtk_notebook_set_current_page(GTK_NOTEBOOK(parent),
-                                      gtk_notebook_page_num(GTK_NOTEBOOK(parent), page));
-        root = gtk_widget_get_root(parent);
-        if (GTK_IS_WINDOW(root)) gtk_window_present(GTK_WINDOW(root));
-    }
-}
-
-static void explorer_action(GtkButton *button, gpointer userdata)
-{
-    Editor *editor = userdata;
-    const char *action = g_object_get_data(G_OBJECT(button), "editor-action");
-    if (!action) return;
-    if (strcmp(action, "native") == 0) focus_dock_page(editor->native_page);
-    else if (strcmp(action, "world-map") == 0)
-        focus_dock_page(editor->world_map_page);
-    else if (strcmp(action, "assets") == 0) focus_dock_page(editor->asset_page);
-    else if (strcmp(action, "events") == 0) focus_dock_page(editor->events_page);
-    else if (strcmp(action, "cutscenes") == 0) focus_dock_page(editor->cutscenes_page);
-    else if (strcmp(action, "aria") == 0) focus_dock_page(editor->aria_page);
-    else if (strcmp(action, "objects") == 0) focus_dock_page(editor->object_page);
-    if (editor->responsive_mode == 0) {
-        editor->small_focus = 0;
-        apply_responsive(editor);
-    }
-}
-
-static void explorer_button(GtkWidget *parent, Editor *editor,
-                            const char *label, const char *action)
-{
-    GtkWidget *button = gtk_button_new_with_label(label);
-    g_object_set_data(G_OBJECT(button), "editor-action", (gpointer)action);
-    g_signal_connect(button, "clicked", G_CALLBACK(explorer_action), editor);
-    gtk_box_append(GTK_BOX(parent), button);
-}
-
-static void build_explorer(Editor *editor, GtkWidget *dock)
-{
-    GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 9);
-    GtkWidget *hint = gtk_label_new(
-        "Native project workspace\n\n"
-        "Drag tabs between columns or detach them.\n\n"
-        "ROM data and edited overrides remain local.");
-    gtk_widget_set_margin_start(root, 12);
-    gtk_widget_set_margin_end(root, 12);
-    gtk_widget_set_margin_top(root, 12);
-    gtk_box_append(GTK_BOX(root), gtk_label_new("PROJECT / METROID VANIA"));
-    gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
-    explorer_button(root, editor, "Zero rooms", "native");
-    explorer_button(root, editor, "Global maps / both worlds", "world-map");
-    explorer_button(root, editor, "Object catalog / both worlds", "objects");
-    explorer_button(root, editor, "Event orchestration", "events");
-    explorer_button(root, editor, "Cutscene editor", "cutscenes");
-    explorer_button(root, editor, "Aria rooms", "aria");
-    explorer_button(root, editor, "Local ROM visuals", "assets");
-    gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
-    gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
-    gtk_label_set_selectable(GTK_LABEL(hint), TRUE);
-    gtk_label_set_xalign(GTK_LABEL(hint), 0.0f);
-    gtk_box_append(GTK_BOX(root), hint);
-    gtk_notebook_append_page(GTK_NOTEBOOK(dock), root, gtk_label_new("Explorer"));
-}
-
+/* PATCH_0086_SOURCE_WORKSPACE_DOCK: permanent browsing tools live in the source dock. */
 static void build_inspector(GtkWidget *dock)
 {
     GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
@@ -328,8 +262,8 @@ static void apply_responsive(Editor *editor)
         right = editor->small_focus == 2;
     } else if (editor->inner_split) {
         int remaining = gtk_widget_get_width(editor->inner_split);
-        /* Only show the optional inspector when enough space remains after
-         * the Explorer dock. Always leave the center workbench accessible. */
+        /* Hide the optional inspector when source browsing plus the
+         * central document canvas no longer fit comfortably. */
         int threshold = gtk_widget_get_visible(editor->right_dock) ? 880 : 1020;
         if (remaining > 0 && remaining < threshold) right = FALSE;
     }
@@ -414,6 +348,16 @@ static void editor_show_world(Editor *editor, GtkWidget *page)
         mode == 1 ? "● METROID: ZERO MISSION" : "◇ SHARED WORKSPACE");
 }
 
+/* The world badge follows actual browser selection, not removed shortcut
+ * buttons. Selecting a document still updates it independently. */
+static void source_page_changed(GtkNotebook *tabs, GtkWidget *page,
+                                guint index, gpointer userdata)
+{
+    Editor *editor = userdata;
+    (void)tabs; (void)index;
+    editor_show_world(editor, page);
+}
+
 static void center_page_changed(GtkNotebook *tabs, GtkWidget *page,
                                 guint index, gpointer userdata)
 {
@@ -433,6 +377,20 @@ static gboolean editor_workbench_is_active(Editor *editor)
     gint selected = gtk_notebook_get_current_page(main_tabs);
     return selected >= 0 && gtk_notebook_get_nth_page(main_tabs, selected) ==
         editor->editing_page;
+}
+
+/* A room selected from the source column should bring its document
+ * into view even in the narrow one-column responsive layout. */
+static void editor_document_added(GtkNotebook *tabs, GtkWidget *page,
+                                  guint index, gpointer userdata)
+{
+    Editor *editor = userdata;
+    (void)tabs; (void)index;
+    if (editor->responsive_mode == 0) {
+        editor->small_focus = 0;
+        apply_responsive(editor);
+    }
+    editor_show_world(editor, page);
 }
 
 static void editor_document_changed(GtkNotebook *tabs, GtkWidget *page,
@@ -476,6 +434,7 @@ static void build_editor_workbench(Editor *editor, GtkApplication *application)
     gtk_notebook_append_page(GTK_NOTEBOOK(editor->center_dock), page,
                              gtk_label_new("Open editors"));
     /* Nested tabs are the sole destination for native room documents. */
+    g_signal_connect(documents, "page-added", G_CALLBACK(editor_document_added), editor);
     g_signal_connect(documents, "switch-page", G_CALLBACK(editor_document_changed), editor);
     g_signal_connect(documents, "page-removed", G_CALLBACK(editor_document_removed), editor);
 }
@@ -520,7 +479,7 @@ static void activate(GtkApplication *application, gpointer userdata)
     editor->right_dock = right;
     editor->outer_split = outer_split;
     editor->inner_split = inner_split;
-    editor->subtitle = gtk_label_new("Native room and asset workspace");
+    editor->subtitle = gtk_label_new("Source browsers · Open editors · Room tools");
     editor->responsive_mode = 2;
     editor->small_focus = 0;
 
@@ -533,7 +492,7 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_widget_set_margin_bottom(header, 8);
     gtk_box_append(GTK_BOX(header), gtk_label_new("METROID VANIA / NATIVE EDITOR"));
     gtk_box_append(GTK_BOX(header), editor->world_badge);
-    gtk_box_append(GTK_BOX(header), make_responsive_button(editor, "Explorer", 1));
+    gtk_box_append(GTK_BOX(header), make_responsive_button(editor, "Sources", 1));
     gtk_box_append(GTK_BOX(header), make_responsive_button(editor, "Canvas", 0));
     gtk_box_append(GTK_BOX(header), make_responsive_button(editor, "Inspector", 2));
     gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(sensor), 1);
@@ -547,8 +506,9 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
     gtk_widget_set_vexpand(outer_split, TRUE);
     gtk_box_append(GTK_BOX(root), outer_split);
-    /* Two resizable splitters with isolated viewport allocations: neither
-     * Explorer nor a long center toolbar may paint on top of its neighbor. */
+    /* Browsing pages reside in the left source dock, with documents in the
+     * center and inspectors on the right. All three remain independently
+     * clipped and user-resizable. */
     editor->left_viewport = dock_viewport(left);
     editor->center_viewport = dock_viewport(center);
     editor->right_viewport = dock_viewport(right);
@@ -566,20 +526,22 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_paned_set_shrink_end_child(GTK_PANED(inner_split), TRUE);
     gtk_paned_set_wide_handle(GTK_PANED(outer_split), TRUE);
     gtk_paned_set_wide_handle(GTK_PANED(inner_split), TRUE);
-    gtk_paned_set_position(GTK_PANED(outer_split), 275);
-    gtk_paned_set_position(GTK_PANED(inner_split), 980);
+    gtk_paned_set_position(GTK_PANED(outer_split), 490);
+    gtk_paned_set_position(GTK_PANED(inner_split), 840);
     g_signal_connect(outer_split, "notify::position",
                      G_CALLBACK(splitter_position_changed), editor);
     g_signal_connect(inner_split, "notify::position",
                      G_CALLBACK(splitter_position_changed), editor);
 
-    /* The outer center notebook is exclusively for permanent workspaces.
-     * NativeMap documents are routed into the secondary notebook below it. */
-    editor->native_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ZERO);
-    editor->world_map_page = world_atlas_build(center, editor->native_workspace, editor->world_badge);
-    editor->object_page = object_catalog_build(center);
-    story_workspace_build(center, &editor->events_page, &editor->cutscenes_page);
-    editor->aria_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ARIA);
+    /* Source pages are persistent; both room browsers are immediate
+     * neighbors. World/map creation, objects and story tools follow. Open
+     * editors remains the only permanent tab in the central workbench.
+     * Original native room documents still use the nested ephemeral dock. */
+    editor->native_page = room_browser_build(left, editor->native_workspace, ROOM_WORLD_ZERO);
+    editor->aria_page = room_browser_build(left, editor->native_workspace, ROOM_WORLD_ARIA);
+    editor->world_map_page = world_atlas_build(left, editor->native_workspace, editor->world_badge);
+    editor->object_page = object_catalog_build(left);
+    story_workspace_build(left, &editor->events_page, &editor->cutscenes_page);
     build_editor_workbench(editor, application);
     build_palette_workbench(editor, application, right);
     native_workspace_build(editor->native_workspace,
@@ -589,9 +551,12 @@ static void activate(GtkApplication *application, gpointer userdata)
     /* Stable sidebar tabs first; transient palette tools remain nested last. */
     gtk_notebook_reorder_child(GTK_NOTEBOOK(right), editor->palette_page, -1);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(right), 0);
-    build_explorer(editor, left);
+    /* The Explorer shortcut page is gone: these real tabs replace it. */
+    g_signal_connect(left, "switch-page", G_CALLBACK(source_page_changed), editor);
     g_signal_connect(center, "switch-page", G_CALLBACK(center_page_changed), editor);
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(left), 0);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(center), 0);
+    editor_show_world(editor, editor->native_page);
     gtk_window_present(GTK_WINDOW(window));
 }
 

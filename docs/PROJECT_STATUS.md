@@ -649,3 +649,23 @@ and the proprietary-file guard passed.
   enemy sprites from the user's legally extracted assets. Missing sprites leave
   the color square visible, without substituting unrelated sprites.
 - All original ROM bytes and private copyrighted resources stay untouched.
+
+## Patch 0086 - source dock in place of Explorer and compact room legend
+
+- Retired Explorer: it only duplicated existing GTK navigation buttons and did
+  not own any data or editing tool. Its left dock now contains actual persistent
+  source tabs: Zero rooms, Aria rooms (immediately adjacent), Global maps,
+  Map creation, Object catalog, Events and Cutscenes. ROM visuals and room
+  palettes stay in the right dock.
+- Kept the center for Open editors and its nested, closable native room tabs;
+  permanent source tabs and ephemeral documents retain separate drag groups.
+  Source and center panes remain independently resizable. Opening a room while
+  in narrow single-pane mode focuses the center editor.
+- World badge responds to source-tab and document selection without relying on
+  the former Explorer shortcuts.
+- Compact, left-aligned, non-expanding colored legend uses short labels and
+  small native-color squares; it wraps if needed rather than stretching.
+  Original independent overlays, sprite cache and color hitboxes are unchanged.
+- Updated layout source tests, including the legacy object-catalog UI check
+  to assert that its widget is now constructed in the left source dock.
+  ROM source assets and authoring data untouched.

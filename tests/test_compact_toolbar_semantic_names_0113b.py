@@ -18,6 +18,7 @@ class CompactToolbarSemanticNames0113b(unittest.TestCase):
         func = source.split("static GtkWidget *find_room_toggle(", 1)[1]
         func = func.split("static void test_native_door_bitflags_imported(", 1)[0]
         self.assertIn('g_object_get_data(G_OBJECT(root), "mv-room-toggle-name")', func)
+        self.assertIn('g_object_get_data(G_OBJECT(root), "mv-room-tool-name")', func)
         self.assertIn("gtk_button_get_label(GTK_BUTTON(root))", func)
         for case in ("native-doors-default-visible", "native-door-bitflags-imported",
                      "hatch-preview-lifetime"):

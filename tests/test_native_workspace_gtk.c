@@ -24,6 +24,8 @@ static GtkWidget *find_room_toggle(GtkWidget *root, const char *label)
     if (GTK_IS_TOGGLE_BUTTON(root) &&
         (g_strcmp0(g_object_get_data(G_OBJECT(root), "mv-room-toggle-name"),
                    label) == 0 ||
+         g_strcmp0(g_object_get_data(G_OBJECT(root), "mv-room-tool-name"),
+                   label) == 0 ||
          g_strcmp0(gtk_button_get_label(GTK_BUTTON(root)), label) == 0))
         return root;
     for (GtkWidget *child = gtk_widget_get_first_child(root); child;
@@ -112,6 +114,32 @@ static void test_hatch_preview_lifetime(void)
     g_assert_false(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(animate)));
     /* Free the document while its timeout is active: no dangling callback. */
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(animate), TRUE);
+    native_workspace_free(workspace);
+}
+
+static void test_platform_collision_tool_available(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 010"));
+    GtkWidget *page = gtk_notebook_get_nth_page(GTK_NOTEBOOK(center), 0);
+    GtkWidget *pencil = find_room_toggle(page, "Pencil (draw)");
+    g_assert_nonnull(pencil);
+    const char *const names[] = {
+        "Wall (W): paint solid collision",
+        "Platform (P): paint one-way collision",
+        "Water (U): paint water collision",
+        "Air (A): erase collision with an explicit passable override",
+    };
+    GtkWidget *previous = pencil;
+    for (guint i = 0; i < G_N_ELEMENTS(names); ++i) {
+        GtkWidget *tool = find_room_toggle(page, names[i]);
+        g_assert_nonnull(tool);
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tool), TRUE);
+        g_assert_true(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(tool)));
+        g_assert_false(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(previous)));
+        previous = tool;
+    }
     native_workspace_free(workspace);
 }
 
@@ -399,6 +427,8 @@ int main(int argc, char **argv)
                     test_native_doors_default_visible);
     g_test_add_func("/native-workspace/hatch-preview-lifetime",
                     test_hatch_preview_lifetime);
+    g_test_add_func("/native-workspace/platform-collision-tool",
+                    test_platform_collision_tool_available);
     g_test_add_func("/native-workspace/native-door-bitflags-imported",
                     test_native_door_bitflags_imported);
     g_test_add_func("/native-workspace/close-and-reopen", test_close_and_reopen);

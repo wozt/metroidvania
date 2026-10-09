@@ -26,7 +26,7 @@ typedef struct {
 } ReverseLinkPending0115;
 
 enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN,
-       TOOL_GRAB, TOOL_WALL, TOOL_WATER, TOOL_AIR, TOOL_COUNT };
+       TOOL_GRAB, TOOL_WALL, TOOL_PLATFORM, TOOL_WATER, TOOL_AIR, TOOL_COUNT };
 enum { OVERLAY_COLLISION, OVERLAY_ENEMIES, OVERLAY_ITEMS, OVERLAY_OBJECTS,
        OVERLAY_DOORS, OVERLAY_EVENTS, OVERLAY_TRIGGERS, OVERLAY_OTHER,
        OVERLAY_COUNT };
@@ -137,6 +137,9 @@ static void mark_changed(NativeWorkspace *doc);
 static void update_title(NativeWorkspace *doc);
 static void project_reload(NativeWorkspace *doc);
 static void project_reverse_apply_0115(NativeWorkspace *doc);
+static gboolean collision_tool_0113(unsigned tool);
+static gboolean collision_cell_0113(const NativeWorkspace *doc,
+                                     double x, double y, int *cx, int *cy);
 
 static gchar *room_stage_path_0109(const NativeWorkspace *doc, const char *suffix)
 {
@@ -3290,7 +3293,9 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
                 doc->collision_stroke, ProjectCollisionCell, i);
             cairo_rectangle(cr, point->x * unit + 0.5, point->y * unit + 0.5,
                             MAX(2.0, unit - 1), MAX(2.0, unit - 1));
-            if (doc->tool_id == TOOL_WATER)
+            if (doc->tool_id == TOOL_PLATFORM)
+                cairo_set_source_rgba(cr, 0.2, 1.0, 0.45, 0.48);
+            else if (doc->tool_id == TOOL_WATER)
                 cairo_set_source_rgba(cr, 0.1, 0.5, 1.0, 0.48);
             else if (doc->tool_id == TOOL_AIR)
                 cairo_set_source_rgba(cr, 0.08, 0.09, 0.11, 0.72);
@@ -3303,6 +3308,28 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
         cairo_restore(cr);
     }
     draw_annotations(doc, cr);
+    if (doc->pointer_over_canvas && !doc->drawing &&
+        collision_tool_0113(doc->tool_id)) {
+        const double unit = (doc->project_aria ? 8.0 : 16.0) * doc->scale;
+        int collision_x = 0, collision_y = 0;
+        if (collision_cell_0113(doc, doc->pointer_x, doc->pointer_y,
+                                &collision_x, &collision_y)) {
+            cairo_save(cr);
+            cairo_rectangle(cr, collision_x * unit + 1, collision_y * unit + 1,
+                            MAX(2.0, unit - 2), MAX(2.0, unit - 2));
+            cairo_set_line_width(cr, 2.0);
+            if (doc->tool_id == TOOL_PLATFORM)
+                cairo_set_source_rgba(cr, 0.2, 1.0, 0.45, 0.95);
+            else if (doc->tool_id == TOOL_WATER)
+                cairo_set_source_rgba(cr, 0.1, 0.56, 1.0, 0.95);
+            else if (doc->tool_id == TOOL_AIR)
+                cairo_set_source_rgba(cr, 0.92, 0.94, 0.96, 0.95);
+            else
+                cairo_set_source_rgba(cr, 1.0, 0.18, 0.18, 0.95);
+            cairo_stroke(cr);
+            cairo_restore(cr);
+        }
+    }
     if (doc->grid_visible) {
         cairo_set_source_rgba(cr, 1, 1, 1, 0.21);
         cairo_set_line_width(cr, 0.75);
@@ -3536,7 +3563,8 @@ static void paint_line(NativeWorkspace *doc, int x, int y)
  * Both original wall overlays and ROM data remain read-only. */
 static gboolean collision_tool_0113(unsigned tool)
 {
-    return tool == TOOL_WALL || tool == TOOL_WATER || tool == TOOL_AIR;
+    return tool == TOOL_WALL || tool == TOOL_PLATFORM ||
+           tool == TOOL_WATER || tool == TOOL_AIR;
 }
 
 static gboolean collision_cell_0113(const NativeWorkspace *doc, double x, double y,
@@ -3594,6 +3622,7 @@ static void collision_commit_0113(NativeWorkspace *doc)
         g_string_append_printf(points, "%u,%u", point->x, point->y);
     }
     const char *kind = doc->tool_id == TOOL_WALL ? "solid" :
+                       doc->tool_id == TOOL_PLATFORM ? "one_way" :
                        doc->tool_id == TOOL_WATER ? "water" : "air";
     const char *const args[] = {"--points", points->str, "--type", kind, NULL};
     if (project_command(doc, "collision-stroke", args, NULL)) {
@@ -3889,8 +3918,13 @@ static void canvas_hover(GtkEventControllerMotion *controller, double x, double 
     int col = 0, row = 0;
     (void)controller;
     gboolean valid = get_cell(doc, x, y, &col, &row);
+    gboolean collision_cursor_moved = collision_tool_0113(doc->tool_id) &&
+        (doc->pointer_x != x || doc->pointer_y != y);
+    doc->pointer_x = x;
+    doc->pointer_y = y;
     if (valid != doc->pointer_over_canvas ||
-        (valid && (doc->hover_col != col || doc->hover_row != row))) {
+        (valid && (doc->hover_col != col || doc->hover_row != row)) ||
+        collision_cursor_moved) {
         doc->pointer_over_canvas = valid;
         if (valid) { doc->hover_col = col; doc->hover_row = row; }
         gtk_widget_queue_draw(doc->canvas);
@@ -4008,12 +4042,20 @@ static void tool_toggled(GtkToggleButton *button, gpointer userdata)
             gtk_toggle_button_set_active(button, TRUE);
         return;
     }
+    unsigned selected = TOOL_COUNT;
     for (unsigned i = 0; i < TOOL_COUNT; ++i) {
         if (doc->tools[i] == GTK_WIDGET(button)) {
-            doc->tool_id = i;
-        } else {
-            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[i]), FALSE);
+            selected = i;
+            break;
         }
+    }
+    if (selected == TOOL_COUNT) return;
+    /* Publish the new selection before deactivating the previous button.
+     * Its nested toggled signal must not reactivate itself as the current tool. */
+    doc->tool_id = selected;
+    for (unsigned i = 0; i < TOOL_COUNT; ++i) {
+        if (i != selected)
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[i]), FALSE);
     }
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
@@ -4460,6 +4502,7 @@ static gboolean key_pressed(GtkEventControllerKey *controller, guint keyval,
     case GDK_KEY_h: doc->tool_id = TOOL_PAN; break;
     case GDK_KEY_m: doc->tool_id = TOOL_GRAB; break;
     case GDK_KEY_w: doc->tool_id = TOOL_WALL; break;
+    case GDK_KEY_p: doc->tool_id = TOOL_PLATFORM; break;
     case GDK_KEY_u: doc->tool_id = TOOL_WATER; break;
     case GDK_KEY_a: doc->tool_id = TOOL_AIR; break;
     default: return FALSE;
@@ -4476,12 +4519,23 @@ static void collision_icon_draw_0113(GtkDrawingArea *area, cairo_t *cr, int w, i
     const int kind = GPOINTER_TO_INT(userdata);
     cairo_set_line_width(cr, 1.7);
     if (kind == TOOL_WALL) {
-        cairo_set_source_rgb(cr, 0.4, 0.8, 0.85);
+        cairo_set_source_rgb(cr, 1.0, 0.22, 0.22);
         cairo_rectangle(cr, 2, 3, w - 4, h - 6);
         cairo_stroke(cr);
         cairo_move_to(cr, 2, h / 2.0); cairo_line_to(cr, w - 2, h / 2.0);
         cairo_move_to(cr, w / 2.0, 3); cairo_line_to(cr, w / 2.0, h / 2.0);
         cairo_move_to(cr, w / 3.0, h / 2.0); cairo_line_to(cr, w / 3.0, h - 3);
+        cairo_stroke(cr);
+    } else if (kind == TOOL_PLATFORM) {
+        cairo_set_source_rgb(cr, 0.2, 1.0, 0.45);
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+        cairo_move_to(cr, 2, h * 0.35);
+        cairo_line_to(cr, w - 2, h * 0.35);
+        cairo_stroke(cr);
+        cairo_move_to(cr, w * 0.28, h * 0.35);
+        cairo_line_to(cr, w * 0.28, h - 3);
+        cairo_move_to(cr, w * 0.72, h * 0.35);
+        cairo_line_to(cr, w * 0.72, h - 3);
         cairo_stroke(cr);
     } else if (kind == TOOL_WATER) {
         cairo_set_source_rgb(cr, 0.2, 0.57, 1.0);
@@ -4521,16 +4575,17 @@ static void document_build(NativeWorkspace *doc)
     static const char *const icons[TOOL_COUNT] = {
         "document-edit-symbolic", "edit-clear-symbolic", "color-fill-symbolic",
         "color-select-symbolic", "edit-select-all-symbolic", "transform-move-symbolic",
-        "hand-symbolic", NULL, NULL, NULL
+        "hand-symbolic", NULL, NULL, NULL, NULL
     };
     static const char *const names[TOOL_COUNT] = {
         "Pencil (draw)", "Eraser", "Fill bucket",
         "Eyedropper (pick a metatile)", "Rectangle selection (drag to move)",
         "Hand (pan the view)",
         "Grab (M): drag doors, enemies, items and objects; Zero Mission 16px / Aria 8px",
-        "Wall (W): solid collision, drag to fill rectangle",
-        "Water (U): water collision, drag to fill rectangle",
-        "Air (A): passable collision override, drag to remove native walls logically"
+        "Wall (W): paint solid collision",
+        "Platform (P): paint one-way collision",
+        "Water (U): paint water collision",
+        "Air (A): erase collision with an explicit passable override"
     };
     GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
     GtkWidget *tools = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
@@ -4579,6 +4634,8 @@ static void document_build(NativeWorkspace *doc)
     for (unsigned i = 0; i < TOOL_COUNT; ++i) {
         doc->tools[i] = i >= TOOL_WALL ?
             collision_icon_toggle_0113(i, names[i]) : icon_toggle(icons[i], names[i]);
+        g_object_set_data(G_OBJECT(doc->tools[i]), "mv-room-tool-name",
+                          (gpointer)names[i]);
         gtk_widget_set_size_request(doc->tools[i], 30, 30);
         if (i == TOOL_WALL)
             gtk_box_append(GTK_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL));

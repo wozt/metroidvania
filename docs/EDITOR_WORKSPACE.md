@@ -19,6 +19,9 @@ docks, or detached into separate windows.
   shared editor; drafts remain explicitly non-playable.
 - **Open editors** edits decoded BG1/BG2 metatile layers with pencil, eraser,
   fill, eyedropper, selection move, zoom, grid and undo/redo.
+- Collision authoring has continuous **Wall** (red), **Platform** (green
+  one-way), **Water** (blue) and **Air** (passable eraser) brushes. A cell cursor
+  previews the exact 16px Zero Mission or 8px Aria target before painting.
 - The room toolbar independently toggles **Walls**, **Objects**, **Doors** and
   **Events**. **Triggers** is visible but disabled until those native records
   are decoded. These overlays inspect original data and are not saved as map
@@ -48,8 +51,9 @@ base import, ROMs and upstream source remain unchanged.
 - BG0, full BG3 composition, animated graphics and several palette effects are
   incomplete.
 - Native objects, doors, events and collision remain inspectable and immutable.
-  Separate project collision cells can be painted or cleared from the canvas
-  context menu, and project doors can be created, viewed and deleted. Complete
+  Separate project collision cells can be painted with semantic brushes or
+  changed from the canvas context menu, and project doors can be created,
+  viewed and deleted. Complete
   property and transition editing is available through the shared CLI while the
   dedicated GTK forms are still being built. None of this data is playable yet.
   Their typed editor shells expose decoded source fields but keep Apply

@@ -90,7 +90,7 @@ and the proprietary-file guard passed.
 
 ## Immediate priorities
 
-1. Complete GTK property/link forms and add project platforms.
+1. Complete GTK object/event forms and add the remaining hazard/slope brushes.
 2. Define project-owned object/ability/soul schemas and validated encoders.
 3. Complete trigger extraction and attach typed events to room overlays.
 4. Add native audio inventory/preview and cutscene timeline operations.
@@ -1050,3 +1050,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   so narrow windows form additional rows rather than overflowing horizontally.
 - Native ROM collision and map data remain immutable; engine collision adapters
   are still unavailable.
+
+## Patch 0118 - one-way platform brush and collision cursor
+
+- Added a green Platform tool and `P` shortcut to both native workroom editors.
+  It authors the existing validated `one_way` project collision semantic at
+  16px resolution in Zero Mission and 8px resolution in Aria.
+- Wall, Platform, Water and Air now show a color-coded cell outline under the
+  pointer before painting. The cursor follows Aria half-tile cells correctly.
+- Compact tool buttons expose stable semantic names for GTK automation and
+  accessibility lookup instead of relying on theme-dependent icon identity.
+- Fixed tool-toggle ordering so the previously active Pencil cannot reactivate
+  itself while Wall, Platform, Water or Air is being selected.
+- Platform strokes use the same bounded continuous interpolation, staging,
+  Undo/Redo and explicit Save workflow as the other collision brushes.
+- This remains engine-neutral project data; no ROM or native physics encoder is
+  implied.

@@ -33,11 +33,13 @@ class CollisionToolbar0113(unittest.TestCase):
         self.assertEqual(entities.collision_get(doc, 3, 2), 'solid')
         self.assertEqual(entities.collision_stroke(doc, points, 'air'), 3)
         self.assertEqual(entities.collision_get(doc, 1, 1), 'air')
+        self.assertEqual(entities.collision_stroke(doc, [(3, 2)], 'one_way'), 1)
+        self.assertEqual(entities.collision_get(doc, 3, 2), 'one_way')
 
     def test_fixed_toolbar_and_one_backend_mutation_per_stroke(self):
         c = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
         for snippet in (
-            'TOOL_WALL, TOOL_WATER, TOOL_AIR',
+            'TOOL_WALL, TOOL_PLATFORM, TOOL_WATER, TOOL_AIR',
             'gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2)',
             'gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(tool_scroll), tools)',
             'gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(visibility_scroll)',
@@ -47,6 +49,9 @@ class CollisionToolbar0113(unittest.TestCase):
             'project_command(doc, "collision-stroke", args, NULL)',
             'doc->collision_dragging = FALSE;',
             'case GDK_KEY_u: doc->tool_id = TOOL_WATER;',
+            'case GDK_KEY_p: doc->tool_id = TOOL_PLATFORM;',
+            'doc->tool_id == TOOL_PLATFORM ? "one_way"',
+            '"mv-room-tool-name"',
             'if (!strcmp(name, "water")) return 6;',
             'if (!strcmp(name, "air")) return 7;',
             'if (cell->type == 7) continue;',

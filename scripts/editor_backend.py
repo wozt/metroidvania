@@ -15,6 +15,7 @@ from typing import Any
 from scripts import authored_rooms
 from scripts import map_placements
 from scripts import project_room_entities
+from scripts import project_connection_graph
 from scripts.import_game_assets import ROOT, verified_rom
 from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.room_audit import audit_world, write_private_report
@@ -63,6 +64,7 @@ CAPABILITIES = {
     "collision-validate": "available_project_room_data_only",
     "door-list": "available_project_room_data_only",
     "door-target-list": "available_saved_project_door_targets_only",
+    "connection-list": "available_saved_project_connections_only",
     "door-return-plan": "available_project_room_data_only",
     "door-inspect": "available_project_room_data_only",
     "door-create": "available_project_room_data_only",
@@ -132,6 +134,7 @@ COMMAND_FIELDS = {
     "collision-validate": {"world", "area", "room", "width", "height"},
     "door-list": {"world", "area", "room", "width", "height"},
     "door-target-list": {"target_world", "target_area", "target_room"},
+    "connection-list": {"world", "area", "room"},
     "door-return-plan": {"world", "area", "room", "source_door_id"},
     "door-inspect": {"world", "area", "room", "width", "height", "id"},
     "door-create": {"world", "area", "room", "width", "height", "x", "y",
@@ -987,6 +990,29 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
         return result
     if command == "door-return-plan":
         return _reciprocal_plan_0115(root_path, options)
+    if command == "connection-list":
+        public_world = _world(options.get("world"))
+        source_world = "aria" if public_world == "aria" else "mzm"
+        area_opt = options.get("area")
+        source_area = None
+        if area_opt is not None:
+            if source_world == "aria":
+                source_area = str(_integer(area_opt, "area", 0, 11))
+            elif str(area_opt).isdecimal():
+                source_area = authored_rooms.AREAS["zero_mission"][
+                    _integer(area_opt, "area", 0, 6)]
+            else:
+                source_area = next((name for name in authored_rooms.AREAS["zero_mission"]
+                                    if name.lower() == str(area_opt).lower()), None)
+                if source_area is None:
+                    raise ValueError("unknown Zero Mission area")
+        room_opt = options.get("room")
+        source_room = (_integer(room_opt, "room", 0, 999)
+                       if room_opt is not None else None)
+        data = project_connection_graph.connections(root_path, source_world,
+                                                    source_area, source_room)
+        return {"connections": data, "count": len(data),
+                "source": "saved_project_rooms_only", "engine_adapter": "unavailable"}
     if command == "door-target-list":
         target = _transition_target(options, root_path)
         return {"target": target, "doors": _saved_target_doors(root_path, target),

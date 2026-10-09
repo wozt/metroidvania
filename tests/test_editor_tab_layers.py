@@ -32,7 +32,9 @@ class EditorLayerContract(unittest.TestCase):
         self.assertNotIn('gtk_widget_add_controller(grid, GTK_EVENT_CONTROLLER(pan));', source)
         self.assertNotIn('gtk_widget_add_controller(pan_surface, GTK_EVENT_CONTROLLER(pan));', source)
         self.assertIn('gtk_widget_add_tick_callback(w->scroller, map_pan_frame, w, NULL)', source)
-        self.assertIn('gtk_box_append(GTK_BOX(canvas_row),grid);', source)
+        self.assertIn('gtk_overlay_set_child(GTK_OVERLAY(map_overlay), grid);', source)
+        self.assertIn('gtk_box_append(GTK_BOX(canvas_row),map_overlay);', source)
+        self.assertIn('gtk_widget_set_can_target(w->connection_canvas, FALSE);', source)
 
 
 if __name__ == '__main__':

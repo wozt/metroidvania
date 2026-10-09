@@ -994,6 +994,21 @@ and the proprietary-file guard passed.
 - No native physics adapter or ROM collision writer is implemented yet. Existing
   imported collision images remain diagnostic-only, not destructive edit targets.
 
+## Patch 0116 — saved project connections on global maps
+
+- A read-only backend `connection-list` inventories saved project room doors
+  (not native door indices or per-tab uncommitted stage files); identifies
+  reciprocal, one-way, interworld, missing and invalid connections.
+- The GTK original world atlas can overlay project edges on actual mapped room
+  footprints, with selected-room default and an optional all-links view.
+  Cross-world / cross-area connections appear in the destination inspector,
+  not as fabricated lines between unrelated world coordinate systems.
+- The map's original GTK grid, occupancy and double-click behavior stay in
+  place behind a click-through Cairo overlay; the inspector can navigate to
+  verified destination rooms in their original maps.
+- No writes, gameplay engine or source ROM mutation. Refresh by reselecting a
+  room or toggling the connection visibility after saving a room editor tab.
+
 ## Patch 0114 - exact saved project door targets
 
 Patch 0114: target project door picker. Lists only previously saved project doors

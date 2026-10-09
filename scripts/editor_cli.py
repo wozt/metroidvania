@@ -30,6 +30,7 @@ TSV_COMMANDS = {
     "room-list", "list-rooms", "placement-list", "entity-list",
     "entity-catalog", "entity-item-settings", "list-assets",
     "collision-list", "door-list", "door-target-list", "door-return-plan", "transition-list",
+    "connection-list",
 }
 
 
@@ -241,6 +242,11 @@ def _tsv_result(command: str, data: dict) -> str:
                   f"{item['native_source']['native_type']}"
                   if 'native_source' in item else "-")]
                 for item in data["doors"]]
+    elif command == "connection-list":
+        rows = [[item["world"], item["area"], item["room"], item["door_id"],
+                 item["target_world"], item["target_area"], item["target_room"],
+                 item["target_door_id"], item["state"], int(item["reciprocal"])]
+                for item in data["connections"]]
     elif command == "transition-list":
         rows = [[item["id"], item["source_door_id"], item["target_world"],
                  item["target_area"], item["target_room"], item["target_door_id"],

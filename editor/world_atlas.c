@@ -14,10 +14,19 @@ typedef struct {
     char type[96];
 } NativeMapDoor;
 typedef struct {
+    guint area, room, door, target_world, target_area, target_room, target_door;
+    guint reciprocal;
+    char state[24];
+} ProjectMapEdge0116;
+
+typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
     GtkWidget *page, *grid, *details, *status, *world_select, *area_select, *zoom;
     GtkWidget *doors_toggle, *door_expander, *door_list;
+    GtkWidget *connections_toggle, *connections_all, *connection_list;
+    GtkWidget *connection_expander, *connection_canvas;
+    GArray *connection_edges; /* verified, SAVED project overrides only */
     GtkWidget *pick_bar;
     WorldAtlasRoomPicked pick_callback;
     gpointer pick_data;
@@ -171,6 +180,7 @@ static gboolean same_atlas_group(const WorldGrid *w, const MapCell *a, const Map
 }
 
 static void selected_room_doors_refresh(WorldGrid *w);
+static void connections_refresh_0116(WorldGrid *w);
 static void world_atlas_pick_finish_0106(WorldGrid *w, gboolean selected,
                                           guint area, guint room);
 
@@ -229,6 +239,7 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
     gtk_label_set_text(GTK_LABEL(w->details), message);
     g_free(message);
     selected_room_doors_refresh(w);
+    connections_refresh_0116(w);
     if (w->pick_callback) {
         /* Only original cells with a verified native room are selectable.
          * A double click must NOT open a room during target picking. */
@@ -592,6 +603,250 @@ static void map_creator_launch(GtkButton *button, gpointer userdata)
 }
 
 static void grid_rebuild(WorldGrid *w);
+
+/* PATCH_0116_CONNECTION_VISUALIZATION: saved project metadata ONLY.
+ * No native door guesses and no writes to ROMs, staging, or overrides. */
+static gboolean connection_center_0116(const WorldGrid *w, guint area, guint room,
+                                       double *x, double *y)
+{
+    double sumx = 0, sumy = 0;
+    guint count = 0;
+    for (guint i = 0; i < w->cells->len; ++i) {
+        const MapCell *c = &g_array_index(w->cells, MapCell, i);
+        if (c->area != area || c->room != room || c->room >= 998 ||
+            c->provenance >= 3 || (w->area != G_MAXUINT && c->area != w->area))
+            continue;
+        sumx += c->x + 0.5;
+        sumy += c->y + 0.5;
+        ++count;
+    }
+    if (!count) return FALSE;
+    *x = sumx / count * w->size;
+    *y = sumy / count * w->size;
+    return TRUE;
+}
+
+static void connection_draw_0116(GtkDrawingArea *area, cairo_t *cr,
+                                 int width, int height, gpointer userdata)
+{
+    (void)area; (void)width; (void)height;
+    WorldGrid *w = userdata;
+    if (!w->connection_edges || !gtk_toggle_button_get_active(
+            GTK_TOGGLE_BUTTON(w->connections_toggle))) return;
+    gboolean show_all = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w->connections_all));
+    guint selected_area = G_MAXUINT, selected_room = G_MAXUINT;
+    if (w->selected && w->selection < w->cells->len) {
+        const MapCell *c = &g_array_index(w->cells, MapCell, w->selection);
+        selected_area = c->area;
+        selected_room = c->room;
+    }
+    for (guint i = 0; i < w->connection_edges->len; ++i) {
+        const ProjectMapEdge0116 *edge = &g_array_index(
+            w->connection_edges, ProjectMapEdge0116, i);
+        if (!show_all && (edge->area != selected_area || edge->room != selected_room))
+            continue;
+        double x1, y1, x2, y2;
+        if (!connection_center_0116(w, edge->area, edge->room, &x1, &y1)) continue;
+        gboolean valid = strcmp(edge->state, "invalid") != 0 &&
+                          strcmp(edge->state, "missing") != 0;
+        gboolean same_map = edge->target_world == w->world &&
+            (w->area == G_MAXUINT || edge->target_area == w->area);
+        gboolean has_target = valid && same_map &&
+            connection_center_0116(w, edge->target_area, edge->target_room, &x2, &y2);
+        cairo_save(cr);
+        if (!valid) cairo_set_source_rgb(cr, 0.96, 0.35, 0.38);
+        else if (edge->target_world != w->world) cairo_set_source_rgb(cr, 0.96, 0.71, 0.34);
+        else if (edge->reciprocal) cairo_set_source_rgb(cr, 0.35, 0.83, 0.57);
+        else cairo_set_source_rgb(cr, 0.94, 0.71, 0.38);
+        cairo_set_line_width(cr, 2.5);
+        if (!edge->reciprocal || !valid) {
+            const double dash[] = {5.0, 4.0};
+            cairo_set_dash(cr, dash, 2, 0);
+        }
+        if (has_target && (x1 != x2 || y1 != y2)) {
+            cairo_move_to(cr, x1, y1);
+            cairo_curve_to(cr, x1, (y1 + y2) / 2, x2, (y1 + y2) / 2, x2, y2);
+            cairo_stroke(cr);
+            cairo_arc(cr, x2, y2, 3.5, 0, 2 * G_PI);
+            cairo_fill(cr);
+        } else {
+            /* Interworld/cross-area destinations have no shared map geometry.
+             * Mark only their source and show the real target in the list. */
+            cairo_arc(cr, x1, y1, 7.0, 0, 2 * G_PI);
+            cairo_stroke(cr);
+        }
+        cairo_arc(cr, x1, y1, 3.5, 0, 2 * G_PI);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+}
+
+static void connection_go_to_0116(GtkButton *button, gpointer userdata)
+{
+    WorldGrid *w = userdata;
+    guint world = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-conn-world"));
+    guint area = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-conn-area"));
+    guint room = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-conn-room"));
+    if (world > 1 || area >= (world ? 12u : 7u) || room > 999) return;
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(w->world_select), world);
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(w->area_select), world ? area + 1 : area);
+    /* world_changed/area_changed synchronously rebuild the native grid. */
+    for (guint i = 0; i < w->cells->len; ++i) {
+        const MapCell *c = &g_array_index(w->cells, MapCell, i);
+        if (c->area == area && c->room == room && c->provenance < 3) {
+            w->selection = i;
+            w->selected = TRUE;
+            grid_rebuild(w);
+            selected_room_doors_refresh(w);
+            connections_refresh_0116(w);
+            gchar *label = g_strdup_printf("Destination: %s / %s / room %03u",
+                worlds[w->world], area_name(w, area), room);
+            gtk_label_set_text(GTK_LABEL(w->details), label);
+            g_free(label);
+            return;
+        }
+    }
+    gtk_label_set_text(GTK_LABEL(w->details),
+        "Destination not found in verified original map cells.");
+}
+
+static void connections_refresh_0116(WorldGrid *w)
+{
+    if (!w->connection_edges || !w->connection_list) return;
+    g_array_set_size(w->connection_edges, 0);
+    GtkWidget *child;
+    while ((child = gtk_widget_get_first_child(w->connection_list)))
+        gtk_box_remove(GTK_BOX(w->connection_list), child);
+    if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w->connections_toggle))) {
+        gtk_widget_queue_draw(w->connection_canvas);
+        return;
+    }
+    gboolean all = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w->connections_all));
+    if (!all && (!w->selected || w->selection >= w->cells->len)) {
+        gtk_box_append(GTK_BOX(w->connection_list),
+                       gtk_label_new("Select a native room to inspect its project links."));
+        gtk_widget_queue_draw(w->connection_canvas);
+        return;
+    }
+    guint selected_area = G_MAXUINT, selected_room = G_MAXUINT;
+    if (w->selected && w->selection < w->cells->len) {
+        const MapCell *c = &g_array_index(w->cells, MapCell, w->selection);
+        selected_area = c->area;
+        selected_room = c->room;
+    }
+    gchar *world_arg = g_strdup_printf("--world=%s", w->world ? "aria" : "zero_mission");
+    /* Aria's "All areas" view still needs an area for one-room lookup. */
+    guint requested_area = (w->area == G_MAXUINT && !all) ? selected_area : w->area;
+    gchar *area_arg = requested_area == G_MAXUINT ? NULL :
+        g_strdup_printf("--area=%u", requested_area);
+    gchar *room_arg = (!all && selected_room <= 999) ?
+        g_strdup_printf("--room=%u", selected_room) : NULL;
+    gchar *args[9];
+    guint argc = 0;
+    args[argc++] = "python3";
+    args[argc++] = "scripts/editor_cli.py";
+    args[argc++] = "--command=connection-list";
+    args[argc++] = world_arg;
+    if (area_arg) args[argc++] = area_arg;
+    if (room_arg) args[argc++] = room_arg;
+    args[argc++] = "--format=tsv";
+    args[argc] = NULL;
+    gchar *out = NULL, *err = NULL;
+    GError *error = NULL;
+    gint code = -1;
+    gboolean launched = g_spawn_sync(NULL, args, NULL, G_SPAWN_SEARCH_PATH,
+                                     NULL, NULL, &out, &err, &code, &error);
+    g_free(world_arg); g_free(area_arg); g_free(room_arg);
+    if (!launched || !g_spawn_check_wait_status(code, NULL)) {
+        gtk_box_append(GTK_BOX(w->connection_list),
+            gtk_label_new("Connection index unavailable; check saved project data."));
+        g_free(out); g_free(err); g_clear_error(&error);
+        gtk_widget_queue_draw(w->connection_canvas);
+        return;
+    }
+    gchar **lines = g_strsplit(out ? out : "", "\n", -1);
+    guint shown = 0;
+    for (guint i = 0; lines[i] && i < 8192; ++i) {
+        if (!*lines[i]) continue;
+        gchar **fields = g_strsplit(lines[i], "\t", 11);
+        guint source_room, source_door, target_room, target_door, reverse;
+        if (g_strv_length(fields) != 10 ||
+            !parse_uint(fields[2], &source_room) || source_room > 999 ||
+            !parse_uint(fields[3], &source_door) || !source_door ||
+            !parse_uint(fields[6], &target_room) || target_room > 999 ||
+            !parse_uint(fields[7], &target_door) ||
+            !parse_uint(fields[9], &reverse) || reverse > 1 ||
+            strlen(fields[8]) >= sizeof(((ProjectMapEdge0116 *)0)->state)) {
+            g_strfreev(fields);
+            continue;
+        }
+        guint src_area = G_MAXUINT, target_area = G_MAXUINT, target_world = w->world;
+        for (guint area = 0; area < area_count(w); ++area)
+            if (!g_strcmp0(fields[1], w->world ? NULL : mzm_areas[area]) ||
+                (w->world && parse_uint(fields[1], &src_area) && src_area == area)) {
+                src_area = area;
+                break;
+            }
+        if (src_area >= area_count(w)) { g_strfreev(fields); continue; }
+        if (!g_strcmp0(fields[4], "aria")) target_world = 1;
+        else if (!g_strcmp0(fields[4], "mzm")) target_world = 0;
+        else if (g_strcmp0(fields[4], "-")) { g_strfreev(fields); continue; }
+        if (g_strcmp0(fields[5], "-")) {
+            if (target_world == 1) {
+                if (!parse_uint(fields[5], &target_area) || target_area >= 12)
+                    target_area = G_MAXUINT;
+            } else for (guint a = 0; a < 7; ++a)
+                if (!g_strcmp0(fields[5], mzm_areas[a])) { target_area = a; break; }
+        }
+        ProjectMapEdge0116 edge = {0};
+        edge.area = src_area; edge.room = source_room; edge.door = source_door;
+        edge.target_world = target_world; edge.target_area = target_area;
+        edge.target_room = target_room; edge.target_door = target_door;
+        edge.reciprocal = reverse;
+        g_strlcpy(edge.state, fields[8], sizeof(edge.state));
+        g_array_append_val(w->connection_edges, edge);
+        const char *status = !strcmp(edge.state, "reciprocal") ? "Reciprocal" :
+            !strcmp(edge.state, "interworld") ? "Interworld" :
+            !strcmp(edge.state, "simple") ? "One-way" :
+            !strcmp(edge.state, "invalid") ? "Invalid target" : "No destination";
+        gchar *label = target_area == G_MAXUINT ?
+            g_strdup_printf("Room %03u D%u — %s", source_room, source_door, status) :
+            g_strdup_printf("Room %03u D%u → %s / %s %03u D%u — %s%s",
+                source_room, source_door, worlds[target_world],
+                target_world ? aria_areas[target_area] : mzm_areas[target_area],
+                target_room, target_door, status,
+                reverse && target_world != w->world ? " (reciprocal)" : "");
+        GtkWidget *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+        GtkWidget *text = gtk_label_new(label);
+        gtk_label_set_xalign(GTK_LABEL(text), 0);
+        gtk_label_set_ellipsize(GTK_LABEL(text), PANGO_ELLIPSIZE_END);
+        gtk_widget_set_hexpand(text, TRUE);
+        gtk_widget_set_tooltip_text(text, label);
+        gtk_box_append(GTK_BOX(row), text);
+        if (target_area != G_MAXUINT && strcmp(edge.state, "invalid") &&
+            strcmp(edge.state, "missing")) {
+            GtkWidget *go = gtk_button_new_from_icon_name("go-next-symbolic");
+            gtk_widget_set_tooltip_text(go, "Select destination on its original map");
+            g_object_set_data(G_OBJECT(go), "mv-conn-world", GUINT_TO_POINTER(target_world));
+            g_object_set_data(G_OBJECT(go), "mv-conn-area", GUINT_TO_POINTER(target_area));
+            g_object_set_data(G_OBJECT(go), "mv-conn-room", GUINT_TO_POINTER(target_room));
+            g_signal_connect(go, "clicked", G_CALLBACK(connection_go_to_0116), w);
+            gtk_box_append(GTK_BOX(row), go);
+        }
+        gtk_box_append(GTK_BOX(w->connection_list), row);
+        ++shown;
+        g_free(label);
+        g_strfreev(fields);
+    }
+    g_strfreev(lines);
+    g_free(out); g_free(err); g_clear_error(&error);
+    if (!shown) gtk_box_append(GTK_BOX(w->connection_list),
+        gtk_label_new("No saved project doors in this scope."));
+    gtk_widget_queue_draw(w->connection_canvas);
+}
+
+static void connections_changed_0116(GtkToggleButton *button, gpointer userdata)
+{ (void)button; connections_refresh_0116(userdata); }
 
 static void placement_refresh(GtkButton *button, gpointer userdata)
 {
@@ -964,6 +1219,7 @@ static void grid_rebuild(WorldGrid *w)
         }
     }
     if (native_doors) g_array_free(native_doors, TRUE);
+    if (w->connection_canvas) gtk_widget_queue_draw(w->connection_canvas);
     g_free(covered);
     g_free(lookup);
     gchar *message = g_strdup_printf(
@@ -1082,6 +1338,7 @@ static void world_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
     w->next_preview_area=0;
     w->selected=FALSE;
     selected_room_doors_refresh(w);
+    connections_refresh_0116(w);
     gtk_drop_down_set_selected(GTK_DROP_DOWN(w->area_select),0);
     w->changing_world=FALSE;
     g_object_set_data(G_OBJECT(w->page),"mv-world-mode",GINT_TO_POINTER(w->world?2:1));
@@ -1106,6 +1363,7 @@ static void area_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
     if(area != G_MAXUINT && area>=area_count(w))return;
     w->area=area;w->selected=FALSE;
     selected_room_doors_refresh(w);
+    connections_refresh_0116(w);
     if (reload_rows(w)) grid_rebuild(w);
     else {
         GtkWidget *child;
@@ -1196,6 +1454,7 @@ static void world_free(gpointer data)
     if (w->popup)
         g_object_remove_weak_pointer(G_OBJECT(w->popup), (gpointer *)&w->popup);
     g_array_free(w->cells, TRUE);
+    if (w->connection_edges) g_array_free(w->connection_edges, TRUE);
     g_free(w);
 }
 GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWidget *indicator)
@@ -1221,11 +1480,21 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     WorldGrid *w=g_new0(WorldGrid,1);
     w->workspace=workspace;w->world_badge=indicator;w->cells=g_array_new(FALSE,FALSE,sizeof(MapCell));
     w->size=28;
+    w->connection_edges = g_array_new(FALSE, FALSE, sizeof(ProjectMapEdge0116));
     w->prefetching=TRUE;
     GtkWidget *root=gtk_box_new(GTK_ORIENTATION_VERTICAL,6);
     GtkWidget *bar=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,6);
     GtkWidget *scroller=gtk_scrolled_window_new();
     GtkWidget *grid=gtk_grid_new();
+    GtkWidget *map_overlay = gtk_overlay_new();
+    w->connection_canvas = gtk_drawing_area_new();
+    gtk_overlay_set_child(GTK_OVERLAY(map_overlay), grid);
+    gtk_widget_set_halign(map_overlay, GTK_ALIGN_START);
+    gtk_widget_set_valign(map_overlay, GTK_ALIGN_START);
+    gtk_widget_set_can_target(w->connection_canvas, FALSE);
+    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(w->connection_canvas),
+                                   connection_draw_0116, w, NULL);
+    gtk_overlay_add_overlay(GTK_OVERLAY(map_overlay), w->connection_canvas);
     /* A 32x32 Zero map can fit inside the viewport, leaving nothing to drag.
      * Padding belongs to a surrounding canvas, NOT to the native cell grid:
      * room coordinates and per-cell dimensions must remain unchanged. */
@@ -1237,7 +1506,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_widget_set_size_request(bottom_space,-1,520);
     gtk_widget_set_halign(grid,GTK_ALIGN_START);
     gtk_widget_set_valign(grid,GTK_ALIGN_START);
-    gtk_box_append(GTK_BOX(canvas_row),grid);
+    gtk_box_append(GTK_BOX(canvas_row),map_overlay);
     gtk_box_append(GTK_BOX(canvas_row),right_space);
     gtk_box_append(GTK_BOX(pan_surface),canvas_row);
     gtk_box_append(GTK_BOX(pan_surface),bottom_space);
@@ -1256,6 +1525,10 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
                      G_CALLBACK(world_atlas_pick_cancel_clicked_0106), w);
     /* Keep global-map door IDs optional. Native door overlays belong
      * primarily in the individual room editor, not over the map mosaic. */
+    w->connections_toggle = gtk_toggle_button_new_with_label("Show connections");
+    w->connections_all = gtk_toggle_button_new_with_label("All links in current map");
+    gtk_widget_set_tooltip_text(w->connections_all,
+        "Selected room by default; all saved project links when enabled.");
     w->doors_toggle = gtk_toggle_button_new_with_label("Show global door IDs");
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w->doors_toggle), FALSE);
     w->page=root;w->grid=grid;w->scroller=scroller;
@@ -1275,6 +1548,14 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     g_signal_connect(wheel, "scroll", G_CALLBACK(map_scroll), w);
     w->status=gtk_label_new("Reading verified original minimap cases…");
     w->details=gtk_label_new("Double-click a case to edit it in the shared room editor.");
+    w->connection_expander = gtk_expander_new("Project connections (saved overrides)");
+    w->connection_list = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+    GtkWidget *connection_scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(connection_scroll),
+                                   GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    gtk_widget_set_size_request(connection_scroll, -1, 125);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(connection_scroll), w->connection_list);
+    gtk_expander_set_child(GTK_EXPANDER(w->connection_expander), connection_scroll);
     w->door_expander = gtk_expander_new("Native doors / select a Zero Mission room");
     GtkWidget *door_scroller = gtk_scrolled_window_new();
     w->door_list = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
@@ -1298,6 +1579,8 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_box_append(GTK_BOX(bar),generate);
     gtk_box_append(GTK_BOX(bar),open);
     gtk_box_append(GTK_BOX(bar),w->doors_toggle);
+    gtk_box_append(GTK_BOX(bar),w->connections_toggle);
+    gtk_box_append(GTK_BOX(bar),w->connections_all);
     gtk_box_append(GTK_BOX(root),bar);
     gtk_box_append(GTK_BOX(root),w->pick_bar);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller),pan_surface);
@@ -1311,6 +1594,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_label_set_xalign(GTK_LABEL(w->details),0);
     gtk_label_set_xalign(GTK_LABEL(w->status),0);
     gtk_box_append(GTK_BOX(root),w->details);
+    gtk_box_append(GTK_BOX(root),w->connection_expander);
     gtk_box_append(GTK_BOX(root),w->door_expander);
     gtk_box_append(GTK_BOX(root),w->status);
     g_object_set_data_full(G_OBJECT(root),"mv-world-grid",w,world_free);
@@ -1323,6 +1607,8 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     g_signal_connect(w->area_select,"notify::selected",G_CALLBACK(area_changed),w);
     g_signal_connect(w->zoom,"value-changed",G_CALLBACK(zoom_changed),w);
     g_signal_connect(w->doors_toggle,"toggled",G_CALLBACK(doors_changed),w);
+    g_signal_connect(w->connections_toggle,"toggled", G_CALLBACK(connections_changed_0116),w);
+    g_signal_connect(w->connections_all,"toggled", G_CALLBACK(connections_changed_0116),w);
     g_signal_connect(generate,"clicked",G_CALLBACK(generate_clicked),w);
     g_signal_connect(open,"clicked",G_CALLBACK(selected_open_click),w);
     if(reload_rows(w))grid_rebuild(w);

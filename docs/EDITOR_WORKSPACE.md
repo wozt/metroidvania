@@ -51,7 +51,8 @@ base import, ROMs and upstream source remain unchanged.
 - BG0, full BG3 composition, animated graphics and several palette effects are
   incomplete.
 - Native objects, doors, events and collision remain inspectable and immutable.
-  Separate project collision cells can be painted with semantic brushes or
+  Separate project collision cells can be painted with Wall, Platform, Hazard,
+  rising/falling Slope, Water and Air brushes or
   changed from the canvas context menu, and project doors can be created,
   viewed and deleted. Complete
   property and transition editing is available through the shared CLI while the
@@ -64,3 +65,10 @@ base import, ROMs and upstream source remain unchanged.
 - Trigger regions, boss parameters, scripts, music and engine-backed cutscene
   authoring are not yet decoded or editable.
 - Editor output is not consumed by a native gameplay runtime yet.
+
+The collision toolbar is shared deliberately: both source formats have verified
+native counterparts for the seven exposed semantics. Zero Mission uses 16px
+project cells and Aria uses 8px project cells. Moving and crumbling platforms
+remain objects rather than static one-way collision. Tooltips and the headless
+`collision-capabilities` command expose this distinction; native encoding is
+still unavailable for both games.

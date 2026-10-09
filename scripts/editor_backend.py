@@ -21,7 +21,7 @@ from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.room_audit import audit_world, write_private_report
 from scripts.validate_story_assets import validate_scene, validate_timeline
 
-BACKEND_VERSION = "1.3.0"
+BACKEND_VERSION = "1.4.0"
 
 CAPABILITIES = {
     "project-info": "available",
@@ -56,6 +56,7 @@ CAPABILITIES = {
     "tile-get": "available_private_native_workspace",
     "tile-set": "available_private_native_workspace",
     "tile-fill": "available_private_native_workspace",
+    "collision-capabilities": "available_project_and_native_reference_metadata",
     "collision-list": "available_project_room_data_only",
     "collision-get": "available_project_room_data_only",
     "collision-set": "available_project_room_data_only",
@@ -124,6 +125,7 @@ COMMAND_FIELDS = {
     "tile-get": {"world", "area", "room", "layer", "x", "y"},
     "tile-set": {"world", "area", "room", "layer", "x", "y", "tile_id"},
     "tile-fill": {"world", "area", "room", "layer", "x", "y", "tile_id"},
+    "collision-capabilities": {"world"},
     "collision-list": {"world", "area", "room", "width", "height"},
     "collision-get": {"world", "area", "room", "width", "height", "x", "y"},
     "collision-set": {"world", "area", "room", "width", "height", "x", "y",
@@ -964,6 +966,12 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
             return {"entity": changed, "persisted": False}
         path = project_room_entities.save(root_path, document)
         return {"entity": changed, "persisted": True, "path": str(path)}
+    if command == "collision-capabilities":
+        world = _world(options.get("world"))
+        result = project_room_entities.collision_capabilities(
+            "mzm" if world == "zero_mission" else "aria")
+        result["world"] = world
+        return result
     if command.startswith("collision-"):
         document, _scope = _room_document(root_path, options)
         resolution = document["collision"]["resolution_px"]

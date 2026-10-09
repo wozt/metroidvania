@@ -1066,3 +1066,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   Undo/Redo and explicit Save workflow as the other collision brushes.
 - This remains engine-neutral project data; no ROM or native physics encoder is
   implied.
+
+## Patch 0119 - cross-world collision capability matrix and full brush suite
+
+- Verified static pass-through platforms in both native formats. Zero Mission
+  exposes `CLIPDATA_TYPE_PASS_THROUGH_BOTTOM`; Aria's collision byte represents
+  a jump-through platform as a top without solid sides/bottom or damage effect.
+  Moving and crumbling platforms remain object records, not static collision.
+- Added Hazard, rising Slope and falling Slope tools to both workroom modes.
+  Their `D`, `R` and `T` shortcuts, continuous gesture interpolation, live
+  previews, backend validation, shared Undo/Redo and explicit Save behavior
+  match the existing collision brushes.
+- Added `collision-capabilities --world=<world>`. The backend now reports all
+  seven shared project semantics, the 16px MZM / 8px Aria resolution, and the
+  exact or family-level native format reference verified for each semantic.
+- Native parity and native writing remain separate states: every listed source
+  format counterpart is verified, but `native_encoder` is still `unavailable`
+  for both worlds and source ROM data remains immutable.
+- Functional tests author every collision type in both world schemas and query
+  both capability matrices. GTK tests activate the complete tool strip.

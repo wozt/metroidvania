@@ -37,8 +37,10 @@ collision cells, editable project/native door overrides, cross-world references,
 project entities and 8px Aria / 16px Zero Mission placement. GTK provides a
 unified room editor, Grab, destination selection on the global map, a shared
 chronological Undo/Redo and Save/Discard for staged room changes. Native ROM
-encoders, full collision paint/platforms, object behavior definitions, triggers,
-events and a deterministic engine-neutral export remain pending.
+encoders, object behavior definitions, triggers, events and a deterministic
+engine-neutral export remain pending. The engine-neutral collision brush suite
+now covers solid, one-way, hazard, two floor-slope directions, water and air in
+both workroom modes, with a machine-readable native-reference matrix.
 
 Exit criterion: representative project rooms for both worlds can be authored,
 validated and exported to an engine-neutral package without ROM mutation.

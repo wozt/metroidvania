@@ -26,7 +26,8 @@ typedef struct {
 } ReverseLinkPending0115;
 
 enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN,
-       TOOL_GRAB, TOOL_WALL, TOOL_PLATFORM, TOOL_WATER, TOOL_AIR, TOOL_COUNT };
+       TOOL_GRAB, TOOL_WALL, TOOL_PLATFORM, TOOL_HAZARD, TOOL_SLOPE_UP,
+       TOOL_SLOPE_DOWN, TOOL_WATER, TOOL_AIR, TOOL_COUNT };
 enum { OVERLAY_COLLISION, OVERLAY_ENEMIES, OVERLAY_ITEMS, OVERLAY_OBJECTS,
        OVERLAY_DOORS, OVERLAY_EVENTS, OVERLAY_TRIGGERS, OVERLAY_OTHER,
        OVERLAY_COUNT };
@@ -3295,6 +3296,11 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
                             MAX(2.0, unit - 1), MAX(2.0, unit - 1));
             if (doc->tool_id == TOOL_PLATFORM)
                 cairo_set_source_rgba(cr, 0.2, 1.0, 0.45, 0.48);
+            else if (doc->tool_id == TOOL_HAZARD)
+                cairo_set_source_rgba(cr, 1.0, 0.16, 0.42, 0.52);
+            else if (doc->tool_id == TOOL_SLOPE_UP ||
+                     doc->tool_id == TOOL_SLOPE_DOWN)
+                cairo_set_source_rgba(cr, 1.0, 0.62, 0.1, 0.52);
             else if (doc->tool_id == TOOL_WATER)
                 cairo_set_source_rgba(cr, 0.1, 0.5, 1.0, 0.48);
             else if (doc->tool_id == TOOL_AIR)
@@ -3320,6 +3326,11 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
             cairo_set_line_width(cr, 2.0);
             if (doc->tool_id == TOOL_PLATFORM)
                 cairo_set_source_rgba(cr, 0.2, 1.0, 0.45, 0.95);
+            else if (doc->tool_id == TOOL_HAZARD)
+                cairo_set_source_rgba(cr, 1.0, 0.16, 0.42, 0.95);
+            else if (doc->tool_id == TOOL_SLOPE_UP ||
+                     doc->tool_id == TOOL_SLOPE_DOWN)
+                cairo_set_source_rgba(cr, 1.0, 0.62, 0.1, 0.95);
             else if (doc->tool_id == TOOL_WATER)
                 cairo_set_source_rgba(cr, 0.1, 0.56, 1.0, 0.95);
             else if (doc->tool_id == TOOL_AIR)
@@ -3564,7 +3575,8 @@ static void paint_line(NativeWorkspace *doc, int x, int y)
 static gboolean collision_tool_0113(unsigned tool)
 {
     return tool == TOOL_WALL || tool == TOOL_PLATFORM ||
-           tool == TOOL_WATER || tool == TOOL_AIR;
+           tool == TOOL_HAZARD || tool == TOOL_SLOPE_UP ||
+           tool == TOOL_SLOPE_DOWN || tool == TOOL_WATER || tool == TOOL_AIR;
 }
 
 static gboolean collision_cell_0113(const NativeWorkspace *doc, double x, double y,
@@ -3623,6 +3635,9 @@ static void collision_commit_0113(NativeWorkspace *doc)
     }
     const char *kind = doc->tool_id == TOOL_WALL ? "solid" :
                        doc->tool_id == TOOL_PLATFORM ? "one_way" :
+                       doc->tool_id == TOOL_HAZARD ? "hazard" :
+                       doc->tool_id == TOOL_SLOPE_UP ? "slope_up" :
+                       doc->tool_id == TOOL_SLOPE_DOWN ? "slope_down" :
                        doc->tool_id == TOOL_WATER ? "water" : "air";
     const char *const args[] = {"--points", points->str, "--type", kind, NULL};
     if (project_command(doc, "collision-stroke", args, NULL)) {
@@ -4503,6 +4518,9 @@ static gboolean key_pressed(GtkEventControllerKey *controller, guint keyval,
     case GDK_KEY_m: doc->tool_id = TOOL_GRAB; break;
     case GDK_KEY_w: doc->tool_id = TOOL_WALL; break;
     case GDK_KEY_p: doc->tool_id = TOOL_PLATFORM; break;
+    case GDK_KEY_d: doc->tool_id = TOOL_HAZARD; break;
+    case GDK_KEY_r: doc->tool_id = TOOL_SLOPE_UP; break;
+    case GDK_KEY_t: doc->tool_id = TOOL_SLOPE_DOWN; break;
     case GDK_KEY_u: doc->tool_id = TOOL_WATER; break;
     case GDK_KEY_a: doc->tool_id = TOOL_AIR; break;
     default: return FALSE;
@@ -4536,6 +4554,26 @@ static void collision_icon_draw_0113(GtkDrawingArea *area, cairo_t *cr, int w, i
         cairo_line_to(cr, w * 0.28, h - 3);
         cairo_move_to(cr, w * 0.72, h * 0.35);
         cairo_line_to(cr, w * 0.72, h - 3);
+        cairo_stroke(cr);
+    } else if (kind == TOOL_HAZARD) {
+        cairo_set_source_rgb(cr, 1.0, 0.16, 0.42);
+        cairo_move_to(cr, w / 2.0, 2);
+        cairo_line_to(cr, w - 2, h - 3);
+        cairo_line_to(cr, 2, h - 3);
+        cairo_close_path(cr);
+        cairo_stroke(cr);
+        cairo_move_to(cr, w / 2.0, 6);
+        cairo_line_to(cr, w / 2.0, h - 8);
+        cairo_stroke(cr);
+        cairo_arc(cr, w / 2.0, h - 6, 1, 0, 2 * G_PI);
+        cairo_fill(cr);
+    } else if (kind == TOOL_SLOPE_UP || kind == TOOL_SLOPE_DOWN) {
+        cairo_set_source_rgb(cr, 1.0, 0.62, 0.1);
+        cairo_move_to(cr, 2, kind == TOOL_SLOPE_UP ? h - 3 : 3);
+        cairo_line_to(cr, w - 2, kind == TOOL_SLOPE_UP ? 3 : h - 3);
+        cairo_line_to(cr, w - 2, h - 3);
+        cairo_line_to(cr, 2, h - 3);
+        cairo_close_path(cr);
         cairo_stroke(cr);
     } else if (kind == TOOL_WATER) {
         cairo_set_source_rgb(cr, 0.2, 0.57, 1.0);
@@ -4575,17 +4613,20 @@ static void document_build(NativeWorkspace *doc)
     static const char *const icons[TOOL_COUNT] = {
         "document-edit-symbolic", "edit-clear-symbolic", "color-fill-symbolic",
         "color-select-symbolic", "edit-select-all-symbolic", "transform-move-symbolic",
-        "hand-symbolic", NULL, NULL, NULL, NULL
+        "hand-symbolic", NULL, NULL, NULL, NULL, NULL, NULL, NULL
     };
     static const char *const names[TOOL_COUNT] = {
         "Pencil (draw)", "Eraser", "Fill bucket",
         "Eyedropper (pick a metatile)", "Rectangle selection (drag to move)",
         "Hand (pan the view)",
         "Grab (M): drag doors, enemies, items and objects; Zero Mission 16px / Aria 8px",
-        "Wall (W): paint solid collision",
-        "Platform (P): paint one-way collision",
-        "Water (U): paint water collision",
-        "Air (A): erase collision with an explicit passable override"
+        "Wall (W): paint solid collision; native counterpart verified in both games",
+        "Platform (P): paint one-way collision; native counterpart verified in both games",
+        "Hazard (D): paint damage collision; native family verified in both games",
+        "Slope up (R): paint a floor rising to the right; native family verified in both games",
+        "Slope down (T): paint a floor falling to the right; native family verified in both games",
+        "Water (U): paint water collision; native counterpart verified in both games",
+        "Air (A): erase with an explicit passable override; native counterpart verified in both games"
     };
     GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
     GtkWidget *tools = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);

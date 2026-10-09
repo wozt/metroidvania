@@ -70,6 +70,7 @@ batch is accepted with `--dry-run=true` because no project document is written.
 | `entity-delete` | Project markers | room scope, `id`, `confirm=true` |
 | `entity-catalog`, `entity-item-settings` | Native references/project metadata | world, kind/entity scope |
 | `story-validate`, `story-save` | Project data | `kind`, `input`, and save `target` |
+| `collision-capabilities` | Project/native reference metadata | `world` |
 | `collision-list`, `collision-get`, `collision-validate` | Project room data | room scope and optional cell |
 | `collision-set`, `collision-fill`, `collision-stroke`, `collision-clear` | Project room data | cell/rectangle/freehand points, semantic type, confirmation for clear |
 | `door-list`, `door-inspect` | Project room data | room scope and optional `id` |
@@ -96,7 +97,7 @@ and engine export are not implied by these visual workroom operations.
 | BG1/BG2 tile read, draw, erase and fill | Yes | Same C core | Private override | Private override |
 | Native object catalog | Read-only metadata | Read-only metadata | Yes | Yes |
 | Project entity create/move/assign/delete | Yes | Yes | Markers only | Markers + item fields |
-| Project collision authoring | Full cell/rectangle/stroke commands | Freehand brushes + cell context actions | 16px semantic cells | 8px semantic cells |
+| Project collision authoring | Full cell/rectangle/stroke commands + capability matrix | Seven freehand brushes + cell context actions | 16px semantic cells | 8px semantic cells |
 | Project doors | Full CRUD + destination links | Create/view/delete | Project data only | Project data only |
 | Project transitions | Full CRUD + target validation | CLI only; form pending | Native target references | Native target references |
 | Timeline/cutscene TOML validate and save | Yes | Yes | Shared project data | Shared project data |
@@ -121,6 +122,12 @@ again. These values are authoring intent only. They do not claim equivalence
 with either ROM's native
 collision bytes and are not playable until the corresponding engine adapter is
 implemented.
+
+`collision-capabilities --world=<world>` makes cross-world parity explicit.
+All seven project semantics are authorable in both modes. Its native references
+confirm solid, pass-through platforms, damage, floor slopes, water and air in
+both source formats, while `native_encoder` remains `unavailable`. A verified
+native reference is not a claim that the editor can rewrite either ROM.
 
 ```sh
 ./build/fusion_editor_cli --command=collision-fill \

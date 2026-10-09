@@ -26,6 +26,30 @@ ENTITY_KEYS = {"id", "kind", "x", "y", "label", "native_type"}
 COLLISION_KEYS = {"resolution_px", "cells"}
 COLLISION_CELL_KEYS = {"x", "y", "type"}
 COLLISION_TYPES = ("solid", "one_way", "hazard", "slope_up", "slope_down", "water", "air")
+# Native-format references are intentionally separate from project authoring
+# support. Every semantic is editable in both worlds, but no ROM encoder exists.
+# This matrix prevents GTK and automation clients from assuming cross-world
+# parity without an explicit, source-verified native counterpart.
+COLLISION_NATIVE_REFERENCES = {
+    "mzm": {
+        "solid": ("verified_exact", "CLIPDATA_TYPE_SOLID"),
+        "one_way": ("verified_exact", "CLIPDATA_TYPE_PASS_THROUGH_BOTTOM"),
+        "hazard": ("verified_family", "CLIP_BEHAVIOR_LAVA/WEAK_ACID/STRONG_ACID"),
+        "slope_up": ("verified_family", "CLIPDATA_TYPE_*_FLOOR_SLOPE"),
+        "slope_down": ("verified_family", "CLIPDATA_TYPE_*_FLOOR_SLOPE"),
+        "water": ("verified_exact", "CLIP_BEHAVIOR_WATER"),
+        "air": ("verified_exact", "CLIPDATA_TYPE_AIR"),
+    },
+    "aria": {
+        "solid": ("verified_exact", "collision byte: top + sides/bottom"),
+        "one_way": ("verified_exact", "collision byte: top only"),
+        "hazard": ("verified_family", "collision byte: damage effect"),
+        "slope_up": ("verified_family", "collision byte: floor slope + horizontal flip"),
+        "slope_down": ("verified_family", "collision byte: floor slope + horizontal flip"),
+        "water": ("verified_exact", "collision byte: water bit"),
+        "air": ("verified_exact", "collision byte: blank shape"),
+    },
+}
 DOOR_KEYS = {"id", "x", "y", "width", "height", "label", "door_type", "facing"}
 # Optional private override reference, preserving existing version-2 room docs.
 NATIVE_DOOR_SOURCE_KEYS = {"index", "variant", "native_type"}
@@ -73,6 +97,28 @@ def requested_item_settings(args: argparse.Namespace) -> dict | None:
 MAX_ENTITIES = 256
 MAX_DOORS = 128
 MAX_TRANSITIONS = 128
+
+
+def collision_capabilities(world: str) -> dict:
+    """Describe project authoring and verified native-format parity by world."""
+    if world not in COLLISION_NATIVE_REFERENCES:
+        raise ValueError("unsupported collision capability world")
+    resolution = 16 if world == "mzm" else 8
+    references = COLLISION_NATIVE_REFERENCES[world]
+    return {
+        "world": world,
+        "resolution_px": resolution,
+        "native_encoder": "unavailable",
+        "types": [
+            {
+                "type": collision_type,
+                "project_authoring": "available",
+                "native_reference_status": references[collision_type][0],
+                "native_reference": references[collision_type][1],
+            }
+            for collision_type in COLLISION_TYPES
+        ],
+    }
 
 
 def _int(value: object, low: int, high: int, label: str) -> int:

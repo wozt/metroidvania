@@ -169,6 +169,26 @@ class EditorCliTests(unittest.TestCase):
                 "--format=json")
             self.assertEqual(removed_door.returncode, 0, removed_door.stderr)
 
+    def test_collision_capabilities_report_both_native_formats(self):
+        for world, resolution in (("zero_mission", 16), ("aria", 8)):
+            with self.subTest(world=world):
+                completed = self.run_cli(
+                    "--command=collision-capabilities", f"--world={world}",
+                    "--format=json")
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                data = json.loads(completed.stdout)["data"]
+                self.assertEqual(data["world"], world)
+                self.assertEqual(data["resolution_px"], resolution)
+                self.assertEqual(data["native_encoder"], "unavailable")
+                by_type = {entry["type"]: entry for entry in data["types"]}
+                self.assertEqual(set(by_type), {
+                    "solid", "one_way", "hazard", "slope_up", "slope_down",
+                    "water", "air",
+                })
+                self.assertEqual(
+                    by_type["one_way"]["native_reference_status"],
+                    "verified_exact")
+
     def test_story_save_validates_and_writes_through_backend(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -53,6 +53,21 @@ class BG3PreviewTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             probe_vram_references(bytes(2048), 31)
 
+    def test_native_loader_provenance(self):
+        from scripts.mzm_bg3_preview import probe_native_loader_regions
+        # Tile index 704 with charbase=0 points to 0x5800 (tileset).
+        data = ((0xF000 | 704).to_bytes(2, 'little')) * 1024
+        report = probe_native_loader_regions(data, background_bytes=12800,
+                                              tileset_bytes=0x2000)
+        self.assertEqual(report['layouts'][0]['counts']['room_tileset_gfx'], 1024)
+        self.assertEqual(report['layouts'][3]['counts']['outside_bg_vram'], 1024)
+
+    def test_native_loader_provenance_rejects_bad_lengths(self):
+        from scripts.mzm_bg3_preview import probe_native_loader_regions
+        with self.assertRaises(ValueError):
+            probe_native_loader_regions(b'\0' * 2048, background_bytes=31,
+                                        tileset_bytes=32)
+
     def test_fail_closed(self):
         with self.assertRaises(ValueError): preview(b'bad',b'',b'')
 

@@ -209,6 +209,70 @@ def probe_vram_references(map_data: bytes, gfx_size: int) -> dict:
     }
 
 
+# PATCH_0130_NATIVE_LOADER_PROVENANCE: room.c RoomLoadTileset writes
+# common graphics to VRAM+0x4800, tileset graphics to VRAM+0x5800,
+# and background graphics to VRAM+0xFDE0-size. This maps references to
+# known VRAM regions, but BG3CNT charbase/priority remain unverified.
+def probe_native_loader_regions(map_data: bytes, *, background_bytes: int,
+                                tileset_bytes: int) -> dict:
+    """Classify BG3 screen-entry addresses for each hardware charbase.
+
+    Report only loader-backed regions. An address inside a known region is
+    not proof of the active BG3CNT charbase or the correct pixel palette.
+    """
+    from collections import Counter
+    if len(map_data) not in (2048, 4096):
+        raise ValueError('invalid BG3 tilemap length')
+    if (background_bytes <= 0 or background_bytes % 32 or
+            tileset_bytes <= 0 or tileset_bytes % 32):
+        raise ValueError('graphics lengths must be positive 4bpp tiles')
+    bg_start = 0xFDE0 - background_bytes
+    if bg_start < 0 or bg_start % 32:
+        raise ValueError('native BG graphics destination not tile aligned')
+    if 0x5800 + tileset_bytes > 0x10000:
+        raise ValueError('tileset exceeds BG VRAM')
+    # Common graphics have a verified destination but their data length is
+    # unknown here. Do not claim more than the gap up to tileset graphics.
+    regions = (
+        ('common_gfx_candidate', 0x4800, 0x5800),
+        ('room_tileset_gfx', 0x5800, 0x5800 + tileset_bytes),
+        ('background_gfx', bg_start, 0xFDE0),
+    )
+    words = [word for (word,) in struct.iter_unpack('<H', map_data)]
+    layouts = []
+    for charbase in range(4):
+        counts = Counter()
+        examples = {}
+        for word in words:
+            idx = word & 1023
+            offset = charbase * 0x4000 + idx * 32
+            matching = [name for name, start, end in regions
+                        if start <= offset and offset + 32 <= end]
+            if offset + 32 > 0x10000:
+                matching = ['outside_bg_vram']
+            if not matching:
+                matching = ['unmapped_or_unknown']
+            for name in matching:
+                counts[name] += 1
+                examples.setdefault(name, {'tile_index': idx,
+                                            'vram_offset': hex(offset)})
+        layouts.append({'charbase': charbase, 'counts': dict(sorted(counts.items())),
+                        'examples': examples})
+    return {
+        'status': 'LOADER_REGIONS_ONLY_BG3CNT_UNVERIFIED',
+        'bg_graphics_start': hex(bg_start),
+        'bg_graphics_end': hex(0xFDE0),
+        'tileset_graphics_start': hex(0x5800),
+        'tileset_graphics_end': hex(0x5800 + tileset_bytes),
+        'common_graphics_start': hex(0x4800),
+        'common_graphics_end_unverified': hex(0x5800),
+        'source': 'metroidret/mzm src/room.c RoomLoadTileset',
+        'layouts': layouts,
+        'caveat': ('Common graphics size and active BG3CNT charbase are not '
+                   'verified. Address overlap is not verified pixel data.'),
+    }
+
+
 def probe_native_room(area: str, room_number: int) -> dict:
     """Inspect privately imported native room resources; never write assets."""
     room = native.read_source_room(area, room_number)
@@ -221,6 +285,10 @@ def probe_native_room(area: str, room_number: int) -> dict:
     compressed_gfx = tileset_background_resource(int(fields['tileset']))
     gfx = native.lz77(compressed_gfx)
     report = probe_vram_references(map_data, len(gfx))
+    from scripts import mzm_room_render as _native
+    tileset_gfx = _native.lz77(_native.tileset_blobs(int(fields['tileset']))[0])
+    report['native_loader_regions'] = probe_native_loader_regions(
+        map_data, background_bytes=len(gfx), tileset_bytes=len(tileset_gfx))
     report.update({
         'area': area, 'room': room_number,
         'tileset': int(fields['tileset']),

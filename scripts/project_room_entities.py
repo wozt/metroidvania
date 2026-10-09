@@ -25,7 +25,7 @@ DOC_KEYS = {
 ENTITY_KEYS = {"id", "kind", "x", "y", "label", "native_type"}
 COLLISION_KEYS = {"resolution_px", "cells"}
 COLLISION_CELL_KEYS = {"x", "y", "type"}
-COLLISION_TYPES = ("solid", "one_way", "hazard", "slope_up", "slope_down")
+COLLISION_TYPES = ("solid", "one_way", "hazard", "slope_up", "slope_down", "water", "air")
 DOOR_KEYS = {"id", "x", "y", "width", "height", "label", "door_type", "facing"}
 # Optional private override reference, preserving existing version-2 room docs.
 NATIVE_DOOR_SOURCE_KEYS = {"index", "variant", "native_type"}

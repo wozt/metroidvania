@@ -980,3 +980,16 @@ and the proprietary-file guard passed.
   Save still controls all durable override writes; Undo/Redo never commits.
 - GTK/Xvfb regression exercises Tile -> JSON -> Undo twice -> Redo twice.
   Native source encoders and atomic multi-file disk commits remain pending.
+
+## Patch 0113 — fixed room toolbar and collision authoring
+
+- Room controls use two fixed-width, horizontally scrollable icon strips instead
+  of the responsive wrapping tool grid. Icons remain compact across window sizes.
+- Wall (W), Water (U) and Air (A) paint private semantic collision rectangles;
+  Zero Mission uses 16px cells and Aria uses 8px cells. Drag previews never write
+  to disk, and each stroke is one backend mutation and one shared history entry.
+- Water and Air are explicit version-2 project collision semantics; Air overrides
+  a native wall as passable without altering source ROM collision data. Clearing
+  the project collision entry in the context menu restores native provenance.
+- No native physics adapter or ROM collision writer is implemented yet. Existing
+  imported collision images remain diagnostic-only, not destructive edit targets.

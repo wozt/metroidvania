@@ -13,7 +13,8 @@
 #include <glib/gstdio.h>
 #include <sys/stat.h>
 
-enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN, TOOL_GRAB, TOOL_COUNT };
+enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN,
+       TOOL_GRAB, TOOL_WALL, TOOL_WATER, TOOL_AIR, TOOL_COUNT };
 enum { OVERLAY_COLLISION, OVERLAY_ENEMIES, OVERLAY_ITEMS, OVERLAY_OBJECTS,
        OVERLAY_DOORS, OVERLAY_EVENTS, OVERLAY_TRIGGERS, OVERLAY_OTHER,
        OVERLAY_COUNT };
@@ -72,6 +73,7 @@ struct NativeWorkspace {
     unsigned undo_count, redo_count;
     gboolean ready, busy, unsaved, drawing, changed, grid_visible;
     gboolean has_selection, selecting, moving, panning;
+    gboolean collision_dragging; /* One private collision rectangle per gesture. */
     unsigned layer_id, brush_id, tool_id;
     int start_x, start_y, last_x, last_y;
     int sel_x0, sel_y0, sel_x1, sel_y1, preview_dx, preview_dy;
@@ -674,6 +676,8 @@ static guint project_collision_type(const char *name)
     if (!strcmp(name, "hazard")) return 3;
     if (!strcmp(name, "slope_up")) return 4;
     if (!strcmp(name, "slope_down")) return 5;
+    if (!strcmp(name, "water")) return 6;
+    if (!strcmp(name, "air")) return 7;
     return 0;
 }
 
@@ -1625,6 +1629,10 @@ static void project_context_empty(NativeWorkspace *doc, GtkWidget *canvas,
     guint collision_y = (guint)(y / (resolution * doc->scale));
     project_collision_context_add(layout, doc, "Set project collision: solid",
                                   collision_x, collision_y, "solid");
+    project_collision_context_add(layout, doc, "Set project collision: water",
+                                  collision_x, collision_y, "water");
+    project_collision_context_add(layout, doc, "Set project collision: air (passable)",
+                                  collision_x, collision_y, "air");
     project_collision_context_add(layout, doc, "Set project collision: one-way",
                                   collision_x, collision_y, "one_way");
     project_collision_context_add(layout, doc, "Set project collision: hazard",
@@ -2830,6 +2838,8 @@ static void draw_project_collision(NativeWorkspace *doc, cairo_t *cr)
         double red = 0.15, green = 0.8, blue = 1.0;
         if (cell->type == 2) { red = 0.2; green = 1.0; blue = 0.45; }
         else if (cell->type == 3) { red = 1.0; green = 0.2; blue = 0.2; }
+        else if (cell->type == 6) { red = 0.1; green = 0.56; blue = 1.0; }
+        else if (cell->type == 7) { red = 0.6; green = 0.68; blue = 0.72; }
         else if (cell->type >= 4) { red = 1.0; green = 0.62; blue = 0.1; }
         cairo_save(cr);
         cairo_rectangle(cr, x + 0.5, y + 0.5, MAX(2.0, size - 1), MAX(2.0, size - 1));
@@ -2843,6 +2853,18 @@ static void draw_project_collision(NativeWorkspace *doc, cairo_t *cr)
         if (cell->type == 2) {
             cairo_move_to(cr, x + 1, y + 2);
             cairo_line_to(cr, x + size - 1, y + 2);
+            cairo_stroke(cr);
+        } else if (cell->type == 6) {
+            /* Native-image source remains visible; blue waves mark authoring water. */
+            cairo_move_to(cr, x + 1, y + size * 0.5);
+            cairo_line_to(cr, x + size * 0.35, y + size * 0.30);
+            cairo_line_to(cr, x + size * 0.65, y + size * 0.60);
+            cairo_line_to(cr, x + size - 1, y + size * 0.4);
+            cairo_stroke(cr);
+        } else if (cell->type == 7) {
+            /* Air is an explicit passable override, NOT removal of an override. */
+            cairo_move_to(cr, x + 2, y + size - 2);
+            cairo_line_to(cr, x + size - 2, y + 2);
             cairo_stroke(cr);
         } else if (cell->type == 4 || cell->type == 5) {
             cairo_move_to(cr, x + 1, cell->type == 4 ? y + size - 1 : y + 1);
@@ -2975,6 +2997,26 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
         cairo_restore(cr);
     }
     draw_project_collision(doc, cr);
+    if (doc->collision_dragging && doc->overlays[OVERLAY_COLLISION]) {
+        const double unit = (doc->project_aria ? 8.0 : 16.0) * doc->scale;
+        const int left = MIN(doc->start_x, doc->last_x);
+        const int top = MIN(doc->start_y, doc->last_y);
+        const int wide = abs(doc->last_x - doc->start_x) + 1;
+        const int high = abs(doc->last_y - doc->start_y) + 1;
+        cairo_save(cr);
+        cairo_rectangle(cr, left * unit + 0.5, top * unit + 0.5,
+                        wide * unit - 1, high * unit - 1);
+        if (doc->tool_id == TOOL_WATER)
+            cairo_set_source_rgba(cr, 0.1, 0.5, 1.0, 0.40);
+        else if (doc->tool_id == TOOL_AIR)
+            cairo_set_source_rgba(cr, 0.65, 0.7, 0.7, 0.45);
+        else cairo_set_source_rgba(cr, 0.15, 0.85, 1.0, 0.4);
+        cairo_fill_preserve(cr);
+        cairo_set_line_width(cr, 2.0);
+        cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+        cairo_stroke(cr);
+        cairo_restore(cr);
+    }
     draw_annotations(doc, cr);
     if (doc->grid_visible) {
         cairo_set_source_rgba(cr, 1, 1, 1, 0.21);
@@ -3204,12 +3246,69 @@ static void paint_line(NativeWorkspace *doc, int x, int y)
     doc->last_y = y;
 }
 
+/* PATCH_0113_COLLISION_BRUSHES: All positions are in collision cells.
+ * A drag stages one validated rectangle (and therefore one undo action).
+ * Both original wall overlays and ROM data remain read-only. */
+static gboolean collision_tool_0113(unsigned tool)
+{
+    return tool == TOOL_WALL || tool == TOOL_WATER || tool == TOOL_AIR;
+}
+
+static gboolean collision_cell_0113(const NativeWorkspace *doc, double x, double y,
+                                     int *cx, int *cy)
+{
+    if (!doc->ready || !doc->map || x < 0 || y < 0) return FALSE;
+    const int resolution = doc->project_aria ? 8 : 16;
+    const int ix = (int)(x / (resolution * doc->scale));
+    const int iy = (int)(y / (resolution * doc->scale));
+    if (ix < 0 || iy < 0 || ix >= (int)doc->map->width[0] * 16 / resolution ||
+        iy >= (int)doc->map->height[0] * 16 / resolution) return FALSE;
+    *cx = ix;
+    *cy = iy;
+    return TRUE;
+}
+
+static void collision_commit_0113(NativeWorkspace *doc)
+{
+    const int x = MIN(doc->start_x, doc->last_x);
+    const int y = MIN(doc->start_y, doc->last_y);
+    const int width = abs(doc->last_x - doc->start_x) + 1;
+    const int height = abs(doc->last_y - doc->start_y) + 1;
+    gchar sx[16], sy[16], sw[16], sh[16];
+    g_snprintf(sx, sizeof(sx), "%d", x);
+    g_snprintf(sy, sizeof(sy), "%d", y);
+    g_snprintf(sw, sizeof(sw), "%d", width);
+    g_snprintf(sh, sizeof(sh), "%d", height);
+    const char *kind = doc->tool_id == TOOL_WALL ? "solid" :
+                       doc->tool_id == TOOL_WATER ? "water" : "air";
+    const char *const args[] = {"--x", sx, "--y", sy, "--fill-width", sw,
+                                "--fill-height", sh, "--type", kind, NULL};
+    if (project_command(doc, "collision-fill", args, NULL)) {
+        project_reload(doc);
+        message(doc, "Collision overlay staged. Ctrl+Z to undo; Save to commit.");
+    }
+}
+
 static void gesture_begin(GtkGestureDrag *gesture, double x, double y, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
     if (doc->closing) return;
     (void)gesture;
     if (!doc->ready || doc->drawing || doc->project_click_consumed) return;
+    if (collision_tool_0113(doc->tool_id)) {
+        int cx = 0, cy = 0;
+        if (!collision_cell_0113(doc, x, y, &cx, &cy)) return;
+        doc->drawing = doc->collision_dragging = TRUE;
+        doc->start_x = doc->last_x = cx;
+        doc->start_y = doc->last_y = cy;
+        doc->pointer_x = x;
+        doc->pointer_y = y;
+        if (doc->overlay_buttons[OVERLAY_COLLISION])
+            gtk_toggle_button_set_active(
+                GTK_TOGGLE_BUTTON(doc->overlay_buttons[OVERLAY_COLLISION]), TRUE);
+        gtk_widget_queue_draw(doc->canvas);
+        return;
+    }
     /* Grab supports every native/project marker, with source-specific snap.
      * Select retains the legacy project-only marker behavior. */
     if (doc->tool_id == TOOL_GRAB || doc->tool_id == TOOL_SELECT) {
@@ -3271,6 +3370,17 @@ static void gesture_update(GtkGestureDrag *gesture, double dx, double dy, gpoint
     if (doc->closing) return;
     (void)gesture;
     if (!doc->ready || !doc->drawing) return;
+    if (doc->collision_dragging) {
+        int cx = 0, cy = 0;
+        if (collision_cell_0113(doc, doc->pointer_x + dx, doc->pointer_y + dy,
+                                &cx, &cy) &&
+            (cx != doc->last_x || cy != doc->last_y)) {
+            doc->last_x = cx;
+            doc->last_y = cy;
+            gtk_widget_queue_draw(doc->canvas);
+        }
+        return;
+    }
     if (doc->dragging_project) {
         RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation,
                                                doc->project_drag_array_index);
@@ -3322,6 +3432,13 @@ static void gesture_end(GtkGestureDrag *gesture, double dx, double dy, gpointer 
     if (doc->closing) return;
     (void)gesture; (void)dx; (void)dy;
     if (!doc->drawing) return;
+    if (doc->collision_dragging) {
+        doc->collision_dragging = FALSE;
+        doc->drawing = FALSE;
+        collision_commit_0113(doc);
+        gtk_widget_queue_draw(doc->canvas);
+        return;
+    }
     if (doc->dragging_project) {
         RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation,
                                                doc->project_drag_array_index);
@@ -4020,10 +4137,60 @@ static gboolean key_pressed(GtkEventControllerKey *controller, guint keyval,
     case GDK_KEY_v: doc->tool_id = TOOL_SELECT; break;
     case GDK_KEY_h: doc->tool_id = TOOL_PAN; break;
     case GDK_KEY_m: doc->tool_id = TOOL_GRAB; break;
+    case GDK_KEY_w: doc->tool_id = TOOL_WALL; break;
+    case GDK_KEY_u: doc->tool_id = TOOL_WATER; break;
+    case GDK_KEY_a: doc->tool_id = TOOL_AIR; break;
     default: return FALSE;
     }
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[doc->tool_id]), TRUE);
     return TRUE;
+}
+
+/* Small vector toolbar icons, independent from GNOME icon theme availability. */
+static void collision_icon_draw_0113(GtkDrawingArea *area, cairo_t *cr, int w, int h,
+                                      gpointer userdata)
+{
+    (void)area;
+    const int kind = GPOINTER_TO_INT(userdata);
+    cairo_set_line_width(cr, 1.7);
+    if (kind == TOOL_WALL) {
+        cairo_set_source_rgb(cr, 0.4, 0.8, 0.85);
+        cairo_rectangle(cr, 2, 3, w - 4, h - 6);
+        cairo_stroke(cr);
+        cairo_move_to(cr, 2, h / 2.0); cairo_line_to(cr, w - 2, h / 2.0);
+        cairo_move_to(cr, w / 2.0, 3); cairo_line_to(cr, w / 2.0, h / 2.0);
+        cairo_move_to(cr, w / 3.0, h / 2.0); cairo_line_to(cr, w / 3.0, h - 3);
+        cairo_stroke(cr);
+    } else if (kind == TOOL_WATER) {
+        cairo_set_source_rgb(cr, 0.2, 0.57, 1.0);
+        cairo_move_to(cr, w / 2.0, 2);
+        cairo_curve_to(cr, w * 0.22, h * 0.45, 3, h * 0.6, w * 0.25, h * 0.82);
+        cairo_curve_to(cr, w * 0.4, h - 1, w * 0.7, h - 1, w * 0.8, h * 0.8);
+        cairo_curve_to(cr, w - 2, h * 0.6, w * 0.7, h * 0.35, w / 2.0, 2);
+        cairo_close_path(cr);
+        cairo_fill(cr);
+    } else {
+        cairo_set_source_rgb(cr, 0.7, 0.76, 0.8);
+        cairo_rectangle(cr, 2, 2, w - 4, h - 4);
+        cairo_stroke(cr);
+        cairo_move_to(cr, 4, h - 4); cairo_line_to(cr, w - 4, 4);
+        cairo_stroke(cr);
+    }
+}
+
+static GtkWidget *collision_icon_toggle_0113(guint tool, const char *tooltip)
+{
+    GtkWidget *button = gtk_toggle_button_new();
+    GtkWidget *icon = gtk_drawing_area_new();
+    gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(icon), 18);
+    gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(icon), 18);
+    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(icon), collision_icon_draw_0113,
+                                   GINT_TO_POINTER(tool), NULL);
+    gtk_button_set_child(GTK_BUTTON(button), icon);
+    gtk_widget_add_css_class(button, "flat");
+    gtk_widget_set_size_request(button, 30, 30);
+    delayed_tip(button, tooltip);
+    return button;
 }
 
 static void document_build(NativeWorkspace *doc)
@@ -4032,16 +4199,22 @@ static void document_build(NativeWorkspace *doc)
     static const char *const icons[TOOL_COUNT] = {
         "document-edit-symbolic", "edit-clear-symbolic", "color-fill-symbolic",
         "color-select-symbolic", "edit-select-all-symbolic", "transform-move-symbolic",
-        "hand-symbolic"
+        "hand-symbolic", NULL, NULL, NULL
     };
     static const char *const names[TOOL_COUNT] = {
         "Pencil (draw)", "Eraser", "Fill bucket",
         "Eyedropper (pick a metatile)", "Rectangle selection (drag to move)",
         "Hand (pan the view)",
-        "Grab (M): drag doors, enemies, items and objects; Zero Mission 16px / Aria 8px"
+        "Grab (M): drag doors, enemies, items and objects; Zero Mission 16px / Aria 8px",
+        "Wall (W): solid collision, drag to fill rectangle",
+        "Water (U): water collision, drag to fill rectangle",
+        "Air (A): passable collision override, drag to remove native walls logically"
     };
     GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-    GtkWidget *tools = gtk_flow_box_new();
+    GtkWidget *tools = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
+    GtkWidget *visibility_tools = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
+    GtkWidget *tool_scroll = gtk_scrolled_window_new();
+    GtkWidget *visibility_scroll = gtk_scrolled_window_new();
     GtkWidget *scroll = gtk_scrolled_window_new();
     GtkWidget *palette_scroll = gtk_scrolled_window_new();
     GtkWidget *palette_tabs = gtk_notebook_new();
@@ -4075,28 +4248,47 @@ static void document_build(NativeWorkspace *doc)
     document_track_widget(doc, &doc->tab_title, gtk_label_new(doc->identity));
     gtk_box_append(GTK_BOX(tab_box), doc->tab_title);
     gtk_box_append(GTK_BOX(tab_box), close);
-    gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(tools), GTK_SELECTION_NONE);
-    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(tools), 20);
-    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(tools), 3);
-    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(tools), 3);
+    /* Fixed icon strips. Horizontal scrolling replaces GtkFlowBox wrapping;
+     * resizing a workroom must not reorder or enlarge its tools. */
+    gtk_widget_set_halign(tools, GTK_ALIGN_START);
+    gtk_widget_set_halign(visibility_tools, GTK_ALIGN_START);
     gtk_widget_add_css_class(tools, "toolbar");
+    gtk_widget_add_css_class(visibility_tools, "toolbar");
     for (unsigned i = 0; i < TOOL_COUNT; ++i) {
-        doc->tools[i] = icon_toggle(icons[i], names[i]);
-        gtk_flow_box_insert(GTK_FLOW_BOX(tools), doc->tools[i], -1);
+        doc->tools[i] = i >= TOOL_WALL ?
+            collision_icon_toggle_0113(i, names[i]) : icon_toggle(icons[i], names[i]);
+        gtk_widget_set_size_request(doc->tools[i], 30, 30);
+        if (i == TOOL_WALL)
+            gtk_box_append(GTK_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL));
+        gtk_box_append(GTK_BOX(tools), doc->tools[i]);
         g_signal_connect(doc->tools[i], "toggled", G_CALLBACK(tool_toggled), doc);
     }
+    gtk_box_append(GTK_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL));
+    gtk_box_append(GTK_BOX(tools), undo);
+    gtk_box_append(GTK_BOX(tools), redo);
+    gtk_box_append(GTK_BOX(tools), save);
+    for (GtkWidget *it = undo; it != NULL;
+         it = it == undo ? redo : it == redo ? save : NULL)
+        gtk_widget_set_size_request(it, 30, 30);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->tools[TOOL_PENCIL]), TRUE);
     doc->grid_button = grid;
     doc->background_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(background), TRUE);
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), background, -1);
+    gtk_box_append(GTK_BOX(visibility_tools), background);
+    static const char *const overlay_icons[OVERLAY_COUNT] = {
+        "view-grid-symbolic", "system-users-symbolic", "emblem-favorite-symbolic",
+        "applications-accessories-symbolic", "go-next-symbolic",
+        "emblem-important-symbolic", "system-run-symbolic", "dialog-question-symbolic"
+    };
     for (guint i = 0; i < OVERLAY_COUNT; ++i) {
-        overlay_buttons[i] = gtk_toggle_button_new_with_label(overlay_labels[i]);
+        overlay_buttons[i] = icon_toggle(overlay_icons[i], overlay_tips[i]);
+        gtk_widget_set_size_request(overlay_buttons[i], 30, 30);
+        gtk_widget_set_tooltip_text(overlay_buttons[i], overlay_labels[i]);
         doc->overlay_buttons[i] = overlay_buttons[i];
         gtk_widget_add_css_class(overlay_buttons[i], "flat");
         delayed_tip(overlay_buttons[i], overlay_tips[i]);
         g_object_set_data(G_OBJECT(overlay_buttons[i]), "overlay-kind", GUINT_TO_POINTER(i));
-        gtk_flow_box_insert(GTK_FLOW_BOX(tools), overlay_buttons[i], -1);
+        gtk_box_append(GTK_BOX(visibility_tools), overlay_buttons[i]);
         g_signal_connect(overlay_buttons[i], "toggled", G_CALLBACK(overlay_toggled), doc);
         /* PATCH_0091_NATIVE_DOORS_DEFAULT_VISIBLE:
          * GTK toggle buttons start inactive, so native annotations previously
@@ -4110,13 +4302,14 @@ static void document_build(NativeWorkspace *doc)
     }
     /* Trigger structures are not decoded for either engine yet. */
     gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);
-    GtkWidget *hatch_preview = gtk_toggle_button_new_with_label("Animate hatches");
+    GtkWidget *hatch_preview = icon_toggle("media-playback-start-symbolic", "Animate hatches");
+    gtk_widget_set_size_request(hatch_preview, 30, 30);
     doc->hatch_animate_button = hatch_preview;
     gtk_widget_set_tooltip_text(hatch_preview,
         "Preview original opening/closing hatch metatiles; read-only, not gameplay");
     gtk_widget_set_visible(hatch_preview,
         !g_str_has_prefix(doc->identity, "Aria "));
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), hatch_preview, -1);
+    gtk_box_append(GTK_BOX(visibility_tools), hatch_preview);
     g_signal_connect(hatch_preview, "toggled",
                      G_CALLBACK(hatch_preview_toggled), doc);
     static const char *const hatch_states[] = {
@@ -4129,23 +4322,32 @@ static void document_build(NativeWorkspace *doc)
     };
     GtkWidget *hatch_state = gtk_drop_down_new_from_strings(hatch_states);
     GtkWidget *hatch_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-    gtk_box_append(GTK_BOX(hatch_box), gtk_label_new("Door state:"));
+    gtk_widget_set_size_request(hatch_state, 170, -1);
     gtk_box_append(GTK_BOX(hatch_box), hatch_state);
     gtk_widget_set_tooltip_text(hatch_box,
         "Read-only preview. ON/OFF applies to all original room events, not "
         "a real save. Event conditions and hatch slots are shown in Door details.");
     gtk_widget_set_visible(hatch_box,
         !g_str_has_prefix(doc->identity, "Aria "));
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), hatch_box, -1);
+    gtk_box_append(GTK_BOX(visibility_tools), hatch_box);
     g_signal_connect(hatch_state, "notify::selected",
                      G_CALLBACK(hatch_state_changed), doc);
     doc->grid_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(grid), TRUE);
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL), -1);
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), grid, -1);
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), undo, -1);
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), redo, -1);
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), save, -1);
+    gtk_box_prepend(GTK_BOX(visibility_tools), grid);
+    gtk_box_append(GTK_BOX(visibility_tools),
+                   gtk_separator_new(GTK_ORIENTATION_VERTICAL));
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(tool_scroll),
+                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(visibility_scroll),
+                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(tool_scroll), tools);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(visibility_scroll),
+                                  visibility_tools);
+    gtk_widget_set_hexpand(tool_scroll, TRUE);
+    gtk_widget_set_hexpand(visibility_scroll, TRUE);
+    gtk_widget_set_size_request(tool_scroll, -1, 40);
+    gtk_widget_set_size_request(visibility_scroll, -1, 40);
     doc->layer = gtk_drop_down_new_from_strings(layers);
     doc->brush = gtk_spin_button_new_with_range(0, 1023, 1);
     doc->zoom = gtk_spin_button_new_with_range(50, 400, 25);
@@ -4158,7 +4360,8 @@ static void document_build(NativeWorkspace *doc)
     gtk_box_append(GTK_BOX(values), gtk_label_new("Zoom %"));
     gtk_box_append(GTK_BOX(values), doc->zoom);
     gtk_widget_set_hexpand(values, FALSE);
-    gtk_box_append(GTK_BOX(page), tools);
+    gtk_box_append(GTK_BOX(page), tool_scroll);
+    gtk_box_append(GTK_BOX(page), visibility_scroll);
     gtk_box_append(GTK_BOX(page), values);
     gtk_box_append(GTK_BOX(page), room_color_legend());
     doc->canvas = gtk_drawing_area_new();

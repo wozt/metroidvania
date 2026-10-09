@@ -500,3 +500,21 @@ and the proprietary-file guard passed.
 - The GTK catalog and corrected Brinstar overview were smoke-tested under Xvfb.
   Validation passes 165 Python tests, all six CTest targets and the
   proprietary-data guard.
+
+## Patch 0077 - native room-record context menus
+
+- Visible objects, doors/transitions, events and decoded triggers now accept a
+  secondary click directly on the room canvas. Hit testing follows the active
+  overlay and current zoom, preferring the topmost visible native record.
+- The context menu shows the semantic label, native identity, variant,
+  geometry and decoded parameters. It can open the full information window,
+  locate the matching row in **Room data**, or launch a type-specific editor
+  shell.
+- The same context menu is attached to every **Room data** entry. The selected
+  canvas marker receives a yellow outline so overlapping records remain clear.
+- Editor shells are intentionally read-only and keep Apply disabled until a
+  versioned project schema and validated per-engine encoder exist. They never
+  modify the original ROM or private imported annotations.
+- Object-menu and editor-window interaction was smoke-tested under Xvfb with
+  Brinstar 023. Validation passes 166 Python tests, all six CTest targets and
+  the proprietary-data guard.

@@ -28,6 +28,18 @@ class ObjectCatalogUiContract(unittest.TestCase):
             'gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);',
             source)
 
+    def test_room_records_have_context_menu_and_typed_editor_shell(self):
+        source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
+        for contract in (
+                'annotation_canvas_context_pressed',
+                'annotation_list_context_pressed',
+                '"Inspect full record"',
+                '"Locate in Room data"',
+                '"Open %s editor…"',
+                '"Apply project override"'):
+            self.assertIn(contract, source)
+        self.assertIn('gtk_widget_set_sensitive(apply, FALSE);', source)
+
 
 if __name__ == '__main__':
     unittest.main()

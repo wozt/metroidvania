@@ -42,6 +42,7 @@ struct NativeWorkspace {
 
     GtkWidget *page, *palette_page, *canvas, *palette, *status;
     GtkWidget *annotations_list, *annotations_status;
+    GtkWidget *annotation_popup;
     GtkWidget *layer, *brush, *zoom, *scroller, *grid_button;
     GtkWidget *tools[TOOL_COUNT];
     GtkWidget *tab_title, *close_button, *save_button;
@@ -66,6 +67,8 @@ struct NativeWorkspace {
     unsigned char *collision_pixels;
     gboolean overlays[OVERLAY_COUNT];
     GArray *annotations;
+    guint selected_annotation;
+    gboolean annotation_selected;
 };
 
 static NativeWorkspace *document_ref(NativeWorkspace *doc)
@@ -78,6 +81,10 @@ static NativeWorkspace *document_ref(NativeWorkspace *doc)
 
 static void history_clear(NativeMap **stack, unsigned *count);
 static void document_unref(NativeWorkspace *doc);
+static void focus_page(GtkWidget *page);
+static void annotation_popup_close(NativeWorkspace *doc);
+static void annotation_list_context_pressed(GtkGestureClick *gesture, gint presses,
+                                            double x, double y, gpointer userdata);
 
 /* GTK owns these widgets. A widget's lifetime holds a document ref. Clear
  * the borrowed pointer BEFORE releasing that ref so the final widget can
@@ -139,6 +146,7 @@ static void discard_collision(NativeWorkspace *doc)
 static void document_destroy(NativeWorkspace *doc)
 {
     if (!doc) return;
+    annotation_popup_close(doc);
     if (doc->pan_tick && doc->canvas)
         gtk_widget_remove_tick_callback(doc->canvas, doc->pan_tick);
     g_clear_object(&doc->import_cancellable);
@@ -241,6 +249,7 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
 {
     gchar *contents = NULL;
     g_array_set_size(doc->annotations, 0);
+    doc->annotation_selected = FALSE;
     annotation_list_clear(doc);
     if (!g_file_get_contents(filename, &contents, NULL, NULL)) {
         if (doc->annotations_status)
@@ -300,6 +309,14 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
             gtk_widget_set_margin_end(label, 8);
             gtk_widget_set_margin_top(label, 6);
             gtk_widget_set_margin_bottom(label, 6);
+            g_object_set_data(G_OBJECT(label), "mv-annotation-index",
+                              GUINT_TO_POINTER(doc->annotations->len));
+            GtkGesture *context = gtk_gesture_click_new();
+            gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(context),
+                                          GDK_BUTTON_SECONDARY);
+            gtk_widget_add_controller(label, GTK_EVENT_CONTROLLER(context));
+            g_signal_connect(context, "pressed",
+                             G_CALLBACK(annotation_list_context_pressed), doc);
             gtk_list_box_append(GTK_LIST_BOX(doc->annotations_list), label);
             g_free(summary);
         }
@@ -315,6 +332,264 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
     }
     g_strfreev(lines);
     g_free(contents);
+}
+
+static const char *annotation_kind_name(guint kind)
+{
+    switch (kind) {
+    case OVERLAY_OBJECTS: return "Object";
+    case OVERLAY_DOORS: return "Door / transition";
+    case OVERLAY_EVENTS: return "Event";
+    case OVERLAY_TRIGGERS: return "Trigger";
+    default: return "Native record";
+    }
+}
+
+static RoomAnnotation *annotation_from_widget(NativeWorkspace *doc, GtkWidget *widget,
+                                              guint *array_index)
+{
+    guint encoded = GPOINTER_TO_UINT(
+        g_object_get_data(G_OBJECT(widget), "mv-annotation-index"));
+    if (!encoded || !doc->annotations || encoded > doc->annotations->len) return NULL;
+    if (array_index) *array_index = encoded - 1;
+    return &g_array_index(doc->annotations, RoomAnnotation, encoded - 1);
+}
+
+static void annotation_popup_close(NativeWorkspace *doc)
+{
+    if (!doc || !doc->annotation_popup) return;
+    GtkWidget *popup = doc->annotation_popup;
+    g_object_remove_weak_pointer(G_OBJECT(popup),
+                                 (gpointer *)&doc->annotation_popup);
+    doc->annotation_popup = NULL;
+    gtk_popover_popdown(GTK_POPOVER(popup));
+    if (gtk_widget_get_parent(popup)) gtk_widget_unparent(popup);
+}
+
+static void annotation_window_add_field(GtkGrid *grid, gint row,
+                                        const char *name, const char *value)
+{
+    GtkWidget *name_label = gtk_label_new(name);
+    GtkWidget *entry = gtk_entry_new();
+    gtk_label_set_xalign(GTK_LABEL(name_label), 1);
+    gtk_editable_set_text(GTK_EDITABLE(entry), value ? value : "");
+    gtk_editable_set_editable(GTK_EDITABLE(entry), FALSE);
+    gtk_widget_set_hexpand(entry, TRUE);
+    gtk_grid_attach(grid, name_label, 0, row, 1, 1);
+    gtk_grid_attach(grid, entry, 1, row, 1, 1);
+}
+
+static void annotation_window_open(NativeWorkspace *doc,
+                                   const RoomAnnotation *item, gboolean editor)
+{
+    if (!doc || doc->closing || !item) return;
+    const char *kind = annotation_kind_name(item->kind);
+    gchar *title = g_strdup_printf("%s %s — %s",
+                                   kind, editor ? "editor" : "information", item->label);
+    GtkWidget *window = gtk_window_new();
+    GtkRoot *root = doc->page ? gtk_widget_get_root(doc->page) : NULL;
+    if (GTK_IS_WINDOW(root))
+        gtk_window_set_transient_for(GTK_WINDOW(window), GTK_WINDOW(root));
+    gtk_window_set_title(GTK_WINDOW(window), title);
+    gtk_window_set_default_size(GTK_WINDOW(window), 560, 440);
+
+    GtkWidget *layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    GtkWidget *heading = gtk_label_new(title);
+    GtkWidget *notice = gtk_label_new(editor
+        ? "Native source record. Fields are read-only until this type has a validated project encoder."
+        : "Decoded native source information. No ROM or project data is modified.");
+    GtkWidget *grid = gtk_grid_new();
+    GtkWidget *details_heading = gtk_label_new("Decoded details");
+    GtkWidget *details = gtk_label_new(item->details);
+    GtkWidget *actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *close = gtk_button_new_with_label("Close");
+    gtk_widget_add_css_class(heading, "title-2");
+    gtk_label_set_xalign(GTK_LABEL(heading), 0);
+    gtk_label_set_xalign(GTK_LABEL(notice), 0);
+    gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(details_heading), 0);
+    gtk_widget_add_css_class(details_heading, "heading");
+    gtk_label_set_xalign(GTK_LABEL(details), 0);
+    gtk_label_set_wrap(GTK_LABEL(details), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(details), TRUE);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+
+    gchar *source_index = g_strdup_printf("%u", item->index);
+    gchar *geometry = g_strdup_printf("x=%d, y=%d, width=%u, height=%u",
+                                      item->x, item->y, item->width, item->height);
+    annotation_window_add_field(GTK_GRID(grid), 0, "Kind", kind);
+    annotation_window_add_field(GTK_GRID(grid), 1, "Label", item->label);
+    annotation_window_add_field(GTK_GRID(grid), 2, "Native identity", item->native_type);
+    annotation_window_add_field(GTK_GRID(grid), 3, "Source index", source_index);
+    annotation_window_add_field(GTK_GRID(grid), 4, "Variant", item->variant);
+    annotation_window_add_field(GTK_GRID(grid), 5, "Geometry", geometry);
+    g_free(source_index);
+    g_free(geometry);
+
+    if (editor) {
+        GtkWidget *apply = gtk_button_new_with_label("Apply project override");
+        gtk_widget_set_sensitive(apply, FALSE);
+        gtk_widget_set_tooltip_text(apply,
+            "Unavailable until a validated project schema and engine encoder exist.");
+        gtk_box_append(GTK_BOX(actions), apply);
+    }
+    gtk_widget_set_hexpand(actions, TRUE);
+    gtk_widget_set_halign(close, GTK_ALIGN_END);
+    gtk_box_append(GTK_BOX(actions), close);
+    gtk_widget_set_margin_start(layout, 18);
+    gtk_widget_set_margin_end(layout, 18);
+    gtk_widget_set_margin_top(layout, 18);
+    gtk_widget_set_margin_bottom(layout, 18);
+    gtk_box_append(GTK_BOX(layout), heading);
+    gtk_box_append(GTK_BOX(layout), notice);
+    gtk_box_append(GTK_BOX(layout), grid);
+    gtk_box_append(GTK_BOX(layout), details_heading);
+    gtk_box_append(GTK_BOX(layout), details);
+    gtk_box_append(GTK_BOX(layout), actions);
+    gtk_window_set_child(GTK_WINDOW(window), layout);
+    g_signal_connect_swapped(close, "clicked", G_CALLBACK(gtk_window_destroy), window);
+    g_object_set_data_full(G_OBJECT(window), "native-annotation-document",
+                           document_ref(doc), (GDestroyNotify)document_unref);
+    gtk_window_present(GTK_WINDOW(window));
+    g_free(title);
+}
+
+static void annotation_inspect_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    RoomAnnotation *item = annotation_from_widget(doc, GTK_WIDGET(button), NULL);
+    if (item) annotation_window_open(doc, item, FALSE);
+    annotation_popup_close(doc);
+}
+
+static void annotation_editor_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    RoomAnnotation *item = annotation_from_widget(doc, GTK_WIDGET(button), NULL);
+    if (item) annotation_window_open(doc, item, TRUE);
+    annotation_popup_close(doc);
+}
+
+static void annotation_locate_clicked(GtkButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    guint index = 0;
+    RoomAnnotation *item = annotation_from_widget(doc, GTK_WIDGET(button), &index);
+    if (!item || !doc->annotations_list) return;
+    GtkWidget *row = gtk_widget_get_first_child(doc->annotations_list);
+    for (guint i = 0; row && i < index; ++i)
+        row = gtk_widget_get_next_sibling(row);
+    if (GTK_IS_LIST_BOX_ROW(row))
+        gtk_list_box_select_row(GTK_LIST_BOX(doc->annotations_list),
+                                GTK_LIST_BOX_ROW(row));
+    if (GTK_IS_NOTEBOOK(doc->palette_page))
+        gtk_notebook_set_current_page(GTK_NOTEBOOK(doc->palette_page), 1);
+    focus_page(doc->palette_page);
+    gchar *status = g_strdup_printf("Selected %s %u — %s in Room data.",
+                                    annotation_kind_name(item->kind),
+                                    item->index, item->label);
+    message(doc, status);
+    g_free(status);
+    annotation_popup_close(doc);
+}
+
+static GtkWidget *annotation_menu_button(NativeWorkspace *doc, const char *label,
+                                         guint array_index, GCallback callback)
+{
+    GtkWidget *button = gtk_button_new_with_label(label);
+    g_object_set_data(G_OBJECT(button), "mv-annotation-index",
+                      GUINT_TO_POINTER(array_index + 1));
+    g_signal_connect(button, "clicked", callback, doc);
+    return button;
+}
+
+static void annotation_context_show(NativeWorkspace *doc, GtkWidget *relative,
+                                    guint array_index, double x, double y)
+{
+    if (doc->closing || !doc->annotations || array_index >= doc->annotations->len) return;
+    annotation_popup_close(doc);
+    const RoomAnnotation *item = &g_array_index(
+        doc->annotations, RoomAnnotation, array_index);
+    doc->annotation_selected = TRUE;
+    doc->selected_annotation = array_index;
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
+
+    GtkWidget *popover = gtk_popover_new();
+    GtkWidget *layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gchar *heading_text = g_strdup_printf("%s %u — %s",
+        annotation_kind_name(item->kind), item->index, item->label);
+    gchar *summary_text = g_strdup_printf(
+        "Native: %s\nVariant: %s\nPosition: (%d,%d), size %ux%u\n%s",
+        item->native_type, item->variant, item->x, item->y,
+        item->width, item->height, item->details);
+    GtkWidget *heading = gtk_label_new(heading_text);
+    GtkWidget *summary = gtk_label_new(summary_text);
+    gtk_widget_add_css_class(heading, "heading");
+    gtk_label_set_xalign(GTK_LABEL(heading), 0);
+    gtk_label_set_xalign(GTK_LABEL(summary), 0);
+    gtk_label_set_wrap(GTK_LABEL(summary), TRUE);
+    gtk_widget_set_size_request(summary, 360, -1);
+    gtk_box_append(GTK_BOX(layout), heading);
+    gtk_box_append(GTK_BOX(layout), summary);
+    gtk_box_append(GTK_BOX(layout), annotation_menu_button(
+        doc, "Inspect full record", array_index, G_CALLBACK(annotation_inspect_clicked)));
+    gchar *editor_label = g_strdup_printf("Open %s editor…",
+                                           annotation_kind_name(item->kind));
+    gtk_box_append(GTK_BOX(layout), annotation_menu_button(
+        doc, editor_label, array_index, G_CALLBACK(annotation_editor_clicked)));
+    gtk_box_append(GTK_BOX(layout), annotation_menu_button(
+        doc, "Locate in Room data", array_index, G_CALLBACK(annotation_locate_clicked)));
+    g_free(editor_label);
+    g_free(heading_text);
+    g_free(summary_text);
+    gtk_widget_set_margin_start(layout, 10);
+    gtk_widget_set_margin_end(layout, 10);
+    gtk_widget_set_margin_top(layout, 10);
+    gtk_widget_set_margin_bottom(layout, 10);
+    gtk_popover_set_child(GTK_POPOVER(popover), layout);
+    gtk_widget_set_parent(popover, relative);
+    GdkRectangle point = {(int)x, (int)y, 1, 1};
+    gtk_popover_set_pointing_to(GTK_POPOVER(popover), &point);
+    doc->annotation_popup = popover;
+    g_object_add_weak_pointer(G_OBJECT(popover),
+                              (gpointer *)&doc->annotation_popup);
+    gtk_popover_popup(GTK_POPOVER(popover));
+}
+
+static void annotation_list_context_pressed(GtkGestureClick *gesture, gint presses,
+                                            double x, double y, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    GtkWidget *widget = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
+    guint encoded = GPOINTER_TO_UINT(
+        g_object_get_data(G_OBJECT(widget), "mv-annotation-index"));
+    (void)presses;
+    if (encoded) annotation_context_show(doc, widget, encoded - 1, x, y);
+}
+
+static void annotation_canvas_context_pressed(GtkGestureClick *gesture, gint presses,
+                                              double x, double y, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    (void)presses;
+    if (doc->closing || !doc->ready || !doc->annotations) return;
+    for (guint cursor = doc->annotations->len; cursor > 0; --cursor) {
+        guint index = cursor - 1;
+        const RoomAnnotation *item = &g_array_index(
+            doc->annotations, RoomAnnotation, index);
+        if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind]) continue;
+        double left = item->x * doc->scale;
+        double top = item->y * doc->scale;
+        double width = MAX(4.0, item->width * doc->scale);
+        double height = MAX(4.0, item->height * doc->scale);
+        if (x < left || y < top || x > left + width || y > top + height) continue;
+        GtkWidget *canvas = gtk_event_controller_get_widget(
+            GTK_EVENT_CONTROLLER(gesture));
+        annotation_context_show(doc, canvas, index, x, y);
+        gtk_gesture_set_state(GTK_GESTURE(gesture), GTK_EVENT_SEQUENCE_CLAIMED);
+        return;
+    }
 }
 
 static gboolean load_atlas(NativeWorkspace *doc, const char *filename)
@@ -436,6 +711,14 @@ static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
             cairo_set_dash(cr, dash, 2, 0);
         }
         cairo_stroke(cr);
+        if (doc->annotation_selected && doc->selected_annotation == i) {
+            cairo_rectangle(cr, x - 1, y - 1, MAX(6.0, width + 2),
+                            MAX(6.0, height + 2));
+            cairo_set_source_rgb(cr, 1.0, 0.84, 0.22);
+            cairo_set_line_width(cr, 3.0);
+            cairo_set_dash(cr, NULL, 0, 0);
+            cairo_stroke(cr);
+        }
         char id[24];
         snprintf(id, sizeof(id), "%s%u",
                  item->kind == OVERLAY_OBJECTS ? "O" :
@@ -1378,14 +1661,18 @@ static void document_build(NativeWorkspace *doc)
     gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(doc->canvas), draw_room, doc, NULL);
     GtkGesture *drag = gtk_gesture_drag_new();
     GtkGesture *click = gtk_gesture_click_new();
+    GtkGesture *annotation_context = gtk_gesture_click_new();
     GtkEventController *hover = gtk_event_controller_motion_new();
     GtkEventController *wheel = gtk_event_controller_scroll_new(
         GTK_EVENT_CONTROLLER_SCROLL_VERTICAL | GTK_EVENT_CONTROLLER_SCROLL_DISCRETE);
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(drag), GDK_BUTTON_PRIMARY);
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), GDK_BUTTON_PRIMARY);
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(annotation_context),
+                                  GDK_BUTTON_SECONDARY);
     gtk_gesture_group(drag, click);
     gtk_widget_add_controller(doc->canvas, GTK_EVENT_CONTROLLER(drag));
     gtk_widget_add_controller(doc->canvas, GTK_EVENT_CONTROLLER(click));
+    gtk_widget_add_controller(doc->canvas, GTK_EVENT_CONTROLLER(annotation_context));
     gtk_widget_add_controller(doc->canvas, hover);
     gtk_event_controller_set_propagation_phase(wheel, GTK_PHASE_CAPTURE);
     gtk_widget_add_controller(scroll, wheel);
@@ -1396,6 +1683,8 @@ static void document_build(NativeWorkspace *doc)
     g_signal_connect(drag, "drag-end", G_CALLBACK(gesture_end), doc);
     g_signal_connect(click, "pressed", G_CALLBACK(canvas_click_down), doc);
     g_signal_connect(click, "released", G_CALLBACK(canvas_click_up), doc);
+    g_signal_connect(annotation_context, "pressed",
+                     G_CALLBACK(annotation_canvas_context_pressed), doc);
     g_signal_connect(wheel, "scroll", G_CALLBACK(canvas_scroll), doc);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), doc->canvas);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),

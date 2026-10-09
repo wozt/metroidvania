@@ -47,6 +47,9 @@ Decoded graphics, raw blocks, room work files, room annotation tables and user
 overrides are ignored. `scripts/room_annotations.py` reconstructs bounded
 per-room native records, while `scripts/object_catalog.py` joins definition and
 placement metadata for the shared editor. No tool writes back to either ROM.
+Canvas and Room-data context menus share the same bounded in-memory annotation
+records; typed editor windows retain their document lifetime safely and cannot
+write native data without an encoder.
 
 ## Verified native coverage
 

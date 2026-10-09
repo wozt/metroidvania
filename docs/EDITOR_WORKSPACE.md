@@ -25,6 +25,11 @@ docks, or detached into separate windows.
   pixels.
 - **Room palettes** contains a metatile browser and a **Room data** list with
   native coordinates, dimensions, variants, identities and decoded details.
+- Right-click any visible object, door/transition, event or decoded trigger on
+  the room canvas to inspect its full native record, locate it in **Room data**,
+  or open its type-specific editor shell. The same menu is available from the
+  **Room data** list. Native fields remain read-only until the corresponding
+  project schema and engine encoder are validated.
 - **Global maps** displays original-coordinate Zero Mission and Aria maps,
   supports drag panning and Ctrl+wheel zoom, and launches known room editors.
 - **Object catalog** shows the native definitions used by both games in two
@@ -43,7 +48,9 @@ base import, ROMs and upstream source remain unchanged.
 - BG0, full BG3 composition, animated graphics and several palette effects are
   incomplete.
 - Native objects, doors, events and collision are inspectable but not editable.
-  Object sprite previews and executable behavior decoding are still pending.
+  Their typed editor shells expose decoded source fields but keep Apply
+  disabled. Object sprite previews and executable behavior decoding are still
+  pending.
 - Project-object creation and cloning are disabled until a versioned common
   schema and target-engine encoders are validated.
 - Trigger regions, boss parameters, scripts, music and engine-backed cutscene

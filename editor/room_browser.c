@@ -8,7 +8,8 @@ typedef struct {
     NativeWorkspace *workspace;
     RoomWorld world;
     GtkWidget *page, *list, *status, *details, *picture;
-    GtkWidget *render_button, *mode, *area_filter, *context_menu_button;
+    GtkWidget *render_button, *open_button, *mode, *area_filter, *context_menu_button;
+    guint draft_refresh_generation;
     gboolean selected, busy;
     guint area, room;
 } RoomBrowser;
@@ -30,6 +31,7 @@ static void room_browser_state_free(gpointer userdata)
     g_object_unref(browser->mode);
     g_object_unref(browser->area_filter);
     g_object_unref(browser->render_button);
+    g_object_unref(browser->open_button);
     g_object_unref(browser->status);
     g_object_unref(browser->details);
     g_object_unref(browser->picture);
@@ -99,10 +101,26 @@ static void room_selected(GtkListBox *list, GtkListBoxRow *row, gpointer userdat
     (void)list;
     if (!row) {
         browser->selected = FALSE;
+        gtk_widget_set_sensitive(browser->open_button, FALSE);
+        if (!browser->busy) gtk_widget_set_sensitive(browser->render_button, FALSE);
         gtk_picture_set_paintable(GTK_PICTURE(browser->picture), NULL);
-        gtk_label_set_text(GTK_LABEL(browser->details), "Select a verified original room.");
+        gtk_label_set_text(GTK_LABEL(browser->details), "Select a verified original room or a private draft.");
         return;
     }
+    if (g_object_get_data(G_OBJECT(row), "mv-authored-draft")) {
+        /* Never send an authored draft to the source-ROM import/renderer path. */
+        browser->selected = FALSE;
+        gtk_widget_set_sensitive(browser->open_button, FALSE);
+        if (!browser->busy) gtk_widget_set_sensitive(browser->render_button, FALSE);
+        gtk_picture_set_paintable(GTK_PICTURE(browser->picture), NULL);
+        const char *info = g_object_get_data(G_OBJECT(row), "mv-details");
+        gtk_label_set_text(GTK_LABEL(browser->details), info ? info : "Private room draft");
+        gtk_label_set_text(GTK_LABEL(browser->status),
+            "Private draft selected (NOT playable). Source-room import and rendering are disabled.");
+        return;
+    }
+    gtk_widget_set_sensitive(browser->open_button, TRUE);
+    if (!browser->busy) gtk_widget_set_sensitive(browser->render_button, TRUE);
     browser->area = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(row), "mv-area"));
     browser->room = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(row), "mv-room"));
     browser->selected = TRUE;
@@ -118,7 +136,9 @@ static void edit_selected(GtkButton *button, gpointer userdata)
 {
     RoomBrowser *browser = userdata;
     (void)button;
-    if (!browser->selected || !browser->workspace) return;
+    GtkListBoxRow *row = gtk_list_box_get_selected_row(GTK_LIST_BOX(browser->list));
+    if (!row || g_object_get_data(G_OBJECT(row), "mv-authored-draft") ||
+        !browser->selected || !browser->workspace) return;
     if (browser->world == ROOM_WORLD_ARIA)
         native_workspace_import_aria_async(browser->workspace,
                                            browser->area, browser->room);
@@ -144,7 +164,7 @@ static void render_complete(GObject *object, GAsyncResult *result, gpointer user
     guint area = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(process), "mv-area"));
     guint room = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(process), "mv-room"));
     browser->busy = FALSE;
-    gtk_widget_set_sensitive(browser->render_button, TRUE);
+    gtk_widget_set_sensitive(browser->render_button, browser->selected);
     if (ok && g_subprocess_get_successful(process)) {
         if (browser->selected && browser->area == area && browser->room == room) {
             display_preview(browser);
@@ -171,7 +191,9 @@ static void render_selected(GtkButton *button, gpointer userdata)
 {
     RoomBrowser *browser = userdata;
     (void)button;
-    if (!browser->selected || browser->busy) return;
+    GtkListBoxRow *row = gtk_list_box_get_selected_row(GTK_LIST_BOX(browser->list));
+    if (!row || g_object_get_data(G_OBJECT(row), "mv-authored-draft") ||
+        !browser->selected || browser->busy) return;
     char area[16], room[16];
     snprintf(area, sizeof(area), "%u", browser->area);
     snprintf(room, sizeof(room), "%u", browser->room);
@@ -362,6 +384,149 @@ static gboolean valid_draft_name(const char *name)
     return TRUE;
 }
 
+/* The Python draft schema is the only parser for private authored JSON.
+ * GTK consumes a bounded, tab-separated listing with no control characters. */
+typedef struct {
+    GtkWidget *page; /* Strong reference until subprocess callback completes. */
+    guint generation;
+} RoomDraftListJob;
+
+static gboolean draft_listing_slug_valid(const char *slug)
+{
+    return valid_draft_slug(slug);
+}
+
+static guint room_browser_replace_drafts(RoomBrowser *browser, const gchar *output)
+{
+    if (!output || strlen(output) > 1024 * 1024) return 0;
+    GtkWidget *child = gtk_widget_get_first_child(browser->list);
+    while (child) {
+        GtkWidget *next = gtk_widget_get_next_sibling(child);
+        if (GTK_IS_LIST_BOX_ROW(child) &&
+            g_object_get_data(G_OBJECT(child), "mv-authored-draft"))
+            gtk_list_box_remove(GTK_LIST_BOX(browser->list), child);
+        child = next;
+    }
+    const char *expected = browser->world == ROOM_WORLD_ARIA ? "aria" : "zero_mission";
+    const guint area_count = browser->world == ROOM_WORLD_ARIA ? 12u : 7u;
+    gchar **lines = g_strsplit(output, "\n", -1);
+    guint count = 0;
+    for (guint i = 0; lines[i] && i < 4096; ++i) {
+        if (!*lines[i]) continue;
+        gchar **fields = g_strsplit(lines[i], "\t", -1);
+        if (g_strv_length(fields) == 4) {
+            gchar **id = g_strsplit(fields[0], ":", -1);
+            guint area = 0, width = 0, height = 0;
+            if (g_strv_length(id) == 3 && g_strcmp0(id[0], expected) == 0 &&
+                parse_uint(id[1], area_count, &area) &&
+                draft_listing_slug_valid(id[2]) &&
+                valid_draft_name(fields[1]) &&
+                parse_uint(fields[2], 9u, &width) && width > 0 &&
+                parse_uint(fields[3], 9u, &height) && height > 0) {
+                GtkWidget *row = gtk_list_box_row_new();
+                gchar *label = g_strdup_printf("[DRAFT] %s (%u x %u screens)",
+                                               fields[1], width, height);
+                GtkWidget *text = gtk_label_new(label);
+                gtk_label_set_xalign(GTK_LABEL(text), 0.0f);
+                gtk_list_box_row_set_child(GTK_LIST_BOX_ROW(row), text);
+                g_object_set_data(G_OBJECT(row), "mv-area", GUINT_TO_POINTER(area));
+                g_object_set_data(G_OBJECT(row), "mv-authored-draft", GUINT_TO_POINTER(1));
+                g_object_set_data_full(G_OBJECT(row), "mv-draft-identity",
+                                       g_strdup(fields[0]), g_free);
+                gchar *details = g_strdup_printf(
+                    "PROJECT DRAFT (not playable)\n%s / %s\nID: %s\n"
+                    "Dimensions: %u x %u GBA screens (240x160 px each)\n"
+                    "No source-ROM room, layers, collision, runtime or engine adapter exists.",
+                    expected, area_names(browser->world)[area], fields[0], width, height);
+                g_object_set_data_full(G_OBJECT(row), "mv-details", details, g_free);
+                gtk_list_box_append(GTK_LIST_BOX(browser->list), row);
+                g_free(label);
+                ++count;
+            }
+            g_strfreev(id);
+        }
+        g_strfreev(fields);
+    }
+    g_strfreev(lines);
+    gtk_list_box_invalidate_filter(GTK_LIST_BOX(browser->list));
+    return count;
+}
+
+static void room_drafts_loaded(GObject *object, GAsyncResult *result, gpointer userdata)
+{
+    RoomDraftListJob *job = userdata;
+    GError *error = NULL;
+    gchar *output = NULL, *diagnostic = NULL;
+    gboolean ok = g_subprocess_communicate_utf8_finish(
+        G_SUBPROCESS(object), result, &output, &diagnostic, &error);
+    RoomBrowser *browser = g_object_get_data(G_OBJECT(job->page), "mv-room-browser-state");
+    /* Closing/reloading a tab never revives it or mutates a detached widget. */
+    if (browser && gtk_widget_get_parent(job->page) &&
+        job->generation == browser->draft_refresh_generation) {
+        if (ok && g_subprocess_get_successful(G_SUBPROCESS(object)) &&
+            output && strlen(output) <= 1024 * 1024) {
+            guint count = room_browser_replace_drafts(browser, output);
+            if (count) {
+                gchar *message = g_strdup_printf(
+                    "%u private authored drafts listed (NOT playable). "
+                    "Original room imports remain separate.", count);
+                gtk_label_set_text(GTK_LABEL(browser->status), message);
+                g_free(message);
+            }
+        } else {
+            const char *reason = error ? error->message : diagnostic;
+            gchar *message = g_strdup_printf("Draft list unavailable: %.400s",
+                reason && *reason ? reason : "Python listing failed");
+            gtk_label_set_text(GTK_LABEL(browser->status), message);
+            g_free(message);
+        }
+    }
+    g_clear_error(&error);
+    g_free(output);
+    g_free(diagnostic);
+    g_object_unref(job->page);
+    g_free(job);
+}
+
+static void room_browser_refresh_drafts(RoomBrowser *browser)
+{
+    const char *world = browser->world == ROOM_WORLD_ARIA ? "aria" : "zero_mission";
+    GError *error = NULL;
+    GSubprocess *process = g_subprocess_new(
+        G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
+        &error, "python3", "-m", "scripts.authored_rooms", "list",
+        "--world", world, "--format", "tsv", NULL);
+    if (!process) {
+        gtk_label_set_text(GTK_LABEL(browser->status),
+            error ? error->message : "Unable to start private draft listing.");
+        g_clear_error(&error);
+        return;
+    }
+    RoomDraftListJob *job = g_new0(RoomDraftListJob, 1);
+    job->page = g_object_ref(browser->page);
+    job->generation = ++browser->draft_refresh_generation;
+    g_subprocess_communicate_utf8_async(process, NULL, NULL, room_drafts_loaded, job);
+    g_object_unref(process);
+}
+
+static void room_draft_refresh_clicked(GtkButton *button, gpointer userdata)
+{
+    GtkWidget *page = GTK_WIDGET(userdata);
+    RoomBrowser *browser = g_object_get_data(G_OBJECT(page), "mv-room-browser-state");
+    (void)button;
+    if (browser) room_browser_refresh_drafts(browser);
+}
+
+#ifdef FUSION_ROOM_BROWSER_TESTING
+/* Test-only parser entry point; no ROM assets or private files required. */
+void room_browser_test_replace_drafts(GtkWidget *page, const gchar *tsv)
+{
+    RoomBrowser *browser = g_object_get_data(G_OBJECT(page), "mv-room-browser-state");
+    g_assert_nonnull(browser);
+    room_browser_replace_drafts(browser, tsv);
+}
+#endif
+
 static void room_draft_done(GObject *object, GAsyncResult *result, gpointer userdata)
 {
     RoomDraftJob *job = userdata;
@@ -376,8 +541,9 @@ static void room_draft_done(GObject *object, GAsyncResult *result, gpointer user
     if (created && page && GTK_IS_WINDOW(gtk_widget_get_root(page))) {
         RoomBrowser *browser = g_object_get_data(G_OBJECT(page), "mv-room-browser-state");
         if (browser) {
+            room_browser_refresh_drafts(browser);
             gchar *message = g_strdup_printf(
-                "Created private draft %s (NOT playable). Run scripts.authored_rooms list to inspect it.",
+                "Created private draft %s (NOT playable). Updating browser list...",
                 job->identity);
             gtk_label_set_text(GTK_LABEL(browser->status), message);
             g_free(message);
@@ -596,6 +762,10 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     browser->mode = gtk_drop_down_new_from_strings(
         world == ROOM_WORLD_ARIA ? aria_modes : zero_modes);
     GtkWidget *open = gtk_button_new_with_label("Open room in editor");
+    GtkWidget *reload = gtk_button_new_with_label("Refresh drafts");
+    browser->open_button = open;
+    gtk_widget_set_sensitive(open, FALSE);
+    gtk_widget_set_sensitive(browser->render_button, FALSE);
     GtkWidget *toolbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *layout = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
     GtkWidget *left = gtk_scrolled_window_new();
@@ -619,6 +789,7 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     gtk_box_append(GTK_BOX(toolbar), browser->mode);
     gtk_box_append(GTK_BOX(toolbar), browser->render_button);
     gtk_box_append(GTK_BOX(toolbar), open);
+    gtk_box_append(GTK_BOX(toolbar), reload);
     gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(menu_button), "view-more-symbolic");
     gtk_widget_set_tooltip_text(menu_button, "Room actions (also via right-click)");
     gtk_box_append(GTK_BOX(toolbar), menu_button);
@@ -676,6 +847,10 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     g_signal_connect(browser->mode, "notify::selected", G_CALLBACK(mode_changed), browser);
     g_signal_connect(browser->render_button, "clicked", G_CALLBACK(render_selected), browser);
     g_signal_connect(open, "clicked", G_CALLBACK(edit_selected), browser);
+    g_signal_connect_object(reload, "clicked", G_CALLBACK(room_draft_refresh_clicked),
+                            browser->page, 0);
+    g_object_set_data(G_OBJECT(browser->page), "mv-draft-refresh-action", reload);
+    g_object_set_data(G_OBJECT(browser->page), "mv-room-open-action", open);
 
     /* The GTK container may dispose the toolbar before the filtered list.
      * Independent strong references prevent callbacks from seeing stale
@@ -684,6 +859,7 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
     g_object_ref(browser->mode);
     g_object_ref(browser->area_filter);
     g_object_ref(browser->render_button);
+    g_object_ref(browser->open_button);
     g_object_ref(browser->status);
     g_object_ref(browser->details);
     g_object_ref(browser->picture);
@@ -697,5 +873,8 @@ GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
         gtk_label_new(world == ROOM_WORLD_ARIA ? "Aria rooms" : "Zero rooms"));
     gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(center), browser->page, TRUE);
     gtk_notebook_set_tab_detachable(GTK_NOTEBOOK(center), browser->page, TRUE);
+#ifndef FUSION_ROOM_BROWSER_TESTING
+    room_browser_refresh_drafts(browser);
+#endif
     return browser->page;
 }

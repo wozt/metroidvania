@@ -11,4 +11,7 @@ typedef enum {
 /* One browser, distinct verified source catalogs and native import adapters. */
 GtkWidget *room_browser_build(GtkWidget *center, NativeWorkspace *workspace,
                               RoomWorld world);
+#ifdef FUSION_ROOM_BROWSER_TESTING
+void room_browser_test_replace_drafts(GtkWidget *page, const gchar *tsv);
+#endif
 #endif

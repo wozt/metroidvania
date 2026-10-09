@@ -283,3 +283,21 @@ and the proprietary-file guard passed.
 - Only test code and documentation changed; the existing editor dialog and
   Python authored-room contract are not modified.
 - Run the developer's GTK4 build, CTest and proprietary-file guard to verify.
+
+## Patch 0066 - private authored rooms in GTK4 browsers
+
+- Both Zero and Aria room browsers asynchronously list **validated** private
+  drafts through `scripts.authored_rooms list --world ... --format tsv`.
+- Draft entries are marked `[DRAFT]`, show their stable identity and intended
+  screen dimensions, and participate in the original area filter.
+- A Refresh drafts button reloads the validated catalog without duplicating
+  entries; successful Create room jobs also refresh the corresponding browser.
+- Selecting or activating a draft cannot invoke the original-room import or
+  renderer. Open/Render controls are disabled for drafts; draft editing and
+  engine export remain unsupported until authoring adapters are implemented.
+- Async listing uses a strong page reference, page-attachment check, and
+  monotonic refresh generation to avoid late results changing closed tabs.
+- The GTK parser is tested with synthetic Zero and Aria draft rows only; the
+  CLI TSV contract is independently tested with isolated temporary files.
+- GTK4 CMake build, CTest and proprietary-file guard still require local
+  verification on the developer's Debian workstation.

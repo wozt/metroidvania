@@ -82,6 +82,8 @@ if(BUILD_TESTING)
             editor/native_workspace.c
         )
         target_include_directories(fusion_room_browser_gtk_tests PRIVATE include editor)
+        target_compile_definitions(fusion_room_browser_gtk_tests
+            PRIVATE FUSION_ROOM_BROWSER_TESTING)
         target_link_libraries(fusion_room_browser_gtk_tests
             PRIVATE fusion_native_editor_core PkgConfig::GTK4)
         fusion_enable_warnings(fusion_room_browser_gtk_tests)

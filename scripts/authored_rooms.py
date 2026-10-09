@@ -216,6 +216,8 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("path", type=Path)
     listed = sub.add_parser("list", help="list validated private authored drafts")
     listed.add_argument("--world", choices=tuple(AREAS))
+    listed.add_argument("--format", choices=("human", "tsv"), default="human",
+                        help="TSV is a machine-readable validated GTK browser listing")
     args = ap.parse_args(argv)
     try:
         if args.command == "create":
@@ -229,7 +231,12 @@ def main(argv: list[str] | None = None) -> int:
             print(f"VALID DRAFT {room['id']} (NOT engine-ready)")
         elif args.command == "list":
             for room in list_rooms(args.root, args.world):
-                print(f"{room['id']} | {room['name']} | draft_not_playable")
+                if args.format == "tsv":
+                    geometry = room["geometry"]
+                    print(f"{room['id']}\t{room['name']}\t"
+                          f"{geometry['width_screens']}\t{geometry['height_screens']}")
+                else:
+                    print(f"{room['id']} | {room['name']} | draft_not_playable")
     except (OSError, ValueError) as exc:
         ap.error(str(exc))
     return 0

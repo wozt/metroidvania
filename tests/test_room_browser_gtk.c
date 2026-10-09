@@ -138,6 +138,74 @@ static void test_create_room_dialogs(void)
     g_object_unref(g_object_ref_sink(right));
 }
 
+/* Synthetic private drafts must be visible, filterable and NEVER imported as
+ * verified engine rooms. No source assets or private JSON files are needed. */
+static void test_authored_draft_rows(void)
+{
+    GtkWidget *center = gtk_notebook_new();
+    GtkWidget *right = gtk_notebook_new();
+    NativeWorkspace *workspace = native_workspace_new();
+    native_workspace_build(workspace, center, right);
+    GtkWidget *pages[2] = {
+        room_browser_build(center, workspace, ROOM_WORLD_ZERO),
+        room_browser_build(center, workspace, ROOM_WORLD_ARIA),
+    };
+    const char *fixtures[] = {
+        "zero_mission:00:custom_hall\tCustom Hall\t2\t1\n",
+        "aria:00:custom_hall\tCustom Hall\t2\t1\n",
+    };
+    for (guint i = 0; i < G_N_ELEMENTS(pages); ++i) {
+        room_browser_test_replace_drafts(pages[i], fixtures[i]);
+        GtkListBox *list = GTK_LIST_BOX(g_object_get_data(
+            G_OBJECT(pages[i]), "mv-room-browser-list"));
+        GtkWidget *row = NULL;
+        guint original_count = 0;
+        for (GtkWidget *child = gtk_widget_get_first_child(GTK_WIDGET(list));
+             child; child = gtk_widget_get_next_sibling(child)) {
+            if (g_object_get_data(G_OBJECT(child), "mv-authored-draft"))
+                row = child;
+            else
+                ++original_count;
+        }
+        g_assert_true(GTK_IS_LIST_BOX_ROW(row));
+        g_assert_cmpstr(g_object_get_data(G_OBJECT(row), "mv-draft-identity"), ==,
+                        i == 0 ? "zero_mission:00:custom_hall" : "aria:00:custom_hall");
+        gtk_list_box_select_row(list, GTK_LIST_BOX_ROW(row));
+        GtkWidget *open = g_object_get_data(G_OBJECT(pages[i]), "mv-room-open-action");
+        GtkWidget *reload = g_object_get_data(G_OBJECT(pages[i]), "mv-draft-refresh-action");
+        g_assert_true(GTK_IS_BUTTON(open));
+        g_assert_true(GTK_IS_BUTTON(reload));
+        g_assert_false(gtk_widget_get_sensitive(open));
+        g_assert_true(gtk_widget_get_sensitive(reload));
+        /* Reload is replacement, not an accumulation of duplicate rows. */
+        room_browser_test_replace_drafts(pages[i], fixtures[i]);
+        guint drafts = 0;
+        for (GtkWidget *child = gtk_widget_get_first_child(GTK_WIDGET(list));
+             child; child = gtk_widget_get_next_sibling(child))
+            drafts += g_object_get_data(G_OBJECT(child), "mv-authored-draft") != NULL;
+        g_assert_cmpuint(drafts, ==, 1);
+        room_browser_test_replace_drafts(pages[i],
+            i == 0 ? "aria:00:foreign\tForeign\t1\t1\n" :
+                     "zero_mission:00:foreign\tForeign\t1\t1\n");
+        drafts = 0;
+        guint remaining_originals = 0;
+        for (GtkWidget *child = gtk_widget_get_first_child(GTK_WIDGET(list));
+             child; child = gtk_widget_get_next_sibling(child)) {
+            if (g_object_get_data(G_OBJECT(child), "mv-authored-draft"))
+                ++drafts;
+            else
+                ++remaining_originals;
+        }
+        g_assert_cmpuint(drafts, ==, 0);
+        g_assert_cmpuint(remaining_originals, ==, original_count);
+    }
+    gtk_notebook_remove_page(GTK_NOTEBOOK(center), 1);
+    gtk_notebook_remove_page(GTK_NOTEBOOK(center), 0);
+    native_workspace_free(workspace);
+    g_object_unref(g_object_ref_sink(center));
+    g_object_unref(g_object_ref_sink(right));
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -146,5 +214,6 @@ int main(int argc, char **argv)
     g_test_add_func("/room-browser/shared-shells", test_shared_browser_shells);
     g_test_add_func("/room-browser/repeated-lifecycle", test_repeated_browser_lifecycle);
     g_test_add_func("/room-browser/create-draft-form", test_create_room_dialogs);
+    g_test_add_func("/room-browser/private-draft-list", test_authored_draft_rows);
     return g_test_run();
 }

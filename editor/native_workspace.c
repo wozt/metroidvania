@@ -426,7 +426,12 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
              !strcmp(action, "collision-clear") ||
              !strcmp(action, "door-list") ||
              !strcmp(action, "door-create") ||
-             !strcmp(action, "door-delete")) command = action;
+             !strcmp(action, "door-update") ||
+             !strcmp(action, "door-delete") ||
+             !strcmp(action, "door-link") ||
+             !strcmp(action, "transition-list") ||
+             !strcmp(action, "transition-update") ||
+             !strcmp(action, "transition-delete")) command = action;
     if (!command) return FALSE;
     gchar command_option[64];
     snprintf(command_option, sizeof(command_option), "--command=%s", command);
@@ -445,14 +450,15 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     if (!strcmp(action, "list-previews"))
         g_ptr_array_add(args, (gpointer)"--preview=true");
     if (!strcmp(action, "delete") || !strcmp(action, "door-delete") ||
-        !strcmp(action, "collision-clear"))
+        !strcmp(action, "transition-delete") || !strcmp(action, "collision-clear"))
         g_ptr_array_add(args, (gpointer)"--confirm=true");
     if (options)
         for (guint i = 0; options[i]; ++i) g_ptr_array_add(args, (gpointer)options[i]);
     g_ptr_array_add(args, (gpointer)(
         !strcmp(action, "list-previews") || !strcmp(action, "list") ||
         !strcmp(action, "catalog") || !strcmp(action, "item-settings") ||
-        !strcmp(action, "collision-list") || !strcmp(action, "door-list") ?
+        !strcmp(action, "collision-list") || !strcmp(action, "door-list") ||
+        !strcmp(action, "transition-list") ?
         "--format=tsv" : "--format=text"));
     g_ptr_array_add(args, NULL);
     gchar *out = NULL, *err = NULL;
@@ -1257,7 +1263,7 @@ static void project_door_create_clicked(GtkButton *button, gpointer userdata)
     project_popover_defer_close(doc);
     if (project_command(doc, "door-create", options, NULL)) {
         project_reload(doc);
-        message(doc, "Project door created. Configure/link it through validated room data.");
+        message(doc, "Project door created. Right-click the purple project door and choose Edit to configure/link it.");
     }
 }
 
@@ -1404,10 +1410,323 @@ static void annotation_window_add_field(GtkGrid *grid, gint row,
     gtk_grid_attach(grid, entry, 1, row, 1, 1);
 }
 
+/* PATCH_0102_SHARED_PROJECT_DOOR_PROPERTIES: GTK UI over one validated backend. */
+typedef struct {
+    NativeWorkspace *doc;
+    GtkWidget *window, *status, *label, *x, *y, *width, *height;
+    GtkWidget *type, *facing, *world, *area, *room;
+    GtkWidget *target_door, *spawn_x, *spawn_y, *unlink;
+    guint door_id, transition_id;
+} ProjectDoorForm;
+
+static const char *const door_types_0102[] = {
+    "normal", "boss", "locked", "portal", "save", NULL
+};
+static const char *const door_facings_0102[] = {
+    "left", "right", "up", "down", NULL
+};
+static const char *const door_mzm_areas_0102[] = {
+    "Brinstar", "Kraid", "Norfair", "Ridley", "Tourian", "Crateria", "Chozodia", NULL
+};
+static const char *const door_aria_areas_0102[] = {
+    "Castle Corridor", "Chapel", "Study", "Dance Hall", "Inner Quarters",
+    "Floating Garden", "Clock Tower", "Underground", "The Arena", "Top Floor",
+    "Chaotic Realm entrance", "Chaotic Realm boss", NULL
+};
+
+static void project_door_form_destroy(gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    document_unref(form->doc);
+    g_free(form);
+}
+
+static GtkWidget *project_door_spin_0102(double low, double high,
+                                          double step, double selected)
+{
+    GtkWidget *field = gtk_spin_button_new_with_range(low, high, step);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(field), selected);
+    gtk_widget_set_hexpand(field, TRUE);
+    return field;
+}
+
+static void project_door_grid_field_0102(GtkGrid *grid, guint row,
+                                          const char *label, GtkWidget *value)
+{
+    GtkWidget *caption = gtk_label_new(label);
+    gtk_label_set_xalign(GTK_LABEL(caption), 0.0f);
+    gtk_grid_attach(grid, caption, 0, (int)row, 1, 1);
+    gtk_grid_attach(grid, value, 1, (int)row, 1, 1);
+}
+
+static void project_door_select_0102(GtkWidget *drop, const char *const choices[],
+                                     const char *value)
+{
+    for (guint index = 0; choices[index]; ++index)
+        if (!g_strcmp0(choices[index], value)) {
+            gtk_drop_down_set_selected(GTK_DROP_DOWN(drop), index);
+            return;
+        }
+}
+
+static void project_door_world_changed_0102(GObject *object, GParamSpec *pspec,
+                                              gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    (void)object; (void)pspec;
+    guint world = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->world));
+    if (world > 1) return;
+    GtkStringList *names = gtk_string_list_new(
+        world ? door_aria_areas_0102 : door_mzm_areas_0102);
+    gtk_drop_down_set_model(GTK_DROP_DOWN(form->area), G_LIST_MODEL(names));
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->area), 0);
+    g_object_unref(names);
+}
+
+static void project_door_fetch_link_0102(ProjectDoorForm *form)
+{
+    gchar *output = NULL;
+    if (!project_command(form->doc, "transition-list", NULL, &output)) return;
+    gchar **lines = g_strsplit(output ? output : "", "\n", -1);
+    for (guint i = 0; lines[i]; ++i) {
+        gchar **values = g_strsplit(lines[i], "\t", 8);
+        guint id, source, room, target_door, sx, sy;
+        if (g_strv_length(values) == 8 &&
+            parse_unsigned_field(values[0], &id) &&
+            parse_unsigned_field(values[1], &source) &&
+            source == form->door_id &&
+            parse_unsigned_field(values[4], &room) &&
+            parse_unsigned_field(values[5], &target_door) &&
+            parse_unsigned_field(values[6], &sx) &&
+            parse_unsigned_field(values[7], &sy)) {
+            form->transition_id = id;
+            gboolean aria = !g_strcmp0(values[2], "aria");
+            gtk_drop_down_set_selected(GTK_DROP_DOWN(form->world), aria ? 1 : 0);
+            if (aria) {
+                guint area = 0;
+                if (parse_unsigned_field(values[3], &area) && area < 12)
+                    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->area), area);
+            } else {
+                project_door_select_0102(form->area, door_mzm_areas_0102, values[3]);
+            }
+            gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->room), room);
+            gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->target_door), target_door);
+            gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->spawn_x), sx);
+            gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->spawn_y), sy);
+            g_strfreev(values);
+            break;
+        }
+        g_strfreev(values);
+    }
+    g_strfreev(lines);
+    g_free(output);
+    gtk_widget_set_sensitive(form->unlink, form->transition_id != 0);
+}
+
+static void project_door_save_0102(GtkButton *button, gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    NativeWorkspace *doc = form->doc;
+    (void)button;
+    if (doc->closing || !doc->ready) return;
+    const char *name = gtk_editable_get_text(GTK_EDITABLE(form->label));
+    guint door_type = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->type));
+    guint facing = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->facing));
+    if (!name[0] || door_type >= 5 || facing >= 4) {
+        gtk_label_set_text(GTK_LABEL(form->status), "Choose a valid label, type and facing.");
+        return;
+    }
+    gchar sid[16], sx[16], sy[16], sw[16], sh[16];
+    g_snprintf(sid, sizeof(sid), "%u", form->door_id);
+    g_snprintf(sx, sizeof(sx), "%u", (guint)gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->x)));
+    g_snprintf(sy, sizeof(sy), "%u", (guint)gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->y)));
+    g_snprintf(sw, sizeof(sw), "%u", (guint)gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->width)));
+    g_snprintf(sh, sizeof(sh), "%u", (guint)gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->height)));
+    const char *const options[] = {
+        "--id", sid, "--x", sx, "--y", sy, "--door-width", sw,
+        "--door-height", sh, "--label", name,
+        "--door-type", door_types_0102[door_type],
+        "--facing", door_facings_0102[facing], NULL
+    };
+    if (project_command(doc, "door-update", options, NULL)) {
+        project_reload(doc);
+        gtk_label_set_text(GTK_LABEL(form->status), "Project door saved in private room data.");
+        message(doc, "Project door updated; native ROM data unchanged.");
+    } else
+        gtk_label_set_text(GTK_LABEL(form->status), "Could not save door; check the editor status for validation details.");
+}
+
+static void project_door_link_0102(GtkButton *button, gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    NativeWorkspace *doc = form->doc;
+    (void)button;
+    if (doc->closing || !doc->ready) return;
+    guint world = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->world));
+    guint area = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->area));
+    if (world > 1 || area >= (world ? 12u : 7u)) {
+        gtk_label_set_text(GTK_LABEL(form->status), "Choose a target world and area.");
+        return;
+    }
+    gchar sid[16], stid[16], sarea[16], sroom[16], sdoor[16], sx[16], sy[16];
+    g_snprintf(sid, sizeof(sid), "%u", form->door_id);
+    g_snprintf(stid, sizeof(stid), "%u", form->transition_id);
+    g_snprintf(sarea, sizeof(sarea), "%u", area);
+    g_snprintf(sroom, sizeof(sroom), "%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->room)));
+    g_snprintf(sdoor, sizeof(sdoor), "%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->target_door)));
+    g_snprintf(sx, sizeof(sx), "%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->spawn_x)));
+    g_snprintf(sy, sizeof(sy), "%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->spawn_y)));
+    const char *const options[] = {
+        "--source-door-id", sid,
+        "--target-world", world ? "aria" : "zero_mission",
+        "--target-area", sarea, "--target-room", sroom,
+        "--target-door-id", sdoor, "--spawn-x", sx, "--spawn-y", sy,
+        "--id", stid, NULL
+    };
+    /* A new link has no ID field. An existing one must update in place. */
+    const char *const new_options[] = {
+        "--source-door-id", sid,
+        "--target-world", world ? "aria" : "zero_mission",
+        "--target-area", sarea, "--target-room", sroom,
+        "--target-door-id", sdoor, "--spawn-x", sx, "--spawn-y", sy, NULL
+    };
+    gboolean ok = project_command(doc, form->transition_id ? "transition-update" : "door-link",
+                                  form->transition_id ? options : new_options, NULL);
+    if (ok) {
+        project_reload(doc);
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "Destination saved. Target room validated; gameplay adapter still pending.");
+        message(doc, "Project door destination saved (not yet playable).");
+        project_door_fetch_link_0102(form);
+    } else
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "Target rejected by backend. Check that the destination room exists.");
+}
+
+static void project_door_unlink_0102(GtkButton *button, gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    (void)button;
+    if (form->doc->closing || !form->transition_id) return;
+    gchar id[16];
+    g_snprintf(id, sizeof(id), "%u", form->transition_id);
+    const char *const options[] = {"--id", id, NULL};
+    if (project_command(form->doc, "transition-delete", options, NULL)) {
+        form->transition_id = 0;
+        gtk_widget_set_sensitive(form->unlink, FALSE);
+        project_reload(form->doc);
+        gtk_label_set_text(GTK_LABEL(form->status), "Project destination removed.");
+    } else
+        gtk_label_set_text(GTK_LABEL(form->status), "Destination removal failed.");
+}
+
+static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnotation *item)
+{
+    if (!doc || doc->closing || !doc->ready || !doc->map ||
+        !item || !item->project_owned || item->kind != OVERLAY_DOORS) return;
+    ProjectDoorForm *form = g_new0(ProjectDoorForm, 1);
+    form->doc = document_ref(doc);
+    form->door_id = item->index;
+    form->window = gtk_window_new();
+    GtkRoot *root = doc->page ? gtk_widget_get_root(doc->page) : NULL;
+    if (GTK_IS_WINDOW(root))
+        gtk_window_set_transient_for(GTK_WINDOW(form->window), GTK_WINDOW(root));
+    gchar *title = g_strdup_printf("Project door #%u / %s", item->index, item->label);
+    gtk_window_set_title(GTK_WINDOW(form->window), title);
+    g_free(title);
+    gtk_window_set_default_size(GTK_WINDOW(form->window), 530, 630);
+    GtkWidget *outer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    GtkWidget *scroll = gtk_scrolled_window_new();
+    GtkWidget *grid = gtk_grid_new();
+    GtkWidget *actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget *save = gtk_button_new_with_label("Save door properties");
+    GtkWidget *link = gtk_button_new_with_label("Save destination");
+    form->unlink = gtk_button_new_with_label("Unlink");
+    GtkWidget *close = gtk_button_new_with_label("Close");
+    form->status = gtk_label_new(
+        "Private project door. Native game doors are read-only; no gameplay adapter yet.");
+    gtk_label_set_wrap(GTK_LABEL(form->status), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(form->status), 0.0f);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 7);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
+    gtk_widget_set_margin_start(grid, 12);
+    gtk_widget_set_margin_end(grid, 12);
+    gtk_widget_set_margin_top(grid, 12);
+    gtk_widget_set_margin_bottom(grid, 12);
+    guint resolution = doc->project_aria ? 8u : 16u;
+    guint max_width = doc->map->width[0] * 16;
+    guint max_height = doc->map->height[0] * 16;
+    form->label = gtk_entry_new();
+    gtk_editable_set_text(GTK_EDITABLE(form->label), item->label);
+    gtk_entry_set_max_length(GTK_ENTRY(form->label), 80);
+    form->x = project_door_spin_0102(0, max_width - resolution, resolution, item->x);
+    form->y = project_door_spin_0102(0, max_height - resolution, resolution, item->y);
+    form->width = project_door_spin_0102(resolution, max_width, resolution, item->width);
+    form->height = project_door_spin_0102(resolution, max_height, resolution, item->height);
+    form->type = gtk_drop_down_new_from_strings(door_types_0102);
+    form->facing = gtk_drop_down_new_from_strings(door_facings_0102);
+    project_door_select_0102(form->type, door_types_0102,
+        g_str_has_prefix(item->native_type, "project-door:") ? item->native_type + 13 : "normal");
+    project_door_select_0102(form->facing, door_facings_0102, item->variant);
+    project_door_grid_field_0102(GTK_GRID(grid), 0, "Label", form->label);
+    project_door_grid_field_0102(GTK_GRID(grid), 1, "X (pixels)", form->x);
+    project_door_grid_field_0102(GTK_GRID(grid), 2, "Y (pixels)", form->y);
+    project_door_grid_field_0102(GTK_GRID(grid), 3, "Width (pixels)", form->width);
+    project_door_grid_field_0102(GTK_GRID(grid), 4, "Height (pixels)", form->height);
+    project_door_grid_field_0102(GTK_GRID(grid), 5, "Door type", form->type);
+    project_door_grid_field_0102(GTK_GRID(grid), 6, "Facing", form->facing);
+    GtkWidget *heading = gtk_label_new("DESTINATION / SHARED CROSS-WORLD TRANSITION");
+    gtk_widget_add_css_class(heading, "heading");
+    gtk_label_set_xalign(GTK_LABEL(heading), 0.0f);
+    gtk_grid_attach(GTK_GRID(grid), heading, 0, 7, 2, 1);
+    const char *const worlds[] = {"Zero Mission", "Aria of Sorrow", NULL};
+    form->world = gtk_drop_down_new_from_strings(worlds);
+    form->area = gtk_drop_down_new_from_strings(door_mzm_areas_0102);
+    form->room = project_door_spin_0102(0, 999, 1, 0);
+    form->target_door = project_door_spin_0102(0, 999999, 1, 0);
+    form->spawn_x = project_door_spin_0102(0, 16383, 1, 0);
+    form->spawn_y = project_door_spin_0102(0, 16383, 1, 0);
+    project_door_grid_field_0102(GTK_GRID(grid), 8, "Target world", form->world);
+    project_door_grid_field_0102(GTK_GRID(grid), 9, "Target area", form->area);
+    project_door_grid_field_0102(GTK_GRID(grid), 10, "Target room ID", form->room);
+    project_door_grid_field_0102(GTK_GRID(grid), 11, "Target project door ID (0 = none)", form->target_door);
+    project_door_grid_field_0102(GTK_GRID(grid), 12, "Spawn X", form->spawn_x);
+    project_door_grid_field_0102(GTK_GRID(grid), 13, "Spawn Y", form->spawn_y);
+    g_signal_connect(form->world, "notify::selected",
+                     G_CALLBACK(project_door_world_changed_0102), form);
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->world), doc->project_aria ? 1 : 0);
+    project_door_fetch_link_0102(form);
+    gtk_widget_set_sensitive(form->unlink, form->transition_id != 0);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), grid);
+    gtk_widget_set_vexpand(scroll, TRUE);
+    gtk_box_append(GTK_BOX(outer), scroll);
+    gtk_box_append(GTK_BOX(actions), save);
+    gtk_box_append(GTK_BOX(actions), link);
+    gtk_box_append(GTK_BOX(actions), form->unlink);
+    gtk_box_append(GTK_BOX(actions), close);
+    gtk_box_append(GTK_BOX(outer), actions);
+    gtk_box_append(GTK_BOX(outer), form->status);
+    gtk_widget_set_margin_start(outer, 8);
+    gtk_widget_set_margin_end(outer, 8);
+    gtk_widget_set_margin_bottom(outer, 8);
+    gtk_window_set_child(GTK_WINDOW(form->window), outer);
+    g_object_set_data_full(G_OBJECT(form->window), "mv-project-door-form-0102",
+                           form, project_door_form_destroy);
+    g_signal_connect(save, "clicked", G_CALLBACK(project_door_save_0102), form);
+    g_signal_connect(link, "clicked", G_CALLBACK(project_door_link_0102), form);
+    g_signal_connect(form->unlink, "clicked", G_CALLBACK(project_door_unlink_0102), form);
+    g_signal_connect_swapped(close, "clicked", G_CALLBACK(gtk_window_destroy), form->window);
+    gtk_window_present(GTK_WINDOW(form->window));
+}
+
 static void annotation_window_open(NativeWorkspace *doc,
                                    const RoomAnnotation *item, gboolean editor)
 {
     if (!doc || doc->closing || !item) return;
+    if (editor && item->project_owned && item->kind == OVERLAY_DOORS) {
+        project_door_editor_open_0102(doc, item);
+        return;
+    }
     const char *kind = annotation_kind_name(item->kind);
     gchar *title = g_strdup_printf("%s %s — %s",
                                    kind, editor ? "editor" : "information", item->label);

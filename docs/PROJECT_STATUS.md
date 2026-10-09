@@ -888,3 +888,19 @@ and the proprietary-file guard passed.
   room extent and boundary can be determined; never assert pixel precision.
 - Invalid native coordinates are inspector-only, not fabricated exits.
 - Aria-only import, no ROM edits or changes to Zero Mission.
+
+## Patch 0102 - shared project-door property editor
+
+- Replace the read-only project-door editor shell with a dedicated GTK4 form
+  for label, geometry, semantic type and facing in both Zero Mission and Aria.
+  The same validated headless backend implements door-update and linking.
+- Choose an existing native target world, area and room and save project-owned
+  transitions; edit or remove an existing link. Original source doors remain
+  immutable and cannot open a project-edit form.
+- All edits stay in the ignored versioned project room document; cross-world
+  targets are validated by the existing backend, not assumed playable.
+  `target_door_id=0` explicitly means unspecified.
+- Scope: target room is chosen in the form, not by clicking the global map.
+  True map-click destination picking, bidirectional link assistance and engine
+  adapters remain follow-ups. The patch does not alter existing map layout,
+  tileset renderer, ROM, native annotations or story data.

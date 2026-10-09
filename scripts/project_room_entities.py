@@ -27,6 +27,8 @@ COLLISION_KEYS = {"resolution_px", "cells"}
 COLLISION_CELL_KEYS = {"x", "y", "type"}
 COLLISION_TYPES = ("solid", "one_way", "hazard", "slope_up", "slope_down")
 DOOR_KEYS = {"id", "x", "y", "width", "height", "label", "door_type", "facing"}
+# Optional private override reference, preserving existing version-2 room docs.
+NATIVE_DOOR_SOURCE_KEYS = {"index", "variant", "native_type"}
 DOOR_TYPES = ("normal", "boss", "locked", "portal", "save")
 DOOR_FACINGS = ("left", "right", "up", "down")
 TRANSITION_KEYS = {
@@ -198,9 +200,24 @@ def validate(doc: object, world: str, area: str, room: int,
     if not isinstance(doors, list) or len(doors) > MAX_DOORS:
         raise ValueError("invalid project door count")
     door_ids = set()
+    adopted_sources = set()
     for door in doors:
-        if not isinstance(door, dict) or door.keys() != DOOR_KEYS:
+        if (not isinstance(door, dict) or
+                door.keys() not in (DOOR_KEYS, DOOR_KEYS | {"native_source"})):
             raise ValueError("invalid project door fields")
+        if "native_source" in door:
+            source = door["native_source"]
+            if not isinstance(source, dict) or source.keys() != NATIVE_DOOR_SOURCE_KEYS:
+                raise ValueError("invalid native source reference")
+            native_index = _int(source["index"], 0, 999999, "native door index")
+            variant, native_type = source["variant"], source["native_type"]
+            if (not isinstance(variant, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,47}", variant)
+                    or not isinstance(native_type, str) or not NATIVE_TYPE.fullmatch(native_type)):
+                raise ValueError("invalid native door source identity")
+            identity = (native_index, variant, native_type)
+            if identity in adopted_sources:
+                raise ValueError("native door cannot have multiple project overrides")
+            adopted_sources.add(identity)
         door_id = _int(door["id"], 1, next_door_id - 1, "door id")
         if door_id in door_ids:
             raise ValueError("duplicate project door id")
@@ -440,6 +457,35 @@ def door_create(doc: dict, x: int, y: int, width: int, height: int,
             "door_type": door_type, "facing": facing}
     candidate = _validated_candidate(
         doc, next_door_id=doc["next_door_id"] + 1,
+        doors=[*doc["doors"], door])
+    doc.update(candidate)
+    return door
+
+
+def door_adopt(doc: dict, source: dict, x: int, y: int,
+               width: int, height: int) -> dict:
+    """Link an immutable native door to a separately editable project door.
+
+    Calling twice returns the same override; original native records are never
+    mutated, and deleting this door restores their visible source overlays.
+    """
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    for door in doc["doors"]:
+        if door.get("native_source") == source:
+            return door
+    if len(doc["doors"]) >= MAX_DOORS:
+        raise ValueError("project door limit reached")
+    door = {"id": doc["next_door_id"], "x": x, "y": y,
+            "width": width, "height": height,
+            "label": f"Native door {source['index']} override",
+            "door_type": "normal", "facing":
+                "left" if x == 0 else "right" if x + width == doc["width_px"]
+                else "up" if y == 0 else "down" if y + height == doc["height_px"]
+                else "left",
+            "native_source": source}
+    candidate = _validated_candidate(doc,
+        next_door_id=doc["next_door_id"] + 1,
         doors=[*doc["doors"], door])
     doc.update(candidate)
     return door

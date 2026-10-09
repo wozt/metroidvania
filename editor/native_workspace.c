@@ -24,6 +24,7 @@ typedef struct {
     guint width, height;
     char variant[48], native_type[96], label[384], details[320];
     gboolean project_owned; /* Original native records remain read-only. */
+    gboolean native_overridden; /* Hide only while its private override exists. */
     gint preview_item_id; /* Exact authored Aria item identifier; -1 if absent. */
 } RoomAnnotation;
 
@@ -426,6 +427,7 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
              !strcmp(action, "collision-clear") ||
              !strcmp(action, "door-list") ||
              !strcmp(action, "door-create") ||
+             !strcmp(action, "door-adopt") ||
              !strcmp(action, "door-update") ||
              !strcmp(action, "door-delete") ||
              !strcmp(action, "door-link") ||
@@ -530,10 +532,10 @@ static guint project_load_doors(NativeWorkspace *doc)
     gchar **lines = g_strsplit(output ? output : "", "\n", -1);
     for (guint i = 0; lines[i] && count < 128; ++i) {
         if (!lines[i][0]) continue;
-        gchar **fields = g_strsplit(lines[i], "\t", 8);
+        gchar **fields = g_strsplit(lines[i], "\t", 9);
         RoomAnnotation item = {0};
         guint x = 0, y = 0;
-        if (g_strv_length(fields) == 8 &&
+        if (g_strv_length(fields) == 9 &&
             parse_unsigned_field(fields[0], &item.index) && item.index &&
             parse_unsigned_field(fields[1], &x) &&
             parse_unsigned_field(fields[2], &y) &&
@@ -553,6 +555,32 @@ static guint project_load_doors(NativeWorkspace *doc)
             g_snprintf(item.details, sizeof(item.details),
                        "Private project door; type=%s; facing=%s; no engine adapter.",
                        fields[6], fields[7]);
+            /* A project native override inherits the original room record,
+             * but retains project geometry/metadata and a distinct source ID.
+             * Keep authentic MZM hatch previews when their private input exists. */
+            if (strcmp(fields[8], "-")) {
+                gchar **source = g_strsplit(fields[8], ",", 3);
+                guint native_index = 0;
+                if (g_strv_length(source) == 3 &&
+                    parse_unsigned_field(source[0], &native_index)) {
+                    for (guint j = 0; j < doc->annotations->len; ++j) {
+                        RoomAnnotation *original = &g_array_index(
+                            doc->annotations, RoomAnnotation, j);
+                        if (!original->project_owned && original->kind == OVERLAY_DOORS &&
+                            original->index == native_index &&
+                            !strcmp(original->variant, source[1]) &&
+                            !strcmp(original->native_type, source[2])) {
+                            original->native_overridden = TRUE;
+                            g_snprintf(item.details, sizeof(item.details),
+                                "Private override of native door %u; %s; "
+                                "type=%s; facing=%s; no engine adapter.",
+                                native_index, original->details, fields[6], fields[7]);
+                            break;
+                        }
+                    }
+                }
+                g_strfreev(source);
+            }
             g_array_append_val(doc->annotations, item);
             GtkWidget *row = gtk_label_new(NULL);
             gchar *summary = g_strdup_printf(
@@ -1835,12 +1863,46 @@ static void annotation_inspect_clicked(GtkButton *button, gpointer userdata)
     annotation_popup_close(doc);
 }
 
+/* PATCH_0104_NATIVE_DOOR_ADOPTION: preserve original Aria/MZM ROM records. */
 static void annotation_editor_clicked(GtkButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
     RoomAnnotation *item = annotation_from_widget(doc, GTK_WIDGET(button), NULL);
-    if (item) annotation_window_open(doc, item, TRUE);
-    annotation_popup_close(doc);
+    if (!item) return;
+    if (item->kind == OVERLAY_DOORS && !item->project_owned) {
+        gchar index[16];
+        snprintf(index, sizeof(index), "%u", item->index);
+        gchar *variant = g_strdup(item->variant);
+        gchar *native_type = g_strdup(item->native_type);
+        const char *const opts[] = {"--native-index", index,
+            "--native-variant", variant, "--native-type", native_type, NULL};
+        project_popover_defer_close(doc);
+        gchar *response = NULL;
+        if (project_command(doc, "door-adopt", opts, &response)) {
+            guint adopted_id = 0;
+            const char *id = response ? strstr(response, "\"id\":") : NULL;
+            if (id) (void)sscanf(id + strlen("\"id\":"), " %u", &adopted_id);
+            project_reload(doc);
+            if (adopted_id) {
+                for (guint i = 0; i < doc->annotations->len; ++i) {
+                    RoomAnnotation *created = &g_array_index(
+                        doc->annotations, RoomAnnotation, i);
+                    if (created->kind == OVERLAY_DOORS && created->project_owned &&
+                        created->index == adopted_id) {
+                        project_door_editor_open_0102(doc, created);
+                        break;
+                    }
+                }
+            }
+            message(doc, "Original door preserved; private override ready for editing.");
+        }
+        g_free(response);
+        g_free(variant);
+        g_free(native_type);
+        return;
+    }
+    annotation_window_open(doc, item, TRUE);
+    project_popover_defer_close(doc);
 }
 
 static void annotation_locate_clicked(GtkButton *button, gpointer userdata)
@@ -1959,7 +2021,8 @@ static void annotation_canvas_context_pressed(GtkGestureClick *gesture, gint pre
         guint index = cursor - 1;
         const RoomAnnotation *item = &g_array_index(
             doc->annotations, RoomAnnotation, index);
-        if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind]) continue;
+        if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind] ||
+            item->native_overridden) continue;
         double left = item->x * doc->scale;
         double top = item->y * doc->scale;
         double width = MAX(4.0, item->width * doc->scale);
@@ -2127,8 +2190,9 @@ static guint room_hatch_lock_preview(const char *details, gboolean events_on)
 
 static gchar *room_sprite_path(NativeWorkspace *doc, const RoomAnnotation *item)
 {
-    if (item->kind == OVERLAY_DOORS && !doc->project_aria && !item->project_owned) {
-        /* Only allow known names emitted by verified Clipdata-based import. */
+    if (item->kind == OVERLAY_DOORS && !doc->project_aria &&
+        (!item->project_owned || strstr(item->details, "hatch_preview=") != NULL)) {
+        /* Known private original graphics, also for validated project overrides. */
         const char *field = strstr(item->details, "hatch_preview=");
         if (!field) return NULL;
         field += strlen("hatch_preview=");
@@ -2419,7 +2483,8 @@ static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
     if (!doc->annotations) return;
     for (guint i = 0; i < doc->annotations->len; ++i) {
         const RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation, i);
-        if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind]) continue;
+        if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind] ||
+            item->native_overridden) continue;
         double x = item->x * doc->scale;
         double y = item->y * doc->scale;
         double width = item->width * doc->scale;

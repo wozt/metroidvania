@@ -904,3 +904,18 @@ and the proprietary-file guard passed.
   True map-click destination picking, bidirectional link assistance and engine
   adapters remain follow-ups. The patch does not alter existing map layout,
   tileset renderer, ROM, native annotations or story data.
+
+## Patch 0104 - native door project overrides
+
+- Context Edit on an original Zero Mission or Aria DOOR now creates/reuses a
+  project-owned override bound to the original annotation's verified index,
+  variant and type. The backend validates that identity against the private
+  imported room annotation TSV and refuses arbitrary/invented source geometry.
+- The unchanged original remains in the ignored private source annotation file;
+  its canvas marker is temporarily superseded by the editable override.
+  Deleting the private override reveals the source door again.
+- Existing project-door edit and cross-world destination form are reused;
+  legacy version-2 room documents and project doors without native source
+  references remain compatible. This is not a native engine door encoder.
+- Real Aria door sprite graphics and frame-accurate transition positions still
+  require separate native research; screen-boundary anchors remain approximate.

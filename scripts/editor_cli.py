@@ -106,6 +106,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--door-width", dest="door_width")
     parser.add_argument("--door-height", dest="door_height")
     parser.add_argument("--door-type", dest="door_type")
+    parser.add_argument("--native-index", dest="native_index")
+    parser.add_argument("--native-variant", dest="native_variant")
     parser.add_argument("--facing")
     parser.add_argument("--source-door-id", dest="source_door_id")
     parser.add_argument("--target-world", dest="target_world")
@@ -228,7 +230,11 @@ def _tsv_result(command: str, data: dict) -> str:
                 for item in data["cells"]]
     elif command == "door-list":
         rows = [[item["id"], item["x"], item["y"], item["width"], item["height"],
-                 item["label"], item["door_type"], item["facing"]]
+                 item["label"], item["door_type"], item["facing"],
+                 (f"{item['native_source']['index']},"
+                  f"{item['native_source']['variant']},"
+                  f"{item['native_source']['native_type']}"
+                  if 'native_source' in item else "-")]
                 for item in data["doors"]]
     elif command == "transition-list":
         rows = [[item["id"], item["source_door_id"], item["target_world"],

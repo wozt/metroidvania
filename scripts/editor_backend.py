@@ -64,6 +64,7 @@ CAPABILITIES = {
     "door-list": "available_project_room_data_only",
     "door-inspect": "available_project_room_data_only",
     "door-create": "available_project_room_data_only",
+    "door-adopt": "available_project_room_data_only",
     "door-update": "available_project_room_data_only",
     "door-delete": "available_project_room_data_only",
     "door-link": "available_project_room_data_only",
@@ -131,6 +132,8 @@ COMMAND_FIELDS = {
     "door-inspect": {"world", "area", "room", "width", "height", "id"},
     "door-create": {"world", "area", "room", "width", "height", "x", "y",
                     "door_width", "door_height", "label", "door_type", "facing"},
+    "door-adopt": {"world", "area", "room", "width", "height",
+                   "native_index", "native_variant", "native_type"},
     "door-update": {"world", "area", "room", "width", "height", "id", "x", "y",
                     "door_width", "door_height", "label", "door_type", "facing"},
     "door-delete": {"world", "area", "room", "width", "height", "id", "confirm"},
@@ -152,7 +155,7 @@ MUTATING_COMMANDS = {
     "entity-create", "entity-move", "entity-delete", "entity-assign", "story-save",
     "tile-set", "tile-fill",
     "collision-set", "collision-fill", "collision-clear",
-    "door-create", "door-update", "door-delete", "door-link",
+    "door-create", "door-adopt", "door-update", "door-delete", "door-link",
     "transition-create", "transition-update", "transition-delete",
 }
 
@@ -870,6 +873,45 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
         return result
     if command.startswith("door-") and command != "door-link":
         document, _scope = _room_document(root_path, options)
+        if command == "door-adopt":
+            native_index = _integer(options.get("native_index"), "native_index", 0, 999999)
+            native_variant = options.get("native_variant")
+            native_type = options.get("native_type")
+            if (not isinstance(native_variant, str)
+                    or not re.fullmatch(r"[A-Za-z0-9_-]{1,47}", native_variant)
+                    or not isinstance(native_type, str)
+                    or not project_room_entities.NATIVE_TYPE.fullmatch(native_type)):
+                raise ValueError("invalid original door identity")
+            world, area, room, width, height = _entity_scope(options)
+            family = "metroid" if world == "mzm" else "aria"
+            filename = (f"{area.lower()}_{room:03}.tsv" if world == "mzm" else
+                        f"area_{int(area):02}_room_{room:03}.tsv")
+            original = (root_path / "assets/extracted/rooms" / family / "annotations" /
+                        filename)
+            if original.is_symlink() or not original.is_file() or original.stat().st_size > 2_000_000:
+                raise ValueError("import original room annotations before editing native doors")
+            matching = []
+            for line in original.read_text(encoding="utf-8").splitlines()[:4096]:
+                fields = line.split("|", 9)
+                if (len(fields) != 10 or fields[0] != "DOOR" or
+                    fields[1] != str(native_index) or fields[6] != native_variant or
+                    fields[7] != native_type):
+                    continue
+                try:
+                    x, y, dw, dh = (int(value) for value in fields[2:6])
+                except ValueError as exc:
+                    raise ValueError("invalid original door geometry") from exc
+                matching.append((x, y, dw, dh))
+            if len(matching) != 1:
+                raise ValueError("source door missing or ambiguous in private original annotations")
+            source = {"index": native_index, "variant": native_variant,
+                      "native_type": native_type}
+            door = project_room_entities.door_adopt(document, source, *matching[0])
+            result = {"door": door, "persisted": False, "engine_adapter": "unavailable"}
+            if not dry_run:
+                path = project_room_entities.save(root_path, document)
+                result.update({"persisted": True, "path": str(path)})
+            return result
         if command == "door-list":
             return {"count": len(document["doors"]), "doors": document["doors"],
                     "engine_adapter": "unavailable"}

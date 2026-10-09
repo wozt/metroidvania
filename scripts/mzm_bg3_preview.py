@@ -156,6 +156,81 @@ def preview(bg3_blob: bytes, background_gfx: bytes, palette: bytes) -> tuple[byt
     return native.bmp24(tw * 8, th * 8, pixels), report
 
 
+# PATCH_0129_BG3_VRAM_PROBE: all counts come from native decoded map words.
+# Coverage is a hypothesis score, never evidence that a VRAM base is correct.
+def probe_vram_references(map_data: bytes, gfx_size: int) -> dict:
+    """Summarize real BG3 tilemap words against possible GBA 4bpp VRAM bases.
+
+    This intentionally never chooses a base, maps missing palettes, or renders.
+    BG screen entries use 10-bit tile indices and four palette-bank bits.
+    """
+    from collections import Counter
+    if len(map_data) not in (2048, 4096) or gfx_size <= 0 or gfx_size % 32:
+        raise ValueError('invalid BG3 tilemap/4bpp graphics for VRAM probe')
+    words = [word for (word,) in struct.iter_unpack('<H', map_data)]
+    tile_ids = [word & 1023 for word in words]
+    tiles = gfx_size // 32
+    histogram = Counter(tile_ids)
+    bank_histogram = Counter((word >> 12) & 15 for word in words)
+    # Candidate base addresses are CHARBASE-relative: 0x0000, 0x1800,
+    # and 0x5800. Preserve the loader-derived base separately.
+    candidate_bases = (0, 192, 704)
+    candidates = []
+    for base in candidate_bases:
+        covered = sum(count for tile_id, count in histogram.items()
+                      if base <= tile_id < base + tiles)
+        candidates.append({
+            'tile_base': base,
+            'offset_bytes': base * 32,
+            'covered_cells': covered,
+            'uncovered_cells': len(words) - covered,
+            'coverage_pct': round(100 * covered / len(words), 2),
+        })
+    return {
+        'status': 'DIAGNOSTIC_ONLY_UNVERIFIED_VRAM_LAYOUT',
+        'total_cells': len(words),
+        'tilemap_width_cells': 32,
+        'tilemap_height_cells': len(words) // 32,
+        'gfx_bytes': gfx_size,
+        'gfx_tiles': tiles,
+        'unique_tile_indices': len(histogram),
+        'most_common_tile_indices': [
+            {'tile': key, 'cells': value}
+            for key, value in sorted(histogram.items(),
+                                     key=lambda item: (-item[1], item[0]))[:16]
+        ],
+        'palette_bank_cells': {str(i): bank_histogram.get(i, 0)
+                               for i in range(16)},
+        'horizontal_flip_cells': sum(bool(word & 0x400) for word in words),
+        'vertical_flip_cells': sum(bool(word & 0x800) for word in words),
+        'candidate_bases': candidates,
+        'note': ('Coverage alone does not establish the actual BG3 charbase, '
+                 'VRAM graphics copy, or palette origin.'),
+    }
+
+
+def probe_native_room(area: str, room_number: int) -> dict:
+    """Inspect privately imported native room resources; never write assets."""
+    room = native.read_source_room(area, room_number)
+    fields = room['fields']
+    symbol = fields['pBg3Data']
+    blob = source_bg3_blob(symbol)
+    if len(blob) < 9:
+        raise ValueError('BG3 header too short')
+    map_data = native.lz77(blob[4:])
+    compressed_gfx = tileset_background_resource(int(fields['tileset']))
+    gfx = native.lz77(compressed_gfx)
+    report = probe_vram_references(map_data, len(gfx))
+    report.update({
+        'area': area, 'room': room_number,
+        'tileset': int(fields['tileset']),
+        'bg3_symbol': symbol,
+        'inferred_loader_base': (0xfde0 - len(gfx) - 0xc000) // 32,
+        'inferred_loader_offset_aligned': (0xfde0 - len(gfx) - 0xc000) % 32 == 0,
+    })
+    return report
+
+
 def render_room(area: str, room_number: int) -> dict:
     room = native.read_source_room(area, room_number)
     fields = room['fields']
@@ -174,7 +249,17 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--area', default='Brinstar')
     p.add_argument('--room', type=int, default=33)
+    p.add_argument('--probe-vram', action='store_true',
+                   help='print native BG3 reference/VRAM candidate evidence as JSON')
     args = p.parse_args()
+    if args.probe_vram:
+        import json
+        try:
+            report = probe_native_room(args.area, args.room)
+        except (ValueError, OSError, IndexError, KeyError) as exc:
+            p.error(str(exc))
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
     try:
         info = render_room(args.area, args.room)
     except (ValueError, OSError, IndexError, KeyError) as e:

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import unittest
-from scripts.mzm_bg3_preview import preview, analyze_references
+from scripts.mzm_bg3_preview import preview, analyze_references, probe_vram_references
 
 
 def litlz(data):
@@ -37,6 +37,21 @@ class BG3PreviewTests(unittest.TestCase):
         bg = bytes(4) + litlz(base.to_bytes(2, 'little') * 1024)
         with self.assertRaisesRegex(ValueError, 'palette-missing pixels=65536'):
             preview(bg, litlz(gfx), b'')
+
+    def test_bg3_vram_probe_counts(self):
+        words = ((0x0000).to_bytes(2, 'little') * 478 +
+                 (0xf2c0).to_bytes(2, 'little') * 546)
+        result = probe_vram_references(words, 32)
+        self.assertEqual(result['total_cells'], 1024)
+        self.assertEqual(result['palette_bank_cells']['0'], 478)
+        self.assertEqual(result['palette_bank_cells']['15'], 546)
+        self.assertEqual(result['candidate_bases'][0]['covered_cells'], 478)
+        self.assertEqual(result['candidate_bases'][2]['covered_cells'], 546)
+        self.assertEqual(result['status'], 'DIAGNOSTIC_ONLY_UNVERIFIED_VRAM_LAYOUT')
+
+    def test_bg3_vram_probe_rejects_unaligned_graphics(self):
+        with self.assertRaises(ValueError):
+            probe_vram_references(bytes(2048), 31)
 
     def test_fail_closed(self):
         with self.assertRaises(ValueError): preview(b'bad',b'',b'')

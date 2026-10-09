@@ -131,12 +131,15 @@ def export(rom: bytes, area: int, room_number: int) -> dict:
     if bg1 and bg1.get('collision') is not None:
         collision_name = f'rooms/aria/previews/{basename}_collision.bmp'
         write_generated(collision_name, renderer.collision_preview(bg1))
+    from scripts.room_annotations import export_aria
+    annotations_name = export_aria(room)
     return {'room_id': f'aria:{area:02d}:{room_number:03d}',
             'tile_count': len(tiles), 'atlas': str(OUTPUT/atlas_name),
             'workroom': str(OUTPUT/workroom_name),
             'override': str(OUTPUT/override_name),
             'collision': str(OUTPUT/collision_name) if collision_name else None,
-            'limitation': 'Visual 16x16 RGBA cells; original 8x8 tile IDs, animations, entities, collisions and BG3 editability not yet preserved.'}
+            'annotations': str(OUTPUT/annotations_name),
+            'limitation': 'Visual 16x16 RGBA cells; original 8x8 tile IDs, object graphics, animations, and entity/collision/BG3 editability are not yet preserved.'}
 
 
 def main() -> int:

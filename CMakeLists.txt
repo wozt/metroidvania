@@ -39,6 +39,7 @@ if(GTK4_FOUND)
         editor/main.c
         editor/native_workspace.c
         editor/world_atlas.c
+        editor/object_catalog.c
         editor/story_workspace.c
         editor/room_browser.c
     )

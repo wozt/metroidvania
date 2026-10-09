@@ -13,10 +13,10 @@ game frontend.
 | Story | Data baseline | Complete campaign bible and dependency-checked parallel timeline |
 | Boss inventory | Verified native identities | 9 MZM encounters and all 11 Aria campaign bosses source/ROM-mapped |
 | Savepoints | Verified metadata | 29 MZM platform rooms and 17 Aria map-flag rooms |
-| MZM rooms | Partial | descriptors, atlas, BG1/BG2 editing and experimental BG3 |
-| Aria rooms | Structural inventory + preview | 343 descriptors, 725 transitions, 2,336 entities; experimental background renderer |
+| MZM rooms | Partial | descriptors, BG1/BG2 editing, collision, doors and native entity variants |
+| Aria rooms | Structural inventory + preview | 343 descriptors, 725 transitions and 2,336 entity placements |
 | Character assets | Partial | local verified Samus and Soma animation extraction |
-| GTK4 editor | Active | native MZM documents, safe tab lifetime, atlas and asset previews |
+| GTK4 editor | Active | shared room documents, native-data overlays and a two-world object catalog |
 | Native gameplay engines | Not started | no player physics, combat, entities or room runtime yet |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
@@ -89,9 +89,9 @@ and the proprietary-file guard passed.
 
 ## Immediate priorities
 
-1. Decode Aria tilemap/collision payloads into private native room work files.
-2. Attach verified transition/access metadata to both games' savepoint records.
-3. Complete MZM collision/entity extraction and verify room overrides.
+1. Decode native object graphics and behaviors for truthful catalog previews.
+2. Define the project-owned object/ability/soul schema and validated encoders.
+3. Decode trigger regions and attach them to the common room-data overlays.
 4. Define the native engine contracts around decoded room data.
 5. Implement the two prologues before general dual-character traversal.
 
@@ -458,3 +458,26 @@ and the proprietary-file guard passed.
   moving content widget.
 - Aria global-map semantics remain unchanged. Python contracts, GTK4 build,
   CTest and the proprietary-data guard are required before push.
+
+## Patch 0075 - native room records and shared object catalog
+
+- Native room imports now produce a bounded private annotation table alongside
+  each work file. Zero Mission records preserve spriteset identity, graphics
+  slot and event variant; Aria records preserve entity identity, parameters,
+  flags and room-transition targets.
+- Every room editor exposes independent Walls, Objects, Doors and Events
+  overlays plus a Room data inspector. Trigger controls are present but
+  disabled and labelled unavailable until native trigger structures are
+  decoded; original records remain read-only.
+- Added a permanent two-column Object catalog for both games. It inventories
+  206 Zero Mission primary sprite types with decoded stat expressions and 174
+  Aria entity types present in the verified local world catalog, including
+  placement counts and known boss health.
+- Missing object images use an explicit diagnostic icon. Create/clone actions
+  are disabled until a project-owned object schema and validated engine
+  encoders exist; the editor does not claim native mutation or sprite support.
+- Nested palette notebooks now resolve their actual owning notebook during
+  close and detach operations, preserving the GTK document-lifetime contract.
+- Validation: 160 Python tests and all six CTest targets pass; the GTK4 editor
+  was smoke-tested under Xvfb with the object catalog, Brinstar 023 annotations
+  and object overlays rendered from local private data.

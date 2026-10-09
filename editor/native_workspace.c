@@ -11,7 +11,16 @@
 #include <string.h>
 
 enum { TOOL_PENCIL, TOOL_ERASER, TOOL_FILL, TOOL_PICK, TOOL_SELECT, TOOL_PAN, TOOL_COUNT };
+enum { OVERLAY_COLLISION, OVERLAY_OBJECTS, OVERLAY_DOORS, OVERLAY_EVENTS,
+       OVERLAY_TRIGGERS, OVERLAY_COUNT };
 #define HISTORY_LIMIT 16u
+
+typedef struct {
+    guint kind, index;
+    int x, y;
+    guint width, height;
+    char variant[48], native_type[96], label[128], details[320];
+} RoomAnnotation;
 
 struct NativeWorkspace {
     /* The instance returned by native_workspace_new() manages documents. */
@@ -32,6 +41,7 @@ struct NativeWorkspace {
     char *identity;
 
     GtkWidget *page, *palette_page, *canvas, *palette, *status;
+    GtkWidget *annotations_list, *annotations_status;
     GtkWidget *layer, *brush, *zoom, *scroller, *grid_button;
     GtkWidget *tools[TOOL_COUNT];
     GtkWidget *tab_title, *close_button, *save_button;
@@ -54,7 +64,8 @@ struct NativeWorkspace {
     gboolean background_visible;
     cairo_surface_t *collision;
     unsigned char *collision_pixels;
-    gboolean collision_visible;
+    gboolean overlays[OVERLAY_COUNT];
+    GArray *annotations;
 };
 
 static NativeWorkspace *document_ref(NativeWorkspace *doc)
@@ -137,6 +148,7 @@ static void document_destroy(NativeWorkspace *doc)
     discard_atlas(doc);
     discard_background(doc);
     discard_collision(doc);
+    if (doc->annotations) g_array_free(doc->annotations, TRUE);
     free(doc->undo);
     free(doc->redo);
     free(doc->map);
@@ -203,6 +215,106 @@ static void load_collision(NativeWorkspace *doc, const char *filename)
 {
     discard_collision(doc);
     load_preview_surface(filename, &doc->collision, &doc->collision_pixels);
+}
+
+static gboolean parse_unsigned_field(const char *text, guint *value)
+{
+    char extra;
+    return text && sscanf(text, "%u%c", value, &extra) == 1;
+}
+
+static gboolean parse_signed_field(const char *text, int *value)
+{
+    char extra;
+    return text && sscanf(text, "%d%c", value, &extra) == 1;
+}
+
+static void annotation_list_clear(NativeWorkspace *doc)
+{
+    if (!doc->annotations_list) return;
+    GtkWidget *child;
+    while ((child = gtk_widget_get_first_child(doc->annotations_list)))
+        gtk_list_box_remove(GTK_LIST_BOX(doc->annotations_list), child);
+}
+
+static void load_annotations(NativeWorkspace *doc, const char *filename)
+{
+    gchar *contents = NULL;
+    g_array_set_size(doc->annotations, 0);
+    annotation_list_clear(doc);
+    if (!g_file_get_contents(filename, &contents, NULL, NULL)) {
+        if (doc->annotations_status)
+            gtk_label_set_text(GTK_LABEL(doc->annotations_status),
+                               "No decoded native room objects for this room.");
+        return;
+    }
+    gchar **lines = g_strsplit(contents, "\n", -1);
+    guint counts[4] = {0};
+    for (guint line = 0; lines[line] && line < 4096; ++line) {
+        if (!lines[line][0] || lines[line][0] == '#') continue;
+        gchar **fields = g_strsplit(lines[line], "|", 11);
+        RoomAnnotation item = {0};
+        guint source_index, width, height;
+        int x, y;
+        guint count = g_strv_length(fields);
+        if (count != 10 || !parse_unsigned_field(fields[1], &source_index) ||
+            !parse_signed_field(fields[2], &x) || !parse_signed_field(fields[3], &y) ||
+            !parse_unsigned_field(fields[4], &width) ||
+            !parse_unsigned_field(fields[5], &height) ||
+            x < -64 || y < -64 || x > 32768 || y > 32768 ||
+            !width || width > 4096 || !height || height > 4096 ||
+            strlen(fields[6]) >= sizeof(item.variant) ||
+            strlen(fields[7]) >= sizeof(item.native_type) ||
+            strlen(fields[8]) >= sizeof(item.label) ||
+            strlen(fields[9]) >= sizeof(item.details)) {
+            g_strfreev(fields);
+            continue;
+        }
+        if (!strcmp(fields[0], "ENTITY")) item.kind = OVERLAY_OBJECTS;
+        else if (!strcmp(fields[0], "DOOR")) item.kind = OVERLAY_DOORS;
+        else if (!strcmp(fields[0], "EVENT")) item.kind = OVERLAY_EVENTS;
+        else if (!strcmp(fields[0], "TRIGGER")) item.kind = OVERLAY_TRIGGERS;
+        else { g_strfreev(fields); continue; }
+        item.index = source_index; item.x = x; item.y = y;
+        item.width = width; item.height = height;
+        g_strlcpy(item.variant, fields[6], sizeof(item.variant));
+        g_strlcpy(item.native_type, fields[7], sizeof(item.native_type));
+        g_strlcpy(item.label, fields[8], sizeof(item.label));
+        g_strlcpy(item.details, fields[9], sizeof(item.details));
+        g_array_append_val(doc->annotations, item);
+        ++counts[item.kind - OVERLAY_OBJECTS];
+
+        if (doc->annotations_list) {
+            const char *kind = item.kind == OVERLAY_OBJECTS ? "OBJECT" :
+                               item.kind == OVERLAY_DOORS ? "DOOR" :
+                               item.kind == OVERLAY_EVENTS ? "EVENT" : "TRIGGER";
+            gchar *summary = g_strdup_printf(
+                "%s %u — %s\n(%d,%d) %ux%u | %s\n%s",
+                kind, item.index, item.label, item.x, item.y,
+                item.width, item.height, item.variant, item.details);
+            GtkWidget *label = gtk_label_new(summary);
+            gtk_label_set_xalign(GTK_LABEL(label), 0);
+            gtk_label_set_wrap(GTK_LABEL(label), TRUE);
+            gtk_label_set_selectable(GTK_LABEL(label), TRUE);
+            gtk_widget_set_margin_start(label, 8);
+            gtk_widget_set_margin_end(label, 8);
+            gtk_widget_set_margin_top(label, 6);
+            gtk_widget_set_margin_bottom(label, 6);
+            gtk_list_box_append(GTK_LIST_BOX(doc->annotations_list), label);
+            g_free(summary);
+        }
+        g_strfreev(fields);
+    }
+    if (doc->annotations_status) {
+        gchar *summary = g_strdup_printf(
+            "%u native object(s), %u door/transition(s), %u event variant(s), "
+            "%u trigger(s). Read-only source data.",
+            counts[0], counts[1], counts[2], counts[3]);
+        gtk_label_set_text(GTK_LABEL(doc->annotations_status), summary);
+        g_free(summary);
+    }
+    g_strfreev(lines);
+    g_free(contents);
 }
 
 static gboolean load_atlas(NativeWorkspace *doc, const char *filename)
@@ -299,6 +411,45 @@ static void selection_outline(NativeWorkspace *doc, cairo_t *cr)
     cairo_restore(cr);
 }
 
+static void draw_annotations(NativeWorkspace *doc, cairo_t *cr)
+{
+    if (!doc->annotations) return;
+    for (guint i = 0; i < doc->annotations->len; ++i) {
+        const RoomAnnotation *item = &g_array_index(doc->annotations, RoomAnnotation, i);
+        if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind]) continue;
+        double x = item->x * doc->scale;
+        double y = item->y * doc->scale;
+        double width = item->width * doc->scale;
+        double height = item->height * doc->scale;
+        double red = 0.2, green = 0.9, blue = 0.45;
+        if (item->kind == OVERLAY_DOORS) { red = 0.72; green = 0.35; blue = 1.0; }
+        else if (item->kind == OVERLAY_EVENTS) { red = 1.0; green = 0.65; blue = 0.12; }
+        else if (item->kind == OVERLAY_TRIGGERS) { red = 0.2; green = 0.8; blue = 1.0; }
+        cairo_save(cr);
+        cairo_rectangle(cr, x + 1, y + 1, MAX(4.0, width - 2), MAX(4.0, height - 2));
+        cairo_set_source_rgba(cr, red, green, blue, 0.28);
+        cairo_fill_preserve(cr);
+        cairo_set_source_rgba(cr, red, green, blue, 0.98);
+        cairo_set_line_width(cr, 2.0);
+        if (item->kind == OVERLAY_EVENTS || item->kind == OVERLAY_TRIGGERS) {
+            const double dash[] = {6.0, 4.0};
+            cairo_set_dash(cr, dash, 2, 0);
+        }
+        cairo_stroke(cr);
+        char id[24];
+        snprintf(id, sizeof(id), "%s%u",
+                 item->kind == OVERLAY_OBJECTS ? "O" :
+                 item->kind == OVERLAY_DOORS ? "D" :
+                 item->kind == OVERLAY_EVENTS ? "E" : "T", item->index);
+        cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size(cr, 10.0);
+        cairo_set_source_rgb(cr, 1, 1, 1);
+        cairo_move_to(cr, x + 3, y + 12);
+        cairo_show_text(cr, id);
+        cairo_restore(cr);
+    }
+}
+
 static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
@@ -345,7 +496,7 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
             }
         }
     }
-    if (doc->collision && doc->collision_visible) {
+    if (doc->collision && doc->overlays[OVERLAY_COLLISION]) {
         cairo_save(cr);
         cairo_scale(cr, doc->scale, doc->scale);
         cairo_rectangle(cr, 0, 0, columns * 16, rows * 16);
@@ -356,6 +507,7 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
         cairo_paint_with_alpha(cr, 0.58);
         cairo_restore(cr);
     }
+    draw_annotations(doc, cr);
     if (doc->grid_visible) {
         cairo_set_source_rgba(cr, 1, 1, 1, 0.21);
         cairo_set_line_width(cr, 0.75);
@@ -818,11 +970,13 @@ static void background_toggled(GtkToggleButton *button, gpointer userdata)
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
 
-static void collision_toggled(GtkToggleButton *button, gpointer userdata)
+static void overlay_toggled(GtkToggleButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
     if (doc->closing) return;
-    doc->collision_visible = gtk_toggle_button_get_active(button);
+    guint overlay = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "overlay-kind"));
+    if (overlay >= OVERLAY_COUNT) return;
+    doc->overlays[overlay] = gtk_toggle_button_get_active(button);
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
 
@@ -866,15 +1020,25 @@ static void remove_notebook_page(GtkWidget **page_slot)
     GtkWidget *page = *page_slot;
     if (!page) return;
     *page_slot = NULL;
-    /* In GTK4 the page is not guaranteed to be a direct notebook child. */
-    GtkWidget *parent = gtk_widget_get_ancestor(page, GTK_TYPE_NOTEBOOK);
-    if (!GTK_IS_NOTEBOOK(parent)) return;
+    /* In GTK4 the page is not guaranteed to be a direct notebook child. A
+     * palette page can itself be a nested GtkNotebook, so the nearest widget
+     * of that type is not necessarily the notebook that owns the page. */
+    GtkNotebook *owner = NULL;
+    for (GtkWidget *parent = gtk_widget_get_parent(page); parent;
+         parent = gtk_widget_get_parent(parent)) {
+        if (GTK_IS_NOTEBOOK(parent) &&
+            gtk_notebook_page_num(GTK_NOTEBOOK(parent), page) >= 0) {
+            owner = GTK_NOTEBOOK(parent);
+            break;
+        }
+    }
+    if (!owner) return;
 
     /* Keep the page alive until gtk_notebook_remove_page() has completed all
      * synchronous widget teardown and signal emission. */
     g_object_ref(page);
-    int index = gtk_notebook_page_num(GTK_NOTEBOOK(parent), page);
-    if (index >= 0) gtk_notebook_remove_page(GTK_NOTEBOOK(parent), index);
+    int index = gtk_notebook_page_num(owner, page);
+    if (index >= 0) gtk_notebook_remove_page(owner, index);
     g_object_unref(page);
 }
 
@@ -1133,6 +1297,10 @@ static void document_build(NativeWorkspace *doc)
     GtkWidget *tools = gtk_flow_box_new();
     GtkWidget *scroll = gtk_scrolled_window_new();
     GtkWidget *palette_scroll = gtk_scrolled_window_new();
+    GtkWidget *palette_tabs = gtk_notebook_new();
+    GtkWidget *data_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    GtkWidget *data_scroll = gtk_scrolled_window_new();
+    GtkWidget *data_list = gtk_list_box_new();
     GtkWidget *palette = gtk_drawing_area_new();
     GtkWidget *undo = icon_button("edit-undo-symbolic", "Undo");
     GtkWidget *redo = icon_button("edit-redo-symbolic", "Redo");
@@ -1140,7 +1308,17 @@ static void document_build(NativeWorkspace *doc)
     doc->save_button = save;
     GtkWidget *grid = icon_toggle("view-grid-symbolic", "Show or hide the grid (G)");
     GtkWidget *background = icon_toggle("image-x-generic-symbolic", "Show BG2 / BG3 (experimental background preview)");
-    GtkWidget *collision = icon_toggle("dialog-warning-symbolic", "Show native collision / wall overlay");
+    static const char *const overlay_labels[OVERLAY_COUNT] = {
+        "Walls", "Objects", "Doors", "Events", "Triggers"
+    };
+    static const char *const overlay_tips[OVERLAY_COUNT] = {
+        "Show native collision / wall data",
+        "Show original native objects and entities",
+        "Show original doors and room transitions",
+        "Show event-dependent native object variants",
+        "Show decoded trigger regions (not available yet)"
+    };
+    GtkWidget *overlay_buttons[OVERLAY_COUNT];
     GtkWidget *tab_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     GtkWidget *close = icon_button("window-close-symbolic", "Close this tab");
     doc->close_button = close;
@@ -1162,8 +1340,16 @@ static void document_build(NativeWorkspace *doc)
     doc->background_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(background), TRUE);
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), background, -1);
-    doc->collision_visible = FALSE;
-    gtk_flow_box_insert(GTK_FLOW_BOX(tools), collision, -1);
+    for (guint i = 0; i < OVERLAY_COUNT; ++i) {
+        overlay_buttons[i] = gtk_toggle_button_new_with_label(overlay_labels[i]);
+        gtk_widget_add_css_class(overlay_buttons[i], "flat");
+        delayed_tip(overlay_buttons[i], overlay_tips[i]);
+        g_object_set_data(G_OBJECT(overlay_buttons[i]), "overlay-kind", GUINT_TO_POINTER(i));
+        gtk_flow_box_insert(GTK_FLOW_BOX(tools), overlay_buttons[i], -1);
+        g_signal_connect(overlay_buttons[i], "toggled", G_CALLBACK(overlay_toggled), doc);
+    }
+    /* Trigger structures are not decoded for either engine yet. */
+    gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);
     doc->grid_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(grid), TRUE);
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL), -1);
@@ -1245,24 +1431,40 @@ static void document_build(NativeWorkspace *doc)
     gtk_widget_set_hexpand(palette_scroll, TRUE);
     gtk_widget_set_vexpand(palette_scroll, TRUE);
     doc->palette = palette;
-    document_track_widget(doc, &doc->palette_page, palette_scroll);
-    GtkWidget *palette_label = gtk_label_new("Native metatiles");
-    gtk_notebook_append_page(doc->owner->right, palette_scroll, palette_label);
-    gtk_notebook_set_tab_reorderable(doc->owner->right, palette_scroll, TRUE);
-    gtk_notebook_set_tab_detachable(doc->owner->right, palette_scroll, TRUE);
+    doc->annotations_list = data_list;
+    doc->annotations_status = gtk_label_new("Native room data imports with the room.");
+    gtk_label_set_xalign(GTK_LABEL(doc->annotations_status), 0);
+    gtk_label_set_wrap(GTK_LABEL(doc->annotations_status), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(doc->annotations_status), TRUE);
+    gtk_widget_set_margin_start(doc->annotations_status, 8);
+    gtk_widget_set_margin_end(doc->annotations_status, 8);
+    gtk_widget_set_margin_top(doc->annotations_status, 8);
+    gtk_list_box_set_selection_mode(GTK_LIST_BOX(data_list), GTK_SELECTION_SINGLE);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(data_scroll), data_list);
+    gtk_widget_set_vexpand(data_scroll, TRUE);
+    gtk_box_append(GTK_BOX(data_page), doc->annotations_status);
+    gtk_box_append(GTK_BOX(data_page), data_scroll);
+    gtk_notebook_append_page(GTK_NOTEBOOK(palette_tabs), palette_scroll,
+                             gtk_label_new("Metatiles"));
+    gtk_notebook_append_page(GTK_NOTEBOOK(palette_tabs), data_page,
+                             gtk_label_new("Room data"));
+    document_track_widget(doc, &doc->palette_page, palette_tabs);
+    GtkWidget *palette_label = gtk_label_new(doc->identity);
+    gtk_notebook_append_page(doc->owner->right, palette_tabs, palette_label);
+    gtk_notebook_set_tab_reorderable(doc->owner->right, palette_tabs, TRUE);
+    gtk_notebook_set_tab_detachable(doc->owner->right, palette_tabs, TRUE);
     g_signal_connect(doc->layer, "notify::selected", G_CALLBACK(layer_changed), doc);
     g_signal_connect(doc->brush, "value-changed", G_CALLBACK(brush_changed), doc);
     g_signal_connect(doc->zoom, "value-changed", G_CALLBACK(zoom_changed), doc);
     g_signal_connect(grid, "toggled", G_CALLBACK(grid_toggled), doc);
     g_signal_connect(background, "toggled", G_CALLBACK(background_toggled), doc);
-    g_signal_connect(collision, "toggled", G_CALLBACK(collision_toggled), doc);
     g_signal_connect(undo, "clicked", G_CALLBACK(undo_clicked), doc);
     g_signal_connect(redo, "clicked", G_CALLBACK(redo_clicked), doc);
     g_signal_connect(save, "clicked", G_CALLBACK(save_clicked), doc);
     g_signal_connect(close, "clicked", G_CALLBACK(close_clicked), doc);
     focus_page(page);
     gtk_widget_grab_focus(page);
-    focus_page(palette_scroll);
+    focus_page(palette_tabs);
 }
 
 static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
@@ -1324,6 +1526,16 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
                  "assets/extracted/rooms/metroid/previews/%s_%03u_collision.bmp",
                  area_lower, number);
     load_collision(doc, collision_path);
+    char annotations_path[420];
+    if (aria)
+        snprintf(annotations_path, sizeof(annotations_path),
+                 "assets/extracted/rooms/aria/annotations/area_%02u_room_%03u.tsv",
+                 (unsigned)atoi(area), number);
+    else
+        snprintf(annotations_path, sizeof(annotations_path),
+                 "assets/extracted/rooms/metroid/annotations/%s_%03u.tsv",
+                 area_lower, number);
+    load_annotations(doc, annotations_path);
     history_clear(doc->undo, &doc->undo_count);
     history_clear(doc->redo, &doc->redo_count);
     g_free(doc->override_path);
@@ -1438,7 +1650,9 @@ static NativeWorkspace *create_document(NativeWorkspace *manager, char *identity
     doc->stroke_before = calloc(1, sizeof(NativeMap));
     doc->undo = calloc(HISTORY_LIMIT, sizeof(*doc->undo));
     doc->redo = calloc(HISTORY_LIMIT, sizeof(*doc->redo));
-    if (!doc->map || !doc->stroke_before || !doc->undo || !doc->redo) {
+    doc->annotations = g_array_new(FALSE, FALSE, sizeof(RoomAnnotation));
+    if (!doc->map || !doc->stroke_before || !doc->undo || !doc->redo ||
+        !doc->annotations) {
         document_destroy(doc);
         return NULL;
     }
@@ -1584,12 +1798,20 @@ void native_workspace_test_set_unsaved(NativeWorkspace *manager, guint index,
 
 static void move_page_for_test(GtkWidget *page, GtkNotebook *target)
 {
-    GtkWidget *parent = gtk_widget_get_ancestor(page, GTK_TYPE_NOTEBOOK);
-    if (!GTK_IS_NOTEBOOK(parent) || GTK_NOTEBOOK(parent) == target) return;
-    GtkWidget *label = gtk_notebook_get_tab_label(GTK_NOTEBOOK(parent), page);
+    GtkNotebook *owner = NULL;
+    for (GtkWidget *parent = gtk_widget_get_parent(page); parent;
+         parent = gtk_widget_get_parent(parent)) {
+        if (GTK_IS_NOTEBOOK(parent) &&
+            gtk_notebook_page_num(GTK_NOTEBOOK(parent), page) >= 0) {
+            owner = GTK_NOTEBOOK(parent);
+            break;
+        }
+    }
+    if (!owner || owner == target) return;
+    GtkWidget *label = gtk_notebook_get_tab_label(owner, page);
     g_object_ref(page);
     if (label) g_object_ref(label);
-    gtk_notebook_detach_tab(GTK_NOTEBOOK(parent), page);
+    gtk_notebook_detach_tab(owner, page);
     gtk_notebook_append_page(target, page, label);
     if (label) g_object_unref(label);
     g_object_unref(page);

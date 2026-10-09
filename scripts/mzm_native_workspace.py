@@ -124,6 +124,8 @@ def export(area: str, number: int) -> dict:
         info["background"] = render_room(area, number)
     except (ValueError, OSError, IndexError, KeyError) as exc:
         info["background"] = {"status": "NOT_DECODED", "reason": str(exc)}
+    from scripts.room_annotations import export_mzm
+    info['annotations'] = str(OUTPUT / export_mzm(room['area'], number))
     print(json.dumps(info))
     return info
 

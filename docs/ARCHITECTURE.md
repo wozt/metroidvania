@@ -24,8 +24,10 @@ The GTK4 executable is assembled from:
 
 - `editor/main.c`: responsive/detachable native workspace shell;
 - `editor/native_workspace.c`: asynchronous room import, native BG1/BG2 editor,
-  metatile palette and safe document lifetime management;
-- `editor/world_atlas.c`: read-only Zero Mission world atlas and room launcher.
+  collision/entity/door/event overlays, room-data inspector, metatile palette
+  and safe document lifetime management;
+- `editor/world_atlas.c`: original-coordinate maps and room launcher;
+- `editor/object_catalog.c`: read-only shared Zero Mission/Aria object catalog.
 
 `fusion_mzm_room_viewer` is a small SDL3 viewer for locally rendered MZM room
 BMPs. It is a research utility, not the future game runtime.
@@ -41,23 +43,29 @@ Tracked outputs contain metadata only:
 - `data/story/timeline.toml`: story dependency graph;
 - `data/story/world_inventory.toml`: boss and savepoint inventory.
 
-Decoded graphics, raw blocks, room work files and user overrides are ignored.
-No tool writes back to either ROM.
+Decoded graphics, raw blocks, room work files, room annotation tables and user
+overrides are ignored. `scripts/room_annotations.py` reconstructs bounded
+per-room native records, while `scripts/object_catalog.py` joins definition and
+placement metadata for the shared editor. No tool writes back to either ROM.
 
 ## Verified native coverage
 
-Zero Mission currently has room descriptors, a door-derived world atlas,
+Zero Mission currently has room descriptors, original minimap structure,
 partial BG1/BG2 rendering, experimental BG3 reconstruction and editable local
-metatile work files. Full collision, entities, animations, effects and scripts
-are not reconstructed.
+metatile work files. Collision, doors, default entities and event-dependent
+spriteset variants are inspectable. The object catalog exposes all primary
+sprite identities and raw health/damage/weakness expressions. Object graphics,
+behavior and authoring encoders are not reconstructed.
 
 Aria currently has verified character sprites and a structural world decoder.
 The decoder reads the global `64x35` map and all 343 rooms through the
 twelve-area directory. It resolves bounded room descriptors, three background
 records per room, graphics/palette references, 2,336 entity placements and 725
 transitions. It also identifies all eleven campaign bosses through their native
-enemy records. Tilemap pixels, collision, music and executable behavior remain
-private-source reconstruction work; there is no Aria renderer yet.
+enemy records. The editor can inspect room entities, their parameters,
+transitions and collision while the common catalog groups native types and
+placement counts. Object graphics, music and executable behavior remain
+private-source reconstruction work; room rendering is still incomplete.
 
 ## Future runtime boundary
 

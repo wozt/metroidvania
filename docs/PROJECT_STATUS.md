@@ -1178,3 +1178,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   unavailable and no native ROM event data is modified.
 - Added version-3 migration, two-world CLI round trips, all condition-family
   resolution, dependency protection and GTK source-contract coverage.
+
+## Patch 0125 - private native BG1/BG2 overlays in SDL3
+
+- The project-room SDL3 preview automatically looks for locally extracted
+  Zero Mission BG1/BG2 BMPs in the existing ignored private preview directory.
+  `--bg1`, `--bg2` and `--no-auto-bg` permit explicit control; no native
+  images, tiles, audio or maps enter `room.json` or `preview.tsv`.
+- Exact pixel dimensions must match the saved project-room package; otherwise
+  an automatic image is skipped with a diagnostic, while an explicit wrong BMP
+  is refused. No stretched or guessed source-to-project geometry.
+- Press `1` for BG1, `2` for BG2, `0` for geometric view, `C` to toggle
+  collisions, `M` for entity/door/event markers; BMPs use nearest-neighbor
+  display and the same coordinates as the project overlay.
+- The existing Zero Mission decoder supplies partial, *authentic* private
+  source graphics. BG1/BG2 are deliberately shown separately: compositing,
+  transparent native priority layers, BG3 and animations are not implemented.
+  This remains a diagnostic viewer and is not gameplay.

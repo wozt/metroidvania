@@ -169,20 +169,81 @@ def expand_mzm_clip_cells(anchors: list[tuple[int, int, int, int, int, int]],
     return out
 
 
+def native_mzm_minimap_cells() -> list[tuple[int, ...]]:
+    """Decode *original* 32x32 MZM pause-screen minimaps without guessing owners.
+
+    Entries are available from the private pinned database raw extraction, or
+    directly from a locally owned, hash-verified US ROM using database offsets.
+    Native tile ownership by individual room is unknown and stays unassigned.
+    """
+    import struct
+    from scripts.mzm_room_render import lz77
+    from scripts.import_game_assets import ROMS, ROOT, verified_rom
+
+    raw_root = OUTPUT / 'raw/metroid/data/menus/pause_screen'
+    missing = [slug for slug in MZM_AREAS
+               if not (raw_root / (slug.lower() + '_minimap.tt')).is_file()]
+    rom = None
+    offsets = {}
+    if missing:
+        source = ROOT / 'roms' / ROMS['metroid'][0]
+        database = ROOT / 'third_party/mzm/database.json'
+        if source.is_file() and database.is_file():
+            rom = verified_rom(source, ROMS['metroid'][1])
+            records = json.loads(database.read_text(encoding='utf-8'))
+            for entry in records:
+                path = entry.get('path', '')
+                if path.startswith('menus/pause_screen/') and path.endswith('_minimap.tt'):
+                    offsets[path.rsplit('/', 1)[-1]] = entry
+
+    cells = []
+    for area, name in enumerate(MZM_AREAS):
+        filename = name.lower() + '_minimap.tt'
+        path = raw_root / filename
+        if path.is_symlink():
+            raise ValueError('symlinked private MZM minimap source refused')
+        if path.is_file():
+            if path.stat().st_size > 16384:
+                raise ValueError('oversized private MZM minimap source')
+            payload = path.read_bytes()
+        elif rom is not None and filename in offsets:
+            item = offsets[filename]
+            offset = int(item['addr']['us'], 16)
+            length = int(item['count'], 16) * int(item['size'])
+            if not 0 < length <= 16384 or offset < 0 or offset + length > len(rom):
+                raise ValueError('invalid verified MZM minimap database offset')
+            payload = rom[offset:offset + length]
+        else:
+            continue
+        decoded = lz77(payload, limit=2048)
+        if len(decoded) != 32 * 32 * 2:
+            raise ValueError(f'invalid native MZM minimap size for {name}')
+        for y in range(32):
+            for x in range(32):
+                tile = struct.unpack_from('<H', decoded, (y * 32 + x) * 2)[0]
+                if tile != 0x140:
+                    # 999 = unassigned native map tile, 3 = native source.
+                    cells.append((area, 999, x, y, 0, 0, 3, tile))
+    return cells
+
+
 def output_rows(world: str, rows: list[tuple[int, ...]]) -> bytes:
-    # Last field is provenance: 0=original MZM origin only, 1=verified native
-    # MZM clipdata rectangle, 2=original Aria minimap cell. Legacy callers
-    # supplying six integers are supported without ambiguity.
+    # 8th field: native minimap tile code (0 when unknown). Provenance:
+    # 0=original MZM anchor, 1=decoded MZM clip bounds, 2=original Aria cell,
+    # 3=MZM original pause-screen map tile with unknown room ownership.
     default = 2 if world == 'aria' else 0
     encoded = []
     for row in rows:
         if len(row) == 6:
             row = (*row, default)
-        if len(row) != 7 or row[6] not in (0, 1, 2):
-            raise ValueError('invalid world overview provenance row')
+        if (len(row) not in (7, 8) or row[6] not in (0, 1, 2, 3)
+                or (len(row) == 7 and row[6] == 3)
+                or (len(row) == 8 and (type(row[7]) is not int
+                    or not 0 <= row[7] <= 65535))):
+            raise ValueError('invalid world overview provenance/tile row')
         encoded.append('|'.join(map(str, row)))
-    head = ('# Native minimap cells; provenance 0=MZM origin, 1=MZM clip bounds, 2=Aria cell.\n'
-            '# area|room|x|y|save|warp|provenance\n')
+    head = ('# Original map cells; provenance 0=anchor, 1=clip, 2=Aria, 3=MZM minimap tile.\n'
+            '# area|room|x|y|save|warp|provenance|native_tile\n')
     return (head + '\n'.join(encoded) + '\n').encode('utf-8')
 
 
@@ -192,7 +253,16 @@ def index(world: str)->int:
         src=OUTPUT/'rooms/metroid/world_atlas.tsv'
         if not src.is_file(): run()
         anchors = build_mzm(src.read_text(encoding='utf-8'))
-        rows = expand_mzm_clip_cells(anchors, native_mzm_clip_dimensions())
+        native = native_mzm_minimap_cells()
+        if native:
+            owned_anchors = {(area, x, y) for area, _, x, y, *_ in anchors}
+            rows = [(*anchor, 0, 0) for anchor in anchors]
+            rows += [cell for cell in native
+                     if (cell[0], cell[2], cell[3]) not in owned_anchors]
+        else:
+            # Lack of verified private minimap inputs cannot justify drawing
+            # a faux complete world from imperfect clipdata bounding boxes.
+            rows = [(*anchor, 0, 0) for anchor in anchors]
     else:
         from scripts.import_aos_world import decode_world, DEFAULT_ROM
         p=OUTPUT/'rooms/aria/world.json'

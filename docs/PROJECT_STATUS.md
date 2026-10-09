@@ -336,3 +336,19 @@ and the proprietary-file guard passed.
   nonrectangular fragments never repeat a misleading full-room screenshot.
 - Python tests cover 2x3 spans, coordinate conflict fallback, bounds,
   Aria L-shaped cells and provenance. Runtime GTK4 tests remain mandatory.
+
+## Patch 0069 - original global-map structure and automatic previews
+
+- Replaced MZM's misleading spatial reconstruction with original per-area
+  32x32 pause-screen minimap occupancy from private LZ77 sources, when
+  available. Decode from pinned raw extraction or a locally verified ROM,
+  never from guessed rectangles. Original room anchors remain separate from
+  map tiles with **unknown room ownership**; double-click cannot import an
+  arbitrary room for unassigned minimap tiles.
+- Aria defaults to an all-areas 64x35 castle map; individual areas remain
+  filterable, but one region can no longer masquerade as the global castle.
+- The complete 64x35 grid uses homogeneous GTK sizing and vertical scrolling.
+- Overview generation automatically indexes on world selection and then
+  incrementally processes each area's original graphics previews, keeping
+  the UI responsive. Generated output stays under ignored private assets.
+- Source and GTK4 regression checks required before final commit/push.

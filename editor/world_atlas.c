@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct { guint area, room, x, y, save, warp, provenance; } MapCell;
+typedef struct { guint area, room, x, y, save, warp, provenance, tile; } MapCell;
 typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
@@ -13,7 +13,8 @@ typedef struct {
     GtkWidget *world_badge;
     guint world, area;
     guint selection;
-    gboolean selected, busy, pending_generation, changing_world;
+    gboolean selected, busy, pending_generation, changing_world, prefetching;
+    guint next_preview_area;
     guint size;
 } WorldGrid;
 static const char *const worlds[]={"Zero Mission", "Aria of Sorrow", NULL};
@@ -37,17 +38,18 @@ static gboolean reload_rows(WorldGrid *w)
     lines=contents; split=g_strsplit(lines,"\n",-1);
     g_array_set_size(w->cells,0);
     for(guint i=0;split[i];++i){
-        MapCell c={0}; char excess; guint a,r,x,y,s,v,provenance=0;
+        MapCell c={0}; char excess; guint a,r,x,y,s,v,provenance=0,tile=0;
         if (!split[i][0] || split[i][0]=='#') continue;
-        int fields=sscanf(split[i],"%u|%u|%u|%u|%u|%u|%u%c",
-                          &a,&r,&x,&y,&s,&v,&provenance,&excess);
-        if (fields != 7 && fields != 6) continue; /* also read legacy 6-field indexes */
+        int fields=sscanf(split[i],"%u|%u|%u|%u|%u|%u|%u|%u%c",
+                          &a,&r,&x,&y,&s,&v,&provenance,&tile,&excess);
+        if (fields != 8 && fields != 7 && fields != 6) continue;
+        /* Old private indexes remain compatible with this source-only change. */
         if (fields == 6) provenance = w->world ? 2u : 0u;
         if (a>=area_count(w) || r>=1000 || x>=128 || y>=128 || s>1 || v>1 ||
-            provenance>2 || (w->world && provenance!=2) ||
+            provenance>3 || (w->world && provenance!=2) ||
             (!w->world && provenance==2)) continue;
         c.area=a;c.room=r;c.x=x;c.y=y;c.save=s;c.warp=v;
-        c.provenance=provenance;
+        c.provenance=provenance;c.tile=tile;
         g_array_append_val(w->cells,c);
     }
     g_strfreev(split);g_free(contents);
@@ -58,6 +60,7 @@ static void selected_open(WorldGrid *w)
 {
     if (!w->selected || w->selection>=w->cells->len)return;
     MapCell c=g_array_index(w->cells,MapCell,w->selection);
+    if (c.provenance == 3 || c.room == 999) return; /* No native room owner. */
     if(w->world)native_workspace_import_aria_async(w->workspace,c.area,c.room);
     else native_workspace_import_async(w->workspace,mzm_areas[c.area],c.room);
 }
@@ -81,8 +84,18 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
     guint n = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(widget), "mv-grid-index"));
     if (!n || n > w->cells->len) return;
     w->selection = n - 1;
-    w->selected = TRUE;
     MapCell c = g_array_index(w->cells, MapCell, w->selection);
+    if (c.provenance == 3 || c.room == 999) {
+        w->selected = FALSE;
+        gchar *info = g_strdup_printf(
+            "Original MZM minimap tile (%u,%u), native code 0x%04x. "
+            "Room ownership unknown; open an original room through its anchor.",
+            c.x, c.y, c.tile);
+        gtk_label_set_text(GTK_LABEL(w->details), info);
+        g_free(info);
+        return;
+    }
+    w->selected = TRUE;
     /* Selection applies to every segment of the same native room, including
      * irregular and disconnected Aria shapes. Never erase source cell gaps. */
     w->selected_cell = widget;
@@ -121,10 +134,12 @@ static void grid_rebuild(WorldGrid *w)
     w->selected_cell = NULL;
     while ((child = gtk_widget_get_first_child(w->grid)))
         gtk_grid_remove(GTK_GRID(w->grid), child);
-    guint xmax = 0, ymax = 0, total = 0, anchor_only = 0;
+    guint xmax = (w->world && w->area == G_MAXUINT) ? 63u : 0u;
+    guint ymax = (w->world && w->area == G_MAXUINT) ? 34u : 0u;
+    guint total = 0, anchor_only = 0;
     for (guint i = 0; i < w->cells->len; ++i) {
         const MapCell *c = &g_array_index(w->cells, MapCell, i);
-        if (c->area != w->area) continue;
+        if (w->area != G_MAXUINT && c->area != w->area) continue;
         xmax = MAX(xmax, c->x);
         ymax = MAX(ymax, c->y);
         ++total;
@@ -147,7 +162,7 @@ static void grid_rebuild(WorldGrid *w)
     guint overlapping = 0, groups = 0, thumbs = 0;
     for (guint i = 0; i < w->cells->len; ++i) {
         const MapCell *c = &g_array_index(w->cells, MapCell, i);
-        if (c->area != w->area) continue;
+        if (w->area != G_MAXUINT && c->area != w->area) continue;
         guint pos = c->y * stride + c->x;
         if (lookup[pos]) {
             ++overlapping; /* Never silently fabricate stacked room ownership. */
@@ -173,7 +188,7 @@ static void grid_rebuild(WorldGrid *w)
             }
             const MapCell *c = &g_array_index(w->cells, MapCell, entry - 1);
             guint width = 1, height = 1;
-            for (guint xx = x + 1; xx <= xmax; ++xx) {
+            for (guint xx = x + 1; c->provenance != 3 && xx <= xmax; ++xx) {
                 guint spot = y * stride + xx, next = lookup[spot];
                 if (covered[spot] || !next) break;
                 const MapCell *other = &g_array_index(w->cells, MapCell, next - 1);
@@ -181,7 +196,7 @@ static void grid_rebuild(WorldGrid *w)
                     other->provenance != c->provenance) break;
                 ++width;
             }
-            for (guint yy = y + 1; yy <= ymax; ++yy) {
+            for (guint yy = y + 1; c->provenance != 3 && yy <= ymax; ++yy) {
                 gboolean full = TRUE;
                 for (guint xx = x; xx < x + width; ++xx) {
                     guint spot = yy * stride + xx, next = lookup[spot];
@@ -207,6 +222,7 @@ static void grid_rebuild(WorldGrid *w)
             gtk_widget_add_css_class(cell, "mv-occupied");
             gtk_widget_add_css_class(cell, "mv-room-footprint");
             if (c->provenance == 0) gtk_widget_add_css_class(cell, "mv-anchor-only");
+            if (c->provenance == 3) gtk_widget_add_css_class(cell, "mv-native-minimap");
             if (save) gtk_widget_add_css_class(cell, "mv-save");
             if (warp) gtk_widget_add_css_class(cell, "mv-warp");
             if (w->selected && w->selection < w->cells->len) {
@@ -223,7 +239,8 @@ static void grid_rebuild(WorldGrid *w)
              * occupied rectangle is complete. No duplicated whole-room images
              * on disconnected segments or unverified MZM anchor markers. */
             char path[256];
-            if (c->provenance != 0 && room_cells == width * height &&
+            if (c->provenance != 0 && c->provenance != 3 &&
+                room_cells == width * height &&
                 has_image(w, c, path, sizeof(path))) {
                 GtkWidget *picture = gtk_picture_new_for_filename(path);
                 gtk_picture_set_can_shrink(GTK_PICTURE(picture), TRUE);
@@ -232,7 +249,8 @@ static void grid_rebuild(WorldGrid *w)
                 gtk_box_append(GTK_BOX(cell), picture);
                 ++thumbs;
             } else {
-                gchar *name = g_strdup_printf("%u%s", c->room,
+                gchar *name = c->provenance == 3 ? g_strdup("") :
+                    g_strdup_printf("%u%s", c->room,
                         room_cells > width * height ? " …" : "");
                 GtkWidget *label = gtk_label_new(name);
                 gtk_widget_set_halign(label, GTK_ALIGN_CENTER);
@@ -244,6 +262,7 @@ static void grid_rebuild(WorldGrid *w)
             gchar *tip = g_strdup_printf("Room %u: %u verified case(s); %ux%u displayed segment; %s",
                 c->room, room_cells, width, height,
                 c->provenance == 2 ? "original Aria map" :
+                c->provenance == 3 ? "original MZM minimap tile (room unknown)" :
                 c->provenance == 1 ? "native MZM clip bounds" : "MZM anchor only");
             gtk_widget_set_tooltip_text(cell, tip);
             g_free(tip);
@@ -263,7 +282,8 @@ static void grid_rebuild(WorldGrid *w)
         "%s / %s | %u occupied case(s), %u room segments, %u previews; "
         "%u anchor-only case(s), %u overlapping source coordinates. "
         "Multi-case rooms retain their actual positions. Double-click to edit.",
-        worlds[w->world], area_name(w, w->area), total, groups, thumbs,
+        worlds[w->world], w->area == G_MAXUINT ? "All castle areas" :
+        area_name(w, w->area), total, groups, thumbs,
         anchor_only, overlapping);
     gtk_label_set_text(GTK_LABEL(w->status), message);
     g_free(message);
@@ -299,9 +319,12 @@ static void generator_finished(GObject *object, GAsyncResult *result, gpointer u
         if (w->pending_generation) {
             w->pending_generation = FALSE;
             begin_generation(w);
-        } else if (success && generated_world == w->world && generated_budget == 0) {
-            /* First present the verified cells, then render graphics separately. */
-            begin_generation(w);
+        } else if (success && generated_world == w->world && w->prefetching) {
+            /* First index, then process a bounded preview batch per area.
+             * Do not block the UI on the full world rendering. */
+            if (generated_budget != 0) ++w->next_preview_area;
+            if (w->next_preview_area < area_count(w)) begin_generation(w);
+            else w->prefetching = FALSE;
         }
     }
     g_clear_error(&error);
@@ -313,7 +336,9 @@ static void generator_finished(GObject *object, GAsyncResult *result, gpointer u
 static void begin_generation(WorldGrid *w)
 {
     if (w->busy) { w->pending_generation = TRUE; return; }
-    gchar *area = g_strdup_printf("%u", w->area);
+    guint active_area = w->prefetching ? w->next_preview_area :
+        (w->area == G_MAXUINT ? 0u : w->area);
+    gchar *area = g_strdup_printf("%u", active_area);
     char index_path[128];
     snprintf(index_path, sizeof(index_path), "assets/extracted/world_overview/%s.tsv",
              world_code(w));
@@ -349,10 +374,14 @@ static void world_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
     if(w->world>1)return;
     w->changing_world=TRUE;
     GtkStringList *list=gtk_string_list_new(NULL);
+    if (w->world) gtk_string_list_append(list, "All areas (original castle)");
     for(guint i=0;i<area_count(w);++i)gtk_string_list_append(list,area_name(w,i));
     gtk_drop_down_set_model(GTK_DROP_DOWN(w->area_select),G_LIST_MODEL(list));
     g_object_unref(list);
-    w->area=0;w->selected=FALSE;
+    w->area=w->world ? G_MAXUINT : 0u;
+    w->prefetching=TRUE;
+    w->next_preview_area=0;
+    w->selected=FALSE;
     gtk_drop_down_set_selected(GTK_DROP_DOWN(w->area_select),0);
     w->changing_world=FALSE;
     g_object_set_data(G_OBJECT(w->page),"mv-world-mode",GINT_TO_POINTER(w->world?2:1));
@@ -372,8 +401,9 @@ static void area_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
 {
     WorldGrid *w=userdata;(void)pspec;
     if(w->changing_world)return;
-    guint area=gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
-    if(area>=area_count(w))return;
+    guint selected=gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
+    guint area = w->world ? (selected == 0 ? G_MAXUINT : selected - 1) : selected;
+    if(area != G_MAXUINT && area>=area_count(w))return;
     w->area=area;w->selected=FALSE;
     if (reload_rows(w)) grid_rebuild(w);
     else {
@@ -388,7 +418,12 @@ static void area_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
 static void zoom_changed(GtkSpinButton *spin,gpointer data)
 {WorldGrid *w=data;w->size=(guint)gtk_spin_button_get_value_as_int(spin);grid_rebuild(w);}
 static void generate_clicked(GtkButton *b,gpointer data)
-{(void)b;begin_generation(data);}
+{
+    WorldGrid *w=data;(void)b;
+    w->prefetching=TRUE;
+    w->next_preview_area=0;
+    begin_generation(w);
+}
 static void world_free(gpointer data)
 {WorldGrid *w=data;g_array_free(w->cells,TRUE);g_free(w);}
 GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWidget *indicator)
@@ -400,7 +435,8 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
         ".mv-warp{border:2px solid #b7a1eb;}"
         ".mv-selected{border:3px solid #f4cc58;}"
         ".mv-room-footprint{border:2px solid #91b8c7;}"
-        ".mv-anchor-only{border:2px dashed #d7a564;}"};
+        ".mv-anchor-only{border:2px dashed #d7a564;}"
+        ".mv-native-minimap{background:#4a7881;border:1px solid #7cacb6;}"};
     GtkCssProvider *provider=gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider,css);
     GdkDisplay *display=gdk_display_get_default();
@@ -409,11 +445,14 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     g_object_unref(provider);
     WorldGrid *w=g_new0(WorldGrid,1);
     w->workspace=workspace;w->world_badge=indicator;w->cells=g_array_new(FALSE,FALSE,sizeof(MapCell));
-    w->size=36;
+    w->size=28;
+    w->prefetching=TRUE;
     GtkWidget *root=gtk_box_new(GTK_ORIENTATION_VERTICAL,6);
     GtkWidget *bar=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,6);
     GtkWidget *scroller=gtk_scrolled_window_new();
     GtkWidget *grid=gtk_grid_new();
+    gtk_grid_set_row_homogeneous(GTK_GRID(grid), TRUE);
+    gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
     GtkWidget *generate=gtk_button_new_with_label("Generate more original previews");
     GtkWidget *open=gtk_button_new_with_label("Open selected room");
     w->page=root;w->grid=grid;
@@ -422,7 +461,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     w->world_select=gtk_drop_down_new_from_strings(worlds);
     w->area_select=gtk_drop_down_new_from_strings(mzm_areas);
     w->zoom=gtk_spin_button_new_with_range(22,64,6);
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->zoom),36);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->zoom),28);
     gtk_box_append(GTK_BOX(bar),gtk_label_new("WORLD:"));
     gtk_box_append(GTK_BOX(bar),w->world_select);
     gtk_box_append(GTK_BOX(bar),gtk_label_new("Area:"));

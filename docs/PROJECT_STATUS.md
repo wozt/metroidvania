@@ -436,3 +436,25 @@ and the proprietary-file guard passed.
 - Render project drafts with distinct dashed borders; clicking one never opens
   an unrelated original ROM room. No playable engine export is implied.
 - Python placement tests and full local GTK4 build/CTest required before push.
+
+## Patch 0074 - source-joined MZM footprints and map interaction polish
+
+- Zero Mission global-map ownership now joins `RoomEntryRom` origins, exact
+  Clipdata playable dimensions and original pause-minimap occupancy. The
+  engine's two-block guard border on each side is removed before converting to
+  15x10-block screens; missing native minimap cells are never filled.
+- Rooms sharing an origin are reported as progression variants. Overlapping
+  candidate geometry without unique origin evidence remains explicitly
+  unassigned, with a private JSON audit containing candidate rooms/origins.
+- The current verified local input resolves 1,015 of 1,180 native cells;
+  37 cells remain geometry-ambiguous and 128 have no geometry claim. Sixteen
+  grouped anchors intentionally absent from the pause minimap remain navigable.
+- Both shared room editors now expose a read-only collision/wall overlay:
+  native MZM Clipdata at 16x16 resolution and Aria BG1 collision at 8x8.
+  Original values are visualized diagnostically and never written to ROM.
+- Ctrl+mouse-wheel zooms both global maps and native room canvases. Map panning
+  now uses stationary scroller coordinates and coalesces adjustment updates to
+  one per GTK frame, removing the feedback jitter/flicker caused by dragging a
+  moving content widget.
+- Aria global-map semantics remain unchanged. Python contracts, GTK4 build,
+  CTest and the proprietary-data guard are required before push.

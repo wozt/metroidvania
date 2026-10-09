@@ -4,13 +4,17 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct { guint area, room, x, y, save, warp, provenance, tile; char draft_id[96]; } MapCell;
+typedef struct {
+    guint area, room, x, y, save, warp, provenance, tile;
+    char ownership[192], draft_id[96];
+} MapCell;
 typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
     GtkWidget *page, *grid, *details, *status, *world_select, *area_select, *zoom;
     GtkWidget *selected_cell, *scroller, *popup;
-    double drag_hstart, drag_vstart;
+    double drag_hstart, drag_vstart, pending_h, pending_v;
+    guint pan_tick;
     GtkWidget *world_badge;
     guint world, area;
     guint selection;
@@ -27,6 +31,12 @@ static guint area_count(const WorldGrid *w) { return w->world ? 12u : 7u; }
 static const char *area_name(const WorldGrid *w, guint a)
 { return w->world ? aria_areas[a] : mzm_areas[a]; }
 
+static gboolean parse_uint(const char *text, guint *value)
+{
+    char extra;
+    return text && sscanf(text, "%u%c", value, &extra) == 1;
+}
+
 static gboolean reload_rows(WorldGrid *w)
 {
     char filename[192], *lines, **split;
@@ -39,19 +49,34 @@ static gboolean reload_rows(WorldGrid *w)
     lines=contents; split=g_strsplit(lines,"\n",-1);
     g_array_set_size(w->cells,0);
     for(guint i=0;split[i];++i){
-        MapCell c={0}; char excess; guint a,r,x,y,s,v,provenance=0,tile=0;
+        MapCell c={0}; guint a,r,x,y,s,v,provenance=0,tile=0;
         if (!split[i][0] || split[i][0]=='#') continue;
-        int fields=sscanf(split[i],"%u|%u|%u|%u|%u|%u|%u|%u%c",
-                          &a,&r,&x,&y,&s,&v,&provenance,&tile,&excess);
-        if (fields != 8 && fields != 7 && fields != 6) continue;
+        char **fields = g_strsplit(split[i], "|", 10);
+        guint count = g_strv_length(fields);
+        if (count < 6 || count > 9 || !parse_uint(fields[0], &a) ||
+            !parse_uint(fields[1], &r) || !parse_uint(fields[2], &x) ||
+            !parse_uint(fields[3], &y) || !parse_uint(fields[4], &s) ||
+            !parse_uint(fields[5], &v) ||
+            (count >= 7 && !parse_uint(fields[6], &provenance)) ||
+            (count >= 8 && !parse_uint(fields[7], &tile))) {
+            g_strfreev(fields);
+            continue;
+        }
         /* Old private indexes remain compatible with this source-only change. */
-        if (fields == 6) provenance = w->world ? 2u : 0u;
+        if (count == 6) provenance = w->world ? 2u : 0u;
         if (a>=area_count(w) || r>=1000 || x>=128 || y>=128 || s>1 || v>1 ||
             provenance>3 || (w->world && provenance!=2) ||
-            (!w->world && provenance==2)) continue;
+            (!w->world && provenance==2) ||
+            (count == 9 && strlen(fields[8]) >= sizeof(c.ownership))) {
+            g_strfreev(fields);
+            continue;
+        }
         c.area=a;c.room=r;c.x=x;c.y=y;c.save=s;c.warp=v;
         c.provenance=provenance;c.tile=tile;
+        if (count == 9 && strcmp(fields[8], "-"))
+            g_strlcpy(c.ownership, fields[8], sizeof(c.ownership));
         g_array_append_val(w->cells,c);
+        g_strfreev(fields);
     }
     g_strfreev(split);g_free(contents);
     /* Project-authored placements are independent of original ROM occupancy.
@@ -142,8 +167,8 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
         w->selected = FALSE;
         gchar *info = g_strdup_printf(
             "Original MZM minimap tile (%u,%u), native code 0x%04x. "
-            "Room ownership unknown; open an original room through its anchor.",
-            c.x, c.y, c.tile);
+            "Room ownership unknown (%s). Open an original room through a verified anchor.",
+            c.x, c.y, c.tile, c.ownership[0] ? c.ownership : "unassigned");
         gtk_label_set_text(GTK_LABEL(w->details), info);
         g_free(info);
         return;
@@ -163,14 +188,15 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
             gtk_widget_remove_css_class(child, "mv-selected");
     }
     const char *source = c.provenance == 2 ? "original minimap cells" :
-                         c.provenance == 1 ? "native clipdata bounds" :
+                         c.provenance == 1 ? "native Clipdata/minimap intersection" :
                          "original map anchor ONLY (extent unavailable)";
     gchar *message = g_strdup_printf(
         "%s / %s / room %03u | %u mapped case(s), clicked (%u,%u) "
-        "%s %s | %s",
+        "%s %s | %s%s%s",
         worlds[w->world], area_name(w, c.area), c.room,
         room_cells_in_area(w, c.area, c.room), c.x, c.y,
-        c.save ? "[SAVE]" : "", c.warp ? "[WARP]" : "", source);
+        c.save ? "[SAVE]" : "", c.warp ? "[WARP]" : "", source,
+        c.ownership[0] ? " | progression variants: " : "", c.ownership);
     gtk_label_set_text(GTK_LABEL(w->details), message);
     g_free(message);
     if (presses >= 2) selected_open(w);
@@ -193,20 +219,49 @@ static void map_drag_begin(GtkGestureDrag *drag, double x, double y, gpointer da
     w->drag_vstart = gtk_adjustment_get_value(v);
 }
 
+static gboolean map_pan_frame(GtkWidget *widget, GdkFrameClock *clock, gpointer data)
+{
+    WorldGrid *w = data;
+    (void)widget; (void)clock;
+    GtkAdjustment *h = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(w->scroller));
+    GtkAdjustment *v = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(w->scroller));
+    gtk_adjustment_set_value(h, w->pending_h);
+    gtk_adjustment_set_value(v, w->pending_v);
+    w->pan_tick = 0;
+    return G_SOURCE_REMOVE;
+}
+
 static void map_drag_update(GtkGestureDrag *drag, double dx, double dy, gpointer data)
 {
     WorldGrid *w = data;
     (void)drag;
     GtkAdjustment *h = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(w->scroller));
     GtkAdjustment *v = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(w->scroller));
-    gtk_adjustment_set_value(h, CLAMP(w->drag_hstart - dx,
+    w->pending_h = CLAMP(w->drag_hstart - dx,
         gtk_adjustment_get_lower(h),
         MAX(gtk_adjustment_get_lower(h),
-            gtk_adjustment_get_upper(h) - gtk_adjustment_get_page_size(h))));
-    gtk_adjustment_set_value(v, CLAMP(w->drag_vstart - dy,
+            gtk_adjustment_get_upper(h) - gtk_adjustment_get_page_size(h)));
+    w->pending_v = CLAMP(w->drag_vstart - dy,
         gtk_adjustment_get_lower(v),
         MAX(gtk_adjustment_get_lower(v),
-            gtk_adjustment_get_upper(v) - gtk_adjustment_get_page_size(v))));
+            gtk_adjustment_get_upper(v) - gtk_adjustment_get_page_size(v)));
+    if (!w->pan_tick)
+        w->pan_tick = gtk_widget_add_tick_callback(w->scroller, map_pan_frame, w, NULL);
+}
+
+static gboolean map_scroll(GtkEventControllerScroll *controller, double dx,
+                           double dy, gpointer data)
+{
+    WorldGrid *w = data;
+    GdkModifierType state = gtk_event_controller_get_current_event_state(
+        GTK_EVENT_CONTROLLER(controller));
+    (void)dx;
+    if (!(state & GDK_CONTROL_MASK) || dy == 0) return FALSE;
+    double value = gtk_spin_button_get_value(GTK_SPIN_BUTTON(w->zoom));
+    double step = gtk_adjustment_get_step_increment(
+        gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(w->zoom)));
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->zoom), value + (dy < 0 ? step : -step));
+    return TRUE;
 }
 
 static void map_popover_close(WorldGrid *w)
@@ -668,11 +723,12 @@ static void grid_rebuild(WorldGrid *w)
             }
             gchar *tip = c->provenance == 4 ? g_strdup_printf(
                 "PROJECT DRAFT: %s (not playable or ROM-backed)", c->draft_id) :
-                g_strdup_printf("Room %u: %u verified case(s); %ux%u displayed segment; %s",
+                g_strdup_printf("Room %u: %u verified case(s); %ux%u displayed segment; %s%s%s",
                 c->room, room_cells, width, height,
                 c->provenance == 2 ? "original Aria map" :
                 c->provenance == 3 ? "original MZM minimap tile (room unknown)" :
-                c->provenance == 1 ? "native MZM clip bounds" : "MZM anchor only");
+                c->provenance == 1 ? "native MZM Clipdata/minimap intersection" : "MZM anchor only",
+                c->ownership[0] ? "; ownership: " : "", c->ownership);
             gtk_widget_set_tooltip_text(cell, tip);
             g_free(tip);
             g_object_set_data(G_OBJECT(cell), "mv-grid-index", GUINT_TO_POINTER(entry));
@@ -837,6 +893,8 @@ static void generate_clicked(GtkButton *b,gpointer data)
 static void world_free(gpointer data)
 {
     WorldGrid *w = data;
+    if (w->pan_tick && w->scroller)
+        gtk_widget_remove_tick_callback(w->scroller, w->pan_tick);
     if (w->popup)
         g_object_remove_weak_pointer(G_OBJECT(w->popup), (gpointer *)&w->popup);
     g_array_free(w->cells, TRUE);
@@ -891,12 +949,17 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     GtkGesture *pan = gtk_gesture_drag_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(pan), GDK_BUTTON_PRIMARY);
     gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(pan), GTK_PHASE_CAPTURE);
-    /* Capture movement even over native Zero Mission minimap tiles,
-     * empty cells and padding. Child clicks and right menus remain intact. */
-    gtk_widget_add_controller(pan_surface, GTK_EVENT_CONTROLLER(pan));
+    /* The scroller is stationary while its child moves, so drag offsets remain
+     * stable. A gesture attached to the moving map caused feedback jitter. */
+    gtk_widget_add_controller(scroller, GTK_EVENT_CONTROLLER(pan));
     g_object_set_data(G_OBJECT(root), "mv-map-pan-surface", pan_surface);
     g_signal_connect(pan, "drag-begin", G_CALLBACK(map_drag_begin), w);
     g_signal_connect(pan, "drag-update", G_CALLBACK(map_drag_update), w);
+    GtkEventController *wheel = gtk_event_controller_scroll_new(
+        GTK_EVENT_CONTROLLER_SCROLL_VERTICAL | GTK_EVENT_CONTROLLER_SCROLL_DISCRETE);
+    gtk_event_controller_set_propagation_phase(wheel, GTK_PHASE_CAPTURE);
+    gtk_widget_add_controller(scroller, wheel);
+    g_signal_connect(wheel, "scroll", G_CALLBACK(map_scroll), w);
     w->status=gtk_label_new("Reading verified original minimap cases…");
     w->details=gtk_label_new("Double-click a case to edit it in the shared room editor.");
     w->world_select=gtk_drop_down_new_from_strings(worlds);

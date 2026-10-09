@@ -254,6 +254,37 @@ def bmp24(width: int, height: int, rgb: bytes) -> bytes:
                         len(pixels), 0, 0, 0, 0) + pixels)
 
 
+def collision_preview(width: int, height: int, blocks: tuple[int, ...]) -> bytes:
+    """Render original 16x16 Clipdata IDs as a diagnostic wall overlay.
+
+    Zero is native air. Slopes and doors receive distinct colors; remaining
+    nonzero IDs are visible as solid/special Clipdata without claiming that
+    every behavior is a physical wall.
+    """
+    if not 1 <= width <= 128 or not 1 <= height <= 128 or len(blocks) != width * height:
+        raise ValueError('invalid MZM Clipdata preview')
+    pixel_width, pixel_height = width * 16, height * 16
+    rgb = bytearray(pixel_width * pixel_height * 3)
+    for block_y in range(height):
+        for block_x in range(width):
+            value = blocks[block_y * width + block_x]
+            if value == 0:
+                color = (0, 0, 0)
+            elif 6 <= value <= 11:
+                color = (245, 178, 52)
+            elif 33 <= value <= 37:
+                color = (185, 88, 245)
+            else:
+                color = (235, 55, 75)
+            for y in range(16):
+                for x in range(16):
+                    pixel = tuple(channel // 2 for channel in color) if x == 0 or y == 0 else color
+                    destination = (((block_y * 16 + y) * pixel_width +
+                                    block_x * 16 + x) * 3)
+                    rgb[destination:destination + 3] = bytes(pixel)
+    return bmp24(pixel_width, pixel_height, rgb)
+
+
 def decode_room(area: str, number: int) -> dict:
     room = read_source_room(area, number)
     fields = room['fields']
@@ -298,6 +329,14 @@ def decode_room(area: str, number: int) -> dict:
         write_generated(rel, bmp24(w*16,h*16,image))
         layers[layer].update({'path': rel, 'unresolved_pixels_or_cells': missing,
                               'painted_pixels': painted})
+    clip_width, clip_height, clip_blocks = rle_room(room_blob(fields['pClipData']))
+    collision_rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_collision.bmp'
+    write_generated(collision_rel, collision_preview(clip_width, clip_height, clip_blocks))
+    result['collision'] = {
+        'path': collision_rel, 'width_blocks': clip_width,
+        'height_blocks': clip_height,
+        'meaning': 'diagnostic native Clipdata IDs; not an editable layer',
+    }
     rel = f'rooms/metroid/previews/{area.lower()}_{number:03}.json'
     write_generated(rel, (json.dumps(result, indent=2)+'\n').encode())
     return result

@@ -103,8 +103,12 @@ def native_mzm_clip_dimensions() -> dict[tuple[int, int], tuple[int, int]]:
         if not line or line.startswith('#'):
             continue
         cols = line.split('|')
-        if len(cols) != 10 or cols[0] not in MZM_AREAS:
+        if len(cols) != 10:
             raise ValueError('malformed verified MZM descriptor catalog')
+        # The shared descriptor catalog also contains developer test rooms.
+        # They have no production-area minimap and are intentionally ignored.
+        if cols[0] not in MZM_AREAS:
+            continue
         area = MZM_AREAS.index(cols[0])
         try:
             room = int(cols[1])
@@ -123,10 +127,12 @@ def native_mzm_clip_dimensions() -> dict[tuple[int, int], tuple[int, int]]:
 
 def expand_mzm_clip_cells(anchors: list[tuple[int, int, int, int, int, int]],
                           dimensions: dict[tuple[int, int], tuple[int, int]]) -> list[tuple[int, ...]]:
-    """Safely expand verified MZM minimap origins with native clipdata bounds.
+    """Expand engine room bounds when no native minimap is available.
 
-    No room may claim another room's anchor or overlapping native bounds.
-    Ambiguous candidates stay anchors; all derived cells carry provenance=1.
+    MZM keeps a two-block Clipdata guard border on every side. The playable
+    dimensions are therefore ``(width - 4) / 15`` by ``(height - 4) / 10``
+    screens. This fallback remains deliberately conservative: overlaps or
+    dimensions that do not exactly match the engine formula stay anchors.
     """
     if not anchors:
         raise ValueError('empty MZM room atlas')
@@ -142,7 +148,9 @@ def expand_mzm_clip_cells(anchors: list[tuple[int, int, int, int, int, int]],
         if (type(bw) is not int or type(bh) is not int or
                 not 1 <= bw <= 128 or not 1 <= bh <= 128):
             continue
-        width, height = (bw + 14) // 15, (bh + 9) // 10
+        if bw < 19 or bh < 14 or (bw - 4) % 15 or (bh - 4) % 10:
+            continue
+        width, height = (bw - 4) // 15, (bh - 4) // 10
         if x + width > 32 or y + height > 32:
             continue
         points = {(area, xx, yy)
@@ -167,6 +175,116 @@ def expand_mzm_clip_cells(anchors: list[tuple[int, int, int, int, int, int]],
         else:
             out.append((area, room, x, y, save, warp, 0))
     return out
+
+
+def resolve_mzm_minimap_cells(
+        anchors: list[tuple[int, int, int, int, int, int]],
+        dimensions: dict[tuple[int, int], tuple[int, int]],
+        native: list[tuple[int, ...]]) -> tuple[list[tuple], dict]:
+    """Join engine geometry to original minimap occupancy without guessing.
+
+    Rooms sharing a RoomEntryRom map origin are recorded as progression
+    variants of one family. A native cell is assigned only when one family
+    claims it, or when its exact room origin disambiguates overlapping engine
+    bounds. Every other native cell remains explicitly unowned.
+    """
+    if not anchors or not native:
+        raise ValueError('MZM ownership resolution needs anchors and native cells')
+    native_by_position = {(row[0], row[2], row[3]): row for row in native}
+    if len(native_by_position) != len(native):
+        raise ValueError('duplicate native MZM minimap coordinate')
+
+    families = {}
+    for area, room, x, y, save, warp in anchors:
+        family = families.setdefault((area, x, y), {
+            'area': area, 'x': x, 'y': y, 'rooms': [], 'points': set(),
+            'save': False, 'warp': False,
+        })
+        family['rooms'].append(room)
+        family['save'] |= bool(save)
+        family['warp'] |= bool(warp)
+        bounds = dimensions.get((area, room))
+        if bounds is None:
+            continue
+        width, height = bounds
+        if (type(width) is not int or type(height) is not int or
+                width < 19 or height < 14 or
+                (width - 4) % 15 or (height - 4) % 10):
+            continue
+        screens_x, screens_y = (width - 4) // 15, (height - 4) // 10
+        if not 1 <= screens_x <= 32 or not 1 <= screens_y <= 32:
+            continue
+        for yy in range(y, y + screens_y):
+            for xx in range(x, x + screens_x):
+                point = (area, xx, yy)
+                if point in native_by_position:
+                    family['points'].add(point)
+
+    claims = {}
+    for key, family in families.items():
+        for point in family['points']:
+            claims.setdefault(point, []).append(key)
+
+    rows = []
+    ambiguity_records = []
+    owned_count = 0
+    for point, source in sorted(native_by_position.items()):
+        area, _, x, y, _, _, _, tile = source
+        candidates = claims.get(point, [])
+        anchored = [point] if point in families else []
+        owner = None
+        if len(candidates) == 1:
+            owner = candidates[0]
+        elif len(anchored) == 1:
+            # RoomEntryRom.mapX/mapY is direct evidence for the origin cell.
+            owner = anchored[0]
+        if owner is not None:
+            family = families[owner]
+            rooms = sorted(set(family['rooms']))
+            primary = rooms[0]
+            provenance = 1 if point in family['points'] else 0
+            note = ','.join(map(str, rooms)) if len(rooms) > 1 else '-'
+            rows.append((area, primary, x, y, int(family['save']),
+                         int(family['warp']), provenance, tile, note))
+            owned_count += 1
+        else:
+            room_ids = sorted({room for key in candidates
+                               for room in families[key]['rooms']})
+            note = 'ambiguous:' + ','.join(map(str, room_ids)) if room_ids else 'unassigned'
+            rows.append((area, 999, x, y, 0, 0, 3, tile, note))
+            if room_ids:
+                ambiguity_records.append({
+                    'area': area, 'x': x, 'y': y,
+                    'candidate_rooms': room_ids,
+                    'candidate_origins': [[key[1], key[2]] for key in candidates],
+                })
+
+    # Some RoomEntry origins are intentionally absent from the pause minimap.
+    # Preserve them as navigable anchor-only records, grouped by variant family.
+    for key, family in sorted(families.items()):
+        if key in native_by_position:
+            continue
+        rooms = sorted(set(family['rooms']))
+        note = ','.join(map(str, rooms)) if len(rooms) > 1 else '-'
+        rows.append((family['area'], rooms[0], family['x'], family['y'],
+                     int(family['save']), int(family['warp']), 0, 0, note))
+
+    report = {
+        'format': 'MV_MZM_MINIMAP_OWNERSHIP_1',
+        'native_cells': len(native),
+        'owned_native_cells': owned_count,
+        'unassigned_native_cells': len(native) - owned_count,
+        'ambiguous_native_cells': len(ambiguity_records),
+        'variant_families': [
+            {'area': family['area'], 'map_x': family['x'], 'map_y': family['y'],
+             'rooms': sorted(set(family['rooms']))}
+            for family in families.values() if len(set(family['rooms'])) > 1
+        ],
+        'ambiguities': ambiguity_records,
+        'method': ('RoomEntryRom origins plus exact Clipdata playable dimensions, '
+                   'intersected with original pause-minimap occupancy'),
+    }
+    return rows, report
 
 
 def native_mzm_minimap_cells() -> list[tuple[int, ...]]:
@@ -227,7 +345,7 @@ def native_mzm_minimap_cells() -> list[tuple[int, ...]]:
     return cells
 
 
-def output_rows(world: str, rows: list[tuple[int, ...]]) -> bytes:
+def output_rows(world: str, rows: list[tuple]) -> bytes:
     # 8th field: native minimap tile code (0 when unknown). Provenance:
     # 0=original MZM anchor, 1=decoded MZM clip bounds, 2=original Aria cell,
     # 3=MZM original pause-screen map tile with unknown room ownership.
@@ -236,14 +354,16 @@ def output_rows(world: str, rows: list[tuple[int, ...]]) -> bytes:
     for row in rows:
         if len(row) == 6:
             row = (*row, default)
-        if (len(row) not in (7, 8) or row[6] not in (0, 1, 2, 3)
+        if (len(row) not in (7, 8, 9) or row[6] not in (0, 1, 2, 3)
                 or (len(row) == 7 and row[6] == 3)
-                or (len(row) == 8 and (type(row[7]) is not int
-                    or not 0 <= row[7] <= 65535))):
+                or (len(row) >= 8 and (type(row[7]) is not int
+                    or not 0 <= row[7] <= 65535))
+                or (len(row) == 9 and (not isinstance(row[8], str)
+                    or '|' in row[8] or '\n' in row[8] or len(row[8]) > 180))):
             raise ValueError('invalid world overview provenance/tile row')
         encoded.append('|'.join(map(str, row)))
     head = ('# Original map cells; provenance 0=anchor, 1=clip, 2=Aria, 3=MZM minimap tile.\n'
-            '# area|room|x|y|save|warp|provenance|native_tile\n')
+            '# area|room|x|y|save|warp|provenance|native_tile|variants_or_ambiguity\n')
     return (head + '\n'.join(encoded) + '\n').encode('utf-8')
 
 
@@ -255,10 +375,10 @@ def index(world: str)->int:
         anchors = build_mzm(src.read_text(encoding='utf-8'))
         native = native_mzm_minimap_cells()
         if native:
-            owned_anchors = {(area, x, y) for area, _, x, y, *_ in anchors}
-            rows = [(*anchor, 0, 0) for anchor in anchors]
-            rows += [cell for cell in native
-                     if (cell[0], cell[2], cell[3]) not in owned_anchors]
+            rows, report = resolve_mzm_minimap_cells(
+                anchors, native_mzm_clip_dimensions(), native)
+            write_generated('world_overview/mzm_ownership.json',
+                            (json.dumps(report, indent=2) + '\n').encode('utf-8'))
         else:
             # Lack of verified private minimap inputs cannot justify drawing
             # a faux complete world from imperfect clipdata bounding boxes.
@@ -275,7 +395,8 @@ def index(world: str)->int:
 
 def generate_previews(world:str, area:int, budget:int)->tuple[int,int]:
     path=OUTPUT/f'world_overview/{world}.tsv'
-    rows=[tuple(map(int,line.split('|'))) for line in path.read_text().splitlines() if line and not line.startswith('#')]
+    rows=[tuple(map(int,line.split('|')[:8])) for line in path.read_text().splitlines()
+          if line and not line.startswith('#')]
     done=0;failed=0
     # Unsupported rooms are remembered privately so each batch advances.
     failures_path=OUTPUT/f'world_overview/{world}_{area:02}_unsupported.json'

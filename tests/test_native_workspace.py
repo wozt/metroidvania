@@ -1,5 +1,6 @@
 import unittest
 from scripts.mzm_native_workspace import serialize,parse
+from scripts.mzm_room_render import collision_preview
 class WorkspaceTest(unittest.TestCase):
     def test_round_trip_and_failures(self):
         room={'id':'mzm:brinstar:033','fields':{'tileset':'27'}}
@@ -13,4 +14,9 @@ class WorkspaceTest(unittest.TestCase):
         room={'id':'mzm:brinstar:033','fields':{'tileset':'27'}}
         with self.assertRaises(ValueError):
             serialize(room,4,{'Bg1':(1,1,[0]),'Bg2':(2,2,[1])},'rooms/metroid/tilesets/27_atlas.bmp')
+    def test_collision_preview_uses_native_air_and_wall_cells(self):
+        bitmap = collision_preview(2, 1, (0, 5))
+        self.assertEqual(bitmap[:2], b'BM')
+        self.assertEqual(int.from_bytes(bitmap[18:22], 'little'), 32)
+        self.assertEqual(int.from_bytes(bitmap[22:26], 'little'), 16)
 if __name__=='__main__':unittest.main()

@@ -25,11 +25,13 @@ class EditorLayerContract(unittest.TestCase):
         self.assertIn('gtk_notebook_get_nth_page(notebook, (gint)i)', focus)
         self.assertIn('gtk_notebook_set_current_page(notebook, (gint)i);', focus)
 
-    def test_pan_uses_surface_not_native_grid(self):
+    def test_pan_uses_stationary_scroller_not_moving_grid(self):
         source = (ROOT / 'editor/world_atlas.c').read_text(encoding='utf-8')
-        self.assertIn('gtk_widget_add_controller(pan_surface, GTK_EVENT_CONTROLLER(pan));', source)
+        self.assertIn('gtk_widget_add_controller(scroller, GTK_EVENT_CONTROLLER(pan));', source)
         self.assertIn('gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller),pan_surface);', source)
         self.assertNotIn('gtk_widget_add_controller(grid, GTK_EVENT_CONTROLLER(pan));', source)
+        self.assertNotIn('gtk_widget_add_controller(pan_surface, GTK_EVENT_CONTROLLER(pan));', source)
+        self.assertIn('gtk_widget_add_tick_callback(w->scroller, map_pan_frame, w, NULL)', source)
         self.assertIn('gtk_box_append(GTK_BOX(canvas_row),grid);', source)
 
 

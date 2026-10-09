@@ -66,8 +66,8 @@ class NativeMinimapTest(unittest.TestCase):
                 with patch.object(world_overview, 'write_generated') as write:
                     world_overview.index('mzm')
             rows = write.call_args.args[1].decode()
-            self.assertIn('0|7|1|1|0|0|0|0', rows)
-            self.assertIn('0|999|2|1|0|0|3|321', rows)
+            self.assertIn('0|7|1|1|0|0|0|321|-', rows)
+            self.assertIn('0|999|2|1|0|0|3|321|unassigned', rows)
             self.assertNotIn('0|999|1|1|', rows)
 
 

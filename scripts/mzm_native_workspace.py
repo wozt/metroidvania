@@ -82,6 +82,11 @@ def export(area: str, number: int) -> dict:
         if fields[field] != 'BG_PROP_RLE_COMPRESSED':
             raise ValueError(f'{room["id"]} {layer} not supported by current RLE decoder')
         layers[layer] = native.rle_room(native.room_blob(fields['p'+layer+'Data']))
+    clip_width, clip_height, clip_blocks = native.rle_room(
+        native.room_blob(fields['pClipData']))
+    collision_rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_collision.bmp'
+    write_generated(collision_rel,
+                    native.collision_preview(clip_width, clip_height, clip_blocks))
     words = [entry for idx in set(layers['Bg1'][2]) if idx < len(table)
              for entry in table[idx]]
     base, _ = native.graphic_base(words, len(gfx)//32)
@@ -110,6 +115,7 @@ def export(area: str, number: int) -> dict:
             'layers':{k:{'width':v[0],'height':v[1]} for k,v in layers.items()},
             'atlas':str(OUTPUT/atlas_rel),'base':str(OUTPUT/map_rel),
             'override':str(OUTPUT/override_rel),'unresolved_atlas_cells':missing,
+            'collision':str(OUTPUT/collision_rel),
             'limitations':'BG0, BG3, common tiles and animated palette omitted; edit blocks BG1/BG2 only'}
     # BG3 is a read-only optional preview. Any unsupported layer must never
     # block room editing or overwrite saved user overrides.

@@ -1,12 +1,26 @@
-# MZM world atlas and experimental BG3 (0044)
+# Zero Mission global map reconstruction
 
-The `World map / MZM` GTK tab displays **original Zero Mission minimap
-anchors** and **verified intra-area door indices** extracted from pinned
-`third_party/mzm/src/data/rooms_data.c`. It does NOT infer room bounding boxes,
-cross-area transitions or event-dependent routes. Some rooms overlap on the
-original minimap and may share the same marker. Click a marker for details;
-double-click or use Open selected room to create/focus its private editable tab.
-The atlas is not yet an editor for door connections.
+The Global maps GTK tab joins three independent native sources instead of
+guessing room rectangles:
+
+- `RoomEntryRom.mapX/mapY` supplies each room's global origin.
+- decoded Clipdata dimensions supply engine geometry; the four-block guard
+  border is removed before dividing by the native 15x10-block screen size;
+- original 32x32 pause-minimap tilemaps decide which candidate cells actually
+  exist.
+
+Only the intersection of engine geometry and original minimap occupancy is
+assigned to a room. Irregular holes remain holes. When engine rectangles
+overlap, an exact `mapX/mapY` origin can disambiguate its own cell; all other
+unproved cells stay visibly unassigned. Rooms sharing an origin are exposed as
+progression variants rather than silently merged. The ignored private
+`world_overview/mzm_ownership.json` report lists every variant family and
+ambiguity.
+
+Click a verified cell for its provenance and variant information. Double-click
+or use Open selected room to create/focus its private editable tab. Unassigned
+cells cannot open arbitrary room IDs. The atlas is not yet an editor for door
+connections.
 
 Import from the **user's local** decomp/ROM extraction:
 
@@ -15,8 +29,8 @@ python3 -m scripts.mzm_world_atlas
 ./build/fusion_map_editor
 ```
 
-Generated data stays under ignored `assets/extracted/rooms/metroid/`:
-`world_atlas.json`, `world_atlas.tsv`.
+Generated data stays under ignored `assets/extracted/`, including the room
+catalog, global-map TSV, ownership report, previews and editor workrooms.
 
 Optional experimental MZM BG3 preview:
 
@@ -24,15 +38,18 @@ Optional experimental MZM BG3 preview:
 python3 -m scripts.mzm_bg3_preview --area Brinstar --room 33
 ```
 
-When opening a room via GTK, the native workspace importer tries to generate
-its BG3 preview automatically. The toggle in the room toolbar controls whether
-the decoded preview repeats behind the selected BG1/BG2 metatiles; when editing
-BG1, decoded BG2 metatiles are also shown underneath (toggleable). BG3 pixels
-are **diagnostic, not yet an exact hardware composite**; compressed resources,
-common palette banks, layers, scroll offsets, animated tiles, clipping and
-blend may be unresolved. Missing resources do not block editing. The generated
-BG3 `.bmp` and ALL original ROM data remain local and ignored by Git.
+When opening a room, the importer also produces a native Clipdata diagnostic.
+The collision/wall toolbar toggle draws it over BG1/BG2 without modifying the
+editable layers. Red identifies non-air/special Clipdata, yellow identifies
+native slope IDs and purple identifies door IDs. This is a read-only diagnostic
+overlay, not collision authoring yet.
 
-The current map covers original MZM's seven normal areas only. Aria uses its
-own structural decoder and does not share this atlas representation. No
+The background toggle controls whether decoded BG2/BG3 appears under the active
+layer. BG3 pixels are **diagnostic, not yet an exact hardware composite**;
+compressed resources, common palette banks, scroll offsets, animation and
+blending may remain unresolved. Missing optional previews do not block editing.
+Ctrl+mouse-wheel changes zoom in both the room workspace and global map.
+
+The current MZM map covers the seven production areas. Aria retains its own
+verified 64x35 native minimap cells through the same GTK workspace. No
 extracted or proprietary assets are committed.

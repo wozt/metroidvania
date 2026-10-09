@@ -126,10 +126,16 @@ def export(rom: bytes, area: int, room_number: int) -> dict:
         write_generated(atlas_name, pack_atlas(tiles))
     if not (OUTPUT / workroom_name).exists():
         write_generated(workroom_name, serialize(area, room_number, layers, len(tiles), atlas_name))
+    bg1 = bg_layers.get(1)
+    collision_name = None
+    if bg1 and bg1.get('collision') is not None:
+        collision_name = f'rooms/aria/previews/{basename}_collision.bmp'
+        write_generated(collision_name, renderer.collision_preview(bg1))
     return {'room_id': f'aria:{area:02d}:{room_number:03d}',
             'tile_count': len(tiles), 'atlas': str(OUTPUT/atlas_name),
             'workroom': str(OUTPUT/workroom_name),
             'override': str(OUTPUT/override_name),
+            'collision': str(OUTPUT/collision_name) if collision_name else None,
             'limitation': 'Visual 16x16 RGBA cells; original 8x8 tile IDs, animations, entities, collisions and BG3 editability not yet preserved.'}
 
 

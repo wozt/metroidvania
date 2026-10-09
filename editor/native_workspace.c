@@ -44,12 +44,17 @@ struct NativeWorkspace {
     int start_x, start_y, last_x, last_y;
     int sel_x0, sel_y0, sel_x1, sel_y1, preview_dx, preview_dy;
     double scale, pointer_x, pointer_y, pan_horizontal, pan_vertical;
+    double pending_pan_horizontal, pending_pan_vertical;
+    guint pan_tick;
     char *override_path;
     cairo_surface_t *atlas;
     unsigned char *atlas_pixels;
     cairo_surface_t *background;
     unsigned char *background_pixels;
     gboolean background_visible;
+    cairo_surface_t *collision;
+    unsigned char *collision_pixels;
+    gboolean collision_visible;
 };
 
 static NativeWorkspace *document_ref(NativeWorkspace *doc)
@@ -112,15 +117,26 @@ static void discard_background(NativeWorkspace *doc)
     doc->background_pixels = NULL;
 }
 
+static void discard_collision(NativeWorkspace *doc)
+{
+    if (doc->collision) cairo_surface_destroy(doc->collision);
+    doc->collision = NULL;
+    g_free(doc->collision_pixels);
+    doc->collision_pixels = NULL;
+}
+
 static void document_destroy(NativeWorkspace *doc)
 {
     if (!doc) return;
+    if (doc->pan_tick && doc->canvas)
+        gtk_widget_remove_tick_callback(doc->canvas, doc->pan_tick);
     g_clear_object(&doc->import_cancellable);
     g_clear_object(&doc->import_process);
     history_clear(doc->undo, &doc->undo_count);
     history_clear(doc->redo, &doc->redo_count);
     discard_atlas(doc);
     discard_background(doc);
+    discard_collision(doc);
     free(doc->undo);
     free(doc->redo);
     free(doc->map);
@@ -137,20 +153,20 @@ static void document_unref(NativeWorkspace *doc)
     if (--doc->references == 0) document_destroy(doc);
 }
 
-static void load_background(NativeWorkspace *doc, const char *filename)
+static gboolean load_preview_surface(const char *filename, cairo_surface_t **target,
+                                     unsigned char **target_pixels)
 {
-    discard_background(doc);
     GError *error = NULL;
     GdkPixbuf *pix = gdk_pixbuf_new_from_file(filename, &error);
     if (!pix) {
         if (error) g_error_free(error);
-        return;
+        return FALSE;
     }
     int w = gdk_pixbuf_get_width(pix), h = gdk_pixbuf_get_height(pix);
     int channels = gdk_pixbuf_get_n_channels(pix);
     if (w < 8 || h < 8 || w > 2048 || h > 2048 || channels < 3) {
         g_object_unref(pix);
-        return;
+        return FALSE;
     }
     int stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, w);
     unsigned char *pixels = g_malloc0((size_t)stride * (size_t)h);
@@ -170,10 +186,23 @@ static void load_background(NativeWorkspace *doc, const char *filename)
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         cairo_surface_destroy(surface);
         g_free(pixels);
-        return;
+        return FALSE;
     }
-    doc->background = surface;
-    doc->background_pixels = pixels;
+    *target = surface;
+    *target_pixels = pixels;
+    return TRUE;
+}
+
+static void load_background(NativeWorkspace *doc, const char *filename)
+{
+    discard_background(doc);
+    load_preview_surface(filename, &doc->background, &doc->background_pixels);
+}
+
+static void load_collision(NativeWorkspace *doc, const char *filename)
+{
+    discard_collision(doc);
+    load_preview_surface(filename, &doc->collision, &doc->collision_pixels);
 }
 
 static gboolean load_atlas(NativeWorkspace *doc, const char *filename)
@@ -315,6 +344,17 @@ static void draw_room(GtkDrawingArea *area, cairo_t *cr, int width, int height, 
                 cairo_fill(cr);
             }
         }
+    }
+    if (doc->collision && doc->collision_visible) {
+        cairo_save(cr);
+        cairo_scale(cr, doc->scale, doc->scale);
+        cairo_rectangle(cr, 0, 0, columns * 16, rows * 16);
+        cairo_clip(cr);
+        cairo_set_operator(cr, CAIRO_OPERATOR_SCREEN);
+        cairo_set_source_surface(cr, doc->collision, 0, 0);
+        cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
+        cairo_paint_with_alpha(cr, 0.58);
+        cairo_restore(cr);
     }
     if (doc->grid_visible) {
         cairo_set_source_rgba(cr, 1, 1, 1, 0.21);
@@ -489,6 +529,20 @@ static gboolean get_cell(NativeWorkspace *doc, double x, double y, int *cx, int 
            (unsigned)*cy < doc->map->height[doc->layer_id];
 }
 
+static gboolean pan_frame(GtkWidget *widget, GdkFrameClock *clock, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    (void)widget; (void)clock;
+    if (!doc->closing && doc->scroller) {
+        GtkAdjustment *h = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(doc->scroller));
+        GtkAdjustment *v = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(doc->scroller));
+        gtk_adjustment_set_value(h, doc->pending_pan_horizontal);
+        gtk_adjustment_set_value(v, doc->pending_pan_vertical);
+    }
+    doc->pan_tick = 0;
+    return G_SOURCE_REMOVE;
+}
+
 static void paint_cell(NativeWorkspace *doc, int x, int y)
 {
     unsigned picked = doc->brush_id;
@@ -570,10 +624,10 @@ static void gesture_update(GtkGestureDrag *gesture, double dx, double dy, gpoint
     (void)gesture;
     if (!doc->ready || !doc->drawing) return;
     if (doc->panning) {
-        GtkAdjustment *h = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(doc->scroller));
-        GtkAdjustment *v = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(doc->scroller));
-        gtk_adjustment_set_value(h, doc->pan_horizontal - dx);
-        gtk_adjustment_set_value(v, doc->pan_vertical - dy);
+        doc->pending_pan_horizontal = doc->pan_horizontal - dx;
+        doc->pending_pan_vertical = doc->pan_vertical - dy;
+        if (!doc->pan_tick)
+            doc->pan_tick = gtk_widget_add_tick_callback(doc->canvas, pan_frame, doc, NULL);
         return;
     }
     int cx = 0, cy = 0;
@@ -689,6 +743,21 @@ static void canvas_leave(GtkEventControllerMotion *controller, gpointer userdata
     }
 }
 
+static gboolean canvas_scroll(GtkEventControllerScroll *controller, double dx,
+                              double dy, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    GdkModifierType state = gtk_event_controller_get_current_event_state(
+        GTK_EVENT_CONTROLLER(controller));
+    (void)dx;
+    if (doc->closing || !(state & GDK_CONTROL_MASK) || dy == 0) return FALSE;
+    double value = gtk_spin_button_get_value(GTK_SPIN_BUTTON(doc->zoom));
+    GtkAdjustment *adjustment = gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(doc->zoom));
+    double step = gtk_adjustment_get_step_increment(adjustment);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(doc->zoom), value + (dy < 0 ? step : -step));
+    return TRUE;
+}
+
 /* GTK owns the tooltip lifecycle; no manual GtkPopover/timer callbacks.
  * Preserve the requested delay when this GTK build exposes the setting. */
 static void delayed_tip(GtkWidget *widget, const char *description)
@@ -746,6 +815,14 @@ static void background_toggled(GtkToggleButton *button, gpointer userdata)
     NativeWorkspace *doc = userdata;
     if (doc->closing) return;
     doc->background_visible = gtk_toggle_button_get_active(button);
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
+}
+
+static void collision_toggled(GtkToggleButton *button, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    if (doc->closing) return;
+    doc->collision_visible = gtk_toggle_button_get_active(button);
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
 
@@ -1063,6 +1140,7 @@ static void document_build(NativeWorkspace *doc)
     doc->save_button = save;
     GtkWidget *grid = icon_toggle("view-grid-symbolic", "Show or hide the grid (G)");
     GtkWidget *background = icon_toggle("image-x-generic-symbolic", "Show BG2 / BG3 (experimental background preview)");
+    GtkWidget *collision = icon_toggle("dialog-warning-symbolic", "Show native collision / wall overlay");
     GtkWidget *tab_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     GtkWidget *close = icon_button("window-close-symbolic", "Close this tab");
     doc->close_button = close;
@@ -1084,6 +1162,8 @@ static void document_build(NativeWorkspace *doc)
     doc->background_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(background), TRUE);
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), background, -1);
+    doc->collision_visible = FALSE;
+    gtk_flow_box_insert(GTK_FLOW_BOX(tools), collision, -1);
     doc->grid_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(grid), TRUE);
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL), -1);
@@ -1113,12 +1193,16 @@ static void document_build(NativeWorkspace *doc)
     GtkGesture *drag = gtk_gesture_drag_new();
     GtkGesture *click = gtk_gesture_click_new();
     GtkEventController *hover = gtk_event_controller_motion_new();
+    GtkEventController *wheel = gtk_event_controller_scroll_new(
+        GTK_EVENT_CONTROLLER_SCROLL_VERTICAL | GTK_EVENT_CONTROLLER_SCROLL_DISCRETE);
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(drag), GDK_BUTTON_PRIMARY);
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), GDK_BUTTON_PRIMARY);
     gtk_gesture_group(drag, click);
     gtk_widget_add_controller(doc->canvas, GTK_EVENT_CONTROLLER(drag));
     gtk_widget_add_controller(doc->canvas, GTK_EVENT_CONTROLLER(click));
     gtk_widget_add_controller(doc->canvas, hover);
+    gtk_event_controller_set_propagation_phase(wheel, GTK_PHASE_CAPTURE);
+    gtk_widget_add_controller(scroll, wheel);
     g_signal_connect(hover, "motion", G_CALLBACK(canvas_hover), doc);
     g_signal_connect(hover, "leave", G_CALLBACK(canvas_leave), doc);
     g_signal_connect(drag, "drag-begin", G_CALLBACK(gesture_begin), doc);
@@ -1126,6 +1210,7 @@ static void document_build(NativeWorkspace *doc)
     g_signal_connect(drag, "drag-end", G_CALLBACK(gesture_end), doc);
     g_signal_connect(click, "pressed", G_CALLBACK(canvas_click_down), doc);
     g_signal_connect(click, "released", G_CALLBACK(canvas_click_up), doc);
+    g_signal_connect(wheel, "scroll", G_CALLBACK(canvas_scroll), doc);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), doc->canvas);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
                                    GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -1170,6 +1255,7 @@ static void document_build(NativeWorkspace *doc)
     g_signal_connect(doc->zoom, "value-changed", G_CALLBACK(zoom_changed), doc);
     g_signal_connect(grid, "toggled", G_CALLBACK(grid_toggled), doc);
     g_signal_connect(background, "toggled", G_CALLBACK(background_toggled), doc);
+    g_signal_connect(collision, "toggled", G_CALLBACK(collision_toggled), doc);
     g_signal_connect(undo, "clicked", G_CALLBACK(undo_clicked), doc);
     g_signal_connect(redo, "clicked", G_CALLBACK(redo_clicked), doc);
     g_signal_connect(save, "clicked", G_CALLBACK(save_clicked), doc);
@@ -1228,6 +1314,16 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
                  "assets/extracted/rooms/metroid/previews/%s_%03u_bg3.bmp",
                  area_lower, number);
     load_background(doc, bgpath);
+    char collision_path[420];
+    if (aria)
+        snprintf(collision_path, sizeof(collision_path),
+                 "assets/extracted/rooms/aria/previews/area_%02u_room_%03u_collision.bmp",
+                 (unsigned)atoi(area), number);
+    else
+        snprintf(collision_path, sizeof(collision_path),
+                 "assets/extracted/rooms/metroid/previews/%s_%03u_collision.bmp",
+                 area_lower, number);
+    load_collision(doc, collision_path);
     history_clear(doc->undo, &doc->undo_count);
     history_clear(doc->redo, &doc->redo_count);
     g_free(doc->override_path);

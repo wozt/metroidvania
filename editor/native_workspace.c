@@ -283,7 +283,11 @@ static void load_annotations(NativeWorkspace *doc, const char *filename)
     guint counts[OVERLAY_COUNT] = {0};
     for (guint line = 0; lines[line] && line < 4096; ++line) {
         if (!lines[line][0] || lines[line][0] == '#') continue;
-        gchar **fields = g_strsplit(lines[line], "|", 11);
+        /* Exactly ten columns: the final details field may itself contain
+         * native C bitflag expressions such as DOOR_TYPE_CLOSED_HATCH |
+         * DOOR_TYPE_NORMAL. Keep the entire remaining text in column 10.
+         * Previously max_tokens=11 silently discarded these door rows. */
+        gchar **fields = g_strsplit(lines[line], "|", 10);
         RoomAnnotation item = {0};
         item.preview_item_id = -1;
         guint source_index, width, height;
@@ -3369,6 +3373,24 @@ void native_workspace_import_aria_async(NativeWorkspace *manager, unsigned area,
 }
 
 #ifdef FUSION_NATIVE_WORKSPACE_TESTING
+/* Exercise the same read-only annotation importer used for real rooms,
+ * without requiring ROM bytes in GTK lifecycle tests. */
+guint native_workspace_test_load_native_doors(NativeWorkspace *manager,
+                                             guint index, const char *path)
+{
+    if (!manager || !manager->documents ||
+        index >= manager->documents->len || !path) return 0;
+    NativeWorkspace *doc = g_ptr_array_index(manager->documents, index);
+    load_annotations(doc, path);
+    guint count = 0;
+    for (guint i = 0; i < doc->annotations->len; ++i) {
+        const RoomAnnotation *item =
+            &g_array_index(doc->annotations, RoomAnnotation, i);
+        if (item->kind == OVERLAY_DOORS && !item->project_owned) ++count;
+    }
+    return count;
+}
+
 guint native_workspace_test_document_count(const NativeWorkspace *manager)
 {
     return manager && manager->documents ? manager->documents->len : 0;

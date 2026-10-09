@@ -820,3 +820,17 @@ and the proprietary-file guard passed.
   never create guessed area links or modify original ROM data.
 - Native map door labels now include known destination IDs in their tooltips.
   Rendering authentic hatch sprites remains separate work.
+
+## Patch 0097 - native MZM doors in individual rooms
+
+- Fix the native room annotation TSV parser: the details field contains the
+  original door bitflag expression with a literal `|`. GTK previously split
+  such lines into eleven fields and discarded the entire native door.
+- Preserve the full native expression by splitting only the first nine `|`
+  separators, including for already-extracted private annotation files.
+- Add a real GTK importer test with both original doors of a synthetic
+  Brinstar 010 room (the source table has two corresponding entries).
+- Keep optional global door-number badges switched off by default. The
+  global map's verified door-navigation panel remains unchanged.
+- Native room door markers are still read-only diagnostics; authentic
+  animated hatch sprite rendering remains future work.

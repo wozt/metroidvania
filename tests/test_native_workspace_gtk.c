@@ -29,6 +29,38 @@ static GtkWidget *find_room_toggle(GtkWidget *root, const char *label)
     return NULL;
 }
 
+/* A literal native OR bitflag previously introduced an 11th pipe-separated
+ * token. The native room importer then dropped the entire door record. */
+static void test_native_door_bitflags_imported(void)
+{
+    GtkWidget *center, *right;
+    NativeWorkspace *workspace = new_workspace(&center, &right);
+    g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 010"));
+    GtkWidget *page = gtk_notebook_get_nth_page(GTK_NOTEBOOK(center), 0);
+    g_assert_nonnull(page);
+    GtkWidget *toggle = find_room_toggle(page, "Doors");
+    g_assert_nonnull(toggle);
+    g_assert_true(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(toggle)));
+
+    gchar *directory = g_dir_make_tmp("mv-native-doors-0097-XXXXXX", NULL);
+    g_assert_nonnull(directory);
+    gchar *filename = g_build_filename(directory, "annotations.tsv", NULL);
+    const gchar *rows =
+        "# kind|index|x|y|width|height|variant|native_type|label|details\n"
+        "DOOR|26|32|96|16|64|native|26|Door 26|native_door=26; "
+        "type=DOOR_TYPE_CLOSED_HATCH | DOOR_TYPE_NORMAL; destination_door=22\n"
+        "DOOR|22|496|80|16|64|native|22|Door 22|native_door=22; "
+        "type=DOOR_TYPE_CLOSED_HATCH | DOOR_TYPE_NORMAL; destination_door=26\n";
+    g_assert_true(g_file_set_contents(filename, rows, -1, NULL));
+    g_assert_cmpuint(native_workspace_test_load_native_doors(
+        workspace, 0, filename), ==, 2);
+    g_assert_cmpint(g_remove(filename), ==, 0);
+    g_assert_cmpint(g_rmdir(directory), ==, 0);
+    g_free(filename);
+    g_free(directory);
+    native_workspace_free(workspace);
+}
+
 static void test_native_doors_default_visible(void)
 {
     GtkWidget *center, *right;
@@ -323,6 +355,8 @@ int main(int argc, char **argv)
                     test_nested_editor_tab_focus_and_close);
     g_test_add_func("/native-workspace/native-doors-default-visible",
                     test_native_doors_default_visible);
+    g_test_add_func("/native-workspace/native-door-bitflags-imported",
+                    test_native_door_bitflags_imported);
     g_test_add_func("/native-workspace/close-and-reopen", test_close_and_reopen);
     g_test_add_func("/native-workspace/close-order-and-unsaved-guard",
                     test_close_order_and_unsaved_guard);

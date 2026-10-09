@@ -8,6 +8,8 @@ void native_workspace_build(NativeWorkspace *w, GtkWidget *center, GtkWidget *ri
 void native_workspace_import_async(NativeWorkspace *w, const char *area, unsigned room);
 void native_workspace_import_aria_async(NativeWorkspace *w, unsigned area, unsigned room);
 #ifdef FUSION_NATIVE_WORKSPACE_TESTING
+guint native_workspace_test_load_native_doors(NativeWorkspace *w,
+                                             guint index, const char *path);
 guint native_workspace_test_document_count(const NativeWorkspace *w);
 gboolean native_workspace_test_add_document(NativeWorkspace *w, const char *identity);
 gboolean native_workspace_test_close_document(NativeWorkspace *w, guint index);

@@ -1173,8 +1173,10 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
     GtkWidget *generate=gtk_button_new_with_label("Generate more original previews");
     GtkWidget *open=gtk_button_new_with_label("Open selected room");
-    w->doors_toggle = gtk_toggle_button_new_with_label("Native doors");
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w->doors_toggle), TRUE);
+    /* Keep global-map door IDs optional. Native door overlays belong
+     * primarily in the individual room editor, not over the map mosaic. */
+    w->doors_toggle = gtk_toggle_button_new_with_label("Show global door IDs");
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w->doors_toggle), FALSE);
     w->page=root;w->grid=grid;w->scroller=scroller;
     GtkGesture *pan = gtk_gesture_drag_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(pan), GDK_BUTTON_PRIMARY);

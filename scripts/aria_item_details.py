@@ -20,38 +20,98 @@ FAMILY_NAMES = {1: "Money", 2: "Consumable", 3: "Weapon",
                 7: "Yellow soul", 8: "Ability soul"}
 MODES = (("pickup", "Normal"), ("hard-mode-pickup", "Hard Mode"),
          ("all-souls-reward", "All Souls"))
-SPECIAL = {0x90: "Œ", 0x91: "œ", 0xA7: "§", 0xBA: "°",
-           0xC0: "À", 0xC7: "Ç", 0xC9: "É", 0xCA: "Ê",
-           0xD6: "Ö", 0xE0: "à", 0xE7: "ç", 0xE9: "é"}
+# PATCH_0083_ARIA_NATIVE_DECODERS: decode native AoS text control sequences.
+# These additional US character codes follow DSVEdit's AOS_SPECIAL_CHARACTERS.
+SPECIAL = {
+    0x90: "Œ", 0x91: "œ", 0xA7: "§", 0xAA: "ᵃ", 0xAB: "«",
+    0xBA: "°", 0xBB: "»", 0xC0: "À", 0xC1: "Á", 0xC2: "Â",
+    0xC4: "Ä", 0xC7: "Ç", 0xC8: "È", 0xC9: "É", 0xCA: "Ê",
+    0xCB: "Ë", 0xD6: "Ö", 0xD8: "Œ", 0xDB: "Û", 0xDC: "Ü",
+    0xDF: "ß", 0xE0: "à", 0xE2: "â", 0xE4: "ä", 0xE7: "ç",
+    0xE8: "è", 0xE9: "é", 0xEA: "ê", 0xEB: "ë", 0xEE: "î",
+    0xEF: "ï", 0xF4: "ô", 0xF6: "ö", 0xF9: "ù", 0xFB: "û",
+    0xFC: "ü",
+}
 
 
 def _read_name(rom: bytes, text_id: int) -> str:
-    """Bounded AoS encoded string: pointer -> 01 00 header -> bytes -> 0A.
+    """Read a bounded native Aria text string, handling known control opcodes.
 
-    The text codec follows DSVEdit's decode_string_aos: ASCII 0x20..0x7E
-    plus explicitly mapped non-ASCII characters. Unknown commands fail closed.
+    AoS strings have a two-byte 01 00 prefix (not part of the name). DSVEdit
+    recognizes byte values 01/02/03/07/08 as two-byte control commands and
+    other control bytes as stand-alone codes. Previously these were rejected
+    for every affected name. The decoder ignores presentation controls, NOT
+    arbitrary unknown bytes or malformed pointers.
     """
+    if type(text_id) is not int or not 0 <= text_id <= 0xB4E:
+        raise ValueError("Aria text ID out of range")
     pointer_offset = TEXT_POINTER_TABLE - GBA_ROM_BASE + text_id * 4
     if pointer_offset < 0 or pointer_offset + 4 > len(rom):
         raise ValueError("Aria name pointer table outside ROM")
     address = struct.unpack_from('<I', rom, pointer_offset)[0]
     pos = address - GBA_ROM_BASE
-    if pos < 0 or pos + 3 > len(rom) or rom[pos:pos+2] != b'\x01\x00':
-        raise ValueError(f"Aria text {text_id:03x}: bad pointer or header")
-    result = []
-    for code in rom[pos+2:min(len(rom), pos+2+96)]:
+    if pos < 0 or pos + 3 > len(rom):
+        raise ValueError(f"Aria text {text_id:03X}: invalid source pointer {address:08X}")
+    header = rom[pos:pos + 2]
+    if header != b'\x01\x00':
+        raise ValueError(f"Aria text {text_id:03X}: invalid string header {header.hex()}")
+    chars = []
+    cursor = pos + 2
+    end = min(len(rom), cursor + 160)
+    while cursor < end:
+        code = rom[cursor]
+        cursor += 1
         if code == 0x0A:
-            name = ''.join(result).strip()
-            if not name or len(name) > 80 or any(ord(c) < 32 for c in name):
-                raise ValueError(f"Aria text {text_id:03x}: invalid name")
-            return name
-        if 0x20 <= code <= 0x7E:
-            result.append(chr(code))
+            value = ''.join(chars).strip()
+            if not value or len(value) > 80 or not any(c.isalnum() for c in value):
+                raise ValueError(f"Aria text {text_id:03X}: empty/invalid item name")
+            return value
+        if code in (1, 2, 3, 7, 8):
+            # Formatting/choice/portrait/text-color command and its one-byte
+            # operand. Never interpret its parameter as a name character.
+            if cursor >= end:
+                break
+            cursor += 1
+        elif code == 6:  # Native newline / spacing between word groups.
+            if chars and chars[-1] != ' ':
+                chars.append(' ')
+        elif code in (4, 5, 9) or 0x0B <= code <= 0x1A:
+            continue  # Known single-byte control / button marker.
+        elif 0x20 <= code <= 0x7E:
+            chars.append(chr(code))
         elif code in SPECIAL:
-            result.append(SPECIAL[code])
+            chars.append(SPECIAL[code])
         else:
-            raise ValueError(f"Aria text {text_id:03x}: unsupported code {code:02x}")
-    raise ValueError(f"Aria text {text_id:03x}: unterminated string")
+            raise ValueError(f"Aria text {text_id:03X}: unknown opcode {code:02X}")
+    raise ValueError(f"Aria text {text_id:03X}: unterminated string")
+
+
+def diagnose_names(rom: bytes) -> tuple[int, int, list[str]]:
+    """Give actionable diagnostics instead of silently labeling everything unknown."""
+    correct = total = 0
+    failures = []
+    for family, (_, count, first_id) in _ITEM_RANGES.items():
+        for item_id in range(first_id, first_id + count):
+            total += 1
+            try:
+                item_name(rom, family, item_id)
+                correct += 1
+            except ValueError as exc:
+                if len(failures) < 8:
+                    failures.append(f"subtype={family:02X} item={item_id:03d}: {exc}")
+    return correct, total, failures
+
+
+if __name__ == '__main__':
+    from scripts.import_game_assets import verified_rom
+    from scripts.import_aos_world import DEFAULT_ROM, EXPECTED_SHA1
+    verified = verified_rom(DEFAULT_ROM, EXPECTED_SHA1)
+    okay, total, errors = diagnose_names(verified)
+    print(f'Aria item/soul names decoded: {okay}/{total}')
+    for failure in errors:
+        print('  ', failure)
+    if okay < total:
+        raise SystemExit(1)
 
 
 def item_name(rom: bytes, subtype: int, item_id: int) -> str:

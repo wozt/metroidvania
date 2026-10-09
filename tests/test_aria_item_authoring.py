@@ -47,19 +47,21 @@ class AriaItemAuthoringTests(unittest.TestCase):
 
     def test_png_generator_validity(self):
         import struct
-        # Three synthetic explicit-size native pages plus a ROM palette.
+        # Three authentic GBA raw GfxWrappers (type=0, 4bpp, 16*512).
         from scripts.native_sprite_thumbnails import GFX_BANKS, PALETTE, GBA_ROM_BASE
         rom = bytearray(max(*GFX_BANKS, PALETTE) - GBA_ROM_BASE + 0x4000)
         for address in GFX_BANKS:
             p = address - GBA_ROM_BASE
-            rom[p:p+4] = (0x2000).to_bytes(4, 'little')
+            rom[p:p+4] = bytes([0, 4, 0, 16])
             rom[p+4:p+4+0x2000] = b'\x11' * 0x2000
         p = PALETTE - GBA_ROM_BASE
-        rom[p+2:p+4] = (0x001f).to_bytes(2, 'little')
+        rom[p:p+4] = bytes([0, 0, 5, 0])
+        rom[p+4+2:p+4+4] = (0x001f).to_bytes(2, 'little')
         pages = [_page(rom, addr) for addr in GFX_BANKS]
         img = _decode_icon(rom, pages, 0)
         self.assertTrue(img.startswith(b'\x89PNG\r\n\x1a\n'))
         self.assertGreater(len(img), 60)
+        # PATCH_0083_ARIA_NATIVE_DECODERS: real GBA wrappers
         self.assertTrue(_png_rgba(1, 1, b'\x00'*4).startswith(b'\x89PNG'))
 
 

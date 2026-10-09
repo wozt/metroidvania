@@ -604,3 +604,16 @@ and the proprietary-file guard passed.
   GTK4 dropdown rows. Actual monster sprite/OAM decoding remains future work.
 - Missing graphics use a neutral diagnostic symbol, not a fake sprite. The
   original ROM, extraction data and untouched native records remain immutable.
+
+## Patch 0083 - authentic Aria graphics wrappers and name controls
+
+- Fixes the v0081 icon extractor: GBA pages use byte-encoded GfxWrapper
+  descriptors (raw or GBA LZ10), not a uint32 0x2000 prefix.
+- Icon table entries pack 1-based sprite index and +4 palette number;
+  palette pages have a four-byte descriptor and multiple 16-color palettes.
+  Regenerate private PNG caches using correct source colors and indices.
+- Aria string decoder handles known embedded formatting/control opcodes and
+  the complete documented USA extended-character range rather than marking
+  any formatted item name undecodable. Provides item-name diagnostic counts.
+- No attempt to fake enemy sprites, souls without verifiable icons, or
+  executable ROM changes. All modified assets remain private and ignored.

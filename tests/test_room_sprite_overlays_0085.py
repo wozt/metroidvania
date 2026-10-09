@@ -52,7 +52,10 @@ class SpriteOverlay0085(unittest.TestCase):
     def test_source_contract_overlay_and_legend(self):
         src = Path('editor/native_workspace.c').read_text()
         self.assertIn('PATCH_0085_ROOM_SPRITE_OVERLAYS', src)
-        self.assertIn('if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind]) continue;', src)
+        # The 0104 native override intentionally hides the original overlay.
+        self.assertIn(
+            'if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind] ||\n'
+            '            item->native_overridden) continue;', src)
         self.assertIn('room_draw_sprite(doc, cr, item, x, y, width, height);', src)
         self.assertIn('gtk_box_append(GTK_BOX(page), room_color_legend());', src)
         self.assertIn('"Enemies", "Items", "Objects", "Doors", "Events"', src)

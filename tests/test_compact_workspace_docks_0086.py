@@ -65,7 +65,10 @@ class CompactWorkspaceDockTest(unittest.TestCase):
         self.assertIn('gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(color), 11);', s)
         self.assertIn('gtk_box_append(GTK_BOX(page), room_color_legend());', s)
         self.assertIn('room_legend_draw,', s)
-        self.assertIn('if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind]) continue;', s)
+        # Original doors with a project override must not be painted twice.
+        self.assertIn(
+            'if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind] ||\n'
+            '            item->native_overridden) continue;', s)
         self.assertIn('room_draw_sprite(doc, cr, item, x, y, width, height);', s)
 
 if __name__ == '__main__':

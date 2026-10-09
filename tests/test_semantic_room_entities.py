@@ -101,7 +101,11 @@ class EntityCategories(unittest.TestCase):
         self.assertIn('OVERLAY_ITEMS', source)
         self.assertIn('OVERLAY_OTHER', source)
         self.assertIn('"Walls", "Enemies", "Items", "Objects", "Doors"', source)
-        self.assertIn('if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind])', source)
+        # Hit-testing and overlays ignore an overridden native marker.
+        self.assertIn(
+            'if (item->kind >= OVERLAY_COUNT || !doc->overlays[item->kind] ||\n'
+            '            item->native_overridden) continue;', source)
+        self.assertIn('original->native_overridden = TRUE;', source)
 
 
 if __name__ == '__main__':

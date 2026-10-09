@@ -209,6 +209,8 @@ def native_mzm_room_evidence(
     evidence = {}
     for area_index, area in enumerate(MZM_AREAS):
         for door in tables[area]:
+            if "DOOR_TYPE_NONE" in door["type"]:
+                continue
             room = door['sourceRoom']
             origin = origins.get((area_index, room))
             if origin is None:
@@ -373,11 +375,20 @@ def resolve_mzm_minimap_cells(
             if len(evidenced) == 1:
                 owner = evidenced[0]
                 evidence_resolutions += 1
+        if owner is None and not candidates:
+            witnessed = [key for key, family in families.items()
+                         if any(point in direct_evidence.get((key[0], room), set())
+                                for room in family['rooms'])]
+            if len(witnessed) == 1:
+                owner = witnessed[0]
+                evidence_resolutions += 1
         if owner is not None:
             family = families[owner]
             rooms = sorted(set(family['rooms']))
             primary = rooms[0]
-            provenance = 1 if point in family['points'] else 0
+            provenance = 1 if (point in family['points'] or
+                               any(point in direct_evidence.get((area, r), set())
+                                   for r in rooms)) else 0
             note = ','.join(map(str, rooms)) if len(rooms) > 1 else '-'
             rows.append((area, primary, x, y, int(family['save']),
                          int(family['warp']), provenance, tile, note))
@@ -479,10 +490,102 @@ def native_mzm_minimap_cells() -> list[tuple[int, ...]]:
         for y in range(32):
             for x in range(32):
                 tile = struct.unpack_from('<H', decoded, (y * 32 + x) * 2)[0]
-                if tile != 0x140:
+                if (tile & 0x03FF) != 0x140:
                     # 999 = unassigned native map tile, 3 = native source.
                     cells.append((area, 999, x, y, 0, 0, 3, tile))
     return cells
+
+
+def mzm_global_doors(anchors: list[tuple[int, int, int, int, int, int]]) -> bytes:
+    """Project native door geometry into original 32x32 minimap coordinates.
+
+    Entries keep native room/index/type. This is NOT a claim that the minimap
+    actually draws door sprites; it is a separate editor diagnostic layer.
+    """
+    rooms = decode_room_descriptors(ROOM_SOURCE.read_text(encoding='utf-8'))
+    tables = decode_door_tables(ROOM_SOURCE.read_text(encoding='utf-8'), rooms)
+    origins = {(a, r): (x, y) for a, r, x, y, *_ in anchors}
+    lines = ['# area|room|door_index|map_x|map_y|native_type']
+    for area, name in enumerate(MZM_AREAS):
+        for door in tables[name]:
+            if 'DOOR_TYPE_NONE' in door['type']:
+                continue
+            origin = origins.get((area, door['sourceRoom']))
+            if origin is None:
+                continue
+            x, y = origin
+            x += max(0, door['xStart'] - 2) // 15
+            y += max(0, door['yStart'] - 2) // 10
+            if 0 <= x < 32 and 0 <= y < 32:
+                lines.append(f"{area}|{door['sourceRoom']}|{door['index']}|"
+                             f"{x}|{y}|{door['type']}")
+    return ('\n'.join(lines) + '\n').encode('utf-8')
+
+
+def mzm_screen_preview(bmp: bytes, local_x: int, local_y: int) -> bytes | None:
+    """Crop one *playable* 240x160 screen, omitting the native 32px guard.
+
+    Downsample nearest-neighbour to 60x40 for a fast, proportion-correct GTK
+    thumbnail. Return None for incompatible room BG1 geometry, never stretch an
+    unrelated full-room preview across a minimap cell.
+    """
+    import struct
+    from scripts.mzm_room_render import bmp24
+    if not (0 <= local_x < 32 and 0 <= local_y < 32) or len(bmp) < 54:
+        return None
+    if bmp[:2] != b'BM' or struct.unpack_from('<I', bmp, 10)[0] != 54:
+        return None
+    width, height = struct.unpack_from('<ii', bmp, 18)
+    planes, bits, compression = struct.unpack_from('<HHI', bmp, 26)
+    if (not 0 < width <= 4096 or not 0 < height <= 4096 or
+        planes != 1 or bits != 24 or compression != 0 or
+        width < 304 or height < 224 or
+        (width - 64) % 240 or (height - 64) % 160):
+        return None
+    pitch = (width * 3 + 3) & ~3
+    if len(bmp) != 54 + pitch * height:
+        return None
+    if (local_x + 1) * 240 + 64 > width or (local_y + 1) * 160 + 64 > height:
+        return None
+    result = bytearray(60 * 40 * 3)
+    for py in range(40):
+        src_y = 32 + local_y * 160 + py * 4 + 2
+        for px in range(60):
+            src_x = 32 + local_x * 240 + px * 4 + 2
+            pos = 54 + (height - 1 - src_y) * pitch + src_x * 3
+            dest = (py * 60 + px) * 3
+            result[dest:dest + 3] = bmp[pos:pos + 3][::-1]
+    return bmp24(60, 40, result)
+
+
+def generate_mzm_case_previews(area: int, rows: list[tuple]) -> int:
+    """Refresh tiny private per-screen previews for verified owned cells."""
+    room_sources = decode_room_descriptors(ROOM_SOURCE.read_text(encoding='utf-8'))
+    anchors = {(MZM_AREAS.index(room['area']), room['index']):
+               (int(room['fields']['mapX']), int(room['fields']['mapY']))
+               for room in room_sources if room['area'] in MZM_AREAS and
+               room['fields']['mapX'].isdecimal() and room['fields']['mapY'].isdecimal()}
+    by_room = {}
+    for row in rows:
+        a, room, x, y = row[:4]
+        provenance = row[6] if len(row) >= 7 else 0
+        if a == area and room != 999 and provenance == 1 and (a, room) in anchors:
+            by_room.setdefault(room, []).append((x, y))
+    created = 0
+    for room, cells in by_room.items():
+        preview = OUTPUT / f'rooms/metroid/previews/{MZM_AREAS[area].lower()}_{room:03}_bg1.bmp'
+        if not preview.is_file() or preview.is_symlink() or preview.stat().st_size > 64_000_000:
+            continue
+        source = preview.read_bytes()
+        ox, oy = anchors[(area, room)]
+        for x, y in cells:
+            result = mzm_screen_preview(source, x - ox, y - oy)
+            if result is None:
+                continue
+            rel = f'world_overview/mzm_cells/area_{area:02}_room_{room:03}_x_{x:02}_y_{y:02}.bmp'
+            write_generated(rel, result)
+            created += 1
+    return created
 
 
 def output_rows(world: str, rows: list[tuple]) -> bytes:
@@ -513,6 +616,7 @@ def index(world: str)->int:
         src=OUTPUT/'rooms/metroid/world_atlas.tsv'
         if not src.is_file(): run()
         anchors = build_mzm(src.read_text(encoding='utf-8'))
+        write_generated('world_overview/mzm_doors.tsv', mzm_global_doors(anchors))
         native = native_mzm_minimap_cells()
         if native:
             rows, report = resolve_mzm_minimap_cells(
@@ -539,10 +643,9 @@ def generate_previews(world:str, area:int, budget:int)->tuple[int,int]:
     rows=[tuple(map(int,line.split('|')[:8])) for line in path.read_text().splitlines()
           if line and not line.startswith('#')]
     done=0;failed=0
-    # Unsupported rooms are remembered privately so each batch advances.
-    failures_path=OUTPUT/f'world_overview/{world}_{area:02}_unsupported.json'
-    try: failures=set(json.loads(failures_path.read_text(encoding='utf-8')))
-    except (OSError,ValueError): failures=set()
+    # Old unsupported caches must not permanently hide original rooms:
+    # a new decoder version or repaired extraction can make them renderable.
+    failures = set()
     seen=set()
     for entry in rows:
         a,room,*_=entry
@@ -571,10 +674,16 @@ def generate_previews(world:str, area:int, budget:int)->tuple[int,int]:
             print(f'MISSING PRIVATE INPUT for {world} {a}:{room}: {exc}', flush=True)
             break
         except (ValueError,KeyError,IndexError) as exc:
+            # Missing private raw extraction is temporary, not unsupported.
+            if 'missing/unsafe extracted MZM resource:' in str(exc):
+                print(f'MISSING PRIVATE INPUT for {world} {a}:{room}: {exc}', flush=True)
+                break
             # Unsupported original structures must not block other rooms.
             failed+=1
             failures.add(room)
             print(f'SKIPPED original {world} {a}:{room}: {exc}',flush=True)
+    if world == 'mzm':
+        generate_mzm_case_previews(area, rows)
     write_generated(f'world_overview/{world}_{area:02}_unsupported.json',
                     (json.dumps(sorted(failures))+'\n').encode('utf-8'))
     return done,failed
@@ -592,7 +701,22 @@ def main()->int:
         count=index(args.world)
         done,failed=generate_previews(args.world,args.area,args.budget)
     except (OSError,ValueError,KeyError,ImportError) as exc:parser.error(str(exc))
-    print(f'{args.world}: {count} verified map cells; generated {done} previews; {failed} unsupported',flush=True)
+    path = OUTPUT / f'world_overview/{args.world}.tsv'
+    preview_rows = [tuple(map(int, line.split('|')[:8]))
+                    for line in path.read_text(encoding='utf-8').splitlines()
+                    if line and not line.startswith('#')]
+    seen = {(a, room) for a, room, *_ in preview_rows if a == args.area and room != 999}
+    unsupported = OUTPUT / f'world_overview/{args.world}_{args.area:02}_unsupported.json'
+    try:
+        failures = set(json.loads(unsupported.read_text(encoding='utf-8')))
+    except (OSError, ValueError):
+        failures = set()
+    remaining = sum(not (OUTPUT / (f'rooms/metroid/previews/{MZM_AREAS[area].lower()}_{room:03}_bg1.bmp'
+                            if args.world == 'mzm' else
+                            f'rooms/aria/previews/area_{area:02}_room_{room:03}_composite.bmp')).is_file()
+                    for area, room in seen if room not in failures)
+    print(f'{args.world}: {count} verified map cells; generated {done} previews; '
+          f'{failed} unsupported; remaining={remaining}', flush=True)
     return 0
 
 if __name__=='__main__':raise SystemExit(main())

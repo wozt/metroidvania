@@ -9,9 +9,14 @@ typedef struct {
     char ownership[192], draft_id[96];
 } MapCell;
 typedef struct {
+    guint area, room, index, x, y;
+    char type[96];
+} NativeMapDoor;
+typedef struct {
     GArray *cells;
     NativeWorkspace *workspace;
     GtkWidget *page, *grid, *details, *status, *world_select, *area_select, *zoom;
+    GtkWidget *doors_toggle;
     GtkWidget *selected_cell, *scroller, *popup;
     double drag_hstart, drag_vstart, pending_h, pending_v;
     guint pan_tick;
@@ -24,7 +29,6 @@ typedef struct {
 } WorldGrid;
 static const char *const worlds[]={"Zero Mission", "Aria of Sorrow", NULL};
 static const char *const mzm_areas[]={"Brinstar", "Kraid", "Norfair", "Ridley", "Tourian", "Crateria", "Chozodia", NULL};
-static const char *const mzm_slugs[]={"brinstar","kraid","norfair","ridley","tourian","crateria","chozodia"};
 static const char *const aria_areas[]={"Castle Corridor", "Chapel", "Study", "Dance Hall", "Inner Quarters", "Floating Garden", "Clock Tower", "Underground", "The Arena", "Top Floor", "Chaotic Realm entrance", "Chaotic Realm boss", NULL};
 static const char *world_code(const WorldGrid *w) { return w->world ? "aria" : "mzm"; }
 static guint area_count(const WorldGrid *w) { return w->world ? 12u : 7u; }
@@ -204,9 +208,67 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
 }
 static gboolean has_image(const WorldGrid *w,const MapCell *c,char *dest,size_t n)
 {
-    if(w->world)snprintf(dest,n,"assets/extracted/rooms/aria/previews/area_%02u_room_%03u_composite.bmp",c->area,c->room);
-    else snprintf(dest,n,"assets/extracted/rooms/metroid/previews/%s_%03u_bg1.bmp",mzm_slugs[c->area],c->room);
+    if(w->world)
+        snprintf(dest,n,"assets/extracted/rooms/aria/previews/area_%02u_room_%03u_composite.bmp",c->area,c->room);
+    else
+        snprintf(dest,n,"assets/extracted/world_overview/mzm_cells/area_%02u_room_%03u_x_%02u_y_%02u.bmp",
+                 c->area,c->room,c->x,c->y);
     return g_file_test(dest,G_FILE_TEST_IS_REGULAR);
+}
+
+static GArray *load_mzm_doors(void)
+{
+    GArray *doors = g_array_new(FALSE, FALSE, sizeof(NativeMapDoor));
+    gchar *contents = NULL;
+    if (!g_file_get_contents("assets/extracted/world_overview/mzm_doors.tsv",
+                             &contents, NULL, NULL)) return doors;
+    gchar **lines = g_strsplit(contents, "\n", -1);
+    for (guint i = 0; lines[i] && i < 2048; ++i) {
+        if (!*lines[i] || *lines[i] == '#') continue;
+        gchar **fields = g_strsplit(lines[i], "|", 7);
+        NativeMapDoor door = {0};
+        if (g_strv_length(fields) == 6 &&
+            parse_uint(fields[0], &door.area) && door.area < 7 &&
+            parse_uint(fields[1], &door.room) && door.room < 1000 &&
+            parse_uint(fields[2], &door.index) && door.index < 4096 &&
+            parse_uint(fields[3], &door.x) && door.x < 32 &&
+            parse_uint(fields[4], &door.y) && door.y < 32 &&
+            strlen(fields[5]) < sizeof(door.type)) {
+            g_strlcpy(door.type, fields[5], sizeof(door.type));
+            g_array_append_val(doors, door);
+        }
+        g_strfreev(fields);
+    }
+    g_strfreev(lines);
+    g_free(contents);
+    return doors;
+}
+
+static void map_cell_door_badge(GtkWidget *cell, const GArray *doors, const MapCell *c)
+{
+    guint count = 0, first = 0;
+    GString *tip = g_string_new("Native Zero Mission doors: ");
+    for (guint i = 0; i < doors->len; ++i) {
+        const NativeMapDoor *door = &g_array_index(doors, NativeMapDoor, i);
+        if (door->area != c->area || door->x != c->x || door->y != c->y) continue;
+        if (!count) first = door->index;
+        if (count) g_string_append(tip, "; ");
+        g_string_append_printf(tip, "D%u (room %u; %s)",
+                               door->index, door->room, door->type);
+        ++count;
+    }
+    if (count) {
+        gchar *title = count == 1 ? g_strdup_printf("D%u", first) :
+                        g_strdup_printf("D×%u", count);
+        GtkWidget *badge = gtk_label_new(title);
+        gtk_widget_add_css_class(badge, "mv-native-door-badge");
+        gtk_widget_set_halign(badge, GTK_ALIGN_END);
+        gtk_widget_set_valign(badge, GTK_ALIGN_START);
+        gtk_widget_set_tooltip_text(badge, tip->str);
+        gtk_overlay_add_overlay(GTK_OVERLAY(cell), badge);
+        g_free(title);
+    }
+    g_string_free(tip, TRUE);
 }
 /* Mouse navigation is on the grid so panning works over occupied cells.
  * The adjustment values are clamped within the real scrolled map content. */
@@ -619,6 +681,9 @@ static void grid_rebuild(WorldGrid *w)
     guint *lookup = g_new0(guint, count);
     gboolean *covered = g_new0(gboolean, count);
     guint overlapping = 0, groups = 0, thumbs = 0;
+    GArray *native_doors = w->world ? NULL : load_mzm_doors();
+    gboolean show_doors = native_doors &&
+        gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w->doors_toggle));
     for (guint i = 0; i < w->cells->len; ++i) {
         const MapCell *c = &g_array_index(w->cells, MapCell, i);
         if (w->area != G_MAXUINT && c->area != w->area) continue;
@@ -648,7 +713,7 @@ static void grid_rebuild(WorldGrid *w)
             }
             const MapCell *c = &g_array_index(w->cells, MapCell, entry - 1);
             guint width = 1, height = 1;
-            for (guint xx = x + 1; c->provenance != 3 && xx <= xmax; ++xx) {
+            for (guint xx = x + 1; w->world && c->provenance != 3 && xx <= xmax; ++xx) {
                 guint spot = y * stride + xx, next = lookup[spot];
                 if (covered[spot] || !next) break;
                 const MapCell *other = &g_array_index(w->cells, MapCell, next - 1);
@@ -657,7 +722,7 @@ static void grid_rebuild(WorldGrid *w)
                     (c->provenance == 4 && strcmp(c->draft_id, other->draft_id) != 0)) break;
                 ++width;
             }
-            for (guint yy = y + 1; c->provenance != 3 && yy <= ymax; ++yy) {
+            for (guint yy = y + 1; w->world && c->provenance != 3 && yy <= ymax; ++yy) {
                 gboolean full = TRUE;
                 for (guint xx = x; xx < x + width; ++xx) {
                     guint spot = yy * stride + xx, next = lookup[spot];
@@ -679,7 +744,9 @@ static void grid_rebuild(WorldGrid *w)
                     warp |= part->warp != 0;
                     covered[spot] = TRUE;
                 }
-            GtkWidget *cell = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+            GtkWidget *cell = gtk_overlay_new();
+            GtkWidget *cell_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+            gtk_overlay_set_child(GTK_OVERLAY(cell), cell_content);
             gtk_widget_add_css_class(cell, "mv-map-cell");
             gtk_widget_add_css_class(cell, "mv-occupied");
             gtk_widget_add_css_class(cell, "mv-room-footprint");
@@ -703,13 +770,16 @@ static void grid_rebuild(WorldGrid *w)
              * on disconnected segments or unverified MZM anchor markers. */
             char path[256];
             if (c->provenance != 0 && c->provenance != 3 && c->provenance != 4 &&
-                room_cells == width * height &&
+                (w->world ? room_cells == width * height : TRUE) &&
                 has_image(w, c, path, sizeof(path))) {
                 GtkWidget *picture = gtk_picture_new_for_filename(path);
                 gtk_picture_set_can_shrink(GTK_PICTURE(picture), TRUE);
+                gtk_picture_set_content_fit(GTK_PICTURE(picture), GTK_CONTENT_FIT_CONTAIN);
                 gtk_widget_set_size_request(picture, (int)(w->size * width) - 4,
                                              (int)(w->size * height) - 4);
-                gtk_box_append(GTK_BOX(cell), picture);
+                gtk_widget_set_hexpand(picture, TRUE);
+                gtk_widget_set_vexpand(picture, TRUE);
+                gtk_box_append(GTK_BOX(cell_content), picture);
                 ++thumbs;
             } else {
                 gchar *name = c->provenance == 4 ? g_strdup("DRAFT") :
@@ -720,7 +790,7 @@ static void grid_rebuild(WorldGrid *w)
                 gtk_widget_set_halign(label, GTK_ALIGN_CENTER);
                 gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
                 gtk_widget_set_vexpand(label, TRUE);
-                gtk_box_append(GTK_BOX(cell), label);
+                gtk_box_append(GTK_BOX(cell_content), label);
                 g_free(name);
             }
             gchar *tip = c->provenance == 4 ? g_strdup_printf(
@@ -733,6 +803,7 @@ static void grid_rebuild(WorldGrid *w)
                 c->ownership[0] ? "; ownership: " : "", c->ownership);
             gtk_widget_set_tooltip_text(cell, tip);
             g_free(tip);
+            if (show_doors) map_cell_door_badge(cell, native_doors, c);
             g_object_set_data(G_OBJECT(cell), "mv-grid-index", GUINT_TO_POINTER(entry));
             map_context_enable(cell, w, x, y, width, height);
             GtkGesture *click = gtk_gesture_click_new();
@@ -744,6 +815,7 @@ static void grid_rebuild(WorldGrid *w)
             ++groups;
         }
     }
+    if (native_doors) g_array_free(native_doors, TRUE);
     g_free(covered);
     g_free(lookup);
     gchar *message = g_strdup_printf(
@@ -790,7 +862,16 @@ static void generator_finished(GObject *object, GAsyncResult *result, gpointer u
         } else if (success && generated_world == w->world && w->prefetching) {
             /* First index, then process a bounded preview batch per area.
              * Do not block the UI on the full world rendering. */
-            if (generated_budget != 0) ++w->next_preview_area;
+            guint remaining = 0, generated = 0;
+            const char *more = output ? strstr(output, "remaining=") : NULL;
+            const char *made = output ? strstr(output, "generated ") : NULL;
+            if (more) sscanf(more, "remaining=%u", &remaining);
+            if (made) sscanf(made, "generated %u", &generated);
+            /* Budget zero was the indexing pass: DO NOT skip the first area.
+             * Continue while we make progress, but avoid an endless retry if
+             * local ROM resources are missing or a decoder is unsupported. */
+            if (generated_budget && (!remaining || generated == 0))
+                ++w->next_preview_area;
             if (w->next_preview_area < area_count(w)) begin_generation(w);
             else w->prefetching = FALSE;
         }
@@ -811,7 +892,7 @@ static void begin_generation(WorldGrid *w)
     snprintf(index_path, sizeof(index_path), "assets/extracted/world_overview/%s.tsv",
              world_code(w));
     /* Missing index: budget zero skips slow graphics and publishes cells first. */
-    guint budget = g_file_test(index_path, G_FILE_TEST_IS_REGULAR) ? 6u : 0u;
+    guint budget = g_file_test(index_path, G_FILE_TEST_IS_REGULAR) ? 24u : 0u;
     gchar *budget_arg = g_strdup_printf("%u", budget);
     GError *error = NULL;
     GSubprocess *proc = g_subprocess_new(
@@ -847,6 +928,7 @@ static void world_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
     gtk_drop_down_set_model(GTK_DROP_DOWN(w->area_select),G_LIST_MODEL(list));
     g_object_unref(list);
     w->area=w->world ? G_MAXUINT : 0u;
+    gtk_widget_set_visible(w->doors_toggle, w->world == 0);
     w->prefetching=TRUE;
     w->next_preview_area=0;
     w->selected=FALSE;
@@ -885,6 +967,8 @@ static void area_changed(GObject *object,GParamSpec *pspec,gpointer userdata)
 }
 static void zoom_changed(GtkSpinButton *spin,gpointer data)
 {WorldGrid *w=data;w->size=(guint)gtk_spin_button_get_value_as_int(spin);grid_rebuild(w);}
+static void doors_changed(GtkToggleButton *button, gpointer data)
+{ (void)button; WorldGrid *w = data; if (w->cells->len) grid_rebuild(w); }
 static void generate_clicked(GtkButton *b,gpointer data)
 {
     WorldGrid *w=data;(void)b;
@@ -913,7 +997,9 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
         ".mv-room-footprint{border:2px solid #91b8c7;}"
         ".mv-anchor-only{border:2px dashed #d7a564;}"
         ".mv-native-minimap{background:#4a7881;border:1px solid #7cacb6;}"
-        ".mv-project-draft{background:#425052;border:2px dashed #f4cc58;}"};
+        ".mv-project-draft{background:#425052;border:2px dashed #f4cc58;}"
+        ".mv-native-door-badge{background:#4d266c;color:#fff;border:1px solid #ca91f8;"
+        "font-size:9px;font-weight:bold;border-radius:3px;padding:0 2px;}"};
     GtkCssProvider *provider=gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider,css);
     GdkDisplay *display=gdk_display_get_default();
@@ -947,6 +1033,8 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
     GtkWidget *generate=gtk_button_new_with_label("Generate more original previews");
     GtkWidget *open=gtk_button_new_with_label("Open selected room");
+    w->doors_toggle = gtk_toggle_button_new_with_label("Native doors");
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w->doors_toggle), TRUE);
     w->page=root;w->grid=grid;w->scroller=scroller;
     GtkGesture *pan = gtk_gesture_drag_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(pan), GDK_BUTTON_PRIMARY);
@@ -976,6 +1064,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_box_append(GTK_BOX(bar),w->zoom);
     gtk_box_append(GTK_BOX(bar),generate);
     gtk_box_append(GTK_BOX(bar),open);
+    gtk_box_append(GTK_BOX(bar),w->doors_toggle);
     gtk_box_append(GTK_BOX(root),bar);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller),pan_surface);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroller),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
@@ -998,6 +1087,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     g_signal_connect(w->world_select,"notify::selected",G_CALLBACK(world_changed),w);
     g_signal_connect(w->area_select,"notify::selected",G_CALLBACK(area_changed),w);
     g_signal_connect(w->zoom,"value-changed",G_CALLBACK(zoom_changed),w);
+    g_signal_connect(w->doors_toggle,"toggled",G_CALLBACK(doors_changed),w);
     g_signal_connect(generate,"clicked",G_CALLBACK(generate_clicked),w);
     g_signal_connect(open,"clicked",G_CALLBACK(selected_open_click),w);
     if(reload_rows(w))grid_rebuild(w);

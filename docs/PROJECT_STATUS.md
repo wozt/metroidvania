@@ -780,3 +780,23 @@ and the proprietary-file guard passed.
   door-table parser test. No ROM, extracted image or private override is changed.
 - Native doors are purple diagnostic outlines with D indices; decoding and
   displaying their authentic graphical hatch sprites is still separate work.
+
+## Patch 0092 - Zero Mission original world-grid reconstruction
+
+- Corrected the native GBA minimap occupancy check to mask palette and flip bits
+  before comparing against tile ID `0x140`; preserves full raw tile words.
+- Native door/sprite evidence may identify an otherwise unowned original minimap
+  case only when exactly one source-room family matches. Ambiguous cases remain
+  unassigned instead of inventing room membership.
+- Added a separate source-derived native-door index in original minimap
+  coordinates, without treating doorless sentinels as actual doors. GTK shows
+  native door markers in a dedicated toggleable global-map overlay.
+- MZM global-map previews are now individual 240x160 playable screens cropped
+  from BG1 after the genuine 32px Clipdata guard, downsampled to native-aspect
+  60x40 thumbnails, not whole-room images stretched over arbitrary shapes.
+- Aria multi-cell geometry and previews remain unchanged.
+- Fixed prefetch skipping the first map area after a zero-budget indexing pass;
+  bounded asynchronous batches continue while new previews are generated.
+- Added ROM-independent mapping/preview regressions; run the local CMake and
+  full test suite before pushing. This does not complete animated graphics,
+  BG0/BG3 blending or full gameplay rendering.

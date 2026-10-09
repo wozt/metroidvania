@@ -27,6 +27,8 @@ HATCH_BASES = {
     "super_missile": 0x96,
     "power_bomb": 0x98,
     "no_hatch": 0x9A,
+    # HATCH_LOCKED_NAVIGATION: original closed security hatch metatiles.
+    "locked_navigation": 0x2A,
 }
 COMMON_TILE_COUNT = 128
 COMMON_TILE_BASE = 64  # (VRAM_BASE + 0x4800 - BG1_CHARBASE_0x4000) / 32
@@ -183,6 +185,10 @@ def export_hatches() -> int:
                     continue
                 write_generated(path, image)
                 count += 1
+                if style == 'locked_navigation':
+                    # A navigation/security lock has its own closed artwork;
+                    # its transition animation is not a separate locked style.
+                    continue
                 # Genuine source animation frames. No interpolated graphics:
                 # currentAnimationFrame is 1..4 for opening and 1..3 for
                 # closing; step 4 of closing returns to the closed tilemap.

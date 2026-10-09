@@ -69,6 +69,8 @@ struct NativeWorkspace {
     guint hatch_preview_timer;
     guint hatch_preview_phase;
     gboolean hatch_preview_playing;
+    guint hatch_state_mode; /* private read-only screenshot scenario */
+    GtkWidget *hatch_animate_button;
     char *override_path;
     char *annotations_path, *project_area;
     guint project_room, project_move_id, project_drag_id;
@@ -1754,6 +1756,38 @@ static gboolean room_preview_params(const char *details, guint *a)
     return TRUE;
 }
 
+/* Lock logic follows ConnectionCheckHatchLockEvents: BEFORE events lock
+ * while false; AFTER events lock while true. The distinction between
+ * UNLOCKABLE and PERMANENT maps to HATCH_LOCKED and LOCKED_NAVIGATION.
+ * These are hypothetical previews, not a loaded game's event flags. */
+static guint room_hatch_lock_preview(const char *details, gboolean events_on)
+{
+    const char *start = strstr(details, "hatch_lock_rules=");
+    if (!start) return 0;
+    start += strlen("hatch_lock_rules=");
+    const char *end = strchr(start, ';');
+    size_t n = end ? (size_t)(end - start) : strlen(start);
+    if (!n || n > 220) return 0;
+    gchar *slice = g_strndup(start, n);
+    gchar **rules = g_strsplit(slice, ",", 16);
+    guint severity = 0;
+    for (guint i = 0; rules[i]; ++i) {
+        gchar **values = g_strsplit(rules[i], ":", 4);
+        if (g_strv_length(values) == 3 &&
+            g_str_has_prefix(values[0], "EVENT_") &&
+            ((!strcmp(values[1], "BEFORE") && !events_on) ||
+             (!strcmp(values[1], "AFTER") && events_on))) {
+            if (!strcmp(values[2], "PERMANENT")) severity = 2;
+            else if (!strcmp(values[2], "UNLOCKABLE") && severity < 1)
+                severity = 1;
+        }
+        g_strfreev(values);
+    }
+    g_strfreev(rules);
+    g_free(slice);
+    return severity;
+}
+
 static gchar *room_sprite_path(NativeWorkspace *doc, const RoomAnnotation *item)
 {
     if (item->kind == OVERLAY_DOORS && !doc->project_aria && !item->project_owned) {
@@ -1778,6 +1812,36 @@ static gchar *room_sprite_path(NativeWorkspace *doc, const RoomAnnotation *item)
         if (!valid) return NULL;
         const char *family = strstr(item->details, "hatch_family=mothership") ?
                              "mothership" : "zebes";
+        const char *last = strrchr(name, '_');
+        const char *orientation = last ? last + 1 : "left";
+        guint mode = doc->hatch_state_mode;
+        if (mode == 1 || mode == 2) {
+            guint locked = room_hatch_lock_preview(item->details, mode == 2);
+            if (locked)
+                g_snprintf(name, sizeof(name), "%s_%s",
+                           locked == 2 ? "locked_navigation" : "gray",
+                           orientation);
+        } else if (mode == 4 || mode == 5) {
+            g_snprintf(name, sizeof(name), "%s_%s",
+                       mode == 5 ? "locked_navigation" : "gray", orientation);
+        } else if (mode == 3) {
+            gchar *opened = g_strdup_printf(
+                "assets/extracted/sprite_previews/mzm_hatches/%s/%s_opening_4.png",
+                family, name);
+            if (g_file_test(opened, G_FILE_TEST_IS_REGULAR)) return opened;
+            g_free(opened);
+        }
+        /* If a special original palette/graphic was not decoded, fall back
+         * to the original closed hatch, never a fictional image. */
+        if (mode && mode != 3) {
+            gchar *candidate = g_strdup_printf(
+                "assets/extracted/sprite_previews/mzm_hatches/%s/%s.png",
+                family, name);
+            if (g_file_test(candidate, G_FILE_TEST_IS_REGULAR)) return candidate;
+            g_free(candidate);
+            memcpy(name, field, length);
+            name[length] = '\0';
+        }
         /* Keep closed native hatch graphics as the default, including when
          * a particular animation frame was not decoded from private assets. */
         if (doc->hatch_preview_playing && doc->hatch_preview_phase >= 1 &&
@@ -2694,6 +2758,26 @@ static void hatch_preview_toggled(GtkToggleButton *button, gpointer userdata)
     if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
 }
 
+static void hatch_state_changed(GObject *object, GParamSpec *pspec, gpointer userdata)
+{
+    NativeWorkspace *doc = userdata;
+    (void)pspec;
+    if (doc->closing || g_str_has_prefix(doc->identity, "Aria ")) return;
+    doc->hatch_state_mode = gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
+    if (doc->hatch_animate_button) {
+        if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(doc->hatch_animate_button)))
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(doc->hatch_animate_button), FALSE);
+        gtk_widget_set_sensitive(doc->hatch_animate_button, doc->hatch_state_mode == 0);
+    }
+    doc->hatch_preview_playing = FALSE;
+    doc->hatch_preview_phase = 0;
+    if (doc->hatch_preview_timer) {
+        g_source_remove(doc->hatch_preview_timer);
+        doc->hatch_preview_timer = 0;
+    }
+    if (doc->canvas) gtk_widget_queue_draw(doc->canvas);
+}
+
 static void grid_toggled(GtkToggleButton *button, gpointer userdata)
 {
     NativeWorkspace *doc = userdata;
@@ -3083,6 +3167,7 @@ static void document_build(NativeWorkspace *doc)
     /* Trigger structures are not decoded for either engine yet. */
     gtk_widget_set_sensitive(overlay_buttons[OVERLAY_TRIGGERS], FALSE);
     GtkWidget *hatch_preview = gtk_toggle_button_new_with_label("Animate hatches");
+    doc->hatch_animate_button = hatch_preview;
     gtk_widget_set_tooltip_text(hatch_preview,
         "Preview original opening/closing hatch metatiles; read-only, not gameplay");
     gtk_widget_set_visible(hatch_preview,
@@ -3090,6 +3175,26 @@ static void document_build(NativeWorkspace *doc)
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), hatch_preview, -1);
     g_signal_connect(hatch_preview, "toggled",
                      G_CALLBACK(hatch_preview_toggled), doc);
+    static const char *const hatch_states[] = {
+        "Original (no simulated events)",
+        "All native events: OFF (preview)",
+        "All native events: ON (preview)",
+        "Opened (last original frame)",
+        "Temporary lock (preview)",
+        "Permanent lock (preview)", NULL
+    };
+    GtkWidget *hatch_state = gtk_drop_down_new_from_strings(hatch_states);
+    GtkWidget *hatch_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    gtk_box_append(GTK_BOX(hatch_box), gtk_label_new("Door state:"));
+    gtk_box_append(GTK_BOX(hatch_box), hatch_state);
+    gtk_widget_set_tooltip_text(hatch_box,
+        "Read-only preview. ON/OFF applies to all original room events, not "
+        "a real save. Event conditions and hatch slots are shown in Door details.");
+    gtk_widget_set_visible(hatch_box,
+        !g_str_has_prefix(doc->identity, "Aria "));
+    gtk_flow_box_insert(GTK_FLOW_BOX(tools), hatch_box, -1);
+    g_signal_connect(hatch_state, "notify::selected",
+                     G_CALLBACK(hatch_state_changed), doc);
     doc->grid_visible = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(grid), TRUE);
     gtk_flow_box_insert(GTK_FLOW_BOX(tools), gtk_separator_new(GTK_ORIENTATION_VERTICAL), -1);
@@ -3296,6 +3401,11 @@ static void open_room(NativeWorkspace *doc, const char *area, unsigned number)
         g_ascii_strcasecmp(area, "crateria") == 0 ? "Crateria" : "Chozodia");
     doc->project_aria = aria;
     doc->project_room = number;
+    /* Reset preview scenario: an unrelated room is never assumed to share
+     * the same progression state. Source annotations remain read-only. */
+    doc->hatch_state_mode = 0;
+    if (doc->hatch_animate_button)
+        gtk_widget_set_sensitive(doc->hatch_animate_button, TRUE);
     load_annotations(doc, annotations_path);
     history_clear(doc->undo, &doc->undo_count);
     history_clear(doc->redo, &doc->redo_count);

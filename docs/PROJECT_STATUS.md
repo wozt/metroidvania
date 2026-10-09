@@ -864,3 +864,19 @@ and the proprietary-file guard passed.
 - Keep closed hatch artwork as fallback for missing original frames; preserve
   Aria workrooms, map overview and authored collision/door overrides.
 - Add native index/pixel regression tests and a GTK document-timer test.
+
+## Patch 0100 - native Zero Mission hatch lock/event preview
+
+- Decode the pinned original hatch event tables by *hatch slot*, not the global
+  door number. Add event conditions to read-only native door metadata only
+  while the prior hatch slot ordering can be verified from original Clipdata.
+- Add GTK4 per-room manual preview modes: original, all named native events
+  off/on, fully open frame, temporary lock and permanent security lock.
+  BEFORE and AFTER conditions follow the decomp's event-bit polarity; the
+  security hatch graphic uses native common metatile 0x2A.
+- Only source-derived graphic PNGs may be displayed; unsupported frames fall
+  back to the original native closed hatch. A manual scenario suspends the
+  animated preview; Aria and the global map remain unchanged.
+- This is a visual, hypothetical all-events snapshot, not a saved game state.
+  More complete event engine state/door runtime mutation is future work.
+- Source-only Python regressions cover event flags and security tile indices.

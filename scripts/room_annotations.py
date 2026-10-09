@@ -13,6 +13,7 @@ from pathlib import Path
 
 from scripts.import_game_assets import OUTPUT, ROOT, write_generated
 from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
+from scripts.mzm_hatch_events import load_hatch_lock_events
 from scripts.mzm_world_atlas import AREAS, DOOR_RE, FIELD_RE, ITEM_RE, REQUIRED
 from scripts.object_catalog import (
     aria_entity_identity, build_mzm as build_mzm_catalog,
@@ -178,15 +179,31 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
                          sprite_name.removeprefix('PSPRITE_').replace('_', ' ').title(),
                          details))
             source_index += 1
+    # Native lock events refer to gHatchData slot numbers, not global Dxx
+    # IDs. Only assign slots when all prior hatches were identified from
+    # native Clipdata; unresolved geometry cannot justify a guessed mapping.
+    lock_rules = load_hatch_lock_events(area, room_number)
+    hatch_slot = 0
+    slots_known = clip is not None
     for door in _mzm_door_entries(ROOM_SOURCE.read_text(encoding='utf-8'),
                                   area, room_number):
+        is_hatch = ('DOOR_TYPE_CLOSED_HATCH' in door['type'] or
+                    'DOOR_TYPE_OPEN_HATCH' in door['type'])
+        detected = (mzm_hatch_from_clipdata(clip, door['xStart'], door['yStart'])
+                    if is_hatch and clip is not None else None)
+        current_slot = hatch_slot if slots_known and detected is not None else None
+        if is_hatch:
+            if detected is None:
+                slots_known = False
+            else:
+                hatch_slot += 1
         width = (door['xEnd'] - door['xStart'] + 1) * 16
         height = (door['yEnd'] - door['yStart'] + 1) * 16
         x = door['xStart'] * 16
         details = (f"native_door={door['index']}; type={door['type']}; "
                    f"destination_door={door['destinationDoor']}")
-        if clip is not None and 'DOOR_TYPE_CLOSED_HATCH' in door['type']:
-            hatch = mzm_hatch_from_clipdata(clip, door['xStart'], door['yStart'])
+        if detected is not None:
+            hatch = detected
             if hatch is not None:
                 style, facing, hatch_x = hatch
                 # Hatch is placed one block to the side of the transition.
@@ -196,6 +213,13 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
                 details += (f"; hatch_preview={style}_{facing}; "
                             f"hatch_family={family}; "
                             f"native_transition_x={door['xStart']}")
+                if current_slot is not None:
+                    details += f"; hatch_slot={current_slot}"
+                    if current_slot in lock_rules:
+                        encoded = ','.join(
+                            f'{event}:{when}:{lock_type}'
+                            for event, when, lock_type in lock_rules[current_slot])
+                        details += f'; hatch_lock_rules={encoded}'
         rows.append(('DOOR', door['index'], x,
                      door['yStart'] * 16, width, height, 'native',
                      str(door['index']), f"Door {door['index']}", details))

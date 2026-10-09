@@ -54,12 +54,16 @@ base import, ROMs and upstream source remain unchanged.
   Separate project collision cells can be painted with Wall, Platform, Hazard,
   rising/falling Slope, Water and Air brushes or
   changed from the canvas context menu, and project doors can be created,
-  viewed and deleted. Complete
-  property and transition editing is available through the shared CLI while the
-  dedicated GTK forms are still being built. None of this data is playable yet.
-  Their typed editor shells expose decoded source fields but keep Apply
-  disabled. Object sprite previews and executable behavior decoding are still
-  pending.
+  viewed and deleted. Project door properties and transition destinations have
+  a dedicated GTK form backed by the same validated CLI operations. None of
+  this data is playable yet.
+- Project enemy, item and object forms edit the label, snapped position and
+  verified native reference in both modes. Aria pickup forms additionally edit
+  the typed item/soul ID, two native parameters and flags. Runtime behavior and
+  native stats remain read-only reference data until engine adapters exist.
+- Native-record editor shells expose decoded source fields but keep Apply
+  disabled. Complete object sprite previews and executable behavior decoding
+  are still pending.
 - Project-object creation and cloning are disabled until a versioned common
   schema and target-engine encoders are validated.
 - Trigger regions, boss parameters, scripts, music and engine-backed cutscene

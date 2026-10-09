@@ -40,6 +40,18 @@ class ObjectCatalogUiContract(unittest.TestCase):
             self.assertIn(contract, source)
         self.assertIn('gtk_widget_set_sensitive(apply, FALSE);', source)
 
+    def test_project_entity_editor_updates_both_world_grids_atomically(self):
+        source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
+        for contract in (
+                'command = "entity-update"',
+                'project_command(doc, "update", options, NULL)',
+                '"Apply entity changes"',
+                '"Placement grid: 8px (Aria)"',
+                '"Placement grid: 16px (Zero Mission)"',
+                'gtk_spin_button_set_snap_to_ticks',
+                'item->index, item->native_type, item->label'):
+            self.assertIn(contract, source)
+
 
 if __name__ == '__main__':
     unittest.main()

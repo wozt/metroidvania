@@ -1085,3 +1085,21 @@ No automatic reciprocal link or native engine encoder is implemented.
   for both worlds and source ROM data remains immutable.
 - Functional tests author every collision type in both world schemas and query
   both capability matrices. GTK tests activate the complete tool strip.
+
+## Patch 0120 - atomic project entity property editor
+
+- Added the validated `entity-update` backend operation. One request updates a
+  project enemy, item or object label, snapped position, native catalog
+  reference and optional typed Aria item fields without partial mutations.
+- The project entity GTK window now edits names and X/Y coordinates instead of
+  only reassigning a native type. Zero Mission coordinates snap to 16px; Aria
+  coordinates snap to 8px. Both remain bounded to the current room.
+- Opening **Enemy editor**, **Item editor** or **Object editor** on a
+  project-owned marker now opens this complete form directly. Native ROM
+  records still open the immutable inspector and retain their disabled override
+  action.
+- The form is vertically scrollable for narrow displays. Source-derived icons,
+  named catalogs and Aria item/soul ID, parameter and flag fields remain in the
+  same workflow, with one shared Undo entry and explicit room Save.
+- Added ROM-free tests for MZM and Aria field updates, alignment rejection,
+  atomic failure behavior, CLI round trips and the shared GTK contract.

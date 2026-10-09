@@ -434,6 +434,26 @@ def move(doc: dict, eid: int, x: int, y: int) -> None:
     doc.update(candidate)
 
 
+def update(doc: dict, eid: int, x: int, y: int, label: str,
+           native_type: str, records: list[dict] | None = None,
+           settings: dict | None = None) -> dict:
+    """Atomically update all editable fields of one project entity."""
+    validate(doc, doc["world"], doc["area"], doc["room"],
+             doc["width_px"], doc["height_px"])
+    if not any(entry["id"] == eid for entry in doc["entities"]):
+        raise ValueError("unknown project entity id")
+    # Work on detached entity dictionaries so a rejected label or position
+    # cannot leave a successful native-type assignment behind.
+    candidate = {**doc, "entities": [dict(entry) for entry in doc["entities"]]}
+    assign(candidate, eid, native_type, records=records, settings=settings)
+    changed = next(entry for entry in candidate["entities"] if entry["id"] == eid)
+    changed.update({"x": x, "y": y, "label": label})
+    validate(candidate, candidate["world"], candidate["area"], candidate["room"],
+             candidate["width_px"], candidate["height_px"])
+    doc.update(candidate)
+    return changed
+
+
 def delete(doc: dict, eid: int) -> None:
     validate(doc, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
     entries = [e for e in doc["entities"] if e["id"] != eid]

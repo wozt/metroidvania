@@ -64,6 +64,35 @@ class ProjectNativeCatalogTests(unittest.TestCase):
                               'PSPRITE_ZOOMER_RED')
             self.assertEqual(entry['native_type'], 'PSPRITE_ZOOMER_RED')
 
+    def test_update_is_atomic_and_edits_all_shared_fields(self):
+        doc = pe._new('mzm', 'Brinstar', 7, 320, 160)
+        pe.create(doc, 'ENEMY', 0, 0, 'Old label')
+        rows = [{"native_type": "PSPRITE_ZOOMER_RED", "name": "Zoomer",
+                 "category": "Enemy / actor"}]
+        changed = pe.update(
+            doc, 1, 32, 48, 'Patrol Zoomer', 'PSPRITE_ZOOMER_RED', rows)
+        self.assertEqual(changed, {
+            'id': 1, 'kind': 'ENEMY', 'x': 32, 'y': 48,
+            'label': 'Patrol Zoomer', 'native_type': 'PSPRITE_ZOOMER_RED',
+        })
+        original = deepcopy(doc)
+        with self.assertRaises(ValueError):
+            pe.update(doc, 1, 17, 48, 'Invalid position',
+                      'PSPRITE_ZOOMER_RED', rows)
+        self.assertEqual(doc, original)
+
+    def test_update_uses_aria_grid_and_preserves_typed_item_settings(self):
+        doc = pe._new('aria', '3', 7, 320, 160)
+        pe.create(doc, 'ITEM', 0, 0, 'Old item')
+        rows = [{"native_type": "pickup:03", "name": "Weapon pickup",
+                 "category": "Aria Pickup / subtype 03"}]
+        settings = pe.item_settings('pickup:03', 12, 513, 999, 7)
+        changed = pe.update(
+            doc, 1, 24, 40, 'Claimh Solais', 'pickup:03', rows, settings)
+        self.assertEqual(changed['settings'], settings)
+        self.assertEqual((changed['x'], changed['y']), (24, 40))
+        self.assertEqual(changed['label'], 'Claimh Solais')
+
     def test_catalog_field_validation_and_no_arbitrary_source(self):
         with self.assertRaises(ValueError):
             pe.catalog_options('badworld', 'ENEMY', [])

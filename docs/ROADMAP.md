@@ -36,7 +36,9 @@ Current progress: one versioned private room document covers validated
 collision cells, editable project/native door overrides, cross-world references,
 project entities and 8px Aria / 16px Zero Mission placement. GTK provides a
 unified room editor, Grab, destination selection on the global map, a shared
-chronological Undo/Redo and Save/Discard for staged room changes. Native ROM
+chronological Undo/Redo and Save/Discard for staged room changes. Project
+enemy/item/object forms atomically edit label, snapped position, native
+reference and available typed item fields in both workroom modes. Native ROM
 encoders, object behavior definitions, triggers, events and a deterministic
 engine-neutral export remain pending. The engine-neutral collision brush suite
 now covers solid, one-way, hazard, two floor-slope directions, water and air in

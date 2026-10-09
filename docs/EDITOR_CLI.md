@@ -66,7 +66,7 @@ batch is accepted with `--dry-run=true` because no project document is written.
 | `layer-list`, `tile-get` | Private native workroom | room identity, layer/coordinates |
 | `tile-set`, `tile-fill` | Private native override | room identity, layer/coordinates, `tile-id` |
 | `entity-list`, `entity-inspect` | Project markers | room scope and geometry |
-| `entity-create`, `entity-move`, `entity-assign` | Project markers | room scope and entity fields |
+| `entity-create`, `entity-move`, `entity-update`, `entity-assign` | Project markers | room scope and entity fields |
 | `entity-delete` | Project markers | room scope, `id`, `confirm=true` |
 | `entity-catalog`, `entity-item-settings` | Native references/project metadata | world, kind/entity scope |
 | `story-validate`, `story-save` | Project data | `kind`, `input`, and save `target` |
@@ -96,10 +96,10 @@ and engine export are not implied by these visual workroom operations.
 | Draft create/list and global-map placement | Yes | Yes | Project data | Project data |
 | BG1/BG2 tile read, draw, erase and fill | Yes | Same C core | Private override | Private override |
 | Native object catalog | Read-only metadata | Read-only metadata | Yes | Yes |
-| Project entity create/move/assign/delete | Yes | Yes | Markers only | Markers + item fields |
+| Project entity create/update/move/assign/delete | Yes | Yes | Label, 16px position, native reference | Label, 8px position, native reference + item fields |
 | Project collision authoring | Full cell/rectangle/stroke commands + capability matrix | Seven freehand brushes + cell context actions | 16px semantic cells | 8px semantic cells |
-| Project doors | Full CRUD + destination links | Create/view/delete | Project data only | Project data only |
-| Project transitions | Full CRUD + target validation | CLI only; form pending | Native target references | Native target references |
+| Project doors | Full CRUD + destination links | Full property form + saved target picker | Project data only | Project data only |
+| Project transitions | Full CRUD + target validation | Destination, unlink and return-link planning | Native target references | Native target references |
 | Timeline/cutscene TOML validate and save | Yes | Yes | Shared project data | Shared project data |
 | Native collision, door and entity encoding | Unavailable | Native overlays remain read-only | Pending | Pending |
 | Audio inventory, decoding and playback | Unavailable | Unavailable | Pending | Pending |

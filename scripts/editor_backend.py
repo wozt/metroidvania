@@ -21,7 +21,7 @@ from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.room_audit import audit_world, write_private_report
 from scripts.validate_story_assets import validate_scene, validate_timeline
 
-BACKEND_VERSION = "1.4.0"
+BACKEND_VERSION = "1.5.0"
 
 CAPABILITIES = {
     "project-info": "available",
@@ -46,6 +46,7 @@ CAPABILITIES = {
     "entity-inspect": "available_project_markers_only",
     "entity-create": "available_project_markers_only",
     "entity-move": "available_project_markers_only",
+    "entity-update": "available_project_markers_only",
     "entity-delete": "available_project_markers_only",
     "entity-assign": "available_project_markers_only",
     "entity-catalog": "available_native_reference_metadata",
@@ -114,6 +115,9 @@ COMMAND_FIELDS = {
                       "x", "y", "label", "native_type", "item_id",
                       "parameter_0", "parameter_1", "flags"},
     "entity-move": {"world", "area", "room", "width", "height", "id", "x", "y"},
+    "entity-update": {"world", "area", "room", "width", "height", "id",
+                      "x", "y", "label", "native_type", "item_id",
+                      "parameter_0", "parameter_1", "flags"},
     "entity-delete": {"world", "area", "room", "width", "height", "id", "confirm"},
     "entity-assign": {"world", "area", "room", "width", "height", "id",
                       "native_type", "item_id", "parameter_0", "parameter_1", "flags"},
@@ -164,7 +168,8 @@ COMMAND_FIELDS = {
 }
 MUTATING_COMMANDS = {
     "room-create", "room-open", "room-place", "room-move", "room-unplace",
-    "entity-create", "entity-move", "entity-delete", "entity-assign", "story-save",
+    "entity-create", "entity-move", "entity-update", "entity-delete",
+    "entity-assign", "story-save",
     "tile-set", "tile-fill",
     "collision-set", "collision-fill", "collision-stroke", "collision-clear",
     "door-create", "door-adopt", "door-update", "door-delete", "door-link",
@@ -948,6 +953,14 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
                 _integer(options.get("y"), "y", 0, 16383))
             changed = next(entry for entry in document["entities"]
                            if entry["id"] == entity_id)
+        elif command == "entity-update":
+            native_type = options.get("native_type")
+            settings = _entity_settings(options, native_type)
+            changed = project_room_entities.update(
+                document, entity_id,
+                _integer(options.get("x"), "x", 0, 16383),
+                _integer(options.get("y"), "y", 0, 16383),
+                options.get("label"), native_type, settings=settings)
         elif command == "entity-delete":
             if options.get("confirm") is not True:
                 raise ValueError("entity-delete requires --confirm=true")

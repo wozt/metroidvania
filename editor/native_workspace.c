@@ -595,6 +595,7 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     else if (!strcmp(action, "item-settings")) command = "entity-item-settings";
     else if (!strcmp(action, "create")) command = "entity-create";
     else if (!strcmp(action, "move")) command = "entity-move";
+    else if (!strcmp(action, "update")) command = "entity-update";
     else if (!strcmp(action, "delete")) command = "entity-delete";
     else if (!strcmp(action, "assign")) command = "entity-assign";
     else if (!strcmp(action, "collision-list") ||
@@ -1024,11 +1025,11 @@ static gboolean project_move(NativeWorkspace *doc, guint id, int x, int y)
 typedef struct {
     NativeWorkspace *doc;
     GtkWidget *window, *name, *native_type, *catalog_description;
+    GtkWidget *x_position, *y_position;
     GtkWidget *item_id, *param0, *param1, *flags, *selected_icon;
     GPtrArray *catalog_names;
     GArray *catalog_item_ids; /* index -> exact Aria item ID; -1 = no item ID */
     GPtrArray *catalog_ids; /* selected dropdown index -> validated native token */
-    int x, y;
     guint kind, editing_id;
 } ProjectCreation;
 
@@ -1043,6 +1044,7 @@ static void project_creation_destroy(gpointer data)
         g_signal_handlers_disconnect_matched(form->item_id, G_SIGNAL_MATCH_DATA,
                                              0, 0, NULL, NULL, form);
     GtkWidget **slots[] = {&form->name, &form->native_type,
+                            &form->x_position, &form->y_position,
                             &form->catalog_description, &form->selected_icon,
                             &form->item_id, &form->param0, &form->param1,
                             &form->flags};
@@ -1090,9 +1092,14 @@ static void project_creation_submit(GtkButton *button, gpointer userdata)
                                         "--parameter-1", spb, "--flags", sflags};
     gboolean success = FALSE;
     if (form->editing_id) {
-        gchar id[16];
+        gchar id[16], sx[16], sy[16];
         snprintf(id, sizeof(id), "%u", form->editing_id);
-        const char *const options[] = {"--id", id, "--native-type", native,
+        snprintf(sx, sizeof(sx), "%d", gtk_spin_button_get_value_as_int(
+            GTK_SPIN_BUTTON(form->x_position)));
+        snprintf(sy, sizeof(sy), "%d", gtk_spin_button_get_value_as_int(
+            GTK_SPIN_BUTTON(form->y_position)));
+        const char *const options[] = {"--id", id, "--x", sx, "--y", sy,
+                                        "--label", label, "--native-type", native,
                                         with_item ? item_options[0] : NULL,
                                         with_item ? item_options[1] : NULL,
                                         with_item ? item_options[2] : NULL,
@@ -1101,13 +1108,15 @@ static void project_creation_submit(GtkButton *button, gpointer userdata)
                                         with_item ? item_options[5] : NULL,
                                         with_item ? item_options[6] : NULL,
                                         with_item ? item_options[7] : NULL, NULL};
-        success = project_command(doc, "assign", options, NULL);
+        success = project_command(doc, "update", options, NULL);
     } else {
         const char *kind = form->kind == OVERLAY_ENEMIES ? "ENEMY" :
                            form->kind == OVERLAY_ITEMS ? "ITEM" : "OBJECT";
         gchar sx[16], sy[16];
-        snprintf(sx, sizeof(sx), "%d", form->x);
-        snprintf(sy, sizeof(sy), "%d", form->y);
+        snprintf(sx, sizeof(sx), "%d", gtk_spin_button_get_value_as_int(
+            GTK_SPIN_BUTTON(form->x_position)));
+        snprintf(sy, sizeof(sy), "%d", gtk_spin_button_get_value_as_int(
+            GTK_SPIN_BUTTON(form->y_position)));
         const char *const options[] = {"--kind", kind, "--x", sx, "--y", sy,
                                        "--label", label, "--native-type", native,
                                        with_item ? item_options[0] : NULL,
@@ -1122,7 +1131,7 @@ static void project_creation_submit(GtkButton *button, gpointer userdata)
     }
     if (!success) return;
     project_reload(doc);
-    message(doc, "Project native reference pending; use Save to commit.");
+    message(doc, "Project entity changes staged; use Save to commit.");
     /* Destroy after GtkButton dispatch to preserve GTK active-state accounting. */
     g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, project_close_idle,
                     g_object_ref(form->window), g_object_unref);
@@ -1317,13 +1326,12 @@ static void project_catalog_changed(GObject *object, GParamSpec *pspec,
 }
 
 static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind,
-                                  guint editing_id, const char *current_native)
+                                  guint editing_id, const char *current_native,
+                                  const char *current_label)
 {
     if (!doc->ready || doc->closing) return;
     ProjectCreation *form = g_new0(ProjectCreation, 1);
     form->doc = document_ref(doc);
-    form->x = x;
-    form->y = y;
     form->kind = kind;
     form->editing_id = editing_id;
     form->catalog_ids = g_ptr_array_new_with_free_func(g_free);
@@ -1334,25 +1342,39 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     GtkRoot *root = doc->page ? gtk_widget_get_root(doc->page) : NULL;
     if (GTK_IS_WINDOW(root)) gtk_window_set_transient_for(GTK_WINDOW(window), GTK_WINDOW(root));
     gtk_window_set_title(GTK_WINDOW(window), editing_id ?
-        "Assign validated native type" : "Create private project entity");
-    gtk_window_set_default_size(GTK_WINDOW(window), 510, 360);
+        "Edit private project entity" : "Create private project entity");
+    gtk_window_set_default_size(GTK_WINDOW(window), 510, 520);
     GtkWidget *layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     GtkWidget *notice = gtk_label_new(
         "Choose a native definition from this game's verified catalog. "
         "This links metadata only; no executable enemy or item is exported to the ROM.");
-    GtkWidget *position = gtk_label_new(NULL);
-    gchar *pos = g_strdup_printf("Position: %d, %d (16px cell)", x, y);
-    gtk_label_set_text(GTK_LABEL(position), pos);
-    g_free(pos);
     gtk_label_set_wrap(GTK_LABEL(notice), TRUE);
     gtk_label_set_xalign(GTK_LABEL(notice), 0);
-    gtk_label_set_xalign(GTK_LABEL(position), 0);
     form->name = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(form->name), "Project entity label");
-    gtk_editable_set_text(GTK_EDITABLE(form->name),
+    gtk_editable_set_text(GTK_EDITABLE(form->name), current_label ? current_label :
         kind == OVERLAY_ENEMIES ? "New enemy" :
         kind == OVERLAY_ITEMS ? "New item" : "New object");
-    gtk_widget_set_sensitive(form->name, editing_id == 0);
+    const int placement_step = doc->project_aria ? 8 : 16;
+    GtkWidget *position_grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(position_grid), 5);
+    gtk_grid_set_column_spacing(GTK_GRID(position_grid), 8);
+    form->x_position = gtk_spin_button_new_with_range(
+        0, MAX(0, (int)doc->map->width[0] * 16 - 16), placement_step);
+    form->y_position = gtk_spin_button_new_with_range(
+        0, MAX(0, (int)doc->map->height[0] * 16 - 16), placement_step);
+    gtk_spin_button_set_snap_to_ticks(GTK_SPIN_BUTTON(form->x_position), TRUE);
+    gtk_spin_button_set_snap_to_ticks(GTK_SPIN_BUTTON(form->y_position), TRUE);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->x_position), x);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->y_position), y);
+    GtkWidget *x_label = gtk_label_new("X position");
+    GtkWidget *y_label = gtk_label_new("Y position");
+    gtk_label_set_xalign(GTK_LABEL(x_label), 0);
+    gtk_label_set_xalign(GTK_LABEL(y_label), 0);
+    gtk_grid_attach(GTK_GRID(position_grid), x_label, 0, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(position_grid), form->x_position, 1, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(position_grid), y_label, 0, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(position_grid), form->y_position, 1, 1, 1, 1);
     const char *role = kind == OVERLAY_ENEMIES ? "ENEMY" :
                        kind == OVERLAY_ITEMS ? "ITEM" : "OBJECT";
     /* Existing project item needs both subtype and item ID to select one row. */
@@ -1427,17 +1449,19 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     gtk_label_set_wrap(GTK_LABEL(form->catalog_description), TRUE);
     gtk_label_set_xalign(GTK_LABEL(form->catalog_description), 0);
     GtkWidget *save = gtk_button_new_with_label(editing_id ?
-        "Assign and save native type" : "Create and save project entity");
+        "Apply entity changes" : "Create project entity");
     gtk_widget_set_margin_start(layout, 16);
     gtk_widget_set_margin_end(layout, 16);
     gtk_widget_set_margin_top(layout, 16);
     gtk_widget_set_margin_bottom(layout, 16);
     gtk_box_append(GTK_BOX(layout), notice);
-    gtk_box_append(GTK_BOX(layout), position);
-    if (!editing_id) {
-        gtk_box_append(GTK_BOX(layout), gtk_label_new("Project label"));
-        gtk_box_append(GTK_BOX(layout), form->name);
-    }
+    gtk_box_append(GTK_BOX(layout), gtk_label_new("Project label"));
+    gtk_box_append(GTK_BOX(layout), form->name);
+    GtkWidget *position_hint = gtk_label_new(doc->project_aria ?
+        "Placement grid: 8px (Aria)" : "Placement grid: 16px (Zero Mission)");
+    gtk_label_set_xalign(GTK_LABEL(position_hint), 0);
+    gtk_box_append(GTK_BOX(layout), position_hint);
+    gtk_box_append(GTK_BOX(layout), position_grid);
     gtk_box_append(GTK_BOX(layout), gtk_label_new("Native definition (read-only catalog)"));
     gtk_box_append(GTK_BOX(layout), form->native_type);
     form->selected_icon = gtk_image_new_from_icon_name("applications-graphics-symbolic");
@@ -1493,6 +1517,7 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     /* Child widgets may be finalized independently during window teardown.
      * GObject weak pointers clear the form slots before a late callback. */
     GtkWidget **borrowed[] = {&form->name, &form->native_type,
+                              &form->x_position, &form->y_position,
                               &form->catalog_description, &form->selected_icon,
                               &form->item_id, &form->param0, &form->param1,
                               &form->flags};
@@ -1501,7 +1526,11 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
             g_object_add_weak_pointer(G_OBJECT(*borrowed[i]),
                                       (gpointer *)borrowed[i]);
     }
-    gtk_window_set_child(GTK_WINDOW(window), layout);
+    GtkWidget *scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+                                   GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), layout);
+    gtk_window_set_child(GTK_WINDOW(window), scroll);
     g_object_set_data_full(G_OBJECT(window), "mv-project-create-form", form,
                            project_creation_destroy);
     g_signal_connect(form->native_type, "notify::selected",
@@ -1532,7 +1561,7 @@ static void project_create_clicked(GtkButton *button, gpointer userdata)
     int y = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "mv-project-y")) - 1;
     guint kind = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(button), "mv-project-kind"));
     project_popover_defer_close(doc);
-    project_creation_open(doc, x, y, kind, 0, NULL);
+    project_creation_open(doc, x, y, kind, 0, NULL, NULL);
 }
 
 static void project_context_add(GtkWidget *layout, NativeWorkspace *doc,
@@ -1673,18 +1702,6 @@ static void project_move_start_clicked(GtkButton *button, gpointer userdata)
         doc->project_move_id = item->index;
         message(doc, "Project entity: click the destination tile (Esc to cancel).");
     }
-    project_popover_defer_close(doc);
-}
-
-static void project_assign_native_clicked(GtkButton *button, gpointer userdata)
-{
-    NativeWorkspace *doc = userdata;
-    RoomAnnotation *item = annotation_from_widget(doc, GTK_WIDGET(button), NULL);
-    if (!item || !item->project_owned || item->kind < OVERLAY_ENEMIES ||
-        item->kind > OVERLAY_OBJECTS) return;
-    /* Read identity before returning to the main loop: popup closes after click. */
-    project_creation_open(doc, item->x, item->y, item->kind,
-                          item->index, item->native_type);
     project_popover_defer_close(doc);
 }
 
@@ -2529,6 +2546,13 @@ static void annotation_editor_clicked(GtkButton *button, gpointer userdata)
     NativeWorkspace *doc = userdata;
     RoomAnnotation *item = annotation_from_widget(doc, GTK_WIDGET(button), NULL);
     if (!item) return;
+    if (item->project_owned && item->kind >= OVERLAY_ENEMIES &&
+        item->kind <= OVERLAY_OBJECTS) {
+        project_creation_open(doc, item->x, item->y, item->kind,
+                              item->index, item->native_type, item->label);
+        project_popover_defer_close(doc);
+        return;
+    }
     if (item->kind == OVERLAY_DOORS && !item->project_owned) {
         gchar index[16];
         snprintf(index, sizeof(index), "%u", item->index);
@@ -2636,9 +2660,6 @@ static void annotation_context_show(NativeWorkspace *doc, GtkWidget *relative,
         doc, "Locate in Room data", array_index, G_CALLBACK(annotation_locate_clicked)));
     if (item->project_owned) {
         if (item->kind >= OVERLAY_ENEMIES && item->kind <= OVERLAY_OBJECTS) {
-            gtk_box_append(GTK_BOX(layout), annotation_menu_button(
-                doc, "Choose native enemy / item / object type…", array_index,
-                G_CALLBACK(project_assign_native_clicked)));
             gtk_box_append(GTK_BOX(layout), annotation_menu_button(
                 doc, "Move project entity (click destination)", array_index,
                 G_CALLBACK(project_move_start_clicked)));

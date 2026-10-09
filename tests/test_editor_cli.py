@@ -109,9 +109,16 @@ class EditorCliTests(unittest.TestCase):
                 "--command=entity-move", *scope, "--id=1", "--x=16", "--y=0",
                 "--format=json")
             self.assertEqual(moved.returncode, 0, moved.stderr)
+            updated = self.run_cli(
+                "--command=entity-update", *scope, "--id=1", "--x=32", "--y=0",
+                "--label=Edited CLI Enemy", "--native-type=unassigned",
+                "--format=json")
+            self.assertEqual(updated.returncode, 0, updated.stderr)
             listed = self.run_cli(
                 "--command=entity-list", *scope, "--preview=true", "--format=tsv")
-            self.assertEqual(listed.stdout, "1\tENEMY\t16\t0\tCLI Enemy\tunassigned\t-1\n")
+            self.assertEqual(
+                listed.stdout,
+                "1\tENEMY\t32\t0\tEdited CLI Enemy\tunassigned\t-1\n")
             refused = self.run_cli(
                 "--command=entity-delete", *scope, "--id=1", "--format=json")
             self.assertEqual(refused.returncode, 4)
@@ -119,6 +126,32 @@ class EditorCliTests(unittest.TestCase):
                 "--command=entity-delete", *scope, "--id=1", "--confirm=true",
                 "--format=json")
             self.assertEqual(deleted.returncode, 0, deleted.stderr)
+
+    def test_aria_entity_update_keeps_typed_item_fields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scope = (
+                "--world=aria", "--area=3", "--room=7",
+                "--width=64", "--height=32", f"--root={directory}",
+            )
+            created = self.run_cli(
+                "--command=entity-create", *scope, "--kind=ITEM", "--x=8", "--y=0",
+                "--label=Aria Item", "--native-type=pickup:03", "--item-id=1",
+                "--parameter-0=2", "--parameter-1=3", "--flags=4",
+                "--format=json")
+            self.assertEqual(created.returncode, 0, created.stderr)
+            updated = self.run_cli(
+                "--command=entity-update", *scope, "--id=1", "--x=16", "--y=8",
+                "--label=Edited Aria Item", "--native-type=pickup:03",
+                "--item-id=12", "--parameter-0=513", "--parameter-1=999",
+                "--flags=7", "--format=json")
+            self.assertEqual(updated.returncode, 0, updated.stderr)
+            entity = json.loads(updated.stdout)["data"]["entity"]
+            self.assertEqual((entity["x"], entity["y"]), (16, 8))
+            self.assertEqual(entity["label"], "Edited Aria Item")
+            self.assertEqual(entity["settings"], {
+                "item_id": 12, "parameter_0": 513,
+                "parameter_1": 999, "flags": 7,
+            })
 
     def test_collision_door_and_transition_cli_round_trip(self):
         with tempfile.TemporaryDirectory() as directory:

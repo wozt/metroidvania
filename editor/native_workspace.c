@@ -1267,6 +1267,35 @@ static void project_door_create_clicked(GtkButton *button, gpointer userdata)
     }
 }
 
+/* PATCH_0103_POPOVER_SCROLL_STABILITY
+ * Popovers parented to the enormous drawing area can make GtkScrolledWindow
+ * scroll-to-focus jump to the document origin or sideways as they gain/lose
+ * focus. Anchor them to the fixed scroller instead, converting canvas-local
+ * click coordinates to scroller-local coordinates before showing them.
+ */
+static void room_context_popover_place_0103(NativeWorkspace *doc,
+                                             GtkWidget *popover,
+                                             GtkWidget *relative,
+                                             double x, double y)
+{
+    GtkWidget *anchor = relative;
+    graphene_point_t source = GRAPHENE_POINT_INIT((float)x, (float)y);
+    graphene_point_t target;
+    if (relative == doc->canvas && doc->scroller &&
+        gtk_widget_compute_point(relative, doc->scroller, &source, &target)) {
+        anchor = doc->scroller;
+        x = target.x;
+        y = target.y;
+    }
+    gtk_widget_set_parent(popover, anchor);
+    GdkRectangle rect = {(int)x, (int)y, 1, 1};
+    gtk_popover_set_pointing_to(GTK_POPOVER(popover), &rect);
+    doc->annotation_popup = popover;
+    g_object_add_weak_pointer(G_OBJECT(popover),
+                              (gpointer *)&doc->annotation_popup);
+    gtk_popover_popup(GTK_POPOVER(popover));
+}
+
 static void project_context_empty(NativeWorkspace *doc, GtkWidget *canvas,
                                   double x, double y)
 {
@@ -1298,12 +1327,7 @@ static void project_context_empty(NativeWorkspace *doc, GtkWidget *canvas,
     project_collision_context_add(layout, doc, "Clear project collision cell",
                                   collision_x, collision_y, "empty");
     gtk_popover_set_child(GTK_POPOVER(popover), layout);
-    gtk_widget_set_parent(popover, canvas);
-    GdkRectangle pointer = {(int)x, (int)y, 1, 1};
-    gtk_popover_set_pointing_to(GTK_POPOVER(popover), &pointer);
-    doc->annotation_popup = popover;
-    g_object_add_weak_pointer(G_OBJECT(popover), (gpointer *)&doc->annotation_popup);
-    gtk_popover_popup(GTK_POPOVER(popover));
+    room_context_popover_place_0103(doc, popover, canvas, x, y);
 }
 
 static void project_move_start_clicked(GtkButton *button, gpointer userdata)
@@ -1911,13 +1935,7 @@ static void annotation_context_show(NativeWorkspace *doc, GtkWidget *relative,
     gtk_widget_set_margin_top(layout, 10);
     gtk_widget_set_margin_bottom(layout, 10);
     gtk_popover_set_child(GTK_POPOVER(popover), layout);
-    gtk_widget_set_parent(popover, relative);
-    GdkRectangle point = {(int)x, (int)y, 1, 1};
-    gtk_popover_set_pointing_to(GTK_POPOVER(popover), &point);
-    doc->annotation_popup = popover;
-    g_object_add_weak_pointer(G_OBJECT(popover),
-                              (gpointer *)&doc->annotation_popup);
-    gtk_popover_popup(GTK_POPOVER(popover));
+    room_context_popover_place_0103(doc, popover, relative, x, y);
 }
 
 static void annotation_list_context_pressed(GtkGestureClick *gesture, gint presses,

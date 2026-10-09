@@ -570,3 +570,25 @@ and the proprietary-file guard passed.
   sprite preview or gameplay encoder is claimed where none exists.
 - ROM-free Python regression tests cover category boundaries, assignments and
   fail-closed wrong-game/wrong-role IDs. GTK4 build/CTest required on Debian.
+
+
+## Patch 0081 - Aria item controls and native-image-aware selectors
+
+- Native-definition dropdown rows render a 28px image from private, verified
+  `assets/extracted/sprite_previews/{aria,mzm}/<native-token>.png` when present.
+  Undecoded monster images explicitly show `image-missing-symbolic`, never
+  misleading cropped backgrounds or unrelated community/fan sprites.
+- Aria lists all documented pickup subtypes (money, consumable, weapons,
+  armor/accessories, red/blue/yellow/ability souls), with normal, hard-mode
+  and all-souls-found families, even if never placed on a vanilla world map.
+- Aria authored items support bounded item ID, two native-sized u16 metadata
+  parameters and u8 flags. Existing schema-v1 documents remain readable; item
+  settings are optional and validated in both CLI and Python API. These are
+  project settings, not a claim of engine export/behavior.
+- The optional local-ROM thumbnail decoder only accepts source-verified icon
+  pages with an explicit 0x2000-byte header and refuses unknown page wrappers;
+  no ROM bytes or generated assets are committed. PNG icons are illustrative
+  of item subtype; the item-ID-specific previews are cached privately.
+- A complete enemy sprite extraction / OAM compositor is not implemented in
+  this patch. Genuine enemy PNGs, when already decoded into the documented
+  cache, display in the same dropdown factory.

@@ -523,6 +523,7 @@ static gboolean project_move(NativeWorkspace *doc, guint id, int x, int y)
 typedef struct {
     NativeWorkspace *doc;
     GtkWidget *window, *name, *native_type, *catalog_description;
+    GtkWidget *item_id, *param0, *param1, *flags, *selected_icon;
     GPtrArray *catalog_names;
     GPtrArray *catalog_ids; /* selected dropdown index -> validated native token */
     int x, y;
@@ -555,11 +556,32 @@ static void project_creation_submit(GtkButton *button, gpointer userdata)
     guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->native_type));
     if (!form->catalog_ids || selected >= form->catalog_ids->len) return;
     const char *native = g_ptr_array_index(form->catalog_ids, selected);
+    gboolean with_item = form->doc->project_aria && form->kind == OVERLAY_ITEMS &&
+                         form->item_id && gtk_widget_get_sensitive(form->item_id);
+    gchar siditem[12], spa[12], spb[12], sflags[12];
+    snprintf(siditem, sizeof(siditem), "%d", with_item ?
+             gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->item_id)) : 0);
+    snprintf(spa, sizeof(spa), "%d", with_item ?
+             gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->param0)) : 0);
+    snprintf(spb, sizeof(spb), "%d", with_item ?
+             gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->param1)) : 0);
+    snprintf(sflags, sizeof(sflags), "%d", with_item ?
+             gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->flags)) : 0);
+    const char *const item_options[] = {"--item-id", siditem, "--parameter-0", spa,
+                                        "--parameter-1", spb, "--flags", sflags};
     gboolean success = FALSE;
     if (form->editing_id) {
         gchar id[16];
         snprintf(id, sizeof(id), "%u", form->editing_id);
-        const char *const options[] = {"--id", id, "--native-type", native, NULL};
+        const char *const options[] = {"--id", id, "--native-type", native,
+                                        with_item ? item_options[0] : NULL,
+                                        with_item ? item_options[1] : NULL,
+                                        with_item ? item_options[2] : NULL,
+                                        with_item ? item_options[3] : NULL,
+                                        with_item ? item_options[4] : NULL,
+                                        with_item ? item_options[5] : NULL,
+                                        with_item ? item_options[6] : NULL,
+                                        with_item ? item_options[7] : NULL, NULL};
         success = project_command(doc, "assign", options, NULL);
     } else {
         const char *kind = form->kind == OVERLAY_ENEMIES ? "ENEMY" :
@@ -568,7 +590,15 @@ static void project_creation_submit(GtkButton *button, gpointer userdata)
         snprintf(sx, sizeof(sx), "%d", form->x);
         snprintf(sy, sizeof(sy), "%d", form->y);
         const char *const options[] = {"--kind", kind, "--x", sx, "--y", sy,
-                                       "--label", label, "--native-type", native, NULL};
+                                       "--label", label, "--native-type", native,
+                                       with_item ? item_options[0] : NULL,
+                                       with_item ? item_options[1] : NULL,
+                                       with_item ? item_options[2] : NULL,
+                                       with_item ? item_options[3] : NULL,
+                                       with_item ? item_options[4] : NULL,
+                                       with_item ? item_options[5] : NULL,
+                                       with_item ? item_options[6] : NULL,
+                                       with_item ? item_options[7] : NULL, NULL};
         success = project_command(doc, "create", options, NULL);
     }
     if (!success) return;
@@ -579,6 +609,123 @@ static void project_creation_submit(GtkButton *button, gpointer userdata)
                     g_object_ref(form->window), g_object_unref);
 }
 
+
+
+/* PATCH_0081_ARIA_PICKUP_THUMBNAILS
+ * GTK4 list-item factories: real PNG previews when source-verified local
+ * decoded graphics are present, explicit missing-image glyph otherwise. */
+static gchar *project_icon_path(ProjectCreation *form, const char *token)
+{
+    const char *world = form->doc->project_aria ? "aria" : "mzm";
+    if (!token || !*token || strlen(token) > 64) return NULL;
+    for (const char *p = token; *p; ++p)
+        if (!g_ascii_isalnum(*p) && *p != ':' && *p != '_' && *p != '-') return NULL;
+    return g_strdup_printf("assets/extracted/sprite_previews/%s/%s.png", world, token);
+}
+
+static void project_icon_assign(GtkWidget *image, ProjectCreation *form, const char *token)
+{
+    gchar *path = project_icon_path(form, token);
+    if (path && g_file_test(path, G_FILE_TEST_IS_REGULAR))
+        gtk_image_set_from_file(GTK_IMAGE(image), path);
+    else gtk_image_set_from_icon_name(GTK_IMAGE(image), "image-missing-symbolic");
+    g_free(path);
+    gtk_image_set_pixel_size(GTK_IMAGE(image), 28);
+}
+
+static void project_row_setup(GtkSignalListItemFactory *factory,
+                              GtkListItem *item, gpointer userdata)
+{
+    (void)factory; (void)userdata;
+    GtkWidget *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *preview = gtk_image_new_from_icon_name("image-missing-symbolic");
+    GtkWidget *label = gtk_label_new("");
+    gtk_image_set_pixel_size(GTK_IMAGE(preview), 28);
+    gtk_widget_set_size_request(preview, 32, 32);
+    gtk_label_set_xalign(GTK_LABEL(label), 0);
+    gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
+    gtk_widget_set_hexpand(label, TRUE);
+    gtk_box_append(GTK_BOX(row), preview);
+    gtk_box_append(GTK_BOX(row), label);
+    gtk_list_item_set_child(item, row);
+}
+
+static void project_row_bind(GtkSignalListItemFactory *factory,
+                             GtkListItem *item, gpointer userdata)
+{
+    (void)factory;
+    ProjectCreation *form = userdata;
+    GtkWidget *row = gtk_list_item_get_child(item);
+    if (!row) return;
+    GtkWidget *icon = gtk_widget_get_first_child(row);
+    GtkWidget *label = icon ? gtk_widget_get_next_sibling(icon) : NULL;
+    guint index = gtk_list_item_get_position(item);
+    GtkStringObject *entry = GTK_STRING_OBJECT(gtk_list_item_get_item(item));
+    if (GTK_IS_LABEL(label) && GTK_IS_STRING_OBJECT(entry))
+        gtk_label_set_text(GTK_LABEL(label), gtk_string_object_get_string(entry));
+    if (GTK_IS_IMAGE(icon) && form->catalog_ids && index < form->catalog_ids->len)
+        project_icon_assign(icon, form, g_ptr_array_index(form->catalog_ids, index));
+}
+
+static void project_item_fields_update(ProjectCreation *form, const char *token)
+{
+    if (!form->item_id) return;
+    gboolean eligible = FALSE;
+    guint max_id = 0;
+    if (form->doc->project_aria && form->kind == OVERLAY_ITEMS && token) {
+        const char *sub = strrchr(token, ':');
+        if (sub && strlen(sub + 1) == 2 &&
+            (g_str_has_prefix(token, "pickup:") ||
+             g_str_has_prefix(token, "hard-mode-pickup:") ||
+             g_str_has_prefix(token, "all-souls-reward:"))) {
+            char *end = NULL;
+            guint type = (guint)g_ascii_strtoull(sub + 1, &end, 16);
+            static const guint limits[] = {0,255,31,58,44,55,24,35,5};
+            if (end && !*end && type < G_N_ELEMENTS(limits)) {
+                max_id = limits[type];
+                eligible = TRUE;
+            }
+        }
+    }
+    gtk_widget_set_sensitive(form->item_id, eligible);
+    gtk_widget_set_sensitive(form->param0, eligible);
+    gtk_widget_set_sensitive(form->param1, eligible);
+    gtk_widget_set_sensitive(form->flags, eligible);
+    gtk_spin_button_set_range(GTK_SPIN_BUTTON(form->item_id), 0, max_id);
+}
+
+
+static void project_specific_icon_refresh(GtkSpinButton *spin, gpointer userdata)
+{
+    (void)spin;
+    ProjectCreation *form = userdata;
+    if (!form->selected_icon || !form->item_id || !form->catalog_ids) return;
+    guint selection = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->native_type));
+    if (selection >= form->catalog_ids->len) return;
+    const char *token = g_ptr_array_index(form->catalog_ids, selection);
+    if (form->doc->project_aria && form->kind == OVERLAY_ITEMS &&
+        gtk_widget_get_sensitive(form->item_id) && token) {
+        const char *sub = strrchr(token, ':');
+        if (sub && strlen(sub + 1) == 2) {
+            char *end = NULL;
+            guint category = (guint)g_ascii_strtoull(sub + 1, &end, 16);
+            if (end && !*end && category >= 2 && category <= 4) {
+                gchar *path = g_strdup_printf(
+                    "assets/extracted/sprite_previews/aria/items/%02X_%03u.png",
+                    category, (guint)gtk_spin_button_get_value_as_int(
+                        GTK_SPIN_BUTTON(form->item_id)));
+                if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
+                    gtk_image_set_from_file(GTK_IMAGE(form->selected_icon), path);
+                    g_free(path);
+                    return;
+                }
+                g_free(path);
+            }
+        }
+    }
+    project_icon_assign(form->selected_icon, form, token);
+}
+
 static void project_catalog_changed(GObject *object, GParamSpec *pspec,
                                     gpointer userdata)
 {
@@ -587,15 +734,21 @@ static void project_catalog_changed(GObject *object, GParamSpec *pspec,
     guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
     if (!selected || !form->catalog_ids || selected >= form->catalog_ids->len) {
         gtk_label_set_text(GTK_LABEL(form->catalog_description),
-            "Unassigned project marker. No engine behavior or sprite preview available.");
+            "Unassigned project marker. No native behavior linked.");
+        if (form->selected_icon)
+            project_icon_assign(form->selected_icon, form, "unassigned");
+        project_item_fields_update(form, NULL);
         return;
     }
     const char *token = g_ptr_array_index(form->catalog_ids, selected);
+    if (form->selected_icon) project_icon_assign(form->selected_icon, form, token);
+    project_item_fields_update(form, token);
+    project_specific_icon_refresh(NULL, form);
     if (!form->editing_id && form->catalog_names && selected < form->catalog_names->len)
         gtk_editable_set_text(GTK_EDITABLE(form->name),
                               g_ptr_array_index(form->catalog_names, selected));
     gchar *message = g_strdup_printf(
-        "Native identity: %s. Source definition only; sprite preview not decoded.", token);
+        "Native identity: %s. Sprite/icon is source-derived only when a private PNG is available; otherwise missing-image is shown.", token);
     gtk_label_set_text(GTK_LABEL(form->catalog_description), message);
     g_free(message);
 }
@@ -669,6 +822,16 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     g_ptr_array_add(labels, NULL);
     form->native_type = gtk_drop_down_new_from_strings(
         (const char * const *)labels->pdata);
+    GtkListItemFactory *popup_factory = gtk_signal_list_item_factory_new();
+    GtkListItemFactory *button_factory = gtk_signal_list_item_factory_new();
+    g_signal_connect(popup_factory, "setup", G_CALLBACK(project_row_setup), form);
+    g_signal_connect(popup_factory, "bind", G_CALLBACK(project_row_bind), form);
+    g_signal_connect(button_factory, "setup", G_CALLBACK(project_row_setup), form);
+    g_signal_connect(button_factory, "bind", G_CALLBACK(project_row_bind), form);
+    gtk_drop_down_set_list_factory(GTK_DROP_DOWN(form->native_type), popup_factory);
+    gtk_drop_down_set_factory(GTK_DROP_DOWN(form->native_type), button_factory);
+    g_object_unref(popup_factory);
+    g_object_unref(button_factory);
     g_ptr_array_free(labels, TRUE);
     form->catalog_description = gtk_label_new(catalog_available ?
         "Select a decoded native type. Sprite preview unavailable." :
@@ -689,8 +852,54 @@ static void project_creation_open(NativeWorkspace *doc, int x, int y, guint kind
     }
     gtk_box_append(GTK_BOX(layout), gtk_label_new("Native definition (read-only catalog)"));
     gtk_box_append(GTK_BOX(layout), form->native_type);
-    gtk_box_append(GTK_BOX(layout), gtk_image_new_from_icon_name(
-        "image-missing-symbolic"));
+    form->selected_icon = gtk_image_new_from_icon_name("image-missing-symbolic");
+    gtk_image_set_pixel_size(GTK_IMAGE(form->selected_icon), 32);
+    gtk_box_append(GTK_BOX(layout), form->selected_icon);
+    if (doc->project_aria && kind == OVERLAY_ITEMS) {
+        GtkWidget *settings = gtk_grid_new();
+        gtk_grid_set_row_spacing(GTK_GRID(settings), 5);
+        gtk_grid_set_column_spacing(GTK_GRID(settings), 8);
+        const char *const field_names[] = {
+            "Specific item/soul ID", "Native parameter 0 (u16)",
+            "Native parameter 1 (u16)", "Native flags (u8)"};
+        GtkWidget **fields[] = {&form->item_id, &form->param0,
+                                &form->param1, &form->flags};
+        const int limits[] = {255, 65535, 65535, 255};
+        for (guint i = 0; i < G_N_ELEMENTS(fields); ++i) {
+            GtkWidget *label = gtk_label_new(field_names[i]);
+            gtk_label_set_xalign(GTK_LABEL(label), 0);
+            *fields[i] = gtk_spin_button_new_with_range(0, limits[i], 1);
+            gtk_grid_attach(GTK_GRID(settings), label, 0, (int)i, 1, 1);
+            gtk_grid_attach(GTK_GRID(settings), *fields[i], 1, (int)i, 1, 1);
+        }
+        GtkWidget *hint = gtk_label_new(
+            "Aria families: Money, Consumable, Weapon, Armor/Accessory, "
+            "Red/Blue/Yellow/Ability Soul; Normal, Hard Mode, All Souls. "
+            "Parameters and flags are project metadata only (no ROM encoder).");
+        gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
+        gtk_label_set_xalign(GTK_LABEL(hint), 0);
+        gtk_box_append(GTK_BOX(layout), hint);
+        gtk_box_append(GTK_BOX(layout), settings);
+        if (editing_id) {
+            gchar id_text[12];
+            snprintf(id_text, sizeof(id_text), "%u", editing_id);
+            const char *const opts[] = {"--id", id_text, NULL};
+            gchar *settings_out = NULL;
+            if (project_command(doc, "item-settings", opts, &settings_out) &&
+                settings_out) {
+                guint id, a, b, flags;
+                if (sscanf(settings_out, "%u	%u	%u	%u", &id, &a, &b, &flags) == 4) {
+                    gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->item_id), id);
+                    gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->param0), a);
+                    gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->param1), b);
+                    gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->flags), flags);
+                }
+                g_free(settings_out);
+            }
+        }
+        g_signal_connect(form->item_id, "value-changed",
+                         G_CALLBACK(project_specific_icon_refresh), form);
+    }
     gtk_box_append(GTK_BOX(layout), form->catalog_description);
     gtk_box_append(GTK_BOX(layout), save);
     gtk_window_set_child(GTK_WINDOW(window), layout);

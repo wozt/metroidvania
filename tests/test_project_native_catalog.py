@@ -28,8 +28,11 @@ class ProjectNativeCatalogTests(unittest.TestCase):
                               'generic-candle:00')]
         self.assertEqual({e['native_type'] for e in pe.catalog_options('aria', 'ENEMY', rows)},
                          {'enemy:07', 'special-object:0A'})
-        self.assertEqual({e['native_type'] for e in pe.catalog_options('aria', 'ITEM', rows)},
-                         {'pickup:02', 'hard-mode-pickup:03'})
+        item_tokens = {e['native_type'] for e in pe.catalog_options('aria', 'ITEM', rows)}
+        self.assertTrue({'pickup:02', 'hard-mode-pickup:03'}.issubset(item_tokens))
+        self.assertIn('all-souls-reward:08', item_tokens)
+        self.assertIn('pickup:01', item_tokens)
+        self.assertNotIn('special-object:00', item_tokens)
         self.assertNotIn('special-object:00',
                          {e['native_type'] for e in pe.catalog_options('aria', 'OBJECT', rows)})
 

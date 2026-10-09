@@ -18,6 +18,41 @@ MZM_AREAS = ("Brinstar", "Kraid", "Norfair", "Ridley", "Tourian", "Crateria", "C
 NATIVE_TYPE = re.compile(r"[A-Za-z0-9_.:-]{1,64}\Z", re.ASCII)
 DOC_KEYS = {"schema", "version", "world", "area", "room", "width_px", "height_px", "next_id", "entities"}
 ENTITY_KEYS = {"id", "kind", "x", "y", "label", "native_type"}
+# PATCH_0081_ARIA_PICKUP_THUMBNAILS
+ITEM_KEYS = {"item_id", "parameter_0", "parameter_1", "flags"}
+ARIA_PICKUP_LIMITS = {0: 0, 1: 255, 2: 31, 3: 58, 4: 44, 5: 55,
+                      6: 24, 7: 35, 8: 5}
+
+
+def item_settings(native_type: str, item_id: int, parameter_0: int,
+                  parameter_1: int, flags: int) -> dict:
+    """Validate a source-model Aria pickup subtype and private 12-byte record fields.
+
+    These are project metadata only. No native placement encoder exists.
+    """
+    import re as _re
+    match = _re.fullmatch(r'(pickup|hard-mode-pickup|all-souls-reward):([0-9A-Fa-f]{2})', native_type)
+    if not match:
+        raise ValueError('choose a valid Aria pickup native type before setting item fields')
+    subtype = int(match.group(2), 16)
+    if subtype not in ARIA_PICKUP_LIMITS:
+        raise ValueError('undocumented Aria pickup subtype')
+    _int(item_id, 0, ARIA_PICKUP_LIMITS[subtype], 'item_id')
+    _int(parameter_0, 0, 65535, 'parameter_0')
+    _int(parameter_1, 0, 65535, 'parameter_1')
+    _int(flags, 0, 255, 'flags')
+    return {"item_id": item_id, "parameter_0": parameter_0,
+            "parameter_1": parameter_1, "flags": flags}
+
+
+def requested_item_settings(args: argparse.Namespace) -> dict | None:
+    fields = (args.item_id, args.parameter_0, args.parameter_1, args.flags)
+    if all(value is None for value in fields):
+        return None
+    if any(value is None for value in fields):
+        raise ValueError('item settings need --item-id --parameter-0 --parameter-1 --flags together')
+    return item_settings(args.native_type, *fields)
+
 MAX_ENTITIES = 256
 
 
@@ -73,8 +108,16 @@ def validate(doc: object, world: str, area: str, room: int,
         raise ValueError("invalid project entity count")
     ids = set()
     for entity in entries:
-        if not isinstance(entity, dict) or entity.keys() != ENTITY_KEYS:
+        if (not isinstance(entity, dict) or
+                entity.keys() not in (ENTITY_KEYS, ENTITY_KEYS | {"settings"})):
             raise ValueError("invalid project entity fields")
+        if "settings" in entity:
+            if doc["world"] != "aria" or entity["kind"] != "ITEM":
+                raise ValueError('typed pickup fields only belong to Aria items')
+            settings = entity["settings"]
+            if not isinstance(settings, dict) or settings.keys() != ITEM_KEYS:
+                raise ValueError('invalid Aria pickup settings')
+            item_settings(entity["native_type"], **settings)
         eid = _int(entity["id"], 1, next_id - 1, "entity id")
         if eid in ids:
             raise ValueError("duplicate entity id")
@@ -151,7 +194,7 @@ def save(root: Path, doc: dict) -> Path:
 
 
 def create(doc: dict, kind: str, x: int, y: int, label: str,
-           native_type: str = "unassigned") -> dict:
+           native_type: str = "unassigned", settings: dict | None = None) -> dict:
     validate(doc, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
     if not isinstance(native_type, str) or not NATIVE_TYPE.fullmatch(native_type):
         raise ValueError("invalid native type token")
@@ -164,6 +207,8 @@ def create(doc: dict, kind: str, x: int, y: int, label: str,
         raise ValueError("project entity limit reached")
     entry = {"id": doc["next_id"], "kind": kind, "x": x, "y": y,
              "label": label, "native_type": native_type}
+    if settings is not None:
+        entry["settings"] = settings
     candidate = {**doc, "next_id": doc["next_id"] + 1,
                  "entities": [*doc["entities"], entry]}
     validate(candidate, candidate["world"], candidate["area"], candidate["room"],
@@ -246,11 +291,26 @@ def catalog_options(world: str, kind: str, records: list[dict] | None = None) ->
         seen.add(token)
         result.append({"native_type": token, "name": name[:80],
                        "category": str(category)[:160]})
+    if world == "aria" and kind == "ITEM":
+        # Publish documented subtype families even if never placed in the
+        # original map. These are native role IDs, NOT invented item sprites.
+        from scripts.object_catalog import ARIA_PICKUP_NAMES
+        for family, prefix in (("Pickup", "pickup"),
+                               ("Hard Mode", "hard-mode-pickup"),
+                               ("All Souls", "all-souls-reward")):
+            for subtype in ARIA_PICKUP_LIMITS:
+                token = f"{prefix}:{subtype:02X}"
+                if token not in seen:
+                    result.append({"native_type": token,
+                                   "name": f"{family} / {ARIA_PICKUP_NAMES[subtype]}",
+                                   "category": f"Aria {family} / subtype {subtype:02X}"})
+                    seen.add(token)
     return sorted(result, key=lambda e: (e["name"].casefold(), e["native_type"]))
 
 
 def assign(doc: dict, eid: int, native_type: str,
-           records: list[dict] | None = None) -> None:
+           records: list[dict] | None = None,
+           settings: dict | None = None) -> None:
     """Assign a source-catalog identity to ONE authored marker, atomically in memory."""
     validate(doc, doc["world"], doc["area"], doc["room"], doc["width_px"], doc["height_px"])
     old = next((e for e in doc["entities"] if e["id"] == eid), None)
@@ -264,8 +324,17 @@ def assign(doc: dict, eid: int, native_type: str,
         if candidate is None:
             raise ValueError("native type missing or category does not match this game")
         name = candidate["name"]
-    edited = [{**e, "native_type": native_type, "label": name}
-              if e["id"] == eid else e for e in doc["entities"]]
+    edited = []
+    for e in doc["entities"]:
+        if e["id"] != eid:
+            edited.append(e)
+            continue
+        updated = {**e, "native_type": native_type, "label": name}
+        if settings is not None:
+            updated["settings"] = settings
+        elif native_type != e["native_type"]:
+            updated.pop("settings", None)  # No stale subtype-specific metadata.
+        edited.append(updated)
     changed = {**doc, "entities": edited}
     validate(changed, changed["world"], changed["area"], changed["room"],
              changed["width_px"], changed["height_px"])
@@ -288,6 +357,8 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument("--y", type=int, required=True)
     add.add_argument("--label", required=True)
     add.add_argument("--native-type", default="unassigned")
+    for flag in ("item-id", "parameter-0", "parameter-1", "flags"):
+        add.add_argument("--" + flag, type=int)
     moving = sub.add_parser("move")
     moving.add_argument("--id", type=int, required=True)
     moving.add_argument("--x", type=int, required=True)
@@ -299,6 +370,10 @@ def main(argv: list[str] | None = None) -> int:
     assigning = sub.add_parser("assign", help="bind one authored entity to a validated native ID")
     assigning.add_argument("--id", type=int, required=True)
     assigning.add_argument("--native-type", required=True)
+    for flag in ("item-id", "parameter-0", "parameter-1", "flags"):
+        assigning.add_argument("--" + flag, type=int)
+    selected = sub.add_parser("item-settings", help="read private Aria pickup settings")
+    selected.add_argument("--id", type=int, required=True)
     args = parser.parse_args(argv)
     try:
         doc = load(args.root, args.world, args.area, args.room, args.width, args.height)
@@ -306,6 +381,12 @@ def main(argv: list[str] | None = None) -> int:
             for e in doc["entities"]:
                 print(f"{e['id']}\t{e['kind']}\t{e['x']}\t{e['y']}\t{e['label']}\t{e['native_type']}")
         elif args.action == "catalog":
+            if args.world == "aria" and args.kind == "ITEM":
+                try:
+                    from scripts.native_sprite_thumbnails import generate_aria_item_thumbnails
+                    generate_aria_item_thumbnails()
+                except (OSError, ValueError, IndexError):
+                    pass  # No verified ROM / decoder: leave honest placeholders.
             for record in catalog_options(args.world, args.kind):
                 print(f"{record['native_type']}\t{record['name']}\t{record['category']}")
         elif args.action == "create":
@@ -314,13 +395,27 @@ def main(argv: list[str] | None = None) -> int:
                 choices = catalog_options(args.world, args.kind)
                 if not any(e["native_type"] == args.native_type for e in choices):
                     raise ValueError("native type missing or incompatible with entity kind")
-            entity = create(doc, args.kind, args.x, args.y, args.label, args.native_type)
+            settings = requested_item_settings(args)
+            if settings is not None and (args.world != "aria" or args.kind != "ITEM"):
+                raise ValueError('pickup parameters require an Aria item')
+            entity = create(doc, args.kind, args.x, args.y, args.label,
+                            args.native_type, settings)
             save(args.root, doc)
             print(f"CREATED {entity['id']}")
         elif args.action == "assign":
-            assign(doc, args.id, args.native_type)
+            settings = requested_item_settings(args)
+            if settings is not None and args.world != "aria":
+                raise ValueError('pickup parameters require Aria')
+            assign(doc, args.id, args.native_type, settings=settings)
             save(args.root, doc)
             print(f"ASSIGNED {args.id}")
+        elif args.action == "item-settings":
+            entry = next((e for e in doc["entities"] if e["id"] == args.id), None)
+            if entry is None or entry["kind"] != "ITEM" or args.world != "aria":
+                raise ValueError('unknown Aria project item')
+            fields = entry.get("settings", {})
+            print("\t".join(str(fields.get(key, 0)) for key in
+                            ("item_id", "parameter_0", "parameter_1", "flags")))
         elif args.action == "move":
             move(doc, args.id, args.x, args.y)
             save(args.root, doc)

@@ -91,17 +91,35 @@ def main() -> int:
     print("Partial ORIGINAL BG1 (not packaged):", native.OUTPUT /
           source["layers"]["Bg1"]["path"])
     composite = source.get('composite', {})
+    bg3_black_hole_report = None
+    if (bg3_report and bg3_report.get("status") == "EXPERIMENTAL_BG3_TEXT_MAP" and
+            composite.get('status') == 'PARTIAL_BG1_OVER_BG2_DIAGNOSTIC'):
+        try:
+            composite_path = native.OUTPUT / composite['path']
+            bg3_path = native.OUTPUT / bg3_report['path']
+            bg3_black_hole_report = bg3.merge_visible_background_files(
+                composite_path, bg3_path, composite_path, y_offset=0)
+        except (ValueError, OSError) as exc:
+            print("BG3-behind-black diagnostic composite unavailable:", exc)
     if composite.get('status') == 'PARTIAL_BG1_OVER_BG2_DIAGNOSTIC':
-        print("BG1-over-BG2 diagnostic (not packaged):", native.OUTPUT / composite['path'])
-        print("Visibility counts:", {key: composite[key] for key in
-              ('bg1_visible_pixels', 'bg2_visible_pixels', 'unresolved_pixels')})
-        print("BG layer order/priority is not yet verified against the GBA renderer.")
+        if bg3_black_hole_report is not None:
+            print("BG1-over-BG2-over-BG3 diagnostic (not packaged):", native.OUTPUT / composite['path'])
+            print("Visibility counts:", {key: composite[key] for key in
+                  ('bg1_visible_pixels', 'bg2_visible_pixels', 'unresolved_pixels')})
+            print("BG3-behind-black merge report:", bg3_black_hole_report)
+            print("BG layer order/priority is not yet verified against the GBA renderer.")
+        else:
+            print("BG1-over-BG2 diagnostic (not packaged):", native.OUTPUT / composite['path'])
+            print("Visibility counts:", {key: composite[key] for key in
+                  ('bg1_visible_pixels', 'bg2_visible_pixels', 'unresolved_pixels')})
+            print("BG layer order/priority is not yet verified against the GBA renderer.")
     else:
         print("BG1+BG2 composite unavailable:", composite.get('reason', 'not decoded'))
     if bg3_report and bg3_report.get("status") == "EXPERIMENTAL_BG3_TEXT_MAP":
         print("Experimental standalone BG3 (not packaged):",
               native.OUTPUT / bg3_report["path"])
-        print("BG3 is a separate native tilemap; press 4 in SDL3. Camera offset and priority unknown.")
+        print("BG3 is a separate native tilemap; press 3 for the black-hole composite or 4 for standalone BG3.")
+        print("Diagnostic placement is top-centered; exact camera offset and priority remain unknown.")
     else:
         print("Standalone BG3 unavailable:", bg3_error or "not decoded")
     if args.demo_overlays:

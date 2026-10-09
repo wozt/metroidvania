@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import unittest
-from scripts.mzm_bg3_preview import preview, analyze_references, probe_vram_references
+from scripts.mzm_bg3_preview import (
+    preview, analyze_references, probe_vram_references,
+    bmp24_decode, merge_visible_background,
+)
+from scripts import mzm_room_render as native
 
 
 def litlz(data):
@@ -71,5 +75,27 @@ class BG3PreviewTests(unittest.TestCase):
 
     def test_fail_closed(self):
         with self.assertRaises(ValueError): preview(b'bad',b'',b'')
+
+
+    def test_merge_visible_background_top_centered(self):
+        foreground = native.bmp24(4, 2, bytes([
+            7, 0, 0,   0, 0, 0,   0, 0, 0,   8, 0, 0,
+            0, 0, 0,   0, 0, 0,   0, 0, 0,   0, 0, 0,
+        ]))
+        background = native.bmp24(2, 2, bytes([
+            0, 9, 0,   0, 10, 0,
+            0, 11, 0,  0, 12, 0,
+        ]))
+        merged, report = merge_visible_background(foreground, background)
+        width, height, rgb = bmp24_decode(merged)
+        self.assertEqual((width, height), (4, 2))
+        self.assertEqual(rgb, bytes([
+            7, 0, 0,   0, 9, 0,   0, 10, 0,  8, 0, 0,
+            0, 0, 0,   0, 11, 0,  0, 12, 0,  0, 0, 0,
+        ]))
+        self.assertEqual(report['foreground_visible_pixels'], 2)
+        self.assertEqual(report['background_visible_pixels'], 4)
+        self.assertEqual(report['x_offset'], 1)
+        self.assertEqual(report['y_offset'], 0)
 
 if __name__ == '__main__': unittest.main()

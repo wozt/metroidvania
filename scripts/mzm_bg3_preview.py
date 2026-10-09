@@ -16,6 +16,90 @@ from scripts.import_game_assets import OUTPUT, write_generated
 SOURCE = native.ROOT / 'third_party/mzm/src/data/rooms_data.c'
 
 
+# PATCH_0132_BG3_BEHIND_BLACK: diagnostic-only BMP helpers used to place the
+# native BG3 image behind unresolved black room pixels. Pure black is treated
+# as transparent/unknown here; exact GBA priorities and camera offsets remain
+# unverified.
+def bmp24_decode(bitmap: bytes) -> tuple[int, int, bytes]:
+    if len(bitmap) < 54 or bitmap[:2] != b'BM':
+        raise ValueError('invalid BMP header')
+    file_size, reserved1, reserved2, pixel_offset = struct.unpack_from('<IHHI', bitmap, 2)
+    if file_size != len(bitmap) or reserved1 or reserved2:
+        raise ValueError('unsupported BMP container')
+    (dib_size, width, height, planes, bit_count, compression, image_size,
+     _xppm, _yppm, _colors_used, _colors_important) = struct.unpack_from('<IiiHHIIiiII', bitmap, 14)
+    if dib_size != 40 or planes != 1 or bit_count != 24 or compression != 0:
+        raise ValueError('unsupported BMP format')
+    if width <= 0 or height <= 0:
+        raise ValueError('unsupported BMP dimensions')
+    pitch = (width * 3 + 3) & ~3
+    expected = pixel_offset + pitch * height
+    if pixel_offset < 54 or image_size not in (0, pitch * height) or expected != len(bitmap):
+        raise ValueError('invalid BMP payload size')
+    rgb = bytearray(width * height * 3)
+    for y in range(height):
+        src_row = pixel_offset + (height - 1 - y) * pitch
+        for x in range(width):
+            src = src_row + x * 3
+            dst = (y * width + x) * 3
+            rgb[dst:dst + 3] = bitmap[src:src + 3][::-1]
+    return width, height, bytes(rgb)
+
+
+def merge_visible_background(foreground_bmp: bytes, background_bmp: bytes,
+                             *, x_offset: int | None = None,
+                             y_offset: int = 0) -> tuple[bytes, dict]:
+    fw, fh, foreground = bmp24_decode(foreground_bmp)
+    bw, bh, background = bmp24_decode(background_bmp)
+    if x_offset is None:
+        x_offset = (fw - bw) // 2
+    if x_offset < 0 or y_offset < 0:
+        raise ValueError('negative BG3 placement offset')
+    output = bytearray(foreground)
+    fg_visible = 0
+    bg_visible = 0
+    black_pixels = 0
+    for y in range(fh):
+        for x in range(fw):
+            dst = (y * fw + x) * 3
+            fg_pixel = foreground[dst:dst + 3]
+            if any(fg_pixel):
+                output[dst:dst + 3] = fg_pixel
+                fg_visible += 1
+                continue
+            bx = x - x_offset
+            by = y - y_offset
+            if 0 <= bx < bw and 0 <= by < bh:
+                src = (by * bw + bx) * 3
+                bg_pixel = background[src:src + 3]
+                if any(bg_pixel):
+                    output[dst:dst + 3] = bg_pixel
+                    bg_visible += 1
+                    continue
+            black_pixels += 1
+    return bmp24(fw, fh, bytes(output)), {
+        'foreground_visible_pixels': fg_visible,
+        'background_visible_pixels': bg_visible,
+        'black_pixels': black_pixels,
+        'background_width': bw,
+        'background_height': bh,
+        'x_offset': x_offset,
+        'y_offset': y_offset,
+    }
+
+
+def merge_visible_background_files(foreground_path: Path, background_path: Path,
+                                   output_path: Path,
+                                   *, x_offset: int | None = None,
+                                   y_offset: int = 0) -> dict:
+    merged, report = merge_visible_background(
+        foreground_path.read_bytes(), background_path.read_bytes(),
+        x_offset=x_offset, y_offset=y_offset)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(merged)
+    return report
+
+
 def source_bg3_blob(symbol: str) -> bytes:
     if symbol in ('sSaveRoom_Bg3', 'sMapRoom_Bg3'):
         kind = 'save_room_bg3.rle' if symbol == 'sSaveRoom_Bg3' else 'map_room_bg3.rle'

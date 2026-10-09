@@ -118,6 +118,42 @@ failure:
     return false;
 }
 
+/* PATCH_0139_CENTRAL_SPAWN
+ * Iterate native/project geometry at four-pixel precision.
+ * First choose the nearest standing position with free headroom; if the
+ * current verified collision subset yields none, use a free central air
+ * position. Never claim this is a native door/transition spawn point.
+ */
+static bool find_spawn(const Room *room, float w, float h,
+                       float *out_x, float *out_y) {
+    bool found = false;
+    float best = 0.f, sx = 0.f, sy = 0.f;
+    float cx = ((float)room->width - w) * 0.5f;
+    float cy = ((float)room->height - h) * 0.5f;
+    for (int pass = 0; pass < 2; ++pass) {
+        found = false;
+        for (int y = 0; y <= room->height - (int)h; y += 4) {
+            for (int x = 0; x <= room->width - (int)w; x += 4) {
+                float fx = (float)x, fy = (float)y;
+                if (blocked(room, fx, fy, w, h)) continue;
+                if (pass == 0 && !blocked(room, fx, fy + 1.f, w, h))
+                    continue;
+                /* Squared distance; prefer a point near the centre. */
+                float dx = fx - cx, dy = fy - cy;
+                float distance = dx * dx + dy * dy;
+                if (!found || distance < best) {
+                    found = true; best = distance; sx = fx; sy = fy;
+                }
+            }
+        }
+        if (found) {
+            *out_x = sx; *out_y = sy;
+            return true;
+        }
+    }
+    return false;
+}
+
 static float clampf(float x, float low, float high) {
     return x < low ? low : x > high ? high : x;
 }
@@ -172,7 +208,17 @@ int main(int argc, char **argv) {
     if (native_source)
         printf("Native source: %zu records, %zu verified full-solid cells (Clipdata 5)\n",
                native_records,native_solids);
-    if (check) { free(room); return 0; }
+    if (check) {
+        float spawn_x = 0.f, spawn_y = 0.f;
+        if (!find_spawn(room, 12.f, 16.f, &spawn_x, &spawn_y)) {
+            fprintf(stderr, "No free runtime test spawn found\n");
+            free(room); return 2;
+        }
+        printf("Validated test spawn: x=%.0f y=%.0f, ground=%s\n",
+               spawn_x, spawn_y,
+               blocked(room, spawn_x, spawn_y + 1.f, 12.f, 16.f) ? "yes" : "no");
+        free(room); return 0;
+    }
     if (!SDL_Init(SDL_INIT_VIDEO)) { fprintf(stderr,"SDL_Init: %s\n",SDL_GetError());free(room);return 1; }
     SDL_Window *window=SDL_CreateWindow("Metroid Vania - experimental C11 runtime",
                                        960,640,SDL_WINDOW_RESIZABLE);
@@ -196,14 +242,12 @@ int main(int argc, char **argv) {
     const float terminal_speed=400.f;
     float vy=0.f;
     bool grounded=false;
-    /* Search for a nonblocked spawn; this is a test avatar, not extracted Samus. */
-    bool spawn=false;
-    for (int y=0;y<=room->height-16 && !spawn;y+=16)
-        for (int x=0;x<=room->width-16 && !spawn;x+=16)
-            if (!blocked(room,(float)x,(float)y,pw,ph)) {
-                px=(float)x;py=(float)y;spawn=true;
-            }
+    /* Prefer a grounded, collision-free test spawn near the room centre.
+     * This is NOT a verified original Samus entry position. */
+    bool spawn = find_spawn(room, pw, ph, &px, &py);
     if (!spawn) { fprintf(stderr,"No free avatar spawn found\n"); goto cleanup; }
+    printf("Selected safe test spawn: x=%.0f y=%.0f, ground=%s\n",
+           px, py, blocked(room, px, py+1.f, pw, ph) ? "yes" : "no");
     printf("Controls: Left/Right or A/D = move; Space/Up/W = jump; Escape = exit. ");
     printf("Experimental platformer physics; only project code-1 solids block.\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;

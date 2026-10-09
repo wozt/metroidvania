@@ -48,9 +48,13 @@ def bmp24_decode(bitmap: bytes) -> tuple[int, int, bytes]:
 
 def merge_visible_background(foreground_bmp: bytes, background_bmp: bytes,
                              *, x_offset: int | None = None,
-                             y_offset: int = 0) -> tuple[bytes, dict]:
+                             y_offset: int = 0,
+                             foreground_mask: bytes | None = None) -> tuple[bytes, dict]:
     fw, fh, foreground = bmp24_decode(foreground_bmp)
     bw, bh, background = bmp24_decode(background_bmp)
+    if foreground_mask is not None:
+        if len(foreground_mask) != fw * fh or any(v not in (0, 1) for v in foreground_mask):
+            raise ValueError('invalid native foreground visibility mask')
     if x_offset is None:
         x_offset = (fw - bw) // 2
     if x_offset < 0 or y_offset < 0:
@@ -63,7 +67,8 @@ def merge_visible_background(foreground_bmp: bytes, background_bmp: bytes,
         for x in range(fw):
             dst = (y * fw + x) * 3
             fg_pixel = foreground[dst:dst + 3]
-            if any(fg_pixel):
+            if (foreground_mask[dst // 3] if foreground_mask is not None
+                    else any(fg_pixel)):
                 output[dst:dst + 3] = fg_pixel
                 fg_visible += 1
                 continue
@@ -91,10 +96,12 @@ def merge_visible_background(foreground_bmp: bytes, background_bmp: bytes,
 def merge_visible_background_files(foreground_path: Path, background_path: Path,
                                    output_path: Path,
                                    *, x_offset: int | None = None,
-                                   y_offset: int = 0) -> dict:
+                                   y_offset: int = 0,
+                                   mask_path: Path | None = None) -> dict:
     merged, report = merge_visible_background(
         foreground_path.read_bytes(), background_path.read_bytes(),
-        x_offset=x_offset, y_offset=y_offset)
+        x_offset=x_offset, y_offset=y_offset,
+        foreground_mask=mask_path.read_bytes() if mask_path is not None else None)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(merged)
     return report

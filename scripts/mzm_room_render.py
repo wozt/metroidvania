@@ -444,7 +444,15 @@ def decode_room(area: str, number: int, *, write_outputs: bool = True) -> dict:
         rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_bg12_composite.bmp'
         if write_outputs:
             write_generated(rel, bmp24(w*16, h*16, merged))
+        # A visibility mask distinguishes native black pixels from unresolved
+        # positions; bitmap RGB alone cannot provide this distinction.
+        mask_rel = f'rooms/metroid/previews/{area.lower()}_{number:03}_bg12_visibility.mask'
+        mask = bytes(1 if a or b else 0 for a, b in zip(
+            layer_coverage['Bg1'], layer_coverage['Bg2']))
+        if write_outputs:
+            write_generated(mask_rel, mask)
         result['composite'] = {
+            'visibility_mask_path': mask_rel,
             'status': 'PARTIAL_BG1_OVER_BG2_DIAGNOSTIC', 'path': rel,
             'width': w*16, 'height': h*16, **coverage,
             'caveat': 'BG1-over-BG2 order is diagnostic, not verified GBA hardware priority; BG0/BG3, sprites, common gfx, palette effects and blending unavailable',

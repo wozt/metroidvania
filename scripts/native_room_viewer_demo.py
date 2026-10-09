@@ -97,8 +97,13 @@ def main() -> int:
         try:
             composite_path = native.OUTPUT / composite['path']
             bg3_path = native.OUTPUT / bg3_report['path']
+            mask_rel = composite.get('visibility_mask_path')
+            if not mask_rel:
+                raise ValueError('native BG1/BG2 visibility mask is unavailable')
+            mask_path = native.OUTPUT / mask_rel
             bg3_black_hole_report = bg3.merge_visible_background_files(
-                composite_path, bg3_path, composite_path, y_offset=0)
+                composite_path, bg3_path, composite_path,
+                y_offset=0, mask_path=mask_path)
         except (ValueError, OSError) as exc:
             print("BG3-behind-black diagnostic composite unavailable:", exc)
     if composite.get('status') == 'PARTIAL_BG1_OVER_BG2_DIAGNOSTIC':

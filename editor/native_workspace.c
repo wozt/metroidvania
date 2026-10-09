@@ -1749,6 +1749,32 @@ static gboolean room_preview_params(const char *details, guint *a)
 
 static gchar *room_sprite_path(NativeWorkspace *doc, const RoomAnnotation *item)
 {
+    if (item->kind == OVERLAY_DOORS && !doc->project_aria && !item->project_owned) {
+        /* Only allow known names emitted by verified Clipdata-based import. */
+        const char *field = strstr(item->details, "hatch_preview=");
+        if (!field) return NULL;
+        field += strlen("hatch_preview=");
+        const char *end = strchr(field, ';');
+        size_t length = end ? (size_t)(end - field) : strlen(field);
+        if (!length || length >= 40) return NULL;
+        gchar name[40];
+        memcpy(name, field, length);
+        name[length] = '\0';
+        static const char *const allowed[] = {
+            "gray_left", "gray_right", "normal_left", "normal_right",
+            "missile_left", "missile_right", "super_missile_left",
+            "super_missile_right", "power_bomb_left", "power_bomb_right"
+        };
+        gboolean valid = FALSE;
+        for (guint i = 0; i < G_N_ELEMENTS(allowed); ++i)
+            if (!strcmp(name, allowed[i])) { valid = TRUE; break; }
+        if (!valid) return NULL;
+        const char *family = strstr(item->details, "hatch_family=mothership") ?
+                             "mothership" : "zebes";
+        return g_strdup_printf(
+            "assets/extracted/sprite_previews/mzm_hatches/%s/%s.png",
+            family, name);
+    }
     if (item->kind != OVERLAY_ENEMIES && item->kind != OVERLAY_ITEMS) return NULL;
     if (!room_preview_token(item->native_type)) return NULL;
     const char *native = item->native_type;
@@ -1840,9 +1866,14 @@ static void room_draw_sprite(NativeWorkspace *doc, cairo_t *cr,
     if (!image) return;
     double iw = cairo_image_surface_get_width(image);
     double ih = cairo_image_surface_get_height(image);
+    /* Hatches are BG1 16x64 metatile stacks, not 16px OAM sprites.
+     * Draw at native spatial size; do not shrink them into a square icon. */
+    gboolean hatch = item->kind == OVERLAY_DOORS && !doc->project_aria &&
+                     strstr(item->details, "hatch_preview=") != NULL;
     double size = MIN(MIN(MAX(4.0, width - 6.0), MAX(4.0, height - 6.0)),
                       48.0 * doc->scale);
-    double factor = MIN(size / iw, size / ih);
+    double factor = hatch ? MIN(width / iw, height / ih) :
+                            MIN(size / iw, size / ih);
     double dw = iw * factor, dh = ih * factor;
     cairo_save(cr);
     cairo_translate(cr, x + (width - dw) * 0.5, y + (height - dh) * 0.5);

@@ -126,6 +126,12 @@ def export(area: str, number: int) -> dict:
         info["background"] = {"status": "NOT_DECODED", "reason": str(exc)}
     from scripts.room_annotations import export_mzm
     info['annotations'] = str(OUTPUT / export_mzm(room['area'], number))
+    try:
+        from scripts.mzm_hatch_preview import export_hatches
+        info['native_hatch_previews'] = export_hatches()
+    except (OSError, ValueError, KeyError, IndexError) as exc:
+        # Missing optional shared graphics must not block editing a room.
+        info['native_hatch_previews'] = {'status': 'NOT_AVAILABLE', 'reason': str(exc)}
     return info
 
 def main() -> int:

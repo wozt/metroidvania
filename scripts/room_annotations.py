@@ -89,6 +89,27 @@ def _mzm_door_entries(source: str, area: str, room: int) -> list[dict]:
     return entries
 
 
+def mzm_hatch_from_clipdata(
+        clip: tuple, x_start: int, y_start: int) -> tuple[str, str, int] | None:
+    """Return (style, facing, hatch_x) using native Clipdata at the door.
+
+    Mirrors ConnectionLoadDoors: inspect one block to the right, then left.
+    The only accepted indices are those mapped to native hatch behaviors in
+    metroidret/mzm src/data/clipdata_types.c, not visually guessed colors.
+    """
+    width, height, blocks = clip
+    styles = {48: 'gray', 54: 'normal', 64: 'missile',
+              70: 'super_missile', 76: 'power_bomb'}
+    if not 0 <= y_start < height or len(blocks) != width * height:
+        return None
+    for position, facing in ((x_start + 1, 'right'), (x_start - 1, 'left')):
+        if 0 <= position < width:
+            style = styles.get(blocks[y_start * width + position])
+            if style:
+                return style, facing, position
+    return None
+
+
 def build_mzm(area: str, room_number: int) -> list[tuple]:
     if area not in AREAS or not 0 <= room_number < 256:
         raise ValueError('invalid MZM room identity')
@@ -115,6 +136,14 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
          fields.get('pSecondSpriteData', 'sEnemyRoomData_Empty'),
          fields.get('secondSpriteset', fields['defaultSpriteset'])),
     ]
+    # Identify hatch color/direction from the original room collision bytes.
+    # Never change ROM content or assign a generic blue hatch to an unknown door.
+    clip = None
+    try:
+        from scripts.mzm_room_render import room_blob, rle_room
+        clip = rle_room(room_blob(fields['pClipData']))
+    except (ValueError, OSError, KeyError, IndexError):
+        pass
     rows = []
     source_index = 0
     for variant_name, event, symbol, spriteset_text in variants:
@@ -153,9 +182,21 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
                                   area, room_number):
         width = (door['xEnd'] - door['xStart'] + 1) * 16
         height = (door['yEnd'] - door['yStart'] + 1) * 16
+        x = door['xStart'] * 16
         details = (f"native_door={door['index']}; type={door['type']}; "
                    f"destination_door={door['destinationDoor']}")
-        rows.append(('DOOR', door['index'], door['xStart'] * 16,
+        if clip is not None and 'DOOR_TYPE_CLOSED_HATCH' in door['type']:
+            hatch = mzm_hatch_from_clipdata(clip, door['xStart'], door['yStart'])
+            if hatch is not None:
+                style, facing, hatch_x = hatch
+                # Hatch is placed one block to the side of the transition.
+                x = hatch_x * 16
+                width, height = 16, 64
+                family = 'mothership' if area == 'Chozodia' else 'zebes'
+                details += (f"; hatch_preview={style}_{facing}; "
+                            f"hatch_family={family}; "
+                            f"native_transition_x={door['xStart']}")
+        rows.append(('DOOR', door['index'], x,
                      door['yStart'] * 16, width, height, 'native',
                      str(door['index']), f"Door {door['index']}", details))
     return rows

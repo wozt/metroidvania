@@ -834,3 +834,19 @@ and the proprietary-file guard passed.
   global map's verified door-navigation panel remains unchanged.
 - Native room door markers are still read-only diagnostics; authentic
   animated hatch sprite rendering remains future work.
+
+## Patch 0098 - original native Zero Mission hatch BG1 graphics
+
+- Decode the original shared 0x400-based metatile table and common graphics/
+  palette from the owner's verified US ROM or ignored extracted raw resources.
+  Generate private transparent hatch PNGs for all five hatch types and both
+  orientations, with a separate Mothership graphics family.
+- Identify real hatch type and facing from native Clipdata (not guessed colors),
+  using the exact engine values. Place each hatch one block beside its door
+  transition as ConnectionLoadDoors does. Unknown entries remain read-only
+  diagnostic boxes, with no fabricated hatch image.
+- Display original 16x64 metatile graphics at actual room scale via the
+  existing cached sprite-preview surface; no gameplay or ROM mutation.
+- Add synthetic pixel/PNG and Clipdata identity regressions.
+- Opening/closing animation and event-dependent palette switching remain future
+  work; CMake/CTest and private-ROM guard still required locally.

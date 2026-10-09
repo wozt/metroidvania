@@ -13,7 +13,7 @@ def litlz(data):
 class BG3PreviewTests(unittest.TestCase):
     def test_text_map_and_gfx(self):
         gfx = bytes([0x11]*32)
-        base = (0xfde0 - len(gfx) - 0xc000)//32
+        base = (0xfde0 - len(gfx) - 0x8000)//32
         word = (0x3000|base).to_bytes(2,'little')
         bg = bytes([0,0,0,0]) + litlz(word*1024)
         pal = bytearray(14*32)
@@ -22,6 +22,7 @@ class BG3PreviewTests(unittest.TestCase):
         self.assertEqual(image[:2],b'BM')
         self.assertEqual(report['visible_pixels'],256*256)
         self.assertEqual(report['unresolved_tiles'],0)
+        self.assertEqual(report['bg3_charbase'], 2)
     def test_reference_diagnostics(self):
         data = (0x0001).to_bytes(2, 'little') * 512 + (0x300a).to_bytes(2, 'little') * 512
         report = analyze_references(data, 16, 0)
@@ -33,7 +34,7 @@ class BG3PreviewTests(unittest.TestCase):
 
     def test_missing_palette_not_fabricated(self):
         gfx = bytes([0x11] * 32)
-        base = (0xfde0 - len(gfx) - 0xc000) // 32
+        base = (0xfde0 - len(gfx) - 0x8000) // 32
         bg = bytes(4) + litlz(base.to_bytes(2, 'little') * 1024)
         with self.assertRaisesRegex(ValueError, 'palette-missing pixels=65536'):
             preview(bg, litlz(gfx), b'')

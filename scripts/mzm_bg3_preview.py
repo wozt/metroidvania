@@ -93,12 +93,16 @@ def preview(bg3_blob: bytes, background_gfx: bytes, palette: bytes) -> tuple[byt
     gfx = native.lz77(background_gfx)
     if not gfx or len(gfx) % 32:
         raise ValueError('BG3 background graphics not 4bpp tile-aligned')
-    # Original location candidate; do not treat it as hardware-verified.
-    base_byte = 0xfde0 - len(gfx) - 0xc000
+    # BG3 charbase 2 addresses character data relative to VRAM+0x8000.
+    # RoomLoadTileset places background graphics ending at VRAM+0xfde0.
+    # This is native loader addressing, not an arbitrary coverage guess.
+    base_byte = 0xfde0 - len(gfx) - 0x8000
     if base_byte < 0 or base_byte % 32:
         raise ValueError('BG3 charbase offset not tile aligned')
     base = base_byte // 32
     report = analyze_references(map_data, len(gfx) // 32, base)
+    report['bg3_charbase'] = 2
+    report['graphics_vram_start'] = hex(0xfde0 - len(gfx))
     tw = 32
     th = len(map_data) // (tw * 2)
     pixels = bytearray(tw * 8 * th * 8 * 3)
@@ -139,8 +143,9 @@ def preview(bg3_blob: bytes, background_gfx: bytes, palette: bytes) -> tuple[byt
         'missing_palette_pixels': missing_palette_pixels,
         'transparent_pixels': transparent_pixels,
         'width': tw * 8, 'height': th * 8,
-        'caveat': ('BG3 charbase/priority/scroll are not verified against GBA hardware; '
-                   'common palette rows 0..2 are not yet decoded'),
+        'caveat': ('BG3 rendered using character block 2 and native loader graphics region. '
+                   'BG3CNT register state, priority/scroll and common palette rows 0..2 '
+                   'remain unverified or unavailable'),
     })
     if not visible:
         raise ValueError(
@@ -150,8 +155,8 @@ def preview(bg3_blob: bytes, background_gfx: bytes, palette: bytes) -> tuple[byt
             f"transparent pixels={transparent_pixels}; "
             f"palette banks={report['palette_banks']}; "
             f"candidate base coverage={report['candidate_base_coverage']}. "
-            'Missing common GBA graphics/palette resources must be recovered '
-            'from the native loader; do not infer colors or select a base blindly.'
+            'Some BG3 graphics or GBA palette resources are unresolved; '
+            'do not invent pixels or palette colors.'
         )
     return native.bmp24(tw * 8, th * 8, pixels), report
 

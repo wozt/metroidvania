@@ -993,3 +993,13 @@ and the proprietary-file guard passed.
   the project collision entry in the context menu restores native provenance.
 - No native physics adapter or ROM collision writer is implemented yet. Existing
   imported collision images remain diagnostic-only, not destructive edit targets.
+
+## Patch 0114 - exact saved project door targets
+
+Patch 0114: target project door picker. Lists only previously saved project doors
+in a ROM-verified target room. The chosen ID is checked against the saved
+target geometry by the headless backend, and no native-only door index is
+silently reused as a project door ID. The target chooser does not change the
+room until the user explicitly saves the destination and then the room.
+No automatic reciprocal link or native engine encoder is implemented.
+

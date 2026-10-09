@@ -29,7 +29,7 @@ EXIT_OPERATION = 4
 TSV_COMMANDS = {
     "room-list", "list-rooms", "placement-list", "entity-list",
     "entity-catalog", "entity-item-settings", "list-assets",
-    "collision-list", "door-list", "transition-list",
+    "collision-list", "door-list", "door-target-list", "transition-list",
 }
 
 
@@ -228,7 +228,7 @@ def _tsv_result(command: str, data: dict) -> str:
     elif command == "collision-list":
         rows = [[item["x"], item["y"], item["type"], data["resolution_px"]]
                 for item in data["cells"]]
-    elif command == "door-list":
+    elif command in ("door-list", "door-target-list"):
         rows = [[item["id"], item["x"], item["y"], item["width"], item["height"],
                  item["label"], item["door_type"], item["facing"],
                  (f"{item['native_source']['index']},"

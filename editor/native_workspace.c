@@ -1770,6 +1770,9 @@ typedef struct {
     GtkWidget *window, *status, *label, *x, *y, *width, *height;
     GtkWidget *type, *facing, *world, *area, *room;
     GtkWidget *target_door, *spawn_x, *spawn_y, *unlink;
+    GtkWidget *target_choices; /* 0114: pick only verified saved project door IDs. */
+    GArray *target_choice_ids;
+    gboolean loading_target_choices;
     GtkWidget *atlas_page, *return_page; /* Weak GTK references. */
     guint door_id, transition_id;
 } ProjectDoorForm;
@@ -1800,6 +1803,7 @@ static void project_door_form_destroy(gpointer userdata)
     if (form->return_page)
         g_object_remove_weak_pointer(G_OBJECT(form->return_page),
                                      (gpointer *)&form->return_page);
+    if (form->target_choice_ids) g_array_unref(form->target_choice_ids);
     document_unref(form->doc);
     g_free(form);
 }
@@ -1844,6 +1848,115 @@ static void project_door_world_changed_0102(GObject *object, GParamSpec *pspec,
     gtk_drop_down_set_model(GTK_DROP_DOWN(form->area), G_LIST_MODEL(names));
     gtk_drop_down_set_selected(GTK_DROP_DOWN(form->area), 0);
     g_object_unref(names);
+}
+
+/* PATCH_0114_EXACT_TARGET_PICKER. UI selection itself never writes to disk. */
+static void project_door_target_chosen_0114(GObject *object, GParamSpec *pspec,
+                                              gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    (void)object; (void)pspec;
+    if (form->loading_target_choices || !form->target_choice_ids) return;
+    guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->target_choices));
+    if (selected >= form->target_choice_ids->len) return;
+    guint id = g_array_index(form->target_choice_ids, guint, selected);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->target_door), id);
+    gtk_label_set_text(GTK_LABEL(form->status),
+        "Target project door selected. Review spawn X/Y, then Save destination."
+        " Press the room diskette to commit.");
+}
+
+static void project_door_list_targets_0114(GtkButton *button, gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    NativeWorkspace *doc = form->doc;
+    (void)button;
+    if (doc->closing || !doc->ready || !form->target_choice_ids) return;
+    guint world = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->world));
+    guint area = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->area));
+    if (world > 1 || area >= (world ? 12u : 7u)) return;
+    gchar *world_arg = g_strdup_printf("--target-world=%s",
+                                          world ? "aria" : "zero_mission");
+    gchar *area_arg = g_strdup_printf("--target-area=%u", area);
+    gchar *room_arg = g_strdup_printf("--target-room=%d",
+        gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->room)));
+    gchar *args[] = {"python3", "scripts/editor_cli.py",
+        "--command=door-target-list", world_arg, area_arg, room_arg,
+        "--format=tsv", NULL};
+    gchar *out = NULL, *err = NULL;
+    GError *error = NULL;
+    gint status = -1;
+    gboolean launched = g_spawn_sync(NULL, args, NULL, G_SPAWN_SEARCH_PATH,
+                                     NULL, NULL, &out, &err, &status, &error);
+    gboolean ok = launched && g_spawn_check_wait_status(status, NULL);
+    g_free(world_arg); g_free(area_arg); g_free(room_arg);
+    if (!ok) {
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "Cannot list target doors: verify the saved target room and imported catalog.");
+        g_free(out); g_free(err); g_clear_error(&error);
+        return;
+    }
+    form->loading_target_choices = TRUE;
+    g_array_set_size(form->target_choice_ids, 0);
+    GtkStringList *labels = gtk_string_list_new(NULL);
+    guint unspecified = 0;
+    g_array_append_val(form->target_choice_ids, unspecified);
+    gtk_string_list_append(labels, "Unspecified (project door ID 0)");
+    guint current = (guint)gtk_spin_button_get_value_as_int(
+        GTK_SPIN_BUTTON(form->target_door));
+    guint previous = 0;
+    gchar **lines = g_strsplit(out ? out : "", "\n", -1);
+    for (guint i = 0; lines[i] && i < 512; ++i) {
+        if (!lines[i][0]) continue;
+        gchar **fields = g_strsplit(lines[i], "\t", 9);
+        guint id, x, y;
+        if (g_strv_length(fields) == 9 &&
+            parse_unsigned_field(fields[0], &id) && id &&
+            parse_unsigned_field(fields[1], &x) &&
+            parse_unsigned_field(fields[2], &y)) {
+            gchar *label = g_strdup_printf("#%u %s (%u, %u) - %s",
+                id, fields[5], x, y, fields[6]);
+            gtk_string_list_append(labels, label);
+            g_array_append_val(form->target_choice_ids, id);
+            if (id == current) previous = form->target_choice_ids->len - 1;
+            g_free(label);
+        }
+        g_strfreev(fields);
+    }
+    guint count = form->target_choice_ids->len - 1;
+    gtk_drop_down_set_model(GTK_DROP_DOWN(form->target_choices), G_LIST_MODEL(labels));
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->target_choices), previous);
+    g_object_unref(labels);
+    form->loading_target_choices = FALSE;
+    if (previous == 0)
+        gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->target_door), 0);
+    gtk_label_set_text(GTK_LABEL(form->status), count ?
+        "Select a saved target project door; then Save destination and the room."
+        " Original native-only doors cannot be linked by project ID." :
+        "No saved project doors in that target room. Adopt/create and save one first.");
+    g_strfreev(lines);
+    g_free(out); g_free(err); g_clear_error(&error);
+}
+
+static void project_door_target_scope_changed_0114(GObject *object,
+                                                     GParamSpec *pspec,
+                                                     gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    (void)object; (void)pspec;
+    if (!form->target_choice_ids || !form->target_choices) return;
+    /* A project door ID is local to its room; reject stale selections. */
+    form->loading_target_choices = TRUE;
+    g_array_set_size(form->target_choice_ids, 0);
+    guint id = 0;
+    g_array_append_val(form->target_choice_ids, id);
+    GtkStringList *names = gtk_string_list_new(
+        (const char *const[]){"Unspecified (refresh target doors)", NULL});
+    gtk_drop_down_set_model(GTK_DROP_DOWN(form->target_choices), G_LIST_MODEL(names));
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(form->target_choices), 0);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->target_door), 0);
+    g_object_unref(names);
+    form->loading_target_choices = FALSE;
 }
 
 static void project_door_fetch_link_0102(ProjectDoorForm *form)
@@ -2073,6 +2186,7 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
     GtkWidget *save = gtk_button_new_with_label("Save door properties");
     GtkWidget *link = gtk_button_new_with_label("Save destination");
     GtkWidget *pick = gtk_button_new_with_label("Pick room on global map");
+    GtkWidget *list_targets = gtk_button_new_with_label("List saved target doors");
     gtk_widget_set_sensitive(pick, form->atlas_page != NULL);
     form->unlink = gtk_button_new_with_label("Unlink");
     GtkWidget *close = gtk_button_new_with_label("Close");
@@ -2117,16 +2231,28 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
     form->area = gtk_drop_down_new_from_strings(door_mzm_areas_0102);
     form->room = project_door_spin_0102(0, 999, 1, 0);
     form->target_door = project_door_spin_0102(0, 999999, 1, 0);
+    form->target_choice_ids = g_array_new(FALSE, FALSE, sizeof(guint));
+    form->target_choices = gtk_drop_down_new_from_strings(
+        (const char *const[]){"Unspecified (project door ID 0)", NULL});
+    gtk_widget_set_hexpand(form->target_choices, TRUE);
     form->spawn_x = project_door_spin_0102(0, 16383, 1, 0);
     form->spawn_y = project_door_spin_0102(0, 16383, 1, 0);
     project_door_grid_field_0102(GTK_GRID(grid), 8, "Target world", form->world);
     project_door_grid_field_0102(GTK_GRID(grid), 9, "Target area", form->area);
     project_door_grid_field_0102(GTK_GRID(grid), 10, "Target room ID", form->room);
     project_door_grid_field_0102(GTK_GRID(grid), 11, "Target project door ID (0 = none)", form->target_door);
-    project_door_grid_field_0102(GTK_GRID(grid), 12, "Spawn X", form->spawn_x);
-    project_door_grid_field_0102(GTK_GRID(grid), 13, "Spawn Y", form->spawn_y);
+    gtk_grid_attach(GTK_GRID(grid), list_targets, 0, 12, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), form->target_choices, 1, 12, 1, 1);
+    project_door_grid_field_0102(GTK_GRID(grid), 13, "Spawn X", form->spawn_x);
+    project_door_grid_field_0102(GTK_GRID(grid), 14, "Spawn Y", form->spawn_y);
     g_signal_connect(form->world, "notify::selected",
                      G_CALLBACK(project_door_world_changed_0102), form);
+    g_signal_connect(form->world, "notify::selected",
+                     G_CALLBACK(project_door_target_scope_changed_0114), form);
+    g_signal_connect(form->area, "notify::selected",
+                     G_CALLBACK(project_door_target_scope_changed_0114), form);
+    g_signal_connect(form->room, "notify::value",
+                     G_CALLBACK(project_door_target_scope_changed_0114), form);
     gtk_drop_down_set_selected(GTK_DROP_DOWN(form->world), doc->project_aria ? 1 : 0);
     project_door_fetch_link_0102(form);
     gtk_widget_set_sensitive(form->unlink, form->transition_id != 0);
@@ -2148,6 +2274,9 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
                            form, project_door_form_destroy);
     g_signal_connect(save, "clicked", G_CALLBACK(project_door_save_0102), form);
     g_signal_connect(pick, "clicked", G_CALLBACK(project_door_pick_map_0106), form);
+    g_signal_connect(list_targets, "clicked", G_CALLBACK(project_door_list_targets_0114), form);
+    g_signal_connect(form->target_choices, "notify::selected",
+                     G_CALLBACK(project_door_target_chosen_0114), form);
     g_signal_connect(link, "clicked", G_CALLBACK(project_door_link_0102), form);
     g_signal_connect(form->unlink, "clicked", G_CALLBACK(project_door_unlink_0102), form);
     g_signal_connect_swapped(close, "clicked", G_CALLBACK(gtk_window_destroy), form->window);

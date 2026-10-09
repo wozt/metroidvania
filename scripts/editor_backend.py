@@ -62,6 +62,7 @@ CAPABILITIES = {
     "collision-clear": "available_project_room_data_only",
     "collision-validate": "available_project_room_data_only",
     "door-list": "available_project_room_data_only",
+    "door-target-list": "available_saved_project_door_targets_only",
     "door-inspect": "available_project_room_data_only",
     "door-create": "available_project_room_data_only",
     "door-adopt": "available_project_room_data_only",
@@ -129,6 +130,7 @@ COMMAND_FIELDS = {
                         "fill_width", "fill_height", "confirm"},
     "collision-validate": {"world", "area", "room", "width", "height"},
     "door-list": {"world", "area", "room", "width", "height"},
+    "door-target-list": {"target_world", "target_area", "target_room"},
     "door-inspect": {"world", "area", "room", "width", "height", "id"},
     "door-create": {"world", "area", "room", "width", "height", "x", "y",
                     "door_width", "door_height", "label", "door_type", "facing"},
@@ -288,7 +290,35 @@ def _room_document(root: Path, options: dict[str, Any]) -> tuple[dict, tuple[str
     return project_room_entities.load(root, *scope), scope
 
 
-def _transition_target(options: dict[str, Any]) -> dict[str, Any]:
+# PATCH_0114_VERIFIED_TARGET_DOORS: only persisted project door IDs are
+# accepted as non-zero destination IDs. Original ROM doors have independent
+# native indices and cannot be silently reinterpreted as project door IDs.
+def _saved_target_doors(root: Path, target: dict[str, Any]) -> list[dict]:
+    world = target["target_world"]
+    area = target["target_area"]
+    room = target["target_room"]
+    # path_for's width/height only validate the scope; file names are identity based.
+    path = project_room_entities.path_for(root, world, area, room, 16, 16)
+    project_room_entities._check_path(path, root)
+    if not path.exists():
+        return []
+    if not path.is_file() or path.stat().st_size > 4_000_000:
+        raise ValueError("invalid saved destination room document")
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("invalid saved destination room document") from exc
+    if not isinstance(raw, dict):
+        raise ValueError("invalid saved destination room document")
+    raw = project_room_entities.migrate(raw)
+    width, height = raw.get("width_px"), raw.get("height_px")
+    if type(width) is not int or type(height) is not int:
+        raise ValueError("invalid saved destination room geometry")
+    validated = project_room_entities.validate(raw, world, area, room, width, height)
+    return sorted(validated["doors"], key=lambda door: door["id"])
+
+
+def _transition_target(options: dict[str, Any], root: Path = ROOT) -> dict[str, Any]:
     public_world = _world(options.get("target_world"))
     area_value = options.get("target_area")
     if public_world == "zero_mission":
@@ -311,7 +341,7 @@ def _transition_target(options: dict[str, Any]) -> dict[str, Any]:
                if item["room"] == room]
     if len(matches) != 1:
         raise ValueError("transition target room is missing or ambiguous")
-    return {
+    target = {
         "target_world": internal_world, "target_area": area,
         "target_room": room,
         "target_door_id": _integer(
@@ -319,9 +349,15 @@ def _transition_target(options: dict[str, Any]) -> dict[str, Any]:
         "spawn_x": _integer(options.get("spawn_x", 0), "spawn_x", 0, 16383),
         "spawn_y": _integer(options.get("spawn_y", 0), "spawn_y", 0, 16383),
     }
+    if target["target_door_id"] and not any(
+        door["id"] == target["target_door_id"]
+        for door in _saved_target_doors(root, target)
+    ):
+        raise ValueError("target project door ID is not present in the saved target room")
+    return target
 
 
-def _transition_validation(document: dict) -> list[dict]:
+def _transition_validation(document: dict, root: Path = ROOT) -> list[dict]:
     results = []
     for transition in document["transitions"]:
         public_world = ("zero_mission" if transition["target_world"] == "mzm"
@@ -329,12 +365,16 @@ def _transition_validation(document: dict) -> list[dict]:
         matches = [item for item in _filter_native_rooms(
             public_world, transition["target_area"])
             if item["room"] == transition["target_room"]]
+        door_id = transition["target_door_id"]
+        found = (door_id == 0 or (len(matches) == 1 and any(
+            door["id"] == door_id for door in _saved_target_doors(root, transition))))
         results.append({
             "id": transition["id"], "source_door_id": transition["source_door_id"],
             "target_exists": len(matches) == 1,
             "target": f"{public_world}:{transition['target_area']}:{transition['target_room']}",
-            "target_door_status": ("unspecified" if transition["target_door_id"] == 0
-                                   else "unverified_without_target_project_geometry"),
+            "target_door_status": ("unspecified" if door_id == 0 else
+                                   "saved_project_door_verified" if found else
+                                   "missing_target_project_door"),
             "engine_adapter": "unavailable",
         })
     return results
@@ -871,6 +911,10 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
             path = project_room_entities.save(root_path, document)
             result.update({"persisted": True, "path": str(path)})
         return result
+    if command == "door-target-list":
+        target = _transition_target(options, root_path)
+        return {"target": target, "doors": _saved_target_doors(root_path, target),
+                "engine_adapter": "unavailable"}
     if command.startswith("door-") and command != "door-link":
         document, _scope = _room_document(root_path, options)
         if command == "door-adopt":
@@ -957,9 +1001,11 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
                     "transitions": document["transitions"],
                     "engine_adapter": "unavailable"}
         if command == "transition-validate":
-            records = _transition_validation(document)
+            records = _transition_validation(document, root_path)
             return {"status": ("valid_project_data_not_playable"
-                               if all(item["target_exists"] for item in records)
+                               if all(item["target_exists"] and
+                                      item["target_door_status"] != "missing_target_project_door"
+                                      for item in records)
                                else "invalid_target"),
                     "count": len(records), "transitions": records,
                     "engine_adapter": "unavailable"}
@@ -974,7 +1020,7 @@ def execute(command: str, options: dict[str, Any], *, root: Path | str = ROOT,
             values = {
                 "source_door_id": _integer(
                     options.get("source_door_id"), "source_door_id", 1, 999999),
-                **_transition_target(options),
+                **_transition_target(options, root_path),
             }
             if command in ("transition-create", "door-link"):
                 changed = project_room_entities.transition_create(document, **values)

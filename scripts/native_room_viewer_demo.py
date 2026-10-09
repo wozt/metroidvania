@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Produce a private MZM project preview with dimensions matching real local BG1.
+"""Preview authentic *partial* MZM BG1 without invented room content by default.
 
-Requires previously imported, locally owned verified Zero Mission ROM resources.
-Uses the repository's authentic partial BG1/BG2 renderer, never embeds a BMP
-in the project package. Project data is isolated under ignored assets/extracted/.
+A blank geometry document is used only as the SDL3 viewer's interchange format;
+it is NOT a reconstruction of native collisions, entities or doors. Explicit
+--demo-overlays restores the previous synthetic project-data demonstration.
+All generated outputs are private and ignored; ROMs are never modified.
 """
 from __future__ import annotations
 
 import argparse
+import subprocess
 from pathlib import Path
 import sys
 
@@ -24,6 +26,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--area", default="Brinstar", choices=rooms.MZM_AREAS)
     parser.add_argument("--room", default=33, type=int)
+    parser.add_argument("--demo-overlays", action="store_true",
+                        help="OPT IN to synthetic collision, object and door overlays")
+    parser.add_argument("--launch", action="store_true",
+                        help="open the resulting preview in the SDL3 viewer")
     args = parser.parse_args()
     if not 0 <= args.room <= 999:
         parser.error("room must be in 0..999")
@@ -41,24 +47,40 @@ def main() -> int:
         root.mkdir(parents=True, exist_ok=True)
         # Re-create ONLY this explicitly named private demonstration workroom.
         doc = rooms._new("mzm", args.area, args.room, width, height)
-        cols, rows = width // 16, height // 16
-        rooms.collision_fill(doc, 0, rows - 1, cols, 1, "solid")
-        if cols >= 5 and rows >= 5:
-            rooms.collision_fill(doc, 2, rows - 3, min(4, cols - 2), 1, "one_way")
-            rooms.collision_fill(doc, cols - 2, rows - 2, 1, 1, "water")
-        if cols >= 2 and rows >= 2:
-            rooms.create(doc, "OBJECT", 16, 16, "Native-size demo marker")
-            rooms.door_create(doc, 0, height - 32, 16, 32,
-                              "Demo exit", "normal", "left")
+        # The native room is NOT described by project-owned collisions/objects.
+        # Never manufacture them for an authentic-source preview.
+        if args.demo_overlays:
+            cols, rows = width // 16, height // 16
+            rooms.collision_fill(doc, 0, rows - 1, cols, 1, "solid")
+            if cols >= 5 and rows >= 5:
+                rooms.collision_fill(doc, 2, rows - 3, min(4, cols - 2), 1, "one_way")
+                rooms.collision_fill(doc, cols - 2, rows - 2, 1, 1, "water")
+            if cols >= 2 and rows >= 2:
+                rooms.create(doc, "OBJECT", 16, 16, "Native-size demo marker")
+                rooms.door_create(doc, 0, height - 32, 16, 32,
+                                  "Demo exit", "normal", "left")
         rooms.save(root, doc)
         result = package.export(root, doc)
     except (ValueError, OSError, KeyError, IndexError) as exc:
         parser.error(str(exc))
-    print("Private native-sized project exported:", result["package_dir"])
-    print("Local source BG1 (not packaged):", native.OUTPUT /
+    print("Private native-sized viewer interchange:", result["package_dir"])
+    print("Partial ORIGINAL BG1 (not packaged):", native.OUTPUT /
           source["layers"]["Bg1"]["path"])
+    if args.demo_overlays:
+        print("NOTE: synthetic project collision/object/door overlays ENABLED.")
+    else:
+        print("NATIVE PREVIEW: no invented collision, entity or door overlays.")
+        print("BG1/BG2 are partial separate previews: this is NOT a full GBA composite.")
     print("Run from repository root:")
     print("./build/fusion_room_package_viewer", Path(result["package_dir"]) / "preview.tsv")
+    if args.launch:
+        try:
+            return subprocess.run(
+                [str(ROOT / "build/fusion_room_package_viewer"),
+                 str(Path(result["package_dir"]) / "preview.tsv")],
+                cwd=ROOT, check=False).returncode
+        except OSError as exc:
+            parser.error(str(exc))
     return 0
 
 

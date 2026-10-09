@@ -1195,3 +1195,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   source graphics. BG1/BG2 are deliberately shown separately: compositing,
   transparent native priority layers, BG3 and animations are not implemented.
   This remains a diagnostic viewer and is not gameplay.
+
+## Patch 0125d - native preview defaults to original data only
+
+- `python3 -m scripts.native_room_viewer_demo --area Brinstar --room 33`
+  now uses the original locally decoded BG1 and an **empty** geometry
+  interchange for SDL3; it no longer invents collision cells, entities or doors.
+- The old illustrative shapes are available only via `--demo-overlays`.
+- Use `--launch` to open the newly generated, exact (hash-named) preview
+  immediately without accidentally choosing an older synthetic export.
+- The empty work document lives exclusively under ignored
+  `assets/extracted/native_demo_0125/`; it is not a native ROM reconstruction.
+- Authentic native collision/object placement, missing palette rows, BG0/BG3,
+  animation and GBA layer priority/compositing are still NOT rendered in SDL3.
+  We do not mistake a partial native BMP for the complete game framebuffer.

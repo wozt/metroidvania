@@ -863,8 +863,8 @@ static void generator_finished(GObject *object, GAsyncResult *result, gpointer u
             /* First index, then process a bounded preview batch per area.
              * Do not block the UI on the full world rendering. */
             guint remaining = 0, generated = 0;
-            const char *more = output ? strstr(output, "remaining=") : NULL;
-            const char *made = output ? strstr(output, "generated ") : NULL;
+            const char *more = out ? strstr(out, "remaining=") : NULL;
+            const char *made = out ? strstr(out, "generated ") : NULL;
             if (more) sscanf(more, "remaining=%u", &remaining);
             if (made) sscanf(made, "generated %u", &generated);
             /* Budget zero was the indexing pass: DO NOT skip the first area.

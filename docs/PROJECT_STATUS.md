@@ -800,3 +800,9 @@ and the proprietary-file guard passed.
 - Added ROM-independent mapping/preview regressions; run the local CMake and
   full test suite before pushing. This does not complete animated graphics,
   BG0/BG3 blending or full gameplay rendering.
+
+## Patch 0093 - compile and legacy minimap regression repair
+
+- Correct GTK global-map preview prefetch callback to use its existing `out` subprocess output buffer, fixing two undeclared `output` references.
+- Update the earlier minimap-source regression to expect provenance 1 for an original ROM-backed room anchor, consistent with patch 0092.
+- No changes to native minimap coordinates, private renders, ROMs or project data; validate with CMake, CTest and the proprietary guard.

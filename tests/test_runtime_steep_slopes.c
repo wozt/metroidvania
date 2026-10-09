@@ -7,7 +7,7 @@
 int main(void) {
     /* Keep the translation-unit helpers referenced with -Werror enabled. */
     (void)parse_room; (void)parse_native_source; (void)find_spawn;
-    (void)clampf; (void)move_axis;
+    (void)clampf; (void)move_axis; (void)move_grounded_x;
     Room *r = calloc(1, sizeof *r);
     assert(r);
     r->width = 64;

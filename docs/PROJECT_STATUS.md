@@ -370,3 +370,33 @@ and the proprietary-file guard passed.
   deliberately unavailable until a separate validated placement contract.
 - Generated or original ROM data are never overwritten by the UI.
 - GTK4 CMake build, CTest and no-proprietary guard are required on Debian.
+
+## Patch 0071 - two-level workbench and unified map panning
+
+- The right sidebar also separates permanent ROM visuals / Inspector from
+  transient native metatile tool palettes in a nested notebook.
+- Permanent navigation workspaces (Zero rooms, Global maps, Map creation,
+  events, cutscenes and Aria rooms) stay in the upper GTK4 notebook.
+- Native room documents open in a SECOND GtkNotebook inside the permanent
+  Open editors workspace. Their closable tabs never clutter navigation tabs;
+  the existing save/discard/cancel contract and detachable document tabs remain.
+- Focusing a room document activates both its nested tab and the upper Open
+  editors tab, even when the document was opened from a global map.
+- The current world badge follows the selected native editor, not merely
+  the permanent Open editors tab.
+- Panning uses a capture-phase gesture on a padded scrollable surface for both
+  original maps. Padding leaves cell coordinates/sizes and source occupancy
+  unchanged, including the native 32x32 Zero Mission minimap.
+- GTK4 regression covers nested focus/close without ROM assets. Build/CTest
+  and physical mouse navigation require validation on the Debian workstation.
+
+## Patch 0071 - GTK4 nested focus recovery
+
+- GTK4 notebook page widgets can have internal parents rather than the
+  notebook itself; walking direct parent-child pairs skips registered pages.
+- Native `focus_page()` now selects the containing registered page of each
+  ancestor GtkNotebook. Opening a room activates both permanent and nested
+  editor tabs, including the separate native palette dock.
+- The existing GTK lifecycle test covers both outer notebooks, document close
+  and preservation of permanent tabs. No ROM data is needed for the test.
+- Compilation, CTest and proprietary guard must pass before commit/push.

@@ -19,6 +19,9 @@ typedef struct {
     GtkWidget *asset_picture;
     GtkWidget *asset_status;
     GtkWidget *world_map_page;
+    GtkWidget *editing_page; /* Permanent top-level entry for opened documents. */
+    GtkWidget *editing_dock; /* Secondary, closable native room tabs. */
+    GtkWidget *palette_page, *palette_dock; /* Secondary room palettes. */
     GtkWidget *events_page, *cutscenes_page, *world_badge;
     GtkWidget *aria_page;
     GtkWidget *left_dock;
@@ -159,7 +162,10 @@ static GtkNotebook *create_floating_dock(GtkNotebook *notebook, GtkWidget *page,
     GtkApplication *application = GTK_APPLICATION(userdata);
     GtkWidget *window = gtk_application_window_new(application);
     GtkWidget *dock = new_dock(application);
-    (void)notebook;
+    /* Keep permanent workspaces and temporary editors in separate DnD groups.
+     * Floating editor windows inherit the source group, so detaching works. */
+    const char *group = gtk_notebook_get_group_name(notebook);
+    if (group) gtk_notebook_set_group_name(GTK_NOTEBOOK(dock), group);
     (void)page;
     gtk_window_set_title(GTK_WINDOW(window), "Metroid Vania - Detached tools");
     gtk_window_set_default_size(GTK_WINDOW(window), 780, 520);
@@ -341,17 +347,103 @@ static GtkWidget *make_responsive_button(Editor *editor,
     return button;
 }
 
+/* General tabs are permanent; the nested notebook owns temporary room tabs.
+ * The badge always describes the active document when Open editors is shown. */
+static void editor_show_world(Editor *editor, GtkWidget *page)
+{
+    guint mode = page ? GPOINTER_TO_UINT(
+        g_object_get_data(G_OBJECT(page), "mv-world-mode")) : 0u;
+    if (page == editor->aria_page) mode = 2;
+    else if (page == editor->native_page) mode = 1;
+    gtk_label_set_text(GTK_LABEL(editor->world_badge),
+        mode == 2 ? "● ARIA OF SORROW" :
+        mode == 1 ? "● METROID: ZERO MISSION" : "◇ SHARED WORKSPACE");
+}
+
 static void center_page_changed(GtkNotebook *tabs, GtkWidget *page,
                                 guint index, gpointer userdata)
 {
     Editor *editor = userdata;
     (void)tabs; (void)index;
-    unsigned mode = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(page), "mv-world-mode"));
-    if (page == editor->aria_page) mode = 2;
-    else if (page == editor->native_page) mode = 1;
-    const char *name = mode == 2 ? "● ARIA OF SORROW" :
-                       mode == 1 ? "● METROID: ZERO MISSION" : "◇ SHARED WORKSPACE";
-    gtk_label_set_text(GTK_LABEL(editor->world_badge), name);
+    if (page == editor->editing_page) {
+        GtkNotebook *documents = GTK_NOTEBOOK(editor->editing_dock);
+        gint current = gtk_notebook_get_current_page(documents);
+        page = current < 0 ? NULL : gtk_notebook_get_nth_page(documents, current);
+    }
+    editor_show_world(editor, page);
+}
+
+static gboolean editor_workbench_is_active(Editor *editor)
+{
+    GtkNotebook *main_tabs = GTK_NOTEBOOK(editor->center_dock);
+    gint selected = gtk_notebook_get_current_page(main_tabs);
+    return selected >= 0 && gtk_notebook_get_nth_page(main_tabs, selected) ==
+        editor->editing_page;
+}
+
+static void editor_document_changed(GtkNotebook *tabs, GtkWidget *page,
+                                    guint index, gpointer userdata)
+{
+    Editor *editor = userdata;
+    (void)tabs; (void)index;
+    if (editor_workbench_is_active(editor)) editor_show_world(editor, page);
+}
+
+static void editor_document_removed(GtkNotebook *tabs, GtkWidget *page,
+                                    guint index, gpointer userdata)
+{
+    Editor *editor = userdata;
+    (void)page; (void)index;
+    if (!gtk_notebook_get_n_pages(tabs) && editor_workbench_is_active(editor))
+        editor_show_world(editor, NULL);
+}
+
+static void build_editor_workbench(Editor *editor, GtkApplication *application)
+{
+    GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    GtkWidget *hint = gtk_label_new(
+        "ROOM EDITORS / TEMPORARY TABS — open a room from a world browser or map. "
+        "Close individual documents from their tab. Unsaved edits are confirmed.");
+    GtkWidget *documents = new_dock(application);
+    gtk_notebook_set_group_name(GTK_NOTEBOOK(documents),
+                                "metroidvania-ephemeral-document-docks");
+    gtk_label_set_xalign(GTK_LABEL(hint), 0.0f);
+    gtk_label_set_wrap(GTK_LABEL(hint), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(hint), TRUE);
+    gtk_widget_set_margin_start(hint, 8);
+    gtk_widget_set_margin_top(hint, 6);
+    gtk_widget_set_vexpand(documents, TRUE);
+    gtk_box_append(GTK_BOX(page), hint);
+    gtk_box_append(GTK_BOX(page), documents);
+    editor->editing_page = page;
+    editor->editing_dock = documents;
+    g_object_set_data(G_OBJECT(page), "mv-permanent-workbench", GUINT_TO_POINTER(1));
+    g_object_set_data(G_OBJECT(documents), "mv-ephemeral-document-tabs", GUINT_TO_POINTER(1));
+    gtk_notebook_append_page(GTK_NOTEBOOK(editor->center_dock), page,
+                             gtk_label_new("Open editors"));
+    /* Nested tabs are the sole destination for native room documents. */
+    g_signal_connect(documents, "switch-page", G_CALLBACK(editor_document_changed), editor);
+    g_signal_connect(documents, "page-removed", G_CALLBACK(editor_document_removed), editor);
+}
+
+static void build_palette_workbench(Editor *editor, GtkApplication *application,
+                                    GtkWidget *right)
+{
+    GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    GtkWidget *palettes = new_dock(application);
+    gtk_notebook_set_group_name(GTK_NOTEBOOK(palettes),
+                                "metroidvania-ephemeral-palette-docks");
+    GtkWidget *hint = gtk_label_new("ROOM TOOLS — palettes follow the active room editor.");
+    gtk_label_set_xalign(GTK_LABEL(hint), 0.0f);
+    gtk_widget_set_margin_start(hint, 8);
+    gtk_widget_set_margin_top(hint, 6);
+    gtk_widget_set_vexpand(palettes, TRUE);
+    gtk_box_append(GTK_BOX(page), hint);
+    gtk_box_append(GTK_BOX(page), palettes);
+    editor->palette_page = page;
+    editor->palette_dock = palettes;
+    gtk_notebook_append_page(GTK_NOTEBOOK(right), page,
+                             gtk_label_new("Room palettes"));
 }
 
 static void activate(GtkApplication *application, gpointer userdata)
@@ -406,13 +498,21 @@ static void activate(GtkApplication *application, gpointer userdata)
     gtk_paned_set_position(GTK_PANED(outer_split), 275);
     gtk_paned_set_position(GTK_PANED(inner_split), 980);
 
+    /* The outer center notebook is exclusively for permanent workspaces.
+     * NativeMap documents are routed into the secondary notebook below it. */
     editor->native_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ZERO);
-    native_workspace_build(editor->native_workspace, center, right);
     editor->world_map_page = world_atlas_build(center, editor->native_workspace, editor->world_badge);
     story_workspace_build(center, &editor->events_page, &editor->cutscenes_page);
     editor->aria_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ARIA);
+    build_editor_workbench(editor, application);
+    build_palette_workbench(editor, application, right);
+    native_workspace_build(editor->native_workspace,
+                           editor->editing_dock, editor->palette_dock);
     build_assets_tab(editor, right);
     build_inspector(right);
+    /* Stable sidebar tabs first; transient palette tools remain nested last. */
+    gtk_notebook_reorder_child(GTK_NOTEBOOK(right), editor->palette_page, -1);
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(right), 0);
     build_explorer(editor, left);
     g_signal_connect(center, "switch-page", G_CALLBACK(center_page_changed), editor);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(center), 0);

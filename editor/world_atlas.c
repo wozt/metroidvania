@@ -687,6 +687,21 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     GtkWidget *bar=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,6);
     GtkWidget *scroller=gtk_scrolled_window_new();
     GtkWidget *grid=gtk_grid_new();
+    /* A 32x32 Zero map can fit inside the viewport, leaving nothing to drag.
+     * Padding belongs to a surrounding canvas, NOT to the native cell grid:
+     * room coordinates and per-cell dimensions must remain unchanged. */
+    GtkWidget *pan_surface=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
+    GtkWidget *canvas_row=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);
+    GtkWidget *right_space=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);
+    GtkWidget *bottom_space=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
+    gtk_widget_set_size_request(right_space,720,-1);
+    gtk_widget_set_size_request(bottom_space,-1,520);
+    gtk_widget_set_halign(grid,GTK_ALIGN_START);
+    gtk_widget_set_valign(grid,GTK_ALIGN_START);
+    gtk_box_append(GTK_BOX(canvas_row),grid);
+    gtk_box_append(GTK_BOX(canvas_row),right_space);
+    gtk_box_append(GTK_BOX(pan_surface),canvas_row);
+    gtk_box_append(GTK_BOX(pan_surface),bottom_space);
     gtk_grid_set_row_homogeneous(GTK_GRID(grid), TRUE);
     gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
     GtkWidget *generate=gtk_button_new_with_label("Generate more original previews");
@@ -695,7 +710,10 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     GtkGesture *pan = gtk_gesture_drag_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(pan), GDK_BUTTON_PRIMARY);
     gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(pan), GTK_PHASE_CAPTURE);
-    gtk_widget_add_controller(grid, GTK_EVENT_CONTROLLER(pan));
+    /* Capture movement even over native Zero Mission minimap tiles,
+     * empty cells and padding. Child clicks and right menus remain intact. */
+    gtk_widget_add_controller(pan_surface, GTK_EVENT_CONTROLLER(pan));
+    g_object_set_data(G_OBJECT(root), "mv-map-pan-surface", pan_surface);
     g_signal_connect(pan, "drag-begin", G_CALLBACK(map_drag_begin), w);
     g_signal_connect(pan, "drag-update", G_CALLBACK(map_drag_update), w);
     w->status=gtk_label_new("Reading verified original minimap cases…");
@@ -713,7 +731,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_box_append(GTK_BOX(bar),generate);
     gtk_box_append(GTK_BOX(bar),open);
     gtk_box_append(GTK_BOX(root),bar);
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller),grid);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller),pan_surface);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroller),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
     gtk_widget_set_hexpand(scroller,TRUE);gtk_widget_set_vexpand(scroller,TRUE);
     gtk_box_append(GTK_BOX(root),scroller);

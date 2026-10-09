@@ -223,6 +223,50 @@ static void test_close_during_import(void)
     native_workspace_free(workspace);
 }
 
+/* Permanent notebook above a nested, closable editor notebook.
+ * An edited room must activate both layers, and closing must not remove any
+ * of the permanent navigation tabs. No proprietary room data is required. */
+static void test_nested_editor_tab_focus_and_close(void)
+{
+    GtkWidget *general = gtk_notebook_new();
+    GtkWidget *editor_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    GtkWidget *editors = gtk_notebook_new();
+    GtkWidget *right = gtk_notebook_new();
+    GtkWidget *right_general = gtk_notebook_new();
+    GtkWidget *right_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    GtkWidget *browser = gtk_label_new("Permanent Zero rooms browser");
+    NativeWorkspace *workspace = native_workspace_new();
+    gtk_box_append(GTK_BOX(editor_page), editors);
+    gtk_box_append(GTK_BOX(right_page), right);
+    gtk_notebook_append_page(GTK_NOTEBOOK(right_general),
+                             gtk_label_new("Permanent ROM visuals"),
+                             gtk_label_new("ROM visuals"));
+    gtk_notebook_append_page(GTK_NOTEBOOK(right_general), right_page,
+                             gtk_label_new("Room palettes"));
+    gtk_notebook_append_page(GTK_NOTEBOOK(general), browser,
+                             gtk_label_new("Zero rooms"));
+    gtk_notebook_append_page(GTK_NOTEBOOK(general), editor_page,
+                             gtk_label_new("Open editors"));
+    native_workspace_build(workspace, editors, right);
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(general), 0);
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(right_general), 0);
+    g_assert_true(native_workspace_test_add_document(workspace, "Brinstar 022"));
+    /* Both outer notebooks must activate even though their page widgets
+     * are separated from the nested document by GTK4 internal children. */
+    g_assert_cmpint(gtk_notebook_get_current_page(GTK_NOTEBOOK(general)), ==, 1);
+    g_assert_cmpint(gtk_notebook_get_current_page(GTK_NOTEBOOK(right_general)), ==, 1);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(editors)), ==, 1);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(general)), ==, 2);
+    g_assert_true(native_workspace_test_activate_close(workspace, 0));
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(editors)), ==, 0);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(general)), ==, 2);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right_general)), ==, 2);
+    g_assert_cmpint(gtk_notebook_get_n_pages(GTK_NOTEBOOK(right)), ==, 0);
+    native_workspace_free(workspace);
+    g_object_unref(g_object_ref_sink(general));
+    g_object_unref(g_object_ref_sink(right_general));
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -230,6 +274,8 @@ int main(int argc, char **argv)
      * The Xvfb session need not connect to the user's AT-SPI bus. */
     g_setenv("GTK_A11Y", "test", TRUE);
     gtk_init();
+    g_test_add_func("/native-workspace/nested-editor-tabs",
+                    test_nested_editor_tab_focus_and_close);
     g_test_add_func("/native-workspace/close-and-reopen", test_close_and_reopen);
     g_test_add_func("/native-workspace/close-order-and-unsaved-guard",
                     test_close_order_and_unsaved_guard);

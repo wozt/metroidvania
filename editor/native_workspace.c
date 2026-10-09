@@ -981,11 +981,28 @@ static void close_clicked(GtkButton *button, gpointer userdata)
 static void focus_page(GtkWidget *page)
 {
     if (!page) return;
-    GtkWidget *parent = gtk_widget_get_ancestor(page, GTK_TYPE_NOTEBOOK);
-    if (GTK_IS_NOTEBOOK(parent)) {
-        GtkNotebook *notebook = GTK_NOTEBOOK(parent);
-        gtk_notebook_set_current_page(notebook, gtk_notebook_page_num(notebook, page));
-        GtkRoot *root = gtk_widget_get_root(parent);
+    /* GTK4 GtkNotebook pages may sit below internal container widgets.
+     * The direct parent of a notebook page need not be the GtkNotebook.
+     * Instead, for each ancestor notebook, select the actual registered
+     * page containing our document, including the outer Open editors page.
+     * This also handles nested palette notebooks and detached windows. */
+    GtkWidget *last_notebook = NULL;
+    for (GtkWidget *ancestor = gtk_widget_get_parent(page); ancestor;
+         ancestor = gtk_widget_get_parent(ancestor)) {
+        if (!GTK_IS_NOTEBOOK(ancestor)) continue;
+        GtkNotebook *notebook = GTK_NOTEBOOK(ancestor);
+        guint count = gtk_notebook_get_n_pages(notebook);
+        for (guint i = 0; i < count; ++i) {
+            GtkWidget *candidate = gtk_notebook_get_nth_page(notebook, (gint)i);
+            if (candidate != page &&
+                !gtk_widget_is_ancestor(page, candidate)) continue;
+            gtk_notebook_set_current_page(notebook, (gint)i);
+            last_notebook = ancestor;
+            break;
+        }
+    }
+    if (last_notebook) {
+        GtkRoot *root = gtk_widget_get_root(last_notebook);
         if (GTK_IS_WINDOW(root)) gtk_window_present(GTK_WINDOW(root));
     }
 }

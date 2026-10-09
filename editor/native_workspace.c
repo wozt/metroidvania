@@ -2,6 +2,7 @@
 /* Multi-document native MZM editor. ROM imports stay read-only; every tab is
  * backed by a private in-memory map and an ignored on-disk override. */
 #include "native_workspace.h"
+#include "world_atlas.h"
 #include "core/native_map.h"
 #include "core/native_selection.h"
 #include <cairo.h>
@@ -36,6 +37,7 @@ struct NativeWorkspace {
     /* The instance returned by native_workspace_new() manages documents. */
     GPtrArray *documents;
     GtkNotebook *center, *right;
+    GtkWidget *world_atlas_page; /* Weak; map tab may be detached or closed. */
     struct NativeWorkspace *owner; /* non-NULL on a document */
     guint references;
     GCancellable *import_cancellable;
@@ -1468,6 +1470,7 @@ typedef struct {
     GtkWidget *window, *status, *label, *x, *y, *width, *height;
     GtkWidget *type, *facing, *world, *area, *room;
     GtkWidget *target_door, *spawn_x, *spawn_y, *unlink;
+    GtkWidget *atlas_page, *return_page; /* Weak GTK references. */
     guint door_id, transition_id;
 } ProjectDoorForm;
 
@@ -1489,6 +1492,14 @@ static const char *const door_aria_areas_0102[] = {
 static void project_door_form_destroy(gpointer userdata)
 {
     ProjectDoorForm *form = userdata;
+    if (form->atlas_page) {
+        world_atlas_abandon_room_pick(form->atlas_page, form);
+        g_object_remove_weak_pointer(G_OBJECT(form->atlas_page),
+                                     (gpointer *)&form->atlas_page);
+    }
+    if (form->return_page)
+        g_object_remove_weak_pointer(G_OBJECT(form->return_page),
+                                     (gpointer *)&form->return_page);
     document_unref(form->doc);
     g_free(form);
 }
@@ -1672,12 +1683,80 @@ static void project_door_unlink_0102(GtkButton *button, gpointer userdata)
         gtk_label_set_text(GTK_LABEL(form->status), "Destination removal failed.");
 }
 
+/* PATCH_0106_NATIVE_DOOR_MAP_PICKER: set form values only; commit is explicit. */
+static void project_door_map_picked_0106(guint world, guint area, guint room,
+                                          gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    if (world <= 1 && area < (world ? 12u : 7u) && room <= 999) {
+        gtk_drop_down_set_selected(GTK_DROP_DOWN(form->world), world);
+        /* The world callback synchronously installs that world's area model. */
+        gtk_drop_down_set_selected(GTK_DROP_DOWN(form->area), area);
+        gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->room), room);
+        /* Do not retain a door ID or coordinates belonging to a past target. */
+        gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->target_door), 0);
+        gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->spawn_x), 0);
+        gtk_spin_button_set_value(GTK_SPIN_BUTTON(form->spawn_y), 0);
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "Target room selected. Set spawn and optional door ID; click Save destination to validate and save.");
+    } else {
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "Map selection cancelled; destination fields unchanged.");
+    }
+    if (form->atlas_page && form->return_page) {
+        GtkWidget *ancestor = gtk_widget_get_ancestor(form->atlas_page,
+                                                       GTK_TYPE_NOTEBOOK);
+        if (GTK_IS_NOTEBOOK(ancestor)) {
+            gint index = gtk_notebook_page_num(GTK_NOTEBOOK(ancestor),
+                                                form->return_page);
+            if (index >= 0) gtk_notebook_set_current_page(GTK_NOTEBOOK(ancestor), index);
+        }
+    }
+    if (GTK_IS_WINDOW(form->window)) gtk_window_present(GTK_WINDOW(form->window));
+}
+
+static void project_door_pick_map_0106(GtkButton *button, gpointer userdata)
+{
+    ProjectDoorForm *form = userdata;
+    (void)button;
+    if (form->doc->closing || !form->doc->ready || !form->atlas_page) {
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "Global map is unavailable. Use the destination fields instead.");
+        return;
+    }
+    guint world = gtk_drop_down_get_selected(GTK_DROP_DOWN(form->world));
+    GtkWidget *notebook = gtk_widget_get_ancestor(form->atlas_page, GTK_TYPE_NOTEBOOK);
+    if (world > 1 || !GTK_IS_NOTEBOOK(notebook)) return;
+    gint current = gtk_notebook_get_current_page(GTK_NOTEBOOK(notebook));
+    GtkWidget *current_page = current >= 0 ?
+        gtk_notebook_get_nth_page(GTK_NOTEBOOK(notebook), current) : NULL;
+    if (!world_atlas_begin_room_pick(form->atlas_page, world,
+                                      project_door_map_picked_0106, form)) {
+        gtk_label_set_text(GTK_LABEL(form->status),
+            "Another destination selection is active or this map is detached.");
+        return;
+    }
+    if (form->return_page)
+        g_object_remove_weak_pointer(G_OBJECT(form->return_page),
+                                     (gpointer *)&form->return_page);
+    form->return_page = current_page;
+    if (form->return_page)
+        g_object_add_weak_pointer(G_OBJECT(form->return_page),
+                                  (gpointer *)&form->return_page);
+    /* Only the map is visible while picking. No backend mutation occurs. */
+    gtk_widget_set_visible(form->window, FALSE);
+}
+
 static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnotation *item)
 {
     if (!doc || doc->closing || !doc->ready || !doc->map ||
         !item || !item->project_owned || item->kind != OVERLAY_DOORS) return;
     ProjectDoorForm *form = g_new0(ProjectDoorForm, 1);
     form->doc = document_ref(doc);
+    form->atlas_page = doc->owner ? doc->owner->world_atlas_page : NULL;
+    if (form->atlas_page)
+        g_object_add_weak_pointer(G_OBJECT(form->atlas_page),
+                                  (gpointer *)&form->atlas_page);
     form->door_id = item->index;
     form->window = gtk_window_new();
     GtkRoot *root = doc->page ? gtk_widget_get_root(doc->page) : NULL;
@@ -1693,6 +1772,8 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
     GtkWidget *actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
     GtkWidget *save = gtk_button_new_with_label("Save door properties");
     GtkWidget *link = gtk_button_new_with_label("Save destination");
+    GtkWidget *pick = gtk_button_new_with_label("Pick room on global map");
+    gtk_widget_set_sensitive(pick, form->atlas_page != NULL);
     form->unlink = gtk_button_new_with_label("Unlink");
     GtkWidget *close = gtk_button_new_with_label("Close");
     form->status = gtk_label_new(
@@ -1753,6 +1834,7 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
     gtk_widget_set_vexpand(scroll, TRUE);
     gtk_box_append(GTK_BOX(outer), scroll);
     gtk_box_append(GTK_BOX(actions), save);
+    gtk_box_append(GTK_BOX(actions), pick);
     gtk_box_append(GTK_BOX(actions), link);
     gtk_box_append(GTK_BOX(actions), form->unlink);
     gtk_box_append(GTK_BOX(actions), close);
@@ -1765,6 +1847,7 @@ static void project_door_editor_open_0102(NativeWorkspace *doc, const RoomAnnota
     g_object_set_data_full(G_OBJECT(form->window), "mv-project-door-form-0102",
                            form, project_door_form_destroy);
     g_signal_connect(save, "clicked", G_CALLBACK(project_door_save_0102), form);
+    g_signal_connect(pick, "clicked", G_CALLBACK(project_door_pick_map_0106), form);
     g_signal_connect(link, "clicked", G_CALLBACK(project_door_link_0102), form);
     g_signal_connect(form->unlink, "clicked", G_CALLBACK(project_door_unlink_0102), form);
     g_signal_connect_swapped(close, "clicked", G_CALLBACK(gtk_window_destroy), form->window);
@@ -3910,6 +3993,18 @@ void native_workspace_build(NativeWorkspace *manager, GtkWidget *center, GtkWidg
     manager->right = GTK_NOTEBOOK(right);
 }
 
+void native_workspace_set_world_atlas(NativeWorkspace *manager, GtkWidget *map_page)
+{
+    if (!manager) return;
+    if (manager->world_atlas_page)
+        g_object_remove_weak_pointer(G_OBJECT(manager->world_atlas_page),
+                                     (gpointer *)&manager->world_atlas_page);
+    manager->world_atlas_page = GTK_IS_WIDGET(map_page) ? map_page : NULL;
+    if (manager->world_atlas_page)
+        g_object_add_weak_pointer(G_OBJECT(manager->world_atlas_page),
+                                  (gpointer *)&manager->world_atlas_page);
+}
+
 static NativeWorkspace *create_document(NativeWorkspace *manager, char *identity)
 {
     NativeWorkspace *doc = calloc(1, sizeof(*doc));
@@ -4144,5 +4239,8 @@ void native_workspace_free(NativeWorkspace *manager)
         }
         g_ptr_array_free(manager->documents, TRUE);
     }
+    if (manager->world_atlas_page)
+        g_object_remove_weak_pointer(G_OBJECT(manager->world_atlas_page),
+                                     (gpointer *)&manager->world_atlas_page);
     free(manager);
 }

@@ -5,6 +5,8 @@ typedef struct NativeWorkspace NativeWorkspace;
 NativeWorkspace *native_workspace_new(void);
 void native_workspace_free(NativeWorkspace *w);
 void native_workspace_build(NativeWorkspace *w, GtkWidget *center, GtkWidget *right);
+/* Weak pointer: global map owns its GTK widget and must outlive no picker. */
+void native_workspace_set_world_atlas(NativeWorkspace *w, GtkWidget *map_page);
 void native_workspace_import_async(NativeWorkspace *w, const char *area, unsigned room);
 void native_workspace_import_aria_async(NativeWorkspace *w, unsigned area, unsigned room);
 #ifdef FUSION_NATIVE_WORKSPACE_TESTING

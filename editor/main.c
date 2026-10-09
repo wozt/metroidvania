@@ -491,6 +491,7 @@ static void activate(GtkApplication *application, gpointer userdata)
     editor->native_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ZERO);
     editor->aria_page = room_browser_build(center, editor->native_workspace, ROOM_WORLD_ARIA);
     editor->world_map_page = world_atlas_build(center, editor->native_workspace, editor->world_badge);
+    native_workspace_set_world_atlas(editor->native_workspace, editor->world_map_page);
     editor->object_page = object_catalog_build(center);
     story_workspace_build(center, &editor->events_page, &editor->cutscenes_page);
     build_editor_workbench(editor, application);

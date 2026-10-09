@@ -919,3 +919,16 @@ and the proprietary-file guard passed.
   references remain compatible. This is not a native engine door encoder.
 - Real Aria door sprite graphics and frame-accurate transition positions still
   require separate native research; screen-boundary anchors remain approximate.
+
+## Patch 0106 - native room picker for project door targets
+
+- One-shot, cancellable Global maps room selection from the shared GTK door form.
+  Both Aria and Zero Mission use verified original map ownership; unknown tiles,
+  private drafts and unassigned cells are refused.
+- Selection fills target world/area/room only. Target project door ID and spawn
+  point reset to zero (safe unspecified values); explicit Save destination still
+  runs existing backend validation before persisting. Nothing is saved on click.
+- Closing a form abandons its callback; closing a map cancels pending
+  selection. Weak pointers prevent dangling map/form/workspace references.
+- No ROM, project data format, runtime engine, minimap grouping or room tile
+  rendering changes. Bidirectional linking is not automatic.

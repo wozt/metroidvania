@@ -18,6 +18,9 @@ typedef struct {
     NativeWorkspace *workspace;
     GtkWidget *page, *grid, *details, *status, *world_select, *area_select, *zoom;
     GtkWidget *doors_toggle, *door_expander, *door_list;
+    GtkWidget *pick_bar;
+    WorldAtlasRoomPicked pick_callback;
+    gpointer pick_data;
     GtkWidget *selected_cell, *scroller, *popup;
     double drag_hstart, drag_vstart, pending_h, pending_v;
     guint pan_tick;
@@ -168,6 +171,8 @@ static gboolean same_atlas_group(const WorldGrid *w, const MapCell *a, const Map
 }
 
 static void selected_room_doors_refresh(WorldGrid *w);
+static void world_atlas_pick_finish_0106(WorldGrid *w, gboolean selected,
+                                          guint area, guint room);
 
 static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, gpointer data)
 {
@@ -224,6 +229,12 @@ static void grid_clicked(GtkGestureClick *g, gint presses, double x, double y, g
     gtk_label_set_text(GTK_LABEL(w->details), message);
     g_free(message);
     selected_room_doors_refresh(w);
+    if (w->pick_callback) {
+        /* Only original cells with a verified native room are selectable.
+         * A double click must NOT open a room during target picking. */
+        world_atlas_pick_finish_0106(w, TRUE, c.area, c.room);
+        return;
+    }
     if (presses >= 2) selected_open(w);
 }
 static gboolean has_image(const WorldGrid *w,const MapCell *c,char *dest,size_t n)
@@ -1116,9 +1127,70 @@ static void generate_clicked(GtkButton *b,gpointer data)
     w->next_preview_area=0;
     begin_generation(w);
 }
+/* PATCH_0106_GLOBAL_MAP_DESTINATION_PICKER
+ * One pending picker at a time; no permanent state nor mutation of source maps.
+ * The caller must abandon the callback when its window is destroyed. */
+static void world_atlas_pick_finish_0106(WorldGrid *w, gboolean selected,
+                                          guint area, guint room)
+{
+    WorldAtlasRoomPicked callback = w->pick_callback;
+    gpointer context = w->pick_data;
+    w->pick_callback = NULL;
+    w->pick_data = NULL;
+    if (w->pick_bar) gtk_widget_set_visible(w->pick_bar, FALSE);
+    if (callback)
+        callback(selected ? w->world : G_MAXUINT,
+                 selected ? area : G_MAXUINT,
+                 selected ? room : G_MAXUINT, context);
+}
+
+static void world_atlas_pick_cancel_clicked_0106(GtkButton *button, gpointer userdata)
+{
+    (void)button;
+    WorldGrid *w = userdata;
+    world_atlas_pick_finish_0106(w, FALSE, G_MAXUINT, G_MAXUINT);
+}
+
+/* Switching to the map also activates its left-side workspace navigation,
+ * because that navigation already follows the central notebook selection. */
+gboolean world_atlas_begin_room_pick(GtkWidget *page, guint preferred_world,
+                                      WorldAtlasRoomPicked callback, gpointer userdata)
+{
+    if (!GTK_IS_WIDGET(page) || preferred_world > 1 || !callback || !userdata)
+        return FALSE;
+    WorldGrid *w = g_object_get_data(G_OBJECT(page), "mv-world-grid");
+    GtkWidget *ancestor = gtk_widget_get_ancestor(page, GTK_TYPE_NOTEBOOK);
+    if (!w || w->pick_callback || !GTK_IS_NOTEBOOK(ancestor) ||
+        gtk_notebook_page_num(GTK_NOTEBOOK(ancestor), page) < 0)
+        return FALSE;
+    w->pick_callback = callback;
+    w->pick_data = userdata;
+    gtk_widget_set_visible(w->pick_bar, TRUE);
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(w->world_select), preferred_world);
+    gtk_label_set_text(GTK_LABEL(w->details),
+        "Choose an original room on the global map. Unknown/unowned cells and drafts cannot be targets.");
+    gtk_notebook_set_current_page(GTK_NOTEBOOK(ancestor),
+                                  gtk_notebook_page_num(GTK_NOTEBOOK(ancestor), page));
+    return TRUE;
+}
+
+void world_atlas_abandon_room_pick(GtkWidget *page, gpointer userdata)
+{
+    if (!GTK_IS_WIDGET(page) || !userdata) return;
+    WorldGrid *w = g_object_get_data(G_OBJECT(page), "mv-world-grid");
+    if (!w || !w->pick_callback || w->pick_data != userdata) return;
+    /* Silent discard: userdata may be a form already being finalized. */
+    w->pick_callback = NULL;
+    w->pick_data = NULL;
+    if (w->pick_bar) gtk_widget_set_visible(w->pick_bar, FALSE);
+}
+
 static void world_free(gpointer data)
 {
     WorldGrid *w = data;
+    /* A detached/closed map cannot leave the source form hidden. */
+    if (w->pick_callback)
+        world_atlas_pick_finish_0106(w, FALSE, G_MAXUINT, G_MAXUINT);
     if (w->pan_tick && w->scroller)
         gtk_widget_remove_tick_callback(w->scroller, w->pan_tick);
     if (w->popup)
@@ -1173,6 +1245,15 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
     GtkWidget *generate=gtk_button_new_with_label("Generate more original previews");
     GtkWidget *open=gtk_button_new_with_label("Open selected room");
+    w->pick_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    GtkWidget *pick_text = gtk_label_new(
+        "PICK DOOR DESTINATION: click a verified room, or cancel.");
+    GtkWidget *pick_cancel = gtk_button_new_with_label("Cancel picking");
+    gtk_box_append(GTK_BOX(w->pick_bar), pick_text);
+    gtk_box_append(GTK_BOX(w->pick_bar), pick_cancel);
+    gtk_widget_set_visible(w->pick_bar, FALSE);
+    g_signal_connect(pick_cancel, "clicked",
+                     G_CALLBACK(world_atlas_pick_cancel_clicked_0106), w);
     /* Keep global-map door IDs optional. Native door overlays belong
      * primarily in the individual room editor, not over the map mosaic. */
     w->doors_toggle = gtk_toggle_button_new_with_label("Show global door IDs");
@@ -1218,6 +1299,7 @@ GtkWidget *world_atlas_build(GtkWidget *center,NativeWorkspace *workspace,GtkWid
     gtk_box_append(GTK_BOX(bar),open);
     gtk_box_append(GTK_BOX(bar),w->doors_toggle);
     gtk_box_append(GTK_BOX(root),bar);
+    gtk_box_append(GTK_BOX(root),w->pick_bar);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller),pan_surface);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroller),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
     gtk_widget_set_hexpand(scroller,TRUE);gtk_widget_set_vexpand(scroller,TRUE);

@@ -16,8 +16,14 @@ class EditorLayerContract(unittest.TestCase):
 
     def test_native_focus_propagates_through_both_notebooks(self):
         source = (ROOT / 'editor/native_workspace.c').read_text(encoding='utf-8')
-        self.assertIn('for (GtkWidget *parent = gtk_widget_get_parent(child); parent;', source)
-        self.assertIn('gtk_notebook_set_current_page(GTK_NOTEBOOK(parent), index);', source)
+        # The GTK4 notebook can interpose internal containers between its
+        # registered page and the actual notebook widget. Check the new
+        # ancestry-based navigation rather than the removed parent/child loop.
+        focus = source.split('static void focus_page(GtkWidget *page)', 1)[1].split(
+            'static gboolean key_pressed(', 1)[0]
+        self.assertIn('gtk_widget_is_ancestor(page, candidate)', focus)
+        self.assertIn('gtk_notebook_get_nth_page(notebook, (gint)i)', focus)
+        self.assertIn('gtk_notebook_set_current_page(notebook, (gint)i);', focus)
 
     def test_pan_uses_surface_not_native_grid(self):
         source = (ROOT / 'editor/world_atlas.c').read_text(encoding='utf-8')

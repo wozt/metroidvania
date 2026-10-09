@@ -400,3 +400,12 @@ and the proprietary-file guard passed.
 - The existing GTK lifecycle test covers both outer notebooks, document close
   and preservation of permanent tabs. No ROM data is needed for the test.
 - Compilation, CTest and proprietary guard must pass before commit/push.
+
+## Patch 0071 - nested focus source-contract recovery
+
+- After the GTK4 notebook ancestry fix, the original source-only Python test
+  was still asserting that the removed direct-parent traversal existed.
+- Its assertion now checks the real registered GtkNotebook page lookup and
+  the descendant relationship used by `focus_page()`; the GTK runtime test
+  remains the authority for actual parent/child notebook activation.
+- Existing room content, generated assets, and Git history remain unchanged.

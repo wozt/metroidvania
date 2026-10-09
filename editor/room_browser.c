@@ -295,15 +295,14 @@ static void render_selected(GtkButton *button, gpointer userdata)
     char area[16], room[16];
     snprintf(area, sizeof(area), "%u", browser->area);
     snprintf(room, sizeof(room), "%u", browser->room);
-    const char *module = browser->world == ROOM_WORLD_ARIA ?
-        "scripts.aos_room_render" : "scripts.mzm_room_render";
     const char *area_arg = browser->world == ROOM_WORLD_ARIA ?
         area : zero_areas[browser->area];
     GError *error = NULL;
     GSubprocess *proc = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "-m", module,
-        "--area", area_arg, "--room", room, NULL);
+        &error, "python3", "scripts/editor_cli.py", "--command=room-render",
+        browser->world == ROOM_WORLD_ARIA ? "--world=aria" : "--world=zero_mission",
+        "--area", area_arg, "--room", room, "--format=text", NULL);
     if (!proc) {
         gtk_label_set_text(GTK_LABEL(browser->status),
                            error ? error->message : "Native renderer unavailable");
@@ -595,8 +594,8 @@ static void room_browser_refresh_drafts(RoomBrowser *browser)
     GError *error = NULL;
     GSubprocess *process = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "-m", "scripts.authored_rooms", "list",
-        "--world", world, "--format", "tsv", NULL);
+        &error, "python3", "scripts/editor_cli.py", "--command=room-list",
+        "--world", world, "--source=draft", "--format=tsv", NULL);
     if (!process) {
         gtk_label_set_text(GTK_LABEL(browser->status),
             error ? error->message : "Unable to start private draft listing.");
@@ -704,9 +703,9 @@ static void room_draft_submit(GtkButton *button, gpointer userdata)
         gtk_label_set_text(GTK_LABEL(form->feedback), "Invalid area selection.");
         return;
     }
-    if (!g_file_test("scripts/authored_rooms.py", G_FILE_TEST_IS_REGULAR)) {
+    if (!g_file_test("scripts/editor_cli.py", G_FILE_TEST_IS_REGULAR)) {
         gtk_label_set_text(GTK_LABEL(form->feedback),
-            "Run the editor from the metroidvania project root (scripts/authored_rooms.py missing).");
+            "Run the editor from the metroidvania project root (shared backend CLI missing).");
         return;
     }
 
@@ -719,10 +718,10 @@ static void room_draft_submit(GtkButton *button, gpointer userdata)
     /* Argument vector; no shell, no ROM file paths, create-only Python CLI. */
     GSubprocess *process = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "-m", "scripts.authored_rooms", "create",
+        &error, "python3", "scripts/editor_cli.py", "--command=room-create",
         "--world", world, "--area", area_buf, "--slug", slug,
         "--name", name, "--width-screens", width_buf,
-        "--height-screens", height_buf, NULL);
+        "--height-screens", height_buf, "--format=text", NULL);
     if (!process) {
         gtk_label_set_text(GTK_LABEL(form->feedback),
             error ? error->message : "Failed to launch Python.");

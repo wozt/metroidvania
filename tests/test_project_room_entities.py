@@ -72,7 +72,8 @@ class ProjectEntityTests(unittest.TestCase):
         source = (Path(__file__).resolve().parents[1] / "editor/native_workspace.c").read_text()
         self.assertIn("item->project_owned", source)
         self.assertIn("Project entity", source)
-        self.assertIn('"scripts.project_room_entities"', source)
+        self.assertIn('"scripts/editor_cli.py"', source)
+        self.assertIn('"entity-create"', source)
         self.assertIn("doc->tool_id == TOOL_SELECT", source)
 
 

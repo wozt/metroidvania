@@ -155,7 +155,9 @@ def _write(root: Path, entries: list[dict], rooms: dict[str, dict]) -> None:
             os.unlink(temporary)
 
 
-def place(room_id: str, x: int, y: int, root: Path = authored_rooms.ROOT) -> dict:
+def plan_place(room_id: str, x: int, y: int,
+               root: Path = authored_rooms.ROOT) -> tuple[dict, list[dict], dict[str, dict]]:
+    """Validate a placement completely without persisting it."""
     entries, rooms = load(root)
     room = _identity(room_id, rooms)
     candidate = {'id': room_id, 'x': x, 'y': y}
@@ -167,6 +169,11 @@ def place(room_id: str, x: int, y: int, root: Path = authored_rooms.ROOT) -> dic
     updated = [entry for entry in entries if entry['id'] != room_id]
     updated.append(candidate)
     validate({'schema': SCHEMA, 'version': VERSION, 'placements': updated}, rooms)
+    return candidate, updated, rooms
+
+
+def place(room_id: str, x: int, y: int, root: Path = authored_rooms.ROOT) -> dict:
+    candidate, updated, rooms = plan_place(room_id, x, y, root)
     _write(root, updated, rooms)
     return candidate
 

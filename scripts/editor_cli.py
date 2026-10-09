@@ -26,6 +26,10 @@ EXIT_SUCCESS = 0
 EXIT_USAGE = 2
 EXIT_UNAVAILABLE = 3
 EXIT_OPERATION = 4
+TSV_COMMANDS = {
+    "room-list", "list-rooms", "placement-list", "entity-list",
+    "entity-catalog", "entity-item-settings", "list-assets",
+}
 
 
 class CliUsageError(ValueError):
@@ -62,7 +66,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--command")
     parser.add_argument("--batch", type=Path)
     parser.add_argument("--atomic", type=_boolean, default=False)
-    parser.add_argument("--format", choices=("json", "text"), default="text")
+    parser.add_argument("--format", choices=("json", "text", "tsv"), default="text")
     parser.add_argument("--verbose", type=_boolean, default=False)
     parser.add_argument("--dry-run", type=_boolean, default=False)
     parser.add_argument("--output", type=Path)
@@ -77,6 +81,24 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--height-screens", dest="height_screens")
     parser.add_argument("--workers")
     parser.add_argument("--report")
+    parser.add_argument("--x")
+    parser.add_argument("--y")
+    parser.add_argument("--width")
+    parser.add_argument("--height")
+    parser.add_argument("--id")
+    parser.add_argument("--kind")
+    parser.add_argument("--label")
+    parser.add_argument("--native-type", dest="native_type")
+    parser.add_argument("--item-id", dest="item_id")
+    parser.add_argument("--parameter-0", dest="parameter_0")
+    parser.add_argument("--parameter-1", dest="parameter_1")
+    parser.add_argument("--flags")
+    parser.add_argument("--preview", type=_boolean)
+    parser.add_argument("--confirm", type=_boolean)
+    parser.add_argument("--input")
+    parser.add_argument("--target")
+    parser.add_argument("--layer")
+    parser.add_argument("--tile-id", dest="tile_id")
     return parser
 
 
@@ -148,6 +170,50 @@ def _text_result(result: dict) -> str:
     return f"{command}: {result['error']['message']}"
 
 
+def _safe_tsv_field(value: Any) -> str:
+    field = str(value)
+    if len(field) > 1000 or any(character in field for character in ("\t", "\n", "\r")):
+        raise CliUsageError("unsafe TSV field returned by backend")
+    return field
+
+
+def _tsv_result(command: str, data: dict) -> str:
+    rows: list[list[Any]]
+    if command in ("room-list", "list-rooms"):
+        if data["source"] != "draft":
+            raise CliUsageError("TSV room listing is available only for draft rooms")
+        rows = [[room["id"], room["name"], room["geometry"]["width_screens"],
+                 room["geometry"]["height_screens"]] for room in data["rooms"]]
+    elif command == "placement-list":
+        rows = [[item["id"], item["name"], item["world"], item["area"],
+                 item["x"], item["y"], item["width_screens"],
+                 item["height_screens"]] for item in data["placements"]]
+    elif command == "entity-list":
+        rows = []
+        for entity in data["entities"]:
+            row = [entity["id"], entity["kind"], entity["x"], entity["y"],
+                   entity["label"], entity["native_type"]]
+            if data["preview"]:
+                row.append(entity.get("settings", {}).get("item_id", -1))
+            rows.append(row)
+    elif command == "entity-catalog":
+        rows = [[item["native_type"], item["name"], item["category"],
+                 item.get("item_id", -1)] for item in data["definitions"]]
+    elif command == "entity-item-settings":
+        settings = data["settings"]
+        rows = [[settings.get("item_id", 0), settings.get("parameter_0", 0),
+                 settings.get("parameter_1", 0), settings.get("flags", 0)]]
+    elif command == "list-assets":
+        rows = [[item["world"], item["native_id"], item["native_type"],
+                 item["name"], item["category"], item["summary"],
+                 item["placements"] if item["placements"] is not None else "-",
+                 1 if item["editable"] else 0] for item in data["assets"]]
+    else:
+        raise CliUsageError(f"TSV output is unavailable for {command}")
+    return "".join("\t".join(_safe_tsv_field(field) for field in row) + "\n"
+                   for row in rows)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     output_format = "text"
@@ -158,6 +224,8 @@ def main(argv: list[str] | None = None) -> int:
         if bool(args.command) == bool(args.batch):
             raise CliUsageError("provide exactly one of --command or --batch")
         if args.batch:
+            if output_format == "tsv":
+                raise CliUsageError("TSV output is unavailable for batches")
             operations = _read_batch(args.batch)
             if args.atomic and not args.dry_run and any(
                     item.get("command") in MUTATING_COMMANDS for item in operations):
@@ -170,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
                 for item in operations]}
         else:
             command = args.command
+            if output_format == "tsv" and command not in TSV_COMMANDS:
+                raise CliUsageError(f"TSV output is unavailable for {command}")
             options = _clean_options(vars(args))
             allowed = COMMAND_FIELDS.get(command)
             if allowed is not None:
@@ -184,8 +254,13 @@ def main(argv: list[str] | None = None) -> int:
             for key in ("path", "report_path"):
                 if data.get(key):
                     result["created_paths"].append(data[key])
-        payload = (json.dumps(result, separators=(",", ":"), ensure_ascii=False)
-                   if output_format == "json" else _text_result(result)) + "\n"
+            result["created_paths"].extend(data.get("created_paths", []))
+        if output_format == "json":
+            payload = json.dumps(result, separators=(",", ":"), ensure_ascii=False) + "\n"
+        elif output_format == "tsv":
+            payload = _tsv_result(command, data)
+        else:
+            payload = _text_result(result) + "\n"
         if args.output:
             _safe_output(args.output, payload)
         print(payload, end="")

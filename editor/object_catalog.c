@@ -58,7 +58,8 @@ static void refresh(GtkButton *button, gpointer userdata)
     gchar *out = NULL, *err = NULL;
     GError *error = NULL;
     gint status = -1;
-    gchar *argv[] = {"python3", "-m", "scripts.object_catalog", "--format", "tsv", NULL};
+    gchar *argv[] = {"python3", "scripts/editor_cli.py",
+                     "--command=list-assets", "--format=tsv", NULL};
     gboolean launched = g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
                                      NULL, NULL, &out, &err, &status, &error);
     gboolean succeeded = launched && g_spawn_check_wait_status(status, NULL);

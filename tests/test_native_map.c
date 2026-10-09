@@ -21,6 +21,10 @@ int main(void)
     assert(native_map_save(m,"test-native-workspace.mvnative",err,sizeof(err)));
     assert(native_map_load(r,"test-native-workspace.mvnative",err,sizeof(err)));
     assert(r->blocks[0][1]==2&&r->blocks[1][0]==3);
+    m->width[0]=m->width[1]=255;m->height[0]=m->height[1]=24;
+    assert(native_map_save(m,"test-native-workspace.mvnative",err,sizeof(err)));
+    assert(native_map_load(r,"test-native-workspace.mvnative",err,sizeof(err)));
+    assert(r->width[0]==255&&r->height[0]==24);
     FILE *f=fopen("test-native-workspace.mvnative","a");assert(f);
     fputs("EXTRA\n",f);fclose(f);
     assert(!native_map_load(r,"test-native-workspace.mvnative",err,sizeof(err)));

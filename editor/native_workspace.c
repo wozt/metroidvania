@@ -393,19 +393,38 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
 {
     if (!doc->ready || !doc->project_area || doc->closing) return FALSE;
     gchar room[16], width[16], height[16];
+    const char *command = !strcmp(action, "list-previews") || !strcmp(action, "list") ?
+        "entity-list" : !strcmp(action, "catalog") ? "entity-catalog" :
+        !strcmp(action, "item-settings") ? "entity-item-settings" :
+        !strcmp(action, "create") ? "entity-create" :
+        !strcmp(action, "move") ? "entity-move" :
+        !strcmp(action, "delete") ? "entity-delete" :
+        !strcmp(action, "assign") ? "entity-assign" : NULL;
+    if (!command) return FALSE;
+    gchar command_option[64];
+    snprintf(command_option, sizeof(command_option), "--command=%s", command);
     snprintf(room, sizeof(room), "%u", doc->project_room);
     snprintf(width, sizeof(width), "%u", doc->map->width[0] * 16);
     snprintf(height, sizeof(height), "%u", doc->map->height[0] * 16);
     GPtrArray *args = g_ptr_array_new();
-    const char *const base[] = {
-        "python3", "-m", "scripts.project_room_entities",
-        "--world", doc->project_aria ? "aria" : "mzm",
-        "--area", doc->project_area, "--room", room,
-        "--width", width, "--height", height, action, NULL
-    };
+    const char *const base[] = {"python3", "scripts/editor_cli.py", command_option,
+        doc->project_aria ? "--world=aria" : "--world=zero_mission", NULL};
     for (guint i = 0; base[i]; ++i) g_ptr_array_add(args, (gpointer)base[i]);
+    if (strcmp(action, "catalog")) {
+        const char *const scope[] = {"--area", doc->project_area, "--room", room,
+                                    "--width", width, "--height", height, NULL};
+        for (guint i = 0; scope[i]; ++i) g_ptr_array_add(args, (gpointer)scope[i]);
+    }
+    if (!strcmp(action, "list-previews"))
+        g_ptr_array_add(args, (gpointer)"--preview=true");
+    if (!strcmp(action, "delete"))
+        g_ptr_array_add(args, (gpointer)"--confirm=true");
     if (options)
         for (guint i = 0; options[i]; ++i) g_ptr_array_add(args, (gpointer)options[i]);
+    g_ptr_array_add(args, (gpointer)(
+        !strcmp(action, "list-previews") || !strcmp(action, "list") ||
+        !strcmp(action, "catalog") || !strcmp(action, "item-settings") ?
+        "--format=tsv" : "--format=text"));
     g_ptr_array_add(args, NULL);
     gchar *out = NULL, *err = NULL;
     GError *error = NULL;
@@ -2986,12 +3005,12 @@ static void start_import(NativeWorkspace *doc, const char *area, unsigned number
     char room_text[16];
     snprintf(room_text, sizeof(room_text), "%u", number);
     GError *error = NULL;
-    const char *importer = g_str_has_prefix(doc->identity, "Aria ") ?
-        "scripts.aos_native_workspace" : "scripts.mzm_native_workspace";
+    const char *world = g_str_has_prefix(doc->identity, "Aria ") ?
+        "--world=aria" : "--world=zero_mission";
     GSubprocess *proc = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "-m", importer,
-        "--area", area, "--room", room_text, NULL);
+        &error, "python3", "scripts/editor_cli.py", "--command=room-open",
+        world, "--area", area, "--room", room_text, "--format=text", NULL);
     if (!proc) {
         message(doc, error ? error->message : "Python importer unavailable");
         if (error) g_error_free(error);

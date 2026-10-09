@@ -25,7 +25,7 @@ def serialize(room: dict, tile_count: int, layers: dict, atlas: str) -> bytes:
            f'TILES {tile_count}', f'ATLAS {atlas}']
     for layer in ('Bg1', 'Bg2'):
         w, h, ids = layers[layer]
-        if not 1 <= w <= 128 or not 1 <= h <= 128 or w*h > MAX_BLOCKS or len(ids) != w*h:
+        if not 1 <= w <= 255 or not 1 <= h <= 255 or w*h > MAX_BLOCKS or len(ids) != w*h:
             raise ValueError('invalid room dimensions')
         if any(not 0 <= int(i) <= 65535 for i in ids):
             raise ValueError('invalid source block index')
@@ -50,7 +50,7 @@ def parse(blob: bytes) -> dict:
         if name != 'LAYER' or actual != layer:
             raise ValueError('invalid layer order')
         w, h = int(sw), int(sh)
-        if not 1 <= w <= 128 or not 1 <= h <= 128 or w*h > MAX_BLOCKS:
+        if not 1 <= w <= 255 or not 1 <= h <= 255 or w*h > MAX_BLOCKS:
             raise ValueError('invalid dimensions')
         cursor += 1
         ids = []
@@ -126,7 +126,6 @@ def export(area: str, number: int) -> dict:
         info["background"] = {"status": "NOT_DECODED", "reason": str(exc)}
     from scripts.room_annotations import export_mzm
     info['annotations'] = str(OUTPUT / export_mzm(room['area'], number))
-    print(json.dumps(info))
     return info
 
 def main() -> int:
@@ -135,9 +134,10 @@ def main() -> int:
     ap.add_argument('--room',required=True,type=int)
     args=ap.parse_args()
     try:
-        export(args.area,args.room)
+        result = export(args.area,args.room)
     except (OSError,ValueError,KeyError,IndexError) as exc:
         ap.error(str(exc))
+    print(json.dumps(result))
     return 0
 if __name__=='__main__':
     raise SystemExit(main())

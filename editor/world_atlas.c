@@ -84,8 +84,9 @@ static gboolean reload_rows(WorldGrid *w)
     gchar *out = NULL, *err = NULL;
     GError *spawn_error = NULL;
     gint exit_status = -1;
-    gchar *argv[] = {"python3", "-m", "scripts.map_placements", "list", "--world",
-                     w->world ? "aria" : "zero_mission", "--format", "tsv", NULL};
+    gchar *argv[] = {"python3", "scripts/editor_cli.py",
+                     "--command=placement-list", "--world",
+                     w->world ? "aria" : "zero_mission", "--format=tsv", NULL};
     gboolean launched = g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
                                      NULL, NULL, &out, &err, &exit_status, &spawn_error);
     if (launched && g_spawn_check_wait_status(exit_status, NULL) && out) {
@@ -430,8 +431,8 @@ static void placement_refresh(GtkButton *button, gpointer userdata)
     gchar *out = NULL, *err = NULL;
     GError *error = NULL;
     gint code = -1;
-    gchar *args[] = {"python3", "-m", "scripts.authored_rooms", "list",
-                     "--format", "tsv", NULL};
+    gchar *args[] = {"python3", "scripts/editor_cli.py", "--command=room-list",
+                     "--source=draft", "--format=tsv", NULL};
     gboolean ok = g_spawn_sync(NULL, args, NULL, G_SPAWN_SEARCH_PATH,
                                NULL, NULL, &out, &err, &code, &error);
     GtkStringList *names = gtk_string_list_new(NULL);
@@ -474,8 +475,9 @@ static void placement_save(GtkButton *button, gpointer userdata)
     const char *id = gtk_string_object_get_string(GTK_STRING_OBJECT(item));
     gchar *x = g_strdup_printf("%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(xspin)));
     gchar *y = g_strdup_printf("%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(yspin)));
-    gchar *args[] = {"python3", "-m", "scripts.map_placements", "place",
-                     "--id", (gchar *)id, "--x", x, "--y", y, NULL};
+    gchar *args[] = {"python3", "scripts/editor_cli.py", "--command=room-place",
+                     "--room", (gchar *)id, "--x", x, "--y", y,
+                     "--format=text", NULL};
     gchar *out = NULL, *err = NULL;
     GError *error = NULL;
     gint code = -1;

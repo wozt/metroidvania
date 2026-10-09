@@ -23,12 +23,18 @@ add_library(fusion_native_editor_core STATIC
 )
 target_include_directories(fusion_native_editor_core PUBLIC include)
 target_compile_definitions(fusion_native_editor_core
-    PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    PRIVATE
+        FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+        FUSION_BINARY_DIR="${CMAKE_BINARY_DIR}")
 fusion_enable_warnings(fusion_native_editor_core)
 
 add_executable(fusion_editor_cli src/tools/editor_cli.c)
 target_link_libraries(fusion_editor_cli PRIVATE fusion_native_editor_core)
 fusion_enable_warnings(fusion_editor_cli)
+
+add_executable(fusion_native_map_cli src/tools/native_map_cli.c)
+target_link_libraries(fusion_native_map_cli PRIVATE fusion_native_editor_core)
+fusion_enable_warnings(fusion_native_map_cli)
 
 find_package(SDL3 CONFIG REQUIRED)
 add_executable(fusion_mzm_room_viewer src/tools/mzm_room_viewer.c)
@@ -72,6 +78,12 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_native_map_tests PRIVATE fusion_native_editor_core)
     fusion_enable_warnings(fusion_native_map_tests)
     add_test(NAME native_map_contract COMMAND fusion_native_map_tests)
+
+    add_test(NAME native_map_cli_contract
+        COMMAND ${CMAKE_COMMAND}
+                -DTOOL=$<TARGET_FILE:fusion_native_map_cli>
+                -DWORK=${CMAKE_BINARY_DIR}/native-map-cli-test
+                -P ${CMAKE_SOURCE_DIR}/tests/native_map_cli_contract.cmake)
 
     add_executable(fusion_native_selection_tests tests/test_native_selection.c)
     target_link_libraries(fusion_native_selection_tests PRIVATE fusion_native_editor_core)

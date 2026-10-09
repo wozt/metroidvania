@@ -157,13 +157,13 @@ static void validate_save(GtkButton *button,gpointer userdata)
     gchar *stdout_data=NULL,*stderr_data=NULL;
     gint wait=0;
     if(valid){
-        gchar *argv[]={"python3","-m","scripts.validate_story_assets","--kind",
-            (gchar *)tab->kind,temporary,NULL};
+        gchar *argv[]={"python3","scripts/editor_cli.py","--command=story-save",
+            "--kind",(gchar *)tab->kind,"--input",temporary,
+            "--target",(gchar *)tab->source,"--format=text",NULL};
         valid=g_spawn_sync(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,NULL,
                            &stdout_data,&stderr_data,&wait,&error);
         if(valid)valid=g_spawn_check_wait_status(wait,&error);
     }
-    if(valid)valid=g_file_set_contents(tab->source,text,-1,&error);
     if(valid){
         gtk_text_buffer_set_modified(gtk_text_view_get_buffer(GTK_TEXT_VIEW(tab->view)),FALSE);
         tab->modified=FALSE;

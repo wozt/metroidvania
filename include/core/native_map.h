@@ -5,6 +5,7 @@
 #include <stdint.h>
 #define NATIVE_MAX_CELLS 6144u
 #define NATIVE_MAX_TILES 1024u
+#define NATIVE_MAX_DIMENSION 255u
 typedef struct {
     char room_id[64];
     char atlas[192];

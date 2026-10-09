@@ -21,6 +21,9 @@ selection operations and display-independent CLI launcher:
 - `src/core/native_selection.c`: bounded rectangular metatile selection moves.
 - `src/core/editor_cli_launcher.c`: replaces the process with the versioned
   shared Python backend; no GTK initialization occurs on this path.
+- `src/tools/native_map_cli.c`: internal display-independent adapter around the
+  exact `native_map_load/edit/save` implementation used by GTK. The public CLI
+  uses it for BG1/BG2 inspection, reads, writes and flood fills.
 
 `fusion_editor_cli` is the native headless entry point. `fusion_map_editor
 --headless` reaches the same backend before creating a `GtkApplication`.
@@ -44,7 +47,11 @@ pinned decompilation symbols and audited ROM offsets to produce private output
 under `assets/extracted/`.
 
 `scripts/editor_backend.py` is the shared operation layer for headless commands
-and GTK subprocess actions. `scripts/room_audit.py` executes real MZM and Aria
+and GTK subprocess actions. It owns draft rooms, global-map placements, project
+entities, story validation/storage and native workspace orchestration. GTK's
+interactive tile canvas and the headless tile commands share the C native-map
+core rather than duplicating its file or editing rules. `scripts/room_audit.py`
+executes real MZM and Aria
 decoders for every discovered room, isolates work by native area and emits a
 structured private report. It does not replace either future gameplay engine.
 

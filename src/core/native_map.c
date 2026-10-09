@@ -28,8 +28,9 @@ static bool valid(const NativeMap *m)
 {
     if(!m||!room_ok(m->room_id)||!atlas_ok(m->atlas)||m->tileset>78||
        !m->tile_count||m->tile_count>NATIVE_MAX_TILES)return false;
-    for(unsigned l=0;l<2;l++)if(!m->width[l]||m->width[l]>128||
-        !m->height[l]||m->height[l]>128||m->width[l]*m->height[l]>NATIVE_MAX_CELLS)return false;
+    for(unsigned l=0;l<2;l++)if(!m->width[l]||m->width[l]>NATIVE_MAX_DIMENSION||
+        !m->height[l]||m->height[l]>NATIVE_MAX_DIMENSION||
+        m->width[l]*m->height[l]>NATIVE_MAX_CELLS)return false;
     return true;
 }
 static bool parse_header(FILE *f,const char *prefix,char *dst,size_t size)
@@ -59,7 +60,8 @@ bool native_map_load(NativeMap *out,const char *path,char *error,size_t length)
         unsigned w,h;char name[16],extra;
         if(!fgets(line,sizeof(line),f)||
            sscanf(line,"LAYER %15s %u %u %c",name,&w,&h,&extra)!=3||
-           strcmp(name,l?"BG2":"BG1")||!w||w>128||!h||h>128||w*h>NATIVE_MAX_CELLS)goto end;
+           strcmp(name,l?"BG2":"BG1")||!w||w>NATIVE_MAX_DIMENSION||
+           !h||h>NATIVE_MAX_DIMENSION||w*h>NATIVE_MAX_CELLS)goto end;
         m->width[l]=w;m->height[l]=h;
         for(unsigned y=0;y<h;y++){
             char *row=malloc(w*5+4);if(!row)goto end;

@@ -78,7 +78,7 @@ def serialize(area: int, room: int, layers: dict[str, tuple[int, int, list[int]]
              f'TILESET {area}', f'TILES {tile_count}', f'ATLAS {atlas}']
     for name in ('BG1', 'BG2'):
         w, h, cells = layers[name]
-        if not 1 <= w <= 128 or not 1 <= h <= 128 or w * h > MAX_CELLS or len(cells) != w * h:
+        if not 1 <= w <= 255 or not 1 <= h <= 255 or w * h > MAX_CELLS or len(cells) != w * h:
             raise ValueError('invalid editable layer dimensions')
         if any(not 0 <= cell < tile_count for cell in cells):
             raise ValueError('invalid tile atlas reference')

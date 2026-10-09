@@ -19,8 +19,11 @@ MZM 330 partial + 1 unsupported; Aria 342 partial + 1 unsupported; zero errors.
 - add backend contracts before enabling unavailable editor controls.
 
 Exit criterion: every enabled non-visual operation is scriptable without GTK,
-with functional no-display tests and explicit capability reporting. **In progress:**
-project/world/area/room queries, draft operations, render and audit are available.
+with functional no-display tests and explicit capability reporting. **Met for
+the currently enabled editor surface:** project/world/area/room queries, native
+room open/render/audit, draft placement, project entity editing, story writes
+and BG1/BG2 tile editing are available through the shared backend. New P2/P3
+features must add their backend contract before their GTK controls are enabled.
 
 ## P2 - Complete room, object and event authoring
 

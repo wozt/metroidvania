@@ -712,3 +712,32 @@ and the proprietary-file guard passed.
   both no-display native entry points and GTK4 lifecycle coverage. The private
   exhaustive audits above completed with zero decoder errors, and the tracked
   proprietary-file guard passed.
+
+## Patch 0089 - complete current-surface backend parity
+
+- Routed GTK draft creation/listing, global-map placement, native room opening
+  and rendering, object inventory, project entity editing, and story validation
+  and storage through the shared editor backend. The old feature-specific Python
+  subprocess entry points remain compatibility tools, not GTK business logic.
+- Added strict headless contracts for draft placement/removal, project entity
+  list/inspect/create/move/assign/delete, named catalogs, Aria item parameters,
+  story validation/save, project audit, native workroom opening and asset lists.
+  Destructive removals require explicit confirmation; dry runs validate without
+  persistence; GTK row consumers use bounded TSV from the same backend.
+- Added `fusion_native_map_cli`, an internal adapter around the exact C
+  `native_map_load/edit/save` core used by GTK. Public `layer-list`, `tile-get`,
+  `tile-set` and `tile-fill` operations now provide no-display BG1/BG2 parity
+  without duplicating native-map rules. Writes target only ignored overrides.
+- Raised the artificial native-workroom axis cap from 128 to 255 cells while
+  retaining the 6,144-cell per-layer bound. This opens verified wide/tall rooms
+  such as MZM Brinstar room 003 (`19x134`) without weakening allocation bounds.
+- Added a functional CMake adapter round trip (read, set, reload, bounds error),
+  Python draft/entity/story round trips, confirmation/dry-run contracts and a
+  documented GUI/backend/CLI feature matrix. Collision, doors, native entity
+  encoding, custom object definitions, graphical event/cutscene authoring and
+  audio remain explicitly unavailable rather than simulated.
+- Validation: all 230 Python tests and all nine CTest targets pass, including
+  the no-display native entry points, GTK lifecycle tests, native-map adapter
+  round trip and proprietary-file guard. The 0088 exhaustive private audit
+  remains MZM 330 partial + 1 unsupported and Aria 342 partial + 1 unsupported,
+  with zero decoder errors.

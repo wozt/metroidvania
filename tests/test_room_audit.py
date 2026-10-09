@@ -12,6 +12,16 @@ from scripts.room_audit import _diagnostic_status, _finish_record, audit_world
 
 
 class RoomAuditTests(unittest.TestCase):
+    @mock.patch("scripts.editor_backend._project_validation")
+    @mock.patch("scripts.editor_backend.audit_world")
+    def test_project_audit_uses_both_real_world_identifiers(self, audit, validation):
+        validation.return_value = {"status": "valid"}
+        audit.side_effect = lambda world, workers: {"world": world, "workers": workers}
+        with tempfile.TemporaryDirectory() as directory:
+            result = execute("project-audit", {"workers": 2}, root=Path(directory))
+        self.assertEqual(set(result["render_audits"]), {"zero_mission", "aria"})
+        self.assertEqual(audit.call_count, 2)
+
     @mock.patch("scripts.editor_backend.write_private_report")
     @mock.patch("scripts.editor_backend.audit_world")
     def test_backend_persists_only_explicit_safe_report(self, audit, write):

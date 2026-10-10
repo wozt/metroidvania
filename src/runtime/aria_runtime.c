@@ -26,6 +26,7 @@
 #define DEFAULT_ROOMS "assets/extracted/aria/rooms/runtime"
 #define DEFAULT_LIBRARY "assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv"
 #define DEFAULT_OBJECTS "assets/extracted/aria/sprites/objects/runtime/runtime_index.tsv"
+#define DEFAULT_WEAPONS "assets/extracted/aria/metadata/weapons.tsv"
 #define DOOR_STYLES 2
 
 
@@ -496,15 +497,48 @@ static uint16_t keyboard_buttons(void) {
     return held;
 }
 
+/* weapons.tsv of scripts/aos_weapons.py: "none" is the unarmed record. */
+static bool load_weapon(const char *path, const char *name, AosWeapon *weapon) {
+    FILE *f = fopen(path, "rb");
+    if (!f) { perror(path); return false; }
+    char line[256];
+    bool found = false;
+    static const char schema[] = "schema\tmetroidvania-aos-weapons-v1";
+    if (!fgets(line, sizeof line, f) || strncmp(line, schema, strlen(schema))) {
+        fclose(f);
+        fprintf(stderr, "Not a weapon table: %s\n", path);
+        return false;
+    }
+    while (!found && fgets(line, sizeof line, f)) {
+        char key[16];
+        unsigned item, flags;
+        int cls, variant, a[5];
+        if (line[0] == '#' ||
+            sscanf(line, "%15s\t%x\t%d\t%d\t%x\t%d\t%d\t%d\t%d\t%d", key, &item, &cls,
+                   &variant, &flags, &a[0], &a[1], &a[2], &a[3], &a[4]) != 10 ||
+            strcmp(key, name))
+            continue;
+        *weapon = (AosWeapon){(uint8_t)cls, (uint16_t)flags,
+                              {(uint8_t)a[0], (uint8_t)a[1], (uint8_t)a[2], (uint8_t)a[3],
+                               (uint8_t)a[4]}};
+        found = true;
+    }
+    fclose(f);
+    if (!found) fprintf(stderr, "No weapon %s in %s\n", name, path);
+    return found;
+}
+
 static void usage(const char *name) {
     fprintf(stderr,
             "Usage: %s [--check] [--library index.tsv] [--spawn X Y] [--moves MASK]\n"
+            "       [--weapon none|INDEX]\n"
             "       [--capture out.bmp FRAMES BUTTONS] (--area A --room R | room-folder)\n",
             name);
 }
 
 int main(int argc, char **argv) {
     const char *folder = NULL, *library_path = DEFAULT_LIBRARY, *capture_path = NULL;
+    const char *weapon_name = "none";
     long area = -1, room_number = -1, capture_frames = 0;
     unsigned long capture_buttons = 0;
     /* No soul inventory yet: every ported ability move is enabled. */
@@ -519,6 +553,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--library") && i + 1 < argc) library_path = argv[++i];
         else if (!strcmp(argv[i], "--area") && i + 1 < argc) area = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
+        else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) weapon_name = argv[++i];
         else if (!strcmp(argv[i], "--moves") && i + 1 < argc) {
             moves = strtoul(argv[++i], &end, 0);
             if (*end || moves > 0x1F) { usage(argv[0]); return 2; }
@@ -585,6 +620,10 @@ int main(int argc, char **argv) {
 
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
     soma.moves = (uint32_t)moves;
+    if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon)) {
+        fprintf(stderr, "Export the weapons first: python3 -m scripts.aos_weapons\n");
+        goto cleanup;
+    }
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     uint16_t previous = 0;
     AosForcedInput forced = {0};

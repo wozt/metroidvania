@@ -413,8 +413,92 @@ static void ability_tests(void) {
     memset(cells, 0, sizeof(cells));
 }
 
+static void attack_tests(void) {
+    fill(0, 20, W - 1, H - 1, 0x03);
+    const AosWeapon sword = {0, 0x0001, {0x30, 0x31, 0x32, 0x33, 0x34}};
+
+    /* Standing attack: state 1, Soma brakes, the attack animation plays to
+     * its end, then the recovery animation is requested. */
+    AosSoma soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.weapon = sword;
+    for (int i = 0; i < 4; ++i) frame(&soma, AOS_KEY_RIGHT, 0);
+    frame(&soma, AOS_KEY_RIGHT | AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    assert(soma.state == 1 && (soma.flags & AOS_FLAG_ATTACKING) && soma.anim.id == 0x30);
+    assert(soma.vx == AOS_WALK_SPEED);     /* friction starts in state 1 */
+    int frames = 0;
+    while (soma.state == 1 && frames < 20) {
+        frame(&soma, AOS_KEY_RIGHT | AOS_KEY_ATTACK, 0);
+        ++frames;
+    }
+    assert(soma.state == 0 && !(soma.flags & AOS_FLAG_ATTACKING) && frames == 4);
+    assert(soma.anim.id == 0x33);
+    /* The weapon entity is gone after that frame, so a new attack starts. */
+    frame(&soma, 0, AOS_KEY_ATTACK);
+    assert(soma.state == 1);
+
+    /* Crouched attack uses the crouch posture. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.weapon = sword;
+    frame(&soma, AOS_KEY_DOWN, 0);
+    frame(&soma, AOS_KEY_DOWN | AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    assert(soma.state == 1 && soma.anim.id == 0x31);
+
+    /* Air attack: flag 0x40, steering without turning around. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.weapon = sword;
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    frame(&soma, AOS_KEY_JUMP | AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    assert(soma.state == 1 && (soma.flags & AOS_FLAG_AIR_ATTACK) && soma.anim.id == 0x32);
+    frame(&soma, AOS_KEY_LEFT, 0);
+    assert(soma.vx == -AOS_WALK_SPEED && !soma.facing_left);
+    AosLanding landing;
+
+    /* With weapon flag 0x2000 the landing keeps the attack and switches to
+     * the standing animation at the same frame. */
+    const AosWeapon heavy = {1, 0x2001, {0x30, 0x31, 0x32, 0x33, 0x34}};
+    anim_defs[0x32] = (AosAnimDef){4, landing_steps};       /* 27 frames */
+    anim_defs[0x30] = (AosAnimDef){4, landing_steps};
+    soma = at(100, 150, AOS_FLAG_AIRBORNE);
+    soma.weapon = heavy;
+    frame(&soma, AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    assert(soma.state == 1 && (soma.flags & AOS_FLAG_AIR_ATTACK));
+    landing = AOS_LANDING_NONE;
+    for (int i = 0; i < 25 && landing == AOS_LANDING_NONE; ++i) landing = frame(&soma, 0, 0);
+    assert(landing == AOS_LANDING_NORMAL && soma.state == 1);
+    assert(soma.anim.id == 0x30 && !(soma.flags & AOS_FLAG_AIR_ATTACK));
+    assert(soma.flags & AOS_FLAG_ATTACKING);
+
+    /* The same landing with an ordinary weapon ends the attack. */
+    soma = at(100, 150, AOS_FLAG_AIRBORNE);
+    soma.weapon = sword;
+    frame(&soma, AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    landing = AOS_LANDING_NONE;
+    for (int i = 0; i < 25 && landing == AOS_LANDING_NONE; ++i) landing = frame(&soma, 0, 0);
+    assert(landing == AOS_LANDING_NORMAL && soma.state == 0);
+    assert(!(soma.flags & (AOS_FLAG_ATTACKING | AOS_FLAG_AIR_ATTACK)));
+    anim_defs[0x32] = (AosAnimDef){1, one_step};
+    anim_defs[0x30] = (AosAnimDef){1, one_step};
+
+    /* A backdash cancels the attack. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.weapon = sword;
+    soma.moves = AOS_MOVE_BACKDASH;
+    frame(&soma, AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    frame(&soma, AOS_KEY_ABILITY, AOS_KEY_ABILITY);
+    assert(soma.state == 0 && (soma.flags & AOS_FLAG_BACKDASH));
+    assert(!(soma.flags & AOS_FLAG_ATTACKING));
+
+    /* Class 5 weapons do not attack. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.weapon = (AosWeapon){5, 0, {0x30, 0x31, 0x32, 0x33, 0x34}};
+    frame(&soma, AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    assert(soma.state == 0);
+    memset(cells, 0, sizeof(cells));
+}
+
 int main(void) {
     init_anims();
+    attack_tests();
     ability_tests();
     animation_tests();
     collision_tests();

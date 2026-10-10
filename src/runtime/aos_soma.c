@@ -357,20 +357,21 @@ static void collide_special(AosSoma *soma, const AosCollision *layer, int32_t x,
 }
 
 static AosLanding land(AosSoma *soma) {
+    bool keeps_attack = soma->weapon.flags & AOS_WEAPON_LANDING_ATTACK;   /* sub_08023424 */
     soma->flags |= AOS_FLAG_GROUNDED;
     soma->air_frames = 0;
-    soma->flags &= ~0x0020017Eu;   /* 0x20031E when the weapon has 0x2000 */
+    soma->flags &= keeps_attack ? ~0x0020031Eu : ~0x0020017Eu;
     soma->y &= ~0xFFFF;
     AosLanding landing = AOS_LANDING_NORMAL;
     if (soma->vy > 0x64000 || (soma->flags & AOS_FLAG_STOP_AT_WALL)) {
         soma->flags |= AOS_FLAG_HARD_LANDING;
+        if (keeps_attack) soma->flags &= ~0x160u;
         play(soma, AOS_SOMA_ANIM_HARD_LANDING, false);
         soma->state = 4;
         landing = AOS_LANDING_HARD;
-    } else {
-        /* The game also checks the attack and soul buttons, which have no
-         * ported use yet; only the jump button is tested here. */
-        if (!(soma->held & 0xF0) && !(soma->pressed & AOS_KEY_JUMP))
+    } else if (!(soma->flags & AOS_FLAG_ATTACKING) || !keeps_attack) {
+        if (!(soma->held & 0xF0) &&
+            !(soma->pressed & (AOS_KEY_JUMP | AOS_KEY_ATTACK | AOS_KEY_ABILITY | AOS_KEY_GUARDIAN)))
             soma->anim_request = AOS_SOMA_ANIM_LAND;
         if (soma->held & (AOS_KEY_LEFT | AOS_KEY_RIGHT))
             play(soma, AOS_SOMA_ANIM_WALK, true);
@@ -480,6 +481,26 @@ static void slow_on_slope(AosSoma *soma, const int32_t divisors[3]) {
         soma->vx = soma->vx / divisors[soma->slope_step - 1] * 16;
 }
 
+/* sub_080197B4: attack start (the auto-attack flag 0x1325C & 2, the
+ * 0x131B8 & 0x80 lock and the weapon entity of sub_080230A8 are not
+ * modelled; the entity exists while weapon_active). */
+static void attack_start(AosSoma *soma, uint16_t pressed) {
+    if (!(pressed & AOS_KEY_ATTACK) || (soma->flags & 0x160u) || soma->weapon_active ||
+        soma->weapon.weapon_class == 5)
+        return;
+    if (soma->flags & AOS_FLAG_AIRBORNE) {
+        soma->flags |= AOS_FLAG_AIR_ATTACK;
+        play(soma, soma->weapon.anims[2], false);
+    } else if (soma->flags & AOS_FLAG_CROUCH) {
+        play(soma, soma->weapon.anims[1], false);
+    } else {
+        play(soma, soma->weapon.anims[0], false);
+    }
+    soma->weapon_active = true;
+    soma->flags |= AOS_FLAG_ATTACKING;
+    soma->state = 1;
+}
+
 /* Grounded animations and crouch of case 0 (_0801BEAC .. _0801C298). */
 static void ground_animation(AosSoma *soma, uint16_t held, int32_t start_speed) {
     if (held & AOS_KEY_DOWN || (soma->flags & AOS_FLAG_HEAD_CEILING)) {
@@ -570,6 +591,7 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         soma->frame_counter++;
         if (!(soma->flags & 0x1000001Eu)) ground_animation(soma, held, start_speed);
     }
+    attack_start(soma, pressed);
     if ((soma->moves & AOS_MOVE_SLIDE) && !(soma->flags & 0x1122u) &&
         (held & AOS_KEY_DOWN) && (pressed & AOS_KEY_JUMP)) {
         /* Slide (ability 1, state 3, sound 0xBD). */
@@ -608,6 +630,43 @@ static void slide_state(AosSoma *soma, const AosCollision *layer) {
         soma->state = 0;
     }
     air_routine(soma, layer);
+}
+
+/* Case 1 (_0801C410): attack. Steering only in the air; the attack ends
+ * with its animation (recovery request by posture) or with a backdash. */
+static void attack_state(AosSoma *soma, const AosCollision *layer, uint16_t held,
+                         uint16_t pressed) {
+    int32_t speed = (soma->abilities & AOS_ABILITY_FAST_WALK) ? AOS_FAST_WALK_SPEED
+                                                              : AOS_WALK_SPEED;
+    if ((soma->flags & AOS_FLAG_AIRBORNE) && (held & AOS_KEY_LEFT)) {
+        soma->vx = -speed;
+        soma->friction = 0;
+    } else if ((soma->flags & AOS_FLAG_AIRBORNE) && (held & AOS_KEY_RIGHT)) {
+        soma->vx = speed;
+        soma->friction = 0;
+    } else {
+        soma->friction = soma->vx >= 0 ? -AOS_FRICTION : AOS_FRICTION;
+    }
+    apply_friction(soma);
+    if ((soma->weapon.flags & AOS_WEAPON_LANDING_ATTACK) && (soma->flags & AOS_FLAG_AIR_ATTACK) &&
+        (soma->flags & AOS_FLAG_GROUNDED)) {
+        play_keeping_frame(soma, soma->weapon.anims[0]);
+        soma->flags &= ~0x41u;
+    }
+    if (soma->flags & AOS_FLAG_ANIM_DONE) {
+        soma->flags &= 0xFFDFFF9Fu;
+        if (!(soma->flags & AOS_FLAG_AIRBORNE) && soma->anim_request == AOS_ANIM_NONE)
+            soma->anim_request = soma->weapon.anims[(soma->flags & AOS_FLAG_CROUCH) ? 4 : 3];
+        soma->state = 0;
+    } else if ((pressed & AOS_KEY_ABILITY) && !(held & AOS_KEY_UP) &&
+               (soma->moves & AOS_MOVE_BACKDASH) && !(soma->flags & 0x10008402u)) {
+        soma->anim_request = AOS_SOMA_ANIM_BACKDASH;
+        soma->flags = (soma->flags & 0xFFDFFF9Fu) | AOS_FLAG_BACKDASH;
+        soma->frame_counter = 0;
+        soma->vx = soma->facing_left ? 0x3C000 : (int32_t)0xFFFC4000;
+        soma->state = 0;
+    }
+    aos_soma_air(soma, layer, held);
 }
 
 /* Case 5 (_0801CBB4): high jump until falling. */
@@ -692,6 +751,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     AosLanding landing = aos_soma_collide(soma, layer);
     switch (soma->state) {
     case 0: normal_state(soma, layer, held, pressed); break;
+    case 1: attack_state(soma, layer, held, pressed); break;
     case 3: slide_state(soma, layer); break;
     case 4: hard_landing_state(soma); break;
     case 5: high_jump_state(soma, layer, held); break;
@@ -716,5 +776,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     /* _0801CF2C: per-frame flags are dropped at the end of the update. */
     soma->flags &= 0xFBF7FFFFu;
     soma->air_anim_locked = false;
+    /* The weapon entity deletes itself once the attack flag is clear. */
+    if (!(soma->flags & AOS_FLAG_ATTACKING)) soma->weapon_active = false;
     return landing;
 }

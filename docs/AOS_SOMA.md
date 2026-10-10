@@ -210,6 +210,28 @@ slow-fall flag). Airborne animations are skipped while `gEwramData + 0x131B8
 (`_0801CF2C`) clears bits 1-7 and `0x800` of `0x131B8` and entity flags
 `0x4080000`.
 
+Attacks. `sub_080197B4` (called from case 0 after the grounded animations,
+before the slide) starts an attack when the attack button (default B,
+`0x13398`) is pressed or `0x1325C & 2` is set, flags `0x160` are clear, the
+weapon entity slot `gEwramData + 0x1311C` is empty, `sub_080230A8` creates
+the weapon entity (update `sUnk_084F124C[class]`) and the weapon class is not
+5. The equipped weapon record is `sUnk_08505D3C[weapon]` (0x1C bytes: item id
++0, class +8, flags +0x10, variant +0x16; 59 records, item ids 0x20-0x5A) or
+the unarmed record `sUnk_084F1270` when `+0x13268` is 0xFF. The body
+animation is `sub_080233BC(posture)`: tables `sUnk_084F1238[0..2]` (standing,
+crouched, airborne) indexed by class * 3 + variant, `[3..4]` (standing and
+crouched recovery) by class. Airborne attacks set `0x40`; all set `0x20` and
+state 1. Case 1 (`_0801C410`) steers only in the air (without turning),
+brakes on the ground, converts an air attack into the standing animation on
+landing (same frame) when the weapon has flag `0x2000` (`sub_08023424`),
+and ends with the animation (clears `0x200060`; on the ground requests the
+recovery animation) or with a backdash. Landing clears `0x20031E` instead of
+`0x20017E` for such weapons and keeps the attack state; otherwise a landing
+ends the attack. The weapon entity follows Soma, takes its hitbox from his
+animation frame data and deletes itself when `0x20` clears; its sprites,
+hitboxes and the subweapon/soul attack `sub_08019478` are not ported.
+`scripts/aos_weapons.py` exports the records and their animations privately.
+
 Earlier revisions called the slide a "probable backdash" and the case
 `_0801C410` the air state; case 1 is an attack state (weapon animations,
 vx kept only while airborne), and state 0 handles both ground and air.
@@ -380,5 +402,8 @@ generic draw (`0x03004564` in IWRAM) is not traced, but this places both
 edge doors inside their doorway art (rooms 0/3 and 0/16).
 
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: the boss doors and save-room objects behind the `0xF0` exit cells, the transition
+(README). Next steps: the weapon entities (sprites and hitboxes), the boss
+doors (object 0x02 deletes itself once boss bit `0x37E >> param1` is set) and
+the save-room objects (0x1C save point, 0x1D walls closing the side opposite
+the room's single exit) behind the `0xF0` exit cells, the transition
 rooms of `sUnk_0850E968`, the hurtboxes, then attacks.

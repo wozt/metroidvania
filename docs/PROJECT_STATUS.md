@@ -1873,3 +1873,16 @@ No automatic reciprocal link or native engine encoder is implemented.
   and 0/16) instead of outlines.
 - Validation on 2026-10-10: CTest passed 21/21, the object sprite tests
   passed and the proprietary guard passed.
+
+## Patch 0211 - Soma attacks (body)
+
+- Ported the attack start `sub_080197B4` and player state 1: standing,
+  crouched and air attacks with the body animation of the equipped weapon,
+  air steering, the landing rules (weapon flag 0x2000 keeps the attack and
+  switches to the standing animation), recovery requests and the backdash
+  cancel. Landing now clears `0x20031E` for such weapons, as the game does.
+- Added `scripts/aos_weapons.py` (private export of the 59 weapon records,
+  the unarmed record and their attack animations) and `--weapon` in the
+  runtime. Weapon entities (blade sprites, hitboxes) are not ported yet.
+- Validation on 2026-10-10: CTest passed 21/21 and the proprietary guard
+  passed.

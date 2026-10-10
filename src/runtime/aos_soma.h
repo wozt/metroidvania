@@ -11,7 +11,8 @@
  * and landing), the movement part of player states 0, 3, 4, 5, 6 and 7
  * with the ability moves, and the animation requests. Moving platforms and
  * carried entities (gEwramData + 0x1316C, + 0x131B4), the other states,
- * attacks, hurtboxes and effects are NOT ported.
+ * the weapon entities (sprites, hitboxes), hurtboxes and effects are NOT
+ * ported.
  * Values are 16.16 fixed point pixels per 60 Hz frame, positive Y downward;
  * positions are room pixels. No SDL. */
 #ifndef AOS_SOMA_H
@@ -34,6 +35,8 @@
 /* Entity flags (+0x10) used here. */
 enum {
     AOS_FLAG_AIRBORNE = 1u << 1,
+    AOS_FLAG_ATTACKING = 1u << 5,      /* 0x20 */
+    AOS_FLAG_AIR_ATTACK = 1u << 6,     /* 0x40 */
     AOS_FLAG_STOP_AT_WALL = 1u << 7,   /* 0x80: walls stop instead of bounce */
     AOS_FLAG_CROUCH = 1u << 10,        /* 0x400 */
     AOS_FLAG_PLATFORM_ONLY = 1u << 12, /* 0x1000: no solid cell under the feet */
@@ -97,6 +100,17 @@ enum {
     AOS_MOVE_HIGH_JUMP = 1u << 4
 };
 
+/* Equipped weapon as sub_08023368 returns it, with the body animations of
+ * sub_080233BC (postures: stand, crouch, air, recover, crouch recover);
+ * exported by scripts/aos_weapons.py. */
+typedef struct {
+    uint8_t weapon_class;   /* record + 8; class 5 cannot attack */
+    uint16_t flags;         /* record + 0x10; 0x2000 keeps air attacks on landing */
+    uint8_t anims[5];
+} AosWeapon;
+
+enum { AOS_WEAPON_LANDING_ATTACK = 0x2000 };
+
 typedef struct {
     int32_t x, y;           /* +0x40, +0x44 */
     int32_t vx, vy;         /* +0x48, +0x4C */
@@ -119,6 +133,8 @@ typedef struct {
     uint16_t anim_request;  /* + 0x20: one-shot animation, 0xFF for none */
     uint8_t up_frames;      /* + 0x2A: frames with Up held while idle */
     bool air_anim_locked;   /* gEwramData + 0x131B8 & 4, cleared every frame */
+    AosWeapon weapon;
+    bool weapon_active;     /* gEwramData + 0x1311C: the weapon entity exists */
     AosAnimState anim;
     const AosAnimSet *anims;    /* animation timings; NULL never ends one */
 } AosSoma;
@@ -162,8 +178,8 @@ AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
 /* One player frame of sub_0801B0D8: animation-end flag, integration,
  * collision pass, state routine, wall probe selection, the pending
  * animation (+ 0x20) and the animation step. States 0 (normal, ground and
- * air), 3 (slide), 4 (hard landing), 5 (high jump), 6 (ceiling crash)
- * and 7 (dive kick) are ported; other states do nothing yet. */
+ * air), 1 (attack), 3 (slide), 4 (hard landing), 5 (high jump), 6
+ * (ceiling crash) and 7 (dive kick) are ported; other states do nothing. */
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed);
 

@@ -143,6 +143,7 @@ with:
 python3 -m scripts.aos_soma_pipeline
 python3 -m scripts.aos_runtime_room --all
 python3 -m scripts.aos_object_sprites
+python3 -m scripts.aos_weapons
 ./build/fusion_aria_runtime --area 0 --room 6
 ```
 
@@ -154,7 +155,9 @@ Leaving a room
 through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn
 point is a test placement (a floor near the room centre, or `--spawn X Y`).
-Arrows move, Down crouches, Space/Z jumps (A), Down + jump drops through
+Arrows move, Down crouches, X/F attacks (B, body animation only; `--weapon
+none|INDEX` after `python3 -m scripts.aos_weapons`, unarmed by default),
+Space/Z jumps (A), Down + jump drops through
 one-way platforms or slides, Q/Left Shift is L (backdash; Up + L high jump),
 jump in the air jumps again and Down + jump after it dive-kicks. All five
 ability moves are enabled by default (no soul inventory yet); `--moves MASK`

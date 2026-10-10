@@ -457,8 +457,14 @@ static bool runtime_library_open(RuntimeLibrary *lib,const char *index) {
     char line[1024],prev[160]="";
     bool ok=true;
     while(fgets(line,sizeof line,f)) {
-        char name[160],path[320],extra;unsigned int frame,tick;
-        if(sscanf(line,"%159[^\t]\t%u\t%u\t%319[^\r\n]%c",name,&frame,&tick,path,&extra)!=4 ||
+        char name[160],path[320];unsigned int frame,tick;
+        int consumed=0;
+        if(sscanf(line,"%159[^\t]\t%u\t%u\t%319[^\t\r\n]%n",
+                  name,&frame,&tick,path,&consumed)!=4 ||
+           consumed<=0 || (line[consumed]!='\n' && line[consumed]!='\r') ||
+           (line[consumed]=='\n' && line[consumed+1]!='\0') ||
+           (line[consumed]=='\r' &&
+             !(line[consumed+1]=='\n' && line[consumed+2]=='\0')) ||
            tick<1 || tick>255 || strchr(path,'/')==NULL || path[0]=='/' || strstr(path,"..")) {ok=false;break;}
         if(strcmp(name,prev)) {
             if(lib->count>=RUNTIME_LIBRARY_MAX){ok=false;break;}

@@ -494,7 +494,11 @@ static bool composed_load(SDL_Renderer *renderer, const char *dir,
 
 static int composed_select(RuntimeMovementState state, int facing,
                            bool diagonal_up, bool diagonal_down,
-                           bool crouch, bool fire, bool extended, bool left_set) {
+                           bool crouch, bool fire, bool extended, bool left_set,
+                           bool spin_jump) {
+    /* Spin jumps must not be silently replaced with straight MidAir poses. */
+    if (spin_jump && (state == RUNTIME_JUMPING || state == RUNTIME_FALLING))
+        return -1;
     if (facing < 0) {
         if (crouch && fire && state == RUNTIME_IDLE && left_set)
             return diagonal_up ? 12 : 11;
@@ -609,6 +613,11 @@ int main(int argc, char **argv) {
     bool grounded=false;
     RuntimeMovementState movement_state=RUNTIME_IDLE;
     int facing=1;
+    bool spin_jump=false;
+    unsigned int armor_index=0;
+    static const char *armor_names[] = {
+        "Power Suit", "Varia Suit", "Gravity Suit", "Full Suit", "Suitless"
+    };
     Uint64 animation_start=SDL_GetTicks();
     /* Prefer a grounded, collision-free test spawn near the room centre.
      * This is NOT a verified original Samus entry position. */
@@ -631,6 +640,12 @@ int main(int argc, char **argv) {
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                 (event.key.key == SDLK_SPACE || event.key.key == SDLK_UP ||
                  event.key.key == SDLK_W)) jump_queued=true;
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                event.key.key == SDLK_R) {
+                armor_index=(armor_index+1u)%5u;
+                fprintf(stderr,"Selected armor: %s (preview unavailable; Power Suit assets retained)\n",
+                        armor_names[armor_index]);
+            }
         }
         Uint64 current=SDL_GetTicks();
         float dt=clampf((float)(current-previous)/1000.f,0.f,0.05f);
@@ -645,6 +660,8 @@ int main(int argc, char **argv) {
             bool hit=false;
             grounded=blocked(room,px,py+1.f,pw,ph);
             if (jump_queued && grounded) {
+                /* Jump type is latched at takeoff, not reclassified by aim keys. */
+                spin_jump=(dx > 0.1f || dx < -0.1f);
                 vy=-jump_speed;
                 grounded=false;
             }
@@ -663,12 +680,15 @@ int main(int argc, char **argv) {
             }
             RuntimeMovementState next_state =
                 runtime_movement_state(grounded, vx, vy, dx);
+            if (grounded && next_state != RUNTIME_JUMPING &&
+                next_state != RUNTIME_FALLING) spin_jump=false;
             if (next_state != movement_state) {
                 movement_state = next_state;
                 animation_start=SDL_GetTicks();
                 char title[128];
                 snprintf(title, sizeof title,
-                         "Metroid Vania - test avatar [%s]",
+                         "Metroid Vania [%s] [%s]",
+                         armor_names[armor_index],
                          runtime_movement_state_name(movement_state));
                 SDL_SetWindowTitle(window, title);
             }
@@ -693,7 +713,7 @@ int main(int argc, char **argv) {
         int selected=(composed_dir || extended_dir || left_dir) ? composed_select(
             movement_state,facing,keys[SDL_SCANCODE_E],keys[SDL_SCANCODE_Q],
             keys[SDL_SCANCODE_C],keys[SDL_SCANCODE_F],
-            extended_dir != NULL,left_dir != NULL) : -1;
+            extended_dir != NULL,left_dir != NULL,spin_jump) : -1;
         if (selected >= 0 && ((selected < COMPOSED_BASE_COUNT && !composed_dir) ||
                               (selected >= COMPOSED_BASE_COUNT &&
                                selected < COMPOSED_EXTRA_COUNT && !extended_dir) ||
@@ -711,6 +731,8 @@ int main(int argc, char **argv) {
                             viewport.y+(py+ph-cy-sh)*scale,sw*scale,sh*scale};
             SDL_RenderTexture(renderer,sprite,NULL,&dest);
         } else if (samus_dir) {
+            /* Legacy jump BMP is not proven to be a native spin animation.
+             * Keep it as a fallback without claiming spin fidelity. */
             int group=samus_animation_group(movement_state);
             const int counts[]={4,10,8};
             Uint64 elapsed_ms = SDL_GetTicks() - animation_start;

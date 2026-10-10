@@ -162,6 +162,13 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_runtime_steep_slopes_tests)
     add_test(NAME runtime_steep_slopes COMMAND fusion_runtime_steep_slopes_tests)
 
+    # ROM-free Aria of Sorrow BG1 collision primitives.
+    add_executable(fusion_aos_collision_tests tests/test_aos_collision.c
+                   src/runtime/aos_collision.c)
+    target_include_directories(fusion_aos_collision_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_collision_tests)
+    add_test(NAME aos_collision COMMAND fusion_aos_collision_tests)
+
     # ROM-free native Zero Mission pose controller regression.
     add_executable(fusion_mzm_samus_tests tests/test_mzm_samus.c src/runtime/mzm_samus.c
                    src/runtime/mzm_projectiles.c)

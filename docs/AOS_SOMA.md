@@ -118,5 +118,22 @@ cells, mostly with air above), bit 2 outside slopes (`0x04`) and the rare
 `0x14`, `0x27`, `0x37` values; `gEwramData->unk_A074_6` with the bitmap at
 `unk_F0C0` overrides some cells to `0x03`.
 
+Ported so far: `python3 -m scripts.aos_runtime_room --area <A> --room <R>`
+exports a room's background composite and its BG1 collision bytes as
+`sub_08001A00` returns them (342 of 343 rooms; the remaining one has no text
+BG1). `src/runtime/aos_collision.c` ports the cell lookup, slope height, walk
+modes, the four vertical walks, the bit-3 test and both horizontal pushes,
+with ROM-free tests. It is not yet used by a Soma controller.
+
+Player collision: `sub_08014A04` (Soma) and its twin `sub_0801D1C8` call these
+probes; the pinned decompilation only has a commented, non-matching m2c draft
+of it. Probe points read from that draft and the assembly include a ceiling
+walk at the origin minus 33 pixels (`sub_08001C1C`), floor walks at the
+origin plus one pixel and at x +/- 5 (`sub_08001E58` with a mode), bit-3 tests
+at x +/- 5 (`sub_08001F3C`) and wall pushes at x +/- 8 (`sub_08002058`,
+`sub_0800207C`). Interleaved loops over `gEwramData + 0x1316C` entities look
+like moving-platform handling. These offsets are recorded as reading notes;
+the control flow is not yet understood well enough to port.
+
 The next research step is the player update routine `sub_0801B0D8`: which of
 these probes it calls, with which body offsets, and Soma's movement constants.

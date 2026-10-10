@@ -228,6 +228,8 @@ def decode_background(rom: bytes, descriptor: dict) -> dict:
         raise ValueError("Aria background exceeds pixel safety cap")
     tiles = [0] * (width_tiles * height_tiles)
     collision = [0] * len(tiles) if collision_data is not None else None
+    # Block X flips per cell: sub_08001A00 toggles bit 2 of slope bytes.
+    collision_xflip = [False] * len(tiles) if collision_data is not None else None
     for tile_y in range(height_tiles):
         block_y, local_y = divmod(tile_y, 4)
         for tile_x in range(width_tiles):
@@ -247,6 +249,7 @@ def decode_background(rom: bytes, descriptor: dict) -> dict:
             tiles[destination] = word
             if collision is not None:
                 collision[destination] = collision_data[cell]
+                collision_xflip[destination] = bool(map_value & 0x4000)
 
     return {
         "status": "DECODED_TEXT_BACKGROUND",
@@ -261,6 +264,7 @@ def decode_background(rom: bytes, descriptor: dict) -> dict:
         "depth_key": descriptor["field_0"],
         "tiles": tiles,
         "collision": collision,
+        "collision_xflip": collision_xflip,
     }
 
 
@@ -393,7 +397,7 @@ def render_room(rom: bytes, area: int, room_number: int,
     for background in backgrounds:
         record = {
             key: value for key, value in background.items()
-            if key not in ("tiles", "collision")
+            if key not in ("tiles", "collision", "collision_xflip")
         }
         if background["status"] == "DECODED_TEXT_BACKGROUND":
             rgba, unresolved = render_background(background, vram, palette)

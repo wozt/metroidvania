@@ -1706,3 +1706,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   indexed BMP writer; the registry test now checks suit-to-family binding.
 - Validation on 2026-10-10: CTest passed 17/17; a Brinstar 001 capture showed
   correct Power Suit colors from the indexed frames.
+
+## Patch 0200 - Aria BG1 collision decoded and ported
+
+- Located the Aria collision readers in cvaos: `sub_08001A00` (cell lookup on
+  the decompressed table at `gEwramData + 0xE0D0`), `sub_08001800` (same
+  indexing as the importer, which is now verified), `sub_08001B40` (slope
+  height) and the vertical/horizontal probes. Checked against all 342 BG1
+  tables: bit 0 blocks from above (floors and platforms), bit 1 from below
+  (ceilings), `0x03` is solid, slopes encode step, start height and direction.
+  Bit 3 and a few rare values remain unidentified (`docs/AOS_SOMA.md`).
+- Added `scripts/aos_runtime_room.py` (342 of 343 rooms export background and
+  native collision bytes, with the slope X-flip toggle applied as the game
+  does) and `src/runtime/aos_collision.c`, a ROM-free port of the collision
+  primitives with tests. The Aria importer now also records per-cell block
+  X flips.
+- Recorded the probe points of Soma's collision routine `sub_08014A04` as
+  reading notes; Soma's controller is still blocked on its update logic.
+- Validation on 2026-10-10: CTest passed 18/18 and the proprietary guard
+  passed.

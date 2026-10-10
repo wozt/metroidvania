@@ -193,7 +193,8 @@ Next action: Port native fades, hatch locks and door lifecycle events.
 
 ### Known inventory gaps
 
-- [!] callbacks assigned through computed values or assembly stores.
+- [!] which stored callback a dynamic dispatch actually runs.
+- [!] callbacks built from computed addresses.
 - [!] runtime-observed dependencies.
 
 ## Castlevania: Aria of Sorrow
@@ -373,5 +374,6 @@ Next action: Port the native game-over flow and its save integration.
 
 ### Known inventory gaps
 
-- [!] callbacks assigned through computed values or assembly stores.
+- [!] which stored callback a dynamic dispatch actually runs.
+- [!] callbacks built from computed addresses.
 - [!] runtime-observed dependencies.

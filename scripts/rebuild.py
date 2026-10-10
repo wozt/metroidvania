@@ -103,6 +103,23 @@ def _digest(task: Task, dependency_digests: list[str]) -> str:
     return digest.hexdigest()
 
 
+def _output_digest(outputs: list[Path]) -> str | None:
+    """Hash of the declared outputs, or None when one is missing."""
+    digest = hashlib.sha256()
+    for path in sorted(outputs):
+        if not path.is_file():
+            return None
+        try:
+            relative = path.relative_to(ROOT).as_posix()
+        except ValueError:
+            relative = path.as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def _load_state(path: Path) -> dict:
     if not path.exists():
         return {"schema": STATE_SCHEMA, "tasks": {}}
@@ -152,22 +169,35 @@ def rebuild(selected: set[str], *, force: bool = False,
     results = []
     current_digests = {}
     changed = False
+    pending = set()
     for name in _ordered(selected):
         task = TASKS[name]
+        if dry_run and pending.intersection(task.dependencies):
+            # A dependency would be regenerated first, so this task's inputs
+            # are not final yet (they may even be missing).
+            pending.add(name)
+            current_digests[name] = ""
+            results.append((name, "would rebuild"))
+            continue
         dependency_digests = [current_digests[item] for item in task.dependencies]
         digest = _digest(task, dependency_digests)
         current_digests[name] = digest
-        previous = state["tasks"].get(name, {}).get("digest")
+        recorded = state["tasks"].get(name, {})
         outputs = _task_outputs(task)
-        outputs_exist = all(path.is_file() for path in outputs)
-        run = force or previous != digest or not outputs_exist
+        output_digest = _output_digest(outputs)
+        run = (force or recorded.get("digest") != digest or output_digest is None
+               or recorded.get("output_digest") != output_digest)
+        if run:
+            pending.add(name)
         if run and not dry_run:
             task.action()
             outputs = _task_outputs(task)
-            if not all(path.is_file() for path in outputs):
+            output_digest = _output_digest(outputs)
+            if output_digest is None:
                 raise ValueError(f"{name}: task completed without all declared outputs")
             state["tasks"][name] = {
                 "digest": digest,
+                "output_digest": output_digest,
                 "outputs": [path.relative_to(ROOT).as_posix() for path in outputs],
                 "version": task.version,
             }

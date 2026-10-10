@@ -147,8 +147,19 @@ its dispatch expression are both visible. Schema v4 also links a routine or
 data initializer that writes a named routine into a member declared as a
 function pointer (directly or through a function-pointer typedef); the member
 name is matched lexically, so every type declaring it is listed as a
-candidate. It deliberately does not treat callbacks assigned through computed
-values, assembly stores or runtime-observed calls as resolved. Aria's unnamed files remain unclassified until
+candidate. Schema v5 adds `address_references`: the routines whose address
+a routine takes without calling it (a C identifier used as a value, outside
+member names and call sites, or an assembly literal-pool `.4byte` word). They
+are possible callback targets, kept apart from proven calls: taking an
+address does not prove the routine runs, nor which stored callback a dynamic
+dispatch selects. Computed addresses and runtime-observed calls stay
+unresolved.
+
+`scripts/rebuild.py` records, per task, a digest of its inputs (including its
+dependencies' digests) and of its declared outputs: a changed input, a
+missing output or an output edited by hand triggers the task again. A dry run
+reports a task whose dependency would be rebuilt as pending instead of
+reading inputs that do not exist yet. Aria's unnamed files remain unclassified until
 evidence supports a category. These gaps are emitted in the generated checklist
 rather than silently excluded. Future extractors join this task graph without
 breaking their existing direct commands.

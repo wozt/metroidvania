@@ -27,9 +27,10 @@ header declaration, data symbol, named type and constant records. Direct calls
 and lexically proven function-pointer table dispatch are resolved; reviewed
 feature annotations are validated, and the parity checklist is generated. The
 initial task graph is incremental and ROM-free. Anonymous aggregate typedefs
-and multi-declarator names are indexed, and function pointers written to
-structure members are linked; computed callbacks, assembly stores and runtime
-evidence remain open.
+and multi-declarator names are indexed, function pointers written to
+structure members are linked, and address-taken routines (C values, assembly
+literal pools) are listed as possible callback targets; the dispatch actually
+taken, computed addresses and runtime evidence remain open.
 
 Exit criterion: a clean checkout plus supported local ROMs can rebuild every
 required private resource and report every known unported or unvalidated native

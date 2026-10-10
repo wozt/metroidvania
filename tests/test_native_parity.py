@@ -129,6 +129,39 @@ class NativeInventoryTests(unittest.TestCase):
             self.assertEqual(setup["_raw_member_writes"],
                              [("count", "Third"), ("step", "Second")])
 
+    def test_address_references_exclude_calls_and_member_names(self):
+        refs = native_inventory._c_address_refs(
+            " CallbackSetVblank(VBlankMain);\n"
+            " gState.Handler = Other;\n"
+            " p -> Helper = 0;\n"
+            " Direct ( 1 );\n"
+            " if (sizeof(int)) return;\n")
+        self.assertIn("VBlankMain", refs)
+        self.assertIn("Other", refs)
+        self.assertNotIn("CallbackSetVblank", refs)
+        self.assertNotIn("Handler", refs)
+        self.assertNotIn("Helper", refs)
+        self.assertNotIn("Direct", refs)
+        self.assertNotIn("sizeof", refs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "asm/code.s"
+            source.parent.mkdir()
+            source.write_text(
+                "thumb_func_start EnemyCreate\n"
+                "EnemyCreate: @ 0x08001000\n"
+                "  ldr r1, _08001010 @ =sub_08002000\n"
+                "  bl sub_08003000\n"
+                "_08001010: .4byte sub_08002000\n"
+                "_08001014: .4byte 0x0820BF10\n",
+                encoding="utf-8")
+
+            routine = native_inventory._discover_asm("aos", root, source)[0]
+
+            self.assertEqual(routine["_raw_address_refs"], ["sub_08002000"])
+            self.assertEqual(routine["_raw_calls"], ["sub_08003000"])
+
     def test_tracked_inventory_covers_both_pinned_sources(self):
         inventory = native_inventory.load_inventory()
         self.assertEqual(inventory["schema"], native_inventory.SCHEMA)
@@ -152,9 +185,16 @@ class NativeInventoryTests(unittest.TestCase):
         self.assertIn({"member": "CgbOscOff", "target": "aos:c:src/m4a.c:MP2K_event_null",
                        "types": ["aos:type:include/m4a_internal.h:struct:SoundMixerState"]},
                       sound_init["member_callbacks"])
+        crow = next(item for item in aos["routines"] if item["symbol"] == "EnemyBlueCrowCreate")
+        self.assertEqual(crow["address_references"],
+                         ["aos:asm:asm/code/code_08060B98.s:sub_0806E1B8",
+                          "aos:asm:asm/code/code_080C0A1C.s:sub_080CA030"])
+        vblank = next(item for item in mzm["routines"] if item["symbol"] == "DemoInit")
+        self.assertIn("mzm:c:src/demo.c:DemoVBlank", vblank["address_references"])
         for game in ("mzm", "aos"):
             self.assertGreater(
                 inventory["games"][game]["statistics"]["resolved_member_callback_edges"], 0)
+            self.assertGreater(inventory["games"][game]["statistics"]["address_reference_edges"], 0)
         for path in native_inventory.inventory_output_paths():
             self.assertLess(path.stat().st_size, 4 * 1024 * 1024)
 
@@ -276,6 +316,43 @@ class NativeParityTests(unittest.TestCase):
                 self.assertEqual(rebuild.rebuild({"sample"}, state_path=state),
                                  [("sample", "rebuilt")])
             self.assertEqual(output.read_text(encoding="utf-8"), "second")
+
+    def test_rebuild_detects_tampered_outputs_and_pending_dependencies(self):
+        cache_root = rebuild.ROOT / ".cache"
+        cache_root.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=cache_root) as directory:
+            temporary = Path(directory)
+            source = temporary / "input.txt"
+            middle = temporary / "middle.txt"
+            final = temporary / "final.txt"
+            state = temporary / "state.json"
+            source.write_text("data", encoding="utf-8")
+
+            tasks = {
+                "first": rebuild.Task(
+                    "first", 1, (), lambda: [source], (middle,),
+                    lambda: middle.write_text(source.read_text(encoding="utf-8"),
+                                              encoding="utf-8")),
+                "second": rebuild.Task(
+                    "second", 1, ("first",), lambda: [middle], (final,),
+                    lambda: final.write_text(middle.read_text(encoding="utf-8") + "!",
+                                             encoding="utf-8")),
+            }
+            with mock.patch.dict(rebuild.TASKS, tasks, clear=True):
+                rebuild.rebuild({"second"}, state_path=state)
+                # A corrupted output is rebuilt even with unchanged inputs.
+                final.write_text("tampered", encoding="utf-8")
+                self.assertEqual(rebuild.rebuild({"second"}, dry_run=True, state_path=state),
+                                 [("first", "up to date"), ("second", "would rebuild")])
+                rebuild.rebuild({"second"}, state_path=state)
+                self.assertEqual(final.read_text(encoding="utf-8"), "data!")
+                # A missing intermediate output: the dry run reports both tasks
+                # instead of failing on the dependent's missing input.
+                middle.unlink()
+                self.assertEqual(rebuild.rebuild({"second"}, dry_run=True, state_path=state),
+                                 [("first", "would rebuild"), ("second", "would rebuild")])
+                self.assertEqual(rebuild.rebuild({"second"}, state_path=state),
+                                 [("first", "rebuilt"), ("second", "up to date")])
 
 
 if __name__ == "__main__":

@@ -13,9 +13,9 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = "metroidvania-native-inventory-v4"
-RECORD_SCHEMA = "metroidvania-native-inventory-records-v4"
-GENERATOR_VERSION = 4
+SCHEMA = "metroidvania-native-inventory-v5"
+RECORD_SCHEMA = "metroidvania-native-inventory-records-v5"
+GENERATOR_VERSION = 5
 DEFAULT_OUTPUT = ROOT / "data/native_parity/inventory.json"
 RECORD_COLLECTIONS = ("routines", "declarations", "data_symbols", "types", "constants")
 MAX_SHARD_BYTES = 3_000_000
@@ -30,6 +30,9 @@ MEMBER_INIT_RE = re.compile(r"\.\s*([A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*)")
 FP_MEMBER_RE = re.compile(r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*\(")
 TYPEDEF_FP_RE = re.compile(
     r"\btypedef\s+[^;{}]*\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*\([^;{}]*\)\s*;")
+IDENTIFIER_RE = re.compile(r"\b([A-Za-z_]\w*)\b")
+ASM_WORD_RE = re.compile(r"^\s*(?:[A-Za-z_.$]\w*:\s*)?\.(?:4byte|word|long)\s+([A-Za-z_.$]\w*)\s*(?:[@;].*)?$",
+                         re.MULTILINE)
 ASM_BRANCH_RE = re.compile(r"^\s*(?:bl|blx|b)\s+([A-Za-z_.$]\w*)", re.MULTILINE)
 ASM_FUNCTION_RE = re.compile(
     r"^\s*(?:(?:thumb|arm)_func_start\s+([A-Za-z_.$]\w*)|"
@@ -562,6 +565,7 @@ def _discover_c(game: str, root: Path, path: Path) -> list[dict]:
                         set(INDIRECT_TABLE_CALL_RE.findall(body)))
                     current["_raw_member_writes"] = sorted(
                         set(MEMBER_WRITE_RE.findall(body)))
+                    current["_raw_address_refs"] = _c_address_refs(body)
                     routines.append(current)
                 current = None
                 body_start = None
@@ -569,6 +573,24 @@ def _discover_c(game: str, root: Path, path: Path) -> list[dict]:
         elif character == ";" and depth == 0:
             statement_start = index + 1
     return routines
+
+
+def _c_address_refs(body: str) -> list[str]:
+    """Identifiers used as values: not called, not member names."""
+    names = set()
+    for match in IDENTIFIER_RE.finditer(body):
+        start = match.start() - 1
+        while start >= 0 and body[start].isspace():
+            start -= 1
+        if start >= 0 and (body[start] == "." or body[start - 1:start + 1] == "->"):
+            continue
+        end = match.end()
+        while end < len(body) and body[end].isspace():
+            end += 1
+        if end < len(body) and body[end] == "(":
+            continue
+        names.add(match.group(1))
+    return sorted(names - CONTROL_WORDS - TYPE_WORDS)
 
 
 def _discover_asm(game: str, root: Path, path: Path) -> list[dict]:
@@ -600,6 +622,7 @@ def _discover_asm(game: str, root: Path, path: Path) -> list[dict]:
             "address": _source_address(symbol),
             "_raw_calls": sorted(set(ASM_BRANCH_RE.findall(source[body_start:body_end]))),
             "_raw_indirect_tables": [],
+            "_raw_address_refs": sorted(set(ASM_WORD_RE.findall(source[body_start:body_end]))),
         })
     return routines
 
@@ -742,6 +765,7 @@ def inventory_game(game: str, root: Path) -> dict:
             item["member_callbacks"] = member_callbacks
         data_by_symbol[item["symbol"]].append(item)
 
+    address_reference_edges = 0
     indirect_edges = 0
     for routine in routines:
         resolved = set()
@@ -791,6 +815,16 @@ def inventory_game(game: str, root: Path) -> dict:
             })
         if member_callbacks:
             routine["member_callbacks"] = member_callbacks
+        address_refs = set()
+        for symbol in routine.pop("_raw_address_refs", []):
+            if symbol == routine["symbol"]:
+                continue
+            resolved = resolve_unique(symbol, routine["source"])
+            if resolved is not None:
+                address_refs.add(resolved)
+        if address_refs:
+            routine["address_references"] = sorted(address_refs)
+            address_reference_edges += len(address_refs)
     routines.sort(key=lambda item: item["id"])
 
     definition_ids = defaultdict(list)
@@ -820,8 +854,12 @@ def inventory_game(game: str, root: Path) -> dict:
             "constants": "object-like preprocessor definitions",
             "calls": "direct lexical calls, assembly branches and proven table dispatch",
             "member_callbacks": "lexically proven function-pointer member writes",
+            "address_references": ("routines whose address a routine takes without calling "
+                                   "it (C values, assembly literal pools): possible callback "
+                                   "targets, not proven calls"),
             "not_yet_indexed": [
-                "callbacks assigned through computed values or assembly stores",
+                "which stored callback a dynamic dispatch actually runs",
+                "callbacks built from computed addresses",
                 "runtime-observed dependencies",
             ],
         },
@@ -846,6 +884,7 @@ def inventory_game(game: str, root: Path) -> dict:
             "resolved_call_edges": sum(len(item["calls"]) for item in routines),
             "resolved_indirect_call_edges": indirect_edges,
             "resolved_member_callback_edges": member_callback_edges,
+            "address_reference_edges": address_reference_edges,
             "by_category": dict(sorted(counts.items())),
         },
         "routines": routines,

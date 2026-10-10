@@ -2131,3 +2131,31 @@ No automatic reciprocal link or native engine encoder is implemented.
   23/23, the Python suite passed 383/383, the incremental dry run reported
   both tasks up to date, the generated checklist check passed and the
   proprietary-file guard passed.
+
+## Patch 0224 - address-taken routines and output-checked rebuilds
+
+- Inventory schema v5 adds `address_references` to routines: the routines
+  whose address they take without calling them, from C identifiers used as
+  values (excluding call sites and member names) and from assembly
+  literal-pool words. They are recorded as possible callback targets, not as
+  calls. The pinned sources yield 124 MZM and 1,408 Aria such edges, for
+  example `DemoInit` installing `DemoVBlank`, `HazeSetupCode` selecting its
+  haze routines, and `EnemyBlueCrowCreate` registering its contact and hit
+  callbacks `sub_0806E1B8` / `sub_080CA030`. Most Aria enemy, entity and
+  callback registrations are of this assembly form, which schema v4 could
+  not see.
+- `scripts/rebuild.py` now also records a digest of each task's declared
+  outputs: a fragment edited or corrupted by hand is regenerated even when
+  the inputs are unchanged (it was previously reported up to date). A dry
+  run marks tasks whose dependencies would be rebuilt as pending instead of
+  failing on their not-yet-generated inputs (a deleted inventory fragment
+  previously aborted the dry run).
+- Checked by hand: a deleted and a corrupted inventory fragment are both
+  detected and regenerated identically, and a forced rebuild is byte-identical.
+- Added ROM-free regressions for address-reference discovery in C and
+  assembly, tracked edges in both games, tampered outputs and pending
+  dependencies.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  23/23, the Python suite passed 385/385, the incremental dry run reported both
+  tasks up to date, the generated checklist check passed and the
+  proprietary-file guard passed.

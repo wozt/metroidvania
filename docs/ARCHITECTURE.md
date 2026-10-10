@@ -34,6 +34,8 @@ selection operations and display-independent CLI launcher:
   native physics constants, per-pose block hitboxes, animation-driven
   transitions). It talks to the room through a box-collision callback and to
   the animation registry through a frame-duration callback.
+- `src/runtime/mzm_projectiles.c`: SDL-free weapon selection and Power Beam,
+  missile and super missile projectiles ported from the decompilation.
 - `src/runtime/room_runtime.c`: room/Clipdata loading, input mapping, the
   semantic animation registry, the catalogue browser and SDL rendering.
 

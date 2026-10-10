@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free regression tests for the native Zero Mission pose controller. */
+#include "mzm_projectiles.h"
 #include "mzm_samus.h"
 
 #include <assert.h>
@@ -55,8 +56,9 @@ static void world_init(World *w) {
     memset(w, 0, sizeof *w);
     w->collision = (MzmCollision){&w->grid, grid_blocked, NULL};
     w->animation = (MzmAnimationSource){NULL, test_durations};
-    w->equipment = (MzmEquipment){MZM_SUIT_NORMAL,
-        MZM_ITEM_MORPH_BALL | MZM_ITEM_POWER_GRIP, 99, 99, 0, 0};
+    w->equipment = (MzmEquipment){.suit = MZM_SUIT_NORMAL,
+        .items = MZM_ITEM_MORPH_BALL | MZM_ITEM_POWER_GRIP,
+        .energy = 99, .max_energy = 99};
     /* Floor along the bottom row. */
     fill(&w->grid, 0, GRID_H - 1, GRID_W, 1);
 }
@@ -106,7 +108,7 @@ static void test_native_tables(void) {
     velocity = -235;
     assert(mzm_integrate_y(&velocity) == 16 && velocity == -235);
 
-    MzmEquipment e = {MZM_SUIT_NORMAL, 0, 99, 99, 0, 0};
+    MzmEquipment e = {.suit = MZM_SUIT_NORMAL, .energy = 99, .max_energy = 99};
     assert(mzm_jump_velocity(&e) == 192);
     e.items = MZM_ITEM_HIGH_JUMP;
     assert(mzm_jump_velocity(&e) == 232);
@@ -115,7 +117,8 @@ static void test_native_tables(void) {
 }
 
 static void test_damage(void) {
-    MzmEquipment e = {MZM_SUIT_NORMAL, MZM_ITEM_VARIA_SUIT, 99, 99, 0, 0};
+    MzmEquipment e = {.suit = MZM_SUIT_NORMAL, .items = MZM_ITEM_VARIA_SUIT,
+                      .energy = 99, .max_energy = 99};
     assert(mzm_equipment_damage(&e, 20) && e.energy == 83);
     e.items = MZM_ITEM_GRAVITY_SUIT;
     assert(mzm_equipment_damage(&e, 20) && e.energy == 69);
@@ -404,6 +407,179 @@ static void test_random_input_never_embeds(void) {
     }
 }
 
+static int two_frames(void *context, const MzmProjectile *projectile,
+                      uint8_t *durations, int max) {
+    (void)context;
+    (void)projectile;
+    (void)max;
+    durations[0] = 3;
+    durations[1] = 3;
+    return 2;
+}
+
+static const MzmProjectile *first_active(const MzmWeapons *weapons) {
+    for (int i = 0; i < MZM_MAX_PROJECTILES; ++i)
+        if (weapons->list[i].active) return &weapons->list[i];
+    return NULL;
+}
+
+static void test_weapon_selection(void) {
+    World w;
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    w.equipment.missiles = 1;
+    w.equipment.super_missiles = 1;
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    assert(weapons.highlighted == MZM_WEAPON_MISSILE);
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, MZM_KEY_SELECT,
+                            &w.equipment);
+    assert(weapons.highlighted == MZM_WEAPON_SUPER_MISSILE);
+    w.equipment.super_missiles = 0;
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    assert(weapons.highlighted == MZM_WEAPON_MISSILE);
+    w.equipment.missiles = 0;
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    assert(weapons.highlighted == MZM_WEAPON_NONE);
+    /* No weapon can be armed or fired in Morph Ball. */
+    w.samus.pose = MZM_POSE_MORPH_BALL;
+    w.equipment.missiles = 3;
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R | MZM_KEY_B,
+                                    MZM_KEY_B, &w.equipment));
+    assert(weapons.highlighted == MZM_WEAPON_NONE);
+}
+
+static void test_beam(void) {
+    World w;
+    world_init(&w);
+    fill(&w.grid, 15, 0, 1, GRID_H);
+    place(&w, 64, 224);
+    step(&w, 0);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    MzmProjectileAnimation animation = {NULL, two_frames};
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B,
+                                   &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision,
+                       &animation);
+    const MzmProjectile *beam = first_active(&weapons);
+    assert(beam && beam->type == MZM_PROJECTILE_BEAM && beam->x_flip);
+    /* gArmCannonX/Y from Samus's native pixel position. */
+    assert(beam->x == (64 + 18) * 4 && beam->y == (223 - 26) * 4);
+    assert(weapons.cooldown == MZM_BEAM_COOLDOWN);
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B,
+                                    &w.equipment));
+    int32_t x = beam->x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, &animation);
+    assert(beam->x == x + 16);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, &animation);
+    assert(beam->x == x + 36 && beam->anim_frame == 0);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, &animation);
+    assert(beam->anim_frame == 1);
+    int updates = 4;
+    while (beam->active) {
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision,
+                           &animation);
+        ++updates;
+    }
+    /* PROJ_SHORT_BEAM_LIFETIME: removed on the thirteenth update. */
+    assert(updates == 13);
+
+    /* A wall in the path removes the shot when its point enters solid,
+     * well before its lifetime or the distance despawn. */
+    mzm_weapons_init(&weapons);
+    w.samus.x = 200 * 4;
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B,
+                                   &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision,
+                       &animation);
+    beam = first_active(&weapons);
+    int32_t last_x = beam->x;
+    int lifetime = 1;
+    while (beam->active) {
+        last_x = beam->x;
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision,
+                           &animation);
+        ++lifetime;
+    }
+    assert(lifetime < 8 && last_x >= 240 * 4 && last_x < 245 * 4);
+    w.samus.x = 64 * 4;
+
+    /* Diagonal shots move 7/10 of the distance on both axes. */
+    mzm_weapons_init(&weapons);
+    w.samus.aim = MZM_AIM_DIAGONAL_UP;
+    w.samus.facing = -1;
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B,
+                                   &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, -10, -30, &w.collision,
+                       &animation);
+    beam = first_active(&weapons);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, &animation);
+    int32_t bx = beam->x, by = beam->y;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, &animation);
+    assert(beam->x == bx - 14 && beam->y == by - 14 && !beam->x_flip);
+
+    /* At most six beams exist at once. */
+    mzm_weapons_init(&weapons);
+    w.samus.aim = MZM_AIM_UP;
+    for (int i = 0; i < 8; ++i) {
+        weapons.cooldown = 0;
+        mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment);
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -40, &w.collision,
+                           &animation);
+    }
+    assert(mzm_projectile_count(&weapons, MZM_PROJECTILE_BEAM) == MZM_PROJECTILE_LIMIT_BEAM);
+}
+
+static void test_missile(void) {
+    World w;
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    w.equipment.missiles = 1;
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R | MZM_KEY_B,
+                                   MZM_KEY_R | MZM_KEY_B, &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    const MzmProjectile *missile = first_active(&weapons);
+    assert(missile && missile->type == MZM_PROJECTILE_MISSILE);
+    assert(weapons.cooldown == MZM_MISSILE_COOLDOWN);
+    /* The last missile is spent at launch and disarms missiles. */
+    assert(w.equipment.missiles == 0 && weapons.highlighted == MZM_WEAPON_NONE);
+    int32_t x = missile->x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(missile->x == x + 48);
+    x = missile->x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(missile->x == x + 8);
+    x = missile->x;
+    /* Samus's horizontal velocity is added when moving the same way. */
+    w.samus.x_velocity = 64;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(missile->x == x + 9 + 8);
+}
+
+static void test_firing_breaks_a_spin(void) {
+    World w;
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    step(&w, MZM_KEY_RIGHT);
+    step(&w, MZM_KEY_RIGHT | MZM_KEY_A);
+    steps(&w, MZM_KEY_RIGHT | MZM_KEY_A, 5);
+    assert(w.samus.pose == MZM_POSE_SPINNING);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    MzmInput input = {MZM_KEY_RIGHT | MZM_KEY_A | MZM_KEY_B, MZM_KEY_B, false};
+    input.new_projectile = mzm_weapons_begin_frame(&weapons, &w.samus, input.held,
+                                                   input.pressed, &w.equipment);
+    mzm_samus_update(&w.samus, &input, &w.equipment, &w.collision, &w.animation);
+    assert(input.new_projectile && w.samus.pose == MZM_POSE_MIDAIR);
+}
+
 int main(void) {
     test_native_tables();
     test_damage();
@@ -414,6 +590,10 @@ int main(void) {
     test_ledge();
     test_hurt_and_death();
     test_random_input_never_embeds();
+    test_weapon_selection();
+    test_beam();
+    test_missile();
+    test_firing_breaks_a_spin();
     puts("MZM Samus controller tests passed");
     return 0;
 }

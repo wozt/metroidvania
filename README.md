@@ -104,10 +104,20 @@ left shoulder is L. Down crouches and Down again morphs; Up unmorphs and
 stands. Running jumps spin; touch a wall during a spin, press away and then A
 to wall-jump. With Power Grip, hold toward a ledge while falling to hang, then
 press A while holding toward it to climb. Fast upward jumps show Zero
-Mission's position-history echo. Diagnostic keys: R cycles suits, T cycles
-Space Jump/Screw Attack, G toggles High Jump, H applies 20 damage, Enter
-restarts after death, F6 opens the raw animation catalogue and F7 outlines
-the active hitbox.
+Mission's position-history echo. B fires the Power Beam from the native arm
+cannon position; holding V or Left Shift (GBA R, gamepad right shoulder) arms
+missiles and Tab (Select, gamepad Back) toggles super missiles. Diagnostic
+keys: R cycles suits (gamepad Guide), T cycles Space Jump/Screw Attack, G
+toggles High Jump, M refills ammunition, H applies 20 damage, Enter restarts
+after death, F6 opens the raw animation catalogue and F7 outlines the active
+hitbox.
+
+For headless verification, `--capture out.bmp FRAMES BUTTONS REPEAT` runs
+FRAMES fixed 60 Hz updates with the given GBA button mask (right 0x1, left 0x2,
+up 0x4, down 0x8, A 0x10, B 0x20, L 0x40, R 0x80, Select 0x100), re-pressing A
+and B every REPEAT frames, and saves the rendered frame, for example
+`SDL_VIDEO_DRIVER=dummy ./build/fusion_room_runtime --room brinstar_033
+--capture shot.bmp 40 0x20 6`.
 
 ## Current verified data
 

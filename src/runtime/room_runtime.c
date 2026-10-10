@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mzm_projectiles.h"
 #include "mzm_samus.h"
 
 #define MAX_MARKS 32768
@@ -405,16 +406,19 @@ static bool runtime_echo_fast_ascent(const MzmSamus *samus) {
 }
 
 #ifndef FUSION_RUNTIME_TEST
-/* PATCH_0176_LIBRARY: 0175-derived private runtime index, loaded on demand. */
+/* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
 #define RUNTIME_LIBRARY_MAX 8192
 #define RUNTIME_LIBRARY_FRAME_MAX 256
 #define RUNTIME_ANIMATION_MAP_MAX 2048
 #define RUNTIME_INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1\n"
-/* One native frame: duration, top-left offset from Samus's position as drawn
- * by SamusDraw, and the private content-addressed BMP. */
+#define RUNTIME_CANNON_SCHEMA "schema\tmetroidvania-samus-cannon-offsets-v1\n"
+/* One native frame: duration, top-left offset from the character's draw
+ * origin, an optional arm cannon offset and the private BMP. */
 typedef struct {
     unsigned int ticks;
     int offset_x,offset_y;
+    bool has_cannon;
+    int cannon_x,cannon_y;
     char path[256];
     SDL_Texture *texture;
     int w,h;
@@ -427,8 +431,13 @@ typedef struct {
 } RuntimeLibraryEntry;
 typedef struct {
     RuntimeLibraryEntry *entries;
+    RuntimeLibraryEntry **sorted;
     int count,capacity;
 } RuntimeLibrary;
+static int runtime_library_compare(const void *a,const void *b) {
+    const RuntimeLibraryEntry *const *left=a,*const *right=b;
+    return strcmp((*left)->name,(*right)->name);
+}
 static void runtime_library_free(RuntimeLibrary *lib) {
     for(int i=0;i<lib->count;i++) {
         RuntimeLibraryEntry *entry=&lib->entries[i];
@@ -438,6 +447,7 @@ static void runtime_library_free(RuntimeLibrary *lib) {
         free(entry->ticks);
     }
     free(lib->entries);
+    free(lib->sorted);
     *lib=(RuntimeLibrary){0};
 }
 static bool runtime_library_add_frame(RuntimeLibraryEntry *entry,
@@ -503,12 +513,50 @@ static bool runtime_library_open(RuntimeLibrary *lib,const char *index) {
     }
     if(ferror(f))ok=false;
     fclose(f);
+    if(ok && lib->count>0) {
+        lib->sorted=malloc((size_t)lib->count*sizeof *lib->sorted);
+        if(!lib->sorted)ok=false;
+        else {
+            for(int i=0;i<lib->count;i++)lib->sorted[i]=&lib->entries[i];
+            qsort(lib->sorted,(size_t)lib->count,sizeof *lib->sorted,
+                  runtime_library_compare);
+        }
+    }
     if(!ok || lib->count==0){runtime_library_free(lib);return false;}
     return true;
 }
 static RuntimeLibraryEntry *runtime_library_find(RuntimeLibrary *lib,const char *name) {
-    for(int i=0;i<lib->count;i++) if(!strcmp(lib->entries[i].name,name)) return &lib->entries[i];
+    int low=0,high=lib->count-1;
+    while(lib->sorted && low<=high) {
+        int middle=low+(high-low)/2;
+        int order=strcmp(lib->sorted[middle]->name,name);
+        if(!order)return lib->sorted[middle];
+        if(order<0)low=middle+1; else high=middle-1;
+    }
     return NULL;
+}
+/* Per-frame arm cannon offsets written by the Samus pipeline. */
+static bool runtime_cannon_offsets_open(RuntimeLibrary *lib,const char *path) {
+    FILE *f=fopen(path,"rb");
+    if(!f)return false;
+    char line[512];
+    bool ok=fgets(line,sizeof line,f) && !strcmp(line,RUNTIME_CANNON_SCHEMA);
+    int rows=0;
+    while(ok && fgets(line,sizeof line,f)) {
+        char key[160];unsigned int frame;int x,y,consumed=0;
+        if(sscanf(line,"%159[^\t]\t%u\t%d\t%d%n",key,&frame,&x,&y,&consumed)!=4 ||
+           (line[consumed]!='\n' && line[consumed]!='\0') ||
+           x<-128 || x>128 || y<-128 || y>128){ok=false;break;}
+        RuntimeLibraryEntry *entry=runtime_library_find(lib,key);
+        if(!entry || frame>=(unsigned)entry->count){ok=false;break;}
+        entry->frames[frame].has_cannon=true;
+        entry->frames[frame].cannon_x=x;
+        entry->frames[frame].cannon_y=y;
+        rows++;
+    }
+    if(ferror(f))ok=false;
+    fclose(f);
+    return ok && rows>0;
 }
 typedef struct {
     char action[32],suit[20],facing[8],aim[20];
@@ -608,6 +656,26 @@ static int runtime_pose_durations(void *context,const MzmSamus *samus,
     for(int i=0;i<count;i++)durations[i]=(uint8_t)row->entry->ticks[i];
     return count;
 }
+/* Projectile library key for ProjectileProcess* OAM selection and the
+ * X/Y flips applied by ProjectileDraw. */
+static void runtime_projectile_key(const MzmProjectile *projectile,char *key,size_t size) {
+    static const char *names[]={"NormalBeam","Missile","SuperMissile"};
+    const char *shape=projectile->direction==MZM_AIM_UP||projectile->direction==MZM_AIM_DOWN?
+        "Vertical":projectile->direction==MZM_AIM_FORWARD?"Horizontal":"Diagonal";
+    const char *flip=projectile->x_flip?(projectile->y_flip?"xy":"x"):
+        (projectile->y_flip?"y":"none");
+    snprintf(key,size,"Projectile/%sOam_%s/%s",names[projectile->type],shape,flip);
+}
+static int runtime_projectile_durations(void *context,const MzmProjectile *projectile,
+                                        uint8_t *durations,int max) {
+    char key[160];
+    runtime_projectile_key(projectile,key,sizeof key);
+    RuntimeLibraryEntry *entry=runtime_library_find(context,key);
+    if(!entry)return 0;
+    int count=entry->count<max?entry->count:max;
+    for(int i=0;i<count;i++)durations[i]=(uint8_t)entry->ticks[i];
+    return count;
+}
 static bool runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry *entry,int index) {
     RuntimeLibraryFrame *frame=&entry->frames[index];
     if(frame->texture)return true;
@@ -649,6 +717,8 @@ static uint16_t runtime_key_buttons(SDL_Scancode key) {
         case SDL_SCANCODE_F: case SDL_SCANCODE_X: return MZM_KEY_B;
         case SDL_SCANCODE_E: return MZM_KEY_L;
         case SDL_SCANCODE_Q: return MZM_KEY_L|MZM_KEY_DOWN;
+        case SDL_SCANCODE_V: case SDL_SCANCODE_LSHIFT: return MZM_KEY_R;
+        case SDL_SCANCODE_TAB: return MZM_KEY_SELECT;
         default: return 0;
     }
 }
@@ -657,7 +727,8 @@ static uint16_t runtime_held_buttons(const bool *keys,SDL_Gamepad *pad) {
         SDL_SCANCODE_RIGHT,SDL_SCANCODE_D,SDL_SCANCODE_LEFT,SDL_SCANCODE_A,
         SDL_SCANCODE_UP,SDL_SCANCODE_W,SDL_SCANCODE_DOWN,SDL_SCANCODE_S,
         SDL_SCANCODE_C,SDL_SCANCODE_SPACE,SDL_SCANCODE_Z,SDL_SCANCODE_F,
-        SDL_SCANCODE_X,SDL_SCANCODE_E,SDL_SCANCODE_Q
+        SDL_SCANCODE_X,SDL_SCANCODE_E,SDL_SCANCODE_Q,SDL_SCANCODE_V,
+        SDL_SCANCODE_LSHIFT,SDL_SCANCODE_TAB
     };
     uint16_t buttons=0;
     for(size_t i=0;i<sizeof held_keys/sizeof held_keys[0];i++)
@@ -682,6 +753,10 @@ static uint16_t runtime_held_buttons(const bool *keys,SDL_Gamepad *pad) {
            runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_WEST))buttons|=MZM_KEY_B;
         if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_LEFT_SHOULDER))
             buttons|=MZM_KEY_L;
+        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER))
+            buttons|=MZM_KEY_R;
+        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_BACK))
+            buttons|=MZM_KEY_SELECT;
     }
     /* A GBA D-pad cannot report opposite directions together. */
     if((buttons&(MZM_KEY_LEFT|MZM_KEY_RIGHT))==(MZM_KEY_LEFT|MZM_KEY_RIGHT))
@@ -693,14 +768,28 @@ static uint16_t runtime_held_buttons(const bool *keys,SDL_Gamepad *pad) {
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
     const char *library_index=NULL, *animation_map_index=NULL;
+    const char *projectile_index=NULL, *cannon_index=NULL;
     const char *room_alias=NULL, *samus_assets=NULL;
-    const char *library_check=NULL;
+    const char *library_check=NULL,*capture_path=NULL;
+    long capture_frames=0,capture_repeat=0;
+    unsigned long capture_buttons=0;
     bool check=false,animation_check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--check-animations")) {
             if(animation_check)return 2;
             animation_check=true;
+        }
+        else if (!strcmp(argv[i],"--capture") && !capture_path && i+4<argc) {
+            /* --capture out.bmp FRAMES BUTTONS REPEAT: headless diagnostic. */
+            char *end=NULL;
+            capture_path=argv[++i];
+            capture_frames=strtol(argv[++i],&end,10);
+            if(*end || capture_frames<1 || capture_frames>36000)return 2;
+            capture_buttons=strtoul(argv[++i],&end,0);
+            if(*end || capture_buttons>0x1FFu)return 2;
+            capture_repeat=strtol(argv[++i],&end,10);
+            if(*end || capture_repeat<0 || capture_repeat>3600)return 2;
         }
         else if (!strcmp(argv[i],"--check-library") && !library_check && i+1<argc)
             library_check=argv[++i];
@@ -710,6 +799,8 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
+        else if (!strcmp(argv[i],"--projectile-library") && !projectile_index && i+1<argc)
+            projectile_index=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
             fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] preview.tsv\n",argv[0]);
             return 2;
@@ -733,7 +824,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     /* PATCH_0181_ROOM_AND_ASSETS: room shorthand keeps native collision mandatory. */
-    char bundle_index[4096],bundle_map[4096];
+    char bundle_index[4096],bundle_map[4096],bundle_cannon[4096];
     if (room_alias) {
         if (strcmp(room_alias,"brinstar_033") || room_path || background || native_source) {
             fprintf(stderr,"Unknown room alias or conflicting room paths: %s\n",room_alias);
@@ -756,9 +847,15 @@ int main(int argc, char **argv) {
             if(n<0 || (size_t)n>=sizeof bundle_map)return 2;
             animation_map_index=bundle_map;
         }
+        n=snprintf(bundle_cannon,sizeof bundle_cannon,"%s/cannon_offsets.tsv",samus_assets);
+        if(n<0 || (size_t)n>=sizeof bundle_cannon)return 2;
+        cannon_index=bundle_cannon;
     } else if (room_alias && !library_index) {
         library_index="assets/extracted/metroid/sprites/samus/runtime/runtime_index.tsv";
         animation_map_index="assets/extracted/metroid/sprites/samus/runtime/animation_map.tsv";
+        cannon_index="assets/extracted/metroid/sprites/samus/runtime/cannon_offsets.tsv";
+        if(!projectile_index)
+            projectile_index="assets/extracted/metroid/sprites/projectiles/runtime/runtime_index.tsv";
     }
     if((animation_map_index!=NULL) != (library_index!=NULL)) {
         fprintf(stderr,"--samus-library and --samus-map must be used together\n");
@@ -779,7 +876,8 @@ int main(int argc, char **argv) {
         runtime_library_free(&checked_library);
         return valid?0:2;
     }
-    if (!room_path || (check && (background || library_index || animation_map_index))) {
+    if (!room_path || (check && (background || library_index || animation_map_index ||
+                                 projectile_index))) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] preview.tsv\n",argv[0]);
         return 2;
     }
@@ -814,6 +912,7 @@ int main(int argc, char **argv) {
     SDL_Surface *surface=NULL; SDL_Texture *texture=NULL;
     int rc=1;
     RuntimeLibrary library = {0};
+    RuntimeLibrary projectile_library = {0};
     RuntimeAnimationMap animation_map = {0};
     SDL_Gamepad *gamepad = NULL;
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
@@ -835,6 +934,16 @@ int main(int argc, char **argv) {
     if(animation_map_index)
         printf("Samus animation registry: %d native sequences, %d semantic bindings\n",
                library.count,animation_map.count);
+    if(cannon_index && !runtime_cannon_offsets_open(&library,cannon_index))
+        fprintf(stderr,"Arm cannon offsets unavailable (%s); projectiles spawn at "
+                "Samus's position.\n",cannon_index);
+    if(projectile_index) {
+        if(!runtime_library_open(&projectile_library,projectile_index)) {
+            fprintf(stderr,"Projectile library failed to load: %s\n",projectile_index);
+            goto cleanup;
+        }
+        printf("Projectile library: %d native sequences\n",projectile_library.count);
+    }
     gamepad=runtime_pad_open();
     MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope};
     MzmEquipment equipment={0};
@@ -843,6 +952,15 @@ int main(int argc, char **argv) {
     runtime_apply_equipment(&equipment,suit_preset,toggled_items);
     equipment.max_energy=99;
     equipment.energy=equipment.max_energy;
+    /* Diagnostic ammunition until item pickups exist. */
+    equipment.max_missiles=10;
+    equipment.missiles=equipment.max_missiles;
+    equipment.max_super_missiles=2;
+    equipment.super_missiles=equipment.max_super_missiles;
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    MzmProjectileAnimation projectile_animation={&projectile_library,
+                                                 runtime_projectile_durations};
     RuntimePoseAnimation pose_animation={&animation_map,
                                          runtime_suit_presets[0].registry,
                                          &equipment};
@@ -863,18 +981,21 @@ int main(int argc, char **argv) {
     int browser_index=0;
     Uint64 animation_start=SDL_GetTicks();
     MzmPose titled_pose=MZM_POSE_COUNT;
-    int titled_energy=-1;
+    int titled_energy=-1,titled_ammo=-1;
     bool title_dirty=true;
     printf("Controls: arrows/WASD = D-pad; Space/Z = A (jump); F/X = B (fire); "
            "E/Q = L diagonal aim up/down; Escape = exit.\n");
     printf("Native poses: Down crouches, Down again morphs, Up unmorphs/stands; "
            "jump toward a wall then away+A to wall-jump; hold toward a ledge "
            "while falling, then A+toward to climb.\n");
+    printf("Weapons: B fires; hold V/Left Shift (GBA R) to arm missiles, Tab "
+           "(Select) toggles super missiles; M refills ammunition.\n");
     printf("Diagnostics: R suit, T Space Jump/Screw Attack, G High Jump, "
            "H 20 damage, Enter restart, F6 catalogue, F7 hitbox.\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
     const float fixed_step=1.f/60.f;
+    long capture_step=0;
     uint16_t previous_held=0,latched=0;
     bool damage_queued=false,restart_queued=false;
     bool pad_armor_prev=false,pad_special_prev=false,pad_browser_prev=false;
@@ -926,6 +1047,10 @@ int main(int argc, char **argv) {
             if (event.key.key == SDLK_H) damage_queued=true;
             if (event.key.key == SDLK_RETURN) restart_queued=true;
             if (event.key.key == SDLK_F7) show_hitbox=!show_hitbox;
+            if (event.key.key == SDLK_M) {
+                equipment.missiles=equipment.max_missiles;
+                equipment.super_missiles=equipment.max_super_missiles;
+            }
             if (event.key.key == SDLK_T) {
                 spin_items=(spin_items+1u)%4u;
                 toggled_items=(toggled_items&~(uint32_t)(MZM_ITEM_SPACE_JUMP|
@@ -949,7 +1074,7 @@ int main(int argc, char **argv) {
         }
         if(gamepad && !SDL_GamepadConnected(gamepad)){SDL_CloseGamepad(gamepad);gamepad=NULL;}
         if(!gamepad)gamepad=runtime_pad_open();
-        bool pad_armor=runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_BACK);
+        bool pad_armor=runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_GUIDE);
         if(pad_armor && !pad_armor_prev) {
             suit_preset=(suit_preset+1u)%RUNTIME_SUIT_PRESETS;
             runtime_apply_equipment(&equipment,suit_preset,toggled_items);
@@ -970,11 +1095,20 @@ int main(int argc, char **argv) {
         pad_special_prev=pad_special;
         Uint64 current=SDL_GetTicks();
         float dt=clampf((float)(current-previous)/1000.f,0.f,0.05f);
+        if(capture_path)dt=fixed_step;
         previous=current;
         const bool *keys=SDL_GetKeyboardState(NULL);
         accumulator += dt;
         while (accumulator >= fixed_step) {
             uint16_t held=runtime_held_buttons(keys,gamepad);
+            if(capture_path) {
+                /* Scripted GBA buttons; A and B are released for one frame
+                 * every REPEAT frames so they are pressed again. */
+                held=(uint16_t)capture_buttons;
+                if(capture_repeat && capture_step%capture_repeat==capture_repeat-1)
+                    held&=(uint16_t)~(MZM_KEY_A|MZM_KEY_B);
+                capture_step++;
+            }
             MzmInput input={held,(uint16_t)((held&~previous_held)|latched),false};
             latched=0;
             previous_held=held;
@@ -987,6 +1121,9 @@ int main(int argc, char **argv) {
                     }
                     echo=(RuntimeEcho){0};echo_visible=false;
                     damage_queued=false;
+                    mzm_weapons_init(&weapons);
+                    equipment.missiles=equipment.max_missiles;
+                    equipment.super_missiles=equipment.max_super_missiles;
                     fprintf(stderr,"Diagnostic restart: Energy %d.\n",equipment.energy);
                 }
                 restart_queued=false;
@@ -1006,10 +1143,24 @@ int main(int argc, char **argv) {
                 input.held=0;
                 input.pressed=0;
             }
-            /* No projectile entities exist yet: B only drives the native
-             * shooting-pose reaction that a spawned projectile triggers. */
-            input.new_projectile=(input.pressed&MZM_KEY_B)!=0;
+            input.new_projectile=mzm_weapons_begin_frame(
+                &weapons,&samus,input.held,input.pressed,&equipment);
             mzm_samus_update(&samus,&input,&equipment,&collision,&animation_source);
+            /* ProjectileUpdate reads the arm cannon offset of the pose and
+             * frame Samus has after her update. */
+            int cannon_x=0,cannon_y=0;
+            RuntimeAnimationMapRow *cannon_row=animation_map.count?runtime_pose_row(
+                &animation_map,&samus,pose_animation.suit,equipment.items):NULL;
+            if(cannon_row && cannon_row->entry->count>0) {
+                int index=samus.anim_frame<cannon_row->entry->count?
+                    samus.anim_frame:cannon_row->entry->count-1;
+                if(cannon_row->entry->frames[index].has_cannon) {
+                    cannon_x=cannon_row->entry->frames[index].cannon_x;
+                    cannon_y=cannon_row->entry->frames[index].cannon_y;
+                }
+            }
+            mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
+                               &collision,&projectile_animation);
             if(samus.grabbed_ledge) {
                 echo.active=false;
                 echo.timer=0;
@@ -1018,19 +1169,26 @@ int main(int argc, char **argv) {
                               runtime_echo_fast_ascent(&samus));
             accumulator-=fixed_step;
         }
+        int ammo=equipment.missiles*1000+equipment.super_missiles*10+(int)weapons.highlighted;
         if(!animation_browser && (title_dirty || samus.pose!=titled_pose ||
-                                  equipment.energy!=titled_energy)) {
-            char title[200];
+                                  equipment.energy!=titled_energy || ammo!=titled_ammo)) {
+            char title[256];
             snprintf(title,sizeof title,
-                     "Metroid Vania [%s] [%s] [Energy %d/%d]%s%s%s",
+                     "Metroid Vania [%s] [%s] [Energy %d/%d] [Missiles %d/%d] "
+                     "[Supers %d/%d]%s%s%s%s",
                      runtime_suit_presets[suit_preset].name,
                      mzm_pose_name(samus.pose),equipment.energy,equipment.max_energy,
+                     equipment.missiles,equipment.max_missiles,
+                     equipment.super_missiles,equipment.max_super_missiles,
+                     weapons.highlighted==MZM_WEAPON_MISSILE?" [missile armed]":
+                     weapons.highlighted==MZM_WEAPON_SUPER_MISSILE?" [super armed]":"",
                      (equipment.items&MZM_ITEM_HIGH_JUMP)?" [High Jump]":"",
                      (equipment.items&MZM_ITEM_SPACE_JUMP)?" [Space Jump]":"",
                      (equipment.items&MZM_ITEM_SCREW_ATTACK)?" [Screw Attack]":"");
             SDL_SetWindowTitle(window,title);
             titled_pose=samus.pose;
             titled_energy=equipment.energy;
+            titled_ammo=ammo;
             title_dirty=false;
         }
         int ow=0,oh=0;
@@ -1063,6 +1221,14 @@ int main(int argc, char **argv) {
             RuntimeAnimationMapRow *row=runtime_pose_row(
                 &animation_map,&samus,pose_animation.suit,equipment.items);
             lib_entry=row?row->entry:NULL;
+            if(lib_entry && weapons.highlighted!=MZM_WEAPON_NONE) {
+                /* SamusUpdateGraphicsOam: armed cannon graphics. */
+                char armed[176];
+                snprintf(armed,sizeof armed,"%s/armed",lib_entry->name);
+                RuntimeLibraryEntry *armed_entry=runtime_library_find(&library,armed);
+                if(armed_entry && armed_entry->count==lib_entry->count)
+                    lib_entry=armed_entry;
+            }
             /* The controller owns the native frame index and timer. */
             if(lib_entry && lib_entry->count>0)
                 frame=samus.anim_frame<lib_entry->count?samus.anim_frame:lib_entry->count-1;
@@ -1103,6 +1269,21 @@ int main(int argc, char **argv) {
             SDL_RenderTexture(renderer,sprite,NULL,&dest);
             if(damage_flash) SDL_SetTextureAlphaMod(sprite,255);
         }
+        for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
+            const MzmProjectile *projectile=&weapons.list[i];
+            if(!projectile->active || projectile->stage==MZM_STAGE_INIT)continue;
+            char key[160];
+            runtime_projectile_key(projectile,key,sizeof key);
+            RuntimeLibraryEntry *entry=runtime_library_find(&projectile_library,key);
+            if(!entry || entry->count==0)continue;
+            int index=projectile->anim_frame<entry->count?projectile->anim_frame:0;
+            if(!runtime_library_texture(renderer,entry,index))continue;
+            const RuntimeLibraryFrame *art=&entry->frames[index];
+            SDL_FRect shot={viewport.x+((float)(projectile->x>>2)+(float)art->offset_x-cx)*scale,
+                            viewport.y+((float)(projectile->y>>2)+(float)art->offset_y-cy)*scale,
+                            (float)art->w*scale,(float)art->h*scale};
+            SDL_RenderTexture(renderer,art->texture,NULL,&shot);
+        }
         if(show_hitbox || !lib_entry) {
             float bx,by,bw,bh;
             mzm_samus_box(&samus,&bx,&by,&bw,&bh);
@@ -1112,13 +1293,26 @@ int main(int argc, char **argv) {
             if(lib_entry) SDL_RenderRect(renderer,&avatar);
             else SDL_RenderFillRect(renderer,&avatar);
         }
+        if(capture_path && capture_step>=capture_frames) {
+            SDL_Surface *shot=SDL_RenderReadPixels(renderer,NULL);
+            bool saved=shot && SDL_SaveBMP(shot,capture_path);
+            if(shot)SDL_DestroySurface(shot);
+            if(!saved) {
+                fprintf(stderr,"Capture failed: %s\n",SDL_GetError());
+                goto cleanup;
+            }
+            printf("Captured frame %ld: %s (pose %s)\n",capture_step,capture_path,
+                   mzm_pose_name(samus.pose));
+            running=false;
+        }
         SDL_RenderPresent(renderer);
-        SDL_Delay(8);
+        if(!capture_path)SDL_Delay(8);
     }
     rc=0;
 cleanup:
     if(gamepad)SDL_CloseGamepad(gamepad);
     runtime_library_free(&library);
+    runtime_library_free(&projectile_library);
     if (texture) SDL_DestroyTexture(texture);
     if (surface) SDL_DestroySurface(surface);
     if (renderer) SDL_DestroyRenderer(renderer);

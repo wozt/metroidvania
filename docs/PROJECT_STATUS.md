@@ -1582,3 +1582,34 @@ No automatic reciprocal link or native engine encoder is implemented.
   table. A contact sheet confirmed native beam, missile and bomb colors.
 - Validation on 2026-10-10: CTest passed 16/16 and all three libraries
   validated through the C loader.
+
+## Patch 0194 - native Power Beam and missiles in the SDL runtime
+
+- Added `src/runtime/mzm_projectiles.{h,c}`, an SDL-free port of weapon
+  highlighting (R arms missiles, Select toggles super missiles), the fire
+  check with native cooldowns (7/9/11 frames), projectile limits (6 beams,
+  4 missiles, 4 super missiles), spawning at the arm cannon offset, native
+  movement (Power Beam 16 then 20 subpixels per frame with a 13-update short
+  beam lifetime; missiles 48 subpixels then accelerating, super missiles
+  faster; diagonal shots at 7/10; Samus's velocity added), point collision
+  with verified Clipdata, ammunition use and disarming, projectile animation
+  timing and the distance despawn.
+- The runtime feeds the native hasNewProjectile flag to the pose controller
+  (shooting poses and spin breaks now come from real shots), reads per-frame
+  arm cannon offsets from `cannon_offsets.tsv`, draws projectiles from the
+  projectile library with their flips, switches to the `/armed` arm cannon art
+  while missiles are highlighted, and shows ammunition in the window title.
+  The sprite loader now resolves keys by binary search.
+- Added `--capture out.bmp FRAMES BUTTONS REPEAT` for headless verification of
+  the real renderer. Captures in Brinstar 033 show the native shooting pose
+  with a Power Beam shot at the muzzle and an upward missile from the armed
+  cannon.
+- Added controller tests for weapon highlighting, beam spawn position,
+  cooldown, movement, lifetime, wall collision, diagonal speed, the six-beam
+  limit, missile acceleration, velocity inheritance, ammunition and firing
+  during a spin.
+- Not implemented: charge beam, Long/Ice/Wave/Plasma behavior, pistol, bombs,
+  projectile hits on sprites or destructible blocks, particles and trails.
+- Validation on 2026-10-10: warning-clean build, CTest passed 16/16, and
+  Brinstar 033 loaded the 1,864-sequence Samus library, 600 bindings and the
+  216-sequence projectile library.

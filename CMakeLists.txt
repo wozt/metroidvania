@@ -45,7 +45,8 @@ add_executable(fusion_room_package_viewer src/tools/room_package_viewer.c)
 target_link_libraries(fusion_room_package_viewer PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_package_viewer)
 
-add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_samus.c)
+add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_samus.c
+               src/runtime/mzm_projectiles.c)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_runtime)
 
@@ -153,14 +154,15 @@ if(BUILD_TESTING)
 
     # ROM-free native collision shape regression.
     add_executable(fusion_runtime_steep_slopes_tests tests/test_runtime_steep_slopes.c
-                   src/runtime/mzm_samus.c)
+                   src/runtime/mzm_samus.c src/runtime/mzm_projectiles.c)
     target_include_directories(fusion_runtime_steep_slopes_tests PRIVATE src/runtime)
     target_link_libraries(fusion_runtime_steep_slopes_tests PRIVATE SDL3::SDL3)
     fusion_enable_warnings(fusion_runtime_steep_slopes_tests)
     add_test(NAME runtime_steep_slopes COMMAND fusion_runtime_steep_slopes_tests)
 
     # ROM-free native Zero Mission pose controller regression.
-    add_executable(fusion_mzm_samus_tests tests/test_mzm_samus.c src/runtime/mzm_samus.c)
+    add_executable(fusion_mzm_samus_tests tests/test_mzm_samus.c src/runtime/mzm_samus.c
+                   src/runtime/mzm_projectiles.c)
     target_include_directories(fusion_mzm_samus_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_samus_tests)
     add_test(NAME mzm_samus_controller COMMAND fusion_mzm_samus_tests)

@@ -120,13 +120,28 @@ direction starts a spin, and A pressed in midair starts spinning without extra
 height. Wall jumping requires facing away from the touched wall before A, and
 is replaced by Space Jump when that item is equipped.
 
+Weapons follow `src/runtime/mzm_projectiles.c`, a port of
+`SamusSetHighlightedWeapon`, `SamusCheckFireBeamMissile` and the beam/missile
+parts of `ProjectileUpdate`, `ProjectileInit`, `ProjectileMove`,
+`ProjectileProcessNormalBeam`, `ProjectileProcessMissile`,
+`ProjectileProcessSuperMissile` and `ProjectileUpdateAnimation`. Holding R
+arms missiles (or super missiles after Select) while ammunition remains; B
+fires when the cooldown allows (7, 9 and 11 frames), the controller reacts with
+the native shooting or spin-break pose, and the projectile spawns at the arm
+cannon offset of the pose and frame Samus has after her update. Power Beam
+shots move 4 then 5 pixels per frame, die after 13 updates (short beam) or on
+entering solid collision, and at most six exist. Missiles advance 12 pixels,
+then accelerate by one subpixel per frame from 2 pixels (super missiles from
+3), add Samus's horizontal velocity when moving the same way, and spend their
+ammunition at launch; spending the last one disarms them. While missiles are
+armed the runtime draws the `/armed` arm cannon sequences.
+
 Known gaps, kept explicit: block collision is resolved with the runtime's
 verified Clipdata boxes and a subpixel sweep, not the original point probes, so
 slope speed changes (`SamusChangeVelocityOnSlope`) and the partial-ceiling
-position nudges are absent. Speed Booster, Shinespark, bombs, beams, aiming
-while hanging, crawling and Morph Ball tunnel pulls are not implemented. The
-fire button only triggers the native shooting-pose reaction until projectile
-entities exist. Lethal damage enters the dying pose without the original
+position nudges are absent. Speed Booster, Shinespark, bombs, charge and upgraded beams, the pistol,
+projectile hits on sprites and blocks, particles and missile trails, aiming
+while hanging, crawling and Morph Ball tunnel pulls are not implemented. Lethal damage enters the dying pose without the original
 screen-centre drift and fade. F6 remains a separate raw-catalogue browser for
 all 1,384 sequences.
 

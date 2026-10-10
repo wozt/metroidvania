@@ -101,7 +101,9 @@ enum {
     MZM_KEY_DOWN = 1u << 3,
     MZM_KEY_A = 1u << 4,
     MZM_KEY_B = 1u << 5,
-    MZM_KEY_L = 1u << 6
+    MZM_KEY_L = 1u << 6,
+    MZM_KEY_R = 1u << 7,
+    MZM_KEY_SELECT = 1u << 8
 };
 
 typedef struct {
@@ -133,6 +135,7 @@ typedef struct {
     uint32_t items;
     int energy, max_energy;
     int missiles, max_missiles;
+    int super_missiles, max_super_missiles;
 } MzmEquipment;
 
 typedef struct {

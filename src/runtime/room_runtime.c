@@ -299,6 +299,59 @@ static const char *runtime_movement_state_name(RuntimeMovementState state) {
     return "unknown";
 }
 
+/* PATCH_0146_SAMUS_BMP_ANIMATIONS
+ * Private BMPs exported by scripts.mzm_samus_sprite, never bundled.
+ * Image placement is provisional; game-accurate OAM axes come later.
+ */
+typedef struct {
+    SDL_Texture *frames[3][10];
+    int widths[3][10];
+    int heights[3][10];
+} SamusFrames;
+
+static void samus_frames_free(SamusFrames *frames) {
+    for (int a = 0; a < 3; ++a)
+        for (int i = 0; i < 10; ++i)
+            if (frames->frames[a][i]) SDL_DestroyTexture(frames->frames[a][i]);
+}
+
+static bool samus_frames_load(SDL_Renderer *renderer, const char *dir,
+                              SamusFrames *frames) {
+    const char *names[] = {"idle", "run", "jump"};
+    const int counts[] = {4, 10, 8};
+    for (int a = 0; a < 3; ++a) {
+        for (int i = 0; i < counts[a]; ++i) {
+            char path[4096];
+            int n = snprintf(path, sizeof path, "%s/%s_%d.bmp", dir, names[a], i);
+            if (n < 0 || (size_t)n >= sizeof path) return false;
+            SDL_Surface *surface = SDL_LoadBMP(path);
+            if (!surface) {
+                fprintf(stderr, "Cannot load Samus frame %s: %s\n", path, SDL_GetError());
+                return false;
+            }
+            frames->widths[a][i] = surface->w;
+            frames->heights[a][i] = surface->h;
+            if (surface->w < 1 || surface->h < 1 ||
+                surface->w > 512 || surface->h > 512) {
+                SDL_DestroySurface(surface);
+                return false;
+            }
+            frames->frames[a][i] = SDL_CreateTextureFromSurface(renderer, surface);
+            SDL_DestroySurface(surface);
+            if (!frames->frames[a][i]) return false;
+            SDL_SetTextureScaleMode(frames->frames[a][i], SDL_SCALEMODE_NEAREST);
+            SDL_SetTextureBlendMode(frames->frames[a][i], SDL_BLENDMODE_BLEND);
+        }
+    }
+    return true;
+}
+
+static int samus_animation_group(RuntimeMovementState state) {
+    if (state == RUNTIME_RUNNING || state == RUNTIME_TURNING) return 1;
+    if (state == RUNTIME_JUMPING || state == RUNTIME_FALLING) return 2;
+    return 0;
+}
+
 static float move_axis(const Room *room, float start, float other,
                        float amount, float w, float h, bool vertical,
                        bool *hit) {
@@ -321,18 +374,20 @@ static float move_axis(const Room *room, float start, float other,
 
 #ifndef FUSION_RUNTIME_TEST
 int main(int argc, char **argv) {
-    const char *room_path=NULL, *background=NULL, *native_source=NULL; bool check=false;
+    const char *room_path=NULL, *background=NULL, *native_source=NULL;
+    const char *samus_dir=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
         else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
+        else if (!strcmp(argv[i],"--samus-sprites") && !samus_dir && i+1<argc) samus_dir=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
-    if (!room_path || (check && background)) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] preview.tsv\n",argv[0]);
+    if (!room_path || (check && (background || samus_dir))) {
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
         return 2;
     }
     Room *room=calloc(1,sizeof *room);
@@ -364,6 +419,7 @@ int main(int argc, char **argv) {
     SDL_Renderer *renderer=window ? SDL_CreateRenderer(window,NULL) : NULL;
     SDL_Surface *surface=NULL; SDL_Texture *texture=NULL;
     int rc=1;
+    SamusFrames samus_frames = {0};
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
     if (background) {
         surface=SDL_LoadBMP(background);
@@ -375,6 +431,10 @@ int main(int argc, char **argv) {
         if (!texture) { fprintf(stderr,"Texture: %s\n",SDL_GetError());goto cleanup; }
         SDL_SetTextureScaleMode(texture,SDL_SCALEMODE_NEAREST);
     }
+    if (samus_dir && !samus_frames_load(renderer,samus_dir,&samus_frames)) {
+        fprintf(stderr,"Samus sprite loading failed; aborting instead of showing incomplete art.\n");
+        goto cleanup;
+    }
     float px=16,py=16, pw=12,ph=16;
     /* Initial gameplay tuning, NOT confirmed Zero Mission physics. */
     const float run_speed=115.f, gravity=650.f, jump_speed=265.f;
@@ -384,6 +444,7 @@ int main(int argc, char **argv) {
     float vx=0.f, vy=0.f;
     bool grounded=false;
     RuntimeMovementState movement_state=RUNTIME_IDLE;
+    int facing=1;
     /* Prefer a grounded, collision-free test spawn near the room centre.
      * This is NOT a verified original Samus entry position. */
     bool spawn = find_spawn(room, pw, ph, &px, &py);
@@ -411,6 +472,8 @@ int main(int argc, char **argv) {
         const bool *keys=SDL_GetKeyboardState(NULL);
         float dx=((keys[SDL_SCANCODE_RIGHT]||keys[SDL_SCANCODE_D]) ? 1.f:0.f)-
                  ((keys[SDL_SCANCODE_LEFT]||keys[SDL_SCANCODE_A]) ? 1.f:0.f);
+        if (dx > 0.f) facing=1;
+        else if (dx < 0.f) facing=-1;
         accumulator += dt;
         while (accumulator >= fixed_step) {
             bool hit=false;
@@ -460,15 +523,30 @@ int main(int argc, char **argv) {
             SDL_FRect dst={viewport.x,viewport.y,src.w*scale,src.h*scale};
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
-        SDL_SetRenderDrawColor(renderer,80,205,115,255);
-        SDL_FRect avatar={viewport.x+(px-cx)*scale, viewport.y+(py-cy)*scale,
-                          pw*scale,ph*scale};
-        SDL_RenderFillRect(renderer,&avatar);
+        if (samus_dir) {
+            int group=samus_animation_group(movement_state);
+            const int counts[]={4,10,8};
+            int frame=(int)(SDL_GetTicks()/100u) % counts[group];
+            SDL_Texture *sprite=samus_frames.frames[group][frame];
+            float sw=(float)samus_frames.widths[group][frame];
+            float sh=(float)samus_frames.heights[group][frame];
+            /* Provisional bottom-centre anchor, separate from physics hitbox. */
+            SDL_FRect dest={viewport.x+(px+pw*0.5f-cx-sw*0.5f)*scale,
+                            viewport.y+(py+ph-cy-sh)*scale,sw*scale,sh*scale};
+            SDL_RenderTextureRotated(renderer,sprite,NULL,&dest,0.0,NULL,
+                                     facing<0 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+        } else {
+            SDL_SetRenderDrawColor(renderer,80,205,115,255);
+            SDL_FRect avatar={viewport.x+(px-cx)*scale, viewport.y+(py-cy)*scale,
+                              pw*scale,ph*scale};
+            SDL_RenderFillRect(renderer,&avatar);
+        }
         SDL_RenderPresent(renderer);
         SDL_Delay(8);
     }
     rc=0;
 cleanup:
+    samus_frames_free(&samus_frames);
     if (texture) SDL_DestroyTexture(texture);
     if (surface) SDL_DestroySurface(surface);
     if (renderer) SDL_DestroyRenderer(renderer);

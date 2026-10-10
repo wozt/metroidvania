@@ -10,11 +10,13 @@ are verified local-ROM importers, native room research tools, a Zero Mission
 metatile workspace, world metadata, and the campaign design baseline. Removed
 simulation and emulation prototypes are not part of the active architecture.
 
-The long-term goal is a game rebuilt automatically from the two ROMs, with the
-project's editor overlays and new mechanics applied as separate layers. The
+The current priority is to reconstruct both original games independently from
+their title screens to their credits before crossover systems resume. The
+long-term goal remains one game rebuilt automatically from the two ROMs, with
+the project's editor overlays and new mechanics applied as separate layers. The
 principle, its layers and the target pipeline are defined in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#reconstruction-principle-permanent-architectural-constraint);
-most of that pipeline is not implemented yet.
+the first dependency-aware orchestration tasks are now implemented.
 
 ## Repository rules
 
@@ -61,6 +63,22 @@ the ROM, reads the native Samus pointer tables from the pinned decompilation
 and the matching reference ELF, composes every body, arm cannon and suit
 palette combination exactly as the game selects them, deduplicates the runtime
 BMPs and emits the semantic animation map.
+
+Build the distributable native-source inventory and its parity checklist
+without reading either ROM:
+
+```sh
+python3 -m scripts.rebuild --all
+python3 -m scripts.rebuild --all --dry-run
+```
+
+The command currently registers the inventory and checklist tasks. It hashes
+their real inputs and pinned-source revisions, rebuilds dependencies in order,
+and skips unchanged outputs. The machine-readable inventory is tracked under
+`data/native_parity/`; human validation stays separate in `annotations.json`,
+and [`docs/NATIVE_PARITY_CHECKLIST.md`](docs/NATIVE_PARITY_CHECKLIST.md) is
+generated from both. ROM extraction tasks will be migrated into the same graph
+incrementally; `--all` does not yet mean that every private asset is rebuilt.
 
 ## Build and test
 

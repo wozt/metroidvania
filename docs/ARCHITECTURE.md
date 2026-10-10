@@ -4,15 +4,17 @@
 
 The final game is intended to be a native C11/SDL3 application with two
 separate gameplay engines: Zero Mission rules in Zebes and Aria rules in the
-castle. A shared layer will own input, rendering presentation, persistence,
-story events, cutscenes, party state and cross-world progression.
+castle. Each original game must first run independently from its native title
+screen to its credits. Crossover mechanics, character adapters and combined
+progression remain deferred until both reconstructions satisfy that boundary.
+A later shared layer may own input, rendering presentation, persistence, story
+events, cutscenes, party state and cross-world progression.
 
 Neither native gameplay engine is complete. The active repository contains
-source-data reconstruction and editor infrastructure plus an experimental SDL3
-Zero Mission room runtime. That runtime reproduces Samus's movement, weapons,
-native collision types, doors and hatches, but has no enemies, events or
-complete room lifecycle yet. It is not a simulated substitute or an emulated
-frontend.
+source-data reconstruction and editor infrastructure plus experimental SDL3
+Zero Mission and Aria room runtimes. They reproduce bounded, tested subsets of
+their native player, room and combat systems, but neither has a complete game
+lifecycle. They are not simulated substitutes or emulated frontends.
 
 ## Reconstruction principle (permanent architectural constraint)
 
@@ -94,14 +96,42 @@ existing tools are extended toward it as real needs appear.
   sprites/palettes/projectiles, Soma animations and every MZM runtime room
   (background, Clipdata types, doors, hatches) under `assets/extracted/`;
   stable native room identifiers and per-room private override documents in the
-  editor; `scripts/check_no_proprietary.py` guarding the repository.
-- Experimental: the Zero Mission runtime (Samus, weapons, collision, doors) and
-  the editor's project room documents, which already store overrides
+  editor; static C/ASM inventories for both pinned decompilations; an
+  incremental inventory/checklist task graph; and
+  `scripts/check_no_proprietary.py` guarding the repository.
+- Experimental: the Zero Mission runtime (Samus, weapons, collision, doors),
+  the Aria runtime (Soma, weapons, doors, bats and zombies), and the editor's
+  project room documents, which already store overrides
   separately from native data but have no ROM or engine encoder yet.
-- Not implemented: a single orchestrated rebuild command, incremental
-  dependency tracking, overlay application inside the engines, behavior
-  extension points, the Aria engine, character adapters and shared runtime
-  systems.
+- Not implemented: migration of every private extractor into the orchestrated
+  rebuild graph, complete table/header/indirect-call inventory, overlay
+  application inside the engines, complete original-game lifecycles, behavior
+  extension points, character adapters and shared crossover runtime systems.
+
+## Native inventory and rebuild orchestration
+
+`python3 -m scripts.rebuild --all` is the initial dependency-aware entry point.
+Its current graph has two deterministic, ROM-free tasks:
+
+1. `inventory` scans both pinned source trees for C definitions and assembly
+   function markers, assigns stable IDs, records source addresses when exposed,
+   resolves direct lexical calls and emits caller/callee edges;
+2. `checklist` validates separate human annotations and generates
+   `docs/NATIVE_PARITY_CHECKLIST.md`.
+
+Task input hashes, task versions and output paths are cached under ignored
+`.cache/rebuild/state.json`. A changed source, generator or annotation
+invalidates the affected task and its consumers. Automatic discoveries live in
+`data/native_parity/inventory.json`; reviewed feature associations, local ports,
+tests and status live in `data/native_parity/annotations.json`, so rescanning a
+submodule cannot overwrite a human validation.
+
+This first pass deliberately does not claim complete dependency knowledge. It
+does not yet index header-only declarations, data tables, indirect function
+pointer edges or runtime-observed calls. Aria's unnamed files remain
+unclassified until evidence supports a category. These gaps are emitted in the
+generated checklist rather than silently excluded. Future extractors join this
+task graph without breaking their existing direct commands.
 
 ## Active C components
 

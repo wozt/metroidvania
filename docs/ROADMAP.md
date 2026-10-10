@@ -1,112 +1,116 @@
 # Roadmap
 
-Every milestone follows the reconstruction principle of
+Every milestone follows the reconstruction principle in
 [`ARCHITECTURE.md`](ARCHITECTURE.md#reconstruction-principle-permanent-architectural-constraint):
-native resources are rebuilt from the ROMs, native behavior is ported from the
-decompilations, and project changes are independent overlays.
+native resources are rebuilt from user-supplied ROMs, native behavior is ported
+from the pinned decompilations, and project changes remain independent overlays.
 
-## P0 - Editor stabilization and systematic render audit
+The permanent priority is to complete the two original games independently.
+Crossover gameplay, character adapters, world travel and combined balancing
+remain deferred until both games can be completed natively from title screen to
+credits.
 
-- keep the vertical workspace navigation and eliminate GTK lifecycle regressions;
-- audit every discovered MZM and Aria room through the real decoders;
-- expose exact success/partial/unsupported/error diagnostics in headless and GTK;
-- correct renderer assumptions only from pinned source or verified ROM evidence.
+## P0 - Inventory, coverage and reproducible reconstruction
 
-Exit criterion: both complete room catalogs produce deterministic structured
-reports with no unexplained decoder errors. **Met for the current private input:**
-MZM 330 partial + 1 unsupported; Aria 342 partial + 1 unsupported; zero errors.
+- extend the automatic inventory from C/ASM definitions and direct calls to
+  headers, data tables, structures, pointer tables and indirect call edges;
+- keep automatic discoveries separate from reviewed associations and test
+  results;
+- migrate existing extractors into `python3 -m scripts.rebuild --all` with
+  declared inputs, outputs, schema versions and deterministic invalidation;
+- generate coverage statistics without treating function count as fidelity;
+- add ROM-backed local fixtures and deterministic traces where redistribution
+  rules permit them.
 
-## P1 - Shared backend and automation interface
+Current progress: both pinned decompilations are inventoried into stable routine
+records, direct static call edges are resolved, reviewed feature annotations are
+validated, and the parity checklist is generated. The initial task graph is
+incremental and ROM-free. Header declarations, data symbols, indirect calls and
+runtime evidence remain open.
 
-- route non-visual editor operations through one validated backend;
-- maintain stable CLI commands, JSON envelopes, batch validation and exit codes;
-- keep GUI/headless project validation and private draft creation behavior aligned;
-- add backend contracts before enabling unavailable editor controls.
+Exit criterion: a clean checkout plus supported local ROMs can rebuild every
+required private resource and report every known unported or unvalidated native
+system without relying on historical caches.
 
-Exit criterion: every enabled non-visual operation is scriptable without GTK,
-with functional no-display tests and explicit capability reporting. **Met for
-the currently enabled editor surface:** project/world/area/room queries, native
-room open/render/audit, draft placement, project entity editing, story writes
-and BG1/BG2 tile editing are available through the shared backend. New P2/P3
-features must add their backend contract before their GTK controls are enabled.
+## P1 - Complete Metroid: Zero Mission
 
-## P2 - Complete room, object and event authoring
+- reproduce boot, title, menus, new game/load and pause flows;
+- complete Samus's state machine, physics, equipment, weapons and effects;
+- implement every room mechanism, entity, enemy, boss, event and cutscene;
+- reproduce HUD, map, inventory, audio, saves, death/game over, endings and
+  credits;
+- validate timing, state transitions, collision, damage and progression against
+  the native routines and reconstructed data.
 
-- finish native tile, collision, door, object, trigger and event extraction;
-- define versioned project-owned schemas and validated per-world encoders;
-- support create/edit/delete, undo/redo, validation and deterministic export;
-- retain native source records as immutable references.
+Current progress: the experimental room runtime has a partial Samus controller,
+native animation library, Clipdata collision, beams/missiles, doors, hatches and
+room transitions. It is not a complete game and no broad category is marked
+validated in the parity checklist.
 
-Current progress: one versioned private room document covers validated
-collision cells, editable project/native door overrides, cross-world references,
-project entities, typed project event/trigger regions and 8px Aria / 16px Zero
-Mission placement. GTK provides a unified room editor, Grab, destination
-selection on the global map, a shared chronological Undo/Redo and Save/Discard
-for staged room changes. Project enemy/item/object forms atomically edit label,
-snapped position, native reference and available typed item fields in both
-workroom modes. Event/trigger forms edit their region, activation type, action,
-stable reference and one-shot behavior. Typed action references are resolved
-against timeline, cutscene, entity, event, transition and checkpoint targets
-before new data is saved. Events also support bounded All/Any condition groups,
-typed targets and individual negation in both workroom modes. Native ROM encoders, native trigger
-extraction, object behavior definitions and a deterministic engine-neutral
-export remain pending. The engine-neutral collision brush suite covers solid,
-one-way, hazard, two floor-slope directions, water and air in both workroom
-modes, with a machine-readable native-reference matrix.
+Exit criterion: Zero Mission is normally completable from its native menu to
+its credits without debug controls or emulation, with residual differences
+explicitly measured and resolved.
 
-Exit criterion: representative project rooms for both worlds can be authored,
-validated and exported to an engine-neutral package without ROM mutation.
+## P2 - Complete Castlevania: Aria of Sorrow
 
-## P3 - Story, cutscene and audio workspaces
+- reproduce boot, title, menus, new game/load, pause, inventory and map flows;
+- complete Soma's state machine, weapons, equipment, statistics, souls and
+  progression;
+- implement every room mechanism, enemy, boss, object, drop, event and
+  cutscene;
+- reproduce HUD, audio, saves, death/game over, final branches, endings and
+  credits;
+- extend shared enemy infrastructure only where the native routines actually
+  share behavior.
 
-- connect typed event conditions/actions to future runtime adapters;
-- add cutscene tracks, keyframes, preview and deterministic export;
-- inventory native music/SFX, decode private previews and author project audio cues;
-- expose all supported operations through the shared CLI.
+Current progress: the experimental runtime covers bounded Soma movement and
+combat states, several weapon classes, room transitions, wooden doors, bats and
+zombies. Most native routines remain unnamed or unclassified and the original
+game lifecycle is absent.
 
-## P4 - Two native gameplay kernels
+Exit criterion: Aria is normally completable through every native final branch
+from its menu to its credits without debug controls or emulation, with residual
+differences explicitly measured and resolved.
 
-- define separate MZM and Aria engine adapters;
-- implement native player movement, collision, damage and room lifecycle;
-- preserve each world's timing and mechanical rules;
-- implement native Samus in MZM and native Soma in Aria first.
+## P3 - Complete input and validation tooling
 
-Current progress: an experimental SDL3 MZM room runtime loads the Brinstar 033
-diagnostic room, native Clipdata collision, a content-addressed 1,384-sequence
-Samus library composed from the native tables for all five suits and simultaneous keyboard/SDL3 gamepad input. Samus is driven by
-an SDL-free pose controller ported from the pinned decompilation: native
-movement constants, per-pose block hitboxes, jump/spin/wall-jump/Space
-Jump/Screw Attack rules, crouch and Morph Ball transitions, Power Grip ledge
-hanging and pulls, hurt/death poses and suit damage reduction. Animation
-frames and transition endings come from the controller's native counters and
-a generated 600-row semantic registry. Collision uses native Clipdata types for every exported room, and doors,
-transitions and hatches link rooms through the native door tables. Samus's
-box sweep still replaces the original point probes; slope speed, Speed
-Booster/Shinespark,
-weapons beyond the Power Beam and missiles, entities, effect overlays, hatch animation, area connections and the Aria kernel
-remain pending.
+- provide full SDL3 keyboard/gamepad hot-plug input through device-independent
+  actions for both games and every menu;
+- add configurable bindings and persistent preferences;
+- add an F1 debug menu to both runtimes with pause, frame stepping, state and
+  entity inspection, teleportation, authentic equipment/ability toggles and
+  collision/hitbox views;
+- ensure debug state cannot contaminate normal saves;
+- generate behavior-focused tests, frame traces and deterministic captures.
 
-Exit criterion: each native character can complete a source-authentic test path
-in its own engine without emulation.
+Exit criterion: either original game can be started, navigated, played and
+completed with a controller, while every implemented subsystem can be inspected
+through real runtime state.
 
-## P5 - Crossover prologues
+## P4 - Native editor overlays
 
-- implement Samus against Creaking Skull in Aria rules;
-- implement Soma against mandatory Deorem in MZM rules;
-- add both portal rewards and the authored Interzone scene;
-- persist order-independent prologue completion.
+- preserve the current room, collision, entity, door, trigger and event editor
+  work while the engines mature;
+- finish immutable native references and versioned overlay schemas;
+- add validated engine adapters only after the corresponding native behavior is
+  understood;
+- guarantee that removing an overlay restores the reconstructed original.
 
-## P6 - Duo campaign
+Exit criterion: edits for both games apply reproducibly above native resources
+and behavior without modifying ROMs or generated source data.
 
-- instantiate both protagonists in one active world engine;
-- add character switching, companion AI and softlock recovery;
-- implement cross-equipment and alien soul mappings;
-- connect verified save rooms through authored world links;
-- implement the full concurrent timeline and both secret epilogues.
+## Deferred - Metroidvania crossover
 
-## P7 - Production
+Only after P1 and P2 are complete and validated:
 
-- complete content verification and balancing;
-- version persistent saves and migrations;
-- add accessibility, input configuration, credits and combined statistics;
-- ship only source/tools and require local extraction of proprietary assets.
+- restore the parallel campaign, portal links and Interzone story work;
+- add Samus-in-Aria and Soma-in-MZM adapters without weakening either engine;
+- add character switching, companion AI, cross-equipment and soul mappings;
+- validate softlock recovery, combined progression and crossover balancing.
+
+## Production
+
+- complete accessibility, localization, configuration and save migrations;
+- audit licensing, packaging and clean-install reconstruction;
+- ship only redistributable source/tools and require local compatible ROMs;
+- publish releases only after explicit approval.

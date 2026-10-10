@@ -1969,3 +1969,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   toward Soma, hurt him for 14 HP and die in two knife hits.
 - Validation on 2026-10-10: CTest passed 23/23, the object sprite tests
   passed and the proprietary guard passed.
+
+## Patch 0218 - native parity inventory and rebuild graph
+
+- Made full, independent reconstruction of Zero Mission and Aria the active
+  architectural and roadmap priority; crossover engines, character adapters
+  and combined progression are explicitly deferred until both original games
+  can run from title screen to credits.
+- Added `scripts/native_inventory.py`, a deterministic ROM-free scanner for the
+  pinned C and assembly sources. It currently records 2,970 MZM and 3,573 Aria
+  routines with stable IDs, source locations, exposed addresses, categories and
+  19,877 resolved direct caller/callee edges. Header-only declarations, data
+  tables, indirect calls and runtime evidence remain explicit inventory gaps.
+- Added separate reviewed annotations in `data/native_parity/annotations.json`.
+  They link the first eleven partial runtime features to native symbols, local
+  implementation files and tests without allowing a source rescan to overwrite
+  human validation.
+- Added the generated `docs/NATIVE_PARITY_CHECKLIST.md`. It creates the complete
+  requested category surface for both games, reports empty and unclassified
+  areas honestly, and treats routine counts as discovery metrics rather than
+  fidelity percentages.
+- Added `python3 -m scripts.rebuild --all`, initially registering `inventory`
+  and `checklist` tasks. The orchestrator declares dependencies, hashes real
+  inputs, versions tasks, records ignored cache state atomically and skips
+  unchanged outputs. Existing direct extraction commands remain unchanged;
+  private ROM-backed tasks have not yet been migrated into the graph.
+- Added ROM-free parser, annotation, generated-output and incremental-cache
+  regressions. Validation on 2026-10-10: the warning-clean build succeeded,
+  CTest passed 23/23, the Python suite passed 377/377, the generated outputs
+  were byte-identical across a forced rebuild, the incremental dry run reported
+  both tasks up to date, and the proprietary-file guard passed.

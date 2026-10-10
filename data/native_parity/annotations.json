@@ -1,0 +1,209 @@
+{
+  "schema": "metroidvania-native-parity-annotations-v1",
+  "games": {
+    "aos": {
+      "features": [
+        {
+          "category": "player",
+          "id": "aos.player.soma_controller",
+          "local_sources": [
+            "src/runtime/aos_soma.c"
+          ],
+          "native_symbols": [
+            "sub_0801B0D8"
+          ],
+          "notes": "Movement and the currently traced ability states are ported; the full native player state machine is not complete.",
+          "status": "partial",
+          "tests": [
+            "tests/test_aos_soma.c"
+          ],
+          "title": "Soma movement and state controller"
+        },
+        {
+          "category": "weapons",
+          "id": "aos.weapons.weapon_entity",
+          "local_sources": [
+            "src/runtime/aos_weapon.c",
+            "scripts/aos_weapons.py"
+          ],
+          "native_symbols": [
+            "sub_080221CC"
+          ],
+          "notes": "Weapon classes 0, 2 and 3 are represented; the other native classes and their effects remain open.",
+          "status": "partial",
+          "tests": [
+            "tests/test_aos_weapon.c",
+            "tests/test_aos_soma_sprite.py"
+          ],
+          "title": "Soma weapon entity and attack boxes"
+        },
+        {
+          "category": "environment",
+          "id": "aos.environment.wooden_doors",
+          "local_sources": [
+            "src/runtime/aos_door.c",
+            "scripts/aos_object_sprites.py"
+          ],
+          "native_symbols": [
+            "Object00Create",
+            "Object00Update"
+          ],
+          "notes": "Wooden and green doors are functional in exported rooms; this does not cover every transition or special door.",
+          "status": "partial",
+          "tests": [
+            "tests/test_aos_door.c",
+            "tests/test_aos_object_sprites.py"
+          ],
+          "title": "Native wooden doors"
+        },
+        {
+          "category": "enemies",
+          "id": "aos.enemies.bat",
+          "local_sources": [
+            "src/runtime/aos_enemy.c"
+          ],
+          "native_symbols": [],
+          "notes": "Bat states, combat and death are ported, but their still-unnamed native routines must be attached to this record.",
+          "status": "partial",
+          "tests": [
+            "tests/test_aos_enemy.c"
+          ],
+          "title": "Bat enemy"
+        },
+        {
+          "category": "enemies",
+          "id": "aos.enemies.zombie",
+          "local_sources": [
+            "src/runtime/aos_enemy.c"
+          ],
+          "native_symbols": [
+            "sub_08069A00",
+            "sub_0806AEAC"
+          ],
+          "notes": "Zombie spawning, terrain walking and generic death are covered; the complete enemy framework is not.",
+          "status": "partial",
+          "tests": [
+            "tests/test_aos_enemy.c"
+          ],
+          "title": "Zombie and generic enemy death"
+        },
+        {
+          "category": "death",
+          "id": "aos.death.soma",
+          "local_sources": [
+            "src/runtime/aos_soma.c"
+          ],
+          "native_symbols": [
+            "sub_0801AF20"
+          ],
+          "notes": "Soma's death state is ported; game-over flow, restart and save integration are absent.",
+          "status": "partial",
+          "tests": [
+            "tests/test_aos_soma.c"
+          ],
+          "title": "Soma death state"
+        }
+      ]
+    },
+    "mzm": {
+      "features": [
+        {
+          "category": "player",
+          "id": "mzm.player.samus_controller",
+          "local_sources": [
+            "src/runtime/mzm_samus.c"
+          ],
+          "native_symbols": [
+            "SamusUpdate",
+            "SamusUpdatePhysics",
+            "SamusUpdateVelocityPosition"
+          ],
+          "notes": "The room runtime covers a tested subset of poses and transitions, not the complete native controller.",
+          "status": "partial",
+          "tests": [
+            "tests/test_mzm_samus.c"
+          ],
+          "title": "Samus pose and physics controller"
+        },
+        {
+          "category": "animation",
+          "id": "mzm.animation.samus_runtime_library",
+          "local_sources": [
+            "scripts/mzm_samus_pipeline.py",
+            "src/runtime/room_runtime.c"
+          ],
+          "native_symbols": [
+            "SamusUpdateAnimation",
+            "SamusUpdateGraphicsOam",
+            "SamusUpdatePalette"
+          ],
+          "notes": "The deterministic private library maps the currently supported semantic actions; native effects and every pose are not yet covered.",
+          "status": "partial",
+          "tests": [
+            "tests/test_mzm_samus_pipeline.py",
+            "tests/test_mzm_samus_palette_banks.py"
+          ],
+          "title": "Samus animation and palette reconstruction"
+        },
+        {
+          "category": "collision",
+          "id": "mzm.collision.clipdata",
+          "local_sources": [
+            "src/runtime/mzm_samus.c",
+            "src/runtime/room_runtime.c"
+          ],
+          "native_symbols": [
+            "ClipdataConvertToCollision",
+            "ClipdataProcess",
+            "ClipdataProcessForSamus"
+          ],
+          "notes": "Room Clipdata and the Samus collision subset are active; special blocks and all environmental effects remain incomplete.",
+          "status": "partial",
+          "tests": [
+            "tests/test_mzm_samus.c",
+            "tests/test_runtime_steep_slopes.c"
+          ],
+          "title": "Samus and room Clipdata collision"
+        },
+        {
+          "category": "weapons",
+          "id": "mzm.weapons.beams_and_missiles",
+          "local_sources": [
+            "src/runtime/mzm_projectiles.c",
+            "scripts/mzm_projectile_compose.py"
+          ],
+          "native_symbols": [
+            "ProjectileUpdate",
+            "ProjectileUpdateAnimation"
+          ],
+          "notes": "Power Beam, missiles and super missiles are represented; the complete beam, bomb and Power Bomb systems are not.",
+          "status": "partial",
+          "tests": [
+            "tests/test_mzm_projectile_compose.py"
+          ],
+          "title": "Beam and missile projectiles"
+        },
+        {
+          "category": "transitions",
+          "id": "mzm.transitions.doors_and_hatches",
+          "local_sources": [
+            "src/runtime/room_runtime.c",
+            "scripts/mzm_hatch_events.py"
+          ],
+          "native_symbols": [
+            "ConnectionCheckEnterDoor",
+            "ConnectionLoadDoors",
+            "ConnectionUpdateHatches"
+          ],
+          "notes": "Room-runtime door travel and hatch animation are partial; native fades, locks, events and lifecycle are not complete.",
+          "status": "partial",
+          "tests": [
+            "tests/test_mzm_hatch_events_0100.py",
+            "tests/test_mzm_door_navigation_0096.py"
+          ],
+          "title": "Doors, hatches and room transitions"
+        }
+      ]
+    }
+  }
+}

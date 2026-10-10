@@ -4,13 +4,16 @@
 
 Every animation listed by Soma's native animation descriptor is exported with
 its native frame durations, not only hand-picked sequences. Each frame is the
-64x64 body cell selected by its frame id, colorized with palette bank 0 and
-cropped; offsets place the BMP relative to Soma's draw origin, which sits 32
+64x64 body cell selected by its frame id, colorized with the palette bank the
+player code loads for that animation (the byte table at 0x080E126C, read by
+sub_0803C7B4 on every direct animation change) and cropped; offsets place the BMP relative to Soma's draw origin, which sits 32
 pixels right of and 47 pixels below the cell's top-left corner (the anchor
 verified for the knife attack). The knife animations are exported the same
 way from their own descriptor, with OAM offsets already origin-relative.
 
-Palette banks 1-6 of Soma's palette descriptor and every other weapon remain
+One-shot animations requested through entity + 0x20 keep the previous
+palette in the game; the export uses each animation's own bank. Palette
+banks never referenced by that table and every other weapon remain
 unidentified and are reported rather than guessed.
 """
 from __future__ import annotations
@@ -77,6 +80,14 @@ def knife_frame(rom: bytes, frame_id: int, palette: bytes):
     return bmp_from_pixels(_opaque_pixels(rgba, width, height, *origin)), metadata
 
 
+ANIMATION_PALETTE_TABLE = 0x080E126C
+
+
+def animation_palette_banks(rom: bytes, count: int) -> list[int]:
+    """Palette bank per Soma animation (byte table read by sub_0803C7B4)."""
+    return list(_rom_slice(rom, ANIMATION_PALETTE_TABLE, count, "animation palette table"))
+
+
 def produce(root: Path, rom_path: Path) -> dict:
     rom = Path(rom_path).read_bytes()
     if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
@@ -86,13 +97,18 @@ def produce(root: Path, rom_path: Path) -> dict:
                 for name, definition in SOMA_ANIMATIONS.items()
                 if len(definition["segments"]) == 1}
     animations = {}
-    soma_palette = load_palette(rom)
-    for index in range(animation_count(rom, SOMA_ANIMATION_DESCRIPTOR)):
+    soma_count = animation_count(rom, SOMA_ANIMATION_DESCRIPTOR)
+    banks = animation_palette_banks(rom, soma_count)
+    palettes = {}
+    for index in range(soma_count):
         animation = parse_animation(rom, index)
+        bank = banks[index]
+        if bank not in palettes:
+            palettes[bank] = load_palette(rom, palette_index=bank)
         frames, sources = [], []
         for frame in animation["frames"]:
             (bmp, left, top), graphics = soma_frame(rom, frame["frame_id"],
-                                                     soma_palette)
+                                                     palettes[bank])
             frames.append((bmp, frame["duration"], left, top))
             sources.append({"frame_id": frame["frame_id"],
                             "sheet": graphics["sheet_index"],
@@ -103,6 +119,7 @@ def produce(root: Path, rom_path: Path) -> dict:
             "native_index": index,
             "animation_pointer": f"0x{animation['animation_pointer']:08x}",
             "observed_label": observed.get(index),
+            "palette_bank": bank,
             "frames": sources,
         }
     knife_palette = load_palette(rom, KNIFE_PALETTE_DESCRIPTOR)
@@ -137,7 +154,7 @@ def produce(root: Path, rom_path: Path) -> dict:
         "knife_animations": sum(key.startswith("Knife/") for key in animations),
         "draw_origin_in_cell": list(KNIFE_CELL_ANCHOR),
         "unidentified": {
-            "soma_palette_banks": list(range(1, palette_banks)),
+            "soma_palette_banks": sorted(set(range(1, palette_banks)) - set(banks)),
             "weapons": "only the knife descriptors are verified",
             "semantic_labels": "observed labels cover a subset of animations",
             "animations": unresolved,

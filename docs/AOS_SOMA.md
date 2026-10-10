@@ -309,7 +309,17 @@ the first exit cell (X = 240), presumably because their door entities,
 which are not ported, control that crossing. Walking from 0/6 into 0/9
 arrives on the floor (Y 159 to 1439).
 
+Animation palettes: every direct animation change compares the byte
+`0x080E126C[id]` with `+0x26` and, when it differs, loads that bank of
+Soma's palette descriptor `0x082097D4` into OBJ palette 0 with
+`sub_0803C7B4(descriptor, bank, 1, 0)` (32 bytes at `+4 + bank * 0x20`).
+Soma's 83 animations use bank 0 except 0x21-0x22 (bank 2, a white
+silhouette), 0x2A-0x2B (bank 3, a red demon), 0x49-0x4A (bank 4, a grey
+Soma) and 0x4B (bank 5); banks 1 and 6 are not referenced by this table.
+One-shot requests through `+0x20` do not reload the palette, so they keep the
+previous one; `scripts/aos_soma_pipeline.py` colorizes each animation with
+its own bank.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: the per-animation palettes (`0x080E126C`) and
-hurtboxes, the doors and the transition rooms of `sUnk_0850E968`, then the
+(README). Next steps: the hurtboxes, the doors and the transition rooms of `sUnk_0850E968`, then the
 ability moves (backdash, slide, high and mid-air jumps) and attacks.

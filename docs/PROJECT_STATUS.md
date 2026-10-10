@@ -1819,3 +1819,12 @@ No automatic reciprocal link or native engine encoder is implemented.
   separately (door entities not ported).
 - Validation on 2026-10-10: CTest passed 20/20, the Python room export tests
   passed and the proprietary guard passed.
+
+## Patch 0207 - native Soma animation palettes
+
+- Identified the per-animation palette table at `0x080E126C` (read by
+  `sub_0803C7B4` on direct animation changes): Soma's library now colorizes
+  animations 0x21-0x22, 0x2A-0x2B, 0x49-0x4A and 0x4B with palette banks 2,
+  3, 4 and 5 instead of bank 0; banks 1 and 6 stay reported as unidentified.
+- Validation on 2026-10-10: CTest passed 20/20, the sprite library tests
+  passed and the proprietary guard passed.

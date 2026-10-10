@@ -53,6 +53,9 @@ void gba_pad_map_default(GbaPadMap *map) {
     bind(map, GBA_KEY_DOWN, SDL_GAMEPAD_BUTTON_DPAD_DOWN, SDL_GAMEPAD_BUTTON_INVALID);
     bind(map, GBA_KEY_R, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, SDL_GAMEPAD_BUTTON_INVALID);
     bind(map, GBA_KEY_L, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, SDL_GAMEPAD_BUTTON_INVALID);
+    map->debug[0] = SDL_GAMEPAD_BUTTON_BACK;
+    map->debug[1] = SDL_GAMEPAD_BUTTON_START;
+    map->debug[2] = SDL_GAMEPAD_BUTTON_INVALID;
     map->dead_zone = 16383;     /* past half travel: |axis| >= 16384 */
 }
 
@@ -87,7 +90,8 @@ bool gba_pad_map_parse_line(GbaPadMap *map, const char *line, char *error, size_
         map->dead_zone = (int16_t)zone;
         return true;
     }
-    int index = key_index(gba_key_from_name(name));
+    bool chord = !SDL_strcasecmp(name, "debug");
+    int index = chord ? 0 : key_index(gba_key_from_name(name));
     if (index < 0) {
         snprintf(error, error_size, "unknown GBA key: %s", name);
         return false;
@@ -106,8 +110,9 @@ bool gba_pad_map_parse_line(GbaPadMap *map, const char *line, char *error, size_
         }
         buttons[count++] = (int8_t)button;
     }
+    int8_t *target = chord ? map->debug : map->buttons[index];
     for (int j = 0; j < GBA_PAD_BINDINGS; ++j)
-        map->buttons[index][j] = j < count ? buttons[j] : SDL_GAMEPAD_BUTTON_INVALID;
+        target[j] = j < count ? buttons[j] : SDL_GAMEPAD_BUTTON_INVALID;
     return true;
 }
 
@@ -154,6 +159,17 @@ uint16_t gba_pad_map_buttons(const GbaPadMap *map, const bool pressed[SDL_GAMEPA
     return keys;
 }
 
+bool gba_pad_map_debug(const GbaPadMap *map, const bool pressed[SDL_GAMEPAD_BUTTON_COUNT]) {
+    int bound = 0;
+    for (int j = 0; j < GBA_PAD_BINDINGS; ++j) {
+        int button = map->debug[j];
+        if (button < 0 || button >= SDL_GAMEPAD_BUTTON_COUNT) continue;
+        if (!pressed[button]) return false;
+        ++bound;
+    }
+    return bound > 0;
+}
+
 static void open_first(GbaInput *input) {
     int count = 0;
     SDL_JoystickID *ids = SDL_GetGamepads(&count);
@@ -183,11 +199,22 @@ bool gba_input_button(const GbaInput *input, SDL_GamepadButton button) {
     return input->pad && SDL_GetGamepadButton(input->pad, button);
 }
 
+static void pressed_buttons(const GbaInput *input, bool pressed[SDL_GAMEPAD_BUTTON_COUNT]) {
+    for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i)
+        pressed[i] = SDL_GetGamepadButton(input->pad, (SDL_GamepadButton)i);
+}
+
+bool gba_input_debug_chord(const GbaInput *input) {
+    if (!input->pad) return false;
+    bool pressed[SDL_GAMEPAD_BUTTON_COUNT];
+    pressed_buttons(input, pressed);
+    return gba_pad_map_debug(&input->map, pressed);
+}
+
 uint16_t gba_input_buttons(const GbaInput *input) {
     if (!input->pad) return 0;
     bool pressed[SDL_GAMEPAD_BUTTON_COUNT];
-    for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i)
-        pressed[i] = SDL_GetGamepadButton(input->pad, (SDL_GamepadButton)i);
+    pressed_buttons(input, pressed);
     return gba_pad_map_buttons(&input->map, pressed,
                                SDL_GetGamepadAxis(input->pad, SDL_GAMEPAD_AXIS_LEFTX),
                                SDL_GetGamepadAxis(input->pad, SDL_GAMEPAD_AXIS_LEFTY));

@@ -71,6 +71,21 @@ int main(void) {
     assert(!memcmp(&before, &map, sizeof map));
     remove(path);
 
+    /* The debug chord: Back + Start by default, remappable. */
+    GbaPadMap chord;
+    gba_pad_map_default(&chord);
+    memset(pressed, 0, sizeof pressed);
+    pressed[SDL_GAMEPAD_BUTTON_BACK] = true;
+    assert(!gba_pad_map_debug(&chord, pressed));
+    pressed[SDL_GAMEPAD_BUTTON_START] = true;
+    assert(gba_pad_map_debug(&chord, pressed));
+    assert(gba_pad_map_parse_line(&chord, "debug guide", error, sizeof error));
+    assert(!gba_pad_map_debug(&chord, pressed));
+    pressed[SDL_GAMEPAD_BUTTON_GUIDE] = true;
+    assert(gba_pad_map_debug(&chord, pressed));
+    assert(gba_pad_map_parse_line(&chord, "debug", error, sizeof error));
+    assert(!gba_pad_map_debug(&chord, pressed));
+
     assert(gba_key_from_name("Select") == GBA_KEY_SELECT && gba_key_from_name("x") == 0);
     puts("gba_input: ok");
     return 0;

@@ -2243,3 +2243,30 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   24/24, the Python suite passed 389/389, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0228 - F1 debug menu (Aria runtime)
+
+- New SDL-free `src/runtime/debug_menu.{h,c}`: toggles, bounded values (with
+  optional names) and actions bound by pointer to the engine's state, GBA-key
+  navigation (Up/Down wrap, Left/Right, L/R by ten, A, B closes), and
+  formatted lines for a 240-pixel screen.
+- `fusion_aria_runtime`: F1 or the gamepad debug chord (new `debug` line of
+  input maps, Back + Start by default) opens the menu, which freezes the game
+  and offers pause with F2 frame stepping, frame step, hitboxes, HP / max HP /
+  refill, diagnostic ATK and DEF, the five ported ability moves, spawning
+  any loaded enemy kind (bat, zombie, blue crow) 48 pixels ahead through
+  `aos_enemy_create`, removing all enemies, and teleporting to an exported
+  room (Soma keeps HP, moves, weapon and facing). A status panel shows the
+  room, frame, Soma's position, state, animation, HP and live enemies.
+- `--debug-menu` and `--debug-input MASK,...` drive it in captures. Checked
+  in captures of room 0/12: the menu renders with the engine's values, a
+  scripted spawn puts a zombie in front of Soma, "remove all" clears the
+  crows, and the teleport loads room 0/15 at 384,223.
+- Not in the menu yet: weapon, equipment, soul and inventory selection,
+  flags, AI inspection and layer views (their engine parts are not ported or
+  not exposed yet), and the Zero Mission runtime's menu.
+- Tests: `tests/test_debug_menu.c` (navigation, bounds, names, actions,
+  closing, capacity) and the debug chord in `tests/test_gba_input.c`.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  25/25, the Python suite passed 389/389, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

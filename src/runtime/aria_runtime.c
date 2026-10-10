@@ -13,6 +13,7 @@
 #include "aos_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
+#include "debug_menu.h"
 #include "gba_input.h"
 
 #include <SDL3/SDL.h>
@@ -689,6 +690,108 @@ static uint16_t keyboard_buttons(void) {
     return held;
 }
 
+/* Debug menu (F1, or the gamepad chord): every item edits the running
+ * engine's state; nothing here exists in the original game. */
+enum {
+    DEBUG_PAUSE = 1, DEBUG_STEP, DEBUG_HITBOXES, DEBUG_HP, DEBUG_MAX_HP, DEBUG_REFILL,
+    DEBUG_ATK, DEBUG_DEF, DEBUG_MOVES, DEBUG_ENEMY, DEBUG_SPAWN, DEBUG_CLEAR,
+    DEBUG_AREA, DEBUG_ROOM, DEBUG_TELEPORT,
+};
+static const char *const debug_move_labels[5] = {
+    "Move: backdash", "Move: slide", "Move: mid-air jump", "Move: dive kick", "Move: high jump",
+};
+static const uint32_t debug_move_bits[5] = {
+    AOS_MOVE_BACKDASH, AOS_MOVE_SLIDE, AOS_MOVE_AIR_JUMP, AOS_MOVE_DIVE_KICK, AOS_MOVE_HIGH_JUMP,
+};
+
+/* An exported room at a floor found by find_spawn; Soma keeps HP, moves,
+ * weapon and facing, and restarts in his normal state. */
+static bool debug_teleport(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **background,
+                           AosSoma *soma, const AosAnimSet *anims, int area, int number) {
+    char folder[512];
+    room_folder(folder, sizeof folder, area, number);
+    AriaRoom target = {0};
+    if (!load_room_folder(folder, &target)) {
+        fprintf(stderr, "Debug teleport: room %d/%d is not exported\n", area, number);
+        return false;
+    }
+    AosCollision layer = room_layer(&target);
+    int x, y;
+    SDL_Texture *texture = NULL;
+    if (!find_spawn(&layer, &x, &y) || !(texture = load_background(renderer, folder))) {
+        fprintf(stderr, "Debug teleport: no spawn point in room %d/%d\n", area, number);
+        free_room(&target);
+        return false;
+    }
+    AosSoma fresh = aos_soma_spawn((int32_t)((uint32_t)x << 16), (int32_t)((uint32_t)y << 16),
+                                   anims);
+    fresh.hp = soma->hp;
+    fresh.max_hp = soma->max_hp;
+    fresh.moves = soma->moves;
+    fresh.weapon = soma->weapon;
+    fresh.facing_left = soma->facing_left;
+    *soma = fresh;
+    free_room(room);
+    *room = target;
+    SDL_DestroyTexture(*background);
+    *background = texture;
+    printf("Debug teleport: room %d/%d at %d,%d\n", area, number, x, y);
+    return true;
+}
+
+/* A ported enemy 48 pixels in front of Soma, created as a room record. */
+static bool debug_spawn(AriaRoom *room, const AriaCombat *combat, const AosSoma *soma,
+                        const AosCollision *layer, int id) {
+    if (room->entity_count >= MAX_ENTITIES || !combat->kinds[id]) return false;
+    int x = (soma->x >> 16) + (soma->facing_left ? -48 : 48), y = (soma->y >> 16) - 24;
+    AriaEntity *e = &room->entities[room->entity_count];
+    *e = (AriaEntity){.kind = ARIA_KIND_ENEMY, .id = id, .x = x, .y = y, .spawned = true,
+                      .spawner = -1};
+    if (!aos_enemy_create(&e->enemy, (uint8_t)id, x, y, 0, 0, soma, layer, combat->kinds[id],
+                          combat->stats[id]))
+        return false;
+    room->entity_count++;
+    return true;
+}
+
+static void debug_text(SDL_Renderer *renderer, int line, const char *text) {
+    SDL_RenderDebugText(renderer, 2.0f, (float)(2 + line * 8), text);
+}
+
+static void draw_debug(SDL_Renderer *renderer, const DebugMenu *menu, bool paused,
+                       const AriaRoom *room, const AosSoma *soma, long step) {
+    if (!menu->open && !paused) return;
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 190);
+    SDL_FRect panel = {0, 0, VIEW_W, menu->open ? VIEW_H : 12};
+    SDL_RenderFillRect(renderer, &panel);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    char line[64];
+    if (!menu->open) {
+        debug_text(renderer, 0, "PAUSED  F2 step  F1 menu");
+        return;
+    }
+    snprintf(line, sizeof line, "DEBUG room %d/%d frame %ld", room->area, room->number, step);
+    debug_text(renderer, 0, line);
+    snprintf(line, sizeof line, "x%d y%d st%u an%u fr%u", soma->x >> 16, soma->y >> 16,
+             soma->state, soma->anim.id, soma->anim.frame);
+    debug_text(renderer, 1, line);
+    int alive = 0;
+    for (size_t i = 0; i < room->entity_count; ++i)
+        alive += room->entities[i].kind == ARIA_KIND_ENEMY && room->entities[i].spawned &&
+                 !room->entities[i].enemy.removed;
+    snprintf(line, sizeof line, "HP %d/%d enemies %d", soma->hp, soma->max_hp, alive);
+    debug_text(renderer, 2, line);
+    enum { FIRST = 4, ROWS = 15 };
+    int top = menu->cursor - ROWS / 2;
+    if (top > menu->count - ROWS) top = menu->count - ROWS;
+    if (top < 0) top = 0;
+    for (int i = 0; i < ROWS && top + i < menu->count; ++i) {
+        debug_menu_line(menu, top + i, line, sizeof line);
+        debug_text(renderer, FIRST + i, line);
+    }
+}
+
 /* The keyboard and the gamepad together (Soma's key bits are the GBA
  * KEYINPUT bits). As on the GBA D-pad, opposite directions cancel out. */
 _Static_assert((int)AOS_KEY_JUMP == (int)GBA_KEY_A && (int)AOS_KEY_ATTACK == (int)GBA_KEY_B &&
@@ -804,7 +907,8 @@ static void usage(const char *name) {
             "Usage: %s [--check] [--library index.tsv] [--spawn X Y] [--moves MASK]\n"
             "       [--weapon none|INDEX] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
-            "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt]\n"
+            "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
+            "       [--debug-input MASK,MASK,...: menu key edges, one per captured frame]\n"
             "       (--area A --room R | room-folder)\n",
             name);
 }
@@ -818,7 +922,8 @@ int main(int argc, char **argv) {
     unsigned long moves = AOS_MOVE_BACKDASH | AOS_MOVE_SLIDE | AOS_MOVE_AIR_JUMP |
                           AOS_MOVE_DIVE_KICK | AOS_MOVE_HIGH_JUMP;
     int spawn_x = -1, spawn_y = -1;
-    bool check = false, show_hitboxes = false;
+    bool check = false, show_hitboxes = false, debug_at_start = false;
+    const char *debug_input = NULL;
     /* Diagnostic combat stats (new-game values are not traced). */
     AriaPlayerStats player_stats = {10, 4, 320, 320};
     long repeat = 0;
@@ -834,6 +939,8 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) weapon_name = argv[++i];
         else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
+        else if (!strcmp(argv[i], "--debug-menu")) debug_at_start = true;
+        else if (!strcmp(argv[i], "--debug-input") && i + 1 < argc) debug_input = argv[++i];
         else if (!strcmp(argv[i], "--input-map") && i + 1 < argc) {
             char error[256];
             if (!gba_pad_map_load(&pad_map, argv[++i], error, sizeof error)) {
@@ -944,22 +1051,121 @@ int main(int argc, char **argv) {
     Uint64 last = SDL_GetTicksNS(), accumulator = 0;
     const Uint64 frame_ns = 1000000000ull / 60;
     bool running = true;
+    /* The debug menu's view of the engine state. */
+    static DebugMenu debug;
+    bool paused = false, step_once = false, chord_before = false;
+    bool debug_moves[5] = {false};
+    int debug_hp = soma.hp, debug_max_hp = soma.max_hp, debug_enemy = 0;
+    int debug_area = room.area, debug_room = room.number;
+    int enemy_ids[ENEMY_KINDS], enemy_count = 0;
+    const char *enemy_labels[ENEMY_KINDS];
+    for (int id = 0; id < ENEMY_KINDS; ++id)
+        if (combat.kinds[id]) {
+            enemy_ids[enemy_count] = id;
+            enemy_labels[enemy_count++] = enemy_names[id];
+        }
+    debug_menu_clear(&debug);
+    debug_menu_toggle(&debug, "Paused", &paused, DEBUG_PAUSE);
+    debug_menu_action(&debug, "Step one frame", DEBUG_STEP);
+    debug_menu_toggle(&debug, "Hitboxes", &show_hitboxes, DEBUG_HITBOXES);
+    debug_menu_value(&debug, "HP", &debug_hp, 1, 9999, 1, NULL, DEBUG_HP);
+    debug_menu_value(&debug, "Max HP", &debug_max_hp, 1, 9999, 1, NULL, DEBUG_MAX_HP);
+    debug_menu_action(&debug, "Refill HP", DEBUG_REFILL);
+    debug_menu_value(&debug, "ATK (diagnostic)", &player_stats.atk, 0, 999, 1, NULL, DEBUG_ATK);
+    debug_menu_value(&debug, "DEF (diagnostic)", &player_stats.def, 0, 999, 1, NULL, DEBUG_DEF);
+    for (int i = 0; i < 5; ++i)
+        debug_menu_toggle(&debug, debug_move_labels[i], &debug_moves[i], DEBUG_MOVES);
+    if (enemy_count) {
+        debug_menu_value(&debug, "Enemy", &debug_enemy, 0, enemy_count - 1, 1, enemy_labels,
+                         DEBUG_ENEMY);
+        debug_menu_action(&debug, "Spawn enemy ahead", DEBUG_SPAWN);
+    }
+    debug_menu_action(&debug, "Remove all enemies", DEBUG_CLEAR);
+    debug_menu_value(&debug, "Area", &debug_area, 0, 99, 1, NULL, DEBUG_AREA);
+    debug_menu_value(&debug, "Room", &debug_room, 0, 999, 1, NULL, DEBUG_ROOM);
+    debug_menu_action(&debug, "Teleport", DEBUG_TELEPORT);
+    debug.open = debug_at_start;
+    uint16_t menu_previous = 0;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             gba_input_handle_event(&gamepad, &event);
             if (event.type == SDL_EVENT_QUIT) running = false;
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) running = false;
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                event.key.key == SDLK_F1)
+                debug.open = !debug.open;
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F2 && paused)
+                step_once = true;
+        }
+        bool chord = gba_input_debug_chord(&gamepad);
+        if (chord && !chord_before) debug.open = !debug.open;
+        chord_before = chord;
+        if (debug.open) {
+            /* Mirror the engine before reading the menu's input. */
+            debug_hp = soma.hp;
+            debug_max_hp = soma.max_hp;
+            for (int i = 0; i < 5; ++i) debug_moves[i] = soma.moves & debug_move_bits[i];
+            uint16_t menu_held = chord ? 0 : player_buttons(&gamepad), pressed;
+            if (capture_path) {
+                /* Scripted menu edges: the next mask of --debug-input. */
+                char *end = NULL;
+                pressed = debug_input && *debug_input
+                              ? (uint16_t)strtoul(debug_input, &end, 0) : 0;
+                if (end) debug_input = *end == ',' ? end + 1 : end;
+            } else {
+                pressed = (uint16_t)(menu_held & ~menu_previous);
+            }
+            switch (debug_menu_input(&debug, pressed)) {
+            case DEBUG_STEP: step_once = true; break;
+            case DEBUG_HP: soma.hp = (int16_t)(debug_hp > soma.max_hp ? soma.max_hp : debug_hp); break;
+            case DEBUG_MAX_HP:
+                soma.max_hp = (int16_t)debug_max_hp;
+                if (soma.hp > soma.max_hp) soma.hp = soma.max_hp;
+                player_stats.max_hp = debug_max_hp;
+                break;
+            case DEBUG_REFILL: soma.hp = soma.max_hp; break;
+            case DEBUG_MOVES:
+                soma.moves = 0;
+                for (int i = 0; i < 5; ++i)
+                    if (debug_moves[i]) soma.moves |= debug_move_bits[i];
+                break;
+            case DEBUG_SPAWN:
+                if (!debug_spawn(&room, &combat, &soma, &layer, enemy_ids[debug_enemy]))
+                    fprintf(stderr, "Debug spawn failed\n");
+                break;
+            case DEBUG_CLEAR:
+                for (size_t i = 0; i < room.entity_count; ++i)
+                    if (room.entities[i].kind == ARIA_KIND_ENEMY) room.entities[i].enemy.removed = true;
+                break;
+            case DEBUG_TELEPORT:
+                if (debug_teleport(renderer, &room, &background, &soma, &library.set, debug_area,
+                                   debug_room)) {
+                    layer = room_layer(&room);
+                    follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
+                }
+                break;
+            default: break;
+            }
+            menu_previous = menu_held;
+        } else {
+            menu_previous = 0xFFFF;     /* no stray edge when the menu opens */
         }
         Uint64 now = SDL_GetTicksNS();
         accumulator += capture_path ? frame_ns : now - last;
         last = now;
         if (accumulator > frame_ns * 5) accumulator = frame_ns * 5;
+        /* The menu and the pause freeze the game (not in captures). */
+        if ((debug.open || paused) && !capture_path) {
+            accumulator = step_once ? frame_ns : 0;
+            step_once = false;
+        }
         while (accumulator >= frame_ns) {
             accumulator -= frame_ns;
             uint16_t held = capture_path ? (uint16_t)capture_buttons
                                          : player_buttons(&gamepad);
             if (capture_path && repeat > 0 && step % repeat == repeat - 1) held = 0;
+            if (debug.open && !capture_path) held = 0;     /* a menu frame step */
             if (forced.active) held = forced.held;
             forced.active = false;
             aos_soma_update(&soma, &layer, held, (uint16_t)(held & ~previous));
@@ -1044,6 +1250,7 @@ int main(int argc, char **argv) {
                 SDL_RenderRect(renderer, &box);
             }
         }
+        draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);
             bool saved = shot && SDL_SaveBMP(shot, capture_path);

@@ -149,10 +149,14 @@ acceleration term, `+0x14` an airborne frame counter, `+0x10` state flags):
 | Air gravity | `sub_08018B98` each airborne frame | +0.125 while vy <= 0x1FFF; then +0.1015625; when falling vy += `+0x54`, `+0x54` += 0.015625 up to 0.0625 |
 | Fall cap | `sub_0801B0D8` | vy <= 8.0 |
 
+| Air steering | `sub_0801B0D8` airborne branch: held right (`0x10`) / left (`0x20`) in `gEwramData + 0x1C` | vx = +/-1.5 (4.0 when flag `0x400` of `+0x13260` is set); otherwise `+0x50` = -/+0.25 per frame until vx reaches 0 |
+| Probable backdash | `sub_0801B0D8`, sound `0xBD`, flags `0x20000420` | vx = -3.125 with `+0x50` = +/-0.09375 per frame |
+| Damage recoil | `sub_0801B0D8`, state `0x0F`, source X at `+0x131D8` | vx = 1.5 away from the source, vy = -2.0, `+0x54` = -0.0625, `+0x50` = -/+0.0078125 |
+
 The flag `0x400000` halves most impulses and is probably underwater
-movement; this and the jump-release rule are still unconfirmed. Horizontal
-walking, dash and backdash speeds have not been traced yet (candidate
-constants in `sub_0801B0D8` include 1.5, 3.75 and -3.125).
+movement; this and the jump-release rule are still unconfirmed. Ground walking
+and the grounded state routines (`sub_08016DE4`, `sub_080168F0`) have not
+been traced yet.
 
 The next research step is the player update routine `sub_0801B0D8`: which of
 these probes it calls, with which body offsets, and Soma's movement constants.

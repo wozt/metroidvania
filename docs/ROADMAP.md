@@ -1,5 +1,10 @@
 # Roadmap
 
+Every milestone follows the reconstruction principle of
+[`ARCHITECTURE.md`](ARCHITECTURE.md#reconstruction-principle-permanent-architectural-constraint):
+native resources are rebuilt from the ROMs, native behavior is ported from the
+decompilations, and project changes are independent overlays.
+
 ## P0 - Editor stabilization and systematic render audit
 
 - keep the vertical workspace navigation and eliminate GTK lifecycle regressions;

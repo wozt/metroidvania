@@ -1679,3 +1679,13 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: CTest passed 17/17. A capture shot the Brinstar 033
   hatch, walked into Brinstar 31 and on to Brinstar 20, where Samus grabbed a
   ledge after the transition.
+
+## Patch 0198 - reconstruction principle documented
+
+- `docs/ARCHITECTURE.md` now defines the permanent constraint: the ROMs are the
+  source of truth, native resources are rebuilt automatically, native behavior
+  is ported from decompilation evidence, and editor modifications, project data,
+  gameplay extensions, character adapters and shared systems are separate,
+  non-destructive layers. It states the target pipeline and separates what
+  exists, what is experimental and what is not implemented. README and the
+  roadmap link to it; no tool was restructured.

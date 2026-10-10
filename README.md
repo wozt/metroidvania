@@ -10,6 +10,12 @@ are verified local-ROM importers, native room research tools, a Zero Mission
 metatile workspace, world metadata, and the campaign design baseline. Removed
 simulation and emulation prototypes are not part of the active architecture.
 
+The long-term goal is a game rebuilt automatically from the two ROMs, with the
+project's editor overlays and new mechanics applied as separate layers. The
+principle, its layers and the target pipeline are defined in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#reconstruction-principle-permanent-architectural-constraint);
+most of that pipeline is not implemented yet.
+
 ## Repository rules
 
 - Supply legally obtained USA ROMs locally under `roms/`.

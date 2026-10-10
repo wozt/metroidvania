@@ -9,9 +9,99 @@ story events, cutscenes, party state and cross-world progression.
 
 Neither native gameplay engine is complete. The active repository contains
 source-data reconstruction and editor infrastructure plus an experimental SDL3
-Zero Mission room runtime. That runtime validates collision movement and native
-animation selection, but does not yet implement combat, entities or a complete
-room lifecycle. It is not a simulated substitute or an emulated frontend.
+Zero Mission room runtime. That runtime reproduces Samus's movement, weapons,
+native collision types, doors and hatches, but has no enemies, events or
+complete room lifecycle yet. It is not a simulated substitute or an emulated
+frontend.
+
+## Reconstruction principle (permanent architectural constraint)
+
+This section is the reference for how MetroidVania is meant to be built. It
+describes a target; the "Current state" list says what exists today.
+
+### The ROMs are the source of truth
+
+The player supplies legally obtained *Metroid: Zero Mission* and *Castlevania:
+Aria of Sorrow* USA ROMs. The finished software must, without modifying them:
+
+1. verify the ROMs and identify supported versions;
+2. extract and rebuild every native resource that can be recovered faithfully:
+   maps, tiles, sprites, animations, palettes, collision, doors, objects,
+   enemies, events, audio;
+3. run both worlds through re-implemented native engines;
+4. apply the project's editor modifications on top of that reconstruction;
+5. apply MetroidVania-specific behaviors and mechanics;
+6. produce one coherent, playable game.
+
+Nothing that can be reconstructed from a ROM is recreated by hand. Extraction
+recovers *data* only: native *behavior* (physics, AI, pose logic, event
+scripts) is re-implemented from evidence in the pinned decompilations and the
+ROMs, and each port names the routine it reproduces. Data extraction and
+engine reconstruction are separate concerns and are tracked separately.
+
+### Layers
+
+Content and behavior are resolved as ordered, independent layers:
+
+| Layer | Origin | Ownership |
+|---|---|---|
+| Native resources | rebuilt from the ROMs | private generated cache, never committed, never edited |
+| Native engines | MZM and Aria kernels ported from the decompilations | project source code |
+| Project data | MetroidVania story, links, crossover content | tracked project files |
+| Editor overlays | user modifications of native or project data | versioned project files |
+| Gameplay extensions | new mechanics grafted onto one engine | project source code |
+| Character adapters | Samus in Aria rules, Soma in MZM rules | project source code |
+| Shared systems | input, saves, story events, cutscenes, party, travel | project source code |
+
+Overlays are non-destructive: moving an enemy records only the new placement
+while the native one stays available; adding an event complements native
+events; overriding a native property never alters the source record; removing
+an overlay restores native content or behavior. Overlays may target data and,
+through declared extension points, behavior. They must be versioned,
+validated, reproducible and independent of cache paths.
+
+### Two engines, shared infrastructure
+
+The Zero Mission engine keeps Metroid physics, collision, room, enemy and
+event handling; the Aria engine keeps Castlevania's. They share tools,
+interfaces and common systems but are not merged into a generic engine. New
+mechanics attach to the engine they belong to without degrading its fidelity,
+and each character runs under the active world's rules with its own
+abilities through an explicit adapter.
+
+### Target reconstruction pipeline
+
+```text
+ROMs -> verification -> native extraction -> data reconstruction
+     -> overlay application -> engine initialization -> playable game
+```
+
+Requirements: complete rebuild from a clean installation; incremental rebuilds;
+generated caches that are never the source of truth; explicit dependencies
+between resources; stable references to native elements (for example
+`mzm:brinstar:033`, native door and table indices, decompilation symbols) so
+overlays never depend on cache paths; validation of overrides with
+incompatibility detection; strict separation of redistributable project files
+from locally extracted proprietary data; deterministic output for identical
+ROMs, engine versions and overlays.
+
+This is a direction for every new development, not a request for a rewrite:
+existing tools are extended toward it as real needs appear.
+
+### Current state
+
+- Implemented: ROM fingerprint checks; deterministic generators for Samus
+  sprites/palettes/projectiles, Soma animations and every MZM runtime room
+  (background, Clipdata types, doors, hatches) under `assets/extracted/`;
+  stable native room identifiers and per-room private override documents in the
+  editor; `scripts/check_no_proprietary.py` guarding the repository.
+- Experimental: the Zero Mission runtime (Samus, weapons, collision, doors) and
+  the editor's project room documents, which already store overrides
+  separately from native data but have no ROM or engine encoder yet.
+- Not implemented: a single orchestrated rebuild command, incremental
+  dependency tracking, overlay application inside the engines, behavior
+  extension points, the Aria engine, character adapters and shared runtime
+  systems.
 
 ## Active C components
 

@@ -7,8 +7,8 @@ from scripts.mzm_samus_export_0150 import parse_nm_sizes, frame_metadata
 class SamusExport0150Tests(unittest.TestCase):
     def test_accepts_exact_sized_symbols(self):
         entries = parse_nm_sizes(
-            "08248744 00000040 R sSamusAnim_PowerSuit_Right_Standing\\n"
-            "08248034 000000a0 R sSamusAnim_PowerSuit_Right_Running\\n")
+            "08248744 00000040 R sSamusAnim_PowerSuit_Right_Standing\n"
+            "08248034 000000a0 R sSamusAnim_PowerSuit_Right_Running\n")
         self.assertEqual(entries["sSamusAnim_PowerSuit_Right_Standing"], (0x08248744, 64))
         self.assertEqual(entries["sSamusAnim_PowerSuit_Right_Running"][1] // 16, 10)
 

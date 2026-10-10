@@ -1948,3 +1948,11 @@ No automatic reciprocal link or native engine encoder is implemented.
   the immunity window. Death is not ported yet.
 - Validation on 2026-10-10: CTest passed 23/23 and the proprietary guard
   passed.
+
+## Patch 0216 - Soma death
+
+- Ported Soma's death (`sub_0801AF20`, state 16 `sub_0801B03C`): the death
+  animation, hurtbox off and the drift that stops; the runtime reports it
+  (the game-over mode is not ported). Checked with `--hp 5` in room 0/5.
+- Validation on 2026-10-10: CTest passed 23/23 and the proprietary guard
+  passed.

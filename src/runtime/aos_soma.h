@@ -170,7 +170,8 @@ enum {
     AOS_SOMA_ANIM_SLIDE_DOWNHILL = 0x2E, AOS_SOMA_ANIM_CEILING_CRASH = 0x25,
     AOS_SOMA_ANIM_DIVE_KICK = 0x26, AOS_SOMA_ANIM_DIVE_DROP = 0x27,
     AOS_SOMA_ANIM_HIT_FRONT = 0x0E, AOS_SOMA_ANIM_HIT_CROUCH = 0x0F,
-    AOS_SOMA_ANIM_HIT_BACK = 0x10, AOS_SOMA_ANIM_KNOCKED = 0x11
+    AOS_SOMA_ANIM_HIT_BACK = 0x10, AOS_SOMA_ANIM_KNOCKED = 0x11,
+    AOS_SOMA_ANIM_DEATH = 0x33
 };
 
 /* Spawn state of sub_08014548: grounded, animation-end flag set, no
@@ -191,7 +192,7 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held);
 void aos_soma_gravity(AosSoma *soma, const AosCollision *layer);
 /* sub_08021654 (normal mode): damage from an attack of power `attack`
  * against DEF `defence`, HP loss, and the pending hit the next update
- * reacts to. Returns the damage. Death (HP 0) is recorded, not handled. */
+ * reacts to (at 0 HP, the death of sub_0801AF20). Returns the damage. */
 int aos_soma_take_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
                       uint8_t knockback_type);
 /* sub_08014A04 on the BG1 layer only. */
@@ -200,8 +201,8 @@ AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
  * collision pass, state routine, wall probe selection, the pending
  * animation (+ 0x20) and the animation step. States 0 (normal, ground and
  * air), 1 (attack), 3 (slide), 4 (hard landing), 5 (high jump), 6
- * (ceiling crash), 7 (dive kick), 12 (hit) and 13 (knockback) are ported;
- * other states do nothing. */
+ * (ceiling crash), 7 (dive kick), 12 (hit), 13 (knockback) and 16 (death)
+ * are ported; other states do nothing. */
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed);
 

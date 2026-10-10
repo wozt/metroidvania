@@ -775,13 +775,47 @@ static void set_enemy_cooldown(AosSoma *soma, uint8_t frames) {
         }
 }
 
+/* sub_0801AF20: death. Soma falls back (animation 0x33, sound 0x197),
+ * his hurtbox is switched off and state 16 runs; the game-over mode
+ * (gEwramData + 0x42C |= 0x10) belongs to the caller. */
+static void die(AosSoma *soma) {
+    play(soma, AOS_SOMA_ANIM_DEATH, false, STAND);
+    soma->combat.hurt_off = true;
+    soma->flags &= 0xEFFFFE9Fu;
+    soma->pending_damage = 0;
+    soma->vx = soma->facing_left ? 0x10000 : (int32_t)0xFFFF0000;
+    soma->vy = (int32_t)0xFFFE8000;                 /* -1.5 */
+    soma->gravity_mod = 0x2000;
+    soma->state = 16;
+}
+
+/* Velocity plus acceleration, stopping on a sign change. */
+static void approach_zero(int32_t *v, int32_t *a) {
+    int32_t old = *v, updated = old + *a;
+    *v = updated;
+    if ((old < 0 && updated > 0) || (old >= 0 && updated < 0) || (old == 0 && updated > 0))
+        *v = *a = 0;
+}
+
+/* Case 16 (sub_0801B03C): drift to a halt; particles every 4 frames are
+ * not ported. */
+static void death_state(AosSoma *soma) {
+    soma->friction = soma->vx < 0 ? 0x200 : (int32_t)0xFFFFFE00;
+    approach_zero(&soma->vx, &soma->friction);
+    approach_zero(&soma->vy, &soma->gravity_mod);
+}
+
 /* sub_0801B0D8 (_0801B3C2 .. _0801B9C8): the reaction to a pending hit.
- * Death (sub_0801AF20), the curse and grab types and the 0x13260 & 0x20200
- * immunity are not ported. */
+ * The curse and grab types and the 0x13260 & 0x20200 immunity are not
+ * ported. */
 static void react_to_hit(AosSoma *soma) {
     if (!soma->pending_damage) return;
+    if (soma->hp <= 0) {
+        die(soma);
+        return;
+    }
     soma->pending_damage = 0;
-    if (soma->hp <= 0 || soma->pending_type > 1) return;
+    if (soma->pending_type > 1) return;
     bool from_right = soma->pending_source_x > soma->x;
     if (soma->pending_type == 0 && !(soma->flags & AOS_FLAG_AIRBORNE)) {
         /* Hit on the ground: a flinch, 50 frames of immunity, state 12. */
@@ -885,6 +919,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     case 7: dive_kick_state(soma, layer); break;
     case 12: hit_state(soma, layer); break;
     case 13: knockback_state(soma, layer, pressed); break;
+    case 16: death_state(soma); break;
     default: break;
     }
     select_wall_probes(soma);

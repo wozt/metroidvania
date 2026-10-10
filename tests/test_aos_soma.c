@@ -543,10 +543,18 @@ static void hit_tests(void) {
     frame(&soma, 0, 0);
     assert(soma.state == 13 && soma.vx > 0 && soma.anim.id == AOS_SOMA_ANIM_HIT_BACK);
 
-    /* sub_08021654: (6 * 4 - 4 * 2) / 2 = 8; HP never drops below 0. */
+    /* sub_08021654: (6 * 4 - 4 * 2) / 2 = 8; HP never drops below 0, and
+     * Soma dies: animation 0x33, no hurtbox, a drift that stops. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
     soma.hp = 5;
+    soma.max_hp = 320;
     aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(90), 0);
     assert(soma.hp == 0);
+    frame(&soma, 0, 0);
+    assert(soma.state == 16 && soma.anim.id == AOS_SOMA_ANIM_DEATH && soma.combat.hurt_off);
+    assert(soma.vx == -0x10000 + 0x200 && soma.vy == -0x18000 + 0x2000);
+    for (int i = 0; i < 200; ++i) frame(&soma, AOS_KEY_JUMP | AOS_KEY_RIGHT, AOS_KEY_JUMP);
+    assert(soma.state == 16 && soma.vx == 0 && soma.vy == 0);
     memset(cells, 0, sizeof(cells));
 }
 

@@ -854,6 +854,7 @@ int main(int argc, char **argv) {
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     uint16_t previous = 0;
     AosForcedInput forced = {0};
+    bool announced_death = false;
     long step = 0;
     Uint64 last = SDL_GetTicksNS(), accumulator = 0;
     const Uint64 frame_ns = 1000000000ull / 60;
@@ -877,6 +878,11 @@ int main(int argc, char **argv) {
             aos_soma_update(&soma, &layer, held, (uint16_t)(held & ~previous));
             previous = held;
             ++step;
+            if (soma.state == 16 && !announced_death) {
+                /* The game-over mode (0x42C |= 0x10) is not ported. */
+                printf("Soma died (frame %ld)\n", step);
+                announced_death = true;
+            }
             if (aos_room_outside(&layer, room.width_screens, room.height_screens, soma.x >> 16,
                                  soma.y >> 16)) {
                 if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;

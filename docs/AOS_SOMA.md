@@ -496,8 +496,13 @@ vy = -2.0, `+0x54` = -0.0625, flags `0x82`, sound 0x195, state 13. State 12
 animation ends. State 13 (`sub_080199A0`) brakes by 0.0625 in bit-3 cells
 and ends when Soma is no longer airborne (his landing is hard because of
 flag 0x80, so he crouches in state 4) or, in such cells, when the animation
-ends; with `0x13260 & 0x400000` a jump press recovers in the air. Death
-(`sub_0801AF20`), the curse (`0x13270 & 4`), types 2 and 3 and the
+ends; with `0x13260 & 0x400000` a jump press recovers in the air. At 0 HP
+the reaction is the death `sub_0801AF20`: animation 0x33, hurtbox off
+(`+0x72 |= 4`), vx = -1.0 when facing right (+1.0 when facing left), vy =
+-1.5, `+0x54` = +0.125, sound 0x197, state 16; `sub_0801B03C` then brakes vx
+by 0.0078 and vy by `+0x54`, each stopping at zero (no gravity), and spawns
+particles every 4 frames. The game-over mode (`0x42C |= 0x10`, set by
+`sub_08021654`), the curse (`0x13270 & 4`), types 2 and 3 and the
 `0x13260 & 0x20200` immunity are not ported. Soma registers as
 type 1 with the attack box off; his hurtbox changes with his animations:
 standing -6, -32, 12 x 28 (`0x080E12F8`), low -5, -16, 12 x 14
@@ -519,7 +524,7 @@ overlaps, slots and formulas; the new-game stats are not traced, so the
 runtime takes ATK, DEF and HP as diagnostic options.
 
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: the player's death, more enemies (damage through the weapon hitboxes), the
+(README). Next steps: more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss
 doors (object 0x02 deletes itself once boss bit `0x37E >> param1` is set) and
 the save-room objects (0x1C save point, 0x1D walls closing the side opposite

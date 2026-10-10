@@ -416,20 +416,99 @@ static float move_axis(const Room *room, float start, float other,
 }
 
 #ifndef FUSION_RUNTIME_TEST
+/* PATCH_0163_PRIVATE_COMPOSITIONS: opt-in, experimental source frames.
+ * This is visual-only; original platform collision is unchanged.
+ * C = crouch preview, F = fire while crouched, E = aim diagonally while running.
+ */
+#define COMPOSED_COUNT 3
+#define COMPOSED_MAX_FRAMES 10
+typedef struct {
+    SDL_Texture *textures[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
+    unsigned int durations[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
+    int widths[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
+    int heights[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
+} ComposedAnimations;
+
+static const int composed_counts[COMPOSED_COUNT] = {10, 5, 3};
+static const char *composed_names[COMPOSED_COUNT] = {
+    "run_diagonal_up_right", "midair_forward_right", "shoot_crouch_right"
+};
+
+static void composed_free(ComposedAnimations *a) {
+    for (int group=0; group<COMPOSED_COUNT; ++group)
+        for (int i=0; i<composed_counts[group]; ++i)
+            if (a->textures[group][i]) SDL_DestroyTexture(a->textures[group][i]);
+}
+
+static bool composed_load(SDL_Renderer *renderer, const char *dir,
+                          ComposedAnimations *a) {
+    for (int group=0; group<COMPOSED_COUNT; ++group) {
+        char path[4096];
+        int n=snprintf(path,sizeof path,"%s/composed/%s/durations.txt",
+                       dir,composed_names[group]);
+        if (n<0 || (size_t)n>=sizeof path) return false;
+        FILE *f=fopen(path,"rb");
+        if (!f) { fprintf(stderr,"Missing composition timings: %s\n",path);return false; }
+        bool valid=true;
+        for (int i=0; i<composed_counts[group]; ++i) {
+            unsigned int value=0;
+            if (fscanf(f,"%u",&value)!=1 || value<1 || value>255) {
+                valid=false; break;
+            }
+            a->durations[group][i]=value;
+        }
+        char trailing;
+        if (valid && fscanf(f," %c",&trailing)!=EOF) valid=false;
+        if (fclose(f)!=0 || !valid) {
+            fprintf(stderr,"Invalid composition timings: %s\n",path);
+            return false;
+        }
+        for (int i=0; i<composed_counts[group]; ++i) {
+            n=snprintf(path,sizeof path,"%s/composed/%s/%03d.bmp",
+                       dir,composed_names[group],i);
+            if (n<0 || (size_t)n>=sizeof path) return false;
+            SDL_Surface *surface=SDL_LoadBMP(path);
+            if (!surface) { fprintf(stderr,"Missing composed frame %s\n",path);return false; }
+            int w=surface->w,h=surface->h;
+            if (w<1 || w>512 || h<1 || h>512) {
+                SDL_DestroySurface(surface);return false;
+            }
+            a->textures[group][i]=SDL_CreateTextureFromSurface(renderer,surface);
+            SDL_DestroySurface(surface);
+            if (!a->textures[group][i]) return false;
+            a->widths[group][i]=w;
+            a->heights[group][i]=h;
+            SDL_SetTextureScaleMode(a->textures[group][i],SDL_SCALEMODE_NEAREST);
+            SDL_SetTextureBlendMode(a->textures[group][i],SDL_BLENDMODE_BLEND);
+        }
+    }
+    return true;
+}
+
+static int composed_select(RuntimeMovementState state, int facing,
+                           bool diagonal, bool crouch, bool fire) {
+    if (facing!=1) return -1; /* Only verified right-facing compositions. */
+    if (crouch && fire && state==RUNTIME_IDLE) return 2;
+    if ((state==RUNTIME_JUMPING || state==RUNTIME_FALLING) && !diagonal) return 1;
+    if (state==RUNTIME_RUNNING && diagonal) return 0;
+    return -1;
+}
+
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
-    const char *samus_dir=NULL; bool check=false;
+    const char *samus_dir=NULL, *composed_dir=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
         else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
         else if (!strcmp(argv[i],"--samus-sprites") && !samus_dir && i+1<argc) samus_dir=argv[++i];
+        else if (!strcmp(argv[i],"--samus-composed") && !composed_dir && i+1<argc) composed_dir=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
             fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
-    if (!room_path || (check && (background || samus_dir))) {
+    if (!room_path || (check && (background || samus_dir || composed_dir))) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
         return 2;
     }
@@ -463,6 +542,7 @@ int main(int argc, char **argv) {
     SDL_Surface *surface=NULL; SDL_Texture *texture=NULL;
     int rc=1;
     SamusFrames samus_frames = {0};
+    ComposedAnimations composed_frames = {0};
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
     if (background) {
         surface=SDL_LoadBMP(background);
@@ -476,6 +556,10 @@ int main(int argc, char **argv) {
     }
     if (samus_dir && !samus_frames_load(renderer,samus_dir,&samus_frames)) {
         fprintf(stderr,"Samus sprite loading failed; aborting instead of showing incomplete art.\n");
+        goto cleanup;
+    }
+    if (composed_dir && !composed_load(renderer,composed_dir,&composed_frames)) {
+        fprintf(stderr,"Composed Samus sprite loading failed.\n");
         goto cleanup;
     }
     float px=16,py=16, pw=12,ph=16;
@@ -497,6 +581,7 @@ int main(int argc, char **argv) {
            px, py, blocked(room, px, py+1.f, pw, ph) ? "yes" : "no");
     printf("Controls: Left/Right or A/D = move; Space/Up/W = jump; Escape = exit. ");
     printf("Experimental platformer physics; only project code-1 solids block.\n");
+    if (composed_dir) printf("Compositions: E=diagonal run, C+F=crouch shooting, jump=straight midair (right facing).\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
     const float fixed_step=1.f/120.f;
@@ -568,7 +653,20 @@ int main(int argc, char **argv) {
             SDL_FRect dst={viewport.x,viewport.y,src.w*scale,src.h*scale};
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
-        if (samus_dir) {
+        int selected=composed_dir ? composed_select(movement_state,facing,
+            keys[SDL_SCANCODE_E],keys[SDL_SCANCODE_C],keys[SDL_SCANCODE_F]) : -1;
+        if (selected>=0) {
+            Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
+            unsigned int elapsed_frames=(unsigned int)(elapsed_ms*60u/1000u);
+            int frame=samus_timeline_frame(composed_frames.durations[selected],
+                                           composed_counts[selected],elapsed_frames);
+            SDL_Texture *sprite=composed_frames.textures[selected][frame];
+            float sw=(float)composed_frames.widths[selected][frame];
+            float sh=(float)composed_frames.heights[selected][frame];
+            SDL_FRect dest={viewport.x+(px+pw*.5f-cx-sw*.5f)*scale,
+                            viewport.y+(py+ph-cy-sh)*scale,sw*scale,sh*scale};
+            SDL_RenderTexture(renderer,sprite,NULL,&dest);
+        } else if (samus_dir) {
             int group=samus_animation_group(movement_state);
             const int counts[]={4,10,8};
             Uint64 elapsed_ms = SDL_GetTicks() - animation_start;
@@ -595,6 +693,7 @@ int main(int argc, char **argv) {
     }
     rc=0;
 cleanup:
+    composed_free(&composed_frames);
     samus_frames_free(&samus_frames);
     if (texture) SDL_DestroyTexture(texture);
     if (surface) SDL_DestroySurface(surface);

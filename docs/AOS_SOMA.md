@@ -582,6 +582,46 @@ blinking every frame for 49 + 25 frames), the `+0x5A` palette bits, the
 particles, `sub_080683BC`, the hit stun and state 3 (global `0x8E & 0x40`)
 are not ported.
 
+Zombie soldier (enemy 0x0C, `EnemyZombieSoldierCreate` /
+`EnemyZombieSoldierUpdate`): tiles `0x081CC024`, palette `0x0820AA48`, frames
+`0x082215C4` (`sub_08093100`); animations 0 walk, 1 close attack, 2 throw,
+3 death. The ROM enemy table at `0x080E9644` maps ids to these routines
+(0x02 skeleton, 0x04 axe armor, 0x05 skull archer, 0x0C zombie soldier...).
+Create: walk animation, one step, stats, a type-8 collision block with the
+contact callback `sub_0809314C` (the same type-0 record as `sub_0806E1B8`)
+and the hit callback `sub_08092B38`, then the floor snap. The update runs
+inside the activity window of `sub_0806CC20` and ends with the animation step
+and `sub_0806E314`. State 0 (`sub_080928FC`): at the start of walk frames 1
+and 5 the soldier faces the player (`sub_0806CF2C`); with him in the
+80 x 70 box `sub_0806CFFC(x - 40, y - 64)` and `(random & 0x7F) <= 0x3F` it
+attacks (state 1, animation 1, sound 0x85 at frame 2); otherwise, with
+`(random & 0x7F) <= 0x1F` and him in the 220 x 70 box at `x - 110`, it
+throws (state 1, step 0xA, animation 2); otherwise vx = 0.25 toward its
+facing, vy = 1.0, `+0x54` = 0x2800. Frames 0 and 4 stop it; it moves with
+the walker collision `sub_08069A00` (the zombie's arguments). Both attacks
+return to walking when their animation ends. The throw faces the player and,
+at the start of frame 10, creates a grenade (`sub_08092BC0`) 16 pixels ahead
+and 37 up with vy = -2.0, gravity 0x1800 and vx = (player x - its x) / 44,
+at most 1.25 toward the facing; it shows sprite frame 18 of the soldier's
+list (entity `+0x65`), carries the soldier's contact power and a 4 x 4 box
+for both roles. The grenade (`sub_08092CCC`) moves with `sub_08069770`
+(walls at its point by the sign of vx, the ceiling at y - 4, the floor, which
+sets vy to the third of vy before gravity, which the grenade then negates):
+the first floor hit bounces (sound 0x11B), a second one or a ceiling makes it
+explode (state 2, sound 0x76); beyond margin entry 2 of `sub_0806D128` it is
+deleted. Touching Soma (`sub_08093098`: element 2, knockback type 1) or
+being struck by a weapon (`sub_080930E0`, no damage) makes a flying grenade
+burst harmlessly (state 1, hidden, 7 frames). The explosion (state 2, hidden)
+sets its attack box to 2 + t / 2 pixels around it while t <= 14, switches the
+hurtbox off, collides while t <= 18 and ends after t = 24. Death
+(`sub_08092B38`): sound 0x70, animation 3, 40 frames, state 2 and the
+generic death `sub_0806AEAC`; the gibs of `sub_08092FCC`, the explosion
+particles and state 3 are not ported. Framework corrections found on the
+way: starting an animation (`sub_0803F2C8`) clears `+0x59` bit 0, and
+`sub_080683BC` (rewards, not ported) sets `+0x3E` bit 1 at death, which makes
+`sub_0806E314` skip the collision pass, so a defeated zombie, soldier or bat
+can no longer be hit nor hurt.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
 (README). Next steps: more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss

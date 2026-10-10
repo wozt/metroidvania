@@ -25,7 +25,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 6 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 8 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 9 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -305,6 +305,14 @@ Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08069A00`, `aos:asm:asm/c
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Next action: Extend the generic enemy framework to further native enemies.
+
+[~] **`aos.enemies.zombie_soldier` — Zombie soldier and its grenade.** Walking, close attack, grenade throw, bounce, explosion box and death are ported; the gibs, explosion particles and sounds are not drawn or played.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08069770`, `aos:asm:asm/code/code_08090914.s:EnemyZombieSoldierCreate`, `aos:asm:asm/code/code_08090914.s:EnemyZombieSoldierUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080928FC`, `aos:asm:asm/code/code_08090914.s:sub_08092A28`, `aos:asm:asm/code/code_08090914.s:sub_08092B38`, `aos:asm:asm/code/code_08090914.s:sub_08092BC0`, `aos:asm:asm/code/code_08090914.s:sub_08092CCC`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie`.  
+Next action: Port the explosion particles of sub_0806D894 / sub_0806D644 and the gibs of sub_08092FCC.
 
 ### Bosses
 

@@ -9,7 +9,9 @@
  * EnemyZombieCreate / EnemyZombieUpdate, with its spawner records, the
  * walker collision sub_08069A00 and the generic death sub_0806AEAC) and the
  * blue crow (enemy 0x09, EnemyBlueCrowCreate / EnemyBlueCrowUpdate, with the
- * homing velocity of sub_080694B8). Facing flag 0x40 of + 0x58 means
+ * homing velocity of sub_080694B8) and the zombie soldier (enemy 0x0C,
+ * EnemyZombieSoldierCreate / EnemyZombieSoldierUpdate) with its grenade
+ * (sub_08092BC0 / sub_08092CCC and the projectile collision sub_08069770). Facing flag 0x40 of + 0x58 means
  * mirrored: enemy sprites face left by default. Combat: the frame boxes of
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
  * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
@@ -46,10 +48,20 @@ typedef struct {
     AosBox hurt[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES];
     AosBox attack[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES];
     uint8_t blink[40];      /* 0x08118CE0 & 1: hidden while dying */
-    int16_t margin_x, margin_y; /* 0x08118D08[4]: sub_0806D128 despawn margin */
+    /* 0x08118D08: the (x, y) screen margins of sub_0806D128(e, n). */
+    int16_t margins[7][2];
 } AosEnemyKind;
 
-enum { AOS_ENEMY_BAT = 0x00, AOS_ENEMY_ZOMBIE = 0x01, AOS_ENEMY_BLUE_CROW = 0x09 };
+enum {
+    AOS_ENEMY_BAT = 0x00,
+    AOS_ENEMY_ZOMBIE = 0x01,
+    AOS_ENEMY_BLUE_CROW = 0x09,
+    AOS_ENEMY_ZOMBIE_SOLDIER = 0x0C,
+};
+
+/* What an AosEnemy slot holds: the enemy itself or a child entity of its
+ * kind (sharing its sprites and record). */
+enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -72,6 +84,11 @@ typedef struct {
     bool attack_off;        /* + 0x72 bit 1 */
     bool cycle_done;        /* + 0x59 bit 0: the animation looped or ended */
     uint8_t hit_flash;      /* + 0x2D */
+    uint8_t role;           /* AOS_ROLE_* */
+    bool defeated;          /* + 0x3E bit 1, set at death by sub_080683BC */
+    int16_t static_frame;   /* sprite frame of a child (+ 0x65), or -1 */
+    bool own_boxes;         /* boxes set by code, not by the animation frame */
+    AosBox own_hurt, own_attack;
     AosEnemyStats stats;
     AosCombat combat;
     AosAnimState anim;
@@ -86,6 +103,8 @@ typedef struct {
     bool killed;
     bool spawn;             /* a zombie spawner created a zombie here */
     int32_t spawn_x, spawn_y;   /* room pixels */
+    bool spawn_child;       /* a child entity (child) to add to the room */
+    AosEnemy child;
 } AosHitReport;
 
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. The seed

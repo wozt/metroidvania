@@ -66,6 +66,10 @@ ENEMIES = {
                "frames": 0x082178B8},  # sub_0807B404 (EnemyZombieCreate 0x0807ABEC)
     "blue_crow": {"id": 0x09, "graphics": 0x081F4274, "palette": 0x0820BF10, "bank": 0,
                   "frames": 0x0824EC04},  # EnemyBlueCrowCreate 0x080C9A6C
+    # sub_08093100 (EnemyZombieSoldierCreate 0x08092868); its grenade
+    # (sub_08092BC0) shows sprite frame 18 of the same list (entity + 0x65).
+    "zombie_soldier": {"id": 0x0C, "graphics": 0x081CC024, "palette": 0x0820AA48, "bank": 0,
+                       "frames": 0x082215C4, "static_frames": (18,)},
 }
 SCREEN_MARGINS = 0x08118D08    # sub_0806D128: 7 (x, y) s16 margins
 WOODEN_DOOR = {
@@ -227,6 +231,17 @@ def produce(root: Path, rom_path: Path) -> dict:
                                                   frame["duration"], frame["mode"],
                                                   *box, *attack))))
             library.add(f"Enemy/{name}/anim_{number}", sprites)
+        # Single sprite frames shown by child entities (sub_0803B924 with a
+        # frame number at + 0x65), as one-frame sequences.
+        if entity.get("static_frames"):
+            tiles, sheet_width, _ = tile_sheet(rom, entity["graphics"])
+            colors = palette_bank(rom, entity["palette"], entity["bank"])
+            for frame_id in entity["static_frames"]:
+                pixels = render_frame(tiles, sheet_width,
+                                      frame_components(rom, entity["frames"], frame_id),
+                                      colors) or {(0, 0): (0, 0, 0)}
+                bmp, left, top = bmp_from_pixels(pixels)
+                library.add(f"Enemy/{name}/frame_{frame_id}", [(bmp, 1, left, top)])
     blink = _rom_slice(rom, DEATH_BLINK, 40, "death blink pattern")
     lines.append("blink\t" + "".join(str(b & 1) for b in blink))
     margins = struct.unpack("<14h", _rom_slice(rom, SCREEN_MARGINS, 28, "screen margins"))

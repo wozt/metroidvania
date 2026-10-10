@@ -28,7 +28,7 @@ static void zombie_tests(void) {
             kind.modes[a][f] = a == 3 ? 0 : 1;
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-5, -31, 8, 31};
         }
-    kind.margin_x = kind.margin_y = 48;
+    kind.margins[4][0] = kind.margins[4][1] = 48;
     const AosEnemyStats stats = {18, 9, 1, 0x0021, 0x0010};
 
     /* A zombie record snaps onto the floor and rises, facing the player. */
@@ -204,6 +204,121 @@ static void crow_tests(void) {
     assert(dying == 64 && crow.anim.id == 3 && crow.y == y0 + 64 * 0x8000);
 }
 
+static void soldier_tests(void) {
+    /* Floor at cell row 20 (top 160). */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t walk[] = {6, 6, 6, 6, 6, 6, 6, 6}, attack[] = {2, 7, 3, 5},
+                         throw_ticks[] = {4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 6, 6}, death[] = {200};
+    const AosAnimDef defs[4] = {{8, walk}, {4, attack}, {13, throw_ticks}, {1, death}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 13; ++f) {
+            kind.modes[a][f] = 2;
+            kind.hurt[a][f] = (AosBox){-5, -32, 8, 32};
+            kind.attack[a][f] = (AosBox){-18, -24, 8, 8};
+        }
+    kind.margins[2][0] = kind.margins[2][1] = 32;
+    const AosEnemyStats stats = {46, 14, 5, 0x0121, 0x0010};
+
+    /* Snapped to the floor; far from Soma it steps toward him at 0.25. */
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
+    soma.max_hp = soma.hp = 320;
+    AosEnemy z;
+    assert(aos_enemy_create(&z, AOS_ENEMY_ZOMBIE_SOLDIER, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(z.state == 0 && (z.y >> 16) == 159 && z.static_frame == -1);
+    int32_t x0 = z.x;
+    for (int i = 0; i < 60; ++i)
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(z.state == 0 && z.mirrored && z.x > x0 && z.x - x0 < 0x100000);
+
+    /* Within 220 x 70 but not 80 x 70: a grenade (one chance in four). */
+    soma.x = AOS_FIXED(z.x >> 16) + AOS_FIXED(84);
+    AosHitReport hit = {0};
+    int frames = 0;
+    while (z.state == 0 && frames < 100) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(z.state == 1 && z.step == 0xA && z.anim.id == 2);
+    while (!hit.spawn_child && frames < 300) {
+        hit = aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(hit.spawn_child && z.step == 0xB && z.anim.frame == 10);
+    AosEnemy g = hit.child;
+    assert(g.role == AOS_ROLE_GRENADE && g.static_frame == 18 && g.own_boxes);
+    assert(g.x == z.x + 0x100000 && g.y == z.y - 0x250000);
+    assert(g.vx == 0x14000 && g.vy == -0x20000 && g.ay == 0x1800);
+    /* The throw animation ends: back to walking. */
+    while (z.state == 1 && frames < 400) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(z.state == 0 && z.anim.id == 0);
+
+    /* Away from Soma, the grenade bounces once at a third of its speed,
+     * explodes on the second floor hit, and its blast grows then ends. */
+    soma.x = AOS_FIXED(600);
+    AosEnemy flying = g;
+    int bounces = 0, guard = 0;
+    int32_t vy_before = 0;
+    while (flying.state == 0 && guard++ < 300) {
+        vy_before = flying.vy;      /* sub_08092CCC passes vy / 3 before gravity */
+        aos_enemy_update(&flying, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        if (flying.state == 0 && flying.timer > bounces) {
+            ++bounces;
+            assert(flying.vy == -(vy_before / 3));
+        }
+    }
+    assert(bounces == 1 && flying.state == 2 && flying.timer == 2);
+    int blast = 0;
+    while (!flying.removed && blast < 100) {
+        aos_enemy_update(&flying, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++blast;
+        if (flying.timer == 14) assert(flying.own_attack.x == -9 && flying.own_attack.w == 18);
+    }
+    assert(flying.hidden && blast == 0x18 - 2);
+
+    /* A grenade reaching Soma knocks him back (type 1) and bursts. */
+    AosEnemy direct = g;
+    soma.x = direct.x;
+    soma.y = direct.y + AOS_FIXED(10);
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    hit = aos_enemy_update(&direct, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.soma_hit && hit.soma_damage == aos_player_damage(14, 4));
+    assert(soma.pending_type == 1 && direct.state == 1);
+    for (int i = 0; i < 7; ++i)
+        aos_enemy_update(&direct, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(direct.removed);
+
+    /* A killing blow: death animation 3, state 2 and the generic death. */
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.x = z.x;
+    soma.y = z.y + AOS_FIXED(20);
+    soma.facing_left = false;
+    z.hp = 1;
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    /* The camera follows it: off-screen, the activity window pauses it. */
+    int cam = (z.x >> 16) - 120;
+    hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, 0, never_zero);
+    assert(hit.killed && z.state == 2 && z.anim.id == 3 && z.timer <= 0x28);
+    int dying = 0;
+    while (!z.removed && dying < 100) {
+        aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, 0, never_zero);
+        ++dying;
+    }
+    assert(z.removed && dying == 0x28);
+}
+
 int main(void) {
     /* sub_080009E4 */
     assert(aos_sine(0) == 0 && aos_sine(0x4000) == 0x10000 && aos_sine(0xC000) == -0x10000);
@@ -226,7 +341,7 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x0C, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x0D, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 
@@ -325,6 +440,7 @@ int main(void) {
     assert(aos_player_damage(6, 10) == 2 && aos_player_damage(1, 50) == 1);
     zombie_tests();
     crow_tests();
+    soldier_tests();
     puts("aos_enemy: ok");
     return 0;
 }

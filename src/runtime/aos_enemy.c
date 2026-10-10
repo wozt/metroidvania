@@ -113,9 +113,17 @@ static bool move_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     return (int32_t)(isqrt((uint32_t)(dx * dx + dy * dy)) << 16) <= speed;
 }
 
+/* sub_0803F2C8: starting an animation also clears + 0x59 bit 0. */
 static void play_loop(AosEnemy *enemy, const AosAnimSet *anims, unsigned id, bool loop) {
     aos_anim_start(&enemy->anim, anims, id, loop);
     enemy->anim.id = (uint8_t)id;
+    enemy->cycle_done = false;
+}
+
+/* sub_0806D128(e, n): the screen position beyond margin entry n. */
+static bool outside_margins(const AosEnemyKind *kind, int n, int sx, int sy) {
+    int mx = kind->margins[n][0], my = kind->margins[n][1];
+    return sx < -mx || sx > mx + 0xF0 || sy < -my || sy > my + 0xA0;
 }
 
 static void play(AosEnemy *enemy, const AosAnimSet *anims, unsigned id) {
@@ -305,10 +313,12 @@ static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollis
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
-    if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW) return false;
+    if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
+        id != AOS_ENEMY_ZOMBIE_SOLDIER)
+        return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
-                        .param0 = param0, .param1 = param1};
+                        .param0 = param0, .param1 = param1, .static_frame = -1};
     /* sub_0800F1FC: mirrored when the record lies left of the player. */
     enemy->mirrored = enemy->x < soma->x;
     /* sub_0806B04C / sub_0806D244: stats and the type 8 collision block. */
@@ -317,6 +327,15 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     enemy->combat.type = AOS_TYPE_ENEMY;
     if (id == AOS_ENEMY_ZOMBIE) {
         zombie_create(enemy, soma, layer, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_ZOMBIE_SOLDIER) {
+        /* EnemyZombieSoldierCreate: walk animation 0, snapped to the floor,
+         * state 0 (state 3 under the global 0x8E & 0x40 is not ported). */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        snap_to_floor(enemy, layer);
+        enemy->state = 0;
         return true;
     }
     if (id == AOS_ENEMY_BLUE_CROW) {
@@ -363,6 +382,12 @@ static void frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind, AosBox 
                         AosBox *attack, bool *hurt_on, bool *attack_on) {
     unsigned a = enemy->anim.id, f = enemy->anim.frame;
     *hurt_on = *attack_on = false;
+    if (enemy->own_boxes) {
+        *hurt = enemy->own_hurt;
+        *attack = enemy->own_attack;
+        *hurt_on = *attack_on = true;
+        return;
+    }
     if (a >= AOS_ENEMY_MAX_ANIMS || f >= AOS_ENEMY_MAX_FRAMES || !kind->modes[a][f]) return;
     *hurt = kind->hurt[a][f];
     *attack = kind->attack[a][f];
@@ -404,8 +429,16 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                             aos_combat_cooldown(AOS_TYPE_WEAPON, soma->weapon.interval));
             /* sub_0802346C (weapon callback): the kick-hit flag. */
             soma->flags |= AOS_FLAG_KICK_HIT;
-            /* sub_0806E218 with sub_08021530(3) = ATK * 16 / 16. */
             report.enemy_hit = true;
+            if (enemy->role == AOS_ROLE_GRENADE) {
+                /* sub_080930E0: a struck grenade bursts harmlessly (sound
+                 * 0x76). */
+                enemy->state = 1;
+                enemy->step = 0;
+                enemy->timer = 0;
+                goto contact;
+            }
+            /* sub_0806E218 with sub_08021530(3) = ATK * 16 / 16. */
             report.enemy_damage = aos_enemy_damage(soma_atk, enemy->stats.defence,
                                                    enemy->stats.weak, enemy->stats.resist,
                                                    soma->weapon.flags);
@@ -413,10 +446,20 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
             if (enemy->hp <= 0) {
                 report.killed = true;
+                /* sub_080683BC (rewards, not ported) marks it defeated
+                 * (+ 0x3E bit 1): sub_0806E314 then skips its collisions. */
+                enemy->defeated = true;
                 if (enemy->id == AOS_ENEMY_BAT) {
                     /* sub_080AD6E4: the bat dies. */
                     enemy->state = 3;
                     enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER) {
+                    /* sub_08092B38: death animation 3 and the generic death
+                     * in state 2 (sound 0x70; sub_080683BC is not ported). */
+                    play_loop(enemy, kind->anims, 3, false);
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = 0;
                 } else if (enemy->id == AOS_ENEMY_BLUE_CROW) {
                     /* sub_080CA030: the crow dies. */
                     enemy->state = 2;
@@ -433,9 +476,20 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             }
         }
     }
-    /* The contact callback sub_0806E1B8 -> sub_08021654 (type 0). */
-    if (report.soma_hit)
+contact:
+    if (report.soma_hit && enemy->role == AOS_ROLE_GRENADE) {
+        /* sub_08093098: element 2, always a knockback (type 1); a flying
+         * grenade then bursts (sound 0x76). */
+        report.soma_damage = aos_soma_take_hit(soma, enemy->stats.contact, soma_def, enemy->x, 1);
+        if (enemy->state == 0) {
+            enemy->state = 1;
+            enemy->timer = 0;
+        }
+    } else if (report.soma_hit) {
+        /* The contact callbacks sub_0806E1B8 and the zombie soldier's
+         * sub_0809314C -> sub_08021654 (type 0). */
         report.soma_damage = aos_soma_take_hit(soma, enemy->stats.contact, soma_def, enemy->x, 0);
+    }
     return report;
 }
 
@@ -598,8 +652,7 @@ static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision
     if (z->state != 3) {
         /* sub_0806D128(e, 4): out of the screen margins, it vanishes. */
         int sx = (z->x >> 16) - cam_x, sy = (z->y >> 16) - cam_y;
-        if (sx < -kind->margin_x || sx > kind->margin_x + 0xF0 || sy < -kind->margin_y ||
-            sy > kind->margin_y + 0xA0)
+        if (outside_margins(kind, 4, sx, sy))
             zombie_vanish(z);
     }
     switch (z->state) {
@@ -612,7 +665,7 @@ static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision
     step_anim(z, kind->anims);
     z->attack_off = z->state == 0 && (z->step == 0 || z->step == 3);
     int sx = (z->x >> 16) - cam_x, sy = (z->y >> 16) - cam_y;
-    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+    if (!z->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
         report = collide(z, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     aos_combat_tick(&z->combat);
     return report;
@@ -735,6 +788,242 @@ static AosHitReport crow_update(AosEnemy *c, AosSoma *soma, const AosEnemyKind *
     return report;
 }
 
+/* sub_08069770: a projectile's motion with the point probes at its position:
+ * X (walls on either side, by the sign of vx), then Y (the ceiling at
+ * y + head and the floor, which sets vy to floor_vy). Returns 1 / 2 for a
+ * wall on the right / left, 8 for a ceiling, 4 for the floor. */
+static int projectile_collide(AosEnemy *e, const AosCollision *layer, int32_t floor_vy,
+                              int32_t head) {
+    int result = 0;
+    /* sub_0806D430(e, 8.0) */
+    e->vx += e->ax;
+    if (e->ax >= 0 ? e->vx > 0x80000 : e->vx < -0x80000) e->vx = e->ax >= 0 ? 0x80000 : -0x80000;
+    e->x += e->vx;
+    if (e->vx <= 0) {
+        int push = aos_wall_push_right(layer, e->x >> 16, e->y >> 16);
+        if (push) {
+            e->x += (int32_t)((uint32_t)push << 16);
+            result = 2;
+        }
+    }
+    if (e->vx >= 0) {
+        int push = aos_wall_push_left(layer, e->x >> 16, e->y >> 16);
+        if (push) {
+            e->x += (int32_t)((uint32_t)push << 16);
+            result |= 1;
+        }
+    }
+    /* sub_0806D460(e, 8.0) */
+    e->vy += e->ay;
+    if (e->ay >= 0 ? e->vy > 0x80000 : e->vy < -0x80000) e->vy = e->ay >= 0 ? 0x80000 : -0x80000;
+    e->y += e->vy;
+    int32_t head_y = e->y + head;
+    int depth = aos_ceiling_depth(layer, e->x >> 16,
+                                  head_y < 0 ? -((-head_y) >> 16) : head_y >> 16, 0, false);
+    if (depth) {
+        e->y += (int32_t)((uint32_t)depth << 16);
+        result |= 8;
+    }
+    depth = aos_floor_depth(layer, e->x >> 16, e->y >> 16, 0, false);
+    if (depth) {
+        e->y += (int32_t)((uint32_t)depth << 16);
+        e->vy = floor_vy;
+        result |= 4;
+    }
+    return result;
+}
+
+/* sub_08092BC0: a grenade at the soldier's position plus (dx, dy), thrown
+ * at (vx, vy) with gravity 0x1800; it shows sprite frame 18, carries the
+ * soldier's contact power and has a 4 x 4 box for both roles. */
+static AosEnemy make_grenade(const AosEnemy *soldier, int32_t dx, int32_t dy, int32_t vx,
+                             int32_t vy) {
+    AosEnemy g = {0};
+    g.id = soldier->id;
+    g.role = AOS_ROLE_GRENADE;
+    g.static_frame = 18;
+    g.x = soldier->x + dx;
+    g.y = soldier->y + dy;
+    g.vx = vx;
+    g.vy = vy;
+    g.ay = 0x1800;
+    g.mirrored = soldier->mirrored;
+    g.stats = soldier->stats;
+    g.hp = 1;
+    g.combat.type = AOS_TYPE_ENEMY;
+    g.own_boxes = true;
+    g.own_hurt = g.own_attack = (AosBox){-2, -2, 4, 4};
+    return g;
+}
+
+/* sub_08092CCC: flight (a floor hit bounces at a third of the speed, sound
+ * 0x11B; a second floor hit or a ceiling makes it explode, sound 0x76),
+ * the harmless burst of state 1 (7 frames) and the explosion of state 2,
+ * whose attack box grows to 2 + t / 2 pixels around it until t = 14, hits
+ * until t = 18 and ends at t = 24. The explosion particles of
+ * sub_0806D894 / sub_0806D644 / sub_0806D930 are not ported, so nothing is
+ * drawn while it bursts. */
+static AosHitReport grenade_update(AosEnemy *g, AosSoma *soma, const AosCollision *layer,
+                                   const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames, int soma_atk,
+                                   int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    switch (g->state) {
+    case 0: {
+        int flags = projectile_collide(g, layer, g->vy / 3, (int32_t)0xFFFC0000);
+        bool explode = false;
+        if (flags & 4) {
+            g->vy = -g->vy;
+            explode = ++g->timer > 1;
+        }
+        if (explode || (flags & 8)) {
+            g->state = 2;
+            break;
+        }
+        if (outside_margins(kind, 2, (g->x >> 16) - cam_x, (g->y >> 16) - cam_y)) {
+            g->removed = true;
+            return report;
+        }
+        report = collide(g, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        break;
+    }
+    case 1:
+        g->hidden = true;
+        if (++g->timer > 6) g->removed = true;
+        break;
+    case 2:
+        g->hidden = true;
+        ++g->timer;
+        if (g->timer <= 14) {
+            int r = 2 + g->timer / 2;
+            g->own_attack = (AosBox){(int8_t)-r, (int8_t)-r, (uint8_t)(2 * r), (uint8_t)(2 * r)};
+            g->combat.hurt_off = true;
+        }
+        if (g->timer > 0x17) {
+            g->removed = true;
+            return report;
+        }
+        if (g->timer <= 0x12) report = collide(g, soma, kind, weapon, weapon_frames, soma_atk,
+                                               soma_def);
+        else g->combat.attack_off = true;
+        break;
+    default:
+        break;
+    }
+    aos_combat_tick(&g->combat);
+    return report;
+}
+
+/* sub_0806CF2C: facing the player, mirrored when he is to the right. */
+static void soldier_face(AosEnemy *z, const AosSoma *soma) {
+    z->mirrored = (z->x >> 16) < (soma->x >> 16);
+}
+
+/* sub_08092A28 steps 1 / 0xB: back to walking. */
+static void soldier_walk_again(AosEnemy *z, const AosAnimSet *anims) {
+    play(z, anims, 0);
+    z->state = z->step = 0;
+    z->vx = 0;
+    z->vy = 0x10000;
+    z->ay = 0x2800;
+}
+
+/* sub_080928FC: at the start of walk frames 1 and 5 the soldier faces the
+ * player, then attacks him at close range (an 80 x 70 box ahead, one
+ * chance in two: animation 1), or throws a grenade (one chance in four,
+ * a 220 x 70 box: animation 2), or steps at 0.25 toward its facing; frames
+ * 0 and 4 stop it. It moves with the walker collision of the zombie. */
+static void soldier_walk(AosEnemy *z, const AosSoma *soma, const AosCollision *layer,
+                         const AosAnimSet *anims, uint32_t (*random)(void)) {
+    if (z->step != 0) return;
+    uint8_t frame = z->anim.frame;
+    bool frame_start = z->anim.tick == 0;
+    if ((frame == 1 || frame == 5) && frame_start) {
+        soldier_face(z, soma);
+        int32_t x = z->x >> 16, y = z->y >> 16;
+        if (player_near(soma, (int16_t)(x - 0x28), (int16_t)(y - 0x40), 0x50, 0x46) &&
+            (random() & 0x7F) <= 0x3F) {
+            z->state = 1;
+            z->step = 0;
+            play_loop(z, anims, 1, false);
+            return;
+        }
+        if ((random() & 0x7F) <= 0x1F &&
+            player_near(soma, (int16_t)(x - 0x6E), (int16_t)(y - 0x40), 0xDC, 0x46)) {
+            z->state = 1;
+            z->step = 0xA;
+            play_loop(z, anims, 2, false);
+            return;
+        }
+        z->vx = z->mirrored ? 0x4000 : -0x4000;
+        z->vy = 0x10000;
+        z->ay = 0x2800;
+    }
+    if ((frame == 0 || frame == 4) && frame_start) z->vx = 0;
+    walk_collide(z, layer, 0x10000, (int32_t)0xFFE00000, 0x80000, 8);
+}
+
+/* sub_08092A28: the close attack (sound 0x85 at frame 2) and the throw: at
+ * the start of frame 10 a grenade leaves 16 pixels ahead and 37 up, at
+ * vy -2.0 and vx = (player x - its x) / 44 frames, at most 1.25. */
+static void soldier_attack(AosEnemy *z, const AosSoma *soma, const AosAnimSet *anims,
+                           AosHitReport *report) {
+    switch (z->step) {
+    case 0:
+        z->step = 1;
+        break;
+    case 1:
+        if (z->cycle_done) soldier_walk_again(z, anims);
+        break;
+    case 0xA:
+        soldier_face(z, soma);
+        if (z->anim.frame == 10 && z->anim.tick == 0) {
+            int32_t offset = z->mirrored ? 0x100000 : (int32_t)0xFFF00000;
+            int32_t vx = (soma->x - (z->x + offset)) / 0x2C;
+            if (z->mirrored ? vx > 0x13FFF : vx <= (int32_t)0xFFFEC000)
+                vx = z->mirrored ? 0x14000 : (int32_t)0xFFFEC000;
+            report->spawn_child = true;
+            report->child = make_grenade(z, offset, (int32_t)0xFFDB0000, vx, (int32_t)0xFFFE0000);
+            z->step = 0xB;
+        }
+        break;
+    case 0xB:
+        if (z->cycle_done) soldier_walk_again(z, anims);
+        break;
+    default:
+        break;
+    }
+}
+
+/* EnemyZombieSoldierUpdate: within the activity window of sub_0806CC20,
+ * state 0 walks, 1 attacks, 2 dies (the gibs of sub_08092FCC are not
+ * ported), then the animation step and the on-screen collision pass. */
+static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollision *layer,
+                                   const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames, int soma_atk,
+                                   int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
+    AosHitReport report = {0}, spawned = {0};
+    int sx = (z->x >> 16) - cam_x, sy = (z->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    switch (z->state) {
+    case 0: soldier_walk(z, soma, layer, kind->anims, random); break;
+    case 1: soldier_attack(z, soma, kind->anims, &spawned); break;
+    case 2: generic_death(z, kind); break;
+    default: break;
+    }
+    if (!z->removed) {
+        step_anim(z, kind->anims);
+        sx = (z->x >> 16) - cam_x;
+        sy = (z->y >> 16) - cam_y;
+        if (!z->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+            report = collide(z, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        aos_combat_tick(&z->combat);
+    }
+    report.spawn_child = spawned.spawn_child;
+    report.child = spawned.child;
+    return report;
+}
+
 AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
@@ -748,6 +1037,12 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_BLUE_CROW)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (enemy->role == AOS_ROLE_GRENADE)
+        return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                              cam_x, cam_y);
+    if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER)
+        return soldier_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                              cam_x, cam_y, random);
     if (enemy->state == 3) {
         bat_die(enemy, kind);
         aos_combat_tick(&enemy->combat);
@@ -764,10 +1059,10 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     }
     /* sub_0806DF20: the animation step. */
     step_anim(enemy, anims);
-    /* sub_0806E314: on screen, the collision pass. */
+    /* sub_0806E314: on screen and not defeated, the collision pass. */
     sx = (enemy->x >> 16) - cam_x;
     sy = (enemy->y >> 16) - cam_y;
-    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+    if (!enemy->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
         report = collide(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     /* sub_080426B0 after the entity update. */
     aos_combat_tick(&enemy->combat);

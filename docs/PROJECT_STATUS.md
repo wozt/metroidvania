@@ -2326,3 +2326,35 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0231 - native zombie soldiers and grenades
+
+- Ported the zombie soldier (Aria enemy 0x0C): floor snap, walking in steps
+  of 0.25 that face the player at the start of walk frames 1 and 5, the close
+  attack (80 x 70 box, one chance in two) and the grenade throw (220 x 70
+  box, one chance in four), the return to walking at the end of each attack,
+  and the death in state 2. Identified the ids of the area-0 enemies from the
+  ROM enemy table (`0x080E9644`).
+- The grenade is a child entity sharing the soldier's sprites (frame 18) and
+  record: vx = distance / 44 frames capped at 1.25, vy = -2.0, gravity
+  0x1800, the projectile collision `sub_08069770`, one bounce at a third of
+  its speed, explosion on the second floor hit or a ceiling with an attack box
+  growing to 9 pixels around it, a harmless burst when it touches Soma
+  (always a knockback) or a weapon, and deletion beyond screen margin 2.
+  `aos_enemy_update` returns new child entities, which the runtime adds to
+  the room; code-driven boxes are drawn in red with `--hitboxes`.
+- Framework fixes from the traced code: starting an animation now clears
+  the cycle-done bit, and a defeated enemy (`+0x3E` bit 1, set at death) skips
+  the on-screen collision pass, so dying zombies, soldiers and bats can no
+  longer be hit again or hurt Soma. Screen margins are kept per entry.
+- The sprite exporter adds the soldier and single-frame sequences
+  (`Enemy/<name>/frame_<n>`) for child entities.
+- Checked in a capture of room 0/15: the soldiers walk on the lower floor, a
+  grenade flies, and Soma takes a 24-point knockback (state 13).
+- Not ported: the gibs, explosion particles and sounds, and state 3.
+- Tests: walking, the throw with its exact grenade parameters, the bounce
+  speed, the explosion box and duration, the grenade hitting Soma, and a
+  death that lasts exactly 40 frames while the weapon keeps overlapping it.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

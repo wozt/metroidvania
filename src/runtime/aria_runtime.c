@@ -36,9 +36,10 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 10     /* enemy ids 0 (bat), 1 (zombie) and 9 (blue crow) */
+#define ENEMY_KINDS 13     /* enemy ids 0 (bat), 1 (zombie), 9 (blue crow), 12 (zombie soldier) */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
-                                                     [9] = "blue_crow"};
+                                                     [9] = "blue_crow", [12] = "zombie_soldier"};
+#define ENEMY_STATIC_FRAMES 4  /* single sprite frames of child entities per kind */
 #define ARIA_KIND_ENEMY 1
 
 
@@ -382,8 +383,8 @@ typedef struct {
 } AriaCombat;
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
- * spawn once per room visit; the wooden door, the bat, the zombie and the
- * blue crow are ported. */
+ * spawn once per room visit; the wooden door, the bat, the zombie, the
+ * blue crow and the zombie soldier (with its grenades) are ported. */
 static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat) {
     int sound = 0;
@@ -409,6 +410,12 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 /* A spawned zombie leaves: its spawner's count drops. */
                 AosEnemy *spawner = &room->entities[e->spawner].enemy;
                 if (spawner->spawned_count) spawner->spawned_count--;
+            }
+            if (hit.spawn_child && room->entity_count < MAX_ENTITIES) {
+                /* A child entity of this kind (a zombie soldier's grenade). */
+                room->entities[room->entity_count++] = (AriaEntity){
+                    .kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.child.x >> 16,
+                    .y = hit.child.y >> 16, .spawned = true, .spawner = -1, .enemy = hit.child};
             }
             if (hit.spawn && room->entity_count < MAX_ENTITIES) {
                 AriaEntity *child = &room->entities[room->entity_count];
@@ -457,6 +464,9 @@ typedef struct {
         AosEnemyKind kind;
         AosEnemyStats stats;
         bool loaded;
+        int static_ids[ENEMY_STATIC_FRAMES];
+        AriaFrame statics[ENEMY_STATIC_FRAMES];
+        int static_count;
     } enemies[ENEMY_KINDS];
 } AriaObjects;
 
@@ -498,8 +508,10 @@ static bool load_enemy_data(AriaObjects *objects) {
         AosEnemyKind *kind = &objects->enemies[id].kind;
         kind->anims = &objects->enemies[id].set;
         memcpy(kind->blink, blink, sizeof blink);
-        kind->margin_x = (int16_t)margins[8];      /* entry 4 of sub_0806D128 */
-        kind->margin_y = (int16_t)margins[9];
+        for (int i = 0; i < 7; ++i) {
+            kind->margins[i][0] = (int16_t)margins[2 * i];
+            kind->margins[i][1] = (int16_t)margins[2 * i + 1];
+        }
     }
     f = fopen(DEFAULT_ENEMY_STATS, "rb");
     if (!f) return false;
@@ -539,6 +551,20 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         char frame_path[512];
         int style, frame, ticks, ox, oy;
         char enemy_name[16];
+        if (sscanf(line, "Enemy/%15[^/]/frame_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style,
+                   &frame, &ticks, &ox, &oy, frame_path) == 7) {
+            for (int id = 0; id < ENEMY_KINDS; ++id) {
+                if (!enemy_names[id] || strcmp(enemy_name, enemy_names[id])) continue;
+                __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
+                if (frame != 0 || art->static_count >= ENEMY_STATIC_FRAMES ||
+                    !load_frame(&art->statics[art->static_count], frame_path, ox, oy, renderer)) {
+                    ok = false;
+                    break;
+                }
+                art->static_ids[art->static_count++] = style;
+            }
+            continue;
+        }
         if (sscanf(line, "Enemy/%15[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
             for (int id = 0; id < ENEMY_KINDS; ++id) {
@@ -591,6 +617,10 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->enemies[id].frames[i][j].texture)
                     SDL_DestroyTexture(objects->enemies[id].frames[i][j].texture);
+    for (int id = 0; id < ENEMY_KINDS; ++id)
+        for (int i = 0; i < objects->enemies[id].static_count; ++i)
+            if (objects->enemies[id].statics[i].texture)
+                SDL_DestroyTexture(objects->enemies[id].statics[i].texture);
 }
 
 static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
@@ -637,7 +667,14 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             e->enemy.anim.frame >= MAX_FRAMES)
             continue;
         const AriaFrame *frame = &objects->enemies[e->id].frames[e->enemy.anim.id][e->enemy.anim.frame];
-        if (!frame->texture) continue;
+        if (e->enemy.static_frame >= 0) {
+            /* A child entity shows one sprite frame of its kind (+ 0x65). */
+            frame = NULL;
+            for (int k = 0; k < objects->enemies[e->id].static_count; ++k)
+                if (objects->enemies[e->id].static_ids[k] == e->enemy.static_frame)
+                    frame = &objects->enemies[e->id].statics[k];
+        }
+        if (!frame || !frame->texture) continue;
         int ex = e->enemy.x >> 16, ey = e->enemy.y >> 16;
         bool flip = e->enemy.mirrored;
         float x = flip ? (float)(ex - frame->offset_x) - frame->w : (float)(ex + frame->offset_x);
@@ -1206,9 +1243,20 @@ int main(int argc, char **argv) {
             for (size_t i = 0; enemies_ok && i < room.entity_count; ++i) {
                 const AriaEntity *e = &room.entities[i];
                 if (!e->spawned || e->kind != ARIA_KIND_ENEMY || e->enemy.removed ||
-                    e->enemy.anim.id >= AOS_ENEMY_MAX_ANIMS ||
+                    e->id >= ENEMY_KINDS)
+                    continue;
+                if (e->enemy.own_boxes) {
+                    /* Code-driven boxes (grenades): the attack box in red. */
+                    AosRect a = aos_entity_rect(e->enemy.own_attack, e->enemy.x >> 16,
+                                                e->enemy.y >> 16, e->enemy.mirrored, false);
+                    SDL_FRect ar = {(float)(a.x1 - cam_x), (float)(a.y1 - cam_y),
+                                    (float)(a.x2 - a.x1 + 1), (float)(a.y2 - a.y1 + 1)};
+                    SDL_SetRenderDrawColor(renderer, 255, 60, 60, 255);
+                    if (!e->enemy.combat.attack_off) SDL_RenderRect(renderer, &ar);
+                    continue;
+                }
+                if (e->enemy.anim.id >= AOS_ENEMY_MAX_ANIMS ||
                     e->enemy.anim.frame >= AOS_ENEMY_MAX_FRAMES ||
-                    e->id >= ENEMY_KINDS ||
                     !objects.enemies[e->id].kind.modes[e->enemy.anim.id][e->enemy.anim.frame])
                     continue;
                 AosRect b = aos_entity_rect(objects.enemies[e->id].kind.hurt[e->enemy.anim.id][e->enemy.anim.frame],

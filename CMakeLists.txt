@@ -166,6 +166,11 @@ if(BUILD_TESTING)
                 --native-source ${CMAKE_SOURCE_DIR}/tests/fixtures/runtime_native_clip_0138.tsv
                 ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)
 
+    add_test(NAME room_runtime_animation_registry
+        COMMAND $<TARGET_FILE:fusion_room_runtime> --check-animations
+                --samus-library ${CMAKE_SOURCE_DIR}/tests/fixtures/samus_animation_registry.index.tsv
+                --samus-map ${CMAKE_SOURCE_DIR}/tests/fixtures/samus_animation_registry.map.tsv)
+
     add_test(NAME room_package_loader
         COMMAND $<TARGET_FILE:fusion_room_package_viewer> --check
                 ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)

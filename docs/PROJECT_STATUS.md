@@ -1317,3 +1317,33 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: CTest passed 13/13, the Python suite passed 407/407,
   the proprietary-file guard passed, and Brinstar 033 remained operational with
   its 204 native collision records after the source-cache migration.
+
+## Patch 0184 - automated Samus preparation and semantic runtime registry
+
+- `python3 -m scripts.mzm_samus_pipeline` is now the complete default pipeline.
+  One command verifies the ROM, decompilation inputs and reference ELF, resolves
+  symbols and palettes, rebuilds all body/composed/special sources, deduplicates
+  the runtime object store and emits both runtime tables. `--bundle-only` is the
+  explicit prepared-cache mode.
+- The real full run resolves and exports 500 body animations, 42 cannon/body
+  compositions and 38 special-pose compositions, producing the unchanged 580
+  sequences, 2,612 indexed frames and 1,982 unique BMP objects in 4.7 seconds
+  on the current workstation.
+- Added a generated, deterministic 408-row semantic registry for 27 actions,
+  five requested suit modes, both facings and applicable aim directions. All
+  rows reference an exact existing catalogue key. Its report exposes 22
+  Suitless equipment-action combinations absent from native data instead of
+  manufacturing replacements; Varia/Gravity palette fallback is explicit.
+- The SDL3 runtime validates the semantic map against the complete library and
+  rejects unknown keys or duplicate selectors. Implemented input/movement states
+  now select through the registry rather than constructing animation names.
+  Turning, skidding, landing and spin startup preserve one-shot native timing
+  with priority-based interruption; spin/Space Jump/Screw Attack keep priority
+  over generic MidAir. F6 continues to expose every raw catalogue entry for
+  mechanics that are not implemented yet.
+- Added `--check-animations` for display-free registry validation plus ROM-free
+  orchestration, semantic-map and one-shot timeline regressions.
+- Validation on 2026-10-10: CTest passed 14/14, the Python suite passed 409/409,
+  and the proprietary-file guard passed. The headless registry check accepted
+  all 580 sequences and 408 bindings; Brinstar 033 loaded the same registry and
+  204 native collision records, then remained live through the smoke timeout.

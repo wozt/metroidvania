@@ -49,6 +49,12 @@ New imports are grouped below `assets/extracted/metroid/`,
 editor caches remain at their historical paths until their consumers can be
 migrated and tested independently.
 
+The Samus command is the complete reproducible preparation path: it verifies
+the ROM, reads the pinned decompilation tables and reference ELF, rebuilds body,
+cannon-composed and special-pose sources, deduplicates runtime BMPs, and emits
+the semantic animation map. Use `--bundle-only` only when intentionally reusing
+already prepared private sources.
+
 ## Build and test
 
 ```sh
@@ -83,6 +89,8 @@ Run the experimental SDL3 Zero Mission room/animation integration with:
 
 ```sh
 ./build/fusion_room_runtime --room brinstar_033
+./build/fusion_room_runtime --check-animations \
+  --samus-assets assets/extracted/metroid/sprites/samus/runtime
 ```
 
 This shortcut consumes only local ignored assets. It demonstrates native room

@@ -55,6 +55,10 @@ int main(void) {
     assert(samus_timeline_frame(timing,3,4)==1);
     assert(samus_timeline_frame(timing,3,5)==2);
     assert(samus_timeline_frame(timing,3,6)==0);
+    assert(samus_timeline_frame_once(timing,3,0)==0);
+    assert(samus_timeline_frame_once(timing,3,5)==2);
+    assert(samus_timeline_frame_once(timing,3,6)==2);
+    assert(samus_timeline_frame_once(timing,3,100)==2);
     free(r);
     return 0;
 }

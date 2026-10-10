@@ -59,6 +59,9 @@ blocks and basic character previews below their world root and writes its
 manifest below `shared/manifests/`. `scripts/mzm_samus_pipeline.py` writes the
 canonical content-addressed Samus runtime library below
 `metroid/sprites/samus/runtime/`; repeated pixels are stored once by SHA-256.
+One default invocation reconstructs all inputs from the verified MZM ROM,
+pinned decompilation sources and matching reference ELF before producing the
+runtime library. `--bundle-only` is the explicit cache-reuse mode.
 Its three reproducible source caches live below
 `metroid/sprites/samus/intermediate/`: `body/` contains the broad native body
 catalogue, `composed/` contains validated body/cannon diagnostic compositions,
@@ -67,6 +70,10 @@ The optional `intermediate/catalog/` compatibility cache is regenerated from
 those three sources and is not consumed by the canonical pipeline.
 Symbol/address catalogues live in `metroid/sprites/samus/metadata/`. Optional
 research commands write only below `metroid/sprites/samus/diagnostics/`.
+The generated `animation_map.tsv` resolves 27 semantic actions across suit,
+facing and aim variants to exact catalogue keys. Runtime loading rejects an
+unknown key or duplicate selector. Native one-shot transitions retain their
+60 Hz duration and have explicit priority over lower-priority loop changes.
 `scripts/audit_extracted_assets.py` inventories the ignored tree, identifies
 exact duplicates by content hash, and records which historical top-level roots
 still have tracked consumers. Historical room/editor caches are migrated only

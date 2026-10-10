@@ -395,6 +395,19 @@ static int samus_timeline_frame(const unsigned int *durations, int count,
     return count-1;
 }
 
+static int samus_timeline_frame_once(const unsigned int *durations, int count,
+                                     unsigned int elapsed_ticks) {
+    if(count<=0)return 0;
+    unsigned int total=0;
+    for(int i=0;i<count;i++)total+=durations[i];
+    if(!total || elapsed_ticks>=total)return count-1;
+    for(int i=0;i<count;i++) {
+        if(elapsed_ticks<durations[i])return i;
+        elapsed_ticks-=durations[i];
+    }
+    return count-1;
+}
+
 static float move_axis(const Room *room, float start, float other,
                        float amount, float w, float h, bool vertical,
                        bool *hit) {
@@ -430,6 +443,7 @@ static float move_axis(const Room *room, float start, float other,
 /* PATCH_0176_LIBRARY: 0175-derived private runtime index, loaded on demand. */
 #define RUNTIME_LIBRARY_MAX 1024
 #define RUNTIME_LIBRARY_FRAME_MAX 256
+#define RUNTIME_ANIMATION_MAP_MAX 512
 typedef struct {
     char name[160];
     int count;
@@ -486,6 +500,104 @@ static bool runtime_library_open(RuntimeLibrary *lib,const char *index) {
 static RuntimeLibraryEntry *runtime_library_find(RuntimeLibrary *lib,const char *name) {
     for(int i=0;i<lib->count;i++) if(!strcmp(lib->entries[i].name,name)) return &lib->entries[i];
     return NULL;
+}
+typedef struct {
+    char action[32],suit[20],facing[8],aim[20];
+    bool once;
+    RuntimeLibraryEntry *entry;
+} RuntimeAnimationMapRow;
+typedef struct {
+    RuntimeAnimationMapRow rows[RUNTIME_ANIMATION_MAP_MAX];
+    int count;
+} RuntimeAnimationMap;
+static bool runtime_animation_token(const char *value) {
+    if(!value[0])return false;
+    for(const unsigned char *p=(const unsigned char *)value;*p;p++)
+        if(!((*p>='a'&&*p<='z')||(*p>='A'&&*p<='Z')||
+             (*p>='0'&&*p<='9')||*p=='_'))return false;
+    return true;
+}
+static bool runtime_animation_map_open(RuntimeAnimationMap *map,const char *path,
+                                       RuntimeLibrary *library) {
+    FILE *file=fopen(path,"rb");
+    if(!file)return false;
+    char line[512];bool ok=true;
+    if(!fgets(line,sizeof line,file) ||
+       strcmp(line,"schema\tmetroidvania-samus-animation-map-v1\n"))ok=false;
+    if(ok && (!fgets(line,sizeof line,file) ||
+       strcmp(line,"action\tsuit\tfacing\taim\tmode\tkey\n")))ok=false;
+    while(ok && fgets(line,sizeof line,file)) {
+        if(map->count>=RUNTIME_ANIMATION_MAP_MAX){ok=false;break;}
+        char action[32],suit[20],facing[8],aim[20],mode[8],key[160];int consumed=0;
+        if(sscanf(line,"%31[^\t]\t%19[^\t]\t%7[^\t]\t%19[^\t]\t%7[^\t]\t%159[^\t\r\n]%n",
+                  action,suit,facing,aim,mode,key,&consumed)!=6 || consumed<=0 ||
+           (line[consumed]!='\n' && line[consumed]!='\r') ||
+           !runtime_animation_token(action) || !runtime_animation_token(suit) ||
+           !runtime_animation_token(facing) || !runtime_animation_token(aim) ||
+           (strcmp(mode,"loop") && strcmp(mode,"once"))) {ok=false;break;}
+        RuntimeLibraryEntry *entry=runtime_library_find(library,key);
+        if(!entry){ok=false;break;}
+        for(int i=0;i<map->count;i++) {
+            RuntimeAnimationMapRow *existing=&map->rows[i];
+            if(!strcmp(existing->action,action)&&!strcmp(existing->suit,suit)&&
+               !strcmp(existing->facing,facing)&&!strcmp(existing->aim,aim)) {
+                ok=false;break;
+            }
+        }
+        if(!ok)break;
+        RuntimeAnimationMapRow *row=&map->rows[map->count++];
+        snprintf(row->action,sizeof row->action,"%s",action);
+        snprintf(row->suit,sizeof row->suit,"%s",suit);
+        snprintf(row->facing,sizeof row->facing,"%s",facing);
+        snprintf(row->aim,sizeof row->aim,"%s",aim);
+        row->once=!strcmp(mode,"once");row->entry=entry;
+    }
+    if(ferror(file))ok=false;
+    fclose(file);
+    if(!ok || map->count==0){map->count=0;return false;}
+    return true;
+}
+static RuntimeAnimationMapRow *runtime_animation_map_find(
+        RuntimeAnimationMap *map,const char *action,const char *suit,
+        const char *facing,const char *aim) {
+    for(int pass=0;pass<3;pass++) {
+        const char *wanted=pass==0?aim:pass==1?"forward":"none";
+        if(pass>0 && !strcmp(wanted,aim))continue;
+        for(int i=0;i<map->count;i++) {
+            RuntimeAnimationMapRow *row=&map->rows[i];
+            if(!strcmp(row->action,action)&&!strcmp(row->suit,suit)&&
+               !strcmp(row->facing,facing)&&!strcmp(row->aim,wanted))return row;
+        }
+    }
+    return NULL;
+}
+static unsigned int runtime_animation_total(const RuntimeAnimationMapRow *row) {
+    unsigned int total=0;
+    if(row && row->entry)
+        for(int i=0;i<row->entry->count;i++)total+=row->entry->ticks[i];
+    return total;
+}
+static int runtime_animation_priority(const char *action) {
+    if(!strcmp(action,"death"))return 100;
+    if(!strcmp(action,"hurt"))return 90;
+    if(!strcmp(action,"spin_start")||!strcmp(action,"wall_jump"))return 80;
+    if(!strcmp(action,"landing"))return 60;
+    if(!strcmp(action,"turn")||!strcmp(action,"skid"))return 40;
+    return 10;
+}
+static const char *runtime_requested_action(RuntimeMovementState state,bool spin,
+        bool crouch,bool fire,bool skid,int special_kind,
+        bool spin_started,bool landed) {
+    if(spin_started)return "spin_start";
+    if(landed)return "landing";
+    if(spin&&(state==RUNTIME_JUMPING||state==RUNTIME_FALLING))
+        return special_kind==2?"screw_attack":special_kind==1?"space_jump":"spin";
+    if(state==RUNTIME_TURNING)return "turn";
+    if(skid)return "skid";
+    if(state==RUNTIME_RUNNING)return "run";
+    if(state==RUNTIME_JUMPING||state==RUNTIME_FALLING)return "midair";
+    if(crouch)return fire?"crouch_fire":"crouch";
+    return fire?"fire":"idle";
 }
 static bool runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry *entry,int frame) {
     if(entry->textures[frame])return true;
@@ -704,9 +816,16 @@ static int composed_select(RuntimeMovementState state, int facing,
 
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
-    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL, *left_dir=NULL, *special_dir=NULL, *library_index=NULL, *room_alias=NULL, *samus_assets=NULL; bool check=false;
+    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL, *left_dir=NULL;
+    const char *special_dir=NULL, *library_index=NULL, *animation_map_index=NULL;
+    const char *room_alias=NULL, *samus_assets=NULL;
+    bool check=false,animation_check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
+        else if (!strcmp(argv[i],"--check-animations")) {
+            if(animation_check)return 2;
+            animation_check=true;
+        }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
         else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
         else if (!strcmp(argv[i],"--samus-sprites") && !samus_dir && i+1<argc) samus_dir=argv[++i];
@@ -717,13 +836,14 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--room") && !room_alias && i+1<argc) room_alias=argv[++i];
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
+        else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
             fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
     /* PATCH_0181_ROOM_AND_ASSETS: room shorthand keeps native collision mandatory. */
-    char bundle_index[4096];
+    char bundle_index[4096],bundle_map[4096];
     if (room_alias) {
         if (strcmp(room_alias,"brinstar_033") || room_path || background || native_source) {
             fprintf(stderr,"Unknown room alias or conflicting room paths: %s\n",room_alias);
@@ -741,10 +861,36 @@ int main(int argc, char **argv) {
         int n=snprintf(bundle_index,sizeof bundle_index,"%s/runtime_index.tsv",samus_assets);
         if (n<0 || (size_t)n>=sizeof bundle_index) return 2;
         library_index=bundle_index;
+        if(!animation_map_index) {
+            n=snprintf(bundle_map,sizeof bundle_map,"%s/animation_map.tsv",samus_assets);
+            if(n<0 || (size_t)n>=sizeof bundle_map)return 2;
+            animation_map_index=bundle_map;
+        }
     } else if (room_alias && !library_index) {
         library_index="assets/extracted/metroid/sprites/samus/runtime/runtime_index.tsv";
+        animation_map_index="assets/extracted/metroid/sprites/samus/runtime/animation_map.tsv";
     }
-    if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir || left_dir || special_dir || library_index))) {
+    if(animation_map_index && !library_index) {
+        fprintf(stderr,"--samus-map requires --samus-library or --samus-assets\n");
+        return 2;
+    }
+    if(animation_check) {
+        if(check || room_path || background || native_source || samus_dir ||
+           composed_dir || extended_dir || left_dir || special_dir ||
+           !library_index || !animation_map_index) {
+            fprintf(stderr,"Animation check requires only --samus-assets, or a library and map pair\n");
+            return 2;
+        }
+        RuntimeLibrary checked_library={0};RuntimeAnimationMap checked_map={0};
+        bool valid=runtime_library_open(&checked_library,library_index) &&
+            runtime_animation_map_open(&checked_map,animation_map_index,&checked_library);
+        if(valid)printf("Validated Samus animation registry: %d sequences, %d semantic bindings\n",
+                        checked_library.count,checked_map.count);
+        else fprintf(stderr,"Samus animation registry validation failed\n");
+        runtime_library_free(&checked_library);
+        return valid?0:2;
+    }
+    if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir || left_dir || special_dir || library_index || animation_map_index))) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
         return 2;
     }
@@ -781,6 +927,7 @@ int main(int argc, char **argv) {
     ComposedAnimations composed_frames = {0};
     SpecialAnimations special_frames = {0};
     RuntimeLibrary library = {0};
+    RuntimeAnimationMap animation_map = {0};
     SDL_Gamepad *gamepad = NULL;
     bool pad_jump_prev=false, pad_armor_prev=false, pad_special_prev=false;
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
@@ -816,6 +963,13 @@ int main(int argc, char **argv) {
         fprintf(stderr,"Special animation load failed.\\n");goto cleanup;
     }
     if(library_index && !runtime_library_open(&library,library_index)){fprintf(stderr,"Runtime animation index failed to load.\n");goto cleanup;}
+    if(animation_map_index && !runtime_animation_map_open(
+            &animation_map,animation_map_index,&library)) {
+        fprintf(stderr,"Runtime animation map failed to load.\n");goto cleanup;
+    }
+    if(animation_map_index)
+        printf("Samus animation registry: %d native sequences, %d semantic bindings\n",
+               library.count,animation_map.count);
     gamepad=runtime_pad_open();
     float px=16,py=16, pw=12,ph=16;
     /* Initial gameplay tuning, NOT confirmed Zero Mission physics. */
@@ -832,6 +986,8 @@ int main(int argc, char **argv) {
     unsigned int armor_index=0;
     bool animation_browser=false;
     int browser_index=0;
+    RuntimeAnimationMapRow *active_animation=NULL;
+    bool spin_started=false,landed=false;
     static const char *armor_names[] = {
         "Power Suit", "Varia Suit", "Gravity Suit", "Full Suit", "Suitless"
     };
@@ -844,6 +1000,7 @@ int main(int argc, char **argv) {
            px, py, blocked(room, px, py+1.f, pw, ph) ? "yes" : "no");
     printf("Controls: Left/Right or A/D = move; Space/Up/W = jump; Escape = exit. ");
     printf("Experimental platformer physics; only project code-1 solids block.\n");
+    printf("Animation controls: E/Q aim, C crouch, F fire, R suit, T spin type, F6 catalogue.\n");
     if (composed_dir) printf("Compositions: E=diagonal run, C+F=crouch shooting, jump=straight midair (right facing).\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
@@ -868,6 +1025,7 @@ int main(int argc, char **argv) {
                                event.gbutton.button==SDL_GAMEPAD_BUTTON_LEFT_STICK);
                 if(toggle) {
                     animation_browser=!animation_browser;
+                    active_animation=NULL;
                     animation_start=SDL_GetTicks();
                 }
                 if(animation_browser && (forward || backward)) {
@@ -902,8 +1060,12 @@ int main(int argc, char **argv) {
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                 event.key.key == SDLK_R) {
                 armor_index=(armor_index+1u)%5u;
-                fprintf(stderr,"Selected armor: %s (preview unavailable; Power Suit assets retained)\n",
-                        armor_names[armor_index]);
+                static const char *armor_sources[]={
+                    "Power Suit","Power Suit palette fallback",
+                    "Power Suit palette fallback","Full Suit","Suitless"
+                };
+                fprintf(stderr,"Selected armor: %s (animation source: %s)\n",
+                        armor_names[armor_index],armor_sources[armor_index]);
             }
         }
         if(gamepad && !SDL_GamepadConnected(gamepad)){SDL_CloseGamepad(gamepad);gamepad=NULL;}
@@ -929,10 +1091,12 @@ int main(int argc, char **argv) {
         accumulator += dt;
         while (accumulator >= fixed_step) {
             bool hit=false;
+            bool was_grounded=grounded;
             grounded=blocked(room,px,py+1.f,pw,ph);
             if (jump_queued && grounded) {
                 /* Jump type is latched at takeoff, not reclassified by aim keys. */
                 spin_jump=(dx > 0.1f || dx < -0.1f);
+                spin_started=spin_jump;
                 vy=-jump_speed;
                 grounded=false;
             }
@@ -946,7 +1110,10 @@ int main(int argc, char **argv) {
             vy=clampf(vy+gravity*fixed_step,-jump_speed,terminal_speed);
             py=move_axis(room,py,px,vy*fixed_step,pw,ph,true,&hit);
             if (hit) {
-                if (vy>0.f) grounded=true;
+                if (vy>0.f) {
+                    grounded=true;
+                    if(!was_grounded)landed=true;
+                }
                 vy=0.f;
             }
             RuntimeMovementState next_state =
@@ -955,7 +1122,6 @@ int main(int argc, char **argv) {
                 next_state != RUNTIME_FALLING) spin_jump=false;
             if (next_state != movement_state) {
                 movement_state = next_state;
-                animation_start=SDL_GetTicks();
                 char title[128];
                 snprintf(title, sizeof title,
                          "Metroid Vania [%s] [%s]",
@@ -981,11 +1147,16 @@ int main(int argc, char **argv) {
             SDL_FRect dst={viewport.x,viewport.y,src.w*scale,src.h*scale};
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
+        bool aim_up=keys[SDL_SCANCODE_E] ||
+            runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER);
+        bool aim_down=keys[SDL_SCANCODE_Q] ||
+            runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
+        bool crouch=keys[SDL_SCANCODE_C] ||
+            runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_DPAD_DOWN);
+        bool fire=keys[SDL_SCANCODE_F] ||
+            runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_EAST);
         int selected=(composed_dir || extended_dir || left_dir) ? composed_select(
-            movement_state,facing,keys[SDL_SCANCODE_E] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER),
-            keys[SDL_SCANCODE_Q] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_LEFT_SHOULDER),
-            keys[SDL_SCANCODE_C] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_DPAD_DOWN),
-            keys[SDL_SCANCODE_F] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_EAST),
+            movement_state,facing,aim_up,aim_down,crouch,fire,
             extended_dir != NULL,left_dir != NULL,spin_jump) : -1;
         if (selected >= 0 && ((selected < COMPOSED_BASE_COUNT && !composed_dir) ||
                               (selected >= COMPOSED_BASE_COUNT &&
@@ -993,13 +1164,50 @@ int main(int argc, char **argv) {
                               (selected >= COMPOSED_EXTRA_COUNT && !left_dir)))
             selected = -1;
         RuntimeLibraryEntry *lib_entry=NULL;
-        if(library_index) lib_entry=runtime_library_select(&library,armor_index,facing,
-            movement_state,spin_jump,keys[SDL_SCANCODE_E] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER),
-            keys[SDL_SCANCODE_Q] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_LEFT_SHOULDER),
-            keys[SDL_SCANCODE_C] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_DPAD_DOWN),
-            keys[SDL_SCANCODE_F] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_EAST),special_kind);
-        if(animation_browser && library_index && library.count>0)
+        if(library_index && animation_map.count>0 && !animation_browser) {
+            static const char *suit_names[]={
+                "PowerSuit","VariaSuit","GravitySuit","FullSuit","Suitless"
+            };
+            const char *side=facing<0?"left":"right";
+            const char *aim=aim_up?"diagonalup":aim_down?"diagonaldown":"forward";
+            const char *action=runtime_requested_action(
+                movement_state,spin_jump,crouch,fire,
+                grounded && dx==0.f && (vx>.1f || vx<-.1f),
+                special_kind,spin_started,landed);
+            RuntimeAnimationMapRow *requested=runtime_animation_map_find(
+                &animation_map,action,suit_names[armor_index%5],side,aim);
+            if(!requested && (!strcmp(action,"space_jump")||
+                              !strcmp(action,"screw_attack")))
+                requested=runtime_animation_map_find(
+                    &animation_map,"spin",suit_names[armor_index%5],side,"none");
+            if(!requested)
+                requested=runtime_animation_map_find(
+                    &animation_map,grounded?"idle":"midair",
+                    suit_names[armor_index%5],side,aim);
+            RuntimeAnimationMapRow *chosen=requested;
+            Uint64 now=SDL_GetTicks();
+            if(active_animation && active_animation->once) {
+                unsigned int elapsed=(unsigned int)((now-animation_start)*60u/1000u);
+                unsigned int total=runtime_animation_total(active_animation);
+                if(elapsed<total && (!requested ||
+                   runtime_animation_priority(requested->action)<=
+                   runtime_animation_priority(active_animation->action)))
+                    chosen=active_animation;
+            }
+            if(chosen!=active_animation) {
+                active_animation=chosen;
+                animation_start=now;
+            }
+            lib_entry=active_animation?active_animation->entry:NULL;
+        } else if(library_index && !animation_browser) {
+            lib_entry=runtime_library_select(&library,armor_index,facing,
+                movement_state,spin_jump,aim_up,aim_down,crouch,fire,special_kind);
+        }
+        if(animation_browser && library_index && library.count>0) {
             lib_entry=&library.entries[browser_index];
+            active_animation=NULL;
+        }
+        spin_started=false;landed=false;
         int special_selected = -1;
         if (special_dir && spin_jump &&
             (movement_state == RUNTIME_JUMPING || movement_state == RUNTIME_FALLING))
@@ -1007,7 +1215,9 @@ int main(int argc, char **argv) {
         if(lib_entry && lib_entry->count>0) {
             Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
             unsigned int ticks=(unsigned int)(elapsed_ms*60u/1000u);
-            int frame=samus_timeline_frame(lib_entry->ticks,lib_entry->count,ticks);
+            int frame=(active_animation && active_animation->once && !animation_browser) ?
+                samus_timeline_frame_once(lib_entry->ticks,lib_entry->count,ticks):
+                samus_timeline_frame(lib_entry->ticks,lib_entry->count,ticks);
             if(runtime_library_texture(renderer,lib_entry,frame)) {
                 float sw=(float)lib_entry->w[frame],sh=(float)lib_entry->h[frame];
                 SDL_FRect dest={viewport.x+(px+pw*.5f-cx-sw*.5f)*scale,

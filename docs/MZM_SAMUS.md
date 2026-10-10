@@ -22,6 +22,21 @@ Varia Suit and Gravity Suit currently have no distinct sequence records; their
 palette/equipment mapping still needs to be implemented from native evidence
 and must not be synthesized by renaming Power Suit files.
 
+The same command performs the entire preparation sequence automatically:
+
+1. inventory the native animation pointer tables from the pinned decompilation;
+2. resolve and validate 500 symbols against the matching ELF and ROM;
+3. export 500 body animation records with verified suit palettes;
+4. rebuild 42 body/cannon compositions and 38 special-pose compositions;
+5. deduplicate the result and emit the runtime index;
+6. generate 408 verified bindings for 27 semantic engine actions.
+
+Use `python3 -m scripts.mzm_samus_pipeline --bundle-only` only to rebuild the
+last two outputs from already prepared caches. The manifest records which mode
+was used and lists every unavailable native combination. Current missing rows
+are Suitless-only equipment actions that have no corresponding native sequence;
+the runtime uses an explicit Spin/MidAir fallback rather than invented art.
+
 The unnumbered pipeline is the stable public entry point. It currently adapts
 previously validated discovery/composition manifests stored in this stable
 private layout:
@@ -44,6 +59,24 @@ these manifests; it is reproducible cache data, not a second runtime library.
 The former numbered top-level directories are obsolete and archived locally.
 New runs of the historical diagnostic tools use semantic paths below
 `diagnostics/` and cannot recreate patch-numbered roots.
+
+## Runtime state mapping
+
+`animation_map.tsv` is loaded and cross-validated against `runtime_index.tsv`
+before SDL creates any animation textures. Active movement now selects exact
+native variants for idle, running, aiming, firing, crouching and midair states.
+Turning, skidding, landing and spin-jump startup are one-shot transitions: they
+play to completion at their native duration unless a higher-priority transition
+interrupts them. Spin, Space Jump and Screw Attack loops cannot be overwritten
+by the generic MidAir state. F6 remains a separate raw-catalogue browser for all
+580 sequences, including poses whose gameplay mechanics are not implemented.
+
+The semantic registry can be validated without opening a window:
+
+```sh
+./build/fusion_room_runtime --check-animations \
+  --samus-assets assets/extracted/metroid/sprites/samus/runtime
+```
 
 `scripts/mzm_samus_sprite.py` reconstructs the four Power Suit animations used
 by the local asset preview. The addresses below come from exact symbols in the pinned

@@ -60,13 +60,15 @@ class NativeInventoryTests(unittest.TestCase):
                 "#define EXAMPLE_LIMIT 4\n"
                 "#define EXAMPLE_SCALE(value) ((value) * 2)\n"
                 "struct Example { int value; void (*callback)(void); };\n"
+                "typedef struct { int x, y; unsigned flags:3, mode:2; } Point;\n"
                 "enum ExampleState { EXAMPLE_IDLE, EXAMPLE_ACTIVE = 3 };\n"
                 "void PublicFunction(void);\n"
                 "extern int ExternalData;\n",
                 encoding="utf-8")
             source.write_text(
                 "typedef void (*ExampleFunc)(void);\n"
-                "static ExampleFunc sFunctions[] = { First, Second };\n",
+                "static ExampleFunc sFunctions[] = { First, Second };\n"
+                "static int sFirst = 1, sSecond[2] = {2, 3}, *sThird;\n",
                 encoding="utf-8")
 
             declarations = native_inventory._discover_declarations(
@@ -78,13 +80,20 @@ class NativeInventoryTests(unittest.TestCase):
             self.assertEqual([item["symbol"] for item in declarations],
                              ["PublicFunction"])
             self.assertEqual({item["symbol"] for item in types},
-                             {"Example", "ExampleState"})
+                             {"Example", "Point", "ExampleState"})
             example = next(item for item in types if item["symbol"] == "Example")
             self.assertEqual(example["members"], ["value", "callback"])
+            point = next(item for item in types if item["symbol"] == "Point")
+            self.assertTrue(point["anonymous"])
+            self.assertEqual(point["members"], ["x", "y", "flags", "mode"])
             self.assertEqual([item["symbol"] for item in constants],
                              ["EXAMPLE_LIMIT"])
             table = next(item for item in data if item["symbol"] == "sFunctions")
             self.assertEqual(table["_raw_references"], ["First", "Second"])
+            by_symbol = {item["symbol"]: item for item in data}
+            self.assertLessEqual({"sFirst", "sSecond", "sThird"}, set(by_symbol))
+            self.assertEqual(by_symbol["sSecond"]["_raw_references"], [])
+            self.assertEqual(by_symbol["sThird"]["linkage"], "internal")
 
     def test_tracked_inventory_covers_both_pinned_sources(self):
         inventory = native_inventory.load_inventory()

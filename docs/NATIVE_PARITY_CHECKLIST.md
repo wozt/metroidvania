@@ -29,8 +29,8 @@ regenerate this view.
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | 1521 | 16063 | 36 | 221 | 2796 |
-| Castlevania: Aria of Sorrow | 1078 | 139 | 11 | 183 | 2423 |
+| Metroid: Zero Mission | 1521 | 16063 | 36 | 227 | 2796 |
+| Castlevania: Aria of Sorrow | 1078 | 139 | 11 | 223 | 2423 |
 
 The machine-readable manifest and its checksummed record fragments, stable
 routine IDs and call edges are rooted at
@@ -193,8 +193,6 @@ Next action: Port native fades, hatch locks and door lifecycle events.
 
 ### Known inventory gaps
 
-- [!] anonymous aggregate typedefs.
-- [!] all declarators in multi-variable data statements.
 - [!] dynamic callbacks and function pointers stored in structure members.
 - [!] runtime-observed dependencies.
 
@@ -366,7 +364,5 @@ Next action: Port the native game-over flow and its save integration.
 
 ### Known inventory gaps
 
-- [!] anonymous aggregate typedefs.
-- [!] all declarators in multi-variable data statements.
 - [!] dynamic callbacks and function pointers stored in structure members.
 - [!] runtime-observed dependencies.

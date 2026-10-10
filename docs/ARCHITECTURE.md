@@ -145,8 +145,7 @@ The second static pass links header declarations to definitions, inventories
 data/type/constant records and proves indirect edges when a lexical table and
 its dispatch expression are both visible. It deliberately does not treat
 dynamic callbacks, structure-member function pointers or runtime-observed calls
-as resolved. Anonymous aggregate typedefs and all names in multi-declarator
-statements are also still open. Aria's unnamed files remain unclassified until
+as resolved. Aria's unnamed files remain unclassified until
 evidence supports a category. These gaps are emitted in the generated checklist
 rather than silently excluded. Future extractors join this task graph without
 breaking their existing direct commands.

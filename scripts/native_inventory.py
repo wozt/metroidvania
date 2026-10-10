@@ -13,9 +13,9 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = "metroidvania-native-inventory-v2"
-RECORD_SCHEMA = "metroidvania-native-inventory-records-v2"
-GENERATOR_VERSION = 2
+SCHEMA = "metroidvania-native-inventory-v3"
+RECORD_SCHEMA = "metroidvania-native-inventory-records-v3"
+GENERATOR_VERSION = 3
 DEFAULT_OUTPUT = ROOT / "data/native_parity/inventory.json"
 RECORD_COLLECTIONS = ("routines", "declarations", "data_symbols", "types", "constants")
 MAX_SHARD_BYTES = 3_000_000
@@ -32,6 +32,7 @@ ASM_FUNCTION_RE = re.compile(
 ASM_OBJECT_RE = re.compile(
     r"^\s*\.type\s+([A-Za-z_.$]\w*)\s*,\s*%?object\s*$", re.MULTILINE)
 TYPE_RE = re.compile(r"\b(struct|union|enum)\s+([A-Za-z_]\w*)\s*\{")
+ANONYMOUS_TYPEDEF_RE = re.compile(r"\btypedef\s+(struct|union|enum)\s*\{")
 DEFINE_RE = re.compile(
     r"^\s*#\s*define\s+([A-Za-z_]\w*)\b(?![ \t]*\()", re.MULTILINE)
 CONTROL_WORDS = {"if", "for", "while", "switch", "return", "sizeof"}
@@ -302,25 +303,57 @@ def _discover_declarations(game: str, root: Path, path: Path) -> list[dict]:
     return declarations
 
 
+def _split_top_level_commas(text: str) -> list[str]:
+    """Split on commas that are not nested in parentheses, braces or brackets."""
+    parts = []
+    depth = 0
+    start = 0
+    for index, character in enumerate(text):
+        if character in "({[":
+            depth += 1
+        elif character in ")}]" and depth:
+            depth -= 1
+        elif character == "," and depth == 0:
+            parts.append(text[start:index])
+            start = index + 1
+    parts.append(text[start:])
+    return parts
+
+
+def _declarator_name(declarator: str) -> str | None:
+    """Extract the declared identifier from one comma-separated declarator."""
+    pointer = re.search(r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)", declarator)
+    if pointer:
+        return pointer.group(1)
+    declarator = declarator.split("=", 1)[0]
+    declarator = re.sub(r"(?:\s*\[[^]]*\]\s*)+$", "", declarator).rstrip()
+    declarator = declarator.lstrip("*").rstrip()
+    match = re.search(r"([A-Za-z_]\w*)\s*$", declarator)
+    if not match or match.group(1) in TYPE_WORDS:
+        return None
+    return match.group(1)
+
+
 def _type_members(kind: str, body: str) -> list[str]:
     if kind == "enum":
         members = []
-        for part in body.split(","):
+        for part in _split_top_level_commas(body):
             match = re.match(r"\s*([A-Za-z_]\w*)", part)
             if match:
                 members.append(match.group(1))
         return members
     members = []
     for statement in body.split(";"):
-        pointer = re.search(r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)", statement)
-        if pointer:
-            members.append(pointer.group(1))
-            continue
-        declarator = statement.split(":", 1)[0]
-        identifiers = re.findall(r"\b([A-Za-z_]\w*)\b", declarator)
-        candidates = [item for item in identifiers if item not in TYPE_WORDS]
-        if candidates:
-            members.append(candidates[-1])
+        for declarator in _split_top_level_commas(statement):
+            pointer = re.search(r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)", declarator)
+            if pointer:
+                members.append(pointer.group(1))
+                continue
+            declarator = declarator.split(":", 1)[0]
+            identifiers = re.findall(r"\b([A-Za-z_]\w*)\b", declarator)
+            candidates = [item for item in identifiers if item not in TYPE_WORDS]
+            if candidates:
+                members.append(candidates[-1])
     return members
 
 
@@ -346,6 +379,26 @@ def _discover_types(game: str, root: Path, path: Path) -> list[dict]:
             "category": _category(game, relative),
             "members": _type_members(kind, masked[opening + 1:closing]),
         })
+    for match in ANONYMOUS_TYPEDEF_RE.finditer(masked):
+        kind = match.group(1)
+        opening = masked.find("{", match.start(), match.end())
+        closing = _matching_brace(masked, opening)
+        if closing is None:
+            continue
+        name = re.match(r"\s*([A-Za-z_]\w*)\s*;", masked[closing + 1:])
+        if name is None or ("typedef", name.group(1)) in seen:
+            continue
+        seen.add(("typedef", name.group(1)))
+        records.append({
+            "id": f"{game}:type:{relative.as_posix()}:{kind}:{name.group(1)}",
+            "symbol": name.group(1),
+            "kind": kind,
+            "source": relative.as_posix(),
+            "line": masked.count("\n", 0, match.start()) + 1,
+            "category": _category(game, relative),
+            "anonymous": True,
+            "members": _type_members(kind, masked[opening + 1:closing]),
+        })
     return records
 
 
@@ -361,25 +414,39 @@ def _discover_constants(game: str, root: Path, path: Path) -> list[dict]:
     } for match in DEFINE_RE.finditer(source)]
 
 
-def _data_declarator(statement: str) -> tuple[str, str] | None:
+def _data_declarators(statement: str) -> list[tuple[str, str, str]]:
+    """Split one top-level data statement into (symbol, prefix, initializer)."""
     stripped = statement.strip().rstrip(";").strip()
     if not stripped or re.search(r"\b(?:typedef|extern)\b", stripped):
-        return None
-    declaration = stripped.split("=", 1)[0].rstrip()
-    if _function_header(declaration) is not None:
-        return None
-    pointer = re.search(r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*(?:\[[^]]*\])?\s*$",
-                        declaration)
+        return []
+    declarators = _split_top_level_commas(stripped)
+    first_head = declarators[0].split("=", 1)[0].rstrip()
+    if _function_header(first_head) is not None:
+        return []
+    pointer = re.search(r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)", first_head)
     if pointer:
-        return pointer.group(1), declaration
-    declaration = re.sub(r"(?:\s*\[[^]]*\]\s*)+$", "", declaration).rstrip()
-    match = re.search(r"([A-Za-z_]\w*)\s*$", declaration)
-    if not match or match.group(1) in TYPE_WORDS:
-        return None
-    prefix = declaration[:match.start(1)]
+        prefix = first_head[:pointer.start()]
+    else:
+        trimmed = re.sub(r"(?:\s*\[[^]]*\]\s*)+$", "", first_head).rstrip()
+        trimmed = trimmed.rstrip("*").rstrip()
+        match = re.search(r"([A-Za-z_]\w*)\s*$", trimmed)
+        if not match or match.group(1) in TYPE_WORDS:
+            return []
+        prefix = first_head[:match.start()]
     if not re.search(r"[A-Za-z_]", prefix):
-        return None
-    return match.group(1), prefix
+        return []
+    records = []
+    for index, declarator in enumerate(declarators):
+        head = declarator.split("=", 1)[0].rstrip()
+        if index and re.search(r"[A-Za-z_]\w*\s*\([^()]*\)\s*$", head) \
+                and "(" not in prefix:
+            continue
+        symbol = _declarator_name(declarator)
+        if symbol is None:
+            continue
+        initializer = declarator.split("=", 1)[1] if "=" in declarator else ""
+        records.append((symbol, prefix, initializer))
+    return records
 
 
 def _discover_c_data(game: str, root: Path, path: Path) -> list[dict]:
@@ -389,23 +456,22 @@ def _discover_c_data(game: str, root: Path, path: Path) -> list[dict]:
     records = []
     for start, end in _top_level_data_statements(masked):
         statement = masked[start:end]
-        parsed = _data_declarator(statement)
-        if parsed is None:
-            continue
-        symbol, prefix = parsed
-        position = masked.find(symbol, start, end)
-        initializer = statement.split("=", 1)[1] if "=" in statement else ""
-        records.append({
-            "id": f"{game}:data:{relative.as_posix()}:{symbol}",
-            "symbol": symbol,
-            "kind": "c_data",
-            "source": relative.as_posix(),
-            "line": masked.count("\n", 0, position) + 1,
-            "linkage": "internal" if re.search(r"\bstatic\b", prefix) else "external",
-            "category": _category(game, relative),
-            "address": _source_address(symbol),
-            "_raw_references": sorted(set(re.findall(r"\b([A-Za-z_]\w*)\b", initializer))),
-        })
+        linkage = None
+        for symbol, prefix, initializer in _data_declarators(statement):
+            if linkage is None:
+                linkage = "internal" if re.search(r"\bstatic\b", prefix) else "external"
+            position = masked.find(symbol, start, end)
+            records.append({
+                "id": f"{game}:data:{relative.as_posix()}:{symbol}",
+                "symbol": symbol,
+                "kind": "c_data",
+                "source": relative.as_posix(),
+                "line": masked.count("\n", 0, position) + 1,
+                "linkage": linkage,
+                "category": _category(game, relative),
+                "address": _source_address(symbol),
+                "_raw_references": sorted(set(re.findall(r"\b([A-Za-z_]\w*)\b", initializer))),
+            })
     return records
 
 
@@ -678,8 +744,6 @@ def inventory_game(game: str, root: Path) -> dict:
             "constants": "object-like preprocessor definitions",
             "calls": "direct lexical calls, assembly branches and proven table dispatch",
             "not_yet_indexed": [
-                "anonymous aggregate typedefs",
-                "all declarators in multi-variable data statements",
                 "dynamic callbacks and function pointers stored in structure members",
                 "runtime-observed dependencies",
             ],

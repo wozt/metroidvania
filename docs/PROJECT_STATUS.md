@@ -2052,3 +2052,29 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   23/23, the Python suite passed 382/382, the incremental rebuild dry run
   reported both tasks up to date, and the proprietary-file guard passed.
+
+## Patch 0221 - anonymous typedefs and multi-declarator inventory coverage
+
+- Inventory schema v3 indexes `typedef struct/union/enum { ... } Name;`
+  anonymous aggregates as named type records (flagged `anonymous`) and every
+  identifier in multi-declarator data and member statements, including
+  bitfields and pointer declarators. Comma splitting respects nested
+  parentheses, braces and brackets so initializers cannot split a declaration.
+- The pinned sources gain 6 MZM and 40 Aria previously invisible type records
+  (227 and 223 total). Multi-declarator file-scope data turns out to be absent
+  from both pinned trees, so data symbol, pointer table and call-edge counts
+  are unchanged (16,063/139 symbols, 36/11 tables, 6,071/14,228 edges with
+  406/17 proven indirect); the gap is now closed by capability, verified on
+  synthetic sources.
+- Pre-existing duplicate data ids from mutually exclusive `#ifdef` build
+  variants (for example both REGION_US_BETA branches of `demo_data.c`) are
+  retained deliberately: both are real source alternatives, not index noise.
+- The remaining open gaps are dynamic callbacks/function pointers stored in
+  structure members and runtime-observed dependencies, as now reported by the
+  generated checklist.
+- Added ROM-free regressions for anonymous typedef members, bitfield and
+  pointer multi-declarators and per-declarator initializer references.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  23/23, the Python suite passed 382/382, the incremental dry run reported
+  both tasks up to date, the generated checklist check passed and the
+  proprietary-file guard passed.

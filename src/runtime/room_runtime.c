@@ -704,7 +704,7 @@ static int composed_select(RuntimeMovementState state, int facing,
 
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
-    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL, *left_dir=NULL, *special_dir=NULL, *library_index=NULL; bool check=false;
+    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL, *left_dir=NULL, *special_dir=NULL, *library_index=NULL, *room_alias=NULL, *samus_assets=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
@@ -714,11 +714,35 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--samus-composed-extra") && !extended_dir && i+1<argc) extended_dir=argv[++i];
         else if (!strcmp(argv[i],"--samus-composed-left") && !left_dir && i+1<argc) left_dir=argv[++i];
         else if (!strcmp(argv[i],"--samus-special") && !special_dir && i+1<argc) special_dir=argv[++i];
+        else if (!strcmp(argv[i],"--room") && !room_alias && i+1<argc) room_alias=argv[++i];
+        else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
             fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
+    }
+    /* PATCH_0181_ROOM_AND_ASSETS: room shorthand keeps native collision mandatory. */
+    char bundle_index[4096];
+    if (room_alias) {
+        if (strcmp(room_alias,"brinstar_033") || room_path || background || native_source) {
+            fprintf(stderr,"Unknown room alias or conflicting room paths: %s\n",room_alias);
+            return 2;
+        }
+        room_path="assets/extracted/native_demo_0125/assets/extracted/exports/mzm/brinstar_033_b10ffe9d3dfbc2a12bb545fe1a6cd0a70f3060fd3a1d11d537148a954a3890ad/preview.tsv";
+        background="assets/extracted/rooms/metroid/previews/brinstar_033_bg12_composite.bmp";
+        native_source="assets/extracted/native_source_overlays/mzm/brinstar_033.tsv";
+    }
+    if (samus_assets && library_index) {
+        fprintf(stderr,"Use either --samus-assets or --samus-library\n");
+        return 2;
+    }
+    if (samus_assets) {
+        int n=snprintf(bundle_index,sizeof bundle_index,"%s/runtime_index.tsv",samus_assets);
+        if (n<0 || (size_t)n>=sizeof bundle_index) return 2;
+        library_index=bundle_index;
+    } else if (room_alias && !library_index) {
+        library_index="assets/extracted/samus/runtime_index.tsv";
     }
     if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir || left_dir || special_dir || library_index))) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);

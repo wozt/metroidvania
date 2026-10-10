@@ -125,15 +125,52 @@ BG1). `src/runtime/aos_collision.c` ports the cell lookup, slope height, walk
 modes, the four vertical walks, the bit-3 test and both horizontal pushes,
 with ROM-free tests. It is not yet used by a Soma controller.
 
-Player collision: `sub_08014A04` (Soma) and its twin `sub_0801D1C8` call these
-probes; the pinned decompilation only has a commented, non-matching m2c draft
-of it. Probe points read from that draft and the assembly include a ceiling
-walk at the origin minus 33 pixels (`sub_08001C1C`), floor walks at the
-origin plus one pixel and at x +/- 5 (`sub_08001E58` with a mode), bit-3 tests
-at x +/- 5 (`sub_08001F3C`) and wall pushes at x +/- 8 (`sub_08002058`,
-`sub_0800207C`). Interleaved loops over `gEwramData + 0x1316C` entities look
-like moving-platform handling. These offsets are recorded as reading notes;
-the control flow is not yet understood well enough to port.
+Player collision: `sub_08014A04` runs every frame from `sub_0801B0D8`
+(unless bit 0 of `gEwramData + 0x131B8` is set), after the position
+integration and before the state dispatch; `sub_0801D1C8` is its twin. The
+pinned decompilation only has a commented, non-matching m2c draft; the order
+and constants below were read from that draft and checked against the
+assembly (wall loop, bounce, landing masks and thresholds). Coordinates are
+the integer room position (X, Y = feet):
+
+1. Clear flags `0x28000800`. A ceiling walk at (X, Y-33) sets `0x20000000`.
+2. Collision mode 1 when `0x13260 & 0x4000` and no bit-3 cell at (X+/-5, Y-7);
+   otherwise mode 0 (no rewrite).
+3. Walls, by the sign of vx + `+0x2C`: for each Y offset of the list at
+   `+0x18` (count byte, then signed offsets), push out of a wall at X-8
+   (`sub_0800207C`) or X+8 (`sub_08002058`); the first hit moves X by whole
+   pixels, sets `0x40000` and either zeroes vx and `+0x50` (flag `0x80`) or
+   sets vx = -vx/4 and negates `+0x50`. Lists in the ROM: `0x080E12DC`
+   (-12, -20, -28) set at spawn, `0x080E12EA` (-6, -9) set by low-posture
+   states, `0x080E12EF` (-14, -20, -32, -48), `0x080E12E4` (-6, -16, -28),
+   `0x080E12E8` (-12).
+4. A ceiling at (X+/-5, Y-20) sets `0x20008000`, else `0x8000` is cleared.
+   `+0x16` counts down.
+5. Bit-3 cells at (X+/-5, Y-8) set `0x1000000` (entering with vy > 1.5 calls
+   `sub_0803319C(0)`; with `0x13260 & 0x8000`, vy /= 4); bit-3 cells at
+   (X+/-5, Y-25) set `0xC00000` (and `0x800` without one at (X, Y-26)). This
+   matches water but is not confirmed.
+6. Walking: `+0x1C` = 1 when a floor slope is within 4 pixels ahead at Y+1.
+7. Not grounded (`0x100000` clear) with vy <= 0: a solid or slope cell at the
+   feet pushes Y up (platforms `0x01` let Soma rise through). Then vy < 0 or
+   `+0x16 != 0` ends the pass.
+8. Ground probes at (X, Y+1), (X-5, Y+1), (X+5, Y+1): `0x1000` stays set only
+   if none is solid or a slope (feet on platforms only), slopes set `0x2000`
+   (bit 2 clear) or `0x4000` (bit 2 set), and `+0x1D` keeps the steepest
+   step (byte >> 6). The centre probe snaps Y onto the surface; when grounded,
+   a probe at Y+7 snaps down (slopes, steps); side probes snap only off
+   slopes. A platform catches falling feet only if they entered it this frame
+   (penetration <= vy pixels + 2).
+9. With contact and vy > 0 Soma lands: sets `0x100000`, clears `0x20017E`
+   (`0x20031E` when the equipped weapon has property `0x2000`), `+0x14` = 0,
+   sound `0xBB`, Y fraction cleared, vy = `+0x54` = 0; vy > 6.25 or flag
+   `0x80` is a hard landing (`0x10000`, state 4), else state 0. Without
+   contact `0x100000` is cleared.
+
+The gravity routine `sub_08018B98` bumps the head with ceiling walks at
+(X-5, Y-32) then (X+5, Y-32), skipped while falling with vx = 0; when rising,
+vy = 0.0625 and `+0x54` = -0.125 (the `sub_08017CC8` special case needs flag
+`0x10`).
 
 Soma motion constants verified in the assembly (16.16 fixed point, pixels per
 60 Hz frame, positive Y downward; `+0x4C` is Y velocity, `+0x54` a Y
@@ -166,8 +203,10 @@ its friction term for one more frame. Ground walking on slopes and the
 grounded state routines (`sub_08016DE4`, `sub_080168F0`) have not been traced
 yet.
 
-`src/runtime/aos_soma.c` ports the rules of this table except the ceiling
-probe, the flag `0x800000` and second/mid-air jumps, backdash and recoil;
+`src/runtime/aos_soma.c` ports the rules of this table and the tile path of
+the collision pass above, except the flag `0x800000` and second/mid-air
+jumps, backdash, recoil and moving platforms (`gEwramData + 0x1316C`,
+`+ 0x131B4`);
 `tests/test_aos_soma.c` checks them without a ROM (a held jump rises about
 56.7 pixels over 56 frames, a tapped jump about 9.7 pixels).
 

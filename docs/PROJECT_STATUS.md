@@ -1739,3 +1739,21 @@ No automatic reciprocal link or native engine encoder is implemented.
   and mid-air jumps, backdash, recoil and the other player states.
 - Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
   passed.
+
+## Patch 0202 - Soma collision pass
+
+- Ported the tile path of Soma's collision pass `sub_08014A04` into
+  `src/runtime/aos_soma.c`: wall pushes from the ROM probe lists with the
+  quarter bounce, ceiling flags, bit-3 flags, floor snap with the step-down
+  probe, slope flags, one-way platform catching and normal/hard landings; the
+  gravity routine now bumps the head on ceilings. The order and constants
+  are documented in `docs/AOS_SOMA.md`.
+- Tests on synthetic layers cover landing, hard landing, walls, ceilings,
+  rising through and landing on platforms, walking off a ledge and walking
+  down a slope. A local check dropped Soma into exported rooms 0/1, 0/5 and
+  0/9; he landed on their floors and slopes.
+- Still missing for a playable Soma: the ground and air state routines of
+  `sub_0801B0D8` (only their steering is ported), moving platforms, the
+  animation selection and the runtime integration.
+- Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
+  passed.

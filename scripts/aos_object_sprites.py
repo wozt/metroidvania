@@ -144,6 +144,16 @@ def frame_components(rom: bytes, frames_descriptor: int, frame: int) -> list[tup
     return result
 
 
+def frame_anchor(rom: bytes, frames_descriptor: int, frame: int) -> tuple[int, int]:
+    """Centre (x + width / 2, y + height / 2) of a frame's last OAM component,
+    as sub_0806C48C reads it (not mirrored)."""
+    components = frame_components(rom, frames_descriptor, frame)
+    if not components:
+        return 0, 0
+    x, y, _, _, width, height, _ = components[-1]
+    return x + width // 2, y + height // 2
+
+
 def render_frame(tiles: bytes, sheet_width: int, components: list[tuple],
                  colors: list[tuple[int, int, int]], skipped: list | None = None) -> dict:
     """Opaque pixels of a frame facing right, relative to the entity position.
@@ -244,6 +254,12 @@ def produce(root: Path, rom_path: Path) -> dict:
                                                   frame["duration"], frame["mode"],
                                                   *box, *attack))))
             library.add(f"Enemy/{name}/anim_{number}", sprites)
+            # sub_0806C48C: the centre of the frame's last OAM component (the
+            # probe point of the debris pieces of sub_0806C5AC).
+            for index, frame in enumerate(animation):
+                lines.append("\t".join(map(str, ("anchor", name, number, index,
+                                                  *frame_anchor(rom, entity["frames"],
+                                                                frame["frame"])))))
         if entity.get("probes"):
             count = struct.unpack("<h", _rom_slice(rom, entity["probes"], 2, "probe table"))[0]
             if not 0 < count <= 8:

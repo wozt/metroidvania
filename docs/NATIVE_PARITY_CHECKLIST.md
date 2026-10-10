@@ -308,14 +308,14 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself.  
 Next action: Port the crow feathers of sub_080C9E2C and the hit stun of sub_0806AD24.
 
-[~] **`aos.enemies.skull_archer` — Skull archer and its arrows.** Standing, volleys from the ROM table, patrol and retreat, sticking arrows and death are ported.
+[~] **`aos.enemies.skull_archer` — Skull archer and its arrows.** Standing, volleys from the ROM table, patrol and retreat, sticking arrows, death and the flung pieces (generic debris) are ported.
 
-Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemySkullArcherCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemySkullArcherUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF78C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF7EC`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF8D0`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF934`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFA9C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFB9C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFD3C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFD8C`.  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806C48C`, `aos:asm:asm/code/code_08060B98.s:sub_0806C5AC`, `aos:asm:asm/code/code_080A0A8C.s:EnemySkullArcherCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemySkullArcherUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF78C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF7EC`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF8D0`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF934`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFA9C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFB9C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFD3C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFD8C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.axe_armor`.  
-Known divergences: The archer vanishes at once: its seven bone pieces (sub_0806C5AC) are not ported.  
-Next action: Port the bone pieces of sub_0806C5AC.
+Known divergences: The pieces' attacker position is Soma's, standing for the weapon entity.  
+Next action: Port the strike and dust effects of sub_0806D5C0 / sub_08045CEC.
 
 [~] **`aos.enemies.zombie` — Zombie and generic enemy death.** Zombie spawning, terrain walking and generic death are covered; the complete enemy framework is not.
 

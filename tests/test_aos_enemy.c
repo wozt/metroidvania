@@ -245,12 +245,12 @@ static void soldier_tests(void) {
         ++frames;
     }
     assert(z.state == 1 && z.step == 0xA && z.anim.id == 2);
-    while (!hit.spawn_child && frames < 300) {
+    while (!hit.child_count && frames < 300) {
         hit = aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         ++frames;
     }
-    assert(hit.spawn_child && z.step == 0xB && z.anim.frame == 10);
-    AosEnemy g = hit.child;
+    assert(hit.child_count && z.step == 0xB && z.anim.frame == 10);
+    AosEnemy g = hit.children[0];
     assert(g.role == AOS_ROLE_GRENADE && g.static_frame == 18 && g.own_boxes);
     assert(g.x == z.x + 0x100000 && g.y == z.y - 0x250000);
     assert(g.vx == 0x14000 && g.vy == -0x20000 && g.ay == 0x1800);
@@ -385,14 +385,14 @@ static void armor_tests(void) {
     }
     assert(a.state == 1);
     AosHitReport hit = {0};
-    while (!hit.spawn_child && frames < 400) {
+    while (!hit.child_count && frames < 400) {
         hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one);
         ++frames;
     }
     /* Thrown at frame 12, tick 2 (the last of these 3-tick test frames):
      * the animation step that follows reaches frame 13. */
     assert(a.anim.id == 1 && a.substep == 0 && a.anim.frame == 13 && a.anim.tick == 0);
-    AosEnemy axe = hit.child;
+    AosEnemy axe = hit.children[0];
     assert(axe.role == AOS_ROLE_AXE && axe.combat.type == 0x0A);
     assert(axe.x == a.x + 0x180000 && axe.y == a.y - 0x100000);
 
@@ -413,7 +413,7 @@ static void armor_tests(void) {
 
     /* The axe hits Soma through its own type (0xA): an enemy-body hit does
      * not shield him from it. */
-    AosEnemy second = hit.child;
+    AosEnemy second = hit.children[0];
     aos_enemy_update(&second, &away, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     soma.x = second.x;
     soma.y = second.y + AOS_FIXED(20);
@@ -431,7 +431,7 @@ static void armor_tests(void) {
     const AosHitbox blade_box[] = {{-10, -40, 20, 20, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    AosEnemy struck = hit.child;
+    AosEnemy struck = hit.children[0];
     struck = second;
     struck.combat.recent[0] = struck.combat.recent[1] = struck.combat.recent[2] = 0;
     soma.x = struck.x;
@@ -509,7 +509,7 @@ static void archer_tests(void) {
         while (a.state == 1 && frames < 1000) {
             AosHitReport hit = aos_enemy_update(&a, &far_soma, &layer, &kind, NULL, NULL, 10, 4,
                                                 100, 0, never_zero);
-            if (hit.spawn_child && arrows++ == 0) first = hit.child;
+            if (hit.child_count && arrows++ == 0) first = hit.children[0];
             ++frames;
         }
         assert(arrows == (volley == 4 ? 3 : 1));
@@ -525,11 +525,11 @@ static void archer_tests(void) {
         aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
         ++frames;
     }
-    while (!hit.spawn_child && frames < 1000) {
+    while (!hit.child_count && frames < 1000) {
         hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
         ++frames;
     }
-    AosEnemy arrow = hit.child;
+    AosEnemy arrow = hit.children[0];
     int32_t x0 = arrow.x;
     soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
     int flight = 0;
@@ -586,9 +586,30 @@ static void archer_tests(void) {
     AosWeaponEntity weapon = {.active = true};
     a.hp = 1;
     hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 0, never_zero);
-    assert(hit.killed && a.state == 3 && !a.removed);
-    aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 0, never_zero);
-    assert(a.removed);
+    assert(hit.killed && a.state == 3 && !a.removed && a.away == 1);
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 0, never_zero);
+    assert(a.removed && hit.child_count == 7);
+    for (int i = 0; i < 7; ++i) {
+        const AosEnemy *piece = &hit.children[i];
+        assert(piece->role == AOS_ROLE_DEBRIS && piece->anim.id == 5 + i);
+        /* random() = 1: vx = 0x8000 + (1 << 13), vy = -0x38000 + (1 << 12). */
+        assert(piece->vx == 0xA000 && piece->vy == (int32_t)0xFFFC9000 && piece->ay == 0x2000);
+        assert(piece->combat.attack_off && piece->combat.hurt_off);
+    }
+    /* A piece rises, falls back and vanishes on the floor (its probe 4
+     * pixels below its anchor), never sliding far: vx keeps 79/80. */
+    kind.anchors[5][0][0] = -4;
+    kind.anchors[5][0][1] = -6;
+    AosEnemy bone = hit.children[0];
+    int32_t rise = bone.y, top = bone.y;
+    int falling = 0;
+    while (!bone.removed && falling < 200) {
+        aos_enemy_update(&bone, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+        if (bone.y < top) top = bone.y;
+        ++falling;
+    }
+    assert(bone.removed && top < rise && (bone.y >> 16) - 6 + 4 >= 160);
+    assert(bone.x - a.x < AOS_FIXED(40));
 }
 
 int main(void) {

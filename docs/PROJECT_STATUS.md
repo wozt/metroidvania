@@ -2407,3 +2407,24 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0234 - generic debris and the archer's shattering
+
+- Ported the generic debris piece `sub_0806C5AC`: friction of 79/80 on vx,
+  clamped accelerations, deletion on a solid cell under the centre of its
+  sprite's last OAM component (`sub_0806C48C`; the exporter now writes an
+  `anchor` line per enemy animation frame) or off a widened screen. A killed
+  skull archer now throws its seven pieces away from the attacker instead of
+  vanishing.
+- `aos_enemy_update` can now return up to eight child entities per update
+  (`child_count` / `children`), which the runtime adds to the room.
+- Documented that the game keeps entity positions screen-relative (the
+  collision probes add the camera); the port keeps room coordinates and
+  converts at absolute screen comparisons.
+- Checked in a capture of room 0/24: the archer's skull, bones and bow fly
+  away from Soma after the killing blow.
+- Tests: seven pieces with their animations and velocities, no collision,
+  and a piece that rises, falls and vanishes at the floor.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

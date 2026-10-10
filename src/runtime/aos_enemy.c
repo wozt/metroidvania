@@ -3,6 +3,7 @@
 #include "aos_enemy.h"
 
 #include <math.h>
+#include <string.h>
 
 
 static uint32_t random_state;
@@ -491,9 +492,11 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->state = 3;
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_SKULL_ARCHER) {
-                    /* sub_080AFD3C: state 3 shatters it on the next update
-                     * (the bone pieces flung away from the attacker are not
-                     * ported). */
+                    /* sub_080AFD3C: state 3 shatters it on the next update,
+                     * its pieces flung away from the attacker (+ 0x20; the
+                     * weapon entity follows Soma, whose position stands in
+                     * for it). */
+                    enemy->away = enemy->x < soma->x ? -1 : 1;
                     enemy->state = 3;
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_AXE_ARMOR) {
@@ -1042,8 +1045,8 @@ static void soldier_attack(AosEnemy *z, const AosSoma *soma, const AosAnimSet *a
             int32_t vx = (soma->x - (z->x + offset)) / 0x2C;
             if (z->mirrored ? vx > 0x13FFF : vx <= (int32_t)0xFFFEC000)
                 vx = z->mirrored ? 0x14000 : (int32_t)0xFFFEC000;
-            report->spawn_child = true;
-            report->child = make_grenade(z, offset, (int32_t)0xFFDB0000, vx, (int32_t)0xFFFE0000);
+            report->children[report->child_count++] =
+                make_grenade(z, offset, (int32_t)0xFFDB0000, vx, (int32_t)0xFFFE0000);
             z->step = 0xB;
         }
         break;
@@ -1079,8 +1082,8 @@ static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollisio
             report = collide(z, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
         aos_combat_tick(&z->combat);
     }
-    report.spawn_child = spawned.spawn_child;
-    report.child = spawned.child;
+    report.child_count = spawned.child_count;
+    memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
     return report;
 }
 
@@ -1250,8 +1253,7 @@ static void armor_attack(AosEnemy *a, const AosSoma *soma, const AosCollision *l
         break;
     case 1:
         if (a->anim.frame == 12 && a->anim.tick == 2) {
-            report->spawn_child = true;
-            report->child = make_axe(a);
+            report->children[report->child_count++] = make_axe(a);
         }
         if (a->anim.flags & AOS_ANIM_ENDED) {
             if (player_ahead_within(a, soma, 0x63)) {
@@ -1366,8 +1368,8 @@ static AosHitReport armor_update(AosEnemy *a, AosSoma *soma, const AosCollision 
         report = collide(a, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     step_anim(a, kind->anims);
     aos_combat_tick(&a->combat);
-    report.spawn_child = spawned.spawn_child;
-    report.child = spawned.child;
+    report.child_count = spawned.child_count;
+    memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
     return report;
 }
 
@@ -1419,8 +1421,7 @@ static void archer_shoot(AosEnemy *a, const AosEnemyKind *kind, AosHitReport *re
         unsigned v = a->volley < 4 ? a->volley : 0;
         if (a->shot < kind->volley_sizes[v] && a->shot < 8 &&
             kind->volleys[v][a->shot][0] == (int8_t)a->anim.frame && a->anim.tick == 0) {
-            report->spawn_child = true;
-            report->child = make_arrow(a, kind->volleys[v][a->shot][1]);
+            report->children[report->child_count++] = make_arrow(a, kind->volleys[v][a->shot][1]);
             a->shot++;
         }
         if (a->anim.flags & AOS_ANIM_ENDED) {
@@ -1497,13 +1498,72 @@ static AosHitReport arrow_update(AosEnemy *arrow, AosSoma *soma, const AosEnemyK
     return report;
 }
 
+/* A debris piece (sub_0806C5AC) of its parent's kind, playing `anim`. */
+static AosEnemy make_debris(const AosEnemy *parent, const AosAnimSet *anims, unsigned anim) {
+    AosEnemy d = {0};
+    d.id = parent->id;
+    d.role = AOS_ROLE_DEBRIS;
+    d.static_frame = -1;
+    d.x = parent->x;
+    d.y = parent->y;
+    d.mirrored = parent->mirrored;
+    d.combat.attack_off = d.combat.hurt_off = true;
+    play_loop(&d, anims, anim, true);
+    step_anim(&d, anims);
+    return d;
+}
+
+/* sub_0806C5AC: a piece keeps 79/80 of vx, adds its accelerations (both
+ * clamped to 8.0) and moves; it vanishes when the centre of its sprite's
+ * last OAM component, 4 pixels lower (sub_0806C48C), is in a solid cell
+ * (sub_080020A0; sound 0x162, the effect of sub_08045CEC is not ported), or
+ * when it leaves the screen widened by 32 pixels. It never collides. */
+static void debris_update(AosEnemy *d, const AosCollision *layer, const AosEnemyKind *kind,
+                          int cam_x, int cam_y) {
+    d->vx = d->vx * 79 / 80 + d->ax;
+    if (d->ax >= 0 ? d->vx > 0x80000 : d->vx < -0x80000) d->vx = d->ax >= 0 ? 0x80000 : -0x80000;
+    d->vy += d->ay;
+    if (d->ay >= 0 ? d->vy > 0x80000 : d->vy < -0x80000) d->vy = d->ay >= 0 ? 0x80000 : -0x80000;
+    d->x += d->vx;
+    d->y += d->vy;
+    int ax = 0, ay = 0;
+    if (d->anim.id < AOS_ENEMY_MAX_ANIMS && d->anim.frame < AOS_ENEMY_MAX_FRAMES) {
+        ax = kind->anchors[d->anim.id][d->anim.frame][0];
+        ay = kind->anchors[d->anim.id][d->anim.frame][1];
+    }
+    if (d->mirrored) ax = -ax;
+    if (d->vflip) ay = -ay;
+    int32_t px = (d->x >> 16) + ax, py = (d->y >> 16) + ay + 4;
+    if (aos_collision_cell(layer, px, py) & 1) {
+        d->removed = true;
+        return;
+    }
+    int sx = (d->x >> 16) - cam_x, sy = (d->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x20) > 0x130 || (uint16_t)(sy + 0x20) > 0xE0) d->removed = true;
+}
+
+/* sub_080AFB9C: seven pieces (animations 5 to 11) fly away from the
+ * attacker at 0.5 to 2.4, rising at 0.5 to 3.5 with gravity 0x2000. */
+static void archer_shatter(const AosEnemy *a, const AosEnemyKind *kind, uint32_t (*random)(void),
+                           AosHitReport *report) {
+    for (unsigned anim = 5; anim <= 11 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++anim) {
+        AosEnemy d = make_debris(a, kind->anims, anim);
+        d.vx = (int32_t)(((random() & 0xF) << 13) + 0x8000) * a->away;
+        d.vy = (int32_t)((random() & 0x1F) << 12) + (int32_t)0xFFFC8000;
+        d.ay = 0x2000;
+        d.timer = (uint8_t)((random() & 0xF) + 0x28);
+        report->children[report->child_count++] = d;
+    }
+}
+
 /* EnemySkullArcherUpdate: inside the activity window, the state, then the
- * collision pass before the animation step; state 3 shatters it (sound
- * 0x6B) and deletes it at once. */
+ * collision pass before the animation step; state 3 shatters it into its
+ * pieces (sound 0x6B) and deletes it at once. */
 static AosHitReport archer_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
                                   const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                   const AosWeaponFrames *weapon_frames, int soma_atk,
-                                  int soma_def, int cam_x, int cam_y) {
+                                  int soma_def, int cam_x, int cam_y,
+                                  uint32_t (*random)(void)) {
     AosHitReport report = {0}, spawned = {0};
     int sx = (a->x >> 16) - cam_x, sy = (a->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
@@ -1512,6 +1572,7 @@ static AosHitReport archer_update(AosEnemy *a, AosSoma *soma, const AosCollision
     case 1: archer_shoot(a, kind, &spawned); break;
     case 2: archer_patrol(a, soma, layer, kind); break;
     case 3:
+        archer_shatter(a, kind, random, &report);
         a->removed = true;
         return report;
     default:
@@ -1524,8 +1585,8 @@ static AosHitReport archer_update(AosEnemy *a, AosSoma *soma, const AosCollision
         report = collide(a, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     step_anim(a, kind->anims);
     aos_combat_tick(&a->combat);
-    report.spawn_child = spawned.spawn_child;
-    report.child = spawned.child;
+    report.child_count = spawned.child_count;
+    memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
     return report;
 }
 
@@ -1542,12 +1603,17 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_BLUE_CROW)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (enemy->role == AOS_ROLE_DEBRIS) {
+        debris_update(enemy, layer, kind, cam_x, cam_y);
+        if (!enemy->removed) step_anim(enemy, anims);
+        return report;
+    }
     if (enemy->role == AOS_ROLE_ARROW)
         return arrow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y);
     if (enemy->id == AOS_ENEMY_SKULL_ARCHER)
         return archer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                             cam_x, cam_y);
+                             cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_AXE)
         return axe_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                           cam_y);

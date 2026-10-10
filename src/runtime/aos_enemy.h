@@ -41,6 +41,7 @@ typedef struct {
 } AosEnemyStats;
 
 #define AOS_ENEMY_MAX_ANIMS 12
+#define AOS_ENEMY_MAX_CHILDREN 8
 #define AOS_ENEMY_MAX_FRAMES 24
 
 /* The probe table of the walker sub_0806C828 (ROM, e.g. 0x08528708). */
@@ -59,6 +60,8 @@ typedef struct {
     AosBox hurt[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES];
     AosBox attack[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES];
     uint8_t blink[40];      /* 0x08118CE0 & 1: hidden while dying */
+    /* Centre of each frame's last OAM component (sub_0806C48C). */
+    int8_t anchors[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES][2];
     /* 0x08118D08: the (x, y) screen margins of sub_0806D128(e, n). */
     int16_t margins[7][2];
     AosProbes probes;       /* walker probe table, count 0 when unused */
@@ -78,7 +81,8 @@ enum {
 
 /* What an AosEnemy slot holds: the enemy itself or a child entity of its
  * kind (sharing its sprites and record). */
-enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3 };
+enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3,
+       AOS_ROLE_DEBRIS = 4 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -110,6 +114,7 @@ typedef struct {
     int32_t spin;           /* + 0x18: angle step per frame */
     int8_t volley_count;    /* + 0x14 of a shooter: volleys fired, 0..4 */
     uint8_t volley, shot;   /* current volley list and entry (+ 0x1C) */
+    int8_t away;            /* + 0x20 at death: +1 / -1, away from the attacker */
     AosBox own_hurt, own_attack;
     AosEnemyStats stats;
     AosCombat combat;
@@ -125,8 +130,8 @@ typedef struct {
     bool killed;
     bool spawn;             /* a zombie spawner created a zombie here */
     int32_t spawn_x, spawn_y;   /* room pixels */
-    bool spawn_child;       /* a child entity (child) to add to the room */
-    AosEnemy child;
+    uint8_t child_count;    /* child entities to add to the room */
+    AosEnemy children[AOS_ENEMY_MAX_CHILDREN];
 } AosHitReport;
 
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. The seed

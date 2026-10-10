@@ -680,10 +680,23 @@ farther than 99. The arrow (`sub_080AF7EC`, collision type 0xA, sprite frame
 25, a 2 x 2 box 18 pixels ahead and 24 up) flies at 3.0; hitting Soma
 (`sub_080AF78C`: a knockback, type 1) it stops colliding and stays on him at
 its offset for 30 frames; struck (`sub_080AFD8C`) it vanishes; beyond margin
-4 it is deleted. Hit callback: at 0 HP, state 3 (`sub_080AFB9C`, sound 0x6B)
-deletes the archer on the next update. Not ported: the seven bone pieces
-(`sub_0806C5AC` with their own floor collision), the strike effect, the
-arrow's `+0x0F` change, the global pause and state 4.
+4 it is deleted. Hit callback: at 0 HP, `+0x20` = +1 or -1 away from the
+attacker and state 3 (`sub_080AFB9C`, sound 0x6B), which on the next update
+throws seven pieces (animations 5 to 11) and deletes the archer: vx =
+(0x8000 + (random & 0xF) << 13) away from the attacker, vy = -3.5 +
+(random & 0x1F) << 12, gravity 0x2000. A piece (`sub_0806C5AC`, generic) keeps
+79/80 of vx each frame, adds its accelerations (clamped to 8.0) and moves;
+it vanishes when the centre of its sprite's last OAM component
+(`sub_0806C48C`), 4 pixels lower, is in a solid cell (`sub_080020A0`: bit 0;
+sound 0x162) or when it leaves the screen widened by 32 pixels; it never
+collides. The attacker is the weapon entity; Soma's position stands for it.
+Not ported: the strike and dust effects, the arrow's `+0x0F` change, the
+global pause and state 4.
+
+Entity positions in the game are screen-relative: the collision probes add
+the camera (`gEwramData + 0xA094 + 6 / + 0xA`) and screen tests compare them
+directly. The port keeps room coordinates and subtracts the camera wherever
+the game compares an absolute screen position.
 
 `fusion_aria_runtime` runs these rules with Soma's library frames
 (README). Next steps: more enemies (damage through the weapon hitboxes), the

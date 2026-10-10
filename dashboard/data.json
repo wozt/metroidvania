@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-10T20:43:31+00:00",
+ "generated_at": "2026-10-10T20:48:33+00:00",
  "git": {
-  "commit": "40226fa",
+  "commit": "e4a8b7a",
   "branch": "main",
   "dirty": true
  },
@@ -880,10 +880,12 @@
     "sub_080AFD3C",
     "sub_080AF7EC",
     "sub_080AF78C",
-    "sub_080AFD8C"
+    "sub_080AFD8C",
+    "sub_0806C5AC",
+    "sub_0806C48C"
    ],
-   "limitations": "The archer vanishes at once: its seven bone pieces (sub_0806C5AC) are not ported. Standing, volleys from the ROM table, patrol and retreat, sticking arrows and death are ported.",
-   "next_action": "Port the bone pieces of sub_0806C5AC.",
+   "limitations": "The pieces' attacker position is Soma's, standing for the weapon entity. Standing, volleys from the ROM table, patrol and retreat, sticking arrows, death and the flung pieces (generic debris) are ported.",
+   "next_action": "Port the strike and dust effects of sub_0806D5C0 / sub_08045CEC.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -3159,6 +3161,12 @@
  },
  "timeline": [
   {
+   "commit": "e4a8b7a",
+   "date": "2026-10-10",
+   "subject": "feat(aria): native skull archers and arrows",
+   "scope": "aria"
+  },
+  {
    "commit": "40226fa",
    "date": "2026-10-10",
    "subject": "feat(aria): native axe armors and the probe walker",
@@ -3631,12 +3639,6 @@
    "date": "2026-10-10",
    "subject": "feat: classify exceptional native Samus cannon animation candidates",
    "scope": "project"
-  },
-  {
-   "commit": "6fadb9d",
-   "date": "2026-10-10",
-   "subject": "feat: cross-reference native Samus and arm cannon animation arrays",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -3695,7 +3697,7 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 46,
+    "routines_cited_by_features": 48,
     "call_edges": 14228
    }
   },

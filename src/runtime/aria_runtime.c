@@ -413,12 +413,12 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 AosEnemy *spawner = &room->entities[e->spawner].enemy;
                 if (spawner->spawned_count) spawner->spawned_count--;
             }
-            if (hit.spawn_child && room->entity_count < MAX_ENTITIES) {
-                /* A child entity of this kind (a zombie soldier's grenade). */
+            /* Child entities of this kind (grenades, axes, arrows, debris). */
+            for (int c = 0; c < hit.child_count && room->entity_count < MAX_ENTITIES; ++c)
                 room->entities[room->entity_count++] = (AriaEntity){
-                    .kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.child.x >> 16,
-                    .y = hit.child.y >> 16, .spawned = true, .spawner = -1, .enemy = hit.child};
-            }
+                    .kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.children[c].x >> 16,
+                    .y = hit.children[c].y >> 16, .spawned = true, .spawner = -1,
+                    .enemy = hit.children[c]};
             if (hit.spawn && room->entity_count < MAX_ENTITIES) {
                 AriaEntity *child = &room->entities[room->entity_count];
                 *child = (AriaEntity){.kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.spawn_x,
@@ -484,6 +484,20 @@ static bool load_enemy_data(AriaObjects *objects) {
         int anim, index, frame, ticks, mode, h[4], a[4];
         if (sscanf(line, "blink\t%63s", text) == 1) {
             for (int i = 0; i < 40 && text[i]; ++i) blink[i] = (uint8_t)(text[i] == '1');
+            continue;
+        }
+        if (!strncmp(line, "anchor\t", 7)) {
+            char anchor_name[16];
+            int anim, index, ax, ay;
+            if (sscanf(line + 7, "%15s %d %d %d %d", anchor_name, &anim, &index, &ax, &ay) != 5 ||
+                anim < 0 || anim >= AOS_ENEMY_MAX_ANIMS || index < 0 ||
+                index >= AOS_ENEMY_MAX_FRAMES)
+                continue;
+            for (int id = 0; id < ENEMY_KINDS; ++id)
+                if (enemy_names[id] && !strcmp(anchor_name, enemy_names[id])) {
+                    objects->enemies[id].kind.anchors[anim][index][0] = (int8_t)ax;
+                    objects->enemies[id].kind.anchors[anim][index][1] = (int8_t)ay;
+                }
             continue;
         }
         if (!strncmp(line, "volley\t", 7)) {

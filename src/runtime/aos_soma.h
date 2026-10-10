@@ -8,9 +8,10 @@
  * (jump release, apex float, slowed fall), the ledge start of sub_08018020
  * and the gravity of sub_08018B98 with its ceiling bump, and the tile path of
  * the collision pass sub_08014A04 (walls, ceilings, water flags, floor snap
- * and landing) and the movement part of player states 0 and 4. Moving
- * platforms and carried entities (gEwramData + 0x1316C, + 0x131B4), the
- * other states, abilities, attacks and the animations are NOT ported.
+ * and landing), the movement part of player states 0, 3, 4, 5, 6 and 7
+ * with the ability moves, and the animation requests. Moving platforms and
+ * carried entities (gEwramData + 0x1316C, + 0x131B4), the other states,
+ * attacks, hurtboxes and effects are NOT ported.
  * Values are 16.16 fixed point pixels per 60 Hz frame, positive Y downward;
  * positions are room pixels. No SDL. */
 #ifndef AOS_SOMA_H
@@ -42,6 +43,7 @@ enum {
     AOS_FLAG_HARD_LANDING = 1u << 16,  /* 0x10000 */
     AOS_FLAG_WALL = 1u << 18,          /* 0x40000: a wall pushed Soma */
     AOS_FLAG_GROUNDED = 1u << 20,      /* 0x100000 */
+    AOS_FLAG_KICK_HIT = 1u << 19,      /* 0x80000: set by attack collisions */
     AOS_FLAG_ANIM_DONE = 1u << 21,     /* 0x200000: set by the animation player */
     AOS_FLAG_SLOW_FALL = 1u << 22,     /* 0x400000: sub_0801938C slows falls */
     AOS_FLAG_HEAD_SPECIAL = 1u << 23,  /* 0x800000: bit-3 cell at y - 25 */
@@ -80,7 +82,19 @@ enum {
     AOS_KEY_LEFT = 0x20,
     AOS_KEY_UP = 0x40,
     AOS_KEY_DOWN = 0x80,
-    AOS_KEY_JUMP = 0x01               /* default A; the game reads 0x1339A */
+    AOS_KEY_JUMP = 0x01,              /* A: default of gEwramData + 0x1339A */
+    AOS_KEY_ATTACK = 0x02,            /* B: + 0x13398 */
+    AOS_KEY_GUARDIAN = 0x100,         /* R: + 0x1339E */
+    AOS_KEY_ABILITY = 0x200           /* L: + 0x1339C (backdash, high jump) */
+};
+
+/* Ability bits of gEwramData + 0x13396 tested with sub_08032AB8(bit). */
+enum {
+    AOS_MOVE_BACKDASH = 1u << 0,
+    AOS_MOVE_SLIDE = 1u << 1,
+    AOS_MOVE_AIR_JUMP = 1u << 2,      /* sub_080190E0 */
+    AOS_MOVE_DIVE_KICK = 1u << 3,     /* sub_08017D90 */
+    AOS_MOVE_HIGH_JUMP = 1u << 4
 };
 
 typedef struct {
@@ -98,11 +112,13 @@ typedef struct {
     uint8_t slope_step;     /* +0x1D: steepest slope byte >> 6 under the feet */
     bool facing_left;       /* +0x58 bit 0x40 */
     uint32_t abilities;     /* gEwramData + 0x13260 */
+    uint32_t moves;         /* gEwramData + 0x13396, AOS_MOVE_* */
     const int8_t *wall_probes;  /* entity + 0x18; NULL means stand probes */
     int8_t air_probes[5];   /* gEwramData + 0x13218: count, offsets */
     uint16_t held, pressed; /* this frame's gEwramData + 0x1C / + 0x1E */
     uint16_t anim_request;  /* + 0x20: one-shot animation, 0xFF for none */
     uint8_t up_frames;      /* + 0x2A: frames with Up held while idle */
+    bool air_anim_locked;   /* gEwramData + 0x131B8 & 4, cleared every frame */
     AosAnimState anim;
     const AosAnimSet *anims;    /* animation timings; NULL never ends one */
 } AosSoma;
@@ -119,7 +135,10 @@ enum {
     AOS_SOMA_ANIM_LOOK_UP = 0x17, AOS_SOMA_ANIM_TURN = 0x18,
     AOS_SOMA_ANIM_STOP = 0x19, AOS_SOMA_ANIM_WALK_START = 0x1A,
     AOS_SOMA_ANIM_HIGH_JUMP = 0x24, AOS_SOMA_ANIM_SPECIAL_TURN = 0x29,
-    AOS_SOMA_ANIM_JUMP = 0x32
+    AOS_SOMA_ANIM_JUMP = 0x32, AOS_SOMA_ANIM_AIR_JUMP = 0x14,
+    AOS_SOMA_ANIM_BACKDASH = 0x15, AOS_SOMA_ANIM_SLIDE = 0x1F,
+    AOS_SOMA_ANIM_SLIDE_DOWNHILL = 0x2E, AOS_SOMA_ANIM_CEILING_CRASH = 0x25,
+    AOS_SOMA_ANIM_DIVE_KICK = 0x26, AOS_SOMA_ANIM_DIVE_DROP = 0x27
 };
 
 /* Spawn state of sub_08014548: grounded, animation-end flag set, no
@@ -143,7 +162,8 @@ AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
 /* One player frame of sub_0801B0D8: animation-end flag, integration,
  * collision pass, state routine, wall probe selection, the pending
  * animation (+ 0x20) and the animation step. States 0 (normal, ground and
- * air) and 4 (hard landing) are ported; other states do nothing yet. */
+ * air), 3 (slide), 4 (hard landing), 5 (high jump), 6 (ceiling crash)
+ * and 7 (dive kick) are ported; other states do nothing yet. */
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed);
 

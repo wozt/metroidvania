@@ -311,8 +311,111 @@ static void animation_tests(void) {
     memset(cells, 0, sizeof(cells));
 }
 
+static void ability_tests(void) {
+    fill(0, 20, W - 1, H - 1, 0x03);
+    const uint32_t all = AOS_MOVE_BACKDASH | AOS_MOVE_SLIDE | AOS_MOVE_AIR_JUMP |
+                         AOS_MOVE_DIVE_KICK | AOS_MOVE_HIGH_JUMP;
+
+    /* Without the ability bits none of the moves start. */
+    AosSoma soma = at(100, 159, AOS_FLAG_GROUNDED);
+    frame(&soma, AOS_KEY_ABILITY, AOS_KEY_ABILITY);
+    assert(soma.vx == 0 && !(soma.flags & AOS_FLAG_BACKDASH));
+    frame(&soma, AOS_KEY_DOWN | AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.state == 0);
+
+    /* Backdash: 3.75 away from the facing side, friction 0.25, ends with
+     * its one-shot animation. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.moves = all;
+    frame(&soma, AOS_KEY_ABILITY, AOS_KEY_ABILITY);
+    assert(soma.flags & AOS_FLAG_BACKDASH);
+    assert(soma.anim.id == AOS_SOMA_ANIM_BACKDASH);
+    assert(soma.vx == -0x3C000 + AOS_FRICTION && !soma.facing_left);
+    for (int i = 0; i < 6; ++i) frame(&soma, AOS_KEY_RIGHT, 0);
+    assert(!(soma.flags & AOS_FLAG_BACKDASH));
+
+    /* Slide: Down + jump, 3.125 decreasing by 0.09375 for 32 frames. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.moves = all;
+    frame(&soma, AOS_KEY_DOWN | AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.state == 3 && soma.anim.id == AOS_SOMA_ANIM_SLIDE);
+    assert(soma.vx == 0x32000 && (soma.flags & 0x20u) && (soma.flags & AOS_FLAG_CROUCH));
+    assert(soma.vy == 0 && (soma.flags & AOS_FLAG_GROUNDED));
+    int slide = 1;
+    while (soma.state == 3 && slide < 100) {
+        frame(&soma, AOS_KEY_DOWN, 0);
+        ++slide;
+    }
+    /* The start frame, then 32 frames in state 3; Soma stays crouched. */
+    assert(slide == 33 && soma.vx == 0x32000 - 32 * 0x1800 && !(soma.flags & 0x20u));
+    assert(soma.state == 0 && (soma.flags & AOS_FLAG_CROUCH));
+
+    /* High jump: Up + L, -10.0, state 5 until falling, flag 0x10 clears
+     * once falling faster than 1.125. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.moves = all;
+    frame(&soma, AOS_KEY_UP | AOS_KEY_ABILITY, AOS_KEY_ABILITY);
+    assert(soma.state == 5 && (soma.flags & 0x10u));
+    assert(soma.anim.id == AOS_SOMA_ANIM_HIGH_JUMP);
+    int32_t top = soma.y;
+    while (soma.state == 5) {
+        frame(&soma, 0, 0);
+        if (soma.y < top) top = soma.y;
+    }
+    assert(soma.vy > 0 && AOS_FIXED(159) - top > AOS_FIXED(200));
+    for (int i = 0; i < 20 && (soma.flags & 0x10u); ++i) frame(&soma, 0, 0);
+    assert(!(soma.flags & 0x10u) && soma.vy > 0x12000);
+
+    /* Under a ceiling the high jump crashes: state 6, frozen until the
+     * crash animation ends. */
+    fill(0, 2, W - 1, 3, 0x03);           /* bottom at pixel 31 */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.moves = all;
+    frame(&soma, AOS_KEY_UP | AOS_KEY_ABILITY, AOS_KEY_ABILITY);
+    for (int i = 0; i < 30 && soma.state == 5; ++i) frame(&soma, 0, 0);
+    assert(soma.state == 6 && soma.anim.id == AOS_SOMA_ANIM_CEILING_CRASH);
+    assert(soma.vy == 0 && soma.vx == 0);
+    int32_t stuck = soma.y;
+    int frozen = 0;
+    while (soma.state == 6 && frozen < 20) {
+        frame(&soma, AOS_KEY_RIGHT, 0);
+        assert(soma.y == stuck && soma.vx == 0);
+        ++frozen;
+    }
+    /* One 4-frame animation step, then the end flag on the next frame. */
+    assert(soma.state == 0 && frozen == 4);
+    fill(0, 2, W - 1, 3, 0x00);
+
+    /* Mid-air jump: once per jump, -4.125 with gravity_mod +0.078125. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.moves = all;
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    for (int i = 0; i < 10; ++i) frame(&soma, AOS_KEY_JUMP, 0);
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.flags & 4u);
+    assert(soma.anim.id == AOS_SOMA_ANIM_AIR_JUMP);
+    assert(soma.vy == (int32_t)0xFFFBE000 + 0x2000 + 0x1A00);
+    frame(&soma, AOS_KEY_JUMP, 0);
+    int32_t vy = soma.vy;
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.vy > vy);                 /* no third jump */
+
+    /* Dive kick: after the mid-air jump, Down + jump dives at 4.875 with
+     * vx 4.0 toward the held side; gravity still applies, so from this
+     * height it ends in a hard landing. */
+    frame(&soma, AOS_KEY_DOWN | AOS_KEY_RIGHT | AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.state == 7 && soma.vx == 0x40000);
+    assert(soma.anim.id == AOS_SOMA_ANIM_DIVE_KICK);
+    AosLanding landing = AOS_LANDING_NONE;
+    for (int i = 0; i < 60 && landing == AOS_LANDING_NONE; ++i)
+        landing = frame(&soma, AOS_KEY_DOWN | AOS_KEY_RIGHT, 0);
+    assert(landing == AOS_LANDING_HARD && soma.state == 4 && soma.y == AOS_FIXED(159));
+    memset(cells, 0, sizeof(cells));
+}
+
 int main(void) {
     init_anims();
+    ability_tests();
     animation_tests();
     collision_tests();
     state_tests();

@@ -179,8 +179,9 @@ acceleration term, `+0x14` an airborne frame counter, `+0x10` state flags):
 | Behavior | Evidence | Values |
 |---|---|---|
 | Ground jump | `sub_08019180`: jump button (`gEwramData + 0x1339A`) pressed while grounded or while `+0x14 <= 3`; sound `0xB9`; sets airborne flag 2, `+0x14 = 16`, `+0x54 = 0` | vy = `0xFFFB0C00` = -4.953125; -1.234375 (`0xFFFEC400`) when flag `0x4000000` is set |
-| Second jump button branch | same routine, ability check `sub_08032AB8(4)` and button `0x1339C`; sound `0xBA` | vy = -10.0, or -2.5 with flag `0x4000000` |
-| Mid-air jump | `+0x14 > 3` with ability `sub_08032AB8(2)` calls `sub_080190E0` | writes -4.5 / -4.125 (not yet traced) |
+| High jump (state 5) | same routine, ability `sub_08032AB8(4)`, button `0x1339C` pressed while airborne or with Up held, flag `0x10` clear; sound `0xBA`; sets `0x12`, clears `0x100404`, `+0x54` = 0 | vy = -10.0, or -2.5 with flag `0x4000000`; state 0 again once vy > 0 |
+| Mid-air jump | `+0x14 > 3` with ability `sub_08032AB8(2)` calls `sub_080190E0`: needs `0x800000`, or neither `4` nor `0x4000000`; jump pressed, `+0x16` = 0; requests animation 0x14, sets `4`, clears `0x10`, sound `0xB9` | vy = -4.125 with `+0x54` = +0.078125; with the slow-fall flag `0x400000` vy = -4.5 and `+0x54` = 0, only when vy >= 0 |
+| Dive kick (state 7) | `sub_08017D90` at the end of the jump routine: ability 3, airborne, `+0x10 & 0x800004` = 4 (flag 4 is only set by the mid-air jump in the code read), Down held, jump pressed; sound `0xA9` | vy = +4.875, `+0x54` = +0.125, vx = +/-4.0 toward the held side (else friction -/+0.25); animation 0x26 when \|vx\| > 1.0, else 0x27. State 7 (`sub_08017F94`) returns to state 0 with the slow-fall flag, or bounces (vy -3.5, `+0x54` -0.125, sets `8`, clears `4`) after a hit flag `0x80000` |
 | Flag `0x800000` jump | same routine | vy += -4.875 when vy > 1.0, otherwise vy = -4.875 |
 | Ceiling bump | `sub_08018B98`: ceiling walk at y-32 pushes the body down; while rising, `sub_08017CC8` handles a special case (vy <= -4.9375, state 6, sound `0xB8`), otherwise | vy = +0.0625, `+0x54` = -0.125 |
 | Air gravity | `sub_08018B98` each airborne frame | +0.125 while vy <= 0x1FFF; then +0.1015625; when falling vy += `+0x54`, `+0x54` += 0.015625 up to 0.0625 |
@@ -192,9 +193,22 @@ acceleration term, `+0x14` an airborne frame counter, `+0x10` state flags):
 | Slow fall | same routine, flag `0x100` of `gEwramData + 0x13260` or entity flag `0x400000` (`0x80 << 0xF`) | vy -= 0.15625 while vy > 0.15625 |
 
 | Air steering | `sub_0801B0D8` airborne branch: held right (`0x10`) / left (`0x20`) in `gEwramData + 0x1C` | vx = +/-1.5 (4.0 when flag `0x400` of `+0x13260` is set); otherwise `+0x50` = -/+0.25 per frame until vx reaches 0 |
-| Slide (state 3) | `sub_0801B0D8` case 0: ability `sub_08032AB8(1)`, Down held and jump pressed, flags `0x1122` clear; sound `0xBD`, flags `0x20000420` set, `0x10000000` cleared | vx = 3.125 toward the facing side with `+0x50` = -/+0.09375 per frame |
+| Slide (state 3) | `sub_0801B0D8` case 0: ability `sub_08032AB8(1)`, Down held and jump pressed, flags `0x1122` clear; sound `0xBD`, flags `0x20000420` set, `0x10000000` cleared | vx = 3.125 toward the facing side with `+0x50` = -/+0.09375 per frame. Case 3 applies the friction for 32 frames (`+0x0D` counts to 0x20, or jumps there when airborne), then clears `0x20` and returns to state 0; animation 0x2E on a step-1 slope going down, else 0x1F, keeping the frame and tick |
+| Ceiling crash (state 6) | `sub_08017CC8` from a ceiling bump while rising with vy <= -4.9375 and `+0x10 & 0x90` = 0x10 (high jump); sound `0xB8`, screen shake | animation 0x25, vx = vy = `+0x54` = 0, gravity stops for the frame; case 6 returns to state 0 when the animation ends |
 | Backdash | case 0: ability `sub_08032AB8(0)`, button `0x1339C` pressed without Up, flags `0x10008402` clear; sound `0xA9`, sets `0x10000000` | vx = 3.75 away from the facing side; friction -/+0.25 while `0x10000000` is set; the flag clears when its animation ends |
 | Damage recoil | `sub_0801B0D8`, state `0x0F`, source X at `+0x131D8` | vx = 1.5 away from the source, vy = -2.0, `+0x54` = -0.0625, `+0x50` = -/+0.0078125 |
+
+Ability bits live at `gEwramData + 0x13396` (`sub_08032AB8(bit)`): 0
+backdash, 1 slide, 2 mid-air jump, 3 dive kick, 4 high jump; what grants
+them (souls, game start) is not traced. Default buttons come from
+`sub_0804C3C8` and the option table `0x08525504`: attack B (`0x13398`), jump
+A (`0x1339A`), the backdash/high-jump button L (`0x1339C`) and guardian R
+(`0x1339E`). During a high jump (flag `0x10`) the gravity routine also bumps
+the head at y - 24 and clears `0x10` once vy exceeds 1.125 (0.5 with the
+slow-fall flag). Airborne animations are skipped while `gEwramData + 0x131B8
+& 4` is set (the dive kick sets it each frame); the end of `sub_0801B0D8`
+(`_0801CF2C`) clears bits 1-7 and `0x800` of `0x131B8` and entity flags
+`0x4080000`.
 
 Earlier revisions called the slide a "probable backdash" and the case
 `_0801C410` the air state; case 1 is an attack state (weapon animations,
@@ -237,8 +251,8 @@ read so far:
 
 `src/runtime/aos_soma.c` ports the rules of this table, the tile path of
 the collision pass and the movement part of cases 0 and 4
-(`aos_soma_update`), except the abilities (high, mid-air and dive jumps,
-backdash, slide), attacks, recoil, animations and moving platforms
+(`aos_soma_update`) with the ability moves and states 3, 5, 6 and 7, except
+attacks, recoil, hurtboxes, effects and moving platforms
 (`gEwramData + 0x1316C`, `+ 0x131B4`);
 `tests/test_aos_soma.c` checks them without a ROM (a held jump rises about
 56.7 pixels over 56 frames, a tapped jump about 9.7 pixels).
@@ -321,5 +335,5 @@ previous one; `scripts/aos_soma_pipeline.py` colorizes each animation with
 its own bank.
 
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: the hurtboxes, the doors and the transition rooms of `sUnk_0850E968`, then the
-ability moves (backdash, slide, high and mid-air jumps) and attacks.
+(README). Next steps: the hurtboxes, the doors and the transition rooms of `sUnk_0850E968` (an Aria
+entity system), then attacks.

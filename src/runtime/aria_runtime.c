@@ -342,12 +342,15 @@ static uint16_t keyboard_buttons(void) {
     if (keys[SDL_SCANCODE_UP]) held |= AOS_KEY_UP;
     if (keys[SDL_SCANCODE_DOWN]) held |= AOS_KEY_DOWN;
     if (keys[SDL_SCANCODE_Z] || keys[SDL_SCANCODE_SPACE]) held |= AOS_KEY_JUMP;
+    if (keys[SDL_SCANCODE_X] || keys[SDL_SCANCODE_F]) held |= AOS_KEY_ATTACK;
+    if (keys[SDL_SCANCODE_Q] || keys[SDL_SCANCODE_LSHIFT]) held |= AOS_KEY_ABILITY;
+    if (keys[SDL_SCANCODE_E] || keys[SDL_SCANCODE_V]) held |= AOS_KEY_GUARDIAN;
     return held;
 }
 
 static void usage(const char *name) {
     fprintf(stderr,
-            "Usage: %s [--check] [--library index.tsv] [--spawn X Y]\n"
+            "Usage: %s [--check] [--library index.tsv] [--spawn X Y] [--moves MASK]\n"
             "       [--capture out.bmp FRAMES BUTTONS] (--area A --room R | room-folder)\n",
             name);
 }
@@ -356,6 +359,9 @@ int main(int argc, char **argv) {
     const char *folder = NULL, *library_path = DEFAULT_LIBRARY, *capture_path = NULL;
     long area = -1, room_number = -1, capture_frames = 0;
     unsigned long capture_buttons = 0;
+    /* No soul inventory yet: every ported ability move is enabled. */
+    unsigned long moves = AOS_MOVE_BACKDASH | AOS_MOVE_SLIDE | AOS_MOVE_AIR_JUMP |
+                          AOS_MOVE_DIVE_KICK | AOS_MOVE_HIGH_JUMP;
     int spawn_x = -1, spawn_y = -1;
     bool check = false;
     for (int i = 1; i < argc; ++i) {
@@ -365,7 +371,11 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--library") && i + 1 < argc) library_path = argv[++i];
         else if (!strcmp(argv[i], "--area") && i + 1 < argc) area = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
-        else if (!strcmp(argv[i], "--spawn") && i + 2 < argc) {
+        else if (!strcmp(argv[i], "--moves") && i + 1 < argc) {
+            moves = strtoul(argv[++i], &end, 0);
+            if (*end || moves > 0x1F) { usage(argv[0]); return 2; }
+            end = NULL;
+        } else if (!strcmp(argv[i], "--spawn") && i + 2 < argc) {
             spawn_x = atoi(argv[++i]);
             spawn_y = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--capture") && i + 3 < argc) {
@@ -424,6 +434,7 @@ int main(int argc, char **argv) {
     int cam_x = 0, cam_y = 0;
 
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
+    soma.moves = (uint32_t)moves;
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     uint16_t previous = 0;
     long step = 0;

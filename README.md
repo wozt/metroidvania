@@ -145,16 +145,21 @@ python3 -m scripts.aos_runtime_room --all
 ./build/fusion_aria_runtime --area 0 --room 6
 ```
 
-Soma uses the movement, collision, jump, crouch, landing and animation rules
-ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks, souls,
-backdash, slide, enemies and doors are not implemented. Leaving a room
+Soma uses the movement, collision, jump, crouch, landing, ability-move and
+animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks,
+souls, enemies and doors are not implemented. Leaving a room
 through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn
 point is a test placement (a floor near the room centre, or `--spawn X Y`).
-Arrows move, Down crouches, Space/Z jumps, Down + jump drops through one-way
-platforms. `--check` validates the room and library without a window, and
+Arrows move, Down crouches, Space/Z jumps (A), Down + jump drops through
+one-way platforms or slides, Q/Left Shift is L (backdash; Up + L high jump),
+jump in the air jumps again and Down + jump after it dive-kicks. All five
+ability moves are enabled by default (no soul inventory yet); `--moves MASK`
+selects them (backdash 0x1, slide 0x2, mid-air jump 0x4, dive kick 0x8, high
+jump 0x10). `--check` validates the room and library without a window, and
 `--capture out.bmp FRAMES BUTTONS` runs FRAMES updates with a held GBA mask
-(right 0x10, left 0x20, up 0x40, down 0x80, A 0x01) and saves the frame.
+(right 0x10, left 0x20, up 0x40, down 0x80, A 0x01, B 0x02, R 0x100,
+L 0x200) and saves the frame.
 
 ## Current verified data
 

@@ -62,8 +62,50 @@ void aos_soma_steer(AosSoma *soma, uint16_t held, int32_t speed) {
     apply_friction(soma);
 }
 
-/* sub_08019180 without the high jump (ability 4), the mid-air jump
- * (ability 2, sub_080190E0) and the dive of sub_08017D90 (ability 3). */
+/* sub_08017D90: Down + jump in the air (ability 3). It needs flag 4,
+ * which only the mid-air jump sets in the code read so far. */
+static void dive_kick(AosSoma *soma, uint16_t held, uint16_t pressed) {
+    if (!(soma->moves & AOS_MOVE_DIVE_KICK) || !(soma->flags & AOS_FLAG_AIRBORNE) ||
+        (soma->flags & 0x00800004u) != 4u || !(held & AOS_KEY_DOWN) ||
+        !(pressed & AOS_KEY_JUMP))
+        return;
+    soma->state = 7;
+    soma->vy = 0x4E000;                                 /* 4.875 */
+    soma->gravity_mod = 0x2000;
+    if (held & AOS_KEY_LEFT) {
+        soma->facing_left = true;
+        soma->vx = (int32_t)0xFFFC0000;                 /* -4.0 */
+        soma->friction = 0;
+    } else if (held & AOS_KEY_RIGHT) {
+        soma->facing_left = false;
+        soma->vx = 0x40000;
+        soma->friction = 0;
+    } else {
+        soma->friction = soma->vx >= 0 ? -AOS_FRICTION : AOS_FRICTION;
+    }
+    int32_t speed = soma->vx < 0 ? -soma->vx : soma->vx;
+    if (speed > 0x10000) play(soma, AOS_SOMA_ANIM_DIVE_KICK, true);
+    else play(soma, AOS_SOMA_ANIM_DIVE_DROP, true);
+    soma->air_anim_locked = true;
+}
+
+/* sub_080190E0: mid-air jump (ability 2); true when it starts. */
+static bool air_jump(AosSoma *soma, uint16_t pressed) {
+    if (!(soma->flags & AOS_FLAG_HEAD_SPECIAL) && (soma->flags & 0x04000004u)) return false;
+    if (!(pressed & AOS_KEY_JUMP) || soma->drop_timer) return false;
+    soma->anim_request = AOS_SOMA_ANIM_AIR_JUMP;
+    soma->flags = (soma->flags | 4u) & ~0x10u;
+    if (!(soma->flags & AOS_FLAG_SLOW_FALL)) {
+        soma->vy = (int32_t)0xFFFBE000;                 /* -4.125 */
+        soma->gravity_mod = 0x1400;                     /* 0.078125 */
+    } else if (soma->vy >= 0) {
+        soma->vy = (int32_t)0xFFFB8000;                 /* -4.5 */
+        soma->gravity_mod = 0;
+    }
+    return true;
+}
+
+/* sub_08019180 */
 bool aos_soma_jump(AosSoma *soma, uint16_t held, uint16_t pressed) {
     uint32_t flags = soma->flags;
     if (flags & AOS_FLAG_LOW_CEILING) return false;
@@ -76,24 +118,45 @@ bool aos_soma_jump(AosSoma *soma, uint16_t held, uint16_t pressed) {
         soma->vx = soma->vy = 0;
         soma->gravity_mod = (int32_t)0xFFFFF000;
     }
-    if (soma->drop_timer) return false;
     flags = soma->flags;
-    if (!(pressed & AOS_KEY_JUMP)) return false;
-    if (flags & AOS_FLAG_HEAD_SPECIAL) {
-        if (flags & 0x02000000u) return false;
+    if ((soma->moves & AOS_MOVE_HIGH_JUMP) && (pressed & AOS_KEY_ABILITY) &&
+        ((flags & AOS_FLAG_AIRBORNE) || (held & AOS_KEY_UP)) && !(flags & 0x10u)) {
+        /* High jump (ability 4). */
+        soma->anim_request = AOS_ANIM_NONE;
+        soma->state = 5;
+        soma->flags = (flags | 0x12u) & 0xFFEFFBFBu;
         soma->gravity_mod = 0;
-        soma->flags = (flags | 0x02000002u) & 0xFFEFFBF7u;
-        soma->vy = soma->vy > 0x10000 ? soma->vy + (int32_t)0xFFFB2000
-                                      : (int32_t)0xFFFB2000;    /* -4.875 */
+        soma->vy = (soma->flags & AOS_FLAG_HEAVY) ? (int32_t)0xFFFD8000   /* -2.5 */
+                                                  : (int32_t)0xFFF60000;  /* -10.0 */
         return true;
     }
-    if ((flags & AOS_FLAG_AIRBORNE) && soma->air_frames > 3) return false;
-    soma->flags = (flags | AOS_FLAG_AIRBORNE) & 0xFFEFFBFFu;
-    soma->air_frames = 16;
-    soma->gravity_mod = 0;
-    soma->vy = (soma->flags & AOS_FLAG_HEAVY) ? AOS_SLOWED_JUMP_VELOCITY
-                                              : AOS_JUMP_VELOCITY;
-    return true;
+    if (soma->drop_timer) return false;
+    if (flags & AOS_FLAG_HEAD_SPECIAL) {
+        if (!(flags & 0x02000000u) && (pressed & AOS_KEY_JUMP)) {
+            soma->gravity_mod = 0;
+            soma->flags = (flags | 0x02000002u) & 0xFFEFFBF7u;
+            soma->vy = soma->vy > 0x10000 ? soma->vy + (int32_t)0xFFFB2000
+                                          : (int32_t)0xFFFB2000;    /* -4.875 */
+            return true;
+        }
+        dive_kick(soma, held, pressed);
+        return false;
+    }
+    if (!(flags & AOS_FLAG_AIRBORNE) || soma->air_frames <= 3) {
+        if (pressed & AOS_KEY_JUMP) {
+            soma->flags = (flags | AOS_FLAG_AIRBORNE) & 0xFFEFFBFFu;
+            soma->air_frames = 16;
+            soma->gravity_mod = 0;
+            soma->vy = (soma->flags & AOS_FLAG_HEAVY) ? AOS_SLOWED_JUMP_VELOCITY
+                                                      : AOS_JUMP_VELOCITY;
+            dive_kick(soma, held, pressed);
+            return true;
+        }
+    } else if ((soma->moves & AOS_MOVE_AIR_JUMP) && air_jump(soma, pressed)) {
+        return true;
+    }
+    dive_kick(soma, held, pressed);
+    return false;
 }
 
 /* sub_08018020 entry. */
@@ -104,8 +167,33 @@ void aos_soma_leave_ground(AosSoma *soma) {
     soma->gravity_mod = (int32_t)0xFFFFF000;   /* -0.0625 */
 }
 
-/* sub_08018B98 (a label inside sub_08018020). The ceiling special case
- * sub_08017CC8 needs entity flag 0x10 and is not ported. */
+/* sub_08017CC8: a fast rise with flag 0x10 (and not 0x80) crashes into
+ * the ceiling (state 6; the screen shake is not modelled). */
+static bool ceiling_crash(AosSoma *soma) {
+    if (soma->vy > (int32_t)0xFFFB1000 || (soma->flags & 0x90u) != 0x10u) return false;
+    play(soma, AOS_SOMA_ANIM_CEILING_CRASH, false);
+    soma->state = 6;
+    soma->vx = soma->vy = soma->gravity_mod = 0;
+    return true;
+}
+
+/* Ceiling walks at (x - 5, y + dy) then (x + 5, y + dy); pushes the head
+ * down and stops a rise. Returns true after a ceiling crash. */
+static bool bump_ceiling(AosSoma *soma, const AosCollision *layer, int dy) {
+    int32_t x = soma->x >> 16, y = (soma->y >> 16) + dy;
+    int depth = aos_ceiling_depth(layer, x - 5, y, 0, false);
+    if (!depth) depth = aos_ceiling_depth(layer, x + 5, y, 0, false);
+    if (!depth) return false;
+    soma->y += (int32_t)((uint32_t)depth << 16);
+    if (soma->vy < 0) {
+        if (ceiling_crash(soma)) return true;
+        soma->vy = 0x1000;                      /* 0.0625 */
+        soma->gravity_mod = (int32_t)0xFFFFE000; /* -0.125 */
+    }
+    return false;
+}
+
+/* sub_08018B98 (a label inside sub_08018020). */
 void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
     if (!(soma->flags & 0x1Eu)) return;
     soma->flags &= 0xEFEFFBFFu;
@@ -114,18 +202,7 @@ void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
         soma->gravity_mod = 0;
     }
     if (soma->air_frames <= 15) soma->air_frames++;
-    if (layer && (soma->vy <= 0 || soma->vx != 0)) {
-        int32_t x = soma->x >> 16, y = (soma->y >> 16) - 32;
-        int depth = aos_ceiling_depth(layer, x - 5, y, 0, false);
-        if (!depth) depth = aos_ceiling_depth(layer, x + 5, y, 0, false);
-        if (depth) {
-            soma->y += (int32_t)((uint32_t)depth << 16);
-            if (soma->vy < 0) {
-                soma->vy = 0x1000;                      /* 0.0625 */
-                soma->gravity_mod = (int32_t)0xFFFFE000; /* -0.125 */
-            }
-        }
-    }
+    if (layer && (soma->vy <= 0 || soma->vx != 0) && bump_ceiling(soma, layer, -32)) return;
     if (soma->vy <= 0x1FFF) soma->vy += 0x2000; /* 0.125 */
     soma->vy += 0x1A00;                         /* 0.1015625 */
     if (soma->vy > 0) {
@@ -133,9 +210,15 @@ void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
         soma->gravity_mod += 0x400;             /* 0.015625 */
         if (soma->gravity_mod > 0x1000) soma->gravity_mod = 0x1000;
     }
-    /* _08018E4A: airborne animations (the flag 0x10 probes before it are
-     * not ported). */
-    if (soma->flags & 0x1E0u) return;
+    /* _08018D0E: during a high jump the head is also checked at y - 24,
+     * and flag 0x10 ends once falling faster than 1.125 (0.5 slowed). */
+    if (soma->flags & 0x10u) {
+        if (layer && bump_ceiling(soma, layer, -24)) return;
+        int32_t limit = (soma->flags & AOS_FLAG_SLOW_FALL) ? 0x8000 : 0x12000;
+        if (soma->vy > limit) soma->flags &= ~0x10u;
+    }
+    /* _08018E4A: airborne animations. */
+    if ((soma->flags & 0x1E0u) || soma->air_anim_locked) return;
     if ((soma->abilities & AOS_ABILITY_FAST_WALK) && soma->vx) {
         play(soma, AOS_SOMA_ANIM_FAST, true);
     } else if (soma->vy > 0x3FFF) {
@@ -149,6 +232,12 @@ void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
     } else {
         play(soma, AOS_SOMA_ANIM_JUMP, true);
     }
+}
+
+/* The start of sub_08018020: ledge start and gravity. */
+static void air_routine(AosSoma *soma, const AosCollision *layer) {
+    aos_soma_leave_ground(soma);
+    if ((soma->flags & 0x00800010u) != 0x00800000u) aos_soma_gravity(soma, layer);
 }
 
 /* sub_0801938C: jump release, apex float and slowed falls, then the start
@@ -171,8 +260,7 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held) {
             soma->vy += (int32_t)0xFFFFD800;               /* -0.15625 */
         if (soma->abilities & AOS_ABILITY_ZERO_FALL) soma->vy = soma->gravity_mod = 0;
     }
-    aos_soma_leave_ground(soma);
-    if ((soma->flags & 0x00800010u) != 0x00800000u) aos_soma_gravity(soma, layer);
+    air_routine(soma, layer);
 }
 
 /* Floor walk with the collision mode; *raw receives the first cell byte, as
@@ -441,8 +529,8 @@ static void ground_animation(AosSoma *soma, uint16_t held, int32_t start_speed) 
 }
 
 /* sub_0801B0D8 case 0 (_0801BA98), movement and animations: the dust and
- * splash effects, backdash (ability 0), attacks (sub_080197B4,
- * sub_08019478) and slide (ability 1) are not ported. */
+ * splash effects and the attacks (sub_080197B4, sub_08019478) are not
+ * ported. */
 static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held,
                          uint16_t pressed) {
     static const int32_t uphill[3] = {24, 20, 18};
@@ -450,6 +538,14 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
     int32_t start_speed = soma->vx < 0 ? -soma->vx : soma->vx;
     int32_t speed = (soma->abilities & AOS_ABILITY_FAST_WALK) ? AOS_FAST_WALK_SPEED
                                                               : AOS_WALK_SPEED;
+    if ((pressed & AOS_KEY_ABILITY) && !(held & AOS_KEY_UP) &&
+        (soma->moves & AOS_MOVE_BACKDASH) && !(soma->flags & 0x10008402u)) {
+        /* Backdash (ability 0, sound 0xA9): ends with its animation. */
+        soma->anim_request = AOS_SOMA_ANIM_BACKDASH;
+        soma->flags = (soma->flags & ~(uint32_t)AOS_FLAG_ANIM_DONE) | AOS_FLAG_BACKDASH;
+        soma->frame_counter = 0;
+        soma->vx = soma->facing_left ? 0x3C000 : (int32_t)0xFFFC4000;   /* 3.75 */
+    }
     if (!(soma->flags & (AOS_FLAG_BACKDASH | AOS_FLAG_HEAD_CEILING | AOS_FLAG_CROUCH))) {
         if (((held & AOS_KEY_RIGHT) && soma->facing_left) ||
             ((held & AOS_KEY_LEFT) && !soma->facing_left)) {
@@ -474,8 +570,67 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         soma->frame_counter++;
         if (!(soma->flags & 0x1000001Eu)) ground_animation(soma, held, start_speed);
     }
+    if ((soma->moves & AOS_MOVE_SLIDE) && !(soma->flags & 0x1122u) &&
+        (held & AOS_KEY_DOWN) && (pressed & AOS_KEY_JUMP)) {
+        /* Slide (ability 1, state 3, sound 0xBD). */
+        soma->state = 3;
+        soma->anim_request = AOS_ANIM_NONE;
+        play(soma, AOS_SOMA_ANIM_SLIDE, false);
+        soma->vx = soma->facing_left ? (int32_t)0xFFFCE000 : 0x32000;   /* 3.125 */
+        soma->friction = soma->vx >= 0 ? (int32_t)0xFFFFE800 : 0x1800; /* 0.09375 */
+        soma->frame_counter = 0;
+        soma->flags = (soma->flags | 0x20000420u) & ~(uint32_t)AOS_FLAG_BACKDASH;
+    }
     aos_soma_jump(soma, held, pressed);
     aos_soma_air(soma, layer, held);
+}
+
+/* Starts an animation but keeps the frame and tick, as case 3 does. */
+static void play_keeping_frame(AosSoma *soma, unsigned id) {
+    if (soma->anim.id == id) return;
+    uint8_t frame = soma->anim.frame, tick = soma->anim.tick;
+    play(soma, id, false);
+    soma->anim.frame = frame;
+    soma->anim.tick = tick;
+}
+
+/* sub_0801B0D8 case 3 (_0801C7BC): slide for 32 frames, or until airborne. */
+static void slide_state(AosSoma *soma, const AosCollision *layer) {
+    if (((soma->flags & AOS_FLAG_SLOPE_LEFT) && soma->slope_step == 1 && !soma->facing_left) ||
+        ((soma->flags & AOS_FLAG_SLOPE_RIGHT) && soma->slope_step == 1 && soma->facing_left))
+        play_keeping_frame(soma, AOS_SOMA_ANIM_SLIDE_DOWNHILL);
+    else
+        play_keeping_frame(soma, AOS_SOMA_ANIM_SLIDE);
+    apply_friction(soma);
+    if (soma->flags & AOS_FLAG_AIRBORNE) soma->frame_counter = 0x20;
+    if (++soma->frame_counter > 0x1F) {
+        soma->flags &= ~0x20u;
+        soma->state = 0;
+    }
+    air_routine(soma, layer);
+}
+
+/* Case 5 (_0801CBB4): high jump until falling. */
+static void high_jump_state(AosSoma *soma, const AosCollision *layer, uint16_t held) {
+    if (soma->vy > 0) soma->state = 0;
+    aos_soma_air(soma, layer, held);
+}
+
+/* Case 7 (_0801CBD4, sub_08017F94): dive kick; a hit (flag 0x80000)
+ * bounces Soma back up. */
+static void dive_kick_state(AosSoma *soma, const AosCollision *layer) {
+    if (soma->flags & AOS_FLAG_SLOW_FALL) {
+        soma->state = 0;
+    } else if (soma->flags & AOS_FLAG_KICK_HIT) {
+        soma->flags = (soma->flags | 8u) & ~4u;
+        soma->anim_request = AOS_SOMA_ANIM_AIR_JUMP;
+        soma->vy = (int32_t)0xFFFC8000;                 /* -3.5 */
+        soma->gravity_mod = (int32_t)0xFFFFE000;
+        soma->state = 0;
+    } else {
+        soma->air_anim_locked = true;
+    }
+    air_routine(soma, layer);
 }
 
 /* sub_0801B0D8 case 4 (_0801C994): hard landing. The slide branch taken
@@ -537,7 +692,13 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     AosLanding landing = aos_soma_collide(soma, layer);
     switch (soma->state) {
     case 0: normal_state(soma, layer, held, pressed); break;
+    case 3: slide_state(soma, layer); break;
     case 4: hard_landing_state(soma); break;
+    case 5: high_jump_state(soma, layer, held); break;
+    case 6:     /* _0801CBC6: ceiling crash, until its animation ends */
+        if (soma->flags & AOS_FLAG_ANIM_DONE) soma->state = 0;
+        break;
+    case 7: dive_kick_state(soma, layer); break;
     default: break;
     }
     select_wall_probes(soma);
@@ -552,5 +713,8 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
         }
     }
     aos_anim_step(&soma->anim, soma->anims);
+    /* _0801CF2C: per-frame flags are dropped at the end of the update. */
+    soma->flags &= 0xFBF7FFFFu;
+    soma->air_anim_locked = false;
     return landing;
 }

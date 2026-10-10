@@ -1828,3 +1828,18 @@ No automatic reciprocal link or native engine encoder is implemented.
   3, 4 and 5 instead of bank 0; banks 1 and 6 stay reported as unidentified.
 - Validation on 2026-10-10: CTest passed 20/20, the sprite library tests
   passed and the proprietary guard passed.
+
+## Patch 0208 - Soma ability moves
+
+- Ported Soma's ability moves from `sub_0801B0D8`, `sub_08019180`,
+  `sub_080190E0`, `sub_08017D90`, `sub_08017F94` and `sub_08017CC8`:
+  backdash (3.75, ends with its animation), slide (state 3, 32 frames),
+  high jump (state 5, vy -10.0, extra ceiling probes), ceiling crash
+  (state 6), mid-air jump (once per jump) and dive kick (state 7), with
+  their animation requests and the per-frame flags cleared at the end of
+  the player update. Ability bits and the default button mapping (B attack,
+  A jump, L backdash/high jump, R guardian) are documented.
+- `fusion_aria_runtime` enables all five moves by default (`--moves`), maps L
+  to Q/Left Shift; captures in room 0/6 show the slide and the ceiling crash.
+- Validation on 2026-10-10: CTest passed 20/20 and the proprietary guard
+  passed.

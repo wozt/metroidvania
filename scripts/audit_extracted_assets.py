@@ -140,6 +140,11 @@ def audit(root: Path, *, hash_files: bool = True) -> dict:
     return {
         "schema": SCHEMA,
         "root": EXTRACTED.as_posix(),
+        "layout": {
+            "legacy_samus_roots": sorted(
+                name for name in top_level
+                if name == "samus" or name.startswith("samus_")),
+        },
         "totals": {
             "files": len(files),
             "bytes": sum(item[2] for item in files),

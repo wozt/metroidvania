@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from scripts.mzm_samus_cannon_links_0158 import body_family
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 
 RUN_AIMS = ("None", "Forward", "DiagonalUp", "DiagonalDown")
 
@@ -71,9 +72,9 @@ def build(links):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--links", type=Path,
-                        default=Path("assets/extracted/samus_cannon/links.json"))
+                        default=METROID_SAMUS_DIAGNOSTICS / "cannon/links.json")
     parser.add_argument("--output", type=Path,
-                        default=Path("assets/extracted/samus_cannon/exceptions.json"))
+                        default=METROID_SAMUS_DIAGNOSTICS / "cannon/exceptions.json")
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parent.parent
     allowed = root / "assets/extracted"

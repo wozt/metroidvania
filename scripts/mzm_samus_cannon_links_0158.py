@@ -7,6 +7,8 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+
+from scripts.asset_layout import METROID_SAMUS_BODY_SOURCE, METROID_SAMUS_DIAGNOSTICS
 import re
 import subprocess
 from scripts.mzm_samus_frame import EXPECTED_SHA1
@@ -88,9 +90,11 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--rom', type=Path, required=True)
     p.add_argument('--elf', type=Path, default=Path('third_party/mzm/mzm_us.elf'))
-    p.add_argument('--body', type=Path, default=Path('assets/extracted/samus_library/manifest.json'))
-    p.add_argument('--cannon', type=Path, default=Path('assets/extracted/samus_cannon/manifest.json'))
-    p.add_argument('--output', type=Path, default=Path('assets/extracted/samus_cannon/links.json'))
+    p.add_argument('--body', type=Path, default=METROID_SAMUS_BODY_SOURCE / 'manifest.json')
+    p.add_argument('--cannon', type=Path,
+                   default=METROID_SAMUS_DIAGNOSTICS / 'cannon/manifest.json')
+    p.add_argument('--output', type=Path,
+                   default=METROID_SAMUS_DIAGNOSTICS / 'cannon/links.json')
     a = p.parse_args(argv)
     root = Path(__file__).resolve().parent.parent
     allowed = root / 'assets/extracted'

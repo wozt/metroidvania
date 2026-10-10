@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 from scripts.mzm_samus_runtime_sidecars_0163 import validate as validate_base
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 
 NAMES = ("run_diagonal_down_right", "run_diagonal_up_left", "shoot_standing_right",
          "midair_diagonal_up_right", "shoot_crouch_diagonal_up_right")
@@ -40,7 +41,7 @@ def validate(manifest, directory):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", type=Path,
-                        default=Path("assets/extracted/samus_compositions_0164"))
+                        default=METROID_SAMUS_DIAGNOSTICS / "compositions/extended")
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parents[1]
     allowed = root / "assets/extracted"

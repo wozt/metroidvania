@@ -12,6 +12,7 @@ import re
 import struct
 
 from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset, parse_frame
+from scripts.asset_layout import METROID_SAMUS_METADATA
 
 SYMBOL = re.compile(r"^sSamusAnim_[A-Za-z0-9_]+$")
 MAP_STYLE = re.compile(r"^\s*(0x[0-9a-fA-F]{8}|[0-9a-fA-F]{8})\s+"
@@ -90,12 +91,12 @@ def resolve(catalog, mapping, rom):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--catalog", type=Path,
-                        default=Path("assets/extracted/samus_runtime/catalog.json"))
+                        default=METROID_SAMUS_METADATA / "catalog.json")
     parser.add_argument("--rom", required=True, type=Path)
     parser.add_argument("--symbols", required=True, type=Path,
                         help="local GBA address map: ADDRESS SYMBOL or nm SYMBOL lines")
     parser.add_argument("--output", type=Path,
-                        default=Path("assets/extracted/samus_runtime/addresses.json"))
+                        default=METROID_SAMUS_METADATA / "addresses.json")
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parent.parent
     allowed = (root / "assets/extracted").resolve()

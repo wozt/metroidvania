@@ -11,6 +11,7 @@ from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset, parse_frame
 from scripts.mzm_samus_export_0150 import frame_metadata
 from scripts.mzm_samus_compositions_0160 import parse_sized_symbols, safe_dir
 from scripts.mzm_samus_special_0171 import CANDIDATES
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 
 
 def header(rom, pointer):
@@ -70,7 +71,7 @@ def main(argv=None):
     p.add_argument("--rom", required=True, type=Path)
     p.add_argument("--elf", type=Path, default=Path("third_party/mzm/mzm_us.elf"))
     p.add_argument("--output-dir", type=Path,
-                   default=Path("assets/extracted/samus_special_0172"))
+                   default=METROID_SAMUS_DIAGNOSTICS / "special/oam")
     args = p.parse_args(argv)
     root = Path(__file__).resolve().parents[1]
     try:

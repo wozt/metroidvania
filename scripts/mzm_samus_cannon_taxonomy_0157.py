@@ -13,6 +13,7 @@ import subprocess
 
 from scripts.mzm_samus_frame import EXPECTED_SHA1
 from scripts.mzm_samus_cannon_0156 import parse_cannon_symbols, validate_private_output
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 
 GFX = re.compile(r'^sArmCannonGfx_(Upper|Lower)_(.+)$')
 DIRECTIONS = ('DiagonalDown', 'DiagonalUp', 'Forward', 'Down', 'Up')
@@ -63,7 +64,7 @@ def generate(symbols, previous):
     return {
         'schema': 'metroidvania-mzm-samus-cannon-taxonomy-v1',
         'rom_sha1': EXPECTED_SHA1,
-        'source_manifest': 'assets/extracted/samus_cannon/manifest.json',
+        'source_manifest': (METROID_SAMUS_DIAGNOSTICS / 'cannon/manifest.json').as_posix(),
         'resources': resources, 'graphics_groups': groups,
         'verified_sequences': {
             name: {'frame_count': len(info.get('frames', [])),
@@ -83,9 +84,9 @@ def main(argv=None):
     ap.add_argument('--rom', type=Path, required=True)
     ap.add_argument('--elf', type=Path, default=Path('third_party/mzm/mzm_us.elf'))
     ap.add_argument('--cannon-manifest', type=Path,
-                    default=Path('assets/extracted/samus_cannon/manifest.json'))
+                    default=METROID_SAMUS_DIAGNOSTICS / 'cannon/manifest.json')
     ap.add_argument('--output', type=Path,
-                    default=Path('assets/extracted/samus_cannon/taxonomy.json'))
+                    default=METROID_SAMUS_DIAGNOSTICS / 'cannon/taxonomy.json')
     a = ap.parse_args(argv)
     root = Path(__file__).resolve().parent.parent
     output = a.output.absolute()

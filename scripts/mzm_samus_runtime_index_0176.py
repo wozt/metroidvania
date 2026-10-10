@@ -4,10 +4,12 @@ import argparse
 import json
 from pathlib import Path
 
+from scripts.asset_layout import METROID_SAMUS_CATALOG_CACHE
+
 
 def build(root):
     base = root / "assets/extracted"
-    manifest = base / "samus_runtime_library_0175/manifest.json"
+    manifest = root / METROID_SAMUS_CATALOG_CACHE / "manifest.json"
     data = json.loads(manifest.read_text(encoding="utf-8"))
     if data.get("schema") != "metroidvania-mzm-samus-runtime-library-v1":
         raise ValueError("unexpected catalogue schema")
@@ -36,7 +38,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     args = p.parse_args()
     root = Path(__file__).resolve().parents[1]
-    target = root / "assets/extracted/samus_runtime_library_0175/runtime_index.tsv"
+    target = root / METROID_SAMUS_CATALOG_CACHE / "runtime_index.tsv"
     if target.is_symlink():
         p.error("symlink destination refused")
     try:

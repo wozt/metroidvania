@@ -23,9 +23,27 @@ palette/equipment mapping still needs to be implemented from native evidence
 and must not be synthesized by renaming Power Suit files.
 
 The unnumbered pipeline is the stable public entry point. It currently adapts
-the previously validated discovery/composition manifests, so the numbered
-private directories remain reproducible intermediate inputs rather than the
-final library layout. The former top-level `samus/` runtime bundle is obsolete.
+previously validated discovery/composition manifests stored in this stable
+private layout:
+
+```text
+assets/extracted/metroid/sprites/samus/
+├── animations/basic/        # Small editor preview set
+├── metadata/                # Symbol and verified address catalogues
+├── intermediate/
+│   ├── body/                # Native body animation catalogue
+│   ├── composed/            # Body/cannon diagnostic compositions
+│   ├── special/             # Poses with verified empty cannon OAM
+│   └── catalog/             # Regenerable compatibility index cache
+├── diagnostics/             # Optional research output, created on demand
+└── runtime/                 # Deduplicated library consumed by SDL3
+```
+
+`intermediate/` is required today because the generic pipeline still consumes
+these manifests; it is reproducible cache data, not a second runtime library.
+The former numbered top-level directories are obsolete and archived locally.
+New runs of the historical diagnostic tools use semantic paths below
+`diagnostics/` and cannot recreate patch-numbered roots.
 
 `scripts/mzm_samus_sprite.py` reconstructs the four Power Suit animations used
 by the local asset preview. The addresses below come from exact symbols in the pinned

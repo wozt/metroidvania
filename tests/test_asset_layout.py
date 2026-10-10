@@ -4,7 +4,14 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.asset_layout import EXTRACTED, METROID_SAMUS_RUNTIME, private_path
+from scripts.asset_layout import (
+    EXTRACTED,
+    METROID_SAMUS_BODY_SOURCE,
+    METROID_SAMUS_COMPOSED_SOURCE,
+    METROID_SAMUS_RUNTIME,
+    METROID_SAMUS_SPECIAL_SOURCE,
+    private_path,
+)
 from scripts.audit_extracted_assets import REPORT, audit
 
 
@@ -28,6 +35,7 @@ class AssetLayoutTests(unittest.TestCase):
             self.assertEqual(report["duplicates"]["groups"], 1)
             self.assertEqual(report["duplicates"]["files"], 2)
             self.assertEqual(report["duplicates"]["reclaimable_bytes"], 9)
+            self.assertEqual(report["layout"]["legacy_samus_roots"], ["samus"])
             by_name = {entry["name"]: entry for entry in report["top_level"]}
             self.assertEqual(by_name["samus"]["reference_files"], 1)
             self.assertEqual(by_name["metroid"]["classification"], "canonical")
@@ -41,6 +49,17 @@ class AssetLayoutTests(unittest.TestCase):
             (report.parent / "asset_inventory.tmp").write_text(
                 "interrupted report", encoding="utf-8")
             self.assertEqual(audit(root)["totals"], {"files": 0, "bytes": 0})
+
+    def test_canonical_samus_layout_has_no_patch_number_directories(self):
+        paths = (
+            METROID_SAMUS_RUNTIME,
+            METROID_SAMUS_BODY_SOURCE,
+            METROID_SAMUS_COMPOSED_SOURCE,
+            METROID_SAMUS_SPECIAL_SOURCE,
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertFalse(any(part[-4:].isdigit() for part in path.parts))
 
     def test_private_path_rejects_symlink_components(self):
         with tempfile.TemporaryDirectory() as directory:

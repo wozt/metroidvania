@@ -8,6 +8,7 @@ import subprocess
 
 from scripts.mzm_samus_frame import EXPECTED_SHA1
 from scripts import mzm_samus_compositions_0160 as base
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 
 ADDITIONAL = {
     "run_diagonal_down_right": (
@@ -57,7 +58,7 @@ def main(argv=None):
     parser.add_argument("--rom", type=Path, required=True)
     parser.add_argument("--elf", type=Path, default=Path("third_party/mzm/mzm_us.elf"))
     parser.add_argument("--output-dir", type=Path,
-                        default=Path("assets/extracted/samus_compositions_0164"))
+                        default=METROID_SAMUS_DIAGNOSTICS / "compositions/extended")
     parser.add_argument("--sequence", action="append", choices=sorted(ADDITIONAL))
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parents[1]

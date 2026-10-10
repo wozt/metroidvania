@@ -16,6 +16,7 @@ from scripts.mzm_samus_sprite import (
     _make_power_suit_frame, aligned_canvas_bounds,
     SAMUS_ANIMATION_RECORD_BYTES, ARM_CANNON_ANIMATION_RECORD_BYTES,
 )
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 
 SEQUENCES = {
     "run_diagonal_up_right": (
@@ -160,7 +161,7 @@ def main(argv=None):
     parser.add_argument("--rom", required=True, type=Path)
     parser.add_argument("--elf", type=Path, default=Path("third_party/mzm/mzm_us.elf"))
     parser.add_argument("--output-dir", type=Path,
-                        default=Path("assets/extracted/samus_compositions_0160"))
+                        default=METROID_SAMUS_DIAGNOSTICS / "compositions/base")
     parser.add_argument("--sequence", choices=tuple(SEQUENCES), action="append",
                         help="repeat to extract chosen sequences; default: all three")
     args = parser.parse_args(argv)

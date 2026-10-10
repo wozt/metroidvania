@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
+
 COUNTS = {"midair_forward_left": 5, "midair_diagonal_up_left": 5,
           "shoot_standing_left": 3, "shoot_crouch_left": 3,
           "shoot_crouch_diagonal_up_left": 3, "run_diagonal_down_left": 10}
@@ -35,7 +37,7 @@ def validate(manifest, folder):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", type=Path,
-                        default=Path("assets/extracted/samus_compositions_0166"))
+                        default=METROID_SAMUS_DIAGNOSTICS / "compositions/left")
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parents[1]
     allowed = root / "assets/extracted"

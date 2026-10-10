@@ -2,6 +2,7 @@
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from scripts.asset_layout import METROID_SAMUS_BODY_SOURCE
 from scripts.mzm_samus_runtime_library_0175 import build, inside
 
 class NativeLibrary0175Tests(unittest.TestCase):
@@ -15,4 +16,7 @@ class NativeLibrary0175Tests(unittest.TestCase):
         with TemporaryDirectory() as d:
             root = Path(d)
             (root / "assets/extracted").mkdir(parents=True)
-            self.assertEqual(inside(root, "samus_library"), root / "assets/extracted/samus_library")
+            self.assertEqual(inside(root, METROID_SAMUS_BODY_SOURCE),
+                             root / METROID_SAMUS_BODY_SOURCE)
+            with self.assertRaisesRegex(ValueError, "outside private assets"):
+                inside(root, "samus_library")

@@ -9,6 +9,7 @@ import subprocess
 from scripts.mzm_samus_frame import EXPECTED_SHA1
 from scripts import mzm_samus_compositions_0160 as core
 from scripts.mzm_samus_compositions_0164 import extend_sequences
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 
 SEQUENCES = {
     "midair_forward_left": (
@@ -69,7 +70,7 @@ def main(argv=None):
     p.add_argument("--rom", type=Path, required=True)
     p.add_argument("--elf", type=Path, default=Path("third_party/mzm/mzm_us.elf"))
     p.add_argument("--output-dir", type=Path,
-                   default=Path("assets/extracted/samus_compositions_0166"))
+                   default=METROID_SAMUS_DIAGNOSTICS / "compositions/left")
     p.add_argument("--sequence", action="append", choices=sorted(SEQUENCES))
     args = p.parse_args(argv)
     root = Path(__file__).resolve().parents[1]

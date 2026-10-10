@@ -1266,10 +1266,9 @@ No automatic reciprocal link or native engine encoder is implemented.
   Soma frames below their world root, with its manifest under
   `shared/manifests/`.
 - Added a deterministic private-tree audit with source-reference accounting and
-  exact SHA-256 duplicate measurement. The current local tree contains 13,189
-  files (1,315,548,858 bytes); 2,286 duplicate groups account for 124,191,011
-  potentially reclaimable bytes. This is an inventory, not permission to
-  coalesce path-sensitive room previews.
+  exact SHA-256 duplicate measurement. The initial canonical-root audit found
+  2,286 duplicate groups and 124,191,011 potentially reclaimable bytes. This is
+  an inventory, not permission to coalesce path-sensitive room previews.
 - Replaced the numbered Samus bundle producer with the stable
   `scripts.mzm_samus_pipeline` entry point. Its canonical content-addressed
   runtime output contains 580 indexed sequences and 1,982 unique BMP objects,
@@ -1293,3 +1292,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   passed. `fusion_room_runtime --room brinstar_033` loaded the 304x224 room,
   204 native collision records and a safe grounded spawn under SDL's dummy
   video driver; it remained live until the three-second smoke timeout.
+
+## Patch 0183 - consolidate all Samus private working directories
+
+- Removed every `samus_*` directory from the root of `assets/extracted/`.
+  Required inputs now have semantic names below the canonical Samus tree:
+  `intermediate/body`, `intermediate/composed`, `intermediate/special`, and
+  `metadata`. The SDL runtime continues to consume only `runtime/`.
+- Updated the body exporter, composition producers, special-pose producer,
+  cannon research tools, sidecar generators and compatibility catalogue/index
+  tools so future runs cannot recreate patch-numbered root directories.
+- Archived the superseded cannon, incremental composition, special diagnostic,
+  basic runtime-preview and duplicate catalogue directories under ignored
+  `legacy/extracted-assets/`; no generated user data was deleted.
+- Rebuilt the canonical library after migration. Its 580 sequences, 2,612
+  indexed frames and 1,982 unique BMP objects are unchanged, and the complete
+  runtime index retains the exact pre-migration SHA-256
+  `9ce35be51ca94495f635ad55841676acdc1fa460fae774e0534d2ebdd337231b`.
+- The post-migration deterministic audit snapshot contains 13,042 files
+  (1,314,411,010 bytes), reports no legacy Samus root, and finds 2,269 exact
+  duplicate groups with 123,555,917 reclaimable bytes. Most remaining
+  duplication is within active room previews or between reproducible
+  intermediates and the runtime object store, so it is not removed blindly.
+- Validation on 2026-10-10: CTest passed 13/13, the Python suite passed 407/407,
+  the proprietary-file guard passed, and Brinstar 033 remained operational with
+  its 204 native collision records after the source-cache migration.

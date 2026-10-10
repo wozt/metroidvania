@@ -11,6 +11,7 @@ from pathlib import Path
 import subprocess
 
 from scripts import mzm_samus_compositions_0160 as core
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 from scripts.mzm_samus_frame import EXPECTED_SHA1
 
 # Distinct native pose suffixes; unknown matching cannon/OAM layouts are
@@ -75,7 +76,7 @@ def main(argv=None):
     p.add_argument("--rom", required=True, type=Path)
     p.add_argument("--elf", type=Path, default=Path("third_party/mzm/mzm_us.elf"))
     p.add_argument("--output-dir", type=Path,
-                   default=Path("assets/extracted/samus_special_0171"))
+                   default=METROID_SAMUS_DIAGNOSTICS / "special/catalog")
     p.add_argument("--sequence", choices=sorted(CANDIDATES), action="append")
     args = p.parse_args(argv)
     root = Path(__file__).resolve().parents[1]

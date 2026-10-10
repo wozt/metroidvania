@@ -11,6 +11,7 @@ import re
 import subprocess
 
 from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset
+from scripts.asset_layout import METROID_SAMUS_DIAGNOSTICS
 from scripts.mzm_samus_sprite import (
     make_power_suit_idle_right, make_power_suit_run_right,
     make_power_suit_jump_right, make_power_suit_attack_right,
@@ -93,7 +94,7 @@ def main(argv=None):
     parser.add_argument('--rom', type=Path, required=True)
     parser.add_argument('--elf', type=Path, default=Path('third_party/mzm/mzm_us.elf'))
     parser.add_argument('--output-dir', type=Path,
-                        default=Path('assets/extracted/samus_cannon'))
+                        default=METROID_SAMUS_DIAGNOSTICS / 'cannon')
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parent.parent
     dest = args.output_dir.absolute()

@@ -11,6 +11,7 @@ from pathlib import Path
 import subprocess
 from scripts import mzm_samus_compositions_0160 as core
 from scripts.mzm_samus_frame import EXPECTED_SHA1
+from scripts.asset_layout import METROID_SAMUS_COMPOSED_SOURCE
 
 AIMS = ("Forward", "DiagonalUp", "DiagonalDown")
 SIDES = ("Right", "Left")
@@ -64,7 +65,7 @@ def main(argv=None):
     p.add_argument("--rom", type=Path, required=True)
     p.add_argument("--elf", type=Path, default=Path("third_party/mzm/mzm_us.elf"))
     p.add_argument("--output-dir", type=Path,
-                   default=Path("assets/extracted/samus_compositions_0170"))
+                   default=METROID_SAMUS_COMPOSED_SOURCE)
     p.add_argument("--sequence", action="append", choices=sorted(CANDIDATES))
     args = p.parse_args(argv)
     root = Path(__file__).resolve().parents[1]

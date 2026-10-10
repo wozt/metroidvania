@@ -8,19 +8,26 @@ import argparse
 import json
 from pathlib import Path
 
+from scripts.asset_layout import (
+    EXTRACTED,
+    METROID_SAMUS_BODY_SOURCE,
+    METROID_SAMUS_CATALOG_CACHE,
+    METROID_SAMUS_COMPOSED_SOURCE,
+    METROID_SAMUS_SPECIAL_SOURCE,
+    private_path,
+)
+
 SUITS = ("PowerSuit", "VariaSuit", "GravitySuit", "FullSuit", "Suitless")
-SOURCES = (("samus_compositions_0170", "diagnostic-composed"),
-           ("samus_special_0173", "body-only-diagnostic-composed"))
+SOURCES = ((METROID_SAMUS_COMPOSED_SOURCE, "composed", "diagnostic-composed"),
+           (METROID_SAMUS_SPECIAL_SOURCE, "special",
+            "body-only-diagnostic-composed"))
 
 
-def inside(root, folder):
-    private = root / "assets/extracted"
-    if private.is_symlink():
-        raise ValueError("private asset root is a symlink")
-    target = (private / folder).absolute()
-    if target.parent != private or target.is_symlink():
-        raise ValueError("unsafe catalogue directory")
-    return target
+def inside(root, relative):
+    relative = Path(relative)
+    if not relative.is_relative_to(EXTRACTED):
+        raise ValueError("catalogue directory is outside private assets")
+    return private_path(Path(root), relative)
 
 
 def validate_frames(root, origin, frames, field):
@@ -44,10 +51,10 @@ def validate_frames(root, origin, frames, field):
 
 def build(root, strict=False):
     root = Path(root).resolve()
-    library = inside(root, "samus_library")
+    library = inside(root, METROID_SAMUS_BODY_SOURCE)
     sources = []
     entries = {}
-    for folder, status in SOURCES:
+    for folder, label, status in SOURCES:
         source = inside(root, folder)
         manifest = source / "manifest.json"
         if not manifest.is_file() or manifest.is_symlink():
@@ -63,9 +70,9 @@ def build(root, strict=False):
             frames = validate_frames(root, source, item["frames"], "bmp")
             if frames:
                 entries["PowerSuit/" + name] = {
-                    "source": folder, "fidelity": status,
+                    "source": label, "fidelity": status,
                     "frames": frames, "frame_count": len(frames)}
-        sources.append(folder)
+        sources.append(label)
     manifest = library / "manifest.json"
     if manifest.is_file() and not manifest.is_symlink():
         data = json.loads(manifest.read_text(encoding="utf-8"))
@@ -82,9 +89,9 @@ def build(root, strict=False):
                 continue
             frames = validate_frames(root, library, item["frames"], "body_bmp")
             if frames:
-                entries[key] = {"source": "samus_library", "fidelity": "body-only",
+                entries[key] = {"source": "body", "fidelity": "body-only",
                                 "frames": frames, "frame_count": len(frames)}
-        sources.append("samus_library")
+        sources.append("body")
     elif strict:
         raise ValueError("missing body library: run scripts.mzm_samus_export_0150")
     if not sources:
@@ -101,7 +108,7 @@ def main():
     args = p.parse_args()
     root = Path(__file__).resolve().parents[1]
     try:
-        output = inside(root, "samus_runtime_library_0175")
+        output = inside(root, METROID_SAMUS_CATALOG_CACHE)
         report = build(root, args.strict)
         output.mkdir(parents=True, exist_ok=True)
         manifest = output / "manifest.json"

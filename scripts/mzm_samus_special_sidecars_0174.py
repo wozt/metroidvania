@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from scripts.asset_layout import METROID_SAMUS_SPECIAL_SOURCE
+
 NAMES = ("spinning_right", "spinning_left",
          "spacejumping_right", "spacejumping_left",
          "screwattacking_right", "screwattacking_left")
@@ -41,7 +43,7 @@ def prepare(directory):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--directory", type=Path,
-                   default=Path("assets/extracted/samus_special_0173"))
+                   default=METROID_SAMUS_SPECIAL_SOURCE)
     args = p.parse_args()
     root = Path(__file__).resolve().parents[1]
     from scripts.mzm_samus_compositions_0160 import safe_dir

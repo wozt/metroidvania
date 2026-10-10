@@ -15,6 +15,7 @@ from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset, stage
 from scripts.mzm_samus_oam_decode import decode_raw_samus_oam
 from scripts.mzm_samus_body import load_palette_banks
 from scripts.gba_oam import compose, to_bmp
+from scripts.asset_layout import METROID_SAMUS_BODY_SOURCE, METROID_SAMUS_METADATA
 
 SYMBOL_RE = re.compile(r"^sSamusAnim_[A-Za-z0-9_]+$")
 NM_LINE = re.compile(r"^([0-9a-fA-F]{8})\s+([0-9a-fA-F]{8})\s+([a-zA-Z])\s+(sSamusAnim_[A-Za-z0-9_]+)$")
@@ -205,9 +206,9 @@ def main(argv=None):
     parser.add_argument("--rom", type=Path, required=True)
     parser.add_argument("--elf", type=Path, default=Path("third_party/mzm/mzm_us.elf"))
     parser.add_argument("--addresses", type=Path,
-                        default=Path("assets/extracted/samus_runtime/addresses.json"))
+                        default=METROID_SAMUS_METADATA / "addresses.json")
     parser.add_argument("--output-dir", type=Path,
-                        default=Path("assets/extracted/samus_library"))
+                        default=METROID_SAMUS_BODY_SOURCE)
     parser.add_argument("--fullsuit-palette-offset", type=lambda s: int(s, 0),
                         help="verified ROM offset of 2-bank FullSuit OBJ palette")
     parser.add_argument("--suitless-palette-offset", type=lambda s: int(s, 0),

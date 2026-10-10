@@ -18,6 +18,7 @@ from scripts.mzm_samus_sprite import (
 )
 from scripts.mzm_samus_compositions_0160 import parse_sized_symbols, safe_dir
 from scripts.mzm_samus_special_0171 import CANDIDATES
+from scripts.asset_layout import METROID_SAMUS_SPECIAL_SOURCE
 
 
 def cannon_oam_header(rom, record_pointer):
@@ -101,7 +102,7 @@ def main(argv=None):
     parser.add_argument("--rom", type=Path, required=True)
     parser.add_argument("--elf", type=Path, default=Path("third_party/mzm/mzm_us.elf"))
     parser.add_argument("--output-dir", type=Path,
-                        default=Path("assets/extracted/samus_special_0173"))
+                        default=METROID_SAMUS_SPECIAL_SOURCE)
     parser.add_argument("--sequence", action="append", choices=sorted(CANDIDATES))
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parents[1]

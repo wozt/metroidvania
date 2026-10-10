@@ -136,6 +136,24 @@ and B every REPEAT frames, and saves the rendered frame, for example
 `SDL_VIDEO_DRIVER=dummy ./build/fusion_room_runtime --room brinstar_033
 --capture shot.bmp 40 0x20 6`.
 
+Run the experimental SDL3 Aria of Sorrow runtime (Soma in one native room)
+with:
+
+```sh
+python3 -m scripts.aos_soma_pipeline
+python3 -m scripts.aos_runtime_room --area 0 --room 5
+./build/fusion_aria_runtime --area 0 --room 5
+```
+
+Soma uses the movement, collision, jump, crouch, landing and animation rules
+ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks, souls,
+backdash, slide, enemies and room transitions are not implemented. The spawn
+point is a test placement (a floor near the room centre, or `--spawn X Y`).
+Arrows move, Down crouches, Space/Z jumps, Down + jump drops through one-way
+platforms. `--check` validates the room and library without a window, and
+`--capture out.bmp FRAMES BUTTONS` runs FRAMES updates with a held GBA mask
+(right 0x10, left 0x20, up 0x40, down 0x80, A 0x01) and saves the frame.
+
 ## Current verified data
 
 - nine requested Zero Mission encounters;

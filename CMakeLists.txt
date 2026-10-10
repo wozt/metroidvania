@@ -50,6 +50,11 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_runtime)
 
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c
+               src/runtime/aos_collision.c src/runtime/aos_anim.c)
+target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3)
+fusion_enable_warnings(fusion_aria_runtime)
+
 include(CTest)
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)

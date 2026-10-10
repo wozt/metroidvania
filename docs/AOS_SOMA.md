@@ -278,5 +278,7 @@ ground `0x080E12DC`; in the air the list at `gEwramData + 0x13218`
 on a slope contact or when |vx| > 2 pixels while rising, else
 -(|vy| / 2) - 4 pixels.
 
-The next step is the runtime integration: an exported room, Soma's frames
-from the sprite library and their durations as the animation set.
+`fusion_aria_runtime` runs these rules in an exported room with Soma's
+library frames (README). Next steps: room transitions (Aria door data),
+the per-animation palettes (`0x080E126C`) and hurtboxes, then the ability
+moves (backdash, slide, high and mid-air jumps) and attacks.

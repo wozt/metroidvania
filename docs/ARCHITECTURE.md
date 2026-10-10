@@ -117,6 +117,11 @@ selection operations and display-independent CLI launcher:
   exact `native_map_load/edit/save` implementation used by GTK. The public CLI
   uses it for BG1/BG2 inspection, reads, writes and flood fills.
 
+`fusion_aria_runtime` (`src/runtime/aria_runtime.c`) is the experimental
+SDL3 Aria runtime: one exported room, Soma's sprite library as animation
+timings and frames, and the SDL-free ports `aos_collision.c`, `aos_soma.c`
+and `aos_anim.c`.
+
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 
 - `src/runtime/mzm_samus.c`: SDL-free Samus pose controller ported from the

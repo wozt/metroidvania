@@ -1788,3 +1788,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   a synthetic animation set.
 - Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
   passed.
+
+## Patch 0205 - experimental Aria runtime
+
+- Added `fusion_aria_runtime` (`src/runtime/aria_runtime.c`): loads an
+  exported Aria room (native collision bytes and background) and Soma's
+  sprite library, whose durations become the native animation timings, then
+  runs `aos_soma_update` at 60 Hz with keyboard input, a following camera,
+  mirrored frames when facing left, `--check` and a headless `--capture`.
+- Checked on area 0 room 5: idle, walk and forward-jump captures show the
+  native animations with the feet on the floor surface. The spawn point is a
+  documented test placement; enemies, souls, attacks and transitions are not
+  modelled.
+- Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
+  passed.

@@ -25,7 +25,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 6 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 10 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -307,6 +307,15 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself.  
 Next action: Port the crow feathers of sub_080C9E2C and the hit stun of sub_0806AD24.
+
+[~] **`aos.enemies.skull_archer` — Skull archer and its arrows.** Standing, volleys from the ROM table, patrol and retreat, sticking arrows and death are ported.
+
+Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemySkullArcherCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemySkullArcherUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF78C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF7EC`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF8D0`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF934`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFA9C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFB9C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFD3C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFD8C`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.axe_armor`.  
+Known divergences: The archer vanishes at once: its seven bone pieces (sub_0806C5AC) are not ported.  
+Next action: Port the bone pieces of sub_0806C5AC.
 
 [~] **`aos.enemies.zombie` — Zombie and generic enemy death.** Zombie spawning, terrain walking and generic death are covered; the complete enemy framework is not.
 

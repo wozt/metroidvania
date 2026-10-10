@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-10T20:38:08+00:00",
+ "generated_at": "2026-10-10T20:43:31+00:00",
  "git": {
-  "commit": "b1886cf",
+  "commit": "40226fa",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 52,
+   "total": 53,
    "by_status": {
     "not_started": 9,
     "in_progress": 2,
-    "partial": 27,
+    "partial": 28,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 2
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 23.1,
-   "with_passing_tests": 38,
-   "with_passing_tests_percent": 73.1,
+   "functional_or_better_percent": 22.6,
+   "with_passing_tests": 39,
+   "with_passing_tests_percent": 73.6,
    "unknown_or_blocked": 2,
    "features": [
     "mzm.animation.samus_runtime_library",
@@ -119,6 +119,7 @@
     "aos.enemies.axe_armor",
     "aos.enemies.bat",
     "aos.enemies.blue_crow",
+    "aos.enemies.skull_archer",
     "aos.enemies.zombie",
     "aos.enemies.zombie_soldier",
     "aos.environment.wooden_doors",
@@ -200,11 +201,11 @@
    "areas": [
     "aos"
    ],
-   "total": 10,
+   "total": 11,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 10,
+    "partial": 11,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -213,7 +214,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 10,
+   "with_passing_tests": 11,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -221,6 +222,7 @@
     "aos.enemies.axe_armor",
     "aos.enemies.bat",
     "aos.enemies.blue_crow",
+    "aos.enemies.skull_archer",
     "aos.enemies.zombie",
     "aos.enemies.zombie_soldier",
     "aos.environment.wooden_doors",
@@ -829,6 +831,59 @@
    ],
    "limitations": "ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Perching, the homing flight behind the player and the falling death are ported; the feathers, sounds, hit stun and the unentered glide step are not.",
    "next_action": "Port the crow feathers of sub_080C9E2C and the hit stun of sub_0806AD24.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.enemies.skull_archer",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Skull archer and its arrows",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.axe_armor"
+   ],
+   "native_routines": [
+    "EnemySkullArcherCreate",
+    "EnemySkullArcherUpdate",
+    "sub_080AF8D0",
+    "sub_080AF934",
+    "sub_080AFA9C",
+    "sub_080AFB9C",
+    "sub_080AFD3C",
+    "sub_080AF7EC",
+    "sub_080AF78C",
+    "sub_080AFD8C"
+   ],
+   "limitations": "The archer vanishes at once: its seven bone pieces (sub_0806C5AC) are not ported. Standing, volleys from the ROM table, patrol and retreat, sticking arrows and death are ported.",
+   "next_action": "Port the bone pieces of sub_0806C5AC.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1840,7 +1895,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie, blue crow, zombie soldier and its grenade frame, axe armor with its walker probe table).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie, blue crow, zombie soldier and its grenade frame, axe armor with its walker probe table, skull archer with its volley table and arrow frame).",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -3104,6 +3159,12 @@
  },
  "timeline": [
   {
+   "commit": "40226fa",
+   "date": "2026-10-10",
+   "subject": "feat(aria): native axe armors and the probe walker",
+   "scope": "aria"
+  },
+  {
    "commit": "b1886cf",
    "date": "2026-10-10",
    "subject": "feat(aria): native zombie soldiers and grenades",
@@ -3576,12 +3637,6 @@
    "date": "2026-10-10",
    "subject": "feat: cross-reference native Samus and arm cannon animation arrays",
    "scope": "project"
-  },
-  {
-   "commit": "e4ae594",
-   "date": "2026-10-10",
-   "subject": "feat: classify verified MZM arm cannon graphics without guessing pose links",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -3640,7 +3695,7 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 36,
+    "routines_cited_by_features": 46,
     "call_edges": 14228
    }
   },

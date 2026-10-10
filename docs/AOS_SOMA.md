@@ -657,6 +657,34 @@ ends. Not ported: the death explosions (`sub_08045CEC`), the strike effect
 on-screen direction of the axe's rotation is inferred (`sub_0803E058` is not
 traced).
 
+Skull archer (enemy 0x05, `EnemySkullArcherCreate` /
+`EnemySkullArcherUpdate`): tiles `0x081E419C`, palette `0x0820B78C`, frames
+`0x0823A52C`; animations 0 stand, 1 walk, 2 to 4 volleys, 5 to 11 bone
+pieces. Create: idle animation, `sub_0806E1B8` / `sub_080AFD3C`, the floor
+snap plus one pixel; with parameter 0 it patrols (state 2, animation 1),
+otherwise it stands (state 0). The update runs inside the activity window,
+the state, then `sub_0806E314` before the animation step. State 0
+(`sub_080AF8D0`) faces the player every frame and, once he is in the
+240 x 35 box centred on it (`sub_0806E29C`), starts the next volley: `+0x14`
+counts 0..4 and the volley is half of it (0, 0, 1, 1, 2), from the pointer
+table `0x08528614` (lists of signed frame / y offset entries ended by frame
+-1: volleys 0 and 1 shoot at frame 3, volley 2 at frames 3, 9 and 14 with y
+offsets 0, 1, 2); it plays animation 2 + volley once. State 1
+(`sub_080AF934`) shoots an arrow at the start of each listed frame (sound
+0x85) and, 32 frames after the animation ends, stands or patrols again.
+State 2 (`sub_080AFA9C`) patrols with the probe walker (table `0x08528620`:
+one wall probe at -15, half width 8, ceiling -30; mode 0xC) at 0.25, turning
+every 129 frames; with the player ahead within 79 pixels it backs away at
+0.75 (mode 0xD, facing him at the start of its walk), and shoots once he is
+farther than 99. The arrow (`sub_080AF7EC`, collision type 0xA, sprite frame
+25, a 2 x 2 box 18 pixels ahead and 24 up) flies at 3.0; hitting Soma
+(`sub_080AF78C`: a knockback, type 1) it stops colliding and stays on him at
+its offset for 30 frames; struck (`sub_080AFD8C`) it vanishes; beyond margin
+4 it is deleted. Hit callback: at 0 HP, state 3 (`sub_080AFB9C`, sound 0x6B)
+deletes the archer on the next update. Not ported: the seven bone pieces
+(`sub_0806C5AC` with their own floor collision), the strike effect, the
+arrow's `+0x0F` change, the global pause and state 4.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
 (README). Next steps: more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss

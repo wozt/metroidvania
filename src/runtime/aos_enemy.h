@@ -13,7 +13,8 @@
  * EnemyZombieSoldierCreate / EnemyZombieSoldierUpdate) with its grenade
  * (sub_08092BC0 / sub_08092CCC and the projectile collision sub_08069770),
  * and the axe armor (enemy 0x04) with its axe (sub_080B0D5C) and the probe
- * walker sub_0806CAF8 / sub_0806C828. Facing flag 0x40 of + 0x58 means
+ * walker sub_0806CAF8 / sub_0806C828, and the skull archer (enemy 0x05) with
+ * its arrows (sub_080AF7EC). Facing flag 0x40 of + 0x58 means
  * mirrored: enemy sprites face left by default. Combat: the frame boxes of
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
  * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
@@ -39,7 +40,7 @@ typedef struct {
     uint16_t weak, resist;  /* record + 0x1A, + 0x1C */
 } AosEnemyStats;
 
-#define AOS_ENEMY_MAX_ANIMS 8
+#define AOS_ENEMY_MAX_ANIMS 12
 #define AOS_ENEMY_MAX_FRAMES 24
 
 /* The probe table of the walker sub_0806C828 (ROM, e.g. 0x08528708). */
@@ -61,19 +62,23 @@ typedef struct {
     /* 0x08118D08: the (x, y) screen margins of sub_0806D128(e, n). */
     int16_t margins[7][2];
     AosProbes probes;       /* walker probe table, count 0 when unused */
+    /* Volley lists (frame, y offset) of a shooter, e.g. 0x08528614. */
+    int8_t volleys[4][8][2];
+    uint8_t volley_sizes[4];
 } AosEnemyKind;
 
 enum {
     AOS_ENEMY_BAT = 0x00,
     AOS_ENEMY_ZOMBIE = 0x01,
     AOS_ENEMY_AXE_ARMOR = 0x04,
+    AOS_ENEMY_SKULL_ARCHER = 0x05,
     AOS_ENEMY_BLUE_CROW = 0x09,
     AOS_ENEMY_ZOMBIE_SOLDIER = 0x0C,
 };
 
 /* What an AosEnemy slot holds: the enemy itself or a child entity of its
  * kind (sharing its sprites and record). */
-enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2 };
+enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -103,6 +108,8 @@ typedef struct {
     uint8_t ground;         /* + 0x3F: floor cell byte under the walker */
     uint32_t angle;         /* + 0x14 of a spinning child (affine rotation) */
     int32_t spin;           /* + 0x18: angle step per frame */
+    int8_t volley_count;    /* + 0x14 of a shooter: volleys fired, 0..4 */
+    uint8_t volley, shot;   /* current volley list and entry (+ 0x1C) */
     AosBox own_hurt, own_attack;
     AosEnemyStats stats;
     AosCombat combat;

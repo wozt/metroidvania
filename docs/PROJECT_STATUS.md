@@ -2386,3 +2386,24 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0233 - native skull archers and arrows
+
+- Ported the skull archer (Aria enemy 0x05): it stands facing the player
+  and shoots when he enters a 240 x 35 box, cycling its volleys 0, 0, 1, 1, 2
+  from the ROM volley table (exported as `volley` lines: one arrow, or
+  three for the last volley); a patrolling archer (parameter 0) walks at
+  0.25 with its own probe table, backs away at 0.75 from a player within 79
+  pixels and shoots once he is beyond 99. Arrows (collision type 0xA, sprite
+  frame 25) fly at 3.0, knock Soma back and stick to him for 30 frames, and
+  vanish when struck. A killed archer disappears on the next update.
+- `AOS_ENEMY_MAX_ANIMS` rises to 12 (the archer has 12 animations).
+- Checked in a capture of room 0/24: the archer shoots, the arrow flies and
+  knocks Soma back for 22 (state 13).
+- Not ported: the bone pieces, the strike effect, the global pause, state 4.
+- Tests: facing, the box trigger, the five-volley cycle with its arrow
+  counts and placement, the arrow's speed, knockback and 30 stuck frames,
+  the patrol, retreat and shot, and the death.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

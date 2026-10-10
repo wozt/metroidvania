@@ -74,6 +74,13 @@ ENEMIES = {
     # width, then count wall y offsets).
     "axe_armor": {"id": 0x04, "graphics": 0x081E41AC, "palette": 0x0820B7F4, "bank": 0,
                   "frames": 0x0823C290, "probes": 0x08528708},
+    # EnemySkullArcherCreate 0x080AFC7C: walker probes 0x08528620, the volley
+    # table 0x08528614 (3 pointers to lists of (s8 frame, s8 y offset, pad)
+    # entries ended by frame -1, read by sub_080AF934); its arrow
+    # (sub_080AF7EC) shows sprite frame 25.
+    "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
+                     "frames": 0x0823A52C, "probes": 0x08528620,
+                     "volleys": (0x08528614, 3), "static_frames": (25,)},
     "zombie_soldier": {"id": 0x0C, "graphics": 0x081CC024, "palette": 0x0820AA48, "bank": 0,
                        "frames": 0x082215C4, "static_frames": (18,)},
 }
@@ -244,6 +251,18 @@ def produce(root: Path, rom_path: Path) -> dict:
             table = struct.unpack(f"<{4 + count}h",
                                   _rom_slice(rom, entity["probes"], 8 + 2 * count, "probe table"))
             lines.append("\t".join(["probes", name, *map(str, table)]))
+        if entity.get("volleys"):
+            table, count = entity["volleys"]
+            for number in range(count):
+                pointer = struct.unpack("<I", _rom_slice(rom, table + 4 * number, 4, "volley"))[0]
+                shots = []
+                for index in range(8):
+                    frame, offset = struct.unpack("<bb", _rom_slice(rom, pointer + 4 * index, 2,
+                                                                    "volley entry"))
+                    if frame < 0:
+                        break
+                    shots += [frame, offset]
+                lines.append("\t".join(["volley", name, str(number), *map(str, shots)]))
         # Single sprite frames shown by child entities (sub_0803B924 with a
         # frame number at + 0x65), as one-frame sequences.
         if entity.get("static_frames"):

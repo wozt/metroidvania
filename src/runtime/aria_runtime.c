@@ -36,9 +36,10 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 13     /* enemy ids 0, 1, 4, 9 and 12 */
+#define ENEMY_KINDS 13     /* enemy ids 0, 1, 4, 5, 9 and 12 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
-                                                     [4] = "axe_armor", [9] = "blue_crow",
+                                                     [4] = "axe_armor", [5] = "skull_archer",
+                                                     [9] = "blue_crow",
                                                      [12] = "zombie_soldier"};
 #define ENEMY_STATIC_FRAMES 4  /* single sprite frames of child entities per kind */
 #define ARIA_KIND_ENEMY 1
@@ -483,6 +484,33 @@ static bool load_enemy_data(AriaObjects *objects) {
         int anim, index, frame, ticks, mode, h[4], a[4];
         if (sscanf(line, "blink\t%63s", text) == 1) {
             for (int i = 0; i < 40 && text[i]; ++i) blink[i] = (uint8_t)(text[i] == '1');
+            continue;
+        }
+        if (!strncmp(line, "volley\t", 7)) {
+            /* A shooter's volley: number, then (frame, y offset) pairs. */
+            char volley_name[16];
+            int used = 0, number;
+            char *cursor = line + 7;
+            if (sscanf(cursor, "%15s %d%n", volley_name, &number, &used) != 2 || number < 0 ||
+                number > 3)
+                continue;
+            cursor += used;
+            for (int id = 0; id < ENEMY_KINDS; ++id) {
+                if (!enemy_names[id] || strcmp(volley_name, enemy_names[id])) continue;
+                AosEnemyKind *kind = &objects->enemies[id].kind;
+                int count = 0;
+                char *end;
+                for (long frame; count < 8 && (frame = strtol(cursor, &end, 10), end != cursor);) {
+                    cursor = end;
+                    long offset = strtol(cursor, &end, 10);
+                    if (end == cursor) break;
+                    cursor = end;
+                    kind->volleys[number][count][0] = (int8_t)frame;
+                    kind->volleys[number][count][1] = (int8_t)offset;
+                    ++count;
+                }
+                kind->volley_sizes[number] = (uint8_t)count;
+            }
             continue;
         }
         if (!strncmp(line, "probes\t", 7)) {

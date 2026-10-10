@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 enum { W = 64, H = 32 };
 static uint8_t cells[W * H];
@@ -455,6 +456,141 @@ static void armor_tests(void) {
     assert(a.removed && a.anim.id == 4 && dying >= 11 * 5);
 }
 
+static void archer_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 4; x < 60; ++x) cells[20 * W + x] = 0x03;
+    static uint8_t idle[4], walk[4], shot[13], triple[16], piece[1];
+    for (int i = 0; i < 4; ++i) idle[i] = walk[i] = 6;
+    for (int i = 0; i < 13; ++i) shot[i] = 3;
+    for (int i = 0; i < 16; ++i) triple[i] = 3;
+    piece[0] = 9;
+    const AosAnimDef defs[6] = {{4, idle}, {4, walk}, {13, shot}, {13, shot}, {16, triple}, {1, piece}};
+    const AosAnimSet anims = {defs, 6};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 6; ++a)
+        for (int f = 0; f < 16; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -32, 16, 32};
+        }
+    kind.probes = (AosProbes){1, -30, -1, 8, {-15}};
+    kind.margins[4][0] = kind.margins[4][1] = 48;
+    kind.volleys[0][0][0] = kind.volleys[1][0][0] = 3;
+    kind.volley_sizes[0] = kind.volley_sizes[1] = 1;
+    const int8_t triple_shots[3][2] = {{3, 0}, {9, 1}, {14, 2}};
+    memcpy(kind.volleys[2], triple_shots, sizeof triple_shots);
+    kind.volley_sizes[2] = 3;
+    const AosEnemyStats stats = {42, 13, 5, 0x0020, 0x0010};
+
+    /* Standing: it faces the player and shoots once he is in the 240 x 35
+     * box; the volleys go 0, 0, 1, 1, 2 (animations 2, 2, 3, 3, 4). */
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(500), AOS_FIXED(159), NULL);
+    soma.max_hp = soma.hp = 320;
+    AosEnemy a;
+    assert(aos_enemy_create(&a, AOS_ENEMY_SKULL_ARCHER, 200, 150, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(a.state == 0 && (a.y >> 16) == 160);
+    soma.y = a.y;
+    aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+    assert(a.state == 0 && a.mirrored);
+    soma.x = a.x + AOS_FIXED(100);
+    AosSoma far_soma = soma;
+    far_soma.x = AOS_FIXED(5000);
+    const unsigned expected[5] = {2, 2, 3, 3, 4};
+    for (int volley = 0; volley < 5; ++volley) {
+        int arrows = 0, frames = 0;
+        AosEnemy first = {0};
+        while (a.state != 1 && frames < 500) {
+            aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+            ++frames;
+        }
+        assert(a.state == 1 && a.anim.id == expected[volley]);
+        /* Shooting does not need the player in range any more. */
+        while (a.state == 1 && frames < 1000) {
+            AosHitReport hit = aos_enemy_update(&a, &far_soma, &layer, &kind, NULL, NULL, 10, 4,
+                                                100, 0, never_zero);
+            if (hit.spawn_child && arrows++ == 0) first = hit.child;
+            ++frames;
+        }
+        assert(arrows == (volley == 4 ? 3 : 1));
+        assert(first.role == AOS_ROLE_ARROW && first.static_frame == 25 && first.x == a.x &&
+               first.y == a.y && first.combat.type == 0x0A && first.mirrored);
+    }
+
+    /* An arrow flies at 3.0, knocks Soma back (type 1) and sticks to him
+     * for 30 frames. */
+    AosHitReport hit = {0};
+    int frames = 0;
+    while (a.state != 1 && frames < 500) {
+        aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+        ++frames;
+    }
+    while (!hit.spawn_child && frames < 1000) {
+        hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+        ++frames;
+    }
+    AosEnemy arrow = hit.child;
+    int32_t x0 = arrow.x;
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    int flight = 0;
+    hit = (AosHitReport){0};
+    while (!hit.soma_hit && flight < 100) {
+        hit = aos_enemy_update(&arrow, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0,
+                               never_zero);
+        ++flight;
+    }
+    assert(hit.soma_hit && arrow.x == x0 + flight * 0x30000);
+    assert(hit.soma_damage == aos_player_damage(13, 4) && soma.pending_type == 1);
+    assert(arrow.state == 1 && arrow.combat.attack_off);
+    soma.x += AOS_FIXED(5);
+    aos_enemy_update(&arrow, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+    assert(arrow.x == soma.x + arrow.ax);
+    int stuck = 1;
+    while (!arrow.removed && stuck < 100) {
+        aos_enemy_update(&arrow, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+        ++stuck;
+    }
+    assert(stuck == 31);
+
+    /* A patrolling archer walks at 0.25, backs away at 0.75 from the
+     * player ahead within 79 pixels and shoots once he is beyond 99. */
+    AosEnemy p;
+    soma.x = AOS_FIXED(600);
+    assert(aos_enemy_create(&p, AOS_ENEMY_SKULL_ARCHER, 200, 150, 1, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(p.state == 2 && p.anim.id == 1);
+    p.mirrored = true;
+    int32_t px = p.x;
+    aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+    assert(p.x == px + 0x4000 && p.step == 0);
+    soma.x = p.x + AOS_FIXED(60);
+    aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+    assert(p.step == 1);
+    px = p.x;
+    aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+    assert(p.x == px - 0xC000 && p.state == 2);
+    soma.x = p.x + AOS_FIXED(120);
+    aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+    assert(p.state == 1 && p.anim.id == 2);
+
+    /* Killed, it shatters on the next update. */
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.facing_left = false;
+    soma.x = a.x - AOS_FIXED(5);
+    soma.y = a.y + AOS_FIXED(20);
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    a.hp = 1;
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 0, never_zero);
+    assert(hit.killed && a.state == 3 && !a.removed);
+    aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 0, never_zero);
+    assert(a.removed);
+}
+
 int main(void) {
     /* sub_080009E4 */
     assert(aos_sine(0) == 0 && aos_sine(0x4000) == 0x10000 && aos_sine(0xC000) == -0x10000);
@@ -578,6 +714,7 @@ int main(void) {
     crow_tests();
     soldier_tests();
     armor_tests();
+    archer_tests();
     puts("aos_enemy: ok");
     return 0;
 }

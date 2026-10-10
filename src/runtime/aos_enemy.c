@@ -314,7 +314,8 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
-        id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR)
+        id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
+        id != AOS_ENEMY_SKULL_ARCHER)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -327,6 +328,21 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     enemy->combat.type = AOS_TYPE_ENEMY;
     if (id == AOS_ENEMY_ZOMBIE) {
         zombie_create(enemy, soma, layer, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_SKULL_ARCHER) {
+        /* EnemySkullArcherCreate: idle animation, floor snap plus one
+         * pixel; a record with parameter 0 patrols (state 2, animation 1),
+         * otherwise it stands (state 0). State 4 is not ported. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        snap_to_floor(enemy, layer);
+        enemy->y += 0x10000;
+        enemy->state = 0;
+        if (param0) {
+            enemy->state = 2;
+            play(enemy, anims, 1);
+        }
         return true;
     }
     if (id == AOS_ENEMY_AXE_ARMOR) {
@@ -443,8 +459,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             /* sub_0802346C (weapon callback): the kick-hit flag. */
             soma->flags |= AOS_FLAG_KICK_HIT;
             report.enemy_hit = true;
-            if (enemy->role == AOS_ROLE_AXE) {
-                /* sub_080B13BC: a struck axe loses its single hit point. */
+            if (enemy->role == AOS_ROLE_AXE || enemy->role == AOS_ROLE_ARROW) {
+                /* sub_080B13BC / sub_080AFD8C: a struck axe or arrow loses
+                 * its single hit point. */
                 enemy->hp = 0;
                 goto contact;
             }
@@ -471,6 +488,12 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 enemy->defeated = true;
                 if (enemy->id == AOS_ENEMY_BAT) {
                     /* sub_080AD6E4: the bat dies. */
+                    enemy->state = 3;
+                    enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_SKULL_ARCHER) {
+                    /* sub_080AFD3C: state 3 shatters it on the next update
+                     * (the bone pieces flung away from the attacker are not
+                     * ported). */
                     enemy->state = 3;
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_AXE_ARMOR) {
@@ -502,6 +525,17 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
         }
     }
 contact:
+    if (report.soma_hit && enemy->role == AOS_ROLE_ARROW) {
+        /* sub_080AF78C: a knockback (type 1); the arrow stops colliding and
+         * sticks to Soma for 30 frames at its offset (+ 0x50 / + 0x54). */
+        report.soma_damage = aos_soma_take_hit(soma, enemy->stats.contact, soma_def, enemy->x, 1);
+        enemy->combat.attack_off = enemy->combat.hurt_off = true;
+        enemy->ax = enemy->x - soma->x;
+        enemy->ay = enemy->y - soma->y;
+        enemy->state = 1;
+        enemy->timer = 0x1E;
+        return report;
+    }
     if (report.soma_hit && enemy->role == AOS_ROLE_GRENADE) {
         /* sub_08093098: element 2, always a knockback (type 1); a flying
          * grenade then bursts (sound 0x76). */
@@ -1337,6 +1371,164 @@ static AosHitReport armor_update(AosEnemy *a, AosSoma *soma, const AosCollision 
     return report;
 }
 
+/* sub_080AF8D0 / sub_080AFA9C: the next volley, in the order 0, 0, 1, 1, 2
+ * (+ 0x14 counts 0..4); it plays animation 2 + volley once. */
+static void archer_volley(AosEnemy *a, const AosAnimSet *anims) {
+    int volley = a->volley_count / 2;
+    if (++a->volley_count > 4) a->volley_count = 0;
+    a->state = 1;
+    a->step = a->substep = 0;
+    a->volley = (uint8_t)volley;
+    a->shot = 0;
+    play_loop(a, anims, (unsigned)volley + 2, false);
+}
+
+/* sub_080AF934 step 0: an arrow (sub_080AF7EC) at the archer's position
+ * plus the entry's y offset, with its facing and contact power, one hit
+ * point, sprite frame 25 and a 2 x 2 box 18 pixels ahead and 24 up for both
+ * roles (collision type 0xA). Sound 0x85. */
+static AosEnemy make_arrow(const AosEnemy *archer, int8_t y_offset) {
+    AosEnemy arrow = {0};
+    arrow.id = archer->id;
+    arrow.role = AOS_ROLE_ARROW;
+    arrow.static_frame = 25;
+    arrow.x = archer->x;
+    arrow.y = archer->y + (int32_t)((uint32_t)(int32_t)y_offset << 16);
+    arrow.mirrored = archer->mirrored;
+    arrow.stats = archer->stats;
+    arrow.hp = 1;
+    arrow.combat.type = 0x0A;
+    arrow.own_boxes = true;
+    arrow.own_hurt = arrow.own_attack = (AosBox){-18, -24, 2, 2};
+    return arrow;
+}
+
+/* sub_080AF8D0: standing, it faces the player and shoots when he enters
+ * the 240 x 35 box centred on it (sub_0806E29C). */
+static void archer_stand(AosEnemy *a, const AosSoma *soma, const AosAnimSet *anims) {
+    face_player(a, soma);
+    if (a->step == 0 && player_in(soma, (int16_t)((a->x >> 16) - 0x78),
+                                  (int16_t)((a->y >> 16) - 0x11), 0xF0, 0x23))
+        archer_volley(a, anims);
+}
+
+/* sub_080AF934: an arrow at the start of each frame its volley lists, then
+ * a 32-frame pause after the animation, then standing or patrolling again. */
+static void archer_shoot(AosEnemy *a, const AosEnemyKind *kind, AosHitReport *report) {
+    if (a->step == 0) {
+        unsigned v = a->volley < 4 ? a->volley : 0;
+        if (a->shot < kind->volley_sizes[v] && a->shot < 8 &&
+            kind->volleys[v][a->shot][0] == (int8_t)a->anim.frame && a->anim.tick == 0) {
+            report->spawn_child = true;
+            report->child = make_arrow(a, kind->volleys[v][a->shot][1]);
+            a->shot++;
+        }
+        if (a->anim.flags & AOS_ANIM_ENDED) {
+            a->step = 1;
+            a->timer = 0x20;
+        }
+        return;
+    }
+    if (a->timer) {
+        a->timer--;
+        return;
+    }
+    a->step = a->substep = 0;
+    if (!a->param0) {
+        a->state = 0;
+        play(a, kind->anims, 0);
+    } else {
+        a->state = 2;
+        play(a, kind->anims, 1);
+    }
+}
+
+/* sub_080AFA9C: patrolling at 0.25 (turning every 129 frames, no ledges,
+ * slowed on slopes), backing away at 0.75 facing the player once he is
+ * ahead within 79 pixels, and shooting when he is farther than 99. */
+static void archer_patrol(AosEnemy *a, const AosSoma *soma, const AosCollision *layer,
+                          const AosEnemyKind *kind) {
+    if (a->step == 0) {
+        if (a->timer++ > 0x80) {
+            a->timer = 0;
+            a->mirrored = !a->mirrored;
+        }
+        ground_walk(a, soma, layer, &kind->probes, 0x4000, 0xC);
+        if (player_ahead_within(a, soma, 0x4F)) a->step = 1;
+        return;
+    }
+    ground_walk(a, soma, layer, &kind->probes, (int32_t)0xFFFF4000, 0xD);
+    int32_t dx = pixel_delta(soma->x, a->x), dy = pixel_delta(soma->y, a->y);
+    if ((int16_t)isqrt((uint32_t)(dx * dx + dy * dy)) > 0x63) archer_volley(a, kind->anims);
+}
+
+/* sub_080AF7EC: flying at 3.0 toward its facing with the collision pass;
+ * stuck to Soma after a hit (state 1, 30 frames; the + 0x0F change at 10
+ * frames left is not traced); struck (no hit point), it vanishes (state 2;
+ * the effect of sub_0806D5C0 is not ported). Deleted beyond screen margin
+ * 4. The global pause 0x4BE is not ported. */
+static AosHitReport arrow_update(AosEnemy *arrow, AosSoma *soma, const AosEnemyKind *kind,
+                                 const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk,
+                                 int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    if (arrow->state != 2 && arrow->hp <= 0) arrow->state = 2;
+    if (outside_margins(kind, 4, (arrow->x >> 16) - cam_x, (arrow->y >> 16) - cam_y)) {
+        arrow->removed = true;
+        return report;
+    }
+    switch (arrow->state) {
+    case 0:
+        arrow->vx = arrow->mirrored ? 0x30000 : -0x30000;
+        arrow->x += arrow->vx;
+        report = collide(arrow, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        break;
+    case 1:
+        arrow->x = soma->x + arrow->ax;
+        arrow->y = soma->y + arrow->ay;
+        if (arrow->timer) arrow->timer--;
+        else arrow->removed = true;
+        break;
+    default:
+        arrow->removed = true;
+        return report;
+    }
+    aos_combat_tick(&arrow->combat);
+    return report;
+}
+
+/* EnemySkullArcherUpdate: inside the activity window, the state, then the
+ * collision pass before the animation step; state 3 shatters it (sound
+ * 0x6B) and deletes it at once. */
+static AosHitReport archer_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
+                                  const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                  const AosWeaponFrames *weapon_frames, int soma_atk,
+                                  int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0}, spawned = {0};
+    int sx = (a->x >> 16) - cam_x, sy = (a->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    switch (a->state) {
+    case 0: archer_stand(a, soma, kind->anims); break;
+    case 1: archer_shoot(a, kind, &spawned); break;
+    case 2: archer_patrol(a, soma, layer, kind); break;
+    case 3:
+        a->removed = true;
+        return report;
+    default:
+        step_anim(a, kind->anims);
+        return report;
+    }
+    sx = (a->x >> 16) - cam_x;
+    sy = (a->y >> 16) - cam_y;
+    if (!a->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(a, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    step_anim(a, kind->anims);
+    aos_combat_tick(&a->combat);
+    report.spawn_child = spawned.spawn_child;
+    report.child = spawned.child;
+    return report;
+}
+
 AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
@@ -1350,6 +1542,12 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_BLUE_CROW)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (enemy->role == AOS_ROLE_ARROW)
+        return arrow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+                            cam_y);
+    if (enemy->id == AOS_ENEMY_SKULL_ARCHER)
+        return archer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                             cam_x, cam_y);
     if (enemy->role == AOS_ROLE_AXE)
         return axe_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                           cam_y);

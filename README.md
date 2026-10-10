@@ -76,7 +76,7 @@ The command currently registers the inventory and checklist tasks. It hashes
 their real inputs and pinned-source revisions, rebuilds dependencies in order,
 and skips unchanged outputs. The machine-readable inventory manifest and its
 checksummed fragments are tracked under `data/native_parity/`; human validation
-stays separate in `annotations.json`,
+stays separate in `annotations.tsv` (the canonical, human-edited source),
 and [`docs/NATIVE_PARITY_CHECKLIST.md`](docs/NATIVE_PARITY_CHECKLIST.md) is
 generated from both. ROM extraction tasks will be migrated into the same graph
 incrementally; `--all` does not yet mean that every private asset is rebuilt.

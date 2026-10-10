@@ -127,8 +127,19 @@ invalidates the affected task and its consumers. Automatic discoveries use
 `data/native_parity/inventory.json` as a small manifest over deterministic,
 checksummed record fragments in the same directory. Fragments are capped below
 the repository's large-file guard. Reviewed feature associations, local ports,
-tests and status live in `data/native_parity/annotations.json`, so rescanning a
-submodule cannot overwrite a human validation.
+tests and status live in `data/native_parity/annotations.tsv`, so rescanning a
+submodule cannot overwrite a human validation. The TSV is the single canonical
+human source: one tab-separated row per feature with columns `game`, `id`,
+`category`, `status`, `title`, `native_routines`, `local_sources`, `tests`,
+`dependencies`, `divergences`, `notes` and `next_action`; multi-value columns
+join entries with `|`. TSV is preferred over CSV because free-text notes
+contain commas and semicolons but never tabs, so the file stays editable in
+any spreadsheet or text editor without quoting rules. Rows are sorted by
+unique, game-prefixed stable ids; validation rejects unknown games, statuses,
+categories, dependency ids, missing local paths, and native symbols that no
+longer exist in the regenerated inventory (renamed or removed routines
+surface as orphaned references). The Markdown checklist is a generated view
+and must never be edited by hand.
 
 The second static pass links header declarations to definitions, inventories
 data/type/constant records and proves indirect edges when a lexical table and

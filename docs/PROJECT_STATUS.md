@@ -2026,3 +2026,29 @@ No automatic reciprocal link or native engine encoder is implemented.
   generated checklist were byte-identical across a forced rebuild, the
   incremental dry run reported both tasks up to date, and the proprietary-file
   guard passed.
+
+## Patch 0220 - canonical TSV parity annotations
+
+- Replaced `data/native_parity/annotations.json` with the canonical,
+  human-edited `data/native_parity/annotations.tsv`: one tab-separated row per
+  feature with explicit `game`, `id`, `category`, `status`, `title`,
+  `native_routines`, `local_sources`, `tests`, `dependencies`, `divergences`,
+  `notes` and `next_action` columns, and `|`-joined multi-value fields. TSV is
+  preferred over CSV because notes contain commas and semicolons but never
+  tabs, keeping the file directly editable in a spreadsheet or text editor.
+- All eleven existing feature annotations migrated without loss; the new
+  `next_action` column records each feature's immediate follow-up.
+  `docs/NATIVE_PARITY_CHECKLIST.md` remains a generated view and now exposes
+  dependencies, divergences and next actions when present.
+- TSV loading enforces the exact header, column count, game-prefixed unique
+  ids sorted in file order, strict status/category vocabularies, existing
+  local paths, declared dependency ids and inventory-resident native symbols;
+  a renamed or removed native routine now fails validation as an orphaned
+  reference. Automatic inventory discoveries still cannot overwrite the human
+  annotations.
+- Added ROM-free regressions for the TSV round trip (parse/serialize bytes are
+  stable), malformed headers, column counts, unknown games, id prefixes,
+  ordering and unknown dependency rejection.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  23/23, the Python suite passed 382/382, the incremental rebuild dry run
+  reported both tasks up to date, and the proprietary-file guard passed.

@@ -1,21 +1,45 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Validate parity annotations and generate the native parity checklist."""
+"""Validate parity annotations and generate the native parity checklist.
+
+The human-edited source of truth is ``data/native_parity/annotations.tsv``:
+one tab-separated row per feature with a fixed header. TSV is used instead of
+CSV because free-text notes routinely contain commas and semicolons, while
+tabs never appear in the tracked content; the file stays editable in any
+spreadsheet or text editor without quoting rules. Multi-value columns
+(``native_routines``, ``local_sources``, ``tests``, ``dependencies``) join
+their entries with ``|``. The Markdown checklist and any future views are
+generated from this single source and must never be edited by hand.
+"""
 from __future__ import annotations
 
 import argparse
 from collections import defaultdict
-import json
 from pathlib import Path
 
 from scripts import native_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
 INVENTORY = ROOT / "data/native_parity/inventory.json"
-ANNOTATIONS = ROOT / "data/native_parity/annotations.json"
+ANNOTATIONS = ROOT / "data/native_parity/annotations.tsv"
 CHECKLIST = ROOT / "docs/NATIVE_PARITY_CHECKLIST.md"
 INVENTORY_SCHEMA = native_inventory.SCHEMA
-ANNOTATION_SCHEMA = "metroidvania-native-parity-annotations-v1"
+
+ANNOTATION_COLUMNS = (
+    "game",
+    "id",
+    "category",
+    "status",
+    "title",
+    "native_routines",
+    "local_sources",
+    "tests",
+    "dependencies",
+    "divergences",
+    "notes",
+    "next_action",
+)
+LIST_COLUMNS = ("native_routines", "local_sources", "tests", "dependencies")
 
 CATEGORIES = (
     ("startup", "Startup and initialization"),
@@ -60,23 +84,103 @@ STATUS_MARKS = {
 }
 
 
+def load_annotations(path: Path = ANNOTATIONS) -> dict:
+    """Parse the canonical annotation TSV into the internal feature mapping."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ValueError(f"cannot load {path}: {exc}") from exc
+    lines = text.split("\n")
+    if not lines or lines[0].split("\t") != list(ANNOTATION_COLUMNS):
+        raise ValueError(
+            f"{path}: header must be exactly: {'\t'.join(ANNOTATION_COLUMNS)}")
+    games: dict[str, list[dict]] = defaultdict(list)
+    previous_id = ""
+    for number, line in enumerate(lines[1:], start=2):
+        if not line:
+            continue
+        fields = line.split("\t")
+        if len(fields) != len(ANNOTATION_COLUMNS):
+            raise ValueError(
+                f"{path}:{number}: expected {len(ANNOTATION_COLUMNS)} columns, "
+                f"got {len(fields)}")
+        row = dict(zip(ANNOTATION_COLUMNS, fields))
+        for column, value in row.items():
+            if column not in LIST_COLUMNS and "|" in value:
+                raise ValueError(f"{path}:{number}: '|' is not allowed in {column}")
+        feature = {
+            "id": row["id"],
+            "category": row["category"],
+            "status": row["status"],
+            "title": row["title"],
+            "native_symbols": [item for item in row["native_routines"].split("|") if item],
+            "local_sources": [item for item in row["local_sources"].split("|") if item],
+            "tests": [item for item in row["tests"].split("|") if item],
+            "dependencies": [item for item in row["dependencies"].split("|") if item],
+            "divergences": row["divergences"],
+            "notes": row["notes"],
+            "next_action": row["next_action"],
+        }
+        if row["game"] not in ("mzm", "aos"):
+            raise ValueError(f"{path}:{number}: unknown game: {row['game']!r}")
+        if not feature["id"].startswith(f"{row['game']}."):
+            raise ValueError(
+                f"{path}:{number}: feature id {feature['id']!r} must start with "
+                f"{row['game']!r}.")
+        if feature["id"] <= previous_id:
+            raise ValueError(
+                f"{path}:{number}: rows must be sorted by unique id; "
+                f"{feature['id']!r} is out of order or duplicated")
+        previous_id = feature["id"]
+        games[row["game"]].append(feature)
+    return {"games": {game: {"features": features}
+                      for game, features in sorted(games.items())}}
+
+
+def format_annotations(annotations: dict) -> str:
+    """Serialize annotations back to the canonical deterministic TSV."""
+    lines = ["\t".join(ANNOTATION_COLUMNS)]
+    rows = []
+    for game, game_annotations in sorted(annotations.get("games", {}).items()):
+        for feature in game_annotations.get("features", []):
+            row = {
+                "game": game,
+                "id": feature["id"],
+                "category": feature["category"],
+                "status": feature["status"],
+                "title": feature["title"],
+                "native_routines": "|".join(feature.get("native_symbols", [])),
+                "local_sources": "|".join(feature.get("local_sources", [])),
+                "tests": "|".join(feature.get("tests", [])),
+                "dependencies": "|".join(feature.get("dependencies", [])),
+                "divergences": feature.get("divergences", ""),
+                "notes": feature.get("notes", ""),
+                "next_action": feature.get("next_action", ""),
+            }
+            rows.append("\t".join(row[column] for column in ANNOTATION_COLUMNS))
+    lines.extend(sorted(rows, key=lambda row: row.split("\t")[1]))
+    return "\n".join(lines) + "\n"
+
+
 def _load(path: Path) -> dict:
     if path.name == INVENTORY.name:
         return native_inventory.load_inventory(path)
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"cannot load {path}: {exc}") from exc
+    if path.name == ANNOTATIONS.name:
+        return load_annotations(path)
+    raise ValueError(f"cannot load unrecognized parity document: {path}")
 
 
 def validate(inventory: dict, annotations: dict, root: Path = ROOT) -> list[str]:
     if inventory.get("schema") != INVENTORY_SCHEMA:
         raise ValueError("unsupported native inventory schema")
-    if annotations.get("schema") != ANNOTATION_SCHEMA:
-        raise ValueError("unsupported parity annotation schema")
     diagnostics = []
     category_ids = {item[0] for item in CATEGORIES}
-    feature_ids = set()
+    feature_ids = {
+        feature.get("id", "")
+        for game_data in annotations.get("games", {}).values()
+        for feature in game_data.get("features", [])
+    }
+    seen_ids = set()
     for game, game_annotations in annotations.get("games", {}).items():
         if game not in inventory.get("games", {}):
             raise ValueError(f"annotations reference unknown game: {game}")
@@ -85,9 +189,9 @@ def validate(inventory: dict, annotations: dict, root: Path = ROOT) -> list[str]
             symbols[routine["symbol"]].append(routine["id"])
         for feature in game_annotations.get("features", []):
             feature_id = feature.get("id", "")
-            if not feature_id or feature_id in feature_ids:
+            if not feature_id or feature_id in seen_ids:
                 raise ValueError(f"missing or duplicate feature id: {feature_id!r}")
-            feature_ids.add(feature_id)
+            seen_ids.add(feature_id)
             if feature.get("status") not in STATUS_MARKS:
                 raise ValueError(f"{feature_id}: invalid status")
             if feature.get("category") not in category_ids:
@@ -95,10 +199,16 @@ def validate(inventory: dict, annotations: dict, root: Path = ROOT) -> list[str]
             for symbol in feature.get("native_symbols", []):
                 matches = symbols.get(symbol, [])
                 if not matches:
-                    raise ValueError(f"{feature_id}: native symbol not found: {symbol}")
+                    raise ValueError(
+                        f"{feature_id}: native symbol not found (renamed or removed "
+                        f"from the inventory): {symbol}")
                 if len(matches) > 1:
                     diagnostics.append(
                         f"{feature_id}: symbol {symbol} has {len(matches)} definitions")
+            for dependency in feature.get("dependencies", []):
+                if dependency not in feature_ids:
+                    raise ValueError(
+                        f"{feature_id}: unknown dependency feature id: {dependency}")
             for field in ("local_sources", "tests"):
                 for relative in feature.get(field, []):
                     if not (root / relative).is_file():
@@ -123,8 +233,10 @@ def render(inventory: dict, annotations: dict) -> str:
         "# Native parity checklist",
         "",
         "This file is generated by `python3 -m scripts.rebuild --checklist` from",
-        "the automatic source inventory and the separate human annotations in",
-        "`data/native_parity/`. Do not edit it directly.",
+        "the automatic source inventory and the canonical human annotations in",
+        "`data/native_parity/annotations.tsv`. Do not edit it directly; edit the",
+        "TSV (one row per feature, tab-separated columns, `|`-joined lists) and",
+        "regenerate this view.",
         "",
         "> Scope warning: this static inventory indexes C/assembly functions, header",
         "> declarations, top-level data, named aggregate types, object-like constants",
@@ -212,6 +324,14 @@ def render(inventory: dict, annotations: dict) -> str:
                     f"Native evidence: {', '.join(f'`{item}`' for item in symbol_ids) or 'not attached yet'}.  ")
                 lines.append(f"Local implementation: {_link_paths(feature.get('local_sources', []))}.  ")
                 lines.append(f"Tests: {_link_paths(feature.get('tests', []))}.")
+                if feature.get("dependencies"):
+                    lines.append(
+                        "Dependencies: "
+                        + ", ".join(f"`{item}`" for item in feature["dependencies"]) + ".  ")
+                if feature.get("divergences"):
+                    lines.append(f"Known divergences: {feature['divergences']}  ")
+                if feature.get("next_action"):
+                    lines.append(f"Next action: {feature['next_action']}")
                 lines.append("")
 
         missing = game_data["coverage"]["not_yet_indexed"]

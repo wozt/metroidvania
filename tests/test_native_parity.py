@@ -156,6 +156,50 @@ class NativeParityTests(unittest.TestCase):
         self.assertIn("aos.enemies.zombie", generated)
         self.assertIn("not game fidelity percentages", generated)
 
+    def test_annotation_tsv_round_trip_is_stable(self):
+        text = native_parity.ANNOTATIONS.read_text(encoding="utf-8")
+
+        annotations = native_parity.load_annotations(native_parity.ANNOTATIONS)
+
+        self.assertEqual(native_parity.format_annotations(annotations), text)
+        reparsed = native_parity.load_annotations(native_parity.ANNOTATIONS)
+        self.assertEqual(reparsed, annotations)
+
+    def test_annotation_tsv_rejects_malformed_rows(self):
+        header = "\t".join(native_parity.ANNOTATION_COLUMNS)
+        valid = ("mzm\tmzm.player.x\tplayer\tpartial\tTitle\tSamusUpdate\t"
+                 "src/runtime/mzm_samus.c\ttests/test_mzm_samus.c\t\t\tNotes\tNext")
+        cases = {
+            "bad header": ("game\tid\n", "header"),
+            "column count": (f"{header}\nmzm\tonly.two.columns\n", "columns"),
+            "unknown game": (f"{header}\n{valid.replace('mzm', 'other', 1)}\n",
+                             "unknown game"),
+            "game prefix": (f"{header}\n{valid.replace('mzm.player', 'aos.player')}\n",
+                            "must start with"),
+            "unsorted rows": (f"{header}\n{valid}\n"
+                              f"{valid.replace('mzm.player.x', 'mzm.player.a')}\n",
+                              "out of order or duplicated"),
+            "list pipe in scalar": (f"{header}\n"
+                                    f"{valid.replace('Title', 'a|b')}\n",
+                                    "not allowed"),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "annotations.tsv"
+            for name, (text, message) in cases.items():
+                with self.subTest(case=name):
+                    path.write_text(text, encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, message):
+                        native_parity.load_annotations(path)
+
+    def test_validate_rejects_unknown_dependency(self):
+        inventory = native_parity._load(native_parity.INVENTORY)
+        annotations = native_parity._load(native_parity.ANNOTATIONS)
+        annotations["games"]["mzm"]["features"][0]["dependencies"] = [
+            "mzm.player.does_not_exist"]
+
+        with self.assertRaisesRegex(ValueError, "unknown dependency"):
+            native_parity.validate(inventory, annotations)
+
     def test_rebuild_invalidates_changed_inputs(self):
         cache_root = rebuild.ROOT / ".cache"
         cache_root.mkdir(exist_ok=True)

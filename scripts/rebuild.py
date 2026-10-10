@@ -70,7 +70,7 @@ TASKS = {
     ),
     "checklist": Task(
         name="checklist",
-        version=2,
+        version=3,
         dependencies=("inventory",),
         inputs=_checklist_inputs,
         outputs=(native_parity.CHECKLIST,),

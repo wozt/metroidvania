@@ -2078,3 +2078,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   23/23, the Python suite passed 382/382, the incremental dry run reported
   both tasks up to date, the generated checklist check passed and the
   proprietary-file guard passed.
+
+## Patch 0222 - function-pointer member callbacks in the inventory
+
+- Finishes the interrupted inventory schema v4 commit: its tracked fragments
+  had been generated before the final generator and reported no member
+  callback edges. Regenerated, the inventory links 9 Aria and 91 MZM callbacks
+  where a routine body writes a named routine into a member (`a->m = F;`,
+  casts allowed) or a data initializer assigns one (`.m = F`), and the member
+  is declared as a function pointer directly or through a function-pointer
+  typedef (for example `SoundInit` installing `MP2K_event_null` into
+  `SoundMixerState.CgbOscOff`, or the MZM cutscene stage tables'
+  `pFunction`). Member names are matched lexically, so each edge lists every
+  type that declares the member as a candidate.
+- The checklist's open inventory gaps are now callbacks assigned through
+  computed values or assembly stores, and runtime-observed dependencies;
+  `docs/ARCHITECTURE.md` and `docs/ROADMAP.md` say the same.
+- Added ROM-free regressions for function-pointer member detection (direct and
+  typedef members), member writes, designated initializers and a known tracked
+  edge.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  23/23, the Python suite passed 383/383, the incremental dry run reported
+  both tasks up to date, the generated checklist check passed and the
+  proprietary-file guard passed.

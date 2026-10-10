@@ -95,6 +95,40 @@ class NativeInventoryTests(unittest.TestCase):
             self.assertEqual(by_symbol["sSecond"]["_raw_references"], [])
             self.assertEqual(by_symbol["sThird"]["linkage"], "internal")
 
+    def test_function_pointer_member_writes_are_discovered(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            header = root / "include/callbacks.h"
+            source = root / "src/callbacks.c"
+            header.parent.mkdir()
+            source.parent.mkdir()
+            header.write_text(
+                "typedef void (*StepFunc)(void);\n"
+                "struct Stage { int count; void (*pFunction)(void); StepFunc step; };\n",
+                encoding="utf-8")
+            source.write_text(
+                "static const struct Stage sStage = { .pFunction = First, .count = Limit };\n"
+                "void Setup(struct Stage *stage)\n{\n"
+                "  stage->step = (StepFunc)Second;\n"
+                "  stage->count = Third;\n}\n",
+                encoding="utf-8")
+            fp_typedefs = frozenset(
+                match.group(1) for match in native_inventory.TYPEDEF_FP_RE.finditer(
+                    header.read_text(encoding="utf-8")))
+
+            types = native_inventory._discover_types("mzm", root, header, fp_typedefs)
+            data = native_inventory._discover_c_data("mzm", root, source)
+            routines = native_inventory._discover_c("mzm", root, source)
+
+            self.assertEqual(fp_typedefs, {"StepFunc"})
+            stage = next(item for item in types if item["symbol"] == "Stage")
+            self.assertEqual(stage["function_pointer_members"], ["pFunction", "step"])
+            table = next(item for item in data if item["symbol"] == "sStage")
+            self.assertIn(("pFunction", "First"), table["_raw_member_inits"])
+            setup = next(item for item in routines if item["symbol"] == "Setup")
+            self.assertEqual(setup["_raw_member_writes"],
+                             [("count", "Third"), ("step", "Second")])
+
     def test_tracked_inventory_covers_both_pinned_sources(self):
         inventory = native_inventory.load_inventory()
         self.assertEqual(inventory["schema"], native_inventory.SCHEMA)
@@ -113,6 +147,14 @@ class NativeInventoryTests(unittest.TestCase):
         tables = {item["table"] for item in handler["indirect_calls"]}
         self.assertIn("mzm:data:src/samus.c:sSamusPoseFunctionPointers", tables)
         self.assertGreater(mzm["statistics"]["resolved_indirect_call_edges"], 0)
+        aos = inventory["games"]["aos"]
+        sound_init = next(item for item in aos["routines"] if item["symbol"] == "SoundInit")
+        self.assertIn({"member": "CgbOscOff", "target": "aos:c:src/m4a.c:MP2K_event_null",
+                       "types": ["aos:type:include/m4a_internal.h:struct:SoundMixerState"]},
+                      sound_init["member_callbacks"])
+        for game in ("mzm", "aos"):
+            self.assertGreater(
+                inventory["games"][game]["statistics"]["resolved_member_callback_edges"], 0)
         for path in native_inventory.inventory_output_paths():
             self.assertLess(path.stat().st_size, 4 * 1024 * 1024)
 

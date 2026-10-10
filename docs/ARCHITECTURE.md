@@ -143,9 +143,12 @@ and must never be edited by hand.
 
 The second static pass links header declarations to definitions, inventories
 data/type/constant records and proves indirect edges when a lexical table and
-its dispatch expression are both visible. It deliberately does not treat
-dynamic callbacks, structure-member function pointers or runtime-observed calls
-as resolved. Aria's unnamed files remain unclassified until
+its dispatch expression are both visible. Schema v4 also links a routine or
+data initializer that writes a named routine into a member declared as a
+function pointer (directly or through a function-pointer typedef); the member
+name is matched lexically, so every type declaring it is listed as a
+candidate. It deliberately does not treat callbacks assigned through computed
+values, assembly stores or runtime-observed calls as resolved. Aria's unnamed files remain unclassified until
 evidence supports a category. These gaps are emitted in the generated checklist
 rather than silently excluded. Future extractors join this task graph without
 breaking their existing direct commands.

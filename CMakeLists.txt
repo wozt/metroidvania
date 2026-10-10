@@ -46,13 +46,14 @@ target_link_libraries(fusion_room_package_viewer PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_package_viewer)
 
 add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_samus.c
-               src/runtime/mzm_projectiles.c)
+               src/runtime/mzm_projectiles.c src/runtime/gba_input.c)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_runtime)
 
 add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
-               src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c)
+               src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c
+               src/runtime/gba_input.c)
 target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_aria_runtime)
 
@@ -167,6 +168,14 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_runtime_steep_slopes_tests PRIVATE SDL3::SDL3)
     fusion_enable_warnings(fusion_runtime_steep_slopes_tests)
     add_test(NAME runtime_steep_slopes COMMAND fusion_runtime_steep_slopes_tests)
+
+    # Device-free shared gamepad mapping (SDL3 headers and string tables only).
+    add_executable(fusion_gba_input_tests tests/test_gba_input.c src/runtime/gba_input.c)
+    target_include_directories(fusion_gba_input_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_gba_input_tests PRIVATE SDL3::SDL3)
+    fusion_enable_warnings(fusion_gba_input_tests)
+    add_test(NAME gba_input COMMAND fusion_gba_input_tests
+             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
     # ROM-free Aria of Sorrow BG1 collision primitives.
     add_executable(fusion_aos_collision_tests tests/test_aos_collision.c

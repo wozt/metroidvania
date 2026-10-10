@@ -13,6 +13,7 @@
 #include "aos_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
+#include "gba_input.h"
 
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -688,6 +689,22 @@ static uint16_t keyboard_buttons(void) {
     return held;
 }
 
+/* The keyboard and the gamepad together (Soma's key bits are the GBA
+ * KEYINPUT bits). As on the GBA D-pad, opposite directions cancel out. */
+_Static_assert((int)AOS_KEY_JUMP == (int)GBA_KEY_A && (int)AOS_KEY_ATTACK == (int)GBA_KEY_B &&
+               (int)AOS_KEY_RIGHT == (int)GBA_KEY_RIGHT && (int)AOS_KEY_LEFT == (int)GBA_KEY_LEFT &&
+               (int)AOS_KEY_UP == (int)GBA_KEY_UP && (int)AOS_KEY_DOWN == (int)GBA_KEY_DOWN &&
+               (int)AOS_KEY_GUARDIAN == (int)GBA_KEY_R && (int)AOS_KEY_ABILITY == (int)GBA_KEY_L,
+               "Soma's buttons are the GBA KEYINPUT bits");
+static uint16_t player_buttons(const GbaInput *gamepad) {
+    uint16_t held = (uint16_t)(keyboard_buttons() | gba_input_buttons(gamepad));
+    if ((held & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) == (AOS_KEY_LEFT | AOS_KEY_RIGHT))
+        held &= (uint16_t)~(AOS_KEY_LEFT | AOS_KEY_RIGHT);
+    if ((held & (AOS_KEY_UP | AOS_KEY_DOWN)) == (AOS_KEY_UP | AOS_KEY_DOWN))
+        held &= (uint16_t)~(AOS_KEY_UP | AOS_KEY_DOWN);
+    return held;
+}
+
 /* weapons.tsv of scripts/aos_weapons.py: "none" is the unarmed record. */
 static bool load_weapon(const char *path, const char *name, AosWeapon *weapon) {
     FILE *f = fopen(path, "rb");
@@ -787,7 +804,8 @@ static void usage(const char *name) {
             "Usage: %s [--check] [--library index.tsv] [--spawn X Y] [--moves MASK]\n"
             "       [--weapon none|INDEX] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
-            "       [--capture out.bmp FRAMES BUTTONS] (--area A --room R | room-folder)\n",
+            "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt]\n"
+            "       (--area A --room R | room-folder)\n",
             name);
 }
 
@@ -804,6 +822,9 @@ int main(int argc, char **argv) {
     /* Diagnostic combat stats (new-game values are not traced). */
     AriaPlayerStats player_stats = {10, 4, 320, 320};
     long repeat = 0;
+    GbaPadMap pad_map;
+    gba_pad_map_default(&pad_map);
+    GbaInput gamepad = {0};
     for (int i = 1; i < argc; ++i) {
         char *end = NULL;
         if (!strcmp(argv[i], "--check")) check = true;
@@ -813,6 +834,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) weapon_name = argv[++i];
         else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
+        else if (!strcmp(argv[i], "--input-map") && i + 1 < argc) {
+            char error[256];
+            if (!gba_pad_map_load(&pad_map, argv[++i], error, sizeof error)) {
+                fprintf(stderr, "Input map: %s\n", error);
+                return 2;
+            }
+        }
         else if (!strcmp(argv[i], "--repeat") && i + 1 < argc) repeat = atol(argv[++i]);
         else if (!strcmp(argv[i], "--atk") && i + 1 < argc) player_stats.atk = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--def") && i + 1 < argc) player_stats.def = atoi(argv[++i]);
@@ -866,7 +894,11 @@ int main(int argc, char **argv) {
         return ok ? 0 : 1;
     }
 
-    if (!SDL_Init(SDL_INIT_VIDEO)) { fprintf(stderr, "SDL_Init: %s\n", SDL_GetError()); return 1; }
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+        fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+        return 1;
+    }
+    gba_input_init(&gamepad, &pad_map);
     int rc = 1;
     SDL_Window *window = SDL_CreateWindow("Metroid Vania - experimental Aria runtime",
                                           VIEW_W * 4, VIEW_H * 4, SDL_WINDOW_RESIZABLE);
@@ -915,6 +947,7 @@ int main(int argc, char **argv) {
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+            gba_input_handle_event(&gamepad, &event);
             if (event.type == SDL_EVENT_QUIT) running = false;
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) running = false;
         }
@@ -924,7 +957,8 @@ int main(int argc, char **argv) {
         if (accumulator > frame_ns * 5) accumulator = frame_ns * 5;
         while (accumulator >= frame_ns) {
             accumulator -= frame_ns;
-            uint16_t held = capture_path ? (uint16_t)capture_buttons : keyboard_buttons();
+            uint16_t held = capture_path ? (uint16_t)capture_buttons
+                                         : player_buttons(&gamepad);
             if (capture_path && repeat > 0 && step % repeat == repeat - 1) held = 0;
             if (forced.active) held = forced.held;
             forced.active = false;
@@ -1025,6 +1059,7 @@ int main(int argc, char **argv) {
     }
     rc = 0;
 cleanup:
+    gba_input_close(&gamepad);
     free_library(&library);
     free_weapon_sprite(&weapon_sprite);
     free_objects(&objects);

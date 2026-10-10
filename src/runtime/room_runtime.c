@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gba_input.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
 
@@ -1105,19 +1106,19 @@ static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *rendere
     SDL_SetTextureScaleMode(*texture,SDL_SCALEMODE_NEAREST);
     return true;
 }
-/* PATCH_0176_GAMEPAD: SDL3 standard gamepad, keyboard remains available. */
-static SDL_Gamepad *runtime_pad_open(void) {
-    int count=0;
-    SDL_JoystickID *ids=SDL_GetGamepads(&count);
-    SDL_Gamepad *pad=NULL;
-    if (ids) {
-        for(int i=0;i<count && !pad;i++) pad=SDL_OpenGamepad(ids[i]);
-        SDL_free(ids);
-    }
-    return pad;
-}
-static bool runtime_pad_button(SDL_Gamepad *pad, SDL_GamepadButton button) {
-    return pad && SDL_GetGamepadButton(pad,button);
+/* Gamepads come from the shared gba_input module (hot-plug, remappable);
+ * its GBA KEYINPUT mask is converted to the runtime's key bits. */
+static uint16_t runtime_gba_buttons(uint16_t gba) {
+    static const struct { uint16_t gba, mzm; } keys[] = {
+        {GBA_KEY_RIGHT, MZM_KEY_RIGHT}, {GBA_KEY_LEFT, MZM_KEY_LEFT},
+        {GBA_KEY_UP, MZM_KEY_UP}, {GBA_KEY_DOWN, MZM_KEY_DOWN},
+        {GBA_KEY_A, MZM_KEY_A}, {GBA_KEY_B, MZM_KEY_B}, {GBA_KEY_L, MZM_KEY_L},
+        {GBA_KEY_R, MZM_KEY_R}, {GBA_KEY_SELECT, MZM_KEY_SELECT},
+    };
+    uint16_t buttons=0;
+    for(size_t i=0;i<sizeof keys/sizeof keys[0];i++)
+        if(gba&keys[i].gba)buttons|=keys[i].mzm;
+    return buttons;
 }
 /* Keyboard layout for the GBA buttons; Q also starts a downward diagonal. */
 static uint16_t runtime_key_buttons(SDL_Scancode key) {
@@ -1136,7 +1137,7 @@ static uint16_t runtime_key_buttons(SDL_Scancode key) {
         default: return 0;
     }
 }
-static uint16_t runtime_held_buttons(const bool *keys,SDL_Gamepad *pad) {
+static uint16_t runtime_held_buttons(const bool *keys,const GbaInput *pad) {
     static const SDL_Scancode held_keys[]={
         SDL_SCANCODE_RIGHT,SDL_SCANCODE_D,SDL_SCANCODE_LEFT,SDL_SCANCODE_A,
         SDL_SCANCODE_UP,SDL_SCANCODE_W,SDL_SCANCODE_DOWN,SDL_SCANCODE_S,
@@ -1151,27 +1152,7 @@ static uint16_t runtime_held_buttons(const bool *keys,SDL_Gamepad *pad) {
     if(keys[SDL_SCANCODE_Q] && !keys[SDL_SCANCODE_DOWN] &&
        !keys[SDL_SCANCODE_S] && !keys[SDL_SCANCODE_C])
         buttons&=(uint16_t)~MZM_KEY_DOWN;
-    if(pad) {
-        float sx=(float)SDL_GetGamepadAxis(pad,SDL_GAMEPAD_AXIS_LEFTX)/32767.f;
-        float sy=(float)SDL_GetGamepadAxis(pad,SDL_GAMEPAD_AXIS_LEFTY)/32767.f;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_DPAD_RIGHT)||sx>.5f)
-            buttons|=MZM_KEY_RIGHT;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_DPAD_LEFT)||sx<-.5f)
-            buttons|=MZM_KEY_LEFT;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_DPAD_UP)||sy<-.5f)
-            buttons|=MZM_KEY_UP;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_DPAD_DOWN)||sy>.5f)
-            buttons|=MZM_KEY_DOWN;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_SOUTH))buttons|=MZM_KEY_A;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_EAST)||
-           runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_WEST))buttons|=MZM_KEY_B;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_LEFT_SHOULDER))
-            buttons|=MZM_KEY_L;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER))
-            buttons|=MZM_KEY_R;
-        if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_BACK))
-            buttons|=MZM_KEY_SELECT;
-    }
+    buttons|=runtime_gba_buttons(gba_input_buttons(pad));
     /* A GBA D-pad cannot report opposite directions together. */
     if((buttons&(MZM_KEY_LEFT|MZM_KEY_RIGHT))==(MZM_KEY_LEFT|MZM_KEY_RIGHT))
         buttons&=(uint16_t)~(MZM_KEY_LEFT|MZM_KEY_RIGHT);
@@ -1188,6 +1169,8 @@ int main(int argc, char **argv) {
     long capture_frames=0,capture_repeat=0;
     unsigned long capture_buttons=0;
     bool check=false,animation_check=false;
+    GbaPadMap pad_map;
+    gba_pad_map_default(&pad_map);
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--check-animations")) {
@@ -1215,8 +1198,15 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
         else if (!strcmp(argv[i],"--projectile-library") && !projectile_index && i+1<argc)
             projectile_index=argv[++i];
+        else if (!strcmp(argv[i],"--input-map") && i+1<argc) {
+            char error[256];
+            if(!gba_pad_map_load(&pad_map,argv[++i],error,sizeof error)) {
+                fprintf(stderr,"Input map: %s\n",error);
+                return 2;
+            }
+        }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -1307,7 +1297,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -1364,7 +1354,7 @@ int main(int argc, char **argv) {
     const char *palette_suit=NULL;
     unsigned int palette_frame=0;
     RuntimeAnimationMap animation_map = {0};
-    SDL_Gamepad *gamepad = NULL;
+    GbaInput gamepad = {0};
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
     if (background) {
         surface=SDL_LoadBMP(background);
@@ -1398,7 +1388,7 @@ int main(int argc, char **argv) {
         }
         printf("Projectile library: %d native sequences\n",projectile_library.count);
     }
-    gamepad=runtime_pad_open();
+    gba_input_init(&gamepad,&pad_map);
     MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope,
                             runtime_collision_point,runtime_collision_affect};
     bool door_lock=false;
@@ -1458,6 +1448,7 @@ int main(int argc, char **argv) {
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+            gba_input_handle_event(&gamepad,&event);
             bool key_down=event.type==SDL_EVENT_KEY_DOWN && !event.key.repeat;
             /* Diagnostic animation browser: gameplay state and collisions unchanged. */
             if (library_index && library.count > 0) {
@@ -1528,9 +1519,7 @@ int main(int argc, char **argv) {
                 title_dirty=true;
             }
         }
-        if(gamepad && !SDL_GamepadConnected(gamepad)){SDL_CloseGamepad(gamepad);gamepad=NULL;}
-        if(!gamepad)gamepad=runtime_pad_open();
-        bool pad_armor=runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_GUIDE);
+        bool pad_armor=gba_input_button(&gamepad,SDL_GAMEPAD_BUTTON_GUIDE);
         if(pad_armor && !pad_armor_prev) {
             suit_preset=(suit_preset+1u)%RUNTIME_SUIT_PRESETS;
             runtime_apply_equipment(&equipment,suit_preset,toggled_items);
@@ -1538,7 +1527,7 @@ int main(int argc, char **argv) {
             title_dirty=true;
         }
         pad_armor_prev=pad_armor;
-        bool pad_special=runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_NORTH);
+        bool pad_special=gba_input_button(&gamepad,SDL_GAMEPAD_BUTTON_NORTH);
         if(pad_special && !pad_special_prev) {
             spin_items=(spin_items+1u)%4u;
             toggled_items=(toggled_items&~(uint32_t)(MZM_ITEM_SPACE_JUMP|
@@ -1556,7 +1545,7 @@ int main(int argc, char **argv) {
         const bool *keys=SDL_GetKeyboardState(NULL);
         accumulator += dt;
         while (accumulator >= fixed_step) {
-            uint16_t held=runtime_held_buttons(keys,gamepad);
+            uint16_t held=runtime_held_buttons(keys,&gamepad);
             if(capture_path) {
                 /* Scripted GBA buttons; A and B are released for one frame
                  * every REPEAT frames so they are pressed again. */
@@ -1829,7 +1818,7 @@ int main(int argc, char **argv) {
     }
     rc=0;
 cleanup:
-    if(gamepad)SDL_CloseGamepad(gamepad);
+    gba_input_close(&gamepad);
     runtime_library_free(&library);
     runtime_library_free(&projectile_library);
     if (texture) SDL_DestroyTexture(texture);

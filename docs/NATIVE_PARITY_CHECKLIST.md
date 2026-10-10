@@ -24,8 +24,8 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 5 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 7 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 6 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 8 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -55,6 +55,14 @@ Pinned source: `third_party/mzm` at `43b7fd52f552e4d38c1521ff9d4df5ee57e61493`.
 ### Controls and input
 
 [?] **`mzm.input.inventory-boundary` — source coverage.** The current classifier assigns 9 discovered routine(s) to this category (9 by source path). Category completeness has not been established.
+
+[~] **`mzm.input.gamepad` — Keyboard and gamepad input.** Hot-plugged SDL3 gamepads, a remappable GBA layout and the keyboard drive Samus; no in-game controls menu yet.
+
+Native evidence: not attached yet.  
+Local implementation: [`src/runtime/gba_input.c`](../src/runtime/gba_input.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_gba_input.c`](../tests/test_gba_input.c).
+Known divergences: Host input layer: SDL3 devices are mapped to the GBA KEYINPUT bits; the native key reading and repeat logic are not ported.  
+Next action: Port the native input routines and add an in-game controls menu.
 
 ### HUD and interface
 
@@ -216,6 +224,14 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 ### Controls and input
 
 [?] **`aos.input.inventory-boundary` — source coverage.** The current classifier assigns 2 discovered routine(s) to this category (2 by native name). Category completeness has not been established.
+
+[~] **`aos.input.gamepad` — Keyboard and gamepad input.** Hot-plugged SDL3 gamepads, a remappable GBA layout and the keyboard drive Soma; no in-game controls menu yet.
+
+Native evidence: not attached yet.  
+Local implementation: [`src/runtime/gba_input.c`](../src/runtime/gba_input.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_gba_input.c`](../tests/test_gba_input.c).
+Known divergences: Host input layer: SDL3 devices are mapped to the GBA KEYINPUT bits; the native key reading and repeat logic are not ported.  
+Next action: Port the native input routines and add an in-game controls menu.
 
 ### HUD and interface
 

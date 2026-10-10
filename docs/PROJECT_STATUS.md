@@ -2216,3 +2216,30 @@ No automatic reciprocal link or native engine encoder is implemented.
   23/23, the Python suite passed 389/389, all twelve rebuild tasks were up to
   date, the generated checklist check passed and the proprietary-file guard
   passed.
+
+## Patch 0227 - shared gamepad input for both runtimes
+
+- New `src/runtime/gba_input.{h,c}`: SDL3 gamepads mapped to the GBA
+  KEYINPUT mask, opened at start-up and on hot-plug, replaced by the next
+  connected gamepad when unplugged, with the left stick driving the D-pad
+  beyond a dead zone and opposite directions cancelling as on the GBA.
+  `--input-map FILE` (both runtimes) remaps up to three gamepad buttons per
+  GBA key (`south`/`east`/`west`/`north` or SDL names) and the dead zone; a
+  bad line rejects the file with its line number.
+- `fusion_room_runtime` now uses it instead of its single, start-up-only
+  gamepad (same default layout and the same half-travel stick threshold); its
+  diagnostic pad buttons (Guide, North, Start) are unchanged.
+  `fusion_aria_runtime` gains gamepad support for the first time; Soma's key
+  bits are checked at compile time to equal the GBA bits, and opposite
+  keyboard directions now cancel out as they would on the GBA.
+- Annotations `aos.input.gamepad` and `mzm.input.gamepad` (partial): the
+  native key reading and repeat logic and an in-game controls menu are not
+  ported.
+- Device-free tests (`tests/test_gba_input.c`, CTest `gba_input`) cover the
+  default layout, stick threshold, opposite directions, remapping, SDL and
+  positional names, rejected lines and map files. Captures of both runtimes
+  are unchanged. No physical gamepad was available in this session, so
+  hot-plug was not exercised on hardware.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  24/24, the Python suite passed 389/389, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

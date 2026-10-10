@@ -92,6 +92,31 @@ generated from both. `--native` runs only these ROM-free tasks; `--all` adds
 the private asset tasks above. Extractors not yet registered (room previews,
 audits, editor caches) still run on their own.
 
+## Gamepads
+
+Both runtimes read SDL3 gamepads through `src/runtime/gba_input.c`, together
+with the keyboard. The first connected gamepad is used, a gamepad plugged in
+later is picked up, and an unplugged one is replaced by the next connected
+one. Default layout: south button A, east and west B, shoulders L and R,
+Back Select, Start Start, the D-pad and the left stick past half travel for
+the GBA D-pad; opposite directions cancel out as on the GBA. `--input-map
+FILE` replaces bindings, one GBA key per line (`a`, `b`, `select`, `start`,
+`right`, `left`, `up`, `down`, `r`, `l`) followed by up to three gamepad
+buttons (`south`, `east`, `west`, `north`, or SDL names such as
+`leftshoulder`, `dpup`, `back`), plus an optional `deadzone 0..32767`;
+`#` starts a comment and a bad line rejects the whole file:
+
+```text
+a south
+b west east
+l rightshoulder
+r leftshoulder
+deadzone 12000
+```
+
+The Zero Mission runtime keeps its own diagnostic pad buttons (Guide suits,
+North Space Jump/Screw Attack, Start animation catalogue).
+
 ## Build and test
 
 ```sh
@@ -146,8 +171,8 @@ pose controller ported from the pinned Zero Mission decompilation (native
 physics constants, per-pose hitboxes and pose transitions); it is not yet a
 complete Zero Mission gameplay engine. Controls follow the GBA layout:
 arrows/WASD are the D-pad, Space/Z is A (jump), F/X is B (fire), E/Q hold L
-for diagonal aim up/down. On a gamepad, South is A, East/West is B and the
-left shoulder is L. Down crouches and Down again morphs; Up unmorphs and
+for diagonal aim up/down. Gamepads work in both runtimes (see "Gamepads"
+below). Down crouches and Down again morphs; Up unmorphs and
 stands. Running jumps spin; touch a wall during a spin, press away and then A
 to wall-jump. With Power Grip, hold toward a ledge while falling to hang, then
 press A while holding toward it to climb. Fast upward jumps show Zero
@@ -189,7 +214,7 @@ Leaving a room
 through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn
 point is a test placement (a floor near the room centre, or `--spawn X Y`).
-Arrows move, Down crouches, X/F attacks (B; `--weapon none|INDEX` after
+Arrows (or a gamepad, see "Gamepads") move, Down crouches, X/F attacks (B; `--weapon none|INDEX` after
 `python3 -m scripts.aos_weapons`, unarmed by default; blades of weapon
 classes 0, 2 and 3 are drawn, `--hitboxes` outlines their hitbox),
 Space/Z jumps (A), Down + jump drops through

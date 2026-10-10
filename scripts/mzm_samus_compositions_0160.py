@@ -11,6 +11,7 @@ import re
 import subprocess
 
 from scripts.mzm_samus_frame import EXPECTED_SHA1
+from scripts.mzm_samus_export_0150 import frame_metadata
 from scripts.mzm_samus_sprite import (
     _make_power_suit_frame, aligned_canvas_bounds,
     SAMUS_ANIMATION_RECORD_BYTES, ARM_CANNON_ANIMATION_RECORD_BYTES,
@@ -57,18 +58,27 @@ def parse_sized_symbols(output):
     return found
 
 
-def validate_pair(body, cannon, gfx, sizes):
+def validate_pair(body, cannon, gfx, sizes, required_frames=None):
     body_addr, body_size = sizes[body]
     cannon_addr, cannon_size = sizes[cannon]
     if body_size < 16 or body_size % 16 or cannon_size < 8 or cannon_size % 8:
         raise ValueError("invalid native animation record alignment")
-    if body_size // 16 != cannon_size // 8 or body_size // 16 > 256:
-        raise ValueError("body/cannon frame count mismatch")
+    body_count = body_size // 16
+    cannon_count = cannon_size // 8
+    if body_count > 256:
+        raise ValueError("body animation exceeds safety limit")
+    # ELF sizes include padding and zero terminators. Validate the number
+    # of playable body frames separately; never assume the arrays match.
+    if required_frames is None:
+        if body_count != cannon_count:
+            raise ValueError("body/cannon frame count mismatch")
+    elif not 1 <= required_frames <= body_count or cannon_count < required_frames:
+        raise ValueError("cannon array is shorter than playable body frames")
     for name in gfx:
         addr, size = sizes[name]
         if not 0x08000000 <= addr < 0x0E000000 or size != 64:
             raise ValueError("unexpected cannon graphics symbol " + name)
-    return body_addr, cannon_addr, body_size // 16
+    return body_addr, cannon_addr, required_frames if required_frames is not None else body_count
 
 
 def safe_dir(root, relative):
@@ -102,7 +112,11 @@ def run(rom, symbols, out, selected):
             report["sequences"][key] = {"status": "missing-symbols", "symbols": missing}
             continue
         try:
-            body_addr, cannon_addr, count = validate_pair(body, cannon, (upper, lower), symbols)
+            # Determine playable frames from the native zero-terminated
+            # body records instead of treating the full ELF size as playback.
+            playable = frame_metadata(rom, symbols[body][0], symbols[body][1])
+            body_addr, cannon_addr, count = validate_pair(
+                body, cannon, (upper, lower), symbols, len(playable))
             images = []
             metas = []
             for index in range(count):

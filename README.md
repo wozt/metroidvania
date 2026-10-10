@@ -50,10 +50,10 @@ editor caches remain at their historical paths until their consumers can be
 migrated and tested independently.
 
 The Samus command is the complete reproducible preparation path: it verifies
-the ROM, reads the pinned decompilation tables and reference ELF, rebuilds body,
-cannon-composed and special-pose sources, deduplicates runtime BMPs, and emits
-the semantic animation map. Use `--bundle-only` only when intentionally reusing
-already prepared private sources.
+the ROM, reads the native Samus pointer tables from the pinned decompilation
+and the matching reference ELF, composes every body, arm cannon and suit
+palette combination exactly as the game selects them, deduplicates the runtime
+BMPs and emits the semantic animation map.
 
 ## Build and test
 

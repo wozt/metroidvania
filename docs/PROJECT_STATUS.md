@@ -1480,3 +1480,41 @@ No automatic reciprocal link or native engine encoder is implemented.
   headless registry check accepted 580 sequences and 468 bindings, and
   Brinstar 033 loaded its 204 native collision records and remained live
   through the dummy-video smoke test.
+
+## Patch 0190 - native table-driven Samus composer with visible suits
+
+- Added `scripts/mzm_samus_compose.py`, which composes every Samus animation
+  from the decompilation pointer tables the way `SamusUpdateGraphicsOam`,
+  `SamusDraw` and `SamusUpdatePalette` select them: body table and selector,
+  matching arm cannon animation (or `_All[pose]`), arm cannon graphics by the
+  running/hanging/zipline/default rules, cannon front/behind order and suit
+  palette. Frames are rendered once to palette indices, colorized per suit,
+  cropped, and carry their native draw offset including SamusDraw's 2-pixel
+  shift.
+- Suit changes are now real: Varia uses Power Suit graphics with the Varia
+  palette, Gravity uses Full Suit graphics with the Gravity palette, matching
+  the source. The previous registry mapped Varia and Gravity to unmodified
+  Power Suit art, and Full Suit/Suitless frames lacked their arm cannon.
+- `python3 -m scripts.mzm_samus_pipeline` now builds the library directly from
+  ROM, ELF and tables in about three seconds: 1,384 sequences, 6,008 frames,
+  3,192 unique BMPs, zero unresolved variants. The runtime index moved to the
+  versioned v3 schema with per-frame offsets, unreferenced objects are pruned
+  (1,943 obsolete objects removed locally) and `sequences.json` records the
+  source symbols of every key. `--bundle-only` and the intermediate caches are
+  no longer used by the canonical pipeline.
+- Validation against the previous library: 387 of its 580 sequences are
+  reproduced pixel for pixel; the other 193 were body-only exports that now
+  include the native arm cannon (hidden body pixels replaced by cannon pixels).
+- The semantic registry now has 600 bindings over 33 actions, including up and
+  down aims, rolling, midair Morph Ball, morphed hurt and the Space Jump Screw
+  Attack variant. The SDL runtime loads the v3 index with dynamic storage,
+  draws every frame at its native offset from Samus's position and selects
+  `ScrewAttacking[TRUE]` when Space Jump is equipped.
+- Added ROM-free tests for table pairing, selector aliases, cannon graphics
+  rules, draw order, the Dying exception, cropping/offsets, registry generation
+  and pipeline deduplication, pruning and failure on unresolved variants.
+- Validation on 2026-10-10: warning-clean build, CTest passed 15/15, the
+  registry check accepted 1,384 sequences and 600 bindings, and Brinstar 033
+  remained live through the dummy-video smoke test. A contact sheet of the
+  private output confirmed distinct Power, Varia, Full, Gravity and Suitless
+  renders with their arm cannons.

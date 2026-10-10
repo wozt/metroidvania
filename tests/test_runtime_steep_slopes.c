@@ -41,17 +41,22 @@ int main(void) {
 
     /* Every spin pose keeps its own action; generic MidAir is only the
      * fallback of non-spinning airborne poses. */
-    assert(strcmp(runtime_pose_action(MZM_POSE_SPINNING),"spin")==0);
-    assert(strcmp(runtime_pose_action(MZM_POSE_STARTING_SPIN_JUMP),"spin_start")==0);
-    assert(strcmp(runtime_pose_action(MZM_POSE_SCREW_ATTACKING),"screw_attack")==0);
+    assert(strcmp(runtime_pose_action(MZM_POSE_SPINNING,0),"spin")==0);
+    assert(strcmp(runtime_pose_action(MZM_POSE_STARTING_SPIN_JUMP,0),"spin_start")==0);
+    assert(strcmp(runtime_pose_action(MZM_POSE_SCREW_ATTACKING,0),"screw_attack")==0);
+    assert(strcmp(runtime_pose_action(MZM_POSE_SCREW_ATTACKING,MZM_ITEM_SPACE_JUMP),
+                  "screw_attack_space")==0);
+    assert(strcmp(runtime_pose_action(MZM_POSE_ROLLING,0),"rolling")==0);
+    assert(strcmp(runtime_pose_fallback_action(MZM_POSE_ROLLING),"morph_ball")==0);
     assert(strcmp(runtime_pose_fallback_action(MZM_POSE_SPACE_JUMPING),"spin")==0);
     assert(strcmp(runtime_pose_fallback_action(MZM_POSE_TURNING_AROUND_MIDAIR),
                   "midair")==0);
     for (int pose = 0; pose < MZM_POSE_COUNT; ++pose)
         if (mzm_pose_is_spinning((MzmPose)pose))
-            assert(strcmp(runtime_pose_action((MzmPose)pose),"midair")!=0 &&
+            assert(strcmp(runtime_pose_action((MzmPose)pose,0),"midair")!=0 &&
                    strcmp(runtime_pose_fallback_action((MzmPose)pose),"midair")!=0);
-    assert(strcmp(runtime_aim_name(MZM_AIM_UP),"forward")==0);
+    assert(strcmp(runtime_aim_name(MZM_AIM_UP),"up")==0);
+    assert(strcmp(runtime_aim_name(MZM_AIM_FORWARD),"forward")==0);
 
     /* Diagnostic presets drive native suit types and item flags. */
     MzmEquipment equipment={0};

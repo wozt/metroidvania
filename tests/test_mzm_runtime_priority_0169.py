@@ -11,6 +11,6 @@ class Priority0169Tests(unittest.TestCase):
         # their own registry actions and are exercised by the C tests.
         text = (ROOT / "src/runtime/room_runtime.c").read_text()
         self.assertIn('case MZM_POSE_SPINNING: return "spin";', text)
-        self.assertIn('case MZM_POSE_SCREW_ATTACKING: return "screw_attack";', text)
+        self.assertIn('"screw_attack_space":"screw_attack"', text)
         cmake = (ROOT / "CMakeLists.txt").read_text()
         self.assertIn("add_test(NAME mzm_samus_controller", cmake)

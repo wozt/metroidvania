@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Build the canonical deduplicated private Samus runtime library.
 
-The current discovery adapter reads validated manifests produced by the native
-MZM decoders. Output names are stable and contain no patch sequence numbers.
+One command verifies the ROM, reads the native Samus pointer tables from the
+pinned decompilation and the matching reference ELF, composes every body,
+arm cannon and suit palette combination with ``scripts.mzm_samus_compose``,
+stores unique BMPs by SHA-256 and emits the runtime index and the semantic
+animation registry. Output names are stable and contain no patch numbers.
 """
 from __future__ import annotations
 
@@ -18,284 +21,196 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from scripts.asset_layout import (
-    EXTRACTED,
-    METROID_SAMUS_BODY_SOURCE,
-    METROID_SAMUS_COMPOSED_SOURCE,
-    METROID_SAMUS_METADATA,
-    METROID_SAMUS_RUNTIME,
-    METROID_SAMUS_SPECIAL_SOURCE,
-    private_path,
+from scripts.asset_layout import METROID_SAMUS_RUNTIME, private_path
+from scripts.mzm_samus_compose import (
+    VISUAL_SUITS,
+    compose_all,
+    parse_symbols,
+    parse_tables,
 )
-from scripts.mzm_samus_catalog import collect as collect_symbolic_catalog
-from scripts.mzm_samus_resolve import parse_symbols, resolve
-from scripts.mzm_samus_export_0150 import (
-    export as export_bodies,
-    parse_nm_sizes,
-    resolve_suit_palettes,
-)
-from scripts.mzm_samus_bulk_0170 import CANDIDATES as COMPOSED_CANDIDATES
-from scripts.mzm_samus_bulk_0170 import collect as collect_compositions
-from scripts.mzm_samus_compositions_0160 import parse_sized_symbols
 from scripts.mzm_samus_frame import EXPECTED_SHA1
-from scripts.mzm_samus_runtime_library_0175 import build
-from scripts.mzm_samus_special_0171 import CANDIDATES as SPECIAL_CANDIDATES
-from scripts.mzm_samus_special_body_0173 import compose as compose_special
 
-SUITS = ("PowerSuit", "VariaSuit", "GravitySuit", "FullSuit", "Suitless")
-SOURCE_SUIT = {
-    "PowerSuit": "PowerSuit",
-    "VariaSuit": "PowerSuit",
-    "GravitySuit": "PowerSuit",
-    "FullSuit": "FullSuit",
-    "Suitless": "Suitless",
+INDEX_SCHEMA = "metroidvania-samus-runtime-index-v3"
+MAP_SCHEMA = "metroidvania-samus-animation-map-v1"
+SUITS = tuple(VISUAL_SUITS)
+AIMS = {
+    "forward": "ACD_FORWARD",
+    "diagonalup": "ACD_DIAGONALLY_UP",
+    "diagonaldown": "ACD_DIAGONALLY_DOWN",
+    "up": "ACD_UP",
+    "down": "ACD_DOWN",
 }
+# Semantic action -> native per-ACD table used by SamusUpdateGraphicsOam.
 AIM_ACTIONS = {
-    "idle": ("standing", "loop"),
-    "run": ("running", "loop"),
-    "midair": ("midair", "loop"),
-    "crouch": ("crouching", "loop"),
-    "fire": ("shooting", "loop"),
-    "crouch_fire": ("shootingandcrouching", "loop"),
-    "turn": ("turningaround", "once"),
-    "turn_midair": ("turningaroundmidair", "once"),
-    "turn_crouch": ("turningaroundandcrouching", "once"),
-    "landing": ("landing", "once"),
+    "idle": ("Standing", "loop"),
+    "run": ("Running", "loop"),
+    "midair": ("MidAir", "loop"),
+    "crouch": ("Crouching", "loop"),
+    "fire": ("Shooting", "once"),
+    "crouch_fire": ("ShootingAndCrouching", "once"),
+    "turn": ("TurningAround", "once"),
+    "turn_midair": ("TurningAroundMidAir", "once"),
+    "turn_crouch": ("TurningAroundAndCrouching", "once"),
+    "landing": ("Landing", "once"),
 }
+# Semantic action -> exact native (table, selector).
 SIMPLE_ACTIONS = {
-    "skid": ("skidding", "once"),
-    "spin_start": ("startingspinjump", "once"),
-    "spin": ("spinning", "loop"),
-    "space_jump": ("spacejumping", "loop"),
-    "screw_attack": ("screwattacking", "loop"),
-    "wall_jump": ("startingwalljump", "once"),
-    "morph_start": ("morphing", "once"),
-    "morph_ball": ("morphball", "loop"),
-    "unmorph": ("unmorphing", "once"),
-    "ledge_hang": ("hangingonledge", "loop"),
-    "ledge_pull_forward": ("pullingyourselfforwardfromhanging", "once"),
-    "ledge_pull_up": ("pullingyourselfupfromhanging", "once"),
-    "hurt": ("gettingknockedback", "once"),
-    "death": ("dying", "once"),
-    "shinespark_charge": ("delaybeforeshinesparking", "once"),
-    "shinespark": ("shinesparking", "loop"),
-    "shinespark_end": ("delayaftershinesparking", "once"),
-    "shinespark_side": ("sidewards_shinesparking", "loop"),
-    "ball_spark": ("ballsparking", "loop"),
+    "skid": ("Skidding", "FALSE", "once"),
+    "spin_start": ("pose", "SPOSE_STARTING_SPIN_JUMP", "once"),
+    "spin": ("pose", "SPOSE_SPINNING", "loop"),
+    "space_jump": ("pose", "SPOSE_SPACE_JUMPING", "loop"),
+    "screw_attack": ("ScrewAttacking", "FALSE", "loop"),
+    "screw_attack_space": ("ScrewAttacking", "TRUE", "loop"),
+    "wall_jump": ("pose", "SPOSE_STARTING_WALL_JUMP", "once"),
+    "morph_start": ("pose", "SPOSE_MORPHING", "once"),
+    "morph_ball": ("pose", "SPOSE_MORPH_BALL", "loop"),
+    "rolling": ("pose", "SPOSE_ROLLING", "loop"),
+    "morph_midair": ("pose", "SPOSE_MORPH_BALL_MIDAIR", "loop"),
+    "unmorph": ("pose", "SPOSE_UNMORPHING", "once"),
+    "ledge_hang": ("pose", "SPOSE_HANGING_ON_LEDGE", "loop"),
+    "ledge_pull_forward": ("pose", "SPOSE_PULLING_YOURSELF_FORWARD_FROM_HANGING", "once"),
+    "ledge_pull_up": ("pose", "SPOSE_PULLING_YOURSELF_UP_FROM_HANGING", "once"),
+    "hurt": ("pose", "SPOSE_GETTING_HURT", "once"),
+    "hurt_morph": ("pose", "SPOSE_GETTING_HURT_IN_MORPH_BALL", "loop"),
+    "death": ("pose", "SPOSE_DYING", "once"),
+    "shinespark_charge": ("pose", "SPOSE_DELAY_BEFORE_SHINESPARKING", "once"),
+    "shinespark": ("Shinesparking", "FORCED_MOVEMENT_UPWARDS_SHINESPARK", "loop"),
+    "shinespark_side": ("Shinesparking", "FORCED_MOVEMENT_SIDEWARDS_SHINESPARK", "loop"),
+    "shinespark_end": ("pose", "SPOSE_DELAY_AFTER_SHINESPARKING", "once"),
+    "ball_spark": ("pose", "SPOSE_BALLSPARKING", "loop"),
 }
 
 
-def safe_asset_path(root: Path, relative: str) -> Path:
-    if not isinstance(relative, str) or not relative.startswith(
-            EXTRACTED.as_posix() + "/"):
-        raise ValueError("asset path is not private")
-    path = root / relative
-    base = root / EXTRACTED
-    if not path.resolve().is_relative_to(base.resolve()):
-        raise ValueError("asset escapes private root")
-    current = root
-    for part in Path(relative).parts:
-        current /= part
-        if current.is_symlink():
-            raise ValueError("symlink source refused: " + str(current))
-    if not path.is_file():
-        raise ValueError("missing source: " + str(path))
-    return path
-
-
-def _write_atomic(path: Path, content: str) -> None:
+def _write_atomic(path: Path, content: str | bytes) -> None:
     if path.is_symlink():
         raise ValueError("symlink output refused")
     temporary = path.with_suffix(path.suffix + ".tmp")
     if temporary.is_symlink():
         raise ValueError("symlink temporary output refused")
-    temporary.write_text(content, encoding="utf-8")
+    if isinstance(content, str):
+        temporary.write_text(content, encoding="utf-8")
+    else:
+        temporary.write_bytes(content)
     os.replace(temporary, path)
 
 
-def _write_json(path: Path, value: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    _write_atomic(path, json.dumps(value, indent=2, sort_keys=True) + "\n")
-
-
-def _run_nm(nm: str, elf: Path, *, sizes: bool) -> str:
-    command = [nm]
-    if sizes:
-        command.append("-S")
-    command.extend(("--defined-only", str(elf)))
-    return subprocess.run(command, check=True, capture_output=True,
-                          text=True).stdout
-
-
-def prepare_sources(root: Path, rom_path: Path, elf: Path,
-                    decomp: Path, nm: str = "arm-none-eabi-nm") -> dict:
-    """Rebuild every source manifest consumed by the canonical library."""
-    root = Path(root).resolve()
-    rom_path = Path(rom_path).resolve()
-    elf = Path(elf).resolve()
-    decomp = Path(decomp).resolve()
-    rom = rom_path.read_bytes()
-    if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
-        raise ValueError("original Zero Mission USA ROM SHA-1 mismatch")
-    if elf.is_symlink() or not elf.is_file():
-        raise ValueError("missing or symlink MZM reference ELF")
-
-    pointers = decomp / "src/data/samus/samus_animation_pointers.c"
-    constants = decomp / "include/constants/samus.h"
-    symbolic = collect_symbolic_catalog(
-        pointers.read_text(encoding="utf-8"),
-        constants.read_text(encoding="utf-8"))
-    metadata = private_path(root, METROID_SAMUS_METADATA, create=True)
-    metadata.mkdir(exist_ok=True)
-    _write_json(metadata / "catalog.json", symbolic)
-
-    nm_plain = _run_nm(nm, elf, sizes=False)
-    addresses = resolve(symbolic, parse_symbols(nm_plain), rom)
-    _write_json(metadata / "addresses.json", addresses)
-
-    nm_sized = _run_nm(nm, elf, sizes=True)
-    body_output = private_path(root, METROID_SAMUS_BODY_SOURCE, create=True)
-    body_output.mkdir(exist_ok=True)
-    body = export_bodies(
-        rom, addresses, parse_nm_sizes(nm_sized), body_output,
-        palette_offsets=resolve_suit_palettes(nm_plain, rom))
-    _write_json(body_output / "manifest.json", body)
-
-    symbols = parse_sized_symbols(nm_sized)
-    composed_output = private_path(root, METROID_SAMUS_COMPOSED_SOURCE, create=True)
-    composed_output.mkdir(exist_ok=True)
-    composed = collect_compositions(
-        rom, symbols, composed_output, list(COMPOSED_CANDIDATES))
-    _write_json(composed_output / "manifest.json", composed)
-
-    special_output = private_path(root, METROID_SAMUS_SPECIAL_SOURCE, create=True)
-    special_output.mkdir(exist_ok=True)
-    special = compose_special(
-        rom, symbols, special_output, sorted(SPECIAL_CANDIDATES))
-    _write_json(special_output / "manifest.json", special)
-    return {
-        "symbolic_variants": symbolic["variant_count"],
-        "resolved_symbols": addresses["resolved_symbols"],
-        "body_animations": sum(
-            item.get("body_status") == "exported-body-only"
-            for item in body["animations"].values()),
-        "composed_sequences": sum(
-            item.get("status") == "diagnostic-composed"
-            for item in composed["sequences"].values()),
-        "special_sequences": sum(
-            item.get("status") == "body-only-diagnostic-composed"
-            for item in special["sequences"].values()),
-    }
-
-
-def _animation_candidates(suit: str, side: str, native: str,
-                          aim: str | None) -> list[str]:
-    source_suit = SOURCE_SUIT[suit]
-    values = []
-    if aim is not None:
-        values.append(f"{source_suit}/{native}_{aim}_{side}")
-        direction = "" if aim == "forward" else aim + "_"
-        values.append(f"{source_suit}/{side}_{direction}{native}")
-        if aim == "forward":
-            values.append(f"{source_suit}/{side}_forward_{native}")
-    else:
-        values.extend((f"{source_suit}/{native}_{side}",
-                       f"{source_suit}/{side}_{native}"))
-    return list(dict.fromkeys(values))
-
-
-def build_animation_map(catalogue: dict) -> tuple[str, dict]:
-    """Resolve gameplay semantics to exact catalogue keys without guessing."""
-    available = set(catalogue["sequences"])
+def build_animation_map(keys) -> tuple[str, dict]:
+    """Resolve gameplay semantics to exact native composition keys."""
+    available = set(keys)
     rows = []
     missing = []
     for suit in SUITS:
         for side in ("left", "right"):
-            for action, (native, mode) in AIM_ACTIONS.items():
-                for aim in ("forward", "diagonalup", "diagonaldown"):
-                    candidates = _animation_candidates(suit, side, native, aim)
-                    key = next((value for value in candidates if value in available), None)
-                    if key:
+            for action, (table, mode) in AIM_ACTIONS.items():
+                for aim, selector in AIMS.items():
+                    key = f"{suit}/{table}/{selector}/{side}"
+                    if key in available:
                         rows.append((action, suit, side, aim, mode, key))
-                    else:
+                    elif aim in ("forward", "diagonalup", "diagonaldown"):
                         missing.append(f"{action}/{suit}/{side}/{aim}")
-            for action, (native, mode) in SIMPLE_ACTIONS.items():
-                candidates = _animation_candidates(suit, side, native, None)
-                key = next((value for value in candidates if value in available), None)
-                if key:
+            for action, (table, selector, mode) in SIMPLE_ACTIONS.items():
+                key = f"{suit}/{table}/{selector}/{side}"
+                if key in available:
                     rows.append((action, suit, side, "none", mode, key))
                 else:
                     missing.append(f"{action}/{suit}/{side}/none")
-    content = "schema\tmetroidvania-samus-animation-map-v1\n"
+    content = f"schema\t{MAP_SCHEMA}\n"
     content += "action\tsuit\tfacing\taim\tmode\tkey\n"
     content += "".join("\t".join(row) + "\n" for row in rows)
     report = {
-        "schema": "metroidvania-samus-animation-map-report-v1",
+        "schema": "metroidvania-samus-animation-map-report-v2",
         "rows": len(rows),
         "actions": len(AIM_ACTIONS) + len(SIMPLE_ACTIONS),
         "missing": missing,
-        "requested_suit_sources": SOURCE_SUIT,
+        "graphics_by_suit": {suit: VISUAL_SUITS[suit][0] for suit in SUITS},
+        "palette_by_suit": {suit: VISUAL_SUITS[suit][2] for suit in SUITS},
     }
     return content, report
 
 
-def produce(root: Path, preparation: dict | None = None) -> dict:
+def _run_nm(nm: str, elf: Path) -> str:
+    return subprocess.run([nm, "-S", "--defined-only", str(elf)], check=True,
+                          capture_output=True, text=True).stdout
+
+
+def produce(root: Path, rom_path: Path, elf: Path, decomp: Path,
+            nm: str = "arm-none-eabi-nm") -> dict:
     root = Path(root).resolve()
+    rom = Path(rom_path).read_bytes()
+    if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
+        raise ValueError("original Zero Mission USA ROM SHA-1 mismatch")
+    elf = Path(elf)
+    if elf.is_symlink() or not elf.is_file():
+        raise ValueError("missing or symlink MZM reference ELF")
+    tables = parse_tables(
+        (Path(decomp) / "src/data/samus/samus_animation_pointers.c")
+        .read_text(encoding="utf-8"))
+    symbols = parse_symbols(_run_nm(nm, elf))
+
     destination = private_path(root, METROID_SAMUS_RUNTIME, create=True)
     if destination.is_symlink():
         raise ValueError("private Samus runtime cannot be a symlink")
-    catalogue = build(root, strict=True)
-    destination.mkdir(exist_ok=True)
     objects = destination / "objects"
     if objects.is_symlink():
         raise ValueError("private Samus object store cannot be a symlink")
-    objects.mkdir(exist_ok=True)
-    rows = []
+    objects.mkdir(parents=True, exist_ok=True)
+
+    rows: list[str] = []
     packed: dict[str, int] = {}
-    for key, entry in sorted(catalogue["sequences"].items()):
-        if len(key) >= 160 or any(character in key for character in "\t\r\n"):
+    sequences: dict[str, dict] = {}
+
+    def sink(key: str, frames, info: dict) -> None:
+        if len(key) >= 160 or any(c in key for c in "\t\r\n"):
             raise ValueError("invalid animation key")
-        for frame in entry["frames"]:
-            source = safe_asset_path(root, frame["bmp"])
-            blob = source.read_bytes()
-            if blob[:2] != b"BM":
-                raise ValueError("invalid BMP header: " + str(source))
-            digest = hashlib.sha256(blob).hexdigest()
+        if key in sequences:
+            raise ValueError("duplicate animation key " + key)
+        for index, (bmp, duration, offset_x, offset_y) in enumerate(frames):
+            digest = hashlib.sha256(bmp).hexdigest()
             output = objects / f"{digest}.bmp"
             if output.is_symlink():
                 raise ValueError("symlink asset destination")
             if output.exists():
-                if output.read_bytes() != blob:
+                if output.read_bytes() != bmp:
                     raise ValueError("object hash collision")
             else:
-                temporary = output.with_suffix(".tmp")
-                if temporary.is_symlink():
-                    raise ValueError("symlink temporary output")
-                temporary.write_bytes(blob)
-                os.replace(temporary, output)
-            packed[digest] = len(blob)
+                _write_atomic(output, bmp)
+            packed[digest] = len(bmp)
             relative = output.relative_to(root).as_posix()
-            if len(relative) >= 320:
-                raise ValueError("runtime BMP path too long")
-            rows.append(
-                f"{key}\t{frame['index']}\t{frame['duration_ticks']}\t{relative}")
+            rows.append(f"{key}\t{index}\t{duration}\t{offset_x}\t{offset_y}\t{relative}")
+        sequences[key] = info
+
+    report = compose_all(rom, tables, symbols, sink)
+    if report["unresolved"]:
+        raise ValueError("unresolved native Samus variants: " +
+                         ", ".join(sorted(report["unresolved"])[:5]))
+    removed = 0
+    for stale in objects.glob("*.bmp"):
+        if stale.stem not in packed and not stale.is_symlink():
+            stale.unlink()
+            removed += 1
+
+    animation_map, map_report = build_animation_map(sequences)
     metadata = {
-        "schema": "metroidvania-mzm-samus-runtime-v2",
-        "source_schema": catalogue["schema"],
-        "suits": catalogue["suits"],
-        "sequences": len(catalogue["sequences"]),
+        "schema": "metroidvania-mzm-samus-runtime-v3",
+        "index_schema": INDEX_SCHEMA,
+        "sequences": len(sequences),
+        "frames": len(rows),
         "unique_bmps": len(packed),
-        "sources": catalogue["sources"],
+        "suits": {suit: sum(key.startswith(suit + "/") for key in sequences)
+                  for suit in SUITS},
+        "composition": {key: report[key] for key in
+                        ("variants", "sequences", "frames", "table_problems")},
+        "removed_stale_objects": removed,
         "object_store": "sha256",
+        "animation_map": map_report,
         "note": "Private native extraction; source ROM data is never redistributed.",
     }
-    if preparation is not None:
-        metadata["preparation"] = preparation
-    animation_map, map_report = build_animation_map(catalogue)
-    metadata["animation_map"] = map_report
+    index = f"schema\t{INDEX_SCHEMA}\n" + "\n".join(rows) + "\n"
     expected = (
-        (destination / "runtime_index.tsv", "\n".join(rows) + "\n"),
+        (destination / "runtime_index.tsv", index),
         (destination / "animation_map.tsv", animation_map),
+        (destination / "sequences.json",
+         json.dumps(sequences, indent=2, sort_keys=True) + "\n"),
         (destination / "manifest.json",
          json.dumps(metadata, indent=2, sort_keys=True) + "\n"),
     )
@@ -307,8 +222,7 @@ def produce(root: Path, preparation: dict | None = None) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path,
-                        default=ROOT)
+    parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--rom", type=Path,
                         default=ROOT / "roms/Metroid - Zero Mission (USA).gba")
     parser.add_argument("--elf", type=Path,
@@ -316,18 +230,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--decomp", type=Path,
                         default=ROOT / "third_party/mzm")
     parser.add_argument("--nm", default="arm-none-eabi-nm")
-    parser.add_argument("--bundle-only", action="store_true",
-                        help="reuse prepared sources and only rebuild runtime output")
     args = parser.parse_args(argv)
     try:
-        preparation = None if args.bundle_only else prepare_sources(
-            args.root, args.rom, args.elf, args.decomp, args.nm)
-        result = produce(args.root, preparation)
-    except (OSError, ValueError, KeyError, TypeError,
-            subprocess.CalledProcessError) as exc:
+        result = produce(args.root, args.rom, args.elf, args.decomp, args.nm)
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as exc:
         parser.error(str(exc))
     print("Samus runtime library:", result["sequences"], "sequences,",
-          result["unique_bmps"], "unique BMPs")
+          result["frames"], "frames,", result["unique_bmps"], "unique BMPs")
+    print("Semantic bindings:", result["animation_map"]["rows"])
     print("Index:", args.root.resolve() / METROID_SAMUS_RUNTIME / "runtime_index.tsv")
     print("State map:", args.root.resolve() / METROID_SAMUS_RUNTIME / "animation_map.tsv")
     return 0

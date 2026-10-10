@@ -1,3 +1,3 @@
 schema	metroidvania-samus-animation-map-v1
 action	suit	facing	aim	mode	key
-idle	PowerSuit	right	forward	loop	PowerSuit/right_standing
+idle	PowerSuit	right	forward	loop	PowerSuit/Standing/ACD_FORWARD/right

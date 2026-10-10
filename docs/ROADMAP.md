@@ -67,16 +67,16 @@ validated and exported to an engine-neutral package without ROM mutation.
 - implement native Samus in MZM and native Soma in Aria first.
 
 Current progress: an experimental SDL3 MZM room runtime loads the Brinstar 033
-diagnostic room, native Clipdata collision, a content-addressed 580-sequence
-Samus library and simultaneous keyboard/SDL3 gamepad input. Samus is driven by
+diagnostic room, native Clipdata collision, a content-addressed 1,384-sequence
+Samus library composed from the native tables for all five suits and simultaneous keyboard/SDL3 gamepad input. Samus is driven by
 an SDL-free pose controller ported from the pinned decompilation: native
 movement constants, per-pose block hitboxes, jump/spin/wall-jump/Space
 Jump/Screw Attack rules, crouch and Morph Ball transitions, Power Grip ledge
 hanging and pulls, hurt/death poses and suit damage reduction. Animation
 frames and transition endings come from the controller's native counters and
-a generated 468-row semantic registry. Collision still uses verified boxes
+a generated 600-row semantic registry. Collision still uses verified boxes
 instead of the original point probes; slope speed, Speed Booster/Shinespark,
-weapons, entities, Varia/Gravity palettes, room lifecycle and the Aria kernel
+weapons, entities, effect overlays, room lifecycle and the Aria kernel
 remain pending.
 
 Exit criterion: each native character can complete a source-authentic test path

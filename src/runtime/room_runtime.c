@@ -282,7 +282,7 @@ static bool runtime_collision_slope(void *context,float x,float y,
 
 /* Semantic registry action shown by each native pose. Every spin pose maps
  * to its own spin action so that generic MidAir can never replace it. */
-static const char *runtime_pose_action(MzmPose pose) {
+static const char *runtime_pose_action(MzmPose pose,uint32_t items) {
     switch (pose) {
         case MZM_POSE_STANDING: return "idle";
         case MZM_POSE_RUNNING: return "run";
@@ -298,12 +298,14 @@ static const char *runtime_pose_action(MzmPose pose) {
         case MZM_POSE_SPINNING: return "spin";
         case MZM_POSE_STARTING_WALL_JUMP: return "wall_jump";
         case MZM_POSE_SPACE_JUMPING: return "space_jump";
-        case MZM_POSE_SCREW_ATTACKING: return "screw_attack";
+        case MZM_POSE_SCREW_ATTACKING:
+            /* SamusUpdateGraphicsOam: ScrewAttacking[space jump equipped]. */
+            return (items&MZM_ITEM_SPACE_JUMP)?"screw_attack_space":"screw_attack";
         case MZM_POSE_MORPHING: return "morph_start";
-        case MZM_POSE_MORPH_BALL:
-        case MZM_POSE_ROLLING:
-        case MZM_POSE_MORPH_BALL_MIDAIR:
-        case MZM_POSE_GETTING_HURT_IN_MORPH_BALL: return "morph_ball";
+        case MZM_POSE_MORPH_BALL: return "morph_ball";
+        case MZM_POSE_ROLLING: return "rolling";
+        case MZM_POSE_MORPH_BALL_MIDAIR: return "morph_midair";
+        case MZM_POSE_GETTING_HURT_IN_MORPH_BALL: return "hurt_morph";
         case MZM_POSE_UNMORPHING: return "unmorph";
         case MZM_POSE_HANGING_ON_LEDGE: return "ledge_hang";
         case MZM_POSE_PULLING_UP: return "ledge_pull_up";
@@ -326,14 +328,22 @@ static const char *runtime_pose_fallback_action(MzmPose pose) {
         case MZM_POSE_TURNING_AROUND_MIDAIR: return "midair";
         case MZM_POSE_TURNING_AROUND_AND_CROUCHING:
         case MZM_POSE_SHOOTING_AND_CROUCHING: return "crouch";
+        case MZM_POSE_ROLLING:
+        case MZM_POSE_MORPH_BALL_MIDAIR:
+        case MZM_POSE_GETTING_HURT_IN_MORPH_BALL: return "morph_ball";
         default: break;
     }
     return mzm_pose_standing(pose) == MZM_STANDING_MIDAIR ? "midair" : "idle";
 }
 
 static const char *runtime_aim_name(MzmAim aim) {
-    if (aim == MZM_AIM_DIAGONAL_UP) return "diagonalup";
-    if (aim == MZM_AIM_DIAGONAL_DOWN) return "diagonaldown";
+    switch (aim) {
+        case MZM_AIM_DIAGONAL_UP: return "diagonalup";
+        case MZM_AIM_DIAGONAL_DOWN: return "diagonaldown";
+        case MZM_AIM_UP: return "up";
+        case MZM_AIM_DOWN: return "down";
+        case MZM_AIM_FORWARD: break;
+    }
     return "forward";
 }
 
@@ -396,56 +406,100 @@ static bool runtime_echo_fast_ascent(const MzmSamus *samus) {
 
 #ifndef FUSION_RUNTIME_TEST
 /* PATCH_0176_LIBRARY: 0175-derived private runtime index, loaded on demand. */
-#define RUNTIME_LIBRARY_MAX 1024
+#define RUNTIME_LIBRARY_MAX 8192
 #define RUNTIME_LIBRARY_FRAME_MAX 256
-#define RUNTIME_ANIMATION_MAP_MAX 512
+#define RUNTIME_ANIMATION_MAP_MAX 2048
+#define RUNTIME_INDEX_SCHEMA "schema\tmetroidvania-samus-runtime-index-v3\n"
+/* One native frame: duration, top-left offset from Samus's position as drawn
+ * by SamusDraw, and the private content-addressed BMP. */
+typedef struct {
+    unsigned int ticks;
+    int offset_x,offset_y;
+    char path[256];
+    SDL_Texture *texture;
+    int w,h;
+} RuntimeLibraryFrame;
 typedef struct {
     char name[160];
-    int count;
-    unsigned int ticks[RUNTIME_LIBRARY_FRAME_MAX];
-    char paths[RUNTIME_LIBRARY_FRAME_MAX][320];
-    SDL_Texture *textures[RUNTIME_LIBRARY_FRAME_MAX];
-    int w[RUNTIME_LIBRARY_FRAME_MAX],h[RUNTIME_LIBRARY_FRAME_MAX];
+    int count,capacity;
+    RuntimeLibraryFrame *frames;
+    unsigned int *ticks;
 } RuntimeLibraryEntry;
 typedef struct {
     RuntimeLibraryEntry *entries;
-    int count;
-    char root[2048];
+    int count,capacity;
 } RuntimeLibrary;
 static void runtime_library_free(RuntimeLibrary *lib) {
-    if(!lib->entries) return;
-    for(int i=0;i<lib->count;i++)
-        for(int j=0;j<lib->entries[i].count;j++)
-            if(lib->entries[i].textures[j]) SDL_DestroyTexture(lib->entries[i].textures[j]);
-    free(lib->entries);lib->entries=NULL;lib->count=0;
+    for(int i=0;i<lib->count;i++) {
+        RuntimeLibraryEntry *entry=&lib->entries[i];
+        for(int j=0;j<entry->count;j++)
+            if(entry->frames[j].texture) SDL_DestroyTexture(entry->frames[j].texture);
+        free(entry->frames);
+        free(entry->ticks);
+    }
+    free(lib->entries);
+    *lib=(RuntimeLibrary){0};
+}
+static bool runtime_library_add_frame(RuntimeLibraryEntry *entry,
+                                      const RuntimeLibraryFrame *frame) {
+    if(entry->count>=RUNTIME_LIBRARY_FRAME_MAX)return false;
+    if(entry->count==entry->capacity) {
+        int capacity=entry->capacity?entry->capacity*2:8;
+        RuntimeLibraryFrame *frames=realloc(entry->frames,(size_t)capacity*sizeof *frames);
+        if(!frames)return false;
+        entry->frames=frames;
+        unsigned int *ticks=realloc(entry->ticks,(size_t)capacity*sizeof *ticks);
+        if(!ticks)return false;
+        entry->ticks=ticks;
+        entry->capacity=capacity;
+    }
+    entry->frames[entry->count]=*frame;
+    entry->ticks[entry->count]=frame->ticks;
+    entry->count++;
+    return true;
 }
 static bool runtime_library_open(RuntimeLibrary *lib,const char *index) {
     FILE *f=fopen(index,"rb");if(!f) return false;
-    lib->entries=calloc(RUNTIME_LIBRARY_MAX,sizeof *lib->entries);
-    if(!lib->entries){fclose(f);return false;}
     char line[1024],prev[160]="";
-    bool ok=true;
-    while(fgets(line,sizeof line,f)) {
-        char name[160],path[320];unsigned int frame,tick;
+    bool ok=fgets(line,sizeof line,f) && !strcmp(line,RUNTIME_INDEX_SCHEMA);
+    while(ok && fgets(line,sizeof line,f)) {
+        char name[160];
+        RuntimeLibraryFrame frame={0};
+        unsigned int index_value;
         int consumed=0;
-        if(sscanf(line,"%159[^\t]\t%u\t%u\t%319[^\t\r\n]%n",
-                  name,&frame,&tick,path,&consumed)!=4 ||
+        if(sscanf(line,"%159[^\t]\t%u\t%u\t%d\t%d\t%255[^\t\r\n]%n",
+                  name,&index_value,&frame.ticks,&frame.offset_x,&frame.offset_y,
+                  frame.path,&consumed)!=6 ||
            consumed<=0 || (line[consumed]!='\n' && line[consumed]!='\r') ||
            (line[consumed]=='\n' && line[consumed+1]!='\0') ||
            (line[consumed]=='\r' &&
              !(line[consumed+1]=='\n' && line[consumed+2]=='\0')) ||
-           tick<1 || tick>255 || strchr(path,'/')==NULL || path[0]=='/' || strstr(path,"..")) {ok=false;break;}
+           frame.ticks<1 || frame.ticks>255 ||
+           frame.offset_x<-256 || frame.offset_x>256 ||
+           frame.offset_y<-256 || frame.offset_y>256 ||
+           strchr(frame.path,'/')==NULL || frame.path[0]=='/' ||
+           strstr(frame.path,"..")) {ok=false;break;}
         if(strcmp(name,prev)) {
-            if(lib->count>=RUNTIME_LIBRARY_MAX){ok=false;break;}
-            strncpy(prev,name,sizeof prev-1);prev[sizeof prev-1]='\0';
+            for(int i=0;i<lib->count;i++)
+                if(!strcmp(lib->entries[i].name,name)){ok=false;break;}
+            if(!ok || lib->count>=RUNTIME_LIBRARY_MAX){ok=false;break;}
+            if(lib->count==lib->capacity) {
+                int capacity=lib->capacity?lib->capacity*2:64;
+                RuntimeLibraryEntry *entries=realloc(lib->entries,
+                    (size_t)capacity*sizeof *entries);
+                if(!entries){ok=false;break;}
+                lib->entries=entries;
+                lib->capacity=capacity;
+            }
+            snprintf(prev,sizeof prev,"%s",name);
             RuntimeLibraryEntry *entry=&lib->entries[lib->count++];
+            *entry=(RuntimeLibraryEntry){0};
             snprintf(entry->name,sizeof entry->name,"%s",name);
         }
         RuntimeLibraryEntry *e=&lib->entries[lib->count-1];
-        if(frame!=(unsigned)e->count || frame>=RUNTIME_LIBRARY_FRAME_MAX){ok=false;break;}
-        e->ticks[frame]=tick;
-        snprintf(e->paths[frame],sizeof e->paths[frame],"%s",path);
-        e->count++;
+        if(index_value!=(unsigned)e->count || !runtime_library_add_frame(e,&frame)) {
+            ok=false;break;
+        }
     }
     if(ferror(f))ok=false;
     fclose(f);
@@ -529,13 +583,16 @@ static RuntimeAnimationMapRow *runtime_animation_map_find(
 typedef struct {
     RuntimeAnimationMap *map;
     const char *suit;
+    const MzmEquipment *equipment;
 } RuntimePoseAnimation;
 static RuntimeAnimationMapRow *runtime_pose_row(RuntimeAnimationMap *map,
-        const MzmSamus *samus,const char *suit) {
+        const MzmSamus *samus,const char *suit,uint32_t items) {
     const char *side=samus->facing<0?"left":"right";
     const char *aim=runtime_aim_name(samus->aim);
     RuntimeAnimationMapRow *row=runtime_animation_map_find(
-        map,runtime_pose_action(samus->pose),suit,side,aim);
+        map,runtime_pose_action(samus->pose,items),suit,side,aim);
+    if(!row && samus->pose==MZM_POSE_SCREW_ATTACKING)
+        row=runtime_animation_map_find(map,"screw_attack",suit,side,aim);
     if(!row)row=runtime_animation_map_find(
         map,runtime_pose_fallback_action(samus->pose),suit,side,aim);
     return row;
@@ -545,22 +602,23 @@ static int runtime_pose_durations(void *context,const MzmSamus *samus,
     RuntimePoseAnimation *animation=context;
     if(animation->map->count==0)return 0;
     RuntimeAnimationMapRow *row=runtime_pose_row(animation->map,samus,
-                                                 animation->suit);
+        animation->suit,animation->equipment->items);
     if(!row)return 0;
     int count=row->entry->count<max?row->entry->count:max;
     for(int i=0;i<count;i++)durations[i]=(uint8_t)row->entry->ticks[i];
     return count;
 }
-static bool runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry *entry,int frame) {
-    if(entry->textures[frame])return true;
-    SDL_Surface *s=SDL_LoadBMP(entry->paths[frame]);
+static bool runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry *entry,int index) {
+    RuntimeLibraryFrame *frame=&entry->frames[index];
+    if(frame->texture)return true;
+    SDL_Surface *s=SDL_LoadBMP(frame->path);
     if(!s)return false;
     if(s->w<1||s->h<1||s->w>512||s->h>512){SDL_DestroySurface(s);return false;}
     int w=s->w,h=s->h;
     SDL_Texture *t=SDL_CreateTextureFromSurface(r,s);
     SDL_DestroySurface(s);
     if(!t)return false;
-    entry->textures[frame]=t;entry->w[frame]=w;entry->h[frame]=h;
+    frame->texture=t;frame->w=w;frame->h=h;
     SDL_SetTextureScaleMode(t,SDL_SCALEMODE_NEAREST);
     SDL_SetTextureBlendMode(t,SDL_BLENDMODE_BLEND);
     return true;
@@ -766,7 +824,8 @@ int main(int argc, char **argv) {
     equipment.max_energy=99;
     equipment.energy=equipment.max_energy;
     RuntimePoseAnimation pose_animation={&animation_map,
-                                         runtime_suit_presets[0].registry};
+                                         runtime_suit_presets[0].registry,
+                                         &equipment};
     MzmAnimationSource animation_source={&pose_animation,runtime_pose_durations};
     MzmSamus samus;
     if(!runtime_spawn_samus(room,&samus)) {
@@ -935,8 +994,7 @@ int main(int argc, char **argv) {
                 echo.active=false;
                 echo.timer=0;
             }
-            runtime_echo_step(&echo,(float)samus.x/MZM_SUBPIXELS_PER_PIXEL,
-                              (float)samus.y/MZM_SUBPIXELS_PER_PIXEL,
+            runtime_echo_step(&echo,(float)(samus.x>>2),(float)((samus.y-1)>>2),
                               runtime_echo_fast_ascent(&samus));
             accumulator-=fixed_step;
         }
@@ -963,8 +1021,9 @@ int main(int argc, char **argv) {
                             320.f*scale,224.f*scale};
         float feet_x=(float)samus.x/MZM_SUBPIXELS_PER_PIXEL;
         float feet_y=(float)samus.y/MZM_SUBPIXELS_PER_PIXEL;
-        float cx=clampf(feet_x-160.f,0.f,(float)(room->width>320?room->width-320:0));
-        float cy=clampf(feet_y-16.f-112.f,0.f,(float)(room->height>224?room->height-224:0));
+        /* Whole-pixel camera keeps native sprite pixels aligned. */
+        float cx=(float)(int)clampf(feet_x-160.f,0.f,(float)(room->width>320?room->width-320:0));
+        float cy=(float)(int)clampf(feet_y-16.f-112.f,0.f,(float)(room->height>224?room->height-224:0));
         SDL_SetRenderDrawColor(renderer,12,14,24,255);SDL_RenderClear(renderer);
         if (texture) {
             SDL_FRect src={cx,cy,320.f,224.f};
@@ -982,7 +1041,7 @@ int main(int argc, char **argv) {
                                        (unsigned int)(elapsed_ms*60u/1000u));
         } else if(animation_map.count>0) {
             RuntimeAnimationMapRow *row=runtime_pose_row(
-                &animation_map,&samus,pose_animation.suit);
+                &animation_map,&samus,pose_animation.suit,equipment.items);
             lib_entry=row?row->entry:NULL;
             /* The controller owns the native frame index and timer. */
             if(lib_entry && lib_entry->count>0)
@@ -991,8 +1050,9 @@ int main(int argc, char **argv) {
         unsigned int render_tick=(unsigned int)(SDL_GetTicks()*60u/1000u);
         if(lib_entry && lib_entry->count>0 &&
            runtime_library_texture(renderer,lib_entry,frame)) {
-            SDL_Texture *sprite=lib_entry->textures[frame];
-            float sw=(float)lib_entry->w[frame],sh=(float)lib_entry->h[frame];
+            const RuntimeLibraryFrame *art=&lib_entry->frames[frame];
+            SDL_Texture *sprite=art->texture;
+            float sw=(float)art->w,sh=(float)art->h;
             if(animation_browser || !echo.active) {
                 echo_visible=false;
             } else if(render_tick!=echo_render_tick) {
@@ -1004,15 +1064,19 @@ int main(int argc, char **argv) {
                  * violet modulation while retaining the native timing. */
                 SDL_SetTextureColorMod(sprite,110,100,255);
                 SDL_SetTextureAlphaMod(sprite,145);
-                SDL_FRect echo_dest={viewport.x+(echo_x-cx-sw*.5f)*scale,
-                                     viewport.y+(echo_y-cy-sh)*scale,
+                SDL_FRect echo_dest={viewport.x+(echo_x+(float)art->offset_x-cx)*scale,
+                                     viewport.y+(echo_y+(float)art->offset_y-cy)*scale,
                                      sw*scale,sh*scale};
                 SDL_RenderTexture(renderer,sprite,NULL,&echo_dest);
                 SDL_SetTextureColorMod(sprite,255,255,255);
                 SDL_SetTextureAlphaMod(sprite,255);
             }
-            SDL_FRect dest={viewport.x+(feet_x-cx-sw*.5f)*scale,
-                            viewport.y+(feet_y-cy-sh)*scale,sw*scale,sh*scale};
+            /* SamusDraw places OAM at the native pixel position; the
+             * runtime stores feet on the block edge, one subpixel lower. */
+            float anchor_x=(float)(samus.x>>2),anchor_y=(float)((samus.y-1)>>2);
+            SDL_FRect dest={viewport.x+(anchor_x+(float)art->offset_x-cx)*scale,
+                            viewport.y+(anchor_y+(float)art->offset_y-cy)*scale,
+                            sw*scale,sh*scale};
             bool damage_flash=samus.pose!=MZM_POSE_DYING &&
                 samus.invincibility>0u && (render_tick&3u)<=1u;
             if(damage_flash) SDL_SetTextureAlphaMod(sprite,90);

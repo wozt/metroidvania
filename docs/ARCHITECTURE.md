@@ -69,18 +69,16 @@ blocks and basic character previews below their world root and writes its
 manifest below `shared/manifests/`. `scripts/mzm_samus_pipeline.py` writes the
 canonical content-addressed Samus runtime library below
 `metroid/sprites/samus/runtime/`; repeated pixels are stored once by SHA-256.
-One default invocation reconstructs all inputs from the verified MZM ROM,
-pinned decompilation sources and matching reference ELF before producing the
-runtime library. `--bundle-only` is the explicit cache-reuse mode.
-Its three reproducible source caches live below
-`metroid/sprites/samus/intermediate/`: `body/` contains the broad native body
-catalogue, `composed/` contains validated body/cannon diagnostic compositions,
-and `special/` contains native poses whose cannon OAM is explicitly empty.
-The optional `intermediate/catalog/` compatibility cache is regenerated from
-those three sources and is not consumed by the canonical pipeline.
-Symbol/address catalogues live in `metroid/sprites/samus/metadata/`. Optional
-research commands write only below `metroid/sprites/samus/diagnostics/`.
-The generated `animation_map.tsv` resolves 29 semantic actions across suit,
+One invocation composes every native animation directly from the verified
+MZM ROM, the pinned decompilation pointer tables and the matching reference
+ELF through `scripts/mzm_samus_compose.py`, which mirrors
+`SamusUpdateGraphicsOam` (body, arm cannon animation and arm cannon graphics
+selection) and `SamusUpdatePalette` (suit palettes). Each frame records its
+native draw offset relative to Samus's position, and the runtime index uses the
+versioned `metroidvania-samus-runtime-index-v3` schema. Objects no longer
+referenced by the index are pruned. Optional research commands write only below
+`metroid/sprites/samus/diagnostics/`.
+The generated `animation_map.tsv` resolves 33 semantic actions across suit,
 facing and aim variants to exact catalogue keys. Runtime loading rejects an
 unknown key or duplicate selector. The runtime maps each controller pose to
 one action; the controller owns the native frame index and duration counter,

@@ -13,52 +13,53 @@ The canonical full-library command is:
 python3 -m scripts.mzm_samus_pipeline
 ```
 
-It currently validates 580 sequence entries and stores 1,982 unique BMP files
-in a SHA-256 object store below
-`assets/extracted/metroid/sprites/samus/runtime/`. The runtime TSV preserves
-the native frame index and duration for every entry. The verified source
-catalogue reports 252 Power Suit, 172 Full Suit and 156 Suitless sequences.
-Varia Suit and Gravity Suit currently have no distinct sequence records; their
-palette/equipment mapping still needs to be implemented from native evidence
-and must not be synthesized by renaming Power Suit files.
+It composes 1,384 sequences (6,008 frames, 3,192 unique BMP objects) in about
+three seconds and stores them in a SHA-256 object store below
+`assets/extracted/metroid/sprites/samus/runtime/`. Every native variant
+resolves; none is synthesized.
 
-The same command performs the entire preparation sequence automatically:
+`scripts/mzm_samus_compose.py` reproduces the native selection instead of
+heuristic candidate lists:
 
-1. inventory the native animation pointer tables from the pinned decompilation;
-2. resolve and validate 500 symbols against the matching ELF and ROM;
-3. export 500 body animation records with verified suit palettes;
-4. rebuild 42 body/cannon compositions and 38 special-pose compositions;
-5. deduplicate the result and emit the runtime index;
-6. generate 408 verified bindings for 27 semantic engine actions.
+| Step | Native source |
+|---|---|
+| Body animation per pose and selector (ACD, Space Jump flag, shinespark direction, crawling aim) | `sSamusAnimPointers_<PowerSuit/FullSuit/Suitless>[_<Table>]` |
+| Arm cannon animation with the same selector, or `_All[pose]` when the source has no dedicated table | `sArmCannonAnimPointers_<Suit/Suitless>_*` |
+| Arm cannon graphics: running right uses `_Standing`, hanging uses `_Hanging`, zipline right uses `_OnZipline`, everything else `_Default`; never for Dying | `SamusUpdateGraphicsOam`, `sArmCannonGfxPointers_*` |
+| Draw order: cannon in front (header bit 12), body, cannon behind (bit 13) | `SamusDraw` |
+| Draw position: OAM relative to Samus's position plus 2 pixels down | `SamusDraw` |
+| Palette: first two banks of the suit default palette | `SamusUpdatePalette` |
 
-Use `python3 -m scripts.mzm_samus_pipeline --bundle-only` only to rebuild the
-last two outputs from already prepared caches. The manifest records which mode
-was used and lists every unavailable native combination. Current missing rows
-are Suitless-only equipment actions that have no corresponding native sequence;
-the runtime uses an explicit Spin/MidAir fallback rather than invented art.
+Graphics and palettes combine into five visual suits:
 
-The unnumbered pipeline is the stable public entry point. It currently adapts
-previously validated discovery/composition manifests stored in this stable
-private layout:
+| Visual suit | Body graphics | Palette |
+|---|---|---|
+| PowerSuit | Power Suit | `sSamusPal_PowerSuit_Default` |
+| VariaSuit | Power Suit | `sSamusPal_VariaSuit_Default` |
+| FullSuit | Full Suit | `sSamusPal_FullSuit_Default` |
+| GravitySuit | Full Suit | `sSamusPal_GravitySuit_Default` |
+| Suitless | Suitless | `sSamusPal_Suitless_Default` |
 
-```text
-assets/extracted/metroid/sprites/samus/
-├── animations/basic/        # Small editor preview set
-├── metadata/                # Symbol and verified address catalogues
-├── intermediate/
-│   ├── body/                # Native body animation catalogue
-│   ├── composed/            # Body/cannon diagnostic compositions
-│   ├── special/             # Poses with verified empty cannon OAM
-│   └── catalog/             # Regenerable compatibility index cache
-├── diagnostics/             # Optional research output, created on demand
-└── runtime/                 # Deduplicated library consumed by SDL3
-```
+Each frame is rendered once into OBJ palette indices, colorized per suit,
+cropped to its visible pixels and stored with its native top-left offset. The
+runtime index (`metroidvania-samus-runtime-index-v3`) lists
+`key, frame, duration, offset_x, offset_y, object path`; keys are
+`<VisualSuit>/<table|pose>/<selector>/<side>`, for example
+`GravitySuit/Standing/ACD_DIAGONALLY_UP/left` or
+`PowerSuit/pose/SPOSE_SPINNING/right`. `sequences.json` records the exact
+body, cannon, cannon-graphics and palette symbols behind every key.
 
-`intermediate/` is required today because the generic pipeline still consumes
-these manifests; it is reproducible cache data, not a second runtime library.
-The former numbered top-level directories are obsolete and archived locally.
-New runs of the historical diagnostic tools use semantic paths below
-`diagnostics/` and cannot recreate patch-numbered roots.
+Validation against the previous diagnostic library: all 387 previously
+exported sequences that had no arm cannon or a verified composition are
+reproduced pixel for pixel; the remaining old Full Suit, Suitless and hanging
+entries were body-only and now gain their native arm cannon.
+
+Not yet exported: missile-armed cannon graphics (`*_Armed_*`), beam-charge,
+speed-boost, shinespark, flashing, unmorph and dying palette rows, the echo's
+palette bank, and effect sprites such as the Screw Attack and Speed Booster
+overlays. The semantic registry binds 600 rows for 33 actions; the only
+missing bindings are Suitless skid, Screw Attack and shinespark actions, which
+have no native Suitless sequence.
 
 ## Runtime state mapping
 
@@ -109,7 +110,7 @@ while hanging, crawling and Morph Ball tunnel pulls are not implemented. The
 fire button only triggers the native shooting-pose reaction until projectile
 entities exist. Lethal damage enters the dying pose without the original
 screen-centre drift and fade. F6 remains a separate raw-catalogue browser for
-all 580 sequences.
+all 1,384 sequences.
 
 The jump trail is the native `SamusEcho` behavior documented by the pinned
 decompilation in `src/samus.c`, not a generic motion blur. The runtime keeps a

@@ -86,7 +86,15 @@ def body_image(rom, frame_pointer, palette):
     }
 
 
-def export(rom, addresses, sizes, output, limit=0):
+def suit_group(name):
+    for label in ("PowerSuit", "FullSuit", "Suitless"):
+        if name.startswith("sSamusAnim_" + label + "_"):
+            return label
+    return None
+
+
+def export(rom, addresses, sizes, output, limit=0, palette_offsets=None):
+    palette_offsets = dict(palette_offsets or {"PowerSuit": DEFAULT_PALETTE_OFFSET})
     result = {"schema": "metroidvania-mzm-samus-body-export-v1",
               "rom_sha1": EXPECTED_SHA1, "animations": {},
               "unresolved": {}}
@@ -112,12 +120,14 @@ def export(rom, addresses, sizes, output, limit=0):
                   "body_status": "not-exported",
                   "arm_cannon_status": "not-extracted",
                   "effects_status": "not-extracted"}
-        # Only the Power Suit palette offset has been verified so far.
-        power = name.startswith("sSamusAnim_PowerSuit_")
-        palette = (load_palette_banks(rom, DEFAULT_PALETTE_OFFSET, 2, 0)
-                   if power else None)
+        suit = suit_group(name)
+        palette_offset = palette_offsets.get(suit)
+        palette = (load_palette_banks(rom, palette_offset, 2, 0)
+                   if palette_offset is not None else None)
+        record["palette_source"] = (f"explicit-rom-offset:0x{palette_offset:08x}"
+                                    if palette_offset is not None else "unverified")
         images = []
-        if power:
+        if palette is not None:
             try:
                 for fr in frames:
                     images.append(body_image(rom, fr["frame_pointer"], palette))
@@ -154,6 +164,10 @@ def main(argv=None):
                         default=Path("assets/extracted/samus_runtime/addresses.json"))
     parser.add_argument("--output-dir", type=Path,
                         default=Path("assets/extracted/samus_library"))
+    parser.add_argument("--fullsuit-palette-offset", type=lambda s: int(s, 0),
+                        help="verified ROM offset of 2-bank FullSuit OBJ palette")
+    parser.add_argument("--suitless-palette-offset", type=lambda s: int(s, 0),
+                        help="verified ROM offset of 2-bank Suitless OBJ palette")
     parser.add_argument("--limit", type=int, default=0,
                         help="initial smoke test; 0 processes all animations")
     args = parser.parse_args(argv)
@@ -177,7 +191,13 @@ def main(argv=None):
         sizes = parse_nm_sizes(nm.stdout)
         if not sizes:
             raise ValueError("ELF contains no sized Samus animation symbols")
-        result = export(rom, addresses, sizes, output, args.limit)
+        palette_offsets = {"PowerSuit": DEFAULT_PALETTE_OFFSET}
+        for suit, offset in (("FullSuit", args.fullsuit_palette_offset),
+                             ("Suitless", args.suitless_palette_offset)):
+            if offset is not None:
+                load_palette_banks(rom, offset, 2, 0)
+                palette_offsets[suit] = offset
+        result = export(rom, addresses, sizes, output, args.limit, palette_offsets)
         output.mkdir(parents=True, exist_ok=True)
         dest = output / "manifest.json"
         content = json.dumps(result, indent=2, sort_keys=True) + "\n"
@@ -189,7 +209,7 @@ def main(argv=None):
                    for x in result["animations"].values())
     print(f"Animations indexed: {len(result['animations'])}; body exported: {exported}; "
           f"unresolved frame records: {len(result['unresolved'])}.")
-    print("Arm cannon, effects and other suit palettes are NOT exported.")
+    print("Arm cannon and effects are NOT exported; other suits require explicit verified palette offsets.")
     print("Manifest:", dest)
 
 

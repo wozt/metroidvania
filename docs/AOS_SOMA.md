@@ -192,23 +192,56 @@ acceleration term, `+0x14` an airborne frame counter, `+0x10` state flags):
 | Slow fall | same routine, flag `0x100` of `gEwramData + 0x13260` or entity flag `0x400000` (`0x80 << 0xF`) | vy -= 0.15625 while vy > 0.15625 |
 
 | Air steering | `sub_0801B0D8` airborne branch: held right (`0x10`) / left (`0x20`) in `gEwramData + 0x1C` | vx = +/-1.5 (4.0 when flag `0x400` of `+0x13260` is set); otherwise `+0x50` = -/+0.25 per frame until vx reaches 0 |
-| Probable backdash | `sub_0801B0D8`, sound `0xBD`, flags `0x20000420` | vx = -3.125 with `+0x50` = +/-0.09375 per frame |
+| Slide (state 3) | `sub_0801B0D8` case 0: ability `sub_08032AB8(1)`, Down held and jump pressed, flags `0x1122` clear; sound `0xBD`, flags `0x20000420` set, `0x10000000` cleared | vx = 3.125 toward the facing side with `+0x50` = -/+0.09375 per frame |
+| Backdash | case 0: ability `sub_08032AB8(0)`, button `0x1339C` pressed without Up, flags `0x10008402` clear; sound `0xA9`, sets `0x10000000` | vx = 3.75 away from the facing side; friction -/+0.25 while `0x10000000` is set; the flag clears when its animation ends |
 | Damage recoil | `sub_0801B0D8`, state `0x0F`, source X at `+0x131D8` | vx = 1.5 away from the source, vy = -2.0, `+0x54` = -0.0625, `+0x50` = -/+0.0078125 |
 
+Earlier revisions called the slide a "probable backdash" and the case
+`_0801C410` the air state; case 1 is an attack state (weapon animations,
+vx kept only while airborne), and state 0 handles both ground and air.
 An earlier revision of this table read the impulse flag as `0x400000`; the
 assembly builds it as `0x80 << 0x13` = `0x4000000`, and `0x400000` is the
 separate slow-fall flag. Its meaning (probably water) is unconfirmed.
 Friction stops on a sign change only: a vx that lands exactly on zero keeps
-its friction term for one more frame. Ground walking on slopes and the
-grounded state routines (`sub_08016DE4`, `sub_080168F0`) have not been traced
-yet.
+its friction term for one more frame.
 
-`src/runtime/aos_soma.c` ports the rules of this table and the tile path of
-the collision pass above, except the flag `0x800000` and second/mid-air
-jumps, backdash, recoil and moving platforms (`gEwramData + 0x1316C`,
-`+ 0x131B4`);
+Player states (`sub_0801B0D8` jump table at `0x0801BA50`, 18 cases): each
+frame integrates the position, runs the collision pass, dispatches on
+`+0x0A`, then most cases call `sub_0802E0C4`. Movement part of the cases
+read so far:
+
+- Case 0, normal (ground and air, `_0801BA98`). Speed 1.5 (4.0 with
+  `0x13260 & 0x400`). Without flags `0x10008400`: steering; on the ground,
+  vx moving up a slope (vx > 0 with `0x4000`, vx < 0 with `0x2000`) becomes
+  vx / 24, 20 or 18 * 16 for `+0x1D` = 1, 2, 3. During a backdash
+  (`0x10000000`) directions only turn Soma and friction is -/+0.25. Crouched
+  (`0x400`) or under a low ceiling (`0x8000`): no steering, the same slope
+  rule with 23, 19, 17 and friction -/+0.15625. Then friction is applied.
+  Grounded: `+0x0D` counts frames and, unless flags `0x1000001E`, Down,
+  `0x8000` or `0x1325C & 1` set the crouch `0x400` (clearing `0x10000000`),
+  which is released when none holds. Then the attack and slide checks, the
+  jump routine `sub_08019180` and `sub_0801938C` (which also starts falls
+  off ledges).
+- Case 4, hard landing (`_0801C994`): friction -/+0.1875; with `0x10000`
+  it keeps the crouch and returns to case 0 (clearing `0x10080`) when Soma
+  is no longer grounded or `0x200000` is set. Every animation start clears
+  `0x200000`, so it marks the end of the landing animation.
+- `sub_08019180`: no jump with `0x20000000` or `0x160`. On the ground over
+  platforms only (`0x1000`), Down + jump drops through: `+0x16` = 16 (32
+  with `0x1000000`), airborne, vx = vy = 0, `+0x54` = -0.0625. Then the high
+  jump (ability 4, state 5); a non-zero `+0x16` stops there. With
+  `0x800000`, jump (unless `0x2000000`) sets vy -4.875 (or adds it when
+  falling faster than 1.0). Otherwise the normal jump, or the ability-2
+  mid-air jump; those paths end in `sub_08017D90` (ability 3: Down + jump in
+  the air, state 7, vy +4.875).
+
+`src/runtime/aos_soma.c` ports the rules of this table, the tile path of
+the collision pass and the movement part of cases 0 and 4
+(`aos_soma_update`), except the abilities (high, mid-air and dive jumps,
+backdash, slide), attacks, recoil, animations and moving platforms
+(`gEwramData + 0x1316C`, `+ 0x131B4`);
 `tests/test_aos_soma.c` checks them without a ROM (a held jump rises about
 56.7 pixels over 56 frames, a tapped jump about 9.7 pixels).
 
-The next research step is the player update routine `sub_0801B0D8`: which of
-these probes it calls, with which body offsets, and Soma's movement constants.
+The next step is the runtime integration: an exported room, Soma's frames
+from the sprite library, and the animation timings that drive `0x200000`.

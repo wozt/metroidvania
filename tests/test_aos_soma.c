@@ -14,7 +14,7 @@ static AosSoma grounded(void) {
 static int jump_arc(uint16_t held_frames, int32_t *peak) {
     AosSoma soma = grounded();
     int32_t start = soma.y;
-    assert(aos_soma_jump(&soma, AOS_KEY_JUMP));
+    assert(aos_soma_jump(&soma, 0, AOS_KEY_JUMP));
     *peak = soma.y;
     for (int frame = 0; frame < 600; ++frame) {
         aos_soma_integrate(&soma);
@@ -34,18 +34,8 @@ static void fill(int x0, int y0, int x1, int y1, uint8_t value) {
         for (int x = x0; x <= x1; ++x) cells[y * W + x] = value;
 }
 
-/* Test scaffolding, not a ported state routine: integrate, collide, then
- * the ground (steer, jump) or air (steer, air rules) step. */
 static AosLanding frame(AosSoma *soma, uint16_t held, uint16_t pressed) {
-    aos_soma_integrate(soma);
-    AosLanding landing = aos_soma_collide(soma, &layer);
-    aos_soma_steer(soma, held, AOS_WALK_SPEED);
-    if (soma->flags & AOS_FLAG_GROUNDED) {
-        aos_soma_jump(soma, pressed);
-    } else {
-        aos_soma_air(soma, &layer, held);
-    }
-    return landing;
+    return aos_soma_update(soma, &layer, held, pressed);
 }
 
 static AosSoma at(int x, int y, uint32_t flags) {
@@ -104,8 +94,9 @@ static void collision_tests(void) {
      * bumps the head and turns back down at +0.0625. */
     fill(0, 12, W - 1, 12, 0x03);
     soma = at(100, 159, AOS_FLAG_GROUNDED);
-    frame(&soma, 0, AOS_KEY_JUMP);
-    assert(soma.vy == AOS_JUMP_VELOCITY);
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    /* The state routine applies the first gravity in the jump frame. */
+    assert(soma.vy == AOS_JUMP_VELOCITY + 0x2000 + 0x1A00);
     int32_t top = soma.y;
     bool bumped = false;
     for (int i = 0; i < 20; ++i) {
@@ -120,7 +111,7 @@ static void collision_tests(void) {
      * through it, the fall lands on it. */
     fill(8, 15, 20, 15, 0x01);
     soma = at(100, 159, AOS_FLAG_GROUNDED);
-    frame(&soma, 0, AOS_KEY_JUMP);
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
     landing = AOS_LANDING_NONE;
     for (int i = 0; i < 120 && landing == AOS_LANDING_NONE; ++i)
         landing = frame(&soma, AOS_KEY_JUMP, 0);
@@ -161,11 +152,81 @@ static void collision_tests(void) {
                    (soma.y >> 16) - (soma.x >> 16) <= 16);
     }
     assert(air == 0 && soma.x > AOS_FIXED(160) && soma.y == AOS_FIXED(159));
+    /* Back up the slope to the left: slope step 1 slows vx to
+     * 1.5 / 24 * 16 = 1.0 pixel per frame. */
+    int uphill = 0;
+    for (int i = 0; i < 100; ++i) {
+        int32_t before = soma.x;
+        frame(&soma, AOS_KEY_LEFT, 0);
+        assert(soma.flags & AOS_FLAG_GROUNDED);
+        if (soma.x - before == -AOS_FIXED(1)) ++uphill;
+    }
+    assert(uphill > 40 && soma.y == AOS_FIXED(95));
+    memset(cells, 0, sizeof(cells));
+}
+
+static void state_tests(void) {
+    fill(0, 20, W - 1, H - 1, 0x03);
+
+    /* Down crouches: no steering, friction 0.15625 brakes the walk. */
+    AosSoma soma = at(100, 159, AOS_FLAG_GROUNDED);
+    for (int i = 0; i < 4; ++i) frame(&soma, AOS_KEY_RIGHT, 0);
+    assert(soma.vx == AOS_WALK_SPEED);
+    frame(&soma, AOS_KEY_RIGHT | AOS_KEY_DOWN, 0);
+    assert(soma.flags & AOS_FLAG_CROUCH);
+    frame(&soma, AOS_KEY_RIGHT | AOS_KEY_DOWN, 0);
+    assert(soma.vx == AOS_WALK_SPEED - 0x2800);
+    for (int i = 0; i < 20; ++i) frame(&soma, AOS_KEY_RIGHT | AOS_KEY_DOWN, 0);
+    assert(soma.vx == 0 && (soma.flags & AOS_FLAG_CROUCH));
+    frame(&soma, 0, 0);
+    assert(!(soma.flags & AOS_FLAG_CROUCH));
+
+    /* A ceiling at y - 20 keeps Soma crouched and y - 33 blocks jumps. */
+    fill(10, 16, 14, 17, 0x03);           /* bottom at pixel 143 */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.flags & AOS_FLAG_LOW_CEILING);
+    assert((soma.flags & AOS_FLAG_CROUCH) && (soma.flags & AOS_FLAG_GROUNDED));
+    assert(soma.vy == 0 && soma.y == AOS_FIXED(159));
+    fill(10, 16, 14, 17, 0x00);
+
+    /* Down + jump on a one-way platform drops through it. */
+    fill(8, 15, 20, 15, 0x01);
+    soma = at(100, 119, AOS_FLAG_GROUNDED | AOS_FLAG_PLATFORM_ONLY);
+    frame(&soma, 0, 0);
+    assert((soma.flags & AOS_FLAG_GROUNDED) && (soma.flags & AOS_FLAG_PLATFORM_ONLY));
+    frame(&soma, AOS_KEY_DOWN | AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.drop_timer == 16 && (soma.flags & AOS_FLAG_AIRBORNE));
+    assert(soma.vy > 0);
+    AosLanding landing = AOS_LANDING_NONE;
+    for (int i = 0; i < 60 && landing == AOS_LANDING_NONE; ++i)
+        landing = frame(&soma, AOS_KEY_DOWN, 0);
+    assert(landing == AOS_LANDING_NORMAL && soma.y == AOS_FIXED(159));
+    fill(8, 15, 20, 15, 0x00);
+
+    /* Hard landing: state 4 brakes by 0.1875 and keeps Soma crouched until
+     * the animation player reports the end of the landing animation. */
+    soma = at(100, 120, AOS_FLAG_AIRBORNE);
+    soma.vy = AOS_FIXED(7);
+    soma.vx = AOS_FIXED(1);
+    landing = AOS_LANDING_NONE;
+    for (int i = 0; i < 20 && landing == AOS_LANDING_NONE; ++i)
+        landing = frame(&soma, 0, 0);
+    assert(landing == AOS_LANDING_HARD && soma.state == 4);
+    for (int i = 0; i < 30; ++i) frame(&soma, AOS_KEY_RIGHT, AOS_KEY_JUMP);
+    assert(soma.state == 4 && soma.vx == 0 && (soma.flags & AOS_FLAG_CROUCH));
+    assert(soma.y == AOS_FIXED(159));
+    soma.flags |= AOS_FLAG_ANIM_DONE;
+    frame(&soma, 0, 0);
+    assert(soma.state == 0 && !(soma.flags & AOS_FLAG_HARD_LANDING));
+    frame(&soma, 0, 0);
+    assert(!(soma.flags & AOS_FLAG_CROUCH));
     memset(cells, 0, sizeof(cells));
 }
 
 int main(void) {
     collision_tests();
+    state_tests();
     /* Integration: extra_vx applies once and the fall speed caps at 8. */
     AosSoma soma = grounded();
     soma.vx = AOS_FIXED(1);
@@ -199,17 +260,17 @@ int main(void) {
     /* Jump: impulse, flags, coyote window of three airborne frames. */
     soma = grounded();
     soma.flags = 0x400u;
-    assert(!aos_soma_jump(&soma, 0));
-    assert(aos_soma_jump(&soma, AOS_KEY_JUMP));
+    assert(!aos_soma_jump(&soma, 0, 0));
+    assert(aos_soma_jump(&soma, 0, AOS_KEY_JUMP));
     assert(soma.vy == AOS_JUMP_VELOCITY && soma.air_frames == 16);
     assert(soma.flags == AOS_FLAG_AIRBORNE);
     soma.air_frames = 3;
-    assert(aos_soma_jump(&soma, AOS_KEY_JUMP));
+    assert(aos_soma_jump(&soma, 0, AOS_KEY_JUMP));
     soma.air_frames = 4;
-    assert(!aos_soma_jump(&soma, AOS_KEY_JUMP));
+    assert(!aos_soma_jump(&soma, 0, AOS_KEY_JUMP));
     soma = grounded();
     soma.flags = AOS_FLAG_HEAVY;
-    assert(aos_soma_jump(&soma, AOS_KEY_JUMP) && soma.vy == AOS_SLOWED_JUMP_VELOCITY);
+    assert(aos_soma_jump(&soma, 0, AOS_KEY_JUMP) && soma.vy == AOS_SLOWED_JUMP_VELOCITY);
 
     /* Leaving a ledge: vy 0, gravity_mod -0.0625, then the first gravity. */
     soma = grounded();
@@ -222,14 +283,14 @@ int main(void) {
 
     /* First airborne frame after a jump: only the gravity terms. */
     soma = grounded();
-    aos_soma_jump(&soma, AOS_KEY_JUMP);
+    aos_soma_jump(&soma, 0, AOS_KEY_JUMP);
     aos_soma_air(&soma, NULL, AOS_KEY_JUMP);
     assert(soma.vy == AOS_JUMP_VELOCITY + 0x2000 + 0x1A00);
     assert(soma.air_frames == 16 && soma.gravity_mod == 0);
 
     /* Releasing jump while rising fast clamps vy to -0.25. */
     soma = grounded();
-    aos_soma_jump(&soma, AOS_KEY_JUMP);
+    aos_soma_jump(&soma, 0, AOS_KEY_JUMP);
     aos_soma_air(&soma, NULL, 0);
     assert(soma.vy == (int32_t)0xFFFFC000 + 0x2000 + 0x1A00);
     assert(soma.gravity_mod == (int32_t)0xFFFFE000);

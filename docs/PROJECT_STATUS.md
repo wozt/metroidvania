@@ -1757,3 +1757,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   animation selection and the runtime integration.
 - Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
   passed.
+
+## Patch 0203 - Soma normal and hard-landing states
+
+- Ported the movement part of player state 0 (ground and air: speed, slope
+  slowdown, crouch, friction) and state 4 (hard landing), and the complete
+  non-ability part of the jump routine `sub_08019180` (low-ceiling block,
+  platform drop-through, the flag 0x800000 jump). `aos_soma_update` runs one
+  native frame: integration, collision pass, state routine.
+- The tests now drive Soma through `aos_soma_update` and cover uphill
+  slowdown, crouching, ceiling-forced crouch, drop-through and the
+  hard-landing exit driven by the animation-end flag.
+- Corrected `docs/AOS_SOMA.md`: the "probable backdash" was the slide
+  (state 3); the real backdash is 3.75 px/frame; case 1 is an attack state,
+  not the air state.
+- Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
+  passed.

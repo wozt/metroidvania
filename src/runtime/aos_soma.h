@@ -8,8 +8,9 @@
  * (jump release, apex float, slowed fall), the ledge start of sub_08018020
  * and the gravity of sub_08018B98 with its ceiling bump, and the tile path of
  * the collision pass sub_08014A04 (walls, ceilings, water flags, floor snap
- * and landing). Moving platforms and carried entities (gEwramData + 0x1316C,
- * + 0x131B4), the player state routines and the animations are NOT ported.
+ * and landing) and the movement part of player states 0 and 4. Moving
+ * platforms and carried entities (gEwramData + 0x1316C, + 0x131B4), the
+ * other states, abilities, attacks and the animations are NOT ported.
  * Values are 16.16 fixed point pixels per 60 Hz frame, positive Y downward;
  * positions are room pixels. No SDL. */
 #ifndef AOS_SOMA_H
@@ -32,6 +33,7 @@
 enum {
     AOS_FLAG_AIRBORNE = 1u << 1,
     AOS_FLAG_STOP_AT_WALL = 1u << 7,   /* 0x80: walls stop instead of bounce */
+    AOS_FLAG_CROUCH = 1u << 10,        /* 0x400 */
     AOS_FLAG_PLATFORM_ONLY = 1u << 12, /* 0x1000: no solid cell under the feet */
     AOS_FLAG_SLOPE_LEFT = 1u << 13,    /* 0x2000: slope byte without bit 2 */
     AOS_FLAG_SLOPE_RIGHT = 1u << 14,   /* 0x4000: slope byte with bit 2 */
@@ -39,11 +41,13 @@ enum {
     AOS_FLAG_HARD_LANDING = 1u << 16,  /* 0x10000 */
     AOS_FLAG_WALL = 1u << 18,          /* 0x40000: a wall pushed Soma */
     AOS_FLAG_GROUNDED = 1u << 20,      /* 0x100000 */
+    AOS_FLAG_ANIM_DONE = 1u << 21,     /* 0x200000: set by the animation player */
     AOS_FLAG_SLOW_FALL = 1u << 22,     /* 0x400000: sub_0801938C slows falls */
     AOS_FLAG_HEAD_SPECIAL = 1u << 23,  /* 0x800000: bit-3 cell at y - 25 */
     AOS_FLAG_BODY_SPECIAL = 1u << 24,  /* 0x1000000: bit-3 cell at y - 8 */
     AOS_FLAG_HEAVY = 1u << 26,         /* 0x4000000: weaker jump, +0.375 gravity */
     AOS_FLAG_SNAPPED = 1u << 27,       /* 0x8000000: floor snap this frame */
+    AOS_FLAG_BACKDASH = 1u << 28,      /* 0x10000000 */
     AOS_FLAG_LOW_CEILING = 1u << 29    /* 0x20000000: ceiling at y - 33 */
 };
 
@@ -71,6 +75,8 @@ typedef enum {
 enum {
     AOS_KEY_RIGHT = 0x10,
     AOS_KEY_LEFT = 0x20,
+    AOS_KEY_UP = 0x40,
+    AOS_KEY_DOWN = 0x80,
     AOS_KEY_JUMP = 0x01               /* default A; the game reads 0x1339A */
 };
 
@@ -84,6 +90,7 @@ typedef struct {
     uint16_t air_frames;    /* +0x14 */
     uint16_t drop_timer;    /* +0x16, skips landing while non-zero */
     uint8_t state;          /* +0x0A */
+    uint8_t frame_counter;  /* +0x0D */
     uint8_t slope_contact;  /* +0x1C: floor slope ahead in the walk direction */
     uint8_t slope_step;     /* +0x1D: steepest slope byte >> 6 under the feet */
     bool facing_left;       /* +0x58 bit 0x40 */
@@ -94,8 +101,9 @@ typedef struct {
 void aos_soma_integrate(AosSoma *soma);
 /* Steering of states 0 and 1: held direction or friction toward zero. */
 void aos_soma_steer(AosSoma *soma, uint16_t held, int32_t speed);
-/* sub_08019180 normal jump; returns true when the jump starts. */
-bool aos_soma_jump(AosSoma *soma, uint16_t pressed);
+/* sub_08019180: platform drop-through, normal jump with its three-frame
+ * grace, and the flag 0x800000 jump; returns true when a jump starts. */
+bool aos_soma_jump(AosSoma *soma, uint16_t held, uint16_t pressed);
 /* sub_08018020 entry: walking off a ledge starts falling. */
 void aos_soma_leave_ground(AosSoma *soma);
 /* sub_0801938C rules followed by the sub_08018B98 gravity. A NULL layer
@@ -104,5 +112,10 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held);
 void aos_soma_gravity(AosSoma *soma, const AosCollision *layer);
 /* sub_08014A04 on the BG1 layer only. */
 AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
+/* One player frame of sub_0801B0D8: integration, collision pass, then the
+ * state routine. States 0 (normal, ground and air) and 4 (hard landing)
+ * are ported; other states do nothing yet. */
+AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
+                           uint16_t pressed);
 
 #endif /* AOS_SOMA_H */

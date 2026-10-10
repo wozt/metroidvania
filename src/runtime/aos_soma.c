@@ -14,9 +14,22 @@ void aos_soma_integrate(AosSoma *soma) {
     soma->extra_vx = 0;
 }
 
-/* sub_0801B0D8 states 0 and 1: left is tested first, then right; without a
- * direction the friction moves vx toward zero and stops on a sign change. */
-void aos_soma_steer(AosSoma *soma, uint16_t held, int32_t speed) {
+/* Velocity plus friction, stopping on a sign change (shared by the
+ * states of sub_0801B0D8). */
+static void apply_friction(AosSoma *soma) {
+    int32_t old = soma->vx;
+    int32_t updated = old + soma->friction;
+    soma->vx = updated;
+    if ((old < 0 && updated > 0) || (old >= 0 && updated < 0) ||
+        (old == 0 && updated > 0)) {
+        soma->vx = 0;
+        soma->friction = 0;
+    }
+}
+
+/* Held direction: left is tested first, then right; otherwise friction
+ * toward zero. */
+static void steer_direction(AosSoma *soma, uint16_t held, int32_t speed) {
     if (held & AOS_KEY_LEFT) {
         soma->facing_left = true;
         soma->vx = -speed;
@@ -28,22 +41,40 @@ void aos_soma_steer(AosSoma *soma, uint16_t held, int32_t speed) {
     } else {
         soma->friction = soma->vx >= 0 ? -AOS_FRICTION : AOS_FRICTION;
     }
-    int32_t old = soma->vx;
-    int32_t updated = old + soma->friction;
-    soma->vx = updated;
-    if ((old < 0 && updated > 0) || (old >= 0 && updated < 0) ||
-        (old == 0 && updated > 0)) {
-        soma->vx = 0;
-        soma->friction = 0;
-    }
 }
 
-/* sub_08019180, normal jump branch: grounded, or airborne for at most three
- * frames. The flag 0x800000 branch and the extra jumps are not ported. */
-bool aos_soma_jump(AosSoma *soma, uint16_t pressed) {
+void aos_soma_steer(AosSoma *soma, uint16_t held, int32_t speed) {
+    steer_direction(soma, held, speed);
+    apply_friction(soma);
+}
+
+/* sub_08019180 without the high jump (ability 4), the mid-air jump
+ * (ability 2, sub_080190E0) and the dive of sub_08017D90 (ability 3). */
+bool aos_soma_jump(AosSoma *soma, uint16_t held, uint16_t pressed) {
+    uint32_t flags = soma->flags;
+    if (flags & AOS_FLAG_LOW_CEILING) return false;
+    if (flags & 0x160u) return false;
+    if (!(flags & AOS_FLAG_AIRBORNE) && (flags & AOS_FLAG_PLATFORM_ONLY) &&
+        (held & AOS_KEY_DOWN) && (pressed & AOS_KEY_JUMP)) {
+        /* Drop through a one-way platform. */
+        soma->drop_timer = (flags & AOS_FLAG_BODY_SPECIAL) ? 32 : 16;
+        soma->flags = (flags | AOS_FLAG_AIRBORNE) & 0xFFFEEFFFu;
+        soma->vx = soma->vy = 0;
+        soma->gravity_mod = (int32_t)0xFFFFF000;
+    }
+    if (soma->drop_timer) return false;
+    flags = soma->flags;
     if (!(pressed & AOS_KEY_JUMP)) return false;
-    if ((soma->flags & AOS_FLAG_AIRBORNE) && soma->air_frames > 3) return false;
-    soma->flags = (soma->flags | AOS_FLAG_AIRBORNE) & 0xFFEFFBFFu;
+    if (flags & AOS_FLAG_HEAD_SPECIAL) {
+        if (flags & 0x02000000u) return false;
+        soma->gravity_mod = 0;
+        soma->flags = (flags | 0x02000002u) & 0xFFEFFBF7u;
+        soma->vy = soma->vy > 0x10000 ? soma->vy + (int32_t)0xFFFB2000
+                                      : (int32_t)0xFFFB2000;    /* -4.875 */
+        return true;
+    }
+    if ((flags & AOS_FLAG_AIRBORNE) && soma->air_frames > 3) return false;
+    soma->flags = (flags | AOS_FLAG_AIRBORNE) & 0xFFEFFBFFu;
     soma->air_frames = 16;
     soma->gravity_mod = 0;
     soma->vy = (soma->flags & AOS_FLAG_HEAVY) ? AOS_SLOWED_JUMP_VELOCITY
@@ -313,4 +344,76 @@ contact:
     if (!center && (soma->flags & (AOS_FLAG_SLOPE_LEFT | AOS_FLAG_SLOPE_RIGHT)))
         return AOS_LANDING_NONE;
     return land(soma);
+}
+
+/* Slope slowdown: vx / divisor * 16 by the steepest slope step. */
+static void slow_on_slope(AosSoma *soma, const int32_t divisors[3]) {
+    if (!((soma->vx > 0 && (soma->flags & AOS_FLAG_SLOPE_RIGHT)) ||
+          (soma->vx < 0 && (soma->flags & AOS_FLAG_SLOPE_LEFT))))
+        return;
+    if (soma->slope_step >= 1 && soma->slope_step <= 3)
+        soma->vx = soma->vx / divisors[soma->slope_step - 1] * 16;
+}
+
+/* sub_0801B0D8 case 0 (_0801BA98), movement only: the dust and splash
+ * effects, animations, backdash (ability 0), attacks (sub_080197B4,
+ * sub_08019478) and slide (ability 1) are not ported. */
+static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held,
+                         uint16_t pressed) {
+    static const int32_t uphill[3] = {24, 20, 18};
+    static const int32_t crouched[3] = {23, 19, 17};
+    int32_t speed = (soma->abilities & AOS_ABILITY_FAST_WALK) ? AOS_FAST_WALK_SPEED
+                                                              : AOS_WALK_SPEED;
+    if (!(soma->flags & (AOS_FLAG_BACKDASH | AOS_FLAG_HEAD_CEILING | AOS_FLAG_CROUCH))) {
+        steer_direction(soma, held, speed);
+        if (!(soma->flags & AOS_FLAG_AIRBORNE)) slow_on_slope(soma, uphill);
+    } else if (soma->flags & AOS_FLAG_BACKDASH) {
+        if (held & AOS_KEY_LEFT) soma->facing_left = true;
+        else if (held & AOS_KEY_RIGHT) soma->facing_left = false;
+        soma->friction = soma->vx < 0 ? AOS_FRICTION : -AOS_FRICTION;
+    } else {
+        if (!(soma->flags & AOS_FLAG_AIRBORNE)) slow_on_slope(soma, crouched);
+        soma->friction = soma->vx < 0 ? 0x2800 : -0x2800;   /* 0.15625 */
+    }
+    apply_friction(soma);
+
+    if ((soma->flags & AOS_FLAG_GROUNDED)) {
+        soma->frame_counter++;
+        if (!(soma->flags & 0x1000001Eu)) {
+            if (((held & AOS_KEY_DOWN) || (soma->flags & AOS_FLAG_HEAD_CEILING)) &&
+                !(soma->flags & AOS_FLAG_CROUCH))
+                soma->flags = (soma->flags | AOS_FLAG_CROUCH) & ~(uint32_t)AOS_FLAG_BACKDASH;
+            if ((soma->flags & (AOS_FLAG_HEAD_CEILING | AOS_FLAG_CROUCH)) == AOS_FLAG_CROUCH &&
+                !(held & AOS_KEY_DOWN))
+                soma->flags &= ~(uint32_t)AOS_FLAG_CROUCH;
+        }
+    }
+    aos_soma_jump(soma, held, pressed);
+    aos_soma_air(soma, layer, held);
+}
+
+/* sub_0801B0D8 case 4 (_0801C994): hard landing. The slide branch taken
+ * with flag 0x80 is not ported. */
+static void hard_landing_state(AosSoma *soma) {
+    soma->friction = soma->vx >= 0 ? (int32_t)0xFFFFD000 : 0x3000; /* 0.1875 */
+    apply_friction(soma);
+    if (soma->frame_counter <= 7) soma->frame_counter++;
+    if (!(soma->flags & AOS_FLAG_HARD_LANDING)) return;
+    soma->flags |= AOS_FLAG_CROUCH;
+    if ((soma->flags & (AOS_FLAG_GROUNDED | AOS_FLAG_ANIM_DONE)) != AOS_FLAG_GROUNDED) {
+        soma->flags &= 0xFFFEFF7Fu;
+        soma->state = 0;
+    }
+}
+
+AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
+                           uint16_t pressed) {
+    aos_soma_integrate(soma);
+    AosLanding landing = aos_soma_collide(soma, layer);
+    switch (soma->state) {
+    case 0: normal_state(soma, layer, held, pressed); break;
+    case 4: hard_landing_state(soma); break;
+    default: break;
+    }
+    return landing;
 }

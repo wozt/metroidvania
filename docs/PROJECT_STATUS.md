@@ -2189,3 +2189,30 @@ No automatic reciprocal link or native engine encoder is implemented.
   23/23, the Python suite passed 388/388, the dry run of all twelve tasks
   reported them up to date, the generated checklist check passed and the
   proprietary-file guard passed.
+
+## Patch 0226 - evidence-based routine classification
+
+- Inventory schema v6 classifies routines without a path rule from two
+  explicit kinds of evidence, recorded per routine as `category_evidence`:
+  native name rules (`Enemy*Create/Update` enemies, `ObjectNN*` environment,
+  `Skill*Use` abilities, `SoulInventory_*` inventory, `GameMode*` handlers
+  by mode, the sound driver, BIOS and entity primitives...), then exclusive
+  referrers: a routine whose callers and address-takers all share one
+  category inherits it, to a fixed point. Mixed or absent referrers leave a
+  routine unclassified; Aria bosses stay within enemies (no boss marker
+  traced).
+- Aria goes from 136 classified routines (path only) to 2,192 (136 by path,
+  503 by name, 1,553 by exclusive referrers); 1,381 shared or unreferenced
+  routines remain unclassified. Spot checks agree with the traced code: the
+  blue crow AI, `sub_080694B8`, `sub_0806AEAC` and `sub_0806BE74` are
+  enemies; the animation, collision-pass and Soma routines stay unclassified.
+  Zero Mission is unchanged (all 2,970 routines by path).
+- The generated checklist states each category's evidence breakdown;
+  classification is still not coverage: category completeness remains
+  unestablished.
+- Added ROM-free regressions for the name rules, transitive and
+  address-based referrer inheritance, mixed referrers and a tracked routine.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  23/23, the Python suite passed 389/389, all twelve rebuild tasks were up to
+  date, the generated checklist check passed and the proprietary-file guard
+  passed.

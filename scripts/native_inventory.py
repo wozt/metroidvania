@@ -13,9 +13,9 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = "metroidvania-native-inventory-v5"
-RECORD_SCHEMA = "metroidvania-native-inventory-records-v5"
-GENERATOR_VERSION = 5
+SCHEMA = "metroidvania-native-inventory-v6"
+RECORD_SCHEMA = "metroidvania-native-inventory-records-v6"
+GENERATOR_VERSION = 6
 DEFAULT_OUTPUT = ROOT / "data/native_parity/inventory.json"
 RECORD_COLLECTIONS = ("routines", "declarations", "data_symbols", "types", "constants")
 MAX_SHARD_BYTES = 3_000_000
@@ -251,6 +251,71 @@ def _brief_and_address(game: str, source: str, header_start: int) -> tuple[str |
     if offset < 0x08000000:
         offset += 0x08000000
     return description, f"0x{offset:08X}"
+
+
+# Category evidence from native names, checked in order. Only unclassified
+# routines (no path rule) use them. Bosses are not split from enemies: the
+# Aria enemy table holds both and no boss marker has been traced yet.
+NAME_CATEGORY_RULES = (
+    (re.compile(r"^Enemy\w+(?:Create|Update)$"), "enemies"),
+    (re.compile(r"^Object[0-9A-F]{2}(?:Create|Update)$"), "environment"),
+    (re.compile(r"^Skill\w+(?:Use|Update)$"), "abilities"),
+    (re.compile(r"^SoulInventory_"), "inventory"),
+    (re.compile(r"^GameMode(?:TitleScreen|KonamiLogo|LicensedByNintendo)"), "title"),
+    (re.compile(r"^TitleScreen"), "title"),
+    (re.compile(r"^GameMode(?:MainMenu|BossRushMenu|SoundTestMenu|SoulTradeMenu)"), "menus"),
+    (re.compile(r"^GameModeCredits"), "endings"),
+    (re.compile(r"^GameModeGameOver"), "death"),
+    (re.compile(r"^GameModeIntroCutscene"), "cutscenes"),
+    (re.compile(r"^GameModeDebug"), "technical"),
+    (re.compile(r"^(?:GameModeUpdate|GameModeReset|SetGameMode)$"), "startup"),
+    (re.compile(r"^(?:Entity\w+|BgAffineSet|BgCmdBuffer_\w+|ArcTan2|Sqrt|Div|Mod|CpuSet|"
+                r"CpuFastSet|RandomNumberGenerator|DmaFill\w*|DmaCopy\w*|Intr\w*)$"),
+     "technical"),
+    (re.compile(r"^(?:m4a|MP2K|MPlay|Cgb|Midi|Sound|ply_)"), "audio"),
+    (re.compile(r"^(?:Sram|Save)"), "saves"),
+    (re.compile(r"^(?:UpdateInput|SetPlayerInput)$"), "input"),
+    (re.compile(r"^CheckRoomTransition$"), "transitions"),
+    (re.compile(r"^(?:GetRoomPointer|GetRoomFromMapPosition|GetAreaFromMapPosition|"
+                r"Get(?:Save|Warp)RoomFlagFromMapPosition)$"), "rooms"),
+)
+
+
+def _classify_by_evidence(routines: list[dict]) -> None:
+    """Name rules, then exclusive referrers, for routines without a path rule.
+
+    A routine gets ``category_evidence``: ``path`` (source location),
+    ``name`` (a native name rule) or ``referrers`` (every routine calling it
+    or taking its address has that one category; repeated to a fixed point).
+    Routines without referrers or with mixed referrers stay unclassified.
+    """
+    for routine in routines:
+        if routine["category"] != "unclassified":
+            routine["category_evidence"] = "path"
+            continue
+        for pattern, category in NAME_CATEGORY_RULES:
+            if pattern.search(routine["symbol"]):
+                routine["category"] = category
+                routine["category_evidence"] = "name"
+                break
+    by_id = {routine["id"]: routine for routine in routines}
+    referrers: dict[str, set[str]] = defaultdict(set)
+    for routine in routines:
+        targets = set(routine["calls"]) | set(routine.get("address_references", []))
+        targets |= {item["target"] for item in routine.get("member_callbacks", [])}
+        for target in targets - {routine["id"]}:
+            referrers[target].add(routine["id"])
+    changed = True
+    while changed:
+        changed = False
+        for routine in routines:
+            if routine["category"] != "unclassified" or not referrers[routine["id"]]:
+                continue
+            categories = {by_id[item]["category"] for item in referrers[routine["id"]]}
+            if len(categories) == 1 and "unclassified" not in categories:
+                routine["category"] = categories.pop()
+                routine["category_evidence"] = "referrers"
+                changed = True
 
 
 def _category(game: str, relative: Path) -> str:
@@ -838,9 +903,12 @@ def inventory_game(game: str, root: Path) -> dict:
     types.sort(key=lambda item: item["id"])
     constants.sort(key=lambda item: item["id"])
 
+    _classify_by_evidence(routines)
     counts = defaultdict(int)
+    evidence = defaultdict(int)
     for routine in routines:
         counts[routine["category"]] += 1
+        evidence[routine.get("category_evidence", "none")] += 1
     return {
         "title": GAMES[game]["title"],
         "source_root": GAMES[game]["path"].as_posix(),
@@ -886,6 +954,7 @@ def inventory_game(game: str, root: Path) -> dict:
             "resolved_member_callback_edges": member_callback_edges,
             "address_reference_edges": address_reference_edges,
             "by_category": dict(sorted(counts.items())),
+            "by_category_evidence": dict(sorted(evidence.items())),
         },
         "routines": routines,
         "declarations": declarations,

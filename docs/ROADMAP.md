@@ -72,9 +72,10 @@ explicitly measured and resolved.
   share behavior.
 
 Current progress: the experimental runtime covers bounded Soma movement and
-combat states, several weapon classes, room transitions, wooden doors, bats and
-zombies. Most native routines remain unnamed or unclassified and the original
-game lifecycle is absent.
+combat states, several weapon classes, room transitions, wooden doors, bats,
+zombies and blue crows. Most native routines remain unnamed; 2,192 of 3,573
+are classified from path, name or exclusive-referrer evidence, and the
+original game lifecycle is absent.
 
 Exit criterion: Aria is normally completable through every native final branch
 from its menu to its credits without debug controls or emulation, with residual

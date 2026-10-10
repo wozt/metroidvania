@@ -228,6 +228,14 @@ def _symbol_ids(game_data: dict, symbols: list[str]) -> list[str]:
             if routine["symbol"] in wanted]
 
 
+def _evidence_text(counts: dict) -> str:
+    """How a category's routines were classified (see native_inventory)."""
+    labels = (("path", "by source path"), ("name", "by native name"),
+              ("referrers", "by exclusive referrers"))
+    parts = [f"{counts[key]} {label}" for key, label in labels if counts.get(key)]
+    return f" ({', '.join(parts)})" if parts else ""
+
+
 def render(inventory: dict, annotations: dict) -> str:
     lines = [
         "# Native parity checklist",
@@ -293,6 +301,11 @@ def render(inventory: dict, annotations: dict) -> str:
         for feature in game_annotations["features"]:
             features_by_category[feature["category"]].append(feature)
         category_counts = game_data["statistics"]["by_category"]
+        evidence_counts = defaultdict(lambda: defaultdict(int))
+        for routine in game_data["routines"]:
+            evidence = routine.get("category_evidence")
+            if evidence:
+                evidence_counts[routine["category"]][evidence] += 1
         lines.extend([
             f"## {game_data['title']}",
             "",
@@ -311,7 +324,8 @@ def render(inventory: dict, annotations: dict) -> str:
                 "",
                 f"[?] **`{game}.{category}.inventory-boundary` — source coverage.** "
                 f"The current classifier assigns {count} discovered routine(s) to "
-                "this category. Category completeness has not been established.",
+                f"this category{_evidence_text(evidence_counts.get(category, {}))}. "
+                "Category completeness has not been established.",
                 "",
             ])
             for feature in features:

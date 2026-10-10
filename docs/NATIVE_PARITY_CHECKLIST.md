@@ -50,19 +50,19 @@ Pinned source: `third_party/mzm` at `43b7fd52f552e4d38c1521ff9d4df5ee57e61493`.
 
 ### Menus and options
 
-[?] **`mzm.menus.inventory-boundary` — source coverage.** The current classifier assigns 240 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.menus.inventory-boundary` — source coverage.** The current classifier assigns 240 discovered routine(s) to this category (240 by source path). Category completeness has not been established.
 
 ### Controls and input
 
-[?] **`mzm.input.inventory-boundary` — source coverage.** The current classifier assigns 9 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.input.inventory-boundary` — source coverage.** The current classifier assigns 9 discovered routine(s) to this category (9 by source path). Category completeness has not been established.
 
 ### HUD and interface
 
-[?] **`mzm.interface.inventory-boundary` — source coverage.** The current classifier assigns 41 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.interface.inventory-boundary` — source coverage.** The current classifier assigns 41 discovered routine(s) to this category (41 by source path). Category completeness has not been established.
 
 ### Player state machine
 
-[?] **`mzm.player.inventory-boundary` — source coverage.** The current classifier assigns 126 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.player.inventory-boundary` — source coverage.** The current classifier assigns 126 discovered routine(s) to this category (126 by source path). Category completeness has not been established.
 
 [~] **`mzm.player.samus_controller` — Samus pose and physics controller.** The room runtime covers a tested subset of poses and transitions, not the complete native controller.
 
@@ -99,7 +99,7 @@ Next action: Port special blocks and environmental Clipdata effects.
 
 ### Weapons and projectiles
 
-[?] **`mzm.weapons.inventory-boundary` — source coverage.** The current classifier assigns 56 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.weapons.inventory-boundary` — source coverage.** The current classifier assigns 56 discovered routine(s) to this category (56 by source path). Category completeness has not been established.
 
 [~] **`mzm.weapons.beams_and_missiles` — Beam and missile projectiles.** Power Beam, missiles and super missiles are represented; the complete beam, bomb and Power Bomb systems are not.
 
@@ -118,11 +118,11 @@ Next action: Port the remaining beam, bomb and Power Bomb systems.
 
 ### Enemies
 
-[?] **`mzm.enemies.inventory-boundary` — source coverage.** The current classifier assigns 812 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.enemies.inventory-boundary` — source coverage.** The current classifier assigns 812 discovered routine(s) to this category (812 by source path). Category completeness has not been established.
 
 ### Bosses
 
-[?] **`mzm.bosses.inventory-boundary` — source coverage.** The current classifier assigns 447 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.bosses.inventory-boundary` — source coverage.** The current classifier assigns 447 discovered routine(s) to this category (447 by source path). Category completeness has not been established.
 
 ### Items and drops
 
@@ -134,7 +134,7 @@ Next action: Port the remaining beam, bomb and Power Bomb systems.
 
 ### Rooms, areas and maps
 
-[?] **`mzm.rooms.inventory-boundary` — source coverage.** The current classifier assigns 85 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.rooms.inventory-boundary` — source coverage.** The current classifier assigns 85 discovered routine(s) to this category (85 by source path). Category completeness has not been established.
 
 ### Camera and scrolling
 
@@ -153,15 +153,15 @@ Next action: Port native fades, hatch locks and door lifecycle events.
 
 ### Events and scripts
 
-[?] **`mzm.events.inventory-boundary` — source coverage.** The current classifier assigns 45 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.events.inventory-boundary` — source coverage.** The current classifier assigns 45 discovered routine(s) to this category (45 by source path). Category completeness has not been established.
 
 ### Cutscenes
 
-[?] **`mzm.cutscenes.inventory-boundary` — source coverage.** The current classifier assigns 170 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.cutscenes.inventory-boundary` — source coverage.** The current classifier assigns 170 discovered routine(s) to this category (170 by source path). Category completeness has not been established.
 
 ### Music and sound effects
 
-[?] **`mzm.audio.inventory-boundary` — source coverage.** The current classifier assigns 134 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.audio.inventory-boundary` — source coverage.** The current classifier assigns 134 discovered routine(s) to this category (134 by source path). Category completeness has not been established.
 
 ### Inventory and progression data
 
@@ -173,7 +173,7 @@ Next action: Port native fades, hatch locks and door lifecycle events.
 
 ### Save and load
 
-[?] **`mzm.saves.inventory-boundary` — source coverage.** The current classifier assigns 128 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.saves.inventory-boundary` — source coverage.** The current classifier assigns 128 discovered routine(s) to this category (128 by source path). Category completeness has not been established.
 
 ### Death and game over
 
@@ -189,7 +189,7 @@ Next action: Port native fades, hatch locks and door lifecycle events.
 
 ### GBA-specific technical systems
 
-[?] **`mzm.technical.inventory-boundary` — source coverage.** The current classifier assigns 677 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`mzm.technical.inventory-boundary` — source coverage.** The current classifier assigns 677 discovered routine(s) to this category (677 by source path). Category completeness has not been established.
 
 ### Known inventory gaps
 
@@ -203,19 +203,19 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 
 ### Startup and initialization
 
-[?] **`aos.startup.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.startup.inventory-boundary` — source coverage.** The current classifier assigns 5 discovered routine(s) to this category (2 by native name, 3 by exclusive referrers). Category completeness has not been established.
 
 ### Title screen
 
-[?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 28 discovered routine(s) to this category (7 by native name, 21 by exclusive referrers). Category completeness has not been established.
 
 ### Menus and options
 
-[?] **`aos.menus.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.menus.inventory-boundary` — source coverage.** The current classifier assigns 33 discovered routine(s) to this category (10 by native name, 23 by exclusive referrers). Category completeness has not been established.
 
 ### Controls and input
 
-[?] **`aos.input.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.input.inventory-boundary` — source coverage.** The current classifier assigns 2 discovered routine(s) to this category (2 by native name). Category completeness has not been established.
 
 ### HUD and interface
 
@@ -261,11 +261,11 @@ Next action: Port the remaining native weapon classes and effects.
 
 ### Powers and abilities
 
-[?] **`aos.abilities.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.abilities.inventory-boundary` — source coverage.** The current classifier assigns 137 discovered routine(s) to this category (79 by native name, 58 by exclusive referrers). Category completeness has not been established.
 
 ### Enemies
 
-[?] **`aos.enemies.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.enemies.inventory-boundary` — source coverage.** The current classifier assigns 1518 discovered routine(s) to this category (228 by native name, 1290 by exclusive referrers). Category completeness has not been established.
 
 [~] **`aos.enemies.bat` — Bat enemy.** Bat hanging, swoop, combat and falling death are ported; its explosion particles and the global 0x8E & 0x40 state are not.
 
@@ -300,7 +300,7 @@ Next action: Extend the generic enemy framework to further native enemies.
 
 ### Environment interactions
 
-[?] **`aos.environment.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.environment.inventory-boundary` — source coverage.** The current classifier assigns 251 discovered routine(s) to this category (112 by native name, 139 by exclusive referrers). Category completeness has not been established.
 
 [~] **`aos.environment.wooden_doors` — Native wooden doors.** Wooden and green doors are functional in exported rooms; this does not cover every transition or special door.
 
@@ -311,7 +311,7 @@ Next action: Cover the remaining native transition and special door kinds.
 
 ### Rooms, areas and maps
 
-[?] **`aos.rooms.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.rooms.inventory-boundary` — source coverage.** The current classifier assigns 5 discovered routine(s) to this category (5 by native name). Category completeness has not been established.
 
 ### Camera and scrolling
 
@@ -319,7 +319,7 @@ Next action: Cover the remaining native transition and special door kinds.
 
 ### Transitions
 
-[?] **`aos.transitions.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.transitions.inventory-boundary` — source coverage.** The current classifier assigns 1 discovered routine(s) to this category (1 by native name). Category completeness has not been established.
 
 ### Events and scripts
 
@@ -327,15 +327,15 @@ Next action: Cover the remaining native transition and special door kinds.
 
 ### Cutscenes
 
-[?] **`aos.cutscenes.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.cutscenes.inventory-boundary` — source coverage.** The current classifier assigns 10 discovered routine(s) to this category (2 by native name, 8 by exclusive referrers). Category completeness has not been established.
 
 ### Music and sound effects
 
-[?] **`aos.audio.inventory-boundary` — source coverage.** The current classifier assigns 99 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.audio.inventory-boundary` — source coverage.** The current classifier assigns 101 discovered routine(s) to this category (99 by source path, 2 by native name). Category completeness has not been established.
 
 ### Inventory and progression data
 
-[?] **`aos.inventory.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.inventory.inventory-boundary` — source coverage.** The current classifier assigns 13 discovered routine(s) to this category (13 by native name). Category completeness has not been established.
 
 ### Progression and unlock conditions
 
@@ -343,11 +343,11 @@ Next action: Cover the remaining native transition and special door kinds.
 
 ### Save and load
 
-[?] **`aos.saves.inventory-boundary` — source coverage.** The current classifier assigns 5 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.saves.inventory-boundary` — source coverage.** The current classifier assigns 17 discovered routine(s) to this category (5 by source path, 12 by native name). Category completeness has not been established.
 
 ### Death and game over
 
-[?] **`aos.death.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.death.inventory-boundary` — source coverage.** The current classifier assigns 2 discovered routine(s) to this category (1 by native name, 1 by exclusive referrers). Category completeness has not been established.
 
 [~] **`aos.death.soma` — Soma death state.** Soma's death state is ported; game-over flow, restart and save integration are absent.
 
@@ -362,15 +362,15 @@ Next action: Port the native game-over flow and its save integration.
 
 ### Endings and credits
 
-[?] **`aos.endings.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.endings.inventory-boundary` — source coverage.** The current classifier assigns 1 discovered routine(s) to this category (1 by native name). Category completeness has not been established.
 
 ### GBA-specific technical systems
 
-[?] **`aos.technical.inventory-boundary` — source coverage.** The current classifier assigns 32 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.technical.inventory-boundary` — source coverage.** The current classifier assigns 68 discovered routine(s) to this category (32 by source path, 26 by native name, 10 by exclusive referrers). Category completeness has not been established.
 
 ### Unclassified source routines
 
-[?] **`aos.unclassified.inventory-boundary` — source coverage.** The current classifier assigns 3437 discovered routine(s) to this category. Category completeness has not been established.
+[?] **`aos.unclassified.inventory-boundary` — source coverage.** The current classifier assigns 1381 discovered routine(s) to this category. Category completeness has not been established.
 
 ### Known inventory gaps
 

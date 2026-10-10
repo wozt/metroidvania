@@ -162,6 +162,38 @@ class NativeInventoryTests(unittest.TestCase):
             self.assertEqual(routine["_raw_address_refs"], ["sub_08002000"])
             self.assertEqual(routine["_raw_calls"], ["sub_08003000"])
 
+    def test_classification_uses_names_then_exclusive_referrers(self):
+        def routine(symbol, category="unclassified", calls=(), refs=()):
+            return {"id": symbol, "symbol": symbol, "category": category,
+                    "calls": list(calls), "address_references": list(refs)}
+
+        routines = [
+            routine("EnemyCrowCreate", refs=["sub_2"]),
+            routine("EnemyCrowUpdate", calls=["sub_1"]),
+            routine("Object0AUpdate", calls=["sub_3"]),
+            routine("SoundMain", "audio", calls=["sub_3"]),
+            routine("sub_1", calls=["sub_4"]),
+            routine("sub_2"),
+            routine("sub_3"),
+            routine("sub_4"),
+            routine("sub_5"),
+        ]
+        native_inventory._classify_by_evidence(routines)
+        by_symbol = {item["symbol"]: item for item in routines}
+
+        self.assertEqual(by_symbol["EnemyCrowCreate"]["category"], "enemies")
+        self.assertEqual(by_symbol["EnemyCrowCreate"]["category_evidence"], "name")
+        self.assertEqual(by_symbol["Object0AUpdate"]["category"], "environment")
+        self.assertEqual(by_symbol["SoundMain"]["category_evidence"], "path")
+        # Exclusive referrers, transitively and through taken addresses.
+        for symbol in ("sub_1", "sub_2", "sub_4"):
+            self.assertEqual(by_symbol[symbol]["category"], "enemies")
+            self.assertEqual(by_symbol[symbol]["category_evidence"], "referrers")
+        # Mixed referrers and no referrers stay unclassified.
+        for symbol in ("sub_3", "sub_5"):
+            self.assertEqual(by_symbol[symbol]["category"], "unclassified")
+            self.assertNotIn("category_evidence", by_symbol[symbol])
+
     def test_tracked_inventory_covers_both_pinned_sources(self):
         inventory = native_inventory.load_inventory()
         self.assertEqual(inventory["schema"], native_inventory.SCHEMA)
@@ -189,6 +221,11 @@ class NativeInventoryTests(unittest.TestCase):
         self.assertEqual(crow["address_references"],
                          ["aos:asm:asm/code/code_08060B98.s:sub_0806E1B8",
                           "aos:asm:asm/code/code_080C0A1C.s:sub_080CA030"])
+        crow_ai = next(item for item in aos["routines"] if item["symbol"] == "sub_080C9AF4")
+        self.assertEqual((crow_ai["category"], crow_ai["category_evidence"]),
+                         ("enemies", "referrers"))
+        self.assertLess(aos["statistics"]["by_category"]["unclassified"],
+                        aos["statistics"]["routines"] // 2)
         vblank = next(item for item in mzm["routines"] if item["symbol"] == "DemoInit")
         self.assertIn("mzm:c:src/demo.c:DemoVBlank", vblank["address_references"])
         for game in ("mzm", "aos"):

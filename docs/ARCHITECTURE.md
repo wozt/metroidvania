@@ -159,9 +159,18 @@ unresolved.
 dependencies' digests) and of its declared outputs: a changed input, a
 missing output or an output edited by hand triggers the task again. A dry run
 reports a task whose dependency would be rebuilt as pending instead of
-reading inputs that do not exist yet. Aria's unnamed files remain unclassified until
-evidence supports a category. These gaps are emitted in the generated checklist
-rather than silently excluded.
+reading inputs that do not exist yet.
+
+Routine categories record their evidence (`category_evidence`, schema v6):
+`path` when the source location decides it (all of Zero Mission's sorted
+tree), `name` when a native name rule does (`Enemy*Create/Update`,
+`ObjectNN*`, `Skill*Use`, `SoulInventory_*`, the `GameMode*` handlers, the
+m4a/MP2K driver...), and `referrers` when every routine calling it or taking
+its address already has one same category, repeated to a fixed point.
+Shared helpers (mixed referrers) and unreferenced routines stay
+unclassified; bosses are not split from Aria's enemies until a boss marker
+is traced. The checklist prints this breakdown per category. Remaining gaps
+are emitted in the generated checklist rather than silently excluded.
 
 Asset tasks join the same graph without changing their extractors: each one
 runs an existing `scripts.<module>` command in a subprocess. Its digest covers

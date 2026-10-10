@@ -25,14 +25,44 @@ typedef enum {
 /* ClipdataActor */
 typedef enum { ACTOR_SAMUS, ACTOR_NON_SPRITE, ACTOR_SPRITE } ClipActor;
 
-/* One native collision type per 16-pixel block. */
+#define MAX_ROOM_DOORS 32
+#define MAX_ROOM_HATCHES 16
+#define HATCH_VERTICAL_SIZE 4
+/* Hatch weakness bits written by scripts/mzm_runtime_room.py. */
+enum { DAMAGE_BEAM = 1, DAMAGE_BOMB_PISTOL = 2, DAMAGE_MISSILE = 4,
+       DAMAGE_SUPER_MISSILE = 8, DAMAGE_POWER_BOMB = 16 };
+/* Clip behaviors that start a room transition. */
+enum { BEHAVIOR_NONE, BEHAVIOR_DOOR, BEHAVIOR_UP, BEHAVIOR_DOWN };
+
+/* One sAreaDoors entry of the room with its destination's placement. */
+typedef struct {
+    int index;
+    char kind[12];
+    int x0, x1, y0, y1;
+    char destination[48];
+    int dest_x, dest_y_end, dest_x_exit, dest_y_exit;
+} RoomDoor;
+/* One hatch built like ConnectionLoadDoors. */
+typedef struct {
+    int door, x, y;
+    char type[24];
+    int weakness, health, hits;
+    bool open;
+} RoomHatch;
+
+/* One native collision type and transition behavior per 16-pixel block. */
 typedef struct { int width, height, resolution, room; char world[16], area[40];
-    unsigned char types[MAX_ROOM_CELLS]; size_t count; } Room;
+    unsigned char types[MAX_ROOM_CELLS]; unsigned char behaviors[MAX_ROOM_CELLS];
+    RoomDoor doors[MAX_ROOM_DOORS]; int door_count;
+    RoomHatch hatches[MAX_ROOM_HATCHES]; int hatch_count;
+    size_t count; } Room;
 
 static void room_set_cell(Room *room, int x, int y, ClipType type) {
     int columns = room->width / 16;
-    if (room->types[y * columns + x] == CLIP_AIR && type != CLIP_AIR) room->count++;
-    room->types[y * columns + x] = (unsigned char)type;
+    unsigned char *cell = &room->types[y * columns + x];
+    if (*cell == CLIP_AIR && type != CLIP_AIR) room->count++;
+    else if (*cell != CLIP_AIR && type == CLIP_AIR) room->count--;
+    *cell = (unsigned char)type;
 }
 
 static ClipType room_cell(const Room *room, int x, int y) {
@@ -217,6 +247,39 @@ static bool parse_native_room(const char *path, Room *room) {
         int x, y, raw, type;
         if (!strchr(line, '\n') && !feof(f)) goto failure;
         if (!strcmp(line, "END\n") || !strcmp(line, "END")) { ended = true; break; }
+        char kind[16];
+        if (line[0] == 'B') {
+            if (sscanf(line, "B\t%d\t%d\t%15s %c", &x, &y, kind, &extra) != 3 ||
+                x < 0 || y < 0 || x >= room->width / 16 || y >= room->height / 16)
+                goto failure;
+            room->behaviors[y * (room->width / 16) + x] = (unsigned char)(
+                !strcmp(kind, "door") ? BEHAVIOR_DOOR : !strcmp(kind, "up") ? BEHAVIOR_UP :
+                !strcmp(kind, "down") ? BEHAVIOR_DOWN : BEHAVIOR_NONE);
+            continue;
+        }
+        if (line[0] == 'D') {
+            RoomDoor door = {0};
+            if (room->door_count >= MAX_ROOM_DOORS ||
+                sscanf(line, "D\t%d\t%11[^\t]\t%d\t%d\t%d\t%d\t%47[^\t]\t%d\t%d\t%d\t%d %c",
+                       &door.index, door.kind, &door.x0, &door.x1, &door.y0, &door.y1,
+                       door.destination, &door.dest_x, &door.dest_y_end,
+                       &door.dest_x_exit, &door.dest_y_exit, &extra) != 11 ||
+                door.x0 < 0 || door.x1 < door.x0 || door.y0 < 0 || door.y1 < door.y0)
+                goto failure;
+            room->doors[room->door_count++] = door;
+            continue;
+        }
+        if (line[0] == 'H') {
+            RoomHatch hatch = {0};
+            if (room->hatch_count >= MAX_ROOM_HATCHES ||
+                sscanf(line, "H\t%d\t%d\t%d\t%23[^\t]\t%d\t%d %c", &hatch.door, &hatch.x,
+                       &hatch.y, hatch.type, &hatch.weakness, &hatch.health, &extra) != 6 ||
+                hatch.x < 0 || hatch.x >= room->width / 16 || hatch.y < 0 ||
+                hatch.y >= room->height / 16 || hatch.health < 0)
+                goto failure;
+            room->hatches[room->hatch_count++] = hatch;
+            continue;
+        }
         if (sscanf(line, "C\t%d\t%d\t%d\t%d %c", &x, &y, &raw, &type, &extra) != 4 ||
             x < 0 || y < 0 || x >= room->width / 16 || y >= room->height / 16 ||
             raw < 1 || raw > 65535 || type < 0 || type >= CLIP_TYPE_COUNT)
@@ -460,6 +523,95 @@ static void runtime_apply_equipment(MzmEquipment *equipment,unsigned int preset,
     equipment->items=p->items;
     if(p->suit!=MZM_SUIT_SUITLESS)
         equipment->items|=MZM_ITEM_MORPH_BALL|MZM_ITEM_POWER_GRIP|toggled_items;
+}
+
+static int runtime_behavior(const Room *room, int x, int y) {
+    return room->behaviors[y * (room->width / 16) + x];
+}
+
+/* BgClipCheckTouchingTransitionOrTank + ConnectionCheckEnterDoor: the door
+ * Samus is entering, and gSamusDoorPositionOffset for the destination. */
+static const RoomDoor *runtime_door_touched(const Room *room, const MzmSamus *samus,
+                                            int *offset) {
+    const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
+    int32_t native_y = samus->y - 1;
+    int32_t max_x = room->width / 16 * MZM_BLOCK_SIZE;
+    int32_t max_y = room->height / 16 * MZM_BLOCK_SIZE;
+    int32_t raw_x[3] = {(box->right >> 2) + samus->x, (box->left >> 2) + samus->x, samus->x};
+    int32_t raw_y[3] = {(box->top >> 2) + native_y, (box->top >> 4) + native_y,
+                        (box->top >> 4) + (box->top >> 2) + native_y};
+    int xs[3], ys[3];
+    for (int i = 0; i < 3; ++i) {
+        int32_t x = raw_x[i] < 0 ? 0 : raw_x[i] > max_x ? max_x : raw_x[i];
+        int32_t y = raw_y[i] < 0 ? 0 : raw_y[i] > max_y ? max_y : raw_y[i];
+        xs[i] = x / MZM_BLOCK_SIZE;
+        ys[i] = y / MZM_BLOCK_SIZE;
+        if (xs[i] >= room->width / 16) xs[i] = room->width / 16 - 1;
+        if (ys[i] >= room->height / 16) ys[i] = room->height / 16 - 1;
+    }
+    /* sBlockTouchOffsets: (center, right), (center, left), (bottom, center),
+     * (top, center). */
+    static const int touch[4][2] = {{0, 0}, {0, 1}, {1, 2}, {2, 2}};
+    int j = -1;
+    if (runtime_behavior(room, xs[0], ys[0]) == BEHAVIOR_DOOR) j = 0;
+    else if (runtime_behavior(room, xs[1], ys[0]) == BEHAVIOR_DOOR) j = 1;
+    else if (runtime_behavior(room, xs[2], ys[1]) == BEHAVIOR_UP) j = 2;
+    else if (runtime_behavior(room, xs[2], ys[2]) == BEHAVIOR_DOWN) j = 3;
+    if (j < 0) return NULL;
+    int px = xs[touch[j][1]], py = ys[touch[j][0]];
+    for (int i = 0; i < room->door_count; ++i) {
+        const RoomDoor *door = &room->doors[i];
+        if (!strcmp(door->kind, "none") || !strcmp(door->kind, "area")) continue;
+        if (door->x0 <= px && px <= door->x1 && door->y0 <= py && py <= door->y1) {
+            *offset = (door->y1 + 1) * MZM_BLOCK_SIZE - native_y - 1;
+            return door;
+        }
+    }
+    return NULL;
+}
+
+/* RoomLoad placement: Samus at the destination door's exit, keeping her
+ * vertical offset inside the door. */
+static void runtime_place_after_door(MzmSamus *samus, const RoomDoor *door, int offset) {
+    int32_t native_y = (door->dest_y_end + 1) * MZM_BLOCK_SIZE + door->dest_y_exit * 4 - 1;
+    samus->x = door->dest_x * MZM_BLOCK_SIZE + (door->dest_x_exit + 8) * 4;
+    if (offset < 0) {
+        offset = 0;
+    } else {
+        int top = -mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top;
+        if (top + offset > 255) offset = 255 - top;
+    }
+    samus->y = native_y - offset + 1;
+}
+
+/* BgClipCheckOpeningHatch for one projectile impact (subpixels). */
+static bool runtime_hit_hatch(Room *room, int32_t x, int32_t y, int damage) {
+    int bx = x / MZM_BLOCK_SIZE, by = y / MZM_BLOCK_SIZE;
+    for (int i = 0; i < room->hatch_count; ++i) {
+        RoomHatch *hatch = &room->hatches[i];
+        if (hatch->open || hatch->x != bx || by < hatch->y ||
+            by > hatch->y + HATCH_VERTICAL_SIZE - 1 || !(hatch->weakness & damage))
+            continue;
+        if (!strcmp(hatch->type, "locked") || !strcmp(hatch->type, "locked_navigation")) {
+            hatch->hits = 0;  /* Locked until an event unlocks it. */
+            return false;
+        }
+        hatch->hits++;
+        if (!strcmp(hatch->type, "missile") && (damage & DAMAGE_SUPER_MISSILE))
+            hatch->hits = hatch->health;
+        if (hatch->hits >= hatch->health) {
+            hatch->open = true;
+            for (int row = 0; row < HATCH_VERTICAL_SIZE; ++row)
+                if (hatch->y + row < room->height / 16)
+                    room_set_cell(room, hatch->x, hatch->y + row, CLIP_AIR);
+        }
+        return true;
+    }
+    return false;
+}
+
+static void runtime_collision_affect(void *context,int32_t x,int32_t y,int damage) {
+    runtime_hit_hatch((Room *)context,x,y,damage);
 }
 
 /* Place Samus's native standing hitbox at the safe diagnostic spawn. */
@@ -776,6 +928,24 @@ static bool runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry *entry,i
     SDL_SetTextureBlendMode(t,SDL_BLENDMODE_BLEND);
     return true;
 }
+/* Load an exported native room and its background texture. */
+static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,
+                              SDL_Texture **texture) {
+    char path[256],background[256];
+    if(!alias[0] || !strcmp(alias,"-"))return false;
+    snprintf(path,sizeof path,"assets/extracted/metroid/rooms/runtime/%s/room.tsv",alias);
+    snprintf(background,sizeof background,
+             "assets/extracted/metroid/rooms/runtime/%s/background.bmp",alias);
+    if(!parse_native_room(path,room))return false;
+    SDL_Surface *surface=SDL_LoadBMP(background);
+    if(!surface)return false;
+    bool ok=surface->w==room->width && surface->h==room->height;
+    *texture=ok?SDL_CreateTextureFromSurface(renderer,surface):NULL;
+    SDL_DestroySurface(surface);
+    if(!*texture)return false;
+    SDL_SetTextureScaleMode(*texture,SDL_SCALEMODE_NEAREST);
+    return true;
+}
 /* PATCH_0176_GAMEPAD: SDL3 standard gamepad, keyboard remains available. */
 static SDL_Gamepad *runtime_pad_open(void) {
     int count=0;
@@ -1059,7 +1229,8 @@ int main(int argc, char **argv) {
     }
     gamepad=runtime_pad_open();
     MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope,
-                            runtime_collision_point};
+                            runtime_collision_point,runtime_collision_affect};
+    bool door_lock=false;
     MzmEquipment equipment={0};
     unsigned int suit_preset=0,spin_items=0;
     uint32_t toggled_items=0;
@@ -1275,6 +1446,36 @@ int main(int argc, char **argv) {
             }
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
+            /* Room lifecycle: a touched door transition loads the exported
+             * destination room and places Samus at its exit. */
+            int door_offset=0;
+            const RoomDoor *door=samus.pose==MZM_POSE_DYING?NULL:
+                runtime_door_touched(room,&samus,&door_offset);
+            if(!door) {
+                door_lock=false;
+            } else if(!door_lock) {
+                RoomDoor used=*door;
+                Room *next=calloc(1,sizeof *next);
+                SDL_Texture *next_texture=NULL;
+                if(next && runtime_load_room(used.destination,next,renderer,&next_texture)) {
+                    free(room);
+                    room=next;
+                    collision.context=room;
+                    if(texture)SDL_DestroyTexture(texture);
+                    texture=next_texture;
+                    runtime_place_after_door(&samus,&used,door_offset);
+                    mzm_weapons_init(&weapons);
+                    echo=(RuntimeEcho){0};
+                    echo_visible=false;
+                    title_dirty=true;
+                    printf("Door %d -> %s\n",used.index,used.destination);
+                } else {
+                    free(next);
+                    fprintf(stderr,"Door %d leads to %s, which is not exported or failed "
+                            "to load.\n",used.index,used.destination);
+                }
+                door_lock=true;
+            }
             if(samus.grabbed_ledge) {
                 echo.active=false;
                 echo.timer=0;
@@ -1383,6 +1584,24 @@ int main(int argc, char **argv) {
             SDL_RenderTexture(renderer,sprite,NULL,&dest);
             if(damage_flash) SDL_SetTextureAlphaMod(sprite,255);
         }
+        /* Hatch graphics use common tiles the partial room render cannot draw
+         * yet; closed hatches are outlined with a diagnostic tint. */
+        SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
+        for(int i=0;i<room->hatch_count;i++) {
+            const RoomHatch *hatch=&room->hatches[i];
+            if(hatch->open)continue;
+            Uint8 r=70,g=140,b=255;
+            if(!strcmp(hatch->type,"missile")){r=230;g=60;b=60;}
+            else if(!strcmp(hatch->type,"super_missile")){r=60;g=200;b=90;}
+            else if(!strcmp(hatch->type,"power_bomb")){r=240;g=200;b=40;}
+            else if(strncmp(hatch->type,"locked",6)==0){r=150;g=150;b=150;}
+            SDL_SetRenderDrawColor(renderer,r,g,b,110);
+            SDL_FRect shell={viewport.x+((float)(hatch->x*16)-cx)*scale,
+                             viewport.y+((float)(hatch->y*16)-cy)*scale,
+                             16.f*scale,(float)(16*HATCH_VERTICAL_SIZE)*scale};
+            SDL_RenderFillRect(renderer,&shell);
+        }
+        SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
             const MzmProjectile *projectile=&weapons.list[i];
             if(!projectile->active || projectile->stage==MZM_STAGE_INIT)continue;

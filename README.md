@@ -99,7 +99,11 @@ Any of the 330 Zero Mission rooms can be exported the same way and opened as
 `--room <area>_<NNN>` (for example `--room brinstar_001`). The export holds the
 partial BG1-over-BG2 render and every Clipdata cell resolved to its native
 collision type; the runtime applies `ClipdataConvertToCollision` for solid
-blocks, all six floor slopes, doors, tanks and enemy-only blocks.
+blocks, all six floor slopes, doors, tanks and enemy-only blocks. Rooms are
+linked through their native door tables: shoot a hatch to open it (beams open
+blue hatches, missiles red ones, super missiles green ones) and walk through
+the door transition to load the destination room at its native exit. Hatch
+shells are tinted rectangles until the common hatch tiles are rendered.
 
 This shortcut consumes only local ignored assets. Samus is driven by a
 pose controller ported from the pinned Zero Mission decompilation (native

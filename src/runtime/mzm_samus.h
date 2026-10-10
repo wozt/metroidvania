@@ -130,6 +130,15 @@ enum {
     MZM_ITEM_POWER_GRIP = 1u << 7
 };
 
+/* Damage types of clipdata-affecting actions (hatches, blocks). */
+enum {
+    MZM_DAMAGE_BEAM = 1u << 0,
+    MZM_DAMAGE_BOMB_PISTOL = 1u << 1,
+    MZM_DAMAGE_MISSILE = 1u << 2,
+    MZM_DAMAGE_SUPER_MISSILE = 1u << 3,
+    MZM_DAMAGE_POWER_BOMB = 1u << 4
+};
+
 typedef struct {
     MzmSuitType suit;
     uint32_t items;
@@ -148,6 +157,9 @@ typedef struct {
      * in subpixels; actor 0 is Samus, 1 a projectile. Falls back to a
      * one-pixel box through ``blocked``. */
     bool (*solid_point)(void *context, int32_t x, int32_t y, int actor);
+    /* Optional: a projectile of the given damage type (MZM_DAMAGE_*) hit
+     * solid collision at this subpixel point, as BlockApplyCcaa sees it. */
+    void (*affect)(void *context, int32_t x, int32_t y, int damage);
 } MzmCollision;
 
 struct MzmSamus;

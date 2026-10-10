@@ -142,6 +142,48 @@ int main(void) {
     assert(room_cell(native, 3, 2) == CLIP_DOOR);
     assert(room_cell(native, 3, 1) == CLIP_AIR);
     free(native);
+
+    /* Doors: BgClipCheckTouchingTransitionOrTank + ConnectionCheckEnterDoor,
+     * the RoomLoad exit placement and hatches opened by shots. */
+    Room *doors = calloc(1, sizeof *doors);
+    assert(doors);
+    doors->width = 128;
+    doors->height = 96;
+    for (int row = 2; row < 6; ++row) {
+        doors->behaviors[row * 8 + 7] = BEHAVIOR_DOOR;
+        room_set_cell(doors, 6, row, CLIP_DOOR);
+    }
+    doors->doors[0] = (RoomDoor){.index = 71, .kind = "hatch", .x0 = 7, .x1 = 7,
+        .y0 = 2, .y1 = 5, .destination = "brinstar_031", .dest_x = 2,
+        .dest_y_end = 18, .dest_x_exit = 32, .dest_y_exit = 0};
+    doors->door_count = 1;
+    doors->hatches[0] = (RoomHatch){.door = 71, .x = 6, .y = 2, .type = "normal",
+        .weakness = DAMAGE_BEAM | DAMAGE_MISSILE, .health = 0};
+    doors->hatches[1] = (RoomHatch){.door = 72, .x = 1, .y = 2, .type = "locked",
+        .weakness = DAMAGE_BEAM, .health = 0};
+    doors->hatch_count = 2;
+    mzm_samus_init(&samus, 7 * 64 - 7, 6 * 64, 1);
+    int offset = -1;
+    const RoomDoor *door = runtime_door_touched(doors, &samus, &offset);
+    assert(door && door->index == 71 && offset == 0);
+    samus.x -= 1;
+    assert(!runtime_door_touched(doors, &samus, &offset));
+    samus.x += 1;
+    /* Jumping through the door keeps Samus's height inside it. */
+    samus.y -= 40;
+    door = runtime_door_touched(doors, &samus, &offset);
+    assert(door && offset == 40);
+    runtime_place_after_door(&samus, door, offset);
+    assert(samus.x == 2 * 64 + (32 + 8) * 4);
+    assert(samus.y == 19 * 64 - 1 - 40 + 1);
+    /* A beam opens the normal hatch; the locked one stays shut. */
+    assert(doors->count == 4);
+    runtime_collision_affect(doors, 6 * 64 + 10, 3 * 64 + 5, DAMAGE_BEAM);
+    assert(doors->hatches[0].open && doors->count == 0);
+    assert(room_cell(doors, 6, 2) == CLIP_AIR && room_cell(doors, 6, 5) == CLIP_AIR);
+    assert(!runtime_hit_hatch(doors, 1 * 64 + 10, 3 * 64, DAMAGE_BEAM));
+    assert(!doors->hatches[1].open);
+    free(doors);
     free(r);
     return 0;
 }

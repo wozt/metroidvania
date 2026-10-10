@@ -74,8 +74,10 @@ movement constants, per-pose block hitboxes, jump/spin/wall-jump/Space
 Jump/Screw Attack rules, crouch and Morph Ball transitions, Power Grip ledge
 hanging and pulls, hurt/death poses and suit damage reduction. Animation
 frames and transition endings come from the controller's native counters and
-a generated 600-row semantic registry. Collision still uses verified boxes
-instead of the original point probes; slope speed, Speed Booster/Shinespark,
+a generated 600-row semantic registry. Collision uses native Clipdata types for every exported room, and doors,
+transitions and hatches link rooms through the native door tables. Samus's
+box sweep still replaces the original point probes; slope speed, Speed
+Booster/Shinespark,
 weapons, entities, effect overlays, room lifecycle and the Aria kernel
 remain pending.
 

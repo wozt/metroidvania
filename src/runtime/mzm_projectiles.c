@@ -87,6 +87,18 @@ static bool point_solid(const MzmCollision *collision, int32_t x, int32_t y) {
                               1.f, 1.f);
 }
 
+/* ProjectileCheckVerticalCollisionAtPosition with the projectile's
+ * clipdata-affecting action: solid impacts reach hatches and blocks. */
+static bool projectile_hits(const MzmCollision *collision, const MzmProjectile *p) {
+    if (!point_solid(collision, p->x, p->y)) return false;
+    if (collision->affect)
+        collision->affect(collision->context, p->x, p->y,
+                          p->type == MZM_PROJECTILE_BEAM ? MZM_DAMAGE_BEAM :
+                          p->type == MZM_PROJECTILE_MISSILE ? MZM_DAMAGE_MISSILE :
+                          MZM_DAMAGE_SUPER_MISSILE);
+    return true;
+}
+
 /* ProjectileMove */
 static void projectile_move(MzmProjectile *p, int distance, int16_t samus_x_velocity) {
     int sign = p->x_flip ? 1 : -1;
@@ -145,16 +157,16 @@ static void initialize(MzmProjectile *p) {
 static void process_beam(MzmProjectile *p, const MzmSamus *samus,
                          const MzmCollision *collision) {
     if (p->stage == MZM_STAGE_MOVING) {
-        if (point_solid(collision, p->x, p->y)) { p->active = false; return; }
+        if (projectile_hits(collision, p)) { p->active = false; return; }
         projectile_move(p, MZM_QUARTER_BLOCK_SIZE + MZM_PIXEL_SIZE, samus->x_velocity);
     } else if (p->stage == MZM_STAGE_SPAWNING) {
-        if (point_solid(collision, p->x, p->y)) { p->active = false; return; }
+        if (projectile_hits(collision, p)) { p->active = false; return; }
         p->stage = MZM_STAGE_MOVING;
         projectile_move(p, MZM_QUARTER_BLOCK_SIZE, samus->x_velocity);
     } else {
         initialize(p);
         p->stage = MZM_STAGE_SPAWNING;
-        if (point_solid(collision, p->x, p->y)) { p->active = false; return; }
+        if (projectile_hits(collision, p)) { p->active = false; return; }
     }
     if (++p->timer > MZM_SHORT_BEAM_LIFETIME) p->active = false;
 }
@@ -173,19 +185,19 @@ static void process_missile(MzmWeapons *weapons, MzmProjectile *p, const MzmSamu
                             MzmEquipment *equipment, const MzmCollision *collision) {
     bool super = p->type == MZM_PROJECTILE_SUPER_MISSILE;
     if (p->stage == MZM_STAGE_MOVING) {
-        if (point_solid(collision, p->x, p->y)) { p->active = false; return; }
+        if (projectile_hits(collision, p)) { p->active = false; return; }
         projectile_move(p, p->timer + (super ? MZM_QUARTER_BLOCK_SIZE - MZM_PIXEL_SIZE :
                                        MZM_EIGHTH_BLOCK_SIZE), samus->x_velocity);
         if (super ? p->timer <= 15 : p->timer < 12) p->timer++;
     } else if (p->stage == MZM_STAGE_SPAWNING) {
-        if (point_solid(collision, p->x, p->y)) { p->active = false; return; }
+        if (projectile_hits(collision, p)) { p->active = false; return; }
         p->stage = MZM_STAGE_MOVING;
         projectile_move(p, MZM_BLOCK_SIZE * 3 / 4, samus->x_velocity);
     } else {
         initialize(p);
         spend_ammo(weapons, equipment, super);
         p->stage = MZM_STAGE_SPAWNING;
-        if (point_solid(collision, p->x, p->y)) p->active = false;
+        if (projectile_hits(collision, p)) p->active = false;
     }
 }
 

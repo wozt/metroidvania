@@ -533,6 +533,31 @@ static void test_beam(void) {
     assert(mzm_projectile_count(&weapons, MZM_PROJECTILE_BEAM) == MZM_PROJECTILE_LIMIT_BEAM);
 }
 
+static int affected_damage;
+static void record_affect(void *context, int32_t x, int32_t y, int damage) {
+    (void)context;
+    (void)x;
+    (void)y;
+    affected_damage |= damage;
+}
+
+static void test_projectiles_affect_blocks(void) {
+    World w;
+    world_init(&w);
+    fill(&w.grid, 6, 0, 1, GRID_H);
+    w.collision.affect = record_affect;
+    place(&w, 64, 224);
+    step(&w, 0);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    affected_damage = 0;
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B,
+                                   &w.equipment));
+    for (int i = 0; i < 10; ++i)
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    assert(affected_damage == MZM_DAMAGE_BEAM);
+}
+
 static void test_missile(void) {
     World w;
     world_init(&w);
@@ -593,6 +618,7 @@ int main(void) {
     test_weapon_selection();
     test_beam();
     test_missile();
+    test_projectiles_affect_blocks();
     test_firing_breaks_a_spin();
     puts("MZM Samus controller tests passed");
     return 0;

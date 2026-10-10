@@ -1650,3 +1650,32 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: warning-clean build, CTest passed 17/17, all 330
   rooms exported, and captures confirmed Samus standing and running on native
   geometry in Brinstar rooms 1 and 33.
+
+## Patch 0197 - native doors, room transitions and hatches
+
+- The runtime room export now also writes, from the decompilation tables,
+  every door of the room (`sAreaDoors` with type, rectangle and the
+  destination door's room and exit offsets), the door-transition and
+  vertical-transition clip behaviors, and the room's hatches built like
+  `ConnectionLoadDoors` (side, type from `sHatchTypeTable`, weakness and
+  health from `sHatchBehaviors`). All 330 rooms export: 759 doors and 506
+  hatches (437 normal, 47 missile, 13 super missile, 7 power bomb, 2 locked).
+- The SDL runtime ports `BgClipCheckTouchingTransitionOrTank` and
+  `ConnectionCheckEnterDoor`: touching a transition at the native probe
+  points enters the matching door, loads the destination room's export and
+  places Samus with the `RoomLoad` exit formula, keeping her height inside
+  the door (`gSamusDoorPositionOffset`, clamped as in the source).
+- Projectile impacts now reach hatches like `BgClipCheckOpeningHatch`: the
+  weakness mask selects which weapons count, super missiles open missile
+  hatches at once, locked hatches stay shut, and an opened hatch clears its
+  four Clipdata cells. Hatch shells are drawn as tinted rectangles because the
+  common hatch tiles are not rendered yet.
+- Not yet native: hatch open/close animation and re-closing, persistent
+  opened-hatch flags, event-based door overrides, area connections
+  (elevators), camera scrolling rules and the transition fade.
+- Added ROM-free tests for door touch detection, the in-door height offset,
+  exit placement, hatch opening and locked hatches, and projectile impacts
+  reporting their damage type.
+- Validation on 2026-10-10: CTest passed 17/17. A capture shot the Brinstar 033
+  hatch, walked into Brinstar 31 and on to Brinstar 20, where Samus grabbed a
+  ledge after the transition.

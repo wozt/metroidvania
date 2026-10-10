@@ -66,6 +66,23 @@ Verified so far (cvaos `asm/code/code_08039340.s`):
 - `sub_0803F970` is the same initializer without the collision step;
   `sub_0803FBBC`/`sub_0803FC6C` update layer scrolling.
 
+Player entity (cvaos `src/code/code_08014548.c` and its assembly):
+
+- `sub_0801487C` creates the player with
+  `EntityCreateInRange(0, 0, sUnk_084F10B4[currentCharacter])` and runs
+  `sUnk_084F10AC[currentCharacter]` on it. For Soma these are the update
+  routine `sub_0801B0D8` and the initializer `sub_08014628`, which loads the
+  graphics (`0x080E11D4`), palette (`0x082097D4`, bank 0) and animation
+  (`0x080E11C4`) descriptors used by the Soma library; Julius uses
+  `sub_0801FEF8`/`sub_08014720`.
+- At the start of every update `sub_0801B0D8` adds the X velocity at entity
+  offset `+0x48` plus a one-frame extra velocity at `+0x2C` (then cleared) to
+  the 16.16 fixed-point X position at `+0x40`, clamps the Y velocity at
+  `+0x4C` to `0x80000` (8 pixels per frame downward) and adds it to the Y
+  position at `+0x44`. The rest of the routine (3,862 assembly lines, with 27
+  calls to `sub_080428B4` and 19 to `sub_0803F2C8`, likely animation and
+  state helpers) is not yet understood.
+
 Not yet found: no other routine references `0xE0CC` as a literal, so the
 collision readers reach the buffer through a cached pointer or a computed
 offset. The next research step is to trace writes of that buffer address into

@@ -78,7 +78,7 @@ a generated 600-row semantic registry. Collision uses native Clipdata types for 
 transitions and hatches link rooms through the native door tables. Samus's
 box sweep still replaces the original point probes; slope speed, Speed
 Booster/Shinespark,
-weapons, entities, effect overlays, room lifecycle and the Aria kernel
+weapons beyond the Power Beam and missiles, entities, effect overlays, hatch animation, area connections and the Aria kernel
 remain pending.
 
 Exit criterion: each native character can complete a source-authentic test path

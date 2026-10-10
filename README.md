@@ -38,10 +38,16 @@ Import private assets and structural metadata:
 ```sh
 python3 scripts/import_game_assets.py --scope all
 python3 scripts/import_aos_world.py
+python3 -m scripts.mzm_samus_pipeline
+python3 -m scripts.audit_extracted_assets --write
 ```
 
 The Aria world importer records metadata only. The general asset importer may
 write proprietary decoded output, so everything it produces remains ignored.
+New imports are grouped below `assets/extracted/metroid/`,
+`assets/extracted/aria/`, and `assets/extracted/shared/`. Some older room and
+editor caches remain at their historical paths until their consumers can be
+migrated and tested independently.
 
 ## Build and test
 
@@ -72,6 +78,16 @@ metatile editing in private overrides, the decoded MZM world atlas, and local
 Samus/Soma sprite previews. Both room browsers can render one native room or
 audit an area/world through the shared headless backend. Aria reconstruction
 remains partial; complete rendering and gameplay are not claimed.
+
+Run the experimental SDL3 Zero Mission room/animation integration with:
+
+```sh
+./build/fusion_room_runtime --room brinstar_033
+```
+
+This shortcut consumes only local ignored assets. It demonstrates native room
+collision diagnostics, an indexed Samus animation library, keyboard input and
+SDL3 gamepad input; it is not a complete Zero Mission gameplay engine.
 
 ## Current verified data
 

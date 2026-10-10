@@ -742,7 +742,7 @@ int main(int argc, char **argv) {
         if (n<0 || (size_t)n>=sizeof bundle_index) return 2;
         library_index=bundle_index;
     } else if (room_alias && !library_index) {
-        library_index="assets/extracted/samus/runtime_index.tsv";
+        library_index="assets/extracted/metroid/sprites/samus/runtime/runtime_index.tsv";
     }
     if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir || left_dir || special_dir || library_index))) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);

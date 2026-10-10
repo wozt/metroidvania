@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-09**.
+Last updated: **2026-10-10**.
 
 ## Current product state
 
@@ -15,10 +15,10 @@ game frontend.
 | Savepoints | Verified metadata | 29 MZM platform rooms and 17 Aria map-flag rooms |
 | MZM rooms | Partial, systematically audited | 331 descriptors: 330 partial renders, 1 unsupported sentinel, 0 errors |
 | Aria rooms | Partial, systematically audited | 343 descriptors: 342 partial renders, 1 unsupported affine/non-text room, 0 errors |
-| Character assets | Partial | local verified Samus and Soma animation extraction |
+| Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Not started | no player physics, combat, entities or room runtime yet |
+| Native gameplay engines | Experimental MZM runtime | Brinstar 033 movement/collision and animation-selection proof; no combat, entities or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -90,11 +90,11 @@ and the proprietary-file guard passed.
 
 ## Immediate priorities
 
-1. Complete GTK object/event forms and add the remaining hazard/slope brushes.
-2. Define project-owned object/ability/soul schemas and validated encoders.
-3. Complete trigger extraction and attach typed events to room overlays.
-4. Add native audio inventory/preview and cutscene timeline operations.
-5. Define the two native engine adapter contracts around validated exported data.
+1. Migrate active historical asset paths one consumer group at a time.
+2. Replace the Samus compatibility discovery adapter with one generic native scanner.
+3. Map suits, transitions and action priorities from verified native data.
+4. Build an equivalent automated Soma/Aria extraction pipeline.
+5. Define both native engine adapter contracts around validated exported data.
 
 ## Non-negotiable constraints
 
@@ -1258,3 +1258,38 @@ No automatic reciprocal link or native engine encoder is implemented.
   of project-room dimensions. No ROM-derived pixels enter room.json or TSV.
 - BG3 character origin/palette decoding is experimental; hardware priority,
   per-frame scrolling, color effects, BG0 and full GBA compositing remain pending.
+
+## Patch 0182 - canonical private asset roots and Samus runtime pipeline
+
+- Added one canonical path contract for new private Zero Mission, Aria and
+  shared outputs. The general importer now writes raw blocks and basic Samus or
+  Soma frames below their world root, with its manifest under
+  `shared/manifests/`.
+- Added a deterministic private-tree audit with source-reference accounting and
+  exact SHA-256 duplicate measurement. The current local tree contains 13,189
+  files (1,315,548,858 bytes); 2,286 duplicate groups account for 124,191,011
+  potentially reclaimable bytes. This is an inventory, not permission to
+  coalesce path-sensitive room previews.
+- Replaced the numbered Samus bundle producer with the stable
+  `scripts.mzm_samus_pipeline` entry point. Its canonical content-addressed
+  runtime output contains 580 indexed sequences and 1,982 unique BMP objects,
+  preserving native durations and five explicit suit categories without
+  inventing Varia or Gravity variants.
+- Updated the SDL3 Brinstar 033 shortcut to load the canonical library. The old
+  top-level runtime bundle was verified equivalent and moved to ignored local
+  `legacy/extracted-assets/samus-runtime-bundle-v1/`, where it remains
+  recoverable. Historical composition directories still used as intermediate
+  inputs were not removed.
+- Regenerated both games' raw blocks and basic character frames in canonical
+  locations, then verified all 3,969 replacements byte-for-byte before moving
+  the old `raw/`, `sprites/` and root catalogue into the ignored legacy
+  archive. The unreferenced CLI demo cache was archived as well; user ROMs,
+  editor staging data and active room caches were not touched.
+- Added ROM-free tests for canonical importer paths, exact duplicate accounting,
+  symlink refusal, idempotent object storage and the absence of new historical
+  bundle output. No ROM-derived file is tracked.
+- Validation on 2026-10-10: the warning-clean Debug build succeeded, CTest
+  passed 13/13, the Python suite passed 406/406, and the proprietary-file guard
+  passed. `fusion_room_runtime --room brinstar_033` loaded the 304x224 room,
+  204 native collision records and a safe grounded spawn under SDL's dummy
+  video driver; it remained live until the three-second smoke timeout.

@@ -7,9 +7,11 @@ separate gameplay engines: Zero Mission rules in Zebes and Aria rules in the
 castle. A shared layer will own input, rendering presentation, persistence,
 story events, cutscenes, party state and cross-world progression.
 
-Neither native gameplay engine exists yet. The active repository therefore
-contains source-data reconstruction and editor infrastructure only. It does not
-contain a simulated substitute or an emulated gameplay frontend.
+Neither native gameplay engine is complete. The active repository contains
+source-data reconstruction and editor infrastructure plus an experimental SDL3
+Zero Mission room runtime. That runtime validates collision movement and native
+animation selection, but does not yet implement combat, entities or a complete
+room lifecycle. It is not a simulated substitute or an emulated frontend.
 
 ## Active C components
 
@@ -45,6 +47,22 @@ BMPs. It is a research utility, not the future game runtime.
 Python tools validate exact USA ROM fingerprints before reading them. They use
 pinned decompilation symbols and audited ROM offsets to produce private output
 under `assets/extracted/`.
+
+New private generators use three stable roots:
+
+- `metroid/` for Zero Mission raw data, rooms, maps and native sprites;
+- `aria/` for Aria raw data, rooms, maps and native sprites;
+- `shared/` for manifests and diagnostics that describe both worlds.
+
+`scripts/asset_layout.py` is the path contract. The general importer writes raw
+blocks and basic character previews below their world root and writes its
+manifest below `shared/manifests/`. `scripts/mzm_samus_pipeline.py` writes the
+canonical content-addressed Samus runtime library below
+`metroid/sprites/samus/runtime/`; repeated pixels are stored once by SHA-256.
+`scripts/audit_extracted_assets.py` inventories the ignored tree, identifies
+exact duplicates by content hash, and records which historical top-level roots
+still have tracked consumers. Historical room/editor caches are migrated only
+with their consumers, never by an unverified bulk move.
 
 `scripts/editor_backend.py` is the shared operation layer for headless commands
 and GTK subprocess actions. It owns draft rooms, global-map placements, project

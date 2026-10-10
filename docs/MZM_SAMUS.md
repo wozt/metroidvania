@@ -7,6 +7,26 @@ under ignored `assets/extracted/`; never commit ROM bytes or extracted images.
 
 ## Current result
 
+The canonical full-library command is:
+
+```sh
+python3 -m scripts.mzm_samus_pipeline
+```
+
+It currently validates 580 sequence entries and stores 1,982 unique BMP files
+in a SHA-256 object store below
+`assets/extracted/metroid/sprites/samus/runtime/`. The runtime TSV preserves
+the native frame index and duration for every entry. The verified source
+catalogue reports 252 Power Suit, 172 Full Suit and 156 Suitless sequences.
+Varia Suit and Gravity Suit currently have no distinct sequence records; their
+palette/equipment mapping still needs to be implemented from native evidence
+and must not be synthesized by renaming Power Suit files.
+
+The unnumbered pipeline is the stable public entry point. It currently adapts
+the previously validated discovery/composition manifests, so the numbered
+private directories remain reproducible intermediate inputs rather than the
+final library layout. The former top-level `samus/` runtime bundle is obsolete.
+
 `scripts/mzm_samus_sprite.py` reconstructs the four Power Suit animations used
 by the local asset preview. The addresses below come from exact symbols in the pinned
 `mzm` source and a matching `mzm_us` build, not from scan heuristics.
@@ -30,12 +50,12 @@ for animation in idle run jump attack; do
   python3 scripts/mzm_samus_sprite.py \
     --rom "roms/Metroid - Zero Mission (USA).gba" \
     --animation "$animation" \
-    --output-dir assets/extracted/sprites/samus
+    --output-dir assets/extracted/metroid/sprites/samus/animations/basic
 done
 ```
 
-Use `--frame N --output assets/extracted/previews/frame.bmp` to export one
-record for diagnostics. The GTK4 asset viewer displays the generated frames;
+Use `--frame N --output assets/extracted/metroid/sprites/samus/animations/diagnostic/frame.bmp`
+to export one record for diagnostics. The GTK4 asset viewer displays the generated frames;
 their source-defined durations are retained as metadata for the future runtime.
 
 Batch output uses a shared transparent canvas centered on Samus's OAM X axis,

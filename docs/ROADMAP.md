@@ -66,6 +66,13 @@ validated and exported to an engine-neutral package without ROM mutation.
 - preserve each world's timing and mechanical rules;
 - implement native Samus in MZM and native Soma in Aria first.
 
+Current progress: an experimental SDL3 MZM room runtime loads the Brinstar 033
+diagnostic room, native Clipdata collision, a content-addressed 580-sequence
+Samus library, and simultaneous keyboard/SDL3 gamepad input. Its state selector
+is still a preview-oriented bridge rather than the final gameplay action graph;
+combat, native entities, suits, room lifecycle and the Aria kernel remain
+pending.
+
 Exit criterion: each native character can complete a source-authentic test path
 in its own engine without emulation.
 

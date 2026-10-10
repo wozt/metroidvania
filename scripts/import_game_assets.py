@@ -20,6 +20,15 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+from scripts.asset_layout import (  # noqa: E402
+    ARIA_RAW,
+    ARIA_SOMA,
+    IMPORT_CATALOG,
+    METROID_RAW,
+    METROID_SAMUS,
+)
+
 OUTPUT = ROOT / "assets" / "extracted"
 ROMS = {
     "metroid": ("Metroid - Zero Mission (USA).gba",
@@ -116,7 +125,9 @@ def extract_database_entries(db: list[dict[str, Any]], rom: bytes, world: str,
         length = int(count, 16) * int(item["size"])
         if offset < 0 or length < 0 or offset + length > len(rom):
             raise ValueError(f"decomp entry {number} exceeds ROM boundaries: {path}")
-        relative = f"raw/{world}/{directory}/{path}"
+        raw_root = METROID_RAW if world == "metroid" else ARIA_RAW
+        relative = (raw_root.relative_to("assets/extracted")
+                    / directory / path).as_posix()
         if relative in seen:
             raise ValueError(f"duplicate extracted file: {relative}")
         seen.add(relative)
@@ -150,7 +161,8 @@ def render_sprites(roms: dict[str, bytes]) -> list[dict[str, Any]]:
         ])
         for frame in range(total):
             data, info = builder(roms["metroid"], frame, bounds)
-            path = f"sprites/samus/{name}_{frame}.bmp"
+            path = (METROID_SAMUS.relative_to("assets/extracted")
+                    / "animations/basic" / f"{name}_{frame}.bmp").as_posix()
             write_generated(path, data)
             rendered.append({"path": path, "world": "metroid", "actor": "samus",
                              "animation": name, "frame": frame,
@@ -161,7 +173,8 @@ def render_sprites(roms: dict[str, bytes]) -> list[dict[str, Any]]:
         for frame in range(soma.SOMA_ANIMATIONS[name]["frame_count"]):
             data, info = soma.make_soma_animation_frame(
                 roms["aria"], name, frame, bounds)
-            path = f"sprites/soma/{name}_{frame}.bmp"
+            path = (ARIA_SOMA.relative_to("assets/extracted")
+                    / "animations/basic" / f"{name}_{frame}.bmp").as_posix()
             write_generated(path, data)
             rendered.append({"path": path, "world": "aria", "actor": "soma",
                              "animation": name, "frame": frame,
@@ -248,8 +261,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "decoded_sprite_frames": len(manifest["decoded_sprites"]),
         "raw_categories": dict(sorted(counts.items())),
     }
-    write_generated("catalog.json", (json.dumps(manifest, indent=2, ensure_ascii=False)
-                                    + "\n").encode("utf-8"))
+    catalog_path = IMPORT_CATALOG.relative_to("assets/extracted").as_posix()
+    write_generated(catalog_path, (json.dumps(manifest, indent=2, ensure_ascii=False)
+                                  + "\n").encode("utf-8"))
     return manifest
 
 
@@ -272,7 +286,7 @@ def main() -> int:
     print(f"Decoded native sprite frames: {summary['decoded_sprite_frames']}")
     if "native_rooms" in manifest:
         print(f"Original MZM room descriptors: {manifest['native_rooms']['metroid']['count']} (metadata only)")
-    print(f"Private catalog: {OUTPUT / 'catalog.json'}")
+    print(f"Private catalog: {ROOT / IMPORT_CATALOG}")
     print("Complete maps, creature stats, audio, and cutscenes remain UNDECODED.")
     return 0
 

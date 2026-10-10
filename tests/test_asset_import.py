@@ -20,9 +20,9 @@ class ImporterTests(unittest.TestCase):
                      "count": "0x2", "size": 2},
                 ], bytes(range(12)), "metroid")
                 self.assertEqual([e["length"] for e in entries], [3, 4])
-                self.assertEqual((Path(directory) / "raw/metroid/sound/sample.bin")
+                self.assertEqual((Path(directory) / "metroid/raw/sound/sample.bin")
                                  .read_bytes(), bytes([2, 3, 4]))
-                self.assertEqual((Path(directory) / "raw/metroid/data/rooms/brinstar.bin")
+                self.assertEqual((Path(directory) / "metroid/raw/data/rooms/brinstar.bin")
                                  .read_bytes(), bytes([6, 7, 8, 9]))
                 self.assertEqual(entries[0]["status"], "RAW_UNDECODED")
                 # Re-import is deterministic and non-destructive.
@@ -54,10 +54,10 @@ class ImporterTests(unittest.TestCase):
     def test_reject_symlink_redirect(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "raw").symlink_to(root / "elsewhere")
+            (root / "metroid").symlink_to(root / "elsewhere")
             with patch.object(asset, "OUTPUT", root):
                 with self.assertRaises(ValueError):
-                    asset.write_generated("raw/aria/data/block.bin", b"secret")
+                    asset.write_generated("metroid/raw/data/block.bin", b"secret")
             self.assertFalse((root / "elsewhere").exists())
 
     def test_reject_duplicates(self):
@@ -70,6 +70,18 @@ class ImporterTests(unittest.TestCase):
         self.assertEqual(asset.classify_raw("sound", "direct_sound_samples/1.bin"),
                          "raw_audio_or_sound_data")
         self.assertEqual(asset.safe_parts("room/data_123.bin"), ("room", "data_123.bin"))
+
+    def test_database_entries_use_canonical_world_roots(self):
+        metroid = asset.extract_database_entries([
+            {"path": "block.bin", "addr": {"us": "0x0"},
+             "count": "0x1", "size": 1},
+        ], bytes(1), "metroid", write=False)
+        aria = asset.extract_database_entries([
+            {"path": "block.bin", "addr": {"us": "0x0"},
+             "count": "0x1", "size": 1},
+        ], bytes(1), "aria", write=False)
+        self.assertEqual(metroid[0]["path"], "metroid/raw/data/block.bin")
+        self.assertEqual(aria[0]["path"], "aria/raw/data/block.bin")
 
 
 if __name__ == "__main__":

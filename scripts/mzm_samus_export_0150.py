@@ -50,6 +50,13 @@ def frame_metadata(rom, address, size):
     frames = []
     for index in range(size // RECORD_BYTES):
         frame_pointer = address + index * RECORD_BYTES
+        raw = rom[off + index * RECORD_BYTES:off + (index + 1) * RECORD_BYTES]
+        # Native frame sequences can end before the ELF symbol boundary.
+        # Do not interpret the following data as more animation frames.
+        if raw == bytes(RECORD_BYTES):
+            if not frames:
+                raise ValueError("animation begins with empty frame")
+            break
         _, meta = stage(rom, frame_pointer)
         if not 1 <= meta["duration"] <= 255:
             raise ValueError("invalid frame duration")

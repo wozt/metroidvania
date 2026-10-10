@@ -278,7 +278,38 @@ ground `0x080E12DC`; in the air the list at `gEwramData + 0x13218`
 on a slope contact or when |vx| > 2 pixels while rising, else
 -(|vy| / 2) - 4 pixels.
 
-`fusion_aria_runtime` runs these rules in an exported room with Soma's
-library frames (README). Next steps: room transitions (Aria door data),
-the per-animation palettes (`0x080E126C`) and hurtboxes, then the ability
-moves (backdash, slide, high and mid-air jumps) and attacks.
+Room exits. Entity positions are screen-relative: the room position is
+the BG1 scroll plus the entity position (`GetEntityRoomXPositionInteger`).
+Each frame of in-game mode 1, `sub_08011A44` reports an exit when the room
+X (unsigned, so negative values count) exceeds `W * 256` (`0xF0` for one
+screen), when Y is below `0x30` or above `H * 256 - 0x30` (`0xD0` for one
+screen), or when the BG1 byte under the feet is `0xF0` (`sub_08001FE8`;
+only rooms 5/5 and 9/1 use it, behind doors). `sub_08010244` then starts
+mode 3: within screen Y `0x31..0xCF`, vx pointing back into the room
+(by screen half) and the friction are cleared, and vy < -5.0 becomes -1.0.
+`sub_08010350` picks the room's transition entry (16 bytes: target room
+pointer, source screen X and Y as `s8`, X adjustment at +6, unused halfword
+at +8, BG1 X and Y at +0xA/+0xC, unused +0xE) whose screen matches
+X >> 8 and the row (multi-screen rooms: `(Y - 0x30) >> 8` above the top
+bound, `(Y + 0x30) >> 8` below the bottom one, else Y >> 8; one-screen
+rooms: `(Y - 0x30) >> 8`, plus one when Y - 0x30 > 0xA0; a one-screen room
+also maps X > 0xF0 to column 1). It moves every entity so Soma is on
+screen at local X (X + 0xF0 when negative, else X & 0xFF, minus 0xF0 above
+0xF0) plus the adjustment, and local Y (Y + 0x70 below 0x30, else
+(Y - 0x30) & 0xFF, minus 0xA0 above 0xA0). `sub_0800F9EC` loads the target
+with BG1 at `sub_0800ED5C(load_x)` and `sub_0800EE54(load_y)` = load_y +
+0x30 (BG1 scrolls 1:1); `sub_0803FBBC` pins one-screen axes to X 0 and Y
+0x30. The arrival is therefore X = (W > 1 ? load_x : 0) + local X +
+adjustment and Y = (H > 1 ? load_y + 0x30 : 0x30) + local Y.
+`src/runtime/aos_room.c` ports these rules. `fusion_aria_runtime
+--audit-transitions` leaves every exported room through each entry: all
+725 entries match an exit, all 723 edge transitions arrive inside their
+target, and the 2 exit-cell transitions arrive outside when leaving from
+the first exit cell (X = 240), presumably because their door entities,
+which are not ported, control that crossing. Walking from 0/6 into 0/9
+arrives on the floor (Y 159 to 1439).
+
+`fusion_aria_runtime` runs these rules with Soma's library frames
+(README). Next steps: the per-animation palettes (`0x080E126C`) and
+hurtboxes, the doors and the transition rooms of `sUnk_0850E968`, then the
+ability moves (backdash, slide, high and mid-air jumps) and attacks.

@@ -18,7 +18,16 @@ class AriaRuntimeRoomTests(unittest.TestCase):
                       "height_screens": 1, "collision": [0, 0x41, 0x03, 0xFF],
                       "collision_xflip": [False, True, False, False]}
         self.assertEqual(encode_room(3, 7, background).splitlines(), [
-            "AOSROOM-NATIVE\t1\t3\t7\t1\t1\t2\t2", "R\t0045", "R\t03ff", "END"])
+            "AOSROOM-NATIVE\t2\t3\t7\t1\t1\t2\t2", "R\t0045", "R\t03ff", "END"])
+
+    def test_transitions_follow_the_rows_with_a_signed_x_adjustment(self):
+        background = {"width_tiles": 1, "height_tiles": 1, "width_screens": 1,
+                      "height_screens": 1, "collision": [0], "collision_xflip": [False]}
+        transition = {"source_screen_x": -1, "source_screen_y": 0, "field_6": 0xFFF0,
+                      "load_x": 1040, "load_y": 0, "target_engine_area": 0,
+                      "target_room": 3}
+        self.assertEqual(encode_room(0, 5, background, [transition]).splitlines()[-2:],
+                         ["T\t-1\t0\t-16\t1040\t0\t0\t3", "END"])
 
 
 if __name__ == "__main__":

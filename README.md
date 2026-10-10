@@ -141,13 +141,15 @@ with:
 
 ```sh
 python3 -m scripts.aos_soma_pipeline
-python3 -m scripts.aos_runtime_room --area 0 --room 5
-./build/fusion_aria_runtime --area 0 --room 5
+python3 -m scripts.aos_runtime_room --all
+./build/fusion_aria_runtime --area 0 --room 6
 ```
 
 Soma uses the movement, collision, jump, crouch, landing and animation rules
 ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks, souls,
-backdash, slide, enemies and room transitions are not implemented. The spawn
+backdash, slide, enemies and doors are not implemented. Leaving a room
+through its edge loads the native neighbour at the native arrival position;
+`--audit-transitions` checks every exported transition. The spawn
 point is a test placement (a floor near the room centre, or `--spawn X Y`).
 Arrows move, Down crouches, Space/Z jumps, Down + jump drops through one-way
 platforms. `--check` validates the room and library without a window, and

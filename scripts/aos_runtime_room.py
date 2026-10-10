@@ -7,7 +7,10 @@ The export holds the static-origin background composite of
 ``sub_08001A00`` returns it: the table index of ``sub_08001800`` and, for
 slope bytes (bits 6-7), bit 2 toggled when the block is X-flipped. The
 source's Y-flip toggle tests ``(flags >> 12) & 3`` and can never fire, so it is
-not applied. Output stays private:
+not applied. Each ``T`` line is one entry of the room's transition list
+(``sub_08010350``): source screen X and Y, the signed X adjustment at +6, the
+BG1 position at +0xA/+0xC loaded in the target room, and the target area and
+room. Output stays private:
 
     assets/extracted/aria/rooms/runtime/area_<AA>_room_<RRR>/room.tsv
     assets/extracted/aria/rooms/runtime/area_<AA>_room_<RRR>/background.bmp
@@ -36,15 +39,23 @@ def native_cell(value: int, xflip: bool) -> int:
     return value
 
 
-def encode_room(area: int, room: int, background: dict) -> str:
+def _signed16(value: int) -> int:
+    return value - 0x10000 if value & 0x8000 else value
+
+
+def encode_room(area: int, room: int, background: dict, transitions=()) -> str:
     width, height = background["width_tiles"], background["height_tiles"]
     cells, flips = background["collision"], background["collision_xflip"]
-    lines = [f"{ROOM_SCHEMA}\t1\t{area}\t{room}\t{background['width_screens']}\t"
+    lines = [f"{ROOM_SCHEMA}\t2\t{area}\t{room}\t{background['width_screens']}\t"
              f"{background['height_screens']}\t{width}\t{height}"]
     for y in range(height):
         row = cells[y * width:(y + 1) * width]
         flip = flips[y * width:(y + 1) * width]
         lines.append("R\t" + "".join(f"{native_cell(v, f):02x}" for v, f in zip(row, flip)))
+    for item in transitions:
+        lines.append(f"T\t{item['source_screen_x']}\t{item['source_screen_y']}\t"
+                     f"{_signed16(item['field_6'])}\t{item['load_x']}\t{item['load_y']}\t"
+                     f"{item['target_engine_area']}\t{item['target_room']}")
     lines.append("END")
     return "\n".join(lines) + "\n"
 
@@ -66,7 +77,8 @@ def produce(root: Path, area: int, room: int, rom: bytes, world=None) -> dict:
     folder = private_path(Path(root), RUNTIME_ROOMS / f"area_{area:02}_room_{room:03}",
                           create=True)
     folder.mkdir(exist_ok=True)
-    write_atomic(folder / "room.tsv", encode_room(area, room, background))
+    write_atomic(folder / "room.tsv",
+                 encode_room(area, room, background, entry["transitions"]))
     write_atomic(folder / "background.bmp", render.bmp24(width, height, composite))
     return {"folder": folder, "width": width, "height": height,
             "cells": background["width_tiles"] * background["height_tiles"]}
@@ -77,11 +89,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--rom", type=Path,
                         default=ROOT / "roms/Castlevania - Aria of Sorrow (USA).gba")
-    parser.add_argument("--area", required=True, type=int)
-    parser.add_argument("--room", required=True, type=int)
+    parser.add_argument("--area", type=int)
+    parser.add_argument("--room", type=int)
+    parser.add_argument("--all", action="store_true",
+                        help="export every room with a decodable BG1 layer")
     args = parser.parse_args(argv)
+    if args.all == (args.area is not None or args.room is not None) or \
+            (not args.all and (args.area is None or args.room is None)):
+        parser.error("use either --all or both --area and --room")
     try:
-        result = produce(args.root, args.area, args.room, args.rom.read_bytes())
+        rom = args.rom.read_bytes()
+        if args.all:
+            world = render.decode_world(rom)
+            exported, skipped = 0, []
+            for item in world["rooms"]:
+                try:
+                    produce(args.root, item["engine_area"], item["room"], rom, world)
+                    exported += 1
+                except ValueError as exc:
+                    skipped.append(f"{item['engine_area']}/{item['room']}: {exc}")
+            print(f"Aria runtime rooms exported: {exported}, skipped: {len(skipped)}")
+            for line in skipped:
+                print("  skipped", line)
+            return 0
+        result = produce(args.root, args.area, args.room, rom)
     except (OSError, ValueError, StopIteration) as exc:
         parser.error(str(exc))
     print(f"Aria runtime room {result['width']}x{result['height']}: "

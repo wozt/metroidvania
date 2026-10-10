@@ -51,7 +51,7 @@ target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_runtime)
 
 add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c
-               src/runtime/aos_collision.c src/runtime/aos_anim.c)
+               src/runtime/aos_collision.c src/runtime/aos_anim.c src/runtime/aos_room.c)
 target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_aria_runtime)
 
@@ -180,6 +180,12 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_soma_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soma_tests)
     add_test(NAME aos_soma COMMAND fusion_aos_soma_tests)
+
+    add_executable(fusion_aos_room_tests tests/test_aos_room.c src/runtime/aos_room.c
+                   src/runtime/aos_collision.c)
+    target_include_directories(fusion_aos_room_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_room_tests)
+    add_test(NAME aos_room COMMAND fusion_aos_room_tests)
 
     # ROM-free native Zero Mission pose controller regression.
     add_executable(fusion_mzm_samus_tests tests/test_mzm_samus.c src/runtime/mzm_samus.c

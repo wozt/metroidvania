@@ -1802,3 +1802,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   modelled.
 - Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
   passed.
+
+## Patch 0206 - native Aria room transitions
+
+- Decoded the Aria room exit path in cvaos: the bounds and exit-cell test
+  `sub_08011A44`, the velocity adjustments of `sub_08010244`, the entry
+  choice and on-screen placement of `sub_08010350`, and the BG1 load offsets
+  of `sub_0800ED5C`/`sub_0800EE54` (vertical + 0x30) and `sub_0803FBBC`.
+  Recorded in `docs/AOS_SOMA.md`.
+- `scripts/aos_runtime_room.py` exports the transition list (format version
+  2) and gains `--all`; `src/runtime/aos_room.c` ports the rules with
+  ROM-free tests; `fusion_aria_runtime` changes rooms at the native arrival
+  position and follows Soma with the transition camera target.
+- `--audit-transitions` over the 342 exported rooms: 725 entries matched,
+  723 edge arrivals inside their target, 2 door exit-cell entries reported
+  separately (door entities not ported).
+- Validation on 2026-10-10: CTest passed 20/20, the Python room export tests
+  passed and the proprietary guard passed.

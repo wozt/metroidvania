@@ -30,7 +30,11 @@ initial task graph is incremental and ROM-free. Anonymous aggregate typedefs
 and multi-declarator names are indexed, function pointers written to
 structure members are linked, and address-taken routines (C values, assembly
 literal pools) are listed as possible callback targets; the dispatch actually
-taken, computed addresses and runtime evidence remain open.
+taken, computed addresses and runtime evidence remain open. The ROM
+extractors behind both runtimes (ROM verification, raw import, Aria world,
+rooms, Soma, objects/enemies and weapons; Samus, projectiles and rooms of Zero
+Mission) are registered as private asset tasks with output validation; room
+previews, audits and editor caches are not yet registered.
 
 Exit criterion: a clean checkout plus supported local ROMs can rebuild every
 required private resource and report every known unported or unvalidated native

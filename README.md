@@ -41,15 +41,25 @@ python3 scripts/verify_roms.py \
   --metroid "roms/Metroid - Zero Mission (USA).gba"
 ```
 
-Import private assets and structural metadata:
+Import private assets and structural metadata in one incremental pass:
 
 ```sh
-python3 scripts/import_game_assets.py --scope all
-python3 scripts/import_aos_world.py
-python3 -m scripts.mzm_samus_pipeline
-python3 -m scripts.aos_soma_pipeline
+python3 -m scripts.rebuild --assets          # or --all, with the native tasks
+python3 -m scripts.rebuild --list            # tasks, dependencies, required files
 python3 -m scripts.audit_extracted_assets --write
 ```
+
+`--assets` verifies each ROM, then runs the existing extractors in dependency
+order: the raw import (`import_game_assets.py`, both ROMs), the Aria world
+metadata, the Aria runtime rooms, Soma, object/enemy sprites and weapons, and
+the Zero Mission Samus/projectile libraries (they also need the reference ELF
+`third_party/mzm/mzm_us.elf`) and runtime rooms. A full pass takes about four
+minutes; afterwards unchanged tasks are skipped in about two seconds. A task
+reruns when its ROM, extractor modules or pinned decompilation revision
+change, or when one of its private outputs is missing or was modified (room
+exports carry an `export_index.tsv` of per-file SHA-256, sprite libraries are
+content-addressed). Tasks whose ROM is absent are reported as skipped. Each
+extractor can still be run directly, as described below.
 
 The Aria world importer records metadata only. The general asset importer may
 write proprietary decoded output, so everything it produces remains ignored.
@@ -78,8 +88,9 @@ and skips unchanged outputs. The machine-readable inventory manifest and its
 checksummed fragments are tracked under `data/native_parity/`; human validation
 stays separate in `annotations.tsv` (the canonical, human-edited source),
 and [`docs/NATIVE_PARITY_CHECKLIST.md`](docs/NATIVE_PARITY_CHECKLIST.md) is
-generated from both. ROM extraction tasks will be migrated into the same graph
-incrementally; `--all` does not yet mean that every private asset is rebuilt.
+generated from both. `--native` runs only these ROM-free tasks; `--all` adds
+the private asset tasks above. Extractors not yet registered (room previews,
+audits, editor caches) still run on their own.
 
 ## Build and test
 

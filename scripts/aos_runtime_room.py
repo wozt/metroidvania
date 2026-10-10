@@ -15,6 +15,7 @@ two parameters and the flags byte), spawned by ``sub_0800F1FC``. Output stays
 private:
 
     assets/extracted/aria/rooms/runtime/area_<AA>_room_<RRR>/room.tsv
+    assets/extracted/aria/rooms/runtime/export_index.tsv (``--all``)
     assets/extracted/aria/rooms/runtime/area_<AA>_room_<RRR>/background.bmp
 """
 from __future__ import annotations
@@ -27,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from scripts import aos_room_render as render
+from scripts import export_index
 from scripts.asset_layout import ARIA_ROOMS, private_path
 from scripts.sprite_library import write_atomic
 
@@ -108,16 +110,19 @@ def main(argv: list[str] | None = None) -> int:
         rom = args.rom.read_bytes()
         if args.all:
             world = render.decode_world(rom)
-            exported, skipped = 0, []
+            files, skipped = [], []
             for item in world["rooms"]:
                 try:
-                    produce(args.root, item["engine_area"], item["room"], rom, world)
-                    exported += 1
+                    folder = produce(args.root, item["engine_area"], item["room"], rom,
+                                     world)["folder"]
+                    files += [folder / "room.tsv", folder / "background.bmp"]
                 except ValueError as exc:
-                    skipped.append(f"{item['engine_area']}/{item['room']}: {exc}")
-            print(f"Aria runtime rooms exported: {exported}, skipped: {len(skipped)}")
-            for line in skipped:
-                print("  skipped", line)
+                    skipped.append((f"{item['engine_area']}/{item['room']}", str(exc)))
+            export_index.write(private_path(Path(args.root), RUNTIME_ROOMS, create=True),
+                               files, skipped)
+            print(f"Aria runtime rooms exported: {len(files) // 2}, skipped: {len(skipped)}")
+            for item, reason in skipped:
+                print(f"  skipped {item}: {reason}")
             return 0
         result = produce(args.root, args.area, args.room, rom)
     except (OSError, ValueError, StopIteration) as exc:

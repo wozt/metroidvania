@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from scripts import native_inventory, native_parity, rebuild
+from scripts import export_index, native_inventory, native_parity, rebuild
 
 
 class NativeInventoryTests(unittest.TestCase):
@@ -316,6 +316,68 @@ class NativeParityTests(unittest.TestCase):
                 self.assertEqual(rebuild.rebuild({"sample"}, state_path=state),
                                  [("sample", "rebuilt")])
             self.assertEqual(output.read_text(encoding="utf-8"), "second")
+
+    def test_rebuild_skips_tasks_without_required_files(self):
+        cache_root = rebuild.ROOT / ".cache"
+        cache_root.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=cache_root) as directory:
+            temporary = Path(directory)
+            rom = temporary / "missing.gba"
+            output = temporary / "out.txt"
+            state = temporary / "state.json"
+            ran = []
+            tasks = {
+                "extract": rebuild.Task(
+                    "extract", 1, (), lambda: [rom], (output,), lambda: ran.append(1),
+                    requires=(rom,), group="assets"),
+                "derived": rebuild.Task(
+                    "derived", 1, ("extract",), lambda: [output], (temporary / "d.txt",),
+                    lambda: ran.append(2), group="assets"),
+            }
+            with mock.patch.dict(rebuild.TASKS, tasks, clear=True):
+                results = rebuild.rebuild({"derived"}, state_path=state)
+            self.assertEqual(ran, [])
+            self.assertEqual(results[1], ("derived", "skipped (dependency skipped)"))
+            self.assertTrue(results[0][1].startswith("skipped (missing "))
+
+    def test_rebuild_reruns_tasks_with_invalid_exports(self):
+        cache_root = rebuild.ROOT / ".cache"
+        cache_root.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=cache_root) as directory:
+            temporary = Path(directory)
+            source = temporary / "input.txt"
+            room = temporary / "room.tsv"
+            state = temporary / "state.json"
+            source.write_text("room", encoding="utf-8")
+            index = temporary / export_index.NAME
+
+            def action() -> None:
+                room.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+                export_index.write(temporary, [room], [("0/1", "no\tcollision")])
+
+            task = rebuild.Task("rooms", 1, (), lambda: [source], (index,), action,
+                                validate=lambda: export_index.problems(index))
+            with mock.patch.dict(rebuild.TASKS, {"rooms": task}, clear=True):
+                rebuild.rebuild({"rooms"}, state_path=state)
+                self.assertEqual(export_index.problems(index), [])
+                self.assertIn("skipped\t0/1\tno collision", index.read_text(encoding="utf-8"))
+                # A modified file listed by the index (the index itself is
+                # unchanged) still triggers the task.
+                room.write_text("edited", encoding="utf-8")
+                self.assertEqual(len(export_index.problems(index)), 1)
+                self.assertEqual(rebuild.rebuild({"rooms"}, state_path=state),
+                                 [("rooms", "rebuilt")])
+            self.assertEqual(room.read_text(encoding="utf-8"), "room")
+
+    def test_asset_tasks_hash_their_extractor_modules(self):
+        sources = rebuild._module_sources("aos_weapons")
+        names = {path.name for path in sources}
+        self.assertLessEqual({"aos_weapons.py", "aos_object_sprites.py", "sprite_library.py",
+                              "asset_layout.py"}, names)
+        for name in ("aria_rom", "metroid_rom", "aria_rooms", "metroid_rooms"):
+            self.assertEqual(rebuild.TASKS[name].group, "assets")
+        self.assertIn(rebuild.ROMS["aria"], rebuild.TASKS["aria_rooms"].requires)
+        self.assertIn(rebuild.MZM_ELF, rebuild.TASKS["metroid_samus"].requires)
 
     def test_rebuild_detects_tampered_outputs_and_pending_dependencies(self):
         cache_root = rebuild.ROOT / ".cache"

@@ -161,8 +161,19 @@ missing output or an output edited by hand triggers the task again. A dry run
 reports a task whose dependency would be rebuilt as pending instead of
 reading inputs that do not exist yet. Aria's unnamed files remain unclassified until
 evidence supports a category. These gaps are emitted in the generated checklist
-rather than silently excluded. Future extractors join this task graph without
-breaking their existing direct commands.
+rather than silently excluded.
+
+Asset tasks join the same graph without changing their extractors: each one
+runs an existing `scripts.<module>` command in a subprocess. Its digest covers
+the ROM it needs, the extractor module and every `scripts` module it imports
+(found from its import statements), and the pinned revision and tracked-file
+state of the matching decompilation. Its declared outputs are index files;
+`scripts/export_index.py` validates them (per-file SHA-256 for room exports,
+content-addressed objects for sprite libraries), so a deleted or edited
+private file reruns the task. A task whose required file (ROM, reference ELF)
+is missing is skipped together with its dependents, which keeps `--all`
+usable on a ROM-free checkout. Private outputs stay below the ignored
+`assets/extracted/`; the rebuild state stays in the ignored `.cache/`.
 
 ## Active C components
 

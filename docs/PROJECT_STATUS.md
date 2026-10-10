@@ -2159,3 +2159,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   23/23, the Python suite passed 385/385, the incremental dry run reported both
   tasks up to date, the generated checklist check passed and the
   proprietary-file guard passed.
+
+## Patch 0225 - ROM extractors in the rebuild graph
+
+- `scripts/rebuild.py` registers ten private asset tasks around the existing,
+  unchanged extractors: `aria_rom` / `metroid_rom` (SHA-1 verification,
+  recorded in a private manifest), `raw_import` (`import_game_assets.py`,
+  both ROMs), `aria_world`, `aria_rooms`, `aria_soma`, `aria_objects`,
+  `aria_weapons`, `metroid_samus` (Samus and projectile libraries; also needs
+  the reference ELF) and `metroid_rooms`. New selections: `--native`,
+  `--assets`, `--task NAME` (repeatable); `--list` shows groups,
+  dependencies and required files.
+- A task's digest covers its ROM, its extractor and the `scripts` modules it
+  imports, and its decompilation's pinned revision and tracked-file state.
+  Missing required files skip the task and its dependents instead of failing.
+  Outputs are validated beyond their digest: new `scripts/export_index.py`
+  indexes multi-file exports by SHA-256, and sprite libraries are checked
+  against their content-addressed object names.
+- `aos_runtime_room --all` now writes `export_index.tsv` (files and skipped
+  rooms) and `mzm_runtime_room` gains `--all` with the same index (330 rooms
+  exported, 1 skipped).
+- Checked on the local ROMs: a full `--assets` pass rebuilt all ten tasks in
+  4 min 7 s; the next dry run of all twelve tasks reported every one up to
+  date in 1.6 s; appending a byte to an exported Aria room made `aria_rooms`
+  pending again, and restoring it made it up to date.
+- Added ROM-free regressions for skipped requirements, invalid exports and
+  extractor module discovery.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  23/23, the Python suite passed 388/388, the dry run of all twelve tasks
+  reported them up to date, the generated checklist check passed and the
+  proprietary-file guard passed.

@@ -13,6 +13,7 @@ no game table is stored in this repository. Output stays private:
 
     assets/extracted/metroid/rooms/runtime/<area>_<NNN>/room.tsv
     assets/extracted/metroid/rooms/runtime/<area>_<NNN>/background.bmp
+    assets/extracted/metroid/rooms/runtime/export_index.tsv (``--all``)
 """
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from scripts import mzm_room_render as render
+from scripts import export_index
 from scripts.asset_layout import METROID_ROOMS, private_path
 from scripts.sprite_library import write_atomic
 
@@ -310,13 +312,35 @@ def produce(root: Path, area: str, number: int) -> dict:
             "hatches": text.count("\nH\t"), "composite": composite}
 
 
+def export_all(root: Path) -> int:
+    files, skipped = [], []
+    for room in render.source_rooms():
+        try:
+            folder = produce(root, room["area"], room["index"])["folder"]
+            files += [folder / "room.tsv", folder / "background.bmp"]
+        except ValueError as exc:
+            skipped.append((f"{room['area']}/{room['index']}", str(exc)))
+    export_index.write(private_path(root, RUNTIME_ROOMS, create=True), files, skipped)
+    print(f"Zero Mission runtime rooms exported: {len(files) // 2}, skipped: {len(skipped)}")
+    for item, reason in skipped:
+        print(f"  skipped {item}: {reason}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--area", required=True)
-    parser.add_argument("--room", required=True, type=int)
+    parser.add_argument("--area")
+    parser.add_argument("--room", type=int)
+    parser.add_argument("--all", action="store_true",
+                        help="export every room of the pinned room descriptors")
     args = parser.parse_args(argv)
+    if args.all == (args.area is not None or args.room is not None) or \
+            (not args.all and (args.area is None or args.room is None)):
+        parser.error("use either --all or both --area and --room")
     try:
+        if args.all:
+            return export_all(Path(args.root))
         result = produce(args.root, args.area, args.room)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))

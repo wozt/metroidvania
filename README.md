@@ -93,16 +93,20 @@ Run the experimental SDL3 Zero Mission room/animation integration with:
   --samus-assets assets/extracted/metroid/sprites/samus/runtime
 ```
 
-This shortcut consumes only local ignored assets. It demonstrates native room
-collision diagnostics, an indexed Samus animation library, keyboard input and
-SDL3 gamepad input; it is not a complete Zero Mission gameplay engine. Use X
-(gamepad West) to toggle Morph Ball. A spinning jump can wall-jump by pressing
-jump while touching a wall. Hold toward a clear ledge while falling to grab it;
-release the direction, then press jump or toward the platform to climb. C,
-gamepad Down or the opposite direction drops from the ledge. Fast upward jumps
-show Zero Mission's position-history echo. H applies diagnostic damage so the
-native hurt, invincibility and death states can be tested; Enter restarts after
-death.
+This shortcut consumes only local ignored assets. Samus is driven by a
+pose controller ported from the pinned Zero Mission decompilation (native
+physics constants, per-pose hitboxes and pose transitions); it is not yet a
+complete Zero Mission gameplay engine. Controls follow the GBA layout:
+arrows/WASD are the D-pad, Space/Z is A (jump), F/X is B (fire), E/Q hold L
+for diagonal aim up/down. On a gamepad, South is A, East/West is B and the
+left shoulder is L. Down crouches and Down again morphs; Up unmorphs and
+stands. Running jumps spin; touch a wall during a spin, press away and then A
+to wall-jump. With Power Grip, hold toward a ledge while falling to hang, then
+press A while holding toward it to climb. Fast upward jumps show Zero
+Mission's position-history echo. Diagnostic keys: R cycles suits, T cycles
+Space Jump/Screw Attack, G toggles High Jump, H applies 20 damage, Enter
+restarts after death, F6 opens the raw animation catalogue and F7 outlines
+the active hitbox.
 
 ## Current verified data
 

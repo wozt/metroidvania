@@ -63,41 +63,66 @@ New runs of the historical diagnostic tools use semantic paths below
 ## Runtime state mapping
 
 `animation_map.tsv` is loaded and cross-validated against `runtime_index.tsv`
-before SDL creates any animation textures. Active movement now selects exact
-native variants for idle, running, aiming, firing, crouching and midair states.
-Turning, skidding, landing and spin-jump startup are one-shot transitions: they
-play to completion at their native duration unless a higher-priority transition
-interrupts them. Spin, Space Jump and Screw Attack loops cannot be overwritten
-by the generic MidAir state. Morph Ball now changes the collision height while
-preserving the feet position, refuses to unmorph without standing clearance,
-and selects the native morph/unmorph/rolling sequences. A spin jump touching
-exactly one blocking side can perform a provisional wall-jump impulse and plays
-the native wall-jump transition. The hitbox dimensions and movement constants
-remain experimental rather than extracted Zero Mission values. Falling toward
-a clear solid-to-air corner now enters the native ledge-hang loop. After
-releasing the approach direction, jump or forward selects the corresponding
-native pull-up transition; away or crouch drops. Pull movement stays locked for
-the exact duration read from the semantic registry. F6 remains a separate
-raw-catalogue browser for all 580 sequences, including poses whose gameplay
-mechanics are not implemented.
+before SDL creates any animation textures. Gameplay no longer chooses
+animations from held keys: `src/runtime/mzm_samus.c` ports the native pose
+handlers (`SamusStanding`, `SamusRunning`, `SamusMidAir`, `SamusSpinning`,
+`SamusCrouching`, `SamusMorphball`, `SamusRolling`, `SamusHangingOnLedge`,
+`SamusPullingSelfUp/Forward`, `SamusGettingHurt`, ...) and the pose-change
+carries of `SamusSetPose`, `SamusSetMidAir`, `SamusSetLandingPose` and
+`SamusChangeToHurtPose`. The runtime maps each pose to exactly one semantic
+action, and the controller owns the native animation frame and duration
+counter, so transitions such as spin start, turning, landing, morphing,
+unmorphing, wall-jump start and both ledge pulls end exactly when their native
+animation does. Spin, Space Jump and Screw Attack are poses selected by
+`SamusSetSpinningPose` from the equipment flags, and their registry fallback
+is the spin sequence, never MidAir.
+
+Native values now used directly:
+
+| Quantity | Native value | Source |
+|---|---|---|
+| Units | 4 subpixels per pixel; velocity in 1/8 subpixel per frame | `types.h`, `VELOCITY_TO_SUB_PIXEL` |
+| Ground acceleration / cap | 8 / 96 | `SAMUS_X_ACCELERATION`, `SAMUS_X_VELOCITY_CAP` |
+| Midair acceleration / cap / morphed cap | 8 / 64 / 48 | `SAMUS_X_MID_AIR_*` |
+| Gravity, rise cap, fall cap | 10, 192, 128 (no gravity below -231) | `SamusUpdateVelocityPosition` |
+| Jump velocity: low / High Jump / Suitless / Morph Ball | 192 / 232 / 212 / 212 | `SAMUS_*_JUMP_VELOCITY` |
+| Standing / crouched / morphed block hitbox | 14x31 / 14x23 / 14x15 px | `sSamusBlockHitboxData` |
+| Spin poses hitbox | crouched | `sSamusCollisionData` |
+| Wall-jump window | 8 frames after side contact while spinning; probe 10 px | `SamusCheckCollisions`, `SamusSpinning` |
+| Ledge hang | Power Grip probes; feet aligned 34 px below the ledge | `SamusCheckCollisions`, `SamusCheckCarryFromCopy` |
+| Pull up / forward | 6, 2, 1 px per frame by animation frame / 1 px per frame | `sSamusPullingSelfUpVelocity`, `SamusPullingSelfForward` |
+| Hurt | rise 112 grounded or 56 midair, 48 invincible frames | `SamusChangeToHurtPose` |
+| Suit damage reduction | Varia 0.8, Gravity 0.7, both 0.5, minimum 1 | `SpriteUtilTakeDamageFromSprite` |
+
+Releasing the D-pad while running returns directly to standing with zero
+velocity, as in the source; skidding is a Speed Booster pose and is not
+entered. A standing jump is a straight MidAir jump, a jump while holding a
+direction starts a spin, and A pressed in midair starts spinning without extra
+height. Wall jumping requires facing away from the touched wall before A, and
+is replaced by Space Jump when that item is equipped.
+
+Known gaps, kept explicit: block collision is resolved with the runtime's
+verified Clipdata boxes and a subpixel sweep, not the original point probes, so
+slope speed changes (`SamusChangeVelocityOnSlope`) and the partial-ceiling
+position nudges are absent. Speed Booster, Shinespark, bombs, beams, aiming
+while hanging, crawling and Morph Ball tunnel pulls are not implemented. The
+fire button only triggers the native shooting-pose reaction until projectile
+entities exist. Lethal damage enters the dying pose without the original
+screen-centre drift and fade. F6 remains a separate raw-catalogue browser for
+all 580 sequences.
 
 The jump trail is the native `SamusEcho` behavior documented by the pinned
-decompilation in `src/samus.c`, not a generic motion blur. At 60 Hz the runtime
-keeps a 64-position ring, refreshes a six-tick echo during fast upward MidAir,
-Spin, Space Jump, Screw Attack and airborne Morph Ball movement, and renders one
-past body position while cycling four distance-two offsets. The activation
-threshold preserves the native `80/192` ratio against the provisional runtime
-jump speed. Native code forces OBJ palette bank 1 for the copy; the current SDL
-path uses translucent violet modulation until that second palette bank is
-exported as a dedicated private runtime texture.
+decompilation in `src/samus.c`, not a generic motion blur. The runtime keeps a
+64-position ring at 60 Hz and activates on the source condition: MidAir, spin,
+Space Jump, Screw Attack or midair Morph Ball with a Y velocity above 80. It
+renders one past body position while cycling four distance-two offsets. Native
+code forces OBJ palette bank 1 for the copy; the SDL path still uses a
+translucent violet modulation until that palette bank is exported.
 
-The runtime also has a minimal damage lifecycle so the existing hurt and death
-sequences are reachable before native enemies exist. H applies a diagnostic
-20-energy hit, the native 48-tick invincibility interval prevents repeated
-damage, the hurt pose lasts the source-derived 13 ticks, and zero energy locks
-the death sequence until Enter restarts at a safe spawn. Damage amounts and
-horizontal recoil are explicitly project diagnostics, not extracted enemy
-values.
+H applies a diagnostic 20-point hit through the native suit reduction rule.
+The 48-frame invincibility interval prevents repeated damage, energy equal to
+the damage is lethal as in the source, and Enter restarts after death. Damage
+amounts are project diagnostics, not extracted enemy values.
 
 The semantic registry can be validated without opening a window:
 

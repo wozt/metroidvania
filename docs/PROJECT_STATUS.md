@@ -1438,3 +1438,45 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: warning-clean build, runtime/room CTest subset
   passed, and Brinstar 033 still loaded 204 native collision records plus the
   complete 580-sequence/408-binding registry in the dummy-video smoke test.
+
+## Patch 0189 - native Samus pose controller
+
+- Added `src/runtime/mzm_samus.{h,c}`, an SDL-free controller ported from the
+  pinned decompilation. It reproduces the native pose handlers and graphics
+  loops for standing, running, turning, shooting, crouching, MidAir, midair
+  turning, landing, spin start, spinning, wall-jump start, Space Jump, Screw
+  Attack, Morph Ball (morphing, idle, rolling, unmorphing, midair and bounce),
+  ledge hanging and both pulls, hurt and dying, plus the carries performed by
+  `SamusSetPose`, `SamusSetMidAir`, `SamusSetLandingPose` and
+  `SamusChangeToHurtPose`.
+- Replaced the provisional float physics with native units and constants:
+  60 Hz frames, subpixel positions, ground/midair acceleration and caps,
+  gravity and fall caps, low/High Jump/Suitless/Morph Ball jump velocities,
+  jump-release cut and the native 14x31, 14x23 and 14x15 block hitboxes
+  (spin poses use the crouched box). The previous 12x16 placeholder box and
+  invented skid-on-release behavior are gone.
+- Wall jump, Space Jump renewal, ledge grabbing (now requiring Power Grip),
+  pull-up velocities, hurt velocities and invincibility follow the source.
+  Damage now passes through the native Varia/Gravity reduction rule with an
+  explicit energy/equipment record.
+- The runtime maps each pose to one semantic action and renders the
+  controller's own native frame index, so animation priority and transition
+  timing are no longer inferred from held keys. Spin poses fall back only to
+  the spin sequence. The registry gained `turn_midair` and `turn_crouch`
+  (468 bindings over 29 actions).
+- Input follows the GBA layout on keyboard and gamepad. Diagnostic keys cycle
+  suit presets, Space Jump/Screw Attack and High Jump; F7 outlines the hitbox.
+- Added `fusion_mzm_samus_tests` (native tables, damage, running and jump
+  apex, spin/Space Jump/Screw Attack, wall jump with and without a wall,
+  crouch/morph/unmorph and tunnel clearance, ledge hang alignment and pulls,
+  hurt/death, and a 40,000-frame random-input no-embedding invariant). A
+  200,000-frame random-input run against the real Brinstar 033 collision,
+  including steep slopes, never embedded the hitbox.
+- Known gaps: collision uses verified boxes plus a subpixel sweep instead of
+  the original point probes (no slope speed changes or ceiling nudges); Speed
+  Booster, Shinespark, weapons, bombs, aiming while hanging and crawling are
+  not implemented; fire only triggers the native shooting-pose reaction.
+- Validation on 2026-10-10: warning-clean build, CTest passed 15/15, the
+  headless registry check accepted 580 sequences and 468 bindings, and
+  Brinstar 033 loaded its 204 native collision records and remained live
+  through the dummy-video smoke test.

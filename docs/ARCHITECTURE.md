@@ -27,6 +27,16 @@ selection operations and display-independent CLI launcher:
   exact `native_map_load/edit/save` implementation used by GTK. The public CLI
   uses it for BG1/BG2 inspection, reads, writes and flood fills.
 
+`fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
+
+- `src/runtime/mzm_samus.c`: SDL-free Samus pose controller ported from the
+  pinned decompilation (pose handlers, `SamusSetMidAir`/landing/hurt carries,
+  native physics constants, per-pose block hitboxes, animation-driven
+  transitions). It talks to the room through a box-collision callback and to
+  the animation registry through a frame-duration callback.
+- `src/runtime/room_runtime.c`: room/Clipdata loading, input mapping, the
+  semantic animation registry, the catalogue browser and SDL rendering.
+
 `fusion_editor_cli` is the native headless entry point. `fusion_map_editor
 --headless` reaches the same backend before creating a `GtkApplication`.
 
@@ -70,10 +80,11 @@ The optional `intermediate/catalog/` compatibility cache is regenerated from
 those three sources and is not consumed by the canonical pipeline.
 Symbol/address catalogues live in `metroid/sprites/samus/metadata/`. Optional
 research commands write only below `metroid/sprites/samus/diagnostics/`.
-The generated `animation_map.tsv` resolves 27 semantic actions across suit,
+The generated `animation_map.tsv` resolves 29 semantic actions across suit,
 facing and aim variants to exact catalogue keys. Runtime loading rejects an
-unknown key or duplicate selector. Native one-shot transitions retain their
-60 Hz duration and have explicit priority over lower-priority loop changes.
+unknown key or duplicate selector. The runtime maps each controller pose to
+one action; the controller owns the native frame index and duration counter,
+so one-shot transitions end exactly when their native animation ends.
 `scripts/audit_extracted_assets.py` inventories the ignored tree, identifies
 exact duplicates by content hash, and records which historical top-level roots
 still have tracked consumers. Historical room/editor caches are migrated only

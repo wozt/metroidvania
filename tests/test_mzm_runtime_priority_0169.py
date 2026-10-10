@@ -1,10 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
 
 class Priority0169Tests(unittest.TestCase):
-    def test_priority_source(self):
-        from pathlib import Path
-        text = (Path(__file__).resolve().parents[1] / "src/runtime/room_runtime.c").read_text()
-        self.assertIn("if (spin_jump && (state == RUNTIME_JUMPING", text)
-        self.assertIn("spin_jump=(dx > 0.1f || dx < -0.1f)", text)
-        self.assertIn("armor_index=(armor_index+1u)%5u", text)
+    def test_spin_poses_select_spin_actions(self):
+        # The pose controller owns animation priority: spin poses map to
+        # their own registry actions and are exercised by the C tests.
+        text = (ROOT / "src/runtime/room_runtime.c").read_text()
+        self.assertIn('case MZM_POSE_SPINNING: return "spin";', text)
+        self.assertIn('case MZM_POSE_SCREW_ATTACKING: return "screw_attack";', text)
+        cmake = (ROOT / "CMakeLists.txt").read_text()
+        self.assertIn("add_test(NAME mzm_samus_controller", cmake)

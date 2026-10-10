@@ -58,6 +58,8 @@ AIM_ACTIONS = {
     "fire": ("shooting", "loop"),
     "crouch_fire": ("shootingandcrouching", "loop"),
     "turn": ("turningaround", "once"),
+    "turn_midair": ("turningaroundmidair", "once"),
+    "turn_crouch": ("turningaroundandcrouching", "once"),
     "landing": ("landing", "once"),
 }
 SIMPLE_ACTIONS = {

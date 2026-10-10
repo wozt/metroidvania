@@ -68,18 +68,16 @@ validated and exported to an engine-neutral package without ROM mutation.
 
 Current progress: an experimental SDL3 MZM room runtime loads the Brinstar 033
 diagnostic room, native Clipdata collision, a content-addressed 580-sequence
-Samus library, and simultaneous keyboard/SDL3 gamepad input. Its state selector
-uses a generated 408-row semantic registry and native-duration transition
-priority for currently implemented movement/input states. All sequences remain
-available through the separate catalogue browser. Its first ability mechanics
-now include clearance-safe Morph Ball resizing and a collision-driven Wall
-Jump, plus clearance-checked ledge hanging with both native pull transitions.
-All are connected to native animation sequences but still use provisional
-physics constants. A source-derived jump echo now follows the native position
-history/timing model, and a diagnostic health lifecycle reaches hurt,
-invincibility, death and restart states. Native damage sources, combat,
-entities, the exact echo palette, complete ability physics, Varia/Gravity
-palette switching, room lifecycle and the Aria kernel remain pending.
+Samus library and simultaneous keyboard/SDL3 gamepad input. Samus is driven by
+an SDL-free pose controller ported from the pinned decompilation: native
+movement constants, per-pose block hitboxes, jump/spin/wall-jump/Space
+Jump/Screw Attack rules, crouch and Morph Ball transitions, Power Grip ledge
+hanging and pulls, hurt/death poses and suit damage reduction. Animation
+frames and transition endings come from the controller's native counters and
+a generated 468-row semantic registry. Collision still uses verified boxes
+instead of the original point probes; slope speed, Speed Booster/Shinespark,
+weapons, entities, Varia/Gravity palettes, room lifecycle and the Aria kernel
+remain pending.
 
 Exit criterion: each native character can complete a source-authentic test path
 in its own engine without emulation.

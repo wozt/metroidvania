@@ -142,13 +142,15 @@ with:
 ```sh
 python3 -m scripts.aos_soma_pipeline
 python3 -m scripts.aos_runtime_room --all
+python3 -m scripts.aos_object_sprites
 ./build/fusion_aria_runtime --area 0 --room 6
 ```
 
 Soma uses the movement, collision, jump, crouch, landing, ability-move and
 animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks,
-souls and enemies are not implemented; wooden doors open natively but are
-drawn as outlines until their graphics are extracted. Leaving a room
+souls and enemies are not implemented; wooden doors open natively with
+their native sprite and palette cycle (`python3 -m scripts.aos_object_sprites`).
+Leaving a room
 through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn
 point is a test placement (a floor near the room centre, or `--spawn X Y`).

@@ -25,6 +25,9 @@
 #define INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1"
 #define DEFAULT_ROOMS "assets/extracted/aria/rooms/runtime"
 #define DEFAULT_LIBRARY "assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv"
+#define DEFAULT_OBJECTS "assets/extracted/aria/sprites/objects/runtime/runtime_index.tsv"
+#define DOOR_STYLES 2
+
 
 #define MAX_TRANSITIONS 32
 #define MAX_ENTITIES 128
@@ -368,18 +371,85 @@ static int update_entities(AriaRoom *room, AosCollision *layer, const AosSoma *s
     return sound;
 }
 
-/* Doors have no extracted graphics yet: an outline marks the blocked
- * 16x48 area, filled while the door is closed. */
-static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, int cam_x, int cam_y) {
+/* Doors use their native sprite (frame 0 or 5 by parameter 0) and palette
+ * cycle; without the object library an outline marks the blocked area. */
+static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
+                       long frame_count, int cam_x, int cam_y);
+
+/* Object sequences of scripts/aos_object_sprites.py: WoodenDoor/style_N
+ * (the door frame under each step of its palette cycle). */
+typedef struct {
+    AriaFrame frames[DOOR_STYLES][MAX_FRAMES];
+    uint8_t ticks[DOOR_STYLES][MAX_FRAMES];
+    int counts[DOOR_STYLES];
+} AriaObjects;
+
+static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *renderer) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[1024];
+    bool ok = fgets(line, sizeof line, f) && !strncmp(line, INDEX_SCHEMA, strlen(INDEX_SCHEMA));
+    while (ok && fgets(line, sizeof line, f)) {
+        char frame_path[512];
+        int style, frame, ticks, ox, oy;
+        if (sscanf(line, "WoodenDoor/style_%d\t%d\t%d\t%d\t%d\t%511s", &style, &frame, &ticks,
+                   &ox, &oy, frame_path) != 6)
+            continue;
+        if (style < 0 || style >= DOOR_STYLES || frame != objects->counts[style] ||
+            frame >= MAX_FRAMES || ticks < 1 || ticks > 255) { ok = false; break; }
+        SDL_Surface *surface = SDL_LoadBMP(frame_path);
+        if (!surface) { ok = false; break; }
+        AriaFrame *out = &objects->frames[style][frame];
+        out->texture = SDL_CreateTextureFromSurface(renderer, surface);
+        out->w = (float)surface->w;
+        out->h = (float)surface->h;
+        out->offset_x = ox;
+        out->offset_y = oy;
+        SDL_DestroySurface(surface);
+        if (!out->texture) { ok = false; break; }
+        SDL_SetTextureScaleMode(out->texture, SDL_SCALEMODE_NEAREST);
+        objects->ticks[style][frame] = (uint8_t)ticks;
+        objects->counts[style]++;
+    }
+    fclose(f);
+    return ok;
+}
+
+static void free_objects(AriaObjects *objects) {
+    for (int i = 0; i < DOOR_STYLES; ++i)
+        for (int j = 0; j < MAX_FRAMES; ++j)
+            if (objects->frames[i][j].texture) SDL_DestroyTexture(objects->frames[i][j].texture);
+}
+
+static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
+                       long frame_count, int cam_x, int cam_y) {
+    const AriaObjects *objects = objects_ptr;
     for (size_t i = 0; i < room->entity_count; ++i) {
         const AriaEntity *e = &room->entities[i];
         if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id != ARIA_OBJECT_WOODEN_DOOR)
             continue;
+        int style = e->param0 ? 1 : 0;
+        if (objects && objects->counts[style]) {
+            /* sub_0803C150: the palette script loops (phase from the run start). */
+            int total = 0;
+            for (int k = 0; k < objects->counts[style]; ++k) total += objects->ticks[style][k];
+            long t = frame_count % total;
+            int k = 0;
+            while (t >= objects->ticks[style][k]) t -= objects->ticks[style][k++];
+            const AriaFrame *frame = &objects->frames[style][k];
+            /* Mirrored when facing left, like Soma's frames; the generic draw
+             * (0x03004564) is not traced, this matches the room art at both
+             * room edges. */
+            bool flip = e->door.facing_left;
+            float x = flip ? (float)(e->x - frame->offset_x) - frame->w
+                           : (float)(e->x + frame->offset_x);
+            SDL_FRect rect = {x - (float)cam_x, (float)(e->y + frame->offset_y - cam_y), frame->w,
+                              frame->h};
+            SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
+                                     flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+            continue;
+        }
         SDL_FRect rect = {(float)((e->x & ~15) - cam_x), (float)(e->y - 48 - cam_y), 16, 48};
-        Uint8 alpha = (Uint8)(160 - (e->door.swing >> 7));
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer, 150, 100, 50, alpha);
-        SDL_RenderFillRect(renderer, &rect);
         SDL_SetRenderDrawColor(renderer, 230, 190, 120, 255);
         SDL_RenderRect(renderer, &rect);
     }
@@ -508,6 +578,9 @@ int main(int argc, char **argv) {
                                      SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
     background = load_background(renderer, folder);
     if (!background || !load_library(library_path, &library, renderer)) goto cleanup;
+    static AriaObjects objects;
+    bool objects_ok = load_objects(DEFAULT_OBJECTS, &objects, renderer);
+    if (!objects_ok) fprintf(stderr, "No object library: python3 -m scripts.aos_object_sprites\n");
     int cam_x = 0, cam_y = 0;
 
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
@@ -551,7 +624,7 @@ int main(int argc, char **argv) {
         SDL_RenderClear(renderer);
         SDL_FRect src = {(float)cam_x, (float)cam_y, VIEW_W, VIEW_H}, dst = {0, 0, VIEW_W, VIEW_H};
         SDL_RenderTexture(renderer, background, &src, &dst);
-        draw_doors(renderer, &room, cam_x, cam_y);
+        draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
         const AriaFrame *frame = NULL;
         if (soma.anim.frame < MAX_FRAMES)
             frame = &library.frames[soma.anim.id][soma.anim.frame];
@@ -580,6 +653,7 @@ int main(int argc, char **argv) {
     rc = 0;
 cleanup:
     free_library(&library);
+    free_objects(&objects);
     if (background) SDL_DestroyTexture(background);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);

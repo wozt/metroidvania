@@ -360,10 +360,25 @@ Closed (state 0), contact with h 2 while Soma faces the door, without
 plays `0x115` and opens it (state 1: `+0x14` += `0x100` for 64 frames, then
 clears the blocks); state 2 walks Soma through it. `src/runtime/aos_door.c`
 ports this; the enemy pause `sub_0800C5A8`, the `0x42C` flags and the
-off-screen state `0x63` are not modelled, and the runtime draws an outline
-until the door graphics are extracted.
+off-screen state `0x63` are not modelled.
+
+Door graphics: `sub_0806E0D0` is the generic object setup (tiles through
+`sub_0803B800`, palette through `sub_08068264`, frame list through
+`sub_0803B924`, draw function `sub_0803B9D0`). The door's tile descriptor
+`0x081CBE0C` has encoding 1 (LZ77 tiles at `0x085F94A0`, 16 x 8 tiles); its
+frame list `0x0820F160` holds 8 frames of two OAM components (12 bytes: x,
+y, reserved, source x and y, width, height, then the OAM size << 4 | shape).
+`+0x65` selects frame 0 (parameter 0, a wooden door) or 5 (a green metal
+door); the draw path is not affine, so the swing value `+0x14` is only the
+open/close timer. `sub_0803CC70` registers a palette script that
+`sub_0803C150` plays: a u16 entry count, then (bank, duration) entries copied
+into the object's palette slot in a loop; 0x08525564 cycles banks 3, 4, 5
+(7 frames each), 0x08525574 banks 9, 10, 11, 10 (10 frames).
+`scripts/aos_object_sprites.py` exports each style as a looping sequence. The
+runtime mirrors doors that face left, as Soma's frames are mirrored; the
+generic draw (`0x03004564` in IWRAM) is not traced, but this places both
+edge doors inside their doorway art (rooms 0/3 and 0/16).
 
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: door graphics (object sprite extraction), the boss
-doors and save-room objects behind the `0xF0` exit cells, the transition
+(README). Next steps: the boss doors and save-room objects behind the `0xF0` exit cells, the transition
 rooms of `sUnk_0850E968`, the hurtboxes, then attacks.

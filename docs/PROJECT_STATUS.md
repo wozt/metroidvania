@@ -1860,3 +1860,16 @@ No automatic reciprocal link or native engine encoder is implemented.
   into room 0/0.
 - Validation on 2026-10-10: CTest passed 21/21, the transition audit and the
   room export tests passed, and the proprietary guard passed.
+
+## Patch 0210 - native door sprites
+
+- Added `scripts/aos_object_sprites.py`: decodes the door's LZ77 tile sheet,
+  OAM frame components, palette banks and its palette-cycling script
+  (`sub_0803CC70` / `sub_0803C150`), and exports the wooden and green door
+  styles as looping sequences in a private object library, with ROM-free
+  tests.
+- `fusion_aria_runtime` draws doors with these sprites and palette cycles
+  (mirrored when facing left, checked against the doorway art of rooms 0/3
+  and 0/16) instead of outlines.
+- Validation on 2026-10-10: CTest passed 21/21, the object sprite tests
+  passed and the proprietary guard passed.

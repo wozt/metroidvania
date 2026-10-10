@@ -425,6 +425,56 @@ static float move_axis(const Room *room, float start, float other,
 #define COMPOSED_BASE_COUNT 3
 #define COMPOSED_EXTRA_COUNT 8
 #define COMPOSED_MAX_FRAMES 10
+#define SPECIAL_COUNT 6
+#define SPECIAL_FRAMES 8
+typedef struct {
+    SDL_Texture *textures[SPECIAL_COUNT][SPECIAL_FRAMES];
+    unsigned int durations[SPECIAL_COUNT][SPECIAL_FRAMES];
+    int widths[SPECIAL_COUNT][SPECIAL_FRAMES], heights[SPECIAL_COUNT][SPECIAL_FRAMES];
+} SpecialAnimations;
+static const char *special_names[SPECIAL_COUNT] = {
+    "spinning_right", "spinning_left",
+    "spacejumping_right", "spacejumping_left",
+    "screwattacking_right", "screwattacking_left"
+};
+static void special_free(SpecialAnimations *a) {
+    for (int g=0;g<SPECIAL_COUNT;g++)
+        for (int i=0;i<SPECIAL_FRAMES;i++)
+            if (a->textures[g][i]) SDL_DestroyTexture(a->textures[g][i]);
+}
+static bool special_load(SDL_Renderer *renderer,const char *dir,SpecialAnimations *a) {
+    for (int g=0;g<SPECIAL_COUNT;g++) {
+        char path[4096];
+        int n=snprintf(path,sizeof path,"%s/composed/%s/durations.txt",dir,special_names[g]);
+        if (n<0 || (size_t)n>=sizeof path) return false;
+        FILE *f=fopen(path,"rb");
+        if (!f) {fprintf(stderr,"Missing special timings: %s\\n",path);return false;}
+        bool valid=true;
+        for(int i=0;i<SPECIAL_FRAMES;i++) {
+            unsigned int t=0;
+            if(fscanf(f,"%u",&t)!=1 || t<1 || t>255) {valid=false;break;}
+            a->durations[g][i]=t;
+        }
+        char extra;
+        if(valid && fscanf(f," %c",&extra)!=EOF) valid=false;
+        if(fclose(f)!=0 || !valid) return false;
+        for(int i=0;i<SPECIAL_FRAMES;i++) {
+            n=snprintf(path,sizeof path,"%s/composed/%s/%03d.bmp",dir,special_names[g],i);
+            if(n<0 || (size_t)n>=sizeof path) return false;
+            SDL_Surface *surface=SDL_LoadBMP(path);
+            if(!surface) {fprintf(stderr,"Missing special BMP: %s\\n",path);return false;}
+            int w=surface->w,h=surface->h;
+            if(w<1 || w>512 || h<1 || h>512) {SDL_DestroySurface(surface);return false;}
+            a->textures[g][i]=SDL_CreateTextureFromSurface(renderer,surface);
+            SDL_DestroySurface(surface);
+            if(!a->textures[g][i]) return false;
+            a->widths[g][i]=w;a->heights[g][i]=h;
+            SDL_SetTextureScaleMode(a->textures[g][i],SDL_SCALEMODE_NEAREST);
+            SDL_SetTextureBlendMode(a->textures[g][i],SDL_BLENDMODE_BLEND);
+        }
+    }
+    return true;
+}
 typedef struct {
     SDL_Texture *textures[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
     unsigned int durations[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
@@ -525,7 +575,7 @@ static int composed_select(RuntimeMovementState state, int facing,
 
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
-    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL, *left_dir=NULL; bool check=false;
+    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL, *left_dir=NULL, *special_dir=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
@@ -534,12 +584,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--samus-composed") && !composed_dir && i+1<argc) composed_dir=argv[++i];
         else if (!strcmp(argv[i],"--samus-composed-extra") && !extended_dir && i+1<argc) extended_dir=argv[++i];
         else if (!strcmp(argv[i],"--samus-composed-left") && !left_dir && i+1<argc) left_dir=argv[++i];
+        else if (!strcmp(argv[i],"--samus-special") && !special_dir && i+1<argc) special_dir=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
             fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
-    if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir || left_dir))) {
+    if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir || left_dir || special_dir))) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
         return 2;
     }
@@ -574,6 +625,7 @@ int main(int argc, char **argv) {
     int rc=1;
     SamusFrames samus_frames = {0};
     ComposedAnimations composed_frames = {0};
+    SpecialAnimations special_frames = {0};
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
     if (background) {
         surface=SDL_LoadBMP(background);
@@ -603,6 +655,9 @@ int main(int argc, char **argv) {
         fprintf(stderr,"Left-facing composed Samus sprite loading failed.\n");
         goto cleanup;
     }
+    if (special_dir && !special_load(renderer,special_dir,&special_frames)) {
+        fprintf(stderr,"Special animation load failed.\\n");goto cleanup;
+    }
     float px=16,py=16, pw=12,ph=16;
     /* Initial gameplay tuning, NOT confirmed Zero Mission physics. */
     const float run_speed=115.f, gravity=650.f, jump_speed=265.f;
@@ -614,6 +669,7 @@ int main(int argc, char **argv) {
     RuntimeMovementState movement_state=RUNTIME_IDLE;
     int facing=1;
     bool spin_jump=false;
+    int special_kind=0; /* 0=spin; 1=space, 2=screw (visual preview only). */
     unsigned int armor_index=0;
     static const char *armor_names[] = {
         "Power Suit", "Varia Suit", "Gravity Suit", "Full Suit", "Suitless"
@@ -640,6 +696,12 @@ int main(int argc, char **argv) {
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                 (event.key.key == SDLK_SPACE || event.key.key == SDLK_UP ||
                  event.key.key == SDLK_W)) jump_queued=true;
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                event.key.key == SDLK_T) {
+                special_kind=(special_kind+1)%3;
+                fprintf(stderr,"Spin preview mode: %s\\n",
+                        special_kind==0 ? "Spin" : special_kind==1 ? "Space" : "Screw");
+            }
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                 event.key.key == SDLK_R) {
                 armor_index=(armor_index+1u)%5u;
@@ -719,7 +781,22 @@ int main(int argc, char **argv) {
                                selected < COMPOSED_EXTRA_COUNT && !extended_dir) ||
                               (selected >= COMPOSED_EXTRA_COUNT && !left_dir)))
             selected = -1;
-        if (selected>=0) {
+        int special_selected = -1;
+        if (special_dir && spin_jump &&
+            (movement_state == RUNTIME_JUMPING || movement_state == RUNTIME_FALLING))
+            special_selected = special_kind*2 + (facing<0 ? 1 : 0);
+        if (special_selected >= 0) {
+            Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
+            unsigned int elapsed_frames=(unsigned int)(elapsed_ms*60u/1000u);
+            int frame=samus_timeline_frame(special_frames.durations[special_selected],
+                                            SPECIAL_FRAMES,elapsed_frames);
+            SDL_Texture *sprite=special_frames.textures[special_selected][frame];
+            float sw=(float)special_frames.widths[special_selected][frame];
+            float sh=(float)special_frames.heights[special_selected][frame];
+            SDL_FRect dest={viewport.x+(px+pw*.5f-cx-sw*.5f)*scale,
+                            viewport.y+(py+ph-cy-sh)*scale,sw*scale,sh*scale};
+            SDL_RenderTexture(renderer,sprite,NULL,&dest);
+        } else if (selected>=0) {
             Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
             unsigned int elapsed_frames=(unsigned int)(elapsed_ms*60u/1000u);
             int frame=samus_timeline_frame(composed_frames.durations[selected],
@@ -759,6 +836,7 @@ int main(int argc, char **argv) {
     }
     rc=0;
 cleanup:
+    special_free(&special_frames);
     composed_free(&composed_frames);
     samus_frames_free(&samus_frames);
     if (texture) SDL_DestroyTexture(texture);

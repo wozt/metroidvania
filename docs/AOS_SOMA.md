@@ -83,9 +83,40 @@ Player entity (cvaos `src/code/code_08014548.c` and its assembly):
   calls to `sub_080428B4` and 19 to `sub_0803F2C8`, likely animation and
   state helpers) is not yet understood.
 
-Not yet found: no other routine references `0xE0CC` as a literal, so the
-collision readers reach the buffer through a cached pointer or a computed
-offset. The next research step is to trace writes of that buffer address into
-IWRAM/EWRAM globals, then the player update routine that reads Soma's position
-and velocity, and document their constants with ROM addresses before
-implementing the kernel.
+BG1 collision readers (cvaos `src/code_08001194.c`, decompiled C):
+
+- `sub_08001A00(x, y)` returns the collision byte of the 8x8 cell containing a
+  room pixel. It reads `gEwramData->unk_E0D0` (the decompressed table after its
+  four-byte header, i.e. `0xE0CC + 4`) for compressed layers and the raw
+  metadata pointer otherwise, clamps the cell to the layer (30 x 26 cells for a
+  one-screen dimension), and for slope bytes toggles bit 2 when the block is
+  X-flipped and bit 1 when it is Y-flipped.
+- `sub_08001800` computes the table index exactly as `scripts/aos_room_render.py`
+  does: block map entry at metadata `+0xC` (`& 0x3FFF`, minus one), `* 16`,
+  plus the local 4x4 cell with the 0x4000/0x8000 flips. The importer's
+  collision decoding is therefore verified.
+- `sub_08001B40(byte, x)` is the slope height inside a cell:
+  `((byte & 0x30) >> 3) + (((byte & 4) ? 7 - x : x) & 7) >> ((byte >> 6) - 1)`.
+  Bits 6-7 give the step (1, 1/2 or 1/4 pixel per pixel), bits 4-5 the starting
+  height in steps of two pixels, bit 2 the direction.
+- `sub_08001D94(x, y)` walks up (at most 8 pixels) while bit 0 is set and
+  returns the negative distance out of the solid; `sub_08001C1C(x, y)` walks
+  down (at most 9 pixels) while bit 1 is set. `0xFF` skips a whole 16-pixel
+  block. A slope byte without bit 1 ends the upward walk on its surface; a
+  slope byte with bit 1 ends the downward walk. `sub_080020A0` returns the
+  distance to the top of a bit-0 cell. `sub_08001E58`/`sub_08001CCC` are the
+  same walks after `sub_08001BA0` rewrites bytes with bit 3 for a mode argument.
+
+Interpretation, checked against all 342 decodable BG1 tables (1.0 M cells):
+bit 0 blocks movement from above (floors), bit 1 from below (ceilings).
+`0x03` is a solid cell (337,055 cells); `0x01` is a floor-only platform (2,409
+cells, almost always with air both above and below); slope bytes without bit 1
+(`0x41`, `0x45`, `0x81`, `0xA1`, ...) always have air above and never below
+(floor slopes), while those with bit 1 (`0x43`, `0x47`, `0x83`, `0xA3`, ...)
+have air below (ceiling slopes). Still unidentified: bit 3 (`0x08`, 22,424
+cells, mostly with air above), bit 2 outside slopes (`0x04`) and the rare
+`0x14`, `0x27`, `0x37` values; `gEwramData->unk_A074_6` with the bitmap at
+`unk_F0C0` overrides some cells to `0x03`.
+
+The next research step is the player update routine `sub_0801B0D8`: which of
+these probes it calls, with which body offsets, and Soma's movement constants.

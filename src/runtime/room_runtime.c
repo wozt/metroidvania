@@ -642,6 +642,112 @@ static bool runtime_echo_fast_ascent(const MzmSamus *samus) {
     }
 }
 
+/* Samus palette arrays exported by the Samus pipeline (palettes.tsv). */
+#define RUNTIME_PALETTE_ROWS_MAX 256
+typedef struct {
+    char suit[16], kind[24];
+    int row;
+    SDL_Color colors[16];
+} RuntimePaletteRow;
+typedef struct {
+    RuntimePaletteRow rows[RUNTIME_PALETTE_ROWS_MAX];
+    int count;
+} RuntimePalettes;
+
+static bool runtime_palettes_open(RuntimePalettes *palettes,const char *path) {
+    FILE *f=fopen(path,"rb");
+    if(!f)return false;
+    char line[512];
+    bool ok=fgets(line,sizeof line,f) &&
+        !strcmp(line,"schema\tmetroidvania-samus-palettes-v1\n");
+    palettes->count=0;
+    while(ok && fgets(line,sizeof line,f)) {
+        RuntimePaletteRow row={0};
+        int consumed=0;
+        if(palettes->count>=RUNTIME_PALETTE_ROWS_MAX ||
+           sscanf(line,"%15[^\t]\t%23[^\t]\t%d%n",row.suit,row.kind,&row.row,
+                  &consumed)!=3 || row.row<0 || row.row>15){ok=false;break;}
+        const char *cursor=line+consumed;
+        for(int i=0;i<16 && ok;i++) {
+            unsigned int rgb;
+            int used=0;
+            if(sscanf(cursor,"\t%6x%n",&rgb,&used)!=1 || used!=7)ok=false;
+            else {
+                row.colors[i]=(SDL_Color){(Uint8)(rgb>>16),(Uint8)(rgb>>8),(Uint8)rgb,255};
+                cursor+=used;
+            }
+        }
+        if(ok && *cursor!='\n' && *cursor!='\0')ok=false;
+        if(ok)palettes->rows[palettes->count++]=row;
+    }
+    if(ferror(f))ok=false;
+    fclose(f);
+    return ok && palettes->count>0;
+}
+
+static const RuntimePaletteRow *runtime_palette_row(const RuntimePalettes *palettes,
+        const char *suit,const char *kind,int row) {
+    for(int i=0;i<palettes->count;i++) {
+        const RuntimePaletteRow *entry=&palettes->rows[i];
+        if(entry->row==row && !strcmp(entry->suit,suit) && !strcmp(entry->kind,kind))
+            return entry;
+    }
+    return NULL;
+}
+
+/* The two OBJ palette rows SamusUpdatePalette loads for Samus. */
+typedef struct {
+    const char *suit0,*kind0; int row0;
+    const char *suit1,*kind1; int row1;
+} RuntimePaletteChoice;
+
+static RuntimePaletteChoice runtime_samus_palette(const MzmSamus *samus,bool beam_release,
+        const char *suit,unsigned int frame_counter) {
+    /* Suitless Samus borrows the Power Suit speed boost and unmorph rows. */
+    const char *borrowed=strcmp(suit,"Suitless")?suit:"PowerSuit";
+    RuntimePaletteChoice choice={suit,"Default",0,suit,"Default",1};
+    if(samus->pose==MZM_POSE_DYING) {
+        /* Row 0 is always the Power Suit dying row; the source then indexes
+         * past it into sSamusPal_Generic_Dying, which directly follows. */
+        int frame=samus->anim_frame;
+        choice=(RuntimePaletteChoice){"PowerSuit","Dying",0,"Generic","Dying",0};
+        if(frame==11 || frame==15) choice.row1=1;
+        else if(frame==12 || frame==14) choice.row1=3;
+        else if(frame==13) choice.row1=5;
+        else if(frame<=10) {
+            choice.suit1=strcmp(suit,"Suitless")?suit:"Generic";
+            choice.row1=0;
+        }
+        return choice;
+    }
+    if(samus->invincibility) {
+        choice.kind0="Flashing";
+        choice.row0=(frame_counter&3u)<=1u?0:1;
+    } else if(samus->pose==MZM_POSE_SCREW_ATTACKING) {
+        if(samus->anim_frame&1u){choice.kind0="Flashing";choice.row0=1;}
+    } else if(beam_release) {
+        choice.kind0="BeamRelease";
+    } else if(samus->unmorph_palette_timer) {
+        choice.suit0=borrowed;
+        choice.kind0="Unmorph";
+        choice.row0=(uint8_t)(samus->unmorph_palette_timer-5)>4?0:1;
+    }
+    return choice;
+}
+
+/* 32 OBJ colors for a choice; ``echo`` draws every part with bank 1. */
+static bool runtime_palette_colors(const RuntimePalettes *palettes,
+        const RuntimePaletteChoice *choice,bool echo,SDL_Color colors[32]) {
+    const RuntimePaletteRow *row0=runtime_palette_row(palettes,choice->suit0,
+                                                      choice->kind0,choice->row0);
+    const RuntimePaletteRow *row1=runtime_palette_row(palettes,choice->suit1,
+                                                      choice->kind1,choice->row1);
+    if(!row0 || !row1)return false;
+    memcpy(colors,echo?row1->colors:row0->colors,sizeof row0->colors);
+    memcpy(colors+16,row1->colors,sizeof row1->colors);
+    return true;
+}
+
 #ifndef FUSION_RUNTIME_TEST
 /* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
 #define RUNTIME_LIBRARY_MAX 8192
@@ -651,13 +757,16 @@ static bool runtime_echo_fast_ascent(const MzmSamus *samus) {
 #define RUNTIME_CANNON_SCHEMA "schema\tmetroidvania-samus-cannon-offsets-v1\n"
 /* One native frame: duration, top-left offset from the character's draw
  * origin, an optional arm cannon offset and the private BMP. */
+#define RUNTIME_PALETTE_SLOTS 16
 typedef struct {
     unsigned int ticks;
     int offset_x,offset_y;
     bool has_cannon;
     int cannon_x,cannon_y;
     char path[256];
-    SDL_Texture *texture;
+    SDL_Texture *texture;            /* 32-bit frames */
+    SDL_Surface *indexed;            /* palette-indexed frames */
+    SDL_Texture *variants[RUNTIME_PALETTE_SLOTS];
     int w,h;
 } RuntimeLibraryFrame;
 typedef struct {
@@ -678,8 +787,13 @@ static int runtime_library_compare(const void *a,const void *b) {
 static void runtime_library_free(RuntimeLibrary *lib) {
     for(int i=0;i<lib->count;i++) {
         RuntimeLibraryEntry *entry=&lib->entries[i];
-        for(int j=0;j<entry->count;j++)
-            if(entry->frames[j].texture) SDL_DestroyTexture(entry->frames[j].texture);
+        for(int j=0;j<entry->count;j++) {
+            RuntimeLibraryFrame *frame=&entry->frames[j];
+            if(frame->texture) SDL_DestroyTexture(frame->texture);
+            for(int k=0;k<RUNTIME_PALETTE_SLOTS;k++)
+                if(frame->variants[k]) SDL_DestroyTexture(frame->variants[k]);
+            if(frame->indexed) SDL_DestroySurface(frame->indexed);
+        }
         free(entry->frames);
         free(entry->ticks);
     }
@@ -913,20 +1027,65 @@ static int runtime_projectile_durations(void *context,const MzmProjectile *proje
     for(int i=0;i<count;i++)durations[i]=(uint8_t)entry->ticks[i];
     return count;
 }
-static bool runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry *entry,int index) {
+/* Texture of one frame; indexed frames are colorized with ``colors`` and
+ * cached in ``slot`` (pass slot -1 and NULL colors for 32-bit libraries). */
+static SDL_Texture *runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry *entry,
+                                            int index,int slot,const SDL_Color *colors) {
     RuntimeLibraryFrame *frame=&entry->frames[index];
-    if(frame->texture)return true;
-    SDL_Surface *s=SDL_LoadBMP(frame->path);
-    if(!s)return false;
-    if(s->w<1||s->h<1||s->w>512||s->h>512){SDL_DestroySurface(s);return false;}
-    int w=s->w,h=s->h;
-    SDL_Texture *t=SDL_CreateTextureFromSurface(r,s);
-    SDL_DestroySurface(s);
-    if(!t)return false;
-    frame->texture=t;frame->w=w;frame->h=h;
-    SDL_SetTextureScaleMode(t,SDL_SCALEMODE_NEAREST);
-    SDL_SetTextureBlendMode(t,SDL_BLENDMODE_BLEND);
-    return true;
+    if(!frame->texture && !frame->indexed) {
+        SDL_Surface *s=SDL_LoadBMP(frame->path);
+        if(!s)return NULL;
+        if(s->w<1||s->h<1||s->w>512||s->h>512){SDL_DestroySurface(s);return NULL;}
+        frame->w=s->w;frame->h=s->h;
+        if(s->format==SDL_PIXELFORMAT_INDEX8) {
+            SDL_SetSurfaceColorKey(s,true,0);
+            frame->indexed=s;
+        } else {
+            frame->texture=SDL_CreateTextureFromSurface(r,s);
+            SDL_DestroySurface(s);
+            if(!frame->texture)return NULL;
+            SDL_SetTextureScaleMode(frame->texture,SDL_SCALEMODE_NEAREST);
+            SDL_SetTextureBlendMode(frame->texture,SDL_BLENDMODE_BLEND);
+        }
+    }
+    if(frame->texture)return frame->texture;
+    if(slot<0 || slot>=RUNTIME_PALETTE_SLOTS || !colors)return NULL;
+    if(!frame->variants[slot]) {
+        SDL_Palette *palette=SDL_GetSurfacePalette(frame->indexed);
+        if(!palette || !SDL_SetPaletteColors(palette,colors,0,32))return NULL;
+        SDL_Texture *t=SDL_CreateTextureFromSurface(r,frame->indexed);
+        if(!t)return NULL;
+        SDL_SetTextureScaleMode(t,SDL_SCALEMODE_NEAREST);
+        SDL_SetTextureBlendMode(t,SDL_BLENDMODE_BLEND);
+        frame->variants[slot]=t;
+    }
+    return frame->variants[slot];
+}
+
+/* Palette variants in use: each slot caches one 32-color combination. */
+typedef struct {
+    SDL_Color colors[RUNTIME_PALETTE_SLOTS][32];
+    int count;
+} RuntimePaletteSlots;
+static void runtime_library_flush_variants(RuntimeLibrary *lib) {
+    for(int i=0;i<lib->count;i++)
+        for(int j=0;j<lib->entries[i].count;j++)
+            for(int k=0;k<RUNTIME_PALETTE_SLOTS;k++)
+                if(lib->entries[i].frames[j].variants[k]) {
+                    SDL_DestroyTexture(lib->entries[i].frames[j].variants[k]);
+                    lib->entries[i].frames[j].variants[k]=NULL;
+                }
+}
+static int runtime_palette_slot(RuntimePaletteSlots *slots,RuntimeLibrary *lib,
+                                const SDL_Color colors[32]) {
+    for(int i=0;i<slots->count;i++)
+        if(!memcmp(slots->colors[i],colors,sizeof slots->colors[i]))return i;
+    if(slots->count==RUNTIME_PALETTE_SLOTS) {
+        runtime_library_flush_variants(lib);
+        slots->count=0;
+    }
+    memcpy(slots->colors[slots->count],colors,sizeof slots->colors[0]);
+    return slots->count++;
 }
 /* Load an exported native room and its background texture. */
 static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,
@@ -1023,7 +1182,7 @@ static uint16_t runtime_held_buttons(const bool *keys,SDL_Gamepad *pad) {
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
     const char *library_index=NULL, *animation_map_index=NULL;
-    const char *projectile_index=NULL, *cannon_index=NULL;
+    const char *projectile_index=NULL, *cannon_index=NULL, *palette_index=NULL;
     const char *room_alias=NULL, *samus_assets=NULL;
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
@@ -1079,7 +1238,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     /* --room <area>_<NNN>: a native room exported by scripts/mzm_runtime_room.py. */
-    char bundle_index[4096],bundle_map[4096],bundle_cannon[4096];
+    char bundle_index[4096],bundle_map[4096],bundle_cannon[4096],bundle_palettes[4096];
     char native_room[4096],native_background[4096];
     bool native_format=false;
     if (room_alias) {
@@ -1116,10 +1275,14 @@ int main(int argc, char **argv) {
         n=snprintf(bundle_cannon,sizeof bundle_cannon,"%s/cannon_offsets.tsv",samus_assets);
         if(n<0 || (size_t)n>=sizeof bundle_cannon)return 2;
         cannon_index=bundle_cannon;
+        n=snprintf(bundle_palettes,sizeof bundle_palettes,"%s/palettes.tsv",samus_assets);
+        if(n<0 || (size_t)n>=sizeof bundle_palettes)return 2;
+        palette_index=bundle_palettes;
     } else if (room_alias && !library_index) {
         library_index="assets/extracted/metroid/sprites/samus/runtime/runtime_index.tsv";
         animation_map_index="assets/extracted/metroid/sprites/samus/runtime/animation_map.tsv";
         cannon_index="assets/extracted/metroid/sprites/samus/runtime/cannon_offsets.tsv";
+        palette_index="assets/extracted/metroid/sprites/samus/runtime/palettes.tsv";
         if(!projectile_index)
             projectile_index="assets/extracted/metroid/sprites/projectiles/runtime/runtime_index.tsv";
     }
@@ -1196,6 +1359,10 @@ int main(int argc, char **argv) {
     int rc=1;
     RuntimeLibrary library = {0};
     RuntimeLibrary projectile_library = {0};
+    static RuntimePalettes palettes;
+    RuntimePaletteSlots palette_slots={0};
+    const char *palette_suit=NULL;
+    unsigned int palette_frame=0;
     RuntimeAnimationMap animation_map = {0};
     SDL_Gamepad *gamepad = NULL;
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
@@ -1220,6 +1387,10 @@ int main(int argc, char **argv) {
     if(cannon_index && !runtime_cannon_offsets_open(&library,cannon_index))
         fprintf(stderr,"Arm cannon offsets unavailable (%s); projectiles spawn at "
                 "Samus's position.\n",cannon_index);
+    if(palette_index && !runtime_palettes_open(&palettes,palette_index)) {
+        fprintf(stderr,"Samus palettes failed to load: %s\n",palette_index);
+        goto cleanup;
+    }
     if(projectile_index) {
         if(!runtime_library_open(&projectile_library,projectile_index)) {
             fprintf(stderr,"Projectile library failed to load: %s\n",projectile_index);
@@ -1431,6 +1602,7 @@ int main(int argc, char **argv) {
             input.new_projectile=mzm_weapons_begin_frame(
                 &weapons,&samus,input.held,input.pressed,&equipment);
             mzm_samus_update(&samus,&input,&equipment,&collision,&animation_source);
+            palette_frame++;
             /* ProjectileUpdate reads the arm cannon offset of the pose and
              * frame Samus has after her update. */
             int cannon_x=0,cannon_y=0;
@@ -1549,10 +1721,27 @@ int main(int argc, char **argv) {
                 frame=samus.anim_frame<lib_entry->count?samus.anim_frame:lib_entry->count-1;
         }
         unsigned int render_tick=(unsigned int)(SDL_GetTicks()*60u/1000u);
-        if(lib_entry && lib_entry->count>0 &&
-           runtime_library_texture(renderer,lib_entry,frame)) {
+        if(palette_suit!=pose_animation.suit) {
+            /* A suit change replaces every palette row. */
+            runtime_library_flush_variants(&library);
+            palette_slots.count=0;
+            palette_suit=pose_animation.suit;
+        }
+        /* SamusUpdatePalette: the rows for this frame, and bank 1 for echoes. */
+        RuntimePaletteChoice palette_choice=animation_browser?
+            (RuntimePaletteChoice){pose_animation.suit,"Default",0,pose_animation.suit,"Default",1}:
+            runtime_samus_palette(&samus,weapons.release_palette_timer>0,
+                                  pose_animation.suit,palette_frame);
+        SDL_Color body_colors[32],echo_colors[32];
+        bool have_palette=palettes.count>0 &&
+            runtime_palette_colors(&palettes,&palette_choice,false,body_colors) &&
+            runtime_palette_colors(&palettes,&palette_choice,true,echo_colors);
+        int body_slot=have_palette?runtime_palette_slot(&palette_slots,&library,body_colors):-1;
+        SDL_Texture *sprite=lib_entry && lib_entry->count>0?
+            runtime_library_texture(renderer,lib_entry,frame,body_slot,
+                                    have_palette?body_colors:NULL):NULL;
+        if(sprite) {
             const RuntimeLibraryFrame *art=&lib_entry->frames[frame];
-            SDL_Texture *sprite=art->texture;
             float sw=(float)art->w,sh=(float)art->h;
             if(animation_browser || !echo.active) {
                 echo_visible=false;
@@ -1560,17 +1749,17 @@ int main(int argc, char **argv) {
                 echo_render_tick=render_tick;
                 echo_visible=runtime_echo_sample(&echo,2u,&echo_x,&echo_y);
             }
-            if(echo_visible) {
-                /* Palette bank 1 is not exported yet; use a translucent
-                 * violet modulation while retaining the native timing. */
-                SDL_SetTextureColorMod(sprite,110,100,255);
-                SDL_SetTextureAlphaMod(sprite,145);
+            if(echo_visible && have_palette) {
+                int echo_slot=runtime_palette_slot(&palette_slots,&library,echo_colors);
+                /* The slot table may have been flushed; refetch both. */
+                SDL_Texture *echo_sprite=runtime_library_texture(
+                    renderer,lib_entry,frame,echo_slot,echo_colors);
+                body_slot=runtime_palette_slot(&palette_slots,&library,body_colors);
+                sprite=runtime_library_texture(renderer,lib_entry,frame,body_slot,body_colors);
                 SDL_FRect echo_dest={viewport.x+(echo_x+(float)art->offset_x-cx)*scale,
                                      viewport.y+(echo_y+(float)art->offset_y-cy)*scale,
                                      sw*scale,sh*scale};
-                SDL_RenderTexture(renderer,sprite,NULL,&echo_dest);
-                SDL_SetTextureColorMod(sprite,255,255,255);
-                SDL_SetTextureAlphaMod(sprite,255);
+                if(echo_sprite)SDL_RenderTexture(renderer,echo_sprite,NULL,&echo_dest);
             }
             /* SamusDraw places OAM at the native pixel position; the
              * runtime stores feet on the block edge, one subpixel lower. */
@@ -1578,11 +1767,7 @@ int main(int argc, char **argv) {
             SDL_FRect dest={viewport.x+(anchor_x+(float)art->offset_x-cx)*scale,
                             viewport.y+(anchor_y+(float)art->offset_y-cy)*scale,
                             sw*scale,sh*scale};
-            bool damage_flash=samus.pose!=MZM_POSE_DYING &&
-                samus.invincibility>0u && (render_tick&3u)<=1u;
-            if(damage_flash) SDL_SetTextureAlphaMod(sprite,90);
-            SDL_RenderTexture(renderer,sprite,NULL,&dest);
-            if(damage_flash) SDL_SetTextureAlphaMod(sprite,255);
+            if(sprite)SDL_RenderTexture(renderer,sprite,NULL,&dest);
         }
         /* Hatch graphics use common tiles the partial room render cannot draw
          * yet; closed hatches are outlined with a diagnostic tint. */
@@ -1610,12 +1795,13 @@ int main(int argc, char **argv) {
             RuntimeLibraryEntry *entry=runtime_library_find(&projectile_library,key);
             if(!entry || entry->count==0)continue;
             int index=projectile->anim_frame<entry->count?projectile->anim_frame:0;
-            if(!runtime_library_texture(renderer,entry,index))continue;
+            SDL_Texture *shot_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+            if(!shot_texture)continue;
             const RuntimeLibraryFrame *art=&entry->frames[index];
             SDL_FRect shot={viewport.x+((float)(projectile->x>>2)+(float)art->offset_x-cx)*scale,
                             viewport.y+((float)(projectile->y>>2)+(float)art->offset_y-cy)*scale,
                             (float)art->w*scale,(float)art->h*scale};
-            SDL_RenderTexture(renderer,art->texture,NULL,&shot);
+            SDL_RenderTexture(renderer,shot_texture,NULL,&shot);
         }
         if(show_hitbox || !lib_entry) {
             float bx,by,bw,bh;

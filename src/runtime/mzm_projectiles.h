@@ -64,6 +64,8 @@ typedef struct {
 typedef struct {
     MzmProjectile list[MZM_MAX_PROJECTILES];
     uint8_t cooldown;
+    /* beamReleasePaletteTimer: four frames after each beam shot. */
+    uint8_t release_palette_timer;
     MzmHighlightedWeapon highlighted;
     bool super_missiles_selected;
     bool pending;

@@ -714,8 +714,10 @@ static int pose_unmorphing(Ctx *x) {
 /* SamusMorphballMidAir */
 static int pose_morph_midair(Ctx *x) {
     MzmSamus *s = x->s;
-    if (pressed(x, MZM_KEY_UP) && standing_clear(x->c, s))
+    if (pressed(x, MZM_KEY_UP) && standing_clear(x->c, s)) {
+        s->unmorph_palette_timer = 15;
         return MZM_POSE_MIDAIR;
+    }
     if (s->forced == MZM_FORCED_NONE) {
         if (!held(x, MZM_KEY_A) && s->y_velocity > 0) s->y_velocity = 0;
     } else if (s->y_velocity < 8 - 1) {
@@ -868,7 +870,10 @@ static int pose_graphics(Ctx *x) {
             if (update_animation(x) == ANIM_ENDED) return MZM_POSE_MORPH_BALL;
             return NEXT_NONE;
         case MZM_POSE_UNMORPHING:
-            if (update_animation(x) == ANIM_ENDED) return MZM_POSE_CROUCHING;
+            if (update_animation(x) == ANIM_ENDED) {
+                s->unmorph_palette_timer = 15;
+                return MZM_POSE_CROUCHING;
+            }
             return NEXT_NONE;
         case MZM_POSE_PULLING_UP:
             if (update_animation(x) == ANIM_ENDED) {
@@ -1047,6 +1052,7 @@ void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
     samus->grabbed_ledge = false;
     samus->anim_counter++;
     if (samus->invincibility) samus->invincibility--;
+    if (samus->unmorph_palette_timer) samus->unmorph_palette_timer--;
     set_spinning_pose(&x);
     int next = pose_handler(&x);
     if (next == NEXT_NONE) next = pose_graphics(&x);

@@ -184,6 +184,48 @@ int main(void) {
     assert(!runtime_hit_hatch(doors, 1 * 64 + 10, 3 * 64, DAMAGE_BEAM));
     assert(!doors->hatches[1].open);
     free(doors);
+
+    /* SamusUpdatePalette row selection and the echo's palette bank 1. */
+    static RuntimePalettes palettes;
+    assert(runtime_palettes_open(&palettes, FIXTURE_DIR "/samus_palettes.tsv"));
+    assert(runtime_palette_row(&palettes, "VariaSuit", "Flashing", 1));
+    assert(!runtime_palette_row(&palettes, "VariaSuit", "Flashing", 2));
+    mzm_samus_init(&samus, 0, 0, 1);
+    RuntimePaletteChoice choice = runtime_samus_palette(&samus, false, "VariaSuit", 0);
+    assert(!strcmp(choice.kind0, "Default") && choice.row0 == 0 && choice.row1 == 1);
+    samus.invincibility = 10;
+    choice = runtime_samus_palette(&samus, false, "VariaSuit", 2);
+    assert(!strcmp(choice.kind0, "Flashing") && choice.row0 == 1);
+    assert(!strcmp(choice.kind1, "Default") && choice.row1 == 1);
+    samus.invincibility = 0;
+    choice = runtime_samus_palette(&samus, true, "VariaSuit", 0);
+    assert(!strcmp(choice.kind0, "BeamRelease"));
+    samus.unmorph_palette_timer = 7;
+    choice = runtime_samus_palette(&samus, false, "Suitless", 0);
+    assert(!strcmp(choice.suit0, "PowerSuit") && !strcmp(choice.kind0, "Unmorph") &&
+           choice.row0 == 1);
+    samus.unmorph_palette_timer = 12;
+    assert(runtime_samus_palette(&samus, false, "VariaSuit", 0).row0 == 0);
+    samus.unmorph_palette_timer = 0;
+    samus.pose = MZM_POSE_SCREW_ATTACKING;
+    samus.anim_frame = 3;
+    assert(!strcmp(runtime_samus_palette(&samus, false, "VariaSuit", 0).kind0, "Flashing"));
+    samus.pose = MZM_POSE_DYING;
+    samus.anim_frame = 13;
+    choice = runtime_samus_palette(&samus, false, "VariaSuit", 0);
+    assert(!strcmp(choice.suit0, "PowerSuit") && !strcmp(choice.suit1, "Generic") &&
+           choice.row1 == 5);
+    samus.anim_frame = 2;
+    choice = runtime_samus_palette(&samus, false, "VariaSuit", 0);
+    assert(!strcmp(choice.suit1, "VariaSuit") && !strcmp(choice.kind1, "Dying"));
+    samus.pose = MZM_POSE_STANDING;
+    choice = runtime_samus_palette(&samus, false, "VariaSuit", 0);
+    SDL_Color body[32], echo_colors[32];
+    assert(runtime_palette_colors(&palettes, &choice, false, body));
+    assert(runtime_palette_colors(&palettes, &choice, true, echo_colors));
+    assert(!memcmp(echo_colors, echo_colors + 16, sizeof(SDL_Color) * 16));
+    assert(!memcmp(body + 16, echo_colors + 16, sizeof(SDL_Color) * 16));
+    assert(memcmp(body, echo_colors, sizeof(SDL_Color) * 16));
     free(r);
     return 0;
 }

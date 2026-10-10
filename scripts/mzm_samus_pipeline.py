@@ -26,6 +26,7 @@ from scripts import mzm_projectile_compose
 from scripts.mzm_samus_compose import (
     VISUAL_SUITS,
     compose_all,
+    palette_rows,
     parse_symbols,
     parse_tables,
     verify_symbols_against_rom,
@@ -89,16 +90,17 @@ def build_animation_map(keys) -> tuple[str, dict]:
     rows = []
     missing = []
     for suit in SUITS:
+        family = VISUAL_SUITS[suit][0]
         for side in ("left", "right"):
             for action, (table, mode) in AIM_ACTIONS.items():
                 for aim, selector in AIMS.items():
-                    key = f"{suit}/{table}/{selector}/{side}"
+                    key = f"{family}/{table}/{selector}/{side}"
                     if key in available:
                         rows.append((action, suit, side, aim, mode, key))
                     elif aim in ("forward", "diagonalup", "diagonaldown"):
                         missing.append(f"{action}/{suit}/{side}/{aim}")
             for action, (table, selector, mode) in SIMPLE_ACTIONS.items():
-                key = f"{suit}/{table}/{selector}/{side}"
+                key = f"{family}/{table}/{selector}/{side}"
                 if key in available:
                     rows.append((action, suit, side, "none", mode, key))
                 else:
@@ -118,6 +120,16 @@ def build_animation_map(keys) -> tuple[str, dict]:
 
 
 CANNON_SCHEMA = "metroidvania-samus-cannon-offsets-v1"
+PALETTE_SCHEMA = "metroidvania-samus-palettes-v1"
+
+
+def palette_table(rows) -> str:
+    """suit, kind, row and 16 RGB colors for every Samus palette array."""
+    lines = [f"schema\t{PALETTE_SCHEMA}"]
+    for suit, kind, row, colors in rows:
+        lines.append("\t".join([suit, kind, str(row)] +
+                                [f"{r:02x}{g:02x}{b:02x}" for r, g, b in colors]))
+    return "\n".join(lines) + "\n"
 PROJECTILE_SYMBOL_PREFIXES = ("sCommonSprites", "sBeamPal", "sNormalBeam",
                               "sChargedNormalBeam", "sLongBeam", "sChargedLongBeam",
                               "sIceBeam", "sChargedIceBeam", "sWaveBeam",
@@ -210,8 +222,8 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path,
     metadata = {
         "schema": "metroidvania-mzm-samus-runtime-v3",
         **totals,
-        "suits": {suit: sum(key.startswith(suit + "/") for key in sequences)
-                  for suit in SUITS},
+        "families": {family: sum(key.startswith(family + "/") for key in sequences)
+                     for family in ("PowerSuit", "FullSuit", "Suitless")},
         "composition": {key: report[key] for key in
                         ("variants", "sequences", "frames", "table_problems")},
         "object_store": "sha256",
@@ -220,6 +232,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path,
     }
     library.write_text("animation_map.tsv", animation_map)
     library.write_text("cannon_offsets.tsv", cannon_offsets(sequences))
+    library.write_text("palettes.tsv", palette_table(palette_rows(rom, symbols)))
     library.write_text("sequences.json",
                        json.dumps(sequences, indent=2, sort_keys=True) + "\n")
     metadata["projectiles"] = produce_projectiles(root, rom, Path(decomp),

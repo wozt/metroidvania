@@ -1689,3 +1689,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   non-destructive layers. It states the target pipeline and separates what
   exists, what is experimental and what is not implemented. README and the
   roadmap link to it; no tool was restructured.
+
+## Patch 0199 - native Samus palettes
+
+- The Samus library now stores palette-indexed 8-bit frames per graphics
+  family (1,056 sequences, 2,600 unique BMPs instead of 1,864 per-suit copies)
+  plus `palettes.tsv` with every `sSamusPal_*` row, verified against the ROM.
+- The runtime colorizes indexed frames per palette variant with a small
+  texture cache and selects rows like `SamusUpdatePalette`: invincibility
+  flashing (replacing the old alpha blink), Screw Attack flash, beam release,
+  unmorph and the dying sequence (including the source's read into
+  `sSamusPal_Generic_Dying`). The jump echo now uses palette bank 1 instead of
+  a violet tint. The controller tracks `unmorphPaletteTimer` and the weapon
+  state tracks `beamReleasePaletteTimer`.
+- Added tests for palette parsing, every selection rule, the echo bank and the
+  indexed BMP writer; the registry test now checks suit-to-family binding.
+- Validation on 2026-10-10: CTest passed 17/17; a Brinstar 001 capture showed
+  correct Power Suit colors from the indexed frames.

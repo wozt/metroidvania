@@ -19,8 +19,8 @@ from scripts.mzm_samus_compose import (
     to_bmp,
     verify_symbols_against_rom,
 )
-from scripts.mzm_samus_pipeline import build_animation_map, produce
-from scripts.sprite_library import INDEX_SCHEMA
+from scripts.mzm_samus_pipeline import build_animation_map, palette_table, produce
+from scripts.sprite_library import INDEX_SCHEMA, bmp8_from_indices
 
 TABLES = """
 const struct SamusAnimationData* const sSamusAnimPointers_PowerSuit[SPOSE_COUNT][2] = {
@@ -219,24 +219,39 @@ class ReferenceElfTests(unittest.TestCase):
 
 
 class PipelineTests(unittest.TestCase):
-    def test_animation_map_uses_native_keys_for_every_visual_suit(self):
-        keys = ["VariaSuit/Standing/ACD_FORWARD/left",
-                "VariaSuit/Standing/ACD_UP/left",
-                "GravitySuit/pose/SPOSE_SPINNING/right",
+    def test_animation_map_binds_visual_suits_to_graphics_families(self):
+        keys = ["PowerSuit/Standing/ACD_FORWARD/left",
+                "PowerSuit/Standing/ACD_UP/left",
+                "FullSuit/pose/SPOSE_SPINNING/right",
                 "PowerSuit/ScrewAttacking/TRUE/right"]
         content, report = build_animation_map(keys)
+        # Varia uses Power Suit graphics, Gravity uses Full Suit graphics.
         self.assertIn("idle\tVariaSuit\tleft\tforward\tloop\t"
-                      "VariaSuit/Standing/ACD_FORWARD/left\n", content)
-        self.assertIn("idle\tVariaSuit\tleft\tup\tloop\tVariaSuit/Standing/ACD_UP/left\n",
+                      "PowerSuit/Standing/ACD_FORWARD/left\n", content)
+        self.assertIn("idle\tPowerSuit\tleft\tup\tloop\tPowerSuit/Standing/ACD_UP/left\n",
                       content)
         self.assertIn("spin\tGravitySuit\tright\tnone\tloop\t"
-                      "GravitySuit/pose/SPOSE_SPINNING/right\n", content)
+                      "FullSuit/pose/SPOSE_SPINNING/right\n", content)
         self.assertIn("screw_attack_space\tPowerSuit\tright\tnone\tloop\t"
                       "PowerSuit/ScrewAttacking/TRUE/right\n", content)
         self.assertIn("spin/Suitless/left/none", report["missing"])
         self.assertEqual(report["graphics_by_suit"]["GravitySuit"], "FullSuit")
         self.assertEqual(report["palette_by_suit"]["VariaSuit"],
                          "sSamusPal_VariaSuit_Default")
+
+    def test_palette_table_and_indexed_frames(self):
+        text = palette_table([("VariaSuit", "Flashing", 1, [(255, 0, 16)] * 16)])
+        self.assertEqual(text.splitlines()[0], "schema\tmetroidvania-samus-palettes-v1")
+        self.assertEqual(text.splitlines()[1].split("\t")[:4],
+                         ["VariaSuit", "Flashing", "1", "ff0010"])
+        bmp, left, top = bmp8_from_indices({(-2, -3): 17, (0, -3): 1},
+                                           [(0, 0, 0)] + [(9, 9, 9)] * 31)
+        self.assertEqual((left, top), (-2, -3))
+        self.assertEqual(struct.unpack_from("<iiHH", bmp, 18), (3, 1, 1, 8))
+        offset = struct.unpack_from("<I", bmp, 10)[0]
+        self.assertEqual(bmp[offset:offset + 3], bytes((17, 0, 1)))
+        with self.assertRaisesRegex(ValueError, "palette index"):
+            bmp8_from_indices({(0, 0): 40}, [(0, 0, 0)] * 32)
 
     def test_produce_deduplicates_prunes_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as directory:

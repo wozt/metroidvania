@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from scripts.gba_oam import unpack_oam
 from scripts.gba_tiles import bgr555
 from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset, stage
-from scripts.sprite_library import bmp_from_pixels
+from scripts.sprite_library import bmp8_from_indices, bmp_from_pixels
 
 ANIMATION_RECORD_BYTES = 16
 CANNON_RECORD_BYTES = 8
@@ -338,8 +338,31 @@ def to_bmp(pixels, colors) -> tuple[bytes, int, int]:
     return bmp_from_pixels({point: colors[index] for point, index in pixels.items()})
 
 
-def variant_key(visual: str, variant: Variant) -> str:
-    return f"{visual}/{variant.table}/{variant.selector}/{variant.side}"
+def variant_key(family: str, variant: Variant) -> str:
+    return f"{family}/{variant.table}/{variant.selector}/{variant.side}"
+
+
+# Preview palette stored in each indexed BMP: the family's default suit.
+FAMILY_PREVIEW = {"PowerSuit": "PowerSuit", "FullSuit": "FullSuit",
+                  "Suitless": "Suitless"}
+
+
+def palette_rows(rom: bytes, symbols) -> list[tuple[str, str, int, list]]:
+    """Every Samus palette array as (suit, kind, row, 16 colors)."""
+    rows = []
+    for name in sorted(symbols):
+        match = re.fullmatch(r"sSamusPal_([A-Za-z]+)_(\w+)", name)
+        if not match or name.endswith("Pointers"):
+            continue
+        address, size = symbols[name]
+        if size % 32:
+            raise ValueError("palette array is not whole rows: " + name)
+        raw = _slice(rom, address, size, name)
+        for row in range(size // 32):
+            rows.append((match.group(1), match.group(2), row,
+                         [bgr555(struct.unpack_from("<H", raw, (row * 16 + i) * 2)[0])
+                          for i in range(16)]))
+    return rows
 
 
 def compose_all(rom: bytes, tables, symbols, sink) -> dict:
@@ -380,23 +403,23 @@ def compose_all(rom: bytes, tables, symbols, sink) -> dict:
         except (ValueError, KeyError) as exc:
             report["unresolved"][label] = str(exc)
             continue
-        for visual, (family, _, palette) in VISUAL_SUITS.items():
-            if family != variant.family:
-                continue
-            outputs = [("", rendered, variant.cannon_gfx)]
-            if armed is not None:
-                outputs.append(("/armed", armed, variant.armed_gfx))
-            for suffix, frames_in, graphics in outputs:
-                frames = []
-                for pixels, duration, _ in frames_in:
-                    bmp, left, top = to_bmp(pixels, palettes[visual])
-                    frames.append((bmp, duration, left, top + DRAW_Y_OFFSET))
-                report["sequences"] += 1
-                report["frames"] += len(frames)
-                sink(variant_key(visual, variant) + suffix, frames, {
-                    "body": variant.body, "cannon": variant.cannon,
-                    "cannon_gfx": list(graphics or ()),
-                    "cannon_parts": [parts for _, _, parts in frames_in],
-                    "muzzle": [list(m) for m in muzzles] if muzzles else None,
-                    "palette": palette})
+        # Frames stay palette-indexed (bank * 16 + color); the runtime picks
+        # the suit and effect palette rows like SamusUpdatePalette.
+        outputs = [("", rendered, variant.cannon_gfx)]
+        if armed is not None:
+            outputs.append(("/armed", armed, variant.armed_gfx))
+        preview = palettes[FAMILY_PREVIEW[variant.family]]
+        for suffix, frames_in, graphics in outputs:
+            frames = []
+            for pixels, duration, _ in frames_in:
+                bmp, left, top = bmp8_from_indices(pixels, [(0, 0, 0)] + preview[1:])
+                frames.append((bmp, duration, left, top + DRAW_Y_OFFSET))
+            report["sequences"] += 1
+            report["frames"] += len(frames)
+            sink(variant_key(variant.family, variant) + suffix, frames, {
+                "body": variant.body, "cannon": variant.cannon,
+                "cannon_gfx": list(graphics or ()),
+                "cannon_parts": [parts for _, _, parts in frames_in],
+                "muzzle": [list(m) for m in muzzles] if muzzles else None,
+                "preview_palette": VISUAL_SUITS[FAMILY_PREVIEW[variant.family]][2]})
     return report

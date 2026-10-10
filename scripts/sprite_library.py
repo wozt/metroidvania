@@ -62,6 +62,37 @@ def bmp_from_pixels(pixels: dict[tuple[int, int], tuple[int, int, int]]
     return bmp, left, top
 
 
+def bmp8_from_indices(pixels: dict[tuple[int, int], int],
+                      colors: list[tuple[int, int, int]]) -> tuple[bytes, int, int]:
+    """Crop palette-indexed pixels to an 8-bit BMP; return it with its origin.
+
+    Index 0 is transparent and never stored by the callers; ``colors`` is the
+    preview palette written into the file (up to 256 entries)."""
+    if not pixels:
+        raise ValueError("frame has no visible pixels")
+    if not 1 <= len(colors) <= 256 or any(not 0 < index < len(colors)
+                                         for index in pixels.values()):
+        raise ValueError("palette index outside the preview palette")
+    left = min(x for x, _ in pixels)
+    top = min(y for _, y in pixels)
+    width = max(x for x, _ in pixels) - left + 1
+    height = max(y for _, y in pixels) - top + 1
+    if width > 512 or height > 512:
+        raise ValueError("frame exceeds 512 pixels")
+    pitch = (width + 3) & ~3
+    data = bytearray(pitch * height)
+    for (x, y), index in pixels.items():
+        data[(height - 1 - (y - top)) * pitch + (x - left)] = index
+    palette = bytearray(1024)
+    for index, (red, green, blue) in enumerate(colors):
+        palette[index * 4:index * 4 + 4] = bytes((blue, green, red, 0))
+    header = struct.pack("<IiiHHIIiiII", 40, width, height, 1, 8, 0, len(data),
+                         2835, 2835, 256, 0)
+    offset = 14 + 40 + 1024
+    bmp = struct.pack("<2sIHHI", b"BM", offset + len(data), 0, 0, offset) + header + palette + data
+    return bmp, left, top
+
+
 class LibraryWriter:
     """Accumulate keyed frames, store unique objects and write the index."""
 

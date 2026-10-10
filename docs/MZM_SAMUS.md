@@ -40,8 +40,19 @@ Graphics and palettes combine into five visual suits:
 | GravitySuit | Full Suit | `sSamusPal_GravitySuit_Default` |
 | Suitless | Suitless | `sSamusPal_Suitless_Default` |
 
-Each frame is rendered once into OBJ palette indices, colorized per suit,
-cropped to its visible pixels and stored with its native top-left offset. The
+Each frame is rendered once into OBJ palette indices (bank * 16 + color) and
+stored as an 8-bit indexed BMP per graphics family (PowerSuit, FullSuit,
+Suitless), cropped to its visible pixels with its native top-left offset; the
+five visual suits share those frames. `palettes.tsv`
+(`metroidvania-samus-palettes-v1`) holds every `sSamusPal_*` array row by row
+(default, flashing, speed boost, beam release, charging, unmorph, dying,
+saving, map download, frozen). The runtime picks two rows per frame like
+`SamusUpdatePalette`: damage flashing during invincibility, the Screw Attack
+flash, four frames of beam release after each shot, the unmorph rows for 15
+frames after leaving the Morph Ball (Suitless borrows the Power Suit rows),
+and the dying sequence, whose row 0 is the Power Suit dying row and whose
+`+16 * k` offsets read the directly following `sSamusPal_Generic_Dying`. The
+jump echo uses the native palette bank 1 for every part. The
 shared runtime index (`metroidvania-sprite-index-v1`, see
 `scripts/sprite_library.py`) lists
 `key, frame, duration, offset_x, offset_y, object path`; keys are
@@ -72,9 +83,8 @@ staged like `HudGenericLoadCommonSpriteGfx` and `ProjectileLoadGraphics`
 2-7 with the beam row patched into row 2). Offsets are relative to the
 projectile position; X/Y flips mirror around it as `ProjectileDraw` does.
 
-Not yet exported: beam-charge,
-speed-boost, shinespark, flashing, unmorph and dying palette rows, the echo's
-palette bank, and effect sprites such as the Screw Attack and Speed Booster
+Not yet used by the runtime: the charge, speed boost, saving, map download
+and frozen palette rows (their mechanics are missing), and effect sprites such as the Screw Attack and Speed Booster
 overlays. The semantic registry binds 600 rows for 33 actions; the only
 missing bindings are Suitless skid, Screw Attack and shinespark actions, which
 have no native Suitless sequence.
@@ -153,9 +163,7 @@ The jump trail is the native `SamusEcho` behavior documented by the pinned
 decompilation in `src/samus.c`, not a generic motion blur. The runtime keeps a
 64-position ring at 60 Hz and activates on the source condition: MidAir, spin,
 Space Jump, Screw Attack or midair Morph Ball with a Y velocity above 80. It
-renders one past body position while cycling four distance-two offsets. Native
-code forces OBJ palette bank 1 for the copy; the SDL path still uses a
-translucent violet modulation until that palette bank is exported.
+renders one past body position while cycling four distance-two offsets. The copy is drawn with OBJ palette bank 1 for every part, as `SamusDraw` does.
 
 H applies a diagnostic 20-point hit through the native suit reduction rule.
 The 48-frame invincibility interval prevents repeated damage, energy equal to

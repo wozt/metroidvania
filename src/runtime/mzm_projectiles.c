@@ -64,6 +64,7 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
                              uint16_t held, uint16_t pressed,
                              const MzmEquipment *equipment) {
     if (weapons->cooldown) weapons->cooldown--;
+    if (weapons->release_palette_timer) weapons->release_palette_timer--;
     if (equipment->suit == MZM_SUIT_SUITLESS || samus->pose == MZM_POSE_DYING) {
         /* The pistol has its own charge rules and is not implemented. */
         weapons->highlighted = MZM_WEAPON_NONE;
@@ -241,8 +242,11 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
         int32_t x = ((samus->x >> 2) + cannon_x) * MZM_SUBPIXELS_PER_PIXEL;
         int32_t y = (((samus->y - 1) >> 2) + cannon_y) * MZM_SUBPIXELS_PER_PIXEL;
         if (mzm_projectile_count(weapons, type) < rules[type].limit &&
-            projectile_spawn(weapons, type, samus, x, y))
+            projectile_spawn(weapons, type, samus, x, y)) {
             weapons->cooldown = rules[type].cooldown;
+            /* CONVERT_SECONDS(1.f / 15) for beam shots only. */
+            if (type == MZM_PROJECTILE_BEAM) weapons->release_palette_timer = 4;
+        }
         weapons->pending = false;
     }
     for (int i = 0; i < MZM_MAX_PROJECTILES; ++i) {

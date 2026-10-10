@@ -195,6 +195,8 @@ typedef struct MzmSamus {
     uint8_t timer;
     uint8_t anim_frame, anim_counter;
     uint8_t invincibility;
+    /* unmorphPaletteTimer: set when Samus leaves the Morph Ball. */
+    uint8_t unmorph_palette_timer;
     bool touching_side;
     bool grabbed_ledge;
 } MzmSamus;

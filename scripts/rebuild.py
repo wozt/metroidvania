@@ -23,7 +23,7 @@ class Task:
     version: int
     dependencies: tuple[str, ...]
     inputs: Callable[[], list[Path]]
-    outputs: tuple[Path, ...]
+    outputs: tuple[Path, ...] | Callable[[], list[Path]]
     action: Callable[[], None]
 
 
@@ -40,8 +40,8 @@ def _source_inputs() -> list[Path]:
 def _checklist_inputs() -> list[Path]:
     return sorted({
         Path(native_parity.__file__).resolve(),
-        native_parity.INVENTORY,
         native_parity.ANNOTATIONS,
+        *native_inventory.inventory_output_paths(native_parity.INVENTORY),
     })
 
 
@@ -61,21 +61,26 @@ def _write_checklist() -> None:
 TASKS = {
     "inventory": Task(
         name="inventory",
-        version=1,
+        version=2,
         dependencies=(),
         inputs=_source_inputs,
-        outputs=(native_inventory.DEFAULT_OUTPUT,),
+        outputs=lambda: native_inventory.inventory_output_paths(
+            native_inventory.DEFAULT_OUTPUT),
         action=_write_inventory,
     ),
     "checklist": Task(
         name="checklist",
-        version=1,
+        version=2,
         dependencies=("inventory",),
         inputs=_checklist_inputs,
         outputs=(native_parity.CHECKLIST,),
         action=_write_checklist,
     ),
 }
+
+
+def _task_outputs(task: Task) -> list[Path]:
+    return list(task.outputs() if callable(task.outputs) else task.outputs)
 
 
 def _digest(task: Task, dependency_digests: list[str]) -> str:
@@ -153,15 +158,17 @@ def rebuild(selected: set[str], *, force: bool = False,
         digest = _digest(task, dependency_digests)
         current_digests[name] = digest
         previous = state["tasks"].get(name, {}).get("digest")
-        outputs_exist = all(path.is_file() for path in task.outputs)
+        outputs = _task_outputs(task)
+        outputs_exist = all(path.is_file() for path in outputs)
         run = force or previous != digest or not outputs_exist
         if run and not dry_run:
             task.action()
-            if not all(path.is_file() for path in task.outputs):
+            outputs = _task_outputs(task)
+            if not all(path.is_file() for path in outputs):
                 raise ValueError(f"{name}: task completed without all declared outputs")
             state["tasks"][name] = {
                 "digest": digest,
-                "outputs": [path.relative_to(ROOT).as_posix() for path in task.outputs],
+                "outputs": [path.relative_to(ROOT).as_posix() for path in outputs],
                 "version": task.version,
             }
             changed = True

@@ -104,7 +104,7 @@ existing tools are extended toward it as real needs appear.
   project room documents, which already store overrides
   separately from native data but have no ROM or engine encoder yet.
 - Not implemented: migration of every private extractor into the orchestrated
-  rebuild graph, complete table/header/indirect-call inventory, overlay
+  rebuild graph, dynamic callback and runtime dependency capture, overlay
   application inside the engines, complete original-game lifecycles, behavior
   extension points, character adapters and shared crossover runtime systems.
 
@@ -113,25 +113,32 @@ existing tools are extended toward it as real needs appear.
 `python3 -m scripts.rebuild --all` is the initial dependency-aware entry point.
 Its current graph has two deterministic, ROM-free tasks:
 
-1. `inventory` scans both pinned source trees for C definitions and assembly
-   function markers, assigns stable IDs, records source addresses when exposed,
-   resolves direct lexical calls and emits caller/callee edges;
+1. `inventory` scans both pinned source trees for C definitions, assembly
+   function markers, header declarations, top-level data, named aggregate
+   types and object-like constants. It assigns stable IDs, records source
+   addresses when exposed, resolves direct calls and table-based dispatch, and
+   emits the static dependency graph;
 2. `checklist` validates separate human annotations and generates
    `docs/NATIVE_PARITY_CHECKLIST.md`.
 
 Task input hashes, task versions and output paths are cached under ignored
 `.cache/rebuild/state.json`. A changed source, generator or annotation
-invalidates the affected task and its consumers. Automatic discoveries live in
-`data/native_parity/inventory.json`; reviewed feature associations, local ports,
+invalidates the affected task and its consumers. Automatic discoveries use
+`data/native_parity/inventory.json` as a small manifest over deterministic,
+checksummed record fragments in the same directory. Fragments are capped below
+the repository's large-file guard. Reviewed feature associations, local ports,
 tests and status live in `data/native_parity/annotations.json`, so rescanning a
 submodule cannot overwrite a human validation.
 
-This first pass deliberately does not claim complete dependency knowledge. It
-does not yet index header-only declarations, data tables, indirect function
-pointer edges or runtime-observed calls. Aria's unnamed files remain
-unclassified until evidence supports a category. These gaps are emitted in the
-generated checklist rather than silently excluded. Future extractors join this
-task graph without breaking their existing direct commands.
+The second static pass links header declarations to definitions, inventories
+data/type/constant records and proves indirect edges when a lexical table and
+its dispatch expression are both visible. It deliberately does not treat
+dynamic callbacks, structure-member function pointers or runtime-observed calls
+as resolved. Anonymous aggregate typedefs and all names in multi-declarator
+statements are also still open. Aria's unnamed files remain unclassified until
+evidence supports a category. These gaps are emitted in the generated checklist
+rather than silently excluded. Future extractors join this task graph without
+breaking their existing direct commands.
 
 ## Active C components
 

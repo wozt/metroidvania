@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """ROM-free tests for native source inventory and rebuild orchestration."""
 from pathlib import Path
-import json
 import tempfile
 import unittest
 from unittest import mock
@@ -50,15 +49,96 @@ class NativeInventoryTests(unittest.TestCase):
             self.assertEqual(routines[0]["symbol"], "NativeFunction")
             self.assertEqual(routines[0]["_raw_calls"], ["OtherFunction"])
 
+    def test_headers_types_constants_and_pointer_tables_are_discovered(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            header = root / "include/example.h"
+            source = root / "src/example.c"
+            header.parent.mkdir()
+            source.parent.mkdir()
+            header.write_text(
+                "#define EXAMPLE_LIMIT 4\n"
+                "#define EXAMPLE_SCALE(value) ((value) * 2)\n"
+                "struct Example { int value; void (*callback)(void); };\n"
+                "enum ExampleState { EXAMPLE_IDLE, EXAMPLE_ACTIVE = 3 };\n"
+                "void PublicFunction(void);\n"
+                "extern int ExternalData;\n",
+                encoding="utf-8")
+            source.write_text(
+                "typedef void (*ExampleFunc)(void);\n"
+                "static ExampleFunc sFunctions[] = { First, Second };\n",
+                encoding="utf-8")
+
+            declarations = native_inventory._discover_declarations(
+                "mzm", root, header)
+            types = native_inventory._discover_types("mzm", root, header)
+            constants = native_inventory._discover_constants("mzm", root, header)
+            data = native_inventory._discover_c_data("mzm", root, source)
+
+            self.assertEqual([item["symbol"] for item in declarations],
+                             ["PublicFunction"])
+            self.assertEqual({item["symbol"] for item in types},
+                             {"Example", "ExampleState"})
+            example = next(item for item in types if item["symbol"] == "Example")
+            self.assertEqual(example["members"], ["value", "callback"])
+            self.assertEqual([item["symbol"] for item in constants],
+                             ["EXAMPLE_LIMIT"])
+            table = next(item for item in data if item["symbol"] == "sFunctions")
+            self.assertEqual(table["_raw_references"], ["First", "Second"])
+
     def test_tracked_inventory_covers_both_pinned_sources(self):
-        inventory = json.loads(native_inventory.DEFAULT_OUTPUT.read_text(
-            encoding="utf-8"))
+        inventory = native_inventory.load_inventory()
         self.assertEqual(inventory["schema"], native_inventory.SCHEMA)
         self.assertGreater(inventory["games"]["mzm"]["statistics"]["routines"], 2500)
         self.assertGreater(inventory["games"]["aos"]["statistics"]["routines"], 3000)
         for game in ("mzm", "aos"):
             self.assertEqual(len(inventory["games"][game]["source_revision"]), 40)
             self.assertTrue(inventory["games"][game]["routines"])
+            self.assertTrue(inventory["games"][game]["declarations"])
+            self.assertTrue(inventory["games"][game]["data_symbols"])
+            self.assertTrue(inventory["games"][game]["types"])
+            self.assertTrue(inventory["games"][game]["constants"])
+        mzm = inventory["games"]["mzm"]
+        handler = next(item for item in mzm["routines"]
+                       if item["symbol"] == "SamusExecutePoseHandler")
+        tables = {item["table"] for item in handler["indirect_calls"]}
+        self.assertIn("mzm:data:src/samus.c:sSamusPoseFunctionPointers", tables)
+        self.assertGreater(mzm["statistics"]["resolved_indirect_call_edges"], 0)
+        for path in native_inventory.inventory_output_paths():
+            self.assertLess(path.stat().st_size, 4 * 1024 * 1024)
+
+    def test_shards_are_manifested_and_checksum_validated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "inventory.json"
+            game = {
+                "title": "Fixture",
+                "source_root": "third_party/fixture",
+                "source_revision": "0" * 40,
+                "statistics": {},
+                "coverage": {},
+                "files": {},
+                "routines": [{"id": "fixture:routine", "symbol": "Run"}],
+                "declarations": [],
+                "data_symbols": [],
+                "types": [],
+                "constants": [],
+            }
+            document = {
+                "schema": native_inventory.SCHEMA,
+                "generator_version": native_inventory.GENERATOR_VERSION,
+                "evidence": "fixture",
+                "games": {"fixture": game},
+            }
+            native_inventory.write_inventory(document, output)
+
+            loaded = native_inventory.load_inventory(output)
+
+            self.assertEqual(loaded["games"]["fixture"]["routines"],
+                             game["routines"])
+            shard = native_inventory.inventory_output_paths(output)[1]
+            shard.write_bytes(shard.read_bytes() + b" ")
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                native_inventory.load_inventory(output)
 
 
 class NativeParityTests(unittest.TestCase):
@@ -74,7 +154,7 @@ class NativeParityTests(unittest.TestCase):
                          generated)
         self.assertIn("mzm.player.samus_controller", generated)
         self.assertIn("aos.enemies.zombie", generated)
-        self.assertIn("Counts are discovery coverage", generated)
+        self.assertIn("not game fidelity percentages", generated)
 
     def test_rebuild_invalidates_changed_inputs(self):
         cache_root = rebuild.ROOT / ".cache"

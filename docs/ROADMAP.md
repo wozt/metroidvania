@@ -22,11 +22,13 @@ credits.
 - add ROM-backed local fixtures and deterministic traces where redistribution
   rules permit them.
 
-Current progress: both pinned decompilations are inventoried into stable routine
-records, direct static call edges are resolved, reviewed feature annotations are
-validated, and the parity checklist is generated. The initial task graph is
-incremental and ROM-free. Header declarations, data symbols, indirect calls and
-runtime evidence remain open.
+Current progress: both pinned decompilations are inventoried into stable routine,
+header declaration, data symbol, named type and constant records. Direct calls
+and lexically proven function-pointer table dispatch are resolved; reviewed
+feature annotations are validated, and the parity checklist is generated. The
+initial task graph is incremental and ROM-free. Dynamic callbacks, anonymous
+aggregate typedefs, multi-declarator completeness and runtime evidence remain
+open.
 
 Exit criterion: a clean checkout plus supported local ROMs can rebuild every
 required private resource and report every known unported or unvalidated native

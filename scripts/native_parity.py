@@ -8,11 +8,13 @@ from collections import defaultdict
 import json
 from pathlib import Path
 
+from scripts import native_inventory
+
 ROOT = Path(__file__).resolve().parents[1]
 INVENTORY = ROOT / "data/native_parity/inventory.json"
 ANNOTATIONS = ROOT / "data/native_parity/annotations.json"
 CHECKLIST = ROOT / "docs/NATIVE_PARITY_CHECKLIST.md"
-INVENTORY_SCHEMA = "metroidvania-native-inventory-v1"
+INVENTORY_SCHEMA = native_inventory.SCHEMA
 ANNOTATION_SCHEMA = "metroidvania-native-parity-annotations-v1"
 
 CATEGORIES = (
@@ -59,6 +61,8 @@ STATUS_MARKS = {
 
 
 def _load(path: Path) -> dict:
+    if path.name == INVENTORY.name:
+        return native_inventory.load_inventory(path)
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -122,11 +126,11 @@ def render(inventory: dict, annotations: dict) -> str:
         "the automatic source inventory and the separate human annotations in",
         "`data/native_parity/`. Do not edit it directly.",
         "",
-        "> Scope warning: this is the first static inventory pass. It indexes C",
-        "> definitions, exported assembly functions and resolved direct lexical",
-        "> calls. Header-only declarations, indirect calls, data tables and runtime",
-        "> observations are not indexed yet. Counts are discovery coverage, not game",
-        "> fidelity percentages.",
+        "> Scope warning: this static inventory indexes C/assembly functions, header",
+        "> declarations, top-level data, named aggregate types, object-like constants",
+        "> and function-pointer table dispatch when it is lexically provable. Dynamic",
+        "> callbacks and runtime observations remain open. Counts are discovery",
+        "> coverage, not game fidelity percentages.",
         "",
         "## Status legend",
         "",
@@ -138,7 +142,7 @@ def render(inventory: dict, annotations: dict) -> str:
         "",
         "## Automatic inventory summary",
         "",
-        "| Game | Source revision | Routines | Addressed | Static call edges | Annotated features |",
+        "| Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |",
         "|---|---:|---:|---:|---:|---:|",
     ]
     for game in ("mzm", "aos"):
@@ -148,11 +152,25 @@ def render(inventory: dict, annotations: dict) -> str:
         lines.append(
             f"| {game_data['title']} | `{game_data['source_revision'][:12]}` | "
             f"{stats['routines']} | {stats['with_source_address']} | "
-            f"{stats['resolved_call_edges']} | {feature_count} |")
+            f"{stats['resolved_call_edges']} "
+            f"({stats['resolved_indirect_call_edges']}) | {feature_count} |")
     lines.extend([
         "",
-        "The complete machine-readable records, stable routine IDs and caller/callee",
-        "edges are in [`data/native_parity/inventory.json`](../data/native_parity/inventory.json).",
+        "| Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |",
+        "|---|---:|---:|---:|---:|---:|",
+    ])
+    for game in ("mzm", "aos"):
+        game_data = inventory["games"][game]
+        stats = game_data["statistics"]
+        lines.append(
+            f"| {game_data['title']} | {stats['declarations']} | "
+            f"{stats['data_symbols']} | {stats['pointer_tables']} | "
+            f"{stats['types']} | {stats['constants']} |")
+    lines.extend([
+        "",
+        "The machine-readable manifest and its checksummed record fragments, stable",
+        "routine IDs and call edges are rooted at",
+        "[`data/native_parity/inventory.json`](../data/native_parity/inventory.json).",
         "",
     ])
 

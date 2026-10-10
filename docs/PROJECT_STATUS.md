@@ -1999,3 +1999,30 @@ No automatic reciprocal link or native engine encoder is implemented.
   CTest passed 23/23, the Python suite passed 377/377, the generated outputs
   were byte-identical across a forced rebuild, the incremental dry run reported
   both tasks up to date, and the proprietary-file guard passed.
+
+## Patch 0219 - declarations, native data and table dispatch
+
+- Upgraded the source inventory to schema v2. Both pinned decompilations now
+  contribute header function declarations, top-level C/assembly data symbols,
+  named struct/union/enum definitions with lexical members, and object-like
+  constants in addition to function definitions.
+- Linked declarations to matching definitions and resolved indirect call edges
+  when both a function-pointer table initializer and its indexed call expression
+  are statically visible. This proves 406 MZM and 17 Aria table-dispatch edges;
+  dynamic assignments and structure-member callbacks remain explicitly open.
+- The indexed source surface now contains 1,521 MZM / 1,078 Aria header
+  declarations, 16,063 / 139 data symbols, 36 / 11 recognized pointer tables,
+  221 / 183 named aggregate types and 2,796 / 2,423 object-like constants.
+- Replaced the near-limit monolithic JSON with a small inventory manifest and
+  deterministic record fragments. Every fragment records its count and SHA-256,
+  loads are checksum-validated, stale generated fragments are pruned, and every
+  file remains below the repository's 4 MiB guard.
+- Extended the rebuild graph so all manifest fragments are declared outputs and
+  checklist inputs. Added ROM-free regressions for header/type/constant parsing,
+  pointer-table discovery, real Samus pose dispatch, shard size limits and
+  checksum rejection.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  23/23, the Python suite passed 379/379, every manifest fragment and the
+  generated checklist were byte-identical across a forced rebuild, the
+  incremental dry run reported both tasks up to date, and the proprietary-file
+  guard passed.

@@ -1956,3 +1956,16 @@ No automatic reciprocal link or native engine encoder is implemented.
   (the game-over mode is not ported). Checked with `--hp 5` in room 0/5.
 - Validation on 2026-10-10: CTest passed 23/23 and the proprietary guard
   passed.
+
+## Patch 0217 - zombies and generic enemies
+
+- Ported the zombie (enemy 0x01): spawner records, rise, burst walking with
+  the walker terrain collision `sub_08069A00`, sinking, screen-margin
+  despawn, the hit callback and the generic enemy death `sub_0806AEAC`, with
+  ROM-free tests.
+- The enemy runtime is now generic by enemy id (sprites, boxes with separate
+  attack boxes, stats, despawn margins exported privately); spawned zombies
+  are added as runtime entities. Checked in room 0/3: zombies rise and walk
+  toward Soma, hurt him for 14 HP and die in two knife hits.
+- Validation on 2026-10-10: CTest passed 23/23, the object sprite tests
+  passed and the proprietary guard passed.

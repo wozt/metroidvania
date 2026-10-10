@@ -523,6 +523,36 @@ frames, then deletes it. `src/runtime/aos_combat.c` ports the boxes,
 overlaps, slots and formulas; the new-game stats are not traced, so the
 runtime takes ATK, DEF and HP as diagnostic options.
 
+Zombie (enemy 0x01, `EnemyZombieCreate` / `EnemyZombieUpdate`): tiles
+`0x081CBF8C`, palette `0x0820A62C`, frames `0x082178B8` (`sub_0807B404`);
+animations 0 rise, 1 and 4 walk, 2 sink, 3 death. A record with parameter 1
+non-zero is a spawner (state 3: hidden, no boxes, snapped to the floor): one
+frame in 32 (`RandomNumberGenerator & 0x1F`), while fewer than parameter 0
+of its zombies exist (`+0x18`), it creates one at a random screen X (`% 240`)
+more than 32 pixels from the player, at its own Y; a spawned zombie keeps a
+link to it and decrements the count when deleted. A zombie snaps onto the
+floor (`sub_0806AF98`), faces the player (`sub_0806CF2C`) and vanishes at
+once (state 1, one frame, HP 0) on a slope byte (`sub_0806D104`) or when the
+snap moved it 8 pixels up. `sub_0807AD28` (state 0): step 0 waits for the
+rise animation, then picks walk animation 1 or 4 at random, a timer
+`+0x1C` of 600 + (random & 0x1FF) frames; step 1 sets vx = 2.0 toward its
+facing, vy = 1.0 and `+0x54` = 0x2800 at the start of every animation frame,
+damps vx by 3/4 per frame (`sub_0806D490`) and moves with the walker
+collision `sub_08069A00` (X then Y, each clamped to 8.0: walls at x +/- 8,
+y - 10, the ceiling at y - 32, the floor, where vy resets to 1.0); a wall, a
+slope byte or the end of the timer pauses the animation (`+0x6C |= 2`) and
+starts step 2, which waits 60 frames, then plays the sink animation; step
+3 vanishes when it ends. With the player in an 80 x 64 box in front of it,
+the animation tick advances twice on even timer values. The attack box is
+off while rising and sinking. `EnemyZombieUpdate` also makes it vanish
+outside the screen margins of `sub_0806D128` (table `0x08118D08`, entry 4:
+48 x 48). Hit callback `sub_0807B0DC`: damage as above; at 0 HP, sound
+0x70, death animation 3 and the generic death `sub_0806AEAC` (state 1: a
+40-frame blink with the same pattern, particles every 4 frames, then the
+deletion; the gore of `sub_0807B258` and `sub_080683BC` are not ported). The
+dust effects `sub_0807B1CC` / `sub_0807B33C` and state 2 (global
+`0x8E & 0x40`) are not ported.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
 (README). Next steps: more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss

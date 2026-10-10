@@ -4,8 +4,10 @@
  * Shared parts of the enemy framework (cvaos code_08060B98): the activity
  * window of sub_0806CC20, facing the player (sub_0806BC40), the signed
  * velocity by facing (sub_0806E120), the vertical distance to the player
- * (sub_0806BDEC) and the sine of sub_080009E4; and the bat (enemy 0x00,
- * EnemyBatCreate / EnemyBatUpdate). Facing flag 0x40 of + 0x58 means
+ * (sub_0806BDEC) and the sine of sub_080009E4; the bat (enemy 0x00,
+ * EnemyBatCreate / EnemyBatUpdate) and the zombie (enemy 0x01,
+ * EnemyZombieCreate / EnemyZombieUpdate, with its spawner records, the
+ * walker collision sub_08069A00 and the generic death sub_0806AEAC). Facing flag 0x40 of + 0x58 means
  * mirrored: enemy sprites face left by default. Combat: the frame boxes of
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
  * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
@@ -42,7 +44,10 @@ typedef struct {
     AosBox hurt[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES];
     AosBox attack[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES];
     uint8_t blink[40];      /* 0x08118CE0 & 1: hidden while dying */
+    int16_t margin_x, margin_y; /* 0x08118D08[4]: sub_0806D128 despawn margin */
 } AosEnemyKind;
+
+enum { AOS_ENEMY_BAT = 0x00, AOS_ENEMY_ZOMBIE = 0x01 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -59,6 +64,11 @@ typedef struct {
     bool vflip;             /* + 0x58 bit 0x80 */
     bool hidden;            /* + 0x58 bit 0x20 */
     int16_t hp;             /* + 0x34 */
+    int16_t param0, param1; /* + 0x30, + 0x32: record parameters */
+    int32_t walk_timer;     /* + 0x1C */
+    uint8_t spawned_count;  /* + 0x18 of a spawner */
+    bool attack_off;        /* + 0x72 bit 1 */
+    bool cycle_done;        /* + 0x59 bit 0: the animation looped or ended */
     uint8_t hit_flash;      /* + 0x2D */
     AosEnemyStats stats;
     AosCombat combat;
@@ -72,6 +82,8 @@ typedef struct {
     bool enemy_hit;         /* the weapon hit the enemy */
     int enemy_damage;
     bool killed;
+    bool spawn;             /* a zombie spawner created a zombie here */
+    int32_t spawn_x, spawn_y;   /* room pixels */
 } AosHitReport;
 
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. The seed
@@ -81,16 +93,16 @@ void aos_random_seed(uint32_t seed);
 /* sub_080009E4: sine of a 16-bit angle (0x10000 per turn), 16.16. */
 int32_t aos_sine(uint32_t angle);
 /* Creates enemy `id` at a record position; false for unported enemies. */
-bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, const AosSoma *soma,
-                      const AosCollision *layer, const AosEnemyKind *kind,
-                      const AosEnemyStats *stats);
+bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
+                      int16_t param1, const AosSoma *soma, const AosCollision *layer,
+                      const AosEnemyKind *kind, const AosEnemyStats *stats);
 /* One update; cam_x / cam_y place the activity window. random() returns
  * the next RandomNumberGenerator value. The collision pass runs inside, as
  * in the game: soma_atk / soma_def are the player's current ATK and DEF
  * (new-game values are not traced); the weapon may be NULL. */
-AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
-                              const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
-                              int soma_atk, int soma_def, int cam_x, int cam_y,
-                              uint32_t (*random)(void));
+AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+                              const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                              const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+                              int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif /* AOS_ENEMY_H */

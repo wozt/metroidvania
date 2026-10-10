@@ -10,6 +10,104 @@ static uint8_t cells[W * H];
 static const AosCollision layer = {2, 1, W, H, cells, NULL, false};
 
 static uint32_t never_zero(void) { return 1; }
+static uint32_t always_zero(void) { return 0; }
+
+static void zombie_tests(void) {
+    /* Floor at cell row 20 (top 160), a wall at cells x 40.. */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    for (int y = 0; y < 20; ++y) cells[y * W + 40] = 0x03;
+    static const uint8_t rise[] = {2, 2}, walk[] = {6, 6}, sink[] = {2, 2}, death[] = {200};
+    const AosAnimDef defs[5] = {{2, rise}, {2, walk}, {2, sink}, {1, death}, {2, walk}};
+    const AosAnimSet anims = {defs, 5};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 5; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = a == 3 ? 0 : 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-5, -31, 8, 31};
+        }
+    kind.margin_x = kind.margin_y = 48;
+    const AosEnemyStats stats = {18, 9, 1, 0x0021, 0x0010};
+
+    /* A zombie record snaps onto the floor and rises, facing the player. */
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(159), NULL);
+    AosEnemy z;
+    assert(aos_enemy_create(&z, AOS_ENEMY_ZOMBIE, 250, 140, 0, 0, &soma, &layer, &kind, &stats));
+    assert(z.state == 0 && z.step == 0 && (z.y >> 16) == 159 && !z.mirrored);
+    int frames = 0;
+    while (z.step == 0 && frames < 20) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+        ++frames;
+    }
+    assert(z.step == 1 && z.anim.id == 4 && z.walk_timer == 600);
+    /* It walks left in bursts of 2.0 that decay by 3/4 per frame. */
+    int32_t x0 = z.x;
+    aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+    assert(z.x < x0 && (z.y >> 16) == 159);
+    /* Turned toward a wall on the right, it stops there and sinks, then
+     * vanishes after the 60-frame pause and the sink animation. */
+    z.mirrored = true;
+    z.x = AOS_FIXED(300);
+    frames = 0;
+    while (z.step == 1 && frames < 300) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+        ++frames;
+    }
+    assert(z.step == 2 && (z.x >> 16) <= 320 - 8);
+    frames = 0;
+    while (!z.removed && frames < 200) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+        ++frames;
+    }
+    assert(z.removed && frames > 60);
+
+    /* A spawner (param1 != 0) is invisible and creates zombies away from
+     * the player, up to param0 of them. */
+    AosEnemy spawner;
+    assert(aos_enemy_create(&spawner, AOS_ENEMY_ZOMBIE, 120, 159, 2, 1, &soma, &layer, &kind,
+                            &stats));
+    assert(spawner.state == 3 && spawner.hidden);
+    int spawns = 0;
+    for (int i = 0; i < 10; ++i) {
+        AosHitReport r = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 100,
+                                          48, always_zero);
+        if (r.spawn) {
+            ++spawns;
+            int dx = r.spawn_x - (soma.x >> 16);
+            assert((dx < 0 ? -dx : dx) > 32 && r.spawn_x >= 100 && r.spawn_x < 340);
+        }
+    }
+    assert(spawns == 2 && spawner.spawned_count == 2);
+
+    /* Far outside the screen margins a zombie vanishes. */
+    assert(aos_enemy_create(&z, AOS_ENEMY_ZOMBIE, 250, 140, 0, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 1000, 48, always_zero);
+    assert(z.state == 1 && z.hp == 0);
+
+    /* The weapon kills a walking zombie: death animation 3, 40 frames. */
+    assert(aos_enemy_create(&z, AOS_ENEMY_ZOMBIE, 250, 140, 0, 0, &soma, &layer, &kind, &stats));
+    z.step = 1;
+    z.walk_timer = 600;
+    z.hp = 1;
+    soma.x = AOS_FIXED(240);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{0, -30, 30, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosHitReport hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100,
+                                        48, always_zero);
+    assert(hit.enemy_hit && hit.killed && z.state == 1 && z.anim.id == 3 && z.timer == 0x28);
+    frames = 0;
+    while (!z.removed && frames < 100) {
+        aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 48, always_zero);
+        ++frames;
+    }
+    assert(frames == 40);
+}
 
 int main(void) {
     /* sub_080009E4 */
@@ -33,41 +131,41 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x0C, 100, 100, &soma, &layer, &kind, &stats));
-    assert(aos_enemy_create(&bat, 0x00, 100, 100, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x0C, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 
     /* Soma far away: it hangs (animation 0). */
-    for (int i = 0; i < 10; ++i) aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
+    for (int i = 0; i < 10; ++i) aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
     assert(bat.state == 1 && bat.anim.id == 0);
     /* Within 0xE0 x 0xA0 but not 0xC0 x 0x70: it notices him (animation 1). */
     soma.x = AOS_FIXED(100 + 0x68);
-    aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
+    aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
     assert(bat.state == 1 && bat.anim.id == 1);
     /* Within 0xC0 x 0x70: it attacks. */
     soma.x = AOS_FIXED(150);
     soma.y = AOS_FIXED(100);
-    aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
+    aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
     assert(bat.state == 2 && bat.step == 0);
 
     /* Backward hop: 0.5 away from Soma, then a dive at 0.375 toward him
      * once 33 frames have passed. */
     int32_t x0 = bat.x;
-    aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
+    aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
     assert(bat.anim.id == 2 && bat.vx == -0x8000 && bat.x == x0 - 0x8000);
     int frames = 1;
     while (bat.step == 0 && frames < 100) {
-        aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
+        aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
         ++frames;
     }
     assert(frames == 33 && bat.step == 1);
-    aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
+    aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
     assert(bat.vx == 0x6000 && bat.vy == 0x6000);
     /* It dives until within 39 pixels of Soma's height, then flies off on a
      * sine wave with acceleration and is deleted 240 pixels on screen. */
     frames = 0;
     while (bat.step == 1 && frames < 400) {
-        aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
+        aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
         ++frames;
     }
     assert(bat.step == 2);
@@ -75,28 +173,28 @@ int main(void) {
     assert(dy >= -0x27 && dy <= 0x27);
     frames = 0;
     while (!bat.removed && frames < 2000) {
-        aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
+        aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 0, 0, never_zero);
         ++frames;
     }
     assert(bat.removed && (bat.x >> 16) > 0xF0 && bat.vx > 0xC000);
 
     /* Outside the activity window nothing runs. */
-    assert(aos_enemy_create(&bat, 0x00, 100, 100, &soma, &layer, &kind, &stats));
+    assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     soma.x = AOS_FIXED(150);
-    aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 0, 1000, 0, never_zero);
+    aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 0, 1000, 0, never_zero);
     assert(bat.state == 1 && bat.anim.tick == 1);
     /* Combat: a swooping bat touching Soma's hurtbox damages him once,
      * then type-8 attacks are ignored for 81 frames. */
     soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(60), NULL);
-    assert(aos_enemy_create(&bat, 0x00, 100, 100, &soma, &layer, &kind, &stats));
+    assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     bat.state = 9;          /* no AI: only the collision pass runs */
     bat.y = AOS_FIXED(40);
-    AosHitReport hit = aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    AosHitReport hit = aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.soma_hit && hit.soma_damage == (6 * 4 - 4 * 2) / 2);
     int frames_to_next = 0;
     do {
         aos_combat_tick(&soma.combat);
-        hit = aos_enemy_update(&bat, &soma, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        hit = aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
         ++frames_to_next;
     } while (!hit.soma_hit && frames_to_next < 200);
     assert(frames_to_next == 81);
@@ -105,7 +203,7 @@ int main(void) {
      * defence 0 -> 12 damage against 10 HP; it falls, blinks and goes. */
     soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(200), NULL);
     soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
-    assert(aos_enemy_create(&bat, 0x00, 100, 100, &soma, &layer, &kind, &stats));
+    assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     bat.y = AOS_FIXED(170);
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
@@ -113,12 +211,12 @@ int main(void) {
     const AosHitbox blade_box[] = {{-10, -40, 20, 20, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    hit = aos_enemy_update(&bat, &soma, &kind, &weapon, &blade, 10, 0, 0, 0, never_zero);
+    hit = aos_enemy_update(&bat, &soma, &layer, &kind, &weapon, &blade, 10, 0, 0, 0, never_zero);
     assert(hit.enemy_hit && hit.enemy_damage == 12 && hit.killed && bat.state == 3);
     assert(soma.flags & AOS_FLAG_KICK_HIT);
     int dying = 0;
     while (!bat.removed && dying < 100) {
-        aos_enemy_update(&bat, &soma, &kind, &weapon, &blade, 10, 0, 0, 0, never_zero);
+        aos_enemy_update(&bat, &soma, &layer, &kind, &weapon, &blade, 10, 0, 0, 0, never_zero);
         ++dying;
     }
     assert(dying == 64 && bat.vflip);
@@ -130,6 +228,7 @@ int main(void) {
     assert(aos_enemy_damage(10, 4, 0, 0, 0x0001) == 7);         /* (10 - 2) * 252 >> 8 */
     assert(aos_enemy_damage(1, 8, 0, 0, 1) == 1);
     assert(aos_player_damage(6, 10) == 2 && aos_player_damage(1, 50) == 1);
+    zombie_tests();
     puts("aos_enemy: ok");
     return 0;
 }

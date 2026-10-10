@@ -39,7 +39,7 @@ from scripts.asset_layout import ARIA_METADATA, ARIA_SPRITES, private_path
 from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic
 
 ARIA_OBJECTS_RUNTIME = ARIA_SPRITES / "objects" / "runtime"
-ENEMY_FRAMES_SCHEMA = "metroidvania-aos-enemy-frames-v1"
+ENEMY_FRAMES_SCHEMA = "metroidvania-aos-enemy-frames-v2"
 DEATH_BLINK = 0x08118CE0       # sub_0806BE74: hidden when byte & 1, 40 frames
 ENEMY_TABLE = 0x080E9644       # sUnk_080E9644: 0x24-byte records
 ENEMY_COUNT = 0x71
@@ -62,7 +62,10 @@ def enemy_stats(rom: bytes) -> list[str]:
 ENEMIES = {
     "bat": {"id": 0x00, "graphics": 0x081F422C, "palette": 0x0820BD4C, "bank": 0,
             "frames": 0x0824B2C4},     # EnemyBatCreate 0x080AD2A8
+    "zombie": {"id": 0x01, "graphics": 0x081CBF8C, "palette": 0x0820A62C, "bank": 0,
+               "frames": 0x082178B8},  # sub_0807B404 (EnemyZombieCreate 0x0807ABEC)
 }
+SCREEN_MARGINS = 0x08118D08    # sub_0806D128: 7 (x, y) s16 margins
 WOODEN_DOOR = {
     "graphics": 0x081CBE0C,
     "palette": 0x08209AE0,
@@ -174,14 +177,18 @@ def descriptor_animations(rom: bytes, entity: dict) -> list[list[dict]]:
             if not 0 <= frame_id < record_count or not duration:
                 raise ValueError("invalid entity animation frame")
             record = _rom_slice(rom, records + frame_id * 16, 16, "frame record")
-            box = None
+            box = attack = None
             if record[4]:
                 box_pointer = struct.unpack_from("<I", record, 8)[0]
                 box = struct.unpack("<bbBB", _rom_slice(rom, box_pointer, 4, "frame box"))
+                attack = box
+                if record[4] == 2:
+                    attack = struct.unpack("<bbBB", _rom_slice(rom, box_pointer + 4, 4,
+                                                                "attack box"))
             pixels = render_frame(tiles, sheet_width,
                                   frame_components(rom, entity["frames"], frame_id), colors)
             frames.append({"frame": frame_id, "duration": duration, "pixels": pixels,
-                           "box": box})
+                           "box": box, "attack": attack, "mode": record[4]})
         result.append(frames)
     return result
 
@@ -203,7 +210,8 @@ def produce(root: Path, rom_path: Path) -> dict:
             frames.append((bmp, duration, left, top))
         library.add(f"WoodenDoor/style_{style}", frames)
     lines = ["schema\t" + ENEMY_FRAMES_SCHEMA,
-             "# enemy\tanimation\tindex\tframe\tticks\tbox\tx\ty\twidth\theight"]
+             "# enemy\tanimation\tindex\tframe\tticks\tmode\thurt x\ty\twidth\theight"
+             "\tattack x\ty\twidth\theight"]
     for name, entity in ENEMIES.items():
         for number, animation in enumerate(descriptor_animations(rom, entity)):
             sprites = []
@@ -212,12 +220,15 @@ def produce(root: Path, rom_path: Path) -> dict:
                 bmp, left, top = bmp_from_pixels(pixels)
                 sprites.append((bmp, frame["duration"], left, top))
                 box = frame["box"] or (0, 0, 0, 0)
+                attack = frame["attack"] or (0, 0, 0, 0)
                 lines.append("\t".join(map(str, (name, number, index, frame["frame"],
-                                                  frame["duration"], 1 if frame["box"] else 0,
-                                                  *box))))
+                                                  frame["duration"], frame["mode"],
+                                                  *box, *attack))))
             library.add(f"Enemy/{name}/anim_{number}", sprites)
     blink = _rom_slice(rom, DEATH_BLINK, 40, "death blink pattern")
     lines.append("blink\t" + "".join(str(b & 1) for b in blink))
+    margins = struct.unpack("<14h", _rom_slice(rom, SCREEN_MARGINS, 28, "screen margins"))
+    lines.append("margins\t" + "\t".join(map(str, margins)))
     folder = private_path(Path(root), ARIA_METADATA, create=True)
     folder.mkdir(parents=True, exist_ok=True)
     write_atomic(folder / "enemy_frames.tsv", "\n".join(lines) + "\n")

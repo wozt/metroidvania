@@ -276,6 +276,15 @@ def main():
             results.append((index, output, metadata))
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
+    if args.output_dir:
+        # Local-only metadata is needed for frame-accurate playback.
+        # Each animation is extracted independently, so use separate sidecars.
+        durations = [int(metadata["frame"]["duration"])
+                     for _, _, metadata in results]
+        if any(duration < 1 or duration > 255 for duration in durations):
+            parser.error("invalid original animation frame duration")
+        timings = args.output_dir.resolve() / f"{args.animation}_durations.txt"
+        timings.write_text("\n".join(str(d) for d in durations) + "\n", encoding="ascii")
     for index, output, metadata in results:
         cannon = metadata["arm_cannon"]
         muzzle = metadata["arm_cannon_animation"]["muzzle_offset"]

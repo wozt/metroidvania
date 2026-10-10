@@ -307,6 +307,7 @@ typedef struct {
     SDL_Texture *frames[3][10];
     int widths[3][10];
     int heights[3][10];
+    unsigned int durations[3][10];
 } SamusFrames;
 
 static void samus_frames_free(SamusFrames *frames) {
@@ -320,6 +321,29 @@ static bool samus_frames_load(SDL_Renderer *renderer, const char *dir,
     const char *names[] = {"idle", "run", "jump"};
     const int counts[] = {4, 10, 8};
     for (int a = 0; a < 3; ++a) {
+        char duration_path[4096];
+        int npath = snprintf(duration_path, sizeof duration_path,
+                             "%s/%s_durations.txt", dir, names[a]);
+        if (npath < 0 || (size_t)npath >= sizeof duration_path) return false;
+        FILE *timings = fopen(duration_path, "rb");
+        if (!timings) {
+            fprintf(stderr, "Missing Samus duration sidecar: %s\n", duration_path);
+            return false;
+        }
+        bool valid = true;
+        for (int i=0; i<counts[a]; ++i) {
+            unsigned int duration = 0;
+            if (fscanf(timings, "%u", &duration) != 1 ||
+                duration < 1 || duration > 255) { valid = false; break; }
+            frames->durations[a][i] = duration;
+        }
+        char trailing;
+        if (valid && fscanf(timings, " %c", &trailing) != EOF) valid = false;
+        if (fclose(timings) != 0) valid = false;
+        if (!valid) {
+            fprintf(stderr, "Invalid Samus animation timings: %s\n", duration_path);
+            return false;
+        }
         for (int i = 0; i < counts[a]; ++i) {
             char path[4096];
             int n = snprintf(path, sizeof path, "%s/%s_%d.bmp", dir, names[a], i);
@@ -350,6 +374,25 @@ static int samus_animation_group(RuntimeMovementState state) {
     if (state == RUNTIME_RUNNING || state == RUNTIME_TURNING) return 1;
     if (state == RUNTIME_JUMPING || state == RUNTIME_FALLING) return 2;
     return 0;
+}
+
+/* PATCH_0147_NATIVE_FRAME_TIMING
+ * Native animation record durations are in 60 Hz frames. Keep each
+ * sprite series on a separate playback clock; reset on state changes.
+ * Visual timeline only; collision and motion physics remain unchanged.
+ */
+static int samus_timeline_frame(const unsigned int *durations, int count,
+                                unsigned int elapsed_ticks) {
+    if (count <= 0) return 0;
+    unsigned int total = 0;
+    for (int i=0; i<count; ++i) total += durations[i];
+    if (!total) return 0;
+    unsigned int phase = elapsed_ticks % total;
+    for (int i=0; i<count; ++i) {
+        if (phase < durations[i]) return i;
+        phase -= durations[i];
+    }
+    return count-1;
 }
 
 static float move_axis(const Room *room, float start, float other,
@@ -445,6 +488,7 @@ int main(int argc, char **argv) {
     bool grounded=false;
     RuntimeMovementState movement_state=RUNTIME_IDLE;
     int facing=1;
+    Uint64 animation_start=SDL_GetTicks();
     /* Prefer a grounded, collision-free test spawn near the room centre.
      * This is NOT a verified original Samus entry position. */
     bool spawn = find_spawn(room, pw, ph, &px, &py);
@@ -499,6 +543,7 @@ int main(int argc, char **argv) {
                 runtime_movement_state(grounded, vx, vy, dx);
             if (next_state != movement_state) {
                 movement_state = next_state;
+                animation_start=SDL_GetTicks();
                 char title[128];
                 snprintf(title, sizeof title,
                          "Metroid Vania - test avatar [%s]",
@@ -526,7 +571,11 @@ int main(int argc, char **argv) {
         if (samus_dir) {
             int group=samus_animation_group(movement_state);
             const int counts[]={4,10,8};
-            int frame=(int)(SDL_GetTicks()/100u) % counts[group];
+            Uint64 elapsed_ms = SDL_GetTicks() - animation_start;
+            /* 60 fps is a GBA playback clock; SDL render rate is independent. */
+            unsigned int elapsed_frames = (unsigned int)(elapsed_ms * 60u / 1000u);
+            int frame=samus_timeline_frame(samus_frames.durations[group],
+                                           counts[group], elapsed_frames);
             SDL_Texture *sprite=samus_frames.frames[group][frame];
             float sw=(float)samus_frames.widths[group][frame];
             float sh=(float)samus_frames.heights[group][frame];

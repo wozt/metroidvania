@@ -47,6 +47,14 @@ int main(void) {
     assert(samus_animation_group(RUNTIME_TURNING)==1);
     assert(samus_animation_group(RUNTIME_JUMPING)==2);
     assert(samus_animation_group(RUNTIME_FALLING)==2);
+    /* PATCH_0147: cycle and boundary tests for original durations. */
+    const unsigned int timing[] = {2, 3, 1};
+    assert(samus_timeline_frame(timing,3,0)==0);
+    assert(samus_timeline_frame(timing,3,1)==0);
+    assert(samus_timeline_frame(timing,3,2)==1);
+    assert(samus_timeline_frame(timing,3,4)==1);
+    assert(samus_timeline_frame(timing,3,5)==2);
+    assert(samus_timeline_frame(timing,3,6)==0);
     free(r);
     return 0;
 }

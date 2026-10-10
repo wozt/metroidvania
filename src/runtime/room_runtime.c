@@ -590,7 +590,7 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
     if (extended_dir && !composed_load(renderer,extended_dir,&composed_frames,
-                                       COMPOSED_BASE_COUNT,COMPOSED_COUNT)) {
+                                       COMPOSED_BASE_COUNT,COMPOSED_EXTRA_COUNT)) {
         fprintf(stderr,"Extended composed Samus sprite loading failed.\n");
         goto cleanup;
     }

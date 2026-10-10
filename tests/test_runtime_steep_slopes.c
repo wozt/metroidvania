@@ -39,14 +39,6 @@ int main(void) {
     assert(runtime_movement_state(false,40.f,-25.f,1.f)==RUNTIME_JUMPING);
     assert(runtime_movement_state(false,0.f,0.f,0.f)==RUNTIME_FALLING);
     assert(strcmp(runtime_movement_state_name(RUNTIME_TURNING),"turning")==0);
-    /* PATCH_0146: animation selection is independent of ROM assets. */
-    (void)samus_frames_free;
-    (void)samus_frames_load;
-    assert(samus_animation_group(RUNTIME_IDLE)==0);
-    assert(samus_animation_group(RUNTIME_RUNNING)==1);
-    assert(samus_animation_group(RUNTIME_TURNING)==1);
-    assert(samus_animation_group(RUNTIME_JUMPING)==2);
-    assert(samus_animation_group(RUNTIME_FALLING)==2);
     /* PATCH_0147: cycle and boundary tests for original durations. */
     const unsigned int timing[] = {2, 3, 1};
     assert(samus_timeline_frame(timing,3,0)==0);

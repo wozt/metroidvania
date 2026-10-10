@@ -428,83 +428,6 @@ static const char *runtime_movement_state_name(RuntimeMovementState state) {
     return "unknown";
 }
 
-/* PATCH_0146_SAMUS_BMP_ANIMATIONS
- * Private BMPs exported by scripts.mzm_samus_sprite, never bundled.
- * Image placement is provisional; game-accurate OAM axes come later.
- */
-typedef struct {
-    SDL_Texture *frames[3][10];
-    int widths[3][10];
-    int heights[3][10];
-    unsigned int durations[3][10];
-} SamusFrames;
-
-static void samus_frames_free(SamusFrames *frames) {
-    for (int a = 0; a < 3; ++a)
-        for (int i = 0; i < 10; ++i)
-            if (frames->frames[a][i]) SDL_DestroyTexture(frames->frames[a][i]);
-}
-
-static bool samus_frames_load(SDL_Renderer *renderer, const char *dir,
-                              SamusFrames *frames) {
-    const char *names[] = {"idle", "run", "jump"};
-    const int counts[] = {4, 10, 8};
-    for (int a = 0; a < 3; ++a) {
-        char duration_path[4096];
-        int npath = snprintf(duration_path, sizeof duration_path,
-                             "%s/%s_durations.txt", dir, names[a]);
-        if (npath < 0 || (size_t)npath >= sizeof duration_path) return false;
-        FILE *timings = fopen(duration_path, "rb");
-        if (!timings) {
-            fprintf(stderr, "Missing Samus duration sidecar: %s\n", duration_path);
-            return false;
-        }
-        bool valid = true;
-        for (int i=0; i<counts[a]; ++i) {
-            unsigned int duration = 0;
-            if (fscanf(timings, "%u", &duration) != 1 ||
-                duration < 1 || duration > 255) { valid = false; break; }
-            frames->durations[a][i] = duration;
-        }
-        char trailing;
-        if (valid && fscanf(timings, " %c", &trailing) != EOF) valid = false;
-        if (fclose(timings) != 0) valid = false;
-        if (!valid) {
-            fprintf(stderr, "Invalid Samus animation timings: %s\n", duration_path);
-            return false;
-        }
-        for (int i = 0; i < counts[a]; ++i) {
-            char path[4096];
-            int n = snprintf(path, sizeof path, "%s/%s_%d.bmp", dir, names[a], i);
-            if (n < 0 || (size_t)n >= sizeof path) return false;
-            SDL_Surface *surface = SDL_LoadBMP(path);
-            if (!surface) {
-                fprintf(stderr, "Cannot load Samus frame %s: %s\n", path, SDL_GetError());
-                return false;
-            }
-            frames->widths[a][i] = surface->w;
-            frames->heights[a][i] = surface->h;
-            if (surface->w < 1 || surface->h < 1 ||
-                surface->w > 512 || surface->h > 512) {
-                SDL_DestroySurface(surface);
-                return false;
-            }
-            frames->frames[a][i] = SDL_CreateTextureFromSurface(renderer, surface);
-            SDL_DestroySurface(surface);
-            if (!frames->frames[a][i]) return false;
-            SDL_SetTextureScaleMode(frames->frames[a][i], SDL_SCALEMODE_NEAREST);
-            SDL_SetTextureBlendMode(frames->frames[a][i], SDL_BLENDMODE_BLEND);
-        }
-    }
-    return true;
-}
-
-static int samus_animation_group(RuntimeMovementState state) {
-    if (state == RUNTIME_RUNNING || state == RUNTIME_TURNING) return 1;
-    if (state == RUNTIME_JUMPING || state == RUNTIME_FALLING) return 2;
-    return 0;
-}
-
 /* PATCH_0147_NATIVE_FRAME_TIMING
  * Native animation record durations are in 60 Hz frames. Keep each
  * sprite series on a separate playback clock; reset on state changes.
@@ -558,17 +481,6 @@ static float move_axis(const Room *room, float start, float other,
 }
 
 #ifndef FUSION_RUNTIME_TEST
-/* PATCH_0163_PRIVATE_COMPOSITIONS: opt-in, experimental source frames.
- * This is visual-only; original platform collision is unchanged.
- * C = crouch preview, F = fire while crouched, E = aim diagonally while running.
- */
-/* PATCH_0165_EXTENDED_COMPOSITIONS */
-#define COMPOSED_COUNT 14
-#define COMPOSED_BASE_COUNT 3
-#define COMPOSED_EXTRA_COUNT 8
-#define COMPOSED_MAX_FRAMES 10
-#define SPECIAL_COUNT 6
-#define SPECIAL_FRAMES 8
 /* PATCH_0176_LIBRARY: 0175-derived private runtime index, loaded on demand. */
 #define RUNTIME_LIBRARY_MAX 1024
 #define RUNTIME_LIBRARY_FRAME_MAX 256
@@ -787,189 +699,9 @@ static float runtime_pad_horizontal(SDL_Gamepad *pad) {
     if(runtime_pad_button(pad,SDL_GAMEPAD_BUTTON_DPAD_RIGHT)) return 1.f;
     return stick;
 }
-static RuntimeLibraryEntry *runtime_library_select(RuntimeLibrary *lib,
-        unsigned int armor,int facing,RuntimeMovementState state,
-        bool spin,bool diag_up,bool diag_down,bool crouch,bool fire,int special_kind) {
-    static const char *suits[]={"PowerSuit","PowerSuit","PowerSuit","FullSuit","Suitless"};
-    const char *suit=suits[armor%5];
-    const char *side=facing<0?"left":"right";
-    char key[160];
-    if(spin && (state==RUNTIME_JUMPING||state==RUNTIME_FALLING)) {
-        const char *special=special_kind==2?"screwattacking":special_kind==1?"spacejumping":"spinning";
-        snprintf(key,sizeof key,"PowerSuit/%s_%s",special,side);
-        RuntimeLibraryEntry *e=runtime_library_find(lib,key);
-        if(e)return e;
-    }
-    const char *pose=state==RUNTIME_RUNNING?"running":
-        state==RUNTIME_JUMPING||state==RUNTIME_FALLING?"midair":
-        crouch?(fire?"shootingandcrouching":"crouching"):
-        fire?"shooting":"standing";
-    const char *aim=diag_up?"diagonalup":diag_down?"diagonaldown":"forward";
-    snprintf(key,sizeof key,"%s/%s_%s_%s",suit,pose,aim,side);
-    RuntimeLibraryEntry *entry=runtime_library_find(lib,key);
-    if(entry)return entry;
-    snprintf(key,sizeof key,"%s/%s_%s_%s",suit,pose,"forward",side);
-    entry=runtime_library_find(lib,key);
-    if(entry)return entry;
-    /* The body library uses native symbol suffixes, not the diagnostic aliases. */
-    const char *native=state==RUNTIME_RUNNING?"running":
-        state==RUNTIME_JUMPING||state==RUNTIME_FALLING?"midair":
-        crouch?(fire?"shootingandcrouching":"crouching"):
-        fire?"shooting":"standing";
-    snprintf(key,sizeof key,"%s/%s_%s",suit,side,native);
-    return runtime_library_find(lib,key);
-}
-
-typedef struct {
-    SDL_Texture *textures[SPECIAL_COUNT][SPECIAL_FRAMES];
-    unsigned int durations[SPECIAL_COUNT][SPECIAL_FRAMES];
-    int widths[SPECIAL_COUNT][SPECIAL_FRAMES], heights[SPECIAL_COUNT][SPECIAL_FRAMES];
-} SpecialAnimations;
-static const char *special_names[SPECIAL_COUNT] = {
-    "spinning_right", "spinning_left",
-    "spacejumping_right", "spacejumping_left",
-    "screwattacking_right", "screwattacking_left"
-};
-static void special_free(SpecialAnimations *a) {
-    for (int g=0;g<SPECIAL_COUNT;g++)
-        for (int i=0;i<SPECIAL_FRAMES;i++)
-            if (a->textures[g][i]) SDL_DestroyTexture(a->textures[g][i]);
-}
-static bool special_load(SDL_Renderer *renderer,const char *dir,SpecialAnimations *a) {
-    for (int g=0;g<SPECIAL_COUNT;g++) {
-        char path[4096];
-        int n=snprintf(path,sizeof path,"%s/composed/%s/durations.txt",dir,special_names[g]);
-        if (n<0 || (size_t)n>=sizeof path) return false;
-        FILE *f=fopen(path,"rb");
-        if (!f) {fprintf(stderr,"Missing special timings: %s\\n",path);return false;}
-        bool valid=true;
-        for(int i=0;i<SPECIAL_FRAMES;i++) {
-            unsigned int t=0;
-            if(fscanf(f,"%u",&t)!=1 || t<1 || t>255) {valid=false;break;}
-            a->durations[g][i]=t;
-        }
-        char extra;
-        if(valid && fscanf(f," %c",&extra)!=EOF) valid=false;
-        if(fclose(f)!=0 || !valid) return false;
-        for(int i=0;i<SPECIAL_FRAMES;i++) {
-            n=snprintf(path,sizeof path,"%s/composed/%s/%03d.bmp",dir,special_names[g],i);
-            if(n<0 || (size_t)n>=sizeof path) return false;
-            SDL_Surface *surface=SDL_LoadBMP(path);
-            if(!surface) {fprintf(stderr,"Missing special BMP: %s\\n",path);return false;}
-            int w=surface->w,h=surface->h;
-            if(w<1 || w>512 || h<1 || h>512) {SDL_DestroySurface(surface);return false;}
-            a->textures[g][i]=SDL_CreateTextureFromSurface(renderer,surface);
-            SDL_DestroySurface(surface);
-            if(!a->textures[g][i]) return false;
-            a->widths[g][i]=w;a->heights[g][i]=h;
-            SDL_SetTextureScaleMode(a->textures[g][i],SDL_SCALEMODE_NEAREST);
-            SDL_SetTextureBlendMode(a->textures[g][i],SDL_BLENDMODE_BLEND);
-        }
-    }
-    return true;
-}
-typedef struct {
-    SDL_Texture *textures[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
-    unsigned int durations[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
-    int widths[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
-    int heights[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
-} ComposedAnimations;
-
-static const int composed_counts[COMPOSED_COUNT] = {10, 5, 3, 10, 10, 3, 5, 3, 5, 5, 3, 3, 3, 10};
-static const char *composed_names[COMPOSED_COUNT] = {
-    "run_diagonal_up_right", "midair_forward_right", "shoot_crouch_right",
-    "run_diagonal_down_right", "run_diagonal_up_left", "shoot_standing_right",
-    "midair_diagonal_up_right", "shoot_crouch_diagonal_up_right",
-    "midair_forward_left", "midair_diagonal_up_left", "shoot_standing_left",
-    "shoot_crouch_left", "shoot_crouch_diagonal_up_left", "run_diagonal_down_left"
-};
-
-static void composed_free(ComposedAnimations *a) {
-    for (int group=0; group<COMPOSED_COUNT; ++group)
-        for (int i=0; i<composed_counts[group]; ++i)
-            if (a->textures[group][i]) SDL_DestroyTexture(a->textures[group][i]);
-}
-
-static bool composed_load(SDL_Renderer *renderer, const char *dir,
-                          ComposedAnimations *a, int first, int last) {
-    for (int group=first; group<last; ++group) {
-        char path[4096];
-        int n=snprintf(path,sizeof path,"%s/composed/%s/durations.txt",
-                       dir,composed_names[group]);
-        if (n<0 || (size_t)n>=sizeof path) return false;
-        FILE *f=fopen(path,"rb");
-        if (!f) { fprintf(stderr,"Missing composition timings: %s\n",path);return false; }
-        bool valid=true;
-        for (int i=0; i<composed_counts[group]; ++i) {
-            unsigned int value=0;
-            if (fscanf(f,"%u",&value)!=1 || value<1 || value>255) {
-                valid=false; break;
-            }
-            a->durations[group][i]=value;
-        }
-        char trailing;
-        if (valid && fscanf(f," %c",&trailing)!=EOF) valid=false;
-        if (fclose(f)!=0 || !valid) {
-            fprintf(stderr,"Invalid composition timings: %s\n",path);
-            return false;
-        }
-        for (int i=0; i<composed_counts[group]; ++i) {
-            n=snprintf(path,sizeof path,"%s/composed/%s/%03d.bmp",
-                       dir,composed_names[group],i);
-            if (n<0 || (size_t)n>=sizeof path) return false;
-            SDL_Surface *surface=SDL_LoadBMP(path);
-            if (!surface) { fprintf(stderr,"Missing composed frame %s\n",path);return false; }
-            int w=surface->w,h=surface->h;
-            if (w<1 || w>512 || h<1 || h>512) {
-                SDL_DestroySurface(surface);return false;
-            }
-            a->textures[group][i]=SDL_CreateTextureFromSurface(renderer,surface);
-            SDL_DestroySurface(surface);
-            if (!a->textures[group][i]) return false;
-            a->widths[group][i]=w;
-            a->heights[group][i]=h;
-            SDL_SetTextureScaleMode(a->textures[group][i],SDL_SCALEMODE_NEAREST);
-            SDL_SetTextureBlendMode(a->textures[group][i],SDL_BLENDMODE_BLEND);
-        }
-    }
-    return true;
-}
-
-static int composed_select(RuntimeMovementState state, int facing,
-                           bool diagonal_up, bool diagonal_down,
-                           bool crouch, bool fire, bool extended, bool left_set,
-                           bool spin_jump) {
-    /* Spin jumps must not be silently replaced with straight MidAir poses. */
-    if (spin_jump && (state == RUNTIME_JUMPING || state == RUNTIME_FALLING))
-        return -1;
-    if (facing < 0) {
-        if (crouch && fire && state == RUNTIME_IDLE && left_set)
-            return diagonal_up ? 12 : 11;
-        if (fire && state == RUNTIME_IDLE && !crouch && left_set) return 10;
-        if (state == RUNTIME_JUMPING || state == RUNTIME_FALLING)
-            return left_set ? (diagonal_up ? 9 : (!diagonal_down ? 8 : -1)) : -1;
-        if (state == RUNTIME_RUNNING) {
-            if (diagonal_down && left_set) return 13;
-            if (diagonal_up && extended) return 4;
-        }
-        return -1;
-    }
-    if (crouch && fire && state == RUNTIME_IDLE)
-        return extended && diagonal_up ? 7 : 2;
-    if (extended && fire && state == RUNTIME_IDLE && !crouch) return 5;
-    if (state == RUNTIME_JUMPING || state == RUNTIME_FALLING)
-        return extended && diagonal_up ? 6 : (!diagonal_up && !diagonal_down ? 1 : -1);
-    if (state == RUNTIME_RUNNING) {
-        if (extended && diagonal_down) return 3;
-        if (diagonal_up) return 0;
-    }
-    return -1;
-}
-
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
-    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL, *left_dir=NULL;
-    const char *special_dir=NULL, *library_index=NULL, *animation_map_index=NULL;
+    const char *library_index=NULL, *animation_map_index=NULL;
     const char *room_alias=NULL, *samus_assets=NULL;
     bool check=false,animation_check=false;
     for (int i=1;i<argc;i++) {
@@ -980,17 +712,12 @@ int main(int argc, char **argv) {
         }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
         else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
-        else if (!strcmp(argv[i],"--samus-sprites") && !samus_dir && i+1<argc) samus_dir=argv[++i];
-        else if (!strcmp(argv[i],"--samus-composed") && !composed_dir && i+1<argc) composed_dir=argv[++i];
-        else if (!strcmp(argv[i],"--samus-composed-extra") && !extended_dir && i+1<argc) extended_dir=argv[++i];
-        else if (!strcmp(argv[i],"--samus-composed-left") && !left_dir && i+1<argc) left_dir=argv[++i];
-        else if (!strcmp(argv[i],"--samus-special") && !special_dir && i+1<argc) special_dir=argv[++i];
         else if (!strcmp(argv[i],"--room") && !room_alias && i+1<argc) room_alias=argv[++i];
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -1022,13 +749,12 @@ int main(int argc, char **argv) {
         library_index="assets/extracted/metroid/sprites/samus/runtime/runtime_index.tsv";
         animation_map_index="assets/extracted/metroid/sprites/samus/runtime/animation_map.tsv";
     }
-    if(animation_map_index && !library_index) {
-        fprintf(stderr,"--samus-map requires --samus-library or --samus-assets\n");
+    if((animation_map_index!=NULL) != (library_index!=NULL)) {
+        fprintf(stderr,"--samus-library and --samus-map must be used together\n");
         return 2;
     }
     if(animation_check) {
-        if(check || room_path || background || native_source || samus_dir ||
-           composed_dir || extended_dir || left_dir || special_dir ||
+        if(check || room_path || background || native_source ||
            !library_index || !animation_map_index) {
             fprintf(stderr,"Animation check requires only --samus-assets, or a library and map pair\n");
             return 2;
@@ -1042,8 +768,8 @@ int main(int argc, char **argv) {
         runtime_library_free(&checked_library);
         return valid?0:2;
     }
-    if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir || left_dir || special_dir || library_index || animation_map_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
+    if (!room_path || (check && (background || library_index || animation_map_index))) {
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] preview.tsv\n",argv[0]);
         return 2;
     }
     Room *room=calloc(1,sizeof *room);
@@ -1075,9 +801,6 @@ int main(int argc, char **argv) {
     SDL_Renderer *renderer=window ? SDL_CreateRenderer(window,NULL) : NULL;
     SDL_Surface *surface=NULL; SDL_Texture *texture=NULL;
     int rc=1;
-    SamusFrames samus_frames = {0};
-    ComposedAnimations composed_frames = {0};
-    SpecialAnimations special_frames = {0};
     RuntimeLibrary library = {0};
     RuntimeAnimationMap animation_map = {0};
     SDL_Gamepad *gamepad = NULL;
@@ -1093,27 +816,6 @@ int main(int argc, char **argv) {
         texture=SDL_CreateTextureFromSurface(renderer,surface);
         if (!texture) { fprintf(stderr,"Texture: %s\n",SDL_GetError());goto cleanup; }
         SDL_SetTextureScaleMode(texture,SDL_SCALEMODE_NEAREST);
-    }
-    if (samus_dir && !samus_frames_load(renderer,samus_dir,&samus_frames)) {
-        fprintf(stderr,"Samus sprite loading failed; aborting instead of showing incomplete art.\n");
-        goto cleanup;
-    }
-    if (composed_dir && !composed_load(renderer,composed_dir,&composed_frames,0,COMPOSED_BASE_COUNT)) {
-        fprintf(stderr,"Composed Samus sprite loading failed.\n");
-        goto cleanup;
-    }
-    if (extended_dir && !composed_load(renderer,extended_dir,&composed_frames,
-                                       COMPOSED_BASE_COUNT,COMPOSED_EXTRA_COUNT)) {
-        fprintf(stderr,"Extended composed Samus sprite loading failed.\n");
-        goto cleanup;
-    }
-    if (left_dir && !composed_load(renderer,left_dir,&composed_frames,
-                                   COMPOSED_EXTRA_COUNT,COMPOSED_COUNT)) {
-        fprintf(stderr,"Left-facing composed Samus sprite loading failed.\n");
-        goto cleanup;
-    }
-    if (special_dir && !special_load(renderer,special_dir,&special_frames)) {
-        fprintf(stderr,"Special animation load failed.\\n");goto cleanup;
     }
     if(library_index && !runtime_library_open(&library,library_index)){fprintf(stderr,"Runtime animation index failed to load.\n");goto cleanup;}
     if(animation_map_index && !runtime_animation_map_open(
@@ -1175,7 +877,6 @@ int main(int argc, char **argv) {
     printf("Ledges: hold toward while falling; release, then jump/toward to climb; C/away drops.\n");
     printf("Damage diagnostic: H = 20 damage; Enter = restart after death.\n");
     printf("Animation controls: E/Q aim, C crouch, F fire, R suit, T spin type, F6 catalogue.\n");
-    if (composed_dir) printf("Compositions: E=diagonal run, C+F=crouch shooting, jump=straight midair (right facing).\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
     const float fixed_step=1.f/120.f;
@@ -1527,14 +1228,6 @@ int main(int argc, char **argv) {
             runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_DPAD_DOWN));
         bool fire=keys[SDL_SCANCODE_F] ||
             runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_EAST);
-        int selected=(composed_dir || extended_dir || left_dir) ? composed_select(
-            movement_state,facing,aim_up,aim_down,crouch,fire,
-            extended_dir != NULL,left_dir != NULL,spin_jump) : -1;
-        if (selected >= 0 && ((selected < COMPOSED_BASE_COUNT && !composed_dir) ||
-                              (selected >= COMPOSED_BASE_COUNT &&
-                               selected < COMPOSED_EXTRA_COUNT && !extended_dir) ||
-                              (selected >= COMPOSED_EXTRA_COUNT && !left_dir)))
-            selected = -1;
         RuntimeLibraryEntry *lib_entry=NULL;
         if(library_index && animation_map.count>0 && !animation_browser) {
             const char *side=facing<0?"left":"right";
@@ -1571,9 +1264,6 @@ int main(int argc, char **argv) {
                 animation_start=now;
             }
             lib_entry=active_animation?active_animation->entry:NULL;
-        } else if(library_index && !animation_browser) {
-            lib_entry=runtime_library_select(&library,armor_index,facing,
-                movement_state,spin_jump,aim_up,aim_down,crouch,fire,special_kind);
         }
         if(animation_browser && library_index && library.count>0) {
             lib_entry=&library.entries[browser_index];
@@ -1582,10 +1272,6 @@ int main(int argc, char **argv) {
         spin_started=false;landed=false;morph_started=false;
         unmorph_started=false;wall_jump_started=false;
         ledge_pull_forward_started=false;ledge_pull_up_started=false;
-        int special_selected = -1;
-        if (special_dir && spin_jump &&
-            (movement_state == RUNTIME_JUMPING || movement_state == RUNTIME_FALLING))
-            special_selected = special_kind*2 + (facing<0 ? 1 : 0);
         if(lib_entry && lib_entry->count>0) {
             Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
             unsigned int ticks=(unsigned int)(elapsed_ms*60u/1000u);
@@ -1625,46 +1311,6 @@ int main(int argc, char **argv) {
                 if(damage_flash)
                     SDL_SetTextureAlphaMod(lib_entry->textures[frame],255);
             }
-        } else if (special_selected >= 0) {
-            Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
-            unsigned int elapsed_frames=(unsigned int)(elapsed_ms*60u/1000u);
-            int frame=samus_timeline_frame(special_frames.durations[special_selected],
-                                            SPECIAL_FRAMES,elapsed_frames);
-            SDL_Texture *sprite=special_frames.textures[special_selected][frame];
-            float sw=(float)special_frames.widths[special_selected][frame];
-            float sh=(float)special_frames.heights[special_selected][frame];
-            SDL_FRect dest={viewport.x+(px+pw*.5f-cx-sw*.5f)*scale,
-                            viewport.y+(py+ph-cy-sh)*scale,sw*scale,sh*scale};
-            SDL_RenderTexture(renderer,sprite,NULL,&dest);
-        } else if (selected>=0) {
-            Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
-            unsigned int elapsed_frames=(unsigned int)(elapsed_ms*60u/1000u);
-            int frame=samus_timeline_frame(composed_frames.durations[selected],
-                                           composed_counts[selected],elapsed_frames);
-            SDL_Texture *sprite=composed_frames.textures[selected][frame];
-            float sw=(float)composed_frames.widths[selected][frame];
-            float sh=(float)composed_frames.heights[selected][frame];
-            SDL_FRect dest={viewport.x+(px+pw*.5f-cx-sw*.5f)*scale,
-                            viewport.y+(py+ph-cy-sh)*scale,sw*scale,sh*scale};
-            SDL_RenderTexture(renderer,sprite,NULL,&dest);
-        } else if (samus_dir) {
-            /* Legacy jump BMP is not proven to be a native spin animation.
-             * Keep it as a fallback without claiming spin fidelity. */
-            int group=samus_animation_group(movement_state);
-            const int counts[]={4,10,8};
-            Uint64 elapsed_ms = SDL_GetTicks() - animation_start;
-            /* 60 fps is a GBA playback clock; SDL render rate is independent. */
-            unsigned int elapsed_frames = (unsigned int)(elapsed_ms * 60u / 1000u);
-            int frame=samus_timeline_frame(samus_frames.durations[group],
-                                           counts[group], elapsed_frames);
-            SDL_Texture *sprite=samus_frames.frames[group][frame];
-            float sw=(float)samus_frames.widths[group][frame];
-            float sh=(float)samus_frames.heights[group][frame];
-            /* Provisional bottom-centre anchor, separate from physics hitbox. */
-            SDL_FRect dest={viewport.x+(px+pw*0.5f-cx-sw*0.5f)*scale,
-                            viewport.y+(py+ph-cy-sh)*scale,sw*scale,sh*scale};
-            SDL_RenderTextureRotated(renderer,sprite,NULL,&dest,0.0,NULL,
-                                     facing<0 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
         } else {
             SDL_SetRenderDrawColor(renderer,80,205,115,255);
             SDL_FRect avatar={viewport.x+(px-cx)*scale, viewport.y+(py-cy)*scale,
@@ -1678,9 +1324,6 @@ int main(int argc, char **argv) {
 cleanup:
     if(gamepad)SDL_CloseGamepad(gamepad);
     runtime_library_free(&library);
-    special_free(&special_frames);
-    composed_free(&composed_frames);
-    samus_frames_free(&samus_frames);
     if (texture) SDL_DestroyTexture(texture);
     if (surface) SDL_DestroySurface(surface);
     if (renderer) SDL_DestroyRenderer(renderer);

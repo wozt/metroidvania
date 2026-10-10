@@ -1425,3 +1425,16 @@ No automatic reciprocal link or native engine encoder is implemented.
   passed. Brinstar 033 loaded all 204 collision records and the complete
   580-sequence/408-binding registry, then remained live through the three-second
   dummy-video smoke test with the new controls initialized.
+
+## Patch 0188 - remove obsolete fixed-sprite runtime loaders
+
+- Removed the runtime's historical `--samus-sprites`, `--samus-composed*` and
+  `--samus-special` loaders plus the heuristic key builder that predated the
+  semantic registry. They read archived patch-numbered caches that the
+  canonical pipeline no longer produces and had no remaining consumers.
+- The runtime now accepts Samus graphics only through the validated
+  `--samus-assets` bundle or an explicit `--samus-library`/`--samus-map` pair;
+  supplying only one half of the pair is rejected.
+- Validation on 2026-10-10: warning-clean build, runtime/room CTest subset
+  passed, and Brinstar 033 still loaded 204 native collision records plus the
+  complete 580-sequence/408-binding registry in the dummy-video smoke test.

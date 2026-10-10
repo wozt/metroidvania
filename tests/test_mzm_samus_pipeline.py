@@ -264,7 +264,9 @@ class PipelineTests(unittest.TestCase):
                     mock.patch("scripts.mzm_samus_pipeline._run_nm", return_value=""), \
                     mock.patch("scripts.mzm_samus_pipeline._elf_image",
                                return_value=b""), \
-                    mock.patch("scripts.mzm_samus_pipeline.compose_all", fake_compose):
+                    mock.patch("scripts.mzm_samus_pipeline.compose_all", fake_compose), \
+                    mock.patch("scripts.mzm_samus_pipeline.produce_projectiles",
+                               return_value={"sequences": 0}):
                 result = produce(root, rom, elf, root / "mzm")
                 repeated = produce(root, rom, elf, root / "mzm")
             self.assertEqual(result["unique_bmps"], 1)

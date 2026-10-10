@@ -21,7 +21,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from scripts.asset_layout import METROID_SAMUS_RUNTIME
+from scripts.asset_layout import METROID_PROJECTILES_RUNTIME, METROID_SAMUS_RUNTIME
+from scripts import mzm_projectile_compose
 from scripts.mzm_samus_compose import (
     VISUAL_SUITS,
     compose_all,
@@ -30,7 +31,7 @@ from scripts.mzm_samus_compose import (
     verify_symbols_against_rom,
 )
 from scripts.mzm_samus_frame import EXPECTED_SHA1
-from scripts.sprite_library import LibraryWriter
+from scripts.sprite_library import LibraryWriter, bmp_from_pixels
 
 MAP_SCHEMA = "metroidvania-samus-animation-map-v1"
 SUITS = tuple(VISUAL_SUITS)
@@ -116,6 +117,50 @@ def build_animation_map(keys) -> tuple[str, dict]:
     return content, report
 
 
+CANNON_SCHEMA = "metroidvania-samus-cannon-offsets-v1"
+PROJECTILE_SYMBOL_PREFIXES = ("sCommonSprites", "sBeamPal", "sNormalBeam",
+                              "sChargedNormalBeam", "sLongBeam", "sChargedLongBeam",
+                              "sIceBeam", "sChargedIceBeam", "sWaveBeam",
+                              "sChargedWaveBeam", "sPlasmaBeam", "sChargedPlasmaBeam",
+                              "sPistol", "sChargedPistol", "sMissile", "sSuperMissile",
+                              "sBomb", "sPowerBomb")
+
+
+def produce_projectiles(root: Path, rom: bytes, decomp: Path, symbols) -> dict:
+    """Write the projectile sprite library; return its totals."""
+    source = (decomp / "src/data/projectile_data.c").read_text(encoding="utf-8")
+    library = LibraryWriter(root, METROID_PROJECTILES_RUNTIME)
+    tables = {}
+
+    def sink(key, frames, info):
+        converted = []
+        for pixels, duration in frames:
+            bmp, left, top = bmp_from_pixels(pixels)
+            converted.append((bmp, duration, left, top))
+        library.add(key, converted)
+        tables[key] = info
+
+    report = mzm_projectile_compose.compose_all(rom, source, symbols, sink)
+    if report["unresolved"]:
+        raise ValueError("unresolved projectile tables: " +
+                         ", ".join(sorted(report["unresolved"])[:5]))
+    totals = library.finish()
+    library.write_text("sequences.json", json.dumps(tables, indent=2, sort_keys=True) + "\n")
+    return {**totals, "tables": report["tables"]}
+
+
+def cannon_offsets(sequences: dict) -> str:
+    """Per-frame arm cannon offsets (pixels from Samus's position) by key."""
+    rows = [f"schema\t{CANNON_SCHEMA}"]
+    for key in sorted(sequences):
+        muzzle = sequences[key].get("muzzle")
+        if key.endswith("/armed") or not muzzle:
+            continue
+        rows.extend(f"{key}\t{index}\t{x}\t{y}"
+                    for index, (x, y) in enumerate(muzzle))
+    return "\n".join(rows) + "\n"
+
+
 def _run_nm(nm: str, elf: Path) -> str:
     return subprocess.run([nm, "-S", "--defined-only", str(elf)], check=True,
                           capture_output=True, text=True).stdout
@@ -142,8 +187,12 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path,
     tables = parse_tables(
         (Path(decomp) / "src/data/samus/samus_animation_pointers.c")
         .read_text(encoding="utf-8"))
-    symbols = parse_symbols(_run_nm(nm, elf))
-    verify_symbols_against_rom(rom, _elf_image(objcopy, elf), symbols)
+    nm_output = _run_nm(nm, elf)
+    symbols = parse_symbols(nm_output)
+    projectile_symbols = parse_symbols(nm_output, PROJECTILE_SYMBOL_PREFIXES)
+    image = _elf_image(objcopy, elf)
+    verify_symbols_against_rom(rom, image, symbols)
+    verify_symbols_against_rom(rom, image, projectile_symbols)
 
     library = LibraryWriter(root, METROID_SAMUS_RUNTIME)
     sequences: dict[str, dict] = {}
@@ -170,8 +219,11 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path,
         "note": "Private native extraction; source ROM data is never redistributed.",
     }
     library.write_text("animation_map.tsv", animation_map)
+    library.write_text("cannon_offsets.tsv", cannon_offsets(sequences))
     library.write_text("sequences.json",
                        json.dumps(sequences, indent=2, sort_keys=True) + "\n")
+    metadata["projectiles"] = produce_projectiles(root, rom, Path(decomp),
+                                                  projectile_symbols)
     library.write_text("manifest.json",
                        json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     return metadata
@@ -197,6 +249,8 @@ def main(argv: list[str] | None = None) -> int:
     print("Samus runtime library:", result["sequences"], "sequences,",
           result["frames"], "frames,", result["unique_bmps"], "unique BMPs")
     print("Semantic bindings:", result["animation_map"]["rows"])
+    print("Projectile library:", result["projectiles"]["sequences"], "sequences,",
+          result["projectiles"]["unique_bmps"], "unique BMPs")
     print("Index:", args.root.resolve() / METROID_SAMUS_RUNTIME / "runtime_index.tsv")
     print("State map:", args.root.resolve() / METROID_SAMUS_RUNTIME / "animation_map.tsv")
     return 0

@@ -1561,3 +1561,24 @@ No automatic reciprocal link or native engine encoder is implemented.
   libraries validated by the C loader (Samus 1,384 sequences / 6,008 frames;
   Soma 84 sequences / 382 frames), and a contact sheet confirmed feet-anchored
   Soma frames.
+
+## Patch 0193 - projectile sprites, arm cannon offsets and armed cannon art
+
+- The Samus composer now also renders the missile-armed arm cannon graphics
+  (`sArmCannonGfxPointers_*_Armed_*`, with the source's running, hanging and
+  zipline rules) as `<key>/armed` sequences, and records each frame's arm
+  cannon offset exactly like `SamusUpdateArmCannonPositionOffset` in
+  `cannon_offsets.tsv`.
+- Added `scripts/mzm_projectile_compose.py`. The Samus pipeline now writes a
+  projectile sprite library: 54 native `FrameData` tables (all beams and
+  charged beams, pistol, missiles, super missiles, bombs, power bombs) in four
+  flip states, 216 sequences and 492 unique BMPs, staged with the common sprite
+  graphics/palette and each beam set's graphics and palette row as the game
+  loads them. Symbols are verified against the ROM like the Samus data.
+- Library totals: Samus 1,864 sequences (7,912 frames, 4,544 unique BMPs) with
+  the same 600 semantic bindings; projectiles 216 sequences.
+- Added ROM-free tests for table filtering, beam-set selection, flip mirroring,
+  palette-row checks, armed cannon rules, muzzle sign handling and the offset
+  table. A contact sheet confirmed native beam, missile and bomb colors.
+- Validation on 2026-10-10: CTest passed 16/16 and all three libraries
+  validated through the C loader.

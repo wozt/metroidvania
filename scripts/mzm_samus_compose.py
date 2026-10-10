@@ -118,16 +118,20 @@ def parse_tables(source: str) -> dict[str, dict[str, list[str]]]:
     return tables
 
 
-def parse_symbols(nm_output: str) -> dict[str, tuple[int, int]]:
-    """Sized ELF symbols relevant to Samus graphics (``nm -S`` output)."""
+SAMUS_SYMBOL_PREFIXES = ("sSamusAnim_", "sArmCannonAnim_", "sArmCannonGfx_",
+                         "sSamusPal_")
+
+
+def parse_symbols(nm_output: str, prefixes: tuple[str, ...] = SAMUS_SYMBOL_PREFIXES
+                  ) -> dict[str, tuple[int, int]]:
+    """Sized ELF symbols with the given name prefixes (``nm -S`` output)."""
     found: dict[str, tuple[int, int]] = {}
     for line in nm_output.splitlines():
         match = NM_RE.fullmatch(line.strip())
         if not match:
             continue
         address, size, name = match.groups()
-        if not name.startswith(("sSamusAnim_", "sArmCannonAnim_",
-                                "sArmCannonGfx_", "sSamusPal_")):
+        if not name.startswith(prefixes):
             continue
         value = (int(address, 16), int(size, 16))
         if name in found and found[name] != value:
@@ -165,18 +169,23 @@ class Variant:
     cannon: str | None
     cannon_gfx: tuple[str, str] | None
     pose: str | None
+    armed_gfx: tuple[str, str] | None = None
 
 
-def _cannon_gfx(tables, pose: str | None, acd: str, side: str):
+def _cannon_gfx(tables, pose: str | None, acd: str, side: str, armed: bool = False):
+    """Arm cannon graphics of SamusUpdateGraphicsOam; ``armed`` selects the
+    variant used while missiles or super missiles are highlighted."""
     right = side == "right"
+    side_name = "Right" if right else "Left"
+    armed_part = "Armed_" if armed else ""
     if pose in HANGING_POSES:
-        family = f"{'Right' if right else 'Left'}_Hanging"
+        family = f"{side_name}_{armed_part}Hanging"
     elif pose in ZIPLINE_POSES and right:
-        family = "Right_OnZipline"
+        family = f"Right_{armed_part}OnZipline"
     elif pose == "SPOSE_RUNNING" and right:
-        family = "Standing"
+        family = f"{armed_part}Standing"
     else:
-        family = f"{'Right' if right else 'Left'}_Default"
+        family = f"{side_name}_{armed_part}Default"
     result = []
     for part in ("Upper", "Lower"):
         row = tables.get(f"sArmCannonGfxPointers_{part}_{family}", {}).get(acd)
@@ -219,7 +228,9 @@ def build_variants(tables) -> tuple[list[Variant], list[str]]:
                         problems.append(f"{name}[{selector}] {side}: no native arm cannon table")
                     variants.append(Variant(
                         family, suffix, selector, side, symbols[index], cannon,
-                        _cannon_gfx(tables, pose, acd, side), pose))
+                        _cannon_gfx(tables, pose, acd, side), pose,
+                        _cannon_gfx(tables, pose, acd, side, armed=True)
+                        if family != "Suitless" else None))
     return variants, problems
 
 
@@ -259,23 +270,36 @@ def body_frame_count(rom: bytes, address: int, size: int) -> list[int]:
     return durations
 
 
-def render_indices(rom: bytes, symbols, variant: Variant, frame: int):
+def muzzle_offset(rom: bytes, symbols, cannon: str, frame: int) -> tuple[int, int]:
+    """Arm cannon position offset of SamusUpdateArmCannonPositionOffset."""
+    cannon_address = symbols[cannon][0] + frame * CANNON_RECORD_BYTES
+    offset_pointer, _ = struct.unpack(
+        "<II", _slice(rom, cannon_address, CANNON_RECORD_BYTES, "cannon record"))
+    y, x = struct.unpack("<HH", _slice(rom, offset_pointer, 4, "cannon offset"))
+    y = y - 0x100 if y & 0x80 else y
+    x = x - 0x200 if x & 0x100 else x
+    return x, y + 1
+
+
+def render_indices(rom: bytes, symbols, variant: Variant, frame: int,
+                   armed: bool = False):
     """Render one frame into ``{(x, y): palette index}`` in OAM coordinates."""
     body_address = symbols[variant.body][0] + frame * ANIMATION_RECORD_BYTES
     vram, metadata = stage(rom, body_address)
     _, body = _oam_entries(rom, metadata["oam_pointer"])
     entries = list(body)
     cannon_parts = 0
+    graphics = variant.armed_gfx if armed else variant.cannon_gfx
     if variant.cannon is not None and variant.pose != "SPOSE_DYING":
         cannon_address = symbols[variant.cannon][0] + frame * CANNON_RECORD_BYTES
         _, cannon_oam = struct.unpack(
             "<II", _slice(rom, cannon_address, CANNON_RECORD_BYTES, "cannon record"))
         header, cannon = _oam_entries(rom, cannon_oam)
         if cannon:
-            if variant.cannon_gfx is None:
+            if graphics is None:
                 raise ValueError("arm cannon OAM without native graphics table")
             vram = bytearray(vram)
-            for name, base in zip(variant.cannon_gfx,
+            for name, base in zip(graphics,
                                   (CANNON_UPPER_VRAM, CANNON_LOWER_VRAM)):
                 vram[base:base + CANNON_GFX_BYTES] = _slice(
                     rom, symbols[name][0], CANNON_GFX_BYTES, "cannon graphics")
@@ -337,6 +361,7 @@ def compose_all(rom: bytes, tables, symbols, sink) -> dict:
             needed = [variant.body]
             needed += [variant.cannon] if variant.cannon else []
             needed += list(variant.cannon_gfx or ())
+            needed += list(variant.armed_gfx or ())
             missing = [name for name in needed if name not in symbols]
             if missing:
                 raise ValueError("missing ELF symbols " + ", ".join(missing))
@@ -345,21 +370,33 @@ def compose_all(rom: bytes, tables, symbols, sink) -> dict:
                         for index in range(len(durations))]
             if any(not pixels for pixels, _, _ in rendered):
                 raise ValueError("frame has no visible pixels")
+            muzzles = ([muzzle_offset(rom, symbols, variant.cannon, index)
+                        for index in range(len(durations))]
+                       if variant.cannon else None)
+            armed = None
+            if variant.armed_gfx and any(parts for _, _, parts in rendered):
+                armed = [render_indices(rom, symbols, variant, index, armed=True)
+                         for index in range(len(durations))]
         except (ValueError, KeyError) as exc:
             report["unresolved"][label] = str(exc)
             continue
         for visual, (family, _, palette) in VISUAL_SUITS.items():
             if family != variant.family:
                 continue
-            frames = []
-            for pixels, duration, _ in rendered:
-                bmp, left, top = to_bmp(pixels, palettes[visual])
-                frames.append((bmp, duration, left, top + DRAW_Y_OFFSET))
-            report["sequences"] += 1
-            report["frames"] += len(frames)
-            sink(variant_key(visual, variant), frames, {
-                "body": variant.body, "cannon": variant.cannon,
-                "cannon_gfx": list(variant.cannon_gfx or ()),
-                "cannon_parts": [parts for _, _, parts in rendered],
-                "palette": palette})
+            outputs = [("", rendered, variant.cannon_gfx)]
+            if armed is not None:
+                outputs.append(("/armed", armed, variant.armed_gfx))
+            for suffix, frames_in, graphics in outputs:
+                frames = []
+                for pixels, duration, _ in frames_in:
+                    bmp, left, top = to_bmp(pixels, palettes[visual])
+                    frames.append((bmp, duration, left, top + DRAW_Y_OFFSET))
+                report["sequences"] += 1
+                report["frames"] += len(frames)
+                sink(variant_key(visual, variant) + suffix, frames, {
+                    "body": variant.body, "cannon": variant.cannon,
+                    "cannon_gfx": list(graphics or ()),
+                    "cannon_parts": [parts for _, _, parts in frames_in],
+                    "muzzle": [list(m) for m in muzzles] if muzzles else None,
+                    "palette": palette})
     return report

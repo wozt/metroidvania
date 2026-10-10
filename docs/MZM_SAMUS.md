@@ -55,7 +55,24 @@ exported sequences that had no arm cannon or a verified composition are
 reproduced pixel for pixel; the remaining old Full Suit, Suitless and hanging
 entries were body-only and now gain their native arm cannon.
 
-Not yet exported: missile-armed cannon graphics (`*_Armed_*`), beam-charge,
+While missiles are highlighted the source swaps the arm cannon graphics for
+the `*_Armed_*` tables; those variants are stored under the same key with an
+`/armed` suffix (480 sequences). `cannon_offsets.tsv`
+(`metroidvania-samus-cannon-offsets-v1`) lists, for every key and frame, the
+arm cannon offset from Samus's pixel position computed exactly like
+`SamusUpdateArmCannonPositionOffset`; projectiles spawn there.
+
+The same command also writes the projectile sprite library below
+`assets/extracted/metroid/sprites/projectiles/runtime/` with
+`scripts/mzm_projectile_compose.py`: every non-particle `FrameData` table of
+`projectile_data.c` (beams of all five types and their charged forms, the
+pistol, missiles, super missiles, bombs and power bombs) in four flip states,
+staged like `HudGenericLoadCommonSpriteGfx` and `ProjectileLoadGraphics`
+(common graphics at OBJ 0x800, the beam set at 0x1000, common palette rows
+2-7 with the beam row patched into row 2). Offsets are relative to the
+projectile position; X/Y flips mirror around it as `ProjectileDraw` does.
+
+Not yet exported: beam-charge,
 speed-boost, shinespark, flashing, unmorph and dying palette rows, the echo's
 palette bank, and effect sprites such as the Screw Attack and Speed Booster
 overlays. The semantic registry binds 600 rows for 33 actions; the only

@@ -93,13 +93,29 @@ def frame_components(rom: bytes, frames_descriptor: int, frame: int) -> list[tup
 
 
 def render_frame(tiles: bytes, sheet_width: int, components: list[tuple],
-                 colors: list[tuple[int, int, int]]) -> dict:
-    """Opaque pixels of a frame, relative to the entity position."""
+                 colors: list[tuple[int, int, int]], skipped: list | None = None) -> dict:
+    """Opaque pixels of a frame facing right, relative to the entity position.
+
+    The component word is the bytes +8..+0xB that ``sub_0804311C`` (the
+    IWRAM OAM builder) reads: +8 shape | size << 4, +9 an alternate tile base
+    used only in animation mode 2, +0xA bit 0 vertical flip and bit 1
+    horizontal flip relative to the entity facing, +0xB a palette offset
+    mask. Components whose source lies outside the sheet read other VRAM and
+    are skipped (counted in ``skipped``)."""
     pixels = {}
-    for x, y, source_x, source_y, width, height, _ in reversed(components):
+    sheet_height = len(tiles) // (sheet_width * TILE_BYTES) * 8
+    for x, y, source_x, source_y, width, height, flags in reversed(components):
+        if flags >> 24 or (flags >> 16) & ~3:
+            raise ValueError("unsupported OAM component attributes")
+        if source_x + width > sheet_width * 8 or source_y + height > sheet_height:
+            if skipped is not None:
+                skipped.append((x, y, source_x, source_y, width, height))
+            continue
+        vflip, hflip = (flags >> 16) & 1, (flags >> 17) & 1
         for py in range(height):
             for px in range(width):
-                sx, sy = source_x + px, source_y + py
+                sx = source_x + (width - 1 - px if hflip else px)
+                sy = source_y + (height - 1 - py if vflip else py)
                 tile = (sy // 8) * sheet_width + sx // 8
                 packed = tiles[tile * TILE_BYTES + (sy % 8) * 4 + (sx % 8) // 2]
                 index = (packed >> (4 * (sx & 1))) & 15

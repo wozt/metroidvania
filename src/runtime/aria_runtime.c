@@ -11,6 +11,7 @@
 #include "aos_door.h"
 #include "aos_room.h"
 #include "aos_soma.h"
+#include "aos_weapon.h"
 
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -27,6 +28,8 @@
 #define DEFAULT_LIBRARY "assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv"
 #define DEFAULT_OBJECTS "assets/extracted/aria/sprites/objects/runtime/runtime_index.tsv"
 #define DEFAULT_WEAPONS "assets/extracted/aria/metadata/weapons.tsv"
+#define DEFAULT_WEAPON_FRAMES "assets/extracted/aria/metadata/weapon_frames.tsv"
+#define DEFAULT_WEAPON_SPRITES "assets/extracted/aria/sprites/weapons/runtime/runtime_index.tsv"
 #define DOOR_STYLES 2
 
 
@@ -528,10 +531,73 @@ static bool load_weapon(const char *path, const char *name, AosWeapon *weapon) {
     return found;
 }
 
+/* The weapon entity's sprite sequence and hitboxes (classes 0, 2, 3). */
+typedef struct {
+    AriaFrame frames[MAX_FRAMES];
+    uint8_t ticks[MAX_FRAMES];
+    AosHitbox hitboxes[MAX_FRAMES];
+    AosAnimDef def;
+    AosAnimSet set;
+    AosWeaponFrames data;
+    int count;
+} AriaWeaponSprite;
+
+static bool load_weapon_sprite(const char *name, AriaWeaponSprite *out, SDL_Renderer *renderer) {
+    char key[32], line[1024];
+    snprintf(key, sizeof key, "Weapon/%s\t", name);
+    FILE *f = fopen(DEFAULT_WEAPON_SPRITES, "rb");
+    if (!f) return false;
+    while (fgets(line, sizeof line, f)) {
+        if (strncmp(line, key, strlen(key))) continue;
+        char frame_path[512];
+        int frame, ticks, ox, oy;
+        if (sscanf(line + strlen(key), "%d\t%d\t%d\t%d\t%511s", &frame, &ticks, &ox, &oy,
+                   frame_path) != 5 || frame != out->count || frame >= MAX_FRAMES)
+            break;
+        SDL_Surface *surface = SDL_LoadBMP(frame_path);
+        if (!surface) break;
+        AriaFrame *dst = &out->frames[frame];
+        dst->texture = SDL_CreateTextureFromSurface(renderer, surface);
+        dst->w = (float)surface->w;
+        dst->h = (float)surface->h;
+        dst->offset_x = ox;
+        dst->offset_y = oy;
+        SDL_DestroySurface(surface);
+        if (!dst->texture) break;
+        SDL_SetTextureScaleMode(dst->texture, SDL_SCALEMODE_NEAREST);
+        out->ticks[frame] = (uint8_t)ticks;
+        out->count++;
+    }
+    fclose(f);
+    if (!out->count) return false;
+    f = fopen(DEFAULT_WEAPON_FRAMES, "rb");
+    if (f) {
+        while (fgets(line, sizeof line, f)) {
+            char weapon[16];
+            int index, frame, ticks, hit, x, y, w, h;
+            if (sscanf(line, "%15s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d", weapon, &index, &frame,
+                       &ticks, &hit, &x, &y, &w, &h) == 9 &&
+                !strcmp(weapon, name) && index >= 0 && index < out->count)
+                out->hitboxes[index] = (AosHitbox){(int8_t)x, (int8_t)y, (uint8_t)w, (uint8_t)h,
+                                                   hit != 0};
+        }
+        fclose(f);
+    }
+    out->def = (AosAnimDef){(uint16_t)out->count, out->ticks};
+    out->set = (AosAnimSet){&out->def, 1};
+    out->data = (AosWeaponFrames){&out->set, out->hitboxes};
+    return true;
+}
+
+static void free_weapon_sprite(AriaWeaponSprite *sprite) {
+    for (int i = 0; i < sprite->count; ++i)
+        if (sprite->frames[i].texture) SDL_DestroyTexture(sprite->frames[i].texture);
+}
+
 static void usage(const char *name) {
     fprintf(stderr,
             "Usage: %s [--check] [--library index.tsv] [--spawn X Y] [--moves MASK]\n"
-            "       [--weapon none|INDEX]\n"
+            "       [--weapon none|INDEX] [--hitboxes]\n"
             "       [--capture out.bmp FRAMES BUTTONS] (--area A --room R | room-folder)\n",
             name);
 }
@@ -545,7 +611,7 @@ int main(int argc, char **argv) {
     unsigned long moves = AOS_MOVE_BACKDASH | AOS_MOVE_SLIDE | AOS_MOVE_AIR_JUMP |
                           AOS_MOVE_DIVE_KICK | AOS_MOVE_HIGH_JUMP;
     int spawn_x = -1, spawn_y = -1;
-    bool check = false;
+    bool check = false, show_hitboxes = false;
     for (int i = 1; i < argc; ++i) {
         char *end = NULL;
         if (!strcmp(argv[i], "--check")) check = true;
@@ -554,6 +620,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--area") && i + 1 < argc) area = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) weapon_name = argv[++i];
+        else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
         else if (!strcmp(argv[i], "--moves") && i + 1 < argc) {
             moves = strtoul(argv[++i], &end, 0);
             if (*end || moves > 0x1F) { usage(argv[0]); return 2; }
@@ -624,6 +691,12 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Export the weapons first: python3 -m scripts.aos_weapons\n");
         goto cleanup;
     }
+    /* Only the class 0, 2 and 3 entity (sub_080221CC) is ported. */
+    static AriaWeaponSprite weapon_sprite;
+    bool weapon_ported = soma.weapon.weapon_class == 0 || soma.weapon.weapon_class == 2 ||
+                         soma.weapon.weapon_class == 3;
+    bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
+    AosWeaponEntity weapon_entity = {0};
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     uint16_t previous = 0;
     AosForcedInput forced = {0};
@@ -656,6 +729,7 @@ int main(int argc, char **argv) {
             }
             follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
             update_entities(&room, &layer, &soma, cam_x, &forced);
+            if (weapon_loaded) aos_weapon_update(&weapon_entity, &soma, &weapon_sprite.data);
         }
 
         int sx = soma.x >> 16, sy = soma.y >> 16;
@@ -676,6 +750,24 @@ int main(int argc, char **argv) {
             SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
                                      soma.facing_left ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
         }
+        if (weapon_loaded && weapon_entity.active && weapon_entity.anim.frame < weapon_sprite.count) {
+            const AriaFrame *blade = &weapon_sprite.frames[weapon_entity.anim.frame];
+            int wy = sy + weapon_entity.y_offset;
+            float x = weapon_entity.facing_left ? (float)(sx - blade->offset_x) - blade->w
+                                                : (float)(sx + blade->offset_x);
+            SDL_FRect rect = {x - (float)cam_x, (float)(wy + blade->offset_y - cam_y), blade->w,
+                              blade->h};
+            SDL_RenderTextureRotated(renderer, blade->texture, NULL, &rect, 0, NULL,
+                                     weapon_entity.facing_left ? SDL_FLIP_HORIZONTAL
+                                                               : SDL_FLIP_NONE);
+            int hx, hy, hw, hh;
+            if (show_hitboxes && aos_weapon_hitbox(&weapon_entity, &soma, &weapon_sprite.data,
+                                                   &hx, &hy, &hw, &hh)) {
+                SDL_FRect box = {(float)(hx - cam_x), (float)(hy - cam_y), (float)hw, (float)hh};
+                SDL_SetRenderDrawColor(renderer, 255, 60, 60, 255);
+                SDL_RenderRect(renderer, &box);
+            }
+        }
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);
             bool saved = shot && SDL_SaveBMP(shot, capture_path);
@@ -692,6 +784,7 @@ int main(int argc, char **argv) {
     rc = 0;
 cleanup:
     free_library(&library);
+    free_weapon_sprite(&weapon_sprite);
     free_objects(&objects);
     if (background) SDL_DestroyTexture(background);
     if (renderer) SDL_DestroyRenderer(renderer);

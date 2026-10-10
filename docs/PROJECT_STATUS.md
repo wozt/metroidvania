@@ -1886,3 +1886,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   runtime. Weapon entities (blade sprites, hitboxes) are not ported yet.
 - Validation on 2026-10-10: CTest passed 21/21 and the proprietary guard
   passed.
+
+## Patch 0212 - Soma weapon entity
+
+- Decoded the weapon entity of classes 0, 2 and 3 (`sub_080221CC`) and the
+  OAM component format of the IWRAM sprite builder `sub_0804311C` (shape and
+  size, alternate tile base, flips, palette mask).
+- `scripts/aos_weapons.py` now also exports every weapon's animation as a
+  private sprite sequence and its per-frame hitboxes; `src/runtime/aos_weapon.c`
+  ports the entity lifetime, placement and hitbox with ROM-free tests.
+- `fusion_aria_runtime` draws the blade with the attack (knife and rapier
+  checked in captures) and outlines the hitbox with `--hitboxes`. Damage,
+  enemies and the class 1, 4 and 5 weapons are not ported.
+- Validation on 2026-10-10: CTest passed 22/22, the object sprite tests passed
+  and the proprietary guard passed.

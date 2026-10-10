@@ -229,8 +229,28 @@ recovery animation) or with a backdash. Landing clears `0x20031E` instead of
 `0x20017E` for such weapons and keeps the attack state; otherwise a landing
 ends the attack. The weapon entity follows Soma, takes its hitbox from his
 animation frame data and deletes itself when `0x20` clears; its sprites,
-hitboxes and the subweapon/soul attack `sub_08019478` are not ported.
+damage and the subweapon/soul attack `sub_08019478` are not ported.
 `scripts/aos_weapons.py` exports the records and their animations privately.
+
+Weapon entity (`sub_080221CC`, classes 0, 2 and 3): its tile sheet is
+`sUnk_084F10C0[record + 0x12]`, its frame/animation descriptor
+`sUnk_084F117C[record + 0x13]` (u16 frame record count, u16 animation count,
+16-byte frame records, a word, the animation table), its palette bank
+`record + 0x15` of `0x082098B8`, and it plays animation `record + 0x14` once
+in mode 0. It sits at Soma's position (13 pixels lower when he was
+crouched, kept in `+0x4E`), faces as he did when it was created, and is
+deleted when its animation ends or Soma's `0x20` clears (both free the slot
+`0x1311C`). On every frame change, a frame record with byte `+4` set enables
+the hitbox at its pointer `+8` (signed x, y, width, height) through
+`sub_08042848`; otherwise the hitbox is off. OAM components are built by
+`sub_0804311C` (ARM code copied to IWRAM `0x03004570`, called through
+`0x03004564`): byte `+8` is shape | size << 4, `+9` selects an alternate tile
+base only in animation mode 2, `+0xA` bit 0 flips vertically and bit 1
+inverts the entity's horizontal flip, `+0xB` masks a palette offset; when the
+entity faces left, components are mirrored around the record's X. Classes 1
+(`sub_080224BC`), 4 and 5 use other entities. `src/runtime/aos_weapon.c`
+ports the class 0/2/3 lifetime and hitbox; the runtime draws the blade
+(`--hitboxes` outlines the active hitbox).
 
 Earlier revisions called the slide a "probable backdash" and the case
 `_0801C410` the air state; case 1 is an attack state (weapon animations,
@@ -402,7 +422,8 @@ generic draw (`0x03004564` in IWRAM) is not traced, but this places both
 edge doors inside their doorway art (rooms 0/3 and 0/16).
 
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: the weapon entities (sprites and hitboxes), the boss
+(README). Next steps: enemies (damage through the weapon hitboxes), the
+class 1, 4 and 5 weapon entities, the boss
 doors (object 0x02 deletes itself once boss bit `0x37E >> param1` is set) and
 the save-room objects (0x1C save point, 0x1D walls closing the side opposite
 the room's single exit) behind the `0xF0` exit cells, the transition

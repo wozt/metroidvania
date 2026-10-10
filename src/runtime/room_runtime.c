@@ -267,6 +267,30 @@ static float update_horizontal_velocity(float vx, float input,
     return vx;
 }
 
+/* PATCH_0185_MORPH_AND_WALL_JUMP
+ * These helpers make the provisional gameplay rules independently testable.
+ * Resizing preserves the avatar's feet and refuses to expand into collision.
+ * Wall contact is sampled one pixel to either side of the current hitbox.
+ * Neither the hitbox sizes nor the movement constants claim native fidelity. */
+static bool runtime_resize_height(const Room *room, float x, float *y,
+                                  float width, float *height,
+                                  float requested_height) {
+    if (requested_height <= 0.f) return false;
+    float candidate_y = *y + *height - requested_height;
+    if (blocked(room, x, candidate_y, width, requested_height)) return false;
+    *y = candidate_y;
+    *height = requested_height;
+    return true;
+}
+
+static int runtime_wall_side(const Room *room, float x, float y,
+                             float width, float height) {
+    bool left = blocked(room, x - 1.f, y, width, height);
+    bool right = blocked(room, x + 1.f, y, width, height);
+    if (left == right) return 0;
+    return left ? -1 : 1;
+}
+
 
 /* PATCH_0145_MOVEMENT_STATES
  * Runtime presentation states only; these are NOT original MZM pose IDs.
@@ -580,14 +604,20 @@ static unsigned int runtime_animation_total(const RuntimeAnimationMapRow *row) {
 static int runtime_animation_priority(const char *action) {
     if(!strcmp(action,"death"))return 100;
     if(!strcmp(action,"hurt"))return 90;
+    if(!strcmp(action,"morph_start")||!strcmp(action,"unmorph"))return 85;
     if(!strcmp(action,"spin_start")||!strcmp(action,"wall_jump"))return 80;
     if(!strcmp(action,"landing"))return 60;
     if(!strcmp(action,"turn")||!strcmp(action,"skid"))return 40;
     return 10;
 }
 static const char *runtime_requested_action(RuntimeMovementState state,bool spin,
-        bool crouch,bool fire,bool skid,int special_kind,
+        bool crouch,bool fire,bool skid,int special_kind,bool morphed,
+        bool morph_started,bool unmorph_started,bool wall_jump_started,
         bool spin_started,bool landed) {
+    if(morph_started)return "morph_start";
+    if(unmorph_started)return "unmorph";
+    if(wall_jump_started)return "wall_jump";
+    if(morphed)return "morph_ball";
     if(spin_started)return "spin_start";
     if(landed)return "landing";
     if(spin&&(state==RUNTIME_JUMPING||state==RUNTIME_FALLING))
@@ -929,7 +959,8 @@ int main(int argc, char **argv) {
     RuntimeLibrary library = {0};
     RuntimeAnimationMap animation_map = {0};
     SDL_Gamepad *gamepad = NULL;
-    bool pad_jump_prev=false, pad_armor_prev=false, pad_special_prev=false;
+    bool pad_jump_prev=false, pad_morph_prev=false;
+    bool pad_armor_prev=false, pad_special_prev=false;
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
     if (background) {
         surface=SDL_LoadBMP(background);
@@ -971,7 +1002,8 @@ int main(int argc, char **argv) {
         printf("Samus animation registry: %d native sequences, %d semantic bindings\n",
                library.count,animation_map.count);
     gamepad=runtime_pad_open();
-    float px=16,py=16, pw=12,ph=16;
+    const float standing_width=12.f,standing_height=16.f,morph_height=10.f;
+    float px=16,py=16,pw=standing_width,ph=standing_height;
     /* Initial gameplay tuning, NOT confirmed Zero Mission physics. */
     const float run_speed=115.f, gravity=650.f, jump_speed=265.f;
     const float terminal_speed=400.f;
@@ -982,12 +1014,15 @@ int main(int argc, char **argv) {
     RuntimeMovementState movement_state=RUNTIME_IDLE;
     int facing=1;
     bool spin_jump=false;
+    bool morphed=false;
+    float wall_jump_lock=0.f;
     int special_kind=0; /* 0=spin; 1=space, 2=screw (visual preview only). */
     unsigned int armor_index=0;
     bool animation_browser=false;
     int browser_index=0;
     RuntimeAnimationMapRow *active_animation=NULL;
-    bool spin_started=false,landed=false;
+    bool spin_started=false,landed=false,morph_started=false;
+    bool unmorph_started=false,wall_jump_started=false;
     static const char *armor_names[] = {
         "Power Suit", "Varia Suit", "Gravity Suit", "Full Suit", "Suitless"
     };
@@ -998,14 +1033,14 @@ int main(int argc, char **argv) {
     if (!spawn) { fprintf(stderr,"No free avatar spawn found\n"); goto cleanup; }
     printf("Selected safe test spawn: x=%.0f y=%.0f, ground=%s\n",
            px, py, blocked(room, px, py+1.f, pw, ph) ? "yes" : "no");
-    printf("Controls: Left/Right or A/D = move; Space/Up/W = jump; Escape = exit. ");
+    printf("Controls: Left/Right or A/D = move; Space/Up/W = jump; X = morph; Escape = exit. ");
     printf("Experimental platformer physics; only project code-1 solids block.\n");
     printf("Animation controls: E/Q aim, C crouch, F fire, R suit, T spin type, F6 catalogue.\n");
     if (composed_dir) printf("Compositions: E=diagonal run, C+F=crouch shooting, jump=straight midair (right facing).\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
     const float fixed_step=1.f/120.f;
-    bool jump_queued=false;
+    bool jump_queued=false,morph_queued=false;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -1052,6 +1087,8 @@ int main(int argc, char **argv) {
                 (event.key.key == SDLK_SPACE || event.key.key == SDLK_UP ||
                  event.key.key == SDLK_W)) jump_queued=true;
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                event.key.key == SDLK_X) morph_queued=true;
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                 event.key.key == SDLK_T) {
                 special_kind=(special_kind+1)%3;
                 fprintf(stderr,"Spin preview mode: %s\\n",
@@ -1073,6 +1110,9 @@ int main(int argc, char **argv) {
         bool pad_jump=runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_SOUTH);
         if(pad_jump && !pad_jump_prev)jump_queued=true;
         pad_jump_prev=pad_jump;
+        bool pad_morph=runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_WEST);
+        if(pad_morph && !pad_morph_prev)morph_queued=true;
+        pad_morph_prev=pad_morph;
         bool pad_armor=runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_BACK);
         if(pad_armor && !pad_armor_prev) armor_index=(armor_index+1u)%5u;
         pad_armor_prev=pad_armor;
@@ -1086,23 +1126,60 @@ int main(int argc, char **argv) {
         float dx=((keys[SDL_SCANCODE_RIGHT]||keys[SDL_SCANCODE_D]) ? 1.f:0.f)-
                  ((keys[SDL_SCANCODE_LEFT]||keys[SDL_SCANCODE_A]) ? 1.f:0.f);
         if(dx==0.f)dx=runtime_pad_horizontal(gamepad);
-        if (dx > 0.f) facing=1;
-        else if (dx < 0.f) facing=-1;
+        if (wall_jump_lock <= 0.f) {
+            if (dx > 0.f) facing=1;
+            else if (dx < 0.f) facing=-1;
+        }
         accumulator += dt;
         while (accumulator >= fixed_step) {
             bool hit=false;
             bool was_grounded=grounded;
             grounded=blocked(room,px,py+1.f,pw,ph);
-            if (jump_queued && grounded) {
+            if (morph_queued) {
+                if (!morphed) {
+                    if (armor_index == 4u) {
+                        fprintf(stderr,"Morph Ball is unavailable for Suitless Samus.\n");
+                    } else if (runtime_resize_height(
+                                   room,px,&py,pw,&ph,morph_height)) {
+                        morphed=true;
+                        spin_jump=false;
+                        morph_started=true;
+                    }
+                } else if (runtime_resize_height(
+                               room,px,&py,pw,&ph,standing_height)) {
+                    morphed=false;
+                    unmorph_started=true;
+                } else {
+                    fprintf(stderr,"Cannot unmorph: standing hitbox is blocked.\n");
+                }
+                morph_queued=false;
+            }
+            int wall_side=runtime_wall_side(room,px,py,pw,ph);
+            if (jump_queued && grounded && !morphed) {
                 /* Jump type is latched at takeoff, not reclassified by aim keys. */
                 spin_jump=(dx > 0.1f || dx < -0.1f);
                 spin_started=spin_jump;
                 vy=-jump_speed;
                 grounded=false;
+            } else if (jump_queued && !grounded && !morphed &&
+                       spin_jump && wall_side != 0) {
+                /* Provisional wall-jump impulse and short steering lock. */
+                const float wall_jump_speed=150.f;
+                vx=wall_side < 0 ? wall_jump_speed : -wall_jump_speed;
+                vy=-jump_speed*.9f;
+                facing=wall_side < 0 ? 1 : -1;
+                wall_jump_lock=.13f;
+                wall_jump_started=true;
+                spin_started=false;
             }
             jump_queued=false;
-            vx=update_horizontal_velocity(vx,dx,fixed_step,run_speed,
-                                          run_accel,run_braking);
+            if (wall_jump_lock > 0.f) {
+                wall_jump_lock-=fixed_step;
+                if (wall_jump_lock < 0.f) wall_jump_lock=0.f;
+            } else {
+                vx=update_horizontal_velocity(vx,dx,fixed_step,run_speed,
+                                              run_accel,run_braking);
+            }
             if (grounded)
                 move_grounded_x(room,&px,&py,vx*fixed_step,pw,ph);
             else
@@ -1151,8 +1228,8 @@ int main(int argc, char **argv) {
             runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER);
         bool aim_down=keys[SDL_SCANCODE_Q] ||
             runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
-        bool crouch=keys[SDL_SCANCODE_C] ||
-            runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_DPAD_DOWN);
+        bool crouch=!morphed && (keys[SDL_SCANCODE_C] ||
+            runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_DPAD_DOWN));
         bool fire=keys[SDL_SCANCODE_F] ||
             runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_EAST);
         int selected=(composed_dir || extended_dir || left_dir) ? composed_select(
@@ -1173,7 +1250,8 @@ int main(int argc, char **argv) {
             const char *action=runtime_requested_action(
                 movement_state,spin_jump,crouch,fire,
                 grounded && dx==0.f && (vx>.1f || vx<-.1f),
-                special_kind,spin_started,landed);
+                special_kind,morphed,morph_started,unmorph_started,
+                wall_jump_started,spin_started,landed);
             RuntimeAnimationMapRow *requested=runtime_animation_map_find(
                 &animation_map,action,suit_names[armor_index%5],side,aim);
             if(!requested && (!strcmp(action,"space_jump")||
@@ -1190,7 +1268,7 @@ int main(int argc, char **argv) {
                 unsigned int elapsed=(unsigned int)((now-animation_start)*60u/1000u);
                 unsigned int total=runtime_animation_total(active_animation);
                 if(elapsed<total && (!requested ||
-                   runtime_animation_priority(requested->action)<=
+                   runtime_animation_priority(requested->action)<
                    runtime_animation_priority(active_animation->action)))
                     chosen=active_animation;
             }
@@ -1207,7 +1285,8 @@ int main(int argc, char **argv) {
             lib_entry=&library.entries[browser_index];
             active_animation=NULL;
         }
-        spin_started=false;landed=false;
+        spin_started=false;landed=false;morph_started=false;
+        unmorph_started=false;wall_jump_started=false;
         int special_selected = -1;
         if (special_dir && spin_jump &&
             (movement_state == RUNTIME_JUMPING || movement_state == RUNTIME_FALLING))

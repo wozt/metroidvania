@@ -1347,3 +1347,27 @@ No automatic reciprocal link or native engine encoder is implemented.
   and the proprietary-file guard passed. The headless registry check accepted
   all 580 sequences and 408 bindings; Brinstar 033 loaded the same registry and
   204 native collision records, then remained live through the smoke timeout.
+
+## Patch 0185 - physical Morph Ball and Wall Jump states
+
+- Added an actual Morph Ball gameplay state to the SDL3 room runtime. X on the
+  keyboard or the gamepad West button now toggles it, switches to a shorter
+  collision box without moving Samus's feet, and selects native morph, rolling
+  and unmorph sequences through the semantic registry.
+- Unmorphing performs a full standing-clearance query before changing the
+  hitbox. A blocked request leaves Samus safely morphed instead of intersecting
+  a ceiling. Suitless preview mode rejects Morph Ball because the source
+  catalogue contains no corresponding native sequences.
+- Added collision-driven Wall Jump activation for airborne spin jumps. Contact
+  is sampled independently on each side, the launch faces and travels away from
+  the wall, and a short steering lock preserves the provisional impulse. The
+  native one-shot wall-jump pose can interrupt spin startup at equal transition
+  priority.
+- Added ROM-free regression coverage for foot-preserving hitbox contraction,
+  blocked and successful expansion, and left/right/ambiguous wall contact. The
+  10-pixel ball height, launch speed and steering interval are explicitly
+  provisional until original Zero Mission movement constants are verified.
+- Validation on 2026-10-10: the warning-clean Debug build succeeded, CTest
+  passed 14/14, the Python suite passed 409/409, and the proprietary-file guard
+  passed. Brinstar 033 loaded 204 native collision records plus all 580 indexed
+  sequences and remained live through the three-second dummy-video smoke test.

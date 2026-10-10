@@ -95,7 +95,9 @@ Run the experimental SDL3 Zero Mission room/animation integration with:
 
 This shortcut consumes only local ignored assets. It demonstrates native room
 collision diagnostics, an indexed Samus animation library, keyboard input and
-SDL3 gamepad input; it is not a complete Zero Mission gameplay engine.
+SDL3 gamepad input; it is not a complete Zero Mission gameplay engine. Use X
+(gamepad West) to toggle Morph Ball. A spinning jump can wall-jump by pressing
+jump while touching a wall.
 
 ## Current verified data
 

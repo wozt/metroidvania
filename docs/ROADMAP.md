@@ -71,9 +71,12 @@ diagnostic room, native Clipdata collision, a content-addressed 580-sequence
 Samus library, and simultaneous keyboard/SDL3 gamepad input. Its state selector
 uses a generated 408-row semantic registry and native-duration transition
 priority for currently implemented movement/input states. All sequences remain
-available through the separate catalogue browser. Combat, native entities,
-complete ability physics, Varia/Gravity palette switching, room lifecycle and
-the Aria kernel remain pending.
+available through the separate catalogue browser. Its first ability mechanics
+now include clearance-safe Morph Ball resizing and a collision-driven Wall
+Jump, both connected to native animation sequences but still using provisional
+physics constants. Combat, native entities, complete ability physics,
+Varia/Gravity palette switching, room lifecycle and the Aria kernel remain
+pending.
 
 Exit criterion: each native character can complete a source-authentic test path
 in its own engine without emulation.

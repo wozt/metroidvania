@@ -59,6 +59,28 @@ int main(void) {
     assert(samus_timeline_frame_once(timing,3,5)==2);
     assert(samus_timeline_frame_once(timing,3,6)==2);
     assert(samus_timeline_frame_once(timing,3,100)==2);
+
+    /* PATCH_0185: Morph Ball keeps its feet planted and cannot expand through
+     * a low ceiling. Wall contact reports exactly one blocking side. */
+    r->count=0;
+    float shape_y=32.f,shape_height=16.f;
+    assert(runtime_resize_height(r,16.f,&shape_y,12.f,&shape_height,10.f));
+    assert(shape_y==38.f && shape_height==10.f);
+    r->count=1;
+    r->collisions[0]=(Collision){16,32,16,6,1};
+    assert(!runtime_resize_height(r,16.f,&shape_y,12.f,&shape_height,16.f));
+    assert(shape_y==38.f && shape_height==10.f);
+    r->count=0;
+    assert(runtime_resize_height(r,16.f,&shape_y,12.f,&shape_height,16.f));
+    assert(shape_y==32.f && shape_height==16.f);
+    r->count=1;
+    r->collisions[0]=(Collision){0,0,16,64,1};
+    assert(runtime_wall_side(r,16.f,16.f,12.f,16.f)==-1);
+    r->collisions[0]=(Collision){28,0,16,64,1};
+    assert(runtime_wall_side(r,16.f,16.f,12.f,16.f)==1);
+    r->count=2;
+    r->collisions[1]=(Collision){0,0,16,64,1};
+    assert(runtime_wall_side(r,16.f,16.f,12.f,16.f)==0);
     free(r);
     return 0;
 }

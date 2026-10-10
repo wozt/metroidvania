@@ -68,8 +68,14 @@ native variants for idle, running, aiming, firing, crouching and midair states.
 Turning, skidding, landing and spin-jump startup are one-shot transitions: they
 play to completion at their native duration unless a higher-priority transition
 interrupts them. Spin, Space Jump and Screw Attack loops cannot be overwritten
-by the generic MidAir state. F6 remains a separate raw-catalogue browser for all
-580 sequences, including poses whose gameplay mechanics are not implemented.
+by the generic MidAir state. Morph Ball now changes the collision height while
+preserving the feet position, refuses to unmorph without standing clearance,
+and selects the native morph/unmorph/rolling sequences. A spin jump touching
+exactly one blocking side can perform a provisional wall-jump impulse and plays
+the native wall-jump transition. The hitbox dimensions and movement constants
+remain experimental rather than extracted Zero Mission values. F6 remains a
+separate raw-catalogue browser for all 580 sequences, including poses whose
+gameplay mechanics are not implemented.
 
 The semantic registry can be validated without opening a window:
 

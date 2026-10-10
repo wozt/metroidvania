@@ -1,0 +1,3660 @@
+{
+ "schema": "metroidvania-dashboard-v1",
+ "generated_at": "2026-10-10T20:07:56+00:00",
+ "git": {
+  "commit": "894a167",
+  "branch": "main",
+  "dirty": true
+ },
+ "areas": [
+  {
+   "id": "mzm",
+   "title": "Metroid: Zero Mission"
+  },
+  {
+   "id": "aos",
+   "title": "Castlevania: Aria of Sorrow"
+  },
+  {
+   "id": "metroidvania",
+   "title": "Metroidvania"
+  },
+  {
+   "id": "story",
+   "title": "Story and events"
+  },
+  {
+   "id": "tools",
+   "title": "Tools and editors"
+  },
+  {
+   "id": "assets",
+   "title": "Asset reconstruction"
+  },
+  {
+   "id": "platform",
+   "title": "Platforms"
+  }
+ ],
+ "statuses": [
+  {
+   "id": "not_started",
+   "label": "Not started",
+   "description": "No implementation."
+  },
+  {
+   "id": "in_progress",
+   "label": "In progress",
+   "description": "Work started; nothing usable yet."
+  },
+  {
+   "id": "partial",
+   "label": "Partially functional",
+   "description": "Part of the feature works."
+  },
+  {
+   "id": "functional",
+   "label": "Functional",
+   "description": "Works for its intended use; fidelity to the original is not claimed."
+  },
+  {
+   "id": "faithful",
+   "label": "Faithful",
+   "description": "Matches the original game's behavior as traced."
+  },
+  {
+   "id": "validated",
+   "label": "Validated",
+   "description": "Faithful or complete, and covered by passing tests."
+  },
+  {
+   "id": "blocked",
+   "label": "Blocked",
+   "description": "Cannot progress until something else is resolved."
+  },
+  {
+   "id": "unknown",
+   "label": "Unknown",
+   "description": "Status not established or not verified."
+  }
+ ],
+ "method": "Percentages are shares of registered features: 'functional or better' counts the functional, faithful and validated statuses declared in the registries; 'passing tests' counts features whose declared tests all passed when this data was generated. Unregistered work is not counted.",
+ "indicators": [
+  {
+   "id": "global",
+   "title": "Overall",
+   "areas": [
+    "mzm",
+    "aos",
+    "metroidvania",
+    "story",
+    "tools",
+    "assets",
+    "platform"
+   ],
+   "total": 50,
+   "by_status": {
+    "not_started": 9,
+    "in_progress": 2,
+    "partial": 25,
+    "functional": 12,
+    "faithful": 0,
+    "validated": 0,
+    "blocked": 0,
+    "unknown": 2
+   },
+   "functional_or_better": 12,
+   "functional_or_better_percent": 24.0,
+   "with_passing_tests": 36,
+   "with_passing_tests_percent": 72.0,
+   "unknown_or_blocked": 2,
+   "features": [
+    "mzm.animation.samus_runtime_library",
+    "mzm.collision.clipdata",
+    "mzm.input.gamepad",
+    "mzm.player.samus_controller",
+    "mzm.transitions.doors_and_hatches",
+    "mzm.weapons.beams_and_missiles",
+    "aos.death.soma",
+    "aos.enemies.bat",
+    "aos.enemies.blue_crow",
+    "aos.enemies.zombie",
+    "aos.environment.wooden_doors",
+    "aos.input.gamepad",
+    "aos.player.soma_controller",
+    "aos.weapons.weapon_entity",
+    "mv.character_state",
+    "mv.character_switch",
+    "mv.dual_engine_host",
+    "mv.event_orchestration",
+    "mv.overlays_in_runtime",
+    "mv.synergies",
+    "mv.world_transitions",
+    "story.bible",
+    "story.cutscenes",
+    "story.timeline",
+    "tools.dashboard",
+    "tools.debug_menu",
+    "tools.editor_cli",
+    "tools.event_editor",
+    "tools.map_editor",
+    "tools.native_inventory",
+    "tools.object_catalog",
+    "tools.rebuild",
+    "tools.room_editor",
+    "tools.room_viewers",
+    "tools.sprite_editor",
+    "tools.world_atlas",
+    "assets.aria_objects",
+    "assets.aria_rooms",
+    "assets.aria_soma",
+    "assets.aria_weapons",
+    "assets.audio",
+    "assets.enemy_sprites_mzm",
+    "assets.mzm_projectiles",
+    "assets.mzm_rooms",
+    "assets.mzm_samus",
+    "assets.raw_import",
+    "assets.rom_verification",
+    "platform.dashboard_offline",
+    "platform.linux",
+    "platform.windows"
+   ]
+  },
+  {
+   "id": "mzm",
+   "title": "Zero Mission engine",
+   "areas": [
+    "mzm"
+   ],
+   "total": 6,
+   "by_status": {
+    "not_started": 0,
+    "in_progress": 0,
+    "partial": 6,
+    "functional": 0,
+    "faithful": 0,
+    "validated": 0,
+    "blocked": 0,
+    "unknown": 0
+   },
+   "functional_or_better": 0,
+   "functional_or_better_percent": 0.0,
+   "with_passing_tests": 6,
+   "with_passing_tests_percent": 100.0,
+   "unknown_or_blocked": 0,
+   "features": [
+    "mzm.animation.samus_runtime_library",
+    "mzm.collision.clipdata",
+    "mzm.input.gamepad",
+    "mzm.player.samus_controller",
+    "mzm.transitions.doors_and_hatches",
+    "mzm.weapons.beams_and_missiles"
+   ]
+  },
+  {
+   "id": "aos",
+   "title": "Aria of Sorrow engine",
+   "areas": [
+    "aos"
+   ],
+   "total": 8,
+   "by_status": {
+    "not_started": 0,
+    "in_progress": 0,
+    "partial": 8,
+    "functional": 0,
+    "faithful": 0,
+    "validated": 0,
+    "blocked": 0,
+    "unknown": 0
+   },
+   "functional_or_better": 0,
+   "functional_or_better_percent": 0.0,
+   "with_passing_tests": 8,
+   "with_passing_tests_percent": 100.0,
+   "unknown_or_blocked": 0,
+   "features": [
+    "aos.death.soma",
+    "aos.enemies.bat",
+    "aos.enemies.blue_crow",
+    "aos.enemies.zombie",
+    "aos.environment.wooden_doors",
+    "aos.input.gamepad",
+    "aos.player.soma_controller",
+    "aos.weapons.weapon_entity"
+   ]
+  },
+  {
+   "id": "assets",
+   "title": "Asset reconstruction",
+   "areas": [
+    "assets"
+   ],
+   "total": 11,
+   "by_status": {
+    "not_started": 1,
+    "in_progress": 0,
+    "partial": 3,
+    "functional": 6,
+    "faithful": 0,
+    "validated": 0,
+    "blocked": 0,
+    "unknown": 1
+   },
+   "functional_or_better": 6,
+   "functional_or_better_percent": 54.5,
+   "with_passing_tests": 9,
+   "with_passing_tests_percent": 81.8,
+   "unknown_or_blocked": 1,
+   "features": [
+    "assets.aria_objects",
+    "assets.aria_rooms",
+    "assets.aria_soma",
+    "assets.aria_weapons",
+    "assets.audio",
+    "assets.enemy_sprites_mzm",
+    "assets.mzm_projectiles",
+    "assets.mzm_rooms",
+    "assets.mzm_samus",
+    "assets.raw_import",
+    "assets.rom_verification"
+   ]
+  },
+  {
+   "id": "tools",
+   "title": "Tools and editors",
+   "areas": [
+    "tools"
+   ],
+   "total": 12,
+   "by_status": {
+    "not_started": 1,
+    "in_progress": 0,
+    "partial": 7,
+    "functional": 4,
+    "faithful": 0,
+    "validated": 0,
+    "blocked": 0,
+    "unknown": 0
+   },
+   "functional_or_better": 4,
+   "functional_or_better_percent": 33.3,
+   "with_passing_tests": 10,
+   "with_passing_tests_percent": 83.3,
+   "unknown_or_blocked": 0,
+   "features": [
+    "tools.dashboard",
+    "tools.debug_menu",
+    "tools.editor_cli",
+    "tools.event_editor",
+    "tools.map_editor",
+    "tools.native_inventory",
+    "tools.object_catalog",
+    "tools.rebuild",
+    "tools.room_editor",
+    "tools.room_viewers",
+    "tools.sprite_editor",
+    "tools.world_atlas"
+   ]
+  },
+  {
+   "id": "metroidvania",
+   "title": "Metroidvania gameplay",
+   "areas": [
+    "metroidvania"
+   ],
+   "total": 7,
+   "by_status": {
+    "not_started": 7,
+    "in_progress": 0,
+    "partial": 0,
+    "functional": 0,
+    "faithful": 0,
+    "validated": 0,
+    "blocked": 0,
+    "unknown": 0
+   },
+   "functional_or_better": 0,
+   "functional_or_better_percent": 0.0,
+   "with_passing_tests": 0,
+   "with_passing_tests_percent": 0.0,
+   "unknown_or_blocked": 0,
+   "features": [
+    "mv.character_state",
+    "mv.character_switch",
+    "mv.dual_engine_host",
+    "mv.event_orchestration",
+    "mv.overlays_in_runtime",
+    "mv.synergies",
+    "mv.world_transitions"
+   ]
+  },
+  {
+   "id": "story",
+   "title": "Story and events",
+   "areas": [
+    "story"
+   ],
+   "total": 3,
+   "by_status": {
+    "not_started": 0,
+    "in_progress": 2,
+    "partial": 1,
+    "functional": 0,
+    "faithful": 0,
+    "validated": 0,
+    "blocked": 0,
+    "unknown": 0
+   },
+   "functional_or_better": 0,
+   "functional_or_better_percent": 0.0,
+   "with_passing_tests": 1,
+   "with_passing_tests_percent": 33.3,
+   "unknown_or_blocked": 0,
+   "features": [
+    "story.bible",
+    "story.cutscenes",
+    "story.timeline"
+   ]
+  },
+  {
+   "id": "platform",
+   "title": "Platforms",
+   "areas": [
+    "platform"
+   ],
+   "total": 3,
+   "by_status": {
+    "not_started": 0,
+    "in_progress": 0,
+    "partial": 0,
+    "functional": 2,
+    "faithful": 0,
+    "validated": 0,
+    "blocked": 0,
+    "unknown": 1
+   },
+   "functional_or_better": 2,
+   "functional_or_better_percent": 66.7,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
+   "unknown_or_blocked": 1,
+   "features": [
+    "platform.dashboard_offline",
+    "platform.linux",
+    "platform.windows"
+   ]
+  }
+ ],
+ "features": [
+  {
+   "id": "mzm.animation.samus_runtime_library",
+   "area": "mzm",
+   "category": "animation",
+   "title": "Samus animation and palette reconstruction",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "scripts/mzm_samus_pipeline.py",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_samus_pipeline.py",
+    "tests/test_mzm_samus_palette_banks.py"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "SamusUpdateAnimation",
+    "SamusUpdateGraphicsOam",
+    "SamusUpdatePalette"
+   ],
+   "limitations": "The deterministic private library maps the currently supported semantic actions; native effects and every pose are not yet covered.",
+   "next_action": "Extend coverage to native effects and the remaining poses.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_samus_pipeline.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_mzm_samus_palette_banks.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "mzm.collision.clipdata",
+   "area": "mzm",
+   "category": "collision",
+   "title": "Samus and room Clipdata collision",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_samus.c",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_samus.c",
+    "tests/test_runtime_steep_slopes.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "ClipdataConvertToCollision",
+    "ClipdataProcess",
+    "ClipdataProcessForSamus"
+   ],
+   "limitations": "Room Clipdata and the Samus collision subset are active; special blocks and all environmental effects remain incomplete.",
+   "next_action": "Port special blocks and environmental Clipdata effects.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_samus.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_samus_controller"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_runtime_steep_slopes.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "runtime_steep_slopes"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "mzm.input.gamepad",
+   "area": "mzm",
+   "category": "input",
+   "title": "Keyboard and gamepad input",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/gba_input.c",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_gba_input.c"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Host input layer: SDL3 devices are mapped to the GBA KEYINPUT bits; the native key reading and repeat logic are not ported. Hot-plugged SDL3 gamepads, a remappable GBA layout and the keyboard drive Samus; no in-game controls menu yet.",
+   "next_action": "Port the native input routines and add an in-game controls menu.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_gba_input.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "gba_input"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "mzm.player.samus_controller",
+   "area": "mzm",
+   "category": "player",
+   "title": "Samus pose and physics controller",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_samus.c"
+   ],
+   "tests": [
+    "tests/test_mzm_samus.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "SamusUpdate",
+    "SamusUpdatePhysics",
+    "SamusUpdateVelocityPosition"
+   ],
+   "limitations": "The room runtime covers a tested subset of poses and transitions, not the complete native controller.",
+   "next_action": "Port the remaining native pose handlers.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_samus.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_samus_controller"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "mzm.transitions.doors_and_hatches",
+   "area": "mzm",
+   "category": "transitions",
+   "title": "Doors, hatches and room transitions",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_hatch_events.py"
+   ],
+   "tests": [
+    "tests/test_mzm_hatch_events_0100.py",
+    "tests/test_mzm_door_navigation_0096.py"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "ConnectionCheckEnterDoor",
+    "ConnectionLoadDoors",
+    "ConnectionUpdateHatches"
+   ],
+   "limitations": "Room-runtime door travel and hatch animation are partial; native fades, locks, events and lifecycle are not complete.",
+   "next_action": "Port native fades, hatch locks and door lifecycle events.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_hatch_events_0100.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_mzm_door_navigation_0096.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "mzm.weapons.beams_and_missiles",
+   "area": "mzm",
+   "category": "weapons",
+   "title": "Beam and missile projectiles",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_projectiles.c",
+    "scripts/mzm_projectile_compose.py"
+   ],
+   "tests": [
+    "tests/test_mzm_projectile_compose.py"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "ProjectileUpdate",
+    "ProjectileUpdateAnimation"
+   ],
+   "limitations": "Power Beam, missiles and super missiles are represented; the complete beam, bomb and Power Bomb systems are not.",
+   "next_action": "Port the remaining beam, bomb and Power Bomb systems.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_projectile_compose.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.death.soma",
+   "area": "aos",
+   "category": "death",
+   "title": "Soma death state",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_soma.c"
+   ],
+   "tests": [
+    "tests/test_aos_soma.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "sub_0801AF20"
+   ],
+   "limitations": "Soma's death state is ported; game-over flow, restart and save integration are absent.",
+   "next_action": "Port the native game-over flow and its save integration.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_soma.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soma"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.enemies.bat",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Bat enemy",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyBatCreate",
+    "EnemyBatUpdate",
+    "sub_080AD364",
+    "sub_080AD44C",
+    "sub_080AD5B8"
+   ],
+   "limitations": "Bat hanging, swoop, combat and falling death are ported; its explosion particles and the global 0x8E & 0x40 state are not.",
+   "next_action": "Port the bat explosion particles and its special state.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.enemies.blue_crow",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Blue crow enemy",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.zombie"
+   ],
+   "native_routines": [
+    "EnemyBlueCrowCreate",
+    "EnemyBlueCrowUpdate",
+    "sub_080C9AF4",
+    "sub_080C9D68",
+    "sub_080CA030",
+    "sub_080694B8"
+   ],
+   "limitations": "ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Perching, the homing flight behind the player and the falling death are ported; the feathers, sounds, hit stun and the unentered glide step are not.",
+   "next_action": "Port the crow feathers of sub_080C9E2C and the hit stun of sub_0806AD24.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.enemies.zombie",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Zombie and generic enemy death",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "sub_08069A00",
+    "sub_0806AEAC"
+   ],
+   "limitations": "Zombie spawning, terrain walking and generic death are covered; the complete enemy framework is not.",
+   "next_action": "Extend the generic enemy framework to further native enemies.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.environment.wooden_doors",
+   "area": "aos",
+   "category": "environment",
+   "title": "Native wooden doors",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_door.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_door.c",
+    "tests/test_aos_object_sprites.py"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "Object00Create",
+    "Object00Update"
+   ],
+   "limitations": "Wooden and green doors are functional in exported rooms; this does not cover every transition or special door.",
+   "next_action": "Cover the remaining native transition and special door kinds.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_door.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_door"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_object_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.input.gamepad",
+   "area": "aos",
+   "category": "input",
+   "title": "Keyboard and gamepad input",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/gba_input.c",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_gba_input.c"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Host input layer: SDL3 devices are mapped to the GBA KEYINPUT bits; the native key reading and repeat logic are not ported. Hot-plugged SDL3 gamepads, a remappable GBA layout and the keyboard drive Soma; no in-game controls menu yet.",
+   "next_action": "Port the native input routines and add an in-game controls menu.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_gba_input.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "gba_input"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.player.soma_controller",
+   "area": "aos",
+   "category": "player",
+   "title": "Soma movement and state controller",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_soma.c"
+   ],
+   "tests": [
+    "tests/test_aos_soma.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "sub_0801B0D8"
+   ],
+   "limitations": "Movement and the currently traced ability states are ported; the full native player state machine is not complete.",
+   "next_action": "Port the remaining native Soma states.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_soma.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soma"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "aos.weapons.weapon_entity",
+   "area": "aos",
+   "category": "weapons",
+   "title": "Soma weapon entity and attack boxes",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_weapon.c",
+    "scripts/aos_weapons.py"
+   ],
+   "tests": [
+    "tests/test_aos_weapon.c",
+    "tests/test_aos_soma_sprite.py"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "sub_080221CC"
+   ],
+   "limitations": "Weapon classes 0, 2 and 3 are represented; the other native classes and their effects remain open.",
+   "next_action": "Port the remaining native weapon classes and effects.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_weapon.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_weapon"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_soma_sprite.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "mv.character_state",
+   "area": "metroidvania",
+   "category": "gameplay",
+   "title": "Per-character state kept across switches",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [
+    "mv.character_switch"
+   ],
+   "native_routines": [],
+   "limitations": "Deferred.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "mv.character_switch",
+   "area": "metroidvania",
+   "category": "gameplay",
+   "title": "Switching between Samus and Soma",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Deferred until both original reconstructions are complete (ROADMAP).",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "mv.dual_engine_host",
+   "area": "metroidvania",
+   "category": "engines",
+   "title": "Both engines hosted in one game process",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Each game runs in its own executable today.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "mv.event_orchestration",
+   "area": "metroidvania",
+   "category": "events",
+   "title": "Cross-world event orchestration",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [
+    "story.timeline"
+   ],
+   "native_routines": [],
+   "limitations": "Deferred.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "mv.overlays_in_runtime",
+   "area": "metroidvania",
+   "category": "overlays",
+   "title": "Editor overlays applied by the runtimes",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [
+    "tools.room_editor"
+   ],
+   "native_routines": [],
+   "limitations": "The runtimes do not read editor overrides yet.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "mv.synergies",
+   "area": "metroidvania",
+   "category": "gameplay",
+   "title": "Interactions and synergies between both worlds",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [
+    "mv.character_switch"
+   ],
+   "native_routines": [],
+   "limitations": "Deferred.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "mv.world_transitions",
+   "area": "metroidvania",
+   "category": "rooms",
+   "title": "Portals and transitions between the worlds",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [
+    "mv.dual_engine_host"
+   ],
+   "native_routines": [],
+   "limitations": "Portal scenes exist only as story data.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "story.bible",
+   "area": "story",
+   "category": "scenario",
+   "title": "Story bible and canon",
+   "status": "in_progress",
+   "fidelity": "n/a",
+   "local_sources": [
+    "docs/STORY_BIBLE.md"
+   ],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Design document; nothing is playable.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "story.cutscenes",
+   "area": "story",
+   "category": "cutscenes",
+   "title": "Crossover cutscene scripts",
+   "status": "in_progress",
+   "fidelity": "n/a",
+   "local_sources": [
+    "data/cutscenes/interzone_first_meeting.toml"
+   ],
+   "tests": [],
+   "dependencies": [
+    "story.timeline"
+   ],
+   "native_routines": [],
+   "limitations": "Scripts exist as data; no cutscene runtime exists.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "story.timeline",
+   "area": "story",
+   "category": "events",
+   "title": "Concurrent campaign timeline data",
+   "status": "partial",
+   "fidelity": "n/a",
+   "local_sources": [
+    "data/story/timeline.toml",
+    "docs/CONCURRENT_TIMELINE.md"
+   ],
+   "tests": [
+    "tests/test_story_timeline.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Validated data model only; no runtime reads it.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_story_timeline.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.dashboard",
+   "area": "tools",
+   "category": "diagnostics",
+   "title": "Development dashboard",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "scripts/dashboard.py",
+    "dashboard/index.html",
+    "dashboard/app.js"
+   ],
+   "tests": [
+    "tests/test_dashboard.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_dashboard.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.debug_menu",
+   "area": "tools",
+   "category": "diagnostics",
+   "title": "F1 debug menu in both runtimes",
+   "status": "partial",
+   "fidelity": "n/a",
+   "local_sources": [
+    "src/runtime/debug_menu.c",
+    "src/runtime/aria_runtime.c",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_debug_menu.c"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "No equipment, soul, flag or AI inspection yet.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_debug_menu.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "debug_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.editor_cli",
+   "area": "tools",
+   "category": "editor",
+   "title": "Headless editor command line",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "src/tools/editor_cli.c"
+   ],
+   "tests": [
+    "tests/test_editor_cli.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_editor_cli.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.event_editor",
+   "area": "tools",
+   "category": "editor",
+   "title": "Story, event and cutscene data editor",
+   "status": "partial",
+   "fidelity": "n/a",
+   "local_sources": [
+    "editor/story_workspace.c"
+   ],
+   "tests": [
+    "tests/test_story_timeline.py"
+   ],
+   "dependencies": [
+    "story.timeline"
+   ],
+   "native_routines": [],
+   "limitations": "No native cutscene runtime exists.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_story_timeline.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.map_editor",
+   "area": "tools",
+   "category": "editor",
+   "title": "GTK4 map editor workspace",
+   "status": "partial",
+   "fidelity": "n/a",
+   "local_sources": [
+    "editor/main.c",
+    "editor/native_workspace.c"
+   ],
+   "tests": [
+    "tests/test_native_workspace.py",
+    "tests/test_unified_workspace.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Aria reconstruction in the editor is partial.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_native_workspace.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_unified_workspace.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.native_inventory",
+   "area": "tools",
+   "category": "reconstruction",
+   "title": "Native source inventory and parity checklist",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "scripts/native_inventory.py",
+    "scripts/native_parity.py"
+   ],
+   "tests": [
+    "tests/test_native_parity.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Lexical analysis: dynamic dispatch and runtime evidence are not indexed.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_native_parity.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.object_catalog",
+   "area": "tools",
+   "category": "editor",
+   "title": "Object catalog",
+   "status": "partial",
+   "fidelity": "n/a",
+   "local_sources": [
+    "editor/object_catalog.c",
+    "scripts/object_catalog.py"
+   ],
+   "tests": [
+    "tests/test_object_catalog.py",
+    "tests/test_object_catalog_ui.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_object_catalog.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_object_catalog_ui.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.rebuild",
+   "area": "tools",
+   "category": "reconstruction",
+   "title": "Incremental reconstruction graph",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "scripts/rebuild.py",
+    "scripts/export_index.py"
+   ],
+   "tests": [
+    "tests/test_native_parity.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Room previews, audits and editor caches are not registered yet.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_native_parity.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.room_editor",
+   "area": "tools",
+   "category": "editor",
+   "title": "Native room tile painter with private overrides",
+   "status": "partial",
+   "fidelity": "n/a",
+   "local_sources": [
+    "editor/room_browser.c",
+    "src/core/native_map.c"
+   ],
+   "tests": [
+    "tests/test_native_rooms.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Edits are private overrides; runtimes do not apply them yet.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_native_rooms.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "tools.room_viewers",
+   "area": "tools",
+   "category": "preview",
+   "title": "Native room and room package viewers",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/tools/mzm_room_viewer.c",
+    "src/tools/room_package_viewer.c"
+   ],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "tools.sprite_editor",
+   "area": "tools",
+   "category": "editor",
+   "title": "Sprite editor",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Sprite previews exist; editing does not.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "tools.world_atlas",
+   "area": "tools",
+   "category": "editor",
+   "title": "Global maps and the Zero Mission world atlas",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "editor/world_atlas.c",
+    "scripts/mzm_world_atlas.py"
+   ],
+   "tests": [
+    "tests/test_mzm_world_atlas.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Shows original minimap cases, not complete world geometry.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_world_atlas.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.aria_objects",
+   "area": "assets",
+   "category": "sprites",
+   "title": "Aria object and enemy sprites, boxes and stats",
+   "status": "partial",
+   "fidelity": "faithful",
+   "local_sources": [
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_object_sprites.py"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
+   "native_routines": [],
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie, blue crow).",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.aria_rooms",
+   "area": "assets",
+   "category": "rooms",
+   "title": "Aria runtime rooms (background, BG1 collision, transitions, entities)",
+   "status": "functional",
+   "fidelity": "partial",
+   "local_sources": [
+    "scripts/aos_runtime_room.py",
+    "scripts/aos_room_render.py"
+   ],
+   "tests": [
+    "tests/test_aos_runtime_room.py",
+    "tests/test_aos_room_render.py"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
+   "native_routines": [],
+   "limitations": "342 of 343 rooms export; one has no decodable BG1 collision table. The background is a static composite.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_runtime_room.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_aos_room_render.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.aria_soma",
+   "area": "assets",
+   "category": "sprites",
+   "title": "Soma animation library",
+   "status": "functional",
+   "fidelity": "faithful",
+   "local_sources": [
+    "scripts/aos_soma_pipeline.py",
+    "scripts/aos_soma_sprite.py"
+   ],
+   "tests": [
+    "tests/test_aos_soma_sprite.py"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
+   "native_routines": [],
+   "limitations": "One-shot animations use their own palette bank instead of the previous one.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_soma_sprite.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.aria_weapons",
+   "area": "assets",
+   "category": "sprites",
+   "title": "Soma weapon records and blade sprites",
+   "status": "partial",
+   "fidelity": "faithful",
+   "local_sources": [
+    "scripts/aos_weapons.py"
+   ],
+   "tests": [
+    "tests/test_aos_soma_sprite.py"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
+   "native_routines": [],
+   "limitations": "Blades of classes 0, 2 and 3 only.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_soma_sprite.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.audio",
+   "area": "assets",
+   "category": "audio",
+   "title": "Music and sound effects",
+   "status": "not_started",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "No audio is decoded or played.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "assets.enemy_sprites_mzm",
+   "area": "assets",
+   "category": "sprites",
+   "title": "Zero Mission enemy sprites",
+   "status": "unknown",
+   "fidelity": "unknown",
+   "local_sources": [
+    "scripts/native_enemy_sprite_cache.py"
+   ],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "An editor sprite cache exists; its use by a runtime is not established.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  },
+  {
+   "id": "assets.mzm_projectiles",
+   "area": "assets",
+   "category": "sprites",
+   "title": "Zero Mission projectile sprites",
+   "status": "functional",
+   "fidelity": "faithful",
+   "local_sources": [
+    "scripts/mzm_projectile_compose.py"
+   ],
+   "tests": [
+    "tests/test_mzm_projectile_compose.py"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
+   "native_routines": [],
+   "limitations": "",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_projectile_compose.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.mzm_rooms",
+   "area": "assets",
+   "category": "rooms",
+   "title": "Zero Mission runtime rooms (Clipdata, doors, hatches)",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "scripts/mzm_runtime_room.py",
+    "scripts/mzm_room_render.py"
+   ],
+   "tests": [
+    "tests/test_mzm_room_render.py",
+    "tests/test_runtime_clipdata_id_0140.py"
+   ],
+   "dependencies": [
+    "assets.raw_import"
+   ],
+   "native_routines": [],
+   "limitations": "330 of 331 rooms export; the BG1-over-BG2 render is a partial composite.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_room_render.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_runtime_clipdata_id_0140.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.mzm_samus",
+   "area": "assets",
+   "category": "sprites",
+   "title": "Samus body, arm cannon and suit palette library",
+   "status": "functional",
+   "fidelity": "faithful",
+   "local_sources": [
+    "scripts/mzm_samus_pipeline.py",
+    "scripts/mzm_samus_compose.py"
+   ],
+   "tests": [
+    "tests/test_mzm_samus_pipeline.py",
+    "tests/test_mzm_samus_palette_banks.py"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
+   "native_routines": [],
+   "limitations": "Needs the reference ELF built from the pinned decompilation.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_samus_pipeline.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_mzm_samus_palette_banks.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.raw_import",
+   "area": "assets",
+   "category": "reconstruction",
+   "title": "Raw ROM import from the pinned decomp databases",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "scripts/import_game_assets.py"
+   ],
+   "tests": [
+    "tests/test_asset_import.py"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
+   "native_routines": [],
+   "limitations": "Raw blocks are copied, not decoded.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_asset_import.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "assets.rom_verification",
+   "area": "assets",
+   "category": "reconstruction",
+   "title": "ROM fingerprint verification",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "scripts/verify_roms.py",
+    "scripts/rebuild.py"
+   ],
+   "tests": [
+    "tests/test_native_parity.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Only the USA revisions are supported.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_native_parity.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "platform.dashboard_offline",
+   "area": "platform",
+   "category": "platform",
+   "title": "Offline dashboard in Firefox, Chromium and Edge",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "dashboard/index.html"
+   ],
+   "tests": [
+    "tests/test_dashboard.py"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Checked by a static test; not exercised in every browser.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_dashboard.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "platform.linux",
+   "area": "platform",
+   "category": "platform",
+   "title": "Linux (Debian 13) build and tests",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "CMakeLists.txt"
+   ],
+   "tests": [
+    "@all-tests"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Verified when the dashboard data is generated on Linux with --run-tests.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "@all-tests on linux",
+      "kind": "suite",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-10"
+   }
+  },
+  {
+   "id": "platform.windows",
+   "area": "platform",
+   "category": "platform",
+   "title": "Windows build and runtime",
+   "status": "unknown",
+   "fidelity": "n/a",
+   "local_sources": [],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Never compiled or run on Windows.",
+   "next_action": "",
+   "last_validated": null,
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
+   }
+  }
+ ],
+ "tests": {
+  "ran": true,
+  "host": "linux",
+  "ctest": [
+   {
+    "name": "editor_cli_headless",
+    "files": [],
+    "outcome": "passed"
+   },
+   {
+    "name": "native_map_contract",
+    "files": [
+     "tests/test_native_map.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "native_map_cli_contract",
+    "files": [
+     "tests/native_map_cli_contract.cmake"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "native_selection_contract",
+    "files": [
+     "tests/test_native_selection.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "map_editor_headless",
+    "files": [],
+    "outcome": "passed"
+   },
+   {
+    "name": "native_workspace_gtk_lifecycle",
+    "files": [
+     "tests/test_native_workspace_gtk.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "room_browser_gtk_contract",
+    "files": [
+     "tests/test_room_browser_gtk.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "runtime_steep_slopes",
+    "files": [
+     "tests/test_runtime_steep_slopes.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "gba_input",
+    "files": [
+     "tests/test_gba_input.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "debug_menu",
+    "files": [
+     "tests/test_debug_menu.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "aos_collision",
+    "files": [
+     "tests/test_aos_collision.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "aos_soma",
+    "files": [
+     "tests/test_aos_soma.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "aos_room",
+    "files": [
+     "tests/test_aos_room.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "aos_door",
+    "files": [
+     "tests/test_aos_door.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "aos_weapon",
+    "files": [
+     "tests/test_aos_weapon.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "aos_enemy",
+    "files": [
+     "tests/test_aos_enemy.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "mzm_samus_controller",
+    "files": [
+     "tests/test_mzm_samus.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "room_runtime_loader",
+    "files": [
+     "tests/fixtures/project_room_0124.preview.tsv"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "room_runtime_native_source_0138",
+    "files": [
+     "tests/fixtures/project_room_0124.preview.tsv",
+     "tests/fixtures/runtime_native_clip_0138.tsv"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "room_runtime_animation_registry",
+    "files": [
+     "tests/fixtures/samus_animation_registry.index.tsv",
+     "tests/fixtures/samus_animation_registry.map.tsv"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "room_runtime_native_room",
+    "files": [
+     "tests/fixtures/runtime_native_room.tsv"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "room_runtime_sprite_library",
+    "files": [
+     "tests/fixtures/samus_animation_registry.index.tsv"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "room_package_loader",
+    "files": [
+     "tests/fixtures/project_room_0124.preview.tsv"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "python_tooling_and_data",
+    "files": [],
+    "outcome": "passed"
+   },
+   {
+    "name": "no_proprietary_files",
+    "files": [],
+    "outcome": "passed"
+   }
+  ],
+  "python": [
+   {
+    "file": "tests/test_aos_native_workspace.py",
+    "module": "tests.test_aos_native_workspace",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_aos_object_sprites.py",
+    "module": "tests.test_aos_object_sprites",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_aos_room_index.py",
+    "module": "tests.test_aos_room_index",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_aos_room_render.py",
+    "module": "tests.test_aos_room_render",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_aos_runtime_room.py",
+    "module": "tests.test_aos_runtime_room",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_aos_soma_sprite.py",
+    "module": "tests.test_aos_soma_sprite",
+    "test_count": 9,
+    "outcome": "passed",
+    "passed": 9
+   },
+   {
+    "file": "tests/test_aos_world_import.py",
+    "module": "tests.test_aos_world_import",
+    "test_count": 7,
+    "outcome": "passed",
+    "passed": 7
+   },
+   {
+    "file": "tests/test_aria_bg3_editor_0108.py",
+    "module": "tests.test_aria_bg3_editor_0108",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_aria_gtk_lifetimes_0084.py",
+    "module": "tests.test_aria_gtk_lifetimes_0084",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_aria_item_authoring.py",
+    "module": "tests.test_aria_item_authoring",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_aria_named_item_catalog.py",
+    "module": "tests.test_aria_named_item_catalog",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_aria_native_decoders_0083.py",
+    "module": "tests.test_aria_native_decoders_0083",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_aria_transition_geometry_0101.py",
+    "module": "tests.test_aria_transition_geometry_0101",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_asset_import.py",
+    "module": "tests.test_asset_import",
+    "test_count": 7,
+    "outcome": "passed",
+    "passed": 7
+   },
+   {
+    "file": "tests/test_asset_layout.py",
+    "module": "tests.test_asset_layout",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_authored_rooms.py",
+    "module": "tests.test_authored_rooms",
+    "test_count": 8,
+    "outcome": "passed",
+    "passed": 8
+   },
+   {
+    "file": "tests/test_authored_rooms_tsv.py",
+    "module": "tests.test_authored_rooms_tsv",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
+   },
+   {
+    "file": "tests/test_collision_toolbar_0113.py",
+    "module": "tests.test_collision_toolbar_0113",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_compact_toolbar_semantic_names_0113b.py",
+    "module": "tests.test_compact_toolbar_semantic_names_0113b",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_compact_workspace_docks_0086.py",
+    "module": "tests.test_compact_workspace_docks_0086",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_connection_graph_0116.py",
+    "module": "tests.test_connection_graph_0116",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_dashboard.py",
+    "module": "tests.test_dashboard",
+    "test_count": 10,
+    "outcome": "passed",
+    "passed": 10
+   },
+   {
+    "file": "tests/test_deferred_room_save_0109.py",
+    "module": "tests.test_deferred_room_save_0109",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_editor_cli.py",
+    "module": "tests.test_editor_cli",
+    "test_count": 17,
+    "outcome": "passed",
+    "passed": 17
+   },
+   {
+    "file": "tests/test_editor_tab_layers.py",
+    "module": "tests.test_editor_tab_layers",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_gba_oam.py",
+    "module": "tests.test_gba_oam",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_gba_tiles.py",
+    "module": "tests.test_gba_tiles",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_global_map_door_picker_0106.py",
+    "module": "tests.test_global_map_door_picker_0106",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_grab_tool_0107.py",
+    "module": "tests.test_grab_tool_0107",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_map_navigation_contract.py",
+    "module": "tests.test_map_navigation_contract",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_map_placements.py",
+    "module": "tests.test_map_placements",
+    "test_count": 6,
+    "outcome": "passed",
+    "passed": 6
+   },
+   {
+    "file": "tests/test_mzm_bg3_preview.py",
+    "module": "tests.test_mzm_bg3_preview",
+    "test_count": 9,
+    "outcome": "passed",
+    "passed": 9
+   },
+   {
+    "file": "tests/test_mzm_bg3_viewer_0127.py",
+    "module": "tests.test_mzm_bg3_viewer_0127",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_mzm_composite_0126.py",
+    "module": "tests.test_mzm_composite_0126",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_mzm_door_navigation_0096.py",
+    "module": "tests.test_mzm_door_navigation_0096",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_mzm_global_map_0092.py",
+    "module": "tests.test_mzm_global_map_0092",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_mzm_grouped_widgets_0095.py",
+    "module": "tests.test_mzm_grouped_widgets_0095",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_mzm_hatch_animation_0099.py",
+    "module": "tests.test_mzm_hatch_animation_0099",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_mzm_hatch_events_0100.py",
+    "module": "tests.test_mzm_hatch_events_0100",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_mzm_hatch_native_0098.py",
+    "module": "tests.test_mzm_hatch_native_0098",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_mzm_minimap_source.py",
+    "module": "tests.test_mzm_minimap_source",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_mzm_projectile_compose.py",
+    "module": "tests.test_mzm_projectile_compose",
+    "test_count": 6,
+    "outcome": "passed",
+    "passed": 6
+   },
+   {
+    "file": "tests/test_mzm_room_render.py",
+    "module": "tests.test_mzm_room_render",
+    "test_count": 6,
+    "outcome": "passed",
+    "passed": 6
+   },
+   {
+    "file": "tests/test_mzm_runtime_priority_0169.py",
+    "module": "tests.test_mzm_runtime_priority_0169",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
+   },
+   {
+    "file": "tests/test_mzm_samus_body.py",
+    "module": "tests.test_mzm_samus_body",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_mzm_samus_frame.py",
+    "module": "tests.test_mzm_samus_frame",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_mzm_samus_oam_decode.py",
+    "module": "tests.test_mzm_samus_oam_decode",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_mzm_samus_palette_banks.py",
+    "module": "tests.test_mzm_samus_palette_banks",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_mzm_samus_pipeline.py",
+    "module": "tests.test_mzm_samus_pipeline",
+    "test_count": 11,
+    "outcome": "passed",
+    "passed": 11
+   },
+   {
+    "file": "tests/test_mzm_samus_sprite.py",
+    "module": "tests.test_mzm_samus_sprite",
+    "test_count": 8,
+    "outcome": "passed",
+    "passed": 8
+   },
+   {
+    "file": "tests/test_mzm_world_atlas.py",
+    "module": "tests.test_mzm_world_atlas",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_native_door_overrides_0104.py",
+    "module": "tests.test_native_door_overrides_0104",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_native_parity.py",
+    "module": "tests.test_native_parity",
+    "test_count": 17,
+    "outcome": "passed",
+    "passed": 17
+   },
+   {
+    "file": "tests/test_native_room_viewer_demo_0125c.py",
+    "module": "tests.test_native_room_viewer_demo_0125c",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
+   },
+   {
+    "file": "tests/test_native_room_viewer_mode_0125d.py",
+    "module": "tests.test_native_room_viewer_mode_0125d",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_native_rooms.py",
+    "module": "tests.test_native_rooms",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_native_source_overlay_0126b.py",
+    "module": "tests.test_native_source_overlay_0126b",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_native_workspace.py",
+    "module": "tests.test_native_workspace",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_object_catalog.py",
+    "module": "tests.test_object_catalog",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_object_catalog_ui.py",
+    "module": "tests.test_object_catalog_ui",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_project_command_environment_0111.py",
+    "module": "tests.test_project_command_environment_0111",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
+   },
+   {
+    "file": "tests/test_project_door_form_0102.py",
+    "module": "tests.test_project_door_form_0102",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_project_native_catalog.py",
+    "module": "tests.test_project_native_catalog",
+    "test_count": 7,
+    "outcome": "passed",
+    "passed": 7
+   },
+   {
+    "file": "tests/test_project_room_entities.py",
+    "module": "tests.test_project_room_entities",
+    "test_count": 11,
+    "outcome": "passed",
+    "passed": 11
+   },
+   {
+    "file": "tests/test_reciprocal_link_0115.py",
+    "module": "tests.test_reciprocal_link_0115",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_responsive_splitters.py",
+    "module": "tests.test_responsive_splitters",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_room_annotations.py",
+    "module": "tests.test_room_annotations",
+    "test_count": 6,
+    "outcome": "passed",
+    "passed": 6
+   },
+   {
+    "file": "tests/test_room_audit.py",
+    "module": "tests.test_room_audit",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_room_background_0125.py",
+    "module": "tests.test_room_background_0125",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_room_context_scroll_0103.py",
+    "module": "tests.test_room_context_scroll_0103",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_room_export_0124.py",
+    "module": "tests.test_room_export_0124",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_room_picker_link_0106b.py",
+    "module": "tests.test_room_picker_link_0106b",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_room_sprite_overlays_0085.py",
+    "module": "tests.test_room_sprite_overlays_0085",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_runtime_clipdata_id_0140.py",
+    "module": "tests.test_runtime_clipdata_id_0140",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
+   },
+   {
+    "file": "tests/test_semantic_room_entities.py",
+    "module": "tests.test_semantic_room_entities",
+    "test_count": 7,
+    "outcome": "passed",
+    "passed": 7
+   },
+   {
+    "file": "tests/test_shared_history_0112.py",
+    "module": "tests.test_shared_history_0112",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_sprite_library.py",
+    "module": "tests.test_sprite_library",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_story_timeline.py",
+    "module": "tests.test_story_timeline",
+    "test_count": 5,
+    "outcome": "passed",
+    "passed": 5
+   },
+   {
+    "file": "tests/test_target_door_picker_0114.py",
+    "module": "tests.test_target_door_picker_0114",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
+    "file": "tests/test_unified_workspace.py",
+    "module": "tests.test_unified_workspace",
+    "test_count": 7,
+    "outcome": "passed",
+    "passed": 7
+   },
+   {
+    "file": "tests/test_verify_roms.py",
+    "module": "tests.test_verify_roms",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
+    "file": "tests/test_vertical_workspace_0087.py",
+    "module": "tests.test_vertical_workspace_0087",
+    "test_count": 4,
+    "outcome": "passed",
+    "passed": 4
+   },
+   {
+    "file": "tests/test_world_inventory.py",
+    "module": "tests.test_world_inventory",
+    "test_count": 8,
+    "outcome": "passed",
+    "passed": 8
+   },
+   {
+    "file": "tests/test_world_multicell.py",
+    "module": "tests.test_world_multicell",
+    "test_count": 12,
+    "outcome": "passed",
+    "passed": 12
+   },
+   {
+    "file": "tests/test_world_overview_contract.py",
+    "module": "tests.test_world_overview_contract",
+    "test_count": 7,
+    "outcome": "passed",
+    "passed": 7
+   }
+  ],
+  "summary": {
+   "passed": 424,
+   "failed": 0,
+   "other": 0
+  }
+ },
+ "timeline": [
+  {
+   "commit": "894a167",
+   "date": "2026-10-10",
+   "subject": "feat(mzm): F1 debug menu",
+   "scope": "mzm"
+  },
+  {
+   "commit": "81d7b9e",
+   "date": "2026-10-10",
+   "subject": "feat(aria): F1 debug menu",
+   "scope": "aria"
+  },
+  {
+   "commit": "e63fc3c",
+   "date": "2026-10-10",
+   "subject": "feat: shared gamepad input for both runtimes",
+   "scope": "project"
+  },
+  {
+   "commit": "66dae35",
+   "date": "2026-10-10",
+   "subject": "feat: evidence-based routine classification",
+   "scope": "project"
+  },
+  {
+   "commit": "15e2a3e",
+   "date": "2026-10-10",
+   "subject": "feat: ROM extractors in the rebuild graph",
+   "scope": "project"
+  },
+  {
+   "commit": "5d8fdf0",
+   "date": "2026-10-10",
+   "subject": "feat: address-taken routines and output-checked rebuilds",
+   "scope": "project"
+  },
+  {
+   "commit": "55e60ea",
+   "date": "2026-10-10",
+   "subject": "feat(aria): native blue crows",
+   "scope": "aria"
+  },
+  {
+   "commit": "0261dd6",
+   "date": "2026-10-10",
+   "subject": "feat: link function-pointer member callbacks in the inventory",
+   "scope": "project"
+  },
+  {
+   "commit": "5df2584",
+   "date": "2026-10-10",
+   "subject": "unfinished job of kimi",
+   "scope": "project"
+  },
+  {
+   "commit": "882948e",
+   "date": "2026-10-10",
+   "subject": "feat: index anonymous typedefs and multi-declarator names",
+   "scope": "project"
+  },
+  {
+   "commit": "efc5e2e",
+   "date": "2026-10-10",
+   "subject": "feat: canonical TSV native parity annotations",
+   "scope": "project"
+  },
+  {
+   "commit": "a3560a1",
+   "date": "2026-10-10",
+   "subject": "feat: expand native source inventory",
+   "scope": "project"
+  },
+  {
+   "commit": "af3e8cf",
+   "date": "2026-10-10",
+   "subject": "feat: add native parity inventory pipeline",
+   "scope": "project"
+  },
+  {
+   "commit": "7606d0e",
+   "date": "2026-10-10",
+   "subject": "feat(aria): native zombies and generic enemy runtime",
+   "scope": "aria"
+  },
+  {
+   "commit": "bda2f78",
+   "date": "2026-10-10",
+   "subject": "feat(aria): Soma's native death",
+   "scope": "aria"
+  },
+  {
+   "commit": "264138f",
+   "date": "2026-10-10",
+   "subject": "feat(aria): Soma's native hit reactions",
+   "scope": "aria"
+  },
+  {
+   "commit": "0e3fbdc",
+   "date": "2026-10-10",
+   "subject": "feat(aria): native collisions, damage and bat deaths",
+   "scope": "aria"
+  },
+  {
+   "commit": "ad7d358",
+   "date": "2026-10-10",
+   "subject": "feat(aria): first native enemy, the bat",
+   "scope": "aria"
+  },
+  {
+   "commit": "6d5e49b",
+   "date": "2026-10-10",
+   "subject": "feat(aria): Soma's weapon entity with native blades and hitboxes",
+   "scope": "aria"
+  },
+  {
+   "commit": "e4b39da",
+   "date": "2026-10-10",
+   "subject": "feat(aria): Soma attacks with weapon body animations",
+   "scope": "aria"
+  },
+  {
+   "commit": "df96b4d",
+   "date": "2026-10-10",
+   "subject": "feat(aria): native door sprites and palette cycles",
+   "scope": "aria"
+  },
+  {
+   "commit": "d065bd7",
+   "date": "2026-10-10",
+   "subject": "feat(aria): native wooden doors and collision block override",
+   "scope": "aria"
+  },
+  {
+   "commit": "e3bd393",
+   "date": "2026-10-10",
+   "subject": "feat(aria): port Soma's ability moves",
+   "scope": "aria"
+  },
+  {
+   "commit": "fe192e9",
+   "date": "2026-10-10",
+   "subject": "feat(aria): colorize Soma animations with their native palette bank",
+   "scope": "aria"
+  },
+  {
+   "commit": "665be2c",
+   "date": "2026-10-10",
+   "subject": "feat(aria): native room transitions for Soma",
+   "scope": "aria"
+  },
+  {
+   "commit": "7cc41c1",
+   "date": "2026-10-10",
+   "subject": "feat(aria): add an experimental Soma room runtime",
+   "scope": "aria"
+  },
+  {
+   "commit": "39df40a",
+   "date": "2026-10-10",
+   "subject": "feat(aria): port Soma's animation timing and requests",
+   "scope": "aria"
+  },
+  {
+   "commit": "d236ee6",
+   "date": "2026-10-10",
+   "subject": "feat(aria): port Soma's normal and hard-landing states",
+   "scope": "aria"
+  },
+  {
+   "commit": "9240c9b",
+   "date": "2026-10-10",
+   "subject": "feat(aria): port the tile path of Soma's collision pass",
+   "scope": "aria"
+  },
+  {
+   "commit": "5e6f2da",
+   "date": "2026-10-10",
+   "subject": "feat(aria): port Soma's verified motion rules",
+   "scope": "aria"
+  },
+  {
+   "commit": "bcdfdeb",
+   "date": "2026-10-10",
+   "subject": "docs(aria): record Soma's air steering, backdash and recoil values",
+   "scope": "aria"
+  },
+  {
+   "commit": "8db09d1",
+   "date": "2026-10-10",
+   "subject": "docs(aria): record Soma's verified jump and gravity constants",
+   "scope": "aria"
+  },
+  {
+   "commit": "cc6262f",
+   "date": "2026-10-10",
+   "subject": "feat(aria): port the native BG1 collision primitives",
+   "scope": "aria"
+  },
+  {
+   "commit": "fc76b9a",
+   "date": "2026-10-10",
+   "subject": "docs(aria): document the verified BG1 collision byte semantics",
+   "scope": "aria"
+  },
+  {
+   "commit": "580542f",
+   "date": "2026-10-10",
+   "subject": "feat(runtime): select native Samus palettes on indexed frames",
+   "scope": "runtime"
+  },
+  {
+   "commit": "896a051",
+   "date": "2026-10-10",
+   "subject": "docs: define the ROM-based reconstruction and overlay architecture",
+   "scope": "project"
+  },
+  {
+   "commit": "a736a17",
+   "date": "2026-10-10",
+   "subject": "docs(aria): record Soma's player entry points and motion fields",
+   "scope": "aria"
+  },
+  {
+   "commit": "f91dcad",
+   "date": "2026-10-10",
+   "subject": "feat(runtime): walk between native rooms through doors and hatches",
+   "scope": "runtime"
+  },
+  {
+   "commit": "1bcd651",
+   "date": "2026-10-10",
+   "subject": "feat(runtime): load any MZM room with native Clipdata types",
+   "scope": "runtime"
+  },
+  {
+   "commit": "f3a2a3d",
+   "date": "2026-10-10",
+   "subject": "fix(assets): read MZM raw payloads from the canonical layout",
+   "scope": "assets"
+  },
+  {
+   "commit": "7447b9e",
+   "date": "2026-10-10",
+   "subject": "feat(runtime): fire native Power Beam shots and missiles",
+   "scope": "runtime"
+  },
+  {
+   "commit": "6c90978",
+   "date": "2026-10-10",
+   "subject": "feat(assets): export projectile sprites, cannon offsets and armed cannons",
+   "scope": "assets"
+  },
+  {
+   "commit": "f396222",
+   "date": "2026-10-10",
+   "subject": "docs(aria): record the verified collision table loader",
+   "scope": "aria"
+  },
+  {
+   "commit": "00caa75",
+   "date": "2026-10-10",
+   "subject": "feat(aria): export every native Soma animation into a shared sprite library",
+   "scope": "aria"
+  },
+  {
+   "commit": "c10df8f",
+   "date": "2026-10-10",
+   "subject": "refactor(assets): retire the patch-numbered Samus extraction chain",
+   "scope": "assets"
+  },
+  {
+   "commit": "d02a0c0",
+   "date": "2026-10-10",
+   "subject": "feat(assets): compose every Samus animation from native tables",
+   "scope": "assets"
+  },
+  {
+   "commit": "b5b3ad5",
+   "date": "2026-10-10",
+   "subject": "feat(runtime): drive Samus with a native Zero Mission pose controller",
+   "scope": "runtime"
+  },
+  {
+   "commit": "3c38267",
+   "date": "2026-10-10",
+   "subject": "refactor(runtime): drop obsolete fixed-sprite Samus loaders",
+   "scope": "runtime"
+  },
+  {
+   "commit": "9c17387",
+   "date": "2026-10-10",
+   "subject": "health missile and trace anim",
+   "scope": "project"
+  },
+  {
+   "commit": "45fb644",
+   "date": "2026-10-10",
+   "subject": "feat: add collision-driven ledge traversal",
+   "scope": "project"
+  },
+  {
+   "commit": "72677ee",
+   "date": "2026-10-10",
+   "subject": "feat: add Morph Ball and wall jump runtime states",
+   "scope": "project"
+  },
+  {
+   "commit": "e203fee",
+   "date": "2026-10-10",
+   "subject": "feat: automate Samus animation registry",
+   "scope": "project"
+  },
+  {
+   "commit": "de15259",
+   "date": "2026-10-10",
+   "subject": "refactor: consolidate Samus extraction caches",
+   "scope": "project"
+  },
+  {
+   "commit": "edaa821",
+   "date": "2026-10-10",
+   "subject": "refactor: canonicalize private asset generation",
+   "scope": "project"
+  },
+  {
+   "commit": "d653cd5",
+   "date": "2026-10-10",
+   "subject": "feat: unify native Samus assets and room launch configuration",
+   "scope": "project"
+  },
+  {
+   "commit": "d40ad62",
+   "date": "2026-10-10",
+   "subject": "feat: browse indexed Samus animations in SDL runtime",
+   "scope": "project"
+  },
+  {
+   "commit": "7a506c3",
+   "date": "2026-10-10",
+   "subject": "fix: accept validated newline-terminated animation index rows",
+   "scope": "project"
+  },
+  {
+   "commit": "10d186f",
+   "date": "2026-10-10",
+   "subject": "fix: validate runtime library TSV scanner arguments",
+   "scope": "project"
+  },
+  {
+   "commit": "a556706",
+   "date": "2026-10-10",
+   "subject": "feat: add SDL3 gamepad and native animation library playback",
+   "scope": "project"
+  },
+  {
+   "commit": "696c988",
+   "date": "2026-10-10",
+   "subject": "feat: index bulk native Samus animations across suits",
+   "scope": "project"
+  },
+  {
+   "commit": "7b01978",
+   "date": "2026-10-10",
+   "subject": "feat: preview native spin jump animations in SDL3 runtime",
+   "scope": "project"
+  },
+  {
+   "commit": "f451cd0",
+   "date": "2026-10-10",
+   "subject": "feat: export native Samus special body sprites with empty cannon OAM",
+   "scope": "project"
+  },
+  {
+   "commit": "9e05cfa",
+   "date": "2026-10-10",
+   "subject": "test: diagnose special Samus body and cannon OAM headers",
+   "scope": "project"
+  },
+  {
+   "commit": "c70e84e",
+   "date": "2026-10-10",
+   "subject": "feat: bulk export native Samus special motion diagnostics",
+   "scope": "project"
+  },
+  {
+   "commit": "ae3cf54",
+   "date": "2026-10-10",
+   "subject": "feat: add bulk native Samus composition diagnostics",
+   "scope": "project"
+  },
+  {
+   "commit": "f8ff595",
+   "date": "2026-10-10",
+   "subject": "fix: latch spin jump priority and add armor selection preview",
+   "scope": "project"
+  },
+  {
+   "commit": "a4c1036",
+   "date": "2026-10-10",
+   "subject": "fix: keep native Samus composition groups separate",
+   "scope": "project"
+  },
+  {
+   "commit": "810404e",
+   "date": "2026-10-10",
+   "subject": "feat: support left-facing native Samus compositions in SDL3",
+   "scope": "project"
+  },
+  {
+   "commit": "044dbd3",
+   "date": "2026-10-10",
+   "subject": "feat: extract missing left-facing native Samus animations",
+   "scope": "project"
+  },
+  {
+   "commit": "6ab3d60",
+   "date": "2026-10-10",
+   "subject": "feat: integrate extended Samus compositions into SDL3 runtime",
+   "scope": "project"
+  },
+  {
+   "commit": "743893c",
+   "date": "2026-10-10",
+   "subject": "feat: expand native Samus diagnostic compositions",
+   "scope": "project"
+  },
+  {
+   "commit": "8c08c03",
+   "date": "2026-10-10",
+   "subject": "feat: add opt-in native Samus compositions to SDL3 runtime",
+   "scope": "project"
+  },
+  {
+   "commit": "c14ebf0",
+   "date": "2026-10-10",
+   "subject": "fix: handle zero-terminated Samus animation arrays during cannon composition",
+   "scope": "project"
+  },
+  {
+   "commit": "579dfe2",
+   "date": "2026-10-10",
+   "subject": "fix: filter unrelated ELF symbols in Samus compositor",
+   "scope": "project"
+  },
+  {
+   "commit": "839a364",
+   "date": "2026-10-10",
+   "subject": "feat: compose selected native Samus cannon and body animations",
+   "scope": "project"
+  },
+  {
+   "commit": "e73ba22",
+   "date": "2026-10-10",
+   "subject": "feat: classify exceptional native Samus cannon animation candidates",
+   "scope": "project"
+  },
+  {
+   "commit": "6fadb9d",
+   "date": "2026-10-10",
+   "subject": "feat: cross-reference native Samus and arm cannon animation arrays",
+   "scope": "project"
+  },
+  {
+   "commit": "e4ae594",
+   "date": "2026-10-10",
+   "subject": "feat: classify verified MZM arm cannon graphics without guessing pose links",
+   "scope": "project"
+  },
+  {
+   "commit": "58f0a33",
+   "date": "2026-10-10",
+   "subject": "feat: inventory native arm cannon assets and export verified compositions",
+   "scope": "project"
+  },
+  {
+   "commit": "38074a1",
+   "date": "2026-10-10",
+   "subject": "feat: resolve Samus suit palettes automatically from matching MZM ELF",
+   "scope": "project"
+  }
+ ],
+ "inventory": {
+  "available": true,
+  "schema": "metroidvania-native-inventory-v6",
+  "games": {
+   "mzm": {
+    "title": "Metroid: Zero Mission",
+    "routines": 2970,
+    "by_category": {
+     "audio": 134,
+     "bosses": 447,
+     "cutscenes": 170,
+     "enemies": 812,
+     "events": 45,
+     "input": 9,
+     "interface": 41,
+     "menus": 240,
+     "player": 126,
+     "rooms": 85,
+     "saves": 128,
+     "technical": 677,
+     "weapons": 56
+    },
+    "by_category_evidence": {
+     "path": 2970
+    },
+    "routines_cited_by_features": 14,
+    "call_edges": 6071
+   },
+   "aos": {
+    "title": "Castlevania: Aria of Sorrow",
+    "routines": 3573,
+    "by_category": {
+     "abilities": 137,
+     "audio": 101,
+     "cutscenes": 10,
+     "death": 2,
+     "endings": 1,
+     "enemies": 1518,
+     "environment": 251,
+     "input": 2,
+     "inventory": 13,
+     "menus": 33,
+     "rooms": 5,
+     "saves": 17,
+     "startup": 5,
+     "technical": 68,
+     "title": 28,
+     "transitions": 1,
+     "unclassified": 1381
+    },
+    "by_category_evidence": {
+     "name": 503,
+     "none": 1381,
+     "path": 136,
+     "referrers": 1553
+    },
+    "routines_cited_by_features": 18,
+    "call_edges": 14228
+   }
+  },
+  "not_yet_indexed": [
+   "which stored callback a dynamic dispatch actually runs",
+   "callbacks built from computed addresses",
+   "runtime-observed dependencies"
+  ]
+ },
+ "rebuild_tasks": [
+  {
+   "name": "inventory",
+   "group": "native",
+   "dependencies": [],
+   "requires": []
+  },
+  {
+   "name": "checklist",
+   "group": "native",
+   "dependencies": [
+    "inventory"
+   ],
+   "requires": []
+  },
+  {
+   "name": "aria_rom",
+   "group": "assets",
+   "dependencies": [],
+   "requires": [
+    "roms/Castlevania - Aria of Sorrow (USA).gba"
+   ]
+  },
+  {
+   "name": "metroid_rom",
+   "group": "assets",
+   "dependencies": [],
+   "requires": [
+    "roms/Metroid - Zero Mission (USA).gba"
+   ]
+  },
+  {
+   "name": "raw_import",
+   "group": "assets",
+   "dependencies": [
+    "aria_rom",
+    "metroid_rom"
+   ],
+   "requires": [
+    "roms/Castlevania - Aria of Sorrow (USA).gba",
+    "roms/Metroid - Zero Mission (USA).gba"
+   ]
+  },
+  {
+   "name": "aria_world",
+   "group": "assets",
+   "dependencies": [
+    "aria_rom"
+   ],
+   "requires": [
+    "roms/Castlevania - Aria of Sorrow (USA).gba"
+   ]
+  },
+  {
+   "name": "aria_rooms",
+   "group": "assets",
+   "dependencies": [
+    "aria_rom"
+   ],
+   "requires": [
+    "roms/Castlevania - Aria of Sorrow (USA).gba"
+   ]
+  },
+  {
+   "name": "aria_soma",
+   "group": "assets",
+   "dependencies": [
+    "aria_rom"
+   ],
+   "requires": [
+    "roms/Castlevania - Aria of Sorrow (USA).gba"
+   ]
+  },
+  {
+   "name": "aria_objects",
+   "group": "assets",
+   "dependencies": [
+    "aria_rom"
+   ],
+   "requires": [
+    "roms/Castlevania - Aria of Sorrow (USA).gba"
+   ]
+  },
+  {
+   "name": "aria_weapons",
+   "group": "assets",
+   "dependencies": [
+    "aria_rom"
+   ],
+   "requires": [
+    "roms/Castlevania - Aria of Sorrow (USA).gba"
+   ]
+  },
+  {
+   "name": "metroid_samus",
+   "group": "assets",
+   "dependencies": [
+    "metroid_rom"
+   ],
+   "requires": [
+    "roms/Metroid - Zero Mission (USA).gba",
+    "third_party/mzm/mzm_us.elf"
+   ]
+  },
+  {
+   "name": "metroid_rooms",
+   "group": "assets",
+   "dependencies": [
+    "raw_import"
+   ],
+   "requires": [
+    "roms/Metroid - Zero Mission (USA).gba"
+   ]
+  }
+ ]
+}

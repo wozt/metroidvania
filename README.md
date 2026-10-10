@@ -132,6 +132,33 @@ saved. For headless checks, `--debug-menu` opens it at start and
 `--debug-input MASK,...` feeds one menu key mask per captured frame (in
 captures the game keeps running under the menu).
 
+## Development dashboard
+
+`dashboard/index.html` is a static status page (HTML, CSS, JavaScript; no
+server, no network, no ROM data). Open it directly in Firefox, Chromium or
+Edge, or publish the `dashboard/` folder on GitHub Pages. Refresh its data
+with:
+
+```sh
+python3 -m scripts.dashboard --run-tests   # also runs CTest (build/) and Python tests
+python3 -m scripts.dashboard               # registries and repository facts only
+```
+
+The generator only reads the project. Native features come from
+`data/native_parity/annotations.tsv`; Metroidvania, story, tools, assets and
+platform features from `data/dashboard/features.tsv` (one row per feature:
+area, stable id, category, status, fidelity, sources, tests, dependencies,
+limitations, last declared validation; `@all-tests` in the tests column means
+the whole suite of the generating host). Statuses are not started, in
+progress, partially functional, functional, faithful, validated, blocked and
+unknown. Each feature shows its declared status apart from what the run
+verified: sources found, tests registered in CTest or present as Python
+modules, and their results. Percentages are shares of registered features
+("functional or better", "with passing tests") with their denominators;
+unregistered work is not counted, and the git timeline is shown as history,
+not as evidence. `data.js` holds the same data as `data.json` so the page
+loads from `file://`.
+
 ## Build and test
 
 ```sh

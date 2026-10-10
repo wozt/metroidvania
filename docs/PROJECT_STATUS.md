@@ -2291,3 +2291,38 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   25/25, the Python suite passed 389/389, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0230 - development dashboard
+
+- New static dashboard `dashboard/` (`index.html`, `style.css`, `app.js`,
+  generated `data.js` / `data.json`): overview indicators (overall, Zero
+  Mission engine, Aria engine, asset reconstruction, tools, Metroidvania
+  gameplay, story, platforms, automated tests), one view per area with
+  collapsible categories, search, status filters, the CTest and Python test
+  tables, the git timeline, a blocked-and-incomplete view, the native
+  inventory figures and the generation date and commit. It opens from
+  `file://` (data loaded by a script tag, no request) and suits GitHub
+  Pages; it ships no ROM data or extracted asset.
+- New generator `scripts/dashboard.py`: read-only; combines the native parity
+  annotations (unchanged, mapped onto the dashboard scale: missing -> not
+  started, research -> unknown) with the new project registry
+  `data/dashboard/features.tsv` (36 Metroidvania, story, tools, assets and
+  platform features with stable ids). It keeps declared facts (status,
+  fidelity, limitations) apart from verified ones (sources found, tests
+  registered, test results with `--run-tests`), warns when a feature is
+  declared validated without a passing test, and computes shares of
+  registered features only.
+- Registry content reflects the repository today: every crossover feature
+  is not started (deferred by the roadmap), the story is design data, the
+  editor tools are partial, Windows is unknown (never compiled there).
+- Checked: generated with `--run-tests` on this Debian host (25 CTest tests
+  and the Python suite passed); rendered from `file://` in headless Chromium
+  (desktop and 390-pixel mobile widths) and Firefox. Edge was not available
+  and is not claimed as tested.
+- `tests/test_dashboard.py`: registry validation, share arithmetic, unknown
+  statuses never counted as progress, declared versus verified facts, CTest
+  source mapping, private-data refusal in outputs, the static offline page
+  (only local scripts, no request APIs) and no test run unless requested.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

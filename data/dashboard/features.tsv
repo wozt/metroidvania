@@ -1,0 +1,37 @@
+area	id	category	status	fidelity	title	local_sources	tests	dependencies	limitations	last_validated
+assets	assets.aria_objects	sprites	partial	faithful	Aria object and enemy sprites, boxes and stats	scripts/aos_object_sprites.py	tests/test_aos_object_sprites.py	assets.rom_verification	Only objects and enemies whose create routine is traced (wooden door, bat, zombie, blue crow).	
+assets	assets.aria_rooms	rooms	functional	partial	Aria runtime rooms (background, BG1 collision, transitions, entities)	scripts/aos_runtime_room.py|scripts/aos_room_render.py	tests/test_aos_runtime_room.py|tests/test_aos_room_render.py	assets.rom_verification	342 of 343 rooms export; one has no decodable BG1 collision table. The background is a static composite.	
+assets	assets.aria_soma	sprites	functional	faithful	Soma animation library	scripts/aos_soma_pipeline.py|scripts/aos_soma_sprite.py	tests/test_aos_soma_sprite.py	assets.rom_verification	One-shot animations use their own palette bank instead of the previous one.	
+assets	assets.aria_weapons	sprites	partial	faithful	Soma weapon records and blade sprites	scripts/aos_weapons.py	tests/test_aos_soma_sprite.py	assets.rom_verification	Blades of classes 0, 2 and 3 only.	
+assets	assets.audio	audio	not_started	n/a	Music and sound effects				No audio is decoded or played.	
+assets	assets.enemy_sprites_mzm	sprites	unknown	unknown	Zero Mission enemy sprites	scripts/native_enemy_sprite_cache.py			An editor sprite cache exists; its use by a runtime is not established.	
+assets	assets.mzm_projectiles	sprites	functional	faithful	Zero Mission projectile sprites	scripts/mzm_projectile_compose.py	tests/test_mzm_projectile_compose.py	assets.rom_verification		
+assets	assets.mzm_rooms	rooms	partial	partial	Zero Mission runtime rooms (Clipdata, doors, hatches)	scripts/mzm_runtime_room.py|scripts/mzm_room_render.py	tests/test_mzm_room_render.py|tests/test_runtime_clipdata_id_0140.py	assets.raw_import	330 of 331 rooms export; the BG1-over-BG2 render is a partial composite.	
+assets	assets.mzm_samus	sprites	functional	faithful	Samus body, arm cannon and suit palette library	scripts/mzm_samus_pipeline.py|scripts/mzm_samus_compose.py	tests/test_mzm_samus_pipeline.py|tests/test_mzm_samus_palette_banks.py	assets.rom_verification	Needs the reference ELF built from the pinned decompilation.	
+assets	assets.raw_import	reconstruction	functional	n/a	Raw ROM import from the pinned decomp databases	scripts/import_game_assets.py	tests/test_asset_import.py	assets.rom_verification	Raw blocks are copied, not decoded.	
+assets	assets.rom_verification	reconstruction	functional	n/a	ROM fingerprint verification	scripts/verify_roms.py|scripts/rebuild.py	tests/test_native_parity.py		Only the USA revisions are supported.	
+metroidvania	mv.character_state	gameplay	not_started	n/a	Per-character state kept across switches			mv.character_switch	Deferred.	
+metroidvania	mv.character_switch	gameplay	not_started	n/a	Switching between Samus and Soma				Deferred until both original reconstructions are complete (ROADMAP).	
+metroidvania	mv.dual_engine_host	engines	not_started	n/a	Both engines hosted in one game process				Each game runs in its own executable today.	
+metroidvania	mv.event_orchestration	events	not_started	n/a	Cross-world event orchestration			story.timeline	Deferred.	
+metroidvania	mv.overlays_in_runtime	overlays	not_started	n/a	Editor overlays applied by the runtimes			tools.room_editor	The runtimes do not read editor overrides yet.	
+metroidvania	mv.synergies	gameplay	not_started	n/a	Interactions and synergies between both worlds			mv.character_switch	Deferred.	
+metroidvania	mv.world_transitions	rooms	not_started	n/a	Portals and transitions between the worlds			mv.dual_engine_host	Portal scenes exist only as story data.	
+platform	platform.dashboard_offline	platform	functional	n/a	Offline dashboard in Firefox, Chromium and Edge	dashboard/index.html	tests/test_dashboard.py		Checked by a static test; not exercised in every browser.	
+platform	platform.linux	platform	functional	n/a	Linux (Debian 13) build and tests	CMakeLists.txt	@all-tests		Verified when the dashboard data is generated on Linux with --run-tests.	
+platform	platform.windows	platform	unknown	n/a	Windows build and runtime				Never compiled or run on Windows.	
+story	story.bible	scenario	in_progress	n/a	Story bible and canon	docs/STORY_BIBLE.md			Design document; nothing is playable.	
+story	story.cutscenes	cutscenes	in_progress	n/a	Crossover cutscene scripts	data/cutscenes/interzone_first_meeting.toml		story.timeline	Scripts exist as data; no cutscene runtime exists.	
+story	story.timeline	events	partial	n/a	Concurrent campaign timeline data	data/story/timeline.toml|docs/CONCURRENT_TIMELINE.md	tests/test_story_timeline.py		Validated data model only; no runtime reads it.	
+tools	tools.dashboard	diagnostics	functional	n/a	Development dashboard	scripts/dashboard.py|dashboard/index.html|dashboard/app.js	tests/test_dashboard.py			
+tools	tools.debug_menu	diagnostics	partial	n/a	F1 debug menu in both runtimes	src/runtime/debug_menu.c|src/runtime/aria_runtime.c|src/runtime/room_runtime.c	tests/test_debug_menu.c		No equipment, soul, flag or AI inspection yet.	
+tools	tools.editor_cli	editor	functional	n/a	Headless editor command line	src/tools/editor_cli.c	tests/test_editor_cli.py			
+tools	tools.event_editor	editor	partial	n/a	Story, event and cutscene data editor	editor/story_workspace.c	tests/test_story_timeline.py	story.timeline	No native cutscene runtime exists.	
+tools	tools.map_editor	editor	partial	n/a	GTK4 map editor workspace	editor/main.c|editor/native_workspace.c	tests/test_native_workspace.py|tests/test_unified_workspace.py		Aria reconstruction in the editor is partial.	
+tools	tools.native_inventory	reconstruction	functional	n/a	Native source inventory and parity checklist	scripts/native_inventory.py|scripts/native_parity.py	tests/test_native_parity.py		Lexical analysis: dynamic dispatch and runtime evidence are not indexed.	
+tools	tools.object_catalog	editor	partial	n/a	Object catalog	editor/object_catalog.c|scripts/object_catalog.py	tests/test_object_catalog.py|tests/test_object_catalog_ui.py			
+tools	tools.rebuild	reconstruction	functional	n/a	Incremental reconstruction graph	scripts/rebuild.py|scripts/export_index.py	tests/test_native_parity.py		Room previews, audits and editor caches are not registered yet.	
+tools	tools.room_editor	editor	partial	n/a	Native room tile painter with private overrides	editor/room_browser.c|src/core/native_map.c	tests/test_native_rooms.py		Edits are private overrides; runtimes do not apply them yet.	
+tools	tools.room_viewers	preview	partial	partial	Native room and room package viewers	src/tools/mzm_room_viewer.c|src/tools/room_package_viewer.c				
+tools	tools.sprite_editor	editor	not_started	n/a	Sprite editor				Sprite previews exist; editing does not.	
+tools	tools.world_atlas	editor	partial	partial	Global maps and the Zero Mission world atlas	editor/world_atlas.c|scripts/mzm_world_atlas.py	tests/test_mzm_world_atlas.py		Shows original minimap cases, not complete world geometry.	

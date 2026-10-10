@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug_menu.h"
 #include "gba_input.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
@@ -1088,6 +1089,59 @@ static int runtime_palette_slot(RuntimePaletteSlots *slots,RuntimeLibrary *lib,
     memcpy(slots->colors[slots->count],colors,sizeof slots->colors[0]);
     return slots->count++;
 }
+/* Debug menu (F1, or the gamepad chord): every item edits the running
+ * engine's state; nothing here exists in the original game. */
+enum {
+    DEBUG_PAUSE=1,DEBUG_STEP,DEBUG_HITBOX,DEBUG_SUIT,DEBUG_ITEMS,DEBUG_ENERGY,
+    DEBUG_MAX_ENERGY,DEBUG_AMMO,DEBUG_REFILL,DEBUG_DAMAGE,DEBUG_AREA,DEBUG_ROOM,
+    DEBUG_TELEPORT,
+};
+static const char *const debug_area_names[]={
+    "brinstar","kraid","norfair","ridley","tourian","crateria","chozodia",
+};
+#define DEBUG_AREAS (int)(sizeof debug_area_names/sizeof debug_area_names[0])
+/* Items whose native effect the engine implements (Speed Booster is not). */
+static const struct { const char *label; uint32_t item; } debug_items[]={
+    {"High Jump",MZM_ITEM_HIGH_JUMP},{"Space Jump",MZM_ITEM_SPACE_JUMP},
+    {"Screw Attack",MZM_ITEM_SCREW_ATTACK},
+};
+#define DEBUG_ITEMS_COUNT (int)(sizeof debug_items/sizeof debug_items[0])
+
+static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
+                       SDL_FRect viewport,float scale,const char *room_name,
+                       const MzmSamus *samus,const MzmEquipment *equipment,long frame) {
+    if(!menu->open && !paused)return;
+    float text_scale=scale>=1.f?(float)(int)scale:1.f;
+    float x=viewport.x/text_scale,y=viewport.y/text_scale;
+    SDL_SetRenderScale(renderer,text_scale,text_scale);
+    SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer,0,0,0,190);
+    SDL_FRect panel={x,y,viewport.w/text_scale,menu->open?viewport.h/text_scale:12.f};
+    SDL_RenderFillRect(renderer,&panel);
+    SDL_SetRenderDrawColor(renderer,255,255,255,255);
+    char line[64];
+    if(!menu->open) {
+        SDL_RenderDebugText(renderer,x+2.f,y+2.f,"PAUSED  F2 step  F1 menu");
+    } else {
+        snprintf(line,sizeof line,"DEBUG %s frame %ld",room_name,frame);
+        SDL_RenderDebugText(renderer,x+2.f,y+2.f,line);
+        snprintf(line,sizeof line,"x%d y%d %s",samus->x/MZM_SUBPIXELS_PER_PIXEL,
+                 samus->y/MZM_SUBPIXELS_PER_PIXEL,mzm_pose_name(samus->pose));
+        SDL_RenderDebugText(renderer,x+2.f,y+10.f,line);
+        snprintf(line,sizeof line,"Energy %d/%d missiles %d supers %d",equipment->energy,
+                 equipment->max_energy,equipment->missiles,equipment->super_missiles);
+        SDL_RenderDebugText(renderer,x+2.f,y+18.f,line);
+        enum { ROWS=22 };
+        int top=menu->cursor-ROWS/2;
+        if(top>menu->count-ROWS)top=menu->count-ROWS;
+        if(top<0)top=0;
+        for(int i=0;i<ROWS && top+i<menu->count;i++) {
+            debug_menu_line(menu,top+i,line,sizeof line);
+            SDL_RenderDebugText(renderer,x+2.f,y+34.f+8.f*(float)i,line);
+        }
+    }
+    SDL_SetRenderScale(renderer,1.f,1.f);
+}
 /* Load an exported native room and its background texture. */
 static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,
                               SDL_Texture **texture) {
@@ -1168,7 +1222,8 @@ int main(int argc, char **argv) {
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     unsigned long capture_buttons=0;
-    bool check=false,animation_check=false;
+    bool check=false,animation_check=false,debug_at_start=false;
+    const char *debug_input=NULL;
     GbaPadMap pad_map;
     gba_pad_map_default(&pad_map);
     for (int i=1;i<argc;i++) {
@@ -1198,6 +1253,8 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
         else if (!strcmp(argv[i],"--projectile-library") && !projectile_index && i+1<argc)
             projectile_index=argv[++i];
+        else if (!strcmp(argv[i],"--debug-menu")) debug_at_start=true;
+        else if (!strcmp(argv[i],"--debug-input") && i+1<argc) debug_input=argv[++i];
         else if (!strcmp(argv[i],"--input-map") && i+1<argc) {
             char error[256];
             if(!gba_pad_map_load(&pad_map,argv[++i],error,sizeof error)) {
@@ -1206,7 +1263,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--debug-input MASK,...] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -1297,7 +1354,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--debug-input MASK,...] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -1445,6 +1502,44 @@ int main(int argc, char **argv) {
     uint16_t previous_held=0,latched=0;
     bool damage_queued=false,restart_queued=false;
     bool pad_armor_prev=false,pad_special_prev=false,pad_browser_prev=false;
+    /* The debug menu's view of the engine state. */
+    static DebugMenu debug;
+    bool paused=false,step_once=false,chord_before=false;
+    bool debug_item_flags[DEBUG_ITEMS_COUNT]={false};
+    int debug_suit=(int)suit_preset,debug_area=0,debug_room=0;
+    long debug_frame=0;
+    const char *debug_suit_names[RUNTIME_SUIT_PRESETS];
+    for(size_t i=0;i<RUNTIME_SUIT_PRESETS;i++)debug_suit_names[i]=runtime_suit_presets[i].name;
+    char current_room[64];
+    snprintf(current_room,sizeof current_room,"%s",room_alias?room_alias:"room");
+    for(int i=0;i<DEBUG_AREAS;i++) {
+        size_t length=strlen(debug_area_names[i]);
+        if(!strncmp(current_room,debug_area_names[i],length) && current_room[length]=='_') {
+            debug_area=i;
+            debug_room=atoi(current_room+length+1);
+        }
+    }
+    debug_menu_clear(&debug);
+    debug_menu_toggle(&debug,"Paused",&paused,DEBUG_PAUSE);
+    debug_menu_action(&debug,"Step one frame",DEBUG_STEP);
+    debug_menu_toggle(&debug,"Hitbox",&show_hitbox,DEBUG_HITBOX);
+    debug_menu_value(&debug,"Suit",&debug_suit,0,(int)RUNTIME_SUIT_PRESETS-1,1,
+                     debug_suit_names,DEBUG_SUIT);
+    for(int i=0;i<DEBUG_ITEMS_COUNT;i++)
+        debug_menu_toggle(&debug,debug_items[i].label,&debug_item_flags[i],DEBUG_ITEMS);
+    debug_menu_value(&debug,"Energy",&equipment.energy,0,2099,1,NULL,DEBUG_ENERGY);
+    debug_menu_value(&debug,"Max energy",&equipment.max_energy,1,2099,1,NULL,DEBUG_MAX_ENERGY);
+    debug_menu_value(&debug,"Missiles",&equipment.missiles,0,255,1,NULL,DEBUG_AMMO);
+    debug_menu_value(&debug,"Max missiles",&equipment.max_missiles,0,255,1,NULL,DEBUG_AMMO);
+    debug_menu_value(&debug,"Supers",&equipment.super_missiles,0,99,1,NULL,DEBUG_AMMO);
+    debug_menu_value(&debug,"Max supers",&equipment.max_super_missiles,0,99,1,NULL,DEBUG_AMMO);
+    debug_menu_action(&debug,"Refill energy, ammo",DEBUG_REFILL);
+    debug_menu_action(&debug,"Take 20 damage",DEBUG_DAMAGE);
+    debug_menu_value(&debug,"Area",&debug_area,0,DEBUG_AREAS-1,1,debug_area_names,DEBUG_AREA);
+    debug_menu_value(&debug,"Room",&debug_room,0,255,1,NULL,DEBUG_ROOM);
+    debug_menu_action(&debug,"Teleport",DEBUG_TELEPORT);
+    debug.open=debug_at_start;
+    uint16_t menu_previous=0;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -1490,6 +1585,9 @@ int main(int argc, char **argv) {
             if (event.type == SDL_EVENT_QUIT ||
                 (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) running=false;
             if (!key_down) continue;
+            if (event.key.key == SDLK_F1) { debug.open=!debug.open; continue; }
+            if (event.key.key == SDLK_F2) { if(paused)step_once=true; continue; }
+            if (debug.open) continue;
             latched|=runtime_key_buttons(event.key.scancode);
             if (event.key.key == SDLK_H) damage_queued=true;
             if (event.key.key == SDLK_RETURN) restart_queued=true;
@@ -1538,13 +1636,115 @@ int main(int argc, char **argv) {
             title_dirty=true;
         }
         pad_special_prev=pad_special;
+        bool chord=gba_input_debug_chord(&gamepad);
+        if(chord && !chord_before)debug.open=!debug.open;
+        chord_before=chord;
+        if(debug.open) {
+            /* Mirror the engine before reading the menu's input. */
+            debug_suit=(int)suit_preset;
+            for(int i=0;i<DEBUG_ITEMS_COUNT;i++)
+                debug_item_flags[i]=(toggled_items&debug_items[i].item)!=0;
+            const bool *menu_keys=SDL_GetKeyboardState(NULL);
+            uint16_t menu_held=chord?0:runtime_held_buttons(menu_keys,&gamepad),pressed;
+            if(capture_path) {
+                /* Scripted menu edges: the next mask of --debug-input (MZM
+                 * key bits). */
+                char *end=NULL;
+                pressed=debug_input && *debug_input?(uint16_t)strtoul(debug_input,&end,0):0;
+                if(end)debug_input=*end==','?end+1:end;
+            } else {
+                pressed=(uint16_t)(menu_held&~menu_previous);
+            }
+            /* The menu reads GBA KEYINPUT bits. */
+            uint16_t gba=0;
+            if(pressed&MZM_KEY_A)gba|=GBA_KEY_A;
+            if(pressed&MZM_KEY_B)gba|=GBA_KEY_B;
+            if(pressed&MZM_KEY_UP)gba|=GBA_KEY_UP;
+            if(pressed&MZM_KEY_DOWN)gba|=GBA_KEY_DOWN;
+            if(pressed&MZM_KEY_LEFT)gba|=GBA_KEY_LEFT;
+            if(pressed&MZM_KEY_RIGHT)gba|=GBA_KEY_RIGHT;
+            if(pressed&MZM_KEY_L)gba|=GBA_KEY_L;
+            if(pressed&MZM_KEY_R)gba|=GBA_KEY_R;
+            switch(debug_menu_input(&debug,gba)) {
+            case DEBUG_STEP: step_once=true; break;
+            case DEBUG_SUIT:
+                suit_preset=(unsigned int)debug_suit;
+                runtime_apply_equipment(&equipment,suit_preset,toggled_items);
+                pose_animation.suit=runtime_suit_presets[suit_preset].registry;
+                title_dirty=true;
+                break;
+            case DEBUG_ITEMS:
+                for(int i=0;i<DEBUG_ITEMS_COUNT;i++) {
+                    if(debug_item_flags[i])toggled_items|=debug_items[i].item;
+                    else toggled_items&=~debug_items[i].item;
+                }
+                spin_items=((toggled_items&MZM_ITEM_SPACE_JUMP)?1u:0u)|
+                           ((toggled_items&MZM_ITEM_SCREW_ATTACK)?2u:0u);
+                runtime_apply_equipment(&equipment,suit_preset,toggled_items);
+                title_dirty=true;
+                break;
+            case DEBUG_ENERGY: case DEBUG_MAX_ENERGY: case DEBUG_AMMO:
+                if(equipment.energy>equipment.max_energy)equipment.energy=equipment.max_energy;
+                if(equipment.missiles>equipment.max_missiles)
+                    equipment.missiles=equipment.max_missiles;
+                if(equipment.super_missiles>equipment.max_super_missiles)
+                    equipment.super_missiles=equipment.max_super_missiles;
+                title_dirty=true;
+                break;
+            case DEBUG_REFILL:
+                equipment.energy=equipment.max_energy;
+                equipment.missiles=equipment.max_missiles;
+                equipment.super_missiles=equipment.max_super_missiles;
+                title_dirty=true;
+                break;
+            case DEBUG_DAMAGE: damage_queued=true; step_once=true; break;
+            case DEBUG_TELEPORT: {
+                char alias[64];
+                snprintf(alias,sizeof alias,"%s_%03d",debug_area_names[debug_area],debug_room);
+                Room *next=calloc(1,sizeof *next);
+                SDL_Texture *next_texture=NULL;
+                MzmSamus placed=samus;
+                if(next && runtime_load_room(alias,next,renderer,&next_texture) &&
+                   runtime_spawn_samus(next,&placed)) {
+                    free(room);
+                    room=next;
+                    collision.context=room;
+                    if(texture)SDL_DestroyTexture(texture);
+                    texture=next_texture;
+                    samus=placed;
+                    mzm_weapons_init(&weapons);
+                    echo=(RuntimeEcho){0};
+                    echo_visible=false;
+                    door_lock=true;
+                    title_dirty=true;
+                    snprintf(current_room,sizeof current_room,"%s",alias);
+                    printf("Debug teleport: %s\n",alias);
+                } else {
+                    if(next_texture)SDL_DestroyTexture(next_texture);
+                    free(next);
+                    fprintf(stderr,"Debug teleport: %s is not exported or has no spawn\n",alias);
+                }
+                break;
+            }
+            default: break;
+            }
+            menu_previous=menu_held;
+        } else {
+            menu_previous=0xFFFF;   /* no stray edge when the menu opens */
+        }
         Uint64 current=SDL_GetTicks();
         float dt=clampf((float)(current-previous)/1000.f,0.f,0.05f);
         if(capture_path)dt=fixed_step;
         previous=current;
         const bool *keys=SDL_GetKeyboardState(NULL);
         accumulator += dt;
+        /* The menu and the pause freeze the game (not in captures). */
+        if((debug.open || paused) && !capture_path) {
+            accumulator=step_once?fixed_step:0.f;
+            step_once=false;
+        }
         while (accumulator >= fixed_step) {
+            debug_frame++;
             uint16_t held=runtime_held_buttons(keys,&gamepad);
             if(capture_path) {
                 /* Scripted GBA buttons; A and B are released for one frame
@@ -1554,6 +1754,7 @@ int main(int argc, char **argv) {
                     held&=(uint16_t)~(MZM_KEY_A|MZM_KEY_B);
                 capture_step++;
             }
+            if(debug.open && !capture_path)held=0;     /* a menu frame step */
             MzmInput input={held,(uint16_t)((held&~previous_held)|latched),false};
             latched=0;
             previous_held=held;
@@ -1629,6 +1830,7 @@ int main(int argc, char **argv) {
                     echo=(RuntimeEcho){0};
                     echo_visible=false;
                     title_dirty=true;
+                    snprintf(current_room,sizeof current_room,"%s",used.destination);
                     printf("Door %d -> %s\n",used.index,used.destination);
                 } else {
                     free(next);
@@ -1801,6 +2003,8 @@ int main(int argc, char **argv) {
             if(lib_entry) SDL_RenderRect(renderer,&avatar);
             else SDL_RenderFillRect(renderer,&avatar);
         }
+        debug_draw(renderer,&debug,paused,viewport,scale,current_room,&samus,&equipment,
+                   debug_frame);
         if(capture_path && capture_step>=capture_frames) {
             SDL_Surface *shot=SDL_RenderReadPixels(renderer,NULL);
             bool saved=shot && SDL_SaveBMP(shot,capture_path);

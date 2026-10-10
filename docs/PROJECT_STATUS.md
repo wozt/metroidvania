@@ -2270,3 +2270,24 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   25/25, the Python suite passed 389/389, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0229 - F1 debug menu (Zero Mission runtime)
+
+- `fusion_room_runtime` gets the shared debug menu: F1 or the gamepad debug
+  chord freezes the game; items cover pause with F2 frame stepping, frame
+  step, the hitbox outline, the suit preset, the items whose native effect
+  the engine implements (High Jump, Space Jump, Screw Attack; Speed Booster
+  is left out because it has no effect yet), energy, missiles and super
+  missiles with their maxima (clamped), refill, 20 damage through the
+  existing native hurt path, and teleporting to any exported
+  `<area>_<NNN>` room at the default safe spawn. A status panel shows the
+  room (also updated by door travel), frame, Samus's position, pose,
+  energy and ammunition. Keyboard diagnostics stay available while the menu
+  is closed.
+- `--debug-menu` and `--debug-input MASK,...` (runtime key bits) drive it in
+  captures. Checked: the menu renders the engine values in brinstar_033, and
+  a scripted area/room change and teleport loads ridley_000 with Samus on
+  the elevator platform.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  25/25, the Python suite passed 389/389, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

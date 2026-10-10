@@ -118,12 +118,14 @@ The Zero Mission runtime keeps its own diagnostic pad buttons (Guide suits,
 North Space Jump/Screw Attack, Start animation catalogue).
 
 F1 (or the gamepad chord, Back + Start by default, `debug ...` in an input
-map) opens the debug menu of `fusion_aria_runtime`; the Zero Mission
-runtime's menu is not written yet. The menu freezes the game and edits the
-running engine: pause (then F2 steps one frame) and frame step, hitboxes,
-HP and max HP, the diagnostic ATK/DEF, each ported ability move, spawning a
-ported enemy 48 pixels ahead, removing every enemy, and teleporting to any
-exported room (at a floor found the way the default spawn is). Up/Down
+map) opens the debug menu of either runtime. It freezes the game and edits
+the running engine; both offer pause (then F2 steps one frame), frame step,
+hitboxes and teleporting to any exported room (at the default spawn
+search). `fusion_aria_runtime` adds HP and max HP, the diagnostic ATK/DEF,
+each ported ability move, spawning a ported enemy 48 pixels ahead and
+removing every enemy. `fusion_room_runtime` adds the suit preset, the items
+whose native effect is ported (High Jump, Space Jump, Screw Attack), energy,
+missiles and super missiles with their maxima, a refill and 20 damage. Up/Down
 select, Left/Right change a value (L/R by ten), A toggles or runs, B
 closes. Only engine features that exist are listed; nothing it does is
 saved. For headless checks, `--debug-menu` opens it at start and

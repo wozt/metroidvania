@@ -5,6 +5,8 @@
 
 const int8_t aos_soma_stand_probes[] = {3, -12, -20, -28};
 const int8_t aos_soma_low_probes[] = {2, -6, -9};
+const int8_t aos_soma_ceiling_probes[] = {1, -12};       /* 0x080E12E8 */
+const int8_t aos_soma_special_probes[] = {3, -6, -16, -28}; /* 0x080E12E4 */
 
 /* sub_0801B0D8 prologue. */
 void aos_soma_integrate(AosSoma *soma) {
@@ -12,6 +14,18 @@ void aos_soma_integrate(AosSoma *soma) {
     if (soma->vy > AOS_FALL_CAP) soma->vy = AOS_FALL_CAP;
     soma->y += soma->vy;
     soma->extra_vx = 0;
+}
+
+/* The pattern used at every animation change of the player code: start
+ * the animation unless it is current, drop the pending one and clear the
+ * animation-end flag. Hurtboxes (sub_080428B4), per-animation palettes
+ * (0x080E126C) and the 0x131B8 & 0x800 gate are not modelled. */
+static void play(AosSoma *soma, unsigned id, bool loop) {
+    if (soma->anim.id == id) return;
+    aos_anim_start(&soma->anim, soma->anims, id, loop);
+    soma->anim.id = (uint8_t)id;
+    soma->anim_request = AOS_ANIM_NONE;
+    soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
 }
 
 /* Velocity plus friction, stopping on a sign change (shared by the
@@ -118,6 +132,22 @@ void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
         soma->vy += soma->gravity_mod;
         soma->gravity_mod += 0x400;             /* 0.015625 */
         if (soma->gravity_mod > 0x1000) soma->gravity_mod = 0x1000;
+    }
+    /* _08018E4A: airborne animations (the flag 0x10 probes before it are
+     * not ported). */
+    if (soma->flags & 0x1E0u) return;
+    if ((soma->abilities & AOS_ABILITY_FAST_WALK) && soma->vx) {
+        play(soma, AOS_SOMA_ANIM_FAST, true);
+    } else if (soma->vy > 0x3FFF) {
+        play(soma, AOS_SOMA_ANIM_FALL, false);
+    } else if ((soma->flags & 4u) && soma->anim_request != AOS_ANIM_NONE) {
+        return;
+    } else if (soma->flags & 0x10u) {
+        play(soma, AOS_SOMA_ANIM_HIGH_JUMP, true);
+    } else if (soma->vx) {
+        play(soma, AOS_SOMA_ANIM_JUMP_FORWARD, false);
+    } else {
+        play(soma, AOS_SOMA_ANIM_JUMP, true);
     }
 }
 
@@ -246,9 +276,16 @@ static AosLanding land(AosSoma *soma) {
     AosLanding landing = AOS_LANDING_NORMAL;
     if (soma->vy > 0x64000 || (soma->flags & AOS_FLAG_STOP_AT_WALL)) {
         soma->flags |= AOS_FLAG_HARD_LANDING;
+        play(soma, AOS_SOMA_ANIM_HARD_LANDING, false);
         soma->state = 4;
         landing = AOS_LANDING_HARD;
     } else {
+        /* The game also checks the attack and soul buttons, which have no
+         * ported use yet; only the jump button is tested here. */
+        if (!(soma->held & 0xF0) && !(soma->pressed & AOS_KEY_JUMP))
+            soma->anim_request = AOS_SOMA_ANIM_LAND;
+        if (soma->held & (AOS_KEY_LEFT | AOS_KEY_RIGHT))
+            play(soma, AOS_SOMA_ANIM_WALK, true);
         soma->state = 0;
     }
     soma->vy = soma->gravity_mod = 0;
@@ -355,16 +392,72 @@ static void slow_on_slope(AosSoma *soma, const int32_t divisors[3]) {
         soma->vx = soma->vx / divisors[soma->slope_step - 1] * 16;
 }
 
-/* sub_0801B0D8 case 0 (_0801BA98), movement only: the dust and splash
- * effects, animations, backdash (ability 0), attacks (sub_080197B4,
+/* Grounded animations and crouch of case 0 (_0801BEAC .. _0801C298). */
+static void ground_animation(AosSoma *soma, uint16_t held, int32_t start_speed) {
+    if (held & AOS_KEY_DOWN || (soma->flags & AOS_FLAG_HEAD_CEILING)) {
+        if (!(soma->flags & AOS_FLAG_CROUCH)) {
+            soma->flags = (soma->flags | AOS_FLAG_CROUCH) & ~(uint32_t)AOS_FLAG_BACKDASH;
+            soma->anim_request = AOS_SOMA_ANIM_CROUCH_DOWN;
+        }
+        if (soma->anim_request == AOS_ANIM_NONE) play(soma, AOS_SOMA_ANIM_CROUCH, true);
+    } else if (held & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) {
+        if ((soma->flags & AOS_FLAG_BACKDASH) || soma->anim_request == AOS_SOMA_ANIM_TURN) {
+            /* no change */
+        } else if (soma->abilities & AOS_ABILITY_FAST_WALK) {
+            play(soma, AOS_SOMA_ANIM_FAST, true);
+        } else {
+            uint8_t current = soma->anim.id;
+            if (current != AOS_SOMA_ANIM_WALK && current != AOS_SOMA_ANIM_WALK_START &&
+                current != AOS_SOMA_ANIM_TURN)
+                play(soma, AOS_SOMA_ANIM_WALK_START, false);
+            if (soma->flags & AOS_FLAG_ANIM_DONE) play(soma, AOS_SOMA_ANIM_WALK, true);
+        }
+    } else {
+        if (!(soma->flags & AOS_FLAG_CROUCH) && (held & AOS_KEY_UP)) {
+            if (soma->up_frames > 3) {
+                play(soma, AOS_SOMA_ANIM_LOOK_UP, false);
+                return;             /* skips the crouch release */
+            }
+            soma->up_frames++;
+        } else {
+            soma->up_frames = 0;
+        }
+        uint8_t current = soma->anim.id;
+        if (!(soma->flags & AOS_FLAG_BACKDASH) && current != AOS_SOMA_ANIM_WALK_START &&
+            current != AOS_SOMA_ANIM_IDLE && current != AOS_SOMA_ANIM_TURN &&
+            start_speed > 0xFFFF)
+            soma->anim_request = AOS_SOMA_ANIM_STOP;
+        if (soma->anim_request == AOS_ANIM_NONE || soma->anim.id == AOS_SOMA_ANIM_WALK_START) {
+            soma->flags &= ~(uint32_t)AOS_FLAG_BACKDASH;
+            play(soma, AOS_SOMA_ANIM_IDLE, true);
+        }
+    }
+    /* _0801C254: stand up. */
+    if ((soma->flags & (AOS_FLAG_HEAD_CEILING | AOS_FLAG_CROUCH)) == AOS_FLAG_CROUCH &&
+        !(held & AOS_KEY_DOWN)) {
+        soma->flags &= ~(uint32_t)AOS_FLAG_CROUCH;
+        soma->anim_request = AOS_SOMA_ANIM_STAND_UP;
+    }
+}
+
+/* sub_0801B0D8 case 0 (_0801BA98), movement and animations: the dust and
+ * splash effects, backdash (ability 0), attacks (sub_080197B4,
  * sub_08019478) and slide (ability 1) are not ported. */
 static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held,
                          uint16_t pressed) {
     static const int32_t uphill[3] = {24, 20, 18};
     static const int32_t crouched[3] = {23, 19, 17};
+    int32_t start_speed = soma->vx < 0 ? -soma->vx : soma->vx;
     int32_t speed = (soma->abilities & AOS_ABILITY_FAST_WALK) ? AOS_FAST_WALK_SPEED
                                                               : AOS_WALK_SPEED;
     if (!(soma->flags & (AOS_FLAG_BACKDASH | AOS_FLAG_HEAD_CEILING | AOS_FLAG_CROUCH))) {
+        if (((held & AOS_KEY_RIGHT) && soma->facing_left) ||
+            ((held & AOS_KEY_LEFT) && !soma->facing_left)) {
+            if (!(soma->flags & AOS_FLAG_AIRBORNE))
+                soma->anim_request = AOS_SOMA_ANIM_TURN;
+            else if ((soma->flags & 0x00800010u) == 0x00800000u)
+                soma->anim_request = AOS_SOMA_ANIM_SPECIAL_TURN;
+        }
         steer_direction(soma, held, speed);
         if (!(soma->flags & AOS_FLAG_AIRBORNE)) slow_on_slope(soma, uphill);
     } else if (soma->flags & AOS_FLAG_BACKDASH) {
@@ -377,16 +470,9 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
     }
     apply_friction(soma);
 
-    if ((soma->flags & AOS_FLAG_GROUNDED)) {
+    if (soma->flags & AOS_FLAG_GROUNDED) {
         soma->frame_counter++;
-        if (!(soma->flags & 0x1000001Eu)) {
-            if (((held & AOS_KEY_DOWN) || (soma->flags & AOS_FLAG_HEAD_CEILING)) &&
-                !(soma->flags & AOS_FLAG_CROUCH))
-                soma->flags = (soma->flags | AOS_FLAG_CROUCH) & ~(uint32_t)AOS_FLAG_BACKDASH;
-            if ((soma->flags & (AOS_FLAG_HEAD_CEILING | AOS_FLAG_CROUCH)) == AOS_FLAG_CROUCH &&
-                !(held & AOS_KEY_DOWN))
-                soma->flags &= ~(uint32_t)AOS_FLAG_CROUCH;
-        }
+        if (!(soma->flags & 0x1000001Eu)) ground_animation(soma, held, start_speed);
     }
     aos_soma_jump(soma, held, pressed);
     aos_soma_air(soma, layer, held);
@@ -406,8 +492,47 @@ static void hard_landing_state(AosSoma *soma) {
     }
 }
 
+AosSoma aos_soma_spawn(int32_t x, int32_t y, const AosAnimSet *anims) {
+    AosSoma soma = {
+        .x = x, .y = y,
+        .flags = AOS_FLAG_GROUNDED | AOS_FLAG_ANIM_DONE,
+        .anim_request = AOS_ANIM_NONE,
+        .air_probes = {4, -8, -12, -20, -28},
+        .anims = anims,
+    };
+    soma.wall_probes = aos_soma_stand_probes;
+    aos_anim_start(&soma.anim, anims, AOS_SOMA_ANIM_IDLE, true);
+    return soma;
+}
+
+/* _0801CD80: wall probes for the next frame. */
+static void select_wall_probes(AosSoma *soma) {
+    if (soma->state == 3 || (soma->flags & AOS_FLAG_HEAD_CEILING)) {
+        soma->wall_probes = aos_soma_ceiling_probes;
+    } else if (soma->flags & AOS_FLAG_HEAD_SPECIAL) {
+        soma->wall_probes = aos_soma_special_probes;
+    } else if (!(soma->flags & AOS_FLAG_AIRBORNE)) {
+        soma->wall_probes = aos_soma_stand_probes;
+    } else {
+        int16_t vx_pixels = (int16_t)(soma->vx >> 16), vy_pixels = (int16_t)(soma->vy >> 16);
+        int vx_abs = vx_pixels < 0 ? -vx_pixels : vx_pixels;
+        int vy_abs = vy_pixels < 0 ? -vy_pixels : vy_pixels;
+        int offset = -12;
+        if (!soma->slope_contact && (vx_abs <= 2 || vy_pixels > 0))
+            offset = -vy_abs / 2 - 4;
+        soma->air_probes[1] = (int8_t)offset;
+        soma->wall_probes = soma->air_probes;
+    }
+}
+
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed) {
+    soma->held = held;
+    soma->pressed = pressed;
+    /* _0801B100 */
+    soma->flags &= ~0x00240000u;
+    if (soma->anim.flags & AOS_ANIM_ENDED)
+        soma->flags = (soma->flags | AOS_FLAG_ANIM_DONE) & ~(uint32_t)AOS_FLAG_BACKDASH;
     aos_soma_integrate(soma);
     AosLanding landing = aos_soma_collide(soma, layer);
     switch (soma->state) {
@@ -415,5 +540,17 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     case 4: hard_landing_state(soma); break;
     default: break;
     }
+    select_wall_probes(soma);
+    /* _0801CE5C: the pending animation plays once, then is dropped. */
+    if (soma->anim_request != AOS_ANIM_NONE) {
+        if (soma->anim.id != soma->anim_request) {
+            aos_anim_start(&soma->anim, soma->anims, soma->anim_request, false);
+            soma->anim.id = (uint8_t)soma->anim_request;
+            soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
+        } else if (soma->flags & AOS_FLAG_ANIM_DONE) {
+            soma->anim_request = AOS_ANIM_NONE;
+        }
+    }
+    aos_anim_step(&soma->anim, soma->anims);
     return landing;
 }

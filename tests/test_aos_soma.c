@@ -38,8 +38,24 @@ static AosLanding frame(AosSoma *soma, uint16_t held, uint16_t pressed) {
     return aos_soma_update(soma, &layer, held, pressed);
 }
 
+/* Synthetic timings: every animation has one 4-frame step except the hard
+ * landing (2, 2, 2, 21) and the walk start (3, 3). */
+static const uint8_t one_step[] = {4};
+static const uint8_t landing_steps[] = {2, 2, 2, 21};
+static const uint8_t walk_start_steps[] = {3, 3};
+static AosAnimDef anim_defs[0x40];
+static const AosAnimSet anim_set = {anim_defs, 0x40};
+
+static void init_anims(void) {
+    for (int i = 0; i < 0x40; ++i) anim_defs[i] = (AosAnimDef){1, one_step};
+    anim_defs[AOS_SOMA_ANIM_HARD_LANDING] = (AosAnimDef){4, landing_steps};
+    anim_defs[AOS_SOMA_ANIM_WALK_START] = (AosAnimDef){2, walk_start_steps};
+}
+
 static AosSoma at(int x, int y, uint32_t flags) {
-    return (AosSoma){.x = AOS_FIXED(x), .y = AOS_FIXED(y), .flags = flags};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(x), AOS_FIXED(y), &anim_set);
+    soma.flags = flags;
+    return soma;
 }
 
 static void collision_tests(void) {
@@ -213,18 +229,91 @@ static void state_tests(void) {
     for (int i = 0; i < 20 && landing == AOS_LANDING_NONE; ++i)
         landing = frame(&soma, 0, 0);
     assert(landing == AOS_LANDING_HARD && soma.state == 4);
-    for (int i = 0; i < 30; ++i) frame(&soma, AOS_KEY_RIGHT, AOS_KEY_JUMP);
+    assert(soma.anim.id == AOS_SOMA_ANIM_HARD_LANDING);
+    /* 27 frames of animation, the first one being the landing frame: Soma
+     * stays in state 4 and ignores input. */
+    for (int i = 0; i < 25; ++i) frame(&soma, AOS_KEY_RIGHT, AOS_KEY_JUMP);
     assert(soma.state == 4 && soma.vx == 0 && (soma.flags & AOS_FLAG_CROUCH));
     assert(soma.y == AOS_FIXED(159));
-    soma.flags |= AOS_FLAG_ANIM_DONE;
-    frame(&soma, 0, 0);
+    frame(&soma, 0, 0);     /* the animation ends in this frame */
+    assert(soma.state == 4);
+    frame(&soma, 0, 0);     /* 0x200000 is seen on the next one */
     assert(soma.state == 0 && !(soma.flags & AOS_FLAG_HARD_LANDING));
     frame(&soma, 0, 0);
     assert(!(soma.flags & AOS_FLAG_CROUCH));
     memset(cells, 0, sizeof(cells));
 }
 
+static void animation_tests(void) {
+    /* sub_0803EC34: durations count frames; non-looping animations hold
+     * the last frame and report the end, looping ones restart. */
+    AosAnimState state = {0};
+    assert(aos_anim_start(&state, &anim_set, AOS_SOMA_ANIM_WALK_START, false));
+    assert(aos_anim_step(&state, &anim_set) == 1);
+    assert(aos_anim_step(&state, &anim_set) == 1);
+    assert(aos_anim_step(&state, &anim_set) == 2 && state.frame == 1);
+    aos_anim_step(&state, &anim_set);
+    aos_anim_step(&state, &anim_set);
+    assert(aos_anim_step(&state, &anim_set) == 3 && state.frame == 1);
+    assert(state.flags & AOS_ANIM_ENDED);
+    assert(aos_anim_step(&state, &anim_set) == 3);
+    assert(aos_anim_start(&state, &anim_set, AOS_SOMA_ANIM_WALK_START, true));
+    for (int i = 0; i < 5; ++i) aos_anim_step(&state, &anim_set);
+    assert(aos_anim_step(&state, &anim_set) == 4 && state.frame == 0);
+    assert(!aos_anim_start(&state, &anim_set, 0x40, true));
+
+    fill(0, 20, W - 1, H - 1, 0x03);
+    AosSoma soma = at(100, 159, AOS_FLAG_GROUNDED | AOS_FLAG_ANIM_DONE);
+    frame(&soma, 0, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_IDLE);
+    /* Walking starts with 0x1A, then loops 1 once it has ended. */
+    frame(&soma, AOS_KEY_RIGHT, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_WALK_START);
+    for (int i = 0; i < 7; ++i) frame(&soma, AOS_KEY_RIGHT, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_WALK);
+    /* Turning around plays 0x18 once, then walks again. */
+    frame(&soma, AOS_KEY_LEFT, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_TURN && soma.facing_left);
+    for (int i = 0; i < 8; ++i) frame(&soma, AOS_KEY_LEFT, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_WALK && soma.anim_request == AOS_ANIM_NONE);
+    /* Stopping from walking speed plays 0x19, then idles. */
+    frame(&soma, 0, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_STOP);
+    for (int i = 0; i < 8; ++i) frame(&soma, 0, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_IDLE);
+    /* Crouching plays 0x09, then holds 0x02; standing up plays 0x0A. */
+    frame(&soma, AOS_KEY_DOWN, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_CROUCH_DOWN);
+    for (int i = 0; i < 8; ++i) frame(&soma, AOS_KEY_DOWN, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_CROUCH);
+    frame(&soma, 0, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_STAND_UP);
+    for (int i = 0; i < 8; ++i) frame(&soma, 0, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_IDLE);
+    /* A vertical jump loops 0x32, a forward one plays 0x0B, falling 0x0C,
+     * and landing without input plays 0x0D. */
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.anim.id == AOS_SOMA_ANIM_JUMP);
+    frame(&soma, AOS_KEY_JUMP | AOS_KEY_RIGHT, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_JUMP_FORWARD);
+    /* Airborne wall probes: one speed-dependent offset, then -12, -20, -28. */
+    assert(soma.wall_probes == soma.air_probes && soma.air_probes[0] == 4);
+    AosLanding landing = AOS_LANDING_NONE;
+    bool fell = false;
+    for (int i = 0; i < 120 && landing == AOS_LANDING_NONE; ++i) {
+        landing = frame(&soma, 0, 0);
+        if (soma.anim.id == AOS_SOMA_ANIM_FALL) fell = true;
+    }
+    assert(fell && landing == AOS_LANDING_NORMAL);
+    frame(&soma, 0, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_LAND);
+    assert(soma.wall_probes == aos_soma_stand_probes);
+    memset(cells, 0, sizeof(cells));
+}
+
 int main(void) {
+    init_anims();
+    animation_tests();
     collision_tests();
     state_tests();
     /* Integration: extra_vx applies once and the fall speed caps at 8. */

@@ -1773,3 +1773,18 @@ No automatic reciprocal link or native engine encoder is implemented.
   not the air state.
 - Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
   passed.
+
+## Patch 0204 - Soma animation timing and requests
+
+- Added `src/runtime/aos_anim.c`, a port of the animation start
+  `sub_0803F2C8` and the encoding-1 step `sub_0803EC34`, and wired Soma's
+  native animation requests: idle, walk start/walk, turn, stop, crouch
+  down/crouch/stand up, look up, jump/forward jump/fall, landing and hard
+  landing, with the one-shot request slot `+0x20`. The hard landing now ends
+  with its animation, as in the game.
+- Soma's wall probes are selected per frame like the game (standing, low
+  ceiling, flag 0x800000, or the speed-dependent airborne list).
+- Tests check the animation timing and every ported animation sequence with
+  a synthetic animation set.
+- Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
+  passed.

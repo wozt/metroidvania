@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "aos_anim.h"
 #include "aos_collision.h"
 
 #define AOS_FIXED(value) ((int32_t)((value) * 65536.0))
@@ -64,6 +65,8 @@ enum {
 /* Wall probe Y offsets (entity + 0x18 points to count, offsets). */
 extern const int8_t aos_soma_stand_probes[]; /* 0x080E12DC: -12, -20, -28 */
 extern const int8_t aos_soma_low_probes[];   /* 0x080E12EA: -6, -9 */
+extern const int8_t aos_soma_ceiling_probes[];  /* 0x080E12E8: -12 */
+extern const int8_t aos_soma_special_probes[];  /* 0x080E12E4: -6, -16, -28 */
 
 typedef enum {
     AOS_LANDING_NONE,
@@ -96,7 +99,32 @@ typedef struct {
     bool facing_left;       /* +0x58 bit 0x40 */
     uint32_t abilities;     /* gEwramData + 0x13260 */
     const int8_t *wall_probes;  /* entity + 0x18; NULL means stand probes */
+    int8_t air_probes[5];   /* gEwramData + 0x13218: count, offsets */
+    uint16_t held, pressed; /* this frame's gEwramData + 0x1C / + 0x1E */
+    uint16_t anim_request;  /* + 0x20: one-shot animation, 0xFF for none */
+    uint8_t up_frames;      /* + 0x2A: frames with Up held while idle */
+    AosAnimState anim;
+    const AosAnimSet *anims;    /* animation timings; NULL never ends one */
 } AosSoma;
+
+#define AOS_ANIM_NONE 0xFF
+
+/* Soma animation ids requested by the ported code (descriptor indices). */
+enum {
+    AOS_SOMA_ANIM_IDLE = 0x00, AOS_SOMA_ANIM_WALK = 0x01,
+    AOS_SOMA_ANIM_CROUCH = 0x02, AOS_SOMA_ANIM_FAST = 0x03,
+    AOS_SOMA_ANIM_CROUCH_DOWN = 0x09, AOS_SOMA_ANIM_STAND_UP = 0x0A,
+    AOS_SOMA_ANIM_JUMP_FORWARD = 0x0B, AOS_SOMA_ANIM_FALL = 0x0C,
+    AOS_SOMA_ANIM_LAND = 0x0D, AOS_SOMA_ANIM_HARD_LANDING = 0x13,
+    AOS_SOMA_ANIM_LOOK_UP = 0x17, AOS_SOMA_ANIM_TURN = 0x18,
+    AOS_SOMA_ANIM_STOP = 0x19, AOS_SOMA_ANIM_WALK_START = 0x1A,
+    AOS_SOMA_ANIM_HIGH_JUMP = 0x24, AOS_SOMA_ANIM_SPECIAL_TURN = 0x29,
+    AOS_SOMA_ANIM_JUMP = 0x32
+};
+
+/* Spawn state of sub_08014548: grounded, animation-end flag set, no
+ * pending animation, idle animation started. */
+AosSoma aos_soma_spawn(int32_t x, int32_t y, const AosAnimSet *anims);
 
 void aos_soma_integrate(AosSoma *soma);
 /* Steering of states 0 and 1: held direction or friction toward zero. */
@@ -112,9 +140,10 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held);
 void aos_soma_gravity(AosSoma *soma, const AosCollision *layer);
 /* sub_08014A04 on the BG1 layer only. */
 AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
-/* One player frame of sub_0801B0D8: integration, collision pass, then the
- * state routine. States 0 (normal, ground and air) and 4 (hard landing)
- * are ported; other states do nothing yet. */
+/* One player frame of sub_0801B0D8: animation-end flag, integration,
+ * collision pass, state routine, wall probe selection, the pending
+ * animation (+ 0x20) and the animation step. States 0 (normal, ground and
+ * air) and 4 (hard landing) are ported; other states do nothing yet. */
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed);
 

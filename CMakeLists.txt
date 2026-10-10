@@ -170,7 +170,8 @@ if(BUILD_TESTING)
     add_test(NAME aos_collision COMMAND fusion_aos_collision_tests)
 
     add_executable(fusion_aos_soma_tests tests/test_aos_soma.c
-                   src/runtime/aos_soma.c src/runtime/aos_collision.c)
+                   src/runtime/aos_soma.c src/runtime/aos_collision.c
+                   src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_soma_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soma_tests)
     add_test(NAME aos_soma COMMAND fusion_aos_soma_tests)

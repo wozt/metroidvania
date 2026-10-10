@@ -243,5 +243,40 @@ backdash, slide), attacks, recoil, animations and moving platforms
 `tests/test_aos_soma.c` checks them without a ROM (a held jump rises about
 56.7 pixels over 56 frames, a tapped jump about 9.7 pixels).
 
+Animations. `sub_0803F2C8(entity, id, mode, loop)` starts animation `id`
+of the entity's descriptor (the table the sprite library exports): it
+stores the pointer at `+0x68`, the id at `+0x6D`, clears the frame `+0x6E`
+and tick `+0x6F`, and sets `+0x6C` = loop | 8. The player always uses mode
+3 (`sub_0803EFF0`: tile upload, then the step chosen by the animation's
+encoding through the table at `0x080E2B34`); Soma's animations use encoding
+1, stepped by `sub_0803EC34`: the tick counts up to the frame duration,
+then the frame advances; after the last frame a looping animation restarts
+and a non-looping one holds its last frame and sets `+0x6C & 4`. At the
+start of each player frame `sub_0801B0D8` clears `0x240000` and, when that
+bit is set, sets `0x200000` and ends the backdash (`0x10000000`). After the
+state routine, a pending one-shot animation in `+0x20` (`0xFF` = none) is
+started if it is not current, and dropped once `0x200000` is seen; then
+`sub_0803F17C` steps the animation. Every direct animation change follows
+the same pattern (start unless current, `+0x20` = `0xFF`, clear
+`0x200000`) and also sets a hurtbox with `sub_080428B4` (standing -6, -32,
+12 x 28 from `0x080E12F8`; low -5, -16, 12 x 14 from `0x080E12FC`/`0x080E1300`;
+slide -8, -12, 16 x 12 from `0x080E1304`) and a palette from the byte table
+at `0x080E126C`.
+
+Animation ids used by the ported code: 0 idle, 1 walk, 2 crouch, 3 fast
+movement, 9 crouch down, 0x0A stand up, 0x0B forward jump, 0x0C fall, 0x0D
+landing, 0x13 hard landing, 0x17 look up (Up held 4 frames), 0x18 turn,
+0x19 stop (from |vx| > 1.0), 0x1A walk start (then 1), 0x24 flag-0x10 jump,
+0x29 turn with `0x800000`, 0x32 vertical jump. Airborne animations are
+chosen at the end of the gravity routine (`_08018E4A`), grounded ones in
+case 0 (`_0801BEAC` .. `_0801C298`), landing ones in the collision pass.
+
+Wall probes (`+0x18`) are chosen at the end of each frame (`_0801CD80`):
+state 3 or `0x8000` uses `0x080E12E8`; `0x800000` uses `0x080E12E4`; on the
+ground `0x080E12DC`; in the air the list at `gEwramData + 0x13218`
+(initialized to 4 probes -8, -12, -20, -28), whose first offset becomes -12
+on a slope contact or when |vx| > 2 pixels while rising, else
+-(|vy| / 2) - 4 pixels.
+
 The next step is the runtime integration: an exported room, Soma's frames
-from the sprite library, and the animation timings that drive `0x200000`.
+from the sprite library and their durations as the animation set.

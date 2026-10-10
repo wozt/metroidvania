@@ -1935,3 +1935,16 @@ No automatic reciprocal link or native engine encoder is implemented.
   are not ported yet.
 - Validation on 2026-10-10: CTest passed 23/23, the object sprite tests
   passed and the proprietary guard passed.
+
+## Patch 0215 - Soma hit reactions
+
+- Ported Soma's reaction to damage from `sub_0801B0D8`: the ground flinch
+  (front, back and crouched animations, 50 frames of immunity, state 12)
+  and the knockback (state 13, ending in a hard landing), with the pending
+  hit recorded by the player damage routine. Soma's HP now lives in his
+  state.
+- Tests cover both reactions, the strong-hit rule and the HP clamp; in room
+  0/5 a bat's touch makes Soma flinch and the second bat is ignored during
+  the immunity window. Death is not ported yet.
+- Validation on 2026-10-10: CTest passed 23/23 and the proprietary guard
+  passed.

@@ -149,8 +149,8 @@ python3 -m scripts.aos_weapons
 
 Soma uses the movement, collision, jump, crouch, landing, ability-move and
 animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks,
-souls and Soma's knockback are not implemented; bats hang, swoop, hurt
-Soma and die to his weapon with native rules (other enemies are not ported
+souls and Soma's death are not implemented; bats hang, swoop, hurt Soma
+(he flinches or is knocked back) and die to his weapon with native rules (other enemies are not ported
 yet; `--atk/--def/--hp` set diagnostic stats, the new-game stats are not
 traced); wooden doors open natively with
 their native sprite and palette cycle (`python3 -m scripts.aos_object_sprites`).

@@ -397,12 +397,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                                 combat->player->def, cam_x, cam_y, aos_random);
             if (hit.enemy_hit)
                 printf("Bat hit: %d damage%s\n", hit.enemy_damage, hit.killed ? ", killed" : "");
-            if (hit.soma_hit) {
-                combat->player->hp -= hit.soma_damage;
-                if (combat->player->hp < 0) combat->player->hp = 0;
-                printf("Soma hit: %d damage, HP %d/%d\n", hit.soma_damage, combat->player->hp,
-                       combat->player->max_hp);
-            }
+            if (hit.soma_hit)
+                printf("Soma hit: %d damage, HP %d/%d\n", hit.soma_damage, soma->hp, soma->max_hp);
             continue;
         }
         if (!door) continue;
@@ -840,6 +836,8 @@ int main(int argc, char **argv) {
 
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
     soma.moves = (uint32_t)moves;
+    soma.hp = (int16_t)player_stats.hp;
+    soma.max_hp = (int16_t)player_stats.max_hp;
     if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon)) {
         fprintf(stderr, "Export the weapons first: python3 -m scripts.aos_weapons\n");
         goto cleanup;

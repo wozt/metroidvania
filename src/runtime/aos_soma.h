@@ -140,6 +140,10 @@ typedef struct {
     bool weapon_active;     /* gEwramData + 0x1311C: the weapon entity exists */
     AosBox hurtbox;         /* set by sub_080428B4 with each animation change */
     AosCombat combat;       /* + 0x70: type 1 */
+    int16_t hp, max_hp;     /* gEwramData + 0x1327A / + 0x1327E */
+    int16_t pending_damage; /* gEwramData + 0x131D6 */
+    uint8_t pending_type;   /* + 0x131D4: 0 normal, 1 strong */
+    int32_t pending_source_x;   /* + 0x131D8 */
     AosAnimState anim;
     const AosAnimSet *anims;    /* animation timings; NULL never ends one */
 } AosSoma;
@@ -164,7 +168,9 @@ enum {
     AOS_SOMA_ANIM_JUMP = 0x32, AOS_SOMA_ANIM_AIR_JUMP = 0x14,
     AOS_SOMA_ANIM_BACKDASH = 0x15, AOS_SOMA_ANIM_SLIDE = 0x1F,
     AOS_SOMA_ANIM_SLIDE_DOWNHILL = 0x2E, AOS_SOMA_ANIM_CEILING_CRASH = 0x25,
-    AOS_SOMA_ANIM_DIVE_KICK = 0x26, AOS_SOMA_ANIM_DIVE_DROP = 0x27
+    AOS_SOMA_ANIM_DIVE_KICK = 0x26, AOS_SOMA_ANIM_DIVE_DROP = 0x27,
+    AOS_SOMA_ANIM_HIT_FRONT = 0x0E, AOS_SOMA_ANIM_HIT_CROUCH = 0x0F,
+    AOS_SOMA_ANIM_HIT_BACK = 0x10, AOS_SOMA_ANIM_KNOCKED = 0x11
 };
 
 /* Spawn state of sub_08014548: grounded, animation-end flag set, no
@@ -183,13 +189,19 @@ void aos_soma_leave_ground(AosSoma *soma);
  * skips the ceiling bump. */
 void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held);
 void aos_soma_gravity(AosSoma *soma, const AosCollision *layer);
+/* sub_08021654 (normal mode): damage from an attack of power `attack`
+ * against DEF `defence`, HP loss, and the pending hit the next update
+ * reacts to. Returns the damage. Death (HP 0) is recorded, not handled. */
+int aos_soma_take_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
+                      uint8_t knockback_type);
 /* sub_08014A04 on the BG1 layer only. */
 AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
 /* One player frame of sub_0801B0D8: animation-end flag, integration,
  * collision pass, state routine, wall probe selection, the pending
  * animation (+ 0x20) and the animation step. States 0 (normal, ground and
  * air), 1 (attack), 3 (slide), 4 (hard landing), 5 (high jump), 6
- * (ceiling crash) and 7 (dive kick) are ported; other states do nothing. */
+ * (ceiling crash), 7 (dive kick), 12 (hit) and 13 (knockback) are ported;
+ * other states do nothing. */
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed);
 

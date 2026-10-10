@@ -275,8 +275,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             }
         }
     }
-    /* The contact callback sub_0806E1B8 -> sub_08021654. */
-    if (report.soma_hit) report.soma_damage = aos_player_damage(enemy->stats.contact, soma_def);
+    /* The contact callback sub_0806E1B8 -> sub_08021654 (type 0). */
+    if (report.soma_hit)
+        report.soma_damage = aos_soma_take_hit(soma, enemy->stats.contact, soma_def, enemy->x, 0);
     return report;
 }
 

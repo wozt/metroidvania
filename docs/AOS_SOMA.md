@@ -483,8 +483,22 @@ the pass calls the player's `+0x80` callback (none) and the enemy's
 while the player's `+0x1E` is set, damage = (attack * 4 - DEF * 2) / 2
 (halved again for resisted elements, at least 1), HP drops, and the source
 position and knockback type are stored for the player update
-(`0x131D4..0x131DC`; a hit above a quarter of max HP becomes type 1); the
-knockback reactions of `sub_0801B0D8` are not ported. Soma registers as
+(`0x131D4..0x131DC`; a hit above a quarter of max HP becomes type 1).
+On the next frame, after the integration and before the collision pass,
+`sub_0801B0D8` reacts (`_0801B3C2` .. `_0801B9C8`). A type-0 hit on the
+ground makes Soma flinch: animation 0x0F when crouched (low hurtbox), else
+0x0E when he faces the source and 0x10 otherwise; his enemy-type cooldown
+becomes 50 frames, flag 0x80 is set, sound 0x19B, state 12. Otherwise
+(type 1, or airborne) he is knocked back: animation 0x11 when he faces the
+source, else 0x10; vx = 1.5 away from it with friction 0.0078 toward zero,
+vy = -2.0, `+0x54` = -0.0625, flags `0x82`, sound 0x195, state 13. State 12
+(`_0801CBE2`) brakes by 0.5 per frame and returns to state 0 when the
+animation ends. State 13 (`sub_080199A0`) brakes by 0.0625 in bit-3 cells
+and ends when Soma is no longer airborne (his landing is hard because of
+flag 0x80, so he crouches in state 4) or, in such cells, when the animation
+ends; with `0x13260 & 0x400000` a jump press recovers in the air. Death
+(`sub_0801AF20`), the curse (`0x13270 & 4`), types 2 and 3 and the
+`0x13260 & 0x20200` immunity are not ported. Soma registers as
 type 1 with the attack box off; his hurtbox changes with his animations:
 standing -6, -32, 12 x 28 (`0x080E12F8`), low -5, -16, 12 x 14
 (`0x080E12FC` / `0x080E1300`: crouch, jumps, falls, hard landing), slide -8,
@@ -505,8 +519,7 @@ overlaps, slots and formulas; the new-game stats are not traced, so the
 runtime takes ATK, DEF and HP as diagnostic options.
 
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: the player's knockback reactions (state 0x0F and the
-`0x131D4` types) and death, more enemies (damage through the weapon hitboxes), the
+(README). Next steps: the player's death, more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss
 doors (object 0x02 deletes itself once boss bit `0x37E >> param1` is set) and
 the save-room objects (0x1C save point, 0x1D walls closing the side opposite

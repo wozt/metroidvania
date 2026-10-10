@@ -741,11 +741,105 @@ AosSoma aos_soma_spawn(int32_t x, int32_t y, const AosAnimSet *anims) {
         .air_probes = {4, -8, -12, -20, -28},
         .hurtbox = {-6, -32, 12, 28},
         .combat = {.type = AOS_TYPE_PLAYER, .attack_off = true},
+        .hp = 1, .max_hp = 1,
         .anims = anims,
     };
     soma.wall_probes = aos_soma_stand_probes;
     aos_anim_start(&soma.anim, anims, AOS_SOMA_ANIM_IDLE, true);
     return soma;
+}
+
+int aos_soma_take_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
+                      uint8_t knockback_type) {
+    int damage = aos_player_damage(attack, defence);
+    soma->hp = (int16_t)(soma->hp - damage > 0 ? soma->hp - damage : 0);
+    soma->pending_damage = (int16_t)damage;
+    soma->pending_source_x = source_x;
+    soma->pending_type = knockback_type;
+    if (soma->pending_type == 0 && damage > (soma->max_hp >> 2)) soma->pending_type = 1;
+    return damage;
+}
+
+/* Gives the enemy-type cooldown slot `frames` (_0801B752 / _0801B93C). */
+static void set_enemy_cooldown(AosSoma *soma, uint8_t frames) {
+    for (int i = 0; i < 3; ++i)
+        if (soma->combat.recent[i] == AOS_TYPE_ENEMY) {
+            soma->combat.cooldown[i] = frames;
+            return;
+        }
+    for (int i = 0; i < 3; ++i)
+        if (!soma->combat.recent[i]) {
+            soma->combat.recent[i] = AOS_TYPE_ENEMY;
+            soma->combat.cooldown[i] = frames;
+            return;
+        }
+}
+
+/* sub_0801B0D8 (_0801B3C2 .. _0801B9C8): the reaction to a pending hit.
+ * Death (sub_0801AF20), the curse and grab types and the 0x13260 & 0x20200
+ * immunity are not ported. */
+static void react_to_hit(AosSoma *soma) {
+    if (!soma->pending_damage) return;
+    soma->pending_damage = 0;
+    if (soma->hp <= 0 || soma->pending_type > 1) return;
+    bool from_right = soma->pending_source_x > soma->x;
+    if (soma->pending_type == 0 && !(soma->flags & AOS_FLAG_AIRBORNE)) {
+        /* Hit on the ground: a flinch, 50 frames of immunity, state 12. */
+        soma->anim.id = AOS_ANIM_NONE;
+        if (soma->flags & AOS_FLAG_CROUCH) {
+            play(soma, AOS_SOMA_ANIM_HIT_CROUCH, false, LOW);
+        } else {
+            bool facing_source = soma->facing_left ? !from_right : from_right;
+            play(soma, facing_source ? AOS_SOMA_ANIM_HIT_FRONT : AOS_SOMA_ANIM_HIT_BACK, false,
+                 STAND);
+        }
+        set_enemy_cooldown(soma, 50);
+        soma->flags |= AOS_FLAG_STOP_AT_WALL;
+        soma->state = 12;
+    } else {
+        /* Knockback: 1.5 away from the source, -2.0 up, state 13. */
+        bool facing_source = soma->facing_left ? !from_right : from_right;
+        play(soma, facing_source ? AOS_SOMA_ANIM_KNOCKED : AOS_SOMA_ANIM_HIT_BACK, false, STAND);
+        soma->vx = from_right ? (int32_t)0xFFFE8000 : 0x18000;
+        soma->friction = from_right ? 0x200 : (int32_t)0xFFFFFE00;
+        soma->vy = (int32_t)0xFFFE0000;
+        soma->gravity_mod = (int32_t)0xFFFFF000;
+        soma->flags |= 0x82u;
+        soma->state = 13;
+    }
+    soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
+}
+
+/* Case 12 (_0801CBE2): flinch with friction 0.5 until the animation ends. */
+static void hit_state(AosSoma *soma, const AosCollision *layer) {
+    soma->flags &= 0xEFFFFE9Fu;
+    soma->friction = soma->vx < 0 ? 0x8000 : (int32_t)0xFFFF8000;
+    apply_friction(soma);
+    if (soma->flags & AOS_FLAG_ANIM_DONE) {
+        soma->flags &= ~(uint32_t)AOS_FLAG_STOP_AT_WALL;
+        soma->state = 0;
+    }
+    air_routine(soma, layer);
+}
+
+/* Case 13 (sub_080199A0): knockback until Soma lands (the landing is hard,
+ * flag 0x80) or, in a bit-3 cell, until the animation ends. */
+static void knockback_state(AosSoma *soma, const AosCollision *layer, uint16_t pressed) {
+    soma->flags &= 0xEFFFFE9Fu;
+    bool special = aos_collision_special(layer, soma->x >> 16, soma->y >> 16);
+    if (special) soma->friction = soma->vx >= 0 ? (int32_t)0xFFFFF000 : 0x1000;
+    apply_friction(soma);
+    if (!(soma->flags & AOS_FLAG_AIRBORNE) || (special && (soma->flags & AOS_FLAG_ANIM_DONE))) {
+        soma->flags &= 0xFFFEFF7Fu;
+        soma->state = 0;
+    } else if ((soma->abilities & 0x400000u) && (pressed & AOS_KEY_JUMP)) {
+        /* Recovery in the air (an ability bit of 0x13260, sound 0xB9). */
+        soma->gravity_mod = 0;
+        soma->flags = (soma->flags & 0xFFEFFB7Fu) | 6u;
+        soma->vy = 0;
+        soma->state = 0;
+    }
+    air_routine(soma, layer);
 }
 
 /* _0801CD80: wall probes for the next frame. */
@@ -777,6 +871,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     if (soma->anim.flags & AOS_ANIM_ENDED)
         soma->flags = (soma->flags | AOS_FLAG_ANIM_DONE) & ~(uint32_t)AOS_FLAG_BACKDASH;
     aos_soma_integrate(soma);
+    react_to_hit(soma);
     AosLanding landing = aos_soma_collide(soma, layer);
     switch (soma->state) {
     case 0: normal_state(soma, layer, held, pressed); break;
@@ -788,6 +883,8 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
         if (soma->flags & AOS_FLAG_ANIM_DONE) soma->state = 0;
         break;
     case 7: dive_kick_state(soma, layer); break;
+    case 12: hit_state(soma, layer); break;
+    case 13: knockback_state(soma, layer, pressed); break;
     default: break;
     }
     select_wall_probes(soma);

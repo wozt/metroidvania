@@ -496,8 +496,63 @@ static void attack_tests(void) {
     memset(cells, 0, sizeof(cells));
 }
 
+static void hit_tests(void) {
+    fill(0, 20, W - 1, H - 1, 0x03);
+    /* A hit from the front on the ground: flinch 0x0E, 50 frames of
+     * immunity against enemies, state 12 until the animation ends. */
+    AosSoma soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 320;
+    assert(aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(120), 0) == 8 && soma.hp == 312);
+    frame(&soma, 0, 0);
+    assert(soma.state == 12 && soma.anim.id == AOS_SOMA_ANIM_HIT_FRONT);
+    assert(soma.combat.recent[0] == AOS_TYPE_ENEMY && soma.combat.cooldown[0] == 50);
+    for (int i = 0; i < 6 && soma.state == 12; ++i) frame(&soma, 0, 0);
+    assert(soma.state == 0 && !(soma.flags & AOS_FLAG_STOP_AT_WALL));
+
+    /* From behind: 0x10. Crouched: 0x0F with the low hurtbox. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 320;
+    aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(80), 0);
+    frame(&soma, 0, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_HIT_BACK);
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 320;
+    frame(&soma, AOS_KEY_DOWN, 0);
+    aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(120), 0);
+    frame(&soma, AOS_KEY_DOWN, 0);
+    assert(soma.anim.id == AOS_SOMA_ANIM_HIT_CROUCH && soma.hurtbox.h == 14);
+
+    /* A strong hit (more than a quarter of max HP) knocks Soma back from
+     * the ground: 1.5 away, -2.0 up, state 13, then a hard landing. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 40;
+    aos_soma_take_hit(&soma, 12, 0, AOS_FIXED(120), 0);      /* 24 of 40 HP */
+    assert(soma.pending_type == 1 && soma.hp == 16);
+    frame(&soma, 0, 0);
+    assert(soma.state == 13 && soma.anim.id == AOS_SOMA_ANIM_KNOCKED);
+    assert(soma.flags & AOS_FLAG_STOP_AT_WALL);
+    AosLanding landing = AOS_LANDING_NONE;
+    int32_t x0 = soma.x;
+    for (int i = 0; i < 60 && landing == AOS_LANDING_NONE; ++i) landing = frame(&soma, 0, 0);
+    assert(landing == AOS_LANDING_HARD && soma.state == 4 && soma.x < x0);
+
+    /* Any hit in the air knocks back, here toward the right. */
+    soma = at(100, 120, AOS_FLAG_AIRBORNE);
+    soma.hp = soma.max_hp = 320;
+    aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(90), 0);
+    frame(&soma, 0, 0);
+    assert(soma.state == 13 && soma.vx > 0 && soma.anim.id == AOS_SOMA_ANIM_HIT_BACK);
+
+    /* sub_08021654: (6 * 4 - 4 * 2) / 2 = 8; HP never drops below 0. */
+    soma.hp = 5;
+    aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(90), 0);
+    assert(soma.hp == 0);
+    memset(cells, 0, sizeof(cells));
+}
+
 int main(void) {
     init_anims();
+    hit_tests();
     attack_tests();
     ability_tests();
     animation_tests();

@@ -453,10 +453,60 @@ sound 0x72, fall and fade) and state 4 (global `0x8E & 0x40`) are not
 ported. `src/runtime/aos_enemy.c` ports the framework parts above and the
 bat; `scripts/aos_object_sprites.py` exports its animations and boxes.
 
+Collisions and damage. Every entity has a collision block at `+0x70`
+(`sub_0804277C`): type (`+0x70`: player 1, weapon 3, secondary weapon 5,
+enemy 8), a flag `+0x71` (1: only the attack box counts), `+0x72` bit 1
+(attack box off) and bit 2 (hurtbox off), its slot `+0x73`, three
+recent-hit types `+0x74..0x76` with cooldowns `+0x78..0x7A`, and two
+callbacks (`+0x7C` when it hits, `+0x80` when it is hit). Per slot,
+`0x03001A58 + slot * 8` holds the attack box (`sub_08042848`) and `+4` the
+hurtbox (`sub_080428B4`), each (signed x, y, width, height); a width or height
+of 1 disables a box. `sub_08042584` turns the player's boxes into world
+rectangles (`x2 = x1 + width`, mirrored by `+0x58` bits 0x40/0x80); other
+boxes become inclusive rectangles (`sub_080415A8`) and `sub_080417A0` /
+`sub_08041688` test overlaps inclusively. Enemies refresh their boxes from
+the frame record on each frame change (`sub_0806B1FC`: `+4` = 0 none, 1 one
+box for both, 2 hurtbox then attack box). On screen, `sub_0806E314` runs
+`sub_080421AC`: the enemy's attack box against the player (`sub_08041D54`),
+the player's attack box against the enemy (`sub_08041BDC`, callbacks), the
+weapon entity against the enemy (`sub_08041864`, the weapon callback
+`sub_0802346C` sets `0x80000`, then the enemy callback), then the player's
+projectiles; each test needs the attacker type absent from the victim's
+recent types and a free slot, and records it with a cooldown of
+`0x080E33F0[type] + 1` frames (0, 0, 8, 28, 30, 0, 0, 0, 80, 60, 120), or for
+types 3/5/6/9 the values at `gEwramData + 0x1307C..0x1307F` (the weapon's
+record `+0x17`, written by `sub_08042A54`). The player hit by an enemy is
+therefore immune to enemy attacks for 81 frames. `sub_080426B0` counts the
+cooldowns down after every entity update. When the enemy hit the player,
+the pass calls the player's `+0x80` callback (none) and the enemy's
+`sub_0806E1B8`, which builds a damage record for `sub_08021654`: skipped
+while the player's `+0x1E` is set, damage = (attack * 4 - DEF * 2) / 2
+(halved again for resisted elements, at least 1), HP drops, and the source
+position and knockback type are stored for the player update
+(`0x131D4..0x131DC`; a hit above a quarter of max HP becomes type 1); the
+knockback reactions of `sub_0801B0D8` are not ported. Soma registers as
+type 1 with the attack box off; his hurtbox changes with his animations:
+standing -6, -32, 12 x 28 (`0x080E12F8`), low -5, -16, 12 x 14
+(`0x080E12FC` / `0x080E1300`: crouch, jumps, falls, hard landing), slide -8,
+-12, 16 x 12 (`0x080E1304`). Enemy damage (`sub_0806E218` ->
+`sub_0806B7D8`): the attacker's power is `sub_08021530(type)` (weapon:
+ATK * 16 / 16 with ATK = STR + equipment, `sub_08021F64`; DEF = CON / 2 +
+equipment); a weakness (`record + 0x1A` & attack elements, low 6 bits) gives
+x1.25 for element 1 and x2 otherwise, a matching resistance (`+0x1C`)
+halves it; damage = ((power - DEF / 2) * (256 - DEF)) >> 8, at least 1,
+with DEF the enemy's `record + 0x14`; `+0x2D` = 8 and HP `+0x34` drops; at
+0 HP the enemy's callback switches to its death. The special weakness bits
+above 0x3F (`+0x38` rules), damage numbers and hit sparks are not ported.
+The bat dies in state 3 (`sub_080AD5B8`): animation 2 frame 2, vy 0.5,
+vertical flip, 64 frames of fall during which `sub_0806BE74` blinks it with
+the pattern `0x08118CE0` (frames below 40) and spawns a particle every 15
+frames, then deletes it. `src/runtime/aos_combat.c` ports the boxes,
+overlaps, slots and formulas; the new-game stats are not traced, so the
+runtime takes ATK, DEF and HP as diagnostic options.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: the collision pass `sub_080421AC` (box tests
-`sub_08041D54`, `sub_08041BDC`, `sub_08041864`), damage (`sub_08021530`,
-`sub_0806B7D8`, the player's stats) and enemy deaths, more enemies (damage through the weapon hitboxes), the
+(README). Next steps: the player's knockback reactions (state 0x0F and the
+`0x131D4` types) and death, more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss
 doors (object 0x02 deletes itself once boss bit `0x37E >> param1` is set) and
 the save-room objects (0x1C save point, 0x1D walls closing the side opposite

@@ -149,8 +149,10 @@ python3 -m scripts.aos_weapons
 
 Soma uses the movement, collision, jump, crouch, landing, ability-move and
 animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks,
-souls and damage are not implemented; bats hang and swoop with their
-native AI and sprites (other enemies are not ported yet); wooden doors open natively with
+souls and Soma's knockback are not implemented; bats hang, swoop, hurt
+Soma and die to his weapon with native rules (other enemies are not ported
+yet; `--atk/--def/--hp` set diagnostic stats, the new-game stats are not
+traced); wooden doors open natively with
 their native sprite and palette cycle (`python3 -m scripts.aos_object_sprites`).
 Leaving a room
 through its edge loads the native neighbour at the native arrival position;
@@ -166,6 +168,7 @@ ability moves are enabled by default (no soul inventory yet); `--moves MASK`
 selects them (backdash 0x1, slide 0x2, mid-air jump 0x4, dive kick 0x8, high
 jump 0x10). `--check` validates the room and library without a window, and
 `--capture out.bmp FRAMES BUTTONS` runs FRAMES updates with a held GBA mask
+(`--repeat N` releases it one frame in N to repeat presses)
 (right 0x10, left 0x20, up 0x40, down 0x80, A 0x01, B 0x02, R 0x100,
 L 0x200) and saves the frame.
 

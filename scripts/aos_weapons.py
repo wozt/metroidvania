@@ -47,7 +47,7 @@ from scripts.aos_soma_sprite import EXPECTED_SHA1, _rom_slice, bgr555
 from scripts.asset_layout import ARIA_METADATA, ARIA_SPRITES, private_path
 from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic
 
-SCHEMA = "metroidvania-aos-weapons-v1"
+SCHEMA = "metroidvania-aos-weapons-v2"
 WEAPON_TABLE = 0x08505D3C
 UNARMED_RECORD = 0x084F1270
 POSTURE_TABLES = 0x084F1238
@@ -65,7 +65,7 @@ def weapon_record(rom: bytes, pointer: int) -> dict:
     return {"item": record[0], "class": record[8],
             "flags": struct.unpack_from("<H", record, 0x10)[0], "variant": record[0x16],
             "tiles": record[0x12], "frames": record[0x13], "animation": record[0x14],
-            "bank": record[0x15]}
+            "bank": record[0x15], "interval": record[0x17]}
 
 
 def _pointer(rom: bytes, table: int, index: int) -> int:
@@ -130,11 +130,12 @@ def weapons(rom: bytes) -> list[tuple[str, dict, list[int]]]:
 
 def encode(rows) -> str:
     lines = ["schema\t" + SCHEMA,
-             "# weapon\titem\tclass\tvariant\tflags\tstand\tcrouch\tair\trecover\tcrouch_recover"]
+             "# weapon\titem\tclass\tvariant\tflags\tstand\tcrouch\tair\trecover\tcrouch_recover"
+             "\tinterval"]
     for name, record, anims in rows:
         lines.append("\t".join([name, f"0x{record['item']:02x}", str(record["class"]),
                                 str(record["variant"]), f"0x{record['flags']:04x}",
-                                *map(str, anims)]))
+                                *map(str, anims), str(record["interval"])]))
     return "\n".join(lines) + "\n"
 
 

@@ -20,6 +20,7 @@ not overlap). Output is private:
 
     assets/extracted/aria/sprites/objects/runtime/runtime_index.tsv
     assets/extracted/aria/metadata/enemy_frames.tsv
+    assets/extracted/aria/metadata/enemies.tsv (stats of every enemy record)
 """
 from __future__ import annotations
 
@@ -39,6 +40,23 @@ from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic
 
 ARIA_OBJECTS_RUNTIME = ARIA_SPRITES / "objects" / "runtime"
 ENEMY_FRAMES_SCHEMA = "metroidvania-aos-enemy-frames-v1"
+DEATH_BLINK = 0x08118CE0       # sub_0806BE74: hidden when byte & 1, 40 frames
+ENEMY_TABLE = 0x080E9644       # sUnk_080E9644: 0x24-byte records
+ENEMY_COUNT = 0x71
+ENEMY_STATS_SCHEMA = "metroidvania-aos-enemy-stats-v1"
+
+
+def enemy_stats(rom: bytes) -> list[str]:
+    """sub_0806B04C and sub_0806B7D8 fields of every enemy record."""
+    lines = ["schema\t" + ENEMY_STATS_SCHEMA,
+             "# id\thp\tfield_e\tcontact\tdefence\tweak\tresist"]
+    for enemy in range(ENEMY_COUNT):
+        record = _rom_slice(rom, ENEMY_TABLE + enemy * 0x24, 0x24, "enemy record")
+        hp, field_e = struct.unpack_from("<HH", record, 0xC)
+        weak, resist = struct.unpack_from("<HH", record, 0x1A)
+        lines.append("\t".join(map(str, (enemy, hp, field_e, record[0x13], record[0x14],
+                                          f"0x{weak:04x}", f"0x{resist:04x}"))))
+    return lines
 # Enemies whose create routine is traced: graphics setup of sub_0806E0D0
 # (tile descriptor, palette descriptor and bank, frame/animation descriptor).
 ENEMIES = {
@@ -198,9 +216,12 @@ def produce(root: Path, rom_path: Path) -> dict:
                                                   frame["duration"], 1 if frame["box"] else 0,
                                                   *box))))
             library.add(f"Enemy/{name}/anim_{number}", sprites)
+    blink = _rom_slice(rom, DEATH_BLINK, 40, "death blink pattern")
+    lines.append("blink\t" + "".join(str(b & 1) for b in blink))
     folder = private_path(Path(root), ARIA_METADATA, create=True)
     folder.mkdir(parents=True, exist_ok=True)
     write_atomic(folder / "enemy_frames.tsv", "\n".join(lines) + "\n")
+    write_atomic(folder / "enemies.tsv", "\n".join(enemy_stats(rom)) + "\n")
     return library.finish()
 
 

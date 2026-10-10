@@ -24,7 +24,7 @@ int main(void) {
     const AosWeaponFrames frames = {&weapon_set, boxes};
 
     AosSoma soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(159), &body);
-    soma.weapon = (AosWeapon){0, 1, {0x30, 0x31, 0x32, 0x33, 0x34}};
+    soma.weapon = (AosWeapon){0, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 15};
     AosWeaponEntity weapon = {0};
     uint16_t previous = 0;
     int created = -1, deleted = -1, hits = 0;
@@ -50,7 +50,7 @@ int main(void) {
     /* Crouched attack facing left: 13 pixels lower, mirrored hitbox; the
      * entity is deleted as soon as the attack flag clears. */
     soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(159), &body);
-    soma.weapon = (AosWeapon){0, 1, {0x30, 0x31, 0x32, 0x33, 0x34}};
+    soma.weapon = (AosWeapon){0, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 15};
     soma.facing_left = true;
     weapon = (AosWeaponEntity){0};
     aos_soma_update(&soma, &layer, AOS_KEY_DOWN, AOS_KEY_DOWN);

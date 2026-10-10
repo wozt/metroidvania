@@ -1916,3 +1916,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   harmless and cannot be hit.
 - Validation on 2026-10-10: CTest passed 23/23 and the proprietary guard
   passed.
+
+## Patch 0214 - Aria combat: collisions, damage and bat deaths
+
+- Traced and ported the entity collision system: collision blocks, world
+  rectangles, inclusive overlaps, recent-hit slots with per-type cooldowns
+  (81 frames of immunity after an enemy hit), the cooldown tick, the enemy
+  damage formula with weaknesses and resistances and the player damage
+  formula (`src/runtime/aos_combat.c`), plus Soma's hurtbox at every
+  animation change.
+- Bats now hurt Soma on contact and die to his weapon: frame boxes, the hit
+  callback and the death state (fall, blink, deletion) are ported; enemy
+  stats and the death blink are exported privately.
+- `fusion_aria_runtime`: `--atk/--def/--hp` (diagnostic stats: the new-game
+  values are not traced), `--repeat N` for captures, `--hitboxes` also
+  outlines hurtboxes. Checked in room 0/5: the knife kills bats (12 damage
+  against 10 HP) and a bat's touch costs 8 HP. Soma's knockback reactions
+  are not ported yet.
+- Validation on 2026-10-10: CTest passed 23/23, the object sprite tests
+  passed and the proprietary guard passed.

@@ -31,6 +31,8 @@
 #define DEFAULT_WEAPONS "assets/extracted/aria/metadata/weapons.tsv"
 #define DEFAULT_WEAPON_FRAMES "assets/extracted/aria/metadata/weapon_frames.tsv"
 #define DEFAULT_WEAPON_SPRITES "assets/extracted/aria/sprites/weapons/runtime/runtime_index.tsv"
+#define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
+#define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
 #define BAT_ANIMS 3
 #define ARIA_KIND_ENEMY 1
@@ -359,24 +361,48 @@ static bool take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **back
     return true;
 }
 
+/* The player's combat stats: diagnostic inputs, the new-game values are
+ * not traced. */
+typedef struct {
+    int atk, def, hp, max_hp;
+} AriaPlayerStats;
+
+/* Everything the enemies need from the frame. */
+typedef struct {
+    const AosEnemyKind *bat;
+    const AosEnemyStats *bat_stats;
+    const AosWeaponEntity *weapon;
+    const AosWeaponFrames *weapon_frames;
+    AriaPlayerStats *player;
+} AriaCombat;
+
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
- * spawn once per room visit; only the wooden door has a ported object. */
-static int update_entities(AriaRoom *room, AosCollision *layer, const AosSoma *soma,
-                           int cam_x, int cam_y, AosForcedInput *input,
-                           const AosAnimSet *bat_anims) {
+ * spawn once per room visit; the wooden door and the bat are ported. */
+static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
+                           int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat) {
     int sound = 0;
     for (size_t i = 0; i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
         bool door = e->kind == ARIA_KIND_SPECIAL && e->id == ARIA_OBJECT_WOODEN_DOOR;
-        bool bat = e->kind == ARIA_KIND_ENEMY && e->id == ARIA_ENEMY_BAT && bat_anims;
+        bool bat = e->kind == ARIA_KIND_ENEMY && e->id == ARIA_ENEMY_BAT && combat->bat;
         if (bat) {
             if (!e->spawned) {
                 if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
                 e->spawned = aos_enemy_create(&e->enemy, (uint8_t)e->id, e->x, e->y, soma, layer,
-                                              bat_anims);
+                                              combat->bat, combat->bat_stats);
                 continue;
             }
-            aos_enemy_update(&e->enemy, soma, bat_anims, cam_x, cam_y, aos_random);
+            AosHitReport hit = aos_enemy_update(&e->enemy, soma, combat->bat, combat->weapon,
+                                                combat->weapon_frames, combat->player->atk,
+                                                combat->player->def, cam_x, cam_y, aos_random);
+            if (hit.enemy_hit)
+                printf("Bat hit: %d damage%s\n", hit.enemy_damage, hit.killed ? ", killed" : "");
+            if (hit.soma_hit) {
+                combat->player->hp -= hit.soma_damage;
+                if (combat->player->hp < 0) combat->player->hp = 0;
+                printf("Soma hit: %d damage, HP %d/%d\n", hit.soma_damage, combat->player->hp,
+                       combat->player->max_hp);
+            }
             continue;
         }
         if (!door) continue;
@@ -407,7 +433,50 @@ typedef struct {
     uint8_t bat_ticks[BAT_ANIMS][MAX_FRAMES];
     AosAnimDef bat_defs[BAT_ANIMS];
     AosAnimSet bat;
+    AosEnemyKind bat_kind;
+    AosEnemyStats bat_stats;
 } AriaObjects;
+
+/* enemy_frames.tsv (boxes, death blink) and enemies.tsv (stats). */
+static bool load_enemy_data(AriaObjects *objects) {
+    FILE *f = fopen(DEFAULT_ENEMY_FRAMES, "rb");
+    if (!f) return false;
+    char line[256];
+    AosEnemyKind *kind = &objects->bat_kind;
+    kind->anims = &objects->bat;
+    while (fgets(line, sizeof line, f)) {
+        char name[16], blink[64];
+        int anim, index, frame, ticks, mode, x, y, w, h;
+        if (sscanf(line, "blink\t%63s", blink) == 1) {
+            for (int i = 0; i < 40 && blink[i]; ++i) kind->blink[i] = (uint8_t)(blink[i] == '1');
+            continue;
+        }
+        if (sscanf(line, "%15s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d", name, &anim, &index, &frame,
+                   &ticks, &mode, &x, &y, &w, &h) != 10 || strcmp(name, "bat") ||
+            anim < 0 || anim >= AOS_ENEMY_MAX_ANIMS || index < 0 || index >= AOS_ENEMY_MAX_FRAMES)
+            continue;
+        /* Frame record + 4 = 1: one box serves as hurtbox and attack box. */
+        kind->modes[anim][index] = (uint8_t)mode;
+        kind->hurt[anim][index] = kind->attack[anim][index] =
+            (AosBox){(int8_t)x, (int8_t)y, (uint8_t)w, (uint8_t)h};
+    }
+    fclose(f);
+    f = fopen(DEFAULT_ENEMY_STATS, "rb");
+    if (!f) return false;
+    bool found = false;
+    while (!found && fgets(line, sizeof line, f)) {
+        int id, hp, field_e, contact, defence;
+        unsigned weak, resist;
+        if (sscanf(line, "%d\t%d\t%d\t%d\t%d\t%x\t%x", &id, &hp, &field_e, &contact, &defence,
+                   &weak, &resist) == 7 && id == ARIA_ENEMY_BAT) {
+            objects->bat_stats = (AosEnemyStats){(int16_t)hp, (uint8_t)contact, (uint8_t)defence,
+                                                 (uint16_t)weak, (uint16_t)resist};
+            found = true;
+        }
+    }
+    fclose(f);
+    return found;
+}
 
 static bool load_frame(AriaFrame *out, const char *path, int ox, int oy, SDL_Renderer *renderer) {
     SDL_Surface *surface = SDL_LoadBMP(path);
@@ -517,7 +586,8 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
     for (size_t i = 0; i < room->entity_count; ++i) {
         const AriaEntity *e = &room->entities[i];
         if (!e->spawned || e->kind != ARIA_KIND_ENEMY || e->id != ARIA_ENEMY_BAT ||
-            e->enemy.removed || e->enemy.anim.id >= BAT_ANIMS || e->enemy.anim.frame >= MAX_FRAMES)
+            e->enemy.removed || e->enemy.hidden || e->enemy.anim.id >= BAT_ANIMS ||
+            e->enemy.anim.frame >= MAX_FRAMES)
             continue;
         const AriaFrame *frame = &objects->bat_frames[e->enemy.anim.id][e->enemy.anim.frame];
         if (!frame->texture) continue;
@@ -525,8 +595,10 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         bool flip = e->enemy.mirrored;
         float x = flip ? (float)(ex - frame->offset_x) - frame->w : (float)(ex + frame->offset_x);
         SDL_FRect rect = {x - (float)cam_x, (float)(ey + frame->offset_y - cam_y), frame->w, frame->h};
-        SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
-                                 flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+        if (e->enemy.vflip) rect.y = (float)(ey - frame->offset_y - cam_y) - frame->h;
+        SDL_FlipMode mode = (SDL_FlipMode)((flip ? SDL_FLIP_HORIZONTAL : 0) |
+                                           (e->enemy.vflip ? SDL_FLIP_VERTICAL : 0));
+        SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL, mode);
     }
 }
 
@@ -577,7 +649,7 @@ static bool load_weapon(const char *path, const char *name, AosWeapon *weapon) {
     if (!f) { perror(path); return false; }
     char line[256];
     bool found = false;
-    static const char schema[] = "schema\tmetroidvania-aos-weapons-v1";
+    static const char schema[] = "schema\tmetroidvania-aos-weapons-v2";
     if (!fgets(line, sizeof line, f) || strncmp(line, schema, strlen(schema))) {
         fclose(f);
         fprintf(stderr, "Not a weapon table: %s\n", path);
@@ -586,15 +658,15 @@ static bool load_weapon(const char *path, const char *name, AosWeapon *weapon) {
     while (!found && fgets(line, sizeof line, f)) {
         char key[16];
         unsigned item, flags;
-        int cls, variant, a[5];
+        int cls, variant, a[5], interval;
         if (line[0] == '#' ||
-            sscanf(line, "%15s\t%x\t%d\t%d\t%x\t%d\t%d\t%d\t%d\t%d", key, &item, &cls,
-                   &variant, &flags, &a[0], &a[1], &a[2], &a[3], &a[4]) != 10 ||
+            sscanf(line, "%15s\t%x\t%d\t%d\t%x\t%d\t%d\t%d\t%d\t%d\t%d", key, &item, &cls,
+                   &variant, &flags, &a[0], &a[1], &a[2], &a[3], &a[4], &interval) != 11 ||
             strcmp(key, name))
             continue;
         *weapon = (AosWeapon){(uint8_t)cls, (uint16_t)flags,
                               {(uint8_t)a[0], (uint8_t)a[1], (uint8_t)a[2], (uint8_t)a[3],
-                               (uint8_t)a[4]}};
+                               (uint8_t)a[4]}, (uint8_t)interval};
         found = true;
     }
     fclose(f);
@@ -668,7 +740,8 @@ static void free_weapon_sprite(AriaWeaponSprite *sprite) {
 static void usage(const char *name) {
     fprintf(stderr,
             "Usage: %s [--check] [--library index.tsv] [--spawn X Y] [--moves MASK]\n"
-            "       [--weapon none|INDEX] [--hitboxes]\n"
+            "       [--weapon none|INDEX] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
+            "       [--repeat N: release the capture buttons one frame in N]\n"
             "       [--capture out.bmp FRAMES BUTTONS] (--area A --room R | room-folder)\n",
             name);
 }
@@ -683,6 +756,9 @@ int main(int argc, char **argv) {
                           AOS_MOVE_DIVE_KICK | AOS_MOVE_HIGH_JUMP;
     int spawn_x = -1, spawn_y = -1;
     bool check = false, show_hitboxes = false;
+    /* Diagnostic combat stats (new-game values are not traced). */
+    AriaPlayerStats player_stats = {10, 4, 320, 320};
+    long repeat = 0;
     for (int i = 1; i < argc; ++i) {
         char *end = NULL;
         if (!strcmp(argv[i], "--check")) check = true;
@@ -692,6 +768,11 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) weapon_name = argv[++i];
         else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
+        else if (!strcmp(argv[i], "--repeat") && i + 1 < argc) repeat = atol(argv[++i]);
+        else if (!strcmp(argv[i], "--atk") && i + 1 < argc) player_stats.atk = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--def") && i + 1 < argc) player_stats.def = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--hp") && i + 1 < argc)
+            player_stats.hp = player_stats.max_hp = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--moves") && i + 1 < argc) {
             moves = strtoul(argv[++i], &end, 0);
             if (*end || moves > 0x1F) { usage(argv[0]); return 2; }
@@ -753,7 +834,8 @@ int main(int argc, char **argv) {
     if (!background || !load_library(library_path, &library, renderer)) goto cleanup;
     static AriaObjects objects;
     bool objects_ok = load_objects(DEFAULT_OBJECTS, &objects, renderer);
-    if (!objects_ok) fprintf(stderr, "No object library: python3 -m scripts.aos_object_sprites\n");
+    bool enemies_ok = objects_ok && load_enemy_data(&objects);
+    if (!enemies_ok) fprintf(stderr, "No object library: python3 -m scripts.aos_object_sprites\n");
     int cam_x = 0, cam_y = 0;
 
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
@@ -768,6 +850,9 @@ int main(int argc, char **argv) {
                          soma.weapon.weapon_class == 3;
     bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
     AosWeaponEntity weapon_entity = {0};
+    AriaCombat combat = {enemies_ok ? &objects.bat_kind : NULL, &objects.bat_stats,
+                         &weapon_entity, weapon_loaded ? &weapon_sprite.data : NULL,
+                         &player_stats};
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     uint16_t previous = 0;
     AosForcedInput forced = {0};
@@ -788,6 +873,7 @@ int main(int argc, char **argv) {
         while (accumulator >= frame_ns) {
             accumulator -= frame_ns;
             uint16_t held = capture_path ? (uint16_t)capture_buttons : keyboard_buttons();
+            if (capture_path && repeat > 0 && step % repeat == repeat - 1) held = 0;
             if (forced.active) held = forced.held;
             forced.active = false;
             aos_soma_update(&soma, &layer, held, (uint16_t)(held & ~previous));
@@ -798,10 +884,12 @@ int main(int argc, char **argv) {
                 if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;
                 layer = room_layer(&room);
             }
+            /* sub_080426B0 after the player update. */
+            aos_combat_tick(&soma.combat);
             follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
-            update_entities(&room, &layer, &soma, cam_x, cam_y, &forced,
-                            objects_ok ? &objects.bat : NULL);
+            /* Entity slots: the weapon entity updates before the enemies. */
             if (weapon_loaded) aos_weapon_update(&weapon_entity, &soma, &weapon_sprite.data);
+            update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
         }
 
         int sx = soma.x >> 16, sy = soma.y >> 16;
@@ -811,6 +899,29 @@ int main(int argc, char **argv) {
         SDL_RenderTexture(renderer, background, &src, &dst);
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
+        if (show_hitboxes) {
+            AosRect hurt = aos_player_rect(soma.hurtbox, soma.x >> 16, soma.y >> 16,
+                                           soma.facing_left, false);
+            SDL_FRect r = {(float)(hurt.x1 - cam_x), (float)(hurt.y1 - cam_y),
+                           (float)(hurt.x2 - hurt.x1), (float)(hurt.y2 - hurt.y1)};
+            SDL_SetRenderDrawColor(renderer, 80, 230, 120, 255);
+            SDL_RenderRect(renderer, &r);
+            for (size_t i = 0; enemies_ok && i < room.entity_count; ++i) {
+                const AriaEntity *e = &room.entities[i];
+                if (!e->spawned || e->kind != ARIA_KIND_ENEMY || e->enemy.removed ||
+                    e->enemy.anim.id >= AOS_ENEMY_MAX_ANIMS ||
+                    e->enemy.anim.frame >= AOS_ENEMY_MAX_FRAMES ||
+                    !objects.bat_kind.modes[e->enemy.anim.id][e->enemy.anim.frame])
+                    continue;
+                AosRect b = aos_entity_rect(objects.bat_kind.hurt[e->enemy.anim.id][e->enemy.anim.frame],
+                                            e->enemy.x >> 16, e->enemy.y >> 16, e->enemy.mirrored,
+                                            e->enemy.vflip);
+                SDL_FRect er = {(float)(b.x1 - cam_x), (float)(b.y1 - cam_y),
+                                (float)(b.x2 - b.x1 + 1), (float)(b.y2 - b.y1 + 1)};
+                SDL_SetRenderDrawColor(renderer, 240, 220, 60, 255);
+                SDL_RenderRect(renderer, &er);
+            }
+        }
         const AriaFrame *frame = NULL;
         if (soma.anim.frame < MAX_FRAMES)
             frame = &library.frames[soma.anim.id][soma.anim.frame];

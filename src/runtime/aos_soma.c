@@ -3,6 +3,13 @@
  * the code path each function reproduces. */
 #include "aos_soma.h"
 
+const AosBox aos_soma_stand_box = {-6, -32, 12, 28};
+const AosBox aos_soma_low_box = {-5, -16, 12, 14};
+const AosBox aos_soma_slide_box = {-8, -12, 16, 12};
+#define STAND (&aos_soma_stand_box)
+#define LOW (&aos_soma_low_box)
+#define SLIDE (&aos_soma_slide_box)
+
 const int8_t aos_soma_stand_probes[] = {3, -12, -20, -28};
 const int8_t aos_soma_low_probes[] = {2, -6, -9};
 const int8_t aos_soma_ceiling_probes[] = {1, -12};       /* 0x080E12E8 */
@@ -18,10 +25,11 @@ void aos_soma_integrate(AosSoma *soma) {
 
 /* The pattern used at every animation change of the player code: start
  * the animation unless it is current, drop the pending one and clear the
- * animation-end flag. Hurtboxes (sub_080428B4), per-animation palettes
- * (0x080E126C) and the 0x131B8 & 0x800 gate are not modelled. */
-static void play(AosSoma *soma, unsigned id, bool loop) {
+ * animation-end flag, with the hurtbox of sub_080428B4. Per-animation
+ * palettes (0x080E126C) and the 0x131B8 & 0x800 gate are not modelled. */
+static void play(AosSoma *soma, unsigned id, bool loop, const AosBox *hurtbox) {
     if (soma->anim.id == id) return;
+    soma->hurtbox = *hurtbox;
     aos_anim_start(&soma->anim, soma->anims, id, loop);
     soma->anim.id = (uint8_t)id;
     soma->anim_request = AOS_ANIM_NONE;
@@ -84,8 +92,8 @@ static void dive_kick(AosSoma *soma, uint16_t held, uint16_t pressed) {
         soma->friction = soma->vx >= 0 ? -AOS_FRICTION : AOS_FRICTION;
     }
     int32_t speed = soma->vx < 0 ? -soma->vx : soma->vx;
-    if (speed > 0x10000) play(soma, AOS_SOMA_ANIM_DIVE_KICK, true);
-    else play(soma, AOS_SOMA_ANIM_DIVE_DROP, true);
+    if (speed > 0x10000) play(soma, AOS_SOMA_ANIM_DIVE_KICK, true, LOW);
+    else play(soma, AOS_SOMA_ANIM_DIVE_DROP, true, LOW);
     soma->air_anim_locked = true;
 }
 
@@ -94,6 +102,7 @@ static bool air_jump(AosSoma *soma, uint16_t pressed) {
     if (!(soma->flags & AOS_FLAG_HEAD_SPECIAL) && (soma->flags & 0x04000004u)) return false;
     if (!(pressed & AOS_KEY_JUMP) || soma->drop_timer) return false;
     soma->anim_request = AOS_SOMA_ANIM_AIR_JUMP;
+    soma->hurtbox = aos_soma_low_box;
     soma->flags = (soma->flags | 4u) & ~0x10u;
     if (!(soma->flags & AOS_FLAG_SLOW_FALL)) {
         soma->vy = (int32_t)0xFFFBE000;                 /* -4.125 */
@@ -171,7 +180,7 @@ void aos_soma_leave_ground(AosSoma *soma) {
  * the ceiling (state 6; the screen shake is not modelled). */
 static bool ceiling_crash(AosSoma *soma) {
     if (soma->vy > (int32_t)0xFFFB1000 || (soma->flags & 0x90u) != 0x10u) return false;
-    play(soma, AOS_SOMA_ANIM_CEILING_CRASH, false);
+    play(soma, AOS_SOMA_ANIM_CEILING_CRASH, false, STAND);
     soma->state = 6;
     soma->vx = soma->vy = soma->gravity_mod = 0;
     return true;
@@ -220,17 +229,17 @@ void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
     /* _08018E4A: airborne animations. */
     if ((soma->flags & 0x1E0u) || soma->air_anim_locked) return;
     if ((soma->abilities & AOS_ABILITY_FAST_WALK) && soma->vx) {
-        play(soma, AOS_SOMA_ANIM_FAST, true);
+        play(soma, AOS_SOMA_ANIM_FAST, true, STAND);
     } else if (soma->vy > 0x3FFF) {
-        play(soma, AOS_SOMA_ANIM_FALL, false);
+        play(soma, AOS_SOMA_ANIM_FALL, false, LOW);
     } else if ((soma->flags & 4u) && soma->anim_request != AOS_ANIM_NONE) {
         return;
     } else if (soma->flags & 0x10u) {
-        play(soma, AOS_SOMA_ANIM_HIGH_JUMP, true);
+        play(soma, AOS_SOMA_ANIM_HIGH_JUMP, true, LOW);
     } else if (soma->vx) {
-        play(soma, AOS_SOMA_ANIM_JUMP_FORWARD, false);
+        play(soma, AOS_SOMA_ANIM_JUMP_FORWARD, false, LOW);
     } else {
-        play(soma, AOS_SOMA_ANIM_JUMP, true);
+        play(soma, AOS_SOMA_ANIM_JUMP, true, LOW);
     }
 }
 
@@ -366,15 +375,18 @@ static AosLanding land(AosSoma *soma) {
     if (soma->vy > 0x64000 || (soma->flags & AOS_FLAG_STOP_AT_WALL)) {
         soma->flags |= AOS_FLAG_HARD_LANDING;
         if (keeps_attack) soma->flags &= ~0x160u;
-        play(soma, AOS_SOMA_ANIM_HARD_LANDING, false);
+        play(soma, AOS_SOMA_ANIM_HARD_LANDING, false, LOW);
         soma->state = 4;
         landing = AOS_LANDING_HARD;
     } else if (!(soma->flags & AOS_FLAG_ATTACKING) || !keeps_attack) {
         if (!(soma->held & 0xF0) &&
             !(soma->pressed & (AOS_KEY_JUMP | AOS_KEY_ATTACK | AOS_KEY_ABILITY | AOS_KEY_GUARDIAN)))
+        {
             soma->anim_request = AOS_SOMA_ANIM_LAND;
+            soma->hurtbox = aos_soma_low_box;
+        }
         if (soma->held & (AOS_KEY_LEFT | AOS_KEY_RIGHT))
-            play(soma, AOS_SOMA_ANIM_WALK, true);
+            play(soma, AOS_SOMA_ANIM_WALK, true, STAND);
         soma->state = 0;
     }
     soma->vy = soma->gravity_mod = 0;
@@ -490,11 +502,11 @@ static void attack_start(AosSoma *soma, uint16_t pressed) {
         return;
     if (soma->flags & AOS_FLAG_AIRBORNE) {
         soma->flags |= AOS_FLAG_AIR_ATTACK;
-        play(soma, soma->weapon.anims[2], false);
+        play(soma, soma->weapon.anims[2], false, LOW);
     } else if (soma->flags & AOS_FLAG_CROUCH) {
-        play(soma, soma->weapon.anims[1], false);
+        play(soma, soma->weapon.anims[1], false, LOW);
     } else {
-        play(soma, soma->weapon.anims[0], false);
+        play(soma, soma->weapon.anims[0], false, STAND);
     }
     soma->weapon_active = true;
     soma->flags |= AOS_FLAG_ATTACKING;
@@ -507,24 +519,25 @@ static void ground_animation(AosSoma *soma, uint16_t held, int32_t start_speed) 
         if (!(soma->flags & AOS_FLAG_CROUCH)) {
             soma->flags = (soma->flags | AOS_FLAG_CROUCH) & ~(uint32_t)AOS_FLAG_BACKDASH;
             soma->anim_request = AOS_SOMA_ANIM_CROUCH_DOWN;
+            soma->hurtbox = aos_soma_low_box;
         }
-        if (soma->anim_request == AOS_ANIM_NONE) play(soma, AOS_SOMA_ANIM_CROUCH, true);
+        if (soma->anim_request == AOS_ANIM_NONE) play(soma, AOS_SOMA_ANIM_CROUCH, true, LOW);
     } else if (held & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) {
         if ((soma->flags & AOS_FLAG_BACKDASH) || soma->anim_request == AOS_SOMA_ANIM_TURN) {
             /* no change */
         } else if (soma->abilities & AOS_ABILITY_FAST_WALK) {
-            play(soma, AOS_SOMA_ANIM_FAST, true);
+            play(soma, AOS_SOMA_ANIM_FAST, true, STAND);
         } else {
             uint8_t current = soma->anim.id;
             if (current != AOS_SOMA_ANIM_WALK && current != AOS_SOMA_ANIM_WALK_START &&
                 current != AOS_SOMA_ANIM_TURN)
-                play(soma, AOS_SOMA_ANIM_WALK_START, false);
-            if (soma->flags & AOS_FLAG_ANIM_DONE) play(soma, AOS_SOMA_ANIM_WALK, true);
+                play(soma, AOS_SOMA_ANIM_WALK_START, false, STAND);
+            if (soma->flags & AOS_FLAG_ANIM_DONE) play(soma, AOS_SOMA_ANIM_WALK, true, STAND);
         }
     } else {
         if (!(soma->flags & AOS_FLAG_CROUCH) && (held & AOS_KEY_UP)) {
             if (soma->up_frames > 3) {
-                play(soma, AOS_SOMA_ANIM_LOOK_UP, false);
+                play(soma, AOS_SOMA_ANIM_LOOK_UP, false, STAND);
                 return;             /* skips the crouch release */
             }
             soma->up_frames++;
@@ -535,10 +548,13 @@ static void ground_animation(AosSoma *soma, uint16_t held, int32_t start_speed) 
         if (!(soma->flags & AOS_FLAG_BACKDASH) && current != AOS_SOMA_ANIM_WALK_START &&
             current != AOS_SOMA_ANIM_IDLE && current != AOS_SOMA_ANIM_TURN &&
             start_speed > 0xFFFF)
+        {
             soma->anim_request = AOS_SOMA_ANIM_STOP;
+            soma->hurtbox = aos_soma_stand_box;
+        }
         if (soma->anim_request == AOS_ANIM_NONE || soma->anim.id == AOS_SOMA_ANIM_WALK_START) {
             soma->flags &= ~(uint32_t)AOS_FLAG_BACKDASH;
-            play(soma, AOS_SOMA_ANIM_IDLE, true);
+            play(soma, AOS_SOMA_ANIM_IDLE, true, STAND);
         }
     }
     /* _0801C254: stand up. */
@@ -546,6 +562,7 @@ static void ground_animation(AosSoma *soma, uint16_t held, int32_t start_speed) 
         !(held & AOS_KEY_DOWN)) {
         soma->flags &= ~(uint32_t)AOS_FLAG_CROUCH;
         soma->anim_request = AOS_SOMA_ANIM_STAND_UP;
+        soma->hurtbox = aos_soma_stand_box;
     }
 }
 
@@ -563,6 +580,7 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         (soma->moves & AOS_MOVE_BACKDASH) && !(soma->flags & 0x10008402u)) {
         /* Backdash (ability 0, sound 0xA9): ends with its animation. */
         soma->anim_request = AOS_SOMA_ANIM_BACKDASH;
+        soma->hurtbox = aos_soma_stand_box;
         soma->flags = (soma->flags & ~(uint32_t)AOS_FLAG_ANIM_DONE) | AOS_FLAG_BACKDASH;
         soma->frame_counter = 0;
         soma->vx = soma->facing_left ? 0x3C000 : (int32_t)0xFFFC4000;   /* 3.75 */
@@ -570,10 +588,13 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
     if (!(soma->flags & (AOS_FLAG_BACKDASH | AOS_FLAG_HEAD_CEILING | AOS_FLAG_CROUCH))) {
         if (((held & AOS_KEY_RIGHT) && soma->facing_left) ||
             ((held & AOS_KEY_LEFT) && !soma->facing_left)) {
-            if (!(soma->flags & AOS_FLAG_AIRBORNE))
+            if (!(soma->flags & AOS_FLAG_AIRBORNE)) {
                 soma->anim_request = AOS_SOMA_ANIM_TURN;
-            else if ((soma->flags & 0x00800010u) == 0x00800000u)
+                soma->hurtbox = aos_soma_stand_box;
+            } else if ((soma->flags & 0x00800010u) == 0x00800000u) {
                 soma->anim_request = AOS_SOMA_ANIM_SPECIAL_TURN;
+                soma->hurtbox = aos_soma_stand_box;
+            }
         }
         steer_direction(soma, held, speed);
         if (!(soma->flags & AOS_FLAG_AIRBORNE)) slow_on_slope(soma, uphill);
@@ -597,7 +618,7 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         /* Slide (ability 1, state 3, sound 0xBD). */
         soma->state = 3;
         soma->anim_request = AOS_ANIM_NONE;
-        play(soma, AOS_SOMA_ANIM_SLIDE, false);
+        play(soma, AOS_SOMA_ANIM_SLIDE, false, SLIDE);
         soma->vx = soma->facing_left ? (int32_t)0xFFFCE000 : 0x32000;   /* 3.125 */
         soma->friction = soma->vx >= 0 ? (int32_t)0xFFFFE800 : 0x1800; /* 0.09375 */
         soma->frame_counter = 0;
@@ -608,10 +629,10 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
 }
 
 /* Starts an animation but keeps the frame and tick, as case 3 does. */
-static void play_keeping_frame(AosSoma *soma, unsigned id) {
+static void play_keeping_frame(AosSoma *soma, unsigned id, const AosBox *hurtbox) {
     if (soma->anim.id == id) return;
     uint8_t frame = soma->anim.frame, tick = soma->anim.tick;
-    play(soma, id, false);
+    play(soma, id, false, hurtbox);
     soma->anim.frame = frame;
     soma->anim.tick = tick;
 }
@@ -620,9 +641,9 @@ static void play_keeping_frame(AosSoma *soma, unsigned id) {
 static void slide_state(AosSoma *soma, const AosCollision *layer) {
     if (((soma->flags & AOS_FLAG_SLOPE_LEFT) && soma->slope_step == 1 && !soma->facing_left) ||
         ((soma->flags & AOS_FLAG_SLOPE_RIGHT) && soma->slope_step == 1 && soma->facing_left))
-        play_keeping_frame(soma, AOS_SOMA_ANIM_SLIDE_DOWNHILL);
+        play_keeping_frame(soma, AOS_SOMA_ANIM_SLIDE_DOWNHILL, SLIDE);
     else
-        play_keeping_frame(soma, AOS_SOMA_ANIM_SLIDE);
+        play_keeping_frame(soma, AOS_SOMA_ANIM_SLIDE, SLIDE);
     apply_friction(soma);
     if (soma->flags & AOS_FLAG_AIRBORNE) soma->frame_counter = 0x20;
     if (++soma->frame_counter > 0x1F) {
@@ -650,17 +671,22 @@ static void attack_state(AosSoma *soma, const AosCollision *layer, uint16_t held
     apply_friction(soma);
     if ((soma->weapon.flags & AOS_WEAPON_LANDING_ATTACK) && (soma->flags & AOS_FLAG_AIR_ATTACK) &&
         (soma->flags & AOS_FLAG_GROUNDED)) {
-        play_keeping_frame(soma, soma->weapon.anims[0]);
+        play_keeping_frame(soma, soma->weapon.anims[0], STAND);
         soma->flags &= ~0x41u;
     }
     if (soma->flags & AOS_FLAG_ANIM_DONE) {
         soma->flags &= 0xFFDFFF9Fu;
         if (!(soma->flags & AOS_FLAG_AIRBORNE) && soma->anim_request == AOS_ANIM_NONE)
-            soma->anim_request = soma->weapon.anims[(soma->flags & AOS_FLAG_CROUCH) ? 4 : 3];
+        {
+            bool low = soma->flags & AOS_FLAG_CROUCH;
+            soma->anim_request = soma->weapon.anims[low ? 4 : 3];
+            soma->hurtbox = low ? aos_soma_low_box : aos_soma_stand_box;
+        }
         soma->state = 0;
     } else if ((pressed & AOS_KEY_ABILITY) && !(held & AOS_KEY_UP) &&
                (soma->moves & AOS_MOVE_BACKDASH) && !(soma->flags & 0x10008402u)) {
         soma->anim_request = AOS_SOMA_ANIM_BACKDASH;
+        soma->hurtbox = aos_soma_stand_box;
         soma->flags = (soma->flags & 0xFFDFFF9Fu) | AOS_FLAG_BACKDASH;
         soma->frame_counter = 0;
         soma->vx = soma->facing_left ? 0x3C000 : (int32_t)0xFFFC4000;
@@ -683,6 +709,7 @@ static void dive_kick_state(AosSoma *soma, const AosCollision *layer) {
     } else if (soma->flags & AOS_FLAG_KICK_HIT) {
         soma->flags = (soma->flags | 8u) & ~4u;
         soma->anim_request = AOS_SOMA_ANIM_AIR_JUMP;
+        soma->hurtbox = aos_soma_low_box;
         soma->vy = (int32_t)0xFFFC8000;                 /* -3.5 */
         soma->gravity_mod = (int32_t)0xFFFFE000;
         soma->state = 0;
@@ -712,6 +739,8 @@ AosSoma aos_soma_spawn(int32_t x, int32_t y, const AosAnimSet *anims) {
         .flags = AOS_FLAG_GROUNDED | AOS_FLAG_ANIM_DONE,
         .anim_request = AOS_ANIM_NONE,
         .air_probes = {4, -8, -12, -20, -28},
+        .hurtbox = {-6, -32, 12, 28},
+        .combat = {.type = AOS_TYPE_PLAYER, .attack_off = true},
         .anims = anims,
     };
     soma.wall_probes = aos_soma_stand_probes;

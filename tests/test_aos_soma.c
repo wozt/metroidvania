@@ -415,7 +415,7 @@ static void ability_tests(void) {
 
 static void attack_tests(void) {
     fill(0, 20, W - 1, H - 1, 0x03);
-    const AosWeapon sword = {0, 0x0001, {0x30, 0x31, 0x32, 0x33, 0x34}};
+    const AosWeapon sword = {0, 0x0001, {0x30, 0x31, 0x32, 0x33, 0x34}, 15};
 
     /* Standing attack: state 1, Soma brakes, the attack animation plays to
      * its end, then the recovery animation is requested. */
@@ -455,7 +455,7 @@ static void attack_tests(void) {
 
     /* With weapon flag 0x2000 the landing keeps the attack and switches to
      * the standing animation at the same frame. */
-    const AosWeapon heavy = {1, 0x2001, {0x30, 0x31, 0x32, 0x33, 0x34}};
+    const AosWeapon heavy = {1, 0x2001, {0x30, 0x31, 0x32, 0x33, 0x34}, 15};
     anim_defs[0x32] = (AosAnimDef){4, landing_steps};       /* 27 frames */
     anim_defs[0x30] = (AosAnimDef){4, landing_steps};
     soma = at(100, 150, AOS_FLAG_AIRBORNE);
@@ -490,7 +490,7 @@ static void attack_tests(void) {
 
     /* Class 5 weapons do not attack. */
     soma = at(100, 159, AOS_FLAG_GROUNDED);
-    soma.weapon = (AosWeapon){5, 0, {0x30, 0x31, 0x32, 0x33, 0x34}};
+    soma.weapon = (AosWeapon){5, 0, {0x30, 0x31, 0x32, 0x33, 0x34}, 15};
     frame(&soma, AOS_KEY_ATTACK, AOS_KEY_ATTACK);
     assert(soma.state == 0);
     memset(cells, 0, sizeof(cells));

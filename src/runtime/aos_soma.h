@@ -23,6 +23,7 @@
 
 #include "aos_anim.h"
 #include "aos_collision.h"
+#include "aos_combat.h"
 
 #define AOS_FIXED(value) ((int32_t)((value) * 65536.0))
 #define AOS_WALK_SPEED 0x18000          /* 1.5 */
@@ -105,8 +106,10 @@ enum {
  * exported by scripts/aos_weapons.py. */
 typedef struct {
     uint8_t weapon_class;   /* record + 8; class 5 cannot attack */
-    uint16_t flags;         /* record + 0x10; 0x2000 keeps air attacks on landing */
+    uint16_t flags;         /* record + 0x10: elements in bits 0-5; 0x2000 keeps air
+                             * attacks on landing */
     uint8_t anims[5];
+    uint8_t interval;       /* record + 0x17: recent-hit cooldown (0x1307C) */
 } AosWeapon;
 
 enum { AOS_WEAPON_LANDING_ATTACK = 0x2000 };
@@ -135,11 +138,18 @@ typedef struct {
     bool air_anim_locked;   /* gEwramData + 0x131B8 & 4, cleared every frame */
     AosWeapon weapon;
     bool weapon_active;     /* gEwramData + 0x1311C: the weapon entity exists */
+    AosBox hurtbox;         /* set by sub_080428B4 with each animation change */
+    AosCombat combat;       /* + 0x70: type 1 */
     AosAnimState anim;
     const AosAnimSet *anims;    /* animation timings; NULL never ends one */
 } AosSoma;
 
 #define AOS_ANIM_NONE 0xFF
+
+/* Soma's hurtboxes (sub_080428B4 arguments). */
+extern const AosBox aos_soma_stand_box;   /* 0x080E12F8: -6, -32, 12 x 28 */
+extern const AosBox aos_soma_low_box;     /* 0x080E12FC / 0x080E1300: -5, -16, 12 x 14 */
+extern const AosBox aos_soma_slide_box;   /* 0x080E1304: -8, -12, 16 x 12 */
 
 /* Soma animation ids requested by the ported code (descriptor indices). */
 enum {

@@ -1900,3 +1900,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   enemies and the class 1, 4 and 5 weapons are not ported.
 - Validation on 2026-10-10: CTest passed 22/22, the object sprite tests passed
   and the proprietary guard passed.
+
+## Patch 0213 - first Aria enemy: the bat
+
+- Traced the shared enemy framework (spawn stats, activity window,
+  facing, collision and damage call chain) and ported the parts the bat
+  needs into `src/runtime/aos_enemy.c`, with the native random generator and
+  the sine of `sub_080009E4` (computed; it matches all 1024 table entries).
+- Ported the bat's create (ceiling climb) and states 1 and 2 (hang, alert,
+  stretch, hop, dive, sine-wave flight, off-screen deletion) with ROM-free
+  tests; `scripts/aos_object_sprites.py` exports enemy animations and
+  per-frame boxes.
+- `fusion_aria_runtime` spawns bats in the native camera window; checked in
+  room 0/5. Collisions, damage and deaths are not ported yet, so bats are
+  harmless and cannot be hit.
+- Validation on 2026-10-10: CTest passed 23/23 and the proprietary guard
+  passed.

@@ -421,8 +421,42 @@ runtime mirrors doors that face left, as Soma's frames are mirrored; the
 generic draw (`0x03004564` in IWRAM) is not traced, but this places both
 edge doors inside their doorway art (rooms 0/3 and 0/16).
 
+Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
+create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,
+flags at +0x1C, +0x20). `sub_0806B04C` copies the stats into the entity (HP
+`+0x34`). The shared update starts with `sub_0806CC20`: the AI only runs
+while the enemy's screen position is within X -128..368 and Y -64..224, and a
+hit-stun check (`sub_0806AD24`) can take over; it ends with `sub_0806DF20`
+(animation step, hitbox refresh) and `sub_0806E314` (collision against the
+player and his weapons through `sub_080421AC`, which calls the registered
+callbacks: `sub_0806E1B8` damages the player, the enemy's own callback
+receives hits through `sub_0806E218`, which subtracts the damage of
+`sub_0806B7D8` from the attacker's power `sub_08021530` and reports death).
+Facing (`+0x58` bit 0x40) means mirrored: enemy sprites face left;
+`sub_0806BC40` sets it when the player is to the right, `sub_0806E120` signs a
+speed by it. `RandomNumberGenerator` is `r = (r >> 8) * 0x3243F6AD +
+0x1B0CB175`; the sine table of `sub_080009E4` equals `floor(sin(i * pi /
+2048) * 65536)` for all 1024 entries.
+
+Bat (enemy 0x00): `EnemyBatCreate` loads tiles `0x081F422C`, palette
+`0x0820BD4C` bank 0 and frames `0x0824B2C4`, and climbs 8 pixels at a time
+until a ceiling walk hits, then hangs. State 1 (`sub_080AD364`) faces the
+player; with him in the 0xE0 x 0xA0 box centred below it, it shows
+animation 1, and in the 0xC0 x 0x70 box it attacks; otherwise it stretches
+with probability 1/128 per frame. State 2 (`sub_080AD44C`): a hop away at
+0.5 for 33 frames, a dive at 0.375 x 0.375 toward him (stepping the
+animation twice per frame) until within 39 pixels of his height, then a
+flight at 0.75 accelerating by 0x50 per frame with a sine wave (`+0x14`
+advancing 0x200 per frame) until it leaves the screen bounds read from
+the integer part of vx (+ 40 / + 240), which deletes it. State 3 (death:
+sound 0x72, fall and fade) and state 4 (global `0x8E & 0x40`) are not
+ported. `src/runtime/aos_enemy.c` ports the framework parts above and the
+bat; `scripts/aos_object_sprites.py` exports its animations and boxes.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: enemies (damage through the weapon hitboxes), the
+(README). Next steps: the collision pass `sub_080421AC` (box tests
+`sub_08041D54`, `sub_08041BDC`, `sub_08041864`), damage (`sub_08021530`,
+`sub_0806B7D8`, the player's stats) and enemy deaths, more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss
 doors (object 0x02 deletes itself once boss bit `0x37E >> param1` is set) and
 the save-room objects (0x1C save point, 0x1D walls closing the side opposite

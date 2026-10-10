@@ -10,11 +10,16 @@ sprite frame 0 (parameter 0) or 5, and ``sub_0803CC70`` cycles its palette
 with the script 0x08525564 or 0x08525574 (u16 entry count, then 4-byte
 entries: palette bank, duration in frames). Each door style is exported as a
 looping sequence: its sprite frame colorized with each bank of the script.
-Offsets are relative to the entity position (the door base); components
+Enemies whose create routine is traced (``ENEMIES``) are exported the same
+way: every animation of their descriptor, colorized with their palette bank,
+as ``Enemy/<name>/anim_<n>``, with per-frame boxes (frame record +4 / +8) in
+``enemy_frames.tsv``. Offsets are relative to the entity position (the door
+base); components
 listed first are drawn on top (assumed OAM order; the door's components do
 not overlap). Output is private:
 
     assets/extracted/aria/sprites/objects/runtime/runtime_index.tsv
+    assets/extracted/aria/metadata/enemy_frames.tsv
 """
 from __future__ import annotations
 
@@ -29,10 +34,17 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from scripts.aos_room_render import lz77_at
 from scripts.aos_soma_sprite import EXPECTED_SHA1, TILE_BYTES, _rom_slice, bgr555
-from scripts.asset_layout import ARIA_SPRITES
-from scripts.sprite_library import LibraryWriter, bmp_from_pixels
+from scripts.asset_layout import ARIA_METADATA, ARIA_SPRITES, private_path
+from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic
 
 ARIA_OBJECTS_RUNTIME = ARIA_SPRITES / "objects" / "runtime"
+ENEMY_FRAMES_SCHEMA = "metroidvania-aos-enemy-frames-v1"
+# Enemies whose create routine is traced: graphics setup of sub_0806E0D0
+# (tile descriptor, palette descriptor and bank, frame/animation descriptor).
+ENEMIES = {
+    "bat": {"id": 0x00, "graphics": 0x081F422C, "palette": 0x0820BD4C, "bank": 0,
+            "frames": 0x0824B2C4},     # EnemyBatCreate 0x080AD2A8
+}
 WOODEN_DOOR = {
     "graphics": 0x081CBE0C,
     "palette": 0x08209AE0,
@@ -124,6 +136,38 @@ def render_frame(tiles: bytes, sheet_width: int, components: list[tuple],
     return pixels
 
 
+def descriptor_animations(rom: bytes, entity: dict) -> list[list[dict]]:
+    """Every animation of an entity's frame/animation descriptor (u16 frame
+    record count, u16 animation count, records, a word, animation table;
+    encoding 1 animations of (frame, duration) entries)."""
+    record_count, animation_count, records, _, table = struct.unpack(
+        "<HHIII", _rom_slice(rom, entity["frames"], 16, "entity descriptor"))
+    tiles, sheet_width, _ = tile_sheet(rom, entity["graphics"])
+    colors = palette_bank(rom, entity["palette"], entity["bank"])
+    result = []
+    for index in range(animation_count):
+        pointer = struct.unpack("<I", _rom_slice(rom, table + index * 4, 4, "animation"))[0]
+        count, encoding = struct.unpack("<HH", _rom_slice(rom, pointer, 4, "animation header"))
+        if encoding != 1 or not 0 < count <= 64:
+            raise ValueError("unsupported entity animation encoding")
+        frames = []
+        for step in range(count):
+            frame_id, duration = _rom_slice(rom, pointer + 4 + step * 4, 2, "animation frame")
+            if not 0 <= frame_id < record_count or not duration:
+                raise ValueError("invalid entity animation frame")
+            record = _rom_slice(rom, records + frame_id * 16, 16, "frame record")
+            box = None
+            if record[4]:
+                box_pointer = struct.unpack_from("<I", record, 8)[0]
+                box = struct.unpack("<bbBB", _rom_slice(rom, box_pointer, 4, "frame box"))
+            pixels = render_frame(tiles, sheet_width,
+                                  frame_components(rom, entity["frames"], frame_id), colors)
+            frames.append({"frame": frame_id, "duration": duration, "pixels": pixels,
+                           "box": box})
+        result.append(frames)
+    return result
+
+
 def produce(root: Path, rom_path: Path) -> dict:
     rom = Path(rom_path).read_bytes()
     if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
@@ -140,6 +184,23 @@ def produce(root: Path, rom_path: Path) -> dict:
             bmp, left, top = bmp_from_pixels(pixels)
             frames.append((bmp, duration, left, top))
         library.add(f"WoodenDoor/style_{style}", frames)
+    lines = ["schema\t" + ENEMY_FRAMES_SCHEMA,
+             "# enemy\tanimation\tindex\tframe\tticks\tbox\tx\ty\twidth\theight"]
+    for name, entity in ENEMIES.items():
+        for number, animation in enumerate(descriptor_animations(rom, entity)):
+            sprites = []
+            for index, frame in enumerate(animation):
+                pixels = frame["pixels"] or {(0, 0): (0, 0, 0)}
+                bmp, left, top = bmp_from_pixels(pixels)
+                sprites.append((bmp, frame["duration"], left, top))
+                box = frame["box"] or (0, 0, 0, 0)
+                lines.append("\t".join(map(str, (name, number, index, frame["frame"],
+                                                  frame["duration"], 1 if frame["box"] else 0,
+                                                  *box))))
+            library.add(f"Enemy/{name}/anim_{number}", sprites)
+    folder = private_path(Path(root), ARIA_METADATA, create=True)
+    folder.mkdir(parents=True, exist_ok=True)
+    write_atomic(folder / "enemy_frames.tsv", "\n".join(lines) + "\n")
     return library.finish()
 
 

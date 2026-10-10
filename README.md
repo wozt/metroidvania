@@ -149,7 +149,8 @@ python3 -m scripts.aos_weapons
 
 Soma uses the movement, collision, jump, crouch, landing, ability-move and
 animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks,
-souls and enemies are not implemented; wooden doors open natively with
+souls and damage are not implemented; bats hang and swoop with their
+native AI and sprites (other enemies are not ported yet); wooden doors open natively with
 their native sprite and palette cycle (`python3 -m scripts.aos_object_sprites`).
 Leaving a room
 through its edge loads the native neighbour at the native arrival position;

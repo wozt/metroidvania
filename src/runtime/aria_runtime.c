@@ -9,6 +9,7 @@
  * animation timing. Rooms, entities, souls and transitions are not
  * modelled. */
 #include "aos_door.h"
+#include "aos_enemy.h"
 #include "aos_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
@@ -31,6 +32,9 @@
 #define DEFAULT_WEAPON_FRAMES "assets/extracted/aria/metadata/weapon_frames.tsv"
 #define DEFAULT_WEAPON_SPRITES "assets/extracted/aria/sprites/weapons/runtime/runtime_index.tsv"
 #define DOOR_STYLES 2
+#define BAT_ANIMS 3
+#define ARIA_KIND_ENEMY 1
+#define ARIA_ENEMY_BAT 0x00
 
 
 #define MAX_TRANSITIONS 32
@@ -42,6 +46,7 @@ typedef struct {
     int kind, id, x, y, param0, param1, flags;
     bool spawned;           /* gEwramData + 0x3D0 bit of the record */
     AosDoor door;
+    AosEnemy enemy;
 } AriaEntity;
 
 typedef struct {
@@ -357,11 +362,23 @@ static bool take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **back
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
  * spawn once per room visit; only the wooden door has a ported object. */
 static int update_entities(AriaRoom *room, AosCollision *layer, const AosSoma *soma,
-                           int cam_x, AosForcedInput *input) {
+                           int cam_x, int cam_y, AosForcedInput *input,
+                           const AosAnimSet *bat_anims) {
     int sound = 0;
     for (size_t i = 0; i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
         bool door = e->kind == ARIA_KIND_SPECIAL && e->id == ARIA_OBJECT_WOODEN_DOOR;
+        bool bat = e->kind == ARIA_KIND_ENEMY && e->id == ARIA_ENEMY_BAT && bat_anims;
+        if (bat) {
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = aos_enemy_create(&e->enemy, (uint8_t)e->id, e->x, e->y, soma, layer,
+                                              bat_anims);
+                continue;
+            }
+            aos_enemy_update(&e->enemy, soma, bat_anims, cam_x, cam_y, aos_random);
+            continue;
+        }
         if (!door) continue;
         if (!e->spawned) {
             if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
@@ -386,7 +403,25 @@ typedef struct {
     AriaFrame frames[DOOR_STYLES][MAX_FRAMES];
     uint8_t ticks[DOOR_STYLES][MAX_FRAMES];
     int counts[DOOR_STYLES];
+    AriaFrame bat_frames[BAT_ANIMS][MAX_FRAMES];
+    uint8_t bat_ticks[BAT_ANIMS][MAX_FRAMES];
+    AosAnimDef bat_defs[BAT_ANIMS];
+    AosAnimSet bat;
 } AriaObjects;
+
+static bool load_frame(AriaFrame *out, const char *path, int ox, int oy, SDL_Renderer *renderer) {
+    SDL_Surface *surface = SDL_LoadBMP(path);
+    if (!surface) return false;
+    out->texture = SDL_CreateTextureFromSurface(renderer, surface);
+    out->w = (float)surface->w;
+    out->h = (float)surface->h;
+    out->offset_x = ox;
+    out->offset_y = oy;
+    SDL_DestroySurface(surface);
+    if (!out->texture) return false;
+    SDL_SetTextureScaleMode(out->texture, SDL_SCALEMODE_NEAREST);
+    return true;
+}
 
 static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *renderer) {
     FILE *f = fopen(path, "rb");
@@ -396,6 +431,19 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     while (ok && fgets(line, sizeof line, f)) {
         char frame_path[512];
         int style, frame, ticks, ox, oy;
+        if (sscanf(line, "Enemy/bat/anim_%d\t%d\t%d\t%d\t%d\t%511s", &style, &frame, &ticks,
+                   &ox, &oy, frame_path) == 6) {
+            if (style < 0 || style >= BAT_ANIMS || frame != objects->bat_defs[style].count ||
+                frame >= MAX_FRAMES || ticks < 1 || ticks > 255 ||
+                !load_frame(&objects->bat_frames[style][frame], frame_path, ox, oy, renderer)) {
+                ok = false;
+                break;
+            }
+            objects->bat_ticks[style][frame] = (uint8_t)ticks;
+            objects->bat_defs[style].durations = objects->bat_ticks[style];
+            objects->bat_defs[style].count++;
+            continue;
+        }
         if (sscanf(line, "WoodenDoor/style_%d\t%d\t%d\t%d\t%d\t%511s", &style, &frame, &ticks,
                    &ox, &oy, frame_path) != 6)
             continue;
@@ -416,6 +464,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         objects->counts[style]++;
     }
     fclose(f);
+    objects->bat = (AosAnimSet){objects->bat_defs, BAT_ANIMS};
     return ok;
 }
 
@@ -423,6 +472,9 @@ static void free_objects(AriaObjects *objects) {
     for (int i = 0; i < DOOR_STYLES; ++i)
         for (int j = 0; j < MAX_FRAMES; ++j)
             if (objects->frames[i][j].texture) SDL_DestroyTexture(objects->frames[i][j].texture);
+    for (int i = 0; i < BAT_ANIMS; ++i)
+        for (int j = 0; j < MAX_FRAMES; ++j)
+            if (objects->bat_frames[i][j].texture) SDL_DestroyTexture(objects->bat_frames[i][j].texture);
 }
 
 static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
@@ -456,6 +508,25 @@ static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void 
         SDL_FRect rect = {(float)((e->x & ~15) - cam_x), (float)(e->y - 48 - cam_y), 16, 48};
         SDL_SetRenderDrawColor(renderer, 230, 190, 120, 255);
         SDL_RenderRect(renderer, &rect);
+    }
+}
+
+/* Enemies: sprites face left; mirrored ones are flipped around x. */
+static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
+                         int cam_x, int cam_y) {
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        if (!e->spawned || e->kind != ARIA_KIND_ENEMY || e->id != ARIA_ENEMY_BAT ||
+            e->enemy.removed || e->enemy.anim.id >= BAT_ANIMS || e->enemy.anim.frame >= MAX_FRAMES)
+            continue;
+        const AriaFrame *frame = &objects->bat_frames[e->enemy.anim.id][e->enemy.anim.frame];
+        if (!frame->texture) continue;
+        int ex = e->enemy.x >> 16, ey = e->enemy.y >> 16;
+        bool flip = e->enemy.mirrored;
+        float x = flip ? (float)(ex - frame->offset_x) - frame->w : (float)(ex + frame->offset_x);
+        SDL_FRect rect = {x - (float)cam_x, (float)(ey + frame->offset_y - cam_y), frame->w, frame->h};
+        SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
+                                 flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
     }
 }
 
@@ -728,7 +799,8 @@ int main(int argc, char **argv) {
                 layer = room_layer(&room);
             }
             follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
-            update_entities(&room, &layer, &soma, cam_x, &forced);
+            update_entities(&room, &layer, &soma, cam_x, cam_y, &forced,
+                            objects_ok ? &objects.bat : NULL);
             if (weapon_loaded) aos_weapon_update(&weapon_entity, &soma, &weapon_sprite.data);
         }
 
@@ -738,6 +810,7 @@ int main(int argc, char **argv) {
         SDL_FRect src = {(float)cam_x, (float)cam_y, VIEW_W, VIEW_H}, dst = {0, 0, VIEW_W, VIEW_H};
         SDL_RenderTexture(renderer, background, &src, &dst);
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
+        if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
         const AriaFrame *frame = NULL;
         if (soma.anim.frame < MAX_FRAMES)
             frame = &library.frames[soma.anim.id][soma.anim.frame];

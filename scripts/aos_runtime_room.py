@@ -10,7 +10,9 @@ source's Y-flip toggle tests ``(flags >> 12) & 3`` and can never fire, so it is
 not applied. Each ``T`` line is one entry of the room's transition list
 (``sub_08010350``): source screen X and Y, the signed X adjustment at +6, the
 BG1 position at +0xA/+0xC loaded in the target room, and the target area and
-room. Output stays private:
+room. Each ``E`` line is one entity record of the room (kind, id, x, y, the
+two parameters and the flags byte), spawned by ``sub_0800F1FC``. Output stays
+private:
 
     assets/extracted/aria/rooms/runtime/area_<AA>_room_<RRR>/room.tsv
     assets/extracted/aria/rooms/runtime/area_<AA>_room_<RRR>/background.bmp
@@ -43,10 +45,11 @@ def _signed16(value: int) -> int:
     return value - 0x10000 if value & 0x8000 else value
 
 
-def encode_room(area: int, room: int, background: dict, transitions=()) -> str:
+def encode_room(area: int, room: int, background: dict, transitions=(),
+                entities=()) -> str:
     width, height = background["width_tiles"], background["height_tiles"]
     cells, flips = background["collision"], background["collision_xflip"]
-    lines = [f"{ROOM_SCHEMA}\t2\t{area}\t{room}\t{background['width_screens']}\t"
+    lines = [f"{ROOM_SCHEMA}\t3\t{area}\t{room}\t{background['width_screens']}\t"
              f"{background['height_screens']}\t{width}\t{height}"]
     for y in range(height):
         row = cells[y * width:(y + 1) * width]
@@ -56,6 +59,9 @@ def encode_room(area: int, room: int, background: dict, transitions=()) -> str:
         lines.append(f"T\t{item['source_screen_x']}\t{item['source_screen_y']}\t"
                      f"{_signed16(item['field_6'])}\t{item['load_x']}\t{item['load_y']}\t"
                      f"{item['target_engine_area']}\t{item['target_room']}")
+    for item in entities:
+        lines.append(f"E\t{item['kind']}\t{item['entity_id']}\t{item['x']}\t{item['y']}\t"
+                     f"{item['parameters'][0]}\t{item['parameters'][1]}\t{item['flags']}")
     lines.append("END")
     return "\n".join(lines) + "\n"
 
@@ -78,7 +84,8 @@ def produce(root: Path, area: int, room: int, rom: bytes, world=None) -> dict:
                           create=True)
     folder.mkdir(exist_ok=True)
     write_atomic(folder / "room.tsv",
-                 encode_room(area, room, background, entry["transitions"]))
+                 encode_room(area, room, background, entry["transitions"],
+                             entry["entities"]))
     write_atomic(folder / "background.bmp", render.bmp24(width, height, composite))
     return {"folder": folder, "width": width, "height": height,
             "cells": background["width_tiles"] * background["height_tiles"]}

@@ -18,7 +18,7 @@ int main(void) {
     assert(aos_room_outside(NULL, 3, 2, 100, 465));
     /* A BG1 byte 0xF0 under the feet is an exit inside the room. */
     static uint8_t cells[32 * 32];
-    AosCollision layer = {1, 1, 32, 32, cells};
+    AosCollision layer = {1, 1, 32, 32, cells, NULL, false};
     cells[10 * 32 + 5] = AOS_EXIT_CELL;
     assert(aos_room_outside(&layer, 1, 1, 44, 84));
     assert(!aos_room_outside(&layer, 1, 1, 60, 84));

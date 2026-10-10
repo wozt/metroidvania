@@ -3,6 +3,22 @@
  * each function reproduces. */
 #include "aos_collision.h"
 
+static int block_columns(const AosCollision *layer) {
+    return (layer->width_cells + 1) / 2;
+}
+
+size_t aos_collision_block_bytes(const AosCollision *layer) {
+    return (size_t)block_columns(layer) * (size_t)((layer->height_cells + 1) / 2);
+}
+
+void aos_collision_set_block(AosCollision *layer, int32_t x, int32_t y, bool solid) {
+    if (!layer || !layer->blocks || x < 0 || y < 0) return;
+    int bx = x >> 4, by = y >> 4;
+    if (bx >= block_columns(layer) || by >= (layer->height_cells + 1) / 2) return;
+    layer->blocks[by * block_columns(layer) + bx] = solid;
+    if (solid) layer->blocks_active = true;
+}
+
 /* sub_08001A00 + sub_08001800 on the exported per-cell table. */
 uint8_t aos_collision_cell(const AosCollision *layer, int32_t x, int32_t y) {
     if (!layer || !layer->cells) return 0;
@@ -13,8 +29,14 @@ uint8_t aos_collision_cell(const AosCollision *layer, int32_t x, int32_t y) {
     else if (cx >= max_x) cx = max_x - 1;
     if (cy < 0) cy = 0;
     else if (cy >= max_y) cy = max_y - 1;
-    if (cx >= layer->width_cells || cy >= layer->height_cells) return 0;
-    return layer->cells[cy * layer->width_cells + cx];
+    uint8_t value = 0;
+    if (cx < layer->width_cells && cy < layer->height_cells)
+        value = layer->cells[cy * layer->width_cells + cx];
+    /* Air and bit-3 cells inside a marked 16x16 block read as solid. */
+    if (layer->blocks_active && layer->blocks && (value == 0 || (value & 8)) &&
+        (cx >> 1) < block_columns(layer) && layer->blocks[(cy >> 1) * block_columns(layer) + (cx >> 1)])
+        value = 3;
+    return value;
 }
 
 /* sub_08001B40 */

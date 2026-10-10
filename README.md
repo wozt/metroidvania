@@ -147,7 +147,8 @@ python3 -m scripts.aos_runtime_room --all
 
 Soma uses the movement, collision, jump, crouch, landing, ability-move and
 animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks,
-souls, enemies and doors are not implemented. Leaving a room
+souls and enemies are not implemented; wooden doors open natively but are
+drawn as outlines until their graphics are extracted. Leaving a room
 through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn
 point is a test placement (a floor near the room centre, or `--spawn X Y`).

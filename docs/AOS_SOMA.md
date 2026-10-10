@@ -334,6 +334,36 @@ One-shot requests through `+0x20` do not reload the palette, so they keep the
 previous one; `scripts/aos_soma_pipeline.py` colorizes each animation with
 its own bank.
 
+Room objects. `sub_0800F4F8` walks the room's entity records (sorted by
+X) and `sub_0800F1FC` spawns those whose X lies within the BG1 X - 80 ..
+X + 320 window, once per visit (bit `+4` of the record in `gEwramData +
+0x3D0`). Kind 2 records use the create/update tables `sUnk_084F0DF8` /
+`sUnk_084F0ED8` (`Object00Create` ... `Object37Update`).
+
+Collision override: `sub_08002200(x, y)` marks the 16x16 block in the
+bitmap `gEwramData + 0xF0C0` and sets `unk_A074_6`; `sub_08002248` clears
+it; `sub_08002278` clears the bitmap on every room load. While `unk_A074_6`
+is set, `sub_08001A00` returns `0x03` for an empty or bit-3 cell whose block
+is marked.
+
+Wooden door (special object 0x00, `Object00Create` / `Object00Update`):
+`sub_0804D8F0` loads its graphics (`0x081CBE0C`, palette `0x08209AE0`,
+frames `0x0820F160`, parameter 0 choosing `0x08525564` or `0x08525574`) and
+faces it left when its screen X is above `0x78`. Contact is `sub_08068AD4`:
+`(u16)(door.x - (soma.x - 20)) <= 40` and `(u16)(door.y - soma.y) <= h`.
+If Soma overlaps it at creation (h 40), the door starts open (`+0x14` =
+`0x4000`, state 10) and walks him away from it until contact ends (sound
+`0x114`), then closes (state 11, `+0x14` -= `0x1A0` per frame) and marks its
+blocks; otherwise it marks the blocks at y - 8, y - 24 and y - 40 at once.
+Closed (state 0), contact with h 2 while Soma faces the door, without
+`0x13260 & 0x200` or a backdash, locks his input (`SetPlayerInput(1, 0)`),
+plays `0x115` and opens it (state 1: `+0x14` += `0x100` for 64 frames, then
+clears the blocks); state 2 walks Soma through it. `src/runtime/aos_door.c`
+ports this; the enemy pause `sub_0800C5A8`, the `0x42C` flags and the
+off-screen state `0x63` are not modelled, and the runtime draws an outline
+until the door graphics are extracted.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
-(README). Next steps: the hurtboxes, the doors and the transition rooms of `sUnk_0850E968` (an Aria
-entity system), then attacks.
+(README). Next steps: door graphics (object sprite extraction), the boss
+doors and save-room objects behind the `0xF0` exit cells, the transition
+rooms of `sUnk_0850E968`, the hurtboxes, then attacks.

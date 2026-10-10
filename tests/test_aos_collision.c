@@ -8,7 +8,7 @@
 
 int main(void) {
     static uint8_t cells[64 * 64];
-    AosCollision layer = {2, 2, 64, 64, cells};
+    AosCollision layer = {2, 2, 64, 64, cells, NULL, false};
     /* A solid floor row at cells y=10 (pixels 80..87), solid below. */
     for (int x = 0; x < 64; ++x) {
         cells[10 * 64 + x] = 0x03;
@@ -19,7 +19,7 @@ int main(void) {
     /* Out-of-room coordinates clamp to the edge cells. */
     assert(aos_collision_cell(&layer, -40, 84) == 0x03);
     /* One-screen dimensions clamp to 30 x 26 cells, not 32 x 32. */
-    AosCollision small = {1, 1, 64, 64, cells};
+    AosCollision small = {1, 1, 64, 64, cells, NULL, false};
     cells[25 * 64 + 29] = 0x01;
     assert(aos_collision_cell(&small, 31 * 8, 31 * 8) == 0x01);
     cells[25 * 64 + 29] = 0x00;

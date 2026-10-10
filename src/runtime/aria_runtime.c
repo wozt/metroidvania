@@ -8,6 +8,7 @@
  * native animation descriptor indices, and their durations drive the
  * animation timing. Rooms, entities, souls and transitions are not
  * modelled. */
+#include "aos_door.h"
 #include "aos_room.h"
 #include "aos_soma.h"
 
@@ -26,14 +27,37 @@
 #define DEFAULT_LIBRARY "assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv"
 
 #define MAX_TRANSITIONS 32
+#define MAX_ENTITIES 128
+#define ARIA_KIND_SPECIAL 2
+#define ARIA_OBJECT_WOODEN_DOOR 0x00
+
+typedef struct {
+    int kind, id, x, y, param0, param1, flags;
+    bool spawned;           /* gEwramData + 0x3D0 bit of the record */
+    AosDoor door;
+} AriaEntity;
 
 typedef struct {
     int area, number;
     int width_screens, height_screens, width_cells, height_cells;
     uint8_t *cells;
+    uint8_t *blocks;        /* gEwramData + 0xF0C0, cleared on every load */
     AosTransition transitions[MAX_TRANSITIONS];
     size_t transition_count;
+    AriaEntity entities[MAX_ENTITIES];
+    size_t entity_count;
 } AriaRoom;
+
+static void free_room(AriaRoom *room) {
+    free(room->cells);
+    free(room->blocks);
+    room->cells = room->blocks = NULL;
+}
+
+static AosCollision room_layer(const AriaRoom *room) {
+    return (AosCollision){room->width_screens, room->height_screens, room->width_cells,
+                          room->height_cells, room->cells, room->blocks, false};
+}
 
 typedef struct {
     SDL_Texture *texture;
@@ -57,17 +81,35 @@ static bool load_room(const char *path, AriaRoom *room) {
     if (!fgets(line, sizeof line, f) ||
         sscanf(line, "AOSROOM-NATIVE\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c", &version, &area, &number,
                &room->width_screens, &room->height_screens, &room->width_cells,
-               &room->height_cells, &extra) != 7 || version != 2 ||
+               &room->height_cells, &extra) != 7 || version != 3 ||
         room->width_cells < 1 || room->height_cells < 1 ||
         room->width_cells > 1024 || room->height_cells > 1024)
         goto failure;
     room->area = area;
     room->number = number;
     room->transition_count = 0;
+    room->entity_count = 0;
+    room->blocks = NULL;
     room->cells = calloc((size_t)room->width_cells * room->height_cells, 1);
     if (!room->cells) goto failure;
+    {
+        AosCollision probe = room_layer(room);
+        room->blocks = calloc(aos_collision_block_bytes(&probe), 1);
+        if (!room->blocks) goto failure;
+    }
     while (fgets(line, sizeof line, f)) {
         if (!strcmp(line, "END\n") || !strcmp(line, "END")) { ended = true; break; }
+        if (line[0] == 'E') {
+            AriaEntity *e = &room->entities[room->entity_count];
+            if (room->entity_count >= MAX_ENTITIES ||
+                sscanf(line, "E\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c", &e->kind, &e->id, &e->x, &e->y,
+                       &e->param0, &e->param1, &e->flags, &extra) != 7 ||
+                e->kind < 0 || e->kind > 255 || e->id < 0 || e->id > 255)
+                goto failure;
+            e->spawned = false;
+            room->entity_count++;
+            continue;
+        }
         if (line[0] == 'T') {
             int sx, sy, adjust, load_x, load_y, target_area, target_room;
             if (room->transition_count >= MAX_TRANSITIONS ||
@@ -96,8 +138,7 @@ static bool load_room(const char *path, AriaRoom *room) {
     return true;
 failure:
     fclose(f);
-    free(room->cells);
-    room->cells = NULL;
+    free_room(room);
     fprintf(stderr, "Invalid Aria runtime room: %s\n", path);
     return false;
 }
@@ -196,8 +237,7 @@ static int audit_transitions(void) {
                 else if (t->screen_y >= source.height_screens)
                     y = source.height_screens > 1 ? height - 0x2E : 0xD2;
                 else y = (t->screen_y << 8) + 0x80;
-                AosCollision layer = {source.width_screens, source.height_screens,
-                                      source.width_cells, source.height_cells, source.cells};
+                AosCollision layer = room_layer(&source);
                 bool inside_x = t->screen_x >= 0 && t->screen_x < source.width_screens;
                 bool inside_y = t->screen_y >= 0 && t->screen_y < source.height_screens;
                 if (inside_x && inside_y) {
@@ -236,9 +276,9 @@ static int audit_transitions(void) {
                     printf("arrival outside %d/%d -> %d/%d at %d,%d\n", area, number, t->area,
                            t->room, ax, ay);
                 }
-                free(target.cells);
+                free_room(&target);
             }
-            free(source.cells);
+            free_room(&source);
         }
     }
     printf("Aria transitions: %d rooms, %d entries, %d unmatched exits, %d missing "
@@ -292,7 +332,7 @@ static bool take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **back
     AriaRoom target = {0};
     if (!load_room_folder(folder, &target)) return false;
     SDL_Texture *texture = load_background(renderer, folder);
-    if (!texture) { free(target.cells); return false; }
+    if (!texture) { free_room(&target); return false; }
     aos_room_exit_velocity(soma, x - cam_x, y - cam_y);
     int32_t ax, ay;
     aos_room_arrival(exit, target.width_screens, target.height_screens, x, y, &ax, &ay);
@@ -300,11 +340,49 @@ static bool take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **back
     soma->y = (int32_t)((uint32_t)ay << 16) | (soma->y & 0xFFFF);
     printf("Room %d/%d -> %d/%d, arrival %d,%d\n", room->area, room->number, target.area,
            target.number, ax, ay);
-    free(room->cells);
+    free_room(room);
     *room = target;
     SDL_DestroyTexture(*background);
     *background = texture;
     return true;
+}
+
+/* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
+ * spawn once per room visit; only the wooden door has a ported object. */
+static int update_entities(AriaRoom *room, AosCollision *layer, const AosSoma *soma,
+                           int cam_x, AosForcedInput *input) {
+    int sound = 0;
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        AriaEntity *e = &room->entities[i];
+        bool door = e->kind == ARIA_KIND_SPECIAL && e->id == ARIA_OBJECT_WOODEN_DOOR;
+        if (!door) continue;
+        if (!e->spawned) {
+            if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+            e->spawned = true;
+            aos_door_create(&e->door, layer, e->x, e->y, soma, cam_x, input);
+            continue;
+        }
+        int played = aos_door_update(&e->door, layer, soma, input);
+        if (played) sound = played;
+    }
+    return sound;
+}
+
+/* Doors have no extracted graphics yet: an outline marks the blocked
+ * 16x48 area, filled while the door is closed. */
+static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, int cam_x, int cam_y) {
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id != ARIA_OBJECT_WOODEN_DOOR)
+            continue;
+        SDL_FRect rect = {(float)((e->x & ~15) - cam_x), (float)(e->y - 48 - cam_y), 16, 48};
+        Uint8 alpha = (Uint8)(160 - (e->door.swing >> 7));
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(renderer, 150, 100, 50, alpha);
+        SDL_RenderFillRect(renderer, &rect);
+        SDL_SetRenderDrawColor(renderer, 230, 190, 120, 255);
+        SDL_RenderRect(renderer, &rect);
+    }
 }
 
 static void free_library(AriaLibrary *lib) {
@@ -403,11 +481,10 @@ int main(int argc, char **argv) {
                         "--area <A> --room <R>\n");
         return 1;
     }
-    AosCollision layer = {room.width_screens, room.height_screens, room.width_cells,
-                          room.height_cells, room.cells};
+    AosCollision layer = room_layer(&room);
     if (spawn_x < 0 && !find_spawn(&layer, &spawn_x, &spawn_y)) {
         fprintf(stderr, "No floor with headroom found in %s\n", room_path);
-        free(room.cells);
+        free_room(&room);
         return 1;
     }
     static AriaLibrary library;
@@ -416,7 +493,7 @@ int main(int argc, char **argv) {
         if (ok) printf("Aria room %s: %d x %d cells, Soma library %d animations, spawn %d,%d\n",
                        folder, room.width_cells, room.height_cells, library.set.count,
                        spawn_x, spawn_y);
-        free(room.cells);
+        free_room(&room);
         return ok ? 0 : 1;
     }
 
@@ -437,6 +514,7 @@ int main(int argc, char **argv) {
     soma.moves = (uint32_t)moves;
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     uint16_t previous = 0;
+    AosForcedInput forced = {0};
     long step = 0;
     Uint64 last = SDL_GetTicksNS(), accumulator = 0;
     const Uint64 frame_ns = 1000000000ull / 60;
@@ -454,16 +532,18 @@ int main(int argc, char **argv) {
         while (accumulator >= frame_ns) {
             accumulator -= frame_ns;
             uint16_t held = capture_path ? (uint16_t)capture_buttons : keyboard_buttons();
+            if (forced.active) held = forced.held;
+            forced.active = false;
             aos_soma_update(&soma, &layer, held, (uint16_t)(held & ~previous));
             previous = held;
             ++step;
             if (aos_room_outside(&layer, room.width_screens, room.height_screens, soma.x >> 16,
                                  soma.y >> 16)) {
                 if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;
-                layer = (AosCollision){room.width_screens, room.height_screens,
-                                       room.width_cells, room.height_cells, room.cells};
+                layer = room_layer(&room);
             }
             follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
+            update_entities(&room, &layer, &soma, cam_x, &forced);
         }
 
         int sx = soma.x >> 16, sy = soma.y >> 16;
@@ -471,6 +551,7 @@ int main(int argc, char **argv) {
         SDL_RenderClear(renderer);
         SDL_FRect src = {(float)cam_x, (float)cam_y, VIEW_W, VIEW_H}, dst = {0, 0, VIEW_W, VIEW_H};
         SDL_RenderTexture(renderer, background, &src, &dst);
+        draw_doors(renderer, &room, cam_x, cam_y);
         const AriaFrame *frame = NULL;
         if (soma.anim.frame < MAX_FRAMES)
             frame = &library.frames[soma.anim.id][soma.anim.frame];
@@ -503,6 +584,6 @@ cleanup:
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
     SDL_Quit();
-    free(room.cells);
+    free_room(&room);
     return rc;
 }

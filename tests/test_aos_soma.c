@@ -27,7 +27,7 @@ static int jump_arc(uint16_t held_frames, int32_t *peak) {
 
 enum { W = 64, H = 96 };
 static uint8_t cells[W * H];
-static const AosCollision layer = {2, 3, W, H, cells};
+static const AosCollision layer = {2, 3, W, H, cells, NULL, false};
 
 static void fill(int x0, int y0, int x1, int y1, uint8_t value) {
     for (int y = y0; y <= y1; ++y)

@@ -1843,3 +1843,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   to Q/Left Shift; captures in room 0/6 show the slide and the ceiling crash.
 - Validation on 2026-10-10: CTest passed 20/20 and the proprietary guard
   passed.
+
+## Patch 0209 - Aria wooden doors and the collision block override
+
+- Ported the 16x16 solid-block override of `sub_08002200` / `sub_08002248`
+  and its rule in `sub_08001A00` into `aos_collision.c`.
+- Ported the wooden door (special object 0x00, `Object00Create` /
+  `Object00Update`) into `src/runtime/aos_door.c`: blocking, contact and
+  facing test, input lock while it swings open for 64 frames, forced walk
+  through, and the open/walk-out/close sequence when Soma enters through a
+  door, with ROM-free tests.
+- The room export (format version 3) carries the entity records; the
+  runtime spawns doors in the native camera window (`sub_0800F4F8`) and
+  applies their forced input. Doors are drawn as outlines until their
+  graphics are extracted. Checked in room 0/3: the door opens and Soma walks
+  into room 0/0.
+- Validation on 2026-10-10: CTest passed 21/21, the transition audit and the
+  room export tests passed, and the proprietary guard passed.

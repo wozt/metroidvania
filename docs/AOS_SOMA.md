@@ -141,22 +141,35 @@ acceleration term, `+0x14` an airborne frame counter, `+0x10` state flags):
 
 | Behavior | Evidence | Values |
 |---|---|---|
-| Ground jump | `sub_08019180`: jump button (`gEwramData + 0x1339A`) pressed while grounded or while `+0x14 <= 3`; sound `0xB9`; sets airborne flag 2, `+0x14 = 16`, `+0x54 = 0` | vy = `0xFFFB0C00` = -4.953125; -1.234375 (`0xFFFEC400`) when flag `0x400000` is set |
-| Second jump button branch | same routine, ability check `sub_08032AB8(4)` and button `0x1339C`; sound `0xBA` | vy = -10.0, or -2.5 with flag `0x400000` |
+| Ground jump | `sub_08019180`: jump button (`gEwramData + 0x1339A`) pressed while grounded or while `+0x14 <= 3`; sound `0xB9`; sets airborne flag 2, `+0x14 = 16`, `+0x54 = 0` | vy = `0xFFFB0C00` = -4.953125; -1.234375 (`0xFFFEC400`) when flag `0x4000000` is set |
+| Second jump button branch | same routine, ability check `sub_08032AB8(4)` and button `0x1339C`; sound `0xBA` | vy = -10.0, or -2.5 with flag `0x4000000` |
 | Mid-air jump | `+0x14 > 3` with ability `sub_08032AB8(2)` calls `sub_080190E0` | writes -4.5 / -4.125 (not yet traced) |
 | Flag `0x800000` jump | same routine | vy += -4.875 when vy > 1.0, otherwise vy = -4.875 |
 | Ceiling bump | `sub_08018B98`: ceiling walk at y-32 pushes the body down; while rising, `sub_08017CC8` handles a special case (vy <= -4.9375, state 6, sound `0xB8`), otherwise | vy = +0.0625, `+0x54` = -0.125 |
 | Air gravity | `sub_08018B98` each airborne frame | +0.125 while vy <= 0x1FFF; then +0.1015625; when falling vy += `+0x54`, `+0x54` += 0.015625 up to 0.0625 |
 | Fall cap | `sub_0801B0D8` | vy <= 8.0 |
+| Heavy gravity | `sub_08018B98`, flag `0x4000000` (`0x80 << 0x13`) | vy += 0.375 and `+0x54` = 0 before the normal gravity |
+| Ledge start | `sub_08018020` entry, when `+0x10 & 0x100002` is clear | sets airborne flag 2, vy = 0, `+0x54` = -0.0625 |
+| Jump release | `sub_0801938C`, airborne and `+0x10 & 0x18` clear | vy < -0.25 without the jump button held: vy = -0.25, `+0x54` = -0.125 |
+| Apex float | same routine, -0x1BFFF <= vy <= 0x1FFF with jump held | `+0x54` -= 0.03125 per frame, floor -0.125 |
+| Slow fall | same routine, flag `0x100` of `gEwramData + 0x13260` or entity flag `0x400000` (`0x80 << 0xF`) | vy -= 0.15625 while vy > 0.15625 |
 
 | Air steering | `sub_0801B0D8` airborne branch: held right (`0x10`) / left (`0x20`) in `gEwramData + 0x1C` | vx = +/-1.5 (4.0 when flag `0x400` of `+0x13260` is set); otherwise `+0x50` = -/+0.25 per frame until vx reaches 0 |
 | Probable backdash | `sub_0801B0D8`, sound `0xBD`, flags `0x20000420` | vx = -3.125 with `+0x50` = +/-0.09375 per frame |
 | Damage recoil | `sub_0801B0D8`, state `0x0F`, source X at `+0x131D8` | vx = 1.5 away from the source, vy = -2.0, `+0x54` = -0.0625, `+0x50` = -/+0.0078125 |
 
-The flag `0x400000` halves most impulses and is probably underwater
-movement; this and the jump-release rule are still unconfirmed. Ground walking
-and the grounded state routines (`sub_08016DE4`, `sub_080168F0`) have not
-been traced yet.
+An earlier revision of this table read the impulse flag as `0x400000`; the
+assembly builds it as `0x80 << 0x13` = `0x4000000`, and `0x400000` is the
+separate slow-fall flag. Its meaning (probably water) is unconfirmed.
+Friction stops on a sign change only: a vx that lands exactly on zero keeps
+its friction term for one more frame. Ground walking on slopes and the
+grounded state routines (`sub_08016DE4`, `sub_080168F0`) have not been traced
+yet.
+
+`src/runtime/aos_soma.c` ports the rules of this table except the ceiling
+probe, the flag `0x800000` and second/mid-air jumps, backdash and recoil;
+`tests/test_aos_soma.c` checks them without a ROM (a held jump rises about
+56.7 pixels over 56 frames, a tapped jump about 9.7 pixels).
 
 The next research step is the player update routine `sub_0801B0D8`: which of
 these probes it calls, with which body offsets, and Soma's movement constants.

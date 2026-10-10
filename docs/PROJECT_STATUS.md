@@ -1725,3 +1725,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   reading notes; Soma's controller is still blocked on its update logic.
 - Validation on 2026-10-10: CTest passed 18/18 and the proprietary guard
   passed.
+
+## Patch 0201 - Soma motion rules
+
+- Added `src/runtime/aos_soma.c`, a ROM-free port of the verified Soma motion
+  rules from cvaos: position integration and fall cap (`sub_0801B0D8`),
+  steering with friction, the normal jump and its three-frame coyote window
+  (`sub_08019180`), jump release, apex float and slow fall (`sub_0801938C`),
+  the ledge start (`sub_08018020`) and gravity (`sub_08018B98`).
+- Corrected `docs/AOS_SOMA.md`: the flag that weakens jumps and adds 0.375
+  gravity is `0x4000000`, not `0x400000` (which is the slow-fall flag).
+- Not ported yet: collision response (`sub_08014A04`), ceiling bump, second
+  and mid-air jumps, backdash, recoil and the other player states.
+- Validation on 2026-10-10: CTest passed 19/19 and the proprietary guard
+  passed.

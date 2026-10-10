@@ -420,7 +420,9 @@ static float move_axis(const Room *room, float start, float other,
  * This is visual-only; original platform collision is unchanged.
  * C = crouch preview, F = fire while crouched, E = aim diagonally while running.
  */
-#define COMPOSED_COUNT 3
+/* PATCH_0165_EXTENDED_COMPOSITIONS */
+#define COMPOSED_COUNT 8
+#define COMPOSED_BASE_COUNT 3
 #define COMPOSED_MAX_FRAMES 10
 typedef struct {
     SDL_Texture *textures[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
@@ -429,9 +431,11 @@ typedef struct {
     int heights[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
 } ComposedAnimations;
 
-static const int composed_counts[COMPOSED_COUNT] = {10, 5, 3};
+static const int composed_counts[COMPOSED_COUNT] = {10, 5, 3, 10, 10, 3, 5, 3};
 static const char *composed_names[COMPOSED_COUNT] = {
-    "run_diagonal_up_right", "midair_forward_right", "shoot_crouch_right"
+    "run_diagonal_up_right", "midair_forward_right", "shoot_crouch_right",
+    "run_diagonal_down_right", "run_diagonal_up_left", "shoot_standing_right",
+    "midair_diagonal_up_right", "shoot_crouch_diagonal_up_right"
 };
 
 static void composed_free(ComposedAnimations *a) {
@@ -441,8 +445,8 @@ static void composed_free(ComposedAnimations *a) {
 }
 
 static bool composed_load(SDL_Renderer *renderer, const char *dir,
-                          ComposedAnimations *a) {
-    for (int group=0; group<COMPOSED_COUNT; ++group) {
+                          ComposedAnimations *a, int first, int last) {
+    for (int group=first; group<last; ++group) {
         char path[4096];
         int n=snprintf(path,sizeof path,"%s/composed/%s/durations.txt",
                        dir,composed_names[group]);
@@ -486,29 +490,40 @@ static bool composed_load(SDL_Renderer *renderer, const char *dir,
 }
 
 static int composed_select(RuntimeMovementState state, int facing,
-                           bool diagonal, bool crouch, bool fire) {
-    if (facing!=1) return -1; /* Only verified right-facing compositions. */
-    if (crouch && fire && state==RUNTIME_IDLE) return 2;
-    if ((state==RUNTIME_JUMPING || state==RUNTIME_FALLING) && !diagonal) return 1;
-    if (state==RUNTIME_RUNNING && diagonal) return 0;
+                           bool diagonal_up, bool diagonal_down,
+                           bool crouch, bool fire, bool extended) {
+    if (facing < 0) {
+        /* Only the left-facing diagonal-up running sequence is native. */
+        return extended && state == RUNTIME_RUNNING && diagonal_up ? 4 : -1;
+    }
+    if (crouch && fire && state == RUNTIME_IDLE)
+        return extended && diagonal_up ? 7 : 2;
+    if (extended && fire && state == RUNTIME_IDLE && !crouch) return 5;
+    if (state == RUNTIME_JUMPING || state == RUNTIME_FALLING)
+        return extended && diagonal_up ? 6 : (!diagonal_up && !diagonal_down ? 1 : -1);
+    if (state == RUNTIME_RUNNING) {
+        if (extended && diagonal_down) return 3;
+        if (diagonal_up) return 0;
+    }
     return -1;
 }
 
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
-    const char *samus_dir=NULL, *composed_dir=NULL; bool check=false;
+    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
         else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
         else if (!strcmp(argv[i],"--samus-sprites") && !samus_dir && i+1<argc) samus_dir=argv[++i];
         else if (!strcmp(argv[i],"--samus-composed") && !composed_dir && i+1<argc) composed_dir=argv[++i];
+        else if (!strcmp(argv[i],"--samus-composed-extra") && !extended_dir && i+1<argc) extended_dir=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
             fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
-    if (!room_path || (check && (background || samus_dir || composed_dir))) {
+    if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir))) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
         return 2;
     }
@@ -558,8 +573,13 @@ int main(int argc, char **argv) {
         fprintf(stderr,"Samus sprite loading failed; aborting instead of showing incomplete art.\n");
         goto cleanup;
     }
-    if (composed_dir && !composed_load(renderer,composed_dir,&composed_frames)) {
+    if (composed_dir && !composed_load(renderer,composed_dir,&composed_frames,0,COMPOSED_BASE_COUNT)) {
         fprintf(stderr,"Composed Samus sprite loading failed.\n");
+        goto cleanup;
+    }
+    if (extended_dir && !composed_load(renderer,extended_dir,&composed_frames,
+                                       COMPOSED_BASE_COUNT,COMPOSED_COUNT)) {
+        fprintf(stderr,"Extended composed Samus sprite loading failed.\n");
         goto cleanup;
     }
     float px=16,py=16, pw=12,ph=16;
@@ -653,8 +673,12 @@ int main(int argc, char **argv) {
             SDL_FRect dst={viewport.x,viewport.y,src.w*scale,src.h*scale};
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
-        int selected=composed_dir ? composed_select(movement_state,facing,
-            keys[SDL_SCANCODE_E],keys[SDL_SCANCODE_C],keys[SDL_SCANCODE_F]) : -1;
+        int selected=(composed_dir || extended_dir) ? composed_select(
+            movement_state,facing,keys[SDL_SCANCODE_E],keys[SDL_SCANCODE_Q],
+            keys[SDL_SCANCODE_C],keys[SDL_SCANCODE_F],extended_dir != NULL) : -1;
+        if (selected >= 0 && ((selected < COMPOSED_BASE_COUNT && !composed_dir) ||
+                              (selected >= COMPOSED_BASE_COUNT && !extended_dir)))
+            selected = -1;
         if (selected>=0) {
             Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
             unsigned int elapsed_frames=(unsigned int)(elapsed_ms*60u/1000u);

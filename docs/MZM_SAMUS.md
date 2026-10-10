@@ -73,9 +73,13 @@ preserving the feet position, refuses to unmorph without standing clearance,
 and selects the native morph/unmorph/rolling sequences. A spin jump touching
 exactly one blocking side can perform a provisional wall-jump impulse and plays
 the native wall-jump transition. The hitbox dimensions and movement constants
-remain experimental rather than extracted Zero Mission values. F6 remains a
-separate raw-catalogue browser for all 580 sequences, including poses whose
-gameplay mechanics are not implemented.
+remain experimental rather than extracted Zero Mission values. Falling toward
+a clear solid-to-air corner now enters the native ledge-hang loop. After
+releasing the approach direction, jump or forward selects the corresponding
+native pull-up transition; away or crouch drops. Pull movement stays locked for
+the exact duration read from the semantic registry. F6 remains a separate
+raw-catalogue browser for all 580 sequences, including poses whose gameplay
+mechanics are not implemented.
 
 The semantic registry can be validated without opening a window:
 

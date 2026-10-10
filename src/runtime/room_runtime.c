@@ -291,6 +291,42 @@ static int runtime_wall_side(const Room *room, float x, float y,
     return left ? -1 : 1;
 }
 
+typedef struct {
+    float hang_x, hang_y;
+    float stand_x, stand_y;
+    int side;
+} RuntimeLedge;
+
+/* PATCH_0186_LEDGE_GRAB
+ * Find a solid-to-air corner beside the upper body and require both the
+ * hanging volume and the final standing volume to be clear. This deliberately
+ * uses the verified blocking geometry instead of assuming a 16-pixel grid. */
+static bool runtime_find_ledge(const Room *room, float x, float y,
+                               float width, float height, int side,
+                               RuntimeLedge *ledge) {
+    if ((side != -1 && side != 1) || !ledge) return false;
+    float body_edge = x + (side > 0 ? width : 0.f);
+    float edge = (float)(int)(body_edge + .5f);
+    float probe_x = side > 0 ? edge : edge - 1.f;
+    int first_y = (int)y - 4;
+    int last_y = (int)y + 8;
+    for (int top = first_y; top <= last_y; ++top) {
+        if (top < 1 || top >= room->height) continue;
+        if (blocked(room,probe_x,(float)top-1.f,1.f,1.f) ||
+            !blocked(room,probe_x,(float)top,1.f,1.f)) continue;
+        float hang_x = side > 0 ? edge-width : edge;
+        float stand_x = side > 0 ? edge : edge-width;
+        float stand_y = (float)top-height;
+        if (stand_y < 0.f ||
+            blocked(room,hang_x,(float)top,width,height) ||
+            blocked(room,stand_x,stand_y,width,height) ||
+            !blocked(room,stand_x,stand_y+1.f,width,height)) continue;
+        *ledge=(RuntimeLedge){hang_x,(float)top,stand_x,stand_y,side};
+        return true;
+    }
+    return false;
+}
+
 
 /* PATCH_0145_MOVEMENT_STATES
  * Runtime presentation states only; these are NOT original MZM pose IDs.
@@ -601,10 +637,20 @@ static unsigned int runtime_animation_total(const RuntimeAnimationMapRow *row) {
         for(int i=0;i<row->entry->count;i++)total+=row->entry->ticks[i];
     return total;
 }
+static float runtime_animation_seconds(RuntimeAnimationMap *map,
+        const char *action,const char *suit,const char *facing,float fallback) {
+    RuntimeAnimationMapRow *row=runtime_animation_map_find(
+        map,action,suit,facing,"none");
+    unsigned int ticks=runtime_animation_total(row);
+    return ticks ? (float)ticks/60.f : fallback;
+}
 static int runtime_animation_priority(const char *action) {
     if(!strcmp(action,"death"))return 100;
     if(!strcmp(action,"hurt"))return 90;
-    if(!strcmp(action,"morph_start")||!strcmp(action,"unmorph"))return 85;
+    if(!strcmp(action,"morph_start")||!strcmp(action,"unmorph")||
+       !strcmp(action,"ledge_pull_forward")||
+       !strcmp(action,"ledge_pull_up"))return 85;
+    if(!strcmp(action,"ledge_hang"))return 82;
     if(!strcmp(action,"spin_start")||!strcmp(action,"wall_jump"))return 80;
     if(!strcmp(action,"landing"))return 60;
     if(!strcmp(action,"turn")||!strcmp(action,"skid"))return 40;
@@ -612,10 +658,14 @@ static int runtime_animation_priority(const char *action) {
 }
 static const char *runtime_requested_action(RuntimeMovementState state,bool spin,
         bool crouch,bool fire,bool skid,int special_kind,bool morphed,
-        bool morph_started,bool unmorph_started,bool wall_jump_started,
+        bool morph_started,bool unmorph_started,bool hanging,
+        bool ledge_pull_forward,bool ledge_pull_up,bool wall_jump_started,
         bool spin_started,bool landed) {
     if(morph_started)return "morph_start";
     if(unmorph_started)return "unmorph";
+    if(ledge_pull_forward)return "ledge_pull_forward";
+    if(ledge_pull_up)return "ledge_pull_up";
+    if(hanging)return "ledge_hang";
     if(wall_jump_started)return "wall_jump";
     if(morphed)return "morph_ball";
     if(spin_started)return "spin_start";
@@ -1016,6 +1066,9 @@ int main(int argc, char **argv) {
     bool spin_jump=false;
     bool morphed=false;
     float wall_jump_lock=0.f;
+    bool hanging=false,ledge_input_armed=false;
+    float ledge_regrab_lock=0.f,ledge_pull_lock=0.f;
+    RuntimeLedge active_ledge={0};
     int special_kind=0; /* 0=spin; 1=space, 2=screw (visual preview only). */
     unsigned int armor_index=0;
     bool animation_browser=false;
@@ -1023,8 +1076,12 @@ int main(int argc, char **argv) {
     RuntimeAnimationMapRow *active_animation=NULL;
     bool spin_started=false,landed=false,morph_started=false;
     bool unmorph_started=false,wall_jump_started=false;
+    bool ledge_pull_forward_started=false,ledge_pull_up_started=false;
     static const char *armor_names[] = {
         "Power Suit", "Varia Suit", "Gravity Suit", "Full Suit", "Suitless"
+    };
+    static const char *suit_names[] = {
+        "PowerSuit","VariaSuit","GravitySuit","FullSuit","Suitless"
     };
     Uint64 animation_start=SDL_GetTicks();
     /* Prefer a grounded, collision-free test spawn near the room centre.
@@ -1035,6 +1092,7 @@ int main(int argc, char **argv) {
            px, py, blocked(room, px, py+1.f, pw, ph) ? "yes" : "no");
     printf("Controls: Left/Right or A/D = move; Space/Up/W = jump; X = morph; Escape = exit. ");
     printf("Experimental platformer physics; only project code-1 solids block.\n");
+    printf("Ledges: hold toward while falling; release, then jump/toward to climb; C/away drops.\n");
     printf("Animation controls: E/Q aim, C crouch, F fire, R suit, T spin type, F6 catalogue.\n");
     if (composed_dir) printf("Compositions: E=diagonal run, C+F=crouch shooting, jump=straight midair (right facing).\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;
@@ -1126,7 +1184,9 @@ int main(int argc, char **argv) {
         float dx=((keys[SDL_SCANCODE_RIGHT]||keys[SDL_SCANCODE_D]) ? 1.f:0.f)-
                  ((keys[SDL_SCANCODE_LEFT]||keys[SDL_SCANCODE_A]) ? 1.f:0.f);
         if(dx==0.f)dx=runtime_pad_horizontal(gamepad);
-        if (wall_jump_lock <= 0.f) {
+        bool drop_held=keys[SDL_SCANCODE_C] ||
+            runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_DPAD_DOWN);
+        if (!hanging && wall_jump_lock <= 0.f) {
             if (dx > 0.f) facing=1;
             else if (dx < 0.f) facing=-1;
         }
@@ -1134,64 +1194,141 @@ int main(int argc, char **argv) {
         while (accumulator >= fixed_step) {
             bool hit=false;
             bool was_grounded=grounded;
-            grounded=blocked(room,px,py+1.f,pw,ph);
-            if (morph_queued) {
-                if (!morphed) {
-                    if (armor_index == 4u) {
-                        fprintf(stderr,"Morph Ball is unavailable for Suitless Samus.\n");
-                    } else if (runtime_resize_height(
-                                   room,px,&py,pw,&ph,morph_height)) {
-                        morphed=true;
-                        spin_jump=false;
-                        morph_started=true;
-                    }
-                } else if (runtime_resize_height(
-                               room,px,&py,pw,&ph,standing_height)) {
-                    morphed=false;
-                    unmorph_started=true;
-                } else {
-                    fprintf(stderr,"Cannot unmorph: standing hitbox is blocked.\n");
-                }
-                morph_queued=false;
-            }
-            int wall_side=runtime_wall_side(room,px,py,pw,ph);
-            if (jump_queued && grounded && !morphed) {
-                /* Jump type is latched at takeoff, not reclassified by aim keys. */
-                spin_jump=(dx > 0.1f || dx < -0.1f);
-                spin_started=spin_jump;
-                vy=-jump_speed;
-                grounded=false;
-            } else if (jump_queued && !grounded && !morphed &&
-                       spin_jump && wall_side != 0) {
-                /* Provisional wall-jump impulse and short steering lock. */
-                const float wall_jump_speed=150.f;
-                vx=wall_side < 0 ? wall_jump_speed : -wall_jump_speed;
-                vy=-jump_speed*.9f;
-                facing=wall_side < 0 ? 1 : -1;
-                wall_jump_lock=.13f;
-                wall_jump_started=true;
-                spin_started=false;
-            }
-            jump_queued=false;
+            bool suspend_physics=false;
             if (wall_jump_lock > 0.f) {
                 wall_jump_lock-=fixed_step;
                 if (wall_jump_lock < 0.f) wall_jump_lock=0.f;
-            } else {
-                vx=update_horizontal_velocity(vx,dx,fixed_step,run_speed,
-                                              run_accel,run_braking);
             }
-            if (grounded)
-                move_grounded_x(room,&px,&py,vx*fixed_step,pw,ph);
-            else
-                px=move_axis(room,px,py,vx*fixed_step,pw,ph,false,&hit);
-            vy=clampf(vy+gravity*fixed_step,-jump_speed,terminal_speed);
-            py=move_axis(room,py,px,vy*fixed_step,pw,ph,true,&hit);
-            if (hit) {
-                if (vy>0.f) {
-                    grounded=true;
-                    if(!was_grounded)landed=true;
-                }
+            if (ledge_regrab_lock > 0.f) {
+                ledge_regrab_lock-=fixed_step;
+                if (ledge_regrab_lock < 0.f) ledge_regrab_lock=0.f;
+            }
+            if (ledge_pull_lock > 0.f) {
+                ledge_pull_lock-=fixed_step;
+                if (ledge_pull_lock < 0.f) ledge_pull_lock=0.f;
+                grounded=true;
+                vx=0.f;
                 vy=0.f;
+                jump_queued=false;
+                morph_queued=false;
+                suspend_physics=true;
+            }
+            if (!suspend_physics && hanging) {
+                grounded=false;
+                vx=0.f;
+                vy=0.f;
+                if (dx==0.f) ledge_input_armed=true;
+                if (jump_queued) {
+                    px=active_ledge.stand_x;
+                    py=active_ledge.stand_y;
+                    hanging=false;
+                    grounded=true;
+                    ledge_pull_up_started=true;
+                    ledge_pull_lock=runtime_animation_seconds(
+                        &animation_map,"ledge_pull_up",
+                        suit_names[armor_index%5],
+                        active_ledge.side<0?"left":"right",.15f);
+                } else if (drop_held ||
+                           dx*(float)active_ledge.side<-.1f) {
+                    hanging=false;
+                    vx=(float)-active_ledge.side*35.f;
+                    vy=20.f;
+                    spin_jump=false;
+                    ledge_regrab_lock=.18f;
+                } else if (ledge_input_armed &&
+                           dx*(float)active_ledge.side>.1f) {
+                    px=active_ledge.stand_x;
+                    py=active_ledge.stand_y;
+                    hanging=false;
+                    grounded=true;
+                    ledge_pull_forward_started=true;
+                    ledge_pull_lock=runtime_animation_seconds(
+                        &animation_map,"ledge_pull_forward",
+                        suit_names[armor_index%5],
+                        active_ledge.side<0?"left":"right",.2f);
+                }
+                jump_queued=false;
+                if (morph_queued) {
+                    fprintf(stderr,"Cannot morph while hanging from a ledge.\n");
+                    morph_queued=false;
+                }
+                suspend_physics=true;
+            }
+            if (!suspend_physics) {
+                grounded=blocked(room,px,py+1.f,pw,ph);
+                if (morph_queued) {
+                    if (!morphed) {
+                        if (armor_index == 4u) {
+                            fprintf(stderr,"Morph Ball is unavailable for Suitless Samus.\n");
+                        } else if (runtime_resize_height(
+                                       room,px,&py,pw,&ph,morph_height)) {
+                            morphed=true;
+                            spin_jump=false;
+                            morph_started=true;
+                        }
+                    } else if (runtime_resize_height(
+                                   room,px,&py,pw,&ph,standing_height)) {
+                        morphed=false;
+                        unmorph_started=true;
+                    } else {
+                        fprintf(stderr,"Cannot unmorph: standing hitbox is blocked.\n");
+                    }
+                    morph_queued=false;
+                }
+                int wall_side=runtime_wall_side(room,px,py,pw,ph);
+                if (jump_queued && grounded && !morphed) {
+                    /* Jump type is latched at takeoff, not reclassified by aim keys. */
+                    spin_jump=(dx > 0.1f || dx < -0.1f);
+                    spin_started=spin_jump;
+                    vy=-jump_speed;
+                    grounded=false;
+                } else if (jump_queued && !grounded && !morphed &&
+                           spin_jump && wall_side != 0) {
+                    /* Provisional wall-jump impulse and short steering lock. */
+                    const float wall_jump_speed=150.f;
+                    vx=wall_side < 0 ? wall_jump_speed : -wall_jump_speed;
+                    vy=-jump_speed*.9f;
+                    facing=wall_side < 0 ? 1 : -1;
+                    wall_jump_lock=.13f;
+                    wall_jump_started=true;
+                    spin_started=false;
+                }
+                jump_queued=false;
+                if (wall_jump_lock <= 0.f)
+                    vx=update_horizontal_velocity(vx,dx,fixed_step,run_speed,
+                                                  run_accel,run_braking);
+                if (grounded)
+                    move_grounded_x(room,&px,&py,vx*fixed_step,pw,ph);
+                else
+                    px=move_axis(room,px,py,vx*fixed_step,pw,ph,false,&hit);
+                vy=clampf(vy+gravity*fixed_step,-jump_speed,terminal_speed);
+                py=move_axis(room,py,px,vy*fixed_step,pw,ph,true,&hit);
+                if (hit) {
+                    if (vy>0.f) {
+                        grounded=true;
+                        if(!was_grounded)landed=true;
+                    }
+                    vy=0.f;
+                }
+                if (!grounded && !morphed && vy>=0.f &&
+                    ledge_regrab_lock<=0.f && dx!=0.f) {
+                    RuntimeLedge candidate={0};
+                    int ledge_side=dx>0.f?1:-1;
+                    if (runtime_find_ledge(room,px,py,pw,ph,
+                                           ledge_side,&candidate)) {
+                        active_ledge=candidate;
+                        px=candidate.hang_x;
+                        py=candidate.hang_y;
+                        vx=0.f;
+                        vy=0.f;
+                        grounded=false;
+                        hanging=true;
+                        ledge_input_armed=false;
+                        spin_jump=false;
+                        landed=false;
+                        facing=ledge_side;
+                    }
+                }
             }
             RuntimeMovementState next_state =
                 runtime_movement_state(grounded, vx, vy, dx);
@@ -1242,15 +1379,13 @@ int main(int argc, char **argv) {
             selected = -1;
         RuntimeLibraryEntry *lib_entry=NULL;
         if(library_index && animation_map.count>0 && !animation_browser) {
-            static const char *suit_names[]={
-                "PowerSuit","VariaSuit","GravitySuit","FullSuit","Suitless"
-            };
             const char *side=facing<0?"left":"right";
             const char *aim=aim_up?"diagonalup":aim_down?"diagonaldown":"forward";
             const char *action=runtime_requested_action(
                 movement_state,spin_jump,crouch,fire,
                 grounded && dx==0.f && (vx>.1f || vx<-.1f),
                 special_kind,morphed,morph_started,unmorph_started,
+                hanging,ledge_pull_forward_started,ledge_pull_up_started,
                 wall_jump_started,spin_started,landed);
             RuntimeAnimationMapRow *requested=runtime_animation_map_find(
                 &animation_map,action,suit_names[armor_index%5],side,aim);
@@ -1287,6 +1422,7 @@ int main(int argc, char **argv) {
         }
         spin_started=false;landed=false;morph_started=false;
         unmorph_started=false;wall_jump_started=false;
+        ledge_pull_forward_started=false;ledge_pull_up_started=false;
         int special_selected = -1;
         if (special_dir && spin_jump &&
             (movement_state == RUNTIME_JUMPING || movement_state == RUNTIME_FALLING))

@@ -97,7 +97,9 @@ This shortcut consumes only local ignored assets. It demonstrates native room
 collision diagnostics, an indexed Samus animation library, keyboard input and
 SDL3 gamepad input; it is not a complete Zero Mission gameplay engine. Use X
 (gamepad West) to toggle Morph Ball. A spinning jump can wall-jump by pressing
-jump while touching a wall.
+jump while touching a wall. Hold toward a clear ledge while falling to grab it;
+release the direction, then press jump or toward the platform to climb. C,
+gamepad Down or the opposite direction drops from the ledge.
 
 ## Current verified data
 

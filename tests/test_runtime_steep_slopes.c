@@ -81,6 +81,27 @@ int main(void) {
     r->count=2;
     r->collisions[1]=(Collision){0,0,16,64,1};
     assert(runtime_wall_side(r,16.f,16.f,12.f,16.f)==0);
+
+    /* PATCH_0186: only a clear solid-to-air corner with a supported standing
+     * destination is a valid ledge. Both facing directions use the same rule. */
+    r->width=96;
+    r->height=96;
+    r->count=1;
+    r->collisions[0]=(Collision){48,32,16,32,1};
+    RuntimeLedge ledge={0};
+    assert(runtime_find_ledge(r,36.f,32.f,12.f,16.f,1,&ledge));
+    assert(ledge.side==1);
+    assert(ledge.hang_x==36.f && ledge.hang_y==32.f);
+    assert(ledge.stand_x==48.f && ledge.stand_y==16.f);
+    r->collisions[0]=(Collision){16,32,16,32,1};
+    assert(runtime_find_ledge(r,32.f,32.f,12.f,16.f,-1,&ledge));
+    assert(ledge.side==-1);
+    assert(ledge.hang_x==32.f && ledge.stand_x==20.f);
+    r->count=2;
+    r->collisions[0]=(Collision){48,32,16,32,1};
+    r->collisions[1]=(Collision){48,0,16,20,1};
+    assert(!runtime_find_ledge(r,36.f,32.f,12.f,16.f,1,&ledge));
+    assert(!runtime_find_ledge(r,36.f,32.f,12.f,16.f,0,&ledge));
     free(r);
     return 0;
 }

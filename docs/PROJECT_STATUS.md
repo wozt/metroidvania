@@ -1371,3 +1371,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   passed 14/14, the Python suite passed 409/409, and the proprietary-file guard
   passed. Brinstar 033 loaded 204 native collision records plus all 580 indexed
   sequences and remained live through the three-second dummy-video smoke test.
+
+## Patch 0186 - collision-driven ledge traversal
+
+- Added a geometry-based ledge query that finds a solid-to-air corner beside
+  the upper body without assuming a metatile grid. A grab is accepted only when
+  both the hanging volume and the complete supported standing destination are
+  collision-free.
+- Falling toward a valid corner now snaps into a stationary hanging state and
+  selects the native ledge loop. The approach direction must be released before
+  forward can pull onto the platform, preventing the held grab input from
+  skipping the hang. Jump selects the separate pull-up sequence; crouch or the
+  direction away from the ledge drops with a short re-grab delay.
+- Pull transitions place Samus only at the prevalidated standing destination
+  and freeze motion for the exact 60 Hz duration read from the active semantic
+  animation row: currently 12 ticks forward and 9 ticks upward. Morph input is
+  rejected while hanging, so the two physical forms cannot overlap.
+- Added ROM-free regressions for left and right ledges, exact snap/destination
+  coordinates, invalid sides and a low-ceiling rejection case. Corner sampling,
+  drop impulse and re-grab timing remain provisional until the original Zero
+  Mission player constants and pose anchors are verified.
+- Validation on 2026-10-10: the warning-clean Debug build succeeded, CTest
+  passed 14/14, the Python suite passed 409/409, and the proprietary-file guard
+  passed. Brinstar 033 loaded its 204 native collision records and the complete
+  580-sequence/408-binding registry, then remained live through the three-second
+  dummy-video smoke test.

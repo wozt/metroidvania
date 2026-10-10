@@ -73,7 +73,8 @@ uses a generated 408-row semantic registry and native-duration transition
 priority for currently implemented movement/input states. All sequences remain
 available through the separate catalogue browser. Its first ability mechanics
 now include clearance-safe Morph Ball resizing and a collision-driven Wall
-Jump, both connected to native animation sequences but still using provisional
+Jump, plus clearance-checked ledge hanging with both native pull transitions.
+All are connected to native animation sequences but still use provisional
 physics constants. Combat, native entities, complete ability physics,
 Varia/Gravity palette switching, room lifecycle and the Aria kernel remain
 pending.

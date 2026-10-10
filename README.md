@@ -89,10 +89,17 @@ remains partial; complete rendering and gameplay are not claimed.
 Run the experimental SDL3 Zero Mission room/animation integration with:
 
 ```sh
+python3 -m scripts.mzm_runtime_room --area Brinstar --room 33
 ./build/fusion_room_runtime --room brinstar_033
 ./build/fusion_room_runtime --check-animations \
   --samus-assets assets/extracted/metroid/sprites/samus/runtime
 ```
+
+Any of the 330 Zero Mission rooms can be exported the same way and opened as
+`--room <area>_<NNN>` (for example `--room brinstar_001`). The export holds the
+partial BG1-over-BG2 render and every Clipdata cell resolved to its native
+collision type; the runtime applies `ClipdataConvertToCollision` for solid
+blocks, all six floor slopes, doors, tanks and enemy-only blocks.
 
 This shortcut consumes only local ignored assets. Samus is driven by a
 pose controller ported from the pinned Zero Mission decompilation (native

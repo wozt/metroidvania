@@ -82,6 +82,7 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
 }
 
 static bool point_solid(const MzmCollision *collision, int32_t x, int32_t y) {
+    if (collision->solid_point) return collision->solid_point(collision->context, x, y, 1);
     return collision->blocked(collision->context, (float)(x >> 2), (float)(y >> 2),
                               1.f, 1.f);
 }

@@ -13,9 +13,8 @@ int main(void) {
     assert(r);
     r->width = 64;
     r->height = 64;
-    r->count = 2;
-    r->collisions[0] = (Collision){16,16,16,16,17};
-    r->collisions[1] = (Collision){32,16,16,16,18};
+    room_set_cell(r, 1, 1, CLIP_RIGHT_STEEP);
+    room_set_cell(r, 2, 1, CLIP_LEFT_STEEP);
     /* RIGHT_STEEP: lower right solid, upper left air. */
     assert(!blocked(r,16.f,16.f,1.f,1.f));
     assert(blocked(r,31.f,16.f,1.f,1.f));
@@ -29,6 +28,34 @@ int main(void) {
     assert(!blocked(r,44.f,17.f,1.f,1.f));
     assert(near_steep_slope(r,16.f,0.f,8.f,16.f));
     assert(!near_steep_slope(r,0.f,40.f,8.f,8.f));
+
+    /* ClipdataConvertToCollision for the slight slopes (two blocks per
+     * slope) and the actor-dependent types. */
+    assert(!clip_solid(CLIP_LEFT_UPPER_SLIGHT, 62, 30, ACTOR_SAMUS));
+    assert(clip_solid(CLIP_LEFT_UPPER_SLIGHT, 62, 31, ACTOR_SAMUS));
+    assert(!clip_solid(CLIP_LEFT_LOWER_SLIGHT, 0, 30, ACTOR_SAMUS));
+    assert(clip_solid(CLIP_LEFT_LOWER_SLIGHT, 0, 31, ACTOR_SAMUS));
+    assert(clip_solid(CLIP_RIGHT_LOWER_SLIGHT, 0, 63, ACTOR_SAMUS));
+    assert(!clip_solid(CLIP_RIGHT_LOWER_SLIGHT, 0, 62, ACTOR_SAMUS));
+    assert(clip_solid(CLIP_RIGHT_UPPER_SLIGHT, 63, 0, ACTOR_SAMUS));
+    assert(!clip_solid(CLIP_RIGHT_UPPER_SLIGHT, 0, 30, ACTOR_SAMUS));
+    assert(clip_solid(CLIP_DOOR, 10, 10, ACTOR_SAMUS));
+    assert(clip_solid(CLIP_ENEMY_ONLY, 10, 10, ACTOR_SAMUS));
+    assert(!clip_solid(CLIP_ENEMY_ONLY, 10, 10, ACTOR_SPRITE));
+    assert(!clip_solid(CLIP_STOP_ENEMY, 10, 10, ACTOR_NON_SPRITE));
+    assert(clip_solid(CLIP_STOP_ENEMY, 10, 10, ACTOR_SPRITE));
+    assert(!clip_solid(CLIP_TANK, 10, 10, ACTOR_SAMUS));
+    assert(clip_solid(CLIP_TANK, 10, 10, ACTOR_NON_SPRITE));
+    assert(!clip_solid(CLIP_PASS_THROUGH_BOTTOM, 10, 10, ACTOR_SAMUS));
+    /* Point queries: Samus sees solid columns outside the room. */
+    assert(solid_point(r, -1, 10, ACTOR_SAMUS));
+    assert(!solid_point(r, -1, 10, ACTOR_NON_SPRITE));
+    assert(!solid_point(r, 10, 64 * 4, ACTOR_SAMUS));
+    assert(solid_point(r, 16 * 4 + 63, 16 * 4 + 63, ACTOR_SAMUS));
+    assert(runtime_collision_point(r, 16 * 4 + 63, 16 * 4 + 63, 1));
+    room_set_cell(r, 0, 3, CLIP_TANK);
+    assert(!blocked(r, 0.f, 48.f, 8.f, 8.f));
+    room_set_cell(r, 0, 3, CLIP_AIR);
 
     /* PATCH_0147: cycle and boundary tests for the catalogue browser. */
     const unsigned int timing[] = {2, 3, 1};
@@ -68,8 +95,8 @@ int main(void) {
     assert(equipment.suit==MZM_SUIT_SUITLESS && equipment.items==0);
 
     /* The safe spawn puts the native 14x31 standing box on the floor. */
-    r->count=4;
-    for (int i = 0; i < 4; ++i) r->collisions[i]=(Collision){16*i,48,16,16,1};
+    memset(r->types, 0, sizeof r->types);
+    for (int i = 0; i < 4; ++i) room_set_cell(r, i, 3, CLIP_SOLID);
     MzmSamus samus;
     assert(runtime_spawn_samus(r,&samus));
     assert(samus.y==48*MZM_SUBPIXELS_PER_PIXEL);
@@ -105,6 +132,16 @@ int main(void) {
     assert(echo.active && echo.timer==0);
     runtime_echo_step(&echo,20.f,23.f,false);
     assert(!echo.active);
+    /* Exported native rooms keep every resolved Clipdata type. */
+    Room *native = calloc(1, sizeof *native);
+    assert(native);
+    assert(parse_native_room(FIXTURE_DIR "/runtime_native_room.tsv", native));
+    assert(native->width == 64 && native->height == 48 && native->count == 4);
+    assert(room_cell(native, 0, 2) == CLIP_SOLID);
+    assert(room_cell(native, 2, 2) == CLIP_RIGHT_STEEP);
+    assert(room_cell(native, 3, 2) == CLIP_DOOR);
+    assert(room_cell(native, 3, 1) == CLIP_AIR);
+    free(native);
     free(r);
     return 0;
 }

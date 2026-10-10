@@ -156,6 +156,8 @@ if(BUILD_TESTING)
     add_executable(fusion_runtime_steep_slopes_tests tests/test_runtime_steep_slopes.c
                    src/runtime/mzm_samus.c src/runtime/mzm_projectiles.c)
     target_include_directories(fusion_runtime_steep_slopes_tests PRIVATE src/runtime)
+    target_compile_definitions(fusion_runtime_steep_slopes_tests PRIVATE
+                               FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
     target_link_libraries(fusion_runtime_steep_slopes_tests PRIVATE SDL3::SDL3)
     fusion_enable_warnings(fusion_runtime_steep_slopes_tests)
     add_test(NAME runtime_steep_slopes COMMAND fusion_runtime_steep_slopes_tests)
@@ -180,6 +182,10 @@ if(BUILD_TESTING)
         COMMAND $<TARGET_FILE:fusion_room_runtime> --check-animations
                 --samus-library ${CMAKE_SOURCE_DIR}/tests/fixtures/samus_animation_registry.index.tsv
                 --samus-map ${CMAKE_SOURCE_DIR}/tests/fixtures/samus_animation_registry.map.tsv)
+
+    add_test(NAME room_runtime_native_room
+        COMMAND $<TARGET_FILE:fusion_room_runtime> --check
+                ${CMAKE_SOURCE_DIR}/tests/fixtures/runtime_native_room.tsv)
 
     add_test(NAME room_runtime_sprite_library
         COMMAND $<TARGET_FILE:fusion_room_runtime> --check-library

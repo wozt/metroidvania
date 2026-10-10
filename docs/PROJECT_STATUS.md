@@ -1625,3 +1625,28 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the Python suite passed, and
   `fusion_editor_cli --command=room-render --world=zero_mission --area=Brinstar
   --room=33` succeeded again on the private extraction.
+
+## Patch 0196 - native Clipdata types and every MZM room in the runtime
+
+- Added `python3 -m scripts.mzm_runtime_room --area <Area> --room <N>`, which
+  exports a room's partial BG1-over-BG2 render and every Clipdata cell with
+  its native collision type, resolved like `RoomLoadTileset`/`ClipdataProcess`
+  from the decompilation tables at export time (main table, contiguous tilemap
+  table, cleared RAM in between). All 330 Zero Mission rooms export; 114 of
+  them contain slight slopes the runtime previously ignored, and Brinstar 033's
+  hatches are now solid doors.
+- The runtime replaced its collision list with a per-block type grid and
+  ports `ClipdataConvertToCollision`: solid and door blocks, the two steep and
+  four slight floor slopes at subpixel precision, and the actor rules of
+  enemy-only, stop-enemy and tank blocks. Box queries only visit overlapped
+  blocks. Samus's ledge and wall-jump probes and projectiles use native point
+  queries (Samus sees solid columns outside the room, projectiles air).
+- `--room <area>_<NNN>` now opens any exported room; the Brinstar 033 alias no
+  longer depends on the historical preview and overlay caches. Exported rooms
+  are also detected when passed by path.
+- Added C tests for every collision type and actor rule, point queries, the
+  type grid and the native room parser (with a synthetic fixture and a CTest
+  `--check` run).
+- Validation on 2026-10-10: warning-clean build, CTest passed 17/17, all 330
+  rooms exported, and captures confirmed Samus standing and running on native
+  geometry in Brinstar rooms 1 and 33.

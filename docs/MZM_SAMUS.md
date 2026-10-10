@@ -136,10 +136,14 @@ then accelerate by one subpixel per frame from 2 pixels (super missiles from
 ammunition at launch; spending the last one disarms them. While missiles are
 armed the runtime draws the `/armed` arm cannon sequences.
 
-Known gaps, kept explicit: block collision is resolved with the runtime's
-verified Clipdata boxes and a subpixel sweep, not the original point probes, so
-slope speed changes (`SamusChangeVelocityOnSlope`) and the partial-ceiling
-position nudges are absent. Speed Booster, Shinespark, bombs, charge and upgraded beams, the pistol,
+Collision uses every native Clipdata type of the room (exported by
+`scripts/mzm_runtime_room.py` from `sClipdataCollisionTypes` and its tilemap
+twin) with the `ClipdataConvertToCollision` rules per actor: solid blocks,
+doors, all six floor slopes at subpixel precision, enemy-only, stop-enemy and
+tank blocks. Known gaps, kept explicit: Samus's box is swept against those
+types instead of the original point probes, so slope speed changes
+(`SamusChangeVelocityOnSlope`) and the partial-ceiling position nudges are
+absent, and pass-through platforms (unused in the original rooms) are air. Speed Booster, Shinespark, bombs, charge and upgraded beams, the pistol,
 projectile hits on sprites and blocks, particles and missile trails, aiming
 while hanging, crawling and Morph Ball tunnel pulls are not implemented. Lethal damage enters the dying pose without the original
 screen-centre drift and fade. F6 remains a separate raw-catalogue browser for

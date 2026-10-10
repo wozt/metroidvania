@@ -186,6 +186,7 @@ static bool box_near_slope(const MzmCollision *c, MzmHitboxType type,
 
 /* ClipdataProcessForSamus solid test at one subpixel position. */
 static bool point_solid(const MzmCollision *c, int32_t x, int32_t y) {
+    if (c->solid_point) return c->solid_point(c->context, x, y, 0);
     return c->blocked(c->context, (float)(x >> 2), (float)(y >> 2), 1.f, 1.f);
 }
 

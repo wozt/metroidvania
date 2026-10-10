@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Early C11/SDL3 runtime experiment, NOT faithful MZM player physics. */
+/* Experimental C11/SDL3 Zero Mission room runtime. Samus, weapons and
+ * collision types follow the pinned decompilation; rooms, entities and the
+ * room lifecycle are still incomplete. */
 #include <SDL3/SDL.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -11,10 +13,31 @@
 
 #define MAX_MARKS 32768
 #define MAX_FILE_BYTES 4000000L
+#define MAX_ROOM_CELLS 6144
 
-typedef struct { int x, y, w, h, code; } Collision;
+/* ClipdataType order of the pinned decompilation. */
+typedef enum {
+    CLIP_AIR, CLIP_SOLID, CLIP_LEFT_STEEP, CLIP_RIGHT_STEEP,
+    CLIP_LEFT_UPPER_SLIGHT, CLIP_LEFT_LOWER_SLIGHT, CLIP_RIGHT_LOWER_SLIGHT,
+    CLIP_RIGHT_UPPER_SLIGHT, CLIP_ENEMY_ONLY, CLIP_STOP_ENEMY, CLIP_TANK,
+    CLIP_DOOR, CLIP_PASS_THROUGH_BOTTOM, CLIP_TYPE_COUNT
+} ClipType;
+/* ClipdataActor */
+typedef enum { ACTOR_SAMUS, ACTOR_NON_SPRITE, ACTOR_SPRITE } ClipActor;
+
+/* One native collision type per 16-pixel block. */
 typedef struct { int width, height, resolution, room; char world[16], area[40];
-    Collision collisions[MAX_MARKS]; size_t count; } Room;
+    unsigned char types[MAX_ROOM_CELLS]; size_t count; } Room;
+
+static void room_set_cell(Room *room, int x, int y, ClipType type) {
+    int columns = room->width / 16;
+    if (room->types[y * columns + x] == CLIP_AIR && type != CLIP_AIR) room->count++;
+    room->types[y * columns + x] = (unsigned char)type;
+}
+
+static ClipType room_cell(const Room *room, int x, int y) {
+    return (ClipType)room->types[y * (room->width / 16) + x];
+}
 
 static bool parse_room(const char *path, Room *room) {
     FILE *f = fopen(path, "rb");
@@ -46,10 +69,8 @@ static bool parse_room(const char *path, Room *room) {
             (kind == 'C' && (code < 1 || code > 7 || w != 16 || h != 16 ||
                  x % 16 || y % 16)) ||
             (kind != 'C' && code != 0)) goto failure;
-        if (kind == 'C') {
-            if (room->count >= MAX_MARKS) goto failure;
-            room->collisions[room->count++] = (Collision){x,y,w,h,code};
-        }
+        /* Project geometry: only code 1 is solid; no Clipdata guesses. */
+        if (kind == 'C' && code == 1) room_set_cell(room, x / 16, y / 16, CLIP_SOLID);
     }
     if (!ended || fgetc(f) != EOF) goto failure;
     fclose(f); return true;
@@ -57,45 +78,68 @@ failure:
     fclose(f); fprintf(stderr, "Invalid room preview: %s\n", path); return false;
 }
 
-/* PATCH_0141_STEEP_SLOPE_COLLISION
- * The pinned MZM clipdata converter marks the lower triangle solid:
- * 17 RIGHT_STEEP: local_y >= 15 - local_x;
- * 18 LEFT_STEEP:  local_y >= local_x.
- * Sample pixel centres at integer precision in the intersected 16px cell.
- * Exact GBA subpixel physics and Samus hitbox remain future work.
- */
-static bool steep_slope_overlap(const Collision *c, float x, float y,
-                                float w, float h) {
-    float left = x > (float)c->x ? x : (float)c->x;
-    float top = y > (float)c->y ? y : (float)c->y;
-    float right = x+w < (float)(c->x+c->w) ? x+w : (float)(c->x+c->w);
-    float bottom = y+h < (float)(c->y+c->h) ? y+h : (float)(c->y+c->h);
-    if (left >= right || top >= bottom) return false;
-    for (int ty = 0; ty < 16; ++ty) {
-        float sy = (float)c->y + (float)ty + 0.5f;
-        if (sy < top || sy >= bottom) continue;
-        for (int tx = 0; tx < 16; ++tx) {
-            float sx = (float)c->x + (float)tx + 0.5f;
-            if (sx < left || sx >= right) continue;
-            if (c->code == 17 ? ty >= 15-tx : ty >= tx) return true;
+/* ClipdataConvertToCollision: solidity of one subpixel (0..63 on each axis)
+ * inside a block for the given actor. Slopes keep their lower part solid. */
+static bool clip_solid(ClipType type, int sub_x, int sub_y, ClipActor actor) {
+    switch (type) {
+        case CLIP_SOLID:
+        case CLIP_DOOR: return true;
+        case CLIP_LEFT_STEEP: return sub_y >= sub_x;
+        case CLIP_RIGHT_STEEP: return sub_y >= 63 - sub_x;
+        case CLIP_LEFT_UPPER_SLIGHT: return sub_y >= sub_x >> 1;
+        case CLIP_LEFT_LOWER_SLIGHT: return sub_y >= (sub_x + 63) >> 1;
+        case CLIP_RIGHT_LOWER_SLIGHT: return sub_y >= 63 - (sub_x >> 1);
+        case CLIP_RIGHT_UPPER_SLIGHT: return sub_y >= (63 - sub_x) >> 1;
+        case CLIP_ENEMY_ONLY: return actor <= ACTOR_NON_SPRITE;
+        case CLIP_STOP_ENEMY: return actor >= ACTOR_SPRITE;
+        case CLIP_TANK: return actor != ACTOR_SAMUS;
+        case CLIP_AIR:
+        case CLIP_PASS_THROUGH_BOTTOM:
+        case CLIP_TYPE_COUNT: break;
+    }
+    return false;
+}
+
+static bool clip_is_floor_slope(ClipType type) {
+    return type >= CLIP_LEFT_STEEP && type <= CLIP_RIGHT_UPPER_SLIGHT;
+}
+
+/* Box overlap against the native type grid for Samus. Partially solid
+ * blocks are sampled at each covered pixel's central subpixel. */
+static bool blocked(const Room *r, float x, float y, float w, float h) {
+    if (x < 0 || y < 0 || x + w > r->width || y + h > r->height) return true;
+    int first_x = (int)x / 16, last_x = (int)(x + w - 0.001f) / 16;
+    int first_y = (int)y / 16, last_y = (int)(y + h - 0.001f) / 16;
+    for (int cy = first_y; cy <= last_y; ++cy) {
+        for (int cx = first_x; cx <= last_x; ++cx) {
+            ClipType type = room_cell(r, cx, cy);
+            if (type == CLIP_AIR) continue;
+            if (!clip_is_floor_slope(type)) {
+                if (clip_solid(type, 0, 0, ACTOR_SAMUS)) return true;
+                continue;
+            }
+            for (int py = 0; py < 16; ++py) {
+                float sy = (float)(cy * 16 + py) + .5f;
+                if (sy < y || sy >= y + h) continue;
+                for (int px = 0; px < 16; ++px) {
+                    float sx = (float)(cx * 16 + px) + .5f;
+                    if (sx < x || sx >= x + w) continue;
+                    if (clip_solid(type, px * 4 + 2, py * 4 + 2, ACTOR_SAMUS)) return true;
+                }
+            }
         }
     }
     return false;
 }
 
-static bool blocked(const Room *r, float x, float y, float w, float h) {
-    if (x < 0 || y < 0 || x + w > r->width || y + h > r->height) return true;
-    for (size_t i=0; i<r->count; ++i) {
-        const Collision *c=&r->collisions[i];
-        /* Only code=1 is treated as a solid rectangle. No native Clipdata guesses. */
-        if (c->code == 1 && x < c->x+c->w && x+w > c->x &&
-            y < c->y+c->h && y+h > c->y) return true;
-        if ((c->code == 17 || c->code == 18) &&
-            steep_slope_overlap(c, x, y, w, h)) return true;
-    }
-    return false;
+/* ClipdataProcessForSamus (Samus probes) and ClipdataProcess (projectiles):
+ * one subpixel point. Out of the room, Samus sees solid columns and air rows;
+ * other actors see air. */
+static bool solid_point(const Room *r, int x, int y, ClipActor actor) {
+    if (x < 0 || x >= r->width * 4) return actor == ACTOR_SAMUS;
+    if (y < 0 || y >= r->height * 4) return false;
+    return clip_solid(room_cell(r, x / 64, y / 64), x % 64, y % 64, actor);
 }
-
 
 /* PATCH_0138_NATIVE_CLIPDATA: opt-in original MZM source sidecar.
  * Native type 16 (CLIPDATA_SOLID) is a full solid tile according to the
@@ -133,10 +177,9 @@ static bool parse_native_source(const char *path, Room *room,
             added >= MAX_MARKS) goto failure;
         ++added;
         if (kind == 'N' && (code == 16 || code == 17 || code == 18)) {
-            if (room->count >= MAX_MARKS) goto failure;
-            /* Preserve the native slope ID; 16 stays a full-solid rectangle. */
-            room->collisions[room->count++] =
-                (Collision){x,y,w,h,code == 16 ? 1 : code};
+            /* Legacy sidecar: only the verified solid and steep IDs. */
+            room_set_cell(room, x / 16, y / 16, code == 16 ? CLIP_SOLID :
+                          code == 17 ? CLIP_RIGHT_STEEP : CLIP_LEFT_STEEP);
             if (code == 16) ++solid;
         }
     }
@@ -148,6 +191,44 @@ static bool parse_native_source(const char *path, Room *room,
 failure:
     fclose(f);
     fprintf(stderr,"Invalid or mismatched native source overlay: %s\n",path);
+    return false;
+}
+
+/* MVROOM-NATIVE room exported by scripts/mzm_runtime_room.py: one line per
+ * nonzero Clipdata cell with its raw value and resolved native type. */
+static bool parse_native_room(const char *path, Room *room) {
+    FILE *f = fopen(path, "rb");
+    if (!f) { perror(path); return false; }
+    char line[256], extra;
+    int version;
+    bool ended = false;
+    if (fseek(f, 0, SEEK_END) || ftell(f) < 0 || ftell(f) > MAX_FILE_BYTES ||
+        fseek(f, 0, SEEK_SET)) goto failure;
+    if (!fgets(line, sizeof line, f) ||
+        sscanf(line, "MVROOM-NATIVE\t%d\t%15[^\t]\t%39[^\t]\t%d\t%d\t%d %c",
+               &version, room->world, room->area, &room->room, &room->width,
+               &room->height, &extra) != 6 || version != 1 ||
+        strcmp(room->world, "mzm") || room->room < 0 || room->room > 999 ||
+        room->width < 16 || room->height < 16 || room->width % 16 ||
+        room->height % 16 || room->width / 16 * (room->height / 16) > MAX_ROOM_CELLS)
+        goto failure;
+    room->resolution = 16;
+    while (fgets(line, sizeof line, f)) {
+        int x, y, raw, type;
+        if (!strchr(line, '\n') && !feof(f)) goto failure;
+        if (!strcmp(line, "END\n") || !strcmp(line, "END")) { ended = true; break; }
+        if (sscanf(line, "C\t%d\t%d\t%d\t%d %c", &x, &y, &raw, &type, &extra) != 4 ||
+            x < 0 || y < 0 || x >= room->width / 16 || y >= room->height / 16 ||
+            raw < 1 || raw > 65535 || type < 0 || type >= CLIP_TYPE_COUNT)
+            goto failure;
+        room_set_cell(room, x, y, (ClipType)type);
+    }
+    if (!ended || fgetc(f) != EOF) goto failure;
+    fclose(f);
+    return true;
+failure:
+    fclose(f);
+    fprintf(stderr, "Invalid native runtime room: %s\n", path);
     return false;
 }
 
@@ -199,17 +280,17 @@ static float clampf(float x, float low, float high) {
     return x < low ? low : x > high ? high : x;
 }
 
-/* Grounded movement may step at most two pixels while a native steep
- * slope (Clipdata 17/18) is beneath or beside the hitbox. */
+/* Grounded movement may step at most two pixels while a native floor
+ * slope is beneath or beside the hitbox. */
 static bool near_steep_slope(const Room *room, float x, float y,
                              float w, float h) {
-    for (size_t i = 0; i < room->count; ++i) {
-        const Collision *c = &room->collisions[i];
-        if (c->code != 17 && c->code != 18) continue;
-        if (x < (float)(c->x+c->w) && x+w > (float)c->x &&
-            y+h >= (float)c->y - 2.f &&
-            y+h <= (float)(c->y+c->h) + 2.f) return true;
-    }
+    int columns = room->width / 16, rows = room->height / 16;
+    int first_x = (int)(x < 0 ? 0 : x) / 16, last_x = (int)(x + w - 0.001f) / 16;
+    int first_y = (int)(y + h - 2.f < 0 ? 0 : y + h - 2.f) / 16;
+    int last_y = (int)(y + h + 2.f) / 16;
+    for (int cy = first_y; cy <= last_y && cy < rows; ++cy)
+        for (int cx = first_x; cx <= last_x && cx < columns; ++cx)
+            if (clip_is_floor_slope(room_cell(room, cx, cy))) return true;
     return false;
 }
 
@@ -279,6 +360,10 @@ static bool runtime_collision_blocked(void *context,float x,float y,
 static bool runtime_collision_slope(void *context,float x,float y,
                                     float w,float h) {
     return near_steep_slope((const Room *)context,x,y,w,h);
+}
+static bool runtime_collision_point(void *context,int32_t x,int32_t y,int actor) {
+    return solid_point((const Room *)context,x,y,
+                       actor==0?ACTOR_SAMUS:ACTOR_NON_SPRITE);
 }
 
 /* Semantic registry action shown by each native pose. Every spin pose maps
@@ -823,16 +908,27 @@ int main(int argc, char **argv) {
         runtime_library_free(&checked);
         return 0;
     }
-    /* PATCH_0181_ROOM_AND_ASSETS: room shorthand keeps native collision mandatory. */
+    /* --room <area>_<NNN>: a native room exported by scripts/mzm_runtime_room.py. */
     char bundle_index[4096],bundle_map[4096],bundle_cannon[4096];
+    char native_room[4096],native_background[4096];
+    bool native_format=false;
     if (room_alias) {
-        if (strcmp(room_alias,"brinstar_033") || room_path || background || native_source) {
-            fprintf(stderr,"Unknown room alias or conflicting room paths: %s\n",room_alias);
+        size_t length=strlen(room_alias);
+        bool valid=length>4 && length<48 && room_alias[length-4]=='_';
+        for (size_t i=0;valid && i<length;i++)
+            valid=(room_alias[i]>='a' && room_alias[i]<='z') || room_alias[i]=='_' ||
+                  (i>=length-3 && room_alias[i]>='0' && room_alias[i]<='9');
+        if (!valid || room_path || background || native_source) {
+            fprintf(stderr,"Invalid room alias or conflicting room paths: %s\n",room_alias);
             return 2;
         }
-        room_path="assets/extracted/native_demo_0125/assets/extracted/exports/mzm/brinstar_033_b10ffe9d3dfbc2a12bb545fe1a6cd0a70f3060fd3a1d11d537148a954a3890ad/preview.tsv";
-        background="assets/extracted/rooms/metroid/previews/brinstar_033_bg12_composite.bmp";
-        native_source="assets/extracted/native_source_overlays/mzm/brinstar_033.tsv";
+        snprintf(native_room,sizeof native_room,
+                 "assets/extracted/metroid/rooms/runtime/%s/room.tsv",room_alias);
+        snprintf(native_background,sizeof native_background,
+                 "assets/extracted/metroid/rooms/runtime/%s/background.bmp",room_alias);
+        room_path=native_room;
+        background=native_background;
+        native_format=true;
     }
     if (samus_assets && library_index) {
         fprintf(stderr,"Use either --samus-assets or --samus-library\n");
@@ -881,11 +977,28 @@ int main(int argc, char **argv) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] preview.tsv\n",argv[0]);
         return 2;
     }
+    if (!native_format) {
+        /* Detect an exported native room passed by path. */
+        FILE *probe=fopen(room_path,"rb");
+        char header[16]={0};
+        if (probe) {
+            size_t read=fread(header,1,sizeof header-1,probe);
+            (void)read;
+            fclose(probe);
+        }
+        native_format=!strncmp(header,"MVROOM-NATIVE\t",14);
+    }
     Room *room=calloc(1,sizeof *room);
     if (!room) return 1;
-    if (!parse_room(room_path,room)) { free(room); return 2; }
-    printf("Runtime room %s/%s/%d %dx%d: %zu project collision entries\n",
-           room->world,room->area,room->room,room->width,room->height,room->count);
+    if (!(native_format ? parse_native_room(room_path,room) : parse_room(room_path,room))) {
+        if (native_format)
+            fprintf(stderr,"Export it first: python3 -m scripts.mzm_runtime_room "
+                    "--area <Area> --room <number>\n");
+        free(room); return 2;
+    }
+    printf("Runtime room %s/%s/%d %dx%d: %zu %s collision cells\n",
+           room->world,room->area,room->room,room->width,room->height,room->count,
+           native_format?"native Clipdata":"project");
     size_t native_records=0, native_solids=0;
     if (native_source && !parse_native_source(native_source,room,&native_records,&native_solids)) {
         free(room); return 2;
@@ -945,7 +1058,8 @@ int main(int argc, char **argv) {
         printf("Projectile library: %d native sequences\n",projectile_library.count);
     }
     gamepad=runtime_pad_open();
-    MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope};
+    MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope,
+                            runtime_collision_point};
     MzmEquipment equipment={0};
     unsigned int suit_preset=0,spin_items=0;
     uint32_t toggled_items=0;

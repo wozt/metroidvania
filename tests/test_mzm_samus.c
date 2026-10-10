@@ -54,7 +54,7 @@ typedef struct {
 
 static void world_init(World *w) {
     memset(w, 0, sizeof *w);
-    w->collision = (MzmCollision){&w->grid, grid_blocked, NULL};
+    w->collision = (MzmCollision){.context = &w->grid, .blocked = grid_blocked};
     w->animation = (MzmAnimationSource){NULL, test_durations};
     w->equipment = (MzmEquipment){.suit = MZM_SUIT_NORMAL,
         .items = MZM_ITEM_MORPH_BALL | MZM_ITEM_POWER_GRIP,

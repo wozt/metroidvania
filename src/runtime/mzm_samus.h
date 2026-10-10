@@ -144,6 +144,10 @@ typedef struct {
     bool (*blocked)(void *context, float x, float y, float w, float h);
     /* Optional: true when grounded movement may follow a slope here. */
     bool (*slope_near)(void *context, float x, float y, float w, float h);
+    /* Optional native point query (ClipdataProcessForSamus/ClipdataProcess)
+     * in subpixels; actor 0 is Samus, 1 a projectile. Falls back to a
+     * one-pixel box through ``blocked``. */
+    bool (*solid_point)(void *context, int32_t x, int32_t y, int actor);
 } MzmCollision;
 
 struct MzmSamus;

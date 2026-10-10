@@ -45,9 +45,14 @@ def parse_sized_symbols(output):
         match = NM_RE.fullmatch(line.strip())
         if match:
             addr, size, name = match.groups()
+            # The ELF also contains repeated local compiler symbols such as
+            # _fpadd_parts. Only our native animation/graphics assets matter.
+            if not name.startswith(("sSamusAnim_", "sArmCannonAnim_",
+                                    "sArmCannonGfx_")):
+                continue
             item = (int(addr, 16), int(size, 16))
             if name in found and found[name] != item:
-                raise ValueError("conflicting symbol " + name)
+                raise ValueError("conflicting Samus symbol " + name)
             found[name] = item
     return found
 

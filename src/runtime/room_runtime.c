@@ -421,8 +421,9 @@ static float move_axis(const Room *room, float start, float other,
  * C = crouch preview, F = fire while crouched, E = aim diagonally while running.
  */
 /* PATCH_0165_EXTENDED_COMPOSITIONS */
-#define COMPOSED_COUNT 8
+#define COMPOSED_COUNT 14
 #define COMPOSED_BASE_COUNT 3
+#define COMPOSED_EXTRA_COUNT 8
 #define COMPOSED_MAX_FRAMES 10
 typedef struct {
     SDL_Texture *textures[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
@@ -431,11 +432,13 @@ typedef struct {
     int heights[COMPOSED_COUNT][COMPOSED_MAX_FRAMES];
 } ComposedAnimations;
 
-static const int composed_counts[COMPOSED_COUNT] = {10, 5, 3, 10, 10, 3, 5, 3};
+static const int composed_counts[COMPOSED_COUNT] = {10, 5, 3, 10, 10, 3, 5, 3, 5, 5, 3, 3, 3, 10};
 static const char *composed_names[COMPOSED_COUNT] = {
     "run_diagonal_up_right", "midair_forward_right", "shoot_crouch_right",
     "run_diagonal_down_right", "run_diagonal_up_left", "shoot_standing_right",
-    "midair_diagonal_up_right", "shoot_crouch_diagonal_up_right"
+    "midair_diagonal_up_right", "shoot_crouch_diagonal_up_right",
+    "midair_forward_left", "midair_diagonal_up_left", "shoot_standing_left",
+    "shoot_crouch_left", "shoot_crouch_diagonal_up_left", "run_diagonal_down_left"
 };
 
 static void composed_free(ComposedAnimations *a) {
@@ -491,10 +494,18 @@ static bool composed_load(SDL_Renderer *renderer, const char *dir,
 
 static int composed_select(RuntimeMovementState state, int facing,
                            bool diagonal_up, bool diagonal_down,
-                           bool crouch, bool fire, bool extended) {
+                           bool crouch, bool fire, bool extended, bool left_set) {
     if (facing < 0) {
-        /* Only the left-facing diagonal-up running sequence is native. */
-        return extended && state == RUNTIME_RUNNING && diagonal_up ? 4 : -1;
+        if (crouch && fire && state == RUNTIME_IDLE && left_set)
+            return diagonal_up ? 12 : 11;
+        if (fire && state == RUNTIME_IDLE && !crouch && left_set) return 10;
+        if (state == RUNTIME_JUMPING || state == RUNTIME_FALLING)
+            return left_set ? (diagonal_up ? 9 : (!diagonal_down ? 8 : -1)) : -1;
+        if (state == RUNTIME_RUNNING) {
+            if (diagonal_down && left_set) return 13;
+            if (diagonal_up && extended) return 4;
+        }
+        return -1;
     }
     if (crouch && fire && state == RUNTIME_IDLE)
         return extended && diagonal_up ? 7 : 2;
@@ -510,7 +521,7 @@ static int composed_select(RuntimeMovementState state, int facing,
 
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
-    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL; bool check=false;
+    const char *samus_dir=NULL, *composed_dir=NULL, *extended_dir=NULL, *left_dir=NULL; bool check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
@@ -518,12 +529,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--samus-sprites") && !samus_dir && i+1<argc) samus_dir=argv[++i];
         else if (!strcmp(argv[i],"--samus-composed") && !composed_dir && i+1<argc) composed_dir=argv[++i];
         else if (!strcmp(argv[i],"--samus-composed-extra") && !extended_dir && i+1<argc) extended_dir=argv[++i];
+        else if (!strcmp(argv[i],"--samus-composed-left") && !left_dir && i+1<argc) left_dir=argv[++i];
         else if (argv[i][0]=='-' || room_path) {
             fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
-    if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir))) {
+    if (!room_path || (check && (background || samus_dir || composed_dir || extended_dir || left_dir))) {
         fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-sprites directory] preview.tsv\n",argv[0]);
         return 2;
     }
@@ -580,6 +592,11 @@ int main(int argc, char **argv) {
     if (extended_dir && !composed_load(renderer,extended_dir,&composed_frames,
                                        COMPOSED_BASE_COUNT,COMPOSED_COUNT)) {
         fprintf(stderr,"Extended composed Samus sprite loading failed.\n");
+        goto cleanup;
+    }
+    if (left_dir && !composed_load(renderer,left_dir,&composed_frames,
+                                   COMPOSED_EXTRA_COUNT,COMPOSED_COUNT)) {
+        fprintf(stderr,"Left-facing composed Samus sprite loading failed.\n");
         goto cleanup;
     }
     float px=16,py=16, pw=12,ph=16;
@@ -673,11 +690,14 @@ int main(int argc, char **argv) {
             SDL_FRect dst={viewport.x,viewport.y,src.w*scale,src.h*scale};
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
-        int selected=(composed_dir || extended_dir) ? composed_select(
+        int selected=(composed_dir || extended_dir || left_dir) ? composed_select(
             movement_state,facing,keys[SDL_SCANCODE_E],keys[SDL_SCANCODE_Q],
-            keys[SDL_SCANCODE_C],keys[SDL_SCANCODE_F],extended_dir != NULL) : -1;
+            keys[SDL_SCANCODE_C],keys[SDL_SCANCODE_F],
+            extended_dir != NULL,left_dir != NULL) : -1;
         if (selected >= 0 && ((selected < COMPOSED_BASE_COUNT && !composed_dir) ||
-                              (selected >= COMPOSED_BASE_COUNT && !extended_dir)))
+                              (selected >= COMPOSED_BASE_COUNT &&
+                               selected < COMPOSED_EXTRA_COUNT && !extended_dir) ||
+                              (selected >= COMPOSED_EXTRA_COUNT && !left_dir)))
             selected = -1;
         if (selected>=0) {
             Uint64 elapsed_ms=SDL_GetTicks()-animation_start;

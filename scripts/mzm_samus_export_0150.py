@@ -86,8 +86,52 @@ def body_image(rom, frame_pointer, palette):
     }
 
 
+
+PALETTE_SYMBOLS = {
+    "PowerSuit": "sSamusPal_PowerSuit_Default",
+    "VariaSuit": "sSamusPal_VariaSuit_Default",
+    "FullSuit": "sSamusPal_FullSuit_Default",
+    "GravitySuit": "sSamusPal_GravitySuit_Default",
+    "Suitless": "sSamusPal_Suitless_Default",
+}
+# Verified against the SHA-1 matching USA MZM rebuild. Fail closed if
+# the ELF symbol layout differs; do not infer palettes from nearby data.
+PALETTE_EXPECTED_ADDRESSES = {
+    "PowerSuit": 0x082376A8,
+    "VariaSuit": 0x08237BE8,
+    "FullSuit": 0x08237FA8,
+    "GravitySuit": 0x082383C8,
+    "Suitless": 0x082387E8,
+}
+PALETTE_NM = re.compile(r"^([0-9a-fA-F]{8})\s+[A-Za-z]\s+(sSamusPal_[A-Za-z0-9_]+)$")
+
+
+def resolve_suit_palettes(nm_output, rom):
+    found = {}
+    for line in nm_output.splitlines():
+        match = PALETTE_NM.fullmatch(line.strip())
+        if match is None:
+            continue
+        address, symbol = match.groups()
+        if symbol in PALETTE_SYMBOLS.values():
+            address = int(address, 16)
+            if symbol in found and found[symbol] != address:
+                raise ValueError("conflicting palette symbol: " + symbol)
+            found[symbol] = address
+    offsets = {}
+    for suit, symbol in PALETTE_SYMBOLS.items():
+        address = found.get(symbol)
+        if address is None:
+            raise ValueError("missing palette symbol: " + symbol)
+        if address != PALETTE_EXPECTED_ADDRESSES[suit]:
+            raise ValueError("unexpected ROM location of " + symbol)
+        offset = rom_offset(address, rom)
+        load_palette_banks(rom, offset, 2, 0)
+        offsets[suit] = offset
+    return offsets
+
 def suit_group(name):
-    for label in ("PowerSuit", "FullSuit", "Suitless"):
+    for label in ("PowerSuit", "VariaSuit", "FullSuit", "GravitySuit", "Suitless"):
         if name.startswith("sSamusAnim_" + label + "_"):
             return label
     return None
@@ -191,12 +235,14 @@ def main(argv=None):
         sizes = parse_nm_sizes(nm.stdout)
         if not sizes:
             raise ValueError("ELF contains no sized Samus animation symbols")
-        palette_offsets = {"PowerSuit": DEFAULT_PALETTE_OFFSET}
+        palette_nm = subprocess.run(
+            ["arm-none-eabi-nm", "--defined-only", str(args.elf)],
+            capture_output=True, text=True, check=True)
+        palette_offsets = resolve_suit_palettes(palette_nm.stdout, rom)
         for suit, offset in (("FullSuit", args.fullsuit_palette_offset),
                              ("Suitless", args.suitless_palette_offset)):
-            if offset is not None:
-                load_palette_banks(rom, offset, 2, 0)
-                palette_offsets[suit] = offset
+            if offset is not None and offset != palette_offsets[suit]:
+                raise ValueError("explicit palette differs from verified ELF palette: " + suit)
         result = export(rom, addresses, sizes, output, args.limit, palette_offsets)
         output.mkdir(parents=True, exist_ok=True)
         dest = output / "manifest.json"
@@ -209,7 +255,7 @@ def main(argv=None):
                    for x in result["animations"].values())
     print(f"Animations indexed: {len(result['animations'])}; body exported: {exported}; "
           f"unresolved frame records: {len(result['unresolved'])}.")
-    print("Arm cannon and effects are NOT exported; other suits require explicit verified palette offsets.")
+    print("Suit palettes resolved from matching ELF; arm cannon and effects NOT exported.")
     print("Manifest:", dest)
 
 

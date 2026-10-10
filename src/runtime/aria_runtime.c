@@ -34,8 +34,9 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 2      /* enemy ids 0 (bat) and 1 (zombie) */
-static const char *const enemy_names[ENEMY_KINDS] = {"bat", "zombie"};
+#define ENEMY_KINDS 10     /* enemy ids 0 (bat), 1 (zombie) and 9 (blue crow) */
+static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
+                                                     [9] = "blue_crow"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -379,8 +380,8 @@ typedef struct {
 } AriaCombat;
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
- * spawn once per room visit; the wooden door, the bat and the zombie are
- * ported. */
+ * spawn once per room visit; the wooden door, the bat, the zombie and the
+ * blue crow are ported. */
 static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat) {
     int sound = 0;
@@ -482,7 +483,7 @@ static bool load_enemy_data(AriaObjects *objects) {
             anim < 0 || anim >= AOS_ENEMY_MAX_ANIMS || index < 0 || index >= AOS_ENEMY_MAX_FRAMES)
             continue;
         for (int id = 0; id < ENEMY_KINDS; ++id) {
-            if (strcmp(name, enemy_names[id])) continue;
+            if (!enemy_names[id] || strcmp(name, enemy_names[id])) continue;
             AosEnemyKind *kind = &objects->enemies[id].kind;
             kind->modes[anim][index] = (uint8_t)mode;
             kind->hurt[anim][index] = (AosBox){(int8_t)h[0], (int8_t)h[1], (uint8_t)h[2], (uint8_t)h[3]};
@@ -539,7 +540,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         if (sscanf(line, "Enemy/%15[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
             for (int id = 0; id < ENEMY_KINDS; ++id) {
-                if (strcmp(enemy_name, enemy_names[id])) continue;
+                if (!enemy_names[id] || strcmp(enemy_name, enemy_names[id])) continue;
                 __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
                 if (style < 0 || style >= AOS_ENEMY_MAX_ANIMS || frame != art->defs[style].count ||
                     frame >= MAX_FRAMES || ticks < 1 || ticks > 255 ||

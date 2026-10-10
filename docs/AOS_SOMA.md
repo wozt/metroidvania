@@ -553,6 +553,35 @@ deletion; the gore of `sub_0807B258` and `sub_080683BC` are not ported). The
 dust effects `sub_0807B1CC` / `sub_0807B33C` and state 2 (global
 `0x8E & 0x40`) are not ported.
 
+Blue crow (enemy 0x09, `EnemyBlueCrowCreate` / `EnemyBlueCrowUpdate`):
+tiles `0x081F4274`, palette `0x0820BF10` bank 0, frames `0x0824EC04`;
+animations 0 perch, 1 fly, 2 flap in place, 3 death. Unlike the bat and the
+zombie, its update has no activity window and runs the collision pass
+(`sub_080421AC`) without an on-screen test. `sub_080C9AF4` (state 1): step 0
+faces the player and perches; step 1 waits until he is within 60 pixels on
+both axes (`sub_0806BF78`, sound 0x8B), then step 3 faces him every frame:
+substep 0 stops and flaps for 33 frames; substep 2 waits until he is more
+than 72 pixels away horizontally and more than 16 vertically; substep 3 flies
+(animation 1) toward the point 42 pixels above him and 32 pixels behind him
+(to his left when he faces right, from his `+0x58` bit 0x40) at 1.625 per
+frame, and on arrival flaps in place again (substep 2). The homing
+`sub_080694B8` takes the whole-pixel distance to the target (rounded toward
+zero), the BIOS `ArcTan2` of it, and sets vx = cos * speed, vy = sin * speed
+with the product `sub_0803E86C` (24-bit operands, rounded toward zero to a
+multiple of 0x100); it reports arrival when the BIOS `Sqrt` of the squared
+distance, as 16.16, is at most the speed. The `gEwramData + 0xA094` offsets it
+adds to the entity are also added to the crow's targets, so they cancel out.
+`ArcTan2` is ported with the polynomial of mGBA's high-level BIOS, not
+checked against the BIOS itself. Step 2 (a glide built from the current
+velocity) is not entered by any code read and is not ported. Hit callback
+`sub_080CA030`: at 0 HP, state 2 (`sub_080C9D68`): sound 0x72, death
+animation 3, vy = 0.5 with no gravity, and the blink and deletion of
+`sub_0806BE74` over 64 frames. Its two feathers (`sub_080C9E2C` /
+`sub_080C9ED4`: crow sprites drifting at 0.25 with a 0.0117 pull back,
+blinking every frame for 49 + 25 frames), the `+0x5A` palette bits, the
+particles, `sub_080683BC`, the hit stun and state 3 (global `0x8E & 0x40`)
+are not ported.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
 (README). Next steps: more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss

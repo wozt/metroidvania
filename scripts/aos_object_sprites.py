@@ -64,6 +64,8 @@ ENEMIES = {
             "frames": 0x0824B2C4},     # EnemyBatCreate 0x080AD2A8
     "zombie": {"id": 0x01, "graphics": 0x081CBF8C, "palette": 0x0820A62C, "bank": 0,
                "frames": 0x082178B8},  # sub_0807B404 (EnemyZombieCreate 0x0807ABEC)
+    "blue_crow": {"id": 0x09, "graphics": 0x081F4274, "palette": 0x0820BF10, "bank": 0,
+                  "frames": 0x0824EC04},  # EnemyBlueCrowCreate 0x080C9A6C
 }
 SCREEN_MARGINS = 0x08118D08    # sub_0806D128: 7 (x, y) s16 margins
 WOODEN_DOOR = {

@@ -40,6 +40,79 @@ int32_t aos_sine(uint32_t angle) {
     return sign * (int32_t)sine_table[a >> 4];
 }
 
+/* ArcTan2 (BIOS call 0x0A). The polynomial is the BIOS one as reimplemented
+ * by mGBA's high-level BIOS; it is not checked against the BIOS itself. */
+static int32_t arctan(int32_t i) {
+    int32_t a = -((i * i) >> 14);
+    int32_t b = ((0xA9 * a) >> 14) + 0x390;
+    b = ((b * a) >> 14) + 0x91C;
+    b = ((b * a) >> 14) + 0xFB6;
+    b = ((b * a) >> 14) + 0x16AA;
+    b = ((b * a) >> 14) + 0x2081;
+    b = ((b * a) >> 14) + 0x3651;
+    b = ((b * a) >> 14) + 0xA2F9;
+    return (int16_t)((i * b) >> 16);
+}
+
+uint16_t aos_arctan2(int16_t x16, int16_t y16) {
+    int32_t x = x16, y = y16, r;
+    if (!y) return x >= 0 ? 0 : 0x8000;
+    if (!x) return y >= 0 ? 0x4000 : 0xC000;
+    if (y >= 0) {
+        if (x >= 0 && x >= y) r = arctan(y * 0x4000 / x);
+        else if (x < 0 && -x >= y) r = arctan(y * 0x4000 / x) + 0x8000;
+        else r = 0x4000 - arctan(x * 0x4000 / y);
+    } else {
+        if (x <= 0 && -x > -y) r = arctan(y * 0x4000 / x) + 0x8000;
+        else if (x > 0 && x >= -y) r = arctan(y * 0x4000 / x) + 0x10000;
+        else r = 0xC000 - arctan(x * 0x4000 / y);
+    }
+    return (uint16_t)r;
+}
+
+/* Sqrt (BIOS call 0x08): the integer square root, rounded down. */
+static uint32_t isqrt(uint32_t x) {
+    uint32_t r = 0;
+    for (uint32_t bit = 1u << 30; bit; bit >>= 2) {
+        if (x >= r + bit) {
+            x -= r + bit;
+            r = (r >> 1) + bit;
+        } else {
+            r >>= 1;
+        }
+    }
+    return r;
+}
+
+/* sub_0803E86C: a 16.16 product from the operands' top 24 bits, rounded
+ * toward zero to a multiple of 0x100. */
+static int32_t fixed_mul(int32_t a, int32_t b) {
+    if (!a || !b) return 0;
+    if (a == 0x10000) return b;
+    if (b == 0x10000) return a;
+    int32_t a8 = a < 0 ? -((-a) >> 8) : a >> 8;
+    int32_t b8 = b < 0 ? -((-b) >> 8) : b >> 8;
+    int32_t p = a8 * b8;
+    if (p < 0) p += 0xFF;
+    return (int32_t)((uint32_t)(p >> 8) << 8);
+}
+
+/* The whole-pixel distance from `from` to `to`, rounded toward zero. */
+static int32_t pixel_delta(int32_t to, int32_t from) {
+    return to >= from ? (to - from) >> 16 : -((from - to) >> 16);
+}
+
+/* sub_080694B8: velocity toward (tx, ty) at `speed`; true once the target
+ * is within `speed`. The gEwramData + 0xA094 offsets it adds to the entity
+ * are also added to the targets of the crow, so they cancel out. */
+static bool move_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
+    int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
+    uint16_t angle = aos_arctan2((int16_t)dx, (int16_t)dy);
+    e->vx = fixed_mul(aos_sine(angle + 0x4000u), speed);
+    e->vy = fixed_mul(aos_sine(angle), speed);
+    return (int32_t)(isqrt((uint32_t)(dx * dx + dy * dy)) << 16) <= speed;
+}
+
 static void play_loop(AosEnemy *enemy, const AosAnimSet *anims, unsigned id, bool loop) {
     aos_anim_start(&enemy->anim, anims, id, loop);
     enemy->anim.id = (uint8_t)id;
@@ -232,7 +305,7 @@ static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollis
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
-    if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE) return false;
+    if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW) return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
                         .param0 = param0, .param1 = param1};
@@ -244,6 +317,13 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     enemy->combat.type = AOS_TYPE_ENEMY;
     if (id == AOS_ENEMY_ZOMBIE) {
         zombie_create(enemy, soma, layer, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_BLUE_CROW) {
+        /* EnemyBlueCrowCreate: animation 0, state 1 (state 3 under the
+         * global 0x8E & 0x40 is not ported). */
+        play(enemy, anims, 0);
+        enemy->state = 1;
         return true;
     }
     /* EnemyBatCreate: hang from the ceiling above the record. */
@@ -336,6 +416,10 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 if (enemy->id == AOS_ENEMY_BAT) {
                     /* sub_080AD6E4: the bat dies. */
                     enemy->state = 3;
+                    enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_BLUE_CROW) {
+                    /* sub_080CA030: the crow dies. */
+                    enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                 } else {
                     /* sub_0807B0DC: death animation 3, 40 frames (sound 0x70;
@@ -534,6 +618,123 @@ static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision
     return report;
 }
 
+/* sub_0806BF78: the player within `range` of the entity on both axes. */
+static bool player_within(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
+    int32_t dx = e->x - soma->x, dy = e->y - soma->y;
+    return (uint32_t)(dx < 0 ? -dx : dx) <= range && (uint32_t)(dy < 0 ? -dy : dy) <= range;
+}
+
+static void integrate(AosEnemy *e) {
+    e->x += e->vx;
+    e->y += e->vy;
+    e->vx += e->ax;
+    e->vy += e->ay;
+}
+
+static void stop(AosEnemy *e) {
+    e->vx = e->vy = e->ax = e->ay = 0;
+}
+
+/* sub_080C9AF4: perch until the player comes within 60 pixels (sound
+ * 0x8B), then keep returning to a point 42 pixels above him and 32 pixels
+ * behind him whenever he is more than 72 pixels away horizontally and 16
+ * vertically. Step 2 (a glide from the current velocity) is not entered by
+ * any code read and is not ported. */
+static void crow_fly(AosEnemy *c, const AosSoma *soma, const AosAnimSet *anims) {
+    int32_t ty = soma->y - 0x2A0000;
+    switch (c->step) {
+    case 0:
+        c->phase = 0;
+        face_player(c, soma);
+        if (c->anim.id != 0) play(c, anims, 0);
+        c->step = 1;
+        c->substep = c->timer = 0;
+        /* fallthrough */
+    case 1:
+        if (player_within(c, soma, 0x3C0000)) {
+            c->step = 3;
+            c->substep = 0;
+        }
+        break;
+    case 3:
+        face_player(c, soma);
+        switch (c->substep) {
+        case 0:
+            c->phase = (uint8_t)(c->phase + 1);
+            if (c->anim.id != 2) play(c, anims, 2);
+            stop(c);
+            c->timer = 0x20;
+            c->substep = 1;
+            /* fallthrough */
+        case 1:
+            if (--c->timer == 0xFF) c->substep = 2;
+            break;
+        case 2: {
+            int32_t dx = c->x - soma->x, dy = c->y - soma->y;
+            if ((dx < 0 ? -dx : dx) > 0x480000 && (dy < 0 ? -dy : dy) > 0x100000) c->substep = 3;
+            break;
+        }
+        case 3: {
+            if (c->anim.id != 1) play(c, anims, 1);
+            /* The player's + 0x58 bit 0x40: behind him is to his right. */
+            int32_t tx = soma->x + (soma->facing_left ? 0x200000 : -0x200000);
+            if (move_toward(c, tx, ty, 0x1A000)) {
+                if (c->anim.id != 2) play(c, anims, 2);
+                stop(c);
+                c->substep = 2;
+            }
+            break;
+        }
+        default:
+            break;
+        }
+        break;
+    default:
+        break;
+    }
+    integrate(c);
+}
+
+/* sub_080C9D68: animation 3, a fall at 0.5 per frame and the blink of
+ * sub_0806BE74 over 64 frames, then the deletion. Sound 0x72, the two
+ * feathers of sub_080C9E2C / sub_080C9ED4, the palette bits of + 0x5A, the
+ * particles and sub_080683BC are not ported. */
+static void crow_die(AosEnemy *c, const AosEnemyKind *kind) {
+    if (c->step == 0) {
+        play_loop(c, kind->anims, 3, false);
+        stop(c);
+        c->vy = 0x8000;
+        c->timer = 0x40;
+        c->step = 1;
+        c->substep = 0;
+    }
+    c->y += c->vy;
+    c->hidden = c->timer <= 0x27 ? kind->blink[c->timer] & 1 : false;
+    if ((int8_t)--c->timer <= 0) {
+        c->removed = true;
+        return;
+    }
+    step_anim(c, kind->anims);
+}
+
+/* EnemyBlueCrowUpdate: no activity window and no on-screen test before the
+ * collision pass (sub_080421AC). The hit stun of sub_0806AD24 is not
+ * ported. */
+static AosHitReport crow_update(AosEnemy *c, AosSoma *soma, const AosEnemyKind *kind,
+                                const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+                                int soma_atk, int soma_def) {
+    AosHitReport report = {0};
+    if (c->state == 2) {
+        crow_die(c, kind);
+    } else {
+        crow_fly(c, soma, kind->anims);
+        step_anim(c, kind->anims);
+        report = collide(c, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    }
+    aos_combat_tick(&c->combat);
+    return report;
+}
+
 AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
@@ -545,6 +746,8 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->id == AOS_ENEMY_ZOMBIE)
         return zombie_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_BLUE_CROW)
+        return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     if (enemy->state == 3) {
         bat_die(enemy, kind);
         aos_combat_tick(&enemy->combat);

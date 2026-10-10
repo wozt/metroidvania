@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* ROM-free tests for the Aria of Sorrow enemy framework and the bat. */
+/* ROM-free tests for the Aria of Sorrow enemy framework, the bat, the zombie
+ * and the blue crow. */
 #include "aos_enemy.h"
 
 #include <assert.h>
@@ -107,6 +108,100 @@ static void zombie_tests(void) {
         ++frames;
     }
     assert(frames == 40);
+}
+
+static void crow_tests(void) {
+    /* ArcTan2 (BIOS 0x0A): quadrants and an exact atan(2). */
+    assert(aos_arctan2(1, 0) == 0 && aos_arctan2(0, 1) == 0x4000);
+    assert(aos_arctan2(-1, 0) == 0x8000 && aos_arctan2(0, -1) == 0xC000);
+    assert(aos_arctan2(1, 1) == 0x2000 && aos_arctan2(1, -1) == 0xE000);
+    assert(aos_arctan2(1, 2) == 0x2D1C);
+
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t flap[] = {4, 4}, death[] = {200};
+    const AosAnimDef defs[4] = {{2, flap}, {2, flap}, {2, flap}, {1, death}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-6, -6, 12, 12};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {6, 8, 0, 0, 0};
+
+    /* The crow perches (animation 0) until the player is within 60 pixels. */
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(159), NULL);
+    AosEnemy crow;
+    assert(aos_enemy_create(&crow, AOS_ENEMY_BLUE_CROW, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(crow.state == 1 && crow.anim.id == 0 && crow.mirrored);
+    aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(crow.step == 1);
+    soma.x = AOS_FIXED(160);
+    soma.y = AOS_FIXED(160);
+    aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(crow.step == 3 && crow.substep == 0);
+    /* It flaps in place (animation 2) for 33 frames. */
+    int frames = 0;
+    while (crow.substep < 2 && frames < 100) {
+        aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(frames == 33 && crow.anim.id == 2 && crow.x == AOS_FIXED(100));
+    /* Within 72 pixels horizontally, it stays. */
+    aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(crow.substep == 2);
+    /* Farther, it flies at 1.625 to 42 pixels above and 32 behind him. */
+    soma.x = AOS_FIXED(300);
+    aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(crow.substep == 3);
+    aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(crow.anim.id == 1 && crow.vx > 0x18000 && crow.vy > 0x2800 && crow.vy < 0x3000);
+    frames = 0;
+    while (crow.substep == 3 && frames < 300) {
+        aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    int ex = (crow.x >> 16) - (300 - 32), ey = (crow.y >> 16) - (160 - 42);
+    assert(crow.substep == 2 && crow.anim.id == 2 && crow.vx == 0 && crow.vy == 0);
+    assert(ex >= -2 && ex <= 2 && ey >= -2 && ey <= 2);
+    /* Facing left, the point is on his right. */
+    soma.facing_left = true;
+    soma.x = AOS_FIXED(100);
+    while (crow.substep != 3 && frames < 600) {
+        aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    while (crow.substep == 3 && frames < 900) {
+        aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    ex = (crow.x >> 16) - (100 + 32);
+    assert(ex >= -2 && ex <= 2);
+
+    /* A killing blow: state 2, a 64-frame fall at 0.5, then the deletion. */
+    soma.facing_left = false;
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.x = crow.x;
+    soma.y = crow.y + AOS_FIXED(30);
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosHitReport hit = aos_enemy_update(&crow, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
+                                        never_zero);
+    assert(hit.killed && crow.state == 2 && crow.step == 0);
+    int32_t y0 = crow.y;
+    int dying = 0;
+    while (!crow.removed && dying < 100) {
+        aos_enemy_update(&crow, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
+        ++dying;
+    }
+    assert(dying == 64 && crow.anim.id == 3 && crow.y == y0 + 64 * 0x8000);
 }
 
 int main(void) {
@@ -229,6 +324,7 @@ int main(void) {
     assert(aos_enemy_damage(1, 8, 0, 0, 1) == 1);
     assert(aos_player_damage(6, 10) == 2 && aos_player_damage(1, 50) == 1);
     zombie_tests();
+    crow_tests();
     puts("aos_enemy: ok");
     return 0;
 }

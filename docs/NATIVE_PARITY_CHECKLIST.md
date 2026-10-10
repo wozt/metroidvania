@@ -25,7 +25,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 5 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 6 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 7 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -266,12 +266,21 @@ Next action: Port the remaining native weapon classes and effects.
 
 [?] **`aos.enemies.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`aos.enemies.bat` — Bat enemy.** Bat states, combat and death are ported, but their still-unnamed native routines must be attached to this record.
+[~] **`aos.enemies.bat` — Bat enemy.** Bat hanging, swoop, combat and falling death are ported; its explosion particles and the global 0x8E & 0x40 state are not.
 
-Native evidence: not attached yet.  
+Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyBatCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyBatUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD364`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD44C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD5B8`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Next action: Identify the native bat routines and attach them as evidence.
+Next action: Port the bat explosion particles and its special state.
+
+[~] **`aos.enemies.blue_crow` — Blue crow enemy.** Perching, the homing flight behind the player and the falling death are ported; the feathers, sounds, hit stun and the unentered glide step are not.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080694B8`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9AF4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9D68`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA030`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie`.  
+Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself.  
+Next action: Port the crow feathers of sub_080C9E2C and the hit stun of sub_0806AD24.
 
 [~] **`aos.enemies.zombie` — Zombie and generic enemy death.** Zombie spawning, terrain walking and generic death are covered; the complete enemy framework is not.
 

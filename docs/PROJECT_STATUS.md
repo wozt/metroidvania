@@ -2101,3 +2101,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   23/23, the Python suite passed 383/383, the incremental dry run reported
   both tasks up to date, the generated checklist check passed and the
   proprietary-file guard passed.
+
+## Patch 0223 - native blue crows
+
+- Ported the blue crow (Aria enemy 0x09) into `src/runtime/aos_enemy.c`: it
+  perches until Soma comes within 60 pixels, flaps in place for 33 frames,
+  then whenever he is more than 72 pixels away horizontally and 16 vertically
+  flies at 1.625 per frame to 42 pixels above and 32 pixels behind him.
+  Unlike the bat and the zombie it has no activity window and its collision
+  pass needs no on-screen test. Its hit callback starts the native death: a
+  64-frame fall at 0.5 with the shared blink, then the deletion.
+- Added the homing helper `sub_080694B8` with the BIOS `ArcTan2` (exported as
+  `aos_arctan2`, following the mGBA high-level BIOS polynomial, which is not
+  checked against the BIOS itself), the BIOS integer `Sqrt` and the fixed
+  product `sub_0803E86C`.
+- `scripts/aos_object_sprites.py` exports the crow's sprites, palette and
+  frame boxes; `fusion_aria_runtime` registers enemies by native id and runs
+  the crows of area 0 rooms 12 and 24. A capture in room 0/12 shows the crow
+  perched on the stair post, then holding position behind Soma's head.
+- Not ported: the feathers, sounds, particles, palette bits, hit stun, the
+  unentered glide step and the global `0x8E & 0x40` state.
+- The parity annotations gain `aos.enemies.blue_crow`, and the bat record now
+  cites its native routines (`EnemyBatCreate`, `EnemyBatUpdate`,
+  `sub_080AD364`, `sub_080AD44C`, `sub_080AD5B8`).
+- ROM-free tests cover the ArcTan2 quadrants and an exact atan(2), perching,
+  the take-off, the 33-frame flap, the hold within 72 pixels, the flight to
+  both sides of the player and the death.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  23/23, the Python suite passed 383/383, the incremental dry run reported
+  both tasks up to date, the generated checklist check passed and the
+  proprietary-file guard passed.

@@ -7,7 +7,9 @@
  * (sub_0806BDEC) and the sine of sub_080009E4; the bat (enemy 0x00,
  * EnemyBatCreate / EnemyBatUpdate) and the zombie (enemy 0x01,
  * EnemyZombieCreate / EnemyZombieUpdate, with its spawner records, the
- * walker collision sub_08069A00 and the generic death sub_0806AEAC). Facing flag 0x40 of + 0x58 means
+ * walker collision sub_08069A00 and the generic death sub_0806AEAC) and the
+ * blue crow (enemy 0x09, EnemyBlueCrowCreate / EnemyBlueCrowUpdate, with the
+ * homing velocity of sub_080694B8). Facing flag 0x40 of + 0x58 means
  * mirrored: enemy sprites face left by default. Combat: the frame boxes of
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
  * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
@@ -47,7 +49,7 @@ typedef struct {
     int16_t margin_x, margin_y; /* 0x08118D08[4]: sub_0806D128 despawn margin */
 } AosEnemyKind;
 
-enum { AOS_ENEMY_BAT = 0x00, AOS_ENEMY_ZOMBIE = 0x01 };
+enum { AOS_ENEMY_BAT = 0x00, AOS_ENEMY_ZOMBIE = 0x01, AOS_ENEMY_BLUE_CROW = 0x09 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -92,6 +94,8 @@ uint32_t aos_random(void);
 void aos_random_seed(uint32_t seed);
 /* sub_080009E4: sine of a 16-bit angle (0x10000 per turn), 16.16. */
 int32_t aos_sine(uint32_t angle);
+/* ArcTan2 (BIOS call 0x0A): the angle of (x, y), 0x10000 per turn. */
+uint16_t aos_arctan2(int16_t x, int16_t y);
 /* Creates enemy `id` at a record position; false for unported enemies. */
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,

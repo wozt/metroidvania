@@ -806,6 +806,8 @@ int main(int argc, char **argv) {
     bool spin_jump=false;
     int special_kind=0; /* 0=spin; 1=space, 2=screw (visual preview only). */
     unsigned int armor_index=0;
+    bool animation_browser=false;
+    int browser_index=0;
     static const char *armor_names[] = {
         "Power Suit", "Varia Suit", "Gravity Suit", "Full Suit", "Suitless"
     };
@@ -826,6 +828,42 @@ int main(int argc, char **argv) {
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+            /* Diagnostic animation browser: gameplay state and collisions unchanged. */
+            if (library_index && library.count > 0) {
+                bool toggle=(event.type==SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                             event.key.key==SDLK_F6) ||
+                            (event.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
+                             event.gbutton.button==SDL_GAMEPAD_BUTTON_DPAD_UP);
+                bool forward=(event.type==SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                              event.key.key==SDLK_PAGEDOWN) ||
+                             (event.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
+                              event.gbutton.button==SDL_GAMEPAD_BUTTON_RIGHT_STICK);
+                bool backward=(event.type==SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                               event.key.key==SDLK_PAGEUP) ||
+                              (event.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
+                               event.gbutton.button==SDL_GAMEPAD_BUTTON_LEFT_STICK);
+                if(toggle) {
+                    animation_browser=!animation_browser;
+                    animation_start=SDL_GetTicks();
+                }
+                if(animation_browser && (forward || backward)) {
+                    browser_index=(browser_index+(forward?1:library.count-1))%library.count;
+                    animation_start=SDL_GetTicks();
+                }
+                if(toggle || (animation_browser && (forward || backward))) {
+                    if(animation_browser) {
+                        char title[256];
+                        snprintf(title,sizeof title,"Samus animation [%d/%d] %s",
+                                 browser_index+1,library.count,library.entries[browser_index].name);
+                        SDL_SetWindowTitle(window,title);
+                        fprintf(stderr,"Animation browser: %s (%d/%d)\n",
+                                library.entries[browser_index].name,browser_index+1,library.count);
+                    } else {
+                        SDL_SetWindowTitle(window,"Metroid Vania - runtime");
+                        fprintf(stderr,"Animation browser disabled\n");
+                    }
+                }
+            }
             if (event.type == SDL_EVENT_QUIT ||
                 (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) running=false;
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
@@ -899,7 +937,7 @@ int main(int argc, char **argv) {
                          "Metroid Vania [%s] [%s]",
                          armor_names[armor_index],
                          runtime_movement_state_name(movement_state));
-                SDL_SetWindowTitle(window, title);
+                if(!animation_browser) SDL_SetWindowTitle(window, title);
             }
             accumulator-=fixed_step;
         }
@@ -936,6 +974,8 @@ int main(int argc, char **argv) {
             keys[SDL_SCANCODE_Q] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_LEFT_SHOULDER),
             keys[SDL_SCANCODE_C] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_DPAD_DOWN),
             keys[SDL_SCANCODE_F] || runtime_pad_button(gamepad,SDL_GAMEPAD_BUTTON_EAST),special_kind);
+        if(animation_browser && library_index && library.count>0)
+            lib_entry=&library.entries[browser_index];
         int special_selected = -1;
         if (special_dir && spin_jump &&
             (movement_state == RUNTIME_JUMPING || movement_state == RUNTIME_FALLING))

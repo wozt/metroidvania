@@ -13,9 +13,9 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = "metroidvania-native-inventory-v3"
-RECORD_SCHEMA = "metroidvania-native-inventory-records-v3"
-GENERATOR_VERSION = 3
+SCHEMA = "metroidvania-native-inventory-v4"
+RECORD_SCHEMA = "metroidvania-native-inventory-records-v4"
+GENERATOR_VERSION = 4
 DEFAULT_OUTPUT = ROOT / "data/native_parity/inventory.json"
 RECORD_COLLECTIONS = ("routines", "declarations", "data_symbols", "types", "constants")
 MAX_SHARD_BYTES = 3_000_000
@@ -23,6 +23,13 @@ SOURCE_SUFFIXES = {".c", ".h", ".s", ".inc"}
 CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 INDIRECT_TABLE_CALL_RE = re.compile(
     r"\b([A-Za-z_]\w*)\s*\[[^\]\n]+\]\s*\(")
+MEMBER_WRITE_RE = re.compile(
+    r"(?:\.|->)\s*([A-Za-z_]\w*)\s*=\s*"
+    r"(?:\(\s*[A-Za-z_][\w\s\*]*\)\s*)?([A-Za-z_]\w*)\s*;")
+MEMBER_INIT_RE = re.compile(r"\.\s*([A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*)")
+FP_MEMBER_RE = re.compile(r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*\(")
+TYPEDEF_FP_RE = re.compile(
+    r"\btypedef\s+[^;{}]*\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*\([^;{}]*\)\s*;")
 ASM_BRANCH_RE = re.compile(r"^\s*(?:bl|blx|b)\s+([A-Za-z_.$]\w*)", re.MULTILINE)
 ASM_FUNCTION_RE = re.compile(
     r"^\s*(?:(?:thumb|arm)_func_start\s+([A-Za-z_.$]\w*)|"
@@ -357,7 +364,23 @@ def _type_members(kind: str, body: str) -> list[str]:
     return members
 
 
-def _discover_types(game: str, root: Path, path: Path) -> list[dict]:
+def _function_pointer_members(kind: str, body: str,
+                              fp_typedefs: frozenset[str]) -> list[str]:
+    if kind == "enum":
+        return []
+    members = set(FP_MEMBER_RE.findall(body))
+    for statement in body.split(";"):
+        if "(" in statement:
+            continue
+        identifiers = re.findall(r"\b([A-Za-z_]\w*)\b", statement.split(":", 1)[0])
+        candidates = [item for item in identifiers if item not in TYPE_WORDS]
+        if len(candidates) >= 2 and candidates[0] in fp_typedefs:
+            members.add(candidates[-1])
+    return sorted(members)
+
+
+def _discover_types(game: str, root: Path, path: Path,
+                    fp_typedefs: frozenset[str] = frozenset()) -> list[dict]:
     source = path.read_text(encoding="utf-8", errors="replace")
     masked = _mask_preprocessor(_mask_c(source))
     relative = path.relative_to(root)
@@ -378,6 +401,8 @@ def _discover_types(game: str, root: Path, path: Path) -> list[dict]:
             "line": masked.count("\n", 0, match.start()) + 1,
             "category": _category(game, relative),
             "members": _type_members(kind, masked[opening + 1:closing]),
+            "function_pointer_members": _function_pointer_members(
+                kind, masked[opening + 1:closing], fp_typedefs),
         })
     for match in ANONYMOUS_TYPEDEF_RE.finditer(masked):
         kind = match.group(1)
@@ -398,6 +423,8 @@ def _discover_types(game: str, root: Path, path: Path) -> list[dict]:
             "category": _category(game, relative),
             "anonymous": True,
             "members": _type_members(kind, masked[opening + 1:closing]),
+            "function_pointer_members": _function_pointer_members(
+                kind, masked[opening + 1:closing], fp_typedefs),
         })
     return records
 
@@ -471,6 +498,7 @@ def _discover_c_data(game: str, root: Path, path: Path) -> list[dict]:
                 "category": _category(game, relative),
                 "address": _source_address(symbol),
                 "_raw_references": sorted(set(re.findall(r"\b([A-Za-z_]\w*)\b", initializer))),
+                "_raw_member_inits": sorted(set(MEMBER_INIT_RE.findall(initializer))),
             })
     return records
 
@@ -532,6 +560,8 @@ def _discover_c(game: str, root: Path, path: Path) -> list[dict]:
                     current["_raw_calls"] = sorted(set(CALL_RE.findall(body)) - CONTROL_WORDS)
                     current["_raw_indirect_tables"] = sorted(
                         set(INDIRECT_TABLE_CALL_RE.findall(body)))
+                    current["_raw_member_writes"] = sorted(
+                        set(MEMBER_WRITE_RE.findall(body)))
                     routines.append(current)
                 current = None
                 body_start = None
@@ -600,15 +630,21 @@ def inventory_game(game: str, root: Path) -> dict:
     data_symbols = []
     types = []
     constants = []
+    fp_typedefs = frozenset(
+        match.group(1)
+        for path in paths
+        if path.suffix.lower() in {".c", ".h"}
+        for match in TYPEDEF_FP_RE.finditer(_mask_preprocessor(
+            _mask_c(path.read_text(encoding="utf-8", errors="replace")))))
     for path in paths:
         if path.suffix.lower() == ".c":
             routines.extend(_discover_c(game, root, path))
             data_symbols.extend(_discover_c_data(game, root, path))
-            types.extend(_discover_types(game, root, path))
+            types.extend(_discover_types(game, root, path, fp_typedefs))
             constants.extend(_discover_constants(game, root, path))
         elif path.suffix.lower() == ".h":
             declarations.extend(_discover_declarations(game, root, path))
-            types.extend(_discover_types(game, root, path))
+            types.extend(_discover_types(game, root, path, fp_typedefs))
             constants.extend(_discover_constants(game, root, path))
         elif path.suffix.lower() == ".s":
             routines.extend(_discover_asm(game, root, path))
@@ -664,21 +700,46 @@ def inventory_game(game: str, root: Path) -> dict:
     by_symbol: dict[str, list[dict]] = defaultdict(list)
     for routine in routines:
         by_symbol[routine["symbol"]].append(routine)
+
+    def resolve_unique(symbol: str, source: str) -> str | None:
+        candidates = by_symbol.get(symbol, [])
+        if len(candidates) == 1:
+            return candidates[0]["id"]
+        same_file = [item for item in candidates if item["source"] == source]
+        return same_file[0]["id"] if len(same_file) == 1 else None
+
+    fp_member_types: dict[str, list[str]] = defaultdict(list)
+    for record in types:
+        for member in record.get("function_pointer_members", []):
+            fp_member_types[member].append(record["id"])
+    fp_member_types = {member: sorted(ids) for member, ids in fp_member_types.items()}
+
+    member_callback_edges = 0
     data_by_symbol: dict[str, list[dict]] = defaultdict(list)
     for item in data_symbols:
         targets = set()
         for symbol in item.pop("_raw_references"):
-            candidates = by_symbol.get(symbol, [])
-            if len(candidates) == 1:
-                targets.add(candidates[0]["id"])
-            elif len(candidates) > 1:
-                same_file = [candidate for candidate in candidates
-                             if candidate["source"] == item["source"]]
-                if len(same_file) == 1:
-                    targets.add(same_file[0]["id"])
+            resolved = resolve_unique(symbol, item["source"])
+            if resolved is not None:
+                targets.add(resolved)
         item["pointer_targets"] = sorted(targets)
         if targets:
             item["pointer_table"] = True
+        member_callbacks = []
+        for member, symbol in item.pop("_raw_member_inits", []):
+            if member not in fp_member_types:
+                continue
+            resolved = resolve_unique(symbol, item["source"])
+            if resolved is None:
+                continue
+            member_callback_edges += 1
+            member_callbacks.append({
+                "member": member,
+                "target": resolved,
+                "types": fp_member_types[member],
+            })
+        if member_callbacks:
+            item["member_callbacks"] = member_callbacks
         data_by_symbol[item["symbol"]].append(item)
 
     indirect_edges = 0
@@ -715,6 +776,21 @@ def inventory_game(game: str, root: Path) -> dict:
         routine["calls"] = sorted(resolved)
         routine["ambiguous_calls"] = sorted(ambiguous)
         routine["indirect_calls"] = indirect_calls
+        member_callbacks = []
+        for member, symbol in routine.pop("_raw_member_writes", []):
+            if member not in fp_member_types:
+                continue
+            resolved = resolve_unique(symbol, routine["source"])
+            if resolved is None:
+                continue
+            member_callback_edges += 1
+            member_callbacks.append({
+                "member": member,
+                "target": resolved,
+                "types": fp_member_types[member],
+            })
+        if member_callbacks:
+            routine["member_callbacks"] = member_callbacks
     routines.sort(key=lambda item: item["id"])
 
     definition_ids = defaultdict(list)
@@ -743,8 +819,9 @@ def inventory_game(game: str, root: Path) -> dict:
             "types": "named struct, union and enum definitions with lexical members",
             "constants": "object-like preprocessor definitions",
             "calls": "direct lexical calls, assembly branches and proven table dispatch",
+            "member_callbacks": "lexically proven function-pointer member writes",
             "not_yet_indexed": [
-                "dynamic callbacks and function pointers stored in structure members",
+                "callbacks assigned through computed values or assembly stores",
                 "runtime-observed dependencies",
             ],
         },
@@ -768,6 +845,7 @@ def inventory_game(game: str, root: Path) -> dict:
                                        for item in routines),
             "resolved_call_edges": sum(len(item["calls"]) for item in routines),
             "resolved_indirect_call_edges": indirect_edges,
+            "resolved_member_callback_edges": member_callback_edges,
             "by_category": dict(sorted(counts.items())),
         },
         "routines": routines,

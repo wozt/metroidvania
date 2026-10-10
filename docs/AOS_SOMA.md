@@ -698,6 +698,36 @@ the camera (`gEwramData + 0xA094 + 6 / + 0xA`) and screen tests compare them
 directly. The port keeps room coordinates and subtracts the camera wherever
 the game compares an absolute screen position.
 
+Skeleton (enemy 0x02, research in progress, not ported). Tiles
+`0x081F424C`, palette `0x0820BE3C`, frames `0x0824C910`. The body entity
+reserves an affine matrix (`sub_0803E654`; slot in `+0x20` and the low five
+bits of `+0x58`) and every update rotates it by a wobble angle (`+0x1E` moves
+by -0x708 or +0x708 by its facing, `sub_0803E058`). Create builds two child
+parts through `sub_080C46AC` (which also sets `+0x58` bit 0x20 on the body):
+`sub_080C4148`, drawn with animation 0x10 (or 7 while body flag `+0x1A`
+bit 0x20 is set), and `sub_080C43C4`, the held bone (animation 8); both
+follow an attachment point of the body's current frame (`sub_0806C3F8`) plus
+per-animation offsets from `0x0852892C`, and track the body through its slot
+(`gEwramData + 0x4E4 + 0x84 * slot`). State 0 (`sub_080C35D0`) patrols at
+0.375 between `x - 32` and `x + 32` of its record (with 40 pixels of
+hysteresis) using the probe table `0x08528948` (mode 0xC), turning at walls
+or ledges (`sub_0806B120`), until the player enters a 512 x 128 box. State 1
+(`sub_080C36E8`) faces him and walks with a decaying random step, choosing,
+by its body flags `+0x1A` (bits 1, 2, 4, 8) and timers, state 2 (a 60-frame
+pause), 3 (picking up a bone: animation 5 or 6), or 4 (throwing:
+`sub_080C3BD8` at frame 2, a bone of collision type 0xA flying at
+0.54 with vy -3.0 and gravity 0x1800 from 30 pixels up, deleted below
+screen y 170). Death (`sub_080C4624`, sound 0x6B) hides the body and throws
+up to seven pieces described by `0x08528952` (6 bytes each: x and y
+offsets, sprite frame, vx, vy, timer) through the generic debris
+`sub_0806C5AC`, then deletes it 256 frames later.
+
+Open question before porting: `sub_0803AC40` skips drawing an entity whose
+`+0x58` bit 0x20 is set, `sub_080C46AC` sets it on the body, and part
+`sub_080C4148` copies the body's bit every frame, so the code read so far
+would leave both hidden; the routine that makes the skeleton visible (or a
+different meaning of the bit for this entity) has not been found yet.
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
 (README). Next steps: more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss

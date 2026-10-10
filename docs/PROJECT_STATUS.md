@@ -2428,3 +2428,15 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0235 - skeleton research notes
+
+- Recorded the traced structure of the Aria skeleton (enemy 0x02) in
+  `docs/AOS_SOMA.md`: the wobbling affine body, its two child parts attached
+  to frame attachment points, the patrol, approach, pickup and bone-throw
+  states, the thrown bone and the death pieces. Not ported yet: the code read
+  leaves the body and its first part hidden (`+0x58` bit 0x20, which
+  `sub_0803AC40` treats as hidden), so the routine that makes the skeleton
+  visible has to be found before an honest port.
+- Confirmed from `sub_0803AC40` that entity positions are screen-relative
+  (drawing is culled outside x -64..304 and y -32..224).

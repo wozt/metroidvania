@@ -247,7 +247,7 @@ python3 -m scripts.aos_weapons
 Soma uses the movement, collision, jump, crouch, landing, ability-move and
 animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks,
 souls and the game-over screen are not implemented; bats, zombies (with their
-spawners), blue crows and zombie soldiers (with their grenades) attack Soma (he flinches, is knocked back, or dies at 0 HP) and
+spawners), blue crows, zombie soldiers (with their grenades) and axe armors (with their returning axes) attack Soma (he flinches, is knocked back, or dies at 0 HP) and
 die to his weapon with native rules (other enemies are not ported
 yet; `--atk/--def/--hp` set diagnostic stats, the new-game stats are not
 traced); wooden doors open natively with

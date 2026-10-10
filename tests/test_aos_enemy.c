@@ -319,6 +319,142 @@ static void soldier_tests(void) {
     assert(z.removed && dying == 0x28);
 }
 
+static uint32_t always_one(void) { return 1; }
+
+static void armor_tests(void) {
+    /* Floor at cell row 20 (top 160) from cell 4 to 49, walls at cells 3
+     * and 50 (x 24..31 and 400..407). */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 4; x < 50; ++x) cells[20 * W + x] = 0x03;
+    for (int y = 0; y < 21; ++y) cells[y * W + 3] = cells[y * W + 50] = 0x03;
+    static uint8_t walk[18], once[15], axe_ticks[] = {4}, death[11];
+    for (int i = 0; i < 18; ++i) walk[i] = 4;
+    for (int i = 0; i < 15; ++i) once[i] = 3;
+    for (int i = 0; i < 11; ++i) death[i] = 5;
+    const AosAnimDef defs[5] = {{18, walk}, {15, once}, {15, once}, {1, axe_ticks}, {11, death}};
+    const AosAnimSet anims = {defs, 5};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 5; ++a)
+        for (int f = 0; f < 18; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-13, -48, 24, 48};
+        }
+    kind.probes = (AosProbes){2, -40, -1, 6, {-7, -24}};
+    kind.margins[4][0] = kind.margins[4][1] = 48;
+    const AosEnemyStats stats = {60, 15, 8, 0x0108, 0};
+
+    /* Snapped onto the floor plus one pixel; walking left, it turns at the
+     * wall (no patrol length). */
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(400), NULL);
+    soma.max_hp = soma.hp = 320;
+    AosEnemy a;
+    assert(aos_enemy_create(&a, AOS_ENEMY_AXE_ARMOR, 80, 150, 0, 0, &soma, &layer, &kind, &stats));
+    assert((a.y >> 16) == 160 && a.state == 0);
+    a.mirrored = false;
+    int frames = 0;
+    while (!a.mirrored && frames < 2000) {
+        aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    /* The wall probes run at the position before the move, so the last
+     * accepted step may end one pixel inside the probe distance. */
+    assert(a.mirrored && (a.x >> 16) >= 32 + 6 - 1 && (a.y >> 16) == 160);
+    /* With a patrol of 1 step it turns after two walk cycles instead. */
+    AosEnemy patrol;
+    assert(aos_enemy_create(&patrol, AOS_ENEMY_AXE_ARMOR, 200, 150, 1, 0, &soma, &layer, &kind,
+                            &stats));
+    bool facing = patrol.mirrored;
+    int turned_at = -1;
+    for (int i = 0; i < 400 && turned_at < 0; ++i) {
+        aos_enemy_update(&patrol, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        if (patrol.mirrored != facing) turned_at = i;
+    }
+    assert(turned_at > 0 && patrol.anim.frame == 0x11);
+
+    /* The player 60 pixels ahead at frame 17: a high or low throw. */
+    assert(aos_enemy_create(&a, AOS_ENEMY_AXE_ARMOR, 200, 150, 0, 0, &soma, &layer, &kind, &stats));
+    a.mirrored = true;
+    soma.x = a.x + AOS_FIXED(60);
+    soma.y = a.y;
+    frames = 0;
+    while (a.state == 0 && frames < 200) {
+        aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one);
+        ++frames;
+    }
+    assert(a.state == 1);
+    AosHitReport hit = {0};
+    while (!hit.spawn_child && frames < 400) {
+        hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one);
+        ++frames;
+    }
+    /* Thrown at frame 12, tick 2 (the last of these 3-tick test frames):
+     * the animation step that follows reaches frame 13. */
+    assert(a.anim.id == 1 && a.substep == 0 && a.anim.frame == 13 && a.anim.tick == 0);
+    AosEnemy axe = hit.child;
+    assert(axe.role == AOS_ROLE_AXE && axe.combat.type == 0x0A);
+    assert(axe.x == a.x + 0x180000 && axe.y == a.y - 0x100000);
+
+    /* Its first update starts the flight: 2.5 toward the throw, pulled
+     * back by 0x800 per frame, spinning 0x800 per frame. */
+    AosSoma away = soma;
+    away.x = AOS_FIXED(5000);
+    aos_enemy_update(&axe, &away, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(axe.state == 1 && axe.vx == 0x28000 && axe.ax == -0x800 && axe.spin == -0x800);
+    int32_t start = axe.x, farthest = axe.x;
+    /* From +2.5 to -2.5 at 0x800 per frame takes 160 frames. */
+    for (int i = 0; i < 200 && !axe.removed; ++i) {
+        aos_enemy_update(&axe, &away, &layer, &kind, NULL, NULL, 10, 4, (axe.x >> 16) - 120, 0,
+                         never_zero);
+        if (axe.x > farthest) farthest = axe.x;
+    }
+    assert(farthest > start + AOS_FIXED(60) && axe.x < farthest && axe.vx == -0x28000);
+
+    /* The axe hits Soma through its own type (0xA): an enemy-body hit does
+     * not shield him from it. */
+    AosEnemy second = hit.child;
+    aos_enemy_update(&second, &away, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    soma.x = second.x;
+    soma.y = second.y + AOS_FIXED(20);
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    aos_combat_take(&soma.combat, AOS_TYPE_ENEMY, 81);
+    hit = aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.soma_hit && hit.soma_damage == aos_player_damage(15, 4) && soma.pending_type == 0);
+
+    /* A weapon destroys it. */
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.facing_left = false;
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosEnemy struck = hit.child;
+    struck = second;
+    struck.combat.recent[0] = struck.combat.recent[1] = struck.combat.recent[2] = 0;
+    soma.x = struck.x;
+    soma.y = struck.y + AOS_FIXED(30);
+    hit = aos_enemy_update(&struck, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
+    assert(hit.enemy_hit && struck.removed);
+
+    /* A killing blow: the armor turns to the attacker, plays its death
+     * animation and is deleted when it ends. */
+    soma.x = a.x - AOS_FIXED(5);
+    soma.y = a.y + AOS_FIXED(20);
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    a.hp = 1;
+    a.mirrored = true;
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
+    assert(hit.killed && a.state == 2 && a.defeated && !a.mirrored);
+    int dying = 0;
+    while (!a.removed && dying < 200) {
+        aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
+        ++dying;
+    }
+    assert(a.removed && a.anim.id == 4 && dying >= 11 * 5);
+}
+
 int main(void) {
     /* sub_080009E4 */
     assert(aos_sine(0) == 0 && aos_sine(0x4000) == 0x10000 && aos_sine(0xC000) == -0x10000);
@@ -441,6 +577,7 @@ int main(void) {
     zombie_tests();
     crow_tests();
     soldier_tests();
+    armor_tests();
     puts("aos_enemy: ok");
     return 0;
 }

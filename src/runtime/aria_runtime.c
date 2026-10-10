@@ -36,9 +36,10 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 13     /* enemy ids 0 (bat), 1 (zombie), 9 (blue crow), 12 (zombie soldier) */
+#define ENEMY_KINDS 13     /* enemy ids 0, 1, 4, 9 and 12 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
-                                                     [9] = "blue_crow", [12] = "zombie_soldier"};
+                                                     [4] = "axe_armor", [9] = "blue_crow",
+                                                     [12] = "zombie_soldier"};
 #define ENEMY_STATIC_FRAMES 4  /* single sprite frames of child entities per kind */
 #define ARIA_KIND_ENEMY 1
 
@@ -484,6 +485,28 @@ static bool load_enemy_data(AriaObjects *objects) {
             for (int i = 0; i < 40 && text[i]; ++i) blink[i] = (uint8_t)(text[i] == '1');
             continue;
         }
+        if (!strncmp(line, "probes\t", 7)) {
+            /* The walker probe table: count, ceiling, floor, half width,
+             * then count wall offsets. */
+            char *cursor = line + 7;
+            char probe_name[16];
+            int used = 0;
+            if (sscanf(cursor, "%15s%n", probe_name, &used) != 1) continue;
+            cursor += used;
+            for (int id = 0; id < ENEMY_KINDS; ++id) {
+                if (!enemy_names[id] || strcmp(probe_name, enemy_names[id])) continue;
+                AosProbes *probes = &objects->enemies[id].kind.probes;
+                long count = strtol(cursor, &cursor, 10);
+                if (count < 1 || count > 8) break;
+                probes->count = (int16_t)count;
+                probes->ceiling = (int16_t)strtol(cursor, &cursor, 10);
+                probes->floor = (int16_t)strtol(cursor, &cursor, 10);
+                probes->half_width = (int16_t)strtol(cursor, &cursor, 10);
+                for (long i = 0; i < count; ++i)
+                    probes->wall_y[i] = (int16_t)strtol(cursor, &cursor, 10);
+            }
+            continue;
+        }
         if (!strncmp(line, "margins\t", 8)) {
             char *cursor = line + 8;
             for (int i = 0; i < 14; ++i) margins[i] = (int)strtol(cursor, &cursor, 10);
@@ -682,7 +705,16 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         if (e->enemy.vflip) rect.y = (float)(ey - frame->offset_y - cam_y) - frame->h;
         SDL_FlipMode mode = (SDL_FlipMode)((flip ? SDL_FLIP_HORIZONTAL : 0) |
                                            (e->enemy.vflip ? SDL_FLIP_VERTICAL : 0));
-        SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL, mode);
+        /* A spinning child (the axe): its affine angle, 0x10000 per turn.
+         * The on-screen direction of the GBA rotation is inferred, not
+         * traced (sub_0803E058 is not ported); rotation is about the
+         * entity position. */
+        double degrees = 0;
+        SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
+        if (e->enemy.role == AOS_ROLE_AXE)
+            degrees = -(double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
+        SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, degrees,
+                                 degrees != 0 ? &centre : NULL, mode);
     }
 }
 

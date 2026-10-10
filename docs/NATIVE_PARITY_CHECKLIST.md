@@ -25,7 +25,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 6 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 9 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 10 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -282,6 +282,15 @@ Next action: Port the remaining native weapon classes and effects.
 ### Enemies
 
 [?] **`aos.enemies.inventory-boundary` — source coverage.** The current classifier assigns 1518 discovered routine(s) to this category (228 by native name, 1290 by exclusive referrers). Category completeness has not been established.
+
+[~] **`aos.enemies.axe_armor` — Axe armor, its axe and the probe walker.** Walking with the native probe walker, patrols, high and low throws, the returning axe and the death are ported; explosions and effects are not.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806C828`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0D5C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0F1C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1030`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B11DC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1370`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B13BC`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie`.  
+Known divergences: The axe's on-screen rotation direction is inferred; sub_0803E058 is not traced.  
+Next action: Port the death explosions of sub_08045CEC and the one-way platform mode of sub_0806C828.
 
 [~] **`aos.enemies.bat` — Bat enemy.** Bat hanging, swoop, combat and falling death are ported; its explosion particles and the global 0x8E & 0x40 state are not.
 

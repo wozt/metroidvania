@@ -314,7 +314,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
-        id != AOS_ENEMY_ZOMBIE_SOLDIER)
+        id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -327,6 +327,17 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     enemy->combat.type = AOS_TYPE_ENEMY;
     if (id == AOS_ENEMY_ZOMBIE) {
         zombie_create(enemy, soma, layer, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_AXE_ARMOR) {
+        /* EnemyAxeArmorCreate: walk animation, floor snap, then one pixel
+         * down; state 0 (state 3 under the global 0x8E & 0x40 is not
+         * ported). */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        snap_to_floor(enemy, layer);
+        enemy->y += 0x10000;
+        enemy->state = 0;
         return true;
     }
     if (id == AOS_ENEMY_ZOMBIE_SOLDIER) {
@@ -407,12 +418,14 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
     if (enemy->combat.attack_off || enemy->attack_off) attack_on = false;
     if (enemy->combat.hurt_off) hurt_on = false;
     /* Enemy attack box against the player's hurt rectangle (sub_08041D54). */
-    if (attack_on && aos_combat_can_take(&soma->combat, AOS_TYPE_ENEMY)) {
+    if (attack_on && aos_combat_can_take(&soma->combat, enemy->combat.type)) {
         AosRect player = aos_player_rect(soma->hurtbox, soma->x >> 16, soma->y >> 16,
                                          soma->facing_left, false);
         if (aos_rect_hits_box(player, attack, ex, ey, enemy->mirrored, enemy->vflip)) {
-            aos_combat_take(&soma->combat, AOS_TYPE_ENEMY,
-                            aos_combat_cooldown(AOS_TYPE_ENEMY, 0));
+            /* The recent-hit slot uses the attacker's own type (+ 0x70):
+             * an axe (type 0xA) is tracked apart from enemy bodies. */
+            aos_combat_take(&soma->combat, enemy->combat.type,
+                            aos_combat_cooldown(enemy->combat.type, 0));
             report.soma_hit = true;
         }
     }
@@ -430,6 +443,13 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             /* sub_0802346C (weapon callback): the kick-hit flag. */
             soma->flags |= AOS_FLAG_KICK_HIT;
             report.enemy_hit = true;
+            if (enemy->role == AOS_ROLE_AXE) {
+                /* sub_080B13BC: a struck axe loses its single hit point. */
+                enemy->hp = 0;
+                goto contact;
+            }
+            /* sub_080B1370: the axe armor turns to face the player when hit. */
+            if (enemy->id == AOS_ENEMY_AXE_ARMOR) face_player(enemy, soma);
             if (enemy->role == AOS_ROLE_GRENADE) {
                 /* sub_080930E0: a struck grenade bursts harmlessly (sound
                  * 0x76). */
@@ -452,6 +472,11 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 if (enemy->id == AOS_ENEMY_BAT) {
                     /* sub_080AD6E4: the bat dies. */
                     enemy->state = 3;
+                    enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_AXE_ARMOR) {
+                    /* sub_080B1370: state 2, step 0 (the palette bits of
+                     * + 0x5A are not ported). */
+                    enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER) {
                     /* sub_08092B38: death animation 3 and the generic death
@@ -486,8 +511,9 @@ contact:
             enemy->timer = 0;
         }
     } else if (report.soma_hit) {
-        /* The contact callbacks sub_0806E1B8 and the zombie soldier's
-         * sub_0809314C -> sub_08021654 (type 0). */
+        /* The contact callbacks sub_0806E1B8, the zombie soldier's
+         * sub_0809314C and the axe's sub_0806E1E8 (element 1) ->
+         * sub_08021654 (type 0). */
         report.soma_damage = aos_soma_take_hit(soma, enemy->stats.contact, soma_def, enemy->x, 0);
     }
     return report;
@@ -1024,6 +1050,293 @@ static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollisio
     return report;
 }
 
+/* sub_0806C828: the probe walker. X first: vx += ax (clamped to 8.0), then
+ * the wall probes at the position before the move, half_width to the side
+ * of the motion, at each wall_y offset (the first push wins: 1 on the left,
+ * 2 on the right). Then Y: vy += ay (clamped), and the ceiling probe when
+ * rising (4, vy = 0) or the floor probe (8, vy = 0), which, while vy has no
+ * integer part, looks `snap` pixels lower. A floor hit records the cell
+ * byte (+ 0x3F); on a slope byte it adds 0x10 and 0x40 when moving down the
+ * slope (0x20 otherwise); with mode bit 0 a second floor probe at the
+ * unmoved height also reports a slope (0x10). Mode bit 1 (one-way
+ * platforms) is not ported. */
+static int probe_walk(AosEnemy *e, const AosCollision *layer, const AosProbes *p, int snap,
+                      int mode) {
+    int result = 0;
+    int32_t px = e->x >> 16, py = e->y >> 16;
+    e->vx += e->ax;
+    if (e->ax >= 0 ? e->vx > 0x80000 : e->vx < -0x80000) e->vx = e->ax >= 0 ? 0x80000 : -0x80000;
+    e->x += e->vx;
+    for (int i = 0; i < p->count && i < 8 && e->vx; ++i) {
+        int push = e->vx < 0 ? aos_wall_push_right(layer, px - p->half_width, py + p->wall_y[i])
+                             : aos_wall_push_left(layer, px + p->half_width, py + p->wall_y[i]);
+        if (push) {
+            e->x += (int32_t)((uint32_t)push << 16);
+            result |= e->vx < 0 ? 1 : 2;
+            break;
+        }
+    }
+    e->vy += e->ay;
+    if (e->ay >= 0 ? e->vy > 0x80000 : e->vy < -0x80000) e->vy = e->ay >= 0 ? 0x80000 : -0x80000;
+    e->y += e->vy;
+    px = e->x >> 16;
+    py = e->y >> 16;
+    e->ground = 0;
+    if (e->vy < 0) {
+        int depth = aos_ceiling_depth(layer, px, py + p->ceiling, 0, false);
+        if (depth) {
+            e->y += (int32_t)((uint32_t)depth << 16);
+            e->vy = 0;
+            result |= 4;
+        }
+        return result;
+    }
+    int extra = (int16_t)(e->vy >> 16) == 0 ? snap : 0;
+    uint8_t raw = aos_collision_cell(layer, px, py + p->floor + extra);
+    int depth = aos_floor_depth(layer, px, py + p->floor + extra, 0, false);
+    (void)mode;
+    if (!depth) return result;
+    e->y += (int32_t)((uint32_t)(depth + extra) << 16);
+    e->vy = 0;
+    e->ground = raw;
+    result |= 8;
+    if (raw & 0xC0) {
+        result |= 0x10;
+        result |= ((e->vx > 0 && (raw & 4)) || (e->vx < 0 && !(raw & 4))) ? 0x40 : 0x20;
+    }
+    if ((mode & 1) && aos_floor_depth(layer, px, py + p->floor, 0, false) &&
+        (aos_collision_cell(layer, px, py + p->floor) & 0xC0))
+        result |= 0x10;
+    return result;
+}
+
+/* sub_0806CAF8: a walker step at `speed` toward the facing (mode bit 1:
+ * the raw sign), facing the player first at the start of frame 0 (bit 0),
+ * slowed on slopes (bit 3); the step is undone on a wall (keeping the
+ * vertical move on a floor), on a slope with bit 4, and without a floor
+ * with bit 2. Returns the probe walker's flags. */
+static int ground_walk(AosEnemy *e, const AosSoma *soma, const AosCollision *layer,
+                       const AosProbes *p, int32_t speed, int mode) {
+    int32_t x0 = e->x, y0 = e->y;
+    if ((mode & 1) && e->anim.frame == 0 && e->anim.tick == 0) face_player(e, soma);
+    e->vx = (!(mode & 2) && !e->mirrored) ? -speed : speed;
+    if ((mode & 8) && (e->ground & 0xC0) &&
+        ((e->vx > 0 && (e->ground & 4)) || (e->vx < 0 && !(e->ground & 4)))) {
+        int steep = e->ground >> 6;
+        if (steep == 1) e->vx /= 2;
+        else if (steep == 2) e->vx = e->vx / 3 * 2;
+    }
+    int result = probe_walk(e, layer, p, 4, ((mode & 0x10) ? 1 : 0) | ((mode & 0x20) ? 2 : 0));
+    if (result & 3) {
+        e->x = x0;
+        if (!(result & 8)) e->y = y0;
+    } else if ((mode & 0x10) && (result & 0x10)) {
+        e->x = x0;
+        e->y = y0;
+    }
+    if ((mode & 4) && !(result & 8)) {
+        e->x = x0;
+        e->y = y0;
+    }
+    return result;
+}
+
+/* sub_0806BBC4 and sub_0806D044: the player ahead (by the facing) within
+ * `range` pixels (the BIOS Sqrt of the squared whole-pixel distance). */
+static bool player_ahead_within(const AosEnemy *e, const AosSoma *soma, int range) {
+    int side = e->x < soma->x ? 1 : e->x > soma->x ? -1 : 0;
+    if (side != (e->mirrored ? 1 : -1)) return false;
+    int32_t dx = pixel_delta(soma->x, e->x), dy = pixel_delta(soma->y, e->y);
+    return (int16_t)isqrt((uint32_t)(dx * dx + dy * dy)) <= range;
+}
+
+/* The walk speed of the axe armor for its walk frame (frame % 9 <= 6). */
+static int32_t armor_speed(const AosEnemy *a) {
+    unsigned r = a->anim.frame % 9;
+    return r > 6 ? 0 : 0x1000 + (int32_t)r * 0x2800;
+}
+
+/* sub_080B0F1C: walking with the probe walker (mode 0x14: no slopes, no
+ * ledges); without a patrol length (parameter 0) it turns around whenever
+ * it is not simply on a floor, otherwise after that many steps (frame 17).
+ * At the start of frame 17, the player ahead within 99 pixels starts an
+ * attack. */
+static void armor_walk(AosEnemy *a, const AosSoma *soma, const AosCollision *layer,
+                       const AosEnemyKind *kind) {
+    if (a->step != 0) return;
+    bool frame17 = a->anim.frame == 0x11 && a->anim.tick == 0;
+    if (frame17 && a->param0) {
+        uint8_t steps = a->timer++;
+        if (steps > a->param0) {
+            a->timer = 0;
+            a->mirrored = !a->mirrored;
+        }
+    }
+    int result = ground_walk(a, soma, layer, &kind->probes, armor_speed(a), 0x14);
+    if (!a->param0 && (result & 0x1B) != 8) a->mirrored = !a->mirrored;
+    if (frame17 && player_ahead_within(a, soma, 0x63)) {
+        a->state = 1;
+        a->step = a->substep = 0;
+    }
+}
+
+/* sub_080B0D5C setup: an axe 24 pixels ahead and 16 up, with the armor's
+ * facing, contact power and throw height. */
+static AosEnemy make_axe(const AosEnemy *armor) {
+    AosEnemy axe = {0};
+    axe.id = armor->id;
+    axe.role = AOS_ROLE_AXE;
+    axe.static_frame = -1;
+    axe.x = armor->x + (armor->mirrored ? 0x180000 : (int32_t)0xFFE80000);
+    axe.y = armor->y - 0x100000;
+    axe.mirrored = armor->mirrored;
+    axe.substep = armor->substep;
+    axe.stats = armor->stats;
+    axe.combat.type = 0x0A;
+    return axe;
+}
+
+/* sub_080B1030: a high or low throw at random (animation 1 or 2); at frame
+ * 12, tick 2, the axe leaves; when the animation ends, with the player still
+ * ahead within 99 pixels it backs away playing the walk once, otherwise it
+ * walks again. */
+static void armor_attack(AosEnemy *a, const AosSoma *soma, const AosCollision *layer,
+                         const AosEnemyKind *kind, uint32_t (*random)(void),
+                         AosHitReport *report) {
+    switch (a->step) {
+    case 0:
+        if (random() & 1) {
+            play_loop(a, kind->anims, 1, false);
+            a->substep = 0;
+        } else {
+            play_loop(a, kind->anims, 2, false);
+            a->substep = 1;
+        }
+        a->step = 1;
+        break;
+    case 1:
+        if (a->anim.frame == 12 && a->anim.tick == 2) {
+            report->spawn_child = true;
+            report->child = make_axe(a);
+        }
+        if (a->anim.flags & AOS_ANIM_ENDED) {
+            if (player_ahead_within(a, soma, 0x63)) {
+                play_loop(a, kind->anims, 0, false);
+                a->step = 2;
+            } else {
+                a->step = 3;
+            }
+        }
+        break;
+    case 2:
+        ground_walk(a, soma, layer, &kind->probes, -armor_speed(a), 0x14);
+        if (a->anim.flags & AOS_ANIM_ENDED) a->step = 0;
+        break;
+    case 3:
+        a->state = a->step = a->substep = 0;
+        play(a, kind->anims, 0);
+        break;
+    default:
+        break;
+    }
+}
+
+/* sub_080B0D5C: the first update starts animation 3 (sound 0x86) and the
+ * flight: vx 2.5 toward the throw, decelerated by 0x800 per frame (it comes
+ * back), a spin of 0x800 per frame (a high throw starts 20 pixels higher
+ * and spins the other way), one hit point and a 16 x 16 box (type 0xA).
+ * Later updates run the collision pass first: struck, it vanishes (the
+ * effect of sub_0806D5C0 is not ported). It is deleted beyond screen margin
+ * 4. The global pause of gEwramData + 0x4BE is not ported. */
+static AosHitReport axe_update(AosEnemy *axe, AosSoma *soma, const AosEnemyKind *kind,
+                               const AosWeaponEntity *weapon,
+                               const AosWeaponFrames *weapon_frames, int soma_atk,
+                               int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    if (axe->state != 0) {
+        report = collide(axe, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        if (axe->hp <= 0) {
+            axe->removed = true;
+            aos_combat_tick(&axe->combat);
+            return report;
+        }
+    }
+    if (axe->state == 0) {
+        play_loop(axe, kind->anims, 3, false);
+        step_anim(axe, kind->anims);
+        axe->vx = (int32_t)0xFFFD8000;
+        axe->ax = 0x800;
+        axe->spin = 0x800;
+        if (axe->substep == 1) {
+            axe->y -= 0x140000;
+            axe->spin = -axe->spin;
+        }
+        if (axe->mirrored) {
+            axe->vx = -axe->vx;
+            axe->ax = -axe->ax;
+            axe->spin = -axe->spin;
+        }
+        axe->state = 1;
+        axe->hp = 1;
+        axe->own_boxes = true;
+        axe->own_hurt = axe->own_attack = (AosBox){-8, -8, 16, 16};
+    } else {
+        /* sub_0806D430(e, 2.5) */
+        axe->vx += axe->ax;
+        if (axe->ax >= 0 ? axe->vx > 0x28000 : axe->vx < -0x28000)
+            axe->vx = axe->ax >= 0 ? 0x28000 : -0x28000;
+        axe->x += axe->vx;
+    }
+    axe->angle += (uint32_t)axe->spin;
+    if (outside_margins(kind, 4, (axe->x >> 16) - cam_x, (axe->y >> 16) - cam_y))
+        axe->removed = true;
+    aos_combat_tick(&axe->combat);
+    return report;
+}
+
+/* sub_080B11DC: death animation 4 (sound 0x6F) until it ends, then the
+ * deletion; the explosions of sub_08045CEC are not ported. */
+static void armor_die(AosEnemy *a, const AosEnemyKind *kind) {
+    if (a->step == 0) {
+        play_loop(a, kind->anims, 4, false);
+        a->step = 1;
+        return;
+    }
+    a->timer++;
+    if (a->anim.flags & AOS_ANIM_ENDED) a->removed = true;
+}
+
+/* EnemyAxeArmorUpdate: inside the activity window, the state, then the
+ * collision pass (sub_0806E314) before the animation step. */
+static AosHitReport armor_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
+                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+                                 int cam_x, int cam_y, uint32_t (*random)(void)) {
+    AosHitReport report = {0}, spawned = {0};
+    int sx = (a->x >> 16) - cam_x, sy = (a->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    switch (a->state) {
+    case 0: armor_walk(a, soma, layer, kind); break;
+    case 1: armor_attack(a, soma, layer, kind, random, &spawned); break;
+    case 2:
+        armor_die(a, kind);
+        if (a->removed) return report;
+        break;
+    default:
+        step_anim(a, kind->anims);
+        return report;
+    }
+    sx = (a->x >> 16) - cam_x;
+    sy = (a->y >> 16) - cam_y;
+    if (!a->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(a, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    step_anim(a, kind->anims);
+    aos_combat_tick(&a->combat);
+    report.spawn_child = spawned.spawn_child;
+    report.child = spawned.child;
+    return report;
+}
+
 AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
@@ -1037,6 +1350,12 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_BLUE_CROW)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (enemy->role == AOS_ROLE_AXE)
+        return axe_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+                          cam_y);
+    if (enemy->id == AOS_ENEMY_AXE_ARMOR)
+        return armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                            cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_GRENADE)
         return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y);

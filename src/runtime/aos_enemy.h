@@ -11,7 +11,9 @@
  * blue crow (enemy 0x09, EnemyBlueCrowCreate / EnemyBlueCrowUpdate, with the
  * homing velocity of sub_080694B8) and the zombie soldier (enemy 0x0C,
  * EnemyZombieSoldierCreate / EnemyZombieSoldierUpdate) with its grenade
- * (sub_08092BC0 / sub_08092CCC and the projectile collision sub_08069770). Facing flag 0x40 of + 0x58 means
+ * (sub_08092BC0 / sub_08092CCC and the projectile collision sub_08069770),
+ * and the axe armor (enemy 0x04) with its axe (sub_080B0D5C) and the probe
+ * walker sub_0806CAF8 / sub_0806C828. Facing flag 0x40 of + 0x58 means
  * mirrored: enemy sprites face left by default. Combat: the frame boxes of
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
  * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
@@ -38,7 +40,15 @@ typedef struct {
 } AosEnemyStats;
 
 #define AOS_ENEMY_MAX_ANIMS 8
-#define AOS_ENEMY_MAX_FRAMES 16
+#define AOS_ENEMY_MAX_FRAMES 24
+
+/* The probe table of the walker sub_0806C828 (ROM, e.g. 0x08528708). */
+typedef struct {
+    int16_t count;          /* wall probes */
+    int16_t ceiling, floor; /* y offsets of the ceiling and floor probes */
+    int16_t half_width;     /* x offset of the wall probes */
+    int16_t wall_y[8];
+} AosProbes;
 
 /* Per animation frame: box mode (frame record + 4: 0 none, 1 one box for
  * both, 2 hurtbox then attack box) and boxes. */
@@ -50,18 +60,20 @@ typedef struct {
     uint8_t blink[40];      /* 0x08118CE0 & 1: hidden while dying */
     /* 0x08118D08: the (x, y) screen margins of sub_0806D128(e, n). */
     int16_t margins[7][2];
+    AosProbes probes;       /* walker probe table, count 0 when unused */
 } AosEnemyKind;
 
 enum {
     AOS_ENEMY_BAT = 0x00,
     AOS_ENEMY_ZOMBIE = 0x01,
+    AOS_ENEMY_AXE_ARMOR = 0x04,
     AOS_ENEMY_BLUE_CROW = 0x09,
     AOS_ENEMY_ZOMBIE_SOLDIER = 0x0C,
 };
 
 /* What an AosEnemy slot holds: the enemy itself or a child entity of its
  * kind (sharing its sprites and record). */
-enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1 };
+enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -88,6 +100,9 @@ typedef struct {
     bool defeated;          /* + 0x3E bit 1, set at death by sub_080683BC */
     int16_t static_frame;   /* sprite frame of a child (+ 0x65), or -1 */
     bool own_boxes;         /* boxes set by code, not by the animation frame */
+    uint8_t ground;         /* + 0x3F: floor cell byte under the walker */
+    uint32_t angle;         /* + 0x14 of a spinning child (affine rotation) */
+    int32_t spin;           /* + 0x18: angle step per frame */
     AosBox own_hurt, own_attack;
     AosEnemyStats stats;
     AosCombat combat;

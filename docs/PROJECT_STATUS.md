@@ -2358,3 +2358,31 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
   25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0232 - native axe armors and the probe walker
+
+- Ported the axe armor (Aria enemy 0x04) and the generic probe walker it
+  uses (`sub_0806CAF8` / `sub_0806C828`): wall probes at the pre-move
+  position from a ROM probe table (exported as a `probes` line of
+  `enemy_frames.tsv`), ceiling and floor probes with the 4-pixel snap, the
+  floor cell byte and slope flags, and the 0x14 mode that refuses walls,
+  slopes and ledges. The armor patrols (turning at obstacles, or after
+  parameter-0 steps), throws high or low when the player is ahead within 99
+  pixels, backs away when he stays in reach, turns to its attacker on every
+  hit and dies with its own animation.
+- The axe is a child entity of collision type 0xA: 2.5 toward the throw,
+  decelerated by 0x800 per frame so it returns, spinning (drawn rotated; the
+  direction is inferred), destroyed when struck, deleted off screen. The
+  collision pass now uses each entity's own type for Soma's recent hits, so
+  an axe is tracked apart from enemy bodies (121-frame slot).
+- `AOS_ENEMY_MAX_FRAMES` rises to 24 (the armor's walk has 18 frames).
+- Checked in a capture of room 0/38: the armor walks, throws, the axe hits
+  Soma for 26 (he flinches, type 0) and flies on spinning.
+- Not ported: death explosions, the strike effect, palette bits, the global
+  pause and state 3.
+- Tests: snap, turning at a wall, patrol turning at walk frame 17, the throw
+  timing and axe placement, the axe's flight and return, its own hit type,
+  its destruction by a weapon, and the armor's death.
+- Validation on 2026-10-10: the warning-clean build succeeded, CTest passed
+  25/25, the Python suite passed 399/399, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

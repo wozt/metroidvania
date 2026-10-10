@@ -622,6 +622,41 @@ way: starting an animation (`sub_0803F2C8`) clears `+0x59` bit 0, and
 `sub_0806E314` skip the collision pass, so a defeated zombie, soldier or bat
 can no longer be hit nor hurt.
 
+Axe armor (enemy 0x04, `EnemyAxeArmorCreate` / `EnemyAxeArmorUpdate`):
+tiles `0x081E41AC`, palette `0x0820B7F4`, frames `0x0823C290`; animations 0
+walk (18 frames), 1 high and 2 low throw, 3 the axe, 4 death. Create: walk
+animation, the contact callback `sub_0806E1B8` and hit callback
+`sub_080B1370`, the floor snap, then one pixel down. The update runs inside
+the activity window, then the collision pass `sub_0806E314` before the
+animation step (the reverse of the zombie soldier). It walks with the probe
+walker `sub_0806CAF8(e, speed, 0x08528708, 0x14)`: the speed of walk frame
+f is 0x1000 + (f % 9) * 0x2800 (0 when f % 9 > 6), toward its facing.
+`sub_0806C828` moves X (vx += ax, clamped to 8.0) and probes walls at the
+position before the move, `half_width` (6) to the side of the motion, at each
+wall offset (-7, -24); then Y, with the ceiling probe (-40) when rising or the
+floor probe (-1, 4 pixels lower while vy has no integer part), recording the
+floor cell byte at `+0x3F` and slope flags. Mode 0x14 undoes a step that hits
+a wall, lands on a slope or finds no floor; without a patrol length
+(parameter 0) the armor then turns around, otherwise it turns after that many
+steps (counted at walk frame 17). At the start of frame 17, the player ahead
+(`sub_0806BBC4`) within 99 pixels (`sub_0806D044`, BIOS Sqrt) starts
+`sub_080B1030`: a high (animation 1) or low (animation 2) throw at random;
+at frame 12, tick 2, the axe leaves 24 pixels ahead and 16 up; at the end it
+backs away playing the walk once if the player is still in reach, or walks
+again. The axe (`sub_080B0D5C`, collision type 0xA, contact callback
+`sub_0806E1E8`: element 1, type 0) flies at 2.5 toward the throw,
+decelerated by 0x800 per frame so it returns, spins 0x800 per frame (a high
+throw starts 20 pixels higher and spins the other way) with an affine
+sprite, has one hit point and a 16 x 16 box, runs the collision pass before
+moving, vanishes when struck (`sub_080B13BC`) and is deleted beyond screen
+margin 4. Being type 0xA, it uses its own slot in Soma's recent hits (121
+frames). Hit callback: the armor turns to the attacker on every hit; at 0 HP,
+state 2 (`sub_080B11DC`, sound 0x6F) plays animation 4 and deletes it when it
+ends. Not ported: the death explosions (`sub_08045CEC`), the strike effect
+`sub_0806D5C0`, the palette bits, the global pause `0x4BE` and state 3. The
+on-screen direction of the axe's rotation is inferred (`sub_0803E058` is not
+traced).
+
 `fusion_aria_runtime` runs these rules with Soma's library frames
 (README). Next steps: more enemies (damage through the weapon hitboxes), the
 class 1, 4 and 5 weapon entities, the boss

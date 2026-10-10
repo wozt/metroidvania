@@ -135,5 +135,24 @@ at x +/- 5 (`sub_08001F3C`) and wall pushes at x +/- 8 (`sub_08002058`,
 like moving-platform handling. These offsets are recorded as reading notes;
 the control flow is not yet understood well enough to port.
 
+Soma motion constants verified in the assembly (16.16 fixed point, pixels per
+60 Hz frame, positive Y downward; `+0x4C` is Y velocity, `+0x54` a Y
+acceleration term, `+0x14` an airborne frame counter, `+0x10` state flags):
+
+| Behavior | Evidence | Values |
+|---|---|---|
+| Ground jump | `sub_08019180`: jump button (`gEwramData + 0x1339A`) pressed while grounded or while `+0x14 <= 3`; sound `0xB9`; sets airborne flag 2, `+0x14 = 16`, `+0x54 = 0` | vy = `0xFFFB0C00` = -4.953125; -1.234375 (`0xFFFEC400`) when flag `0x400000` is set |
+| Second jump button branch | same routine, ability check `sub_08032AB8(4)` and button `0x1339C`; sound `0xBA` | vy = -10.0, or -2.5 with flag `0x400000` |
+| Mid-air jump | `+0x14 > 3` with ability `sub_08032AB8(2)` calls `sub_080190E0` | writes -4.5 / -4.125 (not yet traced) |
+| Flag `0x800000` jump | same routine | vy += -4.875 when vy > 1.0, otherwise vy = -4.875 |
+| Ceiling bump | `sub_08018B98`: ceiling walk at y-32 pushes the body down; while rising, `sub_08017CC8` handles a special case (vy <= -4.9375, state 6, sound `0xB8`), otherwise | vy = +0.0625, `+0x54` = -0.125 |
+| Air gravity | `sub_08018B98` each airborne frame | +0.125 while vy <= 0x1FFF; then +0.1015625; when falling vy += `+0x54`, `+0x54` += 0.015625 up to 0.0625 |
+| Fall cap | `sub_0801B0D8` | vy <= 8.0 |
+
+The flag `0x400000` halves most impulses and is probably underwater
+movement; this and the jump-release rule are still unconfirmed. Horizontal
+walking, dash and backdash speeds have not been traced yet (candidate
+constants in `sub_0801B0D8` include 1.5, 3.75 and -3.125).
+
 The next research step is the player update routine `sub_0801B0D8`: which of
 these probes it calls, with which body offsets, and Soma's movement constants.

@@ -53,7 +53,22 @@ source yet. Until those routines are identified, the repository does not ship
 an Aria movement kernel or a collision interpretation, and the collision
 preview colors remain diagnostic.
 
-The next research step is to locate the routine that consumes the collision
-pointer stored at offset 8 of each layer metadata record, and the player
-update routine that reads Soma's position and velocity, then document their
-constants with ROM addresses before implementing the kernel.
+Verified so far (cvaos `asm/code/code_08039340.s`):
+
+- `sub_0803F8A8` (0x0803F8A8) initializes a background layer from its metadata
+  record: it stores the record in the 28-byte layer slot at
+  `gEwramData + 0xA078 + 28 * layer`, and when flag bit 1 (compressed) is set
+  it LZ77-decompresses the block table (offset 4) to `gEwramData + 0xA104`
+  for BG1 or `+ 0xC0E8` otherwise. Only for BG1, and only in the compressed
+  path, it decompresses the collision table (offset 8) to
+  `gEwramData + 0xE0CC`. This confirms that collision is a BG1 property and
+  that the importer reads the right table.
+- `sub_0803F970` is the same initializer without the collision step;
+  `sub_0803FBBC`/`sub_0803FC6C` update layer scrolling.
+
+Not yet found: no other routine references `0xE0CC` as a literal, so the
+collision readers reach the buffer through a cached pointer or a computed
+offset. The next research step is to trace writes of that buffer address into
+IWRAM/EWRAM globals, then the player update routine that reads Soma's position
+and velocity, and document their constants with ROM addresses before
+implementing the kernel.

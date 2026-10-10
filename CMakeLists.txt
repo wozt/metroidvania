@@ -179,6 +179,10 @@ if(BUILD_TESTING)
                 --samus-library ${CMAKE_SOURCE_DIR}/tests/fixtures/samus_animation_registry.index.tsv
                 --samus-map ${CMAKE_SOURCE_DIR}/tests/fixtures/samus_animation_registry.map.tsv)
 
+    add_test(NAME room_runtime_sprite_library
+        COMMAND $<TARGET_FILE:fusion_room_runtime> --check-library
+                ${CMAKE_SOURCE_DIR}/tests/fixtures/samus_animation_registry.index.tsv)
+
     add_test(NAME room_package_loader
         COMMAND $<TARGET_FILE:fusion_room_package_viewer> --check
                 ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)

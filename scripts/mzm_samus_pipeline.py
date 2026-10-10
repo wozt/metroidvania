@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -22,7 +21,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from scripts.asset_layout import METROID_SAMUS_RUNTIME, private_path
+from scripts.asset_layout import METROID_SAMUS_RUNTIME
 from scripts.mzm_samus_compose import (
     VISUAL_SUITS,
     compose_all,
@@ -31,8 +30,8 @@ from scripts.mzm_samus_compose import (
     verify_symbols_against_rom,
 )
 from scripts.mzm_samus_frame import EXPECTED_SHA1
+from scripts.sprite_library import LibraryWriter
 
-INDEX_SCHEMA = "metroidvania-samus-runtime-index-v3"
 MAP_SCHEMA = "metroidvania-samus-animation-map-v1"
 SUITS = tuple(VISUAL_SUITS)
 AIMS = {
@@ -81,19 +80,6 @@ SIMPLE_ACTIONS = {
     "shinespark_end": ("pose", "SPOSE_DELAY_AFTER_SHINESPARKING", "once"),
     "ball_spark": ("pose", "SPOSE_BALLSPARKING", "loop"),
 }
-
-
-def _write_atomic(path: Path, content: str | bytes) -> None:
-    if path.is_symlink():
-        raise ValueError("symlink output refused")
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    if temporary.is_symlink():
-        raise ValueError("symlink temporary output refused")
-    if isinstance(content, str):
-        temporary.write_text(content, encoding="utf-8")
-    else:
-        temporary.write_bytes(content)
-    os.replace(temporary, path)
 
 
 def build_animation_map(keys) -> tuple[str, dict]:
@@ -159,76 +145,35 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path,
     symbols = parse_symbols(_run_nm(nm, elf))
     verify_symbols_against_rom(rom, _elf_image(objcopy, elf), symbols)
 
-    destination = private_path(root, METROID_SAMUS_RUNTIME, create=True)
-    if destination.is_symlink():
-        raise ValueError("private Samus runtime cannot be a symlink")
-    objects = destination / "objects"
-    if objects.is_symlink():
-        raise ValueError("private Samus object store cannot be a symlink")
-    objects.mkdir(parents=True, exist_ok=True)
-
-    rows: list[str] = []
-    packed: dict[str, int] = {}
+    library = LibraryWriter(root, METROID_SAMUS_RUNTIME)
     sequences: dict[str, dict] = {}
 
     def sink(key: str, frames, info: dict) -> None:
-        if len(key) >= 160 or any(c in key for c in "\t\r\n"):
-            raise ValueError("invalid animation key")
-        if key in sequences:
-            raise ValueError("duplicate animation key " + key)
-        for index, (bmp, duration, offset_x, offset_y) in enumerate(frames):
-            digest = hashlib.sha256(bmp).hexdigest()
-            output = objects / f"{digest}.bmp"
-            if output.is_symlink():
-                raise ValueError("symlink asset destination")
-            if output.exists():
-                if output.read_bytes() != bmp:
-                    raise ValueError("object hash collision")
-            else:
-                _write_atomic(output, bmp)
-            packed[digest] = len(bmp)
-            relative = output.relative_to(root).as_posix()
-            rows.append(f"{key}\t{index}\t{duration}\t{offset_x}\t{offset_y}\t{relative}")
+        library.add(key, frames)
         sequences[key] = info
 
     report = compose_all(rom, tables, symbols, sink)
     if report["unresolved"]:
         raise ValueError("unresolved native Samus variants: " +
                          ", ".join(sorted(report["unresolved"])[:5]))
-    removed = 0
-    for stale in objects.glob("*.bmp"):
-        if stale.stem not in packed and not stale.is_symlink():
-            stale.unlink()
-            removed += 1
-
+    totals = library.finish()
     animation_map, map_report = build_animation_map(sequences)
     metadata = {
         "schema": "metroidvania-mzm-samus-runtime-v3",
-        "index_schema": INDEX_SCHEMA,
-        "sequences": len(sequences),
-        "frames": len(rows),
-        "unique_bmps": len(packed),
+        **totals,
         "suits": {suit: sum(key.startswith(suit + "/") for key in sequences)
                   for suit in SUITS},
         "composition": {key: report[key] for key in
                         ("variants", "sequences", "frames", "table_problems")},
-        "removed_stale_objects": removed,
         "object_store": "sha256",
         "animation_map": map_report,
         "note": "Private native extraction; source ROM data is never redistributed.",
     }
-    index = f"schema\t{INDEX_SCHEMA}\n" + "\n".join(rows) + "\n"
-    expected = (
-        (destination / "runtime_index.tsv", index),
-        (destination / "animation_map.tsv", animation_map),
-        (destination / "sequences.json",
-         json.dumps(sequences, indent=2, sort_keys=True) + "\n"),
-        (destination / "manifest.json",
-         json.dumps(metadata, indent=2, sort_keys=True) + "\n"),
-    )
-    for path, content in expected:
-        if not path.exists() or path.read_text(encoding="utf-8") != content:
-            _write_atomic(path, content)
+    library.write_text("animation_map.tsv", animation_map)
+    library.write_text("sequences.json",
+                       json.dumps(sequences, indent=2, sort_keys=True) + "\n")
+    library.write_text("manifest.json",
+                       json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     return metadata
 
 

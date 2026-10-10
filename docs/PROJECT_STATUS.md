@@ -1541,3 +1541,23 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: CTest passed 15/15 (Python suite 354 tests), the
   rebuilt library still has 1,384 sequences and 600 bindings, and the
   proprietary-file guard passed.
+
+## Patch 0192 - shared sprite libraries and the complete Soma animation set
+
+- Added `scripts/sprite_library.py`: a game-neutral content-addressed writer
+  (`metroidvania-sprite-index-v1`) with per-frame native draw offsets,
+  pruning of unreferenced objects and atomic writes. The Samus pipeline now
+  uses it unchanged in output; the SDL loader accepts the shared schema and
+  gained `--check-library` to validate any library without a display.
+- Added `python3 -m scripts.aos_soma_pipeline`, which exports every animation
+  of Soma's native descriptor instead of six hand-picked sequences: 83 Soma
+  animations and one knife animation, 382 frames, 150 unique BMPs, each with
+  native durations and offsets from Soma's draw origin.
+- Documented in `docs/AOS_SOMA.md` what remains unidentified (palette banks
+  1-6, other weapons, multi-component knife OAM, most semantic names) and the
+  evidence still missing for an Aria movement and collision kernel. No Aria
+  physics or collision semantics are invented.
+- Validation on 2026-10-10: warning-clean build, CTest passed 16/16, both
+  libraries validated by the C loader (Samus 1,384 sequences / 6,008 frames;
+  Soma 84 sequences / 382 frames), and a contact sheet confirmed feet-anchored
+  Soma frames.

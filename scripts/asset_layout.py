@@ -33,6 +33,7 @@ ARIA_METADATA = ARIA / "metadata"
 ARIA_SPRITES = ARIA / "sprites"
 ARIA_RAW = ARIA / "raw"
 ARIA_SOMA = ARIA_SPRITES / "soma"
+ARIA_SOMA_RUNTIME = ARIA_SOMA / "runtime"
 
 SHARED_DIAGNOSTICS = SHARED / "diagnostics"
 SHARED_MANIFESTS = SHARED / "manifests"

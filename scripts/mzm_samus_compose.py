@@ -32,6 +32,7 @@ from dataclasses import dataclass
 from scripts.gba_oam import unpack_oam
 from scripts.gba_tiles import bgr555
 from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset, stage
+from scripts.sprite_library import bmp_from_pixels
 
 ANIMATION_RECORD_BYTES = 16
 CANNON_RECORD_BYTES = 8
@@ -310,26 +311,7 @@ def palette_colors(rom: bytes, symbols, name: str) -> list[tuple[int, int, int]]
 
 def to_bmp(pixels, colors) -> tuple[bytes, int, int]:
     """Cropped 32-bit BGRA BMP plus its top-left OAM coordinate."""
-    if not pixels:
-        raise ValueError("frame has no visible pixels")
-    left = min(x for x, _ in pixels)
-    top = min(y for _, y in pixels)
-    width = max(x for x, _ in pixels) - left + 1
-    height = max(y for _, y in pixels) - top + 1
-    if width > 512 or height > 512:
-        raise ValueError("frame exceeds 512 pixels")
-    data = bytearray(width * height * 4)
-    for (x, y), index in pixels.items():
-        r, g, b = colors[index]
-        row = height - 1 - (y - top)
-        offset = (row * width + (x - left)) * 4
-        data[offset:offset + 4] = bytes((b, g, r, 255))
-    header = bytearray(108)
-    struct.pack_into("<IiiHHII", header, 0, 108, width, height, 1, 32, 3, len(data))
-    struct.pack_into("<IIII", header, 40, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000)
-    struct.pack_into("<I", header, 56, 0x73524742)
-    bmp = struct.pack("<2sIHHI", b"BM", 14 + 108 + len(data), 0, 0, 122) + header + data
-    return bmp, left, top
+    return bmp_from_pixels({point: colors[index] for point, index in pixels.items()})
 
 
 def variant_key(visual: str, variant: Variant) -> str:

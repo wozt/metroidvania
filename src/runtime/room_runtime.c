@@ -409,7 +409,7 @@ static bool runtime_echo_fast_ascent(const MzmSamus *samus) {
 #define RUNTIME_LIBRARY_MAX 8192
 #define RUNTIME_LIBRARY_FRAME_MAX 256
 #define RUNTIME_ANIMATION_MAP_MAX 2048
-#define RUNTIME_INDEX_SCHEMA "schema\tmetroidvania-samus-runtime-index-v3\n"
+#define RUNTIME_INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1\n"
 /* One native frame: duration, top-left offset from Samus's position as drawn
  * by SamusDraw, and the private content-addressed BMP. */
 typedef struct {
@@ -694,6 +694,7 @@ int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
     const char *library_index=NULL, *animation_map_index=NULL;
     const char *room_alias=NULL, *samus_assets=NULL;
+    const char *library_check=NULL;
     bool check=false,animation_check=false;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--check")) { if(check) return 2; check=true; }
@@ -701,6 +702,8 @@ int main(int argc, char **argv) {
             if(animation_check)return 2;
             animation_check=true;
         }
+        else if (!strcmp(argv[i],"--check-library") && !library_check && i+1<argc)
+            library_check=argv[++i];
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
         else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
         else if (!strcmp(argv[i],"--room") && !room_alias && i+1<argc) room_alias=argv[++i];
@@ -711,6 +714,23 @@ int main(int argc, char **argv) {
             fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
+    }
+    if (library_check) {
+        /* Validate any shared sprite library (Samus or Soma) without SDL video. */
+        if (argc != 3) {
+            fprintf(stderr,"--check-library takes only an index path\n");
+            return 2;
+        }
+        RuntimeLibrary checked={0};
+        if (!runtime_library_open(&checked,library_check)) {
+            fprintf(stderr,"Sprite library validation failed: %s\n",library_check);
+            return 2;
+        }
+        int frames=0;
+        for (int i=0;i<checked.count;i++) frames+=checked.entries[i].count;
+        printf("Validated sprite library: %d sequences, %d frames\n",checked.count,frames);
+        runtime_library_free(&checked);
+        return 0;
     }
     /* PATCH_0181_ROOM_AND_ASSETS: room shorthand keeps native collision mandatory. */
     char bundle_index[4096],bundle_map[4096];

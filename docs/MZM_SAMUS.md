@@ -42,7 +42,8 @@ Graphics and palettes combine into five visual suits:
 
 Each frame is rendered once into OBJ palette indices, colorized per suit,
 cropped to its visible pixels and stored with its native top-left offset. The
-runtime index (`metroidvania-samus-runtime-index-v3`) lists
+shared runtime index (`metroidvania-sprite-index-v1`, see
+`scripts/sprite_library.py`) lists
 `key, frame, duration, offset_x, offset_y, object path`; keys are
 `<VisualSuit>/<table|pose>/<selector>/<side>`, for example
 `GravitySuit/Standing/ACD_DIAGONALLY_UP/left` or

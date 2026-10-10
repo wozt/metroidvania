@@ -19,7 +19,8 @@ from scripts.mzm_samus_compose import (
     to_bmp,
     verify_symbols_against_rom,
 )
-from scripts.mzm_samus_pipeline import INDEX_SCHEMA, build_animation_map, produce
+from scripts.mzm_samus_pipeline import build_animation_map, produce
+from scripts.sprite_library import INDEX_SCHEMA
 
 TABLES = """
 const struct SamusAnimationData* const sSamusAnimPointers_PowerSuit[SPOSE_COUNT][2] = {

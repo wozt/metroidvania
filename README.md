@@ -39,6 +39,7 @@ Import private assets and structural metadata:
 python3 scripts/import_game_assets.py --scope all
 python3 scripts/import_aos_world.py
 python3 -m scripts.mzm_samus_pipeline
+python3 -m scripts.aos_soma_pipeline
 python3 -m scripts.audit_extracted_assets --write
 ```
 

@@ -102,6 +102,34 @@ int main(void) {
     r->collisions[1]=(Collision){48,0,16,20,1};
     assert(!runtime_find_ledge(r,36.f,32.f,12.f,16.f,1,&ledge));
     assert(!runtime_find_ledge(r,36.f,32.f,12.f,16.f,0,&ledge));
+
+    /* PATCH_0187: the native-style echo waits for three history entries,
+     * cycles four distance-two samples, and survives six trailing ticks. */
+    RuntimeEcho echo={0};
+    float echo_x=0.f,echo_y=0.f;
+    runtime_echo_step(&echo,10.f,20.f,true);
+    runtime_echo_step(&echo,11.f,21.f,true);
+    assert(!runtime_echo_sample(&echo,2,&echo_x,&echo_y));
+    runtime_echo_step(&echo,12.f,22.f,true);
+    assert(runtime_echo_sample(&echo,2,&echo_x,&echo_y));
+    assert(echo_x==10.f && echo_y==20.f && echo.position==1u);
+    for(int i=0;i<8;i++)runtime_echo_step(&echo,13.f+(float)i,23.f,false);
+    assert(!echo.active && echo.timer==0);
+
+    /* PATCH_0187: diagnostic damage respects the native 48-tick immunity
+     * window, clamps at zero, and enters a persistent death state. */
+    RuntimeHealth health={0};
+    runtime_health_reset(&health,99);
+    assert(runtime_health_damage(&health,20));
+    assert(health.energy==79 && health.invincibility_ticks==48 && !health.dead);
+    assert(!runtime_health_damage(&health,20));
+    for(int i=0;i<48;i++)runtime_health_step(&health);
+    assert(health.invincibility_ticks==0);
+    assert(runtime_health_damage(&health,100));
+    assert(health.energy==0 && health.dead);
+    assert(!runtime_health_damage(&health,1));
+    runtime_health_reset(&health,99);
+    assert(health.energy==99 && !health.dead);
     free(r);
     return 0;
 }

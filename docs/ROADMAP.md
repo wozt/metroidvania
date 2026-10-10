@@ -75,9 +75,11 @@ available through the separate catalogue browser. Its first ability mechanics
 now include clearance-safe Morph Ball resizing and a collision-driven Wall
 Jump, plus clearance-checked ledge hanging with both native pull transitions.
 All are connected to native animation sequences but still use provisional
-physics constants. Combat, native entities, complete ability physics,
-Varia/Gravity palette switching, room lifecycle and the Aria kernel remain
-pending.
+physics constants. A source-derived jump echo now follows the native position
+history/timing model, and a diagnostic health lifecycle reaches hurt,
+invincibility, death and restart states. Native damage sources, combat,
+entities, the exact echo palette, complete ability physics, Varia/Gravity
+palette switching, room lifecycle and the Aria kernel remain pending.
 
 Exit criterion: each native character can complete a source-authentic test path
 in its own engine without emulation.

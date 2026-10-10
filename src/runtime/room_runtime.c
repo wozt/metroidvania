@@ -327,6 +327,75 @@ static bool runtime_find_ledge(const Room *room, float x, float y,
     return false;
 }
 
+#define RUNTIME_ECHO_HISTORY 64
+typedef struct {
+    float x[RUNTIME_ECHO_HISTORY],y[RUNTIME_ECHO_HISTORY];
+    unsigned int counter,position;
+    int timer;
+    bool wrapped,active;
+} RuntimeEcho;
+
+/* PATCH_0187_NATIVE_JUMP_ECHO
+ * The pinned MZM source records 64 positions at 60 Hz. During a sufficiently
+ * fast ascent it refreshes a six-tick timer, selects distance two, and draws
+ * one previous body pose while cycling four lag positions. */
+static void runtime_echo_step(RuntimeEcho *echo,float x,float y,
+                              bool fast_ascent) {
+    if (fast_ascent) {
+        echo->active=true;
+        echo->timer=6;
+    } else if (echo->timer>0) {
+        echo->timer--;
+    } else {
+        echo->active=false;
+    }
+    unsigned int index=echo->counter&(RUNTIME_ECHO_HISTORY-1u);
+    echo->x[index]=x;
+    echo->y[index]=y;
+    echo->counter++;
+    if(echo->counter>=RUNTIME_ECHO_HISTORY)echo->wrapped=true;
+}
+
+static bool runtime_echo_sample(RuntimeEcho *echo,unsigned int distance,
+                                float *x,float *y) {
+    int history=(int)echo->counter-(int)(distance*echo->position)-3;
+    if(!echo->active || (!echo->wrapped && history<0))return false;
+    unsigned int index=(unsigned int)history&(RUNTIME_ECHO_HISTORY-1u);
+    *x=echo->x[index];
+    *y=echo->y[index];
+    echo->position=(echo->position+1u)&3u;
+    return true;
+}
+
+typedef struct {
+    int energy,max_energy;
+    unsigned int invincibility_ticks;
+    bool dead;
+} RuntimeHealth;
+
+/* PATCH_0187_DAMAGE_STATE
+ * Damage amounts are project-side diagnostics until native entities exist.
+ * The 48-tick invincibility window is taken from SamusChangeToHurtPose. */
+static void runtime_health_reset(RuntimeHealth *health,int max_energy) {
+    health->max_energy=max_energy;
+    health->energy=max_energy;
+    health->invincibility_ticks=0;
+    health->dead=false;
+}
+
+static bool runtime_health_damage(RuntimeHealth *health,int amount) {
+    if(amount<=0 || health->dead || health->invincibility_ticks>0)return false;
+    health->energy-=amount;
+    if(health->energy<0)health->energy=0;
+    health->dead=health->energy==0;
+    health->invincibility_ticks=48;
+    return true;
+}
+
+static void runtime_health_step(RuntimeHealth *health) {
+    if(health->invincibility_ticks>0)health->invincibility_ticks--;
+}
+
 
 /* PATCH_0145_MOVEMENT_STATES
  * Runtime presentation states only; these are NOT original MZM pose IDs.
@@ -658,9 +727,12 @@ static int runtime_animation_priority(const char *action) {
 }
 static const char *runtime_requested_action(RuntimeMovementState state,bool spin,
         bool crouch,bool fire,bool skid,int special_kind,bool morphed,
+        bool dead,bool hurt,
         bool morph_started,bool unmorph_started,bool hanging,
         bool ledge_pull_forward,bool ledge_pull_up,bool wall_jump_started,
         bool spin_started,bool landed) {
+    if(dead)return "death";
+    if(hurt)return morphed?"morph_ball":"hurt";
     if(morph_started)return "morph_start";
     if(unmorph_started)return "unmorph";
     if(ledge_pull_forward)return "ledge_pull_forward";
@@ -1069,6 +1141,13 @@ int main(int argc, char **argv) {
     bool hanging=false,ledge_input_armed=false;
     float ledge_regrab_lock=0.f,ledge_pull_lock=0.f;
     RuntimeLedge active_ledge={0};
+    RuntimeEcho echo={0};
+    unsigned int echo_substep=0,echo_render_tick=~0u;
+    bool echo_visible=false;
+    float echo_x=0.f,echo_y=0.f;
+    RuntimeHealth health={0};
+    runtime_health_reset(&health,99);
+    float hurt_lock=0.f;
     int special_kind=0; /* 0=spin; 1=space, 2=screw (visual preview only). */
     unsigned int armor_index=0;
     bool animation_browser=false;
@@ -1090,15 +1169,18 @@ int main(int argc, char **argv) {
     if (!spawn) { fprintf(stderr,"No free avatar spawn found\n"); goto cleanup; }
     printf("Selected safe test spawn: x=%.0f y=%.0f, ground=%s\n",
            px, py, blocked(room, px, py+1.f, pw, ph) ? "yes" : "no");
+    SDL_SetWindowTitle(window,"Metroid Vania [Power Suit] [idle] [Energy 99/99]");
     printf("Controls: Left/Right or A/D = move; Space/Up/W = jump; X = morph; Escape = exit. ");
     printf("Experimental platformer physics; only project code-1 solids block.\n");
     printf("Ledges: hold toward while falling; release, then jump/toward to climb; C/away drops.\n");
+    printf("Damage diagnostic: H = 20 damage; Enter = restart after death.\n");
     printf("Animation controls: E/Q aim, C crouch, F fire, R suit, T spin type, F6 catalogue.\n");
     if (composed_dir) printf("Compositions: E=diagonal run, C+F=crouch shooting, jump=straight midair (right facing).\n");
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
     const float fixed_step=1.f/120.f;
     bool jump_queued=false,morph_queued=false;
+    bool damage_queued=false,restart_queued=false;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -1146,6 +1228,10 @@ int main(int argc, char **argv) {
                  event.key.key == SDLK_W)) jump_queued=true;
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                 event.key.key == SDLK_X) morph_queued=true;
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                event.key.key == SDLK_H) damage_queued=true;
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                event.key.key == SDLK_RETURN) restart_queued=true;
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                 event.key.key == SDLK_T) {
                 special_kind=(special_kind+1)%3;
@@ -1195,6 +1281,59 @@ int main(int argc, char **argv) {
             bool hit=false;
             bool was_grounded=grounded;
             bool suspend_physics=false;
+            if(restart_queued) {
+                if(health.dead) {
+                    runtime_health_reset(&health,99);
+                    pw=standing_width;
+                    ph=standing_height;
+                    if(!find_spawn(room,pw,ph,&px,&py)) {
+                        fprintf(stderr,"Cannot find a safe restart position.\n");
+                        running=false;
+                    }
+                    vx=0.f;vy=0.f;grounded=false;morphed=false;hanging=false;
+                    spin_jump=false;hurt_lock=0.f;wall_jump_lock=0.f;
+                    ledge_pull_lock=0.f;ledge_regrab_lock=0.f;
+                    echo=(RuntimeEcho){0};echo_visible=false;
+                    active_animation=NULL;animation_start=SDL_GetTicks();
+                    damage_queued=false;
+                    fprintf(stderr,"Diagnostic restart: Energy %d.\n",health.energy);
+                }
+                restart_queued=false;
+            }
+            if(damage_queued) {
+                bool on_ground=blocked(room,px,py+1.f,pw,ph);
+                if(runtime_health_damage(&health,20)) {
+                    hanging=false;ledge_pull_lock=0.f;spin_jump=false;
+                    echo.active=false;echo.timer=0;echo_visible=false;
+                    if(health.dead) {
+                        vx=0.f;vy=0.f;hurt_lock=0.f;
+                        fprintf(stderr,"Samus diagnostic health reached zero.\n");
+                    } else {
+                        /* Source-relative launch ratios; horizontal recoil is
+                         * provisional until enemy collision is implemented. */
+                        vy=-jump_speed*(on_ground?112.f/192.f:56.f/192.f);
+                        vx=(float)-facing*90.f;
+                        grounded=false;
+                        hurt_lock=13.f/60.f;
+                        fprintf(stderr,"Diagnostic damage: Energy %d/%d.\n",
+                                health.energy,health.max_energy);
+                    }
+                    char title[160];
+                    snprintf(title,sizeof title,"Metroid Vania [%s] [Energy %d/%d]%s",
+                             armor_names[armor_index],health.energy,
+                             health.max_energy,health.dead?" [DEAD]":"");
+                    if(!animation_browser)SDL_SetWindowTitle(window,title);
+                }
+                damage_queued=false;
+            }
+            if(hurt_lock>0.f) {
+                hurt_lock-=fixed_step;
+                if(hurt_lock<0.f)hurt_lock=0.f;
+            }
+            if(health.dead) {
+                vx=0.f;vy=0.f;jump_queued=false;morph_queued=false;
+                hanging=false;grounded=false;suspend_physics=true;
+            }
             if (wall_jump_lock > 0.f) {
                 wall_jump_lock-=fixed_step;
                 if (wall_jump_lock < 0.f) wall_jump_lock=0.f;
@@ -1203,7 +1342,7 @@ int main(int argc, char **argv) {
                 ledge_regrab_lock-=fixed_step;
                 if (ledge_regrab_lock < 0.f) ledge_regrab_lock=0.f;
             }
-            if (ledge_pull_lock > 0.f) {
+            if (!suspend_physics && ledge_pull_lock > 0.f) {
                 ledge_pull_lock-=fixed_step;
                 if (ledge_pull_lock < 0.f) ledge_pull_lock=0.f;
                 grounded=true;
@@ -1256,6 +1395,10 @@ int main(int argc, char **argv) {
             }
             if (!suspend_physics) {
                 grounded=blocked(room,px,py+1.f,pw,ph);
+                if(hurt_lock>0.f) {
+                    jump_queued=false;
+                    morph_queued=false;
+                }
                 if (morph_queued) {
                     if (!morphed) {
                         if (armor_index == 4u) {
@@ -1276,13 +1419,14 @@ int main(int argc, char **argv) {
                     morph_queued=false;
                 }
                 int wall_side=runtime_wall_side(room,px,py,pw,ph);
-                if (jump_queued && grounded && !morphed) {
+                if (jump_queued && grounded && !morphed && hurt_lock<=0.f) {
                     /* Jump type is latched at takeoff, not reclassified by aim keys. */
                     spin_jump=(dx > 0.1f || dx < -0.1f);
                     spin_started=spin_jump;
                     vy=-jump_speed;
                     grounded=false;
                 } else if (jump_queued && !grounded && !morphed &&
+                           hurt_lock<=0.f &&
                            spin_jump && wall_side != 0) {
                     /* Provisional wall-jump impulse and short steering lock. */
                     const float wall_jump_speed=150.f;
@@ -1294,7 +1438,7 @@ int main(int argc, char **argv) {
                     spin_started=false;
                 }
                 jump_queued=false;
-                if (wall_jump_lock <= 0.f)
+                if (wall_jump_lock <= 0.f && hurt_lock<=0.f)
                     vx=update_horizontal_velocity(vx,dx,fixed_step,run_speed,
                                                   run_accel,run_braking);
                 if (grounded)
@@ -1310,7 +1454,7 @@ int main(int argc, char **argv) {
                     }
                     vy=0.f;
                 }
-                if (!grounded && !morphed && vy>=0.f &&
+                if (!grounded && !morphed && hurt_lock<=0.f && vy>=0.f &&
                     ledge_regrab_lock<=0.f && dx!=0.f) {
                     RuntimeLedge candidate={0};
                     int ledge_side=dx>0.f?1:-1;
@@ -1327,6 +1471,8 @@ int main(int argc, char **argv) {
                         spin_jump=false;
                         landed=false;
                         facing=ledge_side;
+                        echo.active=false;
+                        echo.timer=0;
                     }
                 }
             }
@@ -1336,12 +1482,24 @@ int main(int argc, char **argv) {
                 next_state != RUNTIME_FALLING) spin_jump=false;
             if (next_state != movement_state) {
                 movement_state = next_state;
-                char title[128];
+                char title[180];
                 snprintf(title, sizeof title,
-                         "Metroid Vania [%s] [%s]",
+                         "Metroid Vania [%s] [%s] [Energy %d/%d]%s",
                          armor_names[armor_index],
-                         runtime_movement_state_name(movement_state));
+                         runtime_movement_state_name(movement_state),
+                         health.energy,health.max_energy,
+                         health.dead?" [DEAD]":"");
                 if(!animation_browser) SDL_SetWindowTitle(window, title);
+            }
+            echo_substep++;
+            if(echo_substep>=2u) {
+                echo_substep=0;
+                /* Native threshold is 80/192 of the low-jump launch speed. */
+                bool fast_ascent=!health.dead && hurt_lock<=0.f &&
+                    !grounded && !hanging &&
+                    vy < -jump_speed*(80.f/192.f);
+                runtime_echo_step(&echo,px,py,fast_ascent);
+                runtime_health_step(&health);
             }
             accumulator-=fixed_step;
         }
@@ -1384,7 +1542,8 @@ int main(int argc, char **argv) {
             const char *action=runtime_requested_action(
                 movement_state,spin_jump,crouch,fire,
                 grounded && dx==0.f && (vx>.1f || vx<-.1f),
-                special_kind,morphed,morph_started,unmorph_started,
+                special_kind,morphed,health.dead,hurt_lock>0.f,
+                morph_started,unmorph_started,
                 hanging,ledge_pull_forward_started,ledge_pull_up_started,
                 wall_jump_started,spin_started,landed);
             RuntimeAnimationMapRow *requested=runtime_animation_map_find(
@@ -1435,9 +1594,36 @@ int main(int argc, char **argv) {
                 samus_timeline_frame(lib_entry->ticks,lib_entry->count,ticks);
             if(runtime_library_texture(renderer,lib_entry,frame)) {
                 float sw=(float)lib_entry->w[frame],sh=(float)lib_entry->h[frame];
+                unsigned int render_tick=(unsigned int)(SDL_GetTicks()*60u/1000u);
+                if(animation_browser || !echo.active) {
+                    echo_visible=false;
+                } else if(render_tick!=echo_render_tick) {
+                    echo_render_tick=render_tick;
+                    echo_visible=runtime_echo_sample(&echo,2u,&echo_x,&echo_y);
+                }
+                if(echo_visible) {
+                    /* Palette bank 1 is not exported yet; use a translucent
+                     * violet modulation while retaining the native timing. */
+                    SDL_SetTextureColorMod(lib_entry->textures[frame],110,100,255);
+                    SDL_SetTextureAlphaMod(lib_entry->textures[frame],145);
+                    SDL_FRect echo_dest={
+                        viewport.x+(echo_x+pw*.5f-cx-sw*.5f)*scale,
+                        viewport.y+(echo_y+ph-cy-sh)*scale,
+                        sw*scale,sh*scale};
+                    SDL_RenderTexture(renderer,lib_entry->textures[frame],NULL,
+                                      &echo_dest);
+                    SDL_SetTextureColorMod(lib_entry->textures[frame],255,255,255);
+                    SDL_SetTextureAlphaMod(lib_entry->textures[frame],255);
+                }
                 SDL_FRect dest={viewport.x+(px+pw*.5f-cx-sw*.5f)*scale,
                     viewport.y+(py+ph-cy-sh)*scale,sw*scale,sh*scale};
+                bool damage_flash=!health.dead &&
+                    health.invincibility_ticks>0u && (render_tick&3u)<=1u;
+                if(damage_flash)
+                    SDL_SetTextureAlphaMod(lib_entry->textures[frame],90);
                 SDL_RenderTexture(renderer,lib_entry->textures[frame],NULL,&dest);
+                if(damage_flash)
+                    SDL_SetTextureAlphaMod(lib_entry->textures[frame],255);
             }
         } else if (special_selected >= 0) {
             Uint64 elapsed_ms=SDL_GetTicks()-animation_start;

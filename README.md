@@ -99,7 +99,10 @@ SDL3 gamepad input; it is not a complete Zero Mission gameplay engine. Use X
 (gamepad West) to toggle Morph Ball. A spinning jump can wall-jump by pressing
 jump while touching a wall. Hold toward a clear ledge while falling to grab it;
 release the direction, then press jump or toward the platform to climb. C,
-gamepad Down or the opposite direction drops from the ledge.
+gamepad Down or the opposite direction drops from the ledge. Fast upward jumps
+show Zero Mission's position-history echo. H applies diagnostic damage so the
+native hurt, invincibility and death states can be tested; Enter restarts after
+death.
 
 ## Current verified data
 

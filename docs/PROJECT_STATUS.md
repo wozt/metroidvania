@@ -1396,3 +1396,32 @@ No automatic reciprocal link or native engine encoder is implemented.
   passed. Brinstar 033 loaded its 204 native collision records and the complete
   580-sequence/408-binding registry, then remained live through the three-second
   dummy-video smoke test.
+
+## Patch 0187 - native jump echo and damage lifecycle
+
+- Reproduced the `SamusEcho` control model verified in the pinned Zero Mission
+  decompilation. The runtime records a 64-position history at 60 Hz, activates
+  on fast upward airborne movement at the native `80/192` launch-speed ratio,
+  refreshes for six ticks and draws one old position while cycling four
+  distance-two samples. Ledge grabs immediately clear the echo as in the source.
+- The SDL copy uses the current native body frame and a translucent violet
+  modulation. Timing, history and selection are source-derived; the exact OBJ
+  palette-bank-1 colors and body-only composition remain an explicit pipeline
+  task rather than being represented as finished fidelity.
+- Added a 99-energy diagnostic health state reachable with H while native
+  entities are absent. A hit subtracts 20, preserves the source's 48-tick
+  invincibility window, flashes the rendered sprite and drives a 13-tick hurt
+  state with the mapped knockback animation. The vertical launch ratios derive
+  from the native grounded and airborne hurt velocities; horizontal recoil is
+  still provisional.
+- Zero energy now interrupts every lower-priority transition, disables player
+  control and holds the native 92-tick death sequence on its final frame. Enter
+  resets health and all transient movement/form states at a collision-safe
+  spawn without restarting the process.
+- Added ROM-free regressions for history warm-up, four-position cycling, echo
+  expiry, damage immunity, energy clamping, persistent death and health reset.
+- Validation on 2026-10-10: the warning-clean Debug build succeeded, CTest
+  passed 14/14, the Python suite passed 409/409, and the proprietary-file guard
+  passed. Brinstar 033 loaded all 204 collision records and the complete
+  580-sequence/408-binding registry, then remained live through the three-second
+  dummy-video smoke test with the new controls initialized.

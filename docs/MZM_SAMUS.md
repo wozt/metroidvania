@@ -81,6 +81,24 @@ the exact duration read from the semantic registry. F6 remains a separate
 raw-catalogue browser for all 580 sequences, including poses whose gameplay
 mechanics are not implemented.
 
+The jump trail is the native `SamusEcho` behavior documented by the pinned
+decompilation in `src/samus.c`, not a generic motion blur. At 60 Hz the runtime
+keeps a 64-position ring, refreshes a six-tick echo during fast upward MidAir,
+Spin, Space Jump, Screw Attack and airborne Morph Ball movement, and renders one
+past body position while cycling four distance-two offsets. The activation
+threshold preserves the native `80/192` ratio against the provisional runtime
+jump speed. Native code forces OBJ palette bank 1 for the copy; the current SDL
+path uses translucent violet modulation until that second palette bank is
+exported as a dedicated private runtime texture.
+
+The runtime also has a minimal damage lifecycle so the existing hurt and death
+sequences are reachable before native enemies exist. H applies a diagnostic
+20-energy hit, the native 48-tick invincibility interval prevents repeated
+damage, the hurt pose lasts the source-derived 13 ticks, and zero energy locks
+the death sequence until Enter restarts at a safe spawn. Damage amounts and
+horizontal recoil are explicitly project diagnostics, not extracted enemy
+values.
+
 The semantic registry can be validated without opening a window:
 
 ```sh

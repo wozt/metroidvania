@@ -135,6 +135,25 @@ def parse_symbols(nm_output: str) -> dict[str, tuple[int, int]]:
     return found
 
 
+def verify_symbols_against_rom(rom: bytes, image: bytes, symbols) -> None:
+    """Fail unless every consumed ELF symbol holds the same bytes as the ROM.
+
+    ``image`` is the reference ELF converted with ``objcopy -O binary``. The
+    two files differ outside the Samus data (header logo and unrelated
+    blocks), so only the symbol ranges the composer reads are compared.
+    """
+    mismatched = []
+    for name, (address, size) in sorted(symbols.items()):
+        start = rom_offset(address, rom)
+        if start + size > len(rom) or start + size > len(image):
+            mismatched.append(name)
+        elif rom[start:start + size] != image[start:start + size]:
+            mismatched.append(name)
+    if mismatched:
+        raise ValueError("reference ELF does not match the ROM for: " +
+                         ", ".join(mismatched[:5]))
+
+
 @dataclass(frozen=True)
 class Variant:
     family: str          # PowerSuit, FullSuit or Suitless graphics

@@ -17,6 +17,7 @@ from scripts.mzm_samus_compose import (
     parse_tables,
     render_indices,
     to_bmp,
+    verify_symbols_against_rom,
 )
 from scripts.mzm_samus_pipeline import INDEX_SCHEMA, build_animation_map, produce
 
@@ -204,6 +205,18 @@ class ComposerRenderTests(unittest.TestCase):
         self.assertEqual(DRAW_Y_OFFSET, 2)
 
 
+class ReferenceElfTests(unittest.TestCase):
+    def test_only_consumed_symbol_ranges_must_match(self):
+        rom = bytes(range(256)) * 4
+        image = bytearray(rom)
+        image[0] = 0xEE                      # header-like difference is ignored
+        symbols = {"sSamusPal_PowerSuit_Default": (0x08000010, 32)}
+        verify_symbols_against_rom(rom, bytes(image), symbols)
+        image[0x20] ^= 1
+        with self.assertRaisesRegex(ValueError, "sSamusPal_PowerSuit_Default"):
+            verify_symbols_against_rom(rom, bytes(image), symbols)
+
+
 class PipelineTests(unittest.TestCase):
     def test_animation_map_uses_native_keys_for_every_visual_suit(self):
         keys = ["VariaSuit/Standing/ACD_FORWARD/left",
@@ -248,6 +261,8 @@ class PipelineTests(unittest.TestCase):
             sha1 = hashlib.sha1(rom.read_bytes()).hexdigest()
             with mock.patch("scripts.mzm_samus_pipeline.EXPECTED_SHA1", sha1), \
                     mock.patch("scripts.mzm_samus_pipeline._run_nm", return_value=""), \
+                    mock.patch("scripts.mzm_samus_pipeline._elf_image",
+                               return_value=b""), \
                     mock.patch("scripts.mzm_samus_pipeline.compose_all", fake_compose):
                 result = produce(root, rom, elf, root / "mzm")
                 repeated = produce(root, rom, elf, root / "mzm")
@@ -278,6 +293,8 @@ class PipelineTests(unittest.TestCase):
             sha1 = hashlib.sha1(rom.read_bytes()).hexdigest()
             with mock.patch("scripts.mzm_samus_pipeline.EXPECTED_SHA1", sha1), \
                     mock.patch("scripts.mzm_samus_pipeline._run_nm", return_value=""), \
+                    mock.patch("scripts.mzm_samus_pipeline._elf_image",
+                               return_value=b""), \
                     mock.patch("scripts.mzm_samus_pipeline.compose_all",
                                return_value=report):
                 with self.assertRaisesRegex(ValueError, "unresolved"):

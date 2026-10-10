@@ -1518,3 +1518,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   remained live through the dummy-video smoke test. A contact sheet of the
   private output confirmed distinct Power, Varia, Full, Gravity and Suitless
   renders with their arm cannons.
+
+## Patch 0191 - retire the patch-numbered Samus extraction chain
+
+- The pipeline now checks that every ELF symbol it reads (animation, arm cannon
+  and palette arrays) holds exactly the ROM's bytes, using an `objcopy` image
+  of the reference ELF. This replaces the old hard-coded palette-address guard
+  and fails closed on a mismatched build. The two files differ only outside the
+  Samus data (header logo and unrelated blocks).
+- Removed 21 superseded scripts (`mzm_samus_export_0150`, compositions
+  0160/0164/0166, bulk 0170, special 0171/0173/0174, cannon 0156-0159, runtime
+  sidecars 0163/0165/0167, runtime library/index 0175/0176, bundle 0181,
+  `mzm_samus_catalog`, `mzm_samus_resolve` and the OAM diagnostic 0172) and
+  their 22 test modules. Their only consumers were each other; the composer
+  reproduces or supersedes all of their output. The editor preview chain
+  (`mzm_samus_sprite`, `mzm_samus_body`, `mzm_samus_frame`,
+  `mzm_samus_oam_decode`, `gba_oam`) is unchanged.
+- Dropped the unused intermediate/metadata/diagnostics layout constants and
+  deleted the matching private caches (21 MB of `intermediate/` plus
+  `metadata/`), which no remaining code reads. The runtime library is rebuilt
+  from ROM, ELF and tables alone.
+- Validation on 2026-10-10: CTest passed 15/15 (Python suite 354 tests), the
+  rebuilt library still has 1,384 sequences and 600 bindings, and the
+  proprietary-file guard passed.

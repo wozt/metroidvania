@@ -76,8 +76,7 @@ ELF through `scripts/mzm_samus_compose.py`, which mirrors
 selection) and `SamusUpdatePalette` (suit palettes). Each frame records its
 native draw offset relative to Samus's position, and the runtime index uses the
 versioned `metroidvania-samus-runtime-index-v3` schema. Objects no longer
-referenced by the index are pruned. Optional research commands write only below
-`metroid/sprites/samus/diagnostics/`.
+referenced by the index are pruned; no intermediate cache is kept.
 The generated `animation_map.tsv` resolves 33 semantic actions across suit,
 facing and aim variants to exact catalogue keys. Runtime loading rejects an
 unknown key or duplicate selector. The runtime maps each controller pose to

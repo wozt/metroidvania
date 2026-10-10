@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -27,6 +28,7 @@ from scripts.mzm_samus_compose import (
     compose_all,
     parse_symbols,
     parse_tables,
+    verify_symbols_against_rom,
 )
 from scripts.mzm_samus_frame import EXPECTED_SHA1
 
@@ -133,8 +135,17 @@ def _run_nm(nm: str, elf: Path) -> str:
                           capture_output=True, text=True).stdout
 
 
+def _elf_image(objcopy: str, elf: Path) -> bytes:
+    with tempfile.TemporaryDirectory() as directory:
+        image = Path(directory) / "reference.gba"
+        subprocess.run([objcopy, "-O", "binary", str(elf), str(image)],
+                       check=True, capture_output=True)
+        return image.read_bytes()
+
+
 def produce(root: Path, rom_path: Path, elf: Path, decomp: Path,
-            nm: str = "arm-none-eabi-nm") -> dict:
+            nm: str = "arm-none-eabi-nm",
+            objcopy: str = "arm-none-eabi-objcopy") -> dict:
     root = Path(root).resolve()
     rom = Path(rom_path).read_bytes()
     if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
@@ -146,6 +157,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path,
         (Path(decomp) / "src/data/samus/samus_animation_pointers.c")
         .read_text(encoding="utf-8"))
     symbols = parse_symbols(_run_nm(nm, elf))
+    verify_symbols_against_rom(rom, _elf_image(objcopy, elf), symbols)
 
     destination = private_path(root, METROID_SAMUS_RUNTIME, create=True)
     if destination.is_symlink():
@@ -230,9 +242,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--decomp", type=Path,
                         default=ROOT / "third_party/mzm")
     parser.add_argument("--nm", default="arm-none-eabi-nm")
+    parser.add_argument("--objcopy", default="arm-none-eabi-objcopy")
     args = parser.parse_args(argv)
     try:
-        result = produce(args.root, args.rom, args.elf, args.decomp, args.nm)
+        result = produce(args.root, args.rom, args.elf, args.decomp, args.nm,
+                         args.objcopy)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as exc:
         parser.error(str(exc))
     print("Samus runtime library:", result["sequences"], "sequences,",

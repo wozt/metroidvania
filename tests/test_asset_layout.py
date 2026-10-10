@@ -6,10 +6,8 @@ import unittest
 
 from scripts.asset_layout import (
     EXTRACTED,
-    METROID_SAMUS_BODY_SOURCE,
-    METROID_SAMUS_COMPOSED_SOURCE,
+    METROID_SAMUS_ANIMATIONS,
     METROID_SAMUS_RUNTIME,
-    METROID_SAMUS_SPECIAL_SOURCE,
     private_path,
 )
 from scripts.audit_extracted_assets import REPORT, audit
@@ -53,10 +51,8 @@ class AssetLayoutTests(unittest.TestCase):
     def test_canonical_samus_layout_has_no_patch_number_directories(self):
         paths = (
             METROID_SAMUS_RUNTIME,
-            METROID_SAMUS_BODY_SOURCE,
-            METROID_SAMUS_COMPOSED_SOURCE,
-            METROID_SAMUS_SPECIAL_SOURCE,
-        )
+            METROID_SAMUS_ANIMATIONS,
+                )
         for path in paths:
             with self.subTest(path=path):
                 self.assertFalse(any(part[-4:].isdigit() for part in path.parts))

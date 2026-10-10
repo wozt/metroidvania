@@ -16,6 +16,7 @@ import zlib
 
 from scripts.import_game_assets import OUTPUT, ROOT, ROMS, verified_rom, write_generated
 from scripts.gba_tiles import bgr555
+from scripts.asset_layout import METROID_RAW_DATA
 
 # Original CLIPDATA_TILEMAP_*_DOOR_TOP_LEFT values from
 # metroidret/mzm include/constants/clipdata.h. Right side = +1;
@@ -66,7 +67,7 @@ def common_resource(name: str, expected: int) -> bytes:
     """Use verified private raw extraction, or hash-verified local ROM offsets."""
     if not name.startswith("common/") or "/" in name[7:] or not 0 < expected <= 8192:
         raise ValueError("invalid common resource request")
-    path = OUTPUT / "raw/metroid/data" / name
+    path = OUTPUT / METROID_RAW_DATA / name
     if path.is_symlink():
         raise ValueError("symlinked MZM private common resource")
     if path.is_file():

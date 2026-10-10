@@ -21,7 +21,7 @@ class NativeMinimapTest(unittest.TestCase):
     def test_native_occupied_tiles_keep_real_coordinates(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            dest = output / 'raw/metroid/data/menus/pause_screen'
+            dest = output / 'metroid/raw/data/menus/pause_screen'
             dest.mkdir(parents=True)
             tiles = [0x140] * 1024
             tiles[0] = 0x141

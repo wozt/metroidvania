@@ -1613,3 +1613,15 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-10: warning-clean build, CTest passed 16/16, and
   Brinstar 033 loaded the 1,864-sequence Samus library, 600 bindings and the
   216-sequence projectile library.
+
+## Patch 0195 - fix MZM raw-data consumers after the asset migration
+
+- The canonical importer writes Zero Mission raw payloads below
+  `assets/extracted/metroid/raw/data/`, but `mzm_room_render`,
+  `mzm_hatch_preview` and `world_overview` still read the removed
+  `raw/metroid/data/` tree, so native MZM room rendering (and the editor's
+  `room-render`) failed on a fresh extraction. They now use the new
+  `METROID_RAW_DATA` layout constant; their tests use the canonical path.
+- Validation on 2026-10-10: the Python suite passed, and
+  `fusion_editor_cli --command=room-render --world=zero_mission --area=Brinstar
+  --room=33` succeeded again on the private extraction.

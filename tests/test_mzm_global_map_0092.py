@@ -22,7 +22,7 @@ class GlobalMap0092Tests(unittest.TestCase):
             data.extend(raw[i:i+8])
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            file = root / 'raw/metroid/data/menus/pause_screen/brinstar_minimap.tt'
+            file = root / 'metroid/raw/data/menus/pause_screen/brinstar_minimap.tt'
             file.parent.mkdir(parents=True)
             file.write_bytes(data)
             with patch.object(overview, 'MZM_AREAS', ('Brinstar',)), \

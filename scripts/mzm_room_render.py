@@ -22,11 +22,12 @@ if str(ROOT) not in sys.path:
 from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.import_game_assets import OUTPUT, write_generated
 from scripts.gba_tiles import bgr555
+from scripts.asset_layout import METROID_RAW_DATA
 
 MAX_RAW = 128 * 1024
 MAX_TILES = 1024
 MAX_BLOCKS = 6144
-ROOM_PREFIX = 'raw/metroid/data'
+ROOM_PREFIX = METROID_RAW_DATA
 SYM = re.compile(r'^s([A-Za-z0-9]+)_(\d+)_(Bg[012]|Clipdata)$')
 TILESET_TABLE = ROOT / 'third_party/mzm/src/data/rooms_data.c'
 

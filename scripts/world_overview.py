@@ -447,9 +447,10 @@ def native_mzm_minimap_cells() -> list[tuple[int, ...]]:
     """
     import struct
     from scripts.mzm_room_render import lz77
+    from scripts.asset_layout import METROID_RAW_DATA
     from scripts.import_game_assets import ROMS, ROOT, verified_rom
 
-    raw_root = OUTPUT / 'raw/metroid/data/menus/pause_screen'
+    raw_root = OUTPUT / METROID_RAW_DATA / 'menus/pause_screen'
     missing = [slug for slug in MZM_AREAS
                if not (raw_root / (slug.lower() + '_minimap.tt')).is_file()]
     rom = None

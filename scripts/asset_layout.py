@@ -15,6 +15,8 @@ ARIA = EXTRACTED / "aria"
 SHARED = EXTRACTED / "shared"
 
 METROID_RAW = METROID / "raw"
+# Raw ROM payload tree written by import_game_assets, relative to EXTRACTED.
+METROID_RAW_DATA = METROID_RAW.relative_to(EXTRACTED) / "data"
 METROID_ROOMS = METROID / "rooms"
 METROID_MAPS = METROID / "maps"
 METROID_TILESETS = METROID / "tilesets"

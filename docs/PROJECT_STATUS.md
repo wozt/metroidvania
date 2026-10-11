@@ -2440,3 +2440,34 @@ No automatic reciprocal link or native engine encoder is implemented.
   visible has to be found before an honest port.
 - Confirmed from `sub_0803AC40` that entity positions are screen-relative
   (drawing is culled outside x -64..304 and y -32..224).
+
+## Patch 0236 - Zero Mission sprite engine core and Zoomers
+
+- New `scripts/mzm_sprites.py` (rebuild task `metroid_sprites`): room sprite
+  placements resolved through the default spritesets, the enemy sprite
+  library for sprites with a ported AI (OAM tables in four flip states with
+  their palette row), and `metadata/sprites.tsv` (sprite RNG table, falling
+  speeds, primary sprite stats) read from the ROM through verified reference
+  ELF symbols. `mzm_runtime_room` now writes `P` lines; the 330 exported rooms
+  hold 1,160 default sprite placements.
+- New SDL-free `src/runtime/mzm_sprites.{h,c}`: `SpriteInitPrimary`, the
+  `SpriteUpdate` order with the native sprite RNG, `SpriteUpdateAnimation`,
+  `SpriteCheckOnScreen`, the sprite view of Clipdata
+  (`ClipdataConvertToCollision`, original version) and the vertical and slope
+  collision helpers, and the Zoomer AI (init onto any surface, crawling with
+  its eight turn cases, slope animations, falls and landings).
+- `fusion_room_runtime` loads, updates and draws the room's ported sprites
+  (hitboxes with F7 / the debug menu), respawns them on door travel and
+  teleport, reports live sprites in captures, and gains `--spawn X Y`.
+- Checked in captures of brinstar_000: the six yellow Zoomers spawn on the
+  floor, walls and ceiling; the floor Zoomer crawls, climbs the pillar and
+  turns its corners.
+- Not ported yet: combat (contact damage, projectile hits, death, drops),
+  freezing and every other sprite.
+- Tests: `tests/test_mzm_sprites.c` (clipdata conversion by actor, crawling
+  speed, wall climb, fall and landing, removal without a surface, the red
+  Zoomer on a ceiling, on-screen status) and `tests/test_mzm_sprites.py`
+  (enum, spriteset resolution, data tables).
+- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
+  26/26, the Python suite passed 402/402, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

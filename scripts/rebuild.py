@@ -195,6 +195,7 @@ ARIA_WEAPONS = ROOT / ARIA_SPRITES / "weapons/runtime/runtime_index.tsv"
 ARIA_SOMA = ROOT / ARIA_SOMA_RUNTIME / "runtime_index.tsv"
 MZM_SAMUS = ROOT / METROID_SAMUS_RUNTIME / "runtime_index.tsv"
 MZM_PROJECTILES = ROOT / METROID_PROJECTILES_RUNTIME / "runtime_index.tsv"
+MZM_SPRITES = ROOT / "assets/extracted/metroid/sprites/enemies/runtime/runtime_index.tsv"
 
 ASSET_TASKS = {
     "aria_rom": Task(
@@ -233,6 +234,10 @@ ASSET_TASKS = {
         "metroid_samus", "metroid", "mzm_samus_pipeline", (),
         (MZM_SAMUS, MZM_PROJECTILES, ROOT / METROID_SAMUS_RUNTIME / "animation_map.tsv"),
         ("metroid_rom",), _sprite_validator(MZM_SAMUS, MZM_PROJECTILES), requires=(MZM_ELF,)),
+    "metroid_sprites": _asset_task(
+        "metroid_sprites", "metroid", "mzm_sprites", (),
+        (MZM_SPRITES, ROOT / "assets/extracted/metroid/metadata/sprites.tsv"),
+        ("metroid_rom",), _sprite_validator(MZM_SPRITES), requires=(MZM_ELF,)),
     "metroid_rooms": _asset_task(
         "metroid_rooms", "metroid", "mzm_runtime_room", ("--all",), (MZM_ROOM_INDEX,),
         ("raw_import",), _export_validator(MZM_ROOM_INDEX)),

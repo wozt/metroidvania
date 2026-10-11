@@ -12,6 +12,7 @@
 #include "gba_input.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
+#include "mzm_sprites.h"
 
 #define MAX_MARKS 32768
 #define MAX_FILE_BYTES 4000000L
@@ -52,11 +53,16 @@ typedef struct {
     bool open;
 } RoomHatch;
 
+/* One default room sprite (SpriteLoadRoomSprites), exported by
+ * scripts/mzm_sprites.py: block position, sprite name, graphics slot. */
+#define MAX_ROOM_SPRITES 24
+typedef struct { int y, x, gfx_slot, room_slot; char name[64]; } RoomSprite;
 /* One native collision type and transition behavior per 16-pixel block. */
 typedef struct { int width, height, resolution, room; char world[16], area[40];
     unsigned char types[MAX_ROOM_CELLS]; unsigned char behaviors[MAX_ROOM_CELLS];
     RoomDoor doors[MAX_ROOM_DOORS]; int door_count;
     RoomHatch hatches[MAX_ROOM_HATCHES]; int hatch_count;
+    RoomSprite sprites[MAX_ROOM_SPRITES]; int sprite_count;
     size_t count; } Room;
 
 static void room_set_cell(Room *room, int x, int y, ClipType type) {
@@ -269,6 +275,17 @@ static bool parse_native_room(const char *path, Room *room) {
                 door.x0 < 0 || door.x1 < door.x0 || door.y0 < 0 || door.y1 < door.y0)
                 goto failure;
             room->doors[room->door_count++] = door;
+            continue;
+        }
+        if (line[0] == 'P') {
+            RoomSprite sprite = {0};
+            if (room->sprite_count >= MAX_ROOM_SPRITES ||
+                sscanf(line, "P\t%d\t%d\t%63[^\t]\t%d\t%d %c", &sprite.y, &sprite.x, sprite.name,
+                       &sprite.gfx_slot, &sprite.room_slot, &extra) != 5 ||
+                sprite.x < 0 || sprite.x >= room->width / 16 || sprite.y < 0 ||
+                sprite.y >= room->height / 16 || sprite.gfx_slot < 0 || sprite.gfx_slot > 7)
+                goto failure;
+            room->sprites[room->sprite_count++] = sprite;
             continue;
         }
         if (line[0] == 'H') {
@@ -1142,6 +1159,103 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
     }
     SDL_SetRenderScale(renderer,1.f,1.f);
 }
+/* Zero Mission sprites: the ROM tables and OAM frame durations of
+ * scripts/mzm_sprites.py, the sprite library, and the room's live sprites. */
+#define RUNTIME_SPRITE_TABLES "assets/extracted/metroid/metadata/sprites.tsv"
+#define RUNTIME_SPRITE_LIBRARY "assets/extracted/metroid/sprites/enemies/runtime/runtime_index.tsv"
+#define RUNTIME_MAX_SPRITES 24
+typedef struct {
+    MzmSpriteTables tables;
+    MzmSpriteKind zoomer;
+    char names[256][64];
+    bool tables_ok, kinds_ok;
+    MzmSprite live[RUNTIME_MAX_SPRITES];
+    uint8_t frame8;
+    uint16_t frame16;
+} RuntimeSprites;
+
+static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[1024];
+    bool ok = fgets(line, sizeof line, f) &&
+              !strcmp(line, "schema\tmetroidvania-mzm-sprite-tables-v1\n");
+    int random_count = 0, falling_count = 0;
+    while (ok && fgets(line, sizeof line, f)) {
+        char *cursor = strchr(line, '\t');
+        if (!cursor) continue;
+        *cursor++ = '\0';
+        if (!strcmp(line, "random")) {
+            for (random_count = 0; random_count < 32; ++random_count)
+                sprites->tables.random[random_count] = (uint8_t)strtol(cursor, &cursor, 10);
+        } else if (!strcmp(line, "falling")) {
+            for (falling_count = 0; falling_count < 16; ++falling_count)
+                sprites->tables.falling[falling_count] = (int16_t)strtol(cursor, &cursor, 10);
+        } else if (!strcmp(line, "stats")) {
+            char name[64];
+            int id, health, damage, used = 0;
+            if (sscanf(cursor, "%63s %d %d %d%n", name, &id, &health, &damage, &used) != 4 ||
+                id < 0 || id > 255) { ok = false; break; }
+            snprintf(sprites->names[id], sizeof sprites->names[id], "%s", name);
+            sprites->tables.health[id] = (uint16_t)health;
+            sprites->tables.damage[id] = (uint16_t)damage;
+        }
+    }
+    fclose(f);
+    return ok && random_count == 32 && falling_count == 16;
+}
+
+/* Frame durations of the Zoomer's OAM tables from the sprite library. */
+static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *library) {
+    for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
+        char key[160];
+        snprintf(key, sizeof key, "Sprite/ZOOMER_YELLOW/%s/none", mzm_zoomer_anim_names[a]);
+        RuntimeLibraryEntry *entry = runtime_library_find(library, key);
+        if (!entry || entry->count > MZM_SPRITE_MAX_FRAMES) return false;
+        sprites->zoomer.counts[a] = (uint8_t)entry->count;
+        for (int f = 0; f < entry->count; ++f)
+            sprites->zoomer.timers[a][f] = (uint8_t)entry->ticks[f];
+    }
+    return true;
+}
+
+/* SpriteLoadRoomSprites: the ported sprites of the room. */
+static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room) {
+    memset(sprites->live, 0, sizeof sprites->live);
+    if (!sprites->tables_ok) return;
+    int slot = 0;
+    for (int i = 0; i < room->sprite_count && slot < RUNTIME_MAX_SPRITES; ++i) {
+        for (int id = 0; id < 256; ++id) {
+            if (strcmp(sprites->names[id], room->sprites[i].name) ||
+                !mzm_sprite_supported((uint8_t)id))
+                continue;
+            mzm_sprite_init_primary(&sprites->live[slot++], (uint8_t)id,
+                                    (uint8_t)room->sprites[i].gfx_slot,
+                                    (uint16_t)room->sprites[i].y, (uint16_t)room->sprites[i].x,
+                                    (uint8_t)room->sprites[i].room_slot);
+            break;
+        }
+    }
+}
+
+/* ClipdataProcess's block lookup for sprites: the room's native types. */
+static uint8_t runtime_sprite_block(void *context, uint16_t y, uint16_t x) {
+    const Room *room = context;
+    int column = x / 64, row = y / 64;
+    if (column >= room->width / 16 || row >= room->height / 16) return MZM_CLIPDATA_AIR;
+    return (uint8_t)room_cell(room, column, row);
+}
+
+static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy) {
+    if (!sprites->kinds_ok) return;
+    MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
+                            (uint16_t)((int)cy * 4)};
+    for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
+        mzm_sprite_update(&sprites->live[i], (uint8_t)i, &world, &sprites->tables,
+                          &sprites->zoomer, sprites->frame8, sprites->frame16);
+    sprites->frame8++;
+    sprites->frame16++;
+}
 /* Load an exported native room and its background texture. */
 static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,
                               SDL_Texture **texture) {
@@ -1223,6 +1337,7 @@ int main(int argc, char **argv) {
     long capture_frames=0,capture_repeat=0;
     unsigned long capture_buttons=0;
     bool check=false,animation_check=false,debug_at_start=false;
+    int spawn_px=-1,spawn_py=-1;
     const char *debug_input=NULL;
     GbaPadMap pad_map;
     gba_pad_map_default(&pad_map);
@@ -1254,6 +1369,11 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--projectile-library") && !projectile_index && i+1<argc)
             projectile_index=argv[++i];
         else if (!strcmp(argv[i],"--debug-menu")) debug_at_start=true;
+        else if (!strcmp(argv[i],"--spawn") && i+2<argc) {
+            /* Test placement: Samus's feet at room pixel X, Y. */
+            spawn_px=atoi(argv[++i]);
+            spawn_py=atoi(argv[++i]);
+        }
         else if (!strcmp(argv[i],"--debug-input") && i+1<argc) debug_input=argv[++i];
         else if (!strcmp(argv[i],"--input-map") && i+1<argc) {
             char error[256];
@@ -1263,7 +1383,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--debug-input MASK,...] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -1354,7 +1474,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--debug-input MASK,...] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -1406,6 +1526,9 @@ int main(int argc, char **argv) {
     int rc=1;
     RuntimeLibrary library = {0};
     RuntimeLibrary projectile_library = {0};
+    RuntimeLibrary sprite_library = {0};
+    static RuntimeSprites sprites;
+    float last_cx = 0.f, last_cy = 0.f;
     static RuntimePalettes palettes;
     RuntimePaletteSlots palette_slots={0};
     const char *palette_suit=NULL;
@@ -1445,6 +1568,14 @@ int main(int argc, char **argv) {
         }
         printf("Projectile library: %d native sequences\n",projectile_library.count);
     }
+    /* Sprites (scripts/mzm_sprites.py); without them the rooms stay empty. */
+    sprites.tables_ok = runtime_sprite_tables_open(&sprites, RUNTIME_SPRITE_TABLES);
+    sprites.kinds_ok = sprites.tables_ok &&
+                       runtime_library_open(&sprite_library, RUNTIME_SPRITE_LIBRARY) &&
+                       runtime_sprite_kinds_open(&sprites, &sprite_library);
+    if (!sprites.kinds_ok)
+        fprintf(stderr, "No Zero Mission sprites: python3 -m scripts.mzm_sprites\n");
+    runtime_sprites_spawn(&sprites, room);
     gba_input_init(&gamepad,&pad_map);
     MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope,
                             runtime_collision_point,runtime_collision_affect};
@@ -1469,7 +1600,10 @@ int main(int argc, char **argv) {
                                          &equipment};
     MzmAnimationSource animation_source={&pose_animation,runtime_pose_durations};
     MzmSamus samus;
-    if(!runtime_spawn_samus(room,&samus)) {
+    if(spawn_px>=0 && spawn_py>=0) {
+        mzm_samus_init(&samus,(int32_t)spawn_px*MZM_SUBPIXELS_PER_PIXEL,
+                       (int32_t)spawn_py*MZM_SUBPIXELS_PER_PIXEL,1);
+    } else if(!runtime_spawn_samus(room,&samus)) {
         fprintf(stderr,"No free avatar spawn found\n");
         goto cleanup;
     }
@@ -1712,6 +1846,7 @@ int main(int argc, char **argv) {
                     if(texture)SDL_DestroyTexture(texture);
                     texture=next_texture;
                     samus=placed;
+                    runtime_sprites_spawn(&sprites, room);
                     mzm_weapons_init(&weapons);
                     echo=(RuntimeEcho){0};
                     echo_visible=false;
@@ -1808,6 +1943,8 @@ int main(int argc, char **argv) {
             }
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
+            /* SpriteUpdate after Samus and her projectiles. */
+            runtime_sprites_update(&sprites, room, last_cx, last_cy);
             /* Room lifecycle: a touched door transition loads the exported
              * destination room and places Samus at its exit. */
             int door_offset=0;
@@ -1826,6 +1963,7 @@ int main(int argc, char **argv) {
                     if(texture)SDL_DestroyTexture(texture);
                     texture=next_texture;
                     runtime_place_after_door(&samus,&used,door_offset);
+                    runtime_sprites_spawn(&sprites, room);
                     mzm_weapons_init(&weapons);
                     echo=(RuntimeEcho){0};
                     echo_visible=false;
@@ -1880,6 +2018,8 @@ int main(int argc, char **argv) {
         /* Whole-pixel camera keeps native sprite pixels aligned. */
         float cx=(float)(int)clampf(feet_x-160.f,0.f,(float)(room->width>320?room->width-320:0));
         float cy=(float)(int)clampf(feet_y-16.f-112.f,0.f,(float)(room->height>224?room->height-224:0));
+        last_cx = cx;
+        last_cy = cy;
         SDL_SetRenderDrawColor(renderer,12,14,24,255);SDL_RenderClear(renderer);
         if (texture) {
             SDL_FRect src={cx,cy,320.f,224.f};
@@ -1978,6 +2118,34 @@ int main(int argc, char **argv) {
             SDL_RenderFillRect(renderer,&shell);
         }
         SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
+        /* Sprites: their OAM frame, mirrored by the X and Y flip statuses
+         * (SpriteDraw); palette rows are baked per sprite by the exporter. */
+        for(int i=0;i<RUNTIME_MAX_SPRITES && sprites.kinds_ok;i++) {
+            const MzmSprite *sprite=&sprites.live[i];
+            if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) || sprite->anim>=MZM_ZOOMER_ANIMS)continue;
+            bool fx=sprite->status&MZM_SPRITE_STATUS_X_FLIP,fy=sprite->status&MZM_SPRITE_STATUS_Y_FLIP;
+            char key[160];
+            snprintf(key,sizeof key,"Sprite/%s/%s/%s",sprites.names[sprite->sprite_id],
+                     mzm_zoomer_anim_names[sprite->anim],fx&&fy?"xy":fx?"x":fy?"y":"none");
+            RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
+            if(!entry || entry->count==0)continue;
+            int index=sprite->frame<entry->count?sprite->frame:0;
+            SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+            if(!art_texture)continue;
+            const RuntimeLibraryFrame *art=&entry->frames[index];
+            SDL_FRect box={viewport.x+((float)(sprite->x>>2)+(float)art->offset_x-cx)*scale,
+                           viewport.y+((float)(sprite->y>>2)+(float)art->offset_y-cy)*scale,
+                           (float)art->w*scale,(float)art->h*scale};
+            SDL_RenderTexture(renderer,art_texture,NULL,&box);
+            if(show_hitbox) {
+                SDL_FRect hit={viewport.x+((float)((sprite->x+sprite->hitbox_left)>>2)-cx)*scale,
+                               viewport.y+((float)((sprite->y+sprite->hitbox_top)>>2)-cy)*scale,
+                               (float)((sprite->hitbox_right-sprite->hitbox_left)>>2)*scale,
+                               (float)((sprite->hitbox_bottom-sprite->hitbox_top)>>2)*scale};
+                SDL_SetRenderDrawColor(renderer,240,220,60,255);
+                SDL_RenderRect(renderer,&hit);
+            }
+        }
         for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
             const MzmProjectile *projectile=&weapons.list[i];
             if(!projectile->active || projectile->stage==MZM_STAGE_INIT)continue;
@@ -2013,8 +2181,16 @@ int main(int argc, char **argv) {
                 fprintf(stderr,"Capture failed: %s\n",SDL_GetError());
                 goto cleanup;
             }
-            printf("Captured frame %ld: %s (pose %s)\n",capture_step,capture_path,
-                   mzm_pose_name(samus.pose));
+            int live=0;
+            for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
+                live+=(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)!=0;
+            printf("Captured frame %ld: %s (pose %s, %d sprites)\n",capture_step,capture_path,
+                   mzm_pose_name(samus.pose),live);
+            for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
+                if(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)
+                    printf("  sprite %d %s at %d,%d pose %#x status %#x\n",i,
+                           sprites.names[sprites.live[i].sprite_id],sprites.live[i].x>>2,
+                           sprites.live[i].y>>2,sprites.live[i].pose,sprites.live[i].status);
             running=false;
         }
         SDL_RenderPresent(renderer);
@@ -2025,6 +2201,7 @@ cleanup:
     gba_input_close(&gamepad);
     runtime_library_free(&library);
     runtime_library_free(&projectile_library);
+    runtime_library_free(&sprite_library);
     if (texture) SDL_DestroyTexture(texture);
     if (surface) SDL_DestroySurface(surface);
     if (renderer) SDL_DestroyRenderer(renderer);

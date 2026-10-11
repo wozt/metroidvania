@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from scripts import mzm_room_render as render
-from scripts import export_index
+from scripts import export_index, mzm_sprites
 from scripts.asset_layout import METROID_ROOMS, private_path
 from scripts.sprite_library import write_atomic
 
@@ -236,7 +236,7 @@ def room_hatches(doors, room: int, clip, tables, hatch_types, hatch_behaviors):
 
 def encode_room(area: str, number: int, width: int, height: int,
                 clip: tuple[int, int, tuple[int, ...]], tables,
-                doors: list[dict] | None = None, hatches=None) -> str:
+                doors: list[dict] | None = None, hatches=None, sprites=None) -> str:
     clip_width, clip_height, cells = clip
     if clip_width * 16 != width or clip_height * 16 != height:
         raise ValueError("Clipdata dimensions differ from the rendered room")
@@ -265,6 +265,11 @@ def encode_room(area: str, number: int, width: int, height: int,
     for index, x, y, hatch, weakness, health in hatches or []:
         lines.append(f"H\t{index}\t{x}\t{y}\t{hatch[len('HATCH_'):].lower()}\t"
                      f"{weakness}\t{health}")
+    # Default room sprites (scripts.mzm_sprites.room_sprites): block y and x,
+    # sprite, graphics slot and room slot.
+    for sprite in sprites or []:
+        lines.append(f"P\t{sprite['y']}\t{sprite['x']}\t{sprite['sprite'][len('PSPRITE_'):]}\t"
+                     f"{sprite['gfx_slot']}\t{sprite['room_slot']}")
     lines.append("END")
     return "\n".join(lines) + "\n"
 
@@ -301,7 +306,11 @@ def produce(root: Path, area: str, number: int) -> dict:
     doors = door_tables().get(area, [])
     hatch_types, hatch_behaviors = hatch_tables()
     hatches = room_hatches(doors, number, clip, tables, hatch_types, hatch_behaviors)
-    text = encode_room(area, number, width, height, clip, tables, doors, hatches)
+    try:
+        sprites = mzm_sprites.room_sprites(area, number)
+    except ValueError:
+        sprites = []            # rooms outside the area tables (test rooms)
+    text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites)
     folder = private_path(Path(root), RUNTIME_ROOMS / f"{area.lower()}_{number:03}",
                           create=True)
     folder.mkdir(exist_ok=True)

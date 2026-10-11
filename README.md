@@ -226,6 +226,11 @@ toggles High Jump, M refills ammunition, H applies 20 damage, Enter restarts
 after death, F6 opens the raw animation catalogue and F7 outlines the active
 hitbox.
 
+Rooms show their native Zoomers (`python3 -m scripts.mzm_sprites`, see
+[`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)); they crawl around floors,
+walls and ceilings but do not fight yet. `--spawn X Y` places Samus's feet at
+a room pixel position for tests.
+
 For headless verification, `--capture out.bmp FRAMES BUTTONS REPEAT` runs
 FRAMES fixed 60 Hz updates with the given GBA button mask (right 0x1, left 0x2,
 up 0x4, down 0x8, A 0x10, B 0x20, L 0x40, R 0x80, Select 0x100), re-pressing A

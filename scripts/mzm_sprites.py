@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-only
+"""Zero Mission room sprites and enemy sprite graphics.
+
+Room placements follow ``SpriteLoadRoomSprites`` / ``SpriteInitPrimary``: a
+room entry's default enemy data (``.pDefaultSpriteData``) lists
+``(y block, x block, slot)`` triples up to ``0xFF``; a slot above 16 selects
+entry ``(slot - 1) % 16`` of the room's default spriteset
+(``sSpritesetPointers[.defaultSpriteset]``: ``PSPRITE`` id and graphics
+slot, ``SpriteLoadSpriteset``), a lower slot is sprite ``slot - 1`` in
+graphics slot 0. The first and second event spritesets (hard mode and story
+events) are not exported. Everything is parsed from the pinned
+decompilation; no table is stored in this repository.
+
+Sprite graphics follow ``SpriteLoadSpriteset`` and ``SpriteDraw``: the
+LZ77 graphics of ``sSpritesGraphicsPointers`` go to OBJ VRAM 0x4000 + slot *
+0x800 (tile 0x200 + slot * 64), the palette rows of
+``sSpritesPalettePointers`` to OBJ rows 8 + slot, and each ``FrameData``
+table of the sprite's data file is drawn relative to the sprite position,
+mirrored around it for the X and Y flip statuses. Only sprites whose AI is
+ported (``PORTED``) are exported, each with the palette row its AI selects.
+Output stays private:
+
+    assets/extracted/metroid/sprites/enemies/runtime/runtime_index.tsv
+    assets/extracted/metroid/metadata/sprites.tsv
+
+``sprites.tsv`` holds the ROM tables the sprite engine reads:
+``sSpriteRandomNumberTable`` (``random``), ``sSpritesFallingSpeed``
+(``falling``) and the ``sPrimarySpriteStats`` row of every primary sprite
+(``stats``: name, id, then the SPRITE_STATS columns: health, damage,
+weaknesses, drop probabilities).
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+from pathlib import Path
+import re
+import struct
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts import mzm_projectile_compose  # noqa: E402
+from scripts.asset_layout import METROID_METADATA, METROID_SPRITES, private_path  # noqa: E402
+from scripts.gba_tiles import bgr555  # noqa: E402
+from scripts.mzm_room_render import lz77  # noqa: E402
+from scripts.mzm_samus_compose import parse_symbols, verify_symbols_against_rom  # noqa: E402
+from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset  # noqa: E402
+from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic  # noqa: E402
+
+ENEMIES_RUNTIME = METROID_SPRITES / "enemies" / "runtime"
+DECOMP = ROOT / "third_party/mzm"
+# Sprites with a ported AI, and the palette row it selects (ZoomerInit:
+# the red Zoomer sets paletteRow and absolutePaletteRow to 1).
+PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1}
+SPRITE_VRAM = 0x4000
+SPRITESET_ENTRY_TYPES = 16          # MAX_AMOUNT_OF_SPRITE_TYPES (15) + 1
+
+
+def _c_body(text: str, start: int) -> str:
+    opening = text.index("{", start)
+    depth = 0
+    for index in range(opening, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[opening + 1:index]
+    raise ValueError("unterminated C initializer")
+
+
+def psprite_ids(header: str) -> dict[str, int]:
+    """Values of the PrimarySprite enum (consecutive from PSPRITE_UNUSED0)."""
+    match = re.search(r"MAKE_ENUM\(u8,\s*PrimarySprite\)", header)
+    if not match:
+        raise ValueError("PrimarySprite enum not found")
+    ids = {}
+    value = 0
+    for item in _c_body(header, match.end()).split(","):
+        item = re.sub(r"//[^\n]*|/\*.*?\*/", "", item, flags=re.S).strip()
+        if not item:
+            continue
+        name, _, explicit = item.partition("=")
+        if explicit.strip():
+            value = int(explicit.strip(), 0)
+        ids[name.strip()] = value
+        value += 1
+    return ids
+
+
+def pointer_table(source: str, table: str) -> dict[str, str]:
+    """``[PSPRITE_OFFSET_FOR_GRAPHICS(PSPRITE_X)] = symbol`` entries."""
+    match = re.search(rf"\b{table}\s*\[[^\]]*\]\s*=", source)
+    if not match:
+        raise ValueError(table + " not found")
+    return dict(re.findall(r"\[PSPRITE_OFFSET_FOR_GRAPHICS\((PSPRITE_\w+)\)\]\s*=\s*(\w+)",
+                           _c_body(source, match.end())))
+
+
+def spritesets(sprite_c: str, spriteset_c: str, ids: dict[str, int]) -> list[list[tuple[str, int]]]:
+    """``sSpritesetPointers`` order, each a list of (PSPRITE name, gfx slot)."""
+    match = re.search(r"\bsSpritesetPointers\s*\[[^\]]*\]\s*=", sprite_c)
+    if not match:
+        raise ValueError("sSpritesetPointers not found")
+    order = re.findall(r"\w+", _c_body(sprite_c, match.end()))
+    names = {value: name for name, value in ids.items()}
+    contents = {}
+    for found in re.finditer(r"const\s+u8\s+(sSpriteset\w+)\s*\[[^\]]*\]\s*=", spriteset_c):
+        body = _c_body(spriteset_c, found.end()).replace("SPRITESET_EMPTY", "0, 0")
+        tokens = [token.strip() for token in body.split(",") if token.strip()]
+        entries = []
+        for name, slot in zip(tokens[0::2], tokens[1::2]):
+            value = ids[name] if name in ids else int(name, 0)
+            if value == 0:
+                break
+            entries.append((names.get(value, name), int(slot, 0)))
+        contents[found.group(1)] = entries
+    return [contents.get(name, []) for name in order]
+
+
+def room_entries(rooms_c: str, area: str) -> dict[int, dict[str, str]]:
+    """Fields of ``s<Area>RoomEntries`` by room index."""
+    match = re.search(rf"\bs{area}RoomEntries\s*\[[^\]]*\]\s*=", rooms_c)
+    if not match:
+        raise ValueError(f"s{area}RoomEntries not found")
+    body = _c_body(rooms_c, match.end())
+    entries = {}
+    for found in re.finditer(r"\[(\d+)\]\s*=\s*\{", body):
+        fields = dict(re.findall(r"\.(\w+)\s*=\s*([^,\n]+)", _c_body(body, found.end() - 1)))
+        entries[int(found.group(1))] = {key: value.strip() for key, value in fields.items()}
+    return entries
+
+
+def enemy_data(rooms_dir: Path, symbol: str) -> list[int]:
+    """The bytes of a room's enemy data array, up to the terminator."""
+    pattern = re.compile(rf"const\s+u8\s+{re.escape(symbol)}\s*\[[^\]]*\]\s*=")
+    for path in sorted(rooms_dir.rglob("*.c")) + [rooms_dir.parent / "rooms_data.c"]:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        found = pattern.search(text)
+        if not found:
+            continue
+        body = _c_body(text, found.end()).replace("ROOM_SPRITE_DATA_TERMINATOR",
+                                                   "255, 255, 255")
+        values = []
+        for token in (item.strip() for item in body.split(",")):
+            if not token:
+                continue
+            index = re.fullmatch(r"SPRITESET_IDX\((\d+)\)", token)
+            values.append(16 + int(index.group(1)) + 1 if index else int(token, 0))
+        return values
+    raise ValueError("enemy data not found: " + symbol)
+
+
+def room_sprites(area: str, number: int, decomp: Path = DECOMP) -> list[dict]:
+    """Default sprites of a room: block position, PSPRITE and graphics slot."""
+    rooms_c = (decomp / "src/data/rooms_data.c").read_text(encoding="utf-8")
+    entry = room_entries(rooms_c, area).get(number)
+    if entry is None:
+        raise ValueError(f"no room entry {area} {number}")
+    header = (decomp / "include/constants/sprite.h").read_text(encoding="utf-8")
+    ids = psprite_ids(header)
+    names = {value: name for name, value in ids.items()}
+    sets = spritesets((decomp / "src/sprite.c").read_text(encoding="utf-8"),
+                      (decomp / "src/data/spriteset.c").read_text(encoding="utf-8"), ids)
+    spriteset = int(entry.get("defaultSpriteset", "0"), 0)
+    if spriteset >= len(sets) - 1:
+        spriteset = len(sets) - 1
+    data = enemy_data(decomp / "src/data/rooms", entry["pDefaultSpriteData"])
+    sprites = []
+    for index in range(0, len(data) - 2, 3):
+        y, x, slot = data[index:index + 3]
+        if y == 0xFF:
+            break
+        slot &= 0x7F
+        if slot > SPRITESET_ENTRY_TYPES:
+            choice = (slot - 1) % SPRITESET_ENTRY_TYPES
+            members = sets[spriteset]
+            if choice >= len(members):
+                continue
+            sprite, gfx_slot = members[choice]
+            gfx_slot &= 7
+        else:
+            sprite, gfx_slot = names.get(slot - 1, f"PSPRITE_{slot - 1}"), 0
+        sprites.append({"y": y, "x": x, "slot": slot, "sprite": sprite, "gfx_slot": gfx_slot,
+                        "room_slot": index // 3})
+    return sprites
+
+
+def data_file(decomp: Path, gfx_symbol: str) -> Path:
+    pattern = re.compile(rf"const\s+u32\s+{re.escape(gfx_symbol)}\s*\[")
+    for path in sorted((decomp / "src/data/sprites").glob("*.c")):
+        if pattern.search(path.read_text(encoding="utf-8")):
+            return path
+    raise ValueError("no sprite data file defines " + gfx_symbol)
+
+
+def frame_tables(source: str) -> list[str]:
+    return re.findall(r"^(?:static\s+)?const\s+struct\s+FrameData\s+(s\w+)\s*\[", source, re.M)
+
+
+def stage(rom: bytes, symbols, gfx: str, palette_symbol: str, palette_row: int):
+    """OBJ VRAM with the sprite in graphics slot 0, and the OBJ palette with
+    its palette row `palette_row` at row 8 (SpriteDraw adds the row)."""
+    vram = bytearray(0x8000)
+    address, size = symbols[gfx]
+    tiles = lz77(rom[rom_offset(address, rom):rom_offset(address, rom) + size])
+    if SPRITE_VRAM + len(tiles) > len(vram):
+        raise ValueError(gfx + " overflows OBJ VRAM")
+    vram[SPRITE_VRAM:SPRITE_VRAM + len(tiles)] = tiles
+    address, size = symbols[palette_symbol]
+    colors = rom[rom_offset(address, rom):rom_offset(address, rom) + size]
+    palette = [None] * 256
+    rows = size // 32
+    for row in range(rows - palette_row):
+        for index in range(16):
+            value = struct.unpack_from("<H", colors, ((palette_row + row) * 16 + index) * 2)[0]
+            palette[(8 + row) * 16 + index] = bgr555(value)
+    return bytes(vram), palette
+
+
+def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
+            nm: str = "arm-none-eabi-nm", objcopy: str = "arm-none-eabi-objcopy") -> dict:
+    from scripts.mzm_samus_pipeline import _elf_image, _run_nm
+    rom = Path(rom_path).read_bytes()
+    if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
+        raise ValueError("original Zero Mission USA ROM SHA-1 mismatch")
+    sprite_c = (decomp / "src/sprite.c").read_text(encoding="utf-8")
+    graphics = pointer_table(sprite_c, "sSpritesGraphicsPointers")
+    palettes = pointer_table(sprite_c, "sSpritesPalettePointers")
+    plan = []
+    wanted = set()
+    for sprite, row in PORTED.items():
+        source = data_file(decomp, graphics[sprite]).read_text(encoding="utf-8")
+        tables = frame_tables(source)
+        plan.append((sprite, row, graphics[sprite], palettes[sprite], tables))
+        wanted.update([graphics[sprite], palettes[sprite], *tables])
+    tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
+    wanted.update(tables)
+    nm_output = _run_nm(nm, elf)
+    symbols = {name: value for name, value in parse_symbols(nm_output, tuple(wanted)).items()
+               if name in wanted}
+    missing = wanted - symbols.keys()
+    if missing:
+        raise ValueError("reference ELF lacks " + ", ".join(sorted(missing)[:5]))
+    verify_symbols_against_rom(rom, _elf_image(objcopy, elf), symbols)
+    ids = psprite_ids((decomp / "include/constants/sprite.h").read_text(encoding="utf-8"))
+    lines = ["schema\tmetroidvania-mzm-sprite-tables-v1"]
+
+    def words(symbol: str, signed: bool, width: int) -> list[int]:
+        address, size = symbols[symbol]
+        data = rom[rom_offset(address, rom):rom_offset(address, rom) + size]
+        code = {1: "b", 2: "h"}[width] if signed else {1: "B", 2: "H"}[width]
+        return list(struct.unpack(f"<{size // width}{code}", data))
+
+    lines.append("random\t" + "\t".join(map(str, words("sSpriteRandomNumberTable", False, 1))))
+    lines.append("falling\t" + "\t".join(map(str, words("sSpritesFallingSpeed", True, 2))))
+    stats = words("sPrimarySpriteStats", False, 2)
+    count = ids.get("PSPRITE_COUNT", 0)
+    columns = len(stats) // count if count else 0
+    if not columns or columns * count != len(stats):
+        raise ValueError("sPrimarySpriteStats does not match the PSPRITE count")
+    for name, value in sorted(ids.items(), key=lambda item: item[1]):
+        if name == "PSPRITE_COUNT":
+            continue
+        row = stats[value * columns:(value + 1) * columns]
+        lines.append("\t".join(["stats", name[len("PSPRITE_"):], str(value), *map(str, row)]))
+    folder = private_path(Path(root), METROID_METADATA, create=True)
+    folder.mkdir(parents=True, exist_ok=True)
+    write_atomic(folder / "sprites.tsv", "\n".join(lines) + "\n")
+    library = LibraryWriter(root, ENEMIES_RUNTIME)
+    for sprite, row, gfx, palette_symbol, tables in plan:
+        vram, palette = stage(rom, symbols, gfx, palette_symbol, row)
+        for table in tables:
+            entries = mzm_projectile_compose.frames(rom, symbols, table)
+            for flip in mzm_projectile_compose.FLIPS:
+                frames = []
+                for pointer, duration in entries:
+                    pixels = mzm_projectile_compose.render(rom, vram, palette, pointer, flip)
+                    bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+                    frames.append((bmp, duration, left, top))
+                library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}", frames)
+    return library.finish()
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--root", type=Path, default=ROOT)
+    parser.add_argument("--rom", type=Path, default=ROOT / "roms/Metroid - Zero Mission (USA).gba")
+    parser.add_argument("--elf", type=Path, default=DECOMP / "mzm_us.elf")
+    parser.add_argument("--decomp", type=Path, default=DECOMP)
+    parser.add_argument("--nm", default="arm-none-eabi-nm")
+    parser.add_argument("--objcopy", default="arm-none-eabi-objcopy")
+    args = parser.parse_args(argv)
+    try:
+        result = produce(args.root, args.rom, args.elf, args.decomp, args.nm, args.objcopy)
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as exc:
+        parser.error(str(exc))
+    print(f"Zero Mission enemy sprites: {result['sequences']} sequences, "
+          f"{result['frames']} frames, {result['unique_bmps']} unique BMPs")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

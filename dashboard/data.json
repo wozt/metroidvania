@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-10T20:48:33+00:00",
+ "generated_at": "2026-10-11T02:00:29+00:00",
  "git": {
-  "commit": "e4a8b7a",
+  "commit": "8fcbcea",
   "branch": "main",
   "dirty": true
  },
@@ -92,25 +92,26 @@
     "assets",
     "platform"
    ],
-   "total": 53,
+   "total": 54,
    "by_status": {
     "not_started": 9,
     "in_progress": 2,
-    "partial": 28,
+    "partial": 30,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
-    "unknown": 2
+    "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 22.6,
-   "with_passing_tests": 39,
-   "with_passing_tests_percent": 73.6,
-   "unknown_or_blocked": 2,
+   "functional_or_better_percent": 22.2,
+   "with_passing_tests": 41,
+   "with_passing_tests_percent": 75.9,
+   "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.samus_runtime_library",
     "mzm.collision.clipdata",
+    "mzm.enemies.zoomer",
     "mzm.input.gamepad",
     "mzm.player.samus_controller",
     "mzm.transitions.doors_and_hatches",
@@ -170,11 +171,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 6,
+   "total": 7,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 6,
+    "partial": 7,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -183,12 +184,13 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 6,
+   "with_passing_tests": 7,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.samus_runtime_library",
     "mzm.collision.clipdata",
+    "mzm.enemies.zoomer",
     "mzm.input.gamepad",
     "mzm.player.samus_controller",
     "mzm.transitions.doors_and_hatches",
@@ -241,18 +243,18 @@
    "by_status": {
     "not_started": 1,
     "in_progress": 0,
-    "partial": 3,
+    "partial": 4,
     "functional": 6,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
-    "unknown": 1
+    "unknown": 0
    },
    "functional_or_better": 6,
    "functional_or_better_percent": 54.5,
-   "with_passing_tests": 9,
-   "with_passing_tests_percent": 81.8,
-   "unknown_or_blocked": 1,
+   "with_passing_tests": 10,
+   "with_passing_tests_percent": 90.9,
+   "unknown_or_blocked": 0,
    "features": [
     "assets.aria_objects",
     "assets.aria_rooms",
@@ -438,7 +440,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -493,7 +495,68 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
+   }
+  },
+  {
+   "id": "mzm.enemies.zoomer",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Sprite engine core and the Zoomer",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_sprites.py"
+   ],
+   "dependencies": [
+    "mzm.collision.clipdata"
+   ],
+   "native_routines": [
+    "SpriteUpdate",
+    "SpriteInitPrimary",
+    "SpriteLoadRoomSprites",
+    "SpriteUpdateAnimation",
+    "SpriteCheckOnScreen",
+    "SpriteUtilGetCollisionAtPosition",
+    "SpriteUtilCheckVerticalCollisionAtPosition",
+    "SpriteUtilAlignYPositionOnSlopeAtOrigin",
+    "ClipdataConvertToCollision",
+    "Zoomer"
+   ],
+   "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider. Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, and the Zoomer crawl, turns and falls are ported; combat is not.",
+   "next_action": "Port Samus contact damage, projectile hits, sprite death and drops.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -533,7 +596,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -576,7 +639,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -623,7 +686,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -662,7 +725,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -703,7 +766,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -756,7 +819,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -801,7 +864,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -850,7 +913,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -905,7 +968,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -947,7 +1010,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -998,7 +1061,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1048,7 +1111,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1088,7 +1151,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1129,7 +1192,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1178,7 +1241,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1446,7 +1509,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1483,7 +1546,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1524,7 +1587,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1559,7 +1622,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1596,7 +1659,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1639,7 +1702,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1675,7 +1738,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1718,7 +1781,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1754,7 +1817,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1790,7 +1853,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1877,7 +1940,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1914,7 +1977,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1959,7 +2022,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -1997,7 +2060,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2034,7 +2097,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2065,26 +2128,37 @@
    "id": "assets.enemy_sprites_mzm",
    "area": "assets",
    "category": "sprites",
-   "title": "Zero Mission enemy sprites",
-   "status": "unknown",
-   "fidelity": "unknown",
+   "title": "Zero Mission enemy sprites and room placements",
+   "status": "partial",
+   "fidelity": "faithful",
    "local_sources": [
-    "scripts/native_enemy_sprite_cache.py"
+    "scripts/mzm_sprites.py"
    ],
-   "tests": [],
-   "dependencies": [],
+   "tests": [
+    "tests/test_mzm_sprites.py"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
    "native_routines": [],
-   "limitations": "An editor sprite cache exists; its use by a runtime is not established.",
+   "limitations": "Only sprites with a ported AI are exported (the Zoomers).",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
-    "tests": [],
-    "verdict": "untested",
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2121,7 +2195,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2166,7 +2240,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2211,7 +2285,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2248,7 +2322,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2284,7 +2358,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2319,7 +2393,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2354,7 +2428,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-10"
+    "verified_on": "2026-10-11"
    }
   },
   {
@@ -2435,6 +2509,13 @@
     "name": "runtime_steep_slopes",
     "files": [
      "tests/test_runtime_steep_slopes.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "mzm_sprites",
+    "files": [
+     "tests/test_mzm_sprites.c"
     ],
     "outcome": "passed"
    },
@@ -2908,6 +2989,13 @@
     "passed": 8
    },
    {
+    "file": "tests/test_mzm_sprites.py",
+    "module": "tests.test_mzm_sprites",
+    "test_count": 3,
+    "outcome": "passed",
+    "passed": 3
+   },
+   {
     "file": "tests/test_mzm_world_atlas.py",
     "module": "tests.test_mzm_world_atlas",
     "test_count": 3,
@@ -3154,12 +3242,24 @@
    }
   ],
   "summary": {
-   "passed": 424,
+   "passed": 428,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "8fcbcea",
+   "date": "2026-10-10",
+   "subject": "docs(aria): skeleton research notes",
+   "scope": "aria"
+  },
+  {
+   "commit": "e23bb3a",
+   "date": "2026-10-10",
+   "subject": "feat(aria): generic debris pieces and the archer's shattering",
+   "scope": "aria"
+  },
   {
    "commit": "e4a8b7a",
    "date": "2026-10-10",
@@ -3627,18 +3727,6 @@
    "date": "2026-10-10",
    "subject": "fix: filter unrelated ELF symbols in Samus compositor",
    "scope": "project"
-  },
-  {
-   "commit": "839a364",
-   "date": "2026-10-10",
-   "subject": "feat: compose selected native Samus cannon and body animations",
-   "scope": "project"
-  },
-  {
-   "commit": "e73ba22",
-   "date": "2026-10-10",
-   "subject": "feat: classify exceptional native Samus cannon animation candidates",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -3666,7 +3754,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 14,
+    "routines_cited_by_features": 23,
     "call_edges": 6071
    },
    "aos": {
@@ -3802,6 +3890,17 @@
   },
   {
    "name": "metroid_samus",
+   "group": "assets",
+   "dependencies": [
+    "metroid_rom"
+   ],
+   "requires": [
+    "roms/Metroid - Zero Mission (USA).gba",
+    "third_party/mzm/mzm_us.elf"
+   ]
+  },
+  {
+   "name": "metroid_sprites",
    "group": "assets",
    "dependencies": [
     "metroid_rom"

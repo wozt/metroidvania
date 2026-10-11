@@ -3017,3 +3017,27 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 28/28, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
+
+## Patch 0244 - dashboard monsters and items bestiary
+
+- New *Monsters & items* dashboard tab: every native monster and item of both
+  games, done or not. Zero Mission rows reuse the object catalog's parsing of
+  the pinned sprite enum and stats (95 monsters, 10 items); a monster counts
+  as done when the `mzm_sprite_family` switch of `src/runtime/mzm_sprites.c`
+  gives it an AI family (38 today), and the five enemy drops of `is_drop()`
+  count as ported items. Aria lists all 113 enemy ids; only the six ported
+  enemies of the `AOS_ENEMY` enum get a name, because resolving the others
+  needs the ROM constructor table, which the dashboard never reads. Aria items
+  are the nine documented pickup families, all without runtime behavior.
+- The tab reuses the status badges, search and status filters. Its method is
+  stated on the page: "done" means a ported AI exists, never complete fidelity
+  (sounds and unported states remain).
+- `scripts/dashboard.py` derives the bestiary from tracked sources only
+  (no ROM, no private asset), carries it in `dashboard/data.json`/`data.js`,
+  and `scripts/check_generated.py` now flags a stale bestiary.
+- Tests: `tests/test_dashboard.py` covers the row counts, the done sets
+  (Zoomer, Sidehopper, the six Aria enemies), the drop-versus-Water-Drop
+  boundary, unnamed Aria enemies and the engine-switch parsing.
+- Validation on 2026-10-12: the warning-clean build succeeded, CTest passed
+  28/28, the Python suite passed 418/418, `check_generated` reported fresh
+  documents and the proprietary-file guard passed.

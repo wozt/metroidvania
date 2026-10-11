@@ -356,6 +356,103 @@ def rebuild_tasks() -> list[dict]:
             for task in rebuild.TASKS.values()]
 
 
+ARIA_ENEMY_COUNT = 0x71
+ARIA_ENEMY_RE = re.compile(r"AOS_ENEMY_([A-Z0-9_]+)\s*=\s*0x([0-9A-Fa-f]+)")
+MZM_FAMILY_CASE_RE = re.compile(r"case MZM_PSPRITE_([A-Z0-9_]+):")
+# The five enemy drops of is_drop() in src/runtime/mzm_sprites.c
+# (MZM_PSPRITE_LARGE_ENERGY_DROP..MZM_PSPRITE_POWER_BOMB_DROP).
+MZM_DROP_SPRITES = ("LARGE_ENERGY_DROP", "SMALL_ENERGY_DROP", "MISSILE_DROP",
+                    "SUPER_MISSILE_DROP", "POWER_BOMB_DROP")
+# Pickup families documented by the editor (patch notes) and the native entity
+# kinds 4/5/6; none has runtime behavior yet.
+ARIA_ITEM_FAMILIES = (
+    ("money", "Money pickups"),
+    ("consumable", "Consumable items"),
+    ("weapon", "Weapons"),
+    ("armor", "Armor"),
+    ("accessory", "Accessories"),
+    ("red_soul", "Red souls (offensive)"),
+    ("blue_soul", "Blue souls (guardian)"),
+    ("yellow_soul", "Yellow souls (passive)"),
+    ("ability_soul", "Ability souls (movement)"),
+)
+
+
+def _mzm_supported_sprites(engine: str) -> set[str]:
+    """Primary sprites with a ported AI: the case labels of mzm_sprite_family's
+    primary switch (drops take the MZM_FAMILY_DROP default)."""
+    body = engine.split("int mzm_sprite_family(", 1)[1]
+    primary = body.split("default:", 1)[0]
+    return set(MZM_FAMILY_CASE_RE.findall(primary))
+
+
+def _prettify(identifier: str) -> str:
+    return " ".join(part.capitalize() for part in identifier.split("_"))
+
+
+def bestiary() -> dict:
+    """Monsters and items of both games, done or not, from tracked sources.
+
+    Zero Mission rows reuse the object catalog's parsing of the pinned enum
+    and stats; a sprite counts as done when the runtime engine has an AI
+    family for it. Aria enemy names need the ROM constructor table, so only
+    the ported enemies (named in src/runtime/aos_enemy.h) get a name. No ROM
+    or private extracted data is read here.
+    """
+    from scripts import object_catalog
+    engine = (ROOT / "src/runtime/mzm_sprites.c").read_text(encoding="utf-8")
+    supported = _mzm_supported_sprites(engine)
+    monsters, items = [], []
+    for record in object_catalog.build_mzm():
+        symbol = record["native_type"].removeprefix("PSPRITE_")
+        is_drop = symbol in MZM_DROP_SPRITES
+        if record["category"] == "Enemy / actor":
+            done = symbol in supported
+            monsters.append({
+                "id": record["native_id"], "name": record["name"],
+                "status": "partial" if done else "not_started",
+                "note": "AI ported to the sprite engine" if done else "",
+            })
+        elif record["category"] == "Item / pickup" or is_drop:
+            items.append({
+                "id": record["native_id"], "name": record["name"],
+                "status": "partial" if is_drop else "not_started",
+                "note": ("Enemy drop AI ported (spawn, collection, blink, despawn)"
+                         if is_drop else ""),
+            })
+    aos_header = (ROOT / "src/runtime/aos_enemy.h").read_text(encoding="utf-8")
+    ported = {int(address, 16): _prettify(name)
+              for name, address in ARIA_ENEMY_RE.findall(aos_header)}
+    aos_monsters = [{
+        "id": enemy_id,
+        "name": ported.get(enemy_id, f"Enemy 0x{enemy_id:02X}"),
+        "status": "partial" if enemy_id in ported else "not_started",
+        "note": ("AI ported to the enemy runtime" if enemy_id in ported else
+                 "not identified without the ROM constructor table"),
+    } for enemy_id in range(ARIA_ENEMY_COUNT)]
+    aos_items = [{
+        "id": key, "name": title, "status": "not_started",
+        "note": "Documented pickup family; no runtime pickup behavior is ported",
+    } for key, title in ARIA_ITEM_FAMILIES]
+    items_note = ("Collectible Zero Mission items are the drop sprites plus the few "
+                  "item sprites of the native enum (beams, suits, expansions and tanks "
+                  "use other native placements not inventoried here).")
+    return {
+        "method": ("A monster counts as done when the corresponding runtime has a ported "
+                   "AI for it (mzm_sprite_family switch, AOS_ENEMY enum); 'partial' never "
+                   "means complete: sounds, effects and unported states remain. Names come "
+                   "from the pinned sources only; unidentified Aria enemies keep their "
+                   "native id."),
+        "games": {
+            "mzm": {"title": "Metroid: Zero Mission", "monsters": monsters,
+                    "items": items, "items_note": items_note},
+            "aos": {"title": "Castlevania: Aria of Sorrow", "monsters": aos_monsters,
+                    "items": aos_items},
+        },
+    }
+
+
+
 def build(run_tests: bool = False, build_dir: Path = ROOT / "build",
           now: datetime | None = None) -> dict:
     native = load_native_features()
@@ -426,6 +523,7 @@ def build(run_tests: bool = False, build_dir: Path = ROOT / "build",
         "tests": tests,
         "timeline": timeline(),
         "inventory": inventory_summary(),
+        "bestiary": bestiary(),
         "rebuild_tasks": rebuild_tasks(),
     }
 
@@ -449,7 +547,8 @@ def declared_view(data: dict) -> dict:
     indicators = {item["id"]: {"total": item["total"], "by_status": item["by_status"],
                                "functional_or_better": item["functional_or_better"]}
                   for item in data.get("indicators", [])}
-    return {"features": features, "indicators": indicators}
+    return {"features": features, "indicators": indicators,
+            "bestiary": data.get("bestiary")}
 
 
 def check(output_dir: Path = OUTPUT_DIR) -> list[str]:
@@ -481,6 +580,8 @@ def check(output_dir: Path = OUTPUT_DIR) -> list[str]:
     for indicator_id, after in new["indicators"].items():
         if old["indicators"].get(indicator_id) != after:
             problems.append(f"indicator {indicator_id}: stale status counts")
+    if old.get("bestiary") != new.get("bestiary"):
+        problems.append("bestiary: stale monsters/items data")
     return problems
 
 

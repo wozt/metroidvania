@@ -166,6 +166,12 @@ unregistered work is not counted, and the git timeline is shown as history,
 not as evidence. `data.js` holds the same data as `data.json` so the page
 loads from `file://`.
 
+The *Monsters & items* tab lists every native monster and item of both games
+from tracked sources only (the pinned Zero Mission sprite enum and stats, the
+`mzm_sprite_family` switch and the `AOS_ENEMY` enum), marked done when the
+runtime has a ported AI for them; unidentified Aria enemies keep their native
+id, and "done" never means complete (sounds and unported states remain).
+
 ## Build and test
 
 ```sh

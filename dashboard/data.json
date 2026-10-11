@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T21:40:56+00:00",
+ "generated_at": "2026-10-11T22:16:41+00:00",
  "git": {
-  "commit": "ef16f68",
+  "commit": "dc8509b",
   "branch": "main",
   "dirty": true
  },
@@ -2684,7 +2684,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "",
+   "limitations": "The monsters/items bestiary reflects the runtime AI switches (mzm_sprite_family, AOS_ENEMY), not complete native fidelity.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -3972,9 +3972,9 @@
    {
     "file": "tests/test_dashboard.py",
     "module": "tests.test_dashboard",
-    "test_count": 11,
+    "test_count": 13,
     "outcome": "passed",
-    "passed": 11
+    "passed": 13
    },
    {
     "file": "tests/test_deferred_room_save_0109.py",
@@ -4447,12 +4447,18 @@
    }
   ],
   "summary": {
-   "passed": 444,
+   "passed": 446,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "dc8509b",
+   "date": "2026-10-11",
+   "subject": "feat(mzm): native breakable blocks",
+   "scope": "mzm"
+  },
   {
    "commit": "ef16f68",
    "date": "2026-10-11",
@@ -4926,12 +4932,6 @@
    "date": "2026-10-10",
    "subject": "feat: add Morph Ball and wall jump runtime states",
    "scope": "project"
-  },
-  {
-   "commit": "e203fee",
-   "date": "2026-10-10",
-   "subject": "feat: automate Samus animation registry",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -4999,6 +4999,1376 @@
    "callbacks built from computed addresses",
    "runtime-observed dependencies"
   ]
+ },
+ "bestiary": {
+  "method": "A monster counts as done when the corresponding runtime has a ported AI for it (mzm_sprite_family switch, AOS_ENEMY enum); 'partial' never means complete: sounds, effects and unported states remain. Names come from the pinned sources only; unidentified Aria enemies keep their native id.",
+  "games": {
+   "mzm": {
+    "title": "Metroid: Zero Mission",
+    "monsters": [
+     {
+      "id": 18,
+      "name": "Zoomer Yellow",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 19,
+      "name": "Zoomer Red",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 20,
+      "name": "Zeela",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 21,
+      "name": "Zeela Red",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 22,
+      "name": "Ripper Brown",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 23,
+      "name": "Ripper Purple",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 24,
+      "name": "Zeb",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 25,
+      "name": "Zeb Blue",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 31,
+      "name": "Skree Green",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 32,
+      "name": "Skree Blue",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 50,
+      "name": "Sova Purple",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 51,
+      "name": "Sova Orange",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 52,
+      "name": "Multiviola",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 54,
+      "name": "Geruta Red",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 55,
+      "name": "Geruta Green",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 56,
+      "name": "Squeept",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 59,
+      "name": "Dragon",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 63,
+      "name": "Reo Green Wings",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 64,
+      "name": "Reo Purple Wings",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 66,
+      "name": "Deorem First Location",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 67,
+      "name": "Deorem Second Location",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 69,
+      "name": "Skultera",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 70,
+      "name": "Dessgeega",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 71,
+      "name": "Dessgeega After Long Beam",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 72,
+      "name": "Waver",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 74,
+      "name": "Mellow",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 75,
+      "name": "Hive",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 77,
+      "name": "Imago Larva Right",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 79,
+      "name": "Imago Cocoon",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 81,
+      "name": "Space Pirate",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 82,
+      "name": "Space Pirate Waiting 1",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 83,
+      "name": "Space Pirate Waiting 2",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 84,
+      "name": "Space Pirate Waiting 3",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 85,
+      "name": "Space Pirate 2",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 86,
+      "name": "Gamet Blue Single",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 87,
+      "name": "Gamet Red Single",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 91,
+      "name": "Zebbo Green",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 92,
+      "name": "Zebbo Yellow",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 94,
+      "name": "Parasite Multiple",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 95,
+      "name": "Parasite",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 97,
+      "name": "Ridley",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 100,
+      "name": "Metroid",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 101,
+      "name": "Frozen Metroid",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 102,
+      "name": "Rinka Orange",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 104,
+      "name": "Viola Blue",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 105,
+      "name": "Viola Orange",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 107,
+      "name": "Holtz",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 109,
+      "name": "Ruins Test",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 111,
+      "name": "Kraid",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 113,
+      "name": "Ripperii",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 114,
+      "name": "Mella",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 115,
+      "name": "Atomic",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 117,
+      "name": "Mother Brain",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 119,
+      "name": "Acid Worm",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 121,
+      "name": "Sidehopper",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 122,
+      "name": "Geega",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 123,
+      "name": "Geega White",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 124,
+      "name": "Rinka Mother Brain",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 125,
+      "name": "Zebetite One And Three",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 128,
+      "name": "Tangle Vine Tall",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 129,
+      "name": "Tangle Vine Medium",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 130,
+      "name": "Tangle Vine Curved",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 131,
+      "name": "Tangle Vine Short",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 132,
+      "name": "Mellow Swarm",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 133,
+      "name": "Mellow Swarm Health Based",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 134,
+      "name": "Imago",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 135,
+      "name": "Zebetite Two And Four",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 138,
+      "name": "Crocomire",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 139,
+      "name": "Imago Larva Left",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 147,
+      "name": "Baristute",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 157,
+      "name": "Gamet Blue Leader",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 158,
+      "name": "Gamet Blue Follower",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 159,
+      "name": "Geega Leader",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 160,
+      "name": "Geega Follower",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 161,
+      "name": "Zebbo Green Leader",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 162,
+      "name": "Zebbo Green Follower",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 163,
+      "name": "Kraid Statue",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 164,
+      "name": "Ridley Statue",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 165,
+      "name": "Rinka Green",
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
+     },
+     {
+      "id": 173,
+      "name": "Gadora Kraid",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 174,
+      "name": "Gadora Ridley",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 182,
+      "name": "Space Pirate Carrying Power Bomb",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 183,
+      "name": "Tangle Vine Red Garuta",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 184,
+      "name": "Tangle Vine Geruta",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 185,
+      "name": "Tangle Vine Larva Right",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 186,
+      "name": "Tangle Vine Larva Left",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 195,
+      "name": "Baristute Kraid Upper",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 198,
+      "name": "Black Space Pirate",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 199,
+      "name": "Escape Ship Space Pirate",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 200,
+      "name": "Baristute Kraid Lower",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 201,
+      "name": "Rinka Mother Brain 2",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 202,
+      "name": "Rinka Mother Brain 3",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 203,
+      "name": "Rinka Mother Brain 4",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 204,
+      "name": "Rinka Mother Brain 5",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 205,
+      "name": "Rinka Mother Brain 6",
+      "status": "not_started",
+      "note": ""
+     }
+    ],
+    "items": [
+     {
+      "id": 26,
+      "name": "Large Energy Drop",
+      "status": "partial",
+      "note": "Enemy drop AI ported (spawn, collection, blink, despawn)"
+     },
+     {
+      "id": 27,
+      "name": "Small Energy Drop",
+      "status": "partial",
+      "note": "Enemy drop AI ported (spawn, collection, blink, despawn)"
+     },
+     {
+      "id": 28,
+      "name": "Missile Drop",
+      "status": "partial",
+      "note": "Enemy drop AI ported (spawn, collection, blink, despawn)"
+     },
+     {
+      "id": 29,
+      "name": "Super Missile Drop",
+      "status": "partial",
+      "note": "Enemy drop AI ported (spawn, collection, blink, despawn)"
+     },
+     {
+      "id": 30,
+      "name": "Power Bomb Drop",
+      "status": "partial",
+      "note": "Enemy drop AI ported (spawn, collection, blink, despawn)"
+     },
+     {
+      "id": 33,
+      "name": "Morph Ball",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 68,
+      "name": "Charge Beam",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 76,
+      "name": "Power Grip",
+      "status": "not_started",
+      "note": ""
+     }
+    ],
+    "items_note": "Collectible Zero Mission items are the drop sprites plus the few item sprites of the native enum (beams, suits, expansions and tanks use other native placements not inventoried here)."
+   },
+   "aos": {
+    "title": "Castlevania: Aria of Sorrow",
+    "monsters": [
+     {
+      "id": 0,
+      "name": "Bat",
+      "status": "partial",
+      "note": "AI ported to the enemy runtime"
+     },
+     {
+      "id": 1,
+      "name": "Zombie",
+      "status": "partial",
+      "note": "AI ported to the enemy runtime"
+     },
+     {
+      "id": 2,
+      "name": "Enemy 0x02",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 3,
+      "name": "Enemy 0x03",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 4,
+      "name": "Axe Armor",
+      "status": "partial",
+      "note": "AI ported to the enemy runtime"
+     },
+     {
+      "id": 5,
+      "name": "Skull Archer",
+      "status": "partial",
+      "note": "AI ported to the enemy runtime"
+     },
+     {
+      "id": 6,
+      "name": "Enemy 0x06",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 7,
+      "name": "Enemy 0x07",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 8,
+      "name": "Enemy 0x08",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 9,
+      "name": "Blue Crow",
+      "status": "partial",
+      "note": "AI ported to the enemy runtime"
+     },
+     {
+      "id": 10,
+      "name": "Enemy 0x0A",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 11,
+      "name": "Enemy 0x0B",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 12,
+      "name": "Zombie Soldier",
+      "status": "partial",
+      "note": "AI ported to the enemy runtime"
+     },
+     {
+      "id": 13,
+      "name": "Enemy 0x0D",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 14,
+      "name": "Enemy 0x0E",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 15,
+      "name": "Enemy 0x0F",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 16,
+      "name": "Enemy 0x10",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 17,
+      "name": "Enemy 0x11",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 18,
+      "name": "Enemy 0x12",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 19,
+      "name": "Enemy 0x13",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 20,
+      "name": "Enemy 0x14",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 21,
+      "name": "Enemy 0x15",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 22,
+      "name": "Enemy 0x16",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 23,
+      "name": "Enemy 0x17",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 24,
+      "name": "Enemy 0x18",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 25,
+      "name": "Enemy 0x19",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 26,
+      "name": "Enemy 0x1A",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 27,
+      "name": "Enemy 0x1B",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 28,
+      "name": "Enemy 0x1C",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 29,
+      "name": "Enemy 0x1D",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 30,
+      "name": "Enemy 0x1E",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 31,
+      "name": "Enemy 0x1F",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 32,
+      "name": "Enemy 0x20",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 33,
+      "name": "Enemy 0x21",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 34,
+      "name": "Enemy 0x22",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 35,
+      "name": "Enemy 0x23",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 36,
+      "name": "Enemy 0x24",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 37,
+      "name": "Enemy 0x25",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 38,
+      "name": "Enemy 0x26",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 39,
+      "name": "Enemy 0x27",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 40,
+      "name": "Enemy 0x28",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 41,
+      "name": "Enemy 0x29",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 42,
+      "name": "Enemy 0x2A",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 43,
+      "name": "Enemy 0x2B",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 44,
+      "name": "Enemy 0x2C",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 45,
+      "name": "Enemy 0x2D",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 46,
+      "name": "Enemy 0x2E",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 47,
+      "name": "Enemy 0x2F",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 48,
+      "name": "Enemy 0x30",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 49,
+      "name": "Enemy 0x31",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 50,
+      "name": "Enemy 0x32",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 51,
+      "name": "Enemy 0x33",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 52,
+      "name": "Enemy 0x34",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 53,
+      "name": "Enemy 0x35",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 54,
+      "name": "Enemy 0x36",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 55,
+      "name": "Enemy 0x37",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 56,
+      "name": "Enemy 0x38",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 57,
+      "name": "Enemy 0x39",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 58,
+      "name": "Enemy 0x3A",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 59,
+      "name": "Enemy 0x3B",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 60,
+      "name": "Enemy 0x3C",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 61,
+      "name": "Enemy 0x3D",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 62,
+      "name": "Enemy 0x3E",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 63,
+      "name": "Enemy 0x3F",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 64,
+      "name": "Enemy 0x40",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 65,
+      "name": "Enemy 0x41",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 66,
+      "name": "Enemy 0x42",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 67,
+      "name": "Enemy 0x43",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 68,
+      "name": "Enemy 0x44",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 69,
+      "name": "Enemy 0x45",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 70,
+      "name": "Enemy 0x46",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 71,
+      "name": "Enemy 0x47",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 72,
+      "name": "Enemy 0x48",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 73,
+      "name": "Enemy 0x49",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 74,
+      "name": "Enemy 0x4A",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 75,
+      "name": "Enemy 0x4B",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 76,
+      "name": "Enemy 0x4C",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 77,
+      "name": "Enemy 0x4D",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 78,
+      "name": "Enemy 0x4E",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 79,
+      "name": "Enemy 0x4F",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 80,
+      "name": "Enemy 0x50",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 81,
+      "name": "Enemy 0x51",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 82,
+      "name": "Enemy 0x52",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 83,
+      "name": "Enemy 0x53",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 84,
+      "name": "Enemy 0x54",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 85,
+      "name": "Enemy 0x55",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 86,
+      "name": "Enemy 0x56",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 87,
+      "name": "Enemy 0x57",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 88,
+      "name": "Enemy 0x58",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 89,
+      "name": "Enemy 0x59",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 90,
+      "name": "Enemy 0x5A",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 91,
+      "name": "Enemy 0x5B",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 92,
+      "name": "Enemy 0x5C",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 93,
+      "name": "Enemy 0x5D",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 94,
+      "name": "Enemy 0x5E",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 95,
+      "name": "Enemy 0x5F",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 96,
+      "name": "Enemy 0x60",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 97,
+      "name": "Enemy 0x61",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 98,
+      "name": "Enemy 0x62",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 99,
+      "name": "Enemy 0x63",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 100,
+      "name": "Enemy 0x64",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 101,
+      "name": "Enemy 0x65",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 102,
+      "name": "Enemy 0x66",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 103,
+      "name": "Enemy 0x67",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 104,
+      "name": "Enemy 0x68",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 105,
+      "name": "Enemy 0x69",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 106,
+      "name": "Enemy 0x6A",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 107,
+      "name": "Enemy 0x6B",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 108,
+      "name": "Enemy 0x6C",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 109,
+      "name": "Enemy 0x6D",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 110,
+      "name": "Enemy 0x6E",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 111,
+      "name": "Enemy 0x6F",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     },
+     {
+      "id": 112,
+      "name": "Enemy 0x70",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table"
+     }
+    ],
+    "items": [
+     {
+      "id": "money",
+      "name": "Money pickups",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     },
+     {
+      "id": "consumable",
+      "name": "Consumable items",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     },
+     {
+      "id": "weapon",
+      "name": "Weapons",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     },
+     {
+      "id": "armor",
+      "name": "Armor",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     },
+     {
+      "id": "accessory",
+      "name": "Accessories",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     },
+     {
+      "id": "red_soul",
+      "name": "Red souls (offensive)",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     },
+     {
+      "id": "blue_soul",
+      "name": "Blue souls (guardian)",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     },
+     {
+      "id": "yellow_soul",
+      "name": "Yellow souls (passive)",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     },
+     {
+      "id": "ability_soul",
+      "name": "Ability souls (movement)",
+      "status": "not_started",
+      "note": "Documented pickup family; no runtime pickup behavior is ported"
+     }
+    ]
+   }
+  }
  },
  "rebuild_tasks": [
   {

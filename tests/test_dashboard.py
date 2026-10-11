@@ -128,6 +128,42 @@ class OutputTests(unittest.TestCase):
         self.assertTrue(native)
         self.assertFalse(data["tests"]["ran"])
 
+    def test_bestiary_lists_monsters_and_items_from_tracked_sources(self):
+        bestiary = self.data["bestiary"]
+        mzm, aos = bestiary["games"]["mzm"], bestiary["games"]["aos"]
+        self.assertGreaterEqual(len(mzm["monsters"]), 90)
+        self.assertEqual(len(aos["monsters"]), dashboard.ARIA_ENEMY_COUNT)
+        for game in (mzm, aos):
+            for row in game["monsters"] + game["items"]:
+                self.assertIn(row["status"], ("not_started", "partial"))
+        mzm_done = {row["name"] for row in mzm["monsters"] if row["status"] == "partial"}
+        self.assertIn("Zoomer Yellow", mzm_done)
+        self.assertIn("Sidehopper", mzm_done)
+        self.assertNotIn("Mother Brain", mzm_done)
+        mzm_items = {row["name"]: row["status"] for row in mzm["items"]}
+        self.assertEqual(mzm_items["Small Energy Drop"], "partial")
+        self.assertEqual(mzm_items["Missile Drop"], "partial")
+        self.assertEqual(mzm_items["Morph Ball"], "not_started")
+        # Not one of the five enemy drops of is_drop().
+        self.assertNotIn("Water Drop", mzm_items)
+        aos_done = {row["name"] for row in aos["monsters"] if row["status"] == "partial"}
+        self.assertEqual(aos_done, {"Bat", "Zombie", "Axe Armor", "Skull Archer",
+                                    "Blue Crow", "Zombie Soldier"})
+        unnamed = [row for row in aos["monsters"] if row["status"] == "not_started"]
+        self.assertTrue(all(row["name"].startswith("Enemy 0x") for row in unnamed))
+        self.assertEqual(len(aos["items"]), len(dashboard.ARIA_ITEM_FAMILIES))
+        self.assertTrue(all(row["status"] == "not_started" for row in aos["items"]))
+
+    def test_bestiary_tracks_the_engine_switch(self):
+        engine = (ROOT / "src/runtime/mzm_sprites.c").read_text(encoding="utf-8")
+        supported = dashboard._mzm_supported_sprites(engine)
+        self.assertIn("ZOOMER_YELLOW", supported)
+        self.assertIn("DESSGEEGA_AFTER_LONG_BEAM", supported)
+        self.assertNotIn("MOTHER_BRAIN", supported)
+        # Drops take the MZM_FAMILY_DROP default, not a case label.
+        self.assertNotIn("SMALL_ENERGY_DROP", supported)
+
+
     def test_public_outputs_hold_no_private_data(self):
         with tempfile.TemporaryDirectory() as directory:
             paths = dashboard.write(self.data, Path(directory))

@@ -212,10 +212,35 @@
       (${warnings} with warnings).</p>${featureGroups(flagged, false)}`;
   }
 
+  function bestiaryTable(rows, kind) {
+    const q = state.query;
+    const visible = rows.filter((row) =>
+      (!state.statuses.size || state.statuses.has(row.status)) &&
+      (!q || (row.name + " " + (row.note || "")).toLowerCase().includes(q)));
+    const done = rows.filter((row) => row.status !== "not_started").length;
+    return `<h3>${esc(kind)} <span class="muted">${done}/${rows.length} done</span></h3>
+      <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th><th>Status</th><th>Note</th></tr></thead><tbody>
+      ${visible.map((row) => `<tr><td><code>${esc(typeof row.id === "number" ? "0x" + row.id.toString(16).toUpperCase().padStart(2, "0") : row.id)}</code></td><td>${esc(row.name)}</td><td>${statusBadge(row.status)}</td><td class="muted">${esc(row.note || "")}</td></tr>`).join("") ||
+      '<tr><td colspan="4" class="muted">No match.</td></tr>'}
+      </tbody></table></div>`;
+  }
+
+  function bestiaryView() {
+    const b = data.bestiary;
+    if (!b || !b.games) return '<p class="notice">No bestiary data. Regenerate with <code>python3 -m scripts.dashboard</code>.</p>';
+    const games = ["mzm", "aos"].map((key) => {
+      const g = b.games[key];
+      return `<h2>${esc(g.title)}</h2>${bestiaryTable(g.monsters, "Monsters")}
+        ${g.items_note ? `<p class="muted">${esc(g.items_note)}</p>` : ""}${bestiaryTable(g.items, "Items")}`;
+    });
+    return `<p class="notice">${esc(b.method)}</p>${games.join("")}`;
+  }
+
   function render() {
     statusFilter.hidden = ["tests", "timeline"].includes(state.view);
     if (state.view === "overview") view.innerHTML = overview();
     else if (AREA_VIEWS.includes(state.view)) view.innerHTML = areaView(state.view);
+    else if (state.view === "bestiary") view.innerHTML = bestiaryView();
     else if (state.view === "tests") view.innerHTML = testsView();
     else if (state.view === "timeline") view.innerHTML = timelineView();
     else view.innerHTML = attentionView();

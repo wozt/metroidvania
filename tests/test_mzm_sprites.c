@@ -99,7 +99,7 @@ int main(void) {
     static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
-                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind},
+                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
@@ -1205,6 +1205,33 @@ int main(void) {
     assert(gf->status == 0);
     step(gl, 0);
     assert(gl->pose == 0x23);
+
+    /* A Zebbo leader spawns two followers (1.5 and 2.5 blocks below, 10 and
+     * 18 frames before they turn harmful) and waits for both. */
+    tables.health[MZM_PSPRITE_ZEBBO_GREEN_LEADER] = 6;
+    tables.health[MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER] = 6;
+    memset(group, 0, sizeof group);
+    MzmSprite *zl2 = &group[0];
+    mzm_sprite_init_primary(zl2, MZM_PSPRITE_ZEBBO_GREEN_LEADER, 0, 9, 10, 0, 0);
+    frame.samus_x = 60000;
+    step(zl2, 0);
+    assert(zl2->hitbox_top == -24 && zl2->hitbox_right == 24 && zl2->health == 6);
+    frame.samus_x = (uint16_t)(zl2->x - 120);
+    frame.samus_y = (uint16_t)(zl2->y - 120);
+    step(zl2, 0);
+    assert(zl2->pose == 0x23);
+    assert(group[1].sprite_id == MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER && group[1].work0 == 10 &&
+           group[1].y == zl2->y + 96);
+    assert(group[2].sprite_id == MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER && group[2].work0 == 18 &&
+           group[2].y == zl2->y + 160);
+    zl2->pose = 9;
+    zl2->work1 = 0;
+    group[1].status = 0;
+    step(zl2, 0);
+    assert(zl2->pose == 9);     /* one follower left */
+    group[2].status = 0;
+    step(zl2, 0);
+    assert(zl2->pose == 0x23);
     frame.sprites = NULL;
     frame.sprite_count = 0;
     puts("mzm_sprites: ok");

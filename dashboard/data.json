@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T16:01:12+00:00",
+ "generated_at": "2026-10-11T16:06:29+00:00",
  "git": {
-  "commit": "01a77fa",
+  "commit": "9291cb6",
   "branch": "main",
   "dirty": true
  },
@@ -642,7 +642,7 @@
    "id": "mzm.enemies.pipe_bugs",
    "area": "mzm",
    "category": "enemies",
-   "title": "Zebs and Geegas (pipe bugs)",
+   "title": "Zebs, Geegas and Zebbos (pipe bugs)",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -661,11 +661,12 @@
    "native_routines": [
     "Zeb",
     "Geega",
+    "Zebbo",
     "SpriteUtilCheckSamusNearSpriteAboveBelow",
     "SpriteUtilCountChildPrimarySprites",
     "SpriteSpawnDropFollowers"
    ],
-   "limitations": "Freezing, the sounds and the background priority changes are not ported. Zebs, blue Zebs, Geegas, white Geegas and Geega leaders with their followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.",
+   "limitations": "Freezing, the sounds and the background priority changes are not ported. Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.",
    "next_action": "Port freezing with the ice beam.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -1078,7 +1079,7 @@
     "SpriteUtilSpriteDeath"
    ],
    "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported. Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.",
-   "next_action": "Port the stun palette flash and freezing, then further enemies (Zebbo, Reo, Holtz, Mella, Rinka).",
+   "next_action": "Port the stun palette flash and freezing, then further enemies (Reo, Holtz, Mella, Rinka).",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -2763,7 +2764,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
+   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -3871,6 +3872,12 @@
  },
  "timeline": [
   {
+   "commit": "9291cb6",
+   "date": "2026-10-11",
+   "subject": "feat(mzm): native Zebs and Geegas, respawning deaths",
+   "scope": "mzm"
+  },
+  {
    "commit": "01a77fa",
    "date": "2026-10-11",
    "subject": "feat(mzm): native Sovas",
@@ -4343,12 +4350,6 @@
    "date": "2026-10-10",
    "subject": "feat: preview native spin jump animations in SDL3 runtime",
    "scope": "project"
-  },
-  {
-   "commit": "f451cd0",
-   "date": "2026-10-10",
-   "subject": "feat: export native Samus special body sprites with empty cannon OAM",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -4376,7 +4377,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 78,
+    "routines_cited_by_features": 79,
     "call_edges": 6071
    },
    "aos": {

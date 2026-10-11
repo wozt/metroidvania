@@ -9,8 +9,9 @@
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
  * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper, Dessgeega, Viola, Sova,
- * Zeb and Geega AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c,
- * waver.c, sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c, geega.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * Zeb, Geega and Zebbo AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c,
+ * skree.c, waver.c, sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c,
+ * geega.c, zebbo.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes. Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
  * stats) and the frame durations of each OAM table come from
@@ -204,13 +205,14 @@ extern const char *const mzm_sova_anim_names[MZM_SOVA_ANIMS];
 enum { MZM_PIPE_BUG_IDLE, MZM_PIPE_BUG_MOVING, MZM_PIPE_BUG_ANIMS };
 extern const char *const mzm_zeb_anim_names[MZM_PIPE_BUG_ANIMS];
 extern const char *const mzm_geega_anim_names[MZM_PIPE_BUG_ANIMS];
+extern const char *const mzm_zebbo_anim_names[MZM_PIPE_BUG_ANIMS];
 
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
     MZM_FAMILY_ZOOMER, MZM_FAMILY_ZEELA, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_WAVER,
     MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA, MZM_FAMILY_VIOLA,
-    MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA,
+    MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA, MZM_FAMILY_ZEBBO,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -243,6 +245,8 @@ enum {
     MZM_PSPRITE_ZEB = 24, MZM_PSPRITE_ZEB_BLUE = 25,
     MZM_PSPRITE_GEEGA = 122, MZM_PSPRITE_GEEGA_WHITE = 123,
     MZM_PSPRITE_GEEGA_LEADER = 159, MZM_PSPRITE_GEEGA_FOLLOWER = 160,
+    MZM_PSPRITE_ZEBBO_GREEN = 91, MZM_PSPRITE_ZEBBO_YELLOW = 92,
+    MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
 };
 
 /* SecondarySprite */

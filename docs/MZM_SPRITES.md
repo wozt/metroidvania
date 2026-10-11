@@ -113,7 +113,9 @@ read from the user's ROM at export time; nothing is stored in the repository.
   (`DEATH_RESPAWNING`, `SpriteSpawnDropFollowers`) and the pipe waits while
   it exists (`SpriteUtilCheckHasDrops`). A Geega leader spawns a follower two
   and a half blocks below it when it rises and waits while it exists; a
-  follower is removed instead of respawning.
+  follower is removed instead of respawning. Zebbos (`zebbo.c`) are Geegas
+  with a 24-subpixel hitbox whose green leader spawns two followers (1.5 and
+  2.5 blocks below, harmful after 10 and 18 frames).
 - Every primary sprite records the slot it owns (`primarySpriteRamSlot`),
   passed on to its secondary sprites and its drops.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at

@@ -146,9 +146,9 @@ Dependencies: `mzm.enemies.sidehopper`, `mzm.items.enemy_drops`, `mzm.animation.
 Known divergences: Freezing, the sounds and the screen shakes are not ported; door locks are only reported (gDoorUnlockTimer is not consumed by the runtime) and removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests.  
 Next action: Export the event spritesets and port the statue room event and the door lock lifecycle.
 
-[~] **`mzm.enemies.pipe_bugs` — Zebs and Geegas (pipe bugs).** Zebs, blue Zebs, Geegas, white Geegas and Geega leaders with their followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.
+[~] **`mzm.enemies.pipe_bugs` — Zebs, Geegas and Zebbos (pipe bugs).** Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.
 
-Native evidence: `mzm:c:src/sprite.c:SpriteSpawnDropFollowers`, `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteAboveBelow`, `mzm:c:src/sprite_util.c:SpriteUtilCountChildPrimarySprites`, `mzm:c:src/sprites_ai/geega.c:Geega`, `mzm:c:src/sprites_ai/zeb.c:Zeb`.  
+Native evidence: `mzm:c:src/sprite.c:SpriteSpawnDropFollowers`, `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteAboveBelow`, `mzm:c:src/sprite_util.c:SpriteUtilCountChildPrimarySprites`, `mzm:c:src/sprites_ai/geega.c:Geega`, `mzm:c:src/sprites_ai/zeb.c:Zeb`, `mzm:c:src/sprites_ai/zebbo.c:Zebbo`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
@@ -225,7 +225,7 @@ Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.collision.clipdata`.  
 Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported.  
-Next action: Port the stun palette flash and freezing, then further enemies (Zebbo, Reo, Holtz, Mella, Rinka).
+Next action: Port the stun palette flash and freezing, then further enemies (Reo, Holtz, Mella, Rinka).
 
 ### Bosses
 

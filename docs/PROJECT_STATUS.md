@@ -2638,3 +2638,32 @@ No automatic reciprocal link or native engine encoder is implemented.
   26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
 
+## Patch 0243 - Tracking registry audit and freshness check
+
+- Audited both registries against the code, tests and recent commits:
+  - `mzm.enemies.zoomer`, `mzm.enemies.ripper` and `mzm.enemies.skree` no
+    longer list the death explosions, the Skree crash debris and the huge
+    explosion as missing (ported in patch 0241); the Skree's rotation note now
+    states what the port actually draws; their next actions were updated;
+  - `mzm.weapons.beams_and_missiles` records the sprite hits and impact
+    particles, with their sources and tests (`tests/test_mzm_samus.c`,
+    `tests/test_mzm_sprites.c`), and lists what is still missing;
+  - the particles no longer depend on the Skree (no dependency cycle);
+  - `assets.enemy_sprites_mzm` lists every exported sprite family, the drops,
+    particles and debris instead of the Zoomers only;
+  - `tools.debug_menu` states what the two F1 menus edit today.
+  No status changed: every native feature remains partial.
+- `README.md` and `docs/MZM_SPRITES.md` no longer say that the Zoomers do not
+  fight or that explosions, debris and other AIs are missing.
+- New `python3 -m scripts.dashboard --check` and `python3 -m
+  scripts.check_generated` (checklist and dashboard together): they write
+  nothing, run no tests, compare only registry-derived facts and fail on
+  stale generated documents. `tests/test_dashboard.py` covers the check.
+- `AGENTS.md` now requires synchronizing the registries, the documents that
+  state a feature's scope and the generated documents after every feature
+  change, without raising statuses for percentages.
+- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
+  26/26, the Python suite passed 404/404, all rebuild tasks were up to date,
+  `check_generated` reported fresh documents and the proprietary-file guard
+  passed.
+

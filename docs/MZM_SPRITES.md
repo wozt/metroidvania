@@ -139,9 +139,9 @@ read from the user's ROM at export time; nothing is stored in the repository.
   - The weakness is the low byte of the stats' weakness column
     (`C_16_2_8(freeze chance, weaknesses)`).
 
-Not ported yet: the death explosion, debris and sound, the pickup sounds,
-power bombs and their drops, the multiple large energy pickup, tumbling
-missiles, the stun palette flash,
-charge beams and the pseudo screw, speed booster and shinespark kills, solid
-and frozen sprites, power bombs, freezing, screen-shake falls, the splash
-effect, the damaged sound, the hard-mode spritesets and every other sprite AI.
+Not ported yet: sounds (damage, death, pickups, Skree dive and crash),
+the stun palette flash, freezing and frozen (solid) sprites, power bombs
+and their drops, the multiple large energy pickup, tumbling missiles,
+charge beams and the pseudo screw, speed booster and shinespark kills,
+screen-shake falls, splashes in liquids, the hard-mode and event
+spritesets, and every other sprite AI.

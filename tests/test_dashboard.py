@@ -163,6 +163,39 @@ class OutputTests(unittest.TestCase):
         for path in DASHBOARD.iterdir():
             self.assertLess(path.stat().st_size, 2 * 1024 * 1024)
 
+    def test_check_compares_only_registry_derived_facts(self):
+        fixed = datetime(2026, 1, 2, tzinfo=timezone.utc)
+        with mock.patch.object(dashboard, "run_ctest") as ctest, \
+                mock.patch.object(dashboard, "run_python_tests") as python:
+            data = dashboard.build(now=fixed)
+            with tempfile.TemporaryDirectory() as directory:
+                output = Path(directory)
+                dashboard.write(data, output)
+                self.assertEqual(dashboard.check(output), [])
+                # Volatile facts (time, git, outcomes) are not compared.
+                volatile = json.loads((output / "data.json").read_text(encoding="utf-8"))
+                volatile["generated_at"] = "2000-01-01T00:00:00+00:00"
+                volatile["git"]["commit"] = "0000000"
+                volatile["features"][0]["verification"]["verdict"] = "passing"
+                dashboard.write(volatile, output)
+                self.assertEqual(dashboard.check(output), [])
+                # A declared field or a status count that changed is stale.
+                stale = json.loads((output / "data.json").read_text(encoding="utf-8"))
+                stale["features"][0]["limitations"] += " (old)"
+                stale["indicators"][0]["functional_or_better"] += 1
+                dashboard.write(stale, output)
+                problems = dashboard.check(output)
+                self.assertIn(f"{stale['features'][0]['id']}: stale limitations", problems)
+                self.assertIn(f"indicator {stale['indicators'][0]['id']}: stale status counts",
+                              problems)
+                # A data.js that does not carry data.json is stale.
+                dashboard.write(data, output)
+                (output / "data.js").write_text("// x\nwindow.METROIDVANIA_DASHBOARD = {};\n",
+                                                encoding="utf-8")
+                self.assertIn("data.js does not carry data.json", dashboard.check(output))
+        ctest.assert_not_called()
+        python.assert_not_called()
+
     def test_generation_does_not_run_tests_unless_asked(self):
         with mock.patch.object(dashboard, "run_ctest") as ctest, \
                 mock.patch.object(dashboard, "run_python_tests") as python:

@@ -142,7 +142,14 @@ with:
 ```sh
 python3 -m scripts.dashboard --run-tests   # also runs CTest (build/) and Python tests
 python3 -m scripts.dashboard               # registries and repository facts only
+python3 -m scripts.check_generated         # stale checklist or dashboard data? (no tests run)
 ```
+
+`check_generated` writes nothing: it compares `docs/NATIVE_PARITY_CHECKLIST.md`
+with the parity annotations and the registry-derived part of the dashboard
+data (declared fields, missing sources, test registration, status counts)
+with both registries, ignoring the generation time, git state, history and
+test outcomes.
 
 The generator only reads the project. Native features come from
 `data/native_parity/annotations.tsv`; Metroidvania, story, tools, assets and
@@ -226,9 +233,11 @@ toggles High Jump, M refills ammunition, H applies 20 damage, Enter restarts
 after death, F6 opens the raw animation catalogue and F7 outlines the active
 hitbox.
 
-Rooms show their native Zoomers (`python3 -m scripts.mzm_sprites`, see
-[`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)); they crawl around floors,
-walls and ceilings but do not fight yet. `--spawn X Y` places Samus's feet at
+Rooms show their native Zoomers, Zeelas, Rippers, Skrees and Wavers
+(`python3 -m scripts.mzm_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
+they move with their native AIs, hurt Samus on contact, take beam and missile
+hits, explode into particles and debris and leave the native enemy drops.
+Other enemies, bosses and sounds are not ported yet. `--spawn X Y` places Samus's feet at
 a room pixel position for tests.
 
 For headless verification, `--capture out.bmp FRAMES BUTTONS REPEAT` runs

@@ -22,6 +22,13 @@ features nobody registered are not counted, so no figure claims project
 completeness. Outputs are ``dashboard/data.json`` and ``dashboard/data.js``
 (the same data as a script, so ``index.html`` opens from ``file://`` without
 ``fetch``). They never contain ROM data, extracted assets or local paths.
+
+``--check`` writes nothing: it rebuilds the data without running tests and
+reports features whose registry-derived facts (declared fields, missing
+sources, test registration) or status counts differ from the committed
+output, and a ``data.js`` that does not carry ``data.json``. Generation time,
+git state, history and test outcomes are volatile and not compared, so a
+documentation-only change needs no test run to be checked.
 """
 from __future__ import annotations
 
@@ -423,6 +430,60 @@ def build(run_tests: bool = False, build_dir: Path = ROOT / "build",
     }
 
 
+DECLARED_FIELDS = ("id", "area", "category", "title", "status", "fidelity", "local_sources",
+                   "tests", "dependencies", "native_routines", "limitations", "next_action",
+                   "last_validated", "source")
+
+
+def declared_view(data: dict) -> dict:
+    """The parts of the dashboard data that only depend on the registries and
+    the tracked files (no time, git state or test outcome)."""
+    features = {}
+    for item in data.get("features", []):
+        view = {key: item.get(key) for key in DECLARED_FIELDS}
+        verification = item.get("verification", {})
+        view["missing_sources"] = list(verification.get("missing_sources", []))
+        view["test_registration"] = [[run.get("test"), run.get("registered")]
+                                     for run in verification.get("tests", [])]
+        features[item["id"]] = view
+    indicators = {item["id"]: {"total": item["total"], "by_status": item["by_status"],
+                               "functional_or_better": item["functional_or_better"]}
+                  for item in data.get("indicators", [])}
+    return {"features": features, "indicators": indicators}
+
+
+def check(output_dir: Path = OUTPUT_DIR) -> list[str]:
+    """Problems that make the committed dashboard data stale (empty when fresh)."""
+    json_path = output_dir / "data.json"
+    js_path = output_dir / "data.js"
+    try:
+        committed = json.loads(json_path.read_text(encoding="utf-8"))
+        script = js_path.read_text(encoding="utf-8")
+    except (OSError, ValueError) as exc:
+        return [f"cannot read the dashboard data: {exc}"]
+    problems = []
+    prefix = "window.METROIDVANIA_DASHBOARD = "
+    body = script.split("\n", 1)[1] if "\n" in script else ""
+    if not body.startswith(prefix) or body.rstrip().rstrip(";")[len(prefix):] != \
+            json.dumps(committed, indent=1, ensure_ascii=False, sort_keys=False):
+        problems.append("data.js does not carry data.json")
+    old = declared_view(committed)
+    new = declared_view(build(run_tests=False))
+    for feature_id in sorted(set(old["features"]) | set(new["features"])):
+        before, after = old["features"].get(feature_id), new["features"].get(feature_id)
+        if before is None:
+            problems.append(f"{feature_id}: missing from the dashboard data")
+        elif after is None:
+            problems.append(f"{feature_id}: no longer registered")
+        elif before != after:
+            fields = sorted(key for key in after if before.get(key) != after.get(key))
+            problems.append(f"{feature_id}: stale {', '.join(fields)}")
+    for indicator_id, after in new["indicators"].items():
+        if old["indicators"].get(indicator_id) != after:
+            problems.append(f"indicator {indicator_id}: stale status counts")
+    return problems
+
+
 def write(data: dict, output_dir: Path = OUTPUT_DIR) -> list[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     text = json.dumps(data, indent=1, ensure_ascii=False, sort_keys=False)
@@ -444,7 +505,24 @@ def main(argv: list[str] | None = None) -> int:
                         help="run CTest (in --build) and the Python suite and record results")
     parser.add_argument("--build", type=Path, default=ROOT / "build")
     parser.add_argument("--output", type=Path, default=OUTPUT_DIR)
+    parser.add_argument("--check", action="store_true",
+                        help="report stale registry-derived data without writing or running tests")
     args = parser.parse_args(argv)
+    if args.check:
+        if args.run_tests:
+            parser.error("--check does not run tests")
+        try:
+            problems = check(args.output)
+        except (OSError, ValueError) as exc:
+            parser.error(str(exc))
+        for problem in problems:
+            print("Stale dashboard data:", problem, file=sys.stderr)
+        if problems:
+            print("Regenerate with: python3 -m scripts.dashboard --run-tests", file=sys.stderr)
+            return 1
+        print("Dashboard data checked:", (args.output / "data.json").relative_to(ROOT)
+              if (args.output / "data.json").is_relative_to(ROOT) else args.output / "data.json")
+        return 0
     try:
         data = build(run_tests=args.run_tests, build_dir=args.build)
         paths = write(data, args.output)

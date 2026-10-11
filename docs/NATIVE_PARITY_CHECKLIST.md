@@ -92,7 +92,7 @@ Next action: Port the remaining native pose handlers.
 Native evidence: `mzm:c:src/particle.c:ParticleCheckOnScreen`, `mzm:c:src/particle.c:ParticleHittingSomethingInvincible`, `mzm:c:src/particle.c:ParticleHittingSomethingWithMissile`, `mzm:c:src/particle.c:ParticleHittingSomethingWithNormalBeam`, `mzm:c:src/particle.c:ParticleHittingSomethingWithSuperMissile`, `mzm:c:src/particle.c:ParticleProcessAll`, `mzm:c:src/particle.c:ParticleScrewAttackDestroyed`, `mzm:c:src/particle.c:ParticleSet`, `mzm:c:src/particle.c:ParticleSpriteExplosionHuge`, `mzm:c:src/particle.c:ParticleSpriteExplosionMedium`, `mzm:c:src/particle.c:ParticleUpdateAnimation`, `mzm:c:src/sprite_debris.c:SpriteDebrisDraw`, `mzm:c:src/sprite_debris.c:SpriteDebrisInit`, `mzm:c:src/sprite_debris.c:SpriteDebrisProcess`, `mzm:c:src/sprite_debris.c:SpriteDebrisProcessAll`, `mzm:c:src/sprite_util.c:SpriteUtilRandomSpriteDebris`.  
 Local implementation: [`src/runtime/mzm_effects.c`](../src/runtime/mzm_effects.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
-Dependencies: `mzm.enemies.zoomer`, `mzm.enemies.skree`.  
+Dependencies: `mzm.enemies.zoomer`.  
 Known divergences: Particle sounds, the super missile screen shake and debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece; other particle effects (Samus, charge, dust, beams other than the normal beam) are not ported.  
 Next action: Port the remaining particle effects with their owners (Samus, charge beam, dust).
 
@@ -118,12 +118,12 @@ Next action: Port special blocks and environmental Clipdata effects.
 
 [?] **`mzm.weapons.inventory-boundary` — source coverage.** The current classifier assigns 56 discovered routine(s) to this category (56 by source path). Category completeness has not been established.
 
-[~] **`mzm.weapons.beams_and_missiles` — Beam and missile projectiles.** Power Beam, missiles and super missiles are represented; the complete beam, bomb and Power Bomb systems are not.
+[~] **`mzm.weapons.beams_and_missiles` — Beam and missile projectiles.** Power Beam, missiles and super missiles move and collide with the room; their hits on ported sprites (damage, stun, invincible hits) and their wall and sprite impact particles are ported. Charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles are not.
 
 Native evidence: `mzm:c:src/projectile_util.c:ProjectileUpdate`, `mzm:c:src/projectile_util.c:ProjectileUpdateAnimation`.  
-Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py).  
-Tests: [`tests/test_mzm_projectile_compose.py`](../tests/test_mzm_projectile_compose.py).
-Next action: Port the remaining beam, bomb and Power Bomb systems.
+Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py).  
+Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_projectile_compose.py`](../tests/test_mzm_projectile_compose.py).
+Next action: Port charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles.
 
 ### Upgrades and equipment
 
@@ -137,23 +137,23 @@ Next action: Port the remaining beam, bomb and Power Bomb systems.
 
 [?] **`mzm.enemies.inventory-boundary` — source coverage.** The current classifier assigns 812 discovered routine(s) to this category (812 by source path). Category completeness has not been established.
 
-[~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death into drops.
+[~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper.c:Ripper`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
-Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`.  
-Known divergences: Freezing, the damaged sound and the death explosion are not ported; missiles that would tumble off a Ripper are removed.  
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: Freezing and the damaged and death sounds are not ported; missiles that would tumble off a Ripper are removed.  
 Next action: Port freezing with the ice beam.
 
-[~] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the crash timing and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.
+[~] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.
 
 Native evidence: `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteSpawnSecondary`, `mzm:c:src/sprites_ai/skree.c:Skree`, `mzm:c:src/sprites_ai/skree.c:SkreeExplosion`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
-Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`.  
-Known divergences: The crash debris (SpriteDebrisInit), the huge explosion particle, the sounds and freezing are not ported; the rotation is drawn by rotating the composed frame, not per OAM part.  
-Next action: Port sprite debris and the explosion particles.
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: Freezing and the sounds are not ported; the explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping).  
+Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.waver` — Wavers.** Wavers start toward Samus and bounce diagonally between surfaces at their native speeds, dying into drops.
 
@@ -173,14 +173,14 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.
 Known divergences: Freezing, the damaged sound and the falling splash are not ported; the eyes rotate as a composed frame without the affine clipping.  
 Next action: Port freezing with the ice beam.
 
-[~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns and death into enemy drops are ported.
+[~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families, secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.
 
 Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/projectile_util.c:ProjectileCheckHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileDealDamage`, `mzm:c:src/projectile_util.c:ProjectileHitSolidSprite`, `mzm:c:src/projectile_util.c:ProjectileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileMissileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileSuperMissileHitSprite`, `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteInitPrimary`, `mzm:c:src/sprite.c:SpriteLoadRoomSprites`, `mzm:c:src/sprite.c:SpriteUpdate`, `mzm:c:src/sprite.c:SpriteUpdateAnimation`, `mzm:c:src/sprite_util.c:SpriteUtilAlignYPositionOnSlopeAtOrigin`, `mzm:c:src/sprite_util.c:SpriteUtilCheckVerticalCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilGetCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilIsSpriteStunned`, `mzm:c:src/sprite_util.c:SpriteUtilSamusAndSpriteCollision`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteDeath`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteTakeDamageFromSamusContact`, `mzm:c:src/sprite_util.c:SpriteUtilTakeDamageFromSprite`, `mzm:c:src/sprites_ai/zoomer.c:Zoomer`, `mzm:c:src/sprites_ai/zoomer.c:ZoomerDeath`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.collision.clipdata`.  
-Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the death explosion, debris and sounds are not shown.  
-Next action: Port the death particles and debris, the stun palette flash and further enemies.
+Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported.  
+Next action: Port the stun palette flash and freezing, then further enemies (Sidehopper, Dessgeega, Sova, Viola).
 
 ### Bosses
 

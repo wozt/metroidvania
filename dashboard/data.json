@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T02:54:47+00:00",
+ "generated_at": "2026-10-11T03:10:20+00:00",
  "git": {
-  "commit": "dd21895",
+  "commit": "4832238",
   "branch": "main",
   "dirty": true
  },
@@ -426,8 +426,7 @@
     "tests/test_mzm_sprites.c"
    ],
    "dependencies": [
-    "mzm.enemies.zoomer",
-    "mzm.enemies.skree"
+    "mzm.enemies.zoomer"
    ],
    "native_routines": [
     "ParticleSet",
@@ -590,14 +589,15 @@
    ],
    "dependencies": [
     "mzm.enemies.zoomer",
-    "mzm.items.enemy_drops"
+    "mzm.items.enemy_drops",
+    "mzm.animation.particles"
    ],
    "native_routines": [
     "Ripper",
     "SpriteUtilChooseRandomXFlip",
     "SpriteUtilCheckCollisionAtPosition"
    ],
-   "limitations": "Freezing, the damaged sound and the death explosion are not ported; missiles that would tumble off a Ripper are removed. Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death into drops.",
+   "limitations": "Freezing and the damaged and death sounds are not ported; missiles that would tumble off a Ripper are removed. Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.",
    "next_action": "Port freezing with the ice beam.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -638,7 +638,8 @@
    ],
    "dependencies": [
     "mzm.enemies.zoomer",
-    "mzm.items.enemy_drops"
+    "mzm.items.enemy_drops",
+    "mzm.animation.particles"
    ],
    "native_routines": [
     "Skree",
@@ -646,8 +647,8 @@
     "SpriteSpawnSecondary",
     "SpriteCheckOnScreen"
    ],
-   "limitations": "The crash debris (SpriteDebrisInit), the huge explosion particle, the sounds and freezing are not ported; the rotation is drawn by rotating the composed frame, not per OAM part. Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the crash timing and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.",
-   "next_action": "Port sprite debris and the explosion particles.",
+   "limitations": "Freezing and the sounds are not ported; the explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping). Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.",
+   "next_action": "Port freezing with the ice beam.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -809,8 +810,8 @@
     "ZoomerDeath",
     "SpriteUtilSpriteDeath"
    ],
-   "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the death explosion, debris and sounds are not shown. Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns and death into enemy drops are ported.",
-   "next_action": "Port the death particles and debris, the stun palette flash and further enemies.",
+   "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported. Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families, secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.",
+   "next_action": "Port the stun palette flash and freezing, then further enemies (Sidehopper, Dessgeega, Sova, Viola).",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1025,9 +1026,13 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/room_runtime.c",
     "scripts/mzm_projectile_compose.py"
    ],
    "tests": [
+    "tests/test_mzm_samus.c",
+    "tests/test_mzm_sprites.c",
     "tests/test_mzm_projectile_compose.py"
    ],
    "dependencies": [],
@@ -1035,14 +1040,34 @@
     "ProjectileUpdate",
     "ProjectileUpdateAnimation"
    ],
-   "limitations": "Power Beam, missiles and super missiles are represented; the complete beam, bomb and Power Bomb systems are not.",
-   "next_action": "Port the remaining beam, bomb and Power Bomb systems.",
+   "limitations": "Power Beam, missiles and super missiles move and collide with the room; their hits on ported sprites (damage, stun, invincible hits) and their wall and sprite impact particles are ported. Charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles are not.",
+   "next_action": "Port charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_mzm_samus.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_samus_controller"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
      {
       "test": "tests/test_mzm_projectile_compose.py",
       "kind": "python",
@@ -1848,6 +1873,7 @@
    "fidelity": "n/a",
    "local_sources": [
     "scripts/dashboard.py",
+    "scripts/check_generated.py",
     "dashboard/index.html",
     "dashboard/app.js"
    ],
@@ -1893,7 +1919,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "No equipment, soul, flag or AI inspection yet.",
+   "limitations": "Edits energy, ammunition, suit and teleports (Zero Mission) and HP, stats, moves, enemy spawning and teleports (Aria); no soul, event flag or AI state inspection, and no Zero Mission sprite spawning.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -2455,7 +2481,7 @@
    "id": "assets.enemy_sprites_mzm",
    "area": "assets",
    "category": "sprites",
-   "title": "Zero Mission enemy sprites and room placements",
+   "title": "Zero Mission enemy sprites, effects, room placements and sprite tables",
    "status": "partial",
    "fidelity": "faithful",
    "local_sources": [
@@ -2468,7 +2494,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only sprites with a ported AI are exported (the Zoomers).",
+   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -3115,9 +3141,9 @@
    {
     "file": "tests/test_dashboard.py",
     "module": "tests.test_dashboard",
-    "test_count": 10,
+    "test_count": 11,
     "outcome": "passed",
-    "passed": 10
+    "passed": 11
    },
    {
     "file": "tests/test_deferred_room_save_0109.py",
@@ -3569,12 +3595,18 @@
    }
   ],
   "summary": {
-   "passed": 429,
+   "passed": 430,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "4832238",
+   "date": "2026-10-11",
+   "subject": "feat(mzm): native Zeelas, red Zeela eyes and Wavers",
+   "scope": "mzm"
+  },
   {
    "commit": "dd21895",
    "date": "2026-10-11",
@@ -4047,12 +4079,6 @@
    "commit": "a4c1036",
    "date": "2026-10-10",
    "subject": "fix: keep native Samus composition groups separate",
-   "scope": "project"
-  },
-  {
-   "commit": "810404e",
-   "date": "2026-10-10",
-   "subject": "feat: support left-facing native Samus compositions in SDL3",
    "scope": "project"
   }
  ],

@@ -26,6 +26,8 @@ enum {
     /* SamusSpriteCollision */
     SSC_NONE = 0,
     SSC_HURTS_SAMUS = 4,
+    SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
+    SPRITE_POSE_STOPPED = 66,
     SSC_SMALL_ENERGY_DROP = 31,
     SSC_LARGE_ENERGY_DROP = 32,
     SSC_MISSILE_DROP = 33,
@@ -52,6 +54,8 @@ enum {
     ZOOMER_POSE_LANDING = 0xF,
     ZOOMER_POSE_FALLING_INIT = 0x1E,
     ZOOMER_POSE_FALLING = 0x1F,
+    ZEELA_EYES_POSE_MOVING = 0x9,
+    ZEELA_EYES_POSE_EXPLODING = 0x43,
     ENEMY_DROP_POSE_IDLE = 0x9,
 };
 
@@ -102,6 +106,18 @@ const char *const mzm_ripper_anim_names[MZM_RIPPER_ANIMS] = {
     "RipperOam_Moving", "RipperOam_TurningAround", "RipperOam_TurningAroundPart2",
 };
 
+const char *const mzm_zeela_anim_names[MZM_ZEELA_ANIMS] = {
+    "ZeelaOam_FallingOnGround", "ZeelaOam_OnGround", "ZeelaOam_OnWall",
+    "ZeelaOam_WalkingOnSlope", "ZeelaOam_FallingOnWall", "ZeelaOam_TurningEdgeLeft",
+    "ZeelaOam_TurningEdgeRight", "ZeelaOam_TurningCornerLeft", "ZeelaOam_TurningCornerRight",
+    "ZeelaEyesOam_Idle", "ZeelaEyesOam_Exploding",
+};
+static const char *const zeela_sprites[MZM_ZEELA_ANIMS] = {
+    "ZEELA", "ZEELA", "ZEELA", "ZEELA", "ZEELA", "ZEELA", "ZEELA", "ZEELA", "ZEELA", "ZEELA",
+    "ZEELA",
+};
+const char *const mzm_waver_anim_names[MZM_WAVER_ANIMS] = {"WaverOam"};
+static const char *const waver_sprites[MZM_WAVER_ANIMS] = {"WAVER"};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -123,8 +139,10 @@ static const char *const drop_sprites[MZM_DROP_ANIMS] = {
 
 const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ZOOMER] = {MZM_ZOOMER_ANIMS, mzm_zoomer_anim_names, zoomer_sprites},
+    [MZM_FAMILY_ZEELA] = {MZM_ZEELA_ANIMS, mzm_zeela_anim_names, zeela_sprites},
     [MZM_FAMILY_RIPPER] = {MZM_RIPPER_ANIMS, mzm_ripper_anim_names, ripper_sprites},
     [MZM_FAMILY_SKREE] = {MZM_SKREE_ANIMS, mzm_skree_anim_names, skree_sprites},
+    [MZM_FAMILY_WAVER] = {MZM_WAVER_ANIMS, mzm_waver_anim_names, waver_sprites},
     [MZM_FAMILY_DROP] = {MZM_DROP_ANIMS, mzm_drop_anim_names, drop_sprites},
 };
 
@@ -277,7 +295,12 @@ static void random_x_direction(Ctx *c) {
     else c->s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
 }
 
-/* ZoomerCheckCollidingWithAir */
+/* Zeelas share the Zoomer's crawler code (zeela.c mirrors zoomer.c). */
+static bool is_zeela(const MzmSprite *s) {
+    return s->sprite_id == MZM_PSPRITE_ZEELA || s->sprite_id == MZM_PSPRITE_ZEELA_RED;
+}
+
+/* ZoomerCheckCollidingWithAir / ZeelaCheckCollidingWithAir */
 static bool zoomer_in_air(const Ctx *c) {
     const MzmSprite *s = c->s;
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
@@ -290,38 +313,50 @@ static bool zoomer_in_air(const Ctx *c) {
            collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR;
 }
 
-/* ZoomerUpdateHitbox */
+/* ZoomerUpdateHitbox / ZeelaUpdateHitbox: legs against the surface, the
+ * body (Zeela: eyes) away from it, the sides along it. */
 static void zoomer_hitbox(MzmSprite *s) {
+    bool zeela = is_zeela(s);
+    int16_t legs = PIXEL_SIZE;
+    int16_t body = zeela ? THREE_QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE
+                         : THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+    int16_t side = zeela ? QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE : HALF_BLOCK_SIZE - PIXEL_SIZE;
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
-        s->hitbox_top = -(HALF_BLOCK_SIZE - PIXEL_SIZE);
-        s->hitbox_bottom = HALF_BLOCK_SIZE - PIXEL_SIZE;
+        s->hitbox_top = -side;
+        s->hitbox_bottom = side;
         if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
-            s->hitbox_left = -(THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE);
-            s->hitbox_right = PIXEL_SIZE;
+            s->hitbox_left = -body;
+            s->hitbox_right = legs;
         } else {
-            s->hitbox_left = -PIXEL_SIZE;
-            s->hitbox_right = THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+            s->hitbox_left = -legs;
+            s->hitbox_right = body;
         }
     } else {
-        s->hitbox_left = -(HALF_BLOCK_SIZE - PIXEL_SIZE);
-        s->hitbox_right = HALF_BLOCK_SIZE - PIXEL_SIZE;
+        s->hitbox_left = -side;
+        s->hitbox_right = side;
         if (s->status & MZM_SPRITE_STATUS_Y_FLIP) {
-            s->hitbox_top = -PIXEL_SIZE;
-            s->hitbox_bottom = THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+            s->hitbox_top = -legs;
+            s->hitbox_bottom = body;
         } else {
-            s->hitbox_top = -(THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE);
-            s->hitbox_bottom = PIXEL_SIZE;
+            s->hitbox_top = -body;
+            s->hitbox_bottom = legs;
         }
     }
 }
 
 /* ZoomerSetCrawlingOam / ZoomerSetFallingOam */
 static void zoomer_crawling_oam(MzmSprite *s) {
+    /* ZeelaSetCrawlingOam: on the ground the X flip follows the facing. */
+    if (is_zeela(s) && !(s->status & MZM_SPRITE_STATUS_FACING_DOWN)) {
+        if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        else s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+    }
     set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_DOWN ? MZM_ZOOMER_ON_WALL : MZM_ZOOMER_ON_GROUND);
 }
 
 static void zoomer_falling_oam(MzmSprite *s) {
-    set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_DOWN ? MZM_ZOOMER_ON_WALL : MZM_ZOOMER_FALLING);
+    uint8_t wall = is_zeela(s) ? MZM_ZEELA_FALLING_ON_WALL : MZM_ZOOMER_ON_WALL;
+    set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_DOWN ? wall : MZM_ZOOMER_FALLING);
 }
 
 /* ZoomerInit: the surface it starts on is searched below, above, then on
@@ -357,7 +392,8 @@ static void zoomer_init(Ctx *c) {
     zoomer_hitbox(s);
     s->health = c->tables->health[s->sprite_id];
     s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
-    if (s->sprite_id == MZM_PSPRITE_ZOOMER_RED) s->absolute_palette_row = s->palette_row = 1;
+    if (s->sprite_id == MZM_PSPRITE_ZOOMER_RED || s->sprite_id == MZM_PSPRITE_ZEELA_RED)
+        s->absolute_palette_row = s->palette_row = 1;
 }
 
 /* A turn chosen by ZoomerCrawling: the new facing and direction. */
@@ -371,7 +407,8 @@ static bool zoomer_turn(MzmSprite *s, bool set_right, uint8_t direction) {
 /* ZoomerCrawling */
 static void zoomer_crawling(Ctx *c) {
     MzmSprite *s = c->s;
-    uint16_t speed = s->sprite_id == MZM_PSPRITE_ZOOMER_RED ? PIXEL_SIZE * 3 / 4 : PIXEL_SIZE / 2;
+    uint16_t speed = is_zeela(s) ? 1 :      /* ONE_SUB_PIXEL */
+                     s->sprite_id == MZM_PSPRITE_ZOOMER_RED ? PIXEL_SIZE * 3 / 4 : PIXEL_SIZE / 2;
     bool turning = false, right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
     if (zoomer_in_air(c)) {
         s->pose = ZOOMER_POSE_FALLING_INIT;
@@ -455,6 +492,22 @@ static void zoomer_crawling(Ctx *c) {
                 else
                     s->x -= speed;
             }
+        } else if (is_zeela(s)) {
+            /* ZeelaMove on a slope: one table, flipped once when it starts
+             * (no flip on a left slope going right or a right slope going
+             * left), at the same speed both ways. */
+            bool left_slope = c->vertical == MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE ||
+                              c->vertical == MZM_COLLISION_LEFT_STEEP_FLOOR_SLOPE;
+            bool right_slope = c->vertical == MZM_COLLISION_RIGHT_SLIGHT_FLOOR_SLOPE ||
+                               c->vertical == MZM_COLLISION_RIGHT_STEEP_FLOOR_SLOPE;
+            if (s->anim != MZM_ZEELA_WALKING_ON_SLOPE) {
+                bool flip = right ? !left_slope : right_slope;
+                if (flip) s->status |= MZM_SPRITE_STATUS_X_FLIP;
+                else s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+                set_anim(s, MZM_ZEELA_WALKING_ON_SLOPE);
+            }
+            if (right) s->x += speed;
+            else s->x -= speed;
         } else {
             bool left_slope = c->vertical == MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE ||
                               c->vertical == MZM_COLLISION_LEFT_STEEP_FLOOR_SLOPE;
@@ -609,6 +662,7 @@ static void zoomer_falling_init(MzmSprite *s) {
  * is not ported). */
 static void zoomer_falling(Ctx *c) {
     MzmSprite *s = c->s;
+    if (is_zeela(s)) s->adc++;      /* ZeelaFalling doubles the animation speed */
     uint8_t offset = s->work3;
     int16_t movement = offset < 16 ? c->tables->falling[offset] : SHORT_MAX;
     if (movement == SHORT_MAX) {
@@ -627,6 +681,7 @@ static void zoomer_falling(Ctx *c) {
 
 /* ZoomerLanding */
 static void zoomer_landing(Ctx *c) {
+    if (is_zeela(c->s)) c->s->adc += 2;  /* ZeelaLanding triples it */
     if (zoomer_in_air(c)) c->s->pose = ZOOMER_POSE_FALLING_INIT;
     else if (animation_ending(c, 2)) c->s->pose = ZOOMER_POSE_IDLE_INIT;
 }
@@ -731,9 +786,93 @@ static void sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
     s->freeze_timer = 0;
 }
 
-/* ZoomerDeath: the explosion point is the middle of the body. */
+static void spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
+                            uint16_t y, uint16_t x, uint16_t status);
+
+/* ZeelaSpawnEyes: two eyes beside the body, thrown away from the surface. */
+static void zeela_spawn_eyes(Ctx *c) {
+    const MzmSprite *s = c->s;
+    const uint16_t near = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE, far = THREE_QUARTER_BLOCK_SIZE;
+    const uint8_t id = MZM_SSPRITE_ZEELA_EYES;
+    const uint16_t flip = MZM_SPRITE_STATUS_X_FLIP;
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        bool right_wall = s->status & MZM_SPRITE_STATUS_X_FLIP;
+        uint16_t x = right_wall ? (uint16_t)(s->x - far) : (uint16_t)(s->x + far);
+        uint16_t status = right_wall ? 0 : flip;
+        spawn_secondary(c, id, 0, s->gfx_slot, (uint16_t)(s->y - near), x, status);
+        spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + near), x, status);
+    } else if (s->status & MZM_SPRITE_STATUS_Y_FLIP) {
+        spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + far), (uint16_t)(s->x - near), 0);
+        spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + far), (uint16_t)(s->x + near), flip);
+    } else {
+        spawn_secondary(c, id, 2, s->gfx_slot, (uint16_t)(s->y - far), (uint16_t)(s->x - near), 0);
+        spawn_secondary(c, id, 2, s->gfx_slot, (uint16_t)(s->y - far), (uint16_t)(s->x + near), flip);
+    }
+}
+
+/* ZeelaEyes: thrown with sZeelaEyesFalling*Speed and a part speed (1, 2
+ * or 3 subpixels a frame) while spinning; stopped by solid collision or by
+ * touching Samus, then exploding until the table ends. */
+static void zeela_eyes(Ctx *c) {
+    MzmSprite *s = c->s;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->status |= MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE;
+        s->kill_off_screen = true;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = -EIGHTH_BLOCK_SIZE;
+        s->hitbox_bottom = PIXEL_SIZE;
+        s->hitbox_left = -EIGHTH_BLOCK_SIZE;
+        s->hitbox_right = EIGHTH_BLOCK_SIZE;
+        set_anim(s, MZM_ZEELA_EYES_IDLE);
+        s->work3 = 0;
+        s->pose = ZEELA_EYES_POSE_MOVING;
+        s->samus_collision = SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT;
+        s->work1 = c->rng & 1;
+        s->rotation = s->work1 ? 128 : 0;  /* PI */
+        /* fallthrough */
+    case ZEELA_EYES_POSE_MOVING: {
+        if (collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0) {
+            s->pose = SPRITE_POSE_STOPPED;
+            return;
+        }
+        const int16_t *speeds = s->room_slot == 1 ? c->tables->zeela_eyes_bottom
+                                                  : c->tables->zeela_eyes_up;
+        uint8_t offset = s->work3;
+        int16_t movement = offset < 16 ? speeds[offset] : SHORT_MAX;
+        if (movement == SHORT_MAX) {
+            s->y = (uint16_t)(s->y + speeds[offset > 0 ? offset - 1 : 0]);
+        } else {
+            s->work3++;
+            s->y = (uint16_t)(s->y + movement);
+        }
+        uint16_t x_movement = s->room_slot == 0 ? 1 : s->room_slot == 1 ? PIXEL_SIZE / 2
+                                                                         : PIXEL_SIZE - 1;
+        if (s->status & MZM_SPRITE_STATUS_X_FLIP) s->x += x_movement;
+        else s->x -= x_movement;
+        /* PI / 6 - PI / PI */
+        if (s->work1) s->rotation -= 20;
+        else s->rotation += 20;
+        break;
+    }
+    case ZEELA_EYES_POSE_EXPLODING:
+        s->ignore_samus_timer = 1;
+        if (animation_ending(c, 1)) s->status = 0;
+        break;
+    default:                        /* stopped or destroyed */
+        s->pose = ZEELA_EYES_POSE_EXPLODING;
+        s->samus_collision = SSC_NONE;
+        set_anim(s, MZM_ZEELA_EYES_EXPLODING);
+        break;
+    }
+}
+
+/* ZoomerDeath / ZeelaDeath: the explosion point is the middle of the body;
+ * a red Zeela throws its eyes first. */
 static void zoomer_death(Ctx *c) {
     const MzmSprite *s = c->s;
+    if (s->sprite_id == MZM_PSPRITE_ZEELA_RED) zeela_spawn_eyes(c);
     uint16_t y = s->y, x = s->x;
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
         if (s->status & MZM_SPRITE_STATUS_X_FLIP) x -= HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
@@ -1057,6 +1196,57 @@ static void skree_explosion(Ctx *c) {
     if (animation_ending(c, 1)) s->status = 0;
 }
 
+/* Waver: bouncing diagonally between walls, a pixel a frame horizontally
+ * and half a pixel vertically (FACING_DOWN means moving up), starting
+ * toward Samus (SpriteUtilMakeSpriteFaceSamusXFlip). The damaged sound and
+ * freezing are not ported. */
+static void waver(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+        s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
+        s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE;
+        set_anim(s, MZM_WAVER_MOVING);
+        s->health = c->tables->health[s->sprite_id];
+        s->samus_collision = SSC_HURTS_SAMUS;
+        if (s->x > c->f->samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        else s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        s->pose = 9;
+        return;
+    }
+    if (s->pose != 9) {
+        sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        return;
+    }
+    if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+        if (collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR)
+            s->x += PIXEL_SIZE;
+        else
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+    } else {
+        if (collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR)
+            s->x -= PIXEL_SIZE;
+        else
+            s->status |= MZM_SPRITE_STATUS_X_FLIP;
+    }
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        if (collision_at(c, (uint16_t)(s->y + s->hitbox_top), s->x) == MZM_COLLISION_AIR)
+            s->y -= PIXEL_SIZE / 2;
+        else
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+    } else {
+        if (collision_at(c, (uint16_t)(s->y + s->hitbox_bottom), s->x) == MZM_COLLISION_AIR)
+            s->y += PIXEL_SIZE / 2;
+        else
+            s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -1140,16 +1330,21 @@ static bool is_drop(uint8_t sprite_id) {
 }
 
 int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
-    if (secondary)
+    if (secondary) {
+        if (sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_FAMILY_ZEELA;
         return sprite_id == MZM_SSPRITE_SKREE_EXPLOSION ||
                sprite_id == MZM_SSPRITE_BLUE_SKREE_EXPLOSION ? MZM_FAMILY_SKREE : -1;
+    }
     switch (sprite_id) {
     case MZM_PSPRITE_ZOOMER_YELLOW:
     case MZM_PSPRITE_ZOOMER_RED: return MZM_FAMILY_ZOOMER;
+    case MZM_PSPRITE_ZEELA:
+    case MZM_PSPRITE_ZEELA_RED: return MZM_FAMILY_ZEELA;
     case MZM_PSPRITE_RIPPER_BROWN:
     case MZM_PSPRITE_RIPPER_PURPLE: return MZM_FAMILY_RIPPER;
     case MZM_PSPRITE_SKREE_GREEN:
     case MZM_PSPRITE_SKREE_BLUE: return MZM_FAMILY_SKREE;
+    case MZM_PSPRITE_WAVER: return MZM_FAMILY_WAVER;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
     }
 }
@@ -1216,6 +1411,9 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         if (s->freeze_timer) continue;
         switch (s->samus_collision) {
         case SSC_NONE: break;
+        case SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT:
+            s->pose = SPRITE_POSE_STOPPED;
+            /* fallthrough */
         case SSC_HURTS_SAMUS:
             if (contact_kills(s, samus, tables)) break;
             if (!samus->invincible && samus->hurt) {
@@ -1328,6 +1526,7 @@ bool mzm_sprite_supported(uint8_t sprite_id) {
 
 uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (!sprite->secondary) return sprite->sprite_id;
+    if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
     return sprite->sprite_id == MZM_SSPRITE_BLUE_SKREE_EXPLOSION ? MZM_PSPRITE_SKREE_BLUE
                                                                   : MZM_PSPRITE_SKREE_GREEN;
 }
@@ -1408,8 +1607,13 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     /* SpriteUtilUpdateStunTimer: the stun palette flash is not drawn yet. */
     if (sprite->isft & 0x7F) sprite->isft--;
     switch (family) {
-    case MZM_FAMILY_ZOOMER: zoomer(&c); break;
+    case MZM_FAMILY_ZOOMER:
+    case MZM_FAMILY_ZEELA:
+        if (sprite->secondary) zeela_eyes(&c);
+        else zoomer(&c);
+        break;
     case MZM_FAMILY_RIPPER: ripper(&c); break;
+    case MZM_FAMILY_WAVER: waver(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

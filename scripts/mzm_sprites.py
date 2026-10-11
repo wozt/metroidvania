@@ -64,9 +64,11 @@ DECOMP = ROOT / "third_party/mzm"
 # have their own graphics and palettes).
 PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_RIPPER_BROWN": 0, "PSPRITE_RIPPER_PURPLE": 0,
-          "PSPRITE_SKREE_GREEN": 0, "PSPRITE_SKREE_BLUE": 0}
+          "PSPRITE_SKREE_GREEN": 0, "PSPRITE_SKREE_BLUE": 0,
+          "PSPRITE_ZEELA": 0, "PSPRITE_ZEELA_RED": 1, "PSPRITE_WAVER": 0}
 # Signed s16 tables an AI reads, written as ``table`` lines.
-AI_TABLES = ("sSkreeFallingSpeed", "sDebrisBouncingVelocity", "sDebris11YVelocity",
+AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
+             "sZeelaEyesFallingFromBottomSpeed", "sDebrisBouncingVelocity", "sDebris11YVelocity",
              "sDebris12YVelocity", "sDebris13YVelocity", "sDebris4YVelocity",
              "sDebris5YVelocity", "sDebris6YVelocity", "sDebris7YVelocity",
              "sDebris8YVelocity")

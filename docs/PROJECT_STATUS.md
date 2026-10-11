@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Rippers and Skrees with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees and Wavers with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2615,3 +2615,26 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
   26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0242 - Zero Mission Zeelas and Wavers
+
+- `mzm_sprites` ports the Zeela by generalizing the Zoomer crawler (speed,
+  hitbox, ground X flip, slope table, falling and landing animation speeds),
+  the red Zeela's eyes (`ZeelaSpawnEyes`, `ZeelaEyes`: thrown, spinning,
+  stopped by walls or Samus, exploding) with
+  `SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT`, and the Waver.
+- The runtime draws per-part rotation (`ROTATION_SCALING_SINGLE`) by turning
+  the flipped frame around its centre. `scripts/mzm_sprites.py` exports both
+  Zeelas (the red one with palette row 1), the Waver and the eyes' falling
+  speed tables.
+- Checked in brinstar_017: the five Wavers fly at their native speeds (59 by
+  29 pixels in 59 frames) and one hits Samus for 12 (99 to 87); in kraid_017
+  the three red Zeelas crawl on their walls.
+- Tests: `tests/test_mzm_sprites.c` adds the Zeela speed, flip and hitbox,
+  the red Zeela palette and eyes (spawn, motion, rotation, contact damage,
+  stop, explosion, landing on the floor), and the Waver start, speeds and
+  wall and floor bounces.
+- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
+  26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.
+

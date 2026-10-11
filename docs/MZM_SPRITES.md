@@ -46,6 +46,20 @@ read from the user's ROM at export time; nothing is stored in the repository.
   and corner turns, slope animations (two thirds speed uphill with the
   animation slowed every other frame), falling with `sSpritesFallingSpeed`
   and landing.
+- Zeela (`zeela.c`, yellow and red): the Zoomer's crawler with one subpixel
+  per frame, its own hitbox (legs 4, eyes 56, sides 24 subpixels), the X
+  flip following the facing on the ground, a single slope table flipped
+  when it starts, and doubled (falling) or tripled (landing) animation
+  speed. A red Zeela uses palette row 1 and, when it dies, throws two
+  `ZeelaEyes` (secondary sprites drawn with its graphics): they fall with
+  `sZeelaEyesFallingFrom*Speed`, drift 1 to 3 subpixels a frame and spin
+  20 rotation units a frame (`ROTATION_SCALING_SINGLE`, drawn by turning
+  the composed frame around its centre), stop on solid collision or when
+  they touch Samus (`SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT`, 3 damage), then
+  explode harmlessly until their table ends.
+- Waver (`waver.c`): starts toward Samus and bounces diagonally, a pixel a
+  frame across and half a pixel vertically, reversing on any non-air
+  collision at its hitbox edge.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at
   init, a random X flip from the sprite RNG, half a pixel per frame (purple:
   one), a wall probe a quarter block above its feet and 36 subpixels ahead,

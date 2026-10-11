@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 11 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 13 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -154,6 +154,24 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`.  
 Known divergences: The crash debris (SpriteDebrisInit), the huge explosion particle, the sounds and freezing are not ported; the rotation is drawn by rotating the composed frame, not per OAM part.  
 Next action: Port sprite debris and the explosion particles.
+
+[~] **`mzm.enemies.waver` — Wavers.** Wavers start toward Samus and bounce diagonally between surfaces at their native speeds, dying into drops.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusXFlip`, `mzm:c:src/sprites_ai/waver.c:Waver`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.  
+Known divergences: Freezing and the damaged sound are not ported.  
+Next action: Port freezing with the ice beam.
+
+[~] **`mzm.enemies.zeela` — Zeelas and the red Zeela eyes.** Zeelas reuse the Zoomer crawler with their speed, hitbox, ground X flip, single slope table and faster falling and landing animations; the red Zeela throws two spinning eyes that stop on solid collision or Samus and explode.
+
+Native evidence: `mzm:c:src/sprites_ai/zeela.c:Zeela`, `mzm:c:src/sprites_ai/zeela.c:ZeelaDeath`, `mzm:c:src/sprites_ai/zeela.c:ZeelaEyes`, `mzm:c:src/sprites_ai/zeela.c:ZeelaSpawnEyes`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.  
+Known divergences: Freezing, the damaged sound and the falling splash are not ported; the eyes rotate as a composed frame without the affine clipping.  
+Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns and death into enemy drops are ported.
 

@@ -69,8 +69,10 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind;
-    frame = (MzmSpriteFrame){&world, &tables, {&kind, &ripper_kind, &skree_kind, &drop_kind},
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind;
+    frame = (MzmSpriteFrame){&world, &tables,
+                             {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
+                              &drop_kind},
                              &equipment, 0, 0, 0, 0, NULL, 0, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
@@ -651,6 +653,120 @@ int main(void) {
     assert(fx.debris[0].exists && fx.debris[0].type == 2 && fx.debris[1].type == 3 &&
            fx.debris[2].type == 4 && !fx.debris[3].exists);
     frame.effects = NULL;
+
+    /* Zeelas crawl like Zoomers at one subpixel per frame; on the ground the
+     * X flip follows the facing, and the hitbox has its own sizes. */
+    for (int a = 0; a < MZM_ZEELA_ANIMS; ++a) {
+        zeela_kind.counts[a] = 2;
+        zeela_kind.timers[a][0] = zeela_kind.timers[a][1] = 4;
+    }
+    tables.health[MZM_PSPRITE_ZEELA] = 6;
+    tables.health[MZM_PSPRITE_ZEELA_RED] = 12;
+    const int16_t eyes_up[16] = {-4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 32767};
+    const int16_t eyes_bottom[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 32767};
+    memcpy(tables.zeela_eyes_up, eyes_up, sizeof eyes_up);
+    memcpy(tables.zeela_eyes_bottom, eyes_bottom, sizeof eyes_bottom);
+    tables.secondary_damage[MZM_SSPRITE_ZEELA_EYES] = 3;
+    memset(tables.random, 0, sizeof tables.random);
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+    memset(group, 0, sizeof group);
+    frame.sprites = group;
+    frame.sprite_count = 8;
+    MzmSprite *zl = &group[0];
+    mzm_sprite_init_primary(zl, MZM_PSPRITE_ZEELA, 0, 9, 6, 0);
+    step(zl, 0);
+    assert(zl->health == 6 && zl->status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+           zl->status & MZM_SPRITE_STATUS_X_FLIP && zl->anim == MZM_ZEELA_ON_GROUND);
+    assert(zl->hitbox_top == -56 && zl->hitbox_bottom == 4 && zl->hitbox_left == -24 &&
+           zl->hitbox_right == 24);
+    x0 = zl->x;
+    for (int i = 0; i < 10; ++i) step(zl, 0);
+    assert(zl->x == x0 + 10);
+    /* A red Zeela (palette row 1) killed on the floor throws two eyes from
+     * three quarters of a block above it, a part-2 pair moving 3 subpixels a
+     * frame outward and up first. */
+    mzm_sprite_init_primary(zl, MZM_PSPRITE_ZEELA_RED, 0, 9, 6, 0);
+    step(zl, 0);
+    assert(zl->health == 12 && zl->palette_row == 1);
+    uint16_t zlx = zl->x, zly = zl->y;
+    zl->pose = 0x62;
+    step(zl, 0);
+    assert(zl->status == 0);
+    MzmSprite *eye_l = &group[1], *eye_r = &group[2];
+    assert(eye_l->secondary && eye_l->sprite_id == MZM_SSPRITE_ZEELA_EYES && eye_l->room_slot == 2);
+    assert(mzm_sprite_graphics_owner(eye_l) == MZM_PSPRITE_ZEELA_RED);
+    /* Their first update (in the game, the same frame, as later slots). */
+    assert(eye_l->x == zlx - 24 && eye_r->x == zlx + 24 && eye_l->pose == 0);
+    step(eye_l, 0);
+    step(eye_r, 0);
+    assert(eye_l->x == zlx - 24 - 3 && eye_r->x == zlx + 24 + 3);
+    assert(eye_l->y == zly - 48 - 4 && eye_r->status & MZM_SPRITE_STATUS_X_FLIP);
+    assert(eye_l->status & MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE && eye_l->rotation == 20);
+    step(eye_l, 0);
+    assert(eye_l->y == zly - 48 - 4 - 3 && eye_l->rotation == 40);
+    /* Touching Samus: hurt with the eyes' damage, then stopped, exploding,
+     * harmless, and gone when the table ends. */
+    hurts = 0;
+    MzmSpriteSamus touch = {NULL, eye_l->x, (uint16_t)(eye_l->y + 20), eye_l->x, -96, 0, -24, 24,
+                            false, false, false, hurt};
+    eye_l->ignore_samus_timer = 0;
+    mzm_sprites_samus_collision(eye_l, 1, &touch, &tables);
+    assert(hurts == 1 && last_damage == 3 && eye_l->pose == 66);
+    step(eye_l, 0);
+    assert(eye_l->pose == 0x43 && eye_l->anim == MZM_ZEELA_EYES_EXPLODING &&
+           eye_l->samus_collision == 0);
+    frames = 0;
+    while (eye_l->status && frames < 50) {
+        step(eye_l, 0);
+        ++frames;
+    }
+    assert(eye_l->status == 0 && frames == 8);
+    /* The other eye falls until it reaches the floor, then explodes. */
+    frames = 0;
+    while (eye_r->pose == 9 && frames < 200) {
+        step(eye_r, 0);
+        ++frames;
+    }
+    assert(eye_r->pose == 66 && eye_r->y >= 640);
+    frame.sprites = NULL;
+    frame.sprite_count = 0;
+
+    /* Wavers start toward Samus and bounce between surfaces: one pixel a
+     * frame across, half a pixel up or down. */
+    waver_kind.counts[0] = 2;
+    waver_kind.timers[0][0] = waver_kind.timers[0][1] = 4;
+    tables.health[MZM_PSPRITE_WAVER] = 8;
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[2][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
+    for (int y = 0; y < ROWS; ++y) grid[y][2] = grid[y][12] = MZM_CLIPDATA_SOLID;
+    MzmSprite w;
+    mzm_sprite_init_primary(&w, MZM_PSPRITE_WAVER, 0, 5, 7, 0);
+    frame.samus_x = 0;
+    step(&w, 0);
+    assert(w.pose == 9 && w.health == 8 && !(w.status & MZM_SPRITE_STATUS_X_FLIP));
+    x0 = w.x;
+    uint16_t wy = w.y;
+    step(&w, 0);
+    assert(w.x == x0 - 4 && w.y == wy + 2);
+    /* The left wall (column 2 ends at 192) turns it when its hitbox left
+     * edge (32 subpixels) touches solid. */
+    frames = 0;
+    while (!(w.status & MZM_SPRITE_STATUS_X_FLIP) && frames < 300) {
+        step(&w, 0);
+        ++frames;
+    }
+    assert(w.x - 32 < 192 && w.x - 32 + 4 >= 192);
+    /* The floor (row 10 at 640) turns it up (FACING_DOWN). */
+    frames = 0;
+    while (!(w.status & MZM_SPRITE_STATUS_FACING_DOWN) && frames < 500) {
+        step(&w, 0);
+        ++frames;
+    }
+    assert(w.y + 32 >= 640 && w.y + 32 - 2 < 640);
+    wy = w.y;
+    step(&w, 0);
+    assert(w.y == wy - 2);
     puts("mzm_sprites: ok");
     return 0;
 }

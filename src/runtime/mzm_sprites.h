@@ -8,8 +8,9 @@
  * ClipdataConvertToCollision for the sprite actor,
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
- * Zoomer, Ripper and Skree AIs (src/sprites_ai/zoomer.c, ripper.c,
- * skree.c) with SpriteSpawnSecondary for the Skree's explosion. Positions are native subpixels (64 per
+ * Zoomer, Zeela, Ripper, Skree and Waver AIs (src/sprites_ai/zoomer.c,
+ * zeela.c, ripper.c, skree.c, waver.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * the red Zeela's eyes. Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, stats) and the frame
  * durations of each OAM table come from scripts/mzm_sprites.py.
  * Combat ports SpriteUtilSamusAndSpriteCollision for sprites that hurt Samus
@@ -34,6 +35,7 @@ enum {
     MZM_SPRITE_STATUS_NOT_DRAWN = 1 << 2,
     MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE = 1 << 3,
     MZM_SPRITE_STATUS_X_FLIP = 1 << 6,
+    MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE = 1 << 7,
     MZM_SPRITE_STATUS_Y_FLIP = 1 << 8,
     MZM_SPRITE_STATUS_FACING_RIGHT = 1 << 9,
     MZM_SPRITE_STATUS_FACING_DOWN = 1 << 10,
@@ -95,6 +97,8 @@ typedef struct {
     uint16_t secondary_damage[256]; /* sSecondarySpriteStats */
     uint8_t secondary_weakness[256];
     int16_t skree_falling[16];      /* sSkreeFallingSpeed (SHORT_MAX ends it) */
+    int16_t zeela_eyes_up[16];      /* sZeelaEyesFallingFromUpSpeed */
+    int16_t zeela_eyes_bottom[16];  /* sZeelaEyesFallingFromBottomSpeed */
     int16_t debris[MZM_DEBRIS_TABLES][9]; /* sDebris*YVelocity, sDebrisBouncingVelocity */
 } MzmSpriteTables;
 
@@ -133,6 +137,16 @@ enum {
 };
 extern const char *const mzm_drop_anim_names[MZM_DROP_ANIMS];
 
+/* Zeela OAM tables (src/data/sprites/zeela.c); the shared crawler code
+ * uses the Zoomer's indices for the ground, wall and turn tables. */
+enum {
+    MZM_ZEELA_FALLING_ON_GROUND, MZM_ZEELA_ON_GROUND, MZM_ZEELA_ON_WALL,
+    MZM_ZEELA_WALKING_ON_SLOPE, MZM_ZEELA_FALLING_ON_WALL, MZM_ZEELA_TURNING_EDGE_LEFT,
+    MZM_ZEELA_TURNING_EDGE_RIGHT, MZM_ZEELA_TURNING_CORNER_LEFT, MZM_ZEELA_TURNING_CORNER_RIGHT,
+    MZM_ZEELA_EYES_IDLE, MZM_ZEELA_EYES_EXPLODING, MZM_ZEELA_ANIMS,
+};
+extern const char *const mzm_zeela_anim_names[MZM_ZEELA_ANIMS];
+
 /* Ripper OAM tables (src/data/sprites/ripper.c). */
 enum {
     MZM_RIPPER_MOVING, MZM_RIPPER_TURNING_AROUND, MZM_RIPPER_TURNING_AROUND_PART2,
@@ -147,10 +161,15 @@ enum {
 };
 extern const char *const mzm_skree_anim_names[MZM_SKREE_ANIMS];
 
+/* Waver OAM table (src/data/sprites/waver.c). */
+enum { MZM_WAVER_MOVING, MZM_WAVER_ANIMS };
+extern const char *const mzm_waver_anim_names[MZM_WAVER_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
-    MZM_FAMILY_ZOOMER, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_DROP,
+    MZM_FAMILY_ZOOMER, MZM_FAMILY_ZEELA, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_WAVER,
+    MZM_FAMILY_DROP,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -169,15 +188,20 @@ typedef struct {
 enum {
     MZM_PSPRITE_UNUSED0 = 0,
     MZM_PSPRITE_ZOOMER_YELLOW = 18, MZM_PSPRITE_ZOOMER_RED = 19,
+    MZM_PSPRITE_ZEELA = 20, MZM_PSPRITE_ZEELA_RED = 21,
     MZM_PSPRITE_RIPPER_BROWN = 22, MZM_PSPRITE_RIPPER_PURPLE = 23,
     MZM_PSPRITE_LARGE_ENERGY_DROP = 26, MZM_PSPRITE_SMALL_ENERGY_DROP = 27,
     MZM_PSPRITE_MISSILE_DROP = 28, MZM_PSPRITE_SUPER_MISSILE_DROP = 29,
     MZM_PSPRITE_POWER_BOMB_DROP = 30,
     MZM_PSPRITE_SKREE_GREEN = 31, MZM_PSPRITE_SKREE_BLUE = 32,
+    MZM_PSPRITE_WAVER = 72,
 };
 
 /* SecondarySprite */
-enum { MZM_SSPRITE_SKREE_EXPLOSION = 12, MZM_SSPRITE_BLUE_SKREE_EXPLOSION = 15 };
+enum {
+    MZM_SSPRITE_SKREE_EXPLOSION = 12, MZM_SSPRITE_BLUE_SKREE_EXPLOSION = 15,
+    MZM_SSPRITE_ZEELA_EYES = 16,
+};
 
 typedef struct {
     uint16_t status;

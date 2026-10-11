@@ -1183,6 +1183,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     bool ok = fgets(line, sizeof line, f) &&
               !strcmp(line, "schema\tmetroidvania-mzm-sprite-tables-v1\n");
     int random_count = 0, falling_count = 0, skree_count = 0, debris_tables = 0;
+    int eyes_up_count = 0, eyes_bottom_count = 0;
     while (ok && fgets(line, sizeof line, f)) {
         char *cursor = strchr(line, '\t');
         if (!cursor) continue;
@@ -1210,6 +1211,14 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                 destination = sprites->tables.skree_falling;
                 capacity = 16;
                 count = &skree_count;
+            } else if (!strcmp(cursor, "sZeelaEyesFallingFromUpSpeed")) {
+                destination = sprites->tables.zeela_eyes_up;
+                capacity = 16;
+                count = &eyes_up_count;
+            } else if (!strcmp(cursor, "sZeelaEyesFallingFromBottomSpeed")) {
+                destination = sprites->tables.zeela_eyes_bottom;
+                capacity = 16;
+                count = &eyes_bottom_count;
             }
             for (int t = 0; t < MZM_DEBRIS_TABLES && !destination; ++t) {
                 if (strcmp(cursor, mzm_debris_table_names[t])) continue;
@@ -1246,7 +1255,9 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     fclose(f);
     return ok && random_count == 32 && falling_count == 16 && skree_count > 0 &&
            sprites->tables.skree_falling[skree_count - 1] == 32767 &&
-           debris_tables == (1 << MZM_DEBRIS_TABLES) - 1;
+           debris_tables == (1 << MZM_DEBRIS_TABLES) - 1 && eyes_up_count > 0 &&
+           sprites->tables.zeela_eyes_up[eyes_up_count - 1] == 32767 && eyes_bottom_count > 0 &&
+           sprites->tables.zeela_eyes_bottom[eyes_bottom_count - 1] == 32767;
 }
 
 /* Frame durations of OAM tables from the sprite library. */
@@ -2277,6 +2288,13 @@ int main(int argc, char **argv) {
                 SDL_FPoint center={-(float)art->offset_x*scale,-(float)art->offset_y*scale};
                 SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
                                          (double)(sprite->rotation&0xFF)*360.0/256.0,&center,
+                                         SDL_FLIP_NONE);
+            } else if(sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE) {
+                /* Each part turns around its own centre after its flip; the
+                 * composed frame turns around its centre (exact for
+                 * single-part frames, unclipped). */
+                SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
+                                         (double)(sprite->rotation&0xFF)*360.0/256.0,NULL,
                                          SDL_FLIP_NONE);
             } else {
                 SDL_RenderTexture(renderer,art_texture,NULL,&box);

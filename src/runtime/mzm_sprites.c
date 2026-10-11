@@ -175,6 +175,17 @@ const char *const mzm_zebbo_anim_names[MZM_PIPE_BUG_ANIMS] = {"ZebboOam_Idle", "
 static const char *const zebbo_sprites[MZM_PIPE_BUG_ANIMS] = {"ZEBBO_GREEN", "ZEBBO_GREEN"};
 const char *const mzm_reo_anim_names[MZM_REO_ANIMS] = {"ReoOam_Idle", "ReoOam_Moving"};
 static const char *const reo_sprites[MZM_REO_ANIMS] = {"REO_GREEN_WINGS", "REO_GREEN_WINGS"};
+const char *const mzm_mella_anim_names[MZM_MELLA_ANIMS] = {"MellaOam_Idle", "MellowOam_Moving"};
+static const char *const mella_sprites[MZM_MELLA_ANIMS] = {"MELLA", "MELLA"};
+const char *const mzm_holtz_anim_names[MZM_HOLTZ_ANIMS] = {
+    "HoltzOam_Idle", "HoltzOam_IdleAware", "HoltzOam_Warning", "HoltzOam_GoingDown",
+    "HoltzOam_GoingUp", "HoltzOam_BonkingOnCeiling",
+};
+static const char *const holtz_sprites[MZM_HOLTZ_ANIMS] = {
+    "HOLTZ", "HOLTZ", "HOLTZ", "HOLTZ", "HOLTZ", "HOLTZ",
+};
+const char *const mzm_multiviola_anim_names[MZM_MULTIVIOLA_ANIMS] = {"MultiviolaOam_Moving"};
+static const char *const multiviola_sprites[MZM_MULTIVIOLA_ANIMS] = {"MULTIVIOLA"};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -210,6 +221,10 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_GEEGA] = {MZM_PIPE_BUG_ANIMS, mzm_geega_anim_names, geega_sprites},
     [MZM_FAMILY_ZEBBO] = {MZM_PIPE_BUG_ANIMS, mzm_zebbo_anim_names, zebbo_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
+    [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
+    [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
+    [MZM_FAMILY_MULTIVIOLA] = {MZM_MULTIVIOLA_ANIMS, mzm_multiviola_anim_names,
+                               multiviola_sprites},
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
@@ -2779,6 +2794,299 @@ static void reo(Ctx *c) {
     }
 }
 
+/* Mella (mella.c) and Holtz (holtz.c): ceiling swoopers. SAMUS_COLLIDING
+ * is their "going down" flag, as in the game. */
+enum {
+    SWOOPER_POSE_IDLE_INIT = 0x8,
+    SWOOPER_POSE_IDLE = 0x9,
+    SWOOPER_POSE_WARNING_INIT = 0x32,   /* MELLA_POSE_MOVING_INIT */
+    SWOOPER_POSE_WARNING = 0x33,        /* MELLA_POSE_DELAY_BEOFRE_GOING_DOWN */
+    SWOOPER_POSE_GOING_DOWN = 0x35,
+    SWOOPER_POSE_SLIDING = 0x37,        /* MELLA_POSE_GOING_UP */
+    HOLTZ_POSE_GOING_UP = 0x39,
+    HOLTZ_POSE_BACK_TO_CEILING = 0x3B,
+};
+
+/* MellaYMovement / HoltzYMovement: down until a floor a block below its
+ * centre or either side; up until both blocks on one side of the top are
+ * solid. */
+static bool swooper_y_movement(Ctx *c, uint16_t movement, uint16_t height) {
+    MzmSprite *s = c->s;
+    if (s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) {
+        uint16_t y = (uint16_t)(s->y + BLOCK_SIZE);
+        if (collision_at(c, y, s->x) == MZM_COLLISION_SOLID ||
+            collision_at(c, y, (uint16_t)(s->x - THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID ||
+            collision_at(c, y, (uint16_t)(s->x + THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
+            return true;
+        s->y += movement;
+        return false;
+    }
+    uint16_t y = (uint16_t)(s->y - height);
+    if (collision_at(c, y, (uint16_t)(s->x - THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID &&
+        collision_at(c, y, (uint16_t)(s->x - (BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE))) ==
+            MZM_COLLISION_SOLID)
+        return true;
+    if (collision_at(c, y, (uint16_t)(s->x + THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID &&
+        collision_at(c, y, (uint16_t)(s->x + BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE)) ==
+            MZM_COLLISION_SOLID)
+        return true;
+    s->y -= movement;
+    return false;
+}
+
+/* MellaXMovement / HoltzXMovement: blocked by solid a block ahead, half a
+ * block above or below its centre. */
+static void swooper_x_movement(Ctx *c, uint16_t movement) {
+    MzmSprite *s = c->s;
+    bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
+    uint16_t x = right ? (uint16_t)(s->x + BLOCK_SIZE) : (uint16_t)(s->x - BLOCK_SIZE);
+    if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), x) == MZM_COLLISION_SOLID ||
+        collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), x) == MZM_COLLISION_SOLID)
+        return;
+    if (right) s->x += movement;
+    else s->x -= movement;
+}
+
+/* A cycling idle table (SHORT_MAX restarts it). */
+static void cycle_table(uint8_t *offset_field, uint16_t *position, const int16_t *table, int size) {
+    uint8_t offset = *offset_field;
+    int16_t movement = offset < size ? table[offset] : SHORT_MAX;
+    if (movement == SHORT_MAX) {
+        movement = table[0];
+        offset = 0;
+    }
+    *offset_field = (uint8_t)(offset + 1);
+    *position = (uint16_t)(*position + movement);
+}
+
+/* Samus low enough (her feet 72 subpixels or more below its centre) and
+ * within the ranges. */
+static bool swooper_detects(const Ctx *c, uint16_t x_range) {
+    return c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE) >= c->s->y &&
+           samus_near_left_right(c, BLOCK_SIZE * 8, x_range);
+}
+
+static void face_samus(const Ctx *c) {
+    if (c->s->x > c->f->samus_x) c->s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+    else c->s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+}
+
+/* Mella: hovers under its ceiling with its idle tables, then swoops down
+ * toward Samus (within 8 blocks vertically, 3 across) after a 7-frame
+ * delay, accelerating from the ROM tables, and climbs back. */
+static void mella(Ctx *c) {
+    MzmSprite *s = c->s;
+    const int16_t *t;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->draw_top = s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = -QUARTER_BLOCK_SIZE;
+        s->hitbox_bottom = QUARTER_BLOCK_SIZE;
+        s->hitbox_left = -HALF_BLOCK_SIZE;
+        s->hitbox_right = HALF_BLOCK_SIZE;
+        set_anim(s, MZM_MELLA_IDLE);
+        s->health = c->tables->health[s->sprite_id];
+        s->samus_collision = SSC_HURTS_SAMUS;
+        s->pose = SWOOPER_POSE_IDLE_INIT;
+        break;
+    case SWOOPER_POSE_IDLE_INIT:
+        s->pose = SWOOPER_POSE_IDLE;
+        set_anim(s, MZM_MELLA_IDLE);
+        s->work3 = (uint8_t)(c->rng * 4);
+        s->work2 = (uint8_t)(c->rng * 2);
+        break;
+    case SWOOPER_POSE_IDLE:
+        cycle_table(&s->work3, &s->y, c->tables->mella_idle_y, 65);
+        cycle_table(&s->work2, &s->x, c->tables->mella_idle_x, 49);
+        if (swooper_detects(c, BLOCK_SIZE * 3)) s->pose = SWOOPER_POSE_WARNING_INIT;
+        break;
+    case SWOOPER_POSE_WARNING_INIT:
+        s->pose = SWOOPER_POSE_WARNING;
+        set_anim(s, MZM_MELLA_MOVING);
+        s->work0 = 7;               /* CONVERT_SECONDS(.1f) + 1 */
+        /* fallthrough */
+    case SWOOPER_POSE_WARNING:      /* the moving sound is not played */
+        if (--s->work0 == 0) {
+            s->pose = SWOOPER_POSE_GOING_DOWN;
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            face_samus(c);
+            s->work2 = 0;
+            s->work3 = 0;
+        }
+        break;
+    case SWOOPER_POSE_GOING_DOWN:
+        if (s->work3 < 6 * 8 - 1) s->work3++;
+        if (s->work2 < 7 * 8 - 1) s->work2++;
+        t = c->tables->mella_x;
+        swooper_x_movement(c, (uint16_t)t[s->work2 / 8]);
+        if (swooper_y_movement(c, (uint16_t)c->tables->mella_down[s->work3 / 8], HALF_BLOCK_SIZE)) {
+            s->pose = SWOOPER_POSE_SLIDING;
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            s->work3 = 0;
+        }
+        break;
+    case SWOOPER_POSE_SLIDING:      /* MellaGoingUp */
+        if (s->work3 < 7 * 8 - 1) s->work3++;
+        if (s->work2 > 0x18) s->work2--;
+        swooper_x_movement(c, (uint16_t)c->tables->mella_x[s->work2 / 8]);
+        if (swooper_y_movement(c, (uint16_t)c->tables->mella_up[s->work3 / 8], HALF_BLOCK_SIZE)) {
+            s->y = (uint16_t)((s->y & BLOCK_POSITION_FLAG) + HALF_BLOCK_SIZE);
+            s->pose = SWOOPER_POSE_IDLE_INIT;
+        }
+        break;
+    default: sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_SMALL); break;
+    }
+}
+
+/* Holtz: hovers under its ceiling, warns when Samus is low and within 8
+ * blocks vertically and 5 across, swoops down at 3 pixels a frame with a
+ * growing horizontal speed, slides along the floor, climbs back slowing
+ * down and bonks on its ceiling. */
+static void holtz(Ctx *c) {
+    MzmSprite *s = c->s;
+    const uint16_t height = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        face_samus(c);
+        s->draw_top = THREE_QUARTER_BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = -HALF_BLOCK_SIZE;
+        s->hitbox_bottom = HALF_BLOCK_SIZE;
+        s->hitbox_left = -(HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+        s->hitbox_right = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        set_anim(s, MZM_HOLTZ_IDLE);
+        s->health = c->tables->health[s->sprite_id];
+        s->samus_collision = SSC_HURTS_SAMUS;
+        s->pose = SWOOPER_POSE_IDLE_INIT;
+        s->work3 = 0;
+        break;
+    case SWOOPER_POSE_IDLE_INIT:
+        s->pose = SWOOPER_POSE_IDLE;
+        set_anim(s, c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < s->y ? MZM_HOLTZ_IDLE_AWARE
+                                                                           : MZM_HOLTZ_IDLE);
+        break;
+    case SWOOPER_POSE_IDLE:
+        cycle_table(&s->work3, &s->y, c->tables->holtz_idle_y, 65);
+        if (swooper_detects(c, BLOCK_SIZE * 5)) s->pose = SWOOPER_POSE_WARNING_INIT;
+        break;
+    case SWOOPER_POSE_WARNING_INIT:
+        s->pose = SWOOPER_POSE_WARNING;
+        set_anim(s, MZM_HOLTZ_WARNING);
+        /* fallthrough */
+    case SWOOPER_POSE_WARNING:
+        cycle_table(&s->work3, &s->y, c->tables->holtz_idle_y, 65);
+        if (animation_ending(c, 1)) {
+            s->pose = SWOOPER_POSE_GOING_DOWN;
+            set_anim(s, MZM_HOLTZ_GOING_DOWN);
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            face_samus(c);
+            s->work0 = 0;
+            s->work2 = PIXEL_SIZE / 2;  /* the going down sound is not played */
+        }
+        break;
+    case SWOOPER_POSE_GOING_DOWN:
+        s->work0++;
+        if (s->work2 < PIXEL_SIZE * 3 && (s->work0 & 1) == 0) s->work2++;
+        swooper_x_movement(c, s->work2);
+        if (swooper_y_movement(c, 3 * PIXEL_SIZE, height)) {
+            s->pose = SWOOPER_POSE_SLIDING;
+            set_anim(s, MZM_HOLTZ_IDLE_AWARE);
+        }
+        break;
+    case SWOOPER_POSE_SLIDING:
+        swooper_x_movement(c, s->work2);
+        if (animation_ending(c, 1)) {
+            s->pose = HOLTZ_POSE_GOING_UP;
+            set_anim(s, MZM_HOLTZ_GOING_UP);
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            s->work0 = 0;
+        }
+        break;
+    case HOLTZ_POSE_GOING_UP:
+        s->work0++;
+        if (s->work2 > PIXEL_SIZE / 2 && (s->work0 & 1) == 0) s->work2--;
+        swooper_x_movement(c, s->work2);
+        if (swooper_y_movement(c, PIXEL_SIZE * 3, height)) {
+            s->y &= BLOCK_POSITION_FLAG;
+            s->y += height;
+            s->pose = HOLTZ_POSE_BACK_TO_CEILING;
+            set_anim(s, MZM_HOLTZ_BONKING_ON_CEILING);
+            s->work3 = 0;
+        }
+        break;
+    case HOLTZ_POSE_BACK_TO_CEILING:
+        cycle_table(&s->work3, &s->y, c->tables->holtz_idle_y, 65);
+        if (animation_ending(c, 2)) s->pose = SWOOPER_POSE_IDLE_INIT;
+        break;
+    default: sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM); break;
+    }
+}
+
+/* Multiviola: bounces off every surface at 3 subpixels a frame on both
+ * axes, its animation starting at twice its slot (the bounce sound is not
+ * played). */
+static void multiviola(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+        s->draw_top = BLOCK_SIZE * 2 / PIXEL_SIZE;
+        s->draw_bottom = THREE_QUARTER_BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
+        s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE;
+        set_anim(s, MZM_MULTIVIOLA_MOVING);
+        s->frame = (uint8_t)(s->ram_slot * 2);
+        s->health = c->tables->health[s->sprite_id];
+        s->samus_collision = SSC_HURTS_SAMUS;
+        if (s->x > c->f->samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        else s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        s->pose = 9;
+        return;
+    }
+    if (s->pose != 9) {
+        sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_BIG);
+        return;
+    }
+    const uint16_t step = PIXEL_SIZE - 1;
+    if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+        if (collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR)
+            s->x += step;
+        else
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+    } else {
+        if (collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR)
+            s->x -= step;
+        else
+            s->status |= MZM_SPRITE_STATUS_X_FLIP;
+    }
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        if (collision_at(c, (uint16_t)(s->y + s->hitbox_top), s->x) == MZM_COLLISION_AIR)
+            s->y -= step;
+        else
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+    } else {
+        if (collision_at(c, (uint16_t)(s->y + s->hitbox_bottom), s->x) == MZM_COLLISION_AIR)
+            s->y += step;
+        else
+            s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -2894,6 +3202,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER: return MZM_FAMILY_ZEBBO;
     case MZM_PSPRITE_REO_GREEN_WINGS:
     case MZM_PSPRITE_REO_PURPLE_WINGS: return MZM_FAMILY_REO;
+    case MZM_PSPRITE_MELLA: return MZM_FAMILY_MELLA;
+    case MZM_PSPRITE_HOLTZ: return MZM_FAMILY_HOLTZ;
+    case MZM_PSPRITE_MULTIVIOLA: return MZM_FAMILY_MULTIVIOLA;
     case MZM_PSPRITE_DESSGEEGA:
     case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
@@ -3177,6 +3488,9 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_GEEGA:
     case MZM_FAMILY_ZEBBO: pipe_bug(&c); break;
     case MZM_FAMILY_REO: reo(&c); break;
+    case MZM_FAMILY_MELLA: mella(&c); break;
+    case MZM_FAMILY_HOLTZ: holtz(&c); break;
+    case MZM_FAMILY_MULTIVIOLA: multiviola(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

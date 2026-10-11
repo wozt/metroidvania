@@ -89,7 +89,7 @@ class MzmSpriteDataTests(unittest.TestCase):
         sources = "".join(path.read_text(encoding="utf-8")
                           for path in sorted((DECOMP / "src/data").rglob("*.c")))
         for table in mzm_sprites.AI_TABLES:
-            self.assertRegex(sources, rf"const\s+s16\s+{table}\s*\[")
+            self.assertRegex(sources, rf"const\s+[su]16\s+{table}\s*\[")
         for table in mzm_sprites.PARTICLES:
             self.assertRegex(sources, rf"const\s+struct\s+FrameData\s+{table}\s*\[")
 

@@ -73,13 +73,16 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_GEEGA_LEADER": 0, "PSPRITE_GEEGA_FOLLOWER": 0, "PSPRITE_ZEBBO_GREEN": 0,
           "PSPRITE_ZEBBO_YELLOW": 0, "PSPRITE_ZEBBO_GREEN_LEADER": 0,
           "PSPRITE_ZEBBO_GREEN_FOLLOWER": 0, "PSPRITE_REO_GREEN_WINGS": 0,
-          "PSPRITE_REO_PURPLE_WINGS": 0}
-# Signed s16 tables an AI reads, written as ``table`` lines.
+          "PSPRITE_REO_PURPLE_WINGS": 0, "PSPRITE_MELLA": 0, "PSPRITE_HOLTZ": 0,
+          "PSPRITE_MULTIVIOLA": 0}
+# s16 (or small u16) tables an AI reads, written as ``table`` lines.
 AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
              "sSidehopperHighJumpVelocity", "sSidehopperLowJumpVelocity",
              "sDessgeegaHighJumpYVelocity", "sDessgeegaLowJumpYVelocity",
-             "sReoIdleYMovement", "sReoIdleXMovement", "sDebrisBouncingVelocity", "sDebris11YVelocity",
+             "sReoIdleYMovement", "sReoIdleXMovement", "sMellaIdleYMovement",
+             "sMellaIdleXMovement", "sMellaGoingDownYMovement", "sMellaGoingUpYMovement",
+             "sMellaMovingXMovement", "sHoltzIdleYVelocity", "sDebrisBouncingVelocity", "sDebris11YVelocity",
              "sDebris12YVelocity", "sDebris13YVelocity", "sDebris4YVelocity",
              "sDebris5YVelocity", "sDebris6YVelocity", "sDebris7YVelocity",
              "sDebris8YVelocity")

@@ -125,6 +125,21 @@ read from the user's ROM at export time; nothing is stored in the repository.
   the point and turning, and turning at walls. It pushes the next overlapping
   Reo of its kind a pixel away (when that one is not frozen), and dies with
   the big explosion.
+- Mella and Holtz (`mella.c`, `holtz.c`): ceiling swoopers sharing their
+  native movement probes (down until a floor is a block below their centre
+  or either side, up until both blocks on one side of their top are solid,
+  sideways until solid a block ahead). Both hover with ROM idle tables and
+  swoop when Samus is low (72 subpixels below them) and within 8 blocks
+  vertically (Mella: 3 across, Holtz: 5); `SAMUS_COLLIDING` is their going
+  down flag, as in the game. The Mella waits 7 frames, then moves with
+  `sMellaGoingDownYMovement`, `sMellaGoingUpYMovement` and
+  `sMellaMovingXMovement` (one entry per 8 frames) and its animation is
+  `sMellowOam_Moving`; the Holtz warns for its table, dives 3 pixels a frame
+  while its horizontal speed grows from 2 to 12 subpixels every other frame,
+  slides for its table, climbs back slowing down and bonks on its ceiling.
+- Multiviola (`multiviola.c`): bounces diagonally off every surface at 3
+  subpixels a frame on both axes, starting toward Samus, its 56-frame table
+  starting at twice its slot (the frame limit per table is now 64).
 - Every primary sprite records the slot it owns (`primarySpriteRamSlot`),
   passed on to its secondary sprites and its drops.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at

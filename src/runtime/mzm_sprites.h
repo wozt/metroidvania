@@ -9,9 +9,10 @@
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
  * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper, Dessgeega, Viola, Sova,
- * Zeb, Geega, Zebbo and Reo AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c,
- * skree.c, waver.c, sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c,
- * geega.c, zebbo.c, reo.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * Zeb, Geega, Zebbo, Reo, Mella, Holtz and Multiviola AIs
+ * (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c,
+ * sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c, geega.c, zebbo.c, reo.c,
+ * mella.c, holtz.c, multiviola.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes. Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
  * stats) and the frame durations of each OAM table come from
@@ -110,6 +111,12 @@ typedef struct {
     int16_t debris[MZM_DEBRIS_TABLES][9]; /* sDebris*YVelocity, sDebrisBouncingVelocity */
     int16_t reo_idle_y[65];         /* sReoIdleYMovement (SHORT_MAX ends it) */
     int16_t reo_idle_x[81];         /* sReoIdleXMovement */
+    int16_t mella_idle_y[65];       /* sMellaIdleYMovement */
+    int16_t mella_idle_x[49];       /* sMellaIdleXMovement */
+    int16_t mella_down[6];          /* sMellaGoingDownYMovement (u16) */
+    int16_t mella_up[7];            /* sMellaGoingUpYMovement (u16) */
+    int16_t mella_x[7];             /* sMellaMovingXMovement (u16) */
+    int16_t holtz_idle_y[65];       /* sHoltzIdleYVelocity */
 } MzmSpriteTables;
 
 /* Columns of MzmSpriteTables.drops. */
@@ -137,7 +144,7 @@ enum {
     MZM_ZOOMER_TURNING_CORNER_LEFT, MZM_ZOOMER_TURNING_CORNER_RIGHT, MZM_ZOOMER_ANIMS,
 };
 #define MZM_SPRITE_MAX_ANIMS 16
-#define MZM_SPRITE_MAX_FRAMES 32
+#define MZM_SPRITE_MAX_FRAMES 64   /* sMultiviolaOam_Moving has 56 */
 extern const char *const mzm_zoomer_anim_names[MZM_ZOOMER_ANIMS];
 
 /* Enemy drop OAM tables (src/data/sprites/enemy_drop.c), one per drop. */
@@ -213,12 +220,25 @@ extern const char *const mzm_zebbo_anim_names[MZM_PIPE_BUG_ANIMS];
 enum { MZM_REO_IDLE, MZM_REO_MOVING, MZM_REO_ANIMS };
 extern const char *const mzm_reo_anim_names[MZM_REO_ANIMS];
 
+/* Mella, Holtz and Multiviola OAM tables (src/data/sprites/mella.c,
+ * holtz.c, multiviola.c; the Mella moves with sMellowOam_Moving). */
+enum { MZM_MELLA_IDLE, MZM_MELLA_MOVING, MZM_MELLA_ANIMS };
+extern const char *const mzm_mella_anim_names[MZM_MELLA_ANIMS];
+enum {
+    MZM_HOLTZ_IDLE, MZM_HOLTZ_IDLE_AWARE, MZM_HOLTZ_WARNING, MZM_HOLTZ_GOING_DOWN,
+    MZM_HOLTZ_GOING_UP, MZM_HOLTZ_BONKING_ON_CEILING, MZM_HOLTZ_ANIMS,
+};
+extern const char *const mzm_holtz_anim_names[MZM_HOLTZ_ANIMS];
+enum { MZM_MULTIVIOLA_MOVING, MZM_MULTIVIOLA_ANIMS };
+extern const char *const mzm_multiviola_anim_names[MZM_MULTIVIOLA_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
     MZM_FAMILY_ZOOMER, MZM_FAMILY_ZEELA, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_WAVER,
     MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA, MZM_FAMILY_VIOLA,
     MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA, MZM_FAMILY_ZEBBO, MZM_FAMILY_REO,
+    MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -253,6 +273,7 @@ enum {
     MZM_PSPRITE_GEEGA_LEADER = 159, MZM_PSPRITE_GEEGA_FOLLOWER = 160,
     MZM_PSPRITE_ZEBBO_GREEN = 91, MZM_PSPRITE_ZEBBO_YELLOW = 92,
     MZM_PSPRITE_REO_GREEN_WINGS = 63, MZM_PSPRITE_REO_PURPLE_WINGS = 64,
+    MZM_PSPRITE_MELLA = 114, MZM_PSPRITE_HOLTZ = 107, MZM_PSPRITE_MULTIVIOLA = 52,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
 };
 

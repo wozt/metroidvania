@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos and Reos with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes and Multiviolas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2799,6 +2799,30 @@ No automatic reciprocal link or native engine encoder is implemented.
   full idle cycle returning to its position, the detection delay, the speed
   caps and step, braking and turning past the target, and the push of an
   overlapping Reo.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.
+
+## Patch 0250 - Zero Mission Mellas, Holtzes and Multiviolas
+
+- `mzm_sprites` ports the Mella and the Holtz (shared swooper movement
+  probes, idle tables, detection, swoop, slide or climb, return under the
+  ceiling) and the Multiviola (diagonal bounces, animation offset by slot).
+  The OAM frame limit per table rises to 64 for the Multiviola's 56 frames.
+- `scripts/mzm_sprites.py` exports the three sprites and the Mella and Holtz
+  movement tables (`sMellaIdleYMovement`, `sMellaIdleXMovement`,
+  `sMellaGoingDownYMovement`, `sMellaGoingUpYMovement`,
+  `sMellaMovingXMovement`, `sHoltzIdleYVelocity`); the runtime reads them.
+- Checked in captures: in norfair_001 the Mellas hover and one swoops when
+  Samus stands within 3 blocks (`--spawn 250 160`); in ridley_003 the nearest
+  Holtz dives, slides on the floor and bonks back under its ceiling; in
+  ridley_010 the Multiviolas bounce around and one hits Samus for 18 (the ROM
+  damage).
+- Tests: `tests/test_mzm_sprites.c` adds a full Mella swoop (delay, flag,
+  facing, stop above the floor, return half a block under the ceiling), a
+  full Holtz cycle (warning, dive speed, slide, climb, bonk 40 subpixels
+  under the ceiling, idle) and the Multiviola's slot-based frame, speed and
+  floor bounce.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.

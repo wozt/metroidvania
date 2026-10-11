@@ -96,10 +96,11 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind, swoop_kind;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
-                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind},
+                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
+                              &swoop_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
@@ -1304,6 +1305,124 @@ int main(void) {
     uint16_t re2x = re2->x, re2y = re2->y;
     step(re, 0);
     assert(re2->x == re2x + 4 && re2->y == re2y + 4);
+
+    /* Mellas and Holtzes swoop from a ceiling (row 2) to the floor (row 10)
+     * and climb back. */
+    for (int a = 0; a < MZM_HOLTZ_ANIMS; ++a) {
+        swoop_kind.counts[a] = 4;
+        for (int f = 0; f < 4; ++f) swoop_kind.timers[a][f] = 3;
+    }
+    const int16_t mella_idle_y[65] = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 2, 2, 1, 1, 1,
+                                      0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1,
+                                      0, -1, 0, -1, 0, -1, -1, -1, -2, -2, -1, -1, -1, 0, -1, 0,
+                                      -1, 0, -1, 0, -1, 0, 0, 0, 0, 32767};
+    const int16_t mella_idle_x[49] = {1, 0, 1, 0, 1, 1, 1, 2, 2, 1, 1, 1, 0, 1, 0, 1, 0, 1,
+                                      0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1, 0, -1, 0, -1,
+                                      0, -1, -1, -1, -2, -2, -1, -1, -1, 0, -1, 0, -1, 32767};
+    const int16_t mella_down[6] = {1, 2, 3, 4, 5, 6};
+    const int16_t mella_up[7] = {0, 1, 2, 3, 4, 5, 6};
+    const int16_t mella_x[7] = {0, 1, 2, 3, 4, 5, 6};
+    memcpy(tables.mella_idle_y, mella_idle_y, sizeof mella_idle_y);
+    memcpy(tables.mella_idle_x, mella_idle_x, sizeof mella_idle_x);
+    memcpy(tables.mella_down, mella_down, sizeof mella_down);
+    memcpy(tables.mella_up, mella_up, sizeof mella_up);
+    memcpy(tables.mella_x, mella_x, sizeof mella_x);
+    memcpy(tables.holtz_idle_y, mella_idle_y, sizeof mella_idle_y);
+    tables.health[MZM_PSPRITE_MELLA] = 3;
+    tables.health[MZM_PSPRITE_HOLTZ] = 10;
+    tables.health[MZM_PSPRITE_MULTIVIOLA] = 10;
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[2][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
+    MzmSprite me;
+    mzm_sprite_init_primary(&me, MZM_PSPRITE_MELLA, 0, 3, 10, 0, 0);
+    frame.samus_x = 60000;
+    frame.samus_y = 640;
+    step(&me, 0);
+    step(&me, 0);
+    assert(me.pose == 9 && me.health == 3 && me.hitbox_left == -32);
+    /* Samus low and within 3 blocks: a 7-frame delay, then down toward her
+     * (the going down flag is SAMUS_COLLIDING). */
+    frame.samus_x = (uint16_t)(me.x + 150);
+    step(&me, 0);
+    assert(me.pose == 0x32);
+    step(&me, 0);
+    assert(me.pose == 0x33 && me.anim == MZM_MELLA_MOVING && me.work0 == 6);
+    for (int i = 0; i < 6; ++i) step(&me, 0);
+    assert(me.pose == 0x35 && me.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING &&
+           me.status & MZM_SPRITE_STATUS_FACING_RIGHT);
+    frames = 0;
+    while (me.pose == 0x35 && frames < 300) {
+        step(&me, 0);
+        ++frames;
+    }
+    /* It stops when the floor is a block below it, then climbs back to
+     * half a block under the ceiling. */
+    assert(me.pose == 0x37 && me.y + 64 >= 640 && !(me.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING));
+    frames = 0;
+    while (me.pose == 0x37 && frames < 300) {
+        step(&me, 0);
+        ++frames;
+    }
+    assert(me.pose == 8 && me.y == 3 * 64 + 32);
+
+    MzmSprite ho;
+    mzm_sprite_init_primary(&ho, MZM_PSPRITE_HOLTZ, 0, 3, 10, 0, 0);
+    frame.samus_x = 60000;
+    step(&ho, 0);
+    step(&ho, 0);
+    assert(ho.pose == 9 && ho.anim == MZM_HOLTZ_IDLE && ho.hitbox_left == -40);  /* Samus well below */
+    frame.samus_x = (uint16_t)(ho.x + 250);
+    step(&ho, 0);
+    assert(ho.pose == 0x32);
+    frames = 0;
+    while (ho.pose != 0x35 && frames < 100) {
+        step(&ho, 0);
+        ++frames;
+    }
+    /* Down at 3 pixels a frame with the horizontal speed growing every
+     * other frame from 2 to 12 subpixels. */
+    assert(ho.work2 == 2 && ho.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING);
+    uint16_t hoy = ho.y;
+    step(&ho, 0);
+    assert(ho.y == hoy + 12);
+    frames = 0;
+    while (ho.pose == 0x35 && frames < 300) {
+        step(&ho, 0);
+        ++frames;
+    }
+    assert(ho.pose == 0x37);
+    frames = 0;
+    while (ho.pose != 0x3B && frames < 300) {
+        step(&ho, 0);
+        ++frames;
+    }
+    /* Back under its ceiling, 40 subpixels below the block edge. */
+    assert(ho.pose == 0x3B && ho.y == 3 * 64 + 40 && ho.anim == MZM_HOLTZ_BONKING_ON_CEILING);
+    frames = 0;
+    while (ho.pose != 9 && frames < 100) {
+        step(&ho, 0);
+        ++frames;
+    }
+    assert(ho.pose == 9);
+
+    /* Multiviolas bounce at 3 subpixels a frame, their animation starting
+     * at twice their slot. */
+    swoop_kind.counts[0] = 56;
+    for (int f = 0; f < 56; ++f) swoop_kind.timers[0][f] = 2;
+    MzmSprite mv;
+    mzm_sprite_init_primary(&mv, MZM_PSPRITE_MULTIVIOLA, 0, 5, 5, 0, 7);
+    frame.samus_x = 0;
+    step(&mv, 0);
+    assert(mv.pose == 9 && mv.frame == 14 && !(mv.status & MZM_SPRITE_STATUS_X_FLIP));
+    uint16_t mvx = mv.x, mvy = mv.y;
+    step(&mv, 0);
+    assert(mv.x == mvx - 3 && mv.y == mvy + 3);
+    frames = 0;
+    while (!(mv.status & MZM_SPRITE_STATUS_FACING_DOWN) && frames < 300) {
+        step(&mv, 0);
+        ++frames;
+    }
+    assert(mv.y + 32 >= 640);   /* bounced off the floor */
     frame.sprites = NULL;
     frame.sprite_count = 0;
     puts("mzm_sprites: ok");

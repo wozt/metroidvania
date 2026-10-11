@@ -96,10 +96,10 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
-                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind},
+                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
@@ -111,7 +111,7 @@ int main(void) {
     clear();
     for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
     MzmSprite z;
-    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 3, 0);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 3, 0, 0);
     assert(z.y == 640 && z.x == 3 * 64 + 32);
     step(&z, 0);
     assert(z.status & MZM_SPRITE_STATUS_EXISTS && z.health == 3 && z.anim == MZM_ZOOMER_ON_GROUND);
@@ -153,14 +153,14 @@ int main(void) {
 
     /* Nothing around it: the zoomer is removed at init. */
     clear();
-    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_RED, 0, 4, 4, 0);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_RED, 0, 4, 4, 0, 0);
     step(&z, 0);
     assert(z.status == 0);
 
     /* A red zoomer under a ceiling hangs from it (Y flip) with palette 1 and
      * crawls at 3 subpixels per frame. */
     for (int x = 0; x < COLUMNS; ++x) grid[3][x] = MZM_CLIPDATA_SOLID;
-    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_RED, 0, 4, 4, 0);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_RED, 0, 4, 4, 0, 0);
     step(&z, 0);
     assert(z.status & MZM_SPRITE_STATUS_Y_FLIP && z.palette_row == 1 && z.y == 5 * 64 - 64);
     x0 = z.x;
@@ -183,7 +183,7 @@ int main(void) {
     clear();
     for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
     world.camera_x = world.camera_y = 0;
-    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
     step(&z, 0);
     /* SpriteInitPrimary's one-frame ignore timer runs down in the collision
      * routine, not in the sprite's update. */
@@ -264,7 +264,7 @@ int main(void) {
     assert(z.status == 0);
 
     /* Missiles deal 20; a sprite not weak to beams only flashes. */
-    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_RED, 0, 9, 6, 0);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_RED, 0, 9, 6, 0, 0);
     step(&z, 0);
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 30;
     z.health = 30;
@@ -310,7 +310,7 @@ int main(void) {
         {1000, 99, 0, 0, MZM_PSPRITE_SMALL_ENERGY_DROP},  /* power bombs not unlocked */
     };
     for (size_t r = 0; r < sizeof rolls / sizeof rolls[0]; ++r) {
-        mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0);
+        mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
         frame.frame16 = 0;
         step(&z, 0);
         uint16_t zx = z.x, zy = z.y;
@@ -338,7 +338,7 @@ int main(void) {
      * shown when the ignore timer drops below 2. */
     MzmSprite drop = z;
     equipment.energy = 90;
-    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
     z = drop;
     step(&z, 0);
     assert(z.pose == 9 && z.ignore_samus_timer == 20 && z.anim == MZM_DROP_SMALL_ENERGY);
@@ -396,7 +396,7 @@ int main(void) {
     for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
     for (int y = 0; y < 10; ++y) grid[y][2] = grid[y][12] = MZM_CLIPDATA_SOLID;
     MzmSprite r;
-    mzm_sprite_init_primary(&r, MZM_PSPRITE_RIPPER_BROWN, 0, 6, 7, 0);
+    mzm_sprite_init_primary(&r, MZM_PSPRITE_RIPPER_BROWN, 0, 6, 7, 0, 0);
     step(&r, 0);
     assert(r.pose == 8 && r.health == 20 && r.y == 7 * 64 - 8 && r.hitbox_top == -36);
     assert(r.status & MZM_SPRITE_STATUS_X_FLIP && r.anim == MZM_RIPPER_MOVING);
@@ -449,7 +449,7 @@ int main(void) {
     assert(r.sprite_id == MZM_PSPRITE_SMALL_ENERGY_DROP && r.y == ry - 24);
 
     /* Purple rippers move a pixel per frame. */
-    mzm_sprite_init_primary(&r, MZM_PSPRITE_RIPPER_PURPLE, 0, 6, 7, 0);
+    mzm_sprite_init_primary(&r, MZM_PSPRITE_RIPPER_PURPLE, 0, 6, 7, 0, 0);
     step(&r, 0);
     x0 = r.x;
     step(&r, 0);
@@ -473,7 +473,7 @@ int main(void) {
     frame.sprite_count = 8;
     world.camera_x = world.camera_y = 0;
     MzmSprite *k = &group[0];
-    mzm_sprite_init_primary(k, MZM_PSPRITE_SKREE_GREEN, 0, 3, 8, 0);
+    mzm_sprite_init_primary(k, MZM_PSPRITE_SKREE_GREEN, 0, 3, 8, 0, 0);
     /* Samus far to the right: it waits, one block above its placement. */
     frame.samus_x = 20 * 64;
     frame.samus_y = 640;
@@ -646,7 +646,7 @@ int main(void) {
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] =
         MZM_WEAKNESS_BEAM_BOMBS | MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
     memset(tables.drops[MZM_PSPRITE_ZOOMER_YELLOW], 0, sizeof tables.drops[0]);
-    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
     step(&z, 0);
     z.health = 1;
     weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
@@ -660,7 +660,7 @@ int main(void) {
            fx.particles[1].x == zx2 && fx.particles[1].y == zy2 - 40);
     /* Not weak: the invincible impact. */
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
-    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
     step(&z, 0);
     weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
                                       .x = z.x, .y = z.y - 20};
@@ -701,7 +701,7 @@ int main(void) {
     frame.sprites = group;
     frame.sprite_count = 8;
     MzmSprite *zl = &group[0];
-    mzm_sprite_init_primary(zl, MZM_PSPRITE_ZEELA, 0, 9, 6, 0);
+    mzm_sprite_init_primary(zl, MZM_PSPRITE_ZEELA, 0, 9, 6, 0, 0);
     step(zl, 0);
     assert(zl->health == 6 && zl->status & MZM_SPRITE_STATUS_FACING_RIGHT &&
            zl->status & MZM_SPRITE_STATUS_X_FLIP && zl->anim == MZM_ZEELA_ON_GROUND);
@@ -713,7 +713,7 @@ int main(void) {
     /* A red Zeela (palette row 1) killed on the floor throws two eyes from
      * three quarters of a block above it, a part-2 pair moving 3 subpixels a
      * frame outward and up first. */
-    mzm_sprite_init_primary(zl, MZM_PSPRITE_ZEELA_RED, 0, 9, 6, 0);
+    mzm_sprite_init_primary(zl, MZM_PSPRITE_ZEELA_RED, 0, 9, 6, 0, 0);
     step(zl, 0);
     assert(zl->health == 12 && zl->palette_row == 1);
     uint16_t zlx = zl->x, zly = zl->y;
@@ -768,7 +768,7 @@ int main(void) {
     for (int x = 0; x < COLUMNS; ++x) grid[2][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
     for (int y = 0; y < ROWS; ++y) grid[y][2] = grid[y][12] = MZM_CLIPDATA_SOLID;
     MzmSprite w;
-    mzm_sprite_init_primary(&w, MZM_PSPRITE_WAVER, 0, 5, 7, 0);
+    mzm_sprite_init_primary(&w, MZM_PSPRITE_WAVER, 0, 5, 7, 0, 0);
     frame.samus_x = 0;
     step(&w, 0);
     assert(w.pose == 9 && w.health == 8 && !(w.status & MZM_SPRITE_STATUS_X_FLIP));
@@ -821,7 +821,7 @@ int main(void) {
     frame.samus_y = 0;
     frame.samus_hitbox_top = -128;
     MzmSprite h;
-    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 9, 8, 0);
+    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 9, 8, 0, 0);
     step(&h, 0);
     /* Init: idle on the floor, head hitbox 92, sides 72, facing right
      * (RNG 0); without BUGFIX work1 keeps 0, so it jumps after one loop. */
@@ -868,7 +868,7 @@ int main(void) {
     step(&h, 0);
     assert(h.status & MZM_SPRITE_STATUS_FACING_RIGHT && h.x == 2 * 64 + 72 + 6);
     /* Unsupported on both sides: it falls (the floor removed). */
-    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 4, 8, 0);
+    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 4, 8, 0, 0);
     step(&h, 0);
     assert(h.pose == 0xF);
     step(&h, 0);
@@ -881,7 +881,7 @@ int main(void) {
     assert(h.pose == 0x25 && h.y == 640);
     /* On a ceiling (row 3): Y flipped, head hitbox below. */
     for (int x = 0; x < COLUMNS; ++x) grid[3][x] = MZM_CLIPDATA_SOLID;
-    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 4, 8, 0);
+    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 4, 8, 0, 0);
     step(&h, 0);
     assert(h.status & MZM_SPRITE_STATUS_Y_FLIP && h.y == 4 * 64 && h.hitbox_top == 0 &&
            h.hitbox_bottom == 92);
@@ -889,7 +889,7 @@ int main(void) {
     /* Death: the single-then-big explosion 52 subpixels above its feet. */
     memset(&fx, 0, sizeof fx);
     frame.effects = &fx;
-    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 9, 8, 0);
+    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 9, 8, 0, 0);
     step(&h, 0);
     h.pose = 0x62;
     step(&h, 0);
@@ -902,7 +902,7 @@ int main(void) {
     memset(test_events, 0, sizeof test_events);
     door_timer_calls = 0;
     MzmSprite d;
-    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA, 0, 9, 8, 0);
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA, 0, 9, 8, 0, 0);
     step(&d, 0);
     assert(d.pose == 0xF && d.hitbox_top == -88 && d.hitbox_left == -64 && d.health == 30);
     d.pose = 0x62;
@@ -912,7 +912,7 @@ int main(void) {
     assert(fx.particles[1].effect == MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG &&
            fx.particles[1].y == 640 - 48);
     /* Its jump keeps the head hitbox. */
-    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA, 0, 9, 8, 0);
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA, 0, 9, 8, 0, 0);
     step(&d, 0);
     d.pose = 8;
     frames = 0;
@@ -926,11 +926,11 @@ int main(void) {
      * and it was not killed yet. */
     memset(test_events, 0, sizeof test_events);
     door_timer_calls = 0;
-    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0);
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0, 0);
     step(&d, 0);
     assert(d.status == 0 && door_timer_calls == 0);
     test_set_event(NULL, MZM_EVENT_VIEWED_STATUE_ROOM);
-    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0);
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0, 0);
     step(&d, 0);
     /* Doors locked, waiting hidden from Samus and projectiles. */
     assert(d.pose == 0x11 && door_timer_calls == 1 && last_door_timer == 1);
@@ -970,7 +970,7 @@ int main(void) {
     assert(d.pose == 0x25 && d.y == 13 * 64);
     /* Once killed, it does not come back. */
     test_set_event(NULL, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED);
-    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0);
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0, 0);
     step(&d, 0);
     assert(d.status == 0);
     frame.hooks = NULL;
@@ -986,7 +986,7 @@ int main(void) {
     for (int x = 2; x <= 9; ++x) grid[3][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
     for (int y = 3; y <= 10; ++y) grid[y][2] = grid[y][9] = MZM_CLIPDATA_SOLID;
     MzmSprite v;
-    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_BLUE, 0, 9, 5, 0);
+    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_BLUE, 0, 9, 5, 0, 0);
     step(&v, 0);
     /* Half a block up, then an eighth down onto the floor: centre 24
      * subpixels above it. */
@@ -1011,7 +1011,7 @@ int main(void) {
     assert(min_x == 3 * 64 + 24 && max_x == 9 * 64 - 24 && min_y == 4 * 64 + 24 &&
            max_y == 640 - 24);
     /* Orange Violas are twice as fast. */
-    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_ORANGE, 0, 9, 5, 0);
+    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_ORANGE, 0, 9, 5, 0, 0);
     step(&v, 0);
     x0 = v.x;
     step(&v, 0);
@@ -1019,7 +1019,7 @@ int main(void) {
     /* Without a surface it falls onto the floor below. */
     clear();
     for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
-    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_BLUE, 0, 9, 5, 0);
+    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_BLUE, 0, 9, 5, 0, 0);
     step(&v, 0);
     grid[10][5] = grid[10][4] = grid[10][6] = MZM_CLIPDATA_AIR;
     grid[12][5] = MZM_CLIPDATA_SOLID;
@@ -1045,7 +1045,7 @@ int main(void) {
     for (int x = 2; x <= 12; ++x) grid[3][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
     for (int y = 3; y <= 10; ++y) grid[y][2] = grid[y][12] = MZM_CLIPDATA_SOLID;
     MzmSprite so;
-    mzm_sprite_init_primary(&so, MZM_PSPRITE_SOVA_PURPLE, 0, 9, 6, 0);
+    mzm_sprite_init_primary(&so, MZM_PSPRITE_SOVA_PURPLE, 0, 9, 6, 0, 0);
     step(&so, 0);
     assert(so.pose == 9 && so.health == 4 && so.work2 == 0 && so.anim == MZM_SOVA_ON_GROUND);
     assert(so.status & MZM_SPRITE_STATUS_FACING_RIGHT && so.status & MZM_SPRITE_STATUS_X_FLIP);
@@ -1082,7 +1082,7 @@ int main(void) {
     }
     assert(floor_seen && ceiling_seen && left_seen && right_seen);
     /* Orange Sovas use palette row 1 and move one subpixel more. */
-    mzm_sprite_init_primary(&so, MZM_PSPRITE_SOVA_ORANGE, 0, 9, 6, 0);
+    mzm_sprite_init_primary(&so, MZM_PSPRITE_SOVA_ORANGE, 0, 9, 6, 0, 0);
     step(&so, 0);
     assert(so.palette_row == 1 && so.health == 12);
     step(&so, 0);
@@ -1091,6 +1091,122 @@ int main(void) {
     assert(so.frame == 2);
     step(&so, 0);
     assert(so.x - before == 2);
+
+    /* Zebs and Geegas: pipe bugs. A Zeb in a pipe at block (9, 10) waits
+     * hidden from Samus and projectiles. */
+    for (int a = 0; a < MZM_PIPE_BUG_ANIMS; ++a) {
+        bug_kind.counts[a] = 2;
+        bug_kind.timers[a][0] = bug_kind.timers[a][1] = 4;
+    }
+    tables.health[MZM_PSPRITE_ZEB] = 2;
+    tables.health[MZM_PSPRITE_GEEGA_LEADER] = 4;
+    tables.health[MZM_PSPRITE_GEEGA_FOLLOWER] = 4;
+    tables.weakness[MZM_PSPRITE_ZEB] = MZM_WEAKNESS_BEAM_BOMBS;
+    clear();
+    memset(group, 0, sizeof group);
+    frame.sprites = group;
+    frame.sprite_count = 8;
+    frame.effects = NULL;
+    frame.samus_hitbox_top = -128;
+    MzmSprite *zb = &group[0];
+    mzm_sprite_init_primary(zb, MZM_PSPRITE_ZEB, 0, 9, 10, 0, 0);
+    frame.samus_x = 60000;
+    frame.samus_y = 100;
+    step(zb, 0);
+    assert(zb->pose == 9 && zb->y == 640 - 32 && zb->x == 10 * 64 + 64 && zb->work1 == 0);
+    assert(zb->status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+           zb->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES && zb->samus_collision == 0);
+    /* Samus beside it but too close horizontally (36 subpixels) or out of
+     * the five-block range: nothing. */
+    frame.samus_x = (uint16_t)(zb->x - 36);
+    frame.samus_y = (uint16_t)(zb->y - 100);
+    for (int i = 0; i < 5; ++i) step(zb, 0);
+    assert(zb->pose == 9);
+    /* Above and to its left within range: it rises toward her, facing
+     * left, harmful after two frames. */
+    frame.samus_x = (uint16_t)(zb->x - 120);
+    frame.samus_y = (uint16_t)(zb->y - 120);
+    uint16_t zby = zb->y;
+    step(zb, 0);
+    assert(zb->pose == 0x23 && zb->scaling == frame.samus_y && zb->work0 == 2 &&
+           !(zb->status & MZM_SPRITE_STATUS_NOT_DRAWN) && !(zb->status & MZM_SPRITE_STATUS_X_FLIP));
+    step(zb, 0);
+    assert(zb->y == zby - 8 && zb->samus_collision == 0);
+    step(zb, 0);
+    assert(zb->y == zby - 16 && zb->samus_collision == 4);
+    /* It stops 100 subpixels above her saved height, waits 10 frames, then
+     * flies left 12 subpixels a frame. */
+    frames = 0;
+    while (zb->pose == 0x23 && frames < 100) {
+        step(zb, 0);
+        ++frames;
+    }
+    assert(zb->pose == 0x25 && zb->y < frame.samus_y - 100 && zb->y + 8 >= frame.samus_y - 100);
+    for (int i = 0; i < 10; ++i) step(zb, 0);
+    uint16_t zbx = zb->x;
+    step(zb, 0);
+    assert(zb->x == zbx - 12 && zb->anim == MZM_PIPE_BUG_MOVING);
+    /* Sixteen blocks past Samus it returns to its pipe and waits a second. */
+    frames = 0;
+    while (zb->pose == 0x25 && frames < 300) {
+        step(zb, 0);
+        ++frames;
+    }
+    assert(zb->pose == 9 && zb->y == zby && zb->work1 == 60 &&
+           zb->status & MZM_SPRITE_STATUS_NOT_DRAWN);
+    /* Killed: its drop follows its slot and the pipe waits while it
+     * exists (DEATH_RESPAWNING). */
+    tables.drops[MZM_PSPRITE_ZEB][MZM_DROP_PROB_SMALL_ENERGY] = 1024;
+    equipment.energy = 50;
+    zb->pose = 0x62;
+    step(zb, 0);
+    MzmSprite *zdrop = &group[1];
+    assert(zb->pose == 9 && zb->health == 2 && zb->x == zb->x_spawn);
+    assert(zdrop->status & MZM_SPRITE_STATUS_EXISTS &&
+           zdrop->sprite_id == MZM_PSPRITE_SMALL_ENERGY_DROP && zdrop->ram_slot == 0);
+    step(zdrop, 0);
+    zb->work1 = 0;
+    frame.samus_x = (uint16_t)(zb->x - 120);
+    frame.samus_y = (uint16_t)(zb->y - 120);
+    step(zb, 0);
+    assert(zb->pose == 9);  /* has drops */
+    zdrop->status = 0;
+    step(zb, 0);
+    assert(zb->pose == 0x23);
+
+    /* A Geega leader rises with a follower two blocks and a half below it,
+     * and waits in its pipe while the follower exists. */
+    memset(group, 0, sizeof group);
+    MzmSprite *gl = &group[0];
+    mzm_sprite_init_primary(gl, MZM_PSPRITE_GEEGA_LEADER, 0, 9, 10, 0, 0);
+    frame.samus_x = 60000;
+    step(gl, 0);
+    assert(gl->hitbox_top == -28 && gl->hitbox_left == -24);
+    gl->work1 = 0;
+    frame.samus_x = (uint16_t)(gl->x + 120);
+    frame.samus_y = (uint16_t)(gl->y - 120);
+    step(gl, 0);
+    MzmSprite *gf = &group[1];
+    assert(gl->pose == 0x23 && gl->status & MZM_SPRITE_STATUS_X_FLIP);
+    assert(gf->sprite_id == MZM_PSPRITE_GEEGA_FOLLOWER && gf->ram_slot == 0 && gf->work0 == 18 &&
+           gf->scaling == gl->scaling && gf->status & MZM_SPRITE_STATUS_X_FLIP);
+    step(gf, 0);
+    /* GeegaInit moved it under the leader, two blocks below. */
+    assert(gf->pose == 0x23 && gf->x == gl->x && gf->y == gl->y + 128 &&
+           !(gf->status & MZM_SPRITE_STATUS_NOT_DRAWN));
+    /* The follower is removed when it would respawn; the leader waits for
+     * it before rising again. */
+    gl->pose = 9;
+    gl->work1 = 0;
+    step(gl, 0);
+    assert(gl->pose == 9);
+    gf->pose = 0x62;
+    step(gf, 0);
+    assert(gf->status == 0);
+    step(gl, 0);
+    assert(gl->pose == 0x23);
+    frame.sprites = NULL;
+    frame.sprite_count = 0;
     puts("mzm_sprites: ok");
     return 0;
 }

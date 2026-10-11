@@ -167,6 +167,10 @@ static const char *const sova_sprites[MZM_SOVA_ANIMS] = {
     "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE",
     "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE",
 };
+const char *const mzm_zeb_anim_names[MZM_PIPE_BUG_ANIMS] = {"ZebOam_Idle", "ZebOam_Moving"};
+const char *const mzm_geega_anim_names[MZM_PIPE_BUG_ANIMS] = {"GeegaOam_Idle", "GeegaOam_Moving"};
+static const char *const zeb_sprites[MZM_PIPE_BUG_ANIMS] = {"ZEB", "ZEB"};
+static const char *const geega_sprites[MZM_PIPE_BUG_ANIMS] = {"GEEGA", "GEEGA"};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -198,6 +202,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_DESSGEEGA] = {MZM_DESSGEEGA_ANIMS, mzm_dessgeega_anim_names, dessgeega_sprites},
     [MZM_FAMILY_VIOLA] = {MZM_VIOLA_ANIMS, mzm_viola_anim_names, viola_sprites},
     [MZM_FAMILY_SOVA] = {MZM_SOVA_ANIMS, mzm_sova_anim_names, sova_sprites},
+    [MZM_FAMILY_ZEB] = {MZM_PIPE_BUG_ANIMS, mzm_zeb_anim_names, zeb_sprites},
+    [MZM_FAMILY_GEEGA] = {MZM_PIPE_BUG_ANIMS, mzm_geega_anim_names, geega_sprites},
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
@@ -811,7 +817,13 @@ static void random_debris_3(const Ctx *c, uint16_t y, uint16_t x) {
 /* SpriteUtilSpriteDeath (DEATH_NORMAL): the death particle (the screw
  * attack kill adds three debris), then the sprite becomes its drop at the
  * given position, or is removed. Sounds are not played. */
-static void sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
+static MzmSprite *spawn_drop_follower(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
+                                      uint8_t ram_slot, uint16_t y, uint16_t x, uint16_t status);
+
+/* SpriteDeathType */
+enum { DEATH_NORMAL, DEATH_RESPAWNING };
+
+static void sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect) {
     MzmSprite *s = c->s;
     if (s->pose == SPRITE_POSE_SCREW_ATTACK_DESTROYED) {
         particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
@@ -820,6 +832,12 @@ static void sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
         particle_set(c, y, x, effect);
     }
     uint8_t drop = determine_drop(c);
+    if (type == DEATH_RESPAWNING) {
+        /* The drop follows the sprite's slot; the sprite itself stays. */
+        if (drop != MZM_PSPRITE_UNUSED0)
+            spawn_drop_follower(c, drop, s->room_slot, 0, s->ram_slot, y, x, 0);
+        return;
+    }
     if (drop == MZM_PSPRITE_UNUSED0) {
         s->status = 0;
         return;
@@ -920,6 +938,10 @@ static void zeela_eyes(Ctx *c) {
         set_anim(s, MZM_ZEELA_EYES_EXPLODING);
         break;
     }
+}
+
+static void sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
+    sprite_death_typed(c, DEATH_NORMAL, y, x, effect);
 }
 
 /* ZoomerDeath / ZeelaDeath: the explosion point is the middle of the body;
@@ -1068,6 +1090,7 @@ static void spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx
         n->room_slot = part;
         n->pose = SPRITE_POSE_UNINITIALIZED;
         n->ignore_samus_timer = 1;
+        n->ram_slot = c->s->ram_slot;
         return;
     }
 }
@@ -2323,6 +2346,231 @@ static void sova(Ctx *c) {
     }
 }
 
+/* SpriteSpawnDropFollowers: a primary sprite owned by `ram_slot` in the
+ * first free slot (NULL without one). */
+static MzmSprite *spawn_drop_follower(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
+                                      uint8_t ram_slot, uint16_t y, uint16_t x, uint16_t status) {
+    for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
+        MzmSprite *n = &c->f->sprites[i];
+        if (n->status & MZM_SPRITE_STATUS_EXISTS) continue;
+        memset(n, 0, sizeof *n);
+        n->status = status | MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
+                    MZM_SPRITE_STATUS_NOT_DRAWN;
+        n->gfx_slot = gfx_slot;
+        n->sprite_id = sprite_id;
+        n->y = y;
+        n->x = x;
+        n->room_slot = part;
+        n->pose = SPRITE_POSE_UNINITIALIZED;
+        n->ignore_samus_timer = 1;
+        n->ram_slot = ram_slot;
+        return n;
+    }
+    return NULL;
+}
+
+/* SpriteUtilCheckHasDrops: a drop owned by this sprite's slot exists. */
+static bool has_drops(const Ctx *c) {
+    for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
+        const MzmSprite *n = &c->f->sprites[i];
+        if (n->status & MZM_SPRITE_STATUS_EXISTS && n->ram_slot == c->s->ram_slot &&
+            n->samus_collision >= SSC_SMALL_ENERGY_DROP)
+            return true;
+    }
+    return false;
+}
+
+/* SpriteUtilCountChildPrimarySprites */
+static int count_children(const Ctx *c, uint8_t sprite_id) {
+    int count = 0;
+    for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
+        const MzmSprite *n = &c->f->sprites[i];
+        if (n->status & MZM_SPRITE_STATUS_EXISTS && !n->secondary && n->sprite_id == sprite_id &&
+            n->ram_slot == c->s->ram_slot)
+            ++count;
+    }
+    return count;
+}
+
+/* SpriteUtilCheckSamusNearSpriteAboveBelow == NSAB_ABOVE: within the x
+ * range, and the sprite below Samus's middle within the y range. */
+static bool samus_above(const Ctx *c, uint16_t y_range, uint16_t x_range) {
+    uint16_t samus_y = (uint16_t)(c->f->samus_y + c->f->samus_hitbox_top / 2);
+    uint16_t samus_x = c->f->samus_x, y = c->s->y, x = c->s->x;
+    if (x > samus_x ? x - samus_x >= x_range : samus_x - x >= x_range) return false;
+    return y > samus_y && y - samus_y < y_range;
+}
+
+/* Zeb (zeb.c) and Geega (geega.c), the pipe bugs: hidden in their pipe
+ * until Samus is above it, beside it and within five blocks, they rise an
+ * eighth of a block a frame (harmful after two frames) up to about her
+ * height, then fly toward her at 12 subpixels a frame through walls until
+ * 16 blocks past her, and respawn in the pipe a second later; a pipe waits
+ * while a drop of its own exists. A Geega leader rises with a follower
+ * spawned two blocks and a half below it and waits for it to be gone. */
+enum {
+    PIPE_BUG_POSE_IDLE_INIT = 0x8,
+    PIPE_BUG_POSE_IDLE = 0x9,
+    PIPE_BUG_POSE_GOING_UP = 0x23,
+    PIPE_BUG_POSE_MOVING = 0x25,
+};
+
+static bool is_geega(const MzmSprite *s) {
+    return s->sprite_id == MZM_PSPRITE_GEEGA || s->sprite_id == MZM_PSPRITE_GEEGA_WHITE ||
+           s->sprite_id == MZM_PSPRITE_GEEGA_LEADER || s->sprite_id == MZM_PSPRITE_GEEGA_FOLLOWER;
+}
+
+/* ZebIdleInit / GeegaIdleInit */
+static void pipe_bug_idle_init(MzmSprite *s) {
+    s->samus_collision = SSC_NONE;
+    s->pose = PIPE_BUG_POSE_IDLE;
+    set_anim(s, MZM_PIPE_BUG_IDLE);
+    s->status |= MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+}
+
+/* ZebRespawn / GeegaRespawn (a Geega follower is removed instead) */
+static void pipe_bug_respawn(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->sprite_id == MZM_PSPRITE_GEEGA_FOLLOWER) {
+        s->status = 0;
+        return;
+    }
+    s->y = s->y_spawn;
+    s->x = s->x_spawn;
+    pipe_bug_idle_init(s);
+    s->work1 = 60;                  /* CONVERT_SECONDS(1.f) */
+    s->health = c->tables->health[s->sprite_id];
+    s->isft = 0;
+    s->palette_row = 0;
+    s->absolute_palette_row = 0;
+    s->ignore_samus_timer = 1;
+    s->freeze_timer = 0;
+}
+
+static void pipe_bug_idle(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->sprite_id == MZM_PSPRITE_GEEGA_FOLLOWER) {
+        s->pose = PIPE_BUG_POSE_GOING_UP;
+        s->status &= (uint16_t)~(MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        return;
+    }
+    if (s->sprite_id == MZM_PSPRITE_GEEGA_LEADER && count_children(c, MZM_PSPRITE_GEEGA_FOLLOWER))
+        return;
+    if (has_drops(c)) return;
+    if (s->work1) {
+        s->work1--;
+        return;
+    }
+    uint16_t samus_y = c->f->samus_y, samus_x = c->f->samus_x;
+    if (samus_y > s->y - (HALF_BLOCK_SIZE - PIXEL_SIZE / 2)) return;
+    uint16_t dx = s->x > samus_x ? (uint16_t)(s->x - samus_x) : (uint16_t)(samus_x - s->x);
+    if (dx <= HALF_BLOCK_SIZE + PIXEL_SIZE) return;
+    if (!samus_above(c, BLOCK_SIZE * 5, BLOCK_SIZE * 5)) return;
+    s->scaling = samus_y;
+    s->pose = PIPE_BUG_POSE_GOING_UP;
+    s->work0 = 2;
+    s->status &= (uint16_t)~(MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+    /* SpriteUtilMakeSpriteFaceSamusXFlip (the rising sound is not played) */
+    if (s->x > samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+    else s->status |= MZM_SPRITE_STATUS_X_FLIP;
+    if (s->sprite_id == MZM_PSPRITE_GEEGA_LEADER) {
+        MzmSprite *follower = spawn_drop_follower(
+            c, MZM_PSPRITE_GEEGA_FOLLOWER, s->room_slot, s->gfx_slot, s->ram_slot,
+            (uint16_t)(s->y + BLOCK_SIZE * 2 + HALF_BLOCK_SIZE), (uint16_t)(s->x - HALF_BLOCK_SIZE),
+            s->status & MZM_SPRITE_STATUS_X_FLIP);
+        if (follower) {
+            follower->scaling = s->scaling;
+            follower->work0 = 18;   /* CONVERT_SECONDS(.3f) */
+        }
+    }
+}
+
+static void pipe_bug_going_up(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->y -= EIGHTH_BLOCK_SIZE;
+    if (s->work0) {
+        if (--s->work0 == 0) s->samus_collision = SSC_HURTS_SAMUS;
+        return;
+    }
+    uint16_t samus_y = c->f->samus_y;
+    uint16_t target = s->scaling < samus_y && samus_y > s->y_spawn - BLOCK_SIZE * 2 ? s->scaling
+                                                                                     : samus_y;
+    if (target - (BLOCK_SIZE + HALF_BLOCK_SIZE + PIXEL_SIZE) > s->y) {
+        s->pose = PIPE_BUG_POSE_MOVING;
+        s->work0 = 10;              /* CONVERT_SECONDS(1.f / 6) */
+        set_anim(s, MZM_PIPE_BUG_MOVING);
+    }
+}
+
+static void pipe_bug_move(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->work0) {
+        if (--s->work0 == 0) s->work1 = 0;
+        return;
+    }
+    s->work1++;                     /* the moving sound every 16 frames is not played */
+    int samus_x = c->f->samus_x, x = s->x;
+    if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+        if (x - samus_x > BLOCK_SIZE * 16 || x & 0x8000) {
+            pipe_bug_respawn(c);
+            return;
+        }
+        s->x += EIGHTH_BLOCK_SIZE + PIXEL_SIZE;
+    } else {
+        if (samus_x - x > BLOCK_SIZE * 16 || x & 0x8000) {
+            pipe_bug_respawn(c);
+            return;
+        }
+        s->x -= EIGHTH_BLOCK_SIZE + PIXEL_SIZE;
+    }
+}
+
+/* Zeb / Geega: the AIs. Freezing and the sounds are not ported. */
+static void pipe_bug(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* ZebInit / GeegaInit */
+        if (is_geega(s)) {
+            s->hitbox_top = -(HALF_BLOCK_SIZE - PIXEL_SIZE);
+            s->hitbox_bottom = HALF_BLOCK_SIZE - PIXEL_SIZE;
+            s->hitbox_left = -(HALF_BLOCK_SIZE - EIGHTH_BLOCK_SIZE);
+            s->hitbox_right = HALF_BLOCK_SIZE - EIGHTH_BLOCK_SIZE;
+            s->draw_top = s->draw_bottom = (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE) / PIXEL_SIZE;
+            s->draw_horizontal = THREE_QUARTER_BLOCK_SIZE / PIXEL_SIZE;
+        } else {
+            s->hitbox_top = -EIGHTH_BLOCK_SIZE;
+            s->hitbox_bottom = QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+            s->hitbox_left = -(QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE + PIXEL_SIZE);
+            s->hitbox_right = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE + PIXEL_SIZE;
+            s->draw_top = s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+            s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        }
+        s->work1 = 1;
+        s->health = c->tables->health[s->sprite_id];
+        s->y -= HALF_BLOCK_SIZE;
+        s->x += HALF_BLOCK_SIZE;
+        s->y_spawn = s->y;
+        s->x_spawn = s->x;
+        /* fallthrough */
+    case PIPE_BUG_POSE_IDLE_INIT:
+        pipe_bug_idle_init(s);
+        /* fallthrough */
+    case PIPE_BUG_POSE_IDLE: pipe_bug_idle(c); break;
+    case PIPE_BUG_POSE_GOING_UP: pipe_bug_going_up(c); break;
+    case PIPE_BUG_POSE_MOVING: pipe_bug_move(c); break;
+    default:
+        sprite_death_typed(c, DEATH_RESPAWNING, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        pipe_bug_respawn(c);
+        break;
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -2426,6 +2674,12 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_VIOLA_ORANGE: return MZM_FAMILY_VIOLA;
     case MZM_PSPRITE_SOVA_PURPLE:
     case MZM_PSPRITE_SOVA_ORANGE: return MZM_FAMILY_SOVA;
+    case MZM_PSPRITE_ZEB:
+    case MZM_PSPRITE_ZEB_BLUE: return MZM_FAMILY_ZEB;
+    case MZM_PSPRITE_GEEGA:
+    case MZM_PSPRITE_GEEGA_WHITE:
+    case MZM_PSPRITE_GEEGA_LEADER:
+    case MZM_PSPRITE_GEEGA_FOLLOWER: return MZM_FAMILY_GEEGA;
     case MZM_PSPRITE_DESSGEEGA:
     case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
@@ -2621,12 +2875,14 @@ const char *mzm_sprite_anim_name(const MzmSprite *sprite) {
 }
 
 void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_slot,
-                             uint16_t y_block, uint16_t x_block, uint8_t room_slot) {
+                             uint16_t y_block, uint16_t x_block, uint8_t room_slot,
+                             uint8_t ram_slot) {
     memset(sprite, 0, sizeof *sprite);
     sprite->status = MZM_SPRITE_STATUS_EXISTS;
     sprite->sprite_id = sprite_id;
     sprite->gfx_slot = gfx_slot;
     sprite->room_slot = room_slot;
+    sprite->ram_slot = ram_slot;
     /* Bottom middle of the block. */
     sprite->y = (uint16_t)(y_block * BLOCK_SIZE + BLOCK_SIZE);
     sprite->x = (uint16_t)(x_block * BLOCK_SIZE + HALF_BLOCK_SIZE);
@@ -2703,6 +2959,8 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_DESSGEEGA: hopper(&c); break;
     case MZM_FAMILY_VIOLA: viola(&c); break;
     case MZM_FAMILY_SOVA: sova(&c); break;
+    case MZM_FAMILY_ZEB:
+    case MZM_FAMILY_GEEGA: pipe_bug(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

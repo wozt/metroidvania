@@ -102,6 +102,20 @@ read from the user's ROM at export time; nothing is stored in the repository.
   and offsets differ from the Zoomer's, it has two slope tables (full speed
   going down, two thirds up) and it lands in a random direction. The orange
   Sova uses palette row 1.
+- Zeb and Geega (`zeb.c`, `geega.c`, one ported state machine): hidden in
+  a pipe (not drawn, ignoring projectiles, harmless) until Samus is above it
+  (her feet at least 30 subpixels higher), more than 36 subpixels beside it
+  and within five blocks of her middle (`SpriteUtilCheckSamusNearSpriteAboveBelow`);
+  it rises an eighth of a block a frame, harmful after two frames, until
+  100 subpixels above her saved height, waits 10 frames and flies toward her
+  at 12 subpixels a frame through walls; 16 blocks past her it returns to its
+  pipe and waits a second. A death leaves a drop that follows the pipe's slot
+  (`DEATH_RESPAWNING`, `SpriteSpawnDropFollowers`) and the pipe waits while
+  it exists (`SpriteUtilCheckHasDrops`). A Geega leader spawns a follower two
+  and a half blocks below it when it rises and waits while it exists; a
+  follower is removed instead of respawning.
+- Every primary sprite records the slot it owns (`primarySpriteRamSlot`),
+  passed on to its secondary sprites and its drops.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at
   init, a random X flip from the sprite RNG, half a pixel per frame (purple:
   one), a wall probe a quarter block above its feet and 36 subpixels ahead,

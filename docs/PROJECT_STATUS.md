@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas and Sovas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs and Geegas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2742,6 +2742,29 @@ No automatic reciprocal link or native engine encoder is implemented.
   the per-frame speed table, a loop around a closed box over the four
   surfaces (ceiling through work2, never Y flipped, no fall) and the orange
   palette and speed.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.
+
+## Patch 0247 - Zero Mission Zebs and Geegas
+
+- `mzm_sprites` ports `Zeb` and `Geega` as one pipe bug state machine
+  (detection above and beside Samus, rise, flight, respawn, Geega leaders and
+  followers), `SpriteUtilCheckSamusNearSpriteAboveBelow`,
+  `SpriteUtilCountChildPrimarySprites`, `SpriteSpawnDropFollowers`,
+  `SpriteUtilCheckHasDrops` and `DEATH_RESPAWNING`. Primary sprites now keep
+  their `primarySpriteRamSlot` (`mzm_sprite_init_primary` takes it; the
+  runtime passes the slot), inherited by their secondary sprites and drops.
+- `scripts/mzm_sprites.py` exports both Zebs and the four Geega sprites.
+- Checked in brinstar_012 (`--spawn 1380 144`): the pipe Zeb rises beside
+  Samus, hits her for 6 (99 to 93, the ROM damage), flies left 3 pixels a
+  frame (180 pixels in 60 frames) and is back in its pipe by frame 200; from
+  other spawns the Zebs face Samus on either side. In kraid_003 the Geegas
+  spawn with their ROM health and the nearer one rises at once.
+- Tests: `tests/test_mzm_sprites.c` adds the Zeb wait, horizontal and range
+  limits, rise, harmful delay, stop height, flight speed, respawn, death drop
+  following the pipe and the pipe waiting for it, and the Geega leader's
+  follower (spawn, position after its init, removal) and wait.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.

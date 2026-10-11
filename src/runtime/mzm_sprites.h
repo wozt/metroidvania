@@ -8,9 +8,9 @@
  * ClipdataConvertToCollision for the sprite actor,
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
- * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper, Dessgeega, Viola and Sova
- * AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c,
- * sidehopper.c, dessgeega.c, viola.c, sova.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper, Dessgeega, Viola, Sova,
+ * Zeb and Geega AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c,
+ * waver.c, sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c, geega.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes. Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
  * stats) and the frame durations of each OAM table come from
@@ -200,12 +200,17 @@ enum {
 };
 extern const char *const mzm_sova_anim_names[MZM_SOVA_ANIMS];
 
+/* Zeb and Geega OAM tables (src/data/sprites/zeb.c, geega.c). */
+enum { MZM_PIPE_BUG_IDLE, MZM_PIPE_BUG_MOVING, MZM_PIPE_BUG_ANIMS };
+extern const char *const mzm_zeb_anim_names[MZM_PIPE_BUG_ANIMS];
+extern const char *const mzm_geega_anim_names[MZM_PIPE_BUG_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
     MZM_FAMILY_ZOOMER, MZM_FAMILY_ZEELA, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_WAVER,
     MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA, MZM_FAMILY_VIOLA,
-    MZM_FAMILY_SOVA,
+    MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -235,6 +240,9 @@ enum {
     MZM_PSPRITE_SIDEHOPPER = 121,
     MZM_PSPRITE_VIOLA_BLUE = 104, MZM_PSPRITE_VIOLA_ORANGE = 105,
     MZM_PSPRITE_SOVA_PURPLE = 50, MZM_PSPRITE_SOVA_ORANGE = 51,
+    MZM_PSPRITE_ZEB = 24, MZM_PSPRITE_ZEB_BLUE = 25,
+    MZM_PSPRITE_GEEGA = 122, MZM_PSPRITE_GEEGA_WHITE = 123,
+    MZM_PSPRITE_GEEGA_LEADER = 159, MZM_PSPRITE_GEEGA_FOLLOWER = 160,
 };
 
 /* SecondarySprite */
@@ -263,6 +271,8 @@ typedef struct {
     uint8_t samus_collision;
     uint8_t isft, freeze_timer, ignore_samus_timer;
     uint16_t y_spawn, x_spawn;      /* yPositionSpawn / xPositionSpawn (drop timers) */
+    uint8_t ram_slot;               /* primarySpriteRamSlot: the owning primary's slot */
+    uint16_t scaling;               /* also a saved Samus y for Zebs and Geegas */
 } MzmSprite;
 
 /* EventFunction values read by the ported sprites (include/constants/event.h). */
@@ -326,7 +336,8 @@ uint32_t mzm_clipdata_process(const MzmSpriteWorld *world, uint16_t y, uint16_t 
 
 /* SpriteInitPrimary for a sprite of a known PSPRITE at a block position. */
 void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_slot,
-                             uint16_t y_block, uint16_t x_block, uint8_t room_slot);
+                             uint16_t y_block, uint16_t x_block, uint8_t room_slot,
+                             uint8_t ram_slot);
 /* One SpriteUpdate step of sprite `slot`. */
 void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *frame);
 /* The OAM table name of a sprite's animation, or NULL. */

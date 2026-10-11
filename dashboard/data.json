@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T15:51:50+00:00",
+ "generated_at": "2026-10-11T16:01:12+00:00",
  "git": {
-  "commit": "79ea223",
+  "commit": "01a77fa",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 64,
+   "total": 65,
    "by_status": {
     "not_started": 9,
     "in_progress": 2,
-    "partial": 40,
+    "partial": 41,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,15 +104,16 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 18.8,
-   "with_passing_tests": 51,
-   "with_passing_tests_percent": 79.7,
+   "functional_or_better_percent": 18.5,
+   "with_passing_tests": 52,
+   "with_passing_tests_percent": 80.0,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
     "mzm.animation.samus_runtime_library",
     "mzm.collision.clipdata",
     "mzm.enemies.dessgeega",
+    "mzm.enemies.pipe_bugs",
     "mzm.enemies.ripper",
     "mzm.enemies.sidehopper",
     "mzm.enemies.skree",
@@ -181,11 +182,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 17,
+   "total": 18,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 17,
+    "partial": 18,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -194,7 +195,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 17,
+   "with_passing_tests": 18,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -202,6 +203,7 @@
     "mzm.animation.samus_runtime_library",
     "mzm.collision.clipdata",
     "mzm.enemies.dessgeega",
+    "mzm.enemies.pipe_bugs",
     "mzm.enemies.ripper",
     "mzm.enemies.sidehopper",
     "mzm.enemies.skree",
@@ -637,6 +639,57 @@
    }
   },
   {
+   "id": "mzm.enemies.pipe_bugs",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Zebs and Geegas (pipe bugs)",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer",
+    "mzm.items.enemy_drops",
+    "mzm.animation.particles"
+   ],
+   "native_routines": [
+    "Zeb",
+    "Geega",
+    "SpriteUtilCheckSamusNearSpriteAboveBelow",
+    "SpriteUtilCountChildPrimarySprites",
+    "SpriteSpawnDropFollowers"
+   ],
+   "limitations": "Freezing, the sounds and the background priority changes are not ported. Zebs, blue Zebs, Geegas, white Geegas and Geega leaders with their followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.",
+   "next_action": "Port freezing with the ice beam.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-11"
+   }
+  },
+  {
    "id": "mzm.enemies.ripper",
    "area": "mzm",
    "category": "enemies",
@@ -1025,7 +1078,7 @@
     "SpriteUtilSpriteDeath"
    ],
    "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported. Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.",
-   "next_action": "Port the stun palette flash and freezing, then further enemies (Geega, Zeb, Reo, Holtz, Mella).",
+   "next_action": "Port the stun palette flash and freezing, then further enemies (Zebbo, Reo, Holtz, Mella, Rinka).",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1115,9 +1168,11 @@
    "native_routines": [
     "SpriteUtilDetermineEnemyDrop",
     "EnemyDrop",
-    "HudGenericLoadCommonSpriteGfx"
+    "HudGenericLoadCommonSpriteGfx",
+    "SpriteSpawnDropFollowers",
+    "SpriteUtilCheckHasDrops"
    ],
-   "limitations": "Power bombs are not ported, so their drops never spawn; pickup sounds are not played; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported. Drop rolls from the ROM probabilities with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported.",
+   "limitations": "Power bombs are not ported, so their drops never spawn; pickup sounds are not played; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported. Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported.",
    "next_action": "Port power bombs and the multiple large energy pickup.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -2708,7 +2763,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
+   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -3816,6 +3871,12 @@
  },
  "timeline": [
   {
+   "commit": "01a77fa",
+   "date": "2026-10-11",
+   "subject": "feat(mzm): native Sovas",
+   "scope": "mzm"
+  },
+  {
    "commit": "79ea223",
    "date": "2026-10-11",
    "subject": "feat(mzm): native Violas",
@@ -4288,12 +4349,6 @@
    "date": "2026-10-10",
    "subject": "feat: export native Samus special body sprites with empty cannon OAM",
    "scope": "project"
-  },
-  {
-   "commit": "9e05cfa",
-   "date": "2026-10-10",
-   "subject": "test: diagnose special Samus body and cannon OAM headers",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -4321,7 +4376,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 72,
+    "routines_cited_by_features": 78,
     "call_edges": 6071
    },
    "aos": {

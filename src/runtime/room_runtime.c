@@ -1340,10 +1340,12 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room) {
                 !mzm_sprite_supported((uint8_t)id) ||
                 !sprites->family_ok[mzm_sprite_family((uint8_t)id, false)])
                 continue;
-            mzm_sprite_init_primary(&sprites->live[slot++], (uint8_t)id,
+            /* SpriteInitPrimary: the sprite owns the slot it takes. */
+            mzm_sprite_init_primary(&sprites->live[slot], (uint8_t)id,
                                     (uint8_t)room->sprites[i].gfx_slot,
                                     (uint16_t)room->sprites[i].y, (uint16_t)room->sprites[i].x,
-                                    (uint8_t)room->sprites[i].room_slot);
+                                    (uint8_t)room->sprites[i].room_slot, (uint8_t)slot);
+            slot++;
             break;
         }
     }

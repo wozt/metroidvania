@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 10 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 11 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -87,6 +87,15 @@ Next action: Port the remaining native pose handlers.
 
 [?] **`mzm.animation.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
+[~] **`mzm.animation.particles` — Sprite particles and debris.** One-shot particles for sprite explosions, the screw attack kill and projectile impacts on walls and sprites, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range.
+
+Native evidence: `mzm:c:src/particle.c:ParticleCheckOnScreen`, `mzm:c:src/particle.c:ParticleHittingSomethingInvincible`, `mzm:c:src/particle.c:ParticleHittingSomethingWithMissile`, `mzm:c:src/particle.c:ParticleHittingSomethingWithNormalBeam`, `mzm:c:src/particle.c:ParticleHittingSomethingWithSuperMissile`, `mzm:c:src/particle.c:ParticleProcessAll`, `mzm:c:src/particle.c:ParticleScrewAttackDestroyed`, `mzm:c:src/particle.c:ParticleSet`, `mzm:c:src/particle.c:ParticleSpriteExplosionHuge`, `mzm:c:src/particle.c:ParticleSpriteExplosionMedium`, `mzm:c:src/particle.c:ParticleUpdateAnimation`, `mzm:c:src/sprite_debris.c:SpriteDebrisDraw`, `mzm:c:src/sprite_debris.c:SpriteDebrisInit`, `mzm:c:src/sprite_debris.c:SpriteDebrisProcess`, `mzm:c:src/sprite_debris.c:SpriteDebrisProcessAll`, `mzm:c:src/sprite_util.c:SpriteUtilRandomSpriteDebris`.  
+Local implementation: [`src/runtime/mzm_effects.c`](../src/runtime/mzm_effects.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.enemies.skree`.  
+Known divergences: Particle sounds, the super missile screen shake and debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece; other particle effects (Samus, charge, dust, beams other than the normal beam) are not ported.  
+Next action: Port the remaining particle effects with their owners (Samus, charge beam, dust).
+
 [~] **`mzm.animation.samus_runtime_library` — Samus animation and palette reconstruction.** The deterministic private library maps the currently supported semantic actions; native effects and every pose are not yet covered.
 
 Native evidence: `mzm:c:src/samus.c:SamusUpdateAnimation`, `mzm:c:src/samus.c:SamusUpdateGraphicsOam`, `mzm:c:src/samus.c:SamusUpdatePalette`.  
@@ -128,21 +137,12 @@ Next action: Port the remaining beam, bomb and Power Bomb systems.
 
 [?] **`mzm.enemies.inventory-boundary` — source coverage.** The current classifier assigns 812 discovered routine(s) to this category (812 by source path). Category completeness has not been established.
 
-[~] **`mzm.enemies.drops` — Enemy drops.** Drop rolls from the ROM probabilities with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported.
-
-Native evidence: `mzm:c:src/hud_generic.c:HudGenericLoadCommonSpriteGfx`, `mzm:c:src/sprite_util.c:SpriteUtilDetermineEnemyDrop`, `mzm:c:src/sprites_ai/enemy_drop.c:EnemyDrop`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
-Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
-Dependencies: `mzm.enemies.zoomer`.  
-Known divergences: Power bombs are not ported, so their drops never spawn; pickup sounds are not played; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
-Next action: Port power bombs and the multiple large energy pickup.
-
 [~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper.c:Ripper`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
-Dependencies: `mzm.enemies.zoomer`, `mzm.enemies.drops`.  
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`.  
 Known divergences: Freezing, the damaged sound and the death explosion are not ported; missiles that would tumble off a Ripper are removed.  
 Next action: Port freezing with the ice beam.
 
@@ -151,7 +151,7 @@ Next action: Port freezing with the ice beam.
 Native evidence: `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteSpawnSecondary`, `mzm:c:src/sprites_ai/skree.c:Skree`, `mzm:c:src/sprites_ai/skree.c:SkreeExplosion`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
-Dependencies: `mzm.enemies.zoomer`, `mzm.enemies.drops`.  
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`.  
 Known divergences: The crash debris (SpriteDebrisInit), the huge explosion particle, the sounds and freezing are not ported; the rotation is drawn by rotating the composed frame, not per OAM part.  
 Next action: Port sprite debris and the explosion particles.
 
@@ -171,6 +171,15 @@ Next action: Port the death particles and debris, the stun palette flash and fur
 ### Items and drops
 
 [?] **`mzm.items.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+
+[~] **`mzm.items.enemy_drops` — Enemy drops.** Drop rolls from the ROM probabilities with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported.
+
+Native evidence: `mzm:c:src/hud_generic.c:HudGenericLoadCommonSpriteGfx`, `mzm:c:src/sprite_util.c:SpriteUtilDetermineEnemyDrop`, `mzm:c:src/sprites_ai/enemy_drop.c:EnemyDrop`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`.  
+Known divergences: Power bombs are not ported, so their drops never spawn; pickup sounds are not played; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
+Next action: Port power bombs and the multiple large energy pickup.
 
 ### Environment interactions
 

@@ -71,7 +71,7 @@ int main(void) {
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
     static MzmSpriteKind ripper_kind, skree_kind;
     frame = (MzmSpriteFrame){&world, &tables, {&kind, &ripper_kind, &skree_kind, &drop_kind},
-                             &equipment, 0, 0, 0, 0, NULL, 0};
+                             &equipment, 0, 0, 0, 0, NULL, 0, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -218,7 +218,7 @@ int main(void) {
                                       .x = z.x, .y = z.y - 20};
     weapons.list[1] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
                                       .x = z.x + 400, .y = z.y - 20};
-    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
     assert(z.health == 1 && (z.isft & 0x7F) == 17 && !weapons.list[0].active &&
            weapons.list[1].active);
     x0 = z.x;
@@ -229,7 +229,7 @@ int main(void) {
     step(&z, 0);
     assert(z.x == x0 + 2);  /* moving again below the stun threshold */
     weapons.list[1].x = z.x;
-    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
     assert(z.health == 0 && z.pose == 0x62 && !weapons.list[1].active);
     step(&z, 0);
     assert(z.status == 0);
@@ -241,22 +241,22 @@ int main(void) {
     z.health = 30;
     weapons.list[2] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
                                       .x = z.x, .y = z.y - 20};
-    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
     assert(z.health == 30 && (z.isft & 0x7F) == 3 && !weapons.list[2].active);
     tables.weakness[MZM_PSPRITE_ZOOMER_RED] = MZM_WEAKNESS_MISSILES;
     weapons.list[3] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
                                       .x = z.x + 30, .y = z.y - 20};
-    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
     assert(z.health == 10 && (z.isft & 0x7F) == 17 && !weapons.list[3].active);
     /* The super missile's larger box (12 subpixels) reaches the hitbox
      * right edge (28) from 39 subpixels away; at 40 the strict test fails. */
     weapons.list[4] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_SUPER_MISSILE,
                                       .x = z.x + 40, .y = z.y - 20};
-    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
     assert(z.health == 10 && weapons.list[4].active);
     weapons.list[4] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_SUPER_MISSILE,
                                       .x = z.x + 39, .y = z.y - 20};
-    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
     assert(z.health == 0 && z.pose == 0x62);
 
     /* Drops. The yellow zoomer's ROM probabilities out of 1024: small energy
@@ -288,7 +288,7 @@ int main(void) {
         weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
                                           .x = z.x, .y = z.y - 20};
         z.health = 1;
-        mzm_sprites_projectile_hits(&z, 1, &weapons, &tables);
+        mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
         assert(z.pose == 0x62);
         equipment.energy = rolls[r].energy;
         equipment.missiles = rolls[r].missiles;
@@ -316,7 +316,7 @@ int main(void) {
     assert(z.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES && z.hitbox_top == -36);
     /* Projectiles pass through drops. */
     weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM, .x = z.x, .y = z.y};
-    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     samus = (MzmSpriteSamus){NULL, z.x, (uint16_t)(z.y + 40), z.x, -96, 0, -24, 24,
@@ -404,12 +404,12 @@ int main(void) {
                                       .x = r.x, .y = r.y - 20};
     weapons.list[1] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
                                       .x = r.x, .y = r.y - 20};
-    mzm_sprites_projectile_hits(&r, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&r, 1, &weapons, &tables, NULL);
     assert(r.health == 20 && (r.isft & 0x7F) == 3 && !weapons.list[0].active &&
            !weapons.list[1].active);
     weapons.list[2] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_SUPER_MISSILE,
                                       .x = r.x, .y = r.y - 20};
-    mzm_sprites_projectile_hits(&r, 1, &weapons, &tables);
+    mzm_sprites_projectile_hits(&r, 1, &weapons, &tables, NULL);
     assert(r.health == 0 && r.pose == 0x62);
     /* Its death point is 24 subpixels above its feet (no drop: zero
      * probabilities). */
@@ -502,7 +502,7 @@ int main(void) {
     /* Projectiles ignore it. */
     weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
                                       .x = part->x, .y = part->y};
-    mzm_sprites_projectile_hits(group, 8, &weapons, &tables);
+    mzm_sprites_projectile_hits(group, 8, &weapons, &tables, NULL);
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     /* After its second frame it is harmless; it ends with its table. */
@@ -522,6 +522,135 @@ int main(void) {
     world.camera_x = 0;
     frame.sprites = NULL;
     frame.sprite_count = 0;
+
+    /* Particles. ParticleSet takes the first free slot, then the particle
+     * with the highest frame counter. */
+    static MzmEffects fx;
+    static MzmEffectKinds fx_kinds;
+    memset(&fx, 0, sizeof fx);
+    fx_kinds.counts[MZM_PE_SPRITE_EXPLOSION_MEDIUM] = 3;
+    fx_kinds.counts[MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM] = 2;
+    for (int f = 0; f < 3; ++f) {
+        fx_kinds.timers[MZM_PE_SPRITE_EXPLOSION_MEDIUM][f] = 2;
+        fx_kinds.timers[MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM][f] = 2;
+    }
+    fx_kinds.debris_count = 4;
+    for (int f = 0; f < 4; ++f) fx_kinds.debris_timers[f] = 3;
+    mzm_particle_set(&fx, 300, 400, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+    MzmParticle *pe = &fx.particles[0];
+    assert(pe->status == MZM_PARTICLE_EXISTS && pe->effect == MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+    /* First update: high OAM priority, on screen; a frame lasts until its
+     * counter reaches the timer; the table wrapping removes it. */
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(pe->status & MZM_PARTICLE_HIGH_OAM_PRIORITY && pe->status & MZM_PARTICLE_ONSCREEN);
+    assert(pe->frame == 0 && pe->adc == 1);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(pe->frame == 1 && pe->adc == 0);
+    for (int i = 0; i < 3; ++i) mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(pe->status && pe->frame == 2);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(pe->status == 0);
+    /* Off screen (the native window), removed after its update. */
+    mzm_particle_set(&fx, 300, 3000, MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(fx.particles[0].status == 0);
+    /* Full: the oldest particle is replaced. */
+    for (int i = 0; i < MZM_MAX_PARTICLES; ++i) {
+        mzm_particle_set(&fx, 300, 400, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        fx.particles[i].frame_counter = (uint8_t)(i == 5 ? 9 : 1);
+    }
+    mzm_particle_set(&fx, 100, 100, MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM);
+    assert(fx.particles[5].effect == MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM &&
+           fx.particles[5].x == 100);
+    memset(&fx, 0, sizeof fx);
+
+    /* Debris type 0x11 arcs left with sDebris11YVelocity (each value twice)
+     * onto the floor (row 10), then bounces with the bouncing table. */
+    const int16_t debris_tables[MZM_DEBRIS_TABLES][9] = {
+        {-4, -8, -4, 0, 4, 8, 12, 16, 20}, {-4, -8, -6, -4, 0, 4, 8, 8, 12},
+        {-4, -8, -4, -2, 0, 4, 8, 12, 12}, {-6, -8, -10, -6, 0, 4, 8, 12, 16},
+        {-5, -13, -7, -3, 0, 6, 10, 16, 20}, {4, 8, 12, 16, 20, 24, 28, 28, 28},
+        {8, 10, 12, 14, 16, 18, 20, 22, 22}, {2, 4, 6, 8, 10, 12, 14, 16, 16},
+        {8, 16, 20, 24, 28, 32, 36, 36, 36},
+    };
+    memcpy(tables.debris, debris_tables, sizeof debris_tables);
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+    world.camera_x = world.camera_y = 0;
+    mzm_sprite_debris_init(&fx, 0x11, 600, 400);
+    MzmSpriteDebris *db = &fx.debris[0];
+    mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
+    assert(db->exists && db->y == 596 && db->x == 399 && db->frame_counter == 1);
+    mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
+    assert(db->y == 592 && db->x == 398);
+    frames = 2;
+    while (db->type == 0x11 && frames < 100) {
+        mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
+        ++frames;
+    }
+    assert(db->type == 0x81 && db->y == 640 && db->offset == 1);
+    mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
+    assert(db->y == 636);       /* the bounce starts upward */
+    /* Animation: the counter starts at 0, so the first frame lasts timer + 1
+     * updates and the next ones timer updates (it restarts at 1). */
+    int calls = frames + 1;
+    assert(db->frame == (unsigned)((calls < 4 ? 0 : 1 + (calls - 4) / 3) % 4));
+    /* Delayed types wait: type 1 for 8 frames. */
+    mzm_sprite_debris_init(&fx, 1, 600, 400);
+    for (int i = 0; i < 8; ++i) mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
+    assert(fx.debris[1].y == 600 && fx.debris[1].frame_counter == 8);
+    mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
+    assert(fx.debris[1].y == 596);
+    /* Far below the camera: removed by the draw range check. */
+    world.camera_y = 2000;
+    mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
+    assert(!fx.debris[0].exists && !fx.debris[1].exists);
+    world.camera_y = 0;
+    /* Eight slots at most. */
+    for (int i = 0; i < 9; ++i) mzm_sprite_debris_init(&fx, 4, 600, 400);
+    for (int i = 0; i < MZM_MAX_SPRITE_DEBRIS; ++i) assert(fx.debris[i].exists);
+    memset(&fx, 0, sizeof fx);
+
+    /* Deaths set their particle: a beam kill leaves the medium explosion at
+     * the zoomer's body and the beam impact at the projectile. */
+    frame.effects = &fx;
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] =
+        MZM_WEAKNESS_BEAM_BOMBS | MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
+    memset(tables.drops[MZM_PSPRITE_ZOOMER_YELLOW], 0, sizeof tables.drops[0]);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0);
+    step(&z, 0);
+    z.health = 1;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
+                                      .x = z.x + 4, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(fx.particles[0].effect == MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM &&
+           fx.particles[0].x == z.x + 4 && fx.particles[0].y == z.y - 20);
+    uint16_t zx2 = z.x, zy2 = z.y;
+    step(&z, 0);
+    assert(z.status == 0 && fx.particles[1].effect == MZM_PE_SPRITE_EXPLOSION_MEDIUM &&
+           fx.particles[1].x == zx2 && fx.particles[1].y == zy2 - 40);
+    /* Not weak: the invincible impact. */
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0);
+    step(&z, 0);
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(fx.particles[2].effect == MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+    /* The screw attack kill: its particle and three debris (frame8 even:
+     * types 2, 3 and 4). */
+    memset(&fx, 0, sizeof fx);
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
+    MzmSpriteSamus screw = {NULL, z.x, (uint16_t)(z.y + 20), z.x, -96, 0, -24, 24,
+                            true, false, false, hurt};
+    z.ignore_samus_timer = 0;
+    mzm_sprites_samus_collision(&z, 1, &screw, &tables);
+    assert(z.pose == 0x65);
+    step(&z, 0);
+    assert(z.status == 0 && fx.particles[0].effect == MZM_PE_SCREW_ATTACK_DESTROYED);
+    assert(fx.debris[0].exists && fx.debris[0].type == 2 && fx.debris[1].type == 3 &&
+           fx.debris[2].type == 4 && !fx.debris[3].exists);
+    frame.effects = NULL;
     puts("mzm_sprites: ok");
     return 0;
 }

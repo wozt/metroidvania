@@ -677,11 +677,39 @@ static uint8_t determine_drop(const Ctx *c) {
     return MZM_PSPRITE_UNUSED0;
 }
 
-/* SpriteUtilSpriteDeath (DEATH_NORMAL): the sprite becomes its drop at the
- * given position, or is removed. The explosion particle, debris and sound
- * are not ported. */
-static void sprite_death(Ctx *c, uint16_t y, uint16_t x) {
+/* SpriteDebrisInit, for the sprites. */
+static void debris_init(const Ctx *c, uint8_t type, uint16_t y, uint16_t x) {
+    if (c->f->effects) mzm_sprite_debris_init(c->f->effects, type, y, x);
+}
+
+static void particle_set(const Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
+    if (c->f->effects) mzm_particle_set(c->f->effects, y, x, effect);
+}
+
+/* SpriteUtilRandomSpriteDebris with three pieces. */
+static void random_debris_3(const Ctx *c, uint16_t y, uint16_t x) {
+    if (c->frame8 & 1) {
+        debris_init(c, 1, (uint16_t)(y - EIGHTH_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
+        debris_init(c, 3, (uint16_t)(y - QUARTER_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
+        debris_init(c, 4, (uint16_t)(y + EIGHTH_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
+    } else {
+        debris_init(c, 2, (uint16_t)(y - QUARTER_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
+        debris_init(c, 3, (uint16_t)(y + EIGHTH_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
+        debris_init(c, 4, (uint16_t)(y + QUARTER_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
+    }
+}
+
+/* SpriteUtilSpriteDeath (DEATH_NORMAL): the death particle (the screw
+ * attack kill adds three debris), then the sprite becomes its drop at the
+ * given position, or is removed. Sounds are not played. */
+static void sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
     MzmSprite *s = c->s;
+    if (s->pose == SPRITE_POSE_SCREW_ATTACK_DESTROYED) {
+        particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
+        random_debris_3(c, y, x);
+    } else {
+        particle_set(c, y, x, effect);
+    }
     uint8_t drop = determine_drop(c);
     if (drop == MZM_PSPRITE_UNUSED0) {
         s->status = 0;
@@ -714,7 +742,7 @@ static void zoomer_death(Ctx *c) {
         if (s->status & MZM_SPRITE_STATUS_Y_FLIP) y += HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
         else y -= HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
     }
-    sprite_death(c, y, x);
+    sprite_death(c, y, x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
 }
 
 /* Zoomer: the AI. The damaged sound and freezing are not ported. */
@@ -824,7 +852,8 @@ static void ripper(Ctx *c) {
         if (animation_ending(c, 2)) s->pose = RIPPER_POSE_MOVING_INIT;
         break;
     default:
-        sprite_death(c, (uint16_t)(s->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), s->x);
+        sprite_death(c, (uint16_t)(s->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), s->x,
+                     MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         break;
     }
 }
@@ -922,13 +951,23 @@ static void skree_go_down(Ctx *c) {
     if (x_movement < QUARTER_BLOCK_SIZE) s->work2++;
 }
 
-/* SkreeCrashGround: the crash table after 40 frames (pOam only), the four
- * explosion parts after 60. The debris, particle and sound are not ported. */
+/* SkreeCrashGround: four debris on impact, the crash table after 40 frames
+ * (pOam only), the four explosion parts and the huge explosion after 60.
+ * Sounds are not played. */
 static void skree_crash(Ctx *c) {
     MzmSprite *s = c->s;
     uint16_t y = s->y, x = s->x;
     s->work0++;
-    if (s->work0 == 40) {
+    if (s->work0 == 1) {
+        y += BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        debris_init(c, 0x11, (uint16_t)(y - QUARTER_BLOCK_SIZE), x);
+        debris_init(c, 0x12, y, (uint16_t)(x + (QUARTER_BLOCK_SIZE - PIXEL_SIZE)));
+        debris_init(c, 0x13, (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2)),
+                    (uint16_t)(x + (QUARTER_BLOCK_SIZE + PIXEL_SIZE)));
+        debris_init(c, 4, (uint16_t)(y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
+                    (uint16_t)(x - (QUARTER_BLOCK_SIZE + (QUARTER_BLOCK_SIZE - PIXEL_SIZE) +
+                                    PIXEL_SIZE / 2)));
+    } else if (s->work0 == 40) {
         s->anim = MZM_SKREE_CRASHING;
     } else if (s->work0 == 60) {
         uint8_t id = s->sprite_id == MZM_PSPRITE_SKREE_BLUE ? MZM_SSPRITE_BLUE_SKREE_EXPLOSION
@@ -942,6 +981,7 @@ static void skree_crash(Ctx *c) {
         spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(y + EIGHTH_BLOCK_SIZE),
                         (uint16_t)(x + (QUARTER_BLOCK_SIZE - PIXEL_SIZE)), MZM_SPRITE_STATUS_X_FLIP);
         s->status = 0;
+        particle_set(c, (uint16_t)(y + HALF_BLOCK_SIZE + PIXEL_SIZE), x, MZM_PE_SPRITE_EXPLOSION_HUGE);
     }
 }
 
@@ -975,7 +1015,8 @@ static void skree(Ctx *c) {
     case SKREE_POSE_GOING_DOWN: skree_go_down(c); break;
     case SKREE_POSE_CRASHING: skree_crash(c); break;
     default:
-        sprite_death(c, (uint16_t)(s->y + THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE), s->x);
+        sprite_death(c, (uint16_t)(s->y + THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE), s->x,
+                     MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         break;
     }
 }
@@ -1223,7 +1264,7 @@ static void hit_solid(MzmSprite *s) {
 }
 
 void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weapons,
-                                 const MzmSpriteTables *tables) {
+                                 const MzmSpriteTables *tables, MzmEffects *effects) {
     /* The sprites are visited by draw order, then slot; every ported sprite
      * has the default draw order, so slot order. A sprite's hitbox is read
      * once, before the projectiles that hit it. */
@@ -1246,21 +1287,36 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
             if (!touching(top, bottom, left, right, (uint16_t)(py - half), (uint16_t)(py + half),
                           (uint16_t)(px - half), (uint16_t)(px + half)))
                 continue;
+            /* The particle at the projectile: its impact, or the
+             * invincible impact when the sprite is not weak to it. */
+            uint8_t effect = MZM_PE_HITTING_SOMETHING_INVINCIBLE;
             switch (proj->type) {
             case MZM_PROJECTILE_BEAM:   /* ProjectileHitSprite */
-                if (weakness & MZM_WEAKNESS_BEAM_BOMBS) deal_damage(s, NORMAL_BEAM_DAMAGE);
-                else hit_solid(s);
+                if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
+                    deal_damage(s, NORMAL_BEAM_DAMAGE);
+                    effect = MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
+                } else {
+                    hit_solid(s);
+                }
                 break;
             case MZM_PROJECTILE_MISSILE:    /* ProjectileMissileHitSprite */
-                if (weakness & MZM_WEAKNESS_MISSILES) deal_damage(s, MISSILE_DAMAGE);
-                else hit_solid(s);  /* ProjectileStartTumblingMissile: not ported */
+                if (weakness & MZM_WEAKNESS_MISSILES) {
+                    deal_damage(s, MISSILE_DAMAGE);
+                    effect = MZM_PE_HITTING_SOMETHING_WITH_MISSILE;
+                } else {
+                    hit_solid(s);   /* ProjectileStartTumblingMissile: not ported */
+                }
                 break;
             case MZM_PROJECTILE_SUPER_MISSILE:
-                if (weakness & (MZM_WEAKNESS_MISSILES | MZM_WEAKNESS_SUPER_MISSILES))
+                if (weakness & (MZM_WEAKNESS_MISSILES | MZM_WEAKNESS_SUPER_MISSILES)) {
                     deal_damage(s, SUPER_MISSILE_DAMAGE);
-                else hit_solid(s);
+                    effect = MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE;
+                } else {
+                    hit_solid(s);
+                }
                 break;
             }
+            if (effects) mzm_particle_set(effects, py, px, effect);
             proj->active = false;
         }
     }
@@ -1366,5 +1422,113 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
          * stays the one it started the frame with. */
         update_animation(&c);
         check_on_screen(&c);
+    }
+}
+
+const char *const mzm_debris_table_names[MZM_DEBRIS_TABLES] = {
+    "sDebrisBouncingVelocity", "sDebris11YVelocity", "sDebris12YVelocity",
+    "sDebris13YVelocity", "sDebris4YVelocity", "sDebris5YVelocity", "sDebris6YVelocity",
+    "sDebris7YVelocity", "sDebris8YVelocity",
+};
+
+enum { SPRITE_DEBRIS_BOUNCING = 0x80 };
+
+void mzm_sprite_debris_init(MzmEffects *effects, uint8_t type, uint16_t y, uint16_t x) {
+    MzmSpriteDebris *d = NULL;
+    for (int i = 0; i < MZM_MAX_SPRITE_DEBRIS && !d; ++i)
+        if (!effects->debris[i].exists) d = &effects->debris[i];
+    /* With every slot taken the game writes past gSpriteDebris; the port
+     * drops the piece. */
+    if (!d) return;
+    d->exists = true;
+    d->y = y;
+    d->x = x;
+    d->frame = 0;
+    d->adc = 0;
+    d->type = type;
+    d->frame_counter = 0;
+    d->offset = 0;
+}
+
+/* A falling arc: on landing (after `min_frames` for the half arcs) it
+ * bounces with the given direction. */
+static void debris_fall(Ctx *c, MzmSpriteDebris *d, const int16_t *velocity, unsigned offset,
+                        int dx, uint8_t bounce, uint8_t min_frames) {
+    d->y = (uint16_t)(d->y + velocity[offset]);
+    d->x = (uint16_t)(d->x + dx);
+    uint16_t top = check_vertical_slopes(c, d->y, d->x);
+    /* SpriteDebrisSetSplash: room liquids are not ported. */
+    if (c->vertical != MZM_COLLISION_AIR && d->frame_counter >= min_frames) {
+        d->y = top;
+        d->type = (uint8_t)(SPRITE_DEBRIS_BOUNCING | bounce);
+        d->offset = 0;
+    }
+}
+
+/* SpriteDebrisProcess */
+static void debris_process(Ctx *c, MzmSpriteDebris *d) {
+    const int16_t (*v)[9] = c->tables->debris;
+    if (++d->frame_counter == 0) {
+        d->exists = false;
+        return;
+    }
+    unsigned offset = d->offset / 2u;
+    if (offset > 8) offset = 8;
+    switch (d->type) {
+    case 1:
+        if (d->frame_counter <= 8) return;  /* CONVERT_SECONDS(2.f / 15) */
+        /* fallthrough */
+    case 0x11: debris_fall(c, d, v[MZM_DEBRIS_11], offset, -1, 1, 0); break;
+    case 2:
+        if (d->frame_counter <= 5) return;  /* CONVERT_SECONDS(1.f / 12) */
+        /* fallthrough */
+    case 0x12: debris_fall(c, d, v[MZM_DEBRIS_12], offset, 1, 2, 0); break;
+    case 3:
+        if (d->frame_counter <= 2) return;  /* CONVERT_SECONDS(1.f / 30) */
+        /* fallthrough */
+    case 0x13: debris_fall(c, d, v[MZM_DEBRIS_13], offset, 2, 3, 0); break;
+    case 4: debris_fall(c, d, v[MZM_DEBRIS_4], offset, -2, 4, 0); break;
+    case 5: debris_fall(c, d, v[MZM_DEBRIS_5], offset, -1, 1, 20); break;
+    case 6: debris_fall(c, d, v[MZM_DEBRIS_6], offset, 1, 2, 20); break;
+    case 7: debris_fall(c, d, v[MZM_DEBRIS_7], offset, 1, 3, 20); break;
+    case 8: debris_fall(c, d, v[MZM_DEBRIS_8], offset, -1, 4, 20); break;
+    case SPRITE_DEBRIS_BOUNCING | 1:
+    case SPRITE_DEBRIS_BOUNCING | 2:
+    case SPRITE_DEBRIS_BOUNCING | 3:
+    case SPRITE_DEBRIS_BOUNCING | 4: {
+        static const int8_t dx[5] = {0, -1, 1, 2, -2};
+        d->y = (uint16_t)(d->y + v[MZM_DEBRIS_BOUNCING][offset]);
+        d->x = (uint16_t)(d->x + dx[d->type & 7]);
+        break;
+    }
+    default:
+        d->exists = false;
+        break;
+    }
+    d->offset++;
+}
+
+void mzm_sprite_debris_process(MzmEffects *effects, const MzmSpriteWorld *world,
+                               const MzmSpriteTables *tables, const MzmEffectKinds *kinds) {
+    Ctx c = {NULL, NULL, world, tables, NULL, 0, MZM_COLLISION_AIR, 0};
+    for (int i = 0; i < MZM_MAX_SPRITE_DEBRIS; ++i) {
+        MzmSpriteDebris *d = &effects->debris[i];
+        if (!d->exists) continue;
+        debris_process(&c, d);
+        /* SpriteDebrisProcessAll animates even a piece that just ended. */
+        d->adc++;
+        uint8_t current = d->frame < kinds->debris_count ? kinds->debris_timers[d->frame] : 0;
+        if (current < d->adc) {
+            d->adc = 1;
+            d->frame++;
+            if (d->frame >= kinds->debris_count || kinds->debris_timers[d->frame] == 0) d->frame = 0;
+        }
+    }
+    /* SpriteDebrisDraw: pieces outside the vertical range are removed. */
+    for (int i = 0; i < MZM_MAX_SPRITE_DEBRIS; ++i) {
+        MzmSpriteDebris *d = &effects->debris[i];
+        if (!d->exists || d->frame_counter == 0) continue;
+        int camera = world->camera_y, y = d->y + BLOCK_SIZE * 4;
+        if (camera + BLOCK_SIZE * 3 > y || camera + BLOCK_SIZE * 15 < y) d->exists = false;
     }
 }

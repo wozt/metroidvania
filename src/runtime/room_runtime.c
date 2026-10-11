@@ -1167,6 +1167,8 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
 typedef struct {
     MzmSpriteTables tables;
     MzmSpriteKind kinds[MZM_SPRITE_FAMILIES];
+    MzmEffectKinds effect_kinds;
+    MzmEffects effects;
     char names[256][64];
     bool tables_ok, kinds_ok;
     MzmSprite live[RUNTIME_MAX_SPRITES];
@@ -1180,7 +1182,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     char line[1024];
     bool ok = fgets(line, sizeof line, f) &&
               !strcmp(line, "schema\tmetroidvania-mzm-sprite-tables-v1\n");
-    int random_count = 0, falling_count = 0, skree_count = 0;
+    int random_count = 0, falling_count = 0, skree_count = 0, debris_tables = 0;
     while (ok && fgets(line, sizeof line, f)) {
         char *cursor = strchr(line, '\t');
         if (!cursor) continue;
@@ -1198,15 +1200,33 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                 id < 0 || id > 255) { ok = false; break; }
             sprites->tables.secondary_damage[id] = (uint16_t)damage;
             sprites->tables.secondary_weakness[id] = (uint8_t)(weakness & 0xFF);
-        } else if (!strncmp(cursor, "sSkreeFallingSpeed\t", 19) && !strcmp(line, "table")) {
-            cursor += 19;
-            char *end;
-            for (skree_count = 0; skree_count < 16; ++skree_count) {
-                long value = strtol(cursor, &end, 10);
-                if (end == cursor) break;
-                sprites->tables.skree_falling[skree_count] = (int16_t)value;
-                cursor = end;
+        } else if (!strcmp(line, "table")) {
+            char *values = strchr(cursor, '\t');
+            if (!values) { ok = false; break; }
+            *values++ = '\0';
+            int16_t *destination = NULL;
+            int capacity = 0, *count = NULL, debris_count = 0;
+            if (!strcmp(cursor, "sSkreeFallingSpeed")) {
+                destination = sprites->tables.skree_falling;
+                capacity = 16;
+                count = &skree_count;
             }
+            for (int t = 0; t < MZM_DEBRIS_TABLES && !destination; ++t) {
+                if (strcmp(cursor, mzm_debris_table_names[t])) continue;
+                destination = sprites->tables.debris[t];
+                capacity = 9;
+                count = &debris_count;
+                debris_tables |= 1 << t;
+            }
+            if (!destination) continue;
+            char *end;
+            for (*count = 0; *count < capacity; ++*count) {
+                long value = strtol(values, &end, 10);
+                if (end == values) break;
+                destination[*count] = (int16_t)value;
+                values = end;
+            }
+            if (count == &debris_count && debris_count != 9) { ok = false; break; }
         } else if (!strcmp(line, "stats")) {
             char name[64];
             int id, health, damage, weakness, no_drop, drops[5], used = 0;
@@ -1225,7 +1245,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     }
     fclose(f);
     return ok && random_count == 32 && falling_count == 16 && skree_count > 0 &&
-           sprites->tables.skree_falling[skree_count - 1] == 32767;
+           sprites->tables.skree_falling[skree_count - 1] == 32767 &&
+           debris_tables == (1 << MZM_DEBRIS_TABLES) - 1;
 }
 
 /* Frame durations of OAM tables from the sprite library. */
@@ -1243,7 +1264,28 @@ static bool runtime_sprite_kind_open(MzmSpriteKind *kind, RuntimeLibrary *librar
     return true;
 }
 
+static bool runtime_effect_kind_open(uint8_t *timers, uint8_t *count, RuntimeLibrary *library,
+                                     const char *table) {
+    char key[160];
+    snprintf(key, sizeof key, "Particle/%s/none", table);
+    RuntimeLibraryEntry *entry = runtime_library_find(library, key);
+    if (!entry || entry->count > MZM_EFFECT_MAX_FRAMES) return false;
+    *count = (uint8_t)entry->count;
+    for (int f = 0; f < entry->count; ++f) timers[f] = (uint8_t)entry->ticks[f];
+    return true;
+}
+
 static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *library) {
+    MzmEffectKinds *effects = &sprites->effect_kinds;
+    for (int e = 0; e < MZM_PARTICLE_EFFECTS; ++e) {
+        const char *table = mzm_particle_table((uint8_t)e);
+        if (table && !runtime_effect_kind_open(effects->timers[e], &effects->counts[e], library,
+                                               table))
+            return false;
+    }
+    if (!runtime_effect_kind_open(effects->debris_timers, &effects->debris_count, library,
+                                  "SpriteDebrisOam"))
+        return false;
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) {
         const MzmSpriteFamily *family = &mzm_sprite_families[f];
         if (!runtime_sprite_kind_open(&sprites->kinds[f], library, family->library_sprites,
@@ -1256,6 +1298,7 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
 /* SpriteLoadRoomSprites: the ported sprites of the room. */
 static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room) {
     memset(sprites->live, 0, sizeof sprites->live);
+    memset(&sprites->effects, 0, sizeof sprites->effects);
     if (!sprites->tables_ok) return;
     int slot = 0;
     for (int i = 0; i < room->sprite_count && slot < RUNTIME_MAX_SPRITES; ++i) {
@@ -1301,6 +1344,10 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                    MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
                                    const MzmCollision *collision) {
     if (!sprites->kinds_ok) return;
+    MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
+                            (uint16_t)((int)cy * 4)};
+    mzm_sprite_debris_process(&sprites->effects, &world, &sprites->tables,
+                              &sprites->effect_kinds);
     if (samus->pose != MZM_POSE_DYING) {
         RuntimeSpriteHurt hurt = {samus, equipment, collision};
         const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
@@ -1311,11 +1358,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                runtime_sprite_hurt};
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
     }
-    MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
-                            (uint16_t)((int)cy * 4)};
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
                             sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
-                            sprites->live, RUNTIME_MAX_SPRITES};
+                            sprites->live, RUNTIME_MAX_SPRITES, &sprites->effects};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) frame.kinds[f] = &sprites->kinds[f];
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
@@ -2014,10 +2059,22 @@ int main(int argc, char **argv) {
                                    &equipment, &collision);
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
-            /* ProjectileCheckHittingSprite ends ProjectileUpdate. */
-            if(sprites.kinds_ok)
+            if(sprites.kinds_ok) {
+                /* The wall impacts' particles, then ProjectileCheckHittingSprite
+                 * ends ProjectileUpdate; ParticleProcessAll follows. */
+                static const uint8_t impact_effects[]={
+                    [MZM_PROJECTILE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM,
+                    [MZM_PROJECTILE_MISSILE]=MZM_PE_HITTING_SOMETHING_WITH_MISSILE,
+                    [MZM_PROJECTILE_SUPER_MISSILE]=MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE};
+                for(int i=0;i<weapons.impact_count;i++)
+                    mzm_particle_set(&sprites.effects,(uint16_t)weapons.impacts[i].y,
+                                     (uint16_t)weapons.impacts[i].x,
+                                     impact_effects[weapons.impacts[i].type]);
                 mzm_sprites_projectile_hits(sprites.live,RUNTIME_MAX_SPRITES,&weapons,
-                                            &sprites.tables);
+                                            &sprites.tables,&sprites.effects);
+                mzm_particles_process(&sprites.effects,&sprites.effect_kinds,
+                                      (uint16_t)((int)last_cx*4),(uint16_t)((int)last_cy*4));
+            }
             /* Room lifecycle: a touched door transition loads the exported
              * destination room and places Samus at its exit. */
             int door_offset=0;
@@ -2232,6 +2289,33 @@ int main(int argc, char **argv) {
                 SDL_SetRenderDrawColor(renderer,240,220,60,255);
                 SDL_RenderRect(renderer,&hit);
             }
+        }
+        /* SpriteDebrisDrawAll and ParticleDraw: the common sprite graphics. */
+        for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok;i++) {
+            const char *table; uint16_t px,py,frame;
+            if(i<MZM_MAX_SPRITE_DEBRIS) {
+                const MzmSpriteDebris *d=&sprites.effects.debris[i];
+                if(!d->exists || d->frame_counter==0)continue;
+                table="SpriteDebrisOam";px=d->x;py=d->y;frame=d->frame;
+            } else {
+                const MzmParticle *p=&sprites.effects.particles[i-MZM_MAX_SPRITE_DEBRIS];
+                if((p->status&(MZM_PARTICLE_EXISTS|MZM_PARTICLE_ONSCREEN))!=
+                   (MZM_PARTICLE_EXISTS|MZM_PARTICLE_ONSCREEN))continue;
+                table=mzm_particle_table(p->effect);px=p->x;py=p->y;frame=p->frame;
+            }
+            if(!table)continue;
+            char key[160];
+            snprintf(key,sizeof key,"Particle/%s/none",table);
+            RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
+            if(!entry || entry->count==0)continue;
+            int index=frame<entry->count?frame:0;
+            SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+            if(!art_texture)continue;
+            const RuntimeLibraryFrame *art=&entry->frames[index];
+            SDL_FRect box={viewport.x+((float)(px>>2)+(float)art->offset_x-cx)*scale,
+                           viewport.y+((float)(py>>2)+(float)art->offset_y-cy)*scale,
+                           (float)art->w*scale,(float)art->h*scale};
+            SDL_RenderTexture(renderer,art_texture,NULL,&box);
         }
         for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
             const MzmProjectile *projectile=&weapons.list[i];

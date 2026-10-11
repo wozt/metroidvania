@@ -66,7 +66,19 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_RIPPER_BROWN": 0, "PSPRITE_RIPPER_PURPLE": 0,
           "PSPRITE_SKREE_GREEN": 0, "PSPRITE_SKREE_BLUE": 0}
 # Signed s16 tables an AI reads, written as ``table`` lines.
-AI_TABLES = ("sSkreeFallingSpeed",)
+AI_TABLES = ("sSkreeFallingSpeed", "sDebrisBouncingVelocity", "sDebris11YVelocity",
+             "sDebris12YVelocity", "sDebris13YVelocity", "sDebris4YVelocity",
+             "sDebris5YVelocity", "sDebris6YVelocity", "sDebris7YVelocity",
+             "sDebris8YVelocity")
+# Particle effects and sprite debris drawn from the common sprite graphics
+# (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
+PARTICLES = ("sParticleSpriteExplosionHugeOam", "sParticleSpriteExplosionSmallOam",
+             "sParticleSpriteExplosionMediumOam", "sParticleSpriteExplosionBigOam",
+             "sParticleSpriteExplosionSingleThenBigOam", "sParticleScrewAttackDestroyedOam",
+             "sParticleHittingSomethingWithNormalBeamOam",
+             "sParticleHittingSomethingInvincibleOam",
+             "sParticleHittingSomethingWithMissileOam",
+             "sParticleHittingSomethingWithSuperMissileOam", "sSpriteDebrisOam")
 SPRITE_VRAM = 0x4000
 # Enemy drops (src/sprites_ai/enemy_drop.c, EnemyDropInit) and their table.
 DROPS = {
@@ -289,7 +301,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
     wanted.update(tables)
     wanted.update(["sSecondarySpriteStats", *AI_TABLES])
-    wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values()])
+    wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values(), *PARTICLES])
     nm_output = _run_nm(nm, elf)
     symbols = {name: value for name, value in parse_symbols(nm_output, tuple(wanted)).items()
                if name in wanted}
@@ -354,6 +366,13 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
             bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
             frames.append((bmp, duration, left, top))
         library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/none", frames)
+    for table in PARTICLES:
+        frames = []
+        for pointer, duration in mzm_projectile_compose.frames(rom, symbols, table):
+            pixels = mzm_projectile_compose.render(rom, vram, palette, pointer, "none")
+            bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+            frames.append((bmp, duration, left, top))
+        library.add(f"Particle/{table[1:]}/none", frames)
     return library.finish()
 
 

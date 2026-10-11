@@ -16,14 +16,16 @@
  * (with the screw attack kill of SpriteUtilSpriteTakeDamageFromSamusContact)
  * and the beam and missile parts of ProjectileCheckHittingSprite. A killed
  * sprite becomes the enemy drop of SpriteUtilDetermineEnemyDrop, or is
- * removed (the death explosion, debris and sounds are not ported); drops
- * follow src/sprites_ai/enemy_drop.c. */
+ * removed, with its explosion particle (and the screw attack debris); drops
+ * follow src/sprites_ai/enemy_drop.c. Sprite debris (SpriteDebrisInit,
+ * SpriteDebrisProcess) is processed here. Sounds are not ported. */
 #ifndef MZM_SPRITES_H
 #define MZM_SPRITES_H
 
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "mzm_effects.h"
 #include "mzm_projectiles.h"
 
 enum {
@@ -76,6 +78,13 @@ typedef struct {
     uint16_t camera_x, camera_y;    /* gBg1XPosition / gBg1YPosition */
 } MzmSpriteWorld;
 
+/* Sprite debris velocity tables, in this order. */
+enum {
+    MZM_DEBRIS_BOUNCING, MZM_DEBRIS_11, MZM_DEBRIS_12, MZM_DEBRIS_13, MZM_DEBRIS_4,
+    MZM_DEBRIS_5, MZM_DEBRIS_6, MZM_DEBRIS_7, MZM_DEBRIS_8, MZM_DEBRIS_TABLES,
+};
+extern const char *const mzm_debris_table_names[MZM_DEBRIS_TABLES];
+
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
 typedef struct {
     uint8_t random[32];             /* sSpriteRandomNumberTable */
@@ -86,6 +95,7 @@ typedef struct {
     uint16_t secondary_damage[256]; /* sSecondarySpriteStats */
     uint8_t secondary_weakness[256];
     int16_t skree_falling[16];      /* sSkreeFallingSpeed (SHORT_MAX ends it) */
+    int16_t debris[MZM_DEBRIS_TABLES][9]; /* sDebris*YVelocity, sDebrisBouncingVelocity */
 } MzmSpriteTables;
 
 /* Columns of MzmSpriteTables.drops. */
@@ -205,6 +215,8 @@ typedef struct {
     /* gSpriteData, for SpriteSpawnSecondary (NULL: no spawning). */
     MzmSprite *sprites;
     int sprite_count;
+    /* Particles and sprite debris the sprites set (NULL: none). */
+    MzmEffects *effects;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,
@@ -243,7 +255,13 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
  * at the end of ProjectileUpdate): damage, stun and removal of the
  * projectile. Missiles bouncing off a sprite (tumbling) are removed. */
 void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weapons,
-                                 const MzmSpriteTables *tables);
+                                 const MzmSpriteTables *tables, MzmEffects *effects);
+/* SpriteDebrisInit (the cloud type is unused by the game). */
+void mzm_sprite_debris_init(MzmEffects *effects, uint8_t type, uint16_t y, uint16_t x);
+/* SpriteDebrisProcessAll (start of SpriteUpdate), then the vertical range
+ * check of SpriteDebrisDraw against the camera. */
+void mzm_sprite_debris_process(MzmEffects *effects, const MzmSpriteWorld *world,
+                               const MzmSpriteTables *tables, const MzmEffectKinds *kinds);
 /* Whether a PSPRITE has a ported AI. */
 bool mzm_sprite_supported(uint8_t sprite_id);
 /* The family of a sprite, or -1 without a ported AI. */

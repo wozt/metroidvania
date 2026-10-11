@@ -70,6 +70,10 @@ typedef struct {
     bool super_missiles_selected;
     bool pending;
     MzmProjectileType pending_type;
+    /* Wall impacts of the last update, in order: where the game calls
+     * ParticleSet with the projectile's hitting effect. */
+    struct { int32_t x, y; MzmProjectileType type; } impacts[MZM_MAX_PROJECTILES];
+    int impact_count;
 } MzmWeapons;
 
 void mzm_weapons_init(MzmWeapons *weapons);

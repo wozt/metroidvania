@@ -90,8 +90,15 @@ static bool point_solid(const MzmCollision *collision, int32_t x, int32_t y) {
 
 /* ProjectileCheckVerticalCollisionAtPosition with the projectile's
  * clipdata-affecting action: solid impacts reach hatches and blocks. */
-static bool projectile_hits(const MzmCollision *collision, const MzmProjectile *p) {
+static bool projectile_hits(MzmWeapons *weapons, const MzmCollision *collision,
+                            const MzmProjectile *p) {
     if (!point_solid(collision, p->x, p->y)) return false;
+    if (weapons->impact_count < MZM_MAX_PROJECTILES) {
+        weapons->impacts[weapons->impact_count].x = p->x;
+        weapons->impacts[weapons->impact_count].y = p->y;
+        weapons->impacts[weapons->impact_count].type = p->type;
+        weapons->impact_count++;
+    }
     if (collision->affect)
         collision->affect(collision->context, p->x, p->y,
                           p->type == MZM_PROJECTILE_BEAM ? MZM_DAMAGE_BEAM :
@@ -155,19 +162,19 @@ static void initialize(MzmProjectile *p) {
 }
 
 /* ProjectileProcessNormalBeam */
-static void process_beam(MzmProjectile *p, const MzmSamus *samus,
+static void process_beam(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *samus,
                          const MzmCollision *collision) {
     if (p->stage == MZM_STAGE_MOVING) {
-        if (projectile_hits(collision, p)) { p->active = false; return; }
+        if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
         projectile_move(p, MZM_QUARTER_BLOCK_SIZE + MZM_PIXEL_SIZE, samus->x_velocity);
     } else if (p->stage == MZM_STAGE_SPAWNING) {
-        if (projectile_hits(collision, p)) { p->active = false; return; }
+        if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
         p->stage = MZM_STAGE_MOVING;
         projectile_move(p, MZM_QUARTER_BLOCK_SIZE, samus->x_velocity);
     } else {
         initialize(p);
         p->stage = MZM_STAGE_SPAWNING;
-        if (projectile_hits(collision, p)) { p->active = false; return; }
+        if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
     }
     if (++p->timer > MZM_SHORT_BEAM_LIFETIME) p->active = false;
 }
@@ -186,19 +193,19 @@ static void process_missile(MzmWeapons *weapons, MzmProjectile *p, const MzmSamu
                             MzmEquipment *equipment, const MzmCollision *collision) {
     bool super = p->type == MZM_PROJECTILE_SUPER_MISSILE;
     if (p->stage == MZM_STAGE_MOVING) {
-        if (projectile_hits(collision, p)) { p->active = false; return; }
+        if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
         projectile_move(p, p->timer + (super ? MZM_QUARTER_BLOCK_SIZE - MZM_PIXEL_SIZE :
                                        MZM_EIGHTH_BLOCK_SIZE), samus->x_velocity);
         if (super ? p->timer <= 15 : p->timer < 12) p->timer++;
     } else if (p->stage == MZM_STAGE_SPAWNING) {
-        if (projectile_hits(collision, p)) { p->active = false; return; }
+        if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
         p->stage = MZM_STAGE_MOVING;
         projectile_move(p, MZM_BLOCK_SIZE * 3 / 4, samus->x_velocity);
     } else {
         initialize(p);
         spend_ammo(weapons, equipment, super);
         p->stage = MZM_STAGE_SPAWNING;
-        if (projectile_hits(collision, p)) p->active = false;
+        if (projectile_hits(weapons, collision, p)) p->active = false;
     }
 }
 
@@ -230,6 +237,7 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
                         MzmEquipment *equipment, int cannon_x, int cannon_y,
                         const MzmCollision *collision,
                         const MzmProjectileAnimation *animation) {
+    weapons->impact_count = 0;
     if (weapons->pending) {
         static const struct { int limit; uint8_t cooldown; } rules[] = {
             [MZM_PROJECTILE_BEAM] = {MZM_PROJECTILE_LIMIT_BEAM, MZM_BEAM_COOLDOWN},
@@ -252,7 +260,7 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
     for (int i = 0; i < MZM_MAX_PROJECTILES; ++i) {
         MzmProjectile *p = &weapons->list[i];
         if (!p->active) continue;
-        if (p->type == MZM_PROJECTILE_BEAM) process_beam(p, samus, collision);
+        if (p->type == MZM_PROJECTILE_BEAM) process_beam(weapons, p, samus, collision);
         else process_missile(weapons, p, samus, equipment, collision);
         if (!p->active) continue;
         animate(p, animation);

@@ -64,6 +64,23 @@ read from the user's ROM at export time; nothing is stored in the repository.
   the secondary stats damage until their third frame and are removed when
   their table ends or far off screen (`SP_KILL_OFF_SCREEN`). They draw with
   the parent Skree's graphics.
+- Particles (`src/runtime/mzm_effects.c`, `particle.c`): `ParticleSet` takes
+  the first free of 16 slots or replaces the particle with the highest frame
+  counter; the one-shot effects (sprite explosions, the screw attack kill,
+  the beam, invincible, missile and super missile impacts) play their table
+  once (`ParticleUpdateAnimation`: a frame ends when its counter reaches
+  the timer) and are removed outside the native screen window. Explosions
+  move to the high OAM priority. Deaths set their explosion at the death
+  point (`SpriteUtilSpriteDeath`; the screw attack kill adds three random
+  debris), projectiles set their impact on walls and sprites, and the Skree
+  its huge explosion. Particles are processed after `ProjectileUpdate` and
+  drawn above the sprites.
+- Sprite debris (`sprite_debris.c`): 8 slots, eight arc types from the
+  `sDebris*YVelocity` tables (each value used for two frames) with their
+  start delays, a bounce on landing (half arcs only after 20 frames), the
+  bouncing table afterwards, a 255-frame life, the vertical draw range and
+  `sSpriteDebrisOam`. Processed at the start of `SpriteUpdate`. The Skree
+  throws four pieces on impact.
 - Sprite families (`MzmSpriteFamily`) group the sprites that share an AI and
   OAM tables; `MzmSpriteFrame.kinds` holds each family's frame durations.
 

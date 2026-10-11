@@ -2582,3 +2582,36 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
   26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0241 - Zero Mission particles and sprite debris
+
+- New SDL-free `src/runtime/mzm_effects.{h,c}`: `ParticleSet`,
+  `ParticleProcessAll` (high OAM priority first), `ParticleUpdateAnimation`
+  and `ParticleCheckOnScreen` for the one-shot effects of the ported
+  sprites and projectiles: sprite explosions (small to huge), the screw
+  attack kill and the normal beam, invincible, missile and super missile
+  impacts.
+- `mzm_sprites` ports sprite debris (`SpriteDebrisInit`,
+  `SpriteDebrisProcess`, the draw range check) and
+  `SpriteUtilRandomSpriteDebris`; deaths set their particle, the screw
+  attack kill its debris, the Skree its four impact debris and huge
+  explosion, and projectile hits on sprites their impact particle.
+- `mzm_projectiles` records wall impacts so the runtime sets their
+  particles in the native order (projectile processing, then sprite hits,
+  then `ParticleProcessAll`).
+- `scripts/mzm_sprites.py` exports the particle and debris tables from the
+  common sprite graphics and the nine debris velocity tables.
+- Checked in brinstar_004 (`--spawn 150 160`): the crashing Skree throws its
+  debris at frame 61 and leaves the huge explosion with its spinning parts
+  at frame 116.
+- Not ported yet: particle sounds, the super missile screen shake, debris
+  splashes in liquids and the other particle effects.
+- Tests: `tests/test_mzm_sprites.c` adds particle slots and replacement,
+  animation timing and removal, the on-screen window, debris arcs, landing,
+  bounce, delay, animation, draw range and slot limit, and the particles and
+  debris of beam, invincible and screw attack hits.- The parity registry files the enemy drops under `items`
+  (`mzm.items.enemy_drops`) and the particles under `animation`
+  (`mzm.animation.particles`).
+- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
+  26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

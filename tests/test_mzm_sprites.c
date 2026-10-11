@@ -69,8 +69,9 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind;
-    frame = (MzmSpriteFrame){&world, &tables, {&kind, &ripper_kind, &drop_kind}, &equipment, 0, 0};
+    static MzmSpriteKind ripper_kind, skree_kind;
+    frame = (MzmSpriteFrame){&world, &tables, {&kind, &ripper_kind, &skree_kind, &drop_kind},
+                             &equipment, 0, 0, 0, 0, NULL, 0};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -424,6 +425,103 @@ int main(void) {
     x0 = r.x;
     step(&r, 0);
     assert(r.health == 40 && r.x == x0 + 4);
+
+    /* Skrees: hanging from a ceiling at row 2 above a floor at row 10. */
+    for (int a = 0; a < MZM_SKREE_ANIMS; ++a) {
+        skree_kind.counts[a] = 4;
+        for (int f = 0; f < 4; ++f) skree_kind.timers[a][f] = 3;
+    }
+    const int16_t skree_falling[8] = {2, 4, 6, 8, 12, 14, 16, 32767};
+    memcpy(tables.skree_falling, skree_falling, sizeof skree_falling);
+    tables.health[MZM_PSPRITE_SKREE_GREEN] = 3;
+    tables.secondary_damage[MZM_SSPRITE_SKREE_EXPLOSION] = 2;
+    tables.drops[MZM_PSPRITE_SKREE_GREEN][MZM_DROP_PROB_SMALL_ENERGY] = 0;
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[2][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
+    static MzmSprite group[8];
+    memset(group, 0, sizeof group);
+    frame.sprites = group;
+    frame.sprite_count = 8;
+    world.camera_x = world.camera_y = 0;
+    MzmSprite *k = &group[0];
+    mzm_sprite_init_primary(k, MZM_PSPRITE_SKREE_GREEN, 0, 3, 8, 0);
+    /* Samus far to the right: it waits, one block above its placement. */
+    frame.samus_x = 20 * 64;
+    frame.samus_y = 640;
+    step(k, 0);
+    assert(k->pose == 9 && k->y == 3 * 64 && k->health == 3 && k->hitbox_bottom == 96);
+    step(k, 0);
+    assert(k->pose == 9);
+    /* Within 150 subpixels to its left: it spins, then dives. */
+    frame.samus_x = (uint16_t)(k->x - 149);
+    step(k, 0);
+    assert(k->pose == 0x22);
+    frames = 0;
+    while (k->pose != 0x35 && frames < 50) {
+        step(k, 0);
+        ++frames;
+    }
+    assert(k->pose == 0x35 && !(k->status & MZM_SPRITE_STATUS_FACING_RIGHT));
+    /* The first frame falls 2 with no drift, then the drift grows by one
+     * subpixel every four frames. */
+    uint16_t kx = k->x;
+    frames = 0;
+    while (k->pose == 0x35 && frames < 200) {
+        step(k, 0);
+        ++frames;
+    }
+    /* Lands with its hitbox bottom (96) on the floor top (640). */
+    assert(k->pose == 0x37 && k->y == 640 - 96 && k->x < kx);
+    /* 60 frames later: four explosion parts, the skree removed. */
+    for (int i = 0; i < 60; ++i) {
+        for (int j = 0; j < 8; ++j) step(&group[j], 0);
+    }
+    assert(k->status == 0);
+    int parts = 0;
+    for (int j = 1; j < 8; ++j) {
+        if (!(group[j].status & MZM_SPRITE_STATUS_EXISTS)) continue;
+        ++parts;
+        assert(group[j].secondary && group[j].sprite_id == MZM_SSPRITE_SKREE_EXPLOSION);
+        assert(group[j].status & MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE);
+        assert(mzm_sprite_graphics_owner(&group[j]) == MZM_PSPRITE_SKREE_GREEN);
+    }
+    assert(parts == 4);
+    /* Slot 1 is the first going-up part (not flipped): it was updated in the
+     * same frame (a later slot), moving left and up, rotating backwards. */
+    MzmSprite *part = &group[1];
+    assert(part->room_slot == 0 && !(part->status & MZM_SPRITE_STATUS_X_FLIP));
+    assert(part->y == 640 - 96 - 8 + 40 - 4 && part->x == kx - (kx - k->x) - 8);
+    assert(part->rotation == (uint16_t)-32);
+    /* It hurts Samus with the secondary damage, but not the screw attack. */
+    hurts = 0;
+    MzmSpriteSamus near = {NULL, part->x, (uint16_t)(part->y + 20), part->x, -96, 0, -24, 24,
+                           true, false, false, hurt};
+    part->ignore_samus_timer = 0;
+    mzm_sprites_samus_collision(group, 8, &near, &tables);
+    assert(hurts == 1 && last_damage == 2);
+    /* Projectiles ignore it. */
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
+                                      .x = part->x, .y = part->y};
+    mzm_sprites_projectile_hits(group, 8, &weapons, &tables);
+    assert(weapons.list[0].active);
+    weapons.list[0].active = false;
+    /* After its second frame it is harmless; it ends with its table. */
+    for (int i = 0; i < 7; ++i) step(part, 0);
+    assert(part->frame > 1 && part->ignore_samus_timer == 1);
+    frames = 0;
+    while (part->status && frames < 50) {
+        step(part, 0);
+        ++frames;
+    }
+    assert(part->status == 0);
+    /* Far off screen, parts are removed. */
+    MzmSprite *far = &group[2];
+    world.camera_x = 4000;
+    step(far, 0);
+    assert(far->status == 0);
+    world.camera_x = 0;
+    frame.sprites = NULL;
+    frame.sprite_count = 0;
     puts("mzm_sprites: ok");
     return 0;
 }

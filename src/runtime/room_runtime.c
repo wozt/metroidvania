@@ -1180,7 +1180,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     char line[1024];
     bool ok = fgets(line, sizeof line, f) &&
               !strcmp(line, "schema\tmetroidvania-mzm-sprite-tables-v1\n");
-    int random_count = 0, falling_count = 0;
+    int random_count = 0, falling_count = 0, skree_count = 0;
     while (ok && fgets(line, sizeof line, f)) {
         char *cursor = strchr(line, '\t');
         if (!cursor) continue;
@@ -1191,6 +1191,22 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         } else if (!strcmp(line, "falling")) {
             for (falling_count = 0; falling_count < 16; ++falling_count)
                 sprites->tables.falling[falling_count] = (int16_t)strtol(cursor, &cursor, 10);
+        } else if (!strcmp(line, "sstats")) {
+            char name[64];
+            int id, health, damage, weakness;
+            if (sscanf(cursor, "%63s %d %d %d %d", name, &id, &health, &damage, &weakness) != 5 ||
+                id < 0 || id > 255) { ok = false; break; }
+            sprites->tables.secondary_damage[id] = (uint16_t)damage;
+            sprites->tables.secondary_weakness[id] = (uint8_t)(weakness & 0xFF);
+        } else if (!strncmp(cursor, "sSkreeFallingSpeed\t", 19) && !strcmp(line, "table")) {
+            cursor += 19;
+            char *end;
+            for (skree_count = 0; skree_count < 16; ++skree_count) {
+                long value = strtol(cursor, &end, 10);
+                if (end == cursor) break;
+                sprites->tables.skree_falling[skree_count] = (int16_t)value;
+                cursor = end;
+            }
         } else if (!strcmp(line, "stats")) {
             char name[64];
             int id, health, damage, weakness, no_drop, drops[5], used = 0;
@@ -1208,7 +1224,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         }
     }
     fclose(f);
-    return ok && random_count == 32 && falling_count == 16;
+    return ok && random_count == 32 && falling_count == 16 && skree_count > 0 &&
+           sprites->tables.skree_falling[skree_count - 1] == 32767;
 }
 
 /* Frame durations of OAM tables from the sprite library. */
@@ -1297,7 +1314,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4)};
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
-                            sprites->frame16};
+                            sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
+                            sprites->live, RUNTIME_MAX_SPRITES};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) frame.kinds[f] = &sprites->kinds[f];
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
@@ -2182,7 +2200,11 @@ int main(int argc, char **argv) {
                sprite->status&MZM_SPRITE_STATUS_NOT_DRAWN || !anim_name)continue;
             bool fx=sprite->status&MZM_SPRITE_STATUS_X_FLIP,fy=sprite->status&MZM_SPRITE_STATUS_Y_FLIP;
             char key[160];
-            snprintf(key,sizeof key,"Sprite/%s/%s/%s",sprites.names[sprite->sprite_id],
+            /* Whole-sprite rotation ignores the flips (SpriteDraw). */
+            bool rotated=sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE;
+            if(rotated)fx=fy=false;
+            snprintf(key,sizeof key,"Sprite/%s/%s/%s",
+                     sprites.names[mzm_sprite_graphics_owner(sprite)],
                      anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none");
             RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
             if(!entry || entry->count==0)continue;
@@ -2193,7 +2215,15 @@ int main(int argc, char **argv) {
             SDL_FRect box={viewport.x+((float)(sprite->x>>2)+(float)art->offset_x-cx)*scale,
                            viewport.y+((float)(sprite->y>>2)+(float)art->offset_y-cy)*scale,
                            (float)art->w*scale,(float)art->h*scale};
-            SDL_RenderTexture(renderer,art_texture,NULL,&box);
+            if(rotated) {
+                /* Clockwise around the sprite position, 256 units a turn. */
+                SDL_FPoint center={-(float)art->offset_x*scale,-(float)art->offset_y*scale};
+                SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
+                                         (double)(sprite->rotation&0xFF)*360.0/256.0,&center,
+                                         SDL_FLIP_NONE);
+            } else {
+                SDL_RenderTexture(renderer,art_texture,NULL,&box);
+            }
             if(show_hitbox) {
                 SDL_FRect hit={viewport.x+((float)((sprite->x+sprite->hitbox_left)>>2)-cx)*scale,
                                viewport.y+((float)((sprite->y+sprite->hitbox_top)>>2)-cy)*scale,
@@ -2246,8 +2276,9 @@ int main(int argc, char **argv) {
                    (int)(samus.y>>2),equipment.energy,live);
             for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
                 if(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)
-                    printf("  sprite %d %s at %d,%d pose %#x status %#x health %d\n",i,
-                           sprites.names[sprites.live[i].sprite_id],sprites.live[i].x>>2,
+                    printf("  sprite %d %s%s at %d,%d pose %#x status %#x health %d\n",i,
+                           sprites.names[mzm_sprite_graphics_owner(&sprites.live[i])],
+                           sprites.live[i].secondary?" part":"",sprites.live[i].x>>2,
                            sprites.live[i].y>>2,sprites.live[i].pose,sprites.live[i].status,
                            sprites.live[i].health);
             running=false;

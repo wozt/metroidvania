@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers and Rippers with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Rippers and Skrees with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2553,5 +2553,32 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Tests: `tests/test_mzm_sprites.c` adds the Ripper init, speed, wall turn
   and turn animation, its immunity to beams and missiles, the super missile
   kill, its death point and the purple Ripper's speed.- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
+  26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0240 - Zero Mission Skrees and secondary sprites
+
+- `mzm_sprites` ports the Skree AI (green and blue: detection, spin, dive
+  with the drift toward Samus, landing, crash) and `SkreeExplosion`, the
+  first secondary sprite: `SpriteSpawnSecondary`, secondary stats for
+  contact damage, whole-sprite rotation, and the `SP_KILL_OFF_SCREEN` range
+  of `SpriteCheckOnScreen`. Contact damage now skips the screw attack check
+  for sprites ignoring projectiles, as `SpriteUtilSpriteTakeDamageFromSamusContact`
+  does.
+- `MzmSpriteFrame` carries Samus's position and the sprite array for
+  spawning. `scripts/mzm_sprites.py` exports both Skrees, the
+  `sSecondarySpriteStats` rows (`sstats`) and `sSkreeFallingSpeed`
+  (`table`); the runtime draws secondary sprites with their parent's
+  graphics and rotates whole-sprite rotations.
+- Checked in brinstar_004 (`--spawn 150 160`): the first Skree spins and
+  dives as Samus stands below, hits her (99 to 89), lands at frame 60, and
+  its four parts spin outward from frame 113; the second Skree follows.
+- Not ported yet: the crash debris, the huge explosion particle, sounds.
+- Tests: `tests/test_mzm_sprites.c` adds the Skree wait and detection range,
+  the spin, the dive with drift and landing, the 60-frame crash, the four
+  parts (slots, ids, same-frame update, movement, rotation, secondary damage,
+  projectile immunity, harmless frames, end of table) and the off-screen
+  removal.
+- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
   26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.

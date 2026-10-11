@@ -8,7 +8,8 @@
  * ClipdataConvertToCollision for the sprite actor,
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
- * Zoomer and Ripper AIs (src/sprites_ai/zoomer.c, ripper.c). Positions are native subpixels (64 per
+ * Zoomer, Ripper and Skree AIs (src/sprites_ai/zoomer.c, ripper.c,
+ * skree.c) with SpriteSpawnSecondary for the Skree's explosion. Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, stats) and the frame
  * durations of each OAM table come from scripts/mzm_sprites.py.
  * Combat ports SpriteUtilSamusAndSpriteCollision for sprites that hurt Samus
@@ -29,11 +30,13 @@ enum {
     MZM_SPRITE_STATUS_EXISTS = 1 << 0,
     MZM_SPRITE_STATUS_ONSCREEN = 1 << 1,
     MZM_SPRITE_STATUS_NOT_DRAWN = 1 << 2,
+    MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE = 1 << 3,
     MZM_SPRITE_STATUS_X_FLIP = 1 << 6,
     MZM_SPRITE_STATUS_Y_FLIP = 1 << 8,
     MZM_SPRITE_STATUS_FACING_RIGHT = 1 << 9,
     MZM_SPRITE_STATUS_FACING_DOWN = 1 << 10,
     MZM_SPRITE_STATUS_SAMUS_COLLIDING = 1 << 11,
+    MZM_SPRITE_STATUS_DOUBLE_SIZE = 1 << 14,
     MZM_SPRITE_STATUS_IGNORE_PROJECTILES = 1 << 15,
 };
 
@@ -80,6 +83,9 @@ typedef struct {
     uint16_t health[256], damage[256];  /* sPrimarySpriteStats */
     uint8_t weakness[256];          /* SpriteWeakness (low byte of column 2) */
     uint16_t drops[256][5];         /* drop probabilities (columns 4-8), out of 1024 */
+    uint16_t secondary_damage[256]; /* sSecondarySpriteStats */
+    uint8_t secondary_weakness[256];
+    int16_t skree_falling[16];      /* sSkreeFallingSpeed (SHORT_MAX ends it) */
 } MzmSpriteTables;
 
 /* Columns of MzmSpriteTables.drops. */
@@ -124,9 +130,19 @@ enum {
 };
 extern const char *const mzm_ripper_anim_names[MZM_RIPPER_ANIMS];
 
+/* Skree OAM tables (src/data/sprites/skree.c), its explosion's last. */
+enum {
+    MZM_SKREE_IDLE, MZM_SKREE_SPINNING, MZM_SKREE_GOING_DOWN, MZM_SKREE_CRASHING,
+    MZM_SKREE_EXPLOSION_GOING_DOWN, MZM_SKREE_EXPLOSION_GOING_UP, MZM_SKREE_ANIMS,
+};
+extern const char *const mzm_skree_anim_names[MZM_SKREE_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
-enum { MZM_FAMILY_ZOOMER, MZM_FAMILY_RIPPER, MZM_FAMILY_DROP, MZM_SPRITE_FAMILIES };
+enum {
+    MZM_FAMILY_ZOOMER, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_DROP,
+    MZM_SPRITE_FAMILIES,
+};
 typedef struct {
     int count;
     const char *const *anims;
@@ -147,18 +163,25 @@ enum {
     MZM_PSPRITE_LARGE_ENERGY_DROP = 26, MZM_PSPRITE_SMALL_ENERGY_DROP = 27,
     MZM_PSPRITE_MISSILE_DROP = 28, MZM_PSPRITE_SUPER_MISSILE_DROP = 29,
     MZM_PSPRITE_POWER_BOMB_DROP = 30,
+    MZM_PSPRITE_SKREE_GREEN = 31, MZM_PSPRITE_SKREE_BLUE = 32,
 };
+
+/* SecondarySprite */
+enum { MZM_SSPRITE_SKREE_EXPLOSION = 12, MZM_SSPRITE_BLUE_SKREE_EXPLOSION = 15 };
 
 typedef struct {
     uint16_t status;
-    uint8_t sprite_id;              /* PSPRITE */
+    bool secondary;                 /* SP_SECONDARY_SPRITE: sprite_id is an SSPRITE */
+    bool kill_off_screen;           /* SP_KILL_OFF_SCREEN */
+    uint8_t sprite_id;              /* PSPRITE or SSPRITE */
     uint8_t gfx_slot, room_slot;
     uint16_t x, y;                  /* subpixels, bottom middle of the block */
     uint8_t pose;
     uint8_t anim;                   /* pOam: table index of the kind */
     uint8_t frame;                  /* currentAnimationFrame */
     uint8_t adc;                    /* animationDurationCounter */
-    uint8_t work1, work3;
+    uint8_t work0, work1, work2, work3;
+    uint16_t rotation;              /* 256 per turn, clockwise on screen */
     uint16_t health;
     uint8_t palette_row, absolute_palette_row;
     int16_t hitbox_top, hitbox_bottom, hitbox_left, hitbox_right;
@@ -178,6 +201,10 @@ typedef struct {
     MzmEquipment *equipment;
     uint8_t frame8;                 /* gFrameCounter8Bit */
     uint16_t frame16;               /* gFrameCounter16Bit */
+    uint16_t samus_x, samus_y;      /* gSamusData position, subpixels */
+    /* gSpriteData, for SpriteSpawnSecondary (NULL: no spawning). */
+    MzmSprite *sprites;
+    int sprite_count;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,
@@ -219,7 +246,10 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                                  const MzmSpriteTables *tables);
 /* Whether a PSPRITE has a ported AI. */
 bool mzm_sprite_supported(uint8_t sprite_id);
-/* The family of a PSPRITE, or -1 without a ported AI. */
-int mzm_sprite_family(uint8_t sprite_id);
+/* The family of a sprite, or -1 without a ported AI. */
+int mzm_sprite_family(uint8_t sprite_id, bool secondary);
+/* The PSPRITE whose exported graphics and palette draw the sprite (a
+ * secondary sprite draws with its parent's graphics slot). */
+uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite);
 
 #endif /* MZM_SPRITES_H */

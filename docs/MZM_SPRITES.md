@@ -51,6 +51,19 @@ read from the user's ROM at export time; nothing is stored in the repository.
   one), a wall probe a quarter block above its feet and 36 subpixels ahead,
   the two-part turn, and its death point 24 subpixels above its feet. Only
   super missiles and the screw attack hurt it (ROM weaknesses).
+- Skree (`skree.c`, green and blue): raised a block at init, it waits
+  until Samus is below it (less than 10 blocks) and within 150 subpixels
+  horizontally while on screen, spins, then dives with `sSkreeFallingSpeed`
+  while drifting toward Samus (a quarter of its frame count per frame, up to
+  a quarter block; a wall stops the drift), lands with its hitbox bottom,
+  shows its crash table after 40 frames and after 60 spawns four
+  `SkreeExplosion` parts (`SpriteSpawnSecondary` in the first free slots)
+  and disappears. Parts fly diagonally an eighth of a block per frame,
+  rotate an eighth of a turn per frame (whole-sprite rotation, drawn by
+  rotating the composed frame clockwise), ignore projectiles, hurt Samus with
+  the secondary stats damage until their third frame and are removed when
+  their table ends or far off screen (`SP_KILL_OFF_SCREEN`). They draw with
+  the parent Skree's graphics.
 - Sprite families (`MzmSpriteFamily`) group the sprites that share an AI and
   OAM tables; `MzmSpriteFrame.kinds` holds each family's frame durations.
 

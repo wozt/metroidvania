@@ -31,7 +31,9 @@ Output stays private:
 ``sSpriteRandomNumberTable`` (``random``), ``sSpritesFallingSpeed``
 (``falling``) and the ``sPrimarySpriteStats`` row of every primary sprite
 (``stats``: name, id, then the SPRITE_STATS columns: health, damage,
-weaknesses, drop probabilities).
+weaknesses, drop probabilities), the ``sSecondarySpriteStats`` rows
+(``sstats``, same columns) and the signed tables of ported AIs (``table``:
+symbol, values).
 """
 from __future__ import annotations
 
@@ -61,7 +63,10 @@ DECOMP = ROOT / "third_party/mzm"
 # the red Zoomer sets paletteRow and absolutePaletteRow to 1; the Rippers
 # have their own graphics and palettes).
 PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
-          "PSPRITE_RIPPER_BROWN": 0, "PSPRITE_RIPPER_PURPLE": 0}
+          "PSPRITE_RIPPER_BROWN": 0, "PSPRITE_RIPPER_PURPLE": 0,
+          "PSPRITE_SKREE_GREEN": 0, "PSPRITE_SKREE_BLUE": 0}
+# Signed s16 tables an AI reads, written as ``table`` lines.
+AI_TABLES = ("sSkreeFallingSpeed",)
 SPRITE_VRAM = 0x4000
 # Enemy drops (src/sprites_ai/enemy_drop.c, EnemyDropInit) and their table.
 DROPS = {
@@ -91,9 +96,18 @@ def _c_body(text: str, start: int) -> str:
 
 def psprite_ids(header: str) -> dict[str, int]:
     """Values of the PrimarySprite enum (consecutive from PSPRITE_UNUSED0)."""
-    match = re.search(r"MAKE_ENUM\(u8,\s*PrimarySprite\)", header)
+    return enum_ids(header, "PrimarySprite")
+
+
+def ssprite_ids(header: str) -> dict[str, int]:
+    """Values of the SecondarySprite enum."""
+    return enum_ids(header, "SecondarySprite")
+
+
+def enum_ids(header: str, enum: str) -> dict[str, int]:
+    match = re.search(rf"MAKE_ENUM\(u8,\s*{enum}\)", header)
     if not match:
-        raise ValueError("PrimarySprite enum not found")
+        raise ValueError(enum + " enum not found")
     ids = {}
     value = 0
     for item in _c_body(header, match.end()).split(","):
@@ -274,6 +288,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         wanted.update([graphics[sprite], palettes[sprite], *tables])
     tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
     wanted.update(tables)
+    wanted.update(["sSecondarySpriteStats", *AI_TABLES])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values()])
     nm_output = _run_nm(nm, elf)
     symbols = {name: value for name, value in parse_symbols(nm_output, tuple(wanted)).items()
@@ -282,7 +297,9 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     if missing:
         raise ValueError("reference ELF lacks " + ", ".join(sorted(missing)[:5]))
     verify_symbols_against_rom(rom, _elf_image(objcopy, elf), symbols)
-    ids = psprite_ids((decomp / "include/constants/sprite.h").read_text(encoding="utf-8"))
+    header = (decomp / "include/constants/sprite.h").read_text(encoding="utf-8")
+    ids = psprite_ids(header)
+    secondary = ssprite_ids(header)
     lines = ["schema\tmetroidvania-mzm-sprite-tables-v1"]
 
     def words(symbol: str, signed: bool, width: int) -> list[int]:
@@ -303,6 +320,17 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
             continue
         row = stats[value * columns:(value + 1) * columns]
         lines.append("\t".join(["stats", name[len("PSPRITE_"):], str(value), *map(str, row)]))
+    stats = words("sSecondarySpriteStats", False, 2)
+    count = secondary.get("SSPRITE_COUNT", 0)
+    if not count or columns * count != len(stats):
+        raise ValueError("sSecondarySpriteStats does not match the SSPRITE count")
+    for name, value in sorted(secondary.items(), key=lambda item: item[1]):
+        if name == "SSPRITE_COUNT":
+            continue
+        row = stats[value * columns:(value + 1) * columns]
+        lines.append("\t".join(["sstats", name[len("SSPRITE_"):], str(value), *map(str, row)]))
+    for table in AI_TABLES:
+        lines.append("\t".join(["table", table, *map(str, words(table, True, 2))]))
     folder = private_path(Path(root), METROID_METADATA, create=True)
     folder.mkdir(parents=True, exist_ok=True)
     write_atomic(folder / "sprites.tsv", "\n".join(lines) + "\n")

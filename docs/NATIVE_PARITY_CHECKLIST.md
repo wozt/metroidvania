@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 9 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 10 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -145,6 +145,15 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.enemies.drops`.  
 Known divergences: Freezing, the damaged sound and the death explosion are not ported; missiles that would tumble off a Ripper are removed.  
 Next action: Port freezing with the ice beam.
+
+[~] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the crash timing and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.
+
+Native evidence: `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteSpawnSecondary`, `mzm:c:src/sprites_ai/skree.c:Skree`, `mzm:c:src/sprites_ai/skree.c:SkreeExplosion`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.enemies.drops`.  
+Known divergences: The crash debris (SpriteDebrisInit), the huge explosion particle, the sounds and freezing are not ported; the rotation is drawn by rotating the composed frame, not per OAM part.  
+Next action: Port sprite debris and the explosion particles.
 
 [~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns and death into enemy drops are ported.
 

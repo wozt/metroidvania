@@ -2884,3 +2884,30 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite (407 tests), every rebuild task up to date, `check_generated` fresh
   and the proprietary-file guard passed.
+
+## Patch 0253 - Zero Mission waiting pirates at doors
+
+- `mzm_spawn_waiting_pirates` ports `SpawnWaitingPirates` with
+  `SpriteSpawnPrimary`: after a door transition with the alarm on (forced on
+  once Mecha Ridley is dead) a waiting pirate (the third one when the
+  spriteset has it, else the first) appears at Samus's arrival point, half a
+  block back toward the door, with room slot `0x80` (`0x81` through a door
+  without hatch) and graphics slot 5 in spritesets 88 and 103; a spriteset
+  without pirates stops the alarm.
+- `scripts/mzm_runtime_room.py` writes the room's default spriteset as `S`
+  lines (`scripts.mzm_sprites.room_spriteset`); the runtime reads them and
+  finds the arrival door's type from its position in the new room.
+- Not covered: event spritesets, the debug teleport (no door), the alarm's
+  music and palette.
+- Tests: `tests/test_mzm_sprites.c` covers no spawn without the alarm, the
+  alarm stopped by a spriteset without pirates, the first free slot, room
+  slot `0x81` and graphics slot 5, the pirate's placement two blocks and an
+  eighth back, its wait, the hidden laser through the hatch, its 10-frame
+  exit and the alarm forced after Mecha Ridley;
+  `tests/test_mzm_runtime_room.py` covers the `S` lines and the default
+  spriteset.
+- Checked: the 315 game rooms load with their `S` lines (the 15 Test area
+  rooms are refused by the existing `--room` alias syntax, unchanged).
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite (409 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.

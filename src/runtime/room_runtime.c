@@ -56,6 +56,7 @@ typedef struct {
 /* One default room sprite (SpriteLoadRoomSprites), exported by
  * scripts/mzm_sprites.py: block position, sprite name, graphics slot. */
 #define MAX_ROOM_SPRITES 24
+#define MAX_SPRITESET_ENTRIES 15    /* MAX_AMOUNT_OF_SPRITE_TYPES */
 typedef struct { int y, x, gfx_slot, room_slot; char name[64]; } RoomSprite;
 /* One native collision type and transition behavior per 16-pixel block. */
 typedef struct { int width, height, resolution, room; char world[16], area[40];
@@ -65,6 +66,8 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     RoomDoor doors[MAX_ROOM_DOORS]; int door_count;
     RoomHatch hatches[MAX_ROOM_HATCHES]; int hatch_count;
     RoomSprite sprites[MAX_ROOM_SPRITES]; int sprite_count;
+    /* The default spriteset (gSpriteset, gSpritesetSpritesId names). */
+    int spriteset; char spriteset_names[MAX_SPRITESET_ENTRIES][64]; int spriteset_count;
     size_t count; } Room;
 
 static void room_set_cell(Room *room, int x, int y, ClipType type) {
@@ -297,6 +300,17 @@ static bool parse_native_room(const char *path, Room *room) {
                 sprite.y >= room->height / 16 || sprite.gfx_slot < 0 || sprite.gfx_slot > 7)
                 goto failure;
             room->sprites[room->sprite_count++] = sprite;
+            continue;
+        }
+        if (line[0] == 'S') {
+            int index, gfx_slot;
+            if (room->spriteset_count >= MAX_SPRITESET_ENTRIES ||
+                sscanf(line, "S\t%d\t%63[^\t]\t%d %c", &index,
+                       room->spriteset_names[room->spriteset_count], &gfx_slot, &extra) != 3 ||
+                index < 0 || index > 255 || gfx_slot < 0 || gfx_slot > 7)
+                goto failure;
+            room->spriteset = index;
+            room->spriteset_count++;
             continue;
         }
         if (line[0] == 'H') {
@@ -1439,6 +1453,37 @@ static void runtime_sprite_remove_solid(void *context, uint16_t y, uint16_t x) {
         room_set_cell(room, column, row, CLIP_AIR);
 }
 
+/* SpawnWaitingPirates after a door transition: the arrival position of
+ * RoomLoad (Samus's door exit, half a block back toward the door) and
+ * whether the arrival door has a hatch. */
+static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *room,
+                                         const RoomDoor *used) {
+    if (!sprites->tables_ok) return;
+    uint8_t ids[MAX_SPRITESET_ENTRIES];
+    int count = 0;
+    for (int i = 0; i < room->spriteset_count; ++i)
+        for (int id = 0; id < 256; ++id)
+            if (!strcmp(sprites->names[id], room->spriteset_names[i])) {
+                ids[count++] = (uint8_t)id;
+                break;
+            }
+    int32_t x = used->dest_x * MZM_BLOCK_SIZE + (used->dest_x_exit + 8) * 4;
+    int32_t y = (used->dest_y_end + 1) * MZM_BLOCK_SIZE + used->dest_y_exit * 4 - 1;
+    if (used->dest_x_exit > 0) x -= MZM_BLOCK_SIZE / 2;
+    else if (used->dest_x_exit < 0) x += MZM_BLOCK_SIZE / 2;
+    bool no_hatch = false;
+    for (int i = 0; i < room->door_count; ++i)
+        if (room->doors[i].x0 == used->dest_x && room->doors[i].y1 == used->dest_y_end)
+            no_hatch = !strcmp(room->doors[i].kind, "nohatch");
+    static const MzmSpriteHooks hooks = {NULL, runtime_sprite_check_event, NULL, NULL, NULL,
+                                         NULL};
+    MzmSpriteHooks bound = hooks;
+    bound.context = sprites;
+    mzm_spawn_waiting_pirates(sprites->live, RUNTIME_MAX_SPRITES, &sprites->globals, &bound, ids,
+                              count, (uint8_t)room->spriteset, (uint16_t)y, (uint16_t)x,
+                              no_hatch);
+}
+
 /* BlockApplyCcaa from a sprite (the Space Pirate laser): hatches. */
 static void runtime_sprite_affect(void *context, uint16_t y, uint16_t x, int damage) {
     RuntimeSprites *sprites = context;
@@ -2238,6 +2283,7 @@ int main(int argc, char **argv) {
                     texture=next_texture;
                     runtime_place_after_door(&samus,&used,door_offset);
                     runtime_sprites_spawn(&sprites, room);
+                    runtime_sprites_door_arrival(&sprites, room, &used);
                     mzm_weapons_init(&weapons);
                     echo=(RuntimeEcho){0};
                     echo_visible=false;

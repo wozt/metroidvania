@@ -239,7 +239,8 @@ def room_hatches(doors, room: int, clip, tables, hatch_types, hatch_behaviors):
 
 def encode_room(area: str, number: int, width: int, height: int,
                 clip: tuple[int, int, tuple[int, ...]], tables,
-                doors: list[dict] | None = None, hatches=None, sprites=None) -> str:
+                doors: list[dict] | None = None, hatches=None, sprites=None,
+                spriteset=None) -> str:
     clip_width, clip_height, cells = clip
     if clip_width * 16 != width or clip_height * 16 != height:
         raise ValueError("Clipdata dimensions differ from the rendered room")
@@ -278,6 +279,12 @@ def encode_room(area: str, number: int, width: int, height: int,
     for sprite in sprites or []:
         lines.append(f"P\t{sprite['y']}\t{sprite['x']}\t{sprite['sprite'][len('PSPRITE_'):]}\t"
                      f"{sprite['gfx_slot']}\t{sprite['room_slot']}")
+    # The default spriteset (scripts.mzm_sprites.room_spriteset): index,
+    # sprite and graphics slot of each entry.
+    if spriteset:
+        index, members = spriteset
+        for name, slot in members:
+            lines.append(f"S\t{index}\t{name[len('PSPRITE_'):]}\t{slot}")
     lines.append("END")
     return "\n".join(lines) + "\n"
 
@@ -316,9 +323,11 @@ def produce(root: Path, area: str, number: int) -> dict:
     hatches = room_hatches(doors, number, clip, tables, hatch_types, hatch_behaviors)
     try:
         sprites = mzm_sprites.room_sprites(area, number)
+        spriteset = mzm_sprites.room_spriteset(area, number)
     except ValueError:
-        sprites = []            # rooms outside the area tables (test rooms)
-    text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites)
+        sprites, spriteset = [], None   # rooms outside the area tables (test rooms)
+    text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites,
+                       spriteset)
     folder = private_path(Path(root), RUNTIME_ROOMS / f"{area.lower()}_{number:03}",
                           create=True)
     folder.mkdir(exist_ok=True)

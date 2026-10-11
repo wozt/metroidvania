@@ -1748,6 +1748,69 @@ int main(void) {
         }
         assert(ps[0].pose == 0x23 && ps[0].samus_collision == 20 &&
                !(ps[0].status & MZM_SPRITE_STATUS_NOT_DRAWN) && ps[0].work2 >= 32);
+
+        /* SpawnWaitingPirates: nothing without the alarm; with it, a waiting
+         * pirate at the arrival point that comes out of the door. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        for (int r = 6; r < 10; ++r) grid[r][2] = MZM_CLIPDATA_DOOR;    /* the hatch */
+        const uint8_t pirate_set[] = {MZM_PSPRITE_ZOOMER_YELLOW, MZM_PSPRITE_SPACE_PIRATE};
+        const uint8_t no_pirate_set[] = {MZM_PSPRITE_ZOOMER_YELLOW};
+        globals.alarm_timer = 0;
+        mzm_spawn_waiting_pirates(ps, 8, &globals, &test_hooks, pirate_set, 2, 53, 639, 224,
+                                  false);
+        assert(!(ps[0].status & MZM_SPRITE_STATUS_EXISTS));
+        globals.alarm_timer = 200;
+        mzm_spawn_waiting_pirates(ps, 8, &globals, &test_hooks, no_pirate_set, 1, 53, 639, 224,
+                                  false);
+        assert(globals.alarm_timer == 0 && !(ps[0].status & MZM_SPRITE_STATUS_EXISTS));
+        globals.alarm_timer = 200;
+        ps[0].status = MZM_SPRITE_STATUS_EXISTS;    /* an occupied slot */
+        mzm_spawn_waiting_pirates(ps, 8, &globals, &test_hooks, pirate_set, 2, 88, 639, 224,
+                                  true);
+        assert(ps[1].sprite_id == MZM_PSPRITE_SPACE_PIRATE_WAITING1 && ps[1].room_slot == 0x81 &&
+               ps[1].gfx_slot == 5 && ps[1].ram_slot == 1 && ps[1].y == 639 && ps[1].x == 224 &&
+               ps[1].status & MZM_SPRITE_STATUS_FACING_DOWN &&
+               ps[1].status & MZM_SPRITE_STATUS_NOT_DRAWN);
+        memset(ps, 0, sizeof ps);
+        frame.samus_x = 224;
+        frame.samus_y = 639;
+        mzm_spawn_waiting_pirates(ps, 8, &globals, &test_hooks, pirate_set, 2, 53, 639, 224,
+                                  false);
+        PIRATE_FRAME();
+        /* Facing Samus (right, x not above hers), 2 blocks and an eighth
+         * back toward the door, 20 frames before it shoots. */
+        assert(ps[0].pose == 0x24 && ps[0].status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+               ps[0].x == 224 - 136 && ps[0].work0 == 20 &&
+               ps[0].status & MZM_SPRITE_STATUS_MOSAIC &&
+               ps[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES && ps[0].samus_collision == 0);
+        frame.samus_x = 20 * 64;    /* out of its line of sight */
+        frames = 0;
+        while (ps[0].pose == 0x24 && frames < 100) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        /* The hatch 1.5 blocks ahead: it shoots through it with a hidden
+         * laser when its timer ends. */
+        assert(ps[0].pose == 0x25 && ps[1].secondary && ps[1].room_slot == 0x80 &&
+               ps[1].status & MZM_SPRITE_STATUS_NOT_DRAWN && ps[1].samus_collision == 0);
+        frames = 0;
+        while (ps[0].pose == 0x25 && frames < 100) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        assert(ps[0].pose == 0x23 && frames == 10 && ps[0].samus_collision == 20 &&
+               !(ps[0].status & MZM_SPRITE_STATUS_NOT_DRAWN));
+        /* After Mecha Ridley the alarm is forced on at every door. */
+        memset(ps, 0, sizeof ps);
+        globals.alarm_timer = 0;
+        test_events[MZM_EVENT_MECHA_RIDLEY_KILLED / 8] |= 1u << (MZM_EVENT_MECHA_RIDLEY_KILLED % 8);
+        mzm_spawn_waiting_pirates(ps, 8, &globals, &test_hooks, pirate_set, 2, 53, 639, 224,
+                                  false);
+        assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE && ps[0].status);
+        memset(test_events, 0, sizeof test_events);
+        globals.alarm_timer = 0;
 #undef PIRATE_FRAME
         frame.sprites = NULL;
         frame.sprite_count = 0;

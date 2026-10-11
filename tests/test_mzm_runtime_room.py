@@ -35,6 +35,21 @@ class MzmRuntimeRoomTests(unittest.TestCase):
         self.assertIn("M\t1\t1\t9", lines)
         self.assertEqual(sum(line.startswith("M\t") for line in lines), 2)
 
+    def test_spriteset_lines_follow_the_room_spriteset(self):
+        tables = mzm_runtime_room.collision_tables(DECOMP)
+        lines = mzm_runtime_room.encode_room(
+            "Chozodia", 2, 16, 16, (1, 1, (0,)), tables,
+            spriteset=(53, [("PSPRITE_SPACE_PIRATE", 0), ("PSPRITE_SEARCHLIGHT", 4)])
+        ).splitlines()
+        self.assertEqual(lines[-3:], ["S\t53\tSPACE_PIRATE\t0", "S\t53\tSEARCHLIGHT\t4", "END"])
+
+    def test_room_spriteset_is_the_default_one(self):
+        from scripts import mzm_sprites
+        index, members = mzm_sprites.room_spriteset("Chozodia", 2, DECOMP)
+        self.assertEqual(index, 53)
+        self.assertEqual(members[:2], [("PSPRITE_SPACE_PIRATE", 0),
+                                       ("PSPRITE_SPACE_PIRATE_WAITING1", 0)])
+
 
 if __name__ == "__main__":
     unittest.main()

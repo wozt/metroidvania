@@ -468,6 +468,15 @@ void mzm_sprite_debris_process(MzmEffects *effects, const MzmSpriteWorld *world,
 /* The end of SpriteUpdate: DecrementChozodiaAlarm (its music and palette are
  * not ported), then the draw-order scratch the drawing rewrites. */
 void mzm_sprites_end_frame(MzmSpriteGlobals *globals, const MzmSpriteHooks *hooks);
+/* SpawnWaitingPirates at a room load through a door: with the alarm on (or
+ * Mecha Ridley dead), a waiting pirate is spawned at the arrival position
+ * (Samus's position, half a block back toward the door), shooting through
+ * the door, or crawling out of a hatchless one; a spriteset without pirates
+ * stops the alarm. `spriteset` lists the room spriteset's PSPRITE ids. */
+void mzm_spawn_waiting_pirates(MzmSprite *sprites, int count, MzmSpriteGlobals *globals,
+                               const MzmSpriteHooks *hooks, const uint8_t *spriteset,
+                               int spriteset_count, uint8_t spriteset_index, uint16_t y,
+                               uint16_t x, bool no_hatch);
 /* Whether a PSPRITE has a ported AI. */
 bool mzm_sprite_supported(uint8_t sprite_id);
 /* The family of a sprite, or -1 without a ported AI. */

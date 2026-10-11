@@ -221,20 +221,32 @@ def enemy_data(rooms_dir: Path, symbol: str) -> list[int]:
     raise ValueError("enemy data not found: " + symbol)
 
 
-def room_sprites(area: str, number: int, decomp: Path = DECOMP) -> list[dict]:
-    """Default sprites of a room: block position, PSPRITE and graphics slot."""
+def _room_entry_and_spriteset(area: str, number: int, decomp: Path):
     rooms_c = (decomp / "src/data/rooms_data.c").read_text(encoding="utf-8")
     entry = room_entries(rooms_c, area).get(number)
     if entry is None:
         raise ValueError(f"no room entry {area} {number}")
     header = (decomp / "include/constants/sprite.h").read_text(encoding="utf-8")
     ids = psprite_ids(header)
-    names = {value: name for name, value in ids.items()}
     sets = spritesets((decomp / "src/sprite.c").read_text(encoding="utf-8"),
                       (decomp / "src/data/spriteset.c").read_text(encoding="utf-8"), ids)
     spriteset = int(entry.get("defaultSpriteset", "0"), 0)
     if spriteset >= len(sets) - 1:
         spriteset = len(sets) - 1
+    return entry, ids, sets, spriteset
+
+
+def room_spriteset(area: str, number: int, decomp: Path = DECOMP) -> tuple[int, list]:
+    """The room's default spriteset (SpriteLoadSpriteset: gSpriteset and
+    gSpritesetSpritesId): its index and (PSPRITE name, graphics slot) entries."""
+    _, _, sets, spriteset = _room_entry_and_spriteset(area, number, decomp)
+    return spriteset, [(name, slot & 7) for name, slot in sets[spriteset]]
+
+
+def room_sprites(area: str, number: int, decomp: Path = DECOMP) -> list[dict]:
+    """Default sprites of a room: block position, PSPRITE and graphics slot."""
+    entry, ids, sets, spriteset = _room_entry_and_spriteset(area, number, decomp)
+    names = {value: name for name, value in ids.items()}
     data = enemy_data(decomp / "src/data/rooms", entry["pDefaultSpriteData"])
     sprites = []
     for index in range(0, len(data) - 2, 3):

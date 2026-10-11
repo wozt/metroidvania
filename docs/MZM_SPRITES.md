@@ -178,8 +178,16 @@ read from the user's ROM at export time; nothing is stored in the repository.
   (`SSC_SPACE_PIRATE_LASER` stops them) and, after their first 10 frames,
   on pirates, which freeze, flash and die after 33 frames. The last
   pirate's death stops the alarm. Waiting pirates placed in a room hide at
-  their door until the alarm, then shoot through it and come out;
-  `SpawnWaitingPirates` (pirates arriving at doors) is not ported. Rooms
+  their door until the alarm, then shoot through it and come out.
+  `SpawnWaitingPirates` runs after each door transition: with the alarm on
+  (forced on after Mecha Ridley's death) it spawns the third waiting pirate
+  when the room's spriteset has it, else the first one when the spriteset
+  has any pirate, at Samus's arrival point half a block back toward the
+  door (`SpriteSpawnPrimary`, room slot `0x80`, `0x81` for a door without
+  hatch, graphics slot 5 in spritesets 88 and 103), facing down; a
+  spriteset without pirates stops the alarm. Rooms export their default
+  spriteset as `S` lines (index, sprite, graphics slot); event spritesets
+  are not resolved. Rooms
   export the clipdata movement of each block (`M` lines,
   `sMovementClipdataValues`) for the zonelines, wall jump points and
   stop-enemy blocks.
@@ -273,5 +281,5 @@ and their drops, the multiple large energy pickup, tumbling missiles,
 charge beams and the pseudo screw, speed booster and shinespark kills,
 screen-shake falls, splashes in liquids, the hard-mode and event
 spritesets (where the Long Beam Dessgeega is placed), the door lock
-lifecycle, screen shakes, `SpawnWaitingPirates` and the Chozodia alarm's
-music and palette, and every other sprite AI.
+lifecycle, screen shakes, the Chozodia alarm's music and palette, and
+every other sprite AI.

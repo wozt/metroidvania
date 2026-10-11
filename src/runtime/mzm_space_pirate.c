@@ -6,6 +6,7 @@
 #include "mzm_sprite_ai.h"
 
 #include <stddef.h>
+#include <string.h>
 
 /* SpacePiratePose (include/sprites_ai/space_pirate.h). */
 enum {
@@ -145,14 +146,62 @@ static bool nearly_ended(const Ctx *c) {
     return ai_animation_ending(c, 2);
 }
 
-/* DisableChozodiaAlarm (the animated palette and music are not ported). */
+static bool mecha_ridley_killed(const MzmSpriteHooks *hooks) {
+    return hooks && hooks->check_event &&
+           hooks->check_event(hooks->context, MZM_EVENT_MECHA_RIDLEY_KILLED);
+}
+
+/* DisableChozodiaAlarm (the animated palette and music are not ported): the
+ * escape keeps it ringing. */
+static void disable_chozodia_alarm(MzmSpriteGlobals *g, const MzmSpriteHooks *hooks) {
+    g->alarm_timer = mecha_ridley_killed(hooks) ? ALARM_ACTIVE : 0;
+}
+
 static void disable_alarm(const Ctx *c) {
-    MzmSpriteGlobals *g = c->f->globals;
-    if (ai_check_event(c, MZM_EVENT_MECHA_RIDLEY_KILLED)) {
-        g->alarm_timer = ALARM_ACTIVE;
+    disable_chozodia_alarm(c->f->globals, c->f->hooks);
+}
+
+void mzm_spawn_waiting_pirates(MzmSprite *sprites, int count, MzmSpriteGlobals *globals,
+                               const MzmSpriteHooks *hooks, const uint8_t *spriteset,
+                               int spriteset_count, uint8_t spriteset_index, uint16_t y,
+                               uint16_t x, bool no_hatch) {
+    if (mecha_ridley_killed(hooks)) globals->alarm_timer = ALARM_ACTIVE;
+    else if (!globals->alarm_timer) return;
+    /* The third waiting pirate when the spriteset has it, else the first
+     * one for any other pirate. */
+    uint8_t sprite_id = 0;
+    for (int i = 0; i < spriteset_count && !sprite_id; ++i)
+        if (spriteset[i] == MZM_PSPRITE_SPACE_PIRATE_WAITING2) sprite_id = spriteset[i];
+    for (int i = 0; i < spriteset_count && !sprite_id; ++i)
+        if (spriteset[i] == MZM_PSPRITE_SPACE_PIRATE ||
+            spriteset[i] == MZM_PSPRITE_SPACE_PIRATE_WAITING1 ||
+            spriteset[i] == MZM_PSPRITE_SPACE_PIRATE_WAITING3 ||
+            spriteset[i] == MZM_PSPRITE_SPACE_PIRATE2)
+            sprite_id = MZM_PSPRITE_SPACE_PIRATE_WAITING1;
+    if (!sprite_id) {
+        disable_chozodia_alarm(globals, hooks);
         return;
     }
-    g->alarm_timer = 0;
+    /* Spritesets 88 (save platform) and 103 (map station) keep graphics
+     * slot 5 for the pirates. */
+    uint8_t gfx_slot = spriteset_index == 88 || spriteset_index == 103 ? 5 : 0;
+    /* SpriteSpawnPrimary: the first free slot (none: nothing spawns). */
+    for (int slot = 0; slot < count; ++slot) {
+        MzmSprite *s = &sprites[slot];
+        if (s->status & MZM_SPRITE_STATUS_EXISTS) continue;
+        memset(s, 0, sizeof *s);
+        s->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
+                    MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_FACING_DOWN;
+        s->gfx_slot = gfx_slot;
+        s->sprite_id = sprite_id;
+        s->y = y;
+        s->x = x;
+        s->room_slot = no_hatch ? 0x80 | 0x1 : 0x80;
+        s->pose = SPRITE_POSE_UNINITIALIZED;
+        s->ignore_samus_timer = 1;
+        s->ram_slot = (uint8_t)slot;
+        return;
+    }
 }
 
 void mzm_sprites_end_frame(MzmSpriteGlobals *globals, const MzmSpriteHooks *hooks) {

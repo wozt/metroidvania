@@ -66,6 +66,12 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     RoomDoor doors[MAX_ROOM_DOORS]; int door_count;
     RoomHatch hatches[MAX_ROOM_HATCHES]; int hatch_count;
     RoomSprite sprites[MAX_ROOM_SPRITES]; int sprite_count;
+    /* Backgrounds (scripts/mzm_bg_layers.py): the tileset, the room's
+     * transparency and BG properties, the block layers BG0 (when RLE), BG1
+     * and BG2 as sheet indices, and the LZ77 text layers BG0 and BG3. */
+    bool has_backgrounds; int tileset, transparency, bg0_prop, bg2_prop, bg3_prop, bg3_scrolling;
+    int bg_w[3], bg_h[3]; bool bg_present[3]; unsigned short bg[3][MAX_ROOM_CELLS];
+    bool text_present[4]; int text_size[4], text_w[4], text_h[4];
     /* The default spriteset (gSpriteset, gSpritesetSpritesId names). */
     int spriteset; char spriteset_names[MAX_SPRITESET_ENTRIES][64]; int spriteset_count;
     size_t count; } Room;
@@ -242,7 +248,7 @@ failure:
 static bool parse_native_room(const char *path, Room *room) {
     FILE *f = fopen(path, "rb");
     if (!f) { perror(path); return false; }
-    char line[256], extra;
+    static char line[8192]; char extra;
     int version;
     bool ended = false;
     if (fseek(f, 0, SEEK_END) || ftell(f) < 0 || ftell(f) > MAX_FILE_BYTES ||
@@ -300,6 +306,56 @@ static bool parse_native_room(const char *path, Room *room) {
                 sprite.y >= room->height / 16 || sprite.gfx_slot < 0 || sprite.gfx_slot > 7)
                 goto failure;
             room->sprites[room->sprite_count++] = sprite;
+            continue;
+        }
+        if (line[0] == 'L') {
+            char effect[48];
+            if (sscanf(line, "L\t%d\t%d\t%d\t%d\t%d\t%d\t%47s %c", &room->tileset,
+                       &room->transparency, &room->bg0_prop, &room->bg2_prop, &room->bg3_prop,
+                       &room->bg3_scrolling, effect, &extra) != 7 ||
+                room->tileset < 0 || room->tileset > 78)
+                goto failure;
+            room->has_backgrounds = true;
+            continue;
+        }
+        if (line[0] == 'R') {
+            int layer, row, consumed = 0;
+            if (sscanf(line, "R\t%d\t%d\t%n", &layer, &row, &consumed) != 2 || !consumed ||
+                layer < 0 || layer > 2 || !room->bg_present[layer] || row < 0 ||
+                row >= room->bg_h[layer])
+                goto failure;
+            const char *cursor = line + consumed;
+            for (int column = 0; column < room->bg_w[layer]; ++column) {
+                char *end = NULL;
+                long value = strtol(cursor, &end, 10);
+                if (end == cursor || value < 0 || value > 0xFFFF ||
+                    (*end != ',' && column + 1 < room->bg_w[layer]))
+                    goto failure;
+                room->bg[layer][row * room->bg_w[layer] + column] = (unsigned short)value;
+                cursor = *end == ',' ? end + 1 : end;
+            }
+            continue;
+        }
+        if (line[0] == 'G') {
+            int layer, width, height;
+            if (sscanf(line, "G\t%d\t%d\t%d %c", &layer, &width, &height, &extra) != 3 ||
+                layer < 0 || layer > 2 || width < 1 || height < 1 ||
+                width * height > MAX_ROOM_CELLS)
+                goto failure;
+            room->bg_w[layer] = width;
+            room->bg_h[layer] = height;
+            room->bg_present[layer] = true;
+            continue;
+        }
+        if (line[0] == 'T') {
+            int layer, size, width, height;
+            if (sscanf(line, "T\t%d\t%d\t%d\t%d %c", &layer, &size, &width, &height,
+                       &extra) != 4 || (layer != 0 && layer != 3) || width < 8 || height < 8)
+                goto failure;
+            room->text_present[layer] = true;
+            room->text_size[layer] = size;
+            room->text_w[layer] = width;
+            room->text_h[layer] = height;
             continue;
         }
         if (line[0] == 'S') {
@@ -1556,6 +1612,204 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     sprites->frame8++;
     sprites->frame16++;
 }
+/* The room's background art (scripts/mzm_bg_layers.py): the tileset's
+ * metatile sheet and the LZ77 text layers, reloaded when the room changes. */
+typedef struct {
+    const Room *room;
+    char alias[64];
+    int sheet_tileset;
+    SDL_Texture *sheet;
+    SDL_Texture *text[4];
+} RuntimeBgArt;
+
+static SDL_Texture *runtime_bg_texture(SDL_Renderer *renderer, const char *path) {
+    SDL_Surface *surface = SDL_LoadBMP(path);
+    if (!surface) return NULL;
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_DestroySurface(surface);
+    if (texture) {
+        SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    }
+    return texture;
+}
+
+static void runtime_bg_art_sync(RuntimeBgArt *art, SDL_Renderer *renderer, const Room *room,
+                                const char *alias) {
+    if (art->room == room && !strcmp(art->alias, alias)) return;
+    art->room = room;
+    snprintf(art->alias, sizeof art->alias, "%s", alias);
+    for (int i = 0; i < 4; ++i) {
+        if (art->text[i]) SDL_DestroyTexture(art->text[i]);
+        art->text[i] = NULL;
+    }
+    if (!room->has_backgrounds) return;
+    char path[256];
+    if (!art->sheet || art->sheet_tileset != room->tileset) {
+        if (art->sheet) SDL_DestroyTexture(art->sheet);
+        snprintf(path, sizeof path, "assets/extracted/metroid/rooms/runtime/tilesets/tileset_%02d.bmp",
+                 room->tileset);
+        art->sheet = runtime_bg_texture(renderer, path);
+        art->sheet_tileset = room->tileset;
+        if (!art->sheet) fprintf(stderr, "Missing tileset sheet %s (python3 -m scripts.mzm_runtime_room --all)\n", path);
+    }
+    for (int layer = 0; layer < 4; ++layer) {
+        if (!room->text_present[layer]) continue;
+        snprintf(path, sizeof path, "assets/extracted/metroid/rooms/runtime/%s/bg%d.bmp", alias,
+                 layer);
+        art->text[layer] = runtime_bg_texture(renderer, path);
+    }
+}
+
+static void runtime_bg_art_free(RuntimeBgArt *art) {
+    for (int i = 0; i < 4; ++i)
+        if (art->text[i]) SDL_DestroyTexture(art->text[i]);
+    if (art->sheet) SDL_DestroyTexture(art->sheet);
+    *art = (RuntimeBgArt){0};
+}
+
+/* TransparencySetRoomEffectsTransparency: BG priorities by the room's
+ * transparency (BG3 is always 3) and whether Samus is on top of them. */
+static int runtime_bg_priority(const Room *room, int layer) {
+    int t = room->transparency;
+    if (layer == 3) return 3;
+    if (t >= 5 && t <= 0x33 && (t & 3) == 3)
+        return layer == 0 ? 2 : layer == 1 ? 0 : 1;
+    if (t >= 5 && t <= 0x33 && (t & 3) != 0)
+        return layer == 0 ? 1 : layer == 1 ? 0 : 2;
+    return layer;
+}
+
+static bool runtime_samus_on_top(const Room *room) {
+    int t = room->transparency;
+    return t >= 6 && t <= 0x33 && (t & 3) >= 2;
+}
+
+/* The BG0 alpha blend (BLDALPHA): additive at EVA/16 when EVB is 16,
+ * else a mix at EVA = 16 - EVB; none below 8 or with transparency
+ * disabled. Returns false for an opaque BG0. */
+static bool runtime_bg0_blend(const Room *room, int *eva, bool *additive) {
+    int t = room->transparency & ~3;
+    if (room->transparency < 8 || room->bg0_prop == 0x12) return false;
+    static const int evas[] = {7, 10, 13, 16};
+    static const int evbs[] = {0, 3, 6, 9, 11, 13, 16};
+    if (t >= 0x8 && t <= 0x14) {
+        *eva = evas[(t - 0x8) / 4];
+        *additive = true;
+    } else if (t >= 0x18 && t <= 0x30) {
+        *eva = 16 - evbs[(t - 0x18) / 4];
+        *additive = false;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+/* ScrollBg3 (gBg3XPosition / gBg3YPosition) in pixels, from the camera
+ * as gBg1 position. */
+static void runtime_bg3_position(const Room *room, float cx, float cy, int *x, int *y) {
+    static const int types[11][2] = {
+        {0, 0}, {2, 0}, {0, 2}, {2, 2}, {1, 2}, {2, 1}, {1, 1}, {1, 0}, {1, 0}, {4, 0}, {1, 1},
+    };
+    int scrolling = room->bg3_scrolling >= 0 && room->bg3_scrolling <= 10 ? room->bg3_scrolling : 0;
+    int x_type = types[scrolling][0], y_type = types[scrolling][1];
+    int bg1_x = (int)cx * 4, bg1_y = (int)cy * 4;
+    int sub_x = x_type == 1 ? bg1_x - 128 : x_type == 2 ? (bg1_x - 128) >> 1 :
+                x_type == 4 ? (bg1_x - 128) >> 2 : 0;
+    int sub_y;
+    if (room->bg3_prop == 0x46) {
+        /* BG_PROP_STARTS_FROM_BOTTOM */
+        int size = (room->height / 16 - (10 + 2)) * 64;
+        int offset = (room->text_size[3] & 2 ? 0x800 : 0x400) - 0x280;
+        if (y_type == 0) offset = size = 0;
+        else if (y_type == 1) size -= bg1_y;
+        else size = (size - bg1_y) >> 4;
+        sub_y = offset - size > 0 ? offset - size : 0;
+    } else {
+        sub_y = y_type == 1 ? bg1_y - 128 : y_type == 2 ? (bg1_y - 128) >> 1 :
+                y_type == 4 ? (bg1_y - 128) >> 2 : 0;
+    }
+    *x = sub_x / 4;
+    *y = sub_y / 4;
+}
+
+/* A destination rectangle whose edges are rounded to output pixels, so
+ * that neighbouring blocks meet without seams at fractional scales. */
+static SDL_FRect runtime_snap_rect(SDL_FRect viewport, float scale, float x, float y, float w,
+                                   float h) {
+    float x0 = SDL_roundf(viewport.x + x * scale), y0 = SDL_roundf(viewport.y + y * scale);
+    float x1 = SDL_roundf(viewport.x + (x + w) * scale), y1 = SDL_roundf(viewport.y + (y + h) * scale);
+    return (SDL_FRect){x0, y0, x1 - x0, y1 - y0};
+}
+
+/* One text background layer, wrapped at its size. */
+static void runtime_draw_text_layer(SDL_Renderer *renderer, SDL_Texture *texture, int w, int h,
+                                    int scroll_x, int scroll_y, SDL_FRect viewport, float scale) {
+    int ox = ((scroll_x % w) + w) % w, oy = ((scroll_y % h) + h) % h;
+    for (int y = -oy; y < 224; y += h)
+        for (int x = -ox; x < 320; x += w) {
+            SDL_FRect dst = runtime_snap_rect(viewport, scale, (float)x, (float)y, (float)w,
+                                              (float)h);
+            SDL_RenderTexture(renderer, texture, NULL, &dst);
+        }
+}
+
+/* One block layer from the metatile sheet. */
+static void runtime_draw_block_layer(SDL_Renderer *renderer, SDL_Texture *sheet, const Room *room,
+                                     int layer, float cx, float cy, SDL_FRect viewport,
+                                     float scale) {
+    int w = room->bg_w[layer], h = room->bg_h[layer];
+    int x0 = (int)cx / 16, y0 = (int)cy / 16;
+    for (int by = y0; by <= y0 + 224 / 16 + 1 && by < h; ++by)
+        for (int bx = x0; bx <= x0 + 320 / 16 + 1 && bx < w; ++bx) {
+            int value = room->bg[layer][by * w + bx];
+            SDL_FRect src = {(float)(value % 32 * 16), (float)(value / 32 * 16), 16.f, 16.f};
+            SDL_FRect dst = runtime_snap_rect(viewport, scale, (float)(bx * 16) - cx,
+                                              (float)(by * 16) - cy, 16.f, 16.f);
+            SDL_RenderTexture(renderer, sheet, &src, &dst);
+        }
+}
+
+/* The backgrounds whose priority lies in [low, high], back to front: by
+ * priority, then BG3 to BG0 (a lower BG wins at equal priority). */
+static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt *art,
+                                     const Room *room, float cx, float cy, SDL_FRect viewport,
+                                     float scale, int low, int high) {
+    if (!room->has_backgrounds || !art->sheet) return;
+    for (int priority = high; priority >= low; --priority)
+        for (int layer = 3; layer >= 0; --layer) {
+            if (runtime_bg_priority(room, layer) != priority) continue;
+            int eva = 16;
+            bool additive = false, blend = layer == 0 && runtime_bg0_blend(room, &eva, &additive);
+            SDL_Texture *texture = layer == 3 || (layer == 0 && art->text[0]) ? art->text[layer]
+                                                                              : art->sheet;
+            if (!texture) continue;
+            if (blend) {
+                Uint8 level = (Uint8)(eva * 255 / 16);
+                SDL_SetTextureBlendMode(texture, additive ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
+                if (additive) SDL_SetTextureColorMod(texture, level, level, level);
+                else SDL_SetTextureAlphaMod(texture, level);
+            }
+            if (layer == 3 && art->text[3]) {
+                int x, y;
+                runtime_bg3_position(room, cx, cy, &x, &y);
+                runtime_draw_text_layer(renderer, art->text[3], room->text_w[3], room->text_h[3],
+                                        x, y, viewport, scale);
+            } else if (layer == 0 && art->text[0]) {
+                runtime_draw_text_layer(renderer, art->text[0], room->text_w[0], room->text_h[0],
+                                        (int)cx, (int)cy, viewport, scale);
+            } else if (layer < 3 && room->bg_present[layer]) {
+                runtime_draw_block_layer(renderer, art->sheet, room, layer, cx, cy, viewport,
+                                         scale);
+            }
+            if (blend) {
+                SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+                SDL_SetTextureColorMod(texture, 255, 255, 255);
+                SDL_SetTextureAlphaMod(texture, 255);
+            }
+        }
+}
+
 /* Load an exported native room and its background texture. */
 static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,
                               SDL_Texture **texture) {
@@ -1828,6 +2082,7 @@ int main(int argc, char **argv) {
     RuntimeLibrary projectile_library = {0};
     RuntimeLibrary sprite_library = {0};
     static RuntimeSprites sprites;
+    static RuntimeBgArt bg_art;
     float last_cx = 0.f, last_cy = 0.f;
     static RuntimePalettes palettes;
     RuntimePaletteSlots palette_slots={0};
@@ -2340,8 +2595,18 @@ int main(int argc, char **argv) {
         float cy=(float)(int)clampf(feet_y-16.f-112.f,0.f,(float)(room->height>224?room->height-224:0));
         last_cx = cx;
         last_cy = cy;
-        SDL_SetRenderDrawColor(renderer,12,14,24,255);SDL_RenderClear(renderer);
-        if (texture) {
+        /* SET_BACKDROP_COLOR(COLOR_BLACK) behind the native layers. */
+        runtime_bg_art_sync(&bg_art,renderer,room,current_room);
+        bool layered=room->has_backgrounds && bg_art.sheet;
+        int sprite_priority=samus.pose==MZM_POSE_DYING?0:runtime_samus_on_top(room)?1:2;
+        if(layered)SDL_SetRenderDrawColor(renderer,0,0,0,255);
+        else SDL_SetRenderDrawColor(renderer,12,14,24,255);
+        SDL_RenderClear(renderer);
+        if(layered) {
+            /* Backgrounds at or behind the sprites' priority. */
+            runtime_draw_backgrounds(renderer,&bg_art,room,cx,cy,viewport,scale,
+                                     sprite_priority,3);
+        } else if (texture) {
             SDL_FRect src={cx,cy,320.f,224.f};
             if (src.w>room->width) src.w=(float)room->width;
             if (src.h>room->height) src.h=(float)room->height;
@@ -2530,6 +2795,9 @@ int main(int argc, char **argv) {
                             (float)art->w*scale,(float)art->h*scale};
             SDL_RenderTexture(renderer,shot_texture,NULL,&shot);
         }
+        if(layered)
+            runtime_draw_backgrounds(renderer,&bg_art,room,cx,cy,viewport,scale,0,
+                                     sprite_priority-1);
         if(show_hitbox || !lib_entry) {
             float bx,by,bw,bh;
             mzm_samus_box(&samus,&bx,&by,&bw,&bh);
@@ -2573,6 +2841,7 @@ cleanup:
     runtime_library_free(&library);
     runtime_library_free(&projectile_library);
     runtime_library_free(&sprite_library);
+    runtime_bg_art_free(&bg_art);
     if (texture) SDL_DestroyTexture(texture);
     if (surface) SDL_DestroySurface(surface);
     if (renderer) SDL_DestroyRenderer(renderer);

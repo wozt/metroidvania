@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from scripts import mzm_room_render as render
-from scripts import export_index, mzm_sprites
+from scripts import export_index, mzm_bg_layers, mzm_sprites
 from scripts.asset_layout import METROID_ROOMS, private_path
 from scripts.sprite_library import write_atomic
 
@@ -240,7 +240,7 @@ def room_hatches(doors, room: int, clip, tables, hatch_types, hatch_behaviors):
 def encode_room(area: str, number: int, width: int, height: int,
                 clip: tuple[int, int, tuple[int, ...]], tables,
                 doors: list[dict] | None = None, hatches=None, sprites=None,
-                spriteset=None) -> str:
+                spriteset=None, backgrounds: list[str] | None = None) -> str:
     clip_width, clip_height, cells = clip
     if clip_width * 16 != width or clip_height * 16 != height:
         raise ValueError("Clipdata dimensions differ from the rendered room")
@@ -285,6 +285,8 @@ def encode_room(area: str, number: int, width: int, height: int,
         index, members = spriteset
         for name, slot in members:
             lines.append(f"S\t{index}\t{name[len('PSPRITE_'):]}\t{slot}")
+    # The backgrounds (scripts.mzm_bg_layers.room_background_lines).
+    lines.extend(backgrounds or [])
     lines.append("END")
     return "\n".join(lines) + "\n"
 
@@ -326,16 +328,37 @@ def produce(root: Path, area: str, number: int) -> dict:
         spriteset = mzm_sprites.room_spriteset(area, number)
     except ValueError:
         sprites, spriteset = [], None   # rooms outside the area tables (test rooms)
+    # Block layers by property bit (BG0 and BG2 when RLE compressed).
+    rle = mzm_bg_layers.bg_properties()["BG_PROP_RLE_COMPRESSED"]
+    blocks = {"Bg1": layers["Bg1"]}
+    for layer in ("Bg0", "Bg2"):
+        value = mzm_bg_layers.bg_properties().get(fields.get(f"{layer.lower()}Prop", ""), 0)
+        if value & rle:
+            blocks[layer] = render.rle_room(render.room_blob(fields[f"p{layer}Data"]))
+    background_lines, images = mzm_bg_layers.room_background_lines(fields, blocks, tileset)
     text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites,
-                       spriteset)
+                       spriteset, background_lines)
     folder = private_path(Path(root), RUNTIME_ROOMS / f"{area.lower()}_{number:03}",
                           create=True)
     folder.mkdir(exist_ok=True)
+    for name, (image_width, image_height, rgba) in images.items():
+        write_atomic(folder / name, mzm_bg_layers.bmp32(image_width, image_height, rgba))
+    sheets = private_path(Path(root), RUNTIME_ROOMS / "tilesets", create=True)
+    sheets.mkdir(exist_ok=True)
+    sheet = sheets / f"tileset_{tileset:02}.bmp"
+    if not sheet.is_file() or _SHEETS_WRITTEN.get(tileset) is None:
+        sheet_width, sheet_height, rgba = mzm_bg_layers.metatile_sheet(tileset)
+        write_atomic(sheet, mzm_bg_layers.bmp32(sheet_width, sheet_height, rgba))
+        _SHEETS_WRITTEN[tileset] = sheet
     write_atomic(folder / "room.tsv", text)
     write_atomic(folder / "background.bmp", render.bmp24(width, height, bytes(rgb)))
     return {"folder": folder, "width": width, "height": height,
             "cells": text.count("\nC\t"), "doors": text.count("\nD\t"),
             "hatches": text.count("\nH\t"), "composite": composite}
+
+
+# Tileset sheets written by this process (each tileset once per export).
+_SHEETS_WRITTEN: dict[int, Path] = {}
 
 
 def export_all(root: Path) -> int:

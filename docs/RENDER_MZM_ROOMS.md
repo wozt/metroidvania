@@ -23,3 +23,23 @@ python3 scripts/mzm_room_render.py --area Brinstar --room 33
   available. The SDL3 `fusion_mzm_room_viewer` displays the same local BMP.
 - No copyrighted ROM bytes, audio, tiles, or frame images are committed.
 - Aria has not received a full room decoder yet.
+
+## Runtime backgrounds (patch 0255)
+
+`scripts/mzm_bg_layers.py` rebuilds BG VRAM and palette RAM as
+`RoomLoadTileset` and `RoomLoadBackgrounds` leave them and the runtime room
+export (`scripts/mzm_runtime_room.py`) writes, privately:
+
+- `rooms/runtime/tilesets/tileset_NN.bmp`: the 1024 tileset metatiles and the
+  208 common ones (doors, breakable blocks, tanks), 32 per row, 32-bit with
+  transparent color 0;
+- in `room.tsv`: `L` (tileset, transparency, BG0/BG2/BG3 properties, BG3
+  scrolling, effect), `G`/`R` (the BG0 when RLE, BG1 and BG2 block maps as
+  sheet indices) and `T` (the BG3 and LZ77 BG0 text layers, written as
+  `bg3.bmp` / `bg0.bmp`).
+
+`fusion_room_runtime` draws the layers by the native priorities of the
+room's transparency value around the sprites (priority 2, or 1 when Samus is
+on top of the backgrounds; BG1 normally passes in front of Samus), blends
+BG0 like `BLDALPHA` and scrolls BG3 with `ScrollBg3`. Animated tiles and
+palettes, BG movement effects, gradients and windows are not reproduced yet.

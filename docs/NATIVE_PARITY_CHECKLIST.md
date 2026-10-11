@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 25 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 26 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -314,6 +314,15 @@ Next action: Port power bombs and the multiple large energy pickup.
 ### Rooms, areas and maps
 
 [?] **`mzm.rooms.inventory-boundary` — source coverage.** The current classifier assigns 85 discovered routine(s) to this category (85 by source path). Category completeness has not been established.
+
+[~] **`mzm.rooms.backgrounds` — Room backgrounds: layers, priorities, BG0 blend and BG3 scrolling.** VRAM and BG palette RAM are rebuilt as RoomLoadTileset leaves them (common tiles at 0x4800, tileset at 0x5800, background graphics below 0xFDE0, palette rows 0-2 common and 3-15 from the tileset); every tileset gets a sheet of its 1024 metatiles and the 208 common ones, rooms export their BG0 (RLE), BG1 and BG2 block maps and their BG3 / LZ77 BG0 text maps; the runtime draws them by the native priorities of the room's transparency value (Samus and sprites at priority 2, or 1 on top of the backgrounds), blends BG0 (additive at EVA/16 or alpha at 16 - EVB) and scrolls BG3 with ScrollBg3 including rooms starting from the bottom. Checked in brinstar_000, chozodia_016 and norfair_005 captures.
+
+Native evidence: `mzm:c:src/room.c:RoomLoadBackgrounds`, `mzm:c:src/room.c:RoomLoadTileset`, `mzm:c:src/scroll.c:ScrollBg3`, `mzm:c:src/scroll.c:ScrollGetBg3Scroll`, `mzm:c:src/transparency.c:TransparencyGetBgSizeFlag`, `mzm:c:src/transparency.c:TransparencySetRoomEffectsTransparency`.  
+Local implementation: [`scripts/mzm_bg_layers.py`](../scripts/mzm_bg_layers.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_bg_layers.py`](../tests/test_mzm_bg_layers.py).
+Dependencies: `mzm.collision.clipdata`.  
+Known divergences: Animated tilesets and palettes, the mother ship common tiles, BG2 movement (BG_PROP_MOVING), BG0 movement (water, clouds, snow), BG2/BG3 gradient effects, windows and screen fades are not reproduced; BG2 and the LZ77 BG0 scroll with BG1; the camera is the runtime's 320x224 follow view, not the native scrolling; particles share the sprites' priority.  
+Next action: Animated tiles and palettes, then BG movement effects.
 
 ### Camera and scrolling
 

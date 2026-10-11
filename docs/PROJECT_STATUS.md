@@ -2934,3 +2934,30 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite (409 tests), every rebuild task up to date, `check_generated` fresh
   and the proprietary-file guard passed.
+
+## Patch 0255 - Zero Mission room backgrounds
+
+- `scripts/mzm_bg_layers.py` rebuilds BG VRAM and palette RAM as
+  `RoomLoadTileset` and `RoomLoadBackgrounds` leave them (common tiles,
+  tileset, background graphics, common and tileset palette rows) and draws
+  a per-tileset metatile sheet (with the 208 common metatiles), the BG3 and
+  LZ77 BG0 text layers; `scripts/mzm_runtime_room.py` exports them with the
+  BG0/BG1/BG2 block maps (`L`, `G`, `R`, `T` lines).
+- `fusion_room_runtime` draws the native layers: BG3 with `ScrollBg3`
+  (including rooms starting from the bottom), BG2, BG1 and BG0 by the
+  priorities of the room's transparency value around Samus and the sprites
+  (BG1 now passes in front of them as in the game), the BG0 blend
+  (`BLDALPHA`: additive at EVA/16, or alpha) and a black backdrop; block
+  edges are snapped to output pixels. Rooms without the new lines keep the
+  old composite.
+- Checked in captures: brinstar_000 shows its BG3 vegetation behind the
+  cave, norfair_005 its BG0 bubble columns blended over BG3, chozodia_016 its
+  layers.
+- Not reproduced: animated tiles and palettes, BG movement effects,
+  gradients, windows, the mother ship common tiles.
+- Tests: `tests/test_mzm_bg_layers.py` covers the sheet indices, tile
+  drawing (flips, banks, transparent color 0), the 32-bit BMP, the
+  `BgProperty` values and the room lines.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.

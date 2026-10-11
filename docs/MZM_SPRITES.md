@@ -46,6 +46,13 @@ read from the user's ROM at export time; nothing is stored in the repository.
   and corner turns, slope animations (two thirds speed uphill with the
   animation slowed every other frame), falling with `sSpritesFallingSpeed`
   and landing.
+- Ripper (`ripper.c`, brown and purple): raised an eighth of a block at
+  init, a random X flip from the sprite RNG, half a pixel per frame (purple:
+  one), a wall probe a quarter block above its feet and 36 subpixels ahead,
+  the two-part turn, and its death point 24 subpixels above its feet. Only
+  super missiles and the screw attack hurt it (ROM weaknesses).
+- Sprite families (`MzmSpriteFamily`) group the sprites that share an AI and
+  OAM tables; `MzmSpriteFrame.kinds` holds each family's frame durations.
 
 - Combat. `SpriteUpdate` starts with `SpriteUtilSamusAndSpriteCollision`
   and runs between `SamusUpdate` and `ProjectileUpdate`, which ends with

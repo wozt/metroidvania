@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 8 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 9 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -136,6 +136,15 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`.  
 Known divergences: Power bombs are not ported, so their drops never spawn; pickup sounds are not played; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
 Next action: Port power bombs and the multiple large energy pickup.
+
+[~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death into drops.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper.c:Ripper`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.enemies.drops`.  
+Known divergences: Freezing, the damaged sound and the death explosion are not ported; missiles that would tumble off a Ripper are removed.  
+Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns and death into enemy drops are ported.
 

@@ -1166,7 +1166,7 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
 #define RUNTIME_MAX_SPRITES 24
 typedef struct {
     MzmSpriteTables tables;
-    MzmSpriteKind zoomer, drop;
+    MzmSpriteKind kinds[MZM_SPRITE_FAMILIES];
     char names[256][64];
     bool tables_ok, kinds_ok;
     MzmSprite live[RUNTIME_MAX_SPRITES];
@@ -1227,16 +1227,13 @@ static bool runtime_sprite_kind_open(MzmSpriteKind *kind, RuntimeLibrary *librar
 }
 
 static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *library) {
-    const char *zoomers[MZM_ZOOMER_ANIMS];
-    for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) zoomers[a] = "ZOOMER_YELLOW";
-    static const char *const drops[MZM_DROP_ANIMS] = {
-        "SMALL_ENERGY_DROP", "LARGE_ENERGY_DROP", "MISSILE_DROP", "SUPER_MISSILE_DROP",
-        "POWER_BOMB_DROP",
-    };
-    return runtime_sprite_kind_open(&sprites->zoomer, library, zoomers, mzm_zoomer_anim_names,
-                                    MZM_ZOOMER_ANIMS) &&
-           runtime_sprite_kind_open(&sprites->drop, library, drops, mzm_drop_anim_names,
-                                    MZM_DROP_ANIMS);
+    for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) {
+        const MzmSpriteFamily *family = &mzm_sprite_families[f];
+        if (!runtime_sprite_kind_open(&sprites->kinds[f], library, family->library_sprites,
+                                      family->anims, family->count))
+            return false;
+    }
+    return true;
 }
 
 /* SpriteLoadRoomSprites: the ported sprites of the room. */
@@ -1299,8 +1296,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     }
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4)};
-    MzmSpriteFrame frame = {&world, &sprites->tables, &sprites->zoomer, &sprites->drop,
-                            equipment, sprites->frame8, sprites->frame16};
+    MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
+                            sprites->frame16};
+    for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) frame.kinds[f] = &sprites->kinds[f];
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
     sprites->frame8++;

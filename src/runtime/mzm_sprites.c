@@ -55,6 +55,15 @@ enum {
     ENEMY_DROP_POSE_IDLE = 0x9,
 };
 
+/* Ripper poses (ripper.c). */
+enum {
+    RIPPER_POSE_MOVING_INIT = 0x8,
+    RIPPER_POSE_MOVING = 0x9,
+    RIPPER_POSE_TURNING_AROUND_INIT = 0xA,
+    RIPPER_POSE_TURNING_AROUND_FIRST_PART = 0xB,
+    RIPPER_POSE_TURNING_AROUND_SECOND_PART = 0xC,
+};
+
 /* ZoomerTurningDirection */
 enum {
     TURN_BOTTOM_LEFT_CORNER, TURN_TOP_RIGHT_EDGE, TURN_BOTTOM_RIGHT_EDGE, TURN_TOP_RIGHT_CORNER,
@@ -71,6 +80,28 @@ const char *const mzm_zoomer_anim_names[MZM_ZOOMER_ANIMS] = {
 const char *const mzm_drop_anim_names[MZM_DROP_ANIMS] = {
     "EnemyDropOam_SmallEnergy", "EnemyDropOam_LargeEnergy", "EnemyDropOam_Missile",
     "EnemyDropOam_SuperMissile", "EnemyDropOam_PowerBomb",
+};
+
+const char *const mzm_ripper_anim_names[MZM_RIPPER_ANIMS] = {
+    "RipperOam_Moving", "RipperOam_TurningAround", "RipperOam_TurningAroundPart2",
+};
+
+static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
+    "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
+    "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
+};
+static const char *const ripper_sprites[MZM_RIPPER_ANIMS] = {
+    "RIPPER_BROWN", "RIPPER_BROWN", "RIPPER_BROWN",
+};
+static const char *const drop_sprites[MZM_DROP_ANIMS] = {
+    "SMALL_ENERGY_DROP", "LARGE_ENERGY_DROP", "MISSILE_DROP", "SUPER_MISSILE_DROP",
+    "POWER_BOMB_DROP",
+};
+
+const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
+    [MZM_FAMILY_ZOOMER] = {MZM_ZOOMER_ANIMS, mzm_zoomer_anim_names, zoomer_sprites},
+    [MZM_FAMILY_RIPPER] = {MZM_RIPPER_ANIMS, mzm_ripper_anim_names, ripper_sprites},
+    [MZM_FAMILY_DROP] = {MZM_DROP_ANIMS, mzm_drop_anim_names, drop_sprites},
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
@@ -694,6 +725,84 @@ static void zoomer(Ctx *c) {
     }
 }
 
+/* SpriteUtilChooseRandomXFlip */
+static void random_x_flip(Ctx *c) {
+    if (c->rng & 1) c->s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+    else c->s->status |= MZM_SPRITE_STATUS_X_FLIP;
+}
+
+/* RipperInit */
+static void ripper_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->hitbox_top = -(HALF_BLOCK_SIZE + PIXEL_SIZE);
+    s->hitbox_bottom = 0;
+    s->hitbox_left = -HALF_BLOCK_SIZE;
+    s->hitbox_right = HALF_BLOCK_SIZE;
+    s->draw_top = BLOCK_SIZE / PIXEL_SIZE;
+    s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+    s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+    set_anim(s, MZM_RIPPER_MOVING);
+    s->samus_collision = SSC_HURTS_SAMUS;
+    s->health = c->tables->health[s->sprite_id];
+    s->y -= EIGHTH_BLOCK_SIZE;
+    random_x_flip(c);
+    s->pose = RIPPER_POSE_MOVING_INIT;
+}
+
+/* RipperMove: half a pixel per frame (purple: one), turning at a wall a
+ * quarter block above its feet. */
+static void ripper_move(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t speed = s->sprite_id == MZM_PSPRITE_RIPPER_PURPLE ? PIXEL_SIZE : PIXEL_SIZE / 2;
+    uint16_t y = (uint16_t)(s->y - QUARTER_BLOCK_SIZE);
+    if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+        if (collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE + PIXEL_SIZE)) != MZM_COLLISION_SOLID)
+            s->x += speed;
+        else
+            s->pose = RIPPER_POSE_TURNING_AROUND_INIT;
+    } else {
+        if (collision_at(c, y, (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) == MZM_COLLISION_SOLID)
+            s->pose = RIPPER_POSE_TURNING_AROUND_INIT;
+        else
+            s->x -= speed;
+    }
+}
+
+/* Ripper: the AI. The damaged sound and freezing are not ported. */
+static void ripper(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED: ripper_init(c); break;
+    case RIPPER_POSE_MOVING_INIT:
+        s->pose = RIPPER_POSE_MOVING;
+        set_anim(s, MZM_RIPPER_MOVING);
+        /* fallthrough */
+    case RIPPER_POSE_MOVING: ripper_move(c); break;
+    case RIPPER_POSE_TURNING_AROUND_INIT:
+        s->pose = RIPPER_POSE_TURNING_AROUND_FIRST_PART;
+        set_anim(s, MZM_RIPPER_TURNING_AROUND);
+        /* fallthrough */
+    case RIPPER_POSE_TURNING_AROUND_FIRST_PART:
+        if (animation_ending(c, 1)) {
+            s->status ^= MZM_SPRITE_STATUS_X_FLIP;
+            s->pose = RIPPER_POSE_TURNING_AROUND_SECOND_PART;
+            set_anim(s, MZM_RIPPER_TURNING_AROUND_PART2);
+        }
+        break;
+    case RIPPER_POSE_TURNING_AROUND_SECOND_PART:
+        if (animation_ending(c, 2)) s->pose = RIPPER_POSE_MOVING_INIT;
+        break;
+    default:
+        sprite_death(c, (uint16_t)(s->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), s->x);
+        break;
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -774,6 +883,16 @@ static void enemy_drop(Ctx *c) {
 
 static bool is_drop(uint8_t sprite_id) {
     return sprite_id >= MZM_PSPRITE_LARGE_ENERGY_DROP && sprite_id <= MZM_PSPRITE_POWER_BOMB_DROP;
+}
+
+int mzm_sprite_family(uint8_t sprite_id) {
+    switch (sprite_id) {
+    case MZM_PSPRITE_ZOOMER_YELLOW:
+    case MZM_PSPRITE_ZOOMER_RED: return MZM_FAMILY_ZOOMER;
+    case MZM_PSPRITE_RIPPER_BROWN:
+    case MZM_PSPRITE_RIPPER_PURPLE: return MZM_FAMILY_RIPPER;
+    default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
+    }
 }
 
 /* SPRITE_CLEAR_AND_SET_ISFT (bit 7 is the power bomb stun). */
@@ -919,14 +1038,13 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
 }
 
 bool mzm_sprite_supported(uint8_t sprite_id) {
-    return sprite_id == MZM_PSPRITE_ZOOMER_YELLOW || sprite_id == MZM_PSPRITE_ZOOMER_RED ||
-           is_drop(sprite_id);
+    return mzm_sprite_family(sprite_id) >= 0;
 }
 
 const char *mzm_sprite_anim_name(const MzmSprite *sprite) {
-    if (is_drop(sprite->sprite_id))
-        return sprite->anim < MZM_DROP_ANIMS ? mzm_drop_anim_names[sprite->anim] : NULL;
-    return sprite->anim < MZM_ZOOMER_ANIMS ? mzm_zoomer_anim_names[sprite->anim] : NULL;
+    int family = mzm_sprite_family(sprite->sprite_id);
+    if (family < 0 || sprite->anim >= mzm_sprite_families[family].count) return NULL;
+    return mzm_sprite_families[family].anims[sprite->anim];
 }
 
 void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_slot,
@@ -975,8 +1093,8 @@ static void check_on_screen(const Ctx *c) {
 void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *frame) {
     if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || !mzm_sprite_supported(sprite->sprite_id))
         return;
-    bool drop = is_drop(sprite->sprite_id);
-    Ctx c = {sprite, frame, frame->world, frame->tables, drop ? frame->drop : frame->zoomer,
+    int family = mzm_sprite_family(sprite->sprite_id);
+    Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],
              0, MZM_COLLISION_AIR, frame->frame8};
     /* gSpriteRng = sSpriteRandomNumberTable[(frame8 + slot + frame16 / 16 +
      * x + y) % 32] */
@@ -984,8 +1102,11 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
                               sprite->y) % 32u];
     /* SpriteUtilUpdateStunTimer: the stun palette flash is not drawn yet. */
     if (sprite->isft & 0x7F) sprite->isft--;
-    if (drop) enemy_drop(&c);
-    else zoomer(&c);
+    switch (family) {
+    case MZM_FAMILY_ZOOMER: zoomer(&c); break;
+    case MZM_FAMILY_RIPPER: ripper(&c); break;
+    default: enemy_drop(&c); break;
+    }
     if (sprite->status & MZM_SPRITE_STATUS_EXISTS) {
         /* A sprite that just became a drop finishes the frame on its
          * previous OAM (pOam is only set by EnemyDropInit), so `c.kind`

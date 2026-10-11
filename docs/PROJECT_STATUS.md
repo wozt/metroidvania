@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers and Rippers with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2535,5 +2535,23 @@ No automatic reciprocal link or native engine encoder is implemented.
   collection and the blink and despawn timing; `tests/test_mzm_sprites.py`
   checks the drop ids, tables and common graphics addresses.
 - Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
+  26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0239 - Zero Mission Rippers
+
+- `mzm_sprites` ports the Ripper AI (`ripper.c`) for the brown and purple
+  Rippers: init, `SpriteUtilChooseRandomXFlip`, the horizontal patrol with
+  its wall probe, the two-part turn and the death into drops.
+- Sprite AIs are grouped into families (`MzmSpriteFamily`: Zoomer, Ripper,
+  enemy drops); the runtime loads each family's OAM frame durations from the
+  sprite library, and `MzmSpriteFrame` carries them by family.
+- `scripts/mzm_sprites.py` exports both Rippers with their own graphics and
+  palettes (101 enemy sequences now).
+- Checked in brinstar_003 (`--spawn 120 352`): the five brown Rippers patrol
+  at half a pixel per frame (29 pixels in 59 frames) and turn at the walls.
+- Tests: `tests/test_mzm_sprites.c` adds the Ripper init, speed, wall turn
+  and turn animation, its immunity to beams and missiles, the super missile
+  kill, its death point and the purple Ripper's speed.- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
   26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.

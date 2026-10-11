@@ -69,7 +69,8 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    frame = (MzmSpriteFrame){&world, &tables, &kind, &drop_kind, &equipment, 0, 0};
+    static MzmSpriteKind ripper_kind;
+    frame = (MzmSpriteFrame){&world, &tables, {&kind, &ripper_kind, &drop_kind}, &equipment, 0, 0};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -349,6 +350,80 @@ int main(void) {
     }
     assert(z.status == 0 && frames_alive == 1 + 19 + 1 + 400 - 1);
     assert(shown_changes == 1 + 79);
+
+    /* Rippers: a corridor between walls at columns 2 and 12 over a floor at
+     * row 10. Init raises it an eighth of a block and picks a direction
+     * from the RNG (0: X flip, moving right). */
+    for (int a = 0; a < MZM_RIPPER_ANIMS; ++a) {
+        ripper_kind.counts[a] = 3;
+        ripper_kind.timers[a][0] = ripper_kind.timers[a][1] = ripper_kind.timers[a][2] = 2;
+    }
+    tables.health[MZM_PSPRITE_RIPPER_BROWN] = 20;
+    tables.health[MZM_PSPRITE_RIPPER_PURPLE] = 40;
+    tables.weakness[MZM_PSPRITE_RIPPER_BROWN] =
+        MZM_WEAKNESS_SUPER_MISSILES | MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+    for (int y = 0; y < 10; ++y) grid[y][2] = grid[y][12] = MZM_CLIPDATA_SOLID;
+    MzmSprite r;
+    mzm_sprite_init_primary(&r, MZM_PSPRITE_RIPPER_BROWN, 0, 6, 7, 0);
+    step(&r, 0);
+    assert(r.pose == 8 && r.health == 20 && r.y == 7 * 64 - 8 && r.hitbox_top == -36);
+    assert(r.status & MZM_SPRITE_STATUS_X_FLIP && r.anim == MZM_RIPPER_MOVING);
+    x0 = r.x;
+    step(&r, 0);
+    assert(r.pose == 9 && r.x == x0 + 2);
+    /* It turns when the wall is 36 subpixels ahead: x + 36 reaches column
+     * 12 (768) once x >= 732. */
+    frames = 0;
+    while (r.pose == 9 && frames < 500) {
+        step(&r, 0);
+        ++frames;
+    }
+    assert(r.pose == 0xA && r.x == 732);
+    /* Turn: the X flip changes when the first table ends, then the second
+     * table nearly ends and it moves left. */
+    frames = 0;
+    while (r.status & MZM_SPRITE_STATUS_X_FLIP && frames < 50) {
+        step(&r, 0);
+        ++frames;
+    }
+    assert(r.pose == 0xC && r.anim == MZM_RIPPER_TURNING_AROUND_PART2);
+    frames = 0;
+    while (r.pose != 9 && frames < 50) {
+        step(&r, 0);
+        ++frames;
+    }
+    x0 = r.x;
+    step(&r, 0);
+    assert(r.x == x0 - 2);
+    /* Brown rippers only take super missiles: beams and missiles stun them
+     * for 3 frames and are consumed. */
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
+                                      .x = r.x, .y = r.y - 20};
+    weapons.list[1] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                      .x = r.x, .y = r.y - 20};
+    mzm_sprites_projectile_hits(&r, 1, &weapons, &tables);
+    assert(r.health == 20 && (r.isft & 0x7F) == 3 && !weapons.list[0].active &&
+           !weapons.list[1].active);
+    weapons.list[2] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_SUPER_MISSILE,
+                                      .x = r.x, .y = r.y - 20};
+    mzm_sprites_projectile_hits(&r, 1, &weapons, &tables);
+    assert(r.health == 0 && r.pose == 0x62);
+    /* Its death point is 24 subpixels above its feet (no drop: zero
+     * probabilities). */
+    uint16_t ry = r.y;
+    tables.drops[MZM_PSPRITE_RIPPER_BROWN][MZM_DROP_PROB_SMALL_ENERGY] = 1024;
+    equipment.energy = 50;
+    step(&r, 0);
+    assert(r.sprite_id == MZM_PSPRITE_SMALL_ENERGY_DROP && r.y == ry - 24);
+
+    /* Purple rippers move a pixel per frame. */
+    mzm_sprite_init_primary(&r, MZM_PSPRITE_RIPPER_PURPLE, 0, 6, 7, 0);
+    step(&r, 0);
+    x0 = r.x;
+    step(&r, 0);
+    assert(r.health == 40 && r.x == x0 + 4);
     puts("mzm_sprites: ok");
     return 0;
 }

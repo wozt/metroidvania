@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T02:22:26+00:00",
+ "generated_at": "2026-10-11T02:27:24+00:00",
  "git": {
-  "commit": "733cf41",
+  "commit": "835adb8",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 55,
+   "total": 56,
    "by_status": {
     "not_started": 9,
     "in_progress": 2,
-    "partial": 31,
+    "partial": 32,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,14 +104,15 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 21.8,
-   "with_passing_tests": 42,
-   "with_passing_tests_percent": 76.4,
+   "functional_or_better_percent": 21.4,
+   "with_passing_tests": 43,
+   "with_passing_tests_percent": 76.8,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.samus_runtime_library",
     "mzm.collision.clipdata",
     "mzm.enemies.drops",
+    "mzm.enemies.ripper",
     "mzm.enemies.zoomer",
     "mzm.input.gamepad",
     "mzm.player.samus_controller",
@@ -172,11 +173,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 8,
+   "total": 9,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 8,
+    "partial": 9,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -185,13 +186,14 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 8,
+   "with_passing_tests": 9,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.samus_runtime_library",
     "mzm.collision.clipdata",
     "mzm.enemies.drops",
+    "mzm.enemies.ripper",
     "mzm.enemies.zoomer",
     "mzm.input.gamepad",
     "mzm.player.samus_controller",
@@ -525,6 +527,54 @@
    ],
    "limitations": "Power bombs are not ported, so their drops never spawn; pickup sounds are not played; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported. Drop rolls from the ROM probabilities with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported.",
    "next_action": "Port power bombs and the multiple large energy pickup.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-11"
+   }
+  },
+  {
+   "id": "mzm.enemies.ripper",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Rippers",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer",
+    "mzm.enemies.drops"
+   ],
+   "native_routines": [
+    "Ripper",
+    "SpriteUtilChooseRandomXFlip",
+    "SpriteUtilCheckCollisionAtPosition"
+   ],
+   "limitations": "Freezing, the damaged sound and the death explosion are not ported; missiles that would tumble off a Ripper are removed. Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death into drops.",
+   "next_action": "Port freezing with the ice beam.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -3310,6 +3360,12 @@
  },
  "timeline": [
   {
+   "commit": "835adb8",
+   "date": "2026-10-11",
+   "subject": "feat(mzm): enemy drops and native contact loop order",
+   "scope": "mzm"
+  },
+  {
    "commit": "733cf41",
    "date": "2026-10-11",
    "subject": "feat(mzm): sprite combat for the Zoomers",
@@ -3782,12 +3838,6 @@
    "date": "2026-10-10",
    "subject": "feat: expand native Samus diagnostic compositions",
    "scope": "project"
-  },
-  {
-   "commit": "8c08c03",
-   "date": "2026-10-10",
-   "subject": "feat: add opt-in native Samus compositions to SDL3 runtime",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -3815,7 +3865,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 38,
+    "routines_cited_by_features": 41,
     "call_edges": 6071
    },
    "aos": {

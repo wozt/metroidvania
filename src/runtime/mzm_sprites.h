@@ -8,7 +8,7 @@
  * ClipdataConvertToCollision for the sprite actor,
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
- * Zoomer AI (src/sprites_ai/zoomer.c). Positions are native subpixels (64 per
+ * Zoomer and Ripper AIs (src/sprites_ai/zoomer.c, ripper.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, stats) and the frame
  * durations of each OAM table come from scripts/mzm_sprites.py.
  * Combat ports SpriteUtilSamusAndSpriteCollision for sprites that hurt Samus
@@ -117,6 +117,23 @@ enum {
 };
 extern const char *const mzm_drop_anim_names[MZM_DROP_ANIMS];
 
+/* Ripper OAM tables (src/data/sprites/ripper.c). */
+enum {
+    MZM_RIPPER_MOVING, MZM_RIPPER_TURNING_AROUND, MZM_RIPPER_TURNING_AROUND_PART2,
+    MZM_RIPPER_ANIMS,
+};
+extern const char *const mzm_ripper_anim_names[MZM_RIPPER_ANIMS];
+
+/* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
+ * table, the exported sprite whose frame durations the family uses. */
+enum { MZM_FAMILY_ZOOMER, MZM_FAMILY_RIPPER, MZM_FAMILY_DROP, MZM_SPRITE_FAMILIES };
+typedef struct {
+    int count;
+    const char *const *anims;
+    const char *const *library_sprites;
+} MzmSpriteFamily;
+extern const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES];
+
 /* Frame durations of each OAM table a sprite uses (0 ends a table). */
 typedef struct {
     uint8_t timers[MZM_SPRITE_MAX_ANIMS][MZM_SPRITE_MAX_FRAMES];
@@ -126,6 +143,7 @@ typedef struct {
 enum {
     MZM_PSPRITE_UNUSED0 = 0,
     MZM_PSPRITE_ZOOMER_YELLOW = 18, MZM_PSPRITE_ZOOMER_RED = 19,
+    MZM_PSPRITE_RIPPER_BROWN = 22, MZM_PSPRITE_RIPPER_PURPLE = 23,
     MZM_PSPRITE_LARGE_ENERGY_DROP = 26, MZM_PSPRITE_SMALL_ENERGY_DROP = 27,
     MZM_PSPRITE_MISSILE_DROP = 28, MZM_PSPRITE_SUPER_MISSILE_DROP = 29,
     MZM_PSPRITE_POWER_BOMB_DROP = 30,
@@ -156,7 +174,7 @@ typedef struct {
 typedef struct {
     const MzmSpriteWorld *world;
     const MzmSpriteTables *tables;
-    const MzmSpriteKind *zoomer, *drop;
+    const MzmSpriteKind *kinds[MZM_SPRITE_FAMILIES];
     MzmEquipment *equipment;
     uint8_t frame8;                 /* gFrameCounter8Bit */
     uint16_t frame16;               /* gFrameCounter16Bit */
@@ -201,5 +219,7 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                                  const MzmSpriteTables *tables);
 /* Whether a PSPRITE has a ported AI. */
 bool mzm_sprite_supported(uint8_t sprite_id);
+/* The family of a PSPRITE, or -1 without a ported AI. */
+int mzm_sprite_family(uint8_t sprite_id);
 
 #endif /* MZM_SPRITES_H */

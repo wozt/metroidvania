@@ -58,8 +58,10 @@ from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic 
 ENEMIES_RUNTIME = METROID_SPRITES / "enemies" / "runtime"
 DECOMP = ROOT / "third_party/mzm"
 # Sprites with a ported AI, and the palette row it selects (ZoomerInit:
-# the red Zoomer sets paletteRow and absolutePaletteRow to 1).
-PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1}
+# the red Zoomer sets paletteRow and absolutePaletteRow to 1; the Rippers
+# have their own graphics and palettes).
+PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
+          "PSPRITE_RIPPER_BROWN": 0, "PSPRITE_RIPPER_PURPLE": 0}
 SPRITE_VRAM = 0x4000
 # Enemy drops (src/sprites_ai/enemy_drop.c, EnemyDropInit) and their table.
 DROPS = {

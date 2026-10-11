@@ -74,7 +74,10 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_ZEBBO_YELLOW": 0, "PSPRITE_ZEBBO_GREEN_LEADER": 0,
           "PSPRITE_ZEBBO_GREEN_FOLLOWER": 0, "PSPRITE_REO_GREEN_WINGS": 0,
           "PSPRITE_REO_PURPLE_WINGS": 0, "PSPRITE_MELLA": 0, "PSPRITE_HOLTZ": 0,
-          "PSPRITE_MULTIVIOLA": 0, "PSPRITE_RINKA_ORANGE": 0, "PSPRITE_RINKA_GREEN": 0}
+          "PSPRITE_MULTIVIOLA": 0, "PSPRITE_RINKA_ORANGE": 0, "PSPRITE_RINKA_GREEN": 0,
+          "PSPRITE_SPACE_PIRATE": 0, "PSPRITE_SPACE_PIRATE_WAITING1": 0,
+          "PSPRITE_SPACE_PIRATE_WAITING2": 0, "PSPRITE_SPACE_PIRATE_WAITING3": 0,
+          "PSPRITE_SPACE_PIRATE2": 0}
 # s16 (or small u16) tables an AI reads, written as ``table`` lines.
 AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
@@ -82,7 +85,9 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sDessgeegaHighJumpYVelocity", "sDessgeegaLowJumpYVelocity",
              "sReoIdleYMovement", "sReoIdleXMovement", "sMellaIdleYMovement",
              "sMellaIdleXMovement", "sMellaGoingDownYMovement", "sMellaGoingUpYMovement",
-             "sMellaMovingXMovement", "sHoltzIdleYVelocity", "sDebrisBouncingVelocity", "sDebris11YVelocity",
+             "sMellaMovingXMovement", "sHoltzIdleYVelocity", "sSpacePirateWallJumpingVelocity",
+             "sSpacePirate_2e1030", "sSpacePirateJumpingVelocity", "sSpacePirate_2e105a",
+             "sDebrisBouncingVelocity", "sDebris11YVelocity",
              "sDebris12YVelocity", "sDebris13YVelocity", "sDebris4YVelocity",
              "sDebris5YVelocity", "sDebris6YVelocity", "sDebris7YVelocity",
              "sDebris8YVelocity")

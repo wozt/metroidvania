@@ -15,8 +15,19 @@ static uint8_t block(void *context, uint16_t y, uint16_t x) {
     return row < ROWS && column < COLUMNS ? grid[row][column] : MZM_CLIPDATA_AIR;
 }
 
+/* Clipdata movement (zonelines, wall jump points) by block. */
+static uint8_t movement_grid[ROWS][COLUMNS];
+
+static uint8_t movement(void *context, uint16_t y, uint16_t x) {
+    (void)context;
+    unsigned row = y / 64u, column = x / 64u;
+    return row < ROWS && column < COLUMNS ? movement_grid[row][column]
+                                          : MZM_CLIPDATA_MOVEMENT_NONE;
+}
+
 static void clear(void) {
     memset(grid, 0, sizeof grid);
+    memset(movement_grid, 0, sizeof movement_grid);
 }
 
 static MzmSpriteFrame frame;
@@ -50,8 +61,18 @@ static void test_remove_solid(void *context, uint16_t y, uint16_t x) {
     if (y / 64u < ROWS && x / 64u < COLUMNS) grid[y / 64u][x / 64u] = MZM_CLIPDATA_AIR;
 }
 
+static int affects, last_affect_damage;
+
+static void test_affect(void *context, uint16_t y, uint16_t x, int damage) {
+    (void)context;
+    (void)y;
+    (void)x;
+    ++affects;
+    last_affect_damage = damage;
+}
+
 static const MzmSpriteHooks test_hooks = {NULL, test_check_event, test_set_event,
-                                          test_door_timer, test_remove_solid};
+                                          test_door_timer, test_remove_solid, test_affect};
 
 static int hurts, last_damage;
 static bool last_on_left;
@@ -64,7 +85,7 @@ static void hurt(void *context, uint16_t damage, bool sprite_on_left) {
 }
 
 int main(void) {
-    MzmSpriteWorld world = {NULL, block, 0, 0};
+    MzmSpriteWorld world = {NULL, block, 0, 0, movement};
 
     /* ClipdataConvertToCollision */
     clear();
@@ -96,12 +117,14 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind, swoop_kind, rinka_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind, swoop_kind, rinka_kind, pirate_kind;
+    static MzmSpriteGlobals globals;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
-                              &swoop_kind, &rinka_kind},
-                             &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
+                              &swoop_kind, &rinka_kind, &pirate_kind},
+                             &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
+                             0, 0};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -1493,6 +1516,243 @@ int main(void) {
     step(&rk, 0);
     /* velocity 8, unit (0.6, 0.8): 4 across, 6 down (10-bit truncation). */
     assert(rk.x == spawn_x + 4 && rk.y == 5 * 64 + 32 + 6);
+
+    /* Space Pirates: one frame of the sprite array, then the end of
+     * SpriteUpdate (alarm). */
+    {
+        static MzmSprite ps[8];
+        const int16_t wall_jump[8] = {-2, -1, 0, 4, 8, 12, 16, 20};
+        const int16_t jump_low[11] = {-8, -4, 0, 4, 8, 12, 16, 20, 20, 20, 20};
+        const int16_t jump[10] = {-12, -8, -4, 0, 4, 8, 12, 16, 20, 20};
+        const int16_t jump_high[11] = {-16, -12, -8, -4, -2, 0, 4, 8, 12, 16, 20};
+        memcpy(tables.pirate_wall_jump, wall_jump, sizeof wall_jump);
+        memcpy(tables.pirate_jump_low, jump_low, sizeof jump_low);
+        memcpy(tables.pirate_jump, jump, sizeof jump);
+        memcpy(tables.pirate_jump_high, jump_high, sizeof jump_high);
+        tables.health[MZM_PSPRITE_SPACE_PIRATE] = 30;
+        tables.damage[MZM_PSPRITE_SPACE_PIRATE] = 100;
+        tables.secondary_damage[MZM_SSPRITE_SPACE_PIRATE_LASER] = 100;
+        for (int a = 0; a < MZM_PIRATE_ANIMS; ++a) {
+            pirate_kind.counts[a] = a == MZM_PIRATE_WALKING ? 8 : 4;
+            for (int f = 0; f < pirate_kind.counts[a]; ++f) pirate_kind.timers[a][f] = 4;
+        }
+        frame.sprites = ps;
+        frame.sprite_count = 8;
+        frame.hooks = &test_hooks;
+        frame.samus_hitbox_top = -100;
+#define PIRATE_FRAME()                                                           \
+        do {                                                                     \
+            for (int i_ = 0; i_ < 8; ++i_) mzm_sprite_update(&ps[i_], (uint8_t)i_, &frame); \
+            mzm_sprites_end_frame(&globals, &test_hooks);                        \
+        } while (0)
+
+        /* A pirate on a floor, Samus out of range: it walks toward her,
+         * accelerating 2 subpixels a frame (a quarter of that per frame). */
+        clear();
+        memset(ps, 0, sizeof ps);
+        memset(&globals, 0, sizeof globals);
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SPACE_PIRATE, 0, 9, 5, 0, 0);
+        frame.samus_x = 23 * 64;
+        frame.samus_y = 640;
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x9 && ps[0].health == 30 && ps[0].samus_collision == 20 &&
+               ps[0].status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+               ps[0].status & MZM_SPRITE_STATUS_X_FLIP && ps[0].hitbox_left == -24 &&
+               ps[0].hitbox_right == 64 && ps[0].hitbox_top == -160 &&
+               ps[0].anim == MZM_PIRATE_WALKING && ps[0].scaling == 0x100);
+        uint16_t px = ps[0].x;
+        for (int i = 0; i < 6; ++i) PIRATE_FRAME();
+        /* work2 0, 2, 4, 6, 8, 10: moves 0 + 0 + 1 + 1 + 2 + 2. */
+        assert(ps[0].x == px + 6 && ps[0].work2 == 12 && globals.alarm_timer == 0);
+        for (int i = 0; i < 40; ++i) PIRATE_FRAME();
+        assert(ps[0].work2 == 32);  /* top speed: 8 subpixels a frame */
+        px = ps[0].x;
+        PIRATE_FRAME();
+        assert(ps[0].x == px + 8);
+
+        /* Samus four blocks ahead in its line of sight: alerted, the alarm
+         * rings, it charges for 24 frames and fires two lasers forward. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SPACE_PIRATE, 0, 9, 5, 0, 0);
+        frame.samus_x = (uint16_t)(5 * 64 + 32 + 4 * 64);
+        PIRATE_FRAME();
+        PIRATE_FRAME();
+        assert(ps[0].status & MZM_SPRITE_STATUS_FACING_DOWN && ps[0].pose == 0x22 &&
+               globals.draw_order[0] == 0);   /* cleared by the end of the frame */
+        PIRATE_FRAME();
+        assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE - 1 && ps[0].pose == 0x34 &&
+               ps[0].work1 == 0);
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x35 && ps[0].work0 == 23 &&
+               ps[0].anim == MZM_PIRATE_CHARGING_LASER_FORWARD);
+        int frames = 0;
+        while (!(ps[1].status & MZM_SPRITE_STATUS_EXISTS) && frames < 100) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        assert(ps[0].pose == 0x37 && ps[0].anim == MZM_PIRATE_SHOOTING_FORWARD &&
+               ps[0].frame == 2);
+        uint16_t x0 = ps[0].x, y0 = ps[0].y;
+        /* Spawned behind the pirate's slot: initialised and moved once. */
+        assert(ps[1].secondary && ps[1].sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER &&
+               ps[1].samus_collision == 19 && ps[1].pose == 0x9 &&
+               ps[1].status & MZM_SPRITE_STATUS_X_FLIP && ps[1].y == y0 - 52 &&
+               ps[1].x == x0 + 68 && ps[2].y == y0 - 120 && ps[2].x == x0 + 120 &&
+               ps[1].ram_slot == 0 && ps[1].work2 == 10);
+        affects = 0;
+        PIRATE_FRAME();
+        assert(ps[1].x == x0 + 68 + 20 && ps[1].work2 == 9 && affects == 2 &&
+               last_affect_damage == MZM_DAMAGE_BOMB_PISTOL);
+        /* Samus touches the laser: it stops (SPRITE_POSE_STOPPED), hurts her
+         * with the laser's damage, then explodes. */
+        hurts = 0;
+        MzmSpriteSamus laser_hit = {NULL, ps[1].x, (uint16_t)(ps[1].y + 20), ps[1].x,
+                                    -40, 0, -20, 20, false, false, false, hurt};
+        /* The spawn's ignore timer runs down on the first collision pass. */
+        MzmSpriteSamus far_away = laser_hit;
+        far_away.x = 60000;
+        mzm_sprites_samus_collision(ps, 8, &far_away, &tables);
+        assert(hurts == 0 && ps[1].ignore_samus_timer == 0);
+        mzm_sprites_samus_collision(ps, 8, &laser_hit, &tables);
+        assert(hurts == 1 && last_damage == 100 && ps[1].pose == 0x42);
+        PIRATE_FRAME();
+        assert(ps[1].pose == 0x43 && ps[1].anim == MZM_PIRATE_LASER_EXPLODING &&
+               ps[1].samus_collision == 0);
+        for (int i = 0; i < 16; ++i) PIRATE_FRAME();
+        assert(!(ps[1].status & MZM_SPRITE_STATUS_EXISTS));
+        /* The other laser explodes on a wall (on screen). */
+        for (int r = 0; r < ROWS; ++r) grid[r][15] = MZM_CLIPDATA_SOLID;
+        frames = 0;
+        while (ps[2].pose == 0x9 && frames < 50) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        assert(ps[2].pose == 0x43 && ps[2].x >= 15 * 64);
+
+        /* A laser out of its gun hits a pirate: frozen, flashing, then dead;
+         * the last pirate's death stops the alarm. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SPACE_PIRATE, 0, 9, 5, 0, 0);
+        frame.samus_x = 23 * 64;
+        PIRATE_FRAME();
+        ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
+        ps[1] = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true,
+                            .sprite_id = MZM_SSPRITE_SPACE_PIRATE_LASER, .samus_collision = 19,
+                            .pose = 0x9, .x = ps[0].x, .y = (uint16_t)(ps[0].y - 50)};
+        globals.alarm_timer = 300;
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x6C && ps[0].health == 0 && ps[0].samus_collision == 0 &&
+               ps[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES && ps[0].work0 == 32);
+        frames = 0;
+        while (ps[0].status & MZM_SPRITE_STATUS_EXISTS && frames < 100) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        assert(frames == 32 && globals.alarm_timer == 0);
+        /* With Mecha Ridley dead the alarm never stops. */
+        test_events[MZM_EVENT_MECHA_RIDLEY_KILLED / 8] |= 1u << (MZM_EVENT_MECHA_RIDLEY_KILLED % 8);
+        globals.alarm_timer = 1;
+        mzm_sprites_end_frame(&globals, &test_hooks);
+        assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE);
+        memset(test_events, 0, sizeof test_events);
+        globals.alarm_timer = 0;
+
+        /* A pirate that already reacted (MOSAIC) leaves at a zoneline when
+         * the alarm is off. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        for (int r = 0; r < 10; ++r) grid[r][9] = MZM_CLIPDATA_SOLID;
+        movement_grid[9][9] = MZM_CLIPDATA_MOVEMENT_SPACE_PIRATE_ZONELINE;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SPACE_PIRATE, 0, 9, 5, 0, 0);
+        PIRATE_FRAME();
+        ps[0].status |= MZM_SPRITE_STATUS_MOSAIC;
+        frames = 0;
+        while (ps[0].status & MZM_SPRITE_STATUS_EXISTS && frames < 200) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        /* Removed when its probe 80 subpixels ahead reached the zoneline
+         * (x 496); the rest of the walk then ran with a cleared status,
+         * facing left, and moved it back 8 subpixels as natively. */
+        assert(!(ps[0].status & MZM_SPRITE_STATUS_EXISTS) && ps[0].x == 9 * 64 - 80 - 8);
+
+        /* In the air beside a wall on its left (sprite RNG 0): it climbs
+         * down the wall a pixel a frame, then turns at the floor and jumps
+         * off the wall away from it. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        for (int x = 0; x < COLUMNS; ++x) grid[12][x] = MZM_CLIPDATA_SOLID;
+        for (int r = 0; r < 12; ++r) grid[r][4] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SPACE_PIRATE, 0, 5, 5, 0, 0);
+        frame.samus_x = 23 * 64;
+        frame.samus_y = 2 * 64;
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x5F && ps[0].anim == MZM_PIRATE_CLIMBING_DOWN &&
+               !(ps[0].status & MZM_SPRITE_STATUS_FACING_RIGHT) && ps[0].x == 5 * 64 + 32);
+        uint16_t py = ps[0].y;
+        PIRATE_FRAME();
+        assert(ps[0].y == py + 4);
+        frames = 0;
+        while (ps[0].pose != 0x4D && frames < 400) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        assert(ps[0].pose == 0x4D && ps[0].status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+               ps[0].anim == MZM_PIRATE_JUMPING_FROM_WALL);
+        px = ps[0].x;
+        PIRATE_FRAME();
+        assert(ps[0].x == px + 12);  /* the wall jump's horizontal speed */
+
+        /* A wall jump point beside a climbing pirate makes it leave the
+         * wall at once. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        for (int x = 0; x < COLUMNS; ++x) grid[12][x] = MZM_CLIPDATA_SOLID;
+        for (int r = 0; r < 12; ++r) grid[r][4] = MZM_CLIPDATA_SOLID;
+        for (int r = 0; r < 12; ++r)
+            movement_grid[r][4] = MZM_CLIPDATA_MOVEMENT_SPACE_PIRATE_WALLJUMP_POINT;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SPACE_PIRATE, 0, 5, 5, 0, 0);
+        PIRATE_FRAME();
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x12 && ps[0].work0 == 1);
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x13 && ps[0].work0 == 1 &&
+               ps[0].anim == MZM_PIRATE_TURNING_TO_AIM_WHILE_CLIMBING);
+
+        /* Waiting pirates hide at their door until the alarm rings. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        for (int r = 0; r < 10; ++r) grid[r][3] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SPACE_PIRATE_WAITING1, 0, 9, 5, 0, 0);
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x28 && ps[0].samus_collision == 0 &&
+               ps[0].status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               ps[0].status & MZM_SPRITE_STATUS_FACING_RIGHT && ps[0].x == 5 * 64 + 32 - 40);
+        mzm_sprite_init_primary(&ps[1], MZM_PSPRITE_SPACE_PIRATE_WAITING2, 0, 9, 8, 1, 1);
+        PIRATE_FRAME();
+        assert(!(ps[1].status & MZM_SPRITE_STATUS_EXISTS));
+        globals.alarm_timer = MZM_ALARM_TIMER_ACTIVE;
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x24 && ps[0].work0 == 20);
+        frames = 0;
+        while (ps[0].pose != 0x23 && frames < 100) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        assert(ps[0].pose == 0x23 && ps[0].samus_collision == 20 &&
+               !(ps[0].status & MZM_SPRITE_STATUS_NOT_DRAWN) && ps[0].work2 >= 32);
+#undef PIRATE_FRAME
+        frame.sprites = NULL;
+        frame.sprite_count = 0;
+        frame.hooks = NULL;
+    }
     puts("mzm_sprites: ok");
     return 0;
 }

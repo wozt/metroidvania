@@ -13,7 +13,8 @@
  * (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c,
  * sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c, geega.c, zebbo.c, reo.c,
  * mella.c, holtz.c, multiviola.c, rinka.c) with SpriteSpawnSecondary for the Skree's explosion and
- * the red Zeela's eyes. Positions are native subpixels (64 per
+ * the red Zeela's eyes, and the Space Pirates with their lasers
+ * (src/sprites_ai/space_pirate.c, ported in mzm_space_pirate.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
  * stats) and the frame durations of each OAM table come from
  * scripts/mzm_sprites.py.
@@ -83,7 +84,19 @@ typedef struct {
      * room). */
     uint8_t (*block)(void *context, uint16_t y, uint16_t x);
     uint16_t camera_x, camera_y;    /* gBg1XPosition / gBg1YPosition */
+    /* gCurrentAffectingClipdata.movement after ClipdataProcess at a subpixel
+     * point (sMovementClipdataValues of the block's behavior;
+     * CLIPDATA_MOVEMENT_NONE outside the room). NULL: no movement blocks. */
+    uint8_t (*movement)(void *context, uint16_t y, uint16_t x);
 } MzmSpriteWorld;
+
+/* ClipdataMovement values the ported sprites read. */
+enum {
+    MZM_CLIPDATA_MOVEMENT_NONE = 0,
+    MZM_CLIPDATA_MOVEMENT_STOP_ENEMY_BLOCK_SOLID = 7,
+    MZM_CLIPDATA_MOVEMENT_SPACE_PIRATE_ZONELINE = 8,
+    MZM_CLIPDATA_MOVEMENT_SPACE_PIRATE_WALLJUMP_POINT = 9,
+};
 
 /* Sprite debris velocity tables, in this order. */
 enum {
@@ -118,6 +131,10 @@ typedef struct {
     int16_t mella_up[7];            /* sMellaGoingUpYMovement (u16) */
     int16_t mella_x[7];             /* sMellaMovingXMovement (u16) */
     int16_t holtz_idle_y[65];       /* sHoltzIdleYVelocity */
+    int16_t pirate_wall_jump[8];    /* sSpacePirateWallJumpingVelocity */
+    int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
+    int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
+    int16_t pirate_jump_high[11];   /* sSpacePirate_2e105a */
 } MzmSpriteTables;
 
 /* Columns of MzmSpriteTables.drops. */
@@ -144,7 +161,7 @@ enum {
     MZM_ZOOMER_TURNING_EDGE_LEFT, MZM_ZOOMER_TURNING_EDGE_RIGHT,
     MZM_ZOOMER_TURNING_CORNER_LEFT, MZM_ZOOMER_TURNING_CORNER_RIGHT, MZM_ZOOMER_ANIMS,
 };
-#define MZM_SPRITE_MAX_ANIMS 16
+#define MZM_SPRITE_MAX_ANIMS 40   /* the Space Pirate and its laser use 33 */
 #define MZM_SPRITE_MAX_FRAMES 64   /* sMultiviolaOam_Moving has 56 */
 extern const char *const mzm_zoomer_anim_names[MZM_ZOOMER_ANIMS];
 
@@ -240,6 +257,26 @@ enum {
 };
 extern const char *const mzm_rinka_anim_names[MZM_RINKA_ANIMS];
 
+/* Space Pirate and Space Pirate laser OAM tables
+ * (src/data/sprites/space_pirate.c). */
+enum {
+    MZM_PIRATE_CROUCHED, MZM_PIRATE_WALKING, MZM_PIRATE_CHARGING_LASER_FORWARD,
+    MZM_PIRATE_TURNING_AROUND_FIRST_PART, MZM_PIRATE_TURNING_AROUND_SECOND_PART,
+    MZM_PIRATE_SHOOTING_FORWARD, MZM_PIRATE_JUMPING, MZM_PIRATE_CHARGING_LASER_DIAGONALLY_DOWN,
+    MZM_PIRATE_FALLING, MZM_PIRATE_LANDING, MZM_PIRATE_SHOOTING_DIAGONALLY_DOWN,
+    MZM_PIRATE_CHARGING_LASER_DIAGONALLY_UP, MZM_PIRATE_SHOOTING_DIAGONALLY_UP,
+    MZM_PIRATE_CLIMBING_UP, MZM_PIRATE_CLIMBING_DOWN, MZM_PIRATE_STARTING_TO_CRAWL,
+    MZM_PIRATE_CRAWLING, MZM_PIRATE_STANDING_UP, MZM_PIRATE_TURNING_WHILE_CRAWLING_FIRST_PART,
+    MZM_PIRATE_TURNING_WHILE_CRAWLING_SECOND_PART, MZM_PIRATE_CRAWLING_STOPPED,
+    MZM_PIRATE_TURNING_TO_AIM_WHILE_CLIMBING, MZM_PIRATE_AIMING_WHILE_CLIMBING,
+    MZM_PIRATE_CLIMBING_CHARGING_LASER_FORWARD, MZM_PIRATE_CLIMBING_SHOOTING_FORWARD,
+    MZM_PIRATE_CLIMBING_RETRACTING_AIM, MZM_PIRATE_LAUNCHING_FROM_WALL,
+    MZM_PIRATE_JUMPING_FROM_WALL, MZM_PIRATE_STANDING, MZM_PIRATE_STANDING_ALERTED,
+    MZM_PIRATE_LASER_FORWARD, MZM_PIRATE_LASER_DIAGONAL, MZM_PIRATE_LASER_EXPLODING,
+    MZM_PIRATE_ANIMS,
+};
+extern const char *const mzm_space_pirate_anim_names[MZM_PIRATE_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
@@ -247,7 +284,7 @@ enum {
     MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA, MZM_FAMILY_VIOLA,
     MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA, MZM_FAMILY_ZEBBO, MZM_FAMILY_REO,
     MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
-    MZM_SPRITE_FAMILIES,
+    MZM_FAMILY_SPACE_PIRATE, MZM_SPRITE_FAMILIES,
 };
 typedef struct {
     int count;
@@ -284,12 +321,15 @@ enum {
     MZM_PSPRITE_MELLA = 114, MZM_PSPRITE_HOLTZ = 107, MZM_PSPRITE_MULTIVIOLA = 52,
     MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
+    MZM_PSPRITE_SPACE_PIRATE = 81, MZM_PSPRITE_SPACE_PIRATE_WAITING1 = 82,
+    MZM_PSPRITE_SPACE_PIRATE_WAITING2 = 83, MZM_PSPRITE_SPACE_PIRATE_WAITING3 = 84,
+    MZM_PSPRITE_SPACE_PIRATE2 = 85,
 };
 
 /* SecondarySprite */
 enum {
     MZM_SSPRITE_SKREE_EXPLOSION = 12, MZM_SSPRITE_BLUE_SKREE_EXPLOSION = 15,
-    MZM_SSPRITE_ZEELA_EYES = 16,
+    MZM_SSPRITE_ZEELA_EYES = 16, MZM_SSPRITE_SPACE_PIRATE_LASER = 22,
 };
 
 typedef struct {
@@ -304,7 +344,7 @@ typedef struct {
     uint8_t frame;                  /* currentAnimationFrame */
     uint8_t adc;                    /* animationDurationCounter */
     uint8_t work0, work1, work2, work3;
-    uint16_t rotation;              /* 256 per turn, clockwise on screen */
+    uint16_t rotation;              /* 256 per turn, clockwise on screen (u8 natively) */
     uint16_t health;
     uint8_t palette_row, absolute_palette_row;
     int16_t hitbox_top, hitbox_bottom, hitbox_left, hitbox_right;
@@ -317,7 +357,10 @@ typedef struct {
 } MzmSprite;
 
 /* EventFunction values read by the ported sprites (include/constants/event.h). */
-enum { MZM_EVENT_VIEWED_STATUE_ROOM = 42, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED = 43 };
+enum {
+    MZM_EVENT_VIEWED_STATUE_ROOM = 42, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED = 43,
+    MZM_EVENT_MECHA_RIDLEY_KILLED = 74,
+};
 
 /* Game systems outside the sprite engine. */
 typedef struct {
@@ -330,7 +373,24 @@ typedef struct {
     void (*door_unlock_timer)(void *context, int8_t timer);
     /* ClipdataProcess with CAA_REMOVE_SOLID at a subpixel point. */
     void (*remove_solid)(void *context, uint16_t y, uint16_t x);
+    /* BlockApplyCcaa at a subpixel point for a clipdata-affecting action of
+     * the given damage type (MZM_DAMAGE_*): hatches and breakable blocks.
+     * NULL: nothing is affected. */
+    void (*affect)(void *context, uint16_t y, uint16_t x, int damage);
 } MzmSpriteHooks;
+
+/* ALARM_TIMER_ACTIVE_TIMER: CONVERT_SECONDS(8.f). */
+#define MZM_ALARM_TIMER_ACTIVE 480
+
+/* Game globals the sprites keep between frames. */
+typedef struct {
+    uint16_t alarm_timer;           /* gAlarmTimer (the Chozodia alarm) */
+    /* gSpriteDrawOrder[0..4], which the Space Pirates use as scratch flags
+     * (aim, direction, Samus seen, below, right of the pirate); the sprite
+     * drawing rewrites them every frame (mzm_sprites_end_frame clears them). */
+    uint8_t draw_order[5];
+    uint16_t boss_work2;            /* gBossWork.work2: the last pirate's x distance */
+} MzmSpriteGlobals;
 
 /* What SpriteUpdate shares with every sprite this frame. Enemy drops are
  * chosen from, and refill, the equipment (power bombs are not ported: their
@@ -353,6 +413,12 @@ typedef struct {
     /* Game state some sprites read or change (NULL: no event set, nothing
      * changed). */
     const MzmSpriteHooks *hooks;
+    /* Globals the Space Pirates need (NULL: they are not updated). */
+    MzmSpriteGlobals *globals;
+    /* SpriteUtilCheckCrouchingOrMorphed, gSamusData.xVelocity. */
+    bool samus_crouching_or_morphed;
+    int16_t samus_x_velocity;
+    uint8_t area, room;             /* gCurrentArea / gCurrentRoom */
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,
@@ -399,6 +465,9 @@ void mzm_sprite_debris_init(MzmEffects *effects, uint8_t type, uint16_t y, uint1
  * check of SpriteDebrisDraw against the camera. */
 void mzm_sprite_debris_process(MzmEffects *effects, const MzmSpriteWorld *world,
                                const MzmSpriteTables *tables, const MzmEffectKinds *kinds);
+/* The end of SpriteUpdate: DecrementChozodiaAlarm (its music and palette are
+ * not ported), then the draw-order scratch the drawing rewrites. */
+void mzm_sprites_end_frame(MzmSpriteGlobals *globals, const MzmSpriteHooks *hooks);
 /* Whether a PSPRITE has a ported AI. */
 bool mzm_sprite_supported(uint8_t sprite_id);
 /* The family of a sprite, or -1 without a ported AI. */

@@ -23,7 +23,10 @@ read from the user's ROM at export time; nothing is stored in the repository.
   selects (the red Zoomer uses row 1). Keys: `Sprite/<NAME>/<Table>/<flip>`.
 - `metadata/sprites.tsv`: `sSpriteRandomNumberTable`, `sSpritesFallingSpeed`
   and the `sPrimarySpriteStats` row of every primary sprite, read from the ROM
-  through the reference ELF symbols (verified against the ROM).
+  through the reference ELF symbols (verified against the ROM), the
+  `sSecondarySpriteStats` rows and the signed tables the ported AIs read
+  (`table` lines: falling, jump, idle and movement tables, including the four
+  Space Pirate jump tables).
 - Enemy drops draw from the common sprite graphics
   (`HudGenericLoadCommonSpriteGfx`: `sCommonSpritesGfx` at OBJ VRAM 0x800,
   `sCommonSpritesPal` at OBJ palette rows 2-7) with their
@@ -151,6 +154,35 @@ read from the user's ROM at export time; nothing is stored in the repository.
   leave a drop only when none of its own exists
   (`DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP`). The green Rinka's
   `MOSAIC` status is kept as its flag; the mosaic effect is not drawn.
+- Space Pirate (`space_pirate.c`, ported in `mzm_space_pirate.c` with the
+  shared AI interface `mzm_sprite_ai.h`): the normal, waiting (three) and
+  second pirate sprites and their laser (`SSPRITE_SPACE_PIRATE_LASER`).
+  `SpacePirateSamusDetection` scans the clipdata grid (three rows ahead
+  when Samus is within 3 blocks vertically, then a diagonal up or down, one
+  row while crawling, nothing toward the wall while climbing) and leaves its
+  results in `gSpriteDrawOrder[0..4]`, kept as `MzmSpriteGlobals.draw_order`
+  and cleared at the end of the frame, as the drawing does. Unalerted
+  pirates walk (speed growing by 2 subpixels a frame to 32, a quarter of it
+  per frame, two thirds up steep slopes), idle on stop-enemy blocks and turn
+  around, jump over obstacles with the four `sSpacePirate*` velocity tables,
+  crawl under low ceilings, climb walls, pause, wall-jump (also at
+  `SPACE_PIRATE_WALLJUMP_POINT` blocks) and leave at
+  `SPACE_PIRATE_ZONELINE` blocks once they reacted (`MOSAIC`, the native
+  flag) while the alarm is off. A pirate that sees Samus is alerted, rings
+  the alarm (`gAlarmTimer`, 480 frames, counted down at the end of
+  `SpriteUpdate` and re-armed after Mecha Ridley's death), charges for 24
+  frames and fires two lasers (forward, diagonally up or down, or from a
+  wall) on the third frame of its shooting table. Lasers move 20 subpixels a
+  frame (15 per axis diagonally), apply `CAA_BOMB_PISTOL` to the block they
+  reach (hatches in the runtime), explode on solid blocks and on Samus
+  (`SSC_SPACE_PIRATE_LASER` stops them) and, after their first 10 frames,
+  on pirates, which freeze, flash and die after 33 frames. The last
+  pirate's death stops the alarm. Waiting pirates placed in a room hide at
+  their door until the alarm, then shoot through it and come out;
+  `SpawnWaitingPirates` (pirates arriving at doors) is not ported. Rooms
+  export the clipdata movement of each block (`M` lines,
+  `sMovementClipdataValues`) for the zonelines, wall jump points and
+  stop-enemy blocks.
 - Every primary sprite records the slot it owns (`primarySpriteRamSlot`),
   passed on to its secondary sprites and its drops.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at
@@ -231,6 +263,9 @@ read from the user's ROM at export time; nothing is stored in the repository.
   for its last 80 ticks and then removes it.
   - The weakness is the low byte of the stats' weakness column
     (`C_16_2_8(freeze chance, weaknesses)`).
+  - `SSC_SPACE_PIRATE` hurts like `SSC_HURTS_SAMUS`; `SSC_SPACE_PIRATE_LASER`
+    first sets the laser's stopped pose (`SPRITE_POSE_STOPPED`, its exploding
+    pose).
 
 Not ported yet: sounds (damage, death, pickups, Skree dive and crash),
 the stun palette flash, freezing and frozen (solid) sprites, power bombs
@@ -238,4 +273,5 @@ and their drops, the multiple large energy pickup, tumbling missiles,
 charge beams and the pseudo screw, speed booster and shinespark kills,
 screen-shake falls, splashes in liquids, the hard-mode and event
 spritesets (where the Long Beam Dessgeega is placed), the door lock
-lifecycle, screen shakes, and every other sprite AI.
+lifecycle, screen shakes, `SpawnWaitingPirates` and the Chozodia alarm's
+music and palette, and every other sprite AI.

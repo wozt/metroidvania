@@ -2843,3 +2843,44 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+
+## Patch 0252 - Zero Mission Space Pirates
+
+- `src/runtime/mzm_space_pirate.c` ports `SpacePirate` and
+  `SpacePirateLaser` for the normal, three waiting and second pirate
+  sprites: grid line-of-sight detection, walking, idling on stop-enemy
+  blocks, obstacle jumps (the four ROM jump tables), crawling, climbing,
+  wall pauses and wall jumps, alerted walking, charging and two-laser
+  volleys on the ground and on walls, lasers hurting Samus and pirates, the
+  hit-by-laser death and the Chozodia alarm (`gAlarmTimer`, set on sight,
+  counted down by `mzm_sprites_end_frame`, stopped by the last pirate's
+  death). The pirates' scratch use of `gSpriteDrawOrder[0..4]` and
+  `gBossWork.work2` live in `MzmSpriteGlobals`.
+- The sprite helpers shared by the AIs moved behind the internal header
+  `src/runtime/mzm_sprite_ai.h` (`ai_*`); `SSC_SPACE_PIRATE` and
+  `SSC_SPACE_PIRATE_LASER` contacts are handled; the OAM table limit per
+  family rises to 40.
+- `scripts/mzm_runtime_room.py` exports each block's clipdata movement
+  (`M` lines from `sMovementClipdataValues`: zonelines, wall jump points,
+  stop-enemy blocks) and the runtime reads it; `scripts/mzm_sprites.py`
+  exports the five pirate sprites and the jump tables. The pirate laser's
+  `CAA_BOMB_PISTOL` reaches the runtime's hatches through a new hook.
+- Not ported: `SpawnWaitingPirates`, the alarm music and palette, sounds,
+  freezing, the power-bomb, black and escape-ship pirates.
+- Checked in captures: in chozodia_002 and chozodia_013 pirates see Samus,
+  ring the alarm (480 frames), charge 24 frames and fire two lasers 20
+  subpixels a frame (52 and 120 subpixels above their feet) that hit Samus
+  for 100 (the ROM damage) or kill another pirate after its 33-frame flash;
+  chozodia_013's pirates idle on stop-enemy blocks and turn around. All 47
+  rooms with pirates ran 300 frames without fault (climbing, wall jumps,
+  waiting pirates leaving their doors with the alarm); chozodia_057 shows a
+  pirate pausing at a wall.
+- Tests: `tests/test_mzm_sprites.c` adds the pirate placement and walking
+  acceleration, detection, alarm, charge and laser spawn, laser movement,
+  hatch action, Samus contact and explosion, the friendly-fire death ending
+  the alarm (re-armed after Mecha Ridley), zoneline removal, climbing down
+  to a wall jump, wall jump points and waiting pirates;
+  `tests/test_mzm_runtime_room.py` covers the movement table and `M` lines.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite (407 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.

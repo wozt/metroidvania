@@ -105,6 +105,9 @@ def collision_tables(decomp: Path = DECOMP):
                                               clipdata, behaviors),
             "tilemap_behavior": parse_type_table(tile_source, "sClipdataBehaviorTypes_Tilemap",
                                                  tilemap, behaviors),
+            "movement": parse_type_table(
+                (decomp / "src/data/clipdata_data.c").read_text(encoding="utf-8"),
+                "sMovementClipdataValues", behaviors, parse_enum(header, "ClipdataMovement")),
             "count": clipdata["CLIPDATA_COUNT"],
             "tilemap_flag": tilemap["CLIPDATA_TILEMAP_FLAG"],
             "tilemap_count": tilemap["CLIPDATA_TILEMAP_COUNT"]}
@@ -249,9 +252,14 @@ def encode_room(area: str, number: int, width: int, height: int,
             raw = cells[y * clip_width + x]
             if raw:
                 lines.append(f"C\t{x}\t{y}\t{raw}\t{collision_type(raw, tables)}")
-                kind = transitions.get(clip_behavior(raw, tables))
+                behavior = clip_behavior(raw, tables)
+                kind = transitions.get(behavior)
                 if kind:
                     lines.append(f"B\t{x}\t{y}\t{kind}")
+                # ClipdataUpdateCurrentAffecting: sMovementClipdataValues.
+                movement = tables["movement"].get(behavior, 0)
+                if movement:
+                    lines.append(f"M\t{x}\t{y}\t{movement}")
     for index, door in enumerate(doors or []):
         if door["sourceRoom"] != number:
             continue

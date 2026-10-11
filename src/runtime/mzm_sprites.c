@@ -1,48 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Zero Mission sprites; comments name the pinned decompilation's routines. */
 #include "mzm_sprites.h"
+#include "mzm_sprite_ai.h"
 
 #include <string.h>
-
-/* Native units (include/types.h). */
-enum {
-    BLOCK_SIZE = 64,
-    HALF_BLOCK_SIZE = 32,
-    QUARTER_BLOCK_SIZE = 16,
-    EIGHTH_BLOCK_SIZE = 8,
-    THREE_QUARTER_BLOCK_SIZE = 48,
-    PIXEL_SIZE = 4,
-    SUB_PIXEL_POSITION_FLAG = 0x3F,
-    BLOCK_POSITION_FLAG = 0xFFC0,
-    SHORT_MAX = 32767,
-    SCREEN_SIZE_X_SUB_PIXEL = 240 * 4,
-    SCREEN_SIZE_Y_SUB_PIXEL = 160 * 4,
-    HALF_SCREEN_BLOCKS_SUB_PIXEL = 8 * BLOCK_SIZE,  /* CEIL(SCREEN_SIZE_X_BLOCKS / 2) */
-    /* SpriteUtilIsSpriteStunned on easy and normal: CONVERT_SECONDS(.15f). */
-    STUN_THRESHOLD = 9,
-    SPRITE_POSE_UNINITIALIZED = 0,
-    SPRITE_POSE_DESTROYED = 0x62,
-    SPRITE_POSE_SCREW_ATTACK_DESTROYED = 0x65,
-    /* SamusSpriteCollision */
-    SSC_NONE = 0,
-    SSC_HURTS_SAMUS = 4,
-    SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
-    SPRITE_POSE_STOPPED = 66,
-    SSC_SMALL_ENERGY_DROP = 31,
-    SSC_LARGE_ENERGY_DROP = 32,
-    SSC_MISSILE_DROP = 33,
-    SSC_SUPER_MISSILE_DROP = 34,
-    SSC_POWER_BOMB_DROP = 35,
-    SPRITE_DROP_MAX_PROB = 1024,
-    /* CONVERT_SECONDS of the combat timers. */
-    ISFT_DAMAGED = 17,              /* .25f + 2 * DELTA_TIME */
-    ISFT_SCREW_ATTACK = 17,         /* .29f */
-    ISFT_SOLID_HIT = 3,             /* .05f */
-    IGNORE_SAMUS_AFTER_HIT = 15,    /* .25f */
-    NORMAL_BEAM_DAMAGE = 2,
-    MISSILE_DAMAGE = 20,
-    SUPER_MISSILE_DAMAGE = 100,
-};
 
 /* Zoomer poses (zoomer.c). */
 enum {
@@ -193,6 +154,33 @@ const char *const mzm_rinka_anim_names[MZM_RINKA_ANIMS] = {
 static const char *const rinka_sprites[MZM_RINKA_ANIMS] = {
     "RINKA_ORANGE", "RINKA_ORANGE", "RINKA_GREEN", "RINKA_GREEN",
 };
+const char *const mzm_space_pirate_anim_names[MZM_PIRATE_ANIMS] = {
+    "SpacePirateOam_Crouched", "SpacePirateOam_Walking", "SpacePirateOam_ChargingLaserForward",
+    "SpacePirateOam_TurningAroundFirstPart", "SpacePirateOam_TurningAroundSecondPart",
+    "SpacePirateOam_ShootingForward", "SpacePirateOam_Jumping",
+    "SpacePirateOam_ChargingLaserDiagonallyDown", "SpacePirateOam_Falling",
+    "SpacePirateOam_Landing", "SpacePirateOam_ShootingDiagonallyDown",
+    "SpacePirateOam_ChargingLaserDiagonallyUp", "SpacePirateOam_ShootingDiagonallyUp",
+    "SpacePirateOam_ClimbingUp", "SpacePirateOam_ClimbingDown",
+    "SpacePirateOam_StartingToCrawl", "SpacePirateOam_Crawling", "SpacePirateOam_StandingUp",
+    "SpacePirateOam_TurningAroundWhileCrawlingFirstPart",
+    "SpacePirateOam_TurningAroundWhileCrawlingSecondPart", "SpacePirateOam_CrawlingStopped",
+    "SpacePirateOam_TurningToAimWhileClimbing", "SpacePirateOam_AimingWhileClimbing",
+    "SpacePirateOam_ClimbingChargingLaserForward", "SpacePirateOam_ClimbingShootingForward",
+    "SpacePirateOam_ClimbingRetractingAim", "SpacePirateOam_LaunchingFromWall",
+    "SpacePirateOam_JumpingFromWall", "SpacePirateOam_Standing",
+    "SpacePirateOam_StandingAlerted", "SpacePirateLaserOam_Forward",
+    "SpacePirateLaserOam_Diagonal", "SpacePirateLaserOam_Exploding",
+};
+static const char *const space_pirate_sprites[MZM_PIRATE_ANIMS] = {
+    "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
+    "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
+    "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
+    "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
+    "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
+    "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
+    "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
+};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -233,20 +221,10 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_MULTIVIOLA] = {MZM_MULTIVIOLA_ANIMS, mzm_multiviola_anim_names,
                                multiviola_sprites},
     [MZM_FAMILY_RINKA] = {MZM_RINKA_ANIMS, mzm_rinka_anim_names, rinka_sprites},
+    [MZM_FAMILY_SPACE_PIRATE] = {MZM_PIRATE_ANIMS, mzm_space_pirate_anim_names,
+                                 space_pirate_sprites},
 };
 
-/* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
- * gPreviousVerticalCollisionCheck, gFrameCounter8Bit). */
-typedef struct {
-    MzmSprite *s;
-    const MzmSpriteFrame *f;
-    const MzmSpriteWorld *world;
-    const MzmSpriteTables *tables;
-    const MzmSpriteKind *kind;
-    uint8_t rng;
-    uint8_t vertical;
-    uint8_t frame8;
-} Ctx;
 
 uint32_t mzm_clipdata_process(const MzmSpriteWorld *world, uint16_t y, uint16_t x, int actor) {
     uint8_t type = world->block(world->context, y, x);
@@ -279,8 +257,12 @@ uint32_t mzm_clipdata_process(const MzmSpriteWorld *world, uint16_t y, uint16_t 
 }
 
 /* SpriteUtilGetCollisionAtPosition */
-static uint8_t collision_at(const Ctx *c, uint16_t y, uint16_t x) {
-    uint32_t clip = mzm_clipdata_process(c->world, y, x, MZM_ACTOR_SPRITE);
+uint8_t ai_collision_at(const Ctx *c, uint16_t y, uint16_t x) {
+    return ai_collision_at_actor(c, y, x, MZM_ACTOR_SPRITE);
+}
+
+uint8_t ai_collision_at_actor(const Ctx *c, uint16_t y, uint16_t x, int actor) {
+    uint32_t clip = mzm_clipdata_process(c->world, y, x, actor);
     uint8_t collision = clip & MZM_CLIPDATA_SOLID_FLAG ? MZM_COLLISION_SOLID : MZM_COLLISION_AIR;
     switch (clip & 0xFF) {
     case MZM_CLIPDATA_RIGHT_STEEP: return MZM_COLLISION_RIGHT_STEEP_FLOOR_SLOPE;
@@ -329,33 +311,38 @@ static uint16_t vertical_block_top(const Ctx *c, uint16_t y, uint16_t x, uint8_t
 }
 
 /* SpriteUtilCheckVerticalCollisionAtPosition */
-static uint16_t check_vertical(Ctx *c, uint16_t y, uint16_t x) {
+uint16_t ai_check_vertical(Ctx *c, uint16_t y, uint16_t x) {
     return vertical_block_top(c, y, x, &c->vertical);
 }
 
 /* SpriteUtilCheckVerticalCollisionAtPositionSlopes: the collision only
  * counts when the point is at or below the block top. */
-static uint16_t check_vertical_slopes(Ctx *c, uint16_t y, uint16_t x) {
+uint16_t ai_check_vertical_slopes(Ctx *c, uint16_t y, uint16_t x) {
     uint8_t collision;
     uint16_t top = vertical_block_top(c, y, x, &collision);
     c->vertical = y >= top ? collision : MZM_COLLISION_AIR;
     return top;
 }
 
+uint8_t ai_movement_at(const Ctx *c, uint16_t y, uint16_t x) {
+    return c->world->movement ? c->world->movement(c->world->context, y, x)
+                              : MZM_CLIPDATA_MOVEMENT_NONE;
+}
+
 /* SpriteUtilAlignYPositionOnSlopeAtOrigin */
-static void align_on_slope(Ctx *c) {
+void ai_align_on_slope(Ctx *c) {
     uint16_t y = c->s->y, x = c->s->x;
-    uint16_t top = check_vertical(c, (uint16_t)(y - PIXEL_SIZE), x);
+    uint16_t top = ai_check_vertical(c, (uint16_t)(y - PIXEL_SIZE), x);
     if ((c->vertical & MZM_COLLISION_FLAGS_F) >= MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE) {
         c->s->y = top;
         return;
     }
-    top = check_vertical(c, y, x);
+    top = ai_check_vertical(c, y, x);
     if ((c->vertical & MZM_COLLISION_FLAGS_F) >= MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE) {
         c->s->y = top;
         return;
     }
-    top = check_vertical(c, (uint16_t)(y + PIXEL_SIZE), x);
+    top = ai_check_vertical(c, (uint16_t)(y + PIXEL_SIZE), x);
     if (c->vertical != MZM_COLLISION_AIR) c->s->y = top;
 }
 
@@ -366,20 +353,24 @@ static uint8_t timer(const Ctx *c, unsigned anim, unsigned frame) {
     return c->kind->timers[anim][frame];
 }
 
+uint8_t ai_timer(const Ctx *c, unsigned anim, unsigned frame) {
+    return timer(c, anim, frame);
+}
+
 /* SpriteUtilHasCurrentAnimationEnded (extra = 1) and ...NearlyEnded (2). */
-static bool animation_ending(const Ctx *c, unsigned extra) {
+bool ai_animation_ending(const Ctx *c, unsigned extra) {
     unsigned adc = (uint8_t)(c->s->adc + extra);
     return timer(c, c->s->anim, c->s->frame) < adc && timer(c, c->s->anim, c->s->frame + 1u) == 0;
 }
 
-static void set_anim(MzmSprite *s, uint8_t anim) {
+void ai_set_anim(MzmSprite *s, uint8_t anim) {
     s->anim = anim;
     s->adc = 0;
     s->frame = 0;
 }
 
 /* SpriteUtilChooseRandomXDirection */
-static void random_x_direction(Ctx *c) {
+void ai_random_x_direction(Ctx *c) {
     if (c->rng & 1) c->s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
     else c->s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
 }
@@ -394,12 +385,12 @@ static bool zoomer_in_air(const Ctx *c) {
     const MzmSprite *s = c->s;
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
         uint16_t x = s->status & MZM_SPRITE_STATUS_X_FLIP ? s->x : (uint16_t)(s->x - PIXEL_SIZE);
-        return collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR &&
-               collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR;
+        return ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR &&
+               ai_collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR;
     }
     uint16_t y = s->status & MZM_SPRITE_STATUS_Y_FLIP ? (uint16_t)(s->y - PIXEL_SIZE) : s->y;
-    return collision_at(c, y, (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR &&
-           collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR;
+    return ai_collision_at(c, y, (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR &&
+           ai_collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR;
 }
 
 /* ZoomerUpdateHitbox / ZeelaUpdateHitbox: legs against the surface, the
@@ -440,34 +431,34 @@ static void zoomer_crawling_oam(MzmSprite *s) {
         if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) s->status |= MZM_SPRITE_STATUS_X_FLIP;
         else s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
     }
-    set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_DOWN ? MZM_ZOOMER_ON_WALL : MZM_ZOOMER_ON_GROUND);
+    ai_set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_DOWN ? MZM_ZOOMER_ON_WALL : MZM_ZOOMER_ON_GROUND);
 }
 
 static void zoomer_falling_oam(MzmSprite *s) {
     uint8_t wall = is_zeela(s) ? MZM_ZEELA_FALLING_ON_WALL : MZM_ZOOMER_ON_WALL;
-    set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_DOWN ? wall : MZM_ZOOMER_FALLING);
+    ai_set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_DOWN ? wall : MZM_ZOOMER_FALLING);
 }
 
 /* ZoomerInit: the surface it starts on is searched below, above, then on
  * the left and right walls; without one the sprite is removed. */
 static void zoomer_init(Ctx *c) {
     MzmSprite *s = c->s;
-    random_x_direction(c);
+    ai_random_x_direction(c);
     s->pose = ZOOMER_POSE_IDLE;
-    if (collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0) {
+    if (ai_collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0) {
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
-    } else if (collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE + PIXEL_SIZE)), s->x) &
+    } else if (ai_collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE + PIXEL_SIZE)), s->x) &
                MZM_COLLISION_FLAGS_F0) {
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
         s->status |= MZM_SPRITE_STATUS_Y_FLIP;
         s->y -= BLOCK_SIZE;
-    } else if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
+    } else if (ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
                             (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) &
                MZM_COLLISION_FLAGS_F0) {
         s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
         s->y -= HALF_BLOCK_SIZE;
         s->x -= HALF_BLOCK_SIZE;
-    } else if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
+    } else if (ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
                             (uint16_t)(s->x + HALF_BLOCK_SIZE)) & MZM_COLLISION_FLAGS_F0) {
         s->status |= MZM_SPRITE_STATUS_FACING_DOWN | MZM_SPRITE_STATUS_X_FLIP;
         s->y -= HALF_BLOCK_SIZE;
@@ -507,17 +498,17 @@ static void zoomer_crawling(Ctx *c) {
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
         if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
             if (right) {
-                if (!(collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0))
+                if (!(ai_collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0))
                     turning = zoomer_turn(s, true, TURN_BOTTOM_LEFT_EDGE);
-                else if (collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE),
+                else if (ai_collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE),
                                       (uint16_t)(s->x - PIXEL_SIZE)) == MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, false, TURN_BOTTOM_RIGHT_CORNER);
                 else
                     s->y += speed;
             } else {
-                if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F0))
+                if (!(ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F0))
                     turning = zoomer_turn(s, true, TURN_BOTTOM_RIGHT_CORNER);
-                else if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
+                else if (ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
                                       (uint16_t)(s->x - PIXEL_SIZE)) == MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, false, TURN_BOTTOM_LEFT_EDGE);
                 else
@@ -525,18 +516,18 @@ static void zoomer_crawling(Ctx *c) {
             }
         } else {
             if (right) {
-                if (!(collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) & MZM_COLLISION_FLAGS_F0))
+                if (!(ai_collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) & MZM_COLLISION_FLAGS_F0))
                     turning = zoomer_turn(s, false, TURN_TOP_LEFT_CORNER);
-                else if (collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), s->x) ==
+                else if (ai_collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), s->x) ==
                          MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, true, TURN_TOP_LEFT_EDGE);
                 else
                     s->y += speed;
             } else {
-                if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
+                if (!(ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
                       MZM_COLLISION_FLAGS_F0))
                     turning = zoomer_turn(s, false, TURN_TOP_LEFT_EDGE);
-                else if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), s->x) ==
+                else if (ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), s->x) ==
                          MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, true, TURN_TOP_LEFT_CORNER);
                 else
@@ -545,37 +536,37 @@ static void zoomer_crawling(Ctx *c) {
         }
     } else if (s->status & MZM_SPRITE_STATUS_Y_FLIP) {
         if (right) {
-            if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F))
+            if (!(ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F))
                 turning = zoomer_turn(s, false, TURN_BOTTOM_RIGHT_EDGE);
-            else if (collision_at(c, s->y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
+            else if (ai_collision_at(c, s->y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
                 turning = zoomer_turn(s, true, TURN_TOP_RIGHT_CORNER);
             else
                 s->x += speed;
         } else {
-            if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
+            if (!(ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
                   MZM_COLLISION_FLAGS_F))
                 turning = zoomer_turn(s, false, TURN_TOP_RIGHT_CORNER);
-            else if (collision_at(c, s->y, (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
+            else if (ai_collision_at(c, s->y, (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
                 turning = zoomer_turn(s, true, TURN_BOTTOM_RIGHT_EDGE);
             else
                 s->x -= speed;
         }
     } else {
-        align_on_slope(c);
+        ai_align_on_slope(c);
         if (c->vertical == MZM_COLLISION_AIR || (c->vertical & MZM_COLLISION_FLAGS_F0)) {
-            if (s->anim != MZM_ZOOMER_ON_GROUND) set_anim(s, MZM_ZOOMER_ON_GROUND);
+            if (s->anim != MZM_ZOOMER_ON_GROUND) ai_set_anim(s, MZM_ZOOMER_ON_GROUND);
             if (right) {
-                if (collision_at(c, s->y, s->x) == MZM_COLLISION_AIR)
+                if (ai_collision_at(c, s->y, s->x) == MZM_COLLISION_AIR)
                     turning = zoomer_turn(s, true, TURN_BOTTOM_LEFT_CORNER);
-                else if (collision_at(c, (uint16_t)(s->y - PIXEL_SIZE),
+                else if (ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE),
                                       (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, false, TURN_TOP_RIGHT_EDGE);
                 else
                     s->x += speed;
             } else {
-                if (collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) == MZM_COLLISION_AIR)
+                if (ai_collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) == MZM_COLLISION_AIR)
                     turning = zoomer_turn(s, true, TURN_TOP_RIGHT_EDGE);
-                else if (collision_at(c, (uint16_t)(s->y - PIXEL_SIZE),
+                else if (ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE),
                                       (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, false, TURN_BOTTOM_LEFT_CORNER);
                 else
@@ -593,7 +584,7 @@ static void zoomer_crawling(Ctx *c) {
                 bool flip = right ? !left_slope : right_slope;
                 if (flip) s->status |= MZM_SPRITE_STATUS_X_FLIP;
                 else s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
-                set_anim(s, MZM_ZEELA_WALKING_ON_SLOPE);
+                ai_set_anim(s, MZM_ZEELA_WALKING_ON_SLOPE);
             }
             if (right) s->x += speed;
             else s->x -= speed;
@@ -608,7 +599,7 @@ static void zoomer_crawling(Ctx *c) {
             /* Only slopes reach here, so the table follows the slope. */
             uint8_t anim = left_slope ? MZM_ZOOMER_WALKING_ON_LEFT_SLOPE
                                       : MZM_ZOOMER_WALKING_ON_RIGHT_SLOPE;
-            if (s->anim != anim) set_anim(s, anim);
+            if (s->anim != anim) ai_set_anim(s, anim);
             uint16_t step = down ? speed : (uint16_t)(speed * 2 / 3);
             if (right) s->x += step;
             else s->x -= step;
@@ -648,7 +639,7 @@ static void zoomer_turning_init(MzmSprite *s) {
  * the new surface. */
 static void zoomer_turning(Ctx *c) {
     MzmSprite *s = c->s;
-    if (!animation_ending(c, 1)) return;
+    if (!ai_animation_ending(c, 1)) return;
     bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
     s->pose = ZOOMER_POSE_IDLE;
     switch (s->work1) {
@@ -760,11 +751,11 @@ static void zoomer_falling(Ctx *c) {
         s->work3++;
         s->y = (uint16_t)(s->y + movement);
     }
-    uint16_t top = check_vertical_slopes(c, s->y, s->x);
+    uint16_t top = ai_check_vertical_slopes(c, s->y, s->x);
     if (c->vertical != MZM_COLLISION_AIR) {
         s->y = top;
         s->pose = ZOOMER_POSE_LANDING;
-        random_x_direction(c);
+        ai_random_x_direction(c);
     }
 }
 
@@ -772,7 +763,7 @@ static void zoomer_falling(Ctx *c) {
 static void zoomer_landing(Ctx *c) {
     if (is_zeela(c->s)) c->s->adc += 2;  /* ZeelaLanding triples it */
     if (zoomer_in_air(c)) c->s->pose = ZOOMER_POSE_FALLING_INIT;
-    else if (animation_ending(c, 2)) c->s->pose = ZOOMER_POSE_IDLE_INIT;
+    else if (ai_animation_ending(c, 2)) c->s->pose = ZOOMER_POSE_IDLE_INIT;
 }
 
 /* SpriteUtilDetermineEnemyDrop: the sprite's drop probabilities stacked
@@ -822,49 +813,43 @@ static uint8_t determine_drop(const Ctx *c) {
 }
 
 /* SpriteDebrisInit, for the sprites. */
-static void debris_init(const Ctx *c, uint8_t type, uint16_t y, uint16_t x) {
+void ai_debris_init(const Ctx *c, uint8_t type, uint16_t y, uint16_t x) {
     if (c->f->effects) mzm_sprite_debris_init(c->f->effects, type, y, x);
 }
 
-static void particle_set(const Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
+void ai_particle_set(const Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
     if (c->f->effects) mzm_particle_set(c->f->effects, y, x, effect);
 }
 
 /* SpriteUtilRandomSpriteDebris with three pieces. */
 static void random_debris_3(const Ctx *c, uint16_t y, uint16_t x) {
     if (c->frame8 & 1) {
-        debris_init(c, 1, (uint16_t)(y - EIGHTH_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
-        debris_init(c, 3, (uint16_t)(y - QUARTER_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
-        debris_init(c, 4, (uint16_t)(y + EIGHTH_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
+        ai_debris_init(c, 1, (uint16_t)(y - EIGHTH_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
+        ai_debris_init(c, 3, (uint16_t)(y - QUARTER_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
+        ai_debris_init(c, 4, (uint16_t)(y + EIGHTH_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
     } else {
-        debris_init(c, 2, (uint16_t)(y - QUARTER_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
-        debris_init(c, 3, (uint16_t)(y + EIGHTH_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
-        debris_init(c, 4, (uint16_t)(y + QUARTER_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
+        ai_debris_init(c, 2, (uint16_t)(y - QUARTER_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
+        ai_debris_init(c, 3, (uint16_t)(y + EIGHTH_BLOCK_SIZE), (uint16_t)(x + EIGHTH_BLOCK_SIZE));
+        ai_debris_init(c, 4, (uint16_t)(y + QUARTER_BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE));
     }
 }
 
 /* SpriteUtilSpriteDeath (DEATH_NORMAL): the death particle (the screw
  * attack kill adds three debris), then the sprite becomes its drop at the
  * given position, or is removed. Sounds are not played. */
-static MzmSprite *spawn_drop_follower(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
-                                      uint8_t ram_slot, uint16_t y, uint16_t x, uint16_t status);
-
-/* SpriteDeathType */
-enum { DEATH_NORMAL, DEATH_RESPAWNING, DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP };
-
-static void sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect) {
+void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect) {
     MzmSprite *s = c->s;
     if (s->pose == SPRITE_POSE_SCREW_ATTACK_DESTROYED) {
-        particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
+        ai_particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
         random_debris_3(c, y, x);
     } else {
-        particle_set(c, y, x, effect);
+        ai_particle_set(c, y, x, effect);
     }
     uint8_t drop = determine_drop(c);
     if (type != DEATH_NORMAL) {
         /* The drop follows the sprite's slot; the sprite itself stays. */
         if (drop != MZM_PSPRITE_UNUSED0 && type == DEATH_RESPAWNING)
-            spawn_drop_follower(c, drop, s->room_slot, 0, s->ram_slot, y, x, 0);
+            ai_spawn_drop_follower(c, drop, s->room_slot, 0, s->ram_slot, y, x, 0);
         return;
     }
     if (drop == MZM_PSPRITE_UNUSED0) {
@@ -887,9 +872,6 @@ static void sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t
     s->freeze_timer = 0;
 }
 
-static void spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
-                            uint16_t y, uint16_t x, uint16_t status);
-
 /* ZeelaSpawnEyes: two eyes beside the body, thrown away from the surface. */
 static void zeela_spawn_eyes(Ctx *c) {
     const MzmSprite *s = c->s;
@@ -900,14 +882,14 @@ static void zeela_spawn_eyes(Ctx *c) {
         bool right_wall = s->status & MZM_SPRITE_STATUS_X_FLIP;
         uint16_t x = right_wall ? (uint16_t)(s->x - far) : (uint16_t)(s->x + far);
         uint16_t status = right_wall ? 0 : flip;
-        spawn_secondary(c, id, 0, s->gfx_slot, (uint16_t)(s->y - near), x, status);
-        spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + near), x, status);
+        ai_spawn_secondary(c, id, 0, s->gfx_slot, (uint16_t)(s->y - near), x, status);
+        ai_spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + near), x, status);
     } else if (s->status & MZM_SPRITE_STATUS_Y_FLIP) {
-        spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + far), (uint16_t)(s->x - near), 0);
-        spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + far), (uint16_t)(s->x + near), flip);
+        ai_spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + far), (uint16_t)(s->x - near), 0);
+        ai_spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(s->y + far), (uint16_t)(s->x + near), flip);
     } else {
-        spawn_secondary(c, id, 2, s->gfx_slot, (uint16_t)(s->y - far), (uint16_t)(s->x - near), 0);
-        spawn_secondary(c, id, 2, s->gfx_slot, (uint16_t)(s->y - far), (uint16_t)(s->x + near), flip);
+        ai_spawn_secondary(c, id, 2, s->gfx_slot, (uint16_t)(s->y - far), (uint16_t)(s->x - near), 0);
+        ai_spawn_secondary(c, id, 2, s->gfx_slot, (uint16_t)(s->y - far), (uint16_t)(s->x + near), flip);
     }
 }
 
@@ -926,7 +908,7 @@ static void zeela_eyes(Ctx *c) {
         s->hitbox_bottom = PIXEL_SIZE;
         s->hitbox_left = -EIGHTH_BLOCK_SIZE;
         s->hitbox_right = EIGHTH_BLOCK_SIZE;
-        set_anim(s, MZM_ZEELA_EYES_IDLE);
+        ai_set_anim(s, MZM_ZEELA_EYES_IDLE);
         s->work3 = 0;
         s->pose = ZEELA_EYES_POSE_MOVING;
         s->samus_collision = SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT;
@@ -934,7 +916,7 @@ static void zeela_eyes(Ctx *c) {
         s->rotation = s->work1 ? 128 : 0;  /* PI */
         /* fallthrough */
     case ZEELA_EYES_POSE_MOVING: {
-        if (collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0) {
+        if (ai_collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0) {
             s->pose = SPRITE_POSE_STOPPED;
             return;
         }
@@ -959,18 +941,18 @@ static void zeela_eyes(Ctx *c) {
     }
     case ZEELA_EYES_POSE_EXPLODING:
         s->ignore_samus_timer = 1;
-        if (animation_ending(c, 1)) s->status = 0;
+        if (ai_animation_ending(c, 1)) s->status = 0;
         break;
     default:                        /* stopped or destroyed */
         s->pose = ZEELA_EYES_POSE_EXPLODING;
         s->samus_collision = SSC_NONE;
-        set_anim(s, MZM_ZEELA_EYES_EXPLODING);
+        ai_set_anim(s, MZM_ZEELA_EYES_EXPLODING);
         break;
     }
 }
 
-static void sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
-    sprite_death_typed(c, DEATH_NORMAL, y, x, effect);
+void ai_sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect) {
+    ai_sprite_death_typed(c, DEATH_NORMAL, y, x, effect);
 }
 
 /* ZoomerDeath / ZeelaDeath: the explosion point is the middle of the body;
@@ -986,7 +968,7 @@ static void zoomer_death(Ctx *c) {
         if (s->status & MZM_SPRITE_STATUS_Y_FLIP) y += HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
         else y -= HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
     }
-    sprite_death(c, y, x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+    ai_sprite_death(c, y, x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
 }
 
 /* Zoomer: the AI. The damaged sound and freezing are not ported. */
@@ -1039,7 +1021,7 @@ static void ripper_init(Ctx *c) {
     s->draw_top = BLOCK_SIZE / PIXEL_SIZE;
     s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
     s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
-    set_anim(s, MZM_RIPPER_MOVING);
+    ai_set_anim(s, MZM_RIPPER_MOVING);
     s->samus_collision = SSC_HURTS_SAMUS;
     s->health = c->tables->health[s->sprite_id];
     s->y -= EIGHTH_BLOCK_SIZE;
@@ -1054,12 +1036,12 @@ static void ripper_move(Ctx *c) {
     uint16_t speed = s->sprite_id == MZM_PSPRITE_RIPPER_PURPLE ? PIXEL_SIZE : PIXEL_SIZE / 2;
     uint16_t y = (uint16_t)(s->y - QUARTER_BLOCK_SIZE);
     if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
-        if (collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE + PIXEL_SIZE)) != MZM_COLLISION_SOLID)
+        if (ai_collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE + PIXEL_SIZE)) != MZM_COLLISION_SOLID)
             s->x += speed;
         else
             s->pose = RIPPER_POSE_TURNING_AROUND_INIT;
     } else {
-        if (collision_at(c, y, (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) == MZM_COLLISION_SOLID)
+        if (ai_collision_at(c, y, (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) == MZM_COLLISION_SOLID)
             s->pose = RIPPER_POSE_TURNING_AROUND_INIT;
         else
             s->x -= speed;
@@ -1078,32 +1060,32 @@ static void ripper(Ctx *c) {
     case SPRITE_POSE_UNINITIALIZED: ripper_init(c); break;
     case RIPPER_POSE_MOVING_INIT:
         s->pose = RIPPER_POSE_MOVING;
-        set_anim(s, MZM_RIPPER_MOVING);
+        ai_set_anim(s, MZM_RIPPER_MOVING);
         /* fallthrough */
     case RIPPER_POSE_MOVING: ripper_move(c); break;
     case RIPPER_POSE_TURNING_AROUND_INIT:
         s->pose = RIPPER_POSE_TURNING_AROUND_FIRST_PART;
-        set_anim(s, MZM_RIPPER_TURNING_AROUND);
+        ai_set_anim(s, MZM_RIPPER_TURNING_AROUND);
         /* fallthrough */
     case RIPPER_POSE_TURNING_AROUND_FIRST_PART:
-        if (animation_ending(c, 1)) {
+        if (ai_animation_ending(c, 1)) {
             s->status ^= MZM_SPRITE_STATUS_X_FLIP;
             s->pose = RIPPER_POSE_TURNING_AROUND_SECOND_PART;
-            set_anim(s, MZM_RIPPER_TURNING_AROUND_PART2);
+            ai_set_anim(s, MZM_RIPPER_TURNING_AROUND_PART2);
         }
         break;
     case RIPPER_POSE_TURNING_AROUND_SECOND_PART:
-        if (animation_ending(c, 2)) s->pose = RIPPER_POSE_MOVING_INIT;
+        if (ai_animation_ending(c, 2)) s->pose = RIPPER_POSE_MOVING_INIT;
         break;
     default:
-        sprite_death(c, (uint16_t)(s->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), s->x,
+        ai_sprite_death(c, (uint16_t)(s->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), s->x,
                      MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         break;
     }
 }
 
 /* SpriteSpawnSecondary: the first free slot, or nothing. */
-static void spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
+void ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
                             uint16_t y, uint16_t x, uint16_t status) {
     for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
         MzmSprite *n = &c->f->sprites[i];
@@ -1153,7 +1135,7 @@ static void skree_detect(Ctx *c) {
 /* SkreeGoingDownInit (the sound is not played) */
 static void skree_going_down_init(Ctx *c) {
     MzmSprite *s = c->s;
-    set_anim(s, MZM_SKREE_GOING_DOWN);
+    ai_set_anim(s, MZM_SKREE_GOING_DOWN);
     s->work3 = 0;
     s->work2 = 0;
     s->pose = SKREE_POSE_GOING_DOWN;
@@ -1166,7 +1148,7 @@ static void skree_going_down_init(Ctx *c) {
  * hitbox bottom lands. */
 static void skree_go_down(Ctx *c) {
     MzmSprite *s = c->s;
-    uint16_t top = check_vertical_slopes(c, (uint16_t)(s->hitbox_bottom + s->y), s->x);
+    uint16_t top = ai_check_vertical_slopes(c, (uint16_t)(s->hitbox_bottom + s->y), s->x);
     if (c->vertical != MZM_COLLISION_AIR) {
         s->y = (uint16_t)(top - s->hitbox_bottom);
         s->pose = SKREE_POSE_CRASHING;
@@ -1183,12 +1165,12 @@ static void skree_go_down(Ctx *c) {
         s->y = (uint16_t)(s->y + y_movement);
     }
     if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
-        if (collision_at(c, (uint16_t)(s->y + BLOCK_SIZE), (uint16_t)(s->x + HALF_BLOCK_SIZE)) ==
+        if (ai_collision_at(c, (uint16_t)(s->y + BLOCK_SIZE), (uint16_t)(s->x + HALF_BLOCK_SIZE)) ==
             MZM_COLLISION_SOLID)
             return;
         s->x += x_movement;
     } else {
-        if (collision_at(c, (uint16_t)(s->y + BLOCK_SIZE), (uint16_t)(s->x - HALF_BLOCK_SIZE)) ==
+        if (ai_collision_at(c, (uint16_t)(s->y + BLOCK_SIZE), (uint16_t)(s->x - HALF_BLOCK_SIZE)) ==
             MZM_COLLISION_SOLID)
             return;
         s->x -= x_movement;
@@ -1205,11 +1187,11 @@ static void skree_crash(Ctx *c) {
     s->work0++;
     if (s->work0 == 1) {
         y += BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
-        debris_init(c, 0x11, (uint16_t)(y - QUARTER_BLOCK_SIZE), x);
-        debris_init(c, 0x12, y, (uint16_t)(x + (QUARTER_BLOCK_SIZE - PIXEL_SIZE)));
-        debris_init(c, 0x13, (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2)),
+        ai_debris_init(c, 0x11, (uint16_t)(y - QUARTER_BLOCK_SIZE), x);
+        ai_debris_init(c, 0x12, y, (uint16_t)(x + (QUARTER_BLOCK_SIZE - PIXEL_SIZE)));
+        ai_debris_init(c, 0x13, (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2)),
                     (uint16_t)(x + (QUARTER_BLOCK_SIZE + PIXEL_SIZE)));
-        debris_init(c, 4, (uint16_t)(y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
+        ai_debris_init(c, 4, (uint16_t)(y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
                     (uint16_t)(x - (QUARTER_BLOCK_SIZE + (QUARTER_BLOCK_SIZE - PIXEL_SIZE) +
                                     PIXEL_SIZE / 2)));
     } else if (s->work0 == 40) {
@@ -1217,16 +1199,16 @@ static void skree_crash(Ctx *c) {
     } else if (s->work0 == 60) {
         uint8_t id = s->sprite_id == MZM_PSPRITE_SKREE_BLUE ? MZM_SSPRITE_BLUE_SKREE_EXPLOSION
                                                             : MZM_SSPRITE_SKREE_EXPLOSION;
-        spawn_secondary(c, id, SKREE_EXPLOSION_PART_GOING_UP, s->gfx_slot,
+        ai_spawn_secondary(c, id, SKREE_EXPLOSION_PART_GOING_UP, s->gfx_slot,
                         (uint16_t)(y - EIGHTH_BLOCK_SIZE), x, 0);
-        spawn_secondary(c, id, SKREE_EXPLOSION_PART_GOING_UP, s->gfx_slot,
+        ai_spawn_secondary(c, id, SKREE_EXPLOSION_PART_GOING_UP, s->gfx_slot,
                         (uint16_t)(y - EIGHTH_BLOCK_SIZE), x, MZM_SPRITE_STATUS_X_FLIP);
-        spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(y + EIGHTH_BLOCK_SIZE),
+        ai_spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(y + EIGHTH_BLOCK_SIZE),
                         (uint16_t)(x - (QUARTER_BLOCK_SIZE - PIXEL_SIZE)), 0);
-        spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(y + EIGHTH_BLOCK_SIZE),
+        ai_spawn_secondary(c, id, 1, s->gfx_slot, (uint16_t)(y + EIGHTH_BLOCK_SIZE),
                         (uint16_t)(x + (QUARTER_BLOCK_SIZE - PIXEL_SIZE)), MZM_SPRITE_STATUS_X_FLIP);
         s->status = 0;
-        particle_set(c, (uint16_t)(y + HALF_BLOCK_SIZE + PIXEL_SIZE), x, MZM_PE_SPRITE_EXPLOSION_HUGE);
+        ai_particle_set(c, (uint16_t)(y + HALF_BLOCK_SIZE + PIXEL_SIZE), x, MZM_PE_SPRITE_EXPLOSION_HUGE);
     }
 }
 
@@ -1243,16 +1225,16 @@ static void skree(Ctx *c) {
         skree_init(c);
         /* fallthrough */
     case SKREE_POSE_IDLE_INIT:
-        set_anim(s, MZM_SKREE_IDLE);
+        ai_set_anim(s, MZM_SKREE_IDLE);
         s->pose = SKREE_POSE_IDLE;
         /* fallthrough */
     case SKREE_POSE_IDLE: skree_detect(c); break;
     case SKREE_POSE_SPINNING_INIT:
-        set_anim(s, MZM_SKREE_SPINNING);
+        ai_set_anim(s, MZM_SKREE_SPINNING);
         s->pose = SKREE_POSE_SPINNING;
         /* fallthrough */
     case SKREE_POSE_SPINNING:
-        if (animation_ending(c, 2)) s->pose = SKREE_POSE_GOING_DOWN_INIT;
+        if (ai_animation_ending(c, 2)) s->pose = SKREE_POSE_GOING_DOWN_INIT;
         break;
     case SKREE_POSE_GOING_DOWN_INIT:
         skree_going_down_init(c);
@@ -1260,7 +1242,7 @@ static void skree(Ctx *c) {
     case SKREE_POSE_GOING_DOWN: skree_go_down(c); break;
     case SKREE_POSE_CRASHING: skree_crash(c); break;
     default:
-        sprite_death(c, (uint16_t)(s->y + THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE), s->x,
+        ai_sprite_death(c, (uint16_t)(s->y + THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE), s->x,
                      MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         break;
     }
@@ -1299,7 +1281,7 @@ static void skree_explosion(Ctx *c) {
     }
     if (s->room_slot != SKREE_EXPLOSION_PART_GOING_UP) s->y += PIXEL_SIZE;
     else s->y -= PIXEL_SIZE;
-    if (animation_ending(c, 1)) s->status = 0;
+    if (ai_animation_ending(c, 1)) s->status = 0;
 }
 
 /* Waver: bouncing diagonally between walls, a pixel a frame horizontally
@@ -1317,7 +1299,7 @@ static void waver(Ctx *c) {
         s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
         s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
         s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE;
-        set_anim(s, MZM_WAVER_MOVING);
+        ai_set_anim(s, MZM_WAVER_MOVING);
         s->health = c->tables->health[s->sprite_id];
         s->samus_collision = SSC_HURTS_SAMUS;
         if (s->x > c->f->samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
@@ -1326,27 +1308,27 @@ static void waver(Ctx *c) {
         return;
     }
     if (s->pose != 9) {
-        sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         return;
     }
     if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
-        if (collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR)
             s->x += PIXEL_SIZE;
         else
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
     } else {
-        if (collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR)
             s->x -= PIXEL_SIZE;
         else
             s->status |= MZM_SPRITE_STATUS_X_FLIP;
     }
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
-        if (collision_at(c, (uint16_t)(s->y + s->hitbox_top), s->x) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, (uint16_t)(s->y + s->hitbox_top), s->x) == MZM_COLLISION_AIR)
             s->y -= PIXEL_SIZE / 2;
         else
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
     } else {
-        if (collision_at(c, (uint16_t)(s->y + s->hitbox_bottom), s->x) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, (uint16_t)(s->y + s->hitbox_bottom), s->x) == MZM_COLLISION_AIR)
             s->y += PIXEL_SIZE / 2;
         else
             s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
@@ -1355,16 +1337,21 @@ static void waver(Ctx *c) {
 
 /* SpriteUtilCheckSamusNearSpriteLeftRight: Samus's middle (her position
  * plus half her hitbox top) within the ranges. */
-static bool samus_near_left_right(const Ctx *c, uint16_t y_range, uint16_t x_range) {
+bool ai_samus_near_left_right(const Ctx *c, uint16_t y_range, uint16_t x_range) {
     uint16_t samus_y = (uint16_t)(c->f->samus_y + c->f->samus_hitbox_top / 2);
     uint16_t samus_x = c->f->samus_x, y = c->s->y, x = c->s->x;
     if (y > samus_y ? y - samus_y >= y_range : samus_y - y >= y_range) return false;
     return x > samus_x ? x - samus_x < x_range : samus_x - x < x_range;
 }
 
-static bool hook_event(const Ctx *c, uint8_t event) {
-    const MzmSpriteHooks *h = c->f->hooks;
-    return h && h->check_event && h->check_event(h->context, event);
+uint8_t ai_samus_nslr(const Ctx *c, uint16_t y_range, uint16_t x_range) {
+    if (!ai_samus_near_left_right(c, y_range, x_range)) return NSLR_OUT_OF_RANGE;
+    return c->s->x > c->f->samus_x ? NSLR_LEFT : NSLR_RIGHT;
+}
+
+bool ai_check_event(const Ctx *c, uint8_t event) {
+    return c->f->hooks && c->f->hooks->check_event &&
+           c->f->hooks->check_event(c->f->hooks->context, event);
 }
 
 static void hook_set_event(const Ctx *c, uint8_t event) {
@@ -1392,7 +1379,7 @@ static bool is_dessgeega(const MzmSprite *s) {
 
 /* *CheckSamusNearLeftRight: within five blocks, facing her. */
 static bool hopper_check_samus(Ctx *c) {
-    if (!samus_near_left_right(c, HOPPER_DETECTION_RANGE, HOPPER_DETECTION_RANGE)) return false;
+    if (!ai_samus_near_left_right(c, HOPPER_DETECTION_RANGE, HOPPER_DETECTION_RANGE)) return false;
     if (c->s->x > c->f->samus_x) c->s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
     else c->s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
     return true;
@@ -1400,14 +1387,14 @@ static bool hopper_check_samus(Ctx *c) {
 
 static void hopper_jump_warning_init(MzmSprite *s) {
     s->pose = HOPPER_POSE_JUMP_WARNING;
-    set_anim(s, MZM_SIDEHOPPER_JUMP_WARNING);
+    ai_set_anim(s, MZM_SIDEHOPPER_JUMP_WARNING);
 }
 
 /* *JumpingInit: a low jump when the RNG is odd (the sound is not played). */
 static void hopper_jumping_init(Ctx *c) {
     MzmSprite *s = c->s;
     s->pose = HOPPER_POSE_JUMPING;
-    set_anim(s, MZM_SIDEHOPPER_JUMPING);
+    ai_set_anim(s, MZM_SIDEHOPPER_JUMPING);
     s->work3 = 0;
     s->work2 = c->rng & 1;
     if (!is_dessgeega(s)) {
@@ -1418,7 +1405,7 @@ static void hopper_jumping_init(Ctx *c) {
 
 static void hopper_landing_init(MzmSprite *s) {
     s->pose = HOPPER_POSE_LANDING;
-    set_anim(s, MZM_SIDEHOPPER_LANDING);
+    ai_set_anim(s, MZM_SIDEHOPPER_LANDING);
     if (!is_dessgeega(s)) {
         if (s->status & MZM_SPRITE_STATUS_Y_FLIP) s->hitbox_bottom = SIDEHOPPER_LANDING_HEAD_HITBOX;
         else s->hitbox_top = -SIDEHOPPER_LANDING_HEAD_HITBOX;
@@ -1436,12 +1423,12 @@ static void hopper_idle_init(Ctx *c) {
     s->pose = HOPPER_POSE_IDLE;
     s->work0 = 0;
     s->work1 = c->rng & 3;
-    set_anim(s, c->rng >= 8 ? MZM_SIDEHOPPER_IDLE : MZM_SIDEHOPPER_SHAKING_HEAD);
+    ai_set_anim(s, c->rng >= 8 ? MZM_SIDEHOPPER_IDLE : MZM_SIDEHOPPER_SHAKING_HEAD);
 }
 
 static void hopper_falling_init(MzmSprite *s) {
     s->pose = HOPPER_POSE_FALLING;
-    set_anim(s, MZM_SIDEHOPPER_JUMPING);
+    ai_set_anim(s, MZM_SIDEHOPPER_JUMPING);
     s->work3 = 0;
 }
 
@@ -1450,15 +1437,15 @@ static void hopper_init(Ctx *c) {
     MzmSprite *s = c->s;
     bool dess = is_dessgeega(s);
     if (s->sprite_id == MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM) {
-        if (hook_event(c, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED) ||
-            !hook_event(c, MZM_EVENT_VIEWED_STATUE_ROOM)) {
+        if (ai_check_event(c, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED) ||
+            !ai_check_event(c, MZM_EVENT_VIEWED_STATUE_ROOM)) {
             s->status = 0;
             return;
         }
         hook_doors(c, 1);           /* LOCK_DOORS */
         s->pose = DESSGEEGA_POSE_LONG_BEAM_DETECT;
     } else {
-        if (collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE + PIXEL_SIZE)), s->x) &
+        if (ai_collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE + PIXEL_SIZE)), s->x) &
             MZM_COLLISION_FLAGS_F0) {
             s->status |= MZM_SPRITE_STATUS_Y_FLIP;
             s->y -= BLOCK_SIZE;
@@ -1484,34 +1471,34 @@ static void hopper_init(Ctx *c) {
                                : BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
     s->hitbox_left = (int16_t)-(dess ? BLOCK_SIZE : BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
     s->hitbox_right = dess ? BLOCK_SIZE : BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
-    set_anim(s, MZM_SIDEHOPPER_IDLE);
+    ai_set_anim(s, MZM_SIDEHOPPER_IDLE);
     s->samus_collision = SSC_HURTS_SAMUS;
     s->health = c->tables->health[s->sprite_id];
-    random_x_direction(c);
+    ai_random_x_direction(c);
 }
 
 /* Both sides of the feet in the air (the ground variants start falling). */
 static bool hopper_unsupported(Ctx *c) {
     MzmSprite *s = c->s;
-    return collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR &&
-           collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR;
+    return ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR &&
+           ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR;
 }
 
 /* *JumpWarningGround / *JumpWarningCeiling */
 static void hopper_jump_warning(Ctx *c) {
     MzmSprite *s = c->s;
     if (!(s->status & MZM_SPRITE_STATUS_Y_FLIP) &&
-        collision_at(c, s->y, s->x) == MZM_COLLISION_AIR && hopper_unsupported(c)) {
+        ai_collision_at(c, s->y, s->x) == MZM_COLLISION_AIR && hopper_unsupported(c)) {
         hopper_falling_init(s);
         return;
     }
-    if (animation_ending(c, 1)) hopper_jumping_init(c);
+    if (ai_animation_ending(c, 1)) hopper_jumping_init(c);
 }
 
 /* The vertical probe of a landing: on the ground any collision, on the
  * ceiling the low collision bits, with the block below the top. */
 static bool hopper_lands_at(Ctx *c, uint16_t x, bool ceiling, uint16_t *top) {
-    *top = check_vertical_slopes(c, c->s->y, x);
+    *top = ai_check_vertical_slopes(c, c->s->y, x);
     return ceiling ? (c->vertical & MZM_COLLISION_FLAGS_F) != 0 : c->vertical != MZM_COLLISION_AIR;
 }
 
@@ -1532,7 +1519,7 @@ static void hopper_jumping(Ctx *c) {
     uint16_t probe_x = right ? (uint16_t)(s->x + s->hitbox_right + PIXEL_SIZE)
                              : (uint16_t)(s->x + s->hitbox_left - PIXEL_SIZE);
     int step = movement > 0 ? PIXEL_SIZE : PIXEL_SIZE + 1;
-    if (collision_at(c, probe_y, probe_x) == MZM_COLLISION_SOLID) {
+    if (ai_collision_at(c, probe_y, probe_x) == MZM_COLLISION_SOLID) {
         colliding++;
         s->x = (uint16_t)(s->x + (right ? -(PIXEL_SIZE + PIXEL_SIZE / 2) : PIXEL_SIZE + PIXEL_SIZE / 2));
     } else {
@@ -1563,7 +1550,7 @@ static void hopper_jumping(Ctx *c) {
     uint16_t head_y = ceiling ? (uint16_t)(s->y + s->hitbox_bottom) : (uint16_t)(s->y + s->hitbox_top);
     uint16_t head_x = s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? (uint16_t)(s->x + s->hitbox_right)
                                                                  : (uint16_t)(s->x + s->hitbox_left);
-    if (collision_at(c, head_y, head_x) == MZM_COLLISION_SOLID) {
+    if (ai_collision_at(c, head_y, head_x) == MZM_COLLISION_SOLID) {
         colliding++;
         s->x = (uint16_t)(s->x + (s->status & MZM_SPRITE_STATUS_FACING_RIGHT
                                       ? -(PIXEL_SIZE + PIXEL_SIZE / 2) : PIXEL_SIZE + PIXEL_SIZE / 2));
@@ -1577,14 +1564,14 @@ static void hopper_jumping(Ctx *c) {
 static void hopper_falling(Ctx *c) {
     MzmSprite *s = c->s;
     bool ceiling = s->status & MZM_SPRITE_STATUS_Y_FLIP;
-    uint16_t top = check_vertical_slopes(c, s->y, s->x);
+    uint16_t top = ai_check_vertical_slopes(c, s->y, s->x);
     bool colliding = c->vertical != MZM_COLLISION_AIR;
     if (!colliding) {
-        top = check_vertical_slopes(c, s->y, (uint16_t)(s->x + s->hitbox_right));
+        top = ai_check_vertical_slopes(c, s->y, (uint16_t)(s->x + s->hitbox_right));
         colliding = c->vertical != MZM_COLLISION_AIR;
     }
     if (!colliding) {
-        top = check_vertical_slopes(c, s->y, (uint16_t)(s->x + s->hitbox_left));
+        top = ai_check_vertical_slopes(c, s->y, (uint16_t)(s->x + s->hitbox_left));
         colliding = c->vertical != MZM_COLLISION_AIR;
     }
     if (colliding) {
@@ -1615,7 +1602,7 @@ static void hopper_idle(Ctx *c) {
         hopper_falling_init(s);
         return;
     }
-    if (animation_ending(c, 1) && s->work0++ == s->work1) hopper_jump_warning_init(s);
+    if (ai_animation_ending(c, 1) && s->work0++ == s->work1) hopper_jump_warning_init(s);
 }
 
 /* DessgeegaLongBeamDetectSamus: hidden from projectiles and Samus until she
@@ -1626,26 +1613,26 @@ static void dessgeega_long_beam_detect(Ctx *c) {
     s->ignore_samus_timer = 1;
     s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
     if (!(s->status & MZM_SPRITE_STATUS_ONSCREEN) ||
-        !samus_near_left_right(c, DESSGEEGA_LONG_BEAM_Y_RANGE, DESSGEEGA_LONG_BEAM_X_RANGE))
+        !ai_samus_near_left_right(c, DESSGEEGA_LONG_BEAM_Y_RANGE, DESSGEEGA_LONG_BEAM_X_RANGE))
         return;
     s->pose = DESSGEEGA_POSE_LONG_BEAM_SPAWNING;
-    set_anim(s, MZM_DESSGEEGA_JUMPING);
+    ai_set_anim(s, MZM_DESSGEEGA_JUMPING);
     s->work3 = 0;
     s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
     uint16_t y = s->y, x = s->x;
-    debris_init(c, 5, (uint16_t)(y + THREE_QUARTER_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE + QUARTER_BLOCK_SIZE));
-    debris_init(c, 7, (uint16_t)(y + QUARTER_BLOCK_SIZE),
+    ai_debris_init(c, 5, (uint16_t)(y + THREE_QUARTER_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE + QUARTER_BLOCK_SIZE));
+    ai_debris_init(c, 7, (uint16_t)(y + QUARTER_BLOCK_SIZE),
                 (uint16_t)(x + 3 * EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2));
-    debris_init(c, 8, (uint16_t)(y + BLOCK_SIZE),
+    ai_debris_init(c, 8, (uint16_t)(y + BLOCK_SIZE),
                 (uint16_t)(x - (BLOCK_SIZE + 3 * EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2)));
-    debris_init(c, 6, (uint16_t)(y + HALF_BLOCK_SIZE), (uint16_t)(x - QUARTER_BLOCK_SIZE));
+    ai_debris_init(c, 6, (uint16_t)(y + HALF_BLOCK_SIZE), (uint16_t)(x - QUARTER_BLOCK_SIZE));
 }
 
 /* DessgeegaLongBeamSpawning: down 24 subpixels a frame; the first floor it
  * meets loses three blocks (with dust and debris), the next lands it. */
 static void dessgeega_long_beam_spawning(Ctx *c) {
     MzmSprite *s = c->s;
-    uint16_t top = check_vertical_slopes(c, s->y, s->x);
+    uint16_t top = ai_check_vertical_slopes(c, s->y, s->x);
     if (c->vertical == MZM_COLLISION_AIR) {
         s->y += DESSGEEGA_SPAWNING_SPEED;
         return;
@@ -1660,15 +1647,15 @@ static void dessgeega_long_beam_spawning(Ctx *c) {
     hook_remove_solid(c, y, x);
     hook_remove_solid(c, y, (uint16_t)(x + BLOCK_SIZE));
     hook_remove_solid(c, y, (uint16_t)(x - BLOCK_SIZE));
-    particle_set(c, (uint16_t)(y - EIGHTH_BLOCK_SIZE),
+    ai_particle_set(c, (uint16_t)(y - EIGHTH_BLOCK_SIZE),
                  (uint16_t)(x + 3 * QUARTER_BLOCK_SIZE + PIXEL_SIZE), MZM_PE_TWO_MEDIUM_DUST);
-    particle_set(c, (uint16_t)(y + EIGHTH_BLOCK_SIZE),
+    ai_particle_set(c, (uint16_t)(y + EIGHTH_BLOCK_SIZE),
                  (uint16_t)(x - (3 * QUARTER_BLOCK_SIZE + PIXEL_SIZE)), MZM_PE_MEDIUM_DUST);
-    debris_init(c, 0x11, (uint16_t)(y - BLOCK_SIZE), x);
-    debris_init(c, 0x12, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE - PIXEL_SIZE / 2));
-    debris_init(c, 0x13, (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
+    ai_debris_init(c, 0x11, (uint16_t)(y - BLOCK_SIZE), x);
+    ai_debris_init(c, 0x12, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE - PIXEL_SIZE / 2));
+    ai_debris_init(c, 0x13, (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
                 (uint16_t)(x - (BLOCK_SIZE + HALF_BLOCK_SIZE - PIXEL_SIZE)));
-    debris_init(c, 4, (uint16_t)(y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
+    ai_debris_init(c, 4, (uint16_t)(y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
                 (uint16_t)(x + HALF_BLOCK_SIZE - PIXEL_SIZE / 2));
 }
 
@@ -1683,7 +1670,7 @@ static void hopper_death(Ctx *c) {
         hook_set_event(c, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED);
         hook_doors(c, -20);         /* -ONE_THIRD_SECOND */
     }
-    sprite_death(c, ceiling ? (uint16_t)(s->y + offset) : (uint16_t)(s->y - offset), s->x,
+    ai_sprite_death(c, ceiling ? (uint16_t)(s->y + offset) : (uint16_t)(s->y - offset), s->x,
                  MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
 }
 
@@ -1711,7 +1698,7 @@ static void hopper(Ctx *c) {
     case HOPPER_POSE_JUMP_WARNING: hopper_jump_warning(c); break;
     case HOPPER_POSE_JUMPING: hopper_jumping(c); break;
     case HOPPER_POSE_LANDING:
-        if (animation_ending(c, 1)) hopper_idle_init(c);
+        if (ai_animation_ending(c, 1)) hopper_idle_init(c);
         break;
     case HOPPER_POSE_IDLE: hopper_idle(c); break;
     case HOPPER_POSE_FALLING: hopper_falling(c); break;
@@ -1734,20 +1721,20 @@ enum {
  * wall found around it (or removed); orange Violas move twice as fast. */
 static void viola_init(Ctx *c) {
     MzmSprite *s = c->s;
-    random_x_direction(c);
+    ai_random_x_direction(c);
     s->y -= HALF_BLOCK_SIZE;
-    if (collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), s->x) & MZM_COLLISION_FLAGS_F0) {
+    if (ai_collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), s->x) & MZM_COLLISION_FLAGS_F0) {
         s->y += EIGHTH_BLOCK_SIZE;
         s->pose = VIOLA_POSE_ON_FLOOR;
-    } else if (collision_at(c, (uint16_t)(s->y - (HALF_BLOCK_SIZE + PIXEL_SIZE)), s->x) &
+    } else if (ai_collision_at(c, (uint16_t)(s->y - (HALF_BLOCK_SIZE + PIXEL_SIZE)), s->x) &
                MZM_COLLISION_FLAGS_F0) {
         s->y -= EIGHTH_BLOCK_SIZE;
         s->pose = VIOLA_POSE_ON_CEILING;
-    } else if (collision_at(c, s->y, (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) &
+    } else if (ai_collision_at(c, s->y, (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) &
                MZM_COLLISION_FLAGS_F0) {
         s->x -= EIGHTH_BLOCK_SIZE;
         s->pose = VIOLA_POSE_ON_LEFT_WALL;
-    } else if (collision_at(c, s->y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) & MZM_COLLISION_FLAGS_F0) {
+    } else if (ai_collision_at(c, s->y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) & MZM_COLLISION_FLAGS_F0) {
         s->x += EIGHTH_BLOCK_SIZE;
         s->pose = VIOLA_POSE_ON_RIGHT_WALL;
     } else {
@@ -1755,7 +1742,7 @@ static void viola_init(Ctx *c) {
         return;
     }
     s->samus_collision = SSC_HURTS_SAMUS;
-    set_anim(s, MZM_VIOLA_MOVING);
+    ai_set_anim(s, MZM_VIOLA_MOVING);
     s->health = c->tables->health[s->sprite_id];
     s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
     s->hitbox_top = s->hitbox_left = -(QUARTER_BLOCK_SIZE + PIXEL_SIZE);
@@ -1767,20 +1754,20 @@ static void viola_init(Ctx *c) {
 static void viola_on_floor(Ctx *c) {
     MzmSprite *s = c->s;
     uint16_t v = s->work2, y = (uint16_t)(s->y + VIOLA_SIZE), x = s->x;
-    if (collision_at(c, y, (uint16_t)(x + VIOLA_SIZE + PIXEL_SIZE)) == MZM_COLLISION_AIR &&
-        collision_at(c, y, (uint16_t)(x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR) {
+    if (ai_collision_at(c, y, (uint16_t)(x + VIOLA_SIZE + PIXEL_SIZE)) == MZM_COLLISION_AIR &&
+        ai_collision_at(c, y, (uint16_t)(x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR) {
         s->pose = VIOLA_POSE_FALLING_INIT;
         return;
     }
-    uint16_t top = check_vertical(c, (uint16_t)(y - PIXEL_SIZE), x);
+    uint16_t top = ai_check_vertical(c, (uint16_t)(y - PIXEL_SIZE), x);
     if ((c->vertical & MZM_COLLISION_FLAGS_F) >= MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE) {
         s->y = (uint16_t)(top - VIOLA_SIZE);
     } else {
-        top = check_vertical(c, y, x);
+        top = ai_check_vertical(c, y, x);
         if ((c->vertical & MZM_COLLISION_FLAGS_F) >= MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE) {
             s->y = (uint16_t)(top - VIOLA_SIZE);
         } else {
-            top = check_vertical(c, (uint16_t)(y + PIXEL_SIZE), x);
+            top = ai_check_vertical(c, (uint16_t)(y + PIXEL_SIZE), x);
             if (c->vertical != MZM_COLLISION_AIR) s->y = (uint16_t)(top - VIOLA_SIZE);
         }
     }
@@ -1792,14 +1779,14 @@ static void viola_on_floor(Ctx *c) {
         return;
     }
     if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
-        if (collision_at(c, y, (uint16_t)(x - VIOLA_SIZE)) == MZM_COLLISION_AIR) {
-            if (collision_at(c, y, (uint16_t)(x + VIOLA_SIZE)) == MZM_COLLISION_AIR) {
+        if (ai_collision_at(c, y, (uint16_t)(x - VIOLA_SIZE)) == MZM_COLLISION_AIR) {
+            if (ai_collision_at(c, y, (uint16_t)(x + VIOLA_SIZE)) == MZM_COLLISION_AIR) {
                 s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
                 s->pose = VIOLA_POSE_ON_LEFT_WALL;
             } else {
                 s->x += v;
             }
-        } else if (collision_at(c, (uint16_t)(y - PIXEL_SIZE), (uint16_t)(x + VIOLA_SIZE)) ==
+        } else if (ai_collision_at(c, (uint16_t)(y - PIXEL_SIZE), (uint16_t)(x + VIOLA_SIZE)) ==
                    MZM_COLLISION_SOLID) {
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
             s->pose = VIOLA_POSE_ON_RIGHT_WALL;
@@ -1807,14 +1794,14 @@ static void viola_on_floor(Ctx *c) {
             s->x += v;
         }
     } else {
-        if (collision_at(c, y, (uint16_t)(x + (VIOLA_SIZE - PIXEL_SIZE))) == MZM_COLLISION_AIR) {
-            if (collision_at(c, y, (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_AIR) {
+        if (ai_collision_at(c, y, (uint16_t)(x + (VIOLA_SIZE - PIXEL_SIZE))) == MZM_COLLISION_AIR) {
+            if (ai_collision_at(c, y, (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_AIR) {
                 s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
                 s->pose = VIOLA_POSE_ON_RIGHT_WALL;
             } else {
                 s->x -= v;
             }
-        } else if (collision_at(c, (uint16_t)(y - PIXEL_SIZE),
+        } else if (ai_collision_at(c, (uint16_t)(y - PIXEL_SIZE),
                                 (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_SOLID) {
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
             s->pose = VIOLA_POSE_ON_LEFT_WALL;
@@ -1830,20 +1817,20 @@ static void viola_on_ceiling(Ctx *c) {
     uint16_t block_y = s->y &= BLOCK_POSITION_FLAG;
     s->y += VIOLA_SIZE;
     uint16_t v = s->work2, y = (uint16_t)(block_y - PIXEL_SIZE), x = s->x;
-    if (collision_at(c, y, (uint16_t)(x + VIOLA_SIZE + PIXEL_SIZE)) == MZM_COLLISION_AIR &&
-        collision_at(c, y, (uint16_t)(x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR) {
+    if (ai_collision_at(c, y, (uint16_t)(x + VIOLA_SIZE + PIXEL_SIZE)) == MZM_COLLISION_AIR &&
+        ai_collision_at(c, y, (uint16_t)(x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR) {
         s->pose = VIOLA_POSE_FALLING_INIT;
         return;
     }
     if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
-        if (!(collision_at(c, y, (uint16_t)(x - VIOLA_SIZE)) & MZM_COLLISION_FLAGS_F)) {
-            if (collision_at(c, y, (uint16_t)(x + VIOLA_SIZE)) == MZM_COLLISION_AIR) {
+        if (!(ai_collision_at(c, y, (uint16_t)(x - VIOLA_SIZE)) & MZM_COLLISION_FLAGS_F)) {
+            if (ai_collision_at(c, y, (uint16_t)(x + VIOLA_SIZE)) == MZM_COLLISION_AIR) {
                 s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
                 s->pose = VIOLA_POSE_ON_LEFT_WALL;
             } else {
                 s->x += v;
             }
-        } else if (collision_at(c, (uint16_t)(y + PIXEL_SIZE), (uint16_t)(x + VIOLA_SIZE)) ==
+        } else if (ai_collision_at(c, (uint16_t)(y + PIXEL_SIZE), (uint16_t)(x + VIOLA_SIZE)) ==
                    MZM_COLLISION_SOLID) {
             s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
             s->pose = VIOLA_POSE_ON_RIGHT_WALL;
@@ -1851,14 +1838,14 @@ static void viola_on_ceiling(Ctx *c) {
             s->x += v;
         }
     } else {
-        if (!(collision_at(c, y, (uint16_t)(x + (VIOLA_SIZE - PIXEL_SIZE))) & MZM_COLLISION_FLAGS_F)) {
-            if (collision_at(c, y, (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_AIR) {
+        if (!(ai_collision_at(c, y, (uint16_t)(x + (VIOLA_SIZE - PIXEL_SIZE))) & MZM_COLLISION_FLAGS_F)) {
+            if (ai_collision_at(c, y, (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_AIR) {
                 s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
                 s->pose = VIOLA_POSE_ON_RIGHT_WALL;
             } else {
                 s->x -= v;
             }
-        } else if (collision_at(c, (uint16_t)(y + PIXEL_SIZE),
+        } else if (ai_collision_at(c, (uint16_t)(y + PIXEL_SIZE),
                                 (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_SOLID) {
             s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
             s->pose = VIOLA_POSE_ON_LEFT_WALL;
@@ -1878,21 +1865,21 @@ static void viola_on_wall(Ctx *c, bool right_wall) {
     uint16_t x = right_wall ? (uint16_t)(block_x + BLOCK_SIZE) : (uint16_t)(block_x - PIXEL_SIZE);
     int16_t inward = right_wall ? -PIXEL_SIZE : PIXEL_SIZE;
     uint16_t above = right_wall ? HALF_BLOCK_SIZE : VIOLA_SIZE + EIGHTH_BLOCK_SIZE;
-    if (collision_at(c, (uint16_t)(y + VIOLA_SIZE + PIXEL_SIZE), x) == MZM_COLLISION_AIR &&
-        collision_at(c, (uint16_t)(y - above), x) == MZM_COLLISION_AIR) {
+    if (ai_collision_at(c, (uint16_t)(y + VIOLA_SIZE + PIXEL_SIZE), x) == MZM_COLLISION_AIR &&
+        ai_collision_at(c, (uint16_t)(y - above), x) == MZM_COLLISION_AIR) {
         s->pose = VIOLA_POSE_FALLING_INIT;
         return;
     }
     if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
-        if (!(collision_at(c, (uint16_t)(y - VIOLA_SIZE), x) & MZM_COLLISION_FLAGS_F0)) {
-            if (collision_at(c, (uint16_t)(y + VIOLA_SIZE), x) == MZM_COLLISION_AIR) {
+        if (!(ai_collision_at(c, (uint16_t)(y - VIOLA_SIZE), x) & MZM_COLLISION_FLAGS_F0)) {
+            if (ai_collision_at(c, (uint16_t)(y + VIOLA_SIZE), x) == MZM_COLLISION_AIR) {
                 if (right_wall) s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
                 else s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
                 s->pose = VIOLA_POSE_ON_CEILING;
             } else {
                 s->y += v;
             }
-        } else if (collision_at(c, (uint16_t)(y + VIOLA_SIZE), (uint16_t)(x + inward)) ==
+        } else if (ai_collision_at(c, (uint16_t)(y + VIOLA_SIZE), (uint16_t)(x + inward)) ==
                    MZM_COLLISION_SOLID) {
             if (right_wall) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
             else s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
@@ -1901,15 +1888,15 @@ static void viola_on_wall(Ctx *c, bool right_wall) {
             s->y += v;
         }
     } else {
-        if (!(collision_at(c, (uint16_t)(y + (VIOLA_SIZE - PIXEL_SIZE)), x) & MZM_COLLISION_FLAGS_F0)) {
-            if (collision_at(c, (uint16_t)(y - (VIOLA_SIZE + PIXEL_SIZE)), x) == MZM_COLLISION_AIR) {
+        if (!(ai_collision_at(c, (uint16_t)(y + (VIOLA_SIZE - PIXEL_SIZE)), x) & MZM_COLLISION_FLAGS_F0)) {
+            if (ai_collision_at(c, (uint16_t)(y - (VIOLA_SIZE + PIXEL_SIZE)), x) == MZM_COLLISION_AIR) {
                 if (right_wall) s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
                 else s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
                 s->pose = VIOLA_POSE_ON_FLOOR;
             } else {
                 s->y -= v;
             }
-        } else if (collision_at(c, (uint16_t)(y - (VIOLA_SIZE + PIXEL_SIZE)), (uint16_t)(x + inward)) ==
+        } else if (ai_collision_at(c, (uint16_t)(y - (VIOLA_SIZE + PIXEL_SIZE)), (uint16_t)(x + inward)) ==
                    MZM_COLLISION_SOLID) {
             if (right_wall) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
             else s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
@@ -1923,11 +1910,11 @@ static void viola_on_wall(Ctx *c, bool right_wall) {
 /* ViolaFalling: sSpritesFallingSpeed until it lands on the floor. */
 static void viola_falling(Ctx *c) {
     MzmSprite *s = c->s;
-    uint16_t top = check_vertical_slopes(c, (uint16_t)(s->y + VIOLA_SIZE), s->x);
+    uint16_t top = ai_check_vertical_slopes(c, (uint16_t)(s->y + VIOLA_SIZE), s->x);
     if (c->vertical != MZM_COLLISION_AIR) {
         s->y = (uint16_t)(top - VIOLA_SIZE);
         s->pose = VIOLA_POSE_ON_FLOOR;
-        random_x_direction(c);
+        ai_random_x_direction(c);
         return;
     }
     uint8_t offset = s->work3;
@@ -1959,7 +1946,7 @@ static void viola(Ctx *c) {
         s->work3 = 0;
         /* fallthrough */
     case VIOLA_POSE_FALLING: viola_falling(c); break;
-    default: sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM); break;
+    default: ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM); break;
     }
 }
 
@@ -1976,12 +1963,12 @@ static bool sova_in_air(const Ctx *c) {
     const MzmSprite *s = c->s;
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
         uint16_t x = s->status & MZM_SPRITE_STATUS_X_FLIP ? s->x : (uint16_t)(s->x - PIXEL_SIZE);
-        return collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR &&
-               collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR;
+        return ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR &&
+               ai_collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR;
     }
     uint16_t y = s->work2 ? (uint16_t)(s->y - PIXEL_SIZE) : s->y;
-    return collision_at(c, y, (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR &&
-           collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR;
+    return ai_collision_at(c, y, (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR &&
+           ai_collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR;
 }
 
 /* SovaUpdateHitbox */
@@ -2004,10 +1991,10 @@ static void sova_hitbox(MzmSprite *s) {
 /* SovaSetCrawlingOam */
 static void sova_crawling_oam(MzmSprite *s) {
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
-        set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? MZM_SOVA_WALKING_ON_RIGHT
+        ai_set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? MZM_SOVA_WALKING_ON_RIGHT
                                                                : MZM_SOVA_WALKING_ON_LEFT);
     } else {
-        set_anim(s, s->work2 ? MZM_SOVA_WALKING_ON_CEILING : MZM_SOVA_ON_GROUND);
+        ai_set_anim(s, s->work2 ? MZM_SOVA_WALKING_ON_CEILING : MZM_SOVA_ON_GROUND);
         sova_set_x_flip_by_facing(s);
     }
 }
@@ -2017,21 +2004,21 @@ static void sova_init(Ctx *c) {
     MzmSprite *s = c->s;
     s->work2 = 0;
     s->pose = ZOOMER_POSE_IDLE;
-    random_x_direction(c);
-    if (collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0) {
+    ai_random_x_direction(c);
+    if (ai_collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0) {
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
-    } else if (collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE + PIXEL_SIZE)), s->x) &
+    } else if (ai_collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE + PIXEL_SIZE)), s->x) &
                MZM_COLLISION_FLAGS_F0) {
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
         s->y -= BLOCK_SIZE;
         s->work2 = 1;
-    } else if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
+    } else if (ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
                             (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) &
                MZM_COLLISION_FLAGS_F0) {
         s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
         s->y -= HALF_BLOCK_SIZE;
         s->x -= HALF_BLOCK_SIZE;
-    } else if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
+    } else if (ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
                             (uint16_t)(s->x + HALF_BLOCK_SIZE)) & MZM_COLLISION_FLAGS_F0) {
         s->status |= MZM_SPRITE_STATUS_FACING_DOWN | MZM_SPRITE_STATUS_X_FLIP;
         s->y -= HALF_BLOCK_SIZE;
@@ -2065,17 +2052,17 @@ static void sova_move(Ctx *c) {
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
         if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
             if (right) {
-                if (!(collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0))
+                if (!(ai_collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0))
                     turning = zoomer_turn(s, true, TURN_BOTTOM_LEFT_EDGE);
-                else if (collision_at(c, (uint16_t)(s->y + reach), (uint16_t)(s->x - PIXEL_SIZE)) ==
+                else if (ai_collision_at(c, (uint16_t)(s->y + reach), (uint16_t)(s->x - PIXEL_SIZE)) ==
                          MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, false, TURN_BOTTOM_RIGHT_CORNER);
                 else
                     s->y += speed;
             } else {
-                if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F0))
+                if (!(ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F0))
                     turning = zoomer_turn(s, true, TURN_BOTTOM_RIGHT_CORNER);
-                else if (collision_at(c, (uint16_t)(s->y - reach), (uint16_t)(s->x - PIXEL_SIZE)) ==
+                else if (ai_collision_at(c, (uint16_t)(s->y - reach), (uint16_t)(s->x - PIXEL_SIZE)) ==
                          MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, false, TURN_BOTTOM_LEFT_EDGE);
                 else
@@ -2083,17 +2070,17 @@ static void sova_move(Ctx *c) {
             }
         } else {
             if (right) {
-                if (!(collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) & MZM_COLLISION_FLAGS_F0))
+                if (!(ai_collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) & MZM_COLLISION_FLAGS_F0))
                     turning = zoomer_turn(s, false, TURN_TOP_LEFT_CORNER);
-                else if (collision_at(c, (uint16_t)(s->y + reach), s->x) == MZM_COLLISION_SOLID)
+                else if (ai_collision_at(c, (uint16_t)(s->y + reach), s->x) == MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, true, TURN_TOP_LEFT_EDGE);
                 else
                     s->y += speed;
             } else {
-                if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
+                if (!(ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
                       MZM_COLLISION_FLAGS_F0))
                     turning = zoomer_turn(s, false, TURN_TOP_LEFT_EDGE);
-                else if (collision_at(c, (uint16_t)(s->y - reach), s->x) == MZM_COLLISION_SOLID)
+                else if (ai_collision_at(c, (uint16_t)(s->y - reach), s->x) == MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, true, TURN_TOP_LEFT_CORNER);
                 else
                     s->y -= speed;
@@ -2101,40 +2088,40 @@ static void sova_move(Ctx *c) {
         }
     } else if (s->work2) {
         if (right) {
-            if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F))
+            if (!(ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F))
                 turning = zoomer_turn(s, false, TURN_BOTTOM_RIGHT_EDGE);
-            else if (collision_at(c, s->y, (uint16_t)(s->x + reach)) == MZM_COLLISION_SOLID)
+            else if (ai_collision_at(c, s->y, (uint16_t)(s->x + reach)) == MZM_COLLISION_SOLID)
                 turning = zoomer_turn(s, true, TURN_TOP_RIGHT_CORNER);
             else
                 s->x += speed;
         } else {
-            if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
+            if (!(ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
                   MZM_COLLISION_FLAGS_F))
                 turning = zoomer_turn(s, false, TURN_TOP_RIGHT_CORNER);
-            else if (collision_at(c, s->y, (uint16_t)(s->x - reach)) == MZM_COLLISION_SOLID)
+            else if (ai_collision_at(c, s->y, (uint16_t)(s->x - reach)) == MZM_COLLISION_SOLID)
                 turning = zoomer_turn(s, true, TURN_BOTTOM_RIGHT_EDGE);
             else
                 s->x -= speed;
         }
     } else {
-        align_on_slope(c);
+        ai_align_on_slope(c);
         if (c->vertical == MZM_COLLISION_AIR || (c->vertical & MZM_COLLISION_FLAGS_F0)) {
             if (s->anim != MZM_SOVA_ON_GROUND) {
-                set_anim(s, MZM_SOVA_ON_GROUND);
+                ai_set_anim(s, MZM_SOVA_ON_GROUND);
                 sova_set_x_flip_by_facing(s);
             }
             if (right) {
-                if (collision_at(c, s->y, s->x) == MZM_COLLISION_AIR)
+                if (ai_collision_at(c, s->y, s->x) == MZM_COLLISION_AIR)
                     turning = zoomer_turn(s, true, TURN_BOTTOM_LEFT_CORNER);
-                else if (collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x + reach)) ==
+                else if (ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x + reach)) ==
                          MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, false, TURN_TOP_RIGHT_EDGE);
                 else
                     s->x += speed;
             } else {
-                if (collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) == MZM_COLLISION_AIR)
+                if (ai_collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) == MZM_COLLISION_AIR)
                     turning = zoomer_turn(s, true, TURN_TOP_RIGHT_EDGE);
-                else if (collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - reach)) ==
+                else if (ai_collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - reach)) ==
                          MZM_COLLISION_SOLID)
                     turning = zoomer_turn(s, false, TURN_BOTTOM_LEFT_CORNER);
                 else
@@ -2151,7 +2138,7 @@ static void sova_move(Ctx *c) {
             bool full = right ? left_slope : right_slope;
             uint8_t anim = full ? MZM_SOVA_WALKING_ON_RIGHT_SLOPE : MZM_SOVA_WALKING_ON_LEFT_SLOPE;
             if (s->anim != anim) {
-                set_anim(s, anim);
+                ai_set_anim(s, anim);
                 if (right) s->status |= MZM_SPRITE_STATUS_X_FLIP;
                 else s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
             }
@@ -2192,7 +2179,7 @@ static void sova_turning_init(MzmSprite *s) {
 /* SovaTurningAround: onto the new surface once the turn table ends. */
 static void sova_turning(Ctx *c) {
     MzmSprite *s = c->s;
-    if (!animation_ending(c, 1)) return;
+    if (!ai_animation_ending(c, 1)) return;
     bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
     s->pose = ZOOMER_POSE_IDLE;
     s->status &= (uint16_t)~MZM_SPRITE_STATUS_Y_FLIP;
@@ -2289,8 +2276,8 @@ static void sova_turning(Ctx *c) {
 static void sova_landing_init(Ctx *c) {
     MzmSprite *s = c->s;
     s->pose = ZOOMER_POSE_LANDING;
-    set_anim(s, MZM_SOVA_FALLING);
-    random_x_direction(c);
+    ai_set_anim(s, MZM_SOVA_FALLING);
+    ai_random_x_direction(c);
     sova_set_x_flip_by_facing(s);
 }
 
@@ -2308,7 +2295,7 @@ static void sova_falling_init(MzmSprite *s) {
     s->status &= (uint16_t)~(MZM_SPRITE_STATUS_X_FLIP | MZM_SPRITE_STATUS_Y_FLIP |
                              MZM_SPRITE_STATUS_FACING_DOWN);
     sova_hitbox(s);
-    set_anim(s, MZM_SOVA_FALLING);
+    ai_set_anim(s, MZM_SOVA_FALLING);
 }
 
 /* SovaFalling (the splash of SpriteUtilCheckInRoomEffect is not ported) */
@@ -2322,7 +2309,7 @@ static void sova_falling(Ctx *c) {
         s->work3++;
         s->y = (uint16_t)(s->y + movement);
     }
-    uint16_t top = check_vertical_slopes(c, s->y, s->x);
+    uint16_t top = ai_check_vertical_slopes(c, s->y, s->x);
     if (c->vertical != MZM_COLLISION_AIR) {
         s->y = top;
         sova_landing_init(c);
@@ -2354,7 +2341,7 @@ static void sova(Ctx *c) {
         /* fallthrough */
     case ZOOMER_POSE_LANDING:
         if (sova_in_air(c)) s->pose = ZOOMER_POSE_FALLING_INIT;
-        else if (animation_ending(c, 2)) s->pose = ZOOMER_POSE_IDLE_INIT;
+        else if (ai_animation_ending(c, 2)) s->pose = ZOOMER_POSE_IDLE_INIT;
         break;
     case ZOOMER_POSE_FALLING_INIT:
         sova_falling_init(s);
@@ -2369,7 +2356,7 @@ static void sova(Ctx *c) {
         else
             y = s->work2 ? (uint16_t)(y + HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)
                          : (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
-        sprite_death(c, y, x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        ai_sprite_death(c, y, x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         break;
     }
     }
@@ -2377,7 +2364,7 @@ static void sova(Ctx *c) {
 
 /* SpriteSpawnDropFollowers: a primary sprite owned by `ram_slot` in the
  * first free slot (NULL without one). */
-static MzmSprite *spawn_drop_follower(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
+MzmSprite *ai_spawn_drop_follower(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
                                       uint8_t ram_slot, uint16_t y, uint16_t x, uint16_t status) {
     for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
         MzmSprite *n = &c->f->sprites[i];
@@ -2399,7 +2386,7 @@ static MzmSprite *spawn_drop_follower(Ctx *c, uint8_t sprite_id, uint8_t part, u
 }
 
 /* SpriteUtilCheckHasDrops: a drop owned by this sprite's slot exists. */
-static bool has_drops(const Ctx *c) {
+bool ai_has_drops(const Ctx *c) {
     for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
         const MzmSprite *n = &c->f->sprites[i];
         if (n->status & MZM_SPRITE_STATUS_EXISTS && n->ram_slot == c->s->ram_slot &&
@@ -2423,7 +2410,7 @@ static int count_children(const Ctx *c, uint8_t sprite_id) {
 
 /* SpriteUtilCheckSamusNearSpriteAboveBelow == NSAB_ABOVE: within the x
  * range, and the sprite below Samus's middle within the y range. */
-static bool samus_above(const Ctx *c, uint16_t y_range, uint16_t x_range) {
+bool ai_samus_above(const Ctx *c, uint16_t y_range, uint16_t x_range) {
     uint16_t samus_y = (uint16_t)(c->f->samus_y + c->f->samus_hitbox_top / 2);
     uint16_t samus_x = c->f->samus_x, y = c->s->y, x = c->s->x;
     if (x > samus_x ? x - samus_x >= x_range : samus_x - x >= x_range) return false;
@@ -2466,7 +2453,7 @@ static bool is_geega(const MzmSprite *s) {
 static void pipe_bug_idle_init(MzmSprite *s) {
     s->samus_collision = SSC_NONE;
     s->pose = PIPE_BUG_POSE_IDLE;
-    set_anim(s, MZM_PIPE_BUG_IDLE);
+    ai_set_anim(s, MZM_PIPE_BUG_IDLE);
     s->status |= MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
 }
 
@@ -2501,7 +2488,7 @@ static void pipe_bug_idle(Ctx *c) {
     if (s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_LEADER &&
         count_children(c, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER))
         return;
-    if (has_drops(c)) return;
+    if (ai_has_drops(c)) return;
     if (s->work1) {
         s->work1--;
         return;
@@ -2510,7 +2497,7 @@ static void pipe_bug_idle(Ctx *c) {
     if (samus_y > s->y - (HALF_BLOCK_SIZE - PIXEL_SIZE / 2)) return;
     uint16_t dx = s->x > samus_x ? (uint16_t)(s->x - samus_x) : (uint16_t)(samus_x - s->x);
     if (dx <= HALF_BLOCK_SIZE + PIXEL_SIZE) return;
-    if (!samus_above(c, BLOCK_SIZE * 5, BLOCK_SIZE * 5)) return;
+    if (!ai_samus_above(c, BLOCK_SIZE * 5, BLOCK_SIZE * 5)) return;
     s->scaling = samus_y;
     s->pose = PIPE_BUG_POSE_GOING_UP;
     s->work0 = 2;
@@ -2519,7 +2506,7 @@ static void pipe_bug_idle(Ctx *c) {
     if (s->x > samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
     else s->status |= MZM_SPRITE_STATUS_X_FLIP;
     if (s->sprite_id == MZM_PSPRITE_GEEGA_LEADER) {
-        MzmSprite *follower = spawn_drop_follower(
+        MzmSprite *follower = ai_spawn_drop_follower(
             c, MZM_PSPRITE_GEEGA_FOLLOWER, s->room_slot, s->gfx_slot, s->ram_slot,
             (uint16_t)(s->y + BLOCK_SIZE * 2 + HALF_BLOCK_SIZE), (uint16_t)(s->x - HALF_BLOCK_SIZE),
             s->status & MZM_SPRITE_STATUS_X_FLIP);
@@ -2529,14 +2516,14 @@ static void pipe_bug_idle(Ctx *c) {
         }
     } else if (s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_LEADER) {
         /* The second follower only spawns after the first. */
-        MzmSprite *follower = spawn_drop_follower(
+        MzmSprite *follower = ai_spawn_drop_follower(
             c, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER, s->room_slot, s->gfx_slot, s->ram_slot,
             (uint16_t)(s->y + BLOCK_SIZE + HALF_BLOCK_SIZE), (uint16_t)(s->x - HALF_BLOCK_SIZE),
             s->status & MZM_SPRITE_STATUS_X_FLIP);
         if (follower) {
             follower->scaling = s->scaling;
             follower->work0 = 10;   /* CONVERT_SECONDS(1.f / 6) */
-            follower = spawn_drop_follower(
+            follower = ai_spawn_drop_follower(
                 c, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER, s->room_slot, s->gfx_slot, s->ram_slot,
                 (uint16_t)(s->y + BLOCK_SIZE * 2 + HALF_BLOCK_SIZE),
                 (uint16_t)(s->x - HALF_BLOCK_SIZE), s->status & MZM_SPRITE_STATUS_X_FLIP);
@@ -2561,7 +2548,7 @@ static void pipe_bug_going_up(Ctx *c) {
     if (target - (BLOCK_SIZE + HALF_BLOCK_SIZE + PIXEL_SIZE) > s->y) {
         s->pose = PIPE_BUG_POSE_MOVING;
         s->work0 = 10;              /* CONVERT_SECONDS(1.f / 6) */
-        set_anim(s, MZM_PIPE_BUG_MOVING);
+        ai_set_anim(s, MZM_PIPE_BUG_MOVING);
     }
 }
 
@@ -2633,7 +2620,7 @@ static void pipe_bug(Ctx *c) {
     case PIPE_BUG_POSE_GOING_UP: pipe_bug_going_up(c); break;
     case PIPE_BUG_POSE_MOVING: pipe_bug_move(c); break;
     default:
-        sprite_death_typed(c, DEATH_RESPAWNING, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        ai_sprite_death_typed(c, DEATH_RESPAWNING, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         pipe_bug_respawn(c);
         break;
     }
@@ -2668,7 +2655,7 @@ static void reo_idle(Ctx *c) {
     }
     s->work2 = (uint8_t)(offset + 1);
     s->x = (uint16_t)(s->x + movement);
-    if (samus_near_left_right(c, BLOCK_SIZE * 8, BLOCK_SIZE * 7)) s->pose = REO_POSE_MOVING_INIT;
+    if (ai_samus_near_left_right(c, BLOCK_SIZE * 8, BLOCK_SIZE * 7)) s->pose = REO_POSE_MOVING_INIT;
 }
 
 /* ReoMovingInit: facing Samus, diving if above her head. */
@@ -2681,7 +2668,7 @@ static void reo_moving_init(Ctx *c) {
     s->x_spawn = c->rng & 3;        /* MOD_AND(gSpriteRng, SPRITE_RNG_PROB(.25f)) */
     s->pose = REO_POSE_MOVING;
     s->scaling = 32;                /* CONVERT_SECONDS(.5f + 1.f / 30), the sound timer */
-    set_anim(s, MZM_REO_MOVING);
+    ai_set_anim(s, MZM_REO_MOVING);
     if (s->x > c->f->samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
     else s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
     if (s->y > c->f->samus_y + c->f->samus_hitbox_top)
@@ -2726,16 +2713,16 @@ static void reo_move(Ctx *c) {
             continue;
         if (!o->freeze_timer) {
             if (s->y > o->y) {
-                if (collision_at(c, (uint16_t)(o->y - HALF_BLOCK_SIZE), o->x) == MZM_COLLISION_AIR)
+                if (ai_collision_at(c, (uint16_t)(o->y - HALF_BLOCK_SIZE), o->x) == MZM_COLLISION_AIR)
                     o->y -= PIXEL_SIZE;
-            } else if (collision_at(c, (uint16_t)(o->y + HALF_BLOCK_SIZE), o->x) ==
+            } else if (ai_collision_at(c, (uint16_t)(o->y + HALF_BLOCK_SIZE), o->x) ==
                        MZM_COLLISION_AIR) {
                 o->y += PIXEL_SIZE;
             }
             if (s->x > o->x) {
-                if (collision_at(c, o->y, (uint16_t)(o->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR)
+                if (ai_collision_at(c, o->y, (uint16_t)(o->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR)
                     o->x -= PIXEL_SIZE;
-            } else if (collision_at(c, o->y, (uint16_t)(o->x + HALF_BLOCK_SIZE)) ==
+            } else if (ai_collision_at(c, o->y, (uint16_t)(o->x + HALF_BLOCK_SIZE)) ==
                        MZM_COLLISION_AIR) {
                 o->x += PIXEL_SIZE;
             }
@@ -2744,14 +2731,14 @@ static void reo_move(Ctx *c) {
     }
     uint16_t ahead = s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? (uint16_t)(s->x + HALF_BLOCK_SIZE)
                                                                 : (uint16_t)(s->x - HALF_BLOCK_SIZE);
-    if (collision_at(c, s->y, ahead) != MZM_COLLISION_AIR) {
+    if (ai_collision_at(c, s->y, ahead) != MZM_COLLISION_AIR) {
         s->status ^= MZM_SPRITE_STATUS_FACING_RIGHT;
         s->work1 = 0;
         s->work2 = 1;
     }
     uint16_t below = s->status & MZM_SPRITE_STATUS_FACING_DOWN ? (uint16_t)(s->y + HALF_BLOCK_SIZE)
                                                                : (uint16_t)(s->y - HALF_BLOCK_SIZE);
-    if (collision_at(c, below, s->x) != MZM_COLLISION_AIR) {
+    if (ai_collision_at(c, below, s->x) != MZM_COLLISION_AIR) {
         s->status ^= MZM_SPRITE_STATUS_FACING_DOWN;
         s->work0 = 0;
         s->work3 = 1;
@@ -2781,10 +2768,10 @@ static void reo(Ctx *c) {
         s->hitbox_bottom = HALF_BLOCK_SIZE;
         s->hitbox_left = -(BLOCK_SIZE - EIGHTH_BLOCK_SIZE);
         s->hitbox_right = BLOCK_SIZE - EIGHTH_BLOCK_SIZE;
-        set_anim(s, MZM_REO_IDLE);
+        ai_set_anim(s, MZM_REO_IDLE);
         s->health = c->tables->health[s->sprite_id];
         s->samus_collision = SSC_HURTS_SAMUS;
-        random_x_direction(c);
+        ai_random_x_direction(c);
         if (c->rng > 8) s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
         s->pose = REO_POSE_IDLE_INIT;
         break;
@@ -2798,7 +2785,7 @@ static void reo(Ctx *c) {
         reo_moving_init(c);
         /* fallthrough */
     case REO_POSE_MOVING: reo_move(c); break;
-    default: sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_BIG); break;
+    default: ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_BIG); break;
     }
 }
 
@@ -2822,20 +2809,20 @@ static bool swooper_y_movement(Ctx *c, uint16_t movement, uint16_t height) {
     MzmSprite *s = c->s;
     if (s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) {
         uint16_t y = (uint16_t)(s->y + BLOCK_SIZE);
-        if (collision_at(c, y, s->x) == MZM_COLLISION_SOLID ||
-            collision_at(c, y, (uint16_t)(s->x - THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID ||
-            collision_at(c, y, (uint16_t)(s->x + THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
+        if (ai_collision_at(c, y, s->x) == MZM_COLLISION_SOLID ||
+            ai_collision_at(c, y, (uint16_t)(s->x - THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID ||
+            ai_collision_at(c, y, (uint16_t)(s->x + THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID)
             return true;
         s->y += movement;
         return false;
     }
     uint16_t y = (uint16_t)(s->y - height);
-    if (collision_at(c, y, (uint16_t)(s->x - THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID &&
-        collision_at(c, y, (uint16_t)(s->x - (BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE))) ==
+    if (ai_collision_at(c, y, (uint16_t)(s->x - THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID &&
+        ai_collision_at(c, y, (uint16_t)(s->x - (BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE))) ==
             MZM_COLLISION_SOLID)
         return true;
-    if (collision_at(c, y, (uint16_t)(s->x + THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID &&
-        collision_at(c, y, (uint16_t)(s->x + BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE)) ==
+    if (ai_collision_at(c, y, (uint16_t)(s->x + THREE_QUARTER_BLOCK_SIZE)) == MZM_COLLISION_SOLID &&
+        ai_collision_at(c, y, (uint16_t)(s->x + BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE)) ==
             MZM_COLLISION_SOLID)
         return true;
     s->y -= movement;
@@ -2848,8 +2835,8 @@ static void swooper_x_movement(Ctx *c, uint16_t movement) {
     MzmSprite *s = c->s;
     bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
     uint16_t x = right ? (uint16_t)(s->x + BLOCK_SIZE) : (uint16_t)(s->x - BLOCK_SIZE);
-    if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), x) == MZM_COLLISION_SOLID ||
-        collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), x) == MZM_COLLISION_SOLID)
+    if (ai_collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), x) == MZM_COLLISION_SOLID ||
+        ai_collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), x) == MZM_COLLISION_SOLID)
         return;
     if (right) s->x += movement;
     else s->x -= movement;
@@ -2871,10 +2858,10 @@ static void cycle_table(uint8_t *offset_field, uint16_t *position, const int16_t
  * within the ranges. */
 static bool swooper_detects(const Ctx *c, uint16_t x_range) {
     return c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE) >= c->s->y &&
-           samus_near_left_right(c, BLOCK_SIZE * 8, x_range);
+           ai_samus_near_left_right(c, BLOCK_SIZE * 8, x_range);
 }
 
-static void face_samus(const Ctx *c) {
+void ai_face_samus(const Ctx *c) {
     if (c->s->x > c->f->samus_x) c->s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
     else c->s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
 }
@@ -2898,14 +2885,14 @@ static void mella(Ctx *c) {
         s->hitbox_bottom = QUARTER_BLOCK_SIZE;
         s->hitbox_left = -HALF_BLOCK_SIZE;
         s->hitbox_right = HALF_BLOCK_SIZE;
-        set_anim(s, MZM_MELLA_IDLE);
+        ai_set_anim(s, MZM_MELLA_IDLE);
         s->health = c->tables->health[s->sprite_id];
         s->samus_collision = SSC_HURTS_SAMUS;
         s->pose = SWOOPER_POSE_IDLE_INIT;
         break;
     case SWOOPER_POSE_IDLE_INIT:
         s->pose = SWOOPER_POSE_IDLE;
-        set_anim(s, MZM_MELLA_IDLE);
+        ai_set_anim(s, MZM_MELLA_IDLE);
         s->work3 = (uint8_t)(c->rng * 4);
         s->work2 = (uint8_t)(c->rng * 2);
         break;
@@ -2916,14 +2903,14 @@ static void mella(Ctx *c) {
         break;
     case SWOOPER_POSE_WARNING_INIT:
         s->pose = SWOOPER_POSE_WARNING;
-        set_anim(s, MZM_MELLA_MOVING);
+        ai_set_anim(s, MZM_MELLA_MOVING);
         s->work0 = 7;               /* CONVERT_SECONDS(.1f) + 1 */
         /* fallthrough */
     case SWOOPER_POSE_WARNING:      /* the moving sound is not played */
         if (--s->work0 == 0) {
             s->pose = SWOOPER_POSE_GOING_DOWN;
             s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
-            face_samus(c);
+            ai_face_samus(c);
             s->work2 = 0;
             s->work3 = 0;
         }
@@ -2948,7 +2935,7 @@ static void mella(Ctx *c) {
             s->pose = SWOOPER_POSE_IDLE_INIT;
         }
         break;
-    default: sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_SMALL); break;
+    default: ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_SMALL); break;
     }
 }
 
@@ -2966,14 +2953,14 @@ static void holtz(Ctx *c) {
     }
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED:
-        face_samus(c);
+        ai_face_samus(c);
         s->draw_top = THREE_QUARTER_BLOCK_SIZE / PIXEL_SIZE;
         s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
         s->hitbox_top = -HALF_BLOCK_SIZE;
         s->hitbox_bottom = HALF_BLOCK_SIZE;
         s->hitbox_left = -(HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
         s->hitbox_right = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
-        set_anim(s, MZM_HOLTZ_IDLE);
+        ai_set_anim(s, MZM_HOLTZ_IDLE);
         s->health = c->tables->health[s->sprite_id];
         s->samus_collision = SSC_HURTS_SAMUS;
         s->pose = SWOOPER_POSE_IDLE_INIT;
@@ -2981,7 +2968,7 @@ static void holtz(Ctx *c) {
         break;
     case SWOOPER_POSE_IDLE_INIT:
         s->pose = SWOOPER_POSE_IDLE;
-        set_anim(s, c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < s->y ? MZM_HOLTZ_IDLE_AWARE
+        ai_set_anim(s, c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < s->y ? MZM_HOLTZ_IDLE_AWARE
                                                                            : MZM_HOLTZ_IDLE);
         break;
     case SWOOPER_POSE_IDLE:
@@ -2990,15 +2977,15 @@ static void holtz(Ctx *c) {
         break;
     case SWOOPER_POSE_WARNING_INIT:
         s->pose = SWOOPER_POSE_WARNING;
-        set_anim(s, MZM_HOLTZ_WARNING);
+        ai_set_anim(s, MZM_HOLTZ_WARNING);
         /* fallthrough */
     case SWOOPER_POSE_WARNING:
         cycle_table(&s->work3, &s->y, c->tables->holtz_idle_y, 65);
-        if (animation_ending(c, 1)) {
+        if (ai_animation_ending(c, 1)) {
             s->pose = SWOOPER_POSE_GOING_DOWN;
-            set_anim(s, MZM_HOLTZ_GOING_DOWN);
+            ai_set_anim(s, MZM_HOLTZ_GOING_DOWN);
             s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
-            face_samus(c);
+            ai_face_samus(c);
             s->work0 = 0;
             s->work2 = PIXEL_SIZE / 2;  /* the going down sound is not played */
         }
@@ -3009,14 +2996,14 @@ static void holtz(Ctx *c) {
         swooper_x_movement(c, s->work2);
         if (swooper_y_movement(c, 3 * PIXEL_SIZE, height)) {
             s->pose = SWOOPER_POSE_SLIDING;
-            set_anim(s, MZM_HOLTZ_IDLE_AWARE);
+            ai_set_anim(s, MZM_HOLTZ_IDLE_AWARE);
         }
         break;
     case SWOOPER_POSE_SLIDING:
         swooper_x_movement(c, s->work2);
-        if (animation_ending(c, 1)) {
+        if (ai_animation_ending(c, 1)) {
             s->pose = HOLTZ_POSE_GOING_UP;
-            set_anim(s, MZM_HOLTZ_GOING_UP);
+            ai_set_anim(s, MZM_HOLTZ_GOING_UP);
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
             s->work0 = 0;
         }
@@ -3029,15 +3016,15 @@ static void holtz(Ctx *c) {
             s->y &= BLOCK_POSITION_FLAG;
             s->y += height;
             s->pose = HOLTZ_POSE_BACK_TO_CEILING;
-            set_anim(s, MZM_HOLTZ_BONKING_ON_CEILING);
+            ai_set_anim(s, MZM_HOLTZ_BONKING_ON_CEILING);
             s->work3 = 0;
         }
         break;
     case HOLTZ_POSE_BACK_TO_CEILING:
         cycle_table(&s->work3, &s->y, c->tables->holtz_idle_y, 65);
-        if (animation_ending(c, 2)) s->pose = SWOOPER_POSE_IDLE_INIT;
+        if (ai_animation_ending(c, 2)) s->pose = SWOOPER_POSE_IDLE_INIT;
         break;
-    default: sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM); break;
+    default: ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM); break;
     }
 }
 
@@ -3057,7 +3044,7 @@ static void multiviola(Ctx *c) {
         s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
         s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
         s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE;
-        set_anim(s, MZM_MULTIVIOLA_MOVING);
+        ai_set_anim(s, MZM_MULTIVIOLA_MOVING);
         s->frame = (uint8_t)(s->ram_slot * 2);
         s->health = c->tables->health[s->sprite_id];
         s->samus_collision = SSC_HURTS_SAMUS;
@@ -3067,28 +3054,28 @@ static void multiviola(Ctx *c) {
         return;
     }
     if (s->pose != 9) {
-        sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_BIG);
+        ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_BIG);
         return;
     }
     const uint16_t step = PIXEL_SIZE - 1;
     if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
-        if (collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR)
             s->x += step;
         else
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
     } else {
-        if (collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR)
             s->x -= step;
         else
             s->status |= MZM_SPRITE_STATUS_X_FLIP;
     }
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
-        if (collision_at(c, (uint16_t)(s->y + s->hitbox_top), s->x) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, (uint16_t)(s->y + s->hitbox_top), s->x) == MZM_COLLISION_AIR)
             s->y -= step;
         else
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
     } else {
-        if (collision_at(c, (uint16_t)(s->y + s->hitbox_bottom), s->x) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, (uint16_t)(s->y + s->hitbox_bottom), s->x) == MZM_COLLISION_AIR)
             s->y += step;
         else
             s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
@@ -3175,7 +3162,7 @@ static void rinka_spawning(Ctx *c) {
         if (--s->work0 == 0) s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
         return;
     }
-    if (!animation_ending(c, 1)) return;
+    if (!ai_animation_ending(c, 1)) return;
     s->anim = s->sprite_id == MZM_PSPRITE_RINKA_GREEN ? MZM_RINKA_GREEN_MOVING
                                                        : MZM_RINKA_ORANGE_MOVING;
     s->pose = RINKA_POSE_MOVING;
@@ -3249,7 +3236,7 @@ static void rinka(Ctx *c) {
     case RINKA_POSE_SPAWNING: rinka_spawning(c); break;
     case RINKA_POSE_MOVING: rinka_move(c); break;
     default:
-        sprite_death_typed(c, has_drops(c) ? DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP
+        ai_sprite_death_typed(c, ai_has_drops(c) ? DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP
                                            : DEATH_RESPAWNING,
                            s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         rinka_respawn(c);
@@ -3342,6 +3329,7 @@ static bool is_drop(uint8_t sprite_id) {
 int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     if (secondary) {
         if (sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_FAMILY_ZEELA;
+        if (sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_FAMILY_SPACE_PIRATE;
         return sprite_id == MZM_SSPRITE_SKREE_EXPLOSION ||
                sprite_id == MZM_SSPRITE_BLUE_SKREE_EXPLOSION ? MZM_FAMILY_SKREE : -1;
     }
@@ -3379,6 +3367,11 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_RINKA_GREEN: return MZM_FAMILY_RINKA;
     case MZM_PSPRITE_DESSGEEGA:
     case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
+    case MZM_PSPRITE_SPACE_PIRATE:
+    case MZM_PSPRITE_SPACE_PIRATE_WAITING1:
+    case MZM_PSPRITE_SPACE_PIRATE_WAITING2:
+    case MZM_PSPRITE_SPACE_PIRATE_WAITING3:
+    case MZM_PSPRITE_SPACE_PIRATE2: return MZM_FAMILY_SPACE_PIRATE;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
     }
 }
@@ -3446,9 +3439,11 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         switch (s->samus_collision) {
         case SSC_NONE: break;
         case SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT:
+        case SSC_SPACE_PIRATE_LASER:
             s->pose = SPRITE_POSE_STOPPED;
             /* fallthrough */
         case SSC_HURTS_SAMUS:
+        case SSC_SPACE_PIRATE:      /* same as the hurt code */
             if (contact_kills(s, samus, tables)) break;
             if (!samus->invincible && samus->hurt) {
                 samus->hurt(samus->context, damage_of(s, tables), on_left);
@@ -3561,6 +3556,7 @@ bool mzm_sprite_supported(uint8_t sprite_id) {
 uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (!sprite->secondary) return sprite->sprite_id;
     if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
+    if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
     return sprite->sprite_id == MZM_SSPRITE_BLUE_SKREE_EXPLOSION ? MZM_PSPRITE_SKREE_BLUE
                                                                   : MZM_PSPRITE_SKREE_GREEN;
 }
@@ -3636,6 +3632,8 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     /* A family without frame durations (not exported) is not updated. */
     if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || family < 0 || !frame->kinds[family])
         return;
+    /* The Space Pirates need the game globals. */
+    if (family == MZM_FAMILY_SPACE_PIRATE && !frame->globals) return;
     Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],
              0, MZM_COLLISION_AIR, frame->frame8};
     /* gSpriteRng = sSpriteRandomNumberTable[(frame8 + slot + frame16 / 16 +
@@ -3664,6 +3662,10 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_HOLTZ: holtz(&c); break;
     case MZM_FAMILY_MULTIVIOLA: multiviola(&c); break;
     case MZM_FAMILY_RINKA: rinka(&c); break;
+    case MZM_FAMILY_SPACE_PIRATE:
+        if (sprite->secondary) ai_space_pirate_laser(&c);
+        else ai_space_pirate(&c);
+        break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);
@@ -3710,7 +3712,7 @@ static void debris_fall(Ctx *c, MzmSpriteDebris *d, const int16_t *velocity, uns
                         int dx, uint8_t bounce, uint8_t min_frames) {
     d->y = (uint16_t)(d->y + velocity[offset]);
     d->x = (uint16_t)(d->x + dx);
-    uint16_t top = check_vertical_slopes(c, d->y, d->x);
+    uint16_t top = ai_check_vertical_slopes(c, d->y, d->x);
     /* SpriteDebrisSetSplash: room liquids are not ported. */
     if (c->vertical != MZM_COLLISION_AIR && d->frame_counter >= min_frames) {
         d->y = top;

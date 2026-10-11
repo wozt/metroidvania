@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 23 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 24 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -235,6 +235,15 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: Freezing, the damaged sound, screen-shake falls and the falling splash are not ported.  
 Next action: Port freezing with the ice beam.
+
+[~] **`mzm.enemies.space_pirate` — Space Pirates and their lasers.** The five SpacePirate sprites (normal, three waiting, the faster-shooting variant) and SSPRITE_SPACE_PIRATE_LASER: line-of-sight detection on the clipdata grid (forward rows, diagonals up and down, crawling and climbing cases) through the gSpriteDrawOrder scratch flags, walking with acceleration and slope slowdown, the obstacle probes (jumps from the four ROM tables, crawling under low ceilings, turns), zonelines and wall jump points from the exported clipdata movement (M lines), climbing, wall pauses, wall jumps, crawling, alerted walking, charging and two-laser volleys on the ground and on walls, lasers hurting Samus and other pirates, the Chozodia alarm timer (set on sight, 480 frames, stopped by the last pirate's death, kept after Mecha Ridley) and the laser's CAA_BOMB_PISTOL on hatches. Smoke-run in the 47 Chozodia rooms with pirates.
+
+Native evidence: `mzm:c:src/clipdata.c:ClipdataUpdateCurrentAffecting`, `mzm:c:src/sprite_util.c:SpriteUtilCheckCrouchingOrMorphed`, `mzm:c:src/sprite_util.c:SpriteUtilMoveHorizontallyForwardOnSlopeDirection`, `mzm:c:src/sprites_ai/space_pirate.c:DecrementChozodiaAlarm`, `mzm:c:src/sprites_ai/space_pirate.c:DisableChozodiaAlarm`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirate`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithLaser`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithPirateWhenClimbing`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithPirateWhenWalking`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckSamusInShootingRange`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateClimbingCheckWallJumpOrFire`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateLaser`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateSamusDetection`.  
+Local implementation: [`src/runtime/mzm_space_pirate.c`](../src/runtime/mzm_space_pirate.c), [`src/runtime/mzm_sprite_ai.h`](../src/runtime/mzm_sprite_ai.h), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_runtime_room.py`](../tests/test_mzm_runtime_room.py).
+Dependencies: `mzm.enemies.zoomer`, `mzm.collision.clipdata`, `mzm.transitions.doors_and_hatches`, `mzm.animation.particles`.  
+Known divergences: SpawnWaitingPirates is not ported, so pirates never come out of doors on their own (waiting pirates placed in a room still hide and appear with the alarm); the alarm music, palette animation and sounds, freezing (only the laser check runs while frozen), the stun palette as drawn colours and the laser's draw order and BG priority are not reproduced; the Space Pirate carrying a power bomb, the black and escape-ship pirates are not ported; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset.  
+Next action: Port SpawnWaitingPirates with the door lifecycle, then the power-bomb, black and escape-ship pirates.
 
 [~] **`mzm.enemies.viola` — Violas.** Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops.
 

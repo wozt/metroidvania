@@ -60,6 +60,8 @@ typedef struct { int y, x, gfx_slot, room_slot; char name[64]; } RoomSprite;
 /* One native collision type and transition behavior per 16-pixel block. */
 typedef struct { int width, height, resolution, room; char world[16], area[40];
     unsigned char types[MAX_ROOM_CELLS]; unsigned char behaviors[MAX_ROOM_CELLS];
+    /* gCurrentAffectingClipdata.movement of each block (ClipdataMovement). */
+    unsigned char movements[MAX_ROOM_CELLS];
     RoomDoor doors[MAX_ROOM_DOORS]; int door_count;
     RoomHatch hatches[MAX_ROOM_HATCHES]; int hatch_count;
     RoomSprite sprites[MAX_ROOM_SPRITES]; int sprite_count;
@@ -263,6 +265,15 @@ static bool parse_native_room(const char *path, Room *room) {
             room->behaviors[y * (room->width / 16) + x] = (unsigned char)(
                 !strcmp(kind, "door") ? BEHAVIOR_DOOR : !strcmp(kind, "up") ? BEHAVIOR_UP :
                 !strcmp(kind, "down") ? BEHAVIOR_DOWN : BEHAVIOR_NONE);
+            continue;
+        }
+        if (line[0] == 'M') {
+            int value;
+            if (sscanf(line, "M\t%d\t%d\t%d %c", &x, &y, &value, &extra) != 3 ||
+                x < 0 || y < 0 || x >= room->width / 16 || y >= room->height / 16 ||
+                value < 1 || value > 255)
+                goto failure;
+            room->movements[y * (room->width / 16) + x] = (unsigned char)value;
             continue;
         }
         if (line[0] == 'D') {
@@ -1178,6 +1189,9 @@ typedef struct {
      * story events yet, so they start clear as in a new game. */
     uint8_t events[32];
     Room *room;                     /* the room the hooks change */
+    /* gAlarmTimer and the other sprite globals; the alarm survives door
+     * transitions (SpriteLoadAllData only clears it on a new game). */
+    MzmSpriteGlobals globals;
     MzmSprite live[RUNTIME_MAX_SPRITES];
     uint8_t frame8;
     uint16_t frame16;
@@ -1210,6 +1224,10 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sMellaGoingUpYMovement", t->mella_up, 7, 7},
         {"sMellaMovingXMovement", t->mella_x, 7, 7},
         {"sHoltzIdleYVelocity", t->holtz_idle_y, 65, 65},
+        {"sSpacePirateWallJumpingVelocity", t->pirate_wall_jump, 8, 8},
+        {"sSpacePirate_2e1030", t->pirate_jump_low, 11, 11},
+        {"sSpacePirateJumpingVelocity", t->pirate_jump, 10, 10},
+        {"sSpacePirate_2e105a", t->pirate_jump_high, 11, 11},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -1367,6 +1385,15 @@ static uint8_t runtime_sprite_block(void *context, uint16_t y, uint16_t x) {
     return (uint8_t)room_cell(room, column, row);
 }
 
+/* ClipdataProcess's movement for sprites (CLIPDATA_MOVEMENT_NONE outside). */
+static uint8_t runtime_sprite_movement(void *context, uint16_t y, uint16_t x) {
+    const Room *room = context;
+    int column = x / 64, row = y / 64;
+    if (column >= room->width / 16 || row >= room->height / 16)
+        return MZM_CLIPDATA_MOVEMENT_NONE;
+    return room->movements[row * (room->width / 16) + column];
+}
+
 /* SpriteUtilTakeDamageFromSprite (normal difficulty) and the knockback of
  * SpriteUtilSamusAndSpriteCollision. */
 typedef struct {
@@ -1412,13 +1439,46 @@ static void runtime_sprite_remove_solid(void *context, uint16_t y, uint16_t x) {
         room_set_cell(room, column, row, CLIP_AIR);
 }
 
+/* BlockApplyCcaa from a sprite (the Space Pirate laser): hatches. */
+static void runtime_sprite_affect(void *context, uint16_t y, uint16_t x, int damage) {
+    RuntimeSprites *sprites = context;
+    if (sprites->room) runtime_hit_hatch(sprites->room, x, y, damage);
+}
+
+/* SpriteUtilCheckCrouchingOrMorphed for the ported Samus poses. */
+static bool runtime_samus_small(const MzmSamus *samus) {
+    switch (samus->pose) {
+    case MZM_POSE_CROUCHING:
+    case MZM_POSE_TURNING_AROUND_AND_CROUCHING:
+    case MZM_POSE_SHOOTING_AND_CROUCHING:
+    case MZM_POSE_MORPHING:
+    case MZM_POSE_MORPH_BALL:
+    case MZM_POSE_ROLLING:
+    case MZM_POSE_UNMORPHING:
+    case MZM_POSE_MORPH_BALL_MIDAIR:
+    case MZM_POSE_GETTING_HURT_IN_MORPH_BALL:
+        return true;
+    default:
+        return false;
+    }
+}
+
+/* gCurrentArea (AreaId) of an exported area name. */
+static uint8_t runtime_area_id(const char *area) {
+    static const char *const names[] = {"Brinstar", "Kraid", "Norfair", "Ridley", "Tourian",
+                                        "Crateria", "Chozodia", "Test1", "Test2", "Test3"};
+    for (size_t i = 0; i < sizeof names / sizeof names[0]; ++i)
+        if (!strcmp(area, names[i])) return (uint8_t)i;
+    return 0xFF;
+}
+
 /* SpriteUpdate: Samus's contact with the sprites, then every sprite. */
 static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
                                    MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
                                    const MzmCollision *collision) {
     if (!sprites->kinds_ok) return;
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
-                            (uint16_t)((int)cy * 4)};
+                            (uint16_t)((int)cy * 4), runtime_sprite_movement};
     mzm_sprite_debris_process(&sprites->effects, &world, &sprites->tables,
                               &sprites->effect_kinds);
     if (samus->pose != MZM_POSE_DYING) {
@@ -1434,17 +1494,20 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     sprites->room = room;
     static const MzmSpriteHooks hook_table = {NULL, runtime_sprite_check_event,
                                               runtime_sprite_set_event, runtime_sprite_door_timer,
-                                              runtime_sprite_remove_solid};
+                                              runtime_sprite_remove_solid, runtime_sprite_affect};
     MzmSpriteHooks hooks = hook_table;
     hooks.context = sprites;
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
                             sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top,
-                            sprites->live, RUNTIME_MAX_SPRITES, &sprites->effects, &hooks};
+                            sprites->live, RUNTIME_MAX_SPRITES, &sprites->effects, &hooks,
+                            &sprites->globals, runtime_samus_small(samus), samus->x_velocity,
+                            runtime_area_id(room->area), (uint8_t)room->room};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
+    mzm_sprites_end_frame(&sprites->globals, &hooks);
     sprites->frame8++;
     sprites->frame16++;
 }

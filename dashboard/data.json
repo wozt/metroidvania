@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T16:24:11+00:00",
+ "generated_at": "2026-10-11T20:26:05+00:00",
  "git": {
-  "commit": "dfa07db",
+  "commit": "453c1f7",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 70,
+   "total": 71,
    "by_status": {
     "not_started": 9,
     "in_progress": 2,
-    "partial": 46,
+    "partial": 47,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 17.1,
-   "with_passing_tests": 57,
-   "with_passing_tests_percent": 81.4,
+   "functional_or_better_percent": 16.9,
+   "with_passing_tests": 58,
+   "with_passing_tests_percent": 81.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -123,6 +123,7 @@
     "mzm.enemies.sidehopper",
     "mzm.enemies.skree",
     "mzm.enemies.sova",
+    "mzm.enemies.space_pirate",
     "mzm.enemies.viola",
     "mzm.enemies.waver",
     "mzm.enemies.zeela",
@@ -187,11 +188,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 23,
+   "total": 24,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 23,
+    "partial": 24,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -200,7 +201,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 23,
+   "with_passing_tests": 24,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -218,6 +219,7 @@
     "mzm.enemies.sidehopper",
     "mzm.enemies.skree",
     "mzm.enemies.sova",
+    "mzm.enemies.space_pirate",
     "mzm.enemies.viola",
     "mzm.enemies.waver",
     "mzm.enemies.zeela",
@@ -1133,6 +1135,76 @@
       ],
       "outcome": "passed",
       "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-11"
+   }
+  },
+  {
+   "id": "mzm.enemies.space_pirate",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Space Pirates and their lasers",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_space_pirate.c",
+    "src/runtime/mzm_sprite_ai.h",
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py",
+    "scripts/mzm_runtime_room.py",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_runtime_room.py"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer",
+    "mzm.collision.clipdata",
+    "mzm.transitions.doors_and_hatches",
+    "mzm.animation.particles"
+   ],
+   "native_routines": [
+    "SpacePirate",
+    "SpacePirateLaser",
+    "SpacePirateSamusDetection",
+    "SpacePirateCheckCollidingWithLaser",
+    "SpacePirateCheckCollidingWithPirateWhenWalking",
+    "SpacePirateCheckCollidingWithPirateWhenClimbing",
+    "SpacePirateCheckSamusInShootingRange",
+    "SpacePirateClimbingCheckWallJumpOrFire",
+    "DisableChozodiaAlarm",
+    "DecrementChozodiaAlarm",
+    "SpriteUtilMoveHorizontallyForwardOnSlopeDirection",
+    "SpriteUtilCheckCrouchingOrMorphed",
+    "ClipdataUpdateCurrentAffecting"
+   ],
+   "limitations": "SpawnWaitingPirates is not ported, so pirates never come out of doors on their own (waiting pirates placed in a room still hide and appear with the alarm); the alarm music, palette animation and sounds, freezing (only the laser check runs while frozen), the stun palette as drawn colours and the laser's draw order and BG priority are not reproduced; the Space Pirate carrying a power bomb, the black and escape-ship pirates are not ported; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset. The five SpacePirate sprites (normal, three waiting, the faster-shooting variant) and SSPRITE_SPACE_PIRATE_LASER: line-of-sight detection on the clipdata grid (forward rows, diagonals up and down, crawling and climbing cases) through the gSpriteDrawOrder scratch flags, walking with acceleration and slope slowdown, the obstacle probes (jumps from the four ROM tables, crawling under low ceilings, turns), zonelines and wall jump points from the exported clipdata movement (M lines), climbing, wall pauses, wall jumps, crawling, alerted walking, charging and two-laser volleys on the ground and on walls, lasers hurting Samus and other pirates, the Chozodia alarm timer (set on sight, 480 frames, stopped by the last pirate's death, kept after Mecha Ridley) and the laser's CAA_BOMB_PISTOL on hatches. Smoke-run in the 47 Chozodia rooms with pirates.",
+   "next_action": "Port SpawnWaitingPirates with the door lifecycle, then the power-bomb, black and escape-ship pirates.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_runtime_room.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -3012,7 +3084,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas, Rinkas), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
+   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas, Rinkas, Space Pirates and their lasers), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -3818,6 +3890,13 @@
     "passed": 1
    },
    {
+    "file": "tests/test_mzm_runtime_room.py",
+    "module": "tests.test_mzm_runtime_room",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
     "file": "tests/test_mzm_samus_body.py",
     "module": "tests.test_mzm_samus_body",
     "test_count": 3,
@@ -4113,12 +4192,18 @@
    }
   ],
   "summary": {
-   "passed": 431,
+   "passed": 433,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "453c1f7",
+   "date": "2026-10-11",
+   "subject": "feat(mzm): native Rinkas",
+   "scope": "mzm"
+  },
   {
    "commit": "dfa07db",
    "date": "2026-10-11",
@@ -4592,12 +4677,6 @@
    "date": "2026-10-10",
    "subject": "fix: accept validated newline-terminated animation index rows",
    "scope": "project"
-  },
-  {
-   "commit": "10d186f",
-   "date": "2026-10-10",
-   "subject": "fix: validate runtime library TSV scanner arguments",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -4625,7 +4704,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 85,
+    "routines_cited_by_features": 98,
     "call_edges": 6071
    },
    "aos": {

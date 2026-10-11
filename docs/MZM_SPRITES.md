@@ -88,6 +88,13 @@ read from the user's ROM at export time; nothing is stored in the repository.
 - The runtime loads each family's OAM frame durations separately: a family
   missing from the library is reported by name and its sprites are not
   spawned, while the others keep working.
+- Viola (`viola.c`, blue and orange): half a block up at spawn, then onto
+  the floor, ceiling, left or right wall found around it (or removed); it
+  crawls half a pixel a frame (orange: one) with its centre 24 subpixels from
+  the surface, following floor slopes, turning around outer and inner
+  corners as the native probes decide, snapping to the block on ceilings and
+  walls, falling with `sSpritesFallingSpeed` when unsupported and landing on
+  a floor in a random direction.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at
   init, a random X flip from the sprite RNG, half a pixel per frame (purple:
   one), a wall probe a quarter block above its feet and 36 subpixels ahead,

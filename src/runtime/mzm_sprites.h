@@ -8,9 +8,9 @@
  * ClipdataConvertToCollision for the sprite actor,
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
- * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper and Dessgeega AIs
+ * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper, Dessgeega and Viola AIs
  * (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c, sidehopper.c,
- * dessgeega.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * dessgeega.c, viola.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes. Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
  * stats) and the frame durations of each OAM table come from
@@ -187,11 +187,15 @@ enum {
 };
 extern const char *const mzm_dessgeega_anim_names[MZM_DESSGEEGA_ANIMS];
 
+/* Viola OAM table (src/data/sprites/viola.c; the offset tables are unused). */
+enum { MZM_VIOLA_MOVING, MZM_VIOLA_ANIMS };
+extern const char *const mzm_viola_anim_names[MZM_VIOLA_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
     MZM_FAMILY_ZOOMER, MZM_FAMILY_ZEELA, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_WAVER,
-    MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA,
+    MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA, MZM_FAMILY_VIOLA,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -219,6 +223,7 @@ enum {
     MZM_PSPRITE_WAVER = 72,
     MZM_PSPRITE_DESSGEEGA = 70, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM = 71,
     MZM_PSPRITE_SIDEHOPPER = 121,
+    MZM_PSPRITE_VIOLA_BLUE = 104, MZM_PSPRITE_VIOLA_ORANGE = 105,
 };
 
 /* SecondarySprite */

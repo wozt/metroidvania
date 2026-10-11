@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers and Dessgeegas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas and Violas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2710,3 +2710,20 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: Debug configure and warning-clean build, CTest
   26/26, the Python suite 405/405, `scripts.rebuild --all` with every task up
   to date, `check_generated` fresh and the proprietary-file guard passed.
+
+## Patch 0245 - Zero Mission Violas
+
+- `mzm_sprites` ports the Viola (blue and orange): placement onto the
+  surface around it, crawling along floors (with slopes), ceilings and both
+  walls with the native corner probes and block snapping, falls and landings,
+  death into drops. `scripts/mzm_sprites.py` exports both Violas.
+- Checked in ridley_003 (`--spawn 600 144`): the two blue Violas climb their
+  pillars at half a pixel a frame (30 pixels in 59 frames) and the orange one
+  reaches the floor; they draw with their ROM graphics.
+- Tests: `tests/test_mzm_sprites.c` adds the Viola placement, speeds, a
+  3000-frame loop around a closed box (all four surfaces, no fall, centres
+  exactly 24 subpixels from each surface) and the fall onto a lower floor.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.
+

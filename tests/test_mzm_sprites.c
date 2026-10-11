@@ -96,10 +96,10 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
-                              &drop_kind, &hopper_kind, &hopper_kind},
+                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
@@ -975,6 +975,62 @@ int main(void) {
     assert(d.status == 0);
     frame.hooks = NULL;
     frame.effects = NULL;
+
+    /* Violas crawl around a closed box (walls at columns 2 and 9, ceiling
+     * row 3, floor row 10) along its floor, walls and ceiling. */
+    viola_kind.counts[0] = 2;
+    viola_kind.timers[0][0] = viola_kind.timers[0][1] = 4;
+    tables.health[MZM_PSPRITE_VIOLA_BLUE] = 12;
+    tables.health[MZM_PSPRITE_VIOLA_ORANGE] = 20;
+    clear();
+    for (int x = 2; x <= 9; ++x) grid[3][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
+    for (int y = 3; y <= 10; ++y) grid[y][2] = grid[y][9] = MZM_CLIPDATA_SOLID;
+    MzmSprite v;
+    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_BLUE, 0, 9, 5, 0);
+    step(&v, 0);
+    /* Half a block up, then an eighth down onto the floor: centre 24
+     * subpixels above it. */
+    assert(v.pose == 9 && v.health == 12 && v.y == 640 - 24 && v.work2 == 2 &&
+           v.hitbox_top == -20 && v.status & MZM_SPRITE_STATUS_FACING_RIGHT);
+    x0 = v.x;
+    step(&v, 0);
+    assert(v.x == x0 + 2 && v.y == 640 - 24);
+    bool seen[0x28] = {false};
+    uint16_t min_x = 0xFFFF, max_x = 0, min_y = 0xFFFF, max_y = 0;
+    for (int i = 0; i < 3000; ++i) {
+        step(&v, 0);
+        seen[v.pose] = true;
+        if (v.x < min_x) min_x = v.x;
+        if (v.x > max_x) max_x = v.x;
+        if (v.y < min_y) min_y = v.y;
+        if (v.y > max_y) max_y = v.y;
+    }
+    /* It visits the four surfaces, never falls and stays inside the box
+     * (centres 24 subpixels from each surface). */
+    assert(seen[9] && seen[0x23] && seen[0x25] && seen[0x27] && !seen[0x1F]);
+    assert(min_x == 3 * 64 + 24 && max_x == 9 * 64 - 24 && min_y == 4 * 64 + 24 &&
+           max_y == 640 - 24);
+    /* Orange Violas are twice as fast. */
+    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_ORANGE, 0, 9, 5, 0);
+    step(&v, 0);
+    x0 = v.x;
+    step(&v, 0);
+    assert(v.health == 20 && v.work2 == 4 && v.x == x0 + 4);
+    /* Without a surface it falls onto the floor below. */
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+    mzm_sprite_init_primary(&v, MZM_PSPRITE_VIOLA_BLUE, 0, 9, 5, 0);
+    step(&v, 0);
+    grid[10][5] = grid[10][4] = grid[10][6] = MZM_CLIPDATA_AIR;
+    grid[12][5] = MZM_CLIPDATA_SOLID;
+    step(&v, 0);
+    assert(v.pose == 0x1E);
+    frames = 0;
+    while (v.pose != 9 && frames < 100) {
+        step(&v, 0);
+        ++frames;
+    }
+    assert(v.pose == 9 && v.y == 12 * 64 - 24);
     puts("mzm_sprites: ok");
     return 0;
 }

@@ -155,6 +155,8 @@ const char *const mzm_dessgeega_anim_names[MZM_DESSGEEGA_ANIMS] = {
 static const char *const dessgeega_sprites[MZM_DESSGEEGA_ANIMS] = {
     "DESSGEEGA", "DESSGEEGA", "DESSGEEGA", "DESSGEEGA", "DESSGEEGA",
 };
+const char *const mzm_viola_anim_names[MZM_VIOLA_ANIMS] = {"ViolaOam_Moving"};
+static const char *const viola_sprites[MZM_VIOLA_ANIMS] = {"VIOLA_BLUE"};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -184,6 +186,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_SIDEHOPPER] = {MZM_SIDEHOPPER_ANIMS, mzm_sidehopper_anim_names,
                                sidehopper_sprites},
     [MZM_FAMILY_DESSGEEGA] = {MZM_DESSGEEGA_ANIMS, mzm_dessgeega_anim_names, dessgeega_sprites},
+    [MZM_FAMILY_VIOLA] = {MZM_VIOLA_ANIMS, mzm_viola_anim_names, viola_sprites},
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
@@ -1653,6 +1656,250 @@ static void hopper(Ctx *c) {
     }
 }
 
+/* Viola poses (viola.c): the surface it crawls on. */
+enum {
+    VIOLA_POSE_ON_FLOOR = 0x9,      /* VIOLA_POSE_MOVE_RIGHT */
+    VIOLA_POSE_FALLING_INIT = 0x1E,
+    VIOLA_POSE_FALLING = 0x1F,
+    VIOLA_POSE_ON_CEILING = 0x23,   /* VIOLA_POSE_MOVE_LEFT */
+    VIOLA_POSE_ON_LEFT_WALL = 0x25, /* VIOLA_POSE_MOVE_DOWN */
+    VIOLA_POSE_ON_RIGHT_WALL = 0x27,    /* VIOLA_POSE_MOVE_UP */
+    VIOLA_SIZE = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE,
+};
+
+/* ViolaInit: half a block up, then onto the floor, ceiling, left or right
+ * wall found around it (or removed); orange Violas move twice as fast. */
+static void viola_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    random_x_direction(c);
+    s->y -= HALF_BLOCK_SIZE;
+    if (collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), s->x) & MZM_COLLISION_FLAGS_F0) {
+        s->y += EIGHTH_BLOCK_SIZE;
+        s->pose = VIOLA_POSE_ON_FLOOR;
+    } else if (collision_at(c, (uint16_t)(s->y - (HALF_BLOCK_SIZE + PIXEL_SIZE)), s->x) &
+               MZM_COLLISION_FLAGS_F0) {
+        s->y -= EIGHTH_BLOCK_SIZE;
+        s->pose = VIOLA_POSE_ON_CEILING;
+    } else if (collision_at(c, s->y, (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) &
+               MZM_COLLISION_FLAGS_F0) {
+        s->x -= EIGHTH_BLOCK_SIZE;
+        s->pose = VIOLA_POSE_ON_LEFT_WALL;
+    } else if (collision_at(c, s->y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) & MZM_COLLISION_FLAGS_F0) {
+        s->x += EIGHTH_BLOCK_SIZE;
+        s->pose = VIOLA_POSE_ON_RIGHT_WALL;
+    } else {
+        s->status = 0;
+        return;
+    }
+    s->samus_collision = SSC_HURTS_SAMUS;
+    set_anim(s, MZM_VIOLA_MOVING);
+    s->health = c->tables->health[s->sprite_id];
+    s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+    s->hitbox_top = s->hitbox_left = -(QUARTER_BLOCK_SIZE + PIXEL_SIZE);
+    s->hitbox_bottom = s->hitbox_right = QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+    s->work2 = s->sprite_id == MZM_PSPRITE_VIOLA_ORANGE ? PIXEL_SIZE : PIXEL_SIZE / 2;
+}
+
+/* ViolaMoveRight: on the floor, following slopes. */
+static void viola_on_floor(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t v = s->work2, y = (uint16_t)(s->y + VIOLA_SIZE), x = s->x;
+    if (collision_at(c, y, (uint16_t)(x + VIOLA_SIZE + PIXEL_SIZE)) == MZM_COLLISION_AIR &&
+        collision_at(c, y, (uint16_t)(x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR) {
+        s->pose = VIOLA_POSE_FALLING_INIT;
+        return;
+    }
+    uint16_t top = check_vertical(c, (uint16_t)(y - PIXEL_SIZE), x);
+    if ((c->vertical & MZM_COLLISION_FLAGS_F) >= MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE) {
+        s->y = (uint16_t)(top - VIOLA_SIZE);
+    } else {
+        top = check_vertical(c, y, x);
+        if ((c->vertical & MZM_COLLISION_FLAGS_F) >= MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE) {
+            s->y = (uint16_t)(top - VIOLA_SIZE);
+        } else {
+            top = check_vertical(c, (uint16_t)(y + PIXEL_SIZE), x);
+            if (c->vertical != MZM_COLLISION_AIR) s->y = (uint16_t)(top - VIOLA_SIZE);
+        }
+    }
+    y = (uint16_t)(s->y + VIOLA_SIZE);
+    if (c->vertical != MZM_COLLISION_AIR && !(c->vertical & MZM_COLLISION_FLAGS_F0)) {
+        /* On a slope: straight on. */
+        if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) s->x += v;
+        else s->x -= v;
+        return;
+    }
+    if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
+        if (collision_at(c, y, (uint16_t)(x - VIOLA_SIZE)) == MZM_COLLISION_AIR) {
+            if (collision_at(c, y, (uint16_t)(x + VIOLA_SIZE)) == MZM_COLLISION_AIR) {
+                s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+                s->pose = VIOLA_POSE_ON_LEFT_WALL;
+            } else {
+                s->x += v;
+            }
+        } else if (collision_at(c, (uint16_t)(y - PIXEL_SIZE), (uint16_t)(x + VIOLA_SIZE)) ==
+                   MZM_COLLISION_SOLID) {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->pose = VIOLA_POSE_ON_RIGHT_WALL;
+        } else {
+            s->x += v;
+        }
+    } else {
+        if (collision_at(c, y, (uint16_t)(x + (VIOLA_SIZE - PIXEL_SIZE))) == MZM_COLLISION_AIR) {
+            if (collision_at(c, y, (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_AIR) {
+                s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+                s->pose = VIOLA_POSE_ON_RIGHT_WALL;
+            } else {
+                s->x -= v;
+            }
+        } else if (collision_at(c, (uint16_t)(y - PIXEL_SIZE),
+                                (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_SOLID) {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->pose = VIOLA_POSE_ON_LEFT_WALL;
+        } else {
+            s->x -= v;
+        }
+    }
+}
+
+/* ViolaMoveLeft: on the ceiling, snapped under its block. */
+static void viola_on_ceiling(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t block_y = s->y &= BLOCK_POSITION_FLAG;
+    s->y += VIOLA_SIZE;
+    uint16_t v = s->work2, y = (uint16_t)(block_y - PIXEL_SIZE), x = s->x;
+    if (collision_at(c, y, (uint16_t)(x + VIOLA_SIZE + PIXEL_SIZE)) == MZM_COLLISION_AIR &&
+        collision_at(c, y, (uint16_t)(x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR) {
+        s->pose = VIOLA_POSE_FALLING_INIT;
+        return;
+    }
+    if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
+        if (!(collision_at(c, y, (uint16_t)(x - VIOLA_SIZE)) & MZM_COLLISION_FLAGS_F)) {
+            if (collision_at(c, y, (uint16_t)(x + VIOLA_SIZE)) == MZM_COLLISION_AIR) {
+                s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+                s->pose = VIOLA_POSE_ON_LEFT_WALL;
+            } else {
+                s->x += v;
+            }
+        } else if (collision_at(c, (uint16_t)(y + PIXEL_SIZE), (uint16_t)(x + VIOLA_SIZE)) ==
+                   MZM_COLLISION_SOLID) {
+            s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->pose = VIOLA_POSE_ON_RIGHT_WALL;
+        } else {
+            s->x += v;
+        }
+    } else {
+        if (!(collision_at(c, y, (uint16_t)(x + (VIOLA_SIZE - PIXEL_SIZE))) & MZM_COLLISION_FLAGS_F)) {
+            if (collision_at(c, y, (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_AIR) {
+                s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+                s->pose = VIOLA_POSE_ON_RIGHT_WALL;
+            } else {
+                s->x -= v;
+            }
+        } else if (collision_at(c, (uint16_t)(y + PIXEL_SIZE),
+                                (uint16_t)(x - (VIOLA_SIZE + PIXEL_SIZE))) == MZM_COLLISION_SOLID) {
+            s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->pose = VIOLA_POSE_ON_LEFT_WALL;
+        } else {
+            s->x -= v;
+        }
+    }
+}
+
+/* ViolaMoveDown / ViolaMoveUp: on a left or right wall, snapped beside its
+ * block (facing right means moving down). */
+static void viola_on_wall(Ctx *c, bool right_wall) {
+    MzmSprite *s = c->s;
+    uint16_t block_x = s->x &= BLOCK_POSITION_FLAG;
+    s->x += right_wall ? HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE : VIOLA_SIZE;
+    uint16_t v = s->work2, y = s->y;
+    uint16_t x = right_wall ? (uint16_t)(block_x + BLOCK_SIZE) : (uint16_t)(block_x - PIXEL_SIZE);
+    int16_t inward = right_wall ? -PIXEL_SIZE : PIXEL_SIZE;
+    uint16_t above = right_wall ? HALF_BLOCK_SIZE : VIOLA_SIZE + EIGHTH_BLOCK_SIZE;
+    if (collision_at(c, (uint16_t)(y + VIOLA_SIZE + PIXEL_SIZE), x) == MZM_COLLISION_AIR &&
+        collision_at(c, (uint16_t)(y - above), x) == MZM_COLLISION_AIR) {
+        s->pose = VIOLA_POSE_FALLING_INIT;
+        return;
+    }
+    if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
+        if (!(collision_at(c, (uint16_t)(y - VIOLA_SIZE), x) & MZM_COLLISION_FLAGS_F0)) {
+            if (collision_at(c, (uint16_t)(y + VIOLA_SIZE), x) == MZM_COLLISION_AIR) {
+                if (right_wall) s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+                else s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+                s->pose = VIOLA_POSE_ON_CEILING;
+            } else {
+                s->y += v;
+            }
+        } else if (collision_at(c, (uint16_t)(y + VIOLA_SIZE), (uint16_t)(x + inward)) ==
+                   MZM_COLLISION_SOLID) {
+            if (right_wall) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+            else s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->pose = VIOLA_POSE_ON_FLOOR;
+        } else {
+            s->y += v;
+        }
+    } else {
+        if (!(collision_at(c, (uint16_t)(y + (VIOLA_SIZE - PIXEL_SIZE)), x) & MZM_COLLISION_FLAGS_F0)) {
+            if (collision_at(c, (uint16_t)(y - (VIOLA_SIZE + PIXEL_SIZE)), x) == MZM_COLLISION_AIR) {
+                if (right_wall) s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+                else s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+                s->pose = VIOLA_POSE_ON_FLOOR;
+            } else {
+                s->y -= v;
+            }
+        } else if (collision_at(c, (uint16_t)(y - (VIOLA_SIZE + PIXEL_SIZE)), (uint16_t)(x + inward)) ==
+                   MZM_COLLISION_SOLID) {
+            if (right_wall) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+            else s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->pose = VIOLA_POSE_ON_CEILING;
+        } else {
+            s->y -= v;
+        }
+    }
+}
+
+/* ViolaFalling: sSpritesFallingSpeed until it lands on the floor. */
+static void viola_falling(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t top = check_vertical_slopes(c, (uint16_t)(s->y + VIOLA_SIZE), s->x);
+    if (c->vertical != MZM_COLLISION_AIR) {
+        s->y = (uint16_t)(top - VIOLA_SIZE);
+        s->pose = VIOLA_POSE_ON_FLOOR;
+        random_x_direction(c);
+        return;
+    }
+    uint8_t offset = s->work3;
+    int16_t movement = offset < 16 ? c->tables->falling[offset] : SHORT_MAX;
+    if (movement == SHORT_MAX) {
+        s->y = (uint16_t)(s->y + c->tables->falling[offset > 0 ? offset - 1 : 0]);
+    } else {
+        s->work3 = (uint8_t)(offset + 1);
+        s->y = (uint16_t)(s->y + movement);
+    }
+}
+
+/* Viola: the AI. Freezing and the damaged sound are not ported. */
+static void viola(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED: viola_init(c); break;
+    case VIOLA_POSE_ON_FLOOR: viola_on_floor(c); break;
+    case VIOLA_POSE_ON_CEILING: viola_on_ceiling(c); break;
+    case VIOLA_POSE_ON_LEFT_WALL: viola_on_wall(c, false); break;
+    case VIOLA_POSE_ON_RIGHT_WALL: viola_on_wall(c, true); break;
+    case VIOLA_POSE_FALLING_INIT:
+        s->pose = VIOLA_POSE_FALLING;
+        s->work3 = 0;
+        /* fallthrough */
+    case VIOLA_POSE_FALLING: viola_falling(c); break;
+    default: sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM); break;
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -1752,6 +1999,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SKREE_BLUE: return MZM_FAMILY_SKREE;
     case MZM_PSPRITE_WAVER: return MZM_FAMILY_WAVER;
     case MZM_PSPRITE_SIDEHOPPER: return MZM_FAMILY_SIDEHOPPER;
+    case MZM_PSPRITE_VIOLA_BLUE:
+    case MZM_PSPRITE_VIOLA_ORANGE: return MZM_FAMILY_VIOLA;
     case MZM_PSPRITE_DESSGEEGA:
     case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
@@ -2027,6 +2276,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_WAVER: waver(&c); break;
     case MZM_FAMILY_SIDEHOPPER:
     case MZM_FAMILY_DESSGEEGA: hopper(&c); break;
+    case MZM_FAMILY_VIOLA: viola(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

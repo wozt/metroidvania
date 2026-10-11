@@ -2911,3 +2911,26 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite (409 tests), every rebuild task up to date, `check_generated` fresh
   and the proprietary-file guard passed.
+
+## Patch 0254 - Zero Mission Chozodia security systems
+
+- `src/runtime/mzm_chozodia_security.c` ports `Searchlight`,
+  `SecurityLaser`, `SearchlightEye`, `SearchlightEyeBeam` and
+  `SearchlightEyeProjectile`; the engine handles `SSC_CHECK_COLLIDING`
+  contacts and `SP_IMMUNE_TO_PROJECTILES` (invincible impact, 2-frame stun,
+  no contact damage). `scripts/mzm_sprites.py` exports the ten sprites.
+- Checked in captures: in chozodia_003 Samus walking into a vertical
+  security laser rings the alarm, every laser of the room fades out and
+  holds it, and both waiting pirates come out of their doors (one jumps at
+  her); in chozodia_016 the four searchlights sweep and flicker and Samus in
+  a light brings out the waiting pirate; in chozodia_030 the eyes shoot.
+- Divergences: searchlights drawn opaque above the backgrounds, no BG0
+  transparency fades (`PrimarySpriteB3`), missiles hitting an immune sprite
+  removed instead of tumbling, no sounds.
+- Tests: `tests/test_mzm_sprites.c` adds the searchlight sweep, flicker,
+  turn, alarm and removal under alarm, the vertical laser size, trip,
+  pirate marking, fade and alarm hold, and the eye placement, immunity,
+  beam, alarm, shot timing and projectile speed.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite (409 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.

@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 24 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 25 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -136,6 +136,15 @@ Next action: Port charge beams, beam upgrades, bombs, Power Bombs and tumbling m
 ### Enemies
 
 [?] **`mzm.enemies.inventory-boundary` — source coverage.** The current classifier assigns 812 discovered routine(s) to this category (812 by source path). Category completeness has not been established.
+
+[~] **`mzm.enemies.chozodia_security` — Chozodia searchlights, security lasers and searchlight eyes.** Searchlights sweep diagonally half a pixel a frame between stop-enemy blocks, flickering, and ring the alarm on contact (SSC_CHECK_COLLIDING), then hold it; security lasers size themselves 2 to 5 blocks to the first block above or right, and when tripped mark the Space Pirates, fade out and hold the alarm; searchlight eyes (immune to projectiles until the Fully Powered Suit, SP_IMMUNE_TO_PROJECTILES with the invincible impact) move along their wall, cast a seven-block beam that rings the alarm unless a wall shields Samus, then shoot projectiles (16 damage) every 1.5 seconds. Checked in chozodia_003 (a tripped laser releases the waiting pirates), chozodia_016 and chozodia_030.
+
+Native evidence: `mzm:c:src/projectile_util.c:ProjectileHitSpriteImmuneToProjectiles`, `mzm:c:src/sprites_ai/searchlight.c:Searchlight`, `mzm:c:src/sprites_ai/searchlight_eye.c:SearchlightEye`, `mzm:c:src/sprites_ai/searchlight_eye.c:SearchlightEyeBeam`, `mzm:c:src/sprites_ai/searchlight_eye.c:SearchlightEyeProjectile`, `mzm:c:src/sprites_ai/security_laser.c:SecurityLaser`.  
+Local implementation: [`src/runtime/mzm_chozodia_security.c`](../src/runtime/mzm_chozodia_security.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.space_pirate`, `mzm.collision.clipdata`, `mzm.weapons.beams_and_missiles`.  
+Known divergences: Searchlights are drawn opaque and above the backgrounds (natively they flicker behind BG1 with draw order 1), the BG0 transparency fades (PrimarySpriteB3, the security lasers' TransparencySpriteUpdateBldalpha; their fade state is kept in work2/work3) and sounds are not reproduced; missiles hitting an immune sprite are removed instead of tumbling.  
+Next action: Port the security gates and the event spritesets that place these systems.
 
 [~] **`mzm.enemies.dessgeega` — Dessgeegas and the Long Beam Dessgeega.** Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor removing three blocks with dust and debris, and lands on the next one.
 

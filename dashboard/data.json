@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T20:42:23+00:00",
+ "generated_at": "2026-10-11T20:56:53+00:00",
  "git": {
-  "commit": "539f23e",
+  "commit": "7c72f7c",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 71,
+   "total": 72,
    "by_status": {
     "not_started": 9,
     "in_progress": 2,
-    "partial": 47,
+    "partial": 48,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,14 +104,15 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 16.9,
-   "with_passing_tests": 58,
-   "with_passing_tests_percent": 81.7,
+   "functional_or_better_percent": 16.7,
+   "with_passing_tests": 59,
+   "with_passing_tests_percent": 81.9,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
     "mzm.animation.samus_runtime_library",
     "mzm.collision.clipdata",
+    "mzm.enemies.chozodia_security",
     "mzm.enemies.dessgeega",
     "mzm.enemies.holtz",
     "mzm.enemies.mella",
@@ -188,11 +189,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 24,
+   "total": 25,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 24,
+    "partial": 25,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -201,13 +202,14 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 24,
+   "with_passing_tests": 25,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
     "mzm.animation.samus_runtime_library",
     "mzm.collision.clipdata",
+    "mzm.enemies.chozodia_security",
     "mzm.enemies.dessgeega",
     "mzm.enemies.holtz",
     "mzm.enemies.mella",
@@ -584,6 +586,58 @@
       "registered": true,
       "ctest": [
        "runtime_steep_slopes"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-11"
+   }
+  },
+  {
+   "id": "mzm.enemies.chozodia_security",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Chozodia searchlights, security lasers and searchlight eyes",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_chozodia_security.c",
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.space_pirate",
+    "mzm.collision.clipdata",
+    "mzm.weapons.beams_and_missiles"
+   ],
+   "native_routines": [
+    "Searchlight",
+    "SecurityLaser",
+    "SearchlightEye",
+    "SearchlightEyeBeam",
+    "SearchlightEyeProjectile",
+    "ProjectileHitSpriteImmuneToProjectiles"
+   ],
+   "limitations": "Searchlights are drawn opaque and above the backgrounds (natively they flicker behind BG1 with draw order 1), the BG0 transparency fades (PrimarySpriteB3, the security lasers' TransparencySpriteUpdateBldalpha; their fade state is kept in work2/work3) and sounds are not reproduced; missiles hitting an immune sprite are removed instead of tumbling. Searchlights sweep diagonally half a pixel a frame between stop-enemy blocks, flickering, and ring the alarm on contact (SSC_CHECK_COLLIDING), then hold it; security lasers size themselves 2 to 5 blocks to the first block above or right, and when tripped mark the Space Pirates, fade out and hold the alarm; searchlight eyes (immune to projectiles until the Fully Powered Suit, SP_IMMUNE_TO_PROJECTILES with the invincible impact) move along their wall, cast a seven-block beam that rings the alarm unless a wall shields Samus, then shoot projectiles (16 damage) every 1.5 seconds. Checked in chozodia_003 (a tripped laser releases the waiting pirates), chozodia_016 and chozodia_030.",
+   "next_action": "Port the security gates and the event spritesets that place these systems.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
       ],
       "outcome": "passed",
       "exists": true
@@ -3086,7 +3140,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas, Rinkas, Space Pirates and their lasers), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
+   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas, Rinkas, Space Pirates and their lasers, searchlights, security lasers and searchlight eyes), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -4201,6 +4255,12 @@
  },
  "timeline": [
   {
+   "commit": "7c72f7c",
+   "date": "2026-10-11",
+   "subject": "feat(mzm): waiting Space Pirates at doors",
+   "scope": "mzm"
+  },
+  {
    "commit": "539f23e",
    "date": "2026-10-11",
    "subject": "feat(mzm): native Space Pirates and their lasers",
@@ -4673,12 +4733,6 @@
    "date": "2026-10-10",
    "subject": "feat: unify native Samus assets and room launch configuration",
    "scope": "project"
-  },
-  {
-   "commit": "d40ad62",
-   "date": "2026-10-10",
-   "subject": "feat: browse indexed Samus animations in SDL runtime",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -4706,7 +4760,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 100,
+    "routines_cited_by_features": 106,
     "call_edges": 6071
    },
    "aos": {

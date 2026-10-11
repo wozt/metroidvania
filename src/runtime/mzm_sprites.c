@@ -181,6 +181,32 @@ static const char *const space_pirate_sprites[MZM_PIRATE_ANIMS] = {
     "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
     "SPACE_PIRATE", "SPACE_PIRATE", "SPACE_PIRATE",
 };
+const char *const mzm_chozodia_security_anim_names[MZM_SECURITY_ANIMS] = {
+    "SearchlightOam_Moving",
+    "SecurityLaserOam_VerticalSmall", "SecurityLaserOam_VerticalMedium",
+    "SecurityLaserOam_VerticalLarge", "SecurityLaserOam_VerticalVeryLarge",
+    "SecurityLaserOam_HorizontalSmall", "SecurityLaserOam_HorizontalMedium",
+    "SecurityLaserOam_HorizontalLarge", "SecurityLaserOam_HorizontalVeryLarge",
+    "SecurityLaserOam_VerticalSmallDisappearing", "SecurityLaserOam_VerticalMediumDisappearing",
+    "SecurityLaserOam_VerticalLargeDisappearing",
+    "SecurityLaserOam_VerticalVeryLargeDisappearing",
+    "SecurityLaserOam_HorizontalSmallDisappearing",
+    "SecurityLaserOam_HorizontalMediumDisappearing",
+    "SecurityLaserOam_HorizontalLargeDisappearing",
+    "SecurityLaserOam_HorizontalVeryLargeDisappearing",
+    "SearchlightEyeOam_Idle", "SearchlightEyeOam_Shooting", "SearchlightEyeBeamOam_Idle",
+    "SearchlightEyeProjectileOam_Moving",
+};
+static const char *const chozodia_security_sprites[MZM_SECURITY_ANIMS] = {
+    "SEARCHLIGHT",
+    "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL",
+    "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL",
+    "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL",
+    "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL",
+    "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL", "SECURITY_LASER_VERTICAL",
+    "SECURITY_LASER_VERTICAL",
+    "SEARCHLIGHT_EYE", "SEARCHLIGHT_EYE", "SEARCHLIGHT_EYE", "SEARCHLIGHT_EYE",
+};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -223,6 +249,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_RINKA] = {MZM_RINKA_ANIMS, mzm_rinka_anim_names, rinka_sprites},
     [MZM_FAMILY_SPACE_PIRATE] = {MZM_PIRATE_ANIMS, mzm_space_pirate_anim_names,
                                  space_pirate_sprites},
+    [MZM_FAMILY_CHOZODIA_SECURITY] = {MZM_SECURITY_ANIMS, mzm_chozodia_security_anim_names,
+                                      chozodia_security_sprites},
 };
 
 
@@ -3330,6 +3358,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     if (secondary) {
         if (sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_FAMILY_ZEELA;
         if (sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_FAMILY_SPACE_PIRATE;
+        if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
+            sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
+            return MZM_FAMILY_CHOZODIA_SECURITY;
         return sprite_id == MZM_SSPRITE_SKREE_EXPLOSION ||
                sprite_id == MZM_SSPRITE_BLUE_SKREE_EXPLOSION ? MZM_FAMILY_SKREE : -1;
     }
@@ -3372,6 +3403,16 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SPACE_PIRATE_WAITING2:
     case MZM_PSPRITE_SPACE_PIRATE_WAITING3:
     case MZM_PSPRITE_SPACE_PIRATE2: return MZM_FAMILY_SPACE_PIRATE;
+    case MZM_PSPRITE_SECURITY_LASER_VERTICAL:
+    case MZM_PSPRITE_SECURITY_LASER_HORIZONTAL:
+    case MZM_PSPRITE_SECURITY_LASER_VERTICAL2:
+    case MZM_PSPRITE_SECURITY_LASER_HORIZONTAL2:
+    case MZM_PSPRITE_SEARCHLIGHT_EYE:
+    case MZM_PSPRITE_SEARCHLIGHT_EYE2:
+    case MZM_PSPRITE_SEARCHLIGHT:
+    case MZM_PSPRITE_SEARCHLIGHT2:
+    case MZM_PSPRITE_SEARCHLIGHT3:
+    case MZM_PSPRITE_SEARCHLIGHT4: return MZM_FAMILY_CHOZODIA_SECURITY;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
     }
 }
@@ -3402,6 +3443,8 @@ static uint16_t damage_of(const MzmSprite *s, const MzmSpriteTables *tables) {
 static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
                           const MzmSpriteTables *tables) {
     if (samus->suitless || !samus->screw_attacking) return false;
+    /* Sprites immune to projectiles take no contact damage either. */
+    if (s->immune_to_projectiles) return false;
     /* Sprites ignoring projectiles take no contact damage. */
     if (s->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES) return false;
     if (weakness_of(s, tables) & MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK) {
@@ -3452,6 +3495,7 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
             ignore = true;
             break;
+        case SSC_CHECK_COLLIDING:
         case SSC_SMALL_ENERGY_DROP:
         case SSC_LARGE_ENERGY_DROP:
         case SSC_MISSILE_DROP:
@@ -3517,6 +3561,14 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
             /* The particle at the projectile: its impact, or the
              * invincible impact when the sprite is not weak to it. */
             uint8_t effect = MZM_PE_HITTING_SOMETHING_INVINCIBLE;
+            if (s->immune_to_projectiles) {
+                /* ProjectileHitSpriteImmuneToProjectiles (missiles would
+                 * tumble: not ported). */
+                if ((s->isft & 0x7F) < 2) set_isft(s, 2);
+                if (effects) mzm_particle_set(effects, py, px, effect);
+                proj->active = false;
+                continue;
+            }
             switch (proj->type) {
             case MZM_PROJECTILE_BEAM:   /* ProjectileHitSprite */
                 if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
@@ -3557,6 +3609,9 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (!sprite->secondary) return sprite->sprite_id;
     if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
     if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
+    if (sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
+        sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
+        return MZM_PSPRITE_SEARCHLIGHT_EYE;
     return sprite->sprite_id == MZM_SSPRITE_BLUE_SKREE_EXPLOSION ? MZM_PSPRITE_SKREE_BLUE
                                                                   : MZM_PSPRITE_SKREE_GREEN;
 }
@@ -3632,8 +3687,10 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     /* A family without frame durations (not exported) is not updated. */
     if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || family < 0 || !frame->kinds[family])
         return;
-    /* The Space Pirates need the game globals. */
-    if (family == MZM_FAMILY_SPACE_PIRATE && !frame->globals) return;
+    /* The Space Pirates and the security systems need the game globals. */
+    if ((family == MZM_FAMILY_SPACE_PIRATE || family == MZM_FAMILY_CHOZODIA_SECURITY) &&
+        !frame->globals)
+        return;
     Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],
              0, MZM_COLLISION_AIR, frame->frame8};
     /* gSpriteRng = sSpriteRandomNumberTable[(frame8 + slot + frame16 / 16 +
@@ -3666,6 +3723,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
         if (sprite->secondary) ai_space_pirate_laser(&c);
         else ai_space_pirate(&c);
         break;
+    case MZM_FAMILY_CHOZODIA_SECURITY: ai_chozodia_security(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

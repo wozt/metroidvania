@@ -48,6 +48,7 @@ fusion_enable_warnings(fusion_room_package_viewer)
 add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_samus.c
                src/runtime/mzm_projectiles.c src/runtime/gba_input.c src/runtime/debug_menu.c
                src/runtime/mzm_sprites.c src/runtime/mzm_space_pirate.c
+                   src/runtime/mzm_chozodia_security.c
                src/runtime/mzm_effects.c)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_runtime)
@@ -173,6 +174,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_mzm_sprites_tests tests/test_mzm_sprites.c src/runtime/mzm_sprites.c
                    src/runtime/mzm_space_pirate.c
+                   src/runtime/mzm_chozodia_security.c
                    src/runtime/mzm_effects.c)
     target_include_directories(fusion_mzm_sprites_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_sprites_tests)

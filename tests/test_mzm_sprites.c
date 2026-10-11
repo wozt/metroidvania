@@ -117,12 +117,12 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind, swoop_kind, rinka_kind, pirate_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind, swoop_kind, rinka_kind, pirate_kind, security_kind;
     static MzmSpriteGlobals globals;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
-                              &swoop_kind, &rinka_kind, &pirate_kind},
+                              &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
                              0, 0};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
@@ -1810,6 +1810,140 @@ int main(void) {
                                   false);
         assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE && ps[0].status);
         memset(test_events, 0, sizeof test_events);
+        globals.alarm_timer = 0;
+
+        /* Chozodia security: searchlights, security lasers, searchlight
+         * eyes. */
+        for (int a = 0; a < MZM_SECURITY_ANIMS; ++a) {
+            security_kind.counts[a] = 2;
+            security_kind.timers[a][0] = security_kind.timers[a][1] = 4;
+        }
+        tables.health[MZM_PSPRITE_SEARCHLIGHT_EYE] = 1;
+        tables.weakness[MZM_PSPRITE_SEARCHLIGHT_EYE] = MZM_WEAKNESS_BEAM_BOMBS;
+        tables.secondary_damage[MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE] = 16;
+        globals.alarm_timer = 0;
+
+        /* The searchlight sweeps half a pixel a frame on both axes,
+         * flickering, and turns at stop-enemy blocks. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        movement_grid[4][7] = MZM_CLIPDATA_MOVEMENT_STOP_ENEMY_BLOCK_SOLID;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SEARCHLIGHT, 4, 3, 5, 0, 0);
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x9 && ps[0].samus_collision == 30 &&
+               ps[0].status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+               ps[0].status & MZM_SPRITE_STATUS_FACING_DOWN &&
+               ps[0].anim == MZM_SECURITY_SEARCHLIGHT_MOVING);
+        uint16_t sx = ps[0].x, sy = ps[0].y;
+        uint16_t drawn = ps[0].status & MZM_SPRITE_STATUS_NOT_DRAWN;
+        PIRATE_FRAME();
+        assert(ps[0].x == sx + 2 && ps[0].y == sy + 2 &&
+               (ps[0].status & MZM_SPRITE_STATUS_NOT_DRAWN) != drawn);
+        frames = 0;
+        while (ps[0].status & MZM_SPRITE_STATUS_FACING_RIGHT && frames < 100) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        /* The block a block right of it (column 7) stops it at x 384. */
+        assert(ps[0].x == 7 * 64 - 64 && frames < 100);
+        /* Samus in its light rings the alarm, then it holds it. */
+        hurts = 0;
+        MzmSpriteSamus in_light = {NULL, ps[0].x, (uint16_t)(ps[0].y + 20), ps[0].x,
+                                   -40, 0, -20, 20, false, false, false, hurt};
+        ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
+        MzmSpriteSamus out_of_light = in_light;
+        out_of_light.x = 60000;
+        mzm_sprites_samus_collision(ps, 8, &out_of_light, &tables);
+        mzm_sprites_samus_collision(ps, 8, &in_light, &tables);
+        assert(ps[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING && hurts == 0);
+        PIRATE_FRAME();
+        assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE - 1 && ps[0].pose == 0x23 &&
+               ps[0].samus_collision == 0);
+        for (int i = 0; i < 10; ++i) PIRATE_FRAME();
+        assert(ps[0].pose == 0x25 && ps[0].status & MZM_SPRITE_STATUS_NOT_DRAWN);
+        globals.alarm_timer = 5;
+        PIRATE_FRAME();
+        assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE - 1);
+        /* With the alarm on, a new searchlight is removed. */
+        mzm_sprite_init_primary(&ps[1], MZM_PSPRITE_SEARCHLIGHT2, 4, 3, 5, 1, 1);
+        PIRATE_FRAME();
+        assert(!(ps[1].status & MZM_SPRITE_STATUS_EXISTS));
+
+        /* A vertical security laser up to the ceiling two blocks above:
+         * tripped, it marks the pirates, fades out and holds the alarm. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        globals.alarm_timer = 0;
+        for (int x = 0; x < COLUMNS; ++x) grid[7][x] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SECURITY_LASER_VERTICAL, 4, 9, 5, 0, 0);
+        ps[2] = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .samus_collision = 20,
+                            .pose = 0x27, .x = 2000, .y = 640};
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x9 && ps[0].work1 == 0x82 && ps[0].hitbox_top == -100 &&
+               ps[0].anim == MZM_SECURITY_LASER_VERTICAL_SMALL && ps[0].work3 == 8);
+        ps[0].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0xB && ps[0].anim == MZM_SECURITY_LASER_VERTICAL_SMALL_DISAPPEARING &&
+               globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE - 1 &&
+               ps[2].status & MZM_SPRITE_STATUS_MOSAIC);
+        frames = 0;
+        while (ps[0].pose == 0xB && frames < 50) {
+            PIRATE_FRAME();
+            ++frames;
+        }
+        assert(ps[0].pose == 0x23 && ps[0].status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               ps[0].anim == MZM_SECURITY_LASER_VERTICAL_SMALL);
+        /* The fade toward the full blend, one step per frame. */
+        assert(ps[0].work3 > 8 && ps[0].work3 <= 16);
+
+        /* A searchlight eye on a wall to its right: immune before the
+         * Fully Powered Suit, its beam seven blocks out; Samus in the beam
+         * rings the alarm and the eye shoots. */
+        clear();
+        memset(ps, 0, sizeof ps);
+        globals.alarm_timer = 0;
+        for (int r = 0; r < ROWS; ++r) grid[r][9] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&ps[0], MZM_PSPRITE_SEARCHLIGHT_EYE, 4, 4, 8, 0, 0);
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x9 && ps[0].immune_to_projectiles && ps[0].health == 1 &&
+               ps[0].x == 8 * 64 + 64 && !(ps[0].status & MZM_SPRITE_STATUS_X_FLIP) &&
+               ps[1].secondary && ps[1].sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 &&
+               ps[1].x == 8 * 64 + 64 - 448 && ps[1].samus_collision == 30);
+        /* Moving down a subpixel a frame; the beam follows. */
+        uint16_t ey = ps[0].y;
+        PIRATE_FRAME();
+        assert(ps[0].y == ey + 1 && ps[1].y == ps[0].y);
+        /* A beam shot: the invincible impact, no damage. */
+        static MzmWeapons eye_weapons;
+        memset(&eye_weapons, 0, sizeof eye_weapons);
+        eye_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
+                                              .x = ps[0].x, .y = ps[0].y};
+        mzm_sprites_projectile_hits(ps, 8, &eye_weapons, &tables, NULL);
+        assert(!eye_weapons.list[0].active && ps[0].health == 1 && (ps[0].isft & 0x7F) == 2);
+        /* Samus in the beam, in front of the eye. */
+        frame.samus_x = (uint16_t)(ps[0].x - 200);
+        ps[1].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        PIRATE_FRAME();
+        assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE - 1 && ps[1].pose == 0x23);
+        PIRATE_FRAME();
+        assert(ps[0].pose == 0x23 && ps[0].work0 == 40);
+        frames = 0;
+        ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
+        /* The beam disappears after 40 frames; the projectile takes its
+         * slot. */
+        while (!(ps[1].status & MZM_SPRITE_STATUS_EXISTS &&
+                 ps[1].sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE) && frames < 200) {
+            ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
+            PIRATE_FRAME();
+            ++frames;
+        }
+        /* 40 frames getting alerted, one alerted frame, then the 30 frames
+         * of the shooting table and the shot. */
+        assert(frames == 40 + 1 + 31 && ps[1].samus_collision == 6 && ps[0].pose == 0x25 &&
+               ps[0].work0 == 90 && ps[1].x == ps[0].x - 12);
+        uint16_t qx = ps[1].x;
+        PIRATE_FRAME();
+        assert(ps[1].x == qx - 12);
         globals.alarm_timer = 0;
 #undef PIRATE_FRAME
         frame.sprites = NULL;

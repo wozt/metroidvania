@@ -191,6 +191,25 @@ read from the user's ROM at export time; nothing is stored in the repository.
   export the clipdata movement of each block (`M` lines,
   `sMovementClipdataValues`) for the zonelines, wall jump points and
   stop-enemy blocks.
+- Chozodia security (`searchlight.c`, `security_laser.c`,
+  `searchlight_eye.c`, ported in `mzm_chozodia_security.c`): searchlights
+  sweep diagonally half a pixel a frame (their direction from the sprite
+  id), turning at stop-enemy blocks, flicker every frame and ring the alarm
+  when Samus touches their light (`SSC_CHECK_COLLIDING`, which only sets
+  `SAMUS_COLLIDING`), then hold it; a searchlight is removed when the alarm
+  already rings. Security lasers (vertical up to the first block above,
+  horizontal to the first on the right, 2 to 5 blocks) ring the alarm and
+  mark every Space Pirate (`MOSAIC`) when tripped, play their disappearing
+  table and hold the alarm hidden. Searchlight eyes move a subpixel a frame
+  along their wall between stop-enemy blocks and cast a seven-block beam
+  (`SSPRITE_SEARCHLIGHT_EYE_BEAM2`) that rings the alarm unless the first
+  wall in it shields Samus; alerted, they shoot a projectile (12 subpixels a
+  frame, 16 damage, a medium explosion on walls) every 1.5 seconds while on
+  screen. They are immune to projectiles (`SP_IMMUNE_TO_PROJECTILES`: the
+  invincible impact and a 2-frame stun) until the Fully Powered Suit.
+  Searchlights are drawn opaque above the backgrounds (natively they sit
+  behind BG1); the BG0 transparency fades of these sprites and of
+  `PrimarySpriteB3` are not drawn.
 - Every primary sprite records the slot it owns (`primarySpriteRamSlot`),
   passed on to its secondary sprites and its drops.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at

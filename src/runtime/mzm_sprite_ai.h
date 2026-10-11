@@ -33,6 +33,7 @@ enum {
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
+    SSC_CHECK_COLLIDING = 30,
     SPRITE_POSE_STOPPED = 66,
     SSC_SMALL_ENERGY_DROP = 31,
     SSC_LARGE_ENERGY_DROP = 32,
@@ -104,5 +105,7 @@ bool ai_has_drops(const Ctx *c);
 /* mzm_space_pirate.c */
 void ai_space_pirate(Ctx *c);
 void ai_space_pirate_laser(Ctx *c);
+/* mzm_chozodia_security.c: searchlights, security lasers, searchlight eyes. */
+void ai_chozodia_security(Ctx *c);
 
 #endif /* MZM_SPRITE_AI_H */

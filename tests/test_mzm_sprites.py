@@ -41,6 +41,26 @@ class MzmSpriteDataTests(unittest.TestCase):
             self.assertIn(name, tables)
         self.assertEqual(len(tables), 9)
 
+    def test_drop_tables_and_ids_match_the_runtime(self):
+        ids = mzm_sprites.psprite_ids(
+            (DECOMP / "include/constants/sprite.h").read_text(encoding="utf-8"))
+        runtime = {"PSPRITE_LARGE_ENERGY_DROP": 26, "PSPRITE_SMALL_ENERGY_DROP": 27,
+                   "PSPRITE_MISSILE_DROP": 28, "PSPRITE_SUPER_MISSILE_DROP": 29,
+                   "PSPRITE_POWER_BOMB_DROP": 30}
+        for name, value in runtime.items():
+            self.assertEqual(ids[name], value)
+        self.assertEqual(set(mzm_sprites.DROPS), set(runtime))
+        source = (DECOMP / "src/data/sprites/enemy_drop.c").read_text(encoding="utf-8")
+        tables = mzm_sprites.frame_tables(source)
+        for table in mzm_sprites.DROPS.values():
+            self.assertIn(table, tables)
+        hud = (DECOMP / "src/hud_generic.c").read_text(encoding="utf-8")
+        self.assertIn("sCommonSpritesGfx, VRAM_OBJ + 0x800", hud)
+        self.assertEqual(mzm_sprites.COMMON_GFX_VRAM, 0x800)
+        in_game = (DECOMP / "src/in_game.c").read_text(encoding="utf-8")
+        self.assertIn("sCommonSpritesPal, PALRAM_BASE + 0x240", in_game)
+        self.assertEqual(0x200 + mzm_sprites.COMMON_PALETTE_ROW * 32, 0x240)
+
 
 if __name__ == "__main__":
     unittest.main()

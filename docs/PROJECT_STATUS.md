@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers with contact damage and projectile hits; no drops, bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2505,3 +2505,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   26/26, the Python suite passed 402/402, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
 
+## Patch 0238 - Zero Mission enemy drops
+
+- `mzm_sprites` ports `SpriteUtilDetermineEnemyDrop` (ROM probabilities,
+  the native roll and its full energy and ammunition substitutions),
+  `ZoomerDeath` / `SpriteUtilSpriteDeath` turning the sprite into its drop,
+  and the enemy drop AI: hidden spawn, 20 frames ignoring Samus and
+  projectiles, collection with the native refills, blinking during the last
+  80 ticks and despawn after 200 ticks counted every other frame.
+- Fidelity fixes to patch 0237 found while reading the drop code: only the
+  first hurting or collecting contact of a frame is handled
+  (`gIgnoreSamusAndSpriteCollision`), the ignore timers run down at the end
+  of `SpriteUtilSamusAndSpriteCollision` instead of after each sprite, and
+  `SSC_HURTS_SAMUS` takes its real value (4).
+- `mzm_sprite_update` now takes an `MzmSpriteFrame` (world, tables, the
+  Zoomer and drop OAM durations, the equipment, frame counters).
+- `scripts/mzm_sprites.py` exports the five drop tables from the common
+  sprite graphics and palette; `sprites.tsv` drop columns are parsed.
+  Captures print Samus's position.
+- Checked in brinstar_000 (`--spawn 230 496`, B and Down held): the Zoomer
+  shot down beside the pillar becomes a small energy drop at frame 330,
+  shown from frame 350 next to Samus (knocked back to x 204, out of reach),
+  blinking by frame 600; a later contact (-10) pushes Samus onto it and it
+  is collected (+5): energy 89 to 84.
+- Not ported yet: death particles, debris and sounds, pickup sounds, power
+  bombs and their drops, the multiple large energy pickup.
+- Tests: `tests/test_mzm_sprites.c` adds one contact per frame, the ignore
+  timer order, eight drop rolls, the drop spawn, projectile immunity,
+  collection and the blink and despawn timing; `tests/test_mzm_sprites.py`
+  checks the drop ids, tables and common graphics addresses.
+- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
+  26/26, the Python suite passed 403/403, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.

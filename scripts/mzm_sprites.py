@@ -19,6 +19,9 @@ LZ77 graphics of ``sSpritesGraphicsPointers`` go to OBJ VRAM 0x4000 + slot *
 table of the sprite's data file is drawn relative to the sprite position,
 mirrored around it for the X and Y flip statuses. Only sprites whose AI is
 ported (``PORTED``) are exported, each with the palette row its AI selects.
+Enemy drops (``DROPS``) draw from the common sprite graphics instead
+(``HudGenericLoadCommonSpriteGfx``: ``sCommonSpritesGfx`` at OBJ VRAM 0x800,
+``sCommonSpritesPal`` at OBJ palette rows 2-7), without flips.
 Output stays private:
 
     assets/extracted/metroid/sprites/enemies/runtime/runtime_index.tsv
@@ -58,6 +61,16 @@ DECOMP = ROOT / "third_party/mzm"
 # the red Zoomer sets paletteRow and absolutePaletteRow to 1).
 PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1}
 SPRITE_VRAM = 0x4000
+# Enemy drops (src/sprites_ai/enemy_drop.c, EnemyDropInit) and their table.
+DROPS = {
+    "PSPRITE_SMALL_ENERGY_DROP": "sEnemyDropOam_SmallEnergy",
+    "PSPRITE_LARGE_ENERGY_DROP": "sEnemyDropOam_LargeEnergy",
+    "PSPRITE_MISSILE_DROP": "sEnemyDropOam_Missile",
+    "PSPRITE_SUPER_MISSILE_DROP": "sEnemyDropOam_SuperMissile",
+    "PSPRITE_POWER_BOMB_DROP": "sEnemyDropOam_PowerBomb",
+}
+COMMON_GFX_VRAM = 0x800             # VRAM_OBJ + 0x800
+COMMON_PALETTE_ROW = 2              # PALRAM_BASE + 0x240: OBJ palette row 2
 SPRITESET_ENTRY_TYPES = 16          # MAX_AMOUNT_OF_SPRITE_TYPES (15) + 1
 
 
@@ -225,6 +238,22 @@ def stage(rom: bytes, symbols, gfx: str, palette_symbol: str, palette_row: int):
     return bytes(vram), palette
 
 
+def stage_common(rom: bytes, symbols):
+    """OBJ VRAM and palette as HudGenericLoadCommonSpriteGfx and the room
+    load leave them for the common sprites (enemy drops)."""
+    vram = bytearray(0x8000)
+    address, size = symbols["sCommonSpritesGfx"]
+    vram[COMMON_GFX_VRAM:COMMON_GFX_VRAM + size] = rom[rom_offset(address, rom):
+                                                       rom_offset(address, rom) + size]
+    address, size = symbols["sCommonSpritesPal"]
+    colors = rom[rom_offset(address, rom):rom_offset(address, rom) + size]
+    palette = [None] * 256
+    for index in range(size // 2):
+        palette[COMMON_PALETTE_ROW * 16 + index] = bgr555(struct.unpack_from("<H", colors,
+                                                                            index * 2)[0])
+    return bytes(vram), palette
+
+
 def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
             nm: str = "arm-none-eabi-nm", objcopy: str = "arm-none-eabi-objcopy") -> dict:
     from scripts.mzm_samus_pipeline import _elf_image, _run_nm
@@ -243,6 +272,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         wanted.update([graphics[sprite], palettes[sprite], *tables])
     tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
     wanted.update(tables)
+    wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values()])
     nm_output = _run_nm(nm, elf)
     symbols = {name: value for name, value in parse_symbols(nm_output, tuple(wanted)).items()
                if name in wanted}
@@ -286,6 +316,14 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                     bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
                     frames.append((bmp, duration, left, top))
                 library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}", frames)
+    vram, palette = stage_common(rom, symbols)
+    for sprite, table in DROPS.items():
+        frames = []
+        for pointer, duration in mzm_projectile_compose.frames(rom, symbols, table):
+            pixels = mzm_projectile_compose.render(rom, vram, palette, pointer, "none")
+            bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+            frames.append((bmp, duration, left, top))
+        library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/none", frames)
     return library.finish()
 
 

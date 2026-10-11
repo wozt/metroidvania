@@ -13,9 +13,10 @@
  * durations of each OAM table come from scripts/mzm_sprites.py.
  * Combat ports SpriteUtilSamusAndSpriteCollision for sprites that hurt Samus
  * (with the screw attack kill of SpriteUtilSpriteTakeDamageFromSamusContact)
- * and the beam and missile parts of ProjectileCheckHittingSprite; a killed
- * sprite is removed (SpriteUtilSpriteDeath's explosion, sound and drop are
- * not ported). */
+ * and the beam and missile parts of ProjectileCheckHittingSprite. A killed
+ * sprite becomes the enemy drop of SpriteUtilDetermineEnemyDrop, or is
+ * removed (the death explosion, debris and sounds are not ported); drops
+ * follow src/sprites_ai/enemy_drop.c. */
 #ifndef MZM_SPRITES_H
 #define MZM_SPRITES_H
 
@@ -27,10 +28,13 @@
 enum {
     MZM_SPRITE_STATUS_EXISTS = 1 << 0,
     MZM_SPRITE_STATUS_ONSCREEN = 1 << 1,
+    MZM_SPRITE_STATUS_NOT_DRAWN = 1 << 2,
     MZM_SPRITE_STATUS_X_FLIP = 1 << 6,
     MZM_SPRITE_STATUS_Y_FLIP = 1 << 8,
     MZM_SPRITE_STATUS_FACING_RIGHT = 1 << 9,
     MZM_SPRITE_STATUS_FACING_DOWN = 1 << 10,
+    MZM_SPRITE_STATUS_SAMUS_COLLIDING = 1 << 11,
+    MZM_SPRITE_STATUS_IGNORE_PROJECTILES = 1 << 15,
 };
 
 /* ClipdataType of the pinned decompilation; the solid flag of
@@ -75,7 +79,14 @@ typedef struct {
     int16_t falling[16];            /* sSpritesFallingSpeed */
     uint16_t health[256], damage[256];  /* sPrimarySpriteStats */
     uint8_t weakness[256];          /* SpriteWeakness (low byte of column 2) */
+    uint16_t drops[256][5];         /* drop probabilities (columns 4-8), out of 1024 */
 } MzmSpriteTables;
+
+/* Columns of MzmSpriteTables.drops. */
+enum {
+    MZM_DROP_PROB_SMALL_ENERGY, MZM_DROP_PROB_LARGE_ENERGY, MZM_DROP_PROB_MISSILE,
+    MZM_DROP_PROB_SUPER_MISSILE, MZM_DROP_PROB_POWER_BOMB,
+};
 
 /* SpriteWeakness */
 enum {
@@ -99,13 +110,26 @@ enum {
 #define MZM_SPRITE_MAX_FRAMES 32
 extern const char *const mzm_zoomer_anim_names[MZM_ZOOMER_ANIMS];
 
+/* Enemy drop OAM tables (src/data/sprites/enemy_drop.c), one per drop. */
+enum {
+    MZM_DROP_SMALL_ENERGY, MZM_DROP_LARGE_ENERGY, MZM_DROP_MISSILE,
+    MZM_DROP_SUPER_MISSILE, MZM_DROP_POWER_BOMB, MZM_DROP_ANIMS,
+};
+extern const char *const mzm_drop_anim_names[MZM_DROP_ANIMS];
+
 /* Frame durations of each OAM table a sprite uses (0 ends a table). */
 typedef struct {
     uint8_t timers[MZM_SPRITE_MAX_ANIMS][MZM_SPRITE_MAX_FRAMES];
     uint8_t counts[MZM_SPRITE_MAX_ANIMS];
 } MzmSpriteKind;
 
-enum { MZM_PSPRITE_ZOOMER_YELLOW = 18, MZM_PSPRITE_ZOOMER_RED = 19 };
+enum {
+    MZM_PSPRITE_UNUSED0 = 0,
+    MZM_PSPRITE_ZOOMER_YELLOW = 18, MZM_PSPRITE_ZOOMER_RED = 19,
+    MZM_PSPRITE_LARGE_ENERGY_DROP = 26, MZM_PSPRITE_SMALL_ENERGY_DROP = 27,
+    MZM_PSPRITE_MISSILE_DROP = 28, MZM_PSPRITE_SUPER_MISSILE_DROP = 29,
+    MZM_PSPRITE_POWER_BOMB_DROP = 30,
+};
 
 typedef struct {
     uint16_t status;
@@ -123,7 +147,20 @@ typedef struct {
     uint8_t draw_top, draw_bottom, draw_horizontal;
     uint8_t samus_collision;
     uint8_t isft, freeze_timer, ignore_samus_timer;
+    uint16_t y_spawn, x_spawn;      /* yPositionSpawn / xPositionSpawn (drop timers) */
 } MzmSprite;
+
+/* What SpriteUpdate shares with every sprite this frame. Enemy drops are
+ * chosen from, and refill, the equipment (power bombs are not ported: their
+ * counts are zero). */
+typedef struct {
+    const MzmSpriteWorld *world;
+    const MzmSpriteTables *tables;
+    const MzmSpriteKind *zoomer, *drop;
+    MzmEquipment *equipment;
+    uint8_t frame8;                 /* gFrameCounter8Bit */
+    uint16_t frame16;               /* gFrameCounter16Bit */
+} MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,
  * gPreviousXPosition, the gSamusPhysics hitbox, and the parts of her state
@@ -148,12 +185,13 @@ uint32_t mzm_clipdata_process(const MzmSpriteWorld *world, uint16_t y, uint16_t 
 /* SpriteInitPrimary for a sprite of a known PSPRITE at a block position. */
 void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_slot,
                              uint16_t y_block, uint16_t x_block, uint8_t room_slot);
-/* One SpriteUpdate step of sprite `slot` (frame counters as the game's). */
-void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteWorld *world,
-                       const MzmSpriteTables *tables, const MzmSpriteKind *kind,
-                       uint8_t frame8, uint16_t frame16);
+/* One SpriteUpdate step of sprite `slot`. */
+void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *frame);
+/* The OAM table name of a sprite's animation, or NULL. */
+const char *mzm_sprite_anim_name(const MzmSprite *sprite);
 /* SpriteUtilSamusAndSpriteCollision over the sprite array (run at the start
- * of SpriteUpdate). */
+ * of SpriteUpdate): at most one hurting or collecting contact per frame, then
+ * every ignore timer runs down. */
 void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *samus,
                                  const MzmSpriteTables *tables);
 /* ProjectileCheckHittingSprite for beams, missiles and super missiles (run

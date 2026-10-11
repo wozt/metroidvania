@@ -24,6 +24,10 @@ read from the user's ROM at export time; nothing is stored in the repository.
 - `metadata/sprites.tsv`: `sSpriteRandomNumberTable`, `sSpritesFallingSpeed`
   and the `sPrimarySpriteStats` row of every primary sprite, read from the ROM
   through the reference ELF symbols (verified against the ROM).
+- Enemy drops draw from the common sprite graphics
+  (`HudGenericLoadCommonSpriteGfx`: `sCommonSpritesGfx` at OBJ VRAM 0x800,
+  `sCommonSpritesPal` at OBJ palette rows 2-7) with their
+  `sEnemyDropOam_*` table, unflipped.
 
 ## Engine (`src/runtime/mzm_sprites.c`)
 
@@ -47,7 +51,8 @@ read from the user's ROM at export time; nothing is stored in the repository.
   and runs between `SamusUpdate` and `ProjectileUpdate`, which ends with
   `ProjectileCheckHittingSprite`; the runtime keeps that order (the arm
   cannon offset is the one `SamusUpdate` left).
-  - Samus contact (sprites with `SSC_HURTS_SAMUS`, existing and on screen,
+  - Samus contact (sprites with `SSC_HURTS_SAMUS` or a drop collision,
+    existing and on screen,
     ignore timer zero; `SpriteUtilCheckObjectsTouching` against the pose
     hitbox): the screw attack destroys sprites weak to it
     (`SPRITE_POSE_SCREW_ATTACK_DESTROYED`, stun 17) and otherwise stuns them
@@ -55,7 +60,10 @@ read from the user's ROM at export time; nothing is stored in the repository.
     `SpriteUtilTakeDamageFromSprite` (stats damage, suit reductions, normal
     difficulty, hurt pose) and a knockback of `SUB_PIXEL_TO_VELOCITY(8)` away
     from the sprite hitbox centre compared with `gPreviousXPosition` (none on
-    a lethal hit); the sprite then ignores Samus for 15 frames.
+    a lethal hit); the sprite then ignores Samus for 15 frames. The first
+    hurting or collecting contact ends the loop
+    (`gIgnoreSamusAndSpriteCollision`), and every ignore timer then runs
+    down once.
   - Projectiles (`ProjectileHitSprite`, `ProjectileMissileHitSprite`,
     `ProjectileSuperMissileHitSprite`, `ProjectileDealDamage`): boxes of
     +-8 subpixels (beam, missile) or +-12 (super missile); damage 2, 20 and
@@ -64,12 +72,25 @@ read from the user's ROM at export time; nothing is stored in the repository.
     zero health; otherwise a 3-frame stun (`ProjectileHitSolidSprite`). The
     projectile is consumed. Stuns above 9 frames freeze the AI
     (`SpriteUtilIsSpriteStunned`).
-  - Death: a destroyed Zoomer is removed (`DEATH_NORMAL`).
+  - Death (`ZoomerDeath`, `SpriteUtilSpriteDeath` with `DEATH_NORMAL`): the
+    sprite becomes the drop chosen by `SpriteUtilDetermineEnemyDrop` at the
+    middle of its body, hidden, or is removed. The roll is
+    `(gSpriteRng * 256 + frame8 + frame16) % 1024` (0 counts as 1) against
+    the stats probabilities stacked from 1024 down: power bomb, super
+    missile, missile, large energy, small energy; full ammunition becomes a
+    large energy drop unless Samus is at full energy, and energy drops at
+    full energy become missiles when missiles are not full.
+- Enemy drops (`enemy_drop.c`): 20 frames ignoring Samus and projectiles
+  (shown when the timer falls below 2), the drop hitbox, collection on
+  contact (small energy 5, large energy 20, missiles 2, super missiles 2,
+  capped), a 200-tick timer counted every other frame that blinks the drop
+  for its last 80 ticks and then removes it.
   - The weakness is the low byte of the stats' weakness column
     (`C_16_2_8(freeze chance, weaknesses)`).
 
-Not ported yet: the death explosion, debris and sound, enemy drops
-(`SpriteUtilDetermineEnemyDrop`), tumbling missiles, the stun palette flash,
+Not ported yet: the death explosion, debris and sound, the pickup sounds,
+power bombs and their drops, the multiple large energy pickup, tumbling
+missiles, the stun palette flash,
 charge beams and the pseudo screw, speed booster and shinespark kills, solid
 and frozen sprites, power bombs, freezing, screen-shake falls, the splash
 effect, the damaged sound, the hard-mode spritesets and every other sprite AI.

@@ -23,7 +23,15 @@ enum {
     SPRITE_POSE_UNINITIALIZED = 0,
     SPRITE_POSE_DESTROYED = 0x62,
     SPRITE_POSE_SCREW_ATTACK_DESTROYED = 0x65,
-    SSC_HURTS_SAMUS = 2,
+    /* SamusSpriteCollision */
+    SSC_NONE = 0,
+    SSC_HURTS_SAMUS = 4,
+    SSC_SMALL_ENERGY_DROP = 31,
+    SSC_LARGE_ENERGY_DROP = 32,
+    SSC_MISSILE_DROP = 33,
+    SSC_SUPER_MISSILE_DROP = 34,
+    SSC_POWER_BOMB_DROP = 35,
+    SPRITE_DROP_MAX_PROB = 1024,
     /* CONVERT_SECONDS of the combat timers. */
     ISFT_DAMAGED = 17,              /* .25f + 2 * DELTA_TIME */
     ISFT_SCREW_ATTACK = 17,         /* .29f */
@@ -44,6 +52,7 @@ enum {
     ZOOMER_POSE_LANDING = 0xF,
     ZOOMER_POSE_FALLING_INIT = 0x1E,
     ZOOMER_POSE_FALLING = 0x1F,
+    ENEMY_DROP_POSE_IDLE = 0x9,
 };
 
 /* ZoomerTurningDirection */
@@ -59,10 +68,16 @@ const char *const mzm_zoomer_anim_names[MZM_ZOOMER_ANIMS] = {
     "ZoomerOam_TurningCornerLeft", "ZoomerOam_TurningCornerRight",
 };
 
+const char *const mzm_drop_anim_names[MZM_DROP_ANIMS] = {
+    "EnemyDropOam_SmallEnergy", "EnemyDropOam_LargeEnergy", "EnemyDropOam_Missile",
+    "EnemyDropOam_SuperMissile", "EnemyDropOam_PowerBomb",
+};
+
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
  * gPreviousVerticalCollisionCheck, gFrameCounter8Bit). */
 typedef struct {
     MzmSprite *s;
+    const MzmSpriteFrame *f;
     const MzmSpriteWorld *world;
     const MzmSpriteTables *tables;
     const MzmSpriteKind *kind;
@@ -561,9 +576,91 @@ static void zoomer_landing(Ctx *c) {
     else if (animation_ending(c, 2)) c->s->pose = ZOOMER_POSE_IDLE_INIT;
 }
 
-/* Zoomer: the AI. The damaged sound and freezing are not ported; the death
- * (ZoomerDeath / SpriteUtilSpriteDeath) removes the sprite without its
- * explosion, sound or drop. */
+/* SpriteUtilDetermineEnemyDrop: the sprite's drop probabilities stacked
+ * down from SPRITE_DROP_MAX_PROB (power bomb, super missile, missile, large
+ * energy, small energy), with the substitutions for full ammunition and
+ * energy. */
+static uint8_t determine_drop(const Ctx *c) {
+    const MzmEquipment *e = c->f->equipment;
+    const uint16_t *probs = c->tables->drops[c->s->sprite_id];
+    bool full_life = e->energy == e->max_energy;
+    uint16_t rng = (uint16_t)(c->rng * 256);
+    rng = (uint16_t)(c->frame8 + c->f->frame16 + rng);
+    rng %= SPRITE_DROP_MAX_PROB;
+    if (rng == 0) rng = 1;          /* not REGION_US_BETA */
+    /* Ammunition drops, power bombs first (none ported: 0 of 0). */
+    static const uint8_t ammo_drops[3] = {
+        MZM_PSPRITE_POWER_BOMB_DROP, MZM_PSPRITE_SUPER_MISSILE_DROP, MZM_PSPRITE_MISSILE_DROP,
+    };
+    int current[3] = {0, e->super_missiles, e->missiles};
+    int maximum[3] = {0, e->max_super_missiles, e->max_missiles};
+    uint16_t upper = SPRITE_DROP_MAX_PROB;
+    for (int i = 0; i < 3; ++i) {
+        uint16_t prob = probs[MZM_DROP_PROB_POWER_BOMB - i];
+        if (prob == 0) continue;
+        uint16_t lower = (uint16_t)(upper - prob);
+        if (upper >= rng && rng > lower) {
+            if (maximum[i] > current[i]) return ammo_drops[i];
+            if (!full_life) return MZM_PSPRITE_LARGE_ENERGY_DROP;
+            return maximum[i] != 0 ? ammo_drops[i] : MZM_PSPRITE_SMALL_ENERGY_DROP;
+        }
+        upper = lower;
+    }
+    static const uint8_t energy_drops[2] = {
+        MZM_PSPRITE_LARGE_ENERGY_DROP, MZM_PSPRITE_SMALL_ENERGY_DROP,
+    };
+    for (int i = 0; i < 2; ++i) {
+        uint16_t prob = probs[MZM_DROP_PROB_LARGE_ENERGY - i];
+        if (prob == 0) continue;
+        uint16_t lower = (uint16_t)(upper - prob);
+        if (upper >= rng && rng > lower) {
+            if (full_life && e->max_missiles > e->missiles) return MZM_PSPRITE_MISSILE_DROP;
+            return energy_drops[i];
+        }
+        upper = lower;
+    }
+    return MZM_PSPRITE_UNUSED0;
+}
+
+/* SpriteUtilSpriteDeath (DEATH_NORMAL): the sprite becomes its drop at the
+ * given position, or is removed. The explosion particle, debris and sound
+ * are not ported. */
+static void sprite_death(Ctx *c, uint16_t y, uint16_t x) {
+    MzmSprite *s = c->s;
+    uint8_t drop = determine_drop(c);
+    if (drop == MZM_PSPRITE_UNUSED0) {
+        s->status = 0;
+        return;
+    }
+    s->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN | MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->gfx_slot = 0;
+    s->sprite_id = drop;
+    s->y = y;
+    s->x = x;
+    s->pose = SPRITE_POSE_UNINITIALIZED;
+    s->health = 0;
+    s->isft = 0;
+    s->palette_row = 0;
+    s->absolute_palette_row = 0;
+    s->ignore_samus_timer = 1;
+    s->freeze_timer = 0;
+}
+
+/* ZoomerDeath: the explosion point is the middle of the body. */
+static void zoomer_death(Ctx *c) {
+    const MzmSprite *s = c->s;
+    uint16_t y = s->y, x = s->x;
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        if (s->status & MZM_SPRITE_STATUS_X_FLIP) x -= HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        else x += HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+    } else {
+        if (s->status & MZM_SPRITE_STATUS_Y_FLIP) y += HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        else y -= HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+    }
+    sprite_death(c, y, x);
+}
+
+/* Zoomer: the AI. The damaged sound and freezing are not ported. */
 static void zoomer(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -593,8 +690,90 @@ static void zoomer(Ctx *c) {
         zoomer_falling_init(s);
         /* fallthrough */
     case ZOOMER_POSE_FALLING: zoomer_falling(c); break;
-    default: s->status = 0; break;  /* DEATH_NORMAL without a drop */
+    default: zoomer_death(c); break;
     }
+}
+
+/* EnemyDropInit */
+static void enemy_drop_init(MzmSprite *s) {
+    s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
+    s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    s->pose = ENEMY_DROP_POSE_IDLE;
+    s->y_spawn = 200;               /* CONVERT_SECONDS(3.f) + ONE_THIRD_SECOND */
+    s->x_spawn = 0;
+    s->adc = 0;
+    s->frame = 0;
+    s->draw_top = s->draw_bottom = s->draw_horizontal = HALF_BLOCK_SIZE / PIXEL_SIZE;
+    switch (s->sprite_id) {
+    case MZM_PSPRITE_POWER_BOMB_DROP:
+        s->anim = MZM_DROP_POWER_BOMB;
+        s->samus_collision = SSC_POWER_BOMB_DROP;
+        break;
+    case MZM_PSPRITE_SUPER_MISSILE_DROP:
+        s->anim = MZM_DROP_SUPER_MISSILE;
+        s->samus_collision = SSC_SUPER_MISSILE_DROP;
+        break;
+    case MZM_PSPRITE_MISSILE_DROP:
+        s->anim = MZM_DROP_MISSILE;
+        s->samus_collision = SSC_MISSILE_DROP;
+        break;
+    case MZM_PSPRITE_LARGE_ENERGY_DROP:
+        s->anim = MZM_DROP_LARGE_ENERGY;
+        s->samus_collision = SSC_LARGE_ENERGY_DROP;
+        break;
+    default:                        /* PSPRITE_MULTIPLE_LARGE_ENERGY is not ported */
+        s->anim = MZM_DROP_SMALL_ENERGY;
+        s->samus_collision = SSC_SMALL_ENERGY_DROP;
+        break;
+    }
+    s->hitbox_top = -(HALF_BLOCK_SIZE + PIXEL_SIZE);
+    s->hitbox_bottom = HALF_BLOCK_SIZE + PIXEL_SIZE;
+    s->hitbox_left = -HALF_BLOCK_SIZE;
+    s->hitbox_right = HALF_BLOCK_SIZE;
+}
+
+static void refill(int *current, int maximum, int amount) {
+    *current += amount;
+    if (*current > maximum) *current = maximum;
+}
+
+/* EnemyDropIdle: shown once the ignore timer is nearly over, collected on
+ * contact (sounds not ported), blinking during its last 80 frames and gone
+ * after 200 frames counted every other frame. */
+static void enemy_drop_idle(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmEquipment *e = c->f->equipment;
+    if (s->ignore_samus_timer) {
+        if (s->ignore_samus_timer < 2) s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        return;
+    }
+    if (s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) {
+        switch (s->samus_collision) {
+        case SSC_SMALL_ENERGY_DROP: refill(&e->energy, e->max_energy, 5); break;
+        case SSC_LARGE_ENERGY_DROP: refill(&e->energy, e->max_energy, 20); break;
+        case SSC_MISSILE_DROP: refill(&e->missiles, e->max_missiles, 2); break;
+        case SSC_SUPER_MISSILE_DROP: refill(&e->super_missiles, e->max_super_missiles, 2); break;
+        default: break;             /* power bombs: not ported */
+        }
+        s->status = 0;
+        return;
+    }
+    if (s->x_spawn & 1) {
+        uint8_t timer = (uint8_t)--s->y_spawn;
+        if (timer == 0) s->status = 0;
+        else if (timer < 80) s->status ^= MZM_SPRITE_STATUS_NOT_DRAWN;
+    }
+}
+
+/* EnemyDrop */
+static void enemy_drop(Ctx *c) {
+    if (c->s->pose == SPRITE_POSE_UNINITIALIZED) enemy_drop_init(c->s);
+    else if (c->s->pose == ENEMY_DROP_POSE_IDLE) enemy_drop_idle(c);
+    c->s->x_spawn++;
+}
+
+static bool is_drop(uint8_t sprite_id) {
+    return sprite_id >= MZM_PSPRITE_LARGE_ENERGY_DROP && sprite_id <= MZM_PSPRITE_POWER_BOMB_DROP;
 }
 
 /* SPRITE_CLEAR_AND_SET_ISFT (bit 7 is the power bomb stun). */
@@ -634,7 +813,8 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
     uint16_t samus_left = (uint16_t)(samus->x + samus->hitbox_left);
     uint16_t samus_right = (uint16_t)(samus->x + samus->hitbox_right);
     const uint16_t check = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN;
-    for (int i = 0; i < count; ++i) {
+    bool ignore = false;            /* gIgnoreSamusAndSpriteCollision */
+    for (int i = 0; i < count && !ignore; ++i) {
         MzmSprite *s = &sprites[i];
         if ((s->status & check) != check || s->ignore_samus_timer) continue;
         uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
@@ -644,14 +824,35 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         uint16_t center_x = (uint16_t)(left + (uint16_t)(right - left) / 2);
         bool on_left = center_x >= samus->previous_x;
         /* Frozen sprites are solid: not ported (no ice beam). */
-        if (s->freeze_timer || s->samus_collision != SSC_HURTS_SAMUS) continue;
-        if (contact_kills(s, samus, tables)) continue;
-        if (!samus->invincible && samus->hurt) {
-            samus->hurt(samus->context, tables->damage[s->sprite_id], on_left);
-            samus->invincible = true;
+        if (s->freeze_timer) continue;
+        switch (s->samus_collision) {
+        case SSC_NONE: break;
+        case SSC_HURTS_SAMUS:
+            if (contact_kills(s, samus, tables)) break;
+            if (!samus->invincible && samus->hurt) {
+                samus->hurt(samus->context, tables->damage[s->sprite_id], on_left);
+                samus->invincible = true;
+            }
+            s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+            ignore = true;
+            break;
+        case SSC_SMALL_ENERGY_DROP:
+        case SSC_LARGE_ENERGY_DROP:
+        case SSC_MISSILE_DROP:
+        case SSC_SUPER_MISSILE_DROP:
+        case SSC_POWER_BOMB_DROP:
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            ignore = true;
+            break;
+        default:                    /* no other collision is ported */
+            s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+            ignore = true;
+            break;
         }
-        s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
     }
+    for (int i = 0; i < count; ++i)
+        if (sprites[i].status & MZM_SPRITE_STATUS_EXISTS && sprites[i].ignore_samus_timer)
+            sprites[i].ignore_samus_timer--;
 }
 
 /* ProjectileDealDamage */
@@ -680,7 +881,9 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
      * once, before the projectiles that hit it. */
     for (int i = 0; i < count; ++i) {
         MzmSprite *s = &sprites[i];
-        if (!(s->status & MZM_SPRITE_STATUS_EXISTS) || s->health == 0) continue;
+        if ((s->status & (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_IGNORE_PROJECTILES)) !=
+                MZM_SPRITE_STATUS_EXISTS || s->health == 0)
+            continue;
         uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
         uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
         uint8_t weakness = tables->weakness[s->sprite_id];
@@ -716,7 +919,14 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
 }
 
 bool mzm_sprite_supported(uint8_t sprite_id) {
-    return sprite_id == MZM_PSPRITE_ZOOMER_YELLOW || sprite_id == MZM_PSPRITE_ZOOMER_RED;
+    return sprite_id == MZM_PSPRITE_ZOOMER_YELLOW || sprite_id == MZM_PSPRITE_ZOOMER_RED ||
+           is_drop(sprite_id);
+}
+
+const char *mzm_sprite_anim_name(const MzmSprite *sprite) {
+    if (is_drop(sprite->sprite_id))
+        return sprite->anim < MZM_DROP_ANIMS ? mzm_drop_anim_names[sprite->anim] : NULL;
+    return sprite->anim < MZM_ZOOMER_ANIMS ? mzm_zoomer_anim_names[sprite->anim] : NULL;
 }
 
 void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_slot,
@@ -762,21 +972,25 @@ static void check_on_screen(const Ctx *c) {
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_ONSCREEN;
 }
 
-void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteWorld *world,
-                       const MzmSpriteTables *tables, const MzmSpriteKind *kind,
-                       uint8_t frame8, uint16_t frame16) {
+void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *frame) {
     if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || !mzm_sprite_supported(sprite->sprite_id))
         return;
-    Ctx c = {sprite, world, tables, kind, 0, MZM_COLLISION_AIR, frame8};
+    bool drop = is_drop(sprite->sprite_id);
+    Ctx c = {sprite, frame, frame->world, frame->tables, drop ? frame->drop : frame->zoomer,
+             0, MZM_COLLISION_AIR, frame->frame8};
     /* gSpriteRng = sSpriteRandomNumberTable[(frame8 + slot + frame16 / 16 +
      * x + y) % 32] */
-    c.rng = tables->random[((uint32_t)frame8 + slot + frame16 / 16u + sprite->x + sprite->y) % 32u];
+    c.rng = c.tables->random[((uint32_t)frame->frame8 + slot + frame->frame16 / 16u + sprite->x +
+                              sprite->y) % 32u];
     /* SpriteUtilUpdateStunTimer: the stun palette flash is not drawn yet. */
     if (sprite->isft & 0x7F) sprite->isft--;
-    zoomer(&c);
+    if (drop) enemy_drop(&c);
+    else zoomer(&c);
     if (sprite->status & MZM_SPRITE_STATUS_EXISTS) {
+        /* A sprite that just became a drop finishes the frame on its
+         * previous OAM (pOam is only set by EnemyDropInit), so `c.kind`
+         * stays the one it started the frame with. */
         update_animation(&c);
         check_on_screen(&c);
     }
-    if (sprite->ignore_samus_timer) sprite->ignore_samus_timer--;
 }

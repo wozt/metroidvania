@@ -1166,7 +1166,7 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
 #define RUNTIME_MAX_SPRITES 24
 typedef struct {
     MzmSpriteTables tables;
-    MzmSpriteKind zoomer;
+    MzmSpriteKind zoomer, drop;
     char names[256][64];
     bool tables_ok, kinds_ok;
     MzmSprite live[RUNTIME_MAX_SPRITES];
@@ -1193,10 +1193,13 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                 sprites->tables.falling[falling_count] = (int16_t)strtol(cursor, &cursor, 10);
         } else if (!strcmp(line, "stats")) {
             char name[64];
-            int id, health, damage, weakness, used = 0;
-            if (sscanf(cursor, "%63s %d %d %d %d%n", name, &id, &health, &damage, &weakness,
-                       &used) != 5 ||
+            int id, health, damage, weakness, no_drop, drops[5], used = 0;
+            if (sscanf(cursor, "%63s %d %d %d %d %d %d %d %d %d %d%n", name, &id, &health,
+                       &damage, &weakness, &no_drop, &drops[0], &drops[1], &drops[2], &drops[3],
+                       &drops[4], &used) != 11 ||
                 id < 0 || id > 255) { ok = false; break; }
+            /* SPRITE_STATS_SMALL_ENERGY_PROB .. SPRITE_STATS_POWER_BOMB_PROB */
+            for (int d = 0; d < 5; ++d) sprites->tables.drops[id][d] = (uint16_t)drops[d];
             snprintf(sprites->names[id], sizeof sprites->names[id], "%s", name);
             sprites->tables.health[id] = (uint16_t)health;
             sprites->tables.damage[id] = (uint16_t)damage;
@@ -1208,18 +1211,32 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     return ok && random_count == 32 && falling_count == 16;
 }
 
-/* Frame durations of the Zoomer's OAM tables from the sprite library. */
-static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *library) {
-    for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
+/* Frame durations of OAM tables from the sprite library. */
+static bool runtime_sprite_kind_open(MzmSpriteKind *kind, RuntimeLibrary *library,
+                                     const char *const *sprites, const char *const *anims,
+                                     int count) {
+    for (int a = 0; a < count; ++a) {
         char key[160];
-        snprintf(key, sizeof key, "Sprite/ZOOMER_YELLOW/%s/none", mzm_zoomer_anim_names[a]);
+        snprintf(key, sizeof key, "Sprite/%s/%s/none", sprites[a], anims[a]);
         RuntimeLibraryEntry *entry = runtime_library_find(library, key);
         if (!entry || entry->count > MZM_SPRITE_MAX_FRAMES) return false;
-        sprites->zoomer.counts[a] = (uint8_t)entry->count;
-        for (int f = 0; f < entry->count; ++f)
-            sprites->zoomer.timers[a][f] = (uint8_t)entry->ticks[f];
+        kind->counts[a] = (uint8_t)entry->count;
+        for (int f = 0; f < entry->count; ++f) kind->timers[a][f] = (uint8_t)entry->ticks[f];
     }
     return true;
+}
+
+static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *library) {
+    const char *zoomers[MZM_ZOOMER_ANIMS];
+    for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) zoomers[a] = "ZOOMER_YELLOW";
+    static const char *const drops[MZM_DROP_ANIMS] = {
+        "SMALL_ENERGY_DROP", "LARGE_ENERGY_DROP", "MISSILE_DROP", "SUPER_MISSILE_DROP",
+        "POWER_BOMB_DROP",
+    };
+    return runtime_sprite_kind_open(&sprites->zoomer, library, zoomers, mzm_zoomer_anim_names,
+                                    MZM_ZOOMER_ANIMS) &&
+           runtime_sprite_kind_open(&sprites->drop, library, drops, mzm_drop_anim_names,
+                                    MZM_DROP_ANIMS);
 }
 
 /* SpriteLoadRoomSprites: the ported sprites of the room. */
@@ -1282,9 +1299,10 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     }
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4)};
+    MzmSpriteFrame frame = {&world, &sprites->tables, &sprites->zoomer, &sprites->drop,
+                            equipment, sprites->frame8, sprites->frame16};
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
-        mzm_sprite_update(&sprites->live[i], (uint8_t)i, &world, &sprites->tables,
-                          &sprites->zoomer, sprites->frame8, sprites->frame16);
+        mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
     sprites->frame8++;
     sprites->frame16++;
 }
@@ -2161,11 +2179,13 @@ int main(int argc, char **argv) {
          * (SpriteDraw); palette rows are baked per sprite by the exporter. */
         for(int i=0;i<RUNTIME_MAX_SPRITES && sprites.kinds_ok;i++) {
             const MzmSprite *sprite=&sprites.live[i];
-            if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) || sprite->anim>=MZM_ZOOMER_ANIMS)continue;
+            const char *anim_name=mzm_sprite_anim_name(sprite);
+            if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) ||
+               sprite->status&MZM_SPRITE_STATUS_NOT_DRAWN || !anim_name)continue;
             bool fx=sprite->status&MZM_SPRITE_STATUS_X_FLIP,fy=sprite->status&MZM_SPRITE_STATUS_Y_FLIP;
             char key[160];
             snprintf(key,sizeof key,"Sprite/%s/%s/%s",sprites.names[sprite->sprite_id],
-                     mzm_zoomer_anim_names[sprite->anim],fx&&fy?"xy":fx?"x":fy?"y":"none");
+                     anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none");
             RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
             if(!entry || entry->count==0)continue;
             int index=sprite->frame<entry->count?sprite->frame:0;
@@ -2223,8 +2243,9 @@ int main(int argc, char **argv) {
             int live=0;
             for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
                 live+=(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)!=0;
-            printf("Captured frame %ld: %s (pose %s, energy %d, %d sprites)\n",capture_step,
-                   capture_path,mzm_pose_name(samus.pose),equipment.energy,live);
+            printf("Captured frame %ld: %s (pose %s at %d,%d, energy %d, %d sprites)\n",
+                   capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
+                   (int)(samus.y>>2),equipment.energy,live);
             for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
                 if(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)
                     printf("  sprite %d %s at %d,%d pose %#x status %#x health %d\n",i,

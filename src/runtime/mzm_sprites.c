@@ -84,6 +84,29 @@ enum {
     PI_4 = 32,                      /* PI = Q_8_8(.5f) */
 };
 
+/* Sidehopper (sidehopper.c) and Dessgeega (dessgeega.c) poses. */
+enum {
+    HOPPER_POSE_JUMP_WARNING_INIT = 0x8,
+    HOPPER_POSE_JUMP_WARNING = 0x9,
+    HOPPER_POSE_IDLE = 0xF,
+    DESSGEEGA_POSE_LONG_BEAM_DETECT = 0x11,
+    HOPPER_POSE_FALLING = 0x1F,
+    HOPPER_POSE_JUMPING = 0x23,
+    HOPPER_POSE_LANDING = 0x25,
+    DESSGEEGA_POSE_LONG_BEAM_SPAWNING = 0x33,
+    /* HEAD_HITBOX (sidehopper: - PIXEL_SIZE) / feet hitbox. */
+    SIDEHOPPER_HEAD_HITBOX = BLOCK_SIZE + HALF_BLOCK_SIZE - PIXEL_SIZE,
+    DESSGEEGA_HEAD_HITBOX = BLOCK_SIZE + QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE,
+    /* 0x70 / 0x5C of SidehopperJumpingInit / SidehopperLandingInit. */
+    SIDEHOPPER_JUMPING_HEAD_HITBOX = 0x70,
+    SIDEHOPPER_LANDING_HEAD_HITBOX = 0x5C,
+    HOPPER_DETECTION_RANGE = BLOCK_SIZE * 5,
+    DESSGEEGA_LONG_BEAM_Y_RANGE = BLOCK_SIZE * 12,
+    DESSGEEGA_LONG_BEAM_X_RANGE = BLOCK_SIZE * 4 - QUARTER_BLOCK_SIZE,
+    DESSGEEGA_SPAWNING_SPEED = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE,
+    HOPPER_JUMP_VELOCITY_FRAMES = 39,   /* ARRAY_SIZE(sSidehopperLowJumpVelocity) * 4 - 1 */
+};
+
 /* ZoomerTurningDirection */
 enum {
     TURN_BOTTOM_LEFT_CORNER, TURN_TOP_RIGHT_EDGE, TURN_BOTTOM_RIGHT_EDGE, TURN_TOP_RIGHT_CORNER,
@@ -118,6 +141,20 @@ static const char *const zeela_sprites[MZM_ZEELA_ANIMS] = {
 };
 const char *const mzm_waver_anim_names[MZM_WAVER_ANIMS] = {"WaverOam"};
 static const char *const waver_sprites[MZM_WAVER_ANIMS] = {"WAVER"};
+const char *const mzm_sidehopper_anim_names[MZM_SIDEHOPPER_ANIMS] = {
+    "SidehopperOam_Idle", "SidehopperOam_ShakingHead", "SidehopperOam_JumpWarning",
+    "SidehopperOam_Jumping", "SidehopperOam_Landing",
+};
+static const char *const sidehopper_sprites[MZM_SIDEHOPPER_ANIMS] = {
+    "SIDEHOPPER", "SIDEHOPPER", "SIDEHOPPER", "SIDEHOPPER", "SIDEHOPPER",
+};
+const char *const mzm_dessgeega_anim_names[MZM_DESSGEEGA_ANIMS] = {
+    "DessGeegaOam_Idle", "DessGeegaOam_Screaming", "DessGeegaOam_JumpWarning",
+    "DessGeegaOam_Jumping", "DessGeegaOam_Landing",
+};
+static const char *const dessgeega_sprites[MZM_DESSGEEGA_ANIMS] = {
+    "DESSGEEGA", "DESSGEEGA", "DESSGEEGA", "DESSGEEGA", "DESSGEEGA",
+};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -144,6 +181,9 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_SKREE] = {MZM_SKREE_ANIMS, mzm_skree_anim_names, skree_sprites},
     [MZM_FAMILY_WAVER] = {MZM_WAVER_ANIMS, mzm_waver_anim_names, waver_sprites},
     [MZM_FAMILY_DROP] = {MZM_DROP_ANIMS, mzm_drop_anim_names, drop_sprites},
+    [MZM_FAMILY_SIDEHOPPER] = {MZM_SIDEHOPPER_ANIMS, mzm_sidehopper_anim_names,
+                               sidehopper_sprites},
+    [MZM_FAMILY_DESSGEEGA] = {MZM_DESSGEEGA_ANIMS, mzm_dessgeega_anim_names, dessgeega_sprites},
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,

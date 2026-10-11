@@ -8,11 +8,13 @@
  * ClipdataConvertToCollision for the sprite actor,
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
- * Zoomer, Zeela, Ripper, Skree and Waver AIs (src/sprites_ai/zoomer.c,
- * zeela.c, ripper.c, skree.c, waver.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper and Dessgeega AIs
+ * (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c, sidehopper.c,
+ * dessgeega.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes. Positions are native subpixels (64 per
- * block). ROM tables (random numbers, falling speeds, stats) and the frame
- * durations of each OAM table come from scripts/mzm_sprites.py.
+ * block). ROM tables (random numbers, falling speeds, jump velocities,
+ * stats) and the frame durations of each OAM table come from
+ * scripts/mzm_sprites.py.
  * Combat ports SpriteUtilSamusAndSpriteCollision for sprites that hurt Samus
  * (with the screw attack kill of SpriteUtilSpriteTakeDamageFromSamusContact)
  * and the beam and missile parts of ProjectileCheckHittingSprite. A killed
@@ -99,6 +101,11 @@ typedef struct {
     int16_t skree_falling[16];      /* sSkreeFallingSpeed (SHORT_MAX ends it) */
     int16_t zeela_eyes_up[16];      /* sZeelaEyesFallingFromUpSpeed */
     int16_t zeela_eyes_bottom[16];  /* sZeelaEyesFallingFromBottomSpeed */
+    int16_t falling_ceiling[16];    /* sSpritesFallingCeilingSpeed (SHORT_MAX ends it) */
+    int16_t sidehopper_high[10];    /* sSidehopperHighJumpVelocity */
+    int16_t sidehopper_low[10];     /* sSidehopperLowJumpVelocity */
+    int16_t dessgeega_high[10];     /* sDessgeegaHighJumpYVelocity */
+    int16_t dessgeega_low[10];      /* sDessgeegaLowJumpYVelocity */
     int16_t debris[MZM_DEBRIS_TABLES][9]; /* sDebris*YVelocity, sDebrisBouncingVelocity */
 } MzmSpriteTables;
 
@@ -165,11 +172,26 @@ extern const char *const mzm_skree_anim_names[MZM_SKREE_ANIMS];
 enum { MZM_WAVER_MOVING, MZM_WAVER_ANIMS };
 extern const char *const mzm_waver_anim_names[MZM_WAVER_ANIMS];
 
+/* Sidehopper OAM tables (src/data/sprites/sidehopper.c), in the order the
+ * AI assigns them. */
+enum {
+    MZM_SIDEHOPPER_IDLE, MZM_SIDEHOPPER_SHAKING_HEAD, MZM_SIDEHOPPER_JUMP_WARNING,
+    MZM_SIDEHOPPER_JUMPING, MZM_SIDEHOPPER_LANDING, MZM_SIDEHOPPER_ANIMS,
+};
+extern const char *const mzm_sidehopper_anim_names[MZM_SIDEHOPPER_ANIMS];
+
+/* Dessgeega OAM tables (src/data/sprites/dessgeega.c). */
+enum {
+    MZM_DESSGEEGA_IDLE, MZM_DESSGEEGA_SCREAMING, MZM_DESSGEEGA_JUMP_WARNING,
+    MZM_DESSGEEGA_JUMPING, MZM_DESSGEEGA_LANDING, MZM_DESSGEEGA_ANIMS,
+};
+extern const char *const mzm_dessgeega_anim_names[MZM_DESSGEEGA_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
     MZM_FAMILY_ZOOMER, MZM_FAMILY_ZEELA, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_WAVER,
-    MZM_FAMILY_DROP,
+    MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -195,6 +217,8 @@ enum {
     MZM_PSPRITE_POWER_BOMB_DROP = 30,
     MZM_PSPRITE_SKREE_GREEN = 31, MZM_PSPRITE_SKREE_BLUE = 32,
     MZM_PSPRITE_WAVER = 72,
+    MZM_PSPRITE_DESSGEEGA = 70, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM = 71,
+    MZM_PSPRITE_SIDEHOPPER = 121,
 };
 
 /* SecondarySprite */
@@ -235,7 +259,9 @@ typedef struct {
     MzmEquipment *equipment;
     uint8_t frame8;                 /* gFrameCounter8Bit */
     uint16_t frame16;               /* gFrameCounter16Bit */
-    uint16_t samus_x, samus_y;      /* gSamusData position, subpixels */
+    /* gSamusData position, subpixels; samus_y includes hitboxTop / 2, as
+     * SpriteUtilCheckSamusNearSpriteLeftRight reads it. */
+    uint16_t samus_x, samus_y;
     /* gSpriteData, for SpriteSpawnSecondary (NULL: no spawning). */
     MzmSprite *sprites;
     int sprite_count;

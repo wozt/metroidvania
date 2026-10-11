@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T15:43:22+00:00",
+ "generated_at": "2026-10-11T15:51:50+00:00",
  "git": {
-  "commit": "5fbd6ab",
+  "commit": "79ea223",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 63,
+   "total": 64,
    "by_status": {
     "not_started": 9,
     "in_progress": 2,
-    "partial": 39,
+    "partial": 40,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 19.0,
-   "with_passing_tests": 50,
-   "with_passing_tests_percent": 79.4,
+   "functional_or_better_percent": 18.8,
+   "with_passing_tests": 51,
+   "with_passing_tests_percent": 79.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -116,6 +116,7 @@
     "mzm.enemies.ripper",
     "mzm.enemies.sidehopper",
     "mzm.enemies.skree",
+    "mzm.enemies.sova",
     "mzm.enemies.viola",
     "mzm.enemies.waver",
     "mzm.enemies.zeela",
@@ -180,11 +181,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 16,
+   "total": 17,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 16,
+    "partial": 17,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -193,7 +194,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 16,
+   "with_passing_tests": 17,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -204,6 +205,7 @@
     "mzm.enemies.ripper",
     "mzm.enemies.sidehopper",
     "mzm.enemies.skree",
+    "mzm.enemies.sova",
     "mzm.enemies.viola",
     "mzm.enemies.waver",
     "mzm.enemies.zeela",
@@ -790,6 +792,53 @@
    }
   },
   {
+   "id": "mzm.enemies.sova",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Sovas",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer",
+    "mzm.items.enemy_drops",
+    "mzm.animation.particles"
+   ],
+   "native_routines": [
+    "Sova"
+   ],
+   "limitations": "Freezing, the damaged sound, screen-shake falls and the falling splash are not ported. Purple and orange Sovas (orange: palette row 1, one subpixel faster): placement onto any surface, a speed that follows the animation frame, crawling on floors (with their two slope tables), walls and ceilings (work2, with its own table instead of a Y flip), the eight native turns with their offsets, falls, landings in a random direction and death into drops.",
+   "next_action": "Port freezing with the ice beam.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-11"
+   }
+  },
+  {
    "id": "mzm.enemies.viola",
    "area": "mzm",
    "category": "enemies",
@@ -976,7 +1025,7 @@
     "SpriteUtilSpriteDeath"
    ],
    "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported. Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.",
-   "next_action": "Port the stun palette flash and freezing, then further enemies (Sova, Geega, Zeb, Reo, Holtz).",
+   "next_action": "Port the stun palette flash and freezing, then further enemies (Geega, Zeb, Reo, Holtz, Mella).",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -2659,7 +2708,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
+   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -3767,6 +3816,12 @@
  },
  "timeline": [
   {
+   "commit": "79ea223",
+   "date": "2026-10-11",
+   "subject": "feat(mzm): native Violas",
+   "scope": "mzm"
+  },
+  {
    "commit": "5fbd6ab",
    "date": "2026-10-11",
    "subject": "feat(mzm): native Sidehoppers and Dessgeegas, per-family sprite loading",
@@ -4239,12 +4294,6 @@
    "date": "2026-10-10",
    "subject": "test: diagnose special Samus body and cannon OAM headers",
    "scope": "project"
-  },
-  {
-   "commit": "c70e84e",
-   "date": "2026-10-10",
-   "subject": "feat: bulk export native Samus special motion diagnostics",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -4272,7 +4321,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 71,
+    "routines_cited_by_features": 72,
     "call_edges": 6071
    },
    "aos": {

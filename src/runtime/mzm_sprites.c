@@ -157,6 +157,16 @@ static const char *const dessgeega_sprites[MZM_DESSGEEGA_ANIMS] = {
 };
 const char *const mzm_viola_anim_names[MZM_VIOLA_ANIMS] = {"ViolaOam_Moving"};
 static const char *const viola_sprites[MZM_VIOLA_ANIMS] = {"VIOLA_BLUE"};
+const char *const mzm_sova_anim_names[MZM_SOVA_ANIMS] = {
+    "SovaOam_OnGround", "SovaOam_WalkingOnLeftSlope", "SovaOam_WalkingOnRightSlope",
+    "SovaOam_WalkingOnLeft", "SovaOam_WalkingOnRight", "SovaOam_WalkingOnCeiling",
+    "SovaOam_TurningCornerRight", "SovaOam_TurningEdgeRight", "SovaOam_TurningEdgeLeft",
+    "SovaOam_TurningCornerLeft", "SovaOam_Falling",
+};
+static const char *const sova_sprites[MZM_SOVA_ANIMS] = {
+    "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE",
+    "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE", "SOVA_PURPLE",
+};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -187,6 +197,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
                                sidehopper_sprites},
     [MZM_FAMILY_DESSGEEGA] = {MZM_DESSGEEGA_ANIMS, mzm_dessgeega_anim_names, dessgeega_sprites},
     [MZM_FAMILY_VIOLA] = {MZM_VIOLA_ANIMS, mzm_viola_anim_names, viola_sprites},
+    [MZM_FAMILY_SOVA] = {MZM_SOVA_ANIMS, mzm_sova_anim_names, sova_sprites},
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
@@ -1900,6 +1911,418 @@ static void viola(Ctx *c) {
     }
 }
 
+/* Sova (sova.c): a crawler like the Zoomer, but its ceiling state is work2
+ * (no Y flip: it has its own tables), its speed follows the animation frame
+ * and its turns and probes use slightly different distances. */
+static void sova_set_x_flip_by_facing(MzmSprite *s) {
+    if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) s->status |= MZM_SPRITE_STATUS_X_FLIP;
+    else s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+}
+
+/* SovaCheckCollidingWithAir */
+static bool sova_in_air(const Ctx *c) {
+    const MzmSprite *s = c->s;
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        uint16_t x = s->status & MZM_SPRITE_STATUS_X_FLIP ? s->x : (uint16_t)(s->x - PIXEL_SIZE);
+        return collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR &&
+               collision_at(c, (uint16_t)(s->y + HALF_BLOCK_SIZE), x) == MZM_COLLISION_AIR;
+    }
+    uint16_t y = s->work2 ? (uint16_t)(s->y - PIXEL_SIZE) : s->y;
+    return collision_at(c, y, (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR &&
+           collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR;
+}
+
+/* SovaUpdateHitbox */
+static void sova_hitbox(MzmSprite *s) {
+    const int16_t top = THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE, bottom = PIXEL_SIZE;
+    const int16_t side = HALF_BLOCK_SIZE - PIXEL_SIZE;
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        s->hitbox_top = -side;
+        s->hitbox_bottom = side;
+        s->hitbox_left = s->status & MZM_SPRITE_STATUS_X_FLIP ? -top : -bottom;
+        s->hitbox_right = s->status & MZM_SPRITE_STATUS_X_FLIP ? bottom : top;
+    } else {
+        s->hitbox_top = s->work2 ? -bottom : -top;
+        s->hitbox_bottom = s->work2 ? top : bottom;
+        s->hitbox_left = -side;
+        s->hitbox_right = side;
+    }
+}
+
+/* SovaSetCrawlingOam */
+static void sova_crawling_oam(MzmSprite *s) {
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        set_anim(s, s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? MZM_SOVA_WALKING_ON_RIGHT
+                                                               : MZM_SOVA_WALKING_ON_LEFT);
+    } else {
+        set_anim(s, s->work2 ? MZM_SOVA_WALKING_ON_CEILING : MZM_SOVA_ON_GROUND);
+        sova_set_x_flip_by_facing(s);
+    }
+}
+
+/* SovaInit */
+static void sova_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->work2 = 0;
+    s->pose = ZOOMER_POSE_IDLE;
+    random_x_direction(c);
+    if (collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0) {
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+    } else if (collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE + PIXEL_SIZE)), s->x) &
+               MZM_COLLISION_FLAGS_F0) {
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+        s->y -= BLOCK_SIZE;
+        s->work2 = 1;
+    } else if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
+                            (uint16_t)(s->x - (HALF_BLOCK_SIZE + PIXEL_SIZE))) &
+               MZM_COLLISION_FLAGS_F0) {
+        s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+        s->y -= HALF_BLOCK_SIZE;
+        s->x -= HALF_BLOCK_SIZE;
+    } else if (collision_at(c, (uint16_t)(s->y - HALF_BLOCK_SIZE),
+                            (uint16_t)(s->x + HALF_BLOCK_SIZE)) & MZM_COLLISION_FLAGS_F0) {
+        s->status |= MZM_SPRITE_STATUS_FACING_DOWN | MZM_SPRITE_STATUS_X_FLIP;
+        s->y -= HALF_BLOCK_SIZE;
+        s->x += HALF_BLOCK_SIZE;
+    } else {
+        s->status = 0;
+        return;
+    }
+    if (!(s->status & MZM_SPRITE_STATUS_FACING_DOWN)) sova_set_x_flip_by_facing(s);
+    s->samus_collision = SSC_HURTS_SAMUS;
+    sova_crawling_oam(s);
+    sova_hitbox(s);
+    s->health = c->tables->health[s->sprite_id];
+    s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+    if (s->sprite_id == MZM_PSPRITE_SOVA_ORANGE) s->absolute_palette_row = s->palette_row = 1;
+}
+
+/* SovaMove */
+static void sova_move(Ctx *c) {
+    MzmSprite *s = c->s;
+    static const uint8_t frame_speeds[6] = {0, 0, 1, 2, 3, 1};
+    uint16_t speed = s->frame < 6 ? frame_speeds[s->frame] : 0;
+    if (s->sprite_id == MZM_PSPRITE_SOVA_ORANGE && speed) speed++;
+    bool turning = false, right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
+    const uint16_t reach = HALF_BLOCK_SIZE - PIXEL_SIZE;
+    if (sova_in_air(c)) {
+        s->pose = ZOOMER_POSE_FALLING_INIT;
+        return;
+    }
+    /* SpriteUtilShouldFall: only during a screen shake, not ported. */
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+            if (right) {
+                if (!(collision_at(c, s->y, s->x) & MZM_COLLISION_FLAGS_F0))
+                    turning = zoomer_turn(s, true, TURN_BOTTOM_LEFT_EDGE);
+                else if (collision_at(c, (uint16_t)(s->y + reach), (uint16_t)(s->x - PIXEL_SIZE)) ==
+                         MZM_COLLISION_SOLID)
+                    turning = zoomer_turn(s, false, TURN_BOTTOM_RIGHT_CORNER);
+                else
+                    s->y += speed;
+            } else {
+                if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F0))
+                    turning = zoomer_turn(s, true, TURN_BOTTOM_RIGHT_CORNER);
+                else if (collision_at(c, (uint16_t)(s->y - reach), (uint16_t)(s->x - PIXEL_SIZE)) ==
+                         MZM_COLLISION_SOLID)
+                    turning = zoomer_turn(s, false, TURN_BOTTOM_LEFT_EDGE);
+                else
+                    s->y -= speed;
+            }
+        } else {
+            if (right) {
+                if (!(collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) & MZM_COLLISION_FLAGS_F0))
+                    turning = zoomer_turn(s, false, TURN_TOP_LEFT_CORNER);
+                else if (collision_at(c, (uint16_t)(s->y + reach), s->x) == MZM_COLLISION_SOLID)
+                    turning = zoomer_turn(s, true, TURN_TOP_LEFT_EDGE);
+                else
+                    s->y += speed;
+            } else {
+                if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
+                      MZM_COLLISION_FLAGS_F0))
+                    turning = zoomer_turn(s, false, TURN_TOP_LEFT_EDGE);
+                else if (collision_at(c, (uint16_t)(s->y - reach), s->x) == MZM_COLLISION_SOLID)
+                    turning = zoomer_turn(s, true, TURN_TOP_LEFT_CORNER);
+                else
+                    s->y -= speed;
+            }
+        }
+    } else if (s->work2) {
+        if (right) {
+            if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), s->x) & MZM_COLLISION_FLAGS_F))
+                turning = zoomer_turn(s, false, TURN_BOTTOM_RIGHT_EDGE);
+            else if (collision_at(c, s->y, (uint16_t)(s->x + reach)) == MZM_COLLISION_SOLID)
+                turning = zoomer_turn(s, true, TURN_TOP_RIGHT_CORNER);
+            else
+                s->x += speed;
+        } else {
+            if (!(collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - PIXEL_SIZE)) &
+                  MZM_COLLISION_FLAGS_F))
+                turning = zoomer_turn(s, false, TURN_TOP_RIGHT_CORNER);
+            else if (collision_at(c, s->y, (uint16_t)(s->x - reach)) == MZM_COLLISION_SOLID)
+                turning = zoomer_turn(s, true, TURN_BOTTOM_RIGHT_EDGE);
+            else
+                s->x -= speed;
+        }
+    } else {
+        align_on_slope(c);
+        if (c->vertical == MZM_COLLISION_AIR || (c->vertical & MZM_COLLISION_FLAGS_F0)) {
+            if (s->anim != MZM_SOVA_ON_GROUND) {
+                set_anim(s, MZM_SOVA_ON_GROUND);
+                sova_set_x_flip_by_facing(s);
+            }
+            if (right) {
+                if (collision_at(c, s->y, s->x) == MZM_COLLISION_AIR)
+                    turning = zoomer_turn(s, true, TURN_BOTTOM_LEFT_CORNER);
+                else if (collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x + reach)) ==
+                         MZM_COLLISION_SOLID)
+                    turning = zoomer_turn(s, false, TURN_TOP_RIGHT_EDGE);
+                else
+                    s->x += speed;
+            } else {
+                if (collision_at(c, s->y, (uint16_t)(s->x - PIXEL_SIZE)) == MZM_COLLISION_AIR)
+                    turning = zoomer_turn(s, true, TURN_TOP_RIGHT_EDGE);
+                else if (collision_at(c, (uint16_t)(s->y - PIXEL_SIZE), (uint16_t)(s->x - reach)) ==
+                         MZM_COLLISION_SOLID)
+                    turning = zoomer_turn(s, false, TURN_BOTTOM_LEFT_CORNER);
+                else
+                    s->x -= speed;
+            }
+        } else {
+            /* On a slope: going right, a left slope uses the right slope
+             * table at full speed, any other the left one at two thirds;
+             * going left, the reverse. */
+            bool left_slope = c->vertical == MZM_COLLISION_LEFT_SLIGHT_FLOOR_SLOPE ||
+                              c->vertical == MZM_COLLISION_LEFT_STEEP_FLOOR_SLOPE;
+            bool right_slope = c->vertical == MZM_COLLISION_RIGHT_SLIGHT_FLOOR_SLOPE ||
+                               c->vertical == MZM_COLLISION_RIGHT_STEEP_FLOOR_SLOPE;
+            bool full = right ? left_slope : right_slope;
+            uint8_t anim = full ? MZM_SOVA_WALKING_ON_RIGHT_SLOPE : MZM_SOVA_WALKING_ON_LEFT_SLOPE;
+            if (s->anim != anim) {
+                set_anim(s, anim);
+                if (right) s->status |= MZM_SPRITE_STATUS_X_FLIP;
+                else s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+            }
+            uint16_t step = full ? speed : (uint16_t)(speed * 2 / 3);
+            if (right) s->x += step;
+            else s->x -= step;
+        }
+    }
+    if (turning) s->pose = ZOOMER_POSE_TURNING_AROUND_INIT;
+}
+
+/* SovaTurningAroundInit: the corner table, flipped for the turn. */
+static void sova_turning_init(MzmSprite *s) {
+    bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
+    s->pose = ZOOMER_POSE_TURNING_AROUND;
+    s->adc = 0;
+    s->frame = 0;
+    static const struct { uint8_t if_right, otherwise; bool x_flip, y_flip; } turns[8] = {
+        [TURN_BOTTOM_LEFT_CORNER] = {MZM_SOVA_TURNING_CORNER_RIGHT, MZM_SOVA_TURNING_EDGE_LEFT, false, false},
+        [TURN_TOP_RIGHT_EDGE] = {MZM_SOVA_TURNING_CORNER_RIGHT, MZM_SOVA_TURNING_EDGE_LEFT, true, false},
+        [TURN_BOTTOM_RIGHT_EDGE] = {MZM_SOVA_TURNING_EDGE_LEFT, MZM_SOVA_TURNING_CORNER_RIGHT, false, true},
+        [TURN_TOP_RIGHT_CORNER] = {MZM_SOVA_TURNING_EDGE_LEFT, MZM_SOVA_TURNING_CORNER_RIGHT, true, true},
+        [TURN_TOP_LEFT_EDGE] = {MZM_SOVA_TURNING_CORNER_LEFT, MZM_SOVA_TURNING_EDGE_RIGHT, false, false},
+        [TURN_BOTTOM_RIGHT_CORNER] = {MZM_SOVA_TURNING_EDGE_RIGHT, MZM_SOVA_TURNING_CORNER_LEFT, true, false},
+        [TURN_TOP_LEFT_CORNER] = {MZM_SOVA_TURNING_CORNER_LEFT, MZM_SOVA_TURNING_EDGE_RIGHT, false, true},
+        [TURN_BOTTOM_LEFT_EDGE] = {MZM_SOVA_TURNING_EDGE_RIGHT, MZM_SOVA_TURNING_CORNER_LEFT, true, true},
+    };
+    if (s->work1 >= 8) {
+        s->status = 0;
+        return;
+    }
+    s->anim = right ? turns[s->work1].if_right : turns[s->work1].otherwise;
+    s->status &= (uint16_t)~(MZM_SPRITE_STATUS_X_FLIP | MZM_SPRITE_STATUS_Y_FLIP);
+    if (turns[s->work1].x_flip) s->status |= MZM_SPRITE_STATUS_X_FLIP;
+    if (turns[s->work1].y_flip) s->status |= MZM_SPRITE_STATUS_Y_FLIP;
+}
+
+/* SovaTurningAround: onto the new surface once the turn table ends. */
+static void sova_turning(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (!animation_ending(c, 1)) return;
+    bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
+    s->pose = ZOOMER_POSE_IDLE;
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_Y_FLIP;
+    s->work2 = 0;
+    const uint16_t near = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE, far = HALF_BLOCK_SIZE - PIXEL_SIZE;
+    switch (s->work1) {
+    case TURN_BOTTOM_LEFT_CORNER:
+        if (!right) {
+            s->y -= near;
+            s->x &= BLOCK_POSITION_FLAG;
+        }
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+        break;
+    case TURN_TOP_RIGHT_EDGE:
+        if (!right) {
+            s->y -= far;
+            s->x &= BLOCK_POSITION_FLAG;
+            s->x += BLOCK_SIZE;
+        }
+        s->status |= MZM_SPRITE_STATUS_X_FLIP | MZM_SPRITE_STATUS_FACING_DOWN;
+        break;
+    case TURN_BOTTOM_RIGHT_EDGE:
+        if (right) {
+            s->y += near;
+            s->x &= BLOCK_POSITION_FLAG;
+        }
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+        break;
+    case TURN_TOP_RIGHT_CORNER:
+        if (right) {
+            s->y += far;
+            s->x &= BLOCK_POSITION_FLAG;
+            s->x += BLOCK_SIZE;
+        }
+        s->status |= MZM_SPRITE_STATUS_X_FLIP | MZM_SPRITE_STATUS_FACING_DOWN;
+        break;
+    case TURN_TOP_LEFT_EDGE:
+        if (right) {
+            s->x += far;
+            s->y &= BLOCK_POSITION_FLAG;
+            s->y += BLOCK_SIZE;
+            s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        } else {
+            s->y &= BLOCK_POSITION_FLAG;
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        }
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+        break;
+    case TURN_BOTTOM_RIGHT_CORNER:
+        if (!right) {
+            s->x -= far;
+            s->y &= BLOCK_POSITION_FLAG;
+            s->y += BLOCK_SIZE;
+            s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        } else {
+            s->y &= BLOCK_POSITION_FLAG;
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        }
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+        break;
+    case TURN_TOP_LEFT_CORNER:
+        if (right) {
+            s->y &= BLOCK_POSITION_FLAG;
+            s->x += near;
+            s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        } else {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        }
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+        s->work2 = 1;
+        break;
+    case TURN_BOTTOM_LEFT_EDGE:
+        if (!right) {
+            s->y &= BLOCK_POSITION_FLAG;
+            s->x -= far;
+            s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        } else {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        }
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+        s->work2 = 1;
+        break;
+    default:
+        s->status = 0;
+        return;
+    }
+    sova_crawling_oam(s);
+    sova_hitbox(s);
+}
+
+/* SovaLandingInit: the falling table again, a new random direction. */
+static void sova_landing_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->pose = ZOOMER_POSE_LANDING;
+    set_anim(s, MZM_SOVA_FALLING);
+    random_x_direction(c);
+    sova_set_x_flip_by_facing(s);
+}
+
+/* SovaFallingInit */
+static void sova_falling_init(MzmSprite *s) {
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        if (s->status & MZM_SPRITE_STATUS_X_FLIP) s->x -= HALF_BLOCK_SIZE;
+        else s->x += HALF_BLOCK_SIZE;
+    } else if (s->work2) {
+        s->y += HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+    }
+    s->pose = ZOOMER_POSE_FALLING;
+    s->work3 = 0;
+    s->work2 = 0;
+    s->status &= (uint16_t)~(MZM_SPRITE_STATUS_X_FLIP | MZM_SPRITE_STATUS_Y_FLIP |
+                             MZM_SPRITE_STATUS_FACING_DOWN);
+    sova_hitbox(s);
+    set_anim(s, MZM_SOVA_FALLING);
+}
+
+/* SovaFalling (the splash of SpriteUtilCheckInRoomEffect is not ported) */
+static void sova_falling(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint8_t offset = s->work3;
+    int16_t movement = offset < 16 ? c->tables->falling[offset] : SHORT_MAX;
+    if (movement == SHORT_MAX) {
+        s->y = (uint16_t)(s->y + c->tables->falling[offset > 0 ? offset - 1 : 0]);
+    } else {
+        s->work3++;
+        s->y = (uint16_t)(s->y + movement);
+    }
+    uint16_t top = check_vertical_slopes(c, s->y, s->x);
+    if (c->vertical != MZM_COLLISION_AIR) {
+        s->y = top;
+        sova_landing_init(c);
+    }
+}
+
+/* Sova: the AI. Freezing and the damaged sound are not ported. */
+static void sova(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED: sova_init(c); break;
+    case ZOOMER_POSE_IDLE_INIT:
+        sova_crawling_oam(s);
+        s->pose = ZOOMER_POSE_IDLE;
+        /* fallthrough */
+    case ZOOMER_POSE_IDLE: sova_move(c); break;
+    case ZOOMER_POSE_TURNING_AROUND_INIT:
+        sova_turning_init(s);
+        if (!s->status) break;
+        /* fallthrough */
+    case ZOOMER_POSE_TURNING_AROUND: sova_turning(c); break;
+    case ZOOMER_POSE_LANDING_INIT:
+        sova_landing_init(c);
+        /* fallthrough */
+    case ZOOMER_POSE_LANDING:
+        if (sova_in_air(c)) s->pose = ZOOMER_POSE_FALLING_INIT;
+        else if (animation_ending(c, 2)) s->pose = ZOOMER_POSE_IDLE_INIT;
+        break;
+    case ZOOMER_POSE_FALLING_INIT:
+        sova_falling_init(s);
+        /* fallthrough */
+    case ZOOMER_POSE_FALLING: sova_falling(c); break;
+    default: {
+        /* SovaDeath */
+        uint16_t y = s->y, x = s->x;
+        if (s->status & MZM_SPRITE_STATUS_FACING_DOWN)
+            x = s->status & MZM_SPRITE_STATUS_X_FLIP ? (uint16_t)(x - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE))
+                                                     : (uint16_t)(x + HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+        else
+            y = s->work2 ? (uint16_t)(y + HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)
+                         : (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
+        sprite_death(c, y, x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        break;
+    }
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -2001,6 +2424,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SIDEHOPPER: return MZM_FAMILY_SIDEHOPPER;
     case MZM_PSPRITE_VIOLA_BLUE:
     case MZM_PSPRITE_VIOLA_ORANGE: return MZM_FAMILY_VIOLA;
+    case MZM_PSPRITE_SOVA_PURPLE:
+    case MZM_PSPRITE_SOVA_ORANGE: return MZM_FAMILY_SOVA;
     case MZM_PSPRITE_DESSGEEGA:
     case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
@@ -2277,6 +2702,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_SIDEHOPPER:
     case MZM_FAMILY_DESSGEEGA: hopper(&c); break;
     case MZM_FAMILY_VIOLA: viola(&c); break;
+    case MZM_FAMILY_SOVA: sova(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

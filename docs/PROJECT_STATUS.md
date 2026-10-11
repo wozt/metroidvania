@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas and Violas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas and Sovas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2723,6 +2723,25 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Tests: `tests/test_mzm_sprites.c` adds the Viola placement, speeds, a
   3000-frame loop around a closed box (all four surfaces, no fall, centres
   exactly 24 subpixels from each surface) and the fall onto a lower floor.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.
+
+## Patch 0246 - Zero Mission Sovas
+
+- `mzm_sprites` ports the Sova (purple and orange) as its own crawler:
+  ceiling state in `work2` with a ceiling table, animation-frame speeds,
+  28-subpixel probes, its eight turns and offsets, two slope tables, falls,
+  random-direction landings and death into drops. `scripts/mzm_sprites.py`
+  exports both (orange with palette row 1).
+- Checked in norfair_005: the eight Sovas crawl on floors and walls (purple
+  about 31 pixels, orange 49 in 119 frames); from `--spawn 120 352` two
+  contacts cost Samus 24 energy (12 each, the ROM damage); from `--spawn
+  180 160` a purple Sova is drawn on the floor beside her.
+- Tests: `tests/test_mzm_sprites.c` adds the Sova placement, hitbox and flip,
+  the per-frame speed table, a loop around a closed box over the four
+  surfaces (ceiling through work2, never Y flipped, no fall) and the orange
+  palette and speed.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.

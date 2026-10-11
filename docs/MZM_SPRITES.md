@@ -95,6 +95,13 @@ read from the user's ROM at export time; nothing is stored in the repository.
   corners as the native probes decide, snapping to the block on ceilings and
   walls, falling with `sSpritesFallingSpeed` when unsupported and landing on
   a floor in a random direction.
+- Sova (`sova.c`, purple and orange): a separate crawler port, as its
+  ceiling state is `work2` with its own table (no Y flip while crawling), its
+  speed follows the animation frame (0, 0, 1, 2, 3, 1 subpixels; orange one
+  more while moving), its forward probes reach 28 subpixels, its turn tables
+  and offsets differ from the Zoomer's, it has two slope tables (full speed
+  going down, two thirds up) and it lands in a random direction. The orange
+  Sova uses palette row 1.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at
   init, a random X flip from the sprite RNG, half a pixel per frame (purple:
   one), a wall probe a quarter block above its feet and 36 subpixels ahead,

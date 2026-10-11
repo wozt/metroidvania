@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 16 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 17 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -173,6 +173,15 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.part
 Known divergences: Freezing and the sounds are not ported; the explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping).  
 Next action: Port freezing with the ice beam.
 
+[~] **`mzm.enemies.sova` — Sovas.** Purple and orange Sovas (orange: palette row 1, one subpixel faster): placement onto any surface, a speed that follows the animation frame, crawling on floors (with their two slope tables), walls and ceilings (work2, with its own table instead of a Y flip), the eight native turns with their offsets, falls, landings in a random direction and death into drops.
+
+Native evidence: `mzm:c:src/sprites_ai/sova.c:Sova`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: Freezing, the damaged sound, screen-shake falls and the falling splash are not ported.  
+Next action: Port freezing with the ice beam.
+
 [~] **`mzm.enemies.viola` — Violas.** Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops.
 
 Native evidence: `mzm:c:src/sprites_ai/viola.c:Viola`.  
@@ -207,7 +216,7 @@ Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.collision.clipdata`.  
 Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported.  
-Next action: Port the stun palette flash and freezing, then further enemies (Sova, Geega, Zeb, Reo, Holtz).
+Next action: Port the stun palette flash and freezing, then further enemies (Geega, Zeb, Reo, Holtz, Mella).
 
 ### Bosses
 

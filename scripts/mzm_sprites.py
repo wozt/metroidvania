@@ -68,7 +68,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_ZEELA": 0, "PSPRITE_ZEELA_RED": 1, "PSPRITE_WAVER": 0,
           "PSPRITE_SIDEHOPPER": 0, "PSPRITE_DESSGEEGA": 0,
           "PSPRITE_DESSGEEGA_AFTER_LONG_BEAM": 0, "PSPRITE_VIOLA_BLUE": 0,
-          "PSPRITE_VIOLA_ORANGE": 0}
+          "PSPRITE_VIOLA_ORANGE": 0, "PSPRITE_SOVA_PURPLE": 0, "PSPRITE_SOVA_ORANGE": 1}
 # Signed s16 tables an AI reads, written as ``table`` lines.
 AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",

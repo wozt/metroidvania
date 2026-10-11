@@ -96,10 +96,10 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
-                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind},
+                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
@@ -1031,6 +1031,66 @@ int main(void) {
         ++frames;
     }
     assert(v.pose == 9 && v.y == 12 * 64 - 24);
+
+    /* Sovas: crawlers whose speed follows the animation frame (0, 0, 1, 2,
+     * 3, 1 subpixels; orange: one more when moving) and whose ceiling state
+     * is work2, not a Y flip. */
+    for (int a = 0; a < MZM_SOVA_ANIMS; ++a) {
+        sova_kind.counts[a] = 6;
+        for (int f = 0; f < 6; ++f) sova_kind.timers[a][f] = 1;
+    }
+    tables.health[MZM_PSPRITE_SOVA_PURPLE] = 4;
+    tables.health[MZM_PSPRITE_SOVA_ORANGE] = 12;
+    clear();
+    for (int x = 2; x <= 12; ++x) grid[3][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
+    for (int y = 3; y <= 10; ++y) grid[y][2] = grid[y][12] = MZM_CLIPDATA_SOLID;
+    MzmSprite so;
+    mzm_sprite_init_primary(&so, MZM_PSPRITE_SOVA_PURPLE, 0, 9, 6, 0);
+    step(&so, 0);
+    assert(so.pose == 9 && so.health == 4 && so.work2 == 0 && so.anim == MZM_SOVA_ON_GROUND);
+    assert(so.status & MZM_SPRITE_STATUS_FACING_RIGHT && so.status & MZM_SPRITE_STATUS_X_FLIP);
+    assert(so.hitbox_top == -52 && so.hitbox_bottom == 4 && so.hitbox_left == -28);
+    /* Each frame moves by the speed of the frame the animation shows: with
+     * one-tick timers the frames go 0, 1, 1, 2, 2, ... */
+    int moved = 0;
+    for (int i = 0; i < 24; ++i) {
+        uint16_t before = so.x;
+        uint8_t shown = so.frame;
+        step(&so, 0);
+        static const int speeds[6] = {0, 0, 1, 2, 3, 1};
+        assert(so.x - before == speeds[shown]);
+        moved += so.x - before;
+    }
+    assert(moved > 0);
+    /* Around the closed box: floor, both walls and the ceiling (work2,
+     * never Y flipped while crawling), without falling. */
+    bool floor_seen = false, ceiling_seen = false, left_seen = false, right_seen = false;
+    for (int i = 0; i < 20000 && !(floor_seen && ceiling_seen && left_seen && right_seen); ++i) {
+        step(&so, 0);
+        assert(so.pose != 0x1F && so.status);
+        if (so.pose != 9) continue;
+        assert(!(so.status & MZM_SPRITE_STATUS_Y_FLIP));
+        if (so.status & MZM_SPRITE_STATUS_FACING_DOWN) {
+            if (so.status & MZM_SPRITE_STATUS_X_FLIP) right_seen = true;
+            else left_seen = true;
+        } else if (so.work2) {
+            ceiling_seen = true;
+            assert(so.anim == MZM_SOVA_WALKING_ON_CEILING && so.hitbox_bottom == 52);
+        } else {
+            floor_seen = true;
+        }
+    }
+    assert(floor_seen && ceiling_seen && left_seen && right_seen);
+    /* Orange Sovas use palette row 1 and move one subpixel more. */
+    mzm_sprite_init_primary(&so, MZM_PSPRITE_SOVA_ORANGE, 0, 9, 6, 0);
+    step(&so, 0);
+    assert(so.palette_row == 1 && so.health == 12);
+    step(&so, 0);
+    step(&so, 0);
+    uint16_t before = so.x;
+    assert(so.frame == 2);
+    step(&so, 0);
+    assert(so.x - before == 2);
     puts("mzm_sprites: ok");
     return 0;
 }

@@ -60,6 +60,34 @@ read from the user's ROM at export time; nothing is stored in the repository.
 - Waver (`waver.c`): starts toward Samus and bounces diagonally, a pixel a
   frame across and half a pixel vertically, reversing on any non-air
   collision at its hitbox edge.
+- Sidehopper (`sidehopper.c`) and Dessgeega (`dessgeega.c`): one ported
+  state machine, as the two routines are parallel. On the ground or, when a
+  block is above them at spawn, on the ceiling (Y flip): idle or head shake /
+  scream (RNG below 8) for `work1 + 1` loops (`work1` stays 0 at spawn
+  without BUGFIX), a jump warning when Samus's middle is within five blocks
+  (`SpriteUtilCheckSamusNearSpriteLeftRight`, facing her), then a high or low
+  jump (odd RNG) from the ROM tables, one entry per four frames: 1.25 pixels
+  a frame across while rising, one while descending, pushed back 1.5 pixels
+  and turned by walls, falling when its head meets solid, landing on its
+  centre or either side. Unsupported on both sides, a ground one falls with
+  `sSpritesFallingSpeed` (ceiling: `sSpritesFallingCeilingSpeed`). The
+  Sidehopper's head hitbox grows to 0x70 while jumping and returns to 0x5C on
+  landing; the Dessgeega keeps 88. Deaths use the single-then-big explosion.
+  Every ground Dessgeega death sets `EVENT_LONG_BEAM_DESSGEEGA_KILLED` and
+  unlocks the doors, a bug of the game that is kept.
+- The Long Beam Dessgeega (`PSPRITE_DESSGEEGA_AFTER_LONG_BEAM`) exists only
+  after `EVENT_VIEWED_STATUE_ROOM` and before its kill event; it locks the
+  doors, waits hidden from Samus and projectiles until she is on screen
+  within 12 blocks vertically and 3.75 across, drops with four debris at 24
+  subpixels a frame, removes the three floor blocks it meets
+  (`CAA_REMOVE_SOLID`) with dust and debris, and lands on the next floor.
+  Events, door locks and block removal reach the game through
+  `MzmSpriteHooks`; the runtime keeps session event flags (nothing sets the
+  statue room event yet), reports door lock requests and turns removed blocks
+  into air without changing the static background.
+- The runtime loads each family's OAM frame durations separately: a family
+  missing from the library is reported by name and its sprites are not
+  spawned, while the others keep working.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at
   init, a random X flip from the sprite RNG, half a pixel per frame (purple:
   one), a wall probe a quarter block above its feet and 36 subpixels ahead,
@@ -144,4 +172,5 @@ the stun palette flash, freezing and frozen (solid) sprites, power bombs
 and their drops, the multiple large energy pickup, tumbling missiles,
 charge beams and the pseudo screw, speed booster and shinespark kills,
 screen-shake falls, splashes in liquids, the hard-mode and event
-spritesets, and every other sprite AI.
+spritesets (where the Long Beam Dessgeega is placed), the door lock
+lifecycle, screen shakes, and every other sprite AI.

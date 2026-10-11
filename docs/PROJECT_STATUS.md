@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees and Wavers with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers and Dessgeegas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2667,3 +2667,46 @@ No automatic reciprocal link or native engine encoder is implemented.
   `check_generated` reported fresh documents and the proprietary-file guard
   passed.
 
+## Patch 0244 - Sidehoppers and Dessgeegas (Kimi's work completed)
+
+- Kept and completed Kimi's unfinished commit 4887b26 (poses, OAM table
+  names, families, ids and velocity table fields for the Sidehopper and the
+  Dessgeega).
+- Fixed the regression it introduced: `runtime_sprite_kinds_open` required
+  every declared family, so the two unexported families disabled every Zero
+  Mission sprite (the brinstar_000 Zoomers stayed at pose 0). Each family now
+  loads alone: a missing OAM table is reported by name with its family, its
+  sprites are not spawned and `mzm_sprite_update` skips a family without
+  frame durations; the drops stay required. The AI tables are parsed from one
+  list with their exact decompilation lengths, and a missing one is named.
+- Restored `MzmSpriteFrame.samus_y` to Samus's position (the Skree reads it)
+  and added `samus_hitbox_top` for `SpriteUtilCheckSamusNearSpriteLeftRight`.
+- `mzm_sprites` ports `Sidehopper` and `Dessgeega` as one state machine
+  (ground and ceiling, idle and head shake / scream, detection, jump warning,
+  high and low jumps, wall bounces, falls, landings, deaths with the
+  single-then-big explosion, the Sidehopper's jump hitboxes, the Dessgeega
+  death event bug) and the Long Beam Dessgeega (event checks, door lock,
+  hidden wait, drop through the floor with `CAA_REMOVE_SOLID`, dust and
+  debris) through new `MzmSpriteHooks` (events, `gDoorUnlockTimer`, block
+  removal). `mzm_effects` adds the medium and two-medium dust particles.
+- `scripts/mzm_sprites.py` exports the Sidehopper and both Dessgeegas, the
+  dust particle tables and `sSpritesFallingCeilingSpeed` and the four jump
+  velocity tables.
+- Checked in captures: in brinstar_000 the Zoomers again match their
+  pre-regression positions (frame 60: 410,352 and 314,496); in kraid_001 the
+  four Sidehoppers (two on the ceiling) spawn with 30 health, warn, jump,
+  land and fall back when a ceiling jump meets the floor; in ridley_003 the
+  four Dessgeegas jump about 35 pixels, one detects Samus, turns to her and
+  hits her for 30 (99 to 69, the ROM damage) with the hurt knockback.
+- Not ported: freezing, sounds, screen shakes, the door lock lifecycle, the
+  statue room event and the event spritesets placing the Long Beam
+  Dessgeega (so that variant runs in tests only).
+- Tests: `tests/test_mzm_sprites.c` adds the Sidehopper init, idle loop,
+  high jump (42 frames, 208 subpixels high, 192 across, hitboxes), landing,
+  Samus detection and facing, wall bounce, fall, ceiling placement and death
+  particle, the Dessgeega sizes, kept hitbox and death event bug, and the
+  whole Long Beam sequence; `tests/test_mzm_sprites.py` checks the ids,
+  exported tables and AI tables against the decompilation.
+- Validation on 2026-10-11: Debug configure and warning-clean build, CTest
+  26/26, the Python suite 405/405, `scripts.rebuild --all` with every task up
+  to date, `check_generated` fresh and the proprietary-file guard passed.

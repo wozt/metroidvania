@@ -65,10 +65,14 @@ DECOMP = ROOT / "third_party/mzm"
 PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_RIPPER_BROWN": 0, "PSPRITE_RIPPER_PURPLE": 0,
           "PSPRITE_SKREE_GREEN": 0, "PSPRITE_SKREE_BLUE": 0,
-          "PSPRITE_ZEELA": 0, "PSPRITE_ZEELA_RED": 1, "PSPRITE_WAVER": 0}
+          "PSPRITE_ZEELA": 0, "PSPRITE_ZEELA_RED": 1, "PSPRITE_WAVER": 0,
+          "PSPRITE_SIDEHOPPER": 0, "PSPRITE_DESSGEEGA": 0,
+          "PSPRITE_DESSGEEGA_AFTER_LONG_BEAM": 0}
 # Signed s16 tables an AI reads, written as ``table`` lines.
 AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
-             "sZeelaEyesFallingFromBottomSpeed", "sDebrisBouncingVelocity", "sDebris11YVelocity",
+             "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
+             "sSidehopperHighJumpVelocity", "sSidehopperLowJumpVelocity",
+             "sDessgeegaHighJumpYVelocity", "sDessgeegaLowJumpYVelocity", "sDebrisBouncingVelocity", "sDebris11YVelocity",
              "sDebris12YVelocity", "sDebris13YVelocity", "sDebris4YVelocity",
              "sDebris5YVelocity", "sDebris6YVelocity", "sDebris7YVelocity",
              "sDebris8YVelocity")
@@ -80,7 +84,8 @@ PARTICLES = ("sParticleSpriteExplosionHugeOam", "sParticleSpriteExplosionSmallOa
              "sParticleHittingSomethingWithNormalBeamOam",
              "sParticleHittingSomethingInvincibleOam",
              "sParticleHittingSomethingWithMissileOam",
-             "sParticleHittingSomethingWithSuperMissileOam", "sSpriteDebrisOam")
+             "sParticleHittingSomethingWithSuperMissileOam", "sParticleMediumDustOam",
+             "sParticleTwoMediumDustOam", "sSpriteDebrisOam")
 SPRITE_VRAM = 0x4000
 # Enemy drops (src/sprites_ai/enemy_drop.c, EnemyDropInit) and their table.
 DROPS = {

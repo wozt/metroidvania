@@ -1171,6 +1171,13 @@ typedef struct {
     MzmEffects effects;
     char names[256][64];
     bool tables_ok, kinds_ok;
+    /* Families whose OAM tables are all in the library; the others are
+     * reported once and their sprites are not spawned. */
+    bool family_ok[MZM_SPRITE_FAMILIES];
+    /* Native event flags of this session (EventFunction); nothing sets the
+     * story events yet, so they start clear as in a new game. */
+    uint8_t events[32];
+    Room *room;                     /* the room the hooks change */
     MzmSprite live[RUNTIME_MAX_SPRITES];
     uint8_t frame8;
     uint16_t frame16;
@@ -1182,8 +1189,30 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     char line[1024];
     bool ok = fgets(line, sizeof line, f) &&
               !strcmp(line, "schema\tmetroidvania-mzm-sprite-tables-v1\n");
-    int random_count = 0, falling_count = 0, skree_count = 0, debris_tables = 0;
-    int eyes_up_count = 0, eyes_bottom_count = 0;
+    int random_count = 0, falling_count = 0;
+    /* The `table` lines of the AIs (scripts/mzm_sprites.py AI_TABLES), each
+     * with its exact length in the decompilation. */
+    MzmSpriteTables *t = &sprites->tables;
+    struct { const char *name; int16_t *destination; int capacity, length; } ai_tables[] = {
+        {"sSkreeFallingSpeed", t->skree_falling, 16, 8},
+        {"sZeelaEyesFallingFromUpSpeed", t->zeela_eyes_up, 16, 16},
+        {"sZeelaEyesFallingFromBottomSpeed", t->zeela_eyes_bottom, 16, 12},
+        {"sSpritesFallingCeilingSpeed", t->falling_ceiling, 16, 16},
+        {"sSidehopperHighJumpVelocity", t->sidehopper_high, 10, 10},
+        {"sSidehopperLowJumpVelocity", t->sidehopper_low, 10, 10},
+        {"sDessgeegaHighJumpYVelocity", t->dessgeega_high, 10, 10},
+        {"sDessgeegaLowJumpYVelocity", t->dessgeega_low, 10, 10},
+        {mzm_debris_table_names[0], t->debris[0], 9, 9},
+        {mzm_debris_table_names[1], t->debris[1], 9, 9},
+        {mzm_debris_table_names[2], t->debris[2], 9, 9},
+        {mzm_debris_table_names[3], t->debris[3], 9, 9},
+        {mzm_debris_table_names[4], t->debris[4], 9, 9},
+        {mzm_debris_table_names[5], t->debris[5], 9, 9},
+        {mzm_debris_table_names[6], t->debris[6], 9, 9},
+        {mzm_debris_table_names[7], t->debris[7], 9, 9},
+        {mzm_debris_table_names[8], t->debris[8], 9, 9},
+    };
+    unsigned long long found = 0;
     while (ok && fgets(line, sizeof line, f)) {
         char *cursor = strchr(line, '\t');
         if (!cursor) continue;
@@ -1205,37 +1234,19 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             char *values = strchr(cursor, '\t');
             if (!values) { ok = false; break; }
             *values++ = '\0';
-            int16_t *destination = NULL;
-            int capacity = 0, *count = NULL, debris_count = 0;
-            if (!strcmp(cursor, "sSkreeFallingSpeed")) {
-                destination = sprites->tables.skree_falling;
-                capacity = 16;
-                count = &skree_count;
-            } else if (!strcmp(cursor, "sZeelaEyesFallingFromUpSpeed")) {
-                destination = sprites->tables.zeela_eyes_up;
-                capacity = 16;
-                count = &eyes_up_count;
-            } else if (!strcmp(cursor, "sZeelaEyesFallingFromBottomSpeed")) {
-                destination = sprites->tables.zeela_eyes_bottom;
-                capacity = 16;
-                count = &eyes_bottom_count;
+            for (size_t t = 0; t < sizeof ai_tables / sizeof ai_tables[0]; ++t) {
+                if (strcmp(cursor, ai_tables[t].name)) continue;
+                char *end;
+                int count;
+                for (count = 0; count < ai_tables[t].capacity; ++count) {
+                    long value = strtol(values, &end, 10);
+                    if (end == values) break;
+                    ai_tables[t].destination[count] = (int16_t)value;
+                    values = end;
+                }
+                if (count != ai_tables[t].length) { ok = false; break; }
+                found |= 1ull << t;
             }
-            for (int t = 0; t < MZM_DEBRIS_TABLES && !destination; ++t) {
-                if (strcmp(cursor, mzm_debris_table_names[t])) continue;
-                destination = sprites->tables.debris[t];
-                capacity = 9;
-                count = &debris_count;
-                debris_tables |= 1 << t;
-            }
-            if (!destination) continue;
-            char *end;
-            for (*count = 0; *count < capacity; ++*count) {
-                long value = strtol(values, &end, 10);
-                if (end == values) break;
-                destination[*count] = (int16_t)value;
-                values = end;
-            }
-            if (count == &debris_count && debris_count != 9) { ok = false; break; }
         } else if (!strcmp(line, "stats")) {
             char name[64];
             int id, health, damage, weakness, no_drop, drops[5], used = 0;
@@ -1253,11 +1264,12 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         }
     }
     fclose(f);
-    return ok && random_count == 32 && falling_count == 16 && skree_count > 0 &&
-           sprites->tables.skree_falling[skree_count - 1] == 32767 &&
-           debris_tables == (1 << MZM_DEBRIS_TABLES) - 1 && eyes_up_count > 0 &&
-           sprites->tables.zeela_eyes_up[eyes_up_count - 1] == 32767 && eyes_bottom_count > 0 &&
-           sprites->tables.zeela_eyes_bottom[eyes_bottom_count - 1] == 32767;
+    for (size_t i = 0; i < sizeof ai_tables / sizeof ai_tables[0]; ++i)
+        if (!(found & (1ull << i)))
+            fprintf(stderr, "Zero Mission sprite tables: %s missing (python3 -m scripts.mzm_sprites)\n",
+                    ai_tables[i].name);
+    return ok && random_count == 32 && falling_count == 16 &&
+           found == (1ull << (sizeof ai_tables / sizeof ai_tables[0])) - 1;
 }
 
 /* Frame durations of OAM tables from the sprite library. */
@@ -1268,7 +1280,11 @@ static bool runtime_sprite_kind_open(MzmSpriteKind *kind, RuntimeLibrary *librar
         char key[160];
         snprintf(key, sizeof key, "Sprite/%s/%s/none", sprites[a], anims[a]);
         RuntimeLibraryEntry *entry = runtime_library_find(library, key);
-        if (!entry || entry->count > MZM_SPRITE_MAX_FRAMES) return false;
+        if (!entry || entry->count > MZM_SPRITE_MAX_FRAMES) {
+            fprintf(stderr, "Zero Mission sprite library: %s %s (%s): %s\n", sprites[a],
+                    anims[a], key, entry ? "too many frames" : "missing");
+            return false;
+        }
         kind->counts[a] = (uint8_t)entry->count;
         for (int f = 0; f < entry->count; ++f) kind->timers[a][f] = (uint8_t)entry->ticks[f];
     }
@@ -1297,11 +1313,17 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
     if (!runtime_effect_kind_open(effects->debris_timers, &effects->debris_count, library,
                                   "SpriteDebrisOam"))
         return false;
+    /* Drops are required (every death may leave one); an enemy family with
+     * a missing table is disabled alone, with the diagnostic above. */
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) {
         const MzmSpriteFamily *family = &mzm_sprite_families[f];
-        if (!runtime_sprite_kind_open(&sprites->kinds[f], library, family->library_sprites,
-                                      family->anims, family->count))
-            return false;
+        sprites->family_ok[f] = runtime_sprite_kind_open(&sprites->kinds[f], library,
+                                                         family->library_sprites, family->anims,
+                                                         family->count);
+        if (!sprites->family_ok[f] && f == MZM_FAMILY_DROP) return false;
+        if (!sprites->family_ok[f])
+            fprintf(stderr, "Zero Mission %s sprites disabled until re-exported "
+                    "(python3 -m scripts.mzm_sprites)\n", family->library_sprites[0]);
     }
     return true;
 }
@@ -1315,7 +1337,8 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room) {
     for (int i = 0; i < room->sprite_count && slot < RUNTIME_MAX_SPRITES; ++i) {
         for (int id = 0; id < 256; ++id) {
             if (strcmp(sprites->names[id], room->sprites[i].name) ||
-                !mzm_sprite_supported((uint8_t)id))
+                !mzm_sprite_supported((uint8_t)id) ||
+                !sprites->family_ok[mzm_sprite_family((uint8_t)id, false)])
                 continue;
             mzm_sprite_init_primary(&sprites->live[slot++], (uint8_t)id,
                                     (uint8_t)room->sprites[i].gfx_slot,
@@ -1350,6 +1373,35 @@ static void runtime_sprite_hurt(void *context, uint16_t damage, bool sprite_on_l
     if (alive) hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -64 : 64);
 }
 
+/* MzmSpriteHooks of the runtime. */
+static bool runtime_sprite_check_event(void *context, uint8_t event) {
+    const RuntimeSprites *sprites = context;
+    return sprites->events[event / 8] & (1u << (event % 8));
+}
+
+static void runtime_sprite_set_event(void *context, uint8_t event) {
+    RuntimeSprites *sprites = context;
+    sprites->events[event / 8] |= (uint8_t)(1u << (event % 8));
+}
+
+/* gDoorUnlockTimer: the native door lock lifecycle is not ported, so the
+ * request is only reported. */
+static void runtime_sprite_door_timer(void *context, int8_t timer) {
+    (void)context;
+    fprintf(stderr, "Zero Mission sprites: gDoorUnlockTimer = %d (door locks not ported)\n",
+            timer);
+}
+
+/* CAA_REMOVE_SOLID: the block's collision becomes air; the static background
+ * keeps its graphics (BgClipSetBg1BlockValue is not reproduced). */
+static void runtime_sprite_remove_solid(void *context, uint16_t y, uint16_t x) {
+    RuntimeSprites *sprites = context;
+    Room *room = sprites->room;
+    int column = x / 64, row = y / 64;
+    if (room && column < room->width / 16 && row < room->height / 16)
+        room_set_cell(room, column, row, CLIP_AIR);
+}
+
 /* SpriteUpdate: Samus's contact with the sprites, then every sprite. */
 static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
                                    MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
@@ -1369,10 +1421,18 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                runtime_sprite_hurt};
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
     }
+    sprites->room = room;
+    static const MzmSpriteHooks hook_table = {NULL, runtime_sprite_check_event,
+                                              runtime_sprite_set_event, runtime_sprite_door_timer,
+                                              runtime_sprite_remove_solid};
+    MzmSpriteHooks hooks = hook_table;
+    hooks.context = sprites;
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
                             sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
-                            sprites->live, RUNTIME_MAX_SPRITES, &sprites->effects};
-    for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) frame.kinds[f] = &sprites->kinds[f];
+                            mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top,
+                            sprites->live, RUNTIME_MAX_SPRITES, &sprites->effects, &hooks};
+    for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
+        frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
     sprites->frame8++;

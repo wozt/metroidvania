@@ -1287,6 +1287,372 @@ static void waver(Ctx *c) {
     }
 }
 
+/* SpriteUtilCheckSamusNearSpriteLeftRight: Samus's middle (her position
+ * plus half her hitbox top) within the ranges. */
+static bool samus_near_left_right(const Ctx *c, uint16_t y_range, uint16_t x_range) {
+    uint16_t samus_y = (uint16_t)(c->f->samus_y + c->f->samus_hitbox_top / 2);
+    uint16_t samus_x = c->f->samus_x, y = c->s->y, x = c->s->x;
+    if (y > samus_y ? y - samus_y >= y_range : samus_y - y >= y_range) return false;
+    return x > samus_x ? x - samus_x < x_range : samus_x - x < x_range;
+}
+
+static bool hook_event(const Ctx *c, uint8_t event) {
+    const MzmSpriteHooks *h = c->f->hooks;
+    return h && h->check_event && h->check_event(h->context, event);
+}
+
+static void hook_set_event(const Ctx *c, uint8_t event) {
+    const MzmSpriteHooks *h = c->f->hooks;
+    if (h && h->set_event) h->set_event(h->context, event);
+}
+
+static void hook_doors(const Ctx *c, int8_t timer) {
+    const MzmSpriteHooks *h = c->f->hooks;
+    if (h && h->door_unlock_timer) h->door_unlock_timer(h->context, timer);
+}
+
+static void hook_remove_solid(const Ctx *c, uint16_t y, uint16_t x) {
+    const MzmSpriteHooks *h = c->f->hooks;
+    if (h && h->remove_solid) h->remove_solid(h->context, y, x);
+}
+
+/* Sidehopper (sidehopper.c) and Dessgeega (dessgeega.c): the two routines
+ * are parallel; the Sidehopper alone resizes its head hitbox when it jumps
+ * and lands, and they differ by their tables, sizes and death. */
+static bool is_dessgeega(const MzmSprite *s) {
+    return s->sprite_id == MZM_PSPRITE_DESSGEEGA ||
+           s->sprite_id == MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM;
+}
+
+/* *CheckSamusNearLeftRight: within five blocks, facing her. */
+static bool hopper_check_samus(Ctx *c) {
+    if (!samus_near_left_right(c, HOPPER_DETECTION_RANGE, HOPPER_DETECTION_RANGE)) return false;
+    if (c->s->x > c->f->samus_x) c->s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+    else c->s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+    return true;
+}
+
+static void hopper_jump_warning_init(MzmSprite *s) {
+    s->pose = HOPPER_POSE_JUMP_WARNING;
+    set_anim(s, MZM_SIDEHOPPER_JUMP_WARNING);
+}
+
+/* *JumpingInit: a low jump when the RNG is odd (the sound is not played). */
+static void hopper_jumping_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->pose = HOPPER_POSE_JUMPING;
+    set_anim(s, MZM_SIDEHOPPER_JUMPING);
+    s->work3 = 0;
+    s->work2 = c->rng & 1;
+    if (!is_dessgeega(s)) {
+        if (s->status & MZM_SPRITE_STATUS_Y_FLIP) s->hitbox_bottom = SIDEHOPPER_JUMPING_HEAD_HITBOX;
+        else s->hitbox_top = -SIDEHOPPER_JUMPING_HEAD_HITBOX;
+    }
+}
+
+static void hopper_landing_init(MzmSprite *s) {
+    s->pose = HOPPER_POSE_LANDING;
+    set_anim(s, MZM_SIDEHOPPER_LANDING);
+    if (!is_dessgeega(s)) {
+        if (s->status & MZM_SPRITE_STATUS_Y_FLIP) s->hitbox_bottom = SIDEHOPPER_LANDING_HEAD_HITBOX;
+        else s->hitbox_top = -SIDEHOPPER_LANDING_HEAD_HITBOX;
+    }
+}
+
+/* *IdleInit: idle or shaking its head / screaming at random, jumping after
+ * 1 to 4 animation loops. */
+static void hopper_idle_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (hopper_check_samus(c)) {
+        hopper_jump_warning_init(s);
+        return;
+    }
+    s->pose = HOPPER_POSE_IDLE;
+    s->work0 = 0;
+    s->work1 = c->rng & 3;
+    set_anim(s, c->rng >= 8 ? MZM_SIDEHOPPER_IDLE : MZM_SIDEHOPPER_SHAKING_HEAD);
+}
+
+static void hopper_falling_init(MzmSprite *s) {
+    s->pose = HOPPER_POSE_FALLING;
+    set_anim(s, MZM_SIDEHOPPER_JUMPING);
+    s->work3 = 0;
+}
+
+/* *Init. Without BUGFIX, work1 keeps its spawn value (0). */
+static void hopper_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    bool dess = is_dessgeega(s);
+    if (s->sprite_id == MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM) {
+        if (hook_event(c, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED) ||
+            !hook_event(c, MZM_EVENT_VIEWED_STATUE_ROOM)) {
+            s->status = 0;
+            return;
+        }
+        hook_doors(c, 1);           /* LOCK_DOORS */
+        s->pose = DESSGEEGA_POSE_LONG_BEAM_DETECT;
+    } else {
+        if (collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE + PIXEL_SIZE)), s->x) &
+            MZM_COLLISION_FLAGS_F0) {
+            s->status |= MZM_SPRITE_STATUS_Y_FLIP;
+            s->y -= BLOCK_SIZE;
+        }
+        s->pose = HOPPER_POSE_IDLE;
+    }
+    s->work0 = 0;
+    int16_t head = dess ? DESSGEEGA_HEAD_HITBOX : SIDEHOPPER_HEAD_HITBOX;
+    uint8_t head_draw = (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+    uint8_t feet_draw = HALF_BLOCK_SIZE / PIXEL_SIZE;
+    if (s->status & MZM_SPRITE_STATUS_Y_FLIP) {
+        s->draw_top = feet_draw;
+        s->draw_bottom = head_draw;
+        s->hitbox_top = 0;
+        s->hitbox_bottom = head;
+    } else {
+        s->draw_top = head_draw;
+        s->draw_bottom = feet_draw;
+        s->hitbox_top = -head;
+        s->hitbox_bottom = 0;
+    }
+    s->draw_horizontal = (dess ? BLOCK_SIZE + HALF_BLOCK_SIZE
+                               : BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
+    s->hitbox_left = (int16_t)-(dess ? BLOCK_SIZE : BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+    s->hitbox_right = dess ? BLOCK_SIZE : BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+    set_anim(s, MZM_SIDEHOPPER_IDLE);
+    s->samus_collision = SSC_HURTS_SAMUS;
+    s->health = c->tables->health[s->sprite_id];
+    random_x_direction(c);
+}
+
+/* Both sides of the feet in the air (the ground variants start falling). */
+static bool hopper_unsupported(Ctx *c) {
+    MzmSprite *s = c->s;
+    return collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR &&
+           collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR;
+}
+
+/* *JumpWarningGround / *JumpWarningCeiling */
+static void hopper_jump_warning(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (!(s->status & MZM_SPRITE_STATUS_Y_FLIP) &&
+        collision_at(c, s->y, s->x) == MZM_COLLISION_AIR && hopper_unsupported(c)) {
+        hopper_falling_init(s);
+        return;
+    }
+    if (animation_ending(c, 1)) hopper_jumping_init(c);
+}
+
+/* The vertical probe of a landing: on the ground any collision, on the
+ * ceiling the low collision bits, with the block below the top. */
+static bool hopper_lands_at(Ctx *c, uint16_t x, bool ceiling, uint16_t *top) {
+    *top = check_vertical_slopes(c, c->s->y, x);
+    return ceiling ? (c->vertical & MZM_COLLISION_FLAGS_F) != 0 : c->vertical != MZM_COLLISION_AIR;
+}
+
+/* *JumpingGround / *JumpingCeiling: a pixel a frame across (a pixel and a
+ * subpixel while rising), bouncing off walls; the jump table entry changes
+ * every four frames. Rising into solid makes it fall; descending onto its
+ * centre or either side lands it. */
+static void hopper_jumping(Ctx *c) {
+    MzmSprite *s = c->s;
+    bool dess = is_dessgeega(s), ceiling = s->status & MZM_SPRITE_STATUS_Y_FLIP;
+    const int16_t *table = s->work2 ? (dess ? c->tables->dessgeega_low : c->tables->sidehopper_low)
+                                    : (dess ? c->tables->dessgeega_high : c->tables->sidehopper_high);
+    int movement = table[s->work3 / 4];
+    bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
+    int colliding = 0;
+    uint16_t probe_y = ceiling ? (uint16_t)(s->y + QUARTER_BLOCK_SIZE)
+                               : (uint16_t)(s->y - QUARTER_BLOCK_SIZE);
+    uint16_t probe_x = right ? (uint16_t)(s->x + s->hitbox_right + PIXEL_SIZE)
+                             : (uint16_t)(s->x + s->hitbox_left - PIXEL_SIZE);
+    int step = movement > 0 ? PIXEL_SIZE : PIXEL_SIZE + 1;
+    if (collision_at(c, probe_y, probe_x) == MZM_COLLISION_SOLID) {
+        colliding++;
+        s->x = (uint16_t)(s->x + (right ? -(PIXEL_SIZE + PIXEL_SIZE / 2) : PIXEL_SIZE + PIXEL_SIZE / 2));
+    } else {
+        s->x = (uint16_t)(s->x + (right ? step : -step));
+    }
+    s->y = (uint16_t)(s->y + (ceiling ? -movement : movement));
+    if (s->work3 < HOPPER_JUMP_VELOCITY_FRAMES) s->work3++;
+    bool descending = ceiling ? movement >= 0 : movement > 0;
+    if (descending) {
+        if (colliding) s->status ^= MZM_SPRITE_STATUS_FACING_RIGHT;
+        uint16_t top, land = 0;
+        if (hopper_lands_at(c, s->x, ceiling, &top)) {
+            s->y = ceiling ? (uint16_t)(top + BLOCK_SIZE) : top;
+            hopper_landing_init(s);
+            return;
+        }
+        if (colliding) return;
+        if (hopper_lands_at(c, (uint16_t)(s->x + s->hitbox_right), ceiling, &top) ||
+            hopper_lands_at(c, (uint16_t)(s->x + s->hitbox_left), ceiling, &top))
+            land = 1;
+        if (land) {
+            s->y = ceiling ? (uint16_t)(top + BLOCK_SIZE) : top;
+            hopper_landing_init(s);
+        }
+        return;
+    }
+    /* Rising: the head corner on the facing side against solid. */
+    uint16_t head_y = ceiling ? (uint16_t)(s->y + s->hitbox_bottom) : (uint16_t)(s->y + s->hitbox_top);
+    uint16_t head_x = s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? (uint16_t)(s->x + s->hitbox_right)
+                                                                 : (uint16_t)(s->x + s->hitbox_left);
+    if (collision_at(c, head_y, head_x) == MZM_COLLISION_SOLID) {
+        colliding++;
+        s->x = (uint16_t)(s->x + (s->status & MZM_SPRITE_STATUS_FACING_RIGHT
+                                      ? -(PIXEL_SIZE + PIXEL_SIZE / 2) : PIXEL_SIZE + PIXEL_SIZE / 2));
+        hopper_falling_init(s);
+    }
+    if (colliding) s->status ^= MZM_SPRITE_STATUS_FACING_RIGHT;
+}
+
+/* *FallingGround / *FallingCeiling: sSpritesFallingSpeed (ceiling:
+ * sSpritesFallingCeilingSpeed) until the centre or a side lands. */
+static void hopper_falling(Ctx *c) {
+    MzmSprite *s = c->s;
+    bool ceiling = s->status & MZM_SPRITE_STATUS_Y_FLIP;
+    uint16_t top = check_vertical_slopes(c, s->y, s->x);
+    bool colliding = c->vertical != MZM_COLLISION_AIR;
+    if (!colliding) {
+        top = check_vertical_slopes(c, s->y, (uint16_t)(s->x + s->hitbox_right));
+        colliding = c->vertical != MZM_COLLISION_AIR;
+    }
+    if (!colliding) {
+        top = check_vertical_slopes(c, s->y, (uint16_t)(s->x + s->hitbox_left));
+        colliding = c->vertical != MZM_COLLISION_AIR;
+    }
+    if (colliding) {
+        s->y = ceiling ? (uint16_t)(top + BLOCK_SIZE) : top;
+        hopper_landing_init(s);
+        return;
+    }
+    const int16_t *speeds = ceiling ? c->tables->falling_ceiling : c->tables->falling;
+    uint8_t offset = s->work3;
+    int16_t movement = offset < 16 ? speeds[offset] : SHORT_MAX;
+    if (movement == SHORT_MAX) {
+        s->y = (uint16_t)(s->y + speeds[offset > 0 ? offset - 1 : 0]);
+    } else {
+        s->work3++;
+        s->y = (uint16_t)(s->y + movement);
+    }
+}
+
+/* *IdleGround / *IdleCeiling (the head shake / scream sounds are not
+ * played). */
+static void hopper_idle(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (hopper_check_samus(c)) {
+        hopper_jump_warning_init(s);
+        return;
+    }
+    if (!(s->status & MZM_SPRITE_STATUS_Y_FLIP) && hopper_unsupported(c)) {
+        hopper_falling_init(s);
+        return;
+    }
+    if (animation_ending(c, 1) && s->work0++ == s->work1) hopper_jump_warning_init(s);
+}
+
+/* DessgeegaLongBeamDetectSamus: hidden from projectiles and Samus until she
+ * is on screen within 12 blocks vertically and 3.75 horizontally, then it
+ * drops with four debris (the screen shake and sound are not ported). */
+static void dessgeega_long_beam_detect(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->ignore_samus_timer = 1;
+    s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    if (!(s->status & MZM_SPRITE_STATUS_ONSCREEN) ||
+        !samus_near_left_right(c, DESSGEEGA_LONG_BEAM_Y_RANGE, DESSGEEGA_LONG_BEAM_X_RANGE))
+        return;
+    s->pose = DESSGEEGA_POSE_LONG_BEAM_SPAWNING;
+    set_anim(s, MZM_DESSGEEGA_JUMPING);
+    s->work3 = 0;
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    uint16_t y = s->y, x = s->x;
+    debris_init(c, 5, (uint16_t)(y + THREE_QUARTER_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE + QUARTER_BLOCK_SIZE));
+    debris_init(c, 7, (uint16_t)(y + QUARTER_BLOCK_SIZE),
+                (uint16_t)(x + 3 * EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2));
+    debris_init(c, 8, (uint16_t)(y + BLOCK_SIZE),
+                (uint16_t)(x - (BLOCK_SIZE + 3 * EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2)));
+    debris_init(c, 6, (uint16_t)(y + HALF_BLOCK_SIZE), (uint16_t)(x - QUARTER_BLOCK_SIZE));
+}
+
+/* DessgeegaLongBeamSpawning: down 24 subpixels a frame; the first floor it
+ * meets loses three blocks (with dust and debris), the next lands it. */
+static void dessgeega_long_beam_spawning(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t top = check_vertical_slopes(c, s->y, s->x);
+    if (c->vertical == MZM_COLLISION_AIR) {
+        s->y += DESSGEEGA_SPAWNING_SPEED;
+        return;
+    }
+    if (s->work3) {
+        s->y = top;
+        hopper_landing_init(s);
+        return;
+    }
+    s->work3++;
+    uint16_t y = s->y, x = s->x;
+    hook_remove_solid(c, y, x);
+    hook_remove_solid(c, y, (uint16_t)(x + BLOCK_SIZE));
+    hook_remove_solid(c, y, (uint16_t)(x - BLOCK_SIZE));
+    particle_set(c, (uint16_t)(y - EIGHTH_BLOCK_SIZE),
+                 (uint16_t)(x + 3 * QUARTER_BLOCK_SIZE + PIXEL_SIZE), MZM_PE_TWO_MEDIUM_DUST);
+    particle_set(c, (uint16_t)(y + EIGHTH_BLOCK_SIZE),
+                 (uint16_t)(x - (3 * QUARTER_BLOCK_SIZE + PIXEL_SIZE)), MZM_PE_MEDIUM_DUST);
+    debris_init(c, 0x11, (uint16_t)(y - BLOCK_SIZE), x);
+    debris_init(c, 0x12, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE - PIXEL_SIZE / 2));
+    debris_init(c, 0x13, (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
+                (uint16_t)(x - (BLOCK_SIZE + HALF_BLOCK_SIZE - PIXEL_SIZE)));
+    debris_init(c, 4, (uint16_t)(y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
+                (uint16_t)(x + HALF_BLOCK_SIZE - PIXEL_SIZE / 2));
+}
+
+/* SidehopperDeath / DessgeegaDeath. Every ground Dessgeega (not only the
+ * Long Beam one) sets the Long Beam event and unlocks the doors: a bug of
+ * the game, kept. */
+static void hopper_death(Ctx *c) {
+    MzmSprite *s = c->s;
+    bool dess = is_dessgeega(s), ceiling = s->status & MZM_SPRITE_STATUS_Y_FLIP;
+    uint16_t offset = dess ? THREE_QUARTER_BLOCK_SIZE : THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+    if (dess && !ceiling) {
+        hook_set_event(c, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED);
+        hook_doors(c, -20);         /* -ONE_THIRD_SECOND */
+    }
+    sprite_death(c, ceiling ? (uint16_t)(s->y + offset) : (uint16_t)(s->y - offset), s->x,
+                 MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+}
+
+/* Sidehopper / Dessgeega: the AIs. Freezing and the sounds are not ported. */
+static void hopper(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED: hopper_init(c); break;
+    case DESSGEEGA_POSE_LONG_BEAM_DETECT:
+        if (is_dessgeega(s)) dessgeega_long_beam_detect(c);
+        else hopper_death(c);
+        break;
+    case DESSGEEGA_POSE_LONG_BEAM_SPAWNING:
+        if (is_dessgeega(s)) dessgeega_long_beam_spawning(c);
+        else hopper_death(c);
+        break;
+    case HOPPER_POSE_JUMP_WARNING_INIT:
+        hopper_jump_warning_init(s);
+        /* fallthrough */
+    case HOPPER_POSE_JUMP_WARNING: hopper_jump_warning(c); break;
+    case HOPPER_POSE_JUMPING: hopper_jumping(c); break;
+    case HOPPER_POSE_LANDING:
+        if (animation_ending(c, 1)) hopper_idle_init(c);
+        break;
+    case HOPPER_POSE_IDLE: hopper_idle(c); break;
+    case HOPPER_POSE_FALLING: hopper_falling(c); break;
+    default: hopper_death(c); break;
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -1385,6 +1751,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SKREE_GREEN:
     case MZM_PSPRITE_SKREE_BLUE: return MZM_FAMILY_SKREE;
     case MZM_PSPRITE_WAVER: return MZM_FAMILY_WAVER;
+    case MZM_PSPRITE_SIDEHOPPER: return MZM_FAMILY_SIDEHOPPER;
+    case MZM_PSPRITE_DESSGEEGA:
+    case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
     }
 }
@@ -1637,7 +2006,9 @@ static void check_on_screen(const Ctx *c) {
 
 void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *frame) {
     int family = mzm_sprite_family(sprite->sprite_id, sprite->secondary);
-    if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || family < 0) return;
+    /* A family without frame durations (not exported) is not updated. */
+    if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || family < 0 || !frame->kinds[family])
+        return;
     Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],
              0, MZM_COLLISION_AIR, frame->frame8};
     /* gSpriteRng = sSpriteRandomNumberTable[(frame8 + slot + frame16 / 16 +
@@ -1654,6 +2025,8 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
         break;
     case MZM_FAMILY_RIPPER: ripper(&c); break;
     case MZM_FAMILY_WAVER: waver(&c); break;
+    case MZM_FAMILY_SIDEHOPPER:
+    case MZM_FAMILY_DESSGEEGA: hopper(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

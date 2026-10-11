@@ -233,7 +233,8 @@ toggles High Jump, M refills ammunition, H applies 20 damage, Enter restarts
 after death, F6 opens the raw animation catalogue and F7 outlines the active
 hitbox.
 
-Rooms show their native Zoomers, Zeelas, Rippers, Skrees and Wavers
+Rooms show their native Zoomers, Zeelas, Rippers, Skrees, Wavers,
+Sidehoppers and Dessgeegas
 (`python3 -m scripts.mzm_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
 they move with their native AIs, hurt Samus on contact, take beam and missile
 hits, explode into particles and debris and leave the native enemy drops.

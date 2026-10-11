@@ -26,6 +26,33 @@ static void step(MzmSprite *sprite, int frame8) {
     mzm_sprite_update(sprite, 0, &frame);
 }
 
+static uint8_t test_events[32];
+static int door_timer_calls, last_door_timer;
+
+static bool test_check_event(void *context, uint8_t event) {
+    (void)context;
+    return test_events[event / 8] & (1u << (event % 8));
+}
+
+static void test_set_event(void *context, uint8_t event) {
+    (void)context;
+    test_events[event / 8] |= (uint8_t)(1u << (event % 8));
+}
+
+static void test_door_timer(void *context, int8_t timer) {
+    (void)context;
+    ++door_timer_calls;
+    last_door_timer = timer;
+}
+
+static void test_remove_solid(void *context, uint16_t y, uint16_t x) {
+    (void)context;
+    if (y / 64u < ROWS && x / 64u < COLUMNS) grid[y / 64u][x / 64u] = MZM_CLIPDATA_AIR;
+}
+
+static const MzmSpriteHooks test_hooks = {NULL, test_check_event, test_set_event,
+                                          test_door_timer, test_remove_solid};
+
 static int hurts, last_damage;
 static bool last_on_left;
 
@@ -69,11 +96,11 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
-                              &drop_kind},
-                             &equipment, 0, 0, 0, 0, NULL, 0, NULL};
+                              &drop_kind, &hopper_kind, &hopper_kind},
+                             &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -767,6 +794,187 @@ int main(void) {
     wy = w.y;
     step(&w, 0);
     assert(w.y == wy - 2);
+
+    /* Sidehoppers and Dessgeegas, on a floor at row 10 between walls at
+     * columns 1 and 20, Samus far away. */
+    for (int a = 0; a < MZM_SIDEHOPPER_ANIMS; ++a) {
+        hopper_kind.counts[a] = 2;
+        hopper_kind.timers[a][0] = hopper_kind.timers[a][1] = 2;
+    }
+    const int16_t high[10] = {-8, -16, -16, -8, -4, 0, 4, 8, 16, 16};
+    const int16_t low[10] = {-4, -8, -4, -2, 0, 4, 8, 16, 16, 16};
+    const int16_t ceiling_fall[16] = {-4, -4, -4, -4, -4, -4, -8, -8, -8, -12, -12, -12, -12,
+                                      -12, -16, 32767};
+    memcpy(tables.sidehopper_high, high, sizeof high);
+    memcpy(tables.sidehopper_low, low, sizeof low);
+    memcpy(tables.dessgeega_high, high, sizeof high);
+    memcpy(tables.dessgeega_low, low, sizeof low);
+    memcpy(tables.falling_ceiling, ceiling_fall, sizeof ceiling_fall);
+    tables.health[MZM_PSPRITE_SIDEHOPPER] = 40;
+    tables.health[MZM_PSPRITE_DESSGEEGA] = 30;
+    tables.health[MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM] = 30;
+    memset(tables.random, 0, sizeof tables.random);
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+    for (int y = 0; y < ROWS; ++y) grid[y][1] = grid[y][20] = MZM_CLIPDATA_SOLID;
+    frame.samus_x = 60000;
+    frame.samus_y = 0;
+    frame.samus_hitbox_top = -128;
+    MzmSprite h;
+    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 9, 8, 0);
+    step(&h, 0);
+    /* Init: idle on the floor, head hitbox 92, sides 72, facing right
+     * (RNG 0); without BUGFIX work1 keeps 0, so it jumps after one loop. */
+    assert(h.pose == 0xF && h.health == 40 && h.hitbox_top == -92 && h.hitbox_bottom == 0);
+    assert(h.hitbox_left == -72 && h.hitbox_right == 72 && h.work1 == 0);
+    assert(h.status & MZM_SPRITE_STATUS_FACING_RIGHT && h.anim == MZM_SIDEHOPPER_IDLE);
+    frames = 0;
+    while (h.pose != 0x23 && frames < 100) {
+        step(&h, 0);
+        ++frames;
+    }
+    assert(h.pose == 0x23 && h.hitbox_top == -0x70 && h.work2 == 0);   /* high jump */
+    /* High jump: 20 frames up 208 subpixels and 4 level frames at 5
+     * subpixels across, then down at 4: it lands back after 42 frames,
+     * 192 subpixels further, its head hitbox back to 92. */
+    uint16_t hx = h.x, hy = h.y, peak = h.y;
+    frames = 0;
+    while (h.pose == 0x23 && frames < 100) {
+        step(&h, 0);
+        ++frames;
+        if (h.y < peak) peak = h.y;
+    }
+    assert(frames == 42 && hy == 640 && peak == 640 - 208);
+    assert(h.pose == 0x25 && h.y == 640 && h.x == hx + 192 && h.hitbox_top == -92);
+    /* The landing table ends: idle again. */
+    frames = 0;
+    while (h.pose == 0x25 && frames < 50) {
+        step(&h, 0);
+        ++frames;
+    }
+    assert(h.pose == 0xF);
+    /* Samus within five blocks: it faces her and warns at once. */
+    frame.samus_x = (uint16_t)(h.x - 200);
+    frame.samus_y = (uint16_t)(h.y + 64);
+    step(&h, 0);
+    assert(h.pose == 9 && !(h.status & MZM_SPRITE_STATUS_FACING_RIGHT));
+    frame.samus_x = 60000;
+    /* Against the left wall (column 1, probed 76 subpixels to its left) it
+     * is pushed back 6 subpixels and turns (facing right again). */
+    h.x = 2 * 64 + 72;
+    h.pose = 0x23;
+    h.work3 = 0;
+    h.work2 = 0;
+    step(&h, 0);
+    assert(h.status & MZM_SPRITE_STATUS_FACING_RIGHT && h.x == 2 * 64 + 72 + 6);
+    /* Unsupported on both sides: it falls (the floor removed). */
+    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 4, 8, 0);
+    step(&h, 0);
+    assert(h.pose == 0xF);
+    step(&h, 0);
+    assert(h.pose == 0x1F && h.anim == MZM_SIDEHOPPER_JUMPING);
+    frames = 0;
+    while (h.pose == 0x1F && frames < 200) {
+        step(&h, 0);
+        ++frames;
+    }
+    assert(h.pose == 0x25 && h.y == 640);
+    /* On a ceiling (row 3): Y flipped, head hitbox below. */
+    for (int x = 0; x < COLUMNS; ++x) grid[3][x] = MZM_CLIPDATA_SOLID;
+    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 4, 8, 0);
+    step(&h, 0);
+    assert(h.status & MZM_SPRITE_STATUS_Y_FLIP && h.y == 4 * 64 && h.hitbox_top == 0 &&
+           h.hitbox_bottom == 92);
+    for (int x = 0; x < COLUMNS; ++x) grid[3][x] = MZM_CLIPDATA_AIR;
+    /* Death: the single-then-big explosion 52 subpixels above its feet. */
+    memset(&fx, 0, sizeof fx);
+    frame.effects = &fx;
+    mzm_sprite_init_primary(&h, MZM_PSPRITE_SIDEHOPPER, 0, 9, 8, 0);
+    step(&h, 0);
+    h.pose = 0x62;
+    step(&h, 0);
+    assert(fx.particles[0].effect == MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG &&
+           fx.particles[0].y == 640 - 52);
+
+    /* Dessgeega: head hitbox 88, sides 64; every ground Dessgeega death sets
+     * the Long Beam event and unlocks the doors (the game's bug). */
+    frame.hooks = &test_hooks;
+    memset(test_events, 0, sizeof test_events);
+    door_timer_calls = 0;
+    MzmSprite d;
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA, 0, 9, 8, 0);
+    step(&d, 0);
+    assert(d.pose == 0xF && d.hitbox_top == -88 && d.hitbox_left == -64 && d.health == 30);
+    d.pose = 0x62;
+    step(&d, 0);
+    assert(test_check_event(NULL, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED));
+    assert(door_timer_calls == 1 && last_door_timer == -20);
+    assert(fx.particles[1].effect == MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG &&
+           fx.particles[1].y == 640 - 48);
+    /* Its jump keeps the head hitbox. */
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA, 0, 9, 8, 0);
+    step(&d, 0);
+    d.pose = 8;
+    frames = 0;
+    while (d.pose != 0x23 && frames < 50) {
+        step(&d, 0);
+        ++frames;
+    }
+    assert(d.pose == 0x23 && d.hitbox_top == -88);
+
+    /* The Long Beam Dessgeega: removed unless the statue room was viewed
+     * and it was not killed yet. */
+    memset(test_events, 0, sizeof test_events);
+    door_timer_calls = 0;
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0);
+    step(&d, 0);
+    assert(d.status == 0 && door_timer_calls == 0);
+    test_set_event(NULL, MZM_EVENT_VIEWED_STATUE_ROOM);
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0);
+    step(&d, 0);
+    /* Doors locked, waiting hidden from Samus and projectiles. */
+    assert(d.pose == 0x11 && door_timer_calls == 1 && last_door_timer == 1);
+    step(&d, 0);
+    assert(d.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES && d.ignore_samus_timer == 1);
+    /* Samus below within 12 blocks and 3.75 across, on screen: it drops
+     * with four debris, at 24 subpixels a frame. */
+    memset(&fx, 0, sizeof fx);
+    world.camera_x = world.camera_y = 0;
+    frame.samus_x = (uint16_t)(d.x + 200);
+    frame.samus_y = 640;
+    step(&d, 0);
+    assert(d.pose == 0x33 && !(d.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+    assert(fx.debris[0].type == 5 && fx.debris[1].type == 7 && fx.debris[2].type == 8 &&
+           fx.debris[3].type == 6);
+    uint16_t dy = d.y;
+    step(&d, 0);
+    assert(d.y == dy + 24);
+    /* The floor loses its three blocks under it, then the one below (row
+     * 13) stops it. */
+    for (int x = 0; x < COLUMNS; ++x) grid[13][x] = MZM_CLIPDATA_SOLID;
+    uint16_t dx = d.x;
+    frames = 0;
+    while (grid[10][dx / 64] == MZM_CLIPDATA_SOLID && frames < 100) {
+        step(&d, 0);
+        ++frames;
+    }
+    assert(grid[10][dx / 64 - 1] == MZM_CLIPDATA_AIR && grid[10][dx / 64 + 1] == MZM_CLIPDATA_AIR);
+    assert(grid[10][dx / 64 + 2] == MZM_CLIPDATA_SOLID && d.work3 == 1);
+    assert(fx.particles[0].effect == MZM_PE_TWO_MEDIUM_DUST &&
+           fx.particles[1].effect == MZM_PE_MEDIUM_DUST && fx.debris[4].type == 0x11);
+    frames = 0;
+    while (d.pose == 0x33 && frames < 100) {
+        step(&d, 0);
+        ++frames;
+    }
+    assert(d.pose == 0x25 && d.y == 13 * 64);
+    /* Once killed, it does not come back. */
+    test_set_event(NULL, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED);
+    mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0);
+    step(&d, 0);
+    assert(d.status == 0);
+    frame.hooks = NULL;
+    frame.effects = NULL;
     puts("mzm_sprites: ok");
     return 0;
 }

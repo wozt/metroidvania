@@ -4,7 +4,7 @@
  * Particles follow src/particle.c: ParticleSet (the first free slot, or the
  * oldest particle), ParticleUpdateAnimation and ParticleCheckOnScreen, for
  * the one-shot effects the ported sprites and projectiles set: sprite
- * explosions, the screw attack kill and projectile impacts. Their sounds and
+ * explosions, the screw attack kill, projectile impacts and dust. Their sounds and
  * the super missile screen shake are not ported. Sprite debris
  * (src/sprite_debris.c) is stored here and processed by mzm_sprites, which
  * owns the collision helpers it needs. Frame durations come from the OAM
@@ -32,6 +32,8 @@ enum {
     MZM_PE_HITTING_SOMETHING_INVINCIBLE = 47,
     MZM_PE_HITTING_SOMETHING_WITH_MISSILE = 48,
     MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE = 49,
+    MZM_PE_MEDIUM_DUST = 53,
+    MZM_PE_TWO_MEDIUM_DUST = 54,
 };
 
 /* ParticleStatus */

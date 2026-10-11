@@ -28,6 +28,8 @@ const char *mzm_particle_table(uint8_t effect) {
     case MZM_PE_HITTING_SOMETHING_WITH_MISSILE: return "ParticleHittingSomethingWithMissileOam";
     case MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE:
         return "ParticleHittingSomethingWithSuperMissileOam";
+    case MZM_PE_MEDIUM_DUST: return "ParticleMediumDustOam";
+    case MZM_PE_TWO_MEDIUM_DUST: return "ParticleTwoMediumDustOam";
     default: return NULL;
     }
 }

@@ -249,24 +249,43 @@ typedef struct {
     uint16_t y_spawn, x_spawn;      /* yPositionSpawn / xPositionSpawn (drop timers) */
 } MzmSprite;
 
+/* EventFunction values read by the ported sprites (include/constants/event.h). */
+enum { MZM_EVENT_VIEWED_STATUE_ROOM = 42, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED = 43 };
+
+/* Game systems outside the sprite engine. */
+typedef struct {
+    void *context;
+    /* CHECK_EVENT / SET_EVENT */
+    bool (*check_event)(void *context, uint8_t event);
+    void (*set_event)(void *context, uint8_t event);
+    /* gDoorUnlockTimer: 1 locks the room's doors (LOCK_DOORS), a negative
+     * value unlocks them after that many frames. */
+    void (*door_unlock_timer)(void *context, int8_t timer);
+    /* ClipdataProcess with CAA_REMOVE_SOLID at a subpixel point. */
+    void (*remove_solid)(void *context, uint16_t y, uint16_t x);
+} MzmSpriteHooks;
+
 /* What SpriteUpdate shares with every sprite this frame. Enemy drops are
  * chosen from, and refill, the equipment (power bombs are not ported: their
  * counts are zero). */
 typedef struct {
     const MzmSpriteWorld *world;
     const MzmSpriteTables *tables;
+    /* Frame durations by family; NULL leaves the family's sprites idle. */
     const MzmSpriteKind *kinds[MZM_SPRITE_FAMILIES];
     MzmEquipment *equipment;
     uint8_t frame8;                 /* gFrameCounter8Bit */
     uint16_t frame16;               /* gFrameCounter16Bit */
-    /* gSamusData position, subpixels; samus_y includes hitboxTop / 2, as
-     * SpriteUtilCheckSamusNearSpriteLeftRight reads it. */
-    uint16_t samus_x, samus_y;
+    uint16_t samus_x, samus_y;      /* gSamusData position, subpixels */
+    int16_t samus_hitbox_top;       /* gSamusPhysics.hitboxTop */
     /* gSpriteData, for SpriteSpawnSecondary (NULL: no spawning). */
     MzmSprite *sprites;
     int sprite_count;
     /* Particles and sprite debris the sprites set (NULL: none). */
     MzmEffects *effects;
+    /* Game state some sprites read or change (NULL: no event set, nothing
+     * changed). */
+    const MzmSpriteHooks *hooks;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,

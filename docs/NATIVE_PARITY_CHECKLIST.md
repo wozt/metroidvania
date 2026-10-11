@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 13 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 15 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -87,7 +87,7 @@ Next action: Port the remaining native pose handlers.
 
 [?] **`mzm.animation.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`mzm.animation.particles` — Sprite particles and debris.** One-shot particles for sprite explosions, the screw attack kill and projectile impacts on walls and sprites, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range.
+[~] **`mzm.animation.particles` — Sprite particles and debris.** One-shot particles for sprite explosions, the screw attack kill and projectile impacts on walls and sprites, the medium dust effects, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range.
 
 Native evidence: `mzm:c:src/particle.c:ParticleCheckOnScreen`, `mzm:c:src/particle.c:ParticleHittingSomethingInvincible`, `mzm:c:src/particle.c:ParticleHittingSomethingWithMissile`, `mzm:c:src/particle.c:ParticleHittingSomethingWithNormalBeam`, `mzm:c:src/particle.c:ParticleHittingSomethingWithSuperMissile`, `mzm:c:src/particle.c:ParticleProcessAll`, `mzm:c:src/particle.c:ParticleScrewAttackDestroyed`, `mzm:c:src/particle.c:ParticleSet`, `mzm:c:src/particle.c:ParticleSpriteExplosionHuge`, `mzm:c:src/particle.c:ParticleSpriteExplosionMedium`, `mzm:c:src/particle.c:ParticleUpdateAnimation`, `mzm:c:src/sprite_debris.c:SpriteDebrisDraw`, `mzm:c:src/sprite_debris.c:SpriteDebrisInit`, `mzm:c:src/sprite_debris.c:SpriteDebrisProcess`, `mzm:c:src/sprite_debris.c:SpriteDebrisProcessAll`, `mzm:c:src/sprite_util.c:SpriteUtilRandomSpriteDebris`.  
 Local implementation: [`src/runtime/mzm_effects.c`](../src/runtime/mzm_effects.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
@@ -137,6 +137,15 @@ Next action: Port charge beams, beam upgrades, bombs, Power Bombs and tumbling m
 
 [?] **`mzm.enemies.inventory-boundary` — source coverage.** The current classifier assigns 812 discovered routine(s) to this category (812 by source path). Category completeness has not been established.
 
+[~] **`mzm.enemies.dessgeega` — Dessgeegas and the Long Beam Dessgeega.** Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor removing three blocks with dust and debris, and lands on the next one.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/dessgeega.c:Dessgeega`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
+Dependencies: `mzm.enemies.sidehopper`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: Freezing, the sounds and the screen shakes are not ported; door locks are only reported (gDoorUnlockTimer is not consumed by the runtime) and removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests.  
+Next action: Export the event spritesets and port the statue room event and the door lock lifecycle.
+
 [~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper.c:Ripper`.  
@@ -144,6 +153,15 @@ Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: Freezing and the damaged and death sounds are not ported; missiles that would tumble off a Ripper are removed.  
+Next action: Port freezing with the ice beam.
+
+[~] **`mzm.enemies.sidehopper` — Sidehoppers.** Ground and ceiling Sidehoppers: idle or head shake for 1 to 4 loops (work1 kept at 0 on spawn, as without BUGFIX), Samus detection within five blocks, jump warning, high or low jumps from the ROM tables with the head hitbox resized, wall bounces, falls when unsupported, landing and the single-then-big death explosion into drops.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/sidehopper.c:Sidehopper`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: Freezing and the jumping, landing, head shake and damage sounds are not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.
@@ -173,14 +191,14 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.
 Known divergences: Freezing, the damaged sound and the falling splash are not ported; the eyes rotate as a composed frame without the affine clipping.  
 Next action: Port freezing with the ice beam.
 
-[~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families, secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.
+[~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.
 
 Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/projectile_util.c:ProjectileCheckHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileDealDamage`, `mzm:c:src/projectile_util.c:ProjectileHitSolidSprite`, `mzm:c:src/projectile_util.c:ProjectileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileMissileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileSuperMissileHitSprite`, `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteInitPrimary`, `mzm:c:src/sprite.c:SpriteLoadRoomSprites`, `mzm:c:src/sprite.c:SpriteUpdate`, `mzm:c:src/sprite.c:SpriteUpdateAnimation`, `mzm:c:src/sprite_util.c:SpriteUtilAlignYPositionOnSlopeAtOrigin`, `mzm:c:src/sprite_util.c:SpriteUtilCheckVerticalCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilGetCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilIsSpriteStunned`, `mzm:c:src/sprite_util.c:SpriteUtilSamusAndSpriteCollision`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteDeath`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteTakeDamageFromSamusContact`, `mzm:c:src/sprite_util.c:SpriteUtilTakeDamageFromSprite`, `mzm:c:src/sprites_ai/zoomer.c:Zoomer`, `mzm:c:src/sprites_ai/zoomer.c:ZoomerDeath`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.collision.clipdata`.  
 Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported.  
-Next action: Port the stun palette flash and freezing, then further enemies (Sidehopper, Dessgeega, Sova, Viola).
+Next action: Port the stun palette flash and freezing, then further enemies (Sova, Viola, Geega, Zeb, Reo).
 
 ### Bosses
 

@@ -186,6 +186,13 @@ static const char *const holtz_sprites[MZM_HOLTZ_ANIMS] = {
 };
 const char *const mzm_multiviola_anim_names[MZM_MULTIVIOLA_ANIMS] = {"MultiviolaOam_Moving"};
 static const char *const multiviola_sprites[MZM_MULTIVIOLA_ANIMS] = {"MULTIVIOLA"};
+const char *const mzm_rinka_anim_names[MZM_RINKA_ANIMS] = {
+    "RinkaOrangeOam_Spawning", "RinkaOrangeOam_Moving", "RinkaGreenOam_Spawning",
+    "RinkaGreenOam_Moving",
+};
+static const char *const rinka_sprites[MZM_RINKA_ANIMS] = {
+    "RINKA_ORANGE", "RINKA_ORANGE", "RINKA_GREEN", "RINKA_GREEN",
+};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -225,6 +232,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
     [MZM_FAMILY_MULTIVIOLA] = {MZM_MULTIVIOLA_ANIMS, mzm_multiviola_anim_names,
                                multiviola_sprites},
+    [MZM_FAMILY_RINKA] = {MZM_RINKA_ANIMS, mzm_rinka_anim_names, rinka_sprites},
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
@@ -842,7 +850,7 @@ static MzmSprite *spawn_drop_follower(Ctx *c, uint8_t sprite_id, uint8_t part, u
                                       uint8_t ram_slot, uint16_t y, uint16_t x, uint16_t status);
 
 /* SpriteDeathType */
-enum { DEATH_NORMAL, DEATH_RESPAWNING };
+enum { DEATH_NORMAL, DEATH_RESPAWNING, DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP };
 
 static void sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect) {
     MzmSprite *s = c->s;
@@ -853,9 +861,9 @@ static void sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t
         particle_set(c, y, x, effect);
     }
     uint8_t drop = determine_drop(c);
-    if (type == DEATH_RESPAWNING) {
+    if (type != DEATH_NORMAL) {
         /* The drop follows the sprite's slot; the sprite itself stays. */
-        if (drop != MZM_PSPRITE_UNUSED0)
+        if (drop != MZM_PSPRITE_UNUSED0 && type == DEATH_RESPAWNING)
             spawn_drop_follower(c, drop, s->room_slot, 0, s->ram_slot, y, x, 0);
         return;
     }
@@ -3087,6 +3095,168 @@ static void multiviola(Ctx *c) {
     }
 }
 
+/* Sqrt (BIOS SWI 0x08): the integer square root, rounded down. */
+static uint16_t bios_sqrt(uint32_t number) {
+    uint32_t root = 0, bit = 1u << 30;
+    while (bit > number) bit >>= 2;
+    while (bit) {
+        if (number >= root + bit) {
+            number -= root + bit;
+            root = (root >> 1) + bit;
+        } else {
+            root >>= 1;
+        }
+        bit >>= 2;
+    }
+    return (uint16_t)root;
+}
+
+/* Rinka (rinka.c, orange and green; the Mother Brain ones are not ported):
+ * a ring born at its spawn block that, once on screen and vulnerable,
+ * flies in a straight line toward where Samus was (its distance from the
+ * spawn point grows by 4 subpixels a frame, green 5) and respawns 16 blocks
+ * away from her. */
+enum { RINKA_POSE_SPAWNING_INIT = 0x8, RINKA_POSE_SPAWNING = 0x9, RINKA_POSE_MOVING = 0x23 };
+
+static bool is_green_rinka(const MzmSprite *s) {
+    return s->status & MZM_SPRITE_STATUS_MOSAIC;
+}
+
+/* RinkaSpawningInit (the green one is flagged MOSAIC, as in the game) */
+static void rinka_spawning_init(MzmSprite *s) {
+    s->pose = RINKA_POSE_SPAWNING;
+    s->frame = 0;
+    s->adc = 0;
+    if (s->sprite_id == MZM_PSPRITE_RINKA_GREEN) {
+        s->status |= MZM_SPRITE_STATUS_MOSAIC;
+        s->anim = MZM_RINKA_GREEN_SPAWNING;
+    } else {
+        s->anim = MZM_RINKA_ORANGE_SPAWNING;
+    }
+}
+
+/* RinkaRespawn: back to its spawn block, hidden, after 20 (green) or 60
+ * frames. */
+static void rinka_respawn(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->y = (uint16_t)(s->work3 * BLOCK_SIZE + HALF_BLOCK_SIZE);
+    s->x = (uint16_t)(s->work2 * BLOCK_SIZE + HALF_BLOCK_SIZE);
+    rinka_spawning_init(s);
+    s->health = c->tables->health[s->sprite_id];
+    s->isft = 0;
+    s->palette_row = 0;
+    s->absolute_palette_row = 0;
+    s->freeze_timer = 0;
+    s->work1 = is_green_rinka(s) ? 20 : 60;
+    s->status |= MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    s->ignore_samus_timer = 1;
+}
+
+/* RinkaSpawning */
+static void rinka_spawning(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->work1) {
+        s->ignore_samus_timer = 1;
+        s->work1--;
+        return;
+    }
+    if (s->status & MZM_SPRITE_STATUS_NOT_DRAWN) {
+        s->ignore_samus_timer = 1;
+        if (s->status & MZM_SPRITE_STATUS_ONSCREEN) {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+            s->frame = 0;
+            s->adc = 0;
+            s->work0 = 11;          /* CONVERT_SECONDS(1.f / 6 + 1.f / 60) */
+        }
+        return;
+    }
+    if (s->work0) {
+        s->ignore_samus_timer = 1;
+        if (--s->work0 == 0) s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        return;
+    }
+    if (!animation_ending(c, 1)) return;
+    s->anim = s->sprite_id == MZM_PSPRITE_RINKA_GREEN ? MZM_RINKA_GREEN_MOVING
+                                                       : MZM_RINKA_ORANGE_MOVING;
+    s->pose = RINKA_POSE_MOVING;
+    s->frame = 0;
+    s->adc = 0;
+    s->scaling = 0;
+    uint16_t samus_y = (uint16_t)(c->f->samus_y - (BLOCK_SIZE - PIXEL_SIZE)), samus_x = c->f->samus_x;
+    s->y_spawn = samus_y;           /* the destination */
+    s->x_spawn = samus_x;
+    if (samus_y < s->y) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+    else s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+    if (samus_x < s->x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+    else s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+}
+
+/* RinkaMove: from its spawn point along the unit vector toward the
+ * destination (10-bit fixed point), placed scaling times 4 (green: 5)
+ * subpixels from the spawn point; respawn beyond 16 blocks from Samus or
+ * past the room origin. */
+static void rinka_move(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t velocity = is_green_rinka(s) ? PIXEL_SIZE + 1 : PIXEL_SIZE;
+    uint16_t acceleration = ++s->scaling;
+    velocity = (uint16_t)(velocity * acceleration);
+    uint32_t spawn_y = (uint32_t)s->work3 * BLOCK_SIZE + HALF_BLOCK_SIZE;
+    uint32_t spawn_x = (uint32_t)s->work2 * BLOCK_SIZE + HALF_BLOCK_SIZE;
+    bool down = s->status & MZM_SPRITE_STATUS_FACING_DOWN;
+    bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
+    uint16_t dy = down ? (uint16_t)(s->y_spawn - spawn_y) : (uint16_t)(spawn_y - s->y_spawn);
+    uint16_t dx = right ? (uint16_t)(s->x_spawn - spawn_x) : (uint16_t)(spawn_x - s->x_spawn);
+    int32_t total = bios_sqrt((uint32_t)dx * dx + (uint32_t)dy * dy);
+    if (total != 0) {
+        int32_t oy = (velocity * ((int32_t)(dy << 10) / total)) >> 10;
+        int32_t ox = (velocity * ((int32_t)(dx << 10) / total)) >> 10;
+        s->y = (uint16_t)(down ? spawn_y + oy : spawn_y - oy);
+        s->x = (uint16_t)(right ? spawn_x + ox : spawn_x - ox);
+    }
+    bool respawn = false;
+    uint16_t samus_x = c->f->samus_x, samus_y = c->f->samus_y;
+    if (s->x & 0x8000) respawn = true;
+    else if ((s->x > samus_x ? s->x - samus_x : samus_x - s->x) > BLOCK_SIZE * 16) respawn = true;
+    if (s->y & 0x8000) respawn = true;
+    else if ((s->y > samus_y ? s->y - samus_y : samus_y - s->y) > BLOCK_SIZE * 16) respawn = true;
+    if (respawn) rinka_respawn(c);
+}
+
+/* Rinka: the AI. Freezing is not ported. */
+static void rinka(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* RinkaInit: hitbox 20 subpixels (SUB_PIXEL_TO_PIXEL of 80) */
+        s->hitbox_top = s->hitbox_left = -(BLOCK_SIZE + QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_bottom = s->hitbox_right = (BLOCK_SIZE + QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = EIGHTH_BLOCK_SIZE;
+        s->health = c->tables->health[s->sprite_id];
+        s->y -= HALF_BLOCK_SIZE;
+        s->work3 = (uint8_t)((uint16_t)(s->y - HALF_BLOCK_SIZE) / BLOCK_SIZE);
+        s->work2 = (uint8_t)((uint16_t)(s->x - HALF_BLOCK_SIZE) / BLOCK_SIZE);
+        s->samus_collision = SSC_HURTS_SAMUS;
+        s->work1 = 0;
+        /* fallthrough */
+    case RINKA_POSE_SPAWNING_INIT:
+        rinka_spawning_init(s);
+        /* fallthrough */
+    case RINKA_POSE_SPAWNING: rinka_spawning(c); break;
+    case RINKA_POSE_MOVING: rinka_move(c); break;
+    default:
+        sprite_death_typed(c, has_drops(c) ? DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP
+                                           : DEATH_RESPAWNING,
+                           s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        rinka_respawn(c);
+        break;
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -3205,6 +3375,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_MELLA: return MZM_FAMILY_MELLA;
     case MZM_PSPRITE_HOLTZ: return MZM_FAMILY_HOLTZ;
     case MZM_PSPRITE_MULTIVIOLA: return MZM_FAMILY_MULTIVIOLA;
+    case MZM_PSPRITE_RINKA_ORANGE:
+    case MZM_PSPRITE_RINKA_GREEN: return MZM_FAMILY_RINKA;
     case MZM_PSPRITE_DESSGEEGA:
     case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
@@ -3491,6 +3663,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_MELLA: mella(&c); break;
     case MZM_FAMILY_HOLTZ: holtz(&c); break;
     case MZM_FAMILY_MULTIVIOLA: multiviola(&c); break;
+    case MZM_FAMILY_RINKA: rinka(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

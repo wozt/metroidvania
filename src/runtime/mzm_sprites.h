@@ -9,10 +9,10 @@
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
  * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper, Dessgeega, Viola, Sova,
- * Zeb, Geega, Zebbo, Reo, Mella, Holtz and Multiviola AIs
+ * Zeb, Geega, Zebbo, Reo, Mella, Holtz, Multiviola and Rinka AIs
  * (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c,
  * sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c, geega.c, zebbo.c, reo.c,
- * mella.c, holtz.c, multiviola.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * mella.c, holtz.c, multiviola.c, rinka.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes. Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
  * stats) and the frame durations of each OAM table come from
@@ -38,6 +38,7 @@ enum {
     MZM_SPRITE_STATUS_ONSCREEN = 1 << 1,
     MZM_SPRITE_STATUS_NOT_DRAWN = 1 << 2,
     MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE = 1 << 3,
+    MZM_SPRITE_STATUS_MOSAIC = 1 << 5,
     MZM_SPRITE_STATUS_X_FLIP = 1 << 6,
     MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE = 1 << 7,
     MZM_SPRITE_STATUS_Y_FLIP = 1 << 8,
@@ -232,13 +233,20 @@ extern const char *const mzm_holtz_anim_names[MZM_HOLTZ_ANIMS];
 enum { MZM_MULTIVIOLA_MOVING, MZM_MULTIVIOLA_ANIMS };
 extern const char *const mzm_multiviola_anim_names[MZM_MULTIVIOLA_ANIMS];
 
+/* Rinka OAM tables (src/data/sprites/rinka.c). */
+enum {
+    MZM_RINKA_ORANGE_SPAWNING, MZM_RINKA_ORANGE_MOVING, MZM_RINKA_GREEN_SPAWNING,
+    MZM_RINKA_GREEN_MOVING, MZM_RINKA_ANIMS,
+};
+extern const char *const mzm_rinka_anim_names[MZM_RINKA_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
     MZM_FAMILY_ZOOMER, MZM_FAMILY_ZEELA, MZM_FAMILY_RIPPER, MZM_FAMILY_SKREE, MZM_FAMILY_WAVER,
     MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA, MZM_FAMILY_VIOLA,
     MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA, MZM_FAMILY_ZEBBO, MZM_FAMILY_REO,
-    MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA,
+    MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -274,6 +282,7 @@ enum {
     MZM_PSPRITE_ZEBBO_GREEN = 91, MZM_PSPRITE_ZEBBO_YELLOW = 92,
     MZM_PSPRITE_REO_GREEN_WINGS = 63, MZM_PSPRITE_REO_PURPLE_WINGS = 64,
     MZM_PSPRITE_MELLA = 114, MZM_PSPRITE_HOLTZ = 107, MZM_PSPRITE_MULTIVIOLA = 52,
+    MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
 };
 

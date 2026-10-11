@@ -234,7 +234,7 @@ after death, F6 opens the raw animation catalogue and F7 outlines the active
 hitbox.
 
 Rooms show their native Zoomers, Zeelas, Rippers, Skrees, Wavers,
-Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes and Multiviolas
+Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas and Rinkas
 (`python3 -m scripts.mzm_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
 they move with their native AIs, hurt Samus on contact, take beam and missile
 hits, explode into particles and debris and leave the native enemy drops.

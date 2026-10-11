@@ -140,6 +140,17 @@ read from the user's ROM at export time; nothing is stored in the repository.
 - Multiviola (`multiviola.c`): bounces diagonally off every surface at 3
   subpixels a frame on both axes, starting toward Samus, its 56-frame table
   starting at twice its slot (the frame limit per table is now 64).
+- Rinka (`rinka.c`, orange and green; not the Mother Brain ones): born at
+  its spawn block (the first spawn is visible at once, as `SpriteInitPrimary`
+  sets no `NOT_DRAWN`); a respawn stays hidden and harmless for 60 frames
+  (green 20), shows once on screen and turns vulnerable 11 frames later. When
+  its spawning table ends it aims at 60 subpixels above Samus's feet and is
+  placed along the unit vector (10-bit fixed point, BIOS `Sqrt`) at 4
+  subpixels (green 5) times its frame count from the spawn point; 16 blocks
+  away from Samus or past the room origin it respawns. Deaths respawn it and
+  leave a drop only when none of its own exists
+  (`DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP`). The green Rinka's
+  `MOSAIC` status is kept as its flag; the mosaic effect is not drawn.
 - Every primary sprite records the slot it owns (`primarySpriteRamSlot`),
   passed on to its secondary sprites and its drops.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at

@@ -96,11 +96,11 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind, swoop_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind, swoop_kind, rinka_kind;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
-                              &swoop_kind},
+                              &swoop_kind, &rinka_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
@@ -1423,8 +1423,76 @@ int main(void) {
         ++frames;
     }
     assert(mv.y + 32 >= 640);   /* bounced off the floor */
-    frame.sprites = NULL;
-    frame.sprite_count = 0;
+
+    /* Rinkas. The first spawn is visible at once (SpriteInitPrimary sets
+     * no NOT_DRAWN) and flies when its spawning table ends; respawns are
+     * hidden, wait, show once on screen and turn vulnerable 11 frames
+     * later. */
+    for (int a = 0; a < MZM_RINKA_ANIMS; ++a) {
+        rinka_kind.counts[a] = 2;
+        rinka_kind.timers[a][0] = rinka_kind.timers[a][1] = 2;
+    }
+    tables.health[MZM_PSPRITE_RINKA_ORANGE] = 2;
+    clear();
+    world.camera_x = world.camera_y = 0;
+    MzmSprite rk;
+    mzm_sprite_init_primary(&rk, MZM_PSPRITE_RINKA_ORANGE, 0, 5, 5, 0, 0);
+    frame.samus_x = 60000;
+    frame.samus_y = 60000;
+    step(&rk, 0);
+    /* Init: half a block up, spawn block (5, 5), hitbox 20 subpixels. */
+    assert(rk.pose == 9 && rk.y == 5 * 64 + 32 && rk.work3 == 5 && rk.work2 == 5 &&
+           rk.hitbox_right == 20 && rk.anim == MZM_RINKA_ORANGE_SPAWNING);
+    assert(!(rk.status & MZM_SPRITE_STATUS_NOT_DRAWN) &&
+           !(rk.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+    /* Samus to its right, her y 60 subpixels below its centre: a level
+     * flight, 4, 8, 12... subpixels from the spawn point. */
+    frame.samus_x = (uint16_t)(rk.x + 600);
+    frame.samus_y = (uint16_t)(5 * 64 + 32 + 60);
+    frames = 0;
+    while (rk.pose != 0x23 && frames < 50) {
+        step(&rk, 0);
+        ++frames;
+    }
+    assert(rk.pose == 0x23 && rk.status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+           rk.anim == MZM_RINKA_ORANGE_MOVING);
+    uint16_t spawn_x = 5 * 64 + 32;
+    step(&rk, 0);
+    assert(rk.x == spawn_x + 4 && rk.y == 5 * 64 + 32);
+    step(&rk, 0);
+    assert(rk.x == spawn_x + 8);
+    step(&rk, 0);
+    assert(rk.x == spawn_x + 12);
+    /* Sixteen blocks past Samus it respawns, hidden and harmless, after 60
+     * frames. */
+    frames = 0;
+    while (rk.pose == 0x23 && frames < 1000) {
+        step(&rk, 0);
+        ++frames;
+    }
+    assert(rk.pose == 9 && rk.x == spawn_x && rk.work1 == 60 &&
+           rk.status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+           rk.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+    for (int i = 0; i < 60; ++i) step(&rk, 0);
+    assert(rk.work1 == 0 && rk.status & MZM_SPRITE_STATUS_NOT_DRAWN);
+    step(&rk, 0);                   /* on screen: shown */
+    assert(!(rk.status & MZM_SPRITE_STATUS_NOT_DRAWN) && rk.work0 == 11 &&
+           rk.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+    for (int i = 0; i < 11; ++i) step(&rk, 0);
+    assert(!(rk.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+    /* A diagonal flight follows the unit vector (BIOS Sqrt). */
+    frame.samus_x = (uint16_t)(spawn_x + 300);
+    frame.samus_y = (uint16_t)(5 * 64 + 32 + 60 + 400);
+    rk.work1 = 0;
+    frames = 0;
+    while (rk.pose != 0x23 && frames < 50) {
+        step(&rk, 0);
+        ++frames;
+    }
+    step(&rk, 0);
+    step(&rk, 0);
+    /* velocity 8, unit (0.6, 0.8): 4 across, 6 down (10-bit truncation). */
+    assert(rk.x == spawn_x + 4 && rk.y == 5 * 64 + 32 + 6);
     puts("mzm_sprites: ok");
     return 0;
 }

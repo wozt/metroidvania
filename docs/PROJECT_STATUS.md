@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes and Multiviolas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas and Rinkas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2823,6 +2823,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   full Holtz cycle (warning, dive speed, slide, climb, bonk 40 subpixels
   under the ceiling, idle) and the Multiviola's slot-based frame, speed and
   floor bounce.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.
+
+## Patch 0251 - Zero Mission Rinkas
+
+- `mzm_sprites` ports the orange and green Rinkas: spawn, hidden respawns,
+  on-screen reveal and vulnerability delay, the straight flight along a
+  unit vector computed with the BIOS integer square root, respawn far from
+  Samus, and `DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP`.
+  `scripts/mzm_sprites.py` exports both Rinkas.
+- Checked in tourian_003: the three Rinkas leave their spawn points, fly at
+  Samus and a green one hits her for 20 (the ROM damage).
+- Tests: `tests/test_mzm_sprites.c` adds the first spawn, the level flight (4
+  subpixels a frame from the spawn point), the respawn delay, reveal and
+  vulnerability, and a diagonal flight following the integer square root.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.

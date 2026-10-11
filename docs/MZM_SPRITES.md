@@ -116,6 +116,15 @@ read from the user's ROM at export time; nothing is stored in the repository.
   follower is removed instead of respawning. Zebbos (`zebbo.c`) are Geegas
   with a 24-subpixel hitbox whose green leader spawns two followers (1.5 and
   2.5 blocks below, harmful after 10 and 18 frames).
+- Reo (`reo.c`, green and purple wings): hovers with `sReoIdleYMovement` /
+  `sReoIdleXMovement` from an offset of four times the RNG, until Samus's
+  middle is within 8 blocks vertically and 7 across; then, facing her and
+  diving if above her head, it homes on a point 72 subpixels above her feet,
+  each axis accelerating one unit (a quarter subpixel) a frame up to its cap
+  (green 24 across and 16 vertically, purple 64 and 32), braking once past
+  the point and turning, and turning at walls. It pushes the next overlapping
+  Reo of its kind a pixel away (when that one is not frozen), and dies with
+  the big explosion.
 - Every primary sprite records the slot it owns (`primarySpriteRamSlot`),
   passed on to its secondary sprites and its drops.
 - Ripper (`ripper.c`, brown and purple): raised an eighth of a block at

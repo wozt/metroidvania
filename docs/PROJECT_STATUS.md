@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas and Zebbos with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos and Reos with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2781,6 +2781,24 @@ No automatic reciprocal link or native engine encoder is implemented.
   for 10 (the ROM damage).
 - Tests: `tests/test_mzm_sprites.c` adds the Zebbo leader's hitbox, its two
   followers' positions and delays, and its wait for both.
+- Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.
+
+## Patch 0249 - Zero Mission Reos
+
+- `mzm_sprites` ports the Reo (green and purple wings): idle hovering from
+  the ROM tables, detection, homing with per-axis acceleration and braking,
+  wall turns, pushing an overlapping Reo apart, and the big explosion death.
+  `scripts/mzm_sprites.py` exports both Reos and `sReoIdleYMovement` /
+  `sReoIdleXMovement`; the runtime reads them.
+- Checked in kraid_009: the nearest Reo detects Samus, dives and hits her
+  repeatedly for 12 (99 to 87 to 63, the ROM damage) while the three beyond
+  seven blocks keep hovering.
+- Tests: `tests/test_mzm_sprites.c` adds the Reo init and idle offsets, a
+  full idle cycle returning to its position, the detection delay, the speed
+  caps and step, braking and turning past the target, and the push of an
+  overlapping Reo.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.

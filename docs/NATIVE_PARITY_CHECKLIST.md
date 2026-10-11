@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 18 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 19 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -155,6 +155,15 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.part
 Known divergences: Freezing, the sounds and the background priority changes are not ported.  
 Next action: Port freezing with the ice beam.
 
+[~] **`mzm.enemies.reo` — Reos.** Green and purple Reos: hovering with the ROM idle tables from an RNG offset, detection within 8 blocks vertically and 7 across, homing on a point 72 subpixels above Samus with per-axis acceleration (caps 24/16 or 64/32 quarter subpixels), braking and turning past it, turning at walls, pushing the next overlapping Reo apart and the big explosion death into drops.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/reo.c:Reo`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: Freezing, the sounds and the water splash effects of SpriteUtilCheckInRoomEffect / CheckOutOfRoomEffect are not ported.  
+Next action: Port freezing with the ice beam and the water splash effects.
+
 [~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper.c:Ripper`.  
@@ -225,7 +234,7 @@ Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.collision.clipdata`.  
 Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported.  
-Next action: Port the stun palette flash and freezing, then further enemies (Reo, Holtz, Mella, Rinka).
+Next action: Port the stun palette flash and freezing, then further enemies (Holtz, Mella, Rinka, Multiviola).
 
 ### Bosses
 

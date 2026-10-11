@@ -96,10 +96,10 @@ int main(void) {
     tables.health[MZM_PSPRITE_ZOOMER_RED] = 8;
     static MzmSpriteKind kind, drop_kind;
     static MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind;
+    static MzmSpriteKind ripper_kind, skree_kind, zeela_kind, waver_kind, hopper_kind, viola_kind, sova_kind, bug_kind, reo_kind;
     frame = (MzmSpriteFrame){&world, &tables,
                              {&kind, &zeela_kind, &ripper_kind, &skree_kind, &waver_kind,
-                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind},
+                              &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
@@ -1232,6 +1232,78 @@ int main(void) {
     group[2].status = 0;
     step(zl2, 0);
     assert(zl2->pose == 0x23);
+
+    /* Reos hover with the ROM idle tables, then home on a point 72
+     * subpixels above Samus's feet, accelerating up to their cap and
+     * braking past it. */
+    for (int a = 0; a < MZM_REO_ANIMS; ++a) {
+        reo_kind.counts[a] = 2;
+        reo_kind.timers[a][0] = reo_kind.timers[a][1] = 4;
+    }
+    const int16_t reo_y[65] = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 2, 2, 1, 1, 1, 0, 1,
+                               0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1, 0, -1, 0, -1,
+                               0, -1, -1, -1, -2, -2, -1, -1, -1, 0, -1, 0, -1, 0, -1, 0, -1, 0, 0,
+                               0, 0, 32767};
+    const int16_t reo_x[81] = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2,
+                               2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0,
+                               0, 0, -1, 0, -1, 0, -1, 0, -1, 0, -1, -1, -1, -1, -1, -1, -2, -2,
+                               -2, -2, -1, -1, -1, -1, -1, -1, 0, -1, 0, -1, 0, -1, 0, -1, 0, 0,
+                               0, 0, 32767};
+    memcpy(tables.reo_idle_y, reo_y, sizeof reo_y);
+    memcpy(tables.reo_idle_x, reo_x, sizeof reo_x);
+    tables.health[MZM_PSPRITE_REO_GREEN_WINGS] = 6;
+    clear();
+    memset(group, 0, sizeof group);
+    frame.sprites = group;
+    frame.sprite_count = 8;
+    frame.samus_x = 60000;
+    frame.samus_y = 60000;
+    MzmSprite *re = &group[0];
+    mzm_sprite_init_primary(re, MZM_PSPRITE_REO_GREEN_WINGS, 0, 5, 5, 0, 0);
+    step(re, 0);
+    assert(re->pose == 8 && re->health == 6 && re->hitbox_left == -56 && re->hitbox_top == -32);
+    step(re, 0);
+    assert(re->pose == 9 && re->work2 == 0 && re->work3 == 0);  /* RNG 0 */
+    /* A full idle cycle of the Y table (64 frames) returns it to its
+     * height (the table sums to zero). */
+    uint16_t ry0 = re->y, rx0 = re->x;
+    for (int i = 0; i < 64; ++i) step(re, 0);
+    assert(re->y == ry0 && re->work3 == 64);
+    for (int i = 0; i < 16; ++i) step(re, 0);
+    assert(re->x == rx0);           /* the X table (80 entries) too */
+    /* Samus within range, below-right: it turns toward her and dives. */
+    frame.samus_x = (uint16_t)(re->x + 300);
+    frame.samus_y = (uint16_t)(re->y + 400);
+    frame.samus_hitbox_top = -128;
+    step(re, 0);
+    assert(re->pose == 0x22);       /* detected; the dive starts next frame */
+    step(re, 0);
+    assert(re->pose == 0x23 && re->status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+           re->status & MZM_SPRITE_STATUS_FACING_DOWN && re->anim == MZM_REO_MOVING);
+    /* The speed grows by one unit a frame up to the green cap (24 across,
+     * 16 down) and moves a quarter of it. */
+    for (int i = 0; i < 40; ++i) step(re, 0);
+    assert(re->work2 == 24 && re->work3 == 16);
+    uint16_t rx = re->x, rey = re->y;
+    step(re, 0);
+    assert(re->x == rx + 6 && re->y == rey + 4);
+    /* It passes the target point, brakes, turns, and keeps circling it. */
+    bool turned = false;
+    for (int i = 0; i < 400; ++i) {
+        step(re, 0);
+        if (!(re->status & MZM_SPRITE_STATUS_FACING_RIGHT)) turned = true;
+    }
+    assert(turned && re->pose == 0x23);
+    assert(re->x > frame.samus_x - 400 && re->x < frame.samus_x + 400);
+    /* A second Reo overlapping it is pushed away by a pixel. */
+    MzmSprite *re2 = &group[1];
+    *re2 = *re;
+    re2->ram_slot = 1;
+    re2->x = (uint16_t)(re->x + 10);
+    re2->y = (uint16_t)(re->y + 10);
+    uint16_t re2x = re2->x, re2y = re2->y;
+    step(re, 0);
+    assert(re2->x == re2x + 4 && re2->y == re2y + 4);
     frame.sprites = NULL;
     frame.sprite_count = 0;
     puts("mzm_sprites: ok");

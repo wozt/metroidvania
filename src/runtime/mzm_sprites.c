@@ -173,6 +173,8 @@ static const char *const zeb_sprites[MZM_PIPE_BUG_ANIMS] = {"ZEB", "ZEB"};
 static const char *const geega_sprites[MZM_PIPE_BUG_ANIMS] = {"GEEGA", "GEEGA"};
 const char *const mzm_zebbo_anim_names[MZM_PIPE_BUG_ANIMS] = {"ZebboOam_Idle", "ZebboOam_Moving"};
 static const char *const zebbo_sprites[MZM_PIPE_BUG_ANIMS] = {"ZEBBO_GREEN", "ZEBBO_GREEN"};
+const char *const mzm_reo_anim_names[MZM_REO_ANIMS] = {"ReoOam_Idle", "ReoOam_Moving"};
+static const char *const reo_sprites[MZM_REO_ANIMS] = {"REO_GREEN_WINGS", "REO_GREEN_WINGS"};
 static const char *const zoomer_sprites[MZM_ZOOMER_ANIMS] = {
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
     "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW", "ZOOMER_YELLOW",
@@ -207,6 +209,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ZEB] = {MZM_PIPE_BUG_ANIMS, mzm_zeb_anim_names, zeb_sprites},
     [MZM_FAMILY_GEEGA] = {MZM_PIPE_BUG_ANIMS, mzm_geega_anim_names, geega_sprites},
     [MZM_FAMILY_ZEBBO] = {MZM_PIPE_BUG_ANIMS, mzm_zebbo_anim_names, zebbo_sprites},
+    [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,
@@ -2613,6 +2616,169 @@ static void pipe_bug(Ctx *c) {
     }
 }
 
+/* Reo (reo.c) */
+enum {
+    REO_POSE_IDLE_INIT = 0x8,
+    REO_POSE_IDLE = 0x9,
+    REO_POSE_MOVING_INIT = 0x22,
+    REO_POSE_MOVING = 0x23,
+};
+
+/* ReoIdle: hovering with sReoIdleYMovement / sReoIdleXMovement from an RNG
+ * offset until Samus's middle is within 8 blocks vertically and 7
+ * horizontally. */
+static void reo_idle(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint8_t offset = s->work3;
+    int16_t movement = offset < 65 ? c->tables->reo_idle_y[offset] : SHORT_MAX;
+    if (movement == SHORT_MAX) {
+        movement = c->tables->reo_idle_y[0];
+        offset = 0;
+    }
+    s->work3 = (uint8_t)(offset + 1);
+    s->y = (uint16_t)(s->y + movement);
+    offset = s->work2;
+    movement = offset < 81 ? c->tables->reo_idle_x[offset] : SHORT_MAX;
+    if (movement == SHORT_MAX) {
+        movement = c->tables->reo_idle_x[0];
+        offset = 0;
+    }
+    s->work2 = (uint8_t)(offset + 1);
+    s->x = (uint16_t)(s->x + movement);
+    if (samus_near_left_right(c, BLOCK_SIZE * 8, BLOCK_SIZE * 7)) s->pose = REO_POSE_MOVING_INIT;
+}
+
+/* ReoMovingInit: facing Samus, diving if above her head. */
+static void reo_moving_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->work1 = 0;
+    s->work2 = 1;
+    s->work0 = 0;
+    s->work3 = 1;
+    s->x_spawn = c->rng & 3;        /* MOD_AND(gSpriteRng, SPRITE_RNG_PROB(.25f)) */
+    s->pose = REO_POSE_MOVING;
+    s->scaling = 32;                /* CONVERT_SECONDS(.5f + 1.f / 30), the sound timer */
+    set_anim(s, MZM_REO_MOVING);
+    if (s->x > c->f->samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+    else s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+    if (s->y > c->f->samus_y + c->f->samus_hitbox_top)
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+    else
+        s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+}
+
+/* One axis of ReoMove: accelerate (a speed unit is a quarter subpixel) up
+ * to the cap toward the target, then decelerate past it and turn. */
+static void reo_axis(uint16_t *position, uint8_t *braking, uint8_t *speed, uint16_t *status,
+                     uint16_t flag, uint16_t target, uint8_t cap) {
+    bool positive = *status & flag;
+    if (*braking == 0) {
+        bool passed = positive ? *position > target - PIXEL_SIZE : *position < target + PIXEL_SIZE;
+        if (passed) {
+            *braking = *speed;
+        } else {
+            if (*speed < cap) ++*speed;
+            *position = (uint16_t)(*position + (positive ? *speed / 4 : -(*speed / 4)));
+        }
+    } else if (--*braking != 0) {
+        *position = (uint16_t)(*position + (positive ? *braking / 4 : -(*braking / 4)));
+    } else {
+        *status ^= flag;
+        *speed = 1;
+    }
+}
+
+/* ReoMove: pushing the next overlapping Reo of its kind apart, turning at
+ * walls, and homing on a point 72 subpixels above Samus's feet (the splash
+ * effects and the moving sound are not ported). */
+static void reo_move(Ctx *c) {
+    MzmSprite *s = c->s;
+    const int offset = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+    for (int i = s->ram_slot + 1; c->f->sprites && i < c->f->sprite_count; ++i) {
+        MzmSprite *o = &c->f->sprites[i];
+        if (!(o->status & MZM_SPRITE_STATUS_EXISTS) || o->secondary || o->sprite_id != s->sprite_id)
+            continue;
+        if (!(s->y + offset > o->y - offset && s->y - offset < o->y + offset &&
+              s->x + offset > o->x - offset && s->x - offset < o->x + offset))
+            continue;
+        if (!o->freeze_timer) {
+            if (s->y > o->y) {
+                if (collision_at(c, (uint16_t)(o->y - HALF_BLOCK_SIZE), o->x) == MZM_COLLISION_AIR)
+                    o->y -= PIXEL_SIZE;
+            } else if (collision_at(c, (uint16_t)(o->y + HALF_BLOCK_SIZE), o->x) ==
+                       MZM_COLLISION_AIR) {
+                o->y += PIXEL_SIZE;
+            }
+            if (s->x > o->x) {
+                if (collision_at(c, o->y, (uint16_t)(o->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_AIR)
+                    o->x -= PIXEL_SIZE;
+            } else if (collision_at(c, o->y, (uint16_t)(o->x + HALF_BLOCK_SIZE)) ==
+                       MZM_COLLISION_AIR) {
+                o->x += PIXEL_SIZE;
+            }
+        }
+        break;
+    }
+    uint16_t ahead = s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? (uint16_t)(s->x + HALF_BLOCK_SIZE)
+                                                                : (uint16_t)(s->x - HALF_BLOCK_SIZE);
+    if (collision_at(c, s->y, ahead) != MZM_COLLISION_AIR) {
+        s->status ^= MZM_SPRITE_STATUS_FACING_RIGHT;
+        s->work1 = 0;
+        s->work2 = 1;
+    }
+    uint16_t below = s->status & MZM_SPRITE_STATUS_FACING_DOWN ? (uint16_t)(s->y + HALF_BLOCK_SIZE)
+                                                               : (uint16_t)(s->y - HALF_BLOCK_SIZE);
+    if (collision_at(c, below, s->x) != MZM_COLLISION_AIR) {
+        s->status ^= MZM_SPRITE_STATUS_FACING_DOWN;
+        s->work0 = 0;
+        s->work3 = 1;
+    }
+    bool purple = s->sprite_id == MZM_PSPRITE_REO_PURPLE_WINGS;
+    uint16_t target_y = (uint16_t)(c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
+    reo_axis(&s->x, &s->work1, &s->work2, &s->status, MZM_SPRITE_STATUS_FACING_RIGHT,
+             c->f->samus_x, purple ? BLOCK_SIZE : QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+    reo_axis(&s->y, &s->work0, &s->work3, &s->status, MZM_SPRITE_STATUS_FACING_DOWN, target_y,
+             purple ? HALF_BLOCK_SIZE : QUARTER_BLOCK_SIZE);
+    if (--s->scaling == 0) s->scaling = 32;
+}
+
+/* Reo: the AI. Freezing and the sounds are not ported. */
+static void reo(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) return;
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* ReoInit */
+        s->draw_top = s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = -HALF_BLOCK_SIZE;
+        s->hitbox_bottom = HALF_BLOCK_SIZE;
+        s->hitbox_left = -(BLOCK_SIZE - EIGHTH_BLOCK_SIZE);
+        s->hitbox_right = BLOCK_SIZE - EIGHTH_BLOCK_SIZE;
+        set_anim(s, MZM_REO_IDLE);
+        s->health = c->tables->health[s->sprite_id];
+        s->samus_collision = SSC_HURTS_SAMUS;
+        random_x_direction(c);
+        if (c->rng > 8) s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+        s->pose = REO_POSE_IDLE_INIT;
+        break;
+    case REO_POSE_IDLE_INIT:
+        s->pose = REO_POSE_IDLE;
+        s->work2 = (uint8_t)(c->rng * 4);
+        s->work3 = s->work2;
+        break;
+    case REO_POSE_IDLE: reo_idle(c); break;
+    case REO_POSE_MOVING_INIT:
+        reo_moving_init(c);
+        /* fallthrough */
+    case REO_POSE_MOVING: reo_move(c); break;
+    default: sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_BIG); break;
+    }
+}
+
 /* EnemyDropInit */
 static void enemy_drop_init(MzmSprite *s) {
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
@@ -2726,6 +2892,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_ZEBBO_YELLOW:
     case MZM_PSPRITE_ZEBBO_GREEN_LEADER:
     case MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER: return MZM_FAMILY_ZEBBO;
+    case MZM_PSPRITE_REO_GREEN_WINGS:
+    case MZM_PSPRITE_REO_PURPLE_WINGS: return MZM_FAMILY_REO;
     case MZM_PSPRITE_DESSGEEGA:
     case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
@@ -3008,6 +3176,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_ZEB:
     case MZM_FAMILY_GEEGA:
     case MZM_FAMILY_ZEBBO: pipe_bug(&c); break;
+    case MZM_FAMILY_REO: reo(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

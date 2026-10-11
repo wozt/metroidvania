@@ -1202,6 +1202,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sSidehopperLowJumpVelocity", t->sidehopper_low, 10, 10},
         {"sDessgeegaHighJumpYVelocity", t->dessgeega_high, 10, 10},
         {"sDessgeegaLowJumpYVelocity", t->dessgeega_low, 10, 10},
+        {"sReoIdleYMovement", t->reo_idle_y, 65, 65},
+        {"sReoIdleXMovement", t->reo_idle_x, 81, 81},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},

@@ -2961,3 +2961,29 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 26/26, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
+
+## Patch 0256 - Zero Mission hatches as native blocks
+
+- `src/runtime/mzm_hatches.c` ports `ConnectionUpdateHatches`,
+  `ConnectionUpdateHatchAnimation`, `ConnectionHatchFlashingAnimation`,
+  `ConnectionHatchStartLockAnimation`, `ConnectionOverrideOpenedHatch` and
+  `BgClipCheckOpeningHatch`. Hatches change their four BG1 blocks and
+  Clipdata (collision from the common tilemap types); the runtime builds
+  them like `ConnectionLoadDoors`, closes the hatch Samus comes through,
+  remembers opened hatches per area (`ConnectionSetHatchAsOpened`) and
+  routes beam, missile and pirate laser hits to them. The diagnostic tints
+  remain only for rooms without the layered backgrounds.
+- Rooms export `sHatchesTilemapValues` (`V`),
+  `sHatchesAnimationDurationCounter` (`A`), `sHatchBehaviors` (`W`) and the
+  common tilemap collision types (`K`).
+- BG palette rows 1-2 now come from `sDoorTransitionPal`, which follows the
+  one-row `sCommonTilesPal` in ROM and is read by `RoomLoadTileset`'s copy:
+  the doors and hatches are drawn with their colors.
+- Checked in brinstar_000: the door frame and its blue hatch are drawn and
+  a beam opens it through the grey frames.
+- Tests: `tests/test_mzm_hatches.c` (opening, block values per frame,
+  super missiles, closing behind Samus, override, locked hatches) and the
+  runtime hatch test in `tests/test_runtime_steep_slopes.c`.
+- Validation on 2026-10-11: warning-clean build, CTest 27/27, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.

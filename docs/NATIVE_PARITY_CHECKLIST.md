@@ -332,12 +332,14 @@ Next action: Animated tiles and palettes, then BG movement effects.
 
 [?] **`mzm.transitions.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`mzm.transitions.doors_and_hatches` — Doors, hatches and room transitions.** Room-runtime door travel and hatch animation are partial; native fades, locks, events and lifecycle are not complete.
+[~] **`mzm.transitions.doors_and_hatches` — Doors, hatches and room transitions.** Hatches are BG1 and Clipdata blocks driven by the native state machine: BgClipCheckOpeningHatch on beam, missile and laser hits (weakness and health from sHatchBehaviors, super missiles open missile hatches), the opening and closing frames of sHatchesTilemapValues with sHatchesAnimationDurationCounter, the hatch Samus comes through closing behind her, opened hatches remembered per area and overridden to normal hatches. Checked in brinstar_000: a beam opens the blue hatch through its grey frames.
 
-Native evidence: `mzm:c:src/connection.c:ConnectionCheckEnterDoor`, `mzm:c:src/connection.c:ConnectionLoadDoors`, `mzm:c:src/connection.c:ConnectionUpdateHatches`.  
-Local implementation: [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_hatch_events.py`](../scripts/mzm_hatch_events.py).  
-Tests: [`tests/test_mzm_hatch_events_0100.py`](../tests/test_mzm_hatch_events_0100.py), [`tests/test_mzm_door_navigation_0096.py`](../tests/test_mzm_door_navigation_0096.py).
-Next action: Port native fades, hatch locks and door lifecycle events.
+Native evidence: `mzm:c:src/bg_clip.c:BgClipCheckOpeningHatch`, `mzm:c:src/connection.c:ConnectionCheckEnterDoor`, `mzm:c:src/connection.c:ConnectionHatchFlashingAnimation`, `mzm:c:src/connection.c:ConnectionHatchStartLockAnimation`, `mzm:c:src/connection.c:ConnectionLoadDoors`, `mzm:c:src/connection.c:ConnectionOverrideOpenedHatch`, `mzm:c:src/connection.c:ConnectionSetHatchAsOpened`, `mzm:c:src/connection.c:ConnectionUpdateHatchAnimation`, `mzm:c:src/connection.c:ConnectionUpdateHatches`.  
+Local implementation: [`src/runtime/mzm_hatches.c`](../src/runtime/mzm_hatches.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`scripts/mzm_hatch_events.py`](../scripts/mzm_hatch_events.py).  
+Tests: [`tests/test_mzm_hatches.c`](../tests/test_mzm_hatches.c), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c), [`tests/test_mzm_hatch_events_0100.py`](../tests/test_mzm_hatch_events_0100.py), [`tests/test_mzm_door_navigation_0096.py`](../tests/test_mzm_door_navigation_0096.py).
+Dependencies: `mzm.rooms.backgrounds`.  
+Known divergences: Door fades, the hatch locks (gDoorUnlockTimer, events) and their unlocking, the hatch sounds and the mother ship hatch graphics are not reproduced; opened destinations are remembered by position, not by door index.  
+Next action: Port the door fades and the hatch locks with their events.
 
 ### Events and scripts
 

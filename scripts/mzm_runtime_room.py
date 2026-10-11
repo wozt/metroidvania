@@ -213,6 +213,42 @@ def hatch_tables(decomp: Path = DECOMP) -> tuple[list[str], dict[str, tuple[int,
     return types, behaviors
 
 
+HATCH_ORDER = ("HATCH_NONE", "HATCH_UNUSED", "HATCH_NORMAL", "HATCH_MISSILE",
+               "HATCH_SUPER_MISSILE", "HATCH_POWER_BOMB", "HATCH_LOCKED",
+               "HATCH_LOCKED_NAVIGATION")
+
+
+def hatch_animation_lines(tables, hatch_behaviors, decomp: Path = DECOMP) -> list[str]:
+    """``V``: sHatchesTilemapValues by HatchType; ``A``:
+    sHatchesAnimationDurationCounter; ``W``: sHatchBehaviors (damage bits,
+    health) by HatchType; ``K``: the collision types of the common tilemap
+    values (sClipdataCollisionTypes_Tilemap) that hatches write."""
+    source = (decomp / "src/data/hatch_data.c").read_text(encoding="utf-8")
+    header = (decomp / "include/constants/clipdata.h").read_text(encoding="utf-8")
+    tilemap = parse_enum(header, "ClipdataTilemap")
+    body = re.search(r"sHatchesTilemapValues\[[^\]]*\]\s*=\s*\{(.*?)\};", source, re.S)
+    values = {}
+    for name, expression in re.findall(r"\[(HATCH_\w+)\]\s*=\s*([^,\n]+)", body.group(1)):
+        value = 0
+        for term in expression.split("|"):
+            value |= tilemap[term.strip()]
+        values[name] = value
+    body = re.search(r"sHatchesAnimationDurationCounter\[[^\]]*\]\s*=\s*\{(.*?)\};", source,
+                     re.S)
+    durations = []
+    for expression in re.findall(r"\]\s*=\s*([^,\n]+)", body.group(1)):
+        expression = expression.strip()
+        seconds = re.fullmatch(r"CONVERT_SECONDS\(([\d.]+)f?\)", expression)
+        durations.append(int(float(seconds.group(1)) * 60) if seconds else
+                         255 if expression == "UCHAR_MAX" else int(expression, 0))
+    common = [tables["tilemap"].get(i, 0) for i in range(tables["tilemap_count"])]
+    return ["V\t" + ",".join(str(values[name]) for name in HATCH_ORDER),
+            "A\t" + ",".join(map(str, durations)),
+            "W\t" + ",".join(f"{hatch_behaviors.get(name, (0, 0))[0]}:"
+                             f"{hatch_behaviors.get(name, (0, 0))[1]}" for name in HATCH_ORDER),
+            "K\t" + ",".join(map(str, common))]
+
+
 def room_hatches(doors, room: int, clip, tables, hatch_types, hatch_behaviors):
     """ConnectionLoadDoors: one hatch per hatch door of the room."""
     width, _, cells = clip
@@ -336,6 +372,7 @@ def produce(root: Path, area: str, number: int) -> dict:
         if value & rle:
             blocks[layer] = render.rle_room(render.room_blob(fields[f"p{layer}Data"]))
     background_lines, images = mzm_bg_layers.room_background_lines(fields, blocks, tileset)
+    background_lines += hatch_animation_lines(tables, hatch_behaviors)
     text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites,
                        spriteset, background_lines)
     folder = private_path(Path(root), RUNTIME_ROOMS / f"{area.lower()}_{number:03}",

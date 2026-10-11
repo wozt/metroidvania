@@ -8,8 +8,9 @@ BG VRAM and BG palette RAM:
 * VRAM 0x4800: ``sCommonTilesGfx`` (doors, hatches, breakable blocks, tanks);
   VRAM 0x5800: the tileset graphics (LZ77); VRAM ``0xFDE0 - size``: the
   tileset's background graphics (LZ77, BG3 and LZ77 BG0), 0xFFE0 cleared.
-* Palette rows 0-2: ``sCommonTilesPal`` (without its first color, the black
-  backdrop); rows 3-15: rows 1-13 of the tileset palette.
+* Palette rows 0-2: ``sCommonTilesPal`` and the start of
+  ``sDoorTransitionPal``, which follows it in ROM (without the first color,
+  the black backdrop); rows 3-15: rows 1-13 of the tileset palette.
 * BG0 (RLE), BG1 and BG2 draw 16x16 blocks: a block value below
   ``CLIPDATA_TILEMAP_FLAG`` indexes the tileset metatiles (``gTilemap``, from
   ``pTilemap + 2``), a value above it ``sCommonTilemap`` (``gCommonTilemap``
@@ -96,7 +97,10 @@ def tileset_vram(index: int) -> tuple[bytes, list]:
     vram[start:start + len(data)] = data[:0x10000 - start]
     vram[0xFFE0:0x10000] = bytes(0x20)
     colors = [None] * 256
-    common_pal = symbol_bytes("sCommonTilesPal")
+    # The DMA copies 3 rows minus a color from sCommonTilesPal + 1, a
+    # one-row table that sDoorTransitionPal directly follows in ROM
+    # (src/data/common_pals.c, mzm_us.map): rows 1-2 come from it.
+    common_pal = symbol_bytes("sCommonTilesPal") + symbol_bytes("sDoorTransitionPal")
     for i in range(1, min(48, len(common_pal) // 2)):
         colors[i] = struct.unpack_from("<H", common_pal, i * 2)[0]
     palette = symbol_bytes(entry["pPalette"])

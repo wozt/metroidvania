@@ -176,13 +176,35 @@ int main(void) {
     runtime_place_after_door(&samus, door, offset);
     assert(samus.x == 2 * 64 + (32 + 8) * 4);
     assert(samus.y == 19 * 64 - 1 - 40 + 1);
-    /* A beam opens the normal hatch; the locked one stays shut. */
+    /* A beam starts opening the normal hatch (BgClipCheckOpeningHatch);
+     * ConnectionUpdateHatches plays its frames, writing the opening
+     * blocks' collision (air here); the locked one stops the shot but
+     * stays shut. */
+    doors->has_hatch_tables = true;
+    for (int i = 0; i < MZM_HATCH_COUNT; ++i) {
+        doors->hatch_env.tilemap_values[i] = (uint16_t)(0x420 + i);
+        doors->hatch_env.weakness[i] = DAMAGE_BEAM | DAMAGE_MISSILE;
+    }
+    for (int i = 0; i < 5; ++i) doors->hatch_env.durations[i] = 3;
+    doors->hatch_env.durations[5] = 255;
+    runtime_hatches_load(doors, "test", -1);
+    assert(doors->native_hatch_count == 2 && !doors->native_hatches[0].facing_right &&
+           doors->native_hatches[0].type == MZM_HATCH_NORMAL &&
+           doors->native_hatches[1].type == MZM_HATCH_LOCKED);
     assert(doors->count == 4);
     runtime_collision_affect(doors, 6 * 64 + 10, 3 * 64 + 5, DAMAGE_BEAM);
-    assert(doors->hatches[0].open && doors->count == 0);
+    assert(doors->native_hatches[0].state == MZM_HATCH_OPENING && doors->count == 4);
+    int frames = 0;
+    while (doors->native_hatches[0].state == MZM_HATCH_OPENING && frames < 100) {
+        mzm_hatches_update(doors->native_hatches, doors->native_hatch_count, &doors->hatch_env);
+        ++frames;
+    }
+    /* One frame to start, then four frames of 3 + 1 ticks. */
+    assert(doors->native_hatches[0].state == MZM_HATCH_OPENED && frames == 17);
+    assert(doors->count == 0);
     assert(room_cell(doors, 6, 2) == CLIP_AIR && room_cell(doors, 6, 5) == CLIP_AIR);
-    assert(!runtime_hit_hatch(doors, 1 * 64 + 10, 3 * 64, DAMAGE_BEAM));
-    assert(!doors->hatches[1].open);
+    assert(runtime_hit_hatch(doors, 1 * 64 + 10, 3 * 64, DAMAGE_BEAM));
+    assert(doors->native_hatches[1].state == MZM_HATCH_CLOSED);
     free(doors);
 
     /* SamusUpdatePalette row selection and the echo's palette bank 1. */

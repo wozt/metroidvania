@@ -10,6 +10,7 @@
 
 #include "debug_menu.h"
 #include "gba_input.h"
+#include "mzm_hatches.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
 #include "mzm_sprites.h"
@@ -72,6 +73,10 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     bool has_backgrounds; int tileset, transparency, bg0_prop, bg2_prop, bg3_prop, bg3_scrolling;
     int bg_w[3], bg_h[3]; bool bg_present[3]; unsigned short bg[3][MAX_ROOM_CELLS];
     bool text_present[4]; int text_size[4], text_w[4], text_h[4];
+    /* The native hatches (mzm_hatches) with their ROM tables (V, A, W
+     * lines) and the collision of the common tilemap values (K). */
+    bool has_hatch_tables; MzmHatchEnv hatch_env; unsigned char common_types[256];
+    MzmHatch native_hatches[MZM_MAX_HATCHES]; int native_hatch_count;
     /* The default spriteset (gSpriteset, gSpritesetSpritesId names). */
     int spriteset; char spriteset_names[MAX_SPRITESET_ENTRIES][64]; int spriteset_count;
     size_t count; } Room;
@@ -356,6 +361,34 @@ static bool parse_native_room(const char *path, Room *room) {
             room->text_size[layer] = size;
             room->text_w[layer] = width;
             room->text_h[layer] = height;
+            continue;
+        }
+        if (line[0] == 'V' || line[0] == 'A' || line[0] == 'W' || line[0] == 'K') {
+            char kind = line[0];
+            int limit = kind == 'V' ? MZM_HATCH_COUNT : kind == 'A' ? 6 :
+                        kind == 'W' ? MZM_HATCH_COUNT : 256;
+            const char *cursor = line + 2;
+            int n = 0;
+            while (*cursor && *cursor != '\n' && n < limit) {
+                char *end = NULL;
+                long value = strtol(cursor, &end, 10), second = 0;
+                if (end == cursor || value < 0 || value > 0xFFFF) goto failure;
+                if (kind == 'W') {
+                    if (*end != ':') goto failure;
+                    cursor = end + 1;
+                    second = strtol(cursor, &end, 10);
+                    if (end == cursor || second < 0 || second > 255) goto failure;
+                }
+                if (kind == 'V') room->hatch_env.tilemap_values[n] = (uint16_t)value;
+                else if (kind == 'A') room->hatch_env.durations[n] = (uint8_t)value;
+                else if (kind == 'W') {
+                    room->hatch_env.weakness[n] = (uint8_t)value;
+                    room->hatch_env.health[n] = (uint8_t)second;
+                } else room->common_types[n] = (unsigned char)value;
+                n++;
+                cursor = *end == ',' ? end + 1 : end;
+            }
+            if (kind == 'K') room->has_hatch_tables = true;
             continue;
         }
         if (line[0] == 'S') {
@@ -685,29 +718,110 @@ static void runtime_place_after_door(MzmSamus *samus, const RoomDoor *door, int 
 }
 
 /* BgClipCheckOpeningHatch for one projectile impact (subpixels). */
-static bool runtime_hit_hatch(Room *room, int32_t x, int32_t y, int damage) {
-    int bx = x / MZM_BLOCK_SIZE, by = y / MZM_BLOCK_SIZE;
-    for (int i = 0; i < room->hatch_count; ++i) {
-        RoomHatch *hatch = &room->hatches[i];
-        if (hatch->open || hatch->x != bx || by < hatch->y ||
-            by > hatch->y + HATCH_VERTICAL_SIZE - 1 || !(hatch->weakness & damage))
-            continue;
-        if (!strcmp(hatch->type, "locked") || !strcmp(hatch->type, "locked_navigation")) {
-            hatch->hits = 0;  /* Locked until an event unlocks it. */
-            return false;
+/* gHatchesOpened: per area, the doors whose hatch was opened (their
+ * destinations are remembered by position, as the D lines do not carry
+ * the destination door's index). */
+static struct {
+    uint32_t opened[10][8];
+    struct { char alias[48]; int x, y; } destinations[128];
+    int destination_count;
+} runtime_hatch_memory;
+
+static uint8_t runtime_area_index(const char *area) {
+    static const char *const names[] = {"Brinstar", "Kraid", "Norfair", "Ridley", "Tourian",
+                                        "Crateria", "Chozodia", "Test1", "Test2", "Test3"};
+    for (int i = 0; i < 10; ++i)
+        if (!strcmp(area, names[i])) return (uint8_t)i;
+    return 0;
+}
+
+/* BgClipSetBg1BlockValue + BgClipSetClipdataBlockValue for a common
+ * tilemap value. */
+static void runtime_hatch_set_block(void *context, uint16_t value, int y, int x) {
+    Room *room = context;
+    int common = value - 0x400;
+    if (common < 0 || common >= 208 || x < 0 || y < 0) return;
+    if (room->bg_present[1] && x < room->bg_w[1] && y < room->bg_h[1])
+        room->bg[1][y * room->bg_w[1] + x] = (unsigned short)(1024 + common);
+    if (x < room->width / 16 && y < room->height / 16)
+        room_set_cell(room, x, y, (ClipType)room->common_types[common]);
+}
+
+static int runtime_hatch_type(const char *name) {
+    static const char *const names[] = {"none", "unused", "normal", "missile", "super_missile",
+                                        "power_bomb", "locked", "locked_navigation"};
+    for (int i = 0; i < MZM_HATCH_COUNT; ++i)
+        if (!strcmp(name, names[i])) return i;
+    return MZM_HATCH_NORMAL;
+}
+
+/* ConnectionLoadDoors for the exported hatches, the opened ones overridden
+ * to normal hatches, and the hatch Samus came through closing behind her
+ * (`arrival` is that door's index, -1 without a door). */
+static void runtime_hatches_load(Room *room, const char *alias, int arrival) {
+    room->native_hatch_count = 0;
+    if (!room->has_hatch_tables) return;
+    room->hatch_env.context = room;
+    room->hatch_env.set_block = runtime_hatch_set_block;
+    uint8_t area = runtime_area_index(room->area);
+    for (int i = 0; i < room->hatch_count && room->native_hatch_count < MZM_MAX_HATCHES; ++i) {
+        const RoomHatch *exported = &room->hatches[i];
+        MzmHatch *h = &room->native_hatches[room->native_hatch_count++];
+        *h = (MzmHatch){0};
+        h->exists = true;
+        h->type = (uint8_t)runtime_hatch_type(exported->type);
+        h->x = exported->x;
+        h->y = exported->y;
+        h->source_door = exported->door;
+        for (int d = 0; d < room->door_count; ++d)
+            if (room->doors[d].index == exported->door) h->facing_right = h->x > room->doors[d].x0;
+        bool opened = exported->door < 256 &&
+                      runtime_hatch_memory.opened[area][exported->door / 32] &
+                          (1u << (exported->door % 32));
+        for (int d = 0; d < room->door_count && !opened; ++d) {
+            if (room->doors[d].index != exported->door) continue;
+            for (int k = 0; k < runtime_hatch_memory.destination_count; ++k)
+                if (!strcmp(runtime_hatch_memory.destinations[k].alias, alias) &&
+                    runtime_hatch_memory.destinations[k].x == room->doors[d].x0 &&
+                    runtime_hatch_memory.destinations[k].y == room->doors[d].y1)
+                    opened = true;
         }
-        hatch->hits++;
-        if (!strcmp(hatch->type, "missile") && (damage & DAMAGE_SUPER_MISSILE))
-            hatch->hits = hatch->health;
-        if (hatch->hits >= hatch->health) {
-            hatch->open = true;
-            for (int row = 0; row < HATCH_VERTICAL_SIZE; ++row)
-                if (hatch->y + row < room->height / 16)
-                    room_set_cell(room, hatch->x, hatch->y + row, CLIP_AIR);
-        }
-        return true;
+        if (opened && h->type != MZM_HATCH_NONE && h->type != MZM_HATCH_UNUSED)
+            mzm_hatch_override(h, &room->hatch_env, MZM_HATCH_NORMAL);
     }
-    return false;
+    for (int i = 0; i < room->native_hatch_count && arrival >= 0; ++i) {
+        MzmHatch *h = &room->native_hatches[i];
+        if (h->source_door == arrival && h->type != MZM_HATCH_NONE)
+            mzm_hatch_start_lock_animation(h, &room->hatch_env, MZM_HATCH_CLOSING);
+    }
+}
+
+/* BlockApplyCcaa on a door block: BgClipCheckOpeningHatch, then
+ * ConnectionSetHatchAsOpened (missile and stronger hatches open their
+ * destination too). */
+static bool runtime_hit_hatch(Room *room, int32_t x, int32_t y, int damage) {
+    if (x < 0 || y < 0) return false;
+    MzmHatch *opened = NULL;
+    int action = mzm_hatch_check_opening(room->native_hatches, room->native_hatch_count,
+                                         &room->hatch_env, x / MZM_BLOCK_SIZE,
+                                         y / MZM_BLOCK_SIZE, (unsigned)damage, &opened);
+    if (opened && opened->source_door < 256) {
+        uint8_t area = runtime_area_index(room->area);
+        runtime_hatch_memory.opened[area][opened->source_door / 32] |=
+            1u << (opened->source_door % 32);
+        for (int d = 0; d < room->door_count && opened->type >= MZM_HATCH_MISSILE; ++d) {
+            const RoomDoor *door = &room->doors[d];
+            if (door->index != opened->source_door || !strcmp(door->destination, "-") ||
+                runtime_hatch_memory.destination_count >= 128)
+                continue;
+            int k = runtime_hatch_memory.destination_count++;
+            snprintf(runtime_hatch_memory.destinations[k].alias,
+                     sizeof runtime_hatch_memory.destinations[k].alias, "%s", door->destination);
+            runtime_hatch_memory.destinations[k].x = door->dest_x;
+            runtime_hatch_memory.destinations[k].y = door->dest_y_end;
+        }
+    }
+    return action != MZM_HATCH_NOT_OPENING;
 }
 
 static void runtime_collision_affect(void *context,int32_t x,int32_t y,int damage) {
@@ -2201,6 +2315,7 @@ int main(int argc, char **argv) {
     for(size_t i=0;i<RUNTIME_SUIT_PRESETS;i++)debug_suit_names[i]=runtime_suit_presets[i].name;
     char current_room[64];
     snprintf(current_room,sizeof current_room,"%s",room_alias?room_alias:"room");
+    runtime_hatches_load(room, current_room, -1);
     for(int i=0;i<DEBUG_AREAS;i++) {
         size_t length=strlen(debug_area_names[i]);
         if(!strncmp(current_room,debug_area_names[i],length) && current_room[length]=='_') {
@@ -2402,6 +2517,7 @@ int main(int argc, char **argv) {
                     texture=next_texture;
                     samus=placed;
                     runtime_sprites_spawn(&sprites, room);
+                    runtime_hatches_load(room,alias,-1);
                     mzm_weapons_init(&weapons);
                     echo=(RuntimeEcho){0};
                     echo_visible=false;
@@ -2503,6 +2619,8 @@ int main(int argc, char **argv) {
                                    &equipment, &collision);
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
+            /* ConnectionUpdateHatches */
+            mzm_hatches_update(room->native_hatches,room->native_hatch_count,&room->hatch_env);
             if(sprites.kinds_ok) {
                 /* The wall impacts' particles, then ProjectileCheckHittingSprite
                  * ends ProjectileUpdate; ParticleProcessAll follows. */
@@ -2539,6 +2657,14 @@ int main(int argc, char **argv) {
                     runtime_place_after_door(&samus,&used,door_offset);
                     runtime_sprites_spawn(&sprites, room);
                     runtime_sprites_door_arrival(&sprites, room, &used);
+                    {
+                        /* The arrival door: the new room's door at the exit. */
+                        int arrival=-1;
+                        for(int d=0;d<room->door_count;d++)
+                            if(room->doors[d].x0==used.dest_x && room->doors[d].y1==used.dest_y_end)
+                                arrival=room->doors[d].index;
+                        runtime_hatches_load(room,used.destination,arrival);
+                    }
                     mzm_weapons_init(&weapons);
                     echo=(RuntimeEcho){0};
                     echo_visible=false;
@@ -2685,12 +2811,16 @@ int main(int argc, char **argv) {
                             sw*scale,sh*scale};
             if(sprite)SDL_RenderTexture(renderer,sprite,NULL,&dest);
         }
-        /* Hatch graphics use common tiles the partial room render cannot draw
-         * yet; closed hatches are outlined with a diagnostic tint. */
+        /* Hatches are BG1 blocks; without the layered backgrounds the
+         * closed ones are outlined with a diagnostic tint. */
         SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
-        for(int i=0;i<room->hatch_count;i++) {
+        for(int i=0;i<room->hatch_count && !layered;i++) {
             const RoomHatch *hatch=&room->hatches[i];
-            if(hatch->open)continue;
+            bool closed=false;
+            for(int k=0;k<room->native_hatch_count;k++)
+                if(room->native_hatches[k].source_door==hatch->door)
+                    closed=room->native_hatches[k].state!=MZM_HATCH_OPENED;
+            if(!closed && room->native_hatch_count)continue;
             Uint8 r=70,g=140,b=255;
             if(!strcmp(hatch->type,"missile")){r=230;g=60;b=60;}
             else if(!strcmp(hatch->type,"super_missile")){r=60;g=200;b=90;}

@@ -2987,3 +2987,33 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 27/27, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
+
+## Patch 0257 - Zero Mission breakable blocks
+
+- `src/runtime/mzm_blocks.c` ports the block routines of `src/block.c`:
+  `BlockApplyCcaa` (hatches first), the destruction and reveal rules by
+  weakness, 2x2 blocks, never-reform blocks (remembered per room and removed
+  on reload), reforming blocks with the native stages and BG1 frames (held
+  while Samus stands in them, including the native read past the timer
+  row), hidden tanks, bomb chains and their sub-chains,
+  `BlockSamusApplyScrewSpeedboosterDamageToEnvironment`.
+- The runtime keeps the room's raw Clipdata values, routes every beam,
+  missile, super missile and pirate laser impact through `BlockApplyCcaa`,
+  breaks blocks under the screw attack
+  (`SamusCheckScrewSpeedboosterAffectingEnvironment`) and crumble blocks
+  under Samus (`BgClipCheckWalkingOnCrumbleBlock`).
+- `scripts/mzm_c_tables.py` evaluates the decompilation's constant
+  initializers (enums, `CONVERT_SECONDS` in single precision,
+  `BEHAVIOR_TO_*`, simple defines); the room export writes the block tables
+  and the collision and behavior of every raw value to `blocks.tsv`.
+- Checked in brinstar_022: crumble blocks give way under Samus and a shot
+  block breaks through its frames.
+- Not ported: bombs, power bombs, the speed booster, grabbing crumble
+  blocks, block sounds, tank pickups.
+- Tests: `tests/test_mzm_blocks.c` (no-reform shot block frames, reforming
+  timing and the hold while Samus stands in it, 2x2 never-reform blocks and
+  their reload removal, a hidden tank, the hatch path, a bomb chain, the
+  screw attack) and `tests/test_mzm_c_tables.py`.
+- Validation on 2026-10-11: warning-clean build, CTest 28/28, the Python
+  suite, every rebuild task up to date, `check_generated` fresh and the
+  proprietary-file guard passed.

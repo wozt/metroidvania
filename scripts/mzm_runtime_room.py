@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from scripts import mzm_room_render as render
-from scripts import export_index, mzm_bg_layers, mzm_sprites
+from scripts import export_index, mzm_bg_layers, mzm_c_tables, mzm_sprites
 from scripts.asset_layout import METROID_ROOMS, private_path
 from scripts.sprite_library import write_atomic
 
@@ -380,6 +380,10 @@ def produce(root: Path, area: str, number: int) -> dict:
     folder.mkdir(exist_ok=True)
     for name, (image_width, image_height, rgba) in images.items():
         write_atomic(folder / name, mzm_bg_layers.bmp32(image_width, image_height, rgba))
+    blocks = private_path(Path(root), RUNTIME_ROOMS, create=True) / "blocks.tsv"
+    if not _SHEETS_WRITTEN.get("blocks"):
+        write_atomic(blocks, "\n".join(mzm_c_tables.block_table_lines(tables)) + "\n")
+        _SHEETS_WRITTEN["blocks"] = blocks
     sheets = private_path(Path(root), RUNTIME_ROOMS / "tilesets", create=True)
     sheets.mkdir(exist_ok=True)
     sheet = sheets / f"tileset_{tileset:02}.bmp"
@@ -395,7 +399,7 @@ def produce(root: Path, area: str, number: int) -> dict:
 
 
 # Tileset sheets written by this process (each tileset once per export).
-_SHEETS_WRITTEN: dict[int, Path] = {}
+_SHEETS_WRITTEN: dict = {}
 
 
 def export_all(root: Path) -> int:

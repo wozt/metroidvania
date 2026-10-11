@@ -10,6 +10,7 @@
 
 #include "debug_menu.h"
 #include "gba_input.h"
+#include "mzm_blocks.h"
 #include "mzm_hatches.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
@@ -77,6 +78,10 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
      * lines) and the collision of the common tilemap values (K). */
     bool has_hatch_tables; MzmHatchEnv hatch_env; unsigned char common_types[256];
     MzmHatch native_hatches[MZM_MAX_HATCHES]; int native_hatch_count;
+    /* Raw Clipdata values (gBgPointersAndDimensions.pClipDecomp) and the
+     * breakable block state (mzm_blocks). */
+    unsigned short clip[MAX_ROOM_CELLS];
+    MzmBlocks blocks;
     /* The default spriteset (gSpriteset, gSpritesetSpritesId names). */
     int spriteset; char spriteset_names[MAX_SPRITESET_ENTRIES][64]; int spriteset_count;
     size_t count; } Room;
@@ -418,6 +423,7 @@ static bool parse_native_room(const char *path, Room *room) {
             raw < 1 || raw > 65535 || type < 0 || type >= CLIP_TYPE_COUNT)
             goto failure;
         room_set_cell(room, x, y, (ClipType)type);
+        room->clip[y * (room->width / 16) + x] = (unsigned short)raw;
     }
     if (!ended || fgetc(f) != EOF) goto failure;
     fclose(f);
@@ -735,16 +741,137 @@ static uint8_t runtime_area_index(const char *area) {
     return 0;
 }
 
-/* BgClipSetBg1BlockValue + BgClipSetClipdataBlockValue for a common
- * tilemap value. */
+/* The native block tables (rooms/runtime/blocks.tsv, scripts/mzm_c_tables.py)
+ * and the collision type and behavior of every raw Clipdata value. */
+#define RUNTIME_BLOCK_TABLES "assets/extracted/metroid/rooms/runtime/blocks.tsv"
+static struct {
+    bool ok;
+    MzmBlockEnv env;
+    int main_count, tilemap_count;
+    unsigned char main_types[256], tilemap_types[256];
+    unsigned short main_behaviors[256], tilemap_behaviors[256];
+} runtime_block_tables;
+
+static bool runtime_parse_list(const char *cursor, long *values, int count) {
+    for (int i = 0; i < count; ++i) {
+        char *end = NULL;
+        values[i] = strtol(cursor, &end, 10);
+        if (end == cursor) return false;
+        cursor = *end == ',' ? end + 1 : end;
+    }
+    return true;
+}
+
+static bool runtime_block_tables_open(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    static char line[8192];
+    long values[32];
+    MzmBlockEnv *env = &runtime_block_tables.env;
+    bool ok = fgets(line, sizeof line, f) && !strcmp(line, "schema\tmetroidvania-mzm-blocks-v1\n");
+    while (ok && fgets(line, sizeof line, f)) {
+        int index, a, b, c, d, e;
+        if (!strncmp(line, "damage\t", 7)) {
+            ok = runtime_parse_list(line + 7, values, MZM_CAA_COUNT);
+            for (int i = 0; ok && i < MZM_CAA_COUNT; ++i) env->caa_damage[i] = (uint16_t)values[i];
+        } else if (sscanf(line, "behavior\t%d\t%d\t%d\t%d\t%d\t%d", &index, &a, &b, &c, &d, &e) == 6) {
+            if (index < 0 || index >= MZM_BLOCK_BEHAVIORS) { ok = false; break; }
+            env->behaviors[index] = (MzmBlockBehavior){(uint8_t)a, (uint8_t)b, (uint8_t)c,
+                                                       (uint8_t)d, (uint8_t)e};
+        } else if (!strncmp(line, "weakness\t", 9)) {
+            ok = runtime_parse_list(line + 9, values, MZM_BLOCK_TYPES);
+            for (int i = 0; ok && i < MZM_BLOCK_TYPES; ++i) env->weakness[i] = (uint16_t)values[i];
+        } else if (!strncmp(line, "reforming\t", 10)) {
+            ok = runtime_parse_list(line + 10, values, MZM_BLOCK_TYPES);
+            for (int i = 0; ok && i < MZM_BLOCK_TYPES; ++i) env->reforming[i] = (uint16_t)values[i];
+        } else if (sscanf(line, "timers\t%d\t", &index) == 1) {
+            const char *cursor = strchr(line + 7, '\t');
+            ok = cursor && index >= 0 && index < MZM_BLOCK_TYPES &&
+                 runtime_parse_list(cursor + 1, values, 13);
+            for (int i = 0; ok && i < 13; ++i) env->timers[index][i] = (uint8_t)values[i];
+        } else if (!strncmp(line, "tank\t", 5)) {
+            ok = runtime_parse_list(line + 5, values, MZM_TANK_BEHAVIORS);
+            for (int i = 0; ok && i < MZM_TANK_BEHAVIORS; ++i)
+                env->tank_revealed[i] = (uint16_t)values[i];
+        } else if (sscanf(line, "chain\t%d\t%d\t%d", &index, &a, &b) == 3) {
+            if (index < 0 || index >= 8) { ok = false; break; }
+            env->chain_flag[index] = (uint8_t)a;
+            env->chain_behavior[index] = (uint16_t)b;
+        } else if (sscanf(line, "subchain\t%d\t", &index) == 1) {
+            const char *cursor = strchr(line + 9, '\t');
+            ok = cursor && index >= 0 && index < 4 && runtime_parse_list(cursor + 1, values, 4);
+            for (int i = 0; ok && i < 4; ++i) env->sub_chain[index][i] = (int8_t)values[i];
+        } else if (!strncmp(line, "main\t", 5) || !strncmp(line, "tilemap\t", 8)) {
+            bool main = line[0] == 'm';
+            const char *cursor = strchr(line, '\t') + 1;
+            int n = 0;
+            while (*cursor && *cursor != '\n' && n < 256) {
+                char *end = NULL;
+                long type = strtol(cursor, &end, 10), behavior;
+                if (end == cursor || *end != ':') { ok = false; break; }
+                cursor = end + 1;
+                behavior = strtol(cursor, &end, 10);
+                if (end == cursor) { ok = false; break; }
+                if (main) {
+                    runtime_block_tables.main_types[n] = (unsigned char)type;
+                    runtime_block_tables.main_behaviors[n] = (unsigned short)behavior;
+                } else {
+                    runtime_block_tables.tilemap_types[n] = (unsigned char)type;
+                    runtime_block_tables.tilemap_behaviors[n] = (unsigned short)behavior;
+                }
+                n++;
+                cursor = *end == ',' ? end + 1 : end;
+            }
+            if (main) runtime_block_tables.main_count = n;
+            else runtime_block_tables.tilemap_count = n;
+        }
+    }
+    fclose(f);
+    runtime_block_tables.ok = ok && runtime_block_tables.main_count > 0 &&
+                              runtime_block_tables.tilemap_count > 0;
+    return runtime_block_tables.ok;
+}
+
+/* gTilemapAndClipPointers.pClipCollisions / pClipBehaviors of a raw value
+ * (the common values fall back to the room's K line). */
+static uint8_t runtime_clip_type(const Room *room, uint16_t raw) {
+    if (raw & 0x400) {
+        int common = raw - 0x400;
+        if (runtime_block_tables.ok)
+            return common < runtime_block_tables.tilemap_count ? runtime_block_tables.tilemap_types[common] : 0;
+        return common < 256 ? room->common_types[common] : 0;
+    }
+    return raw < runtime_block_tables.main_count ? runtime_block_tables.main_types[raw] : 0;
+}
+
+static uint16_t runtime_clip_behavior(uint16_t raw) {
+    if (raw & 0x400) {
+        int common = raw - 0x400;
+        return common < runtime_block_tables.tilemap_count ? runtime_block_tables.tilemap_behaviors[common] : 0;
+    }
+    return raw < runtime_block_tables.main_count ? runtime_block_tables.main_behaviors[raw] : 0;
+}
+
+/* BgClipSetClipdataBlockValue: the raw value and its collision. */
+static void runtime_room_set_clip(Room *room, uint16_t raw, int y, int x) {
+    if (x < 0 || y < 0 || x >= room->width / 16 || y >= room->height / 16) return;
+    room->clip[y * (room->width / 16) + x] = raw;
+    room_set_cell(room, x, y, (ClipType)runtime_clip_type(room, raw));
+}
+
+/* BgClipSetBg1BlockValue: a block value as a sheet index. */
+static void runtime_room_set_bg1(Room *room, uint16_t value, int y, int x) {
+    if (!room->bg_present[1] || x < 0 || y < 0 || x >= room->bg_w[1] || y >= room->bg_h[1]) return;
+    int sheet = value & 0x400 ? 1024 + (value - 0x400) : value;
+    if (sheet >= 1024 + 208 || (!(value & 0x400) && value >= 1024)) sheet = 0;
+    room->bg[1][y * room->bg_w[1] + x] = (unsigned short)sheet;
+}
+
+/* Hatches change both the BG1 block and its Clipdata. */
 static void runtime_hatch_set_block(void *context, uint16_t value, int y, int x) {
     Room *room = context;
-    int common = value - 0x400;
-    if (common < 0 || common >= 208 || x < 0 || y < 0) return;
-    if (room->bg_present[1] && x < room->bg_w[1] && y < room->bg_h[1])
-        room->bg[1][y * room->bg_w[1] + x] = (unsigned short)(1024 + common);
-    if (x < room->width / 16 && y < room->height / 16)
-        room_set_cell(room, x, y, (ClipType)room->common_types[common]);
+    runtime_room_set_bg1(room, value, y, x);
+    runtime_room_set_clip(room, value, y, x);
 }
 
 static int runtime_hatch_type(const char *name) {
@@ -824,8 +951,160 @@ static bool runtime_hit_hatch(Room *room, int32_t x, int32_t y, int damage) {
     return action != MZM_HATCH_NOT_OPENING;
 }
 
+/* The Samus whose hitbox the reforming blocks check. */
+static const MzmSamus *runtime_block_samus;
+
+static uint16_t runtime_block_get_clip(void *context, int y, int x) {
+    const Room *room = context;
+    if (x < 0 || y < 0 || x >= room->width / 16 || y >= room->height / 16) return 0;
+    return room->clip[y * (room->width / 16) + x];
+}
+static uint16_t runtime_block_behavior(void *context, uint16_t clip) {
+    (void)context;
+    return runtime_clip_behavior(clip);
+}
+static uint8_t runtime_block_collision(void *context, uint16_t clip) {
+    return runtime_clip_type(context, clip);
+}
+static void runtime_block_set_clip(void *context, uint16_t clip, int y, int x) {
+    runtime_room_set_clip(context, clip, y, x);
+}
+static void runtime_block_set_bg1(void *context, uint16_t value, int y, int x) {
+    runtime_room_set_bg1(context, value, y, x);
+}
+static bool runtime_block_check_hatch(void *context, int x, int y, unsigned damage) {
+    return runtime_hit_hatch(context, x * MZM_BLOCK_SIZE, y * MZM_BLOCK_SIZE, (int)damage);
+}
+/* BlockCheckSamusInReformingBlock */
+static bool runtime_block_samus_in(void *context, int x, int y) {
+    (void)context;
+    const MzmSamus *samus = runtime_block_samus;
+    if (!samus) return false;
+    const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
+    return (samus->x + box->left) / MZM_BLOCK_SIZE <= x && x <= (samus->x + box->right) / MZM_BLOCK_SIZE &&
+           (samus->y + box->top) / MZM_BLOCK_SIZE <= y && y <= samus->y / MZM_BLOCK_SIZE;
+}
+
+/* The room's MzmBlockEnv. */
+static MzmBlockEnv runtime_block_env(Room *room) {
+    MzmBlockEnv env = runtime_block_tables.env;
+    env.context = room;
+    env.width = room->width / 16;
+    env.height = room->height / 16;
+    env.get_clip = runtime_block_get_clip;
+    env.behavior = runtime_block_behavior;
+    env.collision = runtime_block_collision;
+    env.set_clip = runtime_block_set_clip;
+    env.set_bg1 = runtime_block_set_bg1;
+    env.check_hatch = runtime_block_check_hatch;
+    env.samus_in_block = runtime_block_samus_in;
+    return env;
+}
+
+/* BlockApplyCcaa for a clipdata-affecting action of the given damage type
+ * (MZM_DAMAGE_*) at a subpixel point; hatches only without block tables. */
+static bool runtime_room_affect(Room *room, int32_t x, int32_t y, int damage) {
+    if (!runtime_block_tables.ok) return runtime_hit_hatch(room, x, y, damage);
+    uint8_t caa = damage & DAMAGE_SUPER_MISSILE ? MZM_CAA_SUPER_MISSILE :
+                  damage & DAMAGE_MISSILE ? MZM_CAA_MISSILE :
+                  damage & DAMAGE_POWER_BOMB ? MZM_CAA_POWER_BOMB :
+                  damage & DAMAGE_BOMB_PISTOL ? MZM_CAA_BOMB_PISTOL : MZM_CAA_BEAM;
+    MzmBlockEnv env = runtime_block_env(room);
+    return mzm_blocks_affect(&room->blocks, &env, caa, x, y);
+}
+
+/* gNeverReformBlocks: the never-reform blocks destroyed per room. */
+static struct {
+    struct { char alias[48]; int x, y; } blocks[1024];
+    int count;
+} runtime_never_reform_memory;
+
+/* BlockRemoveNeverReformBlocks at a room load, with a fresh block state. */
+static void runtime_blocks_load(Room *room, const char *alias) {
+    memset(&room->blocks, 0, sizeof room->blocks);
+    if (!runtime_block_tables.ok) return;
+    MzmBlockEnv env = runtime_block_env(room);
+    for (int i = 0; i < runtime_never_reform_memory.count; ++i)
+        if (!strcmp(runtime_never_reform_memory.blocks[i].alias, alias))
+            mzm_blocks_remove_never_reform(&env, runtime_never_reform_memory.blocks[i].x,
+                                           runtime_never_reform_memory.blocks[i].y);
+}
+
+/* SamusCheckScrewSpeedboosterAffectingEnvironment (the speed booster is not
+ * ported: only the screw attack destroys blocks on contact). */
+static void runtime_samus_destruct(Room *room, const MzmBlockEnv *env, const MzmSamus *samus,
+                                   const MzmEquipment *equipment) {
+    int action = MZM_DESTRUCT_NONE;
+    if (samus->pose == MZM_POSE_SCREW_ATTACKING ||
+        (samus->pose == MZM_POSE_STARTING_SPIN_JUMP && equipment->items & MZM_ITEM_SCREW_ATTACK))
+        action = MZM_DESTRUCT_SCREW;
+    if (action == MZM_DESTRUCT_NONE) return;
+    const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
+    int32_t left = (uint16_t)(samus->x + box->left), right = (uint16_t)(samus->x + box->right);
+    int32_t top = (uint16_t)(samus->y + box->top), bottom = (uint16_t)samus->y;
+    bool below = box->top < -MZM_BLOCK_SIZE;
+    MzmBlocks *blocks = &room->blocks;
+    mzm_blocks_samus_destruct(blocks, env, left, top, action);
+    mzm_blocks_samus_destruct(blocks, env, right, top, action);
+    int32_t side = samus->x_velocity > 0 ? right : left;
+    if (below) mzm_blocks_samus_destruct(blocks, env, side, top + MZM_BLOCK_SIZE, action);
+    mzm_blocks_samus_destruct(blocks, env, side, bottom, action);
+    if (mzm_pose_standing(samus->pose) == MZM_STANDING_GROUND) {
+        bottom += 1;
+        action = MZM_DESTRUCT_SPEED_ON_GROUND;
+    }
+    mzm_blocks_samus_destruct(blocks, env, left, bottom, action);
+    mzm_blocks_samus_destruct(blocks, env, right, bottom, action);
+}
+
+/* BgClipCheckWalkingOnCrumbleBlock */
+static void runtime_crumble_blocks(Room *room, const MzmBlockEnv *env, const MzmSamus *samus) {
+    enum { CRUMBLE = 35, SLOW_CRUMBLE = 46, TYPE_CRUMBLE = 4, TYPE_SLOW_CRUMBLE = 5 };
+    if (samus->y_velocity < 0 || mzm_pose_standing(samus->pose) == MZM_STANDING_FORCED) return;
+    const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
+    int last = (samus->x + box->right) / MZM_BLOCK_SIZE;
+    if (last > env->width) last = env->width;
+    int32_t left = samus->x + box->left;
+    int first = (left < 0 ? 0 : left) / MZM_BLOCK_SIZE;
+    int y = (samus->y + 2) / MZM_BLOCK_SIZE;
+    if (y > env->height) y = env->height;
+    for (int x = first; x <= last; ++x) {
+        uint16_t behavior = runtime_clip_behavior(runtime_block_get_clip(room, y, x));
+        if (behavior == CRUMBLE) {
+            mzm_blocks_store_broken_reform(&room->blocks, env, TYPE_CRUMBLE, x, y, false);
+        } else if (behavior == SLOW_CRUMBLE &&
+                   mzm_blocks_store_broken_reform(&room->blocks, env, TYPE_SLOW_CRUMBLE, x, y, true)) {
+            runtime_room_set_bg1(room, 0x400 | 1, y, x);
+            runtime_room_set_clip(room, 0x400 | 1, y, x);
+        }
+    }
+}
+
+/* One frame of the blocks: Samus's screw attack and the crumble blocks
+ * under her, BlockUpdateBrokenBlocks, BlockProcessBombChains, then the
+ * never-reform blocks destroyed this frame are remembered. */
+static void runtime_blocks_frame(Room *room, const char *alias, const MzmSamus *samus,
+                                 const MzmEquipment *equipment, uint8_t frame8) {
+    if (!runtime_block_tables.ok) return;
+    runtime_block_samus = samus;
+    MzmBlockEnv env = runtime_block_env(room);
+    int recorded = room->blocks.never_reform_count;
+    runtime_samus_destruct(room, &env, samus, equipment);
+    runtime_crumble_blocks(room, &env, samus);
+    mzm_blocks_update_broken(&room->blocks, &env);
+    mzm_blocks_process_bomb_chains(&room->blocks, &env, frame8);
+    for (int i = recorded; i < room->blocks.never_reform_count; ++i) {
+        if (runtime_never_reform_memory.count >= 1024) break;
+        int k = runtime_never_reform_memory.count++;
+        snprintf(runtime_never_reform_memory.blocks[k].alias,
+                 sizeof runtime_never_reform_memory.blocks[k].alias, "%s", alias);
+        runtime_never_reform_memory.blocks[k].x = room->blocks.never_reform[i][0];
+        runtime_never_reform_memory.blocks[k].y = room->blocks.never_reform[i][1];
+    }
+}
+
 static void runtime_collision_affect(void *context,int32_t x,int32_t y,int damage) {
-    runtime_hit_hatch((Room *)context,x,y,damage);
+    runtime_room_affect((Room *)context,x,y,damage);
 }
 
 /* Place Samus's native standing hitbox at the safe diagnostic spawn. */
@@ -1657,7 +1936,7 @@ static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *ro
 /* BlockApplyCcaa from a sprite (the Space Pirate laser): hatches. */
 static void runtime_sprite_affect(void *context, uint16_t y, uint16_t x, int damage) {
     RuntimeSprites *sprites = context;
-    if (sprites->room) runtime_hit_hatch(sprites->room, x, y, damage);
+    if (sprites->room) runtime_room_affect(sprites->room, x, y, damage);
 }
 
 /* SpriteUtilCheckCrouchingOrMorphed for the ported Samus poses. */
@@ -2238,6 +2517,8 @@ int main(int argc, char **argv) {
         printf("Projectile library: %d native sequences\n",projectile_library.count);
     }
     /* Sprites (scripts/mzm_sprites.py); without them the rooms stay empty. */
+    if (!runtime_block_tables_open(RUNTIME_BLOCK_TABLES))
+        fprintf(stderr, "No Zero Mission block tables: python3 -m scripts.mzm_runtime_room --all\n");
     sprites.tables_ok = runtime_sprite_tables_open(&sprites, RUNTIME_SPRITE_TABLES);
     sprites.kinds_ok = sprites.tables_ok &&
                        runtime_library_open(&sprite_library, RUNTIME_SPRITE_LIBRARY) &&
@@ -2315,6 +2596,7 @@ int main(int argc, char **argv) {
     for(size_t i=0;i<RUNTIME_SUIT_PRESETS;i++)debug_suit_names[i]=runtime_suit_presets[i].name;
     char current_room[64];
     snprintf(current_room,sizeof current_room,"%s",room_alias?room_alias:"room");
+    runtime_blocks_load(room, current_room);
     runtime_hatches_load(room, current_room, -1);
     for(int i=0;i<DEBUG_AREAS;i++) {
         size_t length=strlen(debug_area_names[i]);
@@ -2517,6 +2799,7 @@ int main(int argc, char **argv) {
                     texture=next_texture;
                     samus=placed;
                     runtime_sprites_spawn(&sprites, room);
+                    runtime_blocks_load(room,alias);
                     runtime_hatches_load(room,alias,-1);
                     mzm_weapons_init(&weapons);
                     echo=(RuntimeEcho){0};
@@ -2621,6 +2904,7 @@ int main(int argc, char **argv) {
                                &collision,&projectile_animation);
             /* ConnectionUpdateHatches */
             mzm_hatches_update(room->native_hatches,room->native_hatch_count,&room->hatch_env);
+            runtime_blocks_frame(room,current_room,&samus,&equipment,sprites.frame8);
             if(sprites.kinds_ok) {
                 /* The wall impacts' particles, then ProjectileCheckHittingSprite
                  * ends ProjectileUpdate; ParticleProcessAll follows. */
@@ -2663,6 +2947,7 @@ int main(int argc, char **argv) {
                         for(int d=0;d<room->door_count;d++)
                             if(room->doors[d].x0==used.dest_x && room->doors[d].y1==used.dest_y_end)
                                 arrival=room->doors[d].index;
+                        runtime_blocks_load(room,used.destination);
                         runtime_hatches_load(room,used.destination,arrival);
                     }
                     mzm_weapons_init(&weapons);

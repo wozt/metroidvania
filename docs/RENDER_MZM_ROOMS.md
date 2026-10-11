@@ -43,3 +43,13 @@ room's transparency value around the sprites (priority 2, or 1 when Samus is
 on top of the backgrounds; BG1 normally passes in front of Samus), blends
 BG0 like `BLDALPHA` and scrolls BG3 with `ScrollBg3`. Animated tiles and
 palettes, BG movement effects, gradients and windows are not reproduced yet.
+
+## Hatches and breakable blocks (patches 0256-0257)
+
+Hatches and breakable blocks change BG1 blocks and raw Clipdata values like
+the game (`BgClipSetBg1BlockValue`, `BgClipSetClipdataBlockValue`):
+`src/runtime/mzm_hatches.c` runs the hatch state machine and
+`src/runtime/mzm_blocks.c` the block routines of `src/block.c`. The block,
+tank and bomb chain tables and the collision and behavior of every raw
+Clipdata value are exported privately as `rooms/runtime/blocks.tsv`
+(`scripts/mzm_c_tables.py` evaluates the decompilation's initializers).

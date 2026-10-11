@@ -8,7 +8,8 @@
 int main(void) {
     /* Keep the translation-unit helpers referenced with -Werror enabled. */
     (void)parse_room; (void)parse_native_source; (void)find_spawn;
-    (void)clampf;
+    (void)clampf; (void)runtime_blocks_frame; (void)runtime_blocks_load;
+    (void)runtime_block_tables_open;
     Room *r = calloc(1, sizeof *r);
     assert(r);
     r->width = 64;

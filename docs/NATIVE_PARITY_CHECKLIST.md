@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 26 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 27 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -310,6 +310,15 @@ Next action: Port power bombs and the multiple large energy pickup.
 ### Environment interactions
 
 [?] **`mzm.environment.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+
+[~] **`mzm.environment.breakable_blocks` — Breakable, reforming and crumble blocks, hidden tanks and bomb chains.** Every beam, missile, super missile and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack breaks blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.
+
+Native evidence: `mzm:c:src/bg_clip.c:BgClipCheckWalkingOnCrumbleBlock`, `mzm:c:src/block.c:BlockApplyCcaa`, `mzm:c:src/block.c:BlockCheckCcaa`, `mzm:c:src/block.c:BlockCheckRevealBombChainBlock`, `mzm:c:src/block.c:BlockCheckRevealOrDestroyBombBlock`, `mzm:c:src/block.c:BlockCheckRevealOrDestroyNonBombBlock`, `mzm:c:src/block.c:BlockCheckSamusInReformingBlock`, `mzm:c:src/block.c:BlockCheckStartNewSubBombChain`, `mzm:c:src/block.c:BlockDestroyNonReformBlock`, `mzm:c:src/block.c:BlockDestroySquareBlock`, `mzm:c:src/block.c:BlockProcessBombChains`, `mzm:c:src/block.c:BlockRemoveNeverReformBlocks`, `mzm:c:src/block.c:BlockSamusApplyScrewSpeedboosterDamageToEnvironment`, `mzm:c:src/block.c:BlockStartBombChain`, `mzm:c:src/block.c:BlockStoreBrokenNonReformBlock`, `mzm:c:src/block.c:BlockStoreBrokenReformBlock`, `mzm:c:src/block.c:BlockStoreSingleNeverReformBlock`, `mzm:c:src/block.c:BlockUpdateBrokenBlockAnimation`, `mzm:c:src/block.c:BlockUpdateBrokenBlocks`, `mzm:c:src/samus.c:SamusCheckScrewSpeedboosterAffectingEnvironment`.  
+Local implementation: [`src/runtime/mzm_blocks.c`](../src/runtime/mzm_blocks.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_c_tables.py`](../scripts/mzm_c_tables.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py).  
+Tests: [`tests/test_mzm_blocks.c`](../tests/test_mzm_blocks.c), [`tests/test_mzm_c_tables.py`](../tests/test_mzm_c_tables.py).
+Dependencies: `mzm.rooms.backgrounds`, `mzm.transitions.doors_and_hatches`, `mzm.weapons.beams_and_missiles`.  
+Known divergences: Bombs, power bombs and the speed booster are not ported on Samus, so bomb blocks and speed blocks only break by the actions that exist (beams reveal bomb blocks, pirate lasers act as the bomb pistol); grabbing crumble blocks, the make-solid blocks, block sounds and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout.  
+Next action: Port bombs, power bombs and the speed booster on Samus, then the crumble grab and tank pickups.
 
 ### Rooms, areas and maps
 

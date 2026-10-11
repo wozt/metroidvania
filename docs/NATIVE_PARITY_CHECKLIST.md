@@ -128,14 +128,14 @@ Next action: Port the remaining beam, bomb and Power Bomb systems.
 
 [?] **`mzm.enemies.inventory-boundary` — source coverage.** The current classifier assigns 812 discovered routine(s) to this category (812 by source path). Category completeness has not been established.
 
-[~] **`mzm.enemies.zoomer` — Sprite engine core and the Zoomer.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, and the Zoomer crawl, turns and falls are ported; combat is not.
+[~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills, beam and missile hits, stuns and death are ported.
 
-Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteInitPrimary`, `mzm:c:src/sprite.c:SpriteLoadRoomSprites`, `mzm:c:src/sprite.c:SpriteUpdate`, `mzm:c:src/sprite.c:SpriteUpdateAnimation`, `mzm:c:src/sprite_util.c:SpriteUtilAlignYPositionOnSlopeAtOrigin`, `mzm:c:src/sprite_util.c:SpriteUtilCheckVerticalCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilGetCollisionAtPosition`, `mzm:c:src/sprites_ai/zoomer.c:Zoomer`.  
+Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/projectile_util.c:ProjectileCheckHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileDealDamage`, `mzm:c:src/projectile_util.c:ProjectileHitSolidSprite`, `mzm:c:src/projectile_util.c:ProjectileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileMissileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileSuperMissileHitSprite`, `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteInitPrimary`, `mzm:c:src/sprite.c:SpriteLoadRoomSprites`, `mzm:c:src/sprite.c:SpriteUpdate`, `mzm:c:src/sprite.c:SpriteUpdateAnimation`, `mzm:c:src/sprite_util.c:SpriteUtilAlignYPositionOnSlopeAtOrigin`, `mzm:c:src/sprite_util.c:SpriteUtilCheckVerticalCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilGetCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilIsSpriteStunned`, `mzm:c:src/sprite_util.c:SpriteUtilSamusAndSpriteCollision`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteTakeDamageFromSamusContact`, `mzm:c:src/sprite_util.c:SpriteUtilTakeDamageFromSprite`, `mzm:c:src/sprites_ai/zoomer.c:Zoomer`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.collision.clipdata`.  
-Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider.  
-Next action: Port Samus contact damage, projectile hits, sprite death and drops.
+Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; a destroyed sprite is removed without its explosion, sound or drop.  
+Next action: Port SpriteUtilSpriteDeath effects, enemy drops and the stun palette flash.
 
 ### Bosses
 

@@ -22,7 +22,16 @@ enum {
     STUN_THRESHOLD = 9,
     SPRITE_POSE_UNINITIALIZED = 0,
     SPRITE_POSE_DESTROYED = 0x62,
+    SPRITE_POSE_SCREW_ATTACK_DESTROYED = 0x65,
     SSC_HURTS_SAMUS = 2,
+    /* CONVERT_SECONDS of the combat timers. */
+    ISFT_DAMAGED = 17,              /* .25f + 2 * DELTA_TIME */
+    ISFT_SCREW_ATTACK = 17,         /* .29f */
+    ISFT_SOLID_HIT = 3,             /* .05f */
+    IGNORE_SAMUS_AFTER_HIT = 15,    /* .25f */
+    NORMAL_BEAM_DAMAGE = 2,
+    MISSILE_DAMAGE = 20,
+    SUPER_MISSILE_DAMAGE = 100,
 };
 
 /* Zoomer poses (zoomer.c). */
@@ -552,8 +561,9 @@ static void zoomer_landing(Ctx *c) {
     else if (animation_ending(c, 2)) c->s->pose = ZOOMER_POSE_IDLE_INIT;
 }
 
-/* Zoomer: the AI. The damaged sound, freezing and the death
- * (ZoomerDeath / SpriteUtilSpriteDeath) are not ported yet. */
+/* Zoomer: the AI. The damaged sound and freezing are not ported; the death
+ * (ZoomerDeath / SpriteUtilSpriteDeath) removes the sprite without its
+ * explosion, sound or drop. */
 static void zoomer(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -583,7 +593,125 @@ static void zoomer(Ctx *c) {
         zoomer_falling_init(s);
         /* fallthrough */
     case ZOOMER_POSE_FALLING: zoomer_falling(c); break;
-    default: break;
+    default: s->status = 0; break;  /* DEATH_NORMAL without a drop */
+    }
+}
+
+/* SPRITE_CLEAR_AND_SET_ISFT (bit 7 is the power bomb stun). */
+static void set_isft(MzmSprite *s, uint8_t value) {
+    s->isft = (uint8_t)((s->isft & 0x80) | value);
+}
+
+/* SpriteUtilCheckObjectsTouching */
+static bool touching(uint16_t o1_top, uint16_t o1_bottom, uint16_t o1_left, uint16_t o1_right,
+                     uint16_t o2_top, uint16_t o2_bottom, uint16_t o2_left, uint16_t o2_right) {
+    return o2_bottom >= o1_top && o2_top < o1_bottom && o2_right >= o1_left && o2_left < o1_right;
+}
+
+/* SpriteUtilSpriteTakeDamageFromSamusContact without the speed booster,
+ * shinespark and charged pseudo screw (not ported on Samus): true when the
+ * screw attack destroyed the sprite (DCT_SCREW_ATTACK). */
+static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
+                          const MzmSpriteTables *tables) {
+    if (samus->suitless || !samus->screw_attacking) return false;
+    if (tables->weakness[s->sprite_id] & MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK) {
+        s->health = 0;
+        s->freeze_timer = 0;
+        s->palette_row = 0;
+        s->pose = SPRITE_POSE_SCREW_ATTACK_DESTROYED;
+        s->ignore_samus_timer = 1;
+        set_isft(s, ISFT_SCREW_ATTACK);
+        return true;
+    }
+    if ((s->isft & 0x7F) < ISFT_SOLID_HIT) set_isft(s, ISFT_SOLID_HIT);
+    return false;
+}
+
+void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *samus,
+                                 const MzmSpriteTables *tables) {
+    uint16_t samus_top = (uint16_t)(samus->y + samus->hitbox_top);
+    uint16_t samus_bottom = (uint16_t)(samus->y + samus->hitbox_bottom);
+    uint16_t samus_left = (uint16_t)(samus->x + samus->hitbox_left);
+    uint16_t samus_right = (uint16_t)(samus->x + samus->hitbox_right);
+    const uint16_t check = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN;
+    for (int i = 0; i < count; ++i) {
+        MzmSprite *s = &sprites[i];
+        if ((s->status & check) != check || s->ignore_samus_timer) continue;
+        uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
+        uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
+        if (!touching(samus_top, samus_bottom, samus_left, samus_right, top, bottom, left, right))
+            continue;
+        uint16_t center_x = (uint16_t)(left + (uint16_t)(right - left) / 2);
+        bool on_left = center_x >= samus->previous_x;
+        /* Frozen sprites are solid: not ported (no ice beam). */
+        if (s->freeze_timer || s->samus_collision != SSC_HURTS_SAMUS) continue;
+        if (contact_kills(s, samus, tables)) continue;
+        if (!samus->invincible && samus->hurt) {
+            samus->hurt(samus->context, tables->damage[s->sprite_id], on_left);
+            samus->invincible = true;
+        }
+        s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+    }
+}
+
+/* ProjectileDealDamage */
+static void deal_damage(MzmSprite *s, uint16_t damage) {
+    if (s->health > damage) {
+        s->health -= damage;
+    } else {
+        s->health = 0;
+        s->freeze_timer = 0;
+        s->palette_row = 0;
+        s->pose = SPRITE_POSE_DESTROYED;
+        s->ignore_samus_timer = 1;
+    }
+    set_isft(s, ISFT_DAMAGED);
+}
+
+/* ProjectileHitSolidSprite */
+static void hit_solid(MzmSprite *s) {
+    if ((s->isft & 0x7F) < ISFT_SOLID_HIT) set_isft(s, ISFT_SOLID_HIT);
+}
+
+void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weapons,
+                                 const MzmSpriteTables *tables) {
+    /* The sprites are visited by draw order, then slot; every ported sprite
+     * has the default draw order, so slot order. A sprite's hitbox is read
+     * once, before the projectiles that hit it. */
+    for (int i = 0; i < count; ++i) {
+        MzmSprite *s = &sprites[i];
+        if (!(s->status & MZM_SPRITE_STATUS_EXISTS) || s->health == 0) continue;
+        uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
+        uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
+        uint8_t weakness = tables->weakness[s->sprite_id];
+        for (int p = 0; p < MZM_MAX_PROJECTILES; ++p) {
+            MzmProjectile *proj = &weapons->list[p];
+            if (!proj->active) continue;
+            /* ProjectileProcessNormalBeam/Missile: +-EIGHTH_BLOCK_SIZE;
+             * ProjectileProcessSuperMissile: +-(QUARTER_BLOCK_SIZE - PIXEL_SIZE). */
+            int half = proj->type == MZM_PROJECTILE_SUPER_MISSILE ? QUARTER_BLOCK_SIZE - PIXEL_SIZE
+                                                                  : EIGHTH_BLOCK_SIZE;
+            uint16_t py = (uint16_t)proj->y, px = (uint16_t)proj->x;
+            if (!touching(top, bottom, left, right, (uint16_t)(py - half), (uint16_t)(py + half),
+                          (uint16_t)(px - half), (uint16_t)(px + half)))
+                continue;
+            switch (proj->type) {
+            case MZM_PROJECTILE_BEAM:   /* ProjectileHitSprite */
+                if (weakness & MZM_WEAKNESS_BEAM_BOMBS) deal_damage(s, NORMAL_BEAM_DAMAGE);
+                else hit_solid(s);
+                break;
+            case MZM_PROJECTILE_MISSILE:    /* ProjectileMissileHitSprite */
+                if (weakness & MZM_WEAKNESS_MISSILES) deal_damage(s, MISSILE_DAMAGE);
+                else hit_solid(s);  /* ProjectileStartTumblingMissile: not ported */
+                break;
+            case MZM_PROJECTILE_SUPER_MISSILE:
+                if (weakness & (MZM_WEAKNESS_MISSILES | MZM_WEAKNESS_SUPER_MISSILES))
+                    deal_damage(s, SUPER_MISSILE_DAMAGE);
+                else hit_solid(s);
+                break;
+            }
+            proj->active = false;
+        }
     }
 }
 
@@ -643,8 +771,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteWorld *wo
     /* gSpriteRng = sSpriteRandomNumberTable[(frame8 + slot + frame16 / 16 +
      * x + y) % 32] */
     c.rng = tables->random[((uint32_t)frame8 + slot + frame16 / 16u + sprite->x + sprite->y) % 32u];
-    /* SpriteUtilUpdateStunTimer: no damage source yet, the timer only runs
-     * down. */
+    /* SpriteUtilUpdateStunTimer: the stun palette flash is not drawn yet. */
     if (sprite->isft & 0x7F) sprite->isft--;
     zoomer(&c);
     if (sprite->status & MZM_SPRITE_STATUS_EXISTS) {

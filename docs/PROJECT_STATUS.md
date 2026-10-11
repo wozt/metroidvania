@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM runtime | Brinstar 033 movement/collision and animation-selection proof; no combat, entities or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers with contact damage and projectile hits; no drops, bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2471,3 +2471,37 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
   26/26, the Python suite passed 402/402, all rebuild tasks were up to date,
   the generated checklist check passed and the proprietary-file guard passed.
+
+## Patch 0237 - Zero Mission sprite combat
+
+- `mzm_sprites` ports `SpriteUtilSamusAndSpriteCollision` for sprites that
+  hurt Samus: the pose hitbox against the sprite hitbox, the screw attack
+  kill of `SpriteUtilSpriteTakeDamageFromSamusContact` (or a 3-frame stun),
+  `SpriteUtilTakeDamageFromSprite` through the runtime (stats damage, suit
+  reductions, hurt pose), the knockback away from the sprite from
+  `gPreviousXPosition`, and the 15-frame ignore timer.
+- It ports the beam, missile and super missile parts of
+  `ProjectileCheckHittingSprite` (`ProjectileHitSprite`,
+  `ProjectileMissileHitSprite`, `ProjectileSuperMissileHitSprite`,
+  `ProjectileDealDamage`, `ProjectileHitSolidSprite`) with the native
+  projectile boxes, weaknesses, damage, stun and destroyed pose; a destroyed
+  Zoomer is removed.
+- The runtime now follows the native frame order: `SamusUpdate`,
+  `SpriteUpdate` (contact first), then `ProjectileUpdate` ending with the
+  sprite hits. `metadata/sprites.tsv` weaknesses are parsed (low byte of the
+  `C_16_2_8` column; the Zoomers' 0xFA matches the decompilation).
+- Captures now report Samus's energy and each sprite's health. Checked in
+  brinstar_000 (`--spawn 230 496`, B and Down held): a Zoomer touching Samus
+  takes 10 energy (99 to 89) and puts her in the hurt pose; a Zoomer
+  climbing down the wall beside her falls from 3 to 1 health on a beam hit
+  and is removed by frame 330. Standing beams pass over floor Zoomers.
+- Not ported yet: death explosions, debris and sounds, enemy drops, tumbling
+  missiles, the stun palette flash, charge beams and the pseudo screw, speed
+  booster and shinespark kills, solid and frozen sprites, power bombs.
+- Tests: `tests/test_mzm_sprites.c` adds contact damage, invincibility and
+  ignore timers, screw attack kills and stuns, beam stun timing and kills,
+  beam immunity, missile damage and the super missile box edge.
+- Validation on 2026-10-11: the warning-clean build succeeded, CTest passed
+  26/26, the Python suite passed 402/402, all rebuild tasks were up to date,
+  the generated checklist check passed and the proprietary-file guard passed.
+

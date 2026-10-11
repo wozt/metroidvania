@@ -11,12 +11,18 @@
  * Zoomer AI (src/sprites_ai/zoomer.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, stats) and the frame
  * durations of each OAM table come from scripts/mzm_sprites.py.
- * Combat (Samus contact, projectiles, death) is not ported yet. */
+ * Combat ports SpriteUtilSamusAndSpriteCollision for sprites that hurt Samus
+ * (with the screw attack kill of SpriteUtilSpriteTakeDamageFromSamusContact)
+ * and the beam and missile parts of ProjectileCheckHittingSprite; a killed
+ * sprite is removed (SpriteUtilSpriteDeath's explosion, sound and drop are
+ * not ported). */
 #ifndef MZM_SPRITES_H
 #define MZM_SPRITES_H
 
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "mzm_projectiles.h"
 
 enum {
     MZM_SPRITE_STATUS_EXISTS = 1 << 0,
@@ -68,7 +74,19 @@ typedef struct {
     uint8_t random[32];             /* sSpriteRandomNumberTable */
     int16_t falling[16];            /* sSpritesFallingSpeed */
     uint16_t health[256], damage[256];  /* sPrimarySpriteStats */
+    uint8_t weakness[256];          /* SpriteWeakness (low byte of column 2) */
 } MzmSpriteTables;
+
+/* SpriteWeakness */
+enum {
+    MZM_WEAKNESS_CHARGE_BEAM_PISTOL = 1 << 0,
+    MZM_WEAKNESS_BEAM_BOMBS = 1 << 1,
+    MZM_WEAKNESS_SUPER_MISSILES = 1 << 2,
+    MZM_WEAKNESS_MISSILES = 1 << 3,
+    MZM_WEAKNESS_POWER_BOMB = 1 << 4,
+    MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK = 1 << 5,
+    MZM_WEAKNESS_CAN_BE_FROZEN = 1 << 6,
+};
 
 /* Zoomer OAM tables, in the order of the AI below. */
 enum {
@@ -107,6 +125,20 @@ typedef struct {
     uint8_t isft, freeze_timer, ignore_samus_timer;
 } MzmSprite;
 
+/* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,
+ * gPreviousXPosition, the gSamusPhysics hitbox, and the parts of her state
+ * the contact rules read. `hurt` applies SpriteUtilTakeDamageFromSprite with
+ * the sprite's stats damage (suit and difficulty reductions, the hurt pose)
+ * and, when Samus survives, the knockback away from the sprite; like
+ * SamusChangeToHurtPose it makes her invincible for the rest of the loop. */
+typedef struct {
+    void *context;
+    uint16_t x, y, previous_x;
+    int16_t hitbox_top, hitbox_bottom, hitbox_left, hitbox_right;
+    bool screw_attacking, suitless, invincible;
+    void (*hurt)(void *context, uint16_t damage, bool sprite_on_left);
+} MzmSpriteSamus;
+
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when
  * the point is in the solid part of the block (ClipdataConvertToCollision,
  * original version). Enemy-only, stop-enemy, tank and door blocks become air
@@ -120,6 +152,15 @@ void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_s
 void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteWorld *world,
                        const MzmSpriteTables *tables, const MzmSpriteKind *kind,
                        uint8_t frame8, uint16_t frame16);
+/* SpriteUtilSamusAndSpriteCollision over the sprite array (run at the start
+ * of SpriteUpdate). */
+void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *samus,
+                                 const MzmSpriteTables *tables);
+/* ProjectileCheckHittingSprite for beams, missiles and super missiles (run
+ * at the end of ProjectileUpdate): damage, stun and removal of the
+ * projectile. Missiles bouncing off a sprite (tumbling) are removed. */
+void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weapons,
+                                 const MzmSpriteTables *tables);
 /* Whether a PSPRITE has a ported AI. */
 bool mzm_sprite_supported(uint8_t sprite_id);
 

@@ -43,6 +43,33 @@ read from the user's ROM at export time; nothing is stored in the repository.
   animation slowed every other frame), falling with `sSpritesFallingSpeed`
   and landing.
 
-Not ported yet: combat (Samus contact damage, projectile hits, death and
-drops), freezing, screen-shake falls, the splash effect, the damaged sound,
-the hard-mode spritesets and every other sprite AI.
+- Combat. `SpriteUpdate` starts with `SpriteUtilSamusAndSpriteCollision`
+  and runs between `SamusUpdate` and `ProjectileUpdate`, which ends with
+  `ProjectileCheckHittingSprite`; the runtime keeps that order (the arm
+  cannon offset is the one `SamusUpdate` left).
+  - Samus contact (sprites with `SSC_HURTS_SAMUS`, existing and on screen,
+    ignore timer zero; `SpriteUtilCheckObjectsTouching` against the pose
+    hitbox): the screw attack destroys sprites weak to it
+    (`SPRITE_POSE_SCREW_ATTACK_DESTROYED`, stun 17) and otherwise stuns them
+    for 3 frames; then, unless Samus is invincible,
+    `SpriteUtilTakeDamageFromSprite` (stats damage, suit reductions, normal
+    difficulty, hurt pose) and a knockback of `SUB_PIXEL_TO_VELOCITY(8)` away
+    from the sprite hitbox centre compared with `gPreviousXPosition` (none on
+    a lethal hit); the sprite then ignores Samus for 15 frames.
+  - Projectiles (`ProjectileHitSprite`, `ProjectileMissileHitSprite`,
+    `ProjectileSuperMissileHitSprite`, `ProjectileDealDamage`): boxes of
+    +-8 subpixels (beam, missile) or +-12 (super missile); damage 2, 20 and
+    100 for sprites weak to them (`WEAKNESS_BEAM_BOMBS`, `WEAKNESS_MISSILES`,
+    missiles or super missiles), a 17-frame stun, `SPRITE_POSE_DESTROYED` at
+    zero health; otherwise a 3-frame stun (`ProjectileHitSolidSprite`). The
+    projectile is consumed. Stuns above 9 frames freeze the AI
+    (`SpriteUtilIsSpriteStunned`).
+  - Death: a destroyed Zoomer is removed (`DEATH_NORMAL`).
+  - The weakness is the low byte of the stats' weakness column
+    (`C_16_2_8(freeze chance, weaknesses)`).
+
+Not ported yet: the death explosion, debris and sound, enemy drops
+(`SpriteUtilDetermineEnemyDrop`), tumbling missiles, the stun palette flash,
+charge beams and the pseudo screw, speed booster and shinespark kills, solid
+and frozen sprites, power bombs, freezing, screen-shake falls, the splash
+effect, the damaged sound, the hard-mode spritesets and every other sprite AI.

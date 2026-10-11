@@ -1193,12 +1193,15 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                 sprites->tables.falling[falling_count] = (int16_t)strtol(cursor, &cursor, 10);
         } else if (!strcmp(line, "stats")) {
             char name[64];
-            int id, health, damage, used = 0;
-            if (sscanf(cursor, "%63s %d %d %d%n", name, &id, &health, &damage, &used) != 4 ||
+            int id, health, damage, weakness, used = 0;
+            if (sscanf(cursor, "%63s %d %d %d %d%n", name, &id, &health, &damage, &weakness,
+                       &used) != 5 ||
                 id < 0 || id > 255) { ok = false; break; }
             snprintf(sprites->names[id], sizeof sprites->names[id], "%s", name);
             sprites->tables.health[id] = (uint16_t)health;
             sprites->tables.damage[id] = (uint16_t)damage;
+            /* C_16_2_8(freeze, weakness): the weakness is the low byte. */
+            sprites->tables.weakness[id] = (uint8_t)(weakness & 0xFF);
         }
     }
     fclose(f);
@@ -1246,8 +1249,37 @@ static uint8_t runtime_sprite_block(void *context, uint16_t y, uint16_t x) {
     return (uint8_t)room_cell(room, column, row);
 }
 
-static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy) {
+/* SpriteUtilTakeDamageFromSprite (normal difficulty) and the knockback of
+ * SpriteUtilSamusAndSpriteCollision. */
+typedef struct {
+    MzmSamus *samus;
+    MzmEquipment *equipment;
+    const MzmCollision *collision;
+} RuntimeSpriteHurt;
+
+static void runtime_sprite_hurt(void *context, uint16_t damage, bool sprite_on_left) {
+    RuntimeSpriteHurt *hurt = context;
+    bool alive = mzm_equipment_damage(hurt->equipment, damage);
+    mzm_samus_hurt(hurt->samus, hurt->collision, !alive);
+    /* SUB_PIXEL_TO_VELOCITY(EIGHTH_BLOCK_SIZE) away from the sprite. */
+    if (alive) hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -64 : 64);
+}
+
+/* SpriteUpdate: Samus's contact with the sprites, then every sprite. */
+static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
+                                   MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
+                                   const MzmCollision *collision) {
     if (!sprites->kinds_ok) return;
+    if (samus->pose != MZM_POSE_DYING) {
+        RuntimeSpriteHurt hurt = {samus, equipment, collision};
+        const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
+        MzmSpriteSamus view = {&hurt, (uint16_t)samus->x, (uint16_t)samus->y,
+                               (uint16_t)previous_x, box->top, 0, box->left, box->right,
+                               samus->pose == MZM_POSE_SCREW_ATTACKING,
+                               equipment->suit == MZM_SUIT_SUITLESS, samus->invincibility != 0,
+                               runtime_sprite_hurt};
+        mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
+    }
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4)};
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
@@ -1926,6 +1958,7 @@ int main(int argc, char **argv) {
             }
             input.new_projectile=mzm_weapons_begin_frame(
                 &weapons,&samus,input.held,input.pressed,&equipment);
+            int32_t previous_x=samus.x;    /* gPreviousXPosition */
             mzm_samus_update(&samus,&input,&equipment,&collision,&animation_source);
             palette_frame++;
             /* ProjectileUpdate reads the arm cannon offset of the pose and
@@ -1941,10 +1974,16 @@ int main(int argc, char **argv) {
                     cannon_y=cannon_row->entry->frames[index].cannon_y;
                 }
             }
+            /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
+             * arm cannon offset above is the one SamusUpdate left. */
+            runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
+                                   &equipment, &collision);
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
-            /* SpriteUpdate after Samus and her projectiles. */
-            runtime_sprites_update(&sprites, room, last_cx, last_cy);
+            /* ProjectileCheckHittingSprite ends ProjectileUpdate. */
+            if(sprites.kinds_ok)
+                mzm_sprites_projectile_hits(sprites.live,RUNTIME_MAX_SPRITES,&weapons,
+                                            &sprites.tables);
             /* Room lifecycle: a touched door transition loads the exported
              * destination room and places Samus at its exit. */
             int door_offset=0;
@@ -2184,13 +2223,14 @@ int main(int argc, char **argv) {
             int live=0;
             for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
                 live+=(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)!=0;
-            printf("Captured frame %ld: %s (pose %s, %d sprites)\n",capture_step,capture_path,
-                   mzm_pose_name(samus.pose),live);
+            printf("Captured frame %ld: %s (pose %s, energy %d, %d sprites)\n",capture_step,
+                   capture_path,mzm_pose_name(samus.pose),equipment.energy,live);
             for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
                 if(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)
-                    printf("  sprite %d %s at %d,%d pose %#x status %#x\n",i,
+                    printf("  sprite %d %s at %d,%d pose %#x status %#x health %d\n",i,
                            sprites.names[sprites.live[i].sprite_id],sprites.live[i].x>>2,
-                           sprites.live[i].y>>2,sprites.live[i].pose,sprites.live[i].status);
+                           sprites.live[i].y>>2,sprites.live[i].pose,sprites.live[i].status,
+                           sprites.live[i].health);
             running=false;
         }
         SDL_RenderPresent(renderer);

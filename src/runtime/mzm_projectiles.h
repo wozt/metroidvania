@@ -40,7 +40,11 @@ typedef enum {
     MZM_PROJECTILE_CHARGED_BEAM,
     MZM_PROJECTILE_CHARGED_LONG_BEAM,
     MZM_PROJECTILE_ICE_BEAM,
-    MZM_PROJECTILE_CHARGED_ICE_BEAM
+    MZM_PROJECTILE_CHARGED_ICE_BEAM,
+    MZM_PROJECTILE_WAVE_BEAM,
+    MZM_PROJECTILE_CHARGED_WAVE_BEAM,
+    MZM_PROJECTILE_PLASMA_BEAM,
+    MZM_PROJECTILE_CHARGED_PLASMA_BEAM
 } MzmProjectileType;
 
 /* CHARGE_BEAM_START_THRESHOLD, CHARGE_BEAM_UNCHARGED_THRESHOLD,
@@ -93,6 +97,9 @@ typedef struct {
      * PROJ_STATUS_CAN_AFFECT_ENVIRONMENT). */
     MzmBombStage bomb_stage;
     bool fast, hidden, hits_sprites;
+    /* The Plasma Beam's sPlasmaBeamOam_*_Wave tables (the Wave Beam was
+     * equipped when it started). */
+    bool wave_oam;
 } MzmProjectile;
 
 struct MzmProjectile;
@@ -133,10 +140,15 @@ typedef struct {
     /* gFrameCounter8Bit, set by the caller before mzm_weapons_update (the
      * trails and the ice beam's freeze flag). */
     uint8_t frame8;
+    /* gBg1YPosition / gBg1XPosition (subpixels) for ProjectileCheckDespawn's
+     * on-screen test; without them every projectile counts as off screen. */
+    bool has_camera;
+    uint16_t camera_x, camera_y;
     /* The equipped beams of the last update (the beam damage). */
     uint32_t items;
-    /* ProjectileSetTrail particles of the last update (PE_BEAM_TRAILING). */
-    struct { int32_t x, y; bool left; } trails[MZM_MAX_PROJECTILES];
+    /* ProjectileSetTrail particles of the last update: their position and
+     * ParticleEffectId (PE_MISSILE_TRAIL .. PE_CHARGED_FULL_BEAM_TRAIL). */
+    struct { int32_t x, y; uint8_t effect; } trails[MZM_MAX_PROJECTILES * 2];
     int trail_count;
     /* gCurrentPowerBomb, and a power bomb placed this update
      * (ProjectileProcessPowerBomb clears every sprite's
@@ -159,5 +171,13 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
                         const MzmCollision *collision,
                         const MzmProjectileAnimation *animation);
 int mzm_projectile_count(const MzmWeapons *weapons, MzmProjectileType type);
+/* The hitbox (subpixels around the position) each Projectile*Process*
+ * routine sets for a projectile of this type and direction; the Plasma
+ * Beam's depends on the Wave Beam in `items`. Bombs are not covered. */
+void mzm_projectile_hitbox(MzmProjectileType type, MzmAim direction, uint32_t items,
+                           int16_t *top, int16_t *bottom, int16_t *left, int16_t *right);
+/* The beam type and shot sound SamusCheckNewProjectile picks for the
+ * equipped beams (plasma, then wave, ice, long). */
+MzmProjectileType mzm_beam_type(uint32_t items, bool charged, uint16_t *sound);
 
 #endif /* MZM_PROJECTILES_H */

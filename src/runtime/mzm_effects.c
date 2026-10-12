@@ -35,6 +35,21 @@ const char *mzm_particle_table(uint8_t effect) {
         return "ParticleFreezingSpriteWithChargedIceBeamOam";
     case MZM_PE_BEAM_TRAILING_RIGHT:
     case MZM_PE_BEAM_TRAILING_LEFT: return "ParticleBeamTrailingOam";
+    case MZM_PE_MISSILE_TRAIL: return "ParticleMissileTrailOam";
+    case MZM_PE_SUPER_MISSILE_TRAIL: return "ParticleSuperMissileTrailOam";
+    case MZM_PE_CHARGED_LONG_BEAM_TRAIL: return "ParticleChargedLongBeamTrailOam";
+    case MZM_PE_CHARGED_ICE_BEAM_TRAIL: return "ParticleChargedIceBeamTrailOam";
+    case MZM_PE_CHARGED_WAVE_BEAM_TRAIL: return "ParticleChargedWaveBeamTrailOam";
+    case MZM_PE_CHARGED_PLASMA_BEAM_TRAIL: return "ParticleChargedPlasmaBeamTrailOam";
+    case MZM_PE_CHARGED_FULL_BEAM_TRAIL: return "ParticleChargedFullBeamTrailOam";
+    /* ParticleHittingSomethingWithFullBeamNoPlasma / FullBeam reuse the
+     * Wave and Plasma impact tables. */
+    case MZM_PE_HITTING_SOMETHING_WITH_WAVE_BEAM:
+    case MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM_NO_PLASMA:
+        return "ParticleHittingSomethingWithWaveBeamOam";
+    case MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM:
+    case MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM:
+        return "ParticleHittingSomethingWithPlasmaBeamOam";
     case MZM_PE_PSEUDO_SCREW_DESTROYED: return "ParticlePseudoScrewDestroyedOam";
     case MZM_PE_HITTING_SOMETHING_INVINCIBLE: return "ParticleHittingSomethingInvincibleOam";
     case MZM_PE_HITTING_SOMETHING_WITH_MISSILE: return "ParticleHittingSomethingWithMissileOam";
@@ -133,7 +148,15 @@ static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
             mzm_sfx_play(MZM_SOUND_LONG_BEAM_IMPACT);
             break;
         case MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM:
+        case MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM_NO_PLASMA:
+        case MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM:
             mzm_sfx_play(MZM_SOUND_ICE_BEAM_IMPACT);
+            break;
+        case MZM_PE_HITTING_SOMETHING_WITH_WAVE_BEAM:
+            mzm_sfx_play(MZM_SOUND_WAVE_BEAM_IMPACT);
+            break;
+        case MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM:
+            mzm_sfx_play(MZM_SOUND_PLASMA_BEAM_IMPACT);
             break;
         case MZM_PE_HITTING_SOMETHING_INVINCIBLE:
             mzm_sfx_play(MZM_SOUND_INVINCIBLE_IMPACT);

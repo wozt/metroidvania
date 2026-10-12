@@ -203,7 +203,9 @@ if(BUILD_TESTING)
     add_executable(fusion_mzm_sprites_tests tests/test_mzm_sprites.c src/runtime/mzm_sprites.c
                    src/runtime/mzm_space_pirate.c
                    src/runtime/mzm_chozodia_security.c
-                   src/runtime/mzm_effects.c src/runtime/mzm_sfx.c)
+                   src/runtime/mzm_effects.c src/runtime/mzm_sfx.c
+                   src/runtime/mzm_projectiles.c src/runtime/mzm_samus.c
+                   src/runtime/mzm_power_bomb.c)
     target_include_directories(fusion_mzm_sprites_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_sprites_tests)
     add_test(NAME mzm_sprites COMMAND fusion_mzm_sprites_tests)

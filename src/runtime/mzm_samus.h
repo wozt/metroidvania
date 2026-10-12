@@ -150,7 +150,9 @@ enum {
     MZM_ITEM_BOMBS = 1u << 8,         /* BBF_BOMBS */
     MZM_ITEM_CHARGE_BEAM = 1u << 9,   /* BBF_CHARGE_BEAM */
     MZM_ITEM_LONG_BEAM = 1u << 10,    /* BBF_LONG_BEAM */
-    MZM_ITEM_ICE_BEAM = 1u << 11      /* BBF_ICE_BEAM */
+    MZM_ITEM_ICE_BEAM = 1u << 11,     /* BBF_ICE_BEAM */
+    MZM_ITEM_WAVE_BEAM = 1u << 12,    /* BBF_WAVE_BEAM */
+    MZM_ITEM_PLASMA_BEAM = 1u << 13   /* BBF_PLASMA_BEAM */
 };
 
 /* Damage types of clipdata-affecting actions (hatches, blocks). */

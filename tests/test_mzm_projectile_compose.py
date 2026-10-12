@@ -34,6 +34,18 @@ class ProjectileTableTests(unittest.TestCase):
         self.assertEqual(projectiles.beam_set("sPlasmaBeamOam_Vertical_Wave"), "PlasmaBeam")
         self.assertEqual(projectiles.beam_set("sMissileOam_Vertical"), "NormalBeam")
 
+    def test_beam_particles_cover_the_ported_trails_and_impacts(self):
+        for table in ("sParticleHittingSomethingWithWaveBeamOam",
+                      "sParticleHittingSomethingWithPlasmaBeamOam", "sParticleMissileTrailOam",
+                      "sParticleChargedWaveBeamTrailOam", "sParticleChargedFullBeamTrailOam"):
+            self.assertIn(table, projectiles.BEAM_PARTICLES)
+        # The Plasma trails only exist with the Plasma graphics; the Ice Beam
+        # recolours the Wave and Plasma sets with sBeamPal row 2.
+        self.assertEqual(projectiles.PARTICLE_BEAM_SETS["sParticleChargedFullBeamTrailOam"],
+                         "PlasmaBeam")
+        self.assertEqual(projectiles.ICE_RECOLOURED, ("WaveBeam", "PlasmaBeam"))
+        self.assertEqual(projectiles.BEAM_VARIANTS["WaveIceBeam"], ("WaveBeam", projectiles.ICE_ROW))
+
     def test_frames_stop_at_the_terminator(self):
         rom = synthetic_rom()
         symbols = {"sNormalBeamOam_Horizontal": (0x08000100, 24)}

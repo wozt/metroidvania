@@ -622,7 +622,24 @@ int main(void) {
     mzm_particles_process(&fx, &fx_kinds, 0, 0);
     assert(!(fx.particles[0].status & MZM_PARTICLE_NOT_DRAWN));
     assert(fx.particles[1].x == 399 && fx.particles[1].y == 304);
+    /* The Wave, Plasma and full beam impacts play their sounds on their
+     * first update (the full beams the ice impact). */
     memset(&fx, 0, sizeof fx);
+    const uint8_t impacts[4] = {MZM_PE_HITTING_SOMETHING_WITH_WAVE_BEAM,
+                                MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM,
+                                MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM_NO_PLASMA,
+                                MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM};
+    const uint16_t impact_sounds[4] = {MZM_SOUND_WAVE_BEAM_IMPACT, MZM_SOUND_PLASMA_BEAM_IMPACT,
+                                       MZM_SOUND_ICE_BEAM_IMPACT, MZM_SOUND_ICE_BEAM_IMPACT};
+    for (int k = 0; k < 4; ++k) {
+        fx_kinds.counts[impacts[k]] = 1;
+        fx_kinds.timers[impacts[k]][0] = 4;
+        mzm_sfx_clear();
+        mzm_particle_set(&fx, 300, 400, impacts[k]);
+        mzm_particles_process(&fx, &fx_kinds, 0, 0);
+        assert(mzm_sfx_requested(MZM_SFX_PLAY, impact_sounds[k]));
+        memset(&fx, 0, sizeof fx);
+    }
     /* Off screen (the native window), removed after its update. */
     mzm_particle_set(&fx, 300, 3000, MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM);
     mzm_particles_process(&fx, &fx_kinds, 0, 0);
@@ -853,6 +870,55 @@ int main(void) {
     tables.freeze[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
     weapons.frame8 = 0;
     weapons.items = 0;
+    /* The Wave Beam: WAVE_LONG_BEAM_DAMAGE (4) and its impact; with the Ice
+     * Beam an ice hit (WAVE_ICE_BEAM_DAMAGE) with the full beam particle. */
+    memset(&fx, 0, sizeof fx);
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS | MZM_WEAKNESS_CAN_BE_FROZEN;
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    z.health = 40;
+    weapons.items = MZM_ITEM_WAVE_BEAM | MZM_ITEM_LONG_BEAM;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_WAVE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 36 && !weapons.list[0].active && !z.freeze_timer &&
+           fx.particles[0].effect == MZM_PE_HITTING_SOMETHING_WITH_WAVE_BEAM);
+    z.isft = 0;
+    weapons.items = MZM_ITEM_WAVE_BEAM | MZM_ITEM_ICE_BEAM;
+    weapons.frame8 = 0;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_WAVE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 32 && z.freeze_timer == 240 &&
+           fx.particles[1].effect == MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM_NO_PLASMA &&
+           fx.particles[2].effect == MZM_PE_FREEZING_SPRITE_WITH_ICE);
+    /* The Plasma Beam goes on after its hit (PLASMA_WAVE_BEAM_DAMAGE 4). */
+    z.freeze_timer = 0;
+    z.isft = 0;
+    weapons.items = MZM_ITEM_PLASMA_BEAM | MZM_ITEM_WAVE_BEAM;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_PLASMA_BEAM,
+                                      .x = z.x, .y = z.y - 20, .wave_oam = true};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 28 && weapons.list[0].active &&
+           fx.particles[3].effect == MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM);
+    /* The fully charged beam: CHARGED_PLASMA_WAVE_ICE_LONG_BEAM_DAMAGE (24),
+     * always freezing, the full beam particle. */
+    memset(&fx, 0, sizeof fx);
+    z.isft = 0;
+    z.health = 30;
+    weapons.items = MZM_ITEM_PLASMA_BEAM | MZM_ITEM_WAVE_BEAM | MZM_ITEM_ICE_BEAM | MZM_ITEM_LONG_BEAM;
+    weapons.frame8 = 1;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_CHARGED_PLASMA_BEAM,
+                                      .x = z.x, .y = z.y - 20, .wave_oam = true};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 6 && z.freeze_timer == 240 && weapons.list[0].active &&
+           fx.particles[0].effect == MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM &&
+           fx.particles[1].effect == MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE);
+    weapons.list[0].active = false;
+    weapons.items = 0;
+    weapons.frame8 = 0;
+    z.freeze_timer = 0;
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS;
     /* SpriteUtilUpdateStunTimer: the stun row when the decremented timer
      * is 12 or 4, the sprite's own row at 16, 8 and 0. */
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS;

@@ -138,6 +138,13 @@ def render(rom: bytes, vram: bytes, palette, pointer: int, flip: str):
     return pixels
 
 
+# The beam sets the Ice Beam recolours (ProjectileLoadGraphics loads its
+# sBeamPal row 2 over the Wave and Plasma graphics): their projectiles are
+# also sent as ``Projectile/<table>/<flip>/ice``.
+ICE_RECOLOURED = ("WaveBeam", "PlasmaBeam")
+ICE_ROW = 2
+
+
 def compose_all(rom: bytes, source: str, symbols, sink) -> dict:
     """Send every projectile table and flip state to ``sink(key, frames, info)``.
 
@@ -161,6 +168,17 @@ def compose_all(rom: bytes, source: str, symbols, sink) -> dict:
                 sink(f"Projectile/{table[1:]}/{flip}", rendered,
                      {"table": table, "beam_set": beam, "flip": flip})
                 report["sequences"] += 1
+            if beam in ICE_RECOLOURED:
+                key = beam + "/ice"
+                if key not in staged:
+                    staged[key] = stage(rom, symbols, beam, ICE_ROW)
+                ice_vram, ice_palette = staged[key]
+                for flip in FLIPS:
+                    rendered = [(render(rom, ice_vram, ice_palette, pointer, flip), duration)
+                                for pointer, duration in entries]
+                    sink(f"Projectile/{table[1:]}/{flip}/ice", rendered,
+                         {"table": table, "beam_set": beam, "flip": flip, "palette_row": ICE_ROW})
+                    report["sequences"] += 1
         except (ValueError, KeyError) as exc:
             report["unresolved"][table] = str(exc)
     return report
@@ -183,7 +201,17 @@ BEAM_PARTICLES = ("sParticleChargingBeamBeginOam", "sParticleChargingBeamCharged
                   "sParticleShootingBeamDiagonallyDownOam", "sParticleShootingBeamUpOam",
                   "sParticleShootingBeamDownOam", "sParticleBeamTrailingOam",
                   "sParticleHittingSomethingWithLongBeamOam",
-                  "sParticleHittingSomethingWithIceBeamOam")
+                  "sParticleHittingSomethingWithIceBeamOam",
+                  "sParticleHittingSomethingWithWaveBeamOam",
+                  "sParticleHittingSomethingWithPlasmaBeamOam",
+                  "sParticleMissileTrailOam", "sParticleSuperMissileTrailOam",
+                  "sParticleChargedLongBeamTrailOam", "sParticleChargedIceBeamTrailOam",
+                  "sParticleChargedWaveBeamTrailOam", "sParticleChargedPlasmaBeamTrailOam",
+                  "sParticleChargedFullBeamTrailOam")
+# Particles only drawn with one graphics set (their tiles are blank in the
+# others): the charged Plasma Beam trails.
+PARTICLE_BEAM_SETS = {"sParticleChargedPlasmaBeamTrailOam": "PlasmaBeam",
+                      "sParticleChargedFullBeamTrailOam": "PlasmaBeam"}
 
 
 def compose_beam_particles(rom: bytes, symbols, sink) -> dict:
@@ -193,6 +221,8 @@ def compose_beam_particles(rom: bytes, symbols, sink) -> dict:
     for variant, (beam, row) in BEAM_VARIANTS.items():
         vram, palette = stage(rom, symbols, beam, row)
         for table in BEAM_PARTICLES:
+            if PARTICLE_BEAM_SETS.get(table, beam) != beam:
+                continue
             try:
                 entries = frames(rom, symbols, table)
                 for flip in ("none", "x"):

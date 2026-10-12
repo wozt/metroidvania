@@ -1291,7 +1291,8 @@ static RuntimePaletteChoice runtime_samus_palette(const MzmSamus *samus,bool bea
         if(samus->anim_frame&1u){choice.kind0="Flashing";choice.row0=1;}
     } else if(beam_release) {
         choice.kind0="BeamRelease";
-        choice.row0=(items&MZM_ITEM_ICE_BEAM)?2:(items&MZM_ITEM_LONG_BEAM)?1:0;
+        choice.row0=(items&MZM_ITEM_ICE_BEAM)?2:(items&MZM_ITEM_PLASMA_BEAM)?4:
+            (items&MZM_ITEM_WAVE_BEAM)?3:(items&MZM_ITEM_LONG_BEAM)?1:0;
     } else if(samus->unmorph_palette_timer) {
         choice.suit0=borrowed;
         choice.kind0="Unmorph";
@@ -1301,7 +1302,8 @@ static RuntimePaletteChoice runtime_samus_palette(const MzmSamus *samus,bool bea
          * frames of full charge, none on the fourth step. */
         int offset=(charge-MZM_CHARGE_FULL)>>4;
         if(offset!=3) {
-            int row=((items&MZM_ITEM_ICE_BEAM)?4:(items&MZM_ITEM_LONG_BEAM)?2:0)+(offset&1);
+            int row=((items&MZM_ITEM_ICE_BEAM)?4:(items&MZM_ITEM_PLASMA_BEAM)?8:
+                     (items&MZM_ITEM_WAVE_BEAM)?6:(items&MZM_ITEM_LONG_BEAM)?2:0)+(offset&1);
             choice=(RuntimePaletteChoice){suit,"ChargingBeam",row,suit,"ChargingBeam",row+1};
         }
     }
@@ -1591,14 +1593,18 @@ static int runtime_pose_durations(void *context,const MzmSamus *samus,
 }
 /* Projectile library key for ProjectileProcess* OAM selection and the
  * X/Y flips applied by ProjectileDraw. */
-static void runtime_projectile_key(const MzmProjectile *projectile,char *key,size_t size) {
+static void runtime_projectile_key(const MzmProjectile *projectile,uint32_t items,char *key,
+                                   size_t size) {
     static const char *names[]={
         [MZM_PROJECTILE_BEAM]="NormalBeam",[MZM_PROJECTILE_MISSILE]="Missile",
         [MZM_PROJECTILE_SUPER_MISSILE]="SuperMissile",[MZM_PROJECTILE_BOMB]="Bomb",
         [MZM_PROJECTILE_POWER_BOMB]="PowerBomb",[MZM_PROJECTILE_LONG_BEAM]="LongBeam",
         [MZM_PROJECTILE_CHARGED_BEAM]="ChargedNormalBeam",
         [MZM_PROJECTILE_CHARGED_LONG_BEAM]="ChargedLongBeam",
-        [MZM_PROJECTILE_ICE_BEAM]="IceBeam",[MZM_PROJECTILE_CHARGED_ICE_BEAM]="ChargedIceBeam"};
+        [MZM_PROJECTILE_ICE_BEAM]="IceBeam",[MZM_PROJECTILE_CHARGED_ICE_BEAM]="ChargedIceBeam",
+        [MZM_PROJECTILE_WAVE_BEAM]="WaveBeam",[MZM_PROJECTILE_CHARGED_WAVE_BEAM]="ChargedWaveBeam",
+        [MZM_PROJECTILE_PLASMA_BEAM]="PlasmaBeam",
+        [MZM_PROJECTILE_CHARGED_PLASMA_BEAM]="ChargedPlasmaBeam"};
     if(projectile->type==MZM_PROJECTILE_BOMB || projectile->type==MZM_PROJECTILE_POWER_BOMB) {
         /* s(Power)BombOam_Slow / _Fast, never flipped. */
         snprintf(key,size,"Projectile/%sOam_%s/none",
@@ -1610,12 +1616,21 @@ static void runtime_projectile_key(const MzmProjectile *projectile,char *key,siz
         "Vertical":projectile->direction==MZM_AIM_FORWARD?"Horizontal":"Diagonal";
     const char *flip=projectile->x_flip?(projectile->y_flip?"xy":"x"):
         (projectile->y_flip?"y":"none");
-    snprintf(key,size,"Projectile/%sOam_%s/%s",names[projectile->type],shape,flip);
+    /* The Plasma Beam has its Wave and NoWave tables; the Wave and Plasma
+     * sets are recoloured by the Ice Beam's sBeamPal row (the /ice keys). */
+    bool plasma=projectile->type==MZM_PROJECTILE_PLASMA_BEAM ||
+        projectile->type==MZM_PROJECTILE_CHARGED_PLASMA_BEAM;
+    bool wave=projectile->type==MZM_PROJECTILE_WAVE_BEAM ||
+        projectile->type==MZM_PROJECTILE_CHARGED_WAVE_BEAM;
+    snprintf(key,size,"Projectile/%sOam_%s%s/%s%s",names[projectile->type],shape,
+             plasma?(projectile->wave_oam?"_Wave":"_NoWave"):"",flip,
+             (plasma||wave)&&(items&MZM_ITEM_ICE_BEAM)?"/ice":"");
 }
 static int runtime_projectile_durations(void *context,const MzmProjectile *projectile,
                                         uint8_t *durations,int max) {
     char key[160];
-    runtime_projectile_key(projectile,key,sizeof key);
+    /* The durations do not depend on the Ice Beam recolouring. */
+    runtime_projectile_key(projectile,0,key,sizeof key);
     RuntimeLibraryEntry *entry=runtime_library_find(context,key);
     if(!entry)return 0;
     int count=entry->count<max?entry->count:max;
@@ -1624,7 +1639,10 @@ static int runtime_projectile_durations(void *context,const MzmProjectile *proje
 }
 /* The beam graphics ProjectileLoadGraphics loads (the ported beams). */
 static const char *runtime_beam_variant(uint32_t items) {
-    return (items&MZM_ITEM_ICE_BEAM)?"IceBeam":(items&MZM_ITEM_LONG_BEAM)?"LongBeam":"NormalBeam";
+    bool ice=items&MZM_ITEM_ICE_BEAM;
+    if(items&MZM_ITEM_PLASMA_BEAM)return ice?"PlasmaIceBeam":"PlasmaBeam";
+    if(items&MZM_ITEM_WAVE_BEAM)return ice?"WaveIceBeam":"WaveBeam";
+    return ice?"IceBeam":(items&MZM_ITEM_LONG_BEAM)?"LongBeam":"NormalBeam";
 }
 
 /* One tick of a looping or one-shot particle animation from its library
@@ -1724,7 +1742,8 @@ static const struct { const char *label; uint32_t item; } debug_items[]={
     {"High Jump",MZM_ITEM_HIGH_JUMP},{"Space Jump",MZM_ITEM_SPACE_JUMP},
     {"Screw Attack",MZM_ITEM_SCREW_ATTACK},{"Speed Booster",MZM_ITEM_SPEED_BOOSTER},
     {"Charge Beam",MZM_ITEM_CHARGE_BEAM},{"Long Beam",MZM_ITEM_LONG_BEAM},
-    {"Ice Beam",MZM_ITEM_ICE_BEAM},
+    {"Ice Beam",MZM_ITEM_ICE_BEAM},{"Wave Beam",MZM_ITEM_WAVE_BEAM},
+    {"Plasma Beam",MZM_ITEM_PLASMA_BEAM},
 };
 #define DEBUG_ITEMS_COUNT (int)(sizeof debug_items/sizeof debug_items[0])
 
@@ -2147,8 +2166,9 @@ static uint16_t runtime_pseudo_screw_damage(const MzmSamus *samus,const MzmEquip
         case MZM_POSE_STARTING_WALL_JUMP: case MZM_POSE_SPACE_JUMPING: break;
         default: return 0;
     }
-    return (uint16_t)(4*(2+((equipment->items&MZM_ITEM_LONG_BEAM)?1:0)+
-                           ((equipment->items&MZM_ITEM_ICE_BEAM)?1:0)));
+    uint32_t items=equipment->items;
+    return (uint16_t)(4*(2+((items&MZM_ITEM_LONG_BEAM)?1:0)+((items&MZM_ITEM_ICE_BEAM)?1:0)+
+                           ((items&MZM_ITEM_WAVE_BEAM)?1:0)+((items&MZM_ITEM_PLASMA_BEAM)?1:0)));
 }
 
 /* The kills of a sprite Samus stands on drop her to STANDING_MIDAIR. */
@@ -3200,6 +3220,10 @@ int main(int argc, char **argv) {
                                    &equipment, &collision, &weapons, &input);
             weapons.samus_previous_x=previous_x;
             weapons.frame8=sprites.frame8;
+            /* gBg1X/YPosition for ProjectileCheckDespawn. */
+            weapons.has_camera=true;
+            weapons.camera_x=(uint16_t)((int)last_cx*4);
+            weapons.camera_y=(uint16_t)((int)last_cy*4);
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
             {
@@ -3270,13 +3294,14 @@ int main(int argc, char **argv) {
                     [MZM_PROJECTILE_CHARGED_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM,
                     [MZM_PROJECTILE_CHARGED_LONG_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM,
                     [MZM_PROJECTILE_ICE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM,
-                    [MZM_PROJECTILE_CHARGED_ICE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM};
+                    [MZM_PROJECTILE_CHARGED_ICE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM,
+                    [MZM_PROJECTILE_PLASMA_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM,
+                    [MZM_PROJECTILE_CHARGED_PLASMA_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM};
                 /* ProjectileSetTrail's particles come first (ProjectileProcess). */
                 for(int i=0;i<weapons.trail_count;i++)
                     mzm_particle_set(&sprites.effects,(uint16_t)weapons.trails[i].y,
                                      (uint16_t)weapons.trails[i].x,
-                                     weapons.trails[i].left?MZM_PE_BEAM_TRAILING_LEFT:
-                                     MZM_PE_BEAM_TRAILING_RIGHT);
+                                     weapons.trails[i].effect);
                 for(int i=0;i<weapons.impact_count;i++)
                     mzm_particle_set(&sprites.effects,(uint16_t)weapons.impacts[i].y,
                                      (uint16_t)weapons.impacts[i].x,
@@ -3609,12 +3634,22 @@ int main(int argc, char **argv) {
                 SDL_RenderTexture(renderer,fx_texture,NULL,&box);
             }
         }
+        /* PROJ_STATUS_ABOVE_BG1 (the Wave Beam, and the Plasma Beam with it)
+         * draws in front of every background: those come after the front
+         * layers. */
+        for(int pass=0;pass<2;pass++) {
+        if(pass==1 && layered)
+            runtime_draw_backgrounds(renderer,&bg_art,room,cx,cy,viewport,scale,0,
+                                     sprite_priority-1);
         for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
             const MzmProjectile *projectile=&weapons.list[i];
             if(!projectile->active || projectile->stage==MZM_STAGE_INIT ||
                projectile->hidden)continue;
+            bool above=projectile->type==MZM_PROJECTILE_WAVE_BEAM ||
+                projectile->type==MZM_PROJECTILE_CHARGED_WAVE_BEAM || projectile->wave_oam;
+            if(above!=(pass==1))continue;
             char key[160];
-            runtime_projectile_key(projectile,key,sizeof key);
+            runtime_projectile_key(projectile,equipment.items,key,sizeof key);
             RuntimeLibraryEntry *entry=runtime_library_find(&projectile_library,key);
             if(!entry || entry->count==0)continue;
             int index=projectile->anim_frame<entry->count?projectile->anim_frame:0;
@@ -3626,9 +3661,7 @@ int main(int argc, char **argv) {
                             (float)art->w*scale,(float)art->h*scale};
             SDL_RenderTexture(renderer,shot_texture,NULL,&shot);
         }
-        if(layered)
-            runtime_draw_backgrounds(renderer,&bg_art,room,cx,cy,viewport,scale,0,
-                                     sprite_priority-1);
+        }
         if(show_hitbox || !lib_entry) {
             float bx,by,bw,bh;
             mzm_samus_box(&samus,&bx,&by,&bw,&bh);
@@ -3655,6 +3688,10 @@ int main(int argc, char **argv) {
                    capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
+            for(int i=0;i<MZM_MAX_PROJECTILES;i++)
+                if(weapons.list[i].active)
+                    printf("  projectile %d type %d at %d,%d\n",i,(int)weapons.list[i].type,
+                           (int)(weapons.list[i].x>>2),(int)(weapons.list[i].y>>2));
             for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
                 if(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)
                     printf("  sprite %d %s%s at %d,%d pose %#x status %#x health %d freeze %d\n",

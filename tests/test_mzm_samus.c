@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free regression tests for the native Zero Mission pose controller. */
+#include "mzm_effects.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
 #include "mzm_sfx.h"
@@ -1198,7 +1199,8 @@ static void test_charge_beam(void) {
     mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
     assert(weapons.trail_count == 1 && weapons.trails[0].y == shot->y &&
            weapons.trails[0].x == shot->x + (shot->x_flip ? -32 : 32) &&
-           weapons.trails[0].left == shot->x_flip);
+           weapons.trails[0].effect ==
+               (shot->x_flip ? MZM_PE_BEAM_TRAILING_LEFT : MZM_PE_BEAM_TRAILING_RIGHT));
     weapons.frame8 = 0;
     w.equipment.items &= ~MZM_ITEM_ICE_BEAM;
 
@@ -1211,6 +1213,97 @@ static void test_charge_beam(void) {
            weapons.charge_counter == 0);
     mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
     assert(mzm_projectile_count(&weapons, MZM_PROJECTILE_CHARGED_LONG_BEAM) == 1);
+}
+
+/* SamusCheckNewProjectile's beam types and shot sounds, the Wave Beam
+ * through walls, the Plasma Beam's walls, the trails and the hitboxes. */
+static void test_wave_and_plasma(void) {
+    uint16_t sound = 0;
+    assert(mzm_beam_type(MZM_ITEM_WAVE_BEAM | MZM_ITEM_ICE_BEAM, false, &sound) ==
+               MZM_PROJECTILE_WAVE_BEAM && sound == MZM_SOUND_BEAM_WAVE_ICE_SHOT);
+    assert(mzm_beam_type(MZM_ITEM_PLASMA_BEAM | MZM_ITEM_WAVE_BEAM | MZM_ITEM_LONG_BEAM |
+                             MZM_ITEM_ICE_BEAM, true, &sound) ==
+               MZM_PROJECTILE_CHARGED_PLASMA_BEAM &&
+           sound == MZM_SOUND_CHARGED_BEAM_PLASMA_WAVE_LONG_ICE_SHOT);
+    assert(mzm_beam_type(MZM_ITEM_LONG_BEAM | MZM_ITEM_ICE_BEAM, true, &sound) ==
+               MZM_PROJECTILE_CHARGED_ICE_BEAM && sound == MZM_SOUND_CHARGED_BEAM_LONG_ICE_SHOT);
+    assert(mzm_beam_type(0, false, &sound) == MZM_PROJECTILE_BEAM && sound == MZM_SOUND_BEAM_SHOT);
+    int16_t t, b, l, r;
+    mzm_projectile_hitbox(MZM_PROJECTILE_WAVE_BEAM, MZM_AIM_FORWARD, 0, &t, &b, &l, &r);
+    assert(t == -64 && b == 64 && l == -20 && r == 20);
+    mzm_projectile_hitbox(MZM_PROJECTILE_CHARGED_WAVE_BEAM, MZM_AIM_DIAGONAL_DOWN, 0, &t, &b, &l, &r);
+    assert(t == -16 && b == 72 && l == -48 && r == 48);
+    mzm_projectile_hitbox(MZM_PROJECTILE_PLASMA_BEAM, MZM_AIM_UP, 0, &t, &b, &l, &r);
+    assert(t == -20 && b == 20 && l == -20 && r == 20);
+    mzm_projectile_hitbox(MZM_PROJECTILE_CHARGED_PLASMA_BEAM, MZM_AIM_UP, MZM_ITEM_WAVE_BEAM,
+                          &t, &b, &l, &r);
+    assert(t == -36 && b == 36 && l == -72 && r == 72);
+
+    /* The Wave Beam (with Long Beam): 28 subpixels a frame, through the
+     * wall, which still gets CAA_BEAM. */
+    World w;
+    world_init(&w);
+    fill(&w.grid, 8, 0, 1, GRID_H);
+    w.collision.affect = record_affect;
+    w.equipment.items |= MZM_ITEM_WAVE_BEAM | MZM_ITEM_LONG_BEAM;
+    place(&w, 64, 224);
+    step(&w, 0);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    affected_damage = 0;
+    mzm_sfx_clear();
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    const MzmProjectile *shot = first_active(&weapons);
+    assert(shot && shot->type == MZM_PROJECTILE_WAVE_BEAM &&
+           mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_BEAM_WAVE_LONG_SHOT));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    int32_t x = shot->x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    assert(shot->x == x + 28);
+    for (int i = 0; i < 10; ++i)
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    assert(shot->active && shot->x > 9 * 16 * 4 && affected_damage == MZM_DAMAGE_BEAM &&
+           weapons.impact_count == 0);
+
+    /* The Plasma Beam without Wave stops at the wall with its impact; 32
+     * subpixels a frame. */
+    w.equipment.items = (w.equipment.items & ~(uint32_t)MZM_ITEM_WAVE_BEAM) | MZM_ITEM_PLASMA_BEAM;
+    mzm_weapons_init(&weapons);
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    shot = first_active(&weapons);
+    assert(shot && shot->type == MZM_PROJECTILE_PLASMA_BEAM && !shot->wave_oam);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    x = shot->x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    assert(shot->x == x + 32);
+    bool impact = false;
+    for (int i = 0; i < 8 && shot->active; ++i) {
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+        for (int k = 0; k < weapons.impact_count; ++k)
+            impact |= weapons.impacts[k].type == MZM_PROJECTILE_PLASMA_BEAM;
+    }
+    assert(!shot->active && impact);
+
+    /* The charged Wave Beam's trail (PE_CHARGED_WAVE_BEAM_TRAIL when
+     * gFrameCounter8Bit & 7 is 0) and the missile trail. */
+    w.equipment.items = (w.equipment.items & ~(uint32_t)MZM_ITEM_PLASMA_BEAM) | MZM_ITEM_WAVE_BEAM;
+    for (int r2 = 0; r2 < GRID_H - 1; ++r2) w.grid.solid[r2][8] = false;
+    mzm_weapons_init(&weapons);
+    weapons.pending = true;
+    weapons.pending_type = MZM_PROJECTILE_CHARGED_BEAM;
+    weapons.frame8 = 1;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    shot = first_active(&weapons);
+    assert(shot && shot->type == MZM_PROJECTILE_CHARGED_WAVE_BEAM);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    assert(weapons.trail_count == 0);
+    weapons.frame8 = 8;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    assert(weapons.trail_count == 1 && weapons.trails[0].effect == MZM_PE_CHARGED_WAVE_BEAM_TRAIL);
+    weapons.frame8 = 0;
 }
 
 /* Standing on a solid (frozen) sprite: the landing request from
@@ -1260,6 +1353,7 @@ int main(void) {
     test_power_bomb();
     test_charge_beam();
     test_standing_on_sprite();
+    test_wave_and_plasma();
     puts("MZM Samus controller tests passed");
     return 0;
 }

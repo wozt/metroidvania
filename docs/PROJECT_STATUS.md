@@ -2988,6 +2988,52 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0267 - Zero Mission Wave and Plasma Beams, beam and missile trails
+
+- `mzm_projectiles.c`: `mzm_beam_type` follows `SamusCheckNewProjectile`
+  (plasma, then wave, ice, long) with all 24 normal and charged shot
+  sounds; the Wave and Plasma charge sounds. `ProjectileProcessWaveBeam` /
+  `ChargedWaveBeam` move 28 subpixels a frame through walls with
+  `ProjectileCheckWaveBeamHittingBlocks` (CAA_BEAM on three points across
+  the wave); `ProjectileProcessPlasmaBeam` / `ChargedPlasmaBeam` move 32 and
+  stop at walls (the Plasma impact) unless the Wave Beam is equipped.
+  `mzm_projectile_hitbox` gives every routine's hitbox (the per-direction
+  wave boxes with their truncated float factors).
+- Trails: `ProjectileSetTrail` takes the effect; the ice trail of every beam
+  with the Ice Beam, the charged Long, Ice, Wave, Plasma and full beam
+  trails (every 8 frames), the missile (8) and super missile (4) trails.
+- `ProjectileCheckDespawn` now tests the screen (plus the projectile's draw
+  distance and padding) before the distance to Samus, with the runtime
+  camera's corner and the GBA screen size.
+- `mzm_sprites.c`: the Wave and Plasma cases of `ProjectileCheckHittingSprite`
+  (3 plus one per other beam, charged 12 plus four; ice hits with the full
+  beam particles when the Ice Beam is equipped); the Plasma Beam goes on
+  through the sprites it hits, immune ones included.
+- `mzm_effects.c`: the Wave, Plasma and full beam impacts (their sounds) and
+  the trails' tables.
+- Exporters: the projectile library adds the Wave and Plasma impacts, the
+  missile and charged trails for each beam variant (the Plasma trails with
+  the Plasma graphics only) and ice-coloured `/ice` versions of the Wave and
+  Plasma projectiles; the sprite library adds the same tables for their
+  durations. The Samus pipeline names the first unresolved particle's error.
+- Runtime: Wave and Plasma Beam debug items (`--item wave-beam`,
+  `--item plasma-beam`), their projectile keys (`_Wave`/`_NoWave` by the
+  Wave Beam at the shot, `/ice`), beam variants, release and charging rows,
+  pseudo screw damage; `PROJ_STATUS_ABOVE_BG1` projectiles draw after the
+  front backgrounds; captures list the active projectiles.
+- Checked in brinstar_003: `--item wave-beam --item long-beam` sends a wave
+  through the right wall, drawn in front of it until it leaves the screen;
+  `--item plasma-beam` fires the green Plasma Beam through a Ripper; both
+  flash their release rows.
+- Tests: `tests/test_mzm_samus.c` (beam types and sounds, hitboxes, the Wave
+  Beam through a wall with its block action, the Plasma Beam's speed and
+  wall impact, the charged wave trail), `tests/test_mzm_sprites.c` (Wave,
+  Wave + Ice, Plasma pass-through, fully charged hits, the impact sounds)
+  and `tests/test_mzm_projectile_compose.py` (the exported particle lists).
+- Validation on 2026-10-12: warning-clean build, CTest 30/30, the Python
+  suite (430 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0266 - Zero Mission frozen sprites as platforms
 
 - `mzm_sprites.c` ports the frozen branch of

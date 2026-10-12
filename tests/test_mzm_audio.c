@@ -20,7 +20,8 @@ static int failures;
 
 enum { BASE = 0x08100000u, BANK_SIZE = 0x400 };
 enum { SONG = 0x40, VOICES = 0x60, SAMPLE = 0x100, TRACK = 0x200, SFX = 0x280, SFX_TRACK = 0x2A0,
-       SFX_VOICES = 0x2C0, LOOP_SONG = 0x300, LOOP_TRACK = 0x320 };
+       SFX_VOICES = 0x2C0, LOOP_SONG = 0x300, LOOP_TRACK = 0x320, JINGLE = 0x340,
+       JINGLE_TRACK = 0x360, TRACK2_SONG = 0x380 };
 
 static uint8_t bank[BANK_SIZE];
 
@@ -40,7 +41,8 @@ static void put_bytes(uint32_t offset, const uint8_t *bytes, size_t count) {
 /* Entry 1: a one-track song on player 0 playing middle C on a looped
  * 64-sample square at the native rate for 24 ticks. Entry 2: a sound effect
  * on player 3 playing a square 1 note. Entry 3: the song's note repeated
- * forever (GOTO). */
+ * forever (GOTO). Entry 4: a jingle ending with 0xB6, which replays the
+ * queued music. Entry 5: the looping track on player 2. */
 static void build_bank(void) {
     memset(bank, 0, sizeof bank);
     put32(8, BASE + SONG);
@@ -85,6 +87,18 @@ static void build_bank(void) {
                                    (uint8_t)(BASE + LOOP_TRACK + 6), (uint8_t)((BASE + LOOP_TRACK) >> 8),
                                    (uint8_t)((BASE + LOOP_TRACK) >> 16), (uint8_t)((BASE + LOOP_TRACK) >> 24)};
     put_bytes(LOOP_TRACK, loop, sizeof loop);
+    put32(32, BASE + JINGLE);
+    put16(36, 0);
+    bank[JINGLE] = 1;
+    put32(JINGLE + 4, BASE + VOICES);
+    put32(JINGLE + 8, BASE + JINGLE_TRACK);
+    static const uint8_t jingle[] = {0xBD, 0, 0xBE, 100, 0xBB, 75, 0xE7, 67, 127, 0x98, 0xB6};
+    put_bytes(JINGLE_TRACK, jingle, sizeof jingle);
+    put32(40, BASE + TRACK2_SONG);
+    put16(44, 2);
+    bank[TRACK2_SONG] = 1;
+    put32(TRACK2_SONG + 4, BASE + VOICES);
+    put32(TRACK2_SONG + 8, BASE + LOOP_TRACK);
 }
 
 static void write_list(FILE *f, const char *kind, const char *name, int count, int (*value)(int)) {
@@ -125,7 +139,7 @@ static bool write_files(const char *bank_path, const char *tables_path) {
     fclose(f);
     f = fopen(tables_path, "w");
     if (!f) return false;
-    fprintf(f, "schema\tmetroidvania-mzm-sound-v1\nentries\t%u\t4\n", BASE);
+    fprintf(f, "schema\tmetroidvania-mzm-sound-v1\nentries\t%u\t6\n", BASE);
     write_list(f, "table", "sUnk_808cad0", 129, note_delay);
     write_list(f, "table", "sClockTable", 49, clock);
     write_list(f, "table", "sNoiseTable", 60, noise);
@@ -258,6 +272,43 @@ static void test_engine(void) {
     CHECK(mzm_music_current() == 1);
     mzm_audio_update();
     CHECK(mzm_audio_player_playing(0));
+    /* InsertMusicAndQueueCurrent: the jingle stops player 3 and takes
+     * player 0; its 0xB6 end replays the looping song (ReplayQueuedMusic),
+     * which keeps player 0 playing past the jingle's 25 ticks. */
+    mzm_audio_stop_all();
+    mzm_music_play(3, 0);
+    render(4, &peak, &crossings);
+    mzm_sound_play(2);
+    render(1, &peak, &crossings);
+    CHECK(mzm_audio_player_playing(3));
+    mzm_music_insert(4, 0);
+    CHECK(!mzm_audio_player_playing(3));
+    CHECK(mzm_audio_player_playing(0));
+    CHECK(mzm_music_current() == 3);
+    render(40, &peak, &crossings);
+    CHECK(mzm_audio_player_playing(0));
+    CHECK(peak > 0);
+    /* Without a queued music, the jingle alone ends. */
+    mzm_audio_stop_all();
+    mzm_music_play(4, 0);
+    render(40, &peak, &crossings);
+    CHECK(!mzm_audio_player_playing(0));
+
+    /* BackupTrackData2SoundChannels releases player 2's channel and
+     * RetrieveTrackData2SoundChannels gives it back. */
+    mzm_audio_stop_all();
+    mzm_sound_play(5);
+    render(2, &peak, &crossings);
+    CHECK(mzm_audio_player_playing(2));
+    CHECK(mzm_audio_active_channels() == 1);
+    mzm_audio_backup_track2();
+    CHECK(mzm_audio_active_channels() == 0);
+    mzm_audio_backup_track2();
+    mzm_audio_retrieve_track2();
+    CHECK(mzm_audio_active_channels() == 1);
+    mzm_audio_retrieve_track2();
+    CHECK(mzm_audio_active_channels() == 1);
+
     /* A room without music falls back to the default track. */
     mzm_audio_stop_all();
     mzm_music_check_set_new_track(0);

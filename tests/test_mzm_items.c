@@ -6,6 +6,7 @@
 #include "mzm_sfx.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -118,6 +119,7 @@ static void test_banner(void) {
     assert(b.processing && !b.drawn && b.frame == 0 && b.adc == 1);
     mzm_banner_update(&b, &kind, false, true, &prevent);
     assert(!b.processing && b.drawn && b.table == MZM_BANNER_TWO_LINES_SPAWN && !b.new_item &&
+           mzm_sfx_count() == 2 && mzm_sfx_get(0).action == MZM_SFX_BACKUP_TRACK2 &&
            mzm_sfx_requested(MZM_SFX_PLAY, MZM_MUSIC_GETTING_TANK_JINGLE));
     /* The spawn animation (1 + 1 + 2 + 3 frames), then 100 static frames
      * before an input can close it. */
@@ -133,17 +135,58 @@ static void test_banner(void) {
     events = mzm_banner_update(&b, &kind, false, true, &prevent);
     assert(events & MZM_BANNER_FINISH_TANK && b.table == MZM_BANNER_TWO_LINES_REMOVING);
     events = 0;
+    mzm_sfx_clear();
     frames = run_until(&b, &kind, 0xFF, false, &prevent, &events);
-    assert(!b.exists && events & MZM_BANNER_REMOVED && prevent == 0 && frames == 4);
+    assert(!b.exists && events & MZM_BANNER_REMOVED && prevent == 0 && frames == 4 &&
+           mzm_sfx_count() == 1 && mzm_sfx_get(0).action == MZM_SFX_RETRIEVE_TRACK2);
 
-    /* A first tank: one-line banner, no tank jingle (the item jingle is not
-     * ported), a new item. */
+    /* A first tank: one-line banner, the item jingle inserted in front of
+     * the music, a new item; its removal retrieves nothing. */
     mzm_banner_spawn(&b, MZM_MESSAGE_FIRST_MISSILE_TANK);
     mzm_sfx_clear();
     events = 0;
     run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
-    assert(b.new_item && b.table == MZM_BANNER_ONE_LINE_STATIC &&
-           !mzm_sfx_requested(MZM_SFX_PLAY, MZM_MUSIC_GETTING_TANK_JINGLE));
+    assert(b.new_item && b.table == MZM_BANNER_ONE_LINE_STATIC && mzm_sfx_count() == 2 &&
+           mzm_sfx_get(0).action == MZM_SFX_BACKUP_TRACK2 &&
+           mzm_sfx_get(1).action == MZM_SFX_MUSIC_INSERT &&
+           mzm_sfx_get(1).sound == MZM_MUSIC_GETTING_ITEM_JINGLE && mzm_sfx_get(1).timer == 0);
+    mzm_sfx_clear();
+    run_until(&b, &kind, 0xFF, true, &prevent, &events);
+    assert(!b.exists && !mzm_sfx_requested(MZM_SFX_RETRIEVE_TRACK2, 0));
+
+    /* Items: the unknown ones have their own jingle. */
+    const uint8_t items[] = {MZM_MESSAGE_LONG_BEAM, MZM_MESSAGE_UNKNOWN_ITEM_PLASMA,
+                             MZM_MESSAGE_UNKNOWN_ITEM_GRAVITY, MZM_MESSAGE_UNKNOWN_ITEM_SPACE_JUMP,
+                             MZM_MESSAGE_POWER_GRIP};
+    for (size_t i = 0; i < sizeof items; ++i) {
+        mzm_banner_spawn(&b, items[i]);
+        mzm_sfx_clear();
+        run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
+        bool unknown = i >= 1 && i <= 3;
+        assert(b.new_item && mzm_sfx_count() == 2 &&
+               mzm_sfx_get(0).action == MZM_SFX_BACKUP_TRACK2 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_INSERT, unknown ? MZM_MUSIC_GETTING_UNKNOWN_ITEM_JINGLE
+                                                              : MZM_MUSIC_GETTING_ITEM_JINGLE));
+    }
+
+    /* The fully powered suit: the Brinstar remix behind its own jingle. */
+    mzm_banner_spawn(&b, MZM_MESSAGE_FULLY_POWERED_SUIT);
+    mzm_sfx_clear();
+    run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
+    assert(!b.new_item && mzm_sfx_count() == 2 &&
+           mzm_sfx_get(0).action == MZM_SFX_MUSIC_PLAY &&
+           mzm_sfx_get(0).sound == MZM_MUSIC_BRINSTAR_REMIX &&
+           mzm_sfx_requested(MZM_SFX_MUSIC_INSERT, MZM_MUSIC_GETTING_FULLY_POWERED_SUIT_JINGLE));
+
+    /* A map: the tank jingle without a backup; the save prompt: silent. */
+    mzm_banner_spawn(&b, MZM_MESSAGE_BRINSTAR_MAP_ACQUIRED);
+    mzm_sfx_clear();
+    run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
+    assert(mzm_sfx_count() == 1 && mzm_sfx_requested(MZM_SFX_PLAY, MZM_MUSIC_GETTING_TANK_JINGLE));
+    mzm_banner_spawn(&b, MZM_MESSAGE_SAVE_PROMPT);
+    mzm_sfx_clear();
+    run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
+    assert(mzm_sfx_count() == 0);
 }
 
 int main(void) {

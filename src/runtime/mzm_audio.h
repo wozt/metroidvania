@@ -40,6 +40,12 @@ void mzm_sound_fade(uint16_t sound, uint16_t timer);
 void mzm_music_play(uint16_t music, uint8_t priority);
 void mzm_music_fade(uint16_t timer);
 void mzm_audio_stop_all(void);
+/* InsertMusicAndQueueCurrent: the current music is replayed when `music`
+ * ends (0 for the item jingles, 1 for the loading jingle). */
+void mzm_music_insert(uint16_t music, uint8_t not_interrupting);
+/* BackupTrackData2SoundChannels and RetrieveTrackData2SoundChannels */
+void mzm_audio_backup_track2(void);
+void mzm_audio_retrieve_track2(void);
 /* CheckSetNewMusicTrack (a door transition starts: the room's track) and
  * CheckPlayTransitionMusicTrack (the new room is shown). */
 void mzm_music_check_set_new_track(uint16_t music);

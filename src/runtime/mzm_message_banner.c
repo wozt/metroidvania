@@ -20,6 +20,14 @@ static bool is_first_tank(uint8_t m) {
     return m == MZM_MESSAGE_FIRST_MISSILE_TANK || m == MZM_MESSAGE_FIRST_SUPER_MISSILE_TANK ||
            m == MZM_MESSAGE_FIRST_POWER_BOMB_TANK;
 }
+static bool is_unknown_item(uint8_t m) {
+    return m == MZM_MESSAGE_UNKNOWN_ITEM_PLASMA || m == MZM_MESSAGE_UNKNOWN_ITEM_GRAVITY ||
+           m == MZM_MESSAGE_UNKNOWN_ITEM_SPACE_JUMP;
+}
+static bool is_tank(uint8_t m) {
+    return m == MZM_MESSAGE_ENERGY_TANK_ACQUIRED || m == MZM_MESSAGE_MISSILE_TANK_ACQUIRED ||
+           m == MZM_MESSAGE_SUPER_MISSILE_TANK_ACQUIRED || m == MZM_MESSAGE_POWER_BOMB_TANK_ACQUIRED;
+}
 static bool is_map(uint8_t m) {
     return m >= MZM_MESSAGE_BRINSTAR_MAP_ACQUIRED && m <= MZM_MESSAGE_MOTHER_SHIP_MAP_ACQUIRED;
 }
@@ -83,14 +91,21 @@ unsigned mzm_banner_update(MzmMessageBanner *b, const MzmBannerKind *kind, bool 
             if (++b->text_calls >= needed) {
                 b->processing = false;
                 b->drawn = true;
-                if (is_item(msg) || is_first_tank(msg)) {
-                    /* BackupTrackData2SoundChannels and
-                     * InsertMusicAndQueueCurrent (the item jingles) are not
-                     * ported. */
+                if (is_item(msg)) {
                     b->new_item = true;
-                } else if (msg != MZM_MESSAGE_FULLY_POWERED_SUIT &&
-                           msg != MZM_MESSAGE_SAVE_PROMPT) {
-                    /* BackupTrackData2SoundChannels is not ported. */
+                    mzm_sfx_backup_track2();
+                    mzm_sfx_music_insert(is_unknown_item(msg) ? MZM_MUSIC_GETTING_UNKNOWN_ITEM_JINGLE
+                                                              : MZM_MUSIC_GETTING_ITEM_JINGLE,
+                                         0);
+                } else if (is_first_tank(msg)) {
+                    b->new_item = true;
+                    mzm_sfx_backup_track2();
+                    mzm_sfx_music_insert(MZM_MUSIC_GETTING_ITEM_JINGLE, 0);
+                } else if (msg == MZM_MESSAGE_FULLY_POWERED_SUIT) {
+                    mzm_sfx_music_play(MZM_MUSIC_BRINSTAR_REMIX, 0);
+                    mzm_sfx_music_insert(MZM_MUSIC_GETTING_FULLY_POWERED_SUIT_JINGLE, 0);
+                } else if (msg != MZM_MESSAGE_SAVE_PROMPT) {
+                    if (is_tank(msg)) mzm_sfx_backup_track2();
                     mzm_sfx_play(MZM_MUSIC_GETTING_TANK_JINGLE);
                 }
                 if (b->new_item || msg == MZM_MESSAGE_SAVE_COMPLETE || is_map(msg) ||
@@ -133,9 +148,10 @@ unsigned mzm_banner_update(MzmMessageBanner *b, const MzmBannerKind *kind, bool 
         b->pose = MZM_BANNER_POSE_REMOVAL_ANIMATION;
         break;
     case MZM_BANNER_POSE_REMOVAL_ANIMATION:
-        /* MessageBannerRemovalAnimation: RetrieveTrackData2SoundChannels and
-         * the item acquisition pause screen are not ported. */
+        /* MessageBannerRemovalAnimation: the item acquisition pause screen
+         * is not ported. */
         if (animation_ended(b, kind)) {
+            if (is_tank(msg)) mzm_sfx_retrieve_track2();
             b->exists = false;
             *prevent_movement = 0;
             events |= MZM_BANNER_REMOVED;

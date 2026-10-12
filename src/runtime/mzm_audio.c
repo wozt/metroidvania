@@ -1817,14 +1817,179 @@ static void PlayMusic(uint16_t musicTrack, uint8_t priority) {
     gMusicInfo.occupied = 0;
 }
 
-/* ReplayQueuedMusic: the music queued behind an inserted one is not
- * ported (no insertion yet). */
-static void ReplayQueuedMusic(uint8_t queueFlags) {
-    (void)queueFlags;
-}
-
 /* DetermineNewMusicTrack (the alias pairs of include/constants/audio.h). */
 static uint16_t DetermineNewMusicTrack(uint16_t musicTrack);
+
+/* gSoundChannelBackup and gSoundChannelTrack2Backup */
+typedef struct { SoundChannel *pChannel; SoundChannel channel; } SoundChannelBackup;
+enum { SOUND_CHANNEL_BACKUPS = 7 };
+static SoundChannelBackup gSoundChannelBackup[SOUND_CHANNEL_BACKUPS];
+static SoundChannelBackup gSoundChannelTrack2Backup[SOUND_CHANNEL_BACKUPS];
+
+/* The channel walk shared by unk_34ac and BackupTrackData2SoundChannels:
+ * every sample channel of the track is saved and released. */
+static uint8_t backup_track_channels(TrackData *pTrack, SoundChannelBackup *backup,
+                                     uint8_t currChannel) {
+    pTrack->unk_1E = 1;
+    TrackVariables *pVariables = pTrack->pVariables;
+    for (uint8_t j = 0; j < pTrack->amountOfTracks; j++, pVariables++) {
+        if (pVariables->channel & 0xC0) continue;
+        if (pVariables->pSoundPsg)
+            ClearRegistersForPsg(pVariables->pSoundPsg, (uint8_t)((pVariables->channel & 7) - 1));
+        SoundChannel *pChannelNext;
+        for (SoundChannel *pChannel = pVariables->pChannel; pChannel; pChannel = pChannelNext) {
+            /* The native arrays hold 7 entries and nothing bounds the
+             * index; the port drops what would overflow them. */
+            if (currChannel < SOUND_CHANNEL_BACKUPS) {
+                backup[currChannel].pChannel = pChannel;
+                backup[currChannel].channel = *pChannel;
+            }
+            currChannel++;
+            pChannel->unk_0 = 0;
+            pChannel->pVariables = NULL;
+            pChannelNext = pChannel->pChannel2;
+            pChannel->pChannel2 = NULL;
+            pChannel->pChannel1 = NULL;
+        }
+    }
+    return currChannel;
+}
+
+/* The walk shared by unk_35d0 and RetrieveTrackData2SoundChannels. */
+static uint8_t retrieve_track_channels(TrackData *pTrack, const SoundChannelBackup *backup,
+                                       uint8_t currChannel) {
+    pTrack->unk_1E &= (uint8_t)~1;
+    TrackVariables *pVariables = pTrack->pVariables;
+    for (uint8_t j = 0; j < pTrack->amountOfTracks; j++, pVariables++) {
+        if (pVariables->channel & 0xC0) continue;
+        for (SoundChannel *pChannel = pVariables->pChannel; pChannel; pChannel = pChannel->pChannel2) {
+            unk_20a4(pChannel);
+            if (currChannel < SOUND_CHANNEL_BACKUPS) *pChannel = backup[currChannel].channel;
+            currChannel++;
+        }
+    }
+    return currChannel;
+}
+
+/* unk_34ac: saves the channels of the players under an inserted music
+ * (2 alone, or 1, 3, 6 and 8 when interrupting: mask 0x14A). */
+static void unk_34ac(uint8_t isInterrupting) {
+    uint8_t currChannel = 0;
+    for (uint8_t track = isInterrupting ? 1 : 2; track < NUM_MUSIC_PLAYERS; track++) {
+        if (!((track == 2 && !isInterrupting) || (0x14A >> track) & 1)) continue;
+        TrackData *pTrack = sMusicTrackDataRom[track].pTrack;
+        if (pTrack->occupied) continue;
+        pTrack->occupied = 1;
+        if (!(pTrack->unk_1E & 1) && pTrack->flags & 2)
+            currChannel = backup_track_channels(pTrack, gSoundChannelBackup, currChannel);
+        pTrack->occupied = 0;
+    }
+}
+
+/* unk_35d0: restores what unk_34ac saved. */
+static void unk_35d0(uint8_t param_1) {
+    uint8_t currChannel = 0;
+    for (uint8_t i = param_1 ? 1 : 2; i < NUM_MUSIC_PLAYERS; i++) {
+        if (!((i == 2 && !param_1) || (0x14A >> i) & 1)) continue;
+        TrackData *pTrack = sMusicTrackDataRom[i].pTrack;
+        if (pTrack->occupied) continue;
+        pTrack->occupied = 1;
+        if (pTrack->unk_1E & 1)
+            currChannel = retrieve_track_channels(pTrack, gSoundChannelBackup, currChannel);
+        pTrack->occupied = 0;
+    }
+}
+
+/* unk_2a8c: stops every player whose channels are not saved. */
+static void unk_2a8c(void) {
+    for (int i = NUM_MUSIC_PLAYERS - 1; i >= 0; i--)
+        if (!(sMusicTrackDataRom[i].pTrack->unk_1E & 1)) StopMusicOrSound(sMusicTrackDataRom[i].pTrack);
+}
+
+/* DelayMusicStart */
+static void DelayMusicStart(TrackData *pTrack, uint16_t delay) {
+    if (!pTrack->occupied) {
+        pTrack->occupied = 1;
+        TrackVariables *pVariables = pTrack->pVariables;
+        for (uint8_t trackId = 0; trackId < pTrack->amountOfTracks; trackId++, pVariables++)
+            if (pVariables->unk_0 != 0) pVariables->delay = (uint8_t)(pVariables->delay + delay);
+    }
+    pTrack->occupied = 0;
+}
+
+/* InsertMusicAndQueueCurrent (isNotInterrupting is 0 for the item jingles,
+ * 1 for the loading jingle). */
+static void InsertMusicAndQueueCurrent(uint16_t musicTrack, uint8_t isNotInterrupting) {
+    if (gMusicInfo.occupied) return;
+    gMusicInfo.occupied = 1;
+    if (!(gMusicInfo.priority & 0x84)) {
+        uint32_t pHeader = entry_header(musicTrack);
+        TrackData *pTrack = sMusicTrackDataRom[0].pTrack;
+        if ((pTrack->flags & (0x2 | 0x8 | 0x10)) != 0x2 || pHeader != pTrack->pHeader) {
+            if (isNotInterrupting == 0) {
+                StopMusicOrSound(sMusicTrackDataRom[3].pTrack);
+                unk_34ac(1);
+                unk_2a8c();
+                pTrack->queueFlags |= 0x80;
+            } else if (isNotInterrupting == 1) {
+                unk_2a8c();
+                pTrack->queueFlags |= 0x40;
+                pTrack->queueFlags |= 0x80;
+            }
+            gMusicInfo.unk_20 = 1;
+            gMusicInfo.occupied = 0;
+            InitTrack(pTrack, pHeader);
+        }
+    }
+    gMusicInfo.occupied = 0;
+}
+
+/* ReplayQueuedMusic. The volume down of gUnk_Audio0x50 (unk_3058 on players
+ * 0, 1 and 7 when volumeDownFlag bit 7 is set) is not ported: nothing sets
+ * that flag yet. */
+static void ReplayQueuedMusic(uint8_t queueFlags) {
+    if (gMusicInfo.occupied) return;
+    gMusicInfo.occupied = 1;
+    if (!(queueFlags & 0x40)) unk_35d0(1);
+    TrackData *pTrack = sMusicTrackDataRom[0].pTrack;
+    gMusicInfo.unk_20 = 0;
+    uint16_t music = (uint16_t)(gMusicInfo.musicTrack - 0x5A) < 0xA
+                         ? DetermineNewMusicTrack(gMusicInfo.musicTrack)
+                         : gMusicInfo.musicTrack;
+    uint32_t pHeader = entry_header(music);
+    gMusicInfo.occupied = 0;
+    InitTrack(pTrack, pHeader);
+    if (queueFlags & 0x40) DelayMusicStart(pTrack, 60);
+    gMusicInfo.occupied = 0;
+}
+
+/* BackupTrackData2SoundChannels */
+static void BackupTrackData2SoundChannels(void) {
+    TrackData *pTrack = sMusicTrackDataRom[2].pTrack;
+    if (!pTrack->occupied) {
+        pTrack->occupied = 1;
+        if (!(pTrack->unk_1E & 1) && pTrack->flags & 2)
+            backup_track_channels(pTrack, gSoundChannelTrack2Backup, 0);
+    }
+    pTrack->occupied = 0;
+}
+
+/* RetrieveTrackData2SoundChannels */
+static void RetrieveTrackData2SoundChannels(void) {
+    TrackData *pTrack = sMusicTrackDataRom[2].pTrack;
+    if (!pTrack->occupied) {
+        pTrack->occupied = 1;
+        if (pTrack->unk_1E & 1) retrieve_track_channels(pTrack, gSoundChannelTrack2Backup, 0);
+    }
+    pTrack->occupied = 0;
+}
+
+void mzm_music_insert(uint16_t music, uint8_t not_interrupting) {
+    InsertMusicAndQueueCurrent(music, not_interrupting);
+}
+
+void mzm_audio_backup_track2(void) { BackupTrackData2SoundChannels(); }
+void mzm_audio_retrieve_track2(void) { RetrieveTrackData2SoundChannels(); }
 
 void mzm_sound_play(uint16_t sound) {
     QueueSound(sound, 0);

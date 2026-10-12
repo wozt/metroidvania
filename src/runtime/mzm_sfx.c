@@ -23,6 +23,14 @@ void mzm_sfx_play_not_playing(uint16_t sound) { request(MZM_SFX_PLAY_NOT_PLAYING
 void mzm_sfx_stop(uint16_t sound) { request(MZM_SFX_STOP, sound, 0); }
 void mzm_sfx_fade(uint16_t sound, uint16_t timer) { request(MZM_SFX_FADE, sound, timer); }
 void mzm_sfx_stop_all(void) { request(MZM_SFX_STOP_ALL, 0, 0); }
+void mzm_sfx_music_play(uint16_t music, uint16_t priority) {
+    request(MZM_SFX_MUSIC_PLAY, music, priority);
+}
+void mzm_sfx_music_insert(uint16_t music, uint16_t not_interrupting) {
+    request(MZM_SFX_MUSIC_INSERT, music, not_interrupting);
+}
+void mzm_sfx_backup_track2(void) { request(MZM_SFX_BACKUP_TRACK2, 0, 0); }
+void mzm_sfx_retrieve_track2(void) { request(MZM_SFX_RETRIEVE_TRACK2, 0, 0); }
 
 void mzm_sfx_clear(void) { g_count = 0; }
 int mzm_sfx_count(void) { return g_count; }

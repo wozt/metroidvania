@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-10**.
+Last updated: **2026-10-12**.
 
 ## Current product state
 
@@ -2987,6 +2987,28 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 27/27, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
+
+## Patch 0273 - Zero Mission item jingles
+
+- The sound engine ports `InsertMusicAndQueueCurrent`, `ReplayQueuedMusic`,
+  `DelayMusicStart`, `unk_34ac`, `unk_35d0`, `unk_2a8c`,
+  `BackupTrackData2SoundChannels` and `RetrieveTrackData2SoundChannels`: an
+  inserted music saves the channels of players 1, 3, 6 and 8, stops the
+  others, and its `0xB6` end restores them and restarts the current music.
+- `mzm_sfx` carries `PlayMusic`, the insertion and the player 2 backup
+  requests; the runtime forwards them to the engine.
+- The message banner follows the native `MessageBannerPopUp`: items and
+  first tanks back up player 2 and insert the item (or unknown item)
+  jingle, the fully powered suit plays the Brinstar remix behind its
+  jingle, tank messages back up player 2 and retrieve it on removal.
+- Checked with the extracted sound bank (engine only, captures are
+  silent): the item jingle replaces Brinstar for 355 frames, then Brinstar
+  restarts.
+- Not ported: the volume down of `gUnk_Audio0x50` (`unk_3058`), the item
+  acquisition screen, the save prompt.
+- Tests: `tests/test_mzm_audio.c` (insertion and replay against a jingle
+  without a queued music, player 2 backup and retrieve),
+  `tests/test_mzm_items.c` (the banner's music requests per message kind).
 
 ## Patch 0272 - Zero Mission unknown item Chozo statues
 

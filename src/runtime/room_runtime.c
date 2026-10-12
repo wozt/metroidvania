@@ -1898,6 +1898,10 @@ static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
     case MZM_SFX_STOP: mzm_sound_stop(sound); break;
     case MZM_SFX_FADE: mzm_sound_fade(sound, timer); break;
     case MZM_SFX_STOP_ALL: mzm_audio_stop_all(); break;
+    case MZM_SFX_MUSIC_PLAY: mzm_music_play(sound, (uint8_t)timer); break;
+    case MZM_SFX_MUSIC_INSERT: mzm_music_insert(sound, (uint8_t)timer); break;
+    case MZM_SFX_BACKUP_TRACK2: mzm_audio_backup_track2(); break;
+    case MZM_SFX_RETRIEVE_TRACK2: mzm_audio_retrieve_track2(); break;
     }
 }
 

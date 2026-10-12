@@ -37,7 +37,9 @@ read from the user's ROM at export time; nothing is stored in the repository.
   `TextDrawMessageCharacter` over the banner graphics, and `message` lines
   give the calls each text takes. The runtime's banner
   (`src/runtime/mzm_message_banner.c`) runs `MessageBanner` outside the
-  sprite slots; while it holds `gPreventMovementTimer`, the sprite update
+  sprite slots and requests the banner music through `mzm_sfx` (player 2
+  backed up, the tank jingle or the inserted item jingle); while it holds
+  `gPreventMovementTimer`, the sprite update
   only runs uninitialized and `SP_ALWAYS_ACTIVE` sprites
   (`SpriteUtilCheckStopSpritesPose`).
 - Chozo statues (`src/runtime/mzm_chozo_statue.c`): `multi` lines carry the

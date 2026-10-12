@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 29 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 30 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -78,6 +78,15 @@ Native evidence: `mzm:c:src/samus.c:SamusUpdate`, `mzm:c:src/samus.c:SamusUpdate
 Local implementation: [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c).
 Next action: Port the remaining native pose handlers.
+
+[~] **`mzm.player.speed_booster` — Speed booster, skidding and shinespark storage.** With the Speed Booster, running above 96 subpixels a frame counts a timer to 160 (the cap rises to 140 at 120 and 160 at 140); from 160 subpixels a frame SamusCheckShinesparking starts the speed boost (sound, Running_Speedboosting, the speed boost palette rows by gFrameCounter8Bit % 6, the 160 ground and mid-air caps kept through jumps and the speed-boosted landing), cancelled below it and on death. Releasing the direction skids (10 subpixels a frame, the skidding sound); Down alone while skidding, or during the six frames after a speed-boosted roll in the Morph Ball, stores a shinespark for 180 frames (the palette and the charge sound every 16 frames). Speed boosting breaks speed blocks (DESTRUCTING_ACTION_SPEED and SPEED_ON_GROUND) and kills weak sprites as DCT_SPEEDBOOSTER with its particle and sound. Checked in tourian_010 with --item speed-booster: the speed boost palette and running animation after about 160 frames of running.
+
+Native evidence: `mzm:c:src/particle.c:ParticleSpeedboosterDestroyed`, `mzm:c:src/samus.c:SamusCheckScrewSpeedboosterAffectingEnvironment`, `mzm:c:src/samus.c:SamusCheckShinesparking`, `mzm:c:src/samus.c:SamusRunning`, `mzm:c:src/samus.c:SamusSkidding`, `mzm:c:src/samus.c:SamusUpdatePalette`, `mzm:c:src/samus.c:SamusUpdatePhysics`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteTakeDamageFromSamusContact`.  
+Local implementation: [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_effects.c`](../src/runtime/mzm_effects.c), [`scripts/mzm_samus_pipeline.py`](../scripts/mzm_samus_pipeline.py), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.player.samus_controller`, `mzm.environment.breakable_blocks`, `mzm.enemies.zoomer`.  
+Known divergences: The shinespark itself (its delay, launch, collision and ballspark poses), liquids and the speed booster aura effect sprite (gScrewSpeedAnimation) are not ported; the speed boost palette and running animation are.  
+Next action: Port the shinespark and ballspark poses.
 
 ### Physics
 
@@ -320,14 +329,14 @@ Next action: Port power bombs and the multiple large energy pickup.
 
 [?] **`mzm.environment.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`mzm.environment.breakable_blocks` — Breakable, reforming and crumble blocks, hidden tanks and bomb chains.** Every beam, missile, super missile, bomb explosion point and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack breaks blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.
+[~] **`mzm.environment.breakable_blocks` — Breakable, reforming and crumble blocks, hidden tanks and bomb chains.** Every beam, missile, super missile, bomb explosion point and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack and the speed booster break blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.
 
 Native evidence: `mzm:c:src/bg_clip.c:BgClipCheckWalkingOnCrumbleBlock`, `mzm:c:src/block.c:BlockApplyCcaa`, `mzm:c:src/block.c:BlockCheckCcaa`, `mzm:c:src/block.c:BlockCheckRevealBombChainBlock`, `mzm:c:src/block.c:BlockCheckRevealOrDestroyBombBlock`, `mzm:c:src/block.c:BlockCheckRevealOrDestroyNonBombBlock`, `mzm:c:src/block.c:BlockCheckSamusInReformingBlock`, `mzm:c:src/block.c:BlockCheckStartNewSubBombChain`, `mzm:c:src/block.c:BlockDestroyNonReformBlock`, `mzm:c:src/block.c:BlockDestroySquareBlock`, `mzm:c:src/block.c:BlockProcessBombChains`, `mzm:c:src/block.c:BlockRemoveNeverReformBlocks`, `mzm:c:src/block.c:BlockSamusApplyScrewSpeedboosterDamageToEnvironment`, `mzm:c:src/block.c:BlockStartBombChain`, `mzm:c:src/block.c:BlockStoreBrokenNonReformBlock`, `mzm:c:src/block.c:BlockStoreBrokenReformBlock`, `mzm:c:src/block.c:BlockStoreSingleNeverReformBlock`, `mzm:c:src/block.c:BlockUpdateBrokenBlockAnimation`, `mzm:c:src/block.c:BlockUpdateBrokenBlocks`, `mzm:c:src/samus.c:SamusCheckScrewSpeedboosterAffectingEnvironment`.  
 Local implementation: [`src/runtime/mzm_blocks.c`](../src/runtime/mzm_blocks.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_c_tables.py`](../scripts/mzm_c_tables.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_blocks.c`](../tests/test_mzm_blocks.c), [`tests/test_mzm_c_tables.py`](../tests/test_mzm_c_tables.py).
 Dependencies: `mzm.rooms.backgrounds`, `mzm.transitions.doors_and_hatches`, `mzm.weapons.beams_and_missiles`.  
-Known divergences: Power bombs and the speed booster are not ported on Samus, so speed blocks only break by the actions that exist; grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout.  
-Next action: Port power bombs and the speed booster on Samus, then the crumble grab and tank pickups.
+Known divergences: Power bombs are not ported on Samus; grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout.  
+Next action: Port power bombs, then the crumble grab and tank pickups.
 
 ### Rooms, areas and maps
 

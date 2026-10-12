@@ -47,6 +47,7 @@ AIMS = {
 AIM_ACTIONS = {
     "idle": ("Standing", "loop"),
     "run": ("Running", "loop"),
+    "run_speedboost": ("Running_Speedboosting", "loop"),
     "midair": ("MidAir", "loop"),
     "crouch": ("Crouching", "loop"),
     "fire": ("Shooting", "once"),

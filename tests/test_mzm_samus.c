@@ -606,6 +606,27 @@ static void test_firing_breaks_a_spin(void) {
     assert(input.new_projectile && w.samus.pose == MZM_POSE_MIDAIR);
 }
 
+
+/* The recorded requests other than SamusCheckShinesparking's per-frame
+ * SoundStop(SOUND_SPEEDBOOSTER_START). */
+static int sfx_count(void) {
+    int count = 0;
+    for (int i = 0; i < mzm_sfx_count(); ++i) {
+        MzmSfxRequest r = mzm_sfx_get(i);
+        if (!(r.action == MZM_SFX_STOP && r.sound == MZM_SOUND_SPEEDBOOSTER_START)) count++;
+    }
+    return count;
+}
+
+static MzmSfxRequest sfx_get(int index) {
+    for (int i = 0; i < mzm_sfx_count(); ++i) {
+        MzmSfxRequest r = mzm_sfx_get(i);
+        if (r.action == MZM_SFX_STOP && r.sound == MZM_SOUND_SPEEDBOOSTER_START) continue;
+        if (index-- == 0) return r;
+    }
+    return (MzmSfxRequest){MZM_SFX_PLAY, 0, 0};
+}
+
 /* The native SoundPlay points of the ported poses and weapons. */
 static void test_sounds(void) {
     World w;
@@ -670,13 +691,13 @@ static void test_sounds(void) {
     steps(&w, 0, 40);
     mzm_sfx_clear();
     mzm_samus_hurt(&w.samus, &w.collision, true);
-    assert(mzm_sfx_count() == 0);
+    assert(sfx_count() == 0);
     step(&w, 0);
-    assert(mzm_sfx_count() == 1 && mzm_sfx_get(0).action == MZM_SFX_STOP_ALL);
+    assert(sfx_count() == 1 && sfx_get(0).action == MZM_SFX_STOP_ALL);
     step(&w, 0);
     assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DYING));
     step(&w, 0);
-    assert(mzm_sfx_count() == 2);
+    assert(sfx_count() == 2);
 
     /* SamusSetHighlightedWeapon and ProjectileUpdate. */
     world_init(&w);
@@ -693,9 +714,9 @@ static void test_sounds(void) {
     assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ARMING_WEAPON));
     mzm_sfx_clear();
     mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
-    assert(mzm_sfx_count() == 0);
+    assert(sfx_count() == 0);
     mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, MZM_KEY_SELECT, &w.equipment);
-    assert(mzm_sfx_count() == 1 && mzm_sfx_get(0).sound == MZM_SOUND_MISSILE_TOGGLE);
+    assert(sfx_count() == 1 && sfx_get(0).sound == MZM_SOUND_MISSILE_TOGGLE);
     mzm_sfx_clear();
     mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment);
     while (weapons.cooldown) mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment);
@@ -827,6 +848,80 @@ static void test_bombs(void) {
     assert(placed == MZM_PROJECTILE_LIMIT_BOMB);
 }
 
+/* Run right with the position kept in the grid; returns the frames run. */
+static int run_until(World *w, bool (*done)(const MzmSamus *), int limit) {
+    int frames = 0;
+    while (!done(&w->samus) && frames < limit) {
+        w->samus.x = 160 * 4;
+        step(w, MZM_KEY_RIGHT);
+        frames++;
+    }
+    return frames;
+}
+static bool is_speedboosting(const MzmSamus *s) { return s->speedboosting; }
+
+/* SamusRunning's charge, SamusCheckShinesparking, SamusSkidding. */
+static void test_speed_booster(void) {
+    World w;
+    world_init(&w);
+    place(&w, 160, 224);
+    step(&w, 0);
+    /* Without the item the run stays at the normal cap. */
+    run_until(&w, is_speedboosting, 300);
+    assert(!w.samus.speedboosting && w.samus.x_velocity == MZM_X_VELOCITY_CAP);
+    step(&w, 0);
+    steps(&w, 0, 4);
+
+    w.equipment.items |= MZM_ITEM_SPEED_BOOSTER;
+    mzm_sfx_clear();
+    int frames = run_until(&w, is_speedboosting, 400);
+    /* 12 frames to reach 96, the timer counts from there: 140 at 120
+     * frames, 160 at 140, then 8 a frame up to 160. */
+    assert(w.samus.speedboosting && w.samus.x_velocity >= 160);
+    assert(frames > 140 && frames < 175);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SPEEDBOOSTER_START));
+    assert(w.samus.x_velocity == MZM_X_SPEEDBOOST_VELOCITY_CAP);
+
+    /* A jump keeps the speed boost and its mid-air cap. */
+    MzmSamus saved = w.samus;
+    step(&w, MZM_KEY_RIGHT | MZM_KEY_A);
+    assert(w.samus.pose == MZM_POSE_STARTING_SPIN_JUMP && w.samus.speedboosting);
+    w.samus = saved;
+
+    /* Releasing the direction skids: 10 subpixels a frame less. */
+    mzm_sfx_clear();
+    step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_SKIDDING && !w.samus.speedboosting);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SKIDDING));
+    int16_t velocity = w.samus.x_velocity;
+    step(&w, 0);
+    assert(w.samus.x_velocity == velocity - 10 && !w.samus.speedboosting);
+    /* Down alone stores a shinespark: the glow and the charge sound. */
+    step(&w, MZM_KEY_DOWN);
+    assert(w.samus.pose == MZM_POSE_CROUCHING &&
+           w.samus.shinespark_timer == MZM_SHINESPARK_TIMER_MAX);
+    mzm_sfx_clear();
+    steps(&w, MZM_KEY_DOWN, 20);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SPEEDBOOSTER_CHARGE));
+    steps(&w, MZM_KEY_DOWN, 200);
+    assert(w.samus.shinespark_timer == 0);
+
+    /* Without skidding input the skid ends standing. */
+    world_init(&w);
+    w.equipment.items |= MZM_ITEM_SPEED_BOOSTER;
+    place(&w, 160, 224);
+    step(&w, 0);
+    run_until(&w, is_speedboosting, 400);
+    step(&w, 0);
+    frames = 0;
+    while (w.samus.pose == MZM_POSE_SKIDDING && frames < 40) {
+        w.samus.x = 160 * 4;
+        step(&w, 0);
+        frames++;
+    }
+    assert(w.samus.pose == MZM_POSE_STANDING && frames == 16);
+}
+
 int main(void) {
     test_native_tables();
     test_damage();
@@ -844,6 +939,7 @@ int main(void) {
     test_firing_breaks_a_spin();
     test_sounds();
     test_bombs();
+    test_speed_booster();
     puts("MZM Samus controller tests passed");
     return 0;
 }

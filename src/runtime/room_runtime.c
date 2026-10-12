@@ -611,6 +611,7 @@ static const char *runtime_pose_action(MzmPose pose,uint32_t items) {
         case MZM_POSE_PULLING_FORWARD: return "ledge_pull_forward";
         case MZM_POSE_GETTING_HURT: return "hurt";
         case MZM_POSE_DYING: return "death";
+        case MZM_POSE_SKIDDING: return "skid";
         case MZM_POSE_COUNT: break;
     }
     return "idle";
@@ -1041,14 +1042,15 @@ static void runtime_blocks_load(Room *room, const char *alias) {
                                            runtime_never_reform_memory.blocks[i].y);
 }
 
-/* SamusCheckScrewSpeedboosterAffectingEnvironment (the speed booster is not
- * ported: only the screw attack destroys blocks on contact). */
+/* SamusCheckScrewSpeedboosterAffectingEnvironment: the screw attack and the
+ * speed booster destroy blocks on contact. */
 static void runtime_samus_destruct(Room *room, const MzmBlockEnv *env, const MzmSamus *samus,
                                    const MzmEquipment *equipment) {
     int action = MZM_DESTRUCT_NONE;
     if (samus->pose == MZM_POSE_SCREW_ATTACKING ||
         (samus->pose == MZM_POSE_STARTING_SPIN_JUMP && equipment->items & MZM_ITEM_SCREW_ATTACK))
         action = MZM_DESTRUCT_SCREW;
+    if (samus->speedboosting) action += MZM_DESTRUCT_SPEED;
     if (action == MZM_DESTRUCT_NONE) return;
     const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
     int32_t left = (uint16_t)(samus->x + box->left), right = (uint16_t)(samus->x + box->right);
@@ -1227,6 +1229,10 @@ static RuntimePaletteChoice runtime_samus_palette(const MzmSamus *samus,bool bea
     if(samus->invincibility) {
         choice.kind0="Flashing";
         choice.row0=(frame_counter&3u)<=1u?0:1;
+    } else if(samus->speedboosting || samus->shinespark_timer) {
+        /* gFrameCounter8Bit % 6 picks one row for both halves. */
+        int row=(int)((frame_counter&0xFFu)%6u)/2;
+        choice=(RuntimePaletteChoice){borrowed,"Speedboost",row,borrowed,"Speedboost",row};
     } else if(samus->pose==MZM_POSE_SCREW_ATTACKING) {
         if(samus->anim_frame&1u){choice.kind0="Flashing";choice.row0=1;}
     } else if(beam_release) {
@@ -1492,7 +1498,11 @@ static RuntimeAnimationMapRow *runtime_pose_row(RuntimeAnimationMap *map,
         const MzmSamus *samus,const char *suit,uint32_t items) {
     const char *side=samus->facing<0?"left":"right";
     const char *aim=runtime_aim_name(samus->aim);
-    RuntimeAnimationMapRow *row=runtime_animation_map_find(
+    RuntimeAnimationMapRow *row=NULL;
+    /* SamusUpdateGraphicsOam: Running_Speedboosting while speed boosting. */
+    if(samus->pose==MZM_POSE_RUNNING && samus->speedboosting)
+        row=runtime_animation_map_find(map,"run_speedboost",suit,side,aim);
+    if(!row)row=runtime_animation_map_find(
         map,runtime_pose_action(samus->pose,items),suit,side,aim);
     if(!row && samus->pose==MZM_POSE_SCREW_ATTACKING)
         row=runtime_animation_map_find(map,"screw_attack",suit,side,aim);
@@ -1610,7 +1620,7 @@ static const char *const debug_area_names[]={
 /* Items whose native effect the engine implements (Speed Booster is not). */
 static const struct { const char *label; uint32_t item; } debug_items[]={
     {"High Jump",MZM_ITEM_HIGH_JUMP},{"Space Jump",MZM_ITEM_SPACE_JUMP},
-    {"Screw Attack",MZM_ITEM_SCREW_ATTACK},
+    {"Screw Attack",MZM_ITEM_SCREW_ATTACK},{"Speed Booster",MZM_ITEM_SPEED_BOOSTER},
 };
 #define DEBUG_ITEMS_COUNT (int)(sizeof debug_items/sizeof debug_items[0])
 
@@ -2036,7 +2046,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                (uint16_t)previous_x, box->top, 0, box->left, box->right,
                                samus->pose == MZM_POSE_SCREW_ATTACKING,
                                equipment->suit == MZM_SUIT_SUITLESS, samus->invincibility != 0,
-                               runtime_sprite_hurt};
+                               runtime_sprite_hurt, samus->speedboosting};
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
     }
     sprites->room = room;
@@ -2344,6 +2354,9 @@ int main(int argc, char **argv) {
     int spawn_px=-1,spawn_py=-1;
     bool mute=false;
     const char *debug_input=NULL;
+    /* --item NAME (repeatable): a debug menu item enabled at start, its label
+     * in lower case with dashes (for example speed-booster). */
+    uint32_t start_items=0;
     GbaPadMap pad_map;
     gba_pad_map_default(&pad_map);
     for (int i=1;i<argc;i++) {
@@ -2376,6 +2389,19 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--input-script") && i+1<argc) input_script=argv[++i];
         else if (!strcmp(argv[i],"--debug-menu")) debug_at_start=true;
         else if (!strcmp(argv[i],"--mute")) mute=true;
+        else if (!strcmp(argv[i],"--item") && i+1<argc) {
+            const char *name=argv[++i];
+            bool found=false;
+            for(int k=0;k<DEBUG_ITEMS_COUNT && !found;k++) {
+                char slug[32];
+                size_t n=0;
+                for(const char *c=debug_items[k].label;*c && n+1<sizeof slug;c++)
+                    slug[n++]=(char)(*c==' '?'-':(*c>='A'&&*c<='Z'?*c-'A'+'a':*c));
+                slug[n]=0;
+                if(!strcmp(slug,name)){start_items|=debug_items[k].item;found=true;}
+            }
+            if(!found){fprintf(stderr,"Unknown item: %s\n",name);return 2;}
+        }
         else if (!strcmp(argv[i],"--spawn") && i+2<argc) {
             /* Test placement: Samus's feet at room pixel X, Y. */
             spawn_px=atoi(argv[++i]);
@@ -2390,7 +2416,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -2481,7 +2507,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -2608,7 +2634,7 @@ int main(int argc, char **argv) {
     bool door_lock=false;
     MzmEquipment equipment={0};
     unsigned int suit_preset=0,spin_items=0;
-    uint32_t toggled_items=0;
+    uint32_t toggled_items=start_items;
     runtime_apply_equipment(&equipment,suit_preset,toggled_items);
     equipment.max_energy=99;
     equipment.energy=equipment.max_energy;

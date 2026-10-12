@@ -65,6 +65,7 @@ static const PoseInfo pose_info[MZM_POSE_COUNT] = {
     [MZM_POSE_GETTING_HURT_IN_MORPH_BALL] = {MZM_HITBOX_MORPHED,
         MZM_STANDING_MIDAIR, "hurt-morphed"},
     [MZM_POSE_DYING] = {MZM_HITBOX_STANDING, MZM_STANDING_FORCED, "dying"},
+    [MZM_POSE_SKIDDING] = {MZM_HITBOX_STANDING, MZM_STANDING_GROUND, "skidding"},
 };
 
 /* sSamusPullingSelfUpVelocity, subpixels per frame for each animation frame. */
@@ -210,6 +211,14 @@ enum { NEXT_NONE = -1, REQUEST_MIDAIR = MZM_POSE_COUNT, REQUEST_LANDING };
 static bool held(const Ctx *x, uint16_t keys) { return (x->in->held & keys) != 0; }
 static bool pressed(const Ctx *x, uint16_t keys) { return (x->in->pressed & keys) != 0; }
 static bool suitless(const Ctx *x) { return x->eq->suit == MZM_SUIT_SUITLESS; }
+/* SamusUpdatePhysics: the ground and mid-air caps while speed boosting (no
+ * liquid). */
+static int ground_cap(const MzmSamus *s) {
+    return s->speedboosting ? MZM_X_SPEEDBOOST_VELOCITY_CAP : MZM_X_VELOCITY_CAP;
+}
+static int midair_cap(const MzmSamus *s) {
+    return s->speedboosting ? MZM_X_SPEEDBOOST_VELOCITY_CAP : MZM_X_MIDAIR_VELOCITY_CAP;
+}
 static uint16_t forward_key(const MzmSamus *s) {
     return s->facing > 0 ? MZM_KEY_RIGHT : MZM_KEY_LEFT;
 }
@@ -269,6 +278,7 @@ static MzmSamus copy_data(MzmSamus *s) {
     }
     s->aim = MZM_AIM_FORWARD;
     s->forced = MZM_FORCED_NONE;
+    s->speedboosting = false;
     s->walljump_timer = 0;
     s->timer = 0;
     s->last_wall = 0;
@@ -319,6 +329,16 @@ static void set_pose(Ctx *x, MzmPose pose) {
             s->grabbed_ledge = true;
             break;
         }
+        case MZM_POSE_SKIDDING:
+            s->x_velocity = copy.x_velocity;
+            s->aim = copy.aim;
+            mzm_sfx_play(MZM_SOUND_SKIDDING);
+            break;
+        case MZM_POSE_MORPH_BALL:
+            /* The shinespark storage window after a speed boosting roll. */
+            if (copy.speedboosting) s->timer = 6;
+            s->aim = copy.aim;
+            break;
         case MZM_POSE_PULLING_UP:
             /* No liquid: the grabbing ledge sound of the suit. */
             mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_GRABBING_LEDGE : MZM_SOUND_GRABBING_LEDGE);
@@ -370,6 +390,7 @@ static void request_midair(Ctx *x) {
     MzmSamus copy = copy_data(s);
     s->x_velocity = copy.x_velocity;
     s->aim = copy.aim;
+    s->speedboosting = copy.speedboosting;
     switch (copy.pose) {
         case MZM_POSE_RUNNING:
             if (copy.forced != MZM_FORCED_JUMP) {
@@ -470,7 +491,11 @@ static void request_landing(Ctx *x) {
         default:
             if (!standing_clear(x->c, s)) s->pose = MZM_POSE_CROUCHING;
             else if (copy.x_velocity == 0) s->pose = MZM_POSE_LANDING;
-            else s->pose = MZM_POSE_STANDING;
+            else if (copy.pose == MZM_POSE_MIDAIR && copy.speedboosting) {
+                /* Kept, then cancelled by the reset velocity. */
+                s->pose = MZM_POSE_RUNNING;
+                s->speedboosting = true;
+            } else s->pose = MZM_POSE_STANDING;
             break;
     }
     s->aim = copy.aim;
@@ -541,19 +566,51 @@ static int pose_standing(Ctx *x) {
     return NEXT_NONE;
 }
 
-/* SamusRunning without the Speed Booster charge. */
+/* SamusRunning: the speed booster charge raises the cap after 120 and 140
+ * frames above 96 subpixels a frame (timer up to 160). */
 static int pose_running(Ctx *x) {
     MzmSamus *s = x->s;
     if (pressed(x, MZM_KEY_A)) return jump_request(x);
+    int cap = ground_cap(s);
+    if (x->eq->items & MZM_ITEM_SPEED_BOOSTER) {
+        if (s->timer >= 140) cap = MZM_X_SPEEDBOOST_VELOCITY_CAP;
+        else if (s->timer >= 120) cap = 140;
+        uint16_t velocity = (uint16_t)(s->x_velocity + 8 * 12 - 1);
+        if (velocity < 8 * 24 - 1) s->timer = 0;
+        else if (s->timer < 160) s->timer++;
+    } else {
+        s->timer = 0;
+    }
     if (held(x, forward_key(s))) {
         s->x_velocity = mzm_apply_x_acceleration(
-            s->x_velocity, s->facing, MZM_X_ACCELERATION, MZM_X_VELOCITY_CAP);
+            s->x_velocity, s->facing, MZM_X_ACCELERATION, cap);
         aim_cannon(x, false);
         return NEXT_NONE;
     }
+    if (s->speedboosting) return MZM_POSE_SKIDDING;
     if (x->in->new_projectile) return MZM_POSE_SHOOTING;
     if (!held(x, backward_key(s))) return MZM_POSE_STANDING;
     return MZM_POSE_TURNING_AROUND;
+}
+
+/* SamusSkidding: Down alone stores a shinespark. */
+static int pose_skidding(Ctx *x) {
+    MzmSamus *s = x->s;
+    if (pressed(x, MZM_KEY_A)) return jump_request(x);
+    if (held(x, forward_key(s))) return MZM_POSE_RUNNING;
+    if ((x->in->held & (MZM_KEY_RIGHT | MZM_KEY_LEFT | MZM_KEY_UP | MZM_KEY_DOWN)) == MZM_KEY_DOWN) {
+        s->shinespark_timer = MZM_SHINESPARK_TIMER_MAX;
+        return MZM_POSE_CROUCHING;
+    }
+    /* SUB_PIXEL_TO_VELOCITY(ONE_SUB_PIXEL + ONE_SUB_PIXEL / 4.f) */
+    if (s->facing > 0) {
+        s->x_velocity = (int16_t)(s->x_velocity - 10);
+        if (s->x_velocity <= 0) return MZM_POSE_STANDING;
+    } else {
+        s->x_velocity = (int16_t)(s->x_velocity + 10);
+        if (s->x_velocity >= 0) return MZM_POSE_STANDING;
+    }
+    return NEXT_NONE;
 }
 
 /* SamusTurningAround */
@@ -615,8 +672,7 @@ static int pose_midair(Ctx *x) {
     bool turning = false;
     if (held(x, forward_key(s))) {
         s->x_velocity = mzm_apply_x_acceleration(
-            s->x_velocity, s->facing, MZM_X_MIDAIR_ACCELERATION,
-            MZM_X_MIDAIR_VELOCITY_CAP);
+            s->x_velocity, s->facing, MZM_X_MIDAIR_ACCELERATION, midair_cap(s));
     } else if (held(x, backward_key(s))) {
         turning = true;
     } else if (s->x_velocity > 0) {
@@ -691,7 +747,7 @@ static int pose_spinning(Ctx *x) {
         s->x_velocity = 0;
     } else {
         s->x_velocity = mzm_apply_x_acceleration(
-            s->x_velocity, s->facing, acceleration, MZM_X_MIDAIR_VELOCITY_CAP);
+            s->x_velocity, s->facing, acceleration, midair_cap(s));
     }
     if (!held(x, MZM_KEY_A) && s->y_velocity > 0) s->y_velocity = 0;
     return NEXT_NONE;
@@ -739,6 +795,15 @@ static int pose_morph_ball(Ctx *x) {
         mzm_sfx_play(MZM_SOUND_UNMORPHING);
         return MZM_POSE_UNMORPHING;
     }
+    /* Store a shinespark: only Down during the window after a roll. */
+    if (s->timer) {
+        s->timer--;
+        if ((x->in->held & (MZM_KEY_RIGHT | MZM_KEY_LEFT | MZM_KEY_UP | MZM_KEY_DOWN)) ==
+            MZM_KEY_DOWN) {
+            s->shinespark_timer = MZM_SHINESPARK_TIMER_MAX;
+            s->timer = 0;
+        }
+    }
     return NEXT_NONE;
 }
 
@@ -752,8 +817,13 @@ static int pose_rolling(Ctx *x) {
         return MZM_POSE_UNMORPHING;
     }
     if (held(x, forward_key(s))) {
-        s->x_velocity = mzm_apply_x_acceleration(
-            s->x_velocity, s->facing, MZM_X_ACCELERATION, MZM_X_VELOCITY_CAP);
+        int cap = ground_cap(s);
+        if (s->speedboosting) {
+            /* Speed boosting in the Morph Ball. */
+            cap = MZM_X_SPEEDBOOST_VELOCITY_CAP;
+            s->shinespark_timer = 6;
+        }
+        s->x_velocity = mzm_apply_x_acceleration(s->x_velocity, s->facing, MZM_X_ACCELERATION, cap);
         return NEXT_NONE;
     }
     if (held(x, backward_key(s))) s->turning = true;
@@ -871,6 +941,7 @@ static int pose_handler(Ctx *x) {
         case MZM_POSE_GETTING_HURT:
         case MZM_POSE_GETTING_HURT_IN_MORPH_BALL:
             return pose_hurt(x);
+        case MZM_POSE_SKIDDING: return pose_skidding(x);
         case MZM_POSE_DYING:
             /* SamusDying: the music stops, then the dying sound plays. */
             if (x->s->last_wall == 0) {
@@ -955,6 +1026,7 @@ static int pose_graphics(Ctx *x) {
             if (update_animation(x) == ANIM_ENDED) return MZM_POSE_STANDING;
             return NEXT_NONE;
         case MZM_POSE_GETTING_HURT:
+        case MZM_POSE_SKIDDING:     /* SamusGettingHurtGfx */
         case MZM_POSE_DYING:
             if (update_animation(x) == ANIM_ENDED && s->anim_frame > 0)
                 s->anim_frame--;
@@ -1145,6 +1217,22 @@ static void move_and_collide(Ctx *x) {
     }
 }
 
+/* SamusCheckShinesparking (no shinespark pose yet): speed boosting from
+ * 160 subpixels a frame on, not restarted while skidding. */
+static void check_shinesparking(MzmSamus *s) {
+    if (s->pose == MZM_POSE_DYING) {
+        s->speedboosting = false;
+    } else if ((uint16_t)(s->x_velocity + 8 * 20 - 1) >= 8 * 40 - 1) {
+        if (!s->speedboosting && s->pose != MZM_POSE_SKIDDING) {
+            s->speedboosting = true;
+            mzm_sfx_play(MZM_SOUND_SPEEDBOOSTER_START);
+        }
+    } else {
+        s->speedboosting = false;
+    }
+    if (!s->speedboosting) mzm_sfx_stop(MZM_SOUND_SPEEDBOOSTER_START);
+}
+
 void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
                       const MzmEquipment *equipment,
                       const MzmCollision *collision,
@@ -1154,9 +1242,15 @@ void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
     samus->anim_counter++;
     if (samus->invincibility) samus->invincibility--;
     if (samus->unmorph_palette_timer) samus->unmorph_palette_timer--;
+    /* The speed booster charge sound of a stored shinespark. */
+    if (samus->shinespark_timer) {
+        if (samus->shinespark_timer % 16 == 4) mzm_sfx_play(MZM_SOUND_SPEEDBOOSTER_CHARGE);
+        samus->shinespark_timer--;
+    }
     set_spinning_pose(&x);
     int next = pose_handler(&x);
     if (next == NEXT_NONE) next = pose_graphics(&x);
+    check_shinesparking(samus);
     apply_next(&x, next);
     move_and_collide(&x);
 }

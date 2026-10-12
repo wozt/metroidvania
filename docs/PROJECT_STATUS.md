@@ -2988,6 +2988,36 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0261 - Zero Mission speed booster
+
+- `mzm_samus.c` ports the speed booster charge of `SamusRunning` (a timer to
+  160 above 96 subpixels a frame; the cap rises to 140 at 120 and 160 at 140),
+  `SamusCheckShinesparking` (the speed boost from 160 subpixels a frame, its
+  start sound and per-frame stop, never restarted while skidding), the
+  speed-boost caps of `SamusUpdatePhysics` (ground and mid-air 160), the
+  carry through `SamusSetMidAir` and the speed-boosted landing,
+  `SamusSkidding` (10 subpixels a frame, the skidding sound) and the
+  shinespark storage (Down alone while skidding, or in the six frames after a
+  speed-boosted roll: 180 frames with the charge sound every 16).
+- The runtime draws `Running_Speedboosting` (new `run_speedboost` action of
+  the Samus library) and the speed boost palette rows (`gFrameCounter8Bit %
+  6`), breaks speed blocks with `DESTRUCTING_ACTION_SPEED` and
+  `SPEED_ON_GROUND`, and kills weak sprites as `DCT_SPEEDBOOSTER` with
+  `PE_SPEEDBOOSTER_DESTROYED` (exported) and its sound.
+- The Speed Booster is a debug menu item; `--item NAME` enables an item at
+  start for captures.
+- Checked in tourian_010 with `--item speed-booster`: the red speed boost
+  palette and running pose after about 160 frames, at 5 pixels a frame.
+- Not ported: the shinespark and ballspark poses, the speed booster aura
+  sprite, liquids.
+- Tests: `tests/test_mzm_samus.c` (no boost without the item, the boost
+  timing and cap, the jump carry, the skid, the storage and its charge sound,
+  the 16-frame skid stop) and `tests/test_mzm_sprites.c` (the speed booster
+  kill, its particle and sound).
+- Validation on 2026-10-12: warning-clean build, CTest 29/29, the Python
+  suite (427 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0260 - Zero Mission bombs and bomb jumps
 
 - `src/runtime/mzm_projectiles.c` ports the bomb branch of the Morph Ball

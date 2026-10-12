@@ -17,7 +17,7 @@ typedef enum {
 typedef struct { MzmSfxAction action; uint16_t sound, timer; } MzmSfxRequest;
 typedef void (*MzmSfxSink)(void *context, MzmSfxAction action, uint16_t sound, uint16_t timer);
 
-enum { MZM_SFX_LOG = 64 };
+enum { MZM_SFX_LOG = 1024 };
 
 void mzm_sfx_set_sink(MzmSfxSink sink, void *context);
 /* SoundPlay */

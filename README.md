@@ -235,7 +235,11 @@ Mission's position-history echo. B fires the Power Beam from the native arm
 cannon position; holding V or Left Shift (GBA R, gamepad right shoulder) arms
 missiles and Tab (Select, gamepad Back) toggles super missiles. In the Morph
 Ball, B places a bomb (four at most); its explosion breaks bomb blocks,
-damages enemies and bounces Samus when she is on it. Diagnostic
+damages enemies and bounces Samus when she is on it. With the Speed Booster
+(an item of the debug menu), a long run starts the speed boost: it
+breaks speed blocks and enemies, and releasing the direction skids (Down
+while skidding stores a shinespark glow; the shinespark itself is not
+ported yet). Diagnostic
 keys: R cycles suits (gamepad Guide), T cycles Space Jump/Screw Attack, G
 toggles High Jump, M refills ammunition, H applies 20 damage, Enter restarts
 after death, F6 opens the raw animation catalogue and F7 outlines the active
@@ -271,7 +275,8 @@ and B every REPEAT frames, and saves the rendered frame, for example
 --capture shot.bmp 40 0x20 6`. `--input-script MASK:FRAMES,...` replaces the held mask
 frame by frame (then the `--capture` mask applies), for example
 `--input-script 0:3,8:1,0:1,8:1,0:20,0x20:1` crouches, morphs and places a
-bomb.
+bomb. `--item NAME` enables a debug menu item at start (for example
+`--item speed-booster`).
 
 Run the experimental SDL3 Aria of Sorrow runtime (Soma in one native room)
 with:

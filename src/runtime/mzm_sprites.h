@@ -462,6 +462,8 @@ typedef struct {
     int16_t hitbox_top, hitbox_bottom, hitbox_left, hitbox_right;
     bool screw_attacking, suitless, invincible;
     void (*hurt)(void *context, uint16_t damage, bool sprite_on_left);
+    /* speedboostingShinesparking: contact kills as DCT_SPEEDBOOSTER. */
+    bool speedboosting;
 } MzmSpriteSamus;
 
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when

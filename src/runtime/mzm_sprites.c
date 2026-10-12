@@ -873,6 +873,10 @@ void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t eff
         ai_particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
         random_debris_3(c, y, x);
         mzm_sfx_play(MZM_SOUND_SCREW_ATTACK_DESTROYED);
+    } else if (s->pose == SPRITE_POSE_SPEEDBOOSTER_DESTROYED) {
+        ai_particle_set(c, y, x, MZM_PE_SPEEDBOOSTER_DESTROYED);
+        random_debris_3(c, y, x);
+        mzm_sfx_play(MZM_SOUND_SPEEDBOOSTER_DESTROYED);
     } else {
         ai_particle_set(c, y, x, effect);
         switch (effect) {
@@ -3515,7 +3519,7 @@ static uint16_t damage_of(const MzmSprite *s, const MzmSpriteTables *tables) {
 
 static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
                           const MzmSpriteTables *tables) {
-    if (samus->suitless || !samus->screw_attacking) return false;
+    if (samus->suitless || !(samus->screw_attacking || samus->speedboosting)) return false;
     /* Sprites immune to projectiles take no contact damage either. */
     if (s->immune_to_projectiles) return false;
     /* Sprites ignoring projectiles take no contact damage. */
@@ -3524,7 +3528,9 @@ static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
         s->health = 0;
         s->freeze_timer = 0;
         s->palette_row = 0;
-        s->pose = SPRITE_POSE_SCREW_ATTACK_DESTROYED;
+        /* Speed boosting takes precedence over the screw attack. */
+        s->pose = samus->speedboosting ? SPRITE_POSE_SPEEDBOOSTER_DESTROYED
+                                       : SPRITE_POSE_SCREW_ATTACK_DESTROYED;
         s->ignore_samus_timer = 1;
         set_isft(s, ISFT_SCREW_ATTACK);
         s->damaged = true;

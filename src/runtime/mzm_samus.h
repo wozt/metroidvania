@@ -27,6 +27,9 @@
 #define MZM_X_ACCELERATION 8
 #define MZM_X_VELOCITY_CAP 96
 #define MZM_X_MIDAIR_VELOCITY_CAP 64
+/* SAMUS_X_SPEEDBOOST_VELOCITY_CAP and SHINESPARK_TIMER_MAX. */
+#define MZM_X_SPEEDBOOST_VELOCITY_CAP 160
+#define MZM_SHINESPARK_TIMER_MAX 180
 #define MZM_X_MIDAIR_ACCELERATION 8
 #define MZM_X_MIDAIR_MORPHED_VELOCITY_CAP 48
 #define MZM_Y_ACCELERATION 10
@@ -69,6 +72,7 @@ typedef enum {
     MZM_POSE_GETTING_HURT,
     MZM_POSE_GETTING_HURT_IN_MORPH_BALL,
     MZM_POSE_DYING,
+    MZM_POSE_SKIDDING,
     MZM_POSE_COUNT
 } MzmPose;
 
@@ -212,6 +216,9 @@ typedef struct MzmSamus {
     uint8_t unmorph_palette_timer;
     bool touching_side;
     bool grabbed_ledge;
+    /* speedboostingShinesparking and shinesparkTimer (a stored shinespark). */
+    bool speedboosting;
+    uint8_t shinespark_timer;
 } MzmSamus;
 
 const MzmBlockHitbox *mzm_block_hitbox(MzmHitboxType type);

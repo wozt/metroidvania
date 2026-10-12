@@ -66,6 +66,18 @@ static const PoseInfo pose_info[MZM_POSE_COUNT] = {
         MZM_STANDING_MIDAIR, "hurt-morphed"},
     [MZM_POSE_DYING] = {MZM_HITBOX_STANDING, MZM_STANDING_FORCED, "dying"},
     [MZM_POSE_SKIDDING] = {MZM_HITBOX_STANDING, MZM_STANDING_GROUND, "skidding"},
+    [MZM_POSE_DELAY_BEFORE_SHINESPARKING] = {MZM_HITBOX_STANDING, MZM_STANDING_MIDAIR,
+        "delay-before-shinesparking"},
+    [MZM_POSE_SHINESPARKING] = {MZM_HITBOX_STANDING, MZM_STANDING_MIDAIR, "shinesparking"},
+    [MZM_POSE_SHINESPARK_COLLISION] = {MZM_HITBOX_STANDING, MZM_STANDING_FORCED,
+        "shinespark-collision"},
+    [MZM_POSE_DELAY_AFTER_SHINESPARKING] = {MZM_HITBOX_STANDING, MZM_STANDING_FORCED,
+        "delay-after-shinesparking"},
+    [MZM_POSE_DELAY_BEFORE_BALLSPARKING] = {MZM_HITBOX_MORPHED, MZM_STANDING_MIDAIR,
+        "delay-before-ballsparking"},
+    [MZM_POSE_BALLSPARKING] = {MZM_HITBOX_MORPHED, MZM_STANDING_MIDAIR, "ballsparking"},
+    [MZM_POSE_BALLSPARK_COLLISION] = {MZM_HITBOX_MORPHED, MZM_STANDING_FORCED,
+        "ballspark-collision"},
 };
 
 /* sSamusPullingSelfUpVelocity, subpixels per frame for each animation frame. */
@@ -219,6 +231,9 @@ static int ground_cap(const MzmSamus *s) {
 static int midair_cap(const MzmSamus *s) {
     return s->speedboosting ? MZM_X_SPEEDBOOST_VELOCITY_CAP : MZM_X_MIDAIR_VELOCITY_CAP;
 }
+static bool is_spark(MzmPose pose) {
+    return pose == MZM_POSE_SHINESPARKING || pose == MZM_POSE_BALLSPARKING;
+}
 static uint16_t forward_key(const MzmSamus *s) {
     return s->facing > 0 ? MZM_KEY_RIGHT : MZM_KEY_LEFT;
 }
@@ -298,11 +313,54 @@ static void settle_midair_hitbox(Ctx *x) {
 }
 
 /* SamusSetPose default branch plus SamusCheckCarryFromCopy. */
+/* The speed booster sound stops of SamusSetPose. */
+static void stop_spark_sound(MzmPose from, MzmPose to) {
+    if ((from == MZM_POSE_DELAY_BEFORE_SHINESPARKING && to != MZM_POSE_SHINESPARKING) ||
+        (from == MZM_POSE_SHINESPARKING && to != MZM_POSE_SHINESPARK_COLLISION))
+        mzm_sfx_stop(MZM_SOUND_SHINESPARKING);
+    if ((from == MZM_POSE_DELAY_BEFORE_BALLSPARKING && to != MZM_POSE_BALLSPARKING) ||
+        (from == MZM_POSE_BALLSPARKING && to != MZM_POSE_BALLSPARK_COLLISION))
+        mzm_sfx_stop(MZM_SOUND_BALLSPARKING);
+}
+
 static void set_pose(Ctx *x, MzmPose pose) {
     MzmSamus *s = x->s;
     MzmSamus copy = copy_data(s);
+    stop_spark_sound(copy.pose, pose);
     s->pose = pose;
     switch (pose) {
+        case MZM_POSE_DELAY_BEFORE_SHINESPARKING:
+            s->shinespark_timer = 50;
+            mzm_sfx_play(MZM_SOUND_SHINESPARKING);
+            s->aim = copy.aim;
+            break;
+        case MZM_POSE_SHINESPARKING:
+        case MZM_POSE_BALLSPARKING:
+            s->spark_direction = 0;         /* upwards by default */
+            if (held(x, MZM_KEY_L) || (held(x, forward_key(s)) && held(x, MZM_KEY_UP))) {
+                s->spark_direction = 2;
+                s->x_velocity = (int16_t)(s->facing * MZM_DIAGONAL_SHINESPARK_X_VELOCITY);
+                s->y_velocity = MZM_DIAGONAL_SHINESPARK_Y_VELOCITY;
+            } else if (held(x, forward_key(s))) {
+                s->spark_direction = 1;
+                s->x_velocity = (int16_t)(s->facing * MZM_SHINESPARK_VELOCITY);
+            } else {
+                s->y_velocity = MZM_SHINESPARK_VELOCITY;
+            }
+            s->speedboosting = true;
+            s->shinespark_timer = 0;
+            s->aim = MZM_AIM_FORWARD;
+            break;
+        case MZM_POSE_SHINESPARK_COLLISION:
+            s->anim_frame = 1;
+            /* fall through */
+        case MZM_POSE_BALLSPARK_COLLISION:
+            s->invincibility = 48;
+            mzm_sfx_play(MZM_SOUND_SHINESPARK_COLLISION);
+            break;
+        case MZM_POSE_DELAY_BEFORE_BALLSPARKING:
+            mzm_sfx_play(MZM_SOUND_BALLSPARKING);
+            break;
         case MZM_POSE_RUNNING:
             s->aim = held(x, MZM_KEY_L) ? copy.aim : MZM_AIM_FORWARD;
             break;
@@ -388,10 +446,15 @@ static bool bomb_jump(MzmSamus *s, MzmForcedMovement forced) {
 static void request_midair(Ctx *x) {
     MzmSamus *s = x->s;
     MzmSamus copy = copy_data(s);
+    stop_spark_sound(copy.pose, MZM_POSE_MIDAIR);
     s->x_velocity = copy.x_velocity;
     s->aim = copy.aim;
     s->speedboosting = copy.speedboosting;
     switch (copy.pose) {
+        case MZM_POSE_DELAY_BEFORE_BALLSPARKING:
+        case MZM_POSE_BALLSPARK_COLLISION:
+            s->pose = MZM_POSE_MORPH_BALL_MIDAIR;
+            break;
         case MZM_POSE_RUNNING:
             if (copy.forced != MZM_FORCED_JUMP) {
                 s->pose = MZM_POSE_MIDAIR;
@@ -472,6 +535,7 @@ static void request_midair(Ctx *x) {
 static void request_landing(Ctx *x) {
     MzmSamus *s = x->s;
     MzmSamus copy = copy_data(s);
+    stop_spark_sound(copy.pose, MZM_POSE_LANDING);
     switch (copy.pose) {
         case MZM_POSE_MORPH_BALL_MIDAIR:
             if (held(x, MZM_KEY_A) && (x->eq->items & MZM_ITEM_HIGH_JUMP)) {
@@ -543,6 +607,9 @@ static void set_spinning_pose(Ctx *x) {
     }
 }
 
+static bool ground_spark(Ctx *x);
+static bool clear_above(Ctx *x, int16_t top);
+
 static int jump_request(Ctx *x) {
     x->s->forced = MZM_FORCED_JUMP;
     return REQUEST_MIDAIR;
@@ -551,6 +618,7 @@ static int jump_request(Ctx *x) {
 /* SamusStanding, also used by the shooting and landing poses. */
 static int pose_standing(Ctx *x) {
     MzmSamus *s = x->s;
+    if (ground_spark(x)) return MZM_POSE_DELAY_BEFORE_SHINESPARKING;
     if (pressed(x, MZM_KEY_A)) return jump_request(x);
     if (held(x, forward_key(s))) return MZM_POSE_RUNNING;
     if (x->in->new_projectile) return MZM_POSE_SHOOTING;
@@ -593,6 +661,45 @@ static int pose_running(Ctx *x) {
     return MZM_POSE_TURNING_AROUND;
 }
 
+/* SamusCheckCollisionAbove: the left, middle and right points of a top. */
+static bool clear_above(Ctx *x, int16_t top) {
+    const MzmBlockHitbox *box = mzm_block_hitbox(MZM_HITBOX_STANDING);
+    int32_t y = x->s->y - 1 + top;
+    return !point_solid(x->c, x->s->x + box->left, y) && !point_solid(x->c, x->s->x, y) &&
+           !point_solid(x->c, x->s->x + box->right, y);
+}
+
+/* The shinespark start of the ground poses: A without a direction, with
+ * half a block of room above the head (Samus rises by it). */
+static bool ground_spark(Ctx *x) {
+    MzmSamus *s = x->s;
+    if (held(x, MZM_KEY_RIGHT | MZM_KEY_LEFT) || !pressed(x, MZM_KEY_A) || !s->shinespark_timer)
+        return false;
+    if (!clear_above(x, mzm_block_hitbox(MZM_HITBOX_STANDING)->top - MZM_HALF_BLOCK_SIZE))
+        return false;
+    s->y -= MZM_HALF_BLOCK_SIZE;
+    return true;
+}
+
+/* SamusShinesparking (also the ballspark): stopped by a ceiling or, sideways
+ * or diagonally, by a wall (no slope carry). */
+static int pose_sparking(Ctx *x) {
+    MzmSamus *s = x->s;
+    bool stop = false, side = false;
+    if (s->spark_direction == 0) {
+        stop = s->y_velocity == 0;
+    } else if (s->spark_direction == 2) {
+        if (s->y_velocity != 0) side = s->x_velocity == 0;
+        else stop = true;
+    } else {
+        side = s->x_velocity == 0;
+    }
+    if (stop || side)
+        return s->pose == MZM_POSE_SHINESPARKING ? MZM_POSE_SHINESPARK_COLLISION
+                                                 : MZM_POSE_BALLSPARK_COLLISION;
+    return NEXT_NONE;
+}
+
 /* SamusSkidding: Down alone stores a shinespark. */
 static int pose_skidding(Ctx *x) {
     MzmSamus *s = x->s;
@@ -616,6 +723,7 @@ static int pose_skidding(Ctx *x) {
 /* SamusTurningAround */
 static int pose_turning(Ctx *x) {
     MzmSamus *s = x->s;
+    if (ground_spark(x)) return MZM_POSE_DELAY_BEFORE_SHINESPARKING;
     if (pressed(x, MZM_KEY_A)) return jump_request(x);
     if (pressed(x, MZM_KEY_DOWN) &&
         (!held(x, MZM_KEY_L) || s->aim == MZM_AIM_DIAGONAL_DOWN)) {
@@ -631,6 +739,7 @@ static int pose_turning(Ctx *x) {
 /* SamusCrouching, also used for crouched turning and shooting here. */
 static int pose_crouching(Ctx *x) {
     MzmSamus *s = x->s;
+    if (ground_spark(x)) return MZM_POSE_DELAY_BEFORE_SHINESPARKING;
     bool clear = standing_clear(x->c, s);
     if (pressed(x, MZM_KEY_A) && clear) return jump_request(x);
     if (pressed(x, MZM_KEY_UP) && clear &&
@@ -663,6 +772,7 @@ static int pose_midair(Ctx *x) {
         mzm_sfx_play(MZM_SOUND_MORPHING);
         return MZM_POSE_MORPH_BALL_MIDAIR;
     }
+    if (pressed(x, MZM_KEY_A) && s->shinespark_timer) return MZM_POSE_DELAY_BEFORE_SHINESPARKING;
     if (pressed(x, MZM_KEY_A) && !held(x, MZM_KEY_UP | MZM_KEY_DOWN)) {
         s->pose = MZM_POSE_SPINNING;
         s->anim_frame = 0;
@@ -691,6 +801,7 @@ static int pose_midair(Ctx *x) {
 /* SamusTurningAroundMidAir */
 static int pose_turning_midair(Ctx *x) {
     MzmSamus *s = x->s;
+    if (pressed(x, MZM_KEY_A) && s->shinespark_timer) return MZM_POSE_DELAY_BEFORE_SHINESPARKING;
     if (pressed(x, MZM_KEY_A) && !held(x, MZM_KEY_UP | MZM_KEY_DOWN)) {
         s->pose = MZM_POSE_SPINNING;
         s->facing = -s->facing;
@@ -781,6 +892,12 @@ static int pose_morph_ball(Ctx *x) {
         }
         s->timer++;
         return NEXT_NONE;
+    }
+    /* Start ballsparking (High Jump, a block of room above the ball). */
+    if (pressed(x, MZM_KEY_A) && x->eq->items & MZM_ITEM_HIGH_JUMP && s->shinespark_timer &&
+        clear_above(x, mzm_block_hitbox(MZM_HITBOX_MORPHED)->top - MZM_BLOCK_SIZE)) {
+        s->y -= MZM_HALF_BLOCK_SIZE;
+        return MZM_POSE_DELAY_BEFORE_BALLSPARKING;
     }
     if (pressed(x, MZM_KEY_A)) {
         s->forced = MZM_FORCED_JUMP;
@@ -942,6 +1059,17 @@ static int pose_handler(Ctx *x) {
         case MZM_POSE_GETTING_HURT_IN_MORPH_BALL:
             return pose_hurt(x);
         case MZM_POSE_SKIDDING: return pose_skidding(x);
+        case MZM_POSE_SHINESPARKING:
+        case MZM_POSE_BALLSPARKING: return pose_sparking(x);
+        case MZM_POSE_DELAY_BEFORE_BALLSPARKING:
+            /* SamusDelayBeforeBallsparking: the ball turns toward the input. */
+            if (held(x, backward_key(x->s))) x->s->facing = -x->s->facing;
+            return NEXT_NONE;
+        case MZM_POSE_DELAY_BEFORE_SHINESPARKING:
+        case MZM_POSE_SHINESPARK_COLLISION:
+        case MZM_POSE_DELAY_AFTER_SHINESPARKING:
+        case MZM_POSE_BALLSPARK_COLLISION:
+            return NEXT_NONE;       /* SamusInactivity */
         case MZM_POSE_DYING:
             /* SamusDying: the music stops, then the dying sound plays. */
             if (x->s->last_wall == 0) {
@@ -1033,6 +1161,30 @@ static int pose_graphics(Ctx *x) {
             return NEXT_NONE;
         case MZM_POSE_GETTING_HURT_IN_MORPH_BALL:
             return NEXT_NONE;
+        case MZM_POSE_DELAY_BEFORE_SHINESPARKING:
+            if (update_animation(x) == ANIM_ENDED) {
+                if (held(x, backward_key(s))) s->turning = true;
+                return MZM_POSE_SHINESPARKING;
+            }
+            return NEXT_NONE;
+        case MZM_POSE_SHINESPARKING:
+            /* SamusShinesparkingGfx: loops from frame 1 (up) or 2. */
+            if (update_animation(x) == ANIM_ENDED) s->anim_frame = s->spark_direction ? 2 : 1;
+            return NEXT_NONE;
+        case MZM_POSE_SHINESPARK_COLLISION:
+            /* CONVERT_SECONDS(.25f + 1.f / 60) */
+            return s->anim_counter > 16 ? MZM_POSE_DELAY_AFTER_SHINESPARKING : NEXT_NONE;
+        case MZM_POSE_BALLSPARK_COLLISION:
+            return s->anim_counter > 16 ? REQUEST_MIDAIR : NEXT_NONE;
+        case MZM_POSE_DELAY_AFTER_SHINESPARKING:
+            return update_animation(x) == ANIM_ENDED ? REQUEST_MIDAIR : NEXT_NONE;
+        case MZM_POSE_DELAY_BEFORE_BALLSPARKING:
+            /* CONVERT_SECONDS(1.f), with a half-block hop on the first frame. */
+            if (s->timer >= 60) return MZM_POSE_BALLSPARKING;
+            if (s->timer == 0) s->y -= MZM_HALF_BLOCK_SIZE;
+            s->timer++;
+            loop_animation(x);
+            return NEXT_NONE;
         case MZM_POSE_RUNNING: {
             /* SamusRunningGfx: the footsteps on frames 1 and 6 (plain
              * ground out of liquid). */
@@ -1121,6 +1273,9 @@ static void move_and_collide(Ctx *x) {
     MzmStandingStatus standing = mzm_pose_standing(s->pose);
     int32_t dy = 0;
     if (airborne_physics(s->pose)) dy = mzm_integrate_y(&s->y_velocity);
+    /* SamusUpdateVelocityPosition: sparks keep their velocity (no gravity);
+     * a sideways spark has no vertical motion. */
+    else if (is_spark(s->pose) && s->spark_direction != 1) dy = -(s->y_velocity >> 3);
 
     int velocity = s->x_velocity;
     if (standing == MZM_STANDING_GROUND && s->pose == MZM_POSE_RUNNING) {
@@ -1222,6 +1377,8 @@ static void move_and_collide(Ctx *x) {
 static void check_shinesparking(MzmSamus *s) {
     if (s->pose == MZM_POSE_DYING) {
         s->speedboosting = false;
+    } else if (is_spark(s->pose)) {
+        s->speedboosting = true;
     } else if ((uint16_t)(s->x_velocity + 8 * 20 - 1) >= 8 * 40 - 1) {
         if (!s->speedboosting && s->pose != MZM_POSE_SKIDDING) {
             s->speedboosting = true;
@@ -1243,7 +1400,8 @@ void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
     if (samus->invincibility) samus->invincibility--;
     if (samus->unmorph_palette_timer) samus->unmorph_palette_timer--;
     /* The speed booster charge sound of a stored shinespark. */
-    if (samus->shinespark_timer) {
+    if (samus->shinespark_timer && samus->pose != MZM_POSE_DELAY_BEFORE_SHINESPARKING &&
+        samus->pose != MZM_POSE_DELAY_BEFORE_BALLSPARKING) {
         if (samus->shinespark_timer % 16 == 4) mzm_sfx_play(MZM_SOUND_SPEEDBOOSTER_CHARGE);
         samus->shinespark_timer--;
     }

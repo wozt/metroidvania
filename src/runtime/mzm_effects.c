@@ -24,6 +24,7 @@ const char *mzm_particle_table(uint8_t effect) {
     case MZM_PE_SPRITE_EXPLOSION_BIG: return "ParticleSpriteExplosionBigOam";
     case MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG: return "ParticleSpriteExplosionSingleThenBigOam";
     case MZM_PE_SCREW_ATTACK_DESTROYED: return "ParticleScrewAttackDestroyedOam";
+    case MZM_PE_SHINESPARK_DESTROYED: return "ParticleShinesparkDestroyedOam";
     case MZM_PE_SPEEDBOOSTER_DESTROYED: return "ParticleSpeedboosterDestroyedOam";
     case MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM:
         return "ParticleHittingSomethingWithNormalBeamOam";
@@ -87,7 +88,7 @@ static bool update_animation(MzmParticle *p, const MzmEffectKinds *kinds) {
 }
 
 /* The one-shot effects (ParticleBomb, ParticleSpriteExplosion*, ParticleScrewAttackDestroyed,
- * ParticleSpeedboosterDestroyed,
+ * ParticleShinesparkDestroyed, ParticleSpeedboosterDestroyed,
  * ParticleHittingSomething*): removed when their table ends; the explosions
  * move to the high OAM priority on their first frame. */
 static void process(MzmParticle *p, const MzmEffectKinds *kinds) {

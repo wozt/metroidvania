@@ -80,8 +80,11 @@ SIMPLE_ACTIONS = {
     "shinespark_charge": ("pose", "SPOSE_DELAY_BEFORE_SHINESPARKING", "once"),
     "shinespark": ("Shinesparking", "FORCED_MOVEMENT_UPWARDS_SHINESPARK", "loop"),
     "shinespark_side": ("Shinesparking", "FORCED_MOVEMENT_SIDEWARDS_SHINESPARK", "loop"),
+    "shinespark_diagonal": ("Shinesparking", "FORCED_MOVEMENT_DIAGONAL_SHINESPARK", "loop"),
     "shinespark_end": ("pose", "SPOSE_DELAY_AFTER_SHINESPARKING", "once"),
     "ball_spark": ("pose", "SPOSE_BALLSPARKING", "loop"),
+    "ballspark_charge": ("pose", "SPOSE_DELAY_BEFORE_BALLSPARKING", "loop"),
+    "ball_spark_collision": ("pose", "SPOSE_BALLSPARK_COLLISION", "once"),
 }
 
 

@@ -612,6 +612,13 @@ static const char *runtime_pose_action(MzmPose pose,uint32_t items) {
         case MZM_POSE_GETTING_HURT: return "hurt";
         case MZM_POSE_DYING: return "death";
         case MZM_POSE_SKIDDING: return "skid";
+        case MZM_POSE_DELAY_BEFORE_SHINESPARKING: return "shinespark_charge";
+        case MZM_POSE_SHINESPARKING:
+        case MZM_POSE_SHINESPARK_COLLISION: return "shinespark";
+        case MZM_POSE_DELAY_AFTER_SHINESPARKING: return "shinespark_end";
+        case MZM_POSE_DELAY_BEFORE_BALLSPARKING: return "ballspark_charge";
+        case MZM_POSE_BALLSPARKING: return "ball_spark";
+        case MZM_POSE_BALLSPARK_COLLISION: return "ball_spark_collision";
         case MZM_POSE_COUNT: break;
     }
     return "idle";
@@ -1502,6 +1509,11 @@ static RuntimeAnimationMapRow *runtime_pose_row(RuntimeAnimationMap *map,
     /* SamusUpdateGraphicsOam: Running_Speedboosting while speed boosting. */
     if(samus->pose==MZM_POSE_RUNNING && samus->speedboosting)
         row=runtime_animation_map_find(map,"run_speedboost",suit,side,aim);
+    /* Shinesparking[forcedMovement]: up, sideways or diagonal. */
+    if((samus->pose==MZM_POSE_SHINESPARKING || samus->pose==MZM_POSE_SHINESPARK_COLLISION) &&
+       samus->spark_direction)
+        row=runtime_animation_map_find(map,samus->spark_direction==1?"shinespark_side":
+                                       "shinespark_diagonal",suit,side,"none");
     if(!row)row=runtime_animation_map_find(
         map,runtime_pose_action(samus->pose,items),suit,side,aim);
     if(!row && samus->pose==MZM_POSE_SCREW_ATTACKING)
@@ -2046,7 +2058,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                (uint16_t)previous_x, box->top, 0, box->left, box->right,
                                samus->pose == MZM_POSE_SCREW_ATTACKING,
                                equipment->suit == MZM_SUIT_SUITLESS, samus->invincibility != 0,
-                               runtime_sprite_hurt, samus->speedboosting};
+                               runtime_sprite_hurt, samus->speedboosting,
+                               samus->pose==MZM_POSE_SHINESPARKING ||
+                                   samus->pose==MZM_POSE_BALLSPARKING};
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
     }
     sprites->room = room;

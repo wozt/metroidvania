@@ -922,6 +922,107 @@ static void test_speed_booster(void) {
     assert(w.samus.pose == MZM_POSE_STANDING && frames == 16);
 }
 
+/* SamusDelayBeforeShinesparking, SamusShinesparking, the collision and the
+ * delay after, and the ballspark. */
+static void test_shinespark(void) {
+    World w;
+    world_init(&w);
+    fill(&w.grid, 0, 2, GRID_W, 1);            /* a ceiling */
+    fill(&w.grid, 17, 0, 1, GRID_H);           /* a wall on the right */
+    place(&w, 64, 224);
+    step(&w, 0);
+    /* A stored shinespark: A without a direction starts it, half a block up. */
+    w.samus.shinespark_timer = 100;
+    int32_t y = w.samus.y;
+    mzm_sfx_clear();
+    step(&w, MZM_KEY_A);
+    assert(w.samus.pose == MZM_POSE_DELAY_BEFORE_SHINESPARKING && w.samus.y == y - 32);
+    assert(w.samus.shinespark_timer == 50 &&
+           mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SHINESPARKING));
+    /* No gravity while charging; the stored timer does not run. */
+    step(&w, 0);
+    assert(w.samus.y == y - 32 && w.samus.shinespark_timer == 50);
+    int frames = 0;
+    while (w.samus.pose == MZM_POSE_DELAY_BEFORE_SHINESPARKING && frames++ < 20) step(&w, 0);
+    /* Upwards by default, at 192 (24 subpixels a frame), speed boosting. */
+    assert(w.samus.pose == MZM_POSE_SHINESPARKING && w.samus.spark_direction == 0);
+    assert(w.samus.y_velocity == MZM_SHINESPARK_VELOCITY && w.samus.speedboosting &&
+           w.samus.shinespark_timer == 0);
+    y = w.samus.y;
+    step(&w, 0);
+    assert(w.samus.y == y - 24);
+    mzm_sfx_clear();
+    frames = 0;
+    while (w.samus.pose == MZM_POSE_SHINESPARKING && frames++ < 60) step(&w, 0);
+    /* The ceiling stops it: the collision, invincible, then the delay. */
+    assert(w.samus.pose == MZM_POSE_SHINESPARK_COLLISION && w.samus.invincibility == 48);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SHINESPARK_COLLISION));
+    assert(!mzm_sfx_requested(MZM_SFX_STOP, MZM_SOUND_SHINESPARKING));
+    y = w.samus.y;
+    frames = 0;
+    while (w.samus.pose == MZM_POSE_SHINESPARK_COLLISION && frames++ < 40) step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_DELAY_AFTER_SHINESPARKING && frames == 17 && w.samus.y == y);
+    while (w.samus.pose == MZM_POSE_DELAY_AFTER_SHINESPARKING && frames++ < 80) step(&w, 0);
+    /* SamusSetPose only stops the sound when a charge or a spark is cut
+     * short, not after the collision. */
+    assert(w.samus.pose == MZM_POSE_MIDAIR && !mzm_sfx_requested(MZM_SFX_STOP, MZM_SOUND_SHINESPARKING));
+    while (w.samus.pose != MZM_POSE_LANDING && frames++ < 200) step(&w, 0);
+
+    /* Sideways: the direction held when the charge ends, until the wall. */
+    steps(&w, 0, 6);
+    w.samus.shinespark_timer = 100;
+    step(&w, MZM_KEY_A);
+    frames = 0;
+    while (w.samus.pose == MZM_POSE_DELAY_BEFORE_SHINESPARKING && frames++ < 20)
+        step(&w, MZM_KEY_RIGHT);
+    assert(w.samus.pose == MZM_POSE_SHINESPARKING && w.samus.spark_direction == 1 &&
+           w.samus.x_velocity == MZM_SHINESPARK_VELOCITY && w.samus.y_velocity == 0);
+    y = w.samus.y;
+    while (w.samus.pose == MZM_POSE_SHINESPARKING && frames++ < 80) step(&w, MZM_KEY_RIGHT);
+    assert(w.samus.pose == MZM_POSE_SHINESPARK_COLLISION && w.samus.y == y);
+    assert(box_clear(&w) && w.samus.x > 15 * 64);
+
+    /* Diagonal with L. */
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    w.samus.shinespark_timer = 100;
+    step(&w, MZM_KEY_A);
+    while (w.samus.pose == MZM_POSE_DELAY_BEFORE_SHINESPARKING) step(&w, MZM_KEY_L);
+    assert(w.samus.spark_direction == 2 &&
+           w.samus.x_velocity == MZM_DIAGONAL_SHINESPARK_X_VELOCITY &&
+           w.samus.y_velocity == MZM_DIAGONAL_SHINESPARK_Y_VELOCITY);
+
+    /* A ballspark: High Jump, A in the Morph Ball, 60 frames of charge with
+     * a hop, then upwards. */
+    world_init(&w);
+    w.equipment.items |= MZM_ITEM_HIGH_JUMP;
+    place(&w, 64, 224);
+    step(&w, 0);
+    step(&w, MZM_KEY_DOWN);
+    step(&w, 0);
+    step(&w, MZM_KEY_DOWN);
+    steps(&w, 0, 8);
+    assert(w.samus.pose == MZM_POSE_MORPH_BALL);
+    w.samus.shinespark_timer = 100;
+    y = w.samus.y;
+    mzm_sfx_clear();
+    step(&w, MZM_KEY_A);
+    assert(w.samus.pose == MZM_POSE_DELAY_BEFORE_BALLSPARKING && w.samus.y == y - 32);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_BALLSPARKING));
+    step(&w, 0);
+    assert(w.samus.y == y - 64);
+    frames = 1;
+    while (w.samus.pose == MZM_POSE_DELAY_BEFORE_BALLSPARKING && frames++ < 100) step(&w, 0);
+    /* The hop frame, then CONVERT_SECONDS(1.f) of charge. */
+    assert(w.samus.pose == MZM_POSE_BALLSPARKING && frames == 61 &&
+           w.samus.y_velocity == MZM_SHINESPARK_VELOCITY);
+    while (w.samus.pose == MZM_POSE_BALLSPARKING && frames++ < 200) step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_BALLSPARK_COLLISION);
+    while (w.samus.pose == MZM_POSE_BALLSPARK_COLLISION && frames++ < 300) step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_MORPH_BALL_MIDAIR);
+}
+
 int main(void) {
     test_native_tables();
     test_damage();
@@ -940,6 +1041,7 @@ int main(void) {
     test_sounds();
     test_bombs();
     test_speed_booster();
+    test_shinespark();
     puts("MZM Samus controller tests passed");
     return 0;
 }

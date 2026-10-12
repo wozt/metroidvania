@@ -873,6 +873,10 @@ void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t eff
         ai_particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
         random_debris_3(c, y, x);
         mzm_sfx_play(MZM_SOUND_SCREW_ATTACK_DESTROYED);
+    } else if (s->pose == SPRITE_POSE_SHINESPARK_DESTROYED) {
+        ai_particle_set(c, y, x, MZM_PE_SHINESPARK_DESTROYED);
+        random_debris_3(c, y, x);
+        mzm_sfx_play(MZM_SOUND_SHINESPARK_DESTROYED);
     } else if (s->pose == SPRITE_POSE_SPEEDBOOSTER_DESTROYED) {
         ai_particle_set(c, y, x, MZM_PE_SPEEDBOOSTER_DESTROYED);
         random_debris_3(c, y, x);
@@ -3529,8 +3533,9 @@ static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
         s->freeze_timer = 0;
         s->palette_row = 0;
         /* Speed boosting takes precedence over the screw attack. */
-        s->pose = samus->speedboosting ? SPRITE_POSE_SPEEDBOOSTER_DESTROYED
-                                       : SPRITE_POSE_SCREW_ATTACK_DESTROYED;
+        s->pose = !samus->speedboosting ? SPRITE_POSE_SCREW_ATTACK_DESTROYED
+                  : samus->shinesparking ? SPRITE_POSE_SHINESPARK_DESTROYED
+                                         : SPRITE_POSE_SPEEDBOOSTER_DESTROYED;
         s->ignore_samus_timer = 1;
         set_isft(s, ISFT_SCREW_ATTACK);
         s->damaged = true;

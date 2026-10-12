@@ -2988,6 +2988,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0262 - Zero Mission shinespark and ballspark
+
+- `mzm_samus.c` ports the shinespark start of the ground poses (A without a
+  direction, half a block of room above, Samus rising by it) and of the
+  mid-air poses, `SamusDelayBeforeShinesparkingGfx` (turning when the opposite
+  direction is held), the `SamusSetPose` spark directions (up at 192 by
+  default, sideways at 192, diagonal at 160/96 with L or the direction and
+  Up), `SamusShinesparking` (stopped by a ceiling or a wall),
+  `SamusShinesparkingGfx` (its loop frames), the collision (48 frames of
+  invincibility, the collision sound, 17 frames) and the delay after, and the
+  ballspark (High Jump in the Morph Ball: the half-block rise, the first-frame
+  hop, one second of charge turning toward the input, the spark, the
+  collision and the Morph Ball fall), with the sparks' constant velocity in
+  `SamusUpdateVelocityPosition` and the sound stops of `SamusSetPose`.
+- Sprites touched while sparking die as `DCT_SHINESPARK` with
+  `PE_SHINESPARK_DESTROYED` (exported) and its sound; the Samus library maps
+  the diagonal spark, the ballspark charge and its collision.
+- Checked in tourian_010 (`--item speed-booster`, run, skid, Down, A): the
+  spark rises to the ceiling, then the delay after.
+- Not ported: the slope landing carry, screen shakes, the launchers, the
+  aura sprites.
+- Tests: `tests/test_mzm_samus.c` (the start and rise, the charge without
+  gravity, the upward speed, the ceiling collision and its timings, the
+  sideways spark to a wall, the diagonal velocities, the ballspark timings)
+  and `tests/test_mzm_sprites.c` (the shinespark kill).
+- Validation on 2026-10-12: warning-clean build, CTest 29/29, the Python
+  suite (427 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0261 - Zero Mission speed booster
 
 - `mzm_samus.c` ports the speed booster charge of `SamusRunning` (a timer to

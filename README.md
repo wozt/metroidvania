@@ -238,8 +238,9 @@ Ball, B places a bomb (four at most); its explosion breaks bomb blocks,
 damages enemies and bounces Samus when she is on it. With the Speed Booster
 (an item of the debug menu), a long run starts the speed boost: it
 breaks speed blocks and enemies, and releasing the direction skids (Down
-while skidding stores a shinespark glow; the shinespark itself is not
-ported yet). Diagnostic
+while skidding stores a shinespark: A then launches it up, sideways with a
+direction or diagonally with L or Up; in the Morph Ball with High Jump, A
+launches a ballspark). Diagnostic
 keys: R cycles suits (gamepad Guide), T cycles Space Jump/Screw Attack, G
 toggles High Jump, M refills ammunition, H applies 20 damage, Enter restarts
 after death, F6 opens the raw animation catalogue and F7 outlines the active

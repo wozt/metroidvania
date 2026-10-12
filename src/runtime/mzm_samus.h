@@ -30,6 +30,11 @@
 /* SAMUS_X_SPEEDBOOST_VELOCITY_CAP and SHINESPARK_TIMER_MAX. */
 #define MZM_X_SPEEDBOOST_VELOCITY_CAP 160
 #define MZM_SHINESPARK_TIMER_MAX 180
+/* SAMUS_SIDEWARD_SHINESPARK_X_VELOCITY (also the upward speed) and the
+ * diagonal velocities. */
+#define MZM_SHINESPARK_VELOCITY 192
+#define MZM_DIAGONAL_SHINESPARK_X_VELOCITY 160
+#define MZM_DIAGONAL_SHINESPARK_Y_VELOCITY 96
 #define MZM_X_MIDAIR_ACCELERATION 8
 #define MZM_X_MIDAIR_MORPHED_VELOCITY_CAP 48
 #define MZM_Y_ACCELERATION 10
@@ -73,6 +78,13 @@ typedef enum {
     MZM_POSE_GETTING_HURT_IN_MORPH_BALL,
     MZM_POSE_DYING,
     MZM_POSE_SKIDDING,
+    MZM_POSE_DELAY_BEFORE_SHINESPARKING,
+    MZM_POSE_SHINESPARKING,
+    MZM_POSE_SHINESPARK_COLLISION,
+    MZM_POSE_DELAY_AFTER_SHINESPARKING,
+    MZM_POSE_DELAY_BEFORE_BALLSPARKING,
+    MZM_POSE_BALLSPARKING,
+    MZM_POSE_BALLSPARK_COLLISION,
     MZM_POSE_COUNT
 } MzmPose;
 
@@ -219,6 +231,8 @@ typedef struct MzmSamus {
     /* speedboostingShinesparking and shinesparkTimer (a stored shinespark). */
     bool speedboosting;
     uint8_t shinespark_timer;
+    /* The shinespark's forced movement: 0 upwards, 1 sidewards, 2 diagonal. */
+    uint8_t spark_direction;
 } MzmSamus;
 
 const MzmBlockHitbox *mzm_block_hitbox(MzmHitboxType type);

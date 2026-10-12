@@ -79,8 +79,10 @@ static void set_highlighted_weapon(MzmWeapons *weapons, const MzmSamus *samus,
         break;
     }
     /* Armed a new weapon. */
-    if (highlighted != MZM_WEAPON_NONE && weapons->highlighted == MZM_WEAPON_NONE)
+    if (highlighted != MZM_WEAPON_NONE && weapons->highlighted == MZM_WEAPON_NONE) {
+        weapons->charge_counter = 0;
         mzm_sfx_play(MZM_SOUND_ARMING_WEAPON);
+    }
     weapons->highlighted = highlighted;
 }
 
@@ -92,11 +94,15 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
     if (equipment->suit == MZM_SUIT_SUITLESS || samus->pose == MZM_POSE_DYING) {
         /* The pistol has its own charge rules and is not implemented. */
         weapons->highlighted = MZM_WEAPON_NONE;
+        weapons->charge_counter = 0;
         return false;
     }
     set_highlighted_weapon(weapons, samus, held, pressed, equipment);
-    if (samus->pose == MZM_POSE_MORPH_BALL || samus->pose == MZM_POSE_ROLLING ||
-        samus->pose == MZM_POSE_MORPH_BALL_MIDAIR) {
+    /* SamusCheckNewProjectile */
+    switch (samus->pose) {
+    case MZM_POSE_MORPH_BALL:
+    case MZM_POSE_ROLLING:
+    case MZM_POSE_MORPH_BALL_MIDAIR:
         /* Bombs: no hasNewProjectile, so the pose is not interrupted. */
         if (pressed & MZM_KEY_B && weapons->cooldown == 0 && equipment->items & MZM_ITEM_BOMBS &&
             !weapons->pending) {
@@ -104,17 +110,88 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
             weapons->pending_type = weapons->highlighted == MZM_WEAPON_POWER_BOMB ?
                 MZM_PROJECTILE_POWER_BOMB : MZM_PROJECTILE_BOMB;
         }
+        /* fall through */
+    case MZM_POSE_MORPHING:
+        /* A full charge is released as the ball forms or rolls. */
+        if (weapons->charge_counter >= MZM_CHARGE_FULL) {
+            weapons->pending = true;
+            weapons->pending_type = MZM_PROJECTILE_CHARGED_BEAM;
+        }
+        weapons->charge_counter = 0;
         return false;
+    default:
+        break;
     }
     if (!pose_can_fire(samus->pose)) return false;
-    /* SamusCheckFireBeamMissile without the charge beam. */
-    if (weapons->cooldown || weapons->pending || !(pressed & MZM_KEY_B)) return false;
-    weapons->pending = true;
-    weapons->pending_type =
-        weapons->highlighted == MZM_WEAPON_MISSILE ? MZM_PROJECTILE_MISSILE :
-        weapons->highlighted == MZM_WEAPON_SUPER_MISSILE ?
-            MZM_PROJECTILE_SUPER_MISSILE : MZM_PROJECTILE_BEAM;
-    return true;
+    /* SamusCheckFireBeamMissile */
+    bool fired = false;
+    if (weapons->cooldown == 0 && !weapons->pending && pressed & MZM_KEY_B) {
+        weapons->pending = true;
+        weapons->pending_type =
+            weapons->highlighted == MZM_WEAPON_MISSILE ? MZM_PROJECTILE_MISSILE :
+            weapons->highlighted == MZM_WEAPON_SUPER_MISSILE ?
+                MZM_PROJECTILE_SUPER_MISSILE : MZM_PROJECTILE_BEAM;
+        fired = true;
+    }
+    if (!fired) {
+        if (weapons->highlighted != MZM_WEAPON_NONE) {
+            weapons->charge_counter = 0;
+        } else if (held & MZM_KEY_B) {
+            if (!(equipment->items & MZM_ITEM_CHARGE_BEAM)) weapons->charge_counter = 0;
+            else if (weapons->charge_counter < MZM_CHARGE_MAX) weapons->charge_counter++;
+            else weapons->charge_counter = MZM_CHARGE_FULL;
+        } else {
+            if (weapons->charge_counter >= MZM_CHARGE_FULL) {
+                weapons->pending = true;
+                weapons->pending_type = MZM_PROJECTILE_CHARGED_BEAM;
+                fired = true;
+            } else if (weapons->charge_counter > MZM_CHARGE_UNCHARGED) {
+                weapons->pending = true;
+                weapons->pending_type = MZM_PROJECTILE_BEAM;
+                fired = true;
+            }
+            weapons->charge_counter = 0;
+        }
+    }
+    return fired;
+}
+
+/* The beam sounds of ParticlePlayBeginToChargeSound,
+ * ParticleStopBeginToChargeSound and ParticlePlayBeamFullChargedSound (the
+ * Power and Long Beam rows). */
+static uint16_t charge_init_sound(const MzmEquipment *e) {
+    return e->items & MZM_ITEM_LONG_BEAM ? MZM_SOUND_LONG_CHARGE_INIT : MZM_SOUND_SHORT_CHARGE_INIT;
+}
+
+/* ParticleChargingBeam's state and sounds (the runtime draws it at the arm
+ * cannon from the charging beam tables). */
+static void update_charge_particle(MzmWeapons *weapons, const MzmEquipment *e) {
+    MzmChargeParticle *c = &weapons->charge_particle;
+    /* ProjectileUpdate: the particle starts at the start threshold. */
+    if (c->stage == 0) {
+        if (weapons->charge_counter != MZM_CHARGE_START || e->suit == MZM_SUIT_SUITLESS) return;
+        c->stage = 1;
+        c->frame_counter = 0;
+        mzm_sfx_play(charge_init_sound(e));
+        return;
+    }
+    if (weapons->charge_counter < MZM_CHARGE_START) {
+        c->stage = 0;
+        mzm_sfx_stop(charge_init_sound(e));
+        return;
+    }
+    if (c->stage == 1) {
+        if (weapons->charge_counter >= MZM_CHARGE_FULL) {
+            c->stage = 2;
+            c->frame_counter = 0;
+        }
+        return;
+    }
+    /* CONVERT_SECONDS(.25f + 1.f / 60) */
+    if ((c->frame_counter & 15) == 0)
+        mzm_sfx_play(e->items & MZM_ITEM_LONG_BEAM ? MZM_SOUND_LONG_CHARGE_LOOP
+                                                   : MZM_SOUND_SHORT_CHARGE_LOOP);
+    c->frame_counter++;
 }
 
 static bool point_solid(const MzmCollision *collision, int32_t x, int32_t y) {
@@ -136,9 +213,9 @@ static bool projectile_hits(MzmWeapons *weapons, const MzmCollision *collision,
     }
     if (collision->affect)
         collision->affect(collision->context, p->x, p->y,
-                          p->type == MZM_PROJECTILE_BEAM ? MZM_DAMAGE_BEAM :
                           p->type == MZM_PROJECTILE_MISSILE ? MZM_DAMAGE_MISSILE :
-                          MZM_DAMAGE_SUPER_MISSILE);
+                          p->type == MZM_PROJECTILE_SUPER_MISSILE ? MZM_DAMAGE_SUPER_MISSILE :
+                          MZM_DAMAGE_BEAM);
     return true;
 }
 
@@ -196,12 +273,16 @@ static void initialize(MzmProjectile *p) {
     p->anim_counter = 0;
 }
 
-/* ProjectileProcessNormalBeam */
+/* ProjectileProcessNormalBeam / LongBeam / ChargedNormalBeam /
+ * ChargedLongBeam: their moving speed and the short lifetime of the beams
+ * without Long Beam. */
 static void process_beam(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *samus,
                          const MzmCollision *collision) {
+    bool is_long = p->type == MZM_PROJECTILE_LONG_BEAM || p->type == MZM_PROJECTILE_CHARGED_LONG_BEAM;
     if (p->stage == MZM_STAGE_MOVING) {
         if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
-        projectile_move(p, MZM_QUARTER_BLOCK_SIZE + MZM_PIXEL_SIZE, samus->x_velocity);
+        projectile_move(p, is_long ? MZM_QUARTER_BLOCK_SIZE + MZM_EIGHTH_BLOCK_SIZE
+                                   : MZM_QUARTER_BLOCK_SIZE + MZM_PIXEL_SIZE, samus->x_velocity);
     } else if (p->stage == MZM_STAGE_SPAWNING) {
         if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
         p->stage = MZM_STAGE_MOVING;
@@ -211,7 +292,7 @@ static void process_beam(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *
         p->stage = MZM_STAGE_SPAWNING;
         if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
     }
-    if (++p->timer > MZM_SHORT_BEAM_LIFETIME) p->active = false;
+    if (++p->timer > MZM_SHORT_BEAM_LIFETIME && !is_long) p->active = false;
 }
 
 /* ProjectileDecrementMissileCounter and its super missile twin. */
@@ -422,6 +503,8 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
     weapons->impact_count = 0;
     weapons->bomb_bounce = 0;
     weapons->power_bomb_set = false;
+    weapons->shot_flash = false;
+    update_charge_particle(weapons, equipment);
     if (weapons->pending) {
         static const struct { int limit; uint8_t cooldown; } rules[] = {
             [MZM_PROJECTILE_BEAM] = {MZM_PROJECTILE_LIMIT_BEAM, MZM_BEAM_COOLDOWN},
@@ -432,8 +515,17 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
             [MZM_PROJECTILE_BOMB] = {MZM_PROJECTILE_LIMIT_BOMB, 7},
             /* CONVERT_SECONDS(.1f) - 1 */
             [MZM_PROJECTILE_POWER_BOMB] = {MZM_PROJECTILE_LIMIT_POWER_BOMB, 5},
+            [MZM_PROJECTILE_LONG_BEAM] = {MZM_PROJECTILE_LIMIT_BEAM, MZM_BEAM_COOLDOWN},
+            [MZM_PROJECTILE_CHARGED_BEAM] = {MZM_PROJECTILE_LIMIT_CHARGED_BEAM, MZM_BEAM_COOLDOWN},
+            [MZM_PROJECTILE_CHARGED_LONG_BEAM] = {MZM_PROJECTILE_LIMIT_CHARGED_BEAM,
+                                                  MZM_BEAM_COOLDOWN},
         };
+        /* The beam type of the equipped beams. */
         MzmProjectileType type = weapons->pending_type;
+        bool is_long = equipment->items & MZM_ITEM_LONG_BEAM;
+        if (type == MZM_PROJECTILE_BEAM && is_long) type = MZM_PROJECTILE_LONG_BEAM;
+        else if (type == MZM_PROJECTILE_CHARGED_BEAM && is_long) type = MZM_PROJECTILE_CHARGED_LONG_BEAM;
+        bool beam = type == MZM_PROJECTILE_BEAM || type >= MZM_PROJECTILE_LONG_BEAM;
         /* gArmCannonX/Y: pixel position plus the arm cannon offset; bombs
          * at Samus's position. */
         int32_t x = ((samus->x >> 2) + cannon_x) * MZM_SUBPIXELS_PER_PIXEL;
@@ -446,11 +538,22 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
             (type != MZM_PROJECTILE_POWER_BOMB || weapons->power_bomb.state == MZM_PB_NONE) &&
             projectile_spawn(weapons, type, samus, x, y)) {
             weapons->cooldown = rules[type].cooldown;
-            /* CONVERT_SECONDS(1.f / 15) for beam shots only. */
-            if (type == MZM_PROJECTILE_BEAM) weapons->release_palette_timer = 4;
-            /* The power beam alone (no beam upgrade is ported). */
-            if (type == MZM_PROJECTILE_BEAM) {
-                mzm_sfx_play(MZM_SOUND_BEAM_SHOT);
+            if (beam) {
+                /* ProjectileSetBeamParticleEffect, then CONVERT_SECONDS(1.f / 15)
+                 * of beam release palette. */
+                weapons->shot_flash = true;
+                weapons->shot_flash_aim = samus->aim;
+                weapons->shot_flash_facing = samus->facing;
+                weapons->release_palette_timer = 4;
+            }
+            static const uint16_t beam_sounds[] = {
+                [MZM_PROJECTILE_BEAM] = MZM_SOUND_BEAM_SHOT,
+                [MZM_PROJECTILE_LONG_BEAM] = MZM_SOUND_BEAM_LONG_SHOT,
+                [MZM_PROJECTILE_CHARGED_BEAM] = MZM_SOUND_CHARGED_BEAM_SHOT,
+                [MZM_PROJECTILE_CHARGED_LONG_BEAM] = MZM_SOUND_CHARGED_BEAM_LONG_SHOT,
+            };
+            if (beam) {
+                mzm_sfx_play(beam_sounds[type]);
             } else if (type == MZM_PROJECTILE_MISSILE) {
                 mzm_sfx_play(MZM_SOUND_MISSILE_SHOT);
                 mzm_sfx_play(MZM_SOUND_MISSILE_THRUST);
@@ -464,13 +567,15 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
     for (int i = 0; i < MZM_MAX_PROJECTILES; ++i) {
         MzmProjectile *p = &weapons->list[i];
         if (!p->active) continue;
-        if (p->type == MZM_PROJECTILE_BEAM) process_beam(weapons, p, samus, collision);
+        if (p->type == MZM_PROJECTILE_BEAM || p->type >= MZM_PROJECTILE_LONG_BEAM)
+            process_beam(weapons, p, samus, collision);
         else if (p->type == MZM_PROJECTILE_BOMB) process_bomb(weapons, p, samus, collision);
         else if (p->type == MZM_PROJECTILE_POWER_BOMB) process_power_bomb(weapons, p, equipment);
         else process_missile(weapons, p, samus, equipment, collision);
         if (!p->active) continue;
         animate(p, animation);
         /* Bombs are never despawned by distance. */
-        if (p->type <= MZM_PROJECTILE_SUPER_MISSILE) check_despawn(p, samus);
+        if (p->type != MZM_PROJECTILE_BOMB && p->type != MZM_PROJECTILE_POWER_BOMB)
+            check_despawn(p, samus);
     }
 }

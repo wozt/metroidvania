@@ -139,7 +139,9 @@ PROJECTILE_SYMBOL_PREFIXES = ("sCommonSprites", "sBeamPal", "sNormalBeam",
                               "sIceBeam", "sChargedIceBeam", "sWaveBeam",
                               "sChargedWaveBeam", "sPlasmaBeam", "sChargedPlasmaBeam",
                               "sPistol", "sChargedPistol", "sMissile", "sSuperMissile",
-                              "sBomb", "sPowerBomb")
+                              "sBomb", "sPowerBomb", "sParticleChargingBeam",
+                              "sParticleShootingBeam", "sParticleBeamTrailing",
+                              "sParticleHittingSomethingWithLongBeam")
 
 
 def produce_projectiles(root: Path, rom: bytes, decomp: Path, symbols) -> dict:
@@ -160,6 +162,10 @@ def produce_projectiles(root: Path, rom: bytes, decomp: Path, symbols) -> dict:
     if report["unresolved"]:
         raise ValueError("unresolved projectile tables: " +
                          ", ".join(sorted(report["unresolved"])[:5]))
+    particles = mzm_projectile_compose.compose_beam_particles(rom, symbols, sink)
+    if particles["unresolved"]:
+        raise ValueError("unresolved beam particles: " +
+                         ", ".join(sorted(particles["unresolved"])[:5]))
     totals = library.finish()
     library.write_text("sequences.json", json.dumps(tables, indent=2, sort_keys=True) + "\n")
     return {**totals, "tables": report["tables"]}

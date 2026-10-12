@@ -35,8 +35,25 @@ typedef enum {
     MZM_PROJECTILE_MISSILE,
     MZM_PROJECTILE_SUPER_MISSILE,
     MZM_PROJECTILE_BOMB,
-    MZM_PROJECTILE_POWER_BOMB
+    MZM_PROJECTILE_POWER_BOMB,
+    MZM_PROJECTILE_LONG_BEAM,
+    MZM_PROJECTILE_CHARGED_BEAM,
+    MZM_PROJECTILE_CHARGED_LONG_BEAM
 } MzmProjectileType;
+
+/* CHARGE_BEAM_START_THRESHOLD, CHARGE_BEAM_UNCHARGED_THRESHOLD,
+ * CHARGE_BEAM_THRESHOLD and CHARGE_BEAM_MAX_THRESHOLD. */
+#define MZM_CHARGE_START 16
+#define MZM_CHARGE_UNCHARGED 25
+#define MZM_CHARGE_FULL 64
+#define MZM_CHARGE_MAX (MZM_CHARGE_FULL + 15)
+#define MZM_PROJECTILE_LIMIT_CHARGED_BEAM 2
+
+/* ParticleChargingBeam: 0 none, 1 beginning, 2 charged. */
+typedef struct {
+    uint8_t stage;
+    uint8_t frame_counter;
+} MzmChargeParticle;
 
 /* BombStage (the morph ball launcher stages are not ported). */
 typedef enum {
@@ -93,7 +110,14 @@ typedef struct {
     MzmHighlightedWeapon highlighted;
     bool super_missiles_selected;
     bool pending;
-    MzmProjectileType pending_type;
+    MzmProjectileType pending_type;     /* MZM_PROJECTILE_BEAM / _CHARGED_BEAM: the category */
+    /* chargeCounter and the charging particle. */
+    uint8_t charge_counter;
+    MzmChargeParticle charge_particle;
+    /* ProjectileSetBeamParticleEffect this update: the shot's aim and side. */
+    bool shot_flash;
+    MzmAim shot_flash_aim;
+    int shot_flash_facing;
     /* Wall impacts of the last update, in order: where the game calls
      * ParticleSet with the projectile's hitting effect. */
     struct { int32_t x, y; MzmProjectileType type; } impacts[MZM_MAX_PROJECTILES];

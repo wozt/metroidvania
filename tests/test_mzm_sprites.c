@@ -213,7 +213,7 @@ int main(void) {
     /* SpriteInitPrimary's one-frame ignore timer runs down in the collision
      * routine, not in the sprite's update. */
     assert(z.status & MZM_SPRITE_STATUS_ONSCREEN && z.ignore_samus_timer == 1);
-    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false};
+    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL};
     mzm_sprites_samus_collision(&z, 1, &away, &tables);
     assert(z.ignore_samus_timer == 0 && hurts == 0);
 
@@ -221,7 +221,7 @@ int main(void) {
      * the stats damage, pushed away (the sprite is on her right, "on left"
      * in the native flag naming), then 15 frames of ignored contact. */
     MzmSpriteSamus samus = {NULL, (uint16_t)(z.x - 40), 640, (uint16_t)(z.x - 40),
-                            -96, 0, -24, 24, false, false, false, hurt, false, false};
+                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL};
     mzm_sprites_samus_collision(&z, 1, &samus, &tables);
     assert(hurts == 1 && last_damage == 8 && last_on_left && samus.invincible);
     /* Set to 15, then run down once at the end of the routine. */
@@ -374,7 +374,7 @@ int main(void) {
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     samus = (MzmSpriteSamus){NULL, z.x, (uint16_t)(z.y + 40), z.x, -96, 0, -24, 24,
-                             false, false, false, hurt, false, false};
+                             false, false, false, hurt, false, false, 0, NULL};
     for (int i = 0; i < 19; ++i) {
         mzm_sprites_samus_collision(&z, 1, &samus, &tables);
         step(&z, 0);
@@ -551,7 +551,7 @@ int main(void) {
     /* It hurts Samus with the secondary damage, but not the screw attack. */
     hurts = 0;
     MzmSpriteSamus near = {NULL, part->x, (uint16_t)(part->y + 20), part->x, -96, 0, -24, 24,
-                           true, false, false, hurt, false, false};
+                           true, false, false, hurt, false, false, 0, NULL};
     part->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(group, 8, &near, &tables);
     assert(hurts == 1 && last_damage == 2);
@@ -725,7 +725,29 @@ int main(void) {
     assert(z.health == 20);
     weapons.power_bomb_set = false;
     weapons.power_bomb.state = MZM_PB_NONE;
+    /* The charged beam (8) and charged Long Beam (12) hit sprites weak to
+     * the charge beam or beams; the Long Beam deals 3 with its impact. */
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_CHARGE_BEAM_PISTOL;
+    z.health = 40;
+    z.isft = 0;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_CHARGED_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
+    assert(z.health == 32 && !weapons.list[0].active);
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_CHARGED_LONG_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
+    assert(z.health == 20);
+    /* Not weak to beams: the Long Beam only stuns. */
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_LONG_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
+    assert(z.health == 20 && !weapons.list[0].active);
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_LONG_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
+    assert(z.health == 17);
     z.isft = 0;
     /* Not weak: the invincible impact. */
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
@@ -740,7 +762,7 @@ int main(void) {
     memset(&fx, 0, sizeof fx);
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
     MzmSpriteSamus screw = {NULL, z.x, (uint16_t)(z.y + 20), z.x, -96, 0, -24, 24,
-                            true, false, false, hurt, false, false};
+                            true, false, false, hurt, false, false, 0, NULL};
     z.ignore_samus_timer = 0;
     mzm_sprites_samus_collision(&z, 1, &screw, &tables);
     assert(z.pose == 0x65 && z.damaged);
@@ -766,6 +788,49 @@ int main(void) {
     step(&z, 0);
     assert(z.status == 0 && fx.particles[0].effect == MZM_PE_SPEEDBOOSTER_DESTROYED);
     assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SPEEDBOOSTER_DESTROYED));
+    /* The pseudo screw: a charged spin spends the charge on a weak sprite;
+     * a kill is PSEUDO_SCREW_DESTROYED, a survivor still hurts Samus. */
+    memset(&fx, 0, sizeof fx);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    /* Not weak to beams: nothing happens to the sprite or the charge. */
+    uint8_t charge = 70;
+    MzmSpriteSamus pseudo = speed;
+    pseudo.speedboosting = pseudo.shinesparking = false;
+    pseudo.pseudo_screw_damage = 8;
+    pseudo.charge_counter = &charge;
+    pseudo.x = z.x;
+    pseudo.y = (uint16_t)(z.y + 20);
+    z.ignore_samus_timer = 0;
+    mzm_sprites_samus_collision(&z, 1, &pseudo, &tables);
+    assert(charge == 70 && z.health == 3);
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] |= MZM_WEAKNESS_BEAM_BOMBS;
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    pseudo.speedboosting = pseudo.shinesparking = false;
+    pseudo.pseudo_screw_damage = 8;
+    pseudo.charge_counter = &charge;
+    pseudo.x = z.x;
+    pseudo.y = (uint16_t)(z.y + 20);
+    z.health = 20;
+    z.ignore_samus_timer = 0;
+    pseudo.invincible = false;
+    int hurts_before = hurts;
+    mzm_sprites_samus_collision(&z, 1, &pseudo, &tables);
+    assert(charge == 0 && z.health == 12 && hurts == hurts_before + 1);
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    z.health = 8;
+    z.ignore_samus_timer = 0;
+    charge = 70;
+    pseudo.invincible = false;
+    hurts_before = hurts;
+    mzm_sprites_samus_collision(&z, 1, &pseudo, &tables);
+    assert(z.pose == 0x66 && hurts == hurts_before);
+    mzm_sfx_clear();
+    step(&z, 0);
+    assert(z.status == 0 && fx.particles[0].effect == MZM_PE_PSEUDO_SCREW_DESTROYED &&
+           mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_PSEUDO_SCREW_DESTROYED));
     /* Shinesparking: DCT_SHINESPARK. */
     memset(&fx, 0, sizeof fx);
     mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
@@ -839,7 +904,7 @@ int main(void) {
      * harmless, and gone when the table ends. */
     hurts = 0;
     MzmSpriteSamus touch = {NULL, eye_l->x, (uint16_t)(eye_l->y + 20), eye_l->x, -96, 0, -24, 24,
-                            false, false, false, hurt, false, false};
+                            false, false, false, hurt, false, false, 0, NULL};
     eye_l->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(eye_l, 1, &touch, &tables);
     assert(hurts == 1 && last_damage == 3 && eye_l->pose == 66);
@@ -1689,7 +1754,7 @@ int main(void) {
          * with the laser's damage, then explodes. */
         hurts = 0;
         MzmSpriteSamus laser_hit = {NULL, ps[1].x, (uint16_t)(ps[1].y + 20), ps[1].x,
-                                    -40, 0, -20, 20, false, false, false, hurt, false, false};
+                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL};
         /* The spawn's ignore timer runs down on the first collision pass. */
         MzmSpriteSamus far_away = laser_hit;
         far_away.x = 60000;
@@ -1928,7 +1993,7 @@ int main(void) {
         /* Samus in its light rings the alarm, then it holds it. */
         hurts = 0;
         MzmSpriteSamus in_light = {NULL, ps[0].x, (uint16_t)(ps[0].y + 20), ps[0].x,
-                                   -40, 0, -20, 20, false, false, false, hurt, false, false};
+                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL};
         ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
         MzmSpriteSamus out_of_light = in_light;
         out_of_light.x = 60000;

@@ -1089,6 +1089,106 @@ static void test_power_bomb(void) {
     assert(w.equipment.power_bombs == 0 && weapons.highlighted == MZM_WEAPON_NONE);
 }
 
+/* SamusCheckFireBeamMissile's charge, ParticleChargingBeam's sounds, the
+ * charged and Long Beam shots. */
+static void test_charge_beam(void) {
+    World w;
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    /* Without the Charge Beam, holding B never charges. */
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    assert(weapons.shot_flash && weapons.release_palette_timer == 4);
+    for (int i = 0; i < 80; ++i) {
+        mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment);
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    }
+    assert(weapons.charge_counter == 0);
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment));
+
+    /* With it: the start threshold (16) starts the particle and its sound,
+     * a full charge at 64, then 79 wraps to 64. */
+    w.equipment.items |= MZM_ITEM_CHARGE_BEAM;
+    mzm_weapons_init(&weapons);
+    mzm_sfx_clear();
+    for (int i = 0; i < 16; ++i) {
+        assert(!mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment));
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    }
+    assert(weapons.charge_counter == 16 && weapons.charge_particle.stage == 1);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SHORT_CHARGE_INIT));
+    for (int i = 0; i < 48; ++i) {
+        mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment);
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    }
+    assert(weapons.charge_counter == MZM_CHARGE_FULL && weapons.charge_particle.stage == 2);
+    mzm_sfx_clear();
+    for (int i = 0; i < 16; ++i) {
+        mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment);
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    }
+    assert(weapons.charge_counter == MZM_CHARGE_FULL);  /* 79, then back to 64 */
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SHORT_CHARGE_LOOP));
+    /* Releasing B fires the charged beam. */
+    mzm_sfx_clear();
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment));
+    assert(weapons.charge_counter == 0 && weapons.pending_type == MZM_PROJECTILE_CHARGED_BEAM);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    const MzmProjectile *shot = first_active(&weapons);
+    assert(shot && shot->type == MZM_PROJECTILE_CHARGED_BEAM && weapons.shot_flash);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHARGED_BEAM_SHOT));
+    assert(weapons.charge_particle.stage == 0 &&
+           mzm_sfx_requested(MZM_SFX_STOP, MZM_SOUND_SHORT_CHARGE_INIT));
+    /* A partial charge (above 25) fires a normal beam, a short one nothing. */
+    mzm_weapons_init(&weapons);
+    for (int i = 0; i < 30; ++i) mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment);
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment) &&
+           weapons.pending_type == MZM_PROJECTILE_BEAM);
+    mzm_weapons_init(&weapons);
+    for (int i = 0; i < 20; ++i) mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment);
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment));
+    /* Arming missiles drops the charge. */
+    w.equipment.missiles = w.equipment.max_missiles = 5;
+    for (int i = 0; i < 70; ++i) mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment);
+    assert(weapons.charge_counter >= MZM_CHARGE_FULL);
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B | MZM_KEY_R, 0, &w.equipment);
+    assert(weapons.charge_counter == 0);
+
+    /* Long Beam: its own type, 24 subpixels a frame, no short lifetime. */
+    w.equipment.items |= MZM_ITEM_LONG_BEAM;
+    world_init(&w);
+    w.equipment.items |= MZM_ITEM_LONG_BEAM | MZM_ITEM_CHARGE_BEAM;
+    place(&w, 32, 224);
+    step(&w, 0);
+    mzm_weapons_init(&weapons);
+    mzm_sfx_clear();
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    shot = first_active(&weapons);
+    assert(shot && shot->type == MZM_PROJECTILE_LONG_BEAM &&
+           mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_BEAM_LONG_SHOT));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    int32_t x = shot->x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    assert(shot->x == x + 24);
+    for (int i = 0; i < 14; ++i)
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    assert(shot->active);           /* a normal beam is gone after 12 frames */
+
+    /* A full charge is released when the Morph Ball forms. */
+    mzm_weapons_init(&weapons);
+    for (int i = 0; i < 70; ++i) mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment);
+    w.samus.pose = MZM_POSE_MORPHING;
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment));
+    assert(weapons.pending && weapons.pending_type == MZM_PROJECTILE_CHARGED_BEAM &&
+           weapons.charge_counter == 0);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(mzm_projectile_count(&weapons, MZM_PROJECTILE_CHARGED_LONG_BEAM) == 1);
+}
+
 int main(void) {
     test_native_tables();
     test_damage();
@@ -1109,6 +1209,7 @@ int main(void) {
     test_speed_booster();
     test_shinespark();
     test_power_bomb();
+    test_charge_beam();
     puts("MZM Samus controller tests passed");
     return 0;
 }

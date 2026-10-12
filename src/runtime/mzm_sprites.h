@@ -465,6 +465,10 @@ typedef struct {
     /* speedboostingShinesparking: contact kills as DCT_SPEEDBOOSTER, or as
      * DCT_SHINESPARK while shinesparking or ballsparking. */
     bool speedboosting, shinesparking;
+    /* DCT_PSEUDO_SCREW: the damage of a charged spin (0 when not charged
+     * or not spinning) and gSamusWeaponInfo.chargeCounter to reset. */
+    uint16_t pseudo_screw_damage;
+    uint8_t *charge_counter;
 } MzmSpriteSamus;
 
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when

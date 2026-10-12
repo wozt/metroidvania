@@ -28,6 +28,8 @@ const char *mzm_particle_table(uint8_t effect) {
     case MZM_PE_SPEEDBOOSTER_DESTROYED: return "ParticleSpeedboosterDestroyedOam";
     case MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM:
         return "ParticleHittingSomethingWithNormalBeamOam";
+    case MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM: return "ParticleHittingSomethingWithLongBeamOam";
+    case MZM_PE_PSEUDO_SCREW_DESTROYED: return "ParticlePseudoScrewDestroyedOam";
     case MZM_PE_HITTING_SOMETHING_INVINCIBLE: return "ParticleHittingSomethingInvincibleOam";
     case MZM_PE_HITTING_SOMETHING_WITH_MISSILE: return "ParticleHittingSomethingWithMissileOam";
     case MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE:
@@ -106,6 +108,9 @@ static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
         switch (p->effect) {
         case MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM:
             mzm_sfx_play(MZM_SOUND_BEAM_IMPACT);
+            break;
+        case MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM:
+            mzm_sfx_play(MZM_SOUND_LONG_BEAM_IMPACT);
             break;
         case MZM_PE_HITTING_SOMETHING_INVINCIBLE:
             mzm_sfx_play(MZM_SOUND_INVINCIBLE_IMPACT);

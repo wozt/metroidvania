@@ -67,13 +67,15 @@ def _slice(rom: bytes, pointer: int, size: int, label: str) -> bytes:
     return rom[offset:offset + size]
 
 
-def stage(rom: bytes, symbols, beam: str) -> tuple[bytes, list]:
-    """OBJ VRAM and the 256-color OBJ palette for one beam set."""
+def stage(rom: bytes, symbols, beam: str, row: int | None = None) -> tuple[bytes, list]:
+    """OBJ VRAM and the 256-color OBJ palette for one beam set (``row``
+    overrides its sBeamPal row, as ProjectileLoadGraphics does for ice)."""
     vram = bytearray(0x8000)
     address, size = symbols["sCommonSpritesGfx"]
     vram[COMMON_GFX_VRAM:COMMON_GFX_VRAM + size] = _slice(rom, address, size,
                                                           "common sprite graphics")
-    prefix, row = BEAM_SETS[beam]
+    prefix, set_row = BEAM_SETS[beam]
+    row = set_row if row is None else row
     for part, base in zip(("Top", "Bottom", "Charged_Top", "Charged_Bottom"), BEAM_VRAM):
         length = BEAM_BLOCK_BYTES // 2 if beam == "Pistol" and part == "Top" else BEAM_BLOCK_BYTES
         vram[base:base + length] = _slice(rom, symbols[f"{prefix}_{part}"][0], length,
@@ -161,4 +163,44 @@ def compose_all(rom: bytes, source: str, symbols, sink) -> dict:
                 report["sequences"] += 1
         except (ValueError, KeyError) as exc:
             report["unresolved"][table] = str(exc)
+    return report
+
+
+# The beam graphics ProjectileLoadGraphics loads for the equipped beams: the
+# graphics set and the sBeamPal row (ice recolours wave and plasma).
+BEAM_VARIANTS = {
+    "NormalBeam": ("NormalBeam", 0),
+    "LongBeam": ("LongBeam", 1),
+    "IceBeam": ("IceBeam", 2),
+    "WaveBeam": ("WaveBeam", 3),
+    "WaveIceBeam": ("WaveBeam", 2),
+    "PlasmaBeam": ("PlasmaBeam", 4),
+    "PlasmaIceBeam": ("PlasmaBeam", 2),
+}
+# Particles drawn with the loaded beam graphics or the beam palette row.
+BEAM_PARTICLES = ("sParticleChargingBeamBeginOam", "sParticleChargingBeamChargedOam",
+                  "sParticleShootingBeamHorizontalOam", "sParticleShootingBeamDiagonallyUpOam",
+                  "sParticleShootingBeamDiagonallyDownOam", "sParticleShootingBeamUpOam",
+                  "sParticleShootingBeamDownOam", "sParticleBeamTrailingOam",
+                  "sParticleHittingSomethingWithLongBeamOam")
+
+
+def compose_beam_particles(rom: bytes, symbols, sink) -> dict:
+    """Send each beam particle for each loaded beam variant and X flip to
+    ``sink`` as ``Particle/<table>/<variant>/<flip>``."""
+    report = {"tables": 0, "sequences": 0, "unresolved": {}}
+    for variant, (beam, row) in BEAM_VARIANTS.items():
+        vram, palette = stage(rom, symbols, beam, row)
+        for table in BEAM_PARTICLES:
+            try:
+                entries = frames(rom, symbols, table)
+                for flip in ("none", "x"):
+                    rendered = [(render(rom, vram, palette, pointer, flip), duration)
+                                for pointer, duration in entries]
+                    sink(f"Particle/{table[1:]}/{variant}/{flip}", rendered,
+                         {"table": table, "variant": variant, "flip": flip})
+                    report["sequences"] += 1
+            except (ValueError, KeyError) as exc:
+                report["unresolved"][f"{table}/{variant}"] = str(exc)
+        report["tables"] += 1
     return report

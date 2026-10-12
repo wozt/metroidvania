@@ -102,6 +102,7 @@ PARTICLES = ("sParticleBombOam", "sParticleSpriteExplosionHugeOam", "sParticleSp
              "sParticleSpriteExplosionSingleThenBigOam", "sParticleScrewAttackDestroyedOam",
              "sParticleShinesparkDestroyedOam", "sParticleSpeedboosterDestroyedOam",
              "sParticleHittingSomethingWithNormalBeamOam",
+             "sParticleHittingSomethingWithLongBeamOam", "sParticlePseudoScrewDestroyedOam",
              "sParticleHittingSomethingInvincibleOam",
              "sParticleHittingSomethingWithMissileOam",
              "sParticleHittingSomethingWithSuperMissileOam", "sParticleMediumDustOam",

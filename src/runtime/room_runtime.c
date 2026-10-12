@@ -1260,7 +1260,7 @@ typedef struct {
 } RuntimePaletteChoice;
 
 static RuntimePaletteChoice runtime_samus_palette(const MzmSamus *samus,bool beam_release,
-        const char *suit,unsigned int frame_counter) {
+        const char *suit,unsigned int frame_counter,uint32_t items,int charge) {
     /* Suitless Samus borrows the Power Suit speed boost and unmorph rows. */
     const char *borrowed=strcmp(suit,"Suitless")?suit:"PowerSuit";
     RuntimePaletteChoice choice={suit,"Default",0,suit,"Default",1};
@@ -1289,10 +1289,19 @@ static RuntimePaletteChoice runtime_samus_palette(const MzmSamus *samus,bool bea
         if(samus->anim_frame&1u){choice.kind0="Flashing";choice.row0=1;}
     } else if(beam_release) {
         choice.kind0="BeamRelease";
+        choice.row0=(items&MZM_ITEM_LONG_BEAM)?1:0;
     } else if(samus->unmorph_palette_timer) {
         choice.suit0=borrowed;
         choice.kind0="Unmorph";
         choice.row0=(uint8_t)(samus->unmorph_palette_timer-5)>4?0:1;
+    } else if(strcmp(suit,"Suitless") && charge>=MZM_CHARGE_FULL) {
+        /* The charging rows: two consecutive rows, alternating every 16
+         * frames of full charge, none on the fourth step. */
+        int offset=(charge-MZM_CHARGE_FULL)>>4;
+        if(offset!=3) {
+            int row=((items&MZM_ITEM_LONG_BEAM)?2:0)+(offset&1);
+            choice=(RuntimePaletteChoice){suit,"ChargingBeam",row,suit,"ChargingBeam",row+1};
+        }
     }
     return choice;
 }
@@ -1581,7 +1590,12 @@ static int runtime_pose_durations(void *context,const MzmSamus *samus,
 /* Projectile library key for ProjectileProcess* OAM selection and the
  * X/Y flips applied by ProjectileDraw. */
 static void runtime_projectile_key(const MzmProjectile *projectile,char *key,size_t size) {
-    static const char *names[]={"NormalBeam","Missile","SuperMissile"};
+    static const char *names[]={
+        [MZM_PROJECTILE_BEAM]="NormalBeam",[MZM_PROJECTILE_MISSILE]="Missile",
+        [MZM_PROJECTILE_SUPER_MISSILE]="SuperMissile",[MZM_PROJECTILE_BOMB]="Bomb",
+        [MZM_PROJECTILE_POWER_BOMB]="PowerBomb",[MZM_PROJECTILE_LONG_BEAM]="LongBeam",
+        [MZM_PROJECTILE_CHARGED_BEAM]="ChargedNormalBeam",
+        [MZM_PROJECTILE_CHARGED_LONG_BEAM]="ChargedLongBeam"};
     if(projectile->type==MZM_PROJECTILE_BOMB || projectile->type==MZM_PROJECTILE_POWER_BOMB) {
         /* s(Power)BombOam_Slow / _Fast, never flipped. */
         snprintf(key,size,"Projectile/%sOam_%s/none",
@@ -1605,6 +1619,32 @@ static int runtime_projectile_durations(void *context,const MzmProjectile *proje
     for(int i=0;i<count;i++)durations[i]=(uint8_t)entry->ticks[i];
     return count;
 }
+/* The beam graphics ProjectileLoadGraphics loads (the ported beams). */
+static const char *runtime_beam_variant(uint32_t items) {
+    return (items&MZM_ITEM_LONG_BEAM)?"LongBeam":"NormalBeam";
+}
+
+/* One tick of a looping or one-shot particle animation from its library
+ * durations; true when a one-shot animation ended. */
+static bool runtime_anim_step(const RuntimeLibraryEntry *entry,uint16_t *frame,uint16_t *counter) {
+    if(!entry || entry->count<=0) return true;
+    if(*frame>=entry->count)*frame=0;
+    if(++*counter>=entry->ticks[*frame]) {
+        *counter=0;
+        if(++*frame>=entry->count){*frame=0;return true;}
+    }
+    return false;
+}
+
+/* The charging beam particle and the beam shot flashes drawn from the
+ * projectile library's beam variant. */
+typedef struct {
+    uint8_t charge_stage;
+    uint16_t charge_frame,charge_counter;
+    int cannon_x,cannon_y;
+    struct { bool active; int x,y; const char *table; bool flip; uint16_t frame,counter; } flash;
+} RuntimeBeamFx;
+
 /* Texture of one frame; indexed frames are colorized with ``colors`` and
  * cached in ``slot`` (pass slot -1 and NULL colors for 32-bit libraries). */
 static SDL_Texture *runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry *entry,
@@ -1680,6 +1720,7 @@ static const char *const debug_area_names[]={
 static const struct { const char *label; uint32_t item; } debug_items[]={
     {"High Jump",MZM_ITEM_HIGH_JUMP},{"Space Jump",MZM_ITEM_SPACE_JUMP},
     {"Screw Attack",MZM_ITEM_SCREW_ATTACK},{"Speed Booster",MZM_ITEM_SPEED_BOOSTER},
+    {"Charge Beam",MZM_ITEM_CHARGE_BEAM},{"Long Beam",MZM_ITEM_LONG_BEAM},
 };
 #define DEBUG_ITEMS_COUNT (int)(sizeof debug_items/sizeof debug_items[0])
 
@@ -2090,9 +2131,22 @@ static uint8_t runtime_area_id(const char *area) {
 }
 
 /* SpriteUpdate: Samus's contact with the sprites, then every sprite. */
+/* SpriteUtilSpriteTakeDamageFromSamusContact's DCT_PSEUDO_SCREW: a full
+ * charge while spinning (not screw attacking), 4 * (2 + one per beam). */
+static uint16_t runtime_pseudo_screw_damage(const MzmSamus *samus,const MzmEquipment *equipment,
+                                            const MzmWeapons *weapons) {
+    if(!weapons || weapons->charge_counter<MZM_CHARGE_FULL)return 0;
+    switch(samus->pose) {
+        case MZM_POSE_STARTING_SPIN_JUMP: case MZM_POSE_SPINNING:
+        case MZM_POSE_STARTING_WALL_JUMP: case MZM_POSE_SPACE_JUMPING: break;
+        default: return 0;
+    }
+    return (uint16_t)(4*(2+((equipment->items&MZM_ITEM_LONG_BEAM)?1:0)));
+}
+
 static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
                                    MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
-                                   const MzmCollision *collision) {
+                                   const MzmCollision *collision, MzmWeapons *weapons) {
     if (!sprites->kinds_ok) return;
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4), runtime_sprite_movement};
@@ -2107,7 +2161,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                equipment->suit == MZM_SUIT_SUITLESS, samus->invincibility != 0,
                                runtime_sprite_hurt, samus->speedboosting,
                                samus->pose==MZM_POSE_SHINESPARKING ||
-                                   samus->pose==MZM_POSE_BALLSPARKING};
+                                   samus->pose==MZM_POSE_BALLSPARKING,
+                               runtime_pseudo_screw_damage(samus,equipment,weapons),
+                               weapons?&weapons->charge_counter:NULL};
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
     }
     sprites->room = room;
@@ -2709,6 +2765,7 @@ int main(int argc, char **argv) {
     equipment.max_power_bombs=2;
     equipment.power_bombs=equipment.max_power_bombs;
     MzmWeapons weapons;
+    RuntimeBeamFx beam_fx={0};
     mzm_weapons_init(&weapons);
     MzmProjectileAnimation projectile_animation={&projectile_library,
                                                  runtime_projectile_durations};
@@ -3102,10 +3159,49 @@ int main(int argc, char **argv) {
             /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
              * arm cannon offset above is the one SamusUpdate left. */
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
-                                   &equipment, &collision);
+                                   &equipment, &collision, &weapons);
             weapons.samus_previous_x=previous_x;
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
+            {
+                /* ParticleChargingBeam and ParticleShootingBeam*: their
+                 * animations, at the arm cannon. */
+                char key[160];
+                const char *variant=runtime_beam_variant(equipment.items);
+                uint8_t stage=weapons.charge_particle.stage;
+                if(stage!=beam_fx.charge_stage){beam_fx.charge_frame=0;beam_fx.charge_counter=0;}
+                beam_fx.charge_stage=stage;
+                if(stage) {
+                    snprintf(key,sizeof key,"Particle/ParticleChargingBeam%sOam/%s/none",
+                             stage==1?"Begin":"Charged",variant);
+                    runtime_anim_step(runtime_library_find(&projectile_library,key),
+                                      &beam_fx.charge_frame,&beam_fx.charge_counter);
+                }
+                if(beam_fx.flash.active) {
+                    snprintf(key,sizeof key,"Particle/%s/%s/%s",beam_fx.flash.table,variant,
+                             beam_fx.flash.flip?"x":"none");
+                    if(runtime_anim_step(runtime_library_find(&projectile_library,key),
+                                         &beam_fx.flash.frame,&beam_fx.flash.counter))
+                        beam_fx.flash.active=false;
+                }
+                if(weapons.shot_flash) {
+                    MzmAim aim=weapons.shot_flash_aim;
+                    beam_fx.flash.active=true;
+                    beam_fx.flash.table=aim==MZM_AIM_UP?"ParticleShootingBeamUpOam":
+                        aim==MZM_AIM_DOWN?"ParticleShootingBeamDownOam":
+                        aim==MZM_AIM_DIAGONAL_UP?"ParticleShootingBeamDiagonallyUpOam":
+                        aim==MZM_AIM_DIAGONAL_DOWN?"ParticleShootingBeamDiagonallyDownOam":
+                        "ParticleShootingBeamHorizontalOam";
+                    beam_fx.flash.flip=weapons.shot_flash_facing>0;
+                    beam_fx.flash.x=(samus.x>>2)+cannon_x;
+                    beam_fx.flash.y=((samus.y-1)>>2)+cannon_y;
+                    beam_fx.flash.frame=0;
+                    beam_fx.flash.counter=0;
+                }
+                /* gArmCannonX/Y for the charging particle. */
+                beam_fx.cannon_x=(samus.x>>2)+cannon_x;
+                beam_fx.cannon_y=((samus.y-1)>>2)+cannon_y;
+            }
             /* ProjectileCheckSamusBombBounce -> SamusBombBounce */
             if(weapons.bomb_bounce)
                 mzm_samus_bomb_bounce(&samus,&equipment,&collision,weapons.bomb_bounce);
@@ -3129,7 +3225,11 @@ int main(int argc, char **argv) {
                     [MZM_PROJECTILE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM,
                     [MZM_PROJECTILE_MISSILE]=MZM_PE_HITTING_SOMETHING_WITH_MISSILE,
                     [MZM_PROJECTILE_SUPER_MISSILE]=MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE,
-                    [MZM_PROJECTILE_BOMB]=MZM_PE_BOMB};
+                    [MZM_PROJECTILE_BOMB]=MZM_PE_BOMB,
+                    [MZM_PROJECTILE_POWER_BOMB]=MZM_PE_BOMB,
+                    [MZM_PROJECTILE_LONG_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM,
+                    [MZM_PROJECTILE_CHARGED_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM,
+                    [MZM_PROJECTILE_CHARGED_LONG_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM};
                 for(int i=0;i<weapons.impact_count;i++)
                     mzm_particle_set(&sprites.effects,(uint16_t)weapons.impacts[i].y,
                                      (uint16_t)weapons.impacts[i].x,
@@ -3281,7 +3381,8 @@ int main(int argc, char **argv) {
         RuntimePaletteChoice palette_choice=animation_browser?
             (RuntimePaletteChoice){pose_animation.suit,"Default",0,pose_animation.suit,"Default",1}:
             runtime_samus_palette(&samus,weapons.release_palette_timer>0,
-                                  pose_animation.suit,palette_frame);
+                                  pose_animation.suit,palette_frame,equipment.items,
+                                  weapons.charge_counter);
         SDL_Color body_colors[32],echo_colors[32];
         bool have_palette=palettes.count>0 &&
             runtime_palette_colors(&palettes,&palette_choice,false,body_colors) &&
@@ -3405,8 +3506,14 @@ int main(int argc, char **argv) {
             }
             if(!table)continue;
             char key[160];
-            snprintf(key,sizeof key,"Particle/%s/none",table);
-            RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
+            /* Particles drawn with the beam graphics or palette come from the
+             * projectile library's loaded beam variant. */
+            snprintf(key,sizeof key,"Particle/%s/%s/none",table,runtime_beam_variant(equipment.items));
+            RuntimeLibraryEntry *entry=runtime_library_find(&projectile_library,key);
+            if(!entry) {
+                snprintf(key,sizeof key,"Particle/%s/none",table);
+                entry=runtime_library_find(&sprite_library,key);
+            }
             if(!entry || entry->count==0)continue;
             int index=frame<entry->count?frame:0;
             SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
@@ -3416,6 +3523,37 @@ int main(int argc, char **argv) {
                            viewport.y+((float)(py>>2)+(float)art->offset_y-cy)*scale,
                            (float)art->w*scale,(float)art->h*scale};
             SDL_RenderTexture(renderer,art_texture,NULL,&box);
+        }
+        if(projectile_library.count>0) {
+            /* ParticleChargingBeam (hidden while spinning) and the shot flash. */
+            const char *variant=runtime_beam_variant(equipment.items);
+            for(int k=0;k<2;k++) {
+                char key[160];
+                int px,py;uint16_t fr;
+                if(k==0) {
+                    if(!beam_fx.charge_stage || samus.pose==MZM_POSE_SPINNING ||
+                       samus.pose==MZM_POSE_STARTING_WALL_JUMP || samus.pose==MZM_POSE_SPACE_JUMPING ||
+                       samus.pose==MZM_POSE_SCREW_ATTACKING)continue;
+                    snprintf(key,sizeof key,"Particle/ParticleChargingBeam%sOam/%s/none",
+                             beam_fx.charge_stage==1?"Begin":"Charged",variant);
+                    px=beam_fx.cannon_x;py=beam_fx.cannon_y;fr=beam_fx.charge_frame;
+                } else {
+                    if(!beam_fx.flash.active)continue;
+                    snprintf(key,sizeof key,"Particle/%s/%s/%s",beam_fx.flash.table,variant,
+                             beam_fx.flash.flip?"x":"none");
+                    px=beam_fx.flash.x;py=beam_fx.flash.y;fr=beam_fx.flash.frame;
+                }
+                RuntimeLibraryEntry *entry=runtime_library_find(&projectile_library,key);
+                if(!entry || entry->count==0)continue;
+                int index=fr<entry->count?fr:0;
+                SDL_Texture *fx_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+                if(!fx_texture)continue;
+                const RuntimeLibraryFrame *art=&entry->frames[index];
+                SDL_FRect box={viewport.x+((float)px+(float)art->offset_x-cx)*scale,
+                               viewport.y+((float)py+(float)art->offset_y-cy)*scale,
+                               (float)art->w*scale,(float)art->h*scale};
+                SDL_RenderTexture(renderer,fx_texture,NULL,&box);
+            }
         }
         for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
             const MzmProjectile *projectile=&weapons.list[i];

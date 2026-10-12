@@ -873,6 +873,10 @@ void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t eff
         ai_particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
         random_debris_3(c, y, x);
         mzm_sfx_play(MZM_SOUND_SCREW_ATTACK_DESTROYED);
+    } else if (s->pose == SPRITE_POSE_PSEUDO_SCREW_DESTROYED) {
+        ai_particle_set(c, y, x, MZM_PE_PSEUDO_SCREW_DESTROYED);
+        random_debris_3(c, y, x);
+        mzm_sfx_play(MZM_SOUND_PSEUDO_SCREW_DESTROYED);
     } else if (s->pose == SPRITE_POSE_SHINESPARK_DESTROYED) {
         ai_particle_set(c, y, x, MZM_PE_SHINESPARK_DESTROYED);
         random_debris_3(c, y, x);
@@ -3525,8 +3529,26 @@ static uint16_t damage_of(const MzmSprite *s, const MzmSpriteTables *tables) {
     return s->secondary ? tables->secondary_damage[s->sprite_id] : tables->damage[s->sprite_id];
 }
 
+static void deal_damage(MzmSprite *s, uint16_t damage);
+
 static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
                           const MzmSpriteTables *tables) {
+    if (!samus->suitless && !samus->speedboosting && !samus->screw_attacking &&
+        samus->pseudo_screw_damage && !s->immune_to_projectiles &&
+        !(s->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES)) {
+        /* The pseudo screw: the charge is spent on a weak sprite; Samus is
+         * still hurt when it survives. */
+        if (weakness_of(s, tables) & (MZM_WEAKNESS_CHARGE_BEAM_PISTOL | MZM_WEAKNESS_BEAM_BOMBS)) {
+            if (samus->charge_counter) *samus->charge_counter = 0;
+            deal_damage(s, samus->pseudo_screw_damage);
+            if (s->health == 0) {
+                s->pose = SPRITE_POSE_PSEUDO_SCREW_DESTROYED;
+                return true;
+            }
+            s->ignore_samus_timer = 0;
+        }
+        return false;
+    }
     if (samus->suitless || !(samus->screw_attacking || samus->speedboosting)) return false;
     /* Sprites immune to projectiles take no contact damage either. */
     if (s->immune_to_projectiles) return false;
@@ -3707,10 +3729,13 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                 }
                 continue;
             }
-            /* ProjectileProcessNormalBeam/Missile: +-EIGHTH_BLOCK_SIZE;
-             * ProjectileProcessSuperMissile: +-(QUARTER_BLOCK_SIZE - PIXEL_SIZE). */
-            int half = proj->type == MZM_PROJECTILE_SUPER_MISSILE ? QUARTER_BLOCK_SIZE - PIXEL_SIZE
-                                                                  : EIGHTH_BLOCK_SIZE;
+            /* The hitboxes set by each Projectile*Process* routine. */
+            int half = EIGHTH_BLOCK_SIZE;   /* normal beam, missile */
+            if (proj->type == MZM_PROJECTILE_SUPER_MISSILE || proj->type == MZM_PROJECTILE_LONG_BEAM ||
+                proj->type == MZM_PROJECTILE_CHARGED_BEAM)
+                half = QUARTER_BLOCK_SIZE - PIXEL_SIZE;
+            else if (proj->type == MZM_PROJECTILE_CHARGED_LONG_BEAM)
+                half = QUARTER_BLOCK_SIZE;
             uint16_t py = (uint16_t)proj->y, px = (uint16_t)proj->x;
             if (!touching(top, bottom, left, right, (uint16_t)(py - half), (uint16_t)(py + half),
                           (uint16_t)(px - half), (uint16_t)(px + half)))
@@ -3743,6 +3768,27 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                     hit_solid(s);   /* ProjectileStartTumblingMissile: not ported */
                 }
                 break;
+            case MZM_PROJECTILE_LONG_BEAM:  /* ProjectileHitSprite, LONG_BEAM_DAMAGE */
+                if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
+                    deal_damage(s, LONG_BEAM_DAMAGE);
+                    effect = MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM;
+                } else {
+                    hit_solid(s);
+                }
+                break;
+            case MZM_PROJECTILE_CHARGED_BEAM:
+            case MZM_PROJECTILE_CHARGED_LONG_BEAM: {
+                /* ProjectileNonIceChargedHitSprite */
+                bool is_long = proj->type == MZM_PROJECTILE_CHARGED_LONG_BEAM;
+                if (weakness & (MZM_WEAKNESS_CHARGE_BEAM_PISTOL | MZM_WEAKNESS_BEAM_BOMBS)) {
+                    deal_damage(s, is_long ? CHARGED_LONG_BEAM_DAMAGE : CHARGED_NORMAL_BEAM_DAMAGE);
+                    effect = is_long ? MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM
+                                     : MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
+                } else {
+                    hit_solid(s);
+                }
+                break;
+            }
             case MZM_PROJECTILE_BOMB:
             case MZM_PROJECTILE_POWER_BOMB:
                 break;

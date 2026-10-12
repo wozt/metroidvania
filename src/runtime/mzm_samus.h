@@ -147,7 +147,9 @@ enum {
     MZM_ITEM_VARIA_SUIT = 1u << 5,
     MZM_ITEM_GRAVITY_SUIT = 1u << 6,
     MZM_ITEM_POWER_GRIP = 1u << 7,
-    MZM_ITEM_BOMBS = 1u << 8          /* BBF_BOMBS */
+    MZM_ITEM_BOMBS = 1u << 8,         /* BBF_BOMBS */
+    MZM_ITEM_CHARGE_BEAM = 1u << 9,   /* BBF_CHARGE_BEAM */
+    MZM_ITEM_LONG_BEAM = 1u << 10     /* BBF_LONG_BEAM */
 };
 
 /* Damage types of clipdata-affecting actions (hatches, blocks). */

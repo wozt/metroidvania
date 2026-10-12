@@ -238,7 +238,9 @@ Ball, B places a bomb (four at most); its explosion breaks bomb blocks,
 damages enemies and bounces Samus when she is on it. Holding R in the Morph
 Ball arms power bombs: B places one, whose growing explosion breaks blocks,
 opens power bomb hatches and damages every enemy it reaches (its look is an
-approximate overlay). With the Speed Booster
+approximate overlay). With the Charge Beam (a debug menu item, like the Long
+Beam), holding B charges a shot released with B, and a charged spin hits
+enemies as the pseudo screw. With the Speed Booster
 (an item of the debug menu), a long run starts the speed boost: it
 breaks speed blocks and enemies, and releasing the direction skids (Down
 while skidding stores a shinespark: A then launches it up, sideways with a

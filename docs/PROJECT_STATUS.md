@@ -2988,6 +2988,40 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0264 - Zero Mission Charge Beam and Long Beam
+
+- `mzm_projectiles.c` ports `SamusCheckFireBeamMissile` with the charge
+  (to 79 then 64, a charged shot from 64, a beam above 25, dropped by arming
+  a weapon) and the charge branches of `SamusCheckNewProjectile` (the Morph
+  Ball releases a full charge, dying drops it), the beam type of the equipped
+  beams, the Long Beam (24 subpixels a frame, no short lifetime), the charged
+  normal and Long Beams (two at a time), their sounds, the beam release
+  palette timer and the `ProjectileSetBeamParticleEffect` flash, and
+  `ParticleChargingBeam`'s stages and sounds.
+- `mzm_sprites.c` ports the Long Beam and `ProjectileNonIceChargedHitSprite`
+  hits with their hitboxes, and the pseudo screw contact
+  (`DCT_PSEUDO_SCREW`: the charge spent, 4 * (2 + beams), the
+  `PSEUDO_SCREW_DESTROYED` death with its particle and sound).
+- The projectile library now exports the beam particles (charging, shooting
+  flashes, trails, the Long Beam impact) for each beam variant
+  `ProjectileLoadGraphics` can load (graphics set and `sBeamPal` row); the
+  runtime draws the charging particle at the arm cannon and the shot flash,
+  prefers those variants for beam particles, and uses the charging and beam
+  release palette rows. Charge Beam and Long Beam are debug menu items.
+- Checked in tourian_010 (`--item charge-beam --item long-beam`, B held 80
+  frames): the charge glow and palette, then the charged Long Beam and its
+  flash.
+- Not ported: the Ice, Wave and Plasma Beams, freezing, the charged trails,
+  the pistol.
+- Tests: `tests/test_mzm_samus.c` (no charge without the item, the
+  thresholds, the particle stages and sounds, the charged and partial
+  releases, arming, the Long Beam speed and lifetime, the Morph Ball
+  release), `tests/test_mzm_sprites.c` (charged and Long Beam damage, the
+  pseudo screw) and `tests/test_runtime_steep_slopes.c` (the palettes).
+- Validation on 2026-10-12: warning-clean build, CTest 30/30, the Python
+  suite (428 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0263 - Zero Mission power bombs
 
 - `src/runtime/mzm_power_bomb.c` ports `gCurrentPowerBomb`:

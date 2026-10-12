@@ -2988,6 +2988,23 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0274 - Zero Mission Gerutas and Ripper IIs
+
+- Red and green Gerutas (`geruta.c`) reuse the Holtz's movement probes:
+  they wait under a ceiling until Samus is low and within 5 blocks (or
+  attack at once without one), warn, launch, dive at 3 pixels a frame
+  drifting toward her, bounce off the floor and settle back 52 subpixels
+  under the ceiling, with their sounds.
+- Ripper IIs (`ripper2.c`) patrol at two pixels a frame with their own
+  tables, hitbox, wall probe and turning sound.
+- Both are exported (`PORTED`) and counted as ported monsters.
+- Checked in norfair_012 (Gerutas: dive, bounce and settle at y 77) and
+  norfair_017 (`--spawn 420 80`: six Ripper IIs crossing and turning).
+- Not ported: the liquid splash of `SpriteUtilCheckInRoomEffect`.
+- Tests: `tests/test_mzm_sprites.c` (Geruta detection height, dive speeds,
+  bounce, settle height, the ceiling-free attack; Ripper II speed, wall
+  turn and reverse).
+
 ## Patch 0273 - Zero Mission item jingles
 
 - The sound engine ports `InsertMusicAndQueueCurrent`, `ReplayQueuedMusic`,

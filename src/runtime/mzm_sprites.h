@@ -9,10 +9,10 @@
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
  * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper, Dessgeega, Viola, Sova,
- * Zeb, Geega, Zebbo, Reo, Mella, Holtz, Multiviola and Rinka AIs
- * (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c,
+ * Zeb, Geega, Zebbo, Reo, Mella, Holtz, Multiviola, Rinka, Geruta and
+ * Ripper II AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c,
  * sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c, geega.c, zebbo.c, reo.c,
- * mella.c, holtz.c, multiviola.c, rinka.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * mella.c, holtz.c, multiviola.c, rinka.c, geruta.c, ripper2.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes, and the Space Pirates with their lasers
  * (src/sprites_ai/space_pirate.c, ported in mzm_space_pirate.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
@@ -269,6 +269,18 @@ extern const char *const mzm_holtz_anim_names[MZM_HOLTZ_ANIMS];
 enum { MZM_MULTIVIOLA_MOVING, MZM_MULTIVIOLA_ANIMS };
 extern const char *const mzm_multiviola_anim_names[MZM_MULTIVIOLA_ANIMS];
 
+/* Geruta and Ripper II OAM tables (src/data/sprites/geruta.c, ripper2.c). */
+enum {
+    MZM_GERUTA_IDLE, MZM_GERUTA_WARNING, MZM_GERUTA_LAUNCHING, MZM_GERUTA_GOING_DOWN,
+    MZM_GERUTA_BOUNCING, MZM_GERUTA_GOING_UP, MZM_GERUTA_BOUNCING_ON_CEILING, MZM_GERUTA_ANIMS,
+};
+extern const char *const mzm_geruta_anim_names[MZM_GERUTA_ANIMS];
+enum {
+    MZM_RIPPER2_MOVING, MZM_RIPPER2_TURNING_AROUND, MZM_RIPPER2_TURNING_AROUND_PART2,
+    MZM_RIPPER2_ANIMS,
+};
+extern const char *const mzm_ripper2_anim_names[MZM_RIPPER2_ANIMS];
+
 /* Rinka OAM tables (src/data/sprites/rinka.c). */
 enum {
     MZM_RINKA_ORANGE_SPAWNING, MZM_RINKA_ORANGE_MOVING, MZM_RINKA_GREEN_SPAWNING,
@@ -339,6 +351,7 @@ enum {
     MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA, MZM_FAMILY_ZEBBO, MZM_FAMILY_REO,
     MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
     MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_FAMILY_CHOZO_STATUE,
+    MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -375,6 +388,7 @@ enum {
     MZM_PSPRITE_REO_GREEN_WINGS = 63, MZM_PSPRITE_REO_PURPLE_WINGS = 64,
     MZM_PSPRITE_MELLA = 114, MZM_PSPRITE_HOLTZ = 107, MZM_PSPRITE_MULTIVIOLA = 52,
     MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
+    MZM_PSPRITE_GERUTA_RED = 54, MZM_PSPRITE_GERUTA_GREEN = 55, MZM_PSPRITE_RIPPERII = 113,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
     MZM_PSPRITE_SPACE_PIRATE = 81, MZM_PSPRITE_SPACE_PIRATE_WAITING1 = 82,
     MZM_PSPRITE_SPACE_PIRATE_WAITING2 = 83, MZM_PSPRITE_SPACE_PIRATE_WAITING3 = 84,

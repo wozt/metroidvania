@@ -147,6 +147,18 @@ static const char *const holtz_sprites[MZM_HOLTZ_ANIMS] = {
     "HOLTZ", "HOLTZ", "HOLTZ", "HOLTZ", "HOLTZ", "HOLTZ",
 };
 const char *const mzm_multiviola_anim_names[MZM_MULTIVIOLA_ANIMS] = {"MultiviolaOam_Moving"};
+const char *const mzm_geruta_anim_names[MZM_GERUTA_ANIMS] = {
+    "GerutaOam_Idle", "GerutaOam_Warning", "GerutaOam_Launching", "GerutaOam_GoingDown",
+    "GerutaOam_Bouncing", "GerutaOam_GoingUp", "GerutaOam_BouncingOnCeiling",
+};
+static const char *const geruta_sprites[MZM_GERUTA_ANIMS] = {
+    "GERUTA_RED", "GERUTA_RED", "GERUTA_RED", "GERUTA_RED", "GERUTA_RED", "GERUTA_RED",
+    "GERUTA_RED",
+};
+const char *const mzm_ripper2_anim_names[MZM_RIPPER2_ANIMS] = {
+    "Ripper2Oam_Moving", "Ripper2Oam_TurningAround", "Ripper2Oam_TurningAroundPart2",
+};
+static const char *const ripper2_sprites[MZM_RIPPER2_ANIMS] = {"RIPPERII", "RIPPERII", "RIPPERII"};
 static const char *const multiviola_sprites[MZM_MULTIVIOLA_ANIMS] = {"MULTIVIOLA"};
 const char *const mzm_rinka_anim_names[MZM_RINKA_ANIMS] = {
     "RinkaOrangeOam_Spawning", "RinkaOrangeOam_Moving", "RinkaGreenOam_Spawning",
@@ -259,6 +271,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
+    [MZM_FAMILY_GERUTA] = {MZM_GERUTA_ANIMS, mzm_geruta_anim_names, geruta_sprites},
+    [MZM_FAMILY_RIPPER2] = {MZM_RIPPER2_ANIMS, mzm_ripper2_anim_names, ripper2_sprites},
     [MZM_FAMILY_MULTIVIOLA] = {MZM_MULTIVIOLA_ANIMS, mzm_multiviola_anim_names,
                                multiviola_sprites},
     [MZM_FAMILY_RINKA] = {MZM_RINKA_ANIMS, mzm_rinka_anim_names, rinka_sprites},
@@ -1156,6 +1170,79 @@ static void ripper(Ctx *c) {
     default:
         ai_sprite_death(c, (uint16_t)(s->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), s->x,
                      MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        break;
+    }
+}
+
+/* Ripper2: the Ripper's AI with its own tables, a wider hitbox, two
+ * pixels a frame and a turning sound. */
+static void ripper2(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    /* X_COLLISION_CHECK_OFFSET */
+    const uint16_t offset = THREE_QUARTER_BLOCK_SIZE - PIXEL_SIZE;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* Ripper2Init */
+        s->hitbox_top = -(HALF_BLOCK_SIZE + PIXEL_SIZE);
+        s->hitbox_bottom = EIGHTH_BLOCK_SIZE;
+        s->hitbox_left = -(HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+        s->hitbox_right = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        s->draw_top = BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_horizontal = (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        ai_set_anim(s, MZM_RIPPER2_MOVING);
+        s->samus_collision = SSC_HURTS_SAMUS;
+        s->health = c->tables->health[s->sprite_id];
+        s->y -= EIGHTH_BLOCK_SIZE;
+        random_x_flip(c);
+        s->pose = RIPPER_POSE_MOVING_INIT;
+        break;
+    case RIPPER_POSE_MOVING_INIT:
+        s->pose = RIPPER_POSE_MOVING;
+        ai_set_anim(s, MZM_RIPPER2_MOVING);
+        /* fallthrough */
+    case RIPPER_POSE_MOVING: {
+        /* Ripper2Move */
+        uint16_t y = (uint16_t)(s->y - QUARTER_BLOCK_SIZE);
+        if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+            if (ai_collision_at(c, y, (uint16_t)(s->x + offset)) != MZM_COLLISION_SOLID)
+                s->x += EIGHTH_BLOCK_SIZE;
+            else
+                s->pose = RIPPER_POSE_TURNING_AROUND_INIT;
+        } else {
+            if (ai_collision_at(c, y, (uint16_t)(s->x - offset)) == MZM_COLLISION_SOLID)
+                s->pose = RIPPER_POSE_TURNING_AROUND_INIT;
+            else
+                s->x -= EIGHTH_BLOCK_SIZE;
+        }
+        break;
+    }
+    case RIPPER_POSE_TURNING_AROUND_INIT:
+        s->pose = RIPPER_POSE_TURNING_AROUND_FIRST_PART;
+        ai_set_anim(s, MZM_RIPPER2_TURNING_AROUND);
+        ai_sound_onscreen_once(s, MZM_SOUND_RIPPER2_TURNING_AROUND);
+        /* fallthrough */
+    case RIPPER_POSE_TURNING_AROUND_FIRST_PART:
+        if (ai_animation_ending(c, 1)) {
+            s->status ^= MZM_SPRITE_STATUS_X_FLIP;
+            s->pose = RIPPER_POSE_TURNING_AROUND_SECOND_PART;
+            ai_set_anim(s, MZM_RIPPER2_TURNING_AROUND_PART2);
+        }
+        break;
+    case RIPPER_POSE_TURNING_AROUND_SECOND_PART:
+        if (ai_animation_ending(c, 2)) s->pose = RIPPER_POSE_MOVING_INIT;
+        break;
+    default:
+        ai_sprite_death(c, (uint16_t)(s->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), s->x,
+                        MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         break;
     }
 }
@@ -3171,6 +3258,119 @@ static void holtz(Ctx *c) {
     }
 }
 
+/* Geruta poses (geruta.c). */
+enum {
+    GERUTA_POSE_IDLE_INIT = 0x8,
+    GERUTA_POSE_IDLE = 0x9,
+    GERUTA_POSE_WARNING_INIT = 0x32,
+    GERUTA_POSE_WARNING = 0x33,
+    GERUTA_POSE_LAUNCHING = 0x35,
+    GERUTA_POSE_GOING_DOWN = 0x37,
+    GERUTA_POSE_BOUNCING = 0x39,
+    GERUTA_POSE_GOING_UP = 0x3B,
+    GERUTA_POSE_BOUNCING_ON_CEILING = 0x3D,
+};
+
+/* Geruta: waits on its ceiling (attacking at once without one), warns when
+ * Samus is low and within 5 blocks, launches, dives at 3 pixels a frame
+ * drifting a pixel a frame toward her, bounces off the floor and climbs
+ * back (GerutaXMovement and GerutaYMovement are the Holtz's movements; the
+ * splash of SpriteUtilCheckInRoomEffect is not ported). */
+static void geruta(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    const uint16_t height = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* GerutaInit */
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        ai_face_samus(c);
+        s->draw_top = s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = -HALF_BLOCK_SIZE;
+        s->hitbox_bottom = HALF_BLOCK_SIZE;
+        s->hitbox_left = -THREE_QUARTER_BLOCK_SIZE;
+        s->hitbox_right = THREE_QUARTER_BLOCK_SIZE;
+        ai_set_anim(s, MZM_GERUTA_IDLE);
+        s->health = c->tables->health[s->sprite_id];
+        s->samus_collision = SSC_HURTS_SAMUS;
+        s->y -= 3 * PIXEL_SIZE;
+        s->pose = GERUTA_POSE_IDLE_INIT;
+        break;
+    case GERUTA_POSE_IDLE_INIT:
+        s->pose = GERUTA_POSE_IDLE;
+        ai_set_anim(s, MZM_GERUTA_IDLE);
+        /* fallthrough */
+    case GERUTA_POSE_IDLE: {
+        /* GerutaDetectSamus */
+        uint16_t y = (uint16_t)(s->y - BLOCK_SIZE);
+        if (ai_collision_at(c, y, (uint16_t)(s->x - THREE_QUARTER_BLOCK_SIZE)) != MZM_COLLISION_SOLID &&
+            ai_collision_at(c, y, (uint16_t)(s->x + THREE_QUARTER_BLOCK_SIZE)) != MZM_COLLISION_SOLID) {
+            ai_face_samus(c);
+            s->pose = GERUTA_POSE_WARNING_INIT;
+        } else if (c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE) >= s->y) {
+            uint8_t nslr = ai_samus_nslr(c, BLOCK_SIZE * 5, BLOCK_SIZE * 5);
+            if (nslr == NSLR_RIGHT || nslr == NSLR_LEFT) s->pose = GERUTA_POSE_WARNING_INIT;
+        }
+        break;
+    }
+    case GERUTA_POSE_WARNING_INIT:
+        s->pose = GERUTA_POSE_WARNING;
+        ai_set_anim(s, MZM_GERUTA_WARNING);
+        ai_sound_onscreen(s, MZM_SOUND_GERUTA_WARNING);
+        /* fallthrough */
+    case GERUTA_POSE_WARNING:
+        if (ai_animation_ending(c, 1)) {
+            s->pose = GERUTA_POSE_LAUNCHING;
+            ai_set_anim(s, MZM_GERUTA_LAUNCHING);
+        }
+        break;
+    case GERUTA_POSE_LAUNCHING:
+        if (ai_animation_ending(c, 1)) {
+            s->pose = GERUTA_POSE_GOING_DOWN;
+            ai_set_anim(s, MZM_GERUTA_GOING_DOWN);
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            ai_face_samus(c);
+            ai_sound_onscreen_once(s, MZM_SOUND_GERUTA_GOING_DOWN);
+        }
+        break;
+    case GERUTA_POSE_GOING_DOWN:
+        swooper_x_movement(c, PIXEL_SIZE);
+        if (swooper_y_movement(c, 3 * PIXEL_SIZE, height)) {
+            s->pose = GERUTA_POSE_BOUNCING;
+            ai_set_anim(s, MZM_GERUTA_BOUNCING);
+        }
+        break;
+    case GERUTA_POSE_BOUNCING:
+        if (ai_animation_ending(c, 1)) {
+            s->pose = GERUTA_POSE_GOING_UP;
+            ai_set_anim(s, MZM_GERUTA_GOING_UP);
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            ai_sound_onscreen_once(s, MZM_SOUND_GERUTA_GOING_UP);
+        }
+        break;
+    case GERUTA_POSE_GOING_UP:
+        swooper_x_movement(c, PIXEL_SIZE);
+        if (swooper_y_movement(c, 3 * PIXEL_SIZE, height)) {
+            s->y &= BLOCK_POSITION_FLAG;
+            s->y += THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+            s->pose = GERUTA_POSE_BOUNCING_ON_CEILING;
+            ai_set_anim(s, MZM_GERUTA_BOUNCING_ON_CEILING);
+        }
+        break;
+    case GERUTA_POSE_BOUNCING_ON_CEILING:
+        if (ai_animation_ending(c, 2)) s->pose = GERUTA_POSE_IDLE_INIT;
+        break;
+    default: ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM); break;
+    }
+}
+
 /* Multiviola: bounces off every surface at 3 subpixels a frame on both
  * axes, its animation starting at twice its slot (MultiviolaMove). */
 static void multiviola(Ctx *c) {
@@ -3545,6 +3745,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_REO_PURPLE_WINGS: return MZM_FAMILY_REO;
     case MZM_PSPRITE_MELLA: return MZM_FAMILY_MELLA;
     case MZM_PSPRITE_HOLTZ: return MZM_FAMILY_HOLTZ;
+    case MZM_PSPRITE_GERUTA_RED:
+    case MZM_PSPRITE_GERUTA_GREEN: return MZM_FAMILY_GERUTA;
+    case MZM_PSPRITE_RIPPERII: return MZM_FAMILY_RIPPER2;
     case MZM_PSPRITE_MULTIVIOLA: return MZM_FAMILY_MULTIVIOLA;
     case MZM_PSPRITE_RINKA_ORANGE:
     case MZM_PSPRITE_RINKA_GREEN: return MZM_FAMILY_RINKA;
@@ -4238,6 +4441,8 @@ static uint16_t damaged_sound(int family) {
     case MZM_FAMILY_HOLTZ: return MZM_SOUND_HOLTZ_DAMAGED;
     case MZM_FAMILY_MULTIVIOLA: return MZM_SOUND_MULTIVIOLA_DAMAGED;
     case MZM_FAMILY_SKREE: return MZM_SOUND_SKREE_DAMAGED;
+    case MZM_FAMILY_GERUTA: return MZM_SOUND_GERUTA_DAMAGED;
+    case MZM_FAMILY_RIPPER2: return MZM_SOUND_RIPPER2_DAMAGED;
     default: return 0;
     }
 }
@@ -4297,6 +4502,8 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_MELLA: mella(&c); break;
     case MZM_FAMILY_HOLTZ: holtz(&c); break;
     case MZM_FAMILY_MULTIVIOLA: multiviola(&c); break;
+    case MZM_FAMILY_GERUTA: geruta(&c); break;
+    case MZM_FAMILY_RIPPER2: ripper2(&c); break;
     case MZM_FAMILY_RINKA: rinka(&c); break;
     case MZM_FAMILY_SPACE_PIRATE:
         if (sprite->secondary) ai_space_pirate_laser(&c);

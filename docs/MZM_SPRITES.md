@@ -156,6 +156,18 @@ read from the user's ROM at export time; nothing is stored in the repository.
   `sMellowOam_Moving`; the Holtz warns for its table, dives 3 pixels a frame
   while its horizontal speed grows from 2 to 12 subpixels every other frame,
   slides for its table, climbs back slowing down and bonks on its ceiling.
+- Geruta (`geruta.c`, red and green): the Holtz's movement probes without
+  its idle table. Under a ceiling it waits until Samus is low (72
+  subpixels below it) and within 5 blocks on both axes
+  (`SpriteUtilCheckSamusNearSpriteLeftRight`); without one it attacks at
+  once. It warns and launches for their tables, dives at 3 pixels a frame
+  drifting a pixel a frame toward Samus (`SAMUS_COLLIDING` is again the
+  going down flag), bounces for its table, climbs back and settles 52
+  subpixels under its ceiling. The splash of
+  `SpriteUtilCheckInRoomEffect` is not ported.
+- Ripper II (`ripper2.c`): the Ripper's patrol with its own tables, a
+  wider hitbox, two pixels a frame, a wall probe 44 subpixels ahead and a
+  turning sound.
 - Multiviola (`multiviola.c`): bounces diagonally off every surface at 3
   subpixels a frame on both axes, starting toward Samus, its 56-frame table
   starting at twice its slot (the frame limit per table is now 64).

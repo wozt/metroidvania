@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 37 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 39 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -219,6 +219,15 @@ Dependencies: `mzm.enemies.sidehopper`, `mzm.items.enemy_drops`, `mzm.animation.
 Known divergences: The screen shakes are not ported; door locks are only reported (gDoorUnlockTimer is not consumed by the runtime) and removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests.  
 Next action: Export the event spritesets and port the statue room event and the door lock lifecycle.
 
+[~] **`mzm.enemies.geruta` — Gerutas.** Red and green Gerutas: init 3 pixels up facing Samus, waiting under a ceiling until Samus is low (72 subpixels below) and within 5 blocks on both axes, attacking at once without a ceiling, the warning and launching tables with their sounds, the dive at 3 pixels a frame drifting a pixel toward Samus (the going-down flag is SAMUS_COLLIDING), the floor bounce, the climb, the settle 52 subpixels under the ceiling and the death into drops. Checked in norfair_012: the two row-5 Gerutas attack at once, dive, bounce and settle under the row-3 ceiling at y 77 while the others wait for Samus.
+
+Native evidence: `mzm:c:src/sprites_ai/geruta.c:Geruta`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: The splash of SpriteUtilCheckInRoomEffect when it dives through a liquid surface is not ported; otherwise the shared sprite engine limits (mzm.enemies.zoomer).  
+Next action: Compare its behavior with the original game frame by frame.
+
 [~] **`mzm.enemies.holtz` — Holtzes.** Hovering under a ceiling with its ROM idle table, aware or idle table by Samus height, warning when she is low and within 8 blocks vertically and 5 across, the swoop at 3 pixels a frame with the horizontal speed growing from 2 to 12 subpixels, the slide, the slowing climb, the bonk on the ceiling and the death into drops.
 
 Native evidence: `mzm:c:src/sprites_ai/holtz.c:Holtz`.  
@@ -276,6 +285,15 @@ Next action: Port the Mother Brain Rinkas with Mother Brain.
 [~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper.c:Ripper`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
+Next action: Compare its behavior with the original game frame by frame.
+
+[~] **`mzm.enemies.ripper2` — Ripper IIs.** Init with its hitbox and random direction, the patrol at two pixels a frame with a wall probe 44 subpixels ahead a quarter block above its feet, the two-part turn with its sound, the damaged sound and the death into drops. Checked in norfair_017: six Ripper IIs cross the room and turn at its walls.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper2.c:Ripper2`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  

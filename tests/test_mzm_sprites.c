@@ -1866,6 +1866,117 @@ int main(void) {
     }
     assert(mv.y + 32 >= 640);   /* bounced off the floor */
 
+    /* Gerutas wait under a ceiling (row 2), warn when Samus is low and
+     * within 5 blocks, dive at 3 pixels a frame drifting a pixel toward her,
+     * bounce off the floor (row 10) and climb back. */
+    static MzmSpriteKind geruta_kind, ripper2_kind;
+    for (int a = 0; a < MZM_GERUTA_ANIMS; ++a) {
+        geruta_kind.counts[a] = 2;
+        geruta_kind.timers[a][0] = geruta_kind.timers[a][1] = 3;
+    }
+    for (int a = 0; a < MZM_RIPPER2_ANIMS; ++a) {
+        ripper2_kind.counts[a] = 2;
+        ripper2_kind.timers[a][0] = ripper2_kind.timers[a][1] = 3;
+    }
+    frame.kinds[MZM_FAMILY_GERUTA] = &geruta_kind;
+    frame.kinds[MZM_FAMILY_RIPPER2] = &ripper2_kind;
+    tables.health[MZM_PSPRITE_GERUTA_RED] = 10;
+    tables.health[MZM_PSPRITE_RIPPERII] = 30;
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[2][x] = grid[10][x] = MZM_CLIPDATA_SOLID;
+    MzmSprite ge;
+    mzm_sprite_init_primary(&ge, MZM_PSPRITE_GERUTA_RED, 0, 3, 10, 0, 0);
+    frame.samus_x = 60000;
+    frame.samus_y = 500;
+    step(&ge, 0);
+    assert(ge.pose == 8 && ge.y == 256 - 12 && ge.health == 10 && ge.hitbox_left == -48 &&
+           ge.hitbox_top == -32);
+    step(&ge, 0);
+    assert(ge.pose == 9 && ge.anim == MZM_GERUTA_IDLE);
+    /* Too high: Samus's feet less than 72 subpixels below it. */
+    frame.samus_x = (uint16_t)(ge.x + 200);
+    frame.samus_y = (uint16_t)(ge.y + 71);
+    step(&ge, 0);
+    assert(ge.pose == 9);
+    frame.samus_y = 500;
+    step(&ge, 0);
+    assert(ge.pose == 0x32);
+    step(&ge, 0);
+    assert(ge.pose == 0x33 && ge.anim == MZM_GERUTA_WARNING);
+    frames = 0;
+    while (ge.pose != 0x37 && frames < 100) {
+        step(&ge, 0);
+        ++frames;
+    }
+    assert(ge.anim == MZM_GERUTA_GOING_DOWN && ge.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING &&
+           ge.status & MZM_SPRITE_STATUS_FACING_RIGHT);
+    uint16_t gex = ge.x, gey = ge.y;
+    step(&ge, 0);
+    assert(ge.x == gex + 4 && ge.y == gey + 12);
+    frames = 0;
+    while (ge.pose == 0x37 && frames < 300) {
+        step(&ge, 0);
+        ++frames;
+    }
+    /* It bounces a block above the floor. */
+    assert(ge.pose == 0x39 && ge.anim == MZM_GERUTA_BOUNCING && ge.y + 64 >= 640 && ge.y + 52 < 640);
+    frames = 0;
+    while (ge.pose != 0x3B && frames < 100) {
+        step(&ge, 0);
+        ++frames;
+    }
+    assert(!(ge.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING));
+    frames = 0;
+    while (ge.pose == 0x3B && frames < 300) {
+        step(&ge, 0);
+        ++frames;
+    }
+    /* Back under its ceiling, 52 subpixels below the block edge. */
+    assert(ge.pose == 0x3D && ge.y == 3 * 64 + 52 && ge.anim == MZM_GERUTA_BOUNCING_ON_CEILING);
+    frames = 0;
+    while (ge.pose != 9 && ge.pose != 0x32 && frames < 100) {
+        step(&ge, 0);
+        ++frames;
+    }
+    assert(ge.pose == 0x32);    /* Samus still in range */
+    /* Without a ceiling, it attacks at once. */
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+    MzmSprite ge2;
+    mzm_sprite_init_primary(&ge2, MZM_PSPRITE_GERUTA_RED, 0, 3, 10, 0, 0);
+    frame.samus_x = 60000;
+    step(&ge2, 0);
+    step(&ge2, 0);
+    assert(ge2.pose == 0x32);
+
+    /* Ripper IIs cross at two pixels a frame and turn at walls. */
+    clear();
+    for (int y = 0; y < ROWS; ++y) grid[y][2] = grid[y][12] = MZM_CLIPDATA_SOLID;
+    MzmSprite r2;
+    mzm_sprite_init_primary(&r2, MZM_PSPRITE_RIPPERII, 0, 5, 7, 0, 0);
+    step(&r2, 0);
+    assert(r2.pose == 8 && r2.y == 384 - 8 && r2.hitbox_right == 40 && r2.hitbox_bottom == 8 &&
+           r2.status & MZM_SPRITE_STATUS_X_FLIP && r2.health == 30);
+    uint16_t r2x = r2.x;
+    step(&r2, 0);
+    assert(r2.pose == 9 && r2.x == r2x + 8);
+    frames = 0;
+    while (r2.pose == 9 && frames < 200) {
+        step(&r2, 0);
+        ++frames;
+    }
+    /* The wall's edge is within 44 subpixels. */
+    assert(r2.pose == 0xA && r2.x + 44 >= 12 * 64 && r2.x + 36 < 12 * 64);
+    frames = 0;
+    while (r2.pose != 9 && frames < 100) {
+        step(&r2, 0);
+        ++frames;
+    }
+    assert(!(r2.status & MZM_SPRITE_STATUS_X_FLIP));
+    r2x = r2.x;
+    step(&r2, 0);
+    assert(r2.x == r2x - 8);
+
     /* Rinkas. The first spawn is visible at once (SpriteInitPrimary sets
      * no NOT_DRAWN) and flies when its spawning table ends; respawns are
      * hidden, wait, show once on screen and turn vulnerable 11 frames

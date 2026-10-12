@@ -235,7 +235,10 @@ Mission's position-history echo. B fires the Power Beam from the native arm
 cannon position; holding V or Left Shift (GBA R, gamepad right shoulder) arms
 missiles and Tab (Select, gamepad Back) toggles super missiles. In the Morph
 Ball, B places a bomb (four at most); its explosion breaks bomb blocks,
-damages enemies and bounces Samus when she is on it. With the Speed Booster
+damages enemies and bounces Samus when she is on it. Holding R in the Morph
+Ball arms power bombs: B places one, whose growing explosion breaks blocks,
+opens power bomb hatches and damages every enemy it reaches (its look is an
+approximate overlay). With the Speed Booster
 (an item of the debug menu), a long run starts the speed boost: it
 breaks speed blocks and enemies, and releasing the direction skids (Down
 while skidding stores a shinespark: A then launches it up, sideways with a

@@ -6,13 +6,15 @@
  * ProjectileProcessNormalBeam/Missile/SuperMissile, ProjectileUpdateAnimation
  * and the distance part of ProjectileCheckDespawn from the pinned mzm
  * decompilation, and the bombs (ProjectileProcessBomb,
- * ProjectileCheckSamusBombBounce). Charge beams, beam upgrades, power bombs
- * and tumbling missiles are not implemented yet.
+ * ProjectileCheckSamusBombBounce) and power bombs (ProjectileProcessPowerBomb,
+ * the explosion in mzm_power_bomb). Charge beams, beam upgrades and tumbling
+ * missiles are not implemented yet.
  * Projectile collision probes one point against the runtime's verified
  * Clipdata boxes instead of ClipdataProcess. No SDL dependency. */
 #ifndef MZM_PROJECTILES_H
 #define MZM_PROJECTILES_H
 
+#include "mzm_power_bomb.h"
 #include "mzm_samus.h"
 
 #define MZM_MAX_PROJECTILES 16
@@ -20,6 +22,7 @@
 #define MZM_PROJECTILE_LIMIT_MISSILE 4
 #define MZM_PROJECTILE_LIMIT_SUPER_MISSILE 4
 #define MZM_PROJECTILE_LIMIT_BOMB 4
+#define MZM_PROJECTILE_LIMIT_POWER_BOMB 1
 /* BOMB_EXPLOSION_TIMER, also each spin's duration. */
 #define MZM_BOMB_TIMER 16
 #define MZM_SHORT_BEAM_LIFETIME 12
@@ -31,7 +34,8 @@ typedef enum {
     MZM_PROJECTILE_BEAM,
     MZM_PROJECTILE_MISSILE,
     MZM_PROJECTILE_SUPER_MISSILE,
-    MZM_PROJECTILE_BOMB
+    MZM_PROJECTILE_BOMB,
+    MZM_PROJECTILE_POWER_BOMB
 } MzmProjectileType;
 
 /* BombStage (the morph ball launcher stages are not ported). */
@@ -45,7 +49,8 @@ typedef enum {
 typedef enum {
     MZM_WEAPON_NONE,
     MZM_WEAPON_MISSILE,
-    MZM_WEAPON_SUPER_MISSILE
+    MZM_WEAPON_SUPER_MISSILE,
+    MZM_WEAPON_POWER_BOMB
 } MzmHighlightedWeapon;
 
 typedef enum {
@@ -99,6 +104,11 @@ typedef struct {
      * mzm_samus_bomb_bounce; a bomb impact (MZM_PROJECTILE_BOMB in
      * `impacts`) is the explosion's PE_BOMB particle. */
     int bomb_bounce;
+    /* gCurrentPowerBomb, and a power bomb placed this update
+     * (ProjectileProcessPowerBomb clears every sprite's
+     * SPRITE_ISFT_POWER_BOMB_STUNNED then). */
+    MzmPowerBomb power_bomb;
+    bool power_bomb_set;
 } MzmWeapons;
 
 void mzm_weapons_init(MzmWeapons *weapons);

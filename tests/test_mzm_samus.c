@@ -1023,6 +1023,72 @@ static void test_shinespark(void) {
     assert(w.samus.pose == MZM_POSE_MORPH_BALL_MIDAIR);
 }
 
+/* SamusSetHighlightedWeapon's power bomb branch, the power bomb spawn and
+ * ProjectileProcessPowerBomb. */
+static void test_power_bomb(void) {
+    World w;
+    world_init(&w);
+    w.equipment.items |= MZM_ITEM_BOMBS;
+    w.equipment.power_bombs = w.equipment.max_power_bombs = 2;
+    w.equipment.missiles = w.equipment.max_missiles = 5;
+    place(&w, 64, 224);
+    step(&w, 0);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    /* Standing, R arms missiles; in the Morph Ball, power bombs. */
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    assert(weapons.highlighted == MZM_WEAPON_MISSILE);
+    mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment);
+    step(&w, MZM_KEY_DOWN);
+    step(&w, 0);
+    step(&w, MZM_KEY_DOWN);
+    steps(&w, 0, 8);
+    assert(w.samus.pose == MZM_POSE_MORPH_BALL);
+    mzm_sfx_clear();
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R | MZM_KEY_B, MZM_KEY_B,
+                                    &w.equipment));
+    assert(weapons.highlighted == MZM_WEAPON_POWER_BOMB &&
+           weapons.pending_type == MZM_PROJECTILE_POWER_BOMB);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    const MzmProjectile *pb = first_active(&weapons);
+    assert(pb && pb->type == MZM_PROJECTILE_POWER_BOMB && weapons.cooldown == 5);
+    assert(w.equipment.power_bombs == 1 && weapons.power_bomb_set &&
+           weapons.power_bomb.placed);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_POWER_BOMB_SET));
+    /* One power bomb at a time. */
+    while (weapons.cooldown) mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R | MZM_KEY_B, MZM_KEY_B, &w.equipment);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(mzm_projectile_count(&weapons, MZM_PROJECTILE_POWER_BOMB) == 1 &&
+           w.equipment.power_bombs == 1);
+    /* 54 slow frames (the one just run included), 40 fast, then the
+     * explosion at the bomb. */
+    int frames = 1;
+    while (!pb->fast) {
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+        frames++;
+    }
+    assert(frames == 54);
+    frames = 0;
+    while (pb->active) {
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+        frames++;
+    }
+    assert(frames == 40 && weapons.power_bomb.state == MZM_PB_EXPLODING &&
+           weapons.power_bomb.x == pb->x && !weapons.power_bomb.placed);
+    /* No power bomb while the explosion runs. */
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R | MZM_KEY_B, MZM_KEY_B, &w.equipment);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(mzm_projectile_count(&weapons, MZM_PROJECTILE_POWER_BOMB) == 0 &&
+           w.equipment.power_bombs == 1);
+    /* The last power bomb disarms them. */
+    weapons.power_bomb.state = MZM_PB_NONE;
+    while (weapons.cooldown) mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R | MZM_KEY_B, MZM_KEY_B, &w.equipment);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(w.equipment.power_bombs == 0 && weapons.highlighted == MZM_WEAPON_NONE);
+}
+
 int main(void) {
     test_native_tables();
     test_damage();
@@ -1042,6 +1108,7 @@ int main(void) {
     test_bombs();
     test_speed_booster();
     test_shinespark();
+    test_power_bomb();
     puts("MZM Samus controller tests passed");
     return 0;
 }

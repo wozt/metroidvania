@@ -165,6 +165,7 @@ typedef struct {
     int energy, max_energy;
     int missiles, max_missiles;
     int super_missiles, max_super_missiles;
+    int power_bombs, max_power_bombs;
 } MzmEquipment;
 
 typedef struct {

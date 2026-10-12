@@ -388,6 +388,8 @@ def produce(root: Path, area: str, number: int) -> dict:
     if not _SHEETS_WRITTEN.get("blocks"):
         write_atomic(blocks, "\n".join(mzm_c_tables.block_table_lines(tables)) + "\n")
         _SHEETS_WRITTEN["blocks"] = blocks
+        write_atomic(blocks.with_name("power_bomb.tsv"),
+                     "\n".join(mzm_c_tables.power_bomb_window_lines()) + "\n")
     sheets = private_path(Path(root), RUNTIME_ROOMS / "tilesets", create=True)
     sheets.mkdir(exist_ok=True)
     sheet = sheets / f"tileset_{tileset:02}.bmp"

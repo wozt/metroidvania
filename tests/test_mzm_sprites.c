@@ -708,6 +708,25 @@ int main(void) {
     assert(z.health == 12 && z.damaged && weapons.list[0].active &&
            !weapons.list[0].hits_sprites && !(fx.particles[2].status & MZM_PARTICLE_EXISTS));
     weapons.list[0].active = false;
+    /* ProjectilePowerBombDealDamage: 50 once per power bomb (the stunned
+     * flag), cleared when the next one is set. */
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_POWER_BOMB;
+    z.health = 120;
+    z.isft = 0;
+    weapons.power_bomb = (MzmPowerBomb){.state = MZM_PB_EXPLODING, .x = z.x, .y = z.y,
+                                        .hitbox_top = -40, .hitbox_bottom = 40,
+                                        .hitbox_left = -80, .hitbox_right = 80};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 70 && z.isft & 0x80 && (z.isft & 0x7F) == 17);
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 70);
+    weapons.power_bomb_set = true;
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 20);
+    weapons.power_bomb_set = false;
+    weapons.power_bomb.state = MZM_PB_NONE;
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS;
+    z.isft = 0;
     /* Not weak: the invincible impact. */
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
     mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);

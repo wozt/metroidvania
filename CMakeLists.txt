@@ -51,7 +51,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_hatches.c
                src/runtime/mzm_blocks.c
                src/runtime/mzm_effects.c src/runtime/mzm_audio.c src/runtime/gba_psg.c
-               src/runtime/mzm_sfx.c)
+               src/runtime/mzm_sfx.c src/runtime/mzm_power_bomb.c)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
@@ -167,7 +167,7 @@ if(BUILD_TESTING)
     # ROM-free native collision shape regression.
     add_executable(fusion_runtime_steep_slopes_tests tests/test_runtime_steep_slopes.c
                    src/runtime/mzm_samus.c src/runtime/mzm_projectiles.c src/runtime/mzm_hatches.c
-                   src/runtime/mzm_blocks.c src/runtime/mzm_sfx.c)
+                   src/runtime/mzm_blocks.c src/runtime/mzm_sfx.c src/runtime/mzm_power_bomb.c)
     target_include_directories(fusion_runtime_steep_slopes_tests PRIVATE src/runtime)
     target_compile_definitions(fusion_runtime_steep_slopes_tests PRIVATE
                                FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
@@ -180,6 +180,12 @@ if(BUILD_TESTING)
     target_include_directories(fusion_mzm_blocks_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_blocks_tests)
     add_test(NAME mzm_blocks COMMAND fusion_mzm_blocks_tests)
+
+    add_executable(fusion_mzm_power_bomb_tests tests/test_mzm_power_bomb.c
+                   src/runtime/mzm_power_bomb.c src/runtime/mzm_sfx.c)
+    target_include_directories(fusion_mzm_power_bomb_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_mzm_power_bomb_tests)
+    add_test(NAME mzm_power_bomb COMMAND fusion_mzm_power_bomb_tests)
 
     add_executable(fusion_mzm_audio_tests tests/test_mzm_audio.c src/runtime/mzm_audio.c
                    src/runtime/gba_psg.c)
@@ -257,7 +263,8 @@ if(BUILD_TESTING)
 
     # ROM-free native Zero Mission pose controller regression.
     add_executable(fusion_mzm_samus_tests tests/test_mzm_samus.c src/runtime/mzm_samus.c
-                   src/runtime/mzm_projectiles.c src/runtime/mzm_sfx.c)
+                   src/runtime/mzm_projectiles.c src/runtime/mzm_sfx.c
+                   src/runtime/mzm_power_bomb.c)
     target_include_directories(fusion_mzm_samus_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_samus_tests)
     add_test(NAME mzm_samus_controller COMMAND fusion_mzm_samus_tests)

@@ -53,6 +53,8 @@ enum {
     MISSILE_DAMAGE = 20,
     SUPER_MISSILE_DAMAGE = 100,
     BOMB_DAMAGE = 8,
+    POWER_BOMB_DAMAGE = 50,
+    ISFT_POWER_BOMB_STUNNED = 0x80,  /* SPRITE_ISFT_POWER_BOMB_STUNNED */
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,

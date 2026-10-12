@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 30 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 31 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -127,12 +127,12 @@ Next action: Port special blocks and environmental Clipdata effects.
 
 [?] **`mzm.weapons.inventory-boundary` — source coverage.** The current classifier assigns 56 discovered routine(s) to this category (56 by source path). Category completeness has not been established.
 
-[~] **`mzm.weapons.beams_and_missiles` — Beam and missile projectiles.** Power Beam, missiles and super missiles move and collide with the room; their hits on ported sprites (damage, stun, invincible hits) and their wall and sprite impact particles are ported. Charge beams, beam upgrades, Power Bombs and tumbling missiles are not (bombs: mzm.weapons.bombs). The weapon sounds play at their native points: the toggle and arming sounds of SamusSetHighlightedWeapon, the beam shot and the missile and super missile shot and thrust on ProjectileInit, the thrust stopped by the impact particles.
+[~] **`mzm.weapons.beams_and_missiles` — Beam and missile projectiles.** Power Beam, missiles and super missiles move and collide with the room; their hits on ported sprites (damage, stun, invincible hits) and their wall and sprite impact particles are ported. Charge beams, beam upgrades and tumbling missiles are not (bombs and power bombs: mzm.weapons.bombs, mzm.weapons.power_bombs). The weapon sounds play at their native points: the toggle and arming sounds of SamusSetHighlightedWeapon, the beam shot and the missile and super missile shot and thrust on ProjectileInit, the thrust stopped by the impact particles.
 
 Native evidence: `mzm:c:src/projectile_util.c:ProjectileUpdate`, `mzm:c:src/projectile_util.c:ProjectileUpdateAnimation`.  
 Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_projectile_compose.py`](../tests/test_mzm_projectile_compose.py).
-Next action: Port charge beams, beam upgrades, Power Bombs and tumbling missiles.
+Next action: Port charge beams, beam upgrades and tumbling missiles.
 
 [~] **`mzm.weapons.bombs` — Bombs, bomb jumps and bomb damage.** With the Bombs item, B in the Morph Ball places a bomb (four at most, 7 frames apart) at Samus's position: a slow then a fast spin of 16 frames each with their native sprites, then the PE_BOMB explosion and 16 frames during which CAA_BOMB_PISTOL reaches nine points, one a frame (bomb blocks, bomb chains, hatches). On the first explosion frame Samus bounces off a touching bomb (up, left or right from the bomb's middle and gPreviousXPosition; only falling and from below when airborne), and the explosion damages sprites weak to beams and bombs (8). The set and explosion sounds play. Checked in brinstar_000: the bounce, then the three bomb blocks under Samus break.
 
@@ -141,7 +141,16 @@ Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_proje
 Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.weapons.beams_and_missiles`, `mzm.environment.breakable_blocks`, `mzm.animation.particles`.  
 Known divergences: The morph ball launcher stages and liquids (no bounce when slowed) are not ported; the sprite pass of the explosion runs after the projectile loop in the runtime, so the bomb keeps a flag for the frame the native pass (before the loop) sees it.  
-Next action: Port power bombs and the morph ball launchers.
+Next action: Port the morph ball launchers.
+
+[~] **`mzm.weapons.power_bombs` — Power bombs and their explosion.** In the Morph Ball, R arms power bombs (with ammunition); B (the Bombs item is required, as natively) places one, at most one at a time and none during an explosion: one ammunition (the last disarms them), a slow spin of 54 frames and a fast one of 40, then PowerBombExplosionStart. The semi-minor axis grows by 3 a frame to 159, holds five frames, shrinks back to 4 and ends; while expanding, CAA_POWER_BOMB reaches the hitbox's left and right block columns (even frames) or top and bottom rows (odd frames) from the centre outward, opening power bomb hatches and breaking blocks; every sprite touching the hitbox takes 50 (weak) once per power bomb. The set and explosion sounds play; power bomb drops spawn and refill one. The window rows come from sHaze_PowerBomb_WindowValuesPointers (power_bomb.tsv). Checked in brinstar_000: the explosion and the bomb blocks it breaks.
+
+Native evidence: `mzm:c:src/color_effects.c:PowerBombYellowTint`, `mzm:c:src/haze.c:Haze_PowerBombExpanding`, `mzm:c:src/haze.c:Haze_PowerBombRetracting`, `mzm:c:src/power_bomb_explosion.c:PowerBombExplosionEnd`, `mzm:c:src/power_bomb_explosion.c:PowerBombExplosionProcess`, `mzm:c:src/power_bomb_explosion.c:PowerBombExplosionStart`, `mzm:c:src/projectile.c:ProjectileProcessPowerBomb`, `mzm:c:src/projectile_util.c:ProjectilePowerBombDealDamage`, `mzm:c:src/samus.c:SamusSetHighlightedWeapon`.  
+Local implementation: [`src/runtime/mzm_power_bomb.c`](../src/runtime/mzm_power_bomb.c), [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_c_tables.py`](../scripts/mzm_c_tables.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py).  
+Tests: [`tests/test_mzm_power_bomb.c`](../tests/test_mzm_power_bomb.c), [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_c_tables.py`](../tests/test_mzm_c_tables.py).
+Dependencies: `mzm.weapons.bombs`, `mzm.environment.breakable_blocks`, `mzm.items.enemy_drops`.  
+Known divergences: The explosion's look is an approximation drawn over the background layers behind the sprites (the yellow tint and the BLDY 12 darkening outside the native window rows; the layers in front of the sprites are not darkened), not the native palette and blending registers; PowerBombExplosionEnd's blend fade takes one frame; the screen shake is not reproduced; the native GET_CLIP_BLOCK reads past the room's right edge, the port skips those blocks.  
+Next action: Draw the explosion through the native palette and window effects.
 
 ### Upgrades and equipment
 
@@ -316,27 +325,27 @@ Next action: Port the stun palette flash and freezing, then the Space Pirates, M
 
 [?] **`mzm.items.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`mzm.items.enemy_drops` — Enemy drops.** Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported.
+[~] **`mzm.items.enemy_drops` — Enemy drops.** Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound.
 
 Native evidence: `mzm:c:src/hud_generic.c:HudGenericLoadCommonSpriteGfx`, `mzm:c:src/sprite.c:SpriteSpawnDropFollowers`, `mzm:c:src/sprite_util.c:SpriteUtilCheckHasDrops`, `mzm:c:src/sprite_util.c:SpriteUtilDetermineEnemyDrop`, `mzm:c:src/sprites_ai/enemy_drop.c:EnemyDrop`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`.  
-Known divergences: Power bombs are not ported, so their drops never spawn; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
-Next action: Port power bombs and the multiple large energy pickup.
+Known divergences: PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
+Next action: Port the multiple large energy pickup.
 
 ### Environment interactions
 
 [?] **`mzm.environment.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`mzm.environment.breakable_blocks` — Breakable, reforming and crumble blocks, hidden tanks and bomb chains.** Every beam, missile, super missile, bomb explosion point and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack and the speed booster break blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.
+[~] **`mzm.environment.breakable_blocks` — Breakable, reforming and crumble blocks, hidden tanks and bomb chains.** Every beam, missile, super missile, bomb explosion point, power bomb explosion edge and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack and the speed booster break blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.
 
 Native evidence: `mzm:c:src/bg_clip.c:BgClipCheckWalkingOnCrumbleBlock`, `mzm:c:src/block.c:BlockApplyCcaa`, `mzm:c:src/block.c:BlockCheckCcaa`, `mzm:c:src/block.c:BlockCheckRevealBombChainBlock`, `mzm:c:src/block.c:BlockCheckRevealOrDestroyBombBlock`, `mzm:c:src/block.c:BlockCheckRevealOrDestroyNonBombBlock`, `mzm:c:src/block.c:BlockCheckSamusInReformingBlock`, `mzm:c:src/block.c:BlockCheckStartNewSubBombChain`, `mzm:c:src/block.c:BlockDestroyNonReformBlock`, `mzm:c:src/block.c:BlockDestroySquareBlock`, `mzm:c:src/block.c:BlockProcessBombChains`, `mzm:c:src/block.c:BlockRemoveNeverReformBlocks`, `mzm:c:src/block.c:BlockSamusApplyScrewSpeedboosterDamageToEnvironment`, `mzm:c:src/block.c:BlockStartBombChain`, `mzm:c:src/block.c:BlockStoreBrokenNonReformBlock`, `mzm:c:src/block.c:BlockStoreBrokenReformBlock`, `mzm:c:src/block.c:BlockStoreSingleNeverReformBlock`, `mzm:c:src/block.c:BlockUpdateBrokenBlockAnimation`, `mzm:c:src/block.c:BlockUpdateBrokenBlocks`, `mzm:c:src/samus.c:SamusCheckScrewSpeedboosterAffectingEnvironment`.  
 Local implementation: [`src/runtime/mzm_blocks.c`](../src/runtime/mzm_blocks.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_c_tables.py`](../scripts/mzm_c_tables.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_blocks.c`](../tests/test_mzm_blocks.c), [`tests/test_mzm_c_tables.py`](../tests/test_mzm_c_tables.py).
 Dependencies: `mzm.rooms.backgrounds`, `mzm.transitions.doors_and_hatches`, `mzm.weapons.beams_and_missiles`.  
-Known divergences: Power bombs are not ported on Samus; grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout.  
-Next action: Port power bombs, then the crumble grab and tank pickups.
+Known divergences: grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout.  
+Next action: Port the crumble grab and tank pickups.
 
 ### Rooms, areas and maps
 

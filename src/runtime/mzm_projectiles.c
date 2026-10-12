@@ -41,7 +41,7 @@ static bool pose_can_fire(MzmPose pose) {
     }
 }
 
-/* SamusSetHighlightedWeapon without power bombs. */
+/* SamusSetHighlightedWeapon */
 static void set_highlighted_weapon(MzmWeapons *weapons, const MzmSamus *samus,
                                    uint16_t held, uint16_t pressed,
                                    const MzmEquipment *equipment) {
@@ -52,13 +52,31 @@ static void set_highlighted_weapon(MzmWeapons *weapons, const MzmSamus *samus,
         mzm_sfx_play(MZM_SOUND_MISSILE_TOGGLE);
     }
     MzmHighlightedWeapon highlighted = MZM_WEAPON_NONE;
-    if (!mzm_pose_is_morphed(samus->pose) &&
-        samus->pose != MZM_POSE_HANGING_ON_LEDGE && (held & MZM_KEY_R)) {
-        if (!weapons->super_missiles_selected) {
-            if (equipment->missiles != 0) highlighted = MZM_WEAPON_MISSILE;
-        } else {
-            highlighted = MZM_WEAPON_SUPER_MISSILE;
+    switch (samus->pose) {
+    case MZM_POSE_MORPH_BALL:
+    case MZM_POSE_ROLLING:
+    case MZM_POSE_MORPH_BALL_MIDAIR:
+    case MZM_POSE_GETTING_HURT_IN_MORPH_BALL:
+        if (held & MZM_KEY_R && equipment->power_bombs != 0) highlighted = MZM_WEAPON_POWER_BOMB;
+        break;
+    case MZM_POSE_HANGING_ON_LEDGE:
+    case MZM_POSE_DELAY_BEFORE_SHINESPARKING:
+    case MZM_POSE_SHINESPARKING:
+    case MZM_POSE_SHINESPARK_COLLISION:
+    case MZM_POSE_DELAY_AFTER_SHINESPARKING:
+    case MZM_POSE_DELAY_BEFORE_BALLSPARKING:
+    case MZM_POSE_BALLSPARKING:
+    case MZM_POSE_BALLSPARK_COLLISION:
+        break;
+    default:
+        if (held & MZM_KEY_R) {
+            if (!weapons->super_missiles_selected) {
+                if (equipment->missiles != 0) highlighted = MZM_WEAPON_MISSILE;
+            } else {
+                highlighted = MZM_WEAPON_SUPER_MISSILE;
+            }
         }
+        break;
     }
     /* Armed a new weapon. */
     if (highlighted != MZM_WEAPON_NONE && weapons->highlighted == MZM_WEAPON_NONE)
@@ -83,7 +101,8 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
         if (pressed & MZM_KEY_B && weapons->cooldown == 0 && equipment->items & MZM_ITEM_BOMBS &&
             !weapons->pending) {
             weapons->pending = true;
-            weapons->pending_type = MZM_PROJECTILE_BOMB;
+            weapons->pending_type = weapons->highlighted == MZM_WEAPON_POWER_BOMB ?
+                MZM_PROJECTILE_POWER_BOMB : MZM_PROJECTILE_BOMB;
         }
         return false;
     }
@@ -334,6 +353,44 @@ static void process_bomb(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *
     }
 }
 
+/* ProjectileProcessPowerBomb: one ammunition, a slow spin of 54 frames and a
+ * fast one of 40, then the explosion. */
+static void process_power_bomb(MzmWeapons *weapons, MzmProjectile *p, MzmEquipment *equipment) {
+    switch (p->bomb_stage) {
+    case MZM_BOMB_INIT:
+        if (equipment->power_bombs != 0 && --equipment->power_bombs == 0 &&
+            weapons->highlighted == MZM_WEAPON_POWER_BOMB)
+            weapons->highlighted = MZM_WEAPON_NONE;     /* ^= WH_POWER_BOMB */
+        p->fast = false;
+        p->anim_frame = 0;
+        p->anim_counter = 0;
+        p->hidden = false;
+        p->x_flip = false;
+        p->stage = MZM_STAGE_MOVING;
+        p->timer = 54;              /* CONVERT_SECONDS(.9f) */
+        p->bomb_stage = MZM_BOMB_FIRST_SPIN;
+        weapons->power_bomb_set = true;
+        mzm_sfx_play(MZM_SOUND_POWER_BOMB_SET);
+        weapons->power_bomb.placed = true;
+        break;
+    case MZM_BOMB_FIRST_SPIN:
+        if (--p->timer == 0) {
+            p->fast = true;
+            p->anim_frame = 0;
+            p->anim_counter = 0;
+            p->timer = 40;          /* TWO_THIRD_SECOND */
+            p->bomb_stage = MZM_BOMB_FAST_SPIN;
+        }
+        break;
+    default:
+        if (--p->timer == 0) {
+            mzm_power_bomb_start(&weapons->power_bomb, (uint16_t)p->x, (uint16_t)p->y);
+            p->active = false;
+        }
+        break;
+    }
+}
+
 /* ProjectileUpdateAnimation */
 static void animate(MzmProjectile *p, const MzmProjectileAnimation *animation) {
     uint8_t durations[64];
@@ -364,6 +421,7 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
                         const MzmProjectileAnimation *animation) {
     weapons->impact_count = 0;
     weapons->bomb_bounce = 0;
+    weapons->power_bomb_set = false;
     if (weapons->pending) {
         static const struct { int limit; uint8_t cooldown; } rules[] = {
             [MZM_PROJECTILE_BEAM] = {MZM_PROJECTILE_LIMIT_BEAM, MZM_BEAM_COOLDOWN},
@@ -372,17 +430,20 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
                                               MZM_SUPER_MISSILE_COOLDOWN},
             /* CONVERT_SECONDS(.1f + 1.f / 60) */
             [MZM_PROJECTILE_BOMB] = {MZM_PROJECTILE_LIMIT_BOMB, 7},
+            /* CONVERT_SECONDS(.1f) - 1 */
+            [MZM_PROJECTILE_POWER_BOMB] = {MZM_PROJECTILE_LIMIT_POWER_BOMB, 5},
         };
         MzmProjectileType type = weapons->pending_type;
         /* gArmCannonX/Y: pixel position plus the arm cannon offset; bombs
          * at Samus's position. */
         int32_t x = ((samus->x >> 2) + cannon_x) * MZM_SUBPIXELS_PER_PIXEL;
         int32_t y = (((samus->y - 1) >> 2) + cannon_y) * MZM_SUBPIXELS_PER_PIXEL;
-        if (type == MZM_PROJECTILE_BOMB) {
+        if (type == MZM_PROJECTILE_BOMB || type == MZM_PROJECTILE_POWER_BOMB) {
             x = samus->x;
             y = samus->y - 1;
         }
         if (mzm_projectile_count(weapons, type) < rules[type].limit &&
+            (type != MZM_PROJECTILE_POWER_BOMB || weapons->power_bomb.state == MZM_PB_NONE) &&
             projectile_spawn(weapons, type, samus, x, y)) {
             weapons->cooldown = rules[type].cooldown;
             /* CONVERT_SECONDS(1.f / 15) for beam shots only. */
@@ -405,10 +466,11 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
         if (!p->active) continue;
         if (p->type == MZM_PROJECTILE_BEAM) process_beam(weapons, p, samus, collision);
         else if (p->type == MZM_PROJECTILE_BOMB) process_bomb(weapons, p, samus, collision);
+        else if (p->type == MZM_PROJECTILE_POWER_BOMB) process_power_bomb(weapons, p, equipment);
         else process_missile(weapons, p, samus, equipment, collision);
         if (!p->active) continue;
         animate(p, animation);
         /* Bombs are never despawned by distance. */
-        if (p->type != MZM_PROJECTILE_BOMB) check_despawn(p, samus);
+        if (p->type <= MZM_PROJECTILE_SUPER_MISSILE) check_despawn(p, samus);
     }
 }

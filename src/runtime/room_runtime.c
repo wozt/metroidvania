@@ -13,6 +13,7 @@
 #include "mzm_blocks.h"
 #include "mzm_audio.h"
 #include "mzm_sfx.h"
+#include "mzm_power_bomb.h"
 #include "mzm_hatches.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
@@ -763,6 +764,8 @@ static uint8_t runtime_area_index(const char *area) {
 /* The native block tables (rooms/runtime/blocks.tsv, scripts/mzm_c_tables.py)
  * and the collision type and behavior of every raw Clipdata value. */
 #define RUNTIME_BLOCK_TABLES "assets/extracted/metroid/rooms/runtime/blocks.tsv"
+/* sHaze_PowerBomb_WindowValuesPointers (scripts/mzm_c_tables.py). */
+#define RUNTIME_POWER_BOMB_TABLE "assets/extracted/metroid/rooms/runtime/power_bomb.tsv"
 static struct {
     bool ok;
     MzmBlockEnv env;
@@ -1037,6 +1040,48 @@ static struct {
     struct { char alias[48]; int x, y; } blocks[1024];
     int count;
 } runtime_never_reform_memory;
+
+/* The power bomb explosion's look over the backgrounds (not the sprites):
+ * PowerBombYellowTint (+5 red and green per channel) while expanding, and
+ * outside window 1 (the sHaze_PowerBomb rows around the bomb) the BLDY 12
+ * brightness decrease. Approximation: the native effects act on the BG
+ * palette and blending registers, here on the drawn layers. */
+static void runtime_draw_power_bomb(SDL_Renderer *renderer,const MzmPowerBomb *pb,float cx,
+                                    float cy,SDL_FRect viewport,float scale) {
+    if(pb->state==MZM_PB_EXPLODING) {
+        SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_ADD);
+        SDL_SetRenderDrawColor(renderer,41,41,0,255);
+        SDL_RenderFillRect(renderer,&viewport);
+    }
+    /* 16 - 12 = 4 sixteenths of each colour remain. */
+    SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_MOD);
+    SDL_SetRenderDrawColor(renderer,64,64,64,255);
+    int rows=(int)(viewport.h/scale);
+    int centre_x=(int)((float)(pb->x>>2)-cx), centre_y=(int)((float)(pb->y>>2)-cy);
+    int axis=pb->window_axis;
+    for(int row=0;row<rows;row++) {
+        int left=0,right=0;
+        bool inside=mzm_power_bomb_windows_ready() &&
+            mzm_power_bomb_window(axis,row-(centre_y-axis),&left,&right);
+        float y=viewport.y+(float)row*scale;
+        if(!inside) {
+            SDL_FRect line={viewport.x,y,viewport.w,scale};
+            SDL_RenderFillRect(renderer,&line);
+            continue;
+        }
+        float a=(float)(centre_x+left)*scale, b=(float)(centre_x+right)*scale;
+        if(a<0.f)a=0.f;
+        if(b>viewport.w)b=viewport.w;
+        if(a>0.f){SDL_FRect l={viewport.x,y,a,scale};SDL_RenderFillRect(renderer,&l);}
+        if(b<viewport.w){SDL_FRect r={viewport.x+b,y,viewport.w-b,scale};SDL_RenderFillRect(renderer,&r);}
+    }
+    SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
+}
+
+/* BlockApplyCcaa(CAA_POWER_BOMB) on a block the explosion's edge reaches. */
+static void runtime_power_bomb_apply(void *context, int y, int x) {
+    runtime_room_affect((Room *)context, x * 64, y * 64, DAMAGE_POWER_BOMB);
+}
 
 /* BlockRemoveNeverReformBlocks at a room load, with a fresh block state. */
 static void runtime_blocks_load(Room *room, const char *alias) {
@@ -1537,9 +1582,11 @@ static int runtime_pose_durations(void *context,const MzmSamus *samus,
  * X/Y flips applied by ProjectileDraw. */
 static void runtime_projectile_key(const MzmProjectile *projectile,char *key,size_t size) {
     static const char *names[]={"NormalBeam","Missile","SuperMissile"};
-    if(projectile->type==MZM_PROJECTILE_BOMB) {
-        /* sBombOam_Slow / sBombOam_Fast, never flipped. */
-        snprintf(key,size,"Projectile/BombOam_%s/none",projectile->fast?"Fast":"Slow");
+    if(projectile->type==MZM_PROJECTILE_BOMB || projectile->type==MZM_PROJECTILE_POWER_BOMB) {
+        /* s(Power)BombOam_Slow / _Fast, never flipped. */
+        snprintf(key,size,"Projectile/%sOam_%s/none",
+                 projectile->type==MZM_PROJECTILE_BOMB?"Bomb":"PowerBomb",
+                 projectile->fast?"Fast":"Slow");
         return;
     }
     const char *shape=projectile->direction==MZM_AIM_UP||projectile->direction==MZM_AIM_DOWN?
@@ -2633,6 +2680,8 @@ int main(int argc, char **argv) {
         printf("Projectile library: %d native sequences\n",projectile_library.count);
     }
     /* Sprites (scripts/mzm_sprites.py); without them the rooms stay empty. */
+    if (!mzm_power_bomb_load_windows(RUNTIME_POWER_BOMB_TABLE))
+        fprintf(stderr, "No power bomb window table: python3 -m scripts.mzm_runtime_room --all\n");
     if (!runtime_block_tables_open(RUNTIME_BLOCK_TABLES))
         fprintf(stderr, "No Zero Mission block tables: python3 -m scripts.mzm_runtime_room --all\n");
     sprites.tables_ok = runtime_sprite_tables_open(&sprites, RUNTIME_SPRITE_TABLES);
@@ -2657,6 +2706,8 @@ int main(int argc, char **argv) {
     equipment.missiles=equipment.max_missiles;
     equipment.max_super_missiles=2;
     equipment.super_missiles=equipment.max_super_missiles;
+    equipment.max_power_bombs=2;
+    equipment.power_bombs=equipment.max_power_bombs;
     MzmWeapons weapons;
     mzm_weapons_init(&weapons);
     MzmProjectileAnimation projectile_animation={&projectile_library,
@@ -2738,6 +2789,8 @@ int main(int argc, char **argv) {
     debug_menu_value(&debug,"Max missiles",&equipment.max_missiles,0,255,1,NULL,DEBUG_AMMO);
     debug_menu_value(&debug,"Supers",&equipment.super_missiles,0,99,1,NULL,DEBUG_AMMO);
     debug_menu_value(&debug,"Max supers",&equipment.max_super_missiles,0,99,1,NULL,DEBUG_AMMO);
+    debug_menu_value(&debug,"Power bombs",&equipment.power_bombs,0,99,1,NULL,DEBUG_AMMO);
+    debug_menu_value(&debug,"Max power bombs",&equipment.max_power_bombs,0,99,1,NULL,DEBUG_AMMO);
     debug_menu_action(&debug,"Refill energy, ammo",DEBUG_REFILL);
     debug_menu_action(&debug,"Take 20 damage",DEBUG_DAMAGE);
     debug_menu_value(&debug,"Area",&debug_area,0,DEBUG_AREAS-1,1,debug_area_names,DEBUG_AREA);
@@ -2800,6 +2853,7 @@ int main(int argc, char **argv) {
             if (event.key.key == SDLK_M) {
                 equipment.missiles=equipment.max_missiles;
                 equipment.super_missiles=equipment.max_super_missiles;
+                equipment.power_bombs=equipment.max_power_bombs;
             }
             if (event.key.key == SDLK_T) {
                 spin_items=(spin_items+1u)%4u;
@@ -2894,12 +2948,15 @@ int main(int argc, char **argv) {
                     equipment.missiles=equipment.max_missiles;
                 if(equipment.super_missiles>equipment.max_super_missiles)
                     equipment.super_missiles=equipment.max_super_missiles;
+                if(equipment.power_bombs>equipment.max_power_bombs)
+                    equipment.power_bombs=equipment.max_power_bombs;
                 title_dirty=true;
                 break;
             case DEBUG_REFILL:
                 equipment.energy=equipment.max_energy;
                 equipment.missiles=equipment.max_missiles;
                 equipment.super_missiles=equipment.max_super_missiles;
+                equipment.power_bombs=equipment.max_power_bombs;
                 title_dirty=true;
                 break;
             case DEBUG_DAMAGE: damage_queued=true; step_once=true; break;
@@ -2996,6 +3053,7 @@ int main(int argc, char **argv) {
                     mzm_weapons_init(&weapons);
                     equipment.missiles=equipment.max_missiles;
                     equipment.super_missiles=equipment.max_super_missiles;
+                    equipment.power_bombs=equipment.max_power_bombs;
                     /* SamusDying stopped the music; there is no game over
                      * flow, so the room's track simply starts again. */
                     if(mzm_audio_ready() && room->has_music) {
@@ -3057,6 +3115,13 @@ int main(int argc, char **argv) {
             /* ConnectionUpdateHatches */
             mzm_hatches_update(room->native_hatches,room->native_hatch_count,&room->hatch_env);
             runtime_blocks_frame(room,current_room,&samus,&equipment,sprites.frame8);
+            /* RoomUpdate: HazeProcess, then PowerBombExplosionProcess. */
+            mzm_power_bomb_haze(&weapons.power_bomb);
+            {
+                MzmPowerBombRoom pb_room={room,room->width/16,room->height/16,
+                                          runtime_block_get_clip,runtime_power_bomb_apply};
+                mzm_power_bomb_process(&weapons.power_bomb,&pb_room,sprites.frame8);
+            }
             if(sprites.kinds_ok) {
                 /* The wall impacts' particles, then ProjectileCheckHittingSprite
                  * ends ProjectileUpdate; ParticleProcessAll follows. */
@@ -3164,7 +3229,10 @@ int main(int argc, char **argv) {
         runtime_bg_art_sync(&bg_art,renderer,room,current_room);
         bool layered=room->has_backgrounds && bg_art.sheet;
         int sprite_priority=samus.pose==MZM_POSE_DYING?0:runtime_samus_on_top(room)?1:2;
-        if(layered)SDL_SetRenderDrawColor(renderer,0,0,0,255);
+        bool pb_active=weapons.power_bomb.state==MZM_PB_EXPLODING ||
+                       weapons.power_bomb.state==MZM_PB_IMPLODING;
+        if(pb_active)SDL_SetRenderDrawColor(renderer,255,255,255,255);  /* the white backdrop */
+        else if(layered)SDL_SetRenderDrawColor(renderer,0,0,0,255);
         else SDL_SetRenderDrawColor(renderer,12,14,24,255);
         SDL_RenderClear(renderer);
         if(layered) {
@@ -3178,6 +3246,7 @@ int main(int argc, char **argv) {
             SDL_FRect dst={viewport.x,viewport.y,src.w*scale,src.h*scale};
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
+        if(pb_active)runtime_draw_power_bomb(renderer,&weapons.power_bomb,cx,cy,viewport,scale);
         RuntimeLibraryEntry *lib_entry=NULL;
         int frame=0;
         if(animation_browser && library.count>0) {

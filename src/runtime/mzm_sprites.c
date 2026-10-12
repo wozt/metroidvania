@@ -807,12 +807,12 @@ static uint8_t determine_drop(const Ctx *c) {
     rng = (uint16_t)(c->frame8 + c->f->frame16 + rng);
     rng %= SPRITE_DROP_MAX_PROB;
     if (rng == 0) rng = 1;          /* not REGION_US_BETA */
-    /* Ammunition drops, power bombs first (none ported: 0 of 0). */
+    /* Ammunition drops, power bombs first. */
     static const uint8_t ammo_drops[3] = {
         MZM_PSPRITE_POWER_BOMB_DROP, MZM_PSPRITE_SUPER_MISSILE_DROP, MZM_PSPRITE_MISSILE_DROP,
     };
-    int current[3] = {0, e->super_missiles, e->missiles};
-    int maximum[3] = {0, e->max_super_missiles, e->max_missiles};
+    int current[3] = {e->power_bombs, e->super_missiles, e->missiles};
+    int maximum[3] = {e->max_power_bombs, e->max_super_missiles, e->max_missiles};
     uint16_t upper = SPRITE_DROP_MAX_PROB;
     for (int i = 0; i < 3; ++i) {
         uint16_t prob = probs[MZM_DROP_PROB_POWER_BOMB - i];
@@ -3412,7 +3412,11 @@ static void enemy_drop_idle(Ctx *c) {
             refill(&e->super_missiles, e->max_super_missiles, 2);
             mzm_sfx_play(MZM_SOUND_GETTING_SUPER_MISSILE_DROP);
             break;
-        default: break;             /* power bombs: not ported */
+        case SSC_POWER_BOMB_DROP:
+            refill(&e->power_bombs, e->max_power_bombs, 1);     /* POWER_BOMB_DROP_REFILL */
+            mzm_sfx_play(MZM_SOUND_GETTING_POWER_BOMB_DROP);
+            break;
+        default: break;
         }
         s->status = 0;
         return;
@@ -3620,8 +3624,56 @@ static void hit_solid(MzmSprite *s) {
     if ((s->isft & 0x7F) < ISFT_SOLID_HIT) set_isft(s, ISFT_SOLID_HIT);
 }
 
+/* ProjectilePowerBombDealDamage: once per power bomb (the stunned flag). */
+static void power_bomb_damage(MzmSprite *s, uint8_t weakness) {
+    uint8_t isft;
+    if (s->immune_to_projectiles) {
+        if ((s->isft & 0x7F) < 2) set_isft(s, 2);
+        return;
+    }
+    if (weakness & MZM_WEAKNESS_POWER_BOMB) {
+        if (s->health > POWER_BOMB_DAMAGE) {
+            s->health -= POWER_BOMB_DAMAGE;
+        } else {
+            s->health = 0;
+            s->freeze_timer = 0;
+            s->palette_row = 0;
+            s->pose = SPRITE_POSE_DESTROYED;
+            s->ignore_samus_timer = 1;
+        }
+        isft = ISFT_DAMAGED;
+    } else {
+        isft = ISFT_SOLID_HIT;
+    }
+    if ((s->isft & 0x7F) < isft) s->isft = (uint8_t)(isft | ISFT_POWER_BOMB_STUNNED);
+    else s->isft |= ISFT_POWER_BOMB_STUNNED;
+    s->damaged = true;
+}
+
 void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weapons,
                                  const MzmSpriteTables *tables, MzmEffects *effects) {
+    /* ProjectileProcessPowerBomb clears every sprite's stunned flag. */
+    if (weapons->power_bomb_set)
+        for (int i = 0; i < count; ++i)
+            if (sprites[i].status & MZM_SPRITE_STATUS_EXISTS)
+                sprites[i].isft &= (uint8_t)~ISFT_POWER_BOMB_STUNNED;
+    /* The power bomb explosion's pass of ProjectileCheckHittingSprite (a
+     * power bomb was placed, so the maximum is not zero). */
+    const MzmPowerBomb *pb = &weapons->power_bomb;
+    if (pb->state != MZM_PB_NONE) {
+        uint16_t top = (uint16_t)(pb->y + pb->hitbox_top), bottom = (uint16_t)(pb->y + pb->hitbox_bottom);
+        uint16_t left = (uint16_t)(pb->x + pb->hitbox_left), right = (uint16_t)(pb->x + pb->hitbox_right);
+        for (int i = 0; i < count; ++i) {
+            MzmSprite *s = &sprites[i];
+            if ((s->status & (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_IGNORE_PROJECTILES)) !=
+                    MZM_SPRITE_STATUS_EXISTS || s->health == 0 || s->isft & ISFT_POWER_BOMB_STUNNED)
+                continue;
+            if (touching((uint16_t)(s->y + s->hitbox_top), (uint16_t)(s->y + s->hitbox_bottom),
+                         (uint16_t)(s->x + s->hitbox_left), (uint16_t)(s->x + s->hitbox_right),
+                         top, bottom, left, right))
+                power_bomb_damage(s, weakness_of(s, tables));
+        }
+    }
     /* The sprites are visited by draw order, then slot; every ported sprite
      * has the default draw order, so slot order. A sprite's hitbox is read
      * once, before the projectiles that hit it. */
@@ -3635,7 +3687,7 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
         uint8_t weakness = weakness_of(s, tables);
         for (int p = 0; p < MZM_MAX_PROJECTILES; ++p) {
             MzmProjectile *proj = &weapons->list[p];
-            if (!proj->active) continue;
+            if (!proj->active || proj->type == MZM_PROJECTILE_POWER_BOMB) continue;
             if (proj->type == MZM_PROJECTILE_BOMB) {
                 /* ProjectileBombHitSprite: the bomb's hitbox, no particle,
                  * and the bomb stays. */
@@ -3692,6 +3744,7 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                 }
                 break;
             case MZM_PROJECTILE_BOMB:
+            case MZM_PROJECTILE_POWER_BOMB:
                 break;
             case MZM_PROJECTILE_SUPER_MISSILE:
                 if (weakness & (MZM_WEAKNESS_MISSILES | MZM_WEAKNESS_SUPER_MISSILES)) {

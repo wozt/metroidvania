@@ -2988,6 +2988,45 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0263 - Zero Mission power bombs
+
+- `src/runtime/mzm_power_bomb.c` ports `gCurrentPowerBomb`:
+  `PowerBombExplosionStart`/`Begin` (the explosion sound), the power bomb
+  cases of `HazeProcess` (`Haze_PowerBombExpanding`/`Retracting`: the axis by
+  3 a frame to 159, five frames held, back to 4, the stage not reset), and
+  `PowerBombExplosionProcess` (the hitbox of axis * 4 / 8 * .95 clamped to
+  the room, the `CAA_POWER_BOMB` sweep of its edge columns or rows from the
+  centre outward on alternate frames while expanding, the end).
+- `mzm_projectiles.c` ports the power bomb branch of
+  `SamusSetHighlightedWeapon` (R in the Morph Ball poses; the shinespark
+  poses now arm nothing), the power bomb fire (the Bombs item required), the
+  spawn (one at a time, none during an explosion, 5 frames of cooldown) and
+  `ProjectileProcessPowerBomb` (the ammunition, the last disarming them, 54
+  slow and 40 fast frames, the set sound). `mzm_sprites.c` ports
+  `ProjectilePowerBombDealDamage` (50, once per power bomb through
+  `SPRITE_ISFT_POWER_BOMB_STUNNED`, cleared when one is set), the power bomb
+  drops and their pickup.
+- The runtime runs the explosion after the hatches and blocks (`RoomUpdate`
+  order), draws the power bomb sprites and an approximate look (a white
+  backdrop, `PowerBombYellowTint` as an additive tint while expanding, the
+  BLDY 12 darkening outside the native window rows of
+  `sHaze_PowerBomb_WindowValuesPointers`, exported to `power_bomb.tsv` by
+  `scripts/mzm_c_tables.py`), and gains power bomb ammunition in the debug
+  menu and refills.
+- Checked in brinstar_000: the explosion grows around the bomb and breaks the
+  bomb blocks under Samus.
+- Not ported: the native palette and window effects themselves, the screen
+  shake.
+- Tests: `tests/test_mzm_power_bomb.c` (new: the hitbox, both sweeps and the
+  doubled centre block, air skipped, the expansion, hold, implosion and end
+  timings, the window loader), `tests/test_mzm_samus.c` (selection,
+  placement, one at a time, the spin timings, the explosion start, the last
+  one disarming), `tests/test_mzm_sprites.c` (the damage once per power
+  bomb) and `tests/test_mzm_c_tables.py` (the window table).
+- Validation on 2026-10-12: warning-clean build, CTest 30/30, the Python
+  suite (428 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0262 - Zero Mission shinespark and ballspark
 
 - `mzm_samus.c` ports the shinespark start of the ground poses (A without a

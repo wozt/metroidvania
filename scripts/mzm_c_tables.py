@@ -228,3 +228,22 @@ def block_table_lines(collision_tables: dict) -> list[str]:
         f"{collision_tables['tilemap'].get(i, 0)}:{collision_tables['tilemap_behavior'].get(i, 0)}"
         for i in range(tilemap_count)))
     return lines
+
+
+def power_bomb_window_lines(decomp: Path = DECOMP) -> list[str]:
+    """power_bomb.tsv: ``window <axis> v,...`` for each entry of
+    sHaze_PowerBomb_WindowValuesPointers (src/data/haze_data.c), the
+    (right, left) half-width pairs of the explosion's rows."""
+    text = _strip_comments((decomp / "src/data/haze_data.c").read_text(encoding="utf-8"))
+    arrays = {}
+    for name, body in re.findall(r"\b(sHaze_PowerBomb_Values\d+)\s*\[[^\]]*\]\s*=\s*\{([^}]*)\}",
+                                 text):
+        arrays[name] = [int(v) for v in body.replace("\n", " ").split(",") if v.strip()]
+    match = re.search(r"sHaze_PowerBomb_WindowValuesPointers\s*\[[^\]]*\]\s*=\s*\{([^}]*)\}", text)
+    if not match:
+        raise ValueError("sHaze_PowerBomb_WindowValuesPointers not found")
+    names = [item.strip() for item in match.group(1).split(",") if item.strip()]
+    lines = ["schema\tmetroidvania-mzm-power-bomb-v1"]
+    for axis, name in enumerate(names):
+        lines.append(f"window\t{axis}\t" + ",".join(map(str, arrays[name])))
+    return lines

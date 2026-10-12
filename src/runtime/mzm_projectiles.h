@@ -79,7 +79,9 @@ typedef enum {
 typedef enum {
     MZM_STAGE_INIT,
     MZM_STAGE_SPAWNING,
-    MZM_STAGE_MOVING
+    MZM_STAGE_MOVING,
+    /* PROJECTILE_STAGE_TUMBLING: a missile bounced off a sprite. */
+    MZM_STAGE_TUMBLING = 7
 } MzmProjectileStage;
 
 typedef struct {
@@ -100,6 +102,8 @@ typedef struct {
     /* The Plasma Beam's sPlasmaBeamOam_*_Wave tables (the Wave Beam was
      * equipped when it started). */
     bool wave_oam;
+    /* PROJ_STATUS_ON_SCREEN from the last ProjectileCheckDespawn. */
+    bool on_screen;
 } MzmProjectile;
 
 struct MzmProjectile;
@@ -174,6 +178,10 @@ int mzm_projectile_count(const MzmWeapons *weapons, MzmProjectileType type);
 /* The hitbox (subpixels around the position) each Projectile*Process*
  * routine sets for a projectile of this type and direction; the Plasma
  * Beam's depends on the Wave Beam in `items`. Bombs are not covered. */
+/* ProjectileStartTumblingMissile: a missile or super missile not weak to
+ * the sprite it hit bounces off it, away from the sprite's x, no longer
+ * hitting anything, and its thrust sound stops. */
+void mzm_projectile_start_tumbling(MzmProjectile *p, uint16_t sprite_x);
 void mzm_projectile_hitbox(MzmProjectileType type, MzmAim direction, uint32_t items,
                            int16_t *top, int16_t *bottom, int16_t *left, int16_t *right);
 /* The beam type and shot sound SamusCheckNewProjectile picks for the

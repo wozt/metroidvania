@@ -1614,6 +1614,8 @@ static void runtime_projectile_key(const MzmProjectile *projectile,uint32_t item
     }
     const char *shape=projectile->direction==MZM_AIM_UP||projectile->direction==MZM_AIM_DOWN?
         "Vertical":projectile->direction==MZM_AIM_FORWARD?"Horizontal":"Diagonal";
+    /* s(Super)MissileOam_Tumbling */
+    if(projectile->stage==MZM_STAGE_TUMBLING)shape="Tumbling";
     const char *flip=projectile->x_flip?(projectile->y_flip?"xy":"x"):
         (projectile->y_flip?"y":"none");
     /* The Plasma Beam has its Wave and NoWave tables; the Wave and Plasma
@@ -3646,7 +3648,8 @@ int main(int argc, char **argv) {
             if(!projectile->active || projectile->stage==MZM_STAGE_INIT ||
                projectile->hidden)continue;
             bool above=projectile->type==MZM_PROJECTILE_WAVE_BEAM ||
-                projectile->type==MZM_PROJECTILE_CHARGED_WAVE_BEAM || projectile->wave_oam;
+                projectile->type==MZM_PROJECTILE_CHARGED_WAVE_BEAM || projectile->wave_oam ||
+                projectile->stage==MZM_STAGE_TUMBLING;
             if(above!=(pass==1))continue;
             char key[160];
             runtime_projectile_key(projectile,equipment.items,key,sizeof key);

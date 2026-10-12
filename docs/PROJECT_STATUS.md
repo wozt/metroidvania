@@ -2988,6 +2988,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0268 - Zero Mission tumbling missiles
+
+- `mzm_sprites.c`: `ProjectileMissileHitSprite` and
+  `ProjectileSuperMissileHitSprite` now start `ProjectileStartTumblingMissile`
+  when the sprite is immune or not weak to them (the invincible particle and
+  the solid hit stay): the missile turns away from the sprite's x, stops its
+  thrust sound, loses `PROJ_STATUS_CAN_AFFECT_ENVIRONMENT` (no more sprite
+  hits) and draws in front of the backgrounds.
+- `mzm_projectiles.c`: the tumbling stage (`ProjectileMoveTumbling`: along
+  `sTumblingMissileSpeed`, its last speed kept, a pixel a frame sideways,
+  through walls, removed once `ProjectileCheckDespawn` found it off
+  screen); `ProjectileCheckDespawn` now records `PROJ_STATUS_ON_SCREEN`.
+- Runtime: the `Tumbling` OAM tables of missiles and super missiles.
+- Checked in brinstar_003 (L and R held, B): a missile fired diagonally at a
+  brown Ripper bounces back and falls tumbling.
+- Tests: `tests/test_mzm_samus.c` (the tumbling speeds, sideways drift,
+  no wall collision, removal off screen) and `tests/test_mzm_sprites.c`
+  (the Ripper's tumbling missile, its thrust stop and no second hit).
+- Validation on 2026-10-12: warning-clean build, CTest 30/30, the Python
+  suite (430 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0267 - Zero Mission Wave and Plasma Beams, beam and missile trails
 
 - `mzm_projectiles.c`: `mzm_beam_type` follows `SamusCheckNewProjectile`

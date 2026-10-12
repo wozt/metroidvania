@@ -524,10 +524,44 @@ static void spend_ammo(MzmWeapons *weapons, MzmEquipment *equipment, bool super)
         weapons->highlighted = MZM_WEAPON_NONE;
 }
 
+void mzm_projectile_start_tumbling(MzmProjectile *p, uint16_t sprite_x) {
+    p->stage = MZM_STAGE_TUMBLING;
+    p->timer = 0;
+    p->anim_counter = 0;
+    p->anim_frame = 0;
+    p->x_flip = (uint16_t)p->x > sprite_x;
+    mzm_sfx_stop(p->type == MZM_PROJECTILE_SUPER_MISSILE ? MZM_SOUND_SUPER_MISSILE_THRUST
+                                                         : MZM_SOUND_MISSILE_THRUST);
+}
+
+/* ProjectileMoveTumbling: removed once off screen; falls along
+ * sTumblingMissileSpeed (its last speed kept) and drifts a pixel a frame. */
+static void move_tumbling(MzmProjectile *p) {
+    static const int16_t speeds[15] = {-12, -10, -8, -6, -4, -2, 0, 0, 1, 2, 4, 8, 12, 16, 20};
+    if (!p->on_screen) {
+        p->active = false;
+        return;
+    }
+    if (p->timer >= 15) {
+        p->y += speeds[14];
+    } else {
+        p->y += speeds[p->timer];
+        p->timer++;
+    }
+    p->x += p->x_flip ? MZM_PIXEL_SIZE : -MZM_PIXEL_SIZE;
+}
+
 /* ProjectileProcessMissile / ProjectileProcessSuperMissile */
 static void process_missile(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *samus,
                             MzmEquipment *equipment, const MzmCollision *collision) {
     bool super = p->type == MZM_PROJECTILE_SUPER_MISSILE;
+    if (p->stage == MZM_STAGE_TUMBLING) {
+        /* The PROJ_STATUS_NOT_DRAWN ammo decrement only applies to a
+         * missile that starts tumbling before its first update, which the
+         * update order never allows. */
+        move_tumbling(p);
+        return;
+    }
     if (p->stage == MZM_STAGE_MOVING) {
         if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
         projectile_move(p, p->timer + (super ? MZM_QUARTER_BLOCK_SIZE - MZM_PIXEL_SIZE :
@@ -741,8 +775,12 @@ static void check_despawn(const MzmWeapons *weapons, MzmProjectile *p, const Mzm
         uint16_t bottom = (uint16_t)(y_range + distance + 160 * MZM_SUBPIXELS_PER_PIXEL);
         uint16_t left = (uint16_t)(x_range - distance);
         uint16_t right = (uint16_t)(x_range + distance + 240 * MZM_SUBPIXELS_PER_PIXEL);
-        if (left < x && x < right && top < y && y < bottom) return;
+        if (left < x && x < right && top < y && y < bottom) {
+            p->on_screen = true;
+            return;
+        }
     }
+    p->on_screen = false;
     int32_t dy = p->y - (samus->y - 1 - (MZM_BLOCK_SIZE + MZM_EIGHTH_BLOCK_SIZE));
     int32_t dx = p->x - samus->x;
     if (dy < 0) dy = -dy;

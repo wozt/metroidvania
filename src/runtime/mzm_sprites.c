@@ -3923,7 +3923,10 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
         uint8_t weakness = weakness_of(s, tables);
         for (int p = 0; p < MZM_MAX_PROJECTILES; ++p) {
             MzmProjectile *proj = &weapons->list[p];
-            if (!proj->active || proj->type == MZM_PROJECTILE_POWER_BOMB) continue;
+            /* A tumbling missile no longer has PROJ_STATUS_CAN_AFFECT_ENVIRONMENT. */
+            if (!proj->active || proj->type == MZM_PROJECTILE_POWER_BOMB ||
+                proj->stage == MZM_STAGE_TUMBLING)
+                continue;
             if (proj->type == MZM_PROJECTILE_BOMB) {
                 /* ProjectileBombHitSprite: the bomb's hitbox, no particle,
                  * and the bomb stays. */
@@ -3957,12 +3960,14 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
             /* The particle at the projectile: its impact, or the
              * invincible impact when the sprite is not weak to it. */
             uint8_t effect = MZM_PE_HITTING_SOMETHING_INVINCIBLE;
+            bool missile = proj->type == MZM_PROJECTILE_MISSILE ||
+                           proj->type == MZM_PROJECTILE_SUPER_MISSILE;
             if (s->immune_to_projectiles) {
-                /* ProjectileHitSpriteImmuneToProjectiles (missiles would
-                 * tumble: not ported). */
+                /* ProjectileHitSpriteImmuneToProjectiles; missiles tumble. */
                 if ((s->isft & 0x7F) < 2) set_isft(s, 2);
                 if (effects) mzm_particle_set(effects, py, px, effect);
-                if (!plasma) proj->active = false;
+                if (missile) mzm_projectile_start_tumbling(proj, s->x);
+                else if (!plasma) proj->active = false;
                 continue;
             }
             uint8_t freeze_flag = s->secondary ? tables->secondary_freeze[s->sprite_id]
@@ -3981,7 +3986,10 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                     deal_damage(s, MISSILE_DAMAGE);
                     effect = MZM_PE_HITTING_SOMETHING_WITH_MISSILE;
                 } else {
-                    hit_solid(s);   /* ProjectileStartTumblingMissile: not ported */
+                    hit_solid(s);
+                    if (effects) mzm_particle_set(effects, py, px, effect);
+                    mzm_projectile_start_tumbling(proj, s->x);
+                    continue;
                 }
                 break;
             case MZM_PROJECTILE_LONG_BEAM:  /* ProjectileHitSprite, LONG_BEAM_DAMAGE */
@@ -4059,6 +4067,9 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                     effect = MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE;
                 } else {
                     hit_solid(s);
+                    if (effects) mzm_particle_set(effects, py, px, effect);
+                    mzm_projectile_start_tumbling(proj, s->x);
+                    continue;
                 }
                 break;
             }

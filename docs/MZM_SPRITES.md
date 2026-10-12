@@ -311,7 +311,7 @@ into a side stops her (`SpriteUtilCheckStopSamusAgainstSolidSpriteLeft` /
 landing request and `STANDING_ENEMY`, the release over two frames and the
 drop to `STANDING_MIDAIR` (also when the sprite is killed under her).
 
-Not ported yet: the multiple large energy pickup, tumbling missiles,
+Not ported yet: the multiple large energy pickup,
 screen-shake falls, splashes in liquids, the hard-mode and event
 spritesets (where the Long Beam Dessgeega is placed), the door lock
 lifecycle, screen shakes, the Chozodia alarm's music and palette, and

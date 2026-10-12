@@ -1306,6 +1306,50 @@ static void test_wave_and_plasma(void) {
     weapons.frame8 = 0;
 }
 
+/* ProjectileMoveTumbling: up then down along sTumblingMissileSpeed (the
+ * last speed kept), a pixel a frame sideways, no wall collision, removed
+ * off screen; ProjectileCheckDespawn keeps on-screen projectiles. */
+static void test_tumbling_missile(void) {
+    World w;
+    world_init(&w);
+    fill(&w.grid, 0, 0, GRID_W, GRID_H);    /* solid everywhere */
+    place(&w, 64, 224);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    weapons.has_camera = true;
+    weapons.camera_x = weapons.camera_y = 0;
+    MzmProjectile *p = &weapons.list[0];
+    *p = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE, .x = 400, .y = 400,
+                         .x_flip = true, .on_screen = true};
+    mzm_projectile_start_tumbling(p, 380);
+    assert(p->stage == MZM_STAGE_TUMBLING && p->x_flip);
+    static const int16_t speeds[] = {-12, -10, -8, -6, -4, -2, 0, 0, 1, 2, 4, 8, 12, 16, 20, 20, 20};
+    int32_t y = 400, x = 400;
+    for (int i = 0; i < 17; ++i) {
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+        y += speeds[i];
+        x += 4;
+        assert(p->active && p->y == y && p->x == x && p->on_screen);
+    }
+    /* Leaving the screen (plus its draw distance and padding): removed on
+     * the next update. */
+    p->y = 160 * 4 + 64 + 1;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(p->active && !p->on_screen);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(!p->active);
+    /* Without the camera every projectile counts as off screen. */
+    weapons.has_camera = false;
+    *p = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_SUPER_MISSILE, .x = 400, .y = 400,
+                         .on_screen = true};
+    mzm_projectile_start_tumbling(p, 500);
+    assert(!p->x_flip);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(p->active && p->x == 396 && !p->on_screen);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(!p->active);
+}
+
 /* Standing on a solid (frozen) sprite: the landing request from
  * SpriteUtilSamusStandingOnSprite lands a midair Samus, and STANDING_ENEMY
  * keeps a ground pose over air until it is released. */
@@ -1354,6 +1398,7 @@ int main(void) {
     test_charge_beam();
     test_standing_on_sprite();
     test_wave_and_plasma();
+    test_tumbling_missile();
     puts("MZM Samus controller tests passed");
     return 0;
 }

@@ -153,7 +153,7 @@ doors, all six floor slopes at subpixel precision, enemy-only, stop-enemy and
 tank blocks. Known gaps, kept explicit: Samus's box is swept against those
 types instead of the original point probes, so slope speed changes
 (`SamusChangeVelocityOnSlope`) and the partial-ceiling position nudges are
-absent, and pass-through platforms (unused in the original rooms) are air. The pistol, tumbling missiles, aiming
+absent, and pass-through platforms (unused in the original rooms) are air. The pistol, aiming
 while hanging, crawling and Morph Ball tunnel pulls are not implemented. Lethal damage enters the dying pose without the original
 screen-centre drift and fade. F6 remains a separate raw-catalogue browser for
 all 1,384 sequences.

@@ -455,14 +455,24 @@ int main(void) {
     step(&r, 0);
     assert(r.x == x0 - 2);
     /* Brown rippers only take super missiles: beams and missiles stun them
-     * for 3 frames and are consumed. */
+     * for 3 frames; the beam is consumed, the missile tumbles off it
+     * (ProjectileStartTumblingMissile: away from the sprite's x, no
+     * longer hitting sprites) with its thrust sound stopped. */
     weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
                                       .x = r.x, .y = r.y - 20};
     weapons.list[1] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
                                       .x = r.x, .y = r.y - 20};
+    weapons.list[1].x += 4;
+    mzm_sfx_clear();
     mzm_sprites_projectile_hits(&r, 1, &weapons, &tables, NULL);
     assert(r.health == 20 && (r.isft & 0x7F) == 3 && !weapons.list[0].active &&
-           !weapons.list[1].active);
+           weapons.list[1].active && weapons.list[1].stage == MZM_STAGE_TUMBLING &&
+           weapons.list[1].x_flip && weapons.list[1].timer == 0 &&
+           mzm_sfx_requested(MZM_SFX_STOP, MZM_SOUND_MISSILE_THRUST));
+    r.isft = 0;
+    mzm_sprites_projectile_hits(&r, 1, &weapons, &tables, NULL);
+    assert(r.isft == 0);
+    weapons.list[1].active = false;
     weapons.list[2] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_SUPER_MISSILE,
                                       .x = r.x, .y = r.y - 20};
     mzm_sprites_projectile_hits(&r, 1, &weapons, &tables, NULL);

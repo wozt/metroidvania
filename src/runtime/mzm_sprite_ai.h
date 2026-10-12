@@ -121,6 +121,8 @@ bool ai_samus_above(const Ctx *c, uint16_t y_range, uint16_t x_range);
 /* SpriteUtilCheckOutOfRoomEffect / SpriteUtilCheckInRoomEffect (no splash). */
 bool ai_left_room_effect(const Ctx *c, uint16_t old_y, uint16_t y);
 bool ai_entered_room_effect(const Ctx *c, uint16_t old_y, uint16_t y);
+/* gCurrentAffectingClipdata.hazard after a ClipdataProcess at a point. */
+uint8_t ai_hazard_at(const Ctx *c, uint16_t y, uint16_t x);
 void ai_face_samus(const Ctx *c);
 /* SpriteUtilUpdateFreezeTimer */
 void ai_update_freeze_timer(Ctx *c);

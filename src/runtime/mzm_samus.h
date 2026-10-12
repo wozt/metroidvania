@@ -385,7 +385,15 @@ typedef struct MzmSamus {
     /* gBg1XPosition / gBg1YPosition (subpixels) for SamusChangeToHurtPose
      * and SamusDying. */
     int32_t camera_x, camera_y;
+    /* gSamusHazardDamage: damageTimer, knockbackTimer, paletteTimer. */
+    uint8_t hazard_damage_timer, hazard_knockback_timer, hazard_palette_timer;
 } MzmSamus;
+
+/* HazardType of ClipdataCheckCurrentAffectingAtPosition's low byte. */
+enum {
+    MZM_HAZARD_NONE, MZM_HAZARD_WATER, MZM_HAZARD_LAVA, MZM_HAZARD_WEAK_ACID,
+    MZM_HAZARD_STRONG_ACID, MZM_HAZARD_HEAT, MZM_HAZARD_COLD_KNOCKBACK, MZM_HAZARD_COLD
+};
 
 const MzmBlockHitbox *mzm_block_hitbox(MzmHitboxType type);
 /* sSamusCollisionData[pose][SCDF_BLOCK_HITBOX] and [SCDF_STANDING_STATUS]. */
@@ -408,9 +416,10 @@ bool mzm_equipment_damage(MzmEquipment *equipment, int damage);
 void mzm_samus_init(MzmSamus *samus, int32_t x, int32_t y, int facing);
 void mzm_samus_box(const MzmSamus *samus, float *x, float *y,
                    float *w, float *h);
-/* SamusUpdate followed by SamusUpdateHitboxMovingDirection. */
+/* SamusUpdate followed by SamusUpdateHitboxMovingDirection; the hazards
+ * (SamusTakeHazardDamage) take energy from the equipment. */
 void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
-                      const MzmEquipment *equipment,
+                      MzmEquipment *equipment,
                       const MzmCollision *collision,
                       const MzmAnimationSource *animation);
 /* SamusSetPose(SPOSE_HURT_REQUEST): `lethal` when the energy is 0. */

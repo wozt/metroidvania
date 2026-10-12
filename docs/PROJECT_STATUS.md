@@ -2988,6 +2988,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0279 - Zero Mission liquids and hazards, Skulteras
+
+- The runtime computes `ClipdataUpdateCurrentAffecting`'s hazard: the
+  water, lava and acid blocks, else the room effect's hazard above or below
+  its surface (`sHazardsDefinitions`, the damage effect of the exported
+  `sHazeData`, only with a BG0); the room's `RoomEffect` is read from its
+  `L` line.
+- Samus: `SamusUpdatePhysics` slows her in liquids (halved speeds and
+  gravity, no Gravity Suit) and `SamusTakeHazardDamage` takes energy at the
+  native per-suit rates (the submerged sound, the cold knockback, death).
+- Sprites see the hazard (`MzmSpriteWorld.hazard`); Skulteras (`skultera.c`)
+  patrol, turn, chase Samus and rise only in water.
+- Checked in crateria_007 (Samus at the slowed cap in the water, the
+  Skulteras patrolling and hurting her).
+- Not ported: the surface wave (`gWaterMovement`), the liquid enter and
+  exit effects and sounds.
+- Tests: `tests/test_mzm_samus.c` (water slowing, Gravity Suit, lava damage
+  rates, death), `tests/test_mzm_sprites.c` (Skultera),
+  `tests/test_runtime_steep_slopes.c` (the hazard rules).
+
 ## Patch 0278 - Zero Mission Morph Ball, Power Grip and Charge Beam pickups
 
 - `src/runtime/mzm_item_sprites.c` ports the three item sprites outside the

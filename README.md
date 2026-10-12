@@ -225,8 +225,9 @@ This shortcut consumes only local ignored assets. Samus is driven by a
 transliteration of the pinned decompilation's `src/samus.c`: every pose
 handler and its graphics loop, the pose changes, the physics, the native
 point-probe collisions (corners, slopes, ledges) and the animation and arm
-cannon selection of `SamusUpdateGraphicsOam`; the triggers of the elevator,
-save, map, zipline and escape poses and the liquids are not ported yet. Controls follow the GBA layout:
+cannon selection of `SamusUpdateGraphicsOam`, with the liquids and hazards
+(water slows her, lava, acid, heat and cold hurt); the triggers of the
+elevator, save, map, zipline and escape poses are not ported yet. Controls follow the GBA layout:
 arrows/WASD are the D-pad, Space/Z is A (jump), F/X is B (fire), E/Q hold L
 for diagonal aim up/down. Gamepads work in both runtimes (see "Gamepads"
 below). Down crouches and Down again morphs; Up unmorphs and
@@ -272,7 +273,7 @@ hitbox.
 
 Rooms show their native Zoomers, Zeelas, Rippers, Skrees, Wavers,
 Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes,
-Multiviolas, Rinkas, Gerutas, Ripper IIs, Squeepts, Gamets and Space Pirates (with their lasers and the Chozodia alarm,
+Multiviolas, Rinkas, Gerutas, Ripper IIs, Squeepts, Gamets, Skulteras and Space Pirates (with their lasers and the Chozodia alarm,
 rung by the searchlights, security lasers and searchlight eyes)
 (`python3 -m scripts.mzm_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
 they move with their native AIs, hurt Samus on contact, take beam and missile

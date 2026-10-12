@@ -13,7 +13,7 @@
  * Ripper II and Squeept AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c,
  * skree.c, waver.c, sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c,
  * geega.c, zebbo.c, reo.c, mella.c, holtz.c, multiviola.c, rinka.c, geruta.c,
- * ripper2.c, squeept.c, gamet.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * ripper2.c, squeept.c, gamet.c, skultera.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes, and the Space Pirates with their lasers
  * (src/sprites_ai/space_pirate.c, ported in mzm_space_pirate.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
@@ -94,6 +94,9 @@ typedef struct {
     /* gEffectYPosition: the room effect's surface in subpixels (0 without
      * one). */
     uint16_t effect_y;
+    /* gCurrentAffectingClipdata.hazard after ClipdataProcess at a subpixel
+     * point (HazardType); NULL: no hazards. */
+    uint8_t (*hazard)(void *context, uint16_t y, uint16_t x);
 } MzmSpriteWorld;
 
 /* ClipdataMovement values the ported sprites read. */
@@ -296,6 +299,9 @@ enum {
     MZM_ITEM_SPRITE_CHARGE_BEAM_VISIBLE, MZM_ITEM_SPRITE_CHARGE_BEAM_GLOW, MZM_ITEM_SPRITE_ANIMS,
 };
 extern const char *const mzm_item_sprite_anim_names[MZM_ITEM_SPRITE_ANIMS];
+/* Skultera OAM tables (src/data/sprites/skultera.c). */
+enum { MZM_SKULTERA_IDLE, MZM_SKULTERA_TURNING_AROUND, MZM_SKULTERA_CHASING_SAMUS, MZM_SKULTERA_ANIMS };
+extern const char *const mzm_skultera_anim_names[MZM_SKULTERA_ANIMS];
 /* Squeept OAM tables (src/data/sprites/squeept.c). */
 enum { MZM_SQUEEPT_GOING_UP, MZM_SQUEEPT_TURNING_AROUND, MZM_SQUEEPT_GOING_DOWN, MZM_SQUEEPT_ANIMS };
 extern const char *const mzm_squeept_anim_names[MZM_SQUEEPT_ANIMS];
@@ -371,7 +377,7 @@ enum {
     MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
     MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_FAMILY_CHOZO_STATUE,
     MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
-    MZM_FAMILY_ITEM_SPRITE,
+    MZM_FAMILY_ITEM_SPRITE, MZM_FAMILY_SKULTERA,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -410,7 +416,7 @@ enum {
     MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
     MZM_PSPRITE_GERUTA_RED = 54, MZM_PSPRITE_GERUTA_GREEN = 55, MZM_PSPRITE_RIPPERII = 113,
     MZM_PSPRITE_SQUEEPT = 56,
-    MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SKULTERA = 69, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,

@@ -103,7 +103,7 @@ static void hurt(void *context, uint16_t damage, bool sprite_on_left) {
 }
 
 int main(void) {
-    MzmSpriteWorld world = {NULL, block, 0, 0, movement, 0};
+    MzmSpriteWorld world = {NULL, block, 0, 0, movement, 0, NULL};
 
     /* ClipdataConvertToCollision */
     clear();
@@ -2825,6 +2825,57 @@ int main(void) {
         assert(room[0].pose == 0x2B);
         statue_frame.equipment = &items;
     }
+    /* Skulteras patrol a pixel every three frames, chase Samus every two
+     * and rise only in water. */
+    {
+        static MzmSpriteKind skultera_kind;
+        for (int a = 0; a < MZM_SKULTERA_ANIMS; ++a) {
+            skultera_kind.counts[a] = 2;
+            skultera_kind.timers[a][0] = skultera_kind.timers[a][1] = 3;
+        }
+        frame.kinds[MZM_FAMILY_SKULTERA] = &skultera_kind;
+        tables.health[MZM_PSPRITE_SKULTERA] = 20;
+        clear();
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        MzmSprite sk;
+        mzm_sprite_init_primary(&sk, MZM_PSPRITE_SKULTERA, 0, 9, 10, 0, 0);
+        frame.samus_x = 60000;
+        frame.samus_y = 0;
+        step(&sk, 0);
+        /* rng & 1 = 0: X flip, head to the right. */
+        assert(sk.pose == 8 && sk.status & MZM_SPRITE_STATUS_X_FLIP && sk.hitbox_right == 40 &&
+               sk.hitbox_left == -24 && sk.hitbox_top == -96 && sk.health == 20);
+        step(&sk, 0);
+        assert(sk.pose == 9 && sk.x_spawn == sk.x && sk.work0 == 3);
+        uint16_t sx = sk.x;
+        for (int i = 0; i < 9; ++i) step(&sk, 0);
+        assert(sk.x == sx + 3 * 4);
+        /* Samus behind it within 5 blocks: it turns. */
+        frame.samus_x = (uint16_t)(sk.x - 200);
+        frame.samus_y = (uint16_t)(sk.y - 32);
+        step(&sk, 0);
+        assert(sk.pose == 0xA);
+        step(&sk, 0);
+        assert(sk.pose == 0xB && sk.anim == MZM_SKULTERA_TURNING_AROUND);
+        frames = 0;
+        while (sk.pose == 0xB && frames++ < 20) step(&sk, 0);
+        assert(sk.pose == 9 && !(sk.status & MZM_SPRITE_STATUS_X_FLIP) && sk.hitbox_left == -40);
+        /* Ahead of it now: the chase, two frames a pixel. */
+        step(&sk, 0);
+        assert(sk.pose == 0x34);
+        step(&sk, 0);
+        assert(sk.pose == 0x35 && sk.anim == MZM_SKULTERA_CHASING_SAMUS);
+        sx = sk.x;
+        for (int i = 0; i < 6; ++i) step(&sk, 0);
+        assert(sk.x <= sx - 2 * 4);
+        /* Samus far above: no rise out of the water (no hazard here). */
+        uint16_t sy = sk.y;
+        frame.samus_y = (uint16_t)(sk.y - 200);
+        step(&sk, 0);
+        assert(sk.y == sy);
+        frame.samus_x = 60000;
+    }
+
     /* The Morph Ball, the Power Grip and the Charge Beam: touched, they give
      * their item, hold Samus with the banner and flicker until it lets her
      * go; their secondary sprites follow. */

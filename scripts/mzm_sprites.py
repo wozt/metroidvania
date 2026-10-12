@@ -92,6 +92,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_SQUEEPT": 0, "PSPRITE_GAMET_BLUE_SINGLE": 0, "PSPRITE_GAMET_RED_SINGLE": 0,
           "PSPRITE_GAMET_BLUE_LEADER": 0, "PSPRITE_GAMET_BLUE_FOLLOWER": 0,
           "PSPRITE_MORPH_BALL": 0, "PSPRITE_POWER_GRIP": 0, "PSPRITE_CHARGE_BEAM": 0,
+          "PSPRITE_SKULTERA": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
@@ -400,7 +401,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         wanted.update([graphics[sprite], palettes[sprite], *tables])
     tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
     wanted.update(tables)
-    wanted.update(["sSecondarySpriteStats", *AI_TABLES])
+    wanted.update(["sSecondarySpriteStats", "sHazeData", *AI_TABLES])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values(), *PARTICLES])
     banner_source = (decomp / "src/data/sprites/message_banner.c").read_text(encoding="utf-8")
     banner_tables = [t for t in frame_tables(banner_source) if t.startswith("sMessageBannerOam")]
@@ -464,6 +465,9 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         lines.append("\t".join(["sstats", name[len("SSPRITE_"):], str(value), *map(str, row)]))
     for table in AI_TABLES:
         lines.append("\t".join(["table", table, *map(str, words(table, True, 2))]))
+    # sHazeData[EFFECT_HAZE_COUNT][4]: haze value, damage effect, water
+    # movement and blending kind of each room effect (HazeSetBackgroundEffect).
+    lines.append("\t".join(["haze", *map(str, words("sHazeData", False, 1))]))
     from scripts import mzm_c_tables
     for source, (headers, names) in MULTI_SPRITE_DATA.items():
         for name in names:

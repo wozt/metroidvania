@@ -78,6 +78,7 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
      * transparency and BG properties, the block layers BG0 (when RLE), BG1
      * and BG2 as sheet indices, and the LZ77 text layers BG0 and BG3. */
     int effect_y;                   /* effectY in blocks (255: none) */
+    int visual_effect;              /* RoomEffect of the L line */
     bool has_backgrounds; int tileset, transparency, bg0_prop, bg2_prop, bg3_prop, bg3_scrolling;
     int bg_w[3], bg_h[3]; bool bg_present[3]; unsigned short bg[3][MAX_ROOM_CELLS];
     bool text_present[4]; int text_size[4], text_w[4], text_h[4];
@@ -335,6 +336,15 @@ static bool parse_native_room(const char *path, Room *room) {
                 room->tileset < 0 || room->tileset > 78)
                 goto failure;
             room->has_backgrounds = true;
+            /* RoomEffect */
+            static const char *const effects[] = {
+                "EFFECT_NONE", "EFFECT_WATER", "EFFECT_LAVA", "EFFECT_WEAK_ACID",
+                "EFFECT_LAVA_HEAT_HAZE", "EFFECT_STRONG_ACID", "EFFECT_SNOWFLAKES_COLD_KNOCKBACK",
+                "EFFECT_SNOWFLAKES_COLD", "EFFECT_HEAT_BG3_HAZE", "EFFECT_HEAT_BG2_BG3_HAZE",
+                "EFFECT_BG3_GRADIENT", "EFFECT_BG2_GRADIENT", "EFFECT_HAZE_BG1_BG2_BG3"};
+            room->visual_effect = 0;
+            for (int e = 0; e < (int)(sizeof effects / sizeof effects[0]); ++e)
+                if (!strcmp(effect, effects[e])) room->visual_effect = e;
             continue;
         }
         if (line[0] == 'R') {
@@ -835,6 +845,37 @@ static uint16_t runtime_clip_behavior(uint16_t raw) {
         return common < runtime_block_tables.tilemap_count ? runtime_block_tables.tilemap_behaviors[common] : 0;
     }
     return raw < runtime_block_tables.main_count ? runtime_block_tables.main_behaviors[raw] : 0;
+}
+
+/* sHazeData from the sprite tables. */
+static uint8_t runtime_haze[13][4];
+static bool runtime_haze_ok;
+
+/* ClipdataUpdateCurrentAffecting's hazard: the hazard blocks
+ * (CLIP_BEHAVIOR_WATER .. STRONG_ACID), else the room effect's hazard above
+ * or below gEffectYPosition (sHazardsDefinitions) when the room has a BG0
+ * and its effect has a haze (HazeSetBackgroundEffect sets damageEffect). */
+static uint8_t runtime_hazard(const Room *room, uint16_t y, uint16_t x) {
+    static const uint8_t definitions[8][2] = {
+        {MZM_HAZARD_NONE, MZM_HAZARD_NONE}, {MZM_HAZARD_NONE, MZM_HAZARD_WATER},
+        {MZM_HAZARD_NONE, MZM_HAZARD_LAVA}, {MZM_HAZARD_NONE, MZM_HAZARD_WEAK_ACID},
+        {MZM_HAZARD_HEAT, MZM_HAZARD_LAVA}, {MZM_HAZARD_NONE, MZM_HAZARD_STRONG_ACID},
+        {MZM_HAZARD_COLD_KNOCKBACK, MZM_HAZARD_NONE}, {MZM_HAZARD_COLD, MZM_HAZARD_NONE},
+    };
+    int column = x / 64, row = y / 64;
+    if (column >= room->width / 16 || row >= room->height / 16) return MZM_HAZARD_NONE;
+    uint16_t behavior = runtime_clip_behavior(room->clip[row * (room->width / 16) + column]);
+    if ((uint16_t)(behavior - 0x40) <= 3) return (uint8_t)(MZM_HAZARD_WATER + behavior - 0x40);
+    int visual = room->visual_effect;
+    if (!runtime_haze_ok || room->bg0_prop == 0 || visual < 0 || visual >= 13 ||
+        runtime_haze[visual][0] == 0)
+        return MZM_HAZARD_NONE;
+    uint8_t damage = runtime_haze[visual][1];
+    if (damage == 0 || damage >= 8) return MZM_HAZARD_NONE;
+    if (definitions[damage][1] == MZM_HAZARD_NONE) return definitions[damage][0];
+    /* gEffectYPosition without gWaterMovement's wave (not ported). */
+    uint16_t effect_y = room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
+    return effect_y <= y ? definitions[damage][1] : definitions[damage][0];
 }
 
 /* BgClipSetClipdataBlockValue: the raw value and its collision. */
@@ -1917,6 +1958,10 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         if (!strcmp(line, "random")) {
             for (random_count = 0; random_count < 32; ++random_count)
                 sprites->tables.random[random_count] = (uint8_t)strtol(cursor, &cursor, 10);
+        } else if (!strcmp(line, "haze")) {
+            for (int i = 0; i < 13 * 4; ++i)
+                runtime_haze[i / 4][i % 4] = (uint8_t)strtol(cursor, &cursor, 10);
+            runtime_haze_ok = true;
         } else if (!strcmp(line, "falling")) {
             for (falling_count = 0; falling_count < 16; ++falling_count)
                 sprites->tables.falling[falling_count] = (int16_t)strtol(cursor, &cursor, 10);
@@ -2109,18 +2154,23 @@ static uint8_t runtime_sprite_movement(void *context, uint16_t y, uint16_t x) {
     return room->movements[row * (room->width / 16) + column];
 }
 
+/* gCurrentAffectingClipdata.hazard after ClipdataProcess at a point. */
+static uint8_t runtime_sprite_hazard(void *context, uint16_t y, uint16_t x) {
+    return runtime_hazard(context, y, x);
+}
+
 /* ClipdataProcessForSamus: past the room's right edge (or left of it, as
  * the u16 position wraps) a solid block, below it air. */
 static uint32_t runtime_samus_clipdata(void *context, uint16_t y, uint16_t x) {
     const Room *room = context;
     if (x / 64 >= room->width / 16) return MZM_SAMUS_CLIP_SOLID_FLAG | CLIP_SOLID;
     if (y / 64 >= room->height / 16) return CLIP_AIR;
-    MzmSpriteWorld world = {(void *)room, runtime_sprite_block, 0, 0, NULL, 0};
+    MzmSpriteWorld world = {(void *)room, runtime_sprite_block, 0, 0, NULL, 0, NULL};
     return mzm_clipdata_process(&world, y, x, MZM_ACTOR_SAMUS);
 }
 
-/* ClipdataCheckCurrentAffectingAtPosition: the block's movement (no
- * hazard: the runtime has no liquids, heat or cold). The elevator blocks are
+/* ClipdataCheckCurrentAffectingAtPosition: the block's movement and the
+ * hazard (runtime_hazard). The elevator blocks are
  * reported as none, as the elevator pads and their room changes are not
  * ported. */
 static uint32_t runtime_samus_affecting(void *context, uint16_t y, uint16_t x) {
@@ -2128,7 +2178,7 @@ static uint32_t runtime_samus_affecting(void *context, uint16_t y, uint16_t x) {
     if (movement == MZM_SAMUS_MOVEMENT_ELEVATOR_DOWN_BLOCK ||
         movement == MZM_SAMUS_MOVEMENT_ELEVATOR_UP_BLOCK)
         movement = MZM_CLIPDATA_MOVEMENT_NONE;
-    return (uint32_t)movement << 16;
+    return (uint32_t)movement << 16 | runtime_hazard(context, y, x);
 }
 
 /* ClipdataCheckGroundEffect: sGroundEffectsClipdataValues of the block's
@@ -2298,7 +2348,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     /* gEffectYPosition without gWaterMovement's wave (not ported). */
     uint16_t effect_y = room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
-                            (uint16_t)((int)cy * 4), runtime_sprite_movement, effect_y};
+                            (uint16_t)((int)cy * 4), runtime_sprite_movement, effect_y,
+                            runtime_sprite_hazard};
     mzm_sprite_debris_process(&sprites->effects, &world, &sprites->tables,
                               &sprites->effect_kinds);
     /* SpriteUtilCheckStopSpritesPose: no Samus collision while movement is

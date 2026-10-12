@@ -169,6 +169,10 @@ static const char *const item_sprites[MZM_ITEM_SPRITE_ANIMS] = {
     "MORPH_BALL", "MORPH_BALL", "POWER_GRIP", "POWER_GRIP", "CHARGE_BEAM", "CHARGE_BEAM",
     "CHARGE_BEAM",
 };
+const char *const mzm_skultera_anim_names[MZM_SKULTERA_ANIMS] = {
+    "SkulteraOam_Idle", "SkulteraOam_TurningAround", "SkulteraOam_ChasingSamus",
+};
+static const char *const skultera_sprites[MZM_SKULTERA_ANIMS] = {"SKULTERA", "SKULTERA", "SKULTERA"};
 const char *const mzm_squeept_anim_names[MZM_SQUEEPT_ANIMS] = {
     "SqueeptOam_GoingUp", "SqueeptOam_TurningAround", "SqueeptOam_GoingDown",
 };
@@ -284,6 +288,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ZEBBO] = {MZM_PIPE_BUG_ANIMS, mzm_zebbo_anim_names, zebbo_sprites},
     [MZM_FAMILY_GAMET] = {MZM_PIPE_BUG_ANIMS, mzm_gamet_anim_names, gamet_sprites},
     [MZM_FAMILY_ITEM_SPRITE] = {MZM_ITEM_SPRITE_ANIMS, mzm_item_sprite_anim_names, item_sprites},
+    [MZM_FAMILY_SKULTERA] = {MZM_SKULTERA_ANIMS, mzm_skultera_anim_names, skultera_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -3425,6 +3430,170 @@ bool ai_entered_room_effect(const Ctx *c, uint16_t old_y, uint16_t y) {
     return old_y < effect && y >= effect;
 }
 
+/* gCurrentAffectingClipdata.hazard after a ClipdataProcess at a point. */
+uint8_t ai_hazard_at(const Ctx *c, uint16_t y, uint16_t x) {
+    return c->world->hazard ? c->world->hazard(c->world->context, y, x) : 0;
+}
+
+/* Skultera poses (skultera.c). */
+enum {
+    SKULTERA_POSE_IDLE_INIT = 0x8,
+    SKULTERA_POSE_IDLE = 0x9,
+    SKULTERA_POSE_TURNING_AROUND = 0xA,
+    SKULTERA_POSE_CHECK_TURNING_AROUND_ENDED = 0xB,
+    SKULTERA_POSE_CHASING_SAMUS_INIT = 0x34,
+    SKULTERA_POSE_CHASING_SAMUS = 0x35,
+    SKULTERA_HEAD_HITBOX = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE,
+    SKULTERA_TAIL_HITBOX = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE,
+    SKULTERA_TERRITORY_RANGE = BLOCK_SIZE * 8,
+};
+
+/* SkulteraSetSidesHitbox: the head ahead, the tail behind. */
+static void skultera_sides(MzmSprite *s) {
+    if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+        s->hitbox_left = -SKULTERA_TAIL_HITBOX;
+        s->hitbox_right = SKULTERA_HEAD_HITBOX;
+    } else {
+        s->hitbox_left = -SKULTERA_HEAD_HITBOX;
+        s->hitbox_right = SKULTERA_TAIL_HITBOX;
+    }
+}
+
+/* SkulteraXMovement: true against a wall. */
+static bool skultera_x_movement(Ctx *c, uint16_t movement) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y - HALF_BLOCK_SIZE);
+    if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+        if (ai_collision_at(c, y, (uint16_t)(s->x + THREE_QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)) !=
+            MZM_COLLISION_SOLID) {
+            s->x = (uint16_t)(s->x + movement);
+            return false;
+        }
+        return true;
+    }
+    if (ai_collision_at(c, y, (uint16_t)(s->x - (THREE_QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE))) !=
+        MZM_COLLISION_SOLID) {
+        s->x = (uint16_t)(s->x - movement);
+        return false;
+    }
+    return true;
+}
+
+/* SkulteraIdleInit */
+static void skultera_idle_init(MzmSprite *s) {
+    s->x_spawn = s->x;
+    s->pose = SKULTERA_POSE_IDLE;
+    ai_set_anim(s, MZM_SKULTERA_IDLE);
+    s->work0 = 3;                   /* CONVERT_SECONDS(.05f) */
+}
+
+/* The Samus checks of SkulteraMoving and SkulteraChasingSamus: none within
+ * a block across and ten up or down; else her side within 3 blocks up or
+ * down and 5 across. */
+static uint8_t skultera_nslr(const Ctx *c) {
+    if (ai_samus_nslr(c, BLOCK_SIZE * 10, BLOCK_SIZE) != NSLR_OUT_OF_RANGE) return 0xFF;
+    return ai_samus_nslr(c, BLOCK_SIZE * 3, BLOCK_SIZE * 5);
+}
+
+/* Skultera: patrols its water 8 blocks either side of where it last turned
+ * a pixel every 3 frames, chases Samus every 2 frames (rising only in water,
+ * half a pixel a frame) and turns toward her. */
+static void skultera(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    bool flipped = s->status & MZM_SPRITE_STATUS_X_FLIP;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* SkulteraInit */
+        random_x_flip(c);
+        s->draw_top = BLOCK_SIZE * 2 / PIXEL_SIZE;
+        s->draw_bottom = 0;
+        s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = -(BLOCK_SIZE + HALF_BLOCK_SIZE);
+        s->hitbox_bottom = 0;
+        skultera_sides(s);
+        s->pose = SKULTERA_POSE_IDLE_INIT;
+        s->samus_collision = SSC_HURTS_SAMUS;
+        ai_set_anim(s, MZM_SKULTERA_IDLE);
+        s->health = c->tables->health[s->sprite_id];
+        break;
+    case SKULTERA_POSE_IDLE_INIT:
+        skultera_idle_init(s);
+        break;
+    case SKULTERA_POSE_IDLE: {
+        /* SkulteraMoving */
+        if (--s->work0 == 0) {
+            if (skultera_x_movement(c, PIXEL_SIZE)) {
+                s->pose = SKULTERA_POSE_TURNING_AROUND;
+            } else {
+                if (flipped) {
+                    if (s->x_spawn + SKULTERA_TERRITORY_RANGE < s->x) s->pose = SKULTERA_POSE_TURNING_AROUND;
+                } else if (s->x_spawn - SKULTERA_TERRITORY_RANGE > s->x) {
+                    s->pose = SKULTERA_POSE_TURNING_AROUND;
+                }
+                s->work0 = 3;
+            }
+        }
+        uint8_t nslr = skultera_nslr(c);
+        if (nslr == 0xFF) break;
+        if (flipped ? nslr == NSLR_RIGHT : nslr == NSLR_LEFT) s->pose = SKULTERA_POSE_CHASING_SAMUS_INIT;
+        else if (flipped ? nslr == NSLR_LEFT : nslr == NSLR_RIGHT) s->pose = SKULTERA_POSE_TURNING_AROUND;
+        break;
+    }
+    case SKULTERA_POSE_TURNING_AROUND:
+        /* SkulteraTurningAroundInit */
+        s->pose = SKULTERA_POSE_CHECK_TURNING_AROUND_ENDED;
+        ai_set_anim(s, MZM_SKULTERA_TURNING_AROUND);
+        ai_sound_onscreen_once(s, MZM_SOUND_SKULTERA_TURNING_AROUND);
+        /* fallthrough */
+    case SKULTERA_POSE_CHECK_TURNING_AROUND_ENDED:
+        if (ai_animation_ending(c, 1)) {
+            skultera_idle_init(s);
+            s->status ^= MZM_SPRITE_STATUS_X_FLIP;
+            skultera_sides(s);
+        }
+        break;
+    case SKULTERA_POSE_CHASING_SAMUS_INIT:
+        s->pose = SKULTERA_POSE_CHASING_SAMUS;
+        ai_set_anim(s, MZM_SKULTERA_CHASING_SAMUS);
+        /* fallthrough */
+    case SKULTERA_POSE_CHASING_SAMUS: {
+        /* SkulteraChasingSamus */
+        uint16_t samus_y = (uint16_t)(c->f->samus_y + c->f->samus_hitbox_top / 2);
+        uint16_t y = (uint16_t)(s->y - HALF_BLOCK_SIZE);
+        if ((uint16_t)(y - BLOCK_SIZE) > samus_y) {
+            uint16_t up = (uint16_t)(s->y - (BLOCK_SIZE + HALF_BLOCK_SIZE));
+            if (ai_collision_at(c, up, s->x) == MZM_COLLISION_AIR &&
+                ai_hazard_at(c, up, s->x) == 1 /* HAZARD_TYPE_WATER */)
+                s->y = (uint16_t)(s->y - PIXEL_SIZE / 2);
+        } else if ((uint16_t)(y + BLOCK_SIZE) < samus_y) {
+            if (ai_collision_at(c, s->y, s->x) == MZM_COLLISION_AIR)
+                s->y = (uint16_t)(s->y + PIXEL_SIZE / 2);
+        }
+        if (--s->work0 == 0) {
+            if (skultera_x_movement(c, PIXEL_SIZE)) s->pose = SKULTERA_POSE_TURNING_AROUND;
+            else s->work0 = 2;      /* CONVERT_SECONDS(1.f / 30) */
+        }
+        uint8_t nslr = skultera_nslr(c);
+        if (nslr == 0xFF) break;
+        if (flipped ? nslr != NSLR_RIGHT : nslr != NSLR_LEFT)
+            s->pose = (flipped ? nslr == NSLR_LEFT : nslr == NSLR_RIGHT) ? SKULTERA_POSE_TURNING_AROUND
+                                                                         : SKULTERA_POSE_IDLE_INIT;
+        break;
+    }
+    default:
+        ai_sprite_death(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), s->x, MZM_PE_SPRITE_EXPLOSION_BIG);
+        break;
+    }
+}
+
 /* Squeept poses (squeept.c). */
 enum {
     SQUEEPT_POSE_IDLE_INIT = 0xE,
@@ -3927,6 +4096,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_GERUTA_GREEN: return MZM_FAMILY_GERUTA;
     case MZM_PSPRITE_RIPPERII: return MZM_FAMILY_RIPPER2;
     case MZM_PSPRITE_SQUEEPT: return MZM_FAMILY_SQUEEPT;
+    case MZM_PSPRITE_SKULTERA: return MZM_FAMILY_SKULTERA;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
     case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
@@ -4630,6 +4800,7 @@ static uint16_t damaged_sound(int family) {
     case MZM_FAMILY_GERUTA: return MZM_SOUND_GERUTA_DAMAGED;
     case MZM_FAMILY_RIPPER2: return MZM_SOUND_RIPPER2_DAMAGED;
     case MZM_FAMILY_SQUEEPT: return MZM_SOUND_SQUEEPT_DAMAGED;
+    case MZM_FAMILY_SKULTERA: return MZM_SOUND_SKULTERA_DAMAGED;
     default: return 0;
     }
 }
@@ -4694,6 +4865,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_RIPPER2: ripper2(&c); break;
     case MZM_FAMILY_SQUEEPT: squeept(&c); break;
     case MZM_FAMILY_ITEM_SPRITE: ai_item_sprite(&c); break;
+    case MZM_FAMILY_SKULTERA: skultera(&c); break;
     case MZM_FAMILY_RINKA: rinka(&c); break;
     case MZM_FAMILY_SPACE_PIRATE:
         if (sprite->secondary) ai_space_pirate_laser(&c);

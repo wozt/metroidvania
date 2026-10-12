@@ -1686,6 +1686,60 @@ static void test_suitless(void) {
     assert(w.samus.pose == MZM_POSE_MIDAIR && w.samus.y_velocity == MZM_SUITLESS_JUMP_VELOCITY - 10);
 }
 
+/* ClipdataCheckCurrentAffectingAtPosition's hazards on the grid: water
+ * below row 10, lava below row 12. */
+static uint32_t grid_affecting(void *context, uint16_t y, uint16_t x) {
+    (void)context;
+    (void)x;
+    if (y / 64 >= 12) return MZM_HAZARD_LAVA;
+    return y / 64 >= 10 ? MZM_HAZARD_WATER : MZM_HAZARD_NONE;
+}
+
+/* SamusUpdatePhysics in water halves the speeds; SamusTakeHazardDamage. */
+static void test_liquids(void) {
+    World w;
+    world_init(&w);                 /* no liquid */
+    place(&w, 64, 224);
+    step(&w, 0);
+    steps(&w, MZM_KEY_RIGHT, 30);
+    assert(!w.samus.slowed && w.samus.x_velocity == MZM_X_VELOCITY_CAP);
+    world_init(&w);
+    w.collision.affecting = grid_affecting;
+    fill(&w.grid, 0, 11, GRID_W, 1);
+    place(&w, 64, 176);             /* standing in the water (row 10) */
+    step(&w, 0);
+    steps(&w, MZM_KEY_RIGHT, 30);
+    assert(w.samus.slowed && w.samus.x_velocity == MZM_X_VELOCITY_CAP / 2);
+    /* Slowed jumps: the gravity halved. */
+    step(&w, MZM_KEY_RIGHT | MZM_KEY_A);
+    int16_t v = w.samus.y_velocity;
+    step(&w, MZM_KEY_RIGHT | MZM_KEY_A);
+    assert(v - w.samus.y_velocity == MZM_Y_ACCELERATION / 2);
+    /* The Gravity Suit is not slowed. */
+    w.equipment.items |= MZM_ITEM_GRAVITY_SUIT;
+    steps(&w, 0, 40);
+    assert(!w.samus.slowed);
+    /* Lava: a point of energy every three frames without a suit, every five
+     * with the Varia Suit. */
+    world_init(&w);
+    w.collision.affecting = grid_affecting;
+    memset(w.grid.solid, 0, sizeof w.grid.solid);
+    fill(&w.grid, 0, 13, GRID_W, 2);
+    place(&w, 64, 13 * 16);
+    step(&w, 0);
+    int energy = w.equipment.energy;
+    steps(&w, 0, 30);
+    assert(w.equipment.energy == energy - 10);
+    w.equipment.items |= MZM_ITEM_VARIA_SUIT;
+    energy = w.equipment.energy;
+    steps(&w, 0, 30);
+    assert(w.equipment.energy == energy - 6);
+    /* Down to zero: SamusChangeToHurtPose's dying branch. */
+    w.equipment.energy = 1;
+    steps(&w, 0, 6);
+    assert(w.equipment.energy == 0 && w.samus.pose == MZM_POSE_DYING);
+}
+
 /* The pose table: every pose's hitbox and standing status, and the
  * requests outside it. */
 static void test_pose_table(void) {
@@ -1741,6 +1795,7 @@ int main(void) {
     test_steep_slope();
     test_suitless();
     test_pose_table();
+    test_liquids();
     puts("MZM Samus controller tests passed");
     return 0;
 }

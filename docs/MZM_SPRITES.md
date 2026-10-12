@@ -179,6 +179,11 @@ read from the user's ROM at export time; nothing is stored in the repository.
   its glow (which follows its height), floats with
   `sChargeBeamIdleYMovement` and removes the glow when taken. The Charge
   Beam is placed by an event sprite set the export does not resolve yet.
+- Skultera (`skultera.c`): patrols a pixel every three frames up to eight
+  blocks from where it last turned, turns at walls and toward Samus, chases
+  her every two frames when she is ahead, rising half a pixel a frame only
+  while the point above is water (`gCurrentAffectingClipdata.hazard`, from
+  the runtime's hazard blocks and room effect) and sinking toward her.
 - Squeept (`squeept.c`): hidden at its spawn (a pixel below its block)
   until, after a half-second wait, Samus is above it within 8 blocks up and
   6 across; it rises with `sSqueeptRisingMovement`, turns at the table's

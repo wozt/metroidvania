@@ -101,6 +101,25 @@ int main(void) {
         assert(mzm_samus_armed_graphics(MZM_WH_SUPER_MISSILE) && !mzm_samus_armed_graphics(MZM_WH_POWER_BOMB));
     }
     (void)runtime_samus_destruct;
+    /* ClipdataUpdateCurrentAffecting: a water room (EFFECT_WATER's haze row
+     * gives the water damage effect) below its effectY, needing a BG0. */
+    {
+        Room *liquid = calloc(1, sizeof *liquid);
+        assert(liquid);
+        liquid->width = liquid->height = 64;
+        liquid->visual_effect = 1;
+        liquid->effect_y = 2;
+        runtime_haze_ok = true;
+        runtime_haze[1][0] = 2;
+        runtime_haze[1][1] = 1;
+        assert(runtime_hazard(liquid, 3 * 64, 10) == MZM_HAZARD_NONE);  /* no BG0 */
+        liquid->bg0_prop = 0x10;
+        assert(runtime_hazard(liquid, 2 * 64 - 1, 10) == MZM_HAZARD_NONE);
+        assert(runtime_hazard(liquid, 2 * 64, 10) == MZM_HAZARD_WATER);
+        runtime_haze[1][0] = 0;     /* HAZE_VALUE_NONE: no damage effect */
+        assert(runtime_hazard(liquid, 3 * 64, 10) == MZM_HAZARD_NONE);
+        free(liquid);
+    }
 
     /* Diagnostic presets drive native suit types and item flags. */
     MzmEquipment equipment={0};

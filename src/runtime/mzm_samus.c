@@ -2875,13 +2875,106 @@ static MzmPose pose_graphics(Ctx *c) {
     }
 }
 
-/* SamusExecutePoseHandler. The hazard damage (SamusTakeHazardDamage), the
- * weapon cooldown, SamusSetHighlightedWeapon and SamusCheckNewProjectile
- * belong to the hazards and the weapons (mzm_projectiles.c), which run
- * before and hand over hasNewProjectile, weaponHighlighted and
- * chargeCounter through the input. */
-static MzmPose execute_pose_handler(Ctx *c, Physics *p) {
+/* SamusTakeHazardDamage: true when Samus dies or the cold knocks her
+ * back. */
+static bool take_hazard_damage(Ctx *c, MzmEquipment *equipment) {
     MzmSamus *s = c->s;
+    int32_t y;
+    switch (s->pose) {
+    case MZM_POSE_GRABBED_BY_CHOZO_STATUE:
+    case MZM_POSE_DYING:
+        return false;
+    case MZM_POSE_HANGING_ON_LEDGE:
+    case MZM_POSE_TURNING_TO_AIM_WHILE_HANGING:
+    case MZM_POSE_HIDING_ARM_CANNON_WHILE_HANGING:
+    case MZM_POSE_AIMING_WHILE_HANGING:
+    case MZM_POSE_SHOOTING_WHILE_HANGING:
+    case MZM_POSE_PULLING_YOURSELF_UP_FROM_HANGING:
+    case MZM_POSE_PULLING_YOURSELF_FORWARD_FROM_HANGING:
+    case MZM_POSE_PULLING_YOURSELF_INTO_A_MORPH_BALL_TUNNEL:
+        y = s->y - MZM_QUARTER_BLOCK_SIZE;
+        break;
+    default:
+        y = s->y;
+        break;
+    }
+    s->hazard_damage_timer++;
+    bool damaged = false, knockback = false;
+    enum { NONE, LIQUID, ROOM = 15 } type = NONE;
+    uint8_t hazard = affecting(c, y, s->x) & 0xFF;
+    uint8_t timer = s->hazard_damage_timer;
+    if (has(c, MZM_ITEM_GRAVITY_SUIT)) {
+        if (hazard == MZM_HAZARD_STRONG_ACID) {
+            damaged = true;
+            if (timer > 3) type = LIQUID;
+        }
+    } else if (has(c, MZM_ITEM_VARIA_SUIT)) {
+        if (hazard == MZM_HAZARD_STRONG_ACID) {
+            damaged = true;
+            if (timer > 1) type = LIQUID;
+        } else if (hazard == MZM_HAZARD_LAVA) {
+            damaged = true;
+            if (timer > 4) type = LIQUID;
+        }
+    } else if (hazard == MZM_HAZARD_STRONG_ACID) {
+        damaged = true;
+        type = LIQUID;
+    } else if (hazard == MZM_HAZARD_COLD_KNOCKBACK) {
+        damaged = true;
+        if (timer > 3) type = ROOM;
+        if (s->hazard_knockback_timer++ > 87) {
+            s->hazard_knockback_timer = 0;
+            knockback = true;
+        }
+    } else if (hazard == MZM_HAZARD_LAVA) {
+        damaged = true;
+        if (timer > 2) type = LIQUID;
+    } else if (hazard == MZM_HAZARD_WEAK_ACID) {
+        damaged = true;
+        if (timer > 7) type = LIQUID;
+    } else if (hazard == MZM_HAZARD_HEAT || hazard == MZM_HAZARD_COLD) {
+        damaged = true;
+        if (timer > 5) type = ROOM;
+    }
+    if (!damaged) {
+        s->hazard_damage_timer = 0;
+        s->hazard_knockback_timer = 0;
+        s->hazard_palette_timer = 0;
+    } else {
+        switch (s->hazard_palette_timer++) {
+        case 1:
+        case 33:
+            if (hazard == MZM_HAZARD_STRONG_ACID || hazard == MZM_HAZARD_LAVA ||
+                hazard == MZM_HAZARD_WEAK_ACID)
+                mzm_sfx_play(MZM_SOUND_LIQUID_DAMAGE_SUBMERGED);
+            break;
+        case 64:
+            s->hazard_palette_timer = 0;
+            break;
+        default:
+            break;
+        }
+        if (type != NONE) {
+            if (equipment && equipment->energy > 0) equipment->energy--;
+            s->hazard_damage_timer = 0;
+        }
+        if (type == ROOM) mzm_sfx_play(MZM_SOUND_ROOM_DAMAGE);
+    }
+    return (equipment && equipment->energy == 0) || knockback;
+}
+
+/* SamusExecutePoseHandler. The weapon cooldown, SamusSetHighlightedWeapon
+ * and SamusCheckNewProjectile belong to the weapons (mzm_projectiles.c),
+ * which run before and hand over hasNewProjectile, weaponHighlighted and
+ * chargeCounter through the input. */
+static MzmPose execute_pose_handler(Ctx *c, Physics *p, MzmEquipment *equipment) {
+    MzmSamus *s = c->s;
+    if (take_hazard_damage(c, equipment)) {
+        /* Dead (SamusChangeToHurtPose's dying branch) or knocked back by
+         * the cold (a hurt request with energy left). */
+        c->lethal = !equipment || equipment->energy == 0;
+        return MZM_POSE_HURT_REQUEST;
+    }
     /* The speed booster charge sound of a stored shinespark. */
     if (s->shinespark_timer != 0 && s->pose != MZM_POSE_DELAY_BEFORE_SHINESPARKING &&
         s->pose != MZM_POSE_DELAY_BEFORE_BALLSPARKING) {
@@ -2984,7 +3077,7 @@ static void leave(MzmSamus *s) {
 }
 
 void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
-                      const MzmEquipment *equipment,
+                      MzmEquipment *equipment,
                       const MzmCollision *collision,
                       const MzmAnimationSource *animation) {
     Ctx c = {samus, input ? input : &no_input, equipment ? equipment : &no_equipment, collision,
@@ -2999,7 +3092,7 @@ void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
     if (samus->invincibility) samus->invincibility--;
     if (samus->unmorph_palette_timer) samus->unmorph_palette_timer--;
     Physics p = update_physics(&c);
-    MzmPose pose = execute_pose_handler(&c, &p);
+    MzmPose pose = execute_pose_handler(&c, &p, equipment);
     if (pose != MZM_POSE_NONE) set_pose(&c, pose);
     update_standing(samus);
     update_velocity_position(&c, &p);

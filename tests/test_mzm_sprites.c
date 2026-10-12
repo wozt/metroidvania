@@ -103,7 +103,7 @@ static void hurt(void *context, uint16_t damage, bool sprite_on_left) {
 }
 
 int main(void) {
-    MzmSpriteWorld world = {NULL, block, 0, 0, movement, 0, NULL};
+    MzmSpriteWorld world = {NULL, block, 0, 0, movement, 0, NULL, 0};
 
     /* ClipdataConvertToCollision */
     clear();
@@ -2774,7 +2774,8 @@ int main(void) {
         mzm_sprite_update(hint_arm, 0, &statue_frame);
         assert(hint_link.grab && room[0].pose == 0x22 && hint_arm->pose == 0x23);
         mzm_sprite_update(&room[0], 0, &statue_frame);
-        assert(room[0].pose == 0x23 && test_check_event(NULL, 8) && room[0].work0 == 160);
+        assert(room[0].pose == 0x23 && test_check_event(NULL, 8) && room[0].work0 == 160 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_FADE, 0));
         MzmSprite *eye = &room[room[0].work1];
         mzm_sprite_update(eye, room[0].work1, &statue_frame);
         assert(eye->pose == 0x43);
@@ -2787,12 +2788,26 @@ int main(void) {
             flashes += room[0].palette_row != 0;
         }
         assert(room[0].pose == 0x24 && flashes > 0 && room[0].palette_row == 0 &&
-               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_STATUE_HINT));
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_STATUE_HINT) &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_CHOZO_STATUE_HINT));
         mzm_sprite_update(&room[0], 0, &statue_frame);
         assert(room[0].pose == 0x25 && globals.sub1.multi == MZM_CHOZO_MULTI_SITTING &&
                mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_STATUE_SITTING_DOWN));
         for (int i = 0; i < 20 && room[0].pose == 0x25; ++i) mzm_sprite_update(&room[0], 0, &statue_frame);
         assert(room[0].pose == 0x27 && globals.sub1.multi == MZM_CHOZO_MULTI_SEATED);
+        /* ChozoStatueSleeping: a hint statue replays the room track. */
+        {
+            MzmSpriteWorld track_world = *statue_frame.world;
+            track_world.room_track = MZM_MUSIC_BRINSTAR;
+            MzmSpriteFrame sleep_frame = statue_frame;
+            sleep_frame.world = &track_world;
+            MzmSprite awake = room[0];
+            room[0].pose = 0x30;
+            mzm_sfx_clear();
+            for (int i = 0; i < 80 && room[0].pose != 0xF; ++i) mzm_sprite_update(&room[0], 0, &sleep_frame);
+            assert(room[0].pose == 0xF && mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_BRINSTAR));
+            room[0] = awake;
+        }
         statue_frame.samus_link = NULL;
         /* An unknown item statue (UnknownItemChozoStatue): its own parts,
          * OAM and multi-sprite tables; its item is obtained but not

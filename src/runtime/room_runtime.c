@@ -878,6 +878,20 @@ static uint8_t runtime_hazard(const Room *room, uint16_t y, uint16_t x) {
     return effect_y <= y ? definitions[damage][1] : definitions[damage][0];
 }
 
+/* One GBA frame of sound into the device stream. A GBA frame lasts
+ * 280896 / 16777216 s (59.73 Hz) while the runtime steps at 60 Hz, so the
+ * stream is steered instead of trimmed: the render rate leans by at most
+ * 1% toward a queue of four frames, which keeps the sound continuous
+ * (dropping whole frames on a full queue, as before, made it crackle). */
+#define RUNTIME_AUDIO_RATE 48000
+static int runtime_audio_rate(int queued_frames) {
+    enum { TARGET = RUNTIME_AUDIO_RATE / 15 };  /* about 4 frames, 67 ms */
+    double error = (double)(TARGET - queued_frames) / TARGET;
+    if (error > 1.0) error = 1.0;
+    if (error < -1.0) error = -1.0;
+    return (int)(RUNTIME_AUDIO_RATE * (1.0 + 0.01 * error) + 0.5);
+}
+
 /* BgClipSetClipdataBlockValue: the raw value and its collision. */
 static void runtime_room_set_clip(Room *room, uint16_t raw, int y, int x) {
     if (x < 0 || y < 0 || x >= room->width / 16 || y >= room->height / 16) return;
@@ -1835,16 +1849,17 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
 /* The Zero Mission sound engine's data (scripts/mzm_audio.py). */
 #define RUNTIME_SOUND_BANK "assets/extracted/metroid/sound/runtime/sound_bank.bin"
 #define RUNTIME_SOUND_TABLES "assets/extracted/metroid/sound/runtime/sound_tables.tsv"
-#define RUNTIME_AUDIO_RATE 48000
 
 /* The sound hardware's output of one game frame into the SDL stream; the
  * frame is dropped when the device lags (more than 0.2 s queued). */
+/* One GBA frame of sound into the device stream (runtime_audio_rate). */
 static void runtime_audio_frame(SDL_AudioStream *stream) {
     static int16_t buffer[2 * 1024];
     mzm_audio_update();
-    int frames = mzm_audio_render(buffer, 1024, RUNTIME_AUDIO_RATE);
-    if (stream && frames > 0 &&
-        SDL_GetAudioStreamQueued(stream) < RUNTIME_AUDIO_RATE * 4 / 5)
+    int queued = stream ? SDL_GetAudioStreamQueued(stream) / 4 : 0;
+    int frames = mzm_audio_render(buffer, 1024, runtime_audio_rate(queued));
+    /* Only a stall (a queue of half a second) skips a frame. */
+    if (stream && frames > 0 && queued < RUNTIME_AUDIO_RATE / 2)
         SDL_PutAudioStreamData(stream, buffer, frames * 4);
 }
 
@@ -1862,13 +1877,19 @@ static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
     case MZM_SFX_MUSIC_INSERT: mzm_music_insert(sound, (uint8_t)timer); break;
     case MZM_SFX_BACKUP_TRACK2: mzm_audio_backup_track2(); break;
     case MZM_SFX_RETRIEVE_TRACK2: mzm_audio_retrieve_track2(); break;
+    case MZM_SFX_MUSIC_FADE: mzm_music_fade(timer); break;
     }
 }
 
 /* CheckPlayRoomMusicTrack when a room is entered: the room's track fades
  * the current one in 30 frames; CheckPlayTransitionMusicTrack starts it
  * when the (absent) door transition would end, returned in frames. */
+/* gMusicTrackInfo.currentRoomTrack: the last room track, kept through
+ * rooms without one. */
+static uint16_t runtime_room_track;
+
 static int runtime_room_music(const Room *room) {
+    if (room->has_music) runtime_room_track = (uint16_t)room->music;
     if (!mzm_audio_ready() || !room->has_music) return 0;
     mzm_music_check_set_new_track((uint16_t)room->music);
     return 32;
@@ -2168,7 +2189,7 @@ static uint32_t runtime_samus_clipdata(void *context, uint16_t y, uint16_t x) {
     const Room *room = context;
     if (x / 64 >= room->width / 16) return MZM_SAMUS_CLIP_SOLID_FLAG | CLIP_SOLID;
     if (y / 64 >= room->height / 16) return CLIP_AIR;
-    MzmSpriteWorld world = {(void *)room, runtime_sprite_block, 0, 0, NULL, 0, NULL};
+    MzmSpriteWorld world = {(void *)room, runtime_sprite_block, 0, 0, NULL, 0, NULL, 0};
     return mzm_clipdata_process(&world, y, x, MZM_ACTOR_SAMUS);
 }
 
@@ -2352,7 +2373,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     uint16_t effect_y = room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4), runtime_sprite_movement, effect_y,
-                            runtime_sprite_hazard};
+                            runtime_sprite_hazard, runtime_room_track};
     mzm_sprite_debris_process(&sprites->effects, &world, &sprites->tables,
                               &sprites->effect_kinds);
     /* SpriteUtilCheckStopSpritesPose: no Samus collision while movement is
@@ -3419,9 +3440,10 @@ int main(int argc, char **argv) {
             int cannon_x=0,cannon_y=0;
             /* SamusUpdateArmCannonPositionOffset: the offset of the arm
              * cannon animation frame SamusUpdateGraphicsOam pairs with the
-             * body. */
+             * body. It does not depend on the armed graphics, whose library
+             * entries carry no offsets, so the unarmed entry gives it. */
             RuntimeLibraryEntry *cannon_entry=library.count?runtime_samus_entry(
-                &library,&samus,&equipment,runtime_weapon_highlighted(&weapons)):NULL;
+                &library,&samus,&equipment,0):NULL;
             if(cannon_entry && cannon_entry->count>0) {
                 int index=samus.anim_frame<cannon_entry->count?
                     samus.anim_frame:cannon_entry->count-1;

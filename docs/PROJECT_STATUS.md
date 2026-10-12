@@ -2988,6 +2988,29 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0281 - Zero Mission missile origin, audio output, Chozo hint music
+
+- Shots take the arm cannon offsets of Samus's unarmed library key: the
+  armed graphics variants have no offsets, so missiles fired standing left
+  from her feet (brinstar_033: the missile now starts at the cannon).
+- Audio output: the runtime renders one GBA frame (59.73 Hz, about 803.6
+  samples) per 60 Hz step, so the stream queue kept growing until whole
+  frames were dropped, which crackled. `runtime_audio_rate` now steers the
+  output rate by at most 1% to hold about four frames in the queue; only a
+  half-second stall still skips a frame. The mixer's measured peak (about
+  11 500) does not clip.
+- Hint statues: `ChozoStatueRegisterHint` fades the music for a second,
+  `ChozoStatueHintFlashing` plays `MUSIC_CHOZO_STATUE_HINT` when the statue
+  sits down and `ChozoStatueSleeping` replays the room track
+  (`gMusicTrackInfo.currentRoomTrack`, carried by `MzmSpriteWorld`);
+  `mzm_sfx` gains the `FadeMusic` request. The item jingle path was checked
+  with the extracted bank: player 0 plays the jingle, then the room track
+  resumes.
+- Not ported: the hint map screen (the hint music plays over the statue).
+- Tests: `tests/test_mzm_sprites.c` (fade, hint music, room track replay),
+  `tests/test_runtime_steep_slopes.c` (the rate steering settles between
+  four and eight queued frames).
+
 ## Patch 0280 - Zero Mission Dragons
 
 - Dragons (`dragon.c`) rise from their lava toward Samus, turn and spit

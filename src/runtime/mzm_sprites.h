@@ -97,6 +97,9 @@ typedef struct {
     /* gCurrentAffectingClipdata.hazard after ClipdataProcess at a subpixel
      * point (HazardType); NULL: no hazards. */
     uint8_t (*hazard)(void *context, uint16_t y, uint16_t x);
+    /* gMusicTrackInfo.currentRoomTrack, replayed after a Chozo hint (0:
+     * none). */
+    uint16_t room_track;
 } MzmSpriteWorld;
 
 /* ClipdataMovement values the ported sprites read. */

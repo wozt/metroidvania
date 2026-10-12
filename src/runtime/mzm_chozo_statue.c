@@ -409,8 +409,8 @@ static void statue(Ctx *c) {
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED: statue_init(c); break;
     case STATUE_REGISTER_HINT: {
-        /* ChozoStatueRegisterHint (MakeBackgroundFlash and FadeMusic are not
-         * ported; the Long Beam hint keeps its longer delay). */
+        /* ChozoStatueRegisterHint (MakeBackgroundFlash is not ported; the
+         * Long Beam hint keeps its longer delay). */
         MzmSprite *eye = slot(c, s->work1);
         if (eye) eye->pose = PART_EYE_OPENING_INIT;
         s->pose = STATUE_HINT_FLASHING;
@@ -419,16 +419,18 @@ static void statue(Ctx *c) {
         s->work3 = 0;
         if (s->sprite_id == LONG_HINT) s->work0 += TWO_THIRD_SECOND;
         register_item(c, s->sprite_id);
+        mzm_sfx_music_fade(60);     /* CONVERT_SECONDS(1.f) */
         break;
     }
     case STATUE_HINT_FLASHING: {
-        /* ChozoStatueHintFlashing: the hint screen and its music are not
-         * ported; the statue sits down when the delay ends. */
+        /* ChozoStatueHintFlashing: the hint music starts and the statue
+         * sits down when the delay ends (the hint screen is not ported). */
         const MzmSprite *eye = slot(c, s->work1);
         if (eye && eye->pose != PART_DO_NOTHING) break;
         if (--s->work0 == 0) {
             s->pose = STATUE_SITTING_INIT;
             s->palette_row = 0;
+            mzm_sfx_music_play(MZM_MUSIC_CHOZO_STATUE_HINT, 0);
             break;
         }
         if (s->work0 == DELAY_BEFORE_HINT - 1) mzm_sfx_play(MZM_SOUND_CHOZO_STATUE_HINT);
@@ -481,12 +483,13 @@ static void statue(Ctx *c) {
         s->work0 = 70;              /* CONVERT_SECONDS(1.f + 1.f / 6) */
         break;
     case STATUE_SLEEPING:
-        /* ChozoStatueSleeping (the room music replay after a hint is not
-         * ported) */
+        /* ChozoStatueSleeping: a hint statue replays the room music. */
         if (--s->work0 == 0) {
             MzmSprite *eye = slot(c, s->work1);
             if (eye) eye->pose = PART_EYE_CLOSING_INIT;
             s->pose = STATUE_DO_NOTHING;
+            if (g->sub1.work3 && c->f->world && c->f->world->room_track)
+                mzm_sfx_music_play(c->f->world->room_track, 0);
         }
         break;
     case STATUE_WAIT_FOR_ITEM:

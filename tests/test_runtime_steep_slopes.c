@@ -101,6 +101,22 @@ int main(void) {
         assert(mzm_samus_armed_graphics(MZM_WH_SUPER_MISSILE) && !mzm_samus_armed_graphics(MZM_WH_POWER_BOMB));
     }
     (void)runtime_samus_destruct;
+    /* The sound stream steering: the nominal rate at a four-frame queue,
+     * at most 1% away from it. */
+    assert(runtime_audio_rate(RUNTIME_AUDIO_RATE / 15) == RUNTIME_AUDIO_RATE);
+    assert(runtime_audio_rate(0) == RUNTIME_AUDIO_RATE * 101 / 100);
+    assert(runtime_audio_rate(RUNTIME_AUDIO_RATE) == RUNTIME_AUDIO_RATE * 99 / 100);
+    /* The queue settles where a 59.73 Hz frame's samples match 60 Hz
+     * steps: 803.6 samples rendered per 800 played needs about -0.45%. */
+    {
+        double queued = 0;
+        for (int i = 0; i < 20000; ++i) {
+            int rate = runtime_audio_rate((int)queued);
+            queued += 280896.0 * rate / 16777216.0 - RUNTIME_AUDIO_RATE / 60.0;
+            if (queued < 0) queued = 0;
+        }
+        assert(queued > RUNTIME_AUDIO_RATE / 15 && queued < RUNTIME_AUDIO_RATE / 15 * 2);
+    }
     /* ClipdataUpdateCurrentAffecting: a water room (EFFECT_WATER's haze row
      * gives the water damage effect) below its effectY, needing a BG0. */
     {

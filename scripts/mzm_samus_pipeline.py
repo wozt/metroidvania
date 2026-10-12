@@ -85,6 +85,7 @@ SIMPLE_ACTIONS = {
     "ball_spark": ("pose", "SPOSE_BALLSPARKING", "loop"),
     "ballspark_charge": ("pose", "SPOSE_DELAY_BEFORE_BALLSPARKING", "loop"),
     "ball_spark_collision": ("pose", "SPOSE_BALLSPARK_COLLISION", "once"),
+    "grabbed_by_chozo_statue": ("pose", "SPOSE_GRABBED_BY_CHOZO_STATUE", "loop"),
 }
 
 

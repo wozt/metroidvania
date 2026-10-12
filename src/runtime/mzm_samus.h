@@ -85,6 +85,9 @@ typedef enum {
     MZM_POSE_DELAY_BEFORE_BALLSPARKING,
     MZM_POSE_BALLSPARKING,
     MZM_POSE_BALLSPARK_COLLISION,
+    /* SPOSE_GRABBED_BY_CHOZO_STATUE (SamusInactivity; a Chozo statue moves
+     * Samus) */
+    MZM_POSE_GRABBED_BY_CHOZO_STATUE,
     MZM_POSE_COUNT
 } MzmPose;
 
@@ -274,6 +277,10 @@ void mzm_samus_hurt(MzmSamus *samus, const MzmCollision *collision,
                     bool lethal);
 /* The pose test of SamusBombBounce (no liquid). */
 bool mzm_samus_bomb_bounce_allowed(const MzmSamus *samus, int direction);
+/* SamusSetPose(SPOSE_GRABBED_BY_CHOZO_STATUE) from a statue's arm, and
+ * SamusSetPose(SPOSE_MORPH_BALL) when it lets go. */
+void mzm_samus_chozo_grab(MzmSamus *samus, bool grabbed, const MzmEquipment *equipment,
+                          const MzmCollision *collision);
 /* SamusSetPose(SPOSE_LANDING_REQUEST) from SpriteUtilSamusStandingOnSprite. */
 void mzm_samus_land_on_sprite(MzmSamus *samus, const MzmInput *input,
                               const MzmEquipment *equipment, const MzmCollision *collision);

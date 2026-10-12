@@ -1,15 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Zero Mission Chozo statues holding an item or a hint
- * (src/sprites_ai/chozo_statue.c: ChozoStatue, ChozoStatuePart) and their
- * item ball (chozo_ball.c: ChozoBall); comments name the pinned
- * decompilation's routines. The hint and refill grabs (Samus's
- * SPOSE_GRABBED_BY_CHOZO_STATUE, the hint map screen, the refill and the
- * sitting animation they lead to) are not ported: a hint statue stays
- * standing and an item statue stays seated once its item is taken. */
+ * (src/sprites_ai/chozo_statue.c: ChozoStatue, ChozoStatuePart,
+ * ChozoStatueRefill), their item ball (chozo_ball.c: ChozoBall) and the
+ * sitting echo (chozo_statue_movement.c); comments name the pinned
+ * decompilation's routines. The hint's map screen (PAUSE_SCREEN_CHOZO_HINT),
+ * its background flashes, music and slow scrolling are not ported: a hint
+ * statue goes straight from its flashing to sitting down. */
 #include "mzm_items.h"
 #include "mzm_sprite_ai.h"
 
 #include <stddef.h>
+#include <string.h>
 
 enum {
     /* PrimarySprite */
@@ -17,16 +18,25 @@ enum {
     BOMB_HINT = 40, BOMB = 41, SPEED_HINT = 42, SPEED = 43, HIGH_JUMP_HINT = 44,
     HIGH_JUMP = 45, SCREW_HINT = 46, SCREW = 47, VARIA_HINT = 48, VARIA = 49,
     /* SecondarySprite */
-    SSPRITE_CHOZO_BALL = 0, SSPRITE_CHOZO_STATUE_PART = 1,
+    SSPRITE_CHOZO_BALL = 0, SSPRITE_CHOZO_STATUE_PART = 1, SSPRITE_CHOZO_STATUE_REFILL = 2,
+    SSPRITE_CHOZO_STATUE_MOVEMENT = 4,
     /* ChozoStatueBehavior */
     BEHAVIOR_ITEM = 0, BEHAVIOR_REFILL, BEHAVIOR_HINT, BEHAVIOR_HINT_TAKEN,
     /* ChozoStatuePartId */
     PART_ARM = 0, PART_GLOW, PART_EYE, PART_LEG, PART_HEAD,
     /* CHOZO_STATUE_POSE_* */
-    STATUE_IDLE = 0x9, STATUE_WAIT_FOR_ITEM = 0x29, STATUE_TIMER_AFTER_ITEM = 0x2B,
+    STATUE_IDLE = 0x9, STATUE_DO_NOTHING = 0xF, STATUE_REGISTER_HINT = 0x22,
+    STATUE_HINT_FLASHING = 0x23, STATUE_SITTING_INIT = 0x24, STATUE_SITTING = 0x25,
+    STATUE_DELAY_AFTER_SITTING = 0x27, STATUE_WAIT_FOR_ITEM = 0x29,
+    STATUE_TIMER_AFTER_ITEM = 0x2B, STATUE_REFILL_INIT = 0x2E, STATUE_REFILL = 0x2F,
+    STATUE_SLEEPING_INIT = 0x30, STATUE_SLEEPING = 0x31,
     /* CHOZO_STATUE_PART_POSE_* */
-    PART_ARM_CHECK_GRAB_HINT = 0x9, PART_LEG_IDLE = 0xF, PART_ARM_CHECK_GRAB_REFILL = 0x25,
+    PART_ARM_CHECK_GRAB_HINT = 0x9, PART_LEG_IDLE = 0xF, PART_ARM_SITTING = 0x23,
+    PART_ARM_SEATED = 0x24, PART_ARM_CHECK_GRAB_REFILL = 0x25, PART_ARM_REFILL = 0x27,
+    PART_ARM_SLEEPING_INIT = 0x29, PART_ARM_SLEEPING = 0x2B, PART_EYE_OPENING_INIT = 0x42,
+    PART_EYE_OPENING = 0x43, PART_EYE_CLOSING_INIT = 0x44, PART_EYE_CLOSING = 0x45,
     PART_GLOW_IDLE = 0x4F, PART_DO_NOTHING = 0x61,
+    REFILL_IDLE = 0x9,
     /* CHOZO_BALL_POSE_* */
     BALL_DO_NOTHING = 0x8, BALL_IDLE = 0x9, BALL_GETTING = 0x23, BALL_REVEALING = 0x67,
     /* EventType */
@@ -39,7 +49,12 @@ enum {
     /* MessageId */
     MESSAGE_LONG_BEAM = 8, MESSAGE_ICE_BEAM = 10, MESSAGE_WAVE_BEAM = 11, MESSAGE_BOMB = 13,
     MESSAGE_VARIA_SUIT = 14, MESSAGE_SPEED_BOOSTER = 17, MESSAGE_HIGH_JUMP = 18,
-    MESSAGE_SCREW_ATTACK = 19,
+    MESSAGE_SCREW_ATTACK = 19, MESSAGE_ENERGY_TANK_RECHARGE_COMPLETE = 25,
+    MESSAGE_WEAPONS_AND_ENERGY_RESTORED = 26,
+    /* CHOZO_STATUE_HAND_X_OFFSET, CHOZO_STATUE_HAND_Y_OFFSET */
+    HAND_X_OFFSET = BLOCK_SIZE - EIGHTH_BLOCK_SIZE,
+    HAND_Y_OFFSET = QUARTER_BLOCK_SIZE + 1,
+    DELAY_BEFORE_HINT = 120,        /* CONVERT_SECONDS(2.f) */
     /* CHOZO_STATUE_HAND_*, CHOZO_BALL_OFFSET_* */
     BALL_OFFSET_Y = BLOCK_SIZE + HALF_BLOCK_SIZE,
     BALL_OFFSET_X = BLOCK_SIZE - EIGHTH_BLOCK_SIZE,
@@ -55,6 +70,9 @@ const char *const mzm_chozo_statue_anim_names[MZM_CHOZO_ANIMS] = {
     "ChozoBallOam_NormalRevealing", "ChozoBallOam_NormalRevealed", "ChozoStatueRefillOam",
     "ChozoStatuePartOam_GlowIdle",
 };
+
+/* sChozoStatueFlashingPaletteRows */
+static const uint8_t flashing_rows[4] = {1, 2, 3, 2};
 
 const char *const mzm_chozo_multi_names[MZM_CHOZO_MULTI_COUNT] = {
     "sChozoStatueMultiSpriteData_Standing", "sChozoStatueMultiSpriteData_Sitting",
@@ -262,12 +280,165 @@ static void statue_init(Ctx *c) {
     if (glow >= 0 && c->f->sprites) c->f->sprites[glow].work1 = (uint8_t)arm;
 }
 
+/* SpriteUtilUpdateSubSprite1Timer: work2 is the next frame + 1 when the
+ * multi-sprite frame is about to change. */
+static void update_sub_sprite_timer(Ctx *c) {
+    MzmSpriteGlobals *g = c->f->globals;
+    const MzmMultiSprite *m = &c->tables->chozo_multi[g->sub1.multi];
+    g->sub1.work2 = 0;
+    if (m->timers[g->sub1.frame] < (uint8_t)(g->sub1.adc + 1)) g->sub1.work2 = (uint8_t)(g->sub1.frame + 1);
+}
+
+/* SpriteUtilHasSubSprite1AnimationEnded */
+static bool sub_sprite_ended(const Ctx *c) {
+    const MzmSpriteGlobals *g = c->f->globals;
+    const MzmMultiSprite *m = &c->tables->chozo_multi[g->sub1.multi];
+    uint8_t adc = (uint8_t)(g->sub1.adc + 1);
+    uint8_t next = (uint8_t)(g->sub1.frame + 1);
+    return m->timers[g->sub1.frame] < adc && (next >= MZM_MULTI_FRAMES || m->timers[next] == 0);
+}
+
+static void set_multi(MzmSpriteGlobals *g, uint8_t multi) {
+    g->sub1.multi = multi;
+    g->sub1.adc = 0;
+    g->sub1.frame = 0;
+}
+
+/* SpawnChozoStatueMovement: a flickering copy of the current sprite. */
+static void spawn_movement(Ctx *c, uint8_t stage) {
+    MzmSprite *s = c->s;
+    for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
+        MzmSprite *n = &c->f->sprites[i];
+        if (n->status & MZM_SPRITE_STATUS_EXISTS) continue;
+        memset(n, 0, sizeof *n);
+        n->status = (uint16_t)((s->status & MZM_SPRITE_STATUS_X_FLIP) | MZM_SPRITE_STATUS_EXISTS |
+                               MZM_SPRITE_STATUS_ONSCREEN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        if (!(stage & 1)) n->status |= MZM_SPRITE_STATUS_NOT_DRAWN;
+        uint8_t order = s->draw_order ? s->draw_order : 4;
+        n->draw_order = (uint8_t)(order < 8 ? order + 9 : order + 1);
+        n->always_active = true;
+        n->secondary = true;
+        n->gfx_slot = s->gfx_slot;
+        n->sprite_id = SSPRITE_CHOZO_STATUE_MOVEMENT;
+        n->owner = s->secondary ? s->owner : s->sprite_id;
+        n->y = s->y;
+        n->x = s->x;
+        n->pose = SPRITE_POSE_UNINITIALIZED;
+        n->palette_row = s->palette_row;
+        n->absolute_palette_row = s->absolute_palette_row;
+        n->ignore_samus_timer = 1;
+        n->ram_slot = (uint8_t)i;
+        n->work0 = 32;              /* CONVERT_SECONDS(.5f) + 2 * DELTA_TIME */
+        n->samus_collision = SSC_NONE;
+        n->anim = s->anim;
+        n->frame = s->frame;
+        n->draw_top = s->draw_top;
+        n->draw_bottom = s->draw_bottom;
+        n->draw_horizontal = s->draw_horizontal;
+        return;
+    }
+}
+
+/* The palette flash of the hint and the refill: the next row of
+ * sChozoStatueFlashingPaletteRows every `delay` frames. */
+static void flash_palette(MzmSprite *s, uint8_t delay) {
+    if (--s->work2 != 0) return;
+    s->work2 = delay;
+    s->palette_row = flashing_rows[s->work3];
+    s->work3 = s->work3 >= 3 ? 0 : (uint8_t)(s->work3 + 1);
+}
+
+static MzmSprite *slot(const Ctx *c, uint8_t index) {
+    return c->f->sprites && index < c->f->sprite_count ? &c->f->sprites[index] : NULL;
+}
+
 /* ChozoStatue */
 static void statue(Ctx *c) {
     MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
     s->ignore_samus_timer = 1;
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED: statue_init(c); break;
+    case STATUE_REGISTER_HINT: {
+        /* ChozoStatueRegisterHint (MakeBackgroundFlash and FadeMusic are not
+         * ported; the Long Beam hint keeps its longer delay). */
+        MzmSprite *eye = slot(c, s->work1);
+        if (eye) eye->pose = PART_EYE_OPENING_INIT;
+        s->pose = STATUE_HINT_FLASHING;
+        s->work0 = DELAY_BEFORE_HINT;
+        s->work2 = 12;              /* CONVERT_SECONDS(.2f) */
+        s->work3 = 0;
+        if (s->sprite_id == LONG_HINT) s->work0 += TWO_THIRD_SECOND;
+        register_item(c, s->sprite_id);
+        break;
+    }
+    case STATUE_HINT_FLASHING: {
+        /* ChozoStatueHintFlashing: the hint screen and its music are not
+         * ported; the statue sits down when the delay ends. */
+        const MzmSprite *eye = slot(c, s->work1);
+        if (eye && eye->pose != PART_DO_NOTHING) break;
+        if (--s->work0 == 0) {
+            s->pose = STATUE_SITTING_INIT;
+            s->palette_row = 0;
+            break;
+        }
+        if (s->work0 == DELAY_BEFORE_HINT - 1) mzm_sfx_play(MZM_SOUND_CHOZO_STATUE_HINT);
+        else if (s->work0 >= DELAY_BEFORE_HINT) break;
+        flash_palette(s, 12);
+        break;
+    }
+    case STATUE_SITTING_INIT:
+        /* ChozoStatueSittingInit (gSlowScrollingTimer is not ported) */
+        s->pose = STATUE_SITTING;
+        set_multi(g, MZM_CHOZO_MULTI_SITTING);
+        standing_clipdata(c, MZM_CAA_REMOVE_SOLID, MZM_CAA_REMOVE_SOLID);
+        mzm_sfx_play(MZM_SOUND_CHOZO_STATUE_SITTING_DOWN);
+        break;
+    case STATUE_SITTING:
+        /* ChozoStatueSitting */
+        update_sub_sprite_timer(c);
+        if (g->sub1.work2) spawn_movement(c, g->sub1.work2);
+        if (sub_sprite_ended(c)) {
+            set_multi(g, MZM_CHOZO_MULTI_SEATED);
+            s->pose = STATUE_DELAY_AFTER_SITTING;
+            s->work0 = 30;          /* CONVERT_SECONDS(.5f) */
+            seated_clipdata(c, MZM_CAA_MAKE_NON_POWER_GRIP);
+        }
+        break;
+    case STATUE_DELAY_AFTER_SITTING:
+        /* ChozoStatueDelayBeforeRefillAfterHint */
+        if (--s->work0 == 0) s->pose = STATUE_IDLE;
+        break;
+    case STATUE_REFILL_INIT: {
+        /* ChozoStatueRefillInit */
+        s->pose = STATUE_REFILL;
+        s->work2 = 4;               /* CONVERT_SECONDS(1.f / 15) */
+        s->work3 = 0;
+        const MzmSpriteSamusLink *link = c->f->samus_link;
+        if (link)
+            spawn_part(c, SSPRITE_CHOZO_STATUE_REFILL, 0,
+                       (uint16_t)(link->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), link->x, 0);
+        break;
+    }
+    case STATUE_REFILL:
+        /* ChozoStatueRefillSamus */
+        flash_palette(s, 4);
+        break;
+    case STATUE_SLEEPING_INIT:
+        /* ChozoStatueSleepingInit */
+        s->pose = STATUE_SLEEPING;
+        s->palette_row = 0;
+        s->work0 = 70;              /* CONVERT_SECONDS(1.f + 1.f / 6) */
+        break;
+    case STATUE_SLEEPING:
+        /* ChozoStatueSleeping (the room music replay after a hint is not
+         * ported) */
+        if (--s->work0 == 0) {
+            MzmSprite *eye = slot(c, s->work1);
+            if (eye) eye->pose = PART_EYE_CLOSING_INIT;
+            s->pose = STATUE_DO_NOTHING;
+        }
+        break;
     case STATUE_WAIT_FOR_ITEM:
         /* ChozoStatueWaitForItemToBeCollected */
         if (get_behavior(c, s->sprite_id) == BEHAVIOR_REFILL) {
@@ -279,7 +450,7 @@ static void statue(Ctx *c) {
         /* ChozoStatueTimerAfterItemGrabbed */
         if (--s->work0 == 0) s->pose = STATUE_IDLE;
         break;
-    default: break;             /* the hint and refill poses are not ported */
+    default: break;
     }
     update_sub_sprite(c);
     sync_sub_sprites(c);
@@ -333,19 +504,195 @@ static void part_init(Ctx *c) {
     }
 }
 
+/* The hand's x (CHOZO_STATUE_HAND_X_OFFSET from the arm). */
+static uint16_t hand_x(const MzmSprite *s) {
+    return (uint16_t)(s->status & MZM_SPRITE_STATUS_X_FLIP ? s->x + HAND_X_OFFSET
+                                                           : s->x - HAND_X_OFFSET);
+}
+
+/* Samus resting in the hand: at its height, within a quarter block. */
+static bool samus_in_hand(const MzmSprite *s, const MzmSpriteSamusLink *link) {
+    uint16_t x = hand_x(s);
+    return link->y == (uint16_t)(s->y - HAND_Y_OFFSET) && link->x > x - QUARTER_BLOCK_SIZE &&
+           link->x < x + QUARTER_BLOCK_SIZE;
+}
+
+/* ChozoStatuePartSyncSamusPosition */
+static void sync_samus(const MzmSprite *s, MzmSpriteSamusLink *link) {
+    link->y = (uint16_t)(s->y - HAND_Y_OFFSET);
+    link->x = hand_x(s);
+    link->moved = true;
+}
+
+static void grab(MzmSpriteSamusLink *link) {
+    link->grab = true;
+    link->release = false;
+    link->pose = MZM_LINK_POSE_GRABBED;
+}
+
+/* SpriteUtilRefillEnergy / Missiles / SuperMissiles / PowerBombs: a
+ * fraction of what is missing (`divisor`), between 1 and `cap`. */
+static bool refill(int *current, int max, int divisor, int cap) {
+    if (*current >= max) return false;
+    int step = (max - *current) / divisor;
+    if (step == 0) step = 1;
+    else if (step >= cap) step = cap;
+    *current += step;
+    if (*current > max) *current = max;
+    return true;
+}
+
+/* ChozoStatuePartArmRefill */
+static void arm_refill(Ctx *c, MzmSprite *s, MzmSprite *p) {
+    MzmEquipment *e = c->f->equipment;
+    uint8_t *anim = c->f->globals->refill_animation;
+    if (!p || p->pose != STATUE_REFILL || !e) return;
+    switch (s->work0) {
+    case 30:
+        if (!refill(&e->energy, e->max_energy, 32, 11)) {
+            s->work0--;
+            anim[0] = 13;
+        }
+        break;
+    case 29:
+        if (anim[0]) anim[0]--;
+        else if (!refill(&e->missiles, e->max_missiles, 32, 6)) {
+            s->work0--;
+            anim[1] = 13;
+        }
+        break;
+    case 28:
+        if (anim[1]) anim[1]--;
+        else if (!refill(&e->super_missiles, e->max_super_missiles, 16, 4)) {
+            s->work0--;
+            anim[2] = 13;
+        }
+        break;
+    case 27:
+        if (anim[2]) anim[2]--;
+        else if (!refill(&e->power_bombs, e->max_power_bombs, 16, 4)) {
+            s->work0--;
+            anim[3] = 13;
+        }
+        break;
+    default:
+        if (anim[3]) {
+            anim[3]--;
+        } else if (s->work0 != 0) {
+            s->work0--;
+        } else {
+            p->pose = STATUE_SLEEPING_INIT;
+            s->pose = PART_ARM_SLEEPING_INIT;
+            const MzmSpriteHooks *h = c->f->hooks;
+            if (h && h->spawn_message)
+                h->spawn_message(h->context,
+                                 e->max_missiles == 0 && e->max_super_missiles == 0 &&
+                                         e->max_power_bombs == 0
+                                     ? MESSAGE_ENERGY_TANK_RECHARGE_COMPLETE
+                                     : MESSAGE_WEAPONS_AND_ENERGY_RESTORED);
+        }
+        break;
+    }
+}
+
 /* ChozoStatuePart */
 static void part(Ctx *c) {
     MzmSprite *s = c->s;
     s->ignore_samus_timer = 1;
-    const MzmSprite *p = parent(c);
+    MzmSprite *p = parent(c);
+    MzmSpriteGlobals *g = c->f->globals;
+    MzmSpriteSamusLink *link = c->f->samus_link;
+    uint16_t prevent = c->f->prevent_movement ? *c->f->prevent_movement : 0;
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED: part_init(c); break;
-    case PART_ARM_CHECK_GRAB_REFILL:
-        /* ChozoStatuePartArmCheckGrabSamusRefill: the glow once the item is
-         * taken (the grab itself is not ported). */
-        if (s->anim == MZM_CHOZO_ARM_IDLE && c->f->prevent_movement &&
-            *c->f->prevent_movement == 0 && p && get_behavior(c, p->sprite_id) != BEHAVIOR_ITEM)
+    case PART_ARM_CHECK_GRAB_HINT:
+        /* ChozoStatuePartArmCheckGrabSamusHint (gDisablePause is not
+         * ported) */
+        if (!p || p->pose != STATUE_IDLE || !link || !samus_in_hand(s, link)) break;
+        if (link->pose == MZM_LINK_POSE_MORPH_BALL || link->pose == MZM_LINK_POSE_ROLLING) {
+            grab(link);
+            p->pose = STATUE_REGISTER_HINT;
+            s->pose = PART_ARM_SITTING;
+            ai_set_anim(s, MZM_CHOZO_ARM_SAMUS_GRABBED);
+        }
+        break;
+    case PART_ARM_SITTING:
+        /* ChozoStatuePartArmSitting */
+        if (p && p->pose == STATUE_DELAY_AFTER_SITTING) s->pose = PART_ARM_SEATED;
+        if (link) sync_samus(s, link);
+        if (g->sub1.work2) spawn_movement(c, g->sub1.work2);
+        break;
+    case PART_ARM_SEATED:
+        /* ChozoStatuePartArmSeated */
+        if (link) sync_samus(s, link);
+        if (p && p->pose == STATUE_IDLE) s->pose = PART_ARM_CHECK_GRAB_REFILL;
+        break;
+    case PART_ARM_CHECK_GRAB_REFILL: {
+        /* ChozoStatuePartArmCheckGrabSamusRefill (without BUGFIX: the grab
+         * ignores gPreventMovementTimer) */
+        if (s->anim == MZM_CHOZO_ARM_IDLE && prevent == 0 && p &&
+            get_behavior(c, p->sprite_id) != BEHAVIOR_ITEM)
             s->anim = MZM_CHOZO_ARM_GLOW;
+        if (!p || p->pose != STATUE_IDLE || !link || !samus_in_hand(s, link)) break;
+        bool grabbed = false;
+        if (link->pose == MZM_LINK_POSE_MORPH_BALL) {
+            grab(link);
+            grabbed = true;
+        } else if (link->pose == MZM_LINK_POSE_GRABBED) {
+            grabbed = true;
+        }
+        if (grabbed) {
+            p->pose = STATUE_REFILL_INIT;
+            s->pose = PART_ARM_REFILL;
+            sync_samus(s, link);
+            ai_set_anim(s, MZM_CHOZO_ARM_SAMUS_GRABBED);
+            s->work0 = 30;          /* CONVERT_SECONDS(.5f) */
+        }
+        break;
+    }
+    case PART_ARM_REFILL: arm_refill(c, s, p); break;
+    case PART_ARM_SLEEPING_INIT:
+        /* ChozoStatuePartSleepingInit */
+        if (p && p->pose == STATUE_SLEEPING) s->pose = PART_ARM_SLEEPING;
+        break;
+    case PART_ARM_SLEEPING:
+        /* ChozoStatuePartArmSleeping: Samus is let go once free to move. */
+        if (prevent == 0 && s->anim == MZM_CHOZO_ARM_SAMUS_GRABBED) {
+            ai_set_anim(s, MZM_CHOZO_ARM_IDLE);
+            if (link) {
+                link->release = true;
+                link->grab = false;
+                link->pose = MZM_LINK_POSE_MORPH_BALL;
+            }
+        }
+        break;
+    case PART_EYE_OPENING_INIT:
+        s->pose = PART_EYE_OPENING;
+        ai_set_anim(s, MZM_CHOZO_EYE_OPENING);
+        break;
+    case PART_EYE_OPENING:
+        if (ai_animation_ending(c, 1)) {
+            s->pose = PART_DO_NOTHING;
+            ai_set_anim(s, MZM_CHOZO_EYE_OPENED);
+        }
+        break;
+    case PART_EYE_CLOSING_INIT:
+        s->pose = PART_EYE_CLOSING;
+        ai_set_anim(s, MZM_CHOZO_EYE_CLOSING);
+        break;
+    case PART_EYE_CLOSING:
+        if (ai_animation_ending(c, 1)) {
+            s->pose = PART_DO_NOTHING;
+            ai_set_anim(s, MZM_CHOZO_EYE_CLOSED);
+        }
+        break;
+    case PART_LEG_IDLE:
+        /* ChozoStatuePartLegIdle */
+        if (p && p->pose == STATUE_SITTING) {
+            if (g->sub1.work2) spawn_movement(c, g->sub1.work2);
+        } else if (p && p->pose == STATUE_DELAY_AFTER_SITTING) {
+            s->pose = PART_DO_NOTHING;
+        }
         break;
     case PART_GLOW_IDLE: {
         /* ChozoStatuePartGlowIdle */
@@ -362,7 +709,7 @@ static void part(Ctx *c) {
         }
         break;
     }
-    default: break;             /* the hint grab, sitting and refill are not ported */
+    default: break;
     }
     if (!(s->status & MZM_SPRITE_STATUS_EXISTS)) return;
     if (s->room_slot == PART_LEG) sync_sub_sprites(c);
@@ -431,9 +778,42 @@ static void ball(Ctx *c) {
     }
 }
 
+/* ChozoStatueRefill: the refill's glow around Samus until the statue
+ * sleeps. */
+static void refill_glow(Ctx *c) {
+    MzmSprite *s = c->s;
+    const MzmSprite *p = parent(c);
+    s->ignore_samus_timer = 1;
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->always_active = true;
+        s->samus_collision = SSC_NONE;
+        s->draw_order = 1;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = PIXEL_SIZE;
+        s->pose = REFILL_IDLE;
+        ai_set_anim(s, MZM_CHOZO_REFILL);
+        mzm_sfx_play(MZM_SOUND_CHOZO_STATUE_REFILL);
+    } else if (p && p->pose == STATUE_SLEEPING) {
+        s->status = 0;
+        mzm_sfx_fade(MZM_SOUND_CHOZO_STATUE_REFILL, 30);
+    }
+}
+
+/* ChozoStatueMovement: flickers with its frame held, for 32 frames. */
+static void movement(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->ignore_samus_timer = 1;
+    s->status ^= MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->adc--;
+    if (--s->work0 == 0) s->status = 0;
+}
+
 void ai_chozo_statue(Ctx *c) {
     if (!c->f->globals) return;
     if (!c->s->secondary) statue(c);
     else if (c->s->sprite_id == SSPRITE_CHOZO_BALL) ball(c);
+    else if (c->s->sprite_id == SSPRITE_CHOZO_STATUE_REFILL) refill_glow(c);
+    else if (c->s->sprite_id == SSPRITE_CHOZO_STATUE_MOVEMENT) movement(c);
     else part(c);
 }

@@ -622,6 +622,7 @@ static const char *runtime_pose_action(MzmPose pose,uint32_t items) {
         case MZM_POSE_DELAY_BEFORE_BALLSPARKING: return "ballspark_charge";
         case MZM_POSE_BALLSPARKING: return "ball_spark";
         case MZM_POSE_BALLSPARK_COLLISION: return "ball_spark_collision";
+        case MZM_POSE_GRABBED_BY_CHOZO_STATUE: return "grabbed_by_chozo_statue";
         case MZM_POSE_COUNT: break;
     }
     return "idle";
@@ -2377,6 +2378,13 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                               runtime_sprite_spawn_message};
     MzmSpriteHooks hooks = hook_table;
     hooks.context = sprites;
+    /* Samus for the Chozo statues' hands (native y). */
+    MzmSpriteSamusLink link = {
+        samus->pose == MZM_POSE_MORPH_BALL ? MZM_LINK_POSE_MORPH_BALL :
+        samus->pose == MZM_POSE_ROLLING ? MZM_LINK_POSE_ROLLING :
+        samus->pose == MZM_POSE_GRABBED_BY_CHOZO_STATUE ? MZM_LINK_POSE_GRABBED :
+                                                          MZM_LINK_POSE_OTHER,
+        (uint16_t)(samus->y - 1), (uint16_t)samus->x, false, false, false};
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
                             sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top,
@@ -2384,12 +2392,19 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             &sprites->globals, runtime_samus_small(samus), samus->x_velocity,
                             runtime_area_id(room->area), (uint8_t)room->room,
                             samus->pose != MZM_POSE_DYING ? &standing : NULL, stopped,
-                            prevent_movement};
+                            prevent_movement, &link};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
     if (!stopped) mzm_sprites_end_frame(&sprites->globals, &hooks);
+    /* The statues' SamusSetPose calls and hand positions. */
+    if (link.grab) mzm_samus_chozo_grab(samus, true, equipment, collision);
+    if (link.moved) {
+        samus->x = link.x;
+        samus->y = (int32_t)link.y + 1;
+    }
+    if (link.release) mzm_samus_chozo_grab(samus, false, equipment, collision);
     if (samus->pose != MZM_POSE_DYING && !stopped) {
         if (standing.landing_request)
             mzm_samus_land_on_sprite(samus, input, equipment, collision);
@@ -3724,7 +3739,10 @@ int main(int argc, char **argv) {
             /* The frozen (15 - slot) and stun (14 - slot) rows are baked
              * variants of the sprite's own rows. */
             const char *shade="";
-            if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
+            static const char *const statue_rows[4]={"","/row1","/row2","/row3"};
+            if(mzm_sprite_family(sprite->sprite_id,sprite->secondary)==MZM_FAMILY_CHOZO_STATUE)
+                shade=sprite->palette_row<4?statue_rows[sprite->palette_row]:"";
+            else if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
             else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
             snprintf(key,sizeof key,"Sprite/%s/%s/%s%s",
                      sprites.names[mzm_sprite_graphics_owner(sprite)],

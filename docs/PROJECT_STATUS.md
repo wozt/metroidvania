@@ -2988,6 +2988,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0271 - Zero Mission Chozo statue refills and hints
+
+- `mzm_samus.c` adds `SPOSE_GRABBED_BY_CHOZO_STATUE` (SamusInactivity, the
+  motionless Morph Ball animation from the Samus pipeline, no weapons) and
+  `mzm_samus_chozo_grab`; the sprites see and move Samus through
+  `MzmSpriteSamusLink`.
+- `mzm_chozo_statue.c` ports the hint grab (Morph Ball or rolling at the
+  hand's exact height), `ChozoStatueRegisterHint`, the eye opening, the
+  hint flashing (`sChozoStatueFlashingPaletteRows`, the hint sound), sitting
+  down along the Sitting table with `SpawnChozoStatueMovement` echoes, the
+  seated delay, the refill grab, `ChozoStatuePartArmRefill` with
+  `SpriteUtilRefill*` and the HUD counters, the refill glow sprite, the
+  refill messages, sleeping, the eye closing and the release.
+- The exporter renders the statues with their palette rows 1 to 3 (the
+  runtime picks them from the palette row).
+- Checked in brinstar_005 (`--spawn 126 112 --item long-beam`, Down twice):
+  the statue grabs the Morph Ball, flashes gold during the refill, opens
+  "Weapons and energy fully restored", sleeps and releases Samus. In
+  brinstar_002 (`--spawn 808 112`, Down twice): the Long Beam hint statue
+  grabs Samus, flashes, sits down with her and refills.
+- Not ported: the hint map screen, its flashes and music, the unknown item
+  statues.
+- Tests: `tests/test_mzm_sprites.c` (the refill grab and its height check,
+  the energy refill steps, the message, sleeping and release; the hint grab,
+  eye, flashing, sitting and seating).
+- Validation on 2026-10-12: warning-clean build, CTest 31/31, the Python
+  suite (430 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0270 - Zero Mission item Chozo statues
 
 - `src/runtime/mzm_chozo_statue.c` ports `ChozoStatue`, `ChozoStatuePart` and

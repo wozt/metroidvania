@@ -78,6 +78,8 @@ static const PoseInfo pose_info[MZM_POSE_COUNT] = {
     [MZM_POSE_BALLSPARKING] = {MZM_HITBOX_MORPHED, MZM_STANDING_MIDAIR, "ballsparking"},
     [MZM_POSE_BALLSPARK_COLLISION] = {MZM_HITBOX_MORPHED, MZM_STANDING_FORCED,
         "ballspark-collision"},
+    [MZM_POSE_GRABBED_BY_CHOZO_STATUE] = {MZM_HITBOX_MORPHED, MZM_STANDING_FORCED,
+        "grabbed-by-chozo-statue"},
 };
 
 /* sSamusPullingSelfUpVelocity, subpixels per frame for each animation frame. */
@@ -1070,6 +1072,7 @@ static int pose_handler(Ctx *x) {
         case MZM_POSE_SHINESPARK_COLLISION:
         case MZM_POSE_DELAY_AFTER_SHINESPARKING:
         case MZM_POSE_BALLSPARK_COLLISION:
+        case MZM_POSE_GRABBED_BY_CHOZO_STATUE:
             return NEXT_NONE;       /* SamusInactivity */
         case MZM_POSE_DYING:
             /* SamusDying: the music stops, then the dying sound plays. */
@@ -1457,6 +1460,13 @@ bool mzm_samus_bomb_bounce_allowed(const MzmSamus *samus, int direction) {
     default:
         return false;
     }
+}
+
+void mzm_samus_chozo_grab(MzmSamus *samus, bool grabbed, const MzmEquipment *equipment,
+                          const MzmCollision *collision) {
+    MzmInput none = {0, 0, false};
+    Ctx x = {samus, &none, equipment, collision, NULL};
+    set_pose(&x, grabbed ? MZM_POSE_GRABBED_BY_CHOZO_STATUE : MZM_POSE_MORPH_BALL);
 }
 
 void mzm_samus_land_on_sprite(MzmSamus *samus, const MzmInput *input,

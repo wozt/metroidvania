@@ -470,6 +470,11 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         statue = sprite.startswith("PSPRITE_CHOZO_STATUE")
         if not statue:
             variants.update(shifted_palettes(palette, common_palette))
+        else:
+            # sChozoStatueFlashingPaletteRows: the statue drawn with its
+            # palette rows 1 to 3 (paletteRow added to each part's row).
+            for flash in (1, 2, 3):
+                variants[f"/row{flash}"] = stage(rom, symbols, gfx, palette_symbol, row + flash)[1]
         flips = ("none", "x") if statue else mzm_projectile_compose.FLIPS
         for table in tables:
             entries = mzm_projectile_compose.frames(rom, symbols, table)

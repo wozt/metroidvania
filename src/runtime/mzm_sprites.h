@@ -388,6 +388,7 @@ enum {
 enum {
     MZM_SSPRITE_SKREE_EXPLOSION = 12, MZM_SSPRITE_BLUE_SKREE_EXPLOSION = 15,
     MZM_SSPRITE_CHOZO_BALL = 0, MZM_SSPRITE_CHOZO_STATUE_PART = 1,
+    MZM_SSPRITE_CHOZO_STATUE_REFILL = 2, MZM_SSPRITE_CHOZO_STATUE_MOVEMENT = 4,
     MZM_SSPRITE_ZEELA_EYES = 16, MZM_SSPRITE_SPACE_PIRATE_LASER = 22,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
@@ -492,7 +493,23 @@ typedef struct {
         uint8_t multi, frame, adc, work2;
         bool work3;
     } sub1;
+    /* gEnergyRefillAnimation, gMissileRefillAnimation,
+     * gSuperMissileRefillAnimation and gPowerBombRefillAnimation. */
+    uint8_t refill_animation[4];
 } MzmSpriteGlobals;
+
+/* gSamusData as the Chozo statues read and move it: her pose
+ * (MZM_LINK_POSE_*) and native position; the statues request
+ * SamusSetPose(SPOSE_GRABBED_BY_CHOZO_STATUE) (`grab`), SamusSetPose
+ * (SPOSE_MORPH_BALL) (`release`) and a new position (`moved`), which also
+ * update `pose`, `y` and `x` for the sprites that follow. */
+enum { MZM_LINK_POSE_OTHER, MZM_LINK_POSE_MORPH_BALL, MZM_LINK_POSE_ROLLING,
+       MZM_LINK_POSE_GRABBED };
+typedef struct {
+    uint8_t pose;
+    uint16_t y, x;
+    bool grab, release, moved;
+} MzmSpriteSamusLink;
 
 /* What SpriteUpdate shares with every sprite this frame. Enemy drops are
  * chosen from, and refill, the equipment (power bombs are not ported: their
@@ -529,6 +546,8 @@ typedef struct {
     bool stopped;
     /* gPreventMovementTimer (NULL: none); the Chozo balls set and read it. */
     uint16_t *prevent_movement;
+    /* Samus for the Chozo statues' hands (NULL: no grab). */
+    MzmSpriteSamusLink *samus_link;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,

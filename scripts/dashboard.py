@@ -436,8 +436,8 @@ def bestiary() -> dict:
                                          _prettify(symbol.removeprefix("CHOZO_STATUE_")))
                         + " (Chozo statue)",
                 "status": "partial" if done else "not_started",
-                "note": ("Statue, ball, item and message banner ported; the refill "
-                         "and hint grabs are not" if done else ""),
+                "note": ("Statue, ball, item, banner, refill and hint grab ported; "
+                         "the hint map screen is not" if done else ""),
             })
     aos_header = (ROOT / "src/runtime/aos_enemy.h").read_text(encoding="utf-8")
     ported = {int(address, 16): _prettify(name)

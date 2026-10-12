@@ -68,6 +68,7 @@ static void set_highlighted_weapon(MzmWeapons *weapons, const MzmSamus *samus,
     case MZM_POSE_DELAY_BEFORE_BALLSPARKING:
     case MZM_POSE_BALLSPARKING:
     case MZM_POSE_BALLSPARK_COLLISION:
+    case MZM_POSE_GRABBED_BY_CHOZO_STATUE:
         break;
     default:
         if (held & MZM_KEY_R) {

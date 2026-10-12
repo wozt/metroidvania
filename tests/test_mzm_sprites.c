@@ -141,7 +141,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false, NULL};
+                             0, 0, NULL, false, NULL, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -2455,6 +2455,69 @@ int main(void) {
         memset(room + 1, 0, sizeof room - sizeof room[0]);
         mzm_sprite_update(&room[0], 0, &statue_frame);
         assert(room[0].pose == 0x9 && room[1].sprite_id == MZM_SSPRITE_CHOZO_STATUE_PART);
+        /* The refill: Samus in the Morph Ball resting in the glowing hand
+         * is grabbed and refilled, then the statue sleeps, the banner opens
+         * and the hand lets her go once she may move. */
+        for (int i = 1; i < 8; ++i)
+            if (room[i].status & MZM_SPRITE_STATUS_EXISTS)
+                mzm_sprite_update(&room[i], (uint8_t)i, &statue_frame);
+        int arm_slot = -1;
+        for (int i = 1; i < 8; ++i)
+            if (room[i].sprite_id == MZM_SSPRITE_CHOZO_STATUE_PART && room[i].room_slot == 0)
+                arm_slot = i;
+        assert(arm_slot > 0 && room[arm_slot].pose == 0x25 &&
+               room[arm_slot].anim == MZM_CHOZO_ARM_GLOW);
+        MzmSprite *arm = &room[arm_slot];
+        uint16_t hand = (uint16_t)(arm->x + 56);
+        MzmSpriteSamusLink link = {MZM_LINK_POSE_MORPH_BALL, (uint16_t)(arm->y - 17), hand,
+                                   false, false, false};
+        statue_frame.samus_link = &link;
+        /* Off by one subpixel in height: no grab. */
+        link.y++;
+        mzm_sprite_update(arm, (uint8_t)arm_slot, &statue_frame);
+        assert(!link.grab);
+        link.y--;
+        mzm_sprite_update(arm, (uint8_t)arm_slot, &statue_frame);
+        assert(link.grab && link.pose == MZM_LINK_POSE_GRABBED && room[0].pose == 0x2E &&
+               arm->pose == 0x27 && arm->anim == MZM_CHOZO_ARM_SAMUS_GRABBED);
+        items.energy = 10;
+        items.missiles = 0;
+        items.max_missiles = 0;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x2F);
+        int glow = -1;
+        for (int i = 1; i < 8; ++i)
+            if (room[i].sprite_id == 2 && room[i].status & MZM_SPRITE_STATUS_EXISTS) glow = i;
+        assert(glow > 0);
+        mzm_sprite_update(&room[glow], (uint8_t)glow, &statue_frame);
+        assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_STATUE_REFILL) &&
+               room[glow].draw_order == 1);
+        /* SpriteUtilRefillEnergy: (99 - 10) / 32 = 2 a frame at first. */
+        mzm_sprite_update(arm, (uint8_t)arm_slot, &statue_frame);
+        assert(items.energy == 12);
+        message_count = 0;
+        for (int i = 0; i < 200 && room[0].pose == 0x2F; ++i) {
+            mzm_sprite_update(&room[0], 0, &statue_frame);
+            mzm_sprite_update(arm, (uint8_t)arm_slot, &statue_frame);
+        }
+        assert(items.energy == 99 && room[0].pose == 0x30 && arm->pose == 0x29 &&
+               message_count == 1 && messages[0] == 25);
+        /* The flashing rows run 1, 2, 3, 2 during the refill. */
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x31 && room[0].palette_row == 0);
+        mzm_sprite_update(arm, (uint8_t)arm_slot, &statue_frame);
+        assert(arm->pose == 0x2B);
+        prevent = 5;
+        mzm_sprite_update(arm, (uint8_t)arm_slot, &statue_frame);
+        assert(!link.release);
+        prevent = 0;
+        mzm_sprite_update(arm, (uint8_t)arm_slot, &statue_frame);
+        assert(link.release && link.pose == MZM_LINK_POSE_MORPH_BALL &&
+               arm->anim == MZM_CHOZO_ARM_IDLE);
+        mzm_sprite_update(&room[glow], (uint8_t)glow, &statue_frame);
+        assert(!(room[glow].status & MZM_SPRITE_STATUS_EXISTS));
+        statue_frame.samus_link = NULL;
         /* The hint statue stands (the hand made grippable) until its event. */
         caa_calls = 0;
         memset(room, 0, sizeof room);
@@ -2463,6 +2526,50 @@ int main(void) {
         mzm_sprite_update(&room[0], 0, &statue_frame);
         assert(globals.sub1.multi == MZM_CHOZO_MULTI_STANDING && globals.sub1.work3 &&
                caa_calls == 8 && !(room[0].status & MZM_SPRITE_STATUS_X_FLIP));
+        /* Grabbed in the hand while rolling: the hint registers, the eye
+         * opens, the statue flashes, then sits down (the multi-sprite
+         * Sitting table and its echoes) and seats. */
+        MzmMultiSprite *standing = &tables.chozo_multi[MZM_CHOZO_MULTI_STANDING];
+        standing->timers[0] = 255;
+        memcpy(standing->parts[0], parts, sizeof parts);
+        MzmMultiSprite *sitting = &tables.chozo_multi[MZM_CHOZO_MULTI_SITTING];
+        sitting->timers[0] = sitting->timers[1] = 2;
+        memcpy(sitting->parts[0], parts, sizeof parts);
+        memcpy(sitting->parts[1], parts, sizeof parts);
+        for (int i = 1; i < 8; ++i)
+            if (room[i].status & MZM_SPRITE_STATUS_EXISTS)
+                mzm_sprite_update(&room[i], (uint8_t)i, &statue_frame);
+        MzmSprite *hint_arm = NULL;
+        for (int i = 1; i < 8; ++i)
+            if (room[i].sprite_id == MZM_SSPRITE_CHOZO_STATUE_PART && room[i].room_slot == 0)
+                hint_arm = &room[i];
+        assert(hint_arm && hint_arm->pose == 0x9);
+        MzmSpriteSamusLink hint_link = {MZM_LINK_POSE_ROLLING, (uint16_t)(hint_arm->y - 17),
+                                        (uint16_t)(hint_arm->x - 56), false, false, false};
+        statue_frame.samus_link = &hint_link;
+        mzm_sprite_update(hint_arm, 0, &statue_frame);
+        assert(hint_link.grab && room[0].pose == 0x22 && hint_arm->pose == 0x23);
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x23 && test_check_event(NULL, 8) && room[0].work0 == 160);
+        MzmSprite *eye = &room[room[0].work1];
+        mzm_sprite_update(eye, room[0].work1, &statue_frame);
+        assert(eye->pose == 0x43);
+        for (int i = 0; i < 8 && eye->pose != 0x61; ++i) mzm_sprite_update(eye, room[0].work1, &statue_frame);
+        assert(eye->pose == 0x61 && eye->anim == MZM_CHOZO_EYE_OPENED);
+        mzm_sfx_clear();
+        int flashes = 0;
+        for (int i = 0; i < 200 && room[0].pose == 0x23; ++i) {
+            mzm_sprite_update(&room[0], 0, &statue_frame);
+            flashes += room[0].palette_row != 0;
+        }
+        assert(room[0].pose == 0x24 && flashes > 0 && room[0].palette_row == 0 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_STATUE_HINT));
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x25 && globals.sub1.multi == MZM_CHOZO_MULTI_SITTING &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_STATUE_SITTING_DOWN));
+        for (int i = 0; i < 20 && room[0].pose == 0x25; ++i) mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x27 && globals.sub1.multi == MZM_CHOZO_MULTI_SEATED);
+        statue_frame.samus_link = NULL;
     }
     puts("mzm_sprites: ok");
     return 0;

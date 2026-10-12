@@ -2988,6 +2988,43 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0269 - Zero Mission tank pickups and the message banner
+
+- `src/runtime/mzm_items.c` ports the tank part of
+  `BgClipCheckTouchingTransitionOrTank` (odd frames, the four Clipdata
+  probes, last first): a revealed tank starts `gCollectingTank`, raises the
+  equipment within the game total (100 energy refilled, 5 missiles, 2 super
+  missiles, 2 power bombs on normal difficulty; the first missile, super
+  missile or power bomb tank with its own message) and opens the message
+  banner; `BgClipFinishCollectingTank` empties the block (air, or water for
+  underwater tanks), `BgClipSetItemAsCollected` records it and
+  `BgClipRemoveCollectedTanks` clears it on every room load.
+  `scripts/mzm_c_tables.py` exports `sTankBehaviors`' item types, water
+  flags and messages and the TankList rows into `blocks.tsv`.
+- `src/runtime/mzm_message_banner.c` runs `MessageBanner` (graphics frames,
+  text processing with the animation held, the one- or two-line spawn, 100
+  static frames, A/B/directions to close, the removal) with the tank jingle;
+  `gPreventMovementTimer` skips `SamusUpdate` and stops the sprites
+  (`SpriteUtilCheckStopSpritesPose`: no Samus contact, only uninitialized
+  sprites run).
+- `scripts/mzm_message_text.py` transliterates `TextProcessMessageBanner`,
+  `TextProcessCurrentMessage` and `TextDrawMessageCharacter`; the sprite
+  exporter renders the banner's six OAM tables with each English message and
+  records their text calls.
+- Checked in brinstar_019 (`--spawn 615 96`, Right, then A): Samus walks
+  onto the energy tank, energy rises from 99 to 199, the banner reads
+  "Energy Tank acquired. / Energy capacity increased." while Samus stays
+  frozen, and after A the banner closes and the tank block is empty.
+- Not ported: the item jingles and the music track backup, the minimap and
+  HUD, the item acquisition screen, the ability items.
+- Tests: `tests/test_mzm_items.c` (tank collection, first tanks, the game
+  total, cleared blocks, the collected registry, the banner's timeline and
+  events), `tests/test_runtime_steep_slopes.c` (the probes, the finished
+  collection and the removal on reload).
+- Validation on 2026-10-12: warning-clean build, CTest 31/31, the Python
+  suite (430 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0268 - Zero Mission tumbling missiles
 
 - `mzm_sprites.c`: `ProjectileMissileHitSprite` and

@@ -171,14 +171,31 @@ def _array(body: str, names: dict[str, int]) -> dict[int, object]:
     return result
 
 
-def table(source: str, name: str, decomp: Path = DECOMP) -> dict[int, object]:
+def table(source: str, name: str, decomp: Path = DECOMP,
+          extra: dict[str, int] | None = None) -> dict[int, object]:
     """The initializer of `name` in src/data/<source> by index (nested
-    arrays as dicts, structs as dicts of fields)."""
+    arrays as dicts, structs as dicts of fields); `extra` adds names its
+    indices use."""
     text = (decomp / "src/data" / source).read_text(encoding="utf-8")
     match = re.search(rf"\b{name}\s*(\[[^\]]*\])+\s*=", text)
     if not match:
         raise ValueError(f"{name} not found in {source}")
-    return _array(_body(text, match.end()), enum_values(decomp))
+    return _array(_body(text, match.end()), {**enum_values(decomp), **(extra or {})})
+
+
+def max_areas(decomp: Path = DECOMP) -> int:
+    """MAX_AMOUNT_OF_AREAS (include/structs/connection.h)."""
+    text = (decomp / "include/structs/connection.h").read_text(encoding="utf-8")
+    return int(re.search(r"#define\s+MAX_AMOUNT_OF_AREAS\s+(\d+)", text).group(1))
+
+
+def struct_initializer(source: str, name: str, decomp: Path = DECOMP) -> dict:
+    """The fields of a single struct initializer `name` in src/data/<source>."""
+    text = (decomp / "src/data" / source).read_text(encoding="utf-8")
+    match = re.search(rf"\b{name}\s*=", text)
+    if not match:
+        raise ValueError(f"{name} not found in {source}")
+    return _value("{" + _body(text, match.end()) + "}", enum_values(decomp))
 
 
 def dense(values: dict[int, object], count: int, default=0) -> list:
@@ -212,6 +229,25 @@ def block_table_lines(collision_tables: dict) -> list[str]:
     tank_count = names["CLIP_BEHAVIOR_TANK_END"] - names["CLIP_BEHAVIOR_TANK_START"] + 1
     lines.append("tank\t" + ",".join(str(tanks.get(i, {}).get("revealedClipdata", 0))
                                      for i in range(tank_count)))
+    # BgClipCheckTouchingTransitionOrTank / BgClipFinishCollectingTank:
+    # each tank behavior's item type, underwater flag and message, and the
+    # TankList rows (sStartingHealthAmmo, the game total of
+    # sNumberOfTanksPerArea, sTankIncreaseAmount[DIFF_NORMAL]) as energy,
+    # missile, super missile, power bomb.
+    for index in range(tank_count):
+        tank = tanks.get(index, {})
+        lines.append(f"tankitem\t{index}\t{tank.get('itemType', 0)}\t{tank.get('underwater', 0)}\t"
+                     f"{tank.get('messageId', -1)}")
+    fields = ("energy", "missile", "superMissile", "powerBomb")
+    areas = max_areas()
+    total = table("block_data.c", "sNumberOfTanksPerArea",
+                  extra={"MAX_AMOUNT_OF_AREAS": areas})[areas - 1]
+    increase = table("block_data.c", "sTankIncreaseAmount")[names["DIFF_NORMAL"]]
+    starting = struct_initializer("block_data.c", "sStartingHealthAmmo")
+    for label, row in (("start", starting), ("total", total), ("increase", increase)):
+        lines.append(f"tanklist\t{label}\t" + ",".join(str(row.get(f, 0)) for f in fields))
+    lines.append(f"tankclip\t{names['CLIPDATA_TILEMAP_AIR']}\t"
+                 f"{names['CLIPDATA_TILEMAP_FLAG'] | names['CLIPDATA_TILEMAP_WATER']}")
     chains = table("block_data.c", "sBombChainReverseData")
     for index in range(8):
         chain = chains.get(index, {})

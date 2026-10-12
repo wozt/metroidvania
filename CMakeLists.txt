@@ -51,7 +51,8 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_hatches.c
                src/runtime/mzm_blocks.c
                src/runtime/mzm_effects.c src/runtime/mzm_audio.c src/runtime/gba_psg.c
-               src/runtime/mzm_sfx.c src/runtime/mzm_power_bomb.c)
+               src/runtime/mzm_sfx.c src/runtime/mzm_power_bomb.c
+               src/runtime/mzm_items.c src/runtime/mzm_message_banner.c)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
@@ -167,7 +168,8 @@ if(BUILD_TESTING)
     # ROM-free native collision shape regression.
     add_executable(fusion_runtime_steep_slopes_tests tests/test_runtime_steep_slopes.c
                    src/runtime/mzm_samus.c src/runtime/mzm_projectiles.c src/runtime/mzm_hatches.c
-                   src/runtime/mzm_blocks.c src/runtime/mzm_sfx.c src/runtime/mzm_power_bomb.c)
+                   src/runtime/mzm_blocks.c src/runtime/mzm_sfx.c src/runtime/mzm_power_bomb.c
+                   src/runtime/mzm_items.c src/runtime/mzm_message_banner.c)
     target_include_directories(fusion_runtime_steep_slopes_tests PRIVATE src/runtime)
     target_compile_definitions(fusion_runtime_steep_slopes_tests PRIVATE
                                FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
@@ -199,6 +201,12 @@ if(BUILD_TESTING)
     target_include_directories(fusion_mzm_hatches_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_hatches_tests)
     add_test(NAME mzm_hatches COMMAND fusion_mzm_hatches_tests)
+
+    add_executable(fusion_mzm_items_tests tests/test_mzm_items.c src/runtime/mzm_items.c
+                   src/runtime/mzm_message_banner.c src/runtime/mzm_sfx.c)
+    target_include_directories(fusion_mzm_items_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_mzm_items_tests)
+    add_test(NAME mzm_items COMMAND fusion_mzm_items_tests)
 
     add_executable(fusion_mzm_sprites_tests tests/test_mzm_sprites.c src/runtime/mzm_sprites.c
                    src/runtime/mzm_space_pirate.c

@@ -4196,6 +4196,11 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
         return;
     Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],
              0, MZM_COLLISION_AIR, frame->frame8};
+    /* No ported sprite has SP_ALWAYS_ACTIVE. */
+    if (frame->stopped && sprite->pose != SPRITE_POSE_UNINITIALIZED) {
+        check_on_screen(&c);
+        return;
+    }
     /* gSpriteRng = sSpriteRandomNumberTable[(frame8 + slot + frame16 / 16 +
      * x + y) % 32] */
     c.rng = c.tables->random[((uint32_t)frame->frame8 + slot + frame->frame16 / 16u + sprite->x +

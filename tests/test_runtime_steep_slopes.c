@@ -259,6 +259,48 @@ int main(void) {
     assert(!memcmp(echo_colors, echo_colors + 16, sizeof(SDL_Color) * 16));
     assert(!memcmp(body + 16, echo_colors + 16, sizeof(SDL_Color) * 16));
     assert(memcmp(body, echo_colors, sizeof(SDL_Color) * 16));
+    /* BgClipCheckTouchingTransitionOrTank's probes, the tank collection,
+     * BgClipFinishCollectingTank and BgClipRemoveCollectedTanks. */
+    Room *tanks = calloc(1, sizeof *tanks);
+    assert(tanks);
+    tanks->width = 128;
+    tanks->height = 96;
+    tanks->room = 7;
+    snprintf(tanks->area, sizeof tanks->area, "brinstar");
+    runtime_block_tables.ok = true;
+    runtime_block_tables.tanks_ok = true;
+    runtime_block_tables.main_count = 64;
+    runtime_block_tables.tilemap_count = 1;
+    runtime_block_tables.main_behaviors[50] = MZM_TANK_BEHAVIOR_START + 4;  /* energy tank */
+    runtime_block_tables.tanks.item_type[4] = MZM_ITEM_TYPE_ENERGY;
+    runtime_block_tables.tanks.message[4] = MZM_MESSAGE_ENERGY_TANK_ACQUIRED;
+    runtime_block_tables.tanks.total[MZM_TANK_ENERGY] = 12;
+    runtime_block_tables.tanks.increase[MZM_TANK_ENERGY] = 100;
+    runtime_block_tables.tanks.start[MZM_TANK_ENERGY] = 99;
+    tanks->clip[4 * 8 + 3] = 50;
+    /* Samus's right edge in block 3, her center row (top / 4) in row 4. */
+    mzm_samus_init(&samus, 3 * 64, 5 * 64, 1);
+    MzmTouchProbes probes;
+    runtime_touch_probes(tanks, &samus, &probes);
+    assert(probes.x[0] == 3 && probes.y[0] == 4 && probes.behaviors[0] == MZM_TANK_BEHAVIOR_START + 4);
+    assert(probes.x[1] == 2 && probes.behaviors[1] == 0);
+    MzmEquipment tank_equipment = {.energy = 10, .max_energy = 99};
+    assert(mzm_tank_touch(&runtime_block_tables.tanks, &runtime_tank_collection, &probes,
+                          &tank_equipment) == MZM_MESSAGE_ENERGY_TANK_ACQUIRED &&
+           tank_equipment.max_energy == 199 && runtime_tank_collection.x == 3 &&
+           runtime_tank_collection.y == 4);
+    runtime_finish_collecting_tank(tanks);
+    assert(!runtime_tank_collection.collecting && tanks->clip[4 * 8 + 3] == 0 &&
+           runtime_collected_items.count[0] == 1 && runtime_collected_items.items[0][0].room == 7);
+    /* Reloaded, the collected tank is gone again. */
+    tanks->clip[4 * 8 + 3] = 50;
+    runtime_blocks_load(tanks, "brinstar_007");
+    assert(tanks->clip[4 * 8 + 3] == 0);
+    tanks->room = 8;
+    tanks->clip[4 * 8 + 3] = 50;
+    runtime_blocks_load(tanks, "brinstar_008");
+    assert(tanks->clip[4 * 8 + 3] == 50);
+    free(tanks);
     free(r);
     return 0;
 }

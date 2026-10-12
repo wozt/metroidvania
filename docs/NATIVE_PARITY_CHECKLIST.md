@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 34 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 36 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -67,6 +67,15 @@ Next action: Port the native input routines and add an in-game controls menu.
 ### HUD and interface
 
 [?] **`mzm.interface.inventory-boundary` — source coverage.** The current classifier assigns 41 discovered routine(s) to this category (41 by source path). Category completeness has not been established.
+
+[~] **`mzm.interface.message_banner` — Message banner and its text.** The exporter transliterates TextProcessMessageBanner, TextProcessCurrentMessage and TextDrawMessageCharacter on the banner's OBJ VRAM (sMessageBannerGfx, color 15 fill, glyphs of sCharactersGfx with sCharacterWidths, eight characters a frame, the US line overflow) for every English message of sMessageTextPointers, renders the banner's six OAM tables with each message, and records the TextProcessMessageBanner calls each message takes. The runtime runs MessageBanner frame by frame: the nine graphics frames, the text processing with the animation held, the shown banner (the tank jingle for tank messages; one-line tables for items, first tanks, maps, save complete and the fully powered suit), 100 static frames before A, B or a direction closes it, the removal animation, gPreventMovementTimer held at SAMUS_ITEM_PMT meanwhile (SamusUpdate skipped, sprites stopped except uninitialized ones, no Samus contact); its removal finishes a tank collection.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckStopSpritesPose`, `mzm:c:src/sprite_util.c:SpriteUtilHasCurrentAnimationEnded`, `mzm:c:src/sprites_ai/message_banner.c:MessageBanner`, `mzm:c:src/sprites_ai/message_banner.c:MessageBannerGfxInit`, `mzm:c:src/sprites_ai/message_banner.c:MessageBannerInit`, `mzm:c:src/sprites_ai/message_banner.c:MessageBannerPopUp`, `mzm:c:src/sprites_ai/message_banner.c:MessageBannerRemovalAnimation`, `mzm:c:src/sprites_ai/message_banner.c:MessageBannerRemovalInit`, `mzm:c:src/sprites_ai/message_banner.c:MessageBannerStatic`, `mzm:c:src/text.c:TextDrawMessageCharacter`, `mzm:c:src/text.c:TextGetCharacterWidth`, `mzm:c:src/text.c:TextProcessCurrentMessage`, `mzm:c:src/text.c:TextProcessMessageBanner`, `mzm:c:src/text.c:TextStartMessage`.  
+Local implementation: [`src/runtime/mzm_message_banner.c`](../src/runtime/mzm_message_banner.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_message_text.py`](../scripts/mzm_message_text.py), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_items.c`](../tests/test_mzm_items.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
+Dependencies: `mzm.audio.sound_engine`.  
+Known divergences: The banner is kept outside the sprite slots and is drawn centred in the wider runtime view (the GBA position 120, 54 offset by the view's extra 32 rows); it always loads its graphics (no spriteset holds it); the item jingles (InsertMusicAndQueueCurrent), BackupTrackData2SoundChannels / RetrieveTrackData2SoundChannels, the save prompt cursor, the escape start and the item acquisition pause screen are not ported; the English text is the only language exported.  
+Next action: Port the item jingles and the track backup in the sound engine, then the save prompt and the item acquisition screen.
 
 ### Player state machine
 
@@ -361,6 +370,15 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`.  
 Known divergences: PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
 Next action: Port the multiple large energy pickup.
+
+[~] **`mzm.items.tanks` — Energy, missile, super missile and power bomb tanks.** On odd frames, the four probes of BgClipCheckTouchingTransitionOrTank (Samus's right and left hitbox edges on her center row, the bottom and top rows on her center column) read the behaviors of the current Clipdata, last probe first; a revealed tank (hidden ones are not tanks until their block breaks) starts gCollectingTank, sets gPreventMovementTimer, raises the equipment within the game total (sStartingHealthAmmo, the total of sNumberOfTanksPerArea and sTankIncreaseAmount, exported from the decompilation: 100 energy refilled, 5 missiles, 2 super missiles, 2 power bombs) and spawns the message banner (the first missile, super missile or power bomb tank with its own message). BgClipFinishCollectingTank (on the banner's removal) empties the BG1 block, clears the Clipdata to air or water (underwater tanks) and registers the item in gItemsCollected by area and room; BgClipRemoveCollectedTanks removes them again on every room load. Checked in brinstar_019 (`--spawn 615 96`, Right): Samus walks onto the energy tank column, energy 99 to 199, the banner shows its two lines and Samus stays frozen until A; the tank block is then empty.
+
+Native evidence: `mzm:c:src/bg_clip.c:BgClipCheckTouchingSpecialClipdata`, `mzm:c:src/bg_clip.c:BgClipCheckTouchingTransitionOrTank`, `mzm:c:src/bg_clip.c:BgClipFinishCollectingTank`, `mzm:c:src/bg_clip.c:BgClipRemoveCollectedTanks`, `mzm:c:src/bg_clip.c:BgClipSetItemAsCollected`.  
+Local implementation: [`src/runtime/mzm_items.c`](../src/runtime/mzm_items.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_c_tables.py`](../scripts/mzm_c_tables.py).  
+Tests: [`tests/test_mzm_items.c`](../tests/test_mzm_items.c), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
+Dependencies: `mzm.environment.breakable_blocks`, `mzm.interface.message_banner`.  
+Known divergences: MinimapCheckIsTileExplored is taken as true (no minimap is ported) and the minimap is not updated; the difficulty is normal (sTankIncreaseAmount[DIFF_NORMAL]); the transition probes run every frame for doors, the tank probes on odd frames only; no HUD shows the new capacities.  
+Next action: Port the minimap and the HUD, then the ability items (Chozo statues and item sprites).
 
 ### Environment interactions
 

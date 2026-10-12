@@ -31,6 +31,14 @@ read from the user's ROM at export time; nothing is stored in the repository.
   (`HudGenericLoadCommonSpriteGfx`: `sCommonSpritesGfx` at OBJ VRAM 0x800,
   `sCommonSpritesPal` at OBJ palette rows 2-7) with their
   `sEnemyDropOam_*` table, unflipped.
+- The message banner is rendered once per English message
+  (`Banner/<MESSAGE>/<table>/none`): `scripts/mzm_message_text.py`
+  transliterates `TextProcessMessageBanner`, `TextProcessCurrentMessage` and
+  `TextDrawMessageCharacter` over the banner graphics, and `message` lines
+  give the calls each text takes. The runtime's banner
+  (`src/runtime/mzm_message_banner.c`) runs `MessageBanner` outside the
+  sprite slots; while it holds `gPreventMovementTimer`, the sprite update
+  only runs uninitialized sprites (`SpriteUtilCheckStopSpritesPose`).
 
 ## Engine (`src/runtime/mzm_sprites.c`)
 

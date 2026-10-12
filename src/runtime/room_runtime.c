@@ -15,6 +15,8 @@
 #include "mzm_sfx.h"
 #include "mzm_power_bomb.h"
 #include "mzm_hatches.h"
+#include "mzm_items.h"
+#include "mzm_message_banner.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
 #include "mzm_sprites.h"
@@ -774,6 +776,9 @@ static struct {
     int main_count, tilemap_count;
     unsigned char main_types[256], tilemap_types[256];
     unsigned short main_behaviors[256], tilemap_behaviors[256];
+    /* The tank pickups (tankitem, tanklist and tankclip lines). */
+    bool tanks_ok;
+    MzmTankTables tanks;
 } runtime_block_tables;
 
 static bool runtime_parse_list(const char *cursor, long *values, int count) {
@@ -817,6 +822,22 @@ static bool runtime_block_tables_open(const char *path) {
             ok = runtime_parse_list(line + 5, values, MZM_TANK_BEHAVIORS);
             for (int i = 0; ok && i < MZM_TANK_BEHAVIORS; ++i)
                 env->tank_revealed[i] = (uint16_t)values[i];
+        } else if (sscanf(line, "tankitem\t%d\t%d\t%d\t%d", &index, &a, &b, &c) == 4) {
+            if (index < 0 || index >= MZM_TANK_BEHAVIORS) { ok = false; break; }
+            runtime_block_tables.tanks.item_type[index] = (uint8_t)a;
+            runtime_block_tables.tanks.underwater[index] = b != 0;
+            runtime_block_tables.tanks.message[index] = (int16_t)c;
+            runtime_block_tables.tanks_ok = true;
+        } else if (!strncmp(line, "tanklist\t", 9)) {
+            const char *cursor = strchr(line + 9, '\t');
+            int *row = !strncmp(line + 9, "start", 5) ? runtime_block_tables.tanks.start :
+                       !strncmp(line + 9, "total", 5) ? runtime_block_tables.tanks.total :
+                       !strncmp(line + 9, "increase", 8) ? runtime_block_tables.tanks.increase : NULL;
+            ok = cursor && row && runtime_parse_list(cursor + 1, values, 4);
+            for (int i = 0; ok && i < 4; ++i) row[i] = (int)values[i];
+        } else if (sscanf(line, "tankclip\t%d\t%d", &a, &b) == 2) {
+            runtime_block_tables.tanks.air_clip = (uint16_t)a;
+            runtime_block_tables.tanks.water_clip = (uint16_t)b;
         } else if (sscanf(line, "chain\t%d\t%d\t%d", &index, &a, &b) == 3) {
             if (index < 0 || index >= 8) { ok = false; break; }
             env->chain_flag[index] = (uint8_t)a;
@@ -1086,6 +1107,10 @@ static void runtime_power_bomb_apply(void *context, int y, int x) {
 }
 
 /* BlockRemoveNeverReformBlocks at a room load, with a fresh block state. */
+/* gItemsCollected and gCollectingTank / gLastTankCollected of this session. */
+static MzmCollectedItems runtime_collected_items;
+static MzmTankCollection runtime_tank_collection;
+
 static void runtime_blocks_load(Room *room, const char *alias) {
     memset(&room->blocks, 0, sizeof room->blocks);
     if (!runtime_block_tables.ok) return;
@@ -1094,6 +1119,62 @@ static void runtime_blocks_load(Room *room, const char *alias) {
         if (!strcmp(runtime_never_reform_memory.blocks[i].alias, alias))
             mzm_blocks_remove_never_reform(&env, runtime_never_reform_memory.blocks[i].x,
                                            runtime_never_reform_memory.blocks[i].y);
+    /* BgClipRemoveCollectedTanks: the room's collected items become water
+     * (underwater tank behaviors) or air, with an empty BG1 block. */
+    uint8_t area = runtime_area_index(room->area);
+    if (area >= MZM_MAX_AREAS || !runtime_block_tables.tanks_ok) return;
+    for (int i = 0; i < runtime_collected_items.count[area]; ++i) {
+        const int x = runtime_collected_items.items[area][i].x;
+        const int y = runtime_collected_items.items[area][i].y;
+        if (runtime_collected_items.items[area][i].room != room->room || x >= room->width / 16 ||
+            y >= room->height / 16)
+            continue;
+        uint16_t behavior = runtime_clip_behavior(room->clip[y * (room->width / 16) + x]);
+        runtime_room_set_clip(room, mzm_tank_cleared_clip(&runtime_block_tables.tanks, behavior),
+                              y, x);
+        runtime_room_set_bg1(room, 0, y, x);
+    }
+}
+
+/* The probes of BgClipCheckTouchingTransitionOrTank: blocks at Samus's
+ * right and left hitbox edges (center row), and at her bottom and top
+ * rows (center column), with the behavior of their current Clipdata. */
+static void runtime_touch_probes(const Room *room, const MzmSamus *samus, MzmTouchProbes *probes) {
+    const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
+    int32_t native_y = samus->y - 1;
+    int width = room->width / 16, height = room->height / 16;
+    int32_t raw_x[3] = {(box->right >> 2) + samus->x, (box->left >> 2) + samus->x, samus->x};
+    int32_t raw_y[3] = {(box->top >> 2) + native_y, (box->top >> 4) + native_y,
+                        (box->top >> 4) + (box->top >> 2) + native_y};
+    int xs[3], ys[3];
+    for (int i = 0; i < 3; ++i) {
+        int32_t x = raw_x[i] < 0 ? 0 : raw_x[i] > width * MZM_BLOCK_SIZE ? width * MZM_BLOCK_SIZE : raw_x[i];
+        int32_t y = raw_y[i] < 0 ? 0 : raw_y[i] > height * MZM_BLOCK_SIZE ? height * MZM_BLOCK_SIZE : raw_y[i];
+        xs[i] = x / MZM_BLOCK_SIZE < width ? x / MZM_BLOCK_SIZE : width - 1;
+        ys[i] = y / MZM_BLOCK_SIZE < height ? y / MZM_BLOCK_SIZE : height - 1;
+    }
+    /* sBlockTouchOffsets: (center, right), (center, left), (bottom, center),
+     * (top, center). */
+    static const int touch[4][2] = {{0, 0}, {0, 1}, {1, 2}, {2, 2}};
+    for (int j = 0; j < 4; ++j) {
+        probes->x[j] = xs[touch[j][1]];
+        probes->y[j] = ys[touch[j][0]];
+        probes->behaviors[j] = runtime_clip_behavior(room->clip[probes->y[j] * width + probes->x[j]]);
+    }
+}
+
+/* BgClipFinishCollectingTank: the tank block becomes air or water, empty in
+ * BG1, and is registered as collected (no minimap is ported). */
+static void runtime_finish_collecting_tank(Room *room) {
+    MzmTankCollection *c = &runtime_tank_collection;
+    c->collecting = false;
+    uint8_t type = mzm_tank_item_type(&runtime_block_tables.tanks, c->behavior);
+    if (type == MZM_ITEM_TYPE_NONE) return;
+    runtime_room_set_bg1(room, 0, c->y, c->x);
+    runtime_room_set_clip(room, mzm_tank_cleared_clip(&runtime_block_tables.tanks, c->behavior),
+                          c->y, c->x);
+    mzm_items_set_collected(&runtime_collected_items, runtime_area_index(room->area),
+                            (uint8_t)room->room, c->x, c->y, type);
 }
 
 /* SamusCheckScrewSpeedboosterAffectingEnvironment: the screw attack and the
@@ -1847,6 +1928,13 @@ typedef struct {
     MzmSprite live[RUNTIME_MAX_SPRITES];
     uint8_t frame8;
     uint16_t frame16;
+    /* The message banner: its durations and text calls (message lines),
+     * the message names of its library keys, and the banner itself (kept
+     * outside the sprite slots). */
+    MzmBannerKind banner_kind;
+    char message_names[MZM_MESSAGE_COUNT][40];
+    bool banner_ok;
+    MzmMessageBanner banner;
 } RuntimeSprites;
 
 static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path) {
@@ -1901,6 +1989,14 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         } else if (!strcmp(line, "falling")) {
             for (falling_count = 0; falling_count < 16; ++falling_count)
                 sprites->tables.falling[falling_count] = (int16_t)strtol(cursor, &cursor, 10);
+        } else if (!strcmp(line, "message")) {
+            char name[40];
+            int id, calls;
+            if (sscanf(cursor, "%d %39s %d", &id, name, &calls) == 3 && id >= 0 &&
+                id < MZM_MESSAGE_COUNT) {
+                sprites->banner_kind.text_calls[id] = (uint16_t)calls;
+                snprintf(sprites->message_names[id], sizeof sprites->message_names[id], "%s", name);
+            }
         } else if (!strcmp(line, "sstats")) {
             char name[64];
             int id, health, damage, weakness;
@@ -1993,6 +2089,20 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
     if (!runtime_effect_kind_open(effects->debris_timers, &effects->debris_count, library,
                                   "SpriteDebrisOam"))
         return false;
+    /* The banner's durations do not depend on its message. */
+    sprites->banner_ok = sprites->message_names[MZM_MESSAGE_ENERGY_TANK_ACQUIRED][0] != '\0';
+    for (int t = 0; t < MZM_BANNER_TABLES && sprites->banner_ok; ++t) {
+        char key[160];
+        snprintf(key, sizeof key, "Banner/%s/%s/none",
+                 sprites->message_names[MZM_MESSAGE_ENERGY_TANK_ACQUIRED], mzm_banner_tables[t]);
+        RuntimeLibraryEntry *entry = runtime_library_find(library, key);
+        if (!entry || entry->count >= 32) { sprites->banner_ok = false; break; }
+        for (int f = 0; f < entry->count; ++f)
+            sprites->banner_kind.timers[t][f] = (uint8_t)entry->ticks[f];
+    }
+    if (!sprites->banner_ok)
+        fprintf(stderr, "Zero Mission message banner disabled until re-exported "
+                "(python3 -m scripts.mzm_sprites)\n");
     /* Drops are required (every death may leave one); an enemy family with
      * a missing table is disabled alone, with the diagnostic above. */
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) {
@@ -2181,13 +2291,15 @@ static void runtime_sprites_drop_samus(RuntimeSprites *sprites, MzmSamus *samus)
 static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
                                    MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
                                    const MzmCollision *collision, MzmWeapons *weapons,
-                                   const MzmInput *input) {
+                                   const MzmInput *input, bool stopped) {
     if (!sprites->kinds_ok) return;
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4), runtime_sprite_movement};
     mzm_sprite_debris_process(&sprites->effects, &world, &sprites->tables,
                               &sprites->effect_kinds);
-    if (samus->pose != MZM_POSE_DYING) {
+    /* SpriteUtilCheckStopSpritesPose: no Samus collision while movement is
+     * prevented. */
+    if (samus->pose != MZM_POSE_DYING && !stopped) {
         RuntimeSpriteHurt hurt = {samus, equipment, collision};
         const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
         /* The sprites see gSamusData.yPosition (the port's y - 1). */
@@ -2230,13 +2342,13 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             sprites->live, RUNTIME_MAX_SPRITES, &sprites->effects, &hooks,
                             &sprites->globals, runtime_samus_small(samus), samus->x_velocity,
                             runtime_area_id(room->area), (uint8_t)room->room,
-                            samus->pose != MZM_POSE_DYING ? &standing : NULL};
+                            samus->pose != MZM_POSE_DYING ? &standing : NULL, stopped};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
-    mzm_sprites_end_frame(&sprites->globals, &hooks);
-    if (samus->pose != MZM_POSE_DYING) {
+    if (!stopped) mzm_sprites_end_frame(&sprites->globals, &hooks);
+    if (samus->pose != MZM_POSE_DYING && !stopped) {
         if (standing.landing_request)
             mzm_samus_land_on_sprite(samus, input, equipment, collision);
         if (standing.y_set) samus->y = (int32_t)standing.y + 1;
@@ -2760,6 +2872,8 @@ int main(int argc, char **argv) {
     RuntimePaletteSlots palette_slots={0};
     const char *palette_suit=NULL;
     unsigned int palette_frame=0;
+    /* gPreventMovementTimer */
+    uint16_t prevent_movement=0;
     RuntimeAnimationMap animation_map = {0};
     GbaInput gamepad = {0};
     if (!renderer) { fprintf(stderr,"SDL renderer: %s\n",SDL_GetError()); goto cleanup; }
@@ -3198,10 +3312,18 @@ int main(int argc, char **argv) {
                 input.held=0;
                 input.pressed=0;
             }
-            input.new_projectile=mzm_weapons_begin_frame(
-                &weapons,&samus,input.held,input.pressed,&equipment);
             int32_t previous_x=samus.x;    /* gPreviousXPosition */
-            mzm_samus_update(&samus,&input,&equipment,&collision,&animation_source);
+            /* gPreventMovementTimer: SamusUpdate (with its weapon checks)
+             * waits while it runs down. */
+            bool movement_prevented=prevent_movement!=0;
+            if(movement_prevented) {
+                prevent_movement--;
+                input.new_projectile=false;
+            } else {
+                input.new_projectile=mzm_weapons_begin_frame(
+                    &weapons,&samus,input.held,input.pressed,&equipment);
+                mzm_samus_update(&samus,&input,&equipment,&collision,&animation_source);
+            }
             palette_frame++;
             /* ProjectileUpdate reads the arm cannon offset of the pose and
              * frame Samus has after her update. */
@@ -3219,7 +3341,16 @@ int main(int argc, char **argv) {
             /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
              * arm cannon offset above is the one SamusUpdate left. */
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
-                                   &equipment, &collision, &weapons, &input);
+                                   &equipment, &collision, &weapons, &input, movement_prevented);
+            if(sprites.banner.exists && sprites.banner_ok) {
+                /* MessageBanner, a sprite updated with the others. */
+                bool keys=(input.held&(MZM_KEY_A|MZM_KEY_B|MZM_KEY_RIGHT|MZM_KEY_LEFT|
+                                       MZM_KEY_UP|MZM_KEY_DOWN))!=0;
+                unsigned events=mzm_banner_update(&sprites.banner,&sprites.banner_kind,keys,
+                                                  runtime_tank_collection.collecting,
+                                                  &prevent_movement);
+                if(events&MZM_BANNER_FINISH_TANK) runtime_finish_collecting_tank(room);
+            }
             weapons.samus_previous_x=previous_x;
             weapons.frame8=sprites.frame8;
             /* gBg1X/YPosition for ProjectileCheckDespawn. */
@@ -3313,6 +3444,20 @@ int main(int argc, char **argv) {
                 runtime_sprites_drop_samus(&sprites,&samus);
                 mzm_particles_process(&sprites.effects,&sprites.effect_kinds,
                                       (uint16_t)((int)last_cx*4),(uint16_t)((int)last_cy*4));
+            }
+            /* BgClipCheckTouchingTransitionOrTank on odd frames: a revealed
+             * tank stops Samus and opens its message banner. */
+            if(samus.pose!=MZM_POSE_DYING && runtime_block_tables.tanks_ok &&
+               ((uint8_t)(sprites.frame8-1)&1)) {
+                MzmTouchProbes probes;
+                runtime_touch_probes(room,&samus,&probes);
+                int message=mzm_tank_touch(&runtime_block_tables.tanks,&runtime_tank_collection,
+                                           &probes,&equipment);
+                if(message>=0 && message<MZM_MESSAGE_COUNT) {
+                    prevent_movement=MZM_SAMUS_ITEM_PMT;
+                    mzm_banner_spawn(&sprites.banner,(uint8_t)message);
+                    printf("Tank collected: message %s\n",sprites.message_names[message]);
+                }
             }
             /* Room lifecycle: a touched door transition loads the exported
              * destination room and places Samus at its exit. */
@@ -3674,6 +3819,25 @@ int main(int argc, char **argv) {
             if(lib_entry) SDL_RenderRect(renderer,&avatar);
             else SDL_RenderFillRect(renderer,&avatar);
         }
+        if(sprites.banner.exists && sprites.banner.drawn && sprites.banner_ok) {
+            /* The message banner: SP_ABSOLUTE_POSITION at (120, 54) of the
+             * GBA screen, bgPriority 0; centred in the wider runtime view
+             * (the GBA screen's 64 extra rows split above and below). */
+            char key[160];
+            snprintf(key,sizeof key,"Banner/%s/%s/none",
+                     sprites.message_names[sprites.banner.message],
+                     mzm_banner_tables[sprites.banner.table]);
+            RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
+            if(entry && entry->count>0) {
+                int index=sprites.banner.frame<entry->count?sprites.banner.frame:0;
+                SDL_Texture *banner_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+                const RuntimeLibraryFrame *art=&entry->frames[index];
+                SDL_FRect box={viewport.x+(160.f+(float)art->offset_x)*scale,
+                               viewport.y+(54.f+32.f+(float)art->offset_y)*scale,
+                               (float)art->w*scale,(float)art->h*scale};
+                if(banner_texture)SDL_RenderTexture(renderer,banner_texture,NULL,&box);
+            }
+        }
         debug_draw(renderer,&debug,paused,viewport,scale,current_room,&samus,&equipment,
                    debug_frame);
         if(capture_path && capture_step>=capture_frames) {
@@ -3691,6 +3855,11 @@ int main(int argc, char **argv) {
                    capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
+            if(sprites.banner.exists)
+                printf("  banner %s pose %#x table %s frame %u%s, movement prevented %u\n",
+                       sprites.message_names[sprites.banner.message],sprites.banner.pose,
+                       mzm_banner_tables[sprites.banner.table],sprites.banner.frame,
+                       sprites.banner.drawn?"":" (not drawn)",prevent_movement);
             for(int i=0;i<MZM_MAX_PROJECTILES;i++)
                 if(weapons.list[i].active)
                     printf("  projectile %d type %d at %d,%d\n",i,(int)weapons.list[i].type,

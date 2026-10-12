@@ -27,6 +27,12 @@ Output stays private:
     assets/extracted/metroid/sprites/enemies/runtime/runtime_index.tsv
     assets/extracted/metroid/metadata/sprites.tsv
 
+The message banner (``PSPRITE_MESSAGE_BANNER``) is exported once per English
+message as ``Banner/<MESSAGE>/<table>/none``, its OAM tables drawn over the
+banner graphics with the message's text (``scripts/mzm_message_text.py``);
+``message`` lines give each message's id, name and TextProcessMessageBanner
+calls.
+
 ``sprites.tsv`` holds the ROM tables the sprite engine reads:
 ``sSpriteRandomNumberTable`` (``random``), ``sSpritesFallingSpeed``
 (``falling``) and the ``sPrimarySpriteStats`` row of every primary sprite
@@ -49,7 +55,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts import mzm_projectile_compose  # noqa: E402
+from scripts import mzm_message_text, mzm_projectile_compose  # noqa: E402
 from scripts.asset_layout import METROID_METADATA, METROID_SPRITES, private_path  # noqa: E402
 from scripts.gba_tiles import bgr555  # noqa: E402
 from scripts.mzm_room_render import lz77  # noqa: E402
@@ -115,6 +121,9 @@ PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",
              "sParticleHittingSomethingWithSuperMissileOam", "sParticleMediumDustOam",
              "sParticleTwoMediumDustOam", "sSpriteDebrisOam")
 SPRITE_VRAM = 0x4000
+# The message banner's graphics and the text the banner draws into them.
+BANNER_SYMBOLS = ("sMessageBannerGfx", "sMessageBannerPal", "sMessageTextPointers",
+                  "sCharactersGfx", "sCharacterWidths")
 # Enemy drops (src/sprites_ai/enemy_drop.c, EnemyDropInit) and their table.
 DROPS = {
     "PSPRITE_SMALL_ENERGY_DROP": "sEnemyDropOam_SmallEnergy",
@@ -367,6 +376,9 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     wanted.update(tables)
     wanted.update(["sSecondarySpriteStats", *AI_TABLES])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values(), *PARTICLES])
+    banner_source = (decomp / "src/data/sprites/message_banner.c").read_text(encoding="utf-8")
+    banner_tables = [t for t in frame_tables(banner_source) if t.startswith("sMessageBannerOam")]
+    wanted.update([*BANNER_SYMBOLS, *banner_tables])
     nm_output = _run_nm(nm, elf)
     symbols = {name: value for name, value in parse_symbols(nm_output, tuple(wanted)).items()
                if name in wanted}
@@ -385,6 +397,24 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         code = {1: "b", 2: "h"}[width] if signed else {1: "B", 2: "H"}[width]
         return list(struct.unpack(f"<{size // width}{code}", data))
 
+    messages = {name: value for name, value in enum_ids(
+        (decomp / "include/constants/text.h").read_text(encoding="utf-8"), "MessageId").items()
+        if 0 <= value < enum_ids((decomp / "include/constants/text.h").read_text(encoding="utf-8"),
+                                 "MessageId")["MESSAGE_COUNT"]}
+    banner_vram, banner_palette = stage(rom, symbols, "sMessageBannerGfx", "sMessageBannerPal", 0)
+    font = mzm_message_text.Font(
+        rom[rom_offset(symbols["sCharactersGfx"][0], rom):][:symbols["sCharactersGfx"][1]],
+        rom[rom_offset(symbols["sCharacterWidths"][0], rom):][:symbols["sCharacterWidths"][1]])
+    pointers = struct.unpack_from("<I", rom, rom_offset(symbols["sMessageTextPointers"][0], rom) +
+                                  4 * mzm_message_text.LANGUAGE_ENGLISH)[0]
+    banners = []
+    for name, value in sorted(messages.items(), key=lambda item: item[1]):
+        text_pointer = struct.unpack_from("<I", rom, rom_offset(pointers, rom) + 4 * value)[0]
+        text = mzm_message_text.read_text(rom, text_pointer, rom_offset)
+        vram = mzm_message_text.Vram(banner_vram)
+        calls = mzm_message_text.render_message(vram, font, text, SPRITE_VRAM)
+        lines.append(f"message\t{value}\t{name[len('MESSAGE_'):]}\t{calls}")
+        banners.append((name[len('MESSAGE_'):], vram.to_bytes()))
     lines.append("random\t" + "\t".join(map(str, words("sSpriteRandomNumberTable", False, 1))))
     lines.append("falling\t" + "\t".join(map(str, words("sSpritesFallingSpeed", True, 2))))
     stats = words("sPrimarySpriteStats", False, 2)
@@ -428,6 +458,16 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                         frames.append((bmp, duration, left, top))
                     library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}{suffix}",
                                 frames)
+    # The message banner (PSPRITE_MESSAGE_BANNER) with each message's text
+    # in its graphics (TextProcessMessageBanner over SpriteLoadGfx's tiles).
+    for name, vram in banners:
+        for table in banner_tables:
+            frames = []
+            for pointer, duration in mzm_projectile_compose.frames(rom, symbols, table):
+                pixels = mzm_projectile_compose.render(rom, vram, banner_palette, pointer, "none")
+                bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+                frames.append((bmp, duration, left, top))
+            library.add(f"Banner/{name}/{table[1:]}/none", frames)
     vram, palette = stage_common(rom, symbols)
     for sprite, table in DROPS.items():
         frames = []

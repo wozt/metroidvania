@@ -242,7 +242,9 @@ approximate overlay). With the Charge Beam (a debug menu item, like the Long
 Beam), holding B charges a shot released with B, and a charged spin hits
 enemies as the pseudo screw. The Ice Beam (also a debug item) freezes
 enemies for a few seconds, flashing before they thaw; Samus can stand
-on a frozen enemy. The Wave Beam crosses walls and the Plasma Beam goes
+on a frozen enemy. Energy, missile, super missile and power bomb tanks are
+picked up with their native message banner (the text drawn with the game's
+font), raising the capacities; collected tanks stay gone. The Wave Beam crosses walls and the Plasma Beam goes
 through enemies (both debug items, combinable with the other beams). With the Speed Booster
 (an item of the debug menu), a long run starts the speed boost: it
 breaks speed blocks and enemies, and releasing the direction skids (Down

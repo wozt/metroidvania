@@ -475,6 +475,9 @@ typedef struct {
     /* Samus's standing state (NULL: SpriteUtilSamusStandingOnSprite does
      * nothing). */
     MzmSpriteStanding *standing;
+    /* SpriteUtilCheckStopSpritesPose (gPreventMovementTimer): only sprites
+     * still uninitialized run; the others only check if on screen. */
+    bool stopped;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,

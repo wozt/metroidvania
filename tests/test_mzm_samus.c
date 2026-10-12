@@ -1213,6 +1213,31 @@ static void test_charge_beam(void) {
     assert(mzm_projectile_count(&weapons, MZM_PROJECTILE_CHARGED_LONG_BEAM) == 1);
 }
 
+/* Standing on a solid (frozen) sprite: the landing request from
+ * SpriteUtilSamusStandingOnSprite lands a midair Samus, and STANDING_ENEMY
+ * keeps a ground pose over air until it is released. */
+static void test_standing_on_sprite(void) {
+    World w;
+    world_init(&w);
+    place(&w, 64, 96);              /* feet over air */
+    w.samus.y_velocity = -20;
+    w.samus.pose = MZM_POSE_MIDAIR;
+    MzmInput none = {0, 0, false};
+    mzm_samus_land_on_sprite(&w.samus, &none, &w.equipment, &w.collision);
+    assert(w.samus.pose == MZM_POSE_LANDING && w.samus.y_velocity == 0 &&
+           w.samus.copy_y == 96 * 4);
+    w.samus.on_enemy = true;
+    steps(&w, 0, 10);
+    assert(mzm_pose_standing(w.samus.pose) == MZM_STANDING_GROUND && w.samus.y == 96 * 4);
+    /* Walking on it keeps the ground pose. */
+    steps(&w, MZM_KEY_RIGHT, 10);
+    assert(w.samus.pose == MZM_POSE_RUNNING && w.samus.y == 96 * 4);
+    /* Released: the next ground check finds air. */
+    w.samus.on_enemy = false;
+    step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_MIDAIR);
+}
+
 int main(void) {
     test_native_tables();
     test_damage();
@@ -1234,6 +1259,7 @@ int main(void) {
     test_shinespark();
     test_power_bomb();
     test_charge_beam();
+    test_standing_on_sprite();
     puts("MZM Samus controller tests passed");
     return 0;
 }

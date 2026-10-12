@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-12T12:34:25+00:00",
+ "generated_at": "2026-10-12T13:23:34+00:00",
  "git": {
-  "commit": "1df49f1",
+  "commit": "af23628",
   "branch": "main",
   "dirty": true
  },
@@ -833,8 +833,8 @@
    "native_routines": [
     "Holtz"
    ],
-   "limitations": "Frozen sprites do not yet act as platforms for Samus. Hovering under a ceiling with its ROM idle table, aware or idle table by Samus height, warning when she is low and within 8 blocks vertically and 5 across, the swoop at 3 pixels a frame with the horizontal speed growing from 2 to 12 subpixels, the slide, the slowing climb, the bonk on the ceiling and the death into drops.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "None specific beyond the shared sprite engine limits (mzm.enemies.zoomer). Hovering under a ceiling with its ROM idle table, aware or idle table by Samus height, warning when she is low and within 8 blocks vertically and 5 across, the swoop at 3 pixels a frame with the horizontal speed growing from 2 to 12 subpixels, the slide, the slowing climb, the bonk on the ceiling and the death into drops.",
+   "next_action": "Compare its behavior with the original game frame by frame.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -881,8 +881,8 @@
    "native_routines": [
     "Mella"
    ],
-   "limitations": "Frozen sprites do not yet act as platforms for Samus. Hovering under a ceiling with the ROM idle tables from an RNG offset, detection when Samus is low and within 8 blocks vertically and 3 across, a 7-frame delay, the swoop with the ROM going-down, going-up and horizontal speed tables (the going-down flag is SAMUS_COLLIDING, as in the game), the climb back half a block under the ceiling and the small explosion death.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "None specific beyond the shared sprite engine limits (mzm.enemies.zoomer). Hovering under a ceiling with the ROM idle tables from an RNG offset, detection when Samus is low and within 8 blocks vertically and 3 across, a 7-frame delay, the swoop with the ROM going-down, going-up and horizontal speed tables (the going-down flag is SAMUS_COLLIDING, as in the game), the climb back half a block under the ceiling and the small explosion death.",
+   "next_action": "Compare its behavior with the original game frame by frame.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -929,8 +929,8 @@
    "native_routines": [
     "Multiviola"
    ],
-   "limitations": "Frozen sprites do not yet act as platforms for Samus (its unused secondary sprite is not ported). Bouncing diagonally off every surface at 3 subpixels a frame on both axes, starting toward Samus, its 56-frame animation starting at twice its slot, and the big explosion death into drops.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "Its unused secondary sprite is not ported. Bouncing diagonally off every surface at 3 subpixels a frame on both axes, starting toward Samus, its 56-frame animation starting at twice its slot, and the big explosion death into drops.",
+   "next_action": "Port its unused secondary sprite only if a room uses it; compare its behavior with the original game frame by frame.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -982,8 +982,8 @@
     "SpriteUtilCountChildPrimarySprites",
     "SpriteSpawnDropFollowers"
    ],
-   "limitations": "The background priority changes are not ported and frozen sprites do not yet act as platforms. Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "The background priority changes are not ported. Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.",
+   "next_action": "Port the background priority changes.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1033,7 +1033,7 @@
     "SpriteUtilMakeSpriteFaceSamusDirection"
    ],
    "limitations": "The water splash effects of SpriteUtilCheckInRoomEffect / CheckOutOfRoomEffect are not ported. Green and purple Reos: hovering with the ROM idle tables from an RNG offset, detection within 8 blocks vertically and 7 across, homing on a point 72 subpixels above Samus with per-axis acceleration (caps 24/16 or 64/32 quarter subpixels), braking and turning past it, turning at walls, pushing the next overlapping Reo apart and the big explosion death into drops.",
-   "next_action": "Port the water splash effects and frozen sprites as platforms.",
+   "next_action": "Port the water splash effects.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1130,8 +1130,8 @@
     "SpriteUtilChooseRandomXFlip",
     "SpriteUtilCheckCollisionAtPosition"
    ],
-   "limitations": "Frozen sprites do not yet act as platforms for Samus; missiles that would tumble off a Ripper are removed. Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "Missiles that would tumble off a Ripper are removed. Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.",
+   "next_action": "Port tumbling missiles.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1181,8 +1181,8 @@
     "SpriteUtilCheckSamusNearSpriteLeftRight",
     "SpriteUtilMakeSpriteFaceSamusDirection"
    ],
-   "limitations": "Frozen sprites do not yet act as platforms for Samus. Ground and ceiling Sidehoppers: idle or head shake for 1 to 4 loops (work1 kept at 0 on spawn, as without BUGFIX), Samus detection within five blocks, jump warning, high or low jumps from the ROM tables with the head hitbox resized, wall bounces, falls when unsupported, landing and the single-then-big death explosion into drops.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "None specific beyond the shared sprite engine limits (mzm.enemies.zoomer). Ground and ceiling Sidehoppers: idle or head shake for 1 to 4 loops (work1 kept at 0 on spawn, as without BUGFIX), Samus detection within five blocks, jump warning, high or low jumps from the ROM tables with the head hitbox resized, wall bounces, falls when unsupported, landing and the single-then-big death explosion into drops.",
+   "next_action": "Compare its behavior with the original game frame by frame.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1238,8 +1238,8 @@
     "SpriteSpawnSecondary",
     "SpriteCheckOnScreen"
    ],
-   "limitations": "Frozen sprites do not yet act as platforms for Samus; the explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping). Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "The explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping). Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.",
+   "next_action": "Reproduce the per-part rotation of the explosion parts.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1287,7 +1287,7 @@
     "Sova"
    ],
    "limitations": "Screen-shake falls and the falling splash are not ported. Purple and orange Sovas (orange: palette row 1, one subpixel faster): placement onto any surface, a speed that follows the animation frame, crawling on floors (with their two slope tables), walls and ceilings (work2, with its own table instead of a Y flip), the eight native turns with their offsets, falls, landings in a random direction and death into drops.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "next_action": "Port the screen-shake falls and the falling splash.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1407,8 +1407,8 @@
    "native_routines": [
     "Viola"
    ],
-   "limitations": "Frozen sprites do not yet act as platforms for Samus. Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "None specific beyond the shared sprite engine limits (mzm.enemies.zoomer). Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops.",
+   "next_action": "Compare its behavior with the original game frame by frame.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1455,8 +1455,8 @@
     "Waver",
     "SpriteUtilMakeSpriteFaceSamusXFlip"
    ],
-   "limitations": "Frozen sprites do not yet act as platforms for Samus. Wavers start toward Samus and bounce diagonally between surfaces at their native speeds, dying into drops.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "limitations": "None specific beyond the shared sprite engine limits (mzm.enemies.zoomer). Wavers start toward Samus and bounce diagonally between surfaces at their native speeds, dying into drops.",
+   "next_action": "Compare its behavior with the original game frame by frame.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1506,7 +1506,7 @@
     "ZeelaDeath"
    ],
    "limitations": "The falling splash is not ported; the eyes rotate as a composed frame without the affine clipping. Zeelas reuse the Zoomer crawler with their speed, hitbox, ground X flip, single slope table and faster falling and landing animations; the red Zeela throws two spinning eyes that stop on solid collision or Samus and explode.",
-   "next_action": "Make frozen sprites solid platforms for Samus.",
+   "next_action": "Port the falling splash.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1573,10 +1573,14 @@
     "ZoomerDeath",
     "SpriteUtilSpriteDeath",
     "SpriteUtilUpdateStunTimer",
-    "SpriteUtilUpdateFreezeTimer"
+    "SpriteUtilUpdateFreezeTimer",
+    "SpriteUtilSamusStandingOnSprite",
+    "SpriteUtilCheckStopSamusAgainstSolidSpriteLeft",
+    "SpriteUtilCheckStopSamusAgainstSolidSpriteRight",
+    "SpriteUtilCheckPullingSelfUp"
    ],
-   "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; frozen sprites take contact damage but do not yet act as platforms for Samus. Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns with the stun palette flash (SpriteUtilUpdateStunTimer), freezing (SpriteUtilUpdateFreezeTimer in every ported AI, the frozen and stun rows baked as /frozen and /stun library variants), and death with its explosion particle into enemy drops are ported.",
-   "next_action": "Make frozen sprites platforms (SpriteUtilSamusStandingOnSprite), then port the Space Pirates, Metroids and Mother Brain Rinkas.",
+   "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; frozen sprites ignore SpriteUtilCheckOnZipline (no ziplines are ported). Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns with the stun palette flash (SpriteUtilUpdateStunTimer), freezing (SpriteUtilUpdateFreezeTimer in every ported AI, the frozen and stun rows baked as /frozen and /stun library variants), frozen sprites as solid platforms (SpriteUtilSamusStandingOnSprite: Samus stands on them, is pushed below them or stopped at their sides), and death with its explosion particle into enemy drops are ported.",
+   "next_action": "Port the Metroids, the Mother Brain Rinkas and the remaining Space Pirates.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -2252,7 +2256,8 @@
    ],
    "tests": [
     "tests/test_mzm_samus.c",
-    "tests/test_mzm_sprites.c"
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_sprites.py"
    ],
    "dependencies": [
     "mzm.weapons.charge_beam",
@@ -2274,10 +2279,12 @@
     "ParticleFreezingSpriteWithIce",
     "ParticleFreezingSpriteWithChargedIce",
     "ParticleHittingSomethingWithIceBeam",
-    "SamusUpdatePalette"
+    "SamusUpdatePalette",
+    "SpriteUtilSamusAndSpriteCollision",
+    "SpriteUtilSamusStandingOnSprite"
    ],
-   "limitations": "Frozen sprites take contact damage but are not yet solid platforms for Samus (SpriteUtilSamusStandingOnSprite); the charged Ice Beam trail (PE_CHARGED_ICE_BEAM_TRAIL) is not ported; the trails' low BG priority is not drawn; frozenPaletteRowOffset is taken as 0 for every sprite; the suitless Space Pirate freeze flicker is not ported; the Wave and Plasma combinations are not ported. The Ice Beam (over the Long Beam) moves 26 subpixels a frame and drops a trailing particle half a block from it when gFrameCounter8Bit & 3 is 0 (drifting one subpixel sideways and one pixel down a frame); its shot, charge and impact sounds, beam graphics, sBeamPal row 2, release row 2 and charging rows 4 and 5 are used. Hits: a sprite weak to beams freezes for 240 when freezable and frame8 & its freeze flag (metadata high byte) is 0, taking 3 (4 with Long Beam) as ice damage; otherwise normal damage; freezable but immune sprites freeze with no damage; others take the solid hit. The charged Ice Beam (12, 16 with Long Beam) needs a charge-beam or beam weakness and always freezes freezable sprites. Freezing sets the frozen row (15 - graphics slot), plays SOUND_FREEZING_SPRITE and the freezing particle (drawn every other frame); every ported AI then only counts the timer down every other frame and flickers in its last 45 ticks. The stun timer now flashes the stun row (14 - slot). The exporter bakes /frozen and /stun variants of every sprite frame. Pseudo screw damage counts the Ice Beam. Checked in brinstar_003 (`--item ice-beam`, L held, B taps): a brown Ripper freezes blue under the ice impact and freezing particles, trails follow the shots and Samus flashes the ice release row.",
-   "next_action": "Make frozen sprites solid platforms for Samus, then the charged ice trail, Wave and Plasma Beams.",
+   "limitations": "SpriteUtilCheckOnZipline is not checked (no ziplines); the charged Ice Beam trail (PE_CHARGED_ICE_BEAM_TRAIL) is not ported; the trails' low BG priority is not drawn; frozenPaletteRowOffset is taken as 0 for every sprite; the suitless Space Pirate freeze flicker is not ported; the Wave and Plasma combinations are not ported. The Ice Beam (over the Long Beam) moves 26 subpixels a frame and drops a trailing particle half a block from it when gFrameCounter8Bit & 3 is 0 (drifting one subpixel sideways and one pixel down a frame); its shot, charge and impact sounds, beam graphics, sBeamPal row 2, release row 2 and charging rows 4 and 5 are used. Hits: a sprite weak to beams freezes for 240 when freezable and frame8 & its freeze flag (metadata high byte) is 0, taking 3 (4 with Long Beam) as ice damage; otherwise normal damage; freezable but immune sprites freeze with no damage; others take the solid hit. The charged Ice Beam (12, 16 with Long Beam) needs a charge-beam or beam weakness and always freezes freezable sprites. Freezing sets the frozen row (15 - graphics slot), plays SOUND_FREEZING_SPRITE and the freezing particle (drawn every other frame); every ported AI then only counts the timer down every other frame and flickers in its last 45 ticks. The stun timer now flashes the stun row (14 - slot). The exporter bakes /frozen and /stun variants of every sprite frame. Pseudo screw damage counts the Ice Beam. Checked in brinstar_003 (`--item ice-beam`, L held, B taps): a brown Ripper freezes blue under the ice impact and freezing particles, trails follow the shots and Samus flashes the ice release row. Frozen sprites are solid: a falling Samus lands on them (SpriteUtilSamusStandingOnSprite, STANDING_ENEMY), rising into one stops her under it and walking into one stops her at its side; its kill drops her. Checked in ridley_003 (`--item ice-beam --item charge-beam`): a charged shot freezes a Dessgeega, Samus jumps onto it and stands there until it thaws, then takes its contact damage.",
+   "next_action": "Port the charged ice trail, then the Wave and Plasma Beams.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -2303,6 +2310,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_mzm_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -5018,6 +5031,12 @@
  },
  "timeline": [
   {
+   "commit": "af23628",
+   "date": "2026-10-12",
+   "subject": "feat(mzm): Ice Beam, freezing and the stun palette flash",
+   "scope": "mzm"
+  },
+  {
    "commit": "1df49f1",
    "date": "2026-10-12",
    "subject": "feat(mzm): Charge Beam, Long Beam and the pseudo screw",
@@ -5490,12 +5509,6 @@
    "date": "2026-10-10",
    "subject": "feat(assets): export projectile sprites, cannon offsets and armed cannons",
    "scope": "assets"
-  },
-  {
-   "commit": "f396222",
-   "date": "2026-10-10",
-   "subject": "docs(aria): record the verified collision table loader",
-   "scope": "aria"
   }
  ],
  "inventory": {
@@ -5523,7 +5536,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 225,
+    "routines_cited_by_features": 229,
     "call_edges": 6071
    },
    "aos": {

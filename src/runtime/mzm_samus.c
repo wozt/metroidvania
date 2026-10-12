@@ -287,6 +287,7 @@ static void aim_cannon(Ctx *x, bool allow_down) {
 /* SamusCopyData: snapshot, apply a pending turn and reset transient fields. */
 static MzmSamus copy_data(MzmSamus *s) {
     MzmSamus copy = *s;
+    s->copy_y = s->y;
     if (s->turning) {
         s->facing = -s->facing;
         s->turning = false;
@@ -1322,6 +1323,9 @@ static void move_and_collide(Ctx *x) {
     /* The pull-forward pose starts beside the grabbed block; like the
      * original forced movement it is not dropped by a ground check. */
     if (s->pose == MZM_POSE_PULLING_FORWARD) return;
+    /* SamusCheckWalkingSidesCollision / SamusCheckLandingCollision: no
+     * floor check while standing on a sprite. */
+    if (standing == MZM_STANDING_GROUND && s->on_enemy) return;
     if (standing == MZM_STANDING_GROUND) {
         if (!box_blocked(x->c, type, s->x, s->y + 1) &&
             box_near_slope(x->c, type, s->x, s->y + 2 * MZM_PIXEL_SIZE)) {
@@ -1341,6 +1345,7 @@ static void move_and_collide(Ctx *x) {
     step = dy > 0 ? 1 : -1;
     for (int32_t moved = 0; moved != dy; moved += step) {
         if (box_blocked(x->c, type, s->x, s->y + step)) {
+            if (step > 0 && s->on_enemy) break;
             if (step > 0) {
                 s->y_velocity = 0;
                 request_landing(x);
@@ -1351,7 +1356,7 @@ static void move_and_collide(Ctx *x) {
         }
         s->y += step;
     }
-    if (airborne_physics(s->pose) && s->y_velocity <= 0 &&
+    if (airborne_physics(s->pose) && s->y_velocity <= 0 && !s->on_enemy &&
         box_blocked(x->c, type, s->x, s->y + 1)) {
         s->y_velocity = 0;
         request_landing(x);
@@ -1452,6 +1457,12 @@ bool mzm_samus_bomb_bounce_allowed(const MzmSamus *samus, int direction) {
     default:
         return false;
     }
+}
+
+void mzm_samus_land_on_sprite(MzmSamus *samus, const MzmInput *input,
+                              const MzmEquipment *equipment, const MzmCollision *collision) {
+    Ctx x = {samus, input, equipment, collision, NULL};
+    request_landing(&x);
 }
 
 bool mzm_samus_bomb_bounce(MzmSamus *samus, const MzmEquipment *equipment,

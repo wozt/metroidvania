@@ -3569,6 +3569,88 @@ static uint16_t damage_of(const MzmSprite *s, const MzmSpriteTables *tables) {
 
 static void deal_damage(MzmSprite *s, uint16_t damage);
 
+/* The kills' "standing on it: Samus to STANDING_MIDAIR" (applied by
+ * mzm_sprites_samus_dropped). */
+static void drop_samus(MzmSprite *s) {
+    if (s->standing_on != MZM_STANDING_ON_SPRITE_OFF) s->standing_on = MZM_STANDING_ON_SPRITE_DROPPED;
+}
+
+bool mzm_sprites_samus_dropped(MzmSprite *sprites, int count) {
+    bool dropped = false;
+    for (int i = 0; i < count; ++i) {
+        if (sprites[i].standing_on != MZM_STANDING_ON_SPRITE_DROPPED) continue;
+        sprites[i].standing_on = MZM_STANDING_ON_SPRITE_OFF;
+        dropped = true;
+    }
+    return dropped;
+}
+
+/* SpriteUtilCheckCollisionAtPosition (gPreviousCollisionCheck) for the
+ * solid sprite rules. */
+static uint8_t samus_check_collision(const MzmSpriteWorld *world, uint16_t y, uint16_t x) {
+    Ctx c = {0};
+    c.world = world;
+    return ai_collision_at(&c, y, x);
+}
+
+/* SpriteUtilCheckStopSamusAgainstSolidSpriteLeft */
+static void stop_samus_left(MzmSpriteSamus *samus, uint16_t samus_y, uint16_t sprite_x) {
+    uint16_t x = (uint16_t)(sprite_x - samus->hitbox_right);
+    if (samus_check_collision(samus->world, samus_y, (uint16_t)(x + samus->hitbox_left)) !=
+        MZM_COLLISION_AIR)
+        return;
+    if (samus_check_collision(samus->world, (uint16_t)(samus_y - BLOCK_SIZE),
+                              (uint16_t)(x + samus->hitbox_left)) == MZM_COLLISION_AIR ||
+        samus->morphed) {
+        samus->x = x;
+        if (samus->facing > 0 && samus->has_energy) samus->stop_x = true;
+    }
+}
+
+/* SpriteUtilCheckStopSamusAgainstSolidSpriteRight */
+static void stop_samus_right(MzmSpriteSamus *samus, uint16_t samus_y, uint16_t sprite_x) {
+    uint16_t x = (uint16_t)(sprite_x - samus->hitbox_left);
+    if (samus_check_collision(samus->world, samus_y, (uint16_t)(x + samus->hitbox_right)) !=
+        MZM_COLLISION_AIR)
+        return;
+    if (samus_check_collision(samus->world, (uint16_t)(samus_y - BLOCK_SIZE),
+                              (uint16_t)(x + samus->hitbox_right)) == MZM_COLLISION_AIR ||
+        samus->morphed) {
+        samus->x = (uint16_t)(x + ONE_SUB_PIXEL);
+        if (samus->facing < 0 && samus->has_energy) samus->stop_x = true;
+    }
+}
+
+/* SpriteUtilSamusStandingOnSprite */
+static void samus_standing_on_sprite(MzmSprite *s, MzmSpriteStanding *st) {
+    if (s->status & MZM_SPRITE_STATUS_SAMUS_ON_TOP) {
+        if (!st->on_enemy) {
+            if (st->midair) st->landing_request = true;
+            st->on_enemy = true;
+            st->midair = false;
+        }
+        /* Set again by next frame's collision while Samus stays on top. */
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+        return;
+    }
+    switch (s->standing_on) {
+    case MZM_STANDING_ON_SPRITE_ON:
+        s->standing_on = MZM_STANDING_ON_SPRITE_RELEASING;
+        if (st->copy_y <= st->y) {
+            st->y = (uint16_t)(s->y + s->hitbox_top + ONE_SUB_PIXEL);
+            st->y_set = true;
+        }
+        break;
+    case MZM_STANDING_ON_SPRITE_RELEASING:
+        s->standing_on = MZM_STANDING_ON_SPRITE_OFF;
+        if (st->on_enemy) {
+            st->on_enemy = false;
+            st->midair = true;
+        }
+        break;
+    }
+}
+
 /* SpriteUtilUpdateFreezeTimer: down every other frame; the animation timer
  * steps back once it ends; the last 45 ticks flicker the frozen palette. */
 void ai_update_freeze_timer(Ctx *c) {
@@ -3613,6 +3695,7 @@ static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
         s->health = 0;
         s->freeze_timer = 0;
         s->palette_row = 0;
+        drop_samus(s);
         /* Speed boosting takes precedence over the screw attack. */
         s->pose = !samus->speedboosting ? SPRITE_POSE_SCREW_ATTACK_DESTROYED
                   : samus->shinesparking ? SPRITE_POSE_SHINESPARK_DESTROYED
@@ -3628,6 +3711,7 @@ static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
 
 void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *samus,
                                  const MzmSpriteTables *tables) {
+    const uint16_t samus_y = samus->y, samus_x = samus->x;
     uint16_t samus_top = (uint16_t)(samus->y + samus->hitbox_top);
     uint16_t samus_bottom = (uint16_t)(samus->y + samus->hitbox_bottom);
     uint16_t samus_left = (uint16_t)(samus->x + samus->hitbox_left);
@@ -3643,11 +3727,30 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             continue;
         uint16_t center_x = (uint16_t)(left + (uint16_t)(right - left) / 2);
         bool on_left = center_x >= samus->previous_x;
-        /* A frozen sprite: the contact damage of SpriteUtilSpriteTakeDamage
-         * FromSamusContact, and no harm to Samus (standing on it is not
-         * ported yet). */
+        /* A frozen sprite is solid: after the contact damage (no kill),
+         * Samus stands on it, is pushed below it or is stopped at its
+         * sides. SpriteUtilCheckOnZipline is false (no ziplines). */
         if (s->freeze_timer) {
-            contact_kills(s, samus, tables);
+            if (samus->pulling_up || contact_kills(s, samus, tables) || !samus->world) continue;
+            if (samus_y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < top) {
+                if (samus_check_collision(samus->world,
+                                          (uint16_t)(top + ONE_SUB_PIXEL + samus->hitbox_top),
+                                          samus_x) == MZM_COLLISION_AIR &&
+                    samus->y_velocity <= 0) {
+                    samus->y = (uint16_t)(top + ONE_SUB_PIXEL);
+                    s->status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+                    s->standing_on = MZM_STANDING_ON_SPRITE_ON;
+                }
+            } else if (samus_top + QUARTER_BLOCK_SIZE > bottom) {
+                if (samus_check_collision(samus->world, (uint16_t)(bottom - samus->hitbox_top),
+                                          samus_x) == MZM_COLLISION_AIR) {
+                    samus->y = (uint16_t)(bottom - samus->hitbox_top);
+                    if (samus->y_velocity > 0 && samus->has_energy) samus->stop_y = true;
+                }
+            } else if (samus_x < left || samus_x > right) {
+                if (on_left) stop_samus_left(samus, samus_y, left);
+                else stop_samus_right(samus, samus_y, right);
+            }
             continue;
         }
         switch (s->samus_collision) {
@@ -3694,6 +3797,7 @@ static void deal_damage(MzmSprite *s, uint16_t damage) {
         s->health = 0;
         s->freeze_timer = 0;
         s->palette_row = 0;
+        drop_samus(s);
         s->pose = SPRITE_POSE_DESTROYED;
         s->ignore_samus_timer = 1;
     }
@@ -3706,7 +3810,6 @@ static void hit_solid(MzmSprite *s) {
     if ((s->isft & 0x7F) < ISFT_SOLID_HIT) set_isft(s, ISFT_SOLID_HIT);
 }
 
-/* ProjectilePowerBombDealDamage: once per power bomb (the stunned flag). */
 /* ProjectileIceBeamDealDamage: the freeze timer when the sprite survives. */
 static uint8_t ice_damage(MzmSprite *s, uint16_t damage) {
     uint8_t timer = 0;
@@ -3717,6 +3820,7 @@ static uint8_t ice_damage(MzmSprite *s, uint16_t damage) {
         s->health = 0;
         s->freeze_timer = 0;
         s->palette_row = 0;
+        drop_samus(s);
         s->pose = SPRITE_POSE_DESTROYED;
         s->ignore_samus_timer = 1;
     }
@@ -3755,6 +3859,7 @@ static void ice_hit(MzmSprite *s, uint8_t weakness, uint8_t freeze_flag, uint8_t
     }
 }
 
+/* ProjectilePowerBombDealDamage: once per power bomb (the stunned flag). */
 static void power_bomb_damage(MzmSprite *s, uint8_t weakness) {
     uint8_t isft;
     if (s->immune_to_projectiles) {
@@ -3768,6 +3873,7 @@ static void power_bomb_damage(MzmSprite *s, uint8_t weakness) {
             s->health = 0;
             s->freeze_timer = 0;
             s->palette_row = 0;
+            drop_samus(s);
             s->pose = SPRITE_POSE_DESTROYED;
             s->ignore_samus_timer = 1;
         }
@@ -4103,6 +4209,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
         /* A sprite that just became a drop finishes the frame on its
          * previous OAM (pOam is only set by EnemyDropInit), so `c.kind`
          * stays the one it started the frame with. */
+        if (frame->standing) samus_standing_on_sprite(sprite, frame->standing);
         update_animation(&c);
         check_on_screen(&c);
     }

@@ -2988,6 +2988,43 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0266 - Zero Mission frozen sprites as platforms
+
+- `mzm_sprites.c` ports the frozen branch of
+  `SpriteUtilSamusAndSpriteCollision`: unless Samus pulls herself up or the
+  contact kills the sprite, a falling Samus whose feet are within 6 pixels
+  of its top lands on it (y = top + 1, `SAMUS_ON_TOP`, standing on it),
+  rising into its bottom puts her under it and zeroes the upward velocity,
+  and walking into its sides stops her
+  (`SpriteUtilCheckStopSamusAgainstSolidSpriteLeft` / `Right`).
+  `SpriteUtilSamusStandingOnSprite` runs after each AI: the landing request
+  and `STANDING_ENEMY`, then the two-frame release (Samus kept on the top
+  when she did not rise since her last pose change) to `STANDING_MIDAIR`.
+  Kills of a sprite she stands on drop her (`mzm_sprites_samus_dropped`).
+- `mzm_samus.c` keeps `STANDING_ENEMY` (`on_enemy`): no floor check in the
+  ground poses and no block landing while it holds; `gSamusDataCopy`'s y is
+  kept at each pose change; `mzm_samus_land_on_sprite` is the landing
+  request. A room load clears it.
+- The runtime passes the sprites gSamusData's y (the port's y - 1), the
+  vertical velocity, the facing, the pull-up and morphed states and the
+  room, applies the pushes, and prints the freeze timers and the standing
+  state in captures.
+- Checked in ridley_003 (`--spawn 600 144 --item ice-beam --item
+  charge-beam`): a charged Ice Beam freezes a Dessgeega, Samus jumps onto
+  it and stands on it (y 122 over the floor at 144) for 400 frames; once
+  it thaws she takes its contact damage and is knocked back. In
+  brinstar_003, a frozen Ripper stops a spin jump at its side and bumps
+  Samus's head from below.
+- Not ported: ziplines (`SpriteUtilCheckOnZipline`), the non-frozen solid
+  sprite collisions (no ported sprite uses them).
+- Tests: `tests/test_mzm_sprites.c` (landing on top, not while rising, the
+  standing request, the release, the head bump, the side stop, pulling up,
+  the drop on a kill) and `tests/test_mzm_samus.c` (the landing request and
+  ground poses over air while standing on a sprite).
+- Validation on 2026-10-12: warning-clean build, CTest 30/30, the Python
+  suite (429 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0265 - Zero Mission Ice Beam and freezing
 
 - `mzm_projectiles.c` ports `ProjectileProcessIceBeam` and its charged twin:

@@ -241,7 +241,8 @@ opens power bomb hatches and damages every enemy it reaches (its look is an
 approximate overlay). With the Charge Beam (a debug menu item, like the Long
 Beam), holding B charges a shot released with B, and a charged spin hits
 enemies as the pseudo screw. The Ice Beam (also a debug item) freezes
-enemies for a few seconds, flashing before they thaw. With the Speed Booster
+enemies for a few seconds, flashing before they thaw; Samus can stand
+on a frozen enemy. With the Speed Booster
 (an item of the debug menu), a long run starts the speed boost: it
 breaks speed blocks and enemies, and releasing the direction skids (Down
 while skidding stores a shinespark: A then launches it up, sideways with a

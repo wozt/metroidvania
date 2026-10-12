@@ -237,6 +237,11 @@ typedef struct MzmSamus {
     uint8_t shinespark_timer;
     /* The shinespark's forced movement: 0 upwards, 1 sidewards, 2 diagonal. */
     uint8_t spark_direction;
+    /* standingStatus STANDING_ENEMY (standing on a solid sprite), set by
+     * the sprites; and gSamusDataCopy.yPosition (y before the last pose
+     * change). */
+    bool on_enemy;
+    int32_t copy_y;
 } MzmSamus;
 
 const MzmBlockHitbox *mzm_block_hitbox(MzmHitboxType type);
@@ -267,6 +272,9 @@ void mzm_samus_hurt(MzmSamus *samus, const MzmCollision *collision,
                     bool lethal);
 /* The pose test of SamusBombBounce (no liquid). */
 bool mzm_samus_bomb_bounce_allowed(const MzmSamus *samus, int direction);
+/* SamusSetPose(SPOSE_LANDING_REQUEST) from SpriteUtilSamusStandingOnSprite. */
+void mzm_samus_land_on_sprite(MzmSamus *samus, const MzmInput *input,
+                              const MzmEquipment *equipment, const MzmCollision *collision);
 /* SamusBombBounce: the bomb jump through SamusSetMidAir; false when the
  * pose does not bounce. */
 bool mzm_samus_bomb_bounce(MzmSamus *samus, const MzmEquipment *equipment,

@@ -46,6 +46,7 @@ enum {
     MZM_SPRITE_STATUS_FACING_RIGHT = 1 << 9,
     MZM_SPRITE_STATUS_FACING_DOWN = 1 << 10,
     MZM_SPRITE_STATUS_SAMUS_COLLIDING = 1 << 11,
+    MZM_SPRITE_STATUS_SAMUS_ON_TOP = 1 << 12,
     MZM_SPRITE_STATUS_DOUBLE_SIZE = 1 << 14,
     MZM_SPRITE_STATUS_IGNORE_PROJECTILES = 1 << 15,
 };
@@ -385,7 +386,28 @@ typedef struct {
     uint16_t y_spawn, x_spawn;      /* yPositionSpawn / xPositionSpawn (drop timers) */
     uint8_t ram_slot;               /* primarySpriteRamSlot: the owning primary's slot */
     uint16_t scaling;               /* also a saved Samus y for Zebs and Geegas */
+    uint8_t standing_on;            /* standingOnSprite (MZM_STANDING_ON_SPRITE_*) */
 } MzmSprite;
+
+/* SamusStandingOnSprite values; DROPPED (port only) is OFF after a kill
+ * that natively drops Samus to STANDING_MIDAIR when she stood on the sprite
+ * (mzm_sprites_samus_dropped applies it). */
+enum {
+    MZM_STANDING_ON_SPRITE_OFF,
+    MZM_STANDING_ON_SPRITE_ON,
+    MZM_STANDING_ON_SPRITE_RELEASING,
+    MZM_STANDING_ON_SPRITE_DROPPED
+};
+
+/* gSamusData as SpriteUtilSamusStandingOnSprite sees and changes it:
+ * `on_enemy` is standingStatus STANDING_ENEMY, `midair` STANDING_MIDAIR;
+ * `y` (native subpixels) and `copy_y` (gSamusDataCopy.yPosition). Outputs:
+ * `landing_request` (SamusSetPose(SPOSE_LANDING_REQUEST)) and `y_set`. */
+typedef struct {
+    bool on_enemy, midair;
+    uint16_t y, copy_y;
+    bool landing_request, y_set;
+} MzmSpriteStanding;
 
 /* EventFunction values read by the ported sprites (include/constants/event.h). */
 enum {
@@ -450,6 +472,9 @@ typedef struct {
     bool samus_crouching_or_morphed;
     int16_t samus_x_velocity;
     uint8_t area, room;             /* gCurrentArea / gCurrentRoom */
+    /* Samus's standing state (NULL: SpriteUtilSamusStandingOnSprite does
+     * nothing). */
+    MzmSpriteStanding *standing;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,
@@ -471,6 +496,18 @@ typedef struct {
      * or not spinning) and gSamusWeaponInfo.chargeCounter to reset. */
     uint16_t pseudo_screw_damage;
     uint8_t *charge_counter;
+    /* Frozen sprites are solid: the room for SpriteUtilCheckCollisionAtPosition
+     * (NULL: frozen sprites only take contact damage), gSamusData.yVelocity,
+     * SpriteUtilCheckPullingSelfUp, SpriteUtilCheckMorphed, the facing
+     * direction (1 right, -1 left) and a non-zero energy. The collision moves
+     * `x` and `y` (native subpixels) and sets `stop_x` / `stop_y` where the
+     * native zeroes gSamusData.xVelocity / yVelocity. */
+    const MzmSpriteWorld *world;
+    int16_t y_velocity;
+    bool pulling_up, morphed;
+    int8_t facing;
+    bool has_energy;
+    bool stop_x, stop_y;
 } MzmSpriteSamus;
 
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when
@@ -506,6 +543,10 @@ void mzm_sprite_debris_process(MzmEffects *effects, const MzmSpriteWorld *world,
 /* The end of SpriteUpdate: DecrementChozodiaAlarm (its music and palette are
  * not ported), then the draw-order scratch the drawing rewrites. */
 void mzm_sprites_end_frame(MzmSpriteGlobals *globals, const MzmSpriteHooks *hooks);
+/* The kills that natively drop Samus standing on the sprite to
+ * STANDING_MIDAIR: clears the DROPPED marks and returns true when one was
+ * found. */
+bool mzm_sprites_samus_dropped(MzmSprite *sprites, int count);
 /* SpawnWaitingPirates at a room load through a door: with the alarm on (or
  * Mecha Ridley dead), a waiting pirate is spawned at the arrival position
  * (Samus's position, half a block back toward the door), shooting through

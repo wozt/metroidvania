@@ -302,9 +302,16 @@ of its states. `SpriteUtilUpdateStunTimer` flashes the stun row (14 - slot).
 The exporter bakes `/frozen` and `/stun` variants of every sprite frame (a
 part of row b drawn with OBJ row (b + 15) % 16 or (b + 14) % 16, taking
 `frozenPaletteRowOffset` as 0); the runtime picks them from the sprite's
-palette row.
+palette row. Frozen sprites are solid (the frozen branch of
+`SpriteUtilSamusAndSpriteCollision`): after the contact damage, a falling
+Samus whose feet are within 6 pixels of the top is set on it
+(`SAMUS_ON_TOP`), rising into its bottom pushes her under it, and walking
+into a side stops her (`SpriteUtilCheckStopSamusAgainstSolidSpriteLeft` /
+`Right`). `SpriteUtilSamusStandingOnSprite` then runs after each AI: the
+landing request and `STANDING_ENEMY`, the release over two frames and the
+drop to `STANDING_MIDAIR` (also when the sprite is killed under her).
 
-Not ported yet: frozen sprites as solid platforms, the multiple large energy pickup, tumbling missiles,
+Not ported yet: the multiple large energy pickup, tumbling missiles,
 screen-shake falls, splashes in liquids, the hard-mode and event
 spritesets (where the Long Beam Dessgeega is placed), the door lock
 lifecycle, screen shakes, the Chozodia alarm's music and palette, and

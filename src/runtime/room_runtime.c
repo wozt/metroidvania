@@ -732,6 +732,8 @@ static const RoomDoor *runtime_door_touched(const Room *room, const MzmSamus *sa
 /* RoomLoad placement: Samus at the destination door's exit, keeping her
  * vertical offset inside the door. */
 static void runtime_place_after_door(MzmSamus *samus, const RoomDoor *door, int offset) {
+    /* The room load drops STANDING_ENEMY to STANDING_MIDAIR. */
+    samus->on_enemy = false;
     int32_t native_y = (door->dest_y_end + 1) * MZM_BLOCK_SIZE + door->dest_y_exit * 4 - 1;
     samus->x = door->dest_x * MZM_BLOCK_SIZE + (door->dest_x_exit + 8) * 4;
     if (offset < 0) {
@@ -2149,9 +2151,15 @@ static uint16_t runtime_pseudo_screw_damage(const MzmSamus *samus,const MzmEquip
                            ((equipment->items&MZM_ITEM_ICE_BEAM)?1:0)));
 }
 
+/* The kills of a sprite Samus stands on drop her to STANDING_MIDAIR. */
+static void runtime_sprites_drop_samus(RuntimeSprites *sprites, MzmSamus *samus) {
+    if (mzm_sprites_samus_dropped(sprites->live, RUNTIME_MAX_SPRITES)) samus->on_enemy = false;
+}
+
 static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
                                    MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
-                                   const MzmCollision *collision, MzmWeapons *weapons) {
+                                   const MzmCollision *collision, MzmWeapons *weapons,
+                                   const MzmInput *input) {
     if (!sprites->kinds_ok) return;
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4), runtime_sprite_movement};
@@ -2160,7 +2168,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     if (samus->pose != MZM_POSE_DYING) {
         RuntimeSpriteHurt hurt = {samus, equipment, collision};
         const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
-        MzmSpriteSamus view = {&hurt, (uint16_t)samus->x, (uint16_t)samus->y,
+        /* The sprites see gSamusData.yPosition (the port's y - 1). */
+        MzmSpriteSamus view = {&hurt, (uint16_t)samus->x, (uint16_t)(samus->y - 1),
                                (uint16_t)previous_x, box->top, 0, box->left, box->right,
                                samus->pose == MZM_POSE_SCREW_ATTACKING,
                                equipment->suit == MZM_SUIT_SUITLESS, samus->invincibility != 0,
@@ -2168,9 +2177,25 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                samus->pose==MZM_POSE_SHINESPARKING ||
                                    samus->pose==MZM_POSE_BALLSPARKING,
                                runtime_pseudo_screw_damage(samus,equipment,weapons),
-                               weapons?&weapons->charge_counter:NULL};
+                               weapons?&weapons->charge_counter:NULL, &world, samus->y_velocity,
+                               samus->pose == MZM_POSE_PULLING_UP ||
+                                   samus->pose == MZM_POSE_PULLING_FORWARD,
+                               mzm_pose_hitbox(samus->pose) == MZM_HITBOX_MORPHED,
+                               (int8_t)(samus->facing > 0 ? 1 : -1), equipment->energy != 0,
+                               false, false};
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
+        /* The solid (frozen) sprites' pushes. */
+        samus->x = view.x;
+        samus->y = (int32_t)view.y + 1;
+        if (view.stop_x) samus->x_velocity = 0;
+        if (view.stop_y) samus->y_velocity = 0;
     }
+    /* SpriteUtilSamusStandingOnSprite runs after each sprite's AI. */
+    MzmSpriteStanding standing = {samus->on_enemy,
+                                  !samus->on_enemy &&
+                                      mzm_pose_standing(samus->pose) == MZM_STANDING_MIDAIR,
+                                  (uint16_t)(samus->y - 1), (uint16_t)(samus->copy_y - 1),
+                                  false, false};
     sprites->room = room;
     static const MzmSpriteHooks hook_table = {NULL, runtime_sprite_check_event,
                                               runtime_sprite_set_event, runtime_sprite_door_timer,
@@ -2182,12 +2207,20 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top,
                             sprites->live, RUNTIME_MAX_SPRITES, &sprites->effects, &hooks,
                             &sprites->globals, runtime_samus_small(samus), samus->x_velocity,
-                            runtime_area_id(room->area), (uint8_t)room->room};
+                            runtime_area_id(room->area), (uint8_t)room->room,
+                            samus->pose != MZM_POSE_DYING ? &standing : NULL};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
     mzm_sprites_end_frame(&sprites->globals, &hooks);
+    if (samus->pose != MZM_POSE_DYING) {
+        if (standing.landing_request)
+            mzm_samus_land_on_sprite(samus, input, equipment, collision);
+        if (standing.y_set) samus->y = (int32_t)standing.y + 1;
+        samus->on_enemy = standing.on_enemy;
+    }
+    runtime_sprites_drop_samus(sprites, samus);
     sprites->frame8++;
     sprites->frame16++;
 }
@@ -3164,7 +3197,7 @@ int main(int argc, char **argv) {
             /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
              * arm cannon offset above is the one SamusUpdate left. */
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
-                                   &equipment, &collision, &weapons);
+                                   &equipment, &collision, &weapons, &input);
             weapons.samus_previous_x=previous_x;
             weapons.frame8=sprites.frame8;
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
@@ -3250,6 +3283,7 @@ int main(int argc, char **argv) {
                                      impact_effects[weapons.impacts[i].type]);
                 mzm_sprites_projectile_hits(sprites.live,RUNTIME_MAX_SPRITES,&weapons,
                                             &sprites.tables,&sprites.effects);
+                runtime_sprites_drop_samus(&sprites,&samus);
                 mzm_particles_process(&sprites.effects,&sprites.effect_kinds,
                                       (uint16_t)((int)last_cx*4),(uint16_t)((int)last_cy*4));
             }
@@ -3620,13 +3654,14 @@ int main(int argc, char **argv) {
             printf("Captured frame %ld: %s (pose %s at %d,%d, energy %d, %d sprites)\n",
                    capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
+            if(samus.on_enemy)printf("  Samus stands on a sprite\n");
             for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
                 if(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)
-                    printf("  sprite %d %s%s at %d,%d pose %#x status %#x health %d\n",i,
-                           sprites.names[mzm_sprite_graphics_owner(&sprites.live[i])],
+                    printf("  sprite %d %s%s at %d,%d pose %#x status %#x health %d freeze %d\n",
+                           i,sprites.names[mzm_sprite_graphics_owner(&sprites.live[i])],
                            sprites.live[i].secondary?" part":"",sprites.live[i].x>>2,
                            sprites.live[i].y>>2,sprites.live[i].pose,sprites.live[i].status,
-                           sprites.live[i].health);
+                           sprites.live[i].health,sprites.live[i].freeze_timer);
             running=false;
         }
         SDL_RenderPresent(renderer);

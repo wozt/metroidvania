@@ -125,7 +125,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0};
+                             0, 0, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -213,7 +213,7 @@ int main(void) {
     /* SpriteInitPrimary's one-frame ignore timer runs down in the collision
      * routine, not in the sprite's update. */
     assert(z.status & MZM_SPRITE_STATUS_ONSCREEN && z.ignore_samus_timer == 1);
-    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL};
+    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
     mzm_sprites_samus_collision(&z, 1, &away, &tables);
     assert(z.ignore_samus_timer == 0 && hurts == 0);
 
@@ -221,7 +221,7 @@ int main(void) {
      * the stats damage, pushed away (the sprite is on her right, "on left"
      * in the native flag naming), then 15 frames of ignored contact. */
     MzmSpriteSamus samus = {NULL, (uint16_t)(z.x - 40), 640, (uint16_t)(z.x - 40),
-                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL};
+                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
     mzm_sprites_samus_collision(&z, 1, &samus, &tables);
     assert(hurts == 1 && last_damage == 8 && last_on_left && samus.invincible);
     /* Set to 15, then run down once at the end of the routine. */
@@ -374,7 +374,7 @@ int main(void) {
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     samus = (MzmSpriteSamus){NULL, z.x, (uint16_t)(z.y + 40), z.x, -96, 0, -24, 24,
-                             false, false, false, hurt, false, false, 0, NULL};
+                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
     for (int i = 0; i < 19; ++i) {
         mzm_sprites_samus_collision(&z, 1, &samus, &tables);
         step(&z, 0);
@@ -551,7 +551,7 @@ int main(void) {
     /* It hurts Samus with the secondary damage, but not the screw attack. */
     hurts = 0;
     MzmSpriteSamus near = {NULL, part->x, (uint16_t)(part->y + 20), part->x, -96, 0, -24, 24,
-                           true, false, false, hurt, false, false, 0, NULL};
+                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
     part->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(group, 8, &near, &tables);
     assert(hurts == 1 && last_damage == 2);
@@ -867,12 +867,85 @@ int main(void) {
     for (int i = 0; i < 4; ++i) step(&z, 0);
     assert(z.isft == 8 && z.palette_row == z.absolute_palette_row);
     z.isft = 0;
+    /* Frozen sprites are solid (SpriteUtilSamusAndSpriteCollision): a
+     * falling Samus lands on top (y = top + 1) without being hurt. */
+    clear();
+    for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS;
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    z.freeze_timer = 200;
+    z.ignore_samus_timer = 0;
+    z.isft = 0;
+    const uint16_t ztop = (uint16_t)(z.y + z.hitbox_top), zbottom = (uint16_t)(z.y + z.hitbox_bottom);
+    const uint16_t zleft = (uint16_t)(z.x + z.hitbox_left);
+    MzmSpriteSamus solid = {NULL, z.x, (uint16_t)(ztop + 8), z.x, -124, 0, -28, 28,
+                            false, false, false, hurt, false, false, 0, NULL,
+                            &world, -10, false, false, 1, true, false, false};
+    hurts = 0;
+    mzm_sprites_samus_collision(&z, 1, &solid, &tables);
+    assert(hurts == 0 && solid.y == ztop + 1 && z.status & MZM_SPRITE_STATUS_SAMUS_ON_TOP &&
+           z.standing_on == MZM_STANDING_ON_SPRITE_ON);
+    /* Rising: not set on top. */
+    MzmSpriteSamus rising = solid;
+    rising.y = (uint16_t)(ztop + 8);
+    rising.y_velocity = 30;
+    z.status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+    mzm_sprites_samus_collision(&z, 1, &rising, &tables);
+    assert(rising.y == ztop + 8 && !(z.status & MZM_SPRITE_STATUS_SAMUS_ON_TOP));
+    z.status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+    /* SpriteUtilSamusStandingOnSprite: a midair Samus gets the landing
+     * request and STANDING_ENEMY; the flag is cleared every frame. */
+    MzmSpriteStanding standing = {false, true, solid.y, solid.y, false, false};
+    frame.standing = &standing;
+    step(&z, 1);
+    assert(standing.landing_request && standing.on_enemy && !standing.midair &&
+           !(z.status & MZM_SPRITE_STATUS_SAMUS_ON_TOP));
+    /* Off the top: releasing (Samus kept on its top when she did not rise
+     * since her last pose change), then STANDING_MIDAIR. */
+    standing.landing_request = false;
+    standing.y = standing.copy_y = (uint16_t)(ztop + 3);
+    step(&z, 1);
+    assert(z.standing_on == MZM_STANDING_ON_SPRITE_RELEASING && standing.y_set &&
+           standing.y == ztop + 1 && standing.on_enemy);
+    standing.y_set = false;
+    step(&z, 1);
+    assert(z.standing_on == MZM_STANDING_ON_SPRITE_OFF && !standing.on_enemy && standing.midair &&
+           !standing.y_set);
+    frame.standing = NULL;
+    /* Below it while rising: pushed under it, the upward velocity zeroed. */
+    MzmSpriteSamus below = solid;
+    below.y = (uint16_t)(zbottom + 124 - 8);
+    below.y_velocity = 20;
+    mzm_sprites_samus_collision(&z, 1, &below, &tables);
+    assert(below.y == zbottom + 124 && below.stop_y && hurts == 0);
+    /* Beside it: stopped at its left side, the velocity zeroed when facing
+     * it; pulling up ignores it. */
+    MzmSpriteSamus side = solid;
+    side.y = (uint16_t)(zbottom - 14);
+    side.x = side.previous_x = (uint16_t)(zleft - 20);
+    MzmSpriteSamus pulling = side;
+    pulling.pulling_up = true;
+    mzm_sprites_samus_collision(&z, 1, &pulling, &tables);
+    assert(pulling.x == zleft - 20 && !pulling.stop_x);
+    mzm_sprites_samus_collision(&z, 1, &side, &tables);
+    assert(side.x == zleft - 28 && side.stop_x && hurts == 0);
+    /* A kill drops Samus: the screw attack on a frozen weak sprite. */
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
+    z.standing_on = MZM_STANDING_ON_SPRITE_ON;
+    MzmSpriteSamus screwing = solid;
+    screwing.screw_attacking = true;
+    mzm_sprites_samus_collision(&z, 1, &screwing, &tables);
+    assert(z.pose == 0x65 && z.standing_on == MZM_STANDING_ON_SPRITE_DROPPED &&
+           screwing.y == solid.y);
+    assert(mzm_sprites_samus_dropped(&z, 1) && z.standing_on == MZM_STANDING_ON_SPRITE_OFF &&
+           !mzm_sprites_samus_dropped(&z, 1));
     /* The screw attack kill: its particle and three debris (frame8 even:
      * types 2, 3 and 4). */
     memset(&fx, 0, sizeof fx);
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
     MzmSpriteSamus screw = {NULL, z.x, (uint16_t)(z.y + 20), z.x, -96, 0, -24, 24,
-                            true, false, false, hurt, false, false, 0, NULL};
+                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
     z.ignore_samus_timer = 0;
     mzm_sprites_samus_collision(&z, 1, &screw, &tables);
     assert(z.pose == 0x65 && z.damaged);
@@ -1014,7 +1087,7 @@ int main(void) {
      * harmless, and gone when the table ends. */
     hurts = 0;
     MzmSpriteSamus touch = {NULL, eye_l->x, (uint16_t)(eye_l->y + 20), eye_l->x, -96, 0, -24, 24,
-                            false, false, false, hurt, false, false, 0, NULL};
+                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
     eye_l->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(eye_l, 1, &touch, &tables);
     assert(hurts == 1 && last_damage == 3 && eye_l->pose == 66);
@@ -1864,7 +1937,7 @@ int main(void) {
          * with the laser's damage, then explodes. */
         hurts = 0;
         MzmSpriteSamus laser_hit = {NULL, ps[1].x, (uint16_t)(ps[1].y + 20), ps[1].x,
-                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL};
+                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
         /* The spawn's ignore timer runs down on the first collision pass. */
         MzmSpriteSamus far_away = laser_hit;
         far_away.x = 60000;
@@ -2103,7 +2176,7 @@ int main(void) {
         /* Samus in its light rings the alarm, then it holds it. */
         hurts = 0;
         MzmSpriteSamus in_light = {NULL, ps[0].x, (uint16_t)(ps[0].y + 20), ps[0].x,
-                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL};
+                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
         ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
         MzmSpriteSamus out_of_light = in_light;
         out_of_light.x = 60000;

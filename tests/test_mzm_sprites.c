@@ -1676,6 +1676,51 @@ int main(void) {
     step(zl2, 0);
     assert(zl2->pose == 0x23);
 
+    /* A blue Gamet leader (the pipe bug AI with its own hitbox and sounds)
+     * spawns two followers like the Zebbo leader and waits for both. */
+    frame.kinds[MZM_FAMILY_GAMET] = &bug_kind;
+    tables.health[MZM_PSPRITE_GAMET_BLUE_LEADER] = 4;
+    tables.health[MZM_PSPRITE_GAMET_BLUE_FOLLOWER] = 4;
+    memset(group, 0, sizeof group);
+    MzmSprite *ga = &group[0];
+    mzm_sprite_init_primary(ga, MZM_PSPRITE_GAMET_BLUE_LEADER, 0, 9, 10, 0, 0);
+    ga->status |= MZM_SPRITE_STATUS_ONSCREEN;
+    frame.samus_x = 60000;
+    step(ga, 0);
+    assert(ga->hitbox_top == -28 && ga->hitbox_bottom == 28 && ga->hitbox_left == -24 &&
+           ga->hitbox_right == 24 && ga->health == 4 && ga->status & MZM_SPRITE_STATUS_NOT_DRAWN);
+    frame.samus_x = (uint16_t)(ga->x - 120);
+    frame.samus_y = (uint16_t)(ga->y - 120);
+    mzm_sfx_clear();
+    step(ga, 0);
+    assert(ga->pose == 0x23 && mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_GAMET_RISING));
+    assert(group[1].sprite_id == MZM_PSPRITE_GAMET_BLUE_FOLLOWER && group[1].work0 == 10 &&
+           group[1].y == ga->y + 96);
+    assert(group[2].sprite_id == MZM_PSPRITE_GAMET_BLUE_FOLLOWER && group[2].work0 == 18 &&
+           group[2].y == ga->y + 160);
+    /* Up to Samus's height, then 3 pixels a frame toward her. */
+    frames = 0;
+    while (ga->pose == 0x23 && frames < 100) {
+        step(ga, 0);
+        ++frames;
+    }
+    assert(ga->pose == 0x25 && ga->anim == MZM_PIPE_BUG_MOVING && ga->samus_collision == 4);  /* SSC_HURTS_SAMUS */
+    for (int i = 0; i < 10; ++i) step(ga, 0);
+    mzm_sfx_clear();
+    uint16_t gax = ga->x;
+    step(ga, 0);
+    assert(ga->x == gax - 12);
+    ga->pose = 9;
+    ga->work1 = 0;
+    ga->x = ga->x_spawn;
+    ga->y = ga->y_spawn;
+    group[1].status = 0;
+    step(ga, 0);
+    assert(ga->pose == 9);      /* one follower left */
+    group[2].status = 0;
+    step(ga, 0);
+    assert(ga->pose == 0x23);
+
     /* Reos hover with the ROM idle tables, then home on a point 72
      * subpixels above Samus's feet, accelerating up to their cap and
      * braking past it. */

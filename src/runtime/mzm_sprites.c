@@ -135,6 +135,8 @@ static const char *const zeb_sprites[MZM_PIPE_BUG_ANIMS] = {"ZEB", "ZEB"};
 static const char *const geega_sprites[MZM_PIPE_BUG_ANIMS] = {"GEEGA", "GEEGA"};
 const char *const mzm_zebbo_anim_names[MZM_PIPE_BUG_ANIMS] = {"ZebboOam_Idle", "ZebboOam_Moving"};
 static const char *const zebbo_sprites[MZM_PIPE_BUG_ANIMS] = {"ZEBBO_GREEN", "ZEBBO_GREEN"};
+const char *const mzm_gamet_anim_names[MZM_PIPE_BUG_ANIMS] = {"GametOam_Idle", "GametOam_Moving"};
+static const char *const gamet_sprites[MZM_PIPE_BUG_ANIMS] = {"GAMET_BLUE_SINGLE", "GAMET_BLUE_SINGLE"};
 const char *const mzm_reo_anim_names[MZM_REO_ANIMS] = {"ReoOam_Idle", "ReoOam_Moving"};
 static const char *const reo_sprites[MZM_REO_ANIMS] = {"REO_GREEN_WINGS", "REO_GREEN_WINGS"};
 const char *const mzm_mella_anim_names[MZM_MELLA_ANIMS] = {"MellaOam_Idle", "MellowOam_Moving"};
@@ -272,6 +274,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ZEB] = {MZM_PIPE_BUG_ANIMS, mzm_zeb_anim_names, zeb_sprites},
     [MZM_FAMILY_GEEGA] = {MZM_PIPE_BUG_ANIMS, mzm_geega_anim_names, geega_sprites},
     [MZM_FAMILY_ZEBBO] = {MZM_PIPE_BUG_ANIMS, mzm_zebbo_anim_names, zebbo_sprites},
+    [MZM_FAMILY_GAMET] = {MZM_PIPE_BUG_ANIMS, mzm_gamet_anim_names, gamet_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -2630,7 +2633,9 @@ bool ai_samus_above(const Ctx *c, uint16_t y_range, uint16_t x_range) {
  * while a drop of its own exists. A Geega leader rises with a follower
  * spawned two blocks and a half below it and waits for it to be gone; a
  * Zebbo leader (zebbo.c, otherwise a Geega) spawns two followers, one block
- * and a half and two blocks and a half below it. */
+ * and a half and two blocks and a half below it, and so does a blue Gamet
+ * leader (gamet.c). Their bgPriority changes (2 hidden, 1 moving) are not
+ * modelled: sprites share one drawing priority. */
 enum {
     PIPE_BUG_POSE_IDLE_INIT = 0x8,
     PIPE_BUG_POSE_IDLE = 0x9,
@@ -2640,13 +2645,21 @@ enum {
 
 static bool is_follower(const MzmSprite *s) {
     return s->sprite_id == MZM_PSPRITE_GEEGA_FOLLOWER ||
-           s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER;
+           s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER ||
+           s->sprite_id == MZM_PSPRITE_GAMET_BLUE_FOLLOWER;
 }
 
 static bool is_zebbo(const MzmSprite *s) {
     return s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN || s->sprite_id == MZM_PSPRITE_ZEBBO_YELLOW ||
            s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_LEADER ||
            s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER;
+}
+
+static bool is_gamet(const MzmSprite *s) {
+    return s->sprite_id == MZM_PSPRITE_GAMET_BLUE_SINGLE ||
+           s->sprite_id == MZM_PSPRITE_GAMET_RED_SINGLE ||
+           s->sprite_id == MZM_PSPRITE_GAMET_BLUE_LEADER ||
+           s->sprite_id == MZM_PSPRITE_GAMET_BLUE_FOLLOWER;
 }
 
 static bool is_geega(const MzmSprite *s) {
@@ -2693,6 +2706,9 @@ static void pipe_bug_idle(Ctx *c) {
     if (s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_LEADER &&
         count_children(c, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER))
         return;
+    if (s->sprite_id == MZM_PSPRITE_GAMET_BLUE_LEADER &&
+        count_children(c, MZM_PSPRITE_GAMET_BLUE_FOLLOWER))
+        return;
     if (ai_has_drops(c)) return;
     if (s->work1) {
         s->work1--;
@@ -2711,7 +2727,8 @@ static void pipe_bug_idle(Ctx *c) {
     if (s->x > samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
     else s->status |= MZM_SPRITE_STATUS_X_FLIP;
     ai_sound_onscreen(s, is_zebbo(s) ? MZM_SOUND_ZEBBO_RISING :
-                         is_geega(s) ? MZM_SOUND_GEEGA_RISING : MZM_SOUND_ZEB_RISING);
+                         is_geega(s) ? MZM_SOUND_GEEGA_RISING :
+                         is_gamet(s) ? MZM_SOUND_GAMET_RISING : MZM_SOUND_ZEB_RISING);
     if (s->sprite_id == MZM_PSPRITE_GEEGA_LEADER) {
         MzmSprite *follower = ai_spawn_drop_follower(
             c, MZM_PSPRITE_GEEGA_FOLLOWER, s->room_slot, s->gfx_slot, s->ram_slot,
@@ -2721,17 +2738,20 @@ static void pipe_bug_idle(Ctx *c) {
             follower->scaling = s->scaling;
             follower->work0 = 18;   /* CONVERT_SECONDS(.3f) */
         }
-    } else if (s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_LEADER) {
+    } else if (s->sprite_id == MZM_PSPRITE_ZEBBO_GREEN_LEADER ||
+               s->sprite_id == MZM_PSPRITE_GAMET_BLUE_LEADER) {
         /* The second follower only spawns after the first. */
+        uint8_t id = s->sprite_id == MZM_PSPRITE_GAMET_BLUE_LEADER ? MZM_PSPRITE_GAMET_BLUE_FOLLOWER
+                                                                   : MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER;
         MzmSprite *follower = ai_spawn_drop_follower(
-            c, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER, s->room_slot, s->gfx_slot, s->ram_slot,
+            c, id, s->room_slot, s->gfx_slot, s->ram_slot,
             (uint16_t)(s->y + BLOCK_SIZE + HALF_BLOCK_SIZE), (uint16_t)(s->x - HALF_BLOCK_SIZE),
             s->status & MZM_SPRITE_STATUS_X_FLIP);
         if (follower) {
             follower->scaling = s->scaling;
             follower->work0 = 10;   /* CONVERT_SECONDS(1.f / 6) */
             follower = ai_spawn_drop_follower(
-                c, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER, s->room_slot, s->gfx_slot, s->ram_slot,
+                c, id, s->room_slot, s->gfx_slot, s->ram_slot,
                 (uint16_t)(s->y + BLOCK_SIZE * 2 + HALF_BLOCK_SIZE),
                 (uint16_t)(s->x - HALF_BLOCK_SIZE), s->status & MZM_SPRITE_STATUS_X_FLIP);
             if (follower) {
@@ -2762,7 +2782,8 @@ static void pipe_bug_going_up(Ctx *c) {
 static void pipe_bug_move(Ctx *c) {
     MzmSprite *s = c->s;
     uint16_t moving = is_zebbo(s) ? MZM_SOUND_ZEBBO_MOVING :
-                      is_geega(s) ? MZM_SOUND_GEEGA_MOVING : MZM_SOUND_ZEB_MOVING;
+                      is_geega(s) ? MZM_SOUND_GEEGA_MOVING :
+                      is_gamet(s) ? MZM_SOUND_GAMET_MOVING : MZM_SOUND_ZEB_MOVING;
     if (s->work0) {
         if (--s->work0 == 0) {
             ai_sound_onscreen(s, moving);
@@ -2802,8 +2823,15 @@ static void pipe_bug(Ctx *c) {
     }
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED:
-        /* ZebInit / GeegaInit / ZebboInit */
-        if (is_zebbo(s)) {
+        /* ZebInit / GeegaInit / ZebboInit / GametInit */
+        if (is_gamet(s)) {
+            s->hitbox_top = -(HALF_BLOCK_SIZE - PIXEL_SIZE);
+            s->hitbox_bottom = HALF_BLOCK_SIZE - PIXEL_SIZE;
+            s->hitbox_left = -(QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+            s->hitbox_right = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+            s->draw_top = s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+            s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        } else if (is_zebbo(s)) {
             s->hitbox_top = s->hitbox_left = -(QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
             s->hitbox_bottom = s->hitbox_right = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
             s->draw_top = s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
@@ -3875,6 +3903,10 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_ZEBBO_YELLOW:
     case MZM_PSPRITE_ZEBBO_GREEN_LEADER:
     case MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER: return MZM_FAMILY_ZEBBO;
+    case MZM_PSPRITE_GAMET_BLUE_SINGLE:
+    case MZM_PSPRITE_GAMET_RED_SINGLE:
+    case MZM_PSPRITE_GAMET_BLUE_LEADER:
+    case MZM_PSPRITE_GAMET_BLUE_FOLLOWER: return MZM_FAMILY_GAMET;
     case MZM_PSPRITE_REO_GREEN_WINGS:
     case MZM_PSPRITE_REO_PURPLE_WINGS: return MZM_FAMILY_REO;
     case MZM_PSPRITE_MELLA: return MZM_FAMILY_MELLA;
@@ -4571,6 +4603,7 @@ static uint16_t damaged_sound(int family) {
     case MZM_FAMILY_ZEB: return MZM_SOUND_ZEB_DAMAGED;
     case MZM_FAMILY_GEEGA: return MZM_SOUND_GEEGA_DAMAGED;
     case MZM_FAMILY_ZEBBO: return MZM_SOUND_ZEBBO_DAMAGED;
+    case MZM_FAMILY_GAMET: return MZM_SOUND_GAMET_DAMAGED;
     case MZM_FAMILY_REO: return MZM_SOUND_REO_DAMAGED;
     case MZM_FAMILY_MELLA: return MZM_SOUND_MELLA_DAMAGED;
     case MZM_FAMILY_HOLTZ: return MZM_SOUND_HOLTZ_DAMAGED;
@@ -4633,7 +4666,8 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_SOVA: sova(&c); break;
     case MZM_FAMILY_ZEB:
     case MZM_FAMILY_GEEGA:
-    case MZM_FAMILY_ZEBBO: pipe_bug(&c); break;
+    case MZM_FAMILY_ZEBBO:
+    case MZM_FAMILY_GAMET: pipe_bug(&c); break;
     case MZM_FAMILY_REO: reo(&c); break;
     case MZM_FAMILY_MELLA: mella(&c); break;
     case MZM_FAMILY_HOLTZ: holtz(&c); break;

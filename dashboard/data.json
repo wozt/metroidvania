@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-12T18:57:57+00:00",
+ "generated_at": "2026-10-12T22:36:00+00:00",
  "git": {
-  "commit": "55324e1",
+  "commit": "9e4b9e8",
   "branch": "main",
   "dirty": true
  },
@@ -1038,7 +1038,7 @@
    "id": "mzm.enemies.pipe_bugs",
    "area": "mzm",
    "category": "enemies",
-   "title": "Zebs, Geegas and Zebbos (pipe bugs)",
+   "title": "Zebs, Geegas, Zebbos and Gamets (pipe bugs)",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -1059,11 +1059,12 @@
     "Zeb",
     "Geega",
     "Zebbo",
+    "Gamet",
     "SpriteUtilCheckSamusNearSpriteAboveBelow",
     "SpriteUtilCountChildPrimarySprites",
     "SpriteSpawnDropFollowers"
    ],
-   "limitations": "The background priority changes are not ported. Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.",
+   "limitations": "The background priority changes are not ported. Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers, blue and red Gamets and blue Gamet leaders with their two followers (Gamet hitbox and sounds, followers like the Zebbo leader's): hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower. Checked in norfair_001 (--spawn 1300 140): a blue Gamet leaves its pipe, stops near Samus's height and flies toward her.",
    "next_action": "Port the background priority changes.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -4393,7 +4394,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas, Rinkas, Gerutas, Ripper IIs, Squeepts, Space Pirates and their lasers, searchlights, security lasers and searchlight eyes), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved; the baked frozen and stun variants take frozenPaletteRowOffset as 0.",
+   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas, Rinkas, Gerutas, Ripper IIs, Squeepts, Gamets, Space Pirates and their lasers, searchlights, security lasers and searchlight eyes), plus the enemy drops, the ported particle effects and sprite debris; hard-mode and event spritesets are not resolved; the baked frozen and stun variants take frozenPaletteRowOffset as 0.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
@@ -5579,6 +5580,12 @@
  },
  "timeline": [
   {
+   "commit": "9e4b9e8",
+   "date": "2026-10-12",
+   "subject": "feat(mzm): Squeepts and the room effect height",
+   "scope": "mzm"
+  },
+  {
    "commit": "55324e1",
    "date": "2026-10-12",
    "subject": "feat(mzm): Gerutas and Ripper IIs",
@@ -6051,12 +6058,6 @@
    "date": "2026-10-10",
    "subject": "docs(aria): record Soma's verified jump and gravity constants",
    "scope": "aria"
-  },
-  {
-   "commit": "cc6262f",
-   "date": "2026-10-10",
-   "subject": "feat(aria): port the native BG1 collision primitives",
-   "scope": "aria"
   }
  ],
  "inventory": {
@@ -6084,7 +6085,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 331,
+    "routines_cited_by_features": 332,
     "call_edges": 6071
    },
    "aos": {
@@ -6338,14 +6339,14 @@
      {
       "id": 86,
       "name": "Gamet Blue Single",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
      },
      {
       "id": 87,
       "name": "Gamet Red Single",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
      },
      {
       "id": 91,
@@ -6554,14 +6555,14 @@
      {
       "id": 157,
       "name": "Gamet Blue Leader",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
      },
      {
       "id": 158,
       "name": "Gamet Blue Follower",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
      },
      {
       "id": 159,

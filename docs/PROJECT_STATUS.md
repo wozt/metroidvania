@@ -2988,6 +2988,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0276 - Zero Mission Gamets
+
+- Blue and red Gamets and the blue Gamet leader with its followers run the
+  pipe bug AI (`gamet.c` matches `zeb.c` and `zebbo.c`): their own hitbox
+  and rising, moving and damaged sounds; the leader spawns two followers
+  1.5 and 2.5 blocks below it and waits for both.
+- All four sprites are exported and counted as ported monsters.
+- Checked in norfair_001 (`--spawn 1300 140`): a Gamet leaves its pipe,
+  stops near Samus's height and flies toward her at 3 pixels a frame.
+- Not ported: the background priority changes (as for the other pipe bugs).
+- Tests: `tests/test_mzm_sprites.c` (hitbox, rising sound, followers,
+  speed, the leader waiting for its followers).
+
 ## Patch 0275 - Zero Mission Squeepts and the room effect height
 
 - Rooms export their entry's `effectY` (`E` line); the runtime gives

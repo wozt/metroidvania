@@ -134,7 +134,9 @@ read from the user's ROM at export time; nothing is stored in the repository.
   and a half blocks below it when it rises and waits while it exists; a
   follower is removed instead of respawning. Zebbos (`zebbo.c`) are Geegas
   with a 24-subpixel hitbox whose green leader spawns two followers (1.5 and
-  2.5 blocks below, harmful after 10 and 18 frames).
+  2.5 blocks below, harmful after 10 and 18 frames). Gamets (`gamet.c`,
+  blue, red, and the blue leader with its two followers placed like the
+  Zebbo leader's) have a 28 by 24 subpixel hitbox and their own sounds.
 - Reo (`reo.c`, green and purple wings): hovers with `sReoIdleYMovement` /
   `sReoIdleXMovement` from an offset of four times the RNG, until Samus's
   middle is within 8 blocks vertically and 7 across; then, facing her and

@@ -13,7 +13,7 @@
  * Ripper II and Squeept AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c,
  * skree.c, waver.c, sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c,
  * geega.c, zebbo.c, reo.c, mella.c, holtz.c, multiviola.c, rinka.c, geruta.c,
- * ripper2.c, squeept.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * ripper2.c, squeept.c, gamet.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes, and the Space Pirates with their lasers
  * (src/sprites_ai/space_pirate.c, ported in mzm_space_pirate.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
@@ -258,6 +258,7 @@ enum { MZM_PIPE_BUG_IDLE, MZM_PIPE_BUG_MOVING, MZM_PIPE_BUG_ANIMS };
 extern const char *const mzm_zeb_anim_names[MZM_PIPE_BUG_ANIMS];
 extern const char *const mzm_geega_anim_names[MZM_PIPE_BUG_ANIMS];
 extern const char *const mzm_zebbo_anim_names[MZM_PIPE_BUG_ANIMS];
+extern const char *const mzm_gamet_anim_names[MZM_PIPE_BUG_ANIMS];
 
 /* Reo OAM tables (src/data/sprites/reo.c). */
 enum { MZM_REO_IDLE, MZM_REO_MOVING, MZM_REO_ANIMS };
@@ -360,7 +361,7 @@ enum {
     MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA, MZM_FAMILY_ZEBBO, MZM_FAMILY_REO,
     MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
     MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_FAMILY_CHOZO_STATUE,
-    MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT,
+    MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -399,6 +400,8 @@ enum {
     MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
     MZM_PSPRITE_GERUTA_RED = 54, MZM_PSPRITE_GERUTA_GREEN = 55, MZM_PSPRITE_RIPPERII = 113,
     MZM_PSPRITE_SQUEEPT = 56,
+    MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
+    MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
     MZM_PSPRITE_SPACE_PIRATE = 81, MZM_PSPRITE_SPACE_PIRATE_WAITING1 = 82,
     MZM_PSPRITE_SPACE_PIRATE_WAITING2 = 83, MZM_PSPRITE_SPACE_PIRATE_WAITING3 = 84,

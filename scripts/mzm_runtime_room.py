@@ -276,7 +276,8 @@ def room_hatches(doors, room: int, clip, tables, hatch_types, hatch_behaviors):
 def encode_room(area: str, number: int, width: int, height: int,
                 clip: tuple[int, int, tuple[int, ...]], tables,
                 doors: list[dict] | None = None, hatches=None, sprites=None,
-                spriteset=None, backgrounds: list[str] | None = None) -> str:
+                spriteset=None, backgrounds: list[str] | None = None,
+                music: int | None = None) -> str:
     clip_width, clip_height, cells = clip
     if clip_width * 16 != width or clip_height * 16 != height:
         raise ValueError("Clipdata dimensions differ from the rendered room")
@@ -321,6 +322,9 @@ def encode_room(area: str, number: int, width: int, height: int,
         index, members = spriteset
         for name, slot in members:
             lines.append(f"S\t{index}\t{name[len('PSPRITE_'):]}\t{slot}")
+    # The room entry's musicTrack (CheckPlayRoomMusicTrack).
+    if music is not None:
+        lines.append(f"U\t{music}")
     # The backgrounds (scripts.mzm_bg_layers.room_background_lines).
     lines.extend(backgrounds or [])
     lines.append("END")
@@ -374,7 +378,7 @@ def produce(root: Path, area: str, number: int) -> dict:
     background_lines, images = mzm_bg_layers.room_background_lines(fields, blocks, tileset)
     background_lines += hatch_animation_lines(tables, hatch_behaviors)
     text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites,
-                       spriteset, background_lines)
+                       spriteset, background_lines, room_music(fields))
     folder = private_path(Path(root), RUNTIME_ROOMS / f"{area.lower()}_{number:03}",
                           create=True)
     folder.mkdir(exist_ok=True)
@@ -396,6 +400,11 @@ def produce(root: Path, area: str, number: int) -> dict:
     return {"folder": folder, "width": width, "height": height,
             "cells": text.count("\nC\t"), "doors": text.count("\nD\t"),
             "hatches": text.count("\nH\t"), "composite": composite}
+
+
+def room_music(fields: dict) -> int:
+    """The room entry's musicTrack as its Sound value."""
+    return mzm_c_tables.evaluate(fields.get("musicTrack", "0"), mzm_c_tables.enum_values())
 
 
 # Tileset sheets written by this process (each tileset once per export).

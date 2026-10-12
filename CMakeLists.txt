@@ -50,8 +50,8 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
                src/runtime/mzm_sprites.c src/runtime/mzm_space_pirate.c
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_hatches.c
                src/runtime/mzm_blocks.c
-               src/runtime/mzm_effects.c)
-target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3)
+               src/runtime/mzm_effects.c src/runtime/mzm_audio.c src/runtime/gba_psg.c)
+target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
 add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c
@@ -178,6 +178,13 @@ if(BUILD_TESTING)
     target_include_directories(fusion_mzm_blocks_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_blocks_tests)
     add_test(NAME mzm_blocks COMMAND fusion_mzm_blocks_tests)
+
+    add_executable(fusion_mzm_audio_tests tests/test_mzm_audio.c src/runtime/mzm_audio.c
+                   src/runtime/gba_psg.c)
+    target_include_directories(fusion_mzm_audio_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_mzm_audio_tests PRIVATE m)
+    fusion_enable_warnings(fusion_mzm_audio_tests)
+    add_test(NAME mzm_audio COMMAND fusion_mzm_audio_tests)
 
     add_executable(fusion_mzm_hatches_tests tests/test_mzm_hatches.c src/runtime/mzm_hatches.c)
     target_include_directories(fusion_mzm_hatches_tests PRIVATE src/runtime)

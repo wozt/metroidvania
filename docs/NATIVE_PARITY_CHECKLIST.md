@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 27 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 28 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -361,6 +361,15 @@ Next action: Port the door fades and the hatch locks with their events.
 ### Music and sound effects
 
 [?] **`mzm.audio.inventory-boundary` — source coverage.** The current classifier assigns 134 discovered routine(s) to this category (134 by source path). Category completeness has not been established.
+
+[~] **`mzm.audio.sound_engine` — Sound engine, music and room music.** The custom C engine is ported routine by routine with the assembly mixer: the sequencer commands, DirectSound channels with the native envelope, allocation and group-of-four mixing paths, the four PSG channels through their registers, reverb, fades and the sound queue. ROM data (songs, voice groups, samples) is read through its GBA addresses from a private sound bank; out-of-table ROM reads of GetNoteDelay and unk_1ccc are exported. Rooms export their musicTrack and the runtime plays it through CheckSetNewMusicTrack and CheckPlayTransitionMusicTrack; sound effects are not yet triggered by gameplay.
+
+Native evidence: `mzm:asm:asm/audio_internal.s:InitTrack`, `mzm:asm:asm/audio_internal.s:ResetTrack`, `mzm:asm:asm/audio_internal.s:StopMusicOrSound`, `mzm:asm:asm/audio_internal.s:UpdateAudio`, `mzm:asm:asm/audio_internal.s:UploadSampleToWaveRam`, `mzm:asm:asm/soundcode.s:GetNoteFrequency`, `mzm:asm:asm/soundcode.s:SoundCodeA`, `mzm:asm:asm/soundcode.s:SoundCodeB`, `mzm:asm:asm/soundcode.s:SoundCodeC`, `mzm:c:src/audio.c:ClearRegistersForPsg`, `mzm:c:src/audio.c:GetNoteDelay`, `mzm:c:src/audio.c:UpdateMusic`, `mzm:c:src/audio.c:UpdatePsgSounds`, `mzm:c:src/audio.c:UpdateTrack`, `mzm:c:src/audio_wrappers.c:ApplyMusicSoundFading`, `mzm:c:src/audio_wrappers.c:DoSoundAction`, `mzm:c:src/audio_wrappers.c:InitializeAudio`, `mzm:c:src/audio_wrappers.c:SetupSoundTransfer`, `mzm:c:src/audio_wrappers.c:SoundFade`, `mzm:c:src/audio_wrappers.c:SoundPlay`, `mzm:c:src/audio_wrappers.c:SoundStop`, `mzm:c:src/audio_wrappers.c:StopAllMusicAndSounds`, `mzm:c:src/music_wrappers.c:CheckPlayTransitionMusicTrack`, `mzm:c:src/music_wrappers.c:CheckSetNewMusicTrack`, `mzm:c:src/music_wrappers.c:DMA2IntrCode`, `mzm:c:src/music_wrappers.c:DetermineNewMusicTrack`, `mzm:c:src/music_wrappers.c:FadeMusic`, `mzm:c:src/music_wrappers.c:PlayMusic`, `mzm:c:src/music_wrappers.c:QueueSound`, `mzm:c:src/room_music.c:CheckPlayRoomMusicTrack`.  
+Local implementation: [`src/runtime/mzm_audio.c`](../src/runtime/mzm_audio.c), [`src/runtime/gba_psg.c`](../src/runtime/gba_psg.c), [`scripts/mzm_audio.py`](../scripts/mzm_audio.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_audio.c`](../tests/test_mzm_audio.c), [`tests/test_mzm_audio.py`](../tests/test_mzm_audio.py).
+Dependencies: `mzm.transitions.doors_and_hatches`.  
+Known divergences: Not compared with hardware or an emulator. MidiKey2Freq (BIOS) uses the high-level formula; the PSG and the output mixer are an emulation of the GBA sound hardware, resampled to 48 kHz with a zero-order hold of the FIFO; REG_VCOUNT reads as 160 during UpdateAudio. The runtime has no door transition, so the room's track starts 32 frames after the fade begins; the alarm, Norfair and cutscene music cases (unk_378c, unk_38d8, the gMusicTrackInfo.unk checks), InsertMusicAndQueueCurrent and ReplayQueuedMusic are not ported. A zero divisor in unk_1ccc is taken as a zero quotient.  
+Next action: Trigger the native SoundPlay calls of Samus, weapons, hatches, blocks and sprites; compare a rendered track with an emulator capture.
 
 ### Inventory and progression data
 

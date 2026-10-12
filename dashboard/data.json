@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-11T22:16:41+00:00",
+ "generated_at": "2026-10-12T01:37:41+00:00",
  "git": {
-  "commit": "dc8509b",
+  "commit": "573a308",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 74,
+   "total": 75,
    "by_status": {
-    "not_started": 9,
+    "not_started": 8,
     "in_progress": 2,
-    "partial": 50,
+    "partial": 52,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,13 +104,14 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 16.2,
-   "with_passing_tests": 61,
-   "with_passing_tests_percent": 82.4,
+   "functional_or_better_percent": 16.0,
+   "with_passing_tests": 63,
+   "with_passing_tests_percent": 84.0,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
     "mzm.animation.samus_runtime_library",
+    "mzm.audio.sound_engine",
     "mzm.collision.clipdata",
     "mzm.enemies.chozodia_security",
     "mzm.enemies.dessgeega",
@@ -191,11 +192,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 27,
+   "total": 28,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 27,
+    "partial": 28,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -204,12 +205,13 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 27,
+   "with_passing_tests": 28,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
     "mzm.animation.samus_runtime_library",
+    "mzm.audio.sound_engine",
     "mzm.collision.clipdata",
     "mzm.enemies.chozodia_security",
     "mzm.enemies.dessgeega",
@@ -281,9 +283,9 @@
    ],
    "total": 11,
    "by_status": {
-    "not_started": 1,
+    "not_started": 0,
     "in_progress": 0,
-    "partial": 4,
+    "partial": 5,
     "functional": 6,
     "faithful": 0,
     "validated": 0,
@@ -292,8 +294,8 @@
    },
    "functional_or_better": 6,
    "functional_or_better_percent": 54.5,
-   "with_passing_tests": 10,
-   "with_passing_tests_percent": 90.9,
+   "with_passing_tests": 11,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "assets.aria_objects",
@@ -495,7 +497,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -542,7 +544,90 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
+   }
+  },
+  {
+   "id": "mzm.audio.sound_engine",
+   "area": "mzm",
+   "category": "audio",
+   "title": "Sound engine, music and room music",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_audio.c",
+    "src/runtime/gba_psg.c",
+    "scripts/mzm_audio.py",
+    "scripts/mzm_runtime_room.py",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_audio.c",
+    "tests/test_mzm_audio.py"
+   ],
+   "dependencies": [
+    "mzm.transitions.doors_and_hatches"
+   ],
+   "native_routines": [
+    "InitializeAudio",
+    "DoSoundAction",
+    "SetupSoundTransfer",
+    "UpdateAudio",
+    "UpdateMusic",
+    "UpdatePsgSounds",
+    "UpdateTrack",
+    "InitTrack",
+    "StopMusicOrSound",
+    "ResetTrack",
+    "SoundCodeA",
+    "SoundCodeB",
+    "SoundCodeC",
+    "GetNoteFrequency",
+    "DMA2IntrCode",
+    "UploadSampleToWaveRam",
+    "GetNoteDelay",
+    "ClearRegistersForPsg",
+    "ApplyMusicSoundFading",
+    "QueueSound",
+    "SoundPlay",
+    "SoundStop",
+    "SoundFade",
+    "PlayMusic",
+    "FadeMusic",
+    "StopAllMusicAndSounds",
+    "CheckSetNewMusicTrack",
+    "CheckPlayTransitionMusicTrack",
+    "DetermineNewMusicTrack",
+    "CheckPlayRoomMusicTrack"
+   ],
+   "limitations": "Not compared with hardware or an emulator. MidiKey2Freq (BIOS) uses the high-level formula; the PSG and the output mixer are an emulation of the GBA sound hardware, resampled to 48 kHz with a zero-order hold of the FIFO; REG_VCOUNT reads as 160 during UpdateAudio. The runtime has no door transition, so the room's track starts 32 frames after the fade begins; the alarm, Norfair and cutscene music cases (unk_378c, unk_38d8, the gMusicTrackInfo.unk checks), InsertMusicAndQueueCurrent and ReplayQueuedMusic are not ported. A zero divisor in unk_1ccc is taken as a zero quotient. The custom C engine is ported routine by routine with the assembly mixer: the sequencer commands, DirectSound channels with the native envelope, allocation and group-of-four mixing paths, the four PSG channels through their registers, reverb, fades and the sound queue. ROM data (songs, voice groups, samples) is read through its GBA addresses from a private sound bank; out-of-table ROM reads of GetNoteDelay and unk_1ccc are exported. Rooms export their musicTrack and the runtime plays it through CheckSetNewMusicTrack and CheckPlayTransitionMusicTrack; sound effects are not yet triggered by gameplay.",
+   "next_action": "Trigger the native SoundPlay calls of Samus, weapons, hatches, blocks and sprites; compare a rendered track with an emulator capture.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_audio.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_audio"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_audio.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -597,7 +682,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -649,7 +734,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -705,7 +790,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -752,7 +837,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -799,7 +884,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -846,7 +931,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -898,7 +983,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -947,7 +1032,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -995,7 +1080,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1044,7 +1129,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1100,7 +1185,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1150,7 +1235,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1197,7 +1282,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1269,7 +1354,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1316,7 +1401,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1363,7 +1448,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1412,7 +1497,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1485,7 +1570,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1559,7 +1644,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1599,7 +1684,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1648,7 +1733,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1691,7 +1776,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1737,7 +1822,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1816,7 +1901,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1879,7 +1964,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1920,7 +2005,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -1973,7 +2058,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2018,7 +2103,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2067,7 +2152,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2122,7 +2207,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2164,7 +2249,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2215,7 +2300,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2265,7 +2350,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2305,7 +2390,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2346,7 +2431,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2395,7 +2480,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2663,7 +2748,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2701,7 +2786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2742,7 +2827,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2777,7 +2862,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2814,7 +2899,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2857,7 +2942,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2893,7 +2978,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2936,7 +3021,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -2972,7 +3057,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3008,7 +3093,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3095,7 +3180,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3132,7 +3217,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3177,7 +3262,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3215,7 +3300,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3252,7 +3337,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3260,23 +3345,49 @@
    "area": "assets",
    "category": "audio",
    "title": "Music and sound effects",
-   "status": "not_started",
-   "fidelity": "n/a",
-   "local_sources": [],
-   "tests": [],
-   "dependencies": [],
+   "status": "partial",
+   "fidelity": "unknown",
+   "local_sources": [
+    "scripts/mzm_audio.py",
+    "src/runtime/mzm_audio.c",
+    "src/runtime/gba_psg.c"
+   ],
+   "tests": [
+    "tests/test_mzm_audio.py",
+    "tests/test_mzm_audio.c"
+   ],
+   "dependencies": [
+    "assets.rom_verification"
+   ],
    "native_routines": [],
-   "limitations": "No audio is decoded or played.",
+   "limitations": "Zero Mission only: its sound bank and engine tables are exported privately and its music plays in the runtime through the ported engine, not yet compared with hardware; gameplay sound effects are not triggered yet. Aria of Sorrow audio is not started.",
    "next_action": "",
    "last_validated": null,
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
-    "tests": [],
-    "verdict": "untested",
+    "tests": [
+     {
+      "test": "tests/test_mzm_audio.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_mzm_audio.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_audio"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3313,7 +3424,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3350,7 +3461,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3410,7 +3521,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3455,7 +3566,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3492,7 +3603,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3528,7 +3639,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3563,7 +3674,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3598,7 +3709,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-11"
+    "verified_on": "2026-10-12"
    }
   },
   {
@@ -3686,6 +3797,13 @@
     "name": "mzm_blocks",
     "files": [
      "tests/test_mzm_blocks.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "mzm_audio",
+    "files": [
+     "tests/test_mzm_audio.c"
     ],
     "outcome": "passed"
    },
@@ -4038,6 +4156,13 @@
     "test_count": 6,
     "outcome": "passed",
     "passed": 6
+   },
+   {
+    "file": "tests/test_mzm_audio.py",
+    "module": "tests.test_mzm_audio",
+    "test_count": 7,
+    "outcome": "passed",
+    "passed": 7
    },
    {
     "file": "tests/test_mzm_bg3_preview.py",
@@ -4447,12 +4572,18 @@
    }
   ],
   "summary": {
-   "passed": 446,
+   "passed": 454,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "573a308",
+   "date": "2026-10-12",
+   "subject": "feat(dashboard): monsters and items bestiary",
+   "scope": "dashboard"
+  },
   {
    "commit": "dc8509b",
    "date": "2026-10-11",
@@ -4926,12 +5057,6 @@
    "date": "2026-10-10",
    "subject": "feat: add collision-driven ledge traversal",
    "scope": "project"
-  },
-  {
-   "commit": "72677ee",
-   "date": "2026-10-10",
-   "subject": "feat: add Morph Ball and wall jump runtime states",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -4959,7 +5084,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 138,
+    "routines_cited_by_features": 168,
     "call_edges": 6071
    },
    "aos": {
@@ -6493,6 +6618,17 @@
    ],
    "requires": [
     "roms/Metroid - Zero Mission (USA).gba"
+   ]
+  },
+  {
+   "name": "metroid_sound",
+   "group": "assets",
+   "dependencies": [
+    "metroid_rom"
+   ],
+   "requires": [
+    "roms/Metroid - Zero Mission (USA).gba",
+    "third_party/mzm/mzm_us.map"
    ]
   }
  ]

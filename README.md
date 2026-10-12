@@ -246,8 +246,17 @@ rung by the searchlights, security lasers and searchlight eyes)
 (`python3 -m scripts.mzm_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
 they move with their native AIs, hurt Samus on contact, take beam and missile
 hits, explode into particles and debris and leave the native enemy drops.
-Other enemies, bosses and sounds are not ported yet. `--spawn X Y` places Samus's feet at
+Other enemies and bosses are not ported yet. `--spawn X Y` places Samus's feet at
 a room pixel position for tests.
+
+Rooms play their native music through the ported Zero Mission sound engine
+(`src/runtime/mzm_audio.c`: the sequencer, the DirectSound mixer of
+`asm/soundcode.s` and the four PSG channels, emulated in
+`src/runtime/gba_psg.c`), from a private sound bank exported by
+`python3 -m scripts.mzm_audio` (rebuild task `metroid_sound`). A door fades
+the current track over 30 frames and starts the destination room's track.
+The output has not been compared with hardware yet, and gameplay sound
+effects are not triggered yet. `--mute` disables sound; captures are silent.
 
 For headless verification, `--capture out.bmp FRAMES BUTTONS REPEAT` runs
 FRAMES fixed 60 Hz updates with the given GBA button mask (right 0x1, left 0x2,

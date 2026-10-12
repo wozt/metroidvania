@@ -241,6 +241,11 @@ ASSET_TASKS = {
     "metroid_rooms": _asset_task(
         "metroid_rooms", "metroid", "mzm_runtime_room", ("--all",), (MZM_ROOM_INDEX,),
         ("raw_import",), _export_validator(MZM_ROOM_INDEX)),
+    "metroid_sound": _asset_task(
+        "metroid_sound", "metroid", "mzm_audio", (),
+        (ROOT / "assets/extracted/metroid/sound/runtime/sound_bank.bin",
+         ROOT / "assets/extracted/metroid/sound/runtime/sound_tables.tsv"),
+        ("metroid_rom",), requires=(ROOT / "third_party/mzm/mzm_us.map",)),
 }
 TASKS.update(ASSET_TASKS)
 

@@ -11,6 +11,7 @@
 #include "debug_menu.h"
 #include "gba_input.h"
 #include "mzm_blocks.h"
+#include "mzm_audio.h"
 #include "mzm_hatches.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
@@ -84,6 +85,8 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     MzmBlocks blocks;
     /* The default spriteset (gSpriteset, gSpritesetSpritesId names). */
     int spriteset; char spriteset_names[MAX_SPRITESET_ENTRIES][64]; int spriteset_count;
+    /* The room entry's musicTrack (U line). */
+    bool has_music; int music;
     size_t count; } Room;
 
 static void room_set_cell(Room *room, int x, int y, ClipType type) {
@@ -405,6 +408,13 @@ static bool parse_native_room(const char *path, Room *room) {
                 goto failure;
             room->spriteset = index;
             room->spriteset_count++;
+            continue;
+        }
+        if (line[0] == 'U') {
+            if (sscanf(line, "U\t%d %c", &room->music, &extra) != 1 || room->music < 0 ||
+                room->music > 0xFFFF)
+                goto failure;
+            room->has_music = true;
             continue;
         }
         if (line[0] == 'H') {
@@ -1635,6 +1645,31 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
 }
 /* Zero Mission sprites: the ROM tables and OAM frame durations of
  * scripts/mzm_sprites.py, the sprite library, and the room's live sprites. */
+/* The Zero Mission sound engine's data (scripts/mzm_audio.py). */
+#define RUNTIME_SOUND_BANK "assets/extracted/metroid/sound/runtime/sound_bank.bin"
+#define RUNTIME_SOUND_TABLES "assets/extracted/metroid/sound/runtime/sound_tables.tsv"
+#define RUNTIME_AUDIO_RATE 48000
+
+/* The sound hardware's output of one game frame into the SDL stream; the
+ * frame is dropped when the device lags (more than 0.2 s queued). */
+static void runtime_audio_frame(SDL_AudioStream *stream) {
+    static int16_t buffer[2 * 1024];
+    mzm_audio_update();
+    int frames = mzm_audio_render(buffer, 1024, RUNTIME_AUDIO_RATE);
+    if (stream && frames > 0 &&
+        SDL_GetAudioStreamQueued(stream) < RUNTIME_AUDIO_RATE * 4 / 5)
+        SDL_PutAudioStreamData(stream, buffer, frames * 4);
+}
+
+/* CheckPlayRoomMusicTrack when a room is entered: the room's track fades
+ * the current one in 30 frames; CheckPlayTransitionMusicTrack starts it
+ * when the (absent) door transition would end, returned in frames. */
+static int runtime_room_music(const Room *room) {
+    if (!mzm_audio_ready() || !room->has_music) return 0;
+    mzm_music_check_set_new_track((uint16_t)room->music);
+    return 32;
+}
+
 #define RUNTIME_SPRITE_TABLES "assets/extracted/metroid/metadata/sprites.tsv"
 #define RUNTIME_SPRITE_LIBRARY "assets/extracted/metroid/sprites/enemies/runtime/runtime_index.tsv"
 #define RUNTIME_MAX_SPRITES 24
@@ -2285,6 +2320,7 @@ int main(int argc, char **argv) {
     unsigned long capture_buttons=0;
     bool check=false,animation_check=false,debug_at_start=false;
     int spawn_px=-1,spawn_py=-1;
+    bool mute=false;
     const char *debug_input=NULL;
     GbaPadMap pad_map;
     gba_pad_map_default(&pad_map);
@@ -2316,6 +2352,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--projectile-library") && !projectile_index && i+1<argc)
             projectile_index=argv[++i];
         else if (!strcmp(argv[i],"--debug-menu")) debug_at_start=true;
+        else if (!strcmp(argv[i],"--mute")) mute=true;
         else if (!strcmp(argv[i],"--spawn") && i+2<argc) {
             /* Test placement: Samus's feet at room pixel X, Y. */
             spawn_px=atoi(argv[++i]);
@@ -2330,7 +2367,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -2421,7 +2458,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -2466,6 +2503,21 @@ int main(int argc, char **argv) {
         free(room); return 0;
     }
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) { fprintf(stderr,"SDL_Init: %s\n",SDL_GetError());free(room);return 1; }
+    /* Sound: none in captures (deterministic, no device) or with --mute. */
+    SDL_AudioStream *audio=NULL;
+    if (!capture_path && !mute) {
+        SDL_AudioSpec spec={SDL_AUDIO_S16,2,RUNTIME_AUDIO_RATE};
+        if (!SDL_InitSubSystem(SDL_INIT_AUDIO) ||
+            !(audio=SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,&spec,NULL,NULL)))
+            fprintf(stderr,"No audio device: %s\n",SDL_GetError());
+        else if (!mzm_audio_open(RUNTIME_SOUND_BANK,RUNTIME_SOUND_TABLES)) {
+            SDL_DestroyAudioStream(audio);
+            audio=NULL;
+        } else {
+            mzm_audio_initialize();
+            SDL_ResumeAudioStreamDevice(audio);
+        }
+    }
     SDL_Window *window=SDL_CreateWindow("Metroid Vania - experimental C11 runtime",
                                        960,640,SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer=window ? SDL_CreateRenderer(window,NULL) : NULL;
@@ -2579,6 +2631,9 @@ int main(int argc, char **argv) {
            "(Select) toggles super missiles; M refills ammunition.\n");
     printf("Diagnostics: R suit, T Space Jump/Screw Attack, G High Jump, "
            "H 20 damage, Enter restart, F6 catalogue, F7 hitbox.\n");
+    /* The first room's music starts at once. */
+    if (runtime_room_music(room)) mzm_music_check_play_transition_track();
+    int music_transition=0;
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
     const float fixed_step=1.f/60.f;
@@ -2807,6 +2862,7 @@ int main(int argc, char **argv) {
                     door_lock=true;
                     title_dirty=true;
                     snprintf(current_room,sizeof current_room,"%s",alias);
+                    music_transition=runtime_room_music(room);
                     printf("Debug teleport: %s\n",alias);
                 } else {
                     if(next_texture)SDL_DestroyTexture(next_texture);
@@ -2902,6 +2958,9 @@ int main(int argc, char **argv) {
                                    &equipment, &collision);
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
+            if(music_transition && --music_transition==0)
+                mzm_music_check_play_transition_track();
+            if(audio)runtime_audio_frame(audio);
             /* ConnectionUpdateHatches */
             mzm_hatches_update(room->native_hatches,room->native_hatch_count,&room->hatch_env);
             runtime_blocks_frame(room,current_room,&samus,&equipment,sprites.frame8);
@@ -2955,6 +3014,7 @@ int main(int argc, char **argv) {
                     echo_visible=false;
                     title_dirty=true;
                     snprintf(current_room,sizeof current_room,"%s",used.destination);
+                    music_transition=runtime_room_music(room);
                     printf("Door %d -> %s\n",used.index,used.destination);
                 } else {
                     free(next);
@@ -3252,6 +3312,8 @@ int main(int argc, char **argv) {
     }
     rc=0;
 cleanup:
+    if (audio) SDL_DestroyAudioStream(audio);
+    mzm_audio_close();
     gba_input_close(&gamepad);
     runtime_library_free(&library);
     runtime_library_free(&projectile_library);

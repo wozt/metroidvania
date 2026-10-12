@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas and Rinkas with contact damage, projectile hits and enemy drops; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas and Rinkas with contact damage, projectile hits and enemy drops, room music through the ported sound engine; no bosses, sound effects or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2987,6 +2987,55 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 27/27, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
+
+## Patch 0258 - Zero Mission sound engine and room music
+
+- `src/runtime/mzm_audio.c` ports the game's own sound engine routine by
+  routine: `src/audio.c` (`UpdateMusic`, `UpdatePsgSounds`, `UpdateTrack` and
+  the sequencer commands), `src/audio_wrappers.c`, the sound wrappers of
+  `src/music_wrappers.c`, the assembly of `asm/audio_internal.s` (`InitTrack`,
+  `StopMusicOrSound`, `ResetTrack`, `UpdateAudio`, the tempo, pitch, volume and
+  channel start helpers, `UploadSampleToWaveRam`, the PSG register writes)
+  and the mixer of `asm/soundcode.s` (`SoundCodeA` with its fast and checked
+  groups of four samples, the reverb pass `SoundCodeB`, the clamp pass
+  `SoundCodeC`, `GetNoteFrequency`, the DMA 2 interrupt). Engine structures
+  keep ROM pointers as GBA addresses and the track variables in their RAM
+  order, as the native code depends on both.
+- `src/runtime/gba_psg.c` emulates the sound hardware the engine writes to:
+  the two square channels (sweep, envelope, length), the wave channel and
+  its two banks, the noise channel, the 512 Hz sequencer and the
+  `SOUNDCNT_L/H/X` mixing of the PSG with the FIFO samples. The FIFO is fed
+  as the timer 0 DMA does (224 samples a frame at 13379 Hz, the 84-block
+  ring) and resampled to 48 kHz.
+- `scripts/mzm_audio.py` (rebuild task `metroid_sound`) exports the ROM span
+  of the sound objects (from the reference link map) to a private
+  `sound_bank.bin`, and the engine tables of `src/data/audio.c` evaluated
+  from the decompilation and checked against the ROM, plus the ROM bytes the
+  engine reads past two tables, the `DetermineNewMusicTrack` pairs and the
+  default track, to `sound_tables.tsv`. `scripts/mzm_c_tables.py` evaluates
+  `SAMPLES_PER_SECOND` in single precision.
+- Room exports gain a `U` line (the room entry's `musicTrack`). The runtime
+  opens an SDL3 audio stream, runs `UpdateAudio` and one frame of sound
+  hardware per game frame, starts the first room's track and, on each door
+  or debug teleport, calls `CheckSetNewMusicTrack` (30-frame fade) then
+  `CheckPlayTransitionMusicTrack` 32 frames later, since the runtime has no
+  door transition. `--mute` disables sound; captures stay silent.
+- Checked: the Brinstar and Chozo ruins tracks render 20 seconds under
+  AddressSanitizer and UBSan without errors or clipping (up to seven
+  DirectSound channels). The output has not been compared with hardware or
+  an emulator.
+- Not ported: gameplay sound effects (the `SoundPlay` calls of Samus,
+  weapons, hatches, blocks and sprites), the alarm, Norfair and cutscene
+  music cases, `InsertMusicAndQueueCurrent` and `ReplayQueuedMusic`.
+- Tests: `tests/test_mzm_audio.c` (a synthetic bank: a looped DirectSound
+  note at the native rate with its measured pitch and amplitude, the gate
+  and `FINE`, a PSG sound effect started and stopped, a 30-frame fade into
+  an aliased transition track, the default track, and a PSG square wave
+  frequency) and `tests/test_mzm_audio.py` (link map parsing, the engine
+  tables, the aliases, the room music value).
+- Validation on 2026-10-12: warning-clean build, CTest 29/29, the Python
+  suite (425 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
 
 ## Patch 0257 - Zero Mission breakable blocks
 

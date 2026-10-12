@@ -66,6 +66,12 @@ def evaluate(expression: str, names: dict[str, int]) -> int:
         inner = re.sub(r"(\d+\.\d*|\.\d+|\d+)f\b", r"\1", match.group(1))
         value = _float32(eval(inner, {"__builtins__": {}}, {}))   # noqa: S307
         return str(int(_float32(value * 60.0)))
+    # SAMPLES_PER_SECOND(s): REFRESH_RATE * s + 0.5 in single precision,
+    # REFRESH_RATE being CLOCKRATE (16.f * 1024 * 1024) / FRAME_DRAW_CYCLES.
+    def samples(match: re.Match) -> str:
+        refresh = _float32(16.0 * 1024 * 1024 / 280896)
+        return str(int(_float32(_float32(refresh * int(match.group(1), 0)) + 0.5)))
+    text = re.sub(r"SAMPLES_PER_SECOND\(\s*(\w+)\s*\)", samples, text)
     previous = None
     while previous != text:
         previous = text

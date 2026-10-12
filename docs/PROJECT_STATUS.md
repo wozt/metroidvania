@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas and Rinkas with contact damage, projectile hits and enemy drops, room music through the ported sound engine; no bosses, sound effects or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas and Rinkas with contact damage, projectile hits and enemy drops, room music and sound effects through the ported sound engine; no bosses or complete lifecycle |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2987,6 +2987,43 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 27/27, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
+
+## Patch 0259 - Zero Mission gameplay sound effects
+
+- `src/runtime/mzm_sfx.c` carries the `SoundPlay`, `SoundPlayNotAlreadyPlaying`,
+  `SoundStop`, `SoundFade` and `StopAllMusicAndSounds` calls of the gameplay
+  modules to a sink the runtime points at the sound engine, and records them
+  for tests. `scripts/mzm_sound_ids.py` generates `src/runtime/mzm_sound_ids.h`
+  from the decompilation's `Sound` enum; `check_generated` flags it when stale.
+- Samus (`mzm_samus.c`): the jump sounds by velocity and the Morph Ball jump
+  (`SamusSetMidAir`), the wall jump, the landing effect on plain ground
+  (`SamusCheckSetEnvironmentalEffect`), the footsteps on running frames 1 and 6,
+  the spin, Space Jump and Screw Attack sounds on their first animation tick,
+  crouching, morphing, unmorphing, the ledge grab and pull, the hurt sound,
+  and `SamusDying`'s stop-all then dying sound. Liquids, the wet and dusty
+  grounds and the suitless poses are not modelled.
+- Weapons: the missile toggle and arming sounds, the beam shot, the missile
+  and super missile shot and thrust; the impact particles play their impact
+  and explosion sounds and stop the thrust.
+- Hatches open, close or lock with their sound; blocks play the square block,
+  screw attack, speed booster and bomb chain sounds (the chain sound fades
+  when the last chain ends).
+- Enemies: `SP_DAMAGED` is now kept (`damaged`) and each primary AI's damaged
+  sound plays on screen; `SpriteUtilSpriteDeath` plays the explosion or screw
+  attack kill sound; the drops play their pickup sounds; the Skree, Sidehopper,
+  Dessgeega, Zeb, Geega, Zebbo, Reo, Mella, Holtz, Multiviola, Space Pirate
+  (footsteps, jumps, landings, climbing, crawling, dying, alert, lasers),
+  security laser and searchlight eye projectile sounds play at their native
+  points and timings.
+- The diagnostic restart after a death starts the room's track again (there
+  is no game over flow).
+- Tests: Samus and weapon sounds in `tests/test_mzm_samus.c`, hatch sounds in
+  `tests/test_mzm_hatches.c`, block sounds in `tests/test_mzm_blocks.c`, the
+  damaged, death and pickup sounds in `tests/test_mzm_sprites.c`, and the
+  generated header in `tests/test_mzm_audio.py`.
+- Validation on 2026-10-12: warning-clean build, CTest 29/29, the Python
+  suite (427 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
 
 ## Patch 0258 - Zero Mission sound engine and room music
 

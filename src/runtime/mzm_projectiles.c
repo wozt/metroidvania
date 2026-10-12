@@ -2,6 +2,7 @@
 /* Zero Mission weapon selection and projectiles. Function names in comments
  * refer to the pinned mzm decompilation that each routine reproduces. */
 #include "mzm_projectiles.h"
+#include "mzm_sfx.h"
 
 #include <string.h>
 
@@ -46,8 +47,10 @@ static void set_highlighted_weapon(MzmWeapons *weapons, const MzmSamus *samus,
                                    const MzmEquipment *equipment) {
     if (equipment->super_missiles == 0) weapons->super_missiles_selected = false;
     else if (equipment->missiles == 0) weapons->super_missiles_selected = true;
-    else if (pressed & MZM_KEY_SELECT)
+    else if (pressed & MZM_KEY_SELECT) {
         weapons->super_missiles_selected = !weapons->super_missiles_selected;
+        mzm_sfx_play(MZM_SOUND_MISSILE_TOGGLE);
+    }
     MzmHighlightedWeapon highlighted = MZM_WEAPON_NONE;
     if (!mzm_pose_is_morphed(samus->pose) &&
         samus->pose != MZM_POSE_HANGING_ON_LEDGE && (held & MZM_KEY_R)) {
@@ -57,6 +60,9 @@ static void set_highlighted_weapon(MzmWeapons *weapons, const MzmSamus *samus,
             highlighted = MZM_WEAPON_SUPER_MISSILE;
         }
     }
+    /* Armed a new weapon. */
+    if (highlighted != MZM_WEAPON_NONE && weapons->highlighted == MZM_WEAPON_NONE)
+        mzm_sfx_play(MZM_SOUND_ARMING_WEAPON);
     weapons->highlighted = highlighted;
 }
 
@@ -254,6 +260,16 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
             weapons->cooldown = rules[type].cooldown;
             /* CONVERT_SECONDS(1.f / 15) for beam shots only. */
             if (type == MZM_PROJECTILE_BEAM) weapons->release_palette_timer = 4;
+            /* The power beam alone (no beam upgrade is ported). */
+            if (type == MZM_PROJECTILE_BEAM) {
+                mzm_sfx_play(MZM_SOUND_BEAM_SHOT);
+            } else if (type == MZM_PROJECTILE_MISSILE) {
+                mzm_sfx_play(MZM_SOUND_MISSILE_SHOT);
+                mzm_sfx_play(MZM_SOUND_MISSILE_THRUST);
+            } else {
+                mzm_sfx_play(MZM_SOUND_SUPER_MISSILE_SHOT);
+                mzm_sfx_play(MZM_SOUND_SUPER_MISSILE_THRUST);
+            }
         }
         weapons->pending = false;
     }

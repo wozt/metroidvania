@@ -6,6 +6,7 @@
 #ifndef MZM_SPRITE_AI_H
 #define MZM_SPRITE_AI_H
 
+#include "mzm_sfx.h"
 #include "mzm_sprites.h"
 
 /* Native units (include/types.h). */
@@ -100,6 +101,14 @@ uint8_t ai_samus_nslr(const Ctx *c, uint16_t y_range, uint16_t x_range);
 bool ai_check_event(const Ctx *c, uint8_t event);
 bool ai_samus_above(const Ctx *c, uint16_t y_range, uint16_t x_range);
 void ai_face_samus(const Ctx *c);
+/* `if (status & SPRITE_STATUS_ONSCREEN) SoundPlay(sound)` and its
+ * SoundPlayNotAlreadyPlaying form. */
+static inline void ai_sound_onscreen(const MzmSprite *s, uint16_t sound) {
+    if (s->status & MZM_SPRITE_STATUS_ONSCREEN) mzm_sfx_play(sound);
+}
+static inline void ai_sound_onscreen_once(const MzmSprite *s, uint16_t sound) {
+    if (s->status & MZM_SPRITE_STATUS_ONSCREEN) mzm_sfx_play_not_playing(sound);
+}
 bool ai_has_drops(const Ctx *c);
 
 /* mzm_space_pirate.c */

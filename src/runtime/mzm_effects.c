@@ -2,6 +2,7 @@
 /* Zero Mission particle effects; comments name the pinned decompilation's
  * routines. */
 #include "mzm_effects.h"
+#include "mzm_sfx.h"
 
 #include <stddef.h>
 
@@ -95,6 +96,25 @@ static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
     if (p->stage == 0) {
         p->stage++;
         if (p->effect <= MZM_PE_SCREW_ATTACK_DESTROYED) p->status |= MZM_PARTICLE_HIGH_OAM_PRIORITY;
+        /* The impact sounds of ParticleHittingSomething*. */
+        switch (p->effect) {
+        case MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM:
+            mzm_sfx_play(MZM_SOUND_BEAM_IMPACT);
+            break;
+        case MZM_PE_HITTING_SOMETHING_INVINCIBLE:
+            mzm_sfx_play(MZM_SOUND_INVINCIBLE_IMPACT);
+            break;
+        case MZM_PE_HITTING_SOMETHING_WITH_MISSILE:
+            mzm_sfx_stop(MZM_SOUND_MISSILE_THRUST);
+            mzm_sfx_play(MZM_SOUND_MISSILE_EXPLOSION);
+            break;
+        case MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE:
+            mzm_sfx_stop(MZM_SOUND_SUPER_MISSILE_THRUST);
+            mzm_sfx_play(MZM_SOUND_SUPER_MISSILE_EXPLOSION);
+            break;
+        default:
+            break;
+        }
     }
 }
 

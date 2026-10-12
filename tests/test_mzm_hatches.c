@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests of the Zero Mission hatch state machine. */
 #include "mzm_hatches.h"
+#include "mzm_sfx.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -40,8 +41,10 @@ int main(void) {
     assert(opened == &hatches[0] && hatches[0].state == MZM_HATCH_OPENING);
     /* Frame 0 starts the animation; then each frame waits 3 + 1 ticks and
      * writes CLIPDATA_TILEMAP_FLAG | 0x11 + (frame - 1) down the column. */
+    mzm_sfx_clear();
     mzm_hatches_update(hatches, 2, &env);
     assert(writes == 0 && hatches[0].frame == 1);
+    assert(mzm_sfx_count() == 1 && mzm_sfx_get(0).sound == MZM_SOUND_DOOR_OPENING);
     for (int i = 0; i < 4; ++i) mzm_hatches_update(hatches, 2, &env);
     assert(writes == 4 && column[10][1] == 0x411 && column[11][1] == 0x421 &&
            column[13][1] == 0x441);
@@ -62,7 +65,10 @@ int main(void) {
                      .facing_right = true};
     mzm_hatch_start_lock_animation(&door, &env, MZM_HATCH_CLOSING);
     assert(column[30][3] == 0x416 + 3 + 0x40);
-    for (int i = 0; i < 17; ++i) mzm_hatches_update(&door, 1, &env);
+    mzm_sfx_clear();
+    mzm_hatches_update(&door, 1, &env);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DOOR_CLOSING));
+    for (int i = 0; i < 16; ++i) mzm_hatches_update(&door, 1, &env);
     assert(door.state == MZM_HATCH_CLOSED &&
            column[30][3] == env.tilemap_values[MZM_HATCH_NORMAL] + 1);
 

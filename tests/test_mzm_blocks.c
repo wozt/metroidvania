@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests of the Zero Mission breakable blocks. */
 #include "mzm_blocks.h"
+#include "mzm_sfx.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -130,8 +131,10 @@ int main(void) {
     clip[8][11] = TOP_RIGHT_NEVER;
     clip[9][10] = BOTTOM_LEFT_NEVER;
     clip[9][11] = BOTTOM_RIGHT_NEVER;
+    mzm_sfx_clear();
     assert(mzm_blocks_affect(&blocks, &env, MZM_CAA_BEAM, 11 * 64, 8 * 64));
     assert(!clip[8][10] && !clip[8][11] && !clip[9][10] && !clip[9][11]);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_SQUARE_BLOCK_DESTROYED));
     assert(blocks.never_reform_count == 1 && blocks.never_reform[0][0] == 10 &&
            blocks.never_reform[0][1] == 8);
     /* BlockRemoveNeverReformSingleBlock clears a 2x2 from its top left. */
@@ -152,18 +155,24 @@ int main(void) {
     /* A pistol shot on a horizontal bomb chain destroys it and the chain
      * runs both ways, one chain step per four frames. */
     for (int x = 14; x <= 19; ++x) clip[12][x] = CHAIN_H1;
+    mzm_sfx_clear();
     assert(mzm_blocks_affect(&blocks, &env, MZM_CAA_BOMB_PISTOL, 16 * 64, 12 * 64));
     assert(clip[12][16] == 0 && blocks.active_chain_types == 16);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_BOMB_CHAIN));
     for (int frame = 0; frame < 64; ++frame)
         mzm_blocks_process_bomb_chains(&blocks, &env, (uint8_t)frame);
     for (int x = 14; x <= 19; ++x) assert(clip[12][x] == 0);
     assert(blocks.active_chain_types == 0);
+    assert(mzm_sfx_requested(MZM_SFX_FADE, MZM_SOUND_BOMB_CHAIN));
 
     /* The screw attack breaks a reforming shot block (weak to every
      * action). */
     clip[1][20] = SHOT_REFORM;
+    mzm_sfx_clear();
     assert(mzm_blocks_samus_destruct(&blocks, &env, 20 * 64, 64, MZM_DESTRUCT_SCREW));
     assert(clip[1][20] == 0);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING,
+                             MZM_SOUND_BLOCK_DESTROYED_WITH_SCREW_ATTACK));
     puts("mzm_blocks: ok");
     return 0;
 }

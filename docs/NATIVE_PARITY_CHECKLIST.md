@@ -72,10 +72,10 @@ Next action: Port the native input routines and add an in-game controls menu.
 
 [?] **`mzm.player.inventory-boundary` — source coverage.** The current classifier assigns 126 discovered routine(s) to this category (126 by source path). Category completeness has not been established.
 
-[~] **`mzm.player.samus_controller` — Samus pose and physics controller.** The room runtime covers a tested subset of poses and transitions, not the complete native controller.
+[~] **`mzm.player.samus_controller` — Samus pose and physics controller.** The room runtime covers a tested subset of poses and transitions, not the complete native controller. The pose sounds are emitted at their native points (jumps, wall jumps, landing, footsteps on frames 1 and 6, spins, Space Jump and Screw Attack, crouching, morphing, unmorphing, ledge grab and pull, hurt, and the dying stop-all then dying sound) for plain ground out of liquid: the wet and dusty ground effects, liquids and the suitless poses are not modelled.
 
 Native evidence: `mzm:c:src/samus.c:SamusUpdate`, `mzm:c:src/samus.c:SamusUpdatePhysics`, `mzm:c:src/samus.c:SamusUpdateVelocityPosition`.  
-Local implementation: [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c).  
+Local implementation: [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c).
 Next action: Port the remaining native pose handlers.
 
@@ -90,10 +90,10 @@ Next action: Port the remaining native pose handlers.
 [~] **`mzm.animation.particles` — Sprite particles and debris.** One-shot particles for sprite explosions, the screw attack kill and projectile impacts on walls and sprites, the medium dust effects, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range.
 
 Native evidence: `mzm:c:src/particle.c:ParticleCheckOnScreen`, `mzm:c:src/particle.c:ParticleHittingSomethingInvincible`, `mzm:c:src/particle.c:ParticleHittingSomethingWithMissile`, `mzm:c:src/particle.c:ParticleHittingSomethingWithNormalBeam`, `mzm:c:src/particle.c:ParticleHittingSomethingWithSuperMissile`, `mzm:c:src/particle.c:ParticleProcessAll`, `mzm:c:src/particle.c:ParticleScrewAttackDestroyed`, `mzm:c:src/particle.c:ParticleSet`, `mzm:c:src/particle.c:ParticleSpriteExplosionHuge`, `mzm:c:src/particle.c:ParticleSpriteExplosionMedium`, `mzm:c:src/particle.c:ParticleUpdateAnimation`, `mzm:c:src/sprite_debris.c:SpriteDebrisDraw`, `mzm:c:src/sprite_debris.c:SpriteDebrisInit`, `mzm:c:src/sprite_debris.c:SpriteDebrisProcess`, `mzm:c:src/sprite_debris.c:SpriteDebrisProcessAll`, `mzm:c:src/sprite_util.c:SpriteUtilRandomSpriteDebris`.  
-Local implementation: [`src/runtime/mzm_effects.c`](../src/runtime/mzm_effects.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_effects.c`](../src/runtime/mzm_effects.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`.  
-Known divergences: Particle sounds, the super missile screen shake and debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece; other particle effects (Samus, charge, dust, beams other than the normal beam) are not ported.  
+Known divergences: The super missile screen shake and debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece; other particle effects (Samus, charge, dust, beams other than the normal beam) are not ported.  
 Next action: Port the remaining particle effects with their owners (Samus, charge beam, dust).
 
 [~] **`mzm.animation.samus_runtime_library` — Samus animation and palette reconstruction.** The deterministic private library maps the currently supported semantic actions; native effects and every pose are not yet covered.
@@ -118,10 +118,10 @@ Next action: Port special blocks and environmental Clipdata effects.
 
 [?] **`mzm.weapons.inventory-boundary` — source coverage.** The current classifier assigns 56 discovered routine(s) to this category (56 by source path). Category completeness has not been established.
 
-[~] **`mzm.weapons.beams_and_missiles` — Beam and missile projectiles.** Power Beam, missiles and super missiles move and collide with the room; their hits on ported sprites (damage, stun, invincible hits) and their wall and sprite impact particles are ported. Charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles are not.
+[~] **`mzm.weapons.beams_and_missiles` — Beam and missile projectiles.** Power Beam, missiles and super missiles move and collide with the room; their hits on ported sprites (damage, stun, invincible hits) and their wall and sprite impact particles are ported. Charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles are not. The weapon sounds play at their native points: the toggle and arming sounds of SamusSetHighlightedWeapon, the beam shot and the missile and super missile shot and thrust on ProjectileInit, the thrust stopped by the impact particles.
 
 Native evidence: `mzm:c:src/projectile_util.c:ProjectileUpdate`, `mzm:c:src/projectile_util.c:ProjectileUpdateAnimation`.  
-Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py).  
+Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_projectile_compose.py`](../tests/test_mzm_projectile_compose.py).
 Next action: Port charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles.
 
@@ -140,64 +140,64 @@ Next action: Port charge beams, beam upgrades, bombs, Power Bombs and tumbling m
 [~] **`mzm.enemies.chozodia_security` — Chozodia searchlights, security lasers and searchlight eyes.** Searchlights sweep diagonally half a pixel a frame between stop-enemy blocks, flickering, and ring the alarm on contact (SSC_CHECK_COLLIDING), then hold it; security lasers size themselves 2 to 5 blocks to the first block above or right, and when tripped mark the Space Pirates, fade out and hold the alarm; searchlight eyes (immune to projectiles until the Fully Powered Suit, SP_IMMUNE_TO_PROJECTILES with the invincible impact) move along their wall, cast a seven-block beam that rings the alarm unless a wall shields Samus, then shoot projectiles (16 damage) every 1.5 seconds. Checked in chozodia_003 (a tripped laser releases the waiting pirates), chozodia_016 and chozodia_030.
 
 Native evidence: `mzm:c:src/projectile_util.c:ProjectileHitSpriteImmuneToProjectiles`, `mzm:c:src/sprites_ai/searchlight.c:Searchlight`, `mzm:c:src/sprites_ai/searchlight_eye.c:SearchlightEye`, `mzm:c:src/sprites_ai/searchlight_eye.c:SearchlightEyeBeam`, `mzm:c:src/sprites_ai/searchlight_eye.c:SearchlightEyeProjectile`, `mzm:c:src/sprites_ai/security_laser.c:SecurityLaser`.  
-Local implementation: [`src/runtime/mzm_chozodia_security.c`](../src/runtime/mzm_chozodia_security.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Local implementation: [`src/runtime/mzm_chozodia_security.c`](../src/runtime/mzm_chozodia_security.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.space_pirate`, `mzm.collision.clipdata`, `mzm.weapons.beams_and_missiles`.  
-Known divergences: Searchlights are drawn opaque and above the backgrounds (natively they flicker behind BG1 with draw order 1), the BG0 transparency fades (PrimarySpriteB3, the security lasers' TransparencySpriteUpdateBldalpha; their fade state is kept in work2/work3) and sounds are not reproduced; missiles hitting an immune sprite are removed instead of tumbling.  
+Known divergences: Searchlights are drawn opaque and above the backgrounds (natively they flicker behind BG1 with draw order 1), the BG0 transparency fades (PrimarySpriteB3, the security lasers' TransparencySpriteUpdateBldalpha; their fade state is kept in work2/work3) are not reproduced; missiles hitting an immune sprite are removed instead of tumbling.  
 Next action: Port the security gates and the event spritesets that place these systems.
 
 [~] **`mzm.enemies.dessgeega` — Dessgeegas and the Long Beam Dessgeega.** Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor removing three blocks with dust and debris, and lands on the next one.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/dessgeega.c:Dessgeega`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.enemies.sidehopper`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing, the sounds and the screen shakes are not ported; door locks are only reported (gDoorUnlockTimer is not consumed by the runtime) and removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests.  
+Known divergences: Freezing and the screen shakes are not ported; door locks are only reported (gDoorUnlockTimer is not consumed by the runtime) and removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests.  
 Next action: Export the event spritesets and port the statue room event and the door lock lifecycle.
 
 [~] **`mzm.enemies.holtz` — Holtzes.** Hovering under a ceiling with its ROM idle table, aware or idle table by Samus height, warning when she is low and within 8 blocks vertically and 5 across, the swoop at 3 pixels a frame with the horizontal speed growing from 2 to 12 subpixels, the slide, the slowing climb, the bonk on the ceiling and the death into drops.
 
 Native evidence: `mzm:c:src/sprites_ai/holtz.c:Holtz`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the sounds are not ported.  
+Known divergences: Freezing is not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.mella` — Mellas.** Hovering under a ceiling with the ROM idle tables from an RNG offset, detection when Samus is low and within 8 blocks vertically and 3 across, a 7-frame delay, the swoop with the ROM going-down, going-up and horizontal speed tables (the going-down flag is SAMUS_COLLIDING, as in the game), the climb back half a block under the ceiling and the small explosion death.
 
 Native evidence: `mzm:c:src/sprites_ai/mella.c:Mella`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the sounds are not ported.  
+Known divergences: Freezing is not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.multiviola` — Multiviolas.** Bouncing diagonally off every surface at 3 subpixels a frame on both axes, starting toward Samus, its 56-frame animation starting at twice its slot, and the big explosion death into drops.
 
 Native evidence: `mzm:c:src/sprites_ai/multiviola.c:Multiviola`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing (including its unused secondary sprite) and the bounce sound are not ported.  
+Known divergences: Freezing (including its unused secondary sprite) is not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.pipe_bugs` — Zebs, Geegas and Zebbos (pipe bugs).** Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.
 
 Native evidence: `mzm:c:src/sprite.c:SpriteSpawnDropFollowers`, `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteAboveBelow`, `mzm:c:src/sprite_util.c:SpriteUtilCountChildPrimarySprites`, `mzm:c:src/sprites_ai/geega.c:Geega`, `mzm:c:src/sprites_ai/zeb.c:Zeb`, `mzm:c:src/sprites_ai/zebbo.c:Zebbo`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing, the sounds and the background priority changes are not ported.  
+Known divergences: Freezing and the background priority changes are not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.reo` — Reos.** Green and purple Reos: hovering with the ROM idle tables from an RNG offset, detection within 8 blocks vertically and 7 across, homing on a point 72 subpixels above Samus with per-axis acceleration (caps 24/16 or 64/32 quarter subpixels), braking and turning past it, turning at walls, pushing the next overlapping Reo apart and the big explosion death into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/reo.c:Reo`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing, the sounds and the water splash effects of SpriteUtilCheckInRoomEffect / CheckOutOfRoomEffect are not ported.  
+Known divergences: Freezing and the water splash effects of SpriteUtilCheckInRoomEffect / CheckOutOfRoomEffect are not ported.  
 Next action: Port freezing with the ice beam and the water splash effects.
 
 [~] **`mzm.enemies.rinka` — Rinkas.** Orange and green Rinkas: born at their spawn block (the first spawn visible at once), respawns hidden, shown once on screen and vulnerable 11 frames later, a straight flight toward where Samus was along a unit vector computed with the BIOS integer square root, respawn 16 blocks away from her, and respawning deaths that leave a drop only when none of theirs exists.
@@ -212,82 +212,82 @@ Next action: Port the Mother Brain Rinkas with Mother Brain.
 [~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper.c:Ripper`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the damaged and death sounds are not ported; missiles that would tumble off a Ripper are removed.  
+Known divergences: Freezing is not ported; missiles that would tumble off a Ripper are removed.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.sidehopper` — Sidehoppers.** Ground and ceiling Sidehoppers: idle or head shake for 1 to 4 loops (work1 kept at 0 on spawn, as without BUGFIX), Samus detection within five blocks, jump warning, high or low jumps from the ROM tables with the head hitbox resized, wall bounces, falls when unsupported, landing and the single-then-big death explosion into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/sidehopper.c:Sidehopper`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the jumping, landing, head shake and damage sounds are not ported.  
+Known divergences: Freezing is not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.
 
 Native evidence: `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteSpawnSecondary`, `mzm:c:src/sprites_ai/skree.c:Skree`, `mzm:c:src/sprites_ai/skree.c:SkreeExplosion`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the sounds are not ported; the explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping).  
+Known divergences: Freezing is not ported; the explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping).  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.sova` — Sovas.** Purple and orange Sovas (orange: palette row 1, one subpixel faster): placement onto any surface, a speed that follows the animation frame, crawling on floors (with their two slope tables), walls and ceilings (work2, with its own table instead of a Y flip), the eight native turns with their offsets, falls, landings in a random direction and death into drops.
 
 Native evidence: `mzm:c:src/sprites_ai/sova.c:Sova`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing, the damaged sound, screen-shake falls and the falling splash are not ported.  
+Known divergences: Freezing, screen-shake falls and the falling splash are not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.space_pirate` — Space Pirates and their lasers.** The five SpacePirate sprites (normal, three waiting, the faster-shooting variant) and SSPRITE_SPACE_PIRATE_LASER: line-of-sight detection on the clipdata grid (forward rows, diagonals up and down, crawling and climbing cases) through the gSpriteDrawOrder scratch flags, walking with acceleration and slope slowdown, the obstacle probes (jumps from the four ROM tables, crawling under low ceilings, turns), zonelines and wall jump points from the exported clipdata movement (M lines), climbing, wall pauses, wall jumps, crawling, alerted walking, charging and two-laser volleys on the ground and on walls, lasers hurting Samus and other pirates, the Chozodia alarm timer (set on sight, 480 frames, stopped by the last pirate's death, kept after Mecha Ridley) and the laser's CAA_BOMB_PISTOL on hatches. With the alarm on (or Mecha Ridley dead), every door transition spawns a waiting pirate at the arrival point (half a block back toward the door; graphics slot 5 in spritesets 88 and 103; crawling out of hatchless doors), and a room whose spriteset has no pirate stops the alarm. Rooms export their default spriteset (S lines). Smoke-run in the 47 Chozodia rooms with pirates.
 
 Native evidence: `mzm:c:src/clipdata.c:ClipdataUpdateCurrentAffecting`, `mzm:c:src/sprite.c:SpriteSpawnPrimary`, `mzm:c:src/sprite_util.c:SpriteUtilCheckCrouchingOrMorphed`, `mzm:c:src/sprite_util.c:SpriteUtilMoveHorizontallyForwardOnSlopeDirection`, `mzm:c:src/sprites_ai/space_pirate.c:DecrementChozodiaAlarm`, `mzm:c:src/sprites_ai/space_pirate.c:DisableChozodiaAlarm`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirate`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithLaser`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithPirateWhenClimbing`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithPirateWhenWalking`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckSamusInShootingRange`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateClimbingCheckWallJumpOrFire`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateLaser`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateSamusDetection`, `mzm:c:src/sprites_ai/space_pirate.c:SpawnWaitingPirates`.  
-Local implementation: [`src/runtime/mzm_space_pirate.c`](../src/runtime/mzm_space_pirate.c), [`src/runtime/mzm_sprite_ai.h`](../src/runtime/mzm_sprite_ai.h), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_space_pirate.c`](../src/runtime/mzm_space_pirate.c), [`src/runtime/mzm_sprite_ai.h`](../src/runtime/mzm_sprite_ai.h), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_runtime_room.py`](../tests/test_mzm_runtime_room.py).
 Dependencies: `mzm.enemies.zoomer`, `mzm.collision.clipdata`, `mzm.transitions.doors_and_hatches`, `mzm.animation.particles`.  
-Known divergences: SpawnWaitingPirates reads the room's default spriteset only (event spritesets are not exported) and runs on door transitions, not on the debug teleport; the alarm music, palette animation and sounds, freezing (only the laser check runs while frozen), the stun palette as drawn colours and the laser's draw order and BG priority are not reproduced; the Space Pirate carrying a power bomb, the black and escape-ship pirates are not ported; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset.  
+Known divergences: SpawnWaitingPirates reads the room's default spriteset only (event spritesets are not exported) and runs on door transitions, not on the debug teleport; the alarm music and palette animation, freezing (only the laser check runs while frozen), the stun palette as drawn colours and the laser's draw order and BG priority are not reproduced; the Space Pirate carrying a power bomb, the black and escape-ship pirates are not ported; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset.  
 Next action: Port the power-bomb, black and escape-ship pirates and the security systems that ring the alarm (searchlights, security lasers); resolve the event spritesets.
 
 [~] **`mzm.enemies.viola` — Violas.** Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops.
 
 Native evidence: `mzm:c:src/sprites_ai/viola.c:Viola`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the damaged sound are not ported.  
+Known divergences: Freezing is not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.waver` — Wavers.** Wavers start toward Samus and bounce diagonally between surfaces at their native speeds, dying into drops.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusXFlip`, `mzm:c:src/sprites_ai/waver.c:Waver`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.  
-Known divergences: Freezing and the damaged sound are not ported.  
+Known divergences: Freezing is not ported.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.zeela` — Zeelas and the red Zeela eyes.** Zeelas reuse the Zoomer crawler with their speed, hitbox, ground X flip, single slope table and faster falling and landing animations; the red Zeela throws two spinning eyes that stop on solid collision or Samus and explode.
 
 Native evidence: `mzm:c:src/sprites_ai/zeela.c:Zeela`, `mzm:c:src/sprites_ai/zeela.c:ZeelaDeath`, `mzm:c:src/sprites_ai/zeela.c:ZeelaEyes`, `mzm:c:src/sprites_ai/zeela.c:ZeelaSpawnEyes`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.  
-Known divergences: Freezing, the damaged sound and the falling splash are not ported; the eyes rotate as a composed frame without the affine clipping.  
+Known divergences: Freezing and the falling splash are not ported; the eyes rotate as a composed frame without the affine clipping.  
 Next action: Port freezing with the ice beam.
 
 [~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.
 
 Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/projectile_util.c:ProjectileCheckHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileDealDamage`, `mzm:c:src/projectile_util.c:ProjectileHitSolidSprite`, `mzm:c:src/projectile_util.c:ProjectileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileMissileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileSuperMissileHitSprite`, `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteInitPrimary`, `mzm:c:src/sprite.c:SpriteLoadRoomSprites`, `mzm:c:src/sprite.c:SpriteUpdate`, `mzm:c:src/sprite.c:SpriteUpdateAnimation`, `mzm:c:src/sprite_util.c:SpriteUtilAlignYPositionOnSlopeAtOrigin`, `mzm:c:src/sprite_util.c:SpriteUtilCheckVerticalCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilGetCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilIsSpriteStunned`, `mzm:c:src/sprite_util.c:SpriteUtilSamusAndSpriteCollision`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteDeath`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteTakeDamageFromSamusContact`, `mzm:c:src/sprite_util.c:SpriteUtilTakeDamageFromSprite`, `mzm:c:src/sprites_ai/zoomer.c:Zoomer`, `mzm:c:src/sprites_ai/zoomer.c:ZoomerDeath`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.collision.clipdata`.  
-Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash, freezing and the damaged and death sounds are not ported.  
+Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash and freezing are not ported.  
 Next action: Port the stun palette flash and freezing, then the Space Pirates, Metroids and Mother Brain Rinkas.
 
 ### Bosses
@@ -301,10 +301,10 @@ Next action: Port the stun palette flash and freezing, then the Space Pirates, M
 [~] **`mzm.items.enemy_drops` — Enemy drops.** Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported.
 
 Native evidence: `mzm:c:src/hud_generic.c:HudGenericLoadCommonSpriteGfx`, `mzm:c:src/sprite.c:SpriteSpawnDropFollowers`, `mzm:c:src/sprite_util.c:SpriteUtilCheckHasDrops`, `mzm:c:src/sprite_util.c:SpriteUtilDetermineEnemyDrop`, `mzm:c:src/sprites_ai/enemy_drop.c:EnemyDrop`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`.  
-Known divergences: Power bombs are not ported, so their drops never spawn; pickup sounds are not played; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
+Known divergences: Power bombs are not ported, so their drops never spawn; PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
 Next action: Port power bombs and the multiple large energy pickup.
 
 ### Environment interactions
@@ -314,10 +314,10 @@ Next action: Port power bombs and the multiple large energy pickup.
 [~] **`mzm.environment.breakable_blocks` — Breakable, reforming and crumble blocks, hidden tanks and bomb chains.** Every beam, missile, super missile and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack breaks blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.
 
 Native evidence: `mzm:c:src/bg_clip.c:BgClipCheckWalkingOnCrumbleBlock`, `mzm:c:src/block.c:BlockApplyCcaa`, `mzm:c:src/block.c:BlockCheckCcaa`, `mzm:c:src/block.c:BlockCheckRevealBombChainBlock`, `mzm:c:src/block.c:BlockCheckRevealOrDestroyBombBlock`, `mzm:c:src/block.c:BlockCheckRevealOrDestroyNonBombBlock`, `mzm:c:src/block.c:BlockCheckSamusInReformingBlock`, `mzm:c:src/block.c:BlockCheckStartNewSubBombChain`, `mzm:c:src/block.c:BlockDestroyNonReformBlock`, `mzm:c:src/block.c:BlockDestroySquareBlock`, `mzm:c:src/block.c:BlockProcessBombChains`, `mzm:c:src/block.c:BlockRemoveNeverReformBlocks`, `mzm:c:src/block.c:BlockSamusApplyScrewSpeedboosterDamageToEnvironment`, `mzm:c:src/block.c:BlockStartBombChain`, `mzm:c:src/block.c:BlockStoreBrokenNonReformBlock`, `mzm:c:src/block.c:BlockStoreBrokenReformBlock`, `mzm:c:src/block.c:BlockStoreSingleNeverReformBlock`, `mzm:c:src/block.c:BlockUpdateBrokenBlockAnimation`, `mzm:c:src/block.c:BlockUpdateBrokenBlocks`, `mzm:c:src/samus.c:SamusCheckScrewSpeedboosterAffectingEnvironment`.  
-Local implementation: [`src/runtime/mzm_blocks.c`](../src/runtime/mzm_blocks.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_c_tables.py`](../scripts/mzm_c_tables.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py).  
+Local implementation: [`src/runtime/mzm_blocks.c`](../src/runtime/mzm_blocks.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_c_tables.py`](../scripts/mzm_c_tables.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_blocks.c`](../tests/test_mzm_blocks.c), [`tests/test_mzm_c_tables.py`](../tests/test_mzm_c_tables.py).
 Dependencies: `mzm.rooms.backgrounds`, `mzm.transitions.doors_and_hatches`, `mzm.weapons.beams_and_missiles`.  
-Known divergences: Bombs, power bombs and the speed booster are not ported on Samus, so bomb blocks and speed blocks only break by the actions that exist (beams reveal bomb blocks, pirate lasers act as the bomb pistol); grabbing crumble blocks, the make-solid blocks, block sounds and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout.  
+Known divergences: Bombs, power bombs and the speed booster are not ported on Samus, so bomb blocks and speed blocks only break by the actions that exist (beams reveal bomb blocks, pirate lasers act as the bomb pistol); grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout.  
 Next action: Port bombs, power bombs and the speed booster on Samus, then the crumble grab and tank pickups.
 
 ### Rooms, areas and maps
@@ -344,10 +344,10 @@ Next action: Animated tiles and palettes, then BG movement effects.
 [~] **`mzm.transitions.doors_and_hatches` — Doors, hatches and room transitions.** Hatches are BG1 and Clipdata blocks driven by the native state machine: BgClipCheckOpeningHatch on beam, missile and laser hits (weakness and health from sHatchBehaviors, super missiles open missile hatches), the opening and closing frames of sHatchesTilemapValues with sHatchesAnimationDurationCounter, the hatch Samus comes through closing behind her, opened hatches remembered per area and overridden to normal hatches. Checked in brinstar_000: a beam opens the blue hatch through its grey frames.
 
 Native evidence: `mzm:c:src/bg_clip.c:BgClipCheckOpeningHatch`, `mzm:c:src/connection.c:ConnectionCheckEnterDoor`, `mzm:c:src/connection.c:ConnectionHatchFlashingAnimation`, `mzm:c:src/connection.c:ConnectionHatchStartLockAnimation`, `mzm:c:src/connection.c:ConnectionLoadDoors`, `mzm:c:src/connection.c:ConnectionOverrideOpenedHatch`, `mzm:c:src/connection.c:ConnectionSetHatchAsOpened`, `mzm:c:src/connection.c:ConnectionUpdateHatchAnimation`, `mzm:c:src/connection.c:ConnectionUpdateHatches`.  
-Local implementation: [`src/runtime/mzm_hatches.c`](../src/runtime/mzm_hatches.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`scripts/mzm_hatch_events.py`](../scripts/mzm_hatch_events.py).  
+Local implementation: [`src/runtime/mzm_hatches.c`](../src/runtime/mzm_hatches.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`scripts/mzm_hatch_events.py`](../scripts/mzm_hatch_events.py), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_hatches.c`](../tests/test_mzm_hatches.c), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c), [`tests/test_mzm_hatch_events_0100.py`](../tests/test_mzm_hatch_events_0100.py), [`tests/test_mzm_door_navigation_0096.py`](../tests/test_mzm_door_navigation_0096.py).
 Dependencies: `mzm.rooms.backgrounds`.  
-Known divergences: Door fades, the hatch locks (gDoorUnlockTimer, events) and their unlocking, the hatch sounds and the mother ship hatch graphics are not reproduced; opened destinations are remembered by position, not by door index.  
+Known divergences: Door fades, the hatch locks (gDoorUnlockTimer, events) and their unlocking (with its sound) and the mother ship hatch graphics are not reproduced; opened destinations are remembered by position, not by door index.  
 Next action: Port the door fades and the hatch locks with their events.
 
 ### Events and scripts
@@ -362,14 +362,14 @@ Next action: Port the door fades and the hatch locks with their events.
 
 [?] **`mzm.audio.inventory-boundary` — source coverage.** The current classifier assigns 134 discovered routine(s) to this category (134 by source path). Category completeness has not been established.
 
-[~] **`mzm.audio.sound_engine` — Sound engine, music and room music.** The custom C engine is ported routine by routine with the assembly mixer: the sequencer commands, DirectSound channels with the native envelope, allocation and group-of-four mixing paths, the four PSG channels through their registers, reverb, fades and the sound queue. ROM data (songs, voice groups, samples) is read through its GBA addresses from a private sound bank; out-of-table ROM reads of GetNoteDelay and unk_1ccc are exported. Rooms export their musicTrack and the runtime plays it through CheckSetNewMusicTrack and CheckPlayTransitionMusicTrack; sound effects are not yet triggered by gameplay.
+[~] **`mzm.audio.sound_engine` — Sound engine, music and room music.** The custom C engine is ported routine by routine with the assembly mixer: the sequencer commands, DirectSound channels with the native envelope, allocation and group-of-four mixing paths, the four PSG channels through their registers, reverb, fades and the sound queue. ROM data (songs, voice groups, samples) is read through its GBA addresses from a private sound bank; out-of-table ROM reads of GetNoteDelay and unk_1ccc are exported. Rooms export their musicTrack and the runtime plays it through CheckSetNewMusicTrack and CheckPlayTransitionMusicTrack; the gameplay modules request their sound effects through mzm_sfx (identifiers generated from the decompilation's Sound enum by scripts/mzm_sound_ids.py), which the runtime forwards to the engine.
 
 Native evidence: `mzm:asm:asm/audio_internal.s:InitTrack`, `mzm:asm:asm/audio_internal.s:ResetTrack`, `mzm:asm:asm/audio_internal.s:StopMusicOrSound`, `mzm:asm:asm/audio_internal.s:UpdateAudio`, `mzm:asm:asm/audio_internal.s:UploadSampleToWaveRam`, `mzm:asm:asm/soundcode.s:GetNoteFrequency`, `mzm:asm:asm/soundcode.s:SoundCodeA`, `mzm:asm:asm/soundcode.s:SoundCodeB`, `mzm:asm:asm/soundcode.s:SoundCodeC`, `mzm:c:src/audio.c:ClearRegistersForPsg`, `mzm:c:src/audio.c:GetNoteDelay`, `mzm:c:src/audio.c:UpdateMusic`, `mzm:c:src/audio.c:UpdatePsgSounds`, `mzm:c:src/audio.c:UpdateTrack`, `mzm:c:src/audio_wrappers.c:ApplyMusicSoundFading`, `mzm:c:src/audio_wrappers.c:DoSoundAction`, `mzm:c:src/audio_wrappers.c:InitializeAudio`, `mzm:c:src/audio_wrappers.c:SetupSoundTransfer`, `mzm:c:src/audio_wrappers.c:SoundFade`, `mzm:c:src/audio_wrappers.c:SoundPlay`, `mzm:c:src/audio_wrappers.c:SoundStop`, `mzm:c:src/audio_wrappers.c:StopAllMusicAndSounds`, `mzm:c:src/music_wrappers.c:CheckPlayTransitionMusicTrack`, `mzm:c:src/music_wrappers.c:CheckSetNewMusicTrack`, `mzm:c:src/music_wrappers.c:DMA2IntrCode`, `mzm:c:src/music_wrappers.c:DetermineNewMusicTrack`, `mzm:c:src/music_wrappers.c:FadeMusic`, `mzm:c:src/music_wrappers.c:PlayMusic`, `mzm:c:src/music_wrappers.c:QueueSound`, `mzm:c:src/room_music.c:CheckPlayRoomMusicTrack`.  
-Local implementation: [`src/runtime/mzm_audio.c`](../src/runtime/mzm_audio.c), [`src/runtime/gba_psg.c`](../src/runtime/gba_psg.c), [`scripts/mzm_audio.py`](../scripts/mzm_audio.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`src/runtime/mzm_audio.c`](../src/runtime/mzm_audio.c), [`src/runtime/gba_psg.c`](../src/runtime/gba_psg.c), [`scripts/mzm_audio.py`](../scripts/mzm_audio.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c), [`scripts/mzm_sound_ids.py`](../scripts/mzm_sound_ids.py).  
 Tests: [`tests/test_mzm_audio.c`](../tests/test_mzm_audio.c), [`tests/test_mzm_audio.py`](../tests/test_mzm_audio.py).
 Dependencies: `mzm.transitions.doors_and_hatches`.  
 Known divergences: Not compared with hardware or an emulator. MidiKey2Freq (BIOS) uses the high-level formula; the PSG and the output mixer are an emulation of the GBA sound hardware, resampled to 48 kHz with a zero-order hold of the FIFO; REG_VCOUNT reads as 160 during UpdateAudio. The runtime has no door transition, so the room's track starts 32 frames after the fade begins; the alarm, Norfair and cutscene music cases (unk_378c, unk_38d8, the gMusicTrackInfo.unk checks), InsertMusicAndQueueCurrent and ReplayQueuedMusic are not ported. A zero divisor in unk_1ccc is taken as a zero quotient.  
-Next action: Trigger the native SoundPlay calls of Samus, weapons, hatches, blocks and sprites; compare a rendered track with an emulator capture.
+Next action: Trigger the sounds of the systems still to port (charge beam, bombs, liquids, ground effects, bosses); compare a rendered track with an emulator capture.
 
 ### Inventory and progression data
 

@@ -2,6 +2,7 @@
 /* Zero Mission Samus pose controller. Function names in comments refer to
  * the pinned mzm decompilation that each routine reproduces. */
 #include "mzm_samus.h"
+#include "mzm_sfx.h"
 
 #include <stddef.h>
 
@@ -208,6 +209,7 @@ enum { NEXT_NONE = -1, REQUEST_MIDAIR = MZM_POSE_COUNT, REQUEST_LANDING };
 
 static bool held(const Ctx *x, uint16_t keys) { return (x->in->held & keys) != 0; }
 static bool pressed(const Ctx *x, uint16_t keys) { return (x->in->pressed & keys) != 0; }
+static bool suitless(const Ctx *x) { return x->eq->suit == MZM_SUIT_SUITLESS; }
 static uint16_t forward_key(const MzmSamus *s) {
     return s->facing > 0 ? MZM_KEY_RIGHT : MZM_KEY_LEFT;
 }
@@ -317,6 +319,11 @@ static void set_pose(Ctx *x, MzmPose pose) {
             s->grabbed_ledge = true;
             break;
         }
+        case MZM_POSE_PULLING_UP:
+            /* No liquid: the grabbing ledge sound of the suit. */
+            mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_GRABBING_LEDGE : MZM_SOUND_GRABBING_LEDGE);
+            s->aim = copy.aim;
+            break;
         case MZM_POSE_TURNING_AROUND_MIDAIR:
             s->y_velocity = copy.y_velocity;
             s->turning = true;
@@ -368,6 +375,7 @@ static void request_midair(Ctx *x) {
             if (copy.forced == MZM_FORCED_JUMP)
                 s->y_velocity = (x->eq->items & MZM_ITEM_HIGH_JUMP) ?
                     MZM_HIGH_JUMP_VELOCITY : MZM_LOW_JUMP_VELOCITY;
+            mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_WALL_JUMP : MZM_SOUND_WALL_JUMP);
             break;
         case MZM_POSE_MORPH_BALL_MIDAIR:
             s->pose = MZM_POSE_MORPH_BALL_MIDAIR;
@@ -398,6 +406,17 @@ static void request_midair(Ctx *x) {
                 s->y_velocity = copy.y_velocity;
             }
             break;
+    }
+    if (copy.forced == MZM_FORCED_JUMP) {
+        /* Out of liquid: the jump sound by the jump velocity. */
+        if (s->pose == MZM_POSE_MIDAIR) {
+            if (s->y_velocity == MZM_LOW_JUMP_VELOCITY) mzm_sfx_play(MZM_SOUND_LOW_JUMP);
+            else if (s->y_velocity == MZM_HIGH_JUMP_VELOCITY) mzm_sfx_play(MZM_SOUND_HIGH_JUMP);
+            else if (s->y_velocity == MZM_SUITLESS_JUMP_VELOCITY)
+                mzm_sfx_play(MZM_SOUND_SUITLESS_JUMP);
+        } else if (s->pose == MZM_POSE_MORPH_BALL_MIDAIR) {
+            mzm_sfx_play(MZM_SOUND_MORPH_BALL_JUMP);
+        }
     }
     settle_midair_hitbox(x);
 }
@@ -431,6 +450,10 @@ static void request_landing(Ctx *x) {
     s->aim = copy.aim;
     if ((s->pose == MZM_POSE_LANDING || s->pose == MZM_POSE_STANDING) &&
         copy.aim == MZM_AIM_DOWN) s->aim = MZM_AIM_DIAGONAL_DOWN;
+    /* SamusCheckSetEnvironmentalEffect (WANTING_LANDING_EFFECT) on plain
+     * ground out of liquid; the wet and dusty grounds are not modelled. */
+    if (copy.last_wall != 0) mzm_sfx_play(MZM_SOUND_MORPH_BALL_LANDING);
+    else mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_LANDING : MZM_SOUND_LANDING);
 }
 
 static void apply_next(Ctx *x, int next) {
@@ -483,6 +506,7 @@ static int pose_standing(Ctx *x) {
     if (held(x, backward_key(s))) return MZM_POSE_TURNING_AROUND;
     if (pressed(x, MZM_KEY_DOWN) &&
         (!held(x, MZM_KEY_L) || s->aim == MZM_AIM_DIAGONAL_DOWN)) {
+        if (!suitless(x)) mzm_sfx_play(MZM_SOUND_CROUCHING);
         if (x->in->new_projectile) return MZM_POSE_SHOOTING_AND_CROUCHING;
         return MZM_POSE_CROUCHING;
     }
@@ -511,8 +535,10 @@ static int pose_turning(Ctx *x) {
     MzmSamus *s = x->s;
     if (pressed(x, MZM_KEY_A)) return jump_request(x);
     if (pressed(x, MZM_KEY_DOWN) &&
-        (!held(x, MZM_KEY_L) || s->aim == MZM_AIM_DIAGONAL_DOWN))
+        (!held(x, MZM_KEY_L) || s->aim == MZM_AIM_DIAGONAL_DOWN)) {
         s->pose = MZM_POSE_TURNING_AROUND_AND_CROUCHING;
+        if (!suitless(x)) mzm_sfx_play(MZM_SOUND_CROUCHING);
+    }
     if (x->in->new_projectile)
         return s->pose == MZM_POSE_TURNING_AROUND_AND_CROUCHING ?
             MZM_POSE_SHOOTING_AND_CROUCHING : MZM_POSE_SHOOTING;
@@ -528,8 +554,10 @@ static int pose_crouching(Ctx *x) {
         (!held(x, MZM_KEY_L) || s->aim == MZM_AIM_DIAGONAL_UP))
         return MZM_POSE_STANDING;
     if (pressed(x, MZM_KEY_DOWN) && (x->eq->items & MZM_ITEM_MORPH_BALL) &&
-        (!held(x, MZM_KEY_L) || s->aim == MZM_AIM_DIAGONAL_DOWN))
+        (!held(x, MZM_KEY_L) || s->aim == MZM_AIM_DIAGONAL_DOWN)) {
+        mzm_sfx_play(MZM_SOUND_MORPHING);
         return MZM_POSE_MORPHING;
+    }
     if (s->pose != MZM_POSE_CROUCHING) return NEXT_NONE;
     aim_cannon(x, false);
     if (s->aim == MZM_AIM_UP) s->aim = MZM_AIM_FORWARD;
@@ -549,6 +577,7 @@ static int pose_midair(Ctx *x) {
     if (pressed(x, MZM_KEY_DOWN) && s->aim == MZM_AIM_DOWN &&
         (x->eq->items & MZM_ITEM_MORPH_BALL)) {
         /* The original returns this pose through SamusSetPose. */
+        mzm_sfx_play(MZM_SOUND_MORPHING);
         return MZM_POSE_MORPH_BALL_MIDAIR;
     }
     if (pressed(x, MZM_KEY_A) && !held(x, MZM_KEY_UP | MZM_KEY_DOWN)) {
@@ -680,8 +709,10 @@ static int pose_morph_ball(Ctx *x) {
         s->facing = held(x, MZM_KEY_RIGHT) ? 1 : -1;
         return MZM_POSE_ROLLING;
     }
-    if (pressed(x, MZM_KEY_UP) && standing_clear(x->c, s))
+    if (pressed(x, MZM_KEY_UP) && standing_clear(x->c, s)) {
+        mzm_sfx_play(MZM_SOUND_UNMORPHING);
         return MZM_POSE_UNMORPHING;
+    }
     return NEXT_NONE;
 }
 
@@ -690,8 +721,10 @@ static int pose_rolling(Ctx *x) {
     MzmSamus *s = x->s;
     if (pressed(x, MZM_KEY_A) && (x->eq->items & MZM_ITEM_HIGH_JUMP))
         return jump_request(x);
-    if (standing_clear(x->c, s) && pressed(x, MZM_KEY_UP))
+    if (standing_clear(x->c, s) && pressed(x, MZM_KEY_UP)) {
+        mzm_sfx_play(MZM_SOUND_UNMORPHING);
         return MZM_POSE_UNMORPHING;
+    }
     if (held(x, forward_key(s))) {
         s->x_velocity = mzm_apply_x_acceleration(
             s->x_velocity, s->facing, MZM_X_ACCELERATION, MZM_X_VELOCITY_CAP);
@@ -715,6 +748,7 @@ static int pose_unmorphing(Ctx *x) {
 static int pose_morph_midair(Ctx *x) {
     MzmSamus *s = x->s;
     if (pressed(x, MZM_KEY_UP) && standing_clear(x->c, s)) {
+        mzm_sfx_play(MZM_SOUND_UNMORPHING);
         s->unmorph_palette_timer = 15;
         return MZM_POSE_MIDAIR;
     }
@@ -812,6 +846,14 @@ static int pose_handler(Ctx *x) {
         case MZM_POSE_GETTING_HURT_IN_MORPH_BALL:
             return pose_hurt(x);
         case MZM_POSE_DYING:
+            /* SamusDying: the music stops, then the dying sound plays. */
+            if (x->s->last_wall == 0) {
+                x->s->last_wall++;
+                mzm_sfx_stop_all();
+            } else if (x->s->last_wall == 1) {
+                x->s->last_wall++;
+                mzm_sfx_play(MZM_SOUND_DYING);
+            }
             x->s->x_velocity = 0;
             x->s->y_velocity = 0;
             return NEXT_NONE;
@@ -892,6 +934,37 @@ static int pose_graphics(Ctx *x) {
                 s->anim_frame--;
             return NEXT_NONE;
         case MZM_POSE_GETTING_HURT_IN_MORPH_BALL:
+            return NEXT_NONE;
+        case MZM_POSE_RUNNING: {
+            /* SamusRunningGfx: the footsteps on frames 1 and 6 (plain
+             * ground out of liquid). */
+            AnimState state = update_animation(x);
+            if (state == ANIM_ENDED) s->anim_frame = 0;
+            if (state != ANIM_NONE) {
+                if (s->anim_frame == 1)
+                    mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_FOOTSTEPS_1 : MZM_SOUND_FOOTSTEPS_1);
+                else if (s->anim_frame == 6)
+                    mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_FOOTSTEPS_2 : MZM_SOUND_FOOTSTEPS_2);
+            }
+            return NEXT_NONE;
+        }
+        case MZM_POSE_SPINNING:
+            /* SamusSpinningGfx */
+            loop_animation(x);
+            if (s->anim_frame == 0 && s->anim_counter == 1)
+                mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_SPIN_JUMP : MZM_SOUND_SPIN_JUMP);
+            return NEXT_NONE;
+        case MZM_POSE_SPACE_JUMPING:
+            /* SamusSpaceJumpingGfx */
+            if (s->anim_counter == 1 && s->anim_frame == 0) mzm_sfx_play(MZM_SOUND_SPACE_JUMP);
+            loop_animation(x);
+            return NEXT_NONE;
+        case MZM_POSE_SCREW_ATTACKING:
+            /* SamusScrewAttackingGfx */
+            if (s->anim_counter == 1 && s->anim_frame == 0)
+                mzm_sfx_play((x->eq->items & MZM_ITEM_SPACE_JUMP) ?
+                             MZM_SOUND_SPACE_SCREW_ATTACK : MZM_SOUND_SCREW_ATTACK);
+            loop_animation(x);
             return NEXT_NONE;
         default:
             loop_animation(x);
@@ -1040,6 +1113,8 @@ static void move_and_collide(Ctx *x) {
             s->pose = MZM_POSE_MIDAIR;
             s->y = old_y;
             s->grabbed_ledge = false;
+        } else {
+            mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_GRAB_LEDGE : MZM_SOUND_GRAB_LEDGE);
         }
     }
 }
@@ -1082,4 +1157,5 @@ void mzm_samus_hurt(MzmSamus *samus, const MzmCollision *collision,
     samus->y_velocity = mzm_pose_standing(copy.pose) == MZM_STANDING_MIDAIR ?
         8 * (MZM_EIGHTH_BLOCK_SIZE - 1) :
         8 * (MZM_QUARTER_BLOCK_SIZE - MZM_PIXEL_SIZE / 2);
+    mzm_sfx_play(MZM_SOUND_HURT);
 }

@@ -364,6 +364,7 @@ typedef struct {
     bool secondary;                 /* SP_SECONDARY_SPRITE: sprite_id is an SSPRITE */
     bool kill_off_screen;           /* SP_KILL_OFF_SCREEN */
     bool immune_to_projectiles;     /* SP_IMMUNE_TO_PROJECTILES */
+    bool damaged;                   /* SP_DAMAGED: the AI plays its damaged sound */
     uint8_t sprite_id;              /* PSPRITE or SSPRITE */
     uint8_t gfx_slot, room_slot;
     uint16_t x, y;                  /* subpixels, bottom middle of the block */

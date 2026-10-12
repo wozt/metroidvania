@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Zero Mission sprite engine and the Zoomer. */
+#include "mzm_sfx.h"
 #include "mzm_sprites.h"
 
 #include <assert.h>
@@ -385,8 +386,10 @@ int main(void) {
     step(&z, 0);
     mzm_sprites_samus_collision(&z, 1, &samus, &tables);
     assert(z.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING);
+    mzm_sfx_clear();
     step(&z, 0);
     assert(z.status == 0 && equipment.energy == 95 && hurts == 2);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_GETTING_SMALL_ENERGY_DROP));
 
     /* Left alone it blinks during its last 80 timer ticks and disappears
      * after 200 ticks counted every other frame. */
@@ -679,9 +682,16 @@ int main(void) {
     assert(fx.particles[0].effect == MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM &&
            fx.particles[0].x == z.x + 4 && fx.particles[0].y == z.y - 20);
     uint16_t zx2 = z.x, zy2 = z.y;
+    assert(z.damaged);
+    bool z_onscreen = (z.status & MZM_SPRITE_STATUS_ONSCREEN) != 0;
+    assert(z_onscreen);
+    mzm_sfx_clear();
     step(&z, 0);
     assert(z.status == 0 && fx.particles[1].effect == MZM_PE_SPRITE_EXPLOSION_MEDIUM &&
            fx.particles[1].x == zx2 && fx.particles[1].y == zy2 - 40);
+    /* Zoomer: SP_DAMAGED first (on screen only), then SpriteUtilSpriteDeath. */
+    assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_ZOOMER_DAMAGED) == z_onscreen);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SPRITE_EXPLOSION_MEDIUM));
     /* Not weak: the invincible impact. */
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
     mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
@@ -698,9 +708,12 @@ int main(void) {
                             true, false, false, hurt};
     z.ignore_samus_timer = 0;
     mzm_sprites_samus_collision(&z, 1, &screw, &tables);
-    assert(z.pose == 0x65);
+    assert(z.pose == 0x65 && z.damaged);
+    mzm_sfx_clear();
     step(&z, 0);
     assert(z.status == 0 && fx.particles[0].effect == MZM_PE_SCREW_ATTACK_DESTROYED);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SCREW_ATTACK_DESTROYED));
+    assert(!mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SPRITE_EXPLOSION_MEDIUM));
     assert(fx.debris[0].exists && fx.debris[0].type == 2 && fx.debris[1].type == 3 &&
            fx.debris[2].type == 4 && !fx.debris[3].exists);
     frame.effects = NULL;

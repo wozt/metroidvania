@@ -2,6 +2,7 @@
 /* Zero Mission breakable blocks; comments name the pinned decompilation's
  * routines. */
 #include "mzm_blocks.h"
+#include "mzm_sfx.h"
 
 #include <stddef.h>
 
@@ -188,6 +189,8 @@ static bool destroy_square(MzmBlocks *blocks, const MzmBlockEnv *env, ClipBlock 
         store_broken_non_reform(blocks, env, c->x, c->y, type);
         env->set_clip(env->context, 0, c->y, c->x);
     }
+    if (blocks->caa != MZM_CAA_SPEEDBOOSTER)
+        mzm_sfx_play_not_playing(MZM_SOUND_SQUARE_BLOCK_DESTROYED);
     return true;
 }
 
@@ -314,6 +317,9 @@ static bool check_ccaa(MzmBlocks *blocks, const MzmBlockEnv *env, ClipBlock *c) 
         if (blocks->active_chain_types & env->chain_flag[chain_type]) return false;
         if (start_bomb_chain(blocks, chain_type, c->x, c->y)) {
             blocks->active_chain_types |= env->chain_flag[chain_type];
+            /* BlockStartBombChain: the sound of the first active chain. */
+            if (blocks->active_chain_types == env->chain_flag[chain_type])
+                mzm_sfx_play_not_playing(MZM_SOUND_BOMB_CHAIN);
             return destroy_non_reform(blocks, env, c);
         }
         return false;
@@ -344,7 +350,13 @@ bool mzm_block_apply_ccaa(MzmBlocks *blocks, const MzmBlockEnv *env, int y, int 
         return check_ccaa(blocks, env, &c);
     case MZM_CAA_SPEEDBOOSTER:
     case MZM_CAA_SPEEDBOOSTER_ON_GROUND:
+        if (!check_ccaa(blocks, env, &c)) return false;
+        mzm_sfx_play_not_playing(MZM_SOUND_BLOCK_DESTROYED_WITH_SPEEDBOOSTER);
+        return true;
     case MZM_CAA_SCREW_ATTACK:
+        if (!check_ccaa(blocks, env, &c)) return false;
+        mzm_sfx_play_not_playing(MZM_SOUND_BLOCK_DESTROYED_WITH_SCREW_ATTACK);
+        return true;
     case MZM_CAA_BOMB_CHAIN:
     case MZM_CAA_BOMB_CHAIN_UNUSED: return check_ccaa(blocks, env, &c);
     case MZM_CAA_REMOVE_SOLID:
@@ -499,6 +511,8 @@ void mzm_blocks_process_bomb_chains(MzmBlocks *blocks, const MzmBlockEnv *env, u
     } else {
         chain->offset = 0;
         blocks->active_chain_types &= (uint8_t)~env->chain_flag[chain->type & 7];
+        /* CONVERT_SECONDS(1.f / 6) once no chain is active. */
+        if (blocks->active_chain_types == 0) mzm_sfx_fade(MZM_SOUND_BOMB_CHAIN, 10);
     }
 }
 

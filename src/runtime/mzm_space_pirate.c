@@ -952,6 +952,13 @@ static void land(MzmSprite *s, uint16_t top) {
     s->y = top;
     s->status |= MZM_SPRITE_STATUS_DOUBLE_SIZE;
     set_anim(s, MZM_PIRATE_LANDING);
+    ai_sound_onscreen_once(s, MZM_SOUND_SPACE_PIRATE_LANDING);
+}
+
+/* The footsteps, climbing and crawling sounds: once the animation frame
+ * (a multiple of 4) has lasted more than `ticks`. */
+static void step_sound(const MzmSprite *s, int ticks, uint16_t sound) {
+    if (s->adc > ticks && (s->frame & 3) == 0) ai_sound_onscreen_once(s, sound);
 }
 
 /* SpacePirateFalling */
@@ -1029,6 +1036,8 @@ static void walking(Ctx *c) {
     if (s->work2 < HALF_BLOCK_SIZE) s->work2 += PIXEL_SIZE / 2;
     else if (s->work2 >= HALF_BLOCK_SIZE + 1) s->work2--;
     if (s->scaling < 0x100) s->scaling++;
+    /* CONVERT_SECONDS(.1f) */
+    step_sound(s, 6 - 1, MZM_SOUND_SPACE_PIRATE_FOOTSTEPS);
 }
 
 /* SpacePirateIdle */
@@ -1233,6 +1242,7 @@ static void walking_alerted(Ctx *c) {
     } else {
         s->pose = P_WALKING;
     }
+    step_sound(s, 6 - 1, MZM_SOUND_SPACE_PIRATE_FOOTSTEPS);
 }
 
 /* SpacePirateJumpingInit */
@@ -1337,6 +1347,7 @@ static void jumping(Ctx *c) {
             return;
         }
     }
+    if (s->work3 == 0) ai_sound_onscreen_once(s, MZM_SOUND_SPACE_PIRATE_JUMPING);
     const MzmSpriteTables *t = c->tables;
     int16_t velocity;
     if (s->work1 == 1) velocity = jump_velocity(t->pirate_jump_low, 11, &s->work3);
@@ -1535,6 +1546,8 @@ static void climbing_up(Ctx *c) {
         movement = 4;
     }
     s->y = (uint16_t)(s->y - movement);
+    /* CONVERT_SECONDS(.15f) */
+    step_sound(s, 9, MZM_SOUND_SPACE_PIRATE_CLIMBING);
 }
 
 /* SpacePirateClimbingDown */
@@ -1578,6 +1591,7 @@ static void climbing_down(Ctx *c) {
         movement = PIXEL_SIZE;
     }
     s->y = (uint16_t)(s->y + movement);
+    step_sound(s, 9, MZM_SOUND_SPACE_PIRATE_CLIMBING);
 }
 
 /* No wall under the pirate's feet nor a block lower: it lets go. */
@@ -1748,6 +1762,7 @@ static void crawling(Ctx *c) {
         movement = 1;               /* ONE_SUB_PIXEL */
     }
     s->x = ahead(s, movement);
+    step_sound(s, 9, MZM_SOUND_SPACE_PIRATE_CRAWLING);
 }
 
 /* The hitbox and position steps of SpacePirateStandingUp and
@@ -1797,8 +1812,9 @@ static void falling_while_crawling(Ctx *c) {
 }
 
 /* SpacePirateDeath: the alarm stops with the last pirate. */
-static void death(Ctx *c) {
+static void death(Ctx *c, bool play_sound) {
     MzmSprite *s = c->s;
+    if (play_sound) ai_sound_onscreen(s, MZM_SOUND_SPACE_PIRATE_DYING);
     ai_sprite_death_typed(c, DEATH_NORMAL, (uint16_t)(s->y - (BLOCK_SIZE + HALF_BLOCK_SIZE)),
                           s->x, MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
     if (!c->f->globals->alarm_timer || !c->f->sprites) return;
@@ -1817,6 +1833,7 @@ static void death(Ctx *c) {
 
 /* SpacePirateHitByLaserInit */
 static void hit_by_laser_init(MzmSprite *s) {
+    ai_sound_onscreen(s, MZM_SOUND_SPACE_PIRATE_DYING);
     s->pose = P_HIT_BY_LASER;
     s->health = 0;
     s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
@@ -1836,12 +1853,13 @@ static void hit_by_laser(Ctx *c) {
         s->palette_row = (uint8_t)(15 - s->gfx_slot - 1);
     } else {
         s->palette_row = s->absolute_palette_row;
-        if (timer == 0) death(c);
+        if (timer == 0) death(c, false);
     }
 }
 
 void ai_space_pirate(Ctx *c) {
     MzmSprite *s = c->s;
+    bool alerted = (s->status & MZM_SPRITE_STATUS_FACING_DOWN) != 0;
     MzmSpriteGlobals *g = c->f->globals;
     uint8_t *d = g->draw_order;
     if (s->pose < SPRITE_POSE_DESTROYED) {
@@ -2019,8 +2037,14 @@ void ai_space_pirate(Ctx *c) {
         hit_by_laser_init(s);
         /* fallthrough */
     case P_HIT_BY_LASER: hit_by_laser(c); break;
-    default: death(c); break;
+    default: death(c, true); break;
     }
+    if (!alerted && (s->status & (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
+                                  MZM_SPRITE_STATUS_FACING_DOWN |
+                                  MZM_SPRITE_STATUS_IGNORE_PROJECTILES)) ==
+                      (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
+                       MZM_SPRITE_STATUS_FACING_DOWN))
+        mzm_sfx_play_not_playing(MZM_SOUND_SPACE_PIRATE_GETTING_ALERTED);
 }
 
 /* SpacePirateLaserInit */
@@ -2058,6 +2082,7 @@ static void laser_init(Ctx *c) {
         s->status = 0;
         break;
     }
+    ai_sound_onscreen_once(s, MZM_SOUND_SPACE_PIRATE_FIRING_LASER);
 }
 
 /* SpacePirateLaserExplodingInit (the BG1 priority is not reproduced). */
@@ -2070,6 +2095,7 @@ static void laser_exploding_init(MzmSprite *s) {
     s->samus_collision = SSC_NONE;
     s->pose = LASER_POSE_EXPLODING;
     s->ignore_samus_timer = 1;
+    mzm_sfx_play_not_playing(MZM_SOUND_SPACE_PIRATE_LASER_EXPLODING);
 }
 
 /* SpacePirateLaserMove: CAA_BOMB_PISTOL at the laser's position (opening

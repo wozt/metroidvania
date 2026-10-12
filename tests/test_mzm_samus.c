@@ -2,6 +2,7 @@
 /* ROM-free regression tests for the native Zero Mission pose controller. */
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
+#include "mzm_sfx.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -605,6 +606,111 @@ static void test_firing_breaks_a_spin(void) {
     assert(input.new_projectile && w.samus.pose == MZM_POSE_MIDAIR);
 }
 
+/* The native SoundPlay points of the ported poses and weapons. */
+static void test_sounds(void) {
+    World w;
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    mzm_sfx_clear();
+    /* SamusSetMidAir: a standing jump plays the low jump sound. */
+    step(&w, MZM_KEY_A);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_LOW_JUMP));
+    assert(!mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_LANDING));
+    while (w.samus.pose == MZM_POSE_MIDAIR) step(&w, MZM_KEY_A);
+    /* SamusSetLandingPose: the landing effect on plain ground. */
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_LANDING));
+    steps(&w, 0, 4);
+
+    /* SamusRunningGfx: footsteps on animation frame 1. */
+    mzm_sfx_clear();
+    steps(&w, MZM_KEY_RIGHT, 6);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_FOOTSTEPS_1));
+    step(&w, 0);
+
+    /* Crouching, morphing and unmorphing. */
+    mzm_sfx_clear();
+    step(&w, MZM_KEY_DOWN);
+    assert(w.samus.pose == MZM_POSE_CROUCHING);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CROUCHING));
+    step(&w, 0);
+    step(&w, MZM_KEY_DOWN);
+    assert(w.samus.pose == MZM_POSE_MORPHING);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MORPHING));
+    steps(&w, 0, 8);
+    assert(w.samus.pose == MZM_POSE_MORPH_BALL);
+    mzm_sfx_clear();
+    step(&w, MZM_KEY_UP);
+    assert(w.samus.pose == MZM_POSE_UNMORPHING);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_UNMORPHING));
+    steps(&w, 0, 8);
+
+    /* SamusSpinningGfx: the spin sound on the spin's first frame. */
+    world_init(&w);
+    place(&w, 40, 224);
+    step(&w, 0);
+    step(&w, MZM_KEY_RIGHT);
+    mzm_sfx_clear();
+    step(&w, MZM_KEY_RIGHT | MZM_KEY_A);
+    assert(w.samus.pose == MZM_POSE_STARTING_SPIN_JUMP);
+    /* A running jump starts a spin: no straight jump sound. */
+    assert(!mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_LOW_JUMP));
+    steps(&w, MZM_KEY_RIGHT | MZM_KEY_A, 6);
+    assert(w.samus.pose == MZM_POSE_SPINNING);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SPIN_JUMP));
+
+    /* SamusChangeToHurtPose, then SamusDying: the music stops on the
+     * first dying frame and the dying sound plays on the second. */
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    mzm_sfx_clear();
+    mzm_samus_hurt(&w.samus, &w.collision, false);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_HURT));
+    steps(&w, 0, 40);
+    mzm_sfx_clear();
+    mzm_samus_hurt(&w.samus, &w.collision, true);
+    assert(mzm_sfx_count() == 0);
+    step(&w, 0);
+    assert(mzm_sfx_count() == 1 && mzm_sfx_get(0).action == MZM_SFX_STOP_ALL);
+    step(&w, 0);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DYING));
+    step(&w, 0);
+    assert(mzm_sfx_count() == 2);
+
+    /* SamusSetHighlightedWeapon and ProjectileUpdate. */
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    w.equipment.missiles = 5;
+    w.equipment.max_missiles = 5;
+    w.equipment.super_missiles = 5;
+    w.equipment.max_super_missiles = 5;
+    mzm_sfx_clear();
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ARMING_WEAPON));
+    mzm_sfx_clear();
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    assert(mzm_sfx_count() == 0);
+    mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, MZM_KEY_SELECT, &w.equipment);
+    assert(mzm_sfx_count() == 1 && mzm_sfx_get(0).sound == MZM_SOUND_MISSILE_TOGGLE);
+    mzm_sfx_clear();
+    mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment);
+    while (weapons.cooldown) mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment);
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_BEAM_SHOT));
+    mzm_sfx_clear();
+    while (weapons.cooldown) mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R, 0, &w.equipment);
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_R | MZM_KEY_B, MZM_KEY_B,
+                                   &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SUPER_MISSILE_SHOT));
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SUPER_MISSILE_THRUST));
+}
+
 int main(void) {
     test_native_tables();
     test_damage();
@@ -620,6 +726,7 @@ int main(void) {
     test_missile();
     test_projectiles_affect_blocks();
     test_firing_breaks_a_spin();
+    test_sounds();
     puts("MZM Samus controller tests passed");
     return 0;
 }

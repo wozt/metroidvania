@@ -12,6 +12,7 @@
 #include "gba_input.h"
 #include "mzm_blocks.h"
 #include "mzm_audio.h"
+#include "mzm_sfx.h"
 #include "mzm_hatches.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
@@ -1661,6 +1662,19 @@ static void runtime_audio_frame(SDL_AudioStream *stream) {
         SDL_PutAudioStreamData(stream, buffer, frames * 4);
 }
 
+/* The gameplay modules' sound requests (mzm_sfx) into the sound engine. */
+static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
+                             uint16_t timer) {
+    (void)context;
+    switch (action) {
+    case MZM_SFX_PLAY: mzm_sound_play(sound); break;
+    case MZM_SFX_PLAY_NOT_PLAYING: mzm_sound_play_not_already_playing(sound); break;
+    case MZM_SFX_STOP: mzm_sound_stop(sound); break;
+    case MZM_SFX_FADE: mzm_sound_fade(sound, timer); break;
+    case MZM_SFX_STOP_ALL: mzm_audio_stop_all(); break;
+    }
+}
+
 /* CheckPlayRoomMusicTrack when a room is entered: the room's track fades
  * the current one in 30 frames; CheckPlayTransitionMusicTrack starts it
  * when the (absent) door transition would end, returned in frames. */
@@ -2515,6 +2529,7 @@ int main(int argc, char **argv) {
             audio=NULL;
         } else {
             mzm_audio_initialize();
+            mzm_sfx_set_sink(runtime_sfx_sink,NULL);
             SDL_ResumeAudioStreamDevice(audio);
         }
     }
@@ -2915,6 +2930,14 @@ int main(int argc, char **argv) {
                     mzm_weapons_init(&weapons);
                     equipment.missiles=equipment.max_missiles;
                     equipment.super_missiles=equipment.max_super_missiles;
+                    /* SamusDying stopped the music; there is no game over
+                     * flow, so the room's track simply starts again. */
+                    if(mzm_audio_ready() && room->has_music) {
+                        mzm_music_check_set_new_track((uint16_t)room->music);
+                        mzm_music_check_play_transition_track();
+                        if(!mzm_audio_player_playing(0))
+                            mzm_music_play((uint16_t)room->music,0);
+                    }
                     fprintf(stderr,"Diagnostic restart: Energy %d.\n",equipment.energy);
                 }
                 restart_queued=false;
@@ -3312,6 +3335,7 @@ int main(int argc, char **argv) {
     }
     rc=0;
 cleanup:
+    mzm_sfx_set_sink(NULL,NULL);
     if (audio) SDL_DestroyAudioStream(audio);
     mzm_audio_close();
     gba_input_close(&gamepad);

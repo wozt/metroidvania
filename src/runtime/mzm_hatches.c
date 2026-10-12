@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Zero Mission hatches; comments name the pinned decompilation's routines. */
 #include "mzm_hatches.h"
+#include "mzm_sfx.h"
 
 #include <stddef.h>
 
@@ -112,6 +113,13 @@ void mzm_hatches_update(MzmHatch *hatches, int count, const MzmHatchEnv *env) {
             continue;
         }
         if (h->frame == 0) {
+            /* The opening or closing sound. */
+            if (h->state == MZM_HATCH_OPENING)
+                mzm_sfx_play(MZM_SOUND_DOOR_OPENING);
+            else if (h->type == MZM_HATCH_LOCKED || h->type == MZM_HATCH_LOCKED_NAVIGATION)
+                mzm_sfx_play(MZM_SOUND_DOORS_LOCKING);
+            else
+                mzm_sfx_play(MZM_SOUND_DOOR_CLOSING);
             h->adc = 0;
             h->frame++;
         } else if (h->frame == 7) {

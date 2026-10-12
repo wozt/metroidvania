@@ -225,6 +225,7 @@ static void security_laser(Ctx *c) {
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
         s->ignore_samus_timer = 1;
         security_laser_anim(s, true);
+        if (s->status) mzm_sfx_play(MZM_SOUND_SECURITY_LASER_TRIPPED);
         break;
     case SECURITY_LASER_POSE_DISAPPEARING:
         s->ignore_samus_timer = 1;
@@ -448,6 +449,7 @@ static void searchlight_eye_projectile(Ctx *c) {
             s->hitbox_left = -(QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
             s->hitbox_right = 0;
         }
+        ai_sound_onscreen(s, MZM_SOUND_SEARCHLIGHT_EYE_PROJECTILE_EMERGING);
         /* fallthrough */
     case PROJECTILE_POSE_MOVING:
         if (s->status & MZM_SPRITE_STATUS_X_FLIP)
@@ -459,6 +461,7 @@ static void searchlight_eye_projectile(Ctx *c) {
     default:
         ai_particle_set(c, (uint16_t)(s->y + QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE), s->x,
                         MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        ai_sound_onscreen(s, MZM_SOUND_SPRITE_EXPLOSION_MEDIUM);
         s->status = 0;
         break;
     }

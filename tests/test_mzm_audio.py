@@ -3,7 +3,7 @@
 from pathlib import Path
 import unittest
 
-from scripts import mzm_audio, mzm_c_tables, mzm_runtime_room
+from scripts import mzm_audio, mzm_c_tables, mzm_runtime_room, mzm_sound_ids
 
 DECOMP = Path(__file__).resolve().parents[1] / "third_party/mzm"
 
@@ -64,6 +64,22 @@ class EngineTableTests(unittest.TestCase):
     def test_room_music(self):
         self.assertEqual(mzm_runtime_room.room_music({"musicTrack": "MUSIC_BRINSTAR"}), 1)
         self.assertEqual(mzm_runtime_room.room_music({}), 0)
+
+
+@unittest.skipUnless((DECOMP / "include/constants/audio.h").is_file(),
+                     "pinned MZM decompilation missing")
+class SoundIdTests(unittest.TestCase):
+    def test_sound_enum(self):
+        names = dict(mzm_sound_ids.sound_names(DECOMP))
+        self.assertEqual(names["MUSIC_BRINSTAR"], 1)
+        self.assertEqual(names["SOUND_A9"], 0xA9)
+        self.assertEqual(names["SOUND_BEAM_SHOT"], 0xC8)
+        self.assertNotIn("SOUND_MODE_FREQ_COUNT", names)
+
+    def test_header_is_fresh(self):
+        self.assertEqual(mzm_sound_ids.HEADER.read_text(encoding="utf-8"),
+                         mzm_sound_ids.render(DECOMP))
+        self.assertIn("    MZM_SOUND_HURT = 0x", mzm_sound_ids.render(DECOMP))
 
 
 if __name__ == "__main__":

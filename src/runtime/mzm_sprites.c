@@ -2,6 +2,7 @@
 /* Zero Mission sprites; comments name the pinned decompilation's routines. */
 #include "mzm_sprites.h"
 #include "mzm_sprite_ai.h"
+#include "mzm_sfx.h"
 
 #include <string.h>
 
@@ -862,16 +863,27 @@ static void random_debris_3(const Ctx *c, uint16_t y, uint16_t x) {
     }
 }
 
-/* SpriteUtilSpriteDeath (DEATH_NORMAL): the death particle (the screw
- * attack kill adds three debris), then the sprite becomes its drop at the
- * given position, or is removed. Sounds are not played. */
+/* SpriteUtilSpriteDeath (DEATH_NORMAL): the death particle and sound (the
+ * screw attack kill adds three debris), then the sprite becomes its drop at
+ * the given position, or is removed. Every ported caller passes playSound
+ * TRUE. */
 void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect) {
     MzmSprite *s = c->s;
     if (s->pose == SPRITE_POSE_SCREW_ATTACK_DESTROYED) {
         ai_particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
         random_debris_3(c, y, x);
+        mzm_sfx_play(MZM_SOUND_SCREW_ATTACK_DESTROYED);
     } else {
         ai_particle_set(c, y, x, effect);
+        switch (effect) {
+        case MZM_PE_SPRITE_EXPLOSION_SMALL: mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_SMALL); break;
+        case MZM_PE_SPRITE_EXPLOSION_MEDIUM: mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_MEDIUM); break;
+        case MZM_PE_SPRITE_EXPLOSION_BIG: mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_BIG); break;
+        case MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG:
+            mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+            break;
+        default: break;
+        }
     }
     uint8_t drop = determine_drop(c);
     if (type != DEATH_NORMAL) {
@@ -886,6 +898,7 @@ void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t eff
     }
     s->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN | MZM_SPRITE_STATUS_NOT_DRAWN;
     s->secondary = false;           /* properties = 0 */
+    s->damaged = false;
     s->kill_off_screen = false;
     s->gfx_slot = 0;
     s->sprite_id = drop;
@@ -999,7 +1012,8 @@ static void zoomer_death(Ctx *c) {
     ai_sprite_death(c, y, x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
 }
 
-/* Zoomer: the AI. The damaged sound and freezing are not ported. */
+/* Zoomer: the AI (its damaged sound in mzm_sprite_update). Freezing is not
+ * ported. */
 static void zoomer(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -1076,7 +1090,8 @@ static void ripper_move(Ctx *c) {
     }
 }
 
-/* Ripper: the AI. The damaged sound and freezing are not ported. */
+/* Ripper: the AI (its damaged sound in mzm_sprite_update). Freezing is not
+ * ported. */
 static void ripper(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -1160,7 +1175,7 @@ static void skree_detect(Ctx *c) {
     s->pose = SKREE_POSE_SPINNING_INIT;
 }
 
-/* SkreeGoingDownInit (the sound is not played) */
+/* SkreeGoingDownInit */
 static void skree_going_down_init(Ctx *c) {
     MzmSprite *s = c->s;
     ai_set_anim(s, MZM_SKREE_GOING_DOWN);
@@ -1169,6 +1184,7 @@ static void skree_going_down_init(Ctx *c) {
     s->pose = SKREE_POSE_GOING_DOWN;
     if (s->x > c->f->samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
     else s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+    ai_sound_onscreen(s, MZM_SOUND_SKREE_GOING_DOWN);
 }
 
 /* SkreeGoDown: sSkreeFallingSpeed down, drifting toward Samus faster every
@@ -1181,6 +1197,7 @@ static void skree_go_down(Ctx *c) {
         s->y = (uint16_t)(top - s->hitbox_bottom);
         s->pose = SKREE_POSE_CRASHING;
         s->work0 = 0;
+        ai_sound_onscreen(s, MZM_SOUND_SKREE_CRASHING);
         return;
     }
     uint16_t x_movement = s->work2 / 4;
@@ -1207,8 +1224,7 @@ static void skree_go_down(Ctx *c) {
 }
 
 /* SkreeCrashGround: four debris on impact, the crash table after 40 frames
- * (pOam only), the four explosion parts and the huge explosion after 60.
- * Sounds are not played. */
+ * (pOam only), the four explosion parts and the huge explosion after 60. */
 static void skree_crash(Ctx *c) {
     MzmSprite *s = c->s;
     uint16_t y = s->y, x = s->x;
@@ -1237,10 +1253,12 @@ static void skree_crash(Ctx *c) {
                         (uint16_t)(x + (QUARTER_BLOCK_SIZE - PIXEL_SIZE)), MZM_SPRITE_STATUS_X_FLIP);
         s->status = 0;
         ai_particle_set(c, (uint16_t)(y + HALF_BLOCK_SIZE + PIXEL_SIZE), x, MZM_PE_SPRITE_EXPLOSION_HUGE);
+        mzm_sfx_play(MZM_SOUND_SKREE_EXPLODING);
     }
 }
 
-/* Skree: the AI. The damaged sound and freezing are not ported. */
+/* Skree: the AI (its damaged sound in mzm_sprite_update). Freezing is not
+ * ported. */
 static void skree(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -1418,7 +1436,7 @@ static void hopper_jump_warning_init(MzmSprite *s) {
     ai_set_anim(s, MZM_SIDEHOPPER_JUMP_WARNING);
 }
 
-/* *JumpingInit: a low jump when the RNG is odd (the sound is not played). */
+/* *JumpingInit: a low jump when the RNG is odd. */
 static void hopper_jumping_init(Ctx *c) {
     MzmSprite *s = c->s;
     s->pose = HOPPER_POSE_JUMPING;
@@ -1429,6 +1447,8 @@ static void hopper_jumping_init(Ctx *c) {
         if (s->status & MZM_SPRITE_STATUS_Y_FLIP) s->hitbox_bottom = SIDEHOPPER_JUMPING_HEAD_HITBOX;
         else s->hitbox_top = -SIDEHOPPER_JUMPING_HEAD_HITBOX;
     }
+    ai_sound_onscreen_once(s, is_dessgeega(s) ? MZM_SOUND_DESSGEEGA_JUMPING
+                                              : MZM_SOUND_SIDEHOPPER_JUMPING);
 }
 
 static void hopper_landing_init(MzmSprite *s) {
@@ -1438,6 +1458,14 @@ static void hopper_landing_init(MzmSprite *s) {
         if (s->status & MZM_SPRITE_STATUS_Y_FLIP) s->hitbox_bottom = SIDEHOPPER_LANDING_HEAD_HITBOX;
         else s->hitbox_top = -SIDEHOPPER_LANDING_HEAD_HITBOX;
     }
+    ai_sound_onscreen_once(s, is_dessgeega(s) ? MZM_SOUND_DESSGEEGA_LANDING
+                                              : MZM_SOUND_SIDEHOPPER_LANDING);
+}
+
+/* The head shake (Sidehopper) or scream (Dessgeega) sound. */
+static void hopper_idle_sound(const MzmSprite *s) {
+    ai_sound_onscreen_once(s, is_dessgeega(s) ? MZM_SOUND_DESSGEEGA_SCREAMING
+                                              : MZM_SOUND_SIDEHOPPER_SHAKING_HEAD);
 }
 
 /* *IdleInit: idle or shaking its head / screaming at random, jumping after
@@ -1452,6 +1480,7 @@ static void hopper_idle_init(Ctx *c) {
     s->work0 = 0;
     s->work1 = c->rng & 3;
     ai_set_anim(s, c->rng >= 8 ? MZM_SIDEHOPPER_IDLE : MZM_SIDEHOPPER_SHAKING_HEAD);
+    if (s->anim == MZM_SIDEHOPPER_SHAKING_HEAD) hopper_idle_sound(s);
 }
 
 static void hopper_falling_init(MzmSprite *s) {
@@ -1630,7 +1659,10 @@ static void hopper_idle(Ctx *c) {
         hopper_falling_init(s);
         return;
     }
-    if (ai_animation_ending(c, 1) && s->work0++ == s->work1) hopper_jump_warning_init(s);
+    if (ai_animation_ending(c, 1)) {
+        if (s->work0++ == s->work1) hopper_jump_warning_init(s);
+        else if (s->anim == MZM_SIDEHOPPER_SHAKING_HEAD) hopper_idle_sound(s);
+    }
 }
 
 /* DessgeegaLongBeamDetectSamus: hidden from projectiles and Samus until she
@@ -1702,7 +1734,7 @@ static void hopper_death(Ctx *c) {
                  MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
 }
 
-/* Sidehopper / Dessgeega: the AIs. Freezing and the sounds are not ported. */
+/* Sidehopper / Dessgeega: the AIs. Freezing is not ported. */
 static void hopper(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -1955,7 +1987,8 @@ static void viola_falling(Ctx *c) {
     }
 }
 
-/* Viola: the AI. Freezing and the damaged sound are not ported. */
+/* Viola: the AI (its damaged sound in mzm_sprite_update). Freezing is not
+ * ported. */
 static void viola(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -2344,7 +2377,8 @@ static void sova_falling(Ctx *c) {
     }
 }
 
-/* Sova: the AI. Freezing and the damaged sound are not ported. */
+/* Sova: the AI (its damaged sound in mzm_sprite_update). Freezing is not
+ * ported. */
 static void sova(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -2530,9 +2564,11 @@ static void pipe_bug_idle(Ctx *c) {
     s->pose = PIPE_BUG_POSE_GOING_UP;
     s->work0 = 2;
     s->status &= (uint16_t)~(MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
-    /* SpriteUtilMakeSpriteFaceSamusXFlip (the rising sound is not played) */
+    /* SpriteUtilMakeSpriteFaceSamusXFlip */
     if (s->x > samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
     else s->status |= MZM_SPRITE_STATUS_X_FLIP;
+    ai_sound_onscreen(s, is_zebbo(s) ? MZM_SOUND_ZEBBO_RISING :
+                         is_geega(s) ? MZM_SOUND_GEEGA_RISING : MZM_SOUND_ZEB_RISING);
     if (s->sprite_id == MZM_PSPRITE_GEEGA_LEADER) {
         MzmSprite *follower = ai_spawn_drop_follower(
             c, MZM_PSPRITE_GEEGA_FOLLOWER, s->room_slot, s->gfx_slot, s->ram_slot,
@@ -2582,11 +2618,16 @@ static void pipe_bug_going_up(Ctx *c) {
 
 static void pipe_bug_move(Ctx *c) {
     MzmSprite *s = c->s;
+    uint16_t moving = is_zebbo(s) ? MZM_SOUND_ZEBBO_MOVING :
+                      is_geega(s) ? MZM_SOUND_GEEGA_MOVING : MZM_SOUND_ZEB_MOVING;
     if (s->work0) {
-        if (--s->work0 == 0) s->work1 = 0;
+        if (--s->work0 == 0) {
+            ai_sound_onscreen(s, moving);
+            s->work1 = 0;
+        }
         return;
     }
-    s->work1++;                     /* the moving sound every 16 frames is not played */
+    s->work1++;
     int samus_x = c->f->samus_x, x = s->x;
     if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
         if (x - samus_x > BLOCK_SIZE * 16 || x & 0x8000) {
@@ -2601,9 +2642,11 @@ static void pipe_bug_move(Ctx *c) {
         }
         s->x -= EIGHTH_BLOCK_SIZE + PIXEL_SIZE;
     }
+    /* CONVERT_SECONDS(.25f) + DELTA_TIME */
+    if ((s->work1 & 15) == 0) ai_sound_onscreen(s, moving);
 }
 
-/* Zeb / Geega: the AIs. Freezing and the sounds are not ported. */
+/* Zeb / Geega / Zebbo: the AIs. Freezing is not ported. */
 static void pipe_bug(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -2777,10 +2820,13 @@ static void reo_move(Ctx *c) {
              c->f->samus_x, purple ? BLOCK_SIZE : QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
     reo_axis(&s->y, &s->work0, &s->work3, &s->status, MZM_SPRITE_STATUS_FACING_DOWN, target_y,
              purple ? HALF_BLOCK_SIZE : QUARTER_BLOCK_SIZE);
-    if (--s->scaling == 0) s->scaling = 32;
+    if (--s->scaling == 0) {
+        s->scaling = 32;
+        ai_sound_onscreen_once(s, MZM_SOUND_REO_MOVING);
+    }
 }
 
-/* Reo: the AI. Freezing and the sounds are not ported. */
+/* Reo: the AI. Freezing is not ported. */
 static void reo(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -2934,7 +2980,8 @@ static void mella(Ctx *c) {
         ai_set_anim(s, MZM_MELLA_MOVING);
         s->work0 = 7;               /* CONVERT_SECONDS(.1f) + 1 */
         /* fallthrough */
-    case SWOOPER_POSE_WARNING:      /* the moving sound is not played */
+    case SWOOPER_POSE_WARNING:      /* MellaDelayBeforeGoingDown */
+        if (s->frame == 0 && s->adc == 1) ai_sound_onscreen_once(s, MZM_SOUND_MELLA_MOVING);
         if (--s->work0 == 0) {
             s->pose = SWOOPER_POSE_GOING_DOWN;
             s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
@@ -2944,6 +2991,7 @@ static void mella(Ctx *c) {
         }
         break;
     case SWOOPER_POSE_GOING_DOWN:
+        if (s->frame == 0 && s->adc == 1) ai_sound_onscreen_once(s, MZM_SOUND_MELLA_MOVING);
         if (s->work3 < 6 * 8 - 1) s->work3++;
         if (s->work2 < 7 * 8 - 1) s->work2++;
         t = c->tables->mella_x;
@@ -2955,6 +3003,7 @@ static void mella(Ctx *c) {
         }
         break;
     case SWOOPER_POSE_SLIDING:      /* MellaGoingUp */
+        if (s->frame == 0 && s->adc == 1) ai_sound_onscreen_once(s, MZM_SOUND_MELLA_MOVING);
         if (s->work3 < 7 * 8 - 1) s->work3++;
         if (s->work2 > 0x18) s->work2--;
         swooper_x_movement(c, (uint16_t)c->tables->mella_x[s->work2 / 8]);
@@ -3015,7 +3064,8 @@ static void holtz(Ctx *c) {
             s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
             ai_face_samus(c);
             s->work0 = 0;
-            s->work2 = PIXEL_SIZE / 2;  /* the going down sound is not played */
+            s->work2 = PIXEL_SIZE / 2;
+            ai_sound_onscreen_once(s, MZM_SOUND_HOLTZ_GOING_DOWN);
         }
         break;
     case SWOOPER_POSE_GOING_DOWN:
@@ -3037,6 +3087,8 @@ static void holtz(Ctx *c) {
         }
         break;
     case HOLTZ_POSE_GOING_UP:
+        if ((s->frame == 0 || s->frame == 3) && s->adc == 1)
+            ai_sound_onscreen_once(s, MZM_SOUND_HOLTZ_GOING_UP);
         s->work0++;
         if (s->work2 > PIXEL_SIZE / 2 && (s->work0 & 1) == 0) s->work2--;
         swooper_x_movement(c, s->work2);
@@ -3057,8 +3109,7 @@ static void holtz(Ctx *c) {
 }
 
 /* Multiviola: bounces off every surface at 3 subpixels a frame on both
- * axes, its animation starting at twice its slot (the bounce sound is not
- * played). */
+ * axes, its animation starting at twice its slot (MultiviolaMove). */
 static void multiviola(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) return;
@@ -3086,28 +3137,38 @@ static void multiviola(Ctx *c) {
         return;
     }
     const uint16_t step = PIXEL_SIZE - 1;
+    bool bouncing = false;
     if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
-        if (ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_right)) == MZM_COLLISION_AIR) {
             s->x += step;
-        else
+        } else {
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+            bouncing = true;
+        }
     } else {
-        if (ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, s->y, (uint16_t)(s->x + s->hitbox_left)) == MZM_COLLISION_AIR) {
             s->x -= step;
-        else
+        } else {
             s->status |= MZM_SPRITE_STATUS_X_FLIP;
+            bouncing = true;
+        }
     }
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
-        if (ai_collision_at(c, (uint16_t)(s->y + s->hitbox_top), s->x) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, (uint16_t)(s->y + s->hitbox_top), s->x) == MZM_COLLISION_AIR) {
             s->y -= step;
-        else
+        } else {
             s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+            bouncing = true;
+        }
     } else {
-        if (ai_collision_at(c, (uint16_t)(s->y + s->hitbox_bottom), s->x) == MZM_COLLISION_AIR)
+        if (ai_collision_at(c, (uint16_t)(s->y + s->hitbox_bottom), s->x) == MZM_COLLISION_AIR) {
             s->y += step;
-        else
+        } else {
             s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+            bouncing = true;
+        }
     }
+    if (bouncing) ai_sound_onscreen_once(s, MZM_SOUND_MULTIVIOLA_BOUNCING);
 }
 
 /* Sqrt (BIOS SWI 0x08): the integer square root, rounded down. */
@@ -3316,7 +3377,7 @@ static void refill(int *current, int maximum, int amount) {
 }
 
 /* EnemyDropIdle: shown once the ignore timer is nearly over, collected on
- * contact (sounds not ported), blinking during its last 80 frames and gone
+ * contact with its sound, blinking during its last 80 frames and gone
  * after 200 frames counted every other frame. */
 static void enemy_drop_idle(Ctx *c) {
     MzmSprite *s = c->s;
@@ -3327,10 +3388,22 @@ static void enemy_drop_idle(Ctx *c) {
     }
     if (s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) {
         switch (s->samus_collision) {
-        case SSC_SMALL_ENERGY_DROP: refill(&e->energy, e->max_energy, 5); break;
-        case SSC_LARGE_ENERGY_DROP: refill(&e->energy, e->max_energy, 20); break;
-        case SSC_MISSILE_DROP: refill(&e->missiles, e->max_missiles, 2); break;
-        case SSC_SUPER_MISSILE_DROP: refill(&e->super_missiles, e->max_super_missiles, 2); break;
+        case SSC_SMALL_ENERGY_DROP:
+            refill(&e->energy, e->max_energy, 5);
+            mzm_sfx_play(MZM_SOUND_GETTING_SMALL_ENERGY_DROP);
+            break;
+        case SSC_LARGE_ENERGY_DROP:
+            refill(&e->energy, e->max_energy, 20);
+            mzm_sfx_play(MZM_SOUND_GETTING_LARGE_ENERGY_DROP);
+            break;
+        case SSC_MISSILE_DROP:
+            refill(&e->missiles, e->max_missiles, 2);
+            mzm_sfx_play(MZM_SOUND_GETTING_MISSILE_DROP);
+            break;
+        case SSC_SUPER_MISSILE_DROP:
+            refill(&e->super_missiles, e->max_super_missiles, 2);
+            mzm_sfx_play(MZM_SOUND_GETTING_SUPER_MISSILE_DROP);
+            break;
         default: break;             /* power bombs: not ported */
         }
         s->status = 0;
@@ -3454,6 +3527,7 @@ static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
         s->pose = SPRITE_POSE_SCREW_ATTACK_DESTROYED;
         s->ignore_samus_timer = 1;
         set_isft(s, ISFT_SCREW_ATTACK);
+        s->damaged = true;
         return true;
     }
     if ((s->isft & 0x7F) < ISFT_SOLID_HIT) set_isft(s, ISFT_SOLID_HIT);
@@ -3527,6 +3601,7 @@ static void deal_damage(MzmSprite *s, uint16_t damage) {
         s->ignore_samus_timer = 1;
     }
     set_isft(s, ISFT_DAMAGED);
+    s->damaged = true;
 }
 
 /* ProjectileHitSolidSprite */
@@ -3682,6 +3757,30 @@ static void check_on_screen(const Ctx *c) {
     }
 }
 
+/* The SP_DAMAGED sound of each primary AI (none for Rinkas, the Space
+ * Pirates and the security systems). */
+static uint16_t damaged_sound(int family) {
+    switch (family) {
+    case MZM_FAMILY_ZOOMER: return MZM_SOUND_ZOOMER_DAMAGED;
+    case MZM_FAMILY_ZEELA: return MZM_SOUND_ZEELA_DAMAGED;
+    case MZM_FAMILY_RIPPER: return MZM_SOUND_RIPPER_DAMAGED;
+    case MZM_FAMILY_WAVER: return MZM_SOUND_WAVER_DAMAGED;
+    case MZM_FAMILY_SIDEHOPPER: return MZM_SOUND_SIDEHOPPER_DAMAGED;
+    case MZM_FAMILY_DESSGEEGA: return MZM_SOUND_DESSGEEGA_DAMAGED;
+    case MZM_FAMILY_VIOLA: return MZM_SOUND_VIOLA_DAMAGED;
+    case MZM_FAMILY_SOVA: return MZM_SOUND_SOVA_DAMAGED;
+    case MZM_FAMILY_ZEB: return MZM_SOUND_ZEB_DAMAGED;
+    case MZM_FAMILY_GEEGA: return MZM_SOUND_GEEGA_DAMAGED;
+    case MZM_FAMILY_ZEBBO: return MZM_SOUND_ZEBBO_DAMAGED;
+    case MZM_FAMILY_REO: return MZM_SOUND_REO_DAMAGED;
+    case MZM_FAMILY_MELLA: return MZM_SOUND_MELLA_DAMAGED;
+    case MZM_FAMILY_HOLTZ: return MZM_SOUND_HOLTZ_DAMAGED;
+    case MZM_FAMILY_MULTIVIOLA: return MZM_SOUND_MULTIVIOLA_DAMAGED;
+    case MZM_FAMILY_SKREE: return MZM_SOUND_SKREE_DAMAGED;
+    default: return 0;
+    }
+}
+
 void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *frame) {
     int family = mzm_sprite_family(sprite->sprite_id, sprite->secondary);
     /* A family without frame durations (not exported) is not updated. */
@@ -3699,6 +3798,12 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
                               sprite->y) % 32u];
     /* SpriteUtilUpdateStunTimer: the stun palette flash is not drawn yet. */
     if (sprite->isft & 0x7F) sprite->isft--;
+    /* The first lines of each primary AI with a damaged sound. */
+    uint16_t damaged = sprite->secondary ? 0 : damaged_sound(family);
+    if (damaged && sprite->damaged) {
+        sprite->damaged = false;
+        if (sprite->status & MZM_SPRITE_STATUS_ONSCREEN) mzm_sfx_play_not_playing(damaged);
+    }
     switch (family) {
     case MZM_FAMILY_ZOOMER:
     case MZM_FAMILY_ZEELA:

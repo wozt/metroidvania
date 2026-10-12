@@ -168,6 +168,14 @@ read from the user's ROM at export time; nothing is stored in the repository.
 - Ripper II (`ripper2.c`): the Ripper's patrol with its own tables, a
   wider hitbox, two pixels a frame, a wall probe 44 subpixels ahead and a
   turning sound.
+- Squeept (`squeept.c`): hidden at its spawn (a pixel below its block)
+  until, after a half-second wait, Samus is above it within 8 blocks up and
+  6 across; it rises with `sSqueeptRisingMovement`, turns at the table's
+  end or at a ceiling once 2.5 blocks above its spawn, falls with
+  `sSqueeptFallingMovement` and hides again at its spawn. Crossing the room
+  effect's surface (`SpriteUtilCheckOutOfRoomEffect` /
+  `SpriteUtilCheckInRoomEffect` against the exported `effectY`) plays its
+  lava sounds; the splashes and the surface's wave are not ported.
 - Multiviola (`multiviola.c`): bounces diagonally off every surface at 3
   subpixels a frame on both axes, starting toward Samus, its 56-frame table
   starting at twice its slot (the frame limit per table is now 64).

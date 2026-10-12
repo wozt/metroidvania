@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 39 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 40 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -335,6 +335,15 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_m
 Dependencies: `mzm.enemies.zoomer`, `mzm.collision.clipdata`, `mzm.transitions.doors_and_hatches`, `mzm.animation.particles`.  
 Known divergences: SpawnWaitingPirates reads the room's default spriteset only (event spritesets are not exported) and runs on door transitions, not on the debug teleport; the alarm music and palette animation, the suitless freeze flicker (the port has no suitless Samus) and the laser's draw order and BG priority are not reproduced; the Space Pirate carrying a power bomb, the black and escape-ship pirates are not ported; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset.  
 Next action: Port the power-bomb, black and escape-ship pirates and the security systems that ring the alarm (searchlights, security lasers); resolve the event spritesets.
+
+[~] **`mzm.enemies.squeept` — Squeepts.** Init a pixel below its block with the spawn height saved, hidden with a 30-frame wait, detection when Samus is above it within 8 blocks up and 6 across, the rise with sSqueeptRisingMovement and its three hitboxes, the early turn at a ceiling once 2.5 blocks above its spawn, the fall with sSqueeptFallingMovement (repeating its last entry), hiding again at the spawn height, the leaving and entering lava sounds when it crosses the room effect surface, and the death into drops. Checked in norfair_010 (--spawn 430 150): the right Squeept jumps out of the lava at Samus and turns at the top of its table.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckInRoomEffect`, `mzm:c:src/sprite_util.c:SpriteUtilCheckOutOfRoomEffect`, `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteAboveBelow`, `mzm:c:src/sprites_ai/squeept.c:Squeept`.  
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c), [`scripts/mzm_bg_layers.py`](../scripts/mzm_bg_layers.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: The room effect surface is the exported effectY without the gWaterMovement wave, and the lava splash particles (SpriteUtilSetSplashEffect) are not ported; otherwise the shared sprite engine limits (mzm.enemies.zoomer).  
+Next action: Port the room effect wave and the splash particles; compare its behavior with the original game frame by frame.
 
 [~] **`mzm.enemies.viola` — Violas.** Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops.
 

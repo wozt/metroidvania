@@ -244,6 +244,9 @@ def room_background_lines(fields: dict[str, str], layers: dict[str, tuple],
     lines = [f"L\t{tileset}\t{int(fields.get('transparency', '0'), 0)}\t{prop['bg0']}\t"
              f"{prop['bg2']}\t{prop['bg3']}\t{int(fields.get('bg3Scrolling', '0'), 0)}\t"
              f"{fields.get('effect', 'EFFECT_NONE')}"]
+    # ``E``: the room entry's effectY in blocks (255: no effect).
+    effect_y = fields.get("effectY", "UCHAR_MAX")
+    lines.append(f"E\t{255 if effect_y == 'UCHAR_MAX' else int(effect_y, 0)}")
     images = {}
     for layer in (0, 1, 2):
         if f"Bg{layer}" not in layers:

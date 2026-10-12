@@ -9,10 +9,11 @@
  * SpriteUtilGetCollisionAtPosition, SpriteUtilCheckVerticalCollisionAtPosition
  * and its slope variant, SpriteUtilAlignYPositionOnSlopeAtOrigin) and the
  * Zoomer, Zeela, Ripper, Skree, Waver, Sidehopper, Dessgeega, Viola, Sova,
- * Zeb, Geega, Zebbo, Reo, Mella, Holtz, Multiviola, Rinka, Geruta and
- * Ripper II AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c, skree.c, waver.c,
- * sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c, geega.c, zebbo.c, reo.c,
- * mella.c, holtz.c, multiviola.c, rinka.c, geruta.c, ripper2.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * Zeb, Geega, Zebbo, Reo, Mella, Holtz, Multiviola, Rinka, Geruta,
+ * Ripper II and Squeept AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c,
+ * skree.c, waver.c, sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c,
+ * geega.c, zebbo.c, reo.c, mella.c, holtz.c, multiviola.c, rinka.c, geruta.c,
+ * ripper2.c, squeept.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes, and the Space Pirates with their lasers
  * (src/sprites_ai/space_pirate.c, ported in mzm_space_pirate.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
@@ -90,6 +91,9 @@ typedef struct {
      * point (sMovementClipdataValues of the block's behavior;
      * CLIPDATA_MOVEMENT_NONE outside the room). NULL: no movement blocks. */
     uint8_t (*movement)(void *context, uint16_t y, uint16_t x);
+    /* gEffectYPosition: the room effect's surface in subpixels (0 without
+     * one). */
+    uint16_t effect_y;
 } MzmSpriteWorld;
 
 /* ClipdataMovement values the ported sprites read. */
@@ -148,6 +152,8 @@ typedef struct {
     int16_t mella_up[7];            /* sMellaGoingUpYMovement (u16) */
     int16_t mella_x[7];             /* sMellaMovingXMovement (u16) */
     int16_t holtz_idle_y[65];       /* sHoltzIdleYVelocity */
+    int16_t squeept_rising[65];     /* sSqueeptRisingMovement (SHORT_MAX ends it) */
+    int16_t squeept_falling[16];    /* sSqueeptFallingMovement (SHORT_MAX ends it) */
     int16_t pirate_wall_jump[8];    /* sSpacePirateWallJumpingVelocity */
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
@@ -280,6 +286,9 @@ enum {
     MZM_RIPPER2_ANIMS,
 };
 extern const char *const mzm_ripper2_anim_names[MZM_RIPPER2_ANIMS];
+/* Squeept OAM tables (src/data/sprites/squeept.c). */
+enum { MZM_SQUEEPT_GOING_UP, MZM_SQUEEPT_TURNING_AROUND, MZM_SQUEEPT_GOING_DOWN, MZM_SQUEEPT_ANIMS };
+extern const char *const mzm_squeept_anim_names[MZM_SQUEEPT_ANIMS];
 
 /* Rinka OAM tables (src/data/sprites/rinka.c). */
 enum {
@@ -351,7 +360,7 @@ enum {
     MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA, MZM_FAMILY_ZEBBO, MZM_FAMILY_REO,
     MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
     MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_FAMILY_CHOZO_STATUE,
-    MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2,
+    MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -389,6 +398,7 @@ enum {
     MZM_PSPRITE_MELLA = 114, MZM_PSPRITE_HOLTZ = 107, MZM_PSPRITE_MULTIVIOLA = 52,
     MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
     MZM_PSPRITE_GERUTA_RED = 54, MZM_PSPRITE_GERUTA_GREEN = 55, MZM_PSPRITE_RIPPERII = 113,
+    MZM_PSPRITE_SQUEEPT = 56,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
     MZM_PSPRITE_SPACE_PIRATE = 81, MZM_PSPRITE_SPACE_PIRATE_WAITING1 = 82,
     MZM_PSPRITE_SPACE_PIRATE_WAITING2 = 83, MZM_PSPRITE_SPACE_PIRATE_WAITING3 = 84,

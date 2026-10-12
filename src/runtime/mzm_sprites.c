@@ -159,6 +159,10 @@ const char *const mzm_ripper2_anim_names[MZM_RIPPER2_ANIMS] = {
     "Ripper2Oam_Moving", "Ripper2Oam_TurningAround", "Ripper2Oam_TurningAroundPart2",
 };
 static const char *const ripper2_sprites[MZM_RIPPER2_ANIMS] = {"RIPPERII", "RIPPERII", "RIPPERII"};
+const char *const mzm_squeept_anim_names[MZM_SQUEEPT_ANIMS] = {
+    "SqueeptOam_GoingUp", "SqueeptOam_TurningAround", "SqueeptOam_GoingDown",
+};
+static const char *const squeept_sprites[MZM_SQUEEPT_ANIMS] = {"SQUEEPT", "SQUEEPT", "SQUEEPT"};
 static const char *const multiviola_sprites[MZM_MULTIVIOLA_ANIMS] = {"MULTIVIOLA"};
 const char *const mzm_rinka_anim_names[MZM_RINKA_ANIMS] = {
     "RinkaOrangeOam_Spawning", "RinkaOrangeOam_Moving", "RinkaGreenOam_Spawning",
@@ -273,6 +277,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
     [MZM_FAMILY_GERUTA] = {MZM_GERUTA_ANIMS, mzm_geruta_anim_names, geruta_sprites},
     [MZM_FAMILY_RIPPER2] = {MZM_RIPPER2_ANIMS, mzm_ripper2_anim_names, ripper2_sprites},
+    [MZM_FAMILY_SQUEEPT] = {MZM_SQUEEPT_ANIMS, mzm_squeept_anim_names, squeept_sprites},
     [MZM_FAMILY_MULTIVIOLA] = {MZM_MULTIVIOLA_ANIMS, mzm_multiviola_anim_names,
                                multiviola_sprites},
     [MZM_FAMILY_RINKA] = {MZM_RINKA_ANIMS, mzm_rinka_anim_names, rinka_sprites},
@@ -3371,6 +3376,135 @@ static void geruta(Ctx *c) {
     }
 }
 
+/* SpriteUtilCheckOutOfRoomEffect and SpriteUtilCheckInRoomEffect: whether a
+ * vertical move crossed the room effect's surface upward or downward (their
+ * splash particles are not ported). */
+bool ai_left_room_effect(const Ctx *c, uint16_t old_y, uint16_t y) {
+    uint16_t effect = c->world->effect_y;
+    return old_y > effect && y <= effect;
+}
+bool ai_entered_room_effect(const Ctx *c, uint16_t old_y, uint16_t y) {
+    uint16_t effect = c->world->effect_y;
+    return old_y < effect && y >= effect;
+}
+
+/* Squeept poses (squeept.c). */
+enum {
+    SQUEEPT_POSE_IDLE_INIT = 0xE,
+    SQUEEPT_POSE_IDLE = 0xF,
+    SQUEEPT_POSE_GOING_UP = 0x35,
+    SQUEEPT_POSE_TURNING_AROUND = 0x37,
+    SQUEEPT_POSE_GOING_DOWN = 0x39,
+};
+
+/* SqueeptGoingUpInit, SqueeptTurningAroundInit, SqueeptGoingDownInit */
+static void squeept_set(MzmSprite *s, int16_t top, int16_t bottom, uint8_t anim) {
+    s->hitbox_top = top;
+    s->hitbox_bottom = bottom;
+    ai_set_anim(s, anim);
+}
+
+/* SqueeptIdleInit: hidden, half a second before it looks for Samus. */
+static void squeept_idle_init(MzmSprite *s) {
+    s->status |= MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->pose = SQUEEPT_POSE_IDLE;
+    squeept_set(s, -(HALF_BLOCK_SIZE + PIXEL_SIZE * 3), HALF_BLOCK_SIZE, MZM_SQUEEPT_GOING_UP);
+    s->work0 = 30;
+}
+
+/* Squeept: hidden in its lava until Samus is above it (within 8 blocks up
+ * and 6 across), it jumps with sSqueeptRisingMovement, turns at the top of
+ * the table or at a ceiling once 2.5 blocks above its spawn, falls with
+ * sSqueeptFallingMovement and hides again at its spawn height. */
+static void squeept(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* SqueeptInit */
+        s->draw_top = s->draw_bottom = (BLOCK_SIZE + QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
+        s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_left = -HALF_BLOCK_SIZE;
+        s->hitbox_right = HALF_BLOCK_SIZE;
+        s->samus_collision = SSC_HURTS_SAMUS;
+        s->health = c->tables->health[s->sprite_id];
+        s->y += PIXEL_SIZE;
+        s->y_spawn = s->y;
+        /* fallthrough */
+    case SQUEEPT_POSE_IDLE_INIT:
+        squeept_idle_init(s);
+        /* fallthrough */
+    case SQUEEPT_POSE_IDLE:
+        /* SqueeptIdle */
+        if (s->work0 != 0) {
+            s->work0--;
+            break;
+        }
+        if (ai_samus_above(c, BLOCK_SIZE * 8, BLOCK_SIZE * 6)) {
+            s->pose = SQUEEPT_POSE_GOING_UP;
+            s->work3 = 0;
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        }
+        break;
+    case SQUEEPT_POSE_GOING_UP: {
+        /* SqueeptGoUp */
+        uint16_t old_y = s->y;
+        if (s->y_spawn - (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) > old_y) {
+            uint16_t y = (uint16_t)(s->y - (BLOCK_SIZE - QUARTER_BLOCK_SIZE));
+            if (ai_collision_at(c, y, (uint16_t)(s->x - HALF_BLOCK_SIZE)) == MZM_COLLISION_SOLID ||
+                ai_collision_at(c, y, (uint16_t)(s->x + HALF_BLOCK_SIZE)) == MZM_COLLISION_SOLID) {
+                squeept_set(s, -QUARTER_BLOCK_SIZE, HALF_BLOCK_SIZE, MZM_SQUEEPT_TURNING_AROUND);
+                s->pose = SQUEEPT_POSE_TURNING_AROUND;
+                break;
+            }
+        }
+        int16_t movement = s->work3 < 65 ? c->tables->squeept_rising[s->work3] : SHORT_MAX;
+        if (movement == SHORT_MAX) {
+            squeept_set(s, -QUARTER_BLOCK_SIZE, HALF_BLOCK_SIZE, MZM_SQUEEPT_TURNING_AROUND);
+            s->pose = SQUEEPT_POSE_TURNING_AROUND;
+        } else {
+            s->work3++;
+            s->y = (uint16_t)(s->y + movement);
+        }
+        if (ai_left_room_effect(c, old_y, s->y)) ai_sound_onscreen(s, MZM_SOUND_SQUEEPT_LEAVING_LAVA);
+        break;
+    }
+    case SQUEEPT_POSE_TURNING_AROUND:
+        if (ai_animation_ending(c, 1)) {
+            squeept_set(s, 0, HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE, MZM_SQUEEPT_GOING_DOWN);
+            s->pose = SQUEEPT_POSE_GOING_DOWN;
+            s->work3 = 0;
+        }
+        break;
+    case SQUEEPT_POSE_GOING_DOWN: {
+        /* SqueeptGoDown */
+        uint16_t old_y = s->y;
+        uint8_t offset = s->work3;
+        int16_t movement = offset < 16 ? c->tables->squeept_falling[offset] : SHORT_MAX;
+        if (movement == SHORT_MAX) {
+            s->y = (uint16_t)(s->y + c->tables->squeept_falling[offset > 0 && offset <= 16 ? offset - 1 : 0]);
+        } else {
+            s->work3++;
+            s->y = (uint16_t)(s->y + movement);
+        }
+        if (ai_entered_room_effect(c, old_y, s->y)) ai_sound_onscreen(s, MZM_SOUND_SQUEEPT_ENTERING_LAVA);
+        if (s->y_spawn < s->y) {
+            s->y = s->y_spawn;
+            squeept_idle_init(s);
+        }
+        break;
+    }
+    default: ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM); break;
+    }
+}
+
 /* Multiviola: bounces off every surface at 3 subpixels a frame on both
  * axes, its animation starting at twice its slot (MultiviolaMove). */
 static void multiviola(Ctx *c) {
@@ -3748,6 +3882,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_GERUTA_RED:
     case MZM_PSPRITE_GERUTA_GREEN: return MZM_FAMILY_GERUTA;
     case MZM_PSPRITE_RIPPERII: return MZM_FAMILY_RIPPER2;
+    case MZM_PSPRITE_SQUEEPT: return MZM_FAMILY_SQUEEPT;
     case MZM_PSPRITE_MULTIVIOLA: return MZM_FAMILY_MULTIVIOLA;
     case MZM_PSPRITE_RINKA_ORANGE:
     case MZM_PSPRITE_RINKA_GREEN: return MZM_FAMILY_RINKA;
@@ -4443,6 +4578,7 @@ static uint16_t damaged_sound(int family) {
     case MZM_FAMILY_SKREE: return MZM_SOUND_SKREE_DAMAGED;
     case MZM_FAMILY_GERUTA: return MZM_SOUND_GERUTA_DAMAGED;
     case MZM_FAMILY_RIPPER2: return MZM_SOUND_RIPPER2_DAMAGED;
+    case MZM_FAMILY_SQUEEPT: return MZM_SOUND_SQUEEPT_DAMAGED;
     default: return 0;
     }
 }
@@ -4504,6 +4640,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_MULTIVIOLA: multiviola(&c); break;
     case MZM_FAMILY_GERUTA: geruta(&c); break;
     case MZM_FAMILY_RIPPER2: ripper2(&c); break;
+    case MZM_FAMILY_SQUEEPT: squeept(&c); break;
     case MZM_FAMILY_RINKA: rinka(&c); break;
     case MZM_FAMILY_SPACE_PIRATE:
         if (sprite->secondary) ai_space_pirate_laser(&c);

@@ -34,7 +34,9 @@ export (`scripts/mzm_runtime_room.py`) writes, privately:
   208 common ones (doors, breakable blocks, tanks), 32 per row, 32-bit with
   transparent color 0;
 - in `room.tsv`: `L` (tileset, transparency, BG0/BG2/BG3 properties, BG3
-  scrolling, effect), `G`/`R` (the BG0 when RLE, BG1 and BG2 block maps as
+  scrolling, effect), `E` (the room entry's `effectY` in blocks, 255 for
+  none; the runtime gives sprites `gEffectYPosition` from it, without
+  `gWaterMovement`'s wave), `G`/`R` (the BG0 when RLE, BG1 and BG2 block maps as
   sheet indices) and `T` (the BG3 and LZ77 BG0 text layers, written as
   `bg3.bmp` / `bg0.bmp`).
 

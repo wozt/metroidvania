@@ -2988,6 +2988,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0275 - Zero Mission Squeepts and the room effect height
+
+- Rooms export their entry's `effectY` (`E` line); the runtime gives
+  sprites `gEffectYPosition` from it (`MzmSpriteWorld.effect_y`), without
+  the `gWaterMovement` wave.
+- `SpriteUtilCheckOutOfRoomEffect` / `SpriteUtilCheckInRoomEffect` are
+  ported as surface-crossing checks (their splash particles are not).
+- Squeepts (`squeept.c`) hide in their lava until Samus is above them,
+  jump with `sSqueeptRisingMovement`, turn at the table's end or at a
+  ceiling, fall with `sSqueeptFallingMovement` and hide again, playing their
+  leaving and entering lava sounds at the surface.
+- Checked in norfair_010 (`--spawn 430 150`): the right Squeept leaves the
+  lava, rises to y 64 and turns.
+- Tests: `tests/test_mzm_sprites.c` (wait, detection, rise, turn, fall,
+  hiding, both lava sounds, the early ceiling turn).
+
 ## Patch 0274 - Zero Mission Gerutas and Ripper IIs
 
 - Red and green Gerutas (`geruta.c`) reuse the Holtz's movement probes:

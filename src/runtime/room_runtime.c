@@ -76,6 +76,7 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     /* Backgrounds (scripts/mzm_bg_layers.py): the tileset, the room's
      * transparency and BG properties, the block layers BG0 (when RLE), BG1
      * and BG2 as sheet indices, and the LZ77 text layers BG0 and BG3. */
+    int effect_y;                   /* effectY in blocks (255: none) */
     bool has_backgrounds; int tileset, transparency, bg0_prop, bg2_prop, bg3_prop, bg3_scrolling;
     int bg_w[3], bg_h[3]; bool bg_present[3]; unsigned short bg[3][MAX_ROOM_CELLS];
     bool text_present[4]; int text_size[4], text_w[4], text_h[4];
@@ -412,6 +413,12 @@ static bool parse_native_room(const char *path, Room *room) {
                 goto failure;
             room->spriteset = index;
             room->spriteset_count++;
+            continue;
+        }
+        if (line[0] == 'E') {
+            if (sscanf(line, "E\t%d %c", &room->effect_y, &extra) != 1 || room->effect_y < 0 ||
+                room->effect_y > 255)
+                goto failure;
             continue;
         }
         if (line[0] == 'U') {
@@ -1973,6 +1980,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sMellaGoingUpYMovement", t->mella_up, 7, 7},
         {"sMellaMovingXMovement", t->mella_x, 7, 7},
         {"sHoltzIdleYVelocity", t->holtz_idle_y, 65, 65},
+        {"sSqueeptRisingMovement", t->squeept_rising, 65, 65},
+        {"sSqueeptFallingMovement", t->squeept_falling, 16, 16},
         {"sSpacePirateWallJumpingVelocity", t->pirate_wall_jump, 8, 8},
         {"sSpacePirate_2e1030", t->pirate_jump_low, 11, 11},
         {"sSpacePirateJumpingVelocity", t->pirate_jump, 10, 10},
@@ -2337,8 +2346,10 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                    const MzmInput *input, bool stopped,
                                    uint16_t *prevent_movement) {
     if (!sprites->kinds_ok) return;
+    /* gEffectYPosition without gWaterMovement's wave (not ported). */
+    uint16_t effect_y = room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
-                            (uint16_t)((int)cy * 4), runtime_sprite_movement};
+                            (uint16_t)((int)cy * 4), runtime_sprite_movement, effect_y};
     mzm_sprite_debris_process(&sprites->effects, &world, &sprites->tables,
                               &sprites->effect_kinds);
     /* SpriteUtilCheckStopSpritesPose: no Samus collision while movement is

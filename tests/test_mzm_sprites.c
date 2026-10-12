@@ -102,7 +102,7 @@ static void hurt(void *context, uint16_t damage, bool sprite_on_left) {
 }
 
 int main(void) {
-    MzmSpriteWorld world = {NULL, block, 0, 0, movement};
+    MzmSpriteWorld world = {NULL, block, 0, 0, movement, 0};
 
     /* ClipdataConvertToCollision */
     clear();
@@ -1976,6 +1976,73 @@ int main(void) {
     r2x = r2.x;
     step(&r2, 0);
     assert(r2.x == r2x - 8);
+
+    /* Squeepts hide at their spawn until Samus is above them, jump with the
+     * rising table (leaving the lava surface plays its sound), turn at its
+     * end and fall back into hiding. */
+    static MzmSpriteKind squeept_kind;
+    for (int a = 0; a < MZM_SQUEEPT_ANIMS; ++a) {
+        squeept_kind.counts[a] = 2;
+        squeept_kind.timers[a][0] = squeept_kind.timers[a][1] = 3;
+    }
+    frame.kinds[MZM_FAMILY_SQUEEPT] = &squeept_kind;
+    tables.health[MZM_PSPRITE_SQUEEPT] = 8;
+    for (int i = 0; i < 64; ++i) tables.squeept_rising[i] = -8;
+    tables.squeept_rising[64] = 32767;
+    const int16_t squeept_falling[16] = {4, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14, 14, 16, 16, 32767};
+    memcpy(tables.squeept_falling, squeept_falling, sizeof squeept_falling);
+    clear();
+    world.effect_y = 11 * 64;
+    MzmSprite sq;
+    mzm_sprite_init_primary(&sq, MZM_PSPRITE_SQUEEPT, 0, 12, 7, 0, 0);
+    sq.status |= MZM_SPRITE_STATUS_ONSCREEN;
+    frame.samus_x = 60000;
+    frame.samus_y = 600;
+    step(&sq, 0);
+    /* SqueeptInit falls through SqueeptIdleInit into SqueeptIdle. */
+    assert(sq.pose == 0xF && sq.y == 13 * 64 + 4 && sq.y_spawn == sq.y && sq.work0 == 29 &&
+           sq.status & MZM_SPRITE_STATUS_NOT_DRAWN && sq.hitbox_top == -44);
+    frame.samus_x = (uint16_t)(sq.x + 300);
+    for (int i = 0; i < 29; ++i) step(&sq, 0);
+    assert(sq.pose == 0xF && sq.work0 == 0);
+    step(&sq, 0);
+    assert(sq.pose == 0x35 && !(sq.status & MZM_SPRITE_STATUS_NOT_DRAWN));
+    mzm_sfx_clear();
+    uint16_t sqy = sq.y;
+    frames = 0;
+    while (sq.pose == 0x35 && frames < 200) {
+        step(&sq, 0);
+        ++frames;
+    }
+    /* 64 entries of 8 subpixels, then the turn. */
+    assert(frames == 65 && sq.y == sqy - 64 * 8 && sq.hitbox_top == -16 &&
+           mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SQUEEPT_LEAVING_LAVA));
+    frames = 0;
+    while (sq.pose == 0x37 && frames < 100) {
+        step(&sq, 0);
+        ++frames;
+    }
+    assert(sq.pose == 0x39 && sq.hitbox_top == 0 && sq.hitbox_bottom == 40);
+    mzm_sfx_clear();
+    frames = 0;
+    while (sq.pose == 0x39 && frames < 300) {
+        step(&sq, 0);
+        ++frames;
+    }
+    /* Back at its spawn, hidden, after entering the lava. */
+    assert(sq.pose == 0xF && sq.y == sq.y_spawn && sq.status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+           sq.work0 == 30 && mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SQUEEPT_ENTERING_LAVA));
+    /* A ceiling more than 2.5 blocks above its spawn turns it early. */
+    for (int x = 0; x < COLUMNS; ++x) grid[7][x] = MZM_CLIPDATA_SOLID;
+    for (int i = 0; i < 31; ++i) step(&sq, 0);
+    assert(sq.pose == 0x35);
+    frames = 0;
+    while (sq.pose == 0x35 && frames < 200) {
+        step(&sq, 0);
+        ++frames;
+    }
+    assert(sq.pose == 0x37 && sq.y - 48 < 8 * 64 && sq.y - 48 + 8 >= 8 * 64);
+    world.effect_y = 0;
 
     /* Rinkas. The first spawn is visible at once (SpriteInitPrimary sets
      * no NOT_DRAWN) and flies when its spawning table ends; respawns are

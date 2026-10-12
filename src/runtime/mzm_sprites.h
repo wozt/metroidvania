@@ -47,6 +47,7 @@ enum {
     MZM_SPRITE_STATUS_FACING_DOWN = 1 << 10,
     MZM_SPRITE_STATUS_SAMUS_COLLIDING = 1 << 11,
     MZM_SPRITE_STATUS_SAMUS_ON_TOP = 1 << 12,
+    MZM_SPRITE_STATUS_HIGH_PRIORITY = 1 << 13,
     MZM_SPRITE_STATUS_DOUBLE_SIZE = 1 << 14,
     MZM_SPRITE_STATUS_IGNORE_PROJECTILES = 1 << 15,
 };
@@ -106,6 +107,18 @@ enum {
 };
 extern const char *const mzm_debris_table_names[MZM_DEBRIS_TABLES];
 
+/* A MultiSpriteData table (gSubSpriteData1.pMultiOam): per frame, its
+ * timer (0 ends the table) and each part's OAM index, y and x offsets. */
+#define MZM_MULTI_FRAMES 12
+#define MZM_MULTI_PARTS 5
+typedef struct {
+    uint8_t timers[MZM_MULTI_FRAMES];
+    int16_t parts[MZM_MULTI_FRAMES][MZM_MULTI_PARTS][3];
+} MzmMultiSprite;
+enum { MZM_CHOZO_MULTI_STANDING, MZM_CHOZO_MULTI_SITTING, MZM_CHOZO_MULTI_SEATED,
+       MZM_CHOZO_MULTI_COUNT };
+extern const char *const mzm_chozo_multi_names[MZM_CHOZO_MULTI_COUNT];
+
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
 typedef struct {
     uint8_t random[32];             /* sSpriteRandomNumberTable */
@@ -138,6 +151,8 @@ typedef struct {
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
     int16_t pirate_jump_high[11];   /* sSpacePirate_2e105a */
+    /* sChozoStatueMultiSpriteData_Standing, _Sitting and _Seated. */
+    MzmMultiSprite chozo_multi[MZM_CHOZO_MULTI_COUNT];
 } MzmSpriteTables;
 
 /* Columns of MzmSpriteTables.drops. */
@@ -301,6 +316,17 @@ enum {
 };
 extern const char *const mzm_chozodia_security_anim_names[MZM_SECURITY_ANIMS];
 
+/* Chozo statue OAM tables, in ChozoStatueOam order (sChozoStatueFrameDataPointers,
+ * src/data/sprites/chozo_statue.c). */
+enum {
+    MZM_CHOZO_LEG_STANDING, MZM_CHOZO_LEG_SITTING, MZM_CHOZO_LEG_SEATED, MZM_CHOZO_IDLE,
+    MZM_CHOZO_EYE_OPENED, MZM_CHOZO_EYE_CLOSING, MZM_CHOZO_EYE_OPENING, MZM_CHOZO_EYE_CLOSED,
+    MZM_CHOZO_ARM_IDLE, MZM_CHOZO_ARM_GLOW, MZM_CHOZO_ARM_SAMUS_GRABBED,
+    MZM_CHOZO_BALL_NORMAL_CLOSED, MZM_CHOZO_BALL_NORMAL_REVEALING, MZM_CHOZO_BALL_NORMAL_REVEALED,
+    MZM_CHOZO_REFILL, MZM_CHOZO_REFILL_GLOW_IDLE, MZM_CHOZO_ANIMS,
+};
+extern const char *const mzm_chozo_statue_anim_names[MZM_CHOZO_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
@@ -308,7 +334,8 @@ enum {
     MZM_FAMILY_DROP, MZM_FAMILY_SIDEHOPPER, MZM_FAMILY_DESSGEEGA, MZM_FAMILY_VIOLA,
     MZM_FAMILY_SOVA, MZM_FAMILY_ZEB, MZM_FAMILY_GEEGA, MZM_FAMILY_ZEBBO, MZM_FAMILY_REO,
     MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
-    MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_SPRITE_FAMILIES,
+    MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_FAMILY_CHOZO_STATUE,
+    MZM_SPRITE_FAMILIES,
 };
 typedef struct {
     int count;
@@ -353,11 +380,14 @@ enum {
     MZM_PSPRITE_SEARCHLIGHT_EYE = 166, MZM_PSPRITE_SEARCHLIGHT_EYE2 = 167,
     MZM_PSPRITE_SEARCHLIGHT = 175, MZM_PSPRITE_SEARCHLIGHT2 = 176,
     MZM_PSPRITE_SEARCHLIGHT3 = 177, MZM_PSPRITE_SEARCHLIGHT4 = 178,
+    MZM_PSPRITE_CHOZO_STATUE_LONG_HINT = 34, MZM_PSPRITE_CHOZO_STATUE_LONG = 35, MZM_PSPRITE_CHOZO_STATUE_ICE_HINT = 36, MZM_PSPRITE_CHOZO_STATUE_ICE = 37, MZM_PSPRITE_CHOZO_STATUE_WAVE_HINT = 38, MZM_PSPRITE_CHOZO_STATUE_WAVE = 39, MZM_PSPRITE_CHOZO_STATUE_BOMB_HINT = 40, MZM_PSPRITE_CHOZO_STATUE_BOMB = 41,
+    MZM_PSPRITE_CHOZO_STATUE_SPEEDBOOSTER_HINT = 42, MZM_PSPRITE_CHOZO_STATUE_SPEEDBOOSTER = 43, MZM_PSPRITE_CHOZO_STATUE_HIGH_JUMP_HINT = 44, MZM_PSPRITE_CHOZO_STATUE_HIGH_JUMP = 45, MZM_PSPRITE_CHOZO_STATUE_SCREW_HINT = 46, MZM_PSPRITE_CHOZO_STATUE_SCREW = 47, MZM_PSPRITE_CHOZO_STATUE_VARIA_HINT = 48, MZM_PSPRITE_CHOZO_STATUE_VARIA = 49,
 };
 
 /* SecondarySprite */
 enum {
     MZM_SSPRITE_SKREE_EXPLOSION = 12, MZM_SSPRITE_BLUE_SKREE_EXPLOSION = 15,
+    MZM_SSPRITE_CHOZO_BALL = 0, MZM_SSPRITE_CHOZO_STATUE_PART = 1,
     MZM_SSPRITE_ZEELA_EYES = 16, MZM_SSPRITE_SPACE_PIRATE_LASER = 22,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
@@ -387,6 +417,13 @@ typedef struct {
     uint8_t ram_slot;               /* primarySpriteRamSlot: the owning primary's slot */
     uint16_t scaling;               /* also a saved Samus y for Zebs and Geegas */
     uint8_t standing_on;            /* standingOnSprite (MZM_STANDING_ON_SPRITE_*) */
+    /* drawOrder (1 drawn in front; SpriteInitPrimary and
+     * SpriteSpawnSecondary give 4) and SP_ALWAYS_ACTIVE. */
+    uint8_t draw_order;
+    bool always_active;
+    /* The primary sprite whose graphics a secondary sprite uses (its
+     * spawning sprite's). */
+    uint8_t owner;
 } MzmSprite;
 
 /* SamusStandingOnSprite values; DROPPED (port only) is OFF after a kill
@@ -430,6 +467,11 @@ typedef struct {
      * the given damage type (MZM_DAMAGE_*): hatches and breakable blocks.
      * NULL: nothing is affected. */
     void (*affect)(void *context, uint16_t y, uint16_t x, int damage);
+    /* ClipdataProcess with a clipdata-affecting action (MZM_CAA_*) at a
+     * subpixel point; NULL: nothing changes. */
+    void (*apply_caa)(void *context, uint16_t y, uint16_t x, uint8_t caa);
+    /* SpriteSpawnPrimary(PSPRITE_MESSAGE_BANNER, message, ...); NULL: none. */
+    void (*spawn_message)(void *context, uint8_t message);
 } MzmSpriteHooks;
 
 /* ALARM_TIMER_ACTIVE_TIMER: CONVERT_SECONDS(8.f). */
@@ -443,6 +485,13 @@ typedef struct {
      * drawing rewrites them every frame (mzm_sprites_end_frame clears them). */
     uint8_t draw_order[5];
     uint16_t boss_work2;            /* gBossWork.work2: the last pirate's x distance */
+    /* gSubSpriteData1: the multi-sprite's position, table
+     * (MZM_CHOZO_MULTI_*), frame, counter and work variables. */
+    struct {
+        uint16_t y, x;
+        uint8_t multi, frame, adc, work2;
+        bool work3;
+    } sub1;
 } MzmSpriteGlobals;
 
 /* What SpriteUpdate shares with every sprite this frame. Enemy drops are
@@ -478,6 +527,8 @@ typedef struct {
     /* SpriteUtilCheckStopSpritesPose (gPreventMovementTimer): only sprites
      * still uninitialized run; the others only check if on screen. */
     bool stopped;
+    /* gPreventMovementTimer (NULL: none); the Chozo balls set and read it. */
+    uint16_t *prevent_movement;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,

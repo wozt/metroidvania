@@ -227,6 +227,14 @@ static const char *const drop_sprites[MZM_DROP_ANIMS] = {
     "POWER_BOMB_DROP",
 };
 
+/* Every Chozo statue table has the same durations in each statue's graphics. */
+static const char *const chozo_statue_sprites[MZM_CHOZO_ANIMS] = {
+    "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG",
+    "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG",
+    "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG",
+    "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG",
+};
+
 const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ZOOMER] = {MZM_ZOOMER_ANIMS, mzm_zoomer_anim_names, zoomer_sprites},
     [MZM_FAMILY_ZEELA] = {MZM_ZEELA_ANIMS, mzm_zeela_anim_names, zeela_sprites},
@@ -252,6 +260,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
                                  space_pirate_sprites},
     [MZM_FAMILY_CHOZODIA_SECURITY] = {MZM_SECURITY_ANIMS, mzm_chozodia_security_anim_names,
                                       chozodia_security_sprites},
+    [MZM_FAMILY_CHOZO_STATUE] = {MZM_CHOZO_ANIMS, mzm_chozo_statue_anim_names,
+                                 chozo_statue_sprites},
 };
 
 
@@ -1145,8 +1155,8 @@ static void ripper(Ctx *c) {
 }
 
 /* SpriteSpawnSecondary: the first free slot, or nothing. */
-void ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
-                            uint16_t y, uint16_t x, uint16_t status) {
+int ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
+                       uint16_t y, uint16_t x, uint16_t status) {
     for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
         MzmSprite *n = &c->f->sprites[i];
         if (n->status & MZM_SPRITE_STATUS_EXISTS) continue;
@@ -1162,8 +1172,11 @@ void ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slo
         n->pose = SPRITE_POSE_UNINITIALIZED;
         n->ignore_samus_timer = 1;
         n->ram_slot = c->s->ram_slot;
-        return;
+        n->draw_order = 4;
+        n->owner = c->s->secondary ? c->s->owner : c->s->sprite_id;
+        return i;
     }
+    return -1;
 }
 
 /* SkreeInit, SkreeIdleInit */
@@ -3488,6 +3501,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
             return MZM_FAMILY_CHOZODIA_SECURITY;
+        if (sprite_id == MZM_SSPRITE_CHOZO_BALL || sprite_id == MZM_SSPRITE_CHOZO_STATUE_PART)
+            return MZM_FAMILY_CHOZO_STATUE;
         return sprite_id == MZM_SSPRITE_SKREE_EXPLOSION ||
                sprite_id == MZM_SSPRITE_BLUE_SKREE_EXPLOSION ? MZM_FAMILY_SKREE : -1;
     }
@@ -3540,6 +3555,23 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SEARCHLIGHT2:
     case MZM_PSPRITE_SEARCHLIGHT3:
     case MZM_PSPRITE_SEARCHLIGHT4: return MZM_FAMILY_CHOZODIA_SECURITY;
+    /* The item and hint statues (not the unknown item ones). */
+    case MZM_PSPRITE_CHOZO_STATUE_LONG_HINT:
+    case MZM_PSPRITE_CHOZO_STATUE_LONG:
+    case MZM_PSPRITE_CHOZO_STATUE_ICE_HINT:
+    case MZM_PSPRITE_CHOZO_STATUE_ICE:
+    case MZM_PSPRITE_CHOZO_STATUE_WAVE_HINT:
+    case MZM_PSPRITE_CHOZO_STATUE_WAVE:
+    case MZM_PSPRITE_CHOZO_STATUE_BOMB_HINT:
+    case MZM_PSPRITE_CHOZO_STATUE_BOMB:
+    case MZM_PSPRITE_CHOZO_STATUE_SPEEDBOOSTER_HINT:
+    case MZM_PSPRITE_CHOZO_STATUE_SPEEDBOOSTER:
+    case MZM_PSPRITE_CHOZO_STATUE_HIGH_JUMP_HINT:
+    case MZM_PSPRITE_CHOZO_STATUE_HIGH_JUMP:
+    case MZM_PSPRITE_CHOZO_STATUE_SCREW_HINT:
+    case MZM_PSPRITE_CHOZO_STATUE_SCREW:
+    case MZM_PSPRITE_CHOZO_STATUE_VARIA_HINT:
+    case MZM_PSPRITE_CHOZO_STATUE_VARIA: return MZM_FAMILY_CHOZO_STATUE;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
     }
 }
@@ -3729,8 +3761,16 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         bool on_left = center_x >= samus->previous_x;
         /* A frozen sprite is solid: after the contact damage (no kill),
          * Samus stands on it, is pushed below it or is stopped at its
-         * sides. SpriteUtilCheckOnZipline is false (no ziplines). */
-        if (s->freeze_timer) {
+         * sides. SpriteUtilCheckOnZipline is false (no ziplines). The
+         * SSC_SOLID sprites share the rules; SSC_SOLID_CHECK_COLLIDING also
+         * flags the contact and ends the pass. */
+        bool solid = s->freeze_timer || s->samus_collision == SSC_SOLID ||
+                     s->samus_collision == SSC_SOLID_CHECK_COLLIDING;
+        if (!s->freeze_timer && s->samus_collision == SSC_SOLID_CHECK_COLLIDING) {
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            ignore = true;
+        }
+        if (solid) {
             if (samus->pulling_up || contact_kills(s, samus, tables) || !samus->world) continue;
             if (samus_y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < top) {
                 if (samus_check_collision(samus->world,
@@ -4088,6 +4128,10 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (!sprite->secondary) return sprite->sprite_id;
     if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
     if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
+    /* The Chozo statue parts and ball use their statue's graphics. */
+    if (sprite->sprite_id == MZM_SSPRITE_CHOZO_BALL ||
+        sprite->sprite_id == MZM_SSPRITE_CHOZO_STATUE_PART)
+        return sprite->owner;
     if (sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
         sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
         return MZM_PSPRITE_SEARCHLIGHT_EYE;
@@ -4115,6 +4159,7 @@ void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_s
     sprite->x = (uint16_t)(x_block * BLOCK_SIZE + HALF_BLOCK_SIZE);
     sprite->pose = SPRITE_POSE_UNINITIALIZED;
     sprite->ignore_samus_timer = 1;
+    sprite->draw_order = 4;
 }
 
 /* SpriteUpdateAnimation */
@@ -4191,13 +4236,13 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || family < 0 || !frame->kinds[family])
         return;
     /* The Space Pirates and the security systems need the game globals. */
-    if ((family == MZM_FAMILY_SPACE_PIRATE || family == MZM_FAMILY_CHOZODIA_SECURITY) &&
+    if ((family == MZM_FAMILY_SPACE_PIRATE || family == MZM_FAMILY_CHOZODIA_SECURITY ||
+         family == MZM_FAMILY_CHOZO_STATUE) &&
         !frame->globals)
         return;
     Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],
              0, MZM_COLLISION_AIR, frame->frame8};
-    /* No ported sprite has SP_ALWAYS_ACTIVE. */
-    if (frame->stopped && sprite->pose != SPRITE_POSE_UNINITIALIZED) {
+    if (frame->stopped && sprite->pose != SPRITE_POSE_UNINITIALIZED && !sprite->always_active) {
         check_on_screen(&c);
         return;
     }
@@ -4246,6 +4291,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
         else ai_space_pirate(&c);
         break;
     case MZM_FAMILY_CHOZODIA_SECURITY: ai_chozodia_security(&c); break;
+    case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);
         else skree(&c);

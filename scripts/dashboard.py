@@ -386,6 +386,13 @@ def _mzm_supported_sprites(engine: str) -> set[str]:
     return set(MZM_FAMILY_CASE_RE.findall(primary))
 
 
+# The item each Chozo statue holds (ChozoStatueRegisterItem).
+STATUE_ITEMS = {"LONG": "Long Beam", "ICE": "Ice Beam", "WAVE": "Wave Beam", "BOMB": "Bombs",
+                "SPEEDBOOSTER": "Speed Booster", "HIGH_JUMP": "High Jump",
+                "SCREW": "Screw Attack", "VARIA": "Varia Suit", "GRAVITY": "Gravity Suit",
+                "SPACE_JUMP": "Space Jump", "PLASMA_BEAM": "Plasma Beam"}
+
+
 def _prettify(identifier: str) -> str:
     return " ".join(part.capitalize() for part in identifier.split("_"))
 
@@ -420,6 +427,18 @@ def bestiary() -> dict:
                 "note": ("Enemy drop AI ported (spawn, collection, blink, despawn)"
                          if is_drop else ""),
             })
+        elif symbol.startswith("CHOZO_STATUE_") and not symbol.endswith("_HINT"):
+            # The ability items, held by their Chozo statues.
+            done = symbol in supported
+            items.append({
+                "id": record["native_id"],
+                "name": STATUE_ITEMS.get(symbol.removeprefix("CHOZO_STATUE_"),
+                                         _prettify(symbol.removeprefix("CHOZO_STATUE_")))
+                        + " (Chozo statue)",
+                "status": "partial" if done else "not_started",
+                "note": ("Statue, ball, item and message banner ported; the refill "
+                         "and hint grabs are not" if done else ""),
+            })
     aos_header = (ROOT / "src/runtime/aos_enemy.h").read_text(encoding="utf-8")
     ported = {int(address, 16): _prettify(name)
               for name, address in ARIA_ENEMY_RE.findall(aos_header)}
@@ -434,9 +453,18 @@ def bestiary() -> dict:
         "id": key, "name": title, "status": "not_started",
         "note": "Documented pickup family; no runtime pickup behavior is ported",
     } for key, title in ARIA_ITEM_FAMILIES]
-    items_note = ("Collectible Zero Mission items are the drop sprites plus the few "
-                  "item sprites of the native enum (beams, suits, expansions and tanks "
-                  "use other native placements not inventoried here).")
+    # Tanks are clipdata (BgClipCheckTouchingTransitionOrTank), not sprites.
+    tanks_ported = (ROOT / "src/runtime/mzm_items.c").is_file()
+    for key, title in (("tank_energy", "Energy Tank"), ("tank_missile", "Missile Tank"),
+                       ("tank_super_missile", "Super Missile Tank"),
+                       ("tank_power_bomb", "Power Bomb Tank")):
+        items.append({"id": key, "name": title,
+                      "status": "partial" if tanks_ported else "not_started",
+                      "note": ("Collection, capacities, banner and removal ported; no "
+                               "minimap or HUD" if tanks_ported else "")})
+    items_note = ("Collectible Zero Mission items are the drop sprites, the item sprites "
+                  "of the native enum, the ability items of the Chozo statues and the four "
+                  "tank kinds (Clipdata, not sprites).")
     return {
         "method": ("A monster counts as done when the corresponding runtime has a ported "
                    "AI for it (mzm_sprite_family switch, AOS_ENEMY enum); 'partial' never "

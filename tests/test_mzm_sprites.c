@@ -72,8 +72,24 @@ static void test_affect(void *context, uint16_t y, uint16_t x, int damage) {
     last_affect_damage = damage;
 }
 
+static int caa_calls, last_caa, messages[4], message_count;
+
+static void test_apply_caa(void *context, uint16_t y, uint16_t x, uint8_t caa) {
+    (void)context;
+    (void)y;
+    (void)x;
+    ++caa_calls;
+    last_caa = caa;
+}
+
+static void test_spawn_message(void *context, uint8_t message) {
+    (void)context;
+    if (message_count < 4) messages[message_count++] = message;
+}
+
 static const MzmSpriteHooks test_hooks = {NULL, test_check_event, test_set_event,
-                                          test_door_timer, test_remove_solid, test_affect};
+                                          test_door_timer, test_remove_solid, test_affect,
+                                          test_apply_caa, test_spawn_message};
 
 static int hurts, last_damage;
 static bool last_on_left;
@@ -125,7 +141,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false};
+                             0, 0, NULL, false, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -2352,6 +2368,101 @@ int main(void) {
         frame.sprites = NULL;
         frame.sprite_count = 0;
         frame.hooks = NULL;
+    }
+    /* An item Chozo statue (ChozoStatue, ChozoStatuePart, ChozoBall): the
+     * Long Beam statue faces right, sits (CAA_MAKE_NON_POWER_GRIP on four
+     * blocks), holds the ball and spawns its eye, arm, leg and glow. */
+    {
+        static MzmSprite room[8];
+        static MzmSpriteKind chozo_kind;
+        memset(room, 0, sizeof room);
+        memset(&chozo_kind, 0, sizeof chozo_kind);
+        for (int a = 0; a < MZM_CHOZO_ANIMS; ++a) {
+            chozo_kind.counts[a] = 1;
+            chozo_kind.timers[a][0] = 4;
+        }
+        chozo_kind.counts[MZM_CHOZO_BALL_NORMAL_REVEALING] = 3;
+        chozo_kind.timers[MZM_CHOZO_BALL_NORMAL_REVEALING][1] = 4;
+        chozo_kind.timers[MZM_CHOZO_BALL_NORMAL_REVEALING][2] = 4;
+        MzmMultiSprite *seated = &tables.chozo_multi[MZM_CHOZO_MULTI_SEATED];
+        const int16_t parts[5][3] = {{8, -48, 0}, {15, -64, -56}, {4, -168, 8}, {2, 4, 0},
+                                     {3, -128, 60}};
+        seated->timers[0] = 255;
+        memcpy(seated->parts[0], parts, sizeof parts);
+        MzmSpriteFrame statue_frame = frame;
+        uint16_t prevent = 0;
+        statue_frame.kinds[MZM_FAMILY_CHOZO_STATUE] = &chozo_kind;
+        statue_frame.sprites = room;
+        statue_frame.sprite_count = 8;
+        statue_frame.hooks = &test_hooks;
+        statue_frame.prevent_movement = &prevent;
+        MzmEquipment items = {.energy = 99, .max_energy = 99};
+        statue_frame.equipment = &items;
+        memset(test_events, 0, sizeof test_events);
+        caa_calls = 0;
+        message_count = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_CHOZO_STATUE_LONG_HINT + 1, 0, 6, 7, 0, 0);
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x29 && room[0].status & MZM_SPRITE_STATUS_X_FLIP &&
+               room[0].always_active && room[0].draw_order == 3);
+        assert(caa_calls == 4 && last_caa == 4);      /* CAA_MAKE_NON_POWER_GRIP */
+        /* gSubSpriteData1 half a block right; the head at its OAM offset. */
+        assert(globals.sub1.x == 7 * 64 + 32 + 32 && globals.sub1.multi == MZM_CHOZO_MULTI_SEATED);
+        assert(room[0].anim == MZM_CHOZO_IDLE && room[0].y == globals.sub1.y - 128 &&
+               room[0].x == globals.sub1.x - 60);
+        assert(room[1].secondary && room[1].sprite_id == MZM_SSPRITE_CHOZO_BALL &&
+               room[1].y == globals.sub1.y - 96 && room[1].x == globals.sub1.x + 56 &&
+               room[1].owner == MZM_PSPRITE_CHOZO_STATUE_LONG_HINT + 1);
+        assert(room[0].work1 == 2 && room[2].room_slot == 2 && room[5].room_slot == 1 &&
+               room[5].work1 == 3);
+        for (int i = 1; i < 6; ++i) mzm_sprite_update(&room[i], (uint8_t)i, &statue_frame);
+        assert(room[1].samus_collision == 1 && room[1].anim == MZM_CHOZO_BALL_NORMAL_CLOSED);
+        assert(room[3].anim == MZM_CHOZO_ARM_IDLE && room[3].draw_order == 2 &&
+               room[5].status & MZM_SPRITE_STATUS_NOT_DRAWN);
+        /* Shot ("destroyed"): the ball reveals its item, immune from then on. */
+        mzm_sfx_clear();
+        room[1].pose = 0x62;
+        mzm_sprite_update(&room[1], 1, &statue_frame);
+        assert(room[1].pose == 0x67 && room[1].immune_to_projectiles &&
+               room[1].samus_collision == 30 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_BALL_REVEALING));
+        for (int i = 0; i < 12 && room[1].pose == 0x67; ++i) mzm_sprite_update(&room[1], 1, &statue_frame);
+        assert(room[1].pose == 0x9 && room[1].anim == MZM_CHOZO_BALL_NORMAL_REVEALED);
+        /* Touched: the item, its events and its banner; Samus stops. */
+        room[1].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        mzm_sprite_update(&room[1], 1, &statue_frame);
+        assert(room[1].pose == 0x23 && prevent == 1000 &&
+               items.items & MZM_ITEM_LONG_BEAM && test_check_event(NULL, 8) &&
+               message_count == 1 && messages[0] == 8);
+        /* The statue notices the item is gone, waits 40 frames, idles. */
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x2B && room[0].work0 == 40);
+        for (int i = 0; i < 40; ++i) mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x9);
+        /* The ball flickers while movement stays prevented, then goes; the
+         * arm glows once it is free. */
+        mzm_sprite_update(&room[1], 1, &statue_frame);
+        assert(room[1].status & MZM_SPRITE_STATUS_EXISTS);
+        prevent = 0;
+        mzm_sprite_update(&room[1], 1, &statue_frame);
+        assert(!(room[1].status & MZM_SPRITE_STATUS_EXISTS));
+        mzm_sprite_update(&room[3], 3, &statue_frame);
+        assert(room[3].anim == MZM_CHOZO_ARM_GLOW);
+        mzm_sprite_update(&room[5], 5, &statue_frame);
+        assert(!(room[5].status & MZM_SPRITE_STATUS_NOT_DRAWN));
+        /* Reloaded with the Long Beam: a refill statue without a ball. */
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_CHOZO_STATUE_LONG_HINT + 1, 0, 6, 7, 0, 0);
+        memset(room + 1, 0, sizeof room - sizeof room[0]);
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x9 && room[1].sprite_id == MZM_SSPRITE_CHOZO_STATUE_PART);
+        /* The hint statue stands (the hand made grippable) until its event. */
+        caa_calls = 0;
+        memset(room, 0, sizeof room);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_CHOZO_STATUE_LONG_HINT, 0, 6, 7, 0, 0);
+        memset(test_events, 0, sizeof test_events);
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(globals.sub1.multi == MZM_CHOZO_MULTI_STANDING && globals.sub1.work3 &&
+               caa_calls == 8 && !(room[0].status & MZM_SPRITE_STATUS_X_FLIP));
     }
     puts("mzm_sprites: ok");
     return 0;

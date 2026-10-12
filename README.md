@@ -244,7 +244,9 @@ enemies as the pseudo screw. The Ice Beam (also a debug item) freezes
 enemies for a few seconds, flashing before they thaw; Samus can stand
 on a frozen enemy. Energy, missile, super missile and power bomb tanks are
 picked up with their native message banner (the text drawn with the game's
-font), raising the capacities; collected tanks stay gone. The Wave Beam crosses walls and the Plasma Beam goes
+font), raising the capacities; collected tanks stay gone. Item Chozo statues
+hold their item in a ball: shoot it, then touch it to get the Long, Ice or
+Wave Beam, Bombs, Speed Booster, High Jump, Screw Attack or Varia Suit. The Wave Beam crosses walls and the Plasma Beam goes
 through enemies (both debug items, combinable with the other beams). With the Speed Booster
 (an item of the debug menu), a long run starts the speed boost: it
 breaks speed blocks and enemies, and releasing the direction skids (Down

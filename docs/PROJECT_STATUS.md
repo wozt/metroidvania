@@ -2988,6 +2988,46 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0270 - Zero Mission item Chozo statues
+
+- `src/runtime/mzm_chozo_statue.c` ports `ChozoStatue`, `ChozoStatuePart` and
+  `ChozoBall` for the eight item statues (Long, Ice and Wave Beams, Bombs,
+  Speed Booster, High Jump, Screw Attack, Varia Suit) and their hint
+  statues: `gSubSpriteData1` with the Standing, Sitting and Seated
+  multi-sprite tables, the direction, the seated or standing clipdata
+  (`CAA_MAKE_NON_POWER_GRIP`, `CAA_MAKE_SOLID_GRIPPABLE`), the eye, arm, leg
+  and glow parts, and the ball: shot, it reveals the item; touched, it stops
+  Samus, registers the item and its events and opens the item's banner,
+  flickering until the banner closes; the statue then idles and its arm
+  glows.
+- The sprite engine: `drawOrder` (painted from 16 to 1), `SP_ALWAYS_ACTIVE`
+  under `gPreventMovementTimer`, the graphics owner of secondary sprites,
+  `SSC_SOLID` and `SSC_SOLID_CHECK_COLLIDING` with the solid-sprite rules,
+  hooks for clipdata-affecting actions and message banners, and
+  `SpriteSpawnSecondary` returning its slot.
+- `mzm_blocks.c` ports `BlockUpdateMakeSolidBlocks` and the three
+  make-solid actions (their values exported as `makesolid`).
+- Exporters: the statues' graphics (unflipped and X-flipped only) and the
+  decompilation's `MultiSpriteData` tables (`multi` lines, parsed by
+  `mzm_c_tables.multi_sprite_data`); the runtime library holds up to 16384
+  entries.
+- Dashboard: the ability items of the Chozo statues and the four tank kinds
+  join the items list (statue items done when their statue has an AI).
+- Checked in brinstar_005: the seated Long Beam statue holds its ball;
+  shooting it reveals the orb, touching it opens the "Long Beam" banner, and
+  after A the ball is gone, the hand glows and the next shot is a Long
+  Beam (projectile type LONG_BEAM).
+- Not ported: the hint and refill grabs (Samus's grabbed pose, the hint map,
+  the sitting animation, the refill), the unknown item statues, the
+  flashing palette rows.
+- Tests: `tests/test_mzm_sprites.c` (statue spawn, clipdata, multi-sprite
+  positions, the ball's reveal and collection, the statue's wait, the glow,
+  the refill and hint statues), `tests/test_mzm_blocks.c` (make-solid
+  blocks), `tests/test_dashboard.py` (the new items).
+- Validation on 2026-10-12: warning-clean build, CTest 31/31, the Python
+  suite (430 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0269 - Zero Mission tank pickups and the message banner
 
 - `src/runtime/mzm_items.c` ports the tank part of

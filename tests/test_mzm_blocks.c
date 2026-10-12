@@ -173,6 +173,27 @@ int main(void) {
     assert(clip[1][20] == 0);
     assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING,
                              MZM_SOUND_BLOCK_DESTROYED_WITH_SCREW_ATTACK));
+    /* BlockUpdateMakeSolidBlocks: CAA_MAKE_NON_POWER_GRIP stores an air
+     * block (at the odd entries its double step reaches) and writes its
+     * value; again, nothing changes; CAA_REMOVE_SOLID then empties the
+     * Clipdata but keeps the BG1 block of a block it had made solid. */
+    env.make_solid_clip[0] = 0x401;
+    env.make_solid_clip[2] = 0x40A;
+    clip[14][2] = 0;
+    bg1[14][2] = 77;
+    assert(mzm_blocks_affect(&blocks, &env, MZM_CAA_MAKE_NON_POWER_GRIP, 2 * 64, 14 * 64));
+    assert(clip[14][2] == 0x40A && blocks.make_solid[63] == ((2 << 8) | 14));
+    assert(!mzm_blocks_affect(&blocks, &env, MZM_CAA_MAKE_SOLID_GRIPPABLE, 2 * 64, 14 * 64));
+    clip[14][3] = 0;
+    assert(mzm_blocks_affect(&blocks, &env, MZM_CAA_MAKE_SOLID_GRIPPABLE, 3 * 64, 14 * 64));
+    assert(clip[14][3] == 0x401 && blocks.make_solid[61] == ((3 << 8) | 14));
+    mzm_blocks_affect(&blocks, &env, MZM_CAA_REMOVE_SOLID, 2 * 64, 14 * 64);
+    assert(clip[14][2] == 0 && bg1[14][2] == 77 && blocks.make_solid[63] == 0);
+    /* A block it did not make solid loses its BG1 block too. */
+    clip[14][4] = 0x10;
+    bg1[14][4] = 78;
+    mzm_blocks_affect(&blocks, &env, MZM_CAA_REMOVE_SOLID, 4 * 64, 14 * 64);
+    assert(clip[14][4] == 0 && bg1[14][4] == 0);
     puts("mzm_blocks: ok");
     return 0;
 }

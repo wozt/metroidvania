@@ -336,6 +336,34 @@ static bool check_ccaa(MzmBlocks *blocks, const MzmBlockEnv *env, ClipBlock *c) 
     }
 }
 
+/* BlockUpdateMakeSolidBlocks: both loops step two entries per iteration
+ * (`--i` in the body and `i--` after it), as the native ones do. */
+static bool update_make_solid(MzmBlocks *blocks, const MzmBlockEnv *env, bool make_solid, int x,
+                              int y) {
+    uint16_t key = (uint16_t)(((x & 0xFF) << 8) | (y & 0xFF));
+    int i;
+    if (!make_solid) {
+        for (i = MZM_MAX_MAKE_SOLID_BLOCKS; i > 0; i--) {
+            if (blocks->make_solid[--i] == key) {
+                blocks->make_solid[i] = 0;
+                return true;
+            }
+        }
+        return false;
+    }
+    for (i = MZM_MAX_MAKE_SOLID_BLOCKS; i > 0; i--) {
+        if (blocks->make_solid[--i] == key) {
+            i = 0xFF;
+            break;
+        } else if (blocks->make_solid[i] == 0) {
+            break;
+        }
+    }
+    if (i == 0xFF || env->get_clip(env->context, y, x) != 0) return false;
+    blocks->make_solid[i] = key;
+    return true;
+}
+
 bool mzm_block_apply_ccaa(MzmBlocks *blocks, const MzmBlockEnv *env, int y, int x, uint16_t clip) {
     ClipBlock c = {x, y, env->behavior(env->context, clip), 0};
     switch (blocks->caa) {
@@ -360,10 +388,20 @@ bool mzm_block_apply_ccaa(MzmBlocks *blocks, const MzmBlockEnv *env, int y, int 
     case MZM_CAA_BOMB_CHAIN:
     case MZM_CAA_BOMB_CHAIN_UNUSED: return check_ccaa(blocks, env, &c);
     case MZM_CAA_REMOVE_SOLID:
-        /* BlockUpdateMakeSolidBlocks: no block is ever made solid here. */
-        env->set_bg1(env->context, 0, y, x);
+        if (!update_make_solid(blocks, env, false, x, y)) env->set_bg1(env->context, 0, y, x);
         env->set_clip(env->context, 0, y, x);
         return false;
+    case MZM_CAA_MAKE_SOLID_GRIPPABLE:
+    case MZM_CAA_MAKE_STOP_ENEMY:
+    case MZM_CAA_MAKE_NON_POWER_GRIP: {
+        bool result = update_make_solid(blocks, env, true, x, y);
+        if (result)
+            env->set_clip(env->context,
+                          env->make_solid_clip[blocks->caa == MZM_CAA_MAKE_SOLID_GRIPPABLE ? 0 :
+                                               blocks->caa == MZM_CAA_MAKE_STOP_ENEMY ? 1 : 2],
+                          y, x);
+        return result;
+    }
     default: return false;
     }
 }

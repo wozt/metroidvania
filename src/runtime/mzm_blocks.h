@@ -21,6 +21,7 @@
 #define MZM_MAX_BROKEN_BLOCKS 48    /* MAX_AMOUNT_OF_BROKEN_BLOCKS */
 #define MZM_MAX_BOMB_CHAINS 4       /* MAX_AMOUNT_OF_BOMB_CHAINS */
 #define MZM_NEVER_REFORM_BLOCKS 128
+#define MZM_MAX_MAKE_SOLID_BLOCKS 64    /* MAX_AMOUNT_OF_MAKE_SOLID_BLOCKS */
 
 /* ClipdataAffectingAction */
 enum {
@@ -65,6 +66,9 @@ typedef struct {
     uint8_t chain_flag[8];
     uint16_t chain_behavior[8];
     int8_t sub_chain[4][4];
+    /* The Clipdata values CAA_MAKE_SOLID_GRIPPABLE, CAA_MAKE_STOP_ENEMY and
+     * CAA_MAKE_NON_POWER_GRIP write. */
+    uint16_t make_solid_clip[3];
     /* The room. */
     void *context;
     int width, height;              /* in blocks */
@@ -89,6 +93,9 @@ typedef struct {
      * entries of the room), as block positions. */
     int never_reform[MZM_NEVER_REFORM_BLOCKS][2];
     int never_reform_count;
+    /* gMakeSolidBlocks: C_16_2_8(x, y) of the blocks a clipdata-affecting
+     * action made solid. */
+    uint16_t make_solid[MZM_MAX_MAKE_SOLID_BLOCKS];
 } MzmBlocks;
 
 /* BlockApplyCcaa with `blocks->caa` set: true when something changed. */

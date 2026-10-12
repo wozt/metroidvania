@@ -34,10 +34,12 @@ enum {
     SPRITE_POSE_PSEUDO_SCREW_DESTROYED = 0x66,
     /* SamusSpriteCollision */
     SSC_NONE = 0,
+    SSC_SOLID = 1,
     SSC_HURTS_SAMUS = 4,
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
+    SSC_SOLID_CHECK_COLLIDING = 27,
     SSC_CHECK_COLLIDING = 30,
     SPRITE_POSE_STOPPED = 66,
     SSC_SMALL_ENERGY_DROP = 31,
@@ -104,8 +106,9 @@ void ai_set_anim(MzmSprite *s, uint8_t anim);
 void ai_random_x_direction(Ctx *c);
 void ai_sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect);
 void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect);
-void ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot, uint16_t y,
-                        uint16_t x, uint16_t status);
+/* SpriteSpawnSecondary: the new sprite's slot, or -1. */
+int ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot, uint16_t y,
+                       uint16_t x, uint16_t status);
 MzmSprite *ai_spawn_drop_follower(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
                                   uint8_t ram_slot, uint16_t y, uint16_t x, uint16_t status);
 void ai_particle_set(const Ctx *c, uint16_t y, uint16_t x, uint8_t effect);
@@ -133,5 +136,7 @@ void ai_space_pirate(Ctx *c);
 void ai_space_pirate_laser(Ctx *c);
 /* mzm_chozodia_security.c: searchlights, security lasers, searchlight eyes. */
 void ai_chozodia_security(Ctx *c);
+/* mzm_chozo_statue.c: item and hint Chozo statues, their parts and ball. */
+void ai_chozo_statue(Ctx *c);
 
 #endif /* MZM_SPRITE_AI_H */

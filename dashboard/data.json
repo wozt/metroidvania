@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-12T17:39:39+00:00",
+ "generated_at": "2026-10-12T18:05:01+00:00",
  "git": {
-  "commit": "8a566ac",
+  "commit": "b04dc00",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 83,
+   "total": 84,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 60,
+    "partial": 61,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 14.5,
-   "with_passing_tests": 71,
-   "with_passing_tests_percent": 85.5,
+   "functional_or_better_percent": 14.3,
+   "with_passing_tests": 72,
+   "with_passing_tests_percent": 85.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -133,6 +133,7 @@
     "mzm.environment.breakable_blocks",
     "mzm.input.gamepad",
     "mzm.interface.message_banner",
+    "mzm.items.chozo_statues",
     "mzm.items.enemy_drops",
     "mzm.items.tanks",
     "mzm.player.samus_controller",
@@ -200,11 +201,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 36,
+   "total": 37,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 36,
+    "partial": 37,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -213,7 +214,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 36,
+   "with_passing_tests": 37,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -241,6 +242,7 @@
     "mzm.environment.breakable_blocks",
     "mzm.input.gamepad",
     "mzm.interface.message_banner",
+    "mzm.items.chozo_statues",
     "mzm.items.enemy_drops",
     "mzm.items.tanks",
     "mzm.player.samus_controller",
@@ -1585,7 +1587,7 @@
     "SpriteUtilCheckStopSamusAgainstSolidSpriteRight",
     "SpriteUtilCheckPullingSelfUp"
    ],
-   "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; frozen sprites ignore SpriteUtilCheckOnZipline (no ziplines are ported). Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits (missiles tumbling off the sprites they cannot hurt), stuns with the stun palette flash (SpriteUtilUpdateStunTimer), freezing (SpriteUtilUpdateFreezeTimer in every ported AI, the frozen and stun rows baked as /frozen and /stun library variants), frozen sprites as solid platforms (SpriteUtilSamusStandingOnSprite: Samus stands on them, is pushed below them or stopped at their sides), and death with its explosion particle into enemy drops are ported.",
+   "limitations": "Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; frozen sprites ignore SpriteUtilCheckOnZipline (no ziplines are ported). Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits (missiles tumbling off the sprites they cannot hurt), stuns with the stun palette flash (SpriteUtilUpdateStunTimer), freezing (SpriteUtilUpdateFreezeTimer in every ported AI, the frozen and stun rows baked as /frozen and /stun library variants), frozen and SSC_SOLID / SSC_SOLID_CHECK_COLLIDING sprites as solid platforms (SpriteUtilSamusStandingOnSprite: Samus stands on them, is pushed below them or stopped at their sides), and death with its explosion particle into enemy drops are ported. Sprites draw by drawOrder (1 in front); SP_ALWAYS_ACTIVE sprites keep running while gPreventMovementTimer stops the others; secondary sprites draw with their spawning sprite's graphics.",
    "next_action": "Port the Metroids, the Mother Brain Rinkas and the remaining Space Pirates.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -1658,9 +1660,10 @@
     "BlockProcessBombChains",
     "BlockCheckStartNewSubBombChain",
     "SamusCheckScrewSpeedboosterAffectingEnvironment",
-    "BgClipCheckWalkingOnCrumbleBlock"
+    "BgClipCheckWalkingOnCrumbleBlock",
+    "BlockUpdateMakeSolidBlocks"
    ],
-   "limitations": "grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout. Every beam, missile, super missile, bomb explosion point, power bomb explosion edge and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack and the speed booster break blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.",
+   "limitations": "grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout. Every beam, missile, super missile, bomb explosion point, power bomb explosion edge and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack and the speed booster break blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames. CAA_MAKE_SOLID_GRIPPABLE, CAA_MAKE_STOP_ENEMY and CAA_MAKE_NON_POWER_GRIP make an air block solid through gMakeSolidBlocks (whose loops visit every other entry, as natively), and CAA_REMOVE_SOLID keeps the BG1 block of a block made solid that way.",
    "next_action": "Port the crumble grab and tank pickups.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -1787,6 +1790,91 @@
      },
      {
       "test": "tests/test_mzm_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-12"
+   }
+  },
+  {
+   "id": "mzm.items.chozo_statues",
+   "area": "mzm",
+   "category": "items",
+   "title": "Item and hint Chozo statues",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_chozo_statue.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm_blocks.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py",
+    "scripts/mzm_c_tables.py",
+    "scripts/dashboard.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_blocks.c",
+    "tests/test_dashboard.py"
+   ],
+   "dependencies": [
+    "mzm.interface.message_banner",
+    "mzm.environment.breakable_blocks",
+    "mzm.enemies.zoomer"
+   ],
+   "native_routines": [
+    "ChozoStatue",
+    "ChozoStatueInit",
+    "ChozoStatueGetBehavior",
+    "ChozoStatueRegisterItem",
+    "ChozoStatueSetDirection",
+    "ChozoStatueSyncSubSprites",
+    "ChozoStatueWaitForItemToBeCollected",
+    "ChozoStatueTimerAfterItemGrabbed",
+    "ChozoStatueSeatedChangeClipdata",
+    "ChozoStatueStandingChangeClipdata",
+    "ChozoStatuePart",
+    "ChozoStatuePartInit",
+    "ChozoStatuePartGlowIdle",
+    "ChozoStatuePartArmCheckGrabSamusRefill",
+    "ChozoBall",
+    "SpriteUtilUpdateSubSprite1Anim",
+    "SpriteUtilSyncCurrentSpritePositionWithSubSpriteData1PositionAndOam"
+   ],
+   "limitations": "The hint and refill grabs are not ported (Samus's SPOSE_GRABBED_BY_CHOZO_STATUE pose, the hint map screen, the sitting animation, the refill and its message, the sleeping statue), so a hint statue stays standing and an item statue stays seated; the unknown item statues (Plasma Beam, Space Jump, Gravity Suit), the flashing palette rows and the statue movement echo are not ported; SP_SOLID_FOR_PROJECTILES is not modelled (the statue's hitbox is empty). The eight item statues (Long, Ice and Wave Beams, Bombs, Speed Booster, High Jump, Screw Attack, Varia Suit) and their hint statues run ChozoStatue with gSubSpriteData1: the multi-sprite tables (Standing, Sitting, Seated) are read from the decompilation, the head and leg take their OAM and position from it, the eye, arm and glow parts their position; the statue faces its native direction, makes its seated or standing body solid (CAA_MAKE_NON_POWER_GRIP, the hint statue's hand CAA_MAKE_SOLID_GRIPPABLE) and spawns its parts and, while Samus lacks the item, the ball. The ball (SSC_SOLID, one health) reveals the item when shot, then Samus touching it starts gPreventMovementTimer, registers the item and its events (ChozoStatueRegisterItem) and opens the item's one-line message banner, the ball flickering until the banner closes; the statue then waits 40 frames and idles, its arm glowing. Statues draw with their own graphics; the sprite engine gained drawOrder, SP_ALWAYS_ACTIVE and graphics owners for secondary sprites. Checked in brinstar_005: shooting the ball reveals the Long Beam orb, touching it shows the \"Long Beam\" banner, and after A the ball is gone and the hand glows.",
+   "next_action": "Port the refill and hint grabs with Samus's grabbed pose, then the unknown item statues.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_blocks.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_blocks"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -5271,6 +5359,12 @@
  },
  "timeline": [
   {
+   "commit": "b04dc00",
+   "date": "2026-10-12",
+   "subject": "feat(mzm): tank pickups and the message banner",
+   "scope": "mzm"
+  },
+  {
    "commit": "8a566ac",
    "date": "2026-10-12",
    "subject": "feat(mzm): tumbling missiles",
@@ -5743,12 +5837,6 @@
    "date": "2026-10-10",
    "subject": "feat(runtime): walk between native rooms through doors and hatches",
    "scope": "runtime"
-  },
-  {
-   "commit": "1bcd651",
-   "date": "2026-10-10",
-   "subject": "feat(runtime): load any MZM room with native Clipdata types",
-   "scope": "runtime"
   }
  ],
  "inventory": {
@@ -5776,7 +5864,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 268,
+    "routines_cited_by_features": 286,
     "call_edges": 6071
    },
    "aos": {
@@ -6432,6 +6520,54 @@
       "note": ""
      },
      {
+      "id": 35,
+      "name": "Long Beam (Chozo statue)",
+      "status": "partial",
+      "note": "Statue, ball, item and message banner ported; the refill and hint grabs are not"
+     },
+     {
+      "id": 37,
+      "name": "Ice Beam (Chozo statue)",
+      "status": "partial",
+      "note": "Statue, ball, item and message banner ported; the refill and hint grabs are not"
+     },
+     {
+      "id": 39,
+      "name": "Wave Beam (Chozo statue)",
+      "status": "partial",
+      "note": "Statue, ball, item and message banner ported; the refill and hint grabs are not"
+     },
+     {
+      "id": 41,
+      "name": "Bombs (Chozo statue)",
+      "status": "partial",
+      "note": "Statue, ball, item and message banner ported; the refill and hint grabs are not"
+     },
+     {
+      "id": 43,
+      "name": "Speed Booster (Chozo statue)",
+      "status": "partial",
+      "note": "Statue, ball, item and message banner ported; the refill and hint grabs are not"
+     },
+     {
+      "id": 45,
+      "name": "High Jump (Chozo statue)",
+      "status": "partial",
+      "note": "Statue, ball, item and message banner ported; the refill and hint grabs are not"
+     },
+     {
+      "id": 47,
+      "name": "Screw Attack (Chozo statue)",
+      "status": "partial",
+      "note": "Statue, ball, item and message banner ported; the refill and hint grabs are not"
+     },
+     {
+      "id": 49,
+      "name": "Varia Suit (Chozo statue)",
+      "status": "partial",
+      "note": "Statue, ball, item and message banner ported; the refill and hint grabs are not"
+     },
+     {
       "id": 68,
       "name": "Charge Beam",
       "status": "not_started",
@@ -6442,9 +6578,51 @@
       "name": "Power Grip",
       "status": "not_started",
       "note": ""
+     },
+     {
+      "id": 88,
+      "name": "Gravity Suit (Chozo statue)",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 89,
+      "name": "Space Jump (Chozo statue)",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": 148,
+      "name": "Plasma Beam (Chozo statue)",
+      "status": "not_started",
+      "note": ""
+     },
+     {
+      "id": "tank_energy",
+      "name": "Energy Tank",
+      "status": "partial",
+      "note": "Collection, capacities, banner and removal ported; no minimap or HUD"
+     },
+     {
+      "id": "tank_missile",
+      "name": "Missile Tank",
+      "status": "partial",
+      "note": "Collection, capacities, banner and removal ported; no minimap or HUD"
+     },
+     {
+      "id": "tank_super_missile",
+      "name": "Super Missile Tank",
+      "status": "partial",
+      "note": "Collection, capacities, banner and removal ported; no minimap or HUD"
+     },
+     {
+      "id": "tank_power_bomb",
+      "name": "Power Bomb Tank",
+      "status": "partial",
+      "note": "Collection, capacities, banner and removal ported; no minimap or HUD"
      }
     ],
-    "items_note": "Collectible Zero Mission items are the drop sprites plus the few item sprites of the native enum (beams, suits, expansions and tanks use other native placements not inventoried here)."
+    "items_note": "Collectible Zero Mission items are the drop sprites, the item sprites of the native enum, the ability items of the Chozo statues and the four tank kinds (Clipdata, not sprites)."
    },
    "aos": {
     "title": "Castlevania: Aria of Sorrow",

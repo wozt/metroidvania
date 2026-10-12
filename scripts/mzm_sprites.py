@@ -87,7 +87,20 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_SEARCHLIGHT3": 0, "PSPRITE_SEARCHLIGHT4": 0,
           "PSPRITE_SECURITY_LASER_VERTICAL": 0, "PSPRITE_SECURITY_LASER_HORIZONTAL": 0,
           "PSPRITE_SECURITY_LASER_VERTICAL2": 0, "PSPRITE_SECURITY_LASER_HORIZONTAL2": 0,
-          "PSPRITE_SEARCHLIGHT_EYE": 0, "PSPRITE_SEARCHLIGHT_EYE2": 0}
+          "PSPRITE_SEARCHLIGHT_EYE": 0, "PSPRITE_SEARCHLIGHT_EYE2": 0,
+          **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
+             for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
+                          "VARIA") for hint in ("", "_HINT")}}
+# MultiSpriteData tables (gSubSpriteData1.pMultiOam) of ported sprites, read
+# from the decompilation as ``multi`` lines: name, frame, timer, then each
+# part's OAM index, y and x offsets.
+MULTI_SPRITE_DATA = {
+    "sprites/chozo_statue.c": (("sprites_ai/chozo_statue.h", "data/sprites/chozo_statue.h",
+                                "structs/sprite.h"),
+                               ("sChozoStatueMultiSpriteData_Standing",
+                                "sChozoStatueMultiSpriteData_Sitting",
+                                "sChozoStatueMultiSpriteData_Seated")),
+}
 # s16 (or small u16) tables an AI reads, written as ``table`` lines.
 AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
@@ -438,6 +451,13 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         lines.append("\t".join(["sstats", name[len("SSPRITE_"):], str(value), *map(str, row)]))
     for table in AI_TABLES:
         lines.append("\t".join(["table", table, *map(str, words(table, True, 2))]))
+    from scripts import mzm_c_tables
+    for source, (headers, names) in MULTI_SPRITE_DATA.items():
+        for name in names:
+            for index, (timer, parts) in enumerate(
+                    mzm_c_tables.multi_sprite_data(source, name, list(headers), decomp)):
+                lines.append("\t".join(["multi", name, str(index), str(timer),
+                                         *(",".join(map(str, part)) for part in parts)]))
     folder = private_path(Path(root), METROID_METADATA, create=True)
     folder.mkdir(parents=True, exist_ok=True)
     write_atomic(folder / "sprites.tsv", "\n".join(lines) + "\n")
@@ -446,11 +466,15 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     for sprite, row, gfx, palette_symbol, tables in plan:
         vram, palette = stage(rom, symbols, gfx, palette_symbol, row)
         variants = {"": palette}
-        variants.update(shifted_palettes(palette, common_palette))
+        # Chozo statues are never frozen or stunned and only flip in X.
+        statue = sprite.startswith("PSPRITE_CHOZO_STATUE")
+        if not statue:
+            variants.update(shifted_palettes(palette, common_palette))
+        flips = ("none", "x") if statue else mzm_projectile_compose.FLIPS
         for table in tables:
             entries = mzm_projectile_compose.frames(rom, symbols, table)
             for suffix, colours in variants.items():
-                for flip in mzm_projectile_compose.FLIPS:
+                for flip in flips:
                     frames = []
                     for pointer, duration in entries:
                         pixels = mzm_projectile_compose.render(rom, vram, colours, pointer, flip)

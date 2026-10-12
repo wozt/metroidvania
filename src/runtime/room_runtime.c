@@ -835,6 +835,10 @@ static bool runtime_block_tables_open(const char *path) {
                        !strncmp(line + 9, "increase", 8) ? runtime_block_tables.tanks.increase : NULL;
             ok = cursor && row && runtime_parse_list(cursor + 1, values, 4);
             for (int i = 0; ok && i < 4; ++i) row[i] = (int)values[i];
+        } else if (sscanf(line, "makesolid\t%d\t%d\t%d", &a, &b, &c) == 3) {
+            env->make_solid_clip[0] = (uint16_t)a;
+            env->make_solid_clip[1] = (uint16_t)b;
+            env->make_solid_clip[2] = (uint16_t)c;
         } else if (sscanf(line, "tankclip\t%d\t%d", &a, &b) == 2) {
             runtime_block_tables.tanks.air_clip = (uint16_t)a;
             runtime_block_tables.tanks.water_clip = (uint16_t)b;
@@ -1406,7 +1410,7 @@ static bool runtime_palette_colors(const RuntimePalettes *palettes,
 
 #ifndef FUSION_RUNTIME_TEST
 /* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
-#define RUNTIME_LIBRARY_MAX 8192
+#define RUNTIME_LIBRARY_MAX 16384
 #define RUNTIME_LIBRARY_FRAME_MAX 256
 #define RUNTIME_ANIMATION_MAP_MAX 2048
 #define RUNTIME_INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1\n"
@@ -2005,6 +2009,26 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             sprites->tables.secondary_damage[id] = (uint16_t)damage;
             sprites->tables.secondary_weakness[id] = (uint8_t)(weakness & 0xFF);
             sprites->tables.secondary_freeze[id] = (uint8_t)(weakness >> 8);
+        } else if (!strcmp(line, "multi")) {
+            /* multi <name> <frame> <timer> <oam,y,x> per part */
+            char name[64];
+            int index, timer, used = 0;
+            if (sscanf(cursor, "%63s %d %d%n", name, &index, &timer, &used) != 3) continue;
+            for (int m = 0; m < MZM_CHOZO_MULTI_COUNT; ++m) {
+                if (strcmp(name, mzm_chozo_multi_names[m]) || index < 0 || index >= MZM_MULTI_FRAMES)
+                    continue;
+                MzmMultiSprite *multi = &sprites->tables.chozo_multi[m];
+                multi->timers[index] = (uint8_t)timer;
+                const char *part = cursor + used;
+                for (int p = 0; p < MZM_MULTI_PARTS; ++p) {
+                    int oam, y, x, n = 0;
+                    if (sscanf(part, " %d,%d,%d%n", &oam, &y, &x, &n) != 3) break;
+                    multi->parts[index][p][0] = (int16_t)oam;
+                    multi->parts[index][p][1] = (int16_t)y;
+                    multi->parts[index][p][2] = (int16_t)x;
+                    part += n;
+                }
+            }
         } else if (!strcmp(line, "table")) {
             char *values = strchr(cursor, '\t');
             if (!values) { ok = false; break; }
@@ -2226,7 +2250,7 @@ static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *ro
         if (room->doors[i].x0 == used->dest_x && room->doors[i].y1 == used->dest_y_end)
             no_hatch = !strcmp(room->doors[i].kind, "nohatch");
     static const MzmSpriteHooks hooks = {NULL, runtime_sprite_check_event, NULL, NULL, NULL,
-                                         NULL};
+                                         NULL, NULL, NULL};
     MzmSpriteHooks bound = hooks;
     bound.context = sprites;
     mzm_spawn_waiting_pirates(sprites->live, RUNTIME_MAX_SPRITES, &sprites->globals, &bound, ids,
@@ -2238,6 +2262,20 @@ static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *ro
 static void runtime_sprite_affect(void *context, uint16_t y, uint16_t x, int damage) {
     RuntimeSprites *sprites = context;
     if (sprites->room) runtime_room_affect(sprites->room, x, y, damage);
+}
+
+/* ClipdataProcess with a sprite's clipdata-affecting action. */
+static void runtime_sprite_apply_caa(void *context, uint16_t y, uint16_t x, uint8_t caa) {
+    RuntimeSprites *sprites = context;
+    if (!sprites->room || !runtime_block_tables.ok) return;
+    MzmBlockEnv env = runtime_block_env(sprites->room);
+    mzm_blocks_affect(&sprites->room->blocks, &env, caa, x, y);
+}
+
+/* SpriteSpawnPrimary(PSPRITE_MESSAGE_BANNER, message, ...) */
+static void runtime_sprite_spawn_message(void *context, uint8_t message) {
+    RuntimeSprites *sprites = context;
+    if (message < MZM_MESSAGE_COUNT) mzm_banner_spawn(&sprites->banner, message);
 }
 
 /* SpriteUtilCheckCrouchingOrMorphed for the ported Samus poses. */
@@ -2291,7 +2329,8 @@ static void runtime_sprites_drop_samus(RuntimeSprites *sprites, MzmSamus *samus)
 static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
                                    MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
                                    const MzmCollision *collision, MzmWeapons *weapons,
-                                   const MzmInput *input, bool stopped) {
+                                   const MzmInput *input, bool stopped,
+                                   uint16_t *prevent_movement) {
     if (!sprites->kinds_ok) return;
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4), runtime_sprite_movement};
@@ -2333,7 +2372,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     sprites->room = room;
     static const MzmSpriteHooks hook_table = {NULL, runtime_sprite_check_event,
                                               runtime_sprite_set_event, runtime_sprite_door_timer,
-                                              runtime_sprite_remove_solid, runtime_sprite_affect};
+                                              runtime_sprite_remove_solid, runtime_sprite_affect,
+                                              runtime_sprite_apply_caa,
+                                              runtime_sprite_spawn_message};
     MzmSpriteHooks hooks = hook_table;
     hooks.context = sprites;
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
@@ -2342,7 +2383,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             sprites->live, RUNTIME_MAX_SPRITES, &sprites->effects, &hooks,
                             &sprites->globals, runtime_samus_small(samus), samus->x_velocity,
                             runtime_area_id(room->area), (uint8_t)room->room,
-                            samus->pose != MZM_POSE_DYING ? &standing : NULL, stopped};
+                            samus->pose != MZM_POSE_DYING ? &standing : NULL, stopped,
+                            prevent_movement};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
@@ -3341,7 +3383,8 @@ int main(int argc, char **argv) {
             /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
              * arm cannon offset above is the one SamusUpdate left. */
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
-                                   &equipment, &collision, &weapons, &input, movement_prevented);
+                                   &equipment, &collision, &weapons, &input, movement_prevented,
+                                   &prevent_movement);
             if(sprites.banner.exists && sprites.banner_ok) {
                 /* MessageBanner, a sprite updated with the others. */
                 bool keys=(input.held&(MZM_KEY_A|MZM_KEY_B|MZM_KEY_RIGHT|MZM_KEY_LEFT|
@@ -3664,8 +3707,12 @@ int main(int argc, char **argv) {
         SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         /* Sprites: their OAM frame, mirrored by the X and Y flip statuses
          * (SpriteDraw); palette rows are baked per sprite by the exporter. */
+        /* SpriteDrawAll_*: draw order 1 goes in front, so the higher orders
+         * are painted first (slot order within an order). */
+        for(int order=16;order>=1;order--)
         for(int i=0;i<RUNTIME_MAX_SPRITES && sprites.kinds_ok;i++) {
             const MzmSprite *sprite=&sprites.live[i];
+            if((sprite->draw_order?sprite->draw_order:4)!=order)continue;
             const char *anim_name=mzm_sprite_anim_name(sprite);
             if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) ||
                sprite->status&MZM_SPRITE_STATUS_NOT_DRAWN || !anim_name)continue;
@@ -3855,6 +3902,8 @@ int main(int argc, char **argv) {
                    capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
+            if(prevent_movement && !sprites.banner.exists)
+                printf("  movement prevented %u\n",prevent_movement);
             if(sprites.banner.exists)
                 printf("  banner %s pose %#x table %s frame %u%s, movement prevented %u\n",
                        sprites.message_names[sprites.banner.message],sprites.banner.pose,

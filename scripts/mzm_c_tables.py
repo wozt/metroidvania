@@ -183,6 +183,45 @@ def table(source: str, name: str, decomp: Path = DECOMP,
     return _array(_body(text, match.end()), {**enum_values(decomp), **(extra or {})})
 
 
+def header_enums(headers: list[str], decomp: Path = DECOMP) -> dict[str, int]:
+    """The MAKE_ENUM values of other headers (relative to include/)."""
+    names = dict(enum_values(decomp))
+    found: dict[str, int] = {}
+    for header in headers:
+        text = (decomp / "include" / header).read_text(encoding="utf-8")
+        for _, body in ENUM_RE.findall(text):
+            current = -1
+            for item in _strip_comments(body).split(","):
+                item = item.strip()
+                if not item:
+                    continue
+                key, _, expression = (part.strip() for part in item.partition("="))
+                current = evaluate(expression, {**names, **found}) if expression else current + 1
+                found[key] = current
+    return found
+
+
+def multi_sprite_data(source: str, name: str, headers: list[str],
+                      decomp: Path = DECOMP) -> list[tuple[int, list[list[int]]]]:
+    """A MultiSpriteData table of src/data/<source>: each frame's timer and
+    its parts' (OAM index, y offset, x offset), up to the terminator."""
+    extra = header_enums(headers, decomp)
+    text = (decomp / "src/data" / source).read_text(encoding="utf-8")
+    match = re.search(rf"\b{name}\s*\[[^\]]*\]\s*=", text)
+    if not match:
+        raise ValueError(f"{name} not found in {source}")
+    body = _strip_comments(_body(text, match.end()))
+    names = {**enum_values(decomp), **extra}
+    frames = []
+    for data, timer in re.findall(r"\.pData\s*=\s*(\w+)\s*,\s*\.timer\s*=\s*([^}]+?)\s*\}",
+                                  body):
+        parts = table(source, data, decomp, extra)
+        count = max(parts) + 1 if parts else 0
+        frames.append((evaluate(timer, names),
+                       [[int(parts[p].get(e, 0)) for e in range(3)] for p in range(count)]))
+    return frames
+
+
 def max_areas(decomp: Path = DECOMP) -> int:
     """MAX_AMOUNT_OF_AREAS (include/structs/connection.h)."""
     text = (decomp / "include/structs/connection.h").read_text(encoding="utf-8")
@@ -246,6 +285,11 @@ def block_table_lines(collision_tables: dict) -> list[str]:
     starting = struct_initializer("block_data.c", "sStartingHealthAmmo")
     for label, row in (("start", starting), ("total", total), ("increase", increase)):
         lines.append(f"tanklist\t{label}\t" + ",".join(str(row.get(f, 0)) for f in fields))
+    # BlockApplyCcaa's CAA_MAKE_SOLID_GRIPPABLE / _STOP_ENEMY / _NON_POWER_GRIP.
+    flag = names["CLIPDATA_TILEMAP_FLAG"]
+    lines.append(f"makesolid\t{flag | names['CLIPDATA_TILEMAP_SOLID2']}\t"
+                 f"{flag | names['CLIPDATA_TILEMAP_STOP_ENEMY_AIR']}\t"
+                 f"{flag | names['CLIPDATA_TILEMAP_NON_POWER_GRIP']}")
     lines.append(f"tankclip\t{names['CLIPDATA_TILEMAP_AIR']}\t"
                  f"{names['CLIPDATA_TILEMAP_FLAG'] | names['CLIPDATA_TILEMAP_WATER']}")
     chains = table("block_data.c", "sBombChainReverseData")

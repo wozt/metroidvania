@@ -90,7 +90,9 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_SEARCHLIGHT_EYE": 0, "PSPRITE_SEARCHLIGHT_EYE2": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
-                          "VARIA") for hint in ("", "_HINT")}}
+                          "VARIA") for hint in ("", "_HINT")},
+          "PSPRITE_CHOZO_STATUE_PLASMA_BEAM": 0, "PSPRITE_CHOZO_STATUE_SPACE_JUMP": 0,
+          "PSPRITE_CHOZO_STATUE_GRAVITY": 0}
 # MultiSpriteData tables (gSubSpriteData1.pMultiOam) of ported sprites, read
 # from the decompilation as ``multi`` lines: name, frame, timer, then each
 # part's OAM index, y and x offsets.
@@ -100,6 +102,12 @@ MULTI_SPRITE_DATA = {
                                ("sChozoStatueMultiSpriteData_Standing",
                                 "sChozoStatueMultiSpriteData_Sitting",
                                 "sChozoStatueMultiSpriteData_Seated")),
+    "sprites/unknown_item_chozo_statue.c": (
+        ("sprites_ai/unknown_item_chozo_statue.h", "data/sprites/unknown_item_chozo_statue.h",
+         "structs/sprite.h"),
+        ("sUnknownItemChozoStatueMultiSpriteData_Standing",
+         "sUnknownItemChozoStatueMultiSpriteData_Sitting",
+         "sUnknownItemChozoStatueMultiSpriteData_Seated")),
 }
 # s16 (or small u16) tables an AI reads, written as ``table`` lines.
 AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",

@@ -233,6 +233,12 @@ static const char *const chozo_statue_sprites[MZM_CHOZO_ANIMS] = {
     "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG",
     "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG",
     "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG", "CHOZO_STATUE_LONG",
+    "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM",
+    "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM",
+    "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM",
+    "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM",
+    "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM", "CHOZO_STATUE_PLASMA_BEAM",
+    "CHOZO_STATUE_PLASMA_BEAM",
 };
 
 const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
@@ -3503,7 +3509,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
             return MZM_FAMILY_CHOZODIA_SECURITY;
         if (sprite_id == MZM_SSPRITE_CHOZO_BALL || sprite_id == MZM_SSPRITE_CHOZO_STATUE_PART ||
             sprite_id == MZM_SSPRITE_CHOZO_STATUE_REFILL ||
-            sprite_id == MZM_SSPRITE_CHOZO_STATUE_MOVEMENT)
+            sprite_id == MZM_SSPRITE_CHOZO_STATUE_MOVEMENT ||
+            sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_CHOZO_STATUE_PART ||
+            sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_CHOZO_STATUE_REFILL)
             return MZM_FAMILY_CHOZO_STATUE;
         return sprite_id == MZM_SSPRITE_SKREE_EXPLOSION ||
                sprite_id == MZM_SSPRITE_BLUE_SKREE_EXPLOSION ? MZM_FAMILY_SKREE : -1;
@@ -3573,7 +3581,10 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_CHOZO_STATUE_SCREW_HINT:
     case MZM_PSPRITE_CHOZO_STATUE_SCREW:
     case MZM_PSPRITE_CHOZO_STATUE_VARIA_HINT:
-    case MZM_PSPRITE_CHOZO_STATUE_VARIA: return MZM_FAMILY_CHOZO_STATUE;
+    case MZM_PSPRITE_CHOZO_STATUE_VARIA:
+    case MZM_PSPRITE_CHOZO_STATUE_GRAVITY:
+    case MZM_PSPRITE_CHOZO_STATUE_SPACE_JUMP:
+    case MZM_PSPRITE_CHOZO_STATUE_PLASMA_BEAM: return MZM_FAMILY_CHOZO_STATUE;
     default: return is_drop(sprite_id) ? MZM_FAMILY_DROP : -1;
     }
 }
@@ -4131,10 +4142,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
     if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
     /* The Chozo statue parts and ball use their statue's graphics. */
-    if (sprite->sprite_id == MZM_SSPRITE_CHOZO_BALL ||
-        sprite->sprite_id == MZM_SSPRITE_CHOZO_STATUE_PART ||
-        sprite->sprite_id == MZM_SSPRITE_CHOZO_STATUE_REFILL ||
-        sprite->sprite_id == MZM_SSPRITE_CHOZO_STATUE_MOVEMENT)
+    if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE)
         return sprite->owner;
     if (sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
         sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)

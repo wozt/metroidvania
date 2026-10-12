@@ -2988,6 +2988,27 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0272 - Zero Mission unknown item Chozo statues
+
+- The Plasma Beam, Space Jump and Gravity Suit statues run the Chozo statue
+  AI with their own tables: `UnknownItemChozoStatue*` OAM tables and unknown
+  balls (anim indices offset by `MZM_CHOZO_UNKNOWN_BASE`), the
+  `sUnknownItemChozoStatueMultiSpriteData_*` tables (the multi-sprite parser
+  now reads positional initializers), and their part and refill sprites.
+- Their item is obtained but inactive (`MzmEquipment.unknown_items`, as
+  `UpdateSuitType` leaves it for the normal suit) with its obtained event
+  and "Unknown Item" banner; the statue then refills like the others.
+- Dashboard: the three unknown items count as ported statue items.
+- Checked in kraid_033 (`--spawn 186 128`, B, Right): the Space Jump
+  statue's ball reveals the unknown orb; touching it shows "Unknown Item".
+- Not ported: activating the unknown items (the fully powered suit), the
+  hint map screen.
+- Tests: `tests/test_mzm_sprites.c` (the Plasma Beam statue's tables, parts,
+  graphics owner, ball and inactive item), `tests/test_dashboard.py`.
+- Validation on 2026-10-12: warning-clean build, CTest 31/31, the Python
+  suite (430 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0271 - Zero Mission Chozo statue refills and hints
 
 - `mzm_samus.c` adds `SPOSE_GRABBED_BY_CHOZO_STATUE` (SamusInactivity, the

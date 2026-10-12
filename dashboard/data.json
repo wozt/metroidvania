@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-12T18:18:30+00:00",
+ "generated_at": "2026-10-12T18:30:31+00:00",
  "git": {
-  "commit": "cc2316f",
+  "commit": "6961319",
   "branch": "main",
   "dirty": true
  },
@@ -1804,7 +1804,7 @@
    "id": "mzm.items.chozo_statues",
    "area": "mzm",
    "category": "items",
-   "title": "Item and hint Chozo statues, refills and hints",
+   "title": "Item, hint and unknown item Chozo statues, refills and hints",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -1871,10 +1871,14 @@
     "SpriteUtilRefillEnergy",
     "SpriteUtilRefillMissiles",
     "SpriteUtilRefillSuperMissiles",
-    "SpriteUtilRefillPowerBombs"
+    "SpriteUtilRefillPowerBombs",
+    "UnknownItemChozoStatue",
+    "UnknownItemChozoStatuePart",
+    "UnknownItemChozoStatueRefill",
+    "UpdateSuitType"
    ],
-   "limitations": "The hint map screen (PAUSE_SCREEN_CHOZO_HINT), its background flashes (MakeBackgroundFlash), the hint and room music changes, gSlowScrollingTimer and gDisablePause are not ported: a hint statue goes from its flashing straight to sitting down; the HUD refill animations are counters only; the unknown item statues (Plasma Beam, Space Jump, Gravity Suit) are not ported; SP_SOLID_FOR_PROJECTILES is not modelled (the statue's hitbox is empty). The eight item statues (Long, Ice and Wave Beams, Bombs, Speed Booster, High Jump, Screw Attack, Varia Suit) and their hint statues run ChozoStatue with gSubSpriteData1: the multi-sprite tables (Standing, Sitting, Seated) are read from the decompilation, the head and leg take their OAM and position from it, the eye, arm and glow parts their position; the statue faces its native direction, makes its seated or standing body solid (CAA_MAKE_NON_POWER_GRIP, the hint statue's hand CAA_MAKE_SOLID_GRIPPABLE) and spawns its parts and, while Samus lacks the item, the ball. The ball (SSC_SOLID, one health) reveals the item when shot, then Samus touching it starts gPreventMovementTimer, registers the item and its events (ChozoStatueRegisterItem) and opens the item's one-line message banner, the ball flickering until the banner closes; the statue then waits 40 frames and idles, its arm glowing. Statues draw with their own graphics; the sprite engine gained drawOrder, SP_ALWAYS_ACTIVE and graphics owners for secondary sprites. Checked in brinstar_005: shooting the ball reveals the Long Beam orb, touching it shows the \"Long Beam\" banner, and after A the ball is gone and the hand glows. The statue's hand grabs Samus (SPOSE_GRABBED_BY_CHOZO_STATUE, at its exact height and within a quarter block): a hint statue in the Morph Ball or rolling registers the hint, opens its eye, flashes its palette rows (sChozoStatueFlashingPaletteRows every 12 frames, the hint sound), sits down along the Sitting table with flickering echoes (SpawnChozoStatueMovement), seats and refills; a refill statue in the Morph Ball refills energy, missiles, super missiles and power bombs (SpriteUtilRefill*, each followed by 13 frames of its HUD counter) with the refill glow and palette flash, opens \"Energy Tank recharge complete\" or \"Weapons and energy fully restored\", sleeps, closes its eye and lets Samus go when she may move. The exporter adds the statues' palette rows 1 to 3. Checked in brinstar_005 (`--spawn 126 112 --item long-beam`, Down twice): grabbed, golden flash, refill banner, released in the hand; in brinstar_002 (`--spawn 808 112`, Down twice) the Long Beam hint statue grabs Samus, flashes, sits down with her and refills.",
-   "next_action": "Port the hint map screen with the pause screen, then the unknown item statues.",
+   "limitations": "The hint map screen (PAUSE_SCREEN_CHOZO_HINT), its background flashes (MakeBackgroundFlash), the hint and room music changes, gSlowScrollingTimer and gDisablePause are not ported: a hint statue goes from its flashing straight to sitting down; the HUD refill animations are counters only; the unknown items are kept obtained but inactive with no way to activate them yet (the fully powered suit and its status screen are not ported); SP_SOLID_FOR_PROJECTILES is not modelled (the statue's hitbox is empty). The eight item statues (Long, Ice and Wave Beams, Bombs, Speed Booster, High Jump, Screw Attack, Varia Suit) and their hint statues run ChozoStatue with gSubSpriteData1: the multi-sprite tables (Standing, Sitting, Seated) are read from the decompilation, the head and leg take their OAM and position from it, the eye, arm and glow parts their position; the statue faces its native direction, makes its seated or standing body solid (CAA_MAKE_NON_POWER_GRIP, the hint statue's hand CAA_MAKE_SOLID_GRIPPABLE) and spawns its parts and, while Samus lacks the item, the ball. The ball (SSC_SOLID, one health) reveals the item when shot, then Samus touching it starts gPreventMovementTimer, registers the item and its events (ChozoStatueRegisterItem) and opens the item's one-line message banner, the ball flickering until the banner closes; the statue then waits 40 frames and idles, its arm glowing. Statues draw with their own graphics; the sprite engine gained drawOrder, SP_ALWAYS_ACTIVE and graphics owners for secondary sprites. Checked in brinstar_005: shooting the ball reveals the Long Beam orb, touching it shows the \"Long Beam\" banner, and after A the ball is gone and the hand glows. The statue's hand grabs Samus (SPOSE_GRABBED_BY_CHOZO_STATUE, at its exact height and within a quarter block): a hint statue in the Morph Ball or rolling registers the hint, opens its eye, flashes its palette rows (sChozoStatueFlashingPaletteRows every 12 frames, the hint sound), sits down along the Sitting table with flickering echoes (SpawnChozoStatueMovement), seats and refills; a refill statue in the Morph Ball refills energy, missiles, super missiles and power bombs (SpriteUtilRefill*, each followed by 13 frames of its HUD counter) with the refill glow and palette flash, opens \"Energy Tank recharge complete\" or \"Weapons and energy fully restored\", sleeps, closes its eye and lets Samus go when she may move. The exporter adds the statues' palette rows 1 to 3. Checked in brinstar_005 (`--spawn 126 112 --item long-beam`, Down twice): grabbed, golden flash, refill banner, released in the hand; in brinstar_002 (`--spawn 808 112`, Down twice) the Long Beam hint statue grabs Samus, flashes, sits down with her and refills. The unknown item statues (Plasma Beam, Space Jump, Gravity Suit) run the same AI with their own OAM tables (UnknownItemChozoStatue*, the unknown balls), multi-sprite tables (read from the positional initializers of the decompilation), part and refill sprites; their item is obtained (gEquipment.beamBombs / suitMisc) but stays inactive, as UpdateSuitType keeps it for the normal suit, and its banner reads \"Unknown Item\". Checked in kraid_033 (`--spawn 186 128`, B, Right): the Space Jump statue's ball reveals the unknown orb and touching it shows \"Unknown Item\".",
+   "next_action": "Port the hint map screen with the pause screen, then the fully powered suit's unknown item activation.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -5387,6 +5391,12 @@
  },
  "timeline": [
   {
+   "commit": "6961319",
+   "date": "2026-10-12",
+   "subject": "feat(mzm): Chozo statue refills and hints",
+   "scope": "mzm"
+  },
+  {
    "commit": "cc2316f",
    "date": "2026-10-12",
    "subject": "feat(mzm): item Chozo statues",
@@ -5859,12 +5869,6 @@
    "date": "2026-10-10",
    "subject": "docs: define the ROM-based reconstruction and overlay architecture",
    "scope": "project"
-  },
-  {
-   "commit": "a736a17",
-   "date": "2026-10-10",
-   "subject": "docs(aria): record Soma's player entry points and motion fields",
-   "scope": "aria"
   }
  ],
  "inventory": {
@@ -5892,7 +5896,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 314,
+    "routines_cited_by_features": 318,
     "call_edges": 6071
    },
    "aos": {
@@ -6610,20 +6614,20 @@
      {
       "id": 88,
       "name": "Gravity Suit (Chozo statue)",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "Statue, ball, item, banner, refill and hint grab ported; the hint map screen is not"
      },
      {
       "id": 89,
       "name": "Space Jump (Chozo statue)",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "Statue, ball, item, banner, refill and hint grab ported; the hint map screen is not"
      },
      {
       "id": 148,
       "name": "Plasma Beam (Chozo statue)",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "Statue, ball, item, banner, refill and hint grab ported; the hint map screen is not"
      },
      {
       "id": "tank_energy",

@@ -174,6 +174,9 @@ typedef struct {
     int missiles, max_missiles;
     int super_missiles, max_super_missiles;
     int power_bombs, max_power_bombs;
+    /* Obtained but not activated (gEquipment.beamBombs / suitMisc without
+     * their activation): the unknown items until the fully powered suit. */
+    uint32_t unknown_items;
 } MzmEquipment;
 
 typedef struct {

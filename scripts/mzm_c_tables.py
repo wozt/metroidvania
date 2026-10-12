@@ -213,8 +213,16 @@ def multi_sprite_data(source: str, name: str, headers: list[str],
     body = _strip_comments(_body(text, match.end()))
     names = {**enum_values(decomp), **extra}
     frames = []
-    for data, timer in re.findall(r"\.pData\s*=\s*(\w+)\s*,\s*\.timer\s*=\s*([^}]+?)\s*\}",
-                                  body):
+    pairs = re.findall(r"\.pData\s*=\s*(\w+)\s*,\s*\.timer\s*=\s*([^}]+?)\s*\}", body)
+    if not pairs:
+        # The positional form: pData, timer, ... up to NULL.
+        items = [item.strip() for item in body.split(",") if item.strip()]
+        pairs = []
+        for data, timer in zip(items[0::2], items[1::2]):
+            if data == "NULL":
+                break
+            pairs.append((data, timer))
+    for data, timer in pairs:
         parts = table(source, data, decomp, extra)
         count = max(parts) + 1 if parts else 0
         frames.append((evaluate(timer, names),

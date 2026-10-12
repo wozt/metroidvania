@@ -2570,6 +2570,36 @@ int main(void) {
         for (int i = 0; i < 20 && room[0].pose == 0x25; ++i) mzm_sprite_update(&room[0], 0, &statue_frame);
         assert(room[0].pose == 0x27 && globals.sub1.multi == MZM_CHOZO_MULTI_SEATED);
         statue_frame.samus_link = NULL;
+        /* An unknown item statue (UnknownItemChozoStatue): its own parts,
+         * OAM and multi-sprite tables; its item is obtained but not
+         * activated. */
+        memset(room, 0, sizeof room);
+        MzmMultiSprite *unknown_seated =
+            &tables.chozo_multi[MZM_CHOZO_MULTI_UNKNOWN + MZM_CHOZO_MULTI_SEATED];
+        unknown_seated->timers[0] = 255;
+        memcpy(unknown_seated->parts[0], parts, sizeof parts);
+        MzmEquipment plain = {.energy = 99, .max_energy = 99};
+        statue_frame.equipment = &plain;
+        message_count = 0;
+        memset(test_events, 0, sizeof test_events);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_CHOZO_STATUE_PLASMA_BEAM, 0, 6, 7, 0, 0);
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x29 && !(room[0].status & MZM_SPRITE_STATUS_X_FLIP) &&
+               globals.sub1.multi == MZM_CHOZO_MULTI_UNKNOWN + MZM_CHOZO_MULTI_SEATED &&
+               room[0].anim == MZM_CHOZO_UNKNOWN_BASE + MZM_CHOZO_IDLE);
+        assert(room[1].sprite_id == MZM_SSPRITE_CHOZO_BALL &&
+               room[2].sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_CHOZO_STATUE_PART &&
+               mzm_sprite_graphics_owner(&room[2]) == MZM_PSPRITE_CHOZO_STATUE_PLASMA_BEAM);
+        mzm_sprite_update(&room[1], 1, &statue_frame);
+        assert(room[1].anim == MZM_CHOZO_UNKNOWN_BASE + MZM_CHOZO_BALL_NORMAL_CLOSED);
+        room[1].pose = 0x9;
+        room[1].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        mzm_sprite_update(&room[1], 1, &statue_frame);
+        assert(plain.unknown_items & MZM_ITEM_PLASMA_BEAM && !(plain.items & MZM_ITEM_PLASMA_BEAM) &&
+               test_check_event(NULL, 24) && message_count == 1 && messages[0] == 12);
+        mzm_sprite_update(&room[0], 0, &statue_frame);
+        assert(room[0].pose == 0x2B);
+        statue_frame.equipment = &items;
     }
     puts("mzm_sprites: ok");
     return 0;

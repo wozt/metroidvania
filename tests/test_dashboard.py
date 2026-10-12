@@ -145,7 +145,7 @@ class OutputTests(unittest.TestCase):
         self.assertEqual(mzm_items["Missile Drop"], "partial")
         self.assertEqual(mzm_items["Morph Ball"], "not_started")
         self.assertEqual(mzm_items["Long Beam (Chozo statue)"], "partial")
-        self.assertEqual(mzm_items["Plasma Beam (Chozo statue)"], "not_started")
+        self.assertEqual(mzm_items["Plasma Beam (Chozo statue)"], "partial")
         self.assertEqual(mzm_items["Energy Tank"], "partial")
         self.assertNotIn("Long Beam Hint (Chozo statue)", mzm_items)
         # Not one of the five enemy drops of is_drop().

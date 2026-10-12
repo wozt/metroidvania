@@ -161,6 +161,14 @@ const char *const mzm_ripper2_anim_names[MZM_RIPPER2_ANIMS] = {
     "Ripper2Oam_Moving", "Ripper2Oam_TurningAround", "Ripper2Oam_TurningAroundPart2",
 };
 static const char *const ripper2_sprites[MZM_RIPPER2_ANIMS] = {"RIPPERII", "RIPPERII", "RIPPERII"};
+const char *const mzm_item_sprite_anim_names[MZM_ITEM_SPRITE_ANIMS] = {
+    "MorphBallOam_Idle", "MorphBallOutsideOam_Idle", "PowerGripOam_Idle", "PowerGripGlowOam_Idle",
+    "ChargeBeamOam_Spawning", "ChargeBeamOam_Visible", "ChargeBeamGlowOam_Idle",
+};
+static const char *const item_sprites[MZM_ITEM_SPRITE_ANIMS] = {
+    "MORPH_BALL", "MORPH_BALL", "POWER_GRIP", "POWER_GRIP", "CHARGE_BEAM", "CHARGE_BEAM",
+    "CHARGE_BEAM",
+};
 const char *const mzm_squeept_anim_names[MZM_SQUEEPT_ANIMS] = {
     "SqueeptOam_GoingUp", "SqueeptOam_TurningAround", "SqueeptOam_GoingDown",
 };
@@ -275,6 +283,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_GEEGA] = {MZM_PIPE_BUG_ANIMS, mzm_geega_anim_names, geega_sprites},
     [MZM_FAMILY_ZEBBO] = {MZM_PIPE_BUG_ANIMS, mzm_zebbo_anim_names, zebbo_sprites},
     [MZM_FAMILY_GAMET] = {MZM_PIPE_BUG_ANIMS, mzm_gamet_anim_names, gamet_sprites},
+    [MZM_FAMILY_ITEM_SPRITE] = {MZM_ITEM_SPRITE_ANIMS, mzm_item_sprite_anim_names, item_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -3865,6 +3874,9 @@ static bool is_drop(uint8_t sprite_id) {
 int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     if (secondary) {
         if (sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_FAMILY_ZEELA;
+        if (sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE || sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW ||
+            sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW)
+            return MZM_FAMILY_ITEM_SPRITE;
         if (sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_FAMILY_SPACE_PIRATE;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -3915,6 +3927,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_GERUTA_GREEN: return MZM_FAMILY_GERUTA;
     case MZM_PSPRITE_RIPPERII: return MZM_FAMILY_RIPPER2;
     case MZM_PSPRITE_SQUEEPT: return MZM_FAMILY_SQUEEPT;
+    case MZM_PSPRITE_MORPH_BALL:
+    case MZM_PSPRITE_POWER_GRIP:
+    case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
     case MZM_PSPRITE_MULTIVIOLA: return MZM_FAMILY_MULTIVIOLA;
     case MZM_PSPRITE_RINKA_ORANGE:
     case MZM_PSPRITE_RINKA_GREEN: return MZM_FAMILY_RINKA;
@@ -4510,6 +4525,9 @@ bool mzm_sprite_supported(uint8_t sprite_id) {
 uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (!sprite->secondary) return sprite->sprite_id;
     if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
+    if (sprite->sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE) return MZM_PSPRITE_MORPH_BALL;
+    if (sprite->sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW) return MZM_PSPRITE_POWER_GRIP;
+    if (sprite->sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW) return MZM_PSPRITE_CHARGE_BEAM;
     if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
     /* The Chozo statue parts and ball use their statue's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE)
@@ -4675,6 +4693,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_GERUTA: geruta(&c); break;
     case MZM_FAMILY_RIPPER2: ripper2(&c); break;
     case MZM_FAMILY_SQUEEPT: squeept(&c); break;
+    case MZM_FAMILY_ITEM_SPRITE: ai_item_sprite(&c); break;
     case MZM_FAMILY_RINKA: rinka(&c); break;
     case MZM_FAMILY_SPACE_PIRATE:
         if (sprite->secondary) ai_space_pirate_laser(&c);

@@ -608,15 +608,18 @@ static const RuntimeSuitPreset runtime_suit_presets[]={
 #define RUNTIME_SUIT_PRESETS \
     (sizeof runtime_suit_presets/sizeof runtime_suit_presets[0])
 
-/* Morph Ball and Power Grip stay available in suited presets so the
- * implemented abilities are reachable before item pickups exist. */
+/* Morph Ball, Bombs and Power Grip stay available in suited presets so
+ * the rooms can be explored from anywhere; `--without NAME` removes one so
+ * its pickup can be collected. */
+static uint32_t runtime_removed_items;
 static void runtime_apply_equipment(MzmEquipment *equipment,unsigned int preset,
                                     uint32_t toggled_items) {
     const RuntimeSuitPreset *p=&runtime_suit_presets[preset%RUNTIME_SUIT_PRESETS];
     equipment->suit=p->suit;
     equipment->items=p->items;
     if(p->suit!=MZM_SUIT_SUITLESS)
-        equipment->items|=MZM_ITEM_MORPH_BALL|MZM_ITEM_BOMBS|MZM_ITEM_POWER_GRIP|toggled_items;
+        equipment->items|=((MZM_ITEM_MORPH_BALL|MZM_ITEM_BOMBS|MZM_ITEM_POWER_GRIP)&
+                           ~runtime_removed_items)|toggled_items;
 }
 
 static int runtime_behavior(const Room *room, int x, int y) {
@@ -1891,6 +1894,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sHoltzIdleYVelocity", t->holtz_idle_y, 65, 65},
         {"sSqueeptRisingMovement", t->squeept_rising, 65, 65},
         {"sSqueeptFallingMovement", t->squeept_falling, 16, 16},
+        {"sChargeBeamIdleYMovement", t->charge_beam_idle_y, 66, 66},
         {"sSpacePirateWallJumpingVelocity", t->pirate_wall_jump, 8, 8},
         {"sSpacePirate_2e1030", t->pirate_jump_low, 11, 11},
         {"sSpacePirateJumpingVelocity", t->pirate_jump, 10, 10},
@@ -2708,6 +2712,13 @@ int main(int argc, char **argv) {
             }
             if(!found){fprintf(stderr,"Unknown item: %s\n",name);return 2;}
         }
+        else if (!strcmp(argv[i],"--without") && i+1<argc) {
+            const char *name=argv[++i];
+            if(!strcmp(name,"morph-ball"))runtime_removed_items|=MZM_ITEM_MORPH_BALL;
+            else if(!strcmp(name,"bombs"))runtime_removed_items|=MZM_ITEM_BOMBS;
+            else if(!strcmp(name,"power-grip"))runtime_removed_items|=MZM_ITEM_POWER_GRIP;
+            else{fprintf(stderr,"Unknown default item: %s\n",name);return 2;}
+        }
         else if (!strcmp(argv[i],"--spawn") && i+2<argc) {
             /* Test placement: Samus's feet at room pixel X, Y. */
             spawn_px=atoi(argv[++i]);
@@ -2722,7 +2733,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--without morph-ball|bombs|power-grip] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -2813,7 +2824,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--without morph-ball|bombs|power-grip] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {

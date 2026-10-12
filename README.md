@@ -252,7 +252,11 @@ font), raising the capacities; collected tanks stay gone. Item Chozo statues
 hold their item in a ball: shoot it, then touch it to get the Long, Ice or
 Wave Beam, Bombs, Speed Booster, High Jump, Screw Attack or Varia Suit (the
 Plasma Beam, Space Jump and Gravity Suit statues give an "Unknown Item" that
-stays inactive, as in the game before the fully powered suit). Rest
+stays inactive, as in the game before the fully powered suit). The Morph
+Ball, the Power Grip and the Charge Beam are their own item sprites, touched
+to be collected with their banner (the runtime grants the Morph Ball, Bombs
+and Power Grip at start; `--without morph-ball`, `bombs` or `power-grip`
+removes one). Rest
 in a statue's hand in the Morph Ball to be refilled; a hint statue grabs
 Samus, flashes and sits down (its map screen is not ported). The Wave Beam crosses walls and the Plasma Beam goes
 through enemies (both debug items, combinable with the other beams). With the Speed Booster

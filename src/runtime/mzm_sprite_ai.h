@@ -141,5 +141,7 @@ void ai_space_pirate_laser(Ctx *c);
 void ai_chozodia_security(Ctx *c);
 /* mzm_chozo_statue.c: item and hint Chozo statues, their parts and ball. */
 void ai_chozo_statue(Ctx *c);
+/* mzm_item_sprites.c: the Morph Ball, the Power Grip and the Charge Beam. */
+void ai_item_sprite(Ctx *c);
 
 #endif /* MZM_SPRITE_AI_H */

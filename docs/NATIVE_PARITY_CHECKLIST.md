@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 40 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 41 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -408,6 +408,15 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`.  
 Known divergences: PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
 Next action: Port the multiple large energy pickup.
+
+[~] **`mzm.items.item_sprites` — Morph Ball, Power Grip and Charge Beam pickups.** The Morph Ball (outline sprite with the ball's status), the Power Grip (glow removed once it is taken, EVENT_POWER_GRIP_OBTAINED) and the Charge Beam (spawning table, glow following its height, the float of sChargeBeamIdleYMovement, EVENT_CHARGE_BEAM_OBTAINED): removed when owned, touched they give their item, hold Samus with SAMUS_ITEM_PMT and the item banner with its jingle, and flicker until the banner releases her. Checked in brinstar_000 (--without morph-ball --spawn 212 496: the jump onto the pillar takes the Morph Ball and shows its banner) and crateria_012 (--without power-grip: the Power Grip from the statue's hands).
+
+Native evidence: `mzm:c:src/sprites_ai/charge_beam.c:ChargeBeam`, `mzm:c:src/sprites_ai/charge_beam.c:ChargeBeamGlow`, `mzm:c:src/sprites_ai/charge_beam.c:ChargeBeamGlowMovement`, `mzm:c:src/sprites_ai/morph_ball.c:MorphBall`, `mzm:c:src/sprites_ai/morph_ball.c:MorphBallOutside`, `mzm:c:src/sprites_ai/power_grip.c:PowerGrip`, `mzm:c:src/sprites_ai/power_grip.c:PowerGripGlow`.  
+Local implementation: [`src/runtime/mzm_item_sprites.c`](../src/runtime/mzm_item_sprites.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/dashboard.py`](../scripts/dashboard.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_dashboard.py`](../tests/test_dashboard.py).
+Dependencies: `mzm.interface.message_banner`, `mzm.items.chozo_statues`.  
+Known divergences: The Charge Beam is only placed by an event sprite set (after its guardian), which the room export does not resolve, so it is only covered by the unit tests; the flicker timers never move, as in the game.  
+Next action: Resolve the event sprite sets so the Charge Beam appears in its room; compare with the original game frame by frame.
 
 [~] **`mzm.items.tanks` — Energy, missile, super missile and power bomb tanks.** On odd frames, the four probes of BgClipCheckTouchingTransitionOrTank (Samus's right and left hitbox edges on her center row, the bottom and top rows on her center column) read the behaviors of the current Clipdata, last probe first; a revealed tank (hidden ones are not tanks until their block breaks) starts gCollectingTank, sets gPreventMovementTimer, raises the equipment within the game total (sStartingHealthAmmo, the total of sNumberOfTanksPerArea and sTankIncreaseAmount, exported from the decompilation: 100 energy refilled, 5 missiles, 2 super missiles, 2 power bombs) and spawns the message banner (the first missile, super missile or power bomb tank with its own message). BgClipFinishCollectingTank (on the banner's removal) empties the BG1 block, clears the Clipdata to air or water (underwater tanks) and registers the item in gItemsCollected by area and room; BgClipRemoveCollectedTanks removes them again on every room load. Checked in brinstar_019 (`--spawn 615 96`, Right): Samus walks onto the energy tank column, energy 99 to 199, the banner shows its two lines and Samus stays frozen until A; the tank block is then empty.
 

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Zero Mission sprite engine and the Zoomer. */
 #include "mzm_sfx.h"
+#include "mzm_items.h"
 #include "mzm_sprites.h"
 
 #include <assert.h>
@@ -2823,6 +2824,100 @@ int main(void) {
         mzm_sprite_update(&room[0], 0, &statue_frame);
         assert(room[0].pose == 0x2B);
         statue_frame.equipment = &items;
+    }
+    /* The Morph Ball, the Power Grip and the Charge Beam: touched, they give
+     * their item, hold Samus with the banner and flicker until it lets her
+     * go; their secondary sprites follow. */
+    {
+        static MzmSprite room[6];
+        static MzmSpriteKind item_kind;
+        memset(room, 0, sizeof room);
+        memset(&item_kind, 0, sizeof item_kind);
+        for (int a = 0; a < MZM_ITEM_SPRITE_ANIMS; ++a) {
+            item_kind.counts[a] = 2;
+            item_kind.timers[a][0] = item_kind.timers[a][1] = 3;
+        }
+        MzmSpriteFrame item_frame = frame;
+        uint16_t prevent = 0;
+        item_frame.kinds[MZM_FAMILY_ITEM_SPRITE] = &item_kind;
+        item_frame.sprites = room;
+        item_frame.sprite_count = 6;
+        item_frame.hooks = &test_hooks;
+        item_frame.prevent_movement = &prevent;
+        MzmEquipment items = {.energy = 99, .max_energy = 99};
+        item_frame.equipment = &items;
+        memset(test_events, 0, sizeof test_events);
+        message_count = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_MORPH_BALL, 0, 6, 7, 0, 0);
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].pose == 9 && room[0].y == 7 * 64 - 32 && room[0].samus_collision == 30 &&
+               room[0].immune_to_projectiles && room[0].draw_order == 3);
+        assert(room[1].secondary && room[1].sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE);
+        mzm_sprite_update(&room[1], 1, &item_frame);
+        assert(room[1].draw_order == 2 && room[1].status == room[0].status &&
+               mzm_sprite_graphics_owner(&room[1]) == MZM_PSPRITE_MORPH_BALL);
+        room[0].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].pose == 0x23 && items.items & MZM_ITEM_MORPH_BALL && room[0].always_active &&
+               prevent == MZM_SAMUS_ITEM_PMT && message_count == 1 && messages[0] == 16);
+        uint16_t before = room[0].status;
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert((room[0].status ^ before) & MZM_SPRITE_STATUS_NOT_DRAWN);
+        mzm_sprite_update(&room[1], 1, &item_frame);
+        assert(room[1].always_active && room[1].status == room[0].status);
+        prevent = MZM_SAMUS_ITEM_PMT - 2;
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].status == 0);
+        /* Already obtained: removed at once. */
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_MORPH_BALL, 0, 6, 7, 0, 0);
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].status == 0);
+
+        /* The Power Grip a block up, its glow gone once taken, its event. */
+        memset(room, 0, sizeof room);
+        message_count = 0;
+        prevent = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_POWER_GRIP, 0, 6, 7, 0, 0);
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].pose == 9 && room[0].y == 7 * 64 - 64 &&
+               room[1].sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW);
+        mzm_sprite_update(&room[1], 1, &item_frame);
+        assert(room[1].draw_order == 5 && room[1].pose == 9);
+        room[0].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(items.items & MZM_ITEM_POWER_GRIP && messages[0] == 21 &&
+               test_events[16 / 8] & (1u << (16 % 8)));
+        mzm_sprite_update(&room[1], 1, &item_frame);
+        assert(room[1].status == 0);
+
+        /* The Charge Beam: its spawning table, then the glow and the float
+         * with sChargeBeamIdleYMovement. */
+        memset(room, 0, sizeof room);
+        message_count = 0;
+        prevent = 0;
+        for (int i = 0; i < 65; ++i) tables.charge_beam_idle_y[i] = (int16_t)(i % 2);
+        tables.charge_beam_idle_y[65] = 32767;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_CHARGE_BEAM, 0, 6, 7, 0, 0);
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].pose == 0xA && room[0].samus_collision == 0 &&
+               room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        int frames = 0;
+        while (room[0].pose == 0xA && frames++ < 20) mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].pose == 0xB && room[0].work1 == 1 &&
+               room[1].sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW);
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].pose == 9 && room[0].samus_collision == 30 && room[0].anim ==
+               MZM_ITEM_SPRITE_CHARGE_BEAM_VISIBLE);
+        uint16_t cy = room[0].y;
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].y == cy + 1);
+        mzm_sprite_update(&room[1], 1, &item_frame);
+        assert(room[1].y == room[0].y && room[1].draw_order == 3);
+        room[0].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        mzm_sprite_update(&room[0], 0, &item_frame);
+        assert(room[0].pose == 0x23 && room[1].status == 0 && items.items & MZM_ITEM_CHARGE_BEAM &&
+               messages[0] == 9 && test_events[20 / 8] & (1u << (20 % 8)));
     }
     puts("mzm_sprites: ok");
     return 0;

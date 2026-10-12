@@ -421,11 +421,15 @@ def bestiary() -> dict:
                 "note": "AI ported to the sprite engine" if done else "",
             })
         elif record["category"] == "Item / pickup" or is_drop:
+            # The item sprites (Morph Ball, Power Grip, Charge Beam) count as
+            # done when the engine has their AI, as the monsters do.
+            done = is_drop or symbol in supported
             items.append({
                 "id": record["native_id"], "name": record["name"],
-                "status": "partial" if is_drop else "not_started",
+                "status": "partial" if done else "not_started",
                 "note": ("Enemy drop AI ported (spawn, collection, blink, despawn)"
-                         if is_drop else ""),
+                         if is_drop else
+                         "Item sprite, acquisition, banner and flicker ported" if done else ""),
             })
         elif symbol.startswith("CHOZO_STATUE_") and not symbol.endswith("_HINT"):
             # The ability items, held by their Chozo statues.

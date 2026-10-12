@@ -170,6 +170,15 @@ read from the user's ROM at export time; nothing is stored in the repository.
 - Ripper II (`ripper2.c`): the Ripper's patrol with its own tables, a
   wider hitbox, two pixels a frame, a wall probe 44 subpixels ahead and a
   turning sound.
+- The item sprites (`morph_ball.c`, `power_grip.c`, `charge_beam.c`,
+  `mzm_item_sprites.c`): each is removed at once when its item is owned;
+  touched, it gives the item (and the Power Grip's or Charge Beam's event),
+  sets `SAMUS_ITEM_PMT`, spawns its banner and flickers until the banner lets
+  Samus go. The Morph Ball's outline copies its status, the Power Grip's glow
+  goes when it is taken, and the Charge Beam plays its spawning table, spawns
+  its glow (which follows its height), floats with
+  `sChargeBeamIdleYMovement` and removes the glow when taken. The Charge
+  Beam is placed by an event sprite set the export does not resolve yet.
 - Squeept (`squeept.c`): hidden at its spawn (a pixel below its block)
   until, after a half-second wait, Samus is above it within 8 blocks up and
   6 across; it rises with `sSqueeptRisingMovement`, turns at the table's

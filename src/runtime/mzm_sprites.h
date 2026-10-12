@@ -154,6 +154,7 @@ typedef struct {
     int16_t holtz_idle_y[65];       /* sHoltzIdleYVelocity */
     int16_t squeept_rising[65];     /* sSqueeptRisingMovement (SHORT_MAX ends it) */
     int16_t squeept_falling[16];    /* sSqueeptFallingMovement (SHORT_MAX ends it) */
+    int16_t charge_beam_idle_y[66]; /* sChargeBeamIdleYMovement (SHORT_MAX ends it) */
     int16_t pirate_wall_jump[8];    /* sSpacePirateWallJumpingVelocity */
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
@@ -287,6 +288,14 @@ enum {
     MZM_RIPPER2_ANIMS,
 };
 extern const char *const mzm_ripper2_anim_names[MZM_RIPPER2_ANIMS];
+/* The item sprites' OAM tables (src/data/sprites/morph_ball.c,
+ * power_grip.c, charge_beam.c). */
+enum {
+    MZM_ITEM_SPRITE_MORPH_BALL, MZM_ITEM_SPRITE_MORPH_BALL_OUTSIDE, MZM_ITEM_SPRITE_POWER_GRIP,
+    MZM_ITEM_SPRITE_POWER_GRIP_GLOW, MZM_ITEM_SPRITE_CHARGE_BEAM_SPAWNING,
+    MZM_ITEM_SPRITE_CHARGE_BEAM_VISIBLE, MZM_ITEM_SPRITE_CHARGE_BEAM_GLOW, MZM_ITEM_SPRITE_ANIMS,
+};
+extern const char *const mzm_item_sprite_anim_names[MZM_ITEM_SPRITE_ANIMS];
 /* Squeept OAM tables (src/data/sprites/squeept.c). */
 enum { MZM_SQUEEPT_GOING_UP, MZM_SQUEEPT_TURNING_AROUND, MZM_SQUEEPT_GOING_DOWN, MZM_SQUEEPT_ANIMS };
 extern const char *const mzm_squeept_anim_names[MZM_SQUEEPT_ANIMS];
@@ -362,6 +371,7 @@ enum {
     MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
     MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_FAMILY_CHOZO_STATUE,
     MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
+    MZM_FAMILY_ITEM_SPRITE,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -400,6 +410,7 @@ enum {
     MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
     MZM_PSPRITE_GERUTA_RED = 54, MZM_PSPRITE_GERUTA_GREEN = 55, MZM_PSPRITE_RIPPERII = 113,
     MZM_PSPRITE_SQUEEPT = 56,
+    MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -424,6 +435,8 @@ enum {
     MZM_SSPRITE_CHOZO_STATUE_REFILL = 2, MZM_SSPRITE_CHOZO_STATUE_MOVEMENT = 4,
     MZM_SSPRITE_UNKNOWN_ITEM_CHOZO_STATUE_PART = 34, MZM_SSPRITE_UNKNOWN_ITEM_CHOZO_STATUE_REFILL = 35,
     MZM_SSPRITE_ZEELA_EYES = 16, MZM_SSPRITE_SPACE_PIRATE_LASER = 22,
+    MZM_SSPRITE_MORPH_BALL_OUTSIDE = 19, MZM_SSPRITE_POWER_GRIP_GLOW = 70,
+    MZM_SSPRITE_CHARGE_BEAM_GLOW = 5,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 

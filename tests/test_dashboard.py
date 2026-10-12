@@ -143,7 +143,9 @@ class OutputTests(unittest.TestCase):
         mzm_items = {row["name"]: row["status"] for row in mzm["items"]}
         self.assertEqual(mzm_items["Small Energy Drop"], "partial")
         self.assertEqual(mzm_items["Missile Drop"], "partial")
-        self.assertEqual(mzm_items["Morph Ball"], "not_started")
+        self.assertEqual(mzm_items["Morph Ball"], "partial")
+        self.assertEqual(mzm_items["Power Grip"], "partial")
+        self.assertEqual(mzm_items["Charge Beam"], "partial")
         self.assertEqual(mzm_items["Long Beam (Chozo statue)"], "partial")
         self.assertEqual(mzm_items["Plasma Beam (Chozo statue)"], "partial")
         self.assertEqual(mzm_items["Energy Tank"], "partial")

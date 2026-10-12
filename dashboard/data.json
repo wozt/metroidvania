@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-12T23:10:41+00:00",
+ "generated_at": "2026-10-12T23:23:55+00:00",
  "git": {
-  "commit": "7fd0aa6",
+  "commit": "cb7ea84",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 87,
+   "total": 88,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 64,
+    "partial": 65,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 13.8,
-   "with_passing_tests": 75,
-   "with_passing_tests_percent": 86.2,
+   "functional_or_better_percent": 13.6,
+   "with_passing_tests": 76,
+   "with_passing_tests_percent": 86.4,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -138,6 +138,7 @@
     "mzm.interface.message_banner",
     "mzm.items.chozo_statues",
     "mzm.items.enemy_drops",
+    "mzm.items.item_sprites",
     "mzm.items.tanks",
     "mzm.player.samus_controller",
     "mzm.player.speed_booster",
@@ -204,11 +205,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 40,
+   "total": 41,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 40,
+    "partial": 41,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -217,7 +218,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 40,
+   "with_passing_tests": 41,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -250,6 +251,7 @@
     "mzm.interface.message_banner",
     "mzm.items.chozo_statues",
     "mzm.items.enemy_drops",
+    "mzm.items.item_sprites",
     "mzm.items.tanks",
     "mzm.player.samus_controller",
     "mzm.player.speed_booster",
@@ -2138,6 +2140,67 @@
       ],
       "outcome": "passed",
       "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-12"
+   }
+  },
+  {
+   "id": "mzm.items.item_sprites",
+   "area": "mzm",
+   "category": "items",
+   "title": "Morph Ball, Power Grip and Charge Beam pickups",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_item_sprites.c",
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py",
+    "src/runtime/room_runtime.c",
+    "scripts/dashboard.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c",
+    "tests/test_dashboard.py"
+   ],
+   "dependencies": [
+    "mzm.interface.message_banner",
+    "mzm.items.chozo_statues"
+   ],
+   "native_routines": [
+    "MorphBall",
+    "MorphBallOutside",
+    "PowerGrip",
+    "PowerGripGlow",
+    "ChargeBeam",
+    "ChargeBeamGlow",
+    "ChargeBeamGlowMovement"
+   ],
+   "limitations": "The Charge Beam is only placed by an event sprite set (after its guardian), which the room export does not resolve, so it is only covered by the unit tests; the flicker timers never move, as in the game. The Morph Ball (outline sprite with the ball's status), the Power Grip (glow removed once it is taken, EVENT_POWER_GRIP_OBTAINED) and the Charge Beam (spawning table, glow following its height, the float of sChargeBeamIdleYMovement, EVENT_CHARGE_BEAM_OBTAINED): removed when owned, touched they give their item, hold Samus with SAMUS_ITEM_PMT and the item banner with its jingle, and flicker until the banner releases her. Checked in brinstar_000 (--without morph-ball --spawn 212 496: the jump onto the pillar takes the Morph Ball and shows its banner) and crateria_012 (--without power-grip: the Power Grip from the statue's hands).",
+   "next_action": "Resolve the event sprite sets so the Charge Beam appears in its room; compare with the original game frame by frame.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_dashboard.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -5701,6 +5764,12 @@
  },
  "timeline": [
   {
+   "commit": "cb7ea84",
+   "date": "2026-10-13",
+   "subject": "feat(mzm): native Samus controller",
+   "scope": "mzm"
+  },
+  {
    "commit": "7fd0aa6",
    "date": "2026-10-13",
    "subject": "feat(mzm): Gamets",
@@ -6173,12 +6242,6 @@
    "date": "2026-10-10",
    "subject": "feat(aria): port Soma's verified motion rules",
    "scope": "aria"
-  },
-  {
-   "commit": "bcdfdeb",
-   "date": "2026-10-10",
-   "subject": "docs(aria): record Soma's air steering, backdash and recoil values",
-   "scope": "aria"
   }
  ],
  "inventory": {
@@ -6206,7 +6269,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 425,
+    "routines_cited_by_features": 432,
     "call_edges": 6071
    },
    "aos": {
@@ -6858,8 +6921,8 @@
      {
       "id": 33,
       "name": "Morph Ball",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "Item sprite, acquisition, banner and flicker ported"
      },
      {
       "id": 35,
@@ -6912,14 +6975,14 @@
      {
       "id": 68,
       "name": "Charge Beam",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "Item sprite, acquisition, banner and flicker ported"
      },
      {
       "id": 76,
       "name": "Power Grip",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "Item sprite, acquisition, banner and flicker ported"
      },
      {
       "id": 88,

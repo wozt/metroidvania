@@ -2988,6 +2988,23 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0278 - Zero Mission Morph Ball, Power Grip and Charge Beam pickups
+
+- `src/runtime/mzm_item_sprites.c` ports the three item sprites outside the
+  Chozo statues with their secondaries: the Morph Ball and its outline, the
+  Power Grip and its glow, the Charge Beam with its spawning table, glow and
+  float (`sChargeBeamIdleYMovement`, now exported).
+- Touched, each gives its item and event, holds Samus with the item banner
+  and flickers until the banner releases her; an owned item removes it.
+- The runtime's `--without morph-ball|bombs|power-grip` removes a starting
+  item so its pickup can be collected.
+- Dashboard: the item sprites count as ported like the monsters (all
+  Zero Mission items now have a ported pickup).
+- Checked in brinstar_000 (the Morph Ball on its pillar, its banner) and
+  crateria_012 (the Power Grip); the Charge Beam's event sprite set is not
+  resolved by the export, so it is covered by the unit tests only.
+- Tests: `tests/test_mzm_sprites.c`, `tests/test_dashboard.py`.
+
 ## Patch 0277 - Zero Mission native Samus controller
 
 - `src/runtime/mzm_samus.c` is now a transliteration of `src/samus.c`: the

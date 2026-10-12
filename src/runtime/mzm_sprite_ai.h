@@ -54,6 +54,11 @@ enum {
     LONG_BEAM_DAMAGE = 3,
     CHARGED_NORMAL_BEAM_DAMAGE = 8,
     CHARGED_LONG_BEAM_DAMAGE = 12,
+    ICE_BEAM_DAMAGE = 3,
+    ICE_LONG_BEAM_DAMAGE = 4,
+    CHARGED_ICE_BEAM_DAMAGE = 12,
+    CHARGED_ICE_LONG_BEAM_DAMAGE = 16,
+    SPRITE_FREEZE_TIMER = 240,       /* CONVERT_SECONDS(4.f) */
     MISSILE_DAMAGE = 20,
     SUPER_MISSILE_DAMAGE = 100,
     BOMB_DAMAGE = 8,
@@ -110,6 +115,8 @@ uint8_t ai_samus_nslr(const Ctx *c, uint16_t y_range, uint16_t x_range);
 bool ai_check_event(const Ctx *c, uint8_t event);
 bool ai_samus_above(const Ctx *c, uint16_t y_range, uint16_t x_range);
 void ai_face_samus(const Ctx *c);
+/* SpriteUtilUpdateFreezeTimer */
+void ai_update_freeze_timer(Ctx *c);
 /* `if (status & SPRITE_STATUS_ONSCREEN) SoundPlay(sound)` and its
  * SoundPlayNotAlreadyPlaying form. */
 static inline void ai_sound_onscreen(const MzmSprite *s, uint16_t sound) {

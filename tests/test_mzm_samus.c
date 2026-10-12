@@ -1178,6 +1178,30 @@ static void test_charge_beam(void) {
         mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
     assert(shot->active);           /* a normal beam is gone after 12 frames */
 
+    /* Ice Beam (over the Long Beam): 26 subpixels a frame, its long shot
+     * sound, and a trailing particle half a block behind on the frames
+     * where gFrameCounter8Bit & 3 is 0. */
+    w.equipment.items |= MZM_ITEM_ICE_BEAM;
+    mzm_weapons_init(&weapons);
+    mzm_sfx_clear();
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    shot = first_active(&weapons);
+    assert(shot && shot->type == MZM_PROJECTILE_ICE_BEAM &&
+           mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_BEAM_LONG_ICE_SHOT));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    weapons.frame8 = 1;
+    x = shot->x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    assert(shot->x == x + 26 && weapons.trail_count == 0);
+    weapons.frame8 = 4;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, -20, &w.collision, NULL);
+    assert(weapons.trail_count == 1 && weapons.trails[0].y == shot->y &&
+           weapons.trails[0].x == shot->x + (shot->x_flip ? -32 : 32) &&
+           weapons.trails[0].left == shot->x_flip);
+    weapons.frame8 = 0;
+    w.equipment.items &= ~MZM_ITEM_ICE_BEAM;
+
     /* A full charge is released when the Morph Ball forms. */
     mzm_weapons_init(&weapons);
     for (int i = 0; i < 70; ++i) mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, 0, &w.equipment);

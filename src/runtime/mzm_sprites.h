@@ -111,6 +111,8 @@ typedef struct {
     int16_t falling[16];            /* sSpritesFallingSpeed */
     uint16_t health[256], damage[256];  /* sPrimarySpriteStats */
     uint8_t weakness[256];          /* SpriteWeakness (low byte of column 2) */
+    /* The freeze flag (high byte): frozen when gFrameCounter8Bit & flag is 0. */
+    uint8_t freeze[256], secondary_freeze[256];
     uint16_t drops[256][5];         /* drop probabilities (columns 4-8), out of 1024 */
     uint16_t secondary_damage[256]; /* sSecondarySpriteStats */
     uint8_t secondary_weakness[256];

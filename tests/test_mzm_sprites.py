@@ -94,5 +94,27 @@ class MzmSpriteDataTests(unittest.TestCase):
             self.assertRegex(sources, rf"const\s+struct\s+FrameData\s+{table}\s*\[")
 
 
+class MzmSpritePaletteVariantTests(unittest.TestCase):
+    def test_frozen_and_stun_rows_shift_the_sprite_rows(self):
+        palette = [None] * 256
+        common = [None] * 256
+        for row in range(8, 16):
+            for index in range(16):
+                palette[row * 16 + index] = ("sprite", row, index)
+        for row in range(2, 8):
+            for index in range(16):
+                common[row * 16 + index] = ("common", row, index)
+        variants = mzm_sprites.shifted_palettes(palette, common)
+        frozen, stun = variants["/frozen"], variants["/stun"]
+        # A row 8 part shows OBJ row 7 (frozen) or 6 (stun): common rows.
+        self.assertEqual(frozen[8 * 16 + 3], ("common", 7, 3))
+        self.assertEqual(stun[8 * 16 + 3], ("common", 6, 3))
+        # A row 9 part shows row 8 (frozen) or row 7 (stun).
+        self.assertEqual(frozen[9 * 16], ("sprite", 8, 0))
+        self.assertEqual(stun[9 * 16], ("common", 7, 0))
+        # Rows below 8 are untouched.
+        self.assertEqual(frozen[:128], palette[:128])
+
+
 if __name__ == "__main__":
     unittest.main()

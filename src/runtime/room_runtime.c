@@ -1289,7 +1289,7 @@ static RuntimePaletteChoice runtime_samus_palette(const MzmSamus *samus,bool bea
         if(samus->anim_frame&1u){choice.kind0="Flashing";choice.row0=1;}
     } else if(beam_release) {
         choice.kind0="BeamRelease";
-        choice.row0=(items&MZM_ITEM_LONG_BEAM)?1:0;
+        choice.row0=(items&MZM_ITEM_ICE_BEAM)?2:(items&MZM_ITEM_LONG_BEAM)?1:0;
     } else if(samus->unmorph_palette_timer) {
         choice.suit0=borrowed;
         choice.kind0="Unmorph";
@@ -1299,7 +1299,7 @@ static RuntimePaletteChoice runtime_samus_palette(const MzmSamus *samus,bool bea
          * frames of full charge, none on the fourth step. */
         int offset=(charge-MZM_CHARGE_FULL)>>4;
         if(offset!=3) {
-            int row=((items&MZM_ITEM_LONG_BEAM)?2:0)+(offset&1);
+            int row=((items&MZM_ITEM_ICE_BEAM)?4:(items&MZM_ITEM_LONG_BEAM)?2:0)+(offset&1);
             choice=(RuntimePaletteChoice){suit,"ChargingBeam",row,suit,"ChargingBeam",row+1};
         }
     }
@@ -1595,7 +1595,8 @@ static void runtime_projectile_key(const MzmProjectile *projectile,char *key,siz
         [MZM_PROJECTILE_SUPER_MISSILE]="SuperMissile",[MZM_PROJECTILE_BOMB]="Bomb",
         [MZM_PROJECTILE_POWER_BOMB]="PowerBomb",[MZM_PROJECTILE_LONG_BEAM]="LongBeam",
         [MZM_PROJECTILE_CHARGED_BEAM]="ChargedNormalBeam",
-        [MZM_PROJECTILE_CHARGED_LONG_BEAM]="ChargedLongBeam"};
+        [MZM_PROJECTILE_CHARGED_LONG_BEAM]="ChargedLongBeam",
+        [MZM_PROJECTILE_ICE_BEAM]="IceBeam",[MZM_PROJECTILE_CHARGED_ICE_BEAM]="ChargedIceBeam"};
     if(projectile->type==MZM_PROJECTILE_BOMB || projectile->type==MZM_PROJECTILE_POWER_BOMB) {
         /* s(Power)BombOam_Slow / _Fast, never flipped. */
         snprintf(key,size,"Projectile/%sOam_%s/none",
@@ -1621,7 +1622,7 @@ static int runtime_projectile_durations(void *context,const MzmProjectile *proje
 }
 /* The beam graphics ProjectileLoadGraphics loads (the ported beams). */
 static const char *runtime_beam_variant(uint32_t items) {
-    return (items&MZM_ITEM_LONG_BEAM)?"LongBeam":"NormalBeam";
+    return (items&MZM_ITEM_ICE_BEAM)?"IceBeam":(items&MZM_ITEM_LONG_BEAM)?"LongBeam":"NormalBeam";
 }
 
 /* One tick of a looping or one-shot particle animation from its library
@@ -1721,6 +1722,7 @@ static const struct { const char *label; uint32_t item; } debug_items[]={
     {"High Jump",MZM_ITEM_HIGH_JUMP},{"Space Jump",MZM_ITEM_SPACE_JUMP},
     {"Screw Attack",MZM_ITEM_SCREW_ATTACK},{"Speed Booster",MZM_ITEM_SPEED_BOOSTER},
     {"Charge Beam",MZM_ITEM_CHARGE_BEAM},{"Long Beam",MZM_ITEM_LONG_BEAM},
+    {"Ice Beam",MZM_ITEM_ICE_BEAM},
 };
 #define DEBUG_ITEMS_COUNT (int)(sizeof debug_items/sizeof debug_items[0])
 
@@ -1883,6 +1885,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                 id < 0 || id > 255) { ok = false; break; }
             sprites->tables.secondary_damage[id] = (uint16_t)damage;
             sprites->tables.secondary_weakness[id] = (uint8_t)(weakness & 0xFF);
+            sprites->tables.secondary_freeze[id] = (uint8_t)(weakness >> 8);
         } else if (!strcmp(line, "table")) {
             char *values = strchr(cursor, '\t');
             if (!values) { ok = false; break; }
@@ -1914,6 +1917,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             sprites->tables.damage[id] = (uint16_t)damage;
             /* C_16_2_8(freeze, weakness): the weakness is the low byte. */
             sprites->tables.weakness[id] = (uint8_t)(weakness & 0xFF);
+            sprites->tables.freeze[id] = (uint8_t)(weakness >> 8);
         }
     }
     fclose(f);
@@ -2141,7 +2145,8 @@ static uint16_t runtime_pseudo_screw_damage(const MzmSamus *samus,const MzmEquip
         case MZM_POSE_STARTING_WALL_JUMP: case MZM_POSE_SPACE_JUMPING: break;
         default: return 0;
     }
-    return (uint16_t)(4*(2+((equipment->items&MZM_ITEM_LONG_BEAM)?1:0)));
+    return (uint16_t)(4*(2+((equipment->items&MZM_ITEM_LONG_BEAM)?1:0)+
+                           ((equipment->items&MZM_ITEM_ICE_BEAM)?1:0)));
 }
 
 static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
@@ -3161,6 +3166,7 @@ int main(int argc, char **argv) {
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
                                    &equipment, &collision, &weapons);
             weapons.samus_previous_x=previous_x;
+            weapons.frame8=sprites.frame8;
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
             {
@@ -3229,7 +3235,15 @@ int main(int argc, char **argv) {
                     [MZM_PROJECTILE_POWER_BOMB]=MZM_PE_BOMB,
                     [MZM_PROJECTILE_LONG_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM,
                     [MZM_PROJECTILE_CHARGED_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM,
-                    [MZM_PROJECTILE_CHARGED_LONG_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM};
+                    [MZM_PROJECTILE_CHARGED_LONG_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM,
+                    [MZM_PROJECTILE_ICE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM,
+                    [MZM_PROJECTILE_CHARGED_ICE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM};
+                /* ProjectileSetTrail's particles come first (ProjectileProcess). */
+                for(int i=0;i<weapons.trail_count;i++)
+                    mzm_particle_set(&sprites.effects,(uint16_t)weapons.trails[i].y,
+                                     (uint16_t)weapons.trails[i].x,
+                                     weapons.trails[i].left?MZM_PE_BEAM_TRAILING_LEFT:
+                                     MZM_PE_BEAM_TRAILING_RIGHT);
                 for(int i=0;i<weapons.impact_count;i++)
                     mzm_particle_set(&sprites.effects,(uint16_t)weapons.impacts[i].y,
                                      (uint16_t)weapons.impacts[i].x,
@@ -3454,9 +3468,14 @@ int main(int argc, char **argv) {
             /* Whole-sprite rotation ignores the flips (SpriteDraw). */
             bool rotated=sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE;
             if(rotated)fx=fy=false;
-            snprintf(key,sizeof key,"Sprite/%s/%s/%s",
+            /* The frozen (15 - slot) and stun (14 - slot) rows are baked
+             * variants of the sprite's own rows. */
+            const char *shade="";
+            if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
+            else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
+            snprintf(key,sizeof key,"Sprite/%s/%s/%s%s",
                      sprites.names[mzm_sprite_graphics_owner(sprite)],
-                     anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none");
+                     anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none",shade);
             RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
             if(!entry || entry->count==0)continue;
             int index=sprite->frame<entry->count?sprite->frame:0;
@@ -3501,7 +3520,8 @@ int main(int argc, char **argv) {
             } else {
                 const MzmParticle *p=&sprites.effects.particles[i-MZM_MAX_SPRITE_DEBRIS];
                 if((p->status&(MZM_PARTICLE_EXISTS|MZM_PARTICLE_ONSCREEN))!=
-                   (MZM_PARTICLE_EXISTS|MZM_PARTICLE_ONSCREEN))continue;
+                   (MZM_PARTICLE_EXISTS|MZM_PARTICLE_ONSCREEN) ||
+                   p->status&MZM_PARTICLE_NOT_DRAWN)continue;
                 table=mzm_particle_table(p->effect);px=p->x;py=p->y;frame=p->frame;
             }
             if(!table)continue;

@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 32 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 33 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -132,7 +132,7 @@ Next action: Port special blocks and environmental Clipdata effects.
 Native evidence: `mzm:c:src/projectile_util.c:ProjectileUpdate`, `mzm:c:src/projectile_util.c:ProjectileUpdateAnimation`.  
 Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_projectile_compose.py`](../tests/test_mzm_projectile_compose.py).
-Next action: Port the Ice (with freezing), Wave and Plasma Beams and tumbling missiles.
+Next action: Port the Wave and Plasma Beams and tumbling missiles.
 
 [~] **`mzm.weapons.bombs` — Bombs, bomb jumps and bomb damage.** With the Bombs item, B in the Morph Ball places a bomb (four at most, 7 frames apart) at Samus's position: a slow then a fast spin of 16 frames each with their native sprites, then the PE_BOMB explosion and 16 frames during which CAA_BOMB_PISTOL reaches nine points, one a frame (bomb blocks, bomb chains, hatches). On the first explosion frame Samus bounces off a touching bomb (up, left or right from the bomb's middle and gPreviousXPosition; only falling and from below when airborne), and the explosion damages sprites weak to beams and bombs (8). The set and explosion sounds play. Checked in brinstar_000: the bounce, then the three bomb blocks under Samus break.
 
@@ -149,8 +149,17 @@ Native evidence: `mzm:c:src/particle.c:ParticleChargingBeam`, `mzm:c:src/particl
 Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_effects.c`](../src/runtime/mzm_effects.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py), [`scripts/mzm_samus_pipeline.py`](../scripts/mzm_samus_pipeline.py), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
 Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
 Dependencies: `mzm.weapons.beams_and_missiles`, `mzm.player.samus_controller`.  
-Known divergences: The charged Long Beam trail particle (PE_CHARGED_LONG_BEAM_TRAIL) and the pseudo screw's Samus effect are not drawn; the Ice, Wave and Plasma Beams are not ported, so the charge sounds, palettes and graphics use the Power and Long Beam rows only; the suitless pistol is not ported.  
-Next action: Port the Ice, Wave and Plasma Beams with their particles and freezing.
+Known divergences: The charged Long Beam trail particle (PE_CHARGED_LONG_BEAM_TRAIL) and the pseudo screw's Samus effect are not drawn; the Wave and Plasma Beams are not ported, so the charge sounds, palettes and graphics use the Power, Long and Ice Beam rows only; the suitless pistol is not ported.  
+Next action: Port the Wave and Plasma Beams with their particles.
+
+[~] **`mzm.weapons.ice_beam` — Ice Beam and freezing.** The Ice Beam (over the Long Beam) moves 26 subpixels a frame and drops a trailing particle half a block from it when gFrameCounter8Bit & 3 is 0 (drifting one subpixel sideways and one pixel down a frame); its shot, charge and impact sounds, beam graphics, sBeamPal row 2, release row 2 and charging rows 4 and 5 are used. Hits: a sprite weak to beams freezes for 240 when freezable and frame8 & its freeze flag (metadata high byte) is 0, taking 3 (4 with Long Beam) as ice damage; otherwise normal damage; freezable but immune sprites freeze with no damage; others take the solid hit. The charged Ice Beam (12, 16 with Long Beam) needs a charge-beam or beam weakness and always freezes freezable sprites. Freezing sets the frozen row (15 - graphics slot), plays SOUND_FREEZING_SPRITE and the freezing particle (drawn every other frame); every ported AI then only counts the timer down every other frame and flickers in its last 45 ticks. The stun timer now flashes the stun row (14 - slot). The exporter bakes /frozen and /stun variants of every sprite frame. Pseudo screw damage counts the Ice Beam. Checked in brinstar_003 (`--item ice-beam`, L held, B taps): a brown Ripper freezes blue under the ice impact and freezing particles, trails follow the shots and Samus flashes the ice release row.
+
+Native evidence: `mzm:c:src/particle.c:ParticleBeamTrailingLeft`, `mzm:c:src/particle.c:ParticleBeamTrailingRight`, `mzm:c:src/particle.c:ParticleFreezingSpriteWithChargedIce`, `mzm:c:src/particle.c:ParticleFreezingSpriteWithIce`, `mzm:c:src/particle.c:ParticleHittingSomethingWithIceBeam`, `mzm:c:src/projectile.c:ProjectileProcessChargedIceBeam`, `mzm:c:src/projectile.c:ProjectileProcessIceBeam`, `mzm:c:src/projectile_util.c:ProjectileChargedIceBeamHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileFreezeSprite`, `mzm:c:src/projectile_util.c:ProjectileIceBeamDealDamage`, `mzm:c:src/projectile_util.c:ProjectileIceBeamHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileSetTrail`, `mzm:c:src/samus.c:SamusUpdatePalette`, `mzm:c:src/sprite_util.c:SpriteUtilUpdateFreezeTimer`, `mzm:c:src/sprite_util.c:SpriteUtilUpdateStunTimer`.  
+Local implementation: [`src/runtime/mzm_projectiles.c`](../src/runtime/mzm_projectiles.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_space_pirate.c`](../src/runtime/mzm_space_pirate.c), [`src/runtime/mzm_effects.c`](../src/runtime/mzm_effects.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py), [`scripts/mzm_samus_pipeline.py`](../scripts/mzm_samus_pipeline.py).  
+Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.weapons.charge_beam`, `mzm.enemies.zoomer`, `mzm.animation.particles`.  
+Known divergences: Frozen sprites take contact damage but are not yet solid platforms for Samus (SpriteUtilSamusStandingOnSprite); the charged Ice Beam trail (PE_CHARGED_ICE_BEAM_TRAIL) is not ported; the trails' low BG priority is not drawn; frozenPaletteRowOffset is taken as 0 for every sprite; the suitless Space Pirate freeze flicker is not ported; the Wave and Plasma combinations are not ported.  
+Next action: Make frozen sprites solid platforms for Samus, then the charged ice trail, Wave and Plasma Beams.
 
 [~] **`mzm.weapons.power_bombs` — Power bombs and their explosion.** In the Morph Ball, R arms power bombs (with ammunition); B (the Bombs item is required, as natively) places one, at most one at a time and none during an explosion: one ammunition (the last disarms them), a slow spin of 54 frames and a fast one of 40, then PowerBombExplosionStart. The semi-minor axis grows by 3 a frame to 159, holds five frames, shrinks back to 4 and ends; while expanding, CAA_POWER_BOMB reaches the hitbox's left and right block columns (even frames) or top and bottom rows (odd frames) from the centre outward, opening power bomb hatches and breaking blocks; every sprite touching the hitbox takes 50 (weak) once per power bomb. The set and explosion sounds play; power bomb drops spawn and refill one. The window rows come from sHaze_PowerBomb_WindowValuesPointers (power_bomb.tsv). Checked in brinstar_000: the explosion and the bomb blocks it breaks.
 
@@ -188,7 +197,7 @@ Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRigh
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.enemies.sidehopper`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the screen shakes are not ported; door locks are only reported (gDoorUnlockTimer is not consumed by the runtime) and removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests.  
+Known divergences: The screen shakes are not ported; door locks are only reported (gDoorUnlockTimer is not consumed by the runtime) and removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests.  
 Next action: Export the event spritesets and port the statue room event and the door lock lifecycle.
 
 [~] **`mzm.enemies.holtz` — Holtzes.** Hovering under a ceiling with its ROM idle table, aware or idle table by Samus height, warning when she is low and within 8 blocks vertically and 5 across, the swoop at 3 pixels a frame with the horizontal speed growing from 2 to 12 subpixels, the slide, the slowing climb, the bonk on the ceiling and the death into drops.
@@ -197,8 +206,8 @@ Native evidence: `mzm:c:src/sprites_ai/holtz.c:Holtz`.
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing is not ported.  
-Next action: Port freezing with the ice beam.
+Known divergences: Frozen sprites do not yet act as platforms for Samus.  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.mella` — Mellas.** Hovering under a ceiling with the ROM idle tables from an RNG offset, detection when Samus is low and within 8 blocks vertically and 3 across, a 7-frame delay, the swoop with the ROM going-down, going-up and horizontal speed tables (the going-down flag is SAMUS_COLLIDING, as in the game), the climb back half a block under the ceiling and the small explosion death.
 
@@ -206,8 +215,8 @@ Native evidence: `mzm:c:src/sprites_ai/mella.c:Mella`.
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing is not ported.  
-Next action: Port freezing with the ice beam.
+Known divergences: Frozen sprites do not yet act as platforms for Samus.  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.multiviola` — Multiviolas.** Bouncing diagonally off every surface at 3 subpixels a frame on both axes, starting toward Samus, its 56-frame animation starting at twice its slot, and the big explosion death into drops.
 
@@ -215,8 +224,8 @@ Native evidence: `mzm:c:src/sprites_ai/multiviola.c:Multiviola`.
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing (including its unused secondary sprite) is not ported.  
-Next action: Port freezing with the ice beam.
+Known divergences: Frozen sprites do not yet act as platforms for Samus (its unused secondary sprite is not ported).  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.pipe_bugs` — Zebs, Geegas and Zebbos (pipe bugs).** Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers: hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower.
 
@@ -224,8 +233,8 @@ Native evidence: `mzm:c:src/sprite.c:SpriteSpawnDropFollowers`, `mzm:c:src/sprit
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the background priority changes are not ported.  
-Next action: Port freezing with the ice beam.
+Known divergences: The background priority changes are not ported and frozen sprites do not yet act as platforms.  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.reo` — Reos.** Green and purple Reos: hovering with the ROM idle tables from an RNG offset, detection within 8 blocks vertically and 7 across, homing on a point 72 subpixels above Samus with per-axis acceleration (caps 24/16 or 64/32 quarter subpixels), braking and turning past it, turning at walls, pushing the next overlapping Reo apart and the big explosion death into drops.
 
@@ -233,8 +242,8 @@ Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRigh
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the water splash effects of SpriteUtilCheckInRoomEffect / CheckOutOfRoomEffect are not ported.  
-Next action: Port freezing with the ice beam and the water splash effects.
+Known divergences: The water splash effects of SpriteUtilCheckInRoomEffect / CheckOutOfRoomEffect are not ported.  
+Next action: Port the water splash effects and frozen sprites as platforms.
 
 [~] **`mzm.enemies.rinka` — Rinkas.** Orange and green Rinkas: born at their spawn block (the first spawn visible at once), respawns hidden, shown once on screen and vulnerable 11 frames later, a straight flight toward where Samus was along a unit vector computed with the BIOS integer square root, respawn 16 blocks away from her, and respawning deaths that leave a drop only when none of theirs exists.
 
@@ -242,7 +251,7 @@ Native evidence: `mzm:asm:asm/syscalls.s:Sqrt`, `mzm:c:src/sprites_ai/rinka.c:Ri
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.pipe_bugs`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing and the green Rinka mosaic effect are not reproduced (MOSAIC is kept as its native flag); the Mother Brain Rinkas (RinkaMotherBrain) are not ported.  
+Known divergences: The green Rinka mosaic effect is not reproduced (MOSAIC is kept as its native flag); the Mother Brain Rinkas (RinkaMotherBrain) are not ported.  
 Next action: Port the Mother Brain Rinkas with Mother Brain.
 
 [~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.
@@ -251,8 +260,8 @@ Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing is not ported; missiles that would tumble off a Ripper are removed.  
-Next action: Port freezing with the ice beam.
+Known divergences: Frozen sprites do not yet act as platforms for Samus; missiles that would tumble off a Ripper are removed.  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.sidehopper` — Sidehoppers.** Ground and ceiling Sidehoppers: idle or head shake for 1 to 4 loops (work1 kept at 0 on spawn, as without BUGFIX), Samus detection within five blocks, jump warning, high or low jumps from the ROM tables with the head hitbox resized, wall bounces, falls when unsupported, landing and the single-then-big death explosion into drops.
 
@@ -260,8 +269,8 @@ Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRigh
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing is not ported.  
-Next action: Port freezing with the ice beam.
+Known divergences: Frozen sprites do not yet act as platforms for Samus.  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.
 
@@ -269,8 +278,8 @@ Native evidence: `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:S
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing is not ported; the explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping).  
-Next action: Port freezing with the ice beam.
+Known divergences: Frozen sprites do not yet act as platforms for Samus; the explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping).  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.sova` — Sovas.** Purple and orange Sovas (orange: palette row 1, one subpixel faster): placement onto any surface, a speed that follows the animation frame, crawling on floors (with their two slope tables), walls and ceilings (work2, with its own table instead of a Y flip), the eight native turns with their offsets, falls, landings in a random direction and death into drops.
 
@@ -278,8 +287,8 @@ Native evidence: `mzm:c:src/sprites_ai/sova.c:Sova`.
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing, screen-shake falls and the falling splash are not ported.  
-Next action: Port freezing with the ice beam.
+Known divergences: Screen-shake falls and the falling splash are not ported.  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.space_pirate` — Space Pirates and their lasers.** The five SpacePirate sprites (normal, three waiting, the faster-shooting variant) and SSPRITE_SPACE_PIRATE_LASER: line-of-sight detection on the clipdata grid (forward rows, diagonals up and down, crawling and climbing cases) through the gSpriteDrawOrder scratch flags, walking with acceleration and slope slowdown, the obstacle probes (jumps from the four ROM tables, crawling under low ceilings, turns), zonelines and wall jump points from the exported clipdata movement (M lines), climbing, wall pauses, wall jumps, crawling, alerted walking, charging and two-laser volleys on the ground and on walls, lasers hurting Samus and other pirates, the Chozodia alarm timer (set on sight, 480 frames, stopped by the last pirate's death, kept after Mecha Ridley) and the laser's CAA_BOMB_PISTOL on hatches. With the alarm on (or Mecha Ridley dead), every door transition spawns a waiting pirate at the arrival point (half a block back toward the door; graphics slot 5 in spritesets 88 and 103; crawling out of hatchless doors), and a room whose spriteset has no pirate stops the alarm. Rooms export their default spriteset (S lines). Smoke-run in the 47 Chozodia rooms with pirates.
 
@@ -287,7 +296,7 @@ Native evidence: `mzm:c:src/clipdata.c:ClipdataUpdateCurrentAffecting`, `mzm:c:s
 Local implementation: [`src/runtime/mzm_space_pirate.c`](../src/runtime/mzm_space_pirate.c), [`src/runtime/mzm_sprite_ai.h`](../src/runtime/mzm_sprite_ai.h), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`scripts/mzm_runtime_room.py`](../scripts/mzm_runtime_room.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_runtime_room.py`](../tests/test_mzm_runtime_room.py).
 Dependencies: `mzm.enemies.zoomer`, `mzm.collision.clipdata`, `mzm.transitions.doors_and_hatches`, `mzm.animation.particles`.  
-Known divergences: SpawnWaitingPirates reads the room's default spriteset only (event spritesets are not exported) and runs on door transitions, not on the debug teleport; the alarm music and palette animation, freezing (only the laser check runs while frozen), the stun palette as drawn colours and the laser's draw order and BG priority are not reproduced; the Space Pirate carrying a power bomb, the black and escape-ship pirates are not ported; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset.  
+Known divergences: SpawnWaitingPirates reads the room's default spriteset only (event spritesets are not exported) and runs on door transitions, not on the debug teleport; the alarm music and palette animation, the suitless freeze flicker (the port has no suitless Samus) and the laser's draw order and BG priority are not reproduced; the Space Pirate carrying a power bomb, the black and escape-ship pirates are not ported; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset.  
 Next action: Port the power-bomb, black and escape-ship pirates and the security systems that ring the alarm (searchlights, security lasers); resolve the event spritesets.
 
 [~] **`mzm.enemies.viola` — Violas.** Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops.
@@ -296,8 +305,8 @@ Native evidence: `mzm:c:src/sprites_ai/viola.c:Viola`.
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Freezing is not ported.  
-Next action: Port freezing with the ice beam.
+Known divergences: Frozen sprites do not yet act as platforms for Samus.  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.waver` — Wavers.** Wavers start toward Samus and bounce diagonally between surfaces at their native speeds, dying into drops.
 
@@ -305,8 +314,8 @@ Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusXFlip`, `
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.  
-Known divergences: Freezing is not ported.  
-Next action: Port freezing with the ice beam.
+Known divergences: Frozen sprites do not yet act as platforms for Samus.  
+Next action: Make frozen sprites solid platforms for Samus.
 
 [~] **`mzm.enemies.zeela` — Zeelas and the red Zeela eyes.** Zeelas reuse the Zoomer crawler with their speed, hitbox, ground X flip, single slope table and faster falling and landing animations; the red Zeela throws two spinning eyes that stop on solid collision or Samus and explode.
 
@@ -314,17 +323,17 @@ Native evidence: `mzm:c:src/sprites_ai/zeela.c:Zeela`, `mzm:c:src/sprites_ai/zee
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.  
-Known divergences: Freezing and the falling splash are not ported; the eyes rotate as a composed frame without the affine clipping.  
-Next action: Port freezing with the ice beam.
+Known divergences: The falling splash is not ported; the eyes rotate as a composed frame without the affine clipping.  
+Next action: Make frozen sprites solid platforms for Samus.
 
-[~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns, and death with its explosion particle into enemy drops are ported.
+[~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits, stuns with the stun palette flash (SpriteUtilUpdateStunTimer), freezing (SpriteUtilUpdateFreezeTimer in every ported AI, the frozen and stun rows baked as /frozen and /stun library variants), and death with its explosion particle into enemy drops are ported.
 
-Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/projectile_util.c:ProjectileCheckHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileDealDamage`, `mzm:c:src/projectile_util.c:ProjectileHitSolidSprite`, `mzm:c:src/projectile_util.c:ProjectileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileMissileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileSuperMissileHitSprite`, `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteInitPrimary`, `mzm:c:src/sprite.c:SpriteLoadRoomSprites`, `mzm:c:src/sprite.c:SpriteUpdate`, `mzm:c:src/sprite.c:SpriteUpdateAnimation`, `mzm:c:src/sprite_util.c:SpriteUtilAlignYPositionOnSlopeAtOrigin`, `mzm:c:src/sprite_util.c:SpriteUtilCheckVerticalCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilGetCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilIsSpriteStunned`, `mzm:c:src/sprite_util.c:SpriteUtilSamusAndSpriteCollision`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteDeath`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteTakeDamageFromSamusContact`, `mzm:c:src/sprite_util.c:SpriteUtilTakeDamageFromSprite`, `mzm:c:src/sprites_ai/zoomer.c:Zoomer`, `mzm:c:src/sprites_ai/zoomer.c:ZoomerDeath`.  
+Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/projectile_util.c:ProjectileCheckHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileDealDamage`, `mzm:c:src/projectile_util.c:ProjectileHitSolidSprite`, `mzm:c:src/projectile_util.c:ProjectileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileMissileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileSuperMissileHitSprite`, `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteInitPrimary`, `mzm:c:src/sprite.c:SpriteLoadRoomSprites`, `mzm:c:src/sprite.c:SpriteUpdate`, `mzm:c:src/sprite.c:SpriteUpdateAnimation`, `mzm:c:src/sprite_util.c:SpriteUtilAlignYPositionOnSlopeAtOrigin`, `mzm:c:src/sprite_util.c:SpriteUtilCheckVerticalCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilGetCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilIsSpriteStunned`, `mzm:c:src/sprite_util.c:SpriteUtilSamusAndSpriteCollision`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteDeath`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteTakeDamageFromSamusContact`, `mzm:c:src/sprite_util.c:SpriteUtilTakeDamageFromSprite`, `mzm:c:src/sprite_util.c:SpriteUtilUpdateFreezeTimer`, `mzm:c:src/sprite_util.c:SpriteUtilUpdateStunTimer`, `mzm:c:src/sprites_ai/zoomer.c:Zoomer`, `mzm:c:src/sprites_ai/zoomer.c:ZoomerDeath`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.collision.clipdata`.  
-Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; the stun palette flash and freezing are not ported.  
-Next action: Port the stun palette flash and freezing, then the Space Pirates, Metroids and Mother Brain Rinkas.
+Known divergences: Hard-mode and event spritesets are not loaded; SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider; missiles that would tumble off a sprite are removed; frozen sprites take contact damage but do not yet act as platforms for Samus.  
+Next action: Make frozen sprites platforms (SpriteUtilSamusStandingOnSprite), then port the Space Pirates, Metroids and Mother Brain Rinkas.
 
 ### Bosses
 

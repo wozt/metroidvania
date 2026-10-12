@@ -160,7 +160,17 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
  * ParticleStopBeginToChargeSound and ParticlePlayBeamFullChargedSound (the
  * Power and Long Beam rows). */
 static uint16_t charge_init_sound(const MzmEquipment *e) {
-    return e->items & MZM_ITEM_LONG_BEAM ? MZM_SOUND_LONG_CHARGE_INIT : MZM_SOUND_SHORT_CHARGE_INIT;
+    bool is_long = e->items & MZM_ITEM_LONG_BEAM;
+    if (e->items & MZM_ITEM_ICE_BEAM)
+        return is_long ? MZM_SOUND_ICE_LONG_CHARGE_INIT : MZM_SOUND_ICE_CHARGE_INIT;
+    return is_long ? MZM_SOUND_LONG_CHARGE_INIT : MZM_SOUND_SHORT_CHARGE_INIT;
+}
+
+static uint16_t charge_loop_sound(const MzmEquipment *e) {
+    bool is_long = e->items & MZM_ITEM_LONG_BEAM;
+    if (e->items & MZM_ITEM_ICE_BEAM)
+        return is_long ? MZM_SOUND_ICE_LONG_CHARGE_LOOP : MZM_SOUND_ICE_CHARGE_LOOP;
+    return is_long ? MZM_SOUND_LONG_CHARGE_LOOP : MZM_SOUND_SHORT_CHARGE_LOOP;
 }
 
 /* ParticleChargingBeam's state and sounds (the runtime draws it at the arm
@@ -189,8 +199,7 @@ static void update_charge_particle(MzmWeapons *weapons, const MzmEquipment *e) {
     }
     /* CONVERT_SECONDS(.25f + 1.f / 60) */
     if ((c->frame_counter & 15) == 0)
-        mzm_sfx_play(e->items & MZM_ITEM_LONG_BEAM ? MZM_SOUND_LONG_CHARGE_LOOP
-                                                   : MZM_SOUND_SHORT_CHARGE_LOOP);
+        mzm_sfx_play(charge_loop_sound(e));
     c->frame_counter++;
 }
 
@@ -273,16 +282,43 @@ static void initialize(MzmProjectile *p) {
     p->anim_counter = 0;
 }
 
-/* ProjectileProcessNormalBeam / LongBeam / ChargedNormalBeam /
- * ChargedLongBeam: their moving speed and the short lifetime of the beams
- * without Long Beam. */
+/* ProjectileSetTrail: a trailing particle half a block behind, when
+ * gFrameCounter8Bit & delay is 0. */
+static void set_trail(MzmWeapons *weapons, const MzmProjectile *p, uint8_t delay) {
+    if (weapons->frame8 & delay || weapons->trail_count >= MZM_MAX_PROJECTILES) return;
+    int32_t x = p->x, y = p->y;
+    const int movement = MZM_HALF_BLOCK_SIZE, diagonal = MZM_HALF_BLOCK_SIZE * 3 / 4;
+    int back = p->x_flip ? -1 : 1;
+    switch (p->direction) {
+    case MZM_AIM_UP: y += movement; break;
+    case MZM_AIM_DOWN: y -= movement; break;
+    case MZM_AIM_DIAGONAL_UP: y += diagonal; x += back * diagonal; break;
+    case MZM_AIM_DIAGONAL_DOWN: y -= diagonal; x += back * diagonal; break;
+    default: x += back * movement; break;
+    }
+    weapons->trails[weapons->trail_count].x = x;
+    weapons->trails[weapons->trail_count].y = y;
+    weapons->trails[weapons->trail_count].left = p->x_flip;  /* PE_BEAM_TRAILING_LEFT */
+    weapons->trail_count++;
+}
+
+/* ProjectileProcessNormalBeam / LongBeam / IceBeam and their charged
+ * versions: the moving speed, the ice trails and the short lifetime of the
+ * beams without Long Beam. */
 static void process_beam(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *samus,
-                         const MzmCollision *collision) {
-    bool is_long = p->type == MZM_PROJECTILE_LONG_BEAM || p->type == MZM_PROJECTILE_CHARGED_LONG_BEAM;
+                         const MzmCollision *collision, const MzmEquipment *equipment) {
+    bool is_ice = p->type == MZM_PROJECTILE_ICE_BEAM || p->type == MZM_PROJECTILE_CHARGED_ICE_BEAM;
+    bool is_long = p->type == MZM_PROJECTILE_LONG_BEAM || p->type == MZM_PROJECTILE_CHARGED_LONG_BEAM ||
+                   (is_ice && equipment->items & MZM_ITEM_LONG_BEAM);
     if (p->stage == MZM_STAGE_MOVING) {
         if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
-        projectile_move(p, is_long ? MZM_QUARTER_BLOCK_SIZE + MZM_EIGHTH_BLOCK_SIZE
-                                   : MZM_QUARTER_BLOCK_SIZE + MZM_PIXEL_SIZE, samus->x_velocity);
+        int speed = MZM_QUARTER_BLOCK_SIZE + MZM_PIXEL_SIZE;
+        if (is_ice) speed = MZM_QUARTER_BLOCK_SIZE + MZM_EIGHTH_BLOCK_SIZE + MZM_PIXEL_SIZE / 2;
+        else if (p->type == MZM_PROJECTILE_LONG_BEAM || p->type == MZM_PROJECTILE_CHARGED_LONG_BEAM)
+            speed = MZM_QUARTER_BLOCK_SIZE + MZM_EIGHTH_BLOCK_SIZE;
+        projectile_move(p, speed, samus->x_velocity);
+        /* CONVERT_SECONDS(.05f); the charged ice trail is not ported. */
+        if (is_ice) set_trail(weapons, p, 3);
     } else if (p->stage == MZM_STAGE_SPAWNING) {
         if (projectile_hits(weapons, collision, p)) { p->active = false; return; }
         p->stage = MZM_STAGE_MOVING;
@@ -504,6 +540,8 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
     weapons->bomb_bounce = 0;
     weapons->power_bomb_set = false;
     weapons->shot_flash = false;
+    weapons->trail_count = 0;
+    weapons->items = equipment->items;
     update_charge_particle(weapons, equipment);
     if (weapons->pending) {
         static const struct { int limit; uint8_t cooldown; } rules[] = {
@@ -519,12 +557,18 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
             [MZM_PROJECTILE_CHARGED_BEAM] = {MZM_PROJECTILE_LIMIT_CHARGED_BEAM, MZM_BEAM_COOLDOWN},
             [MZM_PROJECTILE_CHARGED_LONG_BEAM] = {MZM_PROJECTILE_LIMIT_CHARGED_BEAM,
                                                   MZM_BEAM_COOLDOWN},
+            [MZM_PROJECTILE_ICE_BEAM] = {MZM_PROJECTILE_LIMIT_BEAM, MZM_BEAM_COOLDOWN},
+            [MZM_PROJECTILE_CHARGED_ICE_BEAM] = {MZM_PROJECTILE_LIMIT_CHARGED_BEAM, MZM_BEAM_COOLDOWN},
         };
         /* The beam type of the equipped beams. */
         MzmProjectileType type = weapons->pending_type;
         bool is_long = equipment->items & MZM_ITEM_LONG_BEAM;
-        if (type == MZM_PROJECTILE_BEAM && is_long) type = MZM_PROJECTILE_LONG_BEAM;
-        else if (type == MZM_PROJECTILE_CHARGED_BEAM && is_long) type = MZM_PROJECTILE_CHARGED_LONG_BEAM;
+        bool is_ice = equipment->items & MZM_ITEM_ICE_BEAM;
+        if (type == MZM_PROJECTILE_BEAM)
+            type = is_ice ? MZM_PROJECTILE_ICE_BEAM : is_long ? MZM_PROJECTILE_LONG_BEAM : type;
+        else if (type == MZM_PROJECTILE_CHARGED_BEAM)
+            type = is_ice ? MZM_PROJECTILE_CHARGED_ICE_BEAM
+                 : is_long ? MZM_PROJECTILE_CHARGED_LONG_BEAM : type;
         bool beam = type == MZM_PROJECTILE_BEAM || type >= MZM_PROJECTILE_LONG_BEAM;
         /* gArmCannonX/Y: pixel position plus the arm cannon offset; bombs
          * at Samus's position. */
@@ -552,7 +596,12 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
                 [MZM_PROJECTILE_CHARGED_BEAM] = MZM_SOUND_CHARGED_BEAM_SHOT,
                 [MZM_PROJECTILE_CHARGED_LONG_BEAM] = MZM_SOUND_CHARGED_BEAM_LONG_SHOT,
             };
-            if (beam) {
+            if (type == MZM_PROJECTILE_ICE_BEAM) {
+                mzm_sfx_play(is_long ? MZM_SOUND_BEAM_LONG_ICE_SHOT : MZM_SOUND_BEAM_ICE_SHOT);
+            } else if (type == MZM_PROJECTILE_CHARGED_ICE_BEAM) {
+                mzm_sfx_play(is_long ? MZM_SOUND_CHARGED_BEAM_LONG_ICE_SHOT
+                                     : MZM_SOUND_CHARGED_BEAM_ICE_SHOT);
+            } else if (beam) {
                 mzm_sfx_play(beam_sounds[type]);
             } else if (type == MZM_PROJECTILE_MISSILE) {
                 mzm_sfx_play(MZM_SOUND_MISSILE_SHOT);
@@ -568,7 +617,7 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
         MzmProjectile *p = &weapons->list[i];
         if (!p->active) continue;
         if (p->type == MZM_PROJECTILE_BEAM || p->type >= MZM_PROJECTILE_LONG_BEAM)
-            process_beam(weapons, p, samus, collision);
+            process_beam(weapons, p, samus, collision, equipment);
         else if (p->type == MZM_PROJECTILE_BOMB) process_bomb(weapons, p, samus, collision);
         else if (p->type == MZM_PROJECTILE_POWER_BOMB) process_power_bomb(weapons, p, equipment);
         else process_missile(weapons, p, samus, equipment, collision);

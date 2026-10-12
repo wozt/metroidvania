@@ -97,7 +97,9 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sDebris8YVelocity")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
-PARTICLES = ("sParticleBombOam", "sParticleSpriteExplosionHugeOam", "sParticleSpriteExplosionSmallOam",
+PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",
+             "sParticleFreezingSpriteWithChargedIceBeamOam", "sParticleBeamTrailingOam",
+             "sParticleHittingSomethingWithIceBeamOam", "sParticleSpriteExplosionHugeOam", "sParticleSpriteExplosionSmallOam",
              "sParticleSpriteExplosionMediumOam", "sParticleSpriteExplosionBigOam",
              "sParticleSpriteExplosionSingleThenBigOam", "sParticleScrewAttackDestroyedOam",
              "sParticleShinesparkDestroyedOam", "sParticleSpeedboosterDestroyedOam",
@@ -306,6 +308,24 @@ def stage(rom: bytes, symbols, gfx: str, palette_symbol: str, palette_row: int):
     return bytes(vram), palette
 
 
+def shifted_palettes(palette: list, common: list) -> dict[str, list]:
+    """The frozen and stun looks: SpriteDraw adds the sprite's paletteRow to
+    each part's row, and ProjectileFreezeSprite / SPRITE_GET_STUN_PALETTE set
+    it to NBR_OF_PALETTE_ROWS - gfx slot - 0 or 1, so a part of row ``b``
+    shows OBJ row (b + 15) or (b + 14) mod 16 (the common frozen and stun
+    rows for row 8; frozenPaletteRowOffset 0)."""
+    full = [common[i] if common[i] is not None else palette[i] for i in range(256)]
+    result = {}
+    for suffix, shift in (("/frozen", 15), ("/stun", 14)):
+        shifted = list(palette)
+        for bank in range(8, 16):
+            source = (bank + shift) % 16
+            for index in range(16):
+                shifted[bank * 16 + index] = full[source * 16 + index]
+        result[suffix] = shifted
+    return result
+
+
 def stage_common(rom: bytes, symbols):
     """OBJ VRAM and palette as HudGenericLoadCommonSpriteGfx and the room
     load leave them for the common sprites (enemy drops)."""
@@ -387,17 +407,22 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     folder.mkdir(parents=True, exist_ok=True)
     write_atomic(folder / "sprites.tsv", "\n".join(lines) + "\n")
     library = LibraryWriter(root, ENEMIES_RUNTIME)
+    _, common_palette = stage_common(rom, symbols)
     for sprite, row, gfx, palette_symbol, tables in plan:
         vram, palette = stage(rom, symbols, gfx, palette_symbol, row)
+        variants = {"": palette}
+        variants.update(shifted_palettes(palette, common_palette))
         for table in tables:
             entries = mzm_projectile_compose.frames(rom, symbols, table)
-            for flip in mzm_projectile_compose.FLIPS:
-                frames = []
-                for pointer, duration in entries:
-                    pixels = mzm_projectile_compose.render(rom, vram, palette, pointer, flip)
-                    bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
-                    frames.append((bmp, duration, left, top))
-                library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}", frames)
+            for suffix, colours in variants.items():
+                for flip in mzm_projectile_compose.FLIPS:
+                    frames = []
+                    for pointer, duration in entries:
+                        pixels = mzm_projectile_compose.render(rom, vram, colours, pointer, flip)
+                        bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+                        frames.append((bmp, duration, left, top))
+                    library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}{suffix}",
+                                frames)
     vram, palette = stage_common(rom, symbols)
     for sprite, table in DROPS.items():
         frames = []

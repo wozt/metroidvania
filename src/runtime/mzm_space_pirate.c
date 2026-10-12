@@ -1864,7 +1864,9 @@ void ai_space_pirate(Ctx *c) {
     uint8_t *d = g->draw_order;
     if (s->pose < SPRITE_POSE_DESTROYED) {
         if (s->freeze_timer) {
-            /* Freezing is not ported (no ice beam). */
+            /* The suitless branch (its own palette flicker) is not ported:
+             * the port has no suitless Samus. */
+            ai_update_freeze_timer(c);
             check_colliding_with_laser(c);
             return;
         }

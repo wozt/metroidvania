@@ -1024,11 +1024,13 @@ static void zoomer_death(Ctx *c) {
     ai_sprite_death(c, y, x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
 }
 
-/* Zoomer: the AI (its damaged sound in mzm_sprite_update). Freezing is not
- * ported. */
+/* Zoomer: the AI (its damaged sound in mzm_sprite_update). */
 static void zoomer(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     /* SpriteUtilIsSpriteStunned */
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
@@ -1106,7 +1108,10 @@ static void ripper_move(Ctx *c) {
  * ported. */
 static void ripper(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -1273,7 +1278,10 @@ static void skree_crash(Ctx *c) {
  * ported. */
 static void skree(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -1344,11 +1352,14 @@ static void skree_explosion(Ctx *c) {
 
 /* Waver: bouncing diagonally between walls, a pixel a frame horizontally
  * and half a pixel vertically (FACING_DOWN means moving up), starting
- * toward Samus (SpriteUtilMakeSpriteFaceSamusXFlip). The damaged sound and
- * freezing are not ported. */
+ * toward Samus (SpriteUtilMakeSpriteFaceSamusXFlip). The damaged sound is
+ * not ported. */
 static void waver(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -1746,10 +1757,13 @@ static void hopper_death(Ctx *c) {
                  MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
 }
 
-/* Sidehopper / Dessgeega: the AIs. Freezing is not ported. */
+/* Sidehopper / Dessgeega: the AIs. */
 static void hopper(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -2003,7 +2017,10 @@ static void viola_falling(Ctx *c) {
  * ported. */
 static void viola(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -2393,7 +2410,10 @@ static void sova_falling(Ctx *c) {
  * ported. */
 static void sova(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -2658,10 +2678,13 @@ static void pipe_bug_move(Ctx *c) {
     if ((s->work1 & 15) == 0) ai_sound_onscreen(s, moving);
 }
 
-/* Zeb / Geega / Zebbo: the AIs. Freezing is not ported. */
+/* Zeb / Geega / Zebbo: the AIs. */
 static void pipe_bug(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -2838,10 +2861,13 @@ static void reo_move(Ctx *c) {
     }
 }
 
-/* Reo: the AI. Freezing is not ported. */
+/* Reo: the AI. */
 static void reo(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -2958,7 +2984,10 @@ void ai_face_samus(const Ctx *c) {
 static void mella(Ctx *c) {
     MzmSprite *s = c->s;
     const int16_t *t;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -3035,7 +3064,10 @@ static void mella(Ctx *c) {
 static void holtz(Ctx *c) {
     MzmSprite *s = c->s;
     const uint16_t height = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -3124,7 +3156,10 @@ static void holtz(Ctx *c) {
  * axes, its animation starting at twice its slot (MultiviolaMove). */
 static void multiviola(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -3310,10 +3345,13 @@ static void rinka_move(Ctx *c) {
     if (respawn) rinka_respawn(c);
 }
 
-/* Rinka: the AI. Freezing is not ported. */
+/* Rinka: the AI. */
 static void rinka(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->freeze_timer) return;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
     if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
@@ -3531,6 +3569,23 @@ static uint16_t damage_of(const MzmSprite *s, const MzmSpriteTables *tables) {
 
 static void deal_damage(MzmSprite *s, uint16_t damage);
 
+/* SpriteUtilUpdateFreezeTimer: down every other frame; the animation timer
+ * steps back once it ends; the last 45 ticks flicker the frozen palette. */
+void ai_update_freeze_timer(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (c->frame8 & 1) s->freeze_timer--;
+    if (s->freeze_timer == 0) s->adc--;
+    if (s->freeze_timer <= 45)
+        s->palette_row = s->freeze_timer & 1 ? (uint8_t)(15 - s->gfx_slot) : s->absolute_palette_row;
+}
+
+/* ProjectileFreezeSprite (frozenPaletteRowOffset 0). */
+static void freeze_sprite(MzmSprite *s, uint8_t timer) {
+    s->freeze_timer = timer;
+    s->palette_row = (uint8_t)(15 - s->gfx_slot);
+    mzm_sfx_play_not_playing(MZM_SOUND_FREEZING_SPRITE);
+}
+
 static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
                           const MzmSpriteTables *tables) {
     if (!samus->suitless && !samus->speedboosting && !samus->screw_attacking &&
@@ -3588,8 +3643,13 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             continue;
         uint16_t center_x = (uint16_t)(left + (uint16_t)(right - left) / 2);
         bool on_left = center_x >= samus->previous_x;
-        /* Frozen sprites are solid: not ported (no ice beam). */
-        if (s->freeze_timer) continue;
+        /* A frozen sprite: the contact damage of SpriteUtilSpriteTakeDamage
+         * FromSamusContact, and no harm to Samus (standing on it is not
+         * ported yet). */
+        if (s->freeze_timer) {
+            contact_kills(s, samus, tables);
+            continue;
+        }
         switch (s->samus_collision) {
         case SSC_NONE: break;
         case SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT:
@@ -3647,6 +3707,54 @@ static void hit_solid(MzmSprite *s) {
 }
 
 /* ProjectilePowerBombDealDamage: once per power bomb (the stunned flag). */
+/* ProjectileIceBeamDealDamage: the freeze timer when the sprite survives. */
+static uint8_t ice_damage(MzmSprite *s, uint16_t damage) {
+    uint8_t timer = 0;
+    if (s->health > damage) {
+        s->health -= damage;
+        timer = SPRITE_FREEZE_TIMER;
+    } else {
+        s->health = 0;
+        s->freeze_timer = 0;
+        s->palette_row = 0;
+        s->pose = SPRITE_POSE_DESTROYED;
+        s->ignore_samus_timer = 1;
+    }
+    set_isft(s, ISFT_DAMAGED);
+    s->damaged = true;
+    return timer;
+}
+
+/* ProjectileIceBeamHittingSprite / ProjectileChargedIceBeamHittingSprite:
+ * the impact particle (or the invincible one), then the freezing particle
+ * when the sprite freezes. A weak sprite freezes when gFrameCounter8Bit and
+ * its freeze flag share no bit (charged: always). */
+static void ice_hit(MzmSprite *s, uint8_t weakness, uint8_t freeze_flag, uint8_t frame8,
+                    uint16_t damage, bool charged, MzmEffects *effects, uint16_t y, uint16_t x) {
+    uint8_t timer = 0;
+    uint8_t effect = MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM;
+    uint8_t weak = charged ? MZM_WEAKNESS_CHARGE_BEAM_PISTOL | MZM_WEAKNESS_BEAM_BOMBS
+                           : MZM_WEAKNESS_BEAM_BOMBS;
+    if (weakness & weak) {
+        if (weakness & MZM_WEAKNESS_CAN_BE_FROZEN && (charged || !(frame8 & freeze_flag)))
+            timer = ice_damage(s, damage);
+        else
+            deal_damage(s, damage);
+    } else if (weakness & MZM_WEAKNESS_CAN_BE_FROZEN) {
+        timer = SPRITE_FREEZE_TIMER;
+    } else {
+        hit_solid(s);
+        effect = MZM_PE_HITTING_SOMETHING_INVINCIBLE;
+    }
+    if (effects) mzm_particle_set(effects, y, x, effect);
+    if (timer) {
+        freeze_sprite(s, timer);
+        if (effects)
+            mzm_particle_set(effects, y, x, charged ? MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE
+                                                    : MZM_PE_FREEZING_SPRITE_WITH_ICE);
+    }
+}
+
 static void power_bomb_damage(MzmSprite *s, uint8_t weakness) {
     uint8_t isft;
     if (s->immune_to_projectiles) {
@@ -3736,6 +3844,10 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                 half = QUARTER_BLOCK_SIZE - PIXEL_SIZE;
             else if (proj->type == MZM_PROJECTILE_CHARGED_LONG_BEAM)
                 half = QUARTER_BLOCK_SIZE;
+            else if (proj->type == MZM_PROJECTILE_ICE_BEAM)
+                half = QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+            else if (proj->type == MZM_PROJECTILE_CHARGED_ICE_BEAM)
+                half = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
             uint16_t py = (uint16_t)proj->y, px = (uint16_t)proj->x;
             if (!touching(top, bottom, left, right, (uint16_t)(py - half), (uint16_t)(py + half),
                           (uint16_t)(px - half), (uint16_t)(px + half)))
@@ -3788,6 +3900,18 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                     hit_solid(s);
                 }
                 break;
+            }
+            case MZM_PROJECTILE_ICE_BEAM:
+            case MZM_PROJECTILE_CHARGED_ICE_BEAM: {
+                bool charged = proj->type == MZM_PROJECTILE_CHARGED_ICE_BEAM;
+                bool is_long = weapons->items & MZM_ITEM_LONG_BEAM;
+                uint16_t damage = charged ? (is_long ? CHARGED_ICE_LONG_BEAM_DAMAGE : CHARGED_ICE_BEAM_DAMAGE)
+                                          : (is_long ? ICE_LONG_BEAM_DAMAGE : ICE_BEAM_DAMAGE);
+                ice_hit(s, weakness, s->secondary ? tables->secondary_freeze[s->sprite_id]
+                                                  : tables->freeze[s->sprite_id],
+                        weapons->frame8, damage, charged, effects, py, px);
+                proj->active = false;
+                continue;
             }
             case MZM_PROJECTILE_BOMB:
             case MZM_PROJECTILE_POWER_BOMB:
@@ -3928,8 +4052,16 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
      * x + y) % 32] */
     c.rng = c.tables->random[((uint32_t)frame->frame8 + slot + frame->frame16 / 16u + sprite->x +
                               sprite->y) % 32u];
-    /* SpriteUtilUpdateStunTimer: the stun palette flash is not drawn yet. */
-    if (sprite->isft & 0x7F) sprite->isft--;
+    /* SpriteUtilUpdateStunTimer: the stun row every other 4 frames, then
+     * back to the frozen or the sprite's own row. */
+    if (sprite->isft & 0x7F) {
+        uint8_t isft = --sprite->isft;
+        if (!(isft & 3) && sprite->health) {
+            if (isft & 4) sprite->palette_row = (uint8_t)(14 - sprite->gfx_slot);
+            else if (sprite->freeze_timer) sprite->palette_row = (uint8_t)(15 - sprite->gfx_slot);
+            else sprite->palette_row = sprite->absolute_palette_row;
+        }
+    }
     /* The first lines of each primary AI with a damaged sound. */
     uint16_t damaged = sprite->secondary ? 0 : damaged_sound(family);
     if (damaged && sprite->damaged) {

@@ -240,7 +240,8 @@ Ball arms power bombs: B places one, whose growing explosion breaks blocks,
 opens power bomb hatches and damages every enemy it reaches (its look is an
 approximate overlay). With the Charge Beam (a debug menu item, like the Long
 Beam), holding B charges a shot released with B, and a charged spin hits
-enemies as the pseudo screw. With the Speed Booster
+enemies as the pseudo screw. The Ice Beam (also a debug item) freezes
+enemies for a few seconds, flashing before they thaw. With the Speed Booster
 (an item of the debug menu), a long run starts the speed boost: it
 breaks speed blocks and enemies, and releasing the direction skids (Down
 while skidding stores a shinespark: A then launches it up, sideways with a
@@ -257,7 +258,7 @@ Multiviolas, Rinkas and Space Pirates (with their lasers and the Chozodia alarm,
 rung by the searchlights, security lasers and searchlight eyes)
 (`python3 -m scripts.mzm_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
 they move with their native AIs, hurt Samus on contact, take beam and missile
-hits, explode into particles and debris and leave the native enemy drops.
+hits (flashing their stun colours), freeze under the Ice Beam, explode into particles and debris and leave the native enemy drops.
 Other enemies and bosses are not ported yet. `--spawn X Y` places Samus's feet at
 a room pixel position for tests.
 

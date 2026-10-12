@@ -38,7 +38,9 @@ typedef enum {
     MZM_PROJECTILE_POWER_BOMB,
     MZM_PROJECTILE_LONG_BEAM,
     MZM_PROJECTILE_CHARGED_BEAM,
-    MZM_PROJECTILE_CHARGED_LONG_BEAM
+    MZM_PROJECTILE_CHARGED_LONG_BEAM,
+    MZM_PROJECTILE_ICE_BEAM,
+    MZM_PROJECTILE_CHARGED_ICE_BEAM
 } MzmProjectileType;
 
 /* CHARGE_BEAM_START_THRESHOLD, CHARGE_BEAM_UNCHARGED_THRESHOLD,
@@ -128,6 +130,14 @@ typedef struct {
      * mzm_samus_bomb_bounce; a bomb impact (MZM_PROJECTILE_BOMB in
      * `impacts`) is the explosion's PE_BOMB particle. */
     int bomb_bounce;
+    /* gFrameCounter8Bit, set by the caller before mzm_weapons_update (the
+     * trails and the ice beam's freeze flag). */
+    uint8_t frame8;
+    /* The equipped beams of the last update (the beam damage). */
+    uint32_t items;
+    /* ProjectileSetTrail particles of the last update (PE_BEAM_TRAILING). */
+    struct { int32_t x, y; bool left; } trails[MZM_MAX_PROJECTILES];
+    int trail_count;
     /* gCurrentPowerBomb, and a power bomb placed this update
      * (ProjectileProcessPowerBomb clears every sprite's
      * SPRITE_ISFT_POWER_BOMB_STUNNED then). */

@@ -606,6 +606,23 @@ int main(void) {
     assert(pe->status && pe->frame == 2);
     mzm_particles_process(&fx, &fx_kinds, 0, 0);
     assert(pe->status == 0);
+    /* ParticleFreezingSpriteWithIce: high priority, drawn every other
+     * frame. ParticleBeamTrailingRight / Left drift one subpixel sideways
+     * and one pixel down a frame after their first. */
+    fx_kinds.counts[MZM_PE_FREEZING_SPRITE_WITH_ICE] = 1;
+    fx_kinds.timers[MZM_PE_FREEZING_SPRITE_WITH_ICE][0] = 8;
+    fx_kinds.counts[MZM_PE_BEAM_TRAILING_LEFT] = 1;
+    fx_kinds.timers[MZM_PE_BEAM_TRAILING_LEFT][0] = 8;
+    mzm_particle_set(&fx, 300, 400, MZM_PE_FREEZING_SPRITE_WITH_ICE);
+    mzm_particle_set(&fx, 300, 400, MZM_PE_BEAM_TRAILING_LEFT);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(fx.particles[0].status & MZM_PARTICLE_NOT_DRAWN &&
+           fx.particles[0].status & MZM_PARTICLE_HIGH_OAM_PRIORITY);
+    assert(fx.particles[1].x == 400 && fx.particles[1].y == 300);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(!(fx.particles[0].status & MZM_PARTICLE_NOT_DRAWN));
+    assert(fx.particles[1].x == 399 && fx.particles[1].y == 304);
+    memset(&fx, 0, sizeof fx);
     /* Off screen (the native window), removed after its update. */
     mzm_particle_set(&fx, 300, 3000, MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM);
     mzm_particles_process(&fx, &fx_kinds, 0, 0);
@@ -757,6 +774,99 @@ int main(void) {
                                       .x = z.x, .y = z.y - 20};
     mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
     assert(fx.particles[2].effect == MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+    /* ProjectileIceBeamHittingSprite: weak and freezable with frame8 & flag
+     * clear: 3 damage, frozen for 240 with the frozen row, the ice impact,
+     * then the freezing particle and SOUND_FREEZING_SPRITE. */
+    memset(&fx, 0, sizeof fx);
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS | MZM_WEAKNESS_CAN_BE_FROZEN;
+    tables.freeze[MZM_PSPRITE_ZOOMER_YELLOW] = 1;
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    z.health = 20;
+    weapons.frame8 = 1;
+    weapons.items = 0;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_ICE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    /* frame8 & flag set: a plain hit, no freeze. */
+    assert(z.health == 17 && !z.freeze_timer && !weapons.list[0].active &&
+           fx.particles[0].effect == MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM &&
+           !(fx.particles[1].status & MZM_PARTICLE_EXISTS));
+    z.isft = 0;
+    mzm_sfx_clear();
+    weapons.frame8 = 2;
+    weapons.items = MZM_ITEM_LONG_BEAM;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_ICE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 13 && z.freeze_timer == 240 && z.palette_row == 15 - z.gfx_slot);
+    assert(fx.particles[2].effect == MZM_PE_FREEZING_SPRITE_WITH_ICE);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_FREEZING_SPRITE));
+    /* SpriteUtilUpdateFreezeTimer: frozen in place, one tick every odd
+     * frame, the palette flickers in the last 45 ticks. */
+    uint16_t frozen_x = z.x;
+    uint8_t frozen_pose = z.pose;
+    for (int i = 0; i < 10; ++i) step(&z, i);
+    assert(z.freeze_timer == 235 && z.x == frozen_x && z.pose == frozen_pose);
+    z.freeze_timer = 45;
+    step(&z, 1);
+    assert(z.freeze_timer == 44 && z.palette_row == z.absolute_palette_row);
+    step(&z, 1);
+    assert(z.freeze_timer == 43 && z.palette_row == 15 - z.gfx_slot);
+    z.freeze_timer = 1;
+    step(&z, 1);
+    assert(z.freeze_timer == 0 && z.palette_row == z.absolute_palette_row);
+    /* The charged Ice Beam (16 with the Long Beam) freezes regardless of
+     * frame8; it kills here, which clears the freeze. */
+    memset(&fx, 0, sizeof fx);
+    z.isft = 0;
+    z.health = 30;
+    weapons.frame8 = 1;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_CHARGED_ICE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 14 && z.freeze_timer == 240 &&
+           fx.particles[1].effect == MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE);
+    z.isft = 0;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_CHARGED_ICE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 0 && z.freeze_timer == 0 && z.palette_row == 0 &&
+           z.pose == 0x62);
+    /* Freezable but not weak: frozen with no damage; neither: the solid
+     * hit and the invincible particle. */
+    memset(&fx, 0, sizeof fx);
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_CAN_BE_FROZEN;
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    z.health = 20;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_ICE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 20 && z.freeze_timer == 240);
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
+    z.freeze_timer = 0;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_ICE_BEAM,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(!z.freeze_timer && fx.particles[2].effect == MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+    tables.freeze[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
+    weapons.frame8 = 0;
+    weapons.items = 0;
+    /* SpriteUtilUpdateStunTimer: the stun row when the decremented timer
+     * is 12 or 4, the sprite's own row at 16, 8 and 0. */
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS;
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    z.health = 20;
+    z.isft = 17;
+    step(&z, 0);
+    assert(z.isft == 16 && z.palette_row == z.absolute_palette_row);
+    for (int i = 0; i < 4; ++i) step(&z, 0);
+    assert(z.isft == 12 && z.palette_row == 14 - z.gfx_slot);
+    for (int i = 0; i < 4; ++i) step(&z, 0);
+    assert(z.isft == 8 && z.palette_row == z.absolute_palette_row);
+    z.isft = 0;
     /* The screw attack kill: its particle and three debris (frame8 even:
      * types 2, 3 and 4). */
     memset(&fx, 0, sizeof fx);

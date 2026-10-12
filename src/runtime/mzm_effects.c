@@ -29,6 +29,12 @@ const char *mzm_particle_table(uint8_t effect) {
     case MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM:
         return "ParticleHittingSomethingWithNormalBeamOam";
     case MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM: return "ParticleHittingSomethingWithLongBeamOam";
+    case MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM: return "ParticleHittingSomethingWithIceBeamOam";
+    case MZM_PE_FREEZING_SPRITE_WITH_ICE: return "ParticleFreezingSpriteWithIceOam";
+    case MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE:
+        return "ParticleFreezingSpriteWithChargedIceBeamOam";
+    case MZM_PE_BEAM_TRAILING_RIGHT:
+    case MZM_PE_BEAM_TRAILING_LEFT: return "ParticleBeamTrailingOam";
     case MZM_PE_PSEUDO_SCREW_DESTROYED: return "ParticlePseudoScrewDestroyedOam";
     case MZM_PE_HITTING_SOMETHING_INVINCIBLE: return "ParticleHittingSomethingInvincibleOam";
     case MZM_PE_HITTING_SOMETHING_WITH_MISSILE: return "ParticleHittingSomethingWithMissileOam";
@@ -94,14 +100,28 @@ static bool update_animation(MzmParticle *p, const MzmEffectKinds *kinds) {
  * ParticleHittingSomething*): removed when their table ends; the explosions
  * move to the high OAM priority on their first frame. */
 static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
+    /* ParticleFreezingSpriteWith*: drawn every other frame. */
+    if (p->effect == MZM_PE_FREEZING_SPRITE_WITH_ICE ||
+        p->effect == MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE)
+        p->status ^= MZM_PARTICLE_NOT_DRAWN;
     p->frame_counter++;
     if (!mzm_particle_table(p->effect) || update_animation(p, kinds)) {
         p->status = 0;
         return;
     }
+    /* ParticleBeamTrailingRight / Left: drifting down after the first frame. */
+    if (p->stage != 0 && (p->effect == MZM_PE_BEAM_TRAILING_RIGHT ||
+                          p->effect == MZM_PE_BEAM_TRAILING_LEFT)) {
+        p->x = (uint16_t)(p->x + (p->effect == MZM_PE_BEAM_TRAILING_RIGHT ? 1 : -1));
+        p->y = (uint16_t)(p->y + 4);
+    }
     if (p->stage == 0) {
         p->stage++;
-        if (p->effect <= MZM_PE_SPEEDBOOSTER_DESTROYED) p->status |= MZM_PARTICLE_HIGH_OAM_PRIORITY;
+        if (p->effect == MZM_PE_BOMB ||
+            (p->effect >= MZM_PE_SPRITE_EXPLOSION_HUGE && p->effect <= MZM_PE_SPEEDBOOSTER_DESTROYED) ||
+            p->effect == MZM_PE_FREEZING_SPRITE_WITH_ICE ||
+            p->effect == MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE)
+            p->status |= MZM_PARTICLE_HIGH_OAM_PRIORITY;
         /* ParticleBomb */
         if (p->effect == MZM_PE_BOMB) mzm_sfx_play(MZM_SOUND_BOMB_EXPLOSION);
         /* The impact sounds of ParticleHittingSomething*. */
@@ -111,6 +131,9 @@ static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
             break;
         case MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM:
             mzm_sfx_play(MZM_SOUND_LONG_BEAM_IMPACT);
+            break;
+        case MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM:
+            mzm_sfx_play(MZM_SOUND_ICE_BEAM_IMPACT);
             break;
         case MZM_PE_HITTING_SOMETHING_INVINCIBLE:
             mzm_sfx_play(MZM_SOUND_INVINCIBLE_IMPACT);

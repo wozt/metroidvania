@@ -83,8 +83,8 @@ staged like `HudGenericLoadCommonSpriteGfx` and `ProjectileLoadGraphics`
 2-7 with the beam row patched into row 2). Offsets are relative to the
 projectile position; X/Y flips mirror around it as `ProjectileDraw` does.
 
-Not yet used by the runtime: the charge, speed boost, saving, map download
-and frozen palette rows (their mechanics are missing), and effect sprites such as the Screw Attack and Speed Booster
+Not yet used by the runtime: the saving, map download and frozen palette
+rows (their mechanics are missing), and effect sprites such as the Screw Attack and Speed Booster
 overlays. The semantic registry binds 600 rows for 33 actions; the only
 missing bindings are Suitless skid, Screw Attack and shinespark actions, which
 have no native Suitless sequence.
@@ -153,8 +153,7 @@ doors, all six floor slopes at subpixel precision, enemy-only, stop-enemy and
 tank blocks. Known gaps, kept explicit: Samus's box is swept against those
 types instead of the original point probes, so slope speed changes
 (`SamusChangeVelocityOnSlope`) and the partial-ceiling position nudges are
-absent, and pass-through platforms (unused in the original rooms) are air. Speed Booster, Shinespark, bombs, charge and upgraded beams, the pistol,
-projectile hits on sprites and blocks, particles and missile trails, aiming
+absent, and pass-through platforms (unused in the original rooms) are air. The Wave and Plasma Beams, the pistol, missile trails, aiming
 while hanging, crawling and Morph Ball tunnel pulls are not implemented. Lethal damage enters the dying pose without the original
 screen-centre drift and fade. F6 remains a separate raw-catalogue browser for
 all 1,384 sequences.

@@ -141,7 +141,8 @@ PROJECTILE_SYMBOL_PREFIXES = ("sCommonSprites", "sBeamPal", "sNormalBeam",
                               "sPistol", "sChargedPistol", "sMissile", "sSuperMissile",
                               "sBomb", "sPowerBomb", "sParticleChargingBeam",
                               "sParticleShootingBeam", "sParticleBeamTrailing",
-                              "sParticleHittingSomethingWithLongBeam")
+                              "sParticleHittingSomethingWithLongBeam",
+                              "sParticleHittingSomethingWithIceBeam")
 
 
 def produce_projectiles(root: Path, rom: bytes, decomp: Path, symbols) -> dict:

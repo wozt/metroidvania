@@ -2988,6 +2988,44 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0265 - Zero Mission Ice Beam and freezing
+
+- `mzm_projectiles.c` ports `ProjectileProcessIceBeam` and its charged twin:
+  the ice types win over the Long Beam, move 26 subpixels a frame, keep the
+  Long Beam lifetime rule and drop `ProjectileSetTrail` particles half a
+  block from the shot when `gFrameCounter8Bit & 3` is 0; the ice shot and
+  charge sounds are used.
+- `mzm_sprites.c` ports `ProjectileIceBeamHittingSprite`,
+  `ProjectileChargedIceBeamHittingSprite`, `ProjectileIceBeamDealDamage` and
+  `ProjectileFreezeSprite` (3/4 and 12/16 damage, the freeze flag from the
+  high byte of the weakness column, 240 ticks, the frozen row,
+  `SOUND_FREEZING_SPRITE`, the freezing particles), `SpriteUtilUpdateFreezeTimer`
+  in every ported AI (and the Space Pirates' suited branch), and
+  `SpriteUtilUpdateStunTimer`'s stun palette flash. Frozen sprites take
+  contact damage and do not hurt Samus; standing on them is not ported yet.
+- `mzm_effects.c` adds the ice impact (with its sound), the freezing
+  particles (drawn every other frame) and the beam trails (drifting one
+  subpixel sideways and one pixel down a frame).
+- The sprite exporter bakes `/frozen` and `/stun` variants of every sprite
+  frame; the runtime picks them from the palette row, draws the ice
+  projectiles and particles from the IceBeam variant, uses the ice release
+  (row 2) and charging rows (4-5), counts the Ice Beam in the pseudo screw
+  damage, and lists Ice Beam in the debug menu (`--item ice-beam`).
+- Checked in brinstar_003 (`--item ice-beam`, L held, B taps): a brown
+  Ripper (immune to beams, freezable) freezes blue under the ice impact and
+  freezing particles, trails follow the shots and Samus flashes the ice
+  release row; the Ripper stays frozen in place.
+- Not ported: frozen sprites as platforms, the charged ice trail, the Wave
+  and Plasma Beams, the pistol.
+- Tests: `tests/test_mzm_sprites.c` (ice hits with and without the freeze
+  flag, Long Beam damage, the freeze timer and flicker, the charged kill,
+  freezable-but-immune and immune sprites, the stun flash, the freezing and
+  trailing particles), `tests/test_mzm_samus.c` (the ice type, sound, speed
+  and trail) and `tests/test_mzm_sprites.py` (the frozen and stun rows).
+- Validation on 2026-10-12: warning-clean build, CTest 30/30, the Python
+  suite (429 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0264 - Zero Mission Charge Beam and Long Beam
 
 - `mzm_projectiles.c` ports `SamusCheckFireBeamMissile` with the charge

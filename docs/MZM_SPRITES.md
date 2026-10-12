@@ -294,10 +294,17 @@ read from the user's ROM at export time; nothing is stored in the repository.
     first sets the laser's stopped pose (`SPRITE_POSE_STOPPED`, its exploding
     pose).
 
-Not ported yet: sounds (damage, death, pickups, Skree dive and crash),
-the stun palette flash, freezing and frozen (solid) sprites, power bombs
-and their drops, the multiple large energy pickup, tumbling missiles,
-charge beams and the pseudo screw, speed booster and shinespark kills,
+Freezing: the Ice Beam hits follow `ProjectileIceBeamHittingSprite` and its
+charged twin (the freeze flag is the high byte of the weakness column);
+`ProjectileFreezeSprite` sets 240 ticks and the frozen row (15 - graphics
+slot), and every ported AI then runs `SpriteUtilUpdateFreezeTimer` instead
+of its states. `SpriteUtilUpdateStunTimer` flashes the stun row (14 - slot).
+The exporter bakes `/frozen` and `/stun` variants of every sprite frame (a
+part of row b drawn with OBJ row (b + 15) % 16 or (b + 14) % 16, taking
+`frozenPaletteRowOffset` as 0); the runtime picks them from the sprite's
+palette row.
+
+Not ported yet: frozen sprites as solid platforms, the multiple large energy pickup, tumbling missiles,
 screen-shake falls, splashes in liquids, the hard-mode and event
 spritesets (where the Long Beam Dessgeega is placed), the door lock
 lifecycle, screen shakes, the Chozodia alarm's music and palette, and

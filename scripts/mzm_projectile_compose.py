@@ -182,7 +182,8 @@ BEAM_PARTICLES = ("sParticleChargingBeamBeginOam", "sParticleChargingBeamCharged
                   "sParticleShootingBeamHorizontalOam", "sParticleShootingBeamDiagonallyUpOam",
                   "sParticleShootingBeamDiagonallyDownOam", "sParticleShootingBeamUpOam",
                   "sParticleShootingBeamDownOam", "sParticleBeamTrailingOam",
-                  "sParticleHittingSomethingWithLongBeamOam")
+                  "sParticleHittingSomethingWithLongBeamOam",
+                  "sParticleHittingSomethingWithIceBeamOam")
 
 
 def compose_beam_particles(rom: bytes, symbols, sink) -> dict:

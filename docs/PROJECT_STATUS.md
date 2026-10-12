@@ -2988,6 +2988,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0277 - Zero Mission native Samus controller
+
+- `src/runtime/mzm_samus.c` is now a transliteration of `src/samus.c`: the
+  67 native poses with `sSamusCollisionData`, every pose handler and
+  graphics loop, `SamusSetPose` and its carries, the physics, the velocity
+  update (`DIV_SHIFT` shifts, slope speeds) and the native point-probe
+  collisions of `SamusUpdateHitboxMovingDirection` instead of the box sweep.
+- Reported bugs, fixed the native way: corners (the side, top and landing
+  probes with their nudges), the ledge climb with Up or the diagonal toward
+  the ledge without A (`SamusAimingWhileHanging`), the shots while hanging
+  (the hanging aim poses and their arm cannon offsets, no more shots from the
+  feet), and the running diagonals (`SamusAimCannon`).
+- Also ported: slopes, walking off ledges, the morph ball tunnel pull, the
+  knockback pose, the suitless crouching and crawling, the elevator, save,
+  zipline and background poses (not yet entered), the ground effect sounds.
+- The runtime draws the body animation `SamusUpdateGraphicsOam` selects (its
+  library key) and takes the arm cannon offset from it; the Samus export now
+  includes the Running `[ACD_NONE - 2]` rows; the screw and speed booster
+  block damage runs inside the collisions.
+- Checked in brinstar_009 (hang, climb without A, shot up), brinstar_005 (a
+  diagonal shot while running left) and a 900-frame random input run in five
+  rooms.
+- Not ported: liquids and hazards, the elevator pads and save platforms that
+  enter their poses, the sprite knockback requests, the suitless pistol.
+- Tests: `tests/test_mzm_samus.c` (new: running aim, climb without A,
+  hanging shots and arm cannon hiding, morph ball tunnel, corners, wall stop,
+  walk-off ledge, steep slope speed, suitless crouch and jump, knockback, the
+  pose table; the dying drift), `tests/test_runtime_steep_slopes.c`.
+
 ## Patch 0276 - Zero Mission Gamets
 
 - Blue and red Gamets and the blue Gamet leader with its followers run the

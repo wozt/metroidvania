@@ -78,7 +78,9 @@ TABLE_RE = re.compile(
     r"const\s+(?:struct\s+\w+|u8)\s*\*\s*const\s+"
     r"(sSamusAnimPointers_\w+|sArmCannonAnimPointers_\w+|sArmCannonGfxPointers_\w+)"
     r"\s*(?:\[[^\]]*\])+\s*=\s*\{")
-ROW_RE = re.compile(r"\[\s*([A-Za-z0-9_]+)\s*\]\s*=\s*(\{[^{}]*\}|[A-Za-z0-9_]+)")
+# ``[ACD_NONE - 2]`` is the Running tables' row for no aim (SamusUpdateGraphicsOam
+# subtracts 2 from ACD_NONE); it is read as the ``ACD_NONE`` selector.
+ROW_RE = re.compile(r"\[\s*([A-Za-z0-9_]+(?:\s*-\s*2)?)\s*\]\s*=\s*(\{[^{}]*\}|[A-Za-z0-9_]+)")
 SYMBOL_RE = re.compile(r"\b(?:sSamusAnim|sArmCannonAnim|sArmCannonGfx)_\w+\b")
 NM_RE = re.compile(r"^([0-9A-Fa-f]{8})\s+([0-9A-Fa-f]{8})\s+[A-Za-z]\s+(\S+)$")
 
@@ -108,7 +110,7 @@ def parse_tables(source: str) -> dict[str, dict[str, list[str]]]:
             if symbols:
                 if row.group(1) in rows:
                     raise ValueError(f"duplicate selector {row.group(1)} in {name}")
-                rows[row.group(1)] = symbols
+                rows[re.sub(r"\s*-\s*2$", "", row.group(1))] = symbols
         if name in tables:
             raise ValueError("duplicate table " + name)
         if rows:
@@ -208,7 +210,9 @@ def build_variants(tables) -> tuple[list[Variant], list[str]]:
                 f"sArmCannonAnimPointers_{cannon_family}_{suffix}") if suffix != "pose" else None
             for selector, symbols in sorted(tables[name].items()):
                 pose = selector if suffix == "pose" else TABLE_POSES.get(suffix)
-                acd = selector if selector in ACD_SELECTORS else "ACD_FORWARD"
+                # The cannon graphics index: ACD_NONE - 2 on the Running row.
+                acd = (selector if selector in ACD_SELECTORS else
+                       "ACD_UP" if selector == "ACD_NONE" else "ACD_FORWARD")
                 for index, side in enumerate(("right", "left")):
                     if index >= len(symbols):
                         problems.append(f"{name}[{selector}] has no {side} entry")

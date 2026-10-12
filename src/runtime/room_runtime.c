@@ -70,6 +70,7 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     unsigned char types[MAX_ROOM_CELLS]; unsigned char behaviors[MAX_ROOM_CELLS];
     /* gCurrentAffectingClipdata.movement of each block (ClipdataMovement). */
     unsigned char movements[MAX_ROOM_CELLS];
+    int never_reform_recorded;      /* blocks.never_reform entries remembered */
     RoomDoor doors[MAX_ROOM_DOORS]; int door_count;
     RoomHatch hatches[MAX_ROOM_HATCHES]; int hatch_count;
     RoomSprite sprites[MAX_ROOM_SPRITES]; int sprite_count;
@@ -587,82 +588,6 @@ static bool runtime_collision_slope(void *context,float x,float y,
 static bool runtime_collision_point(void *context,int32_t x,int32_t y,int actor) {
     return solid_point((const Room *)context,x,y,
                        actor==0?ACTOR_SAMUS:actor==1?ACTOR_NON_SPRITE:ACTOR_SPRITE);
-}
-
-/* Semantic registry action shown by each native pose. Every spin pose maps
- * to its own spin action so that generic MidAir can never replace it. */
-static const char *runtime_pose_action(MzmPose pose,uint32_t items) {
-    switch (pose) {
-        case MZM_POSE_STANDING: return "idle";
-        case MZM_POSE_RUNNING: return "run";
-        case MZM_POSE_TURNING_AROUND: return "turn";
-        case MZM_POSE_SHOOTING: return "fire";
-        case MZM_POSE_CROUCHING: return "crouch";
-        case MZM_POSE_TURNING_AROUND_AND_CROUCHING: return "turn_crouch";
-        case MZM_POSE_SHOOTING_AND_CROUCHING: return "crouch_fire";
-        case MZM_POSE_MIDAIR: return "midair";
-        case MZM_POSE_TURNING_AROUND_MIDAIR: return "turn_midair";
-        case MZM_POSE_LANDING: return "landing";
-        case MZM_POSE_STARTING_SPIN_JUMP: return "spin_start";
-        case MZM_POSE_SPINNING: return "spin";
-        case MZM_POSE_STARTING_WALL_JUMP: return "wall_jump";
-        case MZM_POSE_SPACE_JUMPING: return "space_jump";
-        case MZM_POSE_SCREW_ATTACKING:
-            /* SamusUpdateGraphicsOam: ScrewAttacking[space jump equipped]. */
-            return (items&MZM_ITEM_SPACE_JUMP)?"screw_attack_space":"screw_attack";
-        case MZM_POSE_MORPHING: return "morph_start";
-        case MZM_POSE_MORPH_BALL: return "morph_ball";
-        case MZM_POSE_ROLLING: return "rolling";
-        case MZM_POSE_MORPH_BALL_MIDAIR: return "morph_midair";
-        case MZM_POSE_GETTING_HURT_IN_MORPH_BALL: return "hurt_morph";
-        case MZM_POSE_UNMORPHING: return "unmorph";
-        case MZM_POSE_HANGING_ON_LEDGE: return "ledge_hang";
-        case MZM_POSE_PULLING_UP: return "ledge_pull_up";
-        case MZM_POSE_PULLING_FORWARD: return "ledge_pull_forward";
-        case MZM_POSE_GETTING_HURT: return "hurt";
-        case MZM_POSE_DYING: return "death";
-        case MZM_POSE_SKIDDING: return "skid";
-        case MZM_POSE_DELAY_BEFORE_SHINESPARKING: return "shinespark_charge";
-        case MZM_POSE_SHINESPARKING:
-        case MZM_POSE_SHINESPARK_COLLISION: return "shinespark";
-        case MZM_POSE_DELAY_AFTER_SHINESPARKING: return "shinespark_end";
-        case MZM_POSE_DELAY_BEFORE_BALLSPARKING: return "ballspark_charge";
-        case MZM_POSE_BALLSPARKING: return "ball_spark";
-        case MZM_POSE_BALLSPARK_COLLISION: return "ball_spark_collision";
-        case MZM_POSE_GRABBED_BY_CHOZO_STATUE: return "grabbed_by_chozo_statue";
-        case MZM_POSE_COUNT: break;
-    }
-    return "idle";
-}
-
-/* Registry fallback used only when a suit lacks the exact native sequence. */
-static const char *runtime_pose_fallback_action(MzmPose pose) {
-    switch (pose) {
-        case MZM_POSE_STARTING_SPIN_JUMP:
-        case MZM_POSE_SPINNING:
-        case MZM_POSE_SPACE_JUMPING:
-        case MZM_POSE_SCREW_ATTACKING:
-        case MZM_POSE_STARTING_WALL_JUMP: return "spin";
-        case MZM_POSE_TURNING_AROUND_MIDAIR: return "midair";
-        case MZM_POSE_TURNING_AROUND_AND_CROUCHING:
-        case MZM_POSE_SHOOTING_AND_CROUCHING: return "crouch";
-        case MZM_POSE_ROLLING:
-        case MZM_POSE_MORPH_BALL_MIDAIR:
-        case MZM_POSE_GETTING_HURT_IN_MORPH_BALL: return "morph_ball";
-        default: break;
-    }
-    return mzm_pose_standing(pose) == MZM_STANDING_MIDAIR ? "midair" : "idle";
-}
-
-static const char *runtime_aim_name(MzmAim aim) {
-    switch (aim) {
-        case MZM_AIM_DIAGONAL_UP: return "diagonalup";
-        case MZM_AIM_DIAGONAL_DOWN: return "diagonaldown";
-        case MZM_AIM_UP: return "up";
-        case MZM_AIM_DOWN: return "down";
-        case MZM_AIM_FORWARD: break;
-    }
-    return "forward";
 }
 
 /* Diagnostic equipment presets. The registry suit names select graphics;
@@ -1189,32 +1114,13 @@ static void runtime_finish_collecting_tank(Room *room) {
                             (uint8_t)room->room, c->x, c->y, type);
 }
 
-/* SamusCheckScrewSpeedboosterAffectingEnvironment: the screw attack and the
- * speed booster destroy blocks on contact. */
-static void runtime_samus_destruct(Room *room, const MzmBlockEnv *env, const MzmSamus *samus,
-                                   const MzmEquipment *equipment) {
-    int action = MZM_DESTRUCT_NONE;
-    if (samus->pose == MZM_POSE_SCREW_ATTACKING ||
-        (samus->pose == MZM_POSE_STARTING_SPIN_JUMP && equipment->items & MZM_ITEM_SCREW_ATTACK))
-        action = MZM_DESTRUCT_SCREW;
-    if (samus->speedboosting) action += MZM_DESTRUCT_SPEED;
-    if (action == MZM_DESTRUCT_NONE) return;
-    const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
-    int32_t left = (uint16_t)(samus->x + box->left), right = (uint16_t)(samus->x + box->right);
-    int32_t top = (uint16_t)(samus->y + box->top), bottom = (uint16_t)samus->y;
-    bool below = box->top < -MZM_BLOCK_SIZE;
-    MzmBlocks *blocks = &room->blocks;
-    mzm_blocks_samus_destruct(blocks, env, left, top, action);
-    mzm_blocks_samus_destruct(blocks, env, right, top, action);
-    int32_t side = samus->x_velocity > 0 ? right : left;
-    if (below) mzm_blocks_samus_destruct(blocks, env, side, top + MZM_BLOCK_SIZE, action);
-    mzm_blocks_samus_destruct(blocks, env, side, bottom, action);
-    if (mzm_pose_standing(samus->pose) == MZM_STANDING_GROUND) {
-        bottom += 1;
-        action = MZM_DESTRUCT_SPEED_ON_GROUND;
-    }
-    mzm_blocks_samus_destruct(blocks, env, left, bottom, action);
-    mzm_blocks_samus_destruct(blocks, env, right, bottom, action);
+/* BlockSamusApplyScrewSpeedboosterDamageToEnvironment, called by the
+ * controller's SamusCheckScrewSpeedboosterAffectingEnvironment. */
+static void runtime_samus_destruct(void *context, uint16_t x, uint16_t y, int action) {
+    Room *room = context;
+    if (!runtime_block_tables.ok) return;
+    MzmBlockEnv env = runtime_block_env(room);
+    mzm_blocks_samus_destruct(&room->blocks, &env, x, y, action);
 }
 
 /* BgClipCheckWalkingOnCrumbleBlock */
@@ -1248,11 +1154,13 @@ static void runtime_blocks_frame(Room *room, const char *alias, const MzmSamus *
     if (!runtime_block_tables.ok) return;
     runtime_block_samus = samus;
     MzmBlockEnv env = runtime_block_env(room);
-    int recorded = room->blocks.never_reform_count;
-    runtime_samus_destruct(room, &env, samus, equipment);
+    (void)equipment;
     runtime_crumble_blocks(room, &env, samus);
     mzm_blocks_update_broken(&room->blocks, &env);
     mzm_blocks_process_bomb_chains(&room->blocks, &env, frame8);
+    /* The blocks Samus destroyed during her update are recorded here too. */
+    int recorded = room->never_reform_recorded;
+    room->never_reform_recorded = room->blocks.never_reform_count;
     for (int i = recorded; i < room->blocks.never_reform_count; ++i) {
         if (runtime_never_reform_memory.count >= 1024) break;
         int k = runtime_never_reform_memory.count++;
@@ -1633,56 +1541,57 @@ static bool runtime_animation_map_open(RuntimeAnimationMap *map,const char *path
     if(!ok || map->count==0){map->count=0;return false;}
     return true;
 }
-static RuntimeAnimationMapRow *runtime_animation_map_find(
-        RuntimeAnimationMap *map,const char *action,const char *suit,
-        const char *facing,const char *aim) {
-    for(int pass=0;pass<3;pass++) {
-        const char *wanted=pass==0?aim:pass==1?"forward":"none";
-        if(pass>0 && !strcmp(wanted,aim))continue;
-        for(int i=0;i<map->count;i++) {
-            RuntimeAnimationMapRow *row=&map->rows[i];
-            if(!strcmp(row->action,action)&&!strcmp(row->suit,suit)&&
-               !strcmp(row->facing,facing)&&!strcmp(row->aim,wanted))return row;
+/* SamusUpdateGraphicsOam's body animation in the library (with the armed
+ * arm cannon graphics while missiles are highlighted). A table without the
+ * direction's row falls back to its forward row, then to the pose's. */
+static RuntimeLibraryEntry *runtime_samus_entry(RuntimeLibrary *library,const MzmSamus *samus,
+                                                const MzmEquipment *equipment,
+                                                uint8_t weapon_highlighted) {
+    char key[160];
+    mzm_samus_graphics_key(samus,equipment,weapon_highlighted,key,sizeof key);
+    RuntimeLibraryEntry *entry=runtime_library_find(library,key);
+    if(!entry) {
+        char fallback[160];
+        const char *acd=strstr(key,"/ACD_");
+        if(acd) {
+            const char *side=strchr(acd+1,'/');
+            snprintf(fallback,sizeof fallback,"%.*s/ACD_FORWARD%s",(int)(acd-key),key,
+                     side?side:"");
+            entry=runtime_library_find(library,fallback);
+        }
+        if(!entry) {
+            const char *family=equipment->suit==MZM_SUIT_SUITLESS?"Suitless":
+                equipment->suit==MZM_SUIT_NORMAL?"PowerSuit":"FullSuit";
+            snprintf(fallback,sizeof fallback,"%s/pose/%s/%s",family,mzm_pose_name(samus->pose),
+                     samus->facing<0?"left":"right");
+            entry=runtime_library_find(library,fallback);
         }
     }
-    return NULL;
+    if(entry && mzm_samus_armed_graphics(weapon_highlighted)) {
+        char armed[176];
+        snprintf(armed,sizeof armed,"%s/armed",entry->name);
+        RuntimeLibraryEntry *armed_entry=runtime_library_find(library,armed);
+        if(armed_entry && armed_entry->count==entry->count) entry=armed_entry;
+    }
+    return entry;
 }
-typedef struct {
-    RuntimeAnimationMap *map;
-    const char *suit;
-    const MzmEquipment *equipment;
-} RuntimePoseAnimation;
-static RuntimeAnimationMapRow *runtime_pose_row(RuntimeAnimationMap *map,
-        const MzmSamus *samus,const char *suit,uint32_t items) {
-    const char *side=samus->facing<0?"left":"right";
-    const char *aim=runtime_aim_name(samus->aim);
-    RuntimeAnimationMapRow *row=NULL;
-    /* SamusUpdateGraphicsOam: Running_Speedboosting while speed boosting. */
-    if(samus->pose==MZM_POSE_RUNNING && samus->speedboosting)
-        row=runtime_animation_map_find(map,"run_speedboost",suit,side,aim);
-    /* Shinesparking[forcedMovement]: up, sideways or diagonal. */
-    if((samus->pose==MZM_POSE_SHINESPARKING || samus->pose==MZM_POSE_SHINESPARK_COLLISION) &&
-       samus->spark_direction)
-        row=runtime_animation_map_find(map,samus->spark_direction==1?"shinespark_side":
-                                       "shinespark_diagonal",suit,side,"none");
-    if(!row)row=runtime_animation_map_find(
-        map,runtime_pose_action(samus->pose,items),suit,side,aim);
-    if(!row && samus->pose==MZM_POSE_SCREW_ATTACKING)
-        row=runtime_animation_map_find(map,"screw_attack",suit,side,aim);
-    if(!row)row=runtime_animation_map_find(
-        map,runtime_pose_fallback_action(samus->pose),suit,side,aim);
-    return row;
-}
-static int runtime_pose_durations(void *context,const MzmSamus *samus,
-                                  uint8_t *durations,int max) {
-    RuntimePoseAnimation *animation=context;
-    if(animation->map->count==0)return 0;
-    RuntimeAnimationMapRow *row=runtime_pose_row(animation->map,samus,
-        animation->suit,animation->equipment->items);
-    if(!row)return 0;
-    int count=row->entry->count<max?row->entry->count:max;
-    for(int i=0;i<count;i++)durations[i]=(uint8_t)row->entry->ticks[i];
+/* The native frame durations of a Samus animation by its library key. */
+static int runtime_pose_durations(void *context,const char *key,uint8_t *durations,int max) {
+    RuntimeLibraryEntry *entry=runtime_library_find(context,key);
+    if(!entry)return 0;
+    int count=entry->count<max?entry->count:max;
+    for(int i=0;i<count;i++)durations[i]=(uint8_t)entry->ticks[i];
     return count;
+}
+/* gSamusWeaponInfo.weaponHighlighted */
+static uint8_t runtime_weapon_highlighted(const MzmWeapons *weapons) {
+    switch(weapons->highlighted) {
+        case MZM_WEAPON_MISSILE: return MZM_WH_MISSILE;
+        case MZM_WEAPON_SUPER_MISSILE: return MZM_WH_SUPER_MISSILE;
+        case MZM_WEAPON_POWER_BOMB: return MZM_WH_POWER_BOMB;
+        case MZM_WEAPON_NONE: break;
+    }
+    return 0;
 }
 /* Projectile library key for ProjectileProcess* OAM selection and the
  * X/Y flips applied by ProjectileDraw. */
@@ -2196,6 +2105,42 @@ static uint8_t runtime_sprite_movement(void *context, uint16_t y, uint16_t x) {
     return room->movements[row * (room->width / 16) + column];
 }
 
+/* ClipdataProcessForSamus: past the room's right edge (or left of it, as
+ * the u16 position wraps) a solid block, below it air. */
+static uint32_t runtime_samus_clipdata(void *context, uint16_t y, uint16_t x) {
+    const Room *room = context;
+    if (x / 64 >= room->width / 16) return MZM_SAMUS_CLIP_SOLID_FLAG | CLIP_SOLID;
+    if (y / 64 >= room->height / 16) return CLIP_AIR;
+    MzmSpriteWorld world = {(void *)room, runtime_sprite_block, 0, 0, NULL, 0};
+    return mzm_clipdata_process(&world, y, x, MZM_ACTOR_SAMUS);
+}
+
+/* ClipdataCheckCurrentAffectingAtPosition: the block's movement (no
+ * hazard: the runtime has no liquids, heat or cold). The elevator blocks are
+ * reported as none, as the elevator pads and their room changes are not
+ * ported. */
+static uint32_t runtime_samus_affecting(void *context, uint16_t y, uint16_t x) {
+    uint8_t movement = runtime_sprite_movement(context, y, x);
+    if (movement == MZM_SAMUS_MOVEMENT_ELEVATOR_DOWN_BLOCK ||
+        movement == MZM_SAMUS_MOVEMENT_ELEVATOR_UP_BLOCK)
+        movement = MZM_CLIPDATA_MOVEMENT_NONE;
+    return (uint32_t)movement << 16;
+}
+
+/* ClipdataCheckGroundEffect: sGroundEffectsClipdataValues of the block's
+ * behavior (CLIP_BEHAVIOR_WET_GROUND .. CLIP_BEHAVIOR_VERY_DUSTY_GROUND). */
+static uint8_t runtime_samus_ground_effect(void *context, uint16_t y, uint16_t x) {
+    static const uint8_t effects[5] = {
+        MZM_GROUND_EFFECT_WET_GROUND, MZM_GROUND_EFFECT_DUSTY_GROUND, MZM_GROUND_EFFECT_UNKNOWN,
+        MZM_GROUND_EFFECT_BUBBLY_GROUND, MZM_GROUND_EFFECT_VERY_DUSTY_GROUND,
+    };
+    const Room *room = context;
+    int column = x / 64, row = y / 64;
+    if (column >= room->width / 16 || row >= room->height / 16) return MZM_GROUND_EFFECT_NONE;
+    uint16_t behavior = runtime_clip_behavior(room->clip[row * (room->width / 16) + column]);
+    return (uint16_t)(behavior - 0x50) < 5 ? effects[behavior - 0x50] : MZM_GROUND_EFFECT_NONE;
+}
+
 /* SpriteUtilTakeDamageFromSprite (normal difficulty) and the knockback of
  * SpriteUtilSamusAndSpriteCollision. */
 typedef struct {
@@ -2367,8 +2312,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                    samus->pose==MZM_POSE_BALLSPARKING,
                                runtime_pseudo_screw_damage(samus,equipment,weapons),
                                weapons?&weapons->charge_counter:NULL, &world, samus->y_velocity,
-                               samus->pose == MZM_POSE_PULLING_UP ||
-                                   samus->pose == MZM_POSE_PULLING_FORWARD,
+                               samus->pose == MZM_POSE_PULLING_YOURSELF_UP_FROM_HANGING ||
+                                   samus->pose == MZM_POSE_PULLING_YOURSELF_FORWARD_FROM_HANGING,
                                mzm_pose_hitbox(samus->pose) == MZM_HITBOX_MORPHED,
                                (int8_t)(samus->facing > 0 ? 1 : -1), equipment->energy != 0,
                                false, false};
@@ -2995,7 +2940,9 @@ int main(int argc, char **argv) {
     runtime_sprites_spawn(&sprites, room);
     gba_input_init(&gamepad,&pad_map);
     MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope,
-                            runtime_collision_point,runtime_collision_affect};
+                            runtime_collision_point,runtime_collision_affect,
+                            runtime_samus_clipdata,runtime_samus_affecting,
+                            runtime_samus_destruct,runtime_samus_ground_effect};
     bool door_lock=false;
     MzmEquipment equipment={0};
     unsigned int suit_preset=0,spin_items=0;
@@ -3015,10 +2962,9 @@ int main(int argc, char **argv) {
     mzm_weapons_init(&weapons);
     MzmProjectileAnimation projectile_animation={&projectile_library,
                                                  runtime_projectile_durations};
-    RuntimePoseAnimation pose_animation={&animation_map,
-                                         runtime_suit_presets[0].registry,
-                                         &equipment};
-    MzmAnimationSource animation_source={&pose_animation,runtime_pose_durations};
+    /* The registry suit selects the palettes. */
+    struct { const char *suit; } pose_animation={runtime_suit_presets[0].registry};
+    MzmAnimationSource animation_source={&library,runtime_pose_durations};
     MzmSamus samus;
     if(spawn_px>=0 && spawn_py>=0) {
         mzm_samus_init(&samus,(int32_t)spawn_px*MZM_SUBPIXELS_PER_PIXEL,
@@ -3341,7 +3287,7 @@ int main(int argc, char **argv) {
                 capture_step++;
             }
             if(debug.open && !capture_path)held=0;     /* a menu frame step */
-            MzmInput input={held,(uint16_t)((held&~previous_held)|latched),false};
+            MzmInput input={held,(uint16_t)((held&~previous_held)|latched),false,0,0};
             latched=0;
             previous_held=held;
             if(restart_queued) {
@@ -3394,20 +3340,29 @@ int main(int argc, char **argv) {
             } else {
                 input.new_projectile=mzm_weapons_begin_frame(
                     &weapons,&samus,input.held,input.pressed,&equipment);
+                input.weapon_highlighted=runtime_weapon_highlighted(&weapons);
+                input.charge_counter=weapons.charge_counter;
+                /* gBg1X/YPosition of the GBA's 240x160 screen centred in the
+                 * wider view. */
+                samus.camera_x=(int32_t)last_cx*4+(320-240)*2;
+                samus.camera_y=(int32_t)last_cy*4+(224-160)*2;
                 mzm_samus_update(&samus,&input,&equipment,&collision,&animation_source);
             }
             palette_frame++;
             /* ProjectileUpdate reads the arm cannon offset of the pose and
              * frame Samus has after her update. */
             int cannon_x=0,cannon_y=0;
-            RuntimeAnimationMapRow *cannon_row=animation_map.count?runtime_pose_row(
-                &animation_map,&samus,pose_animation.suit,equipment.items):NULL;
-            if(cannon_row && cannon_row->entry->count>0) {
-                int index=samus.anim_frame<cannon_row->entry->count?
-                    samus.anim_frame:cannon_row->entry->count-1;
-                if(cannon_row->entry->frames[index].has_cannon) {
-                    cannon_x=cannon_row->entry->frames[index].cannon_x;
-                    cannon_y=cannon_row->entry->frames[index].cannon_y;
+            /* SamusUpdateArmCannonPositionOffset: the offset of the arm
+             * cannon animation frame SamusUpdateGraphicsOam pairs with the
+             * body. */
+            RuntimeLibraryEntry *cannon_entry=library.count?runtime_samus_entry(
+                &library,&samus,&equipment,runtime_weapon_highlighted(&weapons)):NULL;
+            if(cannon_entry && cannon_entry->count>0) {
+                int index=samus.anim_frame<cannon_entry->count?
+                    samus.anim_frame:cannon_entry->count-1;
+                if(cannon_entry->frames[index].has_cannon) {
+                    cannon_x=cannon_entry->frames[index].cannon_x;
+                    cannon_y=cannon_entry->frames[index].cannon_y;
                 }
             }
             /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
@@ -3647,18 +3602,9 @@ int main(int argc, char **argv) {
             Uint64 elapsed_ms=SDL_GetTicks()-animation_start;
             frame=samus_timeline_frame(lib_entry->ticks,lib_entry->count,
                                        (unsigned int)(elapsed_ms*60u/1000u));
-        } else if(animation_map.count>0) {
-            RuntimeAnimationMapRow *row=runtime_pose_row(
-                &animation_map,&samus,pose_animation.suit,equipment.items);
-            lib_entry=row?row->entry:NULL;
-            if(lib_entry && weapons.highlighted!=MZM_WEAPON_NONE) {
-                /* SamusUpdateGraphicsOam: armed cannon graphics. */
-                char armed[176];
-                snprintf(armed,sizeof armed,"%s/armed",lib_entry->name);
-                RuntimeLibraryEntry *armed_entry=runtime_library_find(&library,armed);
-                if(armed_entry && armed_entry->count==lib_entry->count)
-                    lib_entry=armed_entry;
-            }
+        } else if(library.count>0) {
+            lib_entry=runtime_samus_entry(&library,&samus,&equipment,
+                                          runtime_weapon_highlighted(&weapons));
             /* The controller owns the native frame index and timer. */
             if(lib_entry && lib_entry->count>0)
                 frame=samus.anim_frame<lib_entry->count?samus.anim_frame:lib_entry->count-1;

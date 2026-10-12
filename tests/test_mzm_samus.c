@@ -12,7 +12,9 @@
 #define GRID_W 20
 #define GRID_H 15
 
-typedef struct { bool solid[GRID_H][GRID_W]; } Grid;
+/* Solid blocks and, where `slope` is nonzero, a floor slope ClipdataType
+ * (2 left steep, 3 right steep). */
+typedef struct { bool solid[GRID_H][GRID_W]; uint8_t slope[GRID_H][GRID_W]; } Grid;
 
 static bool grid_blocked(void *context, float x, float y, float w, float h) {
     const Grid *g = context;
@@ -26,6 +28,20 @@ static bool grid_blocked(void *context, float x, float y, float w, float h) {
     return false;
 }
 
+/* ClipdataProcessForSamus on the grid: solid blocks, solid columns past the
+ * sides, air below. */
+static uint32_t grid_clipdata(void *context, uint16_t y, uint16_t x) {
+    const Grid *g = context;
+    int col = x / 64, row = y / 64;
+    if (col >= GRID_W) return 1 | MZM_SAMUS_CLIP_SOLID_FLAG;
+    if (row >= GRID_H) return 0;
+    unsigned sx = x % 64, sy = y % 64;
+    /* ClipdataConvertToCollision for the steep slopes. */
+    if (g->slope[row][col] == 2) return sy >= sx ? 2 | MZM_SAMUS_CLIP_SOLID_FLAG : 2;
+    if (g->slope[row][col] == 3) return sy >= 63 - sx ? 3 | MZM_SAMUS_CLIP_SOLID_FLAG : 3;
+    return g->solid[row][col] ? 1 | MZM_SAMUS_CLIP_SOLID_FLAG : 0;
+}
+
 static void fill(Grid *g, int col, int row, int w, int h) {
     for (int r = row; r < row + h; ++r)
         for (int c = col; c < col + w; ++c) g->solid[r][c] = true;
@@ -33,13 +49,14 @@ static void fill(Grid *g, int col, int row, int w, int h) {
 
 /* Two-tick frames by default; MidAir and the ledge pulls use the frame
  * counts and durations of the native Power Suit sequences. */
-static int test_durations(void *context, const MzmSamus *samus,
+static int test_durations(void *context, const char *key,
                           uint8_t *durations, int max) {
     (void)context;
     int count = 2, ticks = 2;
-    if (samus->pose == MZM_POSE_MIDAIR) count = 5;
-    if (samus->pose == MZM_POSE_PULLING_UP) { count = 3; ticks = 3; }
-    if (samus->pose == MZM_POSE_PULLING_FORWARD) { count = 4; ticks = 3; }
+    if (strstr(key, "/SPOSE_MIDAIR/")) count = 5;
+    if (strstr(key, "/SPOSE_PULLING_YOURSELF_UP_FROM_HANGING/") ||
+        strstr(key, "/SPOSE_PULLING_YOURSELF_INTO_A_MORPH_BALL_TUNNEL/")) { count = 3; ticks = 3; }
+    if (strstr(key, "/SPOSE_PULLING_YOURSELF_FORWARD_FROM_HANGING/")) { count = 4; ticks = 3; }
     if (count > max) count = max;
     for (int i = 0; i < count; ++i) durations[i] = (uint8_t)ticks;
     return count;
@@ -56,7 +73,8 @@ typedef struct {
 
 static void world_init(World *w) {
     memset(w, 0, sizeof *w);
-    w->collision = (MzmCollision){.context = &w->grid, .blocked = grid_blocked};
+    w->collision = (MzmCollision){.context = &w->grid, .blocked = grid_blocked,
+                                  .clipdata = grid_clipdata};
     w->animation = (MzmAnimationSource){NULL, test_durations};
     w->equipment = (MzmEquipment){.suit = MZM_SUIT_NORMAL,
         .items = MZM_ITEM_MORPH_BALL | MZM_ITEM_POWER_GRIP,
@@ -70,7 +88,7 @@ static void place(World *w, int pixel_x, int feet_y) {
 }
 
 static void step(World *w, uint16_t held) {
-    MzmInput input = {held, (uint16_t)(held & ~w->previous), false};
+    MzmInput input = {held, (uint16_t)(held & ~w->previous), false, 0, 0};
     w->previous = held;
     mzm_samus_update(&w->samus, &input, &w->equipment, &w->collision,
                      &w->animation);
@@ -234,7 +252,8 @@ static void test_wall_jump(void) {
     while (!(w.samus.pose == MZM_POSE_SPINNING && w.samus.walljump_timer) &&
            frames++ < 60) step(&w, MZM_KEY_RIGHT | MZM_KEY_A);
     assert(w.samus.walljump_timer == MZM_WALL_JUMP_TICKS);
-    assert(w.samus.last_wall == -1 && box_clear(&w));
+    /* lastWallTouchedMidAir: the native KEY_LEFT bit, opposite the facing. */
+    assert(w.samus.last_wall == (1u << 5) && box_clear(&w));
     /* Turning away first, then A, starts the native wall jump. */
     step(&w, MZM_KEY_LEFT | MZM_KEY_A);
     assert(w.samus.facing == -1);
@@ -327,9 +346,9 @@ static void test_ledge(void) {
     steps(&w, 0, 5);
     assert(w.samus.pose == MZM_POSE_HANGING_ON_LEDGE);
     step(&w, MZM_KEY_RIGHT | MZM_KEY_A);
-    assert(w.samus.pose == MZM_POSE_PULLING_UP);
+    assert(w.samus.pose == MZM_POSE_PULLING_YOURSELF_UP_FROM_HANGING);
     steps(&w, MZM_KEY_RIGHT, 9);
-    assert(w.samus.pose == MZM_POSE_PULLING_FORWARD);
+    assert(w.samus.pose == MZM_POSE_PULLING_YOURSELF_FORWARD_FROM_HANGING);
     assert(w.samus.y == 160 * 4);
     int32_t hang_x = w.samus.x;
     steps(&w, 0, 12);
@@ -369,15 +388,35 @@ static void test_hurt_and_death(void) {
     assert(mzm_pose_standing(w.samus.pose) == MZM_STANDING_MIDAIR);
     mzm_samus_hurt(&w.samus, &w.collision, false);
     assert(w.samus.y_velocity == 56);
+    /* No energy: SamusChangeToHurtPose sets the drift toward the GBA
+     * screen's centre (gBg1X + 480, gBg1Y + 400 subpixels); already there,
+     * Samus stays put whatever the input. */
+    w.samus.camera_x = w.samus.x - 480;
+    w.samus.camera_y = (w.samus.y - 1) - 400;
     mzm_samus_hurt(&w.samus, &w.collision, true);
-    assert(w.samus.pose == MZM_POSE_DYING);
+    assert(w.samus.pose == MZM_POSE_DYING && w.samus.x_velocity == 0 && w.samus.y_velocity == 0);
     int32_t x = w.samus.x, y = w.samus.y;
     steps(&w, MZM_KEY_RIGHT | MZM_KEY_A, 20);
     assert(w.samus.pose == MZM_POSE_DYING && w.samus.x == x && w.samus.y == y);
+    /* Left of the centre: half the distance as velocity, a stop past it. */
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    w.samus.camera_x = 0;
+    w.samus.camera_y = (w.samus.y - 1) - 400;
+    mzm_samus_hurt(&w.samus, &w.collision, true);
+    assert(w.samus.x_velocity == (480 - 256) / 2 && w.samus.y_velocity == 0);
+    step(&w, 0);
+    assert(w.samus.x == 256 + 14);
+    steps(&w, 0, 40);
+    assert(w.samus.x_velocity == 0 && w.samus.x >= 480 && w.samus.x < 480 + 14);
 }
 
-/* Random input over mixed geometry must never leave the hitbox embedded
- * in collision, whatever pose or hitbox size the controller selects. */
+/* Random input over mixed geometry never keeps Samus inside collision for
+ * a second nor takes her out of the room. The native probes allow overlaps:
+ * a spin broken under a low ceiling moves Samus down half a block, her
+ * upward velocity then puts the head in the ceiling, and with no vertical
+ * motion (A released at the apex) no probe runs until she falls out. */
 static void test_random_input_never_embeds(void) {
     World w;
     world_init(&w);
@@ -392,6 +431,7 @@ static void test_random_input_never_embeds(void) {
     place(&w, 40, 224);
     uint32_t seed = 12345u;
     uint16_t held = 0;
+    int embedded = 0;
     static const uint32_t item_sets[] = {
         0, MZM_ITEM_SPACE_JUMP, MZM_ITEM_SCREW_ATTACK,
         MZM_ITEM_SPACE_JUMP | MZM_ITEM_SCREW_ATTACK
@@ -404,7 +444,9 @@ static void test_random_input_never_embeds(void) {
                 MZM_ITEM_HIGH_JUMP | item_sets[(frame / 5000) % 4];
         }
         step(&w, held);
-        assert(box_clear(&w));
+        embedded = box_clear(&w) ? 0 : embedded + 1;
+        assert(embedded < 60);
+        assert(w.samus.x > 0 && w.samus.x < GRID_W * 64 && w.samus.y > 0 && w.samus.y <= GRID_H * 64);
         assert(w.samus.pose < MZM_POSE_COUNT);
     }
 }
@@ -600,7 +642,7 @@ static void test_firing_breaks_a_spin(void) {
     assert(w.samus.pose == MZM_POSE_SPINNING);
     MzmWeapons weapons;
     mzm_weapons_init(&weapons);
-    MzmInput input = {MZM_KEY_RIGHT | MZM_KEY_A | MZM_KEY_B, MZM_KEY_B, false};
+    MzmInput input = {MZM_KEY_RIGHT | MZM_KEY_A | MZM_KEY_B, MZM_KEY_B, false, 0, 0};
     input.new_projectile = mzm_weapons_begin_frame(&weapons, &w.samus, input.held,
                                                    input.pressed, &w.equipment);
     mzm_samus_update(&w.samus, &input, &w.equipment, &w.collision, &w.animation);
@@ -946,7 +988,7 @@ static void test_shinespark(void) {
     int frames = 0;
     while (w.samus.pose == MZM_POSE_DELAY_BEFORE_SHINESPARKING && frames++ < 20) step(&w, 0);
     /* Upwards by default, at 192 (24 subpixels a frame), speed boosting. */
-    assert(w.samus.pose == MZM_POSE_SHINESPARKING && w.samus.spark_direction == 0);
+    assert(w.samus.pose == MZM_POSE_SHINESPARKING && w.samus.forced == MZM_FORCED_UPWARDS_SHINESPARK);
     assert(w.samus.y_velocity == MZM_SHINESPARK_VELOCITY && w.samus.speedboosting &&
            w.samus.shinespark_timer == 0);
     y = w.samus.y;
@@ -976,7 +1018,7 @@ static void test_shinespark(void) {
     frames = 0;
     while (w.samus.pose == MZM_POSE_DELAY_BEFORE_SHINESPARKING && frames++ < 20)
         step(&w, MZM_KEY_RIGHT);
-    assert(w.samus.pose == MZM_POSE_SHINESPARKING && w.samus.spark_direction == 1 &&
+    assert(w.samus.pose == MZM_POSE_SHINESPARKING && w.samus.forced == MZM_FORCED_SIDEWARDS_SHINESPARK &&
            w.samus.x_velocity == MZM_SHINESPARK_VELOCITY && w.samus.y_velocity == 0);
     y = w.samus.y;
     while (w.samus.pose == MZM_POSE_SHINESPARKING && frames++ < 80) step(&w, MZM_KEY_RIGHT);
@@ -990,7 +1032,7 @@ static void test_shinespark(void) {
     w.samus.shinespark_timer = 100;
     step(&w, MZM_KEY_A);
     while (w.samus.pose == MZM_POSE_DELAY_BEFORE_SHINESPARKING) step(&w, MZM_KEY_L);
-    assert(w.samus.spark_direction == 2 &&
+    assert(w.samus.forced == MZM_FORCED_DIAGONAL_SHINESPARK &&
            w.samus.x_velocity == MZM_DIAGONAL_SHINESPARK_X_VELOCITY &&
            w.samus.y_velocity == MZM_DIAGONAL_SHINESPARK_Y_VELOCITY);
 
@@ -998,6 +1040,7 @@ static void test_shinespark(void) {
      * a hop, then upwards. */
     world_init(&w);
     w.equipment.items |= MZM_ITEM_HIGH_JUMP;
+    fill(&w.grid, 0, 0, GRID_W, 1);     /* a ceiling: above the room is air */
     place(&w, 64, 224);
     step(&w, 0);
     step(&w, MZM_KEY_DOWN);
@@ -1359,7 +1402,7 @@ static void test_standing_on_sprite(void) {
     place(&w, 64, 96);              /* feet over air */
     w.samus.y_velocity = -20;
     w.samus.pose = MZM_POSE_MIDAIR;
-    MzmInput none = {0, 0, false};
+    MzmInput none = {0, 0, false, 0, 0};
     mzm_samus_land_on_sprite(&w.samus, &none, &w.equipment, &w.collision);
     assert(w.samus.pose == MZM_POSE_LANDING && w.samus.y_velocity == 0 &&
            w.samus.copy_y == 96 * 4);
@@ -1373,6 +1416,298 @@ static void test_standing_on_sprite(void) {
     w.samus.on_enemy = false;
     step(&w, 0);
     assert(w.samus.pose == MZM_POSE_MIDAIR);
+}
+
+static void graphics_key(const World *w, uint8_t highlighted, char *key) {
+    mzm_samus_graphics_key(&w->samus, &w->equipment, highlighted, key, 160);
+}
+
+static void step_input(World *w, uint16_t held, bool new_projectile, uint8_t charge) {
+    MzmInput input = {held, (uint16_t)(held & ~w->previous), new_projectile, 0, charge};
+    w->previous = held;
+    mzm_samus_update(&w->samus, &input, &w->equipment, &w->collision, &w->animation);
+}
+
+/* Reported bug 4: the diagonals while running (SamusAimCannon's running
+ * case: Up or Down with the direction aims diagonally; no direction pad
+ * aim leaves the arm down, ACD_NONE, with its own Running row). */
+static void test_running_aim(void) {
+    World w;
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    steps(&w, MZM_KEY_RIGHT, 3);
+    char key[160];
+    assert(w.samus.pose == MZM_POSE_RUNNING && w.samus.aim == MZM_AIM_NONE);
+    graphics_key(&w, 0, key);
+    assert(strcmp(key, "PowerSuit/Running/ACD_NONE/right") == 0);
+    step(&w, MZM_KEY_RIGHT | MZM_KEY_UP);
+    assert(w.samus.pose == MZM_POSE_RUNNING && w.samus.aim == MZM_AIM_DIAGONAL_UP);
+    graphics_key(&w, 0, key);
+    assert(strcmp(key, "PowerSuit/Running/ACD_DIAGONALLY_UP/right") == 0);
+    step(&w, MZM_KEY_RIGHT | MZM_KEY_DOWN);
+    assert(w.samus.aim == MZM_AIM_DIAGONAL_DOWN);
+    step(&w, MZM_KEY_RIGHT);
+    assert(w.samus.aim == MZM_AIM_FORWARD);    /* aiming released: forward */
+    /* Leftward, the same diagonals. */
+    steps(&w, MZM_KEY_LEFT, 12);
+    assert(w.samus.facing == -1);
+    steps(&w, MZM_KEY_LEFT | MZM_KEY_UP, 2);
+    assert(w.samus.pose == MZM_POSE_RUNNING && w.samus.aim == MZM_AIM_DIAGONAL_UP);
+    graphics_key(&w, 0, key);
+    assert(strcmp(key, "PowerSuit/Running/ACD_DIAGONALLY_UP/left") == 0);
+    /* L alone aims diagonally up, L with Down diagonally down. */
+    steps(&w, MZM_KEY_LEFT | MZM_KEY_L, 2);
+    assert(w.samus.aim == MZM_AIM_DIAGONAL_UP);
+    step(&w, MZM_KEY_LEFT | MZM_KEY_L | MZM_KEY_DOWN);
+    assert(w.samus.aim == MZM_AIM_DIAGONAL_DOWN);
+    /* A charging beam keeps the cannon forward. */
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    for (int i = 0; i < 3; ++i) step_input(&w, MZM_KEY_RIGHT, false, 20);
+    assert(w.samus.pose == MZM_POSE_RUNNING && w.samus.aim == MZM_AIM_FORWARD);
+    /* Landing while aiming up keeps a diagonal for the run. */
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    step(&w, MZM_KEY_A);
+    steps(&w, MZM_KEY_A | MZM_KEY_UP, 6);
+    assert(w.samus.pose == MZM_POSE_MIDAIR && w.samus.aim == MZM_AIM_UP);
+}
+
+/* A ledge to hang from: the platform's top at y=160, starting at x=160. */
+static void hang(World *w) {
+    world_init(w);
+    fill(&w->grid, 10, 10, 10, GRID_H - 10);
+    place(w, 150, 224);
+    step(w, 0);
+    step(w, MZM_KEY_RIGHT);
+    step(w, MZM_KEY_RIGHT | MZM_KEY_A);
+    int frames = 0;
+    while (w->samus.pose != MZM_POSE_HANGING_ON_LEDGE && frames++ < 120)
+        step(w, MZM_KEY_RIGHT | MZM_KEY_A);
+    assert(w->samus.pose == MZM_POSE_HANGING_ON_LEDGE && w->samus.facing == 1);
+    steps(w, 0, 3);
+}
+
+/* Reported bug 2: climbing with the diagonal toward the ledge, no A
+ * (SamusHangingOnLedge turns to aim on Up, SamusAimingWhileHanging pulls
+ * Samus up after ten frames of Up without the outward direction). */
+static void test_ledge_climb_without_a(void) {
+    World w;
+    hang(&w);
+    step(&w, MZM_KEY_UP | MZM_KEY_RIGHT);
+    assert(w.samus.pose == MZM_POSE_TURNING_TO_AIM_WHILE_HANGING && w.samus.facing == -1);
+    int frames = 0;
+    while (w.samus.pose == MZM_POSE_TURNING_TO_AIM_WHILE_HANGING && frames++ < 20)
+        step(&w, MZM_KEY_UP | MZM_KEY_RIGHT);
+    assert(w.samus.pose == MZM_POSE_AIMING_WHILE_HANGING);
+    frames = 0;
+    while (w.samus.pose == MZM_POSE_AIMING_WHILE_HANGING && frames++ < 30)
+        step(&w, MZM_KEY_UP | MZM_KEY_RIGHT);
+    /* Eleven frames: the timer passes 9. */
+    assert(w.samus.pose == MZM_POSE_PULLING_YOURSELF_UP_FROM_HANGING && frames == 11 &&
+           w.samus.facing == 1);
+    frames = 0;
+    while (w.samus.pose != MZM_POSE_STANDING && frames++ < 60) step(&w, MZM_KEY_UP | MZM_KEY_RIGHT);
+    assert(w.samus.pose == MZM_POSE_STANDING && w.samus.y == 160 * 4 && w.samus.x >= 160 * 4);
+
+    /* Up alone climbs too; the outward direction with Up does not. */
+    hang(&w);
+    steps(&w, MZM_KEY_UP | MZM_KEY_LEFT, 40);
+    assert(w.samus.pose == MZM_POSE_AIMING_WHILE_HANGING && w.samus.aim == MZM_AIM_DIAGONAL_UP);
+    steps(&w, MZM_KEY_UP, 12);
+    assert(w.samus.pose == MZM_POSE_PULLING_YOURSELF_UP_FROM_HANGING);
+
+    /* Pressing toward the ledge again hides the arm cannon and hangs. */
+    hang(&w);
+    steps(&w, MZM_KEY_DOWN, 10);
+    assert(w.samus.pose == MZM_POSE_AIMING_WHILE_HANGING && w.samus.aim == MZM_AIM_DOWN);
+    step(&w, MZM_KEY_RIGHT);
+    assert(w.samus.pose == MZM_POSE_HIDING_ARM_CANNON_WHILE_HANGING);
+    frames = 0;
+    while (w.samus.pose == MZM_POSE_HIDING_ARM_CANNON_WHILE_HANGING && frames++ < 20) step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_HANGING_ON_LEDGE && w.samus.facing == 1);
+
+    /* A block above the ledge: the climb pulls into a morph ball tunnel. */
+    hang(&w);
+    fill(&w.grid, 10, 8, 1, 1);
+    step(&w, MZM_KEY_RIGHT | MZM_KEY_A);
+    assert(w.samus.pose == MZM_POSE_PULLING_YOURSELF_INTO_A_MORPH_BALL_TUNNEL);
+    frames = 0;
+    while (w.samus.pose != MZM_POSE_MORPH_BALL && frames++ < 60) step(&w, MZM_KEY_RIGHT);
+    assert(w.samus.pose == MZM_POSE_MORPH_BALL && w.samus.y == 160 * 4);
+}
+
+/* Reported bug 3: firing while hanging turns away from the ledge and aims
+ * up (or down) with the hanging arm cannon tables, whose offsets the
+ * projectiles use (no more shots from the feet). */
+static void test_shooting_while_hanging(void) {
+    World w;
+    hang(&w);
+    step_input(&w, MZM_KEY_B, true, 0);
+    assert(w.samus.pose == MZM_POSE_SHOOTING_WHILE_HANGING && w.samus.facing == -1 &&
+           w.samus.aim == MZM_AIM_UP);
+    char key[160];
+    graphics_key(&w, 0, key);
+    assert(strcmp(key, "PowerSuit/ShootingWhileHanging/ACD_UP/left") == 0);
+    int frames = 0;
+    while (w.samus.pose == MZM_POSE_SHOOTING_WHILE_HANGING && frames++ < 20) step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_AIMING_WHILE_HANGING);
+    /* Aiming: Up and Down, the diagonals with the outward direction. */
+    step(&w, MZM_KEY_DOWN);
+    assert(w.samus.aim == MZM_AIM_DOWN);
+    step(&w, MZM_KEY_DOWN | MZM_KEY_LEFT);
+    assert(w.samus.aim == MZM_AIM_DIAGONAL_DOWN);
+    step(&w, MZM_KEY_LEFT);
+    assert(w.samus.aim == MZM_AIM_FORWARD);
+    step_input(&w, MZM_KEY_LEFT | MZM_KEY_B, true, 0);
+    assert(w.samus.pose == MZM_POSE_SHOOTING_WHILE_HANGING && w.samus.aim == MZM_AIM_FORWARD);
+    graphics_key(&w, MZM_WH_MISSILE, key);
+    assert(strcmp(key, "PowerSuit/ShootingWhileHanging/ACD_FORWARD/left") == 0);
+    /* Down held: the first shot aims down. */
+    hang(&w);
+    step_input(&w, MZM_KEY_DOWN | MZM_KEY_B, true, 0);
+    assert(w.samus.pose == MZM_POSE_SHOOTING_WHILE_HANGING && w.samus.aim == MZM_AIM_DOWN);
+    /* A charging beam turns to aim while hanging. */
+    hang(&w);
+    step_input(&w, MZM_KEY_B, false, 10);
+    assert(w.samus.pose == MZM_POSE_AIMING_WHILE_HANGING && w.samus.aim == MZM_AIM_UP);
+    /* A jumps away from the ledge, spinning when holding outward. */
+    step(&w, MZM_KEY_LEFT | MZM_KEY_A);
+    assert(w.samus.pose == MZM_POSE_STARTING_SPIN_JUMP || w.samus.pose == MZM_POSE_SPINNING);
+}
+
+/* Reported bug 1: the native corner rules of the probes. */
+static void test_corners(void) {
+    World w;
+    /* A ceiling block whose edge only covers Samus's leftmost head probe:
+     * SamusCheckTopCollision moves her out of it and she keeps rising. */
+    world_init(&w);
+    fill(&w.grid, 3, 9, 1, 1);
+    place(&w, 64 + 8, 224);          /* left probe at x = 72 - 7 = 65: in column 4 */
+    w.samus.x = 4 * 64 + 28 - 4;     /* the left probe 4 subpixels inside column 3 */
+    step(&w, 0);
+    step(&w, MZM_KEY_A);
+    int32_t lowest = w.samus.y;
+    int frames = 0;
+    while (w.samus.pose == MZM_POSE_MIDAIR && w.samus.y_velocity > 0 && frames++ < 60) {
+        step(&w, MZM_KEY_A);
+        if (w.samus.y < lowest) lowest = w.samus.y;
+    }
+    /* Pushed right to clear the block's edge, then on up past its bottom. */
+    assert(w.samus.x == 4 * 64 + 28);
+    assert(lowest - 1 + mzm_block_hitbox(MZM_HITBOX_STANDING)->top < 10 * 64);
+    /* A block covering a middle probe stops the rise under it. */
+    world_init(&w);
+    fill(&w.grid, 4, 9, 1, 1);
+    place(&w, 64 + 8, 224);
+    w.samus.x = 4 * 64 + 32;
+    step(&w, 0);
+    step(&w, MZM_KEY_A);
+    frames = 0;
+    while (w.samus.pose == MZM_POSE_MIDAIR && frames++ < 60) {
+        step(&w, MZM_KEY_A);
+        assert(w.samus.y - 1 + mzm_block_hitbox(MZM_HITBOX_STANDING)->top >= 10 * 64);
+    }
+    /* Running into a wall stops at the block edge minus the hitbox. */
+    world_init(&w);
+    fill(&w.grid, 10, 0, 1, GRID_H);
+    place(&w, 100, 224);
+    step(&w, 0);
+    steps(&w, MZM_KEY_RIGHT, 80);
+    assert(w.samus.x == 10 * 64 - 28 - 1 && w.samus.x_velocity == 0);
+    assert(box_clear(&w));
+    /* Walking off a ledge drops at the native halfway point of her block. */
+    world_init(&w);
+    memset(w.grid.solid, 0, sizeof w.grid.solid);
+    fill(&w.grid, 0, GRID_H - 1, 5, 1);
+    place(&w, 40, 224);
+    step(&w, 0);
+    frames = 0;
+    while (w.samus.pose != MZM_POSE_MIDAIR && frames++ < 200) step(&w, MZM_KEY_RIGHT);
+    assert(w.samus.pose == MZM_POSE_MIDAIR);
+    assert(w.samus.x >= 5 * 64 + 28 && w.samus.x < 5 * 64 + 28 + 14);
+}
+
+/* The steep slopes: walked up and down with the native slope speeds. */
+static void test_steep_slope(void) {
+    World w;
+    world_init(&w);
+    /* A right steep slope rising from the floor (row 13) to row 12. */
+    w.grid.slope[13][6] = 3;
+    fill(&w.grid, 7, 13, 13, 1);
+    place(&w, 64, 224);
+    step(&w, 0);
+    int frames = 0;
+    while (w.samus.x < 7 * 64 + 32 && frames++ < 300) {
+        step(&w, MZM_KEY_RIGHT);
+        assert(w.samus.pose == MZM_POSE_RUNNING || w.samus.pose == MZM_POSE_STANDING);
+    }
+    /* Up the slope onto the higher floor, never airborne. */
+    assert(w.samus.y == 13 * 64 && w.samus.current_slope == 0);
+    /* On the slope the speed is three fifths going up. */
+    world_init(&w);
+    w.grid.slope[13][6] = 3;
+    fill(&w.grid, 7, 13, 13, 1);
+    place(&w, 6 * 16 + 4, 224);
+    step(&w, 0);
+    for (int i = 0; i < 30 && !(w.samus.current_slope & 1); ++i) step(&w, MZM_KEY_RIGHT);
+    assert(w.samus.current_slope == (1 | (1u << 4)));
+    w.samus.x_velocity = 80;
+    int32_t x = w.samus.x;
+    step(&w, MZM_KEY_RIGHT);
+    assert(w.samus.x - x == ((80 + 8) * 3 / 5) >> 3);
+}
+
+/* Suitless crawling: the run into a low passage crouches to crawl. */
+static void test_suitless(void) {
+    World w;
+    world_init(&w);
+    w.equipment.suit = MZM_SUIT_SUITLESS;
+    w.equipment.items = 0;
+    place(&w, 64, 224);
+    step(&w, 0);
+    step(&w, MZM_KEY_DOWN);
+    assert(w.samus.pose == MZM_POSE_CROUCHING_SUITLESS);
+    char key[160];
+    graphics_key(&w, 0, key);
+    assert(strcmp(key, "Suitless/CrouchingSuitless/ACD_FORWARD/right") == 0);
+    int frames = 0;
+    while (w.samus.pose != MZM_POSE_CROUCHING && frames++ < 20) step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_CROUCHING);
+    step(&w, MZM_KEY_UP);
+    assert(w.samus.pose == MZM_POSE_UNCROUCHING_SUITLESS);
+    /* The suitless jump. */
+    frames = 0;
+    while (w.samus.pose != MZM_POSE_STANDING && frames++ < 20) step(&w, 0);
+    step(&w, MZM_KEY_A);
+    assert(w.samus.pose == MZM_POSE_MIDAIR && w.samus.y_velocity == MZM_SUITLESS_JUMP_VELOCITY - 10);
+}
+
+/* The pose table: every pose's hitbox and standing status, and the
+ * requests outside it. */
+static void test_pose_table(void) {
+    assert(mzm_pose_standing(MZM_POSE_AIMING_WHILE_HANGING) == MZM_STANDING_HANGING);
+    assert(mzm_pose_standing(MZM_POSE_PULLING_YOURSELF_UP_FROM_HANGING) == MZM_STANDING_FORCED);
+    assert(mzm_pose_standing(MZM_POSE_PULLING_YOURSELF_FORWARD_FROM_HANGING) == MZM_STANDING_GROUND);
+    assert(mzm_pose_standing(MZM_POSE_ON_ZIPLINE) == MZM_STANDING_NOT_IN_CONTROL);
+    assert(mzm_pose_hitbox(MZM_POSE_CRAWLING) == MZM_HITBOX_MORPHED);
+    assert(mzm_pose_hitbox(MZM_POSE_ON_ZIPLINE) == MZM_HITBOX_STANDING);
+    assert(strcmp(mzm_pose_name(MZM_POSE_TURNING_TO_ENTER_ESCAPE_SHIP),
+                  "SPOSE_TURNING_TO_ENTER_ESCAPE_SHIP") == 0);
+    assert(MZM_POSE_COUNT == 67 && MZM_POSE_MID_AIR_REQUEST == 0xFE);
+    /* SamusSetPose(SPOSE_KNOCKBACK_REQUEST) */
+    World w;
+    world_init(&w);
+    place(&w, 64, 224);
+    step(&w, 0);
+    mzm_samus_knockback(&w.samus, &w.collision);
+    assert(w.samus.pose == MZM_POSE_GETTING_KNOCKED_BACK && w.samus.y_velocity == 112);
+    int frames = 0;
+    while (w.samus.pose == MZM_POSE_GETTING_KNOCKED_BACK && frames++ < 60) step(&w, 0);
+    assert(w.samus.pose == MZM_POSE_MIDAIR && frames > 13);
 }
 
 int main(void) {
@@ -1399,6 +1734,13 @@ int main(void) {
     test_standing_on_sprite();
     test_wave_and_plasma();
     test_tumbling_missile();
+    test_running_aim();
+    test_ledge_climb_without_a();
+    test_shooting_while_hanging();
+    test_corners();
+    test_steep_slope();
+    test_suitless();
+    test_pose_table();
     puts("MZM Samus controller tests passed");
     return 0;
 }

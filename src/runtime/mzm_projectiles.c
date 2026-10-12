@@ -36,6 +36,11 @@ static bool pose_can_fire(MzmPose pose) {
         case MZM_POSE_SPACE_JUMPING:
         case MZM_POSE_SCREW_ATTACKING:
         case MZM_POSE_HANGING_ON_LEDGE:
+        case MZM_POSE_HIDING_ARM_CANNON_WHILE_HANGING:
+        case MZM_POSE_AIMING_WHILE_HANGING:
+        case MZM_POSE_SHOOTING_WHILE_HANGING:
+        case MZM_POSE_ON_ZIPLINE:
+        case MZM_POSE_SHOOTING_ON_ZIPLINE:
             return true;
         default:
             return false;
@@ -57,10 +62,16 @@ static void set_highlighted_weapon(MzmWeapons *weapons, const MzmSamus *samus,
     case MZM_POSE_MORPH_BALL:
     case MZM_POSE_ROLLING:
     case MZM_POSE_MORPH_BALL_MIDAIR:
+    case MZM_POSE_MORPH_BALL_ON_ZIPLINE:
     case MZM_POSE_GETTING_HURT_IN_MORPH_BALL:
+    case MZM_POSE_GETTING_KNOCKED_BACK_IN_MORPH_BALL:
         if (held & MZM_KEY_R && equipment->power_bombs != 0) highlighted = MZM_WEAPON_POWER_BOMB;
         break;
     case MZM_POSE_HANGING_ON_LEDGE:
+    case MZM_POSE_USING_AN_ELEVATOR:
+    case MZM_POSE_FACING_THE_FOREGROUND:
+    case MZM_POSE_TURNING_FROM_FACING_THE_FOREGROUND:
+    case MZM_POSE_SAVING_LOADING_GAME:
     case MZM_POSE_DELAY_BEFORE_SHINESPARKING:
     case MZM_POSE_SHINESPARKING:
     case MZM_POSE_SHINESPARK_COLLISION:
@@ -105,6 +116,7 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
     case MZM_POSE_MORPH_BALL:
     case MZM_POSE_ROLLING:
     case MZM_POSE_MORPH_BALL_MIDAIR:
+    case MZM_POSE_MORPH_BALL_ON_ZIPLINE:
         /* Bombs: no hasNewProjectile, so the pose is not interrupted. */
         if (pressed & MZM_KEY_B && weapons->cooldown == 0 && equipment->items & MZM_ITEM_BOMBS &&
             !weapons->pending) {
@@ -119,6 +131,15 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
             weapons->pending = true;
             weapons->pending_type = MZM_PROJECTILE_CHARGED_BEAM;
         }
+        weapons->charge_counter = 0;
+        return false;
+    case MZM_POSE_USING_AN_ELEVATOR:
+    case MZM_POSE_SAVING_LOADING_GAME:
+    case MZM_POSE_DOWNLOADING_MAP_DATA:
+    case MZM_POSE_TURNING_AROUND_TO_DOWNLOAD_MAP_DATA:
+    case MZM_POSE_DYING:
+    case MZM_POSE_IN_ESCAPE_SHIP:
+    case MZM_POSE_TURNING_TO_ENTER_ESCAPE_SHIP:
         weapons->charge_counter = 0;
         return false;
     default:
@@ -353,6 +374,7 @@ static void projectile_move(MzmProjectile *p, int distance, int16_t samus_x_velo
             p->x += sign * distance;
             break;
         case MZM_AIM_FORWARD:
+        case MZM_AIM_NONE:          /* default */
             p->x += sign * distance;
             break;
     }

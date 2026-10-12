@@ -67,24 +67,40 @@ int main(void) {
     assert(samus_timeline_frame(timing,3,5)==2);
     assert(samus_timeline_frame(timing,3,6)==0);
 
-    /* Every spin pose keeps its own action; generic MidAir is only the
-     * fallback of non-spinning airborne poses. */
-    assert(strcmp(runtime_pose_action(MZM_POSE_SPINNING,0),"spin")==0);
-    assert(strcmp(runtime_pose_action(MZM_POSE_STARTING_SPIN_JUMP,0),"spin_start")==0);
-    assert(strcmp(runtime_pose_action(MZM_POSE_SCREW_ATTACKING,0),"screw_attack")==0);
-    assert(strcmp(runtime_pose_action(MZM_POSE_SCREW_ATTACKING,MZM_ITEM_SPACE_JUMP),
-                  "screw_attack_space")==0);
-    assert(strcmp(runtime_pose_action(MZM_POSE_ROLLING,0),"rolling")==0);
-    assert(strcmp(runtime_pose_fallback_action(MZM_POSE_ROLLING),"morph_ball")==0);
-    assert(strcmp(runtime_pose_fallback_action(MZM_POSE_SPACE_JUMPING),"spin")==0);
-    assert(strcmp(runtime_pose_fallback_action(MZM_POSE_TURNING_AROUND_MIDAIR),
-                  "midair")==0);
-    for (int pose = 0; pose < MZM_POSE_COUNT; ++pose)
-        if (mzm_pose_is_spinning((MzmPose)pose))
-            assert(strcmp(runtime_pose_action((MzmPose)pose,0),"midair")!=0 &&
-                   strcmp(runtime_pose_fallback_action((MzmPose)pose),"midair")!=0);
-    assert(strcmp(runtime_aim_name(MZM_AIM_UP),"up")==0);
-    assert(strcmp(runtime_aim_name(MZM_AIM_FORWARD),"forward")==0);
+    /* SamusUpdateGraphicsOam's body animations as library keys. */
+    {
+        MzmSamus k;
+        MzmEquipment suit={.suit=MZM_SUIT_NORMAL};
+        char key[160];
+        mzm_samus_init(&k,0,0,1);
+        k.pose=MZM_POSE_RUNNING;
+        k.aim=MZM_AIM_NONE;
+        mzm_samus_graphics_key(&k,&suit,0,key,sizeof key);
+        assert(strcmp(key,"PowerSuit/Running/ACD_NONE/right")==0);
+        k.aim=MZM_AIM_DIAGONAL_UP;
+        k.facing=-1;
+        k.speedboosting=1;
+        mzm_samus_graphics_key(&k,&suit,0,key,sizeof key);
+        assert(strcmp(key,"PowerSuit/Running_Speedboosting/ACD_DIAGONALLY_UP/left")==0);
+        k.pose=MZM_POSE_SCREW_ATTACKING;
+        suit.items=MZM_ITEM_SPACE_JUMP;
+        suit.suit=MZM_SUIT_FULLY_POWERED;
+        mzm_samus_graphics_key(&k,&suit,0,key,sizeof key);
+        assert(strcmp(key,"FullSuit/ScrewAttacking/TRUE/left")==0);
+        k.pose=MZM_POSE_AIMING_WHILE_HANGING;
+        k.aim=MZM_AIM_UP;
+        mzm_samus_graphics_key(&k,&suit,0,key,sizeof key);
+        assert(strcmp(key,"FullSuit/AimingWhileHanging/ACD_UP/left")==0);
+        k.pose=MZM_POSE_SKIDDING;
+        mzm_samus_graphics_key(&k,&suit,MZM_WH_MISSILE,key,sizeof key);
+        assert(strcmp(key,"FullSuit/Skidding/TRUE/left")==0);
+        k.pose=MZM_POSE_SPINNING;
+        suit.suit=MZM_SUIT_SUITLESS;
+        mzm_samus_graphics_key(&k,&suit,0,key,sizeof key);
+        assert(strcmp(key,"Suitless/pose/SPOSE_SPINNING/left")==0);
+        assert(mzm_samus_armed_graphics(MZM_WH_SUPER_MISSILE) && !mzm_samus_armed_graphics(MZM_WH_POWER_BOMB));
+    }
+    (void)runtime_samus_destruct;
 
     /* Diagnostic presets drive native suit types and item flags. */
     MzmEquipment equipment={0};

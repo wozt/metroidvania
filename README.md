@@ -222,15 +222,19 @@ the door transition to load the destination room at its native exit. Hatch
 shells are tinted rectangles until the common hatch tiles are rendered.
 
 This shortcut consumes only local ignored assets. Samus is driven by a
-pose controller ported from the pinned Zero Mission decompilation (native
-physics constants, per-pose hitboxes and pose transitions); it is not yet a
-complete Zero Mission gameplay engine. Controls follow the GBA layout:
+transliteration of the pinned decompilation's `src/samus.c`: every pose
+handler and its graphics loop, the pose changes, the physics, the native
+point-probe collisions (corners, slopes, ledges) and the animation and arm
+cannon selection of `SamusUpdateGraphicsOam`; the triggers of the elevator,
+save, map, zipline and escape poses and the liquids are not ported yet. Controls follow the GBA layout:
 arrows/WASD are the D-pad, Space/Z is A (jump), F/X is B (fire), E/Q hold L
 for diagonal aim up/down. Gamepads work in both runtimes (see "Gamepads"
 below). Down crouches and Down again morphs; Up unmorphs and
 stands. Running jumps spin; touch a wall during a spin, press away and then A
-to wall-jump. With Power Grip, hold toward a ledge while falling to hang, then
-press A while holding toward it to climb. Fast upward jumps show Zero
+to wall-jump. With Power Grip, hold toward a ledge while falling to hang; Up (or the
+diagonal toward the ledge) turns to aim and climbs after ten frames, A with
+the direction toward it climbs at once, and B fires up (Down: down) from the
+hanging arm cannon. Running with Up or Down aims diagonally. Fast upward jumps show Zero
 Mission's position-history echo. B fires the Power Beam from the native arm
 cannon position; holding V or Left Shift (GBA R, gamepad right shoulder) arms
 missiles and Tab (Select, gamepad Back) toggles super missiles. In the Morph

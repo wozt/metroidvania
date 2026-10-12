@@ -711,6 +711,122 @@ static void test_sounds(void) {
     assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SUPER_MISSILE_THRUST));
 }
 
+/* The nine CAA_BOMB_PISTOL points of an explosion, in order. */
+static int bomb_points;
+static int32_t bomb_point_x[16], bomb_point_y[16];
+static void record_bomb_points(void *context, int32_t x, int32_t y, int damage) {
+    (void)context;
+    if (damage == MZM_DAMAGE_BOMB_PISTOL && bomb_points < 16) {
+        bomb_point_x[bomb_points] = x;
+        bomb_point_y[bomb_points] = y;
+        bomb_points++;
+    }
+}
+
+/* ProjectileProcessBomb, ProjectileCheckSamusBombBounce, SamusBombBounce. */
+static void test_bombs(void) {
+    World w;
+    world_init(&w);
+    w.equipment.items |= MZM_ITEM_BOMBS;
+    w.collision.affect = record_bomb_points;
+    place(&w, 64, 224);
+    step(&w, 0);
+    step(&w, MZM_KEY_DOWN);
+    step(&w, 0);
+    step(&w, MZM_KEY_DOWN);
+    steps(&w, 0, 8);
+    assert(w.samus.pose == MZM_POSE_MORPH_BALL);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+    /* Without the item, B does nothing in the Morph Ball. */
+    w.equipment.items &= ~(uint32_t)MZM_ITEM_BOMBS;
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment));
+    assert(!weapons.pending);
+    w.equipment.items |= MZM_ITEM_BOMBS;
+    mzm_sfx_clear();
+    /* No hasNewProjectile: the Morph Ball pose goes on. */
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, MZM_KEY_B, &w.equipment));
+    weapons.samus_previous_x = w.samus.x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    const MzmProjectile *bomb = first_active(&weapons);
+    assert(bomb && bomb->type == MZM_PROJECTILE_BOMB && weapons.cooldown == 7);
+    assert(bomb->x == w.samus.x && bomb->y == w.samus.y - 1 && !bomb->x_flip);
+    assert(bomb->bomb_stage == MZM_BOMB_FIRST_SPIN && !bomb->fast);
+    assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_BOMB_SET));
+    /* 16 slow frames, 16 fast frames, then the explosion particle. */
+    int frames = 0;
+    while (!bomb->fast) {
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+        frames++;
+    }
+    assert(frames == 16);
+    frames = 0;
+    while (bomb->bomb_stage != MZM_BOMB_EXPLODING) {
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+        frames++;
+    }
+    assert(frames == 16 && bomb->hidden && !bomb->hits_sprites);
+    assert(weapons.impact_count == 1 && weapons.impacts[0].type == MZM_PROJECTILE_BOMB &&
+           weapons.impacts[0].y == bomb->y - 16 && bomb_points == 0);
+    /* The first explosion frame: the block centre, the sprite pass and the
+     * bounce of Samus sitting on the bomb (straight up). */
+    weapons.samus_previous_x = w.samus.x;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(bomb_points == 1 && bomb_point_x[0] == bomb->x && bomb_point_y[0] == bomb->y - 8);
+    assert(bomb->hits_sprites && weapons.bomb_bounce == MZM_FORCED_BOMB_JUMP_UP);
+    assert(mzm_samus_bomb_bounce(&w.samus, &w.equipment, &w.collision, weapons.bomb_bounce));
+    assert(w.samus.pose == MZM_POSE_MORPH_BALL_MIDAIR &&
+           w.samus.y_velocity == MZM_BOMB_BOUNCE_Y_VELOCITY && w.samus.x_velocity == 0);
+    int32_t ground = w.samus.y;
+    /* The other eight points, one a frame, then the bomb is gone. */
+    for (int i = 0; i < 8; ++i)
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(bomb_points == 9);
+    assert(bomb_point_y[1] == bomb->y + 56 && bomb_point_x[1] == bomb->x);
+    assert(bomb_point_x[2] == bomb->x + 48 && bomb_point_x[3] == bomb->x - 48);
+    assert(bomb_point_x[4] == bomb->x + 36 && bomb_point_y[4] == bomb->y + 56);
+    assert(bomb_point_y[6] == bomb->y - 72 && bomb_point_x[8] == bomb->x - 36);
+    for (int i = 0; i < 6; ++i)
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(bomb->active);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(!bomb->active && bomb_points == 9);
+    /* The bounce rises without A held (the mid-air jump forced movement). */
+    step(&w, 0);
+    step(&w, 0);
+    assert(w.samus.y < ground);
+
+    /* Beside the bomb: a sideways bounce away from it. */
+    assert(mzm_samus_bomb_bounce_allowed(&w.samus, MZM_FORCED_BOMB_JUMP_LEFT) ==
+           (w.samus.y_velocity <= 0));
+    MzmSamus rolling = w.samus;
+    rolling.pose = MZM_POSE_ROLLING;
+    assert(mzm_samus_bomb_bounce(&rolling, &w.equipment, &w.collision,
+                                 MZM_FORCED_BOMB_JUMP_RIGHT));
+    assert(rolling.x_velocity == MZM_BOMB_BOUNCE_X_VELOCITY && rolling.facing == 1);
+    /* Falling in the air: only from a bomb that is not above. */
+    MzmSamus falling = w.samus;
+    falling.pose = MZM_POSE_MORPH_BALL_MIDAIR;
+    falling.y_velocity = -8;
+    assert(mzm_samus_bomb_bounce_allowed(&falling, MZM_FORCED_BOMB_JUMP_UP));
+    assert(!mzm_samus_bomb_bounce_allowed(&falling, MZM_FORCED_BOMB_JUMP_UP | MZM_BOMB_JUMP_ABOVE));
+    falling.pose = MZM_POSE_STANDING;
+    assert(!mzm_samus_bomb_bounce_allowed(&falling, MZM_FORCED_BOMB_JUMP_UP));
+
+    /* Four bombs at most, one every 7 frames. */
+    mzm_weapons_init(&weapons);
+    w.samus.pose = MZM_POSE_MORPH_BALL;
+    int placed = 0;
+    for (int frame = 0; frame < 40; ++frame) {
+        mzm_weapons_begin_frame(&weapons, &w.samus, MZM_KEY_B, frame & 1 ? 0 : MZM_KEY_B,
+                                &w.equipment);
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+        int count = mzm_projectile_count(&weapons, MZM_PROJECTILE_BOMB);
+        if (count > placed) placed = count;
+    }
+    assert(placed == MZM_PROJECTILE_LIMIT_BOMB);
+}
+
 int main(void) {
     test_native_tables();
     test_damage();
@@ -727,6 +843,7 @@ int main(void) {
     test_projectiles_affect_blocks();
     test_firing_breaks_a_spin();
     test_sounds();
+    test_bombs();
     puts("MZM Samus controller tests passed");
     return 0;
 }

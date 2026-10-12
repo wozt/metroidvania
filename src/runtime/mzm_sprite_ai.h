@@ -50,6 +50,7 @@ enum {
     NORMAL_BEAM_DAMAGE = 2,
     MISSILE_DAMAGE = 20,
     SUPER_MISSILE_DAMAGE = 100,
+    BOMB_DAMAGE = 8,
 };
 
 /* The state SpriteUpdate shares with an AI (gCurrentSprite, gSpriteRng,

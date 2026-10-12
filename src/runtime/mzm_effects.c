@@ -17,6 +17,7 @@ enum {
 
 const char *mzm_particle_table(uint8_t effect) {
     switch (effect) {
+    case MZM_PE_BOMB: return "ParticleBombOam";
     case MZM_PE_SPRITE_EXPLOSION_HUGE: return "ParticleSpriteExplosionHugeOam";
     case MZM_PE_SPRITE_EXPLOSION_SMALL: return "ParticleSpriteExplosionSmallOam";
     case MZM_PE_SPRITE_EXPLOSION_MEDIUM: return "ParticleSpriteExplosionMediumOam";
@@ -84,7 +85,7 @@ static bool update_animation(MzmParticle *p, const MzmEffectKinds *kinds) {
     return false;
 }
 
-/* The one-shot effects (ParticleSpriteExplosion*, ParticleScrewAttackDestroyed,
+/* The one-shot effects (ParticleBomb, ParticleSpriteExplosion*, ParticleScrewAttackDestroyed,
  * ParticleHittingSomething*): removed when their table ends; the explosions
  * move to the high OAM priority on their first frame. */
 static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
@@ -96,6 +97,8 @@ static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
     if (p->stage == 0) {
         p->stage++;
         if (p->effect <= MZM_PE_SCREW_ATTACK_DESTROYED) p->status |= MZM_PARTICLE_HIGH_OAM_PRIORITY;
+        /* ParticleBomb */
+        if (p->effect == MZM_PE_BOMB) mzm_sfx_play(MZM_SOUND_BOMB_EXPLOSION);
         /* The impact sounds of ParticleHittingSomething*. */
         switch (p->effect) {
         case MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM:

@@ -22,6 +22,7 @@
 
 /* ParticleEffectId values of the ported effects. */
 enum {
+    MZM_PE_BOMB = 19,
     MZM_PE_SPRITE_EXPLOSION_HUGE = 30,
     MZM_PE_SPRITE_EXPLOSION_SMALL = 31,
     MZM_PE_SPRITE_EXPLOSION_MEDIUM = 32,

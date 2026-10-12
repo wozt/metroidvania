@@ -5,8 +5,9 @@
  * missile branches of ProjectileUpdate, ProjectileInit, ProjectileMove,
  * ProjectileProcessNormalBeam/Missile/SuperMissile, ProjectileUpdateAnimation
  * and the distance part of ProjectileCheckDespawn from the pinned mzm
- * decompilation. Sprite and environment collisions, particles, charge beams,
- * beam upgrades, bombs and tumbling missiles are not implemented yet.
+ * decompilation, and the bombs (ProjectileProcessBomb,
+ * ProjectileCheckSamusBombBounce). Charge beams, beam upgrades, power bombs
+ * and tumbling missiles are not implemented yet.
  * Projectile collision probes one point against the runtime's verified
  * Clipdata boxes instead of ClipdataProcess. No SDL dependency. */
 #ifndef MZM_PROJECTILES_H
@@ -18,6 +19,9 @@
 #define MZM_PROJECTILE_LIMIT_BEAM 6
 #define MZM_PROJECTILE_LIMIT_MISSILE 4
 #define MZM_PROJECTILE_LIMIT_SUPER_MISSILE 4
+#define MZM_PROJECTILE_LIMIT_BOMB 4
+/* BOMB_EXPLOSION_TIMER, also each spin's duration. */
+#define MZM_BOMB_TIMER 16
 #define MZM_SHORT_BEAM_LIFETIME 12
 #define MZM_BEAM_COOLDOWN 7
 #define MZM_MISSILE_COOLDOWN 9
@@ -26,8 +30,17 @@
 typedef enum {
     MZM_PROJECTILE_BEAM,
     MZM_PROJECTILE_MISSILE,
-    MZM_PROJECTILE_SUPER_MISSILE
+    MZM_PROJECTILE_SUPER_MISSILE,
+    MZM_PROJECTILE_BOMB
 } MzmProjectileType;
+
+/* BombStage (the morph ball launcher stages are not ported). */
+typedef enum {
+    MZM_BOMB_INIT,
+    MZM_BOMB_FIRST_SPIN,
+    MZM_BOMB_FAST_SPIN,
+    MZM_BOMB_EXPLODING
+} MzmBombStage;
 
 typedef enum {
     MZM_WEAPON_NONE,
@@ -50,6 +63,12 @@ typedef struct {
     MzmProjectileStage stage;
     uint8_t timer;
     uint8_t anim_frame, anim_counter;
+    /* Bombs: their stage, sBombOam_Fast, PROJ_STATUS_NOT_DRAWN, and the
+     * ProjectileCheckHittingSprite pass of the explosion (natively run
+     * before the projectile loop, on the frame after the explosion sets
+     * PROJ_STATUS_CAN_AFFECT_ENVIRONMENT). */
+    MzmBombStage bomb_stage;
+    bool fast, hidden, hits_sprites;
 } MzmProjectile;
 
 struct MzmProjectile;
@@ -74,6 +93,12 @@ typedef struct {
      * ParticleSet with the projectile's hitting effect. */
     struct { int32_t x, y; MzmProjectileType type; } impacts[MZM_MAX_PROJECTILES];
     int impact_count;
+    /* gPreviousXPosition, set by the caller before mzm_weapons_update. */
+    int32_t samus_previous_x;
+    /* The SamusBombBounce direction of the last update (0: none), for
+     * mzm_samus_bomb_bounce; a bomb impact (MZM_PROJECTILE_BOMB in
+     * `impacts`) is the explosion's PE_BOMB particle. */
+    int bomb_bounce;
 } MzmWeapons;
 
 void mzm_weapons_init(MzmWeapons *weapons);

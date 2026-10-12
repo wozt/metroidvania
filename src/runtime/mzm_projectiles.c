@@ -77,6 +77,16 @@ bool mzm_weapons_begin_frame(MzmWeapons *weapons, const MzmSamus *samus,
         return false;
     }
     set_highlighted_weapon(weapons, samus, held, pressed, equipment);
+    if (samus->pose == MZM_POSE_MORPH_BALL || samus->pose == MZM_POSE_ROLLING ||
+        samus->pose == MZM_POSE_MORPH_BALL_MIDAIR) {
+        /* Bombs: no hasNewProjectile, so the pose is not interrupted. */
+        if (pressed & MZM_KEY_B && weapons->cooldown == 0 && equipment->items & MZM_ITEM_BOMBS &&
+            !weapons->pending) {
+            weapons->pending = true;
+            weapons->pending_type = MZM_PROJECTILE_BOMB;
+        }
+        return false;
+    }
     if (!pose_can_fire(samus->pose)) return false;
     /* SamusCheckFireBeamMissile without the charge beam. */
     if (weapons->cooldown || weapons->pending || !(pressed & MZM_KEY_B)) return false;
@@ -215,6 +225,115 @@ static void process_missile(MzmWeapons *weapons, MzmProjectile *p, const MzmSamu
     }
 }
 
+static bool point_solid_sprite(const MzmCollision *collision, int32_t x, int32_t y) {
+    if (collision->solid_point) return collision->solid_point(collision->context, x, y, 2);
+    return collision->blocked(collision->context, (float)(x >> 2), (float)(y >> 2), 1.f, 1.f);
+}
+
+/* ProjectileCheckSamusBombBounce (without BUGFIX: ClipdataProcess). */
+static void bomb_bounce(MzmWeapons *weapons, const MzmProjectile *p, const MzmSamus *samus,
+                        const MzmCollision *collision) {
+    uint16_t samus_y = (uint16_t)(samus->y - 1), samus_x = (uint16_t)samus->x;
+    if (point_solid_sprite(collision, samus_x, (uint16_t)(samus_y + MZM_HALF_BLOCK_SIZE)) &&
+        point_solid_sprite(collision, samus_x,
+                           (uint16_t)(samus_y - (MZM_BLOCK_SIZE + MZM_HALF_BLOCK_SIZE))))
+        return;
+    const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
+    uint16_t top = (uint16_t)(samus_y + box->top), bottom = samus_y;
+    uint16_t left = (uint16_t)(samus_x + box->left), right = (uint16_t)(samus_x + box->right);
+    uint16_t py = (uint16_t)p->y, px = (uint16_t)p->x;
+    uint16_t ptop = (uint16_t)(py - (MZM_BLOCK_SIZE - MZM_PIXEL_SIZE));
+    uint16_t pbottom = (uint16_t)(py + MZM_BLOCK_SIZE * 3 / 4);
+    uint16_t pleft = (uint16_t)(px - MZM_BLOCK_SIZE * 3 / 4);
+    uint16_t pright = (uint16_t)(px + MZM_BLOCK_SIZE * 3 / 4);
+    /* SpriteUtilCheckObjectsTouching */
+    if (!(pbottom >= top && ptop < bottom && pright >= left && pleft < right)) return;
+    if (samus->invincibility) return;
+    uint16_t middle = (uint16_t)(pleft + (pright - pleft) / 2);
+    int direction = (uint16_t)(samus_y - MZM_HALF_BLOCK_SIZE) > py ? MZM_BOMB_JUMP_ABOVE : 0;
+    if (samus_x < px + (MZM_PIXEL_SIZE + 1) && samus_x > px - (MZM_PIXEL_SIZE + 1))
+        direction += MZM_FORCED_BOMB_JUMP_UP;
+    else if (middle >= (uint16_t)weapons->samus_previous_x)
+        direction += MZM_FORCED_BOMB_JUMP_LEFT;
+    else
+        direction += MZM_FORCED_BOMB_JUMP_RIGHT;
+    /* After a bounce Samus rises in the air: no later bomb bounces her
+     * again this frame. */
+    if (!weapons->bomb_bounce && mzm_samus_bomb_bounce_allowed(samus, direction))
+        weapons->bomb_bounce = direction;
+}
+
+/* ProjectileProcessBomb: a slow then a fast spin of 16 frames each, then
+ * the explosion (PE_BOMB) whose 16 frames run CAA_BOMB_PISTOL on nine
+ * points, one a frame. */
+static void process_bomb(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *samus,
+                         const MzmCollision *collision) {
+    static const int16_t points[9][2] = {
+        /* y, x offsets of the frames timer 15 down to 7 */
+        {-MZM_EIGHTH_BLOCK_SIZE, 0},
+        {MZM_BLOCK_SIZE - MZM_EIGHTH_BLOCK_SIZE, 0},
+        {-MZM_EIGHTH_BLOCK_SIZE, MZM_BLOCK_SIZE * 3 / 4},
+        {-MZM_EIGHTH_BLOCK_SIZE, -MZM_BLOCK_SIZE * 3 / 4},
+        {MZM_BLOCK_SIZE - MZM_EIGHTH_BLOCK_SIZE, MZM_HALF_BLOCK_SIZE + MZM_PIXEL_SIZE},
+        {MZM_BLOCK_SIZE - MZM_EIGHTH_BLOCK_SIZE, -(MZM_HALF_BLOCK_SIZE + MZM_PIXEL_SIZE)},
+        {-(MZM_BLOCK_SIZE + MZM_EIGHTH_BLOCK_SIZE), 0},
+        {-(MZM_BLOCK_SIZE + MZM_EIGHTH_BLOCK_SIZE), MZM_HALF_BLOCK_SIZE + MZM_PIXEL_SIZE},
+        {-(MZM_BLOCK_SIZE + MZM_EIGHTH_BLOCK_SIZE), -(MZM_HALF_BLOCK_SIZE + MZM_PIXEL_SIZE)},
+    };
+    switch (p->bomb_stage) {
+    case MZM_BOMB_INIT:
+        p->fast = false;
+        p->anim_frame = 0;
+        p->anim_counter = 0;
+        p->hidden = false;
+        p->x_flip = false;
+        p->stage = MZM_STAGE_MOVING;    /* drawn from now on */
+        p->timer = MZM_BOMB_TIMER;
+        p->bomb_stage = MZM_BOMB_FIRST_SPIN;
+        mzm_sfx_play(MZM_SOUND_BOMB_SET);
+        break;
+    case MZM_BOMB_FIRST_SPIN:
+        if (--p->timer == 0) {
+            p->fast = true;
+            p->anim_frame = 0;
+            p->anim_counter = 0;
+            p->timer = MZM_BOMB_TIMER;
+            p->bomb_stage = MZM_BOMB_FAST_SPIN;
+        }
+        break;
+    case MZM_BOMB_FAST_SPIN:
+        if (--p->timer == 0) {
+            p->timer = MZM_BOMB_TIMER;
+            p->bomb_stage = MZM_BOMB_EXPLODING;
+            p->hidden = true;
+            if (weapons->impact_count < MZM_MAX_PROJECTILES) {
+                weapons->impacts[weapons->impact_count].x = p->x;
+                weapons->impacts[weapons->impact_count].y = p->y - MZM_QUARTER_BLOCK_SIZE;
+                weapons->impacts[weapons->impact_count].type = MZM_PROJECTILE_BOMB;
+                weapons->impact_count++;
+            }
+        }
+        break;
+    case MZM_BOMB_EXPLODING:
+        if (--p->timer == 0) {
+            p->active = false;
+            break;
+        }
+        if (p->timer == MZM_BOMB_TIMER - 1) {
+            /* The sprite pass of this frame ran before the projectile loop. */
+            p->hits_sprites = true;
+        }
+        if (p->timer >= MZM_BOMB_TIMER - 9) {
+            const int16_t *o = points[MZM_BOMB_TIMER - 1 - p->timer];
+            if (collision->affect)
+                collision->affect(collision->context, (uint16_t)(p->x + o[1]),
+                                  (uint16_t)(p->y + o[0]), MZM_DAMAGE_BOMB_PISTOL);
+            if (p->timer == MZM_BOMB_TIMER - 1) bomb_bounce(weapons, p, samus, collision);
+        }
+        break;
+    }
+}
+
 /* ProjectileUpdateAnimation */
 static void animate(MzmProjectile *p, const MzmProjectileAnimation *animation) {
     uint8_t durations[64];
@@ -244,17 +363,25 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
                         const MzmCollision *collision,
                         const MzmProjectileAnimation *animation) {
     weapons->impact_count = 0;
+    weapons->bomb_bounce = 0;
     if (weapons->pending) {
         static const struct { int limit; uint8_t cooldown; } rules[] = {
             [MZM_PROJECTILE_BEAM] = {MZM_PROJECTILE_LIMIT_BEAM, MZM_BEAM_COOLDOWN},
             [MZM_PROJECTILE_MISSILE] = {MZM_PROJECTILE_LIMIT_MISSILE, MZM_MISSILE_COOLDOWN},
             [MZM_PROJECTILE_SUPER_MISSILE] = {MZM_PROJECTILE_LIMIT_SUPER_MISSILE,
                                               MZM_SUPER_MISSILE_COOLDOWN},
+            /* CONVERT_SECONDS(.1f + 1.f / 60) */
+            [MZM_PROJECTILE_BOMB] = {MZM_PROJECTILE_LIMIT_BOMB, 7},
         };
         MzmProjectileType type = weapons->pending_type;
-        /* gArmCannonX/Y: pixel position plus the arm cannon offset. */
+        /* gArmCannonX/Y: pixel position plus the arm cannon offset; bombs
+         * at Samus's position. */
         int32_t x = ((samus->x >> 2) + cannon_x) * MZM_SUBPIXELS_PER_PIXEL;
         int32_t y = (((samus->y - 1) >> 2) + cannon_y) * MZM_SUBPIXELS_PER_PIXEL;
+        if (type == MZM_PROJECTILE_BOMB) {
+            x = samus->x;
+            y = samus->y - 1;
+        }
         if (mzm_projectile_count(weapons, type) < rules[type].limit &&
             projectile_spawn(weapons, type, samus, x, y)) {
             weapons->cooldown = rules[type].cooldown;
@@ -266,7 +393,7 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
             } else if (type == MZM_PROJECTILE_MISSILE) {
                 mzm_sfx_play(MZM_SOUND_MISSILE_SHOT);
                 mzm_sfx_play(MZM_SOUND_MISSILE_THRUST);
-            } else {
+            } else if (type == MZM_PROJECTILE_SUPER_MISSILE) {
                 mzm_sfx_play(MZM_SOUND_SUPER_MISSILE_SHOT);
                 mzm_sfx_play(MZM_SOUND_SUPER_MISSILE_THRUST);
             }
@@ -277,9 +404,11 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
         MzmProjectile *p = &weapons->list[i];
         if (!p->active) continue;
         if (p->type == MZM_PROJECTILE_BEAM) process_beam(weapons, p, samus, collision);
+        else if (p->type == MZM_PROJECTILE_BOMB) process_bomb(weapons, p, samus, collision);
         else process_missile(weapons, p, samus, equipment, collision);
         if (!p->active) continue;
         animate(p, animation);
-        check_despawn(p, samus);
+        /* Bombs are never despawned by distance. */
+        if (p->type != MZM_PROJECTILE_BOMB) check_despawn(p, samus);
     }
 }

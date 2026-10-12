@@ -97,7 +97,7 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sDebris8YVelocity")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
-PARTICLES = ("sParticleSpriteExplosionHugeOam", "sParticleSpriteExplosionSmallOam",
+PARTICLES = ("sParticleBombOam", "sParticleSpriteExplosionHugeOam", "sParticleSpriteExplosionSmallOam",
              "sParticleSpriteExplosionMediumOam", "sParticleSpriteExplosionBigOam",
              "sParticleSpriteExplosionSingleThenBigOam", "sParticleScrewAttackDestroyedOam",
              "sParticleHittingSomethingWithNormalBeamOam",

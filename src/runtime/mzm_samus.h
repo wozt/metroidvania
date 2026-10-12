@@ -36,6 +36,9 @@
 #define MZM_LOW_JUMP_VELOCITY 192
 #define MZM_SUITLESS_JUMP_VELOCITY 212
 #define MZM_MORPH_BALL_JUMP_VELOCITY 212
+/* SAMUS_BOMB_BOUNCE_X_VELOCITY and SAMUS_BOMB_BOUNCE_Y_VELOCITY. */
+#define MZM_BOMB_BOUNCE_X_VELOCITY 48
+#define MZM_BOMB_BOUNCE_Y_VELOCITY 164
 #define MZM_INVINCIBILITY_TICKS 48
 #define MZM_WALL_JUMP_TICKS 8
 
@@ -127,7 +130,8 @@ enum {
     MZM_ITEM_SCREW_ATTACK = 1u << 4,
     MZM_ITEM_VARIA_SUIT = 1u << 5,
     MZM_ITEM_GRAVITY_SUIT = 1u << 6,
-    MZM_ITEM_POWER_GRIP = 1u << 7
+    MZM_ITEM_POWER_GRIP = 1u << 7,
+    MZM_ITEM_BOMBS = 1u << 8          /* BBF_BOMBS */
 };
 
 /* Damage types of clipdata-affecting actions (hatches, blocks). */
@@ -154,7 +158,8 @@ typedef struct {
     /* Optional: true when grounded movement may follow a slope here. */
     bool (*slope_near)(void *context, float x, float y, float w, float h);
     /* Optional native point query (ClipdataProcessForSamus/ClipdataProcess)
-     * in subpixels; actor 0 is Samus, 1 a projectile. Falls back to a
+     * in subpixels; actor 0 is Samus, 1 a projectile (a non-sprite
+     * ClipdataProcess), 2 a sprite (ClipdataProcess without an action). Falls back to a
      * one-pixel box through ``blocked``. */
     bool (*solid_point)(void *context, int32_t x, int32_t y, int actor);
     /* Optional: a projectile of the given damage type (MZM_DAMAGE_*) hit
@@ -179,8 +184,16 @@ typedef enum {
     MZM_FORCED_FALL,
     MZM_FORCED_CARRY,
     MZM_FORCED_BOUNCE_BEFORE_JUMP,
-    MZM_FORCED_BOUNCE_AFTER_FALL
+    MZM_FORCED_BOUNCE_AFTER_FALL,
+    /* FORCED_MOVEMENT_BOMB_JUMP_RIGHT, _UP and _LEFT */
+    MZM_FORCED_BOMB_JUMP_RIGHT,
+    MZM_FORCED_BOMB_JUMP_UP,
+    MZM_FORCED_BOMB_JUMP_LEFT
 } MzmForcedMovement;
+
+/* The direction argument of SamusBombBounce: a bomb jump forced movement,
+ * plus MZM_BOMB_JUMP_ABOVE when the bomb is above Samus's feet. */
+enum { MZM_BOMB_JUMP_ABOVE = 0x80 };
 
 typedef struct MzmSamus {
     MzmPose pose;
@@ -227,5 +240,11 @@ void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
 /* Native SamusChangeToHurtPose: lethal hits enter the dying pose. */
 void mzm_samus_hurt(MzmSamus *samus, const MzmCollision *collision,
                     bool lethal);
+/* The pose test of SamusBombBounce (no liquid). */
+bool mzm_samus_bomb_bounce_allowed(const MzmSamus *samus, int direction);
+/* SamusBombBounce: the bomb jump through SamusSetMidAir; false when the
+ * pose does not bounce. */
+bool mzm_samus_bomb_bounce(MzmSamus *samus, const MzmEquipment *equipment,
+                           const MzmCollision *collision, int direction);
 
 #endif /* MZM_SAMUS_H */

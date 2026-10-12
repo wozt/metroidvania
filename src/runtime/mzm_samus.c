@@ -341,6 +341,29 @@ static void set_pose(Ctx *x, MzmPose pose) {
     if (mzm_pose_standing(pose) == MZM_STANDING_MIDAIR) settle_midair_hitbox(x);
 }
 
+/* The bomb jump branches of SamusSetMidAir; the jump then continues as a
+ * mid-air jump (no release cut until the velocity drops). */
+static bool bomb_jump(MzmSamus *s, MzmForcedMovement forced) {
+    switch (forced) {
+    case MZM_FORCED_BOMB_JUMP_RIGHT:
+        s->facing = 1;
+        s->x_velocity = MZM_BOMB_BOUNCE_X_VELOCITY;
+        break;
+    case MZM_FORCED_BOMB_JUMP_UP:
+        s->x_velocity = 0;
+        break;
+    case MZM_FORCED_BOMB_JUMP_LEFT:
+        s->facing = -1;
+        s->x_velocity = -MZM_BOMB_BOUNCE_X_VELOCITY;
+        break;
+    default:
+        return false;
+    }
+    s->y_velocity = MZM_BOMB_BOUNCE_Y_VELOCITY;
+    s->forced = MZM_FORCED_JUMP;
+    return true;
+}
+
 /* SamusSetMidAir */
 static void request_midair(Ctx *x) {
     MzmSamus *s = x->s;
@@ -378,6 +401,7 @@ static void request_midair(Ctx *x) {
             mzm_sfx_play(suitless(x) ? MZM_SOUND_SUITLESS_WALL_JUMP : MZM_SOUND_WALL_JUMP);
             break;
         case MZM_POSE_MORPH_BALL_MIDAIR:
+            bomb_jump(s, copy.forced);
             s->pose = MZM_POSE_MORPH_BALL_MIDAIR;
             break;
         case MZM_POSE_MORPH_BALL:
@@ -386,9 +410,11 @@ static void request_midair(Ctx *x) {
             s->anim_counter = copy.anim_counter;
             /* fall through */
         case MZM_POSE_MORPHING:
-            s->x_velocity = (int16_t)(s->x_velocity >> 1);
-            if (copy.forced == MZM_FORCED_JUMP)
-                s->y_velocity = MZM_MORPH_BALL_JUMP_VELOCITY;
+            if (!bomb_jump(s, copy.forced)) {
+                s->x_velocity = (int16_t)(s->x_velocity >> 1);
+                if (copy.forced == MZM_FORCED_JUMP)
+                    s->y_velocity = MZM_MORPH_BALL_JUMP_VELOCITY;
+            }
             s->pose = MZM_POSE_MORPH_BALL_MIDAIR;
             break;
         case MZM_POSE_CROUCHING:
@@ -1158,4 +1184,30 @@ void mzm_samus_hurt(MzmSamus *samus, const MzmCollision *collision,
         8 * (MZM_EIGHTH_BLOCK_SIZE - 1) :
         8 * (MZM_QUARTER_BLOCK_SIZE - MZM_PIXEL_SIZE / 2);
     mzm_sfx_play(MZM_SOUND_HURT);
+}
+
+bool mzm_samus_bomb_bounce_allowed(const MzmSamus *samus, int direction) {
+    int base = direction % MZM_BOMB_JUMP_ABOVE;
+    if (base < MZM_FORCED_BOMB_JUMP_RIGHT || base > MZM_FORCED_BOMB_JUMP_LEFT) return false;
+    switch (samus->pose) {
+    case MZM_POSE_MORPHING:
+    case MZM_POSE_MORPH_BALL:
+    case MZM_POSE_ROLLING:
+        return true;
+    case MZM_POSE_MORPH_BALL_MIDAIR:
+        /* Only when falling, and not from a bomb above. */
+        return samus->y_velocity <= 0 && !(direction & MZM_BOMB_JUMP_ABOVE);
+    default:
+        return false;
+    }
+}
+
+bool mzm_samus_bomb_bounce(MzmSamus *samus, const MzmEquipment *equipment,
+                           const MzmCollision *collision, int direction) {
+    if (!mzm_samus_bomb_bounce_allowed(samus, direction)) return false;
+    MzmInput none = {0, 0, false};
+    Ctx x = {samus, &none, equipment, collision, NULL};
+    samus->forced = (MzmForcedMovement)(direction % MZM_BOMB_JUMP_ABOVE);
+    request_midair(&x);
+    return true;
 }

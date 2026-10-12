@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-12T01:56:27+00:00",
+ "generated_at": "2026-10-12T02:09:29+00:00",
  "git": {
-  "commit": "7f0d056",
+  "commit": "965e67c",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 75,
+   "total": 76,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 52,
+    "partial": 53,
     "functional": 12,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 12,
-   "functional_or_better_percent": 16.0,
-   "with_passing_tests": 63,
-   "with_passing_tests_percent": 84.0,
+   "functional_or_better_percent": 15.8,
+   "with_passing_tests": 64,
+   "with_passing_tests_percent": 84.2,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -137,6 +137,7 @@
     "mzm.rooms.backgrounds",
     "mzm.transitions.doors_and_hatches",
     "mzm.weapons.beams_and_missiles",
+    "mzm.weapons.bombs",
     "aos.death.soma",
     "aos.enemies.axe_armor",
     "aos.enemies.bat",
@@ -192,11 +193,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 28,
+   "total": 29,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 28,
+    "partial": 29,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -205,7 +206,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 28,
+   "with_passing_tests": 29,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -236,7 +237,8 @@
     "mzm.player.samus_controller",
     "mzm.rooms.backgrounds",
     "mzm.transitions.doors_and_hatches",
-    "mzm.weapons.beams_and_missiles"
+    "mzm.weapons.beams_and_missiles",
+    "mzm.weapons.bombs"
    ]
   },
   {
@@ -460,6 +462,7 @@
     "mzm.enemies.zoomer"
    ],
    "native_routines": [
+    "ParticleBomb",
     "ParticleSet",
     "ParticleProcessAll",
     "ParticleUpdateAnimation",
@@ -477,7 +480,7 @@
     "SpriteDebrisDraw",
     "SpriteUtilRandomSpriteDebris"
    ],
-   "limitations": "The super missile screen shake and debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece; other particle effects (Samus, charge, dust, beams other than the normal beam) are not ported. One-shot particles for sprite explosions, the screw attack kill and projectile impacts on walls and sprites, the medium dust effects, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range.",
+   "limitations": "The super missile screen shake and debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece; other particle effects (Samus, charge, dust, beams other than the normal beam) are not ported. One-shot particles for the bomb explosion, sprite explosions, the screw attack kill and projectile impacts on walls and sprites, the medium dust effects, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range.",
    "next_action": "Port the remaining particle effects with their owners (Samus, charge beam, dust).",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -1637,8 +1640,8 @@
     "SamusCheckScrewSpeedboosterAffectingEnvironment",
     "BgClipCheckWalkingOnCrumbleBlock"
    ],
-   "limitations": "Bombs, power bombs and the speed booster are not ported on Samus, so bomb blocks and speed blocks only break by the actions that exist (beams reveal bomb blocks, pirate lasers act as the bomb pistol); grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout. Every beam, missile, super missile and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack breaks blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.",
-   "next_action": "Port bombs, power bombs and the speed booster on Samus, then the crumble grab and tank pickups.",
+   "limitations": "Power bombs and the speed booster are not ported on Samus, so speed blocks only break by the actions that exist; grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout. Every beam, missile, super missile, bomb explosion point and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack breaks blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames.",
+   "next_action": "Port power bombs and the speed booster on Samus, then the crumble grab and tank pickups.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1777,7 +1780,7 @@
     "SamusUpdatePhysics",
     "SamusUpdateVelocityPosition"
    ],
-   "limitations": "The room runtime covers a tested subset of poses and transitions, not the complete native controller. The pose sounds are emitted at their native points (jumps, wall jumps, landing, footsteps on frames 1 and 6, spins, Space Jump and Screw Attack, crouching, morphing, unmorphing, ledge grab and pull, hurt, and the dying stop-all then dying sound) for plain ground out of liquid: the wet and dusty ground effects, liquids and the suitless poses are not modelled.",
+   "limitations": "The room runtime covers a tested subset of poses and transitions, not the complete native controller. The pose sounds are emitted at their native points (jumps, wall jumps, landing, footsteps on frames 1 and 6, spins, Space Jump and Screw Attack, crouching, morphing, unmorphing, ledge grab and pull, hurt, and the dying stop-all then dying sound) for plain ground out of liquid: the wet and dusty ground effects, liquids and the suitless poses are not modelled. Bomb jumps (the three SamusSetMidAir bomb branches and SamusBombBounce) are ported.",
    "next_action": "Port the remaining native pose handlers.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -1951,8 +1954,8 @@
     "ProjectileUpdate",
     "ProjectileUpdateAnimation"
    ],
-   "limitations": "Power Beam, missiles and super missiles move and collide with the room; their hits on ported sprites (damage, stun, invincible hits) and their wall and sprite impact particles are ported. Charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles are not. The weapon sounds play at their native points: the toggle and arming sounds of SamusSetHighlightedWeapon, the beam shot and the missile and super missile shot and thrust on ProjectileInit, the thrust stopped by the impact particles.",
-   "next_action": "Port charge beams, beam upgrades, bombs, Power Bombs and tumbling missiles.",
+   "limitations": "Power Beam, missiles and super missiles move and collide with the room; their hits on ported sprites (damage, stun, invincible hits) and their wall and sprite impact particles are ported. Charge beams, beam upgrades, Power Bombs and tumbling missiles are not (bombs: mzm.weapons.bombs). The weapon sounds play at their native points: the toggle and arming sounds of SamusSetHighlightedWeapon, the beam shot and the missile and super missile shot and thrust on ProjectileInit, the thrust stopped by the impact particles.",
+   "next_action": "Port charge beams, beam upgrades, Power Bombs and tumbling missiles.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -1984,6 +1987,71 @@
       "kind": "python",
       "registered": true,
       "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-12"
+   }
+  },
+  {
+   "id": "mzm.weapons.bombs",
+   "area": "mzm",
+   "category": "weapons",
+   "title": "Bombs, bomb jumps and bomb damage",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm_samus.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm_effects.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_samus.c",
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.weapons.beams_and_missiles",
+    "mzm.environment.breakable_blocks",
+    "mzm.animation.particles"
+   ],
+   "native_routines": [
+    "ProjectileProcessBomb",
+    "ProjectileCheckSamusBombBounce",
+    "SamusBombBounce",
+    "ProjectileBombHitSprite",
+    "ParticleBomb"
+   ],
+   "limitations": "The morph ball launcher stages and liquids (no bounce when slowed) are not ported; the sprite pass of the explosion runs after the projectile loop in the runtime, so the bomb keeps a flag for the frame the native pass (before the loop) sees it. With the Bombs item, B in the Morph Ball places a bomb (four at most, 7 frames apart) at Samus's position: a slow then a fast spin of 16 frames each with their native sprites, then the PE_BOMB explosion and 16 frames during which CAA_BOMB_PISTOL reaches nine points, one a frame (bomb blocks, bomb chains, hatches). On the first explosion frame Samus bounces off a touching bomb (up, left or right from the bomb's middle and gPreviousXPosition; only falling and from below when airborne), and the explosion damages sprites weak to beams and bombs (8). The set and explosion sounds play. Checked in brinstar_000: the bounce, then the three bomb blocks under Samus break.",
+   "next_action": "Port power bombs and the morph ball launchers.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_samus.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_samus_controller"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -4605,6 +4673,12 @@
  },
  "timeline": [
   {
+   "commit": "965e67c",
+   "date": "2026-10-12",
+   "subject": "feat(mzm): gameplay sound effects at their native points",
+   "scope": "mzm"
+  },
+  {
    "commit": "7f0d056",
    "date": "2026-10-12",
    "subject": "feat(mzm): native sound engine and room music",
@@ -5077,12 +5151,6 @@
    "date": "2026-10-10",
    "subject": "refactor(runtime): drop obsolete fixed-sprite Samus loaders",
    "scope": "runtime"
-  },
-  {
-   "commit": "9c17387",
-   "date": "2026-10-10",
-   "subject": "health missile and trace anim",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -5110,7 +5178,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 168,
+    "routines_cited_by_features": 173,
     "call_edges": 6071
    },
    "aos": {

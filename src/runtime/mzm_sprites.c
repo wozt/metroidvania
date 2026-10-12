@@ -3625,6 +3625,25 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
         for (int p = 0; p < MZM_MAX_PROJECTILES; ++p) {
             MzmProjectile *proj = &weapons->list[p];
             if (!proj->active) continue;
+            if (proj->type == MZM_PROJECTILE_BOMB) {
+                /* ProjectileBombHitSprite: the bomb's hitbox, no particle,
+                 * and the bomb stays. */
+                if (!proj->hits_sprites) continue;
+                uint16_t by = (uint16_t)proj->y, bx = (uint16_t)proj->x;
+                if (!touching(top, bottom, left, right, (uint16_t)(by - (BLOCK_SIZE - PIXEL_SIZE)),
+                              (uint16_t)(by + THREE_QUARTER_BLOCK_SIZE),
+                              (uint16_t)(bx - THREE_QUARTER_BLOCK_SIZE),
+                              (uint16_t)(bx + THREE_QUARTER_BLOCK_SIZE)))
+                    continue;
+                if (s->immune_to_projectiles) {
+                    if ((s->isft & 0x7F) < 2) set_isft(s, 2);
+                } else if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
+                    deal_damage(s, BOMB_DAMAGE);
+                } else {
+                    hit_solid(s);
+                }
+                continue;
+            }
             /* ProjectileProcessNormalBeam/Missile: +-EIGHTH_BLOCK_SIZE;
              * ProjectileProcessSuperMissile: +-(QUARTER_BLOCK_SIZE - PIXEL_SIZE). */
             int half = proj->type == MZM_PROJECTILE_SUPER_MISSILE ? QUARTER_BLOCK_SIZE - PIXEL_SIZE
@@ -3661,6 +3680,8 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                     hit_solid(s);   /* ProjectileStartTumblingMissile: not ported */
                 }
                 break;
+            case MZM_PROJECTILE_BOMB:
+                break;
             case MZM_PROJECTILE_SUPER_MISSILE:
                 if (weakness & (MZM_WEAKNESS_MISSILES | MZM_WEAKNESS_SUPER_MISSILES)) {
                     deal_damage(s, SUPER_MISSILE_DAMAGE);
@@ -3674,6 +3695,7 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
             proj->active = false;
         }
     }
+    for (int p = 0; p < MZM_MAX_PROJECTILES; ++p) weapons->list[p].hits_sprites = false;
 }
 
 bool mzm_sprite_supported(uint8_t sprite_id) {

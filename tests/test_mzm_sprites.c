@@ -692,6 +692,22 @@ int main(void) {
     /* Zoomer: SP_DAMAGED first (on screen only), then SpriteUtilSpriteDeath. */
     assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_ZOOMER_DAMAGED) == z_onscreen);
     assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SPRITE_EXPLOSION_MEDIUM));
+    /* ProjectileBombHitSprite: an exploding bomb (its sprite pass) deals 8,
+     * leaves no particle and stays; outside its pass it does nothing. */
+    tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_BEAM_BOMBS;
+    mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
+    step(&z, 0);
+    z.health = 20;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BOMB,
+                                      .x = z.x + 40, .y = z.y - 8,
+                                      .bomb_stage = MZM_BOMB_EXPLODING, .hidden = true};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 20);
+    weapons.list[0].hits_sprites = true;
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 12 && z.damaged && weapons.list[0].active &&
+           !weapons.list[0].hits_sprites && !(fx.particles[2].status & MZM_PARTICLE_EXISTS));
+    weapons.list[0].active = false;
     /* Not weak: the invincible impact. */
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
     mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);

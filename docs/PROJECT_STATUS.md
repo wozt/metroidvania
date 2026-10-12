@@ -2988,6 +2988,41 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0260 - Zero Mission bombs and bomb jumps
+
+- `src/runtime/mzm_projectiles.c` ports the bomb branch of the Morph Ball
+  fire check (B with the Bombs item and no cooldown, without
+  `hasNewProjectile`), the bomb spawn of `ProjectileUpdate` (four at most,
+  7 frames of cooldown, at Samus's position) and `ProjectileProcessBomb`: a
+  slow then a fast spin of 16 frames each (`sBombOam_Slow`/`_Fast`), then the
+  hidden bomb's `PE_BOMB` explosion and 16 frames during which
+  `CAA_BOMB_PISTOL` reaches the nine native points, one a frame. Bombs are
+  never despawned by distance.
+- `ProjectileCheckSamusBombBounce` (without BUGFIX: `ClipdataProcess`, now a
+  sprite actor in the runtime's point query) and `SamusBombBounce` /
+  the bomb branches of `SamusSetMidAir` (`mzm_samus.c`): straight up when
+  Samus is within 5 subpixels of the bomb, otherwise away from the bomb's
+  middle against `gPreviousXPosition`, at 48/164; in the air only when
+  falling and not from a bomb above; the jump rises as a mid-air jump.
+- `ProjectileBombHitSprite`: the explosion's sprite pass deals 8 to sprites
+  weak to beams and bombs (immune and solid hits otherwise), with no particle;
+  natively it runs before the projectile loop, so the runtime keeps the pass
+  for the frame after the explosion starts.
+- `ParticleBomb` joins the ported particles (exported by
+  `scripts/mzm_sprites.py`) with its sound; `SOUND_BOMB_SET` plays on
+  placement. The Bombs item is in every suited preset of the runtime.
+- `--input-script MASK:FRAMES,...` scripts the GBA buttons of captures.
+- Checked in brinstar_000 (captures at frames 50 and 75): the explosion, the
+  bounce, then the three bomb blocks under Samus breaking.
+- Not ported: Power Bombs, the morph ball launchers, liquids.
+- Tests: `tests/test_mzm_samus.c` (timings, the nine points in order, the
+  explosion particle, the straight bounce and its rise, the sideways and
+  airborne rules, the limit of four) and `tests/test_mzm_sprites.c` (bomb
+  damage only during the explosion's sprite pass).
+- Validation on 2026-10-12: warning-clean build, CTest 29/29, the Python
+  suite (427 tests), every rebuild task up to date, `check_generated` fresh
+  and the proprietary-file guard passed.
+
 ## Patch 0259 - Zero Mission gameplay sound effects
 
 - `src/runtime/mzm_sfx.c` carries the `SoundPlay`, `SoundPlayNotAlreadyPlaying`,

@@ -576,7 +576,7 @@ static bool runtime_collision_slope(void *context,float x,float y,
 }
 static bool runtime_collision_point(void *context,int32_t x,int32_t y,int actor) {
     return solid_point((const Room *)context,x,y,
-                       actor==0?ACTOR_SAMUS:ACTOR_NON_SPRITE);
+                       actor==0?ACTOR_SAMUS:actor==1?ACTOR_NON_SPRITE:ACTOR_SPRITE);
 }
 
 /* Semantic registry action shown by each native pose. Every spin pose maps
@@ -672,7 +672,7 @@ static void runtime_apply_equipment(MzmEquipment *equipment,unsigned int preset,
     equipment->suit=p->suit;
     equipment->items=p->items;
     if(p->suit!=MZM_SUIT_SUITLESS)
-        equipment->items|=MZM_ITEM_MORPH_BALL|MZM_ITEM_POWER_GRIP|toggled_items;
+        equipment->items|=MZM_ITEM_MORPH_BALL|MZM_ITEM_BOMBS|MZM_ITEM_POWER_GRIP|toggled_items;
 }
 
 static int runtime_behavior(const Room *room, int x, int y) {
@@ -1515,6 +1515,11 @@ static int runtime_pose_durations(void *context,const MzmSamus *samus,
  * X/Y flips applied by ProjectileDraw. */
 static void runtime_projectile_key(const MzmProjectile *projectile,char *key,size_t size) {
     static const char *names[]={"NormalBeam","Missile","SuperMissile"};
+    if(projectile->type==MZM_PROJECTILE_BOMB) {
+        /* sBombOam_Slow / sBombOam_Fast, never flipped. */
+        snprintf(key,size,"Projectile/BombOam_%s/none",projectile->fast?"Fast":"Slow");
+        return;
+    }
     const char *shape=projectile->direction==MZM_AIM_UP||projectile->direction==MZM_AIM_DOWN?
         "Vertical":projectile->direction==MZM_AIM_FORWARD?"Horizontal":"Diagonal";
     const char *flip=projectile->x_flip?(projectile->y_flip?"xy":"x"):
@@ -2331,6 +2336,9 @@ int main(int argc, char **argv) {
     const char *room_alias=NULL, *samus_assets=NULL;
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
+    /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
+     * (after the script, the --capture buttons apply). */
+    const char *input_script=NULL;
     unsigned long capture_buttons=0;
     bool check=false,animation_check=false,debug_at_start=false;
     int spawn_px=-1,spawn_py=-1;
@@ -2365,6 +2373,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
         else if (!strcmp(argv[i],"--projectile-library") && !projectile_index && i+1<argc)
             projectile_index=argv[++i];
+        else if (!strcmp(argv[i],"--input-script") && i+1<argc) input_script=argv[++i];
         else if (!strcmp(argv[i],"--debug-menu")) debug_at_start=true;
         else if (!strcmp(argv[i],"--mute")) mute=true;
         else if (!strcmp(argv[i],"--spawn") && i+2<argc) {
@@ -2381,7 +2390,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -2472,7 +2481,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -2910,6 +2919,23 @@ int main(int argc, char **argv) {
                 /* Scripted GBA buttons; A and B are released for one frame
                  * every REPEAT frames so they are pressed again. */
                 held=(uint16_t)capture_buttons;
+                if(input_script) {
+                    /* The entry covering this step, if any. */
+                    const char *cursor=input_script;
+                    long start=0;
+                    while(*cursor) {
+                        char *end=NULL;
+                        unsigned long mask=strtoul(cursor,&end,0);
+                        long count=*end==':'?strtol(end+1,&end,10):1;
+                        if(capture_step>=start && capture_step<start+count) {
+                            held=(uint16_t)(mask&0x1FFu);
+                            break;
+                        }
+                        start+=count;
+                        if(*end!=',')break;
+                        cursor=end+1;
+                    }
+                }
                 if(capture_repeat && capture_step%capture_repeat==capture_repeat-1)
                     held&=(uint16_t)~(MZM_KEY_A|MZM_KEY_B);
                 capture_step++;
@@ -2979,8 +3005,12 @@ int main(int argc, char **argv) {
              * arm cannon offset above is the one SamusUpdate left. */
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
                                    &equipment, &collision);
+            weapons.samus_previous_x=previous_x;
             mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                &collision,&projectile_animation);
+            /* ProjectileCheckSamusBombBounce -> SamusBombBounce */
+            if(weapons.bomb_bounce)
+                mzm_samus_bomb_bounce(&samus,&equipment,&collision,weapons.bomb_bounce);
             if(music_transition && --music_transition==0)
                 mzm_music_check_play_transition_track();
             if(audio)runtime_audio_frame(audio);
@@ -2993,7 +3023,8 @@ int main(int argc, char **argv) {
                 static const uint8_t impact_effects[]={
                     [MZM_PROJECTILE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM,
                     [MZM_PROJECTILE_MISSILE]=MZM_PE_HITTING_SOMETHING_WITH_MISSILE,
-                    [MZM_PROJECTILE_SUPER_MISSILE]=MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE};
+                    [MZM_PROJECTILE_SUPER_MISSILE]=MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE,
+                    [MZM_PROJECTILE_BOMB]=MZM_PE_BOMB};
                 for(int i=0;i<weapons.impact_count;i++)
                     mzm_particle_set(&sprites.effects,(uint16_t)weapons.impacts[i].y,
                                      (uint16_t)weapons.impacts[i].x,
@@ -3279,7 +3310,8 @@ int main(int argc, char **argv) {
         }
         for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
             const MzmProjectile *projectile=&weapons.list[i];
-            if(!projectile->active || projectile->stage==MZM_STAGE_INIT)continue;
+            if(!projectile->active || projectile->stage==MZM_STAGE_INIT ||
+               projectile->hidden)continue;
             char key[160];
             runtime_projectile_key(projectile,key,sizeof key);
             RuntimeLibraryEntry *entry=runtime_library_find(&projectile_library,key);

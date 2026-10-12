@@ -169,6 +169,13 @@ static const char *const item_sprites[MZM_ITEM_SPRITE_ANIMS] = {
     "MORPH_BALL", "MORPH_BALL", "POWER_GRIP", "POWER_GRIP", "CHARGE_BEAM", "CHARGE_BEAM",
     "CHARGE_BEAM",
 };
+const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
+    "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
+    "DragonOam_TurningAroundPart2", "DragonFireballOam_Moving", "DragonFireballOam_Exploding",
+};
+static const char *const dragon_sprites[MZM_DRAGON_ANIMS] = {
+    "DRAGON", "DRAGON", "DRAGON", "DRAGON", "DRAGON", "DRAGON", "DRAGON",
+};
 const char *const mzm_skultera_anim_names[MZM_SKULTERA_ANIMS] = {
     "SkulteraOam_Idle", "SkulteraOam_TurningAround", "SkulteraOam_ChasingSamus",
 };
@@ -289,6 +296,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_GAMET] = {MZM_PIPE_BUG_ANIMS, mzm_gamet_anim_names, gamet_sprites},
     [MZM_FAMILY_ITEM_SPRITE] = {MZM_ITEM_SPRITE_ANIMS, mzm_item_sprite_anim_names, item_sprites},
     [MZM_FAMILY_SKULTERA] = {MZM_SKULTERA_ANIMS, mzm_skultera_anim_names, skultera_sprites},
+    [MZM_FAMILY_DRAGON] = {MZM_DRAGON_ANIMS, mzm_dragon_anim_names, dragon_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -3594,6 +3602,222 @@ static void skultera(Ctx *c) {
     }
 }
 
+/* Dragon poses (dragon.c). */
+enum {
+    DRAGON_POSE_IDLE_INIT = 0x8,
+    DRAGON_POSE_IDLE = 0x9,
+    DRAGON_POSE_TURN_AROUND_INIT = 0xA,
+    DRAGON_POSE_TURN_AROUND_FIRST_HALF = 0xB,
+    DRAGON_POSE_TURN_AROUND_SECOND_HALF = 0xC,
+    DRAGON_POSE_WARNING_INIT = 0x34,
+    DRAGON_POSE_WARNING = 0x35,
+    DRAGON_POSE_SPIT = 0x37,
+    DRAGON_FIREBALL_POSE_MOVE = 0x9,
+    DRAGON_FIREBALL_POSE_EXPLODING = 0x43,
+    /* STATUS_RISING: the facing down flag means rising. */
+    DRAGON_STATUS_RISING = MZM_SPRITE_STATUS_FACING_DOWN,
+};
+
+/* DragonYMovement: up to two blocks above its spawn, back down to it; the
+ * splashes are not ported. */
+static void dragon_y_movement(MzmSprite *s) {
+    uint16_t spawn = s->y_spawn;
+    if (s->status & DRAGON_STATUS_RISING) {
+        if ((uint16_t)(spawn - (BLOCK_SIZE * 2 - ONE_SUB_PIXEL)) < s->y) s->y -= PIXEL_SIZE / 2;
+    } else if ((uint16_t)(spawn - PIXEL_SIZE / 2) > s->y) {
+        s->y += PIXEL_SIZE / 2;
+    }
+}
+
+/* DragonIdleInit */
+static void dragon_idle_init(MzmSprite *s) {
+    s->pose = DRAGON_POSE_IDLE;
+    ai_set_anim(s, MZM_DRAGON_IDLE);
+    s->work0 = 100;                 /* CONVERT_SECONDS(1.f) + TWO_THIRD_SECOND */
+}
+
+/* Dragon: rises from its lava when Samus is above it within 6 blocks,
+ * turns toward her and spits a fireball every 100 frames (after a
+ * half-second warning), the spit point clear. */
+static void dragon(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        return;
+    }
+    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+        if (s->adc) s->adc--;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* DragonInit */
+        s->hitbox_top = -BLOCK_SIZE;
+        s->hitbox_bottom = BLOCK_SIZE + QUARTER_BLOCK_SIZE;
+        s->hitbox_left = -(QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+        s->hitbox_right = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        ai_set_anim(s, MZM_DRAGON_IDLE);
+        s->samus_collision = SSC_HURTS_SAMUS;
+        s->health = c->tables->health[s->sprite_id];
+        /* SpriteUtilMakeSpriteFaceSamusXFlip */
+        if (s->x > c->f->samus_x) s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        else s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        s->pose = DRAGON_POSE_IDLE_INIT;
+        s->y_spawn = s->y;
+        break;
+    case DRAGON_POSE_IDLE_INIT:
+        dragon_idle_init(s);
+        /* fallthrough */
+    case DRAGON_POSE_IDLE: {
+        /* DragonIdle */
+        if (s->work0) s->work0--;
+        dragon_y_movement(s);
+        s->status &= (uint16_t)~DRAGON_STATUS_RISING;
+        if (c->f->samus_y > s->y) break;
+        uint8_t nslr = ai_samus_nslr(c, BLOCK_SIZE * 6, BLOCK_SIZE * 6);
+        if (nslr != NSLR_OUT_OF_RANGE) s->status |= DRAGON_STATUS_RISING;
+        bool flipped = s->status & MZM_SPRITE_STATUS_X_FLIP;
+        if (nslr == NSLR_RIGHT) {
+            if (!flipped) {
+                s->pose = DRAGON_POSE_TURN_AROUND_INIT;
+                break;
+            }
+        } else if (nslr == NSLR_LEFT) {
+            if (flipped) {
+                s->pose = DRAGON_POSE_TURN_AROUND_INIT;
+                break;
+            }
+        } else {
+            break;
+        }
+        if (s->work0 == 0) {
+            /* The block two above and one ahead (not where the fireball
+             * spawns, as in the game). */
+            uint16_t y = (uint16_t)(s->y - (BLOCK_SIZE * 2 + EIGHTH_BLOCK_SIZE));
+            uint16_t x = flipped ? (uint16_t)(s->x + BLOCK_SIZE + EIGHTH_BLOCK_SIZE)
+                                 : (uint16_t)(s->x - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
+            if (ai_collision_at(c, y, x) == MZM_COLLISION_AIR) s->pose = DRAGON_POSE_WARNING_INIT;
+        }
+        break;
+    }
+    case DRAGON_POSE_TURN_AROUND_INIT:
+        s->pose = DRAGON_POSE_TURN_AROUND_FIRST_HALF;
+        ai_set_anim(s, MZM_DRAGON_TURNING_AROUND);
+        /* fallthrough */
+    case DRAGON_POSE_TURN_AROUND_FIRST_HALF:
+        dragon_y_movement(s);
+        if (ai_animation_ending(c, 1)) {
+            s->pose = DRAGON_POSE_TURN_AROUND_SECOND_HALF;
+            ai_set_anim(s, MZM_DRAGON_TURNING_AROUND_PART2);
+            s->status ^= MZM_SPRITE_STATUS_X_FLIP;
+        }
+        break;
+    case DRAGON_POSE_TURN_AROUND_SECOND_HALF:
+        dragon_y_movement(s);
+        if (ai_animation_ending(c, 2)) s->pose = DRAGON_POSE_WARNING_INIT;
+        break;
+    case DRAGON_POSE_WARNING_INIT:
+        s->pose = DRAGON_POSE_WARNING;
+        ai_set_anim(s, MZM_DRAGON_WARNING);
+        s->work0 = 30;              /* CONVERT_SECONDS(.5f) */
+        /* fallthrough */
+    case DRAGON_POSE_WARNING:
+        dragon_y_movement(s);
+        if (--s->work0 == 0) {
+            s->pose = DRAGON_POSE_SPIT;
+            ai_set_anim(s, MZM_DRAGON_SPITTING);
+            s->work0 = 8;           /* CONVERT_SECONDS(.1f) + 2 * DELTA_TIME */
+        }
+        break;
+    case DRAGON_POSE_SPIT:
+        if (--s->work0 == 0) {
+            dragon_idle_init(s);
+            uint16_t y = (uint16_t)(s->y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
+            bool flipped = s->status & MZM_SPRITE_STATUS_X_FLIP;
+            uint16_t x = flipped ? (uint16_t)(s->x + HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)
+                                 : (uint16_t)(s->x - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
+            ai_spawn_secondary(c, MZM_SSPRITE_DRAGON_FIREBALL, 0, s->gfx_slot, y, x,
+                               s->status & MZM_SPRITE_STATUS_X_FLIP);
+        }
+        break;
+    default: ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_BIG); break;
+    }
+}
+
+/* DragonFireball: an arc from sDragonFireballYMovement at 3 pixels a frame,
+ * rotated with sDragonFireballOamRotation, until the lava's surface or a
+ * block. */
+static void dragon_fireball(Ctx *c) {
+    MzmSprite *s = c->s;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* DragonFireballInit (bgPriority is not modelled) */
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->kill_off_screen = true;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_left = -QUARTER_BLOCK_SIZE;
+        s->hitbox_bottom = s->hitbox_right = QUARTER_BLOCK_SIZE;
+        ai_set_anim(s, MZM_DRAGON_FIREBALL_MOVING);
+        s->pose = DRAGON_POSE_IDLE;
+        s->samus_collision = SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT;
+        s->draw_order = 3;
+        s->health = c->tables->secondary_health[s->sprite_id];
+        if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
+            s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->rotation = 64;       /* PI_2 */
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+        } else {
+            s->rotation = 0;
+        }
+        s->status |= MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE;
+        s->work3 = 0;
+        mzm_sfx_play(MZM_SOUND_DRAGON_SPITTING);
+        /* fallthrough */
+    case DRAGON_FIREBALL_POSE_MOVE: {
+        /* DragonFireballMove */
+        uint16_t old_y = s->y;
+        uint8_t offset = s->work3;
+        int16_t y_movement = offset < 40 ? c->tables->dragon_fireball_y[offset] : SHORT_MAX;
+        int16_t rotation = offset < 40 ? c->tables->dragon_fireball_rotation[offset] : 0;
+        if (y_movement == SHORT_MAX) {
+            uint8_t last = offset > 0 && offset <= 40 ? (uint8_t)(offset - 1) : 0;
+            rotation = c->tables->dragon_fireball_rotation[last];
+            s->y = (uint16_t)(s->y + c->tables->dragon_fireball_y[last]);
+        } else {
+            s->work3++;
+            s->y = (uint16_t)(s->y + y_movement);
+        }
+        if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
+            s->x = (uint16_t)(s->x + PIXEL_SIZE * 3);
+            s->rotation = (uint16_t)((rotation + 64) & 0xFF);
+        } else {
+            s->x = (uint16_t)(s->x - PIXEL_SIZE * 3);
+            s->rotation = (uint16_t)(-rotation & 0xFF);
+        }
+        if (ai_entered_room_effect(c, old_y, s->y)) {
+            s->pose = SPRITE_POSE_STOPPED;
+            break;
+        }
+        if (ai_collision_at(c, s->y, s->x) & 0xF0) s->pose = SPRITE_POSE_STOPPED;
+        break;
+    }
+    case SPRITE_POSE_STOPPED:
+        /* DragonFireballExplodingInit */
+        s->ignore_samus_timer = 1;
+        ai_set_anim(s, MZM_DRAGON_FIREBALL_EXPLODING);
+        s->pose = DRAGON_FIREBALL_POSE_EXPLODING;
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE;
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        break;
+    case DRAGON_FIREBALL_POSE_EXPLODING:
+        s->ignore_samus_timer = 1;
+        if (ai_animation_ending(c, 1)) s->status = 0;
+        break;
+    default: ai_sprite_death(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_SMALL); break;
+    }
+}
+
 /* Squeept poses (squeept.c). */
 enum {
     SQUEEPT_POSE_IDLE_INIT = 0xE,
@@ -4043,6 +4267,7 @@ static bool is_drop(uint8_t sprite_id) {
 int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     if (secondary) {
         if (sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_FAMILY_ZEELA;
+        if (sprite_id == MZM_SSPRITE_DRAGON_FIREBALL) return MZM_FAMILY_DRAGON;
         if (sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE || sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW ||
             sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW)
             return MZM_FAMILY_ITEM_SPRITE;
@@ -4097,6 +4322,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_RIPPERII: return MZM_FAMILY_RIPPER2;
     case MZM_PSPRITE_SQUEEPT: return MZM_FAMILY_SQUEEPT;
     case MZM_PSPRITE_SKULTERA: return MZM_FAMILY_SKULTERA;
+    case MZM_PSPRITE_DRAGON: return MZM_FAMILY_DRAGON;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
     case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
@@ -4696,6 +4922,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (!sprite->secondary) return sprite->sprite_id;
     if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
     if (sprite->sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE) return MZM_PSPRITE_MORPH_BALL;
+    if (sprite->sprite_id == MZM_SSPRITE_DRAGON_FIREBALL) return MZM_PSPRITE_DRAGON;
     if (sprite->sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW) return MZM_PSPRITE_POWER_GRIP;
     if (sprite->sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW) return MZM_PSPRITE_CHARGE_BEAM;
     if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
@@ -4801,6 +5028,7 @@ static uint16_t damaged_sound(int family) {
     case MZM_FAMILY_RIPPER2: return MZM_SOUND_RIPPER2_DAMAGED;
     case MZM_FAMILY_SQUEEPT: return MZM_SOUND_SQUEEPT_DAMAGED;
     case MZM_FAMILY_SKULTERA: return MZM_SOUND_SKULTERA_DAMAGED;
+    case MZM_FAMILY_DRAGON: return MZM_SOUND_DRAGON_DAMAGED;
     default: return 0;
     }
 }
@@ -4866,6 +5094,10 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_SQUEEPT: squeept(&c); break;
     case MZM_FAMILY_ITEM_SPRITE: ai_item_sprite(&c); break;
     case MZM_FAMILY_SKULTERA: skultera(&c); break;
+    case MZM_FAMILY_DRAGON:
+        if (sprite->secondary) dragon_fireball(&c);
+        else dragon(&c);
+        break;
     case MZM_FAMILY_RINKA: rinka(&c); break;
     case MZM_FAMILY_SPACE_PIRATE:
         if (sprite->secondary) ai_space_pirate_laser(&c);

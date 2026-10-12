@@ -1936,6 +1936,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sSqueeptRisingMovement", t->squeept_rising, 65, 65},
         {"sSqueeptFallingMovement", t->squeept_falling, 16, 16},
         {"sChargeBeamIdleYMovement", t->charge_beam_idle_y, 66, 66},
+        {"sDragonFireballYMovement", t->dragon_fireball_y, 40, 40},
+        {"sDragonFireballOamRotation", t->dragon_fireball_rotation, 40, 40},
         {"sSpacePirateWallJumpingVelocity", t->pirate_wall_jump, 8, 8},
         {"sSpacePirate_2e1030", t->pirate_jump_low, 11, 11},
         {"sSpacePirateJumpingVelocity", t->pirate_jump, 10, 10},
@@ -1979,6 +1981,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             if (sscanf(cursor, "%63s %d %d %d %d", name, &id, &health, &damage, &weakness) != 5 ||
                 id < 0 || id > 255) { ok = false; break; }
             sprites->tables.secondary_damage[id] = (uint16_t)damage;
+            sprites->tables.secondary_health[id] = (uint16_t)health;
             sprites->tables.secondary_weakness[id] = (uint8_t)(weakness & 0xFF);
             sprites->tables.secondary_freeze[id] = (uint8_t)(weakness >> 8);
         } else if (!strcmp(line, "multi")) {

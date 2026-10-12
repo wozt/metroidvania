@@ -179,6 +179,12 @@ read from the user's ROM at export time; nothing is stored in the repository.
   its glow (which follows its height), floats with
   `sChargeBeamIdleYMovement` and removes the glow when taken. The Charge
   Beam is placed by an event sprite set the export does not resolve yet.
+- Dragon (`dragon.c`): rises from its lava up to two blocks while Samus is
+  above it within 6 blocks, turns toward her and spits every 100 frames
+  after half a second of warning; the fireball arcs with
+  `sDragonFireballYMovement` at 3 pixels a frame, rotated with
+  `sDragonFireballOamRotation`, until the lava surface or a block. The
+  splashes are not ported.
 - Skultera (`skultera.c`): patrols a pixel every three frames up to eight
   blocks from where it last turned, turns at walls and toward Samus, chases
   her every two frames when she is ahead, rising half a pixel a frame only

@@ -2988,6 +2988,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0280 - Zero Mission Dragons
+
+- Dragons (`dragon.c`) rise from their lava toward Samus, turn and spit
+  fireballs that arc with the ROM tables (`sDragonFireballYMovement`,
+  `sDragonFireballOamRotation`, now exported) and explode on the surface
+  or a block; the secondary sprites now take their health from
+  `sSecondarySpriteStats`.
+- Checked in norfair_022 (`--spawn 260 300`).
+- Not ported: the splashes, the fireball's background priority.
+- Tests: `tests/test_mzm_sprites.c`.
+
 ## Patch 0279 - Zero Mission liquids and hazards, Skulteras
 
 - The runtime computes `ClipdataUpdateCurrentAffecting`'s hazard: the

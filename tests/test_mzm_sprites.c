@@ -2876,6 +2876,58 @@ int main(void) {
         frame.samus_x = 60000;
     }
 
+    /* A Dragon rises toward Samus above it, spits a fireball after its
+     * warning, and the fireball arcs at 3 pixels a frame. */
+    {
+        static MzmSprite room[4];
+        static MzmSpriteKind dragon_kind;
+        memset(room, 0, sizeof room);
+        for (int a = 0; a < MZM_DRAGON_ANIMS; ++a) {
+            dragon_kind.counts[a] = 2;
+            dragon_kind.timers[a][0] = dragon_kind.timers[a][1] = 3;
+        }
+        MzmSpriteFrame dragon_frame = frame;
+        dragon_frame.kinds[MZM_FAMILY_DRAGON] = &dragon_kind;
+        dragon_frame.sprites = room;
+        dragon_frame.sprite_count = 4;
+        tables.health[MZM_PSPRITE_DRAGON] = 18;
+        tables.secondary_health[MZM_SSPRITE_DRAGON_FIREBALL] = 1;
+        for (int i = 0; i < 39; ++i) tables.dragon_fireball_y[i] = (int16_t)(i < 20 ? -4 : 4);
+        tables.dragon_fireball_y[39] = 32767;
+        clear();
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_DRAGON, 0, 9, 5, 0, 0);
+        dragon_frame.samus_x = (uint16_t)(room[0].x + 200);   /* to its right */
+        dragon_frame.samus_y = (uint16_t)(room[0].y - 100);
+        mzm_sprite_update(&room[0], 0, &dragon_frame);
+        assert(room[0].pose == 8 && room[0].status & MZM_SPRITE_STATUS_X_FLIP &&
+               room[0].y_spawn == room[0].y && room[0].health == 18);
+        uint16_t spawn = room[0].y;
+        int frames = 0;
+        while (room[0].pose != 0x35 && frames++ < 200) mzm_sprite_update(&room[0], 0, &dragon_frame);
+        /* The 100-frame spit interval while rising two blocks at most. */
+        assert(room[0].pose == 0x35 && frames >= 99 && room[0].y < spawn &&
+               room[0].y >= spawn - (2 * 64 - 1));
+        frames = 0;
+        while (room[1].status == 0 && frames++ < 60) mzm_sprite_update(&room[0], 0, &dragon_frame);
+        /* The rest of the half-second warning, then 8 frames of spitting. */
+        assert(frames == 29 + 8 && room[0].pose == 9 && room[0].work0 == 100);
+        assert(room[1].secondary && room[1].sprite_id == MZM_SSPRITE_DRAGON_FIREBALL);
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[1], 1, &dragon_frame);
+        assert(room[1].status & MZM_SPRITE_STATUS_FACING_RIGHT && room[1].health == 1 &&
+               room[1].status & MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DRAGON_SPITTING));
+        uint16_t fx = room[1].x, fy = room[1].y;
+        mzm_sprite_update(&room[1], 1, &dragon_frame);
+        assert(room[1].x == fx + 12 && room[1].y == fy - 4);
+        /* Into a wall: it explodes. */
+        for (int y = 0; y < ROWS; ++y) grid[y][(room[1].x + 64) / 64] = MZM_CLIPDATA_SOLID;
+        frames = 0;
+        while (room[1].pose == 9 && frames++ < 20) mzm_sprite_update(&room[1], 1, &dragon_frame);
+        mzm_sprite_update(&room[1], 1, &dragon_frame);
+        assert(room[1].pose == 0x43 && room[1].anim == MZM_DRAGON_FIREBALL_EXPLODING);
+    }
+
     /* The Morph Ball, the Power Grip and the Charge Beam: touched, they give
      * their item, hold Samus with the banner and flicker until it lets her
      * go; their secondary sprites follow. */

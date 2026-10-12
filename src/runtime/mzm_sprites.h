@@ -13,7 +13,7 @@
  * Ripper II and Squeept AIs (src/sprites_ai/zoomer.c, zeela.c, ripper.c,
  * skree.c, waver.c, sidehopper.c, dessgeega.c, viola.c, sova.c, zeb.c,
  * geega.c, zebbo.c, reo.c, mella.c, holtz.c, multiviola.c, rinka.c, geruta.c,
- * ripper2.c, squeept.c, gamet.c, skultera.c) with SpriteSpawnSecondary for the Skree's explosion and
+ * ripper2.c, squeept.c, gamet.c, skultera.c, dragon.c) with SpriteSpawnSecondary for the Skree's explosion and
  * the red Zeela's eyes, and the Space Pirates with their lasers
  * (src/sprites_ai/space_pirate.c, ported in mzm_space_pirate.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
@@ -137,6 +137,7 @@ typedef struct {
     uint8_t freeze[256], secondary_freeze[256];
     uint16_t drops[256][5];         /* drop probabilities (columns 4-8), out of 1024 */
     uint16_t secondary_damage[256]; /* sSecondarySpriteStats */
+    uint16_t secondary_health[256];
     uint8_t secondary_weakness[256];
     int16_t skree_falling[16];      /* sSkreeFallingSpeed (SHORT_MAX ends it) */
     int16_t zeela_eyes_up[16];      /* sZeelaEyesFallingFromUpSpeed */
@@ -158,6 +159,8 @@ typedef struct {
     int16_t squeept_rising[65];     /* sSqueeptRisingMovement (SHORT_MAX ends it) */
     int16_t squeept_falling[16];    /* sSqueeptFallingMovement (SHORT_MAX ends it) */
     int16_t charge_beam_idle_y[66]; /* sChargeBeamIdleYMovement (SHORT_MAX ends it) */
+    int16_t dragon_fireball_y[40];  /* sDragonFireballYMovement (SHORT_MAX ends it) */
+    int16_t dragon_fireball_rotation[40]; /* sDragonFireballOamRotation */
     int16_t pirate_wall_jump[8];    /* sSpacePirateWallJumpingVelocity */
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
@@ -299,6 +302,13 @@ enum {
     MZM_ITEM_SPRITE_CHARGE_BEAM_VISIBLE, MZM_ITEM_SPRITE_CHARGE_BEAM_GLOW, MZM_ITEM_SPRITE_ANIMS,
 };
 extern const char *const mzm_item_sprite_anim_names[MZM_ITEM_SPRITE_ANIMS];
+/* Dragon OAM tables (src/data/sprites/dragon.c). */
+enum {
+    MZM_DRAGON_IDLE, MZM_DRAGON_WARNING, MZM_DRAGON_SPITTING, MZM_DRAGON_TURNING_AROUND,
+    MZM_DRAGON_TURNING_AROUND_PART2, MZM_DRAGON_FIREBALL_MOVING, MZM_DRAGON_FIREBALL_EXPLODING,
+    MZM_DRAGON_ANIMS,
+};
+extern const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS];
 /* Skultera OAM tables (src/data/sprites/skultera.c). */
 enum { MZM_SKULTERA_IDLE, MZM_SKULTERA_TURNING_AROUND, MZM_SKULTERA_CHASING_SAMUS, MZM_SKULTERA_ANIMS };
 extern const char *const mzm_skultera_anim_names[MZM_SKULTERA_ANIMS];
@@ -377,7 +387,7 @@ enum {
     MZM_FAMILY_MELLA, MZM_FAMILY_HOLTZ, MZM_FAMILY_MULTIVIOLA, MZM_FAMILY_RINKA,
     MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_FAMILY_CHOZO_STATUE,
     MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
-    MZM_FAMILY_ITEM_SPRITE, MZM_FAMILY_SKULTERA,
+    MZM_FAMILY_ITEM_SPRITE, MZM_FAMILY_SKULTERA, MZM_FAMILY_DRAGON,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -416,7 +426,7 @@ enum {
     MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
     MZM_PSPRITE_GERUTA_RED = 54, MZM_PSPRITE_GERUTA_GREEN = 55, MZM_PSPRITE_RIPPERII = 113,
     MZM_PSPRITE_SQUEEPT = 56,
-    MZM_PSPRITE_SKULTERA = 69, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SKULTERA = 69, MZM_PSPRITE_DRAGON = 59, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -442,7 +452,7 @@ enum {
     MZM_SSPRITE_UNKNOWN_ITEM_CHOZO_STATUE_PART = 34, MZM_SSPRITE_UNKNOWN_ITEM_CHOZO_STATUE_REFILL = 35,
     MZM_SSPRITE_ZEELA_EYES = 16, MZM_SSPRITE_SPACE_PIRATE_LASER = 22,
     MZM_SSPRITE_MORPH_BALL_OUTSIDE = 19, MZM_SSPRITE_POWER_GRIP_GLOW = 70,
-    MZM_SSPRITE_CHARGE_BEAM_GLOW = 5,
+    MZM_SSPRITE_CHARGE_BEAM_GLOW = 5, MZM_SSPRITE_DRAGON_FIREBALL = 8,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 

@@ -223,6 +223,26 @@ const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
     "MorphBallLauncherOam_Launching",
     "MorphBallLauncherPartOam_Back",
     "MorphBallLauncherPartOam_Energy",
+    "ZiplineOam_OffIdle",
+    "ZiplineOam_OffGrabbingSamus",
+    "ZiplineOam_OffSamusGrabbed",
+    "ZiplineOam_OffReleasingSamus",
+    "ZiplineOam_OnIdle",
+    "ZiplineOam_OnGrabbingSamus",
+    "ZiplineOam_OnSamusGrabbed",
+    "ZiplineOam_OnReleasingSamus",
+    "ZiplineButtonOam_OffIdle",
+    "ZiplineButtonOam_OnIdle",
+    "ZiplineButtonOam_Active",
+    "ZiplineGeneratorOam_Deactivated",
+    "ZiplineGeneratorOam_Activating",
+    "ZiplineGeneratorOam_Activated",
+    "ZiplineGeneratorPartOam_ConductorDeactivated",
+    "ZiplineGeneratorPartOam_ConductorActivating",
+    "ZiplineGeneratorPartOam_ConductorActivated",
+    "ZiplineGeneratorPartOam_MorphSymbolActivating",
+    "ZiplineGeneratorPartOam_MorphSymbolActivated",
+    "ZiplineGeneratorPartOam_ElectricityActivating",
 };
 static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
@@ -236,6 +256,11 @@ static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP",
     "AREA_BANNER", "AREA_BANNER", "AREA_BANNER", "AREA_BANNER", "AREA_BANNER", "AREA_BANNER",
     "MORPH_BALL_LAUNCHER", "MORPH_BALL_LAUNCHER", "MORPH_BALL_LAUNCHER", "MORPH_BALL_LAUNCHER",
+    "ZIPLINE", "ZIPLINE", "ZIPLINE", "ZIPLINE", "ZIPLINE", "ZIPLINE", "ZIPLINE", "ZIPLINE",
+    "ZIPLINE_BUTTON", "ZIPLINE_BUTTON", "ZIPLINE_BUTTON",
+    "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR",
+    "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR",
+    "ZIPLINE_GENERATOR",
 };
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
@@ -4339,7 +4364,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_DRAGON_FIREBALL) return MZM_FAMILY_DRAGON;
         if (sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT || sprite_id == MZM_SSPRITE_MAP_STATION_PART ||
             sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART || sprite_id == MZM_SSPRITE_GUNSHIP_PART ||
-            sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART)
+            sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART ||
+            sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART)
             return MZM_FAMILY_GADGET;
         if (sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE || sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW ||
             sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW)
@@ -4405,6 +4431,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_PLASMA_BEAM_BLOCK: case MZM_PSPRITE_GRAVITY_SUIT_BLOCK:
     case MZM_PSPRITE_SPACE_JUMP_BLOCK: case MZM_PSPRITE_MAP_STATION: case MZM_PSPRITE_SAVE_PLATFORM:
     case MZM_PSPRITE_GUNSHIP: case MZM_PSPRITE_AREA_BANNER: case MZM_PSPRITE_MORPH_BALL_LAUNCHER:
+    case MZM_PSPRITE_ZIPLINE: case MZM_PSPRITE_ZIPLINE_BUTTON: case MZM_PSPRITE_ZIPLINE_GENERATOR:
         return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
@@ -4577,6 +4604,12 @@ static void freeze_sprite(MzmSprite *s, uint8_t timer) {
     mzm_sfx_play_not_playing(MZM_SOUND_FREEZING_SPRITE);
 }
 
+/* SpriteUtilCheckOnZipline */
+static bool on_zipline(uint8_t pose) {
+    return pose == MZM_POSE_ON_ZIPLINE || pose == MZM_POSE_SHOOTING_ON_ZIPLINE ||
+           pose == MZM_POSE_TURNING_ON_ZIPLINE || pose == MZM_POSE_MORPH_BALL_ON_ZIPLINE;
+}
+
 static bool contact_kills(MzmSprite *s, const MzmSpriteSamus *samus,
                           const MzmSpriteTables *tables) {
     if (!samus->suitless && !samus->speedboosting && !samus->screw_attacking &&
@@ -4635,12 +4668,15 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         if (!touching(samus_top, samus_bottom, samus_left, samus_right, top, bottom, left, right))
             continue;
         uint16_t center_x = (uint16_t)(left + (uint16_t)(right - left) / 2);
+        uint16_t center_y = (uint16_t)(top + (uint16_t)(bottom - top) / 2);
         bool on_left = center_x >= samus->previous_x;
+        /* SPRITE_COLLISION_FLAG_ON_BOTTOM: the hitbox's centre above her. */
+        bool on_bottom = center_y + PIXEL_SIZE < samus_top;
         /* A frozen sprite is solid: after the contact damage (no kill),
-         * Samus stands on it, is pushed below it or is stopped at its
-         * sides. SpriteUtilCheckOnZipline is false (no ziplines). The
-         * SSC_SOLID sprites share the rules; SSC_SOLID_CHECK_COLLIDING also
-         * flags the contact and ends the pass. */
+         * Samus falls from a zipline, or stands on it, is pushed below it
+         * or is stopped at its sides. The SSC_SOLID sprites share the
+         * rules; SSC_SOLID_CHECK_COLLIDING also flags the contact and ends
+         * the pass. */
         bool solid = s->freeze_timer || s->samus_collision == SSC_SOLID ||
                      s->samus_collision == SSC_SOLID_CHECK_COLLIDING;
         if (!s->freeze_timer && s->samus_collision == SSC_SOLID_CHECK_COLLIDING) {
@@ -4649,7 +4685,10 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         }
         if (solid) {
             if (samus->pulling_up || contact_kills(s, samus, tables) || !samus->world) continue;
-            if (samus_y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < top) {
+            if (on_zipline(samus->pose)) {
+                samus->set_pose = MZM_POSE_MID_AIR_REQUEST;
+                samus->pose = MZM_POSE_MID_AIR_REQUEST;
+            } else if (samus_y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < top) {
                 if (samus_check_collision(samus->world,
                                           (uint16_t)(top + ONE_SUB_PIXEL + samus->hitbox_top),
                                           samus_x) == MZM_COLLISION_AIR &&
@@ -4694,6 +4733,40 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             if (!samus->invincible && samus->hurt) {
                 samus->hurt(samus->context, damage_of(s, tables), on_left);
                 samus->invincible = true;
+            }
+            s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+            ignore = true;
+            break;
+        case SSC_ZIPLINE:
+            /* Grabbed from below while mid-air or spinning (hanging under
+             * it), or in morph ball mid-air or ballsparking (inside it). */
+            if (on_bottom) {
+                uint8_t pose = MZM_POSE_NONE;
+                uint16_t offset = 0;
+                switch (samus->pose) {
+                case MZM_POSE_SPINNING:
+                case MZM_POSE_MIDAIR:
+                    pose = MZM_POSE_ON_ZIPLINE;
+                    offset = BLOCK_SIZE * 2 + HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+                    break;
+                case MZM_POSE_BALLSPARKING:
+                    mzm_sfx_stop(MZM_SOUND_BALLSPARKING);
+                    /* fallthrough */
+                case MZM_POSE_MORPH_BALL_MIDAIR:
+                    pose = MZM_POSE_MORPH_BALL_ON_ZIPLINE;
+                    offset = BLOCK_SIZE - PIXEL_SIZE;
+                    break;
+                default:
+                    break;
+                }
+                if (pose != MZM_POSE_NONE) {
+                    samus->y = (uint16_t)(s->y + offset);
+                    samus->x = s->x;
+                    samus->previous_x = samus->x;
+                    samus->set_pose = pose;
+                    samus->pose = pose;
+                    s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+                }
             }
             s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
             ignore = true;
@@ -4795,6 +4868,10 @@ static void power_bomb_damage(MzmSprite *s, uint8_t weakness) {
         if ((s->isft & 0x7F) < 2) set_isft(s, 2);
         return;
     }
+    if (s->solid_for_projectiles) {
+        hit_solid(s);
+        return;
+    }
     if (weakness & MZM_WEAKNESS_POWER_BOMB) {
         if (s->health > POWER_BOMB_DAMAGE) {
             s->health -= POWER_BOMB_DAMAGE;
@@ -4813,6 +4890,27 @@ static void power_bomb_damage(MzmSprite *s, uint8_t weakness) {
     if ((s->isft & 0x7F) < isft) s->isft = (uint8_t)(isft | ISFT_POWER_BOMB_STUNNED);
     else s->isft |= ISFT_POWER_BOMB_STUNNED;
     s->damaged = true;
+}
+
+/* The particle a projectile sets on a sprite solid for projectiles. */
+static uint8_t solid_hit_effect(uint8_t type, uint32_t items) {
+    switch (type) {
+    case MZM_PROJECTILE_LONG_BEAM:
+    case MZM_PROJECTILE_CHARGED_LONG_BEAM: return MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM;
+    case MZM_PROJECTILE_ICE_BEAM:
+    case MZM_PROJECTILE_CHARGED_ICE_BEAM: return MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM;
+    case MZM_PROJECTILE_WAVE_BEAM:
+    case MZM_PROJECTILE_CHARGED_WAVE_BEAM:
+        return items & MZM_ITEM_ICE_BEAM ? MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM_NO_PLASMA
+                                         : MZM_PE_HITTING_SOMETHING_WITH_WAVE_BEAM;
+    case MZM_PROJECTILE_PLASMA_BEAM:
+    case MZM_PROJECTILE_CHARGED_PLASMA_BEAM:
+        return items & MZM_ITEM_ICE_BEAM ? MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM
+                                         : MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM;
+    case MZM_PROJECTILE_MISSILE: return MZM_PE_HITTING_SOMETHING_WITH_MISSILE;
+    case MZM_PROJECTILE_SUPER_MISSILE: return MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE;
+    default: return MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
+    }
 }
 
 void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weapons,
@@ -4868,6 +4966,8 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                     continue;
                 if (s->immune_to_projectiles) {
                     if ((s->isft & 0x7F) < 2) set_isft(s, 2);
+                } else if (s->solid_for_projectiles) {
+                    hit_solid(s);
                 } else if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
                     deal_damage(s, BOMB_DAMAGE);
                 } else {
@@ -4891,6 +4991,15 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
             uint8_t effect = MZM_PE_HITTING_SOMETHING_INVINCIBLE;
             bool missile = proj->type == MZM_PROJECTILE_MISSILE ||
                            proj->type == MZM_PROJECTILE_SUPER_MISSILE;
+            if (s->solid_for_projectiles) {
+                /* The SP_SOLID_FOR_PROJECTILES case of each hit routine:
+                 * the projectile's own impact particle, the projectile
+                 * removed (the Plasma Beam goes through). */
+                hit_solid(s);
+                if (effects) mzm_particle_set(effects, py, px, solid_hit_effect(proj->type, weapons->items));
+                if (!plasma) proj->active = false;
+                continue;
+            }
             if (s->immune_to_projectiles) {
                 /* ProjectileHitSpriteImmuneToProjectiles; missiles tumble. */
                 if ((s->isft & 0x7F) < 2) set_isft(s, 2);
@@ -5026,6 +5135,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
         sprite->sprite_id == MZM_SSPRITE_MAP_STATION_PART || sprite->sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART ||
         sprite->sprite_id == MZM_SSPRITE_GUNSHIP_PART || sprite->sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART ||
+        sprite->sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART ||
         sprite->sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT)
         return sprite->owner;
     if (sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||

@@ -2988,6 +2988,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0306 - Zero Mission ziplines
+
+- Zipline, ZiplineButton, ZiplineGenerator and its parts
+  (`src/runtime/mzm_gadget_sprites.c`): Samus in morph ball on the
+  generator activates the ziplines (EVENT_ZIPLINES_ACTIVATED, the animated
+  palette back on); a zipline grabbed from below carries her to the other
+  stop-enemy block once lit and drops her; a shot button calls it.
+- The sprite engine gains SSC_ZIPLINE (the SPOSE_ON_ZIPLINE and
+  SPOSE_MORPH_BALL_ON_ZIPLINE grabs), SpriteUtilCheckOnZipline for frozen
+  sprites, and SP_SOLID_FOR_PROJECTILES hits (`src/runtime/mzm_sprites.c`);
+  the runtime applies the collision's SamusSetPose and gPreviousXPosition.
+- Checked by capture in kraid_004; tests in `tests/test_mzm_sprites.c`.
+
 ## Patch 0305 - Zero Mission morph ball launchers
 
 - MorphBallLauncher and its parts (`src/runtime/mzm_gadget_sprites.c`): a

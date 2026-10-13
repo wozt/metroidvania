@@ -232,7 +232,7 @@ int main(void) {
     /* SpriteInitPrimary's one-frame ignore timer runs down in the collision
      * routine, not in the sprite's update. */
     assert(z.status & MZM_SPRITE_STATUS_ONSCREEN && z.ignore_samus_timer == 1);
-    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
+    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
     mzm_sprites_samus_collision(&z, 1, &away, &tables);
     assert(z.ignore_samus_timer == 0 && hurts == 0);
 
@@ -240,7 +240,7 @@ int main(void) {
      * the stats damage, pushed away (the sprite is on her right, "on left"
      * in the native flag naming), then 15 frames of ignored contact. */
     MzmSpriteSamus samus = {NULL, (uint16_t)(z.x - 40), 640, (uint16_t)(z.x - 40),
-                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
+                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
     mzm_sprites_samus_collision(&z, 1, &samus, &tables);
     assert(hurts == 1 && last_damage == 8 && last_on_left && samus.invincible);
     /* Set to 15, then run down once at the end of the routine. */
@@ -393,7 +393,7 @@ int main(void) {
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     samus = (MzmSpriteSamus){NULL, z.x, (uint16_t)(z.y + 40), z.x, -96, 0, -24, 24,
-                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
+                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
     for (int i = 0; i < 19; ++i) {
         mzm_sprites_samus_collision(&z, 1, &samus, &tables);
         step(&z, 0);
@@ -580,7 +580,7 @@ int main(void) {
     /* It hurts Samus with the secondary damage, but not the screw attack. */
     hurts = 0;
     MzmSpriteSamus near = {NULL, part->x, (uint16_t)(part->y + 20), part->x, -96, 0, -24, 24,
-                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
+                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
     part->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(group, 8, &near, &tables);
     assert(hurts == 1 && last_damage == 2);
@@ -976,7 +976,7 @@ int main(void) {
     const uint16_t zleft = (uint16_t)(z.x + z.hitbox_left);
     MzmSpriteSamus solid = {NULL, z.x, (uint16_t)(ztop + 8), z.x, -124, 0, -28, 28,
                             false, false, false, hurt, false, false, 0, NULL,
-                            &world, -10, false, false, 1, true, false, false};
+                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
     hurts = 0;
     mzm_sprites_samus_collision(&z, 1, &solid, &tables);
     assert(hurts == 0 && solid.y == ztop + 1 && z.status & MZM_SPRITE_STATUS_SAMUS_ON_TOP &&
@@ -1040,7 +1040,7 @@ int main(void) {
     memset(&fx, 0, sizeof fx);
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
     MzmSpriteSamus screw = {NULL, z.x, (uint16_t)(z.y + 20), z.x, -96, 0, -24, 24,
-                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
+                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
     z.ignore_samus_timer = 0;
     mzm_sprites_samus_collision(&z, 1, &screw, &tables);
     assert(z.pose == 0x65 && z.damaged);
@@ -1182,7 +1182,7 @@ int main(void) {
      * harmless, and gone when the table ends. */
     hurts = 0;
     MzmSpriteSamus touch = {NULL, eye_l->x, (uint16_t)(eye_l->y + 20), eye_l->x, -96, 0, -24, 24,
-                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
+                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
     eye_l->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(eye_l, 1, &touch, &tables);
     assert(hurts == 1 && last_damage == 3 && eye_l->pose == 66);
@@ -2255,7 +2255,7 @@ int main(void) {
          * with the laser's damage, then explodes. */
         hurts = 0;
         MzmSpriteSamus laser_hit = {NULL, ps[1].x, (uint16_t)(ps[1].y + 20), ps[1].x,
-                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
+                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
         /* The spawn's ignore timer runs down on the first collision pass. */
         MzmSpriteSamus far_away = laser_hit;
         far_away.x = 60000;
@@ -2494,7 +2494,7 @@ int main(void) {
         /* Samus in its light rings the alarm, then it holds it. */
         hurts = 0;
         MzmSpriteSamus in_light = {NULL, ps[0].x, (uint16_t)(ps[0].y + 20), ps[0].x,
-                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false};
+                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE};
         ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
         MzmSpriteSamus out_of_light = in_light;
         out_of_light.x = 60000;
@@ -3394,6 +3394,162 @@ int main(void) {
         assert(room[0].work1 && room[2].sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART && room[2].room_slot == 1);
         for (int i = 0; i < 59; ++i) mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0x9);
+        /* A zipline between two stop-enemy blocks (initial direction away
+         * from the one beside it), grabbed from below while mid-air: Samus
+         * hangs under it; once the ziplines are activated it carries her
+         * to the other block, snaps to its middle, drops her and turns. */
+        memset(room, 0, sizeof room);
+        memset(test_events, 0, sizeof test_events);
+        clear();
+        movement_grid[5][6] = movement_grid[5][2] = MZM_CLIPDATA_MOVEMENT_STOP_ENEMY_BLOCK_SOLID;
+        g.weapons = NULL;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_ZIPLINE, 0, 5, 5, 0, 0);
+        room[0].status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && !(room[0].status & MZM_SPRITE_STATUS_FACING_RIGHT) &&
+               room[0].anim == MZM_GADGET_ZIPLINE_OFF_IDLE && room[0].samus_collision == 26 /* SSC_ZIPLINE */ &&
+               room[0].solid_for_projectiles && room[0].health == 1 && room[0].draw_order == 3);
+        MzmSpriteSamus zip = {.x = 340, .y = (uint16_t)(room[0].y + 60), .previous_x = 340,
+                              .hitbox_top = -70, .hitbox_left = -24, .hitbox_right = 24,
+                              .hurt = hurt, .has_energy = true, .facing = 1,
+                              .pose = MZM_POSE_STANDING, .set_pose = MZM_POSE_NONE};
+        mzm_sprites_samus_collision(room, 4, &zip, g.tables);
+        mzm_sprites_samus_collision(room, 4, &zip, g.tables);
+        /* Not mid-air: only the contact (and its ignore timer). */
+        assert(zip.set_pose == MZM_POSE_NONE && room[0].ignore_samus_timer == 14);
+        room[0].ignore_samus_timer = 0;
+        zip.pose = MZM_POSE_MIDAIR;
+        mzm_sprites_samus_collision(room, 4, &zip, g.tables);
+        assert(zip.set_pose == MZM_POSE_ON_ZIPLINE && zip.y == room[0].y + 168 && zip.x == 352 &&
+               zip.previous_x == 352 && room[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING);
+        MzmSpriteSamusLink zip_link = {MZM_LINK_POSE_OTHER, zip.y, zip.x, false, false, false, false,
+                                       MZM_POSE_NONE, false, false, false, 0, MZM_POSE_ON_ZIPLINE,
+                                       false, false, 0};
+        g.samus_link = &zip_link;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].work1 == 1 && room[0].anim == MZM_GADGET_ZIPLINE_OFF_GRABBING_SAMUS);
+        for (int i = 0; i < 30; ++i) mzm_sprite_update(&room[0], 0, &g);
+        /* Off, it holds her without moving. */
+        assert(room[0].work1 == 2 && room[0].anim == MZM_GADGET_ZIPLINE_OFF_SAMUS_GRABBED &&
+               room[0].health == 1 && room[0].x == 352);
+        /* Let go (a jump): it releases her and ignores her for a while. */
+        zip_link.samus_pose = MZM_POSE_MIDAIR;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(!(room[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) && room[0].ignore_samus_timer == 15 &&
+               room[0].anim == MZM_GADGET_ZIPLINE_OFF_RELEASING_SAMUS);
+        for (int i = 0; i < 30; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].work1 == 0 && room[0].anim == MZM_GADGET_ZIPLINE_OFF_IDLE);
+        test_set_event(NULL, MZM_EVENT_ZIPLINES_ACTIVATED);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].anim == MZM_GADGET_ZIPLINE_ON_IDLE);
+        room[0].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        zip_link.samus_pose = MZM_POSE_ON_ZIPLINE;
+        int zip_frames = 0;
+        while (room[0].health != 2 && zip_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        /* It moves in the frame it starts. */
+        assert(room[0].anim == MZM_GADGET_ZIPLINE_ON_SAMUS_GRABBED && room[0].work1 == 2);
+        assert(room[0].x == 340 && zip_link.x == 340 && zip_link.moved && room[0].work0 == 1);
+        zip_frames = 0;
+        while (room[0].health == 2 && zip_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].x == 224 && zip_link.x == 224 && zip_link.set_pose == MZM_POSE_MID_AIR_REQUEST &&
+               room[0].status & MZM_SPRITE_STATUS_FACING_RIGHT && room[0].work0 == 0 &&
+               !(room[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) && room[0].ignore_samus_timer == 15);
+        /* In morph ball, she is held inside it. */
+        room[0].ignore_samus_timer = 0;
+        zip.x = zip.previous_x = 224;
+        zip.y = (uint16_t)(room[0].y + 60);
+        zip.pose = MZM_POSE_MORPH_BALL_MIDAIR;
+        zip.set_pose = MZM_POSE_NONE;
+        mzm_sprites_samus_collision(room, 4, &zip, g.tables);
+        assert(zip.set_pose == MZM_POSE_MORPH_BALL_ON_ZIPLINE && zip.y == room[0].y + 60);
+        /* A frozen sprite drops Samus from a zipline. */
+        room[1] = room[0];
+        room[1].samus_collision = 4;            /* SSC_HURTS_SAMUS */
+        room[1].freeze_timer = 100;
+        room[1].ignore_samus_timer = 0;
+        room[0].ignore_samus_timer = 10;
+        zip.pose = MZM_POSE_ON_ZIPLINE;
+        zip.set_pose = MZM_POSE_NONE;
+        MzmSpriteWorld zip_world = *g.world;
+        zip.world = &zip_world;
+        mzm_sprites_samus_collision(room, 4, &zip, g.tables);
+        assert(zip.set_pose == MZM_POSE_MID_AIR_REQUEST);
+        memset(&room[1], 0, sizeof room[1]);
+        /* The button: bound to the zipline, lit; a shot (solid for
+         * projectiles: no damage) calls it, until it stops. */
+        mzm_sprite_init_primary(&room[2], MZM_PSPRITE_ZIPLINE_BUTTON, 0, 5, 8, 0, 2);
+        uint16_t button_y = room[2].y;
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].pose == 0x1 && room[2].y == button_y - 128 && room[2].solid_for_projectiles &&
+               room[2].hitbox_bottom == 80 && room[2].hitbox_left == -20);
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].pose == 0x9 && room[2].work1 == 0 && room[2].anim == MZM_GADGET_ZIPLINE_BUTTON_ON_IDLE);
+        static MzmWeapons zip_weapons;
+        mzm_weapons_init(&zip_weapons);
+        zip_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
+                                              .x = room[2].x, .y = room[2].y + 40};
+        mzm_sprites_projectile_hits(room, 4, &zip_weapons, g.tables, NULL);
+        assert(!zip_weapons.list[0].active && room[2].health == 1 && (room[2].isft & 0x7F) == 3);
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].pose == 0x23 && room[2].anim == MZM_GADGET_ZIPLINE_BUTTON_ACTIVE && room[0].health == 2);
+        zip_frames = 0;
+        while (room[0].health == 2 && zip_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        /* Without Samus it moves a quarter block a frame. */
+        assert(room[0].x == 352 && !(room[0].status & MZM_SPRITE_STATUS_FACING_RIGHT));
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].pose == 0x9);
+        /* Without a zipline, the button is removed. */
+        memset(room, 0, sizeof room);
+        mzm_sprite_init_primary(&room[2], MZM_PSPRITE_ZIPLINE_BUTTON, 0, 5, 8, 0, 2);
+        mzm_sprite_update(&room[2], 2, &g);
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].status == 0);
+        /* The generator: its conductor, solid grippable blocks; Samus in
+         * morph ball on top starts two seconds of activation (the morph
+         * symbol, the electricity, the animated palette back on), then the
+         * event and her morph ball. */
+        memset(room, 0, sizeof room);
+        memset(test_events, 0, sizeof test_events);
+        caa_calls = 0;
+        MzmSpriteGlobals zip_globals = {0};
+        g.globals = &zip_globals;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_ZIPLINE_GENERATOR, 0, 7, 3, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && room[0].anim == MZM_GADGET_ZIPLINE_GENERATOR_DEACTIVATED &&
+               room[1].sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART &&
+               room[1].anim == MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_DEACTIVATED && caa_calls == 4 &&
+               last_caa == MZM_CAA_MAKE_SOLID_GRIPPABLE && room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        mzm_sprite_update(&room[1], 1, &g);
+        assert(room[1].pose == 0x61 && room[1].draw_order == 13 && !(room[1].status & MZM_SPRITE_STATUS_NOT_DRAWN));
+        MzmSpriteSamusLink gen_link = {MZM_LINK_POSE_MORPH_BALL, (uint16_t)(room[0].y - 129), room[0].x,
+                                       false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
+                                       MZM_POSE_STANDING, false, false, 0};
+        g.samus_link = &gen_link;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9);
+        gen_link.samus_pose = MZM_POSE_MORPH_BALL;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xB && room[0].work0 == 120 && gen_link.set_pose == MZM_POSE_ACTIVATING_ZIPLINES &&
+               room[1].anim == MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_ACTIVATING && room[0].work2 == 2 &&
+               room[2].room_slot == 1 && room[2].y == gen_link.y - 24);
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].anim == MZM_GADGET_ZIPLINE_GENERATOR_MORPH_SYMBOL_ACTIVATING && room[2].always_active);
+        for (int i = 0; i < 30; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].work3 == 3 && room[3].room_slot == 2 && room[3].y == room[0].y - 384);
+        for (int i = 0; i < 74; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].work0 == 16 && zip_globals.enable_animated_palette && room[2].pose == 0xB &&
+               room[2].anim == MZM_GADGET_ZIPLINE_GENERATOR_MORPH_SYMBOL_ACTIVATED);
+        for (int i = 0; i < 16; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xC && gen_link.set_pose == MZM_POSE_MORPH_BALL && room[3].status == 0 &&
+               test_check_event(NULL, MZM_EVENT_ZIPLINES_ACTIVATED) &&
+               room[1].anim == MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_ACTIVATED);
+        /* Already activated. */
+        memset(room, 0, sizeof room);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_ZIPLINE_GENERATOR, 0, 7, 3, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xF && room[0].anim == MZM_GADGET_ZIPLINE_GENERATOR_ACTIVATED);
+        memset(test_events, 0, sizeof test_events);
+        clear();
         g.weapons = NULL;
         g.banner_pose = 0;
         g.banner_yes = false;

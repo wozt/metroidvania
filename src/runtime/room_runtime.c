@@ -2811,7 +2811,7 @@ static void runtime_sprites_drop_samus(RuntimeSprites *sprites, MzmSamus *samus)
 }
 
 static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx, float cy,
-                                   MzmSamus *samus, int32_t previous_x, MzmEquipment *equipment,
+                                   MzmSamus *samus, int32_t *previous_x, MzmEquipment *equipment,
                                    const MzmCollision *collision, MzmWeapons *weapons,
                                    const MzmInput *input, bool stopped,
                                    uint16_t *prevent_movement) {
@@ -2830,7 +2830,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
         const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
         /* The sprites see gSamusData.yPosition (the port's y - 1). */
         MzmSpriteSamus view = {&hurt, (uint16_t)samus->x, (uint16_t)(samus->y - 1),
-                               (uint16_t)previous_x, box->top, 0, box->left, box->right,
+                               (uint16_t)*previous_x, box->top, 0, box->left, box->right,
                                samus->pose == MZM_POSE_SCREW_ATTACKING,
                                equipment->suit == MZM_SUIT_SUITLESS, samus->invincibility != 0,
                                runtime_sprite_hurt, samus->speedboosting,
@@ -2842,13 +2842,16 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                    samus->pose == MZM_POSE_PULLING_YOURSELF_FORWARD_FROM_HANGING,
                                mzm_pose_hitbox(samus->pose) == MZM_HITBOX_MORPHED,
                                (int8_t)(samus->facing > 0 ? 1 : -1), equipment->energy != 0,
-                               false, false};
+                               false, false, (uint8_t)samus->pose, MZM_POSE_NONE};
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
-        /* The solid (frozen) sprites' pushes. */
+        /* The solid (frozen) sprites' pushes and the zipline grabs. */
         samus->x = view.x;
         samus->y = (int32_t)view.y + 1;
+        *previous_x = view.previous_x;
         if (view.stop_x) samus->x_velocity = 0;
         if (view.stop_y) samus->y_velocity = 0;
+        if (view.set_pose != MZM_POSE_NONE)
+            mzm_samus_sprite_set_pose(samus, (MzmPose)view.set_pose, equipment, collision);
     }
     /* SpriteUtilSamusStandingOnSprite runs after each sprite's AI. */
     MzmSpriteStanding standing = {samus->on_enemy,
@@ -4490,7 +4493,7 @@ int main(int argc, char **argv) {
             /* InGameTimerUpdate */
             if(!door_frozen && !dying)runtime_igt_update();
             if(!dying)
-                runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
+                runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, &previous_x,
                                        &equipment, &collision, &weapons, &input, movement_prevented,
                                        &prevent_movement);
             /* The loaded room's sprites have seen gIsLoadingFile. */
@@ -4580,6 +4583,11 @@ int main(int argc, char **argv) {
                                           runtime_sprite_check_event(&sprites,46),
                                           sprites.globals.alarm_timer!=0))
                         fprintf(stderr,"Native backgrounds unavailable for %s\n",current_room);
+                }
+                /* The zipline generator's gDisableAnimatedPalette = FALSE. */
+                if(sprites.globals.enable_animated_palette) {
+                    runtime_room_gfx.disable_animated_palette=0;
+                    sprites.globals.enable_animated_palette=false;
                 }
                 mzm_room_gfx_animate(&runtime_room_gfx,prevent_movement!=0,
                                      weapons.power_bomb.state!=MZM_PB_NONE,

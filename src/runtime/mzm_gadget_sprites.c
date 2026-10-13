@@ -1209,6 +1209,407 @@ static void morph_ball_launcher_part(Ctx *c) {
     }
 }
 
+/* Zipline poses, health and animation states (sprites_ai/zipline.c). */
+enum {
+    ZIPLINE_POSE_IDLE = 0x9, ZIPLINE_HEALTH_NOT_MOVING = 1, ZIPLINE_HEALTH_MOVING = 2,
+    ZIPLINE_RELEASED = 0, ZIPLINE_GRABBING = 1, ZIPLINE_GRABBED = 2, ZIPLINE_RELEASING = 3,
+    ZIPLINE_BLOCK_X_RANGE = HALF_BLOCK_SIZE + PIXEL_SIZE * 3,
+    ZIPLINE_BUTTON_POSE_BIND_ZIPLINE = 0x1, ZIPLINE_BUTTON_POSE_IDLE = 0x9,
+    ZIPLINE_BUTTON_POSE_OFF = 0xF, ZIPLINE_BUTTON_POSE_ACTIVATED = 0x23,
+    ZIPLINE_GENERATOR_POSE_DETECT_SAMUS = 0x9, ZIPLINE_GENERATOR_POSE_ACTIVATING = 0xB,
+    ZIPLINE_GENERATOR_POSE_ACTIVATED = 0xC, ZIPLINE_GENERATOR_POSE_ALREADY_ACTIVATED = 0xF,
+    ZIPLINE_GENERATOR_PART_POSE_MORPH_SYMBOL_ACTIVATING = 0xB,
+    ZIPLINE_GENERATOR_PART_POSE_IDLE = 0x61,
+    ZIPLINE_GENERATOR_PART_CONDUCTOR = 0, ZIPLINE_GENERATOR_PART_MORPH_SYMBOL = 1,
+    ZIPLINE_GENERATOR_PART_ELECTRICITY = 2,
+};
+
+/* SpriteUtilCheckOnZipline */
+static bool samus_on_zipline(const MzmSpriteSamusLink *link) {
+    if (!link) return false;
+    switch (link->samus_pose) {
+    case MZM_POSE_ON_ZIPLINE: case MZM_POSE_SHOOTING_ON_ZIPLINE:
+    case MZM_POSE_TURNING_ON_ZIPLINE: case MZM_POSE_MORPH_BALL_ON_ZIPLINE: return true;
+    default: return false;
+    }
+}
+
+/* SamusSetPose from a sprite: the request, and the pose the next sprites
+ * see. */
+static void link_set_pose(MzmSpriteSamusLink *link, uint8_t pose) {
+    if (!link) return;
+    link->set_pose = pose;
+    link->samus_pose = pose;
+}
+
+static bool ziplines_on(const Ctx *c) { return ai_check_event(c, MZM_EVENT_ZIPLINES_ACTIVATED); }
+
+/* ZiplineCheckColliding: the stop-enemy block ahead (on init, the side
+ * without one sets the direction); the movement found. */
+static uint8_t zipline_check_colliding(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y - HALF_BLOCK_SIZE), x = s->x;
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+        uint8_t movement = ai_movement_at(c, y, (uint16_t)(x + ZIPLINE_BLOCK_X_RANGE));
+        if (movement == MZM_CLIPDATA_MOVEMENT_STOP_ENEMY_BLOCK_SOLID) {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+            return movement;
+        }
+        movement = ai_movement_at(c, y, (uint16_t)(x - ZIPLINE_BLOCK_X_RANGE));
+        if (movement == MZM_CLIPDATA_MOVEMENT_STOP_ENEMY_BLOCK_SOLID)
+            s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+        return movement;
+    }
+    return ai_movement_at(c, y, (uint16_t)(s->status & MZM_SPRITE_STATUS_FACING_RIGHT
+                                                ? x + ZIPLINE_BLOCK_X_RANGE
+                                                : x - ZIPLINE_BLOCK_X_RANGE));
+}
+
+/* ZiplineMoving: a quarter block a frame (a pixel less with Samus) up to the
+ * stop-enemy block, where it snaps to the block's middle and drops her;
+ * true once it stopped. */
+static bool zipline_moving(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteSamusLink *link = c->f->samus_link;
+    bool grabbing = s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+    uint16_t velocity = grabbing ? QUARTER_BLOCK_SIZE - PIXEL_SIZE : QUARTER_BLOCK_SIZE;
+    bool releasing = false;
+    if (zipline_check_colliding(c) == MZM_CLIPDATA_MOVEMENT_STOP_ENEMY_BLOCK_SOLID) {
+        releasing = true;
+        s->x = (uint16_t)((s->x & BLOCK_POSITION_FLAG) + HALF_BLOCK_SIZE);
+        if (grabbing && link) {
+            link->x = s->x;
+            link->moved = true;
+        }
+    } else {
+        s->x = (uint16_t)(s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? s->x + velocity : s->x - velocity);
+        if (grabbing && link) {
+            link->x = (uint16_t)(s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? link->x + velocity
+                                                                            : link->x - velocity);
+            link->moved = true;
+        }
+    }
+    if (releasing && grabbing) {
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+        link_set_pose(link, MZM_POSE_MID_AIR_REQUEST);
+    }
+    return releasing;
+}
+
+/* ZiplineUpdateOam: grabbing, grabbed, releasing and idle, lit once the
+ * ziplines are activated. */
+static void zipline_update_oam(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint8_t base = ziplines_on(c) ? MZM_GADGET_ZIPLINE_ON_IDLE : MZM_GADGET_ZIPLINE_OFF_IDLE;
+    uint8_t idle = base, grabbing = (uint8_t)(base + 1), grabbed = (uint8_t)(base + 2),
+            releasing = (uint8_t)(base + 3);
+    if (s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) {
+        switch (s->work1) {
+        case ZIPLINE_RELEASED:
+            ai_set_anim(s, grabbing);
+            s->work1 = ZIPLINE_GRABBING;
+            break;
+        case ZIPLINE_GRABBING:
+            if (ai_animation_ending(c, 1)) {
+                ai_set_anim(s, grabbed);
+                s->work1 = ZIPLINE_GRABBED;
+                /* Only the lit zipline starts moving. */
+                if (base == MZM_GADGET_ZIPLINE_ON_IDLE) s->health = ZIPLINE_HEALTH_MOVING;
+            }
+            break;
+        case ZIPLINE_RELEASING:
+            if (ai_animation_ending(c, 1)) {
+                ai_set_anim(s, grabbed);
+                s->work1 = ZIPLINE_GRABBED;
+            }
+            break;
+        case ZIPLINE_GRABBED:
+            if (s->anim != grabbed) ai_set_anim(s, grabbed);
+            break;
+        default:
+            break;
+        }
+    } else {
+        switch (s->work1) {
+        case ZIPLINE_GRABBED:
+            ai_set_anim(s, releasing);
+            s->work1 = ZIPLINE_RELEASING;
+            break;
+        case ZIPLINE_GRABBING:
+        case ZIPLINE_RELEASING:
+            if (ai_animation_ending(c, 1)) {
+                ai_set_anim(s, idle);
+                s->work1 = ZIPLINE_RELEASED;
+            }
+            break;
+        case ZIPLINE_RELEASED:
+            if (s->anim != idle) ai_set_anim(s, idle);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+/* Zipline: grabbed from below, it carries Samus to the other end once the
+ * ziplines are activated, or comes back when its button is shot. */
+static void zipline(Ctx *c) {
+    MzmSprite *s = c->s;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* ZiplineInit (its BG priority is not modelled) */
+        s->hitbox_top = -BLOCK_SIZE;
+        s->hitbox_bottom = QUARTER_BLOCK_SIZE;
+        s->hitbox_left = -PIXEL_SIZE;
+        s->hitbox_right = PIXEL_SIZE;
+        s->draw_top = BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_horizontal = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->samus_collision = SSC_ZIPLINE;
+        s->health = ZIPLINE_HEALTH_NOT_MOVING;
+        s->solid_for_projectiles = true;
+        s->draw_order = 3;
+        s->work0 = s->work1 = 0;
+        zipline_check_colliding(c);
+        ai_set_anim(s, ziplines_on(c) ? MZM_GADGET_ZIPLINE_ON_IDLE : MZM_GADGET_ZIPLINE_OFF_IDLE);
+        s->pose = ZIPLINE_POSE_IDLE;
+        break;
+    case ZIPLINE_POSE_IDLE:
+        /* ZiplineUpdate */
+        if (!samus_on_zipline(c->f->samus_link) && s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+        }
+        zipline_update_oam(c);
+        if (s->health == ZIPLINE_HEALTH_MOVING) {
+            if (s->work0 % 16 == 0) mzm_sfx_play(MZM_SOUND_ZIPLING_MOVING);
+            s->work0++;
+            if (zipline_moving(c)) {
+                s->health = ZIPLINE_HEALTH_NOT_MOVING;
+                s->status ^= MZM_SPRITE_STATUS_FACING_RIGHT;
+                s->work0 = 0;
+                mzm_sfx_fade(MZM_SOUND_ZIPLING_MOVING, 4);
+            }
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+/* SpriteUtilFindPrimary */
+static int find_primary(const Ctx *c, uint8_t sprite_id) {
+    for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
+        const MzmSprite *n = &c->f->sprites[i];
+        if (n->status & MZM_SPRITE_STATUS_EXISTS && !n->secondary && n->sprite_id == sprite_id)
+            return i;
+    }
+    return -1;
+}
+
+/* ZiplineButtonIdleInit */
+static void zipline_button_idle(MzmSprite *s) {
+    s->pose = ZIPLINE_BUTTON_POSE_IDLE;
+    ai_set_anim(s, MZM_GADGET_ZIPLINE_BUTTON_ON_IDLE);
+}
+
+/* ZiplineButton: shot once the ziplines are activated, it calls the room's
+ * zipline. */
+static void zipline_button(Ctx *c) {
+    MzmSprite *s = c->s;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* ZiplineButtonInit (its BG priority is not modelled) */
+        ai_set_anim(s, ziplines_on(c) ? MZM_GADGET_ZIPLINE_BUTTON_ON_IDLE
+                                      : MZM_GADGET_ZIPLINE_BUTTON_OFF_IDLE);
+        s->y = (uint16_t)(s->y - BLOCK_SIZE * 2);
+        s->draw_top = 0;
+        s->draw_bottom = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->draw_horizontal = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = 0;
+        s->hitbox_bottom = BLOCK_SIZE + QUARTER_BLOCK_SIZE;
+        s->hitbox_left = -(QUARTER_BLOCK_SIZE + PIXEL_SIZE);
+        s->hitbox_right = QUARTER_BLOCK_SIZE + PIXEL_SIZE;
+        s->samus_collision = SSC_NONE;
+        s->health = ZIPLINE_HEALTH_NOT_MOVING;
+        s->solid_for_projectiles = true;
+        s->pose = ZIPLINE_BUTTON_POSE_BIND_ZIPLINE;
+        s->draw_order = 3;
+        break;
+    case ZIPLINE_BUTTON_POSE_BIND_ZIPLINE: {
+        int slot = find_primary(c, MZM_PSPRITE_ZIPLINE);
+        if (slot < 0) {
+            kill(s);
+            break;
+        }
+        s->work1 = (uint8_t)slot;
+        if (ziplines_on(c)) zipline_button_idle(s);
+        else s->pose = ZIPLINE_BUTTON_POSE_OFF;
+        break;
+    }
+    case ZIPLINE_BUTTON_POSE_OFF:
+        if (ziplines_on(c)) zipline_button_idle(s);
+        break;
+    case ZIPLINE_BUTTON_POSE_IDLE: {
+        MzmSprite *line = &c->f->sprites[s->work1];
+        bool moving = false;
+        if (s->isft & 0x7F) {
+            line->health = ZIPLINE_HEALTH_MOVING;
+            moving = true;
+            mzm_sfx_play(MZM_SOUND_ZIPLING_CALLED);
+        } else if (line->health == ZIPLINE_HEALTH_MOVING) {
+            moving = true;
+        }
+        if (moving) {
+            s->pose = ZIPLINE_BUTTON_POSE_ACTIVATED;
+            ai_set_anim(s, MZM_GADGET_ZIPLINE_BUTTON_ACTIVE);
+        }
+        break;
+    }
+    case ZIPLINE_BUTTON_POSE_ACTIVATED:
+        if (c->f->sprites[s->work1].health == ZIPLINE_HEALTH_NOT_MOVING) zipline_button_idle(s);
+        break;
+    default:
+        break;
+    }
+}
+
+/* ZiplineGeneratorChangeClipdata */
+static void zipline_generator_caa(Ctx *c, uint8_t action) {
+    const MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y - HALF_BLOCK_SIZE), x = s->x;
+    caa(c, y, x, action);
+    caa(c, (uint16_t)(y - BLOCK_SIZE), x, action);
+    caa(c, (uint16_t)(y - BLOCK_SIZE * 2), (uint16_t)(x + BLOCK_SIZE), action);
+    caa(c, (uint16_t)(y - BLOCK_SIZE * 2), (uint16_t)(x - BLOCK_SIZE), action);
+}
+
+static void set_part_anim(Ctx *c, uint8_t slot, uint8_t anim) {
+    ai_set_anim(&c->f->sprites[slot], anim);
+}
+
+/* ZiplineGenerator: Samus in morph ball on top of it activates the
+ * ziplines (EVENT_ZIPLINES_ACTIVATED) in two seconds. */
+static void zipline_generator(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteSamusLink *link = c->f->samus_link;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED: {
+        /* ZiplineGeneratorInit */
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->draw_top = BLOCK_SIZE * 3 / PIXEL_SIZE;
+        s->draw_bottom = 0;
+        s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        s->samus_collision = SSC_NONE;
+        s->frame = s->adc = 0;
+        int slot = ai_spawn_secondary(c, MZM_SSPRITE_ZIPLINE_GENERATOR_PART,
+                                      ZIPLINE_GENERATOR_PART_CONDUCTOR, s->gfx_slot, s->y, s->x, 0);
+        if (slot < 0) {
+            kill(s);
+            break;
+        }
+        s->work1 = (uint8_t)slot;
+        if (ziplines_on(c)) {
+            ai_set_anim(s, MZM_GADGET_ZIPLINE_GENERATOR_ACTIVATED);
+            s->pose = ZIPLINE_GENERATOR_POSE_ALREADY_ACTIVATED;
+            set_part_anim(c, (uint8_t)slot, MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_ACTIVATED);
+        } else {
+            ai_set_anim(s, MZM_GADGET_ZIPLINE_GENERATOR_DEACTIVATED);
+            s->pose = ZIPLINE_GENERATOR_POSE_DETECT_SAMUS;
+            set_part_anim(c, (uint8_t)slot, MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_DEACTIVATED);
+        }
+        zipline_generator_caa(c, MZM_CAA_MAKE_SOLID_GRIPPABLE);
+        break;
+    }
+    case ZIPLINE_GENERATOR_POSE_DETECT_SAMUS:
+        /* ZiplineGeneratorDetectSamus */
+        if (link && link->y == (uint16_t)(s->y - (BLOCK_SIZE * 2 + ONE_SUB_PIXEL)) &&
+            s->x - BLOCK_SIZE < link->x && s->x + BLOCK_SIZE > link->x &&
+            link->samus_pose == MZM_POSE_MORPH_BALL) {
+            s->pose = ZIPLINE_GENERATOR_POSE_ACTIVATING;
+            s->work0 = 120;                     /* CONVERT_SECONDS(2.f) */
+            ai_set_anim(s, MZM_GADGET_ZIPLINE_GENERATOR_ACTIVATING);
+            link_set_pose(link, MZM_POSE_ACTIVATING_ZIPLINES);
+            set_part_anim(c, s->work1, MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_ACTIVATING);
+            int slot = ai_spawn_secondary(c, MZM_SSPRITE_ZIPLINE_GENERATOR_PART,
+                                          ZIPLINE_GENERATOR_PART_MORPH_SYMBOL, s->gfx_slot,
+                                          (uint16_t)(link->y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
+                                          link->x, 0);
+            if (slot >= 0) s->work2 = (uint8_t)slot;
+            else kill(s);
+            mzm_sfx_play(MZM_SOUND_ACTIVATING_ZIPLINES);
+        }
+        break;
+    case ZIPLINE_GENERATOR_POSE_ACTIVATING:
+        /* ZiplineGeneratorActivating */
+        if (--s->work0 == 0) {
+            ai_set_anim(s, MZM_GADGET_ZIPLINE_GENERATOR_ACTIVATED);
+            s->pose = ZIPLINE_GENERATOR_POSE_ACTIVATED;
+            link_set_pose(link, MZM_POSE_MORPH_BALL);
+            set_part_anim(c, s->work1, MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_ACTIVATED);
+            kill(&c->f->sprites[s->work3]);
+            const MzmSpriteHooks *h = c->f->hooks;
+            if (h && h->set_event) h->set_event(h->context, MZM_EVENT_ZIPLINES_ACTIVATED);
+        } else if (s->work0 == 90) {             /* CONVERT_SECONDS(1.5f) */
+            int slot = ai_spawn_secondary(c, MZM_SSPRITE_ZIPLINE_GENERATOR_PART,
+                                          ZIPLINE_GENERATOR_PART_ELECTRICITY, s->gfx_slot,
+                                          (uint16_t)(s->y - BLOCK_SIZE * 6), s->x, 0);
+            if (slot >= 0) s->work3 = (uint8_t)slot;
+            else kill(s);
+        } else if (s->work0 == 16) {             /* CONVERT_SECONDS(.25f + 1.f / 60) */
+            MzmSprite *symbol = &c->f->sprites[s->work2];
+            ai_set_anim(symbol, MZM_GADGET_ZIPLINE_GENERATOR_MORPH_SYMBOL_ACTIVATED);
+            symbol->pose = ZIPLINE_GENERATOR_PART_POSE_MORPH_SYMBOL_ACTIVATING;
+            if (c->f->globals) c->f->globals->enable_animated_palette = true;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+/* ZiplineGeneratorPart: the conductor behind Samus, the morph symbol over
+ * her and the electricity rising to the ziplines. */
+static void zipline_generator_part(Ctx *c) {
+    MzmSprite *s = c->s;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->samus_collision = SSC_NONE;
+        s->frame = s->adc = 0;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        s->pose = ZIPLINE_GENERATOR_PART_POSE_IDLE;
+        if (s->room_slot == ZIPLINE_GENERATOR_PART_CONDUCTOR) {
+            s->draw_top = BLOCK_SIZE * 6 / PIXEL_SIZE;
+            s->draw_bottom = 0;
+            s->draw_horizontal = BLOCK_SIZE * 2 / PIXEL_SIZE;
+            s->draw_order = 13;
+        } else if (s->room_slot == ZIPLINE_GENERATOR_PART_MORPH_SYMBOL) {
+            s->anim = MZM_GADGET_ZIPLINE_GENERATOR_MORPH_SYMBOL_ACTIVATING;
+            s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+            s->always_active = true;
+            s->draw_order = 3;
+        } else if (s->room_slot == ZIPLINE_GENERATOR_PART_ELECTRICITY) {
+            /* (its BG priority is not modelled) */
+            s->anim = MZM_GADGET_ZIPLINE_GENERATOR_ELECTRICITY_ACTIVATING;
+            s->draw_top = s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+            s->always_active = true;
+            s->draw_order = 2;
+        } else {
+            kill(s);
+        }
+        break;
+    case ZIPLINE_GENERATOR_PART_POSE_MORPH_SYMBOL_ACTIVATING:
+        if (ai_animation_ending(c, 1)) kill(s);
+        break;
+    default:
+        break;
+    }
+}
+
 void ai_gadget(Ctx *c) {
     if (c->s->secondary) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
@@ -1216,6 +1617,7 @@ void ai_gadget(Ctx *c) {
         else if (c->s->sprite_id == SSPRITE_SAVE_PLATFORM_PART) save_platform_part(c);
         else if (c->s->sprite_id == MZM_SSPRITE_GUNSHIP_PART) ai_gunship(c);
         else if (c->s->sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART) morph_ball_launcher_part(c);
+        else if (c->s->sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART) zipline_generator_part(c);
         return;
     }
     switch (c->s->sprite_id) {
@@ -1233,6 +1635,9 @@ void ai_gadget(Ctx *c) {
     case MZM_PSPRITE_GUNSHIP: ai_gunship(c); break;
     case MZM_PSPRITE_AREA_BANNER: area_banner(c); break;
     case MZM_PSPRITE_MORPH_BALL_LAUNCHER: morph_ball_launcher(c); break;
+    case MZM_PSPRITE_ZIPLINE: zipline(c); break;
+    case MZM_PSPRITE_ZIPLINE_BUTTON: zipline_button(c); break;
+    case MZM_PSPRITE_ZIPLINE_GENERATOR: zipline_generator(c); break;
     default: break;
     }
 }

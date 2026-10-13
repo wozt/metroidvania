@@ -373,6 +373,26 @@ enum {
     MZM_GADGET_MORPH_BALL_LAUNCHER_LAUNCHING,
     MZM_GADGET_MORPH_BALL_LAUNCHER_BACK,
     MZM_GADGET_MORPH_BALL_LAUNCHER_ENERGY,
+    MZM_GADGET_ZIPLINE_OFF_IDLE,
+    MZM_GADGET_ZIPLINE_OFF_GRABBING_SAMUS,
+    MZM_GADGET_ZIPLINE_OFF_SAMUS_GRABBED,
+    MZM_GADGET_ZIPLINE_OFF_RELEASING_SAMUS,
+    MZM_GADGET_ZIPLINE_ON_IDLE,
+    MZM_GADGET_ZIPLINE_ON_GRABBING_SAMUS,
+    MZM_GADGET_ZIPLINE_ON_SAMUS_GRABBED,
+    MZM_GADGET_ZIPLINE_ON_RELEASING_SAMUS,
+    MZM_GADGET_ZIPLINE_BUTTON_OFF_IDLE,
+    MZM_GADGET_ZIPLINE_BUTTON_ON_IDLE,
+    MZM_GADGET_ZIPLINE_BUTTON_ACTIVE,
+    MZM_GADGET_ZIPLINE_GENERATOR_DEACTIVATED,
+    MZM_GADGET_ZIPLINE_GENERATOR_ACTIVATING,
+    MZM_GADGET_ZIPLINE_GENERATOR_ACTIVATED,
+    MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_DEACTIVATED,
+    MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_ACTIVATING,
+    MZM_GADGET_ZIPLINE_GENERATOR_CONDUCTOR_ACTIVATED,
+    MZM_GADGET_ZIPLINE_GENERATOR_MORPH_SYMBOL_ACTIVATING,
+    MZM_GADGET_ZIPLINE_GENERATOR_MORPH_SYMBOL_ACTIVATED,
+    MZM_GADGET_ZIPLINE_GENERATOR_ELECTRICITY_ACTIVATING,
     MZM_GADGET_ANIMS,
 };
 extern const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS];
@@ -501,7 +521,7 @@ enum {
     MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C = 141, MZM_PSPRITE_GERON_VARIA1 = 142,
     MZM_PSPRITE_GERON_VARIA2 = 143, MZM_PSPRITE_GERON_VARIA3 = 144, MZM_PSPRITE_GERON_NORFAIR = 106,
     MZM_PSPRITE_PLASMA_BEAM_BLOCK = 170, MZM_PSPRITE_GRAVITY_SUIT_BLOCK = 171,
-    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -530,6 +550,7 @@ enum {
     MZM_SSPRITE_CHARGE_BEAM_GLOW = 5, MZM_SSPRITE_DRAGON_FIREBALL = 8,
     MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT = 56, MZM_SSPRITE_MAP_STATION_PART = 52,
     MZM_SSPRITE_SAVE_PLATFORM_PART = 13, MZM_SSPRITE_GUNSHIP_PART = 50, MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART = 36,
+    MZM_SSPRITE_ZIPLINE_GENERATOR_PART = 30,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 
@@ -568,6 +589,9 @@ typedef struct {
     /* SP_ABSOLUTE_POSITION: x and y are GBA screen pixels (the area
      * banner). */
     bool absolute;
+    /* SP_SOLID_FOR_PROJECTILES: every projectile only hits it (the
+     * ziplines and their buttons). */
+    bool solid_for_projectiles;
 } MzmSprite;
 
 /* SamusStandingOnSprite values; DROPPED (port only) is OFF after a kill
@@ -593,7 +617,7 @@ typedef struct {
 /* EventFunction values read by the ported sprites (include/constants/event.h). */
 enum {
     MZM_EVENT_VIEWED_STATUE_ROOM = 42, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED = 43,
-    MZM_EVENT_MECHA_RIDLEY_KILLED = 74,
+    MZM_EVENT_MECHA_RIDLEY_KILLED = 74, MZM_EVENT_ZIPLINES_ACTIVATED = 46,
 };
 
 /* Game systems outside the sprite engine. */
@@ -654,6 +678,9 @@ typedef struct {
     /* The gunship's palette animations as last copied to OBJ rows 9 and 10
      * (its entrance and flames palette offsets, -1: still sGunshipPal). */
     int8_t gunship_entrance_palette, gunship_flames_palette;
+    /* gDisableAnimatedPalette = FALSE of the zipline generator (the
+     * runtime takes the request). */
+    bool enable_animated_palette;
 } MzmSpriteGlobals;
 
 /* gSamusData as the Chozo statues read and move it: her pose
@@ -763,6 +790,11 @@ typedef struct {
     int8_t facing;
     bool has_energy;
     bool stop_x, stop_y;
+    /* gSamusData.pose (MZM_POSE_*) in; out, the SamusSetPose request of a
+     * zipline grabbing her or of a frozen sprite dropping her from a
+     * zipline (MZM_POSE_NONE: none). A zipline grab also moves `x`, `y`
+     * and `previous_x` (gPreviousXPosition). */
+    uint8_t pose, set_pose;
 } MzmSpriteSamus;
 
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when

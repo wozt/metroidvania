@@ -4204,8 +4204,9 @@ int main(int argc, char **argv) {
                 }
                 if(left_pause) {
                     pause_mode=false;
-                    if(pause_flag==MZM_PAUSE_FLAG_MAP_DOWNLOAD) {
-                        /* Back in the game the map station goes on. */
+                    if(pause_flag!=MZM_PAUSE_FLAG_PAUSE) {
+                        /* Back in the game the map station or the statue
+                         * goes on (UpdateMusicAfterPause does nothing). */
                         sprites.globals.pause_screen_flag=0;
                     } else {
                         runtime_audio_lock();
@@ -4244,9 +4245,11 @@ int main(int argc, char **argv) {
             /* A map station's download opens the pause screen's map
              * download (gPauseScreenFlag set during the last frame). */
             if(screen_ready && runtime_hud.ready &&
-               sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_MAP_DOWNLOAD) {
+               (sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_MAP_DOWNLOAD ||
+                sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_CHOZO_HINT)) {
+                /* ...or a Chozo statue's hint. */
                 pause_mode=true;
-                pause_flag=MZM_PAUSE_FLAG_MAP_DOWNLOAD;
+                pause_flag=sprites.globals.pause_screen_flag;
                 mzm_pause_enter(&pause_screen);
                 accumulator-=fixed_step;
                 continue;

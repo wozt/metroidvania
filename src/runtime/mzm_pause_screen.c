@@ -15,9 +15,11 @@ enum {
     STATE_MAP_SCREEN = 0, STATE_STATUS_SCREEN = 1, STATE_STATUS_SCREEN_INIT = 11,
     STATE_STATUS_SCREEN_LEAVING = 12, STATE_EASY_SLEEP = 10, STATE_EASY_SLEEP_INIT = 16,
     STATE_EASY_SLEEP_LEAVING = 17, STATE_WAIT_TO_LEAVE = 3, STATE_MAP_DOWNLOAD = 9,
-    STATE_MAP_DOWNLOAD_ENDED = 18,
+    STATE_MAP_DOWNLOAD_ENDED = 18, STATE_LEAVING_AFTER_HINT = 2, STATE_CHOZO_HINT = 8,
+    STATE_CHOZO_HINT_ENDED = 14, STATE_CHOZO_HINT_INIT = 15,
     /* PauseScreenType */
-    TYPE_ON_MAP_SCREEN = 1 << 1, TYPE_DOWNLOADING_MAP = 1 << 5, TYPE_ON_STATUS_SCREEN = 1 << 7,
+    TYPE_ON_MAP_SCREEN = 1 << 1, TYPE_CHOZO_STATUE_HINT = 1 << 4, TYPE_DOWNLOADING_MAP = 1 << 5,
+    TYPE_ON_STATUS_SCREEN = 1 << 7,
     /* PauseScreenFading */
     FADING_NONE = 0, FADING_INIT, FADING_IN_INIT, FADING_IN, FADING_OUT_INIT, FADING_OUT,
     /* OAM ids */
@@ -190,7 +192,7 @@ static void update_world_map_highlight(MzmPauseScreen *p, uint8_t area) {
     p->overlay[2].y = (int16_t)mzm_rom_u16(data + 6);
 }
 
-/* PauseScreenUpdateWorldMap (no Chozo hint targets yet) */
+/* PauseScreenUpdateWorldMap */
 static void update_world_map(MzmPauseScreen *p, const MzmPauseGame *g, int on_world_map) {
     MzmMenuOam *o;
     if (on_world_map == 0) {
@@ -209,8 +211,15 @@ static void update_world_map(MzmPauseScreen *p, const MzmPauseGame *g, int on_wo
             o->x = (int16_t)rom16("sWorldMapTargetPositions", (uint32_t)i * 2);
             o->y = (int16_t)rom16("sWorldMapTargetPositions", (uint32_t)i * 2 + 1);
             o->priority = 2;
-            o->exists = 0;
-            o->oam_id = 0;
+            o->exists = p->hint.activated >> i & 1 && o->x + o->y != 0;
+            o->oam_id = o->exists ? WORLD_MAP_TARGET : 0;
+        }
+    } else if (on_world_map == 2) {
+        for (int i = 0; i < 16; ++i) {
+            o = &p->world_map[8 + i];
+            bool on = p->hint.activated >> i & 1;
+            o->oam_id = on ? WORLD_MAP_TARGET : 0;
+            o->exists = on;
         }
     }
     uint8_t status = on_world_map == 0 ? 1 : OAM_ID_CHANGED;
@@ -267,11 +276,24 @@ static void map_borders(MzmPauseScreen *p) {
             if (map[i + j * MINIMAP] != MINIMAP_TILE_BACKGROUND) { p->map_right = (int8_t)i; found = true; break; }
 }
 
+/* PauseScreenMapUpdateMapBordersForTargets */
+static void map_borders_for_targets(MzmPauseScreen *p) {
+    for (int i = 0; i < 12; ++i) {
+        const MzmMenuOam *o = &p->targets[i];
+        if (!o->exists) continue;
+        int x = o->x < 0 ? 0 : o->x >= MINIMAP * HALF_BLOCK ? MINIMAP - 1 : o->x / HALF_BLOCK;
+        int y = o->y < 0 ? 0 : o->y >= MINIMAP * HALF_BLOCK ? MINIMAP - 1 : o->y / HALF_BLOCK;
+        if (y < p->map_top) p->map_top = (int8_t)y;
+        if (y > p->map_bottom) p->map_bottom = (int8_t)y;
+        if (x < p->map_left) p->map_left = (int8_t)x;
+        if (x > p->map_right) p->map_right = (int8_t)x;
+    }
+}
+
 /* DIV_SHIFT(a, 2) */
 static int half(int value) { return value >> 1; }
 
-/* PauseScreenMapSetSpawnPosition (no Chozo hint targets: the borders for
- * targets do not move) */
+/* PauseScreenMapSetSpawnPosition */
 static void set_spawn_position(MzmPauseScreen *p, MzmScreen *s, int option) {
     p->can_right = p->can_left = p->can_up = p->can_down = false;
     p->map_left = MINIMAP - 1;
@@ -279,6 +301,7 @@ static void set_spawn_position(MzmPauseScreen *p, MzmScreen *s, int option) {
     p->map_right = 0;
     p->map_bottom = 0;
     map_borders(p);
+    map_borders_for_targets(p);
     if (p->map_left > p->map_right) p->map_right = p->map_left;
     if (p->map_top > p->map_bottom) p->map_bottom = p->map_top;
     int map_x, map_y;
@@ -362,8 +385,7 @@ static void load_bg_palette(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame 
     memcpy(&s->ppu->palette[base], &p->palette[base], 9 * 2);
 }
 
-/* PauseScreenMapCheckExploredAreas and PauseScreenDetermineMapsViewable
- * (no Chozo hints: areasWithHints stays empty) */
+/* PauseScreenMapCheckExploredAreas and PauseScreenDetermineMapsViewable */
 static void determine_maps_viewable(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     p->areas_visited = 0;
     for (int i = 0; i < AREAS_NORMAL; ++i)
@@ -372,7 +394,7 @@ static void determine_maps_viewable(MzmPauseScreen *p, MzmScreen *s, const MzmPa
                 p->areas_visited |= (uint8_t)(1 << i);
                 break;
             }
-    p->areas_viewable = (uint8_t)(g->hud->progress->downloaded_maps | p->areas_visited);
+    p->areas_viewable = (uint8_t)(g->hud->progress->downloaded_maps | p->areas_visited | p->areas_with_hints);
     p->areas_viewable_total = 0;
     for (int i = 0; i < AREAS_NORMAL; ++i) p->areas_viewable_total += p->areas_viewable >> i & 1;
     if (p->areas_viewable_total <= 1) {
@@ -402,7 +424,14 @@ static void load_area_names_and_icons(MzmPauseScreen *p, const MzmPauseGame *g) 
     p->boss_icon[0].priority = icon_priority;
     p->misc[0].oam_id = 0;
     p->misc[0].y = p->misc[0].x = 0;
-    if (p->type_flags & TYPE_DOWNLOADING_MAP) {
+    if (p->type_flags & TYPE_CHOZO_STATUE_HINT) {
+        p->overlay[0].oam_id = rom8("sChozoHintAreaNamesOamIds", p->current_area);
+        p->overlay[0].y = (int16_t)rom16("sChozoHintAreaNamesPosition", 1);
+        p->overlay[0].x = (int16_t)rom16("sChozoHintAreaNamesPosition", 0);
+        p->overlay[0].priority = 0;
+        p->overlay[0].bound_background = 4;
+        p->overlay[0].exists = 1;
+    } else if (p->type_flags & TYPE_DOWNLOADING_MAP) {
         /* sPauseScreenAreaIconsData[area].nameOamId */
         mzm_menu_oam_set_id(&p->overlay[0], mzm_rom_u8(area_icon(g->area < AREA_TEST ? g->area : AREA_TEST)));
         p->overlay[0].y = 12;
@@ -440,6 +469,8 @@ static void process_oam(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) 
     if (p->on_world_map) mzm_menu_oam_process(s, 24, p->world_map, sym("sPauseScreenWorldMapOam"));
     else mzm_menu_oam_process(s, 4, p->arrows, sym("sPauseScreenBorderArrowsOam"));
     mzm_menu_oam_process(s, 23, p->misc, sym("sPauseScreenMiscOam"));
+    if (p->type_flags & TYPE_CHOZO_STATUE_HINT)
+        mzm_menu_oam_process(s, 5, p->chozo_hint, sym("sPauseScreenTargetsOam"));
     if (!p->on_world_map && !(p->type_flags & TYPE_ON_STATUS_SCREEN)) {
         if (p->current_area == g->area)
             mzm_menu_oam_process(s, 1, p->samus_icon, sym("sPauseScreenSamusIconOam"));
@@ -518,6 +549,508 @@ static Abilities abilities(const MzmPauseGame *g) {
         if (active) *on |= flags[i].flag;
     }
     return a;
+}
+
+/* The Chozo statue hints (pause_screen_sub_menus.c). */
+enum {
+    TARGETS = 16, TARGET_ITEM_COUNT = 8, TARGET_KRAID_FLAME = 8, TARGET_RIDLEY_FLAME = 9,
+    TARGET_OAM_UP_ARROW = 2, TARGET_OAM_DOWN_ARROW = 3,
+    TARGET_OAM_GREEN_FLAME_MOVING = 10, TARGET_OAM_PURPLE_FLAME_MOVING = 14,
+    HINT_CONDITION_BEAM_BOMBS = 0, HINT_CONDITION_SUIT_MISC, HINT_CONDITION_EVENT,
+    TARGET_MOVEMENT_FLAG = 1 << 0, TARGET_SCROLLING_FLAG = 1 << 1,
+    /* ChozoHintMovementStage, ChozoHintScrollingStage, ChozoHintStage */
+    MOVE_FINISHED = 0, MOVE_CALCULATE, MOVE_DELAY_BEFORE, MOVE_UPDATE, MOVE_DELAY_AFTER,
+    MOVE_DELAY_BEFORE_FINISHED, MOVE_DELAY_BEFORE_CONTINUE,
+    SCROLL_FINISHED = 0, SCROLL_CALCULATE, SCROLL_DELAY_BEFORE, SCROLL_UPDATE, SCROLL_DELAY_BEFORE_FINISHED,
+    HINT_DELAY_BEFORE_UPDATE = 0, HINT_BEGIN_UPDATE, HINT_WAIT_UPDATE_FINISHED, HINT_CHECK_FINISHED,
+    HINT_DELAY_BEFORE_FADE_OUT, HINT_UPDATE_FADE_OUT, HINT_SETUP_NEXT_AREA, HINT_UPDATE_FADE_IN,
+    HINT_DELAY_BEFORE_FINISHED, HINT_FINISHED,
+    BLDCNT_BG3_FIRST = 1 << 3, BLDCNT_OBJ_FIRST = 1 << 4,
+    AREA_NONE = 0xFF,
+};
+
+/* sChozoStatueTargets[i]: statue area, x and y ranges, start icon, target
+ * area, x, y and end icon (12 bytes). */
+typedef struct {
+    uint8_t statue_area, statue_x_start, statue_x_end, statue_y_start, statue_y_end, start_icon;
+    uint8_t target_area, target_x, target_y, end_icon;
+} HintTarget;
+
+static HintTarget hint_target(int i) {
+    uint32_t at = sym("sChozoStatueTargets") + (uint32_t)i * 12u;
+    return (HintTarget){mzm_rom_u8(at), mzm_rom_u8(at + 1), mzm_rom_u8(at + 2), mzm_rom_u8(at + 3),
+                        mzm_rom_u8(at + 4), mzm_rom_u8(at + 5), mzm_rom_u8(at + 6), mzm_rom_u8(at + 7),
+                        mzm_rom_u8(at + 8), mzm_rom_u8(at + 9)};
+}
+
+/* sElevatorRoomPairs[route]: area, room, map x and y of both ends. */
+static uint8_t elevator(int route, int field) {
+    return mzm_rom_u8(sym("sElevatorRoomPairs") + (uint32_t)route * 8u + (uint32_t)field);
+}
+
+/* Sqrt (the BIOS's integer square root) */
+static uint32_t isqrt(uint32_t n) {
+    uint32_t root = 0, bit = 1u << 30;
+    while (bit > n) bit >>= 2;
+    while (bit) {
+        if (n >= root + bit) {
+            n -= root + bit;
+            root = (root >> 1) + bit;
+        } else {
+            root >>= 1;
+        }
+        bit >>= 2;
+    }
+    return root;
+}
+
+/* ChozoStatueHintCheckTargetIsActivated: -1 not activated, 0 done, 1 to do */
+static int target_activated(const MzmPauseGame *g, int target) {
+    uint8_t event = rom8("sChozoStatueHintEvents", (uint32_t)target);
+    if (event == 0xFF || !g->check_event || !g->check_event(g->context, event)) return -1;
+    uint8_t type = rom8("sChozoStatueTargetConditions", (uint32_t)target * 2u);
+    uint8_t flag = rom8("sChozoStatueTargetConditions", (uint32_t)target * 2u + 1u);
+    Abilities a = abilities(g);
+    int result = -1;
+    if (type == HINT_CONDITION_BEAM_BOMBS) result = (a.beam_bombs & flag) != 0;
+    else if (type == HINT_CONDITION_SUIT_MISC) result = (a.suit_misc & flag) != 0;
+    else if (type == HINT_CONDITION_EVENT) result = g->check_event(g->context, flag);
+    if (result >= 0) result ^= 1;
+    return result;
+}
+
+/* PauseScreenCheckActivatedTargets */
+static void check_activated_targets(MzmPauseScreen *p, const MzmPauseGame *g) {
+    p->hint.activated = 0;
+    for (int i = 0; i < TARGETS; ++i)
+        if (target_activated(g, i) > 0) p->hint.activated |= (uint16_t)(1u << i);
+}
+
+/* PauseScreenCheckAreasWithTargets */
+static void check_areas_with_targets(MzmPauseScreen *p, const MzmPauseGame *g) {
+    p->areas_with_hints = 0;
+    for (int i = 0; i < TARGETS; ++i)
+        if (target_activated(g, i) > 0) p->areas_with_hints |= (uint8_t)(1u << hint_target(i).target_area);
+}
+
+/* PauseScreenDrawBossFlames: Kraid's and Ridley's flames in Brinstar. */
+static void draw_boss_flames(MzmPauseScreen *p) {
+    memset(p->boss_flames, 0, sizeof p->boss_flames);
+    if (p->current_area != 0) return;
+    static const struct { int target, oam, dx; } flames[2] = {
+        {TARGET_KRAID_FLAME, TARGET_OAM_GREEN_FLAME_MOVING, -8}, {TARGET_RIDLEY_FLAME, TARGET_OAM_PURPLE_FLAME_MOVING, 8}};
+    for (int f = 0; f < 2; ++f) {
+        if (!(p->hint.activated >> flames[f].target & 1)) continue;
+        for (int i = 0; i < 12; ++i) {
+            if (p->targets[i].oam_id != flames[f].oam) continue;
+            p->boss_flames[f].oam_offset = (uint8_t)i;
+            p->boss_flames[f].direction = 1;
+            p->targets[i].x = (int16_t)(p->targets[i].x + flames[f].dx);
+            p->boss_flames[f].x = (uint16_t)p->targets[i].x;
+            p->boss_flames[f].y = (uint16_t)p->targets[i].y;
+            break;
+        }
+    }
+}
+
+/* ChozoStatueHintChangeArea: an elevator of the path (`path`: its route
+ * and direction) as the place on the map where the hint changes area. */
+static void hint_change_area(MzmPauseScreen *p, uint8_t *x, uint8_t *y, MzmMenuOam *o, uint32_t path) {
+    int route = (int8_t)mzm_rom_u8(path);
+    int8_t direction = (int8_t)mzm_rom_u8(path + 1);
+    if (elevator(route, 0) == p->current_area) {
+        p->hint.unk_42 = (int8_t)elevator(route, 4);
+        *x = elevator(route, 2);
+        o->x = (int16_t)(*x * HALF_BLOCK);
+        *y = elevator(route, 3);
+        o->y = (int16_t)((*y + 4) * HALF_BLOCK);
+    } else {
+        p->hint.unk_42 = (int8_t)elevator(route, 0);
+        *x = elevator(route, 6);
+        o->x = (int16_t)(*x * HALF_BLOCK);
+        *y = elevator(route, 7);
+        o->y = (int16_t)((*y - 3) * HALF_BLOCK);
+    }
+    o->oam_id = direction < 0 ? TARGET_OAM_UP_ARROW : TARGET_OAM_DOWN_ARROW;
+}
+
+/* ChozoStatueHintDeterminePath: the targets' icons on the shown area's map,
+ * the hint's start and end (or the elevators towards its area). */
+static void hint_determine_path(MzmPauseScreen *p, const MzmPauseGame *g, bool next_area) {
+    MzmMenuOam empty = mzm_menu_oam_from_rom(sym("sMenuOamDataChozoHint_Empty"));
+    empty.priority = p->type_flags & TYPE_ON_MAP_SCREEN ? 0 : 3;
+    for (int i = 0; i < 12; ++i) p->targets[i] = empty;
+    for (int i = 0; i < 5; ++i) p->chozo_hint[i] = empty;
+    if (!next_area) {
+        p->hint.unk_41 = 0;
+        p->hint.index = -1;
+        p->hint.unk_42 = -1;
+        check_activated_targets(p, g);
+    }
+    MzmMenuOam *o = p->targets;
+    uint32_t paths = mzm_rom_u32(sym("sChozoStatueTargetPathPointers") + (uint32_t)(g->area < 6 ? g->area : 0) * 4u);
+    if (p->type_flags & TYPE_CHOZO_STATUE_HINT) {
+        if (!next_area) {
+            for (int i = 0; i < TARGETS; ++i) {
+                if (!(p->hint.activated >> i & 1)) continue;
+                HintTarget t = hint_target(i);
+                if (t.statue_area != p->current_area || t.statue_y_start > p->map_y || p->map_y > t.statue_y_end ||
+                    t.statue_x_start > p->map_x || p->map_x > t.statue_x_end)
+                    continue;
+                p->hint.index = (int8_t)i;
+                break;
+            }
+        }
+        if (p->hint.index < 0) return;
+        HintTarget t = hint_target(p->hint.index);
+        if (t.statue_area == t.target_area) {
+            o->x = (int16_t)(p->map_x * HALF_BLOCK);
+            o->y = (int16_t)(p->map_y * HALF_BLOCK);
+            o->oam_id = t.start_icon;
+            o++;
+            p->hint_target_x = t.target_x;
+            p->hint_target_y = t.target_y;
+            o->oam_id = t.end_icon;
+            o->x = (int16_t)(p->hint_target_x * HALF_BLOCK);
+            o->y = (int16_t)(p->hint_target_y * HALF_BLOCK);
+            o++;
+        } else if (paths) {
+            uint32_t path = paths + t.target_area * 6u;
+            if (p->current_area == t.statue_area) {
+                o->x = (int16_t)(p->map_x * HALF_BLOCK);
+                o->y = (int16_t)(p->map_y * HALF_BLOCK);
+                o->oam_id = t.start_icon;
+                o++;
+                hint_change_area(p, &p->hint_target_x, &p->hint_target_y, o, path);
+                o++;
+            } else if (p->hint.unk_42 == (int8_t)t.target_area) {
+                hint_change_area(p, &p->map_x, &p->map_y, o, path + (uint32_t)(p->hint.unk_41 - 1) * 2u);
+                o->exists = 1;
+                o++;
+                p->hint_target_x = t.target_x;
+                p->hint_target_y = t.target_y;
+                o->x = (int16_t)(t.target_x * HALF_BLOCK);
+                o->y = (int16_t)(t.target_y * HALF_BLOCK);
+                o->oam_id = t.end_icon;
+                o++;
+                p->hint.unk_42 = (int8_t)AREA_NONE;
+            } else {
+                hint_change_area(p, &p->map_x, &p->map_y, o, path + (uint32_t)(p->hint.unk_41 - 1) * 2u);
+                o->exists = 1;
+                o++;
+                hint_change_area(p, &p->hint_target_x, &p->hint_target_y, o, path + (uint32_t)p->hint.unk_41 * 2u);
+                o++;
+            }
+        }
+    } else if (p->hint.activated && g->area < 6 && paths) {
+        /* The pause: the elevators towards the first item target's area. */
+        int i;
+        for (i = 0; i < 15; ++i) {
+            if (!(p->hint.activated >> i & 1)) continue;
+            uint8_t type = rom8("sChozoStatueTargetConditions", (uint32_t)i * 2u);
+            if (type == HINT_CONDITION_BEAM_BOMBS || type == HINT_CONDITION_SUIT_MISC) break;
+        }
+        HintTarget t = hint_target(i);
+        if (t.target_area <= 2) {
+            uint32_t path = paths + t.target_area * 6u;
+            for (int k = 0; k < 6; k += 2) {
+                int route = (int8_t)mzm_rom_u8(path + (uint32_t)k);
+                int8_t direction = (int8_t)mzm_rom_u8(path + (uint32_t)k + 1);
+                if (elevator(route, 0) == p->current_area) {
+                    o->x = (int16_t)(elevator(route, 2) * HALF_BLOCK);
+                    o->y = (int16_t)((elevator(route, 3) + 4) * HALF_BLOCK);
+                    o->exists = 1;
+                    o->oam_id = direction < 0 ? TARGET_OAM_UP_ARROW : TARGET_OAM_DOWN_ARROW;
+                    o++;
+                }
+                if (elevator(route, 4) == p->current_area) {
+                    o->x = (int16_t)(elevator(route, 6) * HALF_BLOCK);
+                    o->y = (int16_t)((elevator(route, 7) - 3) * HALF_BLOCK);
+                    o->exists = 1;
+                    o->oam_id = direction < 0 ? TARGET_OAM_UP_ARROW : TARGET_OAM_DOWN_ARROW;
+                    o++;
+                }
+            }
+        }
+    }
+    for (int i = 0; i < TARGETS && o < p->targets + 12; ++i) {
+        if (i == p->hint.index || !(p->hint.activated >> i & 1)) continue;
+        HintTarget t = hint_target(i);
+        if (t.target_area != p->current_area) continue;
+        o->oam_id = t.end_icon;
+        o->x = (int16_t)(t.target_x * HALF_BLOCK);
+        o->y = (int16_t)(t.target_y * HALF_BLOCK);
+        o->exists = 1;
+        o++;
+    }
+    draw_boss_flames(p);
+}
+
+/* ChozoStatueHintCalculateCoordinates: the next position (y << 16 | x). */
+static uint32_t hint_coordinates(MzmChozoHintMapData *d) {
+    int32_t x = 0, y = 0;
+    if (d->dir_x != 0) {
+        if (d->map_x != d->target_x) {
+            x = d->dist_x * d->unk_10 * d->speed * 256 / d->abs_dist;
+            x = d->map_x + x / 256 * d->dir_x;
+            if (d->dir_x > 0 ? d->target_x < x : d->target_x > x) d->dir_x = 0;
+        } else {
+            d->dir_x = 0;
+        }
+    }
+    if (d->dir_y != 0) {
+        if (d->map_y != d->target_y) {
+            y = d->dist_y * d->unk_10 * d->speed * 256 / d->abs_dist;
+            y = d->map_y + y / 256 * d->dir_y;
+            if (d->dir_y > 0 ? d->target_y < y : d->target_y > y) d->dir_y = 0;
+        } else {
+            d->dir_y = 0;
+        }
+    }
+    if (d->dir_x == 0) x = d->target_x;
+    if (d->dir_y == 0) y = d->target_y;
+    return (uint32_t)(uint16_t)y << 16 | (uint16_t)x;
+}
+
+/* The straight line of a movement or a scrolling (their CALCULATE stage). */
+static void hint_line(MzmChozoHintMapData *d) {
+    d->dist_x = (int16_t)(d->target_x - d->map_x);
+    if (d->dist_x == 0) {
+        d->dir_y = 0;
+    } else {
+        d->dir_x = d->dist_x > 0 ? 1 : -1;
+        d->dist_x = (int16_t)(d->dist_x * d->dir_x);
+    }
+    d->dist_y = (int16_t)(d->target_y - d->map_y);
+    if (d->dist_y == 0) {
+        d->dir_y = 0;
+    } else {
+        d->dir_y = d->dist_y > 0 ? 1 : -1;
+        d->dist_y = (int16_t)(d->dist_y * d->dir_y);
+    }
+    uint32_t norm = isqrt((uint32_t)(d->dist_x * d->dist_x + d->dist_y * d->dist_y) * 4u) / 4u;
+    if (norm == 0) d->dir_y = d->dir_x = 0;
+    d->abs_dist = (uint16_t)norm;
+    d->unk_10 = 1;
+    d->speed = 0;
+}
+
+/* ChozoStatueHintMovement: the target travels from the statue, leaving a
+ * trail. */
+static void hint_movement(MzmPauseScreen *p) {
+    MzmChozoHintMapData *d = &p->hint_movement;
+    switch (p->hint.movement_stage) {
+    case MOVE_CALCULATE: {
+        p->hint.flags |= TARGET_MOVEMENT_FLAG;
+        d->map_x = (uint16_t)(p->map_x * HALF_BLOCK);
+        d->map_y = (uint16_t)(p->map_y * HALF_BLOCK);
+        d->target_x = (uint16_t)(p->hint_target_x * HALF_BLOCK);
+        d->target_y = (uint16_t)(p->hint_target_y * HALF_BLOCK);
+        p->chozo_hint[0].y = (int16_t)d->map_y;
+        p->chozo_hint[0].x = (int16_t)d->map_x;
+        p->chozo_hint[0].oam_id = hint_target(p->hint.index).start_icon;
+        hint_line(d);
+        p->hint.movement_timer = 0;
+        if (p->hint.index < TARGET_ITEM_COUNT || p->hint.unk_41 != 0) {
+            p->chozo_hint[0].exists = OAM_ID_CHANGED;
+            p->hint.movement_stage++;
+        } else {
+            p->hint.movement_stage = MOVE_DELAY_BEFORE_CONTINUE;
+        }
+        break;
+    }
+    case MOVE_DELAY_BEFORE:
+        if (++p->hint.movement_timer > 60) {
+            p->hint.scrolling_stage = SCROLL_CALCULATE;
+            p->hint.movement_timer = 0;
+            p->hint.movement_stage++;
+        }
+        break;
+    case MOVE_UPDATE: {
+        p->hint.movement_timer++;
+        int dx = (d->target_x - p->chozo_hint[0].x) * d->dir_x;
+        int dy = (d->target_y - p->chozo_hint[0].y) * d->dir_y;
+        if (dy < dx) dy = dx;
+        int far = dy >> 2;
+        d->speed = (uint16_t)(d->speed + (far <= 0x20 ? 2 : far <= 0x40 ? 3 : far <= 0x60 ? 4 : 5));
+        if ((p->hint.movement_timer & 7) == 0) {
+            int n = (p->hint.movement_timer >> 3 & 3) + 1;
+            p->chozo_hint[n] = p->chozo_hint[0];
+            if (p->hint.index < TARGET_ITEM_COUNT) {
+                p->chozo_hint[n].oam_id = 7;
+                p->chozo_hint[n].exists = OAM_ID_CHANGED;
+            } else {
+                p->chozo_hint[n].oam_id = p->hint.index == TARGET_KRAID_FLAME ? 0xB : 0xF;
+                p->chozo_hint[n].animation_duration_counter = 3;
+                p->chozo_hint[n].current_animation_frame = 5;
+                p->chozo_hint[n].exists = 1;
+            }
+        }
+        uint32_t at = hint_coordinates(d);
+        p->chozo_hint[0].y = (int16_t)(at >> 16);
+        p->chozo_hint[0].x = (int16_t)(at & 0xFFFF);
+        bool y_done = (uint16_t)(at >> 16) == d->target_y, x_done = (uint16_t)at == d->target_x;
+        if (y_done) d->dir_y = 0;
+        if (x_done) {
+            d->dir_x = 0;
+            if (y_done) {
+                p->hint.movement_timer = 0;
+                p->hint.movement_stage++;
+            }
+        }
+        break;
+    }
+    case MOVE_DELAY_AFTER:
+        if (++p->hint.movement_timer > 20) {
+            p->targets[1].exists = OAM_ID_CHANGED;
+            p->chozo_hint[0].exists = 0;
+            p->hint.movement_timer = 0;
+            p->hint.movement_stage++;
+        }
+        break;
+    case MOVE_DELAY_BEFORE_FINISHED:
+        if (++p->hint.movement_timer > 20) {
+            p->hint.movement_timer = 0;
+            p->hint.movement_stage = MOVE_FINISHED;
+            p->hint.flags ^= TARGET_MOVEMENT_FLAG;
+        }
+        break;
+    case MOVE_DELAY_BEFORE_CONTINUE:
+        if (++p->hint.movement_timer > 60) {
+            p->chozo_hint[0].exists = OAM_ID_CHANGED;
+            p->hint.movement_timer = 0;
+            p->hint.movement_stage = MOVE_DELAY_BEFORE;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+/* ChozoStatueHintScrolling: the map follows the target. */
+static void hint_scrolling(MzmPauseScreen *p, MzmScreen *s) {
+    MzmChozoHintMapData *d = &p->hint_scrolling;
+    switch (p->hint.scrolling_stage) {
+    case SCROLL_CALCULATE:
+        p->hint.flags |= TARGET_SCROLLING_FLAG;
+        d->target_y = (uint16_t)((0x204 - (10 - p->hint_target_y) * 8) * 4);
+        d->target_x = (uint16_t)((0x204 - (15 - p->hint_target_x) * 8) * 4);
+        d->map_y = s->bg_vofs[3];
+        d->map_x = s->bg_hofs[3];
+        hint_line(d);
+        p->hint.scrolling_stage++;
+        break;
+    case SCROLL_DELAY_BEFORE:
+        if (++p->hint.scrolling_timer > 20) {
+            p->hint.scrolling_timer = 0;
+            p->hint.scrolling_stage++;
+        }
+        break;
+    case SCROLL_UPDATE: {
+        d->speed = (uint16_t)(d->speed + 4);
+        uint32_t at = hint_coordinates(d);
+        s->bg_vofs[3] = (uint16_t)(at >> 16);
+        s->bg_hofs[3] = (uint16_t)at;
+        bool y_done = (uint16_t)(at >> 16) == d->target_y, x_done = (uint16_t)at == d->target_x;
+        if (y_done) d->dir_y = 0;
+        if (x_done) d->dir_x = 0;
+        if (y_done && x_done) {
+            p->hint.scrolling_timer = 0;
+            p->hint.scrolling_stage++;
+        }
+        break;
+    }
+    case SCROLL_DELAY_BEFORE_FINISHED:
+        if (++p->hint.scrolling_timer > 20) {
+            p->hint.scrolling_timer = 0;
+            p->hint.scrolling_stage = SCROLL_FINISHED;
+            p->hint.flags ^= TARGET_SCROLLING_FLAG;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+static void set_spawn_position(MzmPauseScreen *p, MzmScreen *s, int option);
+static void update_boss_icons(MzmPauseScreen *p, const MzmPauseGame *g);
+
+/* ChozoStatueHintHandler: true once A or START ends the hint. */
+static bool chozo_hint(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
+    hint_movement(p);
+    hint_scrolling(p, s);
+    switch (p->stage) {
+    case HINT_DELAY_BEFORE_UPDATE:
+        if (p->timer > 40) {
+            p->stage++;
+            p->timer = 0;
+        }
+        break;
+    case HINT_BEGIN_UPDATE:
+        p->hint.movement_stage = MOVE_CALCULATE;
+        p->stage++;
+        p->timer = 0;
+        break;
+    case HINT_WAIT_UPDATE_FINISHED:
+        if (!(p->hint.flags & (TARGET_SCROLLING_FLAG | TARGET_MOVEMENT_FLAG))) {
+            p->stage++;
+            p->timer = 0;
+        }
+        break;
+    case HINT_CHECK_FINISHED:
+        p->stage = p->hint.unk_42 > -1 ? (uint8_t)(p->stage + 1) : HINT_DELAY_BEFORE_FINISHED;
+        p->timer = 0;
+        break;
+    case HINT_DELAY_BEFORE_FADE_OUT:
+        if (p->timer > 60) {
+            p->bldcnt |= BLDCNT_BG3_FIRST | BLDCNT_OBJ_FIRST;
+            p->stage++;
+            p->timer = 0;
+        }
+        break;
+    case HINT_UPDATE_FADE_OUT:
+        if (s->bldalpha_h + s->bldalpha_l != 0) {
+            if (s->bldalpha_h) s->bldalpha_h--;
+            if (s->bldalpha_l) s->bldalpha_l--;
+        } else {
+            p->stage++;
+            p->timer = 0;
+        }
+        break;
+    case HINT_SETUP_NEXT_AREA:
+        /* The next area on the path. */
+        p->hint.unk_41++;
+        p->current_area = (uint8_t)p->hint.unk_42;
+        vram_from16(s, 0xE000, p->maps[p->current_area < AREAS ? p->current_area : AREA_TEST], 2048);
+        hint_determine_path(p, g, true);
+        set_spawn_position(p, s, 1);
+        mzm_menu_oam_set_id(&p->overlay[0], rom8("sChozoHintAreaNamesOamIds", p->current_area));
+        update_boss_icons(p, g);
+        p->stage++;
+        p->timer = 0;
+        break;
+    case HINT_UPDATE_FADE_IN:
+        if ((p->target_bld_alpha >> 8 & 0xFF) != s->bldalpha_h || (p->target_bld_alpha & 0xFF) != s->bldalpha_l) {
+            if ((p->target_bld_alpha >> 8 & 0xFF) > s->bldalpha_h) s->bldalpha_h++;
+            if ((p->target_bld_alpha & 0xFF) > s->bldalpha_l) s->bldalpha_l++;
+        } else {
+            p->bldcnt &= (uint16_t)~(BLDCNT_BG3_FIRST | BLDCNT_OBJ_FIRST);
+            p->stage = HINT_DELAY_BEFORE_UPDATE;
+            p->timer = 0;
+        }
+        break;
+    case HINT_DELAY_BEFORE_FINISHED:
+        if (p->timer > 40) {
+            p->stage++;
+            p->timer = 0;
+        }
+        break;
+    case HINT_FINISHED:
+        return (s->changed_input & (KEY_START | KEY_A)) != 0;
+    default:
+        break;
+    }
+    return false;
 }
 
 /* sStatusScreenGroupsPositions / sStatusScreenUnknownItemsPositions:
@@ -1671,7 +2204,8 @@ static bool map_download(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g)
     return false;
 }
 
-/* PauseScreenInit (the pause from the game and the map download) */
+/* PauseScreenInit (the pause from the game, the Chozo hints and the map
+ * download) */
 static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     GbaPpu *ppu = s->ppu;
     gba_ppu_write16(ppu, GBA_REG_BLDCNT, BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN);
@@ -1686,8 +2220,10 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     mzm_screen_copy_oam(s);
     p->bldcnt = BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN;
     p->current_area = g->area;
+    if (g->flag == MZM_PAUSE_FLAG_CHOZO_HINT) p->type_flags |= TYPE_ON_MAP_SCREEN | TYPE_CHOZO_STATUE_HINT;
     if (g->flag == MZM_PAUSE_FLAG_MAP_DOWNLOAD) p->type_flags |= TYPE_ON_MAP_SCREEN | TYPE_DOWNLOADING_MAP;
     bool downloading = p->type_flags & TYPE_DOWNLOADING_MAP;
+    bool hint = p->type_flags & TYPE_CHOZO_STATUE_HINT;
     p->map_x = g->hud->minimap_x;
     p->map_y = g->hud->minimap_y;
     /* The palettes and graphics */
@@ -1703,34 +2239,46 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     vram_lz77(s, "sMapScreenAreaNamesEnglishGfx", 0x10800);
     vram_lz77(s, "sMapScreenUnknownItemsNamesEnglishGfx", 0x11400);
     vram_lz77(s, "sMapScreenChozoStatueAreaNamesEnglishGfx", 0x11800);
-    vram_lz77(s, "sMotifBehindWireframeSamusGfx", 0);
-    vram_lz77(s, "sPauseScreenHudGfx", 0x1000);
-    vram_lz77(s, "sMinimapLettersGfx", 0x7400);
-    vram_lz77(s, "sEquipmentNamesEnglishGfx", 0x6000);
-    vram_lz77(s, "sMenuNamesEnglishGfx", 0xC00);
-    memcpy(ppu->vram + GBA_OBJ_VRAM, ppu->vram + 0x6000, 0x800);
+    if (hint) {
+        vram_lz77(s, "sChozoHintBackgroundGfx", 0);
+        vram_lz77(s, "sMinimapTilesAreaNamesEnglishGfx", 0xA800);
+    } else {
+        vram_lz77(s, "sMotifBehindWireframeSamusGfx", 0);
+        vram_lz77(s, "sPauseScreenHudGfx", 0x1000);
+        vram_lz77(s, "sMinimapLettersGfx", 0x7400);
+        vram_lz77(s, "sEquipmentNamesEnglishGfx", 0x6000);
+        vram_lz77(s, "sMenuNamesEnglishGfx", 0xC00);
+        memcpy(ppu->vram + GBA_OBJ_VRAM, ppu->vram + 0x6000, 0x800);
+    }
     for (uint32_t i = 0; i < 0x1800; i += 2) ppu->vram[0xE800 + i] = 0x40, ppu->vram[0xE801 + i] = 0x11;
     vram_from16(s, 0xE000, g->hud->minimap_visited, 2048);
-    ewram_lz77("sMapScreenVisorOverlayTilemap", p->visor_overlay);
-    vram_from16(s, 0xC800, p->visor_overlay, 2048);
-    update_bottom_visor(p, s, 2, 2);
-    if (downloading) {
-        update_top_visor(p, s, 0xFF);
+    if (hint) {
+        vram_lz77(s, "sChozoHintBackgroundTileTable", 0xB800);
+        for (uint32_t i = 0; i < 0x800; i += 2) ppu->vram[0xC000 + i] = 0x5F, ppu->vram[0xC001 + i] = 0x11;
     } else {
-        ewram_lz77("sStatusScreenTilemap", p->status_base_tilemap);
-        ewram_lz77("sStatusScreenBackgroundTilemap", p->status_background_tilemap);
-        vram_from16(s, 0xC000, suitless(g) ? p->status_background_tilemap : p->status_base_tilemap, 0x500);
-        ewram_lz77("sMapScreenOverlayTilemap", p->map_overlay);
-        ewram_lz77("sWorldMapOverlayTilemap", p->world_map_overlay);
-        p->on_world_map = false;
-        vram_lz77(s, "sMapScreenTextBg0TileTable", 0xD800);
-        ewram_lz77("sEasySleepTilemap", p->easy_sleep_tilemap);
+        ewram_lz77("sMapScreenVisorOverlayTilemap", p->visor_overlay);
+        vram_from16(s, 0xC800, p->visor_overlay, 2048);
+        update_bottom_visor(p, s, 2, 2);
+        if (downloading) {
+            update_top_visor(p, s, 0xFF);
+        } else {
+            ewram_lz77("sStatusScreenTilemap", p->status_base_tilemap);
+            ewram_lz77("sStatusScreenBackgroundTilemap", p->status_background_tilemap);
+            vram_from16(s, 0xC000, suitless(g) ? p->status_background_tilemap : p->status_base_tilemap, 0x500);
+            ewram_lz77("sMapScreenOverlayTilemap", p->map_overlay);
+            ewram_lz77("sWorldMapOverlayTilemap", p->world_map_overlay);
+            p->on_world_map = false;
+            vram_lz77(s, "sMapScreenTextBg0TileTable", 0xD800);
+            ewram_lz77("sEasySleepTilemap", p->easy_sleep_tilemap);
+        }
     }
     memset(s->bg_hofs, 0, sizeof s->bg_hofs);
     memset(s->bg_vofs, 0, sizeof s->bg_vofs);
     p->state = STATE_MAP_SCREEN;
     s->bg_vofs[1] = BLOCK * 16;
-    if (downloading) {
+    if (hint) {
+        p->state = STATE_CHOZO_HINT_INIT;
+    } else if (downloading) {
         /* The area's map is downloaded: the BG3 map keeps the explored
          * tiles until the line reveals the new ones. */
         g->hud->progress->downloaded_maps |= (uint8_t)(1u << g->area);
@@ -1742,26 +2290,43 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     for (int i = 0; i < AREAS; ++i)
         mzm_hud_area_map(g->hud, rom8("sMapScreenAreaIds", (uint32_t)i), p->maps[i], g->check_event,
                          g->context);
-    status_draw(p, s, g);
+    if (!hint) status_draw(p, s, g);
+    hint_determine_path(p, g, false);
     set_spawn_position(p, s, 0);
-    draw_yes_no(p);
+    if (!hint) draw_yes_no(p);
     if (p->type_flags & TYPE_ON_MAP_SCREEN) {
-        p->areas_viewable = p->areas_viewable_total = 0;
+        p->areas_viewable = p->areas_viewable_total = p->areas_with_hints = 0;
         s->bg_hofs[1] = s->bg_vofs[1] = QUARTER_BLOCK;
     } else {
+        check_areas_with_targets(p, g);
         determine_maps_viewable(p, s, g);
         load_bg_palette(p, s, g);
         vram_from16(s, 0xD000, p->map_overlay, 2048);
     }
     s->bldy = 0;
-    p->bldcnt = 1 << 2 | BLDCNT_ALPHA | 1 << 11 | 1 << 12 | 1 << 13;
-    p->target_bld_alpha = 6 << 8 | 10;
-    s->bldalpha_h = 6;
-    s->bldalpha_l = 10;
+    if (hint) {
+        /* BG1 (the screen's tint) over everything. */
+        p->bldcnt = 1 << 1 | BLDCNT_ALPHA | 0x3F << 8;
+        p->target_bld_alpha = 7 << 8 | 9;
+        s->bldalpha_h = 7;
+        s->bldalpha_l = 9;
+    } else {
+        p->bldcnt = 1 << 2 | BLDCNT_ALPHA | 1 << 11 | 1 << 12 | 1 << 13;
+        p->target_bld_alpha = 6 << 8 | 10;
+        s->bldalpha_h = 6;
+        s->bldalpha_l = 10;
+    }
     /* Outside the windows everything blends; in the OBJ window (Samus's
      * wireframe) only BG3 and the objects show. */
     gba_ppu_write16(ppu, GBA_REG_WINOUT, 0x3F | (1 << 3 | 1 << 4) << 8);
-    if (downloading) {
+    if (hint) {
+        p->dispcnt = GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ;
+        p->unk_6c = (uint16_t)(bgcnt(2, 28, 1, 3) | 1 << 6);
+        p->bg3cnt = p->unk_6c;
+        p->bg2cnt = bgcnt(0, 23, 3, 0);
+        p->bg1cnt = bgcnt(2, 24, 2, 0);
+        p->bg0cnt = 0;
+    } else if (downloading) {
         /* BG1 and BG2 show screens 24 and 23, which nothing loads here (the
          * game's leftover VRAM is not kept: they are cleared). */
         p->dispcnt = GBA_DCNT_BG0 | GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ;
@@ -1959,6 +2524,20 @@ static bool call_state_handler(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGa
     case STATE_MAP_DOWNLOAD:
         if (map_download(p, s, g)) p->state = STATE_MAP_DOWNLOAD_ENDED;
         break;
+    case STATE_CHOZO_HINT_INIT:
+        p->state = STATE_CHOZO_HINT;
+        p->timer = 0;
+        p->stage = 0;
+        break;
+    case STATE_CHOZO_HINT:
+        if (chozo_hint(p, s, g)) p->state = STATE_CHOZO_HINT_ENDED;
+        break;
+    case STATE_CHOZO_HINT_ENDED:
+        p->state = p->type_flags & TYPE_ON_MAP_SCREEN ? STATE_LEAVING_AFTER_HINT : STATE_MAP_SCREEN;
+        break;
+    case STATE_LEAVING_AFTER_HINT:
+        mzm_sfx_music_fade(160);    /* CONVERT_SECONDS(2.f) + TWO_THIRD_SECOND */
+        return true;
     case STATE_MAP_DOWNLOAD_ENDED:
         p->state = STATE_WAIT_TO_LEAVE;
         p->stage = 0;

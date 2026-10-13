@@ -2988,6 +2988,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0301 - Zero Mission Chozo statue hints
+
+- `src/runtime/mzm_pause_screen.c`: PAUSE_SCREEN_CHOZO_HINT
+  (pause_screen_sub_menus.c): the hint screen, the statue's target
+  travelling to its item with a trail while the map scrolls to it, the
+  elevators to the target's area, A or START to leave; the activated
+  targets then show on the pause map (with the elevators towards the first
+  one), the world map and as viewable areas.
+- A hint statue now opens this screen when its flashing ends, then sits
+  down (`src/runtime/mzm_chozo_statue.c`).
+- Checked by capture (brinstar_002's Long Beam hint, then the pause map);
+  test in `tests/test_mzm_screens.c`.
+
 ## Patch 0300 - Zero Mission hatch locks
 
 - `src/runtime/mzm_hatches.c`: ConnectionLockHatches,

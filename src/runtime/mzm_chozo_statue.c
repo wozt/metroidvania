@@ -3,9 +3,10 @@
  * (src/sprites_ai/chozo_statue.c: ChozoStatue, ChozoStatuePart,
  * ChozoStatueRefill), their item ball (chozo_ball.c: ChozoBall) and the
  * sitting echo (chozo_statue_movement.c); comments name the pinned
- * decompilation's routines. The hint's map screen (PAUSE_SCREEN_CHOZO_HINT),
- * its background flashes, music and slow scrolling are not ported: a hint
- * statue goes straight from its flashing to sitting down. */
+ * decompilation's routines. A hint statue opens the hint's map screen
+ * (PAUSE_SCREEN_CHOZO_HINT, mzm_pause_screen.c) before sitting down; the
+ * background flashes (MakeBackgroundFlash) and the slow scrolling are not
+ * ported. */
 #include "mzm_items.h"
 #include "mzm_sprite_ai.h"
 
@@ -423,13 +424,15 @@ static void statue(Ctx *c) {
         break;
     }
     case STATUE_HINT_FLASHING: {
-        /* ChozoStatueHintFlashing: the hint music starts and the statue
-         * sits down when the delay ends (the hint screen is not ported). */
+        /* ChozoStatueHintFlashing: the hint screen (gPauseScreenFlag
+         * PAUSE_SCREEN_CHOZO_HINT) and its music start and the statue sits
+         * down when the delay ends. */
         const MzmSprite *eye = slot(c, s->work1);
         if (eye && eye->pose != PART_DO_NOTHING) break;
         if (--s->work0 == 0) {
             s->pose = STATUE_SITTING_INIT;
             s->palette_row = 0;
+            if (g) g->pause_screen_flag = 4;
             mzm_sfx_music_play(MZM_MUSIC_CHOZO_STATUE_HINT, 0);
             break;
         }

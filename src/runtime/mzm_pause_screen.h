@@ -8,10 +8,14 @@
  * revealed one by one, the tank amounts, Samus's wireframe and the headers,
  * the item cursor and the item descriptions (text.c), and easy sleep (L,
  * pause_screen_sub_menus.c): its text, the YES/NO cursor and the sleep until
- * SELECT, L and R; and the map download of the map stations
- * (PAUSE_SCREEN_MAP_DOWNLOAD). The Chozo hints and their targets, the item
- * toggling of the suitless and item acquisition sequences and the
- * completion info are not ported yet. */
+ * SELECT, L and R; the map download of the map stations
+ * (PAUSE_SCREEN_MAP_DOWNLOAD); and the Chozo statue hints
+ * (PAUSE_SCREEN_CHOZO_HINT, pause_screen_sub_menus.c): the hint screen's
+ * background, the target travelling from the statue to its item on the map
+ * (through the elevators to other areas), the map following it, and the
+ * activated targets on the map and the world map. The item toggling of the
+ * suitless and item acquisition sequences and the completion info are not
+ * ported yet. */
 #ifndef MZM_PAUSE_SCREEN_H
 #define MZM_PAUSE_SCREEN_H
 
@@ -23,7 +27,7 @@
 #include "mzm_text.h"
 
 /* gPauseScreenFlag values the pause screen handles. */
-enum { MZM_PAUSE_FLAG_PAUSE = 2, MZM_PAUSE_FLAG_MAP_DOWNLOAD = 5 };
+enum { MZM_PAUSE_FLAG_PAUSE = 2, MZM_PAUSE_FLAG_CHOZO_HINT = 4, MZM_PAUSE_FLAG_MAP_DOWNLOAD = 5 };
 
 /* What the pause screen reads from the game. */
 typedef struct {
@@ -34,6 +38,14 @@ typedef struct {
     void *context;
     uint8_t flag;                   /* gPauseScreenFlag (MZM_PAUSE_FLAG_*) */
 } MzmPauseGame;
+
+/* struct ChozoHintMapData */
+typedef struct {
+    uint16_t map_y, map_x, target_y, target_x;
+    int16_t dist_y, dist_x;
+    int8_t dir_y, dir_x;
+    uint16_t abs_dist, unk_10, speed;
+} MzmChozoHintMapData;
 
 typedef struct {
     uint16_t type_flags;
@@ -67,6 +79,20 @@ typedef struct {
     MzmMessage message;             /* gCurrentMessage */
     /* Easy sleep */
     int8_t easy_sleep_text_state;
+    /* The Chozo hints: chozoHintTarget, the moving target's trail
+     * (chozoHintOam), hintTargetX/Y, the movement and the scrolling, the
+     * areas with an activated target and bossFlameData. */
+    struct {
+        int8_t index;
+        uint8_t unk_41;
+        int8_t unk_42;
+        uint16_t activated;
+        uint8_t flags, movement_stage, movement_timer, scrolling_stage, scrolling_timer;
+    } hint;
+    MzmMenuOam chozo_hint[5];
+    uint8_t hint_target_x, hint_target_y, areas_with_hints;
+    MzmChozoHintMapData hint_movement, hint_scrolling;
+    struct { uint16_t y_offset; uint8_t moving, oam_offset; int8_t direction; uint16_t x, y; } boss_flames[2];
     /* The map download */
     uint16_t download_timer;
     uint8_t download_stage, current_downloaded_line, unk_4f, line_trail_index;

@@ -767,6 +767,81 @@ static void test_door_fade(void) {
     assert(frames == 1 + 8 && !f.cover && f.show_bg[1]);
 }
 
+/* EVENT_STATUE_LONG_BEAM_GRABBED only. */
+static bool hint_event(void *context, uint8_t event) {
+    (void)context;
+    return event == 8;
+}
+
+/* The Long Beam statue's hint on the exported bank: the hint screen, the
+ * target travelling from the statue to the Long Beam, the map following
+ * it, A to leave; then the target on the pause screen's map and world map. */
+static void test_chozo_hint_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the Chozo hint checks are skipped\n");
+        return;
+    }
+    static GbaPpu hud_ppu;
+    static MzmHud hud;
+    static MzmMinimapProgress progress;
+    static MzmPauseScreen pause;
+    mzm_hud_init(&hud, &hud_ppu, &progress, 240);
+    uint8_t map_x, map_y;
+    assert(mzm_hud_room_map(0, 2, &map_x, &map_y));
+    MzmEquipment equipment = {.energy = 99, .max_energy = 99, .items = MZM_ITEM_MORPH_BALL};
+    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 53 * 64, 9 * 64, NULL, NULL, NULL};
+    MzmHudRoom room = {0, 2, map_x, map_y, 64, 16};
+    mzm_hud_room_entered(&hud, &room, &frame);
+    hud.minimap_x = 9;
+    hud.minimap_y = 15;
+    MzmPauseGame game = {&hud, 0, &equipment, hint_event, NULL, MZM_PAUSE_FLAG_CHOZO_HINT};
+    mzm_pause_enter(&pause);
+    mzm_sfx_clear();
+    int f;
+    for (f = 0; f < 40 && pause.sub_stage != 2; ++f) {
+        mzm_screen_input(&screen, 0);
+        assert(!mzm_pause_update(&pause, &screen, &game));
+    }
+    assert(pause.sub_stage == 2 && pause.state == 15 && pause.type_flags == (1 << 1 | 1 << 4));
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.state == 8);
+    assert(pause.hint.index == 0 && pause.hint.activated == 1 && pause.hint_target_x == 6 &&
+           pause.hint_target_y == 6);
+    assert(pause.targets[0].x == 9 * 32 && pause.targets[0].y == 15 * 32 && pause.targets[1].x == 6 * 32 &&
+           pause.targets[1].y == 6 * 32 && pause.dispcnt == (GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ));
+    assert(pause.overlay[0].oam_id == 0x1A && screen.bldalpha_h == 7 && screen.bldalpha_l == 9);
+    /* The target travels to the Long Beam; the map follows it. */
+    bool moved = false;
+    for (f = 0; f < 600 && pause.stage != 9; ++f) {
+        mzm_screen_input(&screen, 0);
+        assert(!mzm_pause_update(&pause, &screen, &game));
+        moved |= pause.hint.movement_stage == 3 && pause.chozo_hint[0].y < 15 * 32;
+    }
+    assert(pause.stage == 9 && moved && pause.chozo_hint[0].exists == 0 && pause.targets[1].exists);
+    assert(screen.bg_vofs[3] == (0x204 - (10 - 6) * 8) * 4 && screen.bg_hofs[3] == (0x204 - (15 - 6) * 8) * 4);
+    /* A ends it: the music fades and the screen fades out. */
+    mzm_screen_input(&screen, 1);
+    mzm_pause_update(&pause, &screen, &game);
+    bool left = false;
+    for (f = 0; f < 60 && !left; ++f) {
+        mzm_screen_input(&screen, 0);
+        left = mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(left && count_requests(MZM_SFX_MUSIC_FADE, 0) == 1);
+    /* The pause afterwards: the target on Brinstar's map and world map. */
+    game.flag = MZM_PAUSE_FLAG_PAUSE;
+    mzm_pause_enter(&pause);
+    for (f = 0; f < 40 && pause.sub_stage != 2; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(pause.hint.activated == 1 && pause.targets[0].exists && pause.targets[0].x == 6 * 32 &&
+           pause.areas_with_hints == 1 && pause.world_map[8].exists && pause.world_map[8].oam_id == 15);
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
@@ -774,6 +849,7 @@ int main(void) {
     test_menu_oam();
     test_title_bank();
     test_pause_bank();
+    test_chozo_hint_bank();
     test_file_select_bank();
     test_game_over_bank();
     test_intro_bank();

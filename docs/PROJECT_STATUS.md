@@ -2988,6 +2988,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0286 - Zero Mission elevators and area connections
+
+- `scripts/mzm_runtime_room.py` resolves the area connection doors
+  (`sAreaConnections`) to the connected area's room and door; the runtime
+  now takes them (elevators, and passages such as brinstar_000's shaft up
+  to Crateria).
+- Elevator blocks work again where `ClipdataCheckCantUseElevator` allows
+  them (`sElevatorRoomPairs` from the ROM bank, the escape condition);
+  `BgClipCheckTouchingTransitionOnElevator` takes the ride's transition
+  without offset and RoomLoad moves Samus three blocks on.
+- Checked by capture: brinstar_026 down to norfair_000, landing on the
+  elevator pad with the Norfair minimap.
+- Tests: `tests/test_runtime_steep_slopes.c` (elevator door, placement).
+
 ## Patch 0285 - Zero Mission room gadgets
 
 - `src/runtime/mzm_gadget_sprites.c`: elevator pads, water drops (common

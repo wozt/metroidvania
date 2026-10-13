@@ -228,6 +228,42 @@ int main(void) {
     runtime_place_after_door(&samus, door, offset);
     assert(samus.x == 2 * 64 + (32 + 8) * 4);
     assert(samus.y == 19 * 64 - 1 - 40 + 1);
+    /* An elevator ride (BgClipCheckTouchingTransitionOnElevator): an area
+     * connection door with a destination is taken through the vertical
+     * transition two blocks under Samus going up, without offset; RoomLoad
+     * then moves her three blocks on. Elevator blocks always work without
+     * the ROM bank. */
+    {
+        Room *shaft = calloc(1, sizeof *shaft);
+        assert(shaft);
+        shaft->width = 128;
+        shaft->height = 160;
+        snprintf(shaft->area, sizeof shaft->area, "Brinstar");
+        shaft->behaviors[8 * 8 + 3] = BEHAVIOR_UP;
+        shaft->doors[0] = (RoomDoor){.index = 0, .kind = "area", .x0 = 2, .x1 = 4, .y0 = 8, .y1 = 8,
+            .destination = "crateria_003", .dest_x = 8, .dest_y_end = 21, .dest_x_exit = 0,
+            .dest_y_exit = 0};
+        shaft->doors[1] = (RoomDoor){.index = 1, .kind = "area", .x0 = 2, .x1 = 4, .y0 = 0, .y1 = 0,
+            .destination = "-"};
+        shaft->door_count = 2;
+        MzmSamus rider;
+        mzm_samus_init(&rider, 3 * 64 + 32, 6 * 64 + 1, 1);
+        rider.pose = MZM_POSE_USING_AN_ELEVATOR;
+        rider.elevator_direction = MZM_KEY_UP;
+        int ride_offset = -1;
+        const RoomDoor *ride = runtime_door_touched(shaft, &rider, &ride_offset);
+        assert(ride && ride->index == 0 && ride_offset == 0);
+        runtime_place_after_door(&rider, ride, ride_offset);
+        assert(rider.x == 8 * 64 + 8 * 4 && rider.y == 22 * 64 - 1 + 1 + 3 * 64);
+        /* Not past a transition, or without a destination: nothing. */
+        mzm_samus_init(&rider, 3 * 64 + 32, 3 * 64 + 1, 1);
+        rider.pose = MZM_POSE_USING_AN_ELEVATOR;
+        rider.elevator_direction = MZM_KEY_UP;
+        assert(!runtime_door_touched(shaft, &rider, &ride_offset));
+        assert(!runtime_door_at(shaft, 3, 0) && runtime_door_at(shaft, 3, 8) == &shaft->doors[0]);
+        assert(!runtime_cant_use_elevator(shaft));
+        free(shaft);
+    }
     /* A beam starts opening the normal hatch (BgClipCheckOpeningHatch);
      * ConnectionUpdateHatches plays its frames, writing the opening
      * blocks' collision (air here); the locked one stops the shot but

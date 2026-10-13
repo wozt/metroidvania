@@ -644,8 +644,42 @@ static int runtime_behavior(const Room *room, int x, int y) {
 
 /* BgClipCheckTouchingTransitionOrTank + ConnectionCheckEnterDoor: the door
  * Samus is entering, and gSamusDoorPositionOffset for the destination. */
+/* The door around a block (ConnectionCheckAreaConnection, then
+ * ConnectionCheckEnterDoor): area connections only with a destination. */
+static const RoomDoor *runtime_door_at(const Room *room, int px, int py) {
+    for (int i = 0; i < room->door_count; ++i) {
+        const RoomDoor *door = &room->doors[i];
+        if (!strcmp(door->kind, "none") || !strcmp(door->destination, "-")) continue;
+        if (door->x0 <= px && px <= door->x1 && door->y0 <= py && py <= door->y1) return door;
+    }
+    return NULL;
+}
+
+/* BgClipCheckTouchingTransitionOnElevator: on an elevator, only the
+ * vertical transition two blocks past Samus in her direction counts, with
+ * no vertical offset. */
+static const RoomDoor *runtime_elevator_door(const Room *room, const MzmSamus *samus,
+                                             int *offset) {
+    bool going_down = samus->elevator_direction != MZM_KEY_UP;
+    int32_t width = room->width / 16, height = room->height / 16;
+    int32_t x = samus->x < 0 ? 0 : samus->x > width * MZM_BLOCK_SIZE ? width * MZM_BLOCK_SIZE : samus->x;
+    int32_t native_y = samus->y - 1;
+    /* gSamusPhysics.hitboxBottom is 0; hitboxTop is the pose's. */
+    int32_t y = going_down ? native_y + mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top - MZM_BLOCK_SIZE * 2
+                           : native_y + MZM_BLOCK_SIZE * 2;
+    if (y < 0) y = 0;
+    else if (y > height * MZM_BLOCK_SIZE) y = height * MZM_BLOCK_SIZE;
+    int bx = x / MZM_BLOCK_SIZE, by = y / MZM_BLOCK_SIZE;
+    if (bx >= width) bx = width - 1;
+    if (by >= height) by = height - 1;
+    if (runtime_behavior(room, bx, by) != (going_down ? BEHAVIOR_DOWN : BEHAVIOR_UP)) return NULL;
+    *offset = 0;
+    return runtime_door_at(room, bx, by);
+}
+
 static const RoomDoor *runtime_door_touched(const Room *room, const MzmSamus *samus,
                                             int *offset) {
+    if (samus->pose == MZM_POSE_USING_AN_ELEVATOR) return runtime_elevator_door(room, samus, offset);
     const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
     int32_t native_y = samus->y - 1;
     int32_t max_x = room->width / 16 * MZM_BLOCK_SIZE;
@@ -672,15 +706,9 @@ static const RoomDoor *runtime_door_touched(const Room *room, const MzmSamus *sa
     else if (runtime_behavior(room, xs[2], ys[2]) == BEHAVIOR_DOWN) j = 3;
     if (j < 0) return NULL;
     int px = xs[touch[j][1]], py = ys[touch[j][0]];
-    for (int i = 0; i < room->door_count; ++i) {
-        const RoomDoor *door = &room->doors[i];
-        if (!strcmp(door->kind, "none") || !strcmp(door->kind, "area")) continue;
-        if (door->x0 <= px && px <= door->x1 && door->y0 <= py && py <= door->y1) {
-            *offset = (door->y1 + 1) * MZM_BLOCK_SIZE - native_y - 1;
-            return door;
-        }
-    }
-    return NULL;
+    const RoomDoor *door = runtime_door_at(room, px, py);
+    if (door) *offset = (door->y1 + 1) * MZM_BLOCK_SIZE - native_y - 1;
+    return door;
 }
 
 /* RoomLoad placement: Samus at the destination door's exit, keeping her
@@ -697,6 +725,9 @@ static void runtime_place_after_door(MzmSamus *samus, const RoomDoor *door, int 
         if (top + offset > 255) offset = 255 - top;
     }
     samus->y = native_y - offset + 1;
+    /* RoomLoad: an elevator ride continues three blocks further. */
+    if (samus->pose == MZM_POSE_USING_AN_ELEVATOR)
+        samus->y += samus->elevator_direction == MZM_KEY_UP ? MZM_BLOCK_SIZE * 3 : -MZM_BLOCK_SIZE * 3;
 }
 
 /* BgClipCheckOpeningHatch for one projectile impact (subpixels). */
@@ -861,6 +892,31 @@ static bool runtime_haze_ok;
  * (CLIP_BEHAVIOR_WATER .. STRONG_ACID), else the room effect's hazard above
  * or below gEffectYPosition (sHazardsDefinitions) when the room has a BG0
  * and its effect has a haze (HazeSetBackgroundEffect sets damageEffect). */
+/* EVENT_ESCAPED_ZEBES for ClipdataCheckCantUseElevator, from the game's
+ * events each frame. */
+static bool runtime_escaped_zebes;
+
+/* ClipdataCheckCantUseElevator: elevator blocks only work in the rooms of
+ * sElevatorRoomPairs (the second Crateria to Tourian route only after the
+ * escape); without the ROM bank they always work. */
+static bool runtime_cant_use_elevator(const Room *room) {
+    uint32_t size;
+    uint32_t pairs = mzm_rom_symbol("sElevatorRoomPairs", &size);
+    if (!pairs || size < 9 * 8) return false;
+    uint8_t area = runtime_area_index(room->area);
+    int direction = 0;
+    for (int i = 8; i > 0; --i) {
+        const uint8_t *pair = mzm_rom_ptr(pairs + (uint32_t)i * 8, 8);
+        if (!pair) continue;
+        if (area == pair[0] && room->room == pair[1]) direction = 1;
+        else if (area == pair[4] && room->room == pair[5]) direction = 2;
+        /* ELEVATOR_ROUTE_CRATERIA_TO_TOURIAN_2 */
+        if (direction && i == 8 && !runtime_escaped_zebes) direction = 0;
+        if (direction) break;
+    }
+    return direction == 0;
+}
+
 /* The native room backgrounds (mzm_room_gfx) of the current room. */
 static MzmRoomGfx runtime_room_gfx;
 
@@ -2253,8 +2309,9 @@ static uint32_t runtime_samus_clipdata(void *context, uint16_t y, uint16_t x) {
  * ported. */
 static uint32_t runtime_samus_affecting(void *context, uint16_t y, uint16_t x) {
     uint8_t movement = runtime_sprite_movement(context, y, x);
-    if (movement == MZM_SAMUS_MOVEMENT_ELEVATOR_DOWN_BLOCK ||
-        movement == MZM_SAMUS_MOVEMENT_ELEVATOR_UP_BLOCK)
+    if ((movement == MZM_SAMUS_MOVEMENT_ELEVATOR_DOWN_BLOCK ||
+         movement == MZM_SAMUS_MOVEMENT_ELEVATOR_UP_BLOCK) &&
+        runtime_cant_use_elevator((const Room *)context))
         movement = MZM_CLIPDATA_MOVEMENT_NONE;
     return (uint32_t)movement << 16 | runtime_hazard(context, y, x);
 }
@@ -3565,6 +3622,7 @@ int main(int argc, char **argv) {
                  * wider view. */
                 samus.camera_x=(int32_t)last_cx*4+(320-240)*2;
                 samus.camera_y=(int32_t)last_cy*4+(224-160)*2;
+                runtime_escaped_zebes=runtime_sprite_check_event(&sprites,65);
                 mzm_samus_update(&samus,&input,&equipment,&collision,&animation_source);
             }
             palette_frame++;

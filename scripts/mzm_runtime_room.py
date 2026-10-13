@@ -172,6 +172,37 @@ def door_tables(decomp: Path = DECOMP) -> dict[str, list[dict]]:
     return tables
 
 
+AREA_CONNECTION_RE = re.compile(
+    r"\[AREA_CONNECTION_FIELD_SOURCE_AREA\]\s*=\s*AREA_(\w+),\s*"
+    r"\[AREA_CONNECTION_FIELD_SOURCE_DOOR\]\s*=\s*(\d+),\s*"
+    r"\[AREA_CONNECTION_FIELD_DESTINATION_AREA\]\s*=\s*AREA_(\w+)")
+
+
+def area_connections(decomp: Path = DECOMP) -> dict[tuple[str, int], str]:
+    """sAreaConnections (ConnectionCheckAreaConnection): the destination
+    area of each area connection door, by source area and door."""
+    source = (decomp / "src/data/hatch_data.c").read_text(encoding="utf-8")
+    return {(src.capitalize(), int(door)): dst.capitalize()
+            for src, door, dst in AREA_CONNECTION_RE.findall(source)}
+
+
+def area_targets(area: str, decomp: Path = DECOMP) -> dict[int, tuple[str, dict]]:
+    """The destination area and door of the area's area connection doors:
+    the door's destinationDoor in the connected area's sAreaDoors (the
+    event-based destinations, ConnectionFindEventBasedDoor, are not
+    resolved)."""
+    tables = door_tables(decomp)
+    targets = {}
+    for (source, index), destination in area_connections(decomp).items():
+        doors = tables.get(source, [])
+        if source != area or index >= len(doors) or destination not in tables:
+            continue
+        target = doors[index]["destinationDoor"]
+        if target < len(tables[destination]):
+            targets[index] = (destination, tables[destination][target])
+    return targets
+
+
 DOOR_KINDS = {
     "DOOR_TYPE_NONE": "none",
     "DOOR_TYPE_AREA_CONNECTION": "area",
@@ -277,7 +308,8 @@ def encode_room(area: str, number: int, width: int, height: int,
                 clip: tuple[int, int, tuple[int, ...]], tables,
                 doors: list[dict] | None = None, hatches=None, sprites=None,
                 spriteset=None, backgrounds: list[str] | None = None,
-                music: int | None = None) -> str:
+                music: int | None = None,
+                targets: dict[int, tuple[str, dict]] | None = None) -> str:
     clip_width, clip_height, cells = clip
     if clip_width * 16 != width or clip_height * 16 != height:
         raise ValueError("Clipdata dimensions differ from the rendered room")
@@ -305,6 +337,11 @@ def encode_room(area: str, number: int, width: int, height: int,
         if door["kind"] not in ("area", "none") and door["destinationDoor"] < len(doors):
             target = doors[door["destinationDoor"]]
             destination = (f"{area.lower()}_{target['sourceRoom']:03}\t{target['xStart']}\t"
+                           f"{target['yEnd']}\t{target['xExit']}\t{target['yExit']}")
+        elif door["kind"] == "area" and targets and index in targets:
+            # ConnectionCheckAreaConnection: the door in the connected area.
+            other, target = targets[index]
+            destination = (f"{other.lower()}_{target['sourceRoom']:03}\t{target['xStart']}\t"
                            f"{target['yEnd']}\t{target['xExit']}\t{target['yExit']}")
         lines.append(f"D\t{index}\t{door['kind']}\t{door['xStart']}\t{door['xEnd']}\t"
                      f"{door['yStart']}\t{door['yEnd']}\t{destination}")
@@ -378,7 +415,7 @@ def produce(root: Path, area: str, number: int) -> dict:
     background_lines, images = mzm_bg_layers.room_background_lines(fields, blocks, tileset)
     background_lines += hatch_animation_lines(tables, hatch_behaviors)
     text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites,
-                       spriteset, background_lines, room_music(fields))
+                       spriteset, background_lines, room_music(fields), area_targets(area))
     folder = private_path(Path(root), RUNTIME_ROOMS / f"{area.lower()}_{number:03}",
                           create=True)
     folder.mkdir(exist_ok=True)

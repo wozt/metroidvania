@@ -16,6 +16,11 @@
 /* The game's state during a fade (gSubGameMode1). */
 enum { MZM_DOOR_FADE_NONE, MZM_DOOR_FADE_OUT, MZM_DOOR_FADE_IN };
 
+/* ColorFadingEffect: a hatch's door transition, another door's quick fade,
+ * and COLOR_FADING_CANCEL around the pause screen (the same quick fade on
+ * every OBJ row, Samus's and the HUD's included). */
+enum { MZM_FADE_DOOR_TRANSITION, MZM_FADE_NO_TRANSITION, MZM_FADE_CANCEL };
+
 typedef struct {
     uint8_t phase;                  /* MZM_DOOR_FADE_*: LOADING_ROOM, DOOR_TRANSITION */
     bool hatch;                     /* COLOR_FADING_DOOR_TRANSITION, else NO_TRANSITION */
@@ -47,6 +52,8 @@ typedef struct {
  * runtime computes them from the hatch's place on its view, as the native
  * 304 or 560 and its vertical formula do for the GBA screen). */
 void mzm_door_fade_start(MzmDoorFade *f, bool hatch, int door_x, int door_y);
+/* ColorFadingStart(COLOR_FADING_CANCEL) of ProcessPauseButtonPress. */
+void mzm_door_fade_start_cancel(MzmDoorFade *f);
 /* ColorFadingProcess, once a frame; true once the room is to be loaded. */
 bool mzm_door_fade_out(MzmDoorFade *f);
 /* RoomLoad's ColorFadingTransferPaletteOnTransition, with the arrival

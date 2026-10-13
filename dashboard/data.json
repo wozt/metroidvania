@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-13T19:42:08+00:00",
+ "generated_at": "2026-10-13T19:46:51+00:00",
  "git": {
-  "commit": "26b0b56",
+  "commit": "710664e",
   "branch": "main",
   "dirty": true
  },
@@ -3185,10 +3185,11 @@
     "PauseScreenCheckActivatedTargets",
     "PauseScreenCheckAreasWithTargets",
     "PauseScreenDrawBossFlames",
-    "PauseScreenMapUpdateMapBordersForTargets"
+    "PauseScreenMapUpdateMapBordersForTargets",
+    "ProcessPauseButtonPress"
    ],
-   "limitations": "The pause from the game, the map download and the Chozo statue hints are ported: the item acquisition and suit screens, the debug menu and the completion info and its tank counts (shown only after the game is completed) are not. The hint screen skips StatusScreenDraw and TextDrawYesNoEasySleep (their EWRAM tilemaps are never shown there); the boss flames' up and down movement (PauseScreenUpdateBossFlameAnimation) is never started by the game and is not ported. The game's own fade into and out of the pause (ColorFadingStart) is not played: the screen cuts to the pause screen, which fades in itself. Not compared with an emulator. START in the game (when movement is not prevented and no power bomb is out) lowers the music and opens the pause screen on the native screen's PPU: PauseScreenInit loads its palettes (sTankIconsPal, sMinimapTilesPal, sPauseScreen_3fcef0), graphics and tile maps (the minimap tiles, the visor overlays, the map and world map overlays, the area and menu names) from the ROM bank, puts the current area's explored map on BG3 (gDecompressedMinimapVisitedTiles) and every area's map (PauseScreenGetMinimapData with the obtained items, boss icons and the skipped Varia tile, then MinimapSetDownloadedTiles) in EWRAM, centres the view on Samus (PauseScreenMapSetSpawnPosition), sets the BG controls and alpha blending, and fades in by two color steps a frame. The map screen scrolls with the D-pad (CheckForMaintainedInput repeats), shows the scroll arrows, Samus's icon, the boss icon or its cross, the area name, animates the minimap palette, toggles the world map with A or B (its overlay, palette, area names and Samus's icon, with their sounds), switches between the viewable areas with SELECT (MapScreenChangeMap with sMapScreenAreasViewOrder) and opens the status screen with R (mzm.menus.status_screen) or easy sleep with L (mzm.menus.easy_sleep) and leaves with START or B: the fade out, then ResetMusicVolume and the game resumes. Checked by capture in brinstar_000 (pause, scroll, resume). The map stations open it in its map download mode (mzm.menus.map_download). Chozo statue hints (PAUSE_SCREEN_CHOZO_HINT): the hint screen (sChozoHintBackgroundGfx and its tile table, the area name, BG1's tint blended over the map), the statue's target found by its map position (sChozoStatueTargets), its icon travelling to the item (ChozoStatueHintMovement: the speed by distance, the trail every 8 frames) while the map scrolls to it (ChozoStatueHintScrolling), through the elevators to another area (sChozoStatueTargetPathPointers, sElevatorRoomPairs: the map fades out and in on the next area), then A or START fades the music (2 2/3 seconds) and leaves. The pause screen's map then shows the activated targets (the items still to collect after their hint, Kraid's and Ridley's flames), the elevators towards the first one and the world map's targets; the areas with a target become viewable. Checked by capture: the Long Beam hint in brinstar_002 (the statue's grab, the screen, the target and the scrolling, A, the statue sitting down) and the target on the pause map afterwards. The test runs that hint on the exported bank.",
-   "next_action": "Port the game fades around the pause and the item acquisition screens.",
+   "limitations": "The pause from the game, the map download and the Chozo statue hints are ported: the item acquisition and suit screens, the debug menu and the completion info and its tank counts (shown only after the game is completed) are not. The hint screen skips StatusScreenDraw and TextDrawYesNoEasySleep (their EWRAM tilemaps are never shown there); the boss flames' up and down movement (PauseScreenUpdateBossFlameAnimation) is never started by the game and is not ported. The game's fades around the pause (COLOR_FADING_CANCEL) darken Samus's and the HUD's frames by colour modulation; the room is not reloaded after the pause (the game keeps its state). Not compared with an emulator. START in the game (when movement is not prevented and no power bomb is out) lowers the music and opens the pause screen on the native screen's PPU: PauseScreenInit loads its palettes (sTankIconsPal, sMinimapTilesPal, sPauseScreen_3fcef0), graphics and tile maps (the minimap tiles, the visor overlays, the map and world map overlays, the area and menu names) from the ROM bank, puts the current area's explored map on BG3 (gDecompressedMinimapVisitedTiles) and every area's map (PauseScreenGetMinimapData with the obtained items, boss icons and the skipped Varia tile, then MinimapSetDownloadedTiles) in EWRAM, centres the view on Samus (PauseScreenMapSetSpawnPosition), sets the BG controls and alpha blending, and fades in by two color steps a frame. The map screen scrolls with the D-pad (CheckForMaintainedInput repeats), shows the scroll arrows, Samus's icon, the boss icon or its cross, the area name, animates the minimap palette, toggles the world map with A or B (its overlay, palette, area names and Samus's icon, with their sounds), switches between the viewable areas with SELECT (MapScreenChangeMap with sMapScreenAreasViewOrder) and opens the status screen with R (mzm.menus.status_screen) or easy sleep with L (mzm.menus.easy_sleep) and leaves with START or B: the fade out, then ResetMusicVolume and the game resumes. Checked by capture in brinstar_000 (pause, scroll, resume). The map stations open it in its map download mode (mzm.menus.map_download). Chozo statue hints (PAUSE_SCREEN_CHOZO_HINT): the hint screen (sChozoHintBackgroundGfx and its tile table, the area name, BG1's tint blended over the map), the statue's target found by its map position (sChozoStatueTargets), its icon travelling to the item (ChozoStatueHintMovement: the speed by distance, the trail every 8 frames) while the map scrolls to it (ChozoStatueHintScrolling), through the elevators to another area (sChozoStatueTargetPathPointers, sElevatorRoomPairs: the map fades out and in on the next area), then A or START fades the music (2 2/3 seconds) and leaves. The pause screen's map then shows the activated targets (the items still to collect after their hint, Kraid's and Ridley's flames), the elevators towards the first one and the world map's targets; the areas with a target become viewable. Checked by capture: the Long Beam hint in brinstar_002 (the statue's grab, the screen, the target and the scrolling, A, the statue sitting down) and the target on the pause map afterwards. The test runs that hint on the exported bank. ProcessPauseButtonPress: START (and a map station's or a hint statue's request) first fades the game to black in 8 frames (COLOR_FADING_CANCEL, every BG and OBJ row) while the sprites go on and Samus waits; the pause screen then opens, and on leaving it the game fades back in over 8 frames, Samus still waiting, before the pause's music volume is reset (UpdateMusicAfterPause). Checked by capture in brinstar_000.",
+   "next_action": "Port the item acquisition screens, then compare with an emulator.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -7253,6 +7254,12 @@
  },
  "timeline": [
   {
+   "commit": "710664e",
+   "date": "2026-10-13",
+   "subject": "feat(mzm): death fades to black then white",
+   "scope": "mzm"
+  },
+  {
    "commit": "26b0b56",
    "date": "2026-10-13",
    "subject": "feat(mzm): Chozo statue hint screen and map targets",
@@ -7724,12 +7731,6 @@
    "commit": "15e2a3e",
    "date": "2026-10-10",
    "subject": "feat: ROM extractors in the rebuild graph",
-   "scope": "project"
-  },
-  {
-   "commit": "5d8fdf0",
-   "date": "2026-10-10",
-   "subject": "feat: address-taken routines and output-checked rebuilds",
    "scope": "project"
   }
  ],

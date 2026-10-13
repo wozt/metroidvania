@@ -2988,6 +2988,16 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0303 - Zero Mission fades around the pause
+
+- ProcessPauseButtonPress and COLOR_FADING_CANCEL: START, a map station or
+  a hint statue first fade the game to black in 8 frames (Samus and the HUD
+  included, the sprites still running, Samus waiting); leaving the pause
+  fades the game back in over 8 frames before the music volume is reset.
+- `mzm_door_fade_start_cancel` reuses the door fades' quick fade with every
+  OBJ row.
+- Checked by capture (brinstar_000's pause, brinstar_002's hint).
+
 ## Patch 0302 - Zero Mission death fades
 
 - SamusDying's gMonochromeBgFading (ColorFadingApplyMonochrome): the hit

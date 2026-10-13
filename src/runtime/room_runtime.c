@@ -3562,6 +3562,11 @@ int main(int argc, char **argv) {
      * white. `level` is the backdrop's 0-31 once the backgrounds are off. */
     struct { uint8_t state; bool active, bg_off; uint8_t timer, color, level; } mono={0};
     RoomDoor pending_door={0};
+    /* ProcessPauseButtonPress: the pause flag waiting for COLOR_FADING_CANCEL
+     * to end (0: none), and the music volume to reset once the game has
+     * faded back in (UpdateMusicAfterPause). */
+    int pause_fade_flag=0;
+    bool pause_music_reset=false;
     int pending_door_offset=0;
     int resume_request=RUNTIME_RESUME_NONE;
     static MzmSaveData resume_save, new_game_state;
@@ -4208,15 +4213,12 @@ int main(int argc, char **argv) {
                 }
                 if(left_pause) {
                     pause_mode=false;
-                    if(pause_flag!=MZM_PAUSE_FLAG_PAUSE) {
-                        /* Back in the game the map station or the statue
-                         * goes on (UpdateMusicAfterPause does nothing). */
-                        sprites.globals.pause_screen_flag=0;
-                    } else {
-                        runtime_audio_lock();
-                        mzm_music_reset_volume();
-                        runtime_audio_unlock();
-                    }
+                    /* Back in the game the map station or the statue goes
+                     * on; the game fades in (ColorFadingUpdate_Default) and
+                     * the pause's music volume is reset at its end. */
+                    if(pause_flag!=MZM_PAUSE_FLAG_PAUSE) sprites.globals.pause_screen_flag=0;
+                    else pause_music_reset=true;
+                    mzm_door_fade_loaded(&door_fade,0,0);
                     previous_held=held;
                 }
                 accumulator-=fixed_step;
@@ -4248,15 +4250,12 @@ int main(int argc, char **argv) {
             }
             /* A map station's download opens the pause screen's map
              * download (gPauseScreenFlag set during the last frame). */
-            if(screen_ready && runtime_hud.ready &&
+            if(screen_ready && runtime_hud.ready && door_fade.phase==MZM_DOOR_FADE_NONE &&
                (sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_MAP_DOWNLOAD ||
                 sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_CHOZO_HINT)) {
-                /* ...or a Chozo statue's hint. */
-                pause_mode=true;
-                pause_flag=sprites.globals.pause_screen_flag;
-                mzm_pause_enter(&pause_screen);
-                accumulator-=fixed_step;
-                continue;
+                /* ...or a Chozo statue's hint, after the game's fade out. */
+                pause_fade_flag=sprites.globals.pause_screen_flag;
+                mzm_door_fade_start_cancel(&door_fade);
             }
             /* ProcessPauseButtonPress: START opens the pause screen unless
              * movement is prevented or a power bomb is out. */
@@ -4267,15 +4266,13 @@ int main(int argc, char **argv) {
                !sprites.globals.disable_pause && !sprites.globals.landing &&
                door_fade.phase==MZM_DOOR_FADE_NONE &&
                weapons.power_bomb.state==MZM_PB_NONE) {
-                pause_mode=true;
-                pause_flag=MZM_PAUSE_FLAG_PAUSE;
-                mzm_pause_enter(&pause_screen);
-                mzm_screen_input(&screen,GBA_KEY_START);
+                /* UpdateMusicWhenPausing, then COLOR_FADING_CANCEL: the
+                 * pause screen opens once the game has faded out. */
+                pause_fade_flag=MZM_PAUSE_FLAG_PAUSE;
+                mzm_door_fade_start_cancel(&door_fade);
                 runtime_audio_lock();
                 mzm_music_decrease_volume();
                 runtime_audio_unlock();
-                accumulator-=fixed_step;
-                continue;
             }
             mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                           capture_path?NULL:&gamepad));
@@ -4589,7 +4586,24 @@ int main(int argc, char **argv) {
             /* ConnectionCheckUnlockDoors (RoomUpdate) */
             if(door_fade.phase==MZM_DOOR_FADE_NONE)
                 mzm_hatches_check_unlock(&runtime_hatch_locks,&room->hatch_env);
-            if(door_fade.phase==MZM_DOOR_FADE_IN && mzm_door_fade_in(&door_fade) && door_music) {
+            if(pause_fade_flag && door_fade.phase==MZM_DOOR_FADE_OUT) {
+                /* ColorFadingProcess_Default ended: the pause screen. */
+                if(mzm_door_fade_out(&door_fade)) {
+                    pause_mode=true;
+                    pause_flag=pause_fade_flag;
+                    pause_fade_flag=0;
+                    mzm_pause_enter(&pause_screen);
+                }
+            }
+            bool fade_in_ended=door_fade.phase==MZM_DOOR_FADE_IN && mzm_door_fade_in(&door_fade);
+            if(fade_in_ended && pause_music_reset) {
+                /* ColorFadingFinishDoorTransition: UpdateMusicAfterPause */
+                pause_music_reset=false;
+                runtime_audio_lock();
+                mzm_music_reset_volume();
+                runtime_audio_unlock();
+            }
+            if(fade_in_ended && door_music) {
                 /* ColorFadingFinishDoorTransition: CheckPlayTransitionMusicTrack */
                 door_music=false;
                 runtime_audio_lock();
@@ -4608,7 +4622,7 @@ int main(int argc, char **argv) {
                 runtime_door_fade_offsets(door,last_cx,last_cy,right,&fade_x,&fade_y);
                 mzm_door_fade_start(&door_fade,!strcmp(door->kind,"hatch"),fade_x,fade_y);
                 door_lock=true;
-            } else if(door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
+            } else if(!pause_fade_flag && door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
                 /* ColorFadingProcess ended: RoomLoad. */
                 door_offset=pending_door_offset;
                 RoomDoor used=pending_door;
@@ -4895,7 +4909,11 @@ int main(int argc, char **argv) {
             SDL_FRect dest={viewport.x+(anchor_x+(float)art->offset_x-cx)*scale,
                             viewport.y+(anchor_y+(float)art->offset_y-cy)*scale,
                             sw*scale,sh*scale};
+            /* COLOR_FADING_CANCEL fades Samus's OBJ rows too. */
+            Uint8 samus_shade=door_fade.obj_mask&3?runtime_door_fade_shade(&door_fade):255;
+            if(sprite)SDL_SetTextureColorMod(sprite,samus_shade,samus_shade,samus_shade);
             if(sprite)SDL_RenderTexture(renderer,sprite,NULL,&dest);
+            if(sprite)SDL_SetTextureColorMod(sprite,255,255,255);
         }
         /* Hatches are BG1 blocks; without the layered backgrounds the
          * closed ones are outlined with a diagnostic tint. */
@@ -5117,7 +5135,11 @@ int main(int argc, char **argv) {
                 gba_ppu_render(&runtime_hud_ppu,320,RUNTIME_HUD_H,true,hud_pixels,hud_pitch);
                 SDL_UnlockTexture(hud_texture);
                 SDL_FRect hud_box={viewport.x,viewport.y,320.f*scale,RUNTIME_HUD_H*scale};
+                /* ...and the HUD's. */
+                Uint8 hud_shade=door_fade.obj_mask&0x38?runtime_door_fade_shade(&door_fade):255;
+                SDL_SetTextureColorMod(hud_texture,hud_shade,hud_shade,hud_shade);
                 SDL_RenderTexture(renderer,hud_texture,NULL,&hud_box);
+                SDL_SetTextureColorMod(hud_texture,255,255,255);
             }
         }
 frame_overlays:

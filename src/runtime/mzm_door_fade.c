@@ -116,6 +116,11 @@ static bool process_default(MzmDoorFade *f) {
     return false;
 }
 
+void mzm_door_fade_start_cancel(MzmDoorFade *f) {
+    mzm_door_fade_start(f, false, 0, 0);
+    f->obj_mask = 0xFFFF;
+}
+
 bool mzm_door_fade_out(MzmDoorFade *f) {
     if (f->phase != MZM_DOOR_FADE_OUT) return false;
     if (f->unk_3 != 0xFF) f->unk_3++;

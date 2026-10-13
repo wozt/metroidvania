@@ -144,3 +144,45 @@ void mzm_hatches_update(MzmHatch *hatches, int count, const MzmHatchEnv *env) {
         }
     }
 }
+
+void mzm_hatches_lock(MzmHatch *hatches, int count, const MzmHatchEnv *env, MzmHatchLocks *locks,
+                      bool event, int last_door) {
+    uint16_t existing = 0;
+    for (int i = 0; i < count && i < MZM_MAX_HATCHES; ++i)
+        if (hatches[i].exists) existing |= (uint16_t)(1u << i);
+    uint16_t locked;
+    if (!event) {
+        locks->with_timer &= existing;
+        locked = locks->with_timer &= (uint16_t)~(locks->with_event | locks->with_event_unlockable);
+    } else {
+        locks->with_event &= existing;
+        locks->with_event_unlockable &= existing;
+        locked = locks->with_event | locks->with_event_unlockable;
+    }
+    for (int i = 0; i < count && i < MZM_MAX_HATCHES; ++i) {
+        if (!(locked >> i & 1)) continue;
+        MzmHatch *h = &hatches[i];
+        /* A timer lock or an unlockable event lock opens with the unlock
+         * timer; the other event locks stay. */
+        h->type = !event || locks->with_event_unlockable >> i & 1 ? MZM_HATCH_LOCKED
+                                                                  : MZM_HATCH_LOCKED_NAVIGATION;
+        mzm_hatch_start_lock_animation(h, env, h->source_door != last_door ? MZM_HATCH_CLOSED
+                                                                           : MZM_HATCH_CLOSING);
+    }
+}
+
+void mzm_hatches_lock_with_timer(MzmHatch *hatches, int count, const MzmHatchEnv *env,
+                                 MzmHatchLocks *locks, int last_door) {
+    locks->with_timer = 0xFFFF;
+    mzm_hatches_lock(hatches, count, env, locks, false, last_door);
+    locks->door_unlock_timer = 2;
+}
+
+bool mzm_hatches_check_unlock(MzmHatchLocks *locks, MzmHatchEnv *env) {
+    if (locks->door_unlock_timer >= 0) return false;
+    locks->door_unlock_timer++;
+    if (locks->door_unlock_timer != 0 || !(locks->with_timer || locks->with_event_unlockable)) return false;
+    mzm_sfx_play(MZM_SOUND_DOORS_UNLOCKING);
+    env->unlocking = true;
+    return true;
+}

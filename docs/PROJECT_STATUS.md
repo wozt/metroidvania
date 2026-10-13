@@ -2988,6 +2988,23 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0300 - Zero Mission hatch locks
+
+- `src/runtime/mzm_hatches.c`: ConnectionLockHatches,
+  ConnectionLockHatchesWithTimer and ConnectionCheckUnlockDoors with
+  gDoorUnlockTimer and the gHatchesState lock masks.
+- Gray hatches wait for the door timer; a sprite's LOCK_DOORS (the Long
+  Beam Dessgeega) locks every hatch when the door fade starts, the arrival
+  one closing; its countdown unlocks them with SOUND_DOORS_UNLOCKING and
+  the flashing hatches, which then open to shots.
+- The rooms export their sHatchLockEvents as Q lines (the hatch's door, the
+  event, before or after, unlockable), which RoomLoad applies
+  (ConnectionCheckHatchLockEvents): brinstar_009's right hatch stays locked
+  until the statue room is viewed (checked by capture: shots do not open
+  it), the gunship room's after Mother Brain.
+- Tests in `tests/test_runtime_steep_slopes.c` (timer unlock, event lock,
+  LOCK_DOORS).
+
 ## Patch 0299 - Zero Mission door fades
 
 - `src/runtime/mzm_door_fade.c`: COLOR_FADING_DOOR_TRANSITION and

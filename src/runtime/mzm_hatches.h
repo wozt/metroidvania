@@ -60,4 +60,24 @@ int mzm_hatch_check_opening(MzmHatch *hatches, int count, const MzmHatchEnv *env
 /* ConnectionUpdateHatches */
 void mzm_hatches_update(MzmHatch *hatches, int count, const MzmHatchEnv *env);
 
+/* gDoorUnlockTimer and the gHatchesState lock masks (bit i: hatch i). */
+typedef struct {
+    int8_t door_unlock_timer;
+    uint16_t with_timer, with_event, with_event_unlockable;
+} MzmHatchLocks;
+
+/* ConnectionLockHatches: the timer locks (all but the event ones) or the
+ * event locks (HATCH_LOCKED_NAVIGATION unless unlockable); each locked
+ * hatch closes at once, the one Samus came through (`last_door`, its
+ * source door) with its closing animation. */
+void mzm_hatches_lock(MzmHatch *hatches, int count, const MzmHatchEnv *env, MzmHatchLocks *locks,
+                      bool event, int last_door);
+/* ConnectionLockHatchesWithTimer */
+void mzm_hatches_lock_with_timer(MzmHatch *hatches, int count, const MzmHatchEnv *env,
+                                 MzmHatchLocks *locks, int last_door);
+/* ConnectionCheckUnlockDoors: a negative timer counts up; at 0, with
+ * locked hatches, SOUND_DOORS_UNLOCKING and gHatchesState.unlocking.
+ * Returns true on that frame. */
+bool mzm_hatches_check_unlock(MzmHatchLocks *locks, MzmHatchEnv *env);
+
 #endif /* MZM_HATCHES_H */

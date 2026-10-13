@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-13T15:29:13+00:00",
+ "generated_at": "2026-10-13T15:37:22+00:00",
  "git": {
-  "commit": "bcedf0a",
+  "commit": "50f3801",
   "branch": "main",
   "dirty": true
  },
@@ -1011,8 +1011,8 @@
     "SpriteUtilCheckSamusNearSpriteLeftRight",
     "SpriteUtilMakeSpriteFaceSamusDirection"
    ],
-   "limitations": "The screen shakes are not ported; door locks are only reported (gDoorUnlockTimer is not consumed by the runtime) and removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests. Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor removing three blocks with dust and debris, and lands on the next one.",
-   "next_action": "Export the event spritesets and port the statue room event and the door lock lifecycle.",
+   "limitations": "The screen shakes are not ported; removed floor blocks keep their background graphics; nothing sets EVENT_VIEWED_STATUE_ROOM yet and the event spriteset that places the Long Beam Dessgeega is not exported, so that variant only runs in tests. Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor removing three blocks with dust and debris, and lands on the next one. The door locks and unlocks go through the runtime's hatch locks (mzm.transitions.doors_and_hatches).",
+   "next_action": "Export the event spritesets and port the statue room event.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -3959,10 +3959,14 @@
     "ColorFadingFinishDoorTransition",
     "ColorFadingUpdate_DoorTransition",
     "ColorFadingUpdate_Default",
-    "ColorFadingStartDefault"
+    "ColorFadingStartDefault",
+    "ConnectionLockHatches",
+    "ConnectionLockHatchesWithTimer",
+    "ConnectionCheckUnlockDoors",
+    "ConnectionCheckHatchLockEvents"
    ],
-   "limitations": "The hatch locks (gDoorUnlockTimer, events) and their unlocking (with its sound) and the mother ship hatch graphics are not reproduced; opened destinations are remembered by position, not by door index. Event-based area destinations (ConnectionFindEventBasedDoor) are not resolved: the normal destination is used. Door fades: the runtime's view is 320x224 with its own camera, so the door transition tilemap's tube starts at the view's edge on the door's side (its last 24 pixels shown on the right, its first 24 on the left, as on the GBA screen) and slides 336 pixels instead of 256 (56 frames instead of 43); the sprites' faded palette rows are drawn as a colour modulation of their baked frames, the BG3 blending as a black veil plus an additive layer; ColorFadingGradients' BG2/BG3 alpha steps, the haze and the window are not reproduced. Hatches are BG1 and Clipdata blocks driven by the native state machine: BgClipCheckOpeningHatch on beam, missile and laser hits (weakness and health from sHatchBehaviors, super missiles open missile hatches), the opening and closing frames of sHatchesTilemapValues with sHatchesAnimationDurationCounter, the hatch Samus comes through closing behind her, opened hatches remembered per area and overridden to normal hatches. Checked in brinstar_000: a beam opens the blue hatch through its grey frames. Door fades (src/runtime/mzm_door_fade.c): a hatch fades the room to black over 16 frames (sColorFading_345f60) except the hatches' palette row, then BG3 shows sDoorTransitionTilemap with sDoorTransitionPal, blended in over BG1 in 8 frames and covering everything (priority 0, Samus included); once the room is loaded the tube slides to the arrival door's height (3 pixels a frame), waits, slides across (6 pixels a frame), then the room comes back from black over 16 frames and the room's track starts (CheckPlayTransitionMusicTrack); the other doors fade to black over 8 frames and back. Samus waits during both (no SamusUpdate, the pause and the in-game timer wait); the medium sprites are hidden after a hatch's fade out. The backgrounds' palette fade is ApplySpecialBackgroundFadingColor on the native room palette. Checked by capture: brinstar_002's hatch to brinstar_003 and chozodia_007's passage to chozodia_037. Area connection doors (sAreaConnections: elevators and the passages between areas) now lead to the connected area's door: the exporter resolves the destination door of each, the runtime takes them like the other doors (an elevator ride without vertical offset) and RoomLoad's elevator placement follows.",
-   "next_action": "Port the hatch locks with their events, then compare the door fades with an emulator.",
+   "limitations": "The mother ship hatch graphics are not reproduced; gLastDoorUsed is the arrival door of a door transition only (a loaded file or a new game locks no hatch as the one Samus came through); opened destinations are remembered by position, not by door index. Event-based area destinations (ConnectionFindEventBasedDoor) are not resolved: the normal destination is used. Door fades: the runtime's view is 320x224 with its own camera, so the door transition tilemap's tube starts at the view's edge on the door's side (its last 24 pixels shown on the right, its first 24 on the left, as on the GBA screen) and slides 336 pixels instead of 256 (56 frames instead of 43); the sprites' faded palette rows are drawn as a colour modulation of their baked frames, the BG3 blending as a black veil plus an additive layer; ColorFadingGradients' BG2/BG3 alpha steps, the haze and the window are not reproduced. Hatches are BG1 and Clipdata blocks driven by the native state machine: BgClipCheckOpeningHatch on beam, missile and laser hits (weakness and health from sHatchBehaviors, super missiles open missile hatches), the opening and closing frames of sHatchesTilemapValues with sHatchesAnimationDurationCounter, the hatch Samus comes through closing behind her, opened hatches remembered per area and overridden to normal hatches. Checked in brinstar_000: a beam opens the blue hatch through its grey frames. Hatch locks (src/runtime/mzm_hatches.c): gray hatches wait for gDoorUnlockTimer (ConnectionLoadDoors); the rooms export their sHatchLockEvents (Q lines: the hatch's door, the event, before or after, unlockable) and RoomLoad locks them as navigation hatches (ConnectionCheckHatchLockEvents); a sprite's LOCK_DOORS locks every hatch when the door fade starts (the arrival hatch closing with the locking sound), and its negative countdown unlocks them (SOUND_DOORS_UNLOCKING, the flashing hatches, then the shots open them); the Long Beam Dessgeega uses both. Door fades (src/runtime/mzm_door_fade.c): a hatch fades the room to black over 16 frames (sColorFading_345f60) except the hatches' palette row, then BG3 shows sDoorTransitionTilemap with sDoorTransitionPal, blended in over BG1 in 8 frames and covering everything (priority 0, Samus included); once the room is loaded the tube slides to the arrival door's height (3 pixels a frame), waits, slides across (6 pixels a frame), then the room comes back from black over 16 frames and the room's track starts (CheckPlayTransitionMusicTrack); the other doors fade to black over 8 frames and back. Samus waits during both (no SamusUpdate, the pause and the in-game timer wait); the medium sprites are hidden after a hatch's fade out. The backgrounds' palette fade is ApplySpecialBackgroundFadingColor on the native room palette. Checked by capture: brinstar_002's hatch to brinstar_003 and chozodia_007's passage to chozodia_037. Area connection doors (sAreaConnections: elevators and the passages between areas) now lead to the connected area's door: the exporter resolves the destination door of each, the runtime takes them like the other doors (an elevator ride without vertical offset) and RoomLoad's elevator placement follows.",
+   "next_action": "Compare the door fades and the hatch locks with an emulator; port the mother ship hatches.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -7237,6 +7241,12 @@
  },
  "timeline": [
   {
+   "commit": "50f3801",
+   "date": "2026-10-13",
+   "subject": "feat(mzm): native door fades and the door transition tube",
+   "scope": "mzm"
+  },
+  {
    "commit": "bcedf0a",
    "date": "2026-10-13",
    "subject": "feat(mzm): gunship, its parts and the new game's landing",
@@ -7709,12 +7719,6 @@
    "date": "2026-10-10",
    "subject": "feat: link function-pointer member callbacks in the inventory",
    "scope": "project"
-  },
-  {
-   "commit": "5df2584",
-   "date": "2026-10-10",
-   "subject": "unfinished job of kimi",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -7742,7 +7746,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 762,
+    "routines_cited_by_features": 766,
     "call_edges": 6071
    },
    "aos": {

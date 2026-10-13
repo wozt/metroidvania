@@ -100,6 +100,10 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     /* The native hatches (mzm_hatches) with their ROM tables (V, A, W
      * lines) and the collision of the common tilemap values (K). */
     bool has_hatch_tables; MzmHatchEnv hatch_env; unsigned char common_types[256];
+    /* sHatchLockEvents of the room (Q lines): the hatch's door, the event,
+     * locked before it (else after) and unlockable by the door timer. */
+    struct { int door, event; bool before, unlockable; } hatch_lock_events[8];
+    int hatch_lock_event_count;
     MzmHatch native_hatches[MZM_MAX_HATCHES]; int native_hatch_count;
     /* Raw Clipdata values (gBgPointersAndDimensions.pClipDecomp) and the
      * breakable block state (mzm_blocks). */
@@ -452,6 +456,19 @@ static bool parse_native_room(const char *path, Room *room) {
                 room->music > 0xFFFF)
                 goto failure;
             room->has_music = true;
+            continue;
+        }
+        if (line[0] == 'Q') {
+            int door, event, before, unlockable;
+            if (room->hatch_lock_event_count >= 8 ||
+                sscanf(line, "Q\t%d\t%d\t%d\t%d %c", &door, &event, &before, &unlockable, &extra) != 4 ||
+                event < 0 || event > 255)
+                goto failure;
+            int n = room->hatch_lock_event_count++;
+            room->hatch_lock_events[n].door = door;
+            room->hatch_lock_events[n].event = event;
+            room->hatch_lock_events[n].before = before != 0;
+            room->hatch_lock_events[n].unlockable = unlockable != 0;
             continue;
         }
         if (line[0] == 'H') {
@@ -999,8 +1016,21 @@ static int runtime_hatch_type(const char *name) {
 /* ConnectionLoadDoors for the exported hatches, the opened ones overridden
  * to normal hatches, and the hatch Samus came through closing behind her
  * (`arrival` is that door's index, -1 without a door). */
+/* gDoorUnlockTimer and gHatchesState's lock masks of the current room, and
+ * gLastDoorUsed's door (the arrival door; -1 when unknown). */
+static MzmHatchLocks runtime_hatch_locks;
+static int runtime_last_door = -1;
+/* A room was loaded: the door fade's start checks LOCK_DOORS (the room's
+ * sprites set gDoorUnlockTimer to 1 when they initialize). */
+static bool runtime_lock_check_pending;
+
 static void runtime_hatches_load(Room *room, const char *alias, int arrival) {
     room->native_hatch_count = 0;
+    /* RoomLoad resets gHatchesState and gDoorUnlockTimer. */
+    runtime_hatch_locks = (MzmHatchLocks){0};
+    room->hatch_env.unlocking = room->hatch_env.navigation_unlocking = false;
+    runtime_last_door = arrival;
+    runtime_lock_check_pending = true;
     if (!room->has_hatch_tables) return;
     room->hatch_env.context = room;
     room->hatch_env.set_block = runtime_hatch_set_block;
@@ -1035,6 +1065,37 @@ static void runtime_hatches_load(Room *room, const char *alias, int arrival) {
         if (h->source_door == arrival && h->type != MZM_HATCH_NONE)
             mzm_hatch_start_lock_animation(h, &room->hatch_env, MZM_HATCH_CLOSING);
     }
+    /* ConnectionLoadDoors: gray hatches wait for the door timer, navigation
+     * hatches for their event. */
+    for (int i = 0; i < room->native_hatch_count; ++i) {
+        if (room->native_hatches[i].type == MZM_HATCH_LOCKED)
+            runtime_hatch_locks.with_timer |= (uint16_t)(1u << i);
+        else if (room->native_hatches[i].type == MZM_HATCH_LOCKED_NAVIGATION)
+            runtime_hatch_locks.with_event |= (uint16_t)(1u << i);
+    }
+}
+
+/* ConnectionCheckHatchLockEvents (RoomLoad, after the doors), with
+ * CHECK_EVENT. */
+static void runtime_hatch_lock_events(Room *room, bool (*check_event)(void *, uint8_t),
+                                      void *context) {
+    runtime_hatch_locks.with_event = 0;
+    runtime_hatch_locks.with_event_unlockable = 0;
+    for (int n = 0; n < room->hatch_lock_event_count; ++n) {
+        bool active = check_event(context, (uint8_t)room->hatch_lock_events[n].event);
+        if (room->hatch_lock_events[n].before) active = !active;
+        if (!active) continue;
+        for (int i = 0; i < room->native_hatch_count; ++i) {
+            if (room->native_hatches[i].source_door != room->hatch_lock_events[n].door) continue;
+            if (room->hatch_lock_events[n].unlockable)
+                runtime_hatch_locks.with_event_unlockable |= (uint16_t)(1u << i);
+            else
+                runtime_hatch_locks.with_event |= (uint16_t)(1u << i);
+        }
+    }
+    if (runtime_hatch_locks.with_event || runtime_hatch_locks.with_event_unlockable)
+        mzm_hatches_lock(room->native_hatches, room->native_hatch_count, &room->hatch_env,
+                         &runtime_hatch_locks, true, runtime_last_door);
 }
 
 /* BlockApplyCcaa on a door block: BgClipCheckOpeningHatch, then
@@ -2561,12 +2622,10 @@ static void runtime_sprite_set_event(void *context, uint8_t event) {
     sprites->events[event / 8] |= (uint8_t)(1u << (event % 8));
 }
 
-/* gDoorUnlockTimer: the native door lock lifecycle is not ported, so the
- * request is only reported. */
+/* gDoorUnlockTimer: LOCK_DOORS (1) or a negative unlock countdown. */
 static void runtime_sprite_door_timer(void *context, int8_t timer) {
     (void)context;
-    fprintf(stderr, "Zero Mission sprites: gDoorUnlockTimer = %d (door locks not ported)\n",
-            timer);
+    runtime_hatch_locks.door_unlock_timer = timer;
 }
 
 /* CAA_REMOVE_SOLID: the block's collision becomes air; the static background
@@ -3687,6 +3746,7 @@ int main(int argc, char **argv) {
     snprintf(current_room,sizeof current_room,"%s",room_alias?room_alias:"room");
     runtime_blocks_load(room, current_room);
     runtime_hatches_load(room, current_room, -1);
+    runtime_hatch_lock_events(room,runtime_sprite_check_event,&sprites);
     for(int i=0;i<DEBUG_AREAS;i++) {
         size_t length=strlen(debug_area_names[i]);
         if(!strncmp(current_room,debug_area_names[i],length) && current_room[length]=='_') {
@@ -3896,6 +3956,7 @@ int main(int argc, char **argv) {
                     runtime_sprites_spawn(&sprites, room);
                     runtime_blocks_load(room,alias);
                     runtime_hatches_load(room,alias,-1);
+                    runtime_hatch_lock_events(room,runtime_sprite_check_event,&sprites);
                     mzm_weapons_init(&weapons);
                     echo=(RuntimeEcho){0};
                     echo_visible=false;
@@ -4100,6 +4161,7 @@ int main(int argc, char **argv) {
                     }
                     runtime_blocks_load(room,current_room);
                     runtime_hatches_load(room,current_room,-1);
+                    runtime_hatch_lock_events(room,runtime_sprite_check_event,&sprites);
                     mzm_weapons_init(&weapons);
                     prevent_movement=0;
                     hud_room_alias[0]='\0';
@@ -4477,6 +4539,21 @@ int main(int argc, char **argv) {
             int door_offset=0;
             const RoomDoor *door=samus.pose==MZM_POSE_DYING || door_fade.phase!=MZM_DOOR_FADE_NONE?NULL:
                 runtime_door_touched(room,&samus,&door_offset);
+            /* LOCK_DOORS: the room's sprites asked for the hatches to lock,
+             * which the door fade's start does (ColorFadingStartDefault,
+             * ColorFadingUpdate_DoorTransition). */
+            if(runtime_lock_check_pending &&
+               (door_fade.phase==MZM_DOOR_FADE_NONE ||
+                (door_fade.phase==MZM_DOOR_FADE_IN && door_fade.stage==0))) {
+                runtime_lock_check_pending=false;
+                if(runtime_hatch_locks.door_unlock_timer==1)
+                    mzm_hatches_lock_with_timer(room->native_hatches,room->native_hatch_count,
+                                                &room->hatch_env,&runtime_hatch_locks,
+                                                runtime_last_door);
+            }
+            /* ConnectionCheckUnlockDoors (RoomUpdate) */
+            if(door_fade.phase==MZM_DOOR_FADE_NONE)
+                mzm_hatches_check_unlock(&runtime_hatch_locks,&room->hatch_env);
             if(door_fade.phase==MZM_DOOR_FADE_IN && mzm_door_fade_in(&door_fade) && door_music) {
                 /* ColorFadingFinishDoorTransition: CheckPlayTransitionMusicTrack */
                 door_music=false;
@@ -4521,6 +4598,7 @@ int main(int argc, char **argv) {
                                 arrival=room->doors[d].index;
                         runtime_blocks_load(room,used.destination);
                         runtime_hatches_load(room,used.destination,arrival);
+                        runtime_hatch_lock_events(room,runtime_sprite_check_event,&sprites);
                     }
                     mzm_weapons_init(&weapons);
                     echo=(RuntimeEcho){0};

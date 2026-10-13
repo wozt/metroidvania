@@ -304,6 +304,28 @@ def room_hatches(doors, room: int, clip, tables, hatch_types, hatch_behaviors):
     return result
 
 
+def hatch_lock_lines(area: str, number: int, doors, decomp: Path = DECOMP) -> list[str]:
+    """ConnectionCheckHatchLockEvents: one ``Q`` line per locked hatch, its
+    door index (the native tables index gHatchData slots, which
+    ConnectionLoadDoors gives to the room's hatch doors in door order), the
+    event value, before (1) or after (0) and unlockable (1) or not."""
+    from scripts.mzm_hatch_events import load_hatch_lock_events
+    rules = load_hatch_lock_events(area, number)
+    if not rules:
+        return []
+    events = parse_enum((decomp / "include/constants/event.h").read_text(encoding="utf-8"), "Event")
+    slots = [index for index, door in enumerate(doors)
+             if door["sourceRoom"] == number and door["kind"] == "hatch"]
+    lines = []
+    for slot, conditions in sorted(rules.items()):
+        if slot >= len(slots):
+            raise ValueError(f"{area} room {number}: no hatch slot {slot}")
+        for event, when, kind in conditions:
+            lines.append(f"Q\t{slots[slot]}\t{events[event]}\t{int(when == 'BEFORE')}\t"
+                         f"{int(kind == 'UNLOCKABLE')}")
+    return lines
+
+
 def encode_room(area: str, number: int, width: int, height: int,
                 clip: tuple[int, int, tuple[int, ...]], tables,
                 doors: list[dict] | None = None, hatches=None, sprites=None,
@@ -414,6 +436,7 @@ def produce(root: Path, area: str, number: int) -> dict:
             blocks[layer] = render.rle_room(render.room_blob(fields[f"p{layer}Data"]))
     background_lines, images = mzm_bg_layers.room_background_lines(fields, blocks, tileset)
     background_lines += hatch_animation_lines(tables, hatch_behaviors)
+    background_lines += hatch_lock_lines(area, number, doors)
     text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites,
                        spriteset, background_lines, room_music(fields), area_targets(area))
     folder = private_path(Path(root), RUNTIME_ROOMS / f"{area.lower()}_{number:03}",

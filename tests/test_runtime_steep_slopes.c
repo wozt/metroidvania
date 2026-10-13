@@ -5,6 +5,12 @@
 #include "../src/runtime/room_runtime.c"
 #include <assert.h>
 
+static bool test_no_event(void *context, uint8_t event) {
+    (void)context;
+    (void)event;
+    return false;
+}
+
 int main(void) {
     /* Keep the translation-unit helpers referenced with -Werror enabled. */
     (void)parse_room; (void)parse_native_source; (void)find_spawn;
@@ -301,6 +307,37 @@ int main(void) {
     assert(room_cell(doors, 6, 2) == CLIP_AIR && room_cell(doors, 6, 5) == CLIP_AIR);
     assert(runtime_hit_hatch(doors, 1 * 64 + 10, 3 * 64, DAMAGE_BEAM));
     assert(doors->native_hatches[1].state == MZM_HATCH_CLOSED);
+    /* The gray hatch waits for the door timer (ConnectionLoadDoors'
+     * hatchesLockedWithTimer): a sprite's countdown unlocks it
+     * (ConnectionCheckUnlockDoors), then a beam opens it. */
+    assert(runtime_hatch_locks.with_timer == 2 && runtime_hatch_locks.with_event == 0);
+    runtime_hatch_locks.door_unlock_timer = -3;
+    mzm_sfx_clear();
+    assert(!mzm_hatches_check_unlock(&runtime_hatch_locks, &doors->hatch_env));
+    assert(!mzm_hatches_check_unlock(&runtime_hatch_locks, &doors->hatch_env));
+    assert(mzm_hatches_check_unlock(&runtime_hatch_locks, &doors->hatch_env) &&
+           doors->hatch_env.unlocking && mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DOORS_UNLOCKING));
+    assert(!mzm_hatches_check_unlock(&runtime_hatch_locks, &doors->hatch_env));
+    assert(runtime_hit_hatch(doors, 1 * 64 + 10, 3 * 64, DAMAGE_BEAM));
+    assert(doors->native_hatches[1].state == MZM_HATCH_OPENING);
+    /* An event lock before its event (ConnectionCheckHatchLockEvents):
+     * the opened hatch shuts as a navigation lock. */
+    doors->hatch_lock_events[0].door = doors->native_hatches[0].source_door;
+    doors->hatch_lock_events[0].event = 42;
+    doors->hatch_lock_events[0].before = true;
+    doors->hatch_lock_events[0].unlockable = false;
+    doors->hatch_lock_event_count = 1;
+    runtime_hatch_lock_events(doors, test_no_event, NULL);
+    assert(doors->native_hatches[0].type == MZM_HATCH_LOCKED_NAVIGATION &&
+           doors->native_hatches[0].state == MZM_HATCH_CLOSED && runtime_hatch_locks.with_event == 1);
+    /* LOCK_DOORS: every other hatch locks, the arrival one closing. */
+    runtime_last_door = doors->native_hatches[1].source_door;
+    mzm_hatches_lock_with_timer(doors->native_hatches, doors->native_hatch_count, &doors->hatch_env,
+                                &runtime_hatch_locks, runtime_last_door);
+    assert(runtime_hatch_locks.door_unlock_timer == 2 && runtime_hatch_locks.with_timer == 2 &&
+           doors->native_hatches[1].type == MZM_HATCH_LOCKED &&
+           doors->native_hatches[1].state == MZM_HATCH_CLOSING &&
+           doors->native_hatches[0].type == MZM_HATCH_LOCKED_NAVIGATION);
     free(doors);
 
     /* SamusUpdatePalette row selection and the echo's palette bank 1. */

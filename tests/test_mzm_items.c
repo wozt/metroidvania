@@ -83,7 +83,7 @@ static int run_until(MzmMessageBanner *b, const MzmBannerKind *kind, uint8_t pos
                      uint16_t *prevent, unsigned *events) {
     int frames = 0;
     while (b->exists && b->pose != pose && frames < 2000) {
-        *events |= mzm_banner_update(b, kind, buttons, true, prevent);
+        *events |= mzm_banner_update(b, kind, buttons, 0, true, prevent);
         frames++;
     }
     return frames;
@@ -109,15 +109,15 @@ static void test_banner(void) {
     mzm_banner_spawn(&b, MZM_MESSAGE_ENERGY_TANK_ACQUIRED);
     assert(b.exists && !b.drawn);
     /* MessageBannerInit, then nine frames of MessageBannerGfxInit. */
-    mzm_banner_update(&b, &kind, false, true, &prevent);
+    mzm_banner_update(&b, &kind, false, 0, true, &prevent);
     assert(b.pose == MZM_BANNER_POSE_GFX_INIT && prevent == MZM_SAMUS_ITEM_PMT && b.timer == 9);
     assert(run_until(&b, &kind, MZM_BANNER_POSE_POP_UP, false, &prevent, &events) == 9);
     /* Ten TextProcessMessageBanner calls with the animation held, then the
      * banner shows with the tank jingle. */
     mzm_sfx_clear();
-    for (int i = 0; i < 9; ++i) mzm_banner_update(&b, &kind, false, true, &prevent);
+    for (int i = 0; i < 9; ++i) mzm_banner_update(&b, &kind, false, 0, true, &prevent);
     assert(b.processing && !b.drawn && b.frame == 0 && b.adc == 1);
-    mzm_banner_update(&b, &kind, false, true, &prevent);
+    mzm_banner_update(&b, &kind, false, 0, true, &prevent);
     assert(!b.processing && b.drawn && b.table == MZM_BANNER_TWO_LINES_SPAWN && !b.new_item &&
            mzm_sfx_count() == 2 && mzm_sfx_get(0).action == MZM_SFX_BACKUP_TRACK2 &&
            mzm_sfx_requested(MZM_SFX_PLAY, MZM_MUSIC_GETTING_TANK_JINGLE));
@@ -125,14 +125,14 @@ static void test_banner(void) {
      * before an input can close it. */
     int frames = run_until(&b, &kind, MZM_BANNER_POSE_STATIC, true, &prevent, &events);
     assert(frames == 7 && b.table == MZM_BANNER_TWO_LINES_STATIC && b.timer == 100);
-    for (int i = 0; i < 100; ++i) mzm_banner_update(&b, &kind, true, true, &prevent);
+    for (int i = 0; i < 100; ++i) mzm_banner_update(&b, &kind, true, 0, true, &prevent);
     assert(b.pose == MZM_BANNER_POSE_STATIC && b.timer == 0 && prevent == MZM_SAMUS_ITEM_PMT);
-    mzm_banner_update(&b, &kind, false, true, &prevent);
+    mzm_banner_update(&b, &kind, false, 0, true, &prevent);
     assert(b.pose == MZM_BANNER_POSE_STATIC);
-    mzm_banner_update(&b, &kind, true, true, &prevent);
+    mzm_banner_update(&b, &kind, true, 0, true, &prevent);
     assert(b.pose == MZM_BANNER_POSE_REMOVAL_INIT);
     /* MessageBannerRemovalInit finishes the tank collection. */
-    events = mzm_banner_update(&b, &kind, false, true, &prevent);
+    events = mzm_banner_update(&b, &kind, false, 0, true, &prevent);
     assert(events & MZM_BANNER_FINISH_TANK && b.table == MZM_BANNER_TWO_LINES_REMOVING);
     events = 0;
     mzm_sfx_clear();
@@ -187,6 +187,35 @@ static void test_banner(void) {
     mzm_sfx_clear();
     run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
     assert(mzm_sfx_count() == 0);
+    /* Its cursor starts on YES; RIGHT moves it to NO, A refuses: the
+     * banner goes, without a save. */
+    assert(b.yes && b.cursor.exists);
+    kind.timers[MZM_BANNER_SAVE_CURSOR][0] = 4;
+    mzm_banner_update(&b, &kind, false, 0, true, &prevent);
+    assert(b.cursor.pose == 0x9 && b.cursor.x == 54 && b.cursor.y == 63);
+    mzm_banner_update(&b, &kind, false, MZM_KEY_LEFT, true, &prevent);
+    assert(mzm_sfx_count() == 0);
+    mzm_banner_update(&b, &kind, false, MZM_KEY_RIGHT, true, &prevent);
+    assert(b.cursor.x == 150 && mzm_sfx_requested(MZM_SFX_PLAY, 0x207));
+    events = mzm_banner_update(&b, &kind, false, MZM_KEY_A, true, &prevent);
+    assert(!b.yes && !b.cursor.exists && b.pose == MZM_BANNER_POSE_REMOVAL_INIT && !(events & MZM_BANNER_SAVE) &&
+           mzm_sfx_requested(MZM_SFX_PLAY, 0x209));
+    /* YES: the cursor hides, the next update saves. */
+    mzm_banner_spawn(&b, MZM_MESSAGE_SAVE_PROMPT);
+    mzm_sfx_clear();
+    run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
+    mzm_banner_update(&b, &kind, false, 0, true, &prevent);
+    events = mzm_banner_update(&b, &kind, false, MZM_KEY_A, true, &prevent);
+    assert(b.yes && b.cursor.exists && b.cursor.pose == 0x43 && !(events & MZM_BANNER_SAVE) &&
+           mzm_sfx_requested(MZM_SFX_PLAY, 0x208));
+    events = mzm_banner_update(&b, &kind, false, 0, true, &prevent);
+    assert(events & MZM_BANNER_SAVE && !b.cursor.exists);
+    /* The save complete message re-enables the pause when it goes. */
+    mzm_banner_spawn(&b, MZM_MESSAGE_SAVE_COMPLETE);
+    events = 0;
+    run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
+    run_until(&b, &kind, 0xFF, true, &prevent, &events);
+    assert(!b.exists && events & MZM_BANNER_ENABLE_PAUSE && b.pose == MZM_BANNER_POSE_REMOVAL_ANIMATION);
 }
 
 int main(void) {

@@ -36,6 +36,7 @@ enum {
 enum {
     MZM_BANNER_TWO_LINES_SPAWN, MZM_BANNER_TWO_LINES_STATIC, MZM_BANNER_TWO_LINES_REMOVING,
     MZM_BANNER_ONE_LINE_SPAWN, MZM_BANNER_ONE_LINE_STATIC, MZM_BANNER_ONE_LINE_REMOVING,
+    MZM_BANNER_SAVE_CURSOR,     /* sSaveYesNoCursorOam_Idle */
     MZM_BANNER_TABLES
 };
 /* Their names without the leading `s`. */
@@ -65,6 +66,15 @@ typedef struct {
     bool new_item;              /* MESSAGE_BANNER_NEW_ITEM */
     uint8_t table, frame, adc;
     uint16_t text_calls;        /* TextProcessMessageBanner calls so far */
+    bool yes;                   /* work1: the save prompt's answer */
+    /* The save prompt's cursor (SSPRITE_SAVE_YES_NO_CURSOR, absolute screen
+     * pixels). */
+    struct {
+        bool exists;
+        uint8_t pose;
+        uint16_t x, y;
+        uint8_t frame, adc;
+    } cursor;
 } MzmMessageBanner;
 
 /* Events of one update. */
@@ -74,18 +84,24 @@ enum {
     /* BgClipFinishCollectingAbility, when the item message's text ends
      * (stage 3 of its text processing). */
     MZM_BANNER_FINISH_ABILITY = 1 << 2,
+    /* SramSaveFile: YES on the save prompt (the save completes in the
+     * frame). */
+    MZM_BANNER_SAVE = 1 << 3,
+    /* gDisablePause = FALSE: the save complete message is gone. */
+    MZM_BANNER_ENABLE_PAUSE = 1 << 4,
 };
 
 /* SpriteSpawnPrimary(PSPRITE_MESSAGE_BANNER, message, ...): spawned not
  * drawn; its AI runs from the next SpriteUpdate. */
 void mzm_banner_spawn(MzmMessageBanner *banner, uint8_t message);
 /* One SpriteUpdate of the banner: MessageBanner, then
- * SpriteUpdateAnimation. `buttons` is gButtonInput's A, B and direction
- * keys; `collecting_tank` is gCollectingTank; `prevent_movement` is
+ * SpriteUpdateAnimation, and of the save prompt's cursor (SaveYesNoCursor).
+ * `buttons` is gButtonInput's A, B and direction keys, `changed` the keys
+ * pressed this frame (MZM_KEY_*); `collecting_tank` is gCollectingTank; `prevent_movement` is
  * gPreventMovementTimer. The banner's sounds go through mzm_sfx. Returns
  * MZM_BANNER_* events. The banner is never part of a spriteset here, so it
  * always loads its graphics (MESSAGE_BANNER_POSE_GFX_INIT). */
 unsigned mzm_banner_update(MzmMessageBanner *banner, const MzmBannerKind *kind, bool buttons,
-                           bool collecting_tank, uint16_t *prevent_movement);
+                           uint16_t changed, bool collecting_tank, uint16_t *prevent_movement);
 
 #endif /* MZM_MESSAGE_BANNER_H */

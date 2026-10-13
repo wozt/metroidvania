@@ -2988,6 +2988,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0292 - Zero Mission save platforms and save file
+
+- `src/runtime/mzm_gadget_sprites.c`: the save platform and its tube,
+  shadow, ray and top parts (save_platform.c). Samus standing on it opens
+  it and is grabbed for the save prompt; YES plays the saving sequence (the
+  palette row 2 flash, the extending top, the tube and the rising ray), then
+  the save complete message and her release. The pause is disabled
+  meanwhile (gDisablePause).
+- `src/runtime/mzm_message_banner.c`: the save prompt's YES/NO cursor
+  (SaveYesNoCursor) with its sounds; YES requests the save.
+- `src/runtime/mzm_save.c`: the runtime's save file (a versioned
+  little-endian format with a CRC-32): the room, Samus, the equipment, the
+  events, the minimap progress, the collected items, the opened hatches and
+  the never-reform blocks. `--save-file PATH` chooses it (default:
+  `file_a.sav` in SDL's preference folder); `--load` starts from it, with
+  the platform releasing Samus from its tube as after a file load.
+- Exported: the save platform (with a baked palette row 2 variant) and the
+  cursor's OAM table.
+- Checked by capture in brinstar_033 (prompt, saving, message, release,
+  reload); tests in `tests/test_mzm_sprites.c`, `tests/test_mzm_items.c`,
+  `tests/test_mzm_save.c` and `tests/test_runtime_steep_slopes.c`.
+
 ## Patch 0291 - Zero Mission map stations and map download
 
 - `src/runtime/mzm_gadget_sprites.c`: the map station and its two screens

@@ -15,6 +15,7 @@
 *.gba
 *.rom
 *.sav
+*.sav.tmp
 *.state
 /fusion-save-v1.bin
 

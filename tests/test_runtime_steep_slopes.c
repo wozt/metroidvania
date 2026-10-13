@@ -10,6 +10,30 @@ int main(void) {
     (void)parse_room; (void)parse_native_source; (void)find_spawn;
     (void)clampf; (void)runtime_blocks_frame; (void)runtime_blocks_load;
     (void)runtime_block_tables_open; (void)runtime_power_bomb_apply; (void)runtime_draw_power_bomb;
+    /* The save file keeps the opened hatches and the destroyed
+     * never-reform blocks. */
+    {
+        static MzmSaveData save;
+        runtime_hatch_memory.opened[2][1] = 0x10;
+        runtime_hatch_memory.destination_count = 1;
+        strcpy(runtime_hatch_memory.destinations[0].alias, "kraid_003");
+        runtime_hatch_memory.destinations[0].x = 5;
+        runtime_hatch_memory.destinations[0].y = 6;
+        runtime_never_reform_memory.count = 1;
+        strcpy(runtime_never_reform_memory.blocks[0].alias, "norfair_010");
+        runtime_never_reform_memory.blocks[0].x = 7;
+        runtime_save_memories(&save);
+        memset(&runtime_hatch_memory, 0, sizeof runtime_hatch_memory);
+        memset(&runtime_never_reform_memory, 0, sizeof runtime_never_reform_memory);
+        runtime_restore_memories(&save);
+        assert(runtime_hatch_memory.opened[2][1] == 0x10 && runtime_hatch_memory.destination_count == 1 &&
+               !strcmp(runtime_hatch_memory.destinations[0].alias, "kraid_003") &&
+               runtime_hatch_memory.destinations[0].y == 6 && runtime_never_reform_memory.count == 1 &&
+               !strcmp(runtime_never_reform_memory.blocks[0].alias, "norfair_010") &&
+               runtime_never_reform_memory.blocks[0].x == 7);
+        memset(&runtime_hatch_memory, 0, sizeof runtime_hatch_memory);
+        memset(&runtime_never_reform_memory, 0, sizeof runtime_never_reform_memory);
+    }
     Room *r = calloc(1, sizeof *r);
     assert(r);
     r->width = 64;

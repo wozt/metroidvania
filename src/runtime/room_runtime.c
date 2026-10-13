@@ -26,6 +26,7 @@
 #include "mzm_screen.h"
 #include "mzm_title_screen.h"
 #include "mzm_pause_screen.h"
+#include "mzm_save.h"
 #include "mzm_sprites.h"
 
 #define MAX_MARKS 32768
@@ -1124,6 +1125,44 @@ static struct {
     struct { char alias[48]; int x, y; } blocks[1024];
     int count;
 } runtime_never_reform_memory;
+
+/* SramWrite_ToEwram / SramCopy_GameInfo for the hatch and never-reform
+ * memories. */
+static void runtime_save_memories(MzmSaveData *save) {
+    memcpy(save->hatches_opened,runtime_hatch_memory.opened,sizeof save->hatches_opened);
+    save->hatch_destination_count=runtime_hatch_memory.destination_count;
+    for (int i=0;i<runtime_hatch_memory.destination_count && i<MZM_SAVE_HATCH_DESTINATIONS;++i) {
+        snprintf(save->hatch_destinations[i].alias,MZM_SAVE_ALIAS,"%s",
+                 runtime_hatch_memory.destinations[i].alias);
+        save->hatch_destinations[i].x=runtime_hatch_memory.destinations[i].x;
+        save->hatch_destinations[i].y=runtime_hatch_memory.destinations[i].y;
+    }
+    save->never_reform_count=runtime_never_reform_memory.count;
+    for (int i=0;i<runtime_never_reform_memory.count && i<MZM_SAVE_NEVER_REFORM;++i) {
+        snprintf(save->never_reform[i].alias,MZM_SAVE_ALIAS,"%s",
+                 runtime_never_reform_memory.blocks[i].alias);
+        save->never_reform[i].x=runtime_never_reform_memory.blocks[i].x;
+        save->never_reform[i].y=runtime_never_reform_memory.blocks[i].y;
+    }
+}
+
+static void runtime_restore_memories(const MzmSaveData *save) {
+    memcpy(runtime_hatch_memory.opened,save->hatches_opened,sizeof runtime_hatch_memory.opened);
+    runtime_hatch_memory.destination_count=save->hatch_destination_count;
+    for (int i=0;i<save->hatch_destination_count;++i) {
+        snprintf(runtime_hatch_memory.destinations[i].alias,
+                 sizeof runtime_hatch_memory.destinations[i].alias,"%s",save->hatch_destinations[i].alias);
+        runtime_hatch_memory.destinations[i].x=save->hatch_destinations[i].x;
+        runtime_hatch_memory.destinations[i].y=save->hatch_destinations[i].y;
+    }
+    runtime_never_reform_memory.count=save->never_reform_count;
+    for (int i=0;i<save->never_reform_count;++i) {
+        snprintf(runtime_never_reform_memory.blocks[i].alias,
+                 sizeof runtime_never_reform_memory.blocks[i].alias,"%s",save->never_reform[i].alias);
+        runtime_never_reform_memory.blocks[i].x=save->never_reform[i].x;
+        runtime_never_reform_memory.blocks[i].y=save->never_reform[i].y;
+    }
+}
 
 /* The power bomb explosion's look over the backgrounds (not the sprites):
  * PowerBombYellowTint (+5 red and green per channel) while expanding, and
@@ -2576,7 +2615,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             /* The banner's slot keeps its last pose once it
                              * is gone, which the map station waits for. */
                             sprites->banner.pose,
-                            runtime_minimap.downloaded_maps};
+                            runtime_minimap.downloaded_maps,sprites->banner.yes};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
@@ -2925,6 +2964,12 @@ int main(int argc, char **argv) {
     bool check=false,animation_check=false,debug_at_start=false;
     int spawn_px=-1,spawn_py=-1;
     bool mute=false;
+    /* The save file (--save-file, else file_a.sav in SDL's preference
+     * folder) and --load, which starts from it. */
+    const char *save_file=NULL;
+    bool load_save=false;
+    static MzmSaveData loaded_save;
+    static char save_path[4096];
     const char *debug_input=NULL;
     /* --item NAME (repeatable): a debug menu item enabled at start, its label
      * in lower case with dashes (for example speed-booster). */
@@ -2962,6 +3007,8 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--input-script") && i+1<argc) input_script=argv[++i];
         else if (!strcmp(argv[i],"--debug-menu")) debug_at_start=true;
         else if (!strcmp(argv[i],"--mute")) mute=true;
+        else if (!strcmp(argv[i],"--save-file") && i+1<argc) save_file=argv[++i];
+        else if (!strcmp(argv[i],"--load")) load_save=true;
         else if (!strcmp(argv[i],"--item") && i+1<argc) {
             const char *name=argv[++i];
             bool found=false;
@@ -3021,6 +3068,22 @@ int main(int argc, char **argv) {
     char bundle_index[4096],bundle_map[4096],bundle_cannon[4096],bundle_palettes[4096];
     char native_room[4096],native_background[4096];
     bool native_format=false;
+    if (save_file) {
+        snprintf(save_path,sizeof save_path,"%s",save_file);
+    } else {
+        char *pref=SDL_GetPrefPath("metroidvania","zero-mission");
+        if (pref) snprintf(save_path,sizeof save_path,"%sfile_a.sav",pref);
+        SDL_free(pref);
+    }
+    if (load_save) {
+        /* SramLoadFile: the game resumes in the room it was saved in. */
+        if (!save_path[0] || !mzm_save_read(save_path,&loaded_save) || room_alias || room_path) {
+            fprintf(stderr,"Cannot load the save file %s\n",save_path[0]?save_path:"(none)");
+            return 2;
+        }
+        room_alias=loaded_save.room;
+        printf("Loaded save file %s (%s)\n",save_path,room_alias);
+    }
     if (title_mode && !room_alias && !room_path) room_alias="brinstar_000";
     if (room_alias) {
         size_t length=strlen(room_alias);
@@ -3271,7 +3334,20 @@ int main(int argc, char **argv) {
     struct { const char *suit; } pose_animation={runtime_suit_presets[0].registry};
     MzmAnimationSource animation_source={&library,runtime_pose_durations};
     MzmSamus samus;
-    if(spawn_px>=0 && spawn_py>=0) {
+    if(load_save) {
+        /* The saved game: its state, and Samus in the save platform's tube
+         * (gIsLoadingFile makes the platform release her). */
+        equipment=loaded_save.equipment;
+        memcpy(sprites.events,loaded_save.events,sizeof sprites.events);
+        runtime_minimap=loaded_save.minimap;
+        runtime_collected_items=loaded_save.items;
+        runtime_restore_memories(&loaded_save);
+        runtime_escaped_zebes=loaded_save.escaped_zebes;
+        mzm_samus_init(&samus,loaded_save.samus_x,loaded_save.samus_y,loaded_save.facing);
+        mzm_samus_sprite_set_pose(&samus,MZM_POSE_SAVING_LOADING_GAME,&equipment,&collision);
+        samus.timer=1;
+        sprites.globals.loading_file=true;
+    } else if(spawn_px>=0 && spawn_py>=0) {
         mzm_samus_init(&samus,(int32_t)spawn_px*MZM_SUBPIXELS_PER_PIXEL,
                        (int32_t)spawn_py*MZM_SUBPIXELS_PER_PIXEL,1);
     } else if(!runtime_spawn_samus(room,&samus)) {
@@ -3665,6 +3741,7 @@ int main(int argc, char **argv) {
                runtime_native_keys(held,capture_path?NULL:keys,capture_path?NULL:&gamepad)&
                    GBA_KEY_START &&
                !(screen.button_input&GBA_KEY_START) && prevent_movement==0 &&
+               !sprites.globals.disable_pause &&
                weapons.power_bomb.state==MZM_PB_NONE) {
                 pause_mode=true;
                 pause_flag=MZM_PAUSE_FLAG_PAUSE;
@@ -3765,15 +3842,38 @@ int main(int argc, char **argv) {
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
                                    &equipment, &collision, &weapons, &input, movement_prevented,
                                    &prevent_movement);
-            if(sprites.banner.exists && sprites.banner_ok) {
+            /* The loaded room's sprites have seen gIsLoadingFile. */
+            sprites.globals.loading_file=false;
+            if((sprites.banner.exists || sprites.banner.cursor.exists) && sprites.banner_ok) {
                 /* MessageBanner, a sprite updated with the others. */
                 bool keys=(input.held&(MZM_KEY_A|MZM_KEY_B|MZM_KEY_RIGHT|MZM_KEY_LEFT|
                                        MZM_KEY_UP|MZM_KEY_DOWN))!=0;
                 unsigned events=mzm_banner_update(&sprites.banner,&sprites.banner_kind,keys,
+                                                  input.pressed,
                                                   runtime_tank_collection.collecting,
                                                   &prevent_movement);
                 if(events&MZM_BANNER_FINISH_TANK) runtime_finish_collecting_tank(room);
                 if(events&MZM_BANNER_FINISH_ABILITY) runtime_finish_collecting_ability(room,&samus);
+                if(events&MZM_BANNER_ENABLE_PAUSE) sprites.globals.disable_pause=false;
+                if(events&MZM_BANNER_SAVE) {
+                    /* SramSaveFile */
+                    static MzmSaveData save;
+                    memset(&save,0,sizeof save);
+                    snprintf(save.room,sizeof save.room,"%.47s",current_room);
+                    save.samus_x=samus.x;
+                    save.samus_y=samus.y;
+                    save.facing=(int8_t)samus.facing;
+                    save.equipment=equipment;
+                    memcpy(save.events,sprites.events,sizeof save.events);
+                    save.minimap=runtime_minimap;
+                    save.items=runtime_collected_items;
+                    runtime_save_memories(&save);
+                    save.escaped_zebes=runtime_escaped_zebes;
+                    if(save_path[0] && mzm_save_write(save_path,&save))
+                        printf("Saved the game to %s\n",save_path);
+                    else
+                        fprintf(stderr,"Could not save the game to %s\n",save_path);
+                }
             }
             weapons.samus_previous_x=previous_x;
             weapons.frame8=sprites.frame8;
@@ -4199,6 +4299,8 @@ int main(int argc, char **argv) {
             static const char *const statue_rows[4]={"","/row1","/row2","/row3"};
             if(mzm_sprite_family(sprite->sprite_id,sprite->secondary)==MZM_FAMILY_CHOZO_STATUE)
                 shade=sprite->palette_row<4?statue_rows[sprite->palette_row]:"";
+            else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM && sprite->palette_row==2)
+                shade="/row2";              /* SavePlatformSaving's flash */
             else if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
             else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
             snprintf(key,sizeof key,"Sprite/%s/%s/%s%s",
@@ -4358,6 +4460,24 @@ int main(int argc, char **argv) {
                                viewport.y+(54.f+32.f+(float)art->offset_y)*scale,
                                (float)art->w*scale,(float)art->h*scale};
                 if(banner_texture)SDL_RenderTexture(renderer,banner_texture,NULL,&box);
+            }
+        }
+        if(sprites.banner.cursor.exists && sprites.banner.cursor.pose==0x9 && sprites.banner_ok) {
+            /* The save prompt's cursor (SP_ABSOLUTE_POSITION, shifted like
+             * the banner). */
+            char key[160];
+            snprintf(key,sizeof key,"Banner/%s/%s/none",
+                     sprites.message_names[sprites.banner.message],
+                     mzm_banner_tables[MZM_BANNER_SAVE_CURSOR]);
+            RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
+            if(entry && entry->count>0) {
+                int index=sprites.banner.cursor.frame<entry->count?sprites.banner.cursor.frame:0;
+                SDL_Texture *cursor_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+                const RuntimeLibraryFrame *art=&entry->frames[index];
+                SDL_FRect box={viewport.x+(40.f+sprites.banner.cursor.x+(float)art->offset_x)*scale,
+                               viewport.y+(32.f+sprites.banner.cursor.y+(float)art->offset_y)*scale,
+                               (float)art->w*scale,(float)art->h*scale};
+                if(cursor_texture)SDL_RenderTexture(renderer,cursor_texture,NULL,&box);
             }
         }
         if(runtime_hud.ready) {

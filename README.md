@@ -309,7 +309,10 @@ ammunition amounts, Samus's wireframe and the item descriptions written with
 the native font. L opens easy sleep: YES blanks the screen and silences the
 game until SELECT, L and R are held together. Map stations grab Samus and
 download the area's map: the pause screen shows the line revealing it, then
-the map message appears and the station retracts.
+the map message appears and the station retracts. Save platforms ask to save
+and write the game to `file_a.sav` in SDL's preference folder (or the file
+given with `--save-file PATH`); `--load` resumes from it, Samus stepping out
+of the save platform's tube.
 
 With the ROM bank, room backgrounds are rendered natively as well
 (`src/runtime/mzm_room_gfx.c`): animated tiles and palettes, liquids (lava,

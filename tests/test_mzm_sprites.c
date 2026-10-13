@@ -144,7 +144,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false, NULL, NULL, false, 0, 0};
+                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -3159,7 +3159,92 @@ int main(void) {
         for (station_frames = 0; station_frames < 11; ++station_frames) mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0x2F && room[0].anim == MZM_GADGET_MAP_STATION_INACTIVE &&
                station_link.set_pose == MZM_POSE_STANDING && mzm_sfx_requested(MZM_SFX_PLAY, 0x124));
+        /* A save platform: opens under Samus standing still, grabs her for
+         * the save prompt, saves (tube, shadow, ray, flashing), shows the
+         * save complete message and releases her. */
+        memset(room, 0, sizeof room);
+        memset(&station_globals, 0, sizeof station_globals);
         g.banner_pose = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_SAVE_PLATFORM, 0, 5, 5, 0, 0);
+        g.samus_link = NULL;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 9 && room[0].anim == MZM_GADGET_SAVE_PLATFORM_IDLE && room[0].work3 == 1 &&
+               room[1].sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART && room[1].room_slot == 3 &&
+               room[1].y == (uint16_t)(room[0].y - 512));
+        mzm_sprite_update(&room[1], 1, &g);
+        assert(room[1].pose == 0x43 && room[1].anim == MZM_GADGET_SAVE_PLATFORM_TOP_IDLE);
+        MzmSpriteSamusLink save_link = {MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y - 65), (uint16_t)(room[0].x + 20),
+                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0};
+        g.samus_link = &save_link;
+        mzm_sfx_clear();
+        for (int i = 0; i < 9; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 9);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x23 && mzm_sfx_requested(MZM_SFX_PLAY, 0x112));
+        int save_frames = 0;
+        while (room[0].pose == 0x23 && save_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x42 && save_link.moved && save_link.x == room[0].x &&
+               save_link.set_pose == MZM_POSE_TURNING_FROM_FACING_THE_FOREGROUND && save_link.set_timer &&
+               save_link.timer == 1 && station_globals.disable_pause);
+        message_count = 0;
+        for (int i = 0; i < 4; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(message_count == 1 && messages[0] == 22);
+        g.banner_pose = MZM_BANNER_POSE_REMOVAL_ANIMATION;
+        g.banner_yes = true;
+        save_link.set_timer = false;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x43 && room[0].anim == MZM_GADGET_SAVE_PLATFORM_SAVING && room[1].pose == 0x44 &&
+               room[2].sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART && room[2].room_slot == 0 &&
+               save_link.set_timer && save_link.timer == 0 && mzm_sfx_requested(MZM_SFX_PLAY, 0x114));
+        g.banner_pose = 0;
+        /* SavePlatformSaving: rows 2 and 0 alternate with the frames. */
+        room[0].frame = 0;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].palette_row == 2 && room[1].palette_row == 2);
+        /* The tube spawns its shadow, then the ray once the shadow is gone;
+         * the ray rises and turns the platform off. */
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].pose == 9 && room[2].anim == MZM_GADGET_SAVE_PLATFORM_TUBE_SPAWNING);
+        save_frames = 0;
+        while (room[2].pose == 9 && save_frames++ < 40) mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].pose == 0x23 && room[3].room_slot == 1);
+        room[3].status = 0;
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[2].pose == 0x25 && room[2].y_spawn == 120 && room[3].room_slot == 2);
+        mzm_sprite_update(&room[3], 3, &g);
+        uint16_t ray_y = room[3].y;
+        for (int i = 0; i < 96; ++i) mzm_sprite_update(&room[3], 3, &g);
+        assert(!(room[3].status & MZM_SPRITE_STATUS_EXISTS) && room[3].y == (uint16_t)(ray_y - 96 * 4) &&
+               room[0].pose == 0x45);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x47 && room[0].palette_row == 0 && room[0].anim == MZM_GADGET_SAVE_PLATFORM_OPENED_OFF);
+        message_count = 0;
+        for (int i = 0; i < 60; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x49 && message_count == 1 && messages[0] == 23);
+        g.banner_pose = MZM_BANNER_POSE_REMOVAL_ANIMATION;
+        mzm_sprite_update(&room[0], 0, &g);
+        g.banner_pose = 0;
+        save_link.set_pose = MZM_POSE_NONE;
+        for (int i = 0; i < 11; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x29 && save_link.set_pose == MZM_POSE_FACING_THE_FOREGROUND &&
+               !station_globals.disable_pause);
+        /* Samus leaves: it closes. */
+        save_link.x = (uint16_t)(room[0].x + 200);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x27 && mzm_sfx_requested(MZM_SFX_PLAY, 0x113));
+        /* A loaded file: the platform releases Samus from its tube. */
+        memset(room, 0, sizeof room);
+        station_globals.loading_file = true;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_SAVE_PLATFORM, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x28 && room[0].y_spawn == 340 && room[1].room_slot == 0 && room[2].room_slot == 3);
+        mzm_sprite_update(&room[1], 1, &g);
+        mzm_sprite_update(&room[2], 2, &g);
+        assert(room[1].pose == 0x25 && room[1].y_spawn == 310 && room[2].anim == MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDED);
+        g.banner_pose = 0;
+        g.banner_yes = false;
         g.samus_link = NULL;
         g.globals = frame.globals;
     }

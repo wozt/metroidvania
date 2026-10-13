@@ -387,6 +387,8 @@ typedef struct MzmSamus {
     int32_t camera_x, camera_y;
     /* gSamusHazardDamage: damageTimer, knockbackTimer, paletteTimer. */
     uint8_t hazard_damage_timer, hazard_knockback_timer, hazard_palette_timer;
+    /* gMainGameMode = GM_GAMEOVER: SamusDying's timer reached 120. */
+    bool game_over;
 } MzmSamus;
 
 /* HazardType of ClipdataCheckCurrentAffectingAtPosition's low byte. */

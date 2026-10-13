@@ -398,6 +398,13 @@ static void test_hurt_and_death(void) {
     int32_t x = w.samus.x, y = w.samus.y;
     steps(&w, MZM_KEY_RIGHT | MZM_KEY_A, 20);
     assert(w.samus.pose == MZM_POSE_DYING && w.samus.x == x && w.samus.y == y);
+    /* After the animation's frame 23 the timer runs; at 120 the game over
+     * starts (gMainGameMode = GM_GAMEOVER). */
+    int dying = 0;
+    w.samus.anim_frame = 24;        /* the test world has no animation durations */
+    while (!w.samus.game_over && dying++ < 2000) step(&w, 0);
+    assert(w.samus.game_over && w.samus.pose == MZM_POSE_DYING && w.samus.timer == 121 &&
+           w.samus.walljump_timer == 8);
     /* Left of the centre: half the distance as velocity, a stop past it. */
     world_init(&w);
     place(&w, 64, 224);

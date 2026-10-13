@@ -349,7 +349,11 @@ and B every REPEAT frames, and saves the rendered frame, for example
 frame by frame (then the `--capture` mask applies), for example
 `--input-script 0:3,8:1,0:1,8:1,0:20,0x20:1` crouches, morphs and places a
 bomb. `--item NAME` enables a debug menu item at start (for example
-`--item speed-booster`).
+`--item speed-booster`), and `--energy N` starts with N energy.
+
+When Samus dies, the native game over screen offers to try again (from the
+most recent save file, or from the start without one) or to return to the
+title screen.
 
 Run the experimental SDL3 Aria of Sorrow runtime (Soma in one native room)
 with:

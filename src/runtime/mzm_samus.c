@@ -2658,6 +2658,9 @@ static MzmPose pose_dying(Ctx *c) {
         case 80:
             s->walljump_timer++;
             break;
+        case 120:
+            s->game_over = true;
+            break;
         default:
             break;
         }

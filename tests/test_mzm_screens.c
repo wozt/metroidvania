@@ -13,6 +13,7 @@
 #include "mzm_hud.h"
 #include "mzm_pause_screen.h"
 #include "mzm_file_select.h"
+#include "mzm_game_over.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -562,6 +563,67 @@ static void test_file_select_bank(void) {
     mzm_rom_close();
 }
 
+/* The game over screen on the exported bank: the fade, the music, DOWN to
+ * quit, A; then A on "try again". */
+static void test_game_over_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the game over checks are skipped\n");
+        return;
+    }
+    static MzmGameOver go;
+    mzm_game_over_enter(&go, 0);
+    mzm_sfx_clear();
+    int f, result = 0;
+    for (f = 0; f < 60 && go.sub_mode1 != 3; ++f) {
+        mzm_screen_input(&screen, 0);
+        result = mzm_game_over_update(&go, &screen);
+    }
+    assert(go.sub_mode1 == 3 && result == 0 && screen.bldy == 6 && count_requests(MZM_SFX_MUSIC_PLAY, 0x53) == 1);
+    assert(go.dispcnt & GBA_DCNT_WIN1 && go.win1v == (102 << 8 | 122) && go.oam[0].x == 200 && go.oam[0].y == 448);
+    /* The letters' palette breathes. */
+    uint16_t letters[6];
+    memcpy(letters, &ppu.palette[4], sizeof letters);
+    bool changed = false;
+    for (f = 0; f < 60 && !changed; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_game_over_update(&go, &screen);
+        changed = memcmp(letters, &ppu.palette[4], sizeof letters) != 0;
+    }
+    assert(changed);
+    /* DOWN selects quit (the text palettes swap, the window follows). */
+    uint16_t top = (uint16_t)(ppu.vram[0x340] | ppu.vram[0x341] << 8);
+    mzm_screen_input(&screen, 1 << 7);
+    mzm_game_over_update(&go, &screen);
+    uint16_t moved = (uint16_t)(ppu.vram[0x340] | ppu.vram[0x341] << 8);
+    assert(go.option_selected == 1 && go.win1v == (126 << 8 | 146) && go.oam[0].y == 544 &&
+           (top >> 12) == 2 && (moved >> 12) == 3 && count_requests(MZM_SFX_PLAY, 0x1F9) == 1);
+    mzm_screen_input(&screen, 0);
+    mzm_game_over_update(&go, &screen);
+    mzm_screen_input(&screen, 1);
+    mzm_game_over_update(&go, &screen);
+    assert(go.sub_mode1 == 4 && count_requests(MZM_SFX_PLAY, 0x1FF) == 1);
+    for (f = 0; f < 200 && result == 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        result = mzm_game_over_update(&go, &screen);
+    }
+    assert(result == MZM_GAME_OVER_QUIT && screen.bldy == 16 && count_requests(MZM_SFX_MUSIC_FADE, 0) == 1);
+    mzm_game_over_enter(&go, 2);
+    result = 0;
+    for (f = 0; f < 60 && go.sub_mode1 != 3; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_game_over_update(&go, &screen);
+    }
+    mzm_screen_input(&screen, 1 << 3);
+    mzm_game_over_update(&go, &screen);
+    for (f = 0; f < 200 && result == 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        result = mzm_game_over_update(&go, &screen);
+    }
+    assert(result == MZM_GAME_OVER_CONTINUE);
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
@@ -569,6 +631,7 @@ int main(void) {
     test_title_bank();
     test_pause_bank();
     test_file_select_bank();
+    test_game_over_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

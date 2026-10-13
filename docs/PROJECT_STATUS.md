@@ -2988,6 +2988,23 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0295 - Zero Mission game over
+
+- `src/runtime/mzm_game_over.c`: the US game over screen
+  (menus/game_over.c): the fade from white, the GAME OVER letters'
+  breathing palette, the try again / title choice with Samus's head, the
+  text palettes and the WIN1 window, the music, the fade to black.
+- SamusDying flags the game over when its timer reaches 120
+  (`MzmSamus.game_over`); the runtime opens the screen, then continues
+  from the most recent save file (or the game's start without one) or goes
+  back to the title screen.
+- The runtime switches state through one path (a loaded file or a new
+  game): the file select's continue and new game, and the game over's
+  continue. A new game now restarts the starting state captured at boot.
+- `--energy N` sets a diagnostic starting energy.
+- Checked by capture in norfair_022; tests in `tests/test_mzm_screens.c`
+  and `tests/test_mzm_samus.c`.
+
 ## Patch 0294 - Zero Mission file select copy and erase
 
 - `src/runtime/mzm_file_select.c`: the copy and erase menus

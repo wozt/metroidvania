@@ -279,6 +279,54 @@ static void test_pause_bank(void) {
     assert(pause.state == 0 && !(pause.type_flags & 0x80) && count_requests(MZM_SFX_PLAY, 501) == 1);
     assert(screen.bldalpha_h == 6 && screen.bldalpha_l == 10 && !(pause.dispcnt & GBA_DCNT_BG0));
     assert(pause.dispcnt == (GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ));
+    /* L opens easy sleep: its text replaces the equipment names. */
+    static uint8_t names[0x2000];
+    memcpy(names, ppu.vram + 0x6000, sizeof names);
+    mzm_sfx_clear();
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    mzm_screen_input(&screen, 1 << 9);
+    mzm_pause_update(&pause, &screen, &game);
+    for (f = 0; f < 200 && pause.state != 10; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(pause.state == 10 && pause.stage == 0 && count_requests(MZM_SFX_PLAY, 517) == 1);
+    assert(pause.easy_sleep_text_state < 0 && memcmp(names, ppu.vram + 0x6000, sizeof names) != 0);
+    assert(pause.misc[1].oam_id == 2 && pause.misc[1].x == 64 * 8 + 16);
+    /* LEFT to YES, A: half a second later the screen blanks and sleeps
+     * until SELECT, L and R are held together. */
+    mzm_screen_input(&screen, 1 << 5);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.stage == 1 && pause.misc[1].x == 64 * 3 + 16 && count_requests(MZM_SFX_PLAY, 519) == 1);
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    mzm_screen_input(&screen, 1);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.stage == 2 && count_requests(MZM_SFX_PLAY, 520) == 1);
+    for (f = 0; f < 60 && !pause.sleeping; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(pause.sleeping && f > 30 && pause.dispcnt & GBA_DCNT_BLANK);
+    mzm_screen_input(&screen, 1 << 9 | 1 << 8);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.sleeping);
+    mzm_screen_input(&screen, 1 << 9 | 1 << 8 | 1 << 2);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(!pause.sleeping && !(pause.dispcnt & GBA_DCNT_BLANK) && pause.stage == 5);
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.stage == 0 && pause.misc[1].x == 64 * 8 + 16);
+    /* B closes it and restores the equipment names. */
+    mzm_screen_input(&screen, 1 << 1);
+    mzm_pause_update(&pause, &screen, &game);
+    for (f = 0; f < 200 && pause.state != 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(pause.state == 0 && count_requests(MZM_SFX_PLAY, 518) == 1);
+    assert(!memcmp(names, ppu.vram + 0x6000, sizeof names) && screen.bldalpha_h == 6 && screen.bldalpha_l == 10);
     mzm_screen_input(&screen, 0);
     mzm_pause_update(&pause, &screen, &game);
     mzm_screen_input(&screen, 1 << 3);

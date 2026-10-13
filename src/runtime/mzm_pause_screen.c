@@ -13,7 +13,8 @@ enum {
     AREAS = 8, AREAS_NORMAL = 7, AREA_TEST = 7, AREA_CRATERIA = 5,
     /* PauseScreenState */
     STATE_MAP_SCREEN = 0, STATE_STATUS_SCREEN = 1, STATE_STATUS_SCREEN_INIT = 11,
-    STATE_STATUS_SCREEN_LEAVING = 12,
+    STATE_STATUS_SCREEN_LEAVING = 12, STATE_EASY_SLEEP = 10, STATE_EASY_SLEEP_INIT = 16,
+    STATE_EASY_SLEEP_LEAVING = 17,
     /* PauseScreenType */
     TYPE_ON_STATUS_SCREEN = 1 << 7,
     /* PauseScreenFading */
@@ -29,6 +30,8 @@ enum {
     SOUND_MOVING_MAP = 512, SOUND_MOVING_MAP_MUFFLED = 513, SOUND_OPENING_WORLD_MAP = 514,
     SOUND_CLOSING_WORLD_MAP = 515, SOUND_MAP_SCREEN_CHANGE_MAP = 516, SOUND_OPENING_STATUS_SCREEN = 500,
     SOUND_LEAVING_STATUS_SCREEN = 501, SOUND_STATUS_SCREEN_CURSOR_MOVING = 502,
+    SOUND_OPENING_EASY_SLEEP_SCREEN = 517, SOUND_CLOSING_EASY_SLEEP_SCREEN = 518,
+    SOUND_YES_NO_CURSOR_MOVING = 519, SOUND_YES_NO_CURSOR_SELECTING_YES = 520, SOUND_REFUSE_MENU = 521,
     /* GBA keys */
     KEY_A = 1 << 0, KEY_B = 1 << 1, KEY_SELECT = 1 << 2, KEY_START = 1 << 3, KEY_RIGHT = 1 << 4,
     KEY_LEFT = 1 << 5, KEY_UP = 1 << 6, KEY_DOWN = 1 << 7, KEY_R = 1 << 8, KEY_L = 1 << 9,
@@ -1284,6 +1287,261 @@ static bool quit_status_screen(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGa
     return stage != 0;
 }
 
+/* Easy sleep (pause_screen_sub_menus.c, the easy sleep parts of
+ * pause_screen.c and text.c) */
+
+enum {
+    MESSAGE_ACTIVATE_EASY_SLEEP = 36, MESSAGE_PRESS_SELECT_L_AND_R = 37, MESSAGE_EASY_SLEEP_PROMPT = 38,
+    /* EasySleepMenuStage */
+    SLEEP_NO_OPTION = 0, SLEEP_YES_OPTION, SLEEP_DELAY, SLEEP_DISABLE_DISPLAY, SLEEP_HANDLE_WAKE,
+    SLEEP_WAIT_FOR_NO_INPUT,
+    MISC_RIGHT_CURSOR = 2,
+    CHAR_TERMINATOR = 0xFF00, CHAR_NEW_LINE = 0xFE00, CHAR_WIDTH_MASK = 0x8000, CHAR_COLOR_MASK = 0x8100,
+};
+
+/* sMessageTextPointers[LANGUAGE_ENGLISH][message] */
+static uint32_t message_text(int message) {
+    return mzm_rom_u32(sym("sEnglishTextPointers_Message") + (uint32_t)message * 4u);
+}
+
+/* TextDrawYesNoEasySleep: YES and NO side by side in unk_6000. */
+static void draw_yes_no(MzmPauseScreen *p) {
+    memset(p->easy_sleep_text, 0xFF, sizeof p->easy_sleep_text);
+    p->easy_sleep_text_state = 0;
+    uint32_t text = message_text(MESSAGE_EASY_SLEEP_PROMPT);
+    memset(&p->message, 0, sizeof p->message);
+    for (uint16_t c; (c = mzm_rom_u16(text)) != CHAR_TERMINATOR; text += 2) {
+        bool draw = true;
+        if (c == CHAR_NEW_LINE) {
+            if (p->message.indent > 112) return;
+            p->message.indent = 112;
+            draw = false;
+        } else if (c & CHAR_WIDTH_MASK) {
+            if ((c & CHAR_TERMINATOR) == CHAR_COLOR_MASK) p->message.color = (uint8_t)c;
+            draw = false;
+        }
+        if (!draw) continue;
+        mzm_text_draw_message_character(c, p->easy_sleep_text[4], p->message.indent, p->message.color);
+        p->message.indent = (uint16_t)(p->message.indent + mzm_text_char_width(c));
+    }
+}
+
+/* One message of TextDrawEasySleep: up to four steps a frame, each line in
+ * the next buffer. */
+static bool draw_sleep_message(MzmPauseScreen *p, MzmScreen *s, int message, int first_buffer) {
+    for (int i = 3; i != -1; --i) {
+        if (!mzm_text_process_message(&p->message, message_text(message),
+                                      p->easy_sleep_text[first_buffer + p->message.line], s->button_input))
+            continue;
+        p->message.indent = 0;
+        if (p->message.message_ended) return true;
+    }
+    return false;
+}
+
+/* TextDrawEasySleep */
+static void draw_easy_sleep_text(MzmPauseScreen *p, MzmScreen *s) {
+    switch ((uint8_t)p->easy_sleep_text_state) {
+    case 0:
+        memset(&p->message, 0, sizeof p->message);
+        p->message.is_message = true;
+        p->easy_sleep_text_state++;
+        /* fall through */
+    case 1:
+        if (draw_sleep_message(p, s, MESSAGE_ACTIVATE_EASY_SLEEP, 0)) p->easy_sleep_text_state++;
+        break;
+    case 2:
+        memset(&p->message, 0, sizeof p->message);
+        p->message.is_message = true;
+        p->easy_sleep_text_state++;
+        /* fall through */
+    case 3:
+        if (draw_sleep_message(p, s, MESSAGE_PRESS_SELECT_L_AND_R, 2)) p->easy_sleep_text_state = INT8_MIN;
+        break;
+    default:
+        break;
+    }
+}
+
+/* PauseScreenEasySleepInit: the map fades out, the easy sleep tilemap and
+ * text replace the equipment names (backed up), then it fades in. */
+static bool easy_sleep_init(MzmPauseScreen *p, MzmScreen *s) {
+    uint8_t *vram = s->ppu->vram;
+    if (p->easy_sleep_text_state >= 0) draw_easy_sleep_text(p, s);
+    switch (p->stage) {
+    case 0:
+        if (!init_fading(p, 16 << 8 | 0, 4)) p->stage--;
+        break;
+    case 1:
+        update_bottom_visor(p, s, 2, 2);
+        update_top_visor(p, s, OVERLAY_L_PROMPT_PRESSED);
+        p->dispcnt &= (uint16_t)~GBA_DCNT_BG2;
+        break;
+    case 2:
+        vram_from16(s, 0xD000, p->easy_sleep_tilemap, sizeof p->easy_sleep_tilemap);
+        break;
+    case 3:
+        memcpy(p->gfx_backup[0], vram + 0x6000, 0x800);
+        memcpy(p->gfx_backup[1], vram + 0x6800, 0x800);
+        break;
+    case 4:
+        memcpy(p->gfx_backup[2], vram + 0x7000, 0x800);
+        memcpy(p->gfx_backup[3], vram + 0x7800, 0x800);
+        break;
+    case 6:
+        /* YES after the first line, NO after the second */
+        memcpy(p->easy_sleep_text[0] + 0x380, p->easy_sleep_text[4], 0x80);
+        memcpy(p->easy_sleep_text[0] + 0x780, p->easy_sleep_text[4] + 0x400, 0x80);
+        memcpy(p->easy_sleep_text[1] + 0x380, p->easy_sleep_text[4] + 0x1C0, 0x80);
+        memcpy(p->easy_sleep_text[1] + 0x780, p->easy_sleep_text[4] + 0x5C0, 0x80);
+        break;
+    case 7:
+        if ((uint8_t)p->easy_sleep_text_state > 1) {
+            memcpy(vram + 0x6000, p->easy_sleep_text[0], 0x800);
+            memcpy(vram + 0x6800, p->easy_sleep_text[1], 0x800);
+        } else {
+            p->stage--;
+        }
+        break;
+    case 8:
+        if (p->easy_sleep_text_state < 0) {
+            memcpy(vram + 0x7000, p->easy_sleep_text[2], 0x800);
+            memcpy(vram + 0x7800, p->easy_sleep_text[3], 0x800);
+        } else {
+            p->stage--;
+        }
+        break;
+    case 9:
+        p->bldcnt = BLDCNT_BG2_FIRST | BLDCNT_ALPHA | BLDCNT_BG2_SECOND | BLDCNT_BG3_SECOND | BLDCNT_OBJ_SECOND |
+                    BLDCNT_BACKDROP_SECOND;
+        p->dispcnt |= GBA_DCNT_BG2;
+        p->stage++;
+        /* fall through */
+    case 10:
+        if (!init_fading(p, 0 << 8 | 16, 4)) p->stage--;
+        break;
+    case 11:
+        mzm_menu_oam_set_id(&p->misc[1], MISC_RIGHT_CURSOR);
+        p->misc[1].x = BLOCK * 8 + QUARTER_BLOCK;
+        p->misc[1].y = BLOCK * 4 + QUARTER_BLOCK;
+        p->misc[1].obj_mode = 1;
+        p->stage = 0;
+        p->timer = 0;
+        return true;
+    default:
+        break;
+    }
+    p->stage++;
+    return false;
+}
+
+/* PauseScreenQuitEasySleep */
+static bool quit_easy_sleep(MzmPauseScreen *p, MzmScreen *s) {
+    uint8_t *vram = s->ppu->vram;
+    switch (p->stage) {
+    case 0:
+        update_top_visor(p, s, 0);
+        p->stage++;
+        /* fall through */
+    case 1:
+        if (!init_fading(p, 16 << 8 | 0, 4)) p->stage--;
+        break;
+    case 2:
+        p->dispcnt &= (uint16_t)~GBA_DCNT_BG2;
+        mzm_menu_oam_set_id(&p->misc[1], 0);
+        p->misc[1].obj_mode = 0;
+        break;
+    case 3:
+        vram_from16(s, 0xD000, p->map_overlay, sizeof p->map_overlay);
+        break;
+    case 4:
+        memcpy(vram + 0x6000, p->gfx_backup[0], 0x800);
+        memcpy(vram + 0x6800, p->gfx_backup[1], 0x800);
+        break;
+    case 5:
+        memcpy(vram + 0x7000, p->gfx_backup[2], 0x800);
+        memcpy(vram + 0x7800, p->gfx_backup[3], 0x800);
+        break;
+    case 6:
+        p->bldcnt = BLDCNT_BG2_FIRST | BLDCNT_ALPHA | BLDCNT_BG3_SECOND | BLDCNT_OBJ_SECOND | BLDCNT_BACKDROP_SECOND;
+        p->dispcnt |= GBA_DCNT_BG2;
+        p->stage++;
+        /* fall through */
+    case 7:
+        if (!init_fading(p, p->target_bld_alpha, 4)) p->stage--;
+        break;
+    case 8:
+        update_bottom_visor(p, s, 1, 1);
+        p->stage = 0;
+        p->timer = 0;
+        return true;
+    default:
+        break;
+    }
+    p->stage++;
+    return false;
+}
+
+/* PauseScreenEasySleepHandler. The Stop syscall becomes `sleeping`: the
+ * screen stays blank until SELECT, L and R are held together. */
+static bool easy_sleep(MzmPauseScreen *p, MzmScreen *s) {
+    int action = 0;
+    switch (p->stage) {
+    case SLEEP_NO_OPTION:
+        if (s->changed_input & KEY_A) {
+            mzm_sfx_play(SOUND_REFUSE_MENU);
+            action = 2;
+        } else if (s->changed_input & KEY_LEFT) {
+            mzm_sfx_play(SOUND_YES_NO_CURSOR_MOVING);
+            p->stage = SLEEP_YES_OPTION;
+            p->misc[1].x = BLOCK * 3 + QUARTER_BLOCK;
+        } else if (s->changed_input & (KEY_B | KEY_L | KEY_R)) {
+            action = 1;
+        }
+        break;
+    case SLEEP_YES_OPTION:
+        if (s->changed_input & KEY_A) {
+            mzm_sfx_play(SOUND_YES_NO_CURSOR_SELECTING_YES);
+            p->stage = SLEEP_DELAY;
+            p->timer = 0;
+        } else if (s->changed_input & KEY_RIGHT) {
+            mzm_sfx_play(SOUND_YES_NO_CURSOR_MOVING);
+            p->stage = SLEEP_NO_OPTION;
+            p->misc[1].x = BLOCK * 8 + QUARTER_BLOCK;
+        } else if (s->changed_input & (KEY_B | KEY_L | KEY_R)) {
+            action = 1;
+        }
+        break;
+    case SLEEP_DELAY:
+        if (p->timer > 30) {
+            p->stage++;
+            p->timer = 0;
+        }
+        break;
+    case SLEEP_DISABLE_DISPLAY:
+        p->dispcnt ^= GBA_DCNT_BLANK;
+        p->stage++;
+        break;
+    case SLEEP_HANDLE_WAKE:
+        p->sleeping = (s->button_input & (KEY_SELECT | KEY_L | KEY_R)) != (KEY_SELECT | KEY_L | KEY_R);
+        if (p->sleeping) break;
+        p->dispcnt ^= GBA_DCNT_BLANK;
+        p->misc[1].x = BLOCK * 8 + QUARTER_BLOCK;
+        p->stage++;
+        break;
+    case SLEEP_WAIT_FOR_NO_INPUT:
+        if (s->button_input == 0) p->stage = SLEEP_NO_OPTION;
+        break;
+    default:
+        break;
+    }
+    if (!action) return false;
+    p->stage = 0;
+    p->timer = 0;
+    if (action == 1) mzm_sfx_play(SOUND_CLOSING_EASY_SLEEP_SCREEN);
+    return true;
+}
+
 /* PauseScreenInit (the pause from the game, PAUSE_SCREEN_PAUSE_OR_CUTSCENE) */
 static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     GbaPpu *ppu = s->ppu;
@@ -1329,6 +1587,7 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     ewram_lz77("sStatusScreenBackgroundTilemap", p->status_background_tilemap);
     vram_from16(s, 0xC000, suitless(g) ? p->status_background_tilemap : p->status_base_tilemap, 0x500);
     ewram_lz77("sMapScreenOverlayTilemap", p->map_overlay);
+    ewram_lz77("sEasySleepTilemap", p->easy_sleep_tilemap);
     ewram_lz77("sWorldMapOverlayTilemap", p->world_map_overlay);
     p->on_world_map = false;
     vram_lz77(s, "sMapScreenTextBg0TileTable", 0xD800);
@@ -1342,6 +1601,7 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
                          g->context);
     status_draw(p, s, g);
     set_spawn_position(p, s, 0);
+    draw_yes_no(p);
     determine_maps_viewable(p, s, g);
     load_bg_palette(p, s, g);
     vram_from16(s, 0xD000, p->map_overlay, 2048);
@@ -1439,7 +1699,7 @@ static void change_map(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     }
 }
 
-/* MapScreenHandler (L, easy sleep, is not ported) */
+/* MapScreenHandler */
 static void map_screen(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     if (p->changing_minimap_stage) {
         change_map(p, s, g);
@@ -1461,9 +1721,14 @@ static void map_screen(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
         s->bg_vofs[3] = (uint16_t)((0x204 - (10 - p->map_view_y) * 8) * 4);
         if (action == 1) {
             mzm_sfx_play(p->on_world_map ? SOUND_MOVING_MAP_MUFFLED : SOUND_MOVING_MAP);
-        } else if (s->changed_input & KEY_R) {
-            /* The status screen (L, easy sleep, is not ported) */
-            p->state = STATE_STATUS_SCREEN_INIT;
+        } else if (s->changed_input & (KEY_R | KEY_L)) {
+            /* The status screen or easy sleep */
+            if (s->changed_input & KEY_R) {
+                p->state = STATE_STATUS_SCREEN_INIT;
+            } else {
+                mzm_sfx_play(SOUND_OPENING_EASY_SLEEP_SCREEN);
+                p->state = STATE_EASY_SLEEP_INIT;
+            }
             p->timer = 0;
             p->stage = 0;
             toggle_world_map(p, s, g, true);
@@ -1495,7 +1760,7 @@ static void maintained_input(MzmPauseScreen *p, MzmScreen *s) {
 }
 
 /* PauseScreenCallStateHandler: the map screen, left with START or B (B
- * only off the world map), and the status screen. */
+ * only off the world map), the status screen and easy sleep. */
 static bool call_state_handler(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     maintained_input(p, s);
     p->timer++;
@@ -1522,6 +1787,27 @@ static bool call_state_handler(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGa
         if (p->is_fading) {
             apply_fading(p, s);
         } else if (quit_status_screen(p, s, g)) {
+            p->state = STATE_MAP_SCREEN;
+            p->stage = 0;
+            p->timer = 0;
+        }
+        break;
+    case STATE_EASY_SLEEP:
+        if (easy_sleep(p, s)) p->state = STATE_EASY_SLEEP_LEAVING;
+        break;
+    case STATE_EASY_SLEEP_INIT:
+        if (p->is_fading) {
+            apply_fading(p, s);
+        } else if (easy_sleep_init(p, s)) {
+            p->state = STATE_EASY_SLEEP;
+            p->stage = 0;
+            p->timer = 0;
+        }
+        break;
+    case STATE_EASY_SLEEP_LEAVING:
+        if (p->is_fading) {
+            apply_fading(p, s);
+        } else if (quit_easy_sleep(p, s)) {
             p->state = STATE_MAP_SCREEN;
             p->stage = 0;
             p->timer = 0;

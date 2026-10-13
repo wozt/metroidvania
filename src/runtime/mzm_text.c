@@ -22,6 +22,14 @@ static uint32_t get32(const uint8_t *p, int i) {
     return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
+static void and32(uint8_t *p, int i, uint32_t value) {
+    p += 4 * i;
+    p[0] &= (uint8_t)value;
+    p[1] &= (uint8_t)(value >> 8);
+    p[2] &= (uint8_t)(value >> 16);
+    p[3] &= (uint8_t)(value >> 24);
+}
+
 static void or32(uint8_t *p, int i, uint32_t value) {
     p += 4 * i;
     p[0] |= (uint8_t)value;
@@ -109,6 +117,63 @@ void mzm_text_draw_character(uint16_t character, uint8_t *dst, uint16_t indent, 
     }
 }
 
+void mzm_text_draw_message_character(uint16_t character, uint8_t *dst, uint16_t indent, uint8_t color) {
+    uint8_t gfx[32 * 4];                     /* gCurrentCharacterGfx */
+    memset(gfx, 0, sizeof gfx);
+    uint32_t width = mzm_text_char_width(character);
+    uint32_t characters = sym("sCharactersGfx");
+    for (int pass = 0; pass < 2; ++pass) {
+        uint8_t *cur = gfx + pass * 64;
+        uint32_t src = characters + character * 32u + (uint32_t)pass * 0x400u;
+        int size = width > 8 ? 16 : 8;
+        for (int i = 0; i < size; ++i) {
+            /* Nibbles with bit 2 take the color (4 by default), the empty
+             * ones become 15, the transparent color of the buffer. */
+            uint32_t pixels = mzm_rom_u32(src + 4u * (uint32_t)i), out = 0;
+            uint32_t palette = color ? color : 4;
+            for (int n = 0; n < 8; ++n) {
+                uint32_t value = pixels & 15u << 4 * n;
+                if (value) out |= value & 4u << 4 * n ? palette << 4 * n : value;
+                else out |= 15u << 4 * n;
+            }
+            or32(cur, i, out);
+        }
+        uint8_t *out = dst + 4 * (((indent & 0xFF) / 8) * 8 + pass * 0x100 + (indent / 256) * 0x200);
+        int shift_tiles = indent & 7;
+        if (shift_tiles) {
+            int shift = shift_tiles * 4, rest = 32 - shift;
+            /* sArray_7602f0 keeps the low pixels, sArray_760314 the high
+             * ones. */
+            uint32_t keep_low = ~(~0u << shift), keep_high = ~(~0u >> (4 * (8 - shift_tiles)));
+            int words = 8;
+            if (shift_tiles + (int)width > 8) {
+                for (int i = 0; i < 8; ++i) {
+                    uint32_t value = get32(cur, i);
+                    and32(out, i, value << shift | keep_low);
+                    and32(out, i + 8, value >> rest | keep_high);
+                }
+                if (width > 8) {
+                    if (shift_tiles + (int)width > 16) {
+                        for (int i = 8; i < 16; ++i) {
+                            uint32_t value = get32(cur, i);
+                            and32(out, i, value << shift | keep_low);
+                            and32(out, i + 8, value >> rest | keep_high);
+                        }
+                    } else {
+                        for (int i = 8; i < 16; ++i) and32(out, i, get32(cur, i) << shift | keep_low);
+                    }
+                }
+                words = 0;
+            }
+            for (int i = 0; i < words; ++i) and32(out, i, get32(cur, i) << shift | keep_low);
+        } else {
+            for (int i = 0; i < 8; ++i) and32(out, i, get32(cur, i));
+            if (width > 8)
+                for (int i = 8; i < 16; ++i) and32(out, i, get32(cur, i));
+        }
+    }
+}
+
 int mzm_text_process_message(MzmMessage *m, uint32_t text, uint8_t *dst, uint16_t button_input) {
     int state = MZM_TEXT_NONE;
     m->timer++;
@@ -146,6 +211,8 @@ int mzm_text_process_message(MzmMessage *m, uint32_t text, uint8_t *dst, uint16_
             break;
         }
         if (state < MZM_TEXT_NOTHING) at += 2;
+        else if (state == MZM_TEXT_NOTHING && m->is_message)
+            mzm_text_draw_message_character(c, dst, m->indent, m->color);
         else if (state == MZM_TEXT_NOTHING) mzm_text_draw_character(c, dst, m->indent, m->color);
         else if (state != MZM_TEXT_ENDED) m->line++;
         m->indent = (uint16_t)(m->indent + width);

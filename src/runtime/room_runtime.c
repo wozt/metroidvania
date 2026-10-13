@@ -3615,7 +3615,14 @@ int main(int argc, char **argv) {
                 MzmPauseGame pause_game={&runtime_hud,runtime_area_index(room->area),
                                          &equipment,
                                          runtime_sprite_check_event,&sprites};
-                if(mzm_pause_update(&pause_screen,&screen,&pause_game)) {
+                bool was_sleeping=pause_screen.sleeping;
+                bool left_pause=mzm_pause_update(&pause_screen,&screen,&pause_game);
+                /* Easy sleep stops the GBA: no sound until it wakes. */
+                if(runtime_audio_stream && pause_screen.sleeping!=was_sleeping) {
+                    if(pause_screen.sleeping)SDL_PauseAudioStreamDevice(runtime_audio_stream);
+                    else SDL_ResumeAudioStreamDevice(runtime_audio_stream);
+                }
+                if(left_pause) {
                     pause_mode=false;
                     runtime_audio_lock();
                     mzm_music_reset_volume();
@@ -3974,7 +3981,10 @@ int main(int argc, char **argv) {
                 if(screen_texture)SDL_SetTextureScaleMode(screen_texture,SDL_SCALEMODE_NEAREST);
             }
             void *screen_pixels; int screen_pitch;
-            if(screen_texture && SDL_LockTexture(screen_texture,NULL,&screen_pixels,&screen_pitch)) {
+            /* Asleep (easy sleep), the LCD is off. */
+            bool lcd_on=!(pause_mode && pause_screen.sleeping);
+            if(lcd_on && screen_texture &&
+               SDL_LockTexture(screen_texture,NULL,&screen_pixels,&screen_pitch)) {
                 gba_ppu_render(&screen_ppu,GBA_SCREEN_W,GBA_SCREEN_H,false,screen_pixels,
                                screen_pitch);
                 SDL_UnlockTexture(screen_texture);

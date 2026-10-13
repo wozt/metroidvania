@@ -2988,6 +2988,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0290 - Zero Mission easy sleep
+
+- L on the pause map opens the native easy sleep screen
+  (`src/runtime/mzm_pause_screen.c`, from pause_screen_sub_menus.c,
+  pause_screen.c and text.c): BLDALPHA fades, the L prompt, the easy sleep
+  tilemap, the text drawn into the equipment names graphics (backed up and
+  restored), the YES/NO cursor with its sounds.
+- YES sleeps after half a second: the screen blanks and the runtime shows
+  nothing and pauses the audio device until SELECT, L and R are held
+  together (the GBA's Stop syscall), then waits for the keys to be released.
+- `src/runtime/mzm_text.c`: the mask mode character drawing
+  (TextDrawMessageCharacter) used by the messages.
+- Checked by capture in brinstar_000; tests in `tests/test_mzm_screens.c`.
+
 ## Patch 0289 - Zero Mission status screen
 
 - R on the pause map opens the native status screen

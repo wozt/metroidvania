@@ -306,7 +306,8 @@ the boss icons, D-pad scrolling, the world map with A or B, the other
 explored areas with SELECT, and START or B to resume; the music is lowered
 meanwhile. R opens the status screen: the equipment rows, the energy and
 ammunition amounts, Samus's wireframe and the item descriptions written with
-the native font. Easy sleep is not ported yet.
+the native font. L opens easy sleep: YES blanks the screen and silences the
+game until SELECT, L and R are held together.
 
 With the ROM bank, room backgrounds are rendered natively as well
 (`src/runtime/mzm_room_gfx.c`): animated tiles and palettes, liquids (lava,

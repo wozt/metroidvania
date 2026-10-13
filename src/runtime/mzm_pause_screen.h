@@ -6,10 +6,11 @@
  * world map (A or B), the other viewable areas (SELECT) and START or B to
  * leave, and the status screen (R, status_screen.c): the equipment rows
  * revealed one by one, the tank amounts, Samus's wireframe and the headers,
- * the item cursor and the item descriptions (text.c). Easy sleep (L), the
- * Chozo hints and their targets, the map download, the item toggling of the
- * suitless and item acquisition sequences and the completion info are not
- * ported yet. */
+ * the item cursor and the item descriptions (text.c), and easy sleep (L,
+ * pause_screen_sub_menus.c): its text, the YES/NO cursor and the sleep until
+ * SELECT, L and R. The Chozo hints and their targets, the map download,
+ * the item toggling of the suitless and item acquisition sequences and the
+ * completion info are not ported yet. */
 #ifndef MZM_PAUSE_SCREEN_H
 #define MZM_PAUSE_SCREEN_H
 
@@ -59,12 +60,19 @@ typedef struct {
     uint8_t is_fading, bld_alpha_step_level, bld_alpha_step_timer, target_l, target_h;
     uint16_t target_bld_alpha;
     MzmMessage message;             /* gCurrentMessage */
+    /* Easy sleep */
+    int8_t easy_sleep_text_state;
+    bool sleeping;                  /* the GBA's Stop mode, until SELECT + L + R */
     /* PAUSE_SCREEN_EWRAM */
     uint16_t maps[8][1024];
     uint16_t original_palette[512], palette[512];
     uint16_t visor_overlay[1024], map_overlay[1024], world_map_overlay[1024];
     uint16_t status_tilemap[1024], status_base_tilemap[1024] /* unk_7800 */,
         status_background_tilemap[1024];
+    /* easySleepTextFormatted_1 / _2, unk_5000, unk_5800, unk_6000 */
+    uint8_t easy_sleep_text[5][0x800];
+    uint16_t easy_sleep_tilemap[1024];
+    uint8_t gfx_backup[4][0x800];   /* equipmentNamesGfxBackup, unk_b000 ... */
 } MzmPauseScreen;
 
 /* gSubGameModeStage = 0: the next update runs PauseScreenInit. */

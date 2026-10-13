@@ -3557,6 +3557,10 @@ int main(int argc, char **argv) {
     /* A door's fade (ConnectionCheckEnterDoor): Samus waits while the room
      * fades out, then the door's room is loaded and fades in. */
     static MzmDoorFade door_fade;
+    /* gMonochromeBgFading (ColorFadingApplyMonochrome): Samus's death fades
+     * the screen to black, hides the backgrounds, then turns the backdrop
+     * white. `level` is the backdrop's 0-31 once the backgrounds are off. */
+    struct { uint8_t state; bool active, bg_off; uint8_t timer, color, level; } mono={0};
     RoomDoor pending_door={0};
     int pending_door_offset=0;
     int resume_request=RUNTIME_RESUME_NONE;
@@ -4362,13 +4366,40 @@ int main(int argc, char **argv) {
                     cannon_y=cannon_entry->frames[index].cannon_y;
                 }
             }
+            /* RoomUpdateGfxInfo: ColorFadingApplyMonochrome. */
+            if(samus.pose!=MZM_POSE_DYING) mono.state=MZM_MONOCHROME_NONE,mono.active=mono.bg_off=false;
+            if(samus.monochrome) {
+                mono.state=samus.monochrome;
+                mono.active=false;
+                samus.monochrome=MZM_MONOCHROME_NONE;
+            }
+            if(mono.state==MZM_MONOCHROME_BLACK || mono.state==MZM_MONOCHROME_WHITE) {
+                /* COLOR_FADING_TO_BLACK / _TO_WHITE: sColorFading_345f58, one
+                 * color a frame, then the backgrounds are switched off. */
+                static const uint8_t faster[8]={3,7,11,15,19,23,27,32};
+                if(!mono.active) {
+                    mono.active=true;
+                    mono.timer=0;
+                } else if(mono.timer<8) {
+                    mono.color=faster[mono.timer++];
+                    if(mono.state==MZM_MONOCHROME_WHITE)mono.level=(uint8_t)(mono.color*31>>5);
+                } else {
+                    mono.bg_off=true;
+                    mono.active=false;
+                    mono.state=3;           /* MONOCHROME_FADING_ENDED */
+                }
+            }
+            /* SUB_GAME_MODE_DYING: no SpriteUpdate, ProjectileUpdate nor
+             * HudDraw. */
+            bool dying=samus.pose==MZM_POSE_DYING;
             /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
              * arm cannon offset above is the one SamusUpdate left. */
             /* InGameTimerUpdate */
-            if(!door_frozen)runtime_igt_update();
-            runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
-                                   &equipment, &collision, &weapons, &input, movement_prevented,
-                                   &prevent_movement);
+            if(!door_frozen && !dying)runtime_igt_update();
+            if(!dying)
+                runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
+                                       &equipment, &collision, &weapons, &input, movement_prevented,
+                                       &prevent_movement);
             /* The loaded room's sprites have seen gIsLoadingFile. */
             sprites.globals.loading_file=false;
             if((sprites.banner.exists || sprites.banner.cursor.exists) && sprites.banner_ok) {
@@ -4399,8 +4430,9 @@ int main(int argc, char **argv) {
             weapons.has_camera=true;
             weapons.camera_x=(uint16_t)((int)last_cx*4);
             weapons.camera_y=(uint16_t)((int)last_cy*4);
-            mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
-                               &collision,&projectile_animation);
+            if(!dying)
+                mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
+                                   &collision,&projectile_animation);
             {
                 /* ParticleChargingBeam and ParticleShootingBeam*: their
                  * animations, at the arm cannon. */
@@ -4726,6 +4758,7 @@ int main(int argc, char **argv) {
             /* A door fade: the door transition tilemap on BG3 and the faded
              * palette for this frame's layers. */
             bool fading=door_fade.phase!=MZM_DOOR_FADE_NONE;
+            bool mono_fading=mono.state==MZM_MONOCHROME_BLACK && mono.active && mono.color;
             if(g->door_bg3!=(fading && door_fade.door_bg3))
                 mzm_room_gfx_door_bg3(g,fading && door_fade.door_bg3);
             if(g->door_bg3) {
@@ -4739,6 +4772,11 @@ int main(int argc, char **argv) {
                 mzm_room_gfx_faded_palette(g,door_fade.door_palette,door_fade.faded,
                                            door_fade.fading_type,door_fade.color,door_fade.bg_mask,
                                            g->ppu.palette);
+            } else if(mono_fading) {
+                /* COLOR_FADING_TO_BLACK on every BG row. */
+                memcpy(kept_palette,g->ppu.palette,sizeof kept_palette);
+                mzm_room_gfx_faded_palette(g,false,true,MZM_FADING_OUT,mono.color,0xFFFF,g->ppu.palette);
+                fading=true;
             }
             native_layers_ready=true;
             for(int layer=0;layer<4;layer++) {
@@ -4762,11 +4800,17 @@ int main(int argc, char **argv) {
             }
             if(fading)memcpy(g->ppu.palette,kept_palette,sizeof kept_palette);
         }
-        bool layered=room->has_backgrounds && (bg_art.sheet || native_layers_ready);
+        /* ColorFadingApplyMonochrome's end: DISPCNT without the backgrounds;
+         * the backdrop is black, then white. */
+        bool layered=room->has_backgrounds && (bg_art.sheet || native_layers_ready) && !mono.bg_off;
         int sprite_priority=samus.pose==MZM_POSE_DYING?0:runtime_samus_on_top(room)?1:2;
         bool pb_active=weapons.power_bomb.state==MZM_PB_EXPLODING ||
                        weapons.power_bomb.state==MZM_PB_IMPLODING;
         if(pb_active)SDL_SetRenderDrawColor(renderer,255,255,255,255);  /* the white backdrop */
+        else if(mono.bg_off) {
+            Uint8 grey=(Uint8)(mono.level*255/31);
+            SDL_SetRenderDrawColor(renderer,grey,grey,grey,255);
+        }
         else if(layered)SDL_SetRenderDrawColor(renderer,0,0,0,255);
         else SDL_SetRenderDrawColor(renderer,12,14,24,255);
         SDL_RenderClear(renderer);
@@ -4774,7 +4818,7 @@ int main(int argc, char **argv) {
             /* Backgrounds at or behind the sprites' priority. */
             runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
                                      cx,cy,viewport,scale,sprite_priority,3,&door_fade);
-        } else if (texture) {
+        } else if (texture && !mono.bg_off) {
             SDL_FRect src={cx,cy,320.f,224.f};
             if (src.w>room->width) src.w=(float)room->width;
             if (src.h>room->height) src.h=(float)room->height;
@@ -4782,9 +4826,12 @@ int main(int argc, char **argv) {
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
         if(pb_active)runtime_draw_power_bomb(renderer,&weapons.power_bomb,cx,cy,viewport,scale);
-        /* SpriteDrawAll_LowPriority: draw orders 9 to 16, behind Samus. */
-        runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16,
-                             runtime_door_fade_shade(&door_fade));
+        /* SpriteDrawAll_LowPriority: draw orders 9 to 16, behind Samus
+         * (SUB_GAME_MODE_DYING draws Samus alone). */
+        bool dying_mode=samus.pose==MZM_POSE_DYING;
+        if(!dying_mode)
+            runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16,
+                                 runtime_door_fade_shade(&door_fade));
 
         RuntimeLibraryEntry *lib_entry=NULL;
         int frame=0;
@@ -4874,11 +4921,11 @@ int main(int argc, char **argv) {
         SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         /* SpriteDrawAll_HighPriority and _MediumPriority: draw orders 1 to
          * 8, in front of Samus. */
-        if(!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden))
+        if(!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden) && !dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,8,
                                  runtime_door_fade_shade(&door_fade));
         /* SpriteDebrisDrawAll and ParticleDraw: the common sprite graphics. */
-        for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok;i++) {
+        for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok && !dying_mode;i++) {
             const char *table; uint16_t px,py,frame;
             if(i<MZM_MAX_SPRITE_DEBRIS) {
                 const MzmSpriteDebris *d=&sprites.effects.debris[i];
@@ -4949,7 +4996,7 @@ int main(int argc, char **argv) {
         if(pass==1 && layered)
             runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
                                      cx,cy,viewport,scale,0,sprite_priority-1,&door_fade);
-        for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
+        for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0 && !dying_mode;i++) {
             const MzmProjectile *projectile=&weapons.list[i];
             if(!projectile->active || projectile->stage==MZM_STAGE_INIT ||
                projectile->hidden)continue;
@@ -5055,7 +5102,7 @@ int main(int argc, char **argv) {
             SDL_RenderFillRect(renderer,&viewport);
             SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         }
-        if(runtime_hud.ready && !sprites.globals.hide_hud) {
+        if(runtime_hud.ready && !sprites.globals.hide_hud && !dying_mode) {
             /* The HUD's OAM over the view (the minimap at its right edge). */
             if(!hud_texture) {
                 hud_texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,

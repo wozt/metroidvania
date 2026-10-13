@@ -394,7 +394,9 @@ static void test_hurt_and_death(void) {
     w.samus.camera_x = w.samus.x - 480;
     w.samus.camera_y = (w.samus.y - 1) - 400;
     mzm_samus_hurt(&w.samus, &w.collision, true);
-    assert(w.samus.pose == MZM_POSE_DYING && w.samus.x_velocity == 0 && w.samus.y_velocity == 0);
+    assert(w.samus.pose == MZM_POSE_DYING && w.samus.x_velocity == 0 && w.samus.y_velocity == 0 &&
+           w.samus.monochrome == MZM_MONOCHROME_BLACK);
+    w.samus.monochrome = MZM_MONOCHROME_NONE;    /* the game state takes it */
     int32_t x = w.samus.x, y = w.samus.y;
     steps(&w, MZM_KEY_RIGHT | MZM_KEY_A, 20);
     assert(w.samus.pose == MZM_POSE_DYING && w.samus.x == x && w.samus.y == y);
@@ -402,6 +404,9 @@ static void test_hurt_and_death(void) {
      * starts (gMainGameMode = GM_GAMEOVER). */
     int dying = 0;
     w.samus.anim_frame = 24;        /* the test world has no animation durations */
+    while (w.samus.timer < 5 && dying++ < 2000) step(&w, 0);
+    /* The white fading starts with the first flash. */
+    assert(w.samus.timer == 5 && w.samus.monochrome == MZM_MONOCHROME_WHITE && w.samus.walljump_timer == 1);
     while (!w.samus.game_over && dying++ < 2000) step(&w, 0);
     assert(w.samus.game_over && w.samus.pose == MZM_POSE_DYING && w.samus.timer == 121 &&
            w.samus.walljump_timer == 8);

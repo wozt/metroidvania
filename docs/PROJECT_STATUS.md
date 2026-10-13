@@ -2988,6 +2988,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0302 - Zero Mission death fades
+
+- SamusDying's gMonochromeBgFading (ColorFadingApplyMonochrome): the hit
+  that kills Samus fades the room to black in 8 frames and switches its
+  backgrounds off; her dying animation's first flash fades the backdrop to
+  white; the game over follows.
+- SUB_GAME_MODE_DYING: the sprites, projectiles, particles, HUD and
+  in-game timer stop and are not drawn; Samus is drawn alone.
+- Checked by capture (the lava death in norfair_022 with `--energy 2`);
+  `tests/test_mzm_samus.c` checks the black and white requests.
+
 ## Patch 0301 - Zero Mission Chozo statue hints
 
 - `src/runtime/mzm_pause_screen.c`: PAUSE_SCREEN_CHOZO_HINT

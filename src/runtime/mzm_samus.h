@@ -389,7 +389,14 @@ typedef struct MzmSamus {
     uint8_t hazard_damage_timer, hazard_knockback_timer, hazard_palette_timer;
     /* gMainGameMode = GM_GAMEOVER: SamusDying's timer reached 120. */
     bool game_over;
+    /* gMonochromeBgFading requests (MZM_MONOCHROME_*): black when the hit
+     * kills her, white once her dying animation flashes; the game state
+     * takes them (ColorFadingApplyMonochrome). */
+    uint8_t monochrome;
 } MzmSamus;
+
+/* MonochromeFading */
+enum { MZM_MONOCHROME_NONE, MZM_MONOCHROME_BLACK, MZM_MONOCHROME_WHITE };
 
 /* HazardType of ClipdataCheckCurrentAffectingAtPosition's low byte. */
 enum {

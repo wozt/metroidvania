@@ -1087,8 +1087,9 @@ static void change_to_hurt(Ctx *c, const MzmSamusData *copy) {
         s->aim = copy->aim;
         mzm_sfx_play(MZM_SOUND_HURT);
     } else {
-        /* gDisableScrolling, the black monochrome fading and
-         * SUB_GAME_MODE_DYING are the game state's. */
+        /* gDisableScrolling and SUB_GAME_MODE_DYING are the game
+         * state's; the screen fades to black. */
+        s->monochrome = MZM_MONOCHROME_BLACK;
         s->pose = MZM_POSE_DYING;
         int16_t x_velocity = (int16_t)(s->camera_x + 240 * 2 - s->x);
         s->x_velocity = (int16_t)(x_velocity >> 1);     /* DIV_SHIFT */
@@ -2620,7 +2621,8 @@ static MzmPose pose_getting_knocked_back(Ctx *c) {
 }
 
 /* SamusDying: the music stops, the dying sound plays and Samus drifts to
- * the screen's centre (the fading and the game over are the game state's). */
+ * the screen's centre; the screen fades to white (requested), then the game
+ * over. */
 static MzmPose pose_dying(Ctx *c) {
     MzmSamus *s = c->s;
     if (s->last_wall == 0) {
@@ -2649,6 +2651,8 @@ static MzmPose pose_dying(Ctx *c) {
     if (s->anim_frame > 23) {
         switch (s->timer++) {
         case 4:
+            s->monochrome = MZM_MONOCHROME_WHITE;
+            /* fall through */
         case 12:
         case 20:
         case 28:

@@ -22,6 +22,8 @@
 #include "mzm_projectiles.h"
 #include "mzm_rom.h"
 #include "mzm_samus.h"
+#include "mzm_screen.h"
+#include "mzm_title_screen.h"
 #include "mzm_sprites.h"
 
 #define MAX_MARKS 32768
@@ -1916,6 +1918,7 @@ static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
     case MZM_SFX_BACKUP_TRACK2: mzm_audio_backup_track2(); break;
     case MZM_SFX_RETRIEVE_TRACK2: mzm_audio_retrieve_track2(); break;
     case MZM_SFX_MUSIC_FADE: mzm_music_fade(timer); break;
+    case MZM_SFX_MUSIC_PRIORITY: mzm_music_update_priority((uint8_t)timer); break;
     }
 }
 
@@ -2762,11 +2765,30 @@ static uint16_t runtime_held_buttons(const bool *keys,const GbaInput *pad) {
         buttons&=(uint16_t)~(MZM_KEY_UP|MZM_KEY_DOWN);
     return buttons;
 }
+/* gButtonInput for the native screens: the GBA key bits, with START on
+ * Return or the gamepad's Start. */
+static uint16_t runtime_native_keys(uint16_t held, const bool *keys, const GbaInput *pad) {
+    static const struct { uint16_t mzm, gba; } map[] = {
+        {MZM_KEY_RIGHT, GBA_KEY_RIGHT}, {MZM_KEY_LEFT, GBA_KEY_LEFT}, {MZM_KEY_UP, GBA_KEY_UP},
+        {MZM_KEY_DOWN, GBA_KEY_DOWN}, {MZM_KEY_A, GBA_KEY_A}, {MZM_KEY_B, GBA_KEY_B},
+        {MZM_KEY_L, GBA_KEY_L}, {MZM_KEY_R, GBA_KEY_R}, {MZM_KEY_SELECT, GBA_KEY_SELECT},
+    };
+    uint16_t native = 0;
+    for (size_t i = 0; i < sizeof map / sizeof map[0]; ++i)
+        if (held & map[i].mzm) native |= map[i].gba;
+    if ((keys && keys[SDL_SCANCODE_RETURN]) || (pad && gba_input_buttons(pad) & GBA_KEY_START))
+        native |= GBA_KEY_START;
+    return native;
+}
+
 int main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
     const char *library_index=NULL, *animation_map_index=NULL;
     const char *projectile_index=NULL, *cannon_index=NULL, *palette_index=NULL;
     const char *room_alias=NULL, *samus_assets=NULL;
+    /* Boot on the title screen (also without any argument); START then
+     * begins the game in Brinstar's first room. */
+    bool title_mode=argc==1;
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
@@ -2804,6 +2826,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--background") && !background && i+1<argc) background=argv[++i];
         else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
         else if (!strcmp(argv[i],"--room") && !room_alias && i+1<argc) room_alias=argv[++i];
+        else if (!strcmp(argv[i],"--title")) title_mode=true;
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
@@ -2871,6 +2894,7 @@ int main(int argc, char **argv) {
     char bundle_index[4096],bundle_map[4096],bundle_cannon[4096],bundle_palettes[4096];
     char native_room[4096],native_background[4096];
     bool native_format=false;
+    if (title_mode && !room_alias && !room_path) room_alias="brinstar_000";
     if (room_alias) {
         size_t length=strlen(room_alias);
         bool valid=length>4 && length<48 && room_alias[length-4]=='_';
@@ -2998,14 +3022,27 @@ int main(int argc, char **argv) {
             SDL_ResumeAudioStreamDevice(audio);
         }
     }
+    /* The native screens (title) on their own GBA display. */
+    static GbaPpu screen_ppu;
+    static MzmScreen screen;
+    static MzmTitleScreen title_screen;
     /* The HUD reads its graphics from the ROM bank. */
     if (mzm_rom_open(RUNTIME_ROM_BANK, RUNTIME_ROM_SYMBOLS))
         mzm_hud_init(&runtime_hud, &runtime_hud_ppu, &runtime_minimap, 320);
+    if (title_mode) {
+        if (mzm_rom_ready() && mzm_screen_init(&screen, &screen_ppu)) {
+            mzm_title_enter(&title_screen, false);
+        } else {
+            fprintf(stderr, "No ROM bank: the title screen is skipped.\n");
+            title_mode = false;
+        }
+    }
     SDL_Window *window=SDL_CreateWindow("Metroid Vania - experimental C11 runtime",
                                        960,640,SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer=window ? SDL_CreateRenderer(window,NULL) : NULL;
     SDL_Surface *surface=NULL; SDL_Texture *texture=NULL;
     SDL_Texture *hud_texture=NULL;
+    SDL_Texture *screen_texture=NULL;
     int rc=1;
     RuntimeLibrary library = {0};
     RuntimeLibrary projectile_library = {0};
@@ -3123,8 +3160,8 @@ int main(int argc, char **argv) {
            "(Select) toggles super missiles; M refills ammunition.\n");
     printf("Diagnostics: R suit, T Space Jump/Screw Attack, G High Jump, "
            "H 20 damage, Enter restart, F6 catalogue, F7 hitbox.\n");
-    /* The first room's music starts at once. */
-    if (runtime_room_music(room)) mzm_music_check_play_transition_track();
+    /* The first room's music starts at once (after the title screen). */
+    if (!title_mode && runtime_room_music(room)) mzm_music_check_play_transition_track();
     int music_transition=0;
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
@@ -3416,6 +3453,26 @@ int main(int argc, char **argv) {
                 capture_step++;
             }
             if(debug.open && !capture_path)held=0;     /* a menu frame step */
+            if(title_mode) {
+                /* TitleScreenHandler; START (or A) leaves for the game, a
+                 * demo (not ported) comes back to the title. */
+                mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                              capture_path?NULL:&gamepad));
+                if(mzm_title_update(&title_screen,&screen)) {
+                    if(title_screen.sub_mode2==2) {
+                        mzm_title_enter(&title_screen,true);
+                    } else {
+                        title_mode=false;
+                        mzm_sfx_stop_all();
+                        mzm_sfx_music_priority(0);
+                        if(runtime_room_music(room)) mzm_music_check_play_transition_track();
+                        previous_held=held;
+                    }
+                }
+                if(audio)runtime_audio_frame(audio);
+                accumulator-=fixed_step;
+                continue;
+            }
             MzmInput input={held,(uint16_t)((held&~previous_held)|latched),false,0,0};
             latched=0;
             previous_held=held;
@@ -3713,6 +3770,30 @@ int main(int argc, char **argv) {
         if ((float)oh/224.f < scale) scale=(float)oh/224.f;
         SDL_FRect viewport={(ow-320.f*scale)*0.5f,(oh-224.f*scale)*0.5f,
                             320.f*scale,224.f*scale};
+        if(title_mode) {
+            /* The 240x160 GBA screen, fitted to the view. */
+            SDL_SetRenderDrawColor(renderer,0,0,0,255);
+            SDL_RenderClear(renderer);
+            if(!screen_texture) {
+                screen_texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,
+                                                 SDL_TEXTUREACCESS_STREAMING,GBA_SCREEN_W,
+                                                 GBA_SCREEN_H);
+                if(screen_texture)SDL_SetTextureScaleMode(screen_texture,SDL_SCALEMODE_NEAREST);
+            }
+            void *screen_pixels; int screen_pitch;
+            if(screen_texture && SDL_LockTexture(screen_texture,NULL,&screen_pixels,&screen_pitch)) {
+                gba_ppu_render(&screen_ppu,GBA_SCREEN_W,GBA_SCREEN_H,false,screen_pixels,
+                               screen_pitch);
+                SDL_UnlockTexture(screen_texture);
+                float fit=viewport.w/GBA_SCREEN_W;
+                if(viewport.h/GBA_SCREEN_H<fit)fit=viewport.h/GBA_SCREEN_H;
+                SDL_FRect box={viewport.x+(viewport.w-GBA_SCREEN_W*fit)*0.5f,
+                               viewport.y+(viewport.h-GBA_SCREEN_H*fit)*0.5f,
+                               GBA_SCREEN_W*fit,GBA_SCREEN_H*fit};
+                SDL_RenderTexture(renderer,screen_texture,NULL,&box);
+            }
+            goto frame_overlays;
+        }
         float feet_x=(float)samus.x/MZM_SUBPIXELS_PER_PIXEL;
         float feet_y=(float)samus.y/MZM_SUBPIXELS_PER_PIXEL;
         /* Whole-pixel camera keeps native sprite pixels aligned. */
@@ -4029,6 +4110,7 @@ int main(int argc, char **argv) {
                 SDL_RenderTexture(renderer,hud_texture,NULL,&hud_box);
             }
         }
+frame_overlays:
         debug_draw(renderer,&debug,paused,viewport,scale,current_room,&samus,&equipment,
                    debug_frame);
         if(capture_path && capture_step>=capture_frames) {
@@ -4081,6 +4163,8 @@ cleanup:
     runtime_bg_art_free(&bg_art);
     if (texture) SDL_DestroyTexture(texture);
     if (hud_texture) SDL_DestroyTexture(hud_texture);
+    if (screen_texture) SDL_DestroyTexture(screen_texture);
+    mzm_screen_free(&screen);
     mzm_rom_close();
     if (surface) SDL_DestroySurface(surface);
     if (renderer) SDL_DestroyRenderer(renderer);

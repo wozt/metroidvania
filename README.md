@@ -202,6 +202,12 @@ Samus/Soma sprite previews. Both room browsers can render one native room or
 audit an area/world through the shared headless backend. Aria reconstruction
 remains partial; complete rendering and gameplay are not claimed.
 
+Started without arguments (or with `--title`), the runtime boots on the
+native Zero Mission title screen (`src/runtime/mzm_title_screen.c`: comets,
+scrolling, title fade, sparkles, PRESS START; Return or the gamepad's Start
+is START) and START begins the game in Brinstar's first room; the file
+select, the intro and the demos are not ported yet.
+
 Run the experimental SDL3 Zero Mission room/animation integration with:
 
 ```sh

@@ -1,0 +1,176 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* The shared non-gameplay screen routines (menu objects, palette fades) on
+ * synthetic ROM data, and the title screen on the exported bank. */
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "gba_ppu.h"
+#include "mzm_rom.h"
+#include "mzm_screen.h"
+#include "mzm_sfx.h"
+#include "mzm_title_screen.h"
+
+static GbaPpu ppu;
+static MzmScreen screen;
+
+static void put16(uint8_t *rom, uint32_t at, uint16_t v) { rom[at] = (uint8_t)v; rom[at + 1] = (uint8_t)(v >> 8); }
+static void put32(uint8_t *rom, uint32_t at, uint32_t v) {
+    for (int i = 0; i < 4; ++i) rom[at + (uint32_t)i] = (uint8_t)(v >> (8 * i));
+}
+
+static void test_fading(void) {
+    uint16_t src[256], dst[256];
+    for (int i = 0; i < 256; ++i) src[i] = (uint16_t)(20 | 10 << 5 | 31 << 10);
+    memset(dst, 0, sizeof dst);
+    /* Only row 1: the fade in at 16/32 halves the channels. */
+    mzm_apply_fading_color(MZM_FADING_IN, 16, src, dst, 1 << 1);
+    assert(dst[0] == 0 && dst[16] == (10 | 5 << 5 | 15 << 10) && dst[32] == 0);
+    mzm_apply_fading_color(MZM_FADING_OUT, 16, src, dst, 0xFFFF);
+    assert(dst[0] == (10 | 5 << 5 | 16 << 10));
+    mzm_apply_fading_color(MZM_FADING_FLASH, 0, src, dst, 1);
+    assert(dst[0] == 0x7FFF);
+    mzm_apply_fading_color(MZM_FADING_UNK, 32, src, dst, 1);
+    assert(dst[0] == 0x7FFF);
+}
+
+/* A synthetic OamArray at 0x08000000: entry 1 has two frames (timers 2
+ * and 1) of one 8x8 part and changes frames; entry 2 kills itself after
+ * its one frame. */
+static void test_menu_oam(void) {
+    static uint8_t rom[0x200];
+    memset(rom, 0, sizeof rom);
+    const uint32_t base = 0x08000000;
+    /* OamArray: {FrameData*, preAction} x 3 at 0x00 */
+    put32(rom, 1 * 8, base + 0x40);
+    rom[1 * 8 + 4] = MZM_OAM_PRE_CHANGE_FRAME;
+    put32(rom, 2 * 8, base + 0x80);
+    rom[2 * 8 + 4] = MZM_OAM_PRE_KILL_AFTER_END;
+    /* FrameData of entry 1 at 0x40: two frames then the terminator. */
+    put32(rom, 0x40, base + 0x100);
+    rom[0x44] = 2;
+    put32(rom, 0x48, base + 0x110);
+    rom[0x4C] = 1;
+    /* Entry 2 at 0x80: one frame. */
+    put32(rom, 0x80, base + 0x100);
+    rom[0x84] = 1;
+    /* Frame OAM: part count, then attr0, attr1, attr2. */
+    put16(rom, 0x100, 1);
+    put16(rom, 0x102, 0x0005);              /* y 5 */
+    put16(rom, 0x104, 0x01FE);              /* x -2 */
+    put16(rom, 0x106, 0x0007);              /* tile 7 */
+    put16(rom, 0x110, 1);
+    put16(rom, 0x112, 0x00FF);
+    put16(rom, 0x114, 0);
+    put16(rom, 0x116, 0x0009);
+    /* A MenuOamData: y 0x100, x 0x80, oamId 1, priority 2, exists 1,
+     * bound to BG 1. */
+    put16(rom, 0x180, 0x100);
+    put16(rom, 0x182, 0x80);
+    rom[0x18A] = 1;
+    rom[0x18B] = 2 | 1 << 6;
+    rom[0x18C] = 1;
+    assert(mzm_rom_open_memory(base, rom, sizeof rom));
+    MzmMenuOam o[2];
+    o[0] = mzm_menu_oam_from_rom(base + 0x180);
+    assert(o[0].y == 0x100 && o[0].x == 0x80 && o[0].oam_id == 1 && o[0].priority == 2 &&
+           o[0].exists == 1 && o[0].bound_background == 1 && !o[0].not_drawn);
+    o[1] = o[0];
+    mzm_menu_oam_set_id(&o[1], 2);
+    assert(o[1].exists == 2);
+    o[1].bound_background = 4;
+    screen.bg_hofs[1] = 16;                 /* 4 pixels */
+    screen.bg_vofs[1] = 0;
+    screen.next_oam_slot = 0;
+    mzm_menu_oam_process(&screen, 2, o, base);
+    /* Object 0: 0x100 / 4 + 5 = 69, 0x80 / 4 - 4 - 2 = 26; tile 7 with
+     * priority 2. Object 1 (no background): y 69, x 30. */
+    assert(screen.next_oam_slot == 2);
+    assert(screen.oam[0] == 69 && screen.oam[1] == 26 && screen.oam[2] == (7 | 2 << 10));
+    assert(screen.oam[4] == 69 && screen.oam[5] == 30 && o[1].exists == 1);
+    /* The first frame lasts two updates, then the second shows. */
+    screen.next_oam_slot = 0;
+    mzm_menu_oam_process(&screen, 2, o, base);
+    assert(o[0].current_animation_frame == 0 && o[1].oam_id == 0 && !o[1].exists);
+    screen.next_oam_slot = 0;
+    mzm_menu_oam_process(&screen, 2, o, base);
+    assert(o[0].current_animation_frame == 1 && screen.oam[2] == (9 | 2 << 10));
+    /* After the last frame it loops back to the first. */
+    screen.next_oam_slot = 0;
+    mzm_menu_oam_process(&screen, 2, o, base);
+    assert(o[0].current_animation_frame == 0);
+    /* ResetFreeOam hides the rest of the buffer. */
+    mzm_reset_free_oam(&screen);
+    assert(screen.oam[4] == 0xFF && screen.oam[5] == 0xFF && screen.oam[6] == 0);
+    mzm_rom_close();
+}
+
+static int count_requests(MzmSfxAction action, uint16_t sound) {
+    int n = 0;
+    for (int i = 0; i < mzm_sfx_count(); ++i) {
+        MzmSfxRequest r = mzm_sfx_get(i);
+        n += r.action == action && r.sound == sound;
+    }
+    return n;
+}
+
+/* With the exported bank: the comets, the scrolling down to the ground,
+ * the title fading in, then START. */
+static void test_title_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the title screen checks are skipped\n");
+        return;
+    }
+    static MzmTitleScreen title;
+    mzm_sfx_clear();
+    mzm_title_enter(&title, false);
+    int f;
+    for (f = 0; f < 700; ++f) {
+        mzm_screen_input(&screen, 0);
+        assert(!mzm_title_update(&title, &screen));
+    }
+    /* The title music starts once faded in, with priority 2. */
+    assert(count_requests(MZM_SFX_MUSIC_PLAY, 0x2) == 1 && count_requests(MZM_SFX_MUSIC_PRIORITY, 0) == 1);
+    assert(title.oam_timings[2].stage == 2 && screen.bg_vofs[3] == 64 * 12 + 32);
+    assert(ppu.io[0] & GBA_DCNT_OBJ && (ppu.io[0] & 0x0F00) != 0);
+    assert(screen.bldalpha_l == 16 && screen.bldalpha_h == 0);
+    /* The screen shows something besides the backdrop. */
+    uint16_t line[GBA_PPU_MAX_W];
+    int drawn = 0;
+    for (int y = 0; y < GBA_SCREEN_H; y += 8) {
+        gba_ppu_render_line(&ppu, y, GBA_SCREEN_W, line);
+        for (int x = 0; x < GBA_SCREEN_W; ++x) drawn += (line[x] & 0x7FFF) != 0;
+    }
+    assert(drawn > GBA_SCREEN_W * 10);
+    /* START: the pressing sound, then the fade out ends the screen. */
+    mzm_screen_input(&screen, 1 << 3);
+    assert(!mzm_title_update(&title, &screen));
+    assert(title.sub_mode2 == 1 && count_requests(MZM_SFX_PLAY, 0x213) == 1);
+    bool left = false;
+    for (f = 0; f < 200 && !left; ++f) {
+        mzm_screen_input(&screen, 0);
+        left = mzm_title_update(&title, &screen);
+    }
+    assert(left && title.sub_mode2 == 1);
+    for (int i = 0; i < 512; ++i) assert(ppu.palette[i] == 0);
+    /* Idle long enough, a demo would start (sub mode 2). */
+    mzm_title_enter(&title, true);
+    left = false;
+    for (f = 0; f < 60 * 18 + 100 && !left; ++f) {
+        mzm_screen_input(&screen, 0);
+        left = mzm_title_update(&title, &screen);
+    }
+    assert(left && title.sub_mode2 == 2);
+    mzm_rom_close();
+}
+
+int main(void) {
+    assert(mzm_screen_init(&screen, &ppu));
+    test_fading();
+    test_menu_oam();
+    test_title_bank();
+    mzm_screen_free(&screen);
+    printf("mzm_screens: ok\n");
+    return 0;
+}

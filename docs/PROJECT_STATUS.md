@@ -2988,6 +2988,24 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0283 - Zero Mission title screen
+
+- `src/runtime/mzm_screen.c`: what the non-gameplay screens share
+  (gOamData, the *_NonGameplay offsets and blending, the EWRAM work area,
+  GBA-bit input) and `ProcessMenuOam`, `ResetFreeOam`,
+  `UpdateMenuOamDataId`, `ClearGfxRam`, `ApplySpecialBackgroundFadingColor`
+  over the ROM's OamArray/FrameData tables.
+- `src/runtime/mzm_title_screen.c` ports the US title screen: init from the
+  ROM bank, fade in, title music (with `UpdateMusicPriority`, now carried by
+  mzm_sfx), comets and ground scrolling, START skipping them, the title
+  alpha fade, animated palettes, sparkles, PRESS START, fade out.
+- The runtime boots on it without arguments or with `--title` (Return or
+  the gamepad's Start is START); START starts the game in brinstar_000.
+  The idle demos re-enter the title past its comets instead of playing.
+- Tests: `tests/test_mzm_screens.c` (fades, menu OAM pre-actions and
+  positions, the title screen on the exported bank); the HUD test now runs
+  its exported-bank checks in CTest too.
+
 ## Patch 0282 - Zero Mission HUD and minimap on a GBA PPU
 
 - Foundation for the native screens: `src/runtime/gba_ppu.c` renders the

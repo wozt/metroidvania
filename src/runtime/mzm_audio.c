@@ -1988,6 +1988,16 @@ void mzm_music_insert(uint16_t music, uint8_t not_interrupting) {
     InsertMusicAndQueueCurrent(music, not_interrupting);
 }
 
+/* UpdateMusicPriority */
+void mzm_music_update_priority(uint8_t priority) {
+    if (gMusicInfo.occupied) return;
+    gMusicInfo.occupied = 1;
+    if (priority == 0x80) gMusicInfo.priority |= priority;
+    else if (priority == 0xFF) gMusicInfo.priority &= (uint8_t)~0x80;
+    else gMusicInfo.priority = (uint8_t)((gMusicInfo.priority & 0x80) | priority);
+    gMusicInfo.occupied = 0;
+}
+
 void mzm_audio_backup_track2(void) { BackupTrackData2SoundChannels(); }
 void mzm_audio_retrieve_track2(void) { RetrieveTrackData2SoundChannels(); }
 

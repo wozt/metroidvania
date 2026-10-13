@@ -40,6 +40,8 @@ void mzm_sound_fade(uint16_t sound, uint16_t timer);
 void mzm_music_play(uint16_t music, uint8_t priority);
 void mzm_music_fade(uint16_t timer);
 void mzm_audio_stop_all(void);
+/* UpdateMusicPriority */
+void mzm_music_update_priority(uint8_t priority);
 /* InsertMusicAndQueueCurrent: the current music is replayed when `music`
  * ends (0 for the item jingles, 1 for the loading jingle). */
 void mzm_music_insert(uint16_t music, uint8_t not_interrupting);

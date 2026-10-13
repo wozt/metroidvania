@@ -71,6 +71,10 @@ enum {
     SAVE_PLATFORM_PART_POSE_TOP_IDLE = 0x43, SAVE_PLATFORM_PART_POSE_TOP_EXTENDING_INIT = 0x44,
     SAVE_PLATFORM_PART_POSE_TOP_EXTENDING = 0x45, SAVE_PLATFORM_PART_POSE_TOP_RETRACTING_INIT = 0x46,
     SAVE_PLATFORM_PART_POSE_TOP_RETRACTING = 0x47,
+    AREA_BANNER_POSE_SPAWNING_INIT = 0x8, AREA_BANNER_POSE_SPAWNING = 0x9, AREA_BANNER_POSE_STATIC = 0x23,
+    AREA_BANNER_POSE_LEAVING = 0x25,
+    /* LocationTextId */
+    LT_MOTHERSHIP = 7, LT_SAVE_ROOM = 9, LT_MAP_ROOM = 11,
 };
 
 static bool check_event(const Ctx *c, uint8_t event) { return ai_check_event(c, event); }
@@ -1016,6 +1020,75 @@ static void save_platform_part(Ctx *c) {
     }
 }
 
+/* AreaBanner: the location's name, at the bottom of the screen for an area,
+ * in its middle for the rooms (save room, map room...), scrolling in,
+ * staying, then out. `room_slot` is the LocationTextId. */
+static void area_banner(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->ignore_samus_timer = 1;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* AreaBannerInit */
+        s->samus_collision = SSC_NONE;
+        s->always_active = true;
+        s->draw_top = BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_bottom = BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_horizontal = (SCREEN_SIZE_X_SUB_PIXEL / 2 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_left = -PIXEL_SIZE;
+        s->hitbox_bottom = s->hitbox_right = PIXEL_SIZE;
+        s->adc = s->frame = 0;
+        s->pose = AREA_BANNER_POSE_SPAWNING_INIT;
+        if (s->room_slot < LT_MOTHERSHIP) {
+            s->anim = MZM_GADGET_AREA_BANNER_SPAWN_BOTTOM;
+            s->work1 = true;
+            s->y = 160 - 8;
+            s->x = 120;
+        } else if ((s->room_slot == LT_SAVE_ROOM || s->room_slot == LT_MAP_ROOM) && c->f->globals &&
+                   c->f->globals->alarm_timer != 0) {
+            kill(s);
+        } else {
+            s->anim = MZM_GADGET_AREA_BANNER_SPAWN_MIDDLE;
+            s->work1 = false;
+            s->y = 160 / 3 + 1;
+            s->x = 120;
+        }
+        break;
+    case AREA_BANNER_POSE_SPAWNING_INIT:
+        /* AreaBannerSpawningInit */
+        s->adc--;
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->pose = AREA_BANNER_POSE_SPAWNING;
+        break;
+    case AREA_BANNER_POSE_SPAWNING:
+        /* AreaBannerSpawning */
+        if (ai_animation_ending(c, 1)) {
+            s->adc = s->frame = 0;
+            s->pose = AREA_BANNER_POSE_STATIC;
+            if (s->work1) {
+                s->anim = MZM_GADGET_AREA_BANNER_STATIC_BOTTOM;
+                s->work0 = 120;                 /* CONVERT_SECONDS(2.f) */
+            } else {
+                s->anim = MZM_GADGET_AREA_BANNER_STATIC_MIDDLE;
+                s->work0 = s->room_slot == LT_SAVE_ROOM || s->room_slot == LT_MAP_ROOM ? 50 : 90;
+            }
+        }
+        break;
+    case AREA_BANNER_POSE_STATIC:
+        /* AreaBannerStatic */
+        if (--s->work0 == 0) {
+            s->adc = s->frame = 0;
+            s->pose = AREA_BANNER_POSE_LEAVING;
+            s->anim = s->work1 ? MZM_GADGET_AREA_BANNER_REMOVING_BOTTOM : MZM_GADGET_AREA_BANNER_REMOVING_MIDDLE;
+        }
+        break;
+    case AREA_BANNER_POSE_LEAVING:
+        if (ai_animation_ending(c, 1)) kill(s);
+        break;
+    default:
+        break;
+    }
+}
+
 void ai_gadget(Ctx *c) {
     if (c->s->secondary) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
@@ -1037,6 +1110,7 @@ void ai_gadget(Ctx *c) {
     case MAP_STATION: map_station(c); break;
     case SAVE_PLATFORM: save_platform(c); break;
     case MZM_PSPRITE_GUNSHIP: ai_gunship(c); break;
+    case MZM_PSPRITE_AREA_BANNER: area_banner(c); break;
     default: break;
     }
 }

@@ -104,6 +104,9 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
      * locked before it (else after) and unlockable by the door timer. */
     struct { int door, event; bool before, unlockable; } hatch_lock_events[8];
     int hatch_lock_event_count;
+    /* DOOR_TYPE_DISPLAYS_ROOM_LOCATION doors (Y lines). */
+    int location_doors[16];
+    int location_door_count;
     MzmHatch native_hatches[MZM_MAX_HATCHES]; int native_hatch_count;
     /* Raw Clipdata values (gBgPointersAndDimensions.pClipDecomp) and the
      * breakable block state (mzm_blocks). */
@@ -456,6 +459,13 @@ static bool parse_native_room(const char *path, Room *room) {
                 room->music > 0xFFFF)
                 goto failure;
             room->has_music = true;
+            continue;
+        }
+        if (line[0] == 'Y') {
+            int door;
+            if (room->location_door_count >= 16 || sscanf(line, "Y\t%d %c", &door, &extra) != 1)
+                goto failure;
+            room->location_doors[room->location_door_count++] = door;
             continue;
         }
         if (line[0] == 'Q') {
@@ -2514,11 +2524,74 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
 }
 
 /* SpriteLoadRoomSprites: the ported sprites of the room. */
-static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room) {
+/* LocationTextGetGfxSlot: the location text of a room entered through
+ * `last_door` (gLastDoorUsed; -1: unknown), or -1. The save and map room
+ * spritesets always name their room; otherwise a door with
+ * DOOR_TYPE_DISPLAYS_ROOM_LOCATION names the room's area (LocationTextGet*). */
+static int runtime_location_text(const Room *room, int last_door) {
+    enum { LT_BRINSTAR, LT_KRAID, LT_NORFAIR, LT_RIDLEY, LT_TOURIAN, LT_CRATERIA, LT_CHOZODIA,
+           LT_MOTHERSHIP, LT_PLANET_ZEBES, LT_SAVE_ROOM, LT_RESEARCH_ROOM, LT_MAP_ROOM, LT_CHOZO_RUINS };
+    switch (room->spriteset) {
+    case 33: case 59: case 88: return LT_SAVE_ROOM;
+    case 27: case 103: return LT_MAP_ROOM;
+    default: break;
+    }
+    bool display = false;
+    for (int i = 0; i < room->location_door_count; ++i)
+        if (room->location_doors[i] == last_door) display = true;
+    if (!display) return -1;
+    int r = room->room;
+    switch (runtime_area_index(room->area)) {
+    case 0:     /* LocationTextGetBrinstar */
+        if (r == 0 || r == 8 || r == 11 || r == 26 || r == 33 || r == 34) return LT_BRINSTAR;
+        return r == 32 ? LT_MAP_ROOM : -1;
+    case 1:     /* LocationTextGetKraid */
+        if (r == 0) return LT_KRAID;
+        if (r == 20 || r == 31 || r == 32 || r == 36 || r == 39) return LT_SAVE_ROOM;
+        return r == 35 ? LT_MAP_ROOM : -1;
+    case 5:     /* LocationTextGetCrateria */
+        if (r == 3 || r == 4 || r == 6 || (r >= 10 && r <= 13) || r == 18) return LT_CRATERIA;
+        if (r == 8 || r == 9 || r == 15 || r == 16 || r == 17) return LT_CHOZO_RUINS;
+        return r == 0 ? LT_PLANET_ZEBES : -1;
+    case 2:     /* LocationTextGetNorfair */
+        if (r == 36 || r == 39 || r == 41 || r == 44 || r == 45) return LT_SAVE_ROOM;
+        if (r == 0 || r == 2 || r == 35 || r == 43) return LT_NORFAIR;
+        return r == 40 ? LT_MAP_ROOM : -1;
+    case 3:     /* LocationTextGetRidley */
+        if (r == 1 || r == 20 || r == 24 || r == 25) return LT_SAVE_ROOM;
+        if (r == 21) return LT_MAP_ROOM;
+        return r == 0 || r == 2 ? LT_RIDLEY : -1;
+    case 6:     /* LocationTextGetChozodia */
+        if (r == 0 || r == 34 || r == 68) return LT_CHOZODIA;
+        if (r == 10 || r == 20 || r == 50 || r == 78 || r == 93) return LT_MOTHERSHIP;
+        return r == 25 || r == 57 || r == 67 ? LT_CHOZO_RUINS : -1;
+    case 4:     /* LocationTextGetTourian */
+        if (r == 6 || r == 11 || r == 20) return LT_SAVE_ROOM;
+        return r == 0 || r == 5 || r == 8 ? LT_TOURIAN : -1;
+    default:
+        return -1;
+    }
+}
+
+static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int last_door) {
     memset(sprites->live, 0, sizeof sprites->live);
     memset(&sprites->effects, 0, sizeof sprites->effects);
     if (!sprites->tables_ok) return;
     int slot = 0;
+    /* SpriteUtilInitLocationText: the area banner takes slot 0. */
+    int lt = runtime_location_text(room, last_door);
+    if (lt >= 0 && sprites->family_ok[MZM_FAMILY_GADGET]) {
+        MzmSprite *banner = &sprites->live[slot++];
+        banner->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN | MZM_SPRITE_STATUS_NOT_DRAWN |
+                         MZM_SPRITE_STATUS_HIGH_PRIORITY | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        banner->absolute = true;
+        banner->sprite_id = MZM_PSPRITE_AREA_BANNER;
+        banner->owner = MZM_PSPRITE_AREA_BANNER;
+        banner->gfx_slot = 7;
+        banner->room_slot = (uint8_t)lt;
+        banner->draw_order = 1;
+        banner->ignore_samus_timer = 1;
+    }
     for (int i = 0; i < room->sprite_count && slot < RUNTIME_MAX_SPRITES; ++i) {
         for (int id = 0; id < 256; ++id) {
             if (strcmp(sprites->names[id], room->sprites[i].name) ||
@@ -2974,13 +3047,13 @@ static int runtime_intro_fade_stage(int frame) {
 static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                                  RuntimeLibrary *sprite_library,SDL_FRect viewport,float cx,
                                  float cy,float scale,bool show_hitbox,int first_order,
-                                 int last_order,Uint8 shade_level) {
+                                 int last_order,Uint8 shade_level,bool absolute_only) {
     /* Their OAM frame, mirrored by the X and Y flip statuses (SpriteDraw);
      * palette rows are baked per sprite by the exporter. */
     for(int order=last_order;order>=first_order;order--)
     for(int i=0;i<RUNTIME_MAX_SPRITES && sprites->kinds_ok;i++) {
         const MzmSprite *sprite=&sprites->live[i];
-        if((sprite->draw_order?sprite->draw_order:4)!=order)continue;
+        if((sprite->draw_order?sprite->draw_order:4)!=order || sprite->absolute!=absolute_only)continue;
         const char *anim_name=mzm_sprite_anim_name(sprite);
         if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) ||
            sprite->status&MZM_SPRITE_STATUS_NOT_DRAWN || !anim_name)continue;
@@ -2997,6 +3070,23 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             shade=sprite->palette_row<4?statue_rows[sprite->palette_row]:"";
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM && sprite->palette_row==2)
             shade="/row2";              /* SavePlatformSaving's flash */
+        else if(sprite->sprite_id==MZM_PSPRITE_AREA_BANNER && !sprite->secondary) {
+            /* TextDrawLocation's text in the banner's graphics. */
+            static char location[8];
+            snprintf(location,sizeof location,"/lt%d",sprite->room_slot);
+            shade=location;
+        } else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_GUNSHIP) {
+            /* The gunship's entrance lights and flames as last copied to
+             * OBJ rows 9 and 10. */
+            static char rows[16];
+            int e=sprites->globals.gunship_entrance_palette,f=sprites->globals.gunship_flames_palette;
+            int n=0;
+            rows[0]='\0';
+            if(e>=0 || f>=0) rows[n++]='/';
+            if(e>=0) n+=snprintf(rows+n,sizeof rows-(size_t)n,"e%d",e);
+            if(f>=0) snprintf(rows+n,sizeof rows-(size_t)n,"f%d",f);
+            shade=rows;
+        }
         else if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
         else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
         snprintf(key,sizeof key,"Sprite/%s/%s/%s%s",
@@ -3014,6 +3104,12 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         SDL_FRect box={viewport.x+((float)(sprite->x>>2)+(float)art->offset_x-cx)*scale,
                        viewport.y+((float)(sprite->y>>2)+(float)art->offset_y-cy)*scale,
                        (float)art->w*scale,(float)art->h*scale};
+        if(sprite->absolute) {
+            /* SP_ABSOLUTE_POSITION: GBA screen pixels, the screen centred
+             * in the view. */
+            box.x=viewport.x+((float)sprite->x+(320-240)/2.f+(float)art->offset_x)*scale;
+            box.y=viewport.y+((float)sprite->y+(224-160)/2.f+(float)art->offset_y)*scale;
+        }
         if(rotated) {
             /* Clockwise around the sprite position, 256 units a turn. */
             SDL_FPoint center={-(float)art->offset_x*scale,-(float)art->offset_y*scale};
@@ -3665,7 +3761,7 @@ int main(int argc, char **argv) {
                        runtime_sprite_kinds_open(&sprites, &sprite_library);
     if (!sprites.kinds_ok)
         fprintf(stderr, "No Zero Mission sprites: python3 -m scripts.mzm_sprites\n");
-    runtime_sprites_spawn(&sprites, room);
+    runtime_sprites_spawn(&sprites, room, -1);
     gba_input_init(&gamepad,&pad_map);
     MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope,
                             runtime_collision_point,runtime_collision_affect,
@@ -3962,7 +4058,7 @@ int main(int argc, char **argv) {
                     if(texture)SDL_DestroyTexture(texture);
                     texture=next_texture;
                     samus=placed;
-                    runtime_sprites_spawn(&sprites, room);
+                    runtime_sprites_spawn(&sprites, room, -1);
                     runtime_blocks_load(room,alias);
                     runtime_hatches_load(room,alias,-1);
                     runtime_hatch_lock_events(room,runtime_sprite_check_event,&sprites);
@@ -4146,7 +4242,7 @@ int main(int argc, char **argv) {
                         texture=next_texture;
                         snprintf(current_room,sizeof current_room,"%s",resume_save.room);
                     }
-                    runtime_sprites_spawn(&sprites,room);
+                    runtime_sprites_spawn(&sprites,room,resume_request==RUNTIME_RESUME_NEW_GAME?0:-1);
                     sprites.banner.exists=false;
                     sprites.banner.cursor.exists=false;
                     runtime_apply_save(&resume_save,&equipment,&sprites,&samus,&collision,
@@ -4637,7 +4733,14 @@ int main(int argc, char **argv) {
                     runtime_place_after_door(&samus,&used,door_offset);
                     sprites.globals.landing=false;
                     sprites.globals.hide_hud=false;
-                    runtime_sprites_spawn(&sprites, room);
+                    {
+                        /* gLastDoorUsed: the arrival door. */
+                        int arrival_door=-1;
+                        for(int d=0;d<room->door_count;d++)
+                            if(room->doors[d].x0==used.dest_x && room->doors[d].y1==used.dest_y_end)
+                                arrival_door=room->doors[d].index;
+                        runtime_sprites_spawn(&sprites, room, arrival_door);
+                    }
                     runtime_sprites_door_arrival(&sprites, room, &used);
                     {
                         /* The arrival door: the new room's door at the exit. */
@@ -4845,7 +4948,7 @@ int main(int argc, char **argv) {
         bool dying_mode=samus.pose==MZM_POSE_DYING;
         if(!dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16,
-                                 runtime_door_fade_shade(&door_fade));
+                                 runtime_door_fade_shade(&door_fade),false);
 
         RuntimeLibraryEntry *lib_entry=NULL;
         int frame=0;
@@ -4941,7 +5044,7 @@ int main(int argc, char **argv) {
          * 8, in front of Samus. */
         if(!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden) && !dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,8,
-                                 runtime_door_fade_shade(&door_fade));
+                                 runtime_door_fade_shade(&door_fade),false);
         /* SpriteDebrisDrawAll and ParticleDraw: the common sprite graphics. */
         for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok && !dying_mode;i++) {
             const char *table; uint16_t px,py,frame;
@@ -5082,6 +5185,11 @@ int main(int argc, char **argv) {
                 if(cursor_texture)SDL_RenderTexture(renderer,cursor_texture,NULL,&box);
             }
         }
+        /* The sprites at an absolute position (the area banner): BG
+         * priority 0, in front of every background. */
+        if(!dying_mode)
+            runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,16,
+                                 runtime_door_fade_shade(&door_fade),true);
         if(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.cover) {
             /* BG3 at priority 0 over everything: the door transition
              * tilemap (alpha blended over the rest while it appears) or

@@ -2988,6 +2988,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0304 - Zero Mission area banners
+
+- AreaBanner and LocationTextGetGfxSlot: entering a room through a door
+  flagged DOOR_TYPE_DISPLAYS_ROOM_LOCATION shows the area's name at the
+  bottom of the screen (BRINSTAR at a new game's start), and a save or map
+  room's spriteset its name in the middle (SAVE ROOM), in sprite slot 0 at
+  an absolute screen position, in front of every background.
+- The exporter draws each location text in the banner's graphics
+  (TextDrawLocation) as /ltN variants; the rooms export their location
+  doors as Y lines.
+- The gunship's sprites now draw with their entrance and flames palette
+  rows (the variants baked in patch 0298 were not selected).
+- Checked by capture; tests in `tests/test_mzm_sprites.c`.
+
 ## Patch 0303 - Zero Mission fades around the pause
 
 - ProcessPauseButtonPress and COLOR_FADING_CANCEL: START, a map station or

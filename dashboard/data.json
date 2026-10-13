@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-13T19:46:51+00:00",
+ "generated_at": "2026-10-13T20:04:11+00:00",
  "git": {
-  "commit": "710664e",
+  "commit": "9788192",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 108,
+   "total": 109,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 84,
+    "partial": 85,
     "functional": 13,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 13,
-   "functional_or_better_percent": 12.0,
-   "with_passing_tests": 96,
-   "with_passing_tests_percent": 88.9,
+   "functional_or_better_percent": 11.9,
+   "with_passing_tests": 97,
+   "with_passing_tests_percent": 89.0,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -143,6 +143,7 @@
     "mzm.environment.room_gadgets",
     "mzm.environment.save_platforms",
     "mzm.input.gamepad",
+    "mzm.interface.area_banner",
     "mzm.interface.hud_and_minimap",
     "mzm.interface.message_banner",
     "mzm.items.chozo_statues",
@@ -225,11 +226,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 60,
+   "total": 61,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 60,
+    "partial": 61,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -238,7 +239,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 60,
+   "with_passing_tests": 61,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -276,6 +277,7 @@
     "mzm.environment.room_gadgets",
     "mzm.environment.save_platforms",
     "mzm.input.gamepad",
+    "mzm.interface.area_banner",
     "mzm.interface.hud_and_minimap",
     "mzm.interface.message_banner",
     "mzm.items.chozo_statues",
@@ -2234,7 +2236,7 @@
     "SpriteUtilRefillSuperMissiles",
     "SpriteUtilRefillPowerBombs"
    ],
-   "limitations": "gLastDoorUsed is not tracked: the landing happens in the room a new game starts in (the runtime's `landing` flag), never when entering the room through a door. The palette animations (GunshipEntranceFlashingAnim's OBJ row 9 and GunshipFlickerFlames' row 10) are baked as library variants of every combination. The mosaic status is not drawn. The escape (Mother Brain killed) runs its AI but the Zebes exit (EFFECT_CUTSCENE_EXITING_ZEBES) and the escape sequence are not ported, and the take-off is untested. The new file's COLOR_FADING_LANDING_SHIP fade in is not drawn. Not compared with an emulator. \"A new game from the file select starts in Crateria's first room with the gunship six blocks up landing in 3.2 seconds (SOUND_GUNSHIP_LANDING, the vertical then horizontal flames, the HUD hidden, the pause disabled), Samus inside it (SPOSE_SAVING_LOADING_GAME with lastWallTouchedMidAir, drawn with the native in-ship animation behind the ship); half a second before touching down it starts the intro text, which leads to the game's start in Brinstar. On the ground the gunship's entrance opens and its platform rises while Samus is near; Samus standing on top (SSC_CAN_STAND_ON_TOP) enters it (turning from the foreground, sinking with the platform behind the closing entrance), is refilled (energy, missiles, super missiles, power bombs with the HUD's refill animations and SOUND_GUNSHIP_REFILL), gets \"\"Weapons and energy fully restored\"\", then the save prompt: yes saves the file (the gunship's saving sound and \"\"Save complete\"\"); then she rises out of the hatch and faces the screen. A file saved there resumes with Samus rising out of the ship. Checked by capture: the landing and its fade into the intro text, entering, the refill, the save and leaving in crateria_000. The tests run the landing, entering, the refill, the save prompt and leaving.\"",
+   "limitations": "gLastDoorUsed is not tracked: the landing happens in the room a new game starts in (the runtime's `landing` flag), never when entering the room through a door. The palette animations (GunshipEntranceFlashingAnim's OBJ row 9 and GunshipFlickerFlames' row 10) are baked as library variants of every combination, the runtime drawing the gunship's sprites with the rows last copied. The mosaic status is not drawn. The escape (Mother Brain killed) runs its AI but the Zebes exit (EFFECT_CUTSCENE_EXITING_ZEBES) and the escape sequence are not ported, and the take-off is untested. The new file's COLOR_FADING_LANDING_SHIP fade in is not drawn. Not compared with an emulator. \"A new game from the file select starts in Crateria's first room with the gunship six blocks up landing in 3.2 seconds (SOUND_GUNSHIP_LANDING, the vertical then horizontal flames, the HUD hidden, the pause disabled), Samus inside it (SPOSE_SAVING_LOADING_GAME with lastWallTouchedMidAir, drawn with the native in-ship animation behind the ship); half a second before touching down it starts the intro text, which leads to the game's start in Brinstar. On the ground the gunship's entrance opens and its platform rises while Samus is near; Samus standing on top (SSC_CAN_STAND_ON_TOP) enters it (turning from the foreground, sinking with the platform behind the closing entrance), is refilled (energy, missiles, super missiles, power bombs with the HUD's refill animations and SOUND_GUNSHIP_REFILL), gets \"\"Weapons and energy fully restored\"\", then the save prompt: yes saves the file (the gunship's saving sound and \"\"Save complete\"\"); then she rises out of the hatch and faces the screen. A file saved there resumes with Samus rising out of the ship. Checked by capture: the landing and its fade into the intro text, entering, the refill, the save and leaving in crateria_000. The tests run the landing, entering, the refill, the save prompt and leaving.\"",
    "next_action": "Port the in-game color fadings and background effects, then the escape take-off with the Zebes exit.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -2487,6 +2489,71 @@
       "registered": true,
       "ctest": [
        "gba_input"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-13"
+   }
+  },
+  {
+   "id": "mzm.interface.area_banner",
+   "area": "mzm",
+   "category": "interface",
+   "title": "Area and room name banners",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_gadget_sprites.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py",
+    "scripts/mzm_message_text.py",
+    "scripts/mzm_runtime_room.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer",
+    "mzm.transitions.doors_and_hatches"
+   ],
+   "native_routines": [
+    "AreaBanner",
+    "AreaBannerInit",
+    "AreaBannerSpawningInit",
+    "AreaBannerSpawning",
+    "AreaBannerStatic",
+    "AreaBannerLeaving",
+    "SpriteUtilInitLocationText",
+    "LocationTextGetGfxSlot",
+    "LocationTextGetBrinstar",
+    "LocationTextGetKraid",
+    "LocationTextGetCrateria",
+    "LocationTextGetNorfair",
+    "LocationTextGetRidley",
+    "LocationTextGetChozodia",
+    "LocationTextGetTourian",
+    "TextDrawLocation",
+    "TextDrawLocationTextCharacters"
+   ],
+   "limitations": "The location texts are baked in the banner's graphics by the exporter (English only), as /ltN library variants; the banner always draws as graphics slot 7 (its slot of the spriteset only matters for the palette rows, which are baked). gLastDoorUsed is known for door transitions and the new game's start (door 0); a loaded file shows only the save and map room banners of their spritesets. The banner is drawn after the front backgrounds (BG priority 0) at its GBA screen position, the GBA screen centred in the wider view. Not compared with an emulator. SpriteUtilInitLocationText: when a room is entered through a door flagged DOOR_TYPE_DISPLAYS_ROOM_LOCATION (exported as Y lines) the area's location text (LocationTextGet*: BRINSTAR, KRAID, NORFAIR, RIDLEY, TOURIAN, CRATERIA, CHOZODIA, MOTHERSHIP, PLANET ZEBES, CHOZO RUINS, the map rooms...), and in a save or map room spriteset always its name, put an area banner in sprite slot 0 at an absolute screen position: an area's name scrolls in at the bottom for 2 seconds (sAreaBannerLocationTextPal), a room's name in the middle for 1.5 seconds (5/6 of a second for the save and map rooms, none of those while the alarm rings), then scrolls out. TextDrawLocation's text (mask mode over 0xFF, its two tile rows copied to the graphics slot) is drawn by the exporter with the native font. Checked by capture: BRINSTAR at a new game's start and SAVE ROOM in brinstar_033. The tests run both banners and the alarm case.",
+   "next_action": "Port the remaining gadgets (morph ball launchers, ziplines, security gates), then compare with an emulator.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
       ],
       "outcome": "passed",
       "exists": true
@@ -7254,6 +7321,12 @@
  },
  "timeline": [
   {
+   "commit": "9788192",
+   "date": "2026-10-13",
+   "subject": "feat(mzm): game fades around the pause screen",
+   "scope": "mzm"
+  },
+  {
    "commit": "710664e",
    "date": "2026-10-13",
    "subject": "feat(mzm): death fades to black then white",
@@ -7726,12 +7799,6 @@
    "date": "2026-10-10",
    "subject": "feat: evidence-based routine classification",
    "scope": "project"
-  },
-  {
-   "commit": "15e2a3e",
-   "date": "2026-10-10",
-   "subject": "feat: ROM extractors in the rebuild graph",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -7759,7 +7826,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 778,
+    "routines_cited_by_features": 795,
     "call_edges": 6071
    },
    "aos": {

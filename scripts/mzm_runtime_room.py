@@ -163,6 +163,7 @@ def door_tables(decomp: Path = DECOMP) -> dict[str, list[dict]]:
             if kind is None:
                 raise ValueError(f"{match.group(1)} door has no base type")
             doors.append({"kind": DOOR_KINDS[kind], "event": "DOOR_TYPE_LOAD_EVENT_BASED_ROOM" in flags,
+                          "location": "DOOR_TYPE_DISPLAYS_ROOM_LOCATION" in flags,
                           **{key: int(fields[key]) for key in
                              ("sourceRoom", "xStart", "xEnd", "yStart", "yEnd",
                               "destinationDoor")},
@@ -367,6 +368,11 @@ def encode_room(area: str, number: int, width: int, height: int,
                            f"{target['yEnd']}\t{target['xExit']}\t{target['yExit']}")
         lines.append(f"D\t{index}\t{door['kind']}\t{door['xStart']}\t{door['xEnd']}\t"
                      f"{door['yStart']}\t{door['yEnd']}\t{destination}")
+    # DOOR_TYPE_DISPLAYS_ROOM_LOCATION: arriving through the door may show
+    # the location's banner (gDisplayLocationText).
+    for index, door in enumerate(doors or []):
+        if door["sourceRoom"] == number and door.get("location"):
+            lines.append(f"Y\t{index}")
     for index, x, y, hatch, weakness, health in hatches or []:
         lines.append(f"H\t{index}\t{x}\t{y}\t{hatch[len('HATCH_'):].lower()}\t"
                      f"{weakness}\t{health}")

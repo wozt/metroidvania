@@ -100,7 +100,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_GERON_VARIA1": 0, "PSPRITE_GERON_VARIA2": 0, "PSPRITE_GERON_VARIA3": 0,
           "PSPRITE_GERON_NORFAIR": 0, "PSPRITE_PLASMA_BEAM_BLOCK": 0,
           "PSPRITE_GRAVITY_SUIT_BLOCK": 0, "PSPRITE_SPACE_JUMP_BLOCK": 0, "PSPRITE_MAP_STATION": 0,
-          "PSPRITE_SAVE_PLATFORM": 0, "PSPRITE_GUNSHIP": 0,
+          "PSPRITE_SAVE_PLATFORM": 0, "PSPRITE_GUNSHIP": 0, "PSPRITE_AREA_BANNER": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
@@ -115,6 +115,12 @@ ROW_VARIANTS = {"PSPRITE_SAVE_PLATFORM": (2,)}
 # colors), is baked as ``/eEfF``, ``/eE``, ``/fF`` or no suffix (the gunship
 # never flips).
 GUNSHIP_FLASHING = "sGunshipFlashingPal"
+# The area banner (PSPRITE_AREA_BANNER) with each location text drawn in its
+# graphics (TextDrawLocation: the text in mask mode over 0x800 bytes of
+# 0xFF, its two tile rows copied to the graphics slot), baked as ``/ltN``;
+# the area names (below LT_SAVE_ROOM) use sAreaBannerLocationTextPal.
+LOCATION_TEXTS = 14                     # LT_BRINSTAR ... LT_STARSHIP
+LT_SAVE_ROOM = 9
 # MultiSpriteData tables (gSubSpriteData1.pMultiOam) of ported sprites, read
 # from the decompilation as ``multi`` lines: name, frame, timer, then each
 # part's OAM index, y and x offsets.
@@ -424,7 +430,8 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         wanted.update([graphics[sprite], palettes[sprite], *tables])
     tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
     wanted.update(tables)
-    wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, *AI_TABLES])
+    wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, *AI_TABLES,
+                   "sLocationTextPointers", "sAreaBannerLocationTextPal"])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values(), *PARTICLES])
     wanted.update(table for tables in COMMON_SPRITES.values() for table in tables)
     banner_source = (decomp / "src/data/sprites/message_banner.c").read_text(encoding="utf-8")
@@ -561,6 +568,28 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                 bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
                 frames.append((bmp, duration, left, top))
             library.add(f"Banner/{name}/{table[1:]}/none", frames)
+    # The area banner's location texts.
+    pointers = struct.unpack_from("<I", rom, rom_offset(symbols["sLocationTextPointers"][0], rom) +
+                                  4 * mzm_message_text.LANGUAGE_ENGLISH)[0]
+    banner_plan = next(item for item in plan if item[0] == "PSPRITE_AREA_BANNER")
+    for lt in range(LOCATION_TEXTS):
+        palette_symbol = banner_plan[3] if lt >= LT_SAVE_ROOM else "sAreaBannerLocationTextPal"
+        vram, palette = stage(rom, symbols, banner_plan[2], palette_symbol, 0)
+        text_pointer = struct.unpack_from("<I", rom, rom_offset(pointers, rom) + 4 * lt)[0]
+        text = mzm_message_text.read_text(rom, text_pointer, rom_offset)
+        buffer = mzm_message_text.Vram(b"\xff" * 0x800)
+        mzm_message_text.draw_location(buffer, font, text)
+        drawn = bytearray(vram)
+        raw = buffer.to_bytes()
+        drawn[SPRITE_VRAM:SPRITE_VRAM + 0x380] = raw[:0x380]
+        drawn[SPRITE_VRAM + 0x400:SPRITE_VRAM + 0x780] = raw[0x400:0x780]
+        for table in banner_plan[4]:
+            frames = []
+            for pointer, duration in mzm_projectile_compose.frames(rom, symbols, table):
+                pixels = mzm_projectile_compose.render(rom, bytes(drawn), palette, pointer, "none")
+                bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+                frames.append((bmp, duration, left, top))
+            library.add(f"Sprite/AREA_BANNER/{table[1:]}/none/lt{lt}", frames)
     vram, palette = stage_common(rom, symbols)
     for sprite, table in DROPS.items():
         frames = []

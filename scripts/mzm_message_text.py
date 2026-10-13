@@ -217,6 +217,28 @@ def process_banner(message: Message, vram: Vram, font: Font, base: int) -> int:
     return message.line
 
 
+def draw_location(vram: Vram, font: Font, text: list[int]) -> None:
+    """TextDrawLocationTextCharacters(1, ...): the first line of a location
+    text, in mask mode, at word 0 of `vram`."""
+    indent = color = 0
+    for char in text:
+        if char in (CHAR_TERMINATOR, CHAR_NEW_LINE):
+            break
+        kind = char & CHAR_MASK
+        if kind == CHAR_WIDTH_MASK:
+            width = char & 0xFF
+        elif kind == CHAR_INDENT_MASK:
+            width = 0
+            indent = char & 0xFF
+        elif kind == CHAR_COLOR_MASK:
+            width = 0
+            color = char & 0xFF
+        else:
+            width = font.width(char)
+            draw_character(vram, font, char, 0, indent, color)
+        indent += width
+
+
 def read_text(rom: bytes, pointer: int, rom_offset) -> list[int]:
     """A u16 message text up to and including its terminator."""
     offset = rom_offset(pointer, rom)

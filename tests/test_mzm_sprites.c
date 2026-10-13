@@ -3325,6 +3325,45 @@ int main(void) {
         assert(room[0].pose == 0x29 && ship_link.y == (uint16_t)(ship_samus_y - 43 * 4) &&
                ship_link.set_pose == MZM_POSE_FACING_THE_FOREGROUND);
         g.equipment = frame.equipment;
+        /* The area banner: an area's name at the bottom of the GBA screen
+         * for 2 seconds, a room's name in the middle (the save room's
+         * shorter), none for the save room while the alarm rings. */
+        memset(room, 0, sizeof room);
+        memset(&station_globals, 0, sizeof station_globals);
+        room[0].status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_NOT_DRAWN;
+        room[0].sprite_id = MZM_PSPRITE_AREA_BANNER;
+        room[0].absolute = true;
+        room[0].room_slot = 0;                  /* LT_BRINSTAR */
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x8 && room[0].anim == MZM_GADGET_AREA_BANNER_SPAWN_BOTTOM && room[0].x == 120 &&
+               room[0].y == 152 && room[0].always_active);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && !(room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN));
+        int banner_frames = 0;
+        while (room[0].pose == 0x9 && banner_frames++ < 200) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x23 && room[0].anim == MZM_GADGET_AREA_BANNER_STATIC_BOTTOM && room[0].work0 == 120);
+        for (int i = 0; i < 120; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25 && room[0].anim == MZM_GADGET_AREA_BANNER_REMOVING_BOTTOM);
+        banner_frames = 0;
+        while (room[0].status && banner_frames++ < 200) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].status == 0);
+        memset(room, 0, sizeof room);
+        room[0].status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_NOT_DRAWN;
+        room[0].sprite_id = MZM_PSPRITE_AREA_BANNER;
+        room[0].room_slot = 9;                  /* LT_SAVE_ROOM */
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].anim == MZM_GADGET_AREA_BANNER_SPAWN_MIDDLE && room[0].y == 160 / 3 + 1);
+        mzm_sprite_update(&room[0], 0, &g);
+        banner_frames = 0;
+        while (room[0].pose == 0x9 && banner_frames++ < 200) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].anim == MZM_GADGET_AREA_BANNER_STATIC_MIDDLE && room[0].work0 == 50);
+        memset(room, 0, sizeof room);
+        station_globals.alarm_timer = 100;
+        room[0].status = MZM_SPRITE_STATUS_EXISTS;
+        room[0].sprite_id = MZM_PSPRITE_AREA_BANNER;
+        room[0].room_slot = 9;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].status == 0);
         g.banner_pose = 0;
         g.banner_yes = false;
         g.samus_link = NULL;

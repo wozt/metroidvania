@@ -213,6 +213,12 @@ const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
     "GunshipPartOam_Platform",
     "GunshipPartOam_FlamesHorizontal",
     "GunshipPartOam_FlamesVertical",
+    "AreaBannerOam_SpawnMiddle",
+    "AreaBannerOam_StaticMiddle",
+    "AreaBannerOam_RemovingMiddle",
+    "AreaBannerOam_SpawnBottom",
+    "AreaBannerOam_StaticBottom",
+    "AreaBannerOam_RemovingBottom",
 };
 static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
@@ -224,6 +230,7 @@ static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION",
     "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM",
     "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP",
+    "AREA_BANNER", "AREA_BANNER", "AREA_BANNER", "AREA_BANNER", "AREA_BANNER", "AREA_BANNER",
 };
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
@@ -4391,7 +4398,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_GERON_VARIA2: case MZM_PSPRITE_GERON_VARIA3: case MZM_PSPRITE_GERON_NORFAIR:
     case MZM_PSPRITE_PLASMA_BEAM_BLOCK: case MZM_PSPRITE_GRAVITY_SUIT_BLOCK:
     case MZM_PSPRITE_SPACE_JUMP_BLOCK: case MZM_PSPRITE_MAP_STATION: case MZM_PSPRITE_SAVE_PLATFORM:
-    case MZM_PSPRITE_GUNSHIP:
+    case MZM_PSPRITE_GUNSHIP: case MZM_PSPRITE_AREA_BANNER:
         return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
@@ -5060,6 +5067,7 @@ static void update_animation(Ctx *c) {
 /* SpriteCheckOnScreen (sprites without an absolute position). */
 static void check_on_screen(const Ctx *c) {
     MzmSprite *s = c->s;
+    if (s->absolute) return;
     uint16_t bg_y = (uint16_t)(c->world->camera_y + HALF_SCREEN_BLOCKS_SUB_PIXEL);
     uint16_t sprite_y = (uint16_t)(s->y + HALF_SCREEN_BLOCKS_SUB_PIXEL);
     uint16_t bottom = (uint16_t)(bg_y - s->draw_bottom * PIXEL_SIZE);

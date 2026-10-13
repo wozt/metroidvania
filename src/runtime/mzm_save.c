@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { VERSION = 1, HEADER = 8 + 4 + 4, TRAILER = 4 };
+enum { VERSION = 2, HEADER = 8 + 4 + 4, TRAILER = 4 };
 static const char MAGIC[8] = {'M', 'V', 'Z', 'M', 'S', 'A', 'V', 'E'};
 
 typedef struct {
@@ -16,6 +16,7 @@ typedef struct {
     const uint8_t *in;      /* decoding */
     size_t at, size;
     bool ok;
+    uint32_t version;
 } Io;
 
 static void raw(Io *io, void *value, size_t size) {
@@ -123,6 +124,19 @@ static void visit(Io *io, MzmSaveData *d) {
     i32(io, &d->never_reform_count);
     for (int i = 0; i < MZM_SAVE_NEVER_REFORM; ++i) block(io, &d->never_reform[i]);
     flag(io, &d->escaped_zebes);
+    if (io->version < 2) {
+        d->area = 0;
+        d->difficulty = 1;
+        return;
+    }
+    u8(io, &d->area);
+    u8(io, &d->difficulty);
+    u8(io, &d->igt.hours);
+    u8(io, &d->igt.minutes);
+    u8(io, &d->igt.seconds);
+    u8(io, &d->igt.frames);
+    flag(io, &d->max_igt);
+    u8(io, &d->completed_game);
 }
 
 static uint32_t crc32(const uint8_t *p, size_t n) {
@@ -144,7 +158,7 @@ static uint32_t get32(const uint8_t *p) {
 
 uint8_t *mzm_save_encode(const MzmSaveData *data, size_t *size) {
     MzmSaveData copy = *data;
-    Io measure = {NULL, NULL, 0, 0, true};
+    Io measure = {NULL, NULL, 0, 0, true, VERSION};
     visit(&measure, &copy);
     size_t total = HEADER + measure.at + TRAILER;
     uint8_t *bytes = malloc(total);
@@ -152,7 +166,7 @@ uint8_t *mzm_save_encode(const MzmSaveData *data, size_t *size) {
     memcpy(bytes, MAGIC, sizeof MAGIC);
     put32(bytes + 8, VERSION);
     put32(bytes + 12, (uint32_t)measure.at);
-    Io io = {bytes + HEADER, NULL, 0, 0, true};
+    Io io = {bytes + HEADER, NULL, 0, 0, true, VERSION};
     visit(&io, &copy);
     put32(bytes + HEADER + measure.at, crc32(bytes + HEADER, measure.at));
     *size = total;
@@ -161,13 +175,14 @@ uint8_t *mzm_save_encode(const MzmSaveData *data, size_t *size) {
 
 bool mzm_save_decode(const uint8_t *bytes, size_t size, MzmSaveData *data) {
     if (size < HEADER + TRAILER || memcmp(bytes, MAGIC, sizeof MAGIC) != 0) return false;
-    if (get32(bytes + 8) != VERSION) return false;
+    uint32_t version = get32(bytes + 8);
+    if (version < 1 || version > VERSION) return false;
     size_t payload = get32(bytes + 12);
     if (payload != size - HEADER - TRAILER) return false;
     if (crc32(bytes + HEADER, payload) != get32(bytes + HEADER + payload)) return false;
     MzmSaveData parsed;
     memset(&parsed, 0, sizeof parsed);
-    Io io = {NULL, bytes + HEADER, 0, payload, true};
+    Io io = {NULL, bytes + HEADER, 0, payload, true, version};
     visit(&io, &parsed);
     if (!io.ok || io.at != payload) return false;
     if (parsed.hatch_destination_count < 0 || parsed.hatch_destination_count > MZM_SAVE_HATCH_DESTINATIONS ||

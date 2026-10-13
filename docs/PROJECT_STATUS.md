@@ -2988,6 +2988,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0293 - Zero Mission file select screen
+
+- `src/runtime/mzm_file_select.c`: the US file select screen
+  (menus/file_select.c) on the native screen PPU, after START on the
+  title: the three files (energy and tanks, timer, difficulty, area), the
+  cursor and markers, the "Start game" panel with its native text, the
+  continue / new game choice and overwrite confirmation of a completed
+  file, the difficulty panel of a new file, the start animation, the fades
+  and B back to the title. Copy, erase, the options and the time attack are
+  not ported.
+- The runtime keeps three save files (`--save-dir DIR`, replacing
+  `--save-file`), the most recent one being selected; a continued file
+  loads its room and state, a new game keeps its difficulty.
+- The save format becomes version 2 (area, difficulty, in-game timer,
+  completed flags); version 1 files are still read. The in-game timer runs
+  each game frame (InGameTimerUpdate).
+- Captures print the screen state (title, file select, pause).
+- Checked by capture (files, panels, new game, continue); tests in
+  `tests/test_mzm_screens.c` and `tests/test_mzm_save.c`.
+
 ## Patch 0292 - Zero Mission save platforms and save file
 
 - `src/runtime/mzm_gadget_sprites.c`: the save platform and its tube,

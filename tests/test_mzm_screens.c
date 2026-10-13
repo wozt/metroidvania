@@ -12,6 +12,7 @@
 #include "mzm_title_screen.h"
 #include "mzm_hud.h"
 #include "mzm_pause_screen.h"
+#include "mzm_file_select.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -366,12 +367,136 @@ static void test_pause_bank(void) {
     mzm_rom_close();
 }
 
+/* The file select screen on the exported bank: file A saved, B and C
+ * empty; a new game on B with the difficulty panel, then B back to the
+ * title. */
+static void test_file_select_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the file select checks are skipped\n");
+        return;
+    }
+    static MzmFileSelect fs;
+    MzmSaveFileInfo files[3];
+    memset(files, 0, sizeof files);
+    files[0].exists = true;
+    files[0].energy = 99;
+    files[0].max_energy = 199;
+    files[0].igt_hours = 1;
+    files[0].igt_minutes = 23;
+    files[0].igt_seconds = 45;
+    files[0].difficulty = 1;
+    files[1].difficulty = files[2].difficulty = 1;
+    mzm_file_select_enter(&fs, files, 0);
+    mzm_sfx_clear();
+    int f, result = 0;
+    for (f = 0; f < 60 && fs.sub_mode1 != 2; ++f) {
+        mzm_screen_input(&screen, 0);
+        result = mzm_file_select_update(&fs, &screen);
+    }
+    assert(fs.sub_mode1 == 2 && result == MZM_FILE_SELECT_STAY && count_requests(MZM_SFX_MUSIC_PLAY, 0x9) == 1);
+    /* File A and copy, erase and options are enabled. */
+    assert(fs.enabled_menus == (1 << 0 | 1 << 3 | 1 << 4 | 1 << 5));
+    /* File A's timer 01:23:45 in the menu tilemap (0x1CC + digit), B's
+     * --:--:--; its energy tiles are drawn. */
+    const uint16_t *menu = (const uint16_t *)(screen.ewram + 0x800);
+    assert((menu[0x6E] & 0x3FF) == 0x1CC + 0 && (menu[0x6E + 1] & 0x3FF) == 0x1CC + 1 &&
+           (menu[0x6E + 3] & 0x3FF) == 0x1CC + 2 && (menu[0x6E + 7] & 0x3FF) == 0x1CC + 5);
+    assert((menu[96 + 0x6E] & 0x3FF) == 0x1CB);
+    bool energy = false;
+    for (int i = 0; i < 0xE0 && !energy; ++i) energy = ppu.vram[0x20 + i] != 0;
+    assert(energy);
+    for (int i = 0; i < 0xE0; ++i) assert(ppu.vram[0x20 + 0xE0 + i] == 0);
+    /* DOWN to file B, A opens its "Start game" panel and its text. */
+    mzm_screen_input(&screen, 1 << 7);
+    mzm_file_select_update(&fs, &screen);
+    assert(fs.cursor_position == 1 && count_requests(MZM_SFX_PLAY, 0x1F9) == 1);
+    mzm_screen_input(&screen, 0);
+    mzm_file_select_update(&fs, &screen);
+    mzm_screen_input(&screen, 1);
+    mzm_file_select_update(&fs, &screen);
+    assert(fs.current_sub_menu == 1 && count_requests(MZM_SFX_PLAY, 0x1FB) == 1);
+    for (f = 0; f < 200 && fs.sub_menu_stage != 7; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(&fs, &screen);
+    }
+    assert(fs.sub_menu_stage == 7 && fs.most_recent == 1 && fs.message_queue[0] == 0xFF);
+    bool text = false;
+    for (int i = 0; i < 0x800 && !text; ++i) text = ppu.vram[0x5800 + i] != 0xFF;
+    assert(text);
+    /* A: the new file asks the difficulty (normal by default). */
+    mzm_screen_input(&screen, 1);
+    mzm_file_select_update(&fs, &screen);
+    for (f = 0; f < 200 && fs.sub_menu_stage != 30; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(&fs, &screen);
+    }
+    assert(fs.sub_menu_stage == 30 && fs.cursors.difficulty == 1 && fs.difficulty_message == 18);
+    mzm_screen_input(&screen, 1 << 6);
+    mzm_file_select_update(&fs, &screen);
+    assert(fs.cursors.difficulty == 0);
+    mzm_screen_input(&screen, 0);
+    mzm_file_select_update(&fs, &screen);
+    mzm_screen_input(&screen, 1 << 7);
+    mzm_file_select_update(&fs, &screen);
+    mzm_screen_input(&screen, 0);
+    mzm_file_select_update(&fs, &screen);
+    mzm_screen_input(&screen, 1 << 7);
+    mzm_file_select_update(&fs, &screen);
+    assert(fs.cursors.difficulty == 1);
+    mzm_screen_input(&screen, 0);
+    mzm_file_select_update(&fs, &screen);
+    mzm_sfx_clear();
+    mzm_screen_input(&screen, 1);
+    mzm_file_select_update(&fs, &screen);
+    for (f = 0; f < 300 && result == 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        result = mzm_file_select_update(&fs, &screen);
+    }
+    assert(result == MZM_FILE_SELECT_NEW_GAME && fs.most_recent == 1 && fs.cursors.difficulty == 1 &&
+           count_requests(MZM_SFX_PLAY, 0x1FF) == 1 && count_requests(MZM_SFX_MUSIC_FADE, 0) == 1);
+    /* B on the files goes back to the title after the fade. */
+    mzm_file_select_enter(&fs, files, 0);
+    for (f = 0; f < 60 && fs.sub_mode1 != 2; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(&fs, &screen);
+    }
+    mzm_screen_input(&screen, 1 << 1);
+    result = mzm_file_select_update(&fs, &screen);
+    for (f = 0; f < 60 && result == 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        result = mzm_file_select_update(&fs, &screen);
+    }
+    assert(result == MZM_FILE_SELECT_TITLE);
+    /* A on the saved file A continues it. */
+    mzm_file_select_enter(&fs, files, 0);
+    for (f = 0; f < 60 && fs.sub_mode1 != 2; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(&fs, &screen);
+    }
+    mzm_screen_input(&screen, 1);
+    result = mzm_file_select_update(&fs, &screen);
+    for (f = 0; f < 200 && fs.sub_menu_stage != 7; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(&fs, &screen);
+    }
+    mzm_screen_input(&screen, 1);
+    result = mzm_file_select_update(&fs, &screen);
+    for (f = 0; f < 300 && result == 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        result = mzm_file_select_update(&fs, &screen);
+    }
+    assert(result == MZM_FILE_SELECT_CONTINUE && fs.most_recent == 0);
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
     test_menu_oam();
     test_title_bank();
     test_pause_bank();
+    test_file_select_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

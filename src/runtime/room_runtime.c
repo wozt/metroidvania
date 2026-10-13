@@ -27,6 +27,8 @@
 #include "mzm_title_screen.h"
 #include "mzm_pause_screen.h"
 #include "mzm_save.h"
+#include "mzm_file_select.h"
+#include <sys/stat.h>
 #include "mzm_sprites.h"
 
 #define MAX_MARKS 32768
@@ -2104,6 +2106,93 @@ typedef struct {
     MzmMessageBanner banner;
 } RuntimeSprites;
 
+/* gInGameTimer, gMaxInGameTimerFlag and gDifficulty of the current game. */
+static struct { uint8_t hours, minutes, seconds, frames; } runtime_igt;
+static bool runtime_max_igt;
+static uint8_t runtime_difficulty=1;
+
+/* InGameTimerUpdate */
+static void runtime_igt_update(void) {
+    if(runtime_max_igt)return;
+    if(++runtime_igt.frames>=60) {
+        runtime_igt.frames=0;
+        if(++runtime_igt.seconds>59) {
+            runtime_igt.seconds=0;
+            if(++runtime_igt.minutes>59) {
+                runtime_igt.minutes=0;
+                if(runtime_igt.hours<100)runtime_igt.hours++;
+            }
+        }
+    }
+    if(runtime_igt.hours>99) {
+        runtime_max_igt=true;
+        runtime_igt.hours=99;
+        runtime_igt.minutes=59;
+        runtime_igt.seconds=59;
+        runtime_igt.frames=63;
+    }
+}
+
+/* SramLoadFile's globals, then Samus in the save platform's tube
+ * (gIsLoadingFile makes the platform release her). */
+static void runtime_apply_save(const MzmSaveData *save,MzmEquipment *equipment,
+                               RuntimeSprites *sprites,MzmSamus *samus,
+                               const MzmCollision *collision) {
+    *equipment=save->equipment;
+    memcpy(sprites->events,save->events,sizeof sprites->events);
+    runtime_minimap=save->minimap;
+    runtime_collected_items=save->items;
+    runtime_restore_memories(save);
+    runtime_escaped_zebes=save->escaped_zebes;
+    runtime_igt.hours=save->igt.hours;
+    runtime_igt.minutes=save->igt.minutes;
+    runtime_igt.seconds=save->igt.seconds;
+    runtime_igt.frames=save->igt.frames;
+    runtime_max_igt=save->max_igt;
+    runtime_difficulty=save->difficulty;
+    mzm_samus_init(samus,save->samus_x,save->samus_y,save->facing);
+    mzm_samus_sprite_set_pose(samus,MZM_POSE_SAVING_LOADING_GAME,equipment,collision);
+    samus->timer=1;
+    sprites->globals.loading_file=true;
+}
+
+/* SramWrite_FileInfo: what the file select screen shows of a save. */
+static MzmSaveFileInfo runtime_save_info(const char *path) {
+    static MzmSaveData save;
+    MzmSaveFileInfo info;
+    memset(&info,0,sizeof info);
+    info.difficulty=1;
+    if(!path[0] || !mzm_save_read(path,&save))return info;
+    info.exists=true;
+    info.area=save.area;
+    info.energy=(uint16_t)save.equipment.energy;
+    info.max_energy=(uint16_t)save.equipment.max_energy;
+    info.missiles=(uint16_t)save.equipment.missiles;
+    info.max_missiles=(uint16_t)save.equipment.max_missiles;
+    info.suit=(uint8_t)save.equipment.suit;
+    info.igt_hours=save.igt.hours;
+    info.igt_minutes=save.igt.minutes;
+    info.igt_seconds=save.igt.seconds;
+    info.completed_game=save.completed_game;
+    info.difficulty=save.difficulty;
+    return info;
+}
+
+/* gMostRecentSaveFile: the newest of the three files (file A without
+ * any). */
+static uint8_t runtime_most_recent_save(char paths[3][4096]) {
+    uint8_t best=0;
+    long long newest=-1;
+    for(int i=0;i<3;i++) {
+        struct stat info;
+        if(paths[i][0] && stat(paths[i],&info)==0 && (long long)info.st_mtime>newest) {
+            newest=(long long)info.st_mtime;
+            best=(uint8_t)i;
+        }
+    }
+    return best;
+}
+
 static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
@@ -2964,12 +3053,14 @@ int main(int argc, char **argv) {
     bool check=false,animation_check=false,debug_at_start=false;
     int spawn_px=-1,spawn_py=-1;
     bool mute=false;
-    /* The save file (--save-file, else file_a.sav in SDL's preference
-     * folder) and --load, which starts from it. */
-    const char *save_file=NULL;
+    /* The three save files (file_a.sav to file_c.sav in --save-dir, else
+     * in SDL's preference folder) and --load, which starts from the most
+     * recent one. */
+    const char *save_dir=NULL;
     bool load_save=false;
     static MzmSaveData loaded_save;
-    static char save_path[4096];
+    static char save_paths[3][4096];
+    uint8_t save_slot=0;            /* gMostRecentSaveFile */
     const char *debug_input=NULL;
     /* --item NAME (repeatable): a debug menu item enabled at start, its label
      * in lower case with dashes (for example speed-booster). */
@@ -3007,7 +3098,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--input-script") && i+1<argc) input_script=argv[++i];
         else if (!strcmp(argv[i],"--debug-menu")) debug_at_start=true;
         else if (!strcmp(argv[i],"--mute")) mute=true;
-        else if (!strcmp(argv[i],"--save-file") && i+1<argc) save_file=argv[++i];
+        else if (!strcmp(argv[i],"--save-dir") && i+1<argc) save_dir=argv[++i];
         else if (!strcmp(argv[i],"--load")) load_save=true;
         else if (!strcmp(argv[i],"--item") && i+1<argc) {
             const char *name=argv[++i];
@@ -3068,21 +3159,25 @@ int main(int argc, char **argv) {
     char bundle_index[4096],bundle_map[4096],bundle_cannon[4096],bundle_palettes[4096];
     char native_room[4096],native_background[4096];
     bool native_format=false;
-    if (save_file) {
-        snprintf(save_path,sizeof save_path,"%s",save_file);
-    } else {
-        char *pref=SDL_GetPrefPath("metroidvania","zero-mission");
-        if (pref) snprintf(save_path,sizeof save_path,"%sfile_a.sav",pref);
+    {
+        char *pref=save_dir?NULL:SDL_GetPrefPath("metroidvania","zero-mission");
+        const char *folder=save_dir?save_dir:pref;
+        size_t length=folder?strlen(folder):0;
+        const char *separator=length && folder[length-1]!='/' && folder[length-1]!='\\'?"/":"";
+        for (int i=0;folder && i<3;i++)
+            snprintf(save_paths[i],sizeof save_paths[i],"%s%sfile_%c.sav",folder,separator,'a'+i);
         SDL_free(pref);
+        save_slot=runtime_most_recent_save(save_paths);
     }
     if (load_save) {
         /* SramLoadFile: the game resumes in the room it was saved in. */
-        if (!save_path[0] || !mzm_save_read(save_path,&loaded_save) || room_alias || room_path) {
-            fprintf(stderr,"Cannot load the save file %s\n",save_path[0]?save_path:"(none)");
+        const char *path=save_paths[save_slot];
+        if (!path[0] || !mzm_save_read(path,&loaded_save) || room_alias || room_path) {
+            fprintf(stderr,"Cannot load the save file %s\n",path[0]?path:"(none)");
             return 2;
         }
         room_alias=loaded_save.room;
-        printf("Loaded save file %s (%s)\n",save_path,room_alias);
+        printf("Loaded save file %s (%s)\n",path,room_alias);
     }
     if (title_mode && !room_alias && !room_path) room_alias="brinstar_000";
     if (room_alias) {
@@ -3220,7 +3315,8 @@ int main(int argc, char **argv) {
     static MzmScreen screen;
     static MzmTitleScreen title_screen;
     static MzmPauseScreen pause_screen;
-    bool pause_mode=false, screen_ready=false;
+    bool pause_mode=false, screen_ready=false, file_select_mode=false;
+    static MzmFileSelect file_select;
     uint8_t pause_flag=MZM_PAUSE_FLAG_PAUSE;   /* gPauseScreenFlag of the open pause */
     /* The HUD reads its graphics from the ROM bank. */
     if (mzm_rom_open(RUNTIME_ROM_BANK, RUNTIME_ROM_SYMBOLS))
@@ -3335,18 +3431,7 @@ int main(int argc, char **argv) {
     MzmAnimationSource animation_source={&library,runtime_pose_durations};
     MzmSamus samus;
     if(load_save) {
-        /* The saved game: its state, and Samus in the save platform's tube
-         * (gIsLoadingFile makes the platform release her). */
-        equipment=loaded_save.equipment;
-        memcpy(sprites.events,loaded_save.events,sizeof sprites.events);
-        runtime_minimap=loaded_save.minimap;
-        runtime_collected_items=loaded_save.items;
-        runtime_restore_memories(&loaded_save);
-        runtime_escaped_zebes=loaded_save.escaped_zebes;
-        mzm_samus_init(&samus,loaded_save.samus_x,loaded_save.samus_y,loaded_save.facing);
-        mzm_samus_sprite_set_pose(&samus,MZM_POSE_SAVING_LOADING_GAME,&equipment,&collision);
-        samus.timer=1;
-        sprites.globals.loading_file=true;
+        runtime_apply_save(&loaded_save,&equipment,&sprites,&samus,&collision);
     } else if(spawn_px>=0 && spawn_py>=0) {
         mzm_samus_init(&samus,(int32_t)spawn_px*MZM_SUBPIXELS_PER_PIXEL,
                        (int32_t)spawn_py*MZM_SUBPIXELS_PER_PIXEL,1);
@@ -3682,16 +3767,71 @@ int main(int argc, char **argv) {
                     if(title_screen.sub_mode2==2) {
                         mzm_title_enter(&title_screen,true);
                     } else {
+                        /* START: the file select screen. */
                         title_mode=false;
-                        mzm_sfx_stop_all();
-                        mzm_sfx_music_priority(0);
-                        if(runtime_room_music(room)) {
-                            runtime_audio_lock();
-                            mzm_music_check_play_transition_track();
-                            runtime_audio_unlock();
-                        }
-                        previous_held=held;
+                        file_select_mode=true;
+                        MzmSaveFileInfo infos[3];
+                        for(int i=0;i<3;i++)infos[i]=runtime_save_info(save_paths[i]);
+                        mzm_file_select_enter(&file_select,infos,save_slot);
                     }
+                }
+                accumulator-=fixed_step;
+                continue;
+            }
+            if(file_select_mode) {
+                mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                              capture_path?NULL:&gamepad));
+                int chosen=mzm_file_select_update(&file_select,&screen);
+                if(chosen==MZM_FILE_SELECT_TITLE) {
+                    file_select_mode=false;
+                    title_mode=true;
+                    mzm_title_enter(&title_screen,false);
+                } else if(chosen!=MZM_FILE_SELECT_STAY) {
+                    file_select_mode=false;
+                    save_slot=file_select.most_recent;
+                    static MzmSaveData chosen_save;
+                    bool resumed=false;
+                    if(chosen==MZM_FILE_SELECT_CONTINUE &&
+                       mzm_save_read(save_paths[save_slot],&chosen_save)) {
+                        /* SramLoadFile, then the saved room. */
+                        Room *next=calloc(1,sizeof *next);
+                        SDL_Texture *next_texture=NULL;
+                        if(next && runtime_load_room(chosen_save.room,next,renderer,&next_texture)) {
+                            free(room);
+                            room=next;
+                            collision.context=room;
+                            if(texture)SDL_DestroyTexture(texture);
+                            texture=next_texture;
+                            snprintf(current_room,sizeof current_room,"%s",chosen_save.room);
+                            runtime_sprites_spawn(&sprites,room);
+                            runtime_apply_save(&chosen_save,&equipment,&sprites,&samus,&collision);
+                            runtime_blocks_load(room,current_room);
+                            runtime_hatches_load(room,current_room,-1);
+                            mzm_weapons_init(&weapons);
+                            hud_room_alias[0]='\0';
+                            runtime_hud.area_before_transition=0xFF;
+                            resumed=true;
+                            printf("Loaded save file %s (%s)\n",save_paths[save_slot],current_room);
+                        } else {
+                            if(next_texture)SDL_DestroyTexture(next_texture);
+                            free(next);
+                            fprintf(stderr,"Cannot load the save file %s\n",save_paths[save_slot]);
+                        }
+                    }
+                    if(!resumed) {
+                        /* A new game on the file. */
+                        runtime_difficulty=file_select.cursors.difficulty;
+                        memset(&runtime_igt,0,sizeof runtime_igt);
+                        runtime_max_igt=false;
+                    }
+                    mzm_sfx_stop_all();
+                    mzm_sfx_music_priority(0);
+                    if(runtime_room_music(room)) {
+                        runtime_audio_lock();
+                        mzm_music_check_play_transition_track();
+                        runtime_audio_unlock();
+                    }
+                    previous_held=held;
                 }
                 accumulator-=fixed_step;
                 continue;
@@ -3839,6 +3979,8 @@ int main(int argc, char **argv) {
             }
             /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
              * arm cannon offset above is the one SamusUpdate left. */
+            /* InGameTimerUpdate */
+            runtime_igt_update();
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
                                    &equipment, &collision, &weapons, &input, movement_prevented,
                                    &prevent_movement);
@@ -3869,10 +4011,18 @@ int main(int argc, char **argv) {
                     save.items=runtime_collected_items;
                     runtime_save_memories(&save);
                     save.escaped_zebes=runtime_escaped_zebes;
-                    if(save_path[0] && mzm_save_write(save_path,&save))
-                        printf("Saved the game to %s\n",save_path);
+                    save.area=runtime_area_index(room->area);
+                    save.difficulty=runtime_difficulty;
+                    save.igt.hours=runtime_igt.hours;
+                    save.igt.minutes=runtime_igt.minutes;
+                    save.igt.seconds=runtime_igt.seconds;
+                    save.igt.frames=runtime_igt.frames;
+                    save.max_igt=runtime_max_igt;
+                    const char *path=save_paths[save_slot];
+                    if(path[0] && mzm_save_write(path,&save))
+                        printf("Saved the game to %s\n",path);
                     else
-                        fprintf(stderr,"Could not save the game to %s\n",save_path);
+                        fprintf(stderr,"Could not save the game to %s\n",path);
                 }
             }
             weapons.samus_previous_x=previous_x;
@@ -4098,7 +4248,7 @@ int main(int argc, char **argv) {
         if ((float)oh/224.f < scale) scale=(float)oh/224.f;
         SDL_FRect viewport={(ow-320.f*scale)*0.5f,(oh-224.f*scale)*0.5f,
                             320.f*scale,224.f*scale};
-        if(title_mode || pause_mode) {
+        if(title_mode || pause_mode || file_select_mode) {
             /* The 240x160 GBA screen, fitted to the view. */
             SDL_SetRenderDrawColor(renderer,0,0,0,255);
             SDL_RenderClear(renderer);
@@ -4516,6 +4666,10 @@ frame_overlays:
                    capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
+            if(title_mode || file_select_mode || pause_mode)
+                printf("  screen: title %d, file select %d (mode %d, sub menu %d stage %d), pause %d\n",
+                       title_mode,file_select_mode,file_select.sub_mode1,file_select.current_sub_menu,
+                       file_select.sub_menu_stage,pause_mode);
             if(prevent_movement && !sprites.banner.exists)
                 printf("  movement prevented %u\n",prevent_movement);
             if(sprites.banner.exists)

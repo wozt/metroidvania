@@ -43,6 +43,13 @@ int main(void) {
     strcpy(data.never_reform[1].alias, "norfair_010");
     data.never_reform[1].x = -1;
     data.escaped_zebes = true;
+    data.area = 5;
+    data.difficulty = 2;
+    data.igt.hours = 1;
+    data.igt.minutes = 23;
+    data.igt.seconds = 45;
+    data.igt.frames = 59;
+    data.completed_game = 0x12;
 
     size_t size = 0;
     uint8_t *bytes = mzm_save_encode(&data, &size);
@@ -59,14 +66,16 @@ int main(void) {
     assert(back.hatches_opened[9][7] == 0x80000001u && back.hatch_destination_count == 1 &&
            !strcmp(back.hatch_destinations[0].alias, "kraid_001") && back.hatch_destinations[0].y == 4);
     assert(back.never_reform_count == 2 && back.never_reform[1].x == -1 && back.escaped_zebes);
+    assert(back.area == 5 && back.difficulty == 2 && back.igt.hours == 1 && back.igt.minutes == 23 &&
+           back.igt.seconds == 45 && back.igt.frames == 59 && back.completed_game == 0x12);
     /* A changed byte, a truncated file, a newer version, a bad count. */
     bytes[100] ^= 1;
     assert(!mzm_save_decode(bytes, size, &back));
     bytes[100] ^= 1;
     assert(!mzm_save_decode(bytes, size - 1, &back));
-    bytes[8] = 2;
+    bytes[8] = 3;
     assert(!mzm_save_decode(bytes, size, &back));
-    bytes[8] = 1;
+    bytes[8] = 2;
     assert(mzm_save_decode(bytes, size, &back));
     free(bytes);
     data.never_reform_count = MZM_SAVE_NEVER_REFORM + 1;

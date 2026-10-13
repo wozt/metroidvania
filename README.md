@@ -310,9 +310,12 @@ the native font. L opens easy sleep: YES blanks the screen and silences the
 game until SELECT, L and R are held together. Map stations grab Samus and
 download the area's map: the pause screen shows the line revealing it, then
 the map message appears and the station retracts. Save platforms ask to save
-and write the game to `file_a.sav` in SDL's preference folder (or the file
-given with `--save-file PATH`); `--load` resumes from it, Samus stepping out
-of the save platform's tube.
+and write the game to the chosen file (`file_a.sav` to `file_c.sav` in SDL's
+preference folder, or in `--save-dir DIR`). START on the title opens the
+native file select screen: the three files with their energy, timer,
+difficulty and area, a new game with its difficulty, or the continuation of
+a saved file, Samus stepping out of the save platform's tube; `--load` resumes
+the most recent file directly.
 
 With the ROM bank, room backgrounds are rendered natively as well
 (`src/runtime/mzm_room_gfx.c`): animated tiles and palettes, liquids (lava,

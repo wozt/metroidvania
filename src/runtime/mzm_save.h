@@ -43,6 +43,14 @@ typedef struct {
     MzmSaveRoomBlock never_reform[MZM_SAVE_NEVER_REFORM];
     int32_t never_reform_count;
     bool escaped_zebes;
+    /* Version 2: what the file select screen shows (struct SaveFileInfo):
+     * gCurrentArea, gDifficulty, gInGameTimer (gMaxInGameTimerFlag) and
+     * the completed game flags. Version 1 files read as Brinstar, normal
+     * difficulty and a zero timer. */
+    uint8_t area, difficulty;
+    struct { uint8_t hours, minutes, seconds, frames; } igt;
+    bool max_igt;
+    uint8_t completed_game;
 } MzmSaveData;
 
 /* The serialized form; `size` receives its length. Returns a malloc'ed

@@ -3140,6 +3140,14 @@ void mzm_samus_chozo_grab(MzmSamus *samus, bool grabbed, const MzmEquipment *equ
     leave(samus);
 }
 
+void mzm_samus_sprite_set_pose(MzmSamus *samus, MzmPose pose, const MzmEquipment *equipment,
+                               const MzmCollision *collision) {
+    Ctx c = {samus, &no_input, equipment ? equipment : &no_equipment, collision, NULL, false};
+    enter(samus);
+    set_pose(&c, pose);
+    leave(samus);
+}
+
 void mzm_samus_land_on_sprite(MzmSamus *samus, const MzmInput *input,
                               const MzmEquipment *equipment, const MzmCollision *collision) {
     Ctx c = {samus, input ? input : &no_input, equipment ? equipment : &no_equipment, collision,

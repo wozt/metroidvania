@@ -632,6 +632,17 @@ void mzm_hud_area_map(MzmHud *h, uint8_t area, uint16_t *dst,
     set_downloaded_tiles(h, area, dst);
 }
 
+void mzm_hud_redraw_minimap(MzmHud *h) {
+    if (!h->ready) return;
+    for (uint8_t flag = MINIMAP_UPDATE_LOWER; flag > MINIMAP_UPDATE_NONE; --flag) {
+        h->update_minimap = flag;
+        minimap_draw(h);
+    }
+    /* Back in the game the HUD graphics are reloaded whole: here the three
+     * parts are transferred over the next frames. */
+    h->update_minimap = MINIMAP_UPDATE_LOWER;
+}
+
 void mzm_hud_room_entered(MzmHud *h, const MzmHudRoom *r, const MzmHudFrame *f) {
     if (!h->ready) return;
     /* MinimapCheckOnTransition */

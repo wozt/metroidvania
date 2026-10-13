@@ -14,16 +14,17 @@ enum {
     /* PauseScreenState */
     STATE_MAP_SCREEN = 0, STATE_STATUS_SCREEN = 1, STATE_STATUS_SCREEN_INIT = 11,
     STATE_STATUS_SCREEN_LEAVING = 12, STATE_EASY_SLEEP = 10, STATE_EASY_SLEEP_INIT = 16,
-    STATE_EASY_SLEEP_LEAVING = 17,
+    STATE_EASY_SLEEP_LEAVING = 17, STATE_WAIT_TO_LEAVE = 3, STATE_MAP_DOWNLOAD = 9,
+    STATE_MAP_DOWNLOAD_ENDED = 18,
     /* PauseScreenType */
-    TYPE_ON_STATUS_SCREEN = 1 << 7,
+    TYPE_ON_MAP_SCREEN = 1 << 1, TYPE_DOWNLOADING_MAP = 1 << 5, TYPE_ON_STATUS_SCREEN = 1 << 7,
     /* PauseScreenFading */
     FADING_NONE = 0, FADING_INIT, FADING_IN_INIT, FADING_IN, FADING_OUT_INIT, FADING_OUT,
     /* OAM ids */
     SAMUS_ICON_SUIT = 1, SAMUS_ICON_SUITLESS = 2, BOSS_ICON_CROSSMARK = 3,
     WORLD_MAP_TARGET = 15, WORLD_MAP_SAMUS_SUIT = 16, WORLD_MAP_SAMUS_SUITLESS = 17,
     OAM_ID_CHANGED = 2,
-    MISC_TEXT_MARKER_DOWN = 4, MISC_TEXT_MARKER_UP = 5, MISC_ITEM_CURSOR_FOCUSING = 6,
+    MISC_MAP_DOWNLOAD_LINE_TRAIL = 10, MISC_MAP_DOWNLOAD_LINE = 11, MISC_TEXT_MARKER_DOWN = 4, MISC_TEXT_MARKER_UP = 5, MISC_ITEM_CURSOR_FOCUSING = 6,
     MISC_GUN_HEADER = 41, MISC_POWER_SUIT_WIREFRAME = 44, MISC_FULL_SUIT_WIREFRAME = 45,
     MISC_SUITLESS_WIREFRAME = 46, OVERLAY_R_PROMPT_PRESSED = 15, OVERLAY_L_PROMPT_PRESSED = 16,
     /* Sounds */
@@ -135,7 +136,8 @@ static bool fading(MzmPauseScreen *p, MzmScreen *s, uint8_t stage) {
 static uint16_t arrow_data(int i, int field) { return rom16("sMapScreenArrowsData", (uint32_t)(i * 4 + field)); }
 
 /* PauseScreenUpdateMapArrows (the pause from the game) */
-static void update_map_arrows(MzmPauseScreen *p) {
+static void update_map_arrows(MzmPauseScreen *p, const MzmPauseGame *g) {
+    if (g->flag != MZM_PAUSE_FLAG_PAUSE) return;
     bool on_map = p->state == STATE_MAP_SCREEN;
     if (on_map) {
         p->can_up = p->map_view_y > p->map_top;
@@ -395,26 +397,35 @@ static void load_area_names_and_icons(MzmPauseScreen *p, const MzmPauseGame *g) 
     p->samus_icon[0].y = (int16_t)(g->hud->minimap_y * HALF_BLOCK);
     p->samus_icon[0].bound_background = 3;
     p->boss_icon[0].bound_background = 3;
-    p->samus_icon[0].priority = 3;
-    p->boss_icon[0].priority = 3;
+    uint8_t icon_priority = p->type_flags & TYPE_ON_MAP_SCREEN ? 1 : 3;
+    p->samus_icon[0].priority = icon_priority;
+    p->boss_icon[0].priority = icon_priority;
     p->misc[0].oam_id = 0;
     p->misc[0].y = p->misc[0].x = 0;
-    p->overlay[1].oam_id = 0;
-    p->overlay[1].y = QUARTER_BLOCK + 8;
-    p->overlay[1].x = BLOCK * 7 + QUARTER_BLOCK;
-    p->overlay[1].priority = 1;
-    update_world_map_highlight(p, g->area);
-    p->overlay[0].y = 12;
-    p->overlay[0].x = BLOCK * 7 + QUARTER_BLOCK;
-    p->overlay[0].priority = 1;
-    p->overlay[2].priority = 1;
-    p->overlay[3].oam_id = 0;
-    p->overlay[3].y = BLOCK * 6 + QUARTER_BLOCK + 8;
-    p->overlay[3].x = BLOCK * 8 + HALF_BLOCK;
-    update_world_map(p, g, 0);
+    if (p->type_flags & TYPE_DOWNLOADING_MAP) {
+        /* sPauseScreenAreaIconsData[area].nameOamId */
+        mzm_menu_oam_set_id(&p->overlay[0], mzm_rom_u8(area_icon(g->area < AREA_TEST ? g->area : AREA_TEST)));
+        p->overlay[0].y = 12;
+        p->overlay[0].x = BLOCK * 7 + QUARTER_BLOCK;
+        p->overlay[0].priority = 0;
+    } else {
+        p->overlay[1].oam_id = 0;
+        p->overlay[1].y = QUARTER_BLOCK + 8;
+        p->overlay[1].x = BLOCK * 7 + QUARTER_BLOCK;
+        p->overlay[1].priority = 1;
+        update_world_map_highlight(p, g->area);
+        p->overlay[0].y = 12;
+        p->overlay[0].x = BLOCK * 7 + QUARTER_BLOCK;
+        p->overlay[0].priority = 1;
+        p->overlay[2].priority = 1;
+        p->overlay[3].oam_id = 0;
+        p->overlay[3].y = BLOCK * 6 + QUARTER_BLOCK + 8;
+        p->overlay[3].x = BLOCK * 8 + HALF_BLOCK;
+        update_world_map(p, g, 0);
+    }
     for (int i = 3; i >= 0; --i) {
         MzmMenuOam *o = &p->arrows[arrow_data(i, 0)];
-        o->exists = 1;
+        if (g->flag == MZM_PAUSE_FLAG_PAUSE) o->exists = 1;
         o->oam_id = (uint8_t)arrow_data(i, 1);
         o->x = (int16_t)arrow_data(i, 2);
         o->y = (int16_t)arrow_data(i, 3);
@@ -1542,7 +1553,125 @@ static bool easy_sleep(MzmPauseScreen *p, MzmScreen *s) {
     return true;
 }
 
-/* PauseScreenInit (the pause from the game, PAUSE_SCREEN_PAUSE_OR_CUTSCENE) */
+/* PauseScreenInitMapDownload (the unused instant types 1 and 2 are not
+ * ported) */
+static void init_map_download(MzmPauseScreen *p) {
+    p->download_timer = 0;
+    p->download_stage = 0;
+    p->current_downloaded_line = 0;
+    p->unk_4f = 0;
+}
+
+/* sMapDownloadLineTrailOamOffsets */
+static uint8_t trail_oam(int i) { return rom8("sMapDownloadLineTrailOamOffsets", (uint32_t)i); }
+
+static void reset_download_oam(MzmMenuOam *o, uint8_t oam_id) {
+    o->oam_id = oam_id;
+    o->animation_duration_counter = 0;
+    o->current_animation_frame = 0;
+}
+
+/* PauseScreenMapDownload: a line sweeps down the map, revealing a row of
+ * the downloaded map every eight frames. */
+static bool map_download(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
+    p->download_timer++;
+    switch (p->download_stage) {
+    case 0:
+        if (p->download_timer <= 8) break;
+        reset_download_oam(&p->misc[2], MISC_MAP_DOWNLOAD_LINE);
+        p->misc[2].x = BLOCK * 7 + QUARTER_BLOCK;
+        p->misc[2].y = -HALF_BLOCK;
+        p->misc[2].priority = 1;
+        p->misc[2].exists = 1;
+        for (int i = 3; i >= 0; --i) {
+            MzmMenuOam *o = &p->misc[trail_oam(i)];
+            reset_download_oam(o, 0);
+            o->x = BLOCK * 7 + QUARTER_BLOCK;
+            o->y = -HALF_BLOCK;
+            o->priority = 1;
+            o->obj_mode = 1;
+            o->exists = 0;
+        }
+        p->download_stage++;
+        p->download_timer = 0;
+        p->unk_4f = 0;
+        p->line_trail_index = 0x80;
+        break;
+    case 1:
+        p->current_downloaded_line = 0;
+        p->unk_4f = 0;
+        if (s->bg_vofs[3] < BLOCK * 32)
+            p->current_downloaded_line = (uint8_t)(0x3F - ((BLOCK * 32 - s->bg_vofs[3]) >> 5));
+        else if (s->bg_vofs[3] > BLOCK * 32)
+            p->current_downloaded_line = (uint8_t)((s->bg_vofs[3] - BLOCK * 32) >> 5);
+        p->download_stage++;
+        p->download_timer = 0;
+        break;
+    case 2: {
+        bool move = true;
+        if (p->download_timer >= 8) {
+            if (p->unk_4f < 21) {
+                if (p->current_downloaded_line < MINIMAP)
+                    vram_from16(s, 0xE000u + p->current_downloaded_line * MINIMAP * 2u,
+                                &g->hud->minimap_visited[p->current_downloaded_line * MINIMAP], MINIMAP * 2);
+                p->unk_4f++;
+                p->current_downloaded_line++;
+                if (p->current_downloaded_line >= MINIMAP * 2) p->current_downloaded_line = 0;
+                /* The boss icon shows once the line is below it. */
+                if (p->boss_icon[0].oam_id != 0 && p->current_area < AREAS_NORMAL &&
+                    p->current_downloaded_line == mzm_rom_u8(sym("sBossIcons") + p->current_area * 5u + 3) + 2)
+                    p->boss_icon[0].not_drawn = false;
+            } else {
+                p->download_stage++;
+                move = false;
+            }
+            p->download_timer = 0;
+        }
+        if (move) {
+            p->misc[2].y = (int16_t)(((p->unk_4f - 1) * 8 + p->download_timer) * 4);
+            if (++p->line_trail_index >= 4) p->line_trail_index = 0;
+            MzmMenuOam *o = &p->misc[trail_oam(p->line_trail_index)];
+            o->y = (int16_t)(p->misc[2].y - 4);
+            reset_download_oam(o, MISC_MAP_DOWNLOAD_LINE_TRAIL);
+            o->exists = 1;
+        }
+        break;
+    }
+    case 3:
+        vram_from16(s, 0xE000, g->hud->minimap_visited, 2048);
+        p->download_stage++;
+        p->download_timer = 0;
+        break;
+    case 4:
+        /* MinimapDraw, so that the HUD's minimap shows the download */
+        mzm_hud_redraw_minimap(g->hud);
+        p->download_stage++;
+        p->download_timer = 0;
+        break;
+    case 5:
+        reset_download_oam(&p->misc[2], 0);
+        p->misc[2].exists = 0;
+        for (int i = 3; i >= 0; --i) {
+            reset_download_oam(&p->misc[trail_oam(i)], 0);
+            p->misc[trail_oam(i)].exists = 0;
+        }
+        p->download_timer = 0;
+        p->download_stage++;
+        break;
+    case 6:
+        if (p->download_timer >= 30) {
+            p->download_timer = 0;
+            p->download_stage = 0;
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
+/* PauseScreenInit (the pause from the game and the map download) */
 static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     GbaPpu *ppu = s->ppu;
     gba_ppu_write16(ppu, GBA_REG_BLDCNT, BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN);
@@ -1557,6 +1686,8 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     mzm_screen_copy_oam(s);
     p->bldcnt = BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN;
     p->current_area = g->area;
+    if (g->flag == MZM_PAUSE_FLAG_MAP_DOWNLOAD) p->type_flags |= TYPE_ON_MAP_SCREEN | TYPE_DOWNLOADING_MAP;
+    bool downloading = p->type_flags & TYPE_DOWNLOADING_MAP;
     p->map_x = g->hud->minimap_x;
     p->map_y = g->hud->minimap_y;
     /* The palettes and graphics */
@@ -1583,18 +1714,30 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     ewram_lz77("sMapScreenVisorOverlayTilemap", p->visor_overlay);
     vram_from16(s, 0xC800, p->visor_overlay, 2048);
     update_bottom_visor(p, s, 2, 2);
-    ewram_lz77("sStatusScreenTilemap", p->status_base_tilemap);
-    ewram_lz77("sStatusScreenBackgroundTilemap", p->status_background_tilemap);
-    vram_from16(s, 0xC000, suitless(g) ? p->status_background_tilemap : p->status_base_tilemap, 0x500);
-    ewram_lz77("sMapScreenOverlayTilemap", p->map_overlay);
-    ewram_lz77("sEasySleepTilemap", p->easy_sleep_tilemap);
-    ewram_lz77("sWorldMapOverlayTilemap", p->world_map_overlay);
-    p->on_world_map = false;
-    vram_lz77(s, "sMapScreenTextBg0TileTable", 0xD800);
+    if (downloading) {
+        update_top_visor(p, s, 0xFF);
+    } else {
+        ewram_lz77("sStatusScreenTilemap", p->status_base_tilemap);
+        ewram_lz77("sStatusScreenBackgroundTilemap", p->status_background_tilemap);
+        vram_from16(s, 0xC000, suitless(g) ? p->status_background_tilemap : p->status_base_tilemap, 0x500);
+        ewram_lz77("sMapScreenOverlayTilemap", p->map_overlay);
+        ewram_lz77("sWorldMapOverlayTilemap", p->world_map_overlay);
+        p->on_world_map = false;
+        vram_lz77(s, "sMapScreenTextBg0TileTable", 0xD800);
+        ewram_lz77("sEasySleepTilemap", p->easy_sleep_tilemap);
+    }
     memset(s->bg_hofs, 0, sizeof s->bg_hofs);
     memset(s->bg_vofs, 0, sizeof s->bg_vofs);
     p->state = STATE_MAP_SCREEN;
     s->bg_vofs[1] = BLOCK * 16;
+    if (downloading) {
+        /* The area's map is downloaded: the BG3 map keeps the explored
+         * tiles until the line reveals the new ones. */
+        g->hud->progress->downloaded_maps |= (uint8_t)(1u << g->area);
+        p->state = STATE_MAP_DOWNLOAD;
+        mzm_hud_area_map(g->hud, g->area, g->hud->minimap_visited, g->check_event, g->context);
+        init_map_download(p);
+    }
     /* PauseScreenGetAllMinimapData */
     for (int i = 0; i < AREAS; ++i)
         mzm_hud_area_map(g->hud, rom8("sMapScreenAreaIds", (uint32_t)i), p->maps[i], g->check_event,
@@ -1602,9 +1745,14 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     status_draw(p, s, g);
     set_spawn_position(p, s, 0);
     draw_yes_no(p);
-    determine_maps_viewable(p, s, g);
-    load_bg_palette(p, s, g);
-    vram_from16(s, 0xD000, p->map_overlay, 2048);
+    if (p->type_flags & TYPE_ON_MAP_SCREEN) {
+        p->areas_viewable = p->areas_viewable_total = 0;
+        s->bg_hofs[1] = s->bg_vofs[1] = QUARTER_BLOCK;
+    } else {
+        determine_maps_viewable(p, s, g);
+        load_bg_palette(p, s, g);
+        vram_from16(s, 0xD000, p->map_overlay, 2048);
+    }
     s->bldy = 0;
     p->bldcnt = 1 << 2 | BLDCNT_ALPHA | 1 << 11 | 1 << 12 | 1 << 13;
     p->target_bld_alpha = 6 << 8 | 10;
@@ -1613,21 +1761,34 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     /* Outside the windows everything blends; in the OBJ window (Samus's
      * wireframe) only BG3 and the objects show. */
     gba_ppu_write16(ppu, GBA_REG_WINOUT, 0x3F | (1 << 3 | 1 << 4) << 8);
-    p->dispcnt = GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ;
-    p->unk_6a = bgcnt(1, 27, 0, 0);
-    p->unk_6c = bgcnt(2, 28, 3, 3);
-    p->unk_6e = bgcnt(2, 31, 3, 0);
-    p->unk_70 = bgcnt(0, 25, 1, 0);
-    p->unk_72 = bgcnt(0, 26, 2, 0);
-    p->unk_74 = bgcnt(0, 24, 2, 0);
-    p->bg3cnt = p->unk_6c;
-    p->bg1cnt = p->unk_70;
-    p->bg0cnt = p->unk_6a;
-    p->bg2cnt = p->unk_72;
+    if (downloading) {
+        /* BG1 and BG2 show screens 24 and 23, which nothing loads here (the
+         * game's leftover VRAM is not kept: they are cleared). */
+        p->dispcnt = GBA_DCNT_BG0 | GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ;
+        p->unk_70 = bgcnt(0, 25, 0, 0);
+        p->unk_6c = (uint16_t)(bgcnt(2, 28, 1, 3) | 1 << 6);
+        p->bg3cnt = p->unk_6c;
+        p->bg2cnt = bgcnt(0, 23, 3, 0);
+        p->bg1cnt = bgcnt(2, 24, 2, 0);
+        p->bg0cnt = p->unk_70;
+    } else {
+        p->dispcnt = GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ;
+        p->unk_6a = bgcnt(1, 27, 0, 0);
+        p->unk_6c = bgcnt(2, 28, 3, 3);
+        p->unk_6e = bgcnt(2, 31, 3, 0);
+        p->unk_70 = bgcnt(0, 25, 1, 0);
+        p->unk_72 = bgcnt(0, 26, 2, 0);
+        p->unk_74 = bgcnt(0, 24, 2, 0);
+        p->bg3cnt = p->unk_6c;
+        p->bg1cnt = p->unk_70;
+        p->bg0cnt = p->unk_6a;
+        p->bg2cnt = p->unk_72;
+    }
     load_area_names_and_icons(p, g);
     s->oam_y_offset = s->oam_x_offset = 4;
-    update_map_arrows(p);
+    update_map_arrows(p, g);
     update_boss_icons(p, g);
+    if (downloading && p->boss_icon[0].oam_id != BOSS_ICON_CROSSMARK) p->boss_icon[0].not_drawn = true;
     process_oam(p, s, g);
     mzm_screen_copy_oam(s);
     fading(p, s, FADING_IN_INIT);
@@ -1795,6 +1956,16 @@ static bool call_state_handler(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGa
     case STATE_EASY_SLEEP:
         if (easy_sleep(p, s)) p->state = STATE_EASY_SLEEP_LEAVING;
         break;
+    case STATE_MAP_DOWNLOAD:
+        if (map_download(p, s, g)) p->state = STATE_MAP_DOWNLOAD_ENDED;
+        break;
+    case STATE_MAP_DOWNLOAD_ENDED:
+        p->state = STATE_WAIT_TO_LEAVE;
+        p->stage = 0;
+        p->timer = 0;
+        break;
+    case STATE_WAIT_TO_LEAVE:
+        return s->changed_input & (KEY_START | KEY_A | KEY_B) && !p->on_world_map;
     case STATE_EASY_SLEEP_INIT:
         if (p->is_fading) {
             apply_fading(p, s);
@@ -1837,7 +2008,7 @@ bool mzm_pause_update(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
             p->sub_stage++;
         }
         if (p->fading.stage == FADING_NONE) minimap_animated_palette(p, s);
-        update_map_arrows(p);
+        update_map_arrows(p, g);
         process_oam(p, s, g);
         break;
     case 4:

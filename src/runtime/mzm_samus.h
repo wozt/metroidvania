@@ -433,6 +433,9 @@ bool mzm_samus_bomb_bounce_allowed(const MzmSamus *samus, int direction);
  * SamusSetPose(SPOSE_MORPH_BALL) when it lets go. */
 void mzm_samus_chozo_grab(MzmSamus *samus, bool grabbed, const MzmEquipment *equipment,
                           const MzmCollision *collision);
+/* SamusSetPose from a sprite (the map station). */
+void mzm_samus_sprite_set_pose(MzmSamus *samus, MzmPose pose, const MzmEquipment *equipment,
+                               const MzmCollision *collision);
 /* SamusSetPose(SPOSE_LANDING_REQUEST) from SpriteUtilSamusStandingOnSprite. */
 void mzm_samus_land_on_sprite(MzmSamus *samus, const MzmInput *input,
                               const MzmEquipment *equipment, const MzmCollision *collision);

@@ -2,9 +2,10 @@
 /* Zero Mission room gadgets: the elevator pad (src/sprites_ai/elevator_pad.c),
  * water drops (water_drop.c), steam vents (steam.c), Gerons
  * (geron.c, geron_norfair.c) and the unknown item blocks
- * (unknown_item_block.c); comments name the pinned decompilation's
- * routines. */
+ * (unknown_item_block.c) and the map stations (map_station.c); comments
+ * name the pinned decompilation's routines. */
 #include "mzm_blocks.h"
+#include "mzm_message_banner.h"
 #include "mzm_sprite_ai.h"
 
 enum {
@@ -16,7 +17,14 @@ enum {
     GERON_VARIA2 = 143, GERON_VARIA3 = 144, GERON_NORFAIR = 106,
     PLASMA_BEAM_BLOCK = 170, GRAVITY_SUIT_BLOCK = 171, SPACE_JUMP_BLOCK = 172,
     /* SecondarySprite */
-    SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT = 56,
+    SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT = 56, SSPRITE_MAP_STATION_PART = 52, MAP_STATION = 58,
+    /* MessageId */
+    MESSAGE_BRINSTAR_MAP_ACQUIRED = 27, MESSAGE_KRAID_MAP_ACQUIRED = 28,
+    MESSAGE_NORFAIR_MAP_ACQUIRED = 29, MESSAGE_RIDLEY_MAP_ACQUIRED = 30,
+    MESSAGE_MOTHER_SHIP_MAP_ACQUIRED = 31, MESSAGE_ENEMY_LOCATION_ABNORMAL = 35,
+    /* Area */
+    AREA_BRINSTAR = 0, AREA_KRAID, AREA_NORFAIR, AREA_RIDLEY, AREA_TOURIAN, AREA_CRATERIA, AREA_CHOZODIA,
+    PAUSE_SCREEN_MAP_DOWNLOAD = 5,
     /* Event */
     EVENT_POWER_GRIP_OBTAINED = 16, EVENT_HIGH_JUMP_OBTAINED = 18, EVENT_SPACE_JUMP_OBTAINED = 22,
     EVENT_GRAVITY_SUIT_OBTAINED = 23, EVENT_PLASMA_BEAM_OBTAINED = 24,
@@ -25,7 +33,8 @@ enum {
     EVENT_PLANT_DESTROYED_VARIA1 = 51,
     /* Sound */
     SOUND_UNKNOWN_ITEM_BLOCK_BREAKING = 315, SOUND_GERON_SHAKING = 619, SOUND_GERON_BREAKING = 620,
-    SOUND_STEAM_LARGE = 632, SOUND_STEAM_SMALL = 633,
+    SOUND_STEAM_LARGE = 632, SOUND_STEAM_SMALL = 633, SOUND_USING_MAP_STATION = 0x123,
+    SOUND_MAP_STATION_RETRACTING = 0x124,
     /* HazardType */
     HAZARD_TYPE_WATER = 1,
     /* Poses */
@@ -37,6 +46,13 @@ enum {
     GERON_POSE_DELAY_BEFORE_DESTROYED = 0x24, GERON_POSE_DESTROYED = 0x25,
     UNKNOWN_ITEM_BLOCK_POSE_CHECK_ACTIVATE = 0x9, UNKNOWN_ITEM_BLOCK_POSE_WAIT_FOR_PROJECTILE = 0xB,
     UNKNOWN_ITEM_BLOCK_POSE_EXPLODING = 0x67,
+    MAP_STATION_POSE_IDLE = 0x9, MAP_STATION_POSE_DO_NOTHING = 0xF, MAP_STATION_POSE_GRABBING_SAMUS = 0x23,
+    MAP_STATION_POSE_DOWNLOADING = 0x25, MAP_STATION_POSE_DOWNLOADED = 0x27,
+    MAP_STATION_POSE_WAIT_FOR_MESSAGE = 0x29, MAP_STATION_POSE_DELAY_BEFORE_RETRACTING = 0x2B,
+    MAP_STATION_POSE_RETRACTING = 0x2D, MAP_STATION_POSE_RETRACTED = 0x2F,
+    MAP_STATION_PART_POSE_IDLE = 0x9, MAP_STATION_PART_POSE_DOWNLOADING = 0x23,
+    MAP_STATION_PART_POSE_DOWNLOADED = 0x25,
+    MAP_STATION_PART_BACK_SCREEN = 0,
 };
 
 static bool check_event(const Ctx *c, uint8_t event) { return ai_check_event(c, event); }
@@ -500,9 +516,177 @@ static void unknown_item_block_light(Ctx *c) {
     if (ai_animation_ending(c, 1)) kill(s);
 }
 
+/* MapStationInit: retracted once the area's map is downloaded or during
+ * the alarm, else idle with its two screens. */
+static void map_station_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->y = (uint16_t)(s->y + BLOCK_SIZE * 2);
+    s->draw_top = BLOCK_SIZE * 8 / PIXEL_SIZE;
+    s->draw_bottom = BLOCK_SIZE / PIXEL_SIZE;
+    s->draw_horizontal = (BLOCK_SIZE * 2 - QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
+    s->hitbox_top = -(BLOCK_SIZE * 8);
+    s->hitbox_left = -HALF_BLOCK_SIZE;
+    s->hitbox_right = HALF_BLOCK_SIZE;
+    s->samus_collision = SSC_NONE;
+    s->draw_order = 4;
+    s->health = 1;
+    bool has_map = c->f->downloaded_maps >> c->f->area & 1;
+    if (has_map || (c->f->globals && c->f->globals->alarm_timer != 0)) {
+        s->hitbox_bottom = -BLOCK_SIZE;
+        s->pose = MAP_STATION_POSE_DO_NOTHING;
+        ai_set_anim(s, MZM_GADGET_MAP_STATION_INACTIVE);
+        uint8_t count = c->kind->counts[MZM_GADGET_MAP_STATION_INACTIVE];
+        s->frame = count ? (uint8_t)(count - 1) : 0;
+    } else {
+        s->hitbox_bottom = BLOCK_SIZE;
+        s->pose = MAP_STATION_POSE_IDLE;
+        ai_set_anim(s, MZM_GADGET_MAP_STATION_IDLE);
+        for (uint8_t part = 0; part < 2; ++part)
+            ai_spawn_secondary(c, SSPRITE_MAP_STATION_PART, part, s->gfx_slot, s->y, s->x, 0);
+    }
+}
+
+/* MapStationIdle: Samus standing still on its platform is grabbed. */
+static void map_station_idle(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteSamusLink *link = c->f->samus_link;
+    if (!link || c->f->samus_crouching_or_morphed) return;
+    uint16_t sprite_y = (uint16_t)(s->y + BLOCK_SIZE * 2);
+    uint16_t sprite_x = (uint16_t)(s->x + BLOCK_SIZE + HALF_BLOCK_SIZE);
+    if (link->y != (uint16_t)(sprite_y - 1) || sprite_x - BLOCK_SIZE >= link->x ||
+        sprite_x + BLOCK_SIZE <= link->x)
+        return;
+    ai_set_anim(s, MZM_GADGET_MAP_STATION_GRABBING_SAMUS);
+    s->pose = MAP_STATION_POSE_GRABBING_SAMUS;
+    link->x = sprite_x;
+    link->moved = true;
+    link->clear_invincibility = true;
+    link->set_pose = link->facing_right ? MZM_POSE_TURNING_AROUND_TO_DOWNLOAD_MAP_DATA
+                                        : MZM_POSE_DOWNLOADING_MAP_DATA;
+    mzm_sfx_play(SOUND_USING_MAP_STATION);
+}
+
+/* MapStationSpawnMessage's message */
+static uint8_t map_station_message(uint8_t area) {
+    switch (area) {
+    case AREA_BRINSTAR: return MESSAGE_BRINSTAR_MAP_ACQUIRED;
+    case AREA_KRAID: return MESSAGE_KRAID_MAP_ACQUIRED;
+    case AREA_NORFAIR: return MESSAGE_NORFAIR_MAP_ACQUIRED;
+    case AREA_RIDLEY: return MESSAGE_RIDLEY_MAP_ACQUIRED;
+    case AREA_CHOZODIA: return MESSAGE_MOTHER_SHIP_MAP_ACQUIRED;
+    default: return MESSAGE_ENEMY_LOCATION_ABNORMAL;
+    }
+}
+
+/* MapStation: grabs Samus, downloads (the pause screen's map download),
+ * shows the map message then retracts. */
+static void map_station(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteSamusLink *link = c->f->samus_link;
+    s->ignore_samus_timer = 1;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        map_station_init(c);
+        break;
+    case MAP_STATION_POSE_IDLE:
+        map_station_idle(c);
+        break;
+    case MAP_STATION_POSE_GRABBING_SAMUS:
+        /* MapStationCheckSamusGrabbedAnimEnded */
+        if (ai_animation_ending(c, 1)) {
+            ai_set_anim(s, MZM_GADGET_MAP_STATION_DOWNLOADING);
+            s->pose = MAP_STATION_POSE_DOWNLOADING;
+            s->work0 = 70;                      /* CONVERT_SECONDS(1.f + 1.f / 6) */
+            if (link) link->set_timer = true, link->timer = 0;
+        }
+        break;
+    case MAP_STATION_POSE_DOWNLOADING:
+        /* MapStationDownloading */
+        if (--s->work0 == 0) {
+            ai_set_anim(s, MZM_GADGET_MAP_STATION_RETRACTING);
+            s->pose = MAP_STATION_POSE_DOWNLOADED;
+            s->work0 = 10;                      /* CONVERT_SECONDS(1.f / 6) */
+        } else if (s->work0 == 10 && c->f->globals) {
+            c->f->globals->pause_screen_flag = PAUSE_SCREEN_MAP_DOWNLOAD;
+        }
+        break;
+    case MAP_STATION_POSE_DOWNLOADED:
+        /* MapStationSpawnMessage */
+        if (--s->work0 != 0) break;
+        if (c->f->hooks && c->f->hooks->spawn_message)
+            c->f->hooks->spawn_message(c->f->hooks->context, map_station_message(c->f->area));
+        s->hitbox_bottom = -BLOCK_SIZE;
+        s->pose = MAP_STATION_POSE_WAIT_FOR_MESSAGE;
+        if (link) link->set_timer = true, link->timer = 1, link->reset_frame = true;
+        mzm_sfx_fade(SOUND_USING_MAP_STATION, 10);
+        break;
+    case MAP_STATION_POSE_WAIT_FOR_MESSAGE:
+        /* MapStationWaitForMessage */
+        if (c->f->banner_pose == MZM_BANNER_POSE_REMOVAL_ANIMATION) {
+            s->pose = MAP_STATION_POSE_DELAY_BEFORE_RETRACTING;
+            s->work0 = 10;
+        }
+        break;
+    case MAP_STATION_POSE_DELAY_BEFORE_RETRACTING:
+        if (--s->work0 == 0) s->pose = MAP_STATION_POSE_RETRACTING;
+        break;
+    case MAP_STATION_POSE_RETRACTING:
+        s->pose = MAP_STATION_POSE_RETRACTED;
+        ai_set_anim(s, MZM_GADGET_MAP_STATION_INACTIVE);
+        if (link) link->set_pose = MZM_POSE_STANDING;
+        mzm_sfx_play(SOUND_MAP_STATION_RETRACTING);
+        break;
+    default:
+        break;
+    }
+}
+
+/* MapStationPart: the screens follow the station's poses and vanish once
+ * the download ends. */
+static void map_station_part(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->ignore_samus_timer = 1;
+    uint8_t main_pose = c->f->sprites ? c->f->sprites[s->ram_slot].pose : 0;
+    bool back = s->room_slot == MAP_STATION_PART_BACK_SCREEN;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->always_active = true;
+        s->samus_collision = SSC_NONE;
+        s->draw_order = 3;
+        s->draw_top = BLOCK_SIZE * 2 / PIXEL_SIZE;
+        s->draw_bottom = 0;
+        s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        s->pose = MAP_STATION_PART_POSE_IDLE;
+        ai_set_anim(s, back ? MZM_GADGET_MAP_STATION_BACK_SCREEN_IDLE : MZM_GADGET_MAP_STATION_FRONT_SCREEN_IDLE);
+        break;
+    case MAP_STATION_PART_POSE_IDLE:
+        if (main_pose == MAP_STATION_POSE_DOWNLOADING) {
+            s->pose = MAP_STATION_PART_POSE_DOWNLOADING;
+            ai_set_anim(s, back ? MZM_GADGET_MAP_STATION_BACK_SCREEN_DOWNLOADING
+                                : MZM_GADGET_MAP_STATION_FRONT_SCREEN_DOWNLOADING);
+        }
+        break;
+    case MAP_STATION_PART_POSE_DOWNLOADING:
+        if (main_pose == MAP_STATION_POSE_DOWNLOADED) {
+            s->pose = MAP_STATION_PART_POSE_DOWNLOADED;
+            ai_set_anim(s, back ? MZM_GADGET_MAP_STATION_BACK_SCREEN_DOWNLOADED
+                                : MZM_GADGET_MAP_STATION_FRONT_SCREEN_DOWNLOADED);
+        }
+        break;
+    case MAP_STATION_PART_POSE_DOWNLOADED:
+        if (ai_animation_ending(c, 1)) kill(s);
+        break;
+    default:
+        break;
+    }
+}
+
 void ai_gadget(Ctx *c) {
     if (c->s->secondary) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
+        else if (c->s->sprite_id == SSPRITE_MAP_STATION_PART) map_station_part(c);
         return;
     }
     switch (c->s->sprite_id) {
@@ -515,6 +699,7 @@ void ai_gadget(Ctx *c) {
     case GERON_VARIA2: case GERON_VARIA3: geron(c); break;
     case GERON_NORFAIR: geron_norfair(c); break;
     case PLASMA_BEAM_BLOCK: case GRAVITY_SUIT_BLOCK: case SPACE_JUMP_BLOCK: unknown_item_block(c); break;
+    case MAP_STATION: map_station(c); break;
     default: break;
     }
 }

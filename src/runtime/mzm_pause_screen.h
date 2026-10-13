@@ -8,8 +8,9 @@
  * revealed one by one, the tank amounts, Samus's wireframe and the headers,
  * the item cursor and the item descriptions (text.c), and easy sleep (L,
  * pause_screen_sub_menus.c): its text, the YES/NO cursor and the sleep until
- * SELECT, L and R. The Chozo hints and their targets, the map download,
- * the item toggling of the suitless and item acquisition sequences and the
+ * SELECT, L and R; and the map download of the map stations
+ * (PAUSE_SCREEN_MAP_DOWNLOAD). The Chozo hints and their targets, the item
+ * toggling of the suitless and item acquisition sequences and the
  * completion info are not ported yet. */
 #ifndef MZM_PAUSE_SCREEN_H
 #define MZM_PAUSE_SCREEN_H
@@ -21,6 +22,9 @@
 #include "mzm_screen.h"
 #include "mzm_text.h"
 
+/* gPauseScreenFlag values the pause screen handles. */
+enum { MZM_PAUSE_FLAG_PAUSE = 2, MZM_PAUSE_FLAG_MAP_DOWNLOAD = 5 };
+
 /* What the pause screen reads from the game. */
 typedef struct {
     MzmHud *hud;                    /* the minimap (gDecompressedMinimapVisitedTiles...) */
@@ -28,6 +32,7 @@ typedef struct {
     const MzmEquipment *equipment;  /* gEquipment */
     bool (*check_event)(void *context, uint8_t event);
     void *context;
+    uint8_t flag;                   /* gPauseScreenFlag (MZM_PAUSE_FLAG_*) */
 } MzmPauseGame;
 
 typedef struct {
@@ -62,6 +67,9 @@ typedef struct {
     MzmMessage message;             /* gCurrentMessage */
     /* Easy sleep */
     int8_t easy_sleep_text_state;
+    /* The map download */
+    uint16_t download_timer;
+    uint8_t download_stage, current_downloaded_line, unk_4f, line_trail_index;
     bool sleeping;                  /* the GBA's Stop mode, until SELECT + L + R */
     /* PAUSE_SCREEN_EWRAM */
     uint16_t maps[8][1024];

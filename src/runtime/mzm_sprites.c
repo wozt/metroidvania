@@ -178,6 +178,11 @@ const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
     "GeronNorfairOam_Idle",
     "UnknownItemBlockOam_Idle", "UnknownItemBlockOam_Activated", "UnknownItemBlockOam_Exploding",
     "UnknownItemBlockLightOam_Idle",
+    "MapStationOam_Idle", "MapStationOam_GrabbingSamus", "MapStationOam_Downloading",
+    "MapStationOam_Retracting", "MapStationOam_Inactive", "MapStationPartOam_BackScreenIdle",
+    "MapStationPartOam_BackScreenDownloading", "MapStationPartOam_BackScreenDownloaded",
+    "MapStationPartOam_FrontScreenIdle", "MapStationPartOam_FrontScreenDownloading",
+    "MapStationPartOam_FrontScreenDownloaded",
 };
 static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
@@ -185,6 +190,8 @@ static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "GERON_BRINSTAR_ROOM_15", "GERON_BRINSTAR_ROOM_15", "GERON_BRINSTAR_ROOM_15",
     "GERON_BRINSTAR_ROOM_15", "GERON_NORFAIR",
     "PLASMA_BEAM_BLOCK", "PLASMA_BEAM_BLOCK", "PLASMA_BEAM_BLOCK", "PLASMA_BEAM_BLOCK",
+    "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION",
+    "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION",
 };
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
@@ -4286,7 +4293,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     if (secondary) {
         if (sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_FAMILY_ZEELA;
         if (sprite_id == MZM_SSPRITE_DRAGON_FIREBALL) return MZM_FAMILY_DRAGON;
-        if (sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) return MZM_FAMILY_GADGET;
+        if (sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT || sprite_id == MZM_SSPRITE_MAP_STATION_PART)
+            return MZM_FAMILY_GADGET;
         if (sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE || sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW ||
             sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW)
             return MZM_FAMILY_ITEM_SPRITE;
@@ -4349,7 +4357,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C: case MZM_PSPRITE_GERON_VARIA1:
     case MZM_PSPRITE_GERON_VARIA2: case MZM_PSPRITE_GERON_VARIA3: case MZM_PSPRITE_GERON_NORFAIR:
     case MZM_PSPRITE_PLASMA_BEAM_BLOCK: case MZM_PSPRITE_GRAVITY_SUIT_BLOCK:
-    case MZM_PSPRITE_SPACE_JUMP_BLOCK: return MZM_FAMILY_GADGET;
+    case MZM_PSPRITE_SPACE_JUMP_BLOCK: case MZM_PSPRITE_MAP_STATION: return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
     case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
@@ -4953,8 +4961,11 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (sprite->sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW) return MZM_PSPRITE_POWER_GRIP;
     if (sprite->sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW) return MZM_PSPRITE_CHARGE_BEAM;
     if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
-    /* The Chozo statue parts and ball use their statue's graphics. */
-    if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE)
+    /* The Chozo statue parts and ball, the map station's screens and the
+     * unknown item block's light use their spawner's graphics. */
+    if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
+        sprite->sprite_id == MZM_SSPRITE_MAP_STATION_PART ||
+        sprite->sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT)
         return sprite->owner;
     if (sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
         sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)

@@ -193,7 +193,7 @@ static void test_pause_bank(void) {
     MzmHudFrame frame = {&equipment, 0, false, 0, 0, 13 * 64, 31 * 64, NULL, NULL, NULL};
     MzmHudRoom room = {0, 0, map_x, map_y, 79, 44};
     mzm_hud_room_entered(&hud, &room, &frame);
-    MzmPauseGame game = {&hud, 0, &equipment, pause_event, NULL};
+    MzmPauseGame game = {&hud, 0, &equipment, pause_event, NULL, MZM_PAUSE_FLAG_PAUSE};
     mzm_pause_enter(&pause);
     mzm_sfx_clear();
     int f;
@@ -337,6 +337,32 @@ static void test_pause_bank(void) {
     }
     assert(left);
     for (int i = 0; i < 512; ++i) assert(ppu.palette[i] == 0);
+    /* The map download: the area's map is marked downloaded, a line reveals
+     * it row by row, then A leaves. */
+    game.flag = MZM_PAUSE_FLAG_MAP_DOWNLOAD;
+    mzm_pause_enter(&pause);
+    for (f = 0; f < 40 && pause.sub_stage != 2; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(pause.type_flags == (1 << 1 | 1 << 5) && progress.downloaded_maps == 1 && pause.state == 9);
+    assert(pause.dispcnt & GBA_DCNT_BG0 && !pause.arrows[0].exists && pause.overlay[0].oam_id != 0);
+    for (f = 0; f < 400 && pause.state != 3; ++f) {
+        mzm_screen_input(&screen, 1);
+        assert(!mzm_pause_update(&pause, &screen, &game));
+    }
+    assert(pause.state == 3 && f > 21 * 8 && !pause.misc[2].exists);
+    for (int i = 0; i < 1024; ++i)
+        assert((ppu.vram[0xE000 + 2 * i] | ppu.vram[0xE001 + 2 * i] << 8) == hud.minimap_visited[i]);
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    mzm_screen_input(&screen, 1);
+    left = mzm_pause_update(&pause, &screen, &game);
+    for (f = 0; f < 40 && !left; ++f) {
+        mzm_screen_input(&screen, 0);
+        left = mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(left);
     mzm_rom_close();
 }
 

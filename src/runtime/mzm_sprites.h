@@ -325,6 +325,12 @@ enum {
     MZM_GADGET_GERON_DESTROYED, MZM_GADGET_GERON_NORFAIR_IDLE,
     MZM_GADGET_UNKNOWN_ITEM_BLOCK_IDLE, MZM_GADGET_UNKNOWN_ITEM_BLOCK_ACTIVATED,
     MZM_GADGET_UNKNOWN_ITEM_BLOCK_EXPLODING, MZM_GADGET_UNKNOWN_ITEM_BLOCK_LIGHT,
+    MZM_GADGET_MAP_STATION_IDLE, MZM_GADGET_MAP_STATION_GRABBING_SAMUS,
+    MZM_GADGET_MAP_STATION_DOWNLOADING, MZM_GADGET_MAP_STATION_RETRACTING,
+    MZM_GADGET_MAP_STATION_INACTIVE, MZM_GADGET_MAP_STATION_BACK_SCREEN_IDLE,
+    MZM_GADGET_MAP_STATION_BACK_SCREEN_DOWNLOADING, MZM_GADGET_MAP_STATION_BACK_SCREEN_DOWNLOADED,
+    MZM_GADGET_MAP_STATION_FRONT_SCREEN_IDLE, MZM_GADGET_MAP_STATION_FRONT_SCREEN_DOWNLOADING,
+    MZM_GADGET_MAP_STATION_FRONT_SCREEN_DOWNLOADED,
     MZM_GADGET_ANIMS,
 };
 extern const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS];
@@ -453,7 +459,7 @@ enum {
     MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C = 141, MZM_PSPRITE_GERON_VARIA1 = 142,
     MZM_PSPRITE_GERON_VARIA2 = 143, MZM_PSPRITE_GERON_VARIA3 = 144, MZM_PSPRITE_GERON_NORFAIR = 106,
     MZM_PSPRITE_PLASMA_BEAM_BLOCK = 170, MZM_PSPRITE_GRAVITY_SUIT_BLOCK = 171,
-    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -480,7 +486,7 @@ enum {
     MZM_SSPRITE_ZEELA_EYES = 16, MZM_SSPRITE_SPACE_PIRATE_LASER = 22,
     MZM_SSPRITE_MORPH_BALL_OUTSIDE = 19, MZM_SSPRITE_POWER_GRIP_GLOW = 70,
     MZM_SSPRITE_CHARGE_BEAM_GLOW = 5, MZM_SSPRITE_DRAGON_FIREBALL = 8,
-    MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT = 56,
+    MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT = 56, MZM_SSPRITE_MAP_STATION_PART = 52,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 
@@ -587,6 +593,8 @@ typedef struct {
     /* gEnergyRefillAnimation, gMissileRefillAnimation,
      * gSuperMissileRefillAnimation and gPowerBombRefillAnimation. */
     uint8_t refill_animation[4];
+    /* gPauseScreenFlag: the map station requests the map download (5). */
+    uint8_t pause_screen_flag;
 } MzmSpriteGlobals;
 
 /* gSamusData as the Chozo statues read and move it: her pose
@@ -600,6 +608,14 @@ typedef struct {
     uint8_t pose;
     uint16_t y, x;
     bool grab, release, moved;
+    /* The map station: Samus facing right in; out, a SamusSetPose request
+     * (`set_pose`, MZM_POSE_NONE: none), gSamusData.timer (`set_timer`,
+     * with currentAnimationFrame reset when `reset_frame`) and the
+     * invincibility timer cleared. */
+    bool facing_right;
+    uint8_t set_pose;
+    bool set_timer, reset_frame, clear_invincibility;
+    uint8_t timer;
 } MzmSpriteSamusLink;
 
 /* What SpriteUpdate shares with every sprite this frame. Enemy drops are
@@ -641,6 +657,11 @@ typedef struct {
     MzmSpriteSamusLink *samus_link;
     /* gSamusData.pose == SPOSE_USING_AN_ELEVATOR (the elevator pad). */
     bool samus_using_elevator;
+    /* The message banner's pose (MZM_BANNER_POSE_*; it stays the last one
+     * once the banner is gone, as its sprite slot does) and
+     * gEquipment.downloadedMapStatus (the map stations). */
+    uint8_t banner_pose;
+    uint8_t downloaded_maps;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,

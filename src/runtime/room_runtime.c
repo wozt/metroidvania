@@ -2562,7 +2562,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
         samus->pose == MZM_POSE_ROLLING ? MZM_LINK_POSE_ROLLING :
         samus->pose == MZM_POSE_GRABBED_BY_CHOZO_STATUE ? MZM_LINK_POSE_GRABBED :
                                                           MZM_LINK_POSE_OTHER,
-        (uint16_t)(samus->y - 1), (uint16_t)samus->x, false, false, false};
+        (uint16_t)(samus->y - 1), (uint16_t)samus->x, false, false, false,
+        samus->facing > 0, MZM_POSE_NONE, false, false, false, 0};
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
                             sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top,
@@ -2571,7 +2572,11 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             runtime_area_id(room->area), (uint8_t)room->room,
                             samus->pose != MZM_POSE_DYING ? &standing : NULL, stopped,
                             prevent_movement, &link,
-                            samus->pose == MZM_POSE_USING_AN_ELEVATOR};
+                            samus->pose == MZM_POSE_USING_AN_ELEVATOR,
+                            /* The banner's slot keeps its last pose once it
+                             * is gone, which the map station waits for. */
+                            sprites->banner.pose,
+                            runtime_minimap.downloaded_maps};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
@@ -2584,6 +2589,12 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
         samus->y = (int32_t)link.y + 1;
     }
     if (link.release) mzm_samus_chozo_grab(samus, false, equipment, collision);
+    /* The map station's SamusSetPose calls and gSamusData writes. */
+    if (link.clear_invincibility) samus->invincibility = 0;
+    if (link.set_pose != MZM_POSE_NONE)
+        mzm_samus_sprite_set_pose(samus, (MzmPose)link.set_pose, equipment, collision);
+    if (link.set_timer) samus->timer = link.timer;
+    if (link.reset_frame) samus->anim_frame = 0;
     if (samus->pose != MZM_POSE_DYING && !stopped) {
         if (standing.landing_request)
             mzm_samus_land_on_sprite(samus, input, equipment, collision);
@@ -3147,6 +3158,7 @@ int main(int argc, char **argv) {
     static MzmTitleScreen title_screen;
     static MzmPauseScreen pause_screen;
     bool pause_mode=false, screen_ready=false;
+    uint8_t pause_flag=MZM_PAUSE_FLAG_PAUSE;   /* gPauseScreenFlag of the open pause */
     /* The HUD reads its graphics from the ROM bank. */
     if (mzm_rom_open(RUNTIME_ROM_BANK, RUNTIME_ROM_SYMBOLS))
         mzm_hud_init(&runtime_hud, &runtime_hud_ppu, &runtime_minimap, 320);
@@ -3614,7 +3626,7 @@ int main(int argc, char **argv) {
                                                               capture_path?NULL:&gamepad));
                 MzmPauseGame pause_game={&runtime_hud,runtime_area_index(room->area),
                                          &equipment,
-                                         runtime_sprite_check_event,&sprites};
+                                         runtime_sprite_check_event,&sprites,pause_flag};
                 bool was_sleeping=pause_screen.sleeping;
                 bool left_pause=mzm_pause_update(&pause_screen,&screen,&pause_game);
                 /* Easy sleep stops the GBA: no sound until it wakes. */
@@ -3624,11 +3636,26 @@ int main(int argc, char **argv) {
                 }
                 if(left_pause) {
                     pause_mode=false;
-                    runtime_audio_lock();
-                    mzm_music_reset_volume();
-                    runtime_audio_unlock();
+                    if(pause_flag==MZM_PAUSE_FLAG_MAP_DOWNLOAD) {
+                        /* Back in the game the map station goes on. */
+                        sprites.globals.pause_screen_flag=0;
+                    } else {
+                        runtime_audio_lock();
+                        mzm_music_reset_volume();
+                        runtime_audio_unlock();
+                    }
                     previous_held=held;
                 }
+                accumulator-=fixed_step;
+                continue;
+            }
+            /* A map station's download opens the pause screen's map
+             * download (gPauseScreenFlag set during the last frame). */
+            if(screen_ready && runtime_hud.ready &&
+               sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_MAP_DOWNLOAD) {
+                pause_mode=true;
+                pause_flag=MZM_PAUSE_FLAG_MAP_DOWNLOAD;
+                mzm_pause_enter(&pause_screen);
                 accumulator-=fixed_step;
                 continue;
             }
@@ -3640,6 +3667,7 @@ int main(int argc, char **argv) {
                !(screen.button_input&GBA_KEY_START) && prevent_movement==0 &&
                weapons.power_bomb.state==MZM_PB_NONE) {
                 pause_mode=true;
+                pause_flag=MZM_PAUSE_FLAG_PAUSE;
                 mzm_pause_enter(&pause_screen);
                 mzm_screen_input(&screen,GBA_KEY_START);
                 runtime_audio_lock();

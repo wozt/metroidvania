@@ -2988,6 +2988,25 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0291 - Zero Mission map stations and map download
+
+- `src/runtime/mzm_gadget_sprites.c`: the map station and its two screens
+  (map_station.c). Samus standing on the platform is grabbed, downloads,
+  gets the area's map message and is released when the station retracts;
+  a station whose area map is already downloaded stays retracted.
+- The station sets gPauseScreenFlag to PAUSE_SCREEN_MAP_DOWNLOAD and the
+  runtime opens the pause screen in its map download mode
+  (`src/runtime/mzm_pause_screen.c`): the download BG layout, the area
+  name, the line sweeping down and revealing the downloaded rows, then A,
+  B or START to return. The HUD minimap shows the download afterwards.
+- `MzmSpriteSamusLink` carries SamusSetPose requests and gSamusData writes
+  from sprites (`mzm_samus_sprite_set_pose`); `MzmSpriteFrame` carries the
+  banner's pose and the downloaded maps; the banner keeps its last pose
+  once removed, as its native sprite slot does.
+- The map station is exported with the ported sprites.
+- Checked by capture in brinstar_032; tests in `tests/test_mzm_sprites.c`
+  and `tests/test_mzm_screens.c`.
+
 ## Patch 0290 - Zero Mission easy sleep
 
 - L on the pause map opens the native easy sleep screen

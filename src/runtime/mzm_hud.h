@@ -93,6 +93,9 @@ bool mzm_hud_tile_explored(const MzmHud *hud, const MzmHudRoom *room, int x_bloc
  * as the pause screen shows it (1024 tiles). */
 void mzm_hud_area_map(MzmHud *hud, uint8_t area, uint16_t *dst,
                       bool (*check_event)(void *context, uint8_t event), void *context);
+/* MinimapDraw for every part of the minimap (the end of the map
+ * download). */
+void mzm_hud_redraw_minimap(MzmHud *hud);
 /* MinimapUpdateChunk: a boss icon of the current area changes. */
 void mzm_hud_update_chunk(MzmHud *hud, const MzmHudRoom *room, uint8_t event);
 

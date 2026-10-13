@@ -3,6 +3,7 @@
 #include "mzm_sfx.h"
 #include "mzm_blocks.h"
 #include "mzm_items.h"
+#include "mzm_message_banner.h"
 #include "mzm_sprites.h"
 
 #include <assert.h>
@@ -143,7 +144,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false, NULL, NULL, false};
+                             0, 0, NULL, false, NULL, NULL, false, 0, 0};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -2695,7 +2696,7 @@ int main(void) {
         MzmSprite *arm = &room[arm_slot];
         uint16_t hand = (uint16_t)(arm->x + 56);
         MzmSpriteSamusLink link = {MZM_LINK_POSE_MORPH_BALL, (uint16_t)(arm->y - 17), hand,
-                                   false, false, false};
+                                   false, false, false, false, MZM_POSE_NONE, false, false, false, 0};
         statue_frame.samus_link = &link;
         /* Off by one subpixel in height: no grab. */
         link.y++;
@@ -2770,7 +2771,8 @@ int main(void) {
                 hint_arm = &room[i];
         assert(hint_arm && hint_arm->pose == 0x9);
         MzmSpriteSamusLink hint_link = {MZM_LINK_POSE_ROLLING, (uint16_t)(hint_arm->y - 17),
-                                        (uint16_t)(hint_arm->x - 56), false, false, false};
+                                        (uint16_t)(hint_arm->x - 56), false, false, false,
+                                        false, MZM_POSE_NONE, false, false, false, 0};
         statue_frame.samus_link = &hint_link;
         mzm_sprite_update(hint_arm, 0, &statue_frame);
         assert(hint_link.grab && room[0].pose == 0x22 && hint_arm->pose == 0x23);
@@ -3100,6 +3102,66 @@ int main(void) {
                room[1].anim == MZM_GADGET_UNKNOWN_ITEM_BLOCK_LIGHT && room[1].draw_bottom == 80);
         mzm_sprite_update(&room[1], 1, &g);
         assert(room[1].draw_top == 0);
+        /* A map station: inactive once the area's map is downloaded; else
+         * it grabs Samus standing on its platform, downloads (the pause
+         * flag), shows the map message, waits for the banner, retracts. */
+        memset(room, 0, sizeof room);
+        static MzmSpriteGlobals station_globals;
+        memset(&station_globals, 0, sizeof station_globals);
+        g.globals = &station_globals;
+        g.area = 0;
+        g.downloaded_maps = 1;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_MAP_STATION, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xF && room[0].anim == MZM_GADGET_MAP_STATION_INACTIVE && room[0].frame == 9 &&
+               !(room[1].status & MZM_SPRITE_STATUS_EXISTS));
+        memset(room, 0, sizeof room);
+        g.downloaded_maps = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_MAP_STATION, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 9 && room[1].sprite_id == MZM_SSPRITE_MAP_STATION_PART &&
+               room[2].sprite_id == MZM_SSPRITE_MAP_STATION_PART && room[2].room_slot == 1);
+        mzm_sprite_update(&room[1], 1, &g);
+        assert(room[1].anim == MZM_GADGET_MAP_STATION_BACK_SCREEN_IDLE);
+        uint16_t station_x = (uint16_t)(room[0].x + 96), station_y = (uint16_t)(room[0].y + 128 - 1);
+        MzmSpriteSamusLink station_link = {MZM_LINK_POSE_OTHER, station_y, (uint16_t)(station_x + 64),
+                                           false, false, false, true, MZM_POSE_NONE, false, false, false, 0};
+        g.samus_link = &station_link;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 9 && station_link.set_pose == MZM_POSE_NONE);
+        station_link.x = (uint16_t)(station_x + 20);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x23 && station_link.moved && station_link.x == station_x &&
+               station_link.clear_invincibility &&
+               station_link.set_pose == MZM_POSE_TURNING_AROUND_TO_DOWNLOAD_MAP_DATA &&
+               mzm_sfx_requested(MZM_SFX_PLAY, 0x123));
+        int station_frames = 0;
+        while (room[0].pose == 0x23 && station_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25 && station_link.set_timer && station_link.timer == 0);
+        mzm_sprite_update(&room[1], 1, &g);
+        assert(room[1].anim == MZM_GADGET_MAP_STATION_BACK_SCREEN_DOWNLOADING);
+        for (station_frames = 0; station_frames < 59; ++station_frames) mzm_sprite_update(&room[0], 0, &g);
+        assert(station_globals.pause_screen_flag == 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(station_globals.pause_screen_flag == 5 && room[0].pose == 0x25);
+        for (station_frames = 0; station_frames < 10; ++station_frames) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x27 && room[0].anim == MZM_GADGET_MAP_STATION_RETRACTING);
+        message_count = 0;
+        station_link.set_timer = station_link.reset_frame = false;
+        for (station_frames = 0; station_frames < 10; ++station_frames) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x29 && message_count == 1 && messages[0] == 27 && station_link.set_timer &&
+               station_link.timer == 1 && station_link.reset_frame && mzm_sfx_requested(MZM_SFX_FADE, 0x123));
+        g.banner_pose = MZM_BANNER_POSE_REMOVAL_ANIMATION;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x2B);
+        station_link.set_pose = MZM_POSE_NONE;
+        for (station_frames = 0; station_frames < 11; ++station_frames) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x2F && room[0].anim == MZM_GADGET_MAP_STATION_INACTIVE &&
+               station_link.set_pose == MZM_POSE_STANDING && mzm_sfx_requested(MZM_SFX_PLAY, 0x124));
+        g.banner_pose = 0;
+        g.samus_link = NULL;
+        g.globals = frame.globals;
     }
 
     /* The Morph Ball, the Power Grip and the Charge Beam: touched, they give

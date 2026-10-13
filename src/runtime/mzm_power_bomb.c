@@ -2,6 +2,7 @@
 /* Zero Mission power bomb explosion; comments name the pinned
  * decompilation's routines. */
 #include "mzm_power_bomb.h"
+#include "mzm_screen_shake.h"
 #include "mzm_sfx.h"
 
 #include <stdio.h>
@@ -14,13 +15,13 @@ bool mzm_power_bomb_start(MzmPowerBomb *pb, uint16_t x, uint16_t y) {
     if (pb->state != MZM_PB_NONE) return false;
     pb->x = x;
     pb->y = y;
-    /* PowerBombExplosionBegin (the palette backup and the horizontal screen
-     * shake are the renderer's). */
+    /* PowerBombExplosionBegin (the palette backup is the renderer's). */
     pb->state = MZM_PB_EXPLODING;
     pb->placed = false;
     pb->stage = 0;
     pb->axis = 4;
     pb->hitbox_left = pb->hitbox_right = pb->hitbox_top = pb->hitbox_bottom = 0;
+    mzm_screen_shake_start_horizontal(120, 0x80);  /* CONVERT_SECONDS(2.f) */
     mzm_sfx_play(MZM_SOUND_POWER_BOMB_EXPLOSION);
     return true;
 }

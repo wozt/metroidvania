@@ -2988,6 +2988,23 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0308 - Zero Mission screen shakes, pistons and the glass tube
+
+- Screen shakes (`src/runtime/mzm_screen_shake.c`): one shared state run
+  once a frame, moving BG0 to BG2 by up to 2 pixels and BG3 by half; Samus's
+  spark collisions, the power bomb, the super missile impact and the Long
+  Beam Dessgeega start them, and crawlers on screen stop or fall during
+  them (SpriteUtilShouldFall).
+- Piston and GlassTube (`src/runtime/mzm_gadget_sprites.c`).
+- Fix: the room gadgets' OAM tables past the 72nd (ziplines, gates)
+  overflowed MzmSpriteKind and read zero durations; the limit is 128 with
+  static asserts and a loader check.
+- The projectile OAM renderer accepts up to the 128 hardware OAM entries
+  (the glass tube uses more than 32).
+- Checked by capture in chozodia_005 (power bomb shake), brinstar_028
+  (piston) and chozodia_023 (glass tube); tests in `tests/test_mzm_sprites.c`
+  and `tests/test_mzm_samus.c`.
+
 ## Patch 0307 - Zero Mission security gates
 
 - SecurityGateDefaultOpen and SecurityGateDefaultClosed

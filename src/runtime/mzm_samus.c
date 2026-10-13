@@ -4,6 +4,7 @@
  * reproduces. Inside an update the position is native (the public `y` minus
  * one); positions wrap as the native u16 fields do. */
 #include "mzm_samus.h"
+#include "mzm_screen_shake.h"
 #include "mzm_sfx.h"
 
 #include <stdio.h>
@@ -1017,7 +1018,7 @@ static void set_landing(Ctx *c, MzmSamusData *copy) {
             s->timer = 160;
             mzm_sfx_play(MZM_SOUND_SPEEDBOOSTER_START);
         } else {
-            s->shake_x = 30;        /* ScreenShakeStartHorizontal(CONVERT_SECONDS(.5f), 1) */
+            mzm_screen_shake_start_horizontal(30, 1);   /* CONVERT_SECONDS(.5f) */
             s->pose = copy->pose == MZM_POSE_SHINESPARKING ? MZM_POSE_SHINESPARK_COLLISION
                                                            : MZM_POSE_BALLSPARK_COLLISION;
             s->forced = copy->forced;
@@ -2189,7 +2190,7 @@ static void hanging_blocks(const Ctx *c, int32_t x_offset, bool *block_above, bo
 /* SamusHangingOnLedge */
 static MzmPose pose_hanging_on_ledge(Ctx *c) {
     MzmSamus *s = c->s;
-    if (s->shake_x >= 30) {
+    if (mzm_screen_shake.x.timer >= 30) {
         s->forced = MZM_FORCED_FALL;
         return MZM_POSE_MID_AIR_REQUEST;
     }
@@ -2238,7 +2239,7 @@ static MzmPose gfx_hanging_on_ledge(Ctx *c) {
 /* SamusTurningToAimWhileHanging (also hiding the arm cannon and shooting) */
 static MzmPose pose_turning_to_aim_while_hanging(Ctx *c) {
     MzmSamus *s = c->s;
-    if (s->shake_x >= 30) {
+    if (mzm_screen_shake.x.timer >= 30) {
         s->forced = MZM_FORCED_FALL;
         return MZM_POSE_MID_AIR_REQUEST;
     }
@@ -2283,7 +2284,7 @@ static MzmPose gfx_hiding_arm_cannon_while_hanging(Ctx *c) {
  * ten frames climbs the ledge, as A with the inward direction does. */
 static MzmPose pose_aiming_while_hanging(Ctx *c) {
     MzmSamus *s = c->s;
-    if (s->shake_x >= 30) {
+    if (mzm_screen_shake.x.timer >= 30) {
         s->forced = MZM_FORCED_FALL;
         return MZM_POSE_MID_AIR_REQUEST;
     }
@@ -2474,7 +2475,7 @@ static MzmPose pose_shinesparking(Ctx *c) {
         hitting_side = true;
     }
     if (stop) {
-        s->shake_y = 30;            /* ScreenShakeStartVertical(CONVERT_SECONDS(.5f), 1) */
+        mzm_screen_shake_start_vertical(30, 1);     /* CONVERT_SECONDS(.5f) */
         return (MzmPose)(s->pose + 1);
     }
     if (hitting_side) {
@@ -2489,7 +2490,7 @@ static MzmPose pose_shinesparking(Ctx *c) {
             s->keep_vertical = true;
             return MZM_POSE_LANDING_REQUEST;
         }
-        s->shake_x = 30;
+        mzm_screen_shake_start_horizontal(30, 1);
         return (MzmPose)(s->pose + 1);
     }
     return MZM_POSE_NONE;
@@ -3104,9 +3105,6 @@ void mzm_samus_update(MzmSamus *samus, const MzmInput *input,
     update_standing(samus);
     update_velocity_position(&c, &p);
     update_hitbox_moving_direction(&c);
-    /* ScreenShakeUpdateHorizontal / Vertical */
-    if (samus->shake_x) samus->shake_x--;
-    if (samus->shake_y) samus->shake_y--;
     leave(samus);
 }
 

@@ -3,6 +3,7 @@
 #include "mzm_effects.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
+#include "mzm_screen_shake.h"
 #include "mzm_sfx.h"
 
 #include <assert.h>
@@ -73,6 +74,8 @@ typedef struct {
 
 static void world_init(World *w) {
     memset(w, 0, sizeof *w);
+    /* RoomLoad's sScreenShake_Empty. */
+    mzm_screen_shake_clear();
     w->collision = (MzmCollision){.context = &w->grid, .blocked = grid_blocked,
                                   .clipdata = grid_clipdata};
     w->animation = (MzmAnimationSource){NULL, test_durations};
@@ -92,6 +95,9 @@ static void step(World *w, uint16_t held) {
     w->previous = held;
     mzm_samus_update(&w->samus, &input, &w->equipment, &w->collision,
                      &w->animation);
+    /* RoomUpdateBackgroundsPosition runs the screen shakes once a frame. */
+    mzm_screen_shake_update_vertical();
+    mzm_screen_shake_update_horizontal();
 }
 
 static void steps(World *w, uint16_t held, int count) {
@@ -1460,6 +1466,8 @@ static void step_input(World *w, uint16_t held, bool new_projectile, uint8_t cha
     MzmInput input = {held, (uint16_t)(held & ~w->previous), new_projectile, 0, charge};
     w->previous = held;
     mzm_samus_update(&w->samus, &input, &w->equipment, &w->collision, &w->animation);
+    mzm_screen_shake_update_vertical();
+    mzm_screen_shake_update_horizontal();
 }
 
 /* Reported bug 4: the diagonals while running (SamusAimCannon's running

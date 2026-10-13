@@ -110,7 +110,8 @@ def frames(rom: bytes, symbols, table: str) -> list[tuple[int, int]]:
 def render(rom: bytes, vram: bytes, palette, pointer: int, flip: str):
     """Pixels relative to the projectile position for one OAM frame."""
     count = struct.unpack("<H", _slice(rom, pointer, 2, "projectile OAM"))[0]
-    if not 1 <= count <= 32:
+    # At most the 128 hardware OAM entries (the glass tube uses over 32).
+    if not 1 <= count <= 128:
         raise ValueError("invalid projectile OAM part count")
     raw = _slice(rom, pointer + 2, count * 6, "projectile OAM entries")
     entries = [unpack_oam(struct.pack("<HHHH", *struct.unpack_from("<HHH", raw, i * 6), 0))

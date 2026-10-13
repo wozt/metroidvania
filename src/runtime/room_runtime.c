@@ -23,6 +23,7 @@
 #include "mzm_rom.h"
 #include "mzm_room_gfx.h"
 #include "mzm_samus.h"
+#include "mzm_screen_shake.h"
 #include "mzm_screen.h"
 #include "mzm_title_screen.h"
 #include "mzm_pause_screen.h"
@@ -2457,6 +2458,11 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
 static bool runtime_sprite_kind_open(MzmSpriteKind *kind, RuntimeLibrary *library,
                                      const char *const *sprites, const char *const *anims,
                                      int count) {
+    if (count > MZM_SPRITE_MAX_ANIMS) {
+        fprintf(stderr, "Zero Mission sprite library: %d OAM tables for %s exceed %d\n", count,
+                sprites[0], MZM_SPRITE_MAX_ANIMS);
+        return false;
+    }
     for (int a = 0; a < count; ++a) {
         char key[160];
         snprintf(key, sizeof key, "Sprite/%s/%s/none", sprites[a], anims[a]);
@@ -2574,6 +2580,8 @@ static int runtime_location_text(const Room *room, int last_door) {
 }
 
 static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int last_door) {
+    /* RoomLoad: sScreenShake_Empty. */
+    mzm_screen_shake_clear();
     memset(sprites->live, 0, sizeof sprites->live);
     memset(&sprites->effects, 0, sizeof sprites->effects);
     if (!sprites->tables_ok) return;
@@ -3706,6 +3714,8 @@ int main(int argc, char **argv) {
     char room_gfx_alias[64]="";
     int room_bg0_x=0,room_bg0_y=0;
     bool room_bg0_custom=false;
+    /* RoomUpdateBackgroundsPosition's screen shake offsets (pixels). */
+    int shake_x=0,shake_y=0;
     SDL_Texture *screen_texture=NULL;
     int rc=1;
     RuntimeLibrary library = {0};
@@ -4498,6 +4508,10 @@ int main(int argc, char **argv) {
                 runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, &previous_x,
                                        &equipment, &collision, &weapons, &input, movement_prevented,
                                        &prevent_movement);
+            /* RoomUpdateBackgroundsPosition: the screen shakes run once a
+             * frame. */
+            shake_y=mzm_screen_shake_update_vertical();
+            shake_x=mzm_screen_shake_update_horizontal();
             /* The loaded room's sprites have seen gIsLoadingFile. */
             sprites.globals.loading_file=false;
             if((sprites.banner.exists || sprites.banner.cursor.exists) && sprites.banner_ok) {
@@ -4877,16 +4891,20 @@ int main(int argc, char **argv) {
         if(room->has_backgrounds && runtime_room_gfx.ready &&
            !strcmp(room_gfx_alias,current_room)) {
             MzmRoomGfx *g=&runtime_room_gfx;
+            /* BG0 to BG2 shaken by the screen shake, BG3 by half of it. */
+            int sx=(int)cx+shake_x,sy=(int)cy+shake_y;
             for(int layer=0;layer<3;layer++)
                 if(room->bg_present[layer]) {
                     mzm_room_gfx_blocks(g,layer,room->bg[layer],room->bg_w[layer],room->bg_h[layer],
-                                        (int)cx,(int)cy,320,224);
-                    mzm_room_gfx_scroll(g,layer,(int)cx,(int)cy);
+                                        sx,sy,320,224);
+                    mzm_room_gfx_scroll(g,layer,sx,sy);
                 }
-            if(room_bg0_custom)mzm_room_gfx_scroll(g,0,room_bg0_x,room_bg0_y);
-            else if(room->text_present[0])mzm_room_gfx_scroll(g,0,(int)cx,(int)cy);
+            if(room_bg0_custom)mzm_room_gfx_scroll(g,0,room_bg0_x+shake_x,room_bg0_y+shake_y);
+            else if(room->text_present[0])mzm_room_gfx_scroll(g,0,sx,sy);
             int bg3_x,bg3_y;
             runtime_bg3_position(room,cx,cy,&bg3_x,&bg3_y);
+            bg3_x+=shake_x>>1;
+            bg3_y+=shake_y>>1;
             /* A door fade: the door transition tilemap on BG3 and the faded
              * palette for this frame's layers. */
             bool fading=door_fade.phase!=MZM_DOOR_FADE_NONE;

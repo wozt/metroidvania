@@ -376,8 +376,6 @@ typedef struct MzmSamus {
     bool keep_vertical;
     /* gScrewSpeedAnimation.flag */
     uint8_t screw_speed_flag;
-    /* gScreenShakeX.timer / gScreenShakeY.timer started by the sparks. */
-    uint8_t shake_x, shake_y;
     /* standingStatus STANDING_ENEMY: set by the sprites. */
     bool on_enemy;
     /* A ledge grab this update (the grab sound). */

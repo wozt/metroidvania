@@ -5,6 +5,7 @@
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
 #include "mzm_sprites.h"
+#include "mzm_screen_shake.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -30,6 +31,8 @@ static uint8_t movement(void *context, uint16_t y, uint16_t x) {
 }
 
 static void clear(void) {
+    /* A new room: RoomLoad's sScreenShake_Empty. */
+    mzm_screen_shake_clear();
     memset(grid, 0, sizeof grid);
     memset(movement_grid, 0, sizeof movement_grid);
 }
@@ -167,6 +170,39 @@ int main(void) {
 
     /* The animation: 2 frames of 4 ticks, looping. */
     assert(z.anim == MZM_ZOOMER_ON_GROUND && z.frame <= 1);
+
+    /* ScreenShakeUpdateVertical: an offset every third frame, up then down
+     * (intensity bit 0) or up then nothing, halved in the last 15 frames;
+     * only a longer shake replaces the current one. */
+    {
+        mzm_screen_shake_clear();
+        assert(mzm_screen_shake_start_vertical(30, 1) == 30);
+        assert(mzm_screen_shake_start_vertical(10, 0x81) == 30);
+        int offsets[30];
+        for (int i = 0; i < 30; ++i) offsets[i] = mzm_screen_shake_update_vertical();
+        assert(offsets[0] == 0 && offsets[1] == 0 && offsets[2] == -2 && offsets[5] == 2 &&
+               offsets[8] == -2 && offsets[11] == 2 && offsets[14] == -1 && offsets[17] == 1 &&
+               offsets[29] == 1 && mzm_screen_shake.y.timer == 0);
+        assert(mzm_screen_shake_update_vertical() == 0);
+        mzm_screen_shake_start_horizontal(120, 0x80);
+        for (int i = 0; i < 2; ++i) mzm_screen_shake_update_horizontal();
+        assert(mzm_screen_shake_update_horizontal() == -2);
+        for (int i = 0; i < 2; ++i) mzm_screen_shake_update_horizontal();
+        assert(mzm_screen_shake_update_horizontal() == 0);
+        mzm_screen_shake_clear();
+    }
+    /* SpriteUtilShouldFall: during a screen shake, a crawler on the ground
+     * stops; one facing down (on a wall or ceiling) drops. */
+    {
+        MzmSprite shaken = z;
+        mzm_screen_shake_start_vertical(10, 0x81);
+        step(&shaken, 0);
+        assert(shaken.x == z.x && shaken.pose == 9);
+        shaken.status |= MZM_SPRITE_STATUS_FACING_DOWN;
+        step(&shaken, 0);
+        assert(shaken.pose == 0x1E);              /* ZOOMER_POSE_FALLING_INIT */
+        mzm_screen_shake_clear();
+    }
 
     /* A wall (column 8): the zoomer turns and climbs it, facing down along
      * the wall with X flip, its x on the wall's left edge. */
@@ -3599,6 +3635,82 @@ int main(void) {
         assert(room[0].pose == 0x27 && last_caa == MZM_CAA_REMOVE_SOLID);
         g.samus_hitbox_top = g.samus_hitbox_left = g.samus_hitbox_right = 0;
         g.globals = frame.globals;
+        /* A piston: its four body blocks, then its bottom block once Samus
+         * is away; a damaging hit on its head opens it (the bottom block
+         * removed), then its top block turns solid. */
+        memset(room, 0, sizeof room);
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_PISTON, 0, 7, 6, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && caa_calls == 5 && last_caa == MZM_CAA_MAKE_NON_POWER_GRIP &&
+               room[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING && room[0].health == 256 &&
+               !(room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES) && room[0].hitbox_top == -116 &&
+               room[0].hitbox_bottom == -108 && room[0].anim == MZM_GADGET_PISTON_IDLE);
+        /* A beam hit (ISFT_DAMAGED: sPrimarySpriteStats gives it
+         * WEAKNESS_BEAM_BOMBS), seen a frame later. */
+        tables.weakness[MZM_PSPRITE_PISTON] = MZM_WEAKNESS_BEAM_BOMBS;
+        static MzmWeapons piston_weapons;
+        mzm_weapons_init(&piston_weapons);
+        piston_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
+                                                 .x = room[0].x, .y = room[0].y - 112};
+        mzm_sprites_projectile_hits(room, 4, &piston_weapons, g.tables, NULL);
+        assert((room[0].isft & 0x7F) == 17 && room[0].health < 256);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x23 && room[0].health == 256 && (room[0].isft & 0x7F) == 0 &&
+               room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+               room[0].anim == MZM_GADGET_PISTON_OPENING);
+        int piston_frames = 0;
+        while (room[0].pose == 0x23 && piston_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25 && caa_calls == 6 && room[0].hitbox_top == -180 &&
+               room[0].anim == MZM_GADGET_PISTON_OPENED);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(caa_calls == 7 && last_caa == MZM_CAA_MAKE_NON_POWER_GRIP &&
+               room[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING);
+        /* The glass tube: intact until a power bomb touches it after the
+         * Fully Powered Suit, then two seconds, the cracking, the opening of
+         * its rows with a shake both ways, and the broken tube. */
+        memset(room, 0, sizeof room);
+        memset(test_events, 0, sizeof test_events);
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GLASS_TUBE, 0, 7, 6, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && room[0].anim == MZM_GADGET_GLASS_TUBE_INTACT && caa_calls == 0);
+        static MzmWeapons tube_weapons;
+        mzm_weapons_init(&tube_weapons);
+        MzmEquipment tube_equipment = *frame.equipment;
+        tube_equipment.max_power_bombs = 2;
+        g.equipment = &tube_equipment;
+        g.weapons = &tube_weapons;
+        tube_weapons.power_bomb.state = MZM_PB_EXPLODING;
+        tube_weapons.power_bomb.x = room[0].x;
+        tube_weapons.power_bomb.y = room[0].y;
+        tube_weapons.power_bomb.hitbox_left = tube_weapons.power_bomb.hitbox_top = -64;
+        tube_weapons.power_bomb.hitbox_right = tube_weapons.power_bomb.hitbox_bottom = 64;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9);            /* not before the Fully Powered Suit */
+        test_set_event(NULL, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x23 && room[0].work0 == 120 &&
+               test_check_event(NULL, MZM_EVENT_GLASS_TUBE_BROKEN));
+        for (int i = 0; i < 120; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25 && room[0].anim == MZM_GADGET_GLASS_TUBE_CRACKING);
+        mzm_screen_shake_clear();
+        int tube_frames = 0;
+        while (room[0].pose == 0x25 && tube_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x27 && caa_calls == 22 && last_caa == MZM_CAA_REMOVE_SOLID &&
+               mzm_screen_shake.x.timer == 30 && mzm_screen_shake.y.timer == 30);
+        tube_frames = 0;
+        while (room[0].pose == 0x27 && tube_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xF && room[0].anim == MZM_GADGET_GLASS_TUBE_BROKEN);
+        /* Broken already: its rows removed at once. */
+        memset(room, 0, sizeof room);
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GLASS_TUBE, 0, 7, 6, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xF && caa_calls == 22);
+        mzm_screen_shake_clear();
+        memset(test_events, 0, sizeof test_events);
+        g.equipment = frame.equipment;
         memset(test_events, 0, sizeof test_events);
         clear();
         g.weapons = NULL;

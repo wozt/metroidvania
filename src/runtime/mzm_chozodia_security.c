@@ -32,7 +32,6 @@ enum {
     ALARM_ACTIVE = MZM_ALARM_TIMER_ACTIVE,
     TWO_THIRD_SECOND = 40,
     SIXTH_SECOND = 10,
-    MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED = 67,
 };
 
 static MzmSpriteGlobals *globals(const Ctx *c) {

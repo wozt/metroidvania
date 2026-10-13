@@ -2,6 +2,7 @@
 /* Zero Mission particle effects; comments name the pinned decompilation's
  * routines. */
 #include "mzm_effects.h"
+#include "mzm_screen_shake.h"
 #include "mzm_sfx.h"
 
 #include <stddef.h>
@@ -168,6 +169,9 @@ static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
         case MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE:
             mzm_sfx_stop(MZM_SOUND_SUPER_MISSILE_THRUST);
             mzm_sfx_play(MZM_SOUND_SUPER_MISSILE_EXPLOSION);
+            /* CONVERT_SECONDS(1.f / 6) */
+            mzm_screen_shake_start_horizontal(10, 0x81);
+            mzm_screen_shake_start_vertical(10, 0x81);
             break;
         default:
             break;

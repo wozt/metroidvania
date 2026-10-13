@@ -381,9 +381,16 @@ destroyed after their event (the Parasites that destroy them are not
 ported), the Norfair one disappears with the Power Grip; the unknown item
 blocks fill 2x2 grippable blocks, let shots through until their item's event,
 then explode with their light and clear the blocks.
+Morph ball launchers hold a bomb and launch Samus; ziplines carry her between
+stop-enemy blocks once the generator has activated them (their buttons call
+them back); Chozodia's security gates close while the alarm rings; pistons
+rise a block when a beam or bomb hits their head; the glass tube breaks under
+a power bomb after the Fully Powered Suit. Their sprites and the crawlers
+react to the shared screen shake (`src/runtime/mzm_screen_shake.c`), which
+moves the backgrounds, never the sprites.
 
 Not ported yet: the multiple large energy pickup,
-screen-shake falls, splashes in liquids, the hard-mode and event
+splashes in liquids, the hard-mode and event
 spritesets (where the Long Beam Dessgeega is placed), the door lock
-lifecycle, screen shakes, the Chozodia alarm's music and palette, and
+lifecycle, the Chozodia alarm's music and palette, and
 every other sprite AI.

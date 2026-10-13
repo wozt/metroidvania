@@ -2,6 +2,7 @@
 /* Zero Mission sprites; comments name the pinned decompilation's routines. */
 #include "mzm_sprites.h"
 #include "mzm_sprite_ai.h"
+#include "mzm_screen_shake.h"
 #include "mzm_sfx.h"
 
 #include <string.h>
@@ -247,6 +248,13 @@ const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
     "SecurityGateOam_Closing",
     "SecurityGateOam_Closed",
     "SecurityGateOam_Opening",
+    "PistonOam_Idle",
+    "PistonOam_Opening",
+    "PistonOam_Opened",
+    "GlassTubeOam_Intact",
+    "GlassTubeOam_Cracking",
+    "GlassTubeOam_Breaking",
+    "GlassTubeOam_Broken",
 };
 static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
@@ -267,6 +275,7 @@ static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ZIPLINE_GENERATOR",
     "SECURITY_GATE_DEFAULT_OPEN", "SECURITY_GATE_DEFAULT_OPEN", "SECURITY_GATE_DEFAULT_OPEN",
     "SECURITY_GATE_DEFAULT_OPEN",
+    "PISTON", "PISTON", "PISTON", "GLASS_TUBE", "GLASS_TUBE", "GLASS_TUBE", "GLASS_TUBE",
 };
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
@@ -673,6 +682,12 @@ static bool zoomer_turn(MzmSprite *s, bool set_right, uint8_t direction) {
     return true;
 }
 
+/* SpriteUtilShouldFall: on screen during any screen shake. */
+static bool should_fall(const MzmSprite *s) {
+    return s->status & MZM_SPRITE_STATUS_ONSCREEN &&
+           (mzm_screen_shake.y.timer != 0 || mzm_screen_shake.x.timer != 0);
+}
+
 /* ZoomerCrawling */
 static void zoomer_crawling(Ctx *c) {
     MzmSprite *s = c->s;
@@ -683,7 +698,13 @@ static void zoomer_crawling(Ctx *c) {
         s->pose = ZOOMER_POSE_FALLING_INIT;
         return;
     }
-    /* SpriteUtilShouldFall: only during a screen shake, not ported. */
+    /* SpriteUtilShouldFall: a crawler on a ceiling or wall drops during a
+     * screen shake, and none crawls. */
+    if (should_fall(s)) {
+        if (s->status & (MZM_SPRITE_STATUS_Y_FLIP | MZM_SPRITE_STATUS_FACING_DOWN))
+            s->pose = ZOOMER_POSE_FALLING_INIT;
+        return;
+    }
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
         if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
             if (right) {
@@ -1926,7 +1947,7 @@ static void hopper_idle(Ctx *c) {
 
 /* DessgeegaLongBeamDetectSamus: hidden from projectiles and Samus until she
  * is on screen within 12 blocks vertically and 3.75 horizontally, then it
- * drops with four debris (the screen shake and sound are not ported). */
+ * drops with four debris, a screen shake and its sound. */
 static void dessgeega_long_beam_detect(Ctx *c) {
     MzmSprite *s = c->s;
     s->ignore_samus_timer = 1;
@@ -1938,6 +1959,7 @@ static void dessgeega_long_beam_detect(Ctx *c) {
     ai_set_anim(s, MZM_DESSGEEGA_JUMPING);
     s->work3 = 0;
     s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    mzm_screen_shake_start_vertical(10, 0x81);  /* CONVERT_SECONDS(1.f / 6) */
     uint16_t y = s->y, x = s->x;
     ai_debris_init(c, 5, (uint16_t)(y + THREE_QUARTER_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE + QUARTER_BLOCK_SIZE));
     ai_debris_init(c, 7, (uint16_t)(y + QUARTER_BLOCK_SIZE),
@@ -1945,6 +1967,7 @@ static void dessgeega_long_beam_detect(Ctx *c) {
     ai_debris_init(c, 8, (uint16_t)(y + BLOCK_SIZE),
                 (uint16_t)(x - (BLOCK_SIZE + 3 * EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2)));
     ai_debris_init(c, 6, (uint16_t)(y + HALF_BLOCK_SIZE), (uint16_t)(x - QUARTER_BLOCK_SIZE));
+    mzm_sfx_play(MZM_SOUND_DESSGEEGA_LONG_BEAM_SPAWNING);
 }
 
 /* DessgeegaLongBeamSpawning: down 24 subpixels a frame; the first floor it
@@ -1958,6 +1981,7 @@ static void dessgeega_long_beam_spawning(Ctx *c) {
     }
     if (s->work3) {
         s->y = top;
+        mzm_screen_shake_start_vertical(10, 0x81);
         hopper_landing_init(s);
         return;
     }
@@ -1976,6 +2000,7 @@ static void dessgeega_long_beam_spawning(Ctx *c) {
                 (uint16_t)(x - (BLOCK_SIZE + HALF_BLOCK_SIZE - PIXEL_SIZE)));
     ai_debris_init(c, 4, (uint16_t)(y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
                 (uint16_t)(x + HALF_BLOCK_SIZE - PIXEL_SIZE / 2));
+    mzm_sfx_play(MZM_SOUND_DESSGEEGA_DESTROYING_FLOOR);
 }
 
 /* SidehopperDeath / DessgeegaDeath. Every ground Dessgeega (not only the
@@ -2374,7 +2399,12 @@ static void sova_move(Ctx *c) {
         s->pose = ZOOMER_POSE_FALLING_INIT;
         return;
     }
-    /* SpriteUtilShouldFall: only during a screen shake, not ported. */
+    /* SpriteUtilShouldFall */
+    if (should_fall(s)) {
+        if (s->status & MZM_SPRITE_STATUS_FACING_DOWN || s->work2 != 0)
+            s->pose = ZOOMER_POSE_FALLING_INIT;
+        return;
+    }
     if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
         if (s->status & MZM_SPRITE_STATUS_X_FLIP) {
             if (right) {
@@ -4439,6 +4469,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_GUNSHIP: case MZM_PSPRITE_AREA_BANNER: case MZM_PSPRITE_MORPH_BALL_LAUNCHER:
     case MZM_PSPRITE_ZIPLINE: case MZM_PSPRITE_ZIPLINE_BUTTON: case MZM_PSPRITE_ZIPLINE_GENERATOR:
     case MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN: case MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED:
+    case MZM_PSPRITE_PISTON: case MZM_PSPRITE_GLASS_TUBE:
         return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:

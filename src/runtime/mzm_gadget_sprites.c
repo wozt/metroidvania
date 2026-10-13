@@ -7,6 +7,7 @@
  * routines. */
 #include "mzm_blocks.h"
 #include "mzm_message_banner.h"
+#include "mzm_screen_shake.h"
 #include "mzm_sprite_ai.h"
 
 enum {
@@ -1739,6 +1740,192 @@ static void security_gate(Ctx *c) {
     }
 }
 
+/* Piston poses (sprites_ai/piston.c). */
+enum {
+    PISTON_POSE_IDLE_INIT = 0x8, PISTON_POSE_CHECK_FOR_PROJECTILES = 0x9,
+    PISTON_POSE_OPENING = 0x23, PISTON_POSE_OPENED = 0x25,
+};
+
+/* PistonSamusCollision / PistonCheckSamusIn: Samus within three quarters
+ * of a block of the point. */
+static bool samus_near_point(const Ctx *c, uint16_t y, uint16_t x) {
+    const uint16_t range = BLOCK_SIZE - QUARTER_BLOCK_SIZE;
+    uint16_t samus_y = c->f->samus_y, samus_x = c->f->samus_x;
+    return y - range < samus_y && y + range > samus_y && x - range < samus_x && x + range > samus_x;
+}
+
+/* Piston: a column whose lower block (with the four body blocks above it)
+ * blocks the way until a beam or bomb hits its head; it then extends one
+ * block up, freeing the bottom block. */
+static void piston(Ctx *c) {
+    MzmSprite *s = c->s;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* PistonInit (its BG priority is not modelled) */
+        s->draw_top = (BLOCK_SIZE * 6 + QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
+        s->draw_bottom = 0;
+        s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_left = -(QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+        s->hitbox_right = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        s->samus_collision = SSC_NONE;
+        s->health = 256;
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        for (int b = 1; b <= 4; ++b)
+            caa(c, (uint16_t)(s->y - (BLOCK_SIZE * b + HALF_BLOCK_SIZE)), s->x, MZM_CAA_MAKE_NON_POWER_GRIP);
+        /* fallthrough */
+    case PISTON_POSE_IDLE_INIT:
+        ai_set_anim(s, MZM_GADGET_PISTON_IDLE);
+        s->pose = PISTON_POSE_CHECK_FOR_PROJECTILES;
+        s->hitbox_top = -(BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE);
+        s->hitbox_bottom = -(BLOCK_SIZE + HALF_BLOCK_SIZE + PIXEL_SIZE * 3);
+        /* fallthrough */
+    case PISTON_POSE_CHECK_FOR_PROJECTILES:
+        /* PistonCheckProjectile: a damaging hit (ISFT_DAMAGED, one frame
+         * run down) opens it; the bottom block turns solid once Samus is
+         * out of it. */
+        if (s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) {
+            if ((s->isft & 0x7F) == 16) {   /* CONVERT_SECONDS(.25f + 1.f / 60) */
+                s->isft &= 0x80;
+                s->health = 256;
+                ai_set_anim(s, MZM_GADGET_PISTON_OPENING);
+                s->pose = PISTON_POSE_OPENING;
+                s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+                mzm_sfx_play(MZM_SOUND_PISTON_EXTENDING);
+            }
+        } else if (!samus_near_point(c, s->y, s->x)) {
+            caa(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), s->x, MZM_CAA_MAKE_NON_POWER_GRIP);
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        }
+        break;
+    case PISTON_POSE_OPENING:
+        /* PistonOpen */
+        if (s->frame == 2 && s->adc == 1) {
+            caa(c, (uint16_t)(s->y - HALF_BLOCK_SIZE), s->x, MZM_CAA_REMOVE_SOLID);
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        }
+        if (ai_animation_ending(c, 1)) {
+            ai_set_anim(s, MZM_GADGET_PISTON_OPENED);
+            s->pose = PISTON_POSE_OPENED;
+            s->hitbox_top = -(BLOCK_SIZE * 2 + THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE);
+            s->hitbox_bottom = -(BLOCK_SIZE * 2 + THREE_QUARTER_BLOCK_SIZE - PIXEL_SIZE);
+        }
+        break;
+    case PISTON_POSE_OPENED:
+        /* PistonOpened: the top block turns solid once Samus is out of it. */
+        if (!(s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) &&
+            !samus_near_point(c, (uint16_t)(s->y - BLOCK_SIZE * 5), s->x)) {
+            caa(c, (uint16_t)(s->y - (BLOCK_SIZE * 5 + HALF_BLOCK_SIZE)), s->x, MZM_CAA_MAKE_NON_POWER_GRIP);
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+/* Glass tube poses (sprites_ai/glass_tube.c). */
+enum {
+    GLASS_TUBE_POSE_POWER_BOMB_COLLISION = 0x9, GLASS_TUBE_POSE_IDLE = 0xF,
+    GLASS_TUBE_POSE_DELAY_BEFORE_CRACKING = 0x23, GLASS_TUBE_POSE_CRACKING = 0x25,
+    GLASS_TUBE_POSE_BREAKING = 0x27,
+};
+
+/* GlassTubeChangeCcaa: the tube's top and bottom rows, eleven blocks each,
+ * removed. */
+static void glass_tube_caa(Ctx *c) {
+    const MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y - HALF_BLOCK_SIZE), x = s->x;
+    for (int row = 0; row < 2; ++row) {
+        uint16_t ry = row ? (uint16_t)(y + BLOCK_SIZE * 3) : (uint16_t)(y - BLOCK_SIZE);
+        caa(c, ry, x, MZM_CAA_REMOVE_SOLID);
+        for (int b = 1; b <= 5; ++b) caa(c, ry, (uint16_t)(x - BLOCK_SIZE * b), MZM_CAA_REMOVE_SOLID);
+        for (int b = 1; b <= 5; ++b) caa(c, ry, (uint16_t)(x + BLOCK_SIZE * b), MZM_CAA_REMOVE_SOLID);
+    }
+}
+
+/* GlassTube: Maridia's tube in Chozodia, broken by a power bomb once the
+ * Fully Powered Suit is obtained (EVENT_GLASS_TUBE_BROKEN). */
+static void glass_tube(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->ignore_samus_timer = 1;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* GlassTubeInit */
+        s->draw_top = s->draw_bottom = BLOCK_SIZE * 3 / PIXEL_SIZE;
+        s->draw_horizontal = BLOCK_SIZE * 7 / PIXEL_SIZE;
+        s->hitbox_top = -(BLOCK_SIZE * 2);
+        s->hitbox_bottom = BLOCK_SIZE * 2;
+        s->hitbox_left = -(BLOCK_SIZE * 4);
+        s->hitbox_right = BLOCK_SIZE * 4;
+        s->frame = s->adc = 0;
+        s->samus_collision = SSC_NONE;
+        if (ai_check_event(c, MZM_EVENT_GLASS_TUBE_BROKEN)) {
+            ai_set_anim(s, MZM_GADGET_GLASS_TUBE_BROKEN);
+            s->pose = GLASS_TUBE_POSE_IDLE;
+            glass_tube_caa(c);
+        } else {
+            ai_set_anim(s, MZM_GADGET_GLASS_TUBE_INTACT);
+            s->pose = GLASS_TUBE_POSE_POWER_BOMB_COLLISION;
+        }
+        if (!ai_check_event(c, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED)) mzm_sfx_play(MZM_SOUND_RAIN_HITTING_GROUND);
+        break;
+    case GLASS_TUBE_POSE_POWER_BOMB_COLLISION: {
+        /* GlassTubeCheckPowerBombCollision */
+        if (!ai_check_event(c, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED) || !c->f->weapons || !c->f->equipment)
+            break;
+        const MzmPowerBomb *pb = &c->f->weapons->power_bomb;
+        if (pb->state == MZM_PB_NONE || c->f->equipment->max_power_bombs == 0) break;
+        uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
+        uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
+        uint16_t bomb_top = (uint16_t)(pb->y + pb->hitbox_top), bomb_bottom = (uint16_t)(pb->y + pb->hitbox_bottom);
+        uint16_t bomb_left = (uint16_t)(pb->x + pb->hitbox_left), bomb_right = (uint16_t)(pb->x + pb->hitbox_right);
+        if (bottom > bomb_top && top < bomb_bottom && right > bomb_left && left < bomb_right) {
+            s->pose = GLASS_TUBE_POSE_DELAY_BEFORE_CRACKING;
+            s->work0 = 120;                     /* CONVERT_SECONDS(2.f) */
+            const MzmSpriteHooks *h = c->f->hooks;
+            if (h && h->set_event) h->set_event(h->context, MZM_EVENT_GLASS_TUBE_BROKEN);
+        }
+        break;
+    }
+    case GLASS_TUBE_POSE_DELAY_BEFORE_CRACKING:
+        if (--s->work0 == 0) {
+            s->pose = GLASS_TUBE_POSE_CRACKING;
+            ai_set_anim(s, MZM_GADGET_GLASS_TUBE_CRACKING);
+            mzm_sfx_play(MZM_SOUND_GLASS_TUBE_BREAKING);
+        }
+        break;
+    case GLASS_TUBE_POSE_CRACKING:
+        /* GlassTubeCheckCrackingAnimEnded: the tube opens with dust at its
+         * four ends and a half-second shake both ways. */
+        if (ai_animation_ending(c, 1)) {
+            s->pose = GLASS_TUBE_POSE_BREAKING;
+            ai_set_anim(s, MZM_GADGET_GLASS_TUBE_BREAKING);
+            glass_tube_caa(c);
+            uint16_t y = s->y, x = s->x;
+            ai_particle_set(c, (uint16_t)(y - (HALF_BLOCK_SIZE - PIXEL_SIZE / 2)),
+                            (uint16_t)(x - (5 * BLOCK_SIZE - QUARTER_BLOCK_SIZE - PIXEL_SIZE)), MZM_PE_MEDIUM_DUST);
+            ai_particle_set(c, (uint16_t)(y + 2 * BLOCK_SIZE + HALF_BLOCK_SIZE), (uint16_t)(x - 5 * BLOCK_SIZE),
+                            MZM_PE_TWO_MEDIUM_DUST);
+            ai_particle_set(c, (uint16_t)(y - (HALF_BLOCK_SIZE - PIXEL_SIZE / 2)),
+                            (uint16_t)(x + 5 * BLOCK_SIZE - QUARTER_BLOCK_SIZE - PIXEL_SIZE), MZM_PE_MEDIUM_DUST);
+            ai_particle_set(c, (uint16_t)(y + 2 * BLOCK_SIZE + HALF_BLOCK_SIZE), (uint16_t)(x + 5 * BLOCK_SIZE),
+                            MZM_PE_TWO_MEDIUM_DUST);
+            mzm_screen_shake_start_vertical(30, 0x81);     /* CONVERT_SECONDS(.5f) */
+            mzm_screen_shake_start_horizontal(30, 0x81);
+        }
+        break;
+    case GLASS_TUBE_POSE_BREAKING:
+        if (ai_animation_ending(c, 1)) {
+            s->pose = GLASS_TUBE_POSE_IDLE;
+            ai_set_anim(s, MZM_GADGET_GLASS_TUBE_BROKEN);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
 void ai_gadget(Ctx *c) {
     if (c->s->secondary) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
@@ -1769,6 +1956,8 @@ void ai_gadget(Ctx *c) {
     case MZM_PSPRITE_ZIPLINE_GENERATOR: zipline_generator(c); break;
     case MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN:
     case MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED: security_gate(c); break;
+    case MZM_PSPRITE_PISTON: piston(c); break;
+    case MZM_PSPRITE_GLASS_TUBE: glass_tube(c); break;
     default: break;
     }
 }

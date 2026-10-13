@@ -188,11 +188,12 @@ static void test_pause_bank(void) {
     mzm_hud_init(&hud, &hud_ppu, &progress, 240);
     uint8_t map_x, map_y;
     assert(mzm_hud_room_map(0, 0, &map_x, &map_y));
-    MzmEquipment equipment = {.energy = 99, .max_energy = 99};
+    MzmEquipment equipment = {.energy = 99, .max_energy = 99, .missiles = 5, .max_missiles = 5,
+                              .items = MZM_ITEM_LONG_BEAM | MZM_ITEM_MORPH_BALL | MZM_ITEM_BOMBS};
     MzmHudFrame frame = {&equipment, 0, false, 0, 0, 13 * 64, 31 * 64, NULL, NULL, NULL};
     MzmHudRoom room = {0, 0, map_x, map_y, 79, 44};
     mzm_hud_room_entered(&hud, &room, &frame);
-    MzmPauseGame game = {&hud, 0, false, pause_event, NULL};
+    MzmPauseGame game = {&hud, 0, &equipment, pause_event, NULL};
     mzm_pause_enter(&pause);
     mzm_sfx_clear();
     int f;
@@ -224,6 +225,60 @@ static void test_pause_bank(void) {
     mzm_screen_input(&screen, 1 << 1);
     mzm_pause_update(&pause, &screen, &game);
     assert(!pause.on_world_map && pause.sub_stage == 2);
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    /* R opens the status screen: the map fades, the headers slide in, the
+     * rows are revealed and the cursor lands on the first beam. */
+    mzm_sfx_clear();
+    mzm_screen_input(&screen, 1 << 8);
+    mzm_pause_update(&pause, &screen, &game);
+    for (f = 0; f < 200 && pause.state != 1; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(pause.state == 1 && count_requests(MZM_SFX_PLAY, 500) == 1);
+    assert(pause.type_flags & 0x80 && pause.dispcnt & GBA_DCNT_BG0 && pause.dispcnt & GBA_DCNT_OBJWIN);
+    assert(screen.bldalpha_h == 0 && screen.bldalpha_l == 16);
+    assert(pause.status.current_slot == 1 && pause.status.beam[0] == 1 && pause.status.misc[0] == 0x40);
+    assert(pause.status.bomb[0] == 0xF && pause.status.bomb[1] == 0 && pause.status.missiles[0] == 3);
+    assert(pause.status.suit[0] == 0 && pause.misc[8].oam_id == 44 && pause.misc[9].obj_mode == 2);
+    for (int i = 0; i < 640; ++i)
+        assert((ppu.vram[0xC000 + 2 * i] | ppu.vram[0xC001 + 2 * i] << 8) == pause.status_tilemap[i]);
+    /* The long beam's description is written into the text tiles. */
+    bool text = false;
+    for (f = 0; f < 120 && !text; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+        for (int i = 0; i < 0x800 && !text; ++i) text = ppu.vram[0x7800 + i] != 0;
+    }
+    assert(text && pause.current_equipment == 0);
+    for (f = 0; f < 60 && pause.misc[0].oam_id == 6; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    /* DOWN wraps to the missiles, RIGHT jumps to the morph ball. */
+    mzm_screen_input(&screen, 1 << 7);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.status.current_slot == 6 && count_requests(MZM_SFX_PLAY, 502) == 1);
+    for (f = 0; f < 60 && pause.misc[0].oam_id == 6; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    mzm_screen_input(&screen, 1 << 4);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.status.current_slot == 12 && pause.status.previous_left_slot == 6);
+    /* B goes back to the map with its blend. */
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    mzm_screen_input(&screen, 1 << 1);
+    mzm_pause_update(&pause, &screen, &game);
+    for (f = 0; f < 200 && pause.state != 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(pause.state == 0 && !(pause.type_flags & 0x80) && count_requests(MZM_SFX_PLAY, 501) == 1);
+    assert(screen.bldalpha_h == 6 && screen.bldalpha_l == 10 && !(pause.dispcnt & GBA_DCNT_BG0));
+    assert(pause.dispcnt == (GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ));
     mzm_screen_input(&screen, 0);
     mzm_pause_update(&pause, &screen, &game);
     mzm_screen_input(&screen, 1 << 3);

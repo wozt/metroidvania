@@ -2988,6 +2988,30 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0289 - Zero Mission status screen
+
+- R on the pause map opens the native status screen
+  (`src/runtime/mzm_pause_screen.c`, from status_screen.c and
+  pause_screen.c): the map fades out through BLDALPHA, the headers and
+  Samus's wireframe slide in (the wireframe also drawn into the OBJ window,
+  which shows only BG3 and the objects), the equipment rows are revealed one
+  a frame, then the item cursor and the description text appear.
+- The status tilemap is built from the runtime equipment: obtained and
+  activated beams, suits and misc items (the plasma beam, gravity suit and
+  space jump as unknown items before the fully powered suit), bombs and
+  missiles with their ammunition, the energy and ammunition amounts, the
+  pistol when suitless.
+- The D-pad moves the cursor between the enabled slots with the native
+  left/right memory; B, L or R goes back to the map.
+- `src/runtime/mzm_text.c`: the native text engine for the descriptions
+  (character widths, append mode drawing, message processing with delays,
+  new lines and the A key).
+- `MzmPauseGame` now carries the equipment instead of a suitless flag.
+- Not ported: the item acquisition and suit change sequences with the item
+  toggling (disabled in the normal pause), the debug status screen, the
+  mask mode message drawing.
+- Checked by capture in brinstar_000; tests in `tests/test_mzm_screens.c`.
+
 ## Patch 0288 - Zero Mission pause screen map
 
 - `src/runtime/mzm_pause_screen.c`: START in the game opens the native

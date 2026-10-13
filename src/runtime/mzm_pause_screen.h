@@ -4,8 +4,12 @@
  * in and out, the visor overlays, the current area's map scrolled with the
  * D-pad, Samus's and the boss icons, the area name, the scroll arrows, the
  * world map (A or B), the other viewable areas (SELECT) and START or B to
- * leave. The status screen (R), easy sleep (L), the Chozo hints and their
- * targets, the map download and the completion info are not ported yet. */
+ * leave, and the status screen (R, status_screen.c): the equipment rows
+ * revealed one by one, the tank amounts, Samus's wireframe and the headers,
+ * the item cursor and the item descriptions (text.c). Easy sleep (L), the
+ * Chozo hints and their targets, the map download, the item toggling of the
+ * suitless and item acquisition sequences and the completion info are not
+ * ported yet. */
 #ifndef MZM_PAUSE_SCREEN_H
 #define MZM_PAUSE_SCREEN_H
 
@@ -14,12 +18,13 @@
 
 #include "mzm_hud.h"
 #include "mzm_screen.h"
+#include "mzm_text.h"
 
 /* What the pause screen reads from the game. */
 typedef struct {
     MzmHud *hud;                    /* the minimap (gDecompressedMinimapVisitedTiles...) */
     uint8_t area;                   /* gCurrentArea */
-    bool suitless;                  /* gEquipment.suitType == SUIT_SUITLESS */
+    const MzmEquipment *equipment;  /* gEquipment */
     bool (*check_event)(void *context, uint8_t event);
     void *context;
 } MzmPauseGame;
@@ -45,10 +50,21 @@ typedef struct {
     struct { uint8_t delay, set; } maintained;      /* gMaintainedInputData */
     MzmMenuOam misc[23], targets[12], samus_icon[1], boss_icon[1], overlay[4], arrows[4],
         world_map[24];
+    /* The status screen */
+    struct {
+        uint8_t unk_0, current_slot, previous_left_slot, previous_right_slot;
+        uint8_t beam[5], suit[2], misc[6], bomb[2], missiles[2];
+    } status;                       /* statusScreenData */
+    uint8_t current_status_slot, current_equipment, description_stage;    /* unk_56 */
+    uint8_t is_fading, bld_alpha_step_level, bld_alpha_step_timer, target_l, target_h;
+    uint16_t target_bld_alpha;
+    MzmMessage message;             /* gCurrentMessage */
     /* PAUSE_SCREEN_EWRAM */
     uint16_t maps[8][1024];
     uint16_t original_palette[512], palette[512];
     uint16_t visor_overlay[1024], map_overlay[1024], world_map_overlay[1024];
+    uint16_t status_tilemap[1024], status_base_tilemap[1024] /* unk_7800 */,
+        status_background_tilemap[1024];
 } MzmPauseScreen;
 
 /* gSubGameModeStage = 0: the next update runs PauseScreenInit. */

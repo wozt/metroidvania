@@ -3613,7 +3613,7 @@ int main(int argc, char **argv) {
                 mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                               capture_path?NULL:&gamepad));
                 MzmPauseGame pause_game={&runtime_hud,runtime_area_index(room->area),
-                                         equipment.suit==MZM_SUIT_SUITLESS,
+                                         &equipment,
                                          runtime_sprite_check_event,&sprites};
                 if(mzm_pause_update(&pause_screen,&screen,&pause_game)) {
                     pause_mode=false;

@@ -304,7 +304,9 @@ START (Return or the gamepad's Start) opens the native pause screen
 (`src/runtime/mzm_pause_screen.c`): the area map with Samus's position and
 the boss icons, D-pad scrolling, the world map with A or B, the other
 explored areas with SELECT, and START or B to resume; the music is lowered
-meanwhile. The status screen and easy sleep are not ported yet.
+meanwhile. R opens the status screen: the equipment rows, the energy and
+ammunition amounts, Samus's wireframe and the item descriptions written with
+the native font. Easy sleep is not ported yet.
 
 With the ROM bank, room backgrounds are rendered natively as well
 (`src/runtime/mzm_room_gfx.c`): animated tiles and palettes, liquids (lava,

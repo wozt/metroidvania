@@ -145,5 +145,7 @@ void ai_chozodia_security(Ctx *c);
 void ai_chozo_statue(Ctx *c);
 /* mzm_item_sprites.c: the Morph Ball, the Power Grip and the Charge Beam. */
 void ai_item_sprite(Ctx *c);
+/* mzm_gadget_sprites.c */
+void ai_gadget(Ctx *c);
 
 #endif /* MZM_SPRITE_AI_H */

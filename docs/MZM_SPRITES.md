@@ -369,6 +369,19 @@ into a side stops her (`SpriteUtilCheckStopSamusAgainstSolidSpriteLeft` /
 landing request and `STANDING_ENEMY`, the release over two frames and the
 drop to `STANDING_MIDAIR` (also when the sprite is killed under her).
 
+Room gadgets (`src/runtime/mzm_gadget_sprites.c`): the elevator pad follows
+Samus while she rides an elevator; water drops wait a random while, fall
+with `sSpritesFallingSpeed`, splash on the ground or the water surface
+(`gEffectYPosition`) and drip again (drawn with the common sprite graphics,
+`particle_data.c`); steam vents find their ground, ceiling or wall (or die in
+the air), start at a random frame and play their sound on screen; the
+diagonal ones face away from their wall; Gerons make their three blocks
+solid but not grippable (`CAA_MAKE_NON_POWER_GRIP`), shake when hit and stay
+destroyed after their event (the Parasites that destroy them are not
+ported), the Norfair one disappears with the Power Grip; the unknown item
+blocks fill 2x2 grippable blocks, let shots through until their item's event,
+then explode with their light and clear the blocks.
+
 Not ported yet: the multiple large energy pickup,
 screen-shake falls, splashes in liquids, the hard-mode and event
 spritesets (where the Long Beam Dessgeega is placed), the door lock

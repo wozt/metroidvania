@@ -2988,6 +2988,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0285 - Zero Mission room gadgets
+
+- `src/runtime/mzm_gadget_sprites.c`: elevator pads, water drops (common
+  sprite graphics), steam vents (ground, ceiling, walls, diagonals),
+  Gerons (Brinstar, Varia and Norfair plugs that block their passage) and
+  the unknown item blocks (Plasma Beam, Gravity Suit, Space Jump) with
+  their light.
+- Exported by `scripts/mzm_sprites.py` (new `COMMON_SPRITES` for sprites
+  drawn with the common graphics); the sprite frame now carries
+  `samus_using_elevator`.
+- Checked by capture in crateria_001, brinstar_021, kraid_012 and
+  crateria_011.
+- Not ported yet: the elevator ride, Parasites, map/save stations, area
+  banners.
+- Tests: `tests/test_mzm_sprites.c`.
+
 ## Patch 0284 - Zero Mission native room backgrounds: animations and liquids
 
 - `src/runtime/mzm_room_gfx.c` renders the room backgrounds from the ROM

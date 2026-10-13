@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 47 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 48 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -475,6 +475,15 @@ Tests: [`tests/test_mzm_blocks.c`](../tests/test_mzm_blocks.c), [`tests/test_mzm
 Dependencies: `mzm.rooms.backgrounds`, `mzm.transitions.doors_and_hatches`, `mzm.weapons.beams_and_missiles`.  
 Known divergences: grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout.  
 Next action: Port the crumble grab and tank pickups.
+
+[~] **`mzm.environment.room_gadgets` — Elevator pads, water drops, steam, Gerons and unknown item blocks.** The AIs follow the decompilation: the elevator pad (moved 2 pixels up, always active, synced to Samus and on its Moving animation while she uses an elevator); water drops (hidden for gSpriteRng * 8 frames, spawning animation, falling by sSpritesFallingSpeed, splashing on a block with SpriteUtilCheckVerticalCollisionAtPositionSlopes or on the water surface held at gEffectYPosition, hidden again for 100 + rng * 8 frames at a random x offset); steam (ground, ceiling with Y flip one block up, left or right wall turned horizontal, killed in the air; large/small draw distances; a random first frame; the large or small steam sound on screen at frame 0); diagonal steam (X flip without a wall on its left, Y flip for the downward ones); Gerons (their event checks, three CAA_MAKE_NON_POWER_GRIP blocks, shaking on ISFT 2 with its sound, the destroyed stump after their event; the destruction and its events when four Parasites hold one) and the Norfair Geron (gone after EVENT_POWER_GRIP_OBTAINED); unknown item blocks (2x2 CAA_MAKE_SOLID_GRIPPABLE blocks, ignoring projectiles until their item event, then destroyed by a hit: CAA_REMOVE_SOLID, the breaking sound, the light secondary at frame 7). Checked by capture in crateria_001 (steam), brinstar_021 (Geron), kraid_012 (Space Jump block) and crateria_011 (Plasma Beam block, water drops).
+
+Native evidence: `mzm:c:src/sprites_ai/elevator_pad.c:ElevatorPad`, `mzm:c:src/sprites_ai/geron.c:Geron`, `mzm:c:src/sprites_ai/geron_norfair.c:GeronNorfair`, `mzm:c:src/sprites_ai/steam.c:Steam`, `mzm:c:src/sprites_ai/steam.c:SteamDiagonal`, `mzm:c:src/sprites_ai/unknown_item_block.c:UnknownItemBlock`, `mzm:c:src/sprites_ai/unknown_item_block.c:UnknownItemBlockChangeClipdata`, `mzm:c:src/sprites_ai/unknown_item_block.c:UnknownItemBlockLight`, `mzm:c:src/sprites_ai/water_drop.c:WaterDrop`, `mzm:c:src/sprites_ai/water_drop.c:WaterDropInit`.  
+Local implementation: [`src/runtime/mzm_gadget_sprites.c`](../src/runtime/mzm_gadget_sprites.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.environment.breakable_blocks`.  
+Known divergences: Not compared with an emulator. The Parasites that grab and destroy the Gerons are not ported, so a Geron that is not already destroyed blocks its passage for good; the elevator ride itself (SPOSE_USING_AN_ELEVATOR and the area change) is not ported, so the pad only shows its idle and moving frames; the unknown item block's explosion keeps the sprites' priority instead of BG1's (bgPriority); event and hard-mode spritesets are not resolved, so a gadget only placed by them (brinstar_000's elevator pad) does not appear.  
+Next action: Port the elevator ride, the Parasites, the map and save stations, then the remaining gadgets.
 
 ### Rooms, areas and maps
 

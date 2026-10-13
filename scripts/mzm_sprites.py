@@ -93,6 +93,13 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_GAMET_BLUE_LEADER": 0, "PSPRITE_GAMET_BLUE_FOLLOWER": 0,
           "PSPRITE_MORPH_BALL": 0, "PSPRITE_POWER_GRIP": 0, "PSPRITE_CHARGE_BEAM": 0,
           "PSPRITE_SKULTERA": 0, "PSPRITE_DRAGON": 0,
+          "PSPRITE_ELEVATOR_PAD": 0, "PSPRITE_STEAM_LARGE": 0, "PSPRITE_STEAM_SMALL": 0,
+          "PSPRITE_STEAM_LARGE_DIAGONAL_UP": 0, "PSPRITE_STEAM_SMALL_DIAGONAL_UP": 0,
+          "PSPRITE_STEAM_LARGE_DIAGONAL_DOWN": 0, "PSPRITE_STEAM_SMALL_DIAGONAL_DOWN": 0,
+          "PSPRITE_GERON_BRINSTAR_ROOM_15": 0, "PSPRITE_GERON_BRINSTAR_ROOM_1C": 0,
+          "PSPRITE_GERON_VARIA1": 0, "PSPRITE_GERON_VARIA2": 0, "PSPRITE_GERON_VARIA3": 0,
+          "PSPRITE_GERON_NORFAIR": 0, "PSPRITE_PLASMA_BEAM_BLOCK": 0,
+          "PSPRITE_GRAVITY_SUIT_BLOCK": 0, "PSPRITE_SPACE_JUMP_BLOCK": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
@@ -159,6 +166,11 @@ DROPS = {
     "PSPRITE_MISSILE_DROP": "sEnemyDropOam_Missile",
     "PSPRITE_SUPER_MISSILE_DROP": "sEnemyDropOam_SuperMissile",
     "PSPRITE_POWER_BOMB_DROP": "sEnemyDropOam_PowerBomb",
+}
+# Sprites drawn with the common sprite graphics (particle_data.c tables).
+COMMON_SPRITES = {
+    "PSPRITE_WATER_DROP": ("sWaterDropOam_Spawning", "sWaterDropOam_Falling",
+                           "sWaterDropOam_Splashing"),
 }
 COMMON_GFX_VRAM = 0x800             # VRAM_OBJ + 0x800
 COMMON_PALETTE_ROW = 2              # PALRAM_BASE + 0x240: OBJ palette row 2
@@ -404,6 +416,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     wanted.update(tables)
     wanted.update(["sSecondarySpriteStats", "sHazeData", *AI_TABLES])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values(), *PARTICLES])
+    wanted.update(table for tables in COMMON_SPRITES.values() for table in tables)
     banner_source = (decomp / "src/data/sprites/message_banner.c").read_text(encoding="utf-8")
     banner_tables = [t for t in frame_tables(banner_source) if t.startswith("sMessageBannerOam")]
     wanted.update([*BANNER_SYMBOLS, *banner_tables])
@@ -523,6 +536,14 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
             bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
             frames.append((bmp, duration, left, top))
         library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/none", frames)
+    for sprite, sprite_tables in COMMON_SPRITES.items():
+        for table in sprite_tables:
+            frames = []
+            for pointer, duration in mzm_projectile_compose.frames(rom, symbols, table):
+                pixels = mzm_projectile_compose.render(rom, vram, palette, pointer, "none")
+                bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+                frames.append((bmp, duration, left, top))
+            library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/none", frames)
     for table in PARTICLES:
         frames = []
         for pointer, duration in mzm_projectile_compose.frames(rom, symbols, table):

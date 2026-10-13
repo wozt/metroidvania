@@ -2485,7 +2485,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             &sprites->globals, runtime_samus_small(samus), samus->x_velocity,
                             runtime_area_id(room->area), (uint8_t)room->room,
                             samus->pose != MZM_POSE_DYING ? &standing : NULL, stopped,
-                            prevent_movement, &link};
+                            prevent_movement, &link,
+                            samus->pose == MZM_POSE_USING_AN_ELEVATOR};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)

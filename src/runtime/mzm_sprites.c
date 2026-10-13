@@ -169,6 +169,23 @@ static const char *const item_sprites[MZM_ITEM_SPRITE_ANIMS] = {
     "MORPH_BALL", "MORPH_BALL", "POWER_GRIP", "POWER_GRIP", "CHARGE_BEAM", "CHARGE_BEAM",
     "CHARGE_BEAM",
 };
+const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
+    "ElevatorPadOam_Idle", "ElevatorPadOam_Moving",
+    "WaterDropOam_Spawning", "WaterDropOam_Falling", "WaterDropOam_Splashing",
+    "SteamOam_VerticalLarge", "SteamOam_VerticalSmall", "SteamOam_HorizontalLarge",
+    "SteamOam_HorizontalSmall", "SteamDiagonalOam_Large", "SteamDiagonalOam_Small",
+    "GeronOam_Idle", "GeronOam_Shaking", "GeronOam_GettingDestroyed", "GeronOam_Destroyed",
+    "GeronNorfairOam_Idle",
+    "UnknownItemBlockOam_Idle", "UnknownItemBlockOam_Activated", "UnknownItemBlockOam_Exploding",
+    "UnknownItemBlockLightOam_Idle",
+};
+static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
+    "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
+    "STEAM_LARGE", "STEAM_LARGE", "STEAM_LARGE", "STEAM_LARGE", "STEAM_LARGE", "STEAM_LARGE",
+    "GERON_BRINSTAR_ROOM_15", "GERON_BRINSTAR_ROOM_15", "GERON_BRINSTAR_ROOM_15",
+    "GERON_BRINSTAR_ROOM_15", "GERON_NORFAIR",
+    "PLASMA_BEAM_BLOCK", "PLASMA_BEAM_BLOCK", "PLASMA_BEAM_BLOCK", "PLASMA_BEAM_BLOCK",
+};
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
     "DragonOam_TurningAroundPart2", "DragonFireballOam_Moving", "DragonFireballOam_Exploding",
@@ -297,6 +314,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ITEM_SPRITE] = {MZM_ITEM_SPRITE_ANIMS, mzm_item_sprite_anim_names, item_sprites},
     [MZM_FAMILY_SKULTERA] = {MZM_SKULTERA_ANIMS, mzm_skultera_anim_names, skultera_sprites},
     [MZM_FAMILY_DRAGON] = {MZM_DRAGON_ANIMS, mzm_dragon_anim_names, dragon_sprites},
+    [MZM_FAMILY_GADGET] = {MZM_GADGET_ANIMS, mzm_gadget_anim_names, gadget_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -4268,6 +4286,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     if (secondary) {
         if (sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_FAMILY_ZEELA;
         if (sprite_id == MZM_SSPRITE_DRAGON_FIREBALL) return MZM_FAMILY_DRAGON;
+        if (sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) return MZM_FAMILY_GADGET;
         if (sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE || sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW ||
             sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW)
             return MZM_FAMILY_ITEM_SPRITE;
@@ -4323,6 +4342,14 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SQUEEPT: return MZM_FAMILY_SQUEEPT;
     case MZM_PSPRITE_SKULTERA: return MZM_FAMILY_SKULTERA;
     case MZM_PSPRITE_DRAGON: return MZM_FAMILY_DRAGON;
+    case MZM_PSPRITE_ELEVATOR_PAD: case MZM_PSPRITE_WATER_DROP: case MZM_PSPRITE_STEAM_LARGE:
+    case MZM_PSPRITE_STEAM_SMALL: case MZM_PSPRITE_STEAM_LARGE_DIAGONAL_UP:
+    case MZM_PSPRITE_STEAM_SMALL_DIAGONAL_UP: case MZM_PSPRITE_STEAM_LARGE_DIAGONAL_DOWN:
+    case MZM_PSPRITE_STEAM_SMALL_DIAGONAL_DOWN: case MZM_PSPRITE_GERON_BRINSTAR_ROOM_15:
+    case MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C: case MZM_PSPRITE_GERON_VARIA1:
+    case MZM_PSPRITE_GERON_VARIA2: case MZM_PSPRITE_GERON_VARIA3: case MZM_PSPRITE_GERON_NORFAIR:
+    case MZM_PSPRITE_PLASMA_BEAM_BLOCK: case MZM_PSPRITE_GRAVITY_SUIT_BLOCK:
+    case MZM_PSPRITE_SPACE_JUMP_BLOCK: return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
     case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
@@ -5094,6 +5121,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_SQUEEPT: squeept(&c); break;
     case MZM_FAMILY_ITEM_SPRITE: ai_item_sprite(&c); break;
     case MZM_FAMILY_SKULTERA: skultera(&c); break;
+    case MZM_FAMILY_GADGET: ai_gadget(&c); break;
     case MZM_FAMILY_DRAGON:
         if (sprite->secondary) dragon_fireball(&c);
         else dragon(&c);

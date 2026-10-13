@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Zero Mission sprite engine and the Zoomer. */
 #include "mzm_sfx.h"
+#include "mzm_blocks.h"
 #include "mzm_items.h"
 #include "mzm_sprites.h"
 
@@ -142,7 +143,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false, NULL, NULL};
+                             0, 0, NULL, false, NULL, NULL, false};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -2941,6 +2942,164 @@ int main(void) {
         while (room[1].pose == 9 && frames++ < 20) mzm_sprite_update(&room[1], 1, &dragon_frame);
         mzm_sprite_update(&room[1], 1, &dragon_frame);
         assert(room[1].pose == 0x43 && room[1].anim == MZM_DRAGON_FIREBALL_EXPLODING);
+    }
+
+    /* The room gadgets: the elevator pad rides with Samus, steam vents sit
+     * on their surface, water drops fall and splash, Gerons and the unknown
+     * item blocks fill their blocks. */
+    {
+        static MzmSprite room[4];
+        static MzmSpriteKind gadget_kind;
+        memset(room, 0, sizeof room);
+        memset(&gadget_kind, 0, sizeof gadget_kind);
+        for (int a = 0; a < MZM_GADGET_ANIMS; ++a) {
+            gadget_kind.counts[a] = 10;
+            for (int f = 0; f < 10; ++f) gadget_kind.timers[a][f] = 2;
+        }
+        MzmSpriteFrame g = frame;
+        g.kinds[MZM_FAMILY_GADGET] = &gadget_kind;
+        g.sprites = room;
+        g.sprite_count = 4;
+        g.hooks = &test_hooks;
+        clear();
+        /* ElevatorPad */
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_ELEVATOR_PAD, 0, 5, 5, 0, 0);
+        uint16_t pad_y = room[0].y;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 9 && room[0].y == pad_y - 8 && room[0].always_active &&
+               room[0].anim == MZM_GADGET_ELEVATOR_PAD_IDLE);
+        g.samus_using_elevator = true;
+        g.samus_x = 1000;
+        g.samus_y = 600;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].x == 1000 && room[0].y == 600 && room[0].anim == MZM_GADGET_ELEVATOR_PAD_MOVING);
+        g.samus_using_elevator = false;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].anim == MZM_GADGET_ELEVATOR_PAD_IDLE);
+        /* Steam on the ground (block row 6 under the sprite of row 5). */
+        for (int x = 0; x < COLUMNS; ++x) grid[6][x] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_STEAM_LARGE, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 9 && room[0].anim == MZM_GADGET_STEAM_VERTICAL_LARGE &&
+               !(room[0].status & MZM_SPRITE_STATUS_Y_FLIP) && room[0].work1 &&
+               room[0].draw_top == (64 * 4 + 32) / 4 && room[0].samus_collision == 0);
+        /* Its sound on the first frame, on screen. */
+        mzm_sfx_clear();
+        room[0].frame = 0;
+        room[0].adc = 2;
+        room[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_STEAM_LARGE));
+        /* On the ceiling: flipped and a block up. */
+        clear();
+        for (int x = 0; x < COLUMNS; ++x) grid[4][x] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_STEAM_SMALL, 0, 5, 5, 0, 0);
+        uint16_t steam_y = room[0].y;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].status & MZM_SPRITE_STATUS_Y_FLIP && room[0].y == steam_y - 64 &&
+               room[0].anim == MZM_GADGET_STEAM_VERTICAL_SMALL && !room[0].work1);
+        /* On a left wall: horizontal, half a block up and left. */
+        clear();
+        grid[5][4] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_STEAM_SMALL, 0, 5, 5, 0, 0);
+        uint16_t steam_x = room[0].x;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].status & MZM_SPRITE_STATUS_FACING_DOWN &&
+               room[0].anim == MZM_GADGET_STEAM_HORIZONTAL_SMALL && room[0].x == steam_x - 32 &&
+               room[0].y == steam_y - 32 && !(room[0].status & MZM_SPRITE_STATUS_X_FLIP));
+        /* A diagonal vent against that wall: not flipped in X, down. */
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_STEAM_LARGE_DIAGONAL_DOWN, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(!(room[0].status & MZM_SPRITE_STATUS_X_FLIP) && room[0].status & MZM_SPRITE_STATUS_Y_FLIP &&
+               room[0].anim == MZM_GADGET_STEAM_DIAGONAL_LARGE && room[0].work1);
+        /* In the air, steam does not exist. */
+        clear();
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_STEAM_SMALL, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].status == 0);
+        /* A water drop: hidden a random while, falls and splashes on the
+         * ground, then waits hidden again. */
+        clear();
+        for (int x = 0; x < COLUMNS; ++x) grid[9][x] = MZM_CLIPDATA_SOLID;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_WATER_DROP, 0, 3, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x11 && room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               room[0].y == 4 * 64 - 64 && room[0].y_spawn == room[0].y && room[0].draw_order == 1);
+        int frames = 0;
+        while (room[0].pose != 0x1F && frames++ < 400) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x1F && !(room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN) &&
+               room[0].anim == MZM_GADGET_WATER_DROP_FALLING);
+        frames = 0;
+        while (room[0].pose == 0x1F && frames++ < 120) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].y == 9 * 64 && (room[0].pose == 0xE || room[0].pose == 0xF));
+        frames = 0;
+        while (room[0].pose != 0x11 && frames++ < 60) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x11 && room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               room[0].work0 >= 100);
+        /* A Geron makes its three blocks solid but not grippable; hit, it
+         * shakes; destroyed earlier, it stays an empty stump. */
+        clear();
+        memset(test_events, 0, sizeof test_events);
+        caa_calls = 0;
+        mzm_sfx_clear();
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GERON_BRINSTAR_ROOM_15, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(caa_calls == 3 && last_caa == MZM_CAA_MAKE_NON_POWER_GRIP && room[0].pose == 9 &&
+               room[0].anim == MZM_GADGET_GERON_IDLE && room[0].health == 1 &&
+               room[0].hitbox_top == -192 && room[0].draw_order == 5);
+        room[0].isft = 3;               /* SpriteUtilUpdateStunTimer runs first */
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].anim == MZM_GADGET_GERON_SHAKING &&
+               mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_GERON_SHAKING));
+        test_events[47 / 8] |= 1u << (47 % 8);      /* EVENT_PLANT_DESTROYED_LAVA */
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GERON_BRINSTAR_ROOM_15, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25 && room[0].anim == MZM_GADGET_GERON_DESTROYED && caa_calls == 0 &&
+               room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        /* The post-Varia Geron only after High Jump; the Norfair one goes
+         * with the Power Grip. */
+        memset(test_events, 0, sizeof test_events);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].status == 0);
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GERON_NORFAIR, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(caa_calls == 3 && room[0].anim == MZM_GADGET_GERON_NORFAIR_IDLE);
+        test_events[16 / 8] |= 1u << (16 % 8);      /* EVENT_POWER_GRIP_OBTAINED */
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GERON_NORFAIR, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].status == 0);
+        /* An unknown item block: 2x2 solid blocks, shots pass through until
+         * its item is obtained, then a hit blows it up with its light. */
+        memset(test_events, 0, sizeof test_events);
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_SPACE_JUMP_BLOCK, 0, 5, 5, 0, 0);
+        uint16_t block_y = room[0].y, block_x = room[0].x;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(caa_calls == 4 && last_caa == MZM_CAA_MAKE_SOLID_GRIPPABLE && room[0].pose == 9 &&
+               room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES && room[0].y == block_y - 64 &&
+               room[0].x == block_x + 32);
+        test_events[22 / 8] |= 1u << (22 % 8);      /* EVENT_SPACE_JUMP_OBTAINED */
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xB && room[0].anim == MZM_GADGET_UNKNOWN_ITEM_BLOCK_ACTIVATED &&
+               !(room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+        room[0].pose = 0x62;
+        caa_calls = 0;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x67 && room[0].anim == MZM_GADGET_UNKNOWN_ITEM_BLOCK_EXPLODING &&
+               caa_calls == 4 && last_caa == MZM_CAA_REMOVE_SOLID &&
+               mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_UNKNOWN_ITEM_BLOCK_BREAKING));
+        room[0].frame = 7;
+        room[0].adc = 2;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[1].status & MZM_SPRITE_STATUS_EXISTS && room[1].secondary &&
+               room[1].sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT &&
+               room[1].anim == MZM_GADGET_UNKNOWN_ITEM_BLOCK_LIGHT && room[1].draw_bottom == 80);
+        mzm_sprite_update(&room[1], 1, &g);
+        assert(room[1].draw_top == 0);
     }
 
     /* The Morph Ball, the Power Grip and the Charge Beam: touched, they give

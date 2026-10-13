@@ -282,6 +282,18 @@ hits (flashing their stun colours), freeze under the Ice Beam, explode into part
 Other enemies and bosses are not ported yet. `--spawn X Y` places Samus's feet at
 a room pixel position for tests.
 
+The HUD and minimap are the native ones (`src/runtime/mzm_hud.c`, a port of
+`hud.c` and `minimap.c`): energy digits and tanks, missile, super missile
+and power bomb counters with their selection and refill graphics, the
+suitless charge bar and the 3x3 minimap that marks the screens Samus
+explores. They are drawn by a GBA picture processing unit emulation
+(`src/runtime/gba_ppu.c`: text and affine backgrounds, objects, windows,
+blending, mosaic) from a private ROM data bank exported by
+`python3 -m scripts.mzm_rom_bank` (rebuild task `metroid_rom_bank`), whose
+symbol table comes from the decompilation's reference ELF. The view is wider
+than the GBA screen, so the minimap sits at the view's right edge. Tanks are
+only collected on explored minimap tiles, as in the game.
+
 Rooms play their native music through the ported Zero Mission sound engine
 (`src/runtime/mzm_audio.c`: the sequencer, the DirectSound mixer of
 `asm/soundcode.s` and the four PSG channels, emulated in

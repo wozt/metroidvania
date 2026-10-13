@@ -246,6 +246,11 @@ ASSET_TASKS = {
         (ROOT / "assets/extracted/metroid/sound/runtime/sound_bank.bin",
          ROOT / "assets/extracted/metroid/sound/runtime/sound_tables.tsv"),
         ("metroid_rom",), requires=(ROOT / "third_party/mzm/mzm_us.map",)),
+    "metroid_rom_bank": _asset_task(
+        "metroid_rom_bank", "metroid", "mzm_rom_bank", (),
+        (ROOT / "assets/extracted/metroid/rom/rom_bank.bin",
+         ROOT / "assets/extracted/metroid/rom/rom_symbols.tsv"),
+        ("metroid_rom",), requires=(ROOT / "third_party/mzm/mzm_us.elf",)),
 }
 TASKS.update(ASSET_TASKS)
 

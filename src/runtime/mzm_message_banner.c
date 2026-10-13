@@ -91,6 +91,7 @@ unsigned mzm_banner_update(MzmMessageBanner *b, const MzmBannerKind *kind, bool 
             if (++b->text_calls >= needed) {
                 b->processing = false;
                 b->drawn = true;
+                if (is_item(msg)) events |= MZM_BANNER_FINISH_ABILITY;
                 if (is_item(msg)) {
                     b->new_item = true;
                     mzm_sfx_backup_track2();

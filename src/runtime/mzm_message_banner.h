@@ -71,6 +71,9 @@ typedef struct {
 enum {
     MZM_BANNER_FINISH_TANK = 1 << 0,    /* BgClipFinishCollectingTank */
     MZM_BANNER_REMOVED = 1 << 1,        /* gPreventMovementTimer = 0 */
+    /* BgClipFinishCollectingAbility, when the item message's text ends
+     * (stage 3 of its text processing). */
+    MZM_BANNER_FINISH_ABILITY = 1 << 2,
 };
 
 /* SpriteSpawnPrimary(PSPRITE_MESSAGE_BANNER, message, ...): spawned not

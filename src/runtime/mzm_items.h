@@ -61,10 +61,12 @@ typedef struct {
 /* The tank loop of BgClipCheckTouchingTransitionOrTank, last probe first:
  * a revealed tank starts the collection, raises the equipment (within the
  * game total; the first missile, super missile or power bomb tank uses the
- * next message) and returns the message the banner shows, or -1. The
- * minimap's explored check is taken as true (no minimap is ported). */
+ * next message) and returns the message the banner shows, or -1. A tank
+ * is only taken on an explored minimap tile (MinimapCheckIsTileExplored,
+ * `explored` at the probe's block; NULL: every tile is explored). */
 int mzm_tank_touch(const MzmTankTables *tables, MzmTankCollection *collection,
-                   const MzmTouchProbes *probes, MzmEquipment *equipment);
+                   const MzmTouchProbes *probes, MzmEquipment *equipment,
+                   bool (*explored)(void *context, int x, int y), void *context);
 
 /* gItemsCollected: the room, item type and block of every collected item,
  * by area. */

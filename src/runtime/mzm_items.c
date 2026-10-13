@@ -26,7 +26,8 @@ static bool below_limit(const MzmTankTables *t, int column, int max) {
 }
 
 int mzm_tank_touch(const MzmTankTables *tables, MzmTankCollection *collection,
-                   const MzmTouchProbes *probes, MzmEquipment *equipment) {
+                   const MzmTouchProbes *probes, MzmEquipment *equipment,
+                   bool (*explored)(void *context, int x, int y), void *context) {
     if ((probes->behaviors[0] | probes->behaviors[1] | probes->behaviors[2] |
          probes->behaviors[3]) == 0)
         return -1;
@@ -38,9 +39,9 @@ int mzm_tank_touch(const MzmTankTables *tables, MzmTankCollection *collection,
         int index = tank_index(behavior);
         if (index < 0) continue;
         uint8_t type = tables->item_type[index];
-        /* Hidden tanks not broken aren't tanks yet; MinimapCheckIsTileExplored
-         * is taken as true. */
+        /* Hidden tanks not broken aren't tanks yet */
         if (type == MZM_ITEM_TYPE_NONE) continue;
+        if (explored && !explored(context, probes->x[j], probes->y[j])) continue;
         collection->collecting = true;
         collection->behavior = behavior;
         collection->x = probes->x[j];

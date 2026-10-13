@@ -336,13 +336,32 @@ int main(void) {
     assert(probes.x[0] == 3 && probes.y[0] == 4 && probes.behaviors[0] == MZM_TANK_BEHAVIOR_START + 4);
     assert(probes.x[1] == 2 && probes.behaviors[1] == 0);
     MzmEquipment tank_equipment = {.energy = 10, .max_energy = 99};
+    /* MinimapCheckIsTileExplored: no tank on an unexplored minimap tile
+     * (block (3, 4) is tile (0, 0) of a room at map (0, 0)). */
+    runtime_hud.ready = true;
+    runtime_hud.ppu = &runtime_hud_ppu;
+    runtime_hud.progress = &runtime_minimap;
     assert(mzm_tank_touch(&runtime_block_tables.tanks, &runtime_tank_collection, &probes,
-                          &tank_equipment) == MZM_MESSAGE_ENERGY_TANK_ACQUIRED &&
+                          &tank_equipment, runtime_hud_explored, tanks) == -1 &&
+           !runtime_tank_collection.collecting);
+    runtime_minimap.visited[0][0] = 1;
+    assert(mzm_tank_touch(&runtime_block_tables.tanks, &runtime_tank_collection, &probes,
+                          &tank_equipment, runtime_hud_explored, tanks) ==
+               MZM_MESSAGE_ENERGY_TANK_ACQUIRED &&
            tank_equipment.max_energy == 199 && runtime_tank_collection.x == 3 &&
            runtime_tank_collection.y == 4);
     runtime_finish_collecting_tank(tanks);
     assert(!runtime_tank_collection.collecting && tanks->clip[4 * 8 + 3] == 0 &&
            runtime_collected_items.count[0] == 1 && runtime_collected_items.items[0][0].room == 7);
+    /* MinimapUpdateForCollectedItem, and BgClipFinishCollectingAbility at
+     * Samus's block. */
+    assert(runtime_minimap.obtained[0][0] == 1);
+    runtime_finish_collecting_ability(tanks, &samus);
+    assert(runtime_collected_items.count[0] == 2 &&
+           runtime_collected_items.items[0][1].type == MZM_ITEM_TYPE_ABILITY &&
+           runtime_collected_items.items[0][1].x == 3 && runtime_collected_items.items[0][1].y == 4);
+    runtime_collected_items.count[0] = 1;
+    runtime_hud.ready = false;
     /* Reloaded, the collected tank is gone again. */
     tanks->clip[4 * 8 + 3] = 50;
     runtime_blocks_load(tanks, "brinstar_007");

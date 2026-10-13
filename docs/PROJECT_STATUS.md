@@ -2988,6 +2988,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0282 - Zero Mission HUD and minimap on a GBA PPU
+
+- Foundation for the native screens: `src/runtime/gba_ppu.c` renders the
+  GBA display memories (text and affine backgrounds, regular and affine
+  objects with 1D/2D mapping, windows 0/1 and the object window, alpha
+  blending, brightness, mosaic, forced blank; not the bitmap modes nor
+  mid-frame register effects). `scripts/mzm_rom_bank.py` (rebuild task
+  `metroid_rom_bank`) copies the verified ROM into a private bank with the
+  14462 sized data symbols of `third_party/mzm/mzm_us.elf`; `mzm_rom.c` reads
+  them by name and decompresses BIOS LZ77 and run-length streams.
+- `src/runtime/mzm_hud.c` ports `hud.c`, `hud_generic.c` and `minimap.c`:
+  energy digits and tanks with the low health flag, the missile, super
+  missile and power bomb counters with their Inactive/Selected/Active
+  symbols and refill stages, the suitless charge bar, the HUD OAM, and the
+  minimap (LZ77 area map, obtained items, downloaded tiles, explored
+  screens, area names, one 3-tile line a frame through the native color
+  tables and flips). Room map positions come from `sAreaRoomEntryPointers`.
+- The runtime draws the HUD over its 320x224 view (minimap at the right
+  edge), runs `MinimapCheckOnTransition` on each new room, refuses tanks on
+  unexplored minimap tiles (`MinimapCheckIsTileExplored`) and records
+  tanks and abilities on the minimap (`MinimapUpdateForCollectedItem`,
+  `BgClipFinishCollectingAbility` at the end of an item message's text).
+- Checked in brinstar_000 (`--spawn 212 496`) by capture.
+- Not ported yet: the pause screen, title, file select, cutscenes; saving
+  the minimap progress; boss icon updates.
+- Tests: `tests/test_mzm_hud.c` (PPU layers, priority, blending, windows,
+  flips, wrap; LZ77/RL; the HUD on a synthetic ROM; the exported bank),
+  `tests/test_mzm_rom_bank.py`, `tests/test_runtime_steep_slopes.c`.
+
 ## Patch 0281 - Zero Mission missile origin, audio output, Chozo hint music
 
 - Shots take the arm cannon offsets of Samus's unarmed library key: the

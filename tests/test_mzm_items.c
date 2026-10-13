@@ -37,32 +37,32 @@ static void test_tanks(void) {
     MzmEquipment equipment = {.energy = 40, .max_energy = 99};
     /* Nothing touched. */
     MzmTouchProbes probes = {{0, 0, 0, 0}, {1, 2, 3, 3}, {5, 5, 6, 4}};
-    assert(mzm_tank_touch(&t, &collection, &probes, &equipment) == -1 && !collection.collecting);
+    assert(mzm_tank_touch(&t, &collection, &probes, &equipment, NULL, NULL) == -1 && !collection.collecting);
     /* A hidden tank is not a tank yet. */
     probes.behaviors[2] = MZM_TANK_BEHAVIOR_START;
-    assert(mzm_tank_touch(&t, &collection, &probes, &equipment) == -1);
+    assert(mzm_tank_touch(&t, &collection, &probes, &equipment, NULL, NULL) == -1);
     /* An energy tank at the right probe: 100 more energy, refilled. */
     probes.behaviors[0] = MZM_TANK_BEHAVIOR_START + 4;
-    assert(mzm_tank_touch(&t, &collection, &probes, &equipment) ==
+    assert(mzm_tank_touch(&t, &collection, &probes, &equipment, NULL, NULL) ==
                MZM_MESSAGE_ENERGY_TANK_ACQUIRED &&
            collection.collecting && collection.x == 1 && collection.y == 5 &&
            equipment.max_energy == 199 && equipment.energy == 199);
     /* While collecting, nothing else is taken. */
-    assert(mzm_tank_touch(&t, &collection, &probes, &equipment) == -1 && equipment.max_energy == 199);
+    assert(mzm_tank_touch(&t, &collection, &probes, &equipment, NULL, NULL) == -1 && equipment.max_energy == 199);
     /* The last probe is checked first; the first missile tank has its own
      * message. */
     collection.collecting = false;
     probes.behaviors[3] = MZM_TANK_BEHAVIOR_START + 5;
-    assert(mzm_tank_touch(&t, &collection, &probes, &equipment) == MZM_MESSAGE_FIRST_MISSILE_TANK &&
+    assert(mzm_tank_touch(&t, &collection, &probes, &equipment, NULL, NULL) == MZM_MESSAGE_FIRST_MISSILE_TANK &&
            collection.x == 3 && collection.y == 4 && equipment.max_missiles == 5 &&
            equipment.missiles == 5 && equipment.max_energy == 199);
     collection.collecting = false;
-    assert(mzm_tank_touch(&t, &collection, &probes, &equipment) == MZM_MESSAGE_MISSILE_TANK_ACQUIRED &&
+    assert(mzm_tank_touch(&t, &collection, &probes, &equipment, NULL, NULL) == MZM_MESSAGE_MISSILE_TANK_ACQUIRED &&
            equipment.max_missiles == 10);
     /* At the game total, the tank is still collected but adds nothing. */
     collection.collecting = false;
     equipment.max_missiles = equipment.missiles = 250;
-    assert(mzm_tank_touch(&t, &collection, &probes, &equipment) == MZM_MESSAGE_MISSILE_TANK_ACQUIRED &&
+    assert(mzm_tank_touch(&t, &collection, &probes, &equipment, NULL, NULL) == MZM_MESSAGE_MISSILE_TANK_ACQUIRED &&
            collection.collecting && equipment.max_missiles == 250);
     /* Underwater tanks leave water; others air. */
     assert(mzm_tank_cleared_clip(&t, MZM_TANK_BEHAVIOR_START + 9) == 0x43C);

@@ -15,9 +15,12 @@
 #include "mzm_sfx.h"
 #include "mzm_power_bomb.h"
 #include "mzm_hatches.h"
+#include "gba_ppu.h"
+#include "mzm_hud.h"
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
 #include "mzm_projectiles.h"
+#include "mzm_rom.h"
 #include "mzm_samus.h"
 #include "mzm_sprites.h"
 
@@ -1102,6 +1105,29 @@ static void runtime_power_bomb_apply(void *context, int y, int x) {
 }
 
 /* BlockRemoveNeverReformBlocks at a room load, with a fresh block state. */
+/* The HUD and minimap (mzm_hud) drawn by a GBA PPU over the view, from the
+ * ROM bank (scripts/mzm_rom_bank.py). */
+#define RUNTIME_ROM_BANK "assets/extracted/metroid/rom/rom_bank.bin"
+#define RUNTIME_ROM_SYMBOLS "assets/extracted/metroid/rom/rom_symbols.tsv"
+#define RUNTIME_HUD_H 32
+static GbaPpu runtime_hud_ppu;
+static MzmHud runtime_hud;
+static MzmMinimapProgress runtime_minimap;
+
+/* gCurrentArea, the room entry's map position and the clipdata size. */
+static MzmHudRoom runtime_hud_room(const Room *room) {
+    MzmHudRoom r = {runtime_area_index(room->area), (uint8_t)room->room, 0, 0,
+                    (uint16_t)(room->width / 16), (uint16_t)(room->height / 16)};
+    if (!mzm_hud_room_map(r.area, r.room, &r.map_x, &r.map_y)) r.map_x = r.map_y = 0;
+    return r;
+}
+
+/* MinimapCheckIsTileExplored for BgClipCheckTouchingTransitionOrTank */
+static bool runtime_hud_explored(void *context, int x, int y) {
+    MzmHudRoom r = runtime_hud_room((const Room *)context);
+    return mzm_hud_tile_explored(&runtime_hud, &r, x, y);
+}
+
 /* gItemsCollected and gCollectingTank / gLastTankCollected of this session. */
 static MzmCollectedItems runtime_collected_items;
 static MzmTankCollection runtime_tank_collection;
@@ -1159,7 +1185,7 @@ static void runtime_touch_probes(const Room *room, const MzmSamus *samus, MzmTou
 }
 
 /* BgClipFinishCollectingTank: the tank block becomes air or water, empty in
- * BG1, and is registered as collected (no minimap is ported). */
+ * BG1, and is registered as collected and on the minimap. */
 static void runtime_finish_collecting_tank(Room *room) {
     MzmTankCollection *c = &runtime_tank_collection;
     c->collecting = false;
@@ -1170,6 +1196,18 @@ static void runtime_finish_collecting_tank(Room *room) {
                           c->y, c->x);
     mzm_items_set_collected(&runtime_collected_items, runtime_area_index(room->area),
                             (uint8_t)room->room, c->x, c->y, type);
+    /* MinimapUpdateForCollectedItem */
+    MzmHudRoom hud_room = runtime_hud_room(room);
+    mzm_hud_collected_item(&runtime_hud, &hud_room, c->x, c->y);
+}
+
+/* BgClipFinishCollectingAbility: the item is registered at Samus's block. */
+static void runtime_finish_collecting_ability(Room *room, const MzmSamus *samus) {
+    int x = samus->x / MZM_BLOCK_SIZE, y = (samus->y - 1) / MZM_BLOCK_SIZE;
+    mzm_items_set_collected(&runtime_collected_items, runtime_area_index(room->area),
+                            (uint8_t)room->room, x, y, MZM_ITEM_TYPE_ABILITY);
+    MzmHudRoom hud_room = runtime_hud_room(room);
+    mzm_hud_collected_item(&runtime_hud, &hud_room, x, y);
 }
 
 /* BlockSamusApplyScrewSpeedboosterDamageToEnvironment, called by the
@@ -2960,10 +2998,14 @@ int main(int argc, char **argv) {
             SDL_ResumeAudioStreamDevice(audio);
         }
     }
+    /* The HUD reads its graphics from the ROM bank. */
+    if (mzm_rom_open(RUNTIME_ROM_BANK, RUNTIME_ROM_SYMBOLS))
+        mzm_hud_init(&runtime_hud, &runtime_hud_ppu, &runtime_minimap, 320);
     SDL_Window *window=SDL_CreateWindow("Metroid Vania - experimental C11 runtime",
                                        960,640,SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer=window ? SDL_CreateRenderer(window,NULL) : NULL;
     SDL_Surface *surface=NULL; SDL_Texture *texture=NULL;
+    SDL_Texture *hud_texture=NULL;
     int rc=1;
     RuntimeLibrary library = {0};
     RuntimeLibrary projectile_library = {0};
@@ -3100,6 +3142,7 @@ int main(int argc, char **argv) {
     const char *debug_suit_names[RUNTIME_SUIT_PRESETS];
     for(size_t i=0;i<RUNTIME_SUIT_PRESETS;i++)debug_suit_names[i]=runtime_suit_presets[i].name;
     char current_room[64];
+    char hud_room_alias[64]="";
     snprintf(current_room,sizeof current_room,"%s",room_alias?room_alias:"room");
     runtime_blocks_load(room, current_room);
     runtime_hatches_load(room, current_room, -1);
@@ -3465,6 +3508,7 @@ int main(int argc, char **argv) {
                                                   runtime_tank_collection.collecting,
                                                   &prevent_movement);
                 if(events&MZM_BANNER_FINISH_TANK) runtime_finish_collecting_tank(room);
+                if(events&MZM_BANNER_FINISH_ABILITY) runtime_finish_collecting_ability(room,&samus);
             }
             weapons.samus_previous_x=previous_x;
             weapons.frame8=sprites.frame8;
@@ -3512,6 +3556,21 @@ int main(int argc, char **argv) {
                 /* gArmCannonX/Y for the charging particle. */
                 beam_fx.cannon_x=(samus.x>>2)+cannon_x;
                 beam_fx.cannon_y=((samus.y-1)>>2)+cannon_y;
+            }
+            /* HudDraw after ProjectileUpdate; a new room first runs
+             * MinimapCheckOnTransition (RoomLoad). */
+            if(runtime_hud.ready) {
+                MzmHudRoom hud_room=runtime_hud_room(room);
+                MzmHudFrame hud_frame={&equipment,runtime_weapon_highlighted(&weapons),
+                                       weapons.super_missiles_selected,weapons.charge_counter,
+                                       sprites.frame8,(uint16_t)samus.x,(uint16_t)(samus.y-1),
+                                       sprites.globals.refill_animation,
+                                       runtime_sprite_check_event,&sprites};
+                if(strcmp(hud_room_alias,current_room)) {
+                    snprintf(hud_room_alias,sizeof hud_room_alias,"%s",current_room);
+                    mzm_hud_room_entered(&runtime_hud,&hud_room,&hud_frame);
+                }
+                mzm_hud_update(&runtime_hud,&hud_room,&hud_frame);
             }
             /* ProjectileCheckSamusBombBounce -> SamusBombBounce */
             if(weapons.bomb_bounce)
@@ -3567,7 +3626,8 @@ int main(int argc, char **argv) {
                 MzmTouchProbes probes;
                 runtime_touch_probes(room,&samus,&probes);
                 int message=mzm_tank_touch(&runtime_block_tables.tanks,&runtime_tank_collection,
-                                           &probes,&equipment);
+                                           &probes,&equipment,
+                                           runtime_hud.ready?runtime_hud_explored:NULL,room);
                 if(message>=0 && message<MZM_MESSAGE_COUNT) {
                     prevent_movement=MZM_SAMUS_ITEM_PMT;
                     mzm_banner_spawn(&sprites.banner,(uint8_t)message);
@@ -3951,6 +4011,24 @@ int main(int argc, char **argv) {
                 if(banner_texture)SDL_RenderTexture(renderer,banner_texture,NULL,&box);
             }
         }
+        if(runtime_hud.ready) {
+            /* The HUD's OAM over the view (the minimap at its right edge). */
+            if(!hud_texture) {
+                hud_texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,
+                                              SDL_TEXTUREACCESS_STREAMING,320,RUNTIME_HUD_H);
+                if(hud_texture) {
+                    SDL_SetTextureBlendMode(hud_texture,SDL_BLENDMODE_BLEND);
+                    SDL_SetTextureScaleMode(hud_texture,SDL_SCALEMODE_NEAREST);
+                }
+            }
+            void *hud_pixels; int hud_pitch;
+            if(hud_texture && SDL_LockTexture(hud_texture,NULL,&hud_pixels,&hud_pitch)) {
+                gba_ppu_render(&runtime_hud_ppu,320,RUNTIME_HUD_H,true,hud_pixels,hud_pitch);
+                SDL_UnlockTexture(hud_texture);
+                SDL_FRect hud_box={viewport.x,viewport.y,320.f*scale,RUNTIME_HUD_H*scale};
+                SDL_RenderTexture(renderer,hud_texture,NULL,&hud_box);
+            }
+        }
         debug_draw(renderer,&debug,paused,viewport,scale,current_room,&samus,&equipment,
                    debug_frame);
         if(capture_path && capture_step>=capture_frames) {
@@ -4002,6 +4080,8 @@ cleanup:
     runtime_library_free(&sprite_library);
     runtime_bg_art_free(&bg_art);
     if (texture) SDL_DestroyTexture(texture);
+    if (hud_texture) SDL_DestroyTexture(hud_texture);
+    mzm_rom_close();
     if (surface) SDL_DestroySurface(surface);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);

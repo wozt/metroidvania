@@ -197,6 +197,11 @@ def _cannon_gfx(tables, pose: str | None, acd: str, side: str, armed: bool = Fal
     return tuple(result)
 
 
+# The in-gunship saving animation of each family (SamusUpdateGraphicsOam).
+IN_SHIP_ANIMS = {"PowerSuit": "sSamusAnim_256484", "FullSuit": "sSamusAnim_27f430",
+                 "Suitless": "sSamusAnim_2b0bf4"}
+
+
 def build_variants(tables) -> tuple[list[Variant], list[str]]:
     variants: list[Variant] = []
     problems: list[str] = []
@@ -235,6 +240,18 @@ def build_variants(tables) -> tuple[list[Variant], list[str]]:
                         _cannon_gfx(tables, pose, acd, side), pose,
                         _cannon_gfx(tables, pose, acd, side, armed=True)
                         if family != "Suitless" else None))
+        # SamusUpdateGraphicsOam: SPOSE_SAVING_LOADING_GAME with
+        # lastWallTouchedMidAir set (Samus in her gunship) draws one of these
+        # tables instead (the facing-the-foreground top half), with the
+        # pose's arm cannon.
+        pose = "SPOSE_SAVING_LOADING_GAME"
+        cannon_row = tables.get(f"sArmCannonAnimPointers_{cannon_family}_All", {}).get(pose)
+        for index, side in enumerate(("right", "left")):
+            cannon = cannon_row[index] if cannon_row and index < len(cannon_row) else None
+            variants.append(Variant(family, "InShip", pose, side, IN_SHIP_ANIMS[family], cannon,
+                                    _cannon_gfx(tables, pose, "ACD_FORWARD", side), pose,
+                                    _cannon_gfx(tables, pose, "ACD_FORWARD", side, armed=True)
+                                    if family != "Suitless" else None))
     return variants, problems
 
 

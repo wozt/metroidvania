@@ -199,6 +199,20 @@ const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
     "SavePlatformPartOam_TubeIdle",
     "SavePlatformPartOam_TubeDespawning",
     "SavePlatformPartOam_Ray",
+    "GunshipOam_Idle",
+    "GunshipOam_Refilling",
+    "GunshipOam_Flying",
+    "GunshipPartOam_EntranceFrontClosed",
+    "GunshipPartOam_EntranceFrontOpening",
+    "GunshipPartOam_EntranceFrontOpened",
+    "GunshipPartOam_EntranceFrontClosing",
+    "GunshipPartOam_EntranceBackClosed",
+    "GunshipPartOam_EntranceBackOpening",
+    "GunshipPartOam_EntranceBackOpened",
+    "GunshipPartOam_EntranceBackClosing",
+    "GunshipPartOam_Platform",
+    "GunshipPartOam_FlamesHorizontal",
+    "GunshipPartOam_FlamesVertical",
 };
 static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
@@ -209,6 +223,7 @@ static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION",
     "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION", "MAP_STATION",
     "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM", "SAVE_PLATFORM",
+    "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP", "GUNSHIP",
 };
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
@@ -4311,7 +4326,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_FAMILY_ZEELA;
         if (sprite_id == MZM_SSPRITE_DRAGON_FIREBALL) return MZM_FAMILY_DRAGON;
         if (sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT || sprite_id == MZM_SSPRITE_MAP_STATION_PART ||
-            sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART)
+            sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART || sprite_id == MZM_SSPRITE_GUNSHIP_PART)
             return MZM_FAMILY_GADGET;
         if (sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE || sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW ||
             sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW)
@@ -4376,6 +4391,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_GERON_VARIA2: case MZM_PSPRITE_GERON_VARIA3: case MZM_PSPRITE_GERON_NORFAIR:
     case MZM_PSPRITE_PLASMA_BEAM_BLOCK: case MZM_PSPRITE_GRAVITY_SUIT_BLOCK:
     case MZM_PSPRITE_SPACE_JUMP_BLOCK: case MZM_PSPRITE_MAP_STATION: case MZM_PSPRITE_SAVE_PLATFORM:
+    case MZM_PSPRITE_GUNSHIP:
         return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
@@ -4643,6 +4659,18 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         }
         switch (s->samus_collision) {
         case SSC_NONE: break;
+        case SSC_CAN_STAND_ON_TOP:
+            /* Only Samus standing on the sprite, no other collision. */
+            if (!samus->pulling_up && !contact_kills(s, samus, tables) && samus->world &&
+                samus_y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < top &&
+                samus_check_collision(samus->world, (uint16_t)(top + ONE_SUB_PIXEL + samus->hitbox_top),
+                                      samus_x) == MZM_COLLISION_AIR &&
+                samus->y_velocity <= 0) {
+                samus->y = (uint16_t)(top + ONE_SUB_PIXEL);
+                s->status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+                s->standing_on = MZM_STANDING_ON_SPRITE_ON;
+            }
+            break;
         case SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT:
         case SSC_SPACE_PIRATE_LASER:
             s->pose = SPRITE_POSE_STOPPED;
@@ -4984,6 +5012,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
         sprite->sprite_id == MZM_SSPRITE_MAP_STATION_PART || sprite->sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART ||
+        sprite->sprite_id == MZM_SSPRITE_GUNSHIP_PART ||
         sprite->sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT)
         return sprite->owner;
     if (sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||

@@ -3242,9 +3242,16 @@ void mzm_samus_graphics_key(const MzmSamus *samus, const MzmEquipment *equipment
         break;
     case MZM_POSE_UNCROUCHING_SUITLESS: family = "Suitless"; table = "UncrouchingSuitless"; break;
     case MZM_POSE_CROUCHING_SUITLESS: family = "Suitless"; table = "CrouchingSuitless"; break;
+    case MZM_POSE_SAVING_LOADING_GAME:
+        /* lastWallTouchedMidAir: Samus in her gunship (sSamusAnim_256484
+         * and its kin, exported as the InShip table). */
+        if (samus->last_wall) {
+            table = "InShip";
+            selector = "SPOSE_SAVING_LOADING_GAME";
+        }
+        break;
     default:
-        /* sSamusAnimPointers_*[pose] (the saving pose's alternate frames,
-         * sSamusAnim_256484 and its kin, are not exported). */
+        /* sSamusAnimPointers_*[pose] */
         break;
     }
     if (table) snprintf(key, size, "%s/%s/%s/%s", family, table, selector, side);

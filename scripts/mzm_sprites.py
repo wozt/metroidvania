@@ -100,7 +100,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_GERON_VARIA1": 0, "PSPRITE_GERON_VARIA2": 0, "PSPRITE_GERON_VARIA3": 0,
           "PSPRITE_GERON_NORFAIR": 0, "PSPRITE_PLASMA_BEAM_BLOCK": 0,
           "PSPRITE_GRAVITY_SUIT_BLOCK": 0, "PSPRITE_SPACE_JUMP_BLOCK": 0, "PSPRITE_MAP_STATION": 0,
-          "PSPRITE_SAVE_PLATFORM": 0,
+          "PSPRITE_SAVE_PLATFORM": 0, "PSPRITE_GUNSHIP": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
@@ -108,6 +108,13 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_CHOZO_STATUE_GRAVITY": 0}
 # Extra palette rows a ported AI sets (paletteRow), baked as ``/rowN``.
 ROW_VARIANTS = {"PSPRITE_SAVE_PLATFORM": (2,)}
+# The gunship's palette animations: GunshipEntranceFlashingAnim copies
+# sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
+# (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
+# (f 0-2); every combination, each row also untouched (its sGunshipPal
+# colors), is baked as ``/eEfF``, ``/eE``, ``/fF`` or no suffix (the gunship
+# never flips).
+GUNSHIP_FLASHING = "sGunshipFlashingPal"
 # MultiSpriteData tables (gSubSpriteData1.pMultiOam) of ported sprites, read
 # from the decompilation as ``multi`` lines: name, frame, timer, then each
 # part's OAM index, y and x offsets.
@@ -138,7 +145,7 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sDebrisBouncingVelocity", "sDebris11YVelocity",
              "sDebris12YVelocity", "sDebris13YVelocity", "sDebris4YVelocity",
              "sDebris5YVelocity", "sDebris6YVelocity", "sDebris7YVelocity",
-             "sDebris8YVelocity")
+             "sDebris8YVelocity", "sGunshipTakingOffYVelocity", "sGunshipFlyingYVelocity")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
 PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",
@@ -417,7 +424,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         wanted.update([graphics[sprite], palettes[sprite], *tables])
     tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
     wanted.update(tables)
-    wanted.update(["sSecondarySpriteStats", "sHazeData", *AI_TABLES])
+    wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, *AI_TABLES])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values(), *PARTICLES])
     wanted.update(table for tables in COMMON_SPRITES.values() for table in tables)
     banner_source = (decomp / "src/data/sprites/message_banner.c").read_text(encoding="utf-8")
@@ -515,6 +522,24 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         for flash in ROW_VARIANTS.get(sprite, ()):
             variants[f"/row{flash}"] = stage(rom, symbols, gfx, palette_symbol, row + flash)[1]
         flips = ("none", "x") if statue else mzm_projectile_compose.FLIPS
+        if sprite == "PSPRITE_GUNSHIP":
+            address, size = symbols[GUNSHIP_FLASHING]
+            flashing = [bgr555(value) for value in struct.unpack_from(
+                f"<{size // 2}H", rom, rom_offset(address, rom))]
+            variants = {}
+            for entrance in (None, 0, 1, 2, 3, 4):
+                for flames in (None, 0, 1, 2):
+                    colours = list(palette)
+                    suffix = ""
+                    if entrance is not None:
+                        colours[9 * 16 + 8:9 * 16 + 16] = flashing[0x38 + 16 * entrance:
+                                                                   0x38 + 16 * entrance + 8]
+                        suffix += f"e{entrance}"
+                    if flames is not None:
+                        colours[10 * 16:11 * 16] = flashing[16 * flames:16 * flames + 16]
+                        suffix += f"f{flames}"
+                    variants["/" + suffix if suffix else ""] = colours
+            flips = ("none",)
         for table in tables:
             entries = mzm_projectile_compose.frames(rom, symbols, table)
             for suffix, colours in variants.items():

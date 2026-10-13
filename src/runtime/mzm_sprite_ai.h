@@ -35,6 +35,7 @@ enum {
     /* SamusSpriteCollision */
     SSC_NONE = 0,
     SSC_SOLID = 1,
+    SSC_CAN_STAND_ON_TOP = 2,
     SSC_HURTS_SAMUS = 4,
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
     SSC_SPACE_PIRATE_LASER = 19,
@@ -147,5 +148,7 @@ void ai_chozo_statue(Ctx *c);
 void ai_item_sprite(Ctx *c);
 /* mzm_gadget_sprites.c */
 void ai_gadget(Ctx *c);
+/* mzm_gunship.c: the gunship and its parts. */
+void ai_gunship(Ctx *c);
 
 #endif /* MZM_SPRITE_AI_H */

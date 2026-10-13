@@ -1448,6 +1448,16 @@ static void test_running_aim(void) {
     assert(w.samus.pose == MZM_POSE_RUNNING && w.samus.aim == MZM_AIM_NONE);
     graphics_key(&w, 0, key);
     assert(strcmp(key, "PowerSuit/Running/ACD_NONE/right") == 0);
+    /* In the gunship (lastWallTouchedMidAir), the saving pose draws the
+     * InShip table; else the pose's own. */
+    MzmSamus in_ship = w.samus;
+    in_ship.pose = MZM_POSE_SAVING_LOADING_GAME;
+    in_ship.last_wall = 1;
+    mzm_samus_graphics_key(&in_ship, &w.equipment, 0, key, 160);
+    assert(strcmp(key, "PowerSuit/InShip/SPOSE_SAVING_LOADING_GAME/right") == 0);
+    in_ship.last_wall = 0;
+    mzm_samus_graphics_key(&in_ship, &w.equipment, 0, key, 160);
+    assert(strcmp(key, "PowerSuit/pose/SPOSE_SAVING_LOADING_GAME/right") == 0);
     step(&w, MZM_KEY_RIGHT | MZM_KEY_UP);
     assert(w.samus.pose == MZM_POSE_RUNNING && w.samus.aim == MZM_AIM_DIAGONAL_UP);
     graphics_key(&w, 0, key);

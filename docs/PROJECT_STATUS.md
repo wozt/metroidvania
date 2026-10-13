@@ -2988,6 +2988,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0298 - Zero Mission gunship and the new game's landing
+
+- `src/runtime/mzm_gunship.c`: the gunship and its parts (gunship.c): the
+  landing of a new game with its flames, the entrance opening and the
+  platform rising while Samus is near, Samus entering from the top, the
+  refill, the save prompt and the save, Samus rising out of the hatch, the
+  palette animations (baked as library variants), and the escape AI.
+- A new game from the file select now lands in Crateria's first room (HUD
+  hidden, pause disabled); half a second before touchdown the intro text's
+  fades (approximated by a black veil) lead to the "Planet Zebes..."
+  cutscene, then to the game in Brinstar. A file saved in the gunship
+  resumes with Samus rising out of it.
+- Sprites: SSC_CAN_STAND_ON_TOP, and draw orders 9 and above now draw
+  behind Samus (SpriteDrawAll_LowPriority) instead of over her.
+- Samus: the in-ship saving animation (sSamusAnim_256484 and its kin) is
+  exported as the InShip table and used with lastWallTouchedMidAir.
+- Checked by capture (landing, fade, cutscene, Brinstar; entering, refill,
+  save, leaving, reload in crateria_000); tests in
+  `tests/test_mzm_sprites.c` and `tests/test_mzm_samus.c`.
+
 ## Patch 0297 - Zero Mission story text cutscenes
 
 - `src/runtime/mzm_cutscene.c`: CutsceneHandler for the non-gameplay

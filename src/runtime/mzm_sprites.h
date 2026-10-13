@@ -168,6 +168,8 @@ typedef struct {
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
     int16_t pirate_jump_high[11];   /* sSpacePirate_2e105a */
+    int16_t gunship_taking_off[153]; /* sGunshipTakingOffYVelocity (SHORT_MAX ends it) */
+    int16_t gunship_flying[22];     /* sGunshipFlyingYVelocity (SHORT_MAX ends it) */
     /* sChozoStatueMultiSpriteData_Standing, _Sitting and _Seated. */
     MzmMultiSprite chozo_multi[MZM_CHOZO_MULTI_COUNT];
 } MzmSpriteTables;
@@ -196,7 +198,7 @@ enum {
     MZM_ZOOMER_TURNING_EDGE_LEFT, MZM_ZOOMER_TURNING_EDGE_RIGHT,
     MZM_ZOOMER_TURNING_CORNER_LEFT, MZM_ZOOMER_TURNING_CORNER_RIGHT, MZM_ZOOMER_ANIMS,
 };
-#define MZM_SPRITE_MAX_ANIMS 48   /* the room gadgets use 47 */
+#define MZM_SPRITE_MAX_ANIMS 64   /* the room gadgets use 61 */
 #define MZM_SPRITE_MAX_FRAMES 64   /* sMultiviolaOam_Moving has 56 */
 extern const char *const mzm_zoomer_anim_names[MZM_ZOOMER_ANIMS];
 
@@ -347,6 +349,20 @@ enum {
     MZM_GADGET_SAVE_PLATFORM_TUBE_IDLE,
     MZM_GADGET_SAVE_PLATFORM_TUBE_DESPAWNING,
     MZM_GADGET_SAVE_PLATFORM_RAY,
+    MZM_GADGET_GUNSHIP_IDLE,
+    MZM_GADGET_GUNSHIP_REFILLING,
+    MZM_GADGET_GUNSHIP_FLYING,
+    MZM_GADGET_GUNSHIP_ENTRANCE_FRONT_CLOSED,
+    MZM_GADGET_GUNSHIP_ENTRANCE_FRONT_OPENING,
+    MZM_GADGET_GUNSHIP_ENTRANCE_FRONT_OPENED,
+    MZM_GADGET_GUNSHIP_ENTRANCE_FRONT_CLOSING,
+    MZM_GADGET_GUNSHIP_ENTRANCE_BACK_CLOSED,
+    MZM_GADGET_GUNSHIP_ENTRANCE_BACK_OPENING,
+    MZM_GADGET_GUNSHIP_ENTRANCE_BACK_OPENED,
+    MZM_GADGET_GUNSHIP_ENTRANCE_BACK_CLOSING,
+    MZM_GADGET_GUNSHIP_PLATFORM,
+    MZM_GADGET_GUNSHIP_FLAMES_HORIZONTAL,
+    MZM_GADGET_GUNSHIP_FLAMES_VERTICAL,
     MZM_GADGET_ANIMS,
 };
 extern const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS];
@@ -475,7 +491,7 @@ enum {
     MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C = 141, MZM_PSPRITE_GERON_VARIA1 = 142,
     MZM_PSPRITE_GERON_VARIA2 = 143, MZM_PSPRITE_GERON_VARIA3 = 144, MZM_PSPRITE_GERON_NORFAIR = 106,
     MZM_PSPRITE_PLASMA_BEAM_BLOCK = 170, MZM_PSPRITE_GRAVITY_SUIT_BLOCK = 171,
-    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -503,7 +519,7 @@ enum {
     MZM_SSPRITE_MORPH_BALL_OUTSIDE = 19, MZM_SSPRITE_POWER_GRIP_GLOW = 70,
     MZM_SSPRITE_CHARGE_BEAM_GLOW = 5, MZM_SSPRITE_DRAGON_FIREBALL = 8,
     MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT = 56, MZM_SSPRITE_MAP_STATION_PART = 52,
-    MZM_SSPRITE_SAVE_PLATFORM_PART = 13,
+    MZM_SSPRITE_SAVE_PLATFORM_PART = 13, MZM_SSPRITE_GUNSHIP_PART = 50,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 
@@ -615,6 +631,16 @@ typedef struct {
     /* gDisablePause (the save platforms) and gIsLoadingFile (the room of a
      * loaded file). */
     bool disable_pause, loading_file;
+    /* gLastDoorUsed == 0 as the runtime knows it: the room entered at a new
+     * game's start (the gunship lands). */
+    bool landing;
+    /* gHideHud and the StartEffectForCutscene request (EFFECT_CUTSCENE_*,
+     * 0: none) the runtime takes. */
+    bool hide_hud;
+    uint8_t cutscene_effect;
+    /* The gunship's palette animations as last copied to OBJ rows 9 and 10
+     * (its entrance and flames palette offsets, -1: still sGunshipPal). */
+    int8_t gunship_entrance_palette, gunship_flames_palette;
 } MzmSpriteGlobals;
 
 /* gSamusData as the Chozo statues read and move it: her pose
@@ -636,6 +662,11 @@ typedef struct {
     uint8_t set_pose;
     bool set_timer, reset_frame, clear_invincibility;
     uint8_t timer;
+    /* The gunship: Samus's pose in (MZM_POSE_*); out, standingStatus
+     * STANDING_ENEMY and lastWallTouchedMidAir (`set_last_wall`). */
+    uint8_t samus_pose;
+    bool standing_enemy, set_last_wall;
+    uint16_t last_wall;
 } MzmSpriteSamusLink;
 
 /* What SpriteUpdate shares with every sprite this frame. Enemy drops are

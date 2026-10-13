@@ -2274,6 +2274,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sSpacePirate_2e1030", t->pirate_jump_low, 11, 11},
         {"sSpacePirateJumpingVelocity", t->pirate_jump, 10, 10},
         {"sSpacePirate_2e105a", t->pirate_jump_high, 11, 11},
+        {"sGunshipTakingOffYVelocity", t->gunship_taking_off, 153, 153},
+        {"sGunshipFlyingYVelocity", t->gunship_flying, 22, 22},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -2736,7 +2738,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
         samus->pose == MZM_POSE_GRABBED_BY_CHOZO_STATUE ? MZM_LINK_POSE_GRABBED :
                                                           MZM_LINK_POSE_OTHER,
         (uint16_t)(samus->y - 1), (uint16_t)samus->x, false, false, false,
-        samus->facing > 0, MZM_POSE_NONE, false, false, false, 0};
+        samus->facing > 0, MZM_POSE_NONE, false, false, false, 0, (uint8_t)samus->pose, false,
+        false, 0};
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
                             sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top,
@@ -2768,12 +2771,15 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
         mzm_samus_sprite_set_pose(samus, (MzmPose)link.set_pose, equipment, collision);
     if (link.set_timer) samus->timer = link.timer;
     if (link.reset_frame) samus->anim_frame = 0;
+    /* The gunship's gSamusData writes. */
+    if (link.set_last_wall) samus->last_wall = link.last_wall;
     if (samus->pose != MZM_POSE_DYING && !stopped) {
         if (standing.landing_request)
             mzm_samus_land_on_sprite(samus, input, equipment, collision);
         if (standing.y_set) samus->y = (int32_t)standing.y + 1;
         samus->on_enemy = standing.on_enemy;
     }
+    if (link.standing_enemy) samus->on_enemy = true;
     runtime_sprites_drop_samus(sprites, samus);
     sprites->frame8++;
     sprites->frame16++;
@@ -2873,6 +2879,85 @@ static bool runtime_bg0_blend(const Room *room, int *eva, bool *additive) {
 
 /* ScrollBg3 (gBg3XPosition / gBg3YPosition) in pixels, from the camera
  * as gBg1 position. */
+/* The intro text's fades, approximated by a black veil: the
+ * BACKGROUND_EFFECT_INTRO_TEXT_FADE colour stages (out of 16), one per 4
+ * frames, then COLOR_FADING_INTRO_TEXT over 16 frames of black. */
+enum { RUNTIME_INTRO_FADE_FRAMES = 15 * 4 + 16 };
+static int runtime_intro_fade_stage(int frame) {
+    static const uint8_t stages[15] = {1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    return stages[frame / 4 < 15 ? frame / 4 : 14];
+}
+
+/* SpriteDrawAll_*: the sprites whose draw order is in [first_order,
+ * last_order]; draw order 1 goes in front, so the higher orders are painted
+ * first (slot order within an order). */
+static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
+                                 RuntimeLibrary *sprite_library,SDL_FRect viewport,float cx,
+                                 float cy,float scale,bool show_hitbox,int first_order,
+                                 int last_order) {
+    /* Their OAM frame, mirrored by the X and Y flip statuses (SpriteDraw);
+     * palette rows are baked per sprite by the exporter. */
+    for(int order=last_order;order>=first_order;order--)
+    for(int i=0;i<RUNTIME_MAX_SPRITES && sprites->kinds_ok;i++) {
+        const MzmSprite *sprite=&sprites->live[i];
+        if((sprite->draw_order?sprite->draw_order:4)!=order)continue;
+        const char *anim_name=mzm_sprite_anim_name(sprite);
+        if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) ||
+           sprite->status&MZM_SPRITE_STATUS_NOT_DRAWN || !anim_name)continue;
+        bool fx=sprite->status&MZM_SPRITE_STATUS_X_FLIP,fy=sprite->status&MZM_SPRITE_STATUS_Y_FLIP;
+        char key[160];
+        /* Whole-sprite rotation ignores the flips (SpriteDraw). */
+        bool rotated=sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE;
+        if(rotated)fx=fy=false;
+        /* The frozen (15 - slot) and stun (14 - slot) rows are baked
+         * variants of the sprite's own rows. */
+        const char *shade="";
+        static const char *const statue_rows[4]={"","/row1","/row2","/row3"};
+        if(mzm_sprite_family(sprite->sprite_id,sprite->secondary)==MZM_FAMILY_CHOZO_STATUE)
+            shade=sprite->palette_row<4?statue_rows[sprite->palette_row]:"";
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM && sprite->palette_row==2)
+            shade="/row2";              /* SavePlatformSaving's flash */
+        else if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
+        else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
+        snprintf(key,sizeof key,"Sprite/%s/%s/%s%s",
+                 sprites->names[mzm_sprite_graphics_owner(sprite)],
+                 anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none",shade);
+        RuntimeLibraryEntry *entry=runtime_library_find(sprite_library,key);
+        if(!entry || entry->count==0)continue;
+        int index=sprite->frame<entry->count?sprite->frame:0;
+        SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+        if(!art_texture)continue;
+        const RuntimeLibraryFrame *art=&entry->frames[index];
+        SDL_FRect box={viewport.x+((float)(sprite->x>>2)+(float)art->offset_x-cx)*scale,
+                       viewport.y+((float)(sprite->y>>2)+(float)art->offset_y-cy)*scale,
+                       (float)art->w*scale,(float)art->h*scale};
+        if(rotated) {
+            /* Clockwise around the sprite position, 256 units a turn. */
+            SDL_FPoint center={-(float)art->offset_x*scale,-(float)art->offset_y*scale};
+            SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
+                                     (double)(sprite->rotation&0xFF)*360.0/256.0,&center,
+                                     SDL_FLIP_NONE);
+        } else if(sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE) {
+            /* Each part turns around its own centre after its flip; the
+             * composed frame turns around its centre (exact for
+             * single-part frames, unclipped). */
+            SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
+                                     (double)(sprite->rotation&0xFF)*360.0/256.0,NULL,
+                                     SDL_FLIP_NONE);
+        } else {
+            SDL_RenderTexture(renderer,art_texture,NULL,&box);
+        }
+        if(show_hitbox) {
+            SDL_FRect hit={viewport.x+((float)((sprite->x+sprite->hitbox_left)>>2)-cx)*scale,
+                           viewport.y+((float)((sprite->y+sprite->hitbox_top)>>2)-cy)*scale,
+                           (float)((sprite->hitbox_right-sprite->hitbox_left)>>2)*scale,
+                           (float)((sprite->hitbox_bottom-sprite->hitbox_top)>>2)*scale};
+            SDL_SetRenderDrawColor(renderer,240,220,60,255);
+            SDL_RenderRect(renderer,&hit);
+        }
+    }
+}
+
 static void runtime_bg3_position(const Room *room, float cx, float cy, int *x, int *y) {
     static const int types[11][2] = {
         {0, 0}, {2, 0}, {0, 2}, {2, 2}, {1, 2}, {2, 1}, {1, 1}, {1, 0}, {1, 0}, {4, 0}, {1, 1},
@@ -3373,7 +3458,15 @@ int main(int argc, char **argv) {
     static MzmGameOver game_over;
     /* A state to switch to: a loaded file, or the game's start (the state
      * captured once Samus is spawned) for a new game. */
-    enum { RUNTIME_RESUME_NONE, RUNTIME_RESUME_SAVE, RUNTIME_RESUME_NEW_GAME };
+    enum { RUNTIME_RESUME_NONE, RUNTIME_RESUME_SAVE, RUNTIME_RESUME_NEW_GAME, RUNTIME_RESUME_LANDING };
+    /* A new file's start (Sram_CheckLoadSaveFile): the gunship lands in
+     * Crateria's first room, then the intro text leads to the game's start
+     * (CutsceneEnd: Brinstar's first room, the runtime's starting state). */
+    static const char runtime_landing_room[]="crateria_000";
+    /* The intro text's fades, in frames since the gunship started them
+     * (-1: none): BACKGROUND_EFFECT_INTRO_TEXT_FADE darkens everything but
+     * Samus in 15 steps, then COLOR_FADING_INTRO_TEXT darkens the rest. */
+    int intro_fade=-1;
     int resume_request=RUNTIME_RESUME_NONE;
     static MzmSaveData resume_save, new_game_state;
     uint8_t pause_flag=MZM_PAUSE_FLAG_PAUSE;   /* gPauseScreenFlag of the open pause */
@@ -3883,13 +3976,10 @@ int main(int argc, char **argv) {
                        mzm_save_read(save_paths[save_slot],&resume_save)) {
                         resume_request=RUNTIME_RESUME_SAVE;
                     } else {
-                        /* A new game on the file: the intro text first
-                         * (CUTSCENE_INTRO_TEXT, which the gunship's landing
-                         * starts natively). */
+                        /* A new game on the file: the gunship's landing. */
                         resume_save=new_game_state;
                         resume_save.difficulty=file_select.cursors.difficulty;
-                        resume_request=RUNTIME_RESUME_NEW_GAME;
-                        cutscene_mode=mzm_cutscene_enter(&cutscene,MZM_CUTSCENE_INTRO_TEXT);
+                        resume_request=RUNTIME_RESUME_LANDING;
                     }
                     previous_held=held;
                 }
@@ -3903,6 +3993,11 @@ int main(int argc, char **argv) {
                 if(mzm_cutscene_update(&cutscene,&screen)) {
                     cutscene_mode=false;
                     previous_held=held;
+                    if(sprites.globals.landing) {
+                        /* CutsceneEnd: the game's start in Brinstar. */
+                        resume_request=RUNTIME_RESUME_NEW_GAME;
+                        sprites.globals.landing=false;
+                    }
                 }
                 accumulator-=fixed_step;
                 continue;
@@ -3933,6 +4028,8 @@ int main(int argc, char **argv) {
             }
             if(resume_request!=RUNTIME_RESUME_NONE) {
                 /* SramLoadFile (or a new game): the state's room and state. */
+                bool landing=resume_request==RUNTIME_RESUME_LANDING;
+                if(landing)snprintf(resume_save.room,sizeof resume_save.room,"%s",runtime_landing_room);
                 bool same_room=!strcmp(resume_save.room,current_room);
                 Room *next=same_room?NULL:calloc(1,sizeof *next);
                 SDL_Texture *next_texture=NULL;
@@ -3950,18 +4047,41 @@ int main(int argc, char **argv) {
                     sprites.banner.cursor.exists=false;
                     runtime_apply_save(&resume_save,&equipment,&sprites,&samus,&collision,
                                        resume_request==RUNTIME_RESUME_SAVE);
+                    /* gLastDoorUsed 0 in the landing room; gHideHud is set
+                     * by the gunship and cleared by the next room. */
+                    sprites.globals.landing=landing;
+                    sprites.globals.hide_hud=false;
+                    sprites.globals.cutscene_effect=0;
+                    intro_fade=-1;
+                    if(landing) {
+                        /* Samus waits at the gunship, which places her. */
+                        for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
+                            if(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS &&
+                               !sprites.live[i].secondary &&
+                               sprites.live[i].sprite_id==MZM_PSPRITE_GUNSHIP) {
+                                samus.x=sprites.live[i].x;
+                                samus.y=sprites.live[i].y-64*6;
+                            }
+                        snprintf(resume_save.room,sizeof resume_save.room,"%s",new_game_state.room);
+                    }
                     runtime_blocks_load(room,current_room);
                     runtime_hatches_load(room,current_room,-1);
                     mzm_weapons_init(&weapons);
                     prevent_movement=0;
                     hud_room_alias[0]='\0';
                     runtime_hud.area_before_transition=0xFF;
-                    printf("%s %s\n",resume_request==RUNTIME_RESUME_SAVE?"Loaded the save in":"New game in",
-                           current_room);
+                    printf("%s %s\n",resume_request==RUNTIME_RESUME_SAVE?"Loaded the save in":
+                           landing?"Gunship landing in":"New game in",current_room);
                 } else {
                     if(next_texture)SDL_DestroyTexture(next_texture);
                     free(next);
                     fprintf(stderr,"Cannot load the room %s\n",resume_save.room);
+                    if(landing) {
+                        /* No landing room: the intro text, then the game. */
+                        snprintf(resume_save.room,sizeof resume_save.room,"%s",new_game_state.room);
+                        sprites.globals.landing=true;
+                        sprites.globals.cutscene_effect=3;
+                    }
                 }
                 resume_request=RUNTIME_RESUME_NONE;
                 mzm_sfx_stop_all();
@@ -4001,6 +4121,22 @@ int main(int argc, char **argv) {
                 accumulator-=fixed_step;
                 continue;
             }
+            /* StartEffectForCutscene(EFFECT_CUTSCENE_INTRO_TEXT): the
+             * fades, then the intro text cutscene. */
+            if(sprites.globals.cutscene_effect==3) {
+                sprites.globals.cutscene_effect=0;
+                intro_fade=0;
+            }
+            if(intro_fade>=0 && ++intro_fade>=RUNTIME_INTRO_FADE_FRAMES) {
+                intro_fade=-1;
+                cutscene_mode=screen_ready && mzm_cutscene_enter(&cutscene,MZM_CUTSCENE_INTRO_TEXT);
+                if(!cutscene_mode) {
+                    resume_request=RUNTIME_RESUME_NEW_GAME;
+                    sprites.globals.landing=false;
+                }
+                accumulator-=fixed_step;
+                continue;
+            }
             /* SamusDying's end: the game over screen. */
             if(screen_ready && samus.game_over) {
                 samus.game_over=false;
@@ -4025,7 +4161,7 @@ int main(int argc, char **argv) {
                runtime_native_keys(held,capture_path?NULL:keys,capture_path?NULL:&gamepad)&
                    GBA_KEY_START &&
                !(screen.button_input&GBA_KEY_START) && prevent_movement==0 &&
-               !sprites.globals.disable_pause &&
+               !sprites.globals.disable_pause && !sprites.globals.landing &&
                weapons.power_bomb.state==MZM_PB_NONE) {
                 pause_mode=true;
                 pause_flag=MZM_PAUSE_FLAG_PAUSE;
@@ -4314,6 +4450,8 @@ int main(int argc, char **argv) {
                     if(texture)SDL_DestroyTexture(texture);
                     texture=next_texture;
                     runtime_place_after_door(&samus,&used,door_offset);
+                    sprites.globals.landing=false;
+                    sprites.globals.hide_hud=false;
                     runtime_sprites_spawn(&sprites, room);
                     runtime_sprites_door_arrival(&sprites, room, &used);
                     {
@@ -4468,6 +4606,9 @@ int main(int argc, char **argv) {
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
         if(pb_active)runtime_draw_power_bomb(renderer,&weapons.power_bomb,cx,cy,viewport,scale);
+        /* SpriteDrawAll_LowPriority: draw orders 9 to 16, behind Samus. */
+        runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16);
+
         RuntimeLibraryEntry *lib_entry=NULL;
         int frame=0;
         if(animation_browser && library.count>0) {
@@ -4554,69 +4695,9 @@ int main(int argc, char **argv) {
             SDL_RenderFillRect(renderer,&shell);
         }
         SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
-        /* Sprites: their OAM frame, mirrored by the X and Y flip statuses
-         * (SpriteDraw); palette rows are baked per sprite by the exporter. */
-        /* SpriteDrawAll_*: draw order 1 goes in front, so the higher orders
-         * are painted first (slot order within an order). */
-        for(int order=16;order>=1;order--)
-        for(int i=0;i<RUNTIME_MAX_SPRITES && sprites.kinds_ok;i++) {
-            const MzmSprite *sprite=&sprites.live[i];
-            if((sprite->draw_order?sprite->draw_order:4)!=order)continue;
-            const char *anim_name=mzm_sprite_anim_name(sprite);
-            if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) ||
-               sprite->status&MZM_SPRITE_STATUS_NOT_DRAWN || !anim_name)continue;
-            bool fx=sprite->status&MZM_SPRITE_STATUS_X_FLIP,fy=sprite->status&MZM_SPRITE_STATUS_Y_FLIP;
-            char key[160];
-            /* Whole-sprite rotation ignores the flips (SpriteDraw). */
-            bool rotated=sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE;
-            if(rotated)fx=fy=false;
-            /* The frozen (15 - slot) and stun (14 - slot) rows are baked
-             * variants of the sprite's own rows. */
-            const char *shade="";
-            static const char *const statue_rows[4]={"","/row1","/row2","/row3"};
-            if(mzm_sprite_family(sprite->sprite_id,sprite->secondary)==MZM_FAMILY_CHOZO_STATUE)
-                shade=sprite->palette_row<4?statue_rows[sprite->palette_row]:"";
-            else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM && sprite->palette_row==2)
-                shade="/row2";              /* SavePlatformSaving's flash */
-            else if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
-            else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
-            snprintf(key,sizeof key,"Sprite/%s/%s/%s%s",
-                     sprites.names[mzm_sprite_graphics_owner(sprite)],
-                     anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none",shade);
-            RuntimeLibraryEntry *entry=runtime_library_find(&sprite_library,key);
-            if(!entry || entry->count==0)continue;
-            int index=sprite->frame<entry->count?sprite->frame:0;
-            SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
-            if(!art_texture)continue;
-            const RuntimeLibraryFrame *art=&entry->frames[index];
-            SDL_FRect box={viewport.x+((float)(sprite->x>>2)+(float)art->offset_x-cx)*scale,
-                           viewport.y+((float)(sprite->y>>2)+(float)art->offset_y-cy)*scale,
-                           (float)art->w*scale,(float)art->h*scale};
-            if(rotated) {
-                /* Clockwise around the sprite position, 256 units a turn. */
-                SDL_FPoint center={-(float)art->offset_x*scale,-(float)art->offset_y*scale};
-                SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
-                                         (double)(sprite->rotation&0xFF)*360.0/256.0,&center,
-                                         SDL_FLIP_NONE);
-            } else if(sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE) {
-                /* Each part turns around its own centre after its flip; the
-                 * composed frame turns around its centre (exact for
-                 * single-part frames, unclipped). */
-                SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
-                                         (double)(sprite->rotation&0xFF)*360.0/256.0,NULL,
-                                         SDL_FLIP_NONE);
-            } else {
-                SDL_RenderTexture(renderer,art_texture,NULL,&box);
-            }
-            if(show_hitbox) {
-                SDL_FRect hit={viewport.x+((float)((sprite->x+sprite->hitbox_left)>>2)-cx)*scale,
-                               viewport.y+((float)((sprite->y+sprite->hitbox_top)>>2)-cy)*scale,
-                               (float)((sprite->hitbox_right-sprite->hitbox_left)>>2)*scale,
-                               (float)((sprite->hitbox_bottom-sprite->hitbox_top)>>2)*scale};
-                SDL_SetRenderDrawColor(renderer,240,220,60,255);
-                SDL_RenderRect(renderer,&hit);
-            }
-        }
+        /* SpriteDrawAll_HighPriority and _MediumPriority: draw orders 1 to
+         * 8, in front of Samus. */
+        runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,8);
         /* SpriteDebrisDrawAll and ParticleDraw: the common sprite graphics. */
         for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok;i++) {
             const char *table; uint16_t px,py,frame;
@@ -4757,7 +4838,17 @@ int main(int argc, char **argv) {
                 if(cursor_texture)SDL_RenderTexture(renderer,cursor_texture,NULL,&box);
             }
         }
-        if(runtime_hud.ready) {
+        if(intro_fade>=0) {
+            /* BACKGROUND_EFFECT_INTRO_TEXT_FADE darkens the backgrounds and
+             * every sprite palette row but Samus's, who is hidden in the
+             * gunship; COLOR_FADING_INTRO_TEXT then keeps the screen black. */
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer,0,0,0,
+                                   (Uint8)(runtime_intro_fade_stage(intro_fade)*255/16));
+            SDL_RenderFillRect(renderer,&viewport);
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
+        }
+        if(runtime_hud.ready && !sprites.globals.hide_hud) {
             /* The HUD's OAM over the view (the minimap at its right edge). */
             if(!hud_texture) {
                 hud_texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,

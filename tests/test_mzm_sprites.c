@@ -2696,7 +2696,7 @@ int main(void) {
         MzmSprite *arm = &room[arm_slot];
         uint16_t hand = (uint16_t)(arm->x + 56);
         MzmSpriteSamusLink link = {MZM_LINK_POSE_MORPH_BALL, (uint16_t)(arm->y - 17), hand,
-                                   false, false, false, false, MZM_POSE_NONE, false, false, false, 0};
+                                   false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
         statue_frame.samus_link = &link;
         /* Off by one subpixel in height: no grab. */
         link.y++;
@@ -2772,7 +2772,7 @@ int main(void) {
         assert(hint_arm && hint_arm->pose == 0x9);
         MzmSpriteSamusLink hint_link = {MZM_LINK_POSE_ROLLING, (uint16_t)(hint_arm->y - 17),
                                         (uint16_t)(hint_arm->x - 56), false, false, false,
-                                        false, MZM_POSE_NONE, false, false, false, 0};
+                                        false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
         statue_frame.samus_link = &hint_link;
         mzm_sprite_update(hint_arm, 0, &statue_frame);
         assert(hint_link.grab && room[0].pose == 0x22 && hint_arm->pose == 0x23);
@@ -3125,7 +3125,7 @@ int main(void) {
         assert(room[1].anim == MZM_GADGET_MAP_STATION_BACK_SCREEN_IDLE);
         uint16_t station_x = (uint16_t)(room[0].x + 96), station_y = (uint16_t)(room[0].y + 128 - 1);
         MzmSpriteSamusLink station_link = {MZM_LINK_POSE_OTHER, station_y, (uint16_t)(station_x + 64),
-                                           false, false, false, true, MZM_POSE_NONE, false, false, false, 0};
+                                           false, false, false, true, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
         g.samus_link = &station_link;
         mzm_sfx_clear();
         mzm_sprite_update(&room[0], 0, &g);
@@ -3174,7 +3174,7 @@ int main(void) {
         mzm_sprite_update(&room[1], 1, &g);
         assert(room[1].pose == 0x43 && room[1].anim == MZM_GADGET_SAVE_PLATFORM_TOP_IDLE);
         MzmSpriteSamusLink save_link = {MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y - 65), (uint16_t)(room[0].x + 20),
-                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0};
+                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
         g.samus_link = &save_link;
         mzm_sfx_clear();
         for (int i = 0; i < 9; ++i) mzm_sprite_update(&room[0], 0, &g);
@@ -3243,6 +3243,88 @@ int main(void) {
         mzm_sprite_update(&room[1], 1, &g);
         mzm_sprite_update(&room[2], 2, &g);
         assert(room[1].pose == 0x25 && room[1].y_spawn == 310 && room[2].anim == MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDED);
+        /* The gunship at a new game's start: six blocks up, it lands with
+         * Samus inside (hidden HUD, the vertical flames), and starts the
+         * intro text half a second before touching down. */
+        memset(room, 0, sizeof room);
+        memset(&station_globals, 0, sizeof station_globals);
+        station_globals.landing = true;
+        g.banner_pose = 0;
+        g.banner_yes = false;
+        MzmSpriteSamusLink ship_link = {MZM_LINK_POSE_OTHER, 0, 0, false, false, false, false, MZM_POSE_NONE,
+                                        false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
+        g.samus_link = &ship_link;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GUNSHIP, 0, 5, 5, 0, 0);
+        uint16_t ship_ground = room[0].y;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x55 && room[0].y == (uint16_t)(ship_ground - 384) && room[0].work0 == 192 &&
+               room[0].anim == MZM_GADGET_GUNSHIP_IDLE && station_globals.hide_hud &&
+               ship_link.set_pose == MZM_POSE_SAVING_LOADING_GAME && ship_link.set_last_wall &&
+               ship_link.last_wall == 1 && mzm_sfx_requested(MZM_SFX_PLAY, 0x232));
+        assert(room[1].sprite_id == MZM_SSPRITE_GUNSHIP_PART && room[1].room_slot == 1 && room[2].room_slot == 2 &&
+               room[3].room_slot == 5);
+        mzm_sprite_update(&room[1], 1, &g);
+        mzm_sprite_update(&room[3], 3, &g);
+        assert(room[1].pose == 0x9 && room[3].pose == 0x34 && room[3].anim == MZM_GADGET_GUNSHIP_FLAMES_VERTICAL &&
+               room[3].draw_order == 15);
+        for (int i = 0; i < 161; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].work0 == 31 && station_globals.cutscene_effect == 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].work0 == 30 && station_globals.cutscene_effect == 3 &&
+               room[0].status & MZM_SPRITE_STATUS_MOSAIC && ship_link.moved && ship_link.x == room[0].x &&
+               ship_link.y == (uint16_t)(room[0].y - 4));
+        for (int i = 0; i < 40; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].y == ship_ground && room[0].work0 == 0);
+        /* Idle on the ground: Samus standing on top enters it, sinks into
+         * it, and is refilled; the banner then asks to save. */
+        memset(room, 0, sizeof room);
+        memset(&station_globals, 0, sizeof station_globals);
+        ship_link.samus_pose = MZM_POSE_STANDING;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GUNSHIP, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && room[0].samus_collision == 2 && room[0].draw_order == 12 &&
+               room[3].room_slot == 3 && room[3].y == (uint16_t)(room[0].y - 192 + 32));
+        static MzmEquipment ship_items;
+        memset(&ship_items, 0, sizeof ship_items);
+        ship_items.energy = 30;
+        ship_items.max_energy = 99;
+        g.equipment = &ship_items;
+        ship_link = (MzmSpriteSamusLink){MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y - 196), (uint16_t)(room[0].x + 20),
+                                         false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
+                                         MZM_POSE_STANDING, false, false, 0};
+        room[0].status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x22 && room[0].draw_order == 4 && room[0].samus_collision == 0 &&
+               ship_link.set_pose == MZM_POSE_TURNING_FROM_FACING_THE_FOREGROUND && ship_link.standing_enemy &&
+               ship_link.x == room[0].x && room[0].work0 == 56);
+        uint16_t ship_samus_y = ship_link.y;
+        int ship_frames = 0;
+        while (room[0].pose == 0x22 && ship_frames++ < 80) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x23 && ship_link.y == (uint16_t)(ship_samus_y + 43 * 4) && room[0].work0 == 65);
+        message_count = 0;
+        while (room[0].pose == 0x23 && ship_frames++ < 400) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x24 && ship_items.energy == 99 && message_count == 1 && messages[0] == 26 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, 0x21E) && mzm_sfx_requested(MZM_SFX_FADE, 0x21E));
+        g.banner_pose = MZM_BANNER_POSE_REMOVAL_ANIMATION;
+        for (int i = 0; i < 30; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(message_count == 2 && messages[1] == 22);
+        g.banner_yes = true;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x42 && mzm_sfx_requested(MZM_SFX_PLAY, 0x21F));
+        g.banner_pose = 0;
+        for (int i = 0; i < 30; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x43 && message_count == 3 && messages[2] == 23);
+        g.banner_pose = MZM_BANNER_POSE_REMOVAL_ANIMATION;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25);
+        /* Samus leaves: the platform rises with her, then she faces the
+         * screen. */
+        ship_samus_y = ship_link.y;
+        while (room[0].pose != 0x29 && ship_frames++ < 600) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x29 && ship_link.y == (uint16_t)(ship_samus_y - 43 * 4) &&
+               ship_link.set_pose == MZM_POSE_FACING_THE_FOREGROUND);
+        g.equipment = frame.equipment;
         g.banner_pose = 0;
         g.banner_yes = false;
         g.samus_link = NULL;

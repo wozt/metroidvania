@@ -1021,6 +1021,7 @@ void ai_gadget(Ctx *c) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
         else if (c->s->sprite_id == SSPRITE_MAP_STATION_PART) map_station_part(c);
         else if (c->s->sprite_id == SSPRITE_SAVE_PLATFORM_PART) save_platform_part(c);
+        else if (c->s->sprite_id == MZM_SSPRITE_GUNSHIP_PART) ai_gunship(c);
         return;
     }
     switch (c->s->sprite_id) {
@@ -1035,6 +1036,7 @@ void ai_gadget(Ctx *c) {
     case PLASMA_BEAM_BLOCK: case GRAVITY_SUIT_BLOCK: case SPACE_JUMP_BLOCK: unknown_item_block(c); break;
     case MAP_STATION: map_station(c); break;
     case SAVE_PLATFORM: save_platform(c); break;
+    case MZM_PSPRITE_GUNSHIP: ai_gunship(c); break;
     default: break;
     }
 }

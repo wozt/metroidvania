@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-12**.
+Last updated: **2026-10-13**.
 
 ## Current product state
 
@@ -2987,6 +2987,22 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 27/27, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
+
+## Patch 0296 - Zero Mission intro
+
+- `src/runtime/mzm_intro.c`: the US intro (intro.c): the fade from black,
+  the three typed texts with their letter sounds and blinking marker, the
+  ship flying towards the camera as double-size affine sprites
+  (ProcessComplexOam and CalculateOamPart4), Samus in her ship, the view of
+  Zebes, Mother Brain's jar and the fuzz with its V-blank palette; A, B or
+  START skips it.
+- `mzm_sfx_fade_all` / `mzm_sound_fade_all` (FadeAllSounds).
+- The runtime boots on the intro (no arguments or `--intro`; `--title`
+  still starts on the title), and the file select's B and the game over's
+  quit lead back to it, as GM_INTRO does. A skipped intro starts the title
+  past its comets.
+- Checked by capture (every stage, the end and the skip); the test in
+  `tests/test_mzm_screens.c` runs the whole intro on the exported bank.
 
 ## Patch 0295 - Zero Mission game over
 

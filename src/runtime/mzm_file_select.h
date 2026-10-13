@@ -35,7 +35,7 @@ enum {
     MZM_FILE_SELECT_STAY = 0,
     MZM_FILE_SELECT_CONTINUE,       /* gSubGameMode2 1: the file is loaded */
     MZM_FILE_SELECT_NEW_GAME,       /* gSubGameMode2 2: a new game on the file */
-    MZM_FILE_SELECT_TITLE,          /* gSubGameMode2 3: back to the title */
+    MZM_FILE_SELECT_TITLE,          /* gSubGameMode2 3: out to the intro */
 };
 
 typedef struct {

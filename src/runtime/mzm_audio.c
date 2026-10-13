@@ -2077,6 +2077,11 @@ void mzm_music_fade(uint16_t timer) {
     gMusicInfo.occupied = 0;
 }
 
+void mzm_sound_fade_all(uint16_t timer) {
+    /* FadeAllSounds: players 1 to 8 */
+    for (int i = 1; i <= 8 && i < NUM_MUSIC_PLAYERS; i++) ApplyMusicSoundFading(sMusicTrackDataRom[i].pTrack, timer);
+}
+
 void mzm_audio_stop_all(void) {
     for (int i = NUM_MUSIC_PLAYERS - 1; i >= 0; i--) StopMusicOrSound(sMusicTrackDataRom[i].pTrack);
 }

@@ -40,6 +40,8 @@ void mzm_sound_fade(uint16_t sound, uint16_t timer);
 void mzm_music_play(uint16_t music, uint8_t priority);
 void mzm_music_fade(uint16_t timer);
 void mzm_audio_stop_all(void);
+/* FadeAllSounds: fades the sound effect players (1 to 8). */
+void mzm_sound_fade_all(uint16_t timer);
 /* DecreaseMusicVolume and ResetMusicVolume (the pause screen) */
 void mzm_music_decrease_volume(void);
 void mzm_music_reset_volume(void);

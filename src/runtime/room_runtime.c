@@ -29,6 +29,7 @@
 #include "mzm_save.h"
 #include "mzm_file_select.h"
 #include "mzm_game_over.h"
+#include "mzm_intro.h"
 #include <sys/stat.h>
 #include <errno.h>
 #include "mzm_sprites.h"
@@ -2050,6 +2051,7 @@ static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
     case MZM_SFX_STOP: mzm_sound_stop(sound); break;
     case MZM_SFX_FADE: mzm_sound_fade(sound, timer); break;
     case MZM_SFX_STOP_ALL: mzm_audio_stop_all(); break;
+    case MZM_SFX_FADE_ALL: mzm_sound_fade_all(timer); break;
     case MZM_SFX_MUSIC_PLAY: mzm_music_play(sound, (uint8_t)timer); break;
     case MZM_SFX_MUSIC_INSERT: mzm_music_insert(sound, (uint8_t)timer); break;
     case MZM_SFX_BACKUP_TRACK2: mzm_audio_backup_track2(); break;
@@ -3085,7 +3087,7 @@ int main(int argc, char **argv) {
     const char *room_alias=NULL, *samus_assets=NULL;
     /* Boot on the title screen (also without any argument); START then
      * begins the game in Brinstar's first room. */
-    bool title_mode=argc==1;
+    bool title_mode=argc==1, intro_mode=argc==1;
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
@@ -3133,6 +3135,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--native-source") && !native_source && i+1<argc) native_source=argv[++i];
         else if (!strcmp(argv[i],"--room") && !room_alias && i+1<argc) room_alias=argv[++i];
         else if (!strcmp(argv[i],"--title")) title_mode=true;
+        else if (!strcmp(argv[i],"--intro")) title_mode=intro_mode=true;
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
@@ -3372,12 +3375,17 @@ int main(int argc, char **argv) {
     if (mzm_rom_open(RUNTIME_ROM_BANK, RUNTIME_ROM_SYMBOLS))
         mzm_hud_init(&runtime_hud, &runtime_hud_ppu, &runtime_minimap, 320);
     screen_ready = mzm_rom_ready() && mzm_screen_init(&screen, &screen_ppu);
+    static MzmIntro intro;
     if (title_mode) {
-        if (screen_ready) {
-            mzm_title_enter(&title_screen, false);
-        } else {
+        if (!screen_ready) {
             fprintf(stderr, "No ROM bank: the title screen is skipped.\n");
+            title_mode = intro_mode = false;
+        } else if (intro_mode) {
+            /* GM_SOFT_RESET leads to GM_INTRO, which leads to the title. */
             title_mode = false;
+            mzm_intro_enter(&intro);
+        } else {
+            mzm_title_enter(&title_screen, false);
         }
     }
     SDL_Window *window=SDL_CreateWindow("Metroid Vania - experimental C11 runtime",
@@ -3514,7 +3522,7 @@ int main(int argc, char **argv) {
     printf("Diagnostics: R suit, T Space Jump/Screw Attack, G High Jump, "
            "H 20 damage, Enter restart, F6 catalogue, F7 hitbox.\n");
     /* The first room's music starts at once (after the title screen). */
-    if (!title_mode && runtime_room_music(room)) {
+    if (!title_mode && !intro_mode && runtime_room_music(room)) {
         runtime_audio_lock();
         mzm_music_check_play_transition_track();
         runtime_audio_unlock();
@@ -3810,6 +3818,20 @@ int main(int argc, char **argv) {
                 capture_step++;
             }
             if(debug.open && !capture_path)held=0;     /* a menu frame step */
+            if(intro_mode) {
+                /* IntroHandler: the title once it ended, without the comets
+                 * when it was skipped (gSubGameMode2 1). */
+                mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                              capture_path?NULL:&gamepad));
+                if(mzm_intro_update(&intro,&screen)) {
+                    intro_mode=false;
+                    title_mode=true;
+                    mzm_title_enter(&title_screen,false);
+                    title_screen.sub_mode2=intro.sub_mode2;
+                }
+                accumulator-=fixed_step;
+                continue;
+            }
             if(title_mode) {
                 /* TitleScreenHandler; START (or A) leaves for the game, a
                  * demo (not ported) comes back to the title. */
@@ -3838,9 +3860,10 @@ int main(int argc, char **argv) {
                                                               capture_path?NULL:&gamepad));
                 int chosen=mzm_file_select_update(&file_select,&screen);
                 if(chosen==MZM_FILE_SELECT_TITLE) {
+                    /* FileSelectMenuHandler's other endings: GM_INTRO. */
                     file_select_mode=false;
-                    title_mode=true;
-                    mzm_title_enter(&title_screen,false);
+                    intro_mode=true;
+                    mzm_intro_enter(&intro);
                 } else if(chosen!=MZM_FILE_SELECT_STAY) {
                     file_select_mode=false;
                     save_slot=file_select.most_recent;
@@ -3860,14 +3883,14 @@ int main(int argc, char **argv) {
             }
             if(game_over_mode) {
                 /* GameOverHandler: continue from the most recent file (a
-                 * new game without any), or quit to the title. */
+                 * new game without any), or quit to the intro. */
                 mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                               capture_path?NULL:&gamepad));
                 int chosen=mzm_game_over_update(&game_over,&screen);
                 if(chosen==MZM_GAME_OVER_QUIT) {
                     game_over_mode=false;
-                    title_mode=true;
-                    mzm_title_enter(&title_screen,false);
+                    intro_mode=true;
+                    mzm_intro_enter(&intro);
                 } else if(chosen==MZM_GAME_OVER_CONTINUE) {
                     game_over_mode=false;
                     if(mzm_save_read(save_paths[save_slot],&resume_save)) {
@@ -4326,7 +4349,7 @@ int main(int argc, char **argv) {
         if ((float)oh/224.f < scale) scale=(float)oh/224.f;
         SDL_FRect viewport={(ow-320.f*scale)*0.5f,(oh-224.f*scale)*0.5f,
                             320.f*scale,224.f*scale};
-        if(title_mode || pause_mode || file_select_mode || game_over_mode) {
+        if(intro_mode || title_mode || pause_mode || file_select_mode || game_over_mode) {
             /* The 240x160 GBA screen, fitted to the view. */
             SDL_SetRenderDrawColor(renderer,0,0,0,255);
             SDL_RenderClear(renderer);
@@ -4744,10 +4767,11 @@ frame_overlays:
                    capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
-            if(title_mode || file_select_mode || pause_mode || game_over_mode)
-                printf("  screen: title %d, file select %d (mode %d, sub menu %d stage %d), pause %d, "
-                       "game over %d (mode %d)\n",
-                       title_mode,file_select_mode,file_select.sub_mode1,file_select.current_sub_menu,
+            if(intro_mode || title_mode || file_select_mode || pause_mode || game_over_mode)
+                printf("  screen: intro %d (stage %d timer %d), title %d, file select %d (mode %d, sub menu %d "
+                       "stage %d), pause %d, game over %d (mode %d)\n",
+                       intro_mode,intro.stage,intro.timer,title_mode,file_select_mode,file_select.sub_mode1,
+                       file_select.current_sub_menu,
                        file_select.sub_menu_stage,pause_mode,game_over_mode,game_over.sub_mode1);
             if(prevent_movement && !sprites.banner.exists)
                 printf("  movement prevented %u\n",prevent_movement);

@@ -14,6 +14,7 @@
 #include "mzm_pause_screen.h"
 #include "mzm_file_select.h"
 #include "mzm_game_over.h"
+#include "mzm_intro.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -624,6 +625,62 @@ static void test_game_over_bank(void) {
     mzm_rom_close();
 }
 
+/* The intro on the exported bank: the eight stages in order with their
+ * sounds, the typed text's letters, the ship's affine parameters, the fuzz
+ * palette, the end; then a skip with START. */
+static void test_intro_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the intro checks are skipped\n");
+        return;
+    }
+    static MzmIntro in;
+    mzm_intro_enter(&in);
+    mzm_sfx_clear();
+    int f, stage_start[9] = {0};
+    uint8_t stage = 0;
+    bool ended = false, affine = false, double_size = false, letters = false, fuzz = false;
+    for (f = 0; f < 3000 && !ended; ++f) {
+        mzm_screen_input(&screen, 0);
+        ended = mzm_intro_update(&in, &screen);
+        if (in.stage != stage) stage_start[stage = in.stage] = f;
+        if (in.stage == 1 && screen.next_oam_slot != 0) {
+            affine |= screen.oam[3] != 0;
+            double_size |= (screen.oam[0] & 0x300) == 0x300;
+        }
+        if (in.stage == 0 && in.final_character > 0) letters = true;
+        if (in.stage == 7 && in.fuzz_vblank && ppu.palette[256 + 1] != 0) fuzz = true;
+    }
+    assert(ended && in.sub_mode2 == 0 && in.stage == 7);
+    assert(letters && affine && double_size && fuzz);
+    for (int i = 2; i < 8; ++i) assert(stage_start[i] > stage_start[i - 1]);
+    /* The timed stages: 30 + 2, 60 + 20 (twice) and 192 frames, plus the
+     * frame resetting their timer; the fuzz ends at 96. */
+    assert(stage_start[2] - stage_start[1] == 33 && stage_start[3] - stage_start[2] == 81 &&
+           stage_start[5] - stage_start[4] == 81 && stage_start[7] - stage_start[6] == 193 &&
+           f - stage_start[7] == 99);
+    assert(count_requests(MZM_SFX_PLAY, 0x4) == 1 && count_requests(MZM_SFX_PLAY, 0x39) == 1);
+    for (uint16_t sound = 0x227; sound <= 0x22B; ++sound) assert(count_requests(MZM_SFX_PLAY, sound) == 1);
+    assert(count_requests(MZM_SFX_PLAY, 0x226) > 40);
+    /* START skips it: the sounds and the music fade, gSubGameMode2 1. */
+    mzm_intro_enter(&in);
+    mzm_sfx_clear();
+    ended = false;
+    for (f = 0; f < 100; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_intro_update(&in, &screen);
+    }
+    mzm_screen_input(&screen, 1 << 3);
+    mzm_intro_update(&in, &screen);
+    for (f = 0; f < 3 && !ended; ++f) {
+        mzm_screen_input(&screen, 0);
+        ended = mzm_intro_update(&in, &screen);
+    }
+    assert(ended && in.sub_mode2 == 1 && count_requests(MZM_SFX_FADE_ALL, 0) == 1 &&
+           count_requests(MZM_SFX_MUSIC_FADE, 0) == 1);
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
@@ -632,6 +689,7 @@ int main(void) {
     test_pause_bank();
     test_file_select_bank();
     test_game_over_bank();
+    test_intro_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

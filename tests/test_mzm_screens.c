@@ -367,6 +367,37 @@ static void test_pause_bank(void) {
     mzm_rom_close();
 }
 
+static int copies, copied_from, copied_to, erases, erased;
+static bool test_copy_file(void *context, int source, int destination) {
+    (void)context;
+    copies++;
+    copied_from = source;
+    copied_to = destination;
+    return true;
+}
+static bool test_erase_file(void *context, int file) {
+    (void)context;
+    erases++;
+    erased = file;
+    return true;
+}
+
+/* One frame with keys pressed, then one released. */
+static void press(MzmFileSelect *fs, uint16_t keys) {
+    mzm_screen_input(&screen, keys);
+    mzm_file_select_update(fs, &screen);
+    mzm_screen_input(&screen, 0);
+    mzm_file_select_update(fs, &screen);
+}
+
+static void run_until_stage(MzmFileSelect *fs, uint8_t stage) {
+    for (int f = 0; f < 200 && fs->sub_menu_stage != stage; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(fs, &screen);
+    }
+    assert(fs->sub_menu_stage == stage);
+}
+
 /* The file select screen on the exported bank: file A saved, B and C
  * empty; a new game on B with the difficulty panel, then B back to the
  * title. */
@@ -487,6 +518,47 @@ static void test_file_select_bank(void) {
         result = mzm_file_select_update(&fs, &screen);
     }
     assert(result == MZM_FILE_SELECT_CONTINUE && fs.most_recent == 0);
+    /* Copy file A to the first empty file (B), then erase B. */
+    mzm_file_select_enter(&fs, files, 0);
+    fs.copy_file = test_copy_file;
+    fs.erase_file_callback = test_erase_file;
+    fs.context = NULL;
+    for (f = 0; f < 60 && fs.sub_mode1 != 2; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(&fs, &screen);
+    }
+    for (int i = 0; i < 3; ++i) press(&fs, 1 << 7);
+    assert(fs.cursor_position == 3);
+    press(&fs, 1);
+    assert(fs.current_sub_menu == 2);
+    run_until_stage(&fs, 3);
+    press(&fs, 1);
+    assert(fs.sub_menu_stage == 4 && fs.copy_source == 0 && fs.current_file == 1);
+    press(&fs, 1);
+    for (f = 0; f < 200 && fs.current_sub_menu != 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(&fs, &screen);
+    }
+    assert(fs.current_sub_menu == 0 && copies == 1 && copied_from == 0 && copied_to == 1);
+    assert(fs.files[1].exists && fs.files[1].igt_minutes == 23 && fs.enabled_menus & 1 << 1);
+    press(&fs, 1 << 7);
+    assert(fs.cursor_position == 4);
+    press(&fs, 1);
+    assert(fs.current_sub_menu == 3);
+    run_until_stage(&fs, 2);
+    press(&fs, 1 << 7);
+    assert(fs.erase_file == 1);
+    press(&fs, 1);
+    run_until_stage(&fs, 4);
+    assert(fs.cursors.confirm_erase == 1);
+    press(&fs, 1 << 5);
+    assert(fs.cursors.confirm_erase == 0);
+    press(&fs, 1);
+    for (f = 0; f < 200 && fs.current_sub_menu != 0; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_file_select_update(&fs, &screen);
+    }
+    assert(erases == 1 && erased == 1 && !fs.files[1].exists && !(fs.enabled_menus & 1 << 1));
     mzm_rom_close();
 }
 

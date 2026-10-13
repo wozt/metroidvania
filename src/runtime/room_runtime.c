@@ -29,6 +29,7 @@
 #include "mzm_save.h"
 #include "mzm_file_select.h"
 #include <sys/stat.h>
+#include <errno.h>
 #include "mzm_sprites.h"
 
 #define MAX_MARKS 32768
@@ -2178,6 +2179,19 @@ static MzmSaveFileInfo runtime_save_info(const char *path) {
     return info;
 }
 
+/* SramCopyFile and SramDeleteFile on the save files (context: their
+ * three paths). */
+static bool runtime_copy_save(void *context,int source,int destination) {
+    char (*paths)[4096]=context;
+    static MzmSaveData save;
+    return mzm_save_read(paths[source],&save) && mzm_save_write(paths[destination],&save);
+}
+
+static bool runtime_erase_save(void *context,int file) {
+    char (*paths)[4096]=context;
+    return remove(paths[file])==0 || errno==ENOENT;
+}
+
 /* gMostRecentSaveFile: the newest of the three files (file A without
  * any). */
 static uint8_t runtime_most_recent_save(char paths[3][4096]) {
@@ -3773,6 +3787,9 @@ int main(int argc, char **argv) {
                         MzmSaveFileInfo infos[3];
                         for(int i=0;i<3;i++)infos[i]=runtime_save_info(save_paths[i]);
                         mzm_file_select_enter(&file_select,infos,save_slot);
+                        file_select.copy_file=runtime_copy_save;
+                        file_select.erase_file_callback=runtime_erase_save;
+                        file_select.context=save_paths;
                     }
                 }
                 accumulator-=fixed_step;

@@ -2988,6 +2988,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0294 - Zero Mission file select copy and erase
+
+- `src/runtime/mzm_file_select.c`: the copy and erase menus
+  (FileSelectCopyFileHandler, FileSelectEraseFileHandler, their cursors,
+  the copy arrow and the green destination markers, the overwrite and erase
+  confirmations, the time attack refusal); the runtime copies and deletes
+  the save files through callbacks.
+- The panels' text buffers are cleared as the US binary does: the
+  disassembly of mzm_us.elf adds the fill offsets in bytes, where the
+  decompiled source's u32 pointers would multiply them by four (the copy
+  panel's first message lost its second line before the fix).
+- Checked by capture (copy panel with both messages and the arrow, erase
+  panel); tests in `tests/test_mzm_screens.c` (copy A to B, erase B).
+
 ## Patch 0293 - Zero Mission file select screen
 
 - `src/runtime/mzm_file_select.c`: the US file select screen

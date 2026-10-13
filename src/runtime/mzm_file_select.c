@@ -25,20 +25,36 @@ enum {
     CURSOR_DEFAULT = 0, CURSOR_MOVING = 1, CURSOR_OPENING_OPTIONS = 2, CURSOR_SELECTING_FILE = 5,
     CURSOR_DESELECTING_FILE = 6, CURSOR_STARTING_GAME = 7, CURSOR_CANCEL_START = 8,
     /* FileSelectSubMenu */
-    SUB_MENU_MAIN = 0, SUB_MENU_FILE,
+    SUB_MENU_MAIN = 0, SUB_MENU_FILE, SUB_MENU_COPY, SUB_MENU_ERASE,
+    /* CursorCopyPose / CursorErasePose, ArrowCopyPose */
+    SUB_CURSOR_DEFAULT = 0, SUB_CURSOR_MOVING, SUB_CURSOR_SELECTING_FILE, SUB_CURSOR_DONE,
+    ARROW_DEFAULT = 0, ARROW_MOVING, ARROW_COPYING, ARROW_KILL,
+    ID_FILE_A_MARKER_SELECTED_GREEN = 19, ID_MEDIUM_PANEL_OPEN = 38, ID_MEDIUM_PANEL_CLOSE = 39,
+    /* FileSelectSelectionSet */
+    SET_ALL_FILES = 0, SET_ONLY_FILES, SET_ALL_FILES_NO_COPY,
     /* FileScreenProcessTextStage (US) */
     TEXT_NONE = 0, TEXT_INIT, TEXT_LINE_1, TEXT_LINE_4 = TEXT_LINE_1 + 3, TEXT_UPDATE_QUEUE,
     /* FileScreenMessageInfoId */
-    MESSAGE_START_GAME = 0, MESSAGE_CONTINUE_NEW = 15, MESSAGE_CONTINUE_NEW_TIME_ATTACK = 16,
+    MESSAGE_START_GAME = 0, MESSAGE_COPY_SOURCE_CHOOSE = 1, MESSAGE_COPY_DESTINATION_CHOOSE = 2,
+    MESSAGE_COPY_CONFIRM = 3, MESSAGE_CANT_COPY_TIME_ATTACK = 4, MESSAGE_ERASE_CHOOSE = 5,
+    MESSAGE_ERASE_CONFIRM = 6, MESSAGE_CONTINUE_NEW = 15, MESSAGE_CONTINUE_NEW_TIME_ATTACK = 16,
     MESSAGE_DIFFICULTY = 18, MESSAGE_DIFFICULTY_HARD = 19, MESSAGE_ERASE_FILE_CONFIRM = 20,
     /* MenuSoundRequest */
     SOUND_REQUEST_SUB_MENU_CURSOR = 0, SOUND_REQUEST_ACCEPT_CONFIRM_MENU, SOUND_REQUEST_CURSOR,
     SOUND_REQUEST_FILE_SELECT, SOUND_REQUEST_START_GAME, SOUND_REQUEST_OPEN_SUB_MENU,
-    SOUND_REQUEST_CLOSE_SUB_MENU, SOUND_REQUEST_CLOSE_SUB_MENU2, SOUND_REQUEST_COUNT = 13,
-    SOUND_REFUSE_MENU = 0x209, MUSIC_FILE_SELECT = 0x9,
+    SOUND_REQUEST_CLOSE_SUB_MENU, SOUND_REQUEST_CLOSE_SUB_MENU2, SOUND_REQUEST_COPY_DELETE,
+    SOUND_REQUEST_COPY_DELETE_MOVING, SOUND_REQUEST_COPY_CONFIRM, SOUND_REQUEST_COUNT = 13,
+    SOUND_REFUSE_MENU = 0x209, SOUND_FILE_DELETE = 0x20D, SOUND_SELECTING_FILE_TO_DELETE = 0x210,
+    MUSIC_FILE_SELECT = 0x9,
     /* FileSelectFadingStage */
     FADING_IN = 0, FADING_CHECK_IN, FADING_OUT, FADING_CHECK_OUT,
     /* Tilemap requests (TilemapRequest values) */
+    TILEMAP_ERASE_SPAWN_INIT = 10, TILEMAP_ERASE_SPAWN, TILEMAP_ERASE_DESPAWN_INIT, TILEMAP_ERASE_DESPAWN,
+    TILEMAP_ERASE_YES_NO_SPAWN_INIT, TILEMAP_ERASE_YES_NO_SPAWN, TILEMAP_ERASE_YES_NO_DESPAWN_INIT,
+    TILEMAP_ERASE_YES_NO_DESPAWN, TILEMAP_COPY_SPAWN_INIT, TILEMAP_COPY_SPAWN, TILEMAP_COPY_DESPAWN_INIT,
+    TILEMAP_COPY_DESPAWN, TILEMAP_COPY_OVERRIDE_SPAWN_INIT, TILEMAP_COPY_OVERRIDE_SPAWN,
+    TILEMAP_COPY_OVERRIDE_DESPAWN_INIT, TILEMAP_COPY_OVERRIDE_DESPAWN, TILEMAP_COPY_DESTINATION_DESPAWN,
+    TILEMAP_COPY_DESTINATION_SPAWN, TILEMAP_28,
     TILEMAP_START_GAME_INIT = 0, TILEMAP_START_GAME = 1, TILEMAP_DIFFICULTY_SPAWN_INIT = 6,
     TILEMAP_DIFFICULTY_SPAWN = 7, TILEMAP_DIFFICULTY_DESPAWN_INIT = 8, TILEMAP_DIFFICULTY_DESPAWN = 9,
     TILEMAP_29 = 29, TILEMAP_30, TILEMAP_31, TILEMAP_32, TILEMAP_34 = 34, TILEMAP_35, TILEMAP_36,
@@ -112,14 +128,16 @@ static void process_text(MzmFileSelect *f, MzmScreen *s) {
         if (buffer == 3 || buffer == 1) {
             fill(s, base, 0x1000, value);
         } else if (buffer == 2) {
+            /* The US code adds these offsets in bytes (the decompiled
+             * source's u32 pointers would multiply them by 4). */
             fill(s, base, 0x200, value);
-            fill(s, base + 0x1000, 0x200, value);
-            fill(s, base + 0x1800, 0x800, value);
+            fill(s, base + 0x400, 0x200, value);
+            fill(s, base + 0x600, 0x800, value);
         } else {
             fill(s, base, 0x800, value);
             if (message_info(id, 2) == 3) {
-                fill(s, base + 0x2000, 0x200, value);
-                fill(s, base + 0x3000, 0x200, value);
+                fill(s, base + 0x800, 0x200, value);
+                fill(s, base + 0xC00, 0x200, value);
             }
         }
         f->process_text_stage++;
@@ -273,6 +291,14 @@ static void sub_cursor(MzmFileSelect *f, int menu, uint8_t value) {
         o->x = BLOCK * 2;
         o->y = (int16_t)(BLOCK * (2 + value) + 24);
         break;
+    case 3:
+    case 4:
+        if (value > 1) return;
+        o->priority = 0;
+        o->bound_background = 0;
+        o->y = BLOCK * 3 + 24;
+        o->x = value == 0 ? BLOCK * 3 + QUARTER_BLOCK : BLOCK * 6 - QUARTER_BLOCK;
+        break;
     case 5:
         if (value > 2) return;
         o->priority = 0;
@@ -394,6 +420,75 @@ static bool update_tilemap(MzmFileSelect *f, MzmScreen *s, int request) {
         f->oam[OAM_0].oam_id = 0;
         f->oam[OAM_0].exists = 0;
         copy_ewram_to_vram(s, 0x3300, 0xE000, 0x300);
+        return true;
+    case TILEMAP_ERASE_SPAWN_INIT:
+    case TILEMAP_COPY_SPAWN_INIT:
+        small->x = BLOCK * 5;
+        small->y = BLOCK * 2 + HALF_BLOCK;
+        mzm_menu_oam_set_id(small, ID_MEDIUM_PANEL_OPEN);
+        play_menu_sound(SOUND_REQUEST_OPEN_SUB_MENU);
+        s->bg_hofs[1] = BLOCK * 27 + 8;
+        s->bg_vofs[1] = BLOCK * 26 + HALF_BLOCK + 8;
+        copy_ewram_to_vram(s, 0x3F00, 0xE800, 0x300);
+        f->bg1cnt = f->unk_1c;
+        f->dispcnt &= (uint16_t)~GBA_DCNT_BG1;
+        f->bg2cnt = f->unk_1a;
+        f->dispcnt |= GBA_DCNT_BG2;
+        return true;
+    case TILEMAP_ERASE_SPAWN:
+    case TILEMAP_COPY_SPAWN:
+        if (small->ended && update_message_queue(f, 1, request == TILEMAP_ERASE_SPAWN ? MESSAGE_ERASE_CHOOSE
+                                                                                      : MESSAGE_COPY_SOURCE_CHOOSE)) {
+            f->bg1cnt = f->unk_1c;
+            f->dispcnt |= GBA_DCNT_BG1;
+            return true;
+        }
+        return false;
+    case TILEMAP_ERASE_DESPAWN_INIT:
+    case TILEMAP_COPY_DESPAWN_INIT:
+        f->dispcnt &= (uint16_t)~GBA_DCNT_BG1;
+        small->oam_id = ID_MEDIUM_PANEL_CLOSE;
+        play_menu_sound(SOUND_REQUEST_CLOSE_SUB_MENU);
+        return true;
+    case TILEMAP_ERASE_DESPAWN:
+    case TILEMAP_COPY_DESPAWN:
+        if (small->oam_id != 0) return false;
+        f->bg1cnt = f->unk_18;
+        f->bg2cnt = f->unk_16;
+        f->dispcnt &= (uint16_t)~GBA_DCNT_BG2;
+        f->dispcnt |= GBA_DCNT_BG1;
+        s->bg_hofs[1] = BLOCK * 32;
+        s->bg_vofs[1] = BLOCK * 32;
+        return true;
+    case TILEMAP_ERASE_YES_NO_SPAWN_INIT:
+    case TILEMAP_COPY_OVERRIDE_SPAWN_INIT:
+        s->bg_hofs[0] = BLOCK * 27 + 8;
+        s->bg_vofs[0] = BLOCK * 26 + HALF_BLOCK + 8;
+        copy_ewram_to_vram(s, 0x4200, 0xE000, 0x300);
+        return true;
+    case TILEMAP_ERASE_YES_NO_SPAWN:
+    case TILEMAP_COPY_OVERRIDE_SPAWN:
+        if (update_message_queue(f, 1, request == TILEMAP_ERASE_YES_NO_SPAWN ? MESSAGE_ERASE_CONFIRM
+                                                                              : MESSAGE_COPY_CONFIRM)) {
+            f->bg0cnt = f->unk_1e;
+            f->dispcnt |= GBA_DCNT_BG0;
+            f->dispcnt &= (uint16_t)~GBA_DCNT_BG1;
+            return true;
+        }
+        return false;
+    case TILEMAP_ERASE_YES_NO_DESPAWN_INIT:
+    case TILEMAP_COPY_OVERRIDE_DESPAWN_INIT:
+        f->dispcnt &= (uint16_t)~GBA_DCNT_BG0;
+        f->dispcnt |= GBA_DCNT_BG1;
+        return true;
+    case TILEMAP_COPY_DESTINATION_DESPAWN:
+        copy_ewram_to_vram(s, 0x3F00, 0xE800, 0x300);
+        return true;
+    case TILEMAP_COPY_DESTINATION_SPAWN:
+        copy_ewram_to_vram(s, 0x4500, 0xE800, 0x300);
+        return true;
+    case TILEMAP_28:
+        copy_ewram_to_vram(s, 0x4200, 0xE800, 0x300);
         return true;
     case TILEMAP_DIFFICULTY_DESPAWN:
     case TILEMAP_32:
@@ -624,9 +719,16 @@ static void init(MzmFileSelect *f, MzmScreen *s) {
     MzmSaveFileInfo files[3];
     memcpy(files, f->files, sizeof files);
     uint8_t most_recent = f->most_recent;
+    bool (*copy_file)(void *, int, int) = f->copy_file;
+    bool (*erase_file)(void *, int) = f->erase_file_callback;
+    void *context = f->context;
     memset(f, 0, sizeof *f);
     memcpy(f->files, files, sizeof files);
     f->most_recent = most_recent;
+    f->copy_file = copy_file;
+    f->erase_file_callback = erase_file;
+    f->context = context;
+    f->copy_source = f->current_file = f->erase_file = most_recent;
     gba_ppu_write16(ppu, GBA_REG_DISPCNT, 0);
     s->bldy = 16;
     gba_ppu_write16(ppu, GBA_REG_BLDY, 16);
@@ -707,23 +809,432 @@ static void maintained_input(MzmFileSelect *f, MzmScreen *s) {
     }
 }
 
-/* FileSelectApplyMenuSelectInput (all files) */
-static bool menu_select_input(MzmFileSelect *f, MzmScreen *s) {
+/* FileSelectApplyMenuSelectInput */
+static bool menu_select_input(MzmFileSelect *f, MzmScreen *s, int set, uint8_t *file) {
     int direction;
     if (s->changed_input & KEY_UP) direction = -1;
     else if (s->changed_input & KEY_DOWN) direction = 1;
     else return false;
-    uint8_t flags = f->enabled_menus | 1 << POSITION_FILE_A | 1 << POSITION_FILE_B | 1 << POSITION_FILE_C;
-    int position = f->cursor_position;
+    const uint8_t files = 1 << POSITION_FILE_A | 1 << POSITION_FILE_B | 1 << POSITION_FILE_C;
+    uint8_t flags = f->enabled_menus;
+    if (set == SET_ALL_FILES) flags |= files;
+    else if (set == SET_ONLY_FILES) flags &= files;
+    else flags = (uint8_t)(files & ~(1 << f->copy_source));
+    int position = *file;
     for (;;) {
         if ((unsigned)(position + direction) > POSITION_OPTIONS) return false;
         position += direction;
         if (flags >> position & 1) {
-            f->cursor_position = (uint8_t)position;
+            *file = (uint8_t)position;
             return true;
         }
     }
 }
+
+/* FileSelectFindFirstNonEmptyFile */
+static void find_first_non_empty_file(MzmFileSelect *f, uint8_t *file) {
+    uint8_t flags = f->enabled_menus;
+    if (flags >> *file & 1) return;
+    for (uint8_t i = 0; i < 3; ++i)
+        if (flags & 1 << i) {
+            *file = i;
+            return;
+        }
+}
+
+static bool file_used(const MzmSaveFileInfo *file) { return file->exists || file->intro_played; }
+
+/* FileSelectUpdateCopyCursor and FileSelectUpdateEraseCursor (alike) */
+static void update_file_cursor(MzmFileSelect *f, int pose, int file) {
+    int suit = file < POSITION_COPY ? f->files[file].suit : 0;
+    uint8_t oam_id = cursor_oam_id(file, suit < 3 ? suit : 0);
+    MzmMenuOam *cursor = &f->oam[OAM_SUB_CURSOR];
+    switch (pose) {
+    case SUB_CURSOR_DEFAULT:
+        oam_id++;
+        /* fall through */
+    case SUB_CURSOR_MOVING:
+        mzm_menu_oam_set_id(cursor, oam_id);
+        cursor->x = cursor_x(file);
+        cursor->y = cursor_y(file);
+        cursor->bound_background = 2;
+        for (int i = 0; i < 3; ++i)
+            mzm_menu_oam_set_id(&f->oam[OAM_FILE_A_MARKER + i],
+                                file == i && file_used(&f->files[i]) ? (uint8_t)(ID_FILE_A_MARKER_SELECTED_RED + i)
+                                                                     : cursor_marker(i));
+        break;
+    case SUB_CURSOR_DONE:
+        cursor->exists = 0;
+        cursor->oam_id = 0;
+        for (int i = 0; i < 3; ++i) mzm_menu_oam_set_id(&f->oam[OAM_FILE_A_MARKER + i], cursor_marker(i));
+        break;
+    case SUB_CURSOR_SELECTING_FILE:
+        mzm_menu_oam_set_id(cursor, (uint8_t)(oam_id + 2));
+        break;
+    default:
+        break;
+    }
+}
+
+/* FileSelectUpdateCopyArrow */
+static void update_copy_arrow(MzmFileSelect *f, int pose, int destination) {
+    MzmMenuOam *arrow = &f->oam[OAM_COPY_ARROW];
+    arrow->x = cursor_x(f->copy_source);
+    arrow->y = cursor_y(f->copy_source);
+    switch (pose) {
+    case ARROW_DEFAULT:
+    case ARROW_MOVING:
+        arrow->bound_background = 2;
+        mzm_menu_oam_set_id(arrow, mzm_rom_u8(sym("sFileSelectCopyFileArrowsOamIds") + f->copy_source * 3u +
+                                              (uint32_t)destination));
+        for (int i = 0; i < 3; ++i) {
+            if (f->copy_source == i) continue;
+            mzm_menu_oam_set_id(&f->oam[OAM_FILE_A_MARKER + i],
+                                destination != i ? cursor_marker(i) : (uint8_t)(ID_FILE_A_MARKER_SELECTED_GREEN + i));
+        }
+        break;
+    case ARROW_KILL:
+        arrow->exists = 0;
+        if (destination >= 0 && destination < 3)
+            mzm_menu_oam_set_id(&f->oam[OAM_FILE_A_MARKER + destination], cursor_marker(destination));
+        break;
+    default:
+        break;
+    }
+}
+
+/* The file's info redrawn after a copy or an erase. */
+static void redraw_file(MzmFileSelect *f, MzmScreen *s, int file) {
+    display_health(f, s, file);
+    display_timer(f, s, file);
+    display_misc(f, s, file);
+}
+
+/* The yes/no inputs of the erase and copy confirmations: true when A was
+ * pressed on YES; `cancel` is set by A on NO or B. */
+static uint8_t yes_no_input(MzmScreen *s, uint8_t *choice, bool *cancel, bool *confirm) {
+    uint8_t action = 0xFF;
+    *cancel = *confirm = false;
+    if (!s->changed_input) return action;
+    if (s->changed_input & KEY_A) {
+        if (*choice) *cancel = true;
+        else *confirm = true;
+    } else if (s->changed_input & KEY_B) {
+        *cancel = true;
+    } else if (s->changed_input & KEY_LEFT) {
+        if (*choice) {
+            action = 0;
+            *choice = 0;
+            play_menu_sound(SOUND_REQUEST_SUB_MENU_CURSOR);
+        }
+    } else if (s->changed_input & KEY_RIGHT) {
+        if (!*choice) {
+            action = 1;
+            *choice = 1;
+            play_menu_sound(SOUND_REQUEST_SUB_MENU_CURSOR);
+        }
+    }
+    return action;
+}
+
+/* FileSelectEraseFileHandler */
+static bool erase_file_handler(MzmFileSelect *f, MzmScreen *s) {
+    int action;
+    bool cancel, confirm;
+    f->sub_menu_timer++;
+    switch (f->sub_menu_stage) {
+    case 0:
+        update_message_queue(f, 0, MESSAGE_ERASE_CHOOSE);
+        update_message_queue(f, 0, MESSAGE_ERASE_CONFIRM);
+        find_first_non_empty_file(f, &f->erase_file);
+        update_file_cursor(f, SUB_CURSOR_DEFAULT, f->erase_file);
+        update_tilemap(f, s, TILEMAP_ERASE_SPAWN_INIT);
+        f->unk_3a = 0;
+        f->sub_menu_stage++;
+        break;
+    case 1:
+        if (update_tilemap(f, s, TILEMAP_ERASE_SPAWN)) f->sub_menu_stage++;
+        break;
+    case 2:
+        /* The file to erase */
+        action = 0;
+        if (s->changed_input) {
+            if (menu_select_input(f, s, SET_ONLY_FILES, &f->erase_file)) {
+                action = 1;
+            } else if (s->changed_input & KEY_B) {
+                f->sub_menu_stage = 10;
+                break;
+            } else if (s->changed_input & KEY_A) {
+                action = f->enabled_menus >> f->erase_file & 1 ? 2 : 0;
+            }
+        }
+        if (action == 1) {
+            play_menu_sound(SOUND_REQUEST_CURSOR);
+            update_file_cursor(f, SUB_CURSOR_MOVING, f->erase_file);
+        } else if (action == 2) {
+            mzm_sfx_play(SOUND_SELECTING_FILE_TO_DELETE);
+            update_file_cursor(f, SUB_CURSOR_SELECTING_FILE, f->erase_file);
+            update_tilemap(f, s, TILEMAP_ERASE_YES_NO_SPAWN_INIT);
+            f->sub_menu_stage = 3;
+        }
+        break;
+    case 3:
+        if (update_tilemap(f, s, TILEMAP_ERASE_YES_NO_SPAWN)) {
+            f->cursors.confirm_erase = mzm_rom_u8(sym("sFileSelectMenuCursors_Empty") + 1);
+            sub_cursor(f, 3, f->cursors.confirm_erase);
+            f->sub_menu_stage++;
+        }
+        break;
+    case 4: {
+        /* Erase it? */
+        uint8_t moved = yes_no_input(s, &f->cursors.confirm_erase, &cancel, &confirm);
+        if (cancel) {
+            f->sub_menu_stage = 5;
+        } else if (confirm) {
+            mzm_sfx_play(SOUND_FILE_DELETE);
+            sub_cursor(f, 3, 0x80);
+            f->sub_menu_stage = 7;
+        } else if (moved != 0xFF) {
+            sub_cursor(f, 3, moved);
+        }
+        break;
+    }
+    case 5:
+        mzm_sfx_play(SOUND_REFUSE_MENU);
+        sub_cursor(f, 3, 0x81);
+        update_tilemap(f, s, TILEMAP_ERASE_YES_NO_DESPAWN_INIT);
+        f->sub_menu_stage++;
+        break;
+    case 6:
+        if (update_tilemap(f, s, TILEMAP_ERASE_YES_NO_DESPAWN)) {
+            update_file_cursor(f, SUB_CURSOR_DEFAULT, f->erase_file);
+            f->sub_menu_stage = 2;
+        }
+        break;
+    case 7:
+        /* SramDeleteFile */
+        if (!f->erase_file_callback || f->erase_file_callback(f->context, f->erase_file)) {
+            memset(&f->files[f->erase_file], 0, sizeof f->files[f->erase_file]);
+            f->files[f->erase_file].difficulty = 1;
+            f->most_recent = f->erase_file;
+        }
+        f->unk_3a = 1;
+        f->sub_menu_stage = 8;
+        break;
+    case 8:
+        sub_cursor(f, 3, 0x81);
+        update_tilemap(f, s, TILEMAP_ERASE_YES_NO_DESPAWN_INIT);
+        f->sub_menu_stage++;
+        break;
+    case 9:
+        if (update_tilemap(f, s, TILEMAP_ERASE_YES_NO_DESPAWN)) f->sub_menu_stage = 10;
+        break;
+    case 10:
+        if (f->unk_3a) {
+            redraw_file(f, s, f->erase_file);
+            if (!f->files[f->erase_file].completed_game) f->oam[OAM_FILE_A_LOGO + f->erase_file].exists = 0;
+            set_enabled_menus(f, s);
+            copy_ewram_to_vram(s, 0x800, 0xD800, 0x800);
+        }
+        update_file_cursor(f, SUB_CURSOR_DONE, f->erase_file);
+        update_tilemap(f, s, TILEMAP_ERASE_DESPAWN_INIT);
+        f->sub_menu_stage++;
+        break;
+    case 11:
+        if (update_tilemap(f, s, TILEMAP_ERASE_DESPAWN)) {
+            update_message_queue(f, 2, 0xFF);
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
+/* FileSelectFileCopyChooseBaseDestinationFile */
+static void choose_copy_destination(MzmFileSelect *f) {
+    int file = -1;
+    for (int i = 0; i < 3 && file < 0; ++i)
+        if (!file_used(&f->files[i])) file = i;
+    if (file < 0) {
+        file = f->current_file;
+        if (file == 0x80 || f->copy_source == file)
+            file = f->copy_source == POSITION_FILE_B ? POSITION_FILE_A : POSITION_FILE_B;
+    }
+    f->current_file = (uint8_t)file;
+}
+
+/* FileSelectCopyFileHandler */
+static bool copy_file_handler(MzmFileSelect *f, MzmScreen *s) {
+    int action;
+    bool cancel, confirm;
+    f->sub_menu_timer++;
+    switch (f->sub_menu_stage) {
+    case 0:
+        update_message_queue(f, 0, MESSAGE_COPY_SOURCE_CHOOSE);
+        update_message_queue(f, 0, MESSAGE_COPY_DESTINATION_CHOOSE);
+        find_first_non_empty_file(f, &f->copy_source);
+        update_file_cursor(f, SUB_CURSOR_DEFAULT, f->copy_source);
+        update_tilemap(f, s, TILEMAP_COPY_SPAWN_INIT);
+        f->cursors.confirm_copy = mzm_rom_u8(sym("sFileSelectMenuCursors_Empty"));
+        f->unk_3a = 0;
+        f->sub_menu_stage++;
+        break;
+    case 1:
+        if (update_tilemap(f, s, TILEMAP_COPY_SPAWN)) f->sub_menu_stage++;
+        break;
+    case 2:
+        if (update_message_queue(f, 1, MESSAGE_COPY_DESTINATION_CHOOSE)) f->sub_menu_stage++;
+        break;
+    case 3:
+        /* The source */
+        action = 0;
+        if (s->changed_input) {
+            if (menu_select_input(f, s, SET_ONLY_FILES, &f->copy_source)) {
+                action = 1;
+            } else if (s->changed_input & KEY_B) {
+                f->sub_menu_stage = 14;
+                break;
+            } else if (s->changed_input & KEY_A) {
+                action = f->enabled_menus >> f->copy_source & 1 ? 2 : 0;
+            }
+        }
+        if (action == 1) {
+            play_menu_sound(SOUND_REQUEST_CURSOR);
+            update_file_cursor(f, SUB_CURSOR_MOVING, f->copy_source);
+        } else if (action == 2) {
+            update_file_cursor(f, SUB_CURSOR_SELECTING_FILE, f->copy_source);
+            if (f->files[f->copy_source].time_attack) {
+                mzm_sfx_play(SOUND_REFUSE_MENU);
+                update_message_queue(f, 0, MESSAGE_CANT_COPY_TIME_ATTACK);
+                f->sub_menu_stage = 9;
+            } else {
+                play_menu_sound(SOUND_REQUEST_COPY_DELETE);
+                choose_copy_destination(f);
+                update_copy_arrow(f, ARROW_DEFAULT, f->current_file);
+                update_tilemap(f, s, TILEMAP_COPY_DESTINATION_SPAWN);
+                f->sub_menu_stage++;
+            }
+        }
+        break;
+    case 4:
+        /* The destination */
+        if (!s->changed_input) break;
+        action = 0;
+        if (menu_select_input(f, s, SET_ALL_FILES_NO_COPY, &f->current_file)) {
+            action = 1;
+        } else if (s->changed_input & KEY_B) {
+            mzm_sfx_play(SOUND_REFUSE_MENU);
+            update_file_cursor(f, SUB_CURSOR_DEFAULT, f->copy_source);
+            update_copy_arrow(f, ARROW_KILL, f->current_file);
+            update_tilemap(f, s, TILEMAP_COPY_DESTINATION_DESPAWN);
+            f->sub_menu_stage = 3;
+            break;
+        } else if (s->changed_input & KEY_A) {
+            action = 2;
+        }
+        if (action == 1) {
+            update_copy_arrow(f, ARROW_MOVING, f->current_file);
+            play_menu_sound(SOUND_REQUEST_COPY_DELETE_MOVING);
+        } else if (action == 2) {
+            f->cursors.confirm_copy = mzm_rom_u8(sym("sFileSelectMenuCursors_Empty"));
+            update_copy_arrow(f, ARROW_COPYING, f->current_file);
+            if (f->enabled_menus >> f->current_file & 1) {
+                update_message_queue(f, 0, MESSAGE_COPY_CONFIRM);
+                update_tilemap(f, s, TILEMAP_COPY_OVERRIDE_SPAWN_INIT);
+                play_menu_sound(SOUND_REQUEST_COPY_DELETE);
+                f->sub_menu_stage = 5;
+            } else {
+                play_menu_sound(SOUND_REQUEST_COPY_CONFIRM);
+                f->sub_menu_stage = 11;
+            }
+        }
+        break;
+    case 5:
+        if (update_tilemap(f, s, TILEMAP_COPY_OVERRIDE_SPAWN)) {
+            sub_cursor(f, 4, f->cursors.confirm_copy);
+            f->sub_menu_stage++;
+        }
+        break;
+    case 6: {
+        /* Overwrite the destination? */
+        uint8_t moved = yes_no_input(s, &f->cursors.confirm_copy, &cancel, &confirm);
+        if (cancel) {
+            f->sub_menu_stage = 7;
+        } else if (confirm) {
+            play_menu_sound(SOUND_REQUEST_COPY_CONFIRM);
+            sub_cursor(f, 4, 0x80);
+            f->sub_menu_stage = 11;
+        } else if (moved != 0xFF) {
+            sub_cursor(f, 4, moved);
+        }
+        break;
+    }
+    case 7:
+        mzm_sfx_play(SOUND_REFUSE_MENU);
+        sub_cursor(f, 4, 0x81);
+        update_tilemap(f, s, TILEMAP_COPY_OVERRIDE_DESPAWN_INIT);
+        f->sub_menu_stage++;
+        break;
+    case 8:
+        if (update_tilemap(f, s, TILEMAP_COPY_OVERRIDE_DESPAWN)) {
+            update_copy_arrow(f, ARROW_DEFAULT, f->current_file);
+            f->sub_menu_stage = 4;
+        }
+        break;
+    case 9:
+        if (update_message_queue(f, 1, MESSAGE_CANT_COPY_TIME_ATTACK)) {
+            update_tilemap(f, s, TILEMAP_28);
+            f->sub_menu_stage++;
+        }
+        break;
+    case 10:
+        if (s->changed_input & (KEY_A | KEY_B)) {
+            update_file_cursor(f, SUB_CURSOR_DEFAULT, f->copy_source);
+            update_tilemap(f, s, TILEMAP_COPY_DESTINATION_DESPAWN);
+            f->sub_menu_stage = 3;
+        }
+        break;
+    case 11:
+        /* SramCopyFile */
+        if (!f->copy_file || f->copy_file(f->context, f->copy_source, f->current_file))
+            f->files[f->current_file] = f->files[f->copy_source];
+        f->unk_3a = 1;
+        f->sub_menu_stage = f->cursors.confirm_copy ? 14 : 12;
+        break;
+    case 12:
+        sub_cursor(f, 4, 0x81);
+        update_tilemap(f, s, TILEMAP_COPY_OVERRIDE_DESPAWN_INIT);
+        f->sub_menu_stage++;
+        break;
+    case 13:
+        if (update_tilemap(f, s, TILEMAP_COPY_OVERRIDE_DESPAWN)) f->sub_menu_stage = 14;
+        break;
+    case 14:
+        if (f->unk_3a) {
+            redraw_file(f, s, f->current_file);
+            f->oam[OAM_FILE_A_LOGO + f->current_file].exists = f->files[f->current_file].completed_game ? 2 : 0;
+            set_enabled_menus(f, s);
+            copy_ewram_to_vram(s, 0x800, 0xD800, 0x800);
+        }
+        update_file_cursor(f, SUB_CURSOR_DONE, f->copy_source);
+        update_copy_arrow(f, ARROW_KILL, f->current_file);
+        update_tilemap(f, s, TILEMAP_COPY_DESPAWN_INIT);
+        f->sub_menu_stage++;
+        break;
+    case 15:
+        if (update_tilemap(f, s, TILEMAP_COPY_DESPAWN)) {
+            update_message_queue(f, 2, 0xFF);
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
 
 static void fade_bldalpha(MzmScreen *s, int target_l, int target_h, bool *done) {
     *done = true;
@@ -1097,7 +1608,7 @@ static bool update_sub_menu(MzmFileSelect *f, MzmScreen *s) {
         int result = 0;
         maintained_input(f, s);
         if (s->changed_input) {
-            if (menu_select_input(f, s)) result = 1;
+            if (menu_select_input(f, s, SET_ALL_FILES, &f->cursor_position)) result = 1;
             else if (s->changed_input & KEY_B) result = 2;
             else if (s->changed_input & KEY_A) result = 3;
         }
@@ -1109,13 +1620,23 @@ static bool update_sub_menu(MzmFileSelect *f, MzmScreen *s) {
             mzm_sfx_music_fade(0);
             f->sub_mode2 = 3;
             return true;
-        } else if (result == 3 && f->cursor_position < POSITION_COPY) {
-            /* Copy, erase and the options are not ported. */
-            play_menu_sound(SOUND_REQUEST_FILE_SELECT);
-            update_cursor(f, CURSOR_SELECTING_FILE, f->cursor_position);
-            f->current_sub_menu = SUB_MENU_FILE;
-            f->sub_menu_stage = 0;
-            f->sub_menu_timer = 0;
+        } else if (result == 3) {
+            int pose = -1;
+            if (f->cursor_position < POSITION_COPY) {
+                play_menu_sound(SOUND_REQUEST_FILE_SELECT);
+                pose = CURSOR_SELECTING_FILE;
+                f->current_sub_menu = SUB_MENU_FILE;
+            } else if (f->cursor_position != POSITION_OPTIONS && f->enabled_menus >> f->cursor_position & 1) {
+                /* Copy or erase (the options are not ported) */
+                play_menu_sound(SOUND_REQUEST_ACCEPT_CONFIRM_MENU);
+                pose = CURSOR_OPENING_OPTIONS;
+                f->current_sub_menu = f->cursor_position == POSITION_COPY ? SUB_MENU_COPY : SUB_MENU_ERASE;
+            }
+            if (pose >= 0) {
+                update_cursor(f, pose, f->cursor_position);
+                f->sub_menu_stage = 0;
+                f->sub_menu_timer = 0;
+            }
         }
         break;
     }
@@ -1137,6 +1658,13 @@ static bool update_sub_menu(MzmFileSelect *f, MzmScreen *s) {
         f->current_sub_menu = SUB_MENU_MAIN;
         break;
     }
+    case SUB_MENU_COPY:
+    case SUB_MENU_ERASE:
+        if (f->current_sub_menu == SUB_MENU_COPY ? copy_file_handler(f, s) : erase_file_handler(f, s)) {
+            update_cursor(f, CURSOR_DEFAULT, f->cursor_position);
+            f->current_sub_menu = SUB_MENU_MAIN;
+        }
+        break;
     default:
         break;
     }
@@ -1145,7 +1673,13 @@ static bool update_sub_menu(MzmFileSelect *f, MzmScreen *s) {
 }
 
 void mzm_file_select_enter(MzmFileSelect *f, const MzmSaveFileInfo files[3], uint8_t most_recent) {
+    bool (*copy_file)(void *, int, int) = f->copy_file;
+    bool (*erase_file)(void *, int) = f->erase_file_callback;
+    void *context = f->context;
     memset(f, 0, sizeof *f);
+    f->copy_file = copy_file;
+    f->erase_file_callback = erase_file;
+    f->context = context;
     memcpy(f->files, files, sizeof f->files);
     f->most_recent = most_recent < 3 ? most_recent : 0;
 }

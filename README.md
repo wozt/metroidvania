@@ -314,8 +314,9 @@ and write the game to the chosen file (`file_a.sav` to `file_c.sav` in SDL's
 preference folder, or in `--save-dir DIR`). START on the title opens the
 native file select screen: the three files with their energy, timer,
 difficulty and area, a new game with its difficulty, or the continuation of
-a saved file, Samus stepping out of the save platform's tube; `--load` resumes
-the most recent file directly.
+a saved file, Samus stepping out of the save platform's tube; its copy and
+erase menus copy or delete the save files. `--load` resumes the most recent
+file directly.
 
 With the ROM bank, room backgrounds are rendered natively as well
 (`src/runtime/mzm_room_gfx.c`): animated tiles and palettes, liquids (lava,

@@ -4,9 +4,10 @@
  * timer, difficulty and area, the cursor and file markers, the file's
  * "Start game" panel, the continue / new game choice of a completed file,
  * the difficulty panel, the start animation, the panels' texts (drawn with
- * the native font) and the fades. Copy, erase, the corrupted files, the
- * options and the time attack are not ported: their entries stay but do
- * nothing. */
+ * the native font), the fades, and the copy and erase menus (the files
+ * themselves are copied and deleted through callbacks). The corrupted
+ * files, the options and the time attack are not ported: the options entry
+ * stays but does nothing. */
 #ifndef MZM_FILE_SELECT_H
 #define MZM_FILE_SELECT_H
 
@@ -62,9 +63,16 @@ typedef struct {
     MzmMessage message;             /* gCurrentMessage */
     uint8_t most_recent;            /* gMostRecentSaveFile */
     uint8_t sub_mode1, sub_mode2;   /* gSubGameMode1 / gSubGameMode2 */
+    uint8_t copy_source, current_file, erase_file;   /* copySourceFile, currentFile, eraseFile */
+    /* SramCopyFile / SramDeleteFile on the game's files (NULL: only the
+     * screen's info changes); they return false on failure. */
+    bool (*copy_file)(void *context, int source, int destination);
+    bool (*erase_file_callback)(void *context, int file);
+    void *context;
 } MzmFileSelect;
 
-/* gSubGameMode1 = 0 with the files' info and gMostRecentSaveFile. */
+/* gSubGameMode1 = 0 with the files' info and gMostRecentSaveFile; the
+ * callbacks are set afterwards and kept. */
 void mzm_file_select_enter(MzmFileSelect *f, const MzmSaveFileInfo files[3], uint8_t most_recent);
 /* FileSelectMenuHandler then FileSelectVBlank for one frame; returns
  * MZM_FILE_SELECT_*. `most_recent` then names the chosen file and

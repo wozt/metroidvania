@@ -2988,6 +2988,15 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0307 - Zero Mission security gates
+
+- SecurityGateDefaultOpen and SecurityGateDefaultClosed
+  (`src/runtime/mzm_gadget_sprites.c`): Chozodia's gates close when the
+  alarm rings, turn solid once Samus is out of them
+  (SpriteCheckCollidingWithSamus) and reopen two thirds of a second after
+  it stops; the sprites now see Samus's whole hitbox.
+- Checked by capture in chozodia_005; tests in `tests/test_mzm_sprites.c`.
+
 ## Patch 0306 - Zero Mission ziplines
 
 - Zipline, ZiplineButton, ZiplineGenerator and its parts

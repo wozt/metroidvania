@@ -144,7 +144,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false, NULL};
+                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false, NULL, 0, 0, 0};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -3548,6 +3548,57 @@ int main(void) {
         mzm_sprite_init_primary(&room[0], MZM_PSPRITE_ZIPLINE_GENERATOR, 0, 7, 3, 0, 0);
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0xF && room[0].anim == MZM_GADGET_ZIPLINE_GENERATOR_ACTIVATED);
+        /* Security gates: open, they close when the alarm rings, become
+         * solid once Samus is out of them, and open two thirds of a second
+         * after it stops; the default closed ones do the opposite. */
+        memset(room, 0, sizeof room);
+        memset(&zip_globals, 0, sizeof zip_globals);
+        g.samus_link = NULL;
+        g.samus_x = 100;
+        g.samus_y = 100;
+        g.samus_hitbox_top = -40;
+        g.samus_hitbox_left = -20;
+        g.samus_hitbox_right = 20;
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN, 0, 7, 6, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && room[0].anim == MZM_GADGET_SECURITY_GATE_OPENED && caa_calls == 0 &&
+               room[0].immune_to_projectiles && room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+               room[0].hitbox_top == -256 && room[0].draw_order == 3);
+        zip_globals.alarm_timer = 500;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x23 && room[0].anim == MZM_GADGET_SECURITY_GATE_CLOSING &&
+               !(room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+        int gate_frames = 0;
+        while (room[0].pose == 0x23 && gate_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25 && room[0].anim == MZM_GADGET_SECURITY_GATE_CLOSED && !room[0].work0);
+        /* Samus inside the gate: not solid yet. */
+        g.samus_x = room[0].x;
+        g.samus_y = (uint16_t)(room[0].y - 10);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(!room[0].work0 && caa_calls == 0);
+        g.samus_x = 100;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].work0 == 1 && caa_calls == 4 && last_caa == MZM_CAA_MAKE_NON_POWER_GRIP);
+        zip_globals.alarm_timer = 0;
+        for (int i = 0; i < 40; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25 && room[0].work3 == 40);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x27 && caa_calls == 8 && last_caa == MZM_CAA_REMOVE_SOLID &&
+               room[0].anim == MZM_GADGET_SECURITY_GATE_OPENING);
+        gate_frames = 0;
+        while (room[0].pose == 0x27 && gate_frames++ < 40) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && room[0].anim == MZM_GADGET_SECURITY_GATE_OPENED);
+        memset(room, 0, sizeof room);
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED, 0, 7, 6, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x25 && room[0].work0 && caa_calls == 4);
+        zip_globals.alarm_timer = 500;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x27 && last_caa == MZM_CAA_REMOVE_SOLID);
+        g.samus_hitbox_top = g.samus_hitbox_left = g.samus_hitbox_right = 0;
+        g.globals = frame.globals;
         memset(test_events, 0, sizeof test_events);
         clear();
         g.weapons = NULL;

@@ -243,6 +243,10 @@ const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
     "ZiplineGeneratorPartOam_MorphSymbolActivating",
     "ZiplineGeneratorPartOam_MorphSymbolActivated",
     "ZiplineGeneratorPartOam_ElectricityActivating",
+    "SecurityGateOam_Opened",
+    "SecurityGateOam_Closing",
+    "SecurityGateOam_Closed",
+    "SecurityGateOam_Opening",
 };
 static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
@@ -261,6 +265,8 @@ static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR",
     "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR", "ZIPLINE_GENERATOR",
     "ZIPLINE_GENERATOR",
+    "SECURITY_GATE_DEFAULT_OPEN", "SECURITY_GATE_DEFAULT_OPEN", "SECURITY_GATE_DEFAULT_OPEN",
+    "SECURITY_GATE_DEFAULT_OPEN",
 };
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
@@ -4432,6 +4438,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SPACE_JUMP_BLOCK: case MZM_PSPRITE_MAP_STATION: case MZM_PSPRITE_SAVE_PLATFORM:
     case MZM_PSPRITE_GUNSHIP: case MZM_PSPRITE_AREA_BANNER: case MZM_PSPRITE_MORPH_BALL_LAUNCHER:
     case MZM_PSPRITE_ZIPLINE: case MZM_PSPRITE_ZIPLINE_BUTTON: case MZM_PSPRITE_ZIPLINE_GENERATOR:
+    case MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN: case MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED:
         return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:

@@ -1610,6 +1610,135 @@ static void zipline_generator_part(Ctx *c) {
     }
 }
 
+/* Security gate poses (sprites_ai/security_gate.c). */
+enum {
+    SECURITY_GATE_POSE_IDLE = 0x9, SECURITY_GATE_POSE_CLOSING = 0x23,
+    SECURITY_GATE_POSE_CLOSED = 0x25, SECURITY_GATE_POSE_OPENING = 0x27,
+    TWO_THIRD_SECOND = 40,
+};
+
+/* SecurityGateChangeClipdata: the four blocks of the gate. */
+static void security_gate_caa(Ctx *c, uint8_t action) {
+    const MzmSprite *s = c->s;
+    for (int b = 0; b < 4; ++b)
+        caa(c, (uint16_t)(s->y - (BLOCK_SIZE * b + HALF_BLOCK_SIZE)), s->x, action);
+}
+
+/* SpriteCheckCollidingWithSamus */
+static bool colliding_with_samus(const Ctx *c) {
+    const MzmSprite *s = c->s;
+    const MzmSpriteFrame *f = c->f;
+    uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
+    uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
+    uint16_t samus_top = (uint16_t)(f->samus_y + f->samus_hitbox_top);
+    uint16_t samus_bottom = (uint16_t)(f->samus_y + f->samus_hitbox_bottom);
+    uint16_t samus_left = (uint16_t)(f->samus_x + f->samus_hitbox_left);
+    uint16_t samus_right = (uint16_t)(f->samus_x + f->samus_hitbox_right);
+    /* SpriteUtilCheckObjectsTouching */
+    return bottom > samus_top && top < samus_bottom && right > samus_left && left < samus_right;
+}
+
+/* SecurityGateOpen */
+static void security_gate_open(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    ai_set_anim(s, MZM_GADGET_SECURITY_GATE_OPENING);
+    s->pose = SECURITY_GATE_POSE_OPENING;
+    security_gate_caa(c, MZM_CAA_REMOVE_SOLID);
+    mzm_sfx_play_not_playing(MZM_SOUND_SECURITY_GATE_OPENING);
+}
+
+/* SecurityGateClose */
+static void security_gate_close(MzmSprite *s) {
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    ai_set_anim(s, MZM_GADGET_SECURITY_GATE_CLOSING);
+    s->pose = SECURITY_GATE_POSE_CLOSING;
+    mzm_sfx_play_not_playing(MZM_SOUND_SECURITY_GATE_CLOSING);
+}
+
+/* SecurityGateDefaultOpen and SecurityGateDefaultClosed: Chozodia's gates,
+ * open (or closed) while the alarm is off and the other way while it
+ * rings; a closing gate only becomes solid once Samus is out of it. */
+static void security_gate(Ctx *c) {
+    MzmSprite *s = c->s;
+    bool default_open = s->sprite_id == MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN;
+    bool alarm = c->f->globals && c->f->globals->alarm_timer != 0;
+    /* Closed in this state: the alarm for the open gates, none for the
+     * closed ones. */
+    bool shut = default_open ? alarm : !alarm;
+    s->ignore_samus_timer = 1;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        if (shut) {
+            ai_set_anim(s, MZM_GADGET_SECURITY_GATE_CLOSED);
+            s->pose = SECURITY_GATE_POSE_CLOSED;
+            s->work0 = true;
+            security_gate_caa(c, MZM_CAA_MAKE_NON_POWER_GRIP);
+        } else {
+            s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+            ai_set_anim(s, MZM_GADGET_SECURITY_GATE_OPENED);
+            s->pose = SECURITY_GATE_POSE_IDLE;
+        }
+        s->hitbox_top = -(BLOCK_SIZE * 4);
+        s->hitbox_bottom = 0;
+        s->hitbox_left = -(QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+        s->hitbox_right = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        s->draw_top = BLOCK_SIZE * 4 / PIXEL_SIZE;
+        s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_horizontal = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->frame = s->adc = 0;
+        s->samus_collision = SSC_NONE;
+        s->health = 1;
+        s->draw_order = 3;
+        s->immune_to_projectiles = true;
+        break;
+    case SECURITY_GATE_POSE_IDLE:
+        if (shut) security_gate_close(s);
+        break;
+    case SECURITY_GATE_POSE_CLOSING:
+        /* SecurityGateCheckClosingAnimEnded */
+        if (ai_animation_ending(c, 1)) {
+            ai_set_anim(s, MZM_GADGET_SECURITY_GATE_CLOSED);
+            s->pose = SECURITY_GATE_POSE_CLOSED;
+            s->work0 = false;
+            s->work3 = 0;
+        }
+        break;
+    case SECURITY_GATE_POSE_CLOSED:
+        if (!s->work0 && !colliding_with_samus(c)) {
+            security_gate_caa(c, MZM_CAA_MAKE_NON_POWER_GRIP);
+            s->work0++;
+        }
+        if (default_open) {
+            /* SecurityGateDefaultOpenOpenAfterAlarm */
+            if (!alarm) {
+                s->work3++;
+                if (s->work3 > TWO_THIRD_SECOND) security_gate_open(c);
+            } else {
+                s->work3 = 0;
+            }
+        } else if (alarm) {
+            /* SecurityGateDefaultClosedCloseAfterAlarm */
+            security_gate_open(c);
+        }
+        break;
+    case SECURITY_GATE_POSE_OPENING:
+        if (ai_animation_ending(c, 1)) {
+            ai_set_anim(s, MZM_GADGET_SECURITY_GATE_OPENED);
+            s->pose = SECURITY_GATE_POSE_IDLE;
+        }
+        break;
+    default: {
+        /* SecurityGateDeath (unused: the gates are immune) */
+        security_gate_caa(c, MZM_CAA_REMOVE_SOLID);
+        uint16_t y = (uint16_t)(s->y - BLOCK_SIZE), x = s->x;
+        ai_particle_set(c, y, x, MZM_PE_SPRITE_EXPLOSION_HUGE);
+        ai_sprite_death(c, (uint16_t)(y - (BLOCK_SIZE + HALF_BLOCK_SIZE)), x, MZM_PE_SPRITE_EXPLOSION_BIG);
+        break;
+    }
+    }
+}
+
 void ai_gadget(Ctx *c) {
     if (c->s->secondary) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
@@ -1638,6 +1767,8 @@ void ai_gadget(Ctx *c) {
     case MZM_PSPRITE_ZIPLINE: zipline(c); break;
     case MZM_PSPRITE_ZIPLINE_BUTTON: zipline_button(c); break;
     case MZM_PSPRITE_ZIPLINE_GENERATOR: zipline_generator(c); break;
+    case MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN:
+    case MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED: security_gate(c); break;
     default: break;
     }
 }

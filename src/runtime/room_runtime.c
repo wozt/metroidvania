@@ -2888,7 +2888,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             /* The banner's slot keeps its last pose once it
                              * is gone, which the map station waits for. */
                             sprites->banner.pose,
-                            runtime_minimap.downloaded_maps,sprites->banner.yes,weapons};
+                            runtime_minimap.downloaded_maps,sprites->banner.yes,weapons,0,
+                            mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->left,
+                            mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->right};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)

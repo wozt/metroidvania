@@ -15,6 +15,7 @@
 #include "mzm_file_select.h"
 #include "mzm_game_over.h"
 #include "mzm_intro.h"
+#include "mzm_cutscene.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -681,6 +682,46 @@ static void test_intro_bank(void) {
     mzm_rom_close();
 }
 
+/* The intro text cutscene on the exported bank: the text drawn before the
+ * fade in, the landing sound, the wait for A, the fade out and the end. */
+static void test_cutscene_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the cutscene checks are skipped\n");
+        return;
+    }
+    static MzmCutscene c;
+    assert(!mzm_cutscene_enter(&c, 3) && mzm_cutscene_enter(&c, MZM_CUTSCENE_INTRO_TEXT));
+    mzm_sfx_clear();
+    int f;
+    for (f = 0; f < 400 && !(c.stage == 4 && c.sub_stage == 1); ++f) {
+        mzm_screen_input(&screen, 0);
+        assert(!mzm_cutscene_update(&c, &screen));
+    }
+    /* Six lines of text in the BG0 graphics, faded in, BG0 shown. */
+    assert(c.stage == 4 && c.message.message_ended && c.message.line == 5);
+    bool drawn = false;
+    for (int at = 0xB000; at < 0xB000 + 6 * 0x800; ++at) drawn |= ppu.vram[at] != 0;
+    assert(drawn && screen.bldalpha_l == 16 && screen.bldalpha_h == 0 && c.dispcnt == GBA_DCNT_BG0);
+    assert(c.bgcnt[0] == (0x14 << 8 | 2 << 2) && c.bg_vofs[0] == (2048 - 2 * 64 - 32) / 4);
+    assert(count_requests(MZM_SFX_PLAY, 0x233) == 1);
+    /* It waits for A or B. */
+    for (f = 0; f < 60; ++f) {
+        mzm_screen_input(&screen, 0);
+        mzm_cutscene_update(&c, &screen);
+    }
+    assert(c.stage == 4);
+    mzm_screen_input(&screen, 1);
+    mzm_cutscene_update(&c, &screen);
+    bool ended = false;
+    for (f = 0; f < 200 && !ended; ++f) {
+        mzm_screen_input(&screen, 0);
+        ended = mzm_cutscene_update(&c, &screen);
+    }
+    assert(ended && c.cutscene == MZM_CUTSCENE_NONE && screen.bldalpha_l == 0 && ppu.palette[15 * 16 + 1] == 0);
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
@@ -690,6 +731,7 @@ int main(void) {
     test_file_select_bank();
     test_game_over_bank();
     test_intro_bank();
+    test_cutscene_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

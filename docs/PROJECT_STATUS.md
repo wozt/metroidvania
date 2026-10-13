@@ -2988,6 +2988,21 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0297 - Zero Mission story text cutscenes
+
+- `src/runtime/mzm_cutscene.c`: CutsceneHandler for the non-gameplay
+  cutscenes (CutsceneInit, the background blending effect, the backgrounds'
+  positions, CutsceneVBlank) and the story text cutscenes: the English
+  monologue drawn with the native font, the vertical centering, the fade in
+  with the landing sound, A or B, the fade out.
+- A new game from the file select now plays the "Planet Zebes..." intro
+  text before the game; `--cutscene N` plays the intro text (1) or the
+  mothership monologue (2) before the game.
+- Natively the gunship's landing in Crateria leads to this cutscene; the
+  landing is not ported yet.
+- Checked by capture (title, new game, monologue, game); test in
+  `tests/test_mzm_screens.c`.
+
 ## Patch 0296 - Zero Mission intro
 
 - `src/runtime/mzm_intro.c`: the US intro (intro.c): the fade from black,

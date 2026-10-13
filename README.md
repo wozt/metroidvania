@@ -207,8 +207,9 @@ native Zero Mission intro (`src/runtime/mzm_intro.c`; A, B or START skips
 it), then the title screen (`src/runtime/mzm_title_screen.c`: comets,
 scrolling, title fade, sparkles, PRESS START; Return or the gamepad's Start
 is START; `--title` starts there), and START opens the file select with its
-three save files (`src/runtime/mzm_file_select.c`). The demos and the other
-cutscenes are not ported yet.
+three save files (`src/runtime/mzm_file_select.c`); a new game plays the
+"Planet Zebes..." story text cutscene (`src/runtime/mzm_cutscene.c`). The
+gunship's landing, the demos and the other cutscenes are not ported yet.
 
 Run the experimental SDL3 Zero Mission room/animation integration with:
 

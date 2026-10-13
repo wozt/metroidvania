@@ -57,7 +57,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
                src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c src/runtime/mzm_room_gfx.c
                src/runtime/mzm_pause_screen.c src/runtime/mzm_text.c src/runtime/mzm_save.c
                src/runtime/mzm_file_select.c src/runtime/mzm_game_over.c
-               src/runtime/mzm_intro.c)
+               src/runtime/mzm_intro.c src/runtime/mzm_cutscene.c)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
@@ -200,7 +200,7 @@ if(BUILD_TESTING)
                    src/runtime/mzm_rom.c src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c
                    src/runtime/mzm_sfx.c src/runtime/mzm_hud.c src/runtime/mzm_pause_screen.c
                    src/runtime/mzm_text.c src/runtime/mzm_file_select.c src/runtime/mzm_game_over.c
-               src/runtime/mzm_intro.c)
+                   src/runtime/mzm_intro.c src/runtime/mzm_cutscene.c)
     target_include_directories(fusion_mzm_screens_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_screens_tests)
     add_test(NAME mzm_screens COMMAND fusion_mzm_screens_tests

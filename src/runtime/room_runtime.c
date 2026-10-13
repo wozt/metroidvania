@@ -29,6 +29,7 @@
 #include "mzm_save.h"
 #include "mzm_file_select.h"
 #include "mzm_game_over.h"
+#include "mzm_cutscene.h"
 #include "mzm_intro.h"
 #include <sys/stat.h>
 #include <errno.h>
@@ -3088,6 +3089,7 @@ int main(int argc, char **argv) {
     /* Boot on the title screen (also without any argument); START then
      * begins the game in Brinstar's first room. */
     bool title_mode=argc==1, intro_mode=argc==1;
+    int start_cutscene=0;     /* --cutscene N: a cutscene before the game */
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
@@ -3136,6 +3138,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--room") && !room_alias && i+1<argc) room_alias=argv[++i];
         else if (!strcmp(argv[i],"--title")) title_mode=true;
         else if (!strcmp(argv[i],"--intro")) title_mode=intro_mode=true;
+        else if (!strcmp(argv[i],"--cutscene") && i+1<argc) start_cutscene=atoi(argv[++i]);
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
@@ -3363,6 +3366,9 @@ int main(int argc, char **argv) {
     static MzmTitleScreen title_screen;
     static MzmPauseScreen pause_screen;
     bool pause_mode=false, screen_ready=false, file_select_mode=false, game_over_mode=false;
+    /* A non-gameplay cutscene, then the pending resume request. */
+    bool cutscene_mode=false;
+    static MzmCutscene cutscene;
     static MzmFileSelect file_select;
     static MzmGameOver game_over;
     /* A state to switch to: a loaded file, or the game's start (the state
@@ -3376,6 +3382,12 @@ int main(int argc, char **argv) {
         mzm_hud_init(&runtime_hud, &runtime_hud_ppu, &runtime_minimap, 320);
     screen_ready = mzm_rom_ready() && mzm_screen_init(&screen, &screen_ppu);
     static MzmIntro intro;
+    if (start_cutscene && !title_mode) {
+        if (!screen_ready || !mzm_cutscene_enter(&cutscene, (uint8_t)start_cutscene))
+            fprintf(stderr, "The cutscene %d cannot be played.\n", start_cutscene);
+        else
+            cutscene_mode = true;
+    }
     if (title_mode) {
         if (!screen_ready) {
             fprintf(stderr, "No ROM bank: the title screen is skipped.\n");
@@ -3522,7 +3534,7 @@ int main(int argc, char **argv) {
     printf("Diagnostics: R suit, T Space Jump/Screw Attack, G High Jump, "
            "H 20 damage, Enter restart, F6 catalogue, F7 hitbox.\n");
     /* The first room's music starts at once (after the title screen). */
-    if (!title_mode && !intro_mode && runtime_room_music(room)) {
+    if (!title_mode && !intro_mode && !cutscene_mode && runtime_room_music(room)) {
         runtime_audio_lock();
         mzm_music_check_play_transition_track();
         runtime_audio_unlock();
@@ -3871,11 +3883,25 @@ int main(int argc, char **argv) {
                        mzm_save_read(save_paths[save_slot],&resume_save)) {
                         resume_request=RUNTIME_RESUME_SAVE;
                     } else {
-                        /* A new game on the file. */
+                        /* A new game on the file: the intro text first
+                         * (CUTSCENE_INTRO_TEXT, which the gunship's landing
+                         * starts natively). */
                         resume_save=new_game_state;
                         resume_save.difficulty=file_select.cursors.difficulty;
                         resume_request=RUNTIME_RESUME_NEW_GAME;
+                        cutscene_mode=mzm_cutscene_enter(&cutscene,MZM_CUTSCENE_INTRO_TEXT);
                     }
+                    previous_held=held;
+                }
+                accumulator-=fixed_step;
+                continue;
+            }
+            if(cutscene_mode) {
+                /* CutsceneHandler; its end applies the pending request. */
+                mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                              capture_path?NULL:&gamepad));
+                if(mzm_cutscene_update(&cutscene,&screen)) {
+                    cutscene_mode=false;
                     previous_held=held;
                 }
                 accumulator-=fixed_step;
@@ -4349,7 +4375,7 @@ int main(int argc, char **argv) {
         if ((float)oh/224.f < scale) scale=(float)oh/224.f;
         SDL_FRect viewport={(ow-320.f*scale)*0.5f,(oh-224.f*scale)*0.5f,
                             320.f*scale,224.f*scale};
-        if(intro_mode || title_mode || pause_mode || file_select_mode || game_over_mode) {
+        if(intro_mode || title_mode || pause_mode || file_select_mode || game_over_mode || cutscene_mode) {
             /* The 240x160 GBA screen, fitted to the view. */
             SDL_SetRenderDrawColor(renderer,0,0,0,255);
             SDL_RenderClear(renderer);
@@ -4767,10 +4793,10 @@ frame_overlays:
                    capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
-            if(intro_mode || title_mode || file_select_mode || pause_mode || game_over_mode)
-                printf("  screen: intro %d (stage %d timer %d), title %d, file select %d (mode %d, sub menu %d "
+            if(intro_mode || title_mode || file_select_mode || pause_mode || game_over_mode || cutscene_mode)
+                printf("  screen: cutscene %d (stage %d sub stage %d), intro %d (stage %d timer %d), title %d, file select %d (mode %d, sub menu %d "
                        "stage %d), pause %d, game over %d (mode %d)\n",
-                       intro_mode,intro.stage,intro.timer,title_mode,file_select_mode,file_select.sub_mode1,
+                       cutscene_mode,cutscene.stage,cutscene.sub_stage,intro_mode,intro.stage,intro.timer,title_mode,file_select_mode,file_select.sub_mode1,
                        file_select.current_sub_menu,
                        file_select.sub_menu_stage,pause_mode,game_over_mode,game_over.sub_mode1);
             if(prevent_movement && !sprites.banner.exists)

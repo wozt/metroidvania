@@ -952,19 +952,10 @@ static uint8_t runtime_hazard(const Room *room, uint16_t y, uint16_t x) {
     return effect_y <= y ? definitions[damage][1] : definitions[damage][0];
 }
 
-/* One GBA frame of sound into the device stream. A GBA frame lasts
- * 280896 / 16777216 s (59.73 Hz) while the runtime steps at 60 Hz, so the
- * stream is steered instead of trimmed: the render rate leans by at most
- * 1% toward a queue of four frames, which keeps the sound continuous
- * (dropping whole frames on a full queue, as before, made it crackle). */
-#define RUNTIME_AUDIO_RATE 48000
-static int runtime_audio_rate(int queued_frames) {
-    enum { TARGET = RUNTIME_AUDIO_RATE / 15 };  /* about 4 frames, 67 ms */
-    double error = (double)(TARGET - queued_frames) / TARGET;
-    if (error > 1.0) error = 1.0;
-    if (error < -1.0) error = -1.0;
-    return (int)(RUNTIME_AUDIO_RATE * (1.0 + 0.01 * error) + 0.5);
-}
+/* The sound hardware's output rate: the 65.536 kHz 8-bit PWM that MZM
+ * selects in SOUNDBIAS; SDL's band-limited resampler converts it for the
+ * device. */
+#define RUNTIME_AUDIO_RATE 65536
 
 /* BgClipSetClipdataBlockValue: the raw value and its collision. */
 static void runtime_room_set_clip(Room *room, uint16_t raw, int y, int x) {
@@ -1959,23 +1950,56 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
 #define RUNTIME_SOUND_BANK "assets/extracted/metroid/sound/runtime/sound_bank.bin"
 #define RUNTIME_SOUND_TABLES "assets/extracted/metroid/sound/runtime/sound_tables.tsv"
 
-/* The sound hardware's output of one game frame into the SDL stream; the
- * frame is dropped when the device lags (more than 0.2 s queued). */
-/* One GBA frame of sound into the device stream (runtime_audio_rate). */
-static void runtime_audio_frame(SDL_AudioStream *stream) {
-    static int16_t buffer[2 * 1024];
-    mzm_audio_update();
-    int queued = stream ? SDL_GetAudioStreamQueued(stream) / 4 : 0;
-    int frames = mzm_audio_render(buffer, 1024, runtime_audio_rate(queued));
-    /* Only a stall (a queue of half a second) skips a frame. */
-    if (stream && frames > 0 && queued < RUNTIME_AUDIO_RATE / 2)
-        SDL_PutAudioStreamData(stream, buffer, frames * 4);
+/* The device pulls the sound, as the GBA's sound hardware runs on its own
+ * clock: each pull runs UpdateAudio and renders one GBA frame (280896 /
+ * 16777216 s) at a time, keeping what the device did not take yet. The game
+ * only changes the engine's state, under the stream's lock, so a slow game
+ * frame never starves the device (feeding the stream from the game steps
+ * ran it dry and crackled). */
+typedef struct {
+    int16_t samples[2 * 2048];
+    int count, offset;
+} RuntimeAudioPull;
+
+static SDL_AudioStream *runtime_audio_stream;
+
+static void runtime_audio_lock(void) {
+    if (runtime_audio_stream) SDL_LockAudioStream(runtime_audio_stream);
+}
+
+static void runtime_audio_unlock(void) {
+    if (runtime_audio_stream) SDL_UnlockAudioStream(runtime_audio_stream);
+}
+
+static void SDLCALL runtime_audio_pull(void *userdata, SDL_AudioStream *stream, int additional,
+                                       int total) {
+    RuntimeAudioPull *pull = userdata;
+    (void)total;
+    int frames = additional / 4;
+    while (frames > 0) {
+        if (pull->offset >= pull->count) {
+            mzm_audio_update();
+            pull->count = mzm_audio_render(pull->samples, 2048, RUNTIME_AUDIO_RATE);
+            pull->offset = 0;
+            if (pull->count <= 0) {
+                /* No engine output: silence. */
+                pull->count = frames < 2048 ? frames : 2048;
+                memset(pull->samples, 0, (size_t)pull->count * 4);
+            }
+        }
+        int n = pull->count - pull->offset;
+        if (n > frames) n = frames;
+        SDL_PutAudioStreamData(stream, &pull->samples[pull->offset * 2], n * 4);
+        pull->offset += n;
+        frames -= n;
+    }
 }
 
 /* The gameplay modules' sound requests (mzm_sfx) into the sound engine. */
 static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
                              uint16_t timer) {
     (void)context;
+    runtime_audio_lock();
     switch (action) {
     case MZM_SFX_PLAY: mzm_sound_play(sound); break;
     case MZM_SFX_PLAY_NOT_PLAYING: mzm_sound_play_not_already_playing(sound); break;
@@ -1989,6 +2013,7 @@ static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
     case MZM_SFX_MUSIC_FADE: mzm_music_fade(timer); break;
     case MZM_SFX_MUSIC_PRIORITY: mzm_music_update_priority((uint8_t)timer); break;
     }
+    runtime_audio_unlock();
 }
 
 /* CheckPlayRoomMusicTrack when a room is entered: the room's track fades
@@ -2001,7 +2026,9 @@ static uint16_t runtime_room_track;
 static int runtime_room_music(const Room *room) {
     if (room->has_music) runtime_room_track = (uint16_t)room->music;
     if (!mzm_audio_ready() || !room->has_music) return 0;
+    runtime_audio_lock();
     mzm_music_check_set_new_track((uint16_t)room->music);
+    runtime_audio_unlock();
     return 32;
 }
 
@@ -3094,8 +3121,10 @@ int main(int argc, char **argv) {
     SDL_AudioStream *audio=NULL;
     if (!capture_path && !mute) {
         SDL_AudioSpec spec={SDL_AUDIO_S16,2,RUNTIME_AUDIO_RATE};
+        static RuntimeAudioPull audio_pull;
         if (!SDL_InitSubSystem(SDL_INIT_AUDIO) ||
-            !(audio=SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,&spec,NULL,NULL)))
+            !(audio=SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,&spec,
+                                              runtime_audio_pull,&audio_pull)))
             fprintf(stderr,"No audio device: %s\n",SDL_GetError());
         else if (!mzm_audio_open(RUNTIME_SOUND_BANK,RUNTIME_SOUND_TABLES)) {
             SDL_DestroyAudioStream(audio);
@@ -3103,6 +3132,7 @@ int main(int argc, char **argv) {
         } else {
             mzm_audio_initialize();
             mzm_sfx_set_sink(runtime_sfx_sink,NULL);
+            runtime_audio_stream=audio;
             SDL_ResumeAudioStreamDevice(audio);
         }
     }
@@ -3251,7 +3281,11 @@ int main(int argc, char **argv) {
     printf("Diagnostics: R suit, T Space Jump/Screw Attack, G High Jump, "
            "H 20 damage, Enter restart, F6 catalogue, F7 hitbox.\n");
     /* The first room's music starts at once (after the title screen). */
-    if (!title_mode && runtime_room_music(room)) mzm_music_check_play_transition_track();
+    if (!title_mode && runtime_room_music(room)) {
+        runtime_audio_lock();
+        mzm_music_check_play_transition_track();
+        runtime_audio_unlock();
+    }
     int music_transition=0;
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
@@ -3555,11 +3589,14 @@ int main(int argc, char **argv) {
                         title_mode=false;
                         mzm_sfx_stop_all();
                         mzm_sfx_music_priority(0);
-                        if(runtime_room_music(room)) mzm_music_check_play_transition_track();
+                        if(runtime_room_music(room)) {
+                            runtime_audio_lock();
+                            mzm_music_check_play_transition_track();
+                            runtime_audio_unlock();
+                        }
                         previous_held=held;
                     }
                 }
-                if(audio)runtime_audio_frame(audio);
                 accumulator-=fixed_step;
                 continue;
             }
@@ -3582,10 +3619,12 @@ int main(int argc, char **argv) {
                     /* SamusDying stopped the music; there is no game over
                      * flow, so the room's track simply starts again. */
                     if(mzm_audio_ready() && room->has_music) {
+                        runtime_audio_lock();
                         mzm_music_check_set_new_track((uint16_t)room->music);
                         mzm_music_check_play_transition_track();
                         if(!mzm_audio_player_playing(0))
                             mzm_music_play((uint16_t)room->music,0);
+                        runtime_audio_unlock();
                     }
                     fprintf(stderr,"Diagnostic restart: Energy %d.\n",equipment.energy);
                 }
@@ -3741,9 +3780,11 @@ int main(int argc, char **argv) {
             /* ProjectileCheckSamusBombBounce -> SamusBombBounce */
             if(weapons.bomb_bounce)
                 mzm_samus_bomb_bounce(&samus,&equipment,&collision,weapons.bomb_bounce);
-            if(music_transition && --music_transition==0)
+            if(music_transition && --music_transition==0) {
+                runtime_audio_lock();
                 mzm_music_check_play_transition_track();
-            if(audio)runtime_audio_frame(audio);
+                runtime_audio_unlock();
+            }
             /* ConnectionUpdateHatches */
             mzm_hatches_update(room->native_hatches,room->native_hatch_count,&room->hatch_env);
             runtime_blocks_frame(room,current_room,&samus,&equipment,sprites.frame8);
@@ -4300,6 +4341,7 @@ frame_overlays:
     rc=0;
 cleanup:
     mzm_sfx_set_sink(NULL,NULL);
+    runtime_audio_stream=NULL;
     if (audio) SDL_DestroyAudioStream(audio);
     mzm_audio_close();
     gba_input_close(&gamepad);

@@ -2988,6 +2988,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0287 - Zero Mission audio pulled by the device
+
+- The crackling came from the stream queue running dry: it was fed from
+  the game steps and consumed by the device in chunks (measured with
+  `MZM_AUDIO_DEBUG`: 0 to ~1400 queued samples, several empty frames a
+  second). The device now pulls the sound through SDL's stream callback:
+  each pull runs UpdateAudio and renders one GBA frame at a time; the game
+  only calls the engine under the stream's lock.
+- The mix is rendered at the 65.536 kHz PWM rate MZM selects in SOUNDBIAS
+  and resampled by SDL; measured offline, the aliasing was negligible
+  either way (about 0.07% of the energy above 16 kHz).
+- The output-rate steering and its test are gone.
+
 ## Patch 0286 - Zero Mission elevators and area connections
 
 - `scripts/mzm_runtime_room.py` resolves the area connection doors

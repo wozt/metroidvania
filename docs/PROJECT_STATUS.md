@@ -2988,6 +2988,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0284 - Zero Mission native room backgrounds: animations and liquids
+
+- `src/runtime/mzm_room_gfx.c` renders the room backgrounds from the ROM
+  bank on a GbaPpu as the game loads them: VRAM (animated, common and
+  tileset tiles, BG3 graphics), BG palettes, BG3 and LZ77 BG0 maps, the BG
+  control registers and priorities of the room's transparency, and the
+  block layers' metatiles around the camera.
+- Animated tiles (all five types), tank tiles, the animated palette (with
+  the alarm and zipline conditions, paused during power bombs), the hatch
+  flashing palette, and the liquid BG0 with its water wave now run every
+  frame: lava, acid and water are visible and animated, and
+  gEffectYPosition (wave included) feeds hazards and sprites.
+- The runtime draws each native layer in place of the static sheets
+  (which remain the fallback without the ROM bank), keeping its sprite
+  interleaving and approximate BG0 blending.
+- Checked by capture in norfair_022, crateria_007 and brinstar_000.
+- Not ported yet: background effects, BG movement, haze, gradients,
+  windows and fades; mother ship doors.
+- Tests: `tests/test_mzm_room_gfx.c`.
+
 ## Patch 0283 - Zero Mission title screen
 
 - `src/runtime/mzm_screen.c`: what the non-gameplay screens share

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-13T00:21:13+00:00",
+ "generated_at": "2026-10-13T00:32:50+00:00",
  "git": {
-  "commit": "462018f",
+  "commit": "d32cc20",
   "branch": "main",
   "dirty": true
  },
@@ -2732,30 +2732,47 @@
    "id": "mzm.rooms.backgrounds",
    "area": "mzm",
    "category": "rooms",
-   "title": "Room backgrounds: layers, priorities, BG0 blend and BG3 scrolling",
+   "title": "Room backgrounds: layers, priorities, animations, liquids, BG0 blend and BG3 scrolling",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
+    "src/runtime/mzm_room_gfx.c",
     "scripts/mzm_bg_layers.py",
     "scripts/mzm_runtime_room.py",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
-    "tests/test_mzm_bg_layers.py"
+    "tests/test_mzm_room_gfx.c",
+    "tests/test_mzm_bg_layers.py",
+    "tests/test_runtime_steep_slopes.c"
    ],
    "dependencies": [
-    "mzm.collision.clipdata"
+    "mzm.collision.clipdata",
+    "mzm.technical.ppu_and_rom_bank"
    ],
    "native_routines": [
     "RoomLoadTileset",
     "RoomLoadBackgrounds",
+    "RoomSetInitialTilemap",
+    "RoomUpdateVerticalTilemap",
+    "RoomUpdateHorizontalTilemap",
+    "RoomUpdateAnimatedGraphicsAndPalettes",
+    "RoomUpdateHatchFlashingAnimation",
+    "AnimatedGraphicsLoad",
+    "AnimatedGraphicsUpdate",
+    "AnimatedGraphicsTransfer",
+    "AnimatedGraphicsTanksAnimationReset",
+    "AnimatedGraphicsTanksAnimationUpdate",
+    "AnimatedPaletteUpdate",
+    "AnimatedPaletteCheckDisableOnTransition",
     "TransparencySetRoomEffectsTransparency",
     "TransparencyGetBgSizeFlag",
+    "ScrollUpdateEffectAndHazePosition",
     "ScrollBg3",
     "ScrollGetBg3Scroll"
    ],
-   "limitations": "Animated tilesets and palettes, the mother ship common tiles, BG2 movement (BG_PROP_MOVING), BG0 movement (water, clouds, snow), BG2/BG3 gradient effects, windows and screen fades are not reproduced; BG2 and the LZ77 BG0 scroll with BG1; the camera is the runtime's 320x224 follow view, not the native scrolling; particles share the sprites' priority. VRAM and BG palette RAM are rebuilt as RoomLoadTileset leaves them (common tiles at 0x4800, tileset at 0x5800, background graphics below 0xFDE0, palette rows 0-2 common and 3-15 from the tileset); every tileset gets a sheet of its 1024 metatiles and the 208 common ones, rooms export their BG0 (RLE), BG1 and BG2 block maps and their BG3 / LZ77 BG0 text maps; the runtime draws them by the native priorities of the room's transparency value (Samus and sprites at priority 2, or 1 on top of the backgrounds), blends BG0 (additive at EVA/16 or alpha at 16 - EVB) and scrolls BG3 with ScrollBg3 including rooms starting from the bottom. Checked in brinstar_000, chozodia_016 and norfair_005 captures.",
-   "next_action": "Animated tiles and palettes, then BG movement effects.",
+   "limitations": "Each background is rendered alone by the PPU and the runtime composes them with its sprites by priority, so the BG0 blend is approximated by SDL blending (additive at EVA/16, alpha at 16 - EVB) instead of the GBA's per-pixel targets; the block layers are redrawn around the view every frame instead of the native row and column streaming (the same tiles); the mother ship common tiles (gUseMotherShipDoors, set by door types) are not tracked; the background effects (lightning, flashes), BG0 and BG3 movement (clouds, snow), the 0x43/0x44/dark-room BG0 positions, haze, gradients, windows and screen fades are not reproduced; without the ROM bank the exported metatile sheets are drawn instead (static). The camera is the runtime's 320x224 follow view. With the ROM bank, mzm_room_gfx rebuilds the room's VRAM and BG palettes as RoomLoadTileset leaves them (animated tiles at 0x4000, common tiles at 0x4800, the tileset at 0x5800, the BG3 graphics below 0xFDE0, palette rows 0-2 common and 3-15 from the tileset), decompresses the BG3 and LZ77 BG0 maps, sets the BG control registers and priorities of TransparencySetRoomEffectsTransparency, and writes the block layers' metatiles (gTilemap, then gCommonTilemap past block 1024) into the 512x256 maps around the camera. Every frame it runs AnimatedGraphicsUpdate (16 slots with their five types, mirrored at the end of VRAM for slots 12-15), the tank animation, AnimatedPaletteUpdate on palette row 15 (disabled without the alarm or the ziplines event, paused during a power bomb), the hatch flashing, and positions a liquid LZ77 BG0 from gEffectYPosition with the water wave (sWaterLoopCounterArray), which also feeds the hazard and sprite liquid surface. Lava, acid and water now animate and blend: checked by capture in norfair_022 (lava), crateria_007 (water over Samus and the Skulteras) and brinstar_000.",
+   "next_action": "Port the background effects, BG movement and haze, then compose the layers with the sprites per pixel.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -2763,10 +2780,30 @@
     "missing_sources": [],
     "tests": [
      {
+      "test": "tests/test_mzm_room_gfx.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_room_gfx"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
       "test": "tests/test_mzm_bg_layers.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
+     },
+     {
+      "test": "tests/test_runtime_steep_slopes.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "runtime_steep_slopes"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -5419,6 +5456,13 @@
     "outcome": "passed"
    },
    {
+    "name": "mzm_room_gfx",
+    "files": [
+     "tests/test_mzm_room_gfx.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "mzm_hud",
     "files": [
      "tests/test_mzm_hud.c"
@@ -6211,12 +6255,18 @@
    }
   ],
   "summary": {
-   "passed": 467,
+   "passed": 468,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "d32cc20",
+   "date": "2026-10-13",
+   "subject": "feat(mzm): native title screen",
+   "scope": "mzm"
+  },
   {
    "commit": "462018f",
    "date": "2026-10-13",
@@ -6690,12 +6740,6 @@
    "date": "2026-10-10",
    "subject": "feat(aria): colorize Soma animations with their native palette bank",
    "scope": "aria"
-  },
-  {
-   "commit": "665be2c",
-   "date": "2026-10-10",
-   "subject": "feat(aria): native room transitions for Soma",
-   "scope": "aria"
   }
  ],
  "inventory": {
@@ -6723,7 +6767,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 501,
+    "routines_cited_by_features": 514,
     "call_edges": 6071
    },
    "aos": {

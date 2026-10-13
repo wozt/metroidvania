@@ -300,6 +300,10 @@ symbol table comes from the decompilation's reference ELF. The view is wider
 than the GBA screen, so the minimap sits at the view's right edge. Tanks are
 only collected on explored minimap tiles, as in the game.
 
+With the ROM bank, room backgrounds are rendered natively as well
+(`src/runtime/mzm_room_gfx.c`): animated tiles and palettes, liquids (lava,
+acid, water with its wave), tank and hatch animations.
+
 Rooms play their native music through the ported Zero Mission sound engine
 (`src/runtime/mzm_audio.c`: the sequencer, the DirectSound mixer of
 `asm/soundcode.s` and the four PSG channels, emulated in

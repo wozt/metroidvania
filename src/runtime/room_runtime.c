@@ -21,6 +21,7 @@
 #include "mzm_message_banner.h"
 #include "mzm_projectiles.h"
 #include "mzm_rom.h"
+#include "mzm_room_gfx.h"
 #include "mzm_samus.h"
 #include "mzm_screen.h"
 #include "mzm_title_screen.h"
@@ -860,6 +861,18 @@ static bool runtime_haze_ok;
  * (CLIP_BEHAVIOR_WATER .. STRONG_ACID), else the room effect's hazard above
  * or below gEffectYPosition (sHazardsDefinitions) when the room has a BG0
  * and its effect has a haze (HazeSetBackgroundEffect sets damageEffect). */
+/* The native room backgrounds (mzm_room_gfx) of the current room. */
+static MzmRoomGfx runtime_room_gfx;
+
+/* gEffectYPosition: the liquid surface with the water wave once the
+ * native backgrounds hold this room, else the room entry's effectY. */
+static uint16_t runtime_effect_y(const Room *room) {
+    if (runtime_room_gfx.ready && runtime_room_gfx.area == runtime_area_index(room->area) &&
+        runtime_room_gfx.room == room->room)
+        return mzm_room_gfx_effect_y(&runtime_room_gfx);
+    return room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
+}
+
 static uint8_t runtime_hazard(const Room *room, uint16_t y, uint16_t x) {
     static const uint8_t definitions[8][2] = {
         {MZM_HAZARD_NONE, MZM_HAZARD_NONE}, {MZM_HAZARD_NONE, MZM_HAZARD_WATER},
@@ -878,8 +891,8 @@ static uint8_t runtime_hazard(const Room *room, uint16_t y, uint16_t x) {
     uint8_t damage = runtime_haze[visual][1];
     if (damage == 0 || damage >= 8) return MZM_HAZARD_NONE;
     if (definitions[damage][1] == MZM_HAZARD_NONE) return definitions[damage][0];
-    /* gEffectYPosition without gWaterMovement's wave (not ported). */
-    uint16_t effect_y = room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
+    /* gEffectYPosition */
+    uint16_t effect_y = runtime_effect_y(room);
     return effect_y <= y ? definitions[damage][1] : definitions[damage][0];
 }
 
@@ -2410,8 +2423,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                    const MzmInput *input, bool stopped,
                                    uint16_t *prevent_movement) {
     if (!sprites->kinds_ok) return;
-    /* gEffectYPosition without gWaterMovement's wave (not ported). */
-    uint16_t effect_y = room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
+    /* gEffectYPosition */
+    uint16_t effect_y = runtime_effect_y(room);
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4), runtime_sprite_movement, effect_y,
                             runtime_sprite_hazard, runtime_room_track};
@@ -2656,14 +2669,27 @@ static void runtime_draw_block_layer(SDL_Renderer *renderer, SDL_Texture *sheet,
 /* The backgrounds whose priority lies in [low, high], back to front: by
  * priority, then BG3 to BG0 (a lower BG wins at equal priority). */
 static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt *art,
-                                     const Room *room, float cx, float cy, SDL_FRect viewport,
-                                     float scale, int low, int high) {
-    if (!room->has_backgrounds || !art->sheet) return;
+                                     SDL_Texture *const *native, const Room *room, float cx,
+                                     float cy, SDL_FRect viewport, float scale, int low,
+                                     int high) {
+    if (!room->has_backgrounds || (!art->sheet && !native)) return;
     for (int priority = high; priority >= low; --priority)
         for (int layer = 3; layer >= 0; --layer) {
             if (runtime_bg_priority(room, layer) != priority) continue;
             int eva = 16;
             bool additive = false, blend = layer == 0 && runtime_bg0_blend(room, &eva, &additive);
+            if (native) {
+                /* The layer as the native renderer drew it (mzm_room_gfx). */
+                SDL_Texture *texture = native[layer];
+                if (!texture) continue;
+                Uint8 level = (Uint8)(eva * 255 / 16);
+                SDL_SetTextureBlendMode(texture, blend && additive ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
+                if (blend && additive) SDL_SetTextureColorMod(texture, level, level, level);
+                else SDL_SetTextureColorMod(texture, 255, 255, 255);
+                SDL_SetTextureAlphaMod(texture, blend && !additive ? level : 255);
+                SDL_RenderTexture(renderer, texture, NULL, &viewport);
+                continue;
+            }
             SDL_Texture *texture = layer == 3 || (layer == 0 && art->text[0]) ? art->text[layer]
                                                                               : art->sheet;
             if (!texture) continue;
@@ -3042,6 +3068,12 @@ int main(int argc, char **argv) {
     SDL_Renderer *renderer=window ? SDL_CreateRenderer(window,NULL) : NULL;
     SDL_Surface *surface=NULL; SDL_Texture *texture=NULL;
     SDL_Texture *hud_texture=NULL;
+    /* The native room backgrounds: one texture a layer. */
+    SDL_Texture *room_layer_textures[4]={NULL,NULL,NULL,NULL};
+    SDL_Texture *room_layers[4]={NULL,NULL,NULL,NULL};
+    char room_gfx_alias[64]="";
+    int room_bg0_x=0,room_bg0_y=0;
+    bool room_bg0_custom=false;
     SDL_Texture *screen_texture=NULL;
     int rc=1;
     RuntimeLibrary library = {0};
@@ -3614,6 +3646,24 @@ int main(int argc, char **argv) {
                 beam_fx.cannon_x=(samus.x>>2)+cannon_x;
                 beam_fx.cannon_y=((samus.y-1)>>2)+cannon_y;
             }
+            /* RoomLoadTileset / RoomLoadBackgrounds on a new room, then
+             * RoomUpdateAnimatedGraphicsAndPalettes and the liquid BG0. */
+            if(mzm_rom_ready() && room->has_backgrounds) {
+                if(strcmp(room_gfx_alias,current_room)) {
+                    snprintf(room_gfx_alias,sizeof room_gfx_alias,"%s",current_room);
+                    if(!mzm_room_gfx_load(&runtime_room_gfx,runtime_area_index(room->area),
+                                          (uint8_t)room->room,false,
+                                          runtime_sprite_check_event(&sprites,46),
+                                          sprites.globals.alarm_timer!=0))
+                        fprintf(stderr,"Native backgrounds unavailable for %s\n",current_room);
+                }
+                mzm_room_gfx_animate(&runtime_room_gfx,prevent_movement!=0,
+                                     weapons.power_bomb.state!=MZM_PB_NONE,
+                                     room->hatch_env.unlocking);
+                room_bg0_custom=mzm_room_gfx_bg0_position(&runtime_room_gfx,(int)last_cx,(int)last_cy,
+                                                          prevent_movement!=0,&room_bg0_x,
+                                                          &room_bg0_y);
+            }
             /* HudDraw after ProjectileUpdate; a new room first runs
              * MinimapCheckOnTransition (RoomLoad). */
             if(runtime_hud.ready) {
@@ -3803,7 +3853,44 @@ int main(int argc, char **argv) {
         last_cy = cy;
         /* SET_BACKDROP_COLOR(COLOR_BLACK) behind the native layers. */
         runtime_bg_art_sync(&bg_art,renderer,room,current_room);
-        bool layered=room->has_backgrounds && bg_art.sheet;
+        /* The native backgrounds (mzm_room_gfx) when the ROM bank is there. */
+        bool native_layers_ready=false;
+        if(room->has_backgrounds && runtime_room_gfx.ready &&
+           !strcmp(room_gfx_alias,current_room)) {
+            MzmRoomGfx *g=&runtime_room_gfx;
+            for(int layer=0;layer<3;layer++)
+                if(room->bg_present[layer]) {
+                    mzm_room_gfx_blocks(g,layer,room->bg[layer],room->bg_w[layer],room->bg_h[layer],
+                                        (int)cx,(int)cy,320,224);
+                    mzm_room_gfx_scroll(g,layer,(int)cx,(int)cy);
+                }
+            if(room_bg0_custom)mzm_room_gfx_scroll(g,0,room_bg0_x,room_bg0_y);
+            else if(room->text_present[0])mzm_room_gfx_scroll(g,0,(int)cx,(int)cy);
+            int bg3_x,bg3_y;
+            runtime_bg3_position(room,cx,cy,&bg3_x,&bg3_y);
+            mzm_room_gfx_scroll(g,3,bg3_x,bg3_y);
+            native_layers_ready=true;
+            for(int layer=0;layer<4;layer++) {
+                bool present=layer<3?room->bg_present[layer]||room->text_present[layer]:
+                                     room->text_present[3];
+                if(!present){room_layers[layer]=NULL;continue;}
+                if(!room_layer_textures[layer]) {
+                    room_layer_textures[layer]=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,
+                                                                 SDL_TEXTUREACCESS_STREAMING,320,224);
+                    if(room_layer_textures[layer])
+                        SDL_SetTextureScaleMode(room_layer_textures[layer],SDL_SCALEMODE_NEAREST);
+                }
+                void *pixels; int pitch;
+                room_layers[layer]=NULL;
+                if(room_layer_textures[layer] &&
+                   SDL_LockTexture(room_layer_textures[layer],NULL,&pixels,&pitch)) {
+                    mzm_room_gfx_render(g,layer,320,224,pixels,pitch);
+                    SDL_UnlockTexture(room_layer_textures[layer]);
+                    room_layers[layer]=room_layer_textures[layer];
+                }
+            }
+        }
+        bool layered=room->has_backgrounds && (bg_art.sheet || native_layers_ready);
         int sprite_priority=samus.pose==MZM_POSE_DYING?0:runtime_samus_on_top(room)?1:2;
         bool pb_active=weapons.power_bomb.state==MZM_PB_EXPLODING ||
                        weapons.power_bomb.state==MZM_PB_IMPLODING;
@@ -3813,8 +3900,8 @@ int main(int argc, char **argv) {
         SDL_RenderClear(renderer);
         if(layered) {
             /* Backgrounds at or behind the sprites' priority. */
-            runtime_draw_backgrounds(renderer,&bg_art,room,cx,cy,viewport,scale,
-                                     sprite_priority,3);
+            runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
+                                     cx,cy,viewport,scale,sprite_priority,3);
         } else if (texture) {
             SDL_FRect src={cx,cy,320.f,224.f};
             if (src.w>room->width) src.w=(float)room->width;
@@ -4040,8 +4127,8 @@ int main(int argc, char **argv) {
          * layers. */
         for(int pass=0;pass<2;pass++) {
         if(pass==1 && layered)
-            runtime_draw_backgrounds(renderer,&bg_art,room,cx,cy,viewport,scale,0,
-                                     sprite_priority-1);
+            runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
+                                     cx,cy,viewport,scale,0,sprite_priority-1);
         for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
             const MzmProjectile *projectile=&weapons.list[i];
             if(!projectile->active || projectile->stage==MZM_STAGE_INIT ||
@@ -4163,6 +4250,7 @@ cleanup:
     runtime_bg_art_free(&bg_art);
     if (texture) SDL_DestroyTexture(texture);
     if (hud_texture) SDL_DestroyTexture(hud_texture);
+    for (int i = 0; i < 4; ++i) if (room_layer_textures[i]) SDL_DestroyTexture(room_layer_textures[i]);
     if (screen_texture) SDL_DestroyTexture(screen_texture);
     mzm_screen_free(&screen);
     mzm_rom_close();

@@ -25,6 +25,7 @@
 #include "mzm_samus.h"
 #include "mzm_screen.h"
 #include "mzm_title_screen.h"
+#include "mzm_pause_screen.h"
 #include "mzm_sprites.h"
 
 #define MAX_MARKS 32768
@@ -2876,6 +2877,9 @@ static uint16_t runtime_held_buttons(const bool *keys,const GbaInput *pad) {
         buttons&=(uint16_t)~(MZM_KEY_UP|MZM_KEY_DOWN);
     return buttons;
 }
+/* START in the scripted inputs of captures (after the runtime's 9 keys). */
+#define RUNTIME_KEY_START 0x200u
+
 /* gButtonInput for the native screens: the GBA key bits, with START on
  * Return or the gamepad's Start. */
 static uint16_t runtime_native_keys(uint16_t held, const bool *keys, const GbaInput *pad) {
@@ -2887,7 +2891,8 @@ static uint16_t runtime_native_keys(uint16_t held, const bool *keys, const GbaIn
     uint16_t native = 0;
     for (size_t i = 0; i < sizeof map / sizeof map[0]; ++i)
         if (held & map[i].mzm) native |= map[i].gba;
-    if ((keys && keys[SDL_SCANCODE_RETURN]) || (pad && gba_input_buttons(pad) & GBA_KEY_START))
+    if ((keys && keys[SDL_SCANCODE_RETURN]) || (pad && gba_input_buttons(pad) & GBA_KEY_START) ||
+        held & RUNTIME_KEY_START)
         native |= GBA_KEY_START;
     return native;
 }
@@ -3140,11 +3145,14 @@ int main(int argc, char **argv) {
     static GbaPpu screen_ppu;
     static MzmScreen screen;
     static MzmTitleScreen title_screen;
+    static MzmPauseScreen pause_screen;
+    bool pause_mode=false, screen_ready=false;
     /* The HUD reads its graphics from the ROM bank. */
     if (mzm_rom_open(RUNTIME_ROM_BANK, RUNTIME_ROM_SYMBOLS))
         mzm_hud_init(&runtime_hud, &runtime_hud_ppu, &runtime_minimap, 320);
+    screen_ready = mzm_rom_ready() && mzm_screen_init(&screen, &screen_ppu);
     if (title_mode) {
-        if (mzm_rom_ready() && mzm_screen_init(&screen, &screen_ppu)) {
+        if (screen_ready) {
             mzm_title_enter(&title_screen, false);
         } else {
             fprintf(stderr, "No ROM bank: the title screen is skipped.\n");
@@ -3564,7 +3572,7 @@ int main(int argc, char **argv) {
                         unsigned long mask=strtoul(cursor,&end,0);
                         long count=*end==':'?strtol(end+1,&end,10):1;
                         if(capture_step>=start && capture_step<start+count) {
-                            held=(uint16_t)(mask&0x1FFu);
+                            held=(uint16_t)(mask&0x3FFu);   /* 0x200: START */
                             break;
                         }
                         start+=count;
@@ -3600,6 +3608,41 @@ int main(int argc, char **argv) {
                 accumulator-=fixed_step;
                 continue;
             }
+            if(pause_mode) {
+                /* PauseScreenHandler; leaving it resets the music volume. */
+                mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                              capture_path?NULL:&gamepad));
+                MzmPauseGame pause_game={&runtime_hud,runtime_area_index(room->area),
+                                         equipment.suit==MZM_SUIT_SUITLESS,
+                                         runtime_sprite_check_event,&sprites};
+                if(mzm_pause_update(&pause_screen,&screen,&pause_game)) {
+                    pause_mode=false;
+                    runtime_audio_lock();
+                    mzm_music_reset_volume();
+                    runtime_audio_unlock();
+                    previous_held=held;
+                }
+                accumulator-=fixed_step;
+                continue;
+            }
+            /* ProcessPauseButtonPress: START opens the pause screen unless
+             * movement is prevented or a power bomb is out. */
+            if(screen_ready && runtime_hud.ready && samus.pose!=MZM_POSE_DYING &&
+               runtime_native_keys(held,capture_path?NULL:keys,capture_path?NULL:&gamepad)&
+                   GBA_KEY_START &&
+               !(screen.button_input&GBA_KEY_START) && prevent_movement==0 &&
+               weapons.power_bomb.state==MZM_PB_NONE) {
+                pause_mode=true;
+                mzm_pause_enter(&pause_screen);
+                mzm_screen_input(&screen,GBA_KEY_START);
+                runtime_audio_lock();
+                mzm_music_decrease_volume();
+                runtime_audio_unlock();
+                accumulator-=fixed_step;
+                continue;
+            }
+            mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                          capture_path?NULL:&gamepad));
             MzmInput input={held,(uint16_t)((held&~previous_held)|latched),false,0,0};
             latched=0;
             previous_held=held;
@@ -3920,7 +3963,7 @@ int main(int argc, char **argv) {
         if ((float)oh/224.f < scale) scale=(float)oh/224.f;
         SDL_FRect viewport={(ow-320.f*scale)*0.5f,(oh-224.f*scale)*0.5f,
                             320.f*scale,224.f*scale};
-        if(title_mode) {
+        if(title_mode || pause_mode) {
             /* The 240x160 GBA screen, fitted to the view. */
             SDL_SetRenderDrawColor(renderer,0,0,0,255);
             SDL_RenderClear(renderer);

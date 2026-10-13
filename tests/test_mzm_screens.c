@@ -10,6 +10,8 @@
 #include "mzm_screen.h"
 #include "mzm_sfx.h"
 #include "mzm_title_screen.h"
+#include "mzm_hud.h"
+#include "mzm_pause_screen.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -165,11 +167,82 @@ static void test_title_bank(void) {
     mzm_rom_close();
 }
 
+static bool pause_event(void *context, uint8_t event) {
+    (void)context;
+    (void)event;
+    return false;
+}
+
+/* With the exported bank: the pause screen's map, the areas and the world
+ * map, then START. */
+static void test_pause_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the pause screen checks are skipped\n");
+        return;
+    }
+    static GbaPpu hud_ppu;
+    static MzmHud hud;
+    static MzmMinimapProgress progress;
+    static MzmPauseScreen pause;
+    mzm_hud_init(&hud, &hud_ppu, &progress, 240);
+    uint8_t map_x, map_y;
+    assert(mzm_hud_room_map(0, 0, &map_x, &map_y));
+    MzmEquipment equipment = {.energy = 99, .max_energy = 99};
+    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 13 * 64, 31 * 64, NULL, NULL, NULL};
+    MzmHudRoom room = {0, 0, map_x, map_y, 79, 44};
+    mzm_hud_room_entered(&hud, &room, &frame);
+    MzmPauseGame game = {&hud, 0, false, pause_event, NULL};
+    mzm_pause_enter(&pause);
+    mzm_sfx_clear();
+    int f;
+    for (f = 0; f < 40 && pause.sub_stage != 2; ++f) {
+        mzm_screen_input(&screen, 0);
+        assert(!mzm_pause_update(&pause, &screen, &game));
+    }
+    /* The fade in takes 17 frames (+2 color steps). */
+    assert(pause.sub_stage == 2 && f >= 16 && f <= 20);
+    assert(pause.current_area == 0 && pause.areas_viewable == 1 && pause.areas_viewable_total == 1);
+    assert(pause.dispcnt == (GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ));
+    assert(ppu.io[GBA_REG_BG0CNT / 2 + 3] == (3 << 14 | 28 << 8 | 2 << 2 | 3));
+    /* Samus's map tile is on the map (BG3 at VRAM 0xE000), her icon there. */
+    uint32_t at = 0xE000u + (uint32_t)(hud.minimap_y * 32 + hud.minimap_x) * 2;
+    assert((ppu.vram[at] | ppu.vram[at + 1] << 8) == hud.minimap_visited[hud.minimap_y * 32 + hud.minimap_x]);
+    assert(pause.samus_icon[0].x == hud.minimap_x * 32 && pause.samus_icon[0].exists);
+    /* One viewable area: SELECT changes nothing. */
+    mzm_screen_input(&screen, 1 << 2);
+    mzm_pause_update(&pause, &screen, &game);
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.current_area == 0 && pause.changing_minimap_stage == 0);
+    /* A opens the world map (and its sound); B closes it, START leaves. */
+    mzm_screen_input(&screen, 1);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(pause.on_world_map && count_requests(MZM_SFX_PLAY, 514) == 1);
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    mzm_screen_input(&screen, 1 << 1);
+    mzm_pause_update(&pause, &screen, &game);
+    assert(!pause.on_world_map && pause.sub_stage == 2);
+    mzm_screen_input(&screen, 0);
+    mzm_pause_update(&pause, &screen, &game);
+    mzm_screen_input(&screen, 1 << 3);
+    bool left = mzm_pause_update(&pause, &screen, &game);
+    for (f = 0; f < 40 && !left; ++f) {
+        mzm_screen_input(&screen, 0);
+        left = mzm_pause_update(&pause, &screen, &game);
+    }
+    assert(left);
+    for (int i = 0; i < 512; ++i) assert(ppu.palette[i] == 0);
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
     test_menu_oam();
     test_title_bank();
+    test_pause_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

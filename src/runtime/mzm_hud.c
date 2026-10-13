@@ -599,6 +599,10 @@ static void get_minimap_data(MzmHud *h, uint8_t area, uint16_t *dst, const MzmHu
     const uint8_t *icon = icons + area * 5;
     if (icon[0] && f && f->check_event && f->check_event(f->context, icon[0]))
         update_boss_icon(area, &dst[icon[2] + icon[3] * MZM_MINIMAP_SIZE], NULL);
+    /* The Varia statue's tile once the suit was skipped
+     * (EVENT_SKIPPED_VARIA_SUIT). */
+    if (area == 0 && f && f->check_event && f->check_event(f->context, 68))
+        dst[MZM_MINIMAP_SIZE * 2 + 14]++;
 }
 
 /* MinimapSetDownloadedTiles */
@@ -617,6 +621,15 @@ static void set_downloaded_tiles(MzmHud *h, uint8_t area, uint16_t *dst) {
             }
         }
     }
+}
+
+void mzm_hud_area_map(MzmHud *h, uint8_t area, uint16_t *dst,
+                      bool (*check_event)(void *context, uint8_t event), void *context) {
+    MzmHudFrame f = {0};
+    f.check_event = check_event;
+    f.context = context;
+    get_minimap_data(h, area, dst, &f);
+    set_downloaded_tiles(h, area, dst);
 }
 
 void mzm_hud_room_entered(MzmHud *h, const MzmHudRoom *r, const MzmHudFrame *f) {

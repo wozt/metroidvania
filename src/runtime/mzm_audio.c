@@ -1944,9 +1944,28 @@ static void InsertMusicAndQueueCurrent(uint16_t musicTrack, uint8_t isNotInterru
     gMusicInfo.occupied = 0;
 }
 
-/* ReplayQueuedMusic. The volume down of gUnk_Audio0x50 (unk_3058 on players
- * 0, 1 and 7 when volumeDownFlag bit 7 is set) is not ported: nothing sets
- * that flag yet. */
+/* unk_3058: the track volumes of a player's masked tracks ((value & 0x3FC)
+ * / 4; 0x40 is full), unless the player is stopping or fading. */
+static void unk_3058(TrackData *pTrack, uint16_t variablesMask, uint16_t value) {
+    if (pTrack->occupied) return;
+    pTrack->occupied = 1;
+    if (!(pTrack->flags & (0x80 | 0x40 | 0x20 | 0x10 | 0x8))) {
+        TrackVariables *pVariables = pTrack->pVariables;
+        value = (uint16_t)((value & 0x3FC) / 4);
+        for (int i = pTrack->amountOfTracks - 1; i >= 0; i--, pVariables++) {
+            if (variablesMask >> i & 1) {
+                pVariables->unk_5 = (uint8_t)value;
+                pVariables->unk_0 |= 4;
+            }
+        }
+    }
+    pTrack->occupied = 0;
+}
+
+/* gUnk_Audio0x50: a linker symbol at 0x50, read as its address. */
+enum { AUDIO_VOLUME_DOWN = 0x50 };
+
+/* ReplayQueuedMusic */
 static void ReplayQueuedMusic(uint8_t queueFlags) {
     if (gMusicInfo.occupied) return;
     gMusicInfo.occupied = 1;
@@ -1960,7 +1979,32 @@ static void ReplayQueuedMusic(uint8_t queueFlags) {
     gMusicInfo.occupied = 0;
     InitTrack(pTrack, pHeader);
     if (queueFlags & 0x40) DelayMusicStart(pTrack, 60);
+    if (gMusicInfo.volumeDownFlag & 0x80) {
+        unk_3058(sMusicTrackDataRom[0].pTrack, 0xFFFF, AUDIO_VOLUME_DOWN);
+        unk_3058(sMusicTrackDataRom[1].pTrack, 0xFFFF, AUDIO_VOLUME_DOWN);
+        unk_3058(sMusicTrackDataRom[7].pTrack, 0xFFFF, AUDIO_VOLUME_DOWN);
+    }
     gMusicInfo.occupied = 0;
+}
+
+/* DecreaseMusicVolume (UpdateMusicWhenPausing): the pause sound, the
+ * channels of the other players saved, the music a third as loud. */
+void mzm_music_decrease_volume(void) {
+    if (!g_bank) return;
+    QueueSound(0x3F, 0);            /* SOUND_63 */
+    unk_34ac(0);
+    gMusicInfo.volumeDownFlag |= 0x80;
+    unk_3058(sMusicTrackDataRom[0].pTrack, 0xFFFF, AUDIO_VOLUME_DOWN);
+    unk_3058(sMusicTrackDataRom[1].pTrack, 0xFFFF, AUDIO_VOLUME_DOWN);
+}
+
+/* ResetMusicVolume (UpdateMusicAfterPause) */
+void mzm_music_reset_volume(void) {
+    if (!g_bank) return;
+    unk_3058(sMusicTrackDataRom[0].pTrack, 0xFFFF, 0x100);
+    unk_3058(sMusicTrackDataRom[1].pTrack, 0xFFFF, 0x100);
+    gMusicInfo.volumeDownFlag &= (uint8_t)~0x80;
+    unk_35d0(0);
 }
 
 /* BackupTrackData2SoundChannels */

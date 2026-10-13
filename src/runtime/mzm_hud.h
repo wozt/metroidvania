@@ -89,6 +89,10 @@ void mzm_hud_update(MzmHud *hud, const MzmHudRoom *room, const MzmHudFrame *fram
 void mzm_hud_collected_item(MzmHud *hud, const MzmHudRoom *room, int x_block, int y_block);
 /* MinimapCheckIsTileExplored at a block of the current room. */
 bool mzm_hud_tile_explored(const MzmHud *hud, const MzmHudRoom *room, int x_block, int y_block);
+/* PauseScreenGetMinimapData then MinimapSetDownloadedTiles: an area's map
+ * as the pause screen shows it (1024 tiles). */
+void mzm_hud_area_map(MzmHud *hud, uint8_t area, uint16_t *dst,
+                      bool (*check_event)(void *context, uint8_t event), void *context);
 /* MinimapUpdateChunk: a boss icon of the current area changes. */
 void mzm_hud_update_chunk(MzmHud *hud, const MzmHudRoom *room, uint8_t event);
 

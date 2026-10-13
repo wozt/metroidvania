@@ -2988,6 +2988,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0288 - Zero Mission pause screen map
+
+- `src/runtime/mzm_pause_screen.c`: START in the game opens the native
+  pause screen's map (PauseScreenInit, fades, the area map with Samus's and
+  the boss icons, scroll arrows, area name, minimap palette animation,
+  D-pad scrolling with repeat, world map on A/B, area switching on SELECT,
+  START/B to leave).
+- `mzm_hud_area_map` gives the pause screen each area's map (obtained
+  items, boss icons, the skipped Varia tile, downloaded tiles).
+- `DecreaseMusicVolume` / `ResetMusicVolume` (unk_3058) lower the music
+  during the pause; `ReplayQueuedMusic` keeps the lowered volume.
+- Captures accept START as the 0x200 bit of `--input-script`.
+- Not ported yet: status screen, easy sleep, Chozo hints, map download,
+  completion info.
+- Tests: `tests/test_mzm_screens.c`.
+
 ## Patch 0287 - Zero Mission audio pulled by the device
 
 - The crackling came from the stream queue running dry: it was fed from

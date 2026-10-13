@@ -46,6 +46,12 @@ typedef struct {
     bool water_moving;
     uint8_t water_stage, water_loop_counter;
     int16_t water_y_offset;
+    /* ColorFadingFinishDoorFade / ColorFadingProcess_DoorTransition: BG3
+     * shows sDoorTransitionTilemap; the room's BG3 map and control are
+     * kept to be restored. */
+    bool door_bg3;
+    uint8_t saved_bg3[0x1000];
+    uint16_t saved_bg3cnt;
     /* TransparencySetRoomEffectsTransparency */
     bool samus_on_top;
     uint8_t eva, evb;
@@ -74,6 +80,14 @@ bool mzm_room_gfx_bg0_position(MzmRoomGfx *g, int bg1_x, int bg1_y, bool movemen
                                int *x, int *y);
 /* gEffectYPosition in subpixels (0 without an effect). */
 uint16_t mzm_room_gfx_effect_y(const MzmRoomGfx *g);
+/* Puts sDoorTransitionTilemap on BG3 (RoomRleDecompress, char base 1,
+ * screen base 6, 512x256) or gives the room its BG3 back. */
+void mzm_room_gfx_door_bg3(MzmRoomGfx *g, bool on);
+/* The BG palette with sDoorTransitionPal (or its mother ship version) in
+ * rows 1 and 2 (`door_palette`) and the masked rows faded
+ * (ApplySpecialBackgroundFadingColor, `faded`), into `palette` (256 colors). */
+void mzm_room_gfx_faded_palette(const MzmRoomGfx *g, bool door_palette, bool faded, uint8_t type,
+                                uint8_t color, uint16_t mask, uint16_t *palette);
 /* BGxHOFS / BGxVOFS in pixels */
 void mzm_room_gfx_scroll(MzmRoomGfx *g, int bg, int x, int y);
 /* One background alone (no blending) as 0xAARRGGBB with a transparent

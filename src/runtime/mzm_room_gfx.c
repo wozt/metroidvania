@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "mzm_rom.h"
+#include "mzm_screen.h"
 
 enum {
     ROOM_ENTRY_SIZE = 60, TILESET_ENTRY_SIZE = 20,
@@ -117,6 +118,7 @@ bool mzm_room_gfx_load(MzmRoomGfx *g, uint8_t area, uint8_t room, bool mother_sh
     g->common_tilemap = sym("sCommonTilemap");
     if (!tile_gfx || !palette || !g->common_tilemap) return false;
     gba_ppu_reset(&g->ppu);
+    g->door_bg3 = false;
     vram_lz77(g, tile_gfx, 0x5800);
     palette_from_rom(g, 3 * 16, palette + 16 * 2, 13 * 16);
     g->ppu.palette[0] = 0;          /* SET_BACKDROP_COLOR(COLOR_BLACK) */
@@ -407,6 +409,62 @@ void mzm_room_gfx_render(MzmRoomGfx *g, int bg, int width, int height, uint32_t 
     gba_ppu_write16(&g->ppu, GBA_REG_DISPCNT, (uint16_t)(GBA_DCNT_BG0 << bg));
     gba_ppu_write16(&g->ppu, GBA_REG_BLDCNT, 0);
     gba_ppu_render(&g->ppu, width, height, true, pixels, pitch);
+}
+
+/* RoomRleDecompress(FALSE, ...): the size byte, then the low and the high
+ * bytes, each run-length coded with 1 or 2 byte counts. */
+static void rle_decompress(uint32_t src, uint8_t *dst, size_t size) {
+    memset(dst, 0, size);
+    src++;
+    for (int plane = 0; plane < 2; ++plane) {
+        size_t at = (size_t)plane;
+        bool wide = mzm_rom_u8(src++) != 1;
+        uint32_t value = wide ? (uint32_t)(mzm_rom_u8(src) << 8 | mzm_rom_u8(src + 1)) : mzm_rom_u8(src);
+        src += wide ? 2 : 1;
+        uint32_t flag = wide ? 0x8000 : 0x80;
+        while (value) {
+            if (value & flag) {
+                value &= flag - 1;
+                uint8_t byte = mzm_rom_u8(src++);
+                for (; value; --value, at += 2)
+                    if (byte && at < size) dst[at] = byte;
+            } else {
+                for (; value; --value, at += 2) {
+                    uint8_t byte = mzm_rom_u8(src++);
+                    if (at < size) dst[at] = byte;
+                }
+            }
+            value = wide ? (uint32_t)(mzm_rom_u8(src) << 8 | mzm_rom_u8(src + 1)) : mzm_rom_u8(src);
+            src += wide ? 2 : 1;
+        }
+    }
+}
+
+void mzm_room_gfx_door_bg3(MzmRoomGfx *g, bool on) {
+    uint16_t *cnt = &g->ppu.io[(GBA_REG_BG0CNT + 6) >> 1];
+    if (on && !g->door_bg3) {
+        memcpy(g->saved_bg3, g->ppu.vram + 0x3000, sizeof g->saved_bg3);
+        g->saved_bg3cnt = *cnt;
+        rle_decompress(sym("sDoorTransitionTilemap"), g->ppu.vram + 0x3000, sizeof g->saved_bg3);
+        gba_ppu_write16(&g->ppu, GBA_REG_BG0CNT + 6, bgcnt(1, 6, PRIO_HIGH, SIZE_512x256));
+        g->door_bg3 = true;
+    } else if (!on && g->door_bg3) {
+        memcpy(g->ppu.vram + 0x3000, g->saved_bg3, sizeof g->saved_bg3);
+        gba_ppu_write16(&g->ppu, GBA_REG_BG0CNT + 6, g->saved_bg3cnt);
+        g->door_bg3 = false;
+    }
+}
+
+void mzm_room_gfx_faded_palette(const MzmRoomGfx *g, bool door_palette, bool faded, uint8_t type,
+                                uint8_t color, uint16_t mask, uint16_t *palette) {
+    uint16_t source[256];
+    memcpy(source, g->ppu.palette, sizeof source);
+    if (door_palette)
+        mzm_copy_from_rom(&source[16], sym(g->mother_ship_doors ? "sDoorTransitionMotherShipPal"
+                                                                : "sDoorTransitionPal"),
+                          2 * 16 * 2);
+    memcpy(palette, source, sizeof source);
+    if (faded) mzm_apply_fading_color(type, color, source, palette, mask);
 }
 
 int mzm_room_gfx_priority(const MzmRoomGfx *g, int bg) {

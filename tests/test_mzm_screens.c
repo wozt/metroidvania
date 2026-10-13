@@ -16,6 +16,7 @@
 #include "mzm_game_over.h"
 #include "mzm_intro.h"
 #include "mzm_cutscene.h"
+#include "mzm_door_fade.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -722,9 +723,54 @@ static void test_cutscene_bank(void) {
     mzm_rom_close();
 }
 
+/* The door fades' state machines (no ROM data). */
+static void test_door_fade(void) {
+    static MzmDoorFade f;
+    /* A hatch: one setup frame, 16 colors out, the frame ending it, BG2/BG3
+     * off, the tilemap on BG3, 8 blending frames and one hiding BG1, then
+     * the load. */
+    mzm_door_fade_start(&f, true, 224, 100);
+    assert(f.phase == MZM_DOOR_FADE_OUT && f.bg_mask == 0xFFFD && f.obj_mask == 0xFFC7);
+    int frames = 0;
+    uint8_t last_color = 0;
+    bool increasing = true;
+    while (!mzm_door_fade_out(&f) && frames < 100) {
+        frames++;
+        if (f.faded) {
+            increasing &= f.color >= last_color;
+            last_color = f.color;
+        }
+        if (f.stage == 4 && f.blend) assert(f.door_bg3 && f.cover && !f.show_bg[0] && f.door_palette);
+    }
+    assert(frames == 1 + 16 + 1 + 1 + 1 + 9 && increasing && last_color == 32 && f.fading_type == MZM_FADING_OUT);
+    assert(f.sprites_hidden && !f.show_bg[1] && !f.show_bg[2] && f.show_bg[3] && f.eva == 16 && f.evb == 0);
+    /* Loaded: the tube slides 3 pixels a frame vertically, waits, then 6 a
+     * frame horizontally; the room comes back and fades in over 16 frames. */
+    mzm_door_fade_loaded(&f, 560, 40);
+    assert(f.phase == MZM_DOOR_FADE_IN && f.faded && f.color == 0 && !f.door_palette);
+    frames = 0;
+    while (!mzm_door_fade_in(&f) && frames < 400) {
+        frames++;
+        if (f.stage == 5) assert(f.show_bg[0] && f.show_bg[1] && !f.cover && !f.sprites_hidden);
+    }
+    assert(f.phase == MZM_DOOR_FADE_NONE && !f.faded && f.door_x == 560 && f.door_y == 40);
+    /* 1 + 20 vertical frames + 1, 3 waiting, 56 horizontal + 1, 16 colors + 1, the end */
+    assert(frames == 1 + 20 + 1 + 3 + 56 + 1 + 16 + 1);
+    /* Another door: 8 colors to black, everything covered, then back. */
+    mzm_door_fade_start(&f, false, 0, 0);
+    frames = 0;
+    while (!mzm_door_fade_out(&f) && frames < 100) frames++;
+    assert(frames == 1 + 8 + 1 && f.cover && !f.show_bg[1] && f.bg_mask == 0xFFFF && !f.sprites_hidden);
+    mzm_door_fade_loaded(&f, 0, 0);
+    frames = 0;
+    while (!mzm_door_fade_in(&f) && frames < 100) frames++;
+    assert(frames == 1 + 8 && !f.cover && f.show_bg[1]);
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
+    test_door_fade();
     test_menu_oam();
     test_title_bank();
     test_pause_bank();

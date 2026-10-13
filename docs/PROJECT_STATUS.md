@@ -2988,6 +2988,25 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0299 - Zero Mission door fades
+
+- `src/runtime/mzm_door_fade.c`: COLOR_FADING_DOOR_TRANSITION and
+  COLOR_FADING_NO_TRANSITION (color_fading.c). A hatch fades the room to
+  black but its hatches, the door transition tilemap's tube blends in on
+  BG3 and covers the screen, slides to the arrival door once the room is
+  loaded, then the room fades in; other doors fade to black and back.
+  Samus, the pause and the in-game timer wait meanwhile.
+- `src/runtime/mzm_room_gfx.c`: sDoorTransitionTilemap on BG3
+  (RoomRleDecompress) and the faded room palette
+  (ApplySpecialBackgroundFadingColor with the fade's row mask and
+  sDoorTransitionPal); sprites fade by colour modulation.
+- A door's room track now starts when its fade ends.
+- The tube starts at the 320x224 view's edge and slides 336 pixels (56
+  frames instead of 43 on the GBA screen).
+- Checked by capture (brinstar_002 to brinstar_003, chozodia_007 to
+  chozodia_037); tests in `tests/test_mzm_screens.c` and
+  `tests/test_mzm_room_gfx.c`.
+
 ## Patch 0298 - Zero Mission gunship and the new game's landing
 
 - `src/runtime/mzm_gunship.c`: the gunship and its parts (gunship.c): the

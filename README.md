@@ -228,8 +228,11 @@ collision type; the runtime applies `ClipdataConvertToCollision` for solid
 blocks, all six floor slopes, doors, tanks and enemy-only blocks. Rooms are
 linked through their native door tables: shoot a hatch to open it (beams open
 blue hatches, missiles red ones, super missiles green ones) and walk through
-the door transition to load the destination room at its native exit. Hatch
-shells are tinted rectangles until the common hatch tiles are rendered.
+the door transition to load the destination room at its native exit. A
+hatch plays the native door fade (the room darkens, the door tube slides
+across a black screen, the new room fades in; `src/runtime/mzm_door_fade.c`),
+other doors a quick fade to black. Hatch shells are tinted rectangles until
+the common hatch tiles are rendered.
 
 This shortcut consumes only local ignored assets. Samus is driven by a
 transliteration of the pinned decompilation's `src/samus.c`: every pose

@@ -30,6 +30,7 @@
 #include "mzm_file_select.h"
 #include "mzm_game_over.h"
 #include "mzm_cutscene.h"
+#include "mzm_door_fade.h"
 #include "mzm_intro.h"
 #include <sys/stat.h>
 #include <errno.h>
@@ -2065,7 +2066,7 @@ static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
 
 /* CheckPlayRoomMusicTrack when a room is entered: the room's track fades
  * the current one in 30 frames; CheckPlayTransitionMusicTrack starts it
- * when the (absent) door transition would end, returned in frames. */
+ * once the door fade ends (a load without one waits the returned frames). */
 /* gMusicTrackInfo.currentRoomTrack: the last room track, kept through
  * rooms without one. */
 static uint16_t runtime_room_track;
@@ -2879,6 +2880,26 @@ static bool runtime_bg0_blend(const Room *room, int *eva, bool *additive) {
 
 /* ScrollBg3 (gBg3XPosition / gBg3YPosition) in pixels, from the camera
  * as gBg1 position. */
+/* The OBJ rows' brightness under a door fade (0-255): the masked sprite rows
+ * fade like the backgrounds (ApplySpecialBackgroundFadingColor). */
+static Uint8 runtime_door_fade_shade(const MzmDoorFade *f) {
+    if (f->phase == MZM_DOOR_FADE_NONE || !f->faded) return 255;
+    int level = f->fading_type == MZM_FADING_OUT ? 32 - f->color : f->color;
+    return (Uint8)(level * 255 / 32);
+}
+
+/* The BG3 offsets that put the door transition tilemap's tube (its tiles 1
+ * to 8 of the first rows) at the view's edge on the door's side, as the
+ * native 304 (right) and 560 (left) do on the GBA screen, and level with
+ * the door's top (BLOCK_SIZE * 16 - the door's offset on screen). The tube
+ * shows its last 24 pixels on the right edge, its first 24 on the left. */
+static void runtime_door_fade_offsets(const RoomDoor *door, float cx, float cy, bool right,
+                                      int *x, int *y) {
+    *x = right ? 8 - (320 - 24) + 512 : 8 + 40 + 512;
+    *y = ((256 - (door->y0 * 16 - (int)cy)) % 256 + 256) % 256;
+    (void)cx;
+}
+
 /* The intro text's fades, approximated by a black veil: the
  * BACKGROUND_EFFECT_INTRO_TEXT_FADE colour stages (out of 16), one per 4
  * frames, then COLOR_FADING_INTRO_TEXT over 16 frames of black. */
@@ -2894,7 +2915,7 @@ static int runtime_intro_fade_stage(int frame) {
 static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                                  RuntimeLibrary *sprite_library,SDL_FRect viewport,float cx,
                                  float cy,float scale,bool show_hitbox,int first_order,
-                                 int last_order) {
+                                 int last_order,Uint8 shade_level) {
     /* Their OAM frame, mirrored by the X and Y flip statuses (SpriteDraw);
      * palette rows are baked per sprite by the exporter. */
     for(int order=last_order;order>=first_order;order--)
@@ -2927,6 +2948,9 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         int index=sprite->frame<entry->count?sprite->frame:0;
         SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
         if(!art_texture)continue;
+        /* A door fade's darkened OBJ rows (ApplySpecialBackgroundFadingColor
+         * as a colour modulation). */
+        SDL_SetTextureColorMod(art_texture,shade_level,shade_level,shade_level);
         const RuntimeLibraryFrame *art=&entry->frames[index];
         SDL_FRect box={viewport.x+((float)(sprite->x>>2)+(float)art->offset_x-cx)*scale,
                        viewport.y+((float)(sprite->y>>2)+(float)art->offset_y-cy)*scale,
@@ -2947,6 +2971,7 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         } else {
             SDL_RenderTexture(renderer,art_texture,NULL,&box);
         }
+        SDL_SetTextureColorMod(art_texture,255,255,255);
         if(show_hitbox) {
             SDL_FRect hit={viewport.x+((float)((sprite->x+sprite->hitbox_left)>>2)-cx)*scale,
                            viewport.y+((float)((sprite->y+sprite->hitbox_top)>>2)-cy)*scale,
@@ -3026,11 +3051,14 @@ static void runtime_draw_block_layer(SDL_Renderer *renderer, SDL_Texture *sheet,
 static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt *art,
                                      SDL_Texture *const *native, const Room *room, float cx,
                                      float cy, SDL_FRect viewport, float scale, int low,
-                                     int high) {
+                                     int high, const MzmDoorFade *fade) {
     if (!room->has_backgrounds || (!art->sheet && !native)) return;
     for (int priority = high; priority >= low; --priority)
         for (int layer = 3; layer >= 0; --layer) {
             if (runtime_bg_priority(room, layer) != priority) continue;
+            /* A door fade's hidden layers; its BG3 cover is drawn last. */
+            if (fade->phase != MZM_DOOR_FADE_NONE && (!fade->show_bg[layer] || (layer == 3 && fade->cover)))
+                continue;
             int eva = 16;
             bool additive = false, blend = layer == 0 && runtime_bg0_blend(room, &eva, &additive);
             if (native) {
@@ -3467,6 +3495,11 @@ int main(int argc, char **argv) {
      * (-1: none): BACKGROUND_EFFECT_INTRO_TEXT_FADE darkens everything but
      * Samus in 15 steps, then COLOR_FADING_INTRO_TEXT darkens the rest. */
     int intro_fade=-1;
+    /* A door's fade (ConnectionCheckEnterDoor): Samus waits while the room
+     * fades out, then the door's room is loaded and fades in. */
+    static MzmDoorFade door_fade;
+    RoomDoor pending_door={0};
+    int pending_door_offset=0;
     int resume_request=RUNTIME_RESUME_NONE;
     static MzmSaveData resume_save, new_game_state;
     uint8_t pause_flag=MZM_PAUSE_FLAG_PAUSE;   /* gPauseScreenFlag of the open pause */
@@ -3633,6 +3666,7 @@ int main(int argc, char **argv) {
         runtime_audio_unlock();
     }
     int music_transition=0;
+    bool door_music=false;     /* a door's room track, started by its fade's end */
     Uint64 previous=SDL_GetTicks(); bool running=true;
     float accumulator=0.f;
     const float fixed_step=1.f/60.f;
@@ -4162,6 +4196,7 @@ int main(int argc, char **argv) {
                    GBA_KEY_START &&
                !(screen.button_input&GBA_KEY_START) && prevent_movement==0 &&
                !sprites.globals.disable_pause && !sprites.globals.landing &&
+               door_fade.phase==MZM_DOOR_FADE_NONE &&
                weapons.power_bomb.state==MZM_PB_NONE) {
                 pause_mode=true;
                 pause_flag=MZM_PAUSE_FLAG_PAUSE;
@@ -4224,7 +4259,12 @@ int main(int argc, char **argv) {
             /* gPreventMovementTimer: SamusUpdate (with its weapon checks)
              * waits while it runs down. */
             bool movement_prevented=prevent_movement!=0;
-            if(movement_prevented) {
+            /* SUB_GAME_MODE_LOADING_ROOM and _DOOR_TRANSITION: no SamusUpdate,
+             * and gPreventMovementTimer waits. */
+            bool door_frozen=door_fade.phase!=MZM_DOOR_FADE_NONE;
+            if(door_frozen) {
+                input.new_projectile=false;
+            } else if(movement_prevented) {
                 prevent_movement--;
                 input.new_projectile=false;
             } else {
@@ -4260,7 +4300,7 @@ int main(int argc, char **argv) {
             /* SpriteUpdate runs between SamusUpdate and ProjectileUpdate; the
              * arm cannon offset above is the one SamusUpdate left. */
             /* InGameTimerUpdate */
-            runtime_igt_update();
+            if(!door_frozen)runtime_igt_update();
             runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, previous_x,
                                    &equipment, &collision, &weapons, &input, movement_prevented,
                                    &prevent_movement);
@@ -4435,12 +4475,31 @@ int main(int argc, char **argv) {
             /* Room lifecycle: a touched door transition loads the exported
              * destination room and places Samus at its exit. */
             int door_offset=0;
-            const RoomDoor *door=samus.pose==MZM_POSE_DYING?NULL:
+            const RoomDoor *door=samus.pose==MZM_POSE_DYING || door_fade.phase!=MZM_DOOR_FADE_NONE?NULL:
                 runtime_door_touched(room,&samus,&door_offset);
-            if(!door) {
+            if(door_fade.phase==MZM_DOOR_FADE_IN && mzm_door_fade_in(&door_fade) && door_music) {
+                /* ColorFadingFinishDoorTransition: CheckPlayTransitionMusicTrack */
+                door_music=false;
+                runtime_audio_lock();
+                mzm_music_check_play_transition_track();
+                runtime_audio_unlock();
+            }
+            if(door_fade.phase==MZM_DOOR_FADE_NONE && !door) {
                 door_lock=false;
-            } else if(!door_lock) {
-                RoomDoor used=*door;
+            } else if(door_fade.phase==MZM_DOOR_FADE_NONE && !door_lock) {
+                /* ConnectionProcessDoorType: hatches fade with the door
+                 * transition, the other doors simply to black. */
+                pending_door=*door;
+                pending_door_offset=door_offset;
+                bool right=(float)(door->x0*16)>last_cx+160.f;
+                int fade_x,fade_y;
+                runtime_door_fade_offsets(door,last_cx,last_cy,right,&fade_x,&fade_y);
+                mzm_door_fade_start(&door_fade,!strcmp(door->kind,"hatch"),fade_x,fade_y);
+                door_lock=true;
+            } else if(door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
+                /* ColorFadingProcess ended: RoomLoad. */
+                door_offset=pending_door_offset;
+                RoomDoor used=pending_door;
                 Room *next=calloc(1,sizeof *next);
                 SDL_Texture *next_texture=NULL;
                 if(next && runtime_load_room(used.destination,next,renderer,&next_texture)) {
@@ -4468,12 +4527,31 @@ int main(int argc, char **argv) {
                     echo_visible=false;
                     title_dirty=true;
                     snprintf(current_room,sizeof current_room,"%s",used.destination);
-                    music_transition=runtime_room_music(room);
+                    /* CheckPlayRoomMusicTrack; the track starts when the fade ends. */
+                    door_music=runtime_room_music(room)!=0;
                     printf("Door %d -> %s\n",used.index,used.destination);
                 } else {
                     free(next);
                     fprintf(stderr,"Door %d leads to %s, which is not exported or failed "
                             "to load.\n",used.index,used.destination);
+                }
+                {
+                    /* The arrival door, on the other side of the view. */
+                    float feet_x=(float)samus.x/MZM_SUBPIXELS_PER_PIXEL;
+                    float feet_y=(float)samus.y/MZM_SUBPIXELS_PER_PIXEL;
+                    float ncx=(float)(int)clampf(feet_x-160.f,0.f,
+                                                 (float)(room->width>320?room->width-320:0));
+                    float ncy=(float)(int)clampf(feet_y-16.f-112.f,0.f,
+                                                 (float)(room->height>224?room->height-224:0));
+                    RoomDoor arrival=used;
+                    arrival.y0=used.dest_y_end-3;
+                    for(int d=0;d<room->door_count;d++)
+                        if(room->doors[d].x0==used.dest_x && room->doors[d].y1==used.dest_y_end)
+                            arrival=room->doors[d];
+                    bool came_right=door_fade.door_x!=8+40+512;
+                    int target_x,target_y;
+                    runtime_door_fade_offsets(&arrival,ncx,ncy,!came_right,&target_x,&target_y);
+                    mzm_door_fade_loaded(&door_fade,target_x,target_y);
                 }
                 door_lock=true;
             }
@@ -4564,11 +4642,27 @@ int main(int argc, char **argv) {
             else if(room->text_present[0])mzm_room_gfx_scroll(g,0,(int)cx,(int)cy);
             int bg3_x,bg3_y;
             runtime_bg3_position(room,cx,cy,&bg3_x,&bg3_y);
+            /* A door fade: the door transition tilemap on BG3 and the faded
+             * palette for this frame's layers. */
+            bool fading=door_fade.phase!=MZM_DOOR_FADE_NONE;
+            if(g->door_bg3!=(fading && door_fade.door_bg3))
+                mzm_room_gfx_door_bg3(g,fading && door_fade.door_bg3);
+            if(g->door_bg3) {
+                bg3_x=door_fade.door_x&511;
+                bg3_y=door_fade.door_y&255;
+            }
             mzm_room_gfx_scroll(g,3,bg3_x,bg3_y);
+            static uint16_t kept_palette[256];
+            if(fading) {
+                memcpy(kept_palette,g->ppu.palette,sizeof kept_palette);
+                mzm_room_gfx_faded_palette(g,door_fade.door_palette,door_fade.faded,
+                                           door_fade.fading_type,door_fade.color,door_fade.bg_mask,
+                                           g->ppu.palette);
+            }
             native_layers_ready=true;
             for(int layer=0;layer<4;layer++) {
                 bool present=layer<3?room->bg_present[layer]||room->text_present[layer]:
-                                     room->text_present[3];
+                                     room->text_present[3]||g->door_bg3;
                 if(!present){room_layers[layer]=NULL;continue;}
                 if(!room_layer_textures[layer]) {
                     room_layer_textures[layer]=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,
@@ -4585,6 +4679,7 @@ int main(int argc, char **argv) {
                     room_layers[layer]=room_layer_textures[layer];
                 }
             }
+            if(fading)memcpy(g->ppu.palette,kept_palette,sizeof kept_palette);
         }
         bool layered=room->has_backgrounds && (bg_art.sheet || native_layers_ready);
         int sprite_priority=samus.pose==MZM_POSE_DYING?0:runtime_samus_on_top(room)?1:2;
@@ -4597,7 +4692,7 @@ int main(int argc, char **argv) {
         if(layered) {
             /* Backgrounds at or behind the sprites' priority. */
             runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
-                                     cx,cy,viewport,scale,sprite_priority,3);
+                                     cx,cy,viewport,scale,sprite_priority,3,&door_fade);
         } else if (texture) {
             SDL_FRect src={cx,cy,320.f,224.f};
             if (src.w>room->width) src.w=(float)room->width;
@@ -4607,7 +4702,8 @@ int main(int argc, char **argv) {
         }
         if(pb_active)runtime_draw_power_bomb(renderer,&weapons.power_bomb,cx,cy,viewport,scale);
         /* SpriteDrawAll_LowPriority: draw orders 9 to 16, behind Samus. */
-        runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16);
+        runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16,
+                             runtime_door_fade_shade(&door_fade));
 
         RuntimeLibraryEntry *lib_entry=NULL;
         int frame=0;
@@ -4697,7 +4793,9 @@ int main(int argc, char **argv) {
         SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         /* SpriteDrawAll_HighPriority and _MediumPriority: draw orders 1 to
          * 8, in front of Samus. */
-        runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,8);
+        if(!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden))
+            runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,8,
+                                 runtime_door_fade_shade(&door_fade));
         /* SpriteDebrisDrawAll and ParticleDraw: the common sprite graphics. */
         for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok;i++) {
             const char *table; uint16_t px,py,frame;
@@ -4769,7 +4867,7 @@ int main(int argc, char **argv) {
         for(int pass=0;pass<2;pass++) {
         if(pass==1 && layered)
             runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
-                                     cx,cy,viewport,scale,0,sprite_priority-1);
+                                     cx,cy,viewport,scale,0,sprite_priority-1,&door_fade);
         for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0;i++) {
             const MzmProjectile *projectile=&weapons.list[i];
             if(!projectile->active || projectile->stage==MZM_STAGE_INIT ||
@@ -4837,6 +4935,34 @@ int main(int argc, char **argv) {
                                (float)art->w*scale,(float)art->h*scale};
                 if(cursor_texture)SDL_RenderTexture(renderer,cursor_texture,NULL,&box);
             }
+        }
+        if(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.cover) {
+            /* BG3 at priority 0 over everything: the door transition
+             * tilemap (alpha blended over the rest while it appears) or
+             * black. */
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
+            if(!door_fade.door_bg3 || !room_layers[3]) {
+                SDL_SetRenderDrawColor(renderer,0,0,0,255);
+                SDL_RenderFillRect(renderer,&viewport);
+            } else {
+                SDL_Texture *door_texture=room_layers[3];
+                if(door_fade.blend) {
+                    /* BLDALPHA: the rest at evb/16, plus BG3 at eva/16. */
+                    SDL_SetRenderDrawColor(renderer,0,0,0,(Uint8)((16-door_fade.evb)*255/16));
+                    SDL_RenderFillRect(renderer,&viewport);
+                    Uint8 level=(Uint8)(door_fade.eva*255/16);
+                    SDL_SetTextureBlendMode(door_texture,SDL_BLENDMODE_ADD);
+                    SDL_SetTextureColorMod(door_texture,level,level,level);
+                } else {
+                    SDL_SetTextureBlendMode(door_texture,SDL_BLENDMODE_BLEND);
+                    SDL_SetTextureColorMod(door_texture,255,255,255);
+                }
+                SDL_SetTextureAlphaMod(door_texture,255);
+                SDL_RenderTexture(renderer,door_texture,NULL,&viewport);
+                SDL_SetTextureBlendMode(door_texture,SDL_BLENDMODE_BLEND);
+                SDL_SetTextureColorMod(door_texture,255,255,255);
+            }
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         }
         if(intro_fade>=0) {
             /* BACKGROUND_EFFECT_INTRO_TEXT_FADE darkens the backgrounds and

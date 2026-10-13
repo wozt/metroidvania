@@ -57,7 +57,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
                src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c src/runtime/mzm_room_gfx.c
                src/runtime/mzm_pause_screen.c src/runtime/mzm_text.c src/runtime/mzm_save.c
                src/runtime/mzm_file_select.c src/runtime/mzm_game_over.c
-               src/runtime/mzm_intro.c src/runtime/mzm_cutscene.c)
+               src/runtime/mzm_intro.c src/runtime/mzm_cutscene.c src/runtime/mzm_door_fade.c)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
@@ -176,7 +176,8 @@ if(BUILD_TESTING)
                    src/runtime/mzm_blocks.c src/runtime/mzm_sfx.c src/runtime/mzm_power_bomb.c
                    src/runtime/mzm_items.c src/runtime/mzm_message_banner.c
                    src/runtime/gba_ppu.c src/runtime/mzm_rom.c src/runtime/mzm_hud.c
-                   src/runtime/mzm_room_gfx.c src/runtime/mzm_save.c)
+                   src/runtime/mzm_room_gfx.c src/runtime/mzm_save.c
+                   src/runtime/mzm_screen.c)
     target_include_directories(fusion_runtime_steep_slopes_tests PRIVATE src/runtime)
     target_compile_definitions(fusion_runtime_steep_slopes_tests PRIVATE
                                FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
@@ -200,7 +201,7 @@ if(BUILD_TESTING)
                    src/runtime/mzm_rom.c src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c
                    src/runtime/mzm_sfx.c src/runtime/mzm_hud.c src/runtime/mzm_pause_screen.c
                    src/runtime/mzm_text.c src/runtime/mzm_file_select.c src/runtime/mzm_game_over.c
-                   src/runtime/mzm_intro.c src/runtime/mzm_cutscene.c)
+                   src/runtime/mzm_intro.c src/runtime/mzm_cutscene.c src/runtime/mzm_door_fade.c)
     target_include_directories(fusion_mzm_screens_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_screens_tests)
     add_test(NAME mzm_screens COMMAND fusion_mzm_screens_tests
@@ -212,7 +213,7 @@ if(BUILD_TESTING)
     add_test(NAME mzm_save COMMAND fusion_mzm_save_tests)
 
     add_executable(fusion_mzm_room_gfx_tests tests/test_mzm_room_gfx.c src/runtime/gba_ppu.c
-                   src/runtime/mzm_rom.c src/runtime/mzm_room_gfx.c)
+                   src/runtime/mzm_rom.c src/runtime/mzm_room_gfx.c src/runtime/mzm_screen.c)
     target_include_directories(fusion_mzm_room_gfx_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_room_gfx_tests)
     add_test(NAME mzm_room_gfx COMMAND fusion_mzm_room_gfx_tests

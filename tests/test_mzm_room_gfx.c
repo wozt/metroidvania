@@ -77,6 +77,22 @@ int main(void) {
         moved = y != first_y;
     }
     assert(moved && mzm_room_gfx_effect_y(&g) > 0);
+    /* The door transition tilemap on BG3 (its tube in tiles 1 to 8 of the
+     * first 8 rows, palette row 1, the rest the blank tile 0x60) and back. */
+    uint16_t room_bg3 = entry_at(3, 1, 0), room_bg3cnt = g.ppu.io[7];
+    mzm_room_gfx_door_bg3(&g, true);
+    assert(g.door_bg3 && (entry_at(3, 1, 0) & 0x3FF) != 0x60 && entry_at(3, 1, 0) >> 12 == 1 &&
+           (entry_at(3, 0, 0) & 0x3FF) == 0x60 && (entry_at(3, 1, 8) & 0x3FF) == 0x60 &&
+           g.ppu.io[7] == (0x4000 | 6 << 8 | 1 << 2 | 0));
+    mzm_room_gfx_door_bg3(&g, false);
+    assert(!g.door_bg3 && entry_at(3, 1, 0) == room_bg3 && g.ppu.io[7] == room_bg3cnt);
+    /* The faded palette: the masked rows darkened, row 1 kept; the door
+     * palette replaces rows 1 and 2. */
+    uint16_t faded[256];
+    mzm_room_gfx_faded_palette(&g, false, true, 2, 32, 0xFFFD, faded);
+    assert(faded[3 * 16 + 1] == 0 && faded[16 + 1] == g.ppu.palette[16 + 1]);
+    mzm_room_gfx_faded_palette(&g, true, false, 0, 0, 0, faded);
+    assert(faded[3 * 16 + 1] == g.ppu.palette[3 * 16 + 1]);
     mzm_rom_close();
     printf("mzm_room_gfx: ok\n");
     return 0;

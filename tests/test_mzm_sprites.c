@@ -144,7 +144,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false};
+                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false, NULL};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -3364,6 +3364,37 @@ int main(void) {
         room[0].room_slot = 9;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].status == 0);
+        /* A morph ball launcher: its back, its blocks made non power grip;
+         * a fresh bomb set in it is held, then the launch spawns the energy
+         * around Samus. */
+        memset(room, 0, sizeof room);
+        static MzmWeapons launcher_weapons;
+        mzm_weapons_init(&launcher_weapons);
+        g.weapons = &launcher_weapons;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_MORPH_BALL_LAUNCHER, 0, 5, 5, 0, 0);
+        uint16_t launcher_y = room[0].y;
+        caa_calls = 0;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9 && room[0].y == (uint16_t)(launcher_y - 32) && caa_calls == 5 &&
+               last_caa == MZM_CAA_MAKE_NON_POWER_GRIP && room[1].sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART &&
+               room[1].room_slot == 0);
+        launcher_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BOMB,
+                                                   .bomb_stage = MZM_BOMB_FIRST_SPIN,
+                                                   .x = room[0].x, .y = room[0].y + 30};
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xB && launcher_weapons.list[0].bomb_stage == MZM_BOMB_PLACED_ON_LAUNCHER &&
+               room[0].work0 == 32);
+        for (int i = 0; i < 32; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0xC && room[0].anim == MZM_GADGET_MORPH_BALL_LAUNCHER_LAUNCHING);
+        MzmSpriteSamusLink launch_link = {MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y + 30), room[0].x,
+                                          false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
+                                          MZM_POSE_DELAY_BEFORE_BALLSPARKING, false, false, 0};
+        g.samus_link = &launch_link;
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].work1 && room[2].sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART && room[2].room_slot == 1);
+        for (int i = 0; i < 59; ++i) mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x9);
+        g.weapons = NULL;
         g.banner_pose = 0;
         g.banner_yes = false;
         g.samus_link = NULL;

@@ -671,19 +671,29 @@ static void process_bomb(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *
         p->bomb_stage = MZM_BOMB_FIRST_SPIN;
         mzm_sfx_play(MZM_SOUND_BOMB_SET);
         break;
+    case MZM_BOMB_PLACED_ON_LAUNCHER:
+        /* A morph ball launcher took the bomb: the spins start again. */
+        p->fast = false;
+        p->anim_frame = 0;
+        p->anim_counter = 0;
+        p->timer = MZM_BOMB_TIMER;
+        p->bomb_stage = MZM_BOMB_FIRST_SPIN_ON_LAUNCHER;
+        break;
     case MZM_BOMB_FIRST_SPIN:
+    case MZM_BOMB_FIRST_SPIN_ON_LAUNCHER:
         if (--p->timer == 0) {
             p->fast = true;
             p->anim_frame = 0;
             p->anim_counter = 0;
             p->timer = MZM_BOMB_TIMER;
-            p->bomb_stage = MZM_BOMB_FAST_SPIN;
+            p->bomb_stage++;
         }
         break;
     case MZM_BOMB_FAST_SPIN:
+    case MZM_BOMB_FAST_SPIN_ON_LAUNCHER:
         if (--p->timer == 0) {
             p->timer = MZM_BOMB_TIMER;
-            p->bomb_stage = MZM_BOMB_EXPLODING;
+            p->bomb_stage++;
             p->hidden = true;
             if (weapons->impact_count < MZM_MAX_PROJECTILES) {
                 weapons->impacts[weapons->impact_count].x = p->x;
@@ -693,6 +703,21 @@ static void process_bomb(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *
             }
         }
         break;
+    case MZM_BOMB_EXPLODING_ON_LAUNCHER: {
+        /* ProjectileMorphballLauncherCheckLaunchSamus: the bomb's own
+         * hitbox (one subpixel around it) against Samus's. */
+        uint16_t samus_y = (uint16_t)(samus->y - 1), samus_x = (uint16_t)samus->x;
+        const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
+        uint16_t top = (uint16_t)(samus_y + box->top), bottom = samus_y;
+        uint16_t left = (uint16_t)(samus_x + box->left), right = (uint16_t)(samus_x + box->right);
+        uint16_t py = (uint16_t)p->y, px = (uint16_t)p->x;
+        if ((uint16_t)(py + 1) >= top && (uint16_t)(py - 1) < bottom && (uint16_t)(px + 1) >= left &&
+            (uint16_t)(px - 1) < right && samus->invincibility == 0 &&
+            (samus->pose == MZM_POSE_ROLLING || samus->pose == MZM_POSE_MORPH_BALL))
+            weapons->launch_by_cannon = true;
+        p->active = false;
+        break;
+    }
     case MZM_BOMB_EXPLODING:
         if (--p->timer == 0) {
             p->active = false;
@@ -817,6 +842,7 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
                         const MzmProjectileAnimation *animation) {
     weapons->impact_count = 0;
     weapons->bomb_bounce = 0;
+    weapons->launch_by_cannon = false;
     weapons->power_bomb_set = false;
     weapons->shot_flash = false;
     weapons->trail_count = 0;

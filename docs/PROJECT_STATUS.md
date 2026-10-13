@@ -2988,6 +2988,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0305 - Zero Mission morph ball launchers
+
+- MorphBallLauncher and its parts (`src/runtime/mzm_gadget_sprites.c`): a
+  bomb set on the launcher is taken, held, and its explosion launches
+  Samus in morph ball (ProjectileMorphballLauncherCheckLaunchSamus, the
+  ballspark launch already ported), with the energy around her.
+- The bombs gain the launcher stages (`src/runtime/mzm_projectiles.c`);
+  the sprites see the projectiles (MzmSpriteFrame.weapons).
+- Checked by capture in brinstar_000; tests in `tests/test_mzm_sprites.c`
+  and `tests/test_mzm_samus.c`.
+
 ## Patch 0304 - Zero Mission area banners
 
 - AreaBanner and LocationTextGetGfxSlot: entering a room through a door

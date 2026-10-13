@@ -2885,7 +2885,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             /* The banner's slot keeps its last pose once it
                              * is gone, which the map station waits for. */
                             sprites->banner.pose,
-                            runtime_minimap.downloaded_maps,sprites->banner.yes};
+                            runtime_minimap.downloaded_maps,sprites->banner.yes,weapons};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
@@ -4526,6 +4526,11 @@ int main(int argc, char **argv) {
             if(!dying)
                 mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                    &collision,&projectile_animation);
+            if(weapons.launch_by_cannon) {
+                /* ProjectileMorphballLauncherCheckLaunchSamus */
+                samus.forced=MZM_FORCED_LAUNCHED_BY_CANNON;
+                mzm_samus_sprite_set_pose(&samus,MZM_POSE_DELAY_BEFORE_BALLSPARKING,&equipment,&collision);
+            }
             {
                 /* ParticleChargingBeam and ParticleShootingBeam*: their
                  * animations, at the arm cannon. */

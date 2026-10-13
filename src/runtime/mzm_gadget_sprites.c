@@ -75,6 +75,10 @@ enum {
     AREA_BANNER_POSE_LEAVING = 0x25,
     /* LocationTextId */
     LT_MOTHERSHIP = 7, LT_SAVE_ROOM = 9, LT_MAP_ROOM = 11,
+    MORPH_BALL_LAUNCHER_POSE_IDLE = 0x9, MORPH_BALL_LAUNCHER_POSE_DELAY_BEFORE_LAUNCHING = 0xB,
+    MORPH_BALL_LAUNCHER_POSE_LAUNCHING = 0xC, MORPH_BALL_LAUNCHER_PART_POSE_ENERGY = 0xB,
+    MORPH_BALL_LAUNCHER_PART_POSE_IDLE = 0x61, MORPH_BALL_LAUNCHER_PART_BACK = 0,
+    MORPH_BALL_LAUNCHER_PART_ENERGY = 1,
 };
 
 static bool check_event(const Ctx *c, uint8_t event) { return ai_check_event(c, event); }
@@ -1089,12 +1093,129 @@ static void area_banner(Ctx *c) {
     }
 }
 
+/* MorphBallLauncherChangeCcaa: the five blocks around and under it. */
+static void morph_ball_launcher_caa(Ctx *c, uint8_t action) {
+    const MzmSprite *s = c->s;
+    caa(c, s->y, (uint16_t)(s->x + BLOCK_SIZE), action);
+    caa(c, (uint16_t)(s->y + BLOCK_SIZE), (uint16_t)(s->x + BLOCK_SIZE), action);
+    caa(c, s->y, (uint16_t)(s->x - BLOCK_SIZE), action);
+    caa(c, (uint16_t)(s->y + BLOCK_SIZE), (uint16_t)(s->x - BLOCK_SIZE), action);
+    caa(c, (uint16_t)(s->y + BLOCK_SIZE), s->x, action);
+}
+
+/* MorphBallLauncher: a bomb set in it is held, then its explosion launches
+ * Samus in morph ball (the bomb's side), with the energy around her. */
+static void morph_ball_launcher(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->ignore_samus_timer = 1;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        /* MorphBallLauncherInit (its BG priority, below BG1, is not
+         * modelled) */
+        s->y = (uint16_t)(s->y - HALF_BLOCK_SIZE);
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        s->draw_top = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_bottom = BLOCK_SIZE * 2 / PIXEL_SIZE;
+        s->draw_horizontal = BLOCK_SIZE * 2 / PIXEL_SIZE;
+        s->samus_collision = SSC_NONE;
+        ai_set_anim(s, MZM_GADGET_MORPH_BALL_LAUNCHER_IDLE);
+        s->pose = MORPH_BALL_LAUNCHER_POSE_IDLE;
+        s->draw_order = 2;
+        ai_spawn_secondary(c, MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART, MORPH_BALL_LAUNCHER_PART_BACK, s->gfx_slot,
+                           s->y, s->x, 0);
+        morph_ball_launcher_caa(c, MZM_CAA_MAKE_NON_POWER_GRIP);
+        break;
+    case MORPH_BALL_LAUNCHER_POSE_IDLE: {
+        /* MorphBallLauncherDetectBomb */
+        MzmWeapons *w = c->f->weapons;
+        uint16_t y = (uint16_t)(s->y + HALF_BLOCK_SIZE), x = s->x;
+        bool bomb = false;
+        for (int i = 0; w && i < MZM_MAX_PROJECTILES; ++i) {
+            MzmProjectile *p = &w->list[i];
+            if (!p->active || p->type != MZM_PROJECTILE_BOMB || p->bomb_stage != MZM_BOMB_FIRST_SPIN) continue;
+            uint16_t py = (uint16_t)p->y, px = (uint16_t)p->x;
+            if (py < y && py > y - EIGHTH_BLOCK_SIZE && px < x + EIGHTH_BLOCK_SIZE && px > x - EIGHTH_BLOCK_SIZE) {
+                p->bomb_stage = MZM_BOMB_PLACED_ON_LAUNCHER;
+                bomb = true;
+                break;
+            }
+        }
+        if (bomb) {
+            s->pose = MORPH_BALL_LAUNCHER_POSE_DELAY_BEFORE_LAUNCHING;
+            s->work0 = 32;                      /* CONVERT_SECONDS(.5f) + 2 * DELTA_TIME */
+        }
+        break;
+    }
+    case MORPH_BALL_LAUNCHER_POSE_DELAY_BEFORE_LAUNCHING:
+        if (--s->work0 == 0) {
+            ai_set_anim(s, MZM_GADGET_MORPH_BALL_LAUNCHER_LAUNCHING);
+            s->pose = MORPH_BALL_LAUNCHER_POSE_LAUNCHING;
+            s->work0 = 60;
+            s->work1 = false;
+        }
+        break;
+    case MORPH_BALL_LAUNCHER_POSE_LAUNCHING: {
+        /* MorphBallLauncherLaunchSamus */
+        const MzmSpriteSamusLink *link = c->f->samus_link;
+        if (!s->work1 && link && link->samus_pose == MZM_POSE_DELAY_BEFORE_BALLSPARKING) {
+            ai_spawn_secondary(c, MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART, MORPH_BALL_LAUNCHER_PART_ENERGY, s->gfx_slot,
+                               (uint16_t)(link->y - QUARTER_BLOCK_SIZE), link->x, 0);
+            s->work1 = true;
+        }
+        if (--s->work0 == 0) {
+            ai_set_anim(s, MZM_GADGET_MORPH_BALL_LAUNCHER_IDLE);
+            s->pose = MORPH_BALL_LAUNCHER_POSE_IDLE;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+/* MorphBallLauncherPart: its back, and the energy around Samus for a
+ * second. */
+static void morph_ball_launcher_part(Ctx *c) {
+    MzmSprite *s = c->s;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->samus_collision = SSC_NONE;
+        s->frame = s->adc = 0;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        if (s->room_slot == MORPH_BALL_LAUNCHER_PART_BACK) {
+            s->anim = MZM_GADGET_MORPH_BALL_LAUNCHER_BACK;
+            s->draw_top = EIGHTH_BLOCK_SIZE;
+            s->draw_bottom = 0;
+            s->draw_horizontal = QUARTER_BLOCK_SIZE;
+            s->draw_order = 12;
+            s->pose = MORPH_BALL_LAUNCHER_PART_POSE_IDLE;
+        } else if (s->room_slot == MORPH_BALL_LAUNCHER_PART_ENERGY) {
+            s->anim = MZM_GADGET_MORPH_BALL_LAUNCHER_ENERGY;
+            s->draw_top = s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+            s->draw_order = 1;
+            s->pose = MORPH_BALL_LAUNCHER_PART_POSE_ENERGY;
+            s->work0 = 60;
+        } else {
+            kill(s);
+        }
+        break;
+    case MORPH_BALL_LAUNCHER_PART_POSE_ENERGY:
+        if (--s->work0 == 0) kill(s);
+        break;
+    default:
+        break;
+    }
+}
+
 void ai_gadget(Ctx *c) {
     if (c->s->secondary) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
         else if (c->s->sprite_id == SSPRITE_MAP_STATION_PART) map_station_part(c);
         else if (c->s->sprite_id == SSPRITE_SAVE_PLATFORM_PART) save_platform_part(c);
         else if (c->s->sprite_id == MZM_SSPRITE_GUNSHIP_PART) ai_gunship(c);
+        else if (c->s->sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART) morph_ball_launcher_part(c);
         return;
     }
     switch (c->s->sprite_id) {
@@ -1111,6 +1232,7 @@ void ai_gadget(Ctx *c) {
     case SAVE_PLATFORM: save_platform(c); break;
     case MZM_PSPRITE_GUNSHIP: ai_gunship(c); break;
     case MZM_PSPRITE_AREA_BANNER: area_banner(c); break;
+    case MZM_PSPRITE_MORPH_BALL_LAUNCHER: morph_ball_launcher(c); break;
     default: break;
     }
 }

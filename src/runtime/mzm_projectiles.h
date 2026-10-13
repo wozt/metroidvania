@@ -61,12 +61,16 @@ typedef struct {
     uint8_t frame_counter;
 } MzmChargeParticle;
 
-/* BombStage (the morph ball launcher stages are not ported). */
+/* BombStage */
 typedef enum {
     MZM_BOMB_INIT,
     MZM_BOMB_FIRST_SPIN,
     MZM_BOMB_FAST_SPIN,
-    MZM_BOMB_EXPLODING
+    MZM_BOMB_EXPLODING,
+    MZM_BOMB_PLACED_ON_LAUNCHER,
+    MZM_BOMB_FIRST_SPIN_ON_LAUNCHER,
+    MZM_BOMB_FAST_SPIN_ON_LAUNCHER,
+    MZM_BOMB_EXPLODING_ON_LAUNCHER
 } MzmBombStage;
 
 typedef enum {
@@ -141,6 +145,11 @@ typedef struct {
      * mzm_samus_bomb_bounce; a bomb impact (MZM_PROJECTILE_BOMB in
      * `impacts`) is the explosion's PE_BOMB particle. */
     int bomb_bounce;
+    /* ProjectileMorphballLauncherCheckLaunchSamus: a bomb on a morph ball
+     * launcher exploded against Samus in morph ball (forcedMovement
+     * FORCED_MOVEMENT_LAUNCHED_BY_CANNON, SPOSE_DELAY_BEFORE_BALLSPARKING
+     * for the caller). */
+    bool launch_by_cannon;
     /* gFrameCounter8Bit, set by the caller before mzm_weapons_update (the
      * trails and the ice beam's freeze flag). */
     uint8_t frame8;

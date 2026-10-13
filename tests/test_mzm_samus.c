@@ -858,6 +858,28 @@ static void test_bombs(void) {
     for (int i = 0; i < 8; ++i)
         mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
     assert(bomb_points == 9);
+    {
+        /* A bomb a morph ball launcher took: its two spins again, then an
+         * explosion that affects no block but launches Samus in morph
+         * ball. */
+        MzmWeapons launcher;
+        mzm_weapons_init(&launcher);
+        launcher.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BOMB,
+                                           .stage = MZM_STAGE_MOVING,
+                                           .bomb_stage = MZM_BOMB_PLACED_ON_LAUNCHER,
+                                           .x = w.samus.x, .y = w.samus.y - 1};
+        MzmSamus rolled = w.samus;
+        rolled.pose = MZM_POSE_MORPH_BALL;
+        rolled.invincibility = 0;
+        int points = bomb_points, launch_frames = 0;
+        bool launched = false;
+        while (launcher.list[0].active && launch_frames < 100) {
+            mzm_weapons_update(&launcher, &rolled, &w.equipment, 0, 0, &w.collision, NULL);
+            launched |= launcher.launch_by_cannon;
+            launch_frames++;
+        }
+        assert(launched && launch_frames == 1 + 16 + 16 + 1 && bomb_points == points);
+    }
     assert(bomb_point_y[1] == bomb->y + 56 && bomb_point_x[1] == bomb->x);
     assert(bomb_point_x[2] == bomb->x + 48 && bomb_point_x[3] == bomb->x - 48);
     assert(bomb_point_x[4] == bomb->x + 36 && bomb_point_y[4] == bomb->y + 56);

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-13T20:04:11+00:00",
+ "generated_at": "2026-10-13T20:20:33+00:00",
  "git": {
-  "commit": "9788192",
+  "commit": "a82e83b",
   "branch": "main",
   "dirty": true
  },
@@ -2359,10 +2359,17 @@
     "GeronNorfair",
     "UnknownItemBlockChangeClipdata",
     "UnknownItemBlock",
-    "UnknownItemBlockLight"
+    "UnknownItemBlockLight",
+    "MorphBallLauncher",
+    "MorphBallLauncherInit",
+    "MorphBallLauncherChangeCcaa",
+    "MorphBallLauncherDetectBomb",
+    "MorphBallLauncherDelayBeforeLaunching",
+    "MorphBallLauncherLaunchSamus",
+    "MorphBallLauncherPart"
    ],
-   "limitations": "Not compared with an emulator. The Parasites that grab and destroy the Gerons are not ported, so a Geron that is not already destroyed blocks its passage for good; the unknown item block's explosion keeps the sprites' priority instead of BG1's (bgPriority); event and hard-mode spritesets are not resolved, so a gadget only placed by them (brinstar_000's elevator pad) does not appear. The AIs follow the decompilation: the elevator pad (moved 2 pixels up, always active, synced to Samus and on its Moving animation while she uses an elevator); water drops (hidden for gSpriteRng * 8 frames, spawning animation, falling by sSpritesFallingSpeed, splashing on a block with SpriteUtilCheckVerticalCollisionAtPositionSlopes or on the water surface held at gEffectYPosition, hidden again for 100 + rng * 8 frames at a random x offset); steam (ground, ceiling with Y flip one block up, left or right wall turned horizontal, killed in the air; large/small draw distances; a random first frame; the large or small steam sound on screen at frame 0); diagonal steam (X flip without a wall on its left, Y flip for the downward ones); Gerons (their event checks, three CAA_MAKE_NON_POWER_GRIP blocks, shaking on ISFT 2 with its sound, the destroyed stump after their event; the destruction and its events when four Parasites hold one) and the Norfair Geron (gone after EVENT_POWER_GRIP_OBTAINED); unknown item blocks (2x2 CAA_MAKE_SOLID_GRIPPABLE blocks, ignoring projectiles until their item event, then destroyed by a hit: CAA_REMOVE_SOLID, the breaking sound, the light secondary at frame 7). Checked by capture in crateria_001 (steam), brinstar_021 (Geron), kraid_012 (Space Jump block) and crateria_011 (Plasma Beam block, water drops).",
-   "next_action": "Port the Parasites, then the remaining gadgets (morph ball launchers, ziplines, security gates).",
+   "limitations": "Not compared with an emulator. The Parasites that grab and destroy the Gerons are not ported, so a Geron that is not already destroyed blocks its passage for good; the unknown item block's explosion and the morph ball launcher keep the sprites' priority instead of their BG priority (bgPriority); event and hard-mode spritesets are not resolved, so a gadget only placed by them (brinstar_000's elevator pad) does not appear. The AIs follow the decompilation: the elevator pad (moved 2 pixels up, always active, synced to Samus and on its Moving animation while she uses an elevator); water drops (hidden for gSpriteRng * 8 frames, spawning animation, falling by sSpritesFallingSpeed, splashing on a block with SpriteUtilCheckVerticalCollisionAtPositionSlopes or on the water surface held at gEffectYPosition, hidden again for 100 + rng * 8 frames at a random x offset); steam (ground, ceiling with Y flip one block up, left or right wall turned horizontal, killed in the air; large/small draw distances; a random first frame; the large or small steam sound on screen at frame 0); diagonal steam (X flip without a wall on its left, Y flip for the downward ones); Gerons (their event checks, three CAA_MAKE_NON_POWER_GRIP blocks, shaking on ISFT 2 with its sound, the destroyed stump after their event; the destruction and its events when four Parasites hold one) and the Norfair Geron (gone after EVENT_POWER_GRIP_OBTAINED); unknown item blocks (2x2 CAA_MAKE_SOLID_GRIPPABLE blocks, ignoring projectiles until their item event, then destroyed by a hit: CAA_REMOVE_SOLID, the breaking sound, the light secondary at frame 7). Checked by capture in crateria_001 (steam), brinstar_021 (Geron), kraid_012 (Space Jump block) and crateria_011 (Plasma Beam block, water drops). Morph ball launchers: their back part and the five blocks around made non power grip; a bomb in its first spin set on the launcher is taken (BOMB_STAGE_PLACED_ON_LAUNCHER), the launcher waits half a second and plays its launching animation, and when the bomb's explosion launches Samus (SPOSE_DELAY_BEFORE_BALLSPARKING) the energy appears around her for a second. Checked by capture in brinstar_000 (the launch is stopped by the power bomb blocks above, as natively before the Power Bombs).",
+   "next_action": "Port the Parasites, then the remaining gadgets (ziplines, security gates).",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -3566,8 +3573,8 @@
     "SamusBallsparkCollisionGfx",
     "ParticleShinesparkDestroyed"
    ],
-   "limitations": "The screen shakes, the morph ball launchers, liquids and the speed booster and shinespark aura sprites (gScrewSpeedAnimation) are not ported. With the Speed Booster, running above 96 subpixels a frame counts a timer to 160 (the cap rises to 140 at 120 and 160 at 140); from 160 subpixels a frame SamusCheckShinesparking starts the speed boost (sound, Running_Speedboosting, the speed boost palette rows by gFrameCounter8Bit % 6, the 160 ground and mid-air caps kept through jumps and the speed-boosted landing), cancelled below it and on death. Releasing the direction skids (10 subpixels a frame, the skidding sound); Down alone while skidding, or during the six frames after a speed-boosted roll in the Morph Ball, stores a shinespark for 180 frames (the palette and the charge sound every 16 frames). Speed boosting breaks speed blocks (DESTRUCTING_ACTION_SPEED and SPEED_ON_GROUND) and kills weak sprites as DCT_SPEEDBOOSTER with its particle and sound. Checked in tourian_010 with --item speed-booster: the speed boost palette and running animation after about 160 frames of running. With a stored shinespark, A (without a direction on the ground, with half a block of room, Samus rising by it) or A in the air starts the charge (50 frames of glow, the shinesparking sound, no gravity); when its animation ends the spark goes up by default at 192, sideways at 192 with the direction held, or diagonally (160, 96) with L or the direction and Up, through SamusSetPose with the speed boost on, killing weak sprites as DCT_SHINESPARK (its particle and sound). A ceiling or a wall ends it in the collision (48 frames of invincibility, the collision sound), 17 frames, then the delay after and a fall. In the Morph Ball with High Jump, A starts a ballspark: half a block up, a hop on the first frame, one second of charge with the ballsparking sound and the ball turning toward the input, then the same sparks, the collision and the Morph Ball fall. SamusSetPose stops the sounds when a charge or spark is cut short. Checked in tourian_010: run, skid, Down, A: the spark rises to the ceiling, then the delay after.",
-   "next_action": "Port the morph ball launchers and the aura sprites.",
+   "limitations": "The screen shakes, liquids and the speed booster and shinespark aura sprites (gScrewSpeedAnimation) are not ported. With the Speed Booster, running above 96 subpixels a frame counts a timer to 160 (the cap rises to 140 at 120 and 160 at 140); from 160 subpixels a frame SamusCheckShinesparking starts the speed boost (sound, Running_Speedboosting, the speed boost palette rows by gFrameCounter8Bit % 6, the 160 ground and mid-air caps kept through jumps and the speed-boosted landing), cancelled below it and on death. Releasing the direction skids (10 subpixels a frame, the skidding sound); Down alone while skidding, or during the six frames after a speed-boosted roll in the Morph Ball, stores a shinespark for 180 frames (the palette and the charge sound every 16 frames). Speed boosting breaks speed blocks (DESTRUCTING_ACTION_SPEED and SPEED_ON_GROUND) and kills weak sprites as DCT_SPEEDBOOSTER with its particle and sound. Checked in tourian_010 with --item speed-booster: the speed boost palette and running animation after about 160 frames of running. With a stored shinespark, A (without a direction on the ground, with half a block of room, Samus rising by it) or A in the air starts the charge (50 frames of glow, the shinesparking sound, no gravity); when its animation ends the spark goes up by default at 192, sideways at 192 with the direction held, or diagonally (160, 96) with L or the direction and Up, through SamusSetPose with the speed boost on, killing weak sprites as DCT_SHINESPARK (its particle and sound). A ceiling or a wall ends it in the collision (48 frames of invincibility, the collision sound), 17 frames, then the delay after and a fall. In the Morph Ball with High Jump, A starts a ballspark: half a block up, a hop on the first frame, one second of charge with the ballsparking sound and the ball turning toward the input, then the same sparks, the collision and the Morph Ball fall. SamusSetPose stops the sounds when a charge or spark is cut short. Checked in tourian_010: run, skid, Down, A: the spark rises to the ceiling, then the delay after.",
+   "next_action": "Port the aura sprites.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -4211,10 +4218,11 @@
     "ProjectileCheckSamusBombBounce",
     "SamusBombBounce",
     "ProjectileBombHitSprite",
-    "ParticleBomb"
+    "ParticleBomb",
+    "ProjectileMorphballLauncherCheckLaunchSamus"
    ],
-   "limitations": "The morph ball launcher stages and liquids (no bounce when slowed) are not ported; the sprite pass of the explosion runs after the projectile loop in the runtime, so the bomb keeps a flag for the frame the native pass (before the loop) sees it. With the Bombs item, B in the Morph Ball places a bomb (four at most, 7 frames apart) at Samus's position: a slow then a fast spin of 16 frames each with their native sprites, then the PE_BOMB explosion and 16 frames during which CAA_BOMB_PISTOL reaches nine points, one a frame (bomb blocks, bomb chains, hatches). On the first explosion frame Samus bounces off a touching bomb (up, left or right from the bomb's middle and gPreviousXPosition; only falling and from below when airborne), and the explosion damages sprites weak to beams and bombs (8). The set and explosion sounds play. Checked in brinstar_000: the bounce, then the three bomb blocks under Samus break.",
-   "next_action": "Port the morph ball launchers.",
+   "limitations": "Liquids (no bounce when slowed) are not ported; the sprite pass of the explosion runs after the projectile loop in the runtime, so the bomb keeps a flag for the frame the native pass (before the loop) sees it. With the Bombs item, B in the Morph Ball places a bomb (four at most, 7 frames apart) at Samus's position: a slow then a fast spin of 16 frames each with their native sprites, then the PE_BOMB explosion and 16 frames during which CAA_BOMB_PISTOL reaches nine points, one a frame (bomb blocks, bomb chains, hatches). On the first explosion frame Samus bounces off a touching bomb (up, left or right from the bomb's middle and gPreviousXPosition; only falling and from below when airborne), and the explosion damages sprites weak to beams and bombs (8). The set and explosion sounds play. Checked in brinstar_000: the bounce, then the three bomb blocks under Samus break. A bomb taken by a morph ball launcher spins again (16 + 16 frames), then its explosion affects no block but launches Samus in morph ball touching it (forcedMovement FORCED_MOVEMENT_LAUNCHED_BY_CANNON, SPOSE_DELAY_BEFORE_BALLSPARKING).",
+   "next_action": "Port the bomb behaviour in liquids.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -7321,6 +7329,12 @@
  },
  "timeline": [
   {
+   "commit": "a82e83b",
+   "date": "2026-10-13",
+   "subject": "feat(mzm): area and room name banners",
+   "scope": "mzm"
+  },
+  {
    "commit": "9788192",
    "date": "2026-10-13",
    "subject": "feat(mzm): game fades around the pause screen",
@@ -7793,12 +7807,6 @@
    "date": "2026-10-10",
    "subject": "feat: shared gamepad input for both runtimes",
    "scope": "project"
-  },
-  {
-   "commit": "66dae35",
-   "date": "2026-10-10",
-   "subject": "feat: evidence-based routine classification",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -7826,7 +7834,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 795,
+    "routines_cited_by_features": 803,
     "call_edges": 6071
    },
    "aos": {

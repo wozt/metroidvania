@@ -2988,6 +2988,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0320 - Zero Mission Mother Brain Rinkas
+
+- RinkaMotherBrain (the six Tourian Rinka ids) in the Rinka engine:
+  the cannon's graphics, frozenPaletteRowOffset 1 (a new
+  `frozen_row_offset` the freeze and stun rows subtract), respawns that
+  wait off screen and pick a second spawn point 20 to 40 blocks left when
+  Samus is far enough left of the first, flights from the point in use,
+  and the end with Mother Brain (EVENT_MOTHER_BRAIN_KILLED).
+- Every Rinka now has RinkaInit's draw order of 3, and
+  ProjectileCheckHittingSprite visits the hittable sprites by draw order,
+  then slot, from a list taken before the pass, as the game does (it used
+  slot order, assuming one draw order).
+- Checked by capture in tourian_004 (the rings flying at Samus) and by a
+  test of the second spawn point, the flight from it, the return to the
+  first and the removal with Mother Brain.
+
 ## Patch 0319 - Zero Mission Worker Robots and the projectile hit order
 
 - WorkerRobot (`src/runtime/mzm_worker_robot.c`): solid, immune to

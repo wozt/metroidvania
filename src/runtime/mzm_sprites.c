@@ -404,10 +404,10 @@ static const char *const squeept_sprites[MZM_SQUEEPT_ANIMS] = {"SQUEEPT", "SQUEE
 static const char *const multiviola_sprites[MZM_MULTIVIOLA_ANIMS] = {"MULTIVIOLA"};
 const char *const mzm_rinka_anim_names[MZM_RINKA_ANIMS] = {
     "RinkaOrangeOam_Spawning", "RinkaOrangeOam_Moving", "RinkaGreenOam_Spawning",
-    "RinkaGreenOam_Moving",
+    "RinkaGreenOam_Moving", "RinkaMotherBrainOam_Spawning", "RinkaMotherBrainOam_Moving",
 };
 static const char *const rinka_sprites[MZM_RINKA_ANIMS] = {
-    "RINKA_ORANGE", "RINKA_ORANGE", "RINKA_GREEN", "RINKA_GREEN",
+    "RINKA_ORANGE", "RINKA_ORANGE", "RINKA_GREEN", "RINKA_GREEN", "CANNON", "CANNON",
 };
 const char *const mzm_space_pirate_anim_names[MZM_PIRATE_ANIMS] = {
     "SpacePirateOam_Crouched", "SpacePirateOam_Walking", "SpacePirateOam_ChargingLaserForward",
@@ -4272,23 +4272,33 @@ static uint16_t bios_sqrt(uint32_t number) {
     return (uint16_t)root;
 }
 
-/* Rinka (rinka.c, orange and green; the Mother Brain ones are not ported):
- * a ring born at its spawn block that, once on screen and vulnerable,
- * flies in a straight line toward where Samus was (its distance from the
- * spawn point grows by 4 subpixels a frame, green 5) and respawns 16 blocks
- * away from her. */
+/* Rinka and RinkaMotherBrain (rinka.c): a ring born at its spawn block
+ * that, once on screen and vulnerable, flies in a straight line toward
+ * where Samus was (its distance from the spawn point grows by 4 subpixels a
+ * frame, green 5) and respawns 16 blocks away from her. Mother Brain's
+ * Rinkas (Tourian) also have a second spawn point their room's Samus
+ * position selects, wait off screen, and vanish once she is dead. */
 enum { RINKA_POSE_SPAWNING_INIT = 0x8, RINKA_POSE_SPAWNING = 0x9, RINKA_POSE_MOVING = 0x23 };
+
+static void drop_samus(MzmSprite *s);
 
 static bool is_green_rinka(const MzmSprite *s) {
     return s->status & MZM_SPRITE_STATUS_MOSAIC;
 }
 
-/* RinkaSpawningInit (the green one is flagged MOSAIC, as in the game) */
+static bool is_mother_brain_rinka(const MzmSprite *s) {
+    return s->sprite_id != MZM_PSPRITE_RINKA_ORANGE && s->sprite_id != MZM_PSPRITE_RINKA_GREEN;
+}
+
+/* RinkaSpawningInit (the green one is flagged MOSAIC, as in the game) and
+ * RinkaMotherBrainSpawningInit */
 static void rinka_spawning_init(MzmSprite *s) {
     s->pose = RINKA_POSE_SPAWNING;
     s->frame = 0;
     s->adc = 0;
-    if (s->sprite_id == MZM_PSPRITE_RINKA_GREEN) {
+    if (is_mother_brain_rinka(s)) {
+        s->anim = MZM_RINKA_MOTHER_BRAIN_SPAWNING;
+    } else if (s->sprite_id == MZM_PSPRITE_RINKA_GREEN) {
         s->status |= MZM_SPRITE_STATUS_MOSAIC;
         s->anim = MZM_RINKA_GREEN_SPAWNING;
     } else {
@@ -4308,7 +4318,49 @@ static void rinka_respawn(Ctx *c) {
     s->palette_row = 0;
     s->absolute_palette_row = 0;
     s->freeze_timer = 0;
+    s->frozen_row_offset = 0;
     s->work1 = is_green_rinka(s) ? 20 : 60;
+    s->status |= MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    s->ignore_samus_timer = 1;
+}
+
+/* The Mother Brain Rinkas' second spawn point: Samus farther left than
+ * `blocks` from the first moves it `shift` blocks left (and a block `dy`
+ * down); SAMUS_COLLIDING marks it. */
+static const struct { uint8_t blocks, shift; int8_t dy; } rinka_second_spawn[6] = {
+    {0, 0, 0}, {20, 40, 1}, {17, 34, -1}, {12, 24, 0}, {15, 30, 0}, {10, 20, 0},
+};
+
+static int rinka_mother_brain_index(const MzmSprite *s) {
+    return s->sprite_id == MZM_PSPRITE_RINKA_MOTHER_BRAIN ? 0 : s->sprite_id - MZM_PSPRITE_RINKA_MOTHER_BRAIN2 + 1;
+}
+
+/* RinkaMotherBrainRespawn */
+static void rinka_mother_brain_respawn(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->work3 * BLOCK_SIZE + HALF_BLOCK_SIZE);
+    uint16_t x = (uint16_t)(s->work2 * BLOCK_SIZE + HALF_BLOCK_SIZE);
+    uint16_t samus_x = c->f->samus_x;
+    int i = rinka_mother_brain_index(s);
+    if (i > 0) {
+        if (samus_x < x && x - samus_x > rinka_second_spawn[i].blocks * BLOCK_SIZE) {
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            y = (uint16_t)(y + rinka_second_spawn[i].dy * BLOCK_SIZE);
+            x = (uint16_t)(x - rinka_second_spawn[i].shift * BLOCK_SIZE);
+        } else {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        }
+    }
+    s->y = y;
+    s->x = x;
+    rinka_spawning_init(s);
+    s->health = c->tables->health[s->sprite_id];
+    s->isft = 0;
+    s->palette_row = 0;
+    s->frozen_row_offset = 1;
+    s->absolute_palette_row = 0;
+    s->freeze_timer = 0;
+    s->work1 = 60;                  /* CONVERT_SECONDS(1.f) */
     s->status |= MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
     s->ignore_samus_timer = 1;
 }
@@ -4328,6 +4380,8 @@ static void rinka_spawning(Ctx *c) {
             s->frame = 0;
             s->adc = 0;
             s->work0 = 11;          /* CONVERT_SECONDS(1.f / 6 + 1.f / 60) */
+        } else if (is_mother_brain_rinka(s)) {
+            rinka_mother_brain_respawn(c);
         }
         return;
     }
@@ -4337,8 +4391,9 @@ static void rinka_spawning(Ctx *c) {
         return;
     }
     if (!ai_animation_ending(c, 1)) return;
-    s->anim = s->sprite_id == MZM_PSPRITE_RINKA_GREEN ? MZM_RINKA_GREEN_MOVING
-                                                       : MZM_RINKA_ORANGE_MOVING;
+    s->anim = is_mother_brain_rinka(s) ? MZM_RINKA_MOTHER_BRAIN_MOVING
+              : s->sprite_id == MZM_PSPRITE_RINKA_GREEN ? MZM_RINKA_GREEN_MOVING
+                                                        : MZM_RINKA_ORANGE_MOVING;
     s->pose = RINKA_POSE_MOVING;
     s->frame = 0;
     s->adc = 0;
@@ -4363,6 +4418,18 @@ static void rinka_move(Ctx *c) {
     velocity = (uint16_t)(velocity * acceleration);
     uint32_t spawn_y = (uint32_t)s->work3 * BLOCK_SIZE + HALF_BLOCK_SIZE;
     uint32_t spawn_x = (uint32_t)s->work2 * BLOCK_SIZE + HALF_BLOCK_SIZE;
+    if (is_mother_brain_rinka(s)) {
+        /* RinkaMotherBrainMove: from the second spawn point when it is the
+         * one in use (the u8 block coordinates, the u16 positions). */
+        uint8_t tile_y = s->work3, tile_x = s->work2;
+        int i = rinka_mother_brain_index(s);
+        if (i > 0 && s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) {
+            tile_x = (uint8_t)(tile_x - rinka_second_spawn[i].shift);
+            tile_y = (uint8_t)(tile_y + rinka_second_spawn[i].dy);
+        }
+        spawn_y = (uint16_t)(tile_y * BLOCK_SIZE + HALF_BLOCK_SIZE);
+        spawn_x = (uint16_t)(tile_x * BLOCK_SIZE + HALF_BLOCK_SIZE);
+    }
     bool down = s->status & MZM_SPRITE_STATUS_FACING_DOWN;
     bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
     uint16_t dy = down ? (uint16_t)(s->y_spawn - spawn_y) : (uint16_t)(spawn_y - s->y_spawn);
@@ -4380,12 +4447,24 @@ static void rinka_move(Ctx *c) {
     else if ((s->x > samus_x ? s->x - samus_x : samus_x - s->x) > BLOCK_SIZE * 16) respawn = true;
     if (s->y & 0x8000) respawn = true;
     else if ((s->y > samus_y ? s->y - samus_y : samus_y - s->y) > BLOCK_SIZE * 16) respawn = true;
-    if (respawn) rinka_respawn(c);
+    if (respawn) {
+        if (is_mother_brain_rinka(s)) rinka_mother_brain_respawn(c);
+        else rinka_respawn(c);
+    }
 }
 
-/* Rinka: the AI. */
+/* Rinka and RinkaMotherBrain: the AIs. */
 static void rinka(Ctx *c) {
     MzmSprite *s = c->s;
+    bool mother_brain = is_mother_brain_rinka(s);
+    if (mother_brain && ai_check_event(c, MZM_EVENT_MOTHER_BRAIN_KILLED)) {
+        if ((s->status & (MZM_SPRITE_STATUS_ONSCREEN | MZM_SPRITE_STATUS_NOT_DRAWN)) ==
+            MZM_SPRITE_STATUS_ONSCREEN)
+            ai_particle_set(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_SMALL);
+        drop_samus(s);
+        s->status = 0;
+        return;
+    }
     if (s->freeze_timer) {
         ai_update_freeze_timer(c);
         return;
@@ -4405,7 +4484,9 @@ static void rinka(Ctx *c) {
         s->work3 = (uint8_t)((uint16_t)(s->y - HALF_BLOCK_SIZE) / BLOCK_SIZE);
         s->work2 = (uint8_t)((uint16_t)(s->x - HALF_BLOCK_SIZE) / BLOCK_SIZE);
         s->samus_collision = SSC_HURTS_SAMUS;
+        s->draw_order = 3;
         s->work1 = 0;
+        if (mother_brain) s->frozen_row_offset = 1;
         /* fallthrough */
     case RINKA_POSE_SPAWNING_INIT:
         rinka_spawning_init(s);
@@ -4416,7 +4497,8 @@ static void rinka(Ctx *c) {
         ai_sprite_death_typed(c, ai_has_drops(c) ? DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP
                                            : DEATH_RESPAWNING,
                            s->y, s->x, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
-        rinka_respawn(c);
+        if (mother_brain) rinka_mother_brain_respawn(c);
+        else rinka_respawn(c);
         break;
     }
 }
@@ -4615,7 +4697,11 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
     case MZM_PSPRITE_MULTIVIOLA: return MZM_FAMILY_MULTIVIOLA;
     case MZM_PSPRITE_RINKA_ORANGE:
-    case MZM_PSPRITE_RINKA_GREEN: return MZM_FAMILY_RINKA;
+    case MZM_PSPRITE_RINKA_GREEN:
+    case MZM_PSPRITE_RINKA_MOTHER_BRAIN: case MZM_PSPRITE_RINKA_MOTHER_BRAIN2:
+    case MZM_PSPRITE_RINKA_MOTHER_BRAIN3: case MZM_PSPRITE_RINKA_MOTHER_BRAIN4:
+    case MZM_PSPRITE_RINKA_MOTHER_BRAIN5: case MZM_PSPRITE_RINKA_MOTHER_BRAIN6:
+        return MZM_FAMILY_RINKA;
     case MZM_PSPRITE_DESSGEEGA:
     case MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM: return MZM_FAMILY_DESSGEEGA;
     case MZM_PSPRITE_SPACE_PIRATE:
@@ -4771,13 +4857,14 @@ void ai_update_freeze_timer(Ctx *c) {
     if (c->frame8 & 1) s->freeze_timer--;
     if (s->freeze_timer == 0) s->adc--;
     if (s->freeze_timer <= 45)
-        s->palette_row = s->freeze_timer & 1 ? (uint8_t)(15 - s->gfx_slot) : s->absolute_palette_row;
+        s->palette_row = s->freeze_timer & 1 ? (uint8_t)(15 - s->gfx_slot - s->frozen_row_offset)
+                                             : s->absolute_palette_row;
 }
 
-/* ProjectileFreezeSprite (frozenPaletteRowOffset 0). */
+/* ProjectileFreezeSprite */
 static void freeze_sprite(MzmSprite *s, uint8_t timer) {
     s->freeze_timer = timer;
-    s->palette_row = (uint8_t)(15 - s->gfx_slot);
+    s->palette_row = (uint8_t)(15 - s->gfx_slot - s->frozen_row_offset);
     mzm_sfx_play_not_playing(MZM_SOUND_FREEZING_SPRITE);
 }
 
@@ -5161,14 +5248,22 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                 power_bomb_damage(s, weakness_of(s, tables));
         }
     }
-    /* The sprites are visited by draw order, then slot; every ported sprite
-     * has the default draw order, so slot order. A sprite's hitbox is read
-     * once, before the projectiles that hit it. */
-    for (int i = 0; i < count; ++i) {
+    /* gSpriteDrawOrder: the sprites that can be hit, chosen once before the
+     * pass, are visited by draw order (1 to 16), then slot. A sprite's
+     * hitbox is read once, before the projectiles that hit it. */
+    enum { MAX_ORDERED = 64 };
+    uint8_t order[MAX_ORDERED];
+    int ordered = count < MAX_ORDERED ? count : MAX_ORDERED;
+    for (int i = 0; i < ordered; ++i) {
+        const MzmSprite *s = &sprites[i];
+        order[i] = (s->status & (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_IGNORE_PROJECTILES)) ==
+                           MZM_SPRITE_STATUS_EXISTS && s->health != 0
+                       ? s->draw_order : 0;
+    }
+    for (int visit = 0; visit < 16 * ordered; ++visit) {
+        int i = visit % ordered;
+        if (order[i] != visit / ordered + 1) continue;
         MzmSprite *s = &sprites[i];
-        if ((s->status & (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_IGNORE_PROJECTILES)) !=
-                MZM_SPRITE_STATUS_EXISTS || s->health == 0)
-            continue;
         uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
         uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
         uint8_t weakness = weakness_of(s, tables);
@@ -5352,6 +5447,10 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         if (sprite->sprite_id == MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR) return MZM_PSPRITE_ZEBETITE_ONE_AND_THREE;
         if (sprite->sprite_id == MZM_PSPRITE_CANNON2 || sprite->sprite_id == MZM_PSPRITE_CANNON3)
             return MZM_PSPRITE_CANNON;
+        /* sRinkaZebetiteAndCannonGfx, exported with the cannon's tables. */
+        if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_RINKA &&
+            sprite->sprite_id != MZM_PSPRITE_RINKA_ORANGE && sprite->sprite_id != MZM_PSPRITE_RINKA_GREEN)
+            return MZM_PSPRITE_CANNON;
         return sprite->sprite_id;
     }
     if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
@@ -5505,8 +5604,9 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     if (sprite->isft & 0x7F) {
         uint8_t isft = --sprite->isft;
         if (!(isft & 3) && sprite->health) {
-            if (isft & 4) sprite->palette_row = (uint8_t)(14 - sprite->gfx_slot);
-            else if (sprite->freeze_timer) sprite->palette_row = (uint8_t)(15 - sprite->gfx_slot);
+            if (isft & 4) sprite->palette_row = (uint8_t)(14 - sprite->gfx_slot - sprite->frozen_row_offset);
+            else if (sprite->freeze_timer)
+                sprite->palette_row = (uint8_t)(15 - sprite->gfx_slot - sprite->frozen_row_offset);
             else sprite->palette_row = sprite->absolute_palette_row;
         }
     }

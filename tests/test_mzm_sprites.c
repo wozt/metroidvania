@@ -2216,6 +2216,56 @@ int main(void) {
     /* velocity 8, unit (0.6, 0.8): 4 across, 6 down (10-bit truncation). */
     assert(rk.x == spawn_x + 4 && rk.y == 5 * 64 + 32 + 6);
 
+    /* Mother Brain's Rinkas (RinkaMotherBrain): hidden off screen they
+     * respawn, at a second spawn point 40 blocks left (and a block down
+     * for the second one) when Samus is more than 20 blocks left of the
+     * first; frozen and stunned a palette row lower; gone with Mother
+     * Brain. */
+    tables.health[MZM_PSPRITE_RINKA_MOTHER_BRAIN2] = 2;
+    MzmSprite mb;
+    mzm_sprite_init_primary(&mb, MZM_PSPRITE_RINKA_MOTHER_BRAIN2, 0, 5, 45, 0, 0);
+    frame.samus_x = 100;
+    frame.samus_y = 5 * 64;
+    step(&mb, 0);
+    assert(mb.pose == 9 && mb.work2 == 45 && mb.work3 == 5 && mb.frozen_row_offset == 1 &&
+           mb.draw_order == 3 && mb.anim == MZM_RINKA_MOTHER_BRAIN_SPAWNING &&
+           mzm_sprite_graphics_owner(&mb) == MZM_PSPRITE_CANNON);
+    mb.status |= MZM_SPRITE_STATUS_NOT_DRAWN;
+    step(&mb, 0);                   /* off screen: RinkaMotherBrainRespawn */
+    assert(mb.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING && mb.x == 5 * 64 + 32 &&
+           mb.y == 6 * 64 + 32 && mb.work1 == 60 && mb.status & MZM_SPRITE_STATUS_NOT_DRAWN);
+    for (int i = 0; i < 61; ++i) step(&mb, 0);
+    assert(!(mb.status & MZM_SPRITE_STATUS_NOT_DRAWN) && mb.work0 == 11);
+    frame.samus_x = (uint16_t)(mb.x + 600);
+    frame.samus_y = (uint16_t)(mb.y + 60);
+    frames = 0;
+    while (mb.pose != 0x23 && frames < 50) {
+        step(&mb, 0);
+        ++frames;
+    }
+    assert(mb.anim == MZM_RINKA_MOTHER_BRAIN_MOVING);
+    step(&mb, 0);
+    assert(mb.x == 5 * 64 + 32 + 4 && mb.y == 6 * 64 + 32);
+    /* Samus back near the first point: the next respawn is there. */
+    frame.samus_x = 45 * 64;
+    mb.status |= MZM_SPRITE_STATUS_NOT_DRAWN;
+    mb.pose = 9;
+    mb.work1 = 0;
+    /* ONSCREEN is updated after the AI: off screen from the next frame. */
+    mb.status &= (uint16_t)~MZM_SPRITE_STATUS_ONSCREEN;
+    world.camera_x = 40 * 64;
+    step(&mb, 0);
+    world.camera_x = 0;
+    assert(!(mb.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING) && mb.x == 45 * 64 + 32 &&
+           mb.y == 5 * 64 + 32);
+    const MzmSpriteHooks *saved_hooks = frame.hooks;
+    frame.hooks = &test_hooks;
+    test_set_event(NULL, MZM_EVENT_MOTHER_BRAIN_KILLED);
+    step(&mb, 0);
+    assert(mb.status == 0);
+    test_events[MZM_EVENT_MOTHER_BRAIN_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_MOTHER_BRAIN_KILLED % 8));
+    frame.hooks = saved_hooks;
+
     /* Space Pirates: one frame of the sprite array, then the end of
      * SpriteUpdate (alarm). */
     {

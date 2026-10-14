@@ -504,7 +504,8 @@ extern const char *const mzm_squeept_anim_names[MZM_SQUEEPT_ANIMS];
 /* Rinka OAM tables (src/data/sprites/rinka.c). */
 enum {
     MZM_RINKA_ORANGE_SPAWNING, MZM_RINKA_ORANGE_MOVING, MZM_RINKA_GREEN_SPAWNING,
-    MZM_RINKA_GREEN_MOVING, MZM_RINKA_ANIMS,
+    MZM_RINKA_GREEN_MOVING, MZM_RINKA_MOTHER_BRAIN_SPAWNING, MZM_RINKA_MOTHER_BRAIN_MOVING,
+    MZM_RINKA_ANIMS,
 };
 extern const char *const mzm_rinka_anim_names[MZM_RINKA_ANIMS];
 
@@ -615,6 +616,9 @@ enum {
     MZM_PSPRITE_REO_GREEN_WINGS = 63, MZM_PSPRITE_REO_PURPLE_WINGS = 64,
     MZM_PSPRITE_MELLA = 114, MZM_PSPRITE_HOLTZ = 107, MZM_PSPRITE_MULTIVIOLA = 52,
     MZM_PSPRITE_RINKA_ORANGE = 102, MZM_PSPRITE_RINKA_GREEN = 165,
+    MZM_PSPRITE_RINKA_MOTHER_BRAIN = 124, MZM_PSPRITE_RINKA_MOTHER_BRAIN2 = 201,
+    MZM_PSPRITE_RINKA_MOTHER_BRAIN3 = 202, MZM_PSPRITE_RINKA_MOTHER_BRAIN4 = 203,
+    MZM_PSPRITE_RINKA_MOTHER_BRAIN5 = 204, MZM_PSPRITE_RINKA_MOTHER_BRAIN6 = 205,
     MZM_PSPRITE_GERUTA_RED = 54, MZM_PSPRITE_GERUTA_GREEN = 55, MZM_PSPRITE_RIPPERII = 113,
     MZM_PSPRITE_SQUEEPT = 56,
     MZM_PSPRITE_SKULTERA = 69, MZM_PSPRITE_DRAGON = 59,
@@ -698,6 +702,9 @@ typedef struct {
     /* SP_SOLID_FOR_PROJECTILES: every projectile only hits it (the
      * ziplines and their buttons). */
     bool solid_for_projectiles;
+    /* frozenPaletteRowOffset: the frozen and stun rows sit this many rows
+     * lower (the Mother Brain Rinkas). */
+    uint8_t frozen_row_offset;
 } MzmSprite;
 
 /* SamusStandingOnSprite values; DROPPED (port only) is OFF after a kill

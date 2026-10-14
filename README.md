@@ -270,7 +270,8 @@ stays inactive, as in the game before the fully powered suit). The Morph
 Ball, the Power Grip and the Charge Beam are their own item sprites, touched
 to be collected with their banner (the runtime grants the Morph Ball, Bombs
 and Power Grip at start; `--without morph-ball`, `bombs` or `power-grip`
-removes one). Rest
+removes one, and `--event N` sets a game event in every room, for test
+captures). Rest
 in a statue's hand in the Morph Ball to be refilled; a hint statue grabs
 Samus, fades the music, flashes and sits down to its hint music, then
 replays the room's track (its map screen is not ported). The Wave Beam crosses walls and the Plasma Beam goes

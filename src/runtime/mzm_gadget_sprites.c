@@ -1926,6 +1926,217 @@ static void glass_tube(Ctx *c) {
     }
 }
 
+/* Rising Chozo pillar poses and platform parts
+ * (sprites_ai/rising_chozo_pillar.c). */
+enum {
+    RISING_CHOZO_PILLAR_POSE_WAIT_FOR_POWER_GRIP = 0x8, RISING_CHOZO_PILLAR_POSE_EXTENDING = 0x9,
+    RISING_CHOZO_PILLAR_POSE_SPAWN_3_PLATFORMS = 0x22, RISING_CHOZO_PILLAR_POSE_SPAWN_2_PLATFORMS = 0x23,
+    RISING_CHOZO_PILLAR_POSE_SPAWN_1_PLATFORMS = 0x24, RISING_CHOZO_PILLAR_POSE_EXTENDED = 0x25,
+    RISING_CHOZO_PILLAR_POSE_KILL = 0x26,
+    CHOZO_PILLAR_PLATFORM_POSE_SPAWNING = 0x8, CHOZO_PILLAR_PLATFORM_POSE_IDLE = 0x9,
+    CHOZO_PILLAR_PLATFORM_NO_SHADOW = 0, CHOZO_PILLAR_PLATFORM_SHADOW = 1,
+};
+
+/* RisingChozoPillarRandomSpriteDebris */
+static void rising_pillar_debris(Ctx *c, uint16_t y, uint16_t x, uint8_t rng) {
+    switch (rng) {
+    case 1:
+        ai_debris_init(c, 0x11, (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), x);
+        ai_debris_init(c, 0x12, (uint16_t)(y - QUARTER_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE + PIXEL_SIZE + PIXEL_SIZE / 2));
+        break;
+    case 3:
+        ai_debris_init(c, 0x13, (uint16_t)(y - (QUARTER_BLOCK_SIZE + PIXEL_SIZE)),
+                       (uint16_t)(x - (BLOCK_SIZE + HALF_BLOCK_SIZE - PIXEL_SIZE)));
+        ai_debris_init(c, 4, (uint16_t)(y - (EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2)), (uint16_t)(x + HALF_BLOCK_SIZE - PIXEL_SIZE / 2));
+        break;
+    case 7:
+        ai_debris_init(c, 0x11, (uint16_t)(y - EIGHTH_BLOCK_SIZE), (uint16_t)(x - (THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE / 2)));
+        ai_debris_init(c, 0x12, (uint16_t)(y - (THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE)),
+                       (uint16_t)(x + BLOCK_SIZE * 2 - EIGHTH_BLOCK_SIZE));
+        break;
+    case 12:
+        ai_debris_init(c, 0x13, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x + HALF_BLOCK_SIZE - PIXEL_SIZE / 2));
+        ai_debris_init(c, 4, (uint16_t)(y - PIXEL_SIZE),
+                       (uint16_t)(x - (BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE - PIXEL_SIZE / 2)));
+        break;
+    default:
+        break;
+    }
+}
+
+/* RisingChozoPillarRandomParticles */
+static void rising_pillar_particles(Ctx *c, uint16_t y, uint16_t x, uint8_t rng) {
+    switch (rng) {
+    case 1: ai_particle_set(c, y, (uint16_t)(x - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)), MZM_PE_TWO_MEDIUM_DUST); break;
+    case 16: ai_particle_set(c, y, (uint16_t)(x + BLOCK_SIZE - PIXEL_SIZE), MZM_PE_SECOND_MEDIUM_DUST); break;
+    case 33: ai_particle_set(c, y, (uint16_t)(x - (BLOCK_SIZE - PIXEL_SIZE)), MZM_PE_SECOND_MEDIUM_DUST); break;
+    case 50: ai_particle_set(c, y, (uint16_t)(x + QUARTER_BLOCK_SIZE + PIXEL_SIZE), MZM_PE_MEDIUM_DUST); break;
+    case 66: ai_particle_set(c, y, (uint16_t)(x - (BLOCK_SIZE + QUARTER_BLOCK_SIZE)), MZM_PE_TWO_MEDIUM_DUST); break;
+    case 84:
+        ai_particle_set(c, y, (uint16_t)(x + BLOCK_SIZE + QUARTER_BLOCK_SIZE), MZM_PE_SECOND_MEDIUM_DUST);
+        ai_particle_set(c, y, x, MZM_PE_SECOND_TWO_MEDIUM_DUST);
+        break;
+    case 100: ai_particle_set(c, y, (uint16_t)(x - (QUARTER_BLOCK_SIZE + PIXEL_SIZE)), MZM_PE_SECOND_TWO_MEDIUM_DUST); break;
+    case 110: ai_particle_set(c, y, (uint16_t)(x + HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE), MZM_PE_MEDIUM_DUST); break;
+    default: break;
+    }
+}
+
+/* One platform of the pillar: its two grippable blocks and its sprite. */
+static void rising_pillar_platform(Ctx *c, uint16_t y, uint16_t x, uint8_t part) {
+    caa(c, y, x, MZM_CAA_MAKE_SOLID_GRIPPABLE);
+    caa(c, y, (uint16_t)(x + BLOCK_SIZE), MZM_CAA_MAKE_SOLID_GRIPPABLE);
+    ai_spawn_secondary(c, MZM_SSPRITE_CHOZO_PILLAR_PLATFORM, part, c->s->gfx_slot, y,
+                       (uint16_t)(x + HALF_BLOCK_SIZE), 0);
+}
+
+/* RisingChozoPillarSpawnThreePlatforms / TwoPlatforms / OnePlatform */
+static void rising_pillar_spawn(Ctx *c, uint16_t y, uint16_t x, int count) {
+    if (count == 3) {
+        for (int b = 3; b <= 19; b += 8)
+            rising_pillar_platform(c, (uint16_t)(y - BLOCK_SIZE * b), (uint16_t)(x + BLOCK_SIZE * 3),
+                                   CHOZO_PILLAR_PLATFORM_SHADOW);
+    } else if (count == 2) {
+        rising_pillar_platform(c, (uint16_t)(y - BLOCK_SIZE * 7), x, CHOZO_PILLAR_PLATFORM_NO_SHADOW);
+        rising_pillar_platform(c, (uint16_t)(y - BLOCK_SIZE * 24), x, CHOZO_PILLAR_PLATFORM_NO_SHADOW);
+    } else {
+        rising_pillar_platform(c, (uint16_t)(y - BLOCK_SIZE * 15), (uint16_t)(x + BLOCK_SIZE * 6),
+                               CHOZO_PILLAR_PLATFORM_NO_SHADOW);
+    }
+}
+
+/* RisingChozoPillar: once the Power Grip is obtained, the pillar (BG2 in
+ * its room) rises for 704 frames with dust, debris and shakes, then its
+ * six platforms appear (EVENT_CHOZO_PILLAR_FULLY_EXTENDED); later visits
+ * place them at once. Never drawn. */
+static void rising_chozo_pillar(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y - HALF_BLOCK_SIZE), x = s->x;
+    MzmSpriteGlobals *globals = c->f->globals;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        if (check_event(c, MZM_EVENT_CHOZO_PILLAR_FULLY_EXTENDED)) {
+            rising_pillar_spawn(c, y, x, 3);
+            rising_pillar_spawn(c, y, x, 2);
+            rising_pillar_spawn(c, y, x, 1);
+            kill(s);
+            break;
+        }
+        s->status |= MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->samus_collision = SSC_NONE;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = 1;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        /* (natively sEnemyDropOam_LargeEnergy, never drawn) */
+        ai_set_anim(s, MZM_GADGET_CHOZO_PILLAR_PLATFORM_NO_SHADOW_SPAWNED);
+        s->pose = RISING_CHOZO_PILLAR_POSE_WAIT_FOR_POWER_GRIP;
+        break;
+    case RISING_CHOZO_PILLAR_POSE_WAIT_FOR_POWER_GRIP:
+        if (check_event(c, EVENT_POWER_GRIP_OBTAINED)) {
+            s->pose = RISING_CHOZO_PILLAR_POSE_EXTENDING;
+            s->scaling = 704;
+            mzm_sfx_play(MZM_SOUND_RISING_CHOZO_PILLAR_RISING);
+        }
+        break;
+    case RISING_CHOZO_PILLAR_POSE_EXTENDING: {
+        if (s->scaling % 32 == 0) mzm_screen_shake_start_vertical(30, 0x81);  /* CONVERT_SECONDS(.5f) */
+        s->scaling--;
+        if (s->scaling != 0) {
+            if (globals) globals->bg2_offset_y += PIXEL_SIZE / 2;
+        } else {
+            s->pose = RISING_CHOZO_PILLAR_POSE_SPAWN_3_PLATFORMS;
+            mzm_sfx_fade(MZM_SOUND_RISING_CHOZO_PILLAR_RISING, 10);   /* CONVERT_SECONDS(1.f / 6) */
+        }
+        uint16_t debris_y = (uint16_t)(y + HALF_BLOCK_SIZE);
+        uint16_t debris_x = (uint16_t)(x + BLOCK_SIZE * 3 + HALF_BLOCK_SIZE);
+        rising_pillar_debris(c, debris_y, debris_x, (uint8_t)(s->scaling % 16));
+        rising_pillar_particles(c, debris_y, debris_x, (uint8_t)(s->scaling % 128));
+        break;
+    }
+    case RISING_CHOZO_PILLAR_POSE_SPAWN_3_PLATFORMS:
+        s->pose = RISING_CHOZO_PILLAR_POSE_SPAWN_2_PLATFORMS;
+        rising_pillar_spawn(c, y, x, 3);
+        break;
+    case RISING_CHOZO_PILLAR_POSE_SPAWN_2_PLATFORMS:
+        s->pose = RISING_CHOZO_PILLAR_POSE_SPAWN_1_PLATFORMS;
+        rising_pillar_spawn(c, y, x, 2);
+        break;
+    case RISING_CHOZO_PILLAR_POSE_SPAWN_1_PLATFORMS:
+        s->pose = RISING_CHOZO_PILLAR_POSE_EXTENDED;
+        rising_pillar_spawn(c, y, x, 1);
+        break;
+    case RISING_CHOZO_PILLAR_POSE_EXTENDED:
+        s->pose = RISING_CHOZO_PILLAR_POSE_KILL;
+        break;
+    case RISING_CHOZO_PILLAR_POSE_KILL: {
+        const MzmSpriteHooks *h = c->f->hooks;
+        if (h && h->set_event) h->set_event(h->context, MZM_EVENT_CHOZO_PILLAR_FULLY_EXTENDED);
+        kill(s);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+/* ChozoPillarPlatform and ChozoPillarPlatformShadow: a platform appears
+ * (with its spawning sound), the shadowed ones drop their shadow behind
+ * Samus on the spawning animation's 22nd frame. */
+static void chozo_pillar_platform(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->ignore_samus_timer = 1;
+    bool shadowed = s->room_slot != CHOZO_PILLAR_PLATFORM_NO_SHADOW;
+    if (s->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW) {
+        if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+            s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+            s->samus_collision = SSC_NONE;
+            s->draw_top = 0;
+            s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+            s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+            s->pose = 8;
+            ai_set_anim(s, MZM_GADGET_CHOZO_PILLAR_PLATFORM_SHADOW);
+            s->draw_order = 12;
+        }
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->y = (uint16_t)(s->y + PIXEL_SIZE);
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->samus_collision = SSC_NONE;
+        s->draw_top = HALF_BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_bottom = s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        if (check_event(c, MZM_EVENT_CHOZO_PILLAR_FULLY_EXTENDED)) {
+            s->pose = CHOZO_PILLAR_PLATFORM_POSE_IDLE;
+            if (shadowed) {
+                ai_set_anim(s, MZM_GADGET_CHOZO_PILLAR_PLATFORM_SHADOW_SPAWNED);
+                ai_spawn_secondary(c, MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW, 0, s->gfx_slot, s->y, s->x, 0);
+            } else {
+                ai_set_anim(s, MZM_GADGET_CHOZO_PILLAR_PLATFORM_NO_SHADOW_SPAWNED);
+            }
+        } else {
+            s->pose = CHOZO_PILLAR_PLATFORM_POSE_SPAWNING;
+            ai_set_anim(s, shadowed ? MZM_GADGET_CHOZO_PILLAR_PLATFORM_SHADOW_SPAWNING
+                                    : MZM_GADGET_CHOZO_PILLAR_PLATFORM_NO_SHADOW_SPAWNING);
+            mzm_sfx_play(MZM_SOUND_RISING_CHOZO_PILLAR_PLATFORM_SPAWNING);
+        }
+        break;
+    case CHOZO_PILLAR_PLATFORM_POSE_SPAWNING:
+        if (ai_animation_ending(c, 1)) {
+            s->pose = CHOZO_PILLAR_PLATFORM_POSE_IDLE;
+            ai_set_anim(s, shadowed ? MZM_GADGET_CHOZO_PILLAR_PLATFORM_SHADOW_SPAWNED
+                                    : MZM_GADGET_CHOZO_PILLAR_PLATFORM_NO_SHADOW_SPAWNED);
+        } else if (shadowed && s->frame == 21 && s->adc == 1) {
+            ai_spawn_secondary(c, MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW, 0, s->gfx_slot, s->y, s->x, 0);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
 void ai_gadget(Ctx *c) {
     if (c->s->secondary) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
@@ -1934,6 +2145,9 @@ void ai_gadget(Ctx *c) {
         else if (c->s->sprite_id == MZM_SSPRITE_GUNSHIP_PART) ai_gunship(c);
         else if (c->s->sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART) morph_ball_launcher_part(c);
         else if (c->s->sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART) zipline_generator_part(c);
+        else if (c->s->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM ||
+                 c->s->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW)
+            chozo_pillar_platform(c);
         return;
     }
     switch (c->s->sprite_id) {
@@ -1958,6 +2172,7 @@ void ai_gadget(Ctx *c) {
     case MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED: security_gate(c); break;
     case MZM_PSPRITE_PISTON: piston(c); break;
     case MZM_PSPRITE_GLASS_TUBE: glass_tube(c); break;
+    case MZM_PSPRITE_RISING_CHOZO_PILLAR: rising_chozo_pillar(c); break;
     default: break;
     }
 }

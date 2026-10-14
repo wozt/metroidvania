@@ -3708,6 +3708,66 @@ int main(void) {
         mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GLASS_TUBE, 0, 7, 6, 0, 0);
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0xF && caa_calls == 22);
+        /* The rising Chozo pillar: waits for the Power Grip, rises BG2 by
+         * half a pixel a frame for 704 frames, then spawns its 3, 2 and 1
+         * platforms (two grippable blocks each) and sets its event; later
+         * the platforms come at once, the shadowed ones with their shadow. */
+        {
+            static MzmSprite pillar_room[12];
+            memset(pillar_room, 0, sizeof pillar_room);
+            MzmSpriteFrame pg = g;
+            MzmSpriteGlobals pillar_globals = {0};
+            pg.sprites = pillar_room;
+            pg.sprite_count = 12;
+            pg.globals = &pillar_globals;
+            caa_calls = 0;
+            mzm_sprite_init_primary(&pillar_room[0], MZM_PSPRITE_RISING_CHOZO_PILLAR, 0, 30, 3, 0, 0);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].pose == 0x8 && pillar_room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].pose == 0x8);
+            test_set_event(NULL, MZM_EVENT_POWER_GRIP_OBTAINED);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].pose == 0x9 && pillar_room[0].scaling == 704);
+            for (int i = 0; i < 703; ++i) mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_globals.bg2_offset_y == 703 * 2 && pillar_room[0].pose == 0x9);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].pose == 0x22 && pillar_globals.bg2_offset_y == 703 * 2);
+            int debris = caa_calls;
+            assert(debris == 0);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].pose == 0x23 && caa_calls == 6 && last_caa == MZM_CAA_MAKE_SOLID_GRIPPABLE);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].pose == 0x25 && caa_calls == 12);
+            int platforms = 0;
+            for (int i = 1; i < 12; ++i)
+                if (pillar_room[i].status && pillar_room[i].sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM)
+                    ++platforms;
+            assert(platforms == 6 && pillar_room[1].room_slot == 1 && pillar_room[4].room_slot == 0);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].status == 0 && test_check_event(NULL, MZM_EVENT_CHOZO_PILLAR_FULLY_EXTENDED));
+            /* A platform updated after the event: four pixels down, already
+             * spawned. */
+            uint16_t platform_y = pillar_room[1].y;
+            mzm_sprite_update(&pillar_room[1], 1, &pg);
+            assert(pillar_room[1].y == platform_y + 4 && pillar_room[1].pose == 0x9 &&
+                   pillar_room[1].anim == MZM_GADGET_CHOZO_PILLAR_PLATFORM_SHADOW_SPAWNED);
+            /* On a later visit the platforms come at once, the shadowed ones
+             * with their shadow behind Samus. */
+            memset(pillar_room, 0, sizeof pillar_room);
+            caa_calls = 0;
+            mzm_sprite_init_primary(&pillar_room[0], MZM_PSPRITE_RISING_CHOZO_PILLAR, 0, 30, 3, 0, 0);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].status == 0 && caa_calls == 12);
+            mzm_sprite_update(&pillar_room[1], 1, &pg);
+            /* (the shadow takes the pillar's freed slot) */
+            assert(pillar_room[1].pose == 0x9 && pillar_room[0].sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW);
+            mzm_sprite_update(&pillar_room[0], 0, &pg);
+            assert(pillar_room[0].draw_order == 12 && pillar_room[0].anim == MZM_GADGET_CHOZO_PILLAR_PLATFORM_SHADOW);
+            memset(test_events, 0, sizeof test_events);
+        }
         mzm_screen_shake_clear();
         memset(test_events, 0, sizeof test_events);
         g.equipment = frame.equipment;

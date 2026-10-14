@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-13T21:21:00+00:00",
+ "generated_at": "2026-10-14T00:43:56+00:00",
  "git": {
-  "commit": "dc8dbec",
+  "commit": "39371b6",
   "branch": "main",
   "dirty": true
  },
@@ -546,7 +546,7 @@
     "SpriteDebrisDraw",
     "SpriteUtilRandomSpriteDebris"
    ],
-   "limitations": "Debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece; other particle effects (Samus, charge, dust, beams other than the normal beam) are not ported. One-shot particles for the bomb explosion, sprite explosions, the screw attack kill and projectile impacts on walls and sprites, the medium dust effects, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range. The super missile impact starts a sixth-of-a-second screen shake both ways.",
+   "limitations": "Debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece; other particle effects (Samus, charge, dust, beams other than the normal beam) are not ported. One-shot particles for the bomb explosion, sprite explosions, the screw attack kill and projectile impacts on walls and sprites, the medium dust effects, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range. The super missile impact starts a sixth-of-a-second screen shake both ways. PE_SECOND_MEDIUM_DUST and PE_SECOND_TWO_MEDIUM_DUST reuse the dust tables (their low BG priority is not drawn).",
    "next_action": "Port the remaining particle effects with their owners (Samus, charge beam, dust).",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -567,7 +567,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -625,7 +625,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -746,7 +746,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -801,7 +801,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -864,7 +864,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -931,7 +931,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1000,7 +1000,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1057,7 +1057,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1106,7 +1106,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1154,7 +1154,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1202,7 +1202,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1250,7 +1250,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1298,7 +1298,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1352,7 +1352,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1402,7 +1402,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1450,7 +1450,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1500,7 +1500,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1549,7 +1549,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1606,7 +1606,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1657,7 +1657,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1705,7 +1705,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1754,7 +1754,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1827,7 +1827,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1879,7 +1879,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1927,7 +1927,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -1975,7 +1975,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2025,7 +2025,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2109,7 +2109,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2185,7 +2185,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2286,7 +2286,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2345,14 +2345,14 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
    "id": "mzm.environment.room_gadgets",
    "area": "mzm",
    "category": "environment",
-   "title": "Elevator pads, water drops, steam, Gerons, unknown item blocks, morph ball launchers, ziplines, pistons and the glass tube",
+   "title": "Elevator pads, water drops, steam, Gerons, unknown item blocks, morph ball launchers, ziplines, pistons, the glass tube and the rising Chozo pillar",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -2423,10 +2423,18 @@
     "GlassTubeCheckPowerBombCollision",
     "GlassTubeDelayBeforeBreaking",
     "GlassTubeCheckCrackingAnimEnded",
-    "GlassTubeCheckBreakingAnimEnded"
+    "GlassTubeCheckBreakingAnimEnded",
+    "RisingChozoPillar",
+    "RisingChozoPillarRandomSpriteDebris",
+    "RisingChozoPillarRandomParticles",
+    "RisingChozoPillarSpawnThreePlatforms",
+    "RisingChozoPillarSpawnTwoPlatforms",
+    "RisingChozoPillarSpawnOnePlatform",
+    "ChozoPillarPlatform",
+    "ChozoPillarPlatformShadow"
    ],
-   "limitations": "Not compared with an emulator. The Parasites that grab and destroy the Gerons are not ported, so a Geron that is not already destroyed blocks its passage for good; the unknown item block's explosion, the morph ball launcher, the ziplines, their buttons, the generator's electricity, the pistons and the glass tube keep the sprites' priority instead of their BG priority (bgPriority); event and hard-mode spritesets are not resolved, so a gadget only placed by them (brinstar_000's elevator pad) does not appear. The zipline's EU-only gSamusPhysics.horizontalMovingDirection update is not applied (USA build) and the grab does not move gPreviousYPosition. The glass tube's break was only checked in tests (no capture: it needs the Fully Powered Suit's event). The AIs follow the decompilation: the elevator pad (moved 2 pixels up, always active, synced to Samus and on its Moving animation while she uses an elevator); water drops (hidden for gSpriteRng * 8 frames, spawning animation, falling by sSpritesFallingSpeed, splashing on a block with SpriteUtilCheckVerticalCollisionAtPositionSlopes or on the water surface held at gEffectYPosition, hidden again for 100 + rng * 8 frames at a random x offset); steam (ground, ceiling with Y flip one block up, left or right wall turned horizontal, killed in the air; large/small draw distances; a random first frame; the large or small steam sound on screen at frame 0); diagonal steam (X flip without a wall on its left, Y flip for the downward ones); Gerons (their event checks, three CAA_MAKE_NON_POWER_GRIP blocks, shaking on ISFT 2 with its sound, the destroyed stump after their event; the destruction and its events when four Parasites hold one) and the Norfair Geron (gone after EVENT_POWER_GRIP_OBTAINED); unknown item blocks (2x2 CAA_MAKE_SOLID_GRIPPABLE blocks, ignoring projectiles until their item event, then destroyed by a hit: CAA_REMOVE_SOLID, the breaking sound, the light secondary at frame 7). Checked by capture in crateria_001 (steam), brinstar_021 (Geron), kraid_012 (Space Jump block) and crateria_011 (Plasma Beam block, water drops). Morph ball launchers: their back part and the five blocks around made non power grip; a bomb in its first spin set on the launcher is taken (BOMB_STAGE_PLACED_ON_LAUNCHER), the launcher waits half a second and plays its launching animation, and when the bomb's explosion launches Samus (SPOSE_DELAY_BEFORE_BALLSPARKING) the energy appears around her for a second. Checked by capture in brinstar_000 (the launch is stopped by the power bomb blocks above, as natively before the Power Bombs). Ziplines: the initial direction away from the stop-enemy block beside them, Samus grabbed from below (SSC_ZIPLINE), the grabbing, grabbed and releasing animations (unlit, then lit once EVENT_ZIPLINES_ACTIVATED is set), the run to the other stop-enemy block once lit (a quarter block a frame, a pixel less carrying Samus, the moving sound every 16 frames and its fade), the snap to the block's middle that drops her (SPOSE_MID_AIR_REQUEST) and the turn; zipline buttons (two blocks up, bound to the room's zipline or removed, lit with the event, a shot calls the zipline with its sound, active until it stops); the zipline generator (its conductor behind Samus, four CAA_MAKE_SOLID_GRIPPABLE blocks, Samus in morph ball at its top set to SPOSE_ACTIVATING_ZIPLINES for two seconds with the activating sound, the morph symbol over her, the electricity at 1.5 seconds, the animated palette back on at 16 frames from the end, then the event and SPOSE_MORPH_BALL; already activated after the event). Checked by capture in kraid_004 (activation, the button shot from the generator, the zipline's run from 440 to 232 and its turn, Samus hanging under it). Pistons: four body blocks made non power grip, the bottom one once Samus is away, a damaging beam or bomb hit on the head (ISFT_DAMAGED) opens them with their sound, freeing the bottom block on the opening's third frame, then the top block once Samus is out of it; checked by capture in brinstar_028 (a standing shot from the right raises the piston). The glass tube: intact (with the rain sound before the Fully Powered Suit), a power bomb touching it after that suit sets EVENT_GLASS_TUBE_BROKEN, two seconds later it cracks with its sound, then opens its two rows of eleven blocks with dust at its four ends and a half-second shake both ways, and stays broken (its rows removed at once on later visits); the intact tube was checked by capture in chozodia_023. Before this patch the gadget OAM tables past the 72nd (the ziplines' and gates') overflowed MzmSpriteKind and read zero durations; the limit is now 128 with static asserts.",
-   "next_action": "Port the Parasites, then the rising Chozo pillar (it scrolls BG2) and, with the Ruins Test, the falling one.",
+   "limitations": "Not compared with an emulator. The Parasites that grab and destroy the Gerons are not ported, so a Geron that is not already destroyed blocks its passage for good; the unknown item block's explosion, the morph ball launcher, the ziplines, their buttons, the generator's electricity, the pistons and the glass tube keep the sprites' priority instead of their BG priority (bgPriority); event and hard-mode spritesets are not resolved, so a gadget only placed by them (brinstar_000's elevator pad) does not appear. The zipline's EU-only gSamusPhysics.horizontalMovingDirection update is not applied (USA build) and the grab does not move gPreviousYPosition. The glass tube's break was only checked in tests (no capture: it needs the Fully Powered Suit's event). The pillar's second dust particles are drawn at the normal priority instead of behind BG1. The AIs follow the decompilation: the elevator pad (moved 2 pixels up, always active, synced to Samus and on its Moving animation while she uses an elevator); water drops (hidden for gSpriteRng * 8 frames, spawning animation, falling by sSpritesFallingSpeed, splashing on a block with SpriteUtilCheckVerticalCollisionAtPositionSlopes or on the water surface held at gEffectYPosition, hidden again for 100 + rng * 8 frames at a random x offset); steam (ground, ceiling with Y flip one block up, left or right wall turned horizontal, killed in the air; large/small draw distances; a random first frame; the large or small steam sound on screen at frame 0); diagonal steam (X flip without a wall on its left, Y flip for the downward ones); Gerons (their event checks, three CAA_MAKE_NON_POWER_GRIP blocks, shaking on ISFT 2 with its sound, the destroyed stump after their event; the destruction and its events when four Parasites hold one) and the Norfair Geron (gone after EVENT_POWER_GRIP_OBTAINED); unknown item blocks (2x2 CAA_MAKE_SOLID_GRIPPABLE blocks, ignoring projectiles until their item event, then destroyed by a hit: CAA_REMOVE_SOLID, the breaking sound, the light secondary at frame 7). Checked by capture in crateria_001 (steam), brinstar_021 (Geron), kraid_012 (Space Jump block) and crateria_011 (Plasma Beam block, water drops). Morph ball launchers: their back part and the five blocks around made non power grip; a bomb in its first spin set on the launcher is taken (BOMB_STAGE_PLACED_ON_LAUNCHER), the launcher waits half a second and plays its launching animation, and when the bomb's explosion launches Samus (SPOSE_DELAY_BEFORE_BALLSPARKING) the energy appears around her for a second. Checked by capture in brinstar_000 (the launch is stopped by the power bomb blocks above, as natively before the Power Bombs). Ziplines: the initial direction away from the stop-enemy block beside them, Samus grabbed from below (SSC_ZIPLINE), the grabbing, grabbed and releasing animations (unlit, then lit once EVENT_ZIPLINES_ACTIVATED is set), the run to the other stop-enemy block once lit (a quarter block a frame, a pixel less carrying Samus, the moving sound every 16 frames and its fade), the snap to the block's middle that drops her (SPOSE_MID_AIR_REQUEST) and the turn; zipline buttons (two blocks up, bound to the room's zipline or removed, lit with the event, a shot calls the zipline with its sound, active until it stops); the zipline generator (its conductor behind Samus, four CAA_MAKE_SOLID_GRIPPABLE blocks, Samus in morph ball at its top set to SPOSE_ACTIVATING_ZIPLINES for two seconds with the activating sound, the morph symbol over her, the electricity at 1.5 seconds, the animated palette back on at 16 frames from the end, then the event and SPOSE_MORPH_BALL; already activated after the event). Checked by capture in kraid_004 (activation, the button shot from the generator, the zipline's run from 440 to 232 and its turn, Samus hanging under it). Pistons: four body blocks made non power grip, the bottom one once Samus is away, a damaging beam or bomb hit on the head (ISFT_DAMAGED) opens them with their sound, freeing the bottom block on the opening's third frame, then the top block once Samus is out of it; checked by capture in brinstar_028 (a standing shot from the right raises the piston). The glass tube: intact (with the rain sound before the Fully Powered Suit), a power bomb touching it after that suit sets EVENT_GLASS_TUBE_BROKEN, two seconds later it cracks with its sound, then opens its two rows of eleven blocks with dust at its four ends and a half-second shake both ways, and stays broken (its rows removed at once on later visits); the intact tube was checked by capture in chozodia_023. Before this patch the gadget OAM tables past the 72nd (the ziplines' and gates') overflowed MzmSpriteKind and read zero durations; the limit is now 128 with static asserts. The rising Chozo pillar (crateria_016 and crateria_017): never drawn, it waits for EVENT_POWER_GRIP_OBTAINED, then for 704 frames raises BG2 (gBg2Movement.yOffset, half a pixel a frame) with its sound, a vertical shake every 32 frames and the ROM's debris and dust patterns, spawns its three shadowed, two and one plain platforms over three frames (two CAA_MAKE_SOLID_GRIPPABLE blocks each, the spawning sound and animation, the shadow behind Samus on the 22nd frame), and sets EVENT_CHOZO_PILLAR_FULLY_EXTENDED; later visits place the platforms at once. Checked by capture in crateria_016 with --event 16 (the pillar rising, then the platforms appearing).",
+   "next_action": "Port the Parasites, then the falling Chozo pillar with the Ruins Test.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -2446,7 +2454,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2520,7 +2528,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2560,7 +2568,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2605,7 +2613,7 @@
     "TextDrawLocationTextCharacters"
    ],
    "limitations": "The location texts are baked in the banner's graphics by the exporter (English only), as /ltN library variants; the banner always draws as graphics slot 7 (its slot of the spriteset only matters for the palette rows, which are baked). gLastDoorUsed is known for door transitions and the new game's start (door 0); a loaded file shows only the save and map room banners of their spritesets. The banner is drawn after the front backgrounds (BG priority 0) at its GBA screen position, the GBA screen centred in the wider view. Not compared with an emulator. SpriteUtilInitLocationText: when a room is entered through a door flagged DOOR_TYPE_DISPLAYS_ROOM_LOCATION (exported as Y lines) the area's location text (LocationTextGet*: BRINSTAR, KRAID, NORFAIR, RIDLEY, TOURIAN, CRATERIA, CHOZODIA, MOTHERSHIP, PLANET ZEBES, CHOZO RUINS, the map rooms...), and in a save or map room spriteset always its name, put an area banner in sprite slot 0 at an absolute screen position: an area's name scrolls in at the bottom for 2 seconds (sAreaBannerLocationTextPal), a room's name in the middle for 1.5 seconds (5/6 of a second for the save and map rooms, none of those while the alarm rings), then scrolls out. TextDrawLocation's text (mask mode over 0xFF, its two tile rows copied to the graphics slot) is drawn by the exporter with the native font. Checked by capture: BRINSTAR at a new game's start and SAVE ROOM in brinstar_033. The tests run both banners and the alarm case.",
-   "next_action": "Port the remaining gadgets (the Chozo pillars), then compare with an emulator.",
+   "next_action": "Port the falling Chozo pillar with the Ruins Test, then compare with an emulator.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -2625,7 +2633,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2711,7 +2719,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2783,7 +2791,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2900,7 +2908,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -2950,7 +2958,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3011,7 +3019,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3075,7 +3083,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3126,7 +3134,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3204,7 +3212,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3257,7 +3265,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3340,7 +3348,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3413,7 +3421,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3583,7 +3591,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3661,7 +3669,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3711,9 +3719,10 @@
     "ScreenShakeStartHorizontal",
     "ScreenShakeUpdateVertical",
     "ScreenShakeUpdateHorizontal",
-    "RoomUpdateBackgroundsPosition"
+    "RoomUpdateBackgroundsPosition",
+    "ScrollBg2"
    ],
-   "limitations": "Each background is rendered alone by the PPU and the runtime composes them with its sprites by priority, so the BG0 blend is approximated by SDL blending (additive at EVA/16, alpha at 16 - EVB) instead of the GBA's per-pixel targets; the block layers are redrawn around the view every frame instead of the native row and column streaming (the same tiles); the mother ship common tiles (gUseMotherShipDoors, set by door types) are not tracked; the background effects (lightning, flashes), BG0 and BG3 movement (clouds, snow), the 0x43/0x44/dark-room BG0 positions, haze, gradients, windows and screen fades are not reproduced; without the ROM bank the exported metatile sheets are drawn instead (static). The camera is the runtime's 320x224 follow view. With the ROM bank, mzm_room_gfx rebuilds the room's VRAM and BG palettes as RoomLoadTileset leaves them (animated tiles at 0x4000, common tiles at 0x4800, the tileset at 0x5800, the BG3 graphics below 0xFDE0, palette rows 0-2 common and 3-15 from the tileset), decompresses the BG3 and LZ77 BG0 maps, sets the BG control registers and priorities of TransparencySetRoomEffectsTransparency, and writes the block layers' metatiles (gTilemap, then gCommonTilemap past block 1024) into the 512x256 maps around the camera. Every frame it runs AnimatedGraphicsUpdate (16 slots with their five types, mirrored at the end of VRAM for slots 12-15), the tank animation, AnimatedPaletteUpdate on palette row 15 (disabled without the alarm or the ziplines event, paused during a power bomb), the hatch flashing, and positions a liquid LZ77 BG0 from gEffectYPosition with the water wave (sWaterLoopCounterArray), which also feeds the hazard and sprite liquid surface. Lava, acid and water now animate and blend: checked by capture in norfair_022 (lava), crateria_007 (water over Samus and the Skulteras) and brinstar_000. Screen shakes (mzm_screen_shake, one shared state as gScreenShakeX/Y): a longer shake replaces the current one; once a frame a 2-pixel offset every third frame (up or left, then down or right with intensity bit 0, else nothing), halved in the last quarter second, moves BG0 to BG2 and BG3 by half, never the sprites; the room load clears them. Checked by capture during a power bomb in chozodia_005 (BG1 2 pixels left, then back).",
+   "limitations": "Each background is rendered alone by the PPU and the runtime composes them with its sprites by priority, so the BG0 blend is approximated by SDL blending (additive at EVA/16, alpha at 16 - EVB) instead of the GBA's per-pixel targets; the block layers are redrawn around the view every frame instead of the native row and column streaming (the same tiles); the mother ship common tiles (gUseMotherShipDoors, set by door types) are not tracked; the background effects (lightning, flashes), BG0 and BG3 movement (clouds, snow), the 0x43/0x44/dark-room BG0 positions, haze, gradients, windows and screen fades are not reproduced; without the ROM bank the exported metatile sheets are drawn instead (static). The camera is the runtime's 320x224 follow view. With the ROM bank, mzm_room_gfx rebuilds the room's VRAM and BG palettes as RoomLoadTileset leaves them (animated tiles at 0x4000, common tiles at 0x4800, the tileset at 0x5800, the BG3 graphics below 0xFDE0, palette rows 0-2 common and 3-15 from the tileset), decompresses the BG3 and LZ77 BG0 maps, sets the BG control registers and priorities of TransparencySetRoomEffectsTransparency, and writes the block layers' metatiles (gTilemap, then gCommonTilemap past block 1024) into the 512x256 maps around the camera. Every frame it runs AnimatedGraphicsUpdate (16 slots with their five types, mirrored at the end of VRAM for slots 12-15), the tank animation, AnimatedPaletteUpdate on palette row 15 (disabled without the alarm or the ziplines event, paused during a power bomb), the hatch flashing, and positions a liquid LZ77 BG0 from gEffectYPosition with the water wave (sWaterLoopCounterArray), which also feeds the hazard and sprite liquid surface. Lava, acid and water now animate and blend: checked by capture in norfair_022 (lava), crateria_007 (water over Samus and the Skulteras) and brinstar_000. Screen shakes (mzm_screen_shake, one shared state as gScreenShakeX/Y): a longer shake replaces the current one; once a frame a 2-pixel offset every third frame (up or left, then down or right with intensity bit 0, else nothing), halved in the last quarter second, moves BG0 to BG2 and BG3 by half, never the sprites; the room load clears them. Checked by capture during a power bomb in chozodia_005 (BG1 2 pixels left, then back). A BG_PROP_MOVING BG2 (crateria_016, kraid_030) follows ScrollBg2: BG1's position plus gBg2Movement, kept within BG2 for the GBA screen (the runtime's wider view may show past it).",
    "next_action": "Port the background effects, BG movement and haze, then compose the layers with the sprites per pixel.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -3750,7 +3759,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3797,7 +3806,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3849,7 +3858,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3919,7 +3928,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -3986,7 +3995,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4055,7 +4064,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4178,7 +4187,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4249,7 +4258,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4315,7 +4324,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4402,7 +4411,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4489,7 +4498,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4576,7 +4585,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4666,7 +4675,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4707,7 +4716,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4760,7 +4769,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4805,7 +4814,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4854,7 +4863,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4909,7 +4918,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -4951,7 +4960,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5002,7 +5011,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5052,7 +5061,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5092,7 +5101,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5133,7 +5142,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5182,7 +5191,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5450,7 +5459,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5488,7 +5497,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5529,7 +5538,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5564,7 +5573,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5601,7 +5610,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5644,7 +5653,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5680,7 +5689,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5723,7 +5732,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5759,7 +5768,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5795,7 +5804,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5882,7 +5891,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5919,7 +5928,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -5964,7 +5973,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6002,7 +6011,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6039,7 +6048,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6102,7 +6111,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6139,7 +6148,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6176,7 +6185,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6225,7 +6234,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6285,7 +6294,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6330,7 +6339,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6367,7 +6376,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6403,7 +6412,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6438,7 +6447,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -6473,7 +6482,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-13"
+    "verified_on": "2026-10-14"
    }
   },
   {
@@ -7392,6 +7401,12 @@
  },
  "timeline": [
   {
+   "commit": "39371b6",
+   "date": "2026-10-13",
+   "subject": "feat(mzm): screen shakes, pistons and the glass tube",
+   "scope": "mzm"
+  },
+  {
    "commit": "dc8dbec",
    "date": "2026-10-13",
    "subject": "feat(mzm): Chozodia security gates",
@@ -7864,12 +7879,6 @@
    "date": "2026-10-10",
    "subject": "feat(aria): native zombie soldiers and grenades",
    "scope": "aria"
-  },
-  {
-   "commit": "593ee3c",
-   "date": "2026-10-10",
-   "subject": "feat: development dashboard",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -7897,7 +7906,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 863,
+    "routines_cited_by_features": 872,
     "call_edges": 6071
    },
    "aos": {

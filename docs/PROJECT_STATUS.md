@@ -2988,6 +2988,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0309 - Zero Mission rising Chozo pillar
+
+- RisingChozoPillar, ChozoPillarPlatform and ChozoPillarPlatformShadow
+  (`src/runtime/mzm_gadget_sprites.c`): after the Power Grip, Crateria's
+  pillar rises in BG2 with dust, debris and shakes, then its six grippable
+  platforms appear.
+- BG2 in BG_PROP_MOVING rooms follows ScrollBg2 (BG1 plus gBg2Movement,
+  kept within BG2); the room load clears gBg2Movement.
+- The second dust particles reuse the dust tables.
+- The runtime's `--event N` sets a game event in every room for test
+  captures.
+- Checked by capture in crateria_016 (`--event 16`); tests in
+  `tests/test_mzm_sprites.c` and `tests/test_runtime_steep_slopes.c`.
+
 ## Patch 0308 - Zero Mission screen shakes, pistons and the glass tube
 
 - Screen shakes (`src/runtime/mzm_screen_shake.c`): one shared state run

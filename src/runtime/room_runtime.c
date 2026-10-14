@@ -1601,6 +1601,25 @@ static bool runtime_palette_colors(const RuntimePalettes *palettes,
     return true;
 }
 
+/* BG_PROP_MOVING (BG_PROP_RLE_COMPRESSED | BG_PROP_CAN_SCROLL | 1). */
+enum { RUNTIME_BG_PROP_MOVING = 0x31 };
+
+/* ScrollBg2 for a BG_PROP_MOVING BG2: BG1's position plus gBg2Movement,
+ * kept within BG2 for the GBA screen (15 x 10 blocks), with the native
+ * screen centred in the runtime view (40 and 32 pixels in). */
+static void runtime_bg2_moving_position(const Room *room, float cx, float cy, int offset_x,
+                                        int offset_y, int *x, int *y) {
+    int bg1_x = ((int)cx + 40) * 4, bg1_y = ((int)cy + 32) * 4;
+    int px = bg1_x + offset_x, py = bg1_y + offset_y;
+    int max_x = (room->bg_w[2] - 15) * 64, max_y = (room->bg_h[2] - 10) * 64;
+    if (px < 0) px = 0;
+    else if (px > max_x) px = max_x;
+    if (py < 0) py = 0;
+    else if (py > max_y) py = max_y;
+    *x = px / 4 - 40;
+    *y = py / 4 - 32;
+}
+
 #ifndef FUSION_RUNTIME_TEST
 /* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
 #define RUNTIME_LIBRARY_MAX 16384
@@ -2579,9 +2598,14 @@ static int runtime_location_text(const Room *room, int last_door) {
     }
 }
 
+/* --event N: EventFunction flags set in every room (test captures). */
+static uint8_t runtime_debug_events[32];
+
 static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int last_door) {
-    /* RoomLoad: sScreenShake_Empty. */
+    /* RoomLoad: sScreenShake_Empty and gBg2Movement cleared. */
     mzm_screen_shake_clear();
+    sprites->globals.bg2_offset_x = sprites->globals.bg2_offset_y = 0;
+    for (int i = 0; i < 32; ++i) sprites->events[i] |= runtime_debug_events[i];
     memset(sprites->live, 0, sizeof sprites->live);
     memset(&sprites->effects, 0, sizeof sprites->effects);
     if (!sprites->tables_ok) return;
@@ -3443,6 +3467,11 @@ int main(int argc, char **argv) {
             }
             if(!found){fprintf(stderr,"Unknown item: %s\n",name);return 2;}
         }
+        else if (!strcmp(argv[i],"--event") && i+1<argc) {
+            int event=atoi(argv[++i]);
+            if(event<=0||event>255){fprintf(stderr,"Invalid event: %d\n",event);return 2;}
+            runtime_debug_events[event/8]|=(uint8_t)(1u<<(event%8));
+        }
         else if (!strcmp(argv[i],"--without") && i+1<argc) {
             const char *name=argv[++i];
             if(!strcmp(name,"morph-ball"))runtime_removed_items|=MZM_ITEM_MORPH_BALL;
@@ -3465,7 +3494,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--without morph-ball|bombs|power-grip] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--without morph-ball|bombs|power-grip] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -3577,7 +3606,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--without morph-ball|bombs|power-grip] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--without morph-ball|bombs|power-grip] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -4895,9 +4924,16 @@ int main(int argc, char **argv) {
             int sx=(int)cx+shake_x,sy=(int)cy+shake_y;
             for(int layer=0;layer<3;layer++)
                 if(room->bg_present[layer]) {
+                    int lx=sx,ly=sy;
+                    if(layer==2 && room->bg2_prop==RUNTIME_BG_PROP_MOVING) {
+                        runtime_bg2_moving_position(room,cx,cy,sprites.globals.bg2_offset_x,
+                                                    sprites.globals.bg2_offset_y,&lx,&ly);
+                        lx+=shake_x;
+                        ly+=shake_y;
+                    }
                     mzm_room_gfx_blocks(g,layer,room->bg[layer],room->bg_w[layer],room->bg_h[layer],
-                                        sx,sy,320,224);
-                    mzm_room_gfx_scroll(g,layer,sx,sy);
+                                        lx,ly,320,224);
+                    mzm_room_gfx_scroll(g,layer,lx,ly);
                 }
             if(room_bg0_custom)mzm_room_gfx_scroll(g,0,room_bg0_x+shake_x,room_bg0_y+shake_y);
             else if(room->text_present[0])mzm_room_gfx_scroll(g,0,sx,sy);

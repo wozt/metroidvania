@@ -340,6 +340,27 @@ int main(void) {
            doors->native_hatches[0].type == MZM_HATCH_LOCKED_NAVIGATION);
     free(doors);
 
+    /* ScrollBg2 for a BG_PROP_MOVING BG2 (the rising Chozo pillar): BG1
+     * (the runtime camera plus the centred GBA screen) plus gBg2Movement,
+     * kept within BG2. */
+    {
+        Room *bg2 = calloc(1, sizeof *bg2);
+        assert(bg2);
+        bg2->bg_w[2] = 40;
+        bg2->bg_h[2] = 60;
+        int x, y;
+        runtime_bg2_moving_position(bg2, 100.f, 200.f, 0, 0, &x, &y);
+        assert(x == 100 && y == 200);
+        runtime_bg2_moving_position(bg2, 100.f, 200.f, 0, 1408, &x, &y);
+        assert(x == 100 && y == 200 + 352);
+        /* Past BG2's last screen (40 - 15 blocks across, 60 - 10 down). */
+        runtime_bg2_moving_position(bg2, 500.f, 800.f, 0, 1408, &x, &y);
+        assert(x == 25 * 16 - 40 && y == 50 * 16 - 32);
+        runtime_bg2_moving_position(bg2, 0.f, 0.f, -400, -400, &x, &y);
+        assert(x == -40 && y == -32);
+        free(bg2);
+    }
+
     /* SamusUpdatePalette row selection and the echo's palette bank 1. */
     static RuntimePalettes palettes;
     assert(runtime_palettes_open(&palettes, FIXTURE_DIR "/samus_palettes.tsv"));

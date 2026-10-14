@@ -255,6 +255,11 @@ const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
     "GlassTubeOam_Cracking",
     "GlassTubeOam_Breaking",
     "GlassTubeOam_Broken",
+    "RisingChozoPillarPlatformOam_NoShadowSpawning",
+    "RisingChozoPillarPlatformOam_NoShadowSpawned",
+    "RisingChozoPillarPlatformOam_ShadowSpawning",
+    "RisingChozoPillarPlatformOam_ShadowSpawned",
+    "RisingChozoPillarPlatformShadowOam",
 };
 static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
@@ -276,6 +281,8 @@ static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "SECURITY_GATE_DEFAULT_OPEN", "SECURITY_GATE_DEFAULT_OPEN", "SECURITY_GATE_DEFAULT_OPEN",
     "SECURITY_GATE_DEFAULT_OPEN",
     "PISTON", "PISTON", "PISTON", "GLASS_TUBE", "GLASS_TUBE", "GLASS_TUBE", "GLASS_TUBE",
+    "RISING_CHOZO_PILLAR", "RISING_CHOZO_PILLAR", "RISING_CHOZO_PILLAR", "RISING_CHOZO_PILLAR",
+    "RISING_CHOZO_PILLAR",
 };
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
@@ -4401,7 +4408,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT || sprite_id == MZM_SSPRITE_MAP_STATION_PART ||
             sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART || sprite_id == MZM_SSPRITE_GUNSHIP_PART ||
             sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART ||
-            sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART)
+            sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART ||
+            sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM ||
+            sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW)
             return MZM_FAMILY_GADGET;
         if (sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE || sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW ||
             sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW)
@@ -4469,7 +4478,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_GUNSHIP: case MZM_PSPRITE_AREA_BANNER: case MZM_PSPRITE_MORPH_BALL_LAUNCHER:
     case MZM_PSPRITE_ZIPLINE: case MZM_PSPRITE_ZIPLINE_BUTTON: case MZM_PSPRITE_ZIPLINE_GENERATOR:
     case MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN: case MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED:
-    case MZM_PSPRITE_PISTON: case MZM_PSPRITE_GLASS_TUBE:
+    case MZM_PSPRITE_PISTON: case MZM_PSPRITE_GLASS_TUBE: case MZM_PSPRITE_RISING_CHOZO_PILLAR:
         return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
@@ -5174,6 +5183,8 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         sprite->sprite_id == MZM_SSPRITE_MAP_STATION_PART || sprite->sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART ||
         sprite->sprite_id == MZM_SSPRITE_GUNSHIP_PART || sprite->sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART ||
         sprite->sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART ||
+        sprite->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM ||
+        sprite->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW ||
         sprite->sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT)
         return sprite->owner;
     if (sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||

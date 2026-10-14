@@ -3007,6 +3007,24 @@ No automatic reciprocal link or native engine encoder is implemented.
   regenerated native parity and dashboard data, fresh generated-file checks,
   and the proprietary-file guard passed.
 
+## Patch 0330 - Zero Mission failed-escape transition
+
+- `MzmEscapeFailure` ports `ColorFadingProcess_EscapeFailed`: its initial
+  transition frame, the eight native white brightness levels, the completed
+  fade frame, and the 61-frame white hold before `GM_GAMEOVER`.
+- Expiration now freezes Samus and the countdown, issues the native 60-frame
+  `FadeAllSounds` and `FadeMusic` requests, keeps the `00:00.00` OBJ timer
+  visible under the fade, then enters the already ported native Game Over
+  screen with the current suit.
+- Tests verify both audio requests, every brightness level, stage boundaries,
+  the exact hold duration, and the terminal Game Over request.
+- Remaining boundary: successful take-off still needs
+  `BACKGROUND_EFFECT_EXIT_ZEBES_FADE`, `COLOR_FADING_TOURIAN_ESCAPE`, and the
+  full Tourian escape cutscene before the Chozodia continuation.
+- Validation on 2026-10-14: warning-clean build, CTest 35/35, Python 471/471,
+  regenerated native parity and dashboard data, fresh generated-file checks,
+  and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

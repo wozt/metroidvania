@@ -109,6 +109,50 @@ void mzm_escape_format(const MzmEscape *escape, char *text, size_t size) {
              escape->digits.hundredths);
 }
 
+void mzm_escape_failure_start(MzmEscapeFailure *failure) {
+    if (!failure) return;
+    *failure = (MzmEscapeFailure){.active = true};
+    /* ColorFadingProcess_EscapeFailed stage 0. */
+    mzm_sfx_fade_all(60);
+    mzm_sfx_music_fade(60);
+}
+
+bool mzm_escape_failure_update(MzmEscapeFailure *failure) {
+    static const uint8_t levels[8] = {3, 7, 11, 15, 19, 23, 27, 32};
+    if (!failure || !failure->active) return false;
+    switch (failure->stage) {
+    case 0:
+        /* unk_5c220 and the two audio fades were started above. */
+        failure->stage = 1;
+        break;
+    case 1:
+        if (failure->fade_timer < sizeof levels) {
+            failure->level = levels[failure->fade_timer++];
+        } else {
+            /* The finished ColorFadingUpdate call advances the process on
+             * the frame after the last visible level. */
+            failure->stage = 2;
+        }
+        break;
+    case 2:
+        /* unk_5d09c, then SET_BACKDROP_COLOR(COLOR_WHITE). */
+        failure->level = 32;
+        failure->hold_timer = 0;
+        failure->stage = 3;
+        break;
+    case 3:
+        if (++failure->hold_timer > 60) {
+            failure->active = false;
+            return true;
+        }
+        break;
+    default:
+        failure->active = false;
+        break;
+    }
+    return false;
+}
+
 void mzm_escape_explosion_start(MzmEscapeExplosion *explosion, uint16_t y, uint16_t x) {
     if (!explosion) return;
     *explosion = (MzmEscapeExplosion){true, false, 0, 7, y, x};

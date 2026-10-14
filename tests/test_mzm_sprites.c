@@ -5056,6 +5056,28 @@ int main(void) {
         assert(mzm_escape_update(&escape, MZM_ESCAPE_MOTHER_BRAIN, true, false));
         assert(escape.status == MZM_ESCAPE_STATUS_FAILED);
 
+        MzmEscapeFailure failure = {0};
+        mzm_sfx_clear();
+        mzm_escape_failure_start(&failure);
+        assert(failure.active && failure.stage == 0 && failure.level == 0);
+        assert(mzm_sfx_count() == 2 && mzm_sfx_get(0).action == MZM_SFX_FADE_ALL &&
+               mzm_sfx_get(0).timer == 60 &&
+               mzm_sfx_get(1).action == MZM_SFX_MUSIC_FADE &&
+               mzm_sfx_get(1).timer == 60);
+        assert(!mzm_escape_failure_update(&failure) && failure.stage == 1);
+        static const uint8_t levels[8] = {3, 7, 11, 15, 19, 23, 27, 32};
+        for (int i = 0; i < 8; ++i) {
+            assert(!mzm_escape_failure_update(&failure));
+            assert(failure.level == levels[i]);
+        }
+        assert(!mzm_escape_failure_update(&failure) && failure.stage == 2);
+        assert(!mzm_escape_failure_update(&failure) && failure.stage == 3 &&
+               failure.hold_timer == 0);
+        for (int i = 0; i < 60; ++i)
+            assert(!mzm_escape_failure_update(&failure));
+        assert(mzm_escape_failure_update(&failure) && !failure.active &&
+               failure.hold_timer == 61);
+
         MzmEffects escape_effects = {0};
         mzm_sfx_clear();
         mzm_screen_shake_clear();

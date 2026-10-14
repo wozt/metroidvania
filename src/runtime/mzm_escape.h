@@ -41,6 +41,14 @@ typedef struct {
     MzmEscapeExplosion explosion;
 } MzmEscape;
 
+/* ColorFadingProcess_EscapeFailed: fade every palette to white, hold the
+ * white backdrop for one second, then enter GM_GAMEOVER. */
+typedef struct {
+    bool active;
+    uint8_t stage, fade_timer, level;
+    uint16_t hold_timer;
+} MzmEscapeFailure;
+
 /* EscapeDetermineTimer and EscapeCheckHasEscaped, expressed with the four
  * event values they read. */
 uint8_t mzm_escape_determine(bool mother_brain_killed, bool escaped_zebes,
@@ -55,6 +63,10 @@ void mzm_escape_start(MzmEscape *escape, uint8_t kind, uint8_t difficulty);
 bool mzm_escape_update(MzmEscape *escape, uint8_t current_kind, bool playing,
                        bool movement_prevented);
 void mzm_escape_format(const MzmEscape *escape, char *text, size_t size);
+
+void mzm_escape_failure_start(MzmEscapeFailure *failure);
+/* One ColorFadingProcess_EscapeFailed call. True requests GM_GAMEOVER. */
+bool mzm_escape_failure_update(MzmEscapeFailure *failure);
 
 void mzm_escape_explosion_start(MzmEscapeExplosion *explosion, uint16_t y, uint16_t x);
 /* One ExplosionZebesEscape update. Positions and cameras use native

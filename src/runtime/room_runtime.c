@@ -3959,6 +3959,9 @@ int main(int argc, char **argv) {
      * (-1: none): BACKGROUND_EFFECT_INTRO_TEXT_FADE darkens everything but
      * Samus in 15 steps, then COLOR_FADING_INTRO_TEXT darkens the rest. */
     int intro_fade=-1;
+    /* EFFECT_CUTSCENE_ESCAPE_FAILED: native white fade and one-second hold
+     * before GM_GAMEOVER. */
+    MzmEscapeFailure escape_failure={0};
     /* A door's fade (ConnectionCheckEnterDoor): Samus waits while the room
      * fades out, then the door's room is loaded and fades in. */
     static MzmDoorFade door_fade;
@@ -4568,6 +4571,27 @@ int main(int argc, char **argv) {
                 accumulator-=fixed_step;
                 continue;
             }
+            if(sprites.globals.cutscene_effect==2 && !escape_failure.active) {
+                sprites.globals.cutscene_effect=0;
+                mzm_escape_failure_start(&escape_failure);
+            }
+            if(escape_failure.active) {
+                /* SUB_GAME_MODE_LOADING_ROOM freezes Samus and the timer;
+                 * the remaining room systems keep their normal update. */
+                prevent_movement=MZM_SAMUS_ITEM_PMT;
+                if(mzm_escape_failure_update(&escape_failure)) {
+                    if(screen_ready) {
+                        game_over_mode=true;
+                        mzm_game_over_enter(&game_over,(uint8_t)equipment.suit);
+                    } else {
+                        fprintf(stderr,"The escape failed, but the Game Over screen is unavailable.\n");
+                        intro_mode=true;
+                        mzm_intro_enter(&intro);
+                    }
+                    accumulator-=fixed_step;
+                    continue;
+                }
+            }
             /* StartEffectForCutscene(EFFECT_CUTSCENE_INTRO_TEXT): the
              * fades, then the intro text cutscene. */
             if(sprites.globals.cutscene_effect==3) {
@@ -4745,7 +4769,8 @@ int main(int argc, char **argv) {
                         fprintf(stderr,"Could not save the game to %s\n",path);
                 }
             }
-            if(mzm_escape_update(&sprites.globals.escape,runtime_escape_kind(&sprites),true,
+            if(!escape_failure.active &&
+               mzm_escape_update(&sprites.globals.escape,runtime_escape_kind(&sprites),true,
                                  prevent_movement!=0)) {
                 prevent_movement=MZM_SAMUS_ITEM_PMT;
                 sprites.globals.cutscene_effect=2;
@@ -5537,6 +5562,15 @@ int main(int argc, char **argv) {
                 SDL_RenderTexture(renderer,hud_texture,NULL,&hud_box);
                 SDL_SetTextureColorMod(hud_texture,255,255,255);
             }
+        }
+        if(escape_failure.active && escape_failure.level) {
+            /* BLDCNT_SCREEN_FIRST_TARGET | BLDCNT_BRIGHTNESS_INCREASE_EFFECT
+             * across every BG and OBJ palette row. */
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer,255,255,255,
+                                   (Uint8)(escape_failure.level*255/32));
+            SDL_RenderFillRect(renderer,&viewport);
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         }
 frame_overlays:
         debug_draw(renderer,&debug,paused,viewport,scale,current_room,&samus,&equipment,

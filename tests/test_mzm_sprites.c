@@ -4005,6 +4005,126 @@ int main(void) {
             assert(knockbacks == 1 && hurts == 0 && last_knockback_left);
             clear();
         }
+        /* Tourian (zebetite_and_cannon.c): Zebetites heal a phase every
+         * half second when not hurt and come back once 20 blocks left;
+         * cannons sweep their aims and their bullets fly until a block. */
+        {
+            static MzmSprite defences[6];
+            static MzmSpriteKind tourian_kind;
+            memset(defences, 0, sizeof defences);
+            memset(&tourian_kind, 0, sizeof tourian_kind);
+            for (int a = 0; a < MZM_TOURIAN_ANIMS; ++a) {
+                tourian_kind.counts[a] = 3;
+                for (int f = 0; f < 3; ++f) tourian_kind.timers[a][f] = 2;
+            }
+            MzmSpriteFrame tf = g;
+            tf.kinds[MZM_FAMILY_TOURIAN] = &tourian_kind;
+            tf.sprites = defences;
+            tf.sprite_count = 6;
+            tf.hooks = &test_hooks;
+            tf.difficulty = 1;
+            tables.health[MZM_PSPRITE_ZEBETITE_ONE_AND_THREE] = 140;
+            clear();
+            MzmSprite *z = &defences[0];
+            mzm_sprite_init_primary(z, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE, 0, 5, 30, 0, 0);
+            uint16_t zx = z->x;
+            mzm_sprite_update(z, 0, &tf);
+            assert(z->pose == 0x9 && z->health == 140 && z->samus_collision == 12 &&
+                   z->anim == MZM_TOURIAN_ZEBETITE_PHASE1);
+            z->health = 100;                        /* phase 2 */
+            mzm_sprite_update(z, 0, &tf);
+            assert(z->anim == MZM_TOURIAN_ZEBETITE_PHASE2 && z->work0 == 30 && z->scaling == 100);
+            int zebetite_frames = 0;
+            while (z->health == 100 && zebetite_frames++ < 100) mzm_sprite_update(z, 0, &tf);
+            assert(z->health == 120 && zebetite_frames == 30);
+            mzm_sprite_update(z, 0, &tf);
+            assert(z->anim == MZM_TOURIAN_ZEBETITE_PHASE2 && z->scaling == 120);
+            /* Destroyed: event one, then the same sprite 20 blocks left. */
+            z->health = 0;
+            mzm_sprite_update(z, 0, &tf);
+            assert(test_check_event(NULL, MZM_EVENT_ZEBETITE_ONE_DESTROYED) &&
+                   z->status & MZM_SPRITE_STATUS_NOT_DRAWN && z->pose == 0);
+            mzm_sprite_update(z, 0, &tf);
+            assert(z->x == zx - 20 * 64 && z->health == 140 && z->pose == 0x9);
+            z->health = 0;
+            mzm_sprite_update(z, 0, &tf);
+            assert(z->status == 0 && test_check_event(NULL, MZM_EVENT_ZEBETITE_ONE_DESTROYED + 2));
+            /* Both destroyed: it does not come back. */
+            mzm_sprite_init_primary(z, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE, 0, 5, 30, 0, 0);
+            mzm_sprite_update(z, 0, &tf);
+            assert(z->status == 0);
+            /* Easy heals half as fast. */
+            tf.difficulty = 0;
+            mzm_sprite_init_primary(z, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR, 0, 5, 30, 0, 0);
+            tables.health[MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR] = 140;
+            mzm_sprite_update(z, 0, &tf);
+            assert(z->work0 == 60 && z->x == zx);
+            assert(mzm_sprite_graphics_owner(z) == MZM_PSPRITE_ZEBETITE_ONE_AND_THREE);
+            tf.difficulty = 1;
+            for (int e = 0; e < 4; ++e)
+                test_events[(MZM_EVENT_ZEBETITE_ONE_DESTROYED + e) / 8] &=
+                    (uint8_t)~(1u << ((MZM_EVENT_ZEBETITE_ONE_DESTROYED + e) % 8));
+            /* A cannon against a wall on its right looks left, then sweeps
+             * through the transitions to the left and back. */
+            MzmSprite *gun = &defences[0];
+            grid[3][11] = MZM_CLIPDATA_SOLID;
+            mzm_sprite_init_primary(gun, MZM_PSPRITE_CANNON, 0, 3, 10, 0, 0);
+            gun->status |= MZM_SPRITE_STATUS_ONSCREEN;
+            tf.samus_x = gun->x;
+            uint16_t gy = gun->y;
+            mzm_sprite_update(gun, 0, &tf);
+            assert(gun->pose == 0x9 && gun->y == gy - 32 && gun->work1 == 2 && gun->work3 == 2 &&
+                   gun->anim == MZM_TOURIAN_CANNON_AIMING_DOWN_LEFT &&
+                   !(gun->status & MZM_SPRITE_STATUS_FACING_RIGHT));
+            memset(tables.random, 15, sizeof tables.random);    /* every arrival shoots */
+            int cannon_frames = 0, aims_seen = 0, last_aim = gun->work1;
+            bool fired = false;
+            while (cannon_frames++ < 5000 && (aims_seen < 8 || !fired)) {
+                tf.frame8 = (uint8_t)cannon_frames;
+                mzm_sprite_update(gun, 0, &tf);
+                if (gun->work1 != last_aim) {
+                    assert(gun->work1 == last_aim + 1 || gun->work1 + 1 == last_aim);
+                    assert(gun->work1 <= 8);
+                    last_aim = gun->work1;
+                    ++aims_seen;
+                }
+                for (int i = 1; i < 6; ++i)
+                    if (defences[i].status && defences[i].sprite_id == MZM_SSPRITE_CANNON_BULLET) fired = true;
+            }
+            assert(aims_seen >= 8 && fired);
+            memset(tables.random, 0, sizeof tables.random);
+            assert(mzm_sprite_graphics_owner(gun) == MZM_PSPRITE_CANNON);
+            /* A bullet aimed down-right: from the mouth, diagonally, until
+             * the floor. */
+            memset(defences, 0, sizeof defences);
+            clear();
+            for (int x = 0; x < COLUMNS; ++x) grid[9][x] = MZM_CLIPDATA_SOLID;
+            MzmSprite *bullet = &defences[1];
+            bullet->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN;
+            bullet->secondary = true;
+            bullet->sprite_id = MZM_SSPRITE_CANNON_BULLET;
+            bullet->room_slot = 6;                  /* CANNON_AIM_DOWN_RIGHT */
+            bullet->y = 300;
+            bullet->x = 300;
+            mzm_sprite_update(bullet, 1, &tf);
+            assert(bullet->pose == 0x9 && bullet->x == 348 && bullet->y == 348 &&
+                   bullet->anim == MZM_TOURIAN_CANNON_BULLET_DOWN_RIGHT && bullet->samus_collision == 6 &&
+                   mzm_sprite_graphics_owner(bullet) == MZM_PSPRITE_CANNON);
+            mzm_sprite_update(bullet, 1, &tf);
+            assert(bullet->x == 351 && bullet->y == 351);
+            int bullet_frames = 0;
+            while (bullet->pose == 0x9 && bullet_frames++ < 400) mzm_sprite_update(bullet, 1, &tf);
+            assert(bullet->pose == 0x42 && bullet->y >= 9 * 64);
+            mzm_sprite_update(bullet, 1, &tf);
+            assert(bullet->status == 0);
+            /* Mother Brain dead: no more cannons. */
+            test_set_event(NULL, MZM_EVENT_MOTHER_BRAIN_KILLED);
+            mzm_sprite_init_primary(gun, MZM_PSPRITE_CANNON2, 0, 3, 10, 0, 0);
+            mzm_sprite_update(gun, 0, &tf);
+            assert(gun->status == 0);
+            test_events[MZM_EVENT_MOTHER_BRAIN_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_MOTHER_BRAIN_KILLED % 8));
+            clear();
+        }
         /* Parasites (parasite.c). */
         {
             static MzmSprite bugs[12];

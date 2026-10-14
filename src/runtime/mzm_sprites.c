@@ -334,6 +334,56 @@ const char *const mzm_polyp_anim_names[MZM_POLYP_ANIMS] = {
 static const char *const polyp_sprites[MZM_POLYP_ANIMS] = {
     "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP",
 };
+const char *const mzm_tourian_anim_names[MZM_TOURIAN_ANIMS] = {
+    "ZebetiteOam_Phase1",
+    "ZebetiteOam_Phase2",
+    "ZebetiteOam_Phase4",
+    "ZebetiteOam_Phase6",
+    "CannonOam_AimingLeft",
+    "CannonOam_ShootingLeft",
+    "CannonOam_LeftToDownLeftTransition",
+    "CannonOam_AimingDownLeft",
+    "CannonOam_ShootingDownLeft",
+    "CannonOam_DownLeftToDownTransition",
+    "CannonOam_AimingDown",
+    "CannonOam_ShootingDown",
+    "CannonOam_DownToDownRightTransition",
+    "CannonOam_AimingDownRight",
+    "CannonOam_ShootingDownRight",
+    "CannonOam_DownRightToRightTransition",
+    "CannonOam_AimingRight",
+    "CannonOam_ShootingRight",
+    "CannonBulletOam_Left",
+    "CannonBulletOam_DownLeft",
+    "CannonBulletOam_Down",
+    "CannonBulletOam_DownRight",
+    "CannonBulletOam_Right",
+};
+static const char *const tourian_sprites[MZM_TOURIAN_ANIMS] = {
+    "ZEBETITE_ONE_AND_THREE",
+    "ZEBETITE_ONE_AND_THREE",
+    "ZEBETITE_ONE_AND_THREE",
+    "ZEBETITE_ONE_AND_THREE",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+    "CANNON",
+};
 const char *const mzm_skultera_anim_names[MZM_SKULTERA_ANIMS] = {
     "SkulteraOam_Idle", "SkulteraOam_TurningAround", "SkulteraOam_ChasingSamus",
 };
@@ -459,6 +509,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_PARASITE] = {MZM_PARASITE_ANIMS, mzm_parasite_anim_names, parasite_sprites},
     [MZM_FAMILY_ATOMIC] = {MZM_ATOMIC_ANIMS, mzm_atomic_anim_names, atomic_sprites},
     [MZM_FAMILY_POLYP] = {MZM_POLYP_ANIMS, mzm_polyp_anim_names, polyp_sprites},
+    [MZM_FAMILY_TOURIAN] = {MZM_TOURIAN_ANIMS, mzm_tourian_anim_names, tourian_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -4475,6 +4526,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_FAMILY_SPACE_PIRATE;
         if (sprite_id == MZM_SSPRITE_ATOMIC_ELECTRICITY) return MZM_FAMILY_ATOMIC;
         if (sprite_id == MZM_SSPRITE_POLYP_PROJECTILE) return MZM_FAMILY_POLYP;
+        if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
             return MZM_FAMILY_CHOZODIA_SECURITY;
@@ -4543,6 +4595,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_PARASITE: case MZM_PSPRITE_PARASITE_MULTIPLE: return MZM_FAMILY_PARASITE;
     case MZM_PSPRITE_ATOMIC: return MZM_FAMILY_ATOMIC;
     case MZM_PSPRITE_POLYP: return MZM_FAMILY_POLYP;
+    case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
+    case MZM_PSPRITE_ZEBETITE_ONE_AND_THREE: case MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR:
+        return MZM_FAMILY_TOURIAN;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
     case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
@@ -4842,6 +4897,12 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
                 s->status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
                 s->standing_on = MZM_STANDING_ON_SPRITE_ON;
             }
+            break;
+        case SSC_SOLID_SIDEWAYS:
+            /* Samus stopped at its sides (the Zebetites). */
+            if (contact_kills(s, samus, tables) || !samus->world) break;
+            if (on_left) stop_samus_left(samus, samus_y, left);
+            else stop_samus_right(samus, samus_y, right);
             break;
         case SSC_KNOCKS_BACK_SAMUS:
             /* A knockback only, no damage. */
@@ -5274,7 +5335,13 @@ bool mzm_sprite_supported(uint8_t sprite_id) {
 }
 
 uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
-    if (!sprite->secondary) return sprite->sprite_id;
+    if (!sprite->secondary) {
+        /* The Tourian defences' second ids share their first's graphics. */
+        if (sprite->sprite_id == MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR) return MZM_PSPRITE_ZEBETITE_ONE_AND_THREE;
+        if (sprite->sprite_id == MZM_PSPRITE_CANNON2 || sprite->sprite_id == MZM_PSPRITE_CANNON3)
+            return MZM_PSPRITE_CANNON;
+        return sprite->sprite_id;
+    }
     if (sprite->sprite_id == MZM_SSPRITE_ZEELA_EYES) return MZM_PSPRITE_ZEELA_RED;
     if (sprite->sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE) return MZM_PSPRITE_MORPH_BALL;
     if (sprite->sprite_id == MZM_SSPRITE_DRAGON_FIREBALL) return MZM_PSPRITE_DRAGON;
@@ -5283,6 +5350,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
     if (sprite->sprite_id == MZM_SSPRITE_ATOMIC_ELECTRICITY) return MZM_PSPRITE_ATOMIC;
     if (sprite->sprite_id == MZM_SSPRITE_POLYP_PROJECTILE) return MZM_PSPRITE_POLYP;
+    if (sprite->sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_PSPRITE_CANNON;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -5475,6 +5543,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_PARASITE: ai_parasite(&c); break;
     case MZM_FAMILY_ATOMIC: ai_atomic(&c); break;
     case MZM_FAMILY_POLYP: ai_polyp(&c); break;
+    case MZM_FAMILY_TOURIAN: ai_tourian(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

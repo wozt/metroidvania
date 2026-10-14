@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-14T14:48:29+00:00",
+ "generated_at": "2026-10-14T14:53:22+00:00",
  "git": {
-  "commit": "b8e0c95",
+  "commit": "42f9c48",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 112,
+   "total": 113,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 88,
+    "partial": 89,
     "functional": 13,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 13,
-   "functional_or_better_percent": 11.6,
-   "with_passing_tests": 100,
-   "with_passing_tests_percent": 89.3,
+   "functional_or_better_percent": 11.5,
+   "with_passing_tests": 101,
+   "with_passing_tests_percent": 89.4,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -136,6 +136,7 @@
     "mzm.enemies.sova",
     "mzm.enemies.space_pirate",
     "mzm.enemies.squeept",
+    "mzm.enemies.tourian_defences",
     "mzm.enemies.viola",
     "mzm.enemies.waver",
     "mzm.enemies.zeela",
@@ -229,11 +230,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 64,
+   "total": 65,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 64,
+    "partial": 65,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -242,7 +243,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 64,
+   "with_passing_tests": 65,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -273,6 +274,7 @@
     "mzm.enemies.sova",
     "mzm.enemies.space_pirate",
     "mzm.enemies.squeept",
+    "mzm.enemies.tourian_defences",
     "mzm.enemies.viola",
     "mzm.enemies.waver",
     "mzm.enemies.zeela",
@@ -2073,6 +2075,55 @@
    ],
    "limitations": "The room effect surface is the exported effectY without the gWaterMovement wave, and the lava splash particles (SpriteUtilSetSplashEffect) are not ported; otherwise the shared sprite engine limits (mzm.enemies.zoomer). Init a pixel below its block with the spawn height saved, hidden with a 30-frame wait, detection when Samus is above it within 8 blocks up and 6 across, the rise with sSqueeptRisingMovement and its three hitboxes, the early turn at a ceiling once 2.5 blocks above its spawn, the fall with sSqueeptFallingMovement (repeating its last entry), hiding again at the spawn height, the leaving and entering lava sounds when it crosses the room effect surface, and the death into drops. Checked in norfair_010 (--spawn 430 150): the right Squeept jumps out of the lava at Samus and turns at the top of its table.",
    "next_action": "Port the room effect wave and the splash particles; compare its behavior with the original game frame by frame.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-14"
+   }
+  },
+  {
+   "id": "mzm.enemies.tourian_defences",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Zebetites and Tourian cannons",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_tourian.c",
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer"
+   ],
+   "native_routines": [
+    "Zebetite",
+    "Cannon",
+    "CannonCheckSurroundings",
+    "CannonFireBullet",
+    "CannonBullet"
+   ],
+   "limitations": "Not compared with an emulator. Mother Brain and the Rinkas are not ported yet. Zebetites (both ids, sharing the first's graphics) are solid sideways (SSC_SOLID_SIDEWAYS), change their look every 40 health lost after the first 20 (with the hurt sounds), heal 20 health every half second (a second on easy) while not hurt, and when destroyed explode, set their first event and come back 20 blocks left, the second destruction setting the next event; a pair already destroyed twice is removed. Cannons (Cannon, Cannon2, Cannon3) look away from an adjacent wall (else everywhere, random start), sweep through their five aims with a 1.1 s delay, shoot on arrival by chance (.625 sideways, .25 down, .125 diagonally) on screen, move to their other place 20 or 24 blocks away when Samus is past their range (Cannon3 a block higher there) and explode once Mother Brain is dead; their bullets leave from the mouth along the aim until a solid block. Checked by capture in tourian_004 (both Zebetites, cannons sweeping and firing).",
+   "next_action": "Port Mother Brain and the Rinkas, then compare with an emulator.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -7630,6 +7681,12 @@
  },
  "timeline": [
   {
+   "commit": "42f9c48",
+   "date": "2026-10-14",
+   "subject": "fix(mzm): the music comes back after the pause",
+   "scope": "mzm"
+  },
+  {
    "commit": "b8e0c95",
    "date": "2026-10-14",
    "subject": "feat(mzm): Polyps and the sprite knockback request",
@@ -8102,12 +8159,6 @@
    "date": "2026-10-11",
    "subject": "feat(mzm): native Rippers and sprite families",
    "scope": "mzm"
-  },
-  {
-   "commit": "835adb8",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): enemy drops and native contact loop order",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -8135,7 +8186,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 949,
+    "routines_cited_by_features": 954,
     "call_edges": 6071
    },
    "aos": {

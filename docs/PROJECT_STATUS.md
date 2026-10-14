@@ -2988,6 +2988,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0317 - Zero Mission Zebetites and Tourian cannons
+
+- Zebetite, Cannon, CannonBullet (`src/runtime/mzm_tourian.c`): the
+  Zebetites heal while not hurt, show their damage phases and move 20
+  blocks left after their first destruction, setting the Zebetite
+  events; the cannons sweep their aims, shoot by chance, change place
+  with Samus' position and disappear once Mother Brain is dead, their
+  bullets flying until a block.
+- The second Zebetite and the other cannons draw with the first one's
+  graphics (the left Zebetite of tourian_004 was invisible).
+- Tests cover the healing, both destructions, easy's slower healing,
+  the cannon sweep and firing, and a diagonal bullet down to the floor.
+
 ## Patch 0316 - Zero Mission music back after the pause
 
 - Fix: DecreaseMusicVolume queued sound 63 (MUSIC_IMAGO_COCOON_BATTLE)

@@ -4413,6 +4413,34 @@ int main(void) {
             /* Its parts start dying. */
             mzm_sprite_update(&boss[2], 2, &kf);
             assert(boss[2].pose >= 0x62);
+            /* It sinks until its sub-sprite point meets the floor, waits two
+             * seconds exploding, then dies: the boss music after a fade,
+             * BG2 hidden, the camera free, every part exploding. */
+            for (int x = 0; x < COLUMNS; ++x) grid[ROWS - 1][x] = MZM_CLIPDATA_SOLID;
+            mzm_sfx_clear();
+            kraid_frames = 0;
+            while (k->pose == 0x67 && kraid_frames++ < 2000) {
+                kf.frame8 = (uint8_t)kraid_frames;
+                mzm_sprite_update(k, 0, &kf);
+            }
+            assert(k->pose == 0x68 && kraid_globals.sub1.y >= (ROWS - 1) * 64);
+            kraid_frames = 0;
+            while (k->status && k->sprite_id == MZM_PSPRITE_KRAID && kraid_frames++ < 400)
+                mzm_sprite_update(k, 0, &kf);
+            assert(kraid_frames == 120 && kraid_globals.bg2_hidden &&
+                   mzm_sfx_requested(MZM_SFX_MUSIC_FADE_AND_QUEUE, MZM_MUSIC_BOSS_KILLED));
+            if (k->status) mzm_sprite_update(k, 0, &kf);
+            assert(!kraid_globals.lock_screen || !(k->status && k->sprite_id == MZM_PSPRITE_KRAID));
+            int alive_parts = 0;
+            for (int i = 1; i < 20; ++i) {
+                if (boss[i].status && boss[i].secondary && boss[i].sprite_id == MZM_SSPRITE_KRAID_PART) {
+                    for (int n = 0; n < 600 && boss[i].sprite_id == MZM_SSPRITE_KRAID_PART && boss[i].status; ++n)
+                        mzm_sprite_update(&boss[i], (uint8_t)i, &kf);
+                    if (boss[i].status && boss[i].secondary && boss[i].sprite_id == MZM_SSPRITE_KRAID_PART)
+                        alive_parts++;
+                }
+            }
+            assert(alive_parts == 0);
             clear();
         }
         /* Worker Robots (worker_robot.c): asleep until hit, then standing

@@ -3278,6 +3278,12 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                 (sprite->palette_row==2 || sprite->palette_row==3))
             /* AtomicCheckShootElectricity's charge flashing. */
             shade=sprite->palette_row==2?"/row2":"/row3";
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_KRAID &&
+                sprite->palette_row>=1 && sprite->palette_row<=3) {
+            /* Kraid's health rows (absolutePaletteRow 1 to 3). */
+            static const char *const hurt_rows[4]={"","/row1","/row2","/row3"};
+            shade=hurt_rows[sprite->palette_row];
+        }
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_METROID && !sprite->secondary &&
                 sprite->palette_row>=1 && sprite->palette_row<=3) {
             /* MetroidSpawning's palette rows 3, 2 and 1. */

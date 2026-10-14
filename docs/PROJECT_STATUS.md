@@ -2988,6 +2988,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0323 - Kraid checked in game
+
+- The runtime draws Kraid's sprites with their health palette rows
+  (/row1 to /row3): the head, arms and holes kept their first colours while
+  the BG2 body changed, leaving light boxes around the holes.
+- Played in kraid_030 from the right platforms: standing shots hit the
+  left arm and bounce off, jumping shots reach the mouth (a super missile
+  took Kraid from 300 to 200 health), and the body and sprites change
+  colour together.
+- The test now follows the death to its end: the sinking to the floor,
+  the two seconds of explosions, the boss music after a fade, BG2 hidden
+  and every part exploding (the arms after their 400 frames).
+
 ## Patch 0322 - Zero Mission Kraid
 
 - Kraid, KraidPart, KraidSpike and KraidNail (`src/runtime/mzm_kraid.c`):

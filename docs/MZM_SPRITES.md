@@ -377,8 +377,8 @@ with `sSpritesFallingSpeed`, splash on the ground or the water surface
 the air), start at a random frame and play their sound on screen; the
 diagonal ones face away from their wall; Gerons make their three blocks
 solid but not grippable (`CAA_MAKE_NON_POWER_GRIP`), shake when hit and stay
-destroyed after their event (the Parasites that destroy them are not
-ported), the Norfair one disappears with the Power Grip; the unknown item
+destroyed after their event (four Parasites on one destroy it), the
+Norfair one disappears with the Power Grip; the unknown item
 blocks fill 2x2 grippable blocks, let shots through until their item's event,
 then explode with their light and clear the blocks.
 Morph ball launchers hold a bomb and launch Samus; ziplines carry her between
@@ -388,6 +388,12 @@ rise a block when a beam or bomb hits their head; the glass tube breaks under
 a power bomb after the Fully Powered Suit. Their sprites and the crawlers
 react to the shared screen shake (`src/runtime/mzm_screen_shake.c`), which
 moves the backgrounds, never the sprites.
+
+Parasites (`src/runtime/mzm_parasite.c`) crawl, hop and jump, grab Samus and
+the Gerons; more than three on Samus leech her energy unless she wears the
+Varia or Gravity Suit, the screw attack and any shot throw them off, and only
+bombs and power bombs kill them. The bug room's multiple Parasites lock its
+doors until the last one dies (`EVENT_BUGS_KILLED`).
 
 Not ported yet: the multiple large energy pickup,
 splashes in liquids, the hard-mode and event

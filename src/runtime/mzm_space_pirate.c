@@ -206,6 +206,8 @@ void mzm_spawn_waiting_pirates(MzmSprite *sprites, int count, MzmSpriteGlobals *
 
 void mzm_sprites_end_frame(MzmSpriteGlobals *globals, const MzmSpriteHooks *hooks) {
     if (!globals) return;
+    /* gParasiteRelated */
+    if (globals->parasite_related) globals->parasite_related--;
     /* DecrementChozodiaAlarm */
     if (globals->alarm_timer) {
         globals->alarm_timer--;

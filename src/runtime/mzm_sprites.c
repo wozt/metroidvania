@@ -291,6 +291,15 @@ const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
 static const char *const dragon_sprites[MZM_DRAGON_ANIMS] = {
     "DRAGON", "DRAGON", "DRAGON", "DRAGON", "DRAGON", "DRAGON", "DRAGON",
 };
+const char *const mzm_parasite_anim_names[MZM_PARASITE_ANIMS] = {
+    "ParasiteOam_Idle", "ParasiteOam_LandingAfterFalling", "ParasiteOam_Landing",
+    "ParasiteOam_Tumbling", "ParasiteOam_TurningBackOnFeet", "ParasiteOam_TurningAround",
+    "ParasiteOam_JumpingUp", "ParasiteOam_Attached", "ParasiteOam_Expelled", "ParasiteOam_Dying",
+};
+static const char *const parasite_sprites[MZM_PARASITE_ANIMS] = {
+    "PARASITE", "PARASITE", "PARASITE", "PARASITE", "PARASITE",
+    "PARASITE", "PARASITE", "PARASITE", "PARASITE", "PARASITE",
+};
 const char *const mzm_skultera_anim_names[MZM_SKULTERA_ANIMS] = {
     "SkulteraOam_Idle", "SkulteraOam_TurningAround", "SkulteraOam_ChasingSamus",
 };
@@ -413,6 +422,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_SKULTERA] = {MZM_SKULTERA_ANIMS, mzm_skultera_anim_names, skultera_sprites},
     [MZM_FAMILY_DRAGON] = {MZM_DRAGON_ANIMS, mzm_dragon_anim_names, dragon_sprites},
     [MZM_FAMILY_GADGET] = {MZM_GADGET_ANIMS, mzm_gadget_anim_names, gadget_sprites},
+    [MZM_FAMILY_PARASITE] = {MZM_PARASITE_ANIMS, mzm_parasite_anim_names, parasite_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -4480,6 +4490,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN: case MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED:
     case MZM_PSPRITE_PISTON: case MZM_PSPRITE_GLASS_TUBE: case MZM_PSPRITE_RISING_CHOZO_PILLAR:
         return MZM_FAMILY_GADGET;
+    case MZM_PSPRITE_PARASITE: case MZM_PSPRITE_PARASITE_MULTIPLE: return MZM_FAMILY_PARASITE;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
     case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
@@ -4651,6 +4662,16 @@ static void freeze_sprite(MzmSprite *s, uint8_t timer) {
     mzm_sfx_play_not_playing(MZM_SOUND_FREEZING_SPRITE);
 }
 
+/* ParasiteCount: more than three Parasites hold Samus. */
+static bool parasite_count(const MzmSprite *sprites, int count) {
+    int held = 0;
+    for (int i = 0; i < count; ++i)
+        if (sprites[i].status & MZM_SPRITE_STATUS_EXISTS && sprites[i].samus_collision == SSC_PARASITE &&
+            sprites[i].pose == 0x43 && ++held > 3)      /* PARASITE_POSE_SAMUS_GRABBED */
+            return true;
+    return false;
+}
+
 /* SpriteUtilCheckOnZipline */
 static bool on_zipline(uint8_t pose) {
     return pose == MZM_POSE_ON_ZIPLINE || pose == MZM_POSE_SHOOTING_ON_ZIPLINE ||
@@ -4817,6 +4838,18 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             }
             s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
             ignore = true;
+            break;
+        case SSC_PARASITE:
+            /* Leeching once more than three Parasites hold her, without
+             * the Varia or Gravity Suit; other contacts go on this frame. */
+            s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            if (!samus->invincible && !samus->suited && parasite_count(sprites, count) && samus->leech &&
+                samus->leech(samus->context)) {
+                samus->invincible = true;
+                mzm_sfx_play_not_playing(MZM_SOUND_BUG_LEECHING);
+                if (samus->leech_count && ++*samus->leech_count % 4 == 0) mzm_sfx_play(MZM_SOUND_HURT);
+            }
+            s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
             break;
         case SSC_CHECK_COLLIDING:
         case SSC_SMALL_ENERGY_DROP:
@@ -5364,6 +5397,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
         else ai_space_pirate(&c);
         break;
     case MZM_FAMILY_CHOZODIA_SECURITY: ai_chozodia_security(&c); break;
+    case MZM_FAMILY_PARASITE: ai_parasite(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

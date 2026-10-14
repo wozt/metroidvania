@@ -2605,6 +2605,7 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
     /* RoomLoad: sScreenShake_Empty and gBg2Movement cleared. */
     mzm_screen_shake_clear();
     sprites->globals.bg2_offset_x = sprites->globals.bg2_offset_y = 0;
+    sprites->globals.parasite_related = 0;
     for (int i = 0; i < 32; ++i) sprites->events[i] |= runtime_debug_events[i];
     memset(sprites->live, 0, sizeof sprites->live);
     memset(&sprites->effects, 0, sizeof sprites->effects);
@@ -2714,6 +2715,17 @@ static void runtime_sprite_hurt(void *context, uint16_t damage, bool sprite_on_l
     mzm_samus_hurt(hurt->samus, hurt->collision, !alive);
     /* SUB_PIXEL_TO_VELOCITY(EIGHTH_BLOCK_SIZE) away from the sprite. */
     if (alive) hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -64 : 64);
+}
+
+/* The Parasites' leech: SpriteUtilTakeDamageFromSprite with a zero
+ * multiplier (the forced 1 after the suits), no knockback, the hurt pose
+ * when it kills Samus, else 16 invincible frames. */
+static bool runtime_sprite_leech(void *context) {
+    RuntimeSpriteHurt *hurt = context;
+    bool alive = mzm_equipment_damage(hurt->equipment, 0);
+    if (!alive) mzm_samus_hurt(hurt->samus, hurt->collision, true);
+    else hurt->samus->invincibility = 16;   /* CONVERT_SECONDS(4.f / 15) */
+    return alive;
 }
 
 /* MzmSpriteHooks of the runtime. */
@@ -2874,7 +2886,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                    samus->pose == MZM_POSE_PULLING_YOURSELF_FORWARD_FROM_HANGING,
                                mzm_pose_hitbox(samus->pose) == MZM_HITBOX_MORPHED,
                                (int8_t)(samus->facing > 0 ? 1 : -1), equipment->energy != 0,
-                               false, false, (uint8_t)samus->pose, MZM_POSE_NONE};
+                               false, false, (uint8_t)samus->pose, MZM_POSE_NONE,
+                               (equipment->items&(MZM_ITEM_VARIA_SUIT|MZM_ITEM_GRAVITY_SUIT))!=0,
+                               runtime_sprite_leech, &sprites->globals.sub1.work2};
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
         /* The solid (frozen) sprites' pushes and the zipline grabs. */
         samus->x = view.x;
@@ -2927,7 +2941,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
         mzm_sprite_update(&sprites->live[i], (uint8_t)i, &frame);
-    if (!stopped) mzm_sprites_end_frame(&sprites->globals, &hooks);
+    /* The alarm and gParasiteRelated also run down while movement is
+     * prevented (SpriteUpdate's second branch). */
+    mzm_sprites_end_frame(&sprites->globals, &hooks);
     /* The statues' SamusSetPose calls and hand positions. */
     if (link.grab) mzm_samus_chozo_grab(samus, true, equipment, collision);
     if (link.moved) {

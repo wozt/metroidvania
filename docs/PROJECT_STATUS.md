@@ -2988,6 +2988,18 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0310 - Zero Mission Parasites
+
+- Parasite and ParasiteMultiple (`src/runtime/mzm_parasite.c`): crawling,
+  jumping, grabbing Samus (SSC_PARASITE: more than three leech her energy
+  without the Varia or Gravity Suit) and the Gerons (four destroy one),
+  thrown off by the screw attack and any shot, killed by bombs and power
+  bombs; the bug room's Parasites lock the doors until the last one dies.
+- gParasiteRelated and the Chozodia alarm now also run down while movement
+  is prevented, as in SpriteUpdate's second branch.
+- Checked by capture in brinstar_016, brinstar_023 and brinstar_024; tests
+  in `tests/test_mzm_sprites.c`.
+
 ## Patch 0309 - Zero Mission rising Chozo pillar
 
 - RisingChozoPillar, ChozoPillarPlatform and ChozoPillarPlatformShadow

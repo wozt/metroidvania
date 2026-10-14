@@ -412,6 +412,14 @@ enum {
     MZM_GADGET_ANIMS,
 };
 extern const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS];
+/* Parasite OAM tables (src/data/sprites/parasite.c). */
+enum {
+    MZM_PARASITE_IDLE, MZM_PARASITE_LANDING_AFTER_FALLING, MZM_PARASITE_LANDING,
+    MZM_PARASITE_TUMBLING, MZM_PARASITE_TURNING_BACK_ON_FEET, MZM_PARASITE_TURNING_AROUND,
+    MZM_PARASITE_JUMPING_UP, MZM_PARASITE_ATTACHED, MZM_PARASITE_EXPELLED, MZM_PARASITE_DYING,
+    MZM_PARASITE_ANIMS,
+};
+extern const char *const mzm_parasite_anim_names[MZM_PARASITE_ANIMS];
 /* Skultera OAM tables (src/data/sprites/skultera.c). */
 enum { MZM_SKULTERA_IDLE, MZM_SKULTERA_TURNING_AROUND, MZM_SKULTERA_CHASING_SAMUS, MZM_SKULTERA_ANIMS };
 extern const char *const mzm_skultera_anim_names[MZM_SKULTERA_ANIMS];
@@ -491,6 +499,7 @@ enum {
     MZM_FAMILY_SPACE_PIRATE, MZM_FAMILY_CHOZODIA_SECURITY, MZM_FAMILY_CHOZO_STATUE,
     MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
     MZM_FAMILY_ITEM_SPRITE, MZM_FAMILY_SKULTERA, MZM_FAMILY_DRAGON, MZM_FAMILY_GADGET,
+    MZM_FAMILY_PARASITE,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -541,7 +550,7 @@ enum {
     MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C = 141, MZM_PSPRITE_GERON_VARIA1 = 142,
     MZM_PSPRITE_GERON_VARIA2 = 143, MZM_PSPRITE_GERON_VARIA3 = 144, MZM_PSPRITE_GERON_NORFAIR = 106,
     MZM_PSPRITE_PLASMA_BEAM_BLOCK = 170, MZM_PSPRITE_GRAVITY_SUIT_BLOCK = 171,
-    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -708,6 +717,9 @@ typedef struct {
      * BG2 is BG_PROP_MOVING (the rising Chozo pillar); cleared by the room
      * load. */
     int16_t bg2_offset_x, bg2_offset_y;
+    /* gParasiteRelated: the Parasites run fast for 1.5 seconds once Samus
+     * came near or one grabbed her; cleared by the room load. */
+    uint8_t parasite_related;
 } MzmSpriteGlobals;
 
 /* gSamusData as the Chozo statues read and move it: her pose
@@ -824,6 +836,14 @@ typedef struct {
      * zipline (MZM_POSE_NONE: none). A zipline grab also moves `x`, `y`
      * and `previous_x` (gPreviousXPosition). */
     uint8_t pose, set_pose;
+    /* The Parasites: the Varia or Gravity Suit (SMF_ALL_SUITS, immune);
+     * `leech` takes the forced damage of 1 (SpriteUtilTakeDamageFromSprite
+     * with no knockback: the hurt pose only when it kills her) and, when
+     * she survives, makes her invincible 16 frames, returning that she
+     * survived (NULL: no leech); `leech_count` is gSubSpriteData1.work2. */
+    bool suited;
+    bool (*leech)(void *context);
+    uint8_t *leech_count;
 } MzmSpriteSamus;
 
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when

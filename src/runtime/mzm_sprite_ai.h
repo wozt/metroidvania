@@ -40,6 +40,7 @@ enum {
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
+    SSC_PARASITE = 23,
     SSC_ZIPLINE = 26,
     SSC_SOLID_CHECK_COLLIDING = 27,
     SSC_CHECK_COLLIDING = 30,
@@ -149,6 +150,8 @@ void ai_chozo_statue(Ctx *c);
 void ai_item_sprite(Ctx *c);
 /* mzm_gadget_sprites.c */
 void ai_gadget(Ctx *c);
+/* Parasites (mzm_parasite.c). */
+void ai_parasite(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

@@ -391,9 +391,22 @@ static void geron(Ctx *c) {
         }
         break;
     }
-    case GERON_POSE_IDLE:
-        /* The Parasites that would grab it are not ported (work3 stays
-         * under four). */
+    case GERON_POSE_IDLE: {
+        /* The Parasites whose point is inside it grab it (counted once:
+         * their collision is cleared); four destroy it. */
+        uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + EIGHTH_BLOCK_SIZE);
+        uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
+        for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
+            MzmSprite *p = &c->f->sprites[i];
+            if (!(p->status & MZM_SPRITE_STATUS_EXISTS) || p->samus_collision != SSC_PARASITE) continue;
+            if (bottom > p->y && top < p->y && right > p->x && left < p->x) {
+                p->work1 = s->ram_slot;
+                p->pose = 0x4C;                 /* PARASITE_POSE_GERON_GRABBED_INIT */
+                p->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+                p->samus_collision = SSC_NONE;
+                s->work3++;
+            }
+        }
         if (s->work3 >= 4) {
             s->pose = GERON_POSE_GETTING_DESTROYED;
             ai_set_anim(s, MZM_GADGET_GERON_GETTING_DESTROYED);
@@ -408,6 +421,7 @@ static void geron(Ctx *c) {
             ai_set_anim(s, MZM_GADGET_GERON_IDLE);
         }
         break;
+    }
     case GERON_POSE_GETTING_DESTROYED:
         if (--s->work0 == 0) {
             s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;

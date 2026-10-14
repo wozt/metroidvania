@@ -12,6 +12,7 @@
 #include <stdint.h>
 
 #include "gba_ppu.h"
+#include "mzm_escape.h"
 #include "mzm_samus.h"
 
 enum { MZM_MINIMAP_SIZE = 32, MZM_HUD_AREAS = 8 };
@@ -49,6 +50,8 @@ typedef struct {
     /* CHECK_EVENT for the boss icons (NULL: no event set). */
     bool (*check_event)(void *context, uint8_t event);
     void *context;
+    /* ParticleEscape: its digits are native absolute-position OBJ. */
+    const MzmEscape *escape;
 } MzmHudFrame;
 
 typedef struct {
@@ -69,6 +72,7 @@ typedef struct {
     MzmMinimapProgress *progress;
     bool low_health;                /* gEquipment.lowHealth */
     bool ship_landing;              /* gShipLandingFlag */
+    bool escape_gfx_loaded;         /* EscapeCheckReloadGraphics */
 } MzmHud;
 
 /* The room entry's map position from sAreaRoomEntryPointers; false without

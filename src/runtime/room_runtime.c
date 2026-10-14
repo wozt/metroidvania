@@ -3194,55 +3194,6 @@ static SDL_Texture *runtime_bg_texture(SDL_Renderer *renderer, const char *path)
     return texture;
 }
 
-/* Temporary host rendering of gEscapeTimerDigits at the native absolute
- * position. The countdown state and cadence are native; replacing these
- * compact glyphs with sEscapeTimerDigitsGfx is tracked separately. */
-static void runtime_draw_escape_timer(SDL_Renderer *renderer, const MzmEscape *escape,
-                                      SDL_FRect viewport, float scale) {
-    if (escape->status != MZM_ESCAPE_STATUS_HAPPENING &&
-        escape->status != MZM_ESCAPE_STATUS_FAILED)
-        return;
-    static const uint8_t digits[10][5] = {
-        {7,5,5,5,7}, {2,6,2,2,7}, {7,1,7,4,7}, {7,1,7,1,7}, {5,5,7,1,1},
-        {7,4,7,1,7}, {7,4,7,5,7}, {7,1,1,1,1}, {7,5,7,5,7}, {7,5,7,1,7},
-    };
-    char text[16];
-    mzm_escape_format(escape, text, sizeof text);
-    const float pixel = 2.f * scale, advance = 4.f * pixel;
-    float width = 0.f;
-    for (const char *p = text; *p; ++p) width += (*p == ':' || *p == '.') ? 2.f * pixel : advance;
-    float x = viewport.x + (viewport.w - width) * .5f;
-    float y = viewport.y + 34.f * scale;
-    SDL_FRect back = {x - 2.f * scale, y - 2.f * scale, width + 4.f * scale,
-                      7.f * pixel};
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 208);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_RenderFillRect(renderer, &back);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    for (const char *p = text; *p; ++p) {
-        if (*p >= '0' && *p <= '9') {
-            const uint8_t *rows = digits[*p - '0'];
-            for (int row = 0; row < 5; ++row)
-                for (int column = 0; column < 3; ++column)
-                    if (rows[row] & (1u << (2 - column))) {
-                        SDL_FRect dot = {x + column * pixel, y + row * pixel, pixel, pixel};
-                        SDL_RenderFillRect(renderer, &dot);
-                    }
-            x += advance;
-        } else {
-            int row = *p == ':' ? 1 : 4;
-            SDL_FRect dot = {x, y + row * pixel, pixel, pixel};
-            SDL_RenderFillRect(renderer, &dot);
-            if (*p == ':') {
-                dot.y = y + 3.f * pixel;
-                SDL_RenderFillRect(renderer, &dot);
-            }
-            x += 2.f * pixel;
-        }
-    }
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-}
-
 static void runtime_bg_art_sync(RuntimeBgArt *art, SDL_Renderer *renderer, const Room *room,
                                 const char *alias) {
     if (art->room == room && !strcmp(art->alias, alias)) return;
@@ -4888,7 +4839,8 @@ int main(int argc, char **argv) {
                                        weapons.super_missiles_selected,weapons.charge_counter,
                                        sprites.frame8,(uint16_t)samus.x,(uint16_t)(samus.y-1),
                                        sprites.globals.refill_animation,
-                                       runtime_sprite_check_event,&sprites};
+                                       runtime_sprite_check_event,&sprites,
+                                       &sprites.globals.escape};
                 if(strcmp(hud_room_alias,current_room)) {
                     snprintf(hud_room_alias,sizeof hud_room_alias,"%s",current_room);
                     mzm_hud_room_entered(&runtime_hud,&hud_room,&hud_frame);
@@ -5586,8 +5538,6 @@ int main(int argc, char **argv) {
                 SDL_SetTextureColorMod(hud_texture,255,255,255);
             }
         }
-        if(!dying_mode)
-            runtime_draw_escape_timer(renderer,&sprites.globals.escape,viewport,scale);
 frame_overlays:
         debug_draw(renderer,&debug,paused,viewport,scale,current_room,&samus,&equipment,
                    debug_frame);

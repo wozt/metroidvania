@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-14T21:33:35+00:00",
+ "generated_at": "2026-10-14T21:39:31+00:00",
  "git": {
-  "commit": "8ca696a",
+  "commit": "2b3451d",
   "branch": "main",
   "dirty": true
  },
@@ -3662,12 +3662,14 @@
    "local_sources": [
     "src/runtime/mzm_escape.c",
     "src/runtime/mzm_escape.h",
+    "src/runtime/mzm_hud.c",
     "src/runtime/mzm_message_banner.c",
     "src/runtime/mzm_gadget_sprites.c",
     "src/runtime/mzm_mother_brain.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
+    "tests/test_mzm_hud.c",
     "tests/test_mzm_sprites.c"
    ],
    "dependencies": [
@@ -3685,10 +3687,11 @@
     "ExplosionZebesEscape",
     "ParticleEscape"
    ],
-   "limitations": "The timer digits currently use compact host-rendered glyphs instead of sEscapeTimerDigitsGfx and sParticleEscapeOam_Frame0. Escape failure requests EFFECT_CUTSCENE_ESCAPE_FAILED, but that cutscene and the successful Zebes exit are not connected. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. The runtime draws the live clock at its absolute HUD position and marks the escape failed at zero. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
-   "next_action": "Render the timer from its native OBJ graphics, connect failure and successful-exit cutscenes, then play through Mother Brain to the gunship.",
+   "limitations": "Escape failure requests EFFECT_CUTSCENE_ESCAPE_FAILED, but that transition and the successful Zebes exit/Tourian escape cutscene are not connected. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. The runtime marks the escape failed at zero. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
+   "next_action": "Connect escape failure to Game Over, then port the successful Zebes exit fade and Tourian escape cutscene.",
    "evidence": {
     "unit_tests": [
+     "tests/test_mzm_hud.c",
      "tests/test_mzm_sprites.c"
     ],
     "in_game_check": [],
@@ -3701,6 +3704,16 @@
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_mzm_hud.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_hud"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
      {
       "test": "tests/test_mzm_sprites.c",
       "kind": "ctest",
@@ -3893,7 +3906,7 @@
     "MinimapUpdateChunk",
     "PauseScreenGetMinimapData"
    ],
-   "limitations": "Not compared with hardware or an emulator. The runtime view is 320x224, wider than the GBA screen: the HUD keeps its native positions from the view's top-left corner and the minimap is placed 26 pixels from the view's right edge (SCREEN_SIZE_X replaced by the view width). Only the HUD is drawn by the PPU (its OAM slots; the other sprites keep the runtime's own drawing), so the HUD is always in front. Without a save system the minimap progress (gVisitedMinimapTiles, gMinimapTilesWithObtainedItems, downloaded maps) lasts one session; the escape timer's native OBJ digits, the Hiragana tiles, the debug room info and the boss icon updates by Kraid, Ridley and the ship (MinimapUpdateChunk has no caller yet) are not wired. HudDraw runs after ProjectileUpdate every frame and writes the native OBJ VRAM and OAM of a GbaPpu: sCommonSpritesGfx at VRAM_OBJ + 0x800 and sCommonSpritesPal at OBJ palette rows 2 to 7 (the in-game init), the energy digits and the energy tank row (sEnergyTanksGfx_* by full tanks, the low health flag under 30), the three refill animation stages of the energy, missile, super missile and power bomb counters (gEnergyRefillAnimation and the others, set by the Chozo statue refills), the missile, super missile and power bomb counters composed from 4-pixel digits (sMissileDigitsGfx, sPowerBombDigitsGfx) with their Inactive, Selected or Active symbol (HudUpdateGfx follows gSamusWeaponInfo.weaponHighlighted and missilesSelected), the suitless charge bar, and the OAM entries of HudUpdateOam (health bar, counters only when their maximum is non-zero, the minimap and its square blinking every 8 frames). The minimap decompresses the area's sMinimapDataPointers map (LZ77), adds the obtained items, hides the unexplored tiles unless the map is downloaded (MinimapSetDownloadedTiles), follows Samus's screen (MinimapCheckForUnexploredTile with the room entry's mapX and mapY read from sAreaRoomEntryPointers), marks it explored, records the area names, and redraws one 3-tile line a frame through the sPauseScreen_40d74c / _40d6fc color tables with the four flips. Checked in brinstar_000 (`--spawn 212 496`): energy 99, missiles, super missiles and power bombs with their symbols, the minimap with the Morph Ball room tile and the blinking square.",
+   "limitations": "Not compared with hardware or an emulator. The runtime view is 320x224, wider than the GBA screen: the HUD keeps its native positions from the view's top-left corner and the minimap is placed 26 pixels from the view's right edge (SCREEN_SIZE_X replaced by the view width). Only the HUD is drawn by the PPU (its OAM slots; the other sprites keep the runtime's own drawing), so the HUD is always in front. Without a save system the minimap progress (gVisitedMinimapTiles, gMinimapTilesWithObtainedItems, downloaded maps) lasts one session; the Hiragana tiles, the debug room info and the boss icon updates by Kraid, Ridley and the ship (MinimapUpdateChunk has no caller yet) are not wired. HudDraw runs after ProjectileUpdate every frame and writes the native OBJ VRAM and OAM of a GbaPpu: sCommonSpritesGfx at VRAM_OBJ + 0x800 and sCommonSpritesPal at OBJ palette rows 2 to 7 (the in-game init), the energy digits and the energy tank row (sEnergyTanksGfx_* by full tanks, the low health flag under 30), the three refill animation stages of the energy, missile, super missile and power bomb counters (gEnergyRefillAnimation and the others, set by the Chozo statue refills), the missile, super missile and power bomb counters composed from 4-pixel digits (sMissileDigitsGfx, sPowerBombDigitsGfx) with their Inactive, Selected or Active symbol (HudUpdateGfx follows gSamusWeaponInfo.weaponHighlighted and missilesSelected), the suitless charge bar, the native escape countdown objects, and the OAM entries of HudUpdateOam (health bar, counters only when their maximum is non-zero, the minimap and its square blinking every 8 frames). The minimap decompresses the area's sMinimapDataPointers map (LZ77), adds the obtained items, hides the unexplored tiles unless the map is downloaded (MinimapSetDownloadedTiles), follows Samus's screen (MinimapCheckForUnexploredTile with the room entry's mapX and mapY read from sAreaRoomEntryPointers), marks it explored, records the area names, and redraws one 3-tile line a frame through the sPauseScreen_40d74c / _40d6fc color tables with the four flips. Checked in brinstar_000 (`--spawn 212 496`): energy 99, missiles, super missiles and power bombs with their symbols, the minimap with the Morph Ball room tile and the blinking square.",
    "next_action": "Port the pause screen map and status screen on the same PPU, then save the minimap progress.",
    "evidence": {
     "unit_tests": [
@@ -9277,6 +9290,12 @@
  },
  "timeline": [
   {
+   "commit": "2b3451d",
+   "date": "2026-10-14",
+   "subject": "feat(mzm): port Zebes escape countdown",
+   "scope": "mzm"
+  },
+  {
    "commit": "8ca696a",
    "date": "2026-10-14",
    "subject": "feat(dashboard): finish evidence-aware progress tracker",
@@ -9748,12 +9767,6 @@
    "commit": "453c1f7",
    "date": "2026-10-11",
    "subject": "feat(mzm): native Rinkas",
-   "scope": "mzm"
-  },
-  {
-   "commit": "dfa07db",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): native Mellas, Holtzes and Multiviolas",
    "scope": "mzm"
   }
  ],

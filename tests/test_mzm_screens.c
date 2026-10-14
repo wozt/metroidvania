@@ -195,7 +195,7 @@ static void test_pause_bank(void) {
     assert(mzm_hud_room_map(0, 0, &map_x, &map_y));
     MzmEquipment equipment = {.energy = 99, .max_energy = 99, .missiles = 5, .max_missiles = 5,
                               .items = MZM_ITEM_LONG_BEAM | MZM_ITEM_MORPH_BALL | MZM_ITEM_BOMBS};
-    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 13 * 64, 31 * 64, NULL, NULL, NULL};
+    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 13 * 64, 31 * 64, NULL, NULL, NULL, NULL};
     MzmHudRoom room = {0, 0, map_x, map_y, 79, 44};
     mzm_hud_room_entered(&hud, &room, &frame);
     MzmPauseGame game = {&hud, 0, &equipment, pause_event, NULL, MZM_PAUSE_FLAG_PAUSE};
@@ -790,7 +790,7 @@ static void test_chozo_hint_bank(void) {
     uint8_t map_x, map_y;
     assert(mzm_hud_room_map(0, 2, &map_x, &map_y));
     MzmEquipment equipment = {.energy = 99, .max_energy = 99, .items = MZM_ITEM_MORPH_BALL};
-    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 53 * 64, 9 * 64, NULL, NULL, NULL};
+    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 53 * 64, 9 * 64, NULL, NULL, NULL, NULL};
     MzmHudRoom room = {0, 2, map_x, map_y, 64, 16};
     mzm_hud_room_entered(&hud, &room, &frame);
     hud.minimap_x = 9;

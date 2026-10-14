@@ -2988,6 +2988,25 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0329 - native Zero Mission escape timer graphics
+
+- Replaced the provisional host-drawn countdown with ParticleEscape's native
+  OBJ path inside the PPU-backed HUD. It copies both 352-byte tile rows from
+  `sEscapeTimerDigitsGfx` to OBJ VRAM at `0x7800` and `0x7c00`.
+- The six digits and two separators now use the native eight 8x16 objects,
+  palette row 3, tile indices and absolute positions from
+  `sParticleEscapeOam_Frame0`. The objects remain available independently of
+  the regular HUD OAM visibility.
+- Removed the duplicate SDL glyph renderer. Synthetic-ROM tests verify both
+  VRAM copies, all eight OAM entries, digit ordering, separators, and cleanup
+  after the countdown ends.
+- Remaining boundary: escape failure is requested but not yet connected to
+  Game Over; successful take-off still needs the exit fade and the full
+  Tourian escape cutscene before the Chozodia continuation.
+- Validation on 2026-10-14: warning-clean build, CTest 35/35, Python 471/471,
+  regenerated native parity and dashboard data, fresh generated-file checks,
+  and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,
@@ -3001,14 +3020,13 @@ No automatic reciprocal link or native engine encoder is implemented.
   `ExplosionZebesEscape`.
 - The Zebes and Chozodia banners emit `EscapeStart` when their spawning
   animation reaches the static table. The room runtime starts the clock there,
-  draws a compact provisional clock at the native absolute HUD position and
-  marks the escape failed at zero.
+  draws the countdown at the native absolute HUD position and marks the escape
+  failed at zero.
 - Brinstar and Chozodia save platforms now consult the same event-driven
   escape selection and initialize in their native disabled state during
   either evacuation.
-- Remaining divergence: the clock still uses host-rendered glyphs rather than
-  `sEscapeTimerDigitsGfx`; the failed-escape and successful-exit cutscenes are
-  not connected, and the explosion state is outside the native sprite slots.
+- Remaining divergence: the failed-escape and successful-exit cutscenes are not
+  connected, and the explosion state is outside the native sprite slots.
 - Tests cover event selection, all timer boundaries relevant to startup and
   failure, movement prevention, the banner trigger, Mother Brain's trigger,
   and a deterministic explosion particle/debris/shake/sound frame.

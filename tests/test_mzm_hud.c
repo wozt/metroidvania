@@ -120,6 +120,7 @@ static const struct { const char *name; uint32_t size; } hud_symbols[] = {
     {"sPauseScreen_40d74c", 80}, {"sPauseScreen_40d6fc", 80}, {"sMinimapDataPointers", 32},
     {"sBossIcons", 35}, {"sMapChunksToUpdate", 6}, {"sMinimapAreaNames", 24},
     {"sAreaRoomEntryPointers", 28}, {"sBrinstarRoomEntries", 120}, {"sMinimapBrinstar", 0x980},
+    {"sEscapeTimerDigitsGfx", 2048},
 };
 
 static uint32_t synthetic_rom(uint8_t **bytes) {
@@ -205,7 +206,7 @@ static void test_hud_synthetic(void) {
 
     MzmEquipment equipment = {.energy = 199, .max_energy = 299, .missiles = 5, .max_missiles = 10};
     uint8_t refill[4] = {0};
-    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 0, 0, refill, NULL, NULL};
+    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 0, 0, refill, NULL, NULL, NULL};
     /* Samus at block (40, 24) of room 1: minimap (4 + 2, 2 + 2). */
     MzmHudRoom room = {0, 1, map_x, map_y, 80, 60};
     frame.samus_x = 40 * 64;
@@ -250,6 +251,29 @@ static void test_hud_synthetic(void) {
     equipment.energy = 29;
     mzm_hud_update(&hud, &room, &frame);
     assert(hud.low_health);
+    /* ParticleEscape uses eight native 8x16 objects and copies both tile
+     * rows exactly where EscapeStart does. */
+    MzmEscape escape = {.status = MZM_ESCAPE_STATUS_HAPPENING,
+                        .digits = {6, 5, 4, 3, 2, 1}};
+    frame.escape = &escape;
+    mzm_hud_update(&hud, &room, &frame);
+    const uint8_t *escape_gfx = symbol_bytes(rom, "sEscapeTimerDigitsGfx");
+    assert(!memcmp(ppu.vram + 0x17800, escape_gfx, 0x160));
+    assert(!memcmp(ppu.vram + 0x17C00, escape_gfx + 0x400, 0x160));
+    assert(ppu.oam[5 * 4] == (2 | 2 << 14) && ppu.oam[5 * 4 + 1] == 141 &&
+           ppu.oam[5 * 4 + 2] == (0x3C1 | 3 << 12));
+    assert(ppu.oam[6 * 4 + 2] == (0x3C2 | 3 << 12));
+    assert(ppu.oam[7 * 4 + 2] == (0x3CA | 3 << 12));
+    assert(ppu.oam[8 * 4 + 2] == (0x3C3 | 3 << 12));
+    assert(ppu.oam[9 * 4 + 2] == (0x3C4 | 3 << 12));
+    assert(ppu.oam[10 * 4 + 2] == (0x3CA | 3 << 12));
+    assert(ppu.oam[11 * 4 + 2] == (0x3C5 | 3 << 12));
+    assert(ppu.oam[12 * 4 + 2] == (0x3C6 | 3 << 12));
+    assert(ppu.oam[13 * 4] == 0x200 && hud.escape_gfx_loaded);
+    escape.status = MZM_ESCAPE_STATUS_NONE;
+    mzm_hud_update(&hud, &room, &frame);
+    assert(ppu.oam[5 * 4] == 0x200 && !hud.escape_gfx_loaded);
+    frame.escape = NULL;
     /* The refill animation draws its stages. */
     refill[0] = 13;
     mzm_hud_update(&hud, &room, &frame);
@@ -290,7 +314,7 @@ static void test_hud_bank(void) {
     mzm_hud_init(&hud, &ppu, &progress, 240);
     assert(hud.ready);
     MzmEquipment equipment = {.energy = 99, .max_energy = 99};
-    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 20 * 64, 10 * 64, NULL, NULL, NULL};
+    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 20 * 64, 10 * 64, NULL, NULL, NULL, NULL};
     MzmHudRoom room = {0, 0, map_x, map_y, 79, 44};
     mzm_hud_room_entered(&hud, &room, &frame);
     for (int i = 0; i < 4; ++i) mzm_hud_update(&hud, &room, &frame);

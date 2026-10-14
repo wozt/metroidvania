@@ -16,7 +16,8 @@ enum {
     AREA_KRAID = 1, AREA_RIDLEY = 3, AREA_CRATERIA = 5, AREAS_NORMAL = 7,
     BLOCK = 64, SCREEN_X_BLOCKS = 15, SCREEN_Y_BLOCKS = 10, SCREEN_PADDING = 2,
     SUITLESS_BAR_ELEMS = 56, SUITLESS_BAR_SIZE = 256,
-    MINIMAP_TILE_BACKGROUND = 0x140, ROOM_ENTRY_SIZE = 60, AREA_NAME_SIZE = 12
+    MINIMAP_TILE_BACKGROUND = 0x140, ROOM_ENTRY_SIZE = 60, AREA_NAME_SIZE = 12,
+    ESCAPE_TILE = 0x3C0, ESCAPE_GFX_BYTES = 0x160
 };
 
 /* HUD_*_X / HUD_*_Y in pixels */
@@ -358,7 +359,8 @@ static void oam(MzmHud *h, int *slot, int y, int x, int shape, int size, int til
 /* HudUpdateOam (the slots after the HUD are hidden: the runtime draws the
  * other sprites itself) */
 static void update_oam(MzmHud *h, const MzmHudFrame *f) {
-    enum { SQUARE = 0, HORIZONTAL = 1, H_32x8 = 1, S_8x8 = 0, S_32x32 = 2 };
+    enum { SQUARE = 0, HORIZONTAL = 1, VERTICAL = 2,
+           H_32x8 = 1, S_8x8 = 0, S_32x32 = 2, V_8x16 = 0 };
     int slot = 0;
     if (!h->hidden) {
         const MzmEquipment *e = f->equipment;
@@ -379,6 +381,30 @@ static void update_oam(MzmHud *h, const MzmHudFrame *f) {
         oam(h, &slot, MINIMAP_Y + 16, minimap_x + 8, SQUARE, S_8x8,
             f->frame8 & 8 ? 0x20 * 5 + 0x1F : 0x20 * 10, 5);
         oam(h, &slot, MINIMAP_Y, minimap_x, SQUARE, S_32x32, 0x20 * 6 + 0x1C, 5);
+    }
+    bool escape_visible = f->escape &&
+        (f->escape->status == MZM_ESCAPE_STATUS_HAPPENING ||
+         f->escape->status == MZM_ESCAPE_STATUS_FAILED);
+    if (escape_visible) {
+        if (!h->escape_gfx_loaded) {
+            uint32_t size;
+            const uint8_t *gfx = mzm_rom_data("sEscapeTimerDigitsGfx", &size);
+            if (gfx && size >= 0x400 + ESCAPE_GFX_BYTES) {
+                /* EscapeStart: the two 8x8 tile rows of the 8x16 digits. */
+                vram_from(h, VRAM_OBJ + 0x7800, gfx, ESCAPE_GFX_BYTES);
+                vram_from(h, VRAM_OBJ + 0x7C00, gfx + 0x400, ESCAPE_GFX_BYTES);
+                h->escape_gfx_loaded = true;
+            }
+        }
+        const MzmEscapeDigits *d = &f->escape->digits;
+        const uint8_t tiles[8] = {d->minutes_tens, d->minutes_ones, 10,
+                                  d->seconds_tens, d->seconds_ones, 10,
+                                  d->tenths, d->hundredths};
+        for (int i = 0; i < 8; ++i)
+            oam(h, &slot, 2, 141 + i * 8, VERTICAL, V_8x16,
+                 ESCAPE_TILE + tiles[i], 3);
+    } else {
+        h->escape_gfx_loaded = false;
     }
     for (int i = slot; i < 128; ++i) {
         h->ppu->oam[i * 4] = 0x200;

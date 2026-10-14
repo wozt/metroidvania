@@ -2988,6 +2988,14 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0316 - Zero Mission music back after the pause
+
+- Fix: DecreaseMusicVolume queued sound 63 (MUSIC_IMAGO_COCOON_BATTLE)
+  instead of SOUND_63 (0x63), so opening the pause replaced the room's
+  music and leaving it brought nothing back. A ROM-free test plays the
+  pause's volume change on a synthetic bank; every other sound constant
+  of the runtime was checked against the decompilation's enum.
+
 ## Patch 0315 - Zero Mission Polyps
 
 - Polyp and PolypProjectile (`src/runtime/mzm_polyp.c`): the lava plants

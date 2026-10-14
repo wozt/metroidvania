@@ -96,6 +96,13 @@ static void build_bank(void) {
     put_bytes(JINGLE_TRACK, jingle, sizeof jingle);
     put32(40, BASE + TRACK2_SONG);
     put16(44, 2);
+    /* Entry 0x63 (SOUND_63): the sound effect on player 3; entry 0x3F (63,
+     * MUSIC_IMAGO_COCOON_BATTLE in the game): the player 2 song, which the
+     * pause once played by mistake. */
+    put32(0x63 * 8, BASE + SFX);
+    put16(0x63 * 8 + 4, 3);
+    put32(0x3F * 8, BASE + TRACK2_SONG);
+    put16(0x3F * 8 + 4, 2);
     bank[TRACK2_SONG] = 1;
     put32(TRACK2_SONG + 4, BASE + VOICES);
     put32(TRACK2_SONG + 8, BASE + LOOP_TRACK);
@@ -139,7 +146,7 @@ static bool write_files(const char *bank_path, const char *tables_path) {
     fclose(f);
     f = fopen(tables_path, "w");
     if (!f) return false;
-    fprintf(f, "schema\tmetroidvania-mzm-sound-v1\nentries\t%u\t6\n", BASE);
+    fprintf(f, "schema\tmetroidvania-mzm-sound-v1\nentries\t%u\t100\n", BASE);
     write_list(f, "table", "sUnk_808cad0", 129, note_delay);
     write_list(f, "table", "sClockTable", 49, clock);
     write_list(f, "table", "sNoiseTable", 60, noise);
@@ -251,6 +258,22 @@ static void test_engine(void) {
     CHECK(!mzm_audio_player_playing(3));
     render(2, &peak, &crossings);
     CHECK(peak == 0);
+
+    /* DecreaseMusicVolume (the pause) plays SOUND_63 (0x63) and keeps the
+     * room's music; ResetMusicVolume leaves it playing. */
+    mzm_music_play(3, 0);
+    render(2, &peak, &crossings);
+    mzm_music_decrease_volume();
+    render(1, &peak, &crossings);
+    CHECK(mzm_audio_player_playing(3));
+    CHECK(!mzm_audio_player_playing(2));
+    CHECK(mzm_audio_player_playing(0));
+    mzm_music_reset_volume();
+    render(4, &peak, &crossings);
+    CHECK(mzm_audio_player_playing(0));
+    mzm_sound_stop(0x63);
+    mzm_audio_stop_all();
+    render(2, &peak, &crossings);
 
     /* CheckSetNewMusicTrack: the alias maps 5 to song 1, which differs
      * from the looping song 3: a 30 frame fade, then

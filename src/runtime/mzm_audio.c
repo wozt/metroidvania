@@ -1991,7 +1991,7 @@ static void ReplayQueuedMusic(uint8_t queueFlags) {
  * channels of the other players saved, the music a third as loud. */
 void mzm_music_decrease_volume(void) {
     if (!g_bank) return;
-    QueueSound(0x3F, 0);            /* SOUND_63 */
+    QueueSound(0x63, 0);            /* SOUND_63 (0x63, not 63: MUSIC_IMAGO_COCOON_BATTLE) */
     unk_34ac(0);
     gMusicInfo.volumeDownFlag |= 0x80;
     unk_3058(sMusicTrackDataRom[0].pTrack, 0xFFFF, AUDIO_VOLUME_DOWN);

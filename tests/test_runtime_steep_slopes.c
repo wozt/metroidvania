@@ -173,6 +173,32 @@ int main(void) {
     runtime_apply_suit_preset(&equipment,1);
     assert(!strcmp(runtime_suit_registry(&equipment),"VariaSuit"));
 
+    /* The block tables keep reading after the tank rows: the normal
+     * increase row, then one per difficulty (a parse of "increase\t100" as
+     * a difficulty index once rejected the whole file, so no crumble,
+     * breakable block or tank worked). */
+    {
+        const char *path = "runtime_blocks_test.tsv";
+        FILE *tables = fopen(path, "w");
+        assert(tables);
+        fputs("schema\tmetroidvania-mzm-blocks-v1\n"
+              "tanklist\tincrease\t100,5,2,2\n"
+              "tanklist\tincrease2\t50,2,1,1\n"
+              "reforming\t", tables);
+        for (int i = 0; i < MZM_BLOCK_TYPES; ++i) fprintf(tables, i ? ",%d" : "%d", 7);
+        fputs("\n", tables);
+        fclose(tables);
+        runtime_block_tables_open(path);
+        remove(path);
+        assert(runtime_block_tables.tanks.increase[0] == 100 &&
+               runtime_block_tables.tanks.has_difficulty[2] &&
+               runtime_block_tables.tanks.difficulty_increase[2][0] == 50 &&
+               runtime_block_tables.env.reforming[0] == 7);
+        mzm_tank_select_difficulty(&runtime_block_tables.tanks, 2);
+        assert(runtime_block_tables.tanks.increase[1] == 2);
+        memset(&runtime_block_tables, 0, sizeof runtime_block_tables);
+    }
+
     /* A new game's state: Brinstar's room 0, nothing collected, the
      * difficulty kept. */
     {

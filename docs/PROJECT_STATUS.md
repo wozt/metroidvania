@@ -2988,6 +2988,16 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0312 - Zero Mission block tables load again
+
+- Fix a regression of patch 0311: the block table reader parsed the
+  normal `tanklist increase` row as a difficulty row (`%d` skipping the
+  tab), rejected the whole file, and so disabled every crumble,
+  breakable and reforming block and every tank. Brinstar's first shaft
+  (crumble blocks around a speed booster block) trapped Samus at the
+  start. The reader now names its bad line, and a test reads the tank
+  rows.
+
 ## Patch 0311 - Zero Mission native new game and gamepad without debug
 
 - A new game is the native one: 99 energy, no item and no ammunition (the

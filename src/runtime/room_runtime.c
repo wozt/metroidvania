@@ -876,7 +876,8 @@ static bool runtime_block_tables_open(const char *path) {
             runtime_block_tables.tanks.underwater[index] = b != 0;
             runtime_block_tables.tanks.message[index] = (int16_t)c;
             runtime_block_tables.tanks_ok = true;
-        } else if (sscanf(line, "tanklist\tincrease%d\t", &index) == 1) {
+        } else if (!strncmp(line, "tanklist\tincrease", 17) && line[17] >= '0' && line[17] <= '9' &&
+                   sscanf(line + 17, "%d\t", &index) == 1) {
             /* sTankIncreaseAmount[difficulty] */
             const char *cursor = strchr(line + 9, '\t');
             ok = index >= 0 && index < 3 && cursor &&
@@ -931,6 +932,7 @@ static bool runtime_block_tables_open(const char *path) {
             else runtime_block_tables.tilemap_count = n;
         }
     }
+    if (!ok) fprintf(stderr, "Zero Mission block tables: bad line: %s", line);
     fclose(f);
     runtime_block_tables.ok = ok && runtime_block_tables.main_count > 0 &&
                               runtime_block_tables.tilemap_count > 0;

@@ -2988,6 +2988,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0324 - Blocks removed by sprites vanish from the screen
+
+- Fix: the sprites' ClipdataProcess(CAA_REMOVE_SOLID) only cleared the
+  collision, so the platform blocks Kraid's spikes break stayed drawn and
+  Samus seemed to fall through a solid floor. The hook now goes through the
+  block engine's CAA_REMOVE_SOLID (BlockApplyCcaa), which clears the BG1
+  block too unless a sprite made it solid; without the block tables only
+  the collision changes as before.
+- Checked by capture in kraid_030: the middle spike reaching the wall
+  clears the platform above it and Samus falls into the gap.
+
 ## Patch 0323 - Kraid checked in game
 
 - The runtime draws Kraid's sprites with their health palette rows

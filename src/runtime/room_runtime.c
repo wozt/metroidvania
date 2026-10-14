@@ -2882,9 +2882,18 @@ static void runtime_sprite_door_timer(void *context, int8_t timer) {
 
 /* CAA_REMOVE_SOLID: the block's collision becomes air; the static background
  * keeps its graphics (BgClipSetBg1BlockValue is not reproduced). */
+static void runtime_sprite_apply_caa(void *context, uint16_t y, uint16_t x, uint8_t caa);
+
+/* ClipdataProcess with CAA_REMOVE_SOLID: the Clipdata and the BG1 block
+ * cleared (BlockApplyCcaa; a block a sprite made solid gets its own
+ * block back). Without the block tables only the collision goes. */
 static void runtime_sprite_remove_solid(void *context, uint16_t y, uint16_t x) {
     RuntimeSprites *sprites = context;
     Room *room = sprites->room;
+    if (room && runtime_block_tables.ok) {
+        runtime_sprite_apply_caa(context, y, x, MZM_CAA_REMOVE_SOLID);
+        return;
+    }
     int column = x / 64, row = y / 64;
     if (room && column < room->width / 16 && row < room->height / 16)
         room_set_cell(room, column, row, CLIP_AIR);

@@ -724,6 +724,29 @@ static void map_station_part(Ctx *c) {
     }
 }
 
+/* The Chozodia save platform (save_platform_chozodia.c) shares the save
+ * platform's code; its own tables, part, sounds and refill. */
+enum {
+    SAVE_PLATFORM_POSE_CHECK_REFILL = 0x54, SAVE_PLATFORM_POSE_REFILL = 0x55,
+    SAVE_PLATFORM_POSE_AFTER_REFILL = 0x56, SAVE_PLATFORM_PART_REFILL_LIGHT = 4,
+    SAVE_PLATFORM_PART_POSE_REFILL_LIGHT_IDLE = 0x33,
+    MESSAGE_ENERGY_TANK_RECHARGE_COMPLETE = 25, MESSAGE_WEAPONS_AND_ENERGY_RESTORED = 26,
+};
+
+static bool chozodia(const MzmSprite *s) {
+    return s->secondary ? s->sprite_id == MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART
+                        : s->sprite_id == MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA;
+}
+
+static uint8_t sp_anim(const MzmSprite *s, uint8_t anim) {
+    return chozodia(s) ? (uint8_t)(anim - MZM_GADGET_SAVE_PLATFORM_IDLE + MZM_GADGET_SAVE_PLATFORM_CHOZODIA_IDLE)
+                       : anim;
+}
+
+static uint8_t sp_part(const MzmSprite *s) {
+    return chozodia(s) ? MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART : SSPRITE_SAVE_PLATFORM_PART;
+}
+
 /* SavePlatformDetectSamus: Samus standing on the platform, within a block
  * of its centre. */
 static bool save_platform_detect_samus(const Ctx *c) {
@@ -734,7 +757,7 @@ static bool save_platform_detect_samus(const Ctx *c) {
 }
 
 static void save_platform_spawn_part(Ctx *c, uint8_t part, uint16_t y) {
-    ai_spawn_secondary(c, SSPRITE_SAVE_PLATFORM_PART, part, c->s->gfx_slot, y, c->s->x, 0);
+    ai_spawn_secondary(c, sp_part(c->s), part, c->s->gfx_slot, y, c->s->x, 0);
 }
 
 static void set_disable_pause(const Ctx *c, bool disabled) {
@@ -752,7 +775,7 @@ static void save_platform_init(Ctx *c) {
     s->always_active = true;
     s->y_spawn = 0;
     s->samus_collision = SSC_NONE;
-    s->draw_top = BLOCK_SIZE / PIXEL_SIZE;
+    s->draw_top = (chozodia(s) ? BLOCK_SIZE + HALF_BLOCK_SIZE : BLOCK_SIZE) / PIXEL_SIZE;
     s->draw_bottom = BLOCK_SIZE / PIXEL_SIZE;
     s->draw_horizontal = (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
     s->hitbox_top = -PIXEL_SIZE;
@@ -762,21 +785,28 @@ static void save_platform_init(Ctx *c) {
     s->work2 = c->f->globals && c->f->globals->alarm_timer != 0;
     s->frame = s->adc = 0;
     s->work0 = 10;                              /* CONVERT_SECONDS(1.f / 6) */
+    /* (the two platforms swap their off tables) */
     if (s->work2) {
-        s->anim = MZM_GADGET_SAVE_PLATFORM_IDLE_OFF;
+        s->anim = sp_anim(s, chozodia(s) ? MZM_GADGET_SAVE_PLATFORM_OPENED_OFF : MZM_GADGET_SAVE_PLATFORM_IDLE_OFF);
         s->pose = SAVE_PLATFORM_POSE_OFF;
     } else if (c->f->globals && c->f->globals->loading_file) {
         save_platform_spawn_part(c, SAVE_PLATFORM_PART_TUBE, s->y);
-        s->anim = MZM_GADGET_SAVE_PLATFORM_OPENED_OFF;
+        s->anim = sp_anim(s, chozodia(s) ? MZM_GADGET_SAVE_PLATFORM_IDLE_OFF : MZM_GADGET_SAVE_PLATFORM_OPENED_OFF);
         s->pose = SAVE_PLATFORM_POSE_RELEASE_SAMUS;
         s->y_spawn = 340;                       /* CONVERT_SECONDS(5.f) + TWO_THIRD_SECOND */
     } else {
-        s->anim = MZM_GADGET_SAVE_PLATFORM_IDLE;
+        s->anim = sp_anim(s, MZM_GADGET_SAVE_PLATFORM_IDLE);
         s->pose = SAVE_PLATFORM_POSE_IDLE;
     }
-    int top = ai_spawn_secondary(c, SSPRITE_SAVE_PLATFORM_PART, SAVE_PLATFORM_PART_TOP, s->gfx_slot,
+    int top = ai_spawn_secondary(c, sp_part(c->s), SAVE_PLATFORM_PART_TOP, s->gfx_slot,
                                  (uint16_t)(s->y - BLOCK_SIZE * 8), s->x, 0);
     s->work3 = (uint8_t)(top >= 0 ? top : 0xFF);
+    /* The Chozodia platform turned off: palette row 3 (the alarm's
+     * transparency is not modelled). */
+    if (chozodia(s) && s->pose == SAVE_PLATFORM_POSE_OFF) {
+        s->palette_row = 3;
+        if (top >= 0) c->f->sprites[top].palette_row = 3;
+    }
 }
 
 static MzmSprite *save_platform_top(const Ctx *c) {
@@ -785,8 +815,84 @@ static MzmSprite *save_platform_top(const Ctx *c) {
 
 static void save_platform_closing(MzmSprite *s) {
     s->pose = SAVE_PLATFORM_POSE_CLOSING;
-    ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_CLOSING);
-    mzm_sfx_play(SOUND_SAVE_PLATFORM_CLOSING);
+    ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_CLOSING));
+    mzm_sfx_play(chozodia(s) ? MZM_SOUND_CHOZODIA_SAVE_PLATFORM_CLOSING : SOUND_SAVE_PLATFORM_CLOSING);
+}
+
+/* SavePlatformChozodiaCheckRefill: the save prompt when full (only the
+ * energy counts suitless), else the refill with its light and sound. */
+static void save_platform_check_refill(Ctx *c) {
+    MzmSprite *s = c->s;
+    const MzmEquipment *e = c->f->equipment;
+    if (s->work0 != 0) {
+        s->work0--;
+        return;
+    }
+    bool full = !e || (e->energy == e->max_energy &&
+                       (e->suit == MZM_SUIT_SUITLESS ||
+                        (e->missiles == e->max_missiles && e->super_missiles == e->max_super_missiles &&
+                         e->power_bombs == e->max_power_bombs)));
+    if (full) {
+        s->work0 = 10;                          /* CONVERT_SECONDS(1.f / 6) */
+        s->pose = SAVE_PLATFORM_POSE_SAVE_PROMPT;
+        return;
+    }
+    MzmSpriteSamusLink *link = c->f->samus_link;
+    if (link) link->set_timer = true, link->timer = 0;
+    s->pose = SAVE_PLATFORM_POSE_REFILL;
+    s->work0 = 5;
+    save_platform_spawn_part(c, SAVE_PLATFORM_PART_REFILL_LIGHT, s->y);
+    mzm_sfx_play(MZM_SOUND_CHOZODIA_SAVE_PLATFORM_REFILL);
+}
+
+/* SavePlatformChozodiaRefill: energy, then (suited) missiles, super
+ * missiles and power bombs, each counter's refill animation, then the
+ * message. */
+static void save_platform_refill(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmEquipment *e = c->f->equipment;
+    MzmSpriteGlobals *g = c->f->globals;
+    if (!e || !g) return;
+    uint8_t *anim = g->refill_animation;
+    bool suitless = e->suit == MZM_SUIT_SUITLESS;
+    if (s->work0 == 5) {
+        if (!ai_refill(&e->energy, e->max_energy, 32, 11)) {
+            s->work0--;
+            anim[0] = 13;
+        }
+    } else if (s->work0 == 4 && suitless) {
+        if (anim[0]) anim[0]--;
+        else s->work0--;
+    } else if (s->work0 == 4) {
+        if (anim[0]) anim[0]--;
+        else if (!ai_refill(&e->missiles, e->max_missiles, 32, 6)) {
+            s->work0--;
+            anim[1] = 13;
+        }
+    } else if (s->work0 == 3 && !suitless) {
+        if (anim[1]) anim[1]--;
+        else if (!ai_refill(&e->super_missiles, e->max_super_missiles, 16, 4)) {
+            s->work0--;
+            anim[2] = 13;
+        }
+    } else if (s->work0 == 2 && !suitless) {
+        if (anim[2]) anim[2]--;
+        else if (!ai_refill(&e->power_bombs, e->max_power_bombs, 16, 4)) {
+            s->work0--;
+            anim[3] = 13;
+        }
+    } else if (!suitless && anim[3]) {
+        anim[3]--;
+    } else if (s->work0 != 0) {
+        if (--s->work0 == 0) {
+            MzmSpriteSamusLink *link = c->f->samus_link;
+            if (link) link->set_timer = true, link->timer = 1;
+            mzm_sfx_fade(MZM_SOUND_CHOZODIA_SAVE_PLATFORM_REFILL, 20);  /* ONE_THIRD_SECOND */
+        }
+    } else {
+        s->pose = SAVE_PLATFORM_POSE_AFTER_REFILL;
+        spawn_message(c, suitless ? MESSAGE_ENERGY_TANK_RECHARGE_COMPLETE : MESSAGE_WEAPONS_AND_ENERGY_RESTORED);
+    }
 }
 
 /* SavePlatform: opens under Samus, grabs her for the save prompt, saves
@@ -804,8 +910,8 @@ static void save_platform(Ctx *c) {
         if (save_platform_detect_samus(c) && !c->f->samus_crouching_or_morphed) {
             if (--s->work0 == 0) {
                 s->pose = SAVE_PLATFORM_POSE_OPENING;
-                ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_OPENING);
-                mzm_sfx_play(SOUND_SAVE_PLATFORM_OPENING);
+                ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_OPENING));
+                mzm_sfx_play(chozodia(s) ? MZM_SOUND_CHOZODIA_SAVE_PLATFORM_OPENING : SOUND_SAVE_PLATFORM_OPENING);
             }
         } else {
             s->work0 = 10;
@@ -814,7 +920,7 @@ static void save_platform(Ctx *c) {
     case SAVE_PLATFORM_POSE_OPENING:
         if (ai_animation_ending(c, 1)) {
             s->pose = SAVE_PLATFORM_POSE_OPENED;
-            ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_OPENED);
+            ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_OPENED));
         }
         break;
     case SAVE_PLATFORM_POSE_OPENED:
@@ -822,7 +928,8 @@ static void save_platform(Ctx *c) {
         if (!save_platform_detect_samus(c)) {
             save_platform_closing(s);
         } else if (!c->f->samus_crouching_or_morphed && link) {
-            s->pose = SAVE_PLATFORM_POSE_SAVE_PROMPT;
+            /* The Chozodia platform refills Samus first. */
+            s->pose = chozodia(s) ? SAVE_PLATFORM_POSE_CHECK_REFILL : SAVE_PLATFORM_POSE_SAVE_PROMPT;
             s->work0 = 4;
             link->x = s->x;
             link->moved = true;
@@ -836,7 +943,7 @@ static void save_platform(Ctx *c) {
     case SAVE_PLATFORM_POSE_CLOSING:
         if (ai_animation_ending(c, 1)) {
             s->pose = SAVE_PLATFORM_POSE_IDLE;
-            ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_IDLE);
+            ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_IDLE));
             s->work0 = 10;
         }
         break;
@@ -861,7 +968,7 @@ static void save_platform(Ctx *c) {
         }
         if (c->f->banner_pose != MZM_BANNER_POSE_REMOVAL_ANIMATION) break;
         if (c->f->banner_yes) {
-            ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_SAVING);
+            ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_SAVING));
             s->pose = SAVE_PLATFORM_POSE_SAVING;
             save_platform_spawn_part(c, SAVE_PLATFORM_PART_TUBE, s->y);
             MzmSprite *top = save_platform_top(c);
@@ -880,8 +987,21 @@ static void save_platform(Ctx *c) {
         if (top) top->palette_row = s->palette_row;
         break;
     }
+    case SAVE_PLATFORM_POSE_CHECK_REFILL:
+        save_platform_check_refill(c);
+        break;
+    case SAVE_PLATFORM_POSE_REFILL:
+        save_platform_refill(c);
+        break;
+    case SAVE_PLATFORM_POSE_AFTER_REFILL:
+        /* SavePlatformChozodiaAfterRefill */
+        if (c->f->banner_pose == MZM_BANNER_POSE_REMOVAL_ANIMATION) {
+            s->work0 = 20;                      /* ONE_THIRD_SECOND */
+            s->pose = SAVE_PLATFORM_POSE_SAVE_PROMPT;
+        }
+        break;
     case SAVE_PLATFORM_POSE_OPENED_OFF_INIT: {
-        ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_OPENED_OFF);
+        ai_set_anim(s, sp_anim(s, chozodia(s) ? MZM_GADGET_SAVE_PLATFORM_IDLE_OFF : MZM_GADGET_SAVE_PLATFORM_OPENED_OFF));
         s->pose = SAVE_PLATFORM_POSE_SPAWN_SAVE_DONE_MESSAGE;
         s->work0 = 60;
         s->palette_row = 0;
@@ -933,17 +1053,17 @@ static void save_platform_part(Ctx *c) {
             s->draw_bottom = 0;
             s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
             if (main && main->pose == SAVE_PLATFORM_POSE_RELEASE_SAMUS) {
-                s->anim = MZM_GADGET_SAVE_PLATFORM_TUBE_IDLE;
+                s->anim = sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TUBE_IDLE);
                 s->y_spawn = 310;               /* CONVERT_SECONDS(5.f + 1.f / 6) */
                 s->pose = SAVE_PLATFORM_PART_POSE_TUBE_IDLE;
             } else {
-                s->anim = MZM_GADGET_SAVE_PLATFORM_TUBE_SPAWNING;
+                s->anim = sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TUBE_SPAWNING);
                 s->pose = SAVE_PLATFORM_PART_POSE_TUBE_SPAWNING;
             }
             break;
         case SAVE_PLATFORM_PART_TUBE_SHADOW:
             s->draw_order = 12;
-            s->anim = MZM_GADGET_SAVE_PLATFORM_TUBE_SHADOW;
+            s->anim = sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TUBE_SHADOW);
             s->draw_top = BLOCK_SIZE * 5 / PIXEL_SIZE;
             s->draw_bottom = 0;
             s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
@@ -951,7 +1071,7 @@ static void save_platform_part(Ctx *c) {
             break;
         case SAVE_PLATFORM_PART_RAY:
             s->draw_order = 5;
-            s->anim = MZM_GADGET_SAVE_PLATFORM_RAY;
+            s->anim = sp_anim(s, MZM_GADGET_SAVE_PLATFORM_RAY);
             s->draw_top = HALF_BLOCK_SIZE / PIXEL_SIZE;
             s->draw_bottom = 0;
             s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
@@ -964,8 +1084,21 @@ static void save_platform_part(Ctx *c) {
             s->draw_bottom = BLOCK_SIZE * 4 / PIXEL_SIZE;
             s->draw_horizontal = BLOCK_SIZE * 2 / PIXEL_SIZE;
             s->pose = SAVE_PLATFORM_PART_POSE_TOP_IDLE;
-            s->anim = main && main->pose == SAVE_PLATFORM_POSE_RELEASE_SAMUS ? MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDED
-                                                                              : MZM_GADGET_SAVE_PLATFORM_TOP_IDLE;
+            s->anim = sp_anim(s, main && main->pose == SAVE_PLATFORM_POSE_RELEASE_SAMUS
+                                     ? MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDED : MZM_GADGET_SAVE_PLATFORM_TOP_IDLE);
+            if (chozodia(s)) s->draw_top = BLOCK_SIZE * 4 / PIXEL_SIZE;
+            break;
+        case SAVE_PLATFORM_PART_REFILL_LIGHT:
+            if (!chozodia(s)) {
+                kill(s);
+                break;
+            }
+            s->draw_order = 5;
+            s->anim = MZM_GADGET_SAVE_PLATFORM_CHOZODIA_REFILL_LIGHT;
+            s->draw_top = BLOCK_SIZE * 5 / PIXEL_SIZE;
+            s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+            s->draw_horizontal = (BLOCK_SIZE + QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
+            s->pose = SAVE_PLATFORM_PART_POSE_REFILL_LIGHT_IDLE;
             break;
         default:
             kill(s);
@@ -975,8 +1108,8 @@ static void save_platform_part(Ctx *c) {
     case SAVE_PLATFORM_PART_POSE_TUBE_SPAWNING:
         if (ai_animation_ending(c, 1)) {
             s->pose = SAVE_PLATFORM_PART_POSE_TUBE_CHECK_SHADOW_DISAPPEARED;
-            ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_TUBE_IDLE);
-            int shadow = ai_spawn_secondary(c, SSPRITE_SAVE_PLATFORM_PART, SAVE_PLATFORM_PART_TUBE_SHADOW,
+            ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TUBE_IDLE));
+            int shadow = ai_spawn_secondary(c, sp_part(c->s), SAVE_PLATFORM_PART_TUBE_SHADOW,
                                             s->gfx_slot, s->y, s->x, 0);
             s->work1 = (uint8_t)(shadow >= 0 ? shadow : 0xFF);
         }
@@ -986,13 +1119,13 @@ static void save_platform_part(Ctx *c) {
         if (!sprites || s->work1 >= c->f->sprite_count || sprites[s->work1].status == 0) {
             s->pose = SAVE_PLATFORM_PART_POSE_TUBE_IDLE;
             s->y_spawn = 120;                   /* CONVERT_SECONDS(2.f) */
-            ai_spawn_secondary(c, SSPRITE_SAVE_PLATFORM_PART, SAVE_PLATFORM_PART_RAY, s->gfx_slot, s->y, s->x, 0);
+            ai_spawn_secondary(c, sp_part(c->s), SAVE_PLATFORM_PART_RAY, s->gfx_slot, s->y, s->x, 0);
         }
         break;
     case SAVE_PLATFORM_PART_POSE_TUBE_IDLE:
         if (--s->y_spawn == 0) {
             s->pose = SAVE_PLATFORM_PART_POSE_TUBE_DESPAWNING;
-            ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_TUBE_DESPAWNING);
+            ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TUBE_DESPAWNING));
         }
         break;
     case SAVE_PLATFORM_PART_POSE_TUBE_DESPAWNING:
@@ -1012,18 +1145,22 @@ static void save_platform_part(Ctx *c) {
             kill(s);
         }
         break;
+    case SAVE_PLATFORM_PART_POSE_REFILL_LIGHT_IDLE:
+        /* SavePlatformChozodiaPartRefillLightIdle */
+        if (main && main->pose == SAVE_PLATFORM_POSE_AFTER_REFILL) kill(s);
+        break;
     case SAVE_PLATFORM_PART_POSE_TOP_EXTENDING_INIT:
-        ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDING);
+        ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDING));
         s->pose = SAVE_PLATFORM_PART_POSE_TOP_EXTENDING;
         break;
     case SAVE_PLATFORM_PART_POSE_TOP_EXTENDING:
         if (ai_animation_ending(c, 1)) {
             s->pose = SAVE_PLATFORM_PART_POSE_TOP_IDLE;
-            ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDED);
+            ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDED));
         }
         break;
     case SAVE_PLATFORM_PART_POSE_TOP_RETRACTING_INIT:
-        ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_TOP_RETRACTING);
+        ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TOP_RETRACTING));
         s->pose = SAVE_PLATFORM_PART_POSE_TOP_RETRACTING;
         if (c->f->samus_link) c->f->samus_link->set_timer = true, c->f->samus_link->timer = 1;
         mzm_sfx_play(SOUND_SAVE_PLATFORM_RETRACTING);
@@ -1031,7 +1168,7 @@ static void save_platform_part(Ctx *c) {
     case SAVE_PLATFORM_PART_POSE_TOP_RETRACTING:
         if (ai_animation_ending(c, 1)) {
             s->pose = SAVE_PLATFORM_PART_POSE_TOP_IDLE;
-            ai_set_anim(s, MZM_GADGET_SAVE_PLATFORM_TOP_IDLE);
+            ai_set_anim(s, sp_anim(s, MZM_GADGET_SAVE_PLATFORM_TOP_IDLE));
         }
         break;
     default:
@@ -2155,7 +2292,8 @@ void ai_gadget(Ctx *c) {
     if (c->s->secondary) {
         if (c->s->sprite_id == SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT) unknown_item_block_light(c);
         else if (c->s->sprite_id == SSPRITE_MAP_STATION_PART) map_station_part(c);
-        else if (c->s->sprite_id == SSPRITE_SAVE_PLATFORM_PART) save_platform_part(c);
+        else if (c->s->sprite_id == SSPRITE_SAVE_PLATFORM_PART ||
+                 c->s->sprite_id == MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART) save_platform_part(c);
         else if (c->s->sprite_id == MZM_SSPRITE_GUNSHIP_PART) ai_gunship(c);
         else if (c->s->sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART) morph_ball_launcher_part(c);
         else if (c->s->sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART) zipline_generator_part(c);
@@ -2175,7 +2313,7 @@ void ai_gadget(Ctx *c) {
     case GERON_NORFAIR: geron_norfair(c); break;
     case PLASMA_BEAM_BLOCK: case GRAVITY_SUIT_BLOCK: case SPACE_JUMP_BLOCK: unknown_item_block(c); break;
     case MAP_STATION: map_station(c); break;
-    case SAVE_PLATFORM: save_platform(c); break;
+    case SAVE_PLATFORM: case MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA: save_platform(c); break;
     case MZM_PSPRITE_GUNSHIP: ai_gunship(c); break;
     case MZM_PSPRITE_AREA_BANNER: area_banner(c); break;
     case MZM_PSPRITE_MORPH_BALL_LAUNCHER: morph_ball_launcher(c); break;

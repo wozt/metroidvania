@@ -586,17 +586,6 @@ static void grab(MzmSpriteSamusLink *link) {
     link->pose = MZM_LINK_POSE_GRABBED;
 }
 
-/* SpriteUtilRefillEnergy / Missiles / SuperMissiles / PowerBombs: a
- * fraction of what is missing (`divisor`), between 1 and `cap`. */
-static bool refill(int *current, int max, int divisor, int cap) {
-    if (*current >= max) return false;
-    int step = (max - *current) / divisor;
-    if (step == 0) step = 1;
-    else if (step >= cap) step = cap;
-    *current += step;
-    if (*current > max) *current = max;
-    return true;
-}
 
 /* ChozoStatuePartArmRefill */
 static void arm_refill(Ctx *c, MzmSprite *s, MzmSprite *p) {
@@ -605,28 +594,28 @@ static void arm_refill(Ctx *c, MzmSprite *s, MzmSprite *p) {
     if (!p || p->pose != STATUE_REFILL || !e) return;
     switch (s->work0) {
     case 30:
-        if (!refill(&e->energy, e->max_energy, 32, 11)) {
+        if (!ai_refill(&e->energy, e->max_energy, 32, 11)) {
             s->work0--;
             anim[0] = 13;
         }
         break;
     case 29:
         if (anim[0]) anim[0]--;
-        else if (!refill(&e->missiles, e->max_missiles, 32, 6)) {
+        else if (!ai_refill(&e->missiles, e->max_missiles, 32, 6)) {
             s->work0--;
             anim[1] = 13;
         }
         break;
     case 28:
         if (anim[1]) anim[1]--;
-        else if (!refill(&e->super_missiles, e->max_super_missiles, 16, 4)) {
+        else if (!ai_refill(&e->super_missiles, e->max_super_missiles, 16, 4)) {
             s->work0--;
             anim[2] = 13;
         }
         break;
     case 27:
         if (anim[2]) anim[2]--;
-        else if (!refill(&e->power_bombs, e->max_power_bombs, 16, 4)) {
+        else if (!ai_refill(&e->power_bombs, e->max_power_bombs, 16, 4)) {
             s->work0--;
             anim[3] = 13;
         }

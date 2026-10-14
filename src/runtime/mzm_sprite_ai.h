@@ -120,6 +120,10 @@ bool ai_samus_near_left_right(const Ctx *c, uint16_t y_range, uint16_t x_range);
 /* SpriteUtilCheckSamusNearSpriteLeftRight with its NSLR result. */
 uint8_t ai_samus_nslr(const Ctx *c, uint16_t y_range, uint16_t x_range);
 bool ai_check_event(const Ctx *c, uint8_t event);
+/* SpriteUtilRefillEnergy / Missiles / SuperMissiles / PowerBombs: a
+ * fraction of what is missing (`divisor`), between 1 and `cap`; false once
+ * full. */
+bool ai_refill(int *current, int max, int divisor, int cap);
 bool ai_samus_above(const Ctx *c, uint16_t y_range, uint16_t x_range);
 /* SpriteUtilCheckOutOfRoomEffect / SpriteUtilCheckInRoomEffect (no splash). */
 bool ai_left_room_effect(const Ctx *c, uint16_t old_y, uint16_t y);

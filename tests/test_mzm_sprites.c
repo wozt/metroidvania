@@ -3776,6 +3776,81 @@ int main(void) {
             assert(pillar_room[0].draw_order == 12 && pillar_room[0].anim == MZM_GADGET_CHOZO_PILLAR_PLATFORM_SHADOW);
             memset(test_events, 0, sizeof test_events);
         }
+        /* The Chozodia save platform refills Samus before its save prompt:
+         * energy, missiles, super missiles and power bombs with their
+         * counters' refill animation, the light, then "weapons and energy
+         * restored" (suitless: the energy and "energy tank recharge
+         * complete"). */
+        {
+            static MzmSprite pads[8];
+            memset(pads, 0, sizeof pads);
+            MzmSpriteFrame zf = g;
+            MzmSpriteGlobals pad_globals = {0};
+            MzmEquipment pad_equipment = *frame.equipment;
+            pad_equipment.suit = MZM_SUIT_NORMAL;
+            pad_equipment.energy = 30;
+            pad_equipment.max_energy = 99;
+            pad_equipment.missiles = 0;
+            pad_equipment.max_missiles = 10;
+            pad_equipment.super_missiles = pad_equipment.max_super_missiles = 2;
+            pad_equipment.power_bombs = 1;
+            pad_equipment.max_power_bombs = 2;
+            MzmSpriteSamusLink pad_link = {0};
+            zf.sprites = pads;
+            zf.sprite_count = 8;
+            zf.globals = &pad_globals;
+            zf.equipment = &pad_equipment;
+            zf.samus_link = &pad_link;
+            zf.banner_pose = 0;
+            mzm_sprite_init_primary(&pads[0], MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA, 0, 7, 4, 0, 0);
+            mzm_sprite_update(&pads[0], 0, &zf);
+            assert(pads[0].pose == 0x9 && pads[0].anim == MZM_GADGET_SAVE_PLATFORM_CHOZODIA_IDLE &&
+                   pads[1].sprite_id == MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART && pads[1].room_slot == 3);
+            pads[0].pose = 0x54;                /* CHECK_REFILL */
+            pads[0].work0 = 0;
+            message_count = 0;
+            mzm_sprite_update(&pads[0], 0, &zf);
+            assert(pads[0].pose == 0x55 && pads[0].work0 == 5 && pad_link.set_timer && pad_link.timer == 0 &&
+                   pads[2].sprite_id == MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART && pads[2].room_slot == 4);
+            mzm_sprite_update(&pads[2], 2, &zf);
+            assert(pads[2].pose == 0x33 && pads[2].anim == MZM_GADGET_SAVE_PLATFORM_CHOZODIA_REFILL_LIGHT);
+            int pad_frames = 0;
+            while (pads[0].pose == 0x55 && pad_frames++ < 400) mzm_sprite_update(&pads[0], 0, &zf);
+            assert(pads[0].pose == 0x56 && pad_equipment.energy == 99 && pad_equipment.missiles == 10 &&
+                   pad_equipment.power_bombs == 2 && message_count == 1 && messages[0] == 26 &&
+                   pad_link.timer == 1);
+            mzm_sprite_update(&pads[2], 2, &zf);
+            assert(pads[2].status == 0);
+            zf.banner_pose = MZM_BANNER_POSE_REMOVAL_ANIMATION;
+            mzm_sprite_update(&pads[0], 0, &zf);
+            assert(pads[0].pose == 0x42 && pads[0].work0 == 20);
+            /* Full: straight to the prompt. */
+            pads[0].pose = 0x54;
+            pads[0].work0 = 0;
+            mzm_sprite_update(&pads[0], 0, &zf);
+            assert(pads[0].pose == 0x42 && pads[0].work0 == 10);
+            /* Suitless: only the energy counts. */
+            pad_equipment.suit = MZM_SUIT_SUITLESS;
+            pad_equipment.energy = 50;
+            pad_equipment.missiles = 0;
+            pads[0].pose = 0x54;
+            pads[0].work0 = 0;
+            message_count = 0;
+            zf.banner_pose = 0;
+            mzm_sprite_update(&pads[0], 0, &zf);
+            pad_frames = 0;
+            while (pads[0].pose == 0x55 && pad_frames++ < 400) mzm_sprite_update(&pads[0], 0, &zf);
+            assert(pads[0].pose == 0x56 && pad_equipment.energy == 99 && pad_equipment.missiles == 0 &&
+                   message_count == 1 && messages[0] == 25);
+            /* Off during the alarm: its off table (the normal one's opened
+             * off) and palette row 3. */
+            memset(pads, 0, sizeof pads);
+            pad_globals.alarm_timer = 100;
+            mzm_sprite_init_primary(&pads[0], MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA, 0, 7, 4, 0, 0);
+            mzm_sprite_update(&pads[0], 0, &zf);
+            assert(pads[0].pose == 0x51 && pads[0].anim == MZM_GADGET_SAVE_PLATFORM_CHOZODIA_OPENED_OFF &&
+                   pads[0].palette_row == 3 && pads[1].palette_row == 3);
+        }
         /* Parasites (parasite.c). */
         {
             static MzmSprite bugs[12];

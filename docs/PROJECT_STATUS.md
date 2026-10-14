@@ -2988,6 +2988,16 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0313 - Zero Mission Chozodia save platforms
+
+- SavePlatformChozodia and its part share the save platform's code
+  (`src/runtime/mzm_gadget_sprites.c`) with their own tables, part and
+  sounds, and refill Samus before the save prompt (energy, missiles,
+  super missiles, power bombs, the refill light and message).
+- The refill helper (SpriteUtilRefill*) is shared with the Chozo statues.
+- Checked by capture in chozodia_004 (refill, save, load); tests in
+  `tests/test_mzm_sprites.c`.
+
 ## Patch 0312 - Zero Mission block tables load again
 
 - Fix a regression of patch 0311: the block table reader parsed the

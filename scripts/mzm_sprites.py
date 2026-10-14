@@ -105,13 +105,14 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_ZIPLINE_GENERATOR": 0, "PSPRITE_SECURITY_GATE_DEFAULT_OPEN": 0,
           "PSPRITE_PISTON": 0, "PSPRITE_GLASS_TUBE": 0, "PSPRITE_RISING_CHOZO_PILLAR": 0,
           "PSPRITE_PARASITE": 0, "PSPRITE_PARASITE_MULTIPLE": 0,
+          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
           "PSPRITE_CHOZO_STATUE_PLASMA_BEAM": 0, "PSPRITE_CHOZO_STATUE_SPACE_JUMP": 0,
           "PSPRITE_CHOZO_STATUE_GRAVITY": 0}
 # Extra palette rows a ported AI sets (paletteRow), baked as ``/rowN``.
-ROW_VARIANTS = {"PSPRITE_SAVE_PLATFORM": (2,)}
+ROW_VARIANTS = {"PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-14T01:51:39+00:00",
+ "generated_at": "2026-10-14T02:02:19+00:00",
  "git": {
-  "commit": "7d9aff7",
+  "commit": "cb246d9",
   "branch": "main",
   "dirty": true
  },
@@ -2547,7 +2547,7 @@
    "id": "mzm.environment.save_platforms",
    "area": "mzm",
    "category": "environment",
-   "title": "Save platforms",
+   "title": "Save platforms (and the Chozodia save platform)",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -2595,10 +2595,21 @@
     "Sram_InitSaveFile",
     "SamusInit",
     "RoomLoad",
-    "CutsceneEnd"
+    "CutsceneEnd",
+    "SavePlatformChozodia",
+    "SavePlatformChozodiaInit",
+    "SavePlatformChozodiaCheckRefill",
+    "SavePlatformChozodiaRefill",
+    "SavePlatformChozodiaAfterRefill",
+    "SavePlatformChozodiaPart",
+    "SavePlatformChozodiaPartRefillLightIdle",
+    "SpriteUtilRefillEnergy",
+    "SpriteUtilRefillMissiles",
+    "SpriteUtilRefillSuperMissiles",
+    "SpriteUtilRefillPowerBombs"
    ],
-   "limitations": "Not compared with an emulator. The Chozodia save platform (PSPRITE_SAVE_PLATFORM_CHOZODIA) is not ported; no escape exists to switch a platform off (only the alarm does); the parts keep the sprites' priority and the OBJ blending of the tube is not drawn. The AIs follow the decompilation: the platform (always active, its top part eight blocks above) opens after Samus stands on it for 10 frames (not crouching or morphed), and once opened grabs her (centred, invincibility cleared, SPOSE_TURNING_FROM_FACING_THE_FOREGROUND with her animation frozen, gDisablePause), spawns the save prompt after 4 frames, and on YES flashes with palette row 2 (a baked /row2 variant) while the top extends and the tube, its shadow and the rising ray play; the ray turns it off, the save complete message follows a second later, then a 10-frame delay and the release (SPOSE_FACING_THE_FOREGROUND, the pause allowed again); Samus walking off closes it. In a loaded file's room (gIsLoadingFile) it starts with the tube around Samus and releases her after 340 frames. Checked by capture in brinstar_033 (prompt, saving, message, release, reload). A new game is the native one whatever the runtime's test options: Sram_InitSaveFile and SamusInit without a file (99 energy, no item, no ammunition, no event, no collected item, no opened hatch, a zero timer, the chosen difficulty), the gunship landing in Crateria, the intro text, then RoomLoad at Brinstar's door 0 (x = xStart blocks + xExit + 8 pixels, y = yEnd + 1 blocks + yExit pixels - 1, its own exit exported as X lines) with SamusInit's pose facing the foreground, facing left; checked by a capture of the whole flow from the title screen (Samus at x 632, falling down the first shaft, 99 energy and no ammunition). The equipment is no longer rebuilt from the debug suit preset: the collected items stay through the debug menu, and Samus's graphics follow the equipment.",
-   "next_action": "Port the Chozodia save platform, then compare with an emulator.",
+   "limitations": "Not compared with an emulator. No escape exists to switch a platform off (only the alarm does); the parts keep the sprites' priority and the OBJ blending of the tube is not drawn. The Chozodia platform's alarm transparency (BLDCNT/BLDALPHA) is not modelled, its off palette row 3 reads another graphics slot's palette and is not baked (it draws with its own row), and its escape check (EscapeDetermineTimer) is not ported. The AIs follow the decompilation: the platform (always active, its top part eight blocks above) opens after Samus stands on it for 10 frames (not crouching or morphed), and once opened grabs her (centred, invincibility cleared, SPOSE_TURNING_FROM_FACING_THE_FOREGROUND with her animation frozen, gDisablePause), spawns the save prompt after 4 frames, and on YES flashes with palette row 2 (a baked /row2 variant) while the top extends and the tube, its shadow and the rising ray play; the ray turns it off, the save complete message follows a second later, then a 10-frame delay and the release (SPOSE_FACING_THE_FOREGROUND, the pause allowed again); Samus walking off closes it. In a loaded file's room (gIsLoadingFile) it starts with the tube around Samus and releases her after 340 frames. Checked by capture in brinstar_033 (prompt, saving, message, release, reload). A new game is the native one whatever the runtime's test options: Sram_InitSaveFile and SamusInit without a file (99 energy, no item, no ammunition, no event, no collected item, no opened hatch, a zero timer, the chosen difficulty), the gunship landing in Crateria, the intro text, then RoomLoad at Brinstar's door 0 (x = xStart blocks + xExit + 8 pixels, y = yEnd + 1 blocks + yExit pixels - 1, its own exit exported as X lines) with SamusInit's pose facing the foreground, facing left; checked by a capture of the whole flow from the title screen (Samus at x 632, falling down the first shaft, 99 energy and no ammunition). The equipment is no longer rebuilt from the debug suit preset: the collected items stay through the debug menu, and Samus's graphics follow the equipment. The Chozodia save platform (PSPRITE_SAVE_PLATFORM_CHOZODIA, its own tables, part and sounds, the off tables swapped, off during the alarm) refills Samus before the prompt: energy, then missiles, super missiles and power bombs (energy only suitless) with each counter's refill animation, the refill light and sound, then MESSAGE_WEAPONS_AND_ENERGY_RESTORED (MESSAGE_ENERGY_TANK_RECHARGE_COMPLETE suitless); checked by capture in chozodia_004 (30 energy refilled, the message, the save written, the file loaded back into the tube and Samus released).",
+   "next_action": "Compare both platforms with an emulator; port the escape that switches them off.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -7491,6 +7502,12 @@
  },
  "timeline": [
   {
+   "commit": "cb246d9",
+   "date": "2026-10-14",
+   "subject": "fix(mzm): block tables load again",
+   "scope": "mzm"
+  },
+  {
    "commit": "7d9aff7",
    "date": "2026-10-14",
    "subject": "feat(mzm): native new game, F1-only debug and a gameplay-only gamepad",
@@ -7963,12 +7980,6 @@
    "date": "2026-10-10",
    "subject": "docs(aria): skeleton research notes",
    "scope": "aria"
-  },
-  {
-   "commit": "e23bb3a",
-   "date": "2026-10-10",
-   "subject": "feat(aria): generic debris pieces and the archer's shattering",
-   "scope": "aria"
   }
  ],
  "inventory": {
@@ -7996,7 +8007,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 909,
+    "routines_cited_by_features": 916,
     "call_edges": 6071
    },
    "aos": {

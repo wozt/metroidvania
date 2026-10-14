@@ -3194,6 +3194,11 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             shade=sprite->palette_row<4?statue_rows[sprite->palette_row]:"";
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM && sprite->palette_row==2)
             shade="/row2";              /* SavePlatformSaving's flash */
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA &&
+                sprite->palette_row==2)
+            /* The Chozodia platform's saving flash (its off row 3 reads
+             * another graphics slot's palette, not baked). */
+            shade="/row2";
         else if(sprite->sprite_id==MZM_PSPRITE_AREA_BANNER && !sprite->secondary) {
             /* TextDrawLocation's text in the banner's graphics. */
             static char location[8];

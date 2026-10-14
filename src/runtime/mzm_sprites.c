@@ -260,6 +260,23 @@ const char *const mzm_gadget_anim_names[MZM_GADGET_ANIMS] = {
     "RisingChozoPillarPlatformOam_ShadowSpawning",
     "RisingChozoPillarPlatformOam_ShadowSpawned",
     "RisingChozoPillarPlatformShadowOam",
+    "SavePlatformChozodiaOam_Idle",
+    "SavePlatformChozodiaOam_Opening",
+    "SavePlatformChozodiaOam_Opened",
+    "SavePlatformChozodiaOam_Saving",
+    "SavePlatformChozodiaOam_OpenedOff",
+    "SavePlatformChozodiaOam_Closing",
+    "SavePlatformChozodiaOam_IdleOff",
+    "SavePlatformChozodiaPartOam_TopIdle",
+    "SavePlatformChozodiaPartOam_TopExtending",
+    "SavePlatformChozodiaPartOam_TopExtended",
+    "SavePlatformChozodiaPartOam_TopRetracting",
+    "SavePlatformChozodiaPartOam_TubeSpawning",
+    "SavePlatformChozodiaPartOam_TubeShadow",
+    "SavePlatformChozodiaPartOam_TubeIdle",
+    "SavePlatformChozodiaPartOam_TubeDespawning",
+    "SavePlatformChozodiaPartOam_Ray",
+    "SavePlatformChozodiaPartOam_RefillLight",
 };
 static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "ELEVATOR_PAD", "ELEVATOR_PAD", "WATER_DROP", "WATER_DROP", "WATER_DROP",
@@ -283,6 +300,7 @@ static const char *const gadget_sprites[MZM_GADGET_ANIMS] = {
     "PISTON", "PISTON", "PISTON", "GLASS_TUBE", "GLASS_TUBE", "GLASS_TUBE", "GLASS_TUBE",
     "RISING_CHOZO_PILLAR", "RISING_CHOZO_PILLAR", "RISING_CHOZO_PILLAR", "RISING_CHOZO_PILLAR",
     "RISING_CHOZO_PILLAR",
+    "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA", "SAVE_PLATFORM_CHOZODIA",
 };
 const char *const mzm_dragon_anim_names[MZM_DRAGON_ANIMS] = {
     "DragonOam_Idle", "DragonOam_Warning", "DragonOam_Spitting", "DragonOam_TurningAround",
@@ -1690,6 +1708,16 @@ bool ai_samus_near_left_right(const Ctx *c, uint16_t y_range, uint16_t x_range) 
 uint8_t ai_samus_nslr(const Ctx *c, uint16_t y_range, uint16_t x_range) {
     if (!ai_samus_near_left_right(c, y_range, x_range)) return NSLR_OUT_OF_RANGE;
     return c->s->x > c->f->samus_x ? NSLR_LEFT : NSLR_RIGHT;
+}
+
+bool ai_refill(int *current, int max, int divisor, int cap) {
+    if (*current >= max) return false;
+    int step = (max - *current) / divisor;
+    if (step == 0) step = 1;
+    else if (step >= cap) step = cap;
+    *current += step;
+    if (*current > max) *current = max;
+    return true;
 }
 
 bool ai_check_event(const Ctx *c, uint8_t event) {
@@ -4420,7 +4448,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
             sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART ||
             sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART ||
             sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM ||
-            sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW)
+            sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW ||
+            sprite_id == MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART)
             return MZM_FAMILY_GADGET;
         if (sprite_id == MZM_SSPRITE_MORPH_BALL_OUTSIDE || sprite_id == MZM_SSPRITE_POWER_GRIP_GLOW ||
             sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW)
@@ -4489,6 +4518,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_ZIPLINE: case MZM_PSPRITE_ZIPLINE_BUTTON: case MZM_PSPRITE_ZIPLINE_GENERATOR:
     case MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN: case MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED:
     case MZM_PSPRITE_PISTON: case MZM_PSPRITE_GLASS_TUBE: case MZM_PSPRITE_RISING_CHOZO_PILLAR:
+    case MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA:
         return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_PARASITE: case MZM_PSPRITE_PARASITE_MULTIPLE: return MZM_FAMILY_PARASITE;
     case MZM_PSPRITE_MORPH_BALL:
@@ -5218,6 +5248,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         sprite->sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART ||
         sprite->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM ||
         sprite->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW ||
+        sprite->sprite_id == MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART ||
         sprite->sprite_id == MZM_SSPRITE_UNKNOWN_ITEM_BLOCK_LIGHT)
         return sprite->owner;
     if (sprite->sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||

@@ -2445,6 +2445,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sAtomicIdleYMovement", t->atomic_idle_y, 65, 65},
         {"sAtomicIdleXMovement", t->atomic_idle_x, 81, 81},
         {"sPolypProjectileYVelocity", t->polyp_projectile_y, 44, 44},
+        {"sWorkerRobotSleepingFallingSpeed", t->worker_robot_sleeping_falling, 10, 10},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -2956,6 +2957,14 @@ static uint16_t runtime_pseudo_screw_damage(const MzmSamus *samus,const MzmEquip
 }
 
 /* The kills of a sprite Samus stands on drop her to STANDING_MIDAIR. */
+/* ProjectileCheckHittingSprite, in ProjectileUpdate between the new
+ * projectile's spawn and the projectile loop. */
+static void runtime_projectile_hits(void *context, MzmWeapons *weapons) {
+    RuntimeSprites *sprites = context;
+    mzm_sprites_projectile_hits(sprites->live, RUNTIME_MAX_SPRITES, weapons, &sprites->tables,
+                                &sprites->effects);
+}
+
 static void runtime_sprites_drop_samus(RuntimeSprites *sprites, MzmSamus *samus) {
     if (mzm_sprites_samus_dropped(sprites->live, RUNTIME_MAX_SPRITES)) samus->on_enemy = false;
 }
@@ -4610,6 +4619,8 @@ int main(int argc, char **argv) {
             weapons.has_camera=true;
             weapons.camera_x=(uint16_t)((int)last_cx*4);
             weapons.camera_y=(uint16_t)((int)last_cy*4);
+            weapons.hit_sprites=sprites.kinds_ok?runtime_projectile_hits:NULL;
+            weapons.hit_context=&sprites;
             if(!dying)
                 mzm_weapons_update(&weapons,&samus,&equipment,cannon_x,cannon_y,
                                    &collision,&projectile_animation);
@@ -4717,8 +4728,8 @@ int main(int argc, char **argv) {
                 mzm_power_bomb_process(&weapons.power_bomb,&pb_room,sprites.frame8);
             }
             if(sprites.kinds_ok) {
-                /* The wall impacts' particles, then ProjectileCheckHittingSprite
-                 * ends ProjectileUpdate; ParticleProcessAll follows. */
+                /* The projectile loop's particles (ProjectileCheckHittingSprite
+                 * set its own before the loop); ParticleProcessAll follows. */
                 static const uint8_t impact_effects[]={
                     [MZM_PROJECTILE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM,
                     [MZM_PROJECTILE_MISSILE]=MZM_PE_HITTING_SOMETHING_WITH_MISSILE,
@@ -4741,8 +4752,6 @@ int main(int argc, char **argv) {
                     mzm_particle_set(&sprites.effects,(uint16_t)weapons.impacts[i].y,
                                      (uint16_t)weapons.impacts[i].x,
                                      impact_effects[weapons.impacts[i].type]);
-                mzm_sprites_projectile_hits(sprites.live,RUNTIME_MAX_SPRITES,&weapons,
-                                            &sprites.tables,&sprites.effects);
                 runtime_sprites_drop_samus(&sprites,&samus);
                 mzm_particles_process(&sprites.effects,&sprites.effect_kinds,
                                       (uint16_t)((int)last_cx*4),(uint16_t)((int)last_cy*4));

@@ -806,6 +806,18 @@ static void record_bomb_points(void *context, int32_t x, int32_t y, int damage) 
 }
 
 /* ProjectileProcessBomb, ProjectileCheckSamusBombBounce, SamusBombBounce. */
+/* A sprite pass that counts the exploding bombs it sees and clears them,
+ * as mzm_sprites_projectile_hits does. */
+static int bomb_passes;
+static void count_bomb_pass(void *context, MzmWeapons *weapons) {
+    (void)context;
+    for (int i = 0; i < MZM_MAX_PROJECTILES; ++i)
+        if (weapons->list[i].hits_sprites) {
+            bomb_passes++;
+            weapons->list[i].hits_sprites = false;
+        }
+}
+
 static void test_bombs(void) {
     World w;
     world_init(&w);
@@ -847,7 +859,11 @@ static void test_bombs(void) {
         mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
         frames++;
     }
-    assert(frames == 16 && bomb->hidden && !bomb->hits_sprites);
+    /* PROJ_STATUS_CAN_AFFECT_ENVIRONMENT for the next update's sprite
+     * pass, which runs before the projectile loop. */
+    assert(frames == 16 && bomb->hidden && bomb->hits_sprites);
+    weapons.hit_sprites = count_bomb_pass;
+    bomb_passes = 0;
     assert(weapons.impact_count == 1 && weapons.impacts[0].type == MZM_PROJECTILE_BOMB &&
            weapons.impacts[0].y == bomb->y - 16 && bomb_points == 0);
     /* The first explosion frame: the block centre, the sprite pass and the
@@ -855,7 +871,7 @@ static void test_bombs(void) {
     weapons.samus_previous_x = w.samus.x;
     mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
     assert(bomb_points == 1 && bomb_point_x[0] == bomb->x && bomb_point_y[0] == bomb->y - 8);
-    assert(bomb->hits_sprites && weapons.bomb_bounce == MZM_FORCED_BOMB_JUMP_UP);
+    assert(bomb_passes == 1 && !bomb->hits_sprites && weapons.bomb_bounce == MZM_FORCED_BOMB_JUMP_UP);
     assert(mzm_samus_bomb_bounce(&w.samus, &w.equipment, &w.collision, weapons.bomb_bounce));
     assert(w.samus.pose == MZM_POSE_MORPH_BALL_MIDAIR &&
            w.samus.y_velocity == MZM_BOMB_BOUNCE_Y_VELOCITY && w.samus.x_velocity == 0);
@@ -863,7 +879,8 @@ static void test_bombs(void) {
     /* The other eight points, one a frame, then the bomb is gone. */
     for (int i = 0; i < 8; ++i)
         mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
-    assert(bomb_points == 9);
+    assert(bomb_points == 9 && bomb_passes == 1);
+    weapons.hit_sprites = NULL;
     {
         /* A bomb a morph ball launcher took: its two spins again, then an
          * explosion that affects no block but launches Samus in morph

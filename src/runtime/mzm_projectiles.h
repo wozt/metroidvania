@@ -119,7 +119,7 @@ typedef struct {
                      uint8_t *durations, int max);
 } MzmProjectileAnimation;
 
-typedef struct {
+typedef struct MzmWeapons {
     MzmProjectile list[MZM_MAX_PROJECTILES];
     uint8_t cooldown;
     /* beamReleasePaletteTimer: four frames after each beam shot. */
@@ -168,6 +168,10 @@ typedef struct {
      * SPRITE_ISFT_POWER_BOMB_STUNNED then). */
     MzmPowerBomb power_bomb;
     bool power_bomb_set;
+    /* ProjectileCheckHittingSprite, which ProjectileUpdate runs after the
+     * new projectile's spawn and before the projectile loop (NULL: none). */
+    void (*hit_sprites)(void *context, struct MzmWeapons *weapons);
+    void *hit_context;
 } MzmWeapons;
 
 void mzm_weapons_init(MzmWeapons *weapons);

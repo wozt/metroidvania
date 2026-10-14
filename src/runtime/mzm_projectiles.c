@@ -695,6 +695,9 @@ static void process_bomb(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *
             p->timer = MZM_BOMB_TIMER;
             p->bomb_stage++;
             p->hidden = true;
+            /* PROJ_STATUS_CAN_AFFECT_ENVIRONMENT: the next update's sprite
+             * pass, before the projectile loop, takes the explosion. */
+            p->hits_sprites = p->bomb_stage == MZM_BOMB_EXPLODING;
             if (weapons->impact_count < MZM_MAX_PROJECTILES) {
                 weapons->impacts[weapons->impact_count].x = p->x;
                 weapons->impacts[weapons->impact_count].y = p->y - MZM_QUARTER_BLOCK_SIZE;
@@ -722,10 +725,6 @@ static void process_bomb(MzmWeapons *weapons, MzmProjectile *p, const MzmSamus *
         if (--p->timer == 0) {
             p->active = false;
             break;
-        }
-        if (p->timer == MZM_BOMB_TIMER - 1) {
-            /* The sprite pass of this frame ran before the projectile loop. */
-            p->hits_sprites = true;
         }
         if (p->timer >= MZM_BOMB_TIMER - 9) {
             const int16_t *o = points[MZM_BOMB_TIMER - 1 - p->timer];
@@ -908,6 +907,7 @@ void mzm_weapons_update(MzmWeapons *weapons, const MzmSamus *samus,
         }
         weapons->pending = false;
     }
+    if (weapons->hit_sprites) weapons->hit_sprites(weapons->hit_context, weapons);
     for (int i = 0; i < MZM_MAX_PROJECTILES; ++i) {
         MzmProjectile *p = &weapons->list[i];
         if (!p->active) continue;

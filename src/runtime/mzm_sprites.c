@@ -334,6 +334,15 @@ const char *const mzm_polyp_anim_names[MZM_POLYP_ANIMS] = {
 static const char *const polyp_sprites[MZM_POLYP_ANIMS] = {
     "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP",
 };
+const char *const mzm_worker_robot_anim_names[MZM_WORKER_ROBOT_ANIMS] = {
+    "WorkerRobotOam_Walking", "WorkerRobotOam_WalkingBackwards", "WorkerRobotOam_Standing",
+    "WorkerRobotOam_BackToSleep", "WorkerRobotOam_Sleeping", "WorkerRobotOam_GoingToSleep",
+    "WorkerRobotOam_TurningAround", "WorkerRobotOam_WakingUp",
+};
+static const char *const worker_robot_sprites[MZM_WORKER_ROBOT_ANIMS] = {
+    "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT",
+    "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT",
+};
 const char *const mzm_tourian_anim_names[MZM_TOURIAN_ANIMS] = {
     "ZebetiteOam_Phase1",
     "ZebetiteOam_Phase2",
@@ -510,6 +519,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ATOMIC] = {MZM_ATOMIC_ANIMS, mzm_atomic_anim_names, atomic_sprites},
     [MZM_FAMILY_POLYP] = {MZM_POLYP_ANIMS, mzm_polyp_anim_names, polyp_sprites},
     [MZM_FAMILY_TOURIAN] = {MZM_TOURIAN_ANIMS, mzm_tourian_anim_names, tourian_sprites},
+    [MZM_FAMILY_WORKER_ROBOT] = {MZM_WORKER_ROBOT_ANIMS, mzm_worker_robot_anim_names,
+                                 worker_robot_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -4595,6 +4606,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_PARASITE: case MZM_PSPRITE_PARASITE_MULTIPLE: return MZM_FAMILY_PARASITE;
     case MZM_PSPRITE_ATOMIC: return MZM_FAMILY_ATOMIC;
     case MZM_PSPRITE_POLYP: return MZM_FAMILY_POLYP;
+    case MZM_PSPRITE_WORKER_ROBOT: return MZM_FAMILY_WORKER_ROBOT;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
     case MZM_PSPRITE_ZEBETITE_ONE_AND_THREE: case MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR:
         return MZM_FAMILY_TOURIAN;
@@ -5544,6 +5556,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_ATOMIC: ai_atomic(&c); break;
     case MZM_FAMILY_POLYP: ai_polyp(&c); break;
     case MZM_FAMILY_TOURIAN: ai_tourian(&c); break;
+    case MZM_FAMILY_WORKER_ROBOT: ai_worker_robot(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

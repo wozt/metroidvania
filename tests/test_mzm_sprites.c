@@ -4,6 +4,7 @@
 #include "mzm_blocks.h"
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
+#include "mzm_projectiles.h"
 #include "mzm_sprites.h"
 #include "mzm_screen_shake.h"
 
@@ -4123,6 +4124,124 @@ int main(void) {
             mzm_sprite_update(gun, 0, &tf);
             assert(gun->status == 0);
             test_events[MZM_EVENT_MOTHER_BRAIN_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_MOTHER_BRAIN_KILLED % 8));
+            clear();
+        }
+        /* Worker Robots (worker_robot.c): asleep until hit, then standing
+         * half a second and walking until Samus is in front; a missile on
+         * the side pushes them away, and they fall when the floor ends. */
+        {
+            static MzmSprite bots[4];
+            static MzmSpriteKind robot_kind;
+            static MzmWeapons robot_weapons;
+            memset(bots, 0, sizeof bots);
+            memset(&robot_kind, 0, sizeof robot_kind);
+            for (int a = 0; a < MZM_WORKER_ROBOT_ANIMS; ++a) {
+                robot_kind.counts[a] = 3;
+                for (int f = 0; f < 3; ++f) robot_kind.timers[a][f] = 2;
+            }
+            mzm_weapons_init(&robot_weapons);
+            MzmSpriteFrame rf = g;
+            rf.kinds[MZM_FAMILY_WORKER_ROBOT] = &robot_kind;
+            rf.sprites = bots;
+            rf.sprite_count = 4;
+            rf.weapons = &robot_weapons;
+            rf.samus_link = NULL;
+            rf.samus_x = 2 * 64;
+            rf.samus_y = 9 * 64;
+            rf.samus_hitbox_top = -96;
+            rf.samus_hitbox_bottom = 0;
+            rf.samus_hitbox_left = -24;
+            rf.samus_hitbox_right = 24;
+            tables.health[MZM_PSPRITE_WORKER_ROBOT] = 1;
+            clear();
+            for (int x = 0; x < 16; ++x) grid[9][x] = MZM_CLIPDATA_SOLID;
+            MzmSprite *bot = &bots[0];
+            mzm_sprite_init_primary(bot, MZM_PSPRITE_WORKER_ROBOT, 0, 8, 8, 0, 0);
+            bot->status |= MZM_SPRITE_STATUS_ONSCREEN;
+            mzm_sprite_update(bot, 0, &rf);
+            /* Samus on its left: it looks right (X flip) and sleeps. */
+            assert(bot->pose == 0x11 && bot->samus_collision == 1 && bot->immune_to_projectiles &&
+                   bot->status & MZM_SPRITE_STATUS_X_FLIP && bot->status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+                   bot->anim == MZM_WORKER_ROBOT_SLEEPING);
+            for (int i = 0; i < 20; ++i) mzm_sprite_update(bot, 0, &rf);
+            assert(bot->pose == 0x11);
+            /* A hit's stun flash wakes it. */
+            mzm_sfx_clear();
+            bot->isft = 2;
+            mzm_sprite_update(bot, 0, &rf);
+            assert(bot->pose == 0x12);
+            mzm_sprite_update(bot, 0, &rf);
+            assert(bot->pose == 0x13 && bot->anim == MZM_WORKER_ROBOT_WAKING_UP);
+            assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_WORKER_ROBOT_WAKING_UP));
+            bot->isft = 0;
+            int robot_frames = 0;
+            while (bot->pose != 0xF && robot_frames++ < 100) mzm_sprite_update(bot, 0, &rf);
+            assert(bot->pose == 0xF && bot->work0 == 29 && bot->hitbox_top == -132);
+            robot_frames = 0;
+            while (bot->pose != 0x9 && robot_frames++ < 100) mzm_sprite_update(bot, 0, &rf);
+            assert(robot_frames == 30 && bot->anim == MZM_WORKER_ROBOT_WALKING);
+            /* A subpixel a frame to the right. */
+            uint16_t bx = bot->x;
+            mzm_sprite_update(bot, 0, &rf);
+            assert(bot->x == bx + 1);
+            /* A missile from the left pushes it right, faster first. */
+            robot_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                                    .stage = MZM_STAGE_MOVING,
+                                                    .direction = MZM_AIM_FORWARD, .x_flip = true,
+                                                    .x = bot->x - 20, .y = bot->y - 64};
+            bx = bot->x;
+            mzm_sprite_update(bot, 0, &rf);
+            assert(!robot_weapons.list[0].active && bot->work1 == 29 && bot->x == bx + 7 &&
+                   bot->anim == MZM_WORKER_ROBOT_WALKING);
+            robot_frames = 0;
+            while (bot->work1 && robot_frames++ < 100) mzm_sprite_update(bot, 0, &rf);
+            assert(bot->pose == 0xE || bot->pose == 0xF);
+            assert(bot->status & MZM_SPRITE_STATUS_FACING_RIGHT);
+            /* A super missile from the right: a second backwards. */
+            mzm_sprite_update(bot, 0, &rf);
+            robot_weapons.list[1] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_SUPER_MISSILE,
+                                                    .stage = MZM_STAGE_MOVING,
+                                                    .direction = MZM_AIM_FORWARD, .x_flip = false,
+                                                    .x = bot->x + 20, .y = bot->y - 64};
+            mzm_sprite_update(bot, 0, &rf);
+            assert(!robot_weapons.list[1].active && bot->pose == 0x9 && bot->work1 == 60 &&
+                   !(bot->status & MZM_SPRITE_STATUS_FACING_RIGHT) &&
+                   bot->anim == MZM_WORKER_ROBOT_WALKING_BACKWARDS);
+            /* A tumbling missile is ignored. */
+            robot_weapons.list[2] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                                    .stage = MZM_STAGE_TUMBLING, .x = bot->x,
+                                                    .y = bot->y - 64};
+            mzm_sprite_update(bot, 0, &rf);
+            assert(robot_weapons.list[2].active);
+            robot_weapons.list[2].active = false;
+            robot_frames = 0;
+            while (bot->work1 && robot_frames++ < 100) mzm_sprite_update(bot, 0, &rf);
+            /* Walking on, it meets Samus in front: back to sleep, then it
+             * lies down the other way. */
+            while (bot->pose != 0x9 && robot_frames++ < 300) mzm_sprite_update(bot, 0, &rf);
+            rf.samus_x = (uint16_t)(bot->x + 80);
+            mzm_sprite_update(bot, 0, &rf);
+            assert(bot->pose == 0xA);
+            mzm_sprite_update(bot, 0, &rf);
+            assert(bot->pose == 0xB && bot->anim == MZM_WORKER_ROBOT_BACK_TO_SLEEP);
+            robot_frames = 0;
+            while (bot->pose != 0x11 && robot_frames++ < 100) mzm_sprite_update(bot, 0, &rf);
+            assert(bot->pose == 0x11 && !(bot->status & MZM_SPRITE_STATUS_X_FLIP) &&
+                   !(bot->status & MZM_SPRITE_STATUS_FACING_RIGHT) && bot->hitbox_top == -116);
+            /* No floor: it falls asleep with its own table, and lands. */
+            mzm_sprite_init_primary(&bots[1], MZM_PSPRITE_WORKER_ROBOT, 0, 4, 20, 0, 0);
+            const int16_t sleep_fall[10] = {4, 8, 8, 12, 12, 16, 16, 20, 24, 32767};
+            memcpy(tables.worker_robot_sleeping_falling, sleep_fall, sizeof sleep_fall);
+            for (int x = 16; x < COLUMNS; ++x) grid[9][x] = MZM_CLIPDATA_SOLID;
+            uint16_t by = bots[1].y;
+            mzm_sprite_update(&bots[1], 1, &rf);
+            assert(bots[1].pose == 0x20);
+            mzm_sprite_update(&bots[1], 1, &rf);
+            assert(bots[1].pose == 0x21 && bots[1].y == by + 4);
+            robot_frames = 0;
+            while (bots[1].pose == 0x21 && robot_frames++ < 200) mzm_sprite_update(&bots[1], 1, &rf);
+            assert(bots[1].pose == 0x10 && bots[1].y == 9 * 64);
+            assert(mzm_sprite_graphics_owner(&bots[1]) == MZM_PSPRITE_WORKER_ROBOT);
             clear();
         }
         /* Parasites (parasite.c). */

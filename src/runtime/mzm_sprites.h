@@ -173,6 +173,7 @@ typedef struct {
     int16_t atomic_idle_y[65];      /* sAtomicIdleYMovement (SHORT_MAX ends it) */
     int16_t atomic_idle_x[81];      /* sAtomicIdleXMovement */
     int16_t polyp_projectile_y[44]; /* sPolypProjectileYVelocity (SHORT_MAX ends it) */
+    int16_t worker_robot_sleeping_falling[10]; /* sWorkerRobotSleepingFallingSpeed (SHORT_MAX ends it) */
     /* sChozoStatueMultiSpriteData_Standing, _Sitting and _Seated. */
     MzmMultiSprite chozo_multi[MZM_CHOZO_MULTI_COUNT];
 } MzmSpriteTables;
@@ -457,6 +458,13 @@ enum {
     MZM_POLYP_PROJECTILE_EXPLODING, MZM_POLYP_ANIMS,
 };
 extern const char *const mzm_polyp_anim_names[MZM_POLYP_ANIMS];
+/* Worker Robot OAM tables (src/data/sprites/worker_robot.c). */
+enum {
+    MZM_WORKER_ROBOT_WALKING, MZM_WORKER_ROBOT_WALKING_BACKWARDS, MZM_WORKER_ROBOT_STANDING,
+    MZM_WORKER_ROBOT_BACK_TO_SLEEP, MZM_WORKER_ROBOT_SLEEPING, MZM_WORKER_ROBOT_GOING_TO_SLEEP,
+    MZM_WORKER_ROBOT_TURNING_AROUND, MZM_WORKER_ROBOT_WAKING_UP, MZM_WORKER_ROBOT_ANIMS,
+};
+extern const char *const mzm_worker_robot_anim_names[MZM_WORKER_ROBOT_ANIMS];
 /* Tourian's Zebetites and cannons (src/data/sprites/zebetite_and_cannon.c),
  * the cannons' aims in CannonAim order. */
 enum {
@@ -566,6 +574,7 @@ enum {
     MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
     MZM_FAMILY_ITEM_SPRITE, MZM_FAMILY_SKULTERA, MZM_FAMILY_DRAGON, MZM_FAMILY_GADGET,
     MZM_FAMILY_PARASITE, MZM_FAMILY_ATOMIC, MZM_FAMILY_POLYP, MZM_FAMILY_TOURIAN,
+    MZM_FAMILY_WORKER_ROBOT,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -616,7 +625,7 @@ enum {
     MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C = 141, MZM_PSPRITE_GERON_VARIA1 = 142,
     MZM_PSPRITE_GERON_VARIA2 = 143, MZM_PSPRITE_GERON_VARIA3 = 144, MZM_PSPRITE_GERON_NORFAIR = 106,
     MZM_PSPRITE_PLASMA_BEAM_BLOCK = 170, MZM_PSPRITE_GRAVITY_SUIT_BLOCK = 171,
-    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA = 146, MZM_PSPRITE_ATOMIC = 115, MZM_PSPRITE_POLYP = 103, MZM_PSPRITE_CANNON = 126, MZM_PSPRITE_CANNON2 = 136, MZM_PSPRITE_CANNON3 = 137, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE = 125, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR = 135, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA = 146, MZM_PSPRITE_ATOMIC = 115, MZM_PSPRITE_POLYP = 103, MZM_PSPRITE_WORKER_ROBOT = 93, MZM_PSPRITE_CANNON = 126, MZM_PSPRITE_CANNON2 = 136, MZM_PSPRITE_CANNON3 = 137, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE = 125, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR = 135, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -946,8 +955,9 @@ const char *mzm_sprite_anim_name(const MzmSprite *sprite);
 void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *samus,
                                  const MzmSpriteTables *tables);
 /* ProjectileCheckHittingSprite for beams, missiles and super missiles (run
- * at the end of ProjectileUpdate): damage, stun and removal of the
- * projectile. Missiles bouncing off a sprite (tumbling) are removed. */
+ * by ProjectileUpdate after the new projectile's spawn and before the
+ * projectile loop, through MzmWeapons.hit_sprites): damage, stun and
+ * removal of the projectile; missiles not hurting the sprite tumble. */
 void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weapons,
                                  const MzmSpriteTables *tables, MzmEffects *effects);
 /* SpriteDebrisInit (the cloud type is unused by the game). */

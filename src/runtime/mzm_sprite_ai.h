@@ -165,6 +165,8 @@ void ai_atomic(Ctx *c);
 void ai_polyp(Ctx *c);
 /* Tourian's Zebetites, cannons and cannon bullets (mzm_tourian.c). */
 void ai_tourian(Ctx *c);
+/* Worker Robots (mzm_worker_robot.c). */
+void ai_worker_robot(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

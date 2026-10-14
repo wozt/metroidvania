@@ -2988,6 +2988,25 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0319 - Zero Mission Worker Robots and the projectile hit order
+
+- WorkerRobot (`src/runtime/mzm_worker_robot.c`): solid, immune to
+  projectiles, asleep until a hit's stun flash wakes them; they stand half
+  a second, walk until Samus is in front of them or a ledge or wall stops
+  them, lie down the other way, carry Samus standing on them, are pushed
+  away by a missile (half a second) or a super missile (a second) on
+  their side, and fall with sSpritesFallingSpeed or, asleep,
+  sWorkerRobotSleepingFallingSpeed.
+- ProjectileCheckHittingSprite now runs where ProjectileUpdate calls it,
+  after the new projectile's spawn and before the projectile loop
+  (MzmWeapons.hit_sprites); it ran after the loop, which made the robots'
+  own missile pass miss every missile. The bomb's sprite flag is set when
+  the explosion starts instead of a frame later.
+- Checked by capture in chozodia_014 (a missile wakes the robot, it walks
+  away from Samus, a second missile pushes it 28 pixels) and by tests
+  (waking, walking, both pushes, Samus in front, sleeping fall, the
+  bomb's single sprite pass).
+
 ## Patch 0318 - Zero Mission audio buzz
 
 - Fix: mzm_audio_render reset the FIFO sample the DACs hold to zero at

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-14T15:00:57+00:00",
+ "generated_at": "2026-10-14T15:14:50+00:00",
  "git": {
-  "commit": "a13f71d",
+  "commit": "f938da6",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 113,
+   "total": 114,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 89,
+    "partial": 90,
     "functional": 13,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 13,
-   "functional_or_better_percent": 11.5,
-   "with_passing_tests": 101,
-   "with_passing_tests_percent": 89.4,
+   "functional_or_better_percent": 11.4,
+   "with_passing_tests": 102,
+   "with_passing_tests_percent": 89.5,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -139,6 +139,7 @@
     "mzm.enemies.tourian_defences",
     "mzm.enemies.viola",
     "mzm.enemies.waver",
+    "mzm.enemies.worker_robot",
     "mzm.enemies.zeela",
     "mzm.enemies.zoomer",
     "mzm.environment.breakable_blocks",
@@ -230,11 +231,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 65,
+   "total": 66,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 65,
+    "partial": 66,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -243,7 +244,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 65,
+   "with_passing_tests": 66,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -277,6 +278,7 @@
     "mzm.enemies.tourian_defences",
     "mzm.enemies.viola",
     "mzm.enemies.waver",
+    "mzm.enemies.worker_robot",
     "mzm.enemies.zeela",
     "mzm.enemies.zoomer",
     "mzm.environment.breakable_blocks",
@@ -2232,6 +2234,85 @@
       "registered": true,
       "ctest": [
        "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-14"
+   }
+  },
+  {
+   "id": "mzm.enemies.worker_robot",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Worker Robots",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_worker_robot.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm_projectiles.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_samus.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer",
+    "mzm.weapons.bombs"
+   ],
+   "native_routines": [
+    "WorkerRobot",
+    "WorkerRobotInit",
+    "WorkerRobotCheckSamusInFront",
+    "WorkerRobotSleepingInit",
+    "WorkerRobotSleeping",
+    "WorkerRobotWakingUpInit",
+    "WorkerRobotWakingUp",
+    "WorkerRobotWalkingDetectProjectile",
+    "WorkerRobotStandingInit",
+    "WorkerRobotStanding",
+    "WorkerRobotWalkingInit",
+    "WorkerRobotWalking",
+    "WorkerRobotBackToSleepInit",
+    "WorkerRobotBackToSleep",
+    "WorkerRobotTurningAroundInit",
+    "WorkerRobotCheckTurningAroundAnimEnded",
+    "WorkerRobotFallingInit",
+    "WorkerRobotFalling",
+    "WorkerRobotFallingSleepInit",
+    "WorkerRobotFallingSleep",
+    "SpriteUtilMakeSpriteFaceAwayFromSamusXFlip"
+   ],
+   "limitations": "Not compared with an emulator. Worker Robots are solid (SSC_SOLID: Samus stands on them and is carried) and immune to projectiles; they sleep facing away from Samus until a hit's stun flash wakes them, stand half a second, then walk a subpixel a frame until Samus is in front of them, a ledge or a wall on a slope stops them, when they go back to sleep lying the other way. A missile (half a second) or a super missile (a second) touching them from the side, in their own pass before ProjectileCheckHittingSprite, is removed with its impact particle and pushes them away at up to two pixels a frame with five times the animation speed and the footstep sound. Without a floor they fall (sSpritesFallingSpeed awake, sWorkerRobotSleepingFallingSpeed asleep) and land with their sound. The runtime now runs ProjectileCheckHittingSprite where ProjectileUpdate does, after the spawn and before the projectile loop, which their missile pass depends on.",
+   "next_action": "Check them by capture in Chozodia, then compare with an emulator.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_samus.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_samus_controller"
       ],
       "outcome": "passed",
       "exists": true
@@ -4573,7 +4654,7 @@
     "ParticleBomb",
     "ProjectileMorphballLauncherCheckLaunchSamus"
    ],
-   "limitations": "Liquids (no bounce when slowed) are not ported; the sprite pass of the explosion runs after the projectile loop in the runtime, so the bomb keeps a flag for the frame the native pass (before the loop) sees it. With the Bombs item, B in the Morph Ball places a bomb (four at most, 7 frames apart) at Samus's position: a slow then a fast spin of 16 frames each with their native sprites, then the PE_BOMB explosion and 16 frames during which CAA_BOMB_PISTOL reaches nine points, one a frame (bomb blocks, bomb chains, hatches). On the first explosion frame Samus bounces off a touching bomb (up, left or right from the bomb's middle and gPreviousXPosition; only falling and from below when airborne), and the explosion damages sprites weak to beams and bombs (8). The set and explosion sounds play. Checked in brinstar_000: the bounce, then the three bomb blocks under Samus break. A bomb taken by a morph ball launcher spins again (16 + 16 frames), then its explosion affects no block but launches Samus in morph ball touching it (forcedMovement FORCED_MOVEMENT_LAUNCHED_BY_CANNON, SPOSE_DELAY_BEFORE_BALLSPARKING).",
+   "limitations": "Liquids (no bounce when slowed) are not ported; With the Bombs item, B in the Morph Ball places a bomb (four at most, 7 frames apart) at Samus's position: a slow then a fast spin of 16 frames each with their native sprites, then the PE_BOMB explosion and 16 frames during which CAA_BOMB_PISTOL reaches nine points, one a frame (bomb blocks, bomb chains, hatches). On the first explosion frame Samus bounces off a touching bomb (up, left or right from the bomb's middle and gPreviousXPosition; only falling and from below when airborne), and the explosion damages sprites weak to beams and bombs (8). The set and explosion sounds play. Checked in brinstar_000: the bounce, then the three bomb blocks under Samus break. A bomb taken by a morph ball launcher spins again (16 + 16 frames), then its explosion affects no block but launches Samus in morph ball touching it (forcedMovement FORCED_MOVEMENT_LAUNCHED_BY_CANNON, SPOSE_DELAY_BEFORE_BALLSPARKING). The runtime runs ProjectileCheckHittingSprite where ProjectileUpdate does, after the new projectile's spawn and before the projectile loop (MzmWeapons.hit_sprites), so the explosion's PROJ_STATUS_CAN_AFFECT_ENVIRONMENT, set when the fast spin ends, is taken by the next update's pass once.",
    "next_action": "Port the bomb behaviour in liquids.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
@@ -7681,6 +7762,12 @@
  },
  "timeline": [
   {
+   "commit": "f938da6",
+   "date": "2026-10-14",
+   "subject": "fix(mzm): no more 60 Hz audio buzz",
+   "scope": "mzm"
+  },
+  {
    "commit": "a13f71d",
    "date": "2026-10-14",
    "subject": "feat(mzm): Zebetites and Tourian cannons",
@@ -8153,12 +8240,6 @@
    "date": "2026-10-11",
    "subject": "feat(mzm): particles and sprite debris",
    "scope": "mzm"
-  },
-  {
-   "commit": "f6040da",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): native Skrees and their secondary explosion parts",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -8186,7 +8267,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 954,
+    "routines_cited_by_features": 975,
     "call_edges": 6071
    },
    "aos": {

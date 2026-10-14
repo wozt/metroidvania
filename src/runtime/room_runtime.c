@@ -2221,6 +2221,7 @@ static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
     case MZM_SFX_BACKUP_TRACK2: mzm_audio_backup_track2(); break;
     case MZM_SFX_RETRIEVE_TRACK2: mzm_audio_retrieve_track2(); break;
     case MZM_SFX_MUSIC_FADE: mzm_music_fade(timer); break;
+    case MZM_SFX_MUSIC_FADE_AND_QUEUE: mzm_music_fade_and_queue(timer, sound, 0); break;
     case MZM_SFX_MUSIC_PRIORITY: mzm_music_update_priority((uint8_t)timer); break;
     }
     runtime_audio_unlock();
@@ -2448,6 +2449,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sWorkerRobotSleepingFallingSpeed", t->worker_robot_sleeping_falling, 10, 10},
         {"sMetroidSpawningYMovement", t->metroid_spawning_y, 65, 65},
         {"sMetroidSpawningXMovement", t->metroid_spawning_x, 81, 81},
+        {"sKraidPal", t->kraid_palette, 128, 128},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -2495,10 +2497,14 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             char name[64];
             int index, timer, used = 0;
             if (sscanf(cursor, "%63s %d %d%n", name, &index, &timer, &used) != 3) continue;
-            for (int m = 0; m < MZM_CHOZO_MULTI_COUNT; ++m) {
-                if (strcmp(name, mzm_chozo_multi_names[m]) || index < 0 || index >= MZM_MULTI_FRAMES)
+            for (int m = 0; m < MZM_CHOZO_MULTI_COUNT + MZM_KRAID_MULTI_COUNT; ++m) {
+                bool kraid = m >= MZM_CHOZO_MULTI_COUNT;
+                const char *known = kraid ? mzm_kraid_multi_names[m - MZM_CHOZO_MULTI_COUNT]
+                                          : mzm_chozo_multi_names[m];
+                if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
-                MzmMultiSprite *multi = &sprites->tables.chozo_multi[m];
+                MzmMultiSprite *multi = kraid ? &sprites->tables.kraid_multi[m - MZM_CHOZO_MULTI_COUNT]
+                                              : &sprites->tables.chozo_multi[m];
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;
                 for (int p = 0; p < MZM_MULTI_PARTS; ++p) {
@@ -2687,6 +2693,9 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
     sprites->globals.bg2_offset_x = sprites->globals.bg2_offset_y = 0;
     sprites->globals.parasite_related = 0;
     sprites->globals.metroid_grab_palette = -1;
+    sprites->globals.lock_screen = false;
+    sprites->globals.bg2_hidden = false;
+    sprites->globals.bg_palette_row10 = -1;
     for (int i = 0; i < 32; ++i) sprites->events[i] |= runtime_debug_events[i];
     memset(sprites->live, 0, sizeof sprites->live);
     memset(&sprites->effects, 0, sizeof sprites->effects);
@@ -2824,7 +2833,9 @@ static void runtime_sprite_hurt(void *context, uint16_t damage, bool sprite_on_l
 static void runtime_sprite_knockback(void *context, bool sprite_on_left) {
     RuntimeSpriteHurt *hurt = context;
     mzm_samus_knockback(hurt->samus, hurt->collision);
-    hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -32 : 32);
+    /* SUB_PIXEL_TO_VELOCITY(PIXEL_SIZE), or of EIGHTH_BLOCK_SIZE. */
+    int16_t velocity = hurt->view && hurt->view->big_knockback ? 64 : 32;
+    hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -velocity : velocity);
 }
 
 /* The Parasites' leech: SpriteUtilTakeDamageFromSprite with a zero
@@ -3021,7 +3032,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                false, false, (uint8_t)samus->pose, MZM_POSE_NONE,
                                (equipment->items&(MZM_ITEM_VARIA_SUIT|MZM_ITEM_GRAVITY_SUIT))!=0,
                                runtime_sprite_leech, &sprites->globals.sub1.work2, false,
-                               runtime_sprite_knockback, runtime_sprite_metroid_drain};
+                               runtime_sprite_knockback, runtime_sprite_metroid_drain,
+                               samus->invincibility,
+                               false};
         hurt.view = &view;
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
         /* The solid (frozen) sprites' pushes and the zipline grabs. */
@@ -3236,13 +3249,15 @@ static int runtime_intro_fade_stage(int frame) {
 static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                                  RuntimeLibrary *sprite_library,SDL_FRect viewport,float cx,
                                  float cy,float scale,bool show_hitbox,int first_order,
-                                 int last_order,Uint8 shade_level,bool absolute_only) {
+                                 int last_order,Uint8 shade_level,bool absolute_only,
+                                 bool low_only) {
     /* Their OAM frame, mirrored by the X and Y flip statuses (SpriteDraw);
      * palette rows are baked per sprite by the exporter. */
     for(int order=last_order;order>=first_order;order--)
     for(int i=0;i<RUNTIME_MAX_SPRITES && sprites->kinds_ok;i++) {
         const MzmSprite *sprite=&sprites->live[i];
-        if((sprite->draw_order?sprite->draw_order:4)!=order || sprite->absolute!=absolute_only)continue;
+        if((sprite->draw_order?sprite->draw_order:4)!=order || sprite->absolute!=absolute_only ||
+           sprite->low_bg_priority!=low_only)continue;
         const char *anim_name=mzm_sprite_anim_name(sprite);
         if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) ||
            sprite->status&MZM_SPRITE_STATUS_NOT_DRAWN || !anim_name)continue;
@@ -5002,6 +5017,11 @@ int main(int argc, char **argv) {
         }
         float feet_x=(float)samus.x/MZM_SUBPIXELS_PER_PIXEL;
         float feet_y=(float)samus.y/MZM_SUBPIXELS_PER_PIXEL;
+        if(sprites.globals.lock_screen) {
+            /* gLockScreen (LOCK_SCREEN_TYPE_POSITION): the scroll centre. */
+            feet_x=(float)sprites.globals.lock_x/MZM_SUBPIXELS_PER_PIXEL;
+            feet_y=(float)sprites.globals.lock_y/MZM_SUBPIXELS_PER_PIXEL;
+        }
         /* Whole-pixel camera keeps native sprite pixels aligned. */
         float cx=(float)(int)clampf(feet_x-160.f,0.f,(float)(room->width>320?room->width-320:0));
         float cy=(float)(int)clampf(feet_y-16.f-112.f,0.f,(float)(room->height>224?room->height-224:0));
@@ -5046,6 +5066,12 @@ int main(int argc, char **argv) {
                 bg3_y=door_fade.door_y&255;
             }
             mzm_room_gfx_scroll(g,3,bg3_x,bg3_y);
+            /* The sKraidPal row Kraid DMAs to BG palette row 10 as it is
+             * hurt (it stays until the room's palette is reloaded). */
+            if(sprites.globals.bg_palette_row10>=0 && sprites.globals.bg_palette_row10<8)
+                for(int i=0;i<16;i++)
+                    g->ppu.palette[10*16+i]=
+                        (uint16_t)sprites.tables.kraid_palette[sprites.globals.bg_palette_row10*16+i];
             static uint16_t kept_palette[256];
             if(fading) {
                 memcpy(kept_palette,g->ppu.palette,sizeof kept_palette);
@@ -5062,6 +5088,8 @@ int main(int argc, char **argv) {
             for(int layer=0;layer<4;layer++) {
                 bool present=layer<3?room->bg_present[layer]||room->text_present[layer]:
                                      room->text_present[3]||g->door_bg3;
+                /* IoUpdateDispcnt(FALSE, DCNT_BG2) at Kraid's death. */
+                if(layer==2 && sprites.globals.bg2_hidden)present=false;
                 if(!present){room_layers[layer]=NULL;continue;}
                 if(!room_layer_textures[layer]) {
                     room_layer_textures[layer]=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,
@@ -5094,10 +5122,19 @@ int main(int argc, char **argv) {
         else if(layered)SDL_SetRenderDrawColor(renderer,0,0,0,255);
         else SDL_SetRenderDrawColor(renderer,12,14,24,255);
         SDL_RenderClear(renderer);
+        bool low_sprites=!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden) &&
+                         samus.pose!=MZM_POSE_DYING;
         if(layered) {
-            /* Backgrounds at or behind the sprites' priority. */
+            /* Backgrounds at or behind the sprites' priority, with the
+             * BGCNT_LOW_PRIORITY sprites (bgPriority 3) after BG3. */
             runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
-                                     cx,cy,viewport,scale,sprite_priority,3,&door_fade);
+                                     cx,cy,viewport,scale,3,3,&door_fade);
+            if(low_sprites)
+                runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,
+                                     1,16,runtime_door_fade_shade(&door_fade),false,true);
+            if(sprite_priority<3)
+                runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
+                                         cx,cy,viewport,scale,sprite_priority,2,&door_fade);
         } else if (texture && !mono.bg_off) {
             SDL_FRect src={cx,cy,320.f,224.f};
             if (src.w>room->width) src.w=(float)room->width;
@@ -5105,13 +5142,16 @@ int main(int argc, char **argv) {
             SDL_FRect dst={viewport.x,viewport.y,src.w*scale,src.h*scale};
             SDL_RenderTexture(renderer,texture,&src,&dst);
         }
+        if(!layered && low_sprites)
+            runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,
+                                 1,16,runtime_door_fade_shade(&door_fade),false,true);
         if(pb_active)runtime_draw_power_bomb(renderer,&weapons.power_bomb,cx,cy,viewport,scale);
         /* SpriteDrawAll_LowPriority: draw orders 9 to 16, behind Samus
          * (SUB_GAME_MODE_DYING draws Samus alone). */
         bool dying_mode=samus.pose==MZM_POSE_DYING;
         if(!dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16,
-                                 runtime_door_fade_shade(&door_fade),false);
+                                 runtime_door_fade_shade(&door_fade),false,false);
 
         RuntimeLibraryEntry *lib_entry=NULL;
         int frame=0;
@@ -5210,7 +5250,7 @@ int main(int argc, char **argv) {
          * 8, in front of Samus. */
         if(!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden) && !dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,8,
-                                 runtime_door_fade_shade(&door_fade),false);
+                                 runtime_door_fade_shade(&door_fade),false,false);
         /* SpriteDebrisDrawAll and ParticleDraw: the common sprite graphics. */
         for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok && !dying_mode;i++) {
             const char *table; uint16_t px,py,frame;
@@ -5355,7 +5395,7 @@ int main(int argc, char **argv) {
          * priority 0, in front of every background. */
         if(!dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,16,
-                                 runtime_door_fade_shade(&door_fade),true);
+                                 runtime_door_fade_shade(&door_fade),true,false);
         if(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.cover) {
             /* BG3 at priority 0 over everything: the door transition
              * tilemap (alpha blended over the rest while it appears) or

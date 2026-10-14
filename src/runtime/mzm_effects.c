@@ -20,6 +20,7 @@ const char *mzm_particle_table(uint8_t effect) {
     switch (effect) {
     case MZM_PE_BOMB: return "ParticleBombOam";
     case MZM_PE_SPRITE_EXPLOSION_HUGE: return "ParticleSpriteExplosionHugeOam";
+    case MZM_PE_MAIN_BOSS_DEATH: return "ParticleMainBossDeathOam";
     case MZM_PE_SPRITE_EXPLOSION_SMALL: return "ParticleSpriteExplosionSmallOam";
     case MZM_PE_SPRITE_EXPLOSION_MEDIUM: return "ParticleSpriteExplosionMediumOam";
     case MZM_PE_SPRITE_EXPLOSION_BIG: return "ParticleSpriteExplosionBigOam";
@@ -138,7 +139,7 @@ static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
         if (p->effect == MZM_PE_BOMB ||
             (p->effect >= MZM_PE_SPRITE_EXPLOSION_HUGE && p->effect <= MZM_PE_SPEEDBOOSTER_DESTROYED) ||
             p->effect == MZM_PE_FREEZING_SPRITE_WITH_ICE ||
-            p->effect == MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE)
+            p->effect == MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE || p->effect == MZM_PE_MAIN_BOSS_DEATH)
             p->status |= MZM_PARTICLE_HIGH_OAM_PRIORITY;
         /* ParticleBomb */
         if (p->effect == MZM_PE_BOMB) mzm_sfx_play(MZM_SOUND_BOMB_EXPLOSION);

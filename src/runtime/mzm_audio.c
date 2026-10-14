@@ -2076,6 +2076,19 @@ void mzm_music_play(uint16_t music, uint8_t priority) {
     PlayMusic(music, priority);
 }
 
+/* FadeCurrentMusicAndQueueNextMusic */
+void mzm_music_fade_and_queue(uint16_t timer, uint16_t music, uint8_t priority) {
+    if (gMusicInfo.priority & 0x84) return;
+    if (timer == 0) {
+        PlayMusic(music, priority);
+        return;
+    }
+    TrackData *pTrack = sMusicTrackDataRom[0].pTrack;
+    pTrack->musicTrack = music;
+    pTrack->priority = priority;
+    ApplyMusicSoundFading(pTrack, timer);
+}
+
 void mzm_music_fade(uint16_t timer) {
     if (gMusicInfo.occupied) return;
     gMusicInfo.occupied = 1;

@@ -2988,6 +2988,27 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0322 - Zero Mission Kraid
+
+- Kraid, KraidPart, KraidSpike and KraidNail (`src/runtime/mzm_kraid.c`):
+  the rise, the steps with the multi-sprite tables and the BG2 body, the
+  mouth that missiles and charged beams hurt, the health palettes (sprite
+  rows and BG row 10), the swipe, the nails, the spikes that break the
+  platforms and carry Samus, and the death (event, sinking, explosions,
+  PE_MAIN_BOSS_DEATH, the boss killed music, BG2 hidden, the parts'
+  explosions and drops).
+- Engine: twelve-part multi-sprite tables (sKraidMultiSpriteData_*, the
+  exporter's MultiSpriteData parser now takes a trailing comma),
+  gSubSpriteData1's health and work bytes, SSC_HURTS_KNOCKBACK_IF_INVINCIBLE
+  and SSC_HURTS_RIGHT_CAN_STAND_ON_TOP, SpriteUtilSpriteDeath's playSound,
+  gLockScreen for the camera, BG2 hidden, a BG palette row request,
+  BGCNT_LOW_PRIORITY sprites drawn behind the backgrounds above BG3,
+  FadeCurrentMusicAndQueueNextMusic and the main boss death particle.
+- Checked by capture in kraid_030 (the rise, the parts, the spikes) and by
+  a test of the parts, the rise, the mouth's damage, the shut mouth
+  opening, the palette, a bouncing missile and the death's event; the
+  fight itself has not been played through.
+
 ## Patch 0321 - Zero Mission Metroids
 
 - Metroid and MetroidShell (`src/runtime/mzm_metroid.c`): the room lock

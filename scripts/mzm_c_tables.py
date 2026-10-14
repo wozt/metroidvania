@@ -225,7 +225,7 @@ def multi_sprite_data(source: str, name: str, headers: list[str],
     for data, timer in pairs:
         parts = table(source, data, decomp, extra)
         count = max(parts) + 1 if parts else 0
-        frames.append((evaluate(timer, names),
+        frames.append((evaluate(timer.strip().rstrip(",").strip(), names),
                        [[int(parts[p].get(e, 0)) for e in range(3)] for p in range(count)]))
     return frames
 

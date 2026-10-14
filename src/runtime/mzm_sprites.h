@@ -120,7 +120,7 @@ extern const char *const mzm_debris_table_names[MZM_DEBRIS_TABLES];
 /* A MultiSpriteData table (gSubSpriteData1.pMultiOam): per frame, its
  * timer (0 ends the table) and each part's OAM index, y and x offsets. */
 #define MZM_MULTI_FRAMES 12
-#define MZM_MULTI_PARTS 5
+#define MZM_MULTI_PARTS 12
 typedef struct {
     uint8_t timers[MZM_MULTI_FRAMES];
     int16_t parts[MZM_MULTI_FRAMES][MZM_MULTI_PARTS][3];
@@ -129,6 +129,12 @@ enum { MZM_CHOZO_MULTI_STANDING, MZM_CHOZO_MULTI_SITTING, MZM_CHOZO_MULTI_SEATED
        /* sUnknownItemChozoStatueMultiSpriteData_*: the same three, offset. */
        MZM_CHOZO_MULTI_UNKNOWN, MZM_CHOZO_MULTI_COUNT = MZM_CHOZO_MULTI_UNKNOWN * 2 };
 extern const char *const mzm_chozo_multi_names[MZM_CHOZO_MULTI_COUNT];
+/* sKraidMultiSpriteData_* */
+enum { MZM_KRAID_MULTI_RISING, MZM_KRAID_MULTI_STANDING, MZM_KRAID_MULTI_STANDING_BETWEEN_STEPS,
+       MZM_KRAID_MULTI_MOVING_LEFT_FEET_TO_RIGHT, MZM_KRAID_MULTI_MOVING_RIGHT_FEET_TO_RIGHT,
+       MZM_KRAID_MULTI_MOVING_LEFT_FEET_TO_LEFT, MZM_KRAID_MULTI_MOVING_RIGHT_FEET_TO_LEFT,
+       MZM_KRAID_MULTI_DYING1, MZM_KRAID_MULTI_DYING2, MZM_KRAID_MULTI_COUNT };
+extern const char *const mzm_kraid_multi_names[MZM_KRAID_MULTI_COUNT];
 
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
 typedef struct {
@@ -178,6 +184,8 @@ typedef struct {
     int16_t metroid_spawning_x[81]; /* sMetroidSpawningXMovement (SHORT_MAX restarts it) */
     /* sChozoStatueMultiSpriteData_Standing, _Sitting and _Seated. */
     MzmMultiSprite chozo_multi[MZM_CHOZO_MULTI_COUNT];
+    MzmMultiSprite kraid_multi[MZM_KRAID_MULTI_COUNT];
+    int16_t kraid_palette[128];     /* sKraidPal (BGR555) */
 } MzmSpriteTables;
 
 /* Columns of MzmSpriteTables.drops. */
@@ -467,6 +475,50 @@ enum {
     MZM_WORKER_ROBOT_TURNING_AROUND, MZM_WORKER_ROBOT_WAKING_UP, MZM_WORKER_ROBOT_ANIMS,
 };
 extern const char *const mzm_worker_robot_anim_names[MZM_WORKER_ROBOT_ANIMS];
+/* Kraid OAM tables in KraidOam order (src/data/sprites/kraid.c), so the
+ * multi-sprite data's OAM indices are these. */
+enum {
+    MZM_KRAID_MOUTH_CLOSED,
+    MZM_KRAID_MOUTH_CLOSED_BLINK,
+    MZM_KRAID_OPENING_MOUTH,
+    MZM_KRAID_MOUTH_OPENED,
+    MZM_KRAID_RISING,
+    MZM_KRAID_CLOSING_MOUTH,
+    MZM_KRAID_PART_2CAC5C,
+    MZM_KRAID_LEFT_ARM_IDLE,
+    MZM_KRAID_LEFT_ARM_DYING,
+    MZM_KRAID_LEFT_ARM_THROWING_NAILS,
+    MZM_KRAID_PART_2CADC4,
+    MZM_KRAID_RIGHT_ARM_IDLE,
+    MZM_KRAID_RIGHT_ARM_ATTACKING,
+    MZM_KRAID_RIGHT_ARM_DYING,
+    MZM_KRAID_LEFT_FEET_RISING,
+    MZM_KRAID_LEFT_FEET_IDLE_1,
+    MZM_KRAID_LEFT_FEET_MOVING_RIGHT,
+    MZM_KRAID_LEFT_FEET_IDLE_2,
+    MZM_KRAID_LEFT_FEET_MOVED_RIGHT,
+    MZM_KRAID_LEFT_FEET_MOVING_LEFT,
+    MZM_KRAID_LEFT_FEET_MOVED_LEFT,
+    MZM_KRAID_RIGHT_FEET_RISING,
+    MZM_KRAID_RIGHT_FEET_IDLE_1,
+    MZM_KRAID_RIGHT_FEET_MOVED_RIGHT,
+    MZM_KRAID_RIGHT_FEET_IDLE_2,
+    MZM_KRAID_RIGHT_FEET_MOVING_RIGHT,
+    MZM_KRAID_RIGHT_FEET_MOVED_LEFT,
+    MZM_KRAID_RIGHT_FEET_MOVING_LEFT,
+    MZM_KRAID_TOP_HOLE_LEFT,
+    MZM_KRAID_TOP_HOLE_RIGHT,
+    MZM_KRAID_MIDDLE_HOLE_LEFT,
+    MZM_KRAID_MIDDLE_HOLE_RIGHT,
+    MZM_KRAID_BOTTOM_HOLE_LEFT,
+    MZM_KRAID_BOTTOM_HOLE_RIGHT,
+    MZM_KRAID_NAIL,
+    MZM_KRAID_2CB29C,
+    MZM_KRAID_2CB2AC,
+    MZM_KRAID_SPIKE,
+    MZM_KRAID_ANIMS,
+};
+extern const char *const mzm_kraid_anim_names[MZM_KRAID_ANIMS];
 /* Metroid OAM tables (src/data/sprites/metroid.c). */
 enum {
     MZM_METROID_SPAWNING, MZM_METROID_MOVING, MZM_METROID_SAMUS_GRABBED, MZM_METROID_SHELL_IDLE,
@@ -583,7 +635,7 @@ enum {
     MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
     MZM_FAMILY_ITEM_SPRITE, MZM_FAMILY_SKULTERA, MZM_FAMILY_DRAGON, MZM_FAMILY_GADGET,
     MZM_FAMILY_PARASITE, MZM_FAMILY_ATOMIC, MZM_FAMILY_POLYP, MZM_FAMILY_TOURIAN,
-    MZM_FAMILY_WORKER_ROBOT, MZM_FAMILY_METROID,
+    MZM_FAMILY_WORKER_ROBOT, MZM_FAMILY_METROID, MZM_FAMILY_KRAID,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -637,7 +689,7 @@ enum {
     MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C = 141, MZM_PSPRITE_GERON_VARIA1 = 142,
     MZM_PSPRITE_GERON_VARIA2 = 143, MZM_PSPRITE_GERON_VARIA3 = 144, MZM_PSPRITE_GERON_NORFAIR = 106,
     MZM_PSPRITE_PLASMA_BEAM_BLOCK = 170, MZM_PSPRITE_GRAVITY_SUIT_BLOCK = 171,
-    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA = 146, MZM_PSPRITE_ATOMIC = 115, MZM_PSPRITE_POLYP = 103, MZM_PSPRITE_METROID = 100, MZM_PSPRITE_FROZEN_METROID = 101, MZM_PSPRITE_WORKER_ROBOT = 93, MZM_PSPRITE_CANNON = 126, MZM_PSPRITE_CANNON2 = 136, MZM_PSPRITE_CANNON3 = 137, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE = 125, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR = 135, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA = 146, MZM_PSPRITE_ATOMIC = 115, MZM_PSPRITE_POLYP = 103, MZM_PSPRITE_KRAID = 111, MZM_PSPRITE_METROID = 100, MZM_PSPRITE_FROZEN_METROID = 101, MZM_PSPRITE_WORKER_ROBOT = 93, MZM_PSPRITE_CANNON = 126, MZM_PSPRITE_CANNON2 = 136, MZM_PSPRITE_CANNON3 = 137, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE = 125, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR = 135, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -668,7 +720,8 @@ enum {
     MZM_SSPRITE_SAVE_PLATFORM_PART = 13, MZM_SSPRITE_GUNSHIP_PART = 50, MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART = 36,
     MZM_SSPRITE_ZIPLINE_GENERATOR_PART = 30, MZM_SSPRITE_CHOZO_PILLAR_PLATFORM = 53,
     MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW = 58, MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART = 46,
-    MZM_SSPRITE_ATOMIC_ELECTRICITY = 31, MZM_SSPRITE_POLYP_PROJECTILE = 27, MZM_SSPRITE_CANNON_BULLET = 39, MZM_SSPRITE_METROID_SHELL = 26,
+    MZM_SSPRITE_ATOMIC_ELECTRICITY = 31, MZM_SSPRITE_POLYP_PROJECTILE = 27, MZM_SSPRITE_CANNON_BULLET = 39, MZM_SSPRITE_KRAID_PART = 3, MZM_SSPRITE_KRAID_SPIKE = 28,
+    MZM_SSPRITE_KRAID_NAIL = 29, MZM_SSPRITE_METROID_SHELL = 26,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 
@@ -713,6 +766,9 @@ typedef struct {
     /* frozenPaletteRowOffset: the frozen and stun rows sit this many rows
      * lower (the Mother Brain Rinkas). */
     uint8_t frozen_row_offset;
+    /* bgPriority BGCNT_LOW_PRIORITY: drawn behind the backgrounds above
+     * BG3 (Kraid's right arm and feet). */
+    bool low_bg_priority;
 } MzmSprite;
 
 /* SamusStandingOnSprite values; DROPPED (port only) is OFF after a kill
@@ -744,7 +800,7 @@ enum {
     MZM_EVENT_MOTHER_BRAIN_KILLED = 39, MZM_EVENT_ZEBETITE_ONE_DESTROYED = 61,
     /* EVENT_FIRST_, THIRD_, FIFTH_, SECOND_, SIXTH_ and FOURTH_METROID_ROOM_CLEARED
      * follow in that order. */
-    MZM_EVENT_FIRST_METROID_ROOM_CLEARED = 55,
+    MZM_EVENT_FIRST_METROID_ROOM_CLEARED = 55, MZM_EVENT_KRAID_KILLED = 30,
 };
 
 /* Game systems outside the sprite engine. */
@@ -784,8 +840,9 @@ typedef struct {
      * (MZM_CHOZO_MULTI_*), frame, counter and work variables. */
     struct {
         uint16_t y, x;
-        uint8_t multi, frame, adc, work2;
-        bool work3;
+        uint8_t multi, frame, adc;
+        uint8_t work1, work2, work3;
+        uint16_t health;
     } sub1;
     /* gEnergyRefillAnimation, gMissileRefillAnimation,
      * gSuperMissileRefillAnimation and gPowerBombRefillAnimation. */
@@ -818,6 +875,14 @@ typedef struct {
     /* The sMetroidPal_SamusGrabbed row a grabbing Metroid last copied to
      * OBJ row 12 (-1: sMetroidPal's own); reset by the room load. */
     int8_t metroid_grab_palette;
+    /* gLockScreen (LOCK_SCREEN_TYPE_POSITION): the camera centred on a
+     * native position instead of Samus; cleared by the room load. */
+    bool lock_screen;
+    uint16_t lock_y, lock_x;
+    /* IoUpdateDispcnt(FALSE, DCNT_BG2) (Kraid's death) and the sKraidPal
+     * row DMAed to BG palette row 10 (-1: none); reset by the room load. */
+    bool bg2_hidden;
+    int8_t bg_palette_row10;
 } MzmSpriteGlobals;
 
 /* gSamusData as the Chozo statues read and move it: her pose
@@ -960,6 +1025,11 @@ typedef struct {
      * `damage`, then, when she survives, an invincibility of 1, 4 or 8
      * frames by suits (NULL: none). */
     void (*metroid_drain)(void *context, uint16_t damage);
+    /* gSamusData.invincibilityTimer (the stand-on-top check of
+     * SSC_HURTS_RIGHT_CAN_STAND_ON_TOP), and set during `knockback` for a
+     * knockback of an eighth of a block a frame instead of a pixel. */
+    uint8_t invincibility_timer;
+    bool big_knockback;
 } MzmSpriteSamus;
 
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when

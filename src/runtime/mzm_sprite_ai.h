@@ -40,11 +40,13 @@ enum {
     SSC_HURTS_SAMUS_A_LOT = 5,
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
     SSC_KNOCKS_BACK_SAMUS = 7,
+    SSC_HURTS_KNOCKBACK_IF_INVINCIBLE = 10,
     SSC_SOLID_SIDEWAYS = 12,
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
     SSC_PARASITE = 23,
     SSC_METROID = 24,
+    SSC_HURTS_RIGHT_CAN_STAND_ON_TOP = 25,
     SSC_ZIPLINE = 26,
     SSC_SOLID_CHECK_COLLIDING = 27,
     SSC_CHECK_COLLIDING = 30,
@@ -113,6 +115,8 @@ void ai_set_anim(MzmSprite *s, uint8_t anim);
 void ai_random_x_direction(Ctx *c);
 void ai_sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect);
 void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect);
+/* SpriteUtilSpriteDeath with its playSound flag (the explosion sounds). */
+void ai_sprite_death_full(Ctx *c, int type, uint16_t y, uint16_t x, bool play_sound, uint8_t effect);
 /* SpriteSpawnSecondary: the new sprite's slot, or -1. */
 int ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot, uint16_t y,
                        uint16_t x, uint16_t status);
@@ -146,6 +150,8 @@ static inline void ai_sound_onscreen_once(const MzmSprite *s, uint16_t sound) {
     if (s->status & MZM_SPRITE_STATUS_ONSCREEN) mzm_sfx_play_not_playing(sound);
 }
 bool ai_has_drops(const Ctx *c);
+/* Sqrt (BIOS SWI 8): the integer square root. */
+uint16_t mzm_bios_sqrt(uint32_t value);
 
 /* mzm_space_pirate.c */
 void ai_space_pirate(Ctx *c);
@@ -170,6 +176,8 @@ void ai_tourian(Ctx *c);
 void ai_worker_robot(Ctx *c);
 /* Metroids and their shells (mzm_metroid.c). */
 void ai_metroid(Ctx *c);
+/* Kraid, its parts, spikes and nails (mzm_kraid.c). */
+void ai_kraid(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

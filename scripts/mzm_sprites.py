@@ -105,7 +105,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_ZIPLINE_GENERATOR": 0, "PSPRITE_SECURITY_GATE_DEFAULT_OPEN": 0,
           "PSPRITE_PISTON": 0, "PSPRITE_GLASS_TUBE": 0, "PSPRITE_RISING_CHOZO_PILLAR": 0,
           "PSPRITE_PARASITE": 0, "PSPRITE_PARASITE_MULTIPLE": 0,
-          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0,
+          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
@@ -115,7 +115,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
 # The tables a sprite's row variants apply to (by prefix; the others keep
 # their rows): only the Atomic's body flashes, not its electricity.
 ROW_VARIANT_TABLES = {"PSPRITE_ATOMIC": ("sAtomicOam_",), "PSPRITE_METROID": ("sMetroidOam_Spawning",)}
-ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
+ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
@@ -142,6 +142,11 @@ MULTI_SPRITE_DATA = {
                                ("sChozoStatueMultiSpriteData_Standing",
                                 "sChozoStatueMultiSpriteData_Sitting",
                                 "sChozoStatueMultiSpriteData_Seated")),
+    "sprites/kraid.c": (("sprites_ai/kraid.h", "data/sprites/kraid.h", "structs/sprite.h"),
+                        tuple("sKraidMultiSpriteData_" + name for name in (
+                            "Rising", "Standing", "StandingBetweenSteps", "MovingLeftFeetToRight",
+                            "MovingRightFeetToRight", "MovingLeftFeetToLeft", "MovingRightFeetToLeft",
+                            "Dying1", "Dying2"))),
     "sprites/unknown_item_chozo_statue.c": (
         ("sprites_ai/unknown_item_chozo_statue.h", "data/sprites/unknown_item_chozo_statue.h",
          "structs/sprite.h"),
@@ -166,7 +171,7 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sDebris8YVelocity", "sGunshipTakingOffYVelocity", "sGunshipFlyingYVelocity",
              "sAtomicIdleYMovement", "sAtomicIdleXMovement",
              "sPolypProjectileYVelocity", "sWorkerRobotSleepingFallingSpeed",
-             "sMetroidSpawningYMovement", "sMetroidSpawningXMovement")
+             "sMetroidSpawningYMovement", "sMetroidSpawningXMovement", "sKraidPal")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
 PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",
@@ -176,7 +181,7 @@ PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",
              "sParticleHittingSomethingWithPlasmaBeamOam", "sParticleMissileTrailOam",
              "sParticleSuperMissileTrailOam", "sParticleChargedLongBeamTrailOam",
              "sParticleChargedIceBeamTrailOam", "sParticleChargedWaveBeamTrailOam",
-             "sParticleChargedPlasmaBeamTrailOam", "sParticleChargedFullBeamTrailOam", "sParticleSpriteExplosionHugeOam", "sParticleSpriteExplosionSmallOam",
+             "sParticleChargedPlasmaBeamTrailOam", "sParticleChargedFullBeamTrailOam", "sParticleSpriteExplosionHugeOam", "sParticleMainBossDeathOam", "sParticleSpriteExplosionSmallOam",
              "sParticleSpriteExplosionMediumOam", "sParticleSpriteExplosionBigOam",
              "sParticleSpriteExplosionSingleThenBigOam", "sParticleScrewAttackDestroyedOam",
              "sParticleShinesparkDestroyedOam", "sParticleSpeedboosterDestroyedOam",

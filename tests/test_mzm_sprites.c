@@ -293,7 +293,7 @@ int main(void) {
     /* SpriteInitPrimary's one-frame ignore timer runs down in the collision
      * routine, not in the sprite's update. */
     assert(z.status & MZM_SPRITE_STATUS_ONSCREEN && z.ignore_samus_timer == 1);
-    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
     mzm_sprites_samus_collision(&z, 1, &away, &tables);
     assert(z.ignore_samus_timer == 0 && hurts == 0);
 
@@ -301,7 +301,7 @@ int main(void) {
      * the stats damage, pushed away (the sprite is on her right, "on left"
      * in the native flag naming), then 15 frames of ignored contact. */
     MzmSpriteSamus samus = {NULL, (uint16_t)(z.x - 40), 640, (uint16_t)(z.x - 40),
-                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
     mzm_sprites_samus_collision(&z, 1, &samus, &tables);
     assert(hurts == 1 && last_damage == 8 && last_on_left && samus.invincible);
     /* Set to 15, then run down once at the end of the routine. */
@@ -454,7 +454,7 @@ int main(void) {
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     samus = (MzmSpriteSamus){NULL, z.x, (uint16_t)(z.y + 40), z.x, -96, 0, -24, 24,
-                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
     for (int i = 0; i < 19; ++i) {
         mzm_sprites_samus_collision(&z, 1, &samus, &tables);
         step(&z, 0);
@@ -641,7 +641,7 @@ int main(void) {
     /* It hurts Samus with the secondary damage, but not the screw attack. */
     hurts = 0;
     MzmSpriteSamus near = {NULL, part->x, (uint16_t)(part->y + 20), part->x, -96, 0, -24, 24,
-                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
     part->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(group, 8, &near, &tables);
     assert(hurts == 1 && last_damage == 2);
@@ -1037,7 +1037,7 @@ int main(void) {
     const uint16_t zleft = (uint16_t)(z.x + z.hitbox_left);
     MzmSpriteSamus solid = {NULL, z.x, (uint16_t)(ztop + 8), z.x, -124, 0, -28, 28,
                             false, false, false, hurt, false, false, 0, NULL,
-                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
     hurts = 0;
     mzm_sprites_samus_collision(&z, 1, &solid, &tables);
     assert(hurts == 0 && solid.y == ztop + 1 && z.status & MZM_SPRITE_STATUS_SAMUS_ON_TOP &&
@@ -1101,7 +1101,7 @@ int main(void) {
     memset(&fx, 0, sizeof fx);
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
     MzmSpriteSamus screw = {NULL, z.x, (uint16_t)(z.y + 20), z.x, -96, 0, -24, 24,
-                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
     z.ignore_samus_timer = 0;
     mzm_sprites_samus_collision(&z, 1, &screw, &tables);
     assert(z.pose == 0x65 && z.damaged);
@@ -1243,7 +1243,7 @@ int main(void) {
      * harmless, and gone when the table ends. */
     hurts = 0;
     MzmSpriteSamus touch = {NULL, eye_l->x, (uint16_t)(eye_l->y + 20), eye_l->x, -96, 0, -24, 24,
-                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
     eye_l->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(eye_l, 1, &touch, &tables);
     assert(hurts == 1 && last_damage == 3 && eye_l->pose == 66);
@@ -2366,7 +2366,7 @@ int main(void) {
          * with the laser's damage, then explodes. */
         hurts = 0;
         MzmSpriteSamus laser_hit = {NULL, ps[1].x, (uint16_t)(ps[1].y + 20), ps[1].x,
-                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
         /* The spawn's ignore timer runs down on the first collision pass. */
         MzmSpriteSamus far_away = laser_hit;
         far_away.x = 60000;
@@ -2605,7 +2605,7 @@ int main(void) {
         /* Samus in its light rings the alarm, then it holds it. */
         hurts = 0;
         MzmSpriteSamus in_light = {NULL, ps[0].x, (uint16_t)(ps[0].y + 20), ps[0].x,
-                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
+                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
         ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
         MzmSpriteSamus out_of_light = in_light;
         out_of_light.x = 60000;
@@ -4306,6 +4306,113 @@ int main(void) {
             assert(mets[2].status == 0);
             test_events[MZM_EVENT_FIRST_METROID_ROOM_CLEARED / 8] &=
                 (uint8_t)~(1u << (MZM_EVENT_FIRST_METROID_ROOM_CLEARED % 8));
+            clear();
+        }
+        /* Kraid (kraid.c): the parts, the rise with BG2, missiles in the
+         * open mouth, the shut mouth opening instead, the health palette,
+         * missiles bouncing off its head and the death's event. */
+        {
+            static MzmSprite boss[20];
+            static MzmSpriteKind kraid_kind;
+            static MzmWeapons kraid_weapons;
+            static MzmSpriteGlobals kraid_globals;
+            memset(boss, 0, sizeof boss);
+            memset(&kraid_kind, 0, sizeof kraid_kind);
+            memset(&kraid_globals, 0, sizeof kraid_globals);
+            kraid_globals.bg_palette_row10 = -1;
+            for (int a = 0; a < MZM_KRAID_ANIMS; ++a) {
+                kraid_kind.counts[a] = 4;
+                for (int f = 0; f < 4; ++f) kraid_kind.timers[a][f] = 2;
+            }
+            for (int m = 0; m < MZM_KRAID_MULTI_COUNT; ++m) {
+                memset(&tables.kraid_multi[m], 0, sizeof tables.kraid_multi[m]);
+                for (int f = 0; f < 3; ++f) {
+                    tables.kraid_multi[m].timers[f] = 10;
+                    for (int p = 0; p < 12; ++p) tables.kraid_multi[m].parts[f][p][0] = MZM_KRAID_TOP_HOLE_LEFT;
+                }
+            }
+            mzm_weapons_init(&kraid_weapons);
+            tables.health[MZM_PSPRITE_KRAID] = 300;
+            MzmSpriteFrame kf = g;
+            kf.kinds[MZM_FAMILY_KRAID] = &kraid_kind;
+            kf.sprites = boss;
+            kf.sprite_count = 20;
+            kf.weapons = &kraid_weapons;
+            kf.globals = &kraid_globals;
+            kf.hooks = &test_hooks;
+            kf.samus_link = NULL;
+            kf.samus_x = 20 * 64;
+            kf.samus_y = 9 * 64;
+            clear();
+            door_timer_calls = 0;
+            MzmSprite *k = &boss[0];
+            mzm_sprite_init_primary(k, MZM_PSPRITE_KRAID, 0, 6, 6, 0, 0);
+            uint16_t ky = (uint16_t)(k->y - 40), kx = (uint16_t)(k->x - 32);
+            mzm_sprite_update(k, 0, &kf);
+            int kraid_parts = 0;
+            for (int i = 1; i < 20; ++i) kraid_parts += boss[i].status && boss[i].sprite_id == MZM_SSPRITE_KRAID_PART;
+            assert(k->pose == 0x1 && door_timer_calls == 1 && last_door_timer == 1 && kraid_parts == 11 &&
+                   k->y_spawn == ky && k->x_spawn == kx && kraid_globals.sub1.y == ky + 128 &&
+                   kraid_globals.bg2_offset_y == -128 && k->room_slot == 6 && kraid_globals.lock_screen &&
+                   mzm_sprite_graphics_owner(&boss[1]) == MZM_PSPRITE_KRAID);
+            /* Rising a subpixel a frame (BG2 with it) for two seconds, then
+             * until its spawn point. */
+            int kraid_frames = 0;
+            while (k->pose != 0xF && kraid_frames++ < 400) mzm_sprite_update(k, 0, &kf);
+            assert(k->pose == 0xF && kraid_globals.sub1.y == ky && kraid_frames > 119);
+            /* A missile flying left into the open mouth: 20 damage. */
+            k->anim = MZM_KRAID_MOUTH_OPENED;
+            k->frame = k->adc = 0;
+            kraid_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                                    .stage = MZM_STAGE_MOVING, .direction = MZM_AIM_FORWARD,
+                                                    .x_flip = false, .x = k->x + 40, .y = k->y};
+            kraid_globals.sub1.work2 = 50;
+            mzm_sprite_update(k, 0, &kf);
+            assert(k->health == 280 && kraid_globals.sub1.health == 280 && (k->isft & 0x7F) <= 17 &&
+                   !kraid_weapons.list[0].active);
+            /* Shut: no damage, the mouth opens for three seconds. */
+            k->anim = MZM_KRAID_MOUTH_CLOSED;
+            kraid_globals.sub1.work2 = 0;
+            kraid_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                                    .stage = MZM_STAGE_MOVING, .direction = MZM_AIM_FORWARD,
+                                                    .x = k->x + 40, .y = k->y};
+            mzm_sprite_update(k, 0, &kf);
+            assert(k->health == 280 && kraid_globals.sub1.work2 == 180);
+            mzm_sprite_update(k, 0, &kf);
+            assert(k->anim == MZM_KRAID_OPENING_MOUTH);
+            /* Under three quarters of its health: palette row 1, BG row 10
+             * from sKraidPal row 5. */
+            k->anim = MZM_KRAID_MOUTH_OPENED;
+            k->health = 240;
+            kraid_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_SUPER_MISSILE,
+                                                    .stage = MZM_STAGE_MOVING, .direction = MZM_AIM_FORWARD,
+                                                    .x = k->x + 40, .y = k->y};
+            mzm_sprite_update(k, 0, &kf);
+            assert(k->health == 140 && k->absolute_palette_row == 1 && kraid_globals.bg_palette_row10 == 5);
+            mzm_sprite_update(&boss[1], 1, &kf);
+            assert(boss[1].palette_row == 1);
+            /* Above the mouth: a missile bounces off. */
+            kraid_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                                    .stage = MZM_STAGE_MOVING, .direction = MZM_AIM_FORWARD,
+                                                    .x = k->x + 40, .y = k->y - 100};
+            mzm_sprite_update(k, 0, &kf);
+            assert(k->health == 140 && kraid_weapons.list[0].stage == MZM_STAGE_TUMBLING);
+            kraid_weapons.list[0].active = false;
+            /* The killing missile: dying, its event set. */
+            k->anim = MZM_KRAID_MOUTH_OPENED;
+            k->health = 10;
+            kraid_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                                    .stage = MZM_STAGE_MOVING, .direction = MZM_AIM_FORWARD,
+                                                    .x = k->x + 40, .y = k->y};
+            mzm_sprite_update(k, 0, &kf);
+            /* (KraidOpenCloseRoutineAndProjectileCollision runs before the
+             * pose switch: KraidDyingInit follows in the same frame.) */
+            assert(k->pose == 0x67 && kraid_globals.sub1.health == 0 && k->health == 1 &&
+                   test_check_event(NULL, MZM_EVENT_KRAID_KILLED));
+            test_events[MZM_EVENT_KRAID_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_KRAID_KILLED % 8));
+            /* Its parts start dying. */
+            mzm_sprite_update(&boss[2], 2, &kf);
+            assert(boss[2].pose >= 0x62);
             clear();
         }
         /* Worker Robots (worker_robot.c): asleep until hit, then standing

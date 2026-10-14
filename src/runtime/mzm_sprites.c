@@ -343,6 +343,93 @@ static const char *const worker_robot_sprites[MZM_WORKER_ROBOT_ANIMS] = {
     "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT",
     "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT",
 };
+const char *const mzm_kraid_anim_names[MZM_KRAID_ANIMS] = {
+    "KraidOam_MouthClosed",
+    "KraidOam_MouthClosedBlink",
+    "KraidOam_OpeningMouth",
+    "KraidOam_MouthOpened",
+    "KraidOam_Rising",
+    "KraidOam_ClosingMouth",
+    "KraidPartOam_2cac5c",
+    "KraidPartOam_LeftArmIdle",
+    "KraidPartOam_LeftArmDying",
+    "KraidPartOam_LeftArmThrowingNails",
+    "KraidPartOam_2cadc4",
+    "KraidPartOam_RightArmIdle",
+    "KraidPartOam_RightArmAttacking",
+    "KraidPartOam_RightArmDying",
+    "KraidPartOam_LeftFeetRising",
+    "KraidPartOam_LeftFeetIdle1",
+    "KraidPartOam_LeftFeetMovingRight",
+    "KraidPartOam_LeftFeetIdle2",
+    "KraidPartOam_LeftFeetMovedRight",
+    "KraidPartOam_LeftFeetMovingLeft",
+    "KraidPartOam_LeftFeetMovedLeft",
+    "KraidPartOam_RightFeetRising",
+    "KraidPartOam_RightFeetIdle1",
+    "KraidPartOam_RightFeetMovedRight",
+    "KraidPartOam_RightFeetIdle2",
+    "KraidPartOam_RightFeetMovingRight",
+    "KraidPartOam_RightFeetMovedLeft",
+    "KraidPartOam_RightFeetMovingLeft",
+    "KraidPartOam_TopHoleLeft",
+    "KraidPartOam_TopHoleRight",
+    "KraidPartOam_MiddleHoleLeft",
+    "KraidPartOam_MiddleHoleRight",
+    "KraidPartOam_BottomHoleLeft",
+    "KraidPartOam_BottomHoleRight",
+    "KraidNailOam",
+    "KraidOam_2cb29c",
+    "KraidOam_2cb2ac",
+    "KraidSpikeOam",
+};
+static const char *const kraid_sprites[MZM_KRAID_ANIMS] = {
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+    "KRAID",
+};
+const char *const mzm_kraid_multi_names[MZM_KRAID_MULTI_COUNT] = {
+    "sKraidMultiSpriteData_Rising", "sKraidMultiSpriteData_Standing",
+    "sKraidMultiSpriteData_StandingBetweenSteps", "sKraidMultiSpriteData_MovingLeftFeetToRight",
+    "sKraidMultiSpriteData_MovingRightFeetToRight", "sKraidMultiSpriteData_MovingLeftFeetToLeft",
+    "sKraidMultiSpriteData_MovingRightFeetToLeft", "sKraidMultiSpriteData_Dying1",
+    "sKraidMultiSpriteData_Dying2",
+};
 const char *const mzm_metroid_anim_names[MZM_METROID_ANIMS] = {
     "MetroidOam_Spawning", "MetroidOam_Moving", "MetroidOam_SamusGrabbed", "MetroidShellOam_Idle",
 };
@@ -528,6 +615,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_WORKER_ROBOT] = {MZM_WORKER_ROBOT_ANIMS, mzm_worker_robot_anim_names,
                                  worker_robot_sprites},
     [MZM_FAMILY_METROID] = {MZM_METROID_ANIMS, mzm_metroid_anim_names, metroid_sprites},
+    [MZM_FAMILY_KRAID] = {MZM_KRAID_ANIMS, mzm_kraid_anim_names, kraid_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -1171,6 +1259,10 @@ static void random_debris_3(const Ctx *c, uint16_t y, uint16_t x) {
  * the given position, or is removed. Every ported caller passes playSound
  * TRUE. */
 void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect) {
+    ai_sprite_death_full(c, type, y, x, true, effect);
+}
+
+void ai_sprite_death_full(Ctx *c, int type, uint16_t y, uint16_t x, bool play_sound, uint8_t effect) {
     MzmSprite *s = c->s;
     if (s->pose == SPRITE_POSE_SCREW_ATTACK_DESTROYED) {
         ai_particle_set(c, y, x, MZM_PE_SCREW_ATTACK_DESTROYED);
@@ -1190,7 +1282,7 @@ void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t eff
         mzm_sfx_play(MZM_SOUND_SPEEDBOOSTER_DESTROYED);
     } else {
         ai_particle_set(c, y, x, effect);
-        switch (effect) {
+        switch (play_sound ? effect : 0) {
         case MZM_PE_SPRITE_EXPLOSION_SMALL: mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_SMALL); break;
         case MZM_PE_SPRITE_EXPLOSION_MEDIUM: mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_MEDIUM); break;
         case MZM_PE_SPRITE_EXPLOSION_BIG: mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_BIG); break;
@@ -4264,7 +4356,7 @@ static void multiviola(Ctx *c) {
 }
 
 /* Sqrt (BIOS SWI 0x08): the integer square root, rounded down. */
-static uint16_t bios_sqrt(uint32_t number) {
+uint16_t mzm_bios_sqrt(uint32_t number) {
     uint32_t root = 0, bit = 1u << 30;
     while (bit > number) bit >>= 2;
     while (bit) {
@@ -4441,7 +4533,7 @@ static void rinka_move(Ctx *c) {
     bool right = s->status & MZM_SPRITE_STATUS_FACING_RIGHT;
     uint16_t dy = down ? (uint16_t)(s->y_spawn - spawn_y) : (uint16_t)(spawn_y - s->y_spawn);
     uint16_t dx = right ? (uint16_t)(s->x_spawn - spawn_x) : (uint16_t)(spawn_x - s->x_spawn);
-    int32_t total = bios_sqrt((uint32_t)dx * dx + (uint32_t)dy * dy);
+    int32_t total = mzm_bios_sqrt((uint32_t)dx * dx + (uint32_t)dy * dy);
     if (total != 0) {
         int32_t oy = (velocity * ((int32_t)(dy << 10) / total)) >> 10;
         int32_t ox = (velocity * ((int32_t)(dx << 10) / total)) >> 10;
@@ -4627,6 +4719,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_ATOMIC_ELECTRICITY) return MZM_FAMILY_ATOMIC;
         if (sprite_id == MZM_SSPRITE_POLYP_PROJECTILE) return MZM_FAMILY_POLYP;
         if (sprite_id == MZM_SSPRITE_METROID_SHELL) return MZM_FAMILY_METROID;
+        if (sprite_id == MZM_SSPRITE_KRAID_PART || sprite_id == MZM_SSPRITE_KRAID_SPIKE ||
+            sprite_id == MZM_SSPRITE_KRAID_NAIL)
+            return MZM_FAMILY_KRAID;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -4698,6 +4793,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_POLYP: return MZM_FAMILY_POLYP;
     case MZM_PSPRITE_WORKER_ROBOT: return MZM_FAMILY_WORKER_ROBOT;
     case MZM_PSPRITE_METROID: case MZM_PSPRITE_FROZEN_METROID: return MZM_FAMILY_METROID;
+    case MZM_PSPRITE_KRAID: return MZM_FAMILY_KRAID;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
     case MZM_PSPRITE_ZEBETITE_ONE_AND_THREE: case MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR:
         return MZM_FAMILY_TOURIAN;
@@ -4802,31 +4898,31 @@ static uint8_t samus_check_collision(const MzmSpriteWorld *world, uint16_t y, ui
 }
 
 /* SpriteUtilCheckStopSamusAgainstSolidSpriteLeft */
-static void stop_samus_left(MzmSpriteSamus *samus, uint16_t samus_y, uint16_t sprite_x) {
+static uint8_t stop_samus_left(MzmSpriteSamus *samus, uint16_t samus_y, uint16_t sprite_x) {
     uint16_t x = (uint16_t)(sprite_x - samus->hitbox_right);
-    if (samus_check_collision(samus->world, samus_y, (uint16_t)(x + samus->hitbox_left)) !=
-        MZM_COLLISION_AIR)
-        return;
-    if (samus_check_collision(samus->world, (uint16_t)(samus_y - BLOCK_SIZE),
-                              (uint16_t)(x + samus->hitbox_left)) == MZM_COLLISION_AIR ||
-        samus->morphed) {
+    uint8_t collision = samus_check_collision(samus->world, samus_y, (uint16_t)(x + samus->hitbox_left));
+    if (collision != MZM_COLLISION_AIR) return collision;
+    collision = samus_check_collision(samus->world, (uint16_t)(samus_y - BLOCK_SIZE),
+                                      (uint16_t)(x + samus->hitbox_left));
+    if (collision == MZM_COLLISION_AIR || samus->morphed) {
         samus->x = x;
         if (samus->facing > 0 && samus->has_energy) samus->stop_x = true;
     }
+    return collision;     /* gPreviousCollisionCheck */
 }
 
 /* SpriteUtilCheckStopSamusAgainstSolidSpriteRight */
-static void stop_samus_right(MzmSpriteSamus *samus, uint16_t samus_y, uint16_t sprite_x) {
+static uint8_t stop_samus_right(MzmSpriteSamus *samus, uint16_t samus_y, uint16_t sprite_x) {
     uint16_t x = (uint16_t)(sprite_x - samus->hitbox_left);
-    if (samus_check_collision(samus->world, samus_y, (uint16_t)(x + samus->hitbox_right)) !=
-        MZM_COLLISION_AIR)
-        return;
-    if (samus_check_collision(samus->world, (uint16_t)(samus_y - BLOCK_SIZE),
-                              (uint16_t)(x + samus->hitbox_right)) == MZM_COLLISION_AIR ||
-        samus->morphed) {
+    uint8_t collision = samus_check_collision(samus->world, samus_y, (uint16_t)(x + samus->hitbox_right));
+    if (collision != MZM_COLLISION_AIR) return collision;
+    collision = samus_check_collision(samus->world, (uint16_t)(samus_y - BLOCK_SIZE),
+                                      (uint16_t)(x + samus->hitbox_right));
+    if (collision == MZM_COLLISION_AIR || samus->morphed) {
         samus->x = (uint16_t)(x + ONE_SUB_PIXEL);
         if (samus->facing < 0 && samus->has_energy) samus->stop_x = true;
     }
+    return collision;     /* gPreviousCollisionCheck */
 }
 
 /* SpriteUtilSamusStandingOnSprite */
@@ -5011,6 +5107,51 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             if (contact_kills(s, samus, tables) || !samus->world) break;
             if (on_left) stop_samus_left(samus, samus_y, left);
             else stop_samus_right(samus, samus_y, right);
+            break;
+        case SSC_HURTS_KNOCKBACK_IF_INVINCIBLE: {
+            /* Kraid's body: Samus stopped at its side, hurt, or knocked back
+             * while invincible when nothing is above her. */
+            if (contact_kills(s, samus, tables) || !samus->world) break;
+            uint8_t previous = on_left ? stop_samus_left(samus, samus_y, left)
+                                       : stop_samus_right(samus, samus_y, right);
+            if (!samus->invincible) {
+                /* The knockback of `hurt` ignores the wall the native one
+                 * checks (gPreviousCollisionCheck). */
+                if (samus->hurt) {
+                    samus->hurt(samus->context, damage_of(s, tables), on_left);
+                    samus->invincible = true;
+                }
+            } else if (previous == MZM_COLLISION_AIR &&
+                       samus_check_collision(samus->world,
+                                             (uint16_t)(samus_y + ONE_SUB_PIXEL + samus->hitbox_top),
+                                             samus_x) == MZM_COLLISION_AIR &&
+                       samus->knockback) {
+                samus->big_knockback = true;
+                samus->knockback(samus->context, on_left);
+                samus->big_knockback = false;
+            }
+            ignore = true;
+            break;
+        }
+        case SSC_HURTS_RIGHT_CAN_STAND_ON_TOP:
+            /* Kraid's spikes: they hurt from the right; Samus stands on
+             * them otherwise. */
+            if (samus_x > right) {
+                if (!samus->invincible && samus->hurt) {
+                    samus->hurt(samus->context, damage_of(s, tables), on_left);
+                    samus->invincible = true;
+                }
+                s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+                ignore = true;
+            } else if (samus_y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE) < top && !samus->pulling_up &&
+                       samus->invincibility_timer < 38 && samus->world &&
+                       samus_check_collision(samus->world, (uint16_t)(top + ONE_SUB_PIXEL + samus->hitbox_top),
+                                             samus_x) == MZM_COLLISION_AIR &&
+                       samus->y_velocity <= 0) {
+                samus->y = (uint16_t)(top + ONE_SUB_PIXEL);
+                s->status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+                s->standing_on = MZM_STANDING_ON_SPRITE_ON;
+            }
             break;
         case SSC_KNOCKS_BACK_SAMUS:
             /* A knockback only, no damage. */
@@ -5482,6 +5623,9 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (sprite->sprite_id == MZM_SSPRITE_POLYP_PROJECTILE) return MZM_PSPRITE_POLYP;
     if (sprite->sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_PSPRITE_CANNON;
     if (sprite->sprite_id == MZM_SSPRITE_METROID_SHELL) return MZM_PSPRITE_METROID;
+    if (sprite->sprite_id == MZM_SSPRITE_KRAID_PART || sprite->sprite_id == MZM_SSPRITE_KRAID_SPIKE ||
+        sprite->sprite_id == MZM_SSPRITE_KRAID_NAIL)
+        return MZM_PSPRITE_KRAID;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -5678,6 +5822,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_TOURIAN: ai_tourian(&c); break;
     case MZM_FAMILY_WORKER_ROBOT: ai_worker_robot(&c); break;
     case MZM_FAMILY_METROID: ai_metroid(&c); break;
+    case MZM_FAMILY_KRAID: ai_kraid(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

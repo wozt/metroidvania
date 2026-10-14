@@ -32,6 +32,9 @@ void mzm_sfx_music_insert(uint16_t music, uint16_t not_interrupting) {
 }
 void mzm_sfx_music_priority(uint8_t priority) { request(MZM_SFX_MUSIC_PRIORITY, 0, priority); }
 void mzm_sfx_music_fade(uint16_t timer) { request(MZM_SFX_MUSIC_FADE, 0, timer); }
+void mzm_sfx_music_fade_and_queue(uint16_t timer, uint16_t music) {
+    request(MZM_SFX_MUSIC_FADE_AND_QUEUE, music, timer);
+}
 void mzm_sfx_backup_track2(void) { request(MZM_SFX_BACKUP_TRACK2, 0, 0); }
 void mzm_sfx_retrieve_track2(void) { request(MZM_SFX_RETRIEVE_TRACK2, 0, 0); }
 

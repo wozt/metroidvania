@@ -2988,6 +2988,17 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0314 - Zero Mission Atomics
+
+- Atomic and AtomicElectricity (`src/runtime/mzm_atomic.c`): hovering,
+  fleeing, charging with their palette flashing, shooting their
+  electricity at Samus, chasing her arm cannon while she charges.
+- SSC_HURTS_SAMUS_A_LOT (five times the damage, stronger knockback); the
+  sprites' contact damage now follows the difficulty.
+- The exporter limits a sprite's row variants to chosen tables (the
+  Atomic's body flashes, its electricity does not).
+- Checked by capture in chozodia_058; tests in `tests/test_mzm_sprites.c`.
+
 ## Patch 0313 - Zero Mission Chozodia save platforms
 
 - SavePlatformChozodia and its part share the save platform's code

@@ -2278,6 +2278,9 @@ typedef struct {
 static struct { uint8_t hours, minutes, seconds, frames; } runtime_igt;
 static bool runtime_max_igt;
 static uint8_t runtime_difficulty=1;
+/* gArmCannonY / gArmCannonX (native subpixels), set by ProjectileUpdate
+ * after the sprites: they see last frame's. */
+static uint16_t runtime_arm_cannon_y,runtime_arm_cannon_x;
 
 /* InGameTimerUpdate */
 static void runtime_igt_update(void) {
@@ -2439,6 +2442,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sSpacePirate_2e105a", t->pirate_jump_high, 11, 11},
         {"sGunshipTakingOffYVelocity", t->gunship_taking_off, 153, 153},
         {"sGunshipFlyingYVelocity", t->gunship_flying, 22, 22},
+        {"sAtomicIdleYMovement", t->atomic_idle_y, 65, 65},
+        {"sAtomicIdleXMovement", t->atomic_idle_x, 81, 81},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -2772,20 +2777,41 @@ static uint8_t runtime_samus_ground_effect(void *context, uint16_t y, uint16_t x
     return (uint16_t)(behavior - 0x50) < 5 ? effects[behavior - 0x50] : MZM_GROUND_EFFECT_NONE;
 }
 
-/* SpriteUtilTakeDamageFromSprite (normal difficulty) and the knockback of
- * SpriteUtilSamusAndSpriteCollision. */
+/* SpriteUtilTakeDamageFromSprite and the knockback of
+ * SpriteUtilSamusAndSpriteCollision; `view` is the collision's Samus. */
 typedef struct {
     MzmSamus *samus;
     MzmEquipment *equipment;
     const MzmCollision *collision;
+    const MzmSpriteSamus *view;
 } RuntimeSpriteHurt;
+
+/* SpriteUtilTakeDamageFromSprite's damage: the suits' reduction, then the
+ * difficulty (halved on easy, doubled on hard), at least 1. */
+static bool runtime_take_sprite_damage(MzmEquipment *equipment, int damage, int difficulty) {
+    const uint32_t both = MZM_ITEM_VARIA_SUIT | MZM_ITEM_GRAVITY_SUIT;
+    if ((equipment->items & both) == both) damage /= 2;
+    else if (equipment->items & MZM_ITEM_GRAVITY_SUIT) damage = damage * 7 / 10;
+    else if (equipment->items & MZM_ITEM_VARIA_SUIT) damage = damage * 8 / 10;
+    if (difficulty == 0) damage /= 2;
+    else if (difficulty == 2) damage *= 2;
+    if (damage <= 0) damage = 1;
+    if (equipment->energy > damage) {
+        equipment->energy -= damage;
+        return true;
+    }
+    equipment->energy = 0;
+    return false;
+}
 
 static void runtime_sprite_hurt(void *context, uint16_t damage, bool sprite_on_left) {
     RuntimeSpriteHurt *hurt = context;
-    bool alive = mzm_equipment_damage(hurt->equipment, damage);
+    bool alive = runtime_take_sprite_damage(hurt->equipment, damage, runtime_difficulty);
     mzm_samus_hurt(hurt->samus, hurt->collision, !alive);
-    /* SUB_PIXEL_TO_VELOCITY(EIGHTH_BLOCK_SIZE) away from the sprite. */
-    if (alive) hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -64 : 64);
+    /* SUB_PIXEL_TO_VELOCITY(EIGHTH_BLOCK_SIZE) away from the sprite
+     * (EIGHTH_BLOCK_SIZE + ONE_SUB_PIXEL for SSC_HURTS_SAMUS_A_LOT). */
+    int16_t knockback = hurt->view && hurt->view->hurts_a_lot ? 72 : 64;
+    if (alive) hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -knockback : knockback);
 }
 
 /* The Parasites' leech: SpriteUtilTakeDamageFromSprite with a zero
@@ -2793,7 +2819,7 @@ static void runtime_sprite_hurt(void *context, uint16_t damage, bool sprite_on_l
  * when it kills Samus, else 16 invincible frames. */
 static bool runtime_sprite_leech(void *context) {
     RuntimeSpriteHurt *hurt = context;
-    bool alive = mzm_equipment_damage(hurt->equipment, 0);
+    bool alive = runtime_take_sprite_damage(hurt->equipment, 0, runtime_difficulty);
     if (!alive) mzm_samus_hurt(hurt->samus, hurt->collision, true);
     else hurt->samus->invincibility = 16;   /* CONVERT_SECONDS(4.f / 15) */
     return alive;
@@ -2941,7 +2967,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     /* SpriteUtilCheckStopSpritesPose: no Samus collision while movement is
      * prevented. */
     if (samus->pose != MZM_POSE_DYING && !stopped) {
-        RuntimeSpriteHurt hurt = {samus, equipment, collision};
+        RuntimeSpriteHurt hurt = {samus, equipment, collision, NULL};
         const MzmBlockHitbox *box = mzm_block_hitbox(mzm_pose_hitbox(samus->pose));
         /* The sprites see gSamusData.yPosition (the port's y - 1). */
         MzmSpriteSamus view = {&hurt, (uint16_t)samus->x, (uint16_t)(samus->y - 1),
@@ -2959,7 +2985,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                (int8_t)(samus->facing > 0 ? 1 : -1), equipment->energy != 0,
                                false, false, (uint8_t)samus->pose, MZM_POSE_NONE,
                                (equipment->items&(MZM_ITEM_VARIA_SUIT|MZM_ITEM_GRAVITY_SUIT))!=0,
-                               runtime_sprite_leech, &sprites->globals.sub1.work2};
+                               runtime_sprite_leech, &sprites->globals.sub1.work2, false};
+        hurt.view = &view;
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
         /* The solid (frozen) sprites' pushes and the zipline grabs. */
         samus->x = view.x;
@@ -3007,7 +3034,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             sprites->banner.pose,
                             runtime_minimap.downloaded_maps,sprites->banner.yes,weapons,0,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->left,
-                            mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->right};
+                            mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->right,
+                            weapons?weapons->charge_counter:0,runtime_arm_cannon_y,
+                            runtime_arm_cannon_x,runtime_difficulty};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
@@ -3194,6 +3223,10 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             shade=sprite->palette_row<4?statue_rows[sprite->palette_row]:"";
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM && sprite->palette_row==2)
             shade="/row2";              /* SavePlatformSaving's flash */
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_ATOMIC && !sprite->secondary &&
+                (sprite->palette_row==2 || sprite->palette_row==3))
+            /* AtomicCheckShootElectricity's charge flashing. */
+            shade=sprite->palette_row==2?"/row2":"/row3";
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA &&
                 sprite->palette_row==2)
             /* The Chozodia platform's saving flash (its off row 3 reads
@@ -4612,6 +4645,9 @@ int main(int argc, char **argv) {
                 }
                 /* gArmCannonX/Y for the charging particle. */
                 beam_fx.cannon_x=(samus.x>>2)+cannon_x;
+                /* ProjectileUpdate's gArmCannonX / gArmCannonY. */
+                runtime_arm_cannon_x=(uint16_t)(((samus.x>>2)+cannon_x)*4);
+                runtime_arm_cannon_y=(uint16_t)((((samus.y-1)>>2)+cannon_y)*4);
                 beam_fx.cannon_y=((samus.y-1)>>2)+cannon_y;
             }
             /* RoomLoadTileset / RoomLoadBackgrounds on a new room, then

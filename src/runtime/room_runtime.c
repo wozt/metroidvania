@@ -2444,6 +2444,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sGunshipFlyingYVelocity", t->gunship_flying, 22, 22},
         {"sAtomicIdleYMovement", t->atomic_idle_y, 65, 65},
         {"sAtomicIdleXMovement", t->atomic_idle_x, 81, 81},
+        {"sPolypProjectileYVelocity", t->polyp_projectile_y, 44, 44},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -2814,6 +2815,14 @@ static void runtime_sprite_hurt(void *context, uint16_t damage, bool sprite_on_l
     if (alive) hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -knockback : knockback);
 }
 
+/* SSC_KNOCKS_BACK_SAMUS: SamusSetPose(SPOSE_KNOCKBACK_REQUEST), then the
+ * x velocity SUB_PIXEL_TO_VELOCITY(PIXEL_SIZE) away from the sprite. */
+static void runtime_sprite_knockback(void *context, bool sprite_on_left) {
+    RuntimeSpriteHurt *hurt = context;
+    mzm_samus_knockback(hurt->samus, hurt->collision);
+    hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -32 : 32);
+}
+
 /* The Parasites' leech: SpriteUtilTakeDamageFromSprite with a zero
  * multiplier (the forced 1 after the suits), no knockback, the hurt pose
  * when it kills Samus, else 16 invincible frames. */
@@ -2985,7 +2994,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                (int8_t)(samus->facing > 0 ? 1 : -1), equipment->energy != 0,
                                false, false, (uint8_t)samus->pose, MZM_POSE_NONE,
                                (equipment->items&(MZM_ITEM_VARIA_SUIT|MZM_ITEM_GRAVITY_SUIT))!=0,
-                               runtime_sprite_leech, &sprites->globals.sub1.work2, false};
+                               runtime_sprite_leech, &sprites->globals.sub1.work2, false,
+                               runtime_sprite_knockback};
         hurt.view = &view;
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
         /* The solid (frozen) sprites' pushes and the zipline grabs. */

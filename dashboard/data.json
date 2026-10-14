@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-14T02:15:06+00:00",
+ "generated_at": "2026-10-14T02:26:14+00:00",
  "git": {
-  "commit": "29642ba",
+  "commit": "dde1c21",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 111,
+   "total": 112,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 87,
+    "partial": 88,
     "functional": 13,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 13,
-   "functional_or_better_percent": 11.7,
-   "with_passing_tests": 99,
-   "with_passing_tests_percent": 89.2,
+   "functional_or_better_percent": 11.6,
+   "with_passing_tests": 100,
+   "with_passing_tests_percent": 89.3,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -125,6 +125,7 @@
     "mzm.enemies.multiviola",
     "mzm.enemies.parasite",
     "mzm.enemies.pipe_bugs",
+    "mzm.enemies.polyp",
     "mzm.enemies.reo",
     "mzm.enemies.rinka",
     "mzm.enemies.ripper",
@@ -228,11 +229,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 63,
+   "total": 64,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 63,
+    "partial": 64,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -241,7 +242,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 63,
+   "with_passing_tests": 64,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -261,6 +262,7 @@
     "mzm.enemies.multiviola",
     "mzm.enemies.parasite",
     "mzm.enemies.pipe_bugs",
+    "mzm.enemies.polyp",
     "mzm.enemies.reo",
     "mzm.enemies.rinka",
     "mzm.enemies.ripper",
@@ -1484,6 +1486,66 @@
    ],
    "limitations": "The background priority changes are not ported. Zebs, blue Zebs, Geegas, white Geegas Geega leaders with their follower, green and yellow Zebbos and Zebbo leaders with their two followers, blue and red Gamets and blue Gamet leaders with their two followers (Gamet hitbox and sounds, followers like the Zebbo leader's): hidden in their pipe, they rise toward Samus when she is above, beside and within five blocks, become harmful after two frames, stop near her height, fly at 12 subpixels a frame through walls, return to their pipe 16 blocks past her and wait a second; deaths leave a drop following the pipe (DEATH_RESPAWNING) that the pipe waits for, and a leader waits for its follower. Checked in norfair_001 (--spawn 1300 140): a blue Gamet leaves its pipe, stops near Samus's height and flies toward her.",
    "next_action": "Port the background priority changes.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-14"
+   }
+  },
+  {
+   "id": "mzm.enemies.polyp",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Polyps",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_polyp.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer"
+   ],
+   "native_routines": [
+    "Polyp",
+    "PolypInit",
+    "PolypIdleInit",
+    "PolypCheckSpawnProjectile",
+    "PolypCheckWarningEnded",
+    "PolypSpawnProjectile",
+    "PolypCheckAfterSpittingAnimEnded",
+    "PolypCheckRetractingAnimEnded",
+    "PolypProjectile",
+    "PolypProjectileInit",
+    "PolypProjectileSpawn",
+    "PolypProjectileMove",
+    "PolypProjectileExplodingInit",
+    "PolypProjectileCheckExplodingAnimEnded",
+    "SpriteUtilCountChildSecondarySprites"
+   ],
+   "limitations": "Not compared with an emulator. The exploding projectile's BG priority is not modelled. Polyps knock Samus back on contact without damage (SSC_KNOCKS_BACK_SAMUS: SPOSE_KNOCKBACK_REQUEST, a pixel of x velocity away) and, every two seconds while on screen without a projectile or a drop of their own, warn (with its sound), spit and retract; the projectile goes towards Samus within 5 by 8.6 blocks (else a random side), arcs with sPolypProjectileYVelocity a pixel a frame sideways (SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT once it moves), dies off screen and explodes on a wall or the floor. Checked by capture in norfair_011 (both Polyps' projectiles arcing towards Samus).",
+   "next_action": "Compare with an emulator.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -3721,8 +3783,8 @@
     "ClipdataCheckCantUseElevator",
     "BgClipCheckTouchingTransitionOnElevator"
    ],
-   "limitations": "Not compared frame by frame with the original game. The liquid enter and exit effects (SamusUpdateEnvironmentalEffect) are not ported, and nothing enters the save, map download, zipline, escape ship or facing-the-background poses (their handlers are ported). The environmental effect sprites (gSamusEnvironmentalEffects) are not drawn, only their sounds play; the sprites do not request the knockback pose yet; SamusCheckFirePistol (the suitless pistol) is not ported in the weapons. The native probes allow transient overlaps (a spin broken under a low ceiling), which the tests accept for under a second. A transliteration of src/samus.c: the 67 poses of sSamusCollisionData with their hitboxes and standing statuses, every handler of sSamusPoseFunctionPointers and sSamusPoseGfxFunctionPointers, SamusSetPose with SamusSetMidAir, SamusSetLandingPose, the hurt and knockback poses and SamusCheckCarryFromCopy, SamusUpdatePhysics, the velocity update with DIV_SHIFT and the slope speeds, and the native point-probe collisions of SamusUpdateHitboxMovingDirection (the side, top, landing and ground probes, the corner nudges, slopes, the walk-off-ledge rule, the Power Grip ledge grab with the non power grip blocks). SamusAimCannon gives the running diagonals (Up or Down with the direction) and the no-aim run (ACD_NONE); the hanging poses turn to aim on Up, Down, L or the outward direction, climb after ten frames of Up without A, hide the arm cannon, pull into a morph ball tunnel under a block and shoot up or down. The animations time with sSamusAnimPointers_PowerSuit[pose] (or the suitless and the special tables) and the runtime draws the body animation of SamusUpdateGraphicsOam by its library key, whose arm cannon offsets place the shots (the Running [ACD_NONE - 2] rows are now exported); the shots take the offsets of the unarmed key, since the armed graphics variants have none and placed missiles at Samus's feet. The screw and speed booster block damage runs at the start of SamusCheckCollisions. Checked in brinstar_009 (--spawn 466 192: hanging, the Up+toward climb without A, a shot up from the hanging cannon) and brinstar_005 (a diagonal shot while running left). The hazards of ClipdataUpdateCurrentAffecting (the water, lava and acid blocks, and the room effect's hazard above or below its surface from the exported sHazeData) drive the liquid slowing of SamusUpdatePhysics (halved speeds and gravity, no Gravity Suit) and SamusTakeHazardDamage (the per-suit damage rates, the submerged sound, the cold knockback, the death). Checked in crateria_007: Samus runs at the slowed cap in the water. Elevator blocks work in the rooms of sElevatorRoomPairs (ClipdataCheckCantUseElevator, from the ROM bank; the second Crateria to Tourian route only after EVENT_ESCAPED_ZEBES): Up or Down on one turns Samus to the foreground, rides at the elevator speed with its sound, takes the area connection through BgClipCheckTouchingTransitionOnElevator and RoomLoad moves her three blocks on in the new room until the opposite elevator block stops her. Checked by capture: brinstar_026 to norfair_000. SamusDying's timer reaching 120 (after the animation's frame 23) flags the game over (gMainGameMode = GM_GAMEOVER). The shinespark and ballspark collisions start the shared screen shake (mzm_screen_shake), whose horizontal timer still drops Samus from a ledge.",
-   "next_action": "Port the room effect wave, the liquid enter and exit effects, the save platforms and map stations that enter their poses, the sprite knockback requests and the suitless pistol; compare with the original game frame by frame.",
+   "limitations": "Not compared frame by frame with the original game. The liquid enter and exit effects (SamusUpdateEnvironmentalEffect) are not ported, and nothing enters the save, map download, zipline, escape ship or facing-the-background poses (their handlers are ported). The environmental effect sprites (gSamusEnvironmentalEffects) are not drawn, only their sounds play; SamusCheckFirePistol (the suitless pistol) is not ported in the weapons. The native probes allow transient overlaps (a spin broken under a low ceiling), which the tests accept for under a second. A transliteration of src/samus.c: the 67 poses of sSamusCollisionData with their hitboxes and standing statuses, every handler of sSamusPoseFunctionPointers and sSamusPoseGfxFunctionPointers, SamusSetPose with SamusSetMidAir, SamusSetLandingPose, the hurt and knockback poses and SamusCheckCarryFromCopy, SamusUpdatePhysics, the velocity update with DIV_SHIFT and the slope speeds, and the native point-probe collisions of SamusUpdateHitboxMovingDirection (the side, top, landing and ground probes, the corner nudges, slopes, the walk-off-ledge rule, the Power Grip ledge grab with the non power grip blocks). SamusAimCannon gives the running diagonals (Up or Down with the direction) and the no-aim run (ACD_NONE); the hanging poses turn to aim on Up, Down, L or the outward direction, climb after ten frames of Up without A, hide the arm cannon, pull into a morph ball tunnel under a block and shoot up or down. The animations time with sSamusAnimPointers_PowerSuit[pose] (or the suitless and the special tables) and the runtime draws the body animation of SamusUpdateGraphicsOam by its library key, whose arm cannon offsets place the shots (the Running [ACD_NONE - 2] rows are now exported); the shots take the offsets of the unarmed key, since the armed graphics variants have none and placed missiles at Samus's feet. The screw and speed booster block damage runs at the start of SamusCheckCollisions. Checked in brinstar_009 (--spawn 466 192: hanging, the Up+toward climb without A, a shot up from the hanging cannon) and brinstar_005 (a diagonal shot while running left). The hazards of ClipdataUpdateCurrentAffecting (the water, lava and acid blocks, and the room effect's hazard above or below its surface from the exported sHazeData) drive the liquid slowing of SamusUpdatePhysics (halved speeds and gravity, no Gravity Suit) and SamusTakeHazardDamage (the per-suit damage rates, the submerged sound, the cold knockback, the death). Checked in crateria_007: Samus runs at the slowed cap in the water. Elevator blocks work in the rooms of sElevatorRoomPairs (ClipdataCheckCantUseElevator, from the ROM bank; the second Crateria to Tourian route only after EVENT_ESCAPED_ZEBES): Up or Down on one turns Samus to the foreground, rides at the elevator speed with its sound, takes the area connection through BgClipCheckTouchingTransitionOnElevator and RoomLoad moves her three blocks on in the new room until the opposite elevator block stops her. Checked by capture: brinstar_026 to norfair_000. SamusDying's timer reaching 120 (after the animation's frame 23) flags the game over (gMainGameMode = GM_GAMEOVER). The shinespark and ballspark collisions start the shared screen shake (mzm_screen_shake), whose horizontal timer still drops Samus from a ledge.",
+   "next_action": "Port the room effect wave, the liquid enter and exit effects, the save platforms and map stations that enter their poses, the suitless pistol; compare with the original game frame by frame.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -7568,6 +7630,12 @@
  },
  "timeline": [
   {
+   "commit": "dde1c21",
+   "date": "2026-10-14",
+   "subject": "feat(mzm): Atomics",
+   "scope": "mzm"
+  },
+  {
    "commit": "29642ba",
    "date": "2026-10-14",
    "subject": "feat(mzm): Chozodia save platforms",
@@ -8040,12 +8108,6 @@
    "date": "2026-10-11",
    "subject": "feat(mzm): sprite combat for the Zoomers",
    "scope": "mzm"
-  },
-  {
-   "commit": "79b935b",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): sprite engine core and native Zoomers",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -8073,7 +8135,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 934,
+    "routines_cited_by_features": 949,
     "call_edges": 6071
    },
    "aos": {

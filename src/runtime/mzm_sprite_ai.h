@@ -39,6 +39,7 @@ enum {
     SSC_HURTS_SAMUS = 4,
     SSC_HURTS_SAMUS_A_LOT = 5,
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
+    SSC_KNOCKS_BACK_SAMUS = 7,
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
     SSC_PARASITE = 23,
@@ -159,6 +160,8 @@ void ai_gadget(Ctx *c);
 void ai_parasite(Ctx *c);
 /* Atomics and their electricity (mzm_atomic.c). */
 void ai_atomic(Ctx *c);
+/* Polyps and their projectiles (mzm_polyp.c). */
+void ai_polyp(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

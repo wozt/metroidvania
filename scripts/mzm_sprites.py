@@ -105,7 +105,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_ZIPLINE_GENERATOR": 0, "PSPRITE_SECURITY_GATE_DEFAULT_OPEN": 0,
           "PSPRITE_PISTON": 0, "PSPRITE_GLASS_TUBE": 0, "PSPRITE_RISING_CHOZO_PILLAR": 0,
           "PSPRITE_PARASITE": 0, "PSPRITE_PARASITE_MULTIPLE": 0,
-          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0,
+          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
@@ -160,7 +160,8 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sDebris12YVelocity", "sDebris13YVelocity", "sDebris4YVelocity",
              "sDebris5YVelocity", "sDebris6YVelocity", "sDebris7YVelocity",
              "sDebris8YVelocity", "sGunshipTakingOffYVelocity", "sGunshipFlyingYVelocity",
-             "sAtomicIdleYMovement", "sAtomicIdleXMovement")
+             "sAtomicIdleYMovement", "sAtomicIdleXMovement",
+             "sPolypProjectileYVelocity")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
 PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",

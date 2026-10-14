@@ -2988,6 +2988,14 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0315 - Zero Mission Polyps
+
+- Polyp and PolypProjectile (`src/runtime/mzm_polyp.c`): the lava plants
+  spit an arcing projectile towards Samus every two seconds on screen.
+- SSC_KNOCKS_BACK_SAMUS: the sprites can now request Samus's knockback
+  pose (no damage).
+- Checked by capture in norfair_011; tests in `tests/test_mzm_sprites.c`.
+
 ## Patch 0314 - Zero Mission Atomics
 
 - Atomic and AtomicElectricity (`src/runtime/mzm_atomic.c`): hovering,

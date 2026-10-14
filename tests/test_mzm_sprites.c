@@ -105,6 +105,15 @@ static bool leech(void *context) {
     return true;
 }
 
+static int knockbacks;
+static bool last_knockback_left;
+
+static void knockback(void *context, bool sprite_on_left) {
+    (void)context;
+    ++knockbacks;
+    last_knockback_left = sprite_on_left;
+}
+
 static int hurts, last_damage;
 static bool last_on_left;
 
@@ -276,7 +285,7 @@ int main(void) {
     /* SpriteInitPrimary's one-frame ignore timer runs down in the collision
      * routine, not in the sprite's update. */
     assert(z.status & MZM_SPRITE_STATUS_ONSCREEN && z.ignore_samus_timer == 1);
-    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
     mzm_sprites_samus_collision(&z, 1, &away, &tables);
     assert(z.ignore_samus_timer == 0 && hurts == 0);
 
@@ -284,7 +293,7 @@ int main(void) {
      * the stats damage, pushed away (the sprite is on her right, "on left"
      * in the native flag naming), then 15 frames of ignored contact. */
     MzmSpriteSamus samus = {NULL, (uint16_t)(z.x - 40), 640, (uint16_t)(z.x - 40),
-                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
     mzm_sprites_samus_collision(&z, 1, &samus, &tables);
     assert(hurts == 1 && last_damage == 8 && last_on_left && samus.invincible);
     /* Set to 15, then run down once at the end of the routine. */
@@ -437,7 +446,7 @@ int main(void) {
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     samus = (MzmSpriteSamus){NULL, z.x, (uint16_t)(z.y + 40), z.x, -96, 0, -24, 24,
-                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
     for (int i = 0; i < 19; ++i) {
         mzm_sprites_samus_collision(&z, 1, &samus, &tables);
         step(&z, 0);
@@ -624,7 +633,7 @@ int main(void) {
     /* It hurts Samus with the secondary damage, but not the screw attack. */
     hurts = 0;
     MzmSpriteSamus near = {NULL, part->x, (uint16_t)(part->y + 20), part->x, -96, 0, -24, 24,
-                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
     part->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(group, 8, &near, &tables);
     assert(hurts == 1 && last_damage == 2);
@@ -1020,7 +1029,7 @@ int main(void) {
     const uint16_t zleft = (uint16_t)(z.x + z.hitbox_left);
     MzmSpriteSamus solid = {NULL, z.x, (uint16_t)(ztop + 8), z.x, -124, 0, -28, 28,
                             false, false, false, hurt, false, false, 0, NULL,
-                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
     hurts = 0;
     mzm_sprites_samus_collision(&z, 1, &solid, &tables);
     assert(hurts == 0 && solid.y == ztop + 1 && z.status & MZM_SPRITE_STATUS_SAMUS_ON_TOP &&
@@ -1084,7 +1093,7 @@ int main(void) {
     memset(&fx, 0, sizeof fx);
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
     MzmSpriteSamus screw = {NULL, z.x, (uint16_t)(z.y + 20), z.x, -96, 0, -24, 24,
-                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
     z.ignore_samus_timer = 0;
     mzm_sprites_samus_collision(&z, 1, &screw, &tables);
     assert(z.pose == 0x65 && z.damaged);
@@ -1226,7 +1235,7 @@ int main(void) {
      * harmless, and gone when the table ends. */
     hurts = 0;
     MzmSpriteSamus touch = {NULL, eye_l->x, (uint16_t)(eye_l->y + 20), eye_l->x, -96, 0, -24, 24,
-                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
     eye_l->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(eye_l, 1, &touch, &tables);
     assert(hurts == 1 && last_damage == 3 && eye_l->pose == 66);
@@ -2299,7 +2308,7 @@ int main(void) {
          * with the laser's damage, then explodes. */
         hurts = 0;
         MzmSpriteSamus laser_hit = {NULL, ps[1].x, (uint16_t)(ps[1].y + 20), ps[1].x,
-                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
         /* The spawn's ignore timer runs down on the first collision pass. */
         MzmSpriteSamus far_away = laser_hit;
         far_away.x = 60000;
@@ -2538,7 +2547,7 @@ int main(void) {
         /* Samus in its light rings the alarm, then it holds it. */
         hurts = 0;
         MzmSpriteSamus in_light = {NULL, ps[0].x, (uint16_t)(ps[0].y + 20), ps[0].x,
-                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false};
+                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
         ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
         MzmSpriteSamus out_of_light = in_light;
         out_of_light.x = 60000;
@@ -3931,6 +3940,69 @@ int main(void) {
             af.charge_counter = 0;
             mzm_sprite_update(&atoms[0], 0, &af);
             assert(atoms[0].pose == 0x8);
+            clear();
+        }
+        /* Polyps: a knockback on contact (no damage), a projectile spat
+         * every two seconds on screen, arcing towards Samus and exploding
+         * on a block. */
+        {
+            static MzmSprite plants[6];
+            static MzmSpriteKind polyp_kind;
+            memset(plants, 0, sizeof plants);
+            memset(&polyp_kind, 0, sizeof polyp_kind);
+            for (int a = 0; a < MZM_POLYP_ANIMS; ++a) {
+                polyp_kind.counts[a] = 3;
+                for (int f = 0; f < 3; ++f) polyp_kind.timers[a][f] = 2;
+            }
+            const int16_t arc[44] = {-8, -8, -6, -4, -2, 0, 2, 4, 6, 8, 32767};
+            memcpy(tables.polyp_projectile_y, arc, sizeof arc);
+            MzmSpriteFrame pp = g;
+            pp.kinds[MZM_FAMILY_POLYP] = &polyp_kind;
+            pp.sprites = plants;
+            pp.sprite_count = 6;
+            pp.samus_x = (uint16_t)(5 * 64 + 32 + 200);
+            pp.samus_y = 6 * 64;
+            clear();
+            for (int x = 0; x < COLUMNS; ++x) grid[9][x] = MZM_CLIPDATA_SOLID;
+            mzm_sprite_init_primary(&plants[0], MZM_PSPRITE_POLYP, 0, 5, 5, 0, 0);
+            mzm_sprite_update(&plants[0], 0, &pp);
+            assert(plants[0].pose == 0x9 && plants[0].samus_collision == 7 && plants[0].work0 == 119);
+            int polyp_frames = 0;
+            while (plants[0].pose == 0x9 && polyp_frames++ < 200) mzm_sprite_update(&plants[0], 0, &pp);
+            assert(plants[0].pose == 0x23 && plants[0].anim == MZM_POLYP_WARNING);
+            polyp_frames = 0;
+            while (!plants[1].status && polyp_frames++ < 100) mzm_sprite_update(&plants[0], 0, &pp);
+            assert(plants[1].sprite_id == MZM_SSPRITE_POLYP_PROJECTILE && plants[0].pose == 0x25 &&
+                   plants[0].work0 == 4 && plants[1].y == plants[0].y - 32);
+            mzm_sprite_update(&plants[1], 1, &pp);
+            assert(plants[1].pose == 0x8 && plants[1].status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+                   plants[1].anim == MZM_POLYP_PROJECTILE_RIGHT && plants[1].kill_off_screen);
+            for (int i = 0; i < 4; ++i) mzm_sprite_update(&plants[1], 1, &pp);
+            assert(plants[1].pose == 0x9 && plants[1].samus_collision == 6);
+            uint16_t px = plants[1].x, py = plants[1].y;
+            mzm_sprite_update(&plants[1], 1, &pp);
+            assert(plants[1].x == px + 4 && plants[1].y == py - 8);
+            polyp_frames = 0;
+            while (plants[1].pose == 0x9 && polyp_frames++ < 400) mzm_sprite_update(&plants[1], 1, &pp);
+            assert(plants[1].pose == 0x42);         /* SPRITE_POSE_STOPPED on the floor */
+            mzm_sprite_update(&plants[1], 1, &pp);
+            assert(plants[1].pose == 0x43 && plants[1].anim == MZM_POLYP_PROJECTILE_EXPLODING);
+            /* While its projectile is out, the Polyp waits. */
+            plants[0].pose = 0x9;
+            plants[0].work0 = 1;
+            mzm_sprite_update(&plants[0], 0, &pp);
+            assert(plants[0].pose == 0x9 && plants[0].work0 == 120);
+            /* SSC_KNOCKS_BACK_SAMUS */
+            knockbacks = 0;
+            hurts = 0;
+            plants[0].ignore_samus_timer = 0;
+            MzmSpriteSamus pushed = {.x = (uint16_t)(plants[0].x - 40), .y = (uint16_t)(plants[0].y + 30),
+                                     .previous_x = (uint16_t)(plants[0].x - 40), .hitbox_top = -96,
+                                     .hitbox_left = -24, .hitbox_right = 24, .hurt = hurt,
+                                     .has_energy = true, .facing = 1, .pose = MZM_POSE_STANDING,
+                                     .set_pose = MZM_POSE_NONE, .knockback = knockback};
+            mzm_sprites_samus_collision(plants, 1, &pushed, g.tables);
+            assert(knockbacks == 1 && hurts == 0 && last_knockback_left);
             clear();
         }
         /* Parasites (parasite.c). */

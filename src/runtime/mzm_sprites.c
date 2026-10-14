@@ -326,6 +326,14 @@ const char *const mzm_atomic_anim_names[MZM_ATOMIC_ANIMS] = {
 static const char *const atomic_sprites[MZM_ATOMIC_ANIMS] = {
     "ATOMIC", "ATOMIC", "ATOMIC", "ATOMIC", "ATOMIC", "ATOMIC", "ATOMIC",
 };
+const char *const mzm_polyp_anim_names[MZM_POLYP_ANIMS] = {
+    "PolypOam_Idle", "PolypOam_Warning", "PolypOam_Spitting", "PolypOam_AfterSpitting",
+    "PolypOam_Retracting", "PolypProjectileOam_Right", "PolypProjectileOam_Left",
+    "PolypProjectileOam_Exploding",
+};
+static const char *const polyp_sprites[MZM_POLYP_ANIMS] = {
+    "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP", "POLYP",
+};
 const char *const mzm_skultera_anim_names[MZM_SKULTERA_ANIMS] = {
     "SkulteraOam_Idle", "SkulteraOam_TurningAround", "SkulteraOam_ChasingSamus",
 };
@@ -450,6 +458,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_GADGET] = {MZM_GADGET_ANIMS, mzm_gadget_anim_names, gadget_sprites},
     [MZM_FAMILY_PARASITE] = {MZM_PARASITE_ANIMS, mzm_parasite_anim_names, parasite_sprites},
     [MZM_FAMILY_ATOMIC] = {MZM_ATOMIC_ANIMS, mzm_atomic_anim_names, atomic_sprites},
+    [MZM_FAMILY_POLYP] = {MZM_POLYP_ANIMS, mzm_polyp_anim_names, polyp_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -4465,6 +4474,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
             return MZM_FAMILY_ITEM_SPRITE;
         if (sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_FAMILY_SPACE_PIRATE;
         if (sprite_id == MZM_SSPRITE_ATOMIC_ELECTRICITY) return MZM_FAMILY_ATOMIC;
+        if (sprite_id == MZM_SSPRITE_POLYP_PROJECTILE) return MZM_FAMILY_POLYP;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
             return MZM_FAMILY_CHOZODIA_SECURITY;
@@ -4532,6 +4542,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         return MZM_FAMILY_GADGET;
     case MZM_PSPRITE_PARASITE: case MZM_PSPRITE_PARASITE_MULTIPLE: return MZM_FAMILY_PARASITE;
     case MZM_PSPRITE_ATOMIC: return MZM_FAMILY_ATOMIC;
+    case MZM_PSPRITE_POLYP: return MZM_FAMILY_POLYP;
     case MZM_PSPRITE_MORPH_BALL:
     case MZM_PSPRITE_POWER_GRIP:
     case MZM_PSPRITE_CHARGE_BEAM: return MZM_FAMILY_ITEM_SPRITE;
@@ -4831,6 +4842,12 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
                 s->status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
                 s->standing_on = MZM_STANDING_ON_SPRITE_ON;
             }
+            break;
+        case SSC_KNOCKS_BACK_SAMUS:
+            /* A knockback only, no damage. */
+            if (contact_kills(s, samus, tables)) break;
+            if (samus->knockback) samus->knockback(samus->context, on_left);
+            ignore = true;
             break;
         case SSC_HURTS_SAMUS_A_LOT:
             /* The hurt code with five times the damage and a bigger
@@ -5265,6 +5282,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (sprite->sprite_id == MZM_SSPRITE_CHARGE_BEAM_GLOW) return MZM_PSPRITE_CHARGE_BEAM;
     if (sprite->sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_PSPRITE_SPACE_PIRATE;
     if (sprite->sprite_id == MZM_SSPRITE_ATOMIC_ELECTRICITY) return MZM_PSPRITE_ATOMIC;
+    if (sprite->sprite_id == MZM_SSPRITE_POLYP_PROJECTILE) return MZM_PSPRITE_POLYP;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -5456,6 +5474,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_CHOZODIA_SECURITY: ai_chozodia_security(&c); break;
     case MZM_FAMILY_PARASITE: ai_parasite(&c); break;
     case MZM_FAMILY_ATOMIC: ai_atomic(&c); break;
+    case MZM_FAMILY_POLYP: ai_polyp(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

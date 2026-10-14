@@ -43,6 +43,19 @@ class MzmRuntimeRoomTests(unittest.TestCase):
         ).splitlines()
         self.assertEqual(lines[-3:], ["S\t53\tSPACE_PIRATE\t0", "S\t53\tSEARCHLIGHT\t4", "END"])
 
+    def test_doors_export_their_own_exit(self):
+        # RoomLoad places Samus by the used door's own xExit / yExit (door 0
+        # at a new game's start), exported as X lines.
+        tables = mzm_runtime_room.collision_tables(DECOMP)
+        doors = [{"kind": "area", "sourceRoom": 0, "xStart": 38, "xEnd": 40, "yStart": 2,
+                  "yEnd": 2, "destinationDoor": 11, "xExit": 16, "yExit": 16},
+                 {"kind": "hatch", "sourceRoom": 1, "xStart": 2, "xEnd": 2, "yStart": 15,
+                  "yEnd": 18, "destinationDoor": 0, "xExit": -32, "yExit": 0}]
+        lines = mzm_runtime_room.encode_room("Brinstar", 0, 16, 16, (1, 1, (0,)), tables,
+                                             doors=doors).splitlines()
+        self.assertIn("X\t0\t16\t16", lines)
+        self.assertFalse(any(line.startswith("X\t1\t") for line in lines))
+
     def test_room_spriteset_is_the_default_one(self):
         from scripts import mzm_sprites
         index, members = mzm_sprites.room_spriteset("Chozodia", 2, DECOMP)

@@ -2988,6 +2988,24 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0311 - Zero Mission native new game and gamepad without debug
+
+- A new game is the native one: 99 energy, no item and no ammunition (the
+  Morph Ball, Bombs and Power Grip are collected in the adventure), no
+  event or collected item, then the gunship landing, the intro text and
+  Brinstar's door 0 (RoomLoad's placement from the door's own exit, now
+  exported as X lines; SamusInit's pose facing the foreground). Direct
+  `--room` starts use the same empty equipment; `--item`, `--ammo` and
+  `--event` set test captures up (`--without` is gone).
+- The debug suit preset only sets the suit type and the Varia and Gravity
+  Suits: the collected items are kept, and Samus's graphics follow the
+  equipment.
+- Tanks follow the difficulty (sTankIncreaseAmount[gDifficulty]).
+- F1 is the only debug input: the diagnostic keys (H, Enter, F2, F6, F7,
+  M, T, G, R, Page Up/Down) and the gamepad's debug chord, Guide, North,
+  stick and Start catalogue buttons are gone; the animation browser is in
+  the F1 menu.
+
 ## Patch 0310 - Zero Mission Parasites
 
 - Parasite and ParasiteMultiple (`src/runtime/mzm_parasite.c`): crawling,

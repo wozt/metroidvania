@@ -151,14 +151,62 @@ int main(void) {
         free(liquid);
     }
 
-    /* Diagnostic presets drive native suit types and item flags. */
-    MzmEquipment equipment={0};
-    runtime_apply_equipment(&equipment,2,MZM_ITEM_SPACE_JUMP);
+    /* A new game's equipment (SamusInit): 99 energy, nothing else. The
+     * debug suit presets set the suit type and the Varia and Gravity Suits
+     * only, the collected items kept; the graphics follow the equipment. */
+    MzmEquipment equipment;
+    runtime_new_equipment(&equipment);
+    assert(equipment.energy==99 && equipment.max_energy==99 && equipment.items==0 &&
+           equipment.suit==MZM_SUIT_NORMAL && equipment.max_missiles==0 &&
+           equipment.max_super_missiles==0 && equipment.max_power_bombs==0);
+    assert(!strcmp(runtime_suit_registry(&equipment),"PowerSuit"));
+    equipment.items=MZM_ITEM_SPACE_JUMP|MZM_ITEM_MORPH_BALL;
+    runtime_apply_suit_preset(&equipment,2);
     assert(equipment.suit==MZM_SUIT_FULLY_POWERED);
-    assert(equipment.items&MZM_ITEM_GRAVITY_SUIT);
-    assert(equipment.items&MZM_ITEM_SPACE_JUMP);
-    runtime_apply_equipment(&equipment,4,MZM_ITEM_SPACE_JUMP);
-    assert(equipment.suit==MZM_SUIT_SUITLESS && equipment.items==0);
+    assert(equipment.items&MZM_ITEM_GRAVITY_SUIT && equipment.items&MZM_ITEM_SPACE_JUMP &&
+           equipment.items&MZM_ITEM_MORPH_BALL);
+    assert(!strcmp(runtime_suit_registry(&equipment),"GravitySuit"));
+    runtime_apply_suit_preset(&equipment,4);
+    assert(equipment.suit==MZM_SUIT_SUITLESS &&
+           equipment.items==(MZM_ITEM_SPACE_JUMP|MZM_ITEM_MORPH_BALL));
+    assert(!strcmp(runtime_suit_registry(&equipment),"Suitless"));
+    runtime_apply_suit_preset(&equipment,1);
+    assert(!strcmp(runtime_suit_registry(&equipment),"VariaSuit"));
+
+    /* A new game's state: Brinstar's room 0, nothing collected, the
+     * difficulty kept. */
+    {
+        static MzmSaveData fresh;
+        memset(&fresh, 0xA5, sizeof fresh);
+        runtime_new_game_save(&fresh, 2);
+        assert(!strcmp(fresh.room, "brinstar_000") && fresh.difficulty == 2 && fresh.area == 0 &&
+               fresh.equipment.energy == 99 && fresh.equipment.items == 0 &&
+               fresh.equipment.max_missiles == 0 && fresh.hatch_destination_count == 0 &&
+               fresh.never_reform_count == 0 && !fresh.escaped_zebes && fresh.igt.hours == 0);
+        for (int i = 0; i < MZM_SAVE_EVENTS; ++i) assert(fresh.events[i] == 0);
+    }
+    /* RoomLoad at door 0 (Brinstar's first door: x 38, y 2, exit 16, 16):
+     * x = 38 * 64 + (16 + 8) * 4, native y = 3 * 64 + 16 * 4 - 1, facing
+     * the foreground, facing left. */
+    {
+        Room *start = calloc(1, sizeof *start);
+        assert(start);
+        start->door_count = 1;
+        start->doors[0] = (RoomDoor){.index = 0, .x0 = 38, .x1 = 40, .y0 = 2, .y1 = 2,
+                                     .exit_x = 16, .exit_y = 16, .has_exit = true};
+        MzmCollision none = {start, runtime_collision_blocked, runtime_collision_slope,
+                             runtime_collision_point, NULL, NULL, NULL, NULL, NULL};
+        MzmEquipment fresh_equipment;
+        runtime_new_equipment(&fresh_equipment);
+        MzmSamus placed;
+        assert(runtime_place_at_door(start, 0, &placed, &fresh_equipment, &none));
+        assert(placed.x == 38 * 64 + 24 * 4 && placed.y == 3 * 64 + 16 * 4 - 1 + 1 &&
+               placed.pose == MZM_POSE_FACING_THE_FOREGROUND && placed.facing == -1);
+        assert(!runtime_place_at_door(start, 1, &placed, &fresh_equipment, &none));
+        start->doors[0].has_exit = false;
+        assert(!runtime_place_at_door(start, 0, &placed, &fresh_equipment, &none));
+        free(start);
+    }
 
     /* The safe spawn puts the native 14x31 standing box on the floor. */
     memset(r->types, 0, sizeof r->types);

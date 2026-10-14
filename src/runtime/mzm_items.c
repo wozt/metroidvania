@@ -21,6 +21,11 @@ uint16_t mzm_tank_cleared_clip(const MzmTankTables *tables, uint16_t behavior) {
 }
 
 /* "max number of tanks * increase + starting >= current max + increase" */
+void mzm_tank_select_difficulty(MzmTankTables *tables, int difficulty) {
+    if (difficulty < 0 || difficulty > 2 || !tables->has_difficulty[difficulty]) return;
+    for (int i = 0; i < 4; ++i) tables->increase[i] = tables->difficulty_increase[difficulty][i];
+}
+
 static bool below_limit(const MzmTankTables *t, int column, int max) {
     return t->total[column] * t->increase[column] + t->start[column] >= max + t->increase[column];
 }

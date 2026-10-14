@@ -289,9 +289,14 @@ def block_table_lines(collision_tables: dict) -> list[str]:
     areas = max_areas()
     total = table("block_data.c", "sNumberOfTanksPerArea",
                   extra={"MAX_AMOUNT_OF_AREAS": areas})[areas - 1]
-    increase = table("block_data.c", "sTankIncreaseAmount")[names["DIFF_NORMAL"]]
+    increases = table("block_data.c", "sTankIncreaseAmount")
+    increase = increases[names["DIFF_NORMAL"]]
     starting = struct_initializer("block_data.c", "sStartingHealthAmmo")
-    for label, row in (("start", starting), ("total", total), ("increase", increase)):
+    # sTankIncreaseAmount[gDifficulty]: the normal row, then each difficulty.
+    rows = [("start", starting), ("total", total), ("increase", increase)]
+    rows += [(f"increase{names[d]}", increases[names[d]])
+             for d in ("DIFF_EASY", "DIFF_NORMAL", "DIFF_HARD")]
+    for label, row in rows:
         lines.append(f"tanklist\t{label}\t" + ",".join(str(row.get(f, 0)) for f in fields))
     # BlockApplyCcaa's CAA_MAKE_SOLID_GRIPPABLE / _STOP_ENEMY / _NON_POWER_GRIP.
     flag = names["CLIPDATA_TILEMAP_FLAG"]

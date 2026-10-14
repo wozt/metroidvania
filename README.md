@@ -114,18 +114,22 @@ r leftshoulder
 deadzone 12000
 ```
 
-The Zero Mission runtime keeps its own diagnostic pad buttons (Guide suits,
-North Space Jump/Screw Attack, Start animation catalogue).
+In the Zero Mission runtime the gamepad only plays: its buttons are the
+GBA's and nothing else (no debug chord or diagnostic button).
 
-F1 (or the gamepad chord, Back + Start by default, `debug ...` in an input
-map) opens the debug menu of either runtime. It freezes the game and edits
-the running engine; both offer pause (then F2 steps one frame), frame step,
+F1 opens the debug menu of either runtime (`fusion_aria_runtime` also
+accepts the gamepad chord, Back + Start by default, `debug ...` in an input
+map). It freezes the game and edits
+the running engine; both offer pause, frame step,
 hitboxes and teleporting to any exported room (at the default spawn
 search). `fusion_aria_runtime` adds HP and max HP, the diagnostic ATK/DEF,
 each ported ability move, spawning a ported enemy 48 pixels ahead and
-removing every enemy. `fusion_room_runtime` adds the suit preset, the items
-whose native effect is ported (High Jump, Space Jump, Screw Attack), energy,
-missiles and super missiles with their maxima, a refill and 20 damage. Up/Down
+removing every enemy. `fusion_room_runtime` adds the suit preset (the suit
+type and the Varia and Gravity Suits, the collected items kept), the items
+(Morph Ball, Bombs, Power Grip, High Jump, Space Jump, Screw Attack, Speed
+Booster and the beams), energy, missiles, super missiles and power bombs
+with their maxima, a refill, 20 damage, teleporting and the raw Samus
+animation browser; it is the runtime's only debug input (F1). Up/Down
 select, Left/Right change a value (L/R by ten), A toggles or runs, B
 closes. Only engine features that exist are listed; nothing it does is
 saved. For headless checks, `--debug-menu` opens it at start and
@@ -268,10 +272,13 @@ Wave Beam, Bombs, Speed Booster, High Jump, Screw Attack or Varia Suit (the
 Plasma Beam, Space Jump and Gravity Suit statues give an "Unknown Item" that
 stays inactive, as in the game before the fully powered suit). The Morph
 Ball, the Power Grip and the Charge Beam are their own item sprites, touched
-to be collected with their banner (the runtime grants the Morph Ball, Bombs
-and Power Grip at start; `--without morph-ball`, `bombs` or `power-grip`
-removes one, and `--event N` sets a game event in every room, for test
-captures). Rest
+to be collected with their banner. Samus starts as the native game does (99
+energy, no item, no ammunition), whether from a new game or a direct
+`--room` start; a new game lands the gunship in Crateria, shows the intro
+text, then starts at Brinstar's door 0 (SamusInit's pose facing the
+foreground, falling down the first shaft). For test captures `--item NAME`
+adds an item, `--ammo M S P` sets the ammunition and `--event N` sets a game
+event in every room. Rest
 in a statue's hand in the Morph Ball to be refilled; a hint statue grabs
 Samus, fades the music, flashes and sits down to its hint music, then
 replays the room's track (its map screen is not ported). The Wave Beam crosses walls and the Plasma Beam goes
@@ -280,11 +287,8 @@ through enemies (both debug items, combinable with the other beams). With the Sp
 breaks speed blocks and enemies, and releasing the direction skids (Down
 while skidding stores a shinespark: A then launches it up, sideways with a
 direction or diagonally with L or Up; in the Morph Ball with High Jump, A
-launches a ballspark). Diagnostic
-keys: R cycles suits (gamepad Guide), T cycles Space Jump/Screw Attack, G
-toggles High Jump, M refills ammunition, H applies 20 damage, Enter restarts
-after death, F6 opens the raw animation catalogue and F7 outlines the active
-hitbox.
+launches a ballspark). The diagnostics (suits, items,
+ammunition, damage, the animation catalogue, hitboxes) are in the F1 menu.
 
 Rooms show their native Zoomers, Zeelas, Rippers, Skrees, Wavers,
 Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes,
@@ -357,7 +361,9 @@ and B every REPEAT frames, and saves the rendered frame, for example
 frame by frame (then the `--capture` mask applies), for example
 `--input-script 0:3,8:1,0:1,8:1,0:20,0x20:1` crouches, morphs and places a
 bomb. `--item NAME` enables a debug menu item at start (for example
-`--item speed-booster`), and `--energy N` starts with N energy.
+`--item morph-ball` or `--item speed-booster`), `--ammo M S P` sets the
+missiles, super missiles and power bombs, and `--energy N` starts with N
+energy.
 
 When Samus dies, the native game over screen offers to try again (from the
 most recent save file, or from the start without one) or to return to the

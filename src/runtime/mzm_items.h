@@ -39,9 +39,17 @@ typedef struct {
      * sTankIncreaseAmount[DIFF_NORMAL]: energy, missile, super missile,
      * power bomb. */
     int start[4], total[4], increase[4];
+    /* sTankIncreaseAmount by difficulty (DIFF_EASY, _NORMAL, _HARD), when
+     * exported; mzm_tank_select_difficulty copies one into `increase`. */
+    int difficulty_increase[3][4];
+    bool has_difficulty[3];
     /* CLIPDATA_TILEMAP_AIR and CLIPDATA_TILEMAP_FLAG | CLIPDATA_TILEMAP_WATER. */
     uint16_t air_clip, water_clip;
 } MzmTankTables;
+
+/* sTankIncreaseAmount[gDifficulty] for the next tanks (the normal row
+ * stays without the difficulty's row). */
+void mzm_tank_select_difficulty(MzmTankTables *tables, int difficulty);
 
 /* gCollectingTank and gLastTankCollected */
 typedef struct {

@@ -67,6 +67,9 @@ typedef struct {
     int x0, x1, y0, y1;
     char destination[48];
     int dest_x, dest_y_end, dest_x_exit, dest_y_exit;
+    /* The door's own xExit / yExit (X lines; RoomLoad's placement). */
+    int exit_x, exit_y;
+    bool has_exit;
 } RoomDoor;
 /* One hatch built like ConnectionLoadDoors. */
 typedef struct {
@@ -338,6 +341,18 @@ static bool parse_native_room(const char *path, Room *room) {
                 door.x0 < 0 || door.x1 < door.x0 || door.y0 < 0 || door.y1 < door.y0)
                 goto failure;
             room->doors[room->door_count++] = door;
+            continue;
+        }
+        if (line[0] == 'X') {
+            int index, exit_x, exit_y;
+            if (sscanf(line, "X\t%d\t%d\t%d %c", &index, &exit_x, &exit_y, &extra) != 3)
+                goto failure;
+            for (int i = 0; i < room->door_count; ++i)
+                if (room->doors[i].index == index) {
+                    room->doors[i].exit_x = exit_x;
+                    room->doors[i].exit_y = exit_y;
+                    room->doors[i].has_exit = true;
+                }
             continue;
         }
         if (line[0] == 'P') {
@@ -661,18 +676,31 @@ static const RuntimeSuitPreset runtime_suit_presets[]={
 #define RUNTIME_SUIT_PRESETS \
     (sizeof runtime_suit_presets/sizeof runtime_suit_presets[0])
 
-/* Morph Ball, Bombs and Power Grip stay available in suited presets so
- * the rooms can be explored from anywhere; `--without NAME` removes one so
- * its pickup can be collected. */
-static uint32_t runtime_removed_items;
-static void runtime_apply_equipment(MzmEquipment *equipment,unsigned int preset,
-                                    uint32_t toggled_items) {
+/* The debug menu's suit: the suit type and the Varia and Gravity Suits,
+ * the other items kept. */
+static void runtime_apply_suit_preset(MzmEquipment *equipment,unsigned int preset) {
     const RuntimeSuitPreset *p=&runtime_suit_presets[preset%RUNTIME_SUIT_PRESETS];
     equipment->suit=p->suit;
-    equipment->items=p->items;
-    if(p->suit!=MZM_SUIT_SUITLESS)
-        equipment->items|=((MZM_ITEM_MORPH_BALL|MZM_ITEM_BOMBS|MZM_ITEM_POWER_GRIP)&
-                           ~runtime_removed_items)|toggled_items;
+    equipment->items=(equipment->items&~(uint32_t)(MZM_ITEM_VARIA_SUIT|MZM_ITEM_GRAVITY_SUIT))|
+                     p->items;
+}
+
+/* The registry suit (the graphics and palettes) of the equipment: the
+ * suit type, then the Gravity and Varia Suits. */
+static const char *runtime_suit_registry(const MzmEquipment *equipment) {
+    if(equipment->suit==MZM_SUIT_SUITLESS)return "Suitless";
+    if(equipment->suit==MZM_SUIT_FULLY_POWERED)
+        return equipment->items&MZM_ITEM_GRAVITY_SUIT?"GravitySuit":"FullSuit";
+    return equipment->items&MZM_ITEM_VARIA_SUIT?"VariaSuit":"PowerSuit";
+}
+
+/* SamusInit for a new game (gIsLoadingFile false): gEquipment cleared, then
+ * 99 energy of 99 (sStartingHealthAmmo: no ammunition, no item). */
+static void runtime_new_equipment(MzmEquipment *equipment) {
+    memset(equipment,0,sizeof *equipment);
+    equipment->suit=MZM_SUIT_NORMAL;
+    equipment->max_energy=99;
+    equipment->energy=99;
 }
 
 static int runtime_behavior(const Room *room, int x, int y) {
@@ -848,6 +876,14 @@ static bool runtime_block_tables_open(const char *path) {
             runtime_block_tables.tanks.underwater[index] = b != 0;
             runtime_block_tables.tanks.message[index] = (int16_t)c;
             runtime_block_tables.tanks_ok = true;
+        } else if (sscanf(line, "tanklist\tincrease%d\t", &index) == 1) {
+            /* sTankIncreaseAmount[difficulty] */
+            const char *cursor = strchr(line + 9, '\t');
+            ok = index >= 0 && index < 3 && cursor &&
+                 runtime_parse_list(cursor + 1, values, 4);
+            for (int i = 0; ok && i < 4; ++i)
+                runtime_block_tables.tanks.difficulty_increase[index][i] = (int)values[i];
+            if (ok) runtime_block_tables.tanks.has_difficulty[index] = true;
         } else if (!strncmp(line, "tanklist\t", 9)) {
             const char *cursor = strchr(line + 9, '\t');
             int *row = !strncmp(line + 9, "start", 5) ? runtime_block_tables.tanks.start :
@@ -1601,6 +1637,38 @@ static bool runtime_palette_colors(const RuntimePalettes *palettes,
     return true;
 }
 
+/* A new game (Sram_InitSaveFile, then SamusInit without a file): nothing
+ * collected, no event, no opened hatch, a zero timer and the chosen
+ * difficulty; after the landing and the intro text, CutsceneEnd starts it
+ * in Brinstar's room 0 at door 0. */
+static const char runtime_new_game_room[]="brinstar_000";
+static void runtime_new_game_save(MzmSaveData *save,uint8_t difficulty) {
+    memset(save,0,sizeof *save);
+    snprintf(save->room,sizeof save->room,"%s",runtime_new_game_room);
+    runtime_new_equipment(&save->equipment);
+    save->facing=-1;
+    save->area=0;               /* AREA_BRINSTAR */
+    save->difficulty=difficulty;
+}
+
+/* RoomLoad with gLastDoorUsed and no file: Samus at the door's own exit
+ * (x = xStart blocks + xExit + 8 pixels, y = yEnd + 1 blocks + yExit
+ * pixels - 1), then SamusInit's pose facing the foreground, facing left.
+ * False when the room has no such door with its exit. */
+static bool runtime_place_at_door(const Room *room,int index,MzmSamus *samus,
+                                  const MzmEquipment *equipment,const MzmCollision *collision) {
+    for(int i=0;i<room->door_count;i++) {
+        const RoomDoor *door=&room->doors[i];
+        if(door->index!=index || !door->has_exit)continue;
+        int32_t x=door->x0*MZM_BLOCK_SIZE+(door->exit_x+8)*4;
+        int32_t native_y=(door->y1+1)*MZM_BLOCK_SIZE+door->exit_y*4-1;
+        mzm_samus_init(samus,x,native_y+1,-1);
+        mzm_samus_sprite_set_pose(samus,MZM_POSE_FACING_THE_FOREGROUND,equipment,collision);
+        return true;
+    }
+    return false;
+}
+
 /* BG_PROP_MOVING (BG_PROP_RLE_COMPRESSED | BG_PROP_CAN_SCROLL | 1). */
 enum { RUNTIME_BG_PROP_MOVING = 0x31 };
 
@@ -2026,12 +2094,12 @@ static int runtime_palette_slot(RuntimePaletteSlots *slots,RuntimeLibrary *lib,
     memcpy(slots->colors[slots->count],colors,sizeof slots->colors[0]);
     return slots->count++;
 }
-/* Debug menu (F1, or the gamepad chord): every item edits the running
+/* Debug menu (F1 only, never on the gamepad): every item edits the running
  * engine's state; nothing here exists in the original game. */
 enum {
     DEBUG_PAUSE=1,DEBUG_STEP,DEBUG_HITBOX,DEBUG_SUIT,DEBUG_ITEMS,DEBUG_ENERGY,
     DEBUG_MAX_ENERGY,DEBUG_AMMO,DEBUG_REFILL,DEBUG_DAMAGE,DEBUG_AREA,DEBUG_ROOM,
-    DEBUG_TELEPORT,
+    DEBUG_TELEPORT,DEBUG_BROWSER,DEBUG_BROWSER_NEXT,DEBUG_BROWSER_PREVIOUS,
 };
 static const char *const debug_area_names[]={
     "brinstar","kraid","norfair","ridley","tourian","crateria","chozodia",
@@ -2039,7 +2107,8 @@ static const char *const debug_area_names[]={
 #define DEBUG_AREAS (int)(sizeof debug_area_names/sizeof debug_area_names[0])
 /* Items whose native effect the engine implements (Speed Booster is not). */
 static const struct { const char *label; uint32_t item; } debug_items[]={
-    {"High Jump",MZM_ITEM_HIGH_JUMP},{"Space Jump",MZM_ITEM_SPACE_JUMP},
+    {"Morph Ball",MZM_ITEM_MORPH_BALL},{"Bombs",MZM_ITEM_BOMBS},
+    {"Power Grip",MZM_ITEM_POWER_GRIP},{"High Jump",MZM_ITEM_HIGH_JUMP},{"Space Jump",MZM_ITEM_SPACE_JUMP},
     {"Screw Attack",MZM_ITEM_SCREW_ATTACK},{"Speed Booster",MZM_ITEM_SPEED_BOOSTER},
     {"Charge Beam",MZM_ITEM_CHARGE_BEAM},{"Long Beam",MZM_ITEM_LONG_BEAM},
     {"Ice Beam",MZM_ITEM_ICE_BEAM},{"Wave Beam",MZM_ITEM_WAVE_BEAM},
@@ -3433,6 +3502,7 @@ int main(int argc, char **argv) {
     /* --item NAME (repeatable): a debug menu item enabled at start, its label
      * in lower case with dashes (for example speed-booster). */
     uint32_t start_items=0;
+    int start_ammo[3]={0,0,0};
     GbaPadMap pad_map;
     gba_pad_map_default(&pad_map);
     for (int i=1;i<argc;i++) {
@@ -3488,12 +3558,9 @@ int main(int argc, char **argv) {
             if(event<=0||event>255){fprintf(stderr,"Invalid event: %d\n",event);return 2;}
             runtime_debug_events[event/8]|=(uint8_t)(1u<<(event%8));
         }
-        else if (!strcmp(argv[i],"--without") && i+1<argc) {
-            const char *name=argv[++i];
-            if(!strcmp(name,"morph-ball"))runtime_removed_items|=MZM_ITEM_MORPH_BALL;
-            else if(!strcmp(name,"bombs"))runtime_removed_items|=MZM_ITEM_BOMBS;
-            else if(!strcmp(name,"power-grip"))runtime_removed_items|=MZM_ITEM_POWER_GRIP;
-            else{fprintf(stderr,"Unknown default item: %s\n",name);return 2;}
+        else if (!strcmp(argv[i],"--ammo") && i+3<argc) {
+            /* Test captures: missiles, super missiles and power bombs. */
+            for(int k=0;k<3;k++)start_ammo[k]=atoi(argv[++i]);
         }
         else if (!strcmp(argv[i],"--energy") && i+1<argc) start_energy=atoi(argv[++i]);
         else if (!strcmp(argv[i],"--spawn") && i+2<argc) {
@@ -3510,7 +3577,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--without morph-ball|bombs|power-grip] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -3622,7 +3689,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--without morph-ball|bombs|power-grip] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -3828,26 +3895,24 @@ int main(int argc, char **argv) {
                             runtime_samus_clipdata,runtime_samus_affecting,
                             runtime_samus_destruct,runtime_samus_ground_effect};
     bool door_lock=false;
-    MzmEquipment equipment={0};
-    unsigned int suit_preset=0,spin_items=0;
-    uint32_t toggled_items=start_items;
-    runtime_apply_equipment(&equipment,suit_preset,toggled_items);
-    equipment.max_energy=99;
-    equipment.energy=start_energy>0 && start_energy<equipment.max_energy?start_energy:equipment.max_energy;
-    /* Diagnostic ammunition until item pickups exist. */
-    equipment.max_missiles=10;
-    equipment.missiles=equipment.max_missiles;
-    equipment.max_super_missiles=2;
-    equipment.super_missiles=equipment.max_super_missiles;
-    equipment.max_power_bombs=2;
-    equipment.power_bombs=equipment.max_power_bombs;
+    /* The native start (SamusInit): no item, no ammunition, 99 energy; the
+     * test options add items (--item), ammunition (--ammo) or set the
+     * energy (--energy). */
+    MzmEquipment equipment;
+    runtime_new_equipment(&equipment);
+    unsigned int suit_preset=0;
+    equipment.items|=start_items;
+    equipment.max_missiles=equipment.missiles=start_ammo[0];
+    equipment.max_super_missiles=equipment.super_missiles=start_ammo[1];
+    equipment.max_power_bombs=equipment.power_bombs=start_ammo[2];
+    if(start_energy>0 && start_energy<equipment.max_energy)equipment.energy=start_energy;
     MzmWeapons weapons;
     RuntimeBeamFx beam_fx={0};
     mzm_weapons_init(&weapons);
     MzmProjectileAnimation projectile_animation={&projectile_library,
                                                  runtime_projectile_durations};
     /* The registry suit selects the palettes. */
-    struct { const char *suit; } pose_animation={runtime_suit_presets[0].registry};
+    struct { const char *suit; } pose_animation={runtime_suit_registry(&equipment)};
     MzmAnimationSource animation_source={&library,runtime_pose_durations};
     MzmSamus samus;
     if(load_save) {
@@ -3859,8 +3924,9 @@ int main(int argc, char **argv) {
         fprintf(stderr,"No free avatar spawn found\n");
         goto cleanup;
     }
-    /* The game's start, for the new games and a continue without a file. */
-    runtime_build_save(&new_game_state,room_alias?room_alias:"",room,&samus,&equipment,&sprites);
+    /* The game's start, for the new games and a continue without a file:
+     * the native new game, whatever the test options set. */
+    runtime_new_game_save(&new_game_state,runtime_difficulty);
     printf("Selected safe test spawn: feet x=%.2f y=%.2f\n",
            (double)samus.x/MZM_SUBPIXELS_PER_PIXEL,
            (double)samus.y/MZM_SUBPIXELS_PER_PIXEL);
@@ -3880,9 +3946,8 @@ int main(int argc, char **argv) {
            "jump toward a wall then away+A to wall-jump; hold toward a ledge "
            "while falling, then A+toward to climb.\n");
     printf("Weapons: B fires; hold V/Left Shift (GBA R) to arm missiles, Tab "
-           "(Select) toggles super missiles; M refills ammunition.\n");
-    printf("Diagnostics: R suit, T Space Jump/Screw Attack, G High Jump, "
-           "H 20 damage, Enter restart, F6 catalogue, F7 hitbox.\n");
+           "(Select) toggles super missiles.\n");
+    printf("Diagnostics: F1 debug menu (keyboard only).\n");
     /* The first room's music starts at once (after the title screen). */
     if (!title_mode && !intro_mode && !cutscene_mode && runtime_room_music(room)) {
         runtime_audio_lock();
@@ -3896,11 +3961,10 @@ int main(int argc, char **argv) {
     const float fixed_step=1.f/60.f;
     long capture_step=0;
     uint16_t previous_held=0,latched=0;
-    bool damage_queued=false,restart_queued=false;
-    bool pad_armor_prev=false,pad_special_prev=false,pad_browser_prev=false;
+    bool damage_queued=false;
     /* The debug menu's view of the engine state. */
     static DebugMenu debug;
-    bool paused=false,step_once=false,chord_before=false;
+    bool paused=false,step_once=false;
     bool debug_item_flags[DEBUG_ITEMS_COUNT]={false};
     int debug_suit=(int)suit_preset,debug_area=0,debug_room=0;
     long debug_frame=0;
@@ -3940,6 +4004,11 @@ int main(int argc, char **argv) {
     debug_menu_value(&debug,"Area",&debug_area,0,DEBUG_AREAS-1,1,debug_area_names,DEBUG_AREA);
     debug_menu_value(&debug,"Room",&debug_room,0,255,1,NULL,DEBUG_ROOM);
     debug_menu_action(&debug,"Teleport",DEBUG_TELEPORT);
+    if(library_index && library.count>0) {
+        debug_menu_toggle(&debug,"Animation browser",&animation_browser,DEBUG_BROWSER);
+        debug_menu_action(&debug,"Next animation",DEBUG_BROWSER_NEXT);
+        debug_menu_action(&debug,"Previous animation",DEBUG_BROWSER_PREVIOUS);
+    }
     debug.open=debug_at_start;
     uint16_t menu_previous=0;
     while (running) {
@@ -3947,108 +4016,22 @@ int main(int argc, char **argv) {
         while (SDL_PollEvent(&event)) {
             gba_input_handle_event(&gamepad,&event);
             bool key_down=event.type==SDL_EVENT_KEY_DOWN && !event.key.repeat;
-            /* Diagnostic animation browser: gameplay state and collisions unchanged. */
-            if (library_index && library.count > 0) {
-                bool pad_browser=event.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
-                    event.gbutton.button==SDL_GAMEPAD_BUTTON_START;
-                bool toggle=(key_down && event.key.key==SDLK_F6) ||
-                            (pad_browser && !pad_browser_prev);
-                if(event.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN ||
-                   event.type==SDL_EVENT_GAMEPAD_BUTTON_UP)
-                    pad_browser_prev=pad_browser;
-                bool forward=(key_down && event.key.key==SDLK_PAGEDOWN) ||
-                             (event.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
-                              event.gbutton.button==SDL_GAMEPAD_BUTTON_RIGHT_STICK);
-                bool backward=(key_down && event.key.key==SDLK_PAGEUP) ||
-                              (event.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
-                               event.gbutton.button==SDL_GAMEPAD_BUTTON_LEFT_STICK);
-                if(toggle) {
-                    animation_browser=!animation_browser;
-                    animation_start=SDL_GetTicks();
-                }
-                if(animation_browser && (forward || backward)) {
-                    browser_index=(browser_index+(forward?1:library.count-1))%library.count;
-                    animation_start=SDL_GetTicks();
-                }
-                if(toggle || (animation_browser && (forward || backward))) {
-                    if(animation_browser) {
-                        char title[256];
-                        snprintf(title,sizeof title,"Samus animation [%d/%d] %s",
-                                 browser_index+1,library.count,library.entries[browser_index].name);
-                        SDL_SetWindowTitle(window,title);
-                        fprintf(stderr,"Animation browser: %s (%d/%d)\n",
-                                library.entries[browser_index].name,browser_index+1,library.count);
-                    } else {
-                        title_dirty=true;
-                        fprintf(stderr,"Animation browser disabled\n");
-                    }
-                }
-            }
             if (event.type == SDL_EVENT_QUIT ||
                 (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) running=false;
             if (!key_down) continue;
+            /* F1 is the only debug key; the gamepad only plays (GBA
+             * buttons). */
             if (event.key.key == SDLK_F1) { debug.open=!debug.open; continue; }
-            if (event.key.key == SDLK_F2) { if(paused)step_once=true; continue; }
             if (debug.open) continue;
             latched|=runtime_key_buttons(event.key.scancode);
-            if (event.key.key == SDLK_H) damage_queued=true;
-            if (event.key.key == SDLK_RETURN) restart_queued=true;
-            if (event.key.key == SDLK_F7) show_hitbox=!show_hitbox;
-            if (event.key.key == SDLK_M) {
-                equipment.missiles=equipment.max_missiles;
-                equipment.super_missiles=equipment.max_super_missiles;
-                equipment.power_bombs=equipment.max_power_bombs;
-            }
-            if (event.key.key == SDLK_T) {
-                spin_items=(spin_items+1u)%4u;
-                toggled_items=(toggled_items&~(uint32_t)(MZM_ITEM_SPACE_JUMP|
-                                                         MZM_ITEM_SCREW_ATTACK))|
-                    ((spin_items&1u)?MZM_ITEM_SPACE_JUMP:0u)|
-                    ((spin_items&2u)?MZM_ITEM_SCREW_ATTACK:0u);
-                runtime_apply_equipment(&equipment,suit_preset,toggled_items);
-                title_dirty=true;
-            }
-            if (event.key.key == SDLK_G) {
-                toggled_items^=MZM_ITEM_HIGH_JUMP;
-                runtime_apply_equipment(&equipment,suit_preset,toggled_items);
-                title_dirty=true;
-            }
-            if (event.key.key == SDLK_R) {
-                suit_preset=(suit_preset+1u)%RUNTIME_SUIT_PRESETS;
-                runtime_apply_equipment(&equipment,suit_preset,toggled_items);
-                pose_animation.suit=runtime_suit_presets[suit_preset].registry;
-                title_dirty=true;
-            }
         }
-        bool pad_armor=gba_input_button(&gamepad,SDL_GAMEPAD_BUTTON_GUIDE);
-        if(pad_armor && !pad_armor_prev) {
-            suit_preset=(suit_preset+1u)%RUNTIME_SUIT_PRESETS;
-            runtime_apply_equipment(&equipment,suit_preset,toggled_items);
-            pose_animation.suit=runtime_suit_presets[suit_preset].registry;
-            title_dirty=true;
-        }
-        pad_armor_prev=pad_armor;
-        bool pad_special=gba_input_button(&gamepad,SDL_GAMEPAD_BUTTON_NORTH);
-        if(pad_special && !pad_special_prev) {
-            spin_items=(spin_items+1u)%4u;
-            toggled_items=(toggled_items&~(uint32_t)(MZM_ITEM_SPACE_JUMP|
-                                                     MZM_ITEM_SCREW_ATTACK))|
-                ((spin_items&1u)?MZM_ITEM_SPACE_JUMP:0u)|
-                ((spin_items&2u)?MZM_ITEM_SCREW_ATTACK:0u);
-            runtime_apply_equipment(&equipment,suit_preset,toggled_items);
-            title_dirty=true;
-        }
-        pad_special_prev=pad_special;
-        bool chord=gba_input_debug_chord(&gamepad);
-        if(chord && !chord_before)debug.open=!debug.open;
-        chord_before=chord;
         if(debug.open) {
             /* Mirror the engine before reading the menu's input. */
             debug_suit=(int)suit_preset;
             for(int i=0;i<DEBUG_ITEMS_COUNT;i++)
-                debug_item_flags[i]=(toggled_items&debug_items[i].item)!=0;
+                debug_item_flags[i]=(equipment.items&debug_items[i].item)!=0;
             const bool *menu_keys=SDL_GetKeyboardState(NULL);
-            uint16_t menu_held=chord?0:runtime_held_buttons(menu_keys,&gamepad),pressed;
+            uint16_t menu_held=runtime_held_buttons(menu_keys,NULL),pressed;
             if(capture_path) {
                 /* Scripted menu edges: the next mask of --debug-input (MZM
                  * key bits). */
@@ -4068,23 +4051,36 @@ int main(int argc, char **argv) {
             if(pressed&MZM_KEY_RIGHT)gba|=GBA_KEY_RIGHT;
             if(pressed&MZM_KEY_L)gba|=GBA_KEY_L;
             if(pressed&MZM_KEY_R)gba|=GBA_KEY_R;
-            switch(debug_menu_input(&debug,gba)) {
+            int menu_action=debug_menu_input(&debug,gba);
+            switch(menu_action) {
             case DEBUG_STEP: step_once=true; break;
             case DEBUG_SUIT:
                 suit_preset=(unsigned int)debug_suit;
-                runtime_apply_equipment(&equipment,suit_preset,toggled_items);
-                pose_animation.suit=runtime_suit_presets[suit_preset].registry;
+                runtime_apply_suit_preset(&equipment,suit_preset);
                 title_dirty=true;
                 break;
             case DEBUG_ITEMS:
                 for(int i=0;i<DEBUG_ITEMS_COUNT;i++) {
-                    if(debug_item_flags[i])toggled_items|=debug_items[i].item;
-                    else toggled_items&=~debug_items[i].item;
+                    if(debug_item_flags[i])equipment.items|=debug_items[i].item;
+                    else equipment.items&=~debug_items[i].item;
                 }
-                spin_items=((toggled_items&MZM_ITEM_SPACE_JUMP)?1u:0u)|
-                           ((toggled_items&MZM_ITEM_SCREW_ATTACK)?2u:0u);
-                runtime_apply_equipment(&equipment,suit_preset,toggled_items);
                 title_dirty=true;
+                break;
+            case DEBUG_BROWSER: case DEBUG_BROWSER_NEXT: case DEBUG_BROWSER_PREVIOUS:
+                /* The diagnostic animation browser (gameplay unchanged). */
+                if(library.count<=0)break;
+                if(animation_browser && menu_action!=DEBUG_BROWSER)
+                    browser_index=(browser_index+(menu_action==DEBUG_BROWSER_NEXT?
+                                                  1:library.count-1))%library.count;
+                animation_start=SDL_GetTicks();
+                if(animation_browser) {
+                    char title[256];
+                    snprintf(title,sizeof title,"Samus animation [%d/%d] %s",
+                             browser_index+1,library.count,library.entries[browser_index].name);
+                    SDL_SetWindowTitle(window,title);
+                } else {
+                    title_dirty=true;
+                }
                 break;
             case DEBUG_ENERGY: case DEBUG_MAX_ENERGY: case DEBUG_AMMO:
                 if(equipment.energy>equipment.max_energy)equipment.energy=equipment.max_energy;
@@ -4307,6 +4303,10 @@ int main(int argc, char **argv) {
                     sprites.banner.cursor.exists=false;
                     runtime_apply_save(&resume_save,&equipment,&sprites,&samus,&collision,
                                        resume_request==RUNTIME_RESUME_SAVE);
+                    /* A new game starts at the room's door 0. */
+                    if(resume_request==RUNTIME_RESUME_NEW_GAME &&
+                       !runtime_place_at_door(room,0,&samus,&equipment,&collision))
+                        fprintf(stderr,"No door 0 exit in %s\n",current_room);
                     /* gLastDoorUsed 0 in the landing room; gHideHud is set
                      * by the gunship and cleared by the next room. */
                     sprites.globals.landing=landing;
@@ -4435,33 +4435,6 @@ int main(int argc, char **argv) {
             MzmInput input={held,(uint16_t)((held&~previous_held)|latched),false,0,0};
             latched=0;
             previous_held=held;
-            if(restart_queued) {
-                if(samus.pose==MZM_POSE_DYING) {
-                    equipment.energy=equipment.max_energy;
-                    if(!runtime_spawn_samus(room,&samus)) {
-                        fprintf(stderr,"Cannot find a safe restart position.\n");
-                        running=false;
-                    }
-                    echo=(RuntimeEcho){0};echo_visible=false;
-                    damage_queued=false;
-                    mzm_weapons_init(&weapons);
-                    equipment.missiles=equipment.max_missiles;
-                    equipment.super_missiles=equipment.max_super_missiles;
-                    equipment.power_bombs=equipment.max_power_bombs;
-                    /* SamusDying stopped the music; there is no game over
-                     * flow, so the room's track simply starts again. */
-                    if(mzm_audio_ready() && room->has_music) {
-                        runtime_audio_lock();
-                        mzm_music_check_set_new_track((uint16_t)room->music);
-                        mzm_music_check_play_transition_track();
-                        if(!mzm_audio_player_playing(0))
-                            mzm_music_play((uint16_t)room->music,0);
-                        runtime_audio_unlock();
-                    }
-                    fprintf(stderr,"Diagnostic restart: Energy %d.\n",equipment.energy);
-                }
-                restart_queued=false;
-            }
             if(damage_queued) {
                 if(samus.pose!=MZM_POSE_DYING && samus.invincibility==0) {
                     bool alive=mzm_equipment_damage(&equipment,20);
@@ -4727,6 +4700,8 @@ int main(int argc, char **argv) {
                ((uint8_t)(sprites.frame8-1)&1)) {
                 MzmTouchProbes probes;
                 runtime_touch_probes(room,&samus,&probes);
+                /* sTankIncreaseAmount[gDifficulty] */
+                mzm_tank_select_difficulty(&runtime_block_tables.tanks,runtime_difficulty);
                 int message=mzm_tank_touch(&runtime_block_tables.tanks,&runtime_tank_collection,
                                            &probes,&equipment,
                                            runtime_hud.ready?runtime_hud_explored:NULL,room);
@@ -5050,6 +5025,9 @@ int main(int argc, char **argv) {
                 frame=samus.anim_frame<lib_entry->count?samus.anim_frame:lib_entry->count-1;
         }
         unsigned int render_tick=(unsigned int)(SDL_GetTicks()*60u/1000u);
+        /* The suit's graphics follow the equipment (items collected, a
+         * loaded file, the debug menu). */
+        pose_animation.suit=runtime_suit_registry(&equipment);
         if(palette_suit!=pose_animation.suit) {
             /* A suit change replaces every palette row. */
             runtime_library_flush_variants(&library);

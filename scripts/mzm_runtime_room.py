@@ -368,6 +368,11 @@ def encode_room(area: str, number: int, width: int, height: int,
                            f"{target['yEnd']}\t{target['xExit']}\t{target['yExit']}")
         lines.append(f"D\t{index}\t{door['kind']}\t{door['xStart']}\t{door['xEnd']}\t"
                      f"{door['yStart']}\t{door['yEnd']}\t{destination}")
+    # Each door's own xExit and yExit (RoomLoad places Samus at the door
+    # gLastDoorUsed names: a new game's start at door 0).
+    for index, door in enumerate(doors or []):
+        if door["sourceRoom"] == number:
+            lines.append(f"X\t{index}\t{door['xExit']}\t{door['yExit']}")
     # DOOR_TYPE_DISPLAYS_ROOM_LOCATION: arriving through the door may show
     # the location's banner (gDisplayLocationText).
     for index, door in enumerate(doors or []):

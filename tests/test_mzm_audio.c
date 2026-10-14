@@ -164,17 +164,20 @@ static bool write_files(const char *bank_path, const char *tables_path) {
 }
 
 /* Render `frames` GBA frames at 48 kHz; the peak amplitude and the number
- * of sign changes of the left channel. */
+ * of sign changes of the left channel (and its silent samples). */
+static int silent_samples;
 static void render(int frames, int *peak, int *crossings) {
     int16_t buffer[2048];
     int previous = 0;
     *peak = 0;
     *crossings = 0;
+    silent_samples = 0;
     for (int frame = 0; frame < frames; ++frame) {
         mzm_audio_update();
         int count = mzm_audio_render(buffer, 1024, 48000);
         for (int i = 0; i < count; ++i) {
             int v = buffer[i * 2];
+            if (v == 0) silent_samples++;
             if (abs(v) > *peak) *peak = abs(v);
             int sign = v > 0 ? 1 : v < 0 ? -1 : 0;
             if (sign && previous && sign != previous) (*crossings)++;
@@ -235,6 +238,9 @@ static void test_engine(void) {
     render(3, &peak, &crossings);
     render(18, &peak, &crossings);
     CHECK(peak > 3000);
+    /* The DAC holds the last FIFO sample across frames: no silent samples
+     * at each frame's start (they buzzed at 60 Hz). */
+    CHECK(silent_samples == 0);
     /* 18 frames of 4.48 ms... a 13379 / 64 Hz square: ~62.9 periods. */
     double seconds = 18 * 280896.0 / 16777216.0;
     int expected = (int)(seconds * 13379.0 / 64.0 * 2.0);

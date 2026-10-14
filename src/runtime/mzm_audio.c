@@ -167,6 +167,10 @@ static GbaPsg g_psg;
 static int g_fifo_sample;
 static int g_fifo_block = -1;
 static double g_output_phase;
+/* The FIFO samples the DACs hold between output samples, kept across
+ * frames, and the PSG cycles not yet stepped. */
+static int8_t g_fifo_a, g_fifo_b;
+static double g_psg_phase;
 
 enum { REG_SOUNDBIAS = 0x04000088 };
 
@@ -1643,6 +1647,7 @@ static void SetupSoundTransfer(void) {
     gMusicInfo.unk_11 = (uint8_t)(blocks * 2);
     g_fifo_sample = 0;
     g_fifo_block = -1;
+    g_fifo_a = g_fifo_b = 0;
 }
 
 /* InitializeAudio */
@@ -1739,7 +1744,7 @@ int mzm_audio_render(int16_t *out, int max_frames, int rate) {
     if (frames > max_frames) frames = max_frames;
     int written = 0;
     int consumed = 0;
-    int8_t a = 0, b = 0;
+    int8_t a = g_fifo_a, b = g_fifo_b;
     for (int i = 0; i < frames; ++i) {
         /* The FIFO sample under this output sample (zero-order hold). */
         int target = (int)((double)(i + 1) * samples / frames);
@@ -1756,7 +1761,10 @@ int mzm_audio_render(int16_t *out, int max_frames, int rate) {
             g_fifo_sample++;
             consumed++;
         }
-        gba_psg_step(&g_psg, (int)(4194304.0 / rate));
+        g_psg_phase += 4194304.0 / rate;
+        int cycles = (int)g_psg_phase;
+        g_psg_phase -= cycles;
+        gba_psg_step(&g_psg, cycles);
         int left, right;
         gba_psg_mix(&g_psg, a, b, &left, &right);
         int l = left * 12, r = right * 12;
@@ -1764,6 +1772,8 @@ int mzm_audio_render(int16_t *out, int max_frames, int rate) {
         out[written * 2 + 1] = (int16_t)(r > 32767 ? 32767 : r < -32768 ? -32768 : r);
         written++;
     }
+    g_fifo_a = a;
+    g_fifo_b = b;
     return written;
 }
 

@@ -2988,6 +2988,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0318 - Zero Mission audio buzz
+
+- Fix: mzm_audio_render reset the FIFO sample the DACs hold to zero at
+  the start of every GBA frame, so the first three or four output samples
+  of each frame were silent: 60 clicks a second, heard as a buzz. The held
+  samples now persist across frames, and the PSG steps keep their
+  fractional cycles (exact at the runtime's 65536 Hz, 0.4% flat at
+  48 kHz before).
+- Found by rendering the extracted Brinstar and title music offline: the
+  output's second difference folded on the 59.73 Hz frame period peaked at
+  ten times its mean at the frame boundary, while the mixer's FIFO stream
+  did not. A ROM-free test checks that a playing DirectSound note has no
+  silent samples; it fails on the old code.
+
 ## Patch 0317 - Zero Mission Zebetites and Tourian cannons
 
 - Zebetite, Cannon, CannonBullet (`src/runtime/mzm_tourian.c`): the

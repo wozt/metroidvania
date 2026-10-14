@@ -159,3 +159,11 @@ tr:last-child td { border-bottom: 0; }
   .feature dl { grid-template-columns: 1fr; }
   .feature dt { margin-top: 4px; }
 }
+
+/* Evidence badges (unit tests, in game, emulator, played through). */
+.evidence { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.evidence .badge { opacity: 0.55; }
+.evidence .badge.ok { opacity: 1; }
+@media (max-width: 600px) {
+  .evidence .badge { font-size: 0.7rem; padding: 0 6px; }
+}

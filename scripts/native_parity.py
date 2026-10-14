@@ -38,8 +38,13 @@ ANNOTATION_COLUMNS = (
     "divergences",
     "notes",
     "next_action",
+    "in_game_check",
+    "emulator_compared",
+    "played_through",
 )
-LIST_COLUMNS = ("native_routines", "local_sources", "tests", "dependencies")
+LIST_COLUMNS = ("native_routines", "local_sources", "tests", "dependencies",
+                "in_game_check")
+YES_NO_COLUMNS = ("emulator_compared", "played_through")
 
 CATEGORIES = (
     ("startup", "Startup and initialization"),
@@ -78,10 +83,13 @@ CATEGORIES = (
 STATUS_MARKS = {
     "missing": "[ ]",
     "partial": "[~]",
+    "functional": "[+]",
     "validated": "[x]",
     "research": "[?]",
     "blocked": "[!]",
 }
+# functional: ported, with unit tests and at least one recorded in-game check.
+# validated: behaviorally compared against an emulator; both require proof.
 
 
 def load_annotations(path: Path = ANNOTATIONS) -> dict:
@@ -120,7 +128,14 @@ def load_annotations(path: Path = ANNOTATIONS) -> dict:
             "divergences": row["divergences"],
             "notes": row["notes"],
             "next_action": row["next_action"],
+            "in_game_check": [item for item in row["in_game_check"].split("|") if item],
+            "emulator_compared": row["emulator_compared"],
+            "played_through": row["played_through"],
         }
+        for column in YES_NO_COLUMNS:
+            if row[column] not in ("", "yes"):
+                raise ValueError(
+                    f"{path}:{number}: {column} must be empty or 'yes'")
         if row["game"] not in ("mzm", "aos"):
             raise ValueError(f"{path}:{number}: unknown game: {row['game']!r}")
         if not feature["id"].startswith(f"{row['game']}."):
@@ -156,6 +171,9 @@ def format_annotations(annotations: dict) -> str:
                 "divergences": feature.get("divergences", ""),
                 "notes": feature.get("notes", ""),
                 "next_action": feature.get("next_action", ""),
+                "in_game_check": "|".join(feature.get("in_game_check", [])),
+                "emulator_compared": feature.get("emulator_compared", ""),
+                "played_through": feature.get("played_through", ""),
             }
             rows.append("\t".join(row[column] for column in ANNOTATION_COLUMNS))
     lines.extend(sorted(rows, key=lambda row: row.split("\t")[1]))
@@ -215,6 +233,16 @@ def validate(inventory: dict, annotations: dict, root: Path = ROOT) -> list[str]
                         raise ValueError(f"{feature_id}: missing {field} path: {relative}")
             if feature.get("status") == "validated" and not feature.get("tests"):
                 raise ValueError(f"{feature_id}: validated status requires tests")
+            if feature.get("status") in ("functional", "validated"):
+                if not feature.get("tests"):
+                    raise ValueError(f"{feature_id}: {feature['status']} requires tests")
+                if not feature.get("in_game_check"):
+                    raise ValueError(
+                        f"{feature_id}: {feature['status']} requires an in-game check")
+            if feature.get("status") == "validated" and \
+                    feature.get("emulator_compared") != "yes":
+                raise ValueError(
+                    f"{feature_id}: validated requires an emulator comparison")
     return diagnostics
 
 
@@ -256,7 +284,8 @@ def render(inventory: dict, annotations: dict) -> str:
         "",
         "- `[ ]` not implemented",
         "- `[~]` partially implemented",
-        "- `[x]` implemented and behaviorally validated",
+        "- `[+]` ported, unit-tested and checked in game",
+        "- `[x]` behaviorally compared against an emulator",
         "- `[?]` research or identification required",
         "- `[!]` blocked or known problem",
         "",
@@ -346,6 +375,16 @@ def render(inventory: dict, annotations: dict) -> str:
                     lines.append(f"Known divergences: {feature['divergences']}  ")
                 if feature.get("next_action"):
                     lines.append(f"Next action: {feature['next_action']}")
+                evidence = []
+                if feature.get("in_game_check"):
+                    evidence.append("in game: "
+                                    + ", ".join(f"`{item}`" for item in feature["in_game_check"]))
+                if feature.get("emulator_compared") == "yes":
+                    evidence.append("compared with an emulator")
+                if feature.get("played_through") == "yes":
+                    evidence.append("played through")
+                if evidence:
+                    lines.append(f"Evidence: {'; '.join(evidence)}.")
                 lines.append("")
 
         missing = game_data["coverage"]["not_yet_indexed"]

@@ -69,6 +69,19 @@
       <div class="bar"><span class="${cls}" style="width:${value || 0}%"></span></div></div>`;
   }
 
+  function evidenceBadges(evidence, verification) {
+    if (!evidence) return "";
+    const unit = verification ? verification.verdict === "passing" : evidence.unit_tests.length > 0;
+    const badges = [
+      [unit, "Unit tests", evidence.unit_tests.join(", ") || "no unit test"],
+      [evidence.in_game_check.length > 0, "In game", evidence.in_game_check.join(", ") || "no recorded in-game check"],
+      [evidence.emulator_compared, "Emulator", evidence.emulator_compared ? "compared with an emulator" : "not compared with an emulator"],
+      [evidence.played_through, "Played through", evidence.played_through ? "played to its end" : "not played to its end"],
+    ];
+    return `<span class="evidence">${badges.map(([ok, label, hint]) =>
+      `<span class="badge ${ok ? "ok" : ""}" title="${esc(hint)}">${ok ? "✓" : "✗"} ${esc(label)}</span>`).join("")}</span>`;
+  }
+
   function featureCard(feature) {
     const v = feature.verification;
     const rows = [];
@@ -87,6 +100,7 @@
     return `<article class="feature">
       <div class="row"><span class="name">${esc(feature.title)}</span><code class="id">${esc(feature.id)}</code></div>
       <div class="row">${statusBadge(feature.status)} ${verdictBadge(v)}</div>
+      <div class="row">${evidenceBadges(feature.evidence, v)}</div>
       ${v.warnings.map((w) => `<div class="warning">⚠ ${esc(w)}</div>`).join("")}
       <dl>${rows.map(([k, val]) => `<dt>${esc(k)}</dt><dd>${val}</dd>`).join("")}</dl>
     </article>`;
@@ -216,12 +230,12 @@
     const q = state.query;
     const visible = rows.filter((row) =>
       (!state.statuses.size || state.statuses.has(row.status)) &&
-      (!q || (row.name + " " + (row.note || "")).toLowerCase().includes(q)));
+      (!q || (row.name + " " + (row.note || "") + " " + (row.feature || "")).toLowerCase().includes(q)));
     const done = rows.filter((row) => row.status !== "not_started").length;
     return `<h3>${esc(kind)} <span class="muted">${done}/${rows.length} done</span></h3>
-      <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th><th>Status</th><th>Note</th></tr></thead><tbody>
-      ${visible.map((row) => `<tr><td><code>${esc(typeof row.id === "number" ? "0x" + row.id.toString(16).toUpperCase().padStart(2, "0") : row.id)}</code></td><td>${esc(row.name)}</td><td>${statusBadge(row.status)}</td><td class="muted">${esc(row.note || "")}</td></tr>`).join("") ||
-      '<tr><td colspan="4" class="muted">No match.</td></tr>'}
+      <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th><th>Status</th><th>Evidence</th><th>Note</th></tr></thead><tbody>
+      ${visible.map((row) => `<tr><td><code>${esc(typeof row.id === "number" ? "0x" + row.id.toString(16).toUpperCase().padStart(2, "0") : row.id)}</code></td><td>${esc(row.name)}${row.feature ? `<br><code class="muted">${esc(row.feature)}</code>` : ""}</td><td>${statusBadge(row.status)}</td><td>${evidenceBadges(row.evidence, null)}</td><td class="muted">${esc(row.note || "")}</td></tr>`).join("") ||
+      '<tr><td colspan="5" class="muted">No match.</td></tr>'}
       </tbody></table></div>`;
   }
 
@@ -236,11 +250,22 @@
     return `<p class="notice">${esc(b.method)}</p>${games.join("")}`;
   }
 
+  function inGameView() {
+    const checked = data.features.filter((f) => f.evidence && f.evidence.in_game_check.length && matches(f));
+    const played = data.features.filter((f) => f.evidence && f.evidence.played_through);
+    const compared = data.features.filter((f) => f.evidence && f.evidence.emulator_compared);
+    return `<p class="notice">What was observed running in a runtime, as recorded in the
+      registries: ${checked.length} features checked in game, ${played.length} played through,
+      ${compared.length} compared with an emulator.</p>
+      ${featureGroups(checked, true)}`;
+  }
+
   function render() {
     statusFilter.hidden = ["tests", "timeline"].includes(state.view);
     if (state.view === "overview") view.innerHTML = overview();
     else if (AREA_VIEWS.includes(state.view)) view.innerHTML = areaView(state.view);
     else if (state.view === "bestiary") view.innerHTML = bestiaryView();
+    else if (state.view === "ingame") view.innerHTML = inGameView();
     else if (state.view === "tests") view.innerHTML = testsView();
     else if (state.view === "timeline") view.innerHTML = timelineView();
     else view.innerHTML = attentionView();

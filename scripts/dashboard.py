@@ -80,6 +80,7 @@ FIDELITIES = ("n/a", "unknown", "approximate", "partial", "faithful")
 ANNOTATION_STATUS = {
     "missing": "not_started",
     "partial": "partial",
+    "functional": "functional",
     "validated": "validated",
     "research": "unknown",
     "blocked": "blocked",
@@ -139,6 +140,9 @@ def load_registry(path: Path = REGISTRY) -> list[dict]:
             "local_sources": _split(row["local_sources"]), "tests": _split(row["tests"]),
             "dependencies": _split(row["dependencies"]), "native_routines": [],
             "limitations": row["limitations"], "next_action": "",
+            "evidence": {"unit_tests": _split(row["tests"]), "in_game_check": [],
+                         "emulator_compared": False, "played_through": False},
+            "last_validated": row["last_validated"] or None,
             "last_validated": row["last_validated"] or None,
             "source": "data/dashboard/features.tsv",
         })
@@ -164,6 +168,12 @@ def load_native_features() -> list[dict]:
                 "limitations": " ".join(filter(None, (item.get("divergences", ""),
                                                       item.get("notes", "")))),
                 "next_action": item.get("next_action", ""),
+                "evidence": {
+                    "unit_tests": list(item.get("tests", [])),
+                    "in_game_check": list(item.get("in_game_check", [])),
+                    "emulator_compared": item.get("emulator_compared") == "yes",
+                    "played_through": item.get("played_through") == "yes",
+                },
                 "last_validated": None,
                 "source": "data/native_parity/annotations.tsv",
             })
@@ -276,8 +286,9 @@ def _verify(feature: dict, ctest: dict[str, dict], python: dict[str, dict],
     else:
         verdict = "tests_not_run"
     warnings = []
-    if feature["status"] == "validated" and verdict != "passing":
-        warnings.append("declared validated, but no passing test was observed in this run")
+    if feature["status"] in ("functional", "validated") and verdict != "passing":
+        warnings.append(f"declared {feature['status']}, but no passing test was observed "
+                        "in this run")
     if feature["status"] in FUNCTIONAL_OR_BETTER and not feature["local_sources"]:
         warnings.append("declared working without any source file")
     if missing_sources:
@@ -358,11 +369,24 @@ def rebuild_tasks() -> list[dict]:
 
 ARIA_ENEMY_COUNT = 0x71
 ARIA_ENEMY_RE = re.compile(r"AOS_ENEMY_([A-Z0-9_]+)\s*=\s*0x([0-9A-Fa-f]+)")
-MZM_FAMILY_CASE_RE = re.compile(r"case MZM_PSPRITE_([A-Z0-9_]+):")
+MZM_FAMILY_GROUP_RE = re.compile(
+    r"((?:\s*case MZM_PSPRITE_[A-Z0-9_]+:)+)\s*return (MZM_FAMILY_[A-Z0-9_]+);")
 # The five enemy drops of is_drop() in src/runtime/mzm_sprites.c
 # (MZM_PSPRITE_LARGE_ENERGY_DROP..MZM_PSPRITE_POWER_BOMB_DROP).
 MZM_DROP_SPRITES = ("LARGE_ENERGY_DROP", "SMALL_ENERGY_DROP", "MISSILE_DROP",
                     "SUPER_MISSILE_DROP", "POWER_BOMB_DROP")
+# Sprite families whose parity annotation is not mzm.enemies.<family>.
+MZM_FAMILY_ANNOTATIONS = {
+    "MZM_FAMILY_DROP": "mzm.items.enemy_drops",
+    "MZM_FAMILY_TOURIAN": "mzm.enemies.tourian_defences",
+    "MZM_FAMILY_GEEGA": "mzm.enemies.pipe_bugs",
+    "MZM_FAMILY_ZEB": "mzm.enemies.pipe_bugs",
+    "MZM_FAMILY_ZEBBO": "mzm.enemies.pipe_bugs",
+    "MZM_FAMILY_GAMET": "mzm.enemies.pipe_bugs",
+    "MZM_FAMILY_GADGET": "mzm.environment.room_gadgets",
+    "MZM_FAMILY_CHOZO_STATUE": "mzm.items.chozo_statues",
+    "MZM_FAMILY_ITEM_SPRITE": "mzm.items.item_sprites",
+}
 # Pickup families documented by the editor (patch notes) and the native entity
 # kinds 4/5/6; none has runtime behavior yet.
 ARIA_ITEM_FAMILIES = (
@@ -378,12 +402,20 @@ ARIA_ITEM_FAMILIES = (
 )
 
 
-def _mzm_supported_sprites(engine: str) -> set[str]:
-    """Primary sprites with a ported AI: the case labels of mzm_sprite_family's
-    primary switch (drops take the MZM_FAMILY_DROP default)."""
-    body = engine.split("int mzm_sprite_family(", 1)[1]
-    primary = body.split("default:", 1)[0]
-    return set(MZM_FAMILY_CASE_RE.findall(primary))
+def _mzm_sprite_annotations(engine: str, annotation_ids: set[str]) -> dict[str, str]:
+    """Map each MZM_PSPRITE of mzm_sprite_family's primary switch to the parity
+    annotation of its family (drops take the MZM_FAMILY_DROP default)."""
+    body = engine.split("int mzm_sprite_family(", 1)[1].split("default:", 1)[0]
+    mapping = {}
+    for group in MZM_FAMILY_GROUP_RE.finditer(body):
+        family = group.group(2)
+        annotation = MZM_FAMILY_ANNOTATIONS.get(
+            family, f"mzm.enemies.{family.removeprefix('MZM_FAMILY_').lower()}")
+        if annotation not in annotation_ids:
+            raise ValueError(f"{family}: unknown parity annotation {annotation}")
+        for sprite in re.findall(r"MZM_PSPRITE_([A-Z0-9_]+)", group.group(1)):
+            mapping[sprite] = annotation
+    return mapping
 
 
 # The item each Chozo statue holds (ChozoStatueRegisterItem).
@@ -397,84 +429,99 @@ def _prettify(identifier: str) -> str:
     return " ".join(part.capitalize() for part in identifier.split("_"))
 
 
+def _row_evidence(feature: dict | None) -> dict:
+    if feature is None:
+        return {"unit_tests": [], "in_game_check": [], "emulator_compared": False,
+                "played_through": False}
+    return {"unit_tests": list(feature.get("tests", [])),
+            "in_game_check": list(feature.get("in_game_check", [])),
+            "emulator_compared": feature.get("emulator_compared") == "yes",
+            "played_through": feature.get("played_through") == "yes"}
+
+
 def bestiary() -> dict:
     """Monsters and items of both games, done or not, from tracked sources.
 
-    Zero Mission rows reuse the object catalog's parsing of the pinned enum
-    and stats; a sprite counts as done when the runtime engine has an AI
-    family for it. Aria enemy names need the ROM constructor table, so only
-    the ported enemies (named in src/runtime/aos_enemy.h) get a name. No ROM
-    or private extracted data is read here.
+    A row's status is its parity annotation's status (partial: a ported AI;
+    functional: also unit-tested and checked in game; validated: compared
+    with an emulator). Sprites without a ported AI are not started. Zero
+    Mission rows reuse the object catalog's parsing of the pinned enum and
+    stats and the mzm_sprite_family switch; Aria enemy names need the ROM
+    constructor table, so only the ported enemies (named in
+    src/runtime/aos_enemy.h) get a name. No ROM or private extracted data is
+    read here.
     """
     from scripts import object_catalog
+    annotations = native_parity._load(native_parity.ANNOTATIONS)
+    features = {feature["id"]: feature
+                for game in annotations["games"].values()
+                for feature in game["features"]}
     engine = (ROOT / "src/runtime/mzm_sprites.c").read_text(encoding="utf-8")
-    supported = _mzm_supported_sprites(engine)
+    sprite_annotations = _mzm_sprite_annotations(engine, set(features))
+
+    def row(native_id, name, annotation, fallback_note=""):
+        feature = features.get(annotation) if annotation else None
+        result = {
+            "id": native_id, "name": name,
+            "status": ANNOTATION_STATUS[feature["status"]] if feature else "not_started",
+            "note": feature["title"] if feature else fallback_note,
+            "evidence": _row_evidence(feature),
+        }
+        if annotation:
+            result["feature"] = annotation
+        return result
+
     monsters, items = [], []
     for record in object_catalog.build_mzm():
         symbol = record["native_type"].removeprefix("PSPRITE_")
         is_drop = symbol in MZM_DROP_SPRITES
         if record["category"] == "Enemy / actor":
-            done = symbol in supported
-            monsters.append({
-                "id": record["native_id"], "name": record["name"],
-                "status": "partial" if done else "not_started",
-                "note": "AI ported to the sprite engine" if done else "",
-            })
+            monsters.append(row(record["native_id"], record["name"],
+                                sprite_annotations.get(symbol)))
         elif record["category"] == "Item / pickup" or is_drop:
-            # The item sprites (Morph Ball, Power Grip, Charge Beam) count as
-            # done when the engine has their AI, as the monsters do.
-            done = is_drop or symbol in supported
-            items.append({
-                "id": record["native_id"], "name": record["name"],
-                "status": "partial" if done else "not_started",
-                "note": ("Enemy drop AI ported (spawn, collection, blink, despawn)"
-                         if is_drop else
-                         "Item sprite, acquisition, banner and flicker ported" if done else ""),
-            })
+            annotation = (MZM_FAMILY_ANNOTATIONS["MZM_FAMILY_DROP"] if is_drop
+                          else sprite_annotations.get(symbol))
+            items.append(row(record["native_id"], record["name"], annotation))
         elif symbol.startswith("CHOZO_STATUE_") and not symbol.endswith("_HINT"):
             # The ability items, held by their Chozo statues.
-            done = symbol in supported
-            items.append({
-                "id": record["native_id"],
-                "name": STATUE_ITEMS.get(symbol.removeprefix("CHOZO_STATUE_"),
-                                         _prettify(symbol.removeprefix("CHOZO_STATUE_")))
-                        + " (Chozo statue)",
-                "status": "partial" if done else "not_started",
-                "note": ("Statue, ball, item, banner, refill and hint grab ported; "
-                         "the hint map screen is not" if done else ""),
-            })
+            key = symbol.removeprefix("CHOZO_STATUE_")
+            annotation = sprite_annotations.get(symbol)
+            entry = row(record["native_id"],
+                        STATUE_ITEMS.get(key, _prettify(key)) + " (Chozo statue)",
+                        annotation)
+            if annotation:
+                entry["note"] += "; the hint map screen is not ported"
+            items.append(entry)
     aos_header = (ROOT / "src/runtime/aos_enemy.h").read_text(encoding="utf-8")
-    ported = {int(address, 16): _prettify(name)
-              for name, address in ARIA_ENEMY_RE.findall(aos_header)}
-    aos_monsters = [{
-        "id": enemy_id,
-        "name": ported.get(enemy_id, f"Enemy 0x{enemy_id:02X}"),
-        "status": "partial" if enemy_id in ported else "not_started",
-        "note": ("AI ported to the enemy runtime" if enemy_id in ported else
-                 "not identified without the ROM constructor table"),
-    } for enemy_id in range(ARIA_ENEMY_COUNT)]
-    aos_items = [{
-        "id": key, "name": title, "status": "not_started",
-        "note": "Documented pickup family; no runtime pickup behavior is ported",
-    } for key, title in ARIA_ITEM_FAMILIES]
+    aos_monsters = []
+    for name, address in ARIA_ENEMY_RE.findall(aos_header):
+        annotation = f"aos.enemies.{name.lower()}"
+        if annotation not in features:
+            raise ValueError(f"AOS_ENEMY_{name}: unknown parity annotation {annotation}")
+        aos_monsters.append(row(int(address, 16), _prettify(name), annotation))
+    ported_ids = {entry["id"] for entry in aos_monsters}
+    aos_monsters.extend(row(enemy_id, f"Enemy 0x{enemy_id:02X}", None,
+                            "not identified without the ROM constructor table")
+                        for enemy_id in range(ARIA_ENEMY_COUNT)
+                        if enemy_id not in ported_ids)
+    aos_monsters.sort(key=lambda entry: entry["id"])
+    aos_items = [row(key, title, None,
+                     "Documented pickup family; no runtime pickup behavior is ported")
+                 for key, title in ARIA_ITEM_FAMILIES]
     # Tanks are clipdata (BgClipCheckTouchingTransitionOrTank), not sprites.
-    tanks_ported = (ROOT / "src/runtime/mzm_items.c").is_file()
     for key, title in (("tank_energy", "Energy Tank"), ("tank_missile", "Missile Tank"),
                        ("tank_super_missile", "Super Missile Tank"),
                        ("tank_power_bomb", "Power Bomb Tank")):
-        items.append({"id": key, "name": title,
-                      "status": "partial" if tanks_ported else "not_started",
-                      "note": ("Collection, capacities, banner and removal ported; no "
-                               "minimap or HUD" if tanks_ported else "")})
+        items.append(row(key, title, "mzm.items.tanks"))
     items_note = ("Collectible Zero Mission items are the drop sprites, the item sprites "
                   "of the native enum, the ability items of the Chozo statues and the four "
                   "tank kinds (Clipdata, not sprites).")
     return {
-        "method": ("A monster counts as done when the corresponding runtime has a ported "
-                   "AI for it (mzm_sprite_family switch, AOS_ENEMY enum); 'partial' never "
-                   "means complete: sounds, effects and unported states remain. Names come "
-                   "from the pinned sources only; unidentified Aria enemies keep their "
-                   "native id."),
+        "method": ("A row's status is its parity annotation's: 'partial' means a ported "
+                   "AI, 'functional' adds unit tests and a recorded in-game check, "
+                   "'validated' requires an emulator comparison; sprites without a ported "
+                   "AI are not started. Names come from the pinned sources only; "
+                   "unidentified Aria enemies keep their native id."),
         "games": {
             "mzm": {"title": "Metroid: Zero Mission", "monsters": monsters,
                     "items": items, "items_note": items_note},
@@ -562,7 +609,7 @@ def build(run_tests: bool = False, build_dir: Path = ROOT / "build",
 
 DECLARED_FIELDS = ("id", "area", "category", "title", "status", "fidelity", "local_sources",
                    "tests", "dependencies", "native_routines", "limitations", "next_action",
-                   "last_validated", "source")
+                   "last_validated", "source", "evidence")
 
 
 def declared_view(data: dict) -> dict:

@@ -2988,6 +2988,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0321 - Zero Mission Metroids
+
+- Metroid and MetroidShell (`src/runtime/mzm_metroid.c`): the room lock
+  and event, the growth on screen (sMetroidSpawning tables, Q8.8 scaling,
+  palette rows 3 to 1), the chase with its inertia and bounces, the grab
+  (SSC_METROID: the drain with its suit-dependent invincibility, the
+  sucking sounds, the grab palette cycle), the bomb release, the frozen
+  id that missiles hurt, and the death of body and shell that clears the
+  room.
+- gEquipment.grabbedByMetroid slows Samus outside liquids; the sprite
+  frame carries her horizontal moving direction; the renderer scales
+  ROTATION_SCALING_SINGLE sprites by their scaling (around the frame's
+  centre) and bakes the grab palette (/gN) and growth rows (/rowN).
+- Checked by capture in tourian_014 and by a test of the lock, growth,
+  chase, grab, drain, bomb release, freeze, thaw, death and event.
+
 ## Patch 0320 - Zero Mission Mother Brain Rinkas
 
 - RinkaMotherBrain (the six Tourian Rinka ids) in the Rinka engine:

@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 66 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 67 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -346,6 +346,15 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+
+[~] **`mzm.enemies.metroid` — Metroids.** Metroids lock their room (rooms 14, 15, 19, 1, 2, 16 of Tourian, one event each) and are removed once its event is set; once on screen they wobble along sMetroidSpawningY/XMovement and, after a random delay, grow from a quarter of their size (palette rows 3, 2, 1, baked as /rowN), then chase Samus's head with a speed that builds up to its cap and a momentum that runs down every other frame, reversing on walls and pushing overlapping Metroids (MetroidCheckBouncingOnMetroid). Samus under a Metroid's middle is grabbed (SSC_METROID): it drains SpriteUtilTakeDamageFromSprite's damage with an invincibility of 1, 4 or 8 frames by suits, rides her head, cycles sMetroidPal_SamusGrabbed in OBJ row 12 (baked as /gN), plays the sucking sounds by suits and slows her (gEquipment.grabbedByMetroid, outside liquids as in the unfixed game) until an exploding bomb ejects it. Frozen, it becomes PSPRITE_FROZEN_METROID (missiles hurt it) with a bigger hitbox and thaws twice as fast except on easy; dead, it and its shell explode (PE_FREEZING_SPRITE_WITH_CHARGED_ICE) and the last one sets the room's event and unlocks the doors. Checked by capture in tourian_014 (the growth, the chase and the grab).
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilMetroidUnfreezeAnim`, `mzm:c:src/sprite_util.c:SpriteUtilUnfreezeAnimEasy`, `mzm:c:src/sprites_ai/metroid.c:Metroid`, `mzm:c:src/sprites_ai/metroid.c:MetroidBombDetection`, `mzm:c:src/sprites_ai/metroid.c:MetroidCheckAirCollision`, `mzm:c:src/sprites_ai/metroid.c:MetroidCheckBouncingOnMetroid`, `mzm:c:src/sprites_ai/metroid.c:MetroidCheckSamusGrabbed`, `mzm:c:src/sprites_ai/metroid.c:MetroidCheckSpawn`, `mzm:c:src/sprites_ai/metroid.c:MetroidDeath`, `mzm:c:src/sprites_ai/metroid.c:MetroidInit`, `mzm:c:src/sprites_ai/metroid.c:MetroidMove`, `mzm:c:src/sprites_ai/metroid.c:MetroidMovement`, `mzm:c:src/sprites_ai/metroid.c:MetroidMovingInit`, `mzm:c:src/sprites_ai/metroid.c:MetroidPlayMovingSound`, `mzm:c:src/sprites_ai/metroid.c:MetroidSamusGrabbed`, `mzm:c:src/sprites_ai/metroid.c:MetroidSamusGrabbedInit`, `mzm:c:src/sprites_ai/metroid.c:MetroidShell`, `mzm:c:src/sprites_ai/metroid.c:MetroidSpawning`.  
+Local implementation: [`src/runtime/mzm_metroid.c`](../src/runtime/mzm_metroid.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`, `mzm.weapons.bombs`.  
+Known divergences: Not compared with an emulator. The growth scales the composed frame around its centre, where the GBA scales each OAM part around its own; MetroidDoorLock (an unused sprite) is not ported; the room's music and the Tourian entrance cutscene are not part of this.  
+Next action: Check the grab and the bomb release in game, then compare with an emulator.
 
 [~] **`mzm.enemies.multiviola` — Multiviolas.** Bouncing diagonally off every surface at 3 subpixels a frame on both axes, starting toward Samus, its 56-frame animation starting at twice its slot, and the big explosion death into drops.
 

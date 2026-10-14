@@ -1377,8 +1377,13 @@ static Physics update_physics(Ctx *c) {
     s->keep_vertical = false;
     uint8_t hazard = affecting(c, y, s->x) & 0xFF;
     bool slowed = false;
-    /* HAZARD_TYPE_WATER .. HAZARD_TYPE_STRONG_ACID */
-    if (hazard >= 1 && hazard <= 4 && !has(c, MZM_ITEM_GRAVITY_SUIT)) slowed = true;
+    /* HAZARD_TYPE_WATER .. HAZARD_TYPE_STRONG_ACID; elsewhere a Metroid
+     * holding Samus slows her (the liquids break before that check). */
+    if (hazard >= 1 && hazard <= 4) {
+        if (!has(c, MZM_ITEM_GRAVITY_SUIT)) slowed = true;
+    } else if (c->eq->grabbed_by_metroid) {
+        slowed = true;
+    }
     s->slowed = slowed;
     Physics p;
     if (slowed) {

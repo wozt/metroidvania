@@ -44,6 +44,7 @@ enum {
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
     SSC_PARASITE = 23,
+    SSC_METROID = 24,
     SSC_ZIPLINE = 26,
     SSC_SOLID_CHECK_COLLIDING = 27,
     SSC_CHECK_COLLIDING = 30,
@@ -167,6 +168,8 @@ void ai_polyp(Ctx *c);
 void ai_tourian(Ctx *c);
 /* Worker Robots (mzm_worker_robot.c). */
 void ai_worker_robot(Ctx *c);
+/* Metroids and their shells (mzm_metroid.c). */
+void ai_metroid(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

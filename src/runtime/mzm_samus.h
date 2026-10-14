@@ -237,6 +237,8 @@ typedef struct {
     /* Obtained but not activated (gEquipment.beamBombs / suitMisc without
      * their activation): the unknown items until the fully powered suit. */
     uint32_t unknown_items;
+    /* gEquipment.grabbedByMetroid: Samus is slowed. */
+    bool grabbed_by_metroid;
 } MzmEquipment;
 
 /* ClipdataProcessForSamus's result: the ClipdataType plus this flag when

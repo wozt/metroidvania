@@ -343,6 +343,12 @@ static const char *const worker_robot_sprites[MZM_WORKER_ROBOT_ANIMS] = {
     "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT",
     "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT", "WORKER_ROBOT",
 };
+const char *const mzm_metroid_anim_names[MZM_METROID_ANIMS] = {
+    "MetroidOam_Spawning", "MetroidOam_Moving", "MetroidOam_SamusGrabbed", "MetroidShellOam_Idle",
+};
+static const char *const metroid_sprites[MZM_METROID_ANIMS] = {
+    "METROID", "METROID", "METROID", "METROID",
+};
 const char *const mzm_tourian_anim_names[MZM_TOURIAN_ANIMS] = {
     "ZebetiteOam_Phase1",
     "ZebetiteOam_Phase2",
@@ -521,6 +527,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_TOURIAN] = {MZM_TOURIAN_ANIMS, mzm_tourian_anim_names, tourian_sprites},
     [MZM_FAMILY_WORKER_ROBOT] = {MZM_WORKER_ROBOT_ANIMS, mzm_worker_robot_anim_names,
                                  worker_robot_sprites},
+    [MZM_FAMILY_METROID] = {MZM_METROID_ANIMS, mzm_metroid_anim_names, metroid_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -4619,6 +4626,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) return MZM_FAMILY_SPACE_PIRATE;
         if (sprite_id == MZM_SSPRITE_ATOMIC_ELECTRICITY) return MZM_FAMILY_ATOMIC;
         if (sprite_id == MZM_SSPRITE_POLYP_PROJECTILE) return MZM_FAMILY_POLYP;
+        if (sprite_id == MZM_SSPRITE_METROID_SHELL) return MZM_FAMILY_METROID;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -4689,6 +4697,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_ATOMIC: return MZM_FAMILY_ATOMIC;
     case MZM_PSPRITE_POLYP: return MZM_FAMILY_POLYP;
     case MZM_PSPRITE_WORKER_ROBOT: return MZM_FAMILY_WORKER_ROBOT;
+    case MZM_PSPRITE_METROID: case MZM_PSPRITE_FROZEN_METROID: return MZM_FAMILY_METROID;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
     case MZM_PSPRITE_ZEBETITE_ONE_AND_THREE: case MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR:
         return MZM_FAMILY_TOURIAN;
@@ -5082,6 +5091,15 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             }
             s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
             break;
+        case SSC_METROID:
+            /* Samus below its middle: it grabs her; it drains her when she
+             * is not invincible. */
+            if (samus_y > (uint16_t)(s->y + HALF_BLOCK_SIZE)) s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+            if (!samus->invincible && samus->metroid_drain) {
+                samus->metroid_drain(samus->context, damage_of(s, tables));
+                samus->invincible = true;
+            }
+            break;
         case SSC_CHECK_COLLIDING:
         case SSC_SMALL_ENERGY_DROP:
         case SSC_LARGE_ENERGY_DROP:
@@ -5445,6 +5463,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (!sprite->secondary) {
         /* The Tourian defences' second ids share their first's graphics. */
         if (sprite->sprite_id == MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR) return MZM_PSPRITE_ZEBETITE_ONE_AND_THREE;
+        if (sprite->sprite_id == MZM_PSPRITE_FROZEN_METROID) return MZM_PSPRITE_METROID;
         if (sprite->sprite_id == MZM_PSPRITE_CANNON2 || sprite->sprite_id == MZM_PSPRITE_CANNON3)
             return MZM_PSPRITE_CANNON;
         /* sRinkaZebetiteAndCannonGfx, exported with the cannon's tables. */
@@ -5462,6 +5481,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (sprite->sprite_id == MZM_SSPRITE_ATOMIC_ELECTRICITY) return MZM_PSPRITE_ATOMIC;
     if (sprite->sprite_id == MZM_SSPRITE_POLYP_PROJECTILE) return MZM_PSPRITE_POLYP;
     if (sprite->sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_PSPRITE_CANNON;
+    if (sprite->sprite_id == MZM_SSPRITE_METROID_SHELL) return MZM_PSPRITE_METROID;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -5657,6 +5677,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_POLYP: ai_polyp(&c); break;
     case MZM_FAMILY_TOURIAN: ai_tourian(&c); break;
     case MZM_FAMILY_WORKER_ROBOT: ai_worker_robot(&c); break;
+    case MZM_FAMILY_METROID: ai_metroid(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

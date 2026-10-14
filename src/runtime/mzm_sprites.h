@@ -174,6 +174,8 @@ typedef struct {
     int16_t atomic_idle_x[81];      /* sAtomicIdleXMovement */
     int16_t polyp_projectile_y[44]; /* sPolypProjectileYVelocity (SHORT_MAX ends it) */
     int16_t worker_robot_sleeping_falling[10]; /* sWorkerRobotSleepingFallingSpeed (SHORT_MAX ends it) */
+    int16_t metroid_spawning_y[65]; /* sMetroidSpawningYMovement (SHORT_MAX restarts it) */
+    int16_t metroid_spawning_x[81]; /* sMetroidSpawningXMovement (SHORT_MAX restarts it) */
     /* sChozoStatueMultiSpriteData_Standing, _Sitting and _Seated. */
     MzmMultiSprite chozo_multi[MZM_CHOZO_MULTI_COUNT];
 } MzmSpriteTables;
@@ -465,6 +467,12 @@ enum {
     MZM_WORKER_ROBOT_TURNING_AROUND, MZM_WORKER_ROBOT_WAKING_UP, MZM_WORKER_ROBOT_ANIMS,
 };
 extern const char *const mzm_worker_robot_anim_names[MZM_WORKER_ROBOT_ANIMS];
+/* Metroid OAM tables (src/data/sprites/metroid.c). */
+enum {
+    MZM_METROID_SPAWNING, MZM_METROID_MOVING, MZM_METROID_SAMUS_GRABBED, MZM_METROID_SHELL_IDLE,
+    MZM_METROID_ANIMS,
+};
+extern const char *const mzm_metroid_anim_names[MZM_METROID_ANIMS];
 /* Tourian's Zebetites and cannons (src/data/sprites/zebetite_and_cannon.c),
  * the cannons' aims in CannonAim order. */
 enum {
@@ -575,7 +583,7 @@ enum {
     MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
     MZM_FAMILY_ITEM_SPRITE, MZM_FAMILY_SKULTERA, MZM_FAMILY_DRAGON, MZM_FAMILY_GADGET,
     MZM_FAMILY_PARASITE, MZM_FAMILY_ATOMIC, MZM_FAMILY_POLYP, MZM_FAMILY_TOURIAN,
-    MZM_FAMILY_WORKER_ROBOT,
+    MZM_FAMILY_WORKER_ROBOT, MZM_FAMILY_METROID,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -629,7 +637,7 @@ enum {
     MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C = 141, MZM_PSPRITE_GERON_VARIA1 = 142,
     MZM_PSPRITE_GERON_VARIA2 = 143, MZM_PSPRITE_GERON_VARIA3 = 144, MZM_PSPRITE_GERON_NORFAIR = 106,
     MZM_PSPRITE_PLASMA_BEAM_BLOCK = 170, MZM_PSPRITE_GRAVITY_SUIT_BLOCK = 171,
-    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA = 146, MZM_PSPRITE_ATOMIC = 115, MZM_PSPRITE_POLYP = 103, MZM_PSPRITE_WORKER_ROBOT = 93, MZM_PSPRITE_CANNON = 126, MZM_PSPRITE_CANNON2 = 136, MZM_PSPRITE_CANNON3 = 137, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE = 125, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR = 135, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA = 146, MZM_PSPRITE_ATOMIC = 115, MZM_PSPRITE_POLYP = 103, MZM_PSPRITE_METROID = 100, MZM_PSPRITE_FROZEN_METROID = 101, MZM_PSPRITE_WORKER_ROBOT = 93, MZM_PSPRITE_CANNON = 126, MZM_PSPRITE_CANNON2 = 136, MZM_PSPRITE_CANNON3 = 137, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE = 125, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR = 135, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -660,7 +668,7 @@ enum {
     MZM_SSPRITE_SAVE_PLATFORM_PART = 13, MZM_SSPRITE_GUNSHIP_PART = 50, MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART = 36,
     MZM_SSPRITE_ZIPLINE_GENERATOR_PART = 30, MZM_SSPRITE_CHOZO_PILLAR_PLATFORM = 53,
     MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW = 58, MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART = 46,
-    MZM_SSPRITE_ATOMIC_ELECTRICITY = 31, MZM_SSPRITE_POLYP_PROJECTILE = 27, MZM_SSPRITE_CANNON_BULLET = 39,
+    MZM_SSPRITE_ATOMIC_ELECTRICITY = 31, MZM_SSPRITE_POLYP_PROJECTILE = 27, MZM_SSPRITE_CANNON_BULLET = 39, MZM_SSPRITE_METROID_SHELL = 26,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 
@@ -734,6 +742,9 @@ enum {
     MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED = 67, MZM_EVENT_GLASS_TUBE_BROKEN = 73,
     MZM_EVENT_POWER_GRIP_OBTAINED = 16, MZM_EVENT_CHOZO_PILLAR_FULLY_EXTENDED = 17,
     MZM_EVENT_MOTHER_BRAIN_KILLED = 39, MZM_EVENT_ZEBETITE_ONE_DESTROYED = 61,
+    /* EVENT_FIRST_, THIRD_, FIFTH_, SECOND_, SIXTH_ and FOURTH_METROID_ROOM_CLEARED
+     * follow in that order. */
+    MZM_EVENT_FIRST_METROID_ROOM_CLEARED = 55,
 };
 
 /* Game systems outside the sprite engine. */
@@ -804,6 +815,9 @@ typedef struct {
     /* gParasiteRelated: the Parasites run fast for 1.5 seconds once Samus
      * came near or one grabbed her; cleared by the room load. */
     uint8_t parasite_related;
+    /* The sMetroidPal_SamusGrabbed row a grabbing Metroid last copied to
+     * OBJ row 12 (-1: sMetroidPal's own); reset by the room load. */
+    int8_t metroid_grab_palette;
 } MzmSpriteGlobals;
 
 /* gSamusData as the Chozo statues read and move it: her pose
@@ -888,6 +902,8 @@ typedef struct {
     uint8_t charge_counter;
     uint16_t arm_cannon_y, arm_cannon_x;
     uint8_t difficulty;
+    /* gSamusPhysics.horizontalMovingDirection (0 none, 1 left, 2 right). */
+    uint8_t samus_h_moving;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,
@@ -940,6 +956,10 @@ typedef struct {
     /* SSC_KNOCKS_BACK_SAMUS: SamusSetPose(SPOSE_KNOCKBACK_REQUEST) with
      * an x velocity of a pixel away from the sprite (NULL: none). */
     void (*knockback)(void *context, bool sprite_on_left);
+    /* SSC_METROID: SpriteUtilTakeDamageFromSprite without knockback for
+     * `damage`, then, when she survives, an invincibility of 1, 4 or 8
+     * frames by suits (NULL: none). */
+    void (*metroid_drain)(void *context, uint16_t damage);
 } MzmSpriteSamus;
 
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when

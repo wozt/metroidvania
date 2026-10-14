@@ -105,7 +105,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_ZIPLINE_GENERATOR": 0, "PSPRITE_SECURITY_GATE_DEFAULT_OPEN": 0,
           "PSPRITE_PISTON": 0, "PSPRITE_GLASS_TUBE": 0, "PSPRITE_RISING_CHOZO_PILLAR": 0,
           "PSPRITE_PARASITE": 0, "PSPRITE_PARASITE_MULTIPLE": 0,
-          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0,
+          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
@@ -114,8 +114,8 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
 # Extra palette rows a ported AI sets (paletteRow), baked as ``/rowN``.
 # The tables a sprite's row variants apply to (by prefix; the others keep
 # their rows): only the Atomic's body flashes, not its electricity.
-ROW_VARIANT_TABLES = {"PSPRITE_ATOMIC": ("sAtomicOam_",)}
-ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
+ROW_VARIANT_TABLES = {"PSPRITE_ATOMIC": ("sAtomicOam_",), "PSPRITE_METROID": ("sMetroidOam_Spawning",)}
+ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
@@ -123,6 +123,10 @@ ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRIT
 # colors), is baked as ``/eEfF``, ``/eE``, ``/fF`` or no suffix (the gunship
 # never flips).
 GUNSHIP_FLASHING = "sGunshipFlashingPal"
+# MetroidSamusGrabbed copies 8 colors of sMetroidPal_SamusGrabbed row N
+# (0-4) to OBJ row 12, which only sMetroidOam_SamusGrabbed's parts use;
+# baked as ``/gN`` for that table.
+METROID_GRABBED = "sMetroidPal_SamusGrabbed"
 # The area banner (PSPRITE_AREA_BANNER) with each location text drawn in its
 # graphics (TextDrawLocation: the text in mask mode over 0x800 bytes of
 # 0xFF, its two tile rows copied to the graphics slot), baked as ``/ltN``;
@@ -161,7 +165,8 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sDebris5YVelocity", "sDebris6YVelocity", "sDebris7YVelocity",
              "sDebris8YVelocity", "sGunshipTakingOffYVelocity", "sGunshipFlyingYVelocity",
              "sAtomicIdleYMovement", "sAtomicIdleXMovement",
-             "sPolypProjectileYVelocity", "sWorkerRobotSleepingFallingSpeed")
+             "sPolypProjectileYVelocity", "sWorkerRobotSleepingFallingSpeed",
+             "sMetroidSpawningYMovement", "sMetroidSpawningXMovement")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
 PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",
@@ -440,7 +445,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         wanted.update([graphics[sprite], palettes[sprite], *tables])
     tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
     wanted.update(tables)
-    wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, *AI_TABLES,
+    wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES,
                    "sLocationTextPointers", "sAreaBannerLocationTextPal"])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values(), *PARTICLES])
     wanted.update(table for tables in COMMON_SPRITES.values() for table in tables)
@@ -557,9 +562,19 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                         suffix += f"f{flames}"
                     variants["/" + suffix if suffix else ""] = colours
             flips = ("none",)
+        if sprite == "PSPRITE_METROID":
+            address, size = symbols[METROID_GRABBED]
+            grabbed = [bgr555(value) for value in struct.unpack_from(
+                f"<{size // 2}H", rom, rom_offset(address, rom))]
+            for index in range(size // 32):
+                colours = list(palette)
+                colours[12 * 16:12 * 16 + 8] = grabbed[16 * index:16 * index + 8]
+                variants[f"/g{index}"] = colours
         for table in tables:
             entries = mzm_projectile_compose.frames(rom, symbols, table)
             for suffix, colours in variants.items():
+                if suffix.startswith("/g") and table != "sMetroidOam_SamusGrabbed":
+                    continue
                 if (suffix.startswith("/row") and sprite in ROW_VARIANT_TABLES and
                         not table.startswith(ROW_VARIANT_TABLES[sprite])):
                     continue

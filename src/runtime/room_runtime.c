@@ -2446,6 +2446,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sAtomicIdleXMovement", t->atomic_idle_x, 81, 81},
         {"sPolypProjectileYVelocity", t->polyp_projectile_y, 44, 44},
         {"sWorkerRobotSleepingFallingSpeed", t->worker_robot_sleeping_falling, 10, 10},
+        {"sMetroidSpawningYMovement", t->metroid_spawning_y, 65, 65},
+        {"sMetroidSpawningXMovement", t->metroid_spawning_x, 81, 81},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -2684,6 +2686,7 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
     mzm_screen_shake_clear();
     sprites->globals.bg2_offset_x = sprites->globals.bg2_offset_y = 0;
     sprites->globals.parasite_related = 0;
+    sprites->globals.metroid_grab_palette = -1;
     for (int i = 0; i < 32; ++i) sprites->events[i] |= runtime_debug_events[i];
     memset(sprites->live, 0, sizeof sprites->live);
     memset(&sprites->effects, 0, sizeof sprites->effects);
@@ -2833,6 +2836,20 @@ static bool runtime_sprite_leech(void *context) {
     if (!alive) mzm_samus_hurt(hurt->samus, hurt->collision, true);
     else hurt->samus->invincibility = 16;   /* CONVERT_SECONDS(4.f / 15) */
     return alive;
+}
+
+/* SSC_METROID: SpriteUtilTakeDamageFromSprite(FALSE, sprite, 1), the hurt
+ * pose only when it kills Samus, else an invincibility of 1, 4 or 8 frames
+ * with no, one or both suits. */
+static void runtime_sprite_metroid_drain(void *context, uint16_t damage) {
+    RuntimeSpriteHurt *hurt = context;
+    bool alive = runtime_take_sprite_damage(hurt->equipment, damage, runtime_difficulty);
+    if (!alive) {
+        mzm_samus_hurt(hurt->samus, hurt->collision, true);
+        return;
+    }
+    uint32_t suits = hurt->equipment->items & (MZM_ITEM_VARIA_SUIT | MZM_ITEM_GRAVITY_SUIT);
+    hurt->samus->invincibility = suits == 0 ? 1 : suits == (MZM_ITEM_VARIA_SUIT | MZM_ITEM_GRAVITY_SUIT) ? 8 : 4;
 }
 
 /* MzmSpriteHooks of the runtime. */
@@ -3004,7 +3021,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                false, false, (uint8_t)samus->pose, MZM_POSE_NONE,
                                (equipment->items&(MZM_ITEM_VARIA_SUIT|MZM_ITEM_GRAVITY_SUIT))!=0,
                                runtime_sprite_leech, &sprites->globals.sub1.work2, false,
-                               runtime_sprite_knockback};
+                               runtime_sprite_knockback, runtime_sprite_metroid_drain};
         hurt.view = &view;
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
         /* The solid (frozen) sprites' pushes and the zipline grabs. */
@@ -3055,7 +3072,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->left,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->right,
                             weapons?weapons->charge_counter:0,runtime_arm_cannon_y,
-                            runtime_arm_cannon_x,runtime_difficulty};
+                            runtime_arm_cannon_x,runtime_difficulty,samus->h_moving};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
@@ -3246,6 +3263,19 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                 (sprite->palette_row==2 || sprite->palette_row==3))
             /* AtomicCheckShootElectricity's charge flashing. */
             shade=sprite->palette_row==2?"/row2":"/row3";
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_METROID && !sprite->secondary &&
+                sprite->palette_row>=1 && sprite->palette_row<=3) {
+            /* MetroidSpawning's palette rows 3, 2 and 1. */
+            static const char *const growing[4]={"","/row1","/row2","/row3"};
+            shade=growing[sprite->palette_row];
+        } else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_METROID &&
+                  sprite->anim==MZM_METROID_SAMUS_GRABBED &&
+                  sprites->globals.metroid_grab_palette>=0) {
+            /* sMetroidPal_SamusGrabbed's row in OBJ row 12. */
+            static char grab[8];
+            snprintf(grab,sizeof grab,"/g%d",sprites->globals.metroid_grab_palette);
+            shade=grab;
+        }
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA &&
                 sprite->palette_row==2)
             /* The Chozodia platform's saving flash (its off row 3 reads
@@ -3300,7 +3330,18 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         } else if(sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE) {
             /* Each part turns around its own centre after its flip; the
              * composed frame turns around its centre (exact for
-             * single-part frames, unclipped). */
+             * single-part frames, unclipped); the Q8.8 scaling shrinks the
+             * composed frame around its centre, where the GBA shrinks each
+             * part around its own (0 is taken as 1 for the AIs that never
+             * set it). */
+            if(sprite->scaling && sprite->scaling!=0x100) {
+                float k=(float)sprite->scaling/256.f;
+                float cxm=box.x+box.w/2.f,cym=box.y+box.h/2.f;
+                box.w*=k;
+                box.h*=k;
+                box.x=cxm-box.w/2.f;
+                box.y=cym-box.h/2.f;
+            }
             SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
                                      (double)(sprite->rotation&0xFF)*360.0/256.0,NULL,
                                      SDL_FLIP_NONE);

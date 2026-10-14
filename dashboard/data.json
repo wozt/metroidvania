@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-14T15:20:15+00:00",
+ "generated_at": "2026-10-14T15:31:44+00:00",
  "git": {
-  "commit": "b36ba1c",
+  "commit": "526db25",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 114,
+   "total": 115,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 90,
+    "partial": 91,
     "functional": 13,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 13,
-   "functional_or_better_percent": 11.4,
-   "with_passing_tests": 102,
-   "with_passing_tests_percent": 89.5,
+   "functional_or_better_percent": 11.3,
+   "with_passing_tests": 103,
+   "with_passing_tests_percent": 89.6,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -122,6 +122,7 @@
     "mzm.enemies.geruta",
     "mzm.enemies.holtz",
     "mzm.enemies.mella",
+    "mzm.enemies.metroid",
     "mzm.enemies.multiviola",
     "mzm.enemies.parasite",
     "mzm.enemies.pipe_bugs",
@@ -231,11 +232,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 66,
+   "total": 67,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 66,
+    "partial": 67,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -244,7 +245,7 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 66,
+   "with_passing_tests": 67,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -261,6 +262,7 @@
     "mzm.enemies.geruta",
     "mzm.enemies.holtz",
     "mzm.enemies.mella",
+    "mzm.enemies.metroid",
     "mzm.enemies.multiviola",
     "mzm.enemies.parasite",
     "mzm.enemies.pipe_bugs",
@@ -1305,6 +1307,71 @@
    ],
    "limitations": "None specific beyond the shared sprite engine limits (mzm.enemies.zoomer). Hovering under a ceiling with the ROM idle tables from an RNG offset, detection when Samus is low and within 8 blocks vertically and 3 across, a 7-frame delay, the swoop with the ROM going-down, going-up and horizontal speed tables (the going-down flag is SAMUS_COLLIDING, as in the game), the climb back half a block under the ceiling and the small explosion death.",
    "next_action": "Compare its behavior with the original game frame by frame.",
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-14"
+   }
+  },
+  {
+   "id": "mzm.enemies.metroid",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Metroids",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_metroid.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm_samus.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.zoomer",
+    "mzm.weapons.bombs"
+   ],
+   "native_routines": [
+    "Metroid",
+    "MetroidShell",
+    "MetroidInit",
+    "MetroidCheckSpawn",
+    "MetroidSpawning",
+    "MetroidMovingInit",
+    "MetroidMovement",
+    "MetroidMove",
+    "MetroidCheckAirCollision",
+    "MetroidBombDetection",
+    "MetroidCheckBouncingOnMetroid",
+    "MetroidCheckSamusGrabbed",
+    "MetroidPlayMovingSound",
+    "MetroidSamusGrabbedInit",
+    "MetroidSamusGrabbed",
+    "MetroidDeath",
+    "SpriteUtilUnfreezeAnimEasy",
+    "SpriteUtilMetroidUnfreezeAnim"
+   ],
+   "limitations": "Not compared with an emulator. The growth scales the composed frame around its centre, where the GBA scales each OAM part around its own; MetroidDoorLock (an unused sprite) is not ported; the room's music and the Tourian entrance cutscene are not part of this. Metroids lock their room (rooms 14, 15, 19, 1, 2, 16 of Tourian, one event each) and are removed once its event is set; once on screen they wobble along sMetroidSpawningY/XMovement and, after a random delay, grow from a quarter of their size (palette rows 3, 2, 1, baked as /rowN), then chase Samus's head with a speed that builds up to its cap and a momentum that runs down every other frame, reversing on walls and pushing overlapping Metroids (MetroidCheckBouncingOnMetroid). Samus under a Metroid's middle is grabbed (SSC_METROID): it drains SpriteUtilTakeDamageFromSprite's damage with an invincibility of 1, 4 or 8 frames by suits, rides her head, cycles sMetroidPal_SamusGrabbed in OBJ row 12 (baked as /gN), plays the sucking sounds by suits and slows her (gEquipment.grabbedByMetroid, outside liquids as in the unfixed game) until an exploding bomb ejects it. Frozen, it becomes PSPRITE_FROZEN_METROID (missiles hurt it) with a bigger hitbox and thaws twice as fast except on easy; dead, it and its shell explode (PE_FREEZING_SPRITE_WITH_CHARGED_ICE) and the last one sets the room's event and unlocks the doors. Checked by capture in tourian_014 (the growth, the chase and the grab).",
+   "next_action": "Check the grab and the bomb release in game, then compare with an emulator.",
    "last_validated": null,
    "source": "data/native_parity/annotations.tsv",
    "verification": {
@@ -7771,6 +7838,12 @@
  },
  "timeline": [
   {
+   "commit": "526db25",
+   "date": "2026-10-14",
+   "subject": "feat(mzm): Mother Brain Rinkas, hits by draw order",
+   "scope": "mzm"
+  },
+  {
    "commit": "b36ba1c",
    "date": "2026-10-14",
    "subject": "feat(mzm): Worker Robots, native projectile hit order",
@@ -8243,12 +8316,6 @@
    "date": "2026-10-11",
    "subject": "docs: audit tracking registries and check generated documents",
    "scope": "project"
-  },
-  {
-   "commit": "4832238",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): native Zeelas, red Zeela eyes and Wavers",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -8276,7 +8343,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 985,
+    "routines_cited_by_features": 1003,
     "call_edges": 6071
    },
    "aos": {
@@ -8572,14 +8639,14 @@
      {
       "id": 100,
       "name": "Metroid",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
      },
      {
       "id": 101,
       "name": "Frozen Metroid",
-      "status": "not_started",
-      "note": ""
+      "status": "partial",
+      "note": "AI ported to the sprite engine"
      },
      {
       "id": 102,

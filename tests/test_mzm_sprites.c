@@ -58,6 +58,13 @@ static void test_set_event(void *context, uint8_t event) {
     test_events[event / 8] |= (uint8_t)(1u << (event % 8));
 }
 
+static int drains, last_drain;
+static void drain(void *context, uint16_t damage) {
+    (void)context;
+    ++drains;
+    last_drain = damage;
+}
+
 static void test_door_timer(void *context, int8_t timer) {
     (void)context;
     ++door_timer_calls;
@@ -165,7 +172,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false, NULL, 0, 0, 0, 0, 0, 0, 1};
+                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false, NULL, 0, 0, 0, 0, 0, 0, 1, 0};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -286,7 +293,7 @@ int main(void) {
     /* SpriteInitPrimary's one-frame ignore timer runs down in the collision
      * routine, not in the sprite's update. */
     assert(z.status & MZM_SPRITE_STATUS_ONSCREEN && z.ignore_samus_timer == 1);
-    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
     mzm_sprites_samus_collision(&z, 1, &away, &tables);
     assert(z.ignore_samus_timer == 0 && hurts == 0);
 
@@ -294,7 +301,7 @@ int main(void) {
      * the stats damage, pushed away (the sprite is on her right, "on left"
      * in the native flag naming), then 15 frames of ignored contact. */
     MzmSpriteSamus samus = {NULL, (uint16_t)(z.x - 40), 640, (uint16_t)(z.x - 40),
-                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
     mzm_sprites_samus_collision(&z, 1, &samus, &tables);
     assert(hurts == 1 && last_damage == 8 && last_on_left && samus.invincible);
     /* Set to 15, then run down once at the end of the routine. */
@@ -447,7 +454,7 @@ int main(void) {
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     samus = (MzmSpriteSamus){NULL, z.x, (uint16_t)(z.y + 40), z.x, -96, 0, -24, 24,
-                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
     for (int i = 0; i < 19; ++i) {
         mzm_sprites_samus_collision(&z, 1, &samus, &tables);
         step(&z, 0);
@@ -634,7 +641,7 @@ int main(void) {
     /* It hurts Samus with the secondary damage, but not the screw attack. */
     hurts = 0;
     MzmSpriteSamus near = {NULL, part->x, (uint16_t)(part->y + 20), part->x, -96, 0, -24, 24,
-                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
     part->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(group, 8, &near, &tables);
     assert(hurts == 1 && last_damage == 2);
@@ -1030,7 +1037,7 @@ int main(void) {
     const uint16_t zleft = (uint16_t)(z.x + z.hitbox_left);
     MzmSpriteSamus solid = {NULL, z.x, (uint16_t)(ztop + 8), z.x, -124, 0, -28, 28,
                             false, false, false, hurt, false, false, 0, NULL,
-                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
     hurts = 0;
     mzm_sprites_samus_collision(&z, 1, &solid, &tables);
     assert(hurts == 0 && solid.y == ztop + 1 && z.status & MZM_SPRITE_STATUS_SAMUS_ON_TOP &&
@@ -1094,7 +1101,7 @@ int main(void) {
     memset(&fx, 0, sizeof fx);
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
     MzmSpriteSamus screw = {NULL, z.x, (uint16_t)(z.y + 20), z.x, -96, 0, -24, 24,
-                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
     z.ignore_samus_timer = 0;
     mzm_sprites_samus_collision(&z, 1, &screw, &tables);
     assert(z.pose == 0x65 && z.damaged);
@@ -1236,7 +1243,7 @@ int main(void) {
      * harmless, and gone when the table ends. */
     hurts = 0;
     MzmSpriteSamus touch = {NULL, eye_l->x, (uint16_t)(eye_l->y + 20), eye_l->x, -96, 0, -24, 24,
-                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
     eye_l->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(eye_l, 1, &touch, &tables);
     assert(hurts == 1 && last_damage == 3 && eye_l->pose == 66);
@@ -2359,7 +2366,7 @@ int main(void) {
          * with the laser's damage, then explodes. */
         hurts = 0;
         MzmSpriteSamus laser_hit = {NULL, ps[1].x, (uint16_t)(ps[1].y + 20), ps[1].x,
-                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
         /* The spawn's ignore timer runs down on the first collision pass. */
         MzmSpriteSamus far_away = laser_hit;
         far_away.x = 60000;
@@ -2598,7 +2605,7 @@ int main(void) {
         /* Samus in its light rings the alarm, then it holds it. */
         hurts = 0;
         MzmSpriteSamus in_light = {NULL, ps[0].x, (uint16_t)(ps[0].y + 20), ps[0].x,
-                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL};
+                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL};
         ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
         MzmSpriteSamus out_of_light = in_light;
         out_of_light.x = 60000;
@@ -4174,6 +4181,131 @@ int main(void) {
             mzm_sprite_update(gun, 0, &tf);
             assert(gun->status == 0);
             test_events[MZM_EVENT_MOTHER_BRAIN_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_MOTHER_BRAIN_KILLED % 8));
+            clear();
+        }
+        /* Metroids (metroid.c): the room locked, growth once on screen,
+         * the chase, the grab and its drain, a bomb's release, the frozen
+         * id and the last one's event. */
+        {
+            static MzmSprite mets[6];
+            static MzmSpriteKind metroid_kind;
+            static MzmWeapons metroid_weapons;
+            static MzmSpriteGlobals metroid_globals;
+            static MzmEquipment metroid_equipment;
+            memset(mets, 0, sizeof mets);
+            memset(&metroid_kind, 0, sizeof metroid_kind);
+            for (int a = 0; a < MZM_METROID_ANIMS; ++a) {
+                metroid_kind.counts[a] = 3;
+                for (int f = 0; f < 3; ++f) metroid_kind.timers[a][f] = 2;
+            }
+            mzm_weapons_init(&metroid_weapons);
+            metroid_globals.metroid_grab_palette = -1;
+            metroid_equipment = (MzmEquipment){.energy = 99, .max_energy = 99};
+            const int16_t still_y[65] = {0, 0, 32767}, still_x[81] = {0, 0, 32767};
+            memcpy(tables.metroid_spawning_y, still_y, sizeof still_y);
+            memcpy(tables.metroid_spawning_x, still_x, sizeof still_x);
+            tables.health[MZM_PSPRITE_METROID] = tables.health[MZM_PSPRITE_FROZEN_METROID] = 100;
+            tables.damage[MZM_PSPRITE_METROID] = 1;
+            MzmSpriteFrame mf = g;
+            mf.kinds[MZM_FAMILY_METROID] = &metroid_kind;
+            mf.sprites = mets;
+            mf.sprite_count = 6;
+            mf.weapons = &metroid_weapons;
+            mf.globals = &metroid_globals;
+            mf.equipment = &metroid_equipment;
+            mf.hooks = &test_hooks;
+            mf.samus_link = NULL;
+            mf.room = 14;
+            mf.difficulty = 1;
+            mf.samus_x = 10 * 64;
+            mf.samus_y = 9 * 64;
+            mf.samus_hitbox_top = -96;
+            clear();
+            for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+            door_timer_calls = 0;
+            MzmSprite *m = &mets[0];
+            mzm_sprite_init_primary(m, MZM_PSPRITE_METROID, 0, 4, 4, 0, 0);
+            mzm_sprite_update(m, 0, &mf);
+            assert(m->pose == 0x1 && door_timer_calls == 1 && last_door_timer == 1 && m->scaling == 0x40 &&
+                   m->palette_row == 3 && m->status & MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE &&
+                   mets[1].sprite_id == MZM_SSPRITE_METROID_SHELL && mets[1].secondary &&
+                   mzm_sprite_graphics_owner(&mets[1]) == MZM_PSPRITE_METROID);
+            m->status |= MZM_SPRITE_STATUS_ONSCREEN;
+            mzm_sprite_update(m, 0, &mf);
+            assert(m->pose == 0x2);
+            int metroid_frames = 0;
+            bool row2 = false, row1 = false;
+            while (m->pose == 0x2 && metroid_frames++ < 400) {
+                mzm_sprite_update(m, 0, &mf);
+                row2 |= m->palette_row == 2;
+                row1 |= m->palette_row == 1;
+            }
+            assert(row1 && row2 && m->pose == 0x8 && m->samus_collision == 24 && m->palette_row == 0 &&
+                   !(m->status & MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE) &&
+                   !(m->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+            /* The shell shows once the body stops scaling. */
+            mzm_sprite_update(&mets[1], 1, &mf);
+            mzm_sprite_update(&mets[1], 1, &mf);
+            assert(!(mets[1].status & MZM_SPRITE_STATUS_NOT_DRAWN) && mets[1].x == m->x);
+            /* The chase: toward Samus (right and down), faster each frame. */
+            uint16_t mx = m->x;
+            mzm_sprite_update(m, 0, &mf);
+            assert(m->pose == 0x9 && m->status & MZM_SPRITE_STATUS_FACING_RIGHT);
+            for (int i = 0; i < 20; ++i) mzm_sprite_update(m, 0, &mf);
+            assert(m->x > mx);
+            /* Samus under its middle: the contact flags the grab and drains. */
+            drains = 0;
+            m->ignore_samus_timer = 0;
+            MzmSpriteSamus held = {.x = m->x, .y = (uint16_t)(m->y + 80), .previous_x = m->x,
+                                   .hitbox_top = -96, .hitbox_left = -24, .hitbox_right = 24,
+                                   .hurt = hurt, .has_energy = true, .facing = 1,
+                                   .pose = MZM_POSE_STANDING, .set_pose = MZM_POSE_NONE,
+                                   .metroid_drain = drain};
+            mzm_sprites_samus_collision(mets, 6, &held, &tables);
+            assert(m->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING && drains == 1 && last_drain == 1);
+            mzm_sprite_update(m, 0, &mf);
+            assert(m->pose == 0x42 && m->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+            mf.samus_x = m->x;
+            mzm_sprite_update(m, 0, &mf);
+            assert(m->pose == 0x43 && metroid_equipment.grabbed_by_metroid &&
+                   m->anim == MZM_METROID_SAMUS_GRABBED && m->y == mf.samus_y - 96);
+            for (int i = 0; i < 3; ++i) mzm_sprite_update(m, 0, &mf);
+            assert(metroid_globals.metroid_grab_palette == 0);
+            /* An exploding bomb on it: released, flying off. */
+            metroid_weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BOMB,
+                                                      .bomb_stage = MZM_BOMB_EXPLODING,
+                                                      .hits_sprites = true, .x = m->x, .y = m->y};
+            mzm_sprite_update(m, 0, &mf);
+            assert(m->pose == 0x9 && !metroid_equipment.grabbed_by_metroid && m->ignore_samus_timer == 15 &&
+                   (m->work2 == 16 || m->work2 == 28) && m->anim == MZM_METROID_MOVING);
+            metroid_weapons.list[0].active = false;
+            /* Frozen: the frozen id (missiles hurt it), a bigger hitbox,
+             * twice as fast a thaw on normal; then moving again. */
+            m->freeze_timer = 240;
+            mzm_sprite_update(m, 0, &mf);
+            assert(m->sprite_id == MZM_PSPRITE_FROZEN_METROID && m->hitbox_left == -64 && m->freeze_timer == 238 &&
+                   mzm_sprite_graphics_owner(m) == MZM_PSPRITE_METROID);
+            metroid_frames = 0;
+            while (m->freeze_timer && metroid_frames++ < 200) mzm_sprite_update(m, 0, &mf);
+            assert(metroid_frames == 119);
+            mzm_sprite_update(m, 0, &mf);
+            assert(m->sprite_id == MZM_PSPRITE_METROID && m->hitbox_left == -40 && m->pose == 0x9);
+            /* Killed: the shell explodes too, and the last Metroid sets the
+             * room's event and unlocks the doors. */
+            m->health = 0;
+            m->pose = 0x62;
+            door_timer_calls = 0;
+            mzm_sprite_update(m, 0, &mf);
+            assert(test_check_event(NULL, MZM_EVENT_FIRST_METROID_ROOM_CLEARED) && door_timer_calls == 1 &&
+                   last_door_timer == -20);
+            mzm_sprite_update(&mets[1], 1, &mf);
+            assert(mets[1].sprite_id != MZM_SSPRITE_METROID_SHELL || !(mets[1].status & MZM_SPRITE_STATUS_EXISTS));
+            /* The room cleared: no Metroid any more. */
+            mzm_sprite_init_primary(&mets[2], MZM_PSPRITE_METROID, 0, 4, 8, 0, 2);
+            mzm_sprite_update(&mets[2], 2, &mf);
+            assert(mets[2].status == 0);
+            test_events[MZM_EVENT_FIRST_METROID_ROOM_CLEARED / 8] &=
+                (uint8_t)~(1u << (MZM_EVENT_FIRST_METROID_ROOM_CLEARED % 8));
             clear();
         }
         /* Worker Robots (worker_robot.c): asleep until hit, then standing

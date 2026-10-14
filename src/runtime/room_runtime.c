@@ -2450,6 +2450,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sMetroidSpawningYMovement", t->metroid_spawning_y, 65, 65},
         {"sMetroidSpawningXMovement", t->metroid_spawning_x, 81, 81},
         {"sKraidPal", t->kraid_palette, 128, 128},
+        {"sRidleyIdleYOffsets", t->ridley_idle_y, 65, 65},
+        {"sRidleySpawningSpittingFireballsYOffsets", t->ridley_spawning_y, 81, 81},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -2497,14 +2499,17 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             char name[64];
             int index, timer, used = 0;
             if (sscanf(cursor, "%63s %d %d%n", name, &index, &timer, &used) != 3) continue;
-            for (int m = 0; m < MZM_CHOZO_MULTI_COUNT + MZM_KRAID_MULTI_COUNT; ++m) {
-                bool kraid = m >= MZM_CHOZO_MULTI_COUNT;
-                const char *known = kraid ? mzm_kraid_multi_names[m - MZM_CHOZO_MULTI_COUNT]
-                                          : mzm_chozo_multi_names[m];
+            enum { CHOZO = MZM_CHOZO_MULTI_COUNT, KRAID = CHOZO + MZM_KRAID_MULTI_COUNT,
+                   ALL = KRAID + MZM_RIDLEY_MULTI_COUNT };
+            for (int m = 0; m < ALL; ++m) {
+                const char *known = m < CHOZO ? mzm_chozo_multi_names[m]
+                                    : m < KRAID ? mzm_kraid_multi_names[m - CHOZO]
+                                                : mzm_ridley_multi_names[m - KRAID];
                 if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
-                MzmMultiSprite *multi = kraid ? &sprites->tables.kraid_multi[m - MZM_CHOZO_MULTI_COUNT]
-                                              : &sprites->tables.chozo_multi[m];
+                MzmMultiSprite *multi = m < CHOZO ? &sprites->tables.chozo_multi[m]
+                                        : m < KRAID ? &sprites->tables.kraid_multi[m - CHOZO]
+                                                    : &sprites->tables.ridley_multi[m - KRAID];
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;
                 for (int p = 0; p < MZM_MULTI_PARTS; ++p) {
@@ -2849,14 +2854,19 @@ static bool runtime_sprite_leech(void *context) {
     return alive;
 }
 
-/* SSC_METROID: SpriteUtilTakeDamageFromSprite(FALSE, sprite, 1), the hurt
- * pose only when it kills Samus, else an invincibility of 1, 4 or 8 frames
- * with no, one or both suits. */
-static void runtime_sprite_metroid_drain(void *context, uint16_t damage) {
+/* SpriteUtilTakeDamageFromSprite(FALSE, sprite, 1), the hurt pose only when
+ * it kills Samus, else the invincibility of SSC_METROID (1, 4 or 8 frames
+ * with no, one or both suits) or of the fireballs on Samus held. */
+static void runtime_sprite_metroid_drain(void *context, uint16_t damage, uint8_t invincibility) {
     RuntimeSpriteHurt *hurt = context;
     bool alive = runtime_take_sprite_damage(hurt->equipment, damage, runtime_difficulty);
     if (!alive) {
         mzm_samus_hurt(hurt->samus, hurt->collision, true);
+        return;
+    }
+    if (invincibility) {
+        /* SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT_NO_KNOCKBACK */
+        if (hurt->samus->invincibility == 0) hurt->samus->invincibility = invincibility;
         return;
     }
     uint32_t suits = hurt->equipment->items & (MZM_ITEM_VARIA_SUIT | MZM_ITEM_GRAVITY_SUIT);
@@ -3077,7 +3087,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                                           MZM_LINK_POSE_OTHER,
         (uint16_t)(samus->y - 1), (uint16_t)samus->x, false, false, false,
         samus->facing > 0, MZM_POSE_NONE, false, false, false, 0, (uint8_t)samus->pose, false,
-        false, 0};
+        false, 0, 0};
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
                             sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top,
@@ -3094,7 +3104,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->left,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->right,
                             weapons?weapons->charge_counter:0,runtime_arm_cannon_y,
-                            runtime_arm_cannon_x,runtime_difficulty,samus->h_moving};
+                            runtime_arm_cannon_x,runtime_difficulty,samus->h_moving,
+                            input?input->pressed:0};
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f)
         frame.kinds[f] = sprites->family_ok[f] ? &sprites->kinds[f] : NULL;
     for (int i = 0; i < RUNTIME_MAX_SPRITES; ++i)
@@ -3117,6 +3128,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     if (link.reset_frame) samus->anim_frame = 0;
     /* The gunship's gSamusData writes. */
     if (link.set_last_wall) samus->last_wall = link.last_wall;
+    /* Ridley's claw: gSamusData.invincibilityTimer. */
+    if (link.set_invincibility) samus->invincibility = link.set_invincibility;
     if (samus->pose != MZM_POSE_DYING && !stopped) {
         if (standing.landing_request)
             mzm_samus_land_on_sprite(samus, input, equipment, collision);
@@ -3287,6 +3300,10 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                 (sprite->palette_row==2 || sprite->palette_row==3))
             /* AtomicCheckShootElectricity's charge flashing. */
             shade=sprite->palette_row==2?"/row2":"/row3";
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_RIDLEY &&
+                (sprite->palette_row==3 || sprite->palette_row==5))
+            /* Ridley's health rows (paletteRow 3 and 5). */
+            shade=sprite->palette_row==3?"/row3":"/row5";
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_KRAID &&
                 sprite->palette_row>=1 && sprite->palette_row<=3) {
             /* Kraid's health rows (absolutePaletteRow 1 to 3). */
@@ -4036,6 +4053,9 @@ int main(int argc, char **argv) {
     equipment.max_super_missiles=equipment.super_missiles=start_ammo[1];
     equipment.max_power_bombs=equipment.power_bombs=start_ammo[2];
     if(start_energy>0 && start_energy<equipment.max_energy)equipment.energy=start_energy;
+    else if(start_energy>equipment.max_energy && start_energy<=1299)
+        /* Above the maximum: a diagnostic of long fights (energy tanks). */
+        equipment.energy=equipment.max_energy=start_energy;
     MzmWeapons weapons;
     RuntimeBeamFx beam_fx={0};
     mzm_weapons_init(&weapons);

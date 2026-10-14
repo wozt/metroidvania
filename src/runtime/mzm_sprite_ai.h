@@ -42,6 +42,7 @@ enum {
     SSC_KNOCKS_BACK_SAMUS = 7,
     SSC_HURTS_KNOCKBACK_IF_INVINCIBLE = 10,
     SSC_SOLID_SIDEWAYS = 12,
+    SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT_NO_KNOCKBACK = 16,
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
     SSC_PARASITE = 23,
@@ -49,6 +50,7 @@ enum {
     SSC_HURTS_RIGHT_CAN_STAND_ON_TOP = 25,
     SSC_ZIPLINE = 26,
     SSC_SOLID_CHECK_COLLIDING = 27,
+    SSC_RIDLEY_CLAW = 28,
     SSC_CHECK_COLLIDING = 30,
     SPRITE_POSE_STOPPED = 66,
     SSC_SMALL_ENERGY_DROP = 31,
@@ -178,6 +180,8 @@ void ai_worker_robot(Ctx *c);
 void ai_metroid(Ctx *c);
 /* Kraid, its parts, spikes and nails (mzm_kraid.c). */
 void ai_kraid(Ctx *c);
+/* Ridley, its parts, tail and fireballs (mzm_ridley.c). */
+void ai_ridley(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

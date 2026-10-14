@@ -430,6 +430,92 @@ const char *const mzm_kraid_multi_names[MZM_KRAID_MULTI_COUNT] = {
     "sKraidMultiSpriteData_MovingRightFeetToLeft", "sKraidMultiSpriteData_Dying1",
     "sKraidMultiSpriteData_Dying2",
 };
+const char *const mzm_ridley_anim_names[MZM_RIDLEY_ANIMS] = {
+    "RidleyOam_Idle",
+    "RidleyOam_SpittingFireballs",
+    "RidleyOam_TurningAroundFirstPart",
+    "RidleyOam_TurningAroundSecondPart",
+    "RidleyPartOam_HeadIdle",
+    "RidleyPartOam_OpeningMouth",
+    "RidleyPartOam_MouthOpened",
+    "RidleyPartOam_HeadDying",
+    "RidleyPartOam_HeadTurningAround",
+    "RidleyPartOam_ClawIdle",
+    "RidleyPartOam_ClawSpittingFireballs",
+    "RidleyPartOam_ClawTurningAroundFirstPart",
+    "RidleyPartOam_ClawTurningAroundSecondPart",
+    "RidleyPartOam_ClawCarryingSamus",
+    "RidleyPartOam_ClawLiftingSamus",
+    "RidleyPartOam_ClawSamusLifted",
+    "RidleyPartOam_ClawReleasingSamus",
+    "RidleyPartOam_LeftWingIdle",
+    "RidleyPartOam_RightWingIdle",
+    "RidleyPartOam_LeftWing_Unused",
+    "RidleyPartOam_RightWing_Unused",
+    "RidleyPartOam_LeftWingSpittingFireballs",
+    "RidleyPartOam_RightWingSpittingFireballs",
+    "RidleyTailOam_Part",
+    "RidleyTailOam_TipPointingDown",
+    "RidleyTailOam_TipPointingUp",
+    "RidleyTailOam_TipPointingDiagonallyDownRight",
+    "RidleyTailOam_TipPointingDiagonallyUpRight",
+    "RidleyTailOam_TipPointingDiagonallyDownLeft",
+    "RidleyTailOam_TipPointingDiagonallyUpLeft",
+    "RidleyOam_Square",
+    "RidleyFireballOam_Small",
+    "RidleyFireballOam_Big",
+};
+static const char *const ridley_sprites[MZM_RIDLEY_ANIMS] = {
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+    "RIDLEY",
+};
+const char *const mzm_ridley_multi_names[MZM_RIDLEY_MULTI_COUNT] = {
+    "sRidleyMultiSpriteData_Idle",
+    "sRidleyMultiSpriteData_SpittingFireballs",
+    "sRidleyMultiSpriteData_TurningAroundFirstPart",
+    "sRidleyMultiSpriteData_TurningAroundSecondPart",
+    "sRidleyTailMultiSpriteData_Idle",
+    "sRidleyTailMultiSpriteData_Dying",
+    "sRidleyTailMultiSpriteData_MoveToAttack",
+    "sRidleyTailMultiSpriteData_SettingUpDiagonalTailAttack",
+    "sRidleyTailMultiSpriteData_ChargingDiagonalTailAttack",
+    "sRidleyTailMultiSpriteData_DiagonalTailAttack",
+    "sRidleyTailMultiSpriteData_ChargingVerticalTailAttack",
+    "sRidleyTailMultiSpriteData_VerticalTailAttack",
+    "sRidleyTailMultiSpriteData_LastVerticalAttack",
+    "sRidleyTailMultiSpriteData_BackToIdle",
+};
 const char *const mzm_metroid_anim_names[MZM_METROID_ANIMS] = {
     "MetroidOam_Spawning", "MetroidOam_Moving", "MetroidOam_SamusGrabbed", "MetroidShellOam_Idle",
 };
@@ -616,6 +702,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
                                  worker_robot_sprites},
     [MZM_FAMILY_METROID] = {MZM_METROID_ANIMS, mzm_metroid_anim_names, metroid_sprites},
     [MZM_FAMILY_KRAID] = {MZM_KRAID_ANIMS, mzm_kraid_anim_names, kraid_sprites},
+    [MZM_FAMILY_RIDLEY] = {MZM_RIDLEY_ANIMS, mzm_ridley_anim_names, ridley_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -4722,6 +4809,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_KRAID_PART || sprite_id == MZM_SSPRITE_KRAID_SPIKE ||
             sprite_id == MZM_SSPRITE_KRAID_NAIL)
             return MZM_FAMILY_KRAID;
+        if (sprite_id == MZM_SSPRITE_RIDLEY_PART || sprite_id == MZM_SSPRITE_RIDLEY_TAIL ||
+            sprite_id == MZM_SSPRITE_RIDLEY_FIREBALL || sprite_id == MZM_SSPRITE_RIDLEY_BIG_FIREBALL)
+            return MZM_FAMILY_RIDLEY;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -4794,6 +4884,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_WORKER_ROBOT: return MZM_FAMILY_WORKER_ROBOT;
     case MZM_PSPRITE_METROID: case MZM_PSPRITE_FROZEN_METROID: return MZM_FAMILY_METROID;
     case MZM_PSPRITE_KRAID: return MZM_FAMILY_KRAID;
+    case MZM_PSPRITE_RIDLEY: return MZM_FAMILY_RIDLEY;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
     case MZM_PSPRITE_ZEBETITE_ONE_AND_THREE: case MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR:
         return MZM_FAMILY_TOURIAN;
@@ -5153,6 +5244,45 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
                 s->standing_on = MZM_STANDING_ON_SPRITE_ON;
             }
             break;
+        case SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT_NO_KNOCKBACK:
+            /* Ridley's fireballs on Samus held: damage without knockback,
+             * even while invincible, then 8 invincible frames. */
+            s->pose = SPRITE_POSE_STOPPED;
+            if (samus->metroid_drain) samus->metroid_drain(samus->context, damage_of(s, tables), 8);
+            samus->invincible = true;
+            s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+            ignore = true;
+            break;
+        case SSC_RIDLEY_CLAW: {
+            /* RidleyCheckGrabbing: Samus under the claw with room for her
+             * where it would carry her is grabbed; otherwise it hurts. */
+            bool grabbing = false;
+            if (on_bottom && samus->world) {
+                uint16_t gy = (uint16_t)(s->y + BLOCK_SIZE * 4);
+                uint16_t gx = samus_x > s->x ? (uint16_t)(s->x + (BLOCK_SIZE * 3 - QUARTER_BLOCK_SIZE))
+                                             : (uint16_t)(s->x - (BLOCK_SIZE * 3 - QUARTER_BLOCK_SIZE));
+                grabbing = samus_check_collision(samus->world, gy, (uint16_t)(gx + samus->hitbox_left)) ==
+                               MZM_COLLISION_AIR &&
+                           samus_check_collision(samus->world, gy, (uint16_t)(gx + samus->hitbox_right)) ==
+                               MZM_COLLISION_AIR;
+            }
+            if (grabbing) {
+                s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+                s->samus_collision = SSC_NONE;
+                samus->set_pose = MZM_POSE_MIDAIR;
+                samus->pose = MZM_POSE_MIDAIR;
+                mzm_sfx_play(MZM_SOUND_RIDLEY_GRABBING_SAMUS);
+            } else {
+                /* (the hurt's knockback velocity the native leaves alone) */
+                if (!samus->invincible && !contact_kills(s, samus, tables) && samus->hurt) {
+                    samus->hurt(samus->context, damage_of(s, tables), on_left);
+                    samus->invincible = true;
+                }
+                s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+            }
+            ignore = true;
+            break;
+        }
         case SSC_KNOCKS_BACK_SAMUS:
             /* A knockback only, no damage. */
             if (contact_kills(s, samus, tables)) break;
@@ -5237,7 +5367,7 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
              * is not invincible. */
             if (samus_y > (uint16_t)(s->y + HALF_BLOCK_SIZE)) s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
             if (!samus->invincible && samus->metroid_drain) {
-                samus->metroid_drain(samus->context, damage_of(s, tables));
+                samus->metroid_drain(samus->context, damage_of(s, tables), 0);
                 samus->invincible = true;
             }
             break;
@@ -5626,6 +5756,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (sprite->sprite_id == MZM_SSPRITE_KRAID_PART || sprite->sprite_id == MZM_SSPRITE_KRAID_SPIKE ||
         sprite->sprite_id == MZM_SSPRITE_KRAID_NAIL)
         return MZM_PSPRITE_KRAID;
+    if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_RIDLEY) return MZM_PSPRITE_RIDLEY;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -5823,6 +5954,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_WORKER_ROBOT: ai_worker_robot(&c); break;
     case MZM_FAMILY_METROID: ai_metroid(&c); break;
     case MZM_FAMILY_KRAID: ai_kraid(&c); break;
+    case MZM_FAMILY_RIDLEY: ai_ridley(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

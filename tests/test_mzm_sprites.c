@@ -59,8 +59,9 @@ static void test_set_event(void *context, uint8_t event) {
 }
 
 static int drains, last_drain;
-static void drain(void *context, uint16_t damage) {
+static void drain(void *context, uint16_t damage, uint8_t invincibility) {
     (void)context;
+    (void)invincibility;
     ++drains;
     last_drain = damage;
 }
@@ -172,7 +173,7 @@ int main(void) {
                               &drop_kind, &hopper_kind, &hopper_kind, &viola_kind, &sova_kind, &bug_kind, &bug_kind, &bug_kind, &reo_kind, &swoop_kind, &swoop_kind,
                               &swoop_kind, &rinka_kind, &pirate_kind, &security_kind},
                              &equipment, 0, 0, 0, 0, 0, NULL, 0, NULL, NULL, &globals, false, 0,
-                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false, NULL, 0, 0, 0, 0, 0, 0, 1, 0};
+                             0, 0, NULL, false, NULL, NULL, false, 0, 0, false, NULL, 0, 0, 0, 0, 0, 0, 1, 0, 0};
     for (int a = 0; a < MZM_ZOOMER_ANIMS; ++a) {
         kind.counts[a] = 2;
         kind.timers[a][0] = kind.timers[a][1] = 4;
@@ -2807,7 +2808,7 @@ int main(void) {
         MzmSprite *arm = &room[arm_slot];
         uint16_t hand = (uint16_t)(arm->x + 56);
         MzmSpriteSamusLink link = {MZM_LINK_POSE_MORPH_BALL, (uint16_t)(arm->y - 17), hand,
-                                   false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
+                                   false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
         statue_frame.samus_link = &link;
         /* Off by one subpixel in height: no grab. */
         link.y++;
@@ -2883,7 +2884,7 @@ int main(void) {
         assert(hint_arm && hint_arm->pose == 0x9);
         MzmSpriteSamusLink hint_link = {MZM_LINK_POSE_ROLLING, (uint16_t)(hint_arm->y - 17),
                                         (uint16_t)(hint_arm->x - 56), false, false, false,
-                                        false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
+                                        false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
         statue_frame.samus_link = &hint_link;
         mzm_sprite_update(hint_arm, 0, &statue_frame);
         assert(hint_link.grab && room[0].pose == 0x22 && hint_arm->pose == 0x23);
@@ -3236,7 +3237,7 @@ int main(void) {
         assert(room[1].anim == MZM_GADGET_MAP_STATION_BACK_SCREEN_IDLE);
         uint16_t station_x = (uint16_t)(room[0].x + 96), station_y = (uint16_t)(room[0].y + 128 - 1);
         MzmSpriteSamusLink station_link = {MZM_LINK_POSE_OTHER, station_y, (uint16_t)(station_x + 64),
-                                           false, false, false, true, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
+                                           false, false, false, true, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
         g.samus_link = &station_link;
         mzm_sfx_clear();
         mzm_sprite_update(&room[0], 0, &g);
@@ -3285,7 +3286,7 @@ int main(void) {
         mzm_sprite_update(&room[1], 1, &g);
         assert(room[1].pose == 0x43 && room[1].anim == MZM_GADGET_SAVE_PLATFORM_TOP_IDLE);
         MzmSpriteSamusLink save_link = {MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y - 65), (uint16_t)(room[0].x + 20),
-                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
+                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
         g.samus_link = &save_link;
         mzm_sfx_clear();
         for (int i = 0; i < 9; ++i) mzm_sprite_update(&room[0], 0, &g);
@@ -3363,7 +3364,7 @@ int main(void) {
         g.banner_pose = 0;
         g.banner_yes = false;
         MzmSpriteSamusLink ship_link = {MZM_LINK_POSE_OTHER, 0, 0, false, false, false, false, MZM_POSE_NONE,
-                                        false, false, false, 0, MZM_POSE_STANDING, false, false, 0};
+                                        false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
         g.samus_link = &ship_link;
         mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GUNSHIP, 0, 5, 5, 0, 0);
         uint16_t ship_ground = room[0].y;
@@ -3403,7 +3404,7 @@ int main(void) {
         g.equipment = &ship_items;
         ship_link = (MzmSpriteSamusLink){MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y - 196), (uint16_t)(room[0].x + 20),
                                          false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
-                                         MZM_POSE_STANDING, false, false, 0};
+                                         MZM_POSE_STANDING, false, false, 0, 0};
         room[0].status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0x22 && room[0].draw_order == 4 && room[0].samus_collision == 0 &&
@@ -3499,7 +3500,7 @@ int main(void) {
         assert(room[0].pose == 0xC && room[0].anim == MZM_GADGET_MORPH_BALL_LAUNCHER_LAUNCHING);
         MzmSpriteSamusLink launch_link = {MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y + 30), room[0].x,
                                           false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
-                                          MZM_POSE_DELAY_BEFORE_BALLSPARKING, false, false, 0};
+                                          MZM_POSE_DELAY_BEFORE_BALLSPARKING, false, false, 0, 0};
         g.samus_link = &launch_link;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].work1 && room[2].sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART && room[2].room_slot == 1);
@@ -3535,7 +3536,7 @@ int main(void) {
                zip.previous_x == 352 && room[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING);
         MzmSpriteSamusLink zip_link = {MZM_LINK_POSE_OTHER, zip.y, zip.x, false, false, false, false,
                                        MZM_POSE_NONE, false, false, false, 0, MZM_POSE_ON_ZIPLINE,
-                                       false, false, 0};
+                                       false, false, 0, 0};
         g.samus_link = &zip_link;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].work1 == 1 && room[0].anim == MZM_GADGET_ZIPLINE_OFF_GRABBING_SAMUS);
@@ -3634,7 +3635,7 @@ int main(void) {
         assert(room[1].pose == 0x61 && room[1].draw_order == 13 && !(room[1].status & MZM_SPRITE_STATUS_NOT_DRAWN));
         MzmSpriteSamusLink gen_link = {MZM_LINK_POSE_MORPH_BALL, (uint16_t)(room[0].y - 129), room[0].x,
                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
-                                       MZM_POSE_STANDING, false, false, 0};
+                                       MZM_POSE_STANDING, false, false, 0, 0};
         g.samus_link = &gen_link;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0x9);
@@ -4441,6 +4442,87 @@ int main(void) {
                 }
             }
             assert(alive_parts == 0);
+            clear();
+        }
+        /* Ridley (ridley.c): absent before the Gravity Suit, the parts,
+         * the drop when Samus faces left on the ground, the landing, the
+         * big fireballs after 200 damage, and the death's event. */
+        {
+            static MzmSprite boss[24];
+            static MzmSpriteKind ridley_kind;
+            static MzmSpriteGlobals ridley_globals;
+            static MzmSpriteSamusLink ridley_link;
+            memset(boss, 0, sizeof boss);
+            memset(&ridley_kind, 0, sizeof ridley_kind);
+            memset(&ridley_globals, 0, sizeof ridley_globals);
+            memset(&ridley_link, 0, sizeof ridley_link);
+            for (int a = 0; a < MZM_RIDLEY_ANIMS; ++a) {
+                ridley_kind.counts[a] = 4;
+                for (int f = 0; f < 4; ++f) ridley_kind.timers[a][f] = 2;
+            }
+            for (int m = 0; m < MZM_RIDLEY_MULTI_COUNT; ++m) {
+                memset(&tables.ridley_multi[m], 0, sizeof tables.ridley_multi[m]);
+                for (int f = 0; f < 3; ++f) tables.ridley_multi[m].timers[f] = 6;
+            }
+            memset(tables.ridley_idle_y, 0, sizeof tables.ridley_idle_y);
+            memset(tables.ridley_spawning_y, 0, sizeof tables.ridley_spawning_y);
+            tables.health[MZM_PSPRITE_RIDLEY] = 1000;
+            MzmSpriteFrame rf = g;
+            rf.kinds[MZM_FAMILY_RIDLEY] = &ridley_kind;
+            rf.sprites = boss;
+            rf.sprite_count = 24;
+            rf.globals = &ridley_globals;
+            rf.hooks = &test_hooks;
+            rf.samus_link = &ridley_link;
+            clear();
+            MzmSprite *r = &boss[0];
+            mzm_sprite_init_primary(r, MZM_PSPRITE_RIDLEY, 0, 11, 16, 0, 0);
+            mzm_sprite_update(r, 0, &rf);
+            assert(r->status == 0);                 /* no Gravity Suit yet */
+            test_set_event(NULL, MZM_EVENT_GRAVITY_SUIT_OBTAINED);
+            door_timer_calls = 0;
+            mzm_sprite_init_primary(r, MZM_PSPRITE_RIDLEY, 0, 11, 16, 0, 0);
+            mzm_sprite_update(r, 0, &rf);
+            int ridley_parts = 0;
+            for (int i = 1; i < 24; ++i) ridley_parts += boss[i].status != 0;
+            assert(r->pose == 0x1 && ridley_parts == 13 && door_timer_calls == 1 &&
+                   r->status & MZM_SPRITE_STATUS_NOT_DRAWN && r->room_slot == 2 &&
+                   ridley_globals.sub1.y == 12 * 64 - 512 && ridley_globals.sub1.x == 16 * 64 + 32 - 64 &&
+                   boss[ridley_globals.sub1.work4].room_slot == 1 && boss[ridley_globals.sub1.work5].room_slot == 3 &&
+                   mzm_sprite_graphics_owner(&boss[1]) == MZM_PSPRITE_RIDLEY);
+            /* Samus on the ground facing right: nothing; facing left past
+             * the platform: it drops. */
+            rf.samus_y = 18 * 64;
+            rf.samus_x = (uint16_t)(16 * 64 + 32 + 32 + 7 * 64 + 8);
+            ridley_link.facing_right = true;
+            mzm_sprite_update(r, 0, &rf);
+            assert(r->pose == 0x1);
+            ridley_link.facing_right = false;
+            mzm_sprite_update(r, 0, &rf);
+            assert(r->pose == 0x2 && !(r->status & MZM_SPRITE_STATUS_NOT_DRAWN) && r->scaling == 300);
+            /* It falls to the ground (it hits it with a shake). */
+            int ridley_frames = 0;
+            while (r->work1 == 0 && ridley_frames++ < 100) mzm_sprite_update(r, 0, &rf);
+            assert(r->work1 == 1 && ridley_globals.sub1.y == 18 * 64 - 1 - 160);
+            /* 200 damage: the big fireballs attack. */
+            r->pose = 0x9;
+            ridley_globals.sub1.health = r->health = 1000;
+            ridley_globals.boss_work3 = 0;
+            r->health = 790;
+            mzm_sprite_update(r, 0, &rf);
+            assert(r->pose == 0x2B || r->pose == 0x2A);
+            /* Dead: dying, then gone with its event. */
+            r->health = 0;
+            r->pose = 0x9;
+            mzm_sprite_update(r, 0, &rf);
+            mzm_sprite_update(r, 0, &rf);
+            assert(r->pose == 0x67);
+            ridley_frames = 0;
+            while (r->status && ridley_frames++ < 2000) mzm_sprite_update(r, 0, &rf);
+            assert(r->status == 0 && test_check_event(NULL, MZM_EVENT_RIDLEY_KILLED));
+            test_events[MZM_EVENT_RIDLEY_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_RIDLEY_KILLED % 8));
+            test_events[MZM_EVENT_GRAVITY_SUIT_OBTAINED / 8] &=
+                (uint8_t)~(1u << (MZM_EVENT_GRAVITY_SUIT_OBTAINED % 8));
             clear();
         }
         /* Worker Robots (worker_robot.c): asleep until hit, then standing

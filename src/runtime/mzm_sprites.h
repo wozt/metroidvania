@@ -119,7 +119,7 @@ extern const char *const mzm_debris_table_names[MZM_DEBRIS_TABLES];
 
 /* A MultiSpriteData table (gSubSpriteData1.pMultiOam): per frame, its
  * timer (0 ends the table) and each part's OAM index, y and x offsets. */
-#define MZM_MULTI_FRAMES 12
+#define MZM_MULTI_FRAMES 24
 #define MZM_MULTI_PARTS 12
 typedef struct {
     uint8_t timers[MZM_MULTI_FRAMES];
@@ -135,6 +135,10 @@ enum { MZM_KRAID_MULTI_RISING, MZM_KRAID_MULTI_STANDING, MZM_KRAID_MULTI_STANDIN
        MZM_KRAID_MULTI_MOVING_LEFT_FEET_TO_LEFT, MZM_KRAID_MULTI_MOVING_RIGHT_FEET_TO_LEFT,
        MZM_KRAID_MULTI_DYING1, MZM_KRAID_MULTI_DYING2, MZM_KRAID_MULTI_COUNT };
 extern const char *const mzm_kraid_multi_names[MZM_KRAID_MULTI_COUNT];
+/* sRidleyMultiSpriteData_* (gSubSpriteData1) and
+ * sRidleyTailMultiSpriteData_* (gSubSpriteData2) */
+enum { MZM_RIDLEY_MULTI_IDLE, MZM_RIDLEY_MULTI_SPITTING_FIREBALLS, MZM_RIDLEY_MULTI_TURNING_AROUND_FIRST_PART, MZM_RIDLEY_MULTI_TURNING_AROUND_SECOND_PART, MZM_RIDLEY_MULTI_TAIL_IDLE, MZM_RIDLEY_MULTI_TAIL_DYING, MZM_RIDLEY_MULTI_TAIL_MOVE_TO_ATTACK, MZM_RIDLEY_MULTI_TAIL_SETTING_UP_DIAGONAL, MZM_RIDLEY_MULTI_TAIL_CHARGING_DIAGONAL, MZM_RIDLEY_MULTI_TAIL_DIAGONAL, MZM_RIDLEY_MULTI_TAIL_CHARGING_VERTICAL, MZM_RIDLEY_MULTI_TAIL_VERTICAL, MZM_RIDLEY_MULTI_TAIL_LAST_VERTICAL, MZM_RIDLEY_MULTI_TAIL_BACK_TO_IDLE, MZM_RIDLEY_MULTI_COUNT };
+extern const char *const mzm_ridley_multi_names[MZM_RIDLEY_MULTI_COUNT];
 
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
 typedef struct {
@@ -186,6 +190,9 @@ typedef struct {
     MzmMultiSprite chozo_multi[MZM_CHOZO_MULTI_COUNT];
     MzmMultiSprite kraid_multi[MZM_KRAID_MULTI_COUNT];
     int16_t kraid_palette[128];     /* sKraidPal (BGR555) */
+    MzmMultiSprite ridley_multi[MZM_RIDLEY_MULTI_COUNT];
+    int16_t ridley_idle_y[65];      /* sRidleyIdleYOffsets (SHORT_MAX restarts it) */
+    int16_t ridley_spawning_y[81];  /* sRidleySpawningSpittingFireballsYOffsets */
 } MzmSpriteTables;
 
 /* Columns of MzmSpriteTables.drops. */
@@ -519,6 +526,44 @@ enum {
     MZM_KRAID_ANIMS,
 };
 extern const char *const mzm_kraid_anim_names[MZM_KRAID_ANIMS];
+/* Ridley OAM tables in RidleyOam order (src/data/sprites/ridley.c). */
+enum {
+    MZM_RIDLEY_IDLE,
+    MZM_RIDLEY_SPITTING_FIREBALLS,
+    MZM_RIDLEY_TURNING_AROUND_FIRST_PART,
+    MZM_RIDLEY_TURNING_AROUND_SECOND_PART,
+    MZM_RIDLEY_HEAD_IDLE,
+    MZM_RIDLEY_OPENING_MOUTH,
+    MZM_RIDLEY_MOUTH_OPENED,
+    MZM_RIDLEY_HEAD_DYING,
+    MZM_RIDLEY_HEAD_TURNING_AROUND,
+    MZM_RIDLEY_CLAW_IDLE,
+    MZM_RIDLEY_CLAW_SPITTING_FIREBALLS,
+    MZM_RIDLEY_CLAW_TURNING_AROUND_FIRST_PART,
+    MZM_RIDLEY_CLAW_TURNING_AROUND_SECOND_PART,
+    MZM_RIDLEY_CLAW_CARRYING_SAMUS,
+    MZM_RIDLEY_CLAW_LIFTING_SAMUS,
+    MZM_RIDLEY_CLAW_SAMUS_LIFTED,
+    MZM_RIDLEY_CLAW_RELEASING_SAMUS,
+    MZM_RIDLEY_LEFT_WING_IDLE,
+    MZM_RIDLEY_RIGHT_WING_IDLE,
+    MZM_RIDLEY_LEFT_WING_UNUSED,
+    MZM_RIDLEY_RIGHT_WING_UNUSED,
+    MZM_RIDLEY_LEFT_WING_SPITTING_FIREBALLS,
+    MZM_RIDLEY_RIGHT_WING_SPITTING_FIREBALLS,
+    MZM_RIDLEY_TAIL_PART,
+    MZM_RIDLEY_TAIL_TIP_POINTING_DOWN,
+    MZM_RIDLEY_TAIL_TIP_POINTING_UP,
+    MZM_RIDLEY_TAIL_TIP_POINTING_DIAGONALLY_DOWN_RIGHT,
+    MZM_RIDLEY_TAIL_TIP_POINTING_DIAGONALLY_UP_RIGHT,
+    MZM_RIDLEY_TAIL_TIP_POINTING_DIAGONALLY_DOWN_LEFT,
+    MZM_RIDLEY_TAIL_TIP_POINTING_DIAGONALLY_UP_LEFT,
+    MZM_RIDLEY_SQUARE,
+    MZM_RIDLEY_FIREBALL_SMALL,
+    MZM_RIDLEY_FIREBALL_BIG,
+    MZM_RIDLEY_ANIMS,
+};
+extern const char *const mzm_ridley_anim_names[MZM_RIDLEY_ANIMS];
 /* Metroid OAM tables (src/data/sprites/metroid.c). */
 enum {
     MZM_METROID_SPAWNING, MZM_METROID_MOVING, MZM_METROID_SAMUS_GRABBED, MZM_METROID_SHELL_IDLE,
@@ -635,7 +680,7 @@ enum {
     MZM_FAMILY_GERUTA, MZM_FAMILY_RIPPER2, MZM_FAMILY_SQUEEPT, MZM_FAMILY_GAMET,
     MZM_FAMILY_ITEM_SPRITE, MZM_FAMILY_SKULTERA, MZM_FAMILY_DRAGON, MZM_FAMILY_GADGET,
     MZM_FAMILY_PARASITE, MZM_FAMILY_ATOMIC, MZM_FAMILY_POLYP, MZM_FAMILY_TOURIAN,
-    MZM_FAMILY_WORKER_ROBOT, MZM_FAMILY_METROID, MZM_FAMILY_KRAID,
+    MZM_FAMILY_WORKER_ROBOT, MZM_FAMILY_METROID, MZM_FAMILY_KRAID, MZM_FAMILY_RIDLEY,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -689,7 +734,7 @@ enum {
     MZM_PSPRITE_GERON_BRINSTAR_ROOM_1C = 141, MZM_PSPRITE_GERON_VARIA1 = 142,
     MZM_PSPRITE_GERON_VARIA2 = 143, MZM_PSPRITE_GERON_VARIA3 = 144, MZM_PSPRITE_GERON_NORFAIR = 106,
     MZM_PSPRITE_PLASMA_BEAM_BLOCK = 170, MZM_PSPRITE_GRAVITY_SUIT_BLOCK = 171,
-    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA = 146, MZM_PSPRITE_ATOMIC = 115, MZM_PSPRITE_POLYP = 103, MZM_PSPRITE_KRAID = 111, MZM_PSPRITE_METROID = 100, MZM_PSPRITE_FROZEN_METROID = 101, MZM_PSPRITE_WORKER_ROBOT = 93, MZM_PSPRITE_CANNON = 126, MZM_PSPRITE_CANNON2 = 136, MZM_PSPRITE_CANNON3 = 137, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE = 125, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR = 135, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
+    MZM_PSPRITE_SPACE_JUMP_BLOCK = 172, MZM_PSPRITE_MAP_STATION = 58, MZM_PSPRITE_SAVE_PLATFORM = 110, MZM_PSPRITE_GUNSHIP = 65, MZM_PSPRITE_AREA_BANNER = 116, MZM_PSPRITE_MORPH_BALL_LAUNCHER = 78, MZM_PSPRITE_ZIPLINE = 61, MZM_PSPRITE_ZIPLINE_BUTTON = 62, MZM_PSPRITE_ZIPLINE_GENERATOR = 99, MZM_PSPRITE_SECURITY_GATE_DEFAULT_OPEN = 90, MZM_PSPRITE_SECURITY_GATE_DEFAULT_CLOSED = 98, MZM_PSPRITE_PISTON = 96, MZM_PSPRITE_GLASS_TUBE = 145, MZM_PSPRITE_RISING_CHOZO_PILLAR = 151, MZM_PSPRITE_PARASITE = 95, MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA = 146, MZM_PSPRITE_ATOMIC = 115, MZM_PSPRITE_POLYP = 103, MZM_PSPRITE_KRAID = 111, MZM_PSPRITE_RIDLEY = 97, MZM_PSPRITE_METROID = 100, MZM_PSPRITE_FROZEN_METROID = 101, MZM_PSPRITE_WORKER_ROBOT = 93, MZM_PSPRITE_CANNON = 126, MZM_PSPRITE_CANNON2 = 136, MZM_PSPRITE_CANNON3 = 137, MZM_PSPRITE_ZEBETITE_ONE_AND_THREE = 125, MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR = 135, MZM_PSPRITE_PARASITE_MULTIPLE = 94, MZM_PSPRITE_MORPH_BALL = 33, MZM_PSPRITE_POWER_GRIP = 76, MZM_PSPRITE_CHARGE_BEAM = 68,
     MZM_PSPRITE_GAMET_BLUE_SINGLE = 86, MZM_PSPRITE_GAMET_RED_SINGLE = 87,
     MZM_PSPRITE_GAMET_BLUE_LEADER = 157, MZM_PSPRITE_GAMET_BLUE_FOLLOWER = 158,
     MZM_PSPRITE_ZEBBO_GREEN_LEADER = 161, MZM_PSPRITE_ZEBBO_GREEN_FOLLOWER = 162,
@@ -721,7 +766,8 @@ enum {
     MZM_SSPRITE_ZIPLINE_GENERATOR_PART = 30, MZM_SSPRITE_CHOZO_PILLAR_PLATFORM = 53,
     MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW = 58, MZM_SSPRITE_CHOZODIA_SAVE_PLATFORM_PART = 46,
     MZM_SSPRITE_ATOMIC_ELECTRICITY = 31, MZM_SSPRITE_POLYP_PROJECTILE = 27, MZM_SSPRITE_CANNON_BULLET = 39, MZM_SSPRITE_KRAID_PART = 3, MZM_SSPRITE_KRAID_SPIKE = 28,
-    MZM_SSPRITE_KRAID_NAIL = 29, MZM_SSPRITE_METROID_SHELL = 26,
+    MZM_SSPRITE_KRAID_NAIL = 29, MZM_SSPRITE_RIDLEY_PART = 23, MZM_SSPRITE_RIDLEY_TAIL = 24,
+    MZM_SSPRITE_RIDLEY_FIREBALL = 33, MZM_SSPRITE_RIDLEY_BIG_FIREBALL = 67, MZM_SSPRITE_METROID_SHELL = 26,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 
@@ -801,6 +847,7 @@ enum {
     /* EVENT_FIRST_, THIRD_, FIFTH_, SECOND_, SIXTH_ and FOURTH_METROID_ROOM_CLEARED
      * follow in that order. */
     MZM_EVENT_FIRST_METROID_ROOM_CLEARED = 55, MZM_EVENT_KRAID_KILLED = 30,
+    MZM_EVENT_RIDLEY_KILLED = 37, MZM_EVENT_GRAVITY_SUIT_OBTAINED = 23,
 };
 
 /* Game systems outside the sprite engine. */
@@ -841,9 +888,16 @@ typedef struct {
     struct {
         uint16_t y, x;
         uint8_t multi, frame, adc;
-        uint8_t work1, work2, work3;
+        uint8_t work1, work2, work3, work4, work5;
         uint16_t health;
     } sub1;
+    /* gSubSpriteData2 (Ridley's tail): position, table and animation. */
+    struct {
+        uint16_t y, x;
+        uint8_t multi, frame, adc;
+    } sub2;
+    /* gBossWork.work1 and work3 (Ridley's spawn y and damage taken). */
+    uint16_t boss_work1, boss_work3;
     /* gEnergyRefillAnimation, gMissileRefillAnimation,
      * gSuperMissileRefillAnimation and gPowerBombRefillAnimation. */
     uint8_t refill_animation[4];
@@ -909,6 +963,8 @@ typedef struct {
     uint8_t samus_pose;
     bool standing_enemy, set_last_wall;
     uint16_t last_wall;
+    /* Ridley's claw: gSamusData.invincibilityTimer written (0: not). */
+    uint8_t set_invincibility;
 } MzmSpriteSamusLink;
 
 /* What SpriteUpdate shares with every sprite this frame. Enemy drops are
@@ -969,6 +1025,8 @@ typedef struct {
     uint8_t difficulty;
     /* gSamusPhysics.horizontalMovingDirection (0 none, 1 left, 2 right). */
     uint8_t samus_h_moving;
+    /* gChangedInput: the keys pressed this frame (MZM_KEY_* bits). */
+    uint16_t changed_input;
 } MzmSpriteFrame;
 
 /* Samus as SpriteUtilSamusAndSpriteCollision sees her: subpixel position,
@@ -1021,10 +1079,11 @@ typedef struct {
     /* SSC_KNOCKS_BACK_SAMUS: SamusSetPose(SPOSE_KNOCKBACK_REQUEST) with
      * an x velocity of a pixel away from the sprite (NULL: none). */
     void (*knockback)(void *context, bool sprite_on_left);
-    /* SSC_METROID: SpriteUtilTakeDamageFromSprite without knockback for
-     * `damage`, then, when she survives, an invincibility of 1, 4 or 8
-     * frames by suits (NULL: none). */
-    void (*metroid_drain)(void *context, uint16_t damage);
+    /* SpriteUtilTakeDamageFromSprite without knockback for `damage` (the
+     * hurt pose only when it kills her), then, when she survives, an
+     * invincibility of `invincibility` frames when she has none, or for
+     * SSC_METROID (0) of 1, 4 or 8 frames by suits (NULL: none). */
+    void (*metroid_drain)(void *context, uint16_t damage, uint8_t invincibility);
     /* gSamusData.invincibilityTimer (the stand-on-top check of
      * SSC_HURTS_RIGHT_CAN_STAND_ON_TOP), and set during `knockback` for a
      * knockback of an eighth of a block a frame instead of a pixel. */

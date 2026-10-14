@@ -2988,6 +2988,23 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0325 - Zero Mission Ridley
+
+- Ridley, RidleyPart, RidleyTail and RidleyFireball (`src/runtime/mzm_ridley.c`):
+  the Gravity Suit condition, the drop when Samus faces left on the
+  ground, the landing that breaks the ground, the hovering and sliding,
+  the turns, the small, big and grab fireballs, the tail's diagonal and
+  vertical swipes (gSubSpriteData2), the claw that grabs, lifts and drains
+  Samus until she is freed, the health palettes, the camera lock and the
+  death with its event and music.
+- Engine: multi-sprite tables of up to 24 frames, gSubSpriteData2,
+  gBossWork.work1/work3, gChangedInput in the sprite frame,
+  SSC_RIDLEY_CLAW and SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT_NO_KNOCKBACK, the
+  claw's invincibility write; `--energy` above the maximum raises it (a
+  diagnostic of long fights).
+- Checked by capture in ridley_012 (the drop and fireballs, the grab
+  lifting Samus in front of its mouth, her release) and by a test.
+
 ## Patch 0324 - Blocks removed by sprites vanish from the screen
 
 - Fix: the sprites' ClipdataProcess(CAA_REMOVE_SOLID) only cleared the

@@ -2988,6 +2988,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0326 - Zero Mission Mother Brain
+
+- MotherBrain and its part, beam, block and glass sprites
+  (`src/runtime/mzm_mother_brain.c`): the glass that missiles crack in
+  three BG0 stages and shatter, the block Samus can't grab, the eye that
+  opens after the glass and closes after enough damage, the charged beam
+  that ignores invincibility, and the death that sets its event and shows
+  the escape banner with the escape music.
+- Engine: a background block hook (BgClipSetBgBlockValue),
+  SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY, the sprites' charge palette rows.
+- Checked by capture in tourian_004 (missiles from a platform crack the
+  glass to its second stage) and by a test of the whole fight; the escape
+  sequence itself is not ported yet.
+
 ## Patch 0325 - Zero Mission Ridley
 
 - Ridley, RidleyPart, RidleyTail and RidleyFireball (`src/runtime/mzm_ridley.c`):

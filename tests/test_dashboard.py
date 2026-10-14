@@ -139,7 +139,8 @@ class OutputTests(unittest.TestCase):
         mzm_done = {row["name"] for row in mzm["monsters"] if row["status"] == "partial"}
         self.assertIn("Zoomer Yellow", mzm_done)
         self.assertIn("Sidehopper", mzm_done)
-        self.assertNotIn("Mother Brain", mzm_done)
+        self.assertIn("Mother Brain", mzm_done)
+        self.assertNotIn("Acid Worm", mzm_done)
         mzm_items = {row["name"]: row["status"] for row in mzm["items"]}
         self.assertEqual(mzm_items["Small Energy Drop"], "partial")
         self.assertEqual(mzm_items["Missile Drop"], "partial")
@@ -165,7 +166,8 @@ class OutputTests(unittest.TestCase):
         supported = dashboard._mzm_supported_sprites(engine)
         self.assertIn("ZOOMER_YELLOW", supported)
         self.assertIn("DESSGEEGA_AFTER_LONG_BEAM", supported)
-        self.assertNotIn("MOTHER_BRAIN", supported)
+        self.assertIn("MOTHER_BRAIN", supported)
+        self.assertNotIn("ACID_WORM", supported)
         # Drops take the MZM_FAMILY_DROP default, not a case label.
         self.assertNotIn("SMALL_ENERGY_DROP", supported)
 

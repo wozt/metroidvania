@@ -24,7 +24,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 69 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 70 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -364,6 +364,15 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.weapons.bombs`.  
 Known divergences: Not compared with an emulator. The growth scales the composed frame around its centre, where the GBA scales each OAM part around its own; MetroidDoorLock (an unused sprite) is not ported; the room's music and the Tourian entrance cutscene are not part of this.  
 Next action: Check the grab and the bomb release in game, then compare with an emulator.
+
+[~] **`mzm.enemies.mother_brain` — Mother Brain.** Mother Brain (gone once EVENT_MOTHER_BRAIN_KILLED or EVENT_ESCAPED_ZEBES is set) waits in its glass, the bottom part's 400 health: missiles break it in three stages drawn on BG0 (BgClipCallMotherBrainUpdateGlass through a new block hook) and shatter it with the glass breaking sprite; the block Samus can't grab appears once she passes its place. The eye then opens with Mother Brain's 700 health: missiles hurt it, and 100 damage (200 on easy, 60 on hard) close it; with the eye closed and Samus above the blocks it charges (sMotherBrainDynamicPaletteData's palette rows, baked as /rowN) and fires its beam (SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY), the eye opening for the shot; Samus below the blocks closes it. The camera locks on the arena and Samus is kept out of it. Its death sets EVENT_MOTHER_BRAIN_KILLED (which also removes the cannons and its Rinkas), flashes it for two seconds, explodes it (PE_MAIN_BOSS_DEATH) and a second later shows the escape banner, plays the escape music and its beep. Checked by capture in tourian_004 (Mother Brain in its glass, missiles from a platform cracking it: 400 to 260 health, the second stage drawn) and by a test of the whole fight.
+
+Native evidence: `mzm:c:src/bg_clip.c:BgClipCallMotherBrainUpdateGlass`, `mzm:c:src/bg_clip.c:BgClipSetBgBlockValue`, `mzm:c:src/sprite_util.c:SpriteUtilHasAnimationEnded`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrain`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainBeam`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainBlock`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainCheckGlassBroke`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainDeath`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainGlassBreaking`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainHandler`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainInit`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainPart`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainPartGlassBroken`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainPartGlassStage1`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainPartGlassStage2`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainPartGlassStage3`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainPartHitboxInit`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainPartInit`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainPartSpawnGlassBreaking`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainSpawnBlock`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainStartEscape`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainSyncSubSpritesPosition`, `mzm:c:src/sprites_ai/mother_brain.c:MotherBrainUpdatePalette`.  
+Local implementation: [`src/runtime/mzm_mother_brain.c`](../src/runtime/mzm_mother_brain.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.ridley`, `mzm.enemies.tourian_defences`.  
+Known divergences: Not compared with an emulator; the fight was not won in game. Not ported: MakeBackgroundFlash (the yellow flashes of its death), the escape explosion sprite (PSPRITE_EXPLOSION_ZEBES_ESCAPE, with the escape timer and sequence) and the in-game timer at bosses.  
+Next action: Port the escape sequence, win the fight in game, then compare with an emulator.
 
 [~] **`mzm.enemies.multiviola` — Multiviolas.** Bouncing diagonally off every surface at 3 subpixels a frame on both axes, starting toward Samus, its 56-frame animation starting at twice its slot, and the big explosion death into drops.
 

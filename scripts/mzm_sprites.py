@@ -105,7 +105,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_ZIPLINE_GENERATOR": 0, "PSPRITE_SECURITY_GATE_DEFAULT_OPEN": 0,
           "PSPRITE_PISTON": 0, "PSPRITE_GLASS_TUBE": 0, "PSPRITE_RISING_CHOZO_PILLAR": 0,
           "PSPRITE_PARASITE": 0, "PSPRITE_PARASITE_MULTIPLE": 0,
-          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0, "PSPRITE_RIDLEY": 0,
+          "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0, "PSPRITE_RIDLEY": 0, "PSPRITE_MOTHER_BRAIN": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
                           "VARIA") for hint in ("", "_HINT")},
@@ -115,7 +115,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
 # The tables a sprite's row variants apply to (by prefix; the others keep
 # their rows): only the Atomic's body flashes, not its electricity.
 ROW_VARIANT_TABLES = {"PSPRITE_ATOMIC": ("sAtomicOam_",), "PSPRITE_METROID": ("sMetroidOam_Spawning",)}
-ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
+ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
@@ -142,6 +142,8 @@ MULTI_SPRITE_DATA = {
                                ("sChozoStatueMultiSpriteData_Standing",
                                 "sChozoStatueMultiSpriteData_Sitting",
                                 "sChozoStatueMultiSpriteData_Seated")),
+    "sprites/mother_brain.c": (("sprites_ai/mother_brain.h", "data/sprites/mother_brain.h",
+                                "structs/sprite.h"), ("sMotherBrainMultiSpriteData",)),
     "sprites/ridley.c": (("sprites_ai/ridley.h", "data/sprites/ridley.h", "structs/sprite.h"),
                          ("sRidleyMultiSpriteData_Idle", "sRidleyMultiSpriteData_SpittingFireballs",
                           "sRidleyMultiSpriteData_TurningAroundFirstPart",

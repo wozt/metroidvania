@@ -42,6 +42,7 @@ enum {
     SSC_KNOCKS_BACK_SAMUS = 7,
     SSC_HURTS_KNOCKBACK_IF_INVINCIBLE = 10,
     SSC_SOLID_SIDEWAYS = 12,
+    SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY = 15,
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT_NO_KNOCKBACK = 16,
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
@@ -182,6 +183,8 @@ void ai_metroid(Ctx *c);
 void ai_kraid(Ctx *c);
 /* Ridley, its parts, tail and fireballs (mzm_ridley.c). */
 void ai_ridley(Ctx *c);
+/* Mother Brain, its parts, beam, block and glass (mzm_mother_brain.c). */
+void ai_mother_brain(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

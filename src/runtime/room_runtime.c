@@ -2500,16 +2500,18 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             int index, timer, used = 0;
             if (sscanf(cursor, "%63s %d %d%n", name, &index, &timer, &used) != 3) continue;
             enum { CHOZO = MZM_CHOZO_MULTI_COUNT, KRAID = CHOZO + MZM_KRAID_MULTI_COUNT,
-                   ALL = KRAID + MZM_RIDLEY_MULTI_COUNT };
+                   RIDLEY = KRAID + MZM_RIDLEY_MULTI_COUNT, ALL = RIDLEY + 1 };
             for (int m = 0; m < ALL; ++m) {
                 const char *known = m < CHOZO ? mzm_chozo_multi_names[m]
                                     : m < KRAID ? mzm_kraid_multi_names[m - CHOZO]
-                                                : mzm_ridley_multi_names[m - KRAID];
+                                    : m < RIDLEY ? mzm_ridley_multi_names[m - KRAID]
+                                                 : MZM_MOTHER_BRAIN_MULTI_NAME;
                 if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
                 MzmMultiSprite *multi = m < CHOZO ? &sprites->tables.chozo_multi[m]
                                         : m < KRAID ? &sprites->tables.kraid_multi[m - CHOZO]
-                                                    : &sprites->tables.ridley_multi[m - KRAID];
+                                        : m < RIDLEY ? &sprites->tables.ridley_multi[m - KRAID]
+                                                     : &sprites->tables.mother_brain_multi;
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;
                 for (int p = 0; p < MZM_MULTI_PARTS; ++p) {
@@ -2932,7 +2934,7 @@ static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *ro
         if (room->doors[i].x0 == used->dest_x && room->doors[i].y1 == used->dest_y_end)
             no_hatch = !strcmp(room->doors[i].kind, "nohatch");
     static const MzmSpriteHooks hooks = {NULL, runtime_sprite_check_event, NULL, NULL, NULL,
-                                         NULL, NULL, NULL};
+                                         NULL, NULL, NULL, NULL};
     MzmSpriteHooks bound = hooks;
     bound.context = sprites;
     mzm_spawn_waiting_pirates(sprites->live, RUNTIME_MAX_SPRITES, &sprites->globals, &bound, ids,
@@ -2952,6 +2954,17 @@ static void runtime_sprite_apply_caa(void *context, uint16_t y, uint16_t x, uint
     if (!sprites->room || !runtime_block_tables.ok) return;
     MzmBlockEnv env = runtime_block_env(sprites->room);
     mzm_blocks_affect(&sprites->room->blocks, &env, caa, x, y);
+}
+
+/* BgClipSetBgBlockValue: a block value of BG0 to BG2 (the sheet indices of
+ * values below 0x400; the drawing reads them every frame). */
+static void runtime_sprite_set_bg_block(void *context, uint8_t bg, uint16_t value, uint16_t y, uint16_t x) {
+    RuntimeSprites *sprites = context;
+    Room *room = sprites->room;
+    if (!room || bg > 2 || !room->bg_present[bg] || x >= room->bg_w[bg] || y >= room->bg_h[bg]) return;
+    int sheet = value & 0x400 ? 1024 + (value - 0x400) : value;
+    if (sheet >= 1024 + 208 || (!(value & 0x400) && value >= 1024)) sheet = 0;
+    room->bg[bg][y * room->bg_w[bg] + x] = (unsigned short)sheet;
 }
 
 /* SpriteSpawnPrimary(PSPRITE_MESSAGE_BANNER, message, ...) */
@@ -3076,7 +3089,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                               runtime_sprite_set_event, runtime_sprite_door_timer,
                                               runtime_sprite_remove_solid, runtime_sprite_affect,
                                               runtime_sprite_apply_caa,
-                                              runtime_sprite_spawn_message};
+                                              runtime_sprite_spawn_message,
+                                              runtime_sprite_set_bg_block};
     MzmSpriteHooks hooks = hook_table;
     hooks.context = sprites;
     /* Samus for the Chozo statues' hands (native y). */
@@ -3300,6 +3314,12 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                 (sprite->palette_row==2 || sprite->palette_row==3))
             /* AtomicCheckShootElectricity's charge flashing. */
             shade=sprite->palette_row==2?"/row2":"/row3";
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MOTHER_BRAIN &&
+                sprite->palette_row>=2 && sprite->palette_row<=4) {
+            /* MotherBrainUpdatePalette's charge rows. */
+            static const char *const charge_rows[5]={"","","/row2","/row3","/row4"};
+            shade=charge_rows[sprite->palette_row];
+        }
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_RIDLEY &&
                 (sprite->palette_row==3 || sprite->palette_row==5))
             /* Ridley's health rows (paletteRow 3 and 5). */

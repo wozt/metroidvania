@@ -102,9 +102,20 @@ static void test_spawn_message(void *context, uint8_t message) {
     if (message_count < 4) messages[message_count++] = message;
 }
 
+static int bg_blocks, last_bg_value;
+static void set_bg_block(void *context, uint8_t bg, uint16_t value, uint16_t y, uint16_t x) {
+    (void)context;
+    (void)y;
+    (void)x;
+    if (bg == 0) {
+        bg_blocks++;
+        last_bg_value = value;
+    }
+}
+
 static const MzmSpriteHooks test_hooks = {NULL, test_check_event, test_set_event,
                                           test_door_timer, test_remove_solid, test_affect,
-                                          test_apply_caa, test_spawn_message};
+                                          test_apply_caa, test_spawn_message, NULL};
 
 static int leeches;
 
@@ -4523,6 +4534,98 @@ int main(void) {
             test_events[MZM_EVENT_RIDLEY_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_RIDLEY_KILLED % 8));
             test_events[MZM_EVENT_GRAVITY_SUIT_OBTAINED / 8] &=
                 (uint8_t)~(1u << (MZM_EVENT_GRAVITY_SUIT_OBTAINED % 8));
+            clear();
+        }
+        /* Mother Brain (mother_brain.c): the glass's stages on BG0 and its
+         * breaking, the eye opening, the damage that closes it, the beam,
+         * and the death that starts the escape. */
+        {
+            static MzmSprite mb[16];
+            static MzmSpriteKind mb_kind;
+            static MzmSpriteGlobals mb_globals;
+            static MzmSpriteHooks mb_hooks;
+            memset(mb, 0, sizeof mb);
+            memset(&mb_kind, 0, sizeof mb_kind);
+            memset(&mb_globals, 0, sizeof mb_globals);
+            for (int a = 0; a < MZM_MOTHER_BRAIN_ANIMS; ++a) {
+                mb_kind.counts[a] = 3;
+                for (int f = 0; f < 3; ++f) mb_kind.timers[a][f] = 2;
+            }
+            memset(&tables.mother_brain_multi, 0, sizeof tables.mother_brain_multi);
+            tables.mother_brain_multi.timers[0] = 8;
+            tables.mother_brain_multi.parts[0][2][0] = MZM_MOTHER_BRAIN_EYE_CLOSED;
+            tables.health[MZM_PSPRITE_MOTHER_BRAIN] = 700;
+            tables.secondary_health[MZM_SSPRITE_MOTHER_BRAIN_PART] = 400;
+            mb_hooks = test_hooks;
+            mb_hooks.set_bg_block = set_bg_block;
+            bg_blocks = 0;
+            MzmSpriteFrame mf = g;
+            mf.kinds[MZM_FAMILY_MOTHER_BRAIN] = &mb_kind;
+            mf.sprites = mb;
+            mf.sprite_count = 16;
+            mf.globals = &mb_globals;
+            mf.hooks = &mb_hooks;
+            mf.samus_link = NULL;
+            mf.area = 4;
+            mf.room = 4;
+            mf.samus_x = 5 * 64;
+            mf.samus_y = 9 * 64;
+            clear();
+            MzmSprite *b = &mb[0];
+            mzm_sprite_init_primary(b, MZM_PSPRITE_MOTHER_BRAIN, 0, 4, 2, 0, 0);
+            mzm_sprite_update(b, 0, &mf);
+            MzmSprite *shooter = &mb[mb_globals.sub1.work4], *eye = &mb[mb_globals.sub1.work5],
+                      *bottom = &mb[mb_globals.sub1.work6];
+            assert(b->pose == 0x1 && b->immune_to_projectiles && b->health == 700 && shooter->room_slot == 0 &&
+                   eye->room_slot == 2 && bottom->room_slot == 3);
+            for (int i = 1; i < 4; ++i) mzm_sprite_update(&mb[i], (uint8_t)i, &mf);
+            assert(eye->anim == MZM_MOTHER_BRAIN_EYE_CLOSED && bottom->health == 400 && mb_globals.boss_work3 == 400);
+            /* Samus left of the block's place: the block, and the glass
+             * takes hits. */
+            mzm_sprite_update(bottom, 3, &mf);
+            assert(bottom->pose == 0xF && !(bottom->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+            bottom->health = 300;
+            mzm_sprite_update(bottom, 3, &mf);
+            assert(bottom->pose == 0x11 && bg_blocks == 35 && last_bg_value == 0x177 + 4 * 16 + 6);
+            bottom->health = 0;
+            bottom->pose = 0x62;
+            mzm_sprite_update(bottom, 3, &mf);
+            assert(mb_globals.sub1.work3 == 1 && bottom->pose == 0x15 && last_bg_value == 0x210 + 4 * 16 + 6);
+            /* The glass broken: the eye opens with Mother Brain's health. */
+            mzm_sprite_update(b, 0, &mf);
+            assert(b->pose == 0x9 && eye->health == 700 && eye->anim == MZM_MOTHER_BRAIN_EYE_OPENING);
+            /* 100 damage on normal closes the eye; above the blocks it
+             * charges and fires its beam. */
+            eye->health = 600;
+            eye->isft = 16;
+            mzm_sprite_update(b, 0, &mf);
+            assert(eye->anim == MZM_MOTHER_BRAIN_EYE_CLOSING && eye->immune_to_projectiles && b->work2 == 1);
+            eye->isft = 0;
+            for (int i = 0; i < 10 && eye->anim != MZM_MOTHER_BRAIN_EYE_CLOSED; ++i) {
+                mzm_sprite_update(b, 0, &mf);
+                eye->adc++;
+                if (eye->adc > 2) { eye->adc = 1; eye->frame++; }
+            }
+            assert(eye->anim == MZM_MOTHER_BRAIN_EYE_CLOSED);
+            mf.samus_y = 6 * 64;                    /* above the blocks */
+            mzm_sprite_update(b, 0, &mf);
+            assert(b->anim == MZM_MOTHER_BRAIN_CHARGING_BEAM && b->work1 == 71);  /* the beam's countdown runs at once */
+            int mb_frames = 0, beams = 0;
+            while (b->work1 && mb_frames++ < 100) {
+                mzm_sprite_update(b, 0, &mf);
+                for (int i = 4; i < 16; ++i) beams += mb[i].status && mb[i].sprite_id == MZM_SSPRITE_MOTHER_BRAIN_BEAM;
+            }
+            assert(beams > 0 && eye->anim == MZM_MOTHER_BRAIN_EYE_OPENING && !eye->immune_to_projectiles);
+            /* Its eye at 0: dying, the event, then the escape's banner. */
+            message_count = 0;
+            eye->health = 0;
+            mzm_sprite_update(b, 0, &mf);
+            assert(b->pose == 0x67 && test_check_event(NULL, MZM_EVENT_MOTHER_BRAIN_KILLED) &&
+                   mb_globals.sub1.work3 == 2);
+            mb_frames = 0;
+            while (b->status && mb_frames++ < 400) mzm_sprite_update(b, 0, &mf);
+            assert(b->status == 0 && message_count == 1 && messages[0] == 33 && mb_globals.sub1.work3 == 3);
+            test_events[MZM_EVENT_MOTHER_BRAIN_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_MOTHER_BRAIN_KILLED % 8));
             clear();
         }
         /* Worker Robots (worker_robot.c): asleep until hit, then standing

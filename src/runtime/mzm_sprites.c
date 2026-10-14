@@ -516,6 +516,18 @@ const char *const mzm_ridley_multi_names[MZM_RIDLEY_MULTI_COUNT] = {
     "sRidleyTailMultiSpriteData_LastVerticalAttack",
     "sRidleyTailMultiSpriteData_BackToIdle",
 };
+const char *const mzm_mother_brain_anim_names[MZM_MOTHER_BRAIN_ANIMS] = {
+    "MotherBrainOam_Idle", "MotherBrainOam_ChargingBeam", "MotherBrainPartOam_EyeClosed",
+    "MotherBrainPartOam_2fa934", "MotherBrainPartOam_EyeOpening", "MotherBrainPartOam_2fa984",
+    "MotherBrainPartOam_EyeDying", "MotherBrainPartOam_Bottom", "MotherBrainPartOam_BeamSpawning",
+    "MotherBrainBeamOam_Moving", "MotherBrainPartOam_EyeClosing", "MotherBrainGlassBreakingOam_Breaking",
+    "MotherBrainBlockOam",
+};
+static const char *const mother_brain_sprites[MZM_MOTHER_BRAIN_ANIMS] = {
+    "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN",
+    "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN",
+    "CANNON",
+};
 const char *const mzm_metroid_anim_names[MZM_METROID_ANIMS] = {
     "MetroidOam_Spawning", "MetroidOam_Moving", "MetroidOam_SamusGrabbed", "MetroidShellOam_Idle",
 };
@@ -703,6 +715,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_METROID] = {MZM_METROID_ANIMS, mzm_metroid_anim_names, metroid_sprites},
     [MZM_FAMILY_KRAID] = {MZM_KRAID_ANIMS, mzm_kraid_anim_names, kraid_sprites},
     [MZM_FAMILY_RIDLEY] = {MZM_RIDLEY_ANIMS, mzm_ridley_anim_names, ridley_sprites},
+    [MZM_FAMILY_MOTHER_BRAIN] = {MZM_MOTHER_BRAIN_ANIMS, mzm_mother_brain_anim_names, mother_brain_sprites},
     [MZM_FAMILY_REO] = {MZM_REO_ANIMS, mzm_reo_anim_names, reo_sprites},
     [MZM_FAMILY_MELLA] = {MZM_MELLA_ANIMS, mzm_mella_anim_names, mella_sprites},
     [MZM_FAMILY_HOLTZ] = {MZM_HOLTZ_ANIMS, mzm_holtz_anim_names, holtz_sprites},
@@ -4812,6 +4825,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_RIDLEY_PART || sprite_id == MZM_SSPRITE_RIDLEY_TAIL ||
             sprite_id == MZM_SSPRITE_RIDLEY_FIREBALL || sprite_id == MZM_SSPRITE_RIDLEY_BIG_FIREBALL)
             return MZM_FAMILY_RIDLEY;
+        if (sprite_id == MZM_SSPRITE_MOTHER_BRAIN_PART || sprite_id == MZM_SSPRITE_MOTHER_BRAIN_BEAM ||
+            sprite_id == MZM_SSPRITE_MOTHER_BRAIN_BLOCK || sprite_id == MZM_SSPRITE_MOTHER_BRAIN_GLASS_BREAKING)
+            return MZM_FAMILY_MOTHER_BRAIN;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -4885,6 +4901,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_METROID: case MZM_PSPRITE_FROZEN_METROID: return MZM_FAMILY_METROID;
     case MZM_PSPRITE_KRAID: return MZM_FAMILY_KRAID;
     case MZM_PSPRITE_RIDLEY: return MZM_FAMILY_RIDLEY;
+    case MZM_PSPRITE_MOTHER_BRAIN: return MZM_FAMILY_MOTHER_BRAIN;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
     case MZM_PSPRITE_ZEBETITE_ONE_AND_THREE: case MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR:
         return MZM_FAMILY_TOURIAN;
@@ -5306,6 +5323,16 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         case SSC_SPACE_PIRATE_LASER:
             s->pose = SPRITE_POSE_STOPPED;
             /* fallthrough */
+        case SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY:
+            /* Mother Brain's beam: it hurts even an invincible Samus. */
+            if (contact_kills(s, samus, tables)) break;
+            if (samus->hurt) {
+                samus->hurt(samus->context, damage_of(s, tables), on_left);
+                samus->invincible = true;
+            }
+            s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+            ignore = true;
+            break;
         case SSC_HURTS_SAMUS:
         case SSC_SPACE_PIRATE:      /* same as the hurt code */
             if (contact_kills(s, samus, tables)) break;
@@ -5757,6 +5784,9 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         sprite->sprite_id == MZM_SSPRITE_KRAID_NAIL)
         return MZM_PSPRITE_KRAID;
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_RIDLEY) return MZM_PSPRITE_RIDLEY;
+    /* The block uses SPRITE_GFX_SLOT_SPECIAL (the cannons' graphics). */
+    if (sprite->sprite_id == MZM_SSPRITE_MOTHER_BRAIN_BLOCK) return MZM_PSPRITE_CANNON;
+    if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_MOTHER_BRAIN) return MZM_PSPRITE_MOTHER_BRAIN;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -5955,6 +5985,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_METROID: ai_metroid(&c); break;
     case MZM_FAMILY_KRAID: ai_kraid(&c); break;
     case MZM_FAMILY_RIDLEY: ai_ridley(&c); break;
+    case MZM_FAMILY_MOTHER_BRAIN: ai_mother_brain(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

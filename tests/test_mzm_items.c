@@ -216,6 +216,13 @@ static void test_banner(void) {
     run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
     run_until(&b, &kind, 0xFF, true, &prevent, &events);
     assert(!b.exists && events & MZM_BANNER_ENABLE_PAUSE && b.pose == MZM_BANNER_POSE_REMOVAL_ANIMATION);
+
+    /* EscapeStart occurs when either escape banner reaches its static
+     * table, while movement is still prevented. */
+    mzm_banner_spawn(&b, MZM_MESSAGE_ZEBES_ESCAPE);
+    events = 0;
+    run_until(&b, &kind, MZM_BANNER_POSE_STATIC, false, &prevent, &events);
+    assert(events & MZM_BANNER_START_ESCAPE && prevent == MZM_SAMUS_ITEM_PMT);
 }
 
 int main(void) {

@@ -2886,6 +2886,14 @@ static void runtime_sprite_set_event(void *context, uint8_t event) {
     sprites->events[event / 8] |= (uint8_t)(1u << (event % 8));
 }
 
+static uint8_t runtime_escape_kind(const RuntimeSprites *sprites) {
+    return mzm_escape_determine(
+        runtime_sprite_check_event((void *)sprites, MZM_EVENT_MOTHER_BRAIN_KILLED),
+        runtime_sprite_check_event((void *)sprites, MZM_EVENT_ESCAPED_ZEBES),
+        runtime_sprite_check_event((void *)sprites, MZM_EVENT_MECHA_RIDLEY_KILLED),
+        runtime_sprite_check_event((void *)sprites, MZM_EVENT_ESCAPED_CHOZODIA));
+}
+
 /* gDoorUnlockTimer: LOCK_DOORS (1) or a negative unlock countdown. */
 static void runtime_sprite_door_timer(void *context, int8_t timer) {
     (void)context;
@@ -3152,6 +3160,15 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     }
     if (link.standing_enemy) samus->on_enemy = true;
     runtime_sprites_drop_samus(sprites, samus);
+    if (runtime_sprite_check_event(sprites, MZM_EVENT_ESCAPED_ZEBES) ||
+        runtime_sprite_check_event(sprites, MZM_EVENT_ESCAPED_CHOZODIA))
+        sprites->globals.escape.explosion.active = false;
+    uint8_t escape_rng = sprites->tables.random[(sprites->frame8 + sprites->frame16 / 16u +
+        sprites->globals.escape.explosion.spawn_x +
+        sprites->globals.escape.explosion.spawn_y) % 32u];
+    mzm_escape_explosion_update(&sprites->globals.escape.explosion, &sprites->effects,
+                                world.camera_x, world.camera_y, (uint16_t)(samus->y - 1),
+                                escape_rng);
     sprites->frame8++;
     sprites->frame16++;
 }
@@ -3175,6 +3192,55 @@ static SDL_Texture *runtime_bg_texture(SDL_Renderer *renderer, const char *path)
         SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
     }
     return texture;
+}
+
+/* Temporary host rendering of gEscapeTimerDigits at the native absolute
+ * position. The countdown state and cadence are native; replacing these
+ * compact glyphs with sEscapeTimerDigitsGfx is tracked separately. */
+static void runtime_draw_escape_timer(SDL_Renderer *renderer, const MzmEscape *escape,
+                                      SDL_FRect viewport, float scale) {
+    if (escape->status != MZM_ESCAPE_STATUS_HAPPENING &&
+        escape->status != MZM_ESCAPE_STATUS_FAILED)
+        return;
+    static const uint8_t digits[10][5] = {
+        {7,5,5,5,7}, {2,6,2,2,7}, {7,1,7,4,7}, {7,1,7,1,7}, {5,5,7,1,1},
+        {7,4,7,1,7}, {7,4,7,5,7}, {7,1,1,1,1}, {7,5,7,5,7}, {7,5,7,1,7},
+    };
+    char text[16];
+    mzm_escape_format(escape, text, sizeof text);
+    const float pixel = 2.f * scale, advance = 4.f * pixel;
+    float width = 0.f;
+    for (const char *p = text; *p; ++p) width += (*p == ':' || *p == '.') ? 2.f * pixel : advance;
+    float x = viewport.x + (viewport.w - width) * .5f;
+    float y = viewport.y + 34.f * scale;
+    SDL_FRect back = {x - 2.f * scale, y - 2.f * scale, width + 4.f * scale,
+                      7.f * pixel};
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 208);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_RenderFillRect(renderer, &back);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    for (const char *p = text; *p; ++p) {
+        if (*p >= '0' && *p <= '9') {
+            const uint8_t *rows = digits[*p - '0'];
+            for (int row = 0; row < 5; ++row)
+                for (int column = 0; column < 3; ++column)
+                    if (rows[row] & (1u << (2 - column))) {
+                        SDL_FRect dot = {x + column * pixel, y + row * pixel, pixel, pixel};
+                        SDL_RenderFillRect(renderer, &dot);
+                    }
+            x += advance;
+        } else {
+            int row = *p == ':' ? 1 : 4;
+            SDL_FRect dot = {x, y + row * pixel, pixel, pixel};
+            SDL_RenderFillRect(renderer, &dot);
+            if (*p == ':') {
+                dot.y = y + 3.f * pixel;
+                SDL_RenderFillRect(renderer, &dot);
+            }
+            x += 2.f * pixel;
+        }
+    }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
 static void runtime_bg_art_sync(RuntimeBgArt *art, SDL_Renderer *renderer, const Room *room,
@@ -4473,6 +4539,7 @@ int main(int argc, char **argv) {
                     sprites.banner.cursor.exists=false;
                     runtime_apply_save(&resume_save,&equipment,&sprites,&samus,&collision,
                                        resume_request==RUNTIME_RESUME_SAVE);
+                    sprites.globals.escape=(MzmEscape){0};
                     /* A new game starts at the room's door 0. */
                     if(resume_request==RUNTIME_RESUME_NEW_GAME &&
                        !runtime_place_at_door(room,0,&samus,&equipment,&collision))
@@ -4713,6 +4780,9 @@ int main(int argc, char **argv) {
                 if(events&MZM_BANNER_FINISH_TANK) runtime_finish_collecting_tank(room);
                 if(events&MZM_BANNER_FINISH_ABILITY) runtime_finish_collecting_ability(room,&samus);
                 if(events&MZM_BANNER_ENABLE_PAUSE) sprites.globals.disable_pause=false;
+                if(events&MZM_BANNER_START_ESCAPE)
+                    mzm_escape_start(&sprites.globals.escape, runtime_escape_kind(&sprites),
+                                     runtime_difficulty);
                 if(events&MZM_BANNER_SAVE) {
                     /* SramSaveFile */
                     static MzmSaveData save;
@@ -4723,6 +4793,11 @@ int main(int argc, char **argv) {
                     else
                         fprintf(stderr,"Could not save the game to %s\n",path);
                 }
+            }
+            if(mzm_escape_update(&sprites.globals.escape,runtime_escape_kind(&sprites),true,
+                                 prevent_movement!=0)) {
+                prevent_movement=MZM_SAMUS_ITEM_PMT;
+                sprites.globals.cutscene_effect=2;
             }
             weapons.samus_previous_x=previous_x;
             weapons.frame8=sprites.frame8;
@@ -5511,6 +5586,8 @@ int main(int argc, char **argv) {
                 SDL_SetTextureColorMod(hud_texture,255,255,255);
             }
         }
+        if(!dying_mode)
+            runtime_draw_escape_timer(renderer,&sprites.globals.escape,viewport,scale);
 frame_overlays:
         debug_draw(renderer,&debug,paused,viewport,scale,current_room,&samus,&equipment,
                    debug_frame);

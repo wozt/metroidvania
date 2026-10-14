@@ -51,7 +51,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c src/runtime/mzm_hatches.c
                src/runtime/mzm_blocks.c
                src/runtime/mzm_effects.c src/runtime/mzm_audio.c src/runtime/gba_psg.c
-               src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c src/runtime/mzm_power_bomb.c
+               src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c src/runtime/mzm_escape.c src/runtime/mzm_power_bomb.c
                src/runtime/mzm_items.c src/runtime/mzm_message_banner.c
                src/runtime/gba_ppu.c src/runtime/mzm_rom.c src/runtime/mzm_hud.c
                src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c src/runtime/mzm_room_gfx.c
@@ -248,6 +248,7 @@ if(BUILD_TESTING)
                    src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c
                    src/runtime/mzm_effects.c src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c
+                   src/runtime/mzm_escape.c
                    src/runtime/mzm_projectiles.c src/runtime/mzm_samus.c
                    src/runtime/mzm_power_bomb.c)
     target_include_directories(fusion_mzm_sprites_tests PRIVATE src/runtime)

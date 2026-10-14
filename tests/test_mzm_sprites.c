@@ -2,6 +2,7 @@
 /* ROM-free tests for the Zero Mission sprite engine and the Zoomer. */
 #include "mzm_sfx.h"
 #include "mzm_blocks.h"
+#include "mzm_escape.h"
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
 #include "mzm_projectiles.h"
@@ -3366,6 +3367,21 @@ int main(void) {
         mzm_sprite_update(&room[1], 1, &g);
         mzm_sprite_update(&room[2], 2, &g);
         assert(room[1].pose == 0x25 && room[1].y_spawn == 310 && room[2].anim == MZM_GADGET_SAVE_PLATFORM_TOP_EXTENDED);
+        /* EscapeDetermineTimer disables both kinds of save platform. */
+        memset(room, 0, sizeof room);
+        station_globals.loading_file = false;
+        test_set_event(NULL, MZM_EVENT_MOTHER_BRAIN_KILLED);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_SAVE_PLATFORM, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x51 && room[0].anim == MZM_GADGET_SAVE_PLATFORM_IDLE_OFF);
+        memset(room, 0, sizeof room);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_SAVE_PLATFORM_CHOZODIA, 0, 5, 5, 0, 0);
+        mzm_sprite_update(&room[0], 0, &g);
+        assert(room[0].pose == 0x51 &&
+               room[0].anim == MZM_GADGET_SAVE_PLATFORM_CHOZODIA_OPENED_OFF &&
+               room[0].palette_row == 3);
+        test_events[MZM_EVENT_MOTHER_BRAIN_KILLED / 8] &=
+            (uint8_t)~(1u << (MZM_EVENT_MOTHER_BRAIN_KILLED % 8));
         /* The gunship at a new game's start: six blocks up, it lands with
          * Samus inside (hidden HUD, the vertical flames), and starts the
          * intro text half a second before touching down. */
@@ -4624,7 +4640,8 @@ int main(void) {
                    mb_globals.sub1.work3 == 2);
             mb_frames = 0;
             while (b->status && mb_frames++ < 400) mzm_sprite_update(b, 0, &mf);
-            assert(b->status == 0 && message_count == 1 && messages[0] == 33 && mb_globals.sub1.work3 == 3);
+            assert(b->status == 0 && message_count == 1 && messages[0] == 33 &&
+                   mb_globals.sub1.work3 == 3 && mb_globals.escape.explosion.active);
             test_events[MZM_EVENT_MOTHER_BRAIN_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_MOTHER_BRAIN_KILLED % 8));
             clear();
         }
@@ -5014,6 +5031,43 @@ int main(void) {
         mzm_sprite_update(&room[0], 0, &item_frame);
         assert(room[0].pose == 0x23 && room[1].status == 0 && items.items & MZM_ITEM_CHARGE_BEAM &&
                messages[0] == 9 && test_events[20 / 8] & (1u << (20 % 8)));
+    }
+    /* EscapeDetermineTimer, EscapeSetTimer and EscapeUpdateTimer: event
+     * routing, difficulty lengths, banner pause and timeout. */
+    {
+        MzmEscape escape = {0};
+        assert(mzm_escape_determine(true, false, false, false) == MZM_ESCAPE_MOTHER_BRAIN);
+        assert(mzm_escape_determine(true, true, true, false) == MZM_ESCAPE_MECHA_RIDLEY);
+        assert(mzm_escape_determine(false, false, false, false) == MZM_ESCAPE_NONE);
+        assert(mzm_escape_has_escaped(true, true, false, false));
+        assert(mzm_escape_has_escaped(false, true, true, true));
+        mzm_escape_start(&escape, MZM_ESCAPE_MOTHER_BRAIN, 0);
+        char clock[16];
+        mzm_escape_format(&escape, clock, sizeof clock);
+        assert(!strcmp(clock, "03:00.00"));
+        assert(!mzm_escape_update(&escape, MZM_ESCAPE_MOTHER_BRAIN, true, true));
+        mzm_escape_format(&escape, clock, sizeof clock);
+        assert(!strcmp(clock, "03:00.00"));
+        assert(!mzm_escape_update(&escape, MZM_ESCAPE_MOTHER_BRAIN, true, false));
+        mzm_escape_format(&escape, clock, sizeof clock);
+        assert(!strcmp(clock, "02:59.99"));
+        memset(&escape.digits, 0, sizeof escape.digits);
+        escape.counter = 59;
+        assert(mzm_escape_update(&escape, MZM_ESCAPE_MOTHER_BRAIN, true, false));
+        assert(escape.status == MZM_ESCAPE_STATUS_FAILED);
+
+        MzmEffects escape_effects = {0};
+        mzm_sfx_clear();
+        mzm_screen_shake_clear();
+        mzm_escape_explosion_start(&escape.explosion, 640, 640);
+        mzm_escape_explosion_update(&escape.explosion, &escape_effects, 0, 0, 640, 15);
+        assert(!escape_effects.particles[0].status);
+        mzm_escape_explosion_update(&escape.explosion, &escape_effects, 0, 0, 640, 15);
+        assert(escape_effects.particles[0].effect == MZM_PE_TWO_MEDIUM_DUST &&
+               escape_effects.debris[0].exists && escape_effects.debris[1].exists &&
+               mzm_screen_shake.x.timer == 10 && mzm_screen_shake.y.timer == 10 &&
+               mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING,
+                                 MZM_SOUND_ZEBES_ESCAPE_EXPLOSION_2));
     }
     puts("mzm_sprites: ok");
     return 0;

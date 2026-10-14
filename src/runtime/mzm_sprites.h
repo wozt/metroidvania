@@ -33,6 +33,7 @@
 #include <stdint.h>
 
 #include "mzm_effects.h"
+#include "mzm_escape.h"
 #include "mzm_projectiles.h"
 
 enum {
@@ -864,6 +865,7 @@ enum {
      * follow in that order. */
     MZM_EVENT_FIRST_METROID_ROOM_CLEARED = 55, MZM_EVENT_KRAID_KILLED = 30,
     MZM_EVENT_RIDLEY_KILLED = 37, MZM_EVENT_GRAVITY_SUIT_OBTAINED = 23, MZM_EVENT_ESCAPED_ZEBES = 65,
+    MZM_EVENT_ESCAPED_CHOZODIA = 75,
 };
 
 /* Game systems outside the sprite engine. */
@@ -956,6 +958,9 @@ typedef struct {
      * row DMAed to BG palette row 10 (-1: none); reset by the room load. */
     bool bg2_hidden;
     int8_t bg_palette_row10;
+    /* EscapeUpdateTimer and the invisible Zebes explosion actor. The
+     * countdown survives room loads with the other game globals. */
+    MzmEscape escape;
 } MzmSpriteGlobals;
 
 /* gSamusData as the Chozo statues read and move it: her pose

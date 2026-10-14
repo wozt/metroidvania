@@ -2988,6 +2988,34 @@ No automatic reciprocal link or native engine encoder is implemented.
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
 
+## Patch 0328 - Zero Mission Zebes escape countdown and destruction
+
+- `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,
+  `EscapeCheckHasEscaped`, `EscapeSetTimer` and `EscapeUpdateTimer`. The event
+  route selects Tourian or Chozodia, the difficulty selects the native limit,
+  and the hundredths/seconds countdown freezes outside gameplay and while a
+  message prevents movement.
+- Mother Brain now starts the invisible `PSPRITE_EXPLOSION_ZEBES_ESCAPE`
+  behavior at its native offset. Its camera-relative particles and debris,
+  Samus-height correction, four sounds and alternating two-axis shakes follow
+  `ExplosionZebesEscape`.
+- The Zebes and Chozodia banners emit `EscapeStart` when their spawning
+  animation reaches the static table. The room runtime starts the clock there,
+  draws a compact provisional clock at the native absolute HUD position and
+  marks the escape failed at zero.
+- Brinstar and Chozodia save platforms now consult the same event-driven
+  escape selection and initialize in their native disabled state during
+  either evacuation.
+- Remaining divergence: the clock still uses host-rendered glyphs rather than
+  `sEscapeTimerDigitsGfx`; the failed-escape and successful-exit cutscenes are
+  not connected, and the explosion state is outside the native sprite slots.
+- Tests cover event selection, all timer boundaries relevant to startup and
+  failure, movement prevention, the banner trigger, Mother Brain's trigger,
+  and a deterministic explosion particle/debris/shake/sound frame.
+- Validation on 2026-10-14: warning-clean build, CTest 35/35, Python 471/471,
+  the 119-feature evidence dashboard regenerated, native parity regenerated,
+  and the proprietary-file guard passed.
+
 ## Patch 0327 - evidence-aware development dashboard
 
 - Completed the dashboard evidence migration started in `1f03c78`: the 118

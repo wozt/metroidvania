@@ -29,6 +29,8 @@ enum {
     MZM_MESSAGE_BRINSTAR_MAP_ACQUIRED = 27,
     MZM_MESSAGE_MOTHER_SHIP_MAP_ACQUIRED = 31,
     MZM_MESSAGE_FULLY_POWERED_SUIT = 32,
+    MZM_MESSAGE_ZEBES_ESCAPE = 33,
+    MZM_MESSAGE_CHOZODIA_ESCAPE = 34,
     MZM_MESSAGE_COUNT = 39
 };
 
@@ -89,6 +91,8 @@ enum {
     MZM_BANNER_SAVE = 1 << 3,
     /* gDisablePause = FALSE: the save complete message is gone. */
     MZM_BANNER_ENABLE_PAUSE = 1 << 4,
+    /* EscapeStart: the escape banner has finished spawning. */
+    MZM_BANNER_START_ESCAPE = 1 << 5,
 };
 
 /* SpriteSpawnPrimary(PSPRITE_MESSAGE_BANNER, message, ...): spawned not

@@ -4,9 +4,8 @@
  * glass (the bottom part's health, drawn on BG0 in four stages), then hit
  * its eye, which closes after enough damage while it charges and fires its
  * beam; its death flashes it, removes it and starts the escape. Comments
- * name the pinned decompilation's routines. Not ported: MakeBackgroundFlash,
- * the escape explosion sprite (PSPRITE_EXPLOSION_ZEBES_ESCAPE, with the
- * escape timer) and the in-game timer at bosses. */
+ * name the pinned decompilation's routines. Not ported: MakeBackgroundFlash
+ * and the in-game timer at bosses. */
 #include "mzm_sprite_ai.h"
 
 enum {
@@ -286,7 +285,8 @@ static void start_escape(Ctx *c) {
     s->status = 0;
     const MzmSpriteHooks *h = c->f->hooks;
     if (h && h->spawn_message) h->spawn_message(h->context, MESSAGE_ZEBES_ESCAPE);
-    /* (PSPRITE_EXPLOSION_ZEBES_ESCAPE is not ported) */
+    mzm_escape_explosion_start(&c->f->globals->escape.explosion,
+                               (uint16_t)(s->y + BLOCK_SIZE * 4), s->x);
     mzm_sfx_music_play(MZM_MUSIC_ESCAPE, 0x40);
     mzm_sfx_play(MZM_SOUND_ESCAPE_BEEP);
     c->f->globals->sub1.work3 = STAGE_DEAD;

@@ -202,12 +202,12 @@ static unsigned banner_update(MzmMessageBanner *b, const MzmBannerKind *kind, bo
             } else {
                 b->table = MZM_BANNER_TWO_LINES_STATIC;
                 b->timer = 100;
-                /* The save prompt spawns its cursor (the escape start is
-                 * not ported). */
                 if (msg == MZM_MESSAGE_SAVE_PROMPT) {
                     b->cursor.exists = true;
                     b->cursor.pose = 0;
-                }
+                } else if (msg == MZM_MESSAGE_ZEBES_ESCAPE ||
+                           msg == MZM_MESSAGE_CHOZODIA_ESCAPE)
+                    events |= MZM_BANNER_START_ESCAPE;
             }
         }
         break;

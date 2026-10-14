@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-14T21:20:05+00:00",
+ "generated_at": "2026-10-14T21:33:35+00:00",
  "git": {
-  "commit": "1f03c78",
+  "commit": "8ca696a",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 118,
+   "total": 119,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 49,
+    "partial": 50,
     "functional": 58,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 58,
-   "functional_or_better_percent": 49.2,
-   "with_passing_tests": 106,
-   "with_passing_tests_percent": 89.8,
+   "functional_or_better_percent": 48.7,
+   "with_passing_tests": 107,
+   "with_passing_tests_percent": 89.9,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -151,6 +151,7 @@
     "mzm.environment.map_stations",
     "mzm.environment.room_gadgets",
     "mzm.environment.save_platforms",
+    "mzm.events.escape_sequence",
     "mzm.input.gamepad",
     "mzm.interface.area_banner",
     "mzm.interface.hud_and_minimap",
@@ -235,11 +236,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 70,
+   "total": 71,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 25,
+    "partial": 26,
     "functional": 45,
     "faithful": 0,
     "validated": 0,
@@ -247,8 +248,8 @@
     "unknown": 0
    },
    "functional_or_better": 45,
-   "functional_or_better_percent": 64.3,
-   "with_passing_tests": 70,
+   "functional_or_better_percent": 63.4,
+   "with_passing_tests": 71,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -294,6 +295,7 @@
     "mzm.environment.map_stations",
     "mzm.environment.room_gadgets",
     "mzm.environment.save_platforms",
+    "mzm.events.escape_sequence",
     "mzm.input.gamepad",
     "mzm.interface.area_banner",
     "mzm.interface.hud_and_minimap",
@@ -1661,7 +1663,8 @@
    ],
    "dependencies": [
     "mzm.enemies.ridley",
-    "mzm.enemies.tourian_defences"
+    "mzm.enemies.tourian_defences",
+    "mzm.events.escape_sequence"
    ],
    "native_routines": [
     "MotherBrain",
@@ -1688,8 +1691,8 @@
     "BgClipSetBgBlockValue",
     "SpriteUtilHasAnimationEnded"
    ],
-   "limitations": "Not compared with an emulator; the fight was not won in game. Not ported: MakeBackgroundFlash (the yellow flashes of its death), the escape explosion sprite (PSPRITE_EXPLOSION_ZEBES_ESCAPE, with the escape timer and sequence) and the in-game timer at bosses. Mother Brain (gone once EVENT_MOTHER_BRAIN_KILLED or EVENT_ESCAPED_ZEBES is set) waits in its glass, the bottom part's 400 health: missiles break it in three stages drawn on BG0 (BgClipCallMotherBrainUpdateGlass through a new block hook) and shatter it with the glass breaking sprite; the block Samus can't grab appears once she passes its place. The eye then opens with Mother Brain's 700 health: missiles hurt it, and 100 damage (200 on easy, 60 on hard) close it; with the eye closed and Samus above the blocks it charges (sMotherBrainDynamicPaletteData's palette rows, baked as /rowN) and fires its beam (SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY), the eye opening for the shot; Samus below the blocks closes it. The camera locks on the arena and Samus is kept out of it. Its death sets EVENT_MOTHER_BRAIN_KILLED (which also removes the cannons and its Rinkas), flashes it for two seconds, explodes it (PE_MAIN_BOSS_DEATH) and a second later shows the escape banner, plays the escape music and its beep. Checked by capture in tourian_004 (Mother Brain in its glass, missiles from a platform cracking it: 400 to 260 health, the second stage drawn) and by a test of the whole fight.",
-   "next_action": "Port the escape sequence, win the fight in game, then compare with an emulator.",
+   "limitations": "Not compared with an emulator; the fight was not won in game. MakeBackgroundFlash (the yellow flashes of its death) is not ported. Mother Brain (gone once EVENT_MOTHER_BRAIN_KILLED or EVENT_ESCAPED_ZEBES is set) waits in its glass, the bottom part's 400 health: missiles break it in three stages drawn on BG0 (BgClipCallMotherBrainUpdateGlass through a new block hook) and shatter it with the glass breaking sprite; the block Samus can't grab appears once she passes its place. The eye then opens with Mother Brain's 700 health: missiles hurt it, and 100 damage (200 on easy, 60 on hard) close it; with the eye closed and Samus above the blocks it charges (sMotherBrainDynamicPaletteData's palette rows, baked as /rowN) and fires its beam (SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY), the eye opening for the shot; Samus below the blocks closes it. The camera locks on the arena and Samus is kept out of it. Its death sets EVENT_MOTHER_BRAIN_KILLED (which also removes the cannons and its Rinkas), flashes it for two seconds, explodes it (PE_MAIN_BOSS_DEATH) and a second later shows the escape banner, starts the Zebes destruction actor and escape countdown, plays the escape music and its beep. Checked by capture in tourian_004 (Mother Brain in its glass, missiles from a platform cracking it: 400 to 260 health, the second stage drawn) and by a test of the whole fight.",
+   "next_action": "Win the fight and escape to the gunship in game, then compare with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c"
@@ -3264,7 +3267,8 @@
     "mzm.enemies.zoomer",
     "mzm.environment.save_platforms",
     "mzm.technical.save_file",
-    "mzm.cutscenes.story_text"
+    "mzm.cutscenes.story_text",
+    "mzm.events.escape_sequence"
    ],
    "native_routines": [
     "Gunship",
@@ -3309,8 +3313,8 @@
     "SpriteUtilRefillSuperMissiles",
     "SpriteUtilRefillPowerBombs"
    ],
-   "limitations": "gLastDoorUsed is not tracked: the landing happens in the room a new game starts in (the runtime's `landing` flag), never when entering the room through a door. The palette animations (GunshipEntranceFlashingAnim's OBJ row 9 and GunshipFlickerFlames' row 10) are baked as library variants of every combination, the runtime drawing the gunship's sprites with the rows last copied. The mosaic status is not drawn. The escape (Mother Brain killed) runs its AI but the Zebes exit (EFFECT_CUTSCENE_EXITING_ZEBES) and the escape sequence are not ported, and the take-off is untested. The new file's COLOR_FADING_LANDING_SHIP fade in is not drawn. Not compared with an emulator. \"A new game from the file select starts in Crateria's first room with the gunship six blocks up landing in 3.2 seconds (SOUND_GUNSHIP_LANDING, the vertical then horizontal flames, the HUD hidden, the pause disabled), Samus inside it (SPOSE_SAVING_LOADING_GAME with lastWallTouchedMidAir, drawn with the native in-ship animation behind the ship); half a second before touching down it starts the intro text, which leads to the game's start in Brinstar. On the ground the gunship's entrance opens and its platform rises while Samus is near; Samus standing on top (SSC_CAN_STAND_ON_TOP) enters it (turning from the foreground, sinking with the platform behind the closing entrance), is refilled (energy, missiles, super missiles, power bombs with the HUD's refill animations and SOUND_GUNSHIP_REFILL), gets \"\"Weapons and energy fully restored\"\", then the save prompt: yes saves the file (the gunship's saving sound and \"\"Save complete\"\"); then she rises out of the hatch and faces the screen. A file saved there resumes with Samus rising out of the ship. Checked by capture: the landing and its fade into the intro text, entering, the refill, the save and leaving in crateria_000. The tests run the landing, entering, the refill, the save prompt and leaving.\"",
-   "next_action": "Port the in-game color fadings and background effects, then the escape take-off with the Zebes exit.",
+   "limitations": "gLastDoorUsed is not tracked: the landing happens in the room a new game starts in (the runtime's `landing` flag), never when entering the room through a door. The palette animations (GunshipEntranceFlashingAnim's OBJ row 9 and GunshipFlickerFlames' row 10) are baked as library variants of every combination, the runtime drawing the gunship's sprites with the rows last copied. The mosaic status is not drawn. The escape (Mother Brain killed) runs its AI, but the Zebes exit (EFFECT_CUTSCENE_EXITING_ZEBES) is not connected and the take-off is untested. The new file's COLOR_FADING_LANDING_SHIP fade in is not drawn. Not compared with an emulator. \"A new game from the file select starts in Crateria's first room with the gunship six blocks up landing in 3.2 seconds (SOUND_GUNSHIP_LANDING, the vertical then horizontal flames, the HUD hidden, the pause disabled), Samus inside it (SPOSE_SAVING_LOADING_GAME with lastWallTouchedMidAir, drawn with the native in-ship animation behind the ship); half a second before touching down it starts the intro text, which leads to the game's start in Brinstar. On the ground the gunship's entrance opens and its platform rises while Samus is near; Samus standing on top (SSC_CAN_STAND_ON_TOP) enters it (turning from the foreground, sinking with the platform behind the closing entrance), is refilled (energy, missiles, super missiles, power bombs with the HUD's refill animations and SOUND_GUNSHIP_REFILL), gets \"\"Weapons and energy fully restored\"\", then the save prompt: yes saves the file (the gunship's saving sound and \"\"Save complete\"\"); then she rises out of the hatch and faces the screen. A file saved there resumes with Samus rising out of the ship. Checked by capture: the landing and its fade into the intro text, entering, the refill, the save and leaving in crateria_000. The tests run the landing, entering, the refill, the save prompt and leaving.\"",
+   "next_action": "Connect the Zebes exit cutscene, then play through and verify the escape take-off.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
@@ -3614,7 +3618,7 @@
     "SpriteUtilRefillSuperMissiles",
     "SpriteUtilRefillPowerBombs"
    ],
-   "limitations": "Not compared with an emulator. No escape exists to switch a platform off (only the alarm does); the parts keep the sprites' priority and the OBJ blending of the tube is not drawn. The Chozodia platform's alarm transparency (BLDCNT/BLDALPHA) is not modelled, its off palette row 3 reads another graphics slot's palette and is not baked (it draws with its own row), and its escape check (EscapeDetermineTimer) is not ported. The AIs follow the decompilation: the platform (always active, its top part eight blocks above) opens after Samus stands on it for 10 frames (not crouching or morphed), and once opened grabs her (centred, invincibility cleared, SPOSE_TURNING_FROM_FACING_THE_FOREGROUND with her animation frozen, gDisablePause), spawns the save prompt after 4 frames, and on YES flashes with palette row 2 (a baked /row2 variant) while the top extends and the tube, its shadow and the rising ray play; the ray turns it off, the save complete message follows a second later, then a 10-frame delay and the release (SPOSE_FACING_THE_FOREGROUND, the pause allowed again); Samus walking off closes it. In a loaded file's room (gIsLoadingFile) it starts with the tube around Samus and releases her after 340 frames. Checked by capture in brinstar_033 (prompt, saving, message, release, reload). A new game is the native one whatever the runtime's test options: Sram_InitSaveFile and SamusInit without a file (99 energy, no item, no ammunition, no event, no collected item, no opened hatch, a zero timer, the chosen difficulty), the gunship landing in Crateria, the intro text, then RoomLoad at Brinstar's door 0 (x = xStart blocks + xExit + 8 pixels, y = yEnd + 1 blocks + yExit pixels - 1, its own exit exported as X lines) with SamusInit's pose facing the foreground, facing left; checked by a capture of the whole flow from the title screen (Samus at x 632, falling down the first shaft, 99 energy and no ammunition). The equipment is no longer rebuilt from the debug suit preset: the collected items stay through the debug menu, and Samus's graphics follow the equipment. The Chozodia save platform (PSPRITE_SAVE_PLATFORM_CHOZODIA, its own tables, part and sounds, the off tables swapped, off during the alarm) refills Samus before the prompt: energy, then missiles, super missiles and power bombs (energy only suitless) with each counter's refill animation, the refill light and sound, then MESSAGE_WEAPONS_AND_ENERGY_RESTORED (MESSAGE_ENERGY_TANK_RECHARGE_COMPLETE suitless); checked by capture in chozodia_004 (30 energy refilled, the message, the save written, the file loaded back into the tube and Samus released).",
+   "limitations": "Not compared with an emulator. The parts keep the sprites' priority and the OBJ blending of the tube is not drawn. The Chozodia platform's alarm transparency (BLDCNT/BLDALPHA) is not modelled, and its off palette row 3 reads another graphics slot's palette and is not baked (it draws with its own row). The AIs follow the decompilation: the platform (always active, its top part eight blocks above) opens after Samus stands on it for 10 frames (not crouching or morphed), and once opened grabs her (centred, invincibility cleared, SPOSE_TURNING_FROM_FACING_THE_FOREGROUND with her animation frozen, gDisablePause), spawns the save prompt after 4 frames, and on YES flashes with palette row 2 (a baked /row2 variant) while the top extends and the tube, its shadow and the rising ray play; the ray turns it off, the save complete message follows a second later, then a 10-frame delay and the release (SPOSE_FACING_THE_FOREGROUND, the pause allowed again); Samus walking off closes it. In a loaded file's room (gIsLoadingFile) it starts with the tube around Samus and releases her after 340 frames. Checked by capture in brinstar_033 (prompt, saving, message, release, reload). A new game is the native one whatever the runtime's test options: Sram_InitSaveFile and SamusInit without a file (99 energy, no item, no ammunition, no event, no collected item, no opened hatch, a zero timer, the chosen difficulty), the gunship landing in Crateria, the intro text, then RoomLoad at Brinstar's door 0 (x = xStart blocks + xExit + 8 pixels, y = yEnd + 1 blocks + yExit pixels - 1, its own exit exported as X lines) with SamusInit's pose facing the foreground, facing left; checked by a capture of the whole flow from the title screen (Samus at x 632, falling down the first shaft, 99 energy and no ammunition). The equipment is no longer rebuilt from the debug suit preset: the collected items stay through the debug menu, and Samus's graphics follow the equipment. The Chozodia save platform (PSPRITE_SAVE_PLATFORM_CHOZODIA, its own tables, part and sounds, the off tables swapped, off during the alarm) refills Samus before the prompt: energy, then missiles, super missiles and power bombs (energy only suitless) with each counter's refill animation, the refill light and sound, then MESSAGE_WEAPONS_AND_ENERGY_RESTORED (MESSAGE_ENERGY_TANK_RECHARGE_COMPLETE suitless); checked by capture in chozodia_004 (30 energy refilled, the message, the save written, the file loaded back into the tube and Samus released). Both variants initialize off while EscapeDetermineTimer reports the Tourian or Chozodia escape.",
    "next_action": "Compare both platforms with an emulator; port the escape that switches them off.",
    "evidence": {
     "unit_tests": [
@@ -3623,6 +3627,71 @@
     "in_game_check": [
      "brinstar_033"
     ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-14"
+   }
+  },
+  {
+   "id": "mzm.events.escape_sequence",
+   "area": "mzm",
+   "category": "events",
+   "title": "Escape countdown and Zebes destruction",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_escape.c",
+    "src/runtime/mzm_escape.h",
+    "src/runtime/mzm_message_banner.c",
+    "src/runtime/mzm_gadget_sprites.c",
+    "src/runtime/mzm_mother_brain.c",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.mother_brain",
+    "mzm.interface.message_banner",
+    "mzm.animation.particles",
+    "mzm.environment.gunship"
+   ],
+   "native_routines": [
+    "EscapeDetermineTimer",
+    "EscapeCheckHasEscaped",
+    "EscapeStart",
+    "EscapeSetTimer",
+    "EscapeUpdateTimer",
+    "ExplosionZebesEscape",
+    "ParticleEscape"
+   ],
+   "limitations": "The timer digits currently use compact host-rendered glyphs instead of sEscapeTimerDigitsGfx and sParticleEscapeOam_Frame0. Escape failure requests EFFECT_CUTSCENE_ESCAPE_FAILED, but that cutscene and the successful Zebes exit are not connected. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. The runtime draws the live clock at its absolute HUD position and marks the escape failed at zero. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
+   "next_action": "Render the timer from its native OBJ graphics, connect failure and successful-exit cutscenes, then play through Mother Brain to the gunship.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_mzm_sprites.c"
+    ],
+    "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
@@ -3789,7 +3858,8 @@
    ],
    "dependencies": [
     "mzm.technical.ppu_and_rom_bank",
-    "mzm.items.tanks"
+    "mzm.items.tanks",
+    "mzm.events.escape_sequence"
    ],
    "native_routines": [
     "HudUpdateOam",
@@ -3823,7 +3893,7 @@
     "MinimapUpdateChunk",
     "PauseScreenGetMinimapData"
    ],
-   "limitations": "Not compared with hardware or an emulator. The runtime view is 320x224, wider than the GBA screen: the HUD keeps its native positions from the view's top-left corner and the minimap is placed 26 pixels from the view's right edge (SCREEN_SIZE_X replaced by the view width). Only the HUD is drawn by the PPU (its OAM slots; the other sprites keep the runtime's own drawing), so the HUD is always in front. Without a save system the minimap progress (gVisitedMinimapTiles, gMinimapTilesWithObtainedItems, downloaded maps) lasts one session; map stations, the escape timer, the Hiragana tiles, the debug room info and the boss icon updates by Kraid, Ridley and the ship (MinimapUpdateChunk has no caller yet) are not wired. HudDraw runs after ProjectileUpdate every frame and writes the native OBJ VRAM and OAM of a GbaPpu: sCommonSpritesGfx at VRAM_OBJ + 0x800 and sCommonSpritesPal at OBJ palette rows 2 to 7 (the in-game init), the energy digits and the energy tank row (sEnergyTanksGfx_* by full tanks, the low health flag under 30), the three refill animation stages of the energy, missile, super missile and power bomb counters (gEnergyRefillAnimation and the others, set by the Chozo statue refills), the missile, super missile and power bomb counters composed from 4-pixel digits (sMissileDigitsGfx, sPowerBombDigitsGfx) with their Inactive, Selected or Active symbol (HudUpdateGfx follows gSamusWeaponInfo.weaponHighlighted and missilesSelected), the suitless charge bar, and the OAM entries of HudUpdateOam (health bar, counters only when their maximum is non-zero, the minimap and its square blinking every 8 frames). The minimap decompresses the area's sMinimapDataPointers map (LZ77), adds the obtained items, hides the unexplored tiles unless the map is downloaded (MinimapSetDownloadedTiles), follows Samus's screen (MinimapCheckForUnexploredTile with the room entry's mapX and mapY read from sAreaRoomEntryPointers), marks it explored, records the area names, and redraws one 3-tile line a frame through the sPauseScreen_40d74c / _40d6fc color tables with the four flips. Checked in brinstar_000 (`--spawn 212 496`): energy 99, missiles, super missiles and power bombs with their symbols, the minimap with the Morph Ball room tile and the blinking square.",
+   "limitations": "Not compared with hardware or an emulator. The runtime view is 320x224, wider than the GBA screen: the HUD keeps its native positions from the view's top-left corner and the minimap is placed 26 pixels from the view's right edge (SCREEN_SIZE_X replaced by the view width). Only the HUD is drawn by the PPU (its OAM slots; the other sprites keep the runtime's own drawing), so the HUD is always in front. Without a save system the minimap progress (gVisitedMinimapTiles, gMinimapTilesWithObtainedItems, downloaded maps) lasts one session; the escape timer's native OBJ digits, the Hiragana tiles, the debug room info and the boss icon updates by Kraid, Ridley and the ship (MinimapUpdateChunk has no caller yet) are not wired. HudDraw runs after ProjectileUpdate every frame and writes the native OBJ VRAM and OAM of a GbaPpu: sCommonSpritesGfx at VRAM_OBJ + 0x800 and sCommonSpritesPal at OBJ palette rows 2 to 7 (the in-game init), the energy digits and the energy tank row (sEnergyTanksGfx_* by full tanks, the low health flag under 30), the three refill animation stages of the energy, missile, super missile and power bomb counters (gEnergyRefillAnimation and the others, set by the Chozo statue refills), the missile, super missile and power bomb counters composed from 4-pixel digits (sMissileDigitsGfx, sPowerBombDigitsGfx) with their Inactive, Selected or Active symbol (HudUpdateGfx follows gSamusWeaponInfo.weaponHighlighted and missilesSelected), the suitless charge bar, and the OAM entries of HudUpdateOam (health bar, counters only when their maximum is non-zero, the minimap and its square blinking every 8 frames). The minimap decompresses the area's sMinimapDataPointers map (LZ77), adds the obtained items, hides the unexplored tiles unless the map is downloaded (MinimapSetDownloadedTiles), follows Samus's screen (MinimapCheckForUnexploredTile with the room entry's mapX and mapY read from sAreaRoomEntryPointers), marks it explored, records the area names, and redraws one 3-tile line a frame through the sPauseScreen_40d74c / _40d6fc color tables with the four flips. Checked in brinstar_000 (`--spawn 212 496`): energy 99, missiles, super missiles and power bombs with their symbols, the minimap with the Morph Ball room tile and the blinking square.",
    "next_action": "Port the pause screen map and status screen on the same PPU, then save the minimap progress.",
    "evidence": {
     "unit_tests": [
@@ -3884,10 +3954,11 @@
    ],
    "tests": [
     "tests/test_mzm_items.c",
-    "tests/test_mzm_sprites.py"
+    "tests/test_mzm_sprites.c"
    ],
    "dependencies": [
-    "mzm.audio.sound_engine"
+    "mzm.audio.sound_engine",
+    "mzm.events.escape_sequence"
    ],
    "native_routines": [
     "MessageBanner",
@@ -3910,12 +3981,12 @@
     "BgClipFinishCollectingAbility",
     "SaveYesNoCursor"
    ],
-   "limitations": "The banner is kept outside the sprite slots and is drawn centred in the wider runtime view (the GBA position 120, 54 offset by the view's extra 32 rows); it always loads its graphics (no spriteset holds it); the escape start and the item acquisition pause screen are not ported; the English text is the only language exported. The exporter transliterates TextProcessMessageBanner, TextProcessCurrentMessage and TextDrawMessageCharacter on the banner's OBJ VRAM (sMessageBannerGfx, color 15 fill, glyphs of sCharactersGfx with sCharacterWidths, eight characters a frame, the US line overflow) for every English message of sMessageTextPointers, renders the banner's six OAM tables with each message, and records the TextProcessMessageBanner calls each message takes. The runtime runs MessageBanner frame by frame: the nine graphics frames, the text processing with the animation held, the shown banner (items and first tanks back up player 2 and insert the item or unknown item jingle; the fully powered suit plays the Brinstar remix behind its jingle; tank messages back up player 2, play the tank jingle and retrieve player 2 at removal; maps and save complete play the tank jingle; one-line tables for items, first tanks, maps, save complete and the fully powered suit), 100 static frames before A, B or a direction closes it, the removal animation, gPreventMovementTimer held at SAMUS_ITEM_PMT meanwhile (SamusUpdate skipped, sprites stopped except uninitialized ones, no Samus contact); its removal finishes a tank collection, and the end of an item message's text (stage 3 of the text processing) runs BgClipFinishCollectingAbility, which registers the ability in gItemsCollected and on the minimap. Once removed, the banner keeps its last pose, as its sprite slot does natively, for the map station that waits for MESSAGE_BANNER_POSE_REMOVAL_ANIMATION. The save prompt spawns its YES/NO cursor (SaveYesNoCursor, drawn at its absolute position shifted like the banner): LEFT and RIGHT move it with their sound, A answers (work1), NO plays the refusal and closes the banner, YES hides the cursor and saves on its next update (MZM_BANNER_SAVE); the save complete message re-enables the pause when it goes.",
-   "next_action": "Port the item acquisition screen and the escape start.",
+   "limitations": "The banner is kept outside the sprite slots and is drawn centred in the wider runtime view (the GBA position 120, 54 offset by the view's extra 32 rows); it always loads its graphics (no spriteset holds it); the item acquisition pause screen is not ported; the English text is the only language exported. The exporter transliterates TextProcessMessageBanner, TextProcessCurrentMessage and TextDrawMessageCharacter on the banner's OBJ VRAM (sMessageBannerGfx, color 15 fill, glyphs of sCharactersGfx with sCharacterWidths, eight characters a frame, the US line overflow) for every English message of sMessageTextPointers, renders the banner's six OAM tables with each message, and records the TextProcessMessageBanner calls each message takes. The runtime runs MessageBanner frame by frame: the nine graphics frames, the text processing with the animation held, the shown banner (items and first tanks back up player 2 and insert the item or unknown item jingle; the fully powered suit plays the Brinstar remix behind its jingle; tank messages back up player 2, play the tank jingle and retrieve player 2 at removal; maps and save complete play the tank jingle; one-line tables for items, first tanks, maps, save complete and the fully powered suit), 100 static frames before A, B or a direction closes it, the removal animation, gPreventMovementTimer held at SAMUS_ITEM_PMT meanwhile (SamusUpdate skipped, sprites stopped except uninitialized ones, no Samus contact); its removal finishes a tank collection, and the end of an item message's text (stage 3 of the text processing) runs BgClipFinishCollectingAbility, which registers the ability in gItemsCollected and on the minimap. Once removed, the banner keeps its last pose, as its sprite slot does natively, for the map station that waits for MESSAGE_BANNER_POSE_REMOVAL_ANIMATION. The save prompt spawns its YES/NO cursor (SaveYesNoCursor, drawn at its absolute position shifted like the banner): LEFT and RIGHT move it with their sound, A answers (work1), NO plays the refusal and closes the banner, YES hides the cursor and saves on its next update (MZM_BANNER_SAVE); the save complete message re-enables the pause when it goes. The Zebes and Chozodia escape messages emit EscapeStart when their spawning animation reaches its static table.",
+   "next_action": "Port the item acquisition screen.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_items.c",
-     "tests/test_mzm_sprites.py"
+     "tests/test_mzm_sprites.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -3938,10 +4009,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9202,6 +9277,12 @@
  },
  "timeline": [
   {
+   "commit": "8ca696a",
+   "date": "2026-10-14",
+   "subject": "feat(dashboard): finish evidence-aware progress tracker",
+   "scope": "dashboard"
+  },
+  {
    "commit": "1f03c78",
    "date": "2026-10-14",
    "subject": "unfinished job of kimi, we were working on better HTML CSS advancement following sheet",
@@ -9674,12 +9755,6 @@
    "date": "2026-10-11",
    "subject": "feat(mzm): native Mellas, Holtzes and Multiviolas",
    "scope": "mzm"
-  },
-  {
-   "commit": "1489daa",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): native Reos",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -9707,7 +9782,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1127,
+    "routines_cited_by_features": 1134,
     "call_edges": 6071
    },
    "aos": {

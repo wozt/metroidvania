@@ -768,8 +768,15 @@ static void spawn_message(const Ctx *c, uint8_t message) {
     if (c->f->hooks && c->f->hooks->spawn_message) c->f->hooks->spawn_message(c->f->hooks->context, message);
 }
 
-/* SavePlatformInit: off during the alarm (no escape is ported), releasing
- * Samus in a loaded file's room, else idle; the top part above. */
+static bool escape_active(const Ctx *c) {
+    return mzm_escape_determine(ai_check_event(c, MZM_EVENT_MOTHER_BRAIN_KILLED),
+                                ai_check_event(c, MZM_EVENT_ESCAPED_ZEBES),
+                                ai_check_event(c, MZM_EVENT_MECHA_RIDLEY_KILLED),
+                                ai_check_event(c, MZM_EVENT_ESCAPED_CHOZODIA)) != MZM_ESCAPE_NONE;
+}
+
+/* SavePlatformInit: off during the alarm or either escape, releasing Samus
+ * in a loaded file's room, else idle; the top part above. */
 static void save_platform_init(Ctx *c) {
     MzmSprite *s = c->s;
     s->always_active = true;
@@ -786,7 +793,7 @@ static void save_platform_init(Ctx *c) {
     s->frame = s->adc = 0;
     s->work0 = 10;                              /* CONVERT_SECONDS(1.f / 6) */
     /* (the two platforms swap their off tables) */
-    if (s->work2) {
+    if (s->work2 || escape_active(c)) {
         s->anim = sp_anim(s, chozodia(s) ? MZM_GADGET_SAVE_PLATFORM_OPENED_OFF : MZM_GADGET_SAVE_PLATFORM_IDLE_OFF);
         s->pose = SAVE_PLATFORM_POSE_OFF;
     } else if (c->f->globals && c->f->globals->loading_file) {

@@ -9,6 +9,7 @@
   const toolbar = document.getElementById("toolbar");
   const search = document.getElementById("search");
   const statusFilter = document.getElementById("status-filter");
+  const REPOSITORY_URL = "https://github.com/wozt/metroidvania";
 
   const VERDICTS = {
     passing: ["Tests passed", "ok"],
@@ -45,6 +46,17 @@
     return area ? area.title : id;
   }
 
+  function repositoryPath(path) {
+    const encoded = String(path).split("/").map(encodeURIComponent).join("/");
+    if (location.protocol === "file:") return `../${encoded}`;
+    const branch = encodeURIComponent((data && data.git && data.git.branch) || "main");
+    return `${REPOSITORY_URL}/blob/${branch}/${encoded}`;
+  }
+  function fileLink(path, label) {
+    if (!path || path.startsWith("@")) return `<code>${esc(label || path)}</code>`;
+    return `<a class="file-link" href="${esc(repositoryPath(path))}"><code>${esc(label || path)}</code></a>`;
+  }
+
   function matches(feature) {
     if (state.statuses.size && !state.statuses.has(feature.status)) return false;
     if (!state.query) return true;
@@ -71,30 +83,39 @@
 
   function evidenceBadges(evidence, verification) {
     if (!evidence) return "";
-    const unit = verification ? verification.verdict === "passing" : evidence.unit_tests.length > 0;
+    const testsDeclared = evidence.unit_tests.length > 0;
+    const testsPassed = testsDeclared && verification && verification.verdict === "passing";
+    const testsFailed = testsDeclared && verification && verification.verdict === "failing";
     const badges = [
-      [unit, "Unit tests", evidence.unit_tests.join(", ") || "no unit test"],
-      [evidence.in_game_check.length > 0, "In game", evidence.in_game_check.join(", ") || "no recorded in-game check"],
-      [evidence.emulator_compared, "Emulator", evidence.emulator_compared ? "compared with an emulator" : "not compared with an emulator"],
-      [evidence.played_through, "Played through", evidence.played_through ? "played to its end" : "not played to its end"],
+      [testsPassed ? "ok" : testsFailed ? "bad" : testsDeclared ? "declared" : "none",
+       testsPassed ? "Tests passed" : testsFailed ? "Tests failed" : testsDeclared ? "Tests declared" : "No tests",
+       evidence.unit_tests.join(", ") || "no automated test declared"],
+      [evidence.in_game_check.length ? "ok" : "none", "In-game check",
+       evidence.in_game_check.join(", ") || "no recorded manual runtime check"],
+      [evidence.emulator_compared ? "ok" : "none", "Emulator comparison",
+       evidence.emulator_compared ? "compared with an emulator" : "not compared with an emulator"],
+      [evidence.played_through ? "ok" : "none", "Played through",
+       evidence.played_through ? "played to its end" : "not played to its end"],
     ];
-    return `<span class="evidence">${badges.map(([ok, label, hint]) =>
-      `<span class="badge ${ok ? "ok" : ""}" title="${esc(hint)}">${ok ? "✓" : "✗"} ${esc(label)}</span>`).join("")}</span>`;
+    return `<span class="evidence">${badges.map(([tone, label, hint]) => {
+      const symbol = tone === "ok" ? "✓" : tone === "bad" ? "✗" : tone === "declared" ? "•" : "—";
+      return `<span class="badge evidence-${tone}" title="${esc(hint)}">${symbol} ${esc(label)}</span>`;
+    }).join("")}</span>`;
   }
 
   function featureCard(feature) {
     const v = feature.verification;
     const rows = [];
     const list = (items, mono) => items.map((x) => mono ? `<code>${esc(x)}</code>` : esc(x)).join(", ");
-    if (feature.local_sources.length) rows.push(["Implementation", list(feature.local_sources, true)]);
+    if (feature.local_sources.length) rows.push(["Implementation", feature.local_sources.map((x) => fileLink(x)).join(", ")]);
     if (feature.tests.length) rows.push(["Tests", v.tests.map((t) =>
-      `<code>${esc(t.test)}</code>${t.ctest && t.ctest.length ? ` <span class="muted">(${esc(t.ctest.join(", "))})</span>` : ""}${t.outcome ? ` — ${esc(t.outcome)}` : ""}`).join("<br>")]);
+      `${fileLink(t.test)}${t.ctest && t.ctest.length ? ` <span class="muted">(${esc(t.ctest.join(", "))})</span>` : ""}${t.outcome ? ` — ${esc(t.outcome)}` : ""}`).join("<br>")]);
     if (feature.native_routines.length) rows.push(["Native routines", list(feature.native_routines, true)]);
     if (feature.dependencies.length) rows.push(["Depends on", list(feature.dependencies, true)]);
     rows.push(["Fidelity", esc(feature.fidelity)]);
     if (feature.limitations) rows.push(["Limitations", esc(feature.limitations)]);
     if (feature.next_action) rows.push(["Next", esc(feature.next_action)]);
-    rows.push(["Declared in", `<code>${esc(feature.source)}</code>`]);
+    rows.push(["Declared in", fileLink(feature.source)]);
     if (v.verified_on) rows.push(["Verified", esc(v.verified_on)]);
     else if (feature.last_validated) rows.push(["Last validated (declared)", esc(feature.last_validated)]);
     return `<article class="feature">
@@ -172,6 +193,10 @@
   function overview() {
     const indicators = data.indicators.map(indicatorCard).join("");
     return `<p class="notice">${esc(data.method)}</p>
+      <p class="notice evidence-note"><strong>Evidence is separate from implementation status.</strong>
+      “Tests declared” only means a test is registered; “Tests passed” means it passed during this
+      dashboard generation. In-game checks are recorded manual observations. Emulator comparison
+      and playthrough are independent evidence.</p>
       <h2>Indicators</h2><div class="grid">${indicators}${testsIndicator()}</div>
       ${inventoryPanel()}`;
   }
@@ -198,11 +223,11 @@
     return `<div class="grid">${testsIndicator()}</div>
       <h2>CTest (${ctest.length})</h2>
       <div class="table-wrap"><table><thead><tr><th>Test</th><th>Sources</th><th>Result</th></tr></thead><tbody>
-      ${ctest.map((x) => `<tr><td><code>${esc(x.name)}</code></td><td>${x.files.map((f) => `<code>${esc(f)}</code>`).join("<br>") || '<span class="muted">command</span>'}</td><td>${outcomeBadge(x.outcome)}</td></tr>`).join("")}
+      ${ctest.map((x) => `<tr><td><code>${esc(x.name)}</code></td><td>${x.files.map((f) => fileLink(f)).join("<br>") || '<span class="muted">command</span>'}</td><td>${outcomeBadge(x.outcome)}</td></tr>`).join("")}
       </tbody></table></div>
       <h2>Python modules (${python.length})</h2>
       <div class="table-wrap"><table><thead><tr><th>Module</th><th>Tests</th><th>Result</th></tr></thead><tbody>
-      ${python.map((x) => `<tr><td><code>${esc(x.file)}</code></td><td>${x.passed == null ? x.test_count : `${x.passed}/${x.test_count}`}</td><td>${outcomeBadge(x.outcome)}</td></tr>`).join("")}
+      ${python.map((x) => `<tr><td>${fileLink(x.file)}</td><td>${x.passed == null ? x.test_count : `${x.passed}/${x.test_count}`}</td><td>${outcomeBadge(x.outcome)}</td></tr>`).join("")}
       </tbody></table></div>`;
   }
 
@@ -211,7 +236,7 @@
     const entries = data.timeline.filter((e) => !q || (e.subject + " " + e.scope).toLowerCase().includes(q));
     return `<p class="notice">Commit history shows when work landed; it is not evidence that a feature works.</p>
       <ul class="timeline">${entries.map((e) => `<li class="scope-${esc(e.scope)}">
-        <div class="date">${esc(e.date)} · <code>${esc(e.commit)}</code> · ${esc(e.scope)}</div>
+        <div class="date">${esc(e.date)} · <a href="${esc(`${REPOSITORY_URL}/commit/${encodeURIComponent(e.commit)}`)}"><code>${esc(e.commit)}</code></a> · ${esc(e.scope)}</div>
         <div>${esc(e.subject)}</div></li>`).join("")}</ul>`;
   }
 
@@ -231,10 +256,14 @@
     const visible = rows.filter((row) =>
       (!state.statuses.size || state.statuses.has(row.status)) &&
       (!q || (row.name + " " + (row.note || "") + " " + (row.feature || "")).toLowerCase().includes(q)));
-    const done = rows.filter((row) => row.status !== "not_started").length;
-    return `<h3>${esc(kind)} <span class="muted">${done}/${rows.length} done</span></h3>
+    const implemented = rows.filter((row) =>
+      ["partial", "functional", "faithful", "validated"].includes(row.status)).length;
+    return `<h3>${esc(kind)} <span class="muted">${implemented}/${rows.length} with an implementation status</span></h3>
       <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th><th>Status</th><th>Evidence</th><th>Note</th></tr></thead><tbody>
-      ${visible.map((row) => `<tr><td><code>${esc(typeof row.id === "number" ? "0x" + row.id.toString(16).toUpperCase().padStart(2, "0") : row.id)}</code></td><td>${esc(row.name)}${row.feature ? `<br><code class="muted">${esc(row.feature)}</code>` : ""}</td><td>${statusBadge(row.status)}</td><td>${evidenceBadges(row.evidence, null)}</td><td class="muted">${esc(row.note || "")}</td></tr>`).join("") ||
+      ${visible.map((row) => {
+        const feature = row.feature ? data.features.find((item) => item.id === row.feature) : null;
+        return `<tr><td><code>${esc(typeof row.id === "number" ? "0x" + row.id.toString(16).toUpperCase().padStart(2, "0") : row.id)}</code></td><td>${esc(row.name)}${row.feature ? `<br><code class="muted">${esc(row.feature)}</code>` : ""}</td><td>${statusBadge(row.status)}</td><td>${evidenceBadges(row.evidence, feature && feature.verification)}</td><td class="muted">${esc(row.note || "")}</td></tr>`;
+      }).join("") ||
       '<tr><td colspan="5" class="muted">No match.</td></tr>'}
       </tbody></table></div>`;
   }
@@ -251,12 +280,14 @@
   }
 
   function inGameView() {
-    const checked = data.features.filter((f) => f.evidence && f.evidence.in_game_check.length && matches(f));
+    const allChecked = data.features.filter((f) => f.evidence && f.evidence.in_game_check.length);
+    const checked = allChecked.filter(matches);
     const played = data.features.filter((f) => f.evidence && f.evidence.played_through);
     const compared = data.features.filter((f) => f.evidence && f.evidence.emulator_compared);
-    return `<p class="notice">What was observed running in a runtime, as recorded in the
-      registries: ${checked.length} features checked in game, ${played.length} played through,
-      ${compared.length} compared with an emulator.</p>
+    return `<p class="notice">Recorded evidence across ${data.features.length} registered features:
+      ${allChecked.length} checked manually in a runtime, ${compared.length} compared with an emulator,
+      and ${played.length} played through. These counts are evidence, not completion percentages.</p>
+      ${checked.length !== allChecked.length ? `<p class="filter-result">Showing ${checked.length} of ${allChecked.length} in-game checks after filters.</p>` : ""}
       ${featureGroups(checked, true)}`;
   }
 
@@ -299,8 +330,12 @@
       try { history.replaceState(null, "", `#${state.view}`); } catch (e) { /* file:// may refuse */ }
       render();
     });
+    document.querySelectorAll("[data-repo-path]").forEach((link) => {
+      link.href = repositoryPath(link.dataset.repoPath);
+    });
     const initial = (location.hash || "").slice(1);
-    const button = document.querySelector(`#tabs button[data-view="${CSS.escape(initial)}"]`);
+    const button = [...document.querySelectorAll("#tabs button[data-view]")]
+      .find((candidate) => candidate.dataset.view === initial);
     if (button) button.click(); else render();
   }
 

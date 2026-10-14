@@ -135,8 +135,12 @@ class OutputTests(unittest.TestCase):
         self.assertEqual(len(aos["monsters"]), dashboard.ARIA_ENEMY_COUNT)
         for game in (mzm, aos):
             for row in game["monsters"] + game["items"]:
-                self.assertIn(row["status"], ("not_started", "partial"))
-        mzm_done = {row["name"] for row in mzm["monsters"] if row["status"] == "partial"}
+                self.assertIn(row["status"], dashboard.STATUS_IDS)
+                self.assertEqual(set(row["evidence"]), {
+                    "unit_tests", "in_game_check", "emulator_compared", "played_through",
+                })
+        mzm_done = {row["name"] for row in mzm["monsters"]
+                    if row["status"] != "not_started"}
         self.assertIn("Zoomer Yellow", mzm_done)
         self.assertIn("Sidehopper", mzm_done)
         self.assertIn("Mother Brain", mzm_done)
@@ -144,12 +148,12 @@ class OutputTests(unittest.TestCase):
         mzm_items = {row["name"]: row["status"] for row in mzm["items"]}
         self.assertEqual(mzm_items["Small Energy Drop"], "partial")
         self.assertEqual(mzm_items["Missile Drop"], "partial")
-        self.assertEqual(mzm_items["Morph Ball"], "partial")
-        self.assertEqual(mzm_items["Power Grip"], "partial")
-        self.assertEqual(mzm_items["Charge Beam"], "partial")
-        self.assertEqual(mzm_items["Long Beam (Chozo statue)"], "partial")
-        self.assertEqual(mzm_items["Plasma Beam (Chozo statue)"], "partial")
-        self.assertEqual(mzm_items["Energy Tank"], "partial")
+        self.assertEqual(mzm_items["Morph Ball"], "functional")
+        self.assertEqual(mzm_items["Power Grip"], "functional")
+        self.assertEqual(mzm_items["Charge Beam"], "functional")
+        self.assertEqual(mzm_items["Long Beam (Chozo statue)"], "functional")
+        self.assertEqual(mzm_items["Plasma Beam (Chozo statue)"], "functional")
+        self.assertEqual(mzm_items["Energy Tank"], "functional")
         self.assertNotIn("Long Beam Hint (Chozo statue)", mzm_items)
         # Not one of the five enemy drops of is_drop().
         self.assertNotIn("Water Drop", mzm_items)
@@ -163,13 +167,34 @@ class OutputTests(unittest.TestCase):
 
     def test_bestiary_tracks_the_engine_switch(self):
         engine = (ROOT / "src/runtime/mzm_sprites.c").read_text(encoding="utf-8")
-        supported = dashboard._mzm_supported_sprites(engine)
-        self.assertIn("ZOOMER_YELLOW", supported)
-        self.assertIn("DESSGEEGA_AFTER_LONG_BEAM", supported)
-        self.assertIn("MOTHER_BRAIN", supported)
-        self.assertNotIn("ACID_WORM", supported)
+        annotation_ids = {item["id"] for item in dashboard.load_native_features()}
+        mapping = dashboard._mzm_sprite_annotations(engine, annotation_ids)
+        self.assertEqual(mapping["ZOOMER_YELLOW"], "mzm.enemies.zoomer")
+        self.assertEqual(mapping["DESSGEEGA_AFTER_LONG_BEAM"],
+                         "mzm.enemies.dessgeega")
+        self.assertEqual(mapping["MOTHER_BRAIN"], "mzm.enemies.mother_brain")
+        self.assertEqual(mapping["ZEB"], "mzm.enemies.pipe_bugs")
+        self.assertEqual(mapping["ZEBETITE_ONE_AND_THREE"],
+                         "mzm.enemies.tourian_defences")
+        self.assertEqual(mapping["CHOZO_STATUE_LONG"], "mzm.items.chozo_statues")
+        self.assertEqual(mapping["MORPH_BALL"], "mzm.items.item_sprites")
+        self.assertEqual(mapping["MAP_STATION"], "mzm.environment.room_gadgets")
+        self.assertNotIn("ACID_WORM", mapping)
         # Drops take the MZM_FAMILY_DROP default, not a case label.
-        self.assertNotIn("SMALL_ENERGY_DROP", supported)
+        self.assertNotIn("SMALL_ENERGY_DROP", mapping)
+        self.assertTrue(set(mapping.values()).issubset(annotation_ids))
+
+    def test_bestiary_rejects_an_unregistered_sprite_family(self):
+        engine = """int mzm_sprite_family(int type) {
+            switch (type) {
+            case MZM_PSPRITE_SAMPLE:
+                return MZM_FAMILY_SAMPLE;
+            default:
+                return MZM_FAMILY_NONE;
+            }
+        }"""
+        with self.assertRaisesRegex(ValueError, "unknown parity annotation"):
+            dashboard._mzm_sprite_annotations(engine, set())
 
 
     def test_public_outputs_hold_no_private_data(self):
@@ -200,6 +225,11 @@ class OutputTests(unittest.TestCase):
         app = (DASHBOARD / "app.js").read_text(encoding="utf-8")
         self.assertNotIn("fetch(", app)
         self.assertNotIn("XMLHttpRequest", app)
+        self.assertIn('location.protocol === "file:"', app)
+        self.assertIn("https://github.com/wozt/metroidvania", app)
+        for path in ("docs/PROJECT_STATUS.md", "docs/NATIVE_PARITY_CHECKLIST.md",
+                     "data/native_parity/annotations.tsv"):
+            self.assertIn(f'data-repo-path="{path}"', html)
         js = (DASHBOARD / "data.js").read_text(encoding="utf-8")
         payload = json.loads(js.split("window.METROIDVANIA_DASHBOARD = ", 1)[1]
                              .rstrip().rstrip(";"))

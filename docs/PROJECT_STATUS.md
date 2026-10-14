@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-13**.
+Last updated: **2026-10-14**.
 
 ## Current product state
 
@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM: Samus movement, weapons, room travel, Zoomers, Zeelas, Rippers, Skrees, Wavers, Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas and Rinkas with contact damage, projectile hits and enemy drops, room music and sound effects through the ported sound engine; no bosses or complete lifecycle |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -2987,6 +2987,33 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-11: warning-clean build, CTest 27/27, the Python
   suite, every rebuild task up to date, `check_generated` fresh and the
   proprietary-file guard passed.
+
+## Patch 0327 - evidence-aware development dashboard
+
+- Completed the dashboard evidence migration started in `1f03c78`: the 118
+  registered features now carry separate automated-test, manual in-game,
+  emulator-comparison and playthrough evidence. The generated data reflects
+  the current 70 Zero Mission records (45 functional, 25 partial) without
+  presenting that registered subset as game-completion or fidelity coverage.
+- Feature implementation files, tests and registry declarations are clickable.
+  They resolve locally when the dashboard is opened through `file://` and to
+  the repository when the `dashboard/` directory is published by itself.
+- The in-game view reports unfiltered evidence counts while search and status
+  filters report their displayed subset. Bestiary rows inherit the status and
+  evidence of their sprite-family annotation; tests cover the family-to-
+  annotation mapping and fail closed on an unregistered family.
+- Fixed the native-parity malformed-row fixtures for the 15-column evidence
+  schema and removed a duplicate dashboard registry field.
+- Visual checks on 2026-10-14 covered Firefox and Chromium through `file://`,
+  a 390-pixel Chromium viewport, and a Chromium standalone HTTP directory.
+  No JavaScript errors occurred, and standalone source links resolved to the
+  repository.
+- Audio validation retained the SDL callback and fractional PSG/FIFO fixes:
+  the ROM-free regression measured no silent FIFO samples at frame boundaries,
+  and covers concurrent music/SFX, pause/reset, room-track fade/transition and
+  jingle/resume. A normal intro runtime smoke opened the real audio device for
+  eight seconds with isolated empty save paths and no runtime error; this is
+  not a listening comparison against hardware or an emulator.
 
 ## Patch 0326 - Zero Mission Mother Brain
 

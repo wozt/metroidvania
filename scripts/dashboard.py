@@ -143,7 +143,6 @@ def load_registry(path: Path = REGISTRY) -> list[dict]:
             "evidence": {"unit_tests": _split(row["tests"]), "in_game_check": [],
                          "emulator_compared": False, "played_through": False},
             "last_validated": row["last_validated"] or None,
-            "last_validated": row["last_validated"] or None,
             "source": "data/dashboard/features.tsv",
         })
     return features

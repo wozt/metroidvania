@@ -51,6 +51,8 @@ body {
 }
 code, .mono { font-family: ui-monospace, "Cascadia Code", "DejaVu Sans Mono", monospace; font-size: 0.86em; }
 a { color: var(--info); }
+a:hover { color: var(--text); }
+.file-link { text-decoration-color: color-mix(in srgb, var(--info) 45%, transparent); }
 
 .masthead {
   display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between;
@@ -137,6 +139,7 @@ details.group > summary .title { flex: 1; font-weight: 600; }
 .badge.bad { color: var(--aria); }
 .badge.warn { color: var(--s-partial); }
 .warning { color: var(--s-partial); font-size: 0.85rem; }
+.filter-result { color: var(--muted); font-size: 0.85rem; }
 
 table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
 .table-wrap { overflow-x: auto; background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius); }
@@ -162,8 +165,11 @@ tr:last-child td { border-bottom: 0; }
 
 /* Evidence badges (unit tests, in game, emulator, played through). */
 .evidence { display: inline-flex; flex-wrap: wrap; gap: 4px; }
-.evidence .badge { opacity: 0.55; }
-.evidence .badge.ok { opacity: 1; }
+.evidence .badge { opacity: 0.72; }
+.evidence .evidence-ok { color: var(--visor); opacity: 1; }
+.evidence .evidence-bad { color: var(--aria); opacity: 1; }
+.evidence .evidence-declared { color: var(--info); opacity: 1; }
+.evidence-note strong { color: var(--text); }
 @media (max-width: 600px) {
   .evidence .badge { font-size: 0.7rem; padding: 0 6px; }
 }

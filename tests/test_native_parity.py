@@ -295,8 +295,13 @@ class NativeParityTests(unittest.TestCase):
 
     def test_annotation_tsv_rejects_malformed_rows(self):
         header = "\t".join(native_parity.ANNOTATION_COLUMNS)
-        valid = ("mzm\tmzm.player.x\tplayer\tpartial\tTitle\tSamusUpdate\t"
-                 "src/runtime/mzm_samus.c\ttests/test_mzm_samus.c\t\t\tNotes\tNext")
+        valid_fields = (
+            "mzm", "mzm.player.x", "player", "partial", "Title", "SamusUpdate",
+            "src/runtime/mzm_samus.c", "tests/test_mzm_samus.c", "", "", "Notes",
+            "Next", "runtime capture", "", "",
+        )
+        valid = "\t".join(valid_fields)
+        invalid_emulator = "\t".join((*valid_fields[:-2], "maybe", ""))
         cases = {
             "bad header": ("game\tid\n", "header"),
             "column count": (f"{header}\nmzm\tonly.two.columns\n", "columns"),
@@ -310,6 +315,9 @@ class NativeParityTests(unittest.TestCase):
             "list pipe in scalar": (f"{header}\n"
                                     f"{valid.replace('Title', 'a|b')}\n",
                                     "not allowed"),
+            "invalid emulator evidence": (
+                f"{header}\n{invalid_emulator}\n",
+                "emulator_compared must be empty or 'yes'"),
         }
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "annotations.tsv"

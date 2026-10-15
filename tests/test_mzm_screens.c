@@ -846,6 +846,44 @@ static void test_tourian_escape_bank(void) {
     assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) == 0);
     assert(screen.ppu->oam[0] == 0x200);
 
+    /* Samus surrounded: BG2 starts magnified over the fixed cockpit and
+     * zooms out around the native screen centre from frames 32 through 47. */
+    assert(escape.bg2_scale == 1536);
+    for (int f = 0; f < 5; ++f) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.timer == 5 && escape.bg2_scale == 1536);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (1 | GBA_DCNT_BG0 | GBA_DCNT_BG2 | GBA_DCNT_OBJ));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT) == (1 | 14 << 8));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT + 2) == (2 | 14 << 8));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT + 4) ==
+           (2 << 2 | 15 << 8 | 1 << 7 | 1 << 14));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2PA) == 42);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2PB) == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2PC) == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2PD) == 42);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2X) == 25680);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2Y) == 17120);
+    assert(screen.ppu->palette[255] ==
+           mzm_rom_u16(mzm_sym("sTourianEscapeSamusSurroundedPal") + 510));
+    drawn = 0;
+    for (int y = 0; y < GBA_SCREEN_H; y += 8) {
+        gba_ppu_render_line(screen.ppu, y, GBA_SCREEN_W, line);
+        for (int x = 0; x < GBA_SCREEN_W; ++x) drawn += (line[x] & 0x7FFF) != 0;
+    }
+    assert(drawn > GBA_SCREEN_W);
+    while (escape.timer < 33) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.bg2_scale == 1456);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2PA) == 45);
+    while (escape.timer < 48) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.bg2_scale == 256);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2PA) == 256);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2X) == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG2Y) == 0);
+    while (escape.stage == 3) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 4 && escape.timer == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDCNT) == 0x3F00);
+
     /* The other equipment branch selects the Power Suit palette. */
     assert(mzm_tourian_escape_enter(&escape, &screen, false));
     for (int f = 0; f < 513 + 3; ++f) mzm_tourian_escape_update(&escape, &screen);

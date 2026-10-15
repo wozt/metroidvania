@@ -16,7 +16,11 @@ typedef struct {
     uint8_t semi[GBA_PPU_MAX_W];    /* objects: semi-transparent */
 } Line;
 
-static uint16_t reg(const GbaPpu *p, uint32_t r) { return p->io[(r & 0x5F) >> 1]; }
+static uint32_t reg_offset(uint32_t r) { return r & 0xFFFFu; }
+static uint16_t reg(const GbaPpu *p, uint32_t r) {
+    uint32_t offset = reg_offset(r);
+    return offset < 0x60 ? p->io[(offset & ~1u) >> 1] : 0;
+}
 static int32_t reg32(const GbaPpu *p, uint32_t r) {
     return (int32_t)((uint32_t)reg(p, r) | (uint32_t)reg(p, r + 2) << 16);
 }
@@ -24,7 +28,8 @@ static int32_t reg32(const GbaPpu *p, uint32_t r) {
 void gba_ppu_reset(GbaPpu *ppu) { memset(ppu, 0, sizeof *ppu); }
 
 void gba_ppu_write16(GbaPpu *ppu, uint32_t r, uint16_t value) {
-    if ((r & 0xFFFF) < 0x60) ppu->io[(r & 0x5E) >> 1] = value;
+    uint32_t offset = reg_offset(r);
+    if (offset < 0x60) ppu->io[(offset & ~1u) >> 1] = value;
 }
 
 void gba_ppu_write32(GbaPpu *ppu, uint32_t r, uint32_t value) {
@@ -33,7 +38,7 @@ void gba_ppu_write32(GbaPpu *ppu, uint32_t r, uint32_t value) {
 }
 
 uint16_t gba_ppu_read16(const GbaPpu *ppu, uint32_t r) {
-    return (r & 0xFFFF) < 0x60 ? ppu->io[(r & 0x5E) >> 1] : 0;
+    return reg(ppu, r);
 }
 
 uint32_t gba_color_argb(uint16_t c) {

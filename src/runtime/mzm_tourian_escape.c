@@ -515,6 +515,7 @@ static void update_samus_looking_around(MzmTourianEscape *e, MzmScreen *s) {
     case 56:
         dispcnt(e, 0);
         gba_ppu_write16(p, GBA_REG_BLDCNT, 0);
+        e->bg2_scale = 1536;
         reset_stage(e, s, 3);
         return;
     default:
@@ -527,9 +528,70 @@ static void update_samus_looking_around(MzmTourianEscape *e, MzmScreen *s) {
     draw_looking_around_oam(e, s);
 }
 
+static void calculate_surrounded_bg2(MzmTourianEscape *e) {
+    GbaPpu *p = &e->room.ppu;
+    int16_t pa = (int16_t)(65536u / e->bg2_scale);
+    int32_t x = (GBA_SCREEN_W / 2 << 8) - pa * (GBA_SCREEN_W / 2);
+    int32_t y = (GBA_SCREEN_H / 2 << 8) - pa * (GBA_SCREEN_H / 2);
+    gba_ppu_write16(p, GBA_REG_BG2PA, (uint16_t)pa);
+    gba_ppu_write16(p, GBA_REG_BG2PB, 0);
+    gba_ppu_write16(p, GBA_REG_BG2PC, 0);
+    gba_ppu_write16(p, GBA_REG_BG2PD, (uint16_t)pa);
+    gba_ppu_write32(p, GBA_REG_BG2X, (uint32_t)x);
+    gba_ppu_write32(p, GBA_REG_BG2Y, (uint32_t)y);
+}
+
+static void update_samus_surrounded(MzmTourianEscape *e, MzmScreen *s) {
+    GbaPpu *p = &e->room.ppu;
+    uint16_t frame = e->timer++;
+    switch (frame) {
+    case 0:
+        decompress("sTourianEscapeSamusSurroundedBackgroundGfx",
+                   p->vram, GBA_VRAM_SIZE);
+        break;
+    case 1:
+        decompress("sTourianEscape_49cb90", p->vram + 0x8000,
+                   GBA_VRAM_SIZE - 0x8000);
+        break;
+    case 2:
+        decompress("sTourianEscapeSamusSurroundedBackgroundTileTable",
+                   p->vram + 0x7000, GBA_VRAM_SIZE - 0x7000);
+        decompress("sTourianEscape_49fb70", p->vram + 0x7800,
+                   GBA_VRAM_SIZE - 0x7800);
+        copy_bg_palette(e, "sTourianEscapeSamusSurroundedPal", 16 * 16);
+        gba_ppu_write16(p, GBA_REG_BG0HOFS, 0);
+        gba_ppu_write16(p, GBA_REG_BG0VOFS, 0);
+        gba_ppu_write16(p, GBA_REG_BLDALPHA, 16);
+        break;
+    case 4:
+        gba_ppu_write16(p, GBA_REG_BG0CNT, 1 | 14 << 8);
+        gba_ppu_write16(p, GBA_REG_BG0CNT + 2, 2 | 14 << 8);
+        gba_ppu_write16(p, GBA_REG_BG0CNT + 4,
+                        2 << 2 | 15 << 8 | 1 << 7 | 1 << 14);
+        dispcnt(e, 1 | GBA_DCNT_BG0 | GBA_DCNT_BG2 | GBA_DCNT_OBJ);
+        break;
+    case 32:
+        e->effect_phase = 1;
+        break;
+    case 112:
+        dispcnt(e, 0);
+        gba_ppu_write16(p, GBA_REG_BLDCNT, BLDCNT_SCREEN_SECOND);
+        reset_stage(e, s, 4);
+        return;
+    default:
+        break;
+    }
+    if (e->effect_phase) {
+        if (e->bg2_scale > 256) e->bg2_scale -= 80;
+        else e->bg2_scale = 256;
+    }
+    calculate_surrounded_bg2(e);
+}
+
 void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     if (!e || !e->ready || !s) return;
     if (e->stage == 0) update_zebes_exploding(e, s);
     else if (e->stage == 1) update_samus_in_ship(e, s);
     else if (e->stage == 2) update_samus_looking_around(e, s);
+    else if (e->stage == 3) update_samus_surrounded(e, s);
 }

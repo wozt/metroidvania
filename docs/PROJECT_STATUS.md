@@ -3103,6 +3103,27 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0335 - Tourian surrounded affine scene
+
+- The 113-frame `TourianEscapeSamusSurrounded` stage now follows the
+  looking-around scene. It loads the native starfield/cockpit BG0 and the
+  256-colour affine BG2 view directly from the private ROM bank.
+- BG2 starts centred at the native 42/256 matrix scale, then zooms out between
+  frames 32 and 47 by the exact fixed-point increments until its 256/256
+  matrix reveals Samus's ship encircled by the pirate formation.
+- The shared PPU's register indexing no longer aliases the `0x20-0x3F` BG2/BG3
+  affine register range over `0x00-0x1F`. `DISPCNT` now remains independent
+  while `BG2PA`, `BG2PD`, `BG2X` and `BG2Y` are updated every frame.
+- The ROM-backed screen test verifies the two layer configurations, full BG
+  palette, starting/intermediate/final affine state, rendered output and exact
+  transition to stage 5. Manual captures verified the close, moving and fully
+  revealed compositions.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and stages 5-12 beginning with `TourianEscapeSamusFlyingIn` are not ported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

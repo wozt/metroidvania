@@ -90,6 +90,21 @@ static void test_ppu(void) {
     gba_ppu_render(&ppu, GBA_SCREEN_W, 1, true, argb, (int)sizeof argb);
     assert(argb[0] == 0);
     assert(gba_color_argb(0x7FFF) == 0xFFFFFFFFu && gba_color_argb(0x001F) == 0xFFFF0000u);
+
+    /* The affine register range must not alias the lower display registers. */
+    gba_ppu_reset(&ppu);
+    gba_ppu_write16(&ppu, GBA_REG_DISPCNT, 0x1501);
+    gba_ppu_write16(&ppu, GBA_REG_BG2PA, 42);
+    gba_ppu_write16(&ppu, 0x04000000u + GBA_REG_BG2PD, 43);
+    gba_ppu_write32(&ppu, GBA_REG_BG2X, 0x01234567);
+    gba_ppu_write32(&ppu, GBA_REG_BG2Y, 0x07654321);
+    assert(gba_ppu_read16(&ppu, GBA_REG_DISPCNT) == 0x1501);
+    assert(gba_ppu_read16(&ppu, GBA_REG_BG2PA) == 42);
+    assert(gba_ppu_read16(&ppu, GBA_REG_BG2PD) == 43);
+    assert(gba_ppu_read16(&ppu, GBA_REG_BG2X) == 0x4567);
+    assert(gba_ppu_read16(&ppu, GBA_REG_BG2X + 2) == 0x0123);
+    assert(gba_ppu_read16(&ppu, GBA_REG_BG2Y) == 0x4321);
+    assert(gba_ppu_read16(&ppu, GBA_REG_BG2Y + 2) == 0x0765);
 }
 
 static void test_decompression(void) {

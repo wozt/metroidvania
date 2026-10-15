@@ -928,6 +928,102 @@ static void test_tourian_escape_bank(void) {
     assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDCNT) == 0);
     assert(screen.ppu->oam[0] == 0x200);
 
+    /* Samus chased by pirates: six alternating particles cross the scrolling
+     * starfield, then Samus and three pirate ships traverse it in both
+     * directions with their native poses, timings and sound cues. */
+    for (int f = 0; f < 4; ++f) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 5 && escape.timer == 4);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (GBA_DCNT_BG0 | GBA_DCNT_OBJ));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT) == 28 << 8);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0HOFS) == 0);
+    assert(screen.next_oam_slot == 6);
+    assert(!escape.object_active[0] && escape.object_active[4] == 1 &&
+           escape.object_active[5] == 2 && escape.object_active[9] == 2);
+    assert(escape.object_x[4] == 18 && escape.object_y[4] == 40);
+    assert(escape.object_x[5] == 210 && escape.object_y[5] == 136);
+    assert(escape.object_x[6] == 140 && escape.object_y[6] == 88);
+    assert(escape.object_x[9] == 28 && escape.object_y[9] == 152);
+    assert(screen.ppu->palette[79] == mzm_rom_u16(
+           mzm_sym("sTourianEscapeSamusChasedBackgroundPal") + 158));
+    assert(screen.ppu->palette[256 + 95] == mzm_rom_u16(
+           mzm_sym("sTourianEscapeSamusChasedShipsPal") + 190));
+    drawn = 0;
+    for (int y = 0; y < GBA_SCREEN_H; y += 8) {
+        gba_ppu_render_line(screen.ppu, y, GBA_SCREEN_W, line);
+        for (int x = 0; x < GBA_SCREEN_W; ++x) drawn += (line[x] & 0x7FFF) != 0;
+    }
+    assert(drawn > GBA_SCREEN_W);
+    while (escape.timer < 8) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.bg0_x == -1 &&
+           gba_ppu_read16(screen.ppu, GBA_REG_BG0HOFS) == 511);
+    assert(escape.object_timer[4] == 6 && escape.object_x[4] == 22);
+    assert(escape.object_oam_address[4] ==
+           mzm_rom_u32(mzm_sym("sTourianEscape_47ce00") + 4));
+
+    while (escape.timer < 41) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_active[0] == 1 && escape.object_x[0] == 214 &&
+           escape.object_y[0] == 226 && screen.next_oam_slot == 11);
+    assert(count_requests(MZM_SFX_PLAY,
+                          MZM_SOUND_TOURIAN_ESCAPE_SAMUS_FLEEING_RIGHT_TO_LEFT) == 1);
+    while (escape.timer < 51) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_active[5] == 1 && escape.object_frame[5] == 7);
+    assert(escape.object_x[5] == 80 && escape.object_y[5] == 72);
+    assert(escape.object_oam_address[5] ==
+           mzm_rom_u32(mzm_sym("sTourianEscape_47ce10")));
+    while (escape.timer < 65) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_x[0] == 70 && escape.object_y[0] == 370);
+    assert(escape.object_active[1] == 1 && escape.object_x[1] == 250 &&
+           escape.object_y[1] == 246);
+    assert(escape.object_x[2] == 174 && escape.object_y[2] == 246);
+    assert(escape.object_x[3] == 206 && escape.object_y[3] == 196);
+    assert(screen.next_oam_slot == 26);
+    assert(count_requests(MZM_SFX_PLAY,
+                          MZM_SOUND_TOURIAN_ESCAPE_SAMUS_FLEEING_LEFT_TO_RIGHT) == 1);
+    while (escape.timer < 73) mzm_tourian_escape_update(&escape, &screen);
+    assert(!escape.object_active[0] && escape.object_x[0] == 464 &&
+           escape.object_y[0] == 224);
+    assert(escape.object_x[1] == 202 && escape.object_y[1] == 294);
+    while (escape.timer < 117) mzm_tourian_escape_update(&escape, &screen);
+    assert(!escape.object_active[1] && escape.object_frame[1] == 1 &&
+           escape.object_x[1] == 432 && escape.object_y[1] == 224);
+    assert(!escape.object_active[2] && escape.object_frame[2] == 1 &&
+           escape.object_x[2] == 496 && escape.object_y[2] == 224);
+    while (escape.timer < 120) mzm_tourian_escape_update(&escape, &screen);
+    assert(!escape.object_active[3] && escape.object_frame[3] == 1 &&
+           escape.object_x[3] == 432 && escape.object_y[3] == 224);
+
+    while (escape.timer < 161) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_active[0] == 2 && escape.object_x[0] == 478 &&
+           escape.object_y[0] == 210 && escape.object_timer[0] == 1);
+    assert(screen.next_oam_slot == 12 &&
+           (screen.ppu->oam[2] & 0x3FF) == 0x380);
+    assert(count_requests(MZM_SFX_PLAY,
+                          MZM_SOUND_TOURIAN_ESCAPE_PIRATES_CHASING_RIGHT_TO_LEFT) == 1);
+    while (escape.timer < 165) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_timer[0] == 5 &&
+           (screen.ppu->oam[2] & 0x3FF) == 0x386);
+    while (escape.timer < 177) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_active[1] == 2 && escape.object_x[1] == 446 &&
+           escape.object_y[1] == 210);
+    assert(count_requests(MZM_SFX_PLAY,
+                          MZM_SOUND_TOURIAN_ESCAPE_PIRATES_CHASING_LEFT_TO_RIGHT) == 1);
+    mzm_tourian_escape_update(&escape, &screen);
+    assert(!escape.object_active[0] && escape.object_x[1] == 460 &&
+           escape.object_y[1] == 196);
+    while (escape.timer < 185) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_active[2] == 2 && escape.object_x[2] == 538 &&
+           escape.object_y[2] == 182);
+    assert(escape.object_active[3] == 2 && escape.object_x[3] == 446 &&
+           escape.object_y[3] == 210);
+    while (escape.timer < 201) mzm_tourian_escape_update(&escape, &screen);
+    assert(!escape.object_active[1] && !escape.object_active[2] &&
+           !escape.object_active[3] && screen.next_oam_slot == 6);
+    while (escape.stage == 5) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 6 && escape.timer == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) == 0);
+    assert(screen.ppu->oam[0] == 0x200);
+
     /* The other equipment branch selects the Power Suit palette. */
     assert(mzm_tourian_escape_enter(&escape, &screen, false));
     for (int f = 0; f < 513 + 3; ++f) mzm_tourian_escape_update(&escape, &screen);

@@ -3124,6 +3124,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0336 - Tourian ship flying-in scene
+
+- The 33-frame `TourianEscapeSamusFlyingIn` stage now follows the surrounded
+  view. It reuses the intro's native starfield, palette and ship graphics from
+  the private ROM bank and plays the dedicated flying-in sound.
+- The six- and nine-part ship OAM poses alternate every four frames. Their
+  double-size affine coordinates and four flip matrices follow
+  `ProcessComplexOam` and `CalculateOamPart4`, while the ship's vertical speed
+  eases through the native 8/6/3/1/-1 pixel steps and its scale rises from 32
+  to 480.
+- The ROM-backed screen test verifies both OAM poses, affine parameters,
+  palette over-read used by the original DMA, blend/display registers,
+  position and scaling boundaries, sound request and exact transition to
+  stage 6. Manual captures verified the small, intermediate and full-size
+  ship over the starfield.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and stages 6-12 beginning with `TourianEscapeSamusChasedByPirates` are not
+  ported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

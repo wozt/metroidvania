@@ -7,7 +7,7 @@
 #include "mzm_sfx.h"
 
 enum {
-    AREA_TOURIAN = 4, AREA_CRATERIA = 5,
+    AREA_TOURIAN = 4, AREA_CRATERIA = 5, OAM_BLOCK = 64, PI_2 = 64,
     BLDCNT_BG0_FIRST = 1 << 0, BLDCNT_BG1_FIRST = 1 << 1,
     BLDCNT_BG2_FIRST = 1 << 2, BLDCNT_BG3_FIRST = 1 << 3,
     BLDCNT_OBJ_FIRST = 1 << 4, BLDCNT_BACKDROP_FIRST = 1 << 5,
@@ -588,10 +588,166 @@ static void update_samus_surrounded(MzmTourianEscape *e, MzmScreen *s) {
     calculate_surrounded_bg2(e);
 }
 
+static uint16_t *oam_attributes(MzmScreen *s, int slot) {
+    return &s->oam[slot * 4];
+}
+
+static void set_oam_x(MzmScreen *s, int slot, int x) {
+    uint16_t *a = oam_attributes(s, slot);
+    a[1] = (uint16_t)((a[1] & 0xFE00) | (x & 0x1FF));
+}
+
+static void set_oam_y(MzmScreen *s, int slot, int y) {
+    uint16_t *a = oam_attributes(s, slot);
+    a[0] = (uint16_t)((a[0] & 0xFF00) | (y & 0xFF));
+}
+
+static int16_t affine_sine(uint16_t angle) {
+    return (int16_t)mzm_rom_u16(mzm_sym("sSineTable") + (uint32_t)angle * 2u);
+}
+
+static int16_t fixed_multiply(int16_t a, int16_t b) {
+    return (int16_t)(((int32_t)a * b) >> 8);
+}
+
+static int16_t fixed_inverse(int16_t value) {
+    return (int16_t)(65536 / value);
+}
+
+static void process_affine_oam(MzmScreen *s, int slot, int16_t x_position,
+                               int16_t y_position, uint16_t rotation,
+                               int16_t scaling, uint16_t matrix) {
+    uint16_t *a = oam_attributes(s, slot);
+    int32_t x_origin = (int16_t)((uint16_t)x_position + OAM_BLOCK);
+    int32_t y_origin = (int16_t)((uint16_t)y_position + OAM_BLOCK);
+    int shape = a[0] >> 14, size = a[1] >> 14;
+    uint32_t radius = mzm_sym("sSpriteXHalfRadius") + (uint32_t)(shape * 4 + size);
+    uint8_t x_half = mzm_rom_u8(radius);
+    uint8_t y_half = mzm_rom_u8(mzm_sym("sSpriteYHalfRadius") +
+                                (uint32_t)(shape * 4 + size));
+    int32_t x = (int16_t)(((a[1] & 0x1FF) + x_origin) & 511);
+    int32_t y = (int16_t)(((a[0] & 0xFF) + y_origin) & 255);
+    int32_t local_x = (int16_t)(x - x_origin + x_half);
+    int32_t local_y = (int16_t)(y - y_origin + y_half);
+    x += (int16_t)(((local_x * scaling) >> 8) - local_x);
+    y += (int16_t)(((local_y * scaling) >> 8) - local_y);
+    int32_t u = (int16_t)(x - x_origin + x_half);
+    int32_t v = (int16_t)(y - y_origin + y_half);
+    int32_t cosine = affine_sine((uint16_t)(rotation + PI_2));
+    int32_t sine = affine_sine(rotation);
+    x = (int16_t)((u * cosine - v * sine) >> 8);
+    y = (int16_t)((u * sine + v * cosine) >> 8);
+    a[0] = (uint16_t)((a[0] & ~(3 << 8)) | 3 << 8);
+    x -= x_half * 2;
+    y -= y_half * 2;
+    set_oam_x(s, slot, x + x_origin - OAM_BLOCK);
+    set_oam_y(s, slot, y + y_origin - OAM_BLOCK);
+    bool x_flip = (a[1] & 1 << 12) != 0;
+    bool y_flip = (a[1] & 1 << 13) != 0;
+    uint16_t number = (uint16_t)(matrix +
+        (x_flip ? (y_flip ? 3 : 1) : (y_flip ? 2 : 0)));
+    a[1] = (uint16_t)((a[1] & ~(0x1F << 9)) | (number & 0x1F) << 9);
+}
+
+static void write_affine_oam_matrices(MzmScreen *s, uint16_t rotation,
+                                      int16_t scaling, int slot) {
+    int16_t cosine = affine_sine((uint16_t)(rotation + PI_2));
+    int16_t sine = affine_sine(rotation);
+    int16_t inverse = fixed_inverse(scaling);
+    int16_t negative_inverse = fixed_inverse((int16_t)-scaling);
+    int16_t dy1 = fixed_multiply(cosine, inverse);
+    int16_t dmy1 = fixed_multiply(sine, inverse);
+    int16_t dx1 = fixed_multiply((int16_t)-sine, inverse);
+    int16_t dmx1 = fixed_multiply(cosine, negative_inverse);
+    int16_t dy2 = fixed_multiply(sine, negative_inverse);
+    int16_t dmy2 = fixed_multiply((int16_t)-sine, negative_inverse);
+    const int16_t parameters[16] = {
+        dy1, dmy1, dx1, dy1, dmx1, dy2, dx1, dy1,
+        dy1, dmy1, dmy2, dmx1, dmx1, dy2, dmy2, dmx1,
+    };
+    for (int i = 0; i < 16; ++i)
+        oam_attributes(s, slot + i)[3] = (uint16_t)parameters[i];
+}
+
+static void draw_flying_in_oam(MzmTourianEscape *e, MzmScreen *s) {
+    clear_oam_buffer(s);
+    if (!e->object_active[0]) {
+        mzm_screen_copy_oam(s);
+        return;
+    }
+    const char *name = e->object_frame[0] == 0 ?
+        "sIntroShipFlyingTowardsCameraOam_1" :
+        "sIntroShipFlyingTowardsCameraOam_2";
+    uint32_t source = mzm_sym(name);
+    unsigned count = mzm_rom_u16(source) & 0xFFu;
+    source += 2;
+    for (unsigned i = 0; i < count && i < MZM_OAM_BUFFER; ++i, source += 6) {
+        uint16_t *a = oam_attributes(s, (int)i);
+        a[0] = mzm_rom_u16(source);
+        a[1] = mzm_rom_u16(source + 2);
+        a[2] = mzm_rom_u16(source + 4);
+        process_affine_oam(s, (int)i, (int16_t)e->object_x[0],
+                           (int16_t)e->object_y[0], 0,
+                           (int16_t)e->object_scaling, 0);
+    }
+    s->next_oam_slot = (uint8_t)count;
+    write_affine_oam_matrices(s, 0, (int16_t)e->object_scaling, 0);
+    mzm_screen_copy_oam(s);
+}
+
+static void update_samus_flying_in(MzmTourianEscape *e, MzmScreen *s) {
+    GbaPpu *p = &e->room.ppu;
+    uint16_t frame = e->timer++;
+    switch (frame) {
+    case 0:
+        decompress("sIntroTextAndShipFlyingInGfx", p->vram + GBA_OBJ_VRAM,
+                   GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+        mzm_sfx_play(MZM_SOUND_TOURIAN_ESCAPE_SAMUS_FLYING_IN);
+        break;
+    case 1:
+        decompress("sIntroSpaceBackgroundGfx", p->vram, GBA_VRAM_SIZE);
+        break;
+    case 2:
+        decompress("sIntroSpaceBackgroundTileTable", p->vram + 0xF000,
+                   GBA_VRAM_SIZE - 0xF000);
+        copy_palette(e, "sIntroTextAndShipPal", 7 * 16);
+        gba_ppu_write16(p, GBA_REG_BG0CNT, 30 << 8);
+        dispcnt(e, GBA_DCNT_BG0 | GBA_DCNT_OBJ);
+        gba_ppu_write16(p, GBA_REG_BLDALPHA, 7 << 8 | 9);
+        e->object_active[0] = 1;
+        e->object_scaling = 32;
+        e->object_x[0] = GBA_SCREEN_W / 2;
+        e->object_y[0] = GBA_SCREEN_H / 8 + 8;
+        e->object_timer[0] = 0;
+        break;
+    case 32:
+        dispcnt(e, 0);
+        gba_ppu_write16(p, GBA_REG_BLDCNT, 0);
+        reset_stage(e, s, 5);
+        return;
+    default:
+        break;
+    }
+    if (e->object_active[0]) {
+        if (e->object_timer[0] < 4) e->object_y[0] += 8;
+        else if (e->object_timer[0] < 8) e->object_y[0] += 6;
+        else if (e->object_timer[0] < 16) e->object_y[0] += 3;
+        else if (e->object_timer[0] < 20) e->object_y[0] += 1;
+        else if (e->object_timer[0] < 28) e->object_y[0] -= 1;
+        if (e->object_scaling < 128) e->object_scaling += 8;
+        else if (e->object_scaling < 320) e->object_scaling += 16;
+        else if (e->object_scaling < 480) e->object_scaling += 32;
+        e->object_frame[0] = (uint8_t)((e->object_timer[0] & 7) < 4 ? 0 : 1);
+        e->object_timer[0]++;
+    }
+    draw_flying_in_oam(e, s);
+}
+
 void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     if (!e || !e->ready || !s) return;
     if (e->stage == 0) update_zebes_exploding(e, s);
     else if (e->stage == 1) update_samus_in_ship(e, s);
     else if (e->stage == 2) update_samus_looking_around(e, s);
     else if (e->stage == 3) update_samus_surrounded(e, s);
+    else if (e->stage == 4) update_samus_flying_in(e, s);
 }

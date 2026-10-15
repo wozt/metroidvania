@@ -3962,6 +3962,10 @@ int main(int argc, char **argv) {
     /* EFFECT_CUTSCENE_ESCAPE_FAILED: native white fade and one-second hold
      * before GM_GAMEOVER. */
     MzmEscapeFailure escape_failure={0};
+    /* EFFECT_CUTSCENE_EXITING_ZEBES: background whitening followed by the
+     * global Tourian-escape fade. */
+    MzmEscapeExitFade escape_exit={0};
+    bool tourian_escape_pending=false;
     /* A door's fade (ConnectionCheckEnterDoor): Samus waits while the room
      * fades out, then the door's room is loaded and fades in. */
     static MzmDoorFade door_fade;
@@ -4472,6 +4476,12 @@ int main(int argc, char **argv) {
                 accumulator-=fixed_step;
                 continue;
             }
+            if(tourian_escape_pending) {
+                /* GM_TOURIAN_ESCAPE owns the following frames. Its PPU
+                 * sequence is the next native subsystem to be connected. */
+                accumulator-=fixed_step;
+                continue;
+            }
             if(resume_request!=RUNTIME_RESUME_NONE) {
                 /* SramLoadFile (or a new game): the state's room and state. */
                 bool landing=resume_request==RUNTIME_RESUME_LANDING;
@@ -4588,6 +4598,20 @@ int main(int argc, char **argv) {
                         intro_mode=true;
                         mzm_intro_enter(&intro);
                     }
+                    accumulator-=fixed_step;
+                    continue;
+                }
+            }
+            if(sprites.globals.cutscene_effect==1 && !escape_exit.active) {
+                sprites.globals.cutscene_effect=0;
+                mzm_escape_exit_fade_start(&escape_exit);
+            }
+            if(escape_exit.active) {
+                if(escape_exit.phase != 0)
+                    prevent_movement=MZM_SAMUS_ITEM_PMT;
+                if(mzm_escape_exit_fade_update(&escape_exit)) {
+                    tourian_escape_pending=true;
+                    printf("Tourian escape cutscene requested.\n");
                     accumulator-=fixed_step;
                     continue;
                 }
@@ -5569,6 +5593,16 @@ int main(int argc, char **argv) {
             SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
             SDL_SetRenderDrawColor(renderer,255,255,255,
                                    (Uint8)(escape_failure.level*255/32));
+            SDL_RenderFillRect(renderer,&viewport);
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
+        }
+        if((escape_exit.active || tourian_escape_pending) && escape_exit.level) {
+            /* The native background effect excludes Samus's OBJ rows before
+             * the global fade; the host composite applies the same white
+             * level to the completed view. */
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer,255,255,255,
+                                   (Uint8)(escape_exit.level*255/32));
             SDL_RenderFillRect(renderer,&viewport);
             SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         }

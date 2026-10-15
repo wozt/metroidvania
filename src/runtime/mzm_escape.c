@@ -153,6 +153,61 @@ bool mzm_escape_failure_update(MzmEscapeFailure *failure) {
     return false;
 }
 
+void mzm_escape_exit_fade_start(MzmEscapeExitFade *fade) {
+    if (!fade) return;
+    *fade = (MzmEscapeExitFade){.active = true};
+}
+
+bool mzm_escape_exit_fade_update(MzmEscapeExitFade *fade) {
+    static const uint8_t background_levels[15] =
+        {1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    static const uint8_t color_levels[8] = {3, 7, 11, 15, 19, 23, 27, 32};
+    if (!fade || !fade->active) return false;
+    if (fade->phase == 0) {
+        /* Each CHECK_APPLY command is followed by a two-delta-time wait,
+         * except that the call after level 16 finishes the effect. */
+        if (!fade->between_colors) {
+            fade->level = (uint8_t)(background_levels[fade->color_index++] * 2);
+            fade->between_colors = true;
+        } else {
+            fade->between_colors = false;
+            if (fade->color_index == sizeof background_levels) {
+                fade->phase = 1;
+                fade->stage = 0;
+                fade->color_index = 0;
+            }
+        }
+        return false;
+    }
+    switch (fade->stage) {
+    case 0:
+        /* ColorFadingProcess_TourianEscape: unk_5c220. */
+        fade->stage = 1;
+        break;
+    case 1:
+        /* Disable the animated palette and initialize its work timer. */
+        fade->stage = 2;
+        break;
+    case 2:
+        if (fade->color_index < sizeof color_levels) {
+            /* The first effect has already made the host view white; these
+             * are retained for the exact ColorFadingUpdate cadence. */
+            fade->level = color_levels[fade->color_index++];
+        } else {
+            fade->stage = 3;
+        }
+        break;
+    case 3:
+        fade->active = false;
+        fade->level = 32;
+        return true;
+    default:
+        fade->active = false;
+        break;
+    }
+    return false;
+}
+
 void mzm_escape_explosion_start(MzmEscapeExplosion *explosion, uint16_t y, uint16_t x) {
     if (!explosion) return;
     *explosion = (MzmEscapeExplosion){true, false, 0, 7, y, x};

@@ -5078,6 +5078,24 @@ int main(void) {
         assert(mzm_escape_failure_update(&failure) && !failure.active &&
                failure.hold_timer == 61);
 
+        MzmEscapeExitFade exit_fade = {0};
+        mzm_escape_exit_fade_start(&exit_fade);
+        static const uint8_t exit_levels[15] =
+            {2, 4, 6, 8, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32};
+        for (int i = 0; i < 15; ++i) {
+            assert(!mzm_escape_exit_fade_update(&exit_fade));
+            assert(exit_fade.level == exit_levels[i]);
+            assert(!mzm_escape_exit_fade_update(&exit_fade));
+        }
+        assert(exit_fade.phase == 1 && exit_fade.stage == 0);
+        assert(!mzm_escape_exit_fade_update(&exit_fade) && exit_fade.stage == 1);
+        assert(!mzm_escape_exit_fade_update(&exit_fade) && exit_fade.stage == 2);
+        for (int i = 0; i < 8; ++i)
+            assert(!mzm_escape_exit_fade_update(&exit_fade));
+        assert(!mzm_escape_exit_fade_update(&exit_fade) && exit_fade.stage == 3);
+        assert(mzm_escape_exit_fade_update(&exit_fade) && !exit_fade.active &&
+               exit_fade.level == 32);
+
         MzmEffects escape_effects = {0};
         mzm_sfx_clear();
         mzm_screen_shake_clear();

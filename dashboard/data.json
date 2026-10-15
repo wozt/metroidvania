@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-14T21:44:13+00:00",
+ "generated_at": "2026-10-15T06:44:46+00:00",
  "git": {
-  "commit": "af7b29e",
+  "commit": "64b56c8",
   "branch": "main",
   "dirty": true
  },
@@ -595,7 +595,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -663,7 +663,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -795,7 +795,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -859,7 +859,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -932,7 +932,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1010,7 +1010,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1084,7 +1084,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1166,7 +1166,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1232,7 +1232,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1291,7 +1291,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1349,7 +1349,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1405,7 +1405,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1511,7 +1511,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1567,7 +1567,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1642,7 +1642,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1722,7 +1722,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1778,7 +1778,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1873,7 +1873,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -1937,7 +1937,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2007,7 +2007,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2065,7 +2065,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2177,7 +2177,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2244,7 +2244,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2302,7 +2302,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2361,7 +2361,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2427,7 +2427,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2486,7 +2486,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2544,7 +2544,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2601,7 +2601,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2683,7 +2683,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2745,7 +2745,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2804,7 +2804,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2860,7 +2860,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -2916,7 +2916,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3004,7 +3004,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3062,7 +3062,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3155,7 +3155,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3242,7 +3242,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3355,7 +3355,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3424,7 +3424,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3550,7 +3550,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3649,7 +3649,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3687,10 +3687,13 @@
     "ExplosionZebesEscape",
     "ParticleEscape",
     "StartEffectForCutscene",
-    "ColorFadingProcess_EscapeFailed"
+    "ColorFadingProcess_EscapeFailed",
+    "BackgroundEffectUpdate",
+    "BackgroundEffectProcess",
+    "ColorFadingProcess_TourianEscape"
    ],
-   "limitations": "The successful Zebes exit fade and Tourian escape cutscene are not connected. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. The failure transition uses one host white overlay rather than applying brightness separately to every GBA palette row. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. At zero, the runtime freezes Samus and the countdown, fades all sounds and music over 60 frames, applies ColorFadingProcess_EscapeFailed's eight white levels, holds white for 61 frames, then enters the native Game Over screen. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
-   "next_action": "Port the successful Zebes exit fade and Tourian escape cutscene, then play through Mother Brain to the Chozodia continuation.",
+   "limitations": "The successful fade now reaches the GM_TOURIAN_ESCAPE boundary, but the twelve-stage Tourian escape PPU cutscene is not ported, so the runtime deliberately holds its final white frame instead of inventing the Chozodia transition. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Both fade transitions use one host white overlay rather than applying brightness separately to selected GBA palette rows; the exit background effect therefore also whitens Samus before the global fade. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. At zero, the runtime freezes Samus and the countdown, fades all sounds and music over 60 frames, applies ColorFadingProcess_EscapeFailed's eight white levels, holds white for 61 frames, then enters the native Game Over screen. A successful gunship take-off applies all fifteen BACKGROUND_EFFECT_EXIT_ZEBES_FADE levels at their two-frame cadence, freezes Samus for the following twelve-frame COLOR_FADING_TOURIAN_ESCAPE, and leaves gameplay at the native cutscene boundary. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
+   "next_action": "Port TourianEscapeInit and the twelve Tourian escape stages on the screen PPU, then continue through CUTSCENE_COULD_I_SURVIVE into Chozodia room 0.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_hud.c",
@@ -3729,7 +3732,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3777,7 +3780,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3852,7 +3855,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -3950,7 +3953,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4036,7 +4039,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4167,7 +4170,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4225,7 +4228,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4298,7 +4301,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4373,7 +4376,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4434,7 +4437,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4522,7 +4525,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4585,7 +4588,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4679,7 +4682,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4762,7 +4765,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -4948,7 +4951,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5037,7 +5040,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5139,7 +5142,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5194,7 +5197,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5255,7 +5258,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5335,7 +5338,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5412,7 +5415,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5491,7 +5494,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5633,7 +5636,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5716,7 +5719,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5793,7 +5796,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5892,7 +5895,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -5992,7 +5995,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6092,7 +6095,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6194,7 +6197,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6243,7 +6246,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6304,7 +6307,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6357,7 +6360,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6414,7 +6417,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6477,7 +6480,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6527,7 +6530,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6586,7 +6589,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6645,7 +6648,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6693,7 +6696,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6742,7 +6745,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -6800,7 +6803,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7130,7 +7133,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7176,7 +7179,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7225,7 +7228,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7268,7 +7271,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7313,7 +7316,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7365,7 +7368,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7409,7 +7412,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7461,7 +7464,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7505,7 +7508,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7549,7 +7552,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7656,7 +7659,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7701,7 +7704,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7755,7 +7758,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7801,7 +7804,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7846,7 +7849,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7919,7 +7922,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -7964,7 +7967,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -8009,7 +8012,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -8067,7 +8070,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -8138,7 +8141,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -8192,7 +8195,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -8237,7 +8240,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -8281,7 +8284,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -8324,7 +8327,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -8367,7 +8370,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-14"
+    "verified_on": "2026-10-15"
    }
   },
   {
@@ -9292,6 +9295,12 @@
  },
  "timeline": [
   {
+   "commit": "64b56c8",
+   "date": "2026-10-14",
+   "subject": "feat(mzm): connect escape failure game over",
+   "scope": "mzm"
+  },
+  {
    "commit": "af7b29e",
    "date": "2026-10-14",
    "subject": "feat(mzm): render native escape timer objects",
@@ -9764,12 +9773,6 @@
    "date": "2026-10-11",
    "subject": "feat(mzm): waiting Space Pirates at doors",
    "scope": "mzm"
-  },
-  {
-   "commit": "539f23e",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): native Space Pirates and their lasers",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -9797,7 +9800,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1136,
+    "routines_cited_by_features": 1139,
     "call_edges": 6071
    },
    "aos": {

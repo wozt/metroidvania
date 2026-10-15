@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-14**.
+Last updated: **2026-10-15**.
 
 ## Current product state
 
@@ -3022,6 +3022,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   `BACKGROUND_EFFECT_EXIT_ZEBES_FADE`, `COLOR_FADING_TOURIAN_ESCAPE`, and the
   full Tourian escape cutscene before the Chozodia continuation.
 - Validation on 2026-10-14: warning-clean build, CTest 35/35, Python 471/471,
+  regenerated native parity and dashboard data, fresh generated-file checks,
+  and the proprietary-file guard passed.
+
+## Patch 0331 - Zero Mission successful-exit fades
+
+- The gunship's `EFFECT_CUTSCENE_EXITING_ZEBES` request now starts a native
+  42-frame transition: all fifteen
+  `BACKGROUND_EFFECT_EXIT_ZEBES_FADE` levels at their alternating command/wait
+  cadence, followed by the four stages and eight brightness updates of
+  `COLOR_FADING_TOURIAN_ESCAPE`.
+- Gameplay continues during the background effect, then freezes Samus when
+  the global color fade begins. At completion the runtime leaves gameplay at
+  the `GM_TOURIAN_ESCAPE` boundary and deliberately keeps the final white
+  frame; it does not fabricate a direct jump to Chozodia.
+- Tests verify every background brightness value, all phase boundaries, the
+  eight global color updates, the exact 42-frame duration, and the terminal
+  Tourian-escape request.
+- Remaining boundary: `TourianEscapeInit`, its twelve PPU scenes, the
+  `CUTSCENE_COULD_I_SURVIVE` handoff, and Chozodia room 0 are not connected.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 471/471,
   regenerated native parity and dashboard data, fresh generated-file checks,
   and the proprietary-file guard passed.
 

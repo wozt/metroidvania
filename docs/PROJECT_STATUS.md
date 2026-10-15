@@ -3085,6 +3085,24 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0334 - Tourian looking-around scene
+
+- The 57-frame `TourianEscapeSamusLookingAround` stage now follows the cockpit
+  sequence. It loads the shared native BG/OBJ graphics, both cockpit tilemaps
+  and the seven palette rows directly from the private ROM bank.
+- Its two four-part, alpha-blended OAM images start above and below the screen,
+  converge by eight pixels per frame on Samus's face, and stop together at the
+  vertical centre. BG0 changes from the left-looking to the right-looking
+  tilemap on native frame 32.
+- The ROM-backed screen test verifies the register setup, palette, eight OAM
+  parts, convergence cadence, tilemap switch and exact transition to stage 4.
+  Manual diagnostic captures verified the left, converged and right views.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and stages 4-12 beginning with `TourianEscapeSamusSurrounded` are not ported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

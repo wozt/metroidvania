@@ -725,7 +725,7 @@ static void test_cutscene_bank(void) {
 }
 
 /* GM_TOURIAN_ESCAPE on the exported bank: the three exploding-room views,
- * then the native Zebes background, Samus's ship and explosion objects. */
+ * the native Zebes background, then Samus in and looking around her ship. */
 static void test_tourian_escape_bank(void) {
     if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
                       "assets/extracted/metroid/rom/rom_symbols.tsv")) {
@@ -812,6 +812,39 @@ static void test_tourian_escape_bank(void) {
     while (escape.stage == 1) mzm_tourian_escape_update(&escape, &screen);
     assert(escape.stage == 2 && escape.timer == 0);
     assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) == 0);
+
+    /* Samus looking around: both alpha-blended objects converge on the
+     * screen centre while the cockpit switches from its left to right view. */
+    for (int f = 0; f < 4; ++f) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.timer == 4);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (GBA_DCNT_BG0 | GBA_DCNT_OBJ));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT) == 16 << 8);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDCNT) ==
+           (1 << 4 | 1 << 6 | 1 << 8));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDALPHA) == (8 << 8 | 8));
+    assert(escape.object_active[0] && escape.object_active[1]);
+    assert(escape.object_x[0] == 128 && escape.object_x[1] == 128);
+    assert(escape.object_y[0] == 0 && escape.object_y[1] == 160);
+    assert(screen.next_oam_slot == 8 && screen.ppu->oam[0] != 0x200);
+    assert(screen.ppu->palette[17] ==
+           mzm_rom_u16(mzm_sym("sTourianEscapeSamusLookingAroundPal") + 34));
+    drawn = 0;
+    for (int y = 0; y < GBA_SCREEN_H; y += 8) {
+        gba_ppu_render_line(screen.ppu, y, GBA_SCREEN_W, line);
+        for (int x = 0; x < GBA_SCREEN_W; ++x) drawn += (line[x] & 0x7FFF) != 0;
+    }
+    assert(drawn > GBA_SCREEN_W);
+    while (escape.timer < 17) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_y[0] == 8 && escape.object_y[1] == 152);
+    while (escape.timer < 26) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_y[0] == 80 && escape.object_y[1] == 80);
+    while (escape.timer < 33) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT) == 17 << 8);
+    while (escape.stage == 2) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 3 && escape.timer == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) == 0);
+    assert(screen.ppu->oam[0] == 0x200);
 
     /* The other equipment branch selects the Power Suit palette. */
     assert(mzm_tourian_escape_enter(&escape, &screen, false));

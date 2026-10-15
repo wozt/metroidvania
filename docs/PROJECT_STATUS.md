@@ -3168,6 +3168,29 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0338 - Tourian pirates-firing scene
+
+- The 385-frame `TourianEscapeSamusChasedByPiratesFiring` stage now follows
+  the chase and reaches the getting-shot boundary. It reuses the starfield and
+  the six projectile states inherited from the previous scene, switches them
+  to vertical motion and loads the dedicated native ship/projectile graphics
+  and OBJ palette from the private ROM bank.
+- Samus follows all eight native velocity and acceleration paths, including
+  the capped fixed-point movement, pauses and direction changes. Her ship and
+  the pirate formation use their complete four-frame OAM pose cadence with
+  independent complex-affine matrices; the pirates shrink first slowly and
+  then twice as quickly before disappearing.
+- The display, vertical background drift, three sound cues, off-screen exit
+  and exact 385-frame boundary match the source. The ROM-backed test also
+  verifies carried projectile state, affine parameters, trajectory phases,
+  scaling thresholds and the invisible tail after frame 192.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and stages 8-12 beginning with `TourianEscapeSamusGettingShot` are not
+  ported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

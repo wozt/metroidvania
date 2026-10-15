@@ -15,8 +15,9 @@ enum { MZM_TOURIAN_ESCAPE_OBJECTS = 10 };
 typedef struct {
     bool ready, planet, flash, varia;
     uint8_t stage, flash_timer, flash_level, effect_phase, effect_timer;
-    uint16_t timer, explosion_timer, bg2_scale, object_scaling;
-    int16_t ship_x, explosion_x, bg0_x;
+    uint16_t timer, explosion_timer, bg2_scale, object_scaling, secondary_scaling;
+    int16_t ship_x, explosion_x, bg0_x, bg0_y;
+    int16_t firing_vertical_velocity, firing_vertical_acceleration;
     int16_t win0_left, win0_right, win0_top, win0_bottom;
     uint8_t object_active[MZM_TOURIAN_ESCAPE_OBJECTS];
     uint8_t object_frame[MZM_TOURIAN_ESCAPE_OBJECTS];
@@ -30,8 +31,8 @@ typedef struct {
 
 /* TourianEscapeInit and the start of TourianEscapeUpdateStage. */
 bool mzm_tourian_escape_enter(MzmTourianEscape *escape, MzmScreen *screen, bool varia);
-/* Advances the current native scene. The first six scenes stop at stage 6
- * until the following pirates-firing scene is ported. */
+/* Advances the current native scene. The first seven scenes stop at stage 7
+ * until the following getting-shot scene is ported. */
 void mzm_tourian_escape_update(MzmTourianEscape *escape, MzmScreen *screen);
 
 #endif /* MZM_TOURIAN_ESCAPE_H */

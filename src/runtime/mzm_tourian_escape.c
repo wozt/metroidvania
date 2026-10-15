@@ -256,7 +256,7 @@ static void reset_stage(MzmTourianEscape *e, MzmScreen *s, uint8_t stage) {
     e->flash_level = 0;
     e->planet = false;
     memset(e->object_active, 0, sizeof e->object_active);
-    memset(e->object_frame, 0, sizeof e->object_frame);
+    memset(e->object_frame, 0, 4 * sizeof e->object_frame[0]);
     memset(e->object_timer, 0, sizeof e->object_timer);
     memset(e->object_oam_address, 0, sizeof e->object_oam_address);
     hide_oam(s);
@@ -787,11 +787,13 @@ static uint32_t chased_particle_oam(const MzmTourianEscape *e, int object) {
                        (uint32_t)(e->object_timer[object] / 4u) * 4u);
 }
 
-static void advance_chased_particles(MzmTourianEscape *e) {
+static void advance_chased_particles(MzmTourianEscape *e, bool vertical) {
     for (int i = 4; i < MZM_TOURIAN_ESCAPE_OBJECTS; ++i) {
         e->object_oam_address[i] = chased_particle_oam(e, i);
-        if (e->object_x[i] < 256) {
+        if (!vertical && e->object_x[i] < 256) {
             e->object_x[i] = (uint16_t)(e->object_x[i] + e->object_velocity[i]);
+        } else if (vertical && e->object_y[i] < 252) {
+            e->object_y[i] = (uint16_t)(e->object_y[i] - e->object_velocity[i]);
         } else {
             e->object_active[i] ^= 3;
             e->object_frame[i] = (uint8_t)((e->object_frame[i] + 1u) & 15u);
@@ -834,6 +836,7 @@ static void draw_chased_oam(MzmTourianEscape *e, MzmScreen *s) {
 
 static void update_samus_chased(MzmTourianEscape *e, MzmScreen *s) {
     GbaPpu *p = &e->room.ppu;
+    bool ended = false;
     uint16_t frame = e->timer++;
     switch (frame) {
     case 0:
@@ -916,8 +919,8 @@ static void update_samus_chased(MzmTourianEscape *e, MzmScreen *s) {
         break;
     case 256:
         dispcnt(e, 0);
-        reset_stage(e, s, 6);
-        return;
+        ended = true;
+        break;
     default:
         break;
     }
@@ -932,10 +935,219 @@ static void update_samus_chased(MzmTourianEscape *e, MzmScreen *s) {
             e->object_y[i] -= 14;
         }
     }
-    if (e->object_active[4]) advance_chased_particles(e);
+    if (e->object_active[4]) advance_chased_particles(e, false);
     if (e->object_active[0] == 2)
         e->object_timer[0] = (uint8_t)((e->object_timer[0] + 1u) & 7u);
     draw_chased_oam(e, s);
+    if (ended) reset_stage(e, s, 6);
+}
+
+static int16_t firing_table_value(const char *name, uint8_t index) {
+    return (int16_t)mzm_rom_u16(mzm_sym(name) + (uint32_t)index * 2u);
+}
+
+static void load_firing_trajectory(MzmTourianEscape *e) {
+    uint8_t index = e->object_frame[3];
+    e->object_velocity[2] = firing_table_value("sTourianEscape_47cfa4", index);
+    e->firing_vertical_velocity =
+        firing_table_value("sTourianEscape_47cfb4", index);
+    e->object_velocity[3] = firing_table_value("sTourianEscape_47cfc4", index);
+    e->firing_vertical_acceleration =
+        firing_table_value("sTourianEscape_47cfd4", index);
+}
+
+static uint32_t firing_oam(const char *table, unsigned frame) {
+    return mzm_rom_u32(mzm_sym(table) + frame * 4u);
+}
+
+static void update_firing_samus(MzmTourianEscape *e) {
+    if (!e->object_active[0]) return;
+    if (e->object_active[0] == 1) {
+        int velocity = e->object_velocity[2];
+        if (velocity > 48) velocity = 48;
+        if (velocity < -48) velocity = -48;
+        e->object_x[2] = (uint16_t)(e->object_x[2] + velocity);
+        e->object_x[0] = e->object_x[2] >> 3;
+
+        velocity = e->firing_vertical_velocity;
+        if (velocity > 24) velocity = 24;
+        if (velocity < -24) velocity = -24;
+        e->object_y[2] = (uint16_t)(e->object_y[2] + velocity);
+        e->object_y[0] = e->object_y[2] >> 3;
+
+        e->object_velocity[2] += e->object_velocity[3];
+        e->firing_vertical_velocity += e->firing_vertical_acceleration;
+        unsigned change = 0;
+        switch (e->object_frame[2]) {
+        case 0:
+            if (e->object_velocity[2] >= 0) change = 1;
+            break;
+        case 1:
+        case 3:
+            if (e->object_timer[2]++ >= 20) {
+                e->object_timer[2] = 0;
+                change = 2;
+            }
+            break;
+        case 2:
+            if (e->object_velocity[2] <= 0) change = 1;
+            break;
+        default:
+            break;
+        }
+        if (change == 1) {
+            e->object_frame[2]++;
+            e->object_velocity[3] = 0;
+            e->firing_vertical_acceleration = 0;
+        } else if (change == 2) {
+            e->object_frame[2] = (uint8_t)((e->object_frame[2] + 1u) & 3u);
+            e->object_frame[3] = (uint8_t)((e->object_frame[3] + 1u) & 7u);
+            load_firing_trajectory(e);
+        }
+        if (e->object_timer[0] & 1) e->object_scaling++;
+    }
+
+    if (e->object_active[0] < 3) {
+        if (e->object_frame[0] > 14) e->object_frame[0] = 0;
+    } else {
+        if (e->object_frame[0] >= 23) e->object_frame[0] = 23;
+        if (e->object_timer[0] < 4) e->object_y[0] += 4;
+        else if (e->object_timer[0] < 8) e->object_y[0] += 2;
+        else e->object_y[0] += 1;
+        if (e->object_scaling < 0x1F8) e->object_scaling += 8;
+    }
+    e->object_oam_address[0] = firing_oam(
+        "sTourianEscape_47cf70", e->object_frame[0] / 4u);
+    e->object_frame[0]++;
+    e->object_timer[0]++;
+}
+
+static void update_firing_pirates(MzmTourianEscape *e) {
+    if (!e->object_active[1]) return;
+    unsigned frame = 0;
+    if (e->secondary_scaling > 160) {
+        if (e->object_frame[1] > 26) e->object_frame[1] = 0;
+        frame = e->object_frame[1] / 4u;
+    }
+    e->object_oam_address[1] = firing_oam("sTourianEscape_47cf88", frame);
+    e->secondary_scaling -= e->object_active[1] == 1 ? 1 : 2;
+    if (e->secondary_scaling < 8) e->object_active[1] = 0;
+    e->object_frame[1]++;
+    e->object_timer[1]++;
+}
+
+static void place_firing_affine(MzmScreen *s, int *slot, uint32_t address,
+                                int x, int y, int16_t scaling,
+                                uint16_t matrix) {
+    uint32_t size = 0;
+    const uint8_t *data = mzm_rom_span(address, &size);
+    if (!data || size < 2) return;
+    unsigned count = (unsigned)(data[0] | data[1] << 8) & 0xFFu;
+    if (2u + count * 6u > size) return;
+    for (unsigned i = 0; i < count && *slot < MZM_OAM_BUFFER; ++i, ++*slot) {
+        const uint8_t *part = data + 2 + i * 6;
+        uint16_t *a = oam_attributes(s, *slot);
+        a[0] = (uint16_t)(part[0] | part[1] << 8);
+        a[1] = (uint16_t)(part[2] | part[3] << 8);
+        a[2] = (uint16_t)(part[4] | part[5] << 8);
+        a[3] = 0;
+        process_affine_oam(s, *slot, (int16_t)x, (int16_t)y,
+                           0, scaling, matrix);
+    }
+}
+
+static void draw_firing_oam(MzmTourianEscape *e, MzmScreen *s) {
+    clear_oam_buffer(s);
+    int slot = 0;
+    if (e->object_active[0])
+        place_firing_affine(s, &slot, e->object_oam_address[0],
+                            e->object_x[0], e->object_y[0],
+                            (int16_t)e->object_scaling, 0);
+    if (e->object_active[1])
+        place_firing_affine(s, &slot, e->object_oam_address[1],
+                            e->object_x[1], e->object_y[1],
+                            (int16_t)e->secondary_scaling, 4);
+    for (int i = 4; i < MZM_TOURIAN_ESCAPE_OBJECTS; ++i) {
+        if (!e->object_active[i]) continue;
+        place_oam_address(s, &slot, e->object_oam_address[i],
+                          e->object_x[i], e->object_y[i], 0);
+    }
+    if (e->object_active[0])
+        write_affine_oam_matrices(s, 0, (int16_t)e->object_scaling, 0);
+    if (e->object_active[1])
+        write_affine_oam_matrices(s, 0, (int16_t)e->secondary_scaling, 16);
+    s->next_oam_slot = (uint8_t)slot;
+    mzm_screen_copy_oam(s);
+}
+
+static void update_samus_chased_firing(MzmTourianEscape *e, MzmScreen *s) {
+    GbaPpu *p = &e->room.ppu;
+    bool ended = false;
+    uint16_t frame = e->timer++;
+    switch (frame) {
+    case 0:
+        decompress("sTourianEscapeShipsAndProjectilesGfx",
+                   p->vram + GBA_OBJ_VRAM, GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+        break;
+    case 1:
+        copy_obj_palette(e, "sTourianEscapeSamusChasedByPiratesFiringPal", 4 * 16);
+        e->object_active[0] = 1;
+        e->object_x[0] = 0x78;
+        e->object_y[0] = 64 + 32;
+        e->object_scaling = 0xC0;
+        e->object_active[1] = 1;
+        e->object_x[1] = 0x78;
+        e->object_y[1] = 32;
+        e->secondary_scaling = 256;
+        e->object_active[4] = 1;
+        e->object_active[5] = 2;
+        e->object_active[6] = 2;
+        e->object_active[7] = 1;
+        e->object_active[8] = 2;
+        e->object_active[9] = 1;
+        e->object_x[2] = (uint16_t)(e->object_x[0] * 8);
+        e->object_y[2] = (uint16_t)(e->object_y[0] * 8);
+        load_firing_trajectory(e);
+        e->bg0_x = 64 - 16;
+        e->bg0_y = 64 + 16;
+        gba_ppu_write16(p, GBA_REG_BG0HOFS, (uint16_t)e->bg0_x);
+        gba_ppu_write16(p, GBA_REG_BG0VOFS, (uint16_t)e->bg0_y);
+        break;
+    case 2:
+        dispcnt(e, GBA_DCNT_BG0 | GBA_DCNT_OBJ);
+        mzm_sfx_play(MZM_SOUND_TOURIAN_ESCAPE_SAMUS_DODGING_SHOTS);
+        mzm_sfx_play(MZM_SOUND_TOURIAN_ESCAPE_PIRATES_FIRING);
+        break;
+    case 120:
+        e->object_active[1]++;
+        break;
+    case 126:
+        e->object_active[0]++;
+        break;
+    case 160:
+        e->object_timer[0] = 0;
+        e->object_frame[0] = 0;
+        e->object_active[0]++;
+        break;
+    case 192:
+        dispcnt(e, 0);
+        break;
+    case 368:
+        mzm_sfx_play(MZM_SOUND_TOURIAN_ESCAPE_SAMUS_FLYING_AFTER_SHOTS);
+        break;
+    case 384:
+        ended = true;
+        break;
+    default:
+        break;
+    }
+    if ((e->timer & 7) == 0) e->bg0_y--;
+    gba_ppu_write16(p, GBA_REG_BG0VOFS, (uint16_t)e->bg0_y & 0xFF);
+    update_firing_samus(e);
+    if (e->object_active[4]) advance_chased_particles(e, true);
+    update_firing_pirates(e);
+    draw_firing_oam(e, s);
+    if (ended) reset_stage(e, s, 7);
 }
 
 void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
@@ -946,4 +1158,5 @@ void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     else if (e->stage == 3) update_samus_surrounded(e, s);
     else if (e->stage == 4) update_samus_flying_in(e, s);
     else if (e->stage == 5) update_samus_chased(e, s);
+    else if (e->stage == 6) update_samus_chased_firing(e, s);
 }

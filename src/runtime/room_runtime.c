@@ -22,6 +22,7 @@
 #include "mzm_projectiles.h"
 #include "mzm_rom.h"
 #include "mzm_room_gfx.h"
+#include "mzm_tourian_escape.h"
 #include "mzm_samus.h"
 #include "mzm_screen_shake.h"
 #include "mzm_screen.h"
@@ -3965,7 +3966,9 @@ int main(int argc, char **argv) {
     /* EFFECT_CUTSCENE_EXITING_ZEBES: background whitening followed by the
      * global Tourian-escape fade. */
     MzmEscapeExitFade escape_exit={0};
+    bool tourian_escape_mode=false;
     bool tourian_escape_pending=false;
+    static MzmTourianEscape tourian_escape;
     /* A door's fade (ConnectionCheckEnterDoor): Samus waits while the room
      * fades out, then the door's room is loaded and fades in. */
     static MzmDoorFade door_fade;
@@ -4476,9 +4479,17 @@ int main(int argc, char **argv) {
                 accumulator-=fixed_step;
                 continue;
             }
+            if(tourian_escape_mode) {
+                /* GM_TOURIAN_ESCAPE owns the non-gameplay PPU. */
+                mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                              capture_path?NULL:&gamepad));
+                mzm_tourian_escape_update(&tourian_escape,&screen);
+                accumulator-=fixed_step;
+                continue;
+            }
             if(tourian_escape_pending) {
-                /* GM_TOURIAN_ESCAPE owns the following frames. Its PPU
-                 * sequence is the next native subsystem to be connected. */
+                /* Without a ROM-backed screen, keep the completed native
+                 * white boundary instead of resuming gameplay. */
                 accumulator-=fixed_step;
                 continue;
             }
@@ -4610,8 +4621,13 @@ int main(int argc, char **argv) {
                 if(escape_exit.phase != 0)
                     prevent_movement=MZM_SAMUS_ITEM_PMT;
                 if(mzm_escape_exit_fade_update(&escape_exit)) {
-                    tourian_escape_pending=true;
-                    printf("Tourian escape cutscene requested.\n");
+                    tourian_escape_mode=screen_ready &&
+                        mzm_tourian_escape_enter(&tourian_escape,&screen);
+                    tourian_escape_pending=!tourian_escape_mode;
+                    if(tourian_escape_mode)
+                        printf("Tourian escape cutscene started.\n");
+                    else
+                        fprintf(stderr,"The Tourian escape cutscene is unavailable.\n");
                     accumulator-=fixed_step;
                     continue;
                 }
@@ -5119,7 +5135,8 @@ int main(int argc, char **argv) {
         if ((float)oh/224.f < scale) scale=(float)oh/224.f;
         SDL_FRect viewport={(ow-320.f*scale)*0.5f,(oh-224.f*scale)*0.5f,
                             320.f*scale,224.f*scale};
-        if(intro_mode || title_mode || pause_mode || file_select_mode || game_over_mode || cutscene_mode) {
+        if(intro_mode || title_mode || pause_mode || file_select_mode || game_over_mode ||
+           cutscene_mode || tourian_escape_mode) {
             /* The 240x160 GBA screen, fitted to the view. */
             SDL_SetRenderDrawColor(renderer,0,0,0,255);
             SDL_RenderClear(renderer);
@@ -5134,7 +5151,7 @@ int main(int argc, char **argv) {
             bool lcd_on=!(pause_mode && pause_screen.sleeping);
             if(lcd_on && screen_texture &&
                SDL_LockTexture(screen_texture,NULL,&screen_pixels,&screen_pitch)) {
-                gba_ppu_render(&screen_ppu,GBA_SCREEN_W,GBA_SCREEN_H,false,screen_pixels,
+                gba_ppu_render(screen.ppu,GBA_SCREEN_W,GBA_SCREEN_H,false,screen_pixels,
                                screen_pitch);
                 SDL_UnlockTexture(screen_texture);
                 float fit=viewport.w/GBA_SCREEN_W;
@@ -5624,12 +5641,14 @@ frame_overlays:
                    capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
-            if(intro_mode || title_mode || file_select_mode || pause_mode || game_over_mode || cutscene_mode)
+            if(intro_mode || title_mode || file_select_mode || pause_mode || game_over_mode ||
+               cutscene_mode || tourian_escape_mode)
                 printf("  screen: cutscene %d (stage %d sub stage %d), intro %d (stage %d timer %d), title %d, file select %d (mode %d, sub menu %d "
-                       "stage %d), pause %d, game over %d (mode %d)\n",
+                       "stage %d), pause %d, game over %d (mode %d), Tourian escape %d (stage %u timer %u)\n",
                        cutscene_mode,cutscene.stage,cutscene.sub_stage,intro_mode,intro.stage,intro.timer,title_mode,file_select_mode,file_select.sub_mode1,
                        file_select.current_sub_menu,
-                       file_select.sub_menu_stage,pause_mode,game_over_mode,game_over.sub_mode1);
+                       file_select.sub_menu_stage,pause_mode,game_over_mode,game_over.sub_mode1,
+                       tourian_escape_mode,tourian_escape.stage,tourian_escape.timer);
             if(prevent_movement && !sprites.banner.exists)
                 printf("  movement prevented %u\n",prevent_movement);
             if(sprites.banner.exists)

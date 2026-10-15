@@ -3045,6 +3045,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   regenerated native parity and dashboard data, fresh generated-file checks,
   and the proprietary-file guard passed.
 
+## Patch 0332 - Tourian escape first PPU stage
+
+- The successful exit no longer stops on its white boundary. The room runtime
+  now enters a dedicated `GM_TOURIAN_ESCAPE` state whose PPU is rendered by the
+  same non-gameplay screen path as the title, menus and story cutscenes.
+- `TourianEscapeInit` loads the native Tourian room, explosion/debris graphics
+  and OBJ palette. `TourianEscapeZebesExploding` follows the native 513-frame
+  boundary, including the room changes to Tourian 5 and Crateria 1, the four
+  brightness flashes, sound requests, cutscene music handoff, and the switch at
+  frame 248 to the native Zebes background with the departing ship and moving
+  explosion objects.
+- ROM-backed screen tests verify the three room identities, display modes,
+  audio requests, planet rendering, OAM output and exact first-stage endpoint.
+- Remaining boundary: the exploding-room block tilemaps and their explosion
+  objects are not drawn yet. Stages 2-12, beginning with Samus in her ship,
+  remain to be ported before `CUTSCENE_COULD_I_SURVIVE` and Chozodia room 0.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

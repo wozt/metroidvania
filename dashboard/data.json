@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-15T06:44:46+00:00",
+ "generated_at": "2026-10-15T06:55:21+00:00",
  "git": {
-  "commit": "64b56c8",
+  "commit": "2152639",
   "branch": "main",
   "dirty": true
  },
@@ -3666,11 +3666,14 @@
     "src/runtime/mzm_message_banner.c",
     "src/runtime/mzm_gadget_sprites.c",
     "src/runtime/mzm_mother_brain.c",
+    "src/runtime/mzm_tourian_escape.c",
+    "src/runtime/mzm_tourian_escape.h",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
     "tests/test_mzm_hud.c",
-    "tests/test_mzm_sprites.c"
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_screens.c"
    ],
    "dependencies": [
     "mzm.enemies.mother_brain",
@@ -3690,14 +3693,17 @@
     "ColorFadingProcess_EscapeFailed",
     "BackgroundEffectUpdate",
     "BackgroundEffectProcess",
-    "ColorFadingProcess_TourianEscape"
+    "ColorFadingProcess_TourianEscape",
+    "TourianEscapeInit",
+    "TourianEscapeZebesExploding"
    ],
-   "limitations": "The successful fade now reaches the GM_TOURIAN_ESCAPE boundary, but the twelve-stage Tourian escape PPU cutscene is not ported, so the runtime deliberately holds its final white frame instead of inventing the Chozodia transition. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Both fade transitions use one host white overlay rather than applying brightness separately to selected GBA palette rows; the exit background effect therefore also whitens Samus before the global fade. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. At zero, the runtime freezes Samus and the countdown, fades all sounds and music over 60 frames, applies ColorFadingProcess_EscapeFailed's eight white levels, holds white for 61 frames, then enters the native Game Over screen. A successful gunship take-off applies all fifteen BACKGROUND_EFFECT_EXIT_ZEBES_FADE levels at their two-frame cadence, freezes Samus for the following twelve-frame COLOR_FADING_TOURIAN_ESCAPE, and leaves gameplay at the native cutscene boundary. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
-   "next_action": "Port TourianEscapeInit and the twelve Tourian escape stages on the screen PPU, then continue through CUTSCENE_COULD_I_SURVIVE into Chozodia room 0.",
+   "limitations": "Only the first of the twelve Tourian escape stages is connected. Its room views still omit the native block-layer tilemaps and their explosion/debris OAM animation; the authentic Zebes background, leaving ship and explosion objects begin at frame 248. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Both gameplay fade transitions use one host white overlay rather than applying brightness separately to selected GBA palette rows; the exit background effect therefore also whitens Samus before the global fade. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. At zero, the runtime freezes Samus and the countdown, fades all sounds and music over 60 frames, applies ColorFadingProcess_EscapeFailed's eight white levels, holds white for 61 frames, then enters the native Game Over screen. A successful gunship take-off applies the native exit fades and enters GM_TOURIAN_ESCAPE. TourianEscapeInit loads the native room, OBJ graphics and palettes; TourianEscapeZebesExploding switches from Tourian room 4 to Tourian room 5 and Crateria room 1 at frames 104 and 176, starts the cutscene music, then shows Zebes with the animated departing ship and scrolling explosion through frame 512. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
+   "next_action": "Complete the exploding-room block layers and OAM objects, then port TourianEscapeSamusInHerShip and the remaining ten stages before CUTSCENE_COULD_I_SURVIVE and Chozodia room 0.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_hud.c",
-     "tests/test_mzm_sprites.c"
+     "tests/test_mzm_sprites.c",
+     "tests/test_mzm_screens.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -3725,6 +3731,16 @@
       "registered": true,
       "ctest": [
        "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_screens.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_screens"
       ],
       "outcome": "passed",
       "exists": true
@@ -9295,6 +9311,12 @@
  },
  "timeline": [
   {
+   "commit": "2152639",
+   "date": "2026-10-15",
+   "subject": "feat(mzm): connect successful Zebes exit fades",
+   "scope": "mzm"
+  },
+  {
    "commit": "64b56c8",
    "date": "2026-10-14",
    "subject": "feat(mzm): connect escape failure game over",
@@ -9767,12 +9789,6 @@
    "date": "2026-10-11",
    "subject": "feat(mzm): Chozodia searchlights, security lasers and searchlight eyes",
    "scope": "mzm"
-  },
-  {
-   "commit": "7c72f7c",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): waiting Space Pirates at doors",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -9800,7 +9816,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1139,
+    "routines_cited_by_features": 1141,
     "call_edges": 6071
    },
    "aos": {

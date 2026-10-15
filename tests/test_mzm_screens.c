@@ -17,6 +17,7 @@
 #include "mzm_intro.h"
 #include "mzm_cutscene.h"
 #include "mzm_door_fade.h"
+#include "mzm_tourian_escape.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -723,6 +724,50 @@ static void test_cutscene_bank(void) {
     mzm_rom_close();
 }
 
+/* GM_TOURIAN_ESCAPE on the exported bank: the three exploding-room views,
+ * then the native Zebes background, Samus's ship and explosion objects. */
+static void test_tourian_escape_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the Tourian escape checks are skipped\n");
+        return;
+    }
+    static MzmTourianEscape escape;
+    mzm_sfx_clear();
+    assert(mzm_tourian_escape_enter(&escape, &screen));
+    assert(escape.ready && escape.stage == 0 && escape.timer == 0);
+    assert(escape.room.area == 4 && escape.room.room == 4 && screen.ppu == &escape.room.ppu);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ));
+    assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_FIRST_ROOM_EXPLODING) == 0);
+    mzm_tourian_escape_update(&escape, &screen);
+    assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_FIRST_ROOM_EXPLODING) == 1);
+
+    for (int f = 1; f < 249; ++f) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.planet && escape.timer == 249 && escape.room.area == 5 && escape.room.room == 1);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) == (GBA_DCNT_BG0 | GBA_DCNT_OBJ));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDCNT) == 0x3F00);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 0);
+    assert(escape.explosion_timer == 2);
+    assert(screen.ppu->oam[0] != 0x200);
+    assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_OTHER_ROOMS_EXPLODING) == 2);
+    assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_SAMUS_LEAVING_PLANET) == 1);
+    assert(count_requests(MZM_SFX_MUSIC_FADE_AND_QUEUE, MZM_MUSIC_ESCAPING_ZEBES_CUTSCENE) == 1);
+
+    uint16_t line[GBA_SCREEN_W];
+    int drawn = 0;
+    for (int y = 0; y < GBA_SCREEN_H; y += 8) {
+        gba_ppu_render_line(screen.ppu, y, GBA_SCREEN_W, line);
+        for (int x = 0; x < GBA_SCREEN_W; ++x) drawn += (line[x] & 0x7FFF) != 0;
+    }
+    assert(drawn > GBA_SCREEN_W);
+    for (int f = 0; f < 300 && escape.stage == 0; ++f)
+        mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 1 && escape.timer == 513);
+    screen.ppu = &ppu;
+    mzm_rom_close();
+}
+
 /* The door fades' state machines (no ROM data). */
 static void test_door_fade(void) {
     static MzmDoorFade f;
@@ -854,6 +899,7 @@ int main(void) {
     test_game_over_bank();
     test_intro_bank();
     test_cutscene_bank();
+    test_tourian_escape_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

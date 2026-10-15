@@ -3214,6 +3214,27 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0340 - Tourian going-to-crash scene
+
+- The 81-frame `TourianEscapeSamusGoingToCrash` stage now follows the
+  decisive shot and reaches the crashing boundary. It restores the Zebes
+  background, loads the damaged ship graphics and copies the native BG and
+  OBJ palettes from the private ROM bank.
+- The ship and foreground wake use the native semi-transparent OAM path with
+  the 9/7 alpha coefficients. Its one-pixel vibration and both smoke trails
+  follow the exact timing and cumulative eight-step ROM tables, including
+  their independent resets and mirrored vertical movement.
+- The fire palette alternates every four frames, the background drifts every
+  six frames and the free-falling sound starts with the visible scene. The
+  ROM-backed regression test covers both smoke activations and recycling
+  points, palette phases, blended OAM, scrolling, rendering and the exact
+  transition after frame 80.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and stages 10-12 beginning with `TourianEscapeSamusCrashing` are not ported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

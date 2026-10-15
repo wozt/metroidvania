@@ -1325,6 +1325,131 @@ static void update_samus_getting_shot(MzmTourianEscape *e, MzmScreen *s) {
     if (ended) reset_stage(e, s, 8);
 }
 
+static void copy_going_to_crash_fire_palette(MzmTourianEscape *e) {
+    const char *name = (e->timer & 7) < 4 ?
+        "sTourianEscape_479ee0" : "sTourianEscape_479f00";
+    uint32_t address = mzm_sym(name);
+    for (int i = 0; address && i < 16; ++i)
+        e->room.ppu.palette[256 + 5 * 16 + i] =
+            mzm_rom_u16(address + (uint32_t)i * 2u);
+}
+
+static void advance_going_to_crash_smoke(MzmTourianEscape *e, int object,
+                                         bool mirror_y) {
+    uint8_t offset = (uint8_t)(e->object_timer[object]++ / 4u);
+    if (offset >= 8) {
+        e->object_timer[object] = 0;
+        e->object_x[object] = 0x6D;
+        e->object_y[object] = 0x46;
+        offset = 0;
+    }
+    e->object_oam_address[object] = mzm_rom_u32(
+        mzm_sym("sTourianEscape_47cea0") + (uint32_t)offset * 4u);
+    uint16_t x = mzm_rom_u16(
+        mzm_sym("sTourianEscape_47ce80") + (uint32_t)offset * 2u);
+    uint16_t y = mzm_rom_u16(
+        mzm_sym("sTourianEscape_47ce90") + (uint32_t)offset * 2u);
+    e->object_x[object] = (uint16_t)(e->object_x[object] + x);
+    e->object_y[object] = (uint16_t)(e->object_y[object] +
+                                     (mirror_y ? -(int)y : (int)y));
+}
+
+static void place_blended_oam_address(MzmScreen *s, int *slot,
+                                      uint32_t address, int x, int y) {
+    int first = *slot;
+    place_oam_address(s, slot, address, x, y, 0);
+    for (int i = first; i < *slot; ++i)
+        s->oam[i * 4] = (uint16_t)((s->oam[i * 4] & ~(3u << 10)) | 1u << 10);
+}
+
+static void update_going_to_crash_objects(MzmTourianEscape *e,
+                                          MzmScreen *s) {
+    if ((e->object_timer[0] & 3) < 2) {
+        e->object_x[0] = 0x6D;
+        e->object_y[0] = 0x46;
+    } else {
+        e->object_x[0] = 0x6C;
+        e->object_y[0] = 0x47;
+    }
+    e->object_timer[0]++;
+    if (e->object_active[1]) advance_going_to_crash_smoke(e, 1, false);
+    if (e->object_active[2]) advance_going_to_crash_smoke(e, 2, true);
+    copy_going_to_crash_fire_palette(e);
+
+    clear_oam_buffer(s);
+    int slot = 0;
+    for (int i = 0; i < 4; ++i) {
+        if (!e->object_active[i]) continue;
+        place_blended_oam_address(s, &slot, e->object_oam_address[i],
+                                  e->object_x[i], e->object_y[i]);
+    }
+    s->next_oam_slot = (uint8_t)slot;
+    mzm_screen_copy_oam(s);
+}
+
+static void update_samus_going_to_crash(MzmTourianEscape *e, MzmScreen *s) {
+    GbaPpu *p = &e->room.ppu;
+    bool ended = false;
+    uint16_t frame = e->timer++;
+    switch (frame) {
+    case 0:
+        decompress("sTourianEscapeZebesGfx", p->vram, GBA_VRAM_SIZE);
+        break;
+    case 1:
+        decompress("sTourianEscapeShipGoingToCrashGfx",
+                   p->vram + GBA_OBJ_VRAM, GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+        e->bg0_x = 16;
+        e->bg0_y = 0;
+        gba_ppu_write16(p, GBA_REG_BLDALPHA, 7 << 8 | 9);
+        break;
+    case 2:
+        decompress("sTourianEscapeZebesTileTable", p->vram + 0xF000,
+                   GBA_VRAM_SIZE - 0xF000);
+        copy_bg_palette(e, "sTourianEscapeExplodingPal", 9 * 16);
+        copy_obj_palette(e, "sTourianEscapeSamusGoingToCrashPal", 7 * 16);
+        e->object_active[0] = 1;
+        e->object_oam_address[0] = mzm_sym("sTourianEscape_47a98a");
+        e->object_active[3] = 1;
+        e->object_oam_address[3] = mzm_sym("sTourianEscape_47a958");
+        e->object_x[3] = 0x88;
+        e->object_y[3] = 0x58;
+        break;
+    case 3:
+        gba_ppu_write16(p, GBA_REG_BG0CNT, 30 << 8);
+        dispcnt(e, GBA_DCNT_BG0 | GBA_DCNT_OBJ);
+        gba_ppu_write16(p, GBA_REG_BLDCNT,
+                        BLDCNT_SCREEN_SECOND | BLDCNT_ALPHA);
+        mzm_sfx_play(MZM_SOUND_TOURIAN_ESCAPE_SHIP_FREE_FALLING);
+        break;
+    case 6:
+        e->object_active[1] = 1;
+        e->object_x[1] = 0x6D;
+        e->object_y[1] = 0x46;
+        break;
+    case 12:
+        e->object_active[2] = 1;
+        e->object_x[2] = 0x6D;
+        e->object_y[2] = 0x46;
+        break;
+    case 80:
+        dispcnt(e, 0);
+        gba_ppu_write16(p, GBA_REG_BLDCNT, 0);
+        ended = true;
+        break;
+    default:
+        break;
+    }
+
+    if (e->effect_timer++ > 4) {
+        e->effect_timer = 0;
+        e->bg0_x--;
+    }
+    gba_ppu_write16(p, GBA_REG_BG0HOFS, (uint16_t)e->bg0_x & 0x1FF);
+    gba_ppu_write16(p, GBA_REG_BG0VOFS, (uint16_t)e->bg0_y & 0xFF);
+    update_going_to_crash_objects(e, s);
+    if (ended) reset_stage(e, s, 9);
+}
+
 void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     if (!e || !e->ready || !s) return;
     if (e->stage == 0) update_zebes_exploding(e, s);
@@ -1335,4 +1460,5 @@ void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     else if (e->stage == 5) update_samus_chased(e, s);
     else if (e->stage == 6) update_samus_chased_firing(e, s);
     else if (e->stage == 7) update_samus_getting_shot(e, s);
+    else if (e->stage == 8) update_samus_going_to_crash(e, s);
 }

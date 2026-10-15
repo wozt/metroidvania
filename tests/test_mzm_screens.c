@@ -734,7 +734,7 @@ static void test_tourian_escape_bank(void) {
     }
     static MzmTourianEscape escape;
     mzm_sfx_clear();
-    assert(mzm_tourian_escape_enter(&escape, &screen));
+    assert(mzm_tourian_escape_enter(&escape, &screen, true));
     assert(escape.ready && escape.stage == 0 && escape.timer == 0);
     assert(escape.room.area == 4 && escape.room.room == 4 && screen.ppu == &escape.room.ppu);
     assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
@@ -742,6 +742,8 @@ static void test_tourian_escape_bank(void) {
     assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_FIRST_ROOM_EXPLODING) == 0);
     mzm_tourian_escape_update(&escape, &screen);
     assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_FIRST_ROOM_EXPLODING) == 1);
+    assert(screen.next_oam_slot > 0 && screen.ppu->oam[0] != 0x200);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0HOFS + 4) == 82);
 
     for (int f = 1; f < 249; ++f) mzm_tourian_escape_update(&escape, &screen);
     assert(escape.planet && escape.timer == 249 && escape.room.area == 5 && escape.room.room == 1);
@@ -763,7 +765,59 @@ static void test_tourian_escape_bank(void) {
     assert(drawn > GBA_SCREEN_W);
     for (int f = 0; f < 300 && escape.stage == 0; ++f)
         mzm_tourian_escape_update(&escape, &screen);
-    assert(escape.stage == 1 && escape.timer == 513);
+    assert(escape.stage == 1 && escape.timer == 0 && screen.ppu->oam[0] == 0x200);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0HOFS) == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0HOFS + 4) == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS + 4) == 0);
+
+    /* Samus in her ship: suited image, expanding flash window, suitless
+     * cross-fade, opened eyes, then the exact stage boundary. */
+    for (int f = 0; f < 4; ++f) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.timer == 4 && gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (GBA_DCNT_BG1 | GBA_DCNT_OBJ));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT) == (2 << 2 | 30 << 8));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT + 2) == (1 | 14 << 8));
+    assert(screen.ppu->palette[17] ==
+           mzm_rom_u16(mzm_sym("sTourianEscapeSamusInHerShipVariaSuitPal") + 34));
+    drawn = 0;
+    for (int y = 0; y < GBA_SCREEN_H; y += 8) {
+        gba_ppu_render_line(screen.ppu, y, GBA_SCREEN_W, line);
+        for (int x = 0; x < GBA_SCREEN_W; ++x) drawn += (line[x] & 0x7FFF) != 0;
+    }
+    assert(drawn > GBA_SCREEN_W);
+
+    while (escape.timer < 57) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (GBA_DCNT_BG1 | GBA_DCNT_OBJ | GBA_DCNT_WIN0));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_WIN0H) == (119 << 8 | 121));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_WIN0V) == (76 << 8 | 84));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 10);
+    assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_SAMUS_REMOVING_SUIT_1) == 1);
+    while (escape.timer < 129) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 11);
+    while (escape.timer < 163) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (GBA_DCNT_BG0 | GBA_DCNT_BG1 | GBA_DCNT_OBJ));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 15);
+    assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_SAMUS_REMOVING_SUIT_2) == 1);
+    while (escape.timer < 201) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDCNT) ==
+           (1 | 1 << 6 | 1 << 9));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDALPHA) == 16);
+    assert(count_requests(MZM_SFX_PLAY, MZM_SOUND_TOURIAN_ESCAPE_SAMUS_REMOVING_SUIT_3) == 1);
+    while (escape.timer < 204) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDALPHA) == (1 << 8 | 15));
+    while (escape.timer < 353) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT + 2) == 15 << 8);
+    while (escape.stage == 1) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 2 && escape.timer == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) == 0);
+
+    /* The other equipment branch selects the Power Suit palette. */
+    assert(mzm_tourian_escape_enter(&escape, &screen, false));
+    for (int f = 0; f < 513 + 3; ++f) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 1 && escape.timer == 3 && screen.ppu->palette[17] ==
+           mzm_rom_u16(mzm_sym("sTourianEscapeSamusInHerShipPowerSuitPal") + 34));
     screen.ppu = &ppu;
     mzm_rom_close();
 }

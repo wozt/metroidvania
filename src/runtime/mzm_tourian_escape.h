@@ -10,18 +10,26 @@
 #include "mzm_room_gfx.h"
 #include "mzm_screen.h"
 
+enum { MZM_TOURIAN_ESCAPE_OBJECTS = 9 };
+
 typedef struct {
-    bool ready, planet, flash;
-    uint8_t stage, flash_timer, flash_level;
+    bool ready, planet, flash, varia;
+    uint8_t stage, flash_timer, flash_level, effect_phase, effect_timer;
     uint16_t timer, explosion_timer;
     int16_t ship_x, explosion_x;
+    int16_t win0_left, win0_right, win0_top, win0_bottom;
+    uint8_t object_active[MZM_TOURIAN_ESCAPE_OBJECTS];
+    uint8_t object_frame[MZM_TOURIAN_ESCAPE_OBJECTS];
+    uint8_t object_timer[MZM_TOURIAN_ESCAPE_OBJECTS];
+    uint16_t object_x[MZM_TOURIAN_ESCAPE_OBJECTS];
+    uint16_t object_y[MZM_TOURIAN_ESCAPE_OBJECTS];
     MzmRoomGfx room;
 } MzmTourianEscape;
 
 /* TourianEscapeInit and the start of TourianEscapeUpdateStage. */
-bool mzm_tourian_escape_enter(MzmTourianEscape *escape, MzmScreen *screen);
-/* Advances the current native scene. The first scene stops at stage 1 until
- * the following Samus-in-her-ship scene is ported. */
+bool mzm_tourian_escape_enter(MzmTourianEscape *escape, MzmScreen *screen, bool varia);
+/* Advances the current native scene. The first two scenes stop at stage 2
+ * until the following looking-around scene is ported. */
 void mzm_tourian_escape_update(MzmTourianEscape *escape, MzmScreen *screen);
 
 #endif /* MZM_TOURIAN_ESCAPE_H */

@@ -3665,6 +3665,7 @@ int main(int argc, char **argv) {
      * begins the game in Brinstar's first room. */
     bool title_mode=argc==1, intro_mode=argc==1;
     int start_cutscene=0;     /* --cutscene N: a cutscene before the game */
+    bool start_tourian_escape=false; /* --tourian-escape: post-Tourian diagnostic */
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
@@ -3715,6 +3716,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--title")) title_mode=true;
         else if (!strcmp(argv[i],"--intro")) title_mode=intro_mode=true;
         else if (!strcmp(argv[i],"--cutscene") && i+1<argc) start_cutscene=atoi(argv[++i]);
+        else if (!strcmp(argv[i],"--tourian-escape")) start_tourian_escape=true;
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
@@ -3762,9 +3764,13 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
+    }
+    if(start_tourian_escape && (check || title_mode || intro_mode || start_cutscene)) {
+        fprintf(stderr,"--tourian-escape cannot be combined with another start mode.\n");
+        return 2;
     }
     if (library_check) {
         /* Validate any shared sprite library (Samus or Soma) without SDL video. */
@@ -3874,7 +3880,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -4121,6 +4127,14 @@ int main(int argc, char **argv) {
         fprintf(stderr,"No free avatar spawn found\n");
         goto cleanup;
     }
+    if(start_tourian_escape) {
+        tourian_escape_mode=screen_ready &&
+            mzm_tourian_escape_enter(&tourian_escape,&screen,
+                (equipment.items&MZM_ITEM_VARIA_SUIT)!=0);
+        tourian_escape_pending=!tourian_escape_mode;
+        if(tourian_escape_mode) printf("Tourian escape diagnostic started.\n");
+        else fprintf(stderr,"The Tourian escape diagnostic is unavailable.\n");
+    }
     /* The game's start, for the new games and a continue without a file:
      * the native new game, whatever the test options set. */
     runtime_new_game_save(&new_game_state,runtime_difficulty);
@@ -4146,7 +4160,8 @@ int main(int argc, char **argv) {
            "(Select) toggles super missiles.\n");
     printf("Diagnostics: F1 debug menu (keyboard only).\n");
     /* The first room's music starts at once (after the title screen). */
-    if (!title_mode && !intro_mode && !cutscene_mode && runtime_room_music(room)) {
+    if (!title_mode && !intro_mode && !cutscene_mode && !tourian_escape_mode &&
+        runtime_room_music(room)) {
         runtime_audio_lock();
         mzm_music_check_play_transition_track();
         runtime_audio_unlock();
@@ -4622,7 +4637,8 @@ int main(int argc, char **argv) {
                     prevent_movement=MZM_SAMUS_ITEM_PMT;
                 if(mzm_escape_exit_fade_update(&escape_exit)) {
                     tourian_escape_mode=screen_ready &&
-                        mzm_tourian_escape_enter(&tourian_escape,&screen);
+                        mzm_tourian_escape_enter(&tourian_escape,&screen,
+                            (equipment.items&MZM_ITEM_VARIA_SUIT)!=0);
                     tourian_escape_pending=!tourian_escape_mode;
                     if(tourian_escape_mode)
                         printf("Tourian escape cutscene started.\n");

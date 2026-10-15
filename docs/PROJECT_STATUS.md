@@ -3065,6 +3065,26 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0333 - Tourian cockpit and room explosions
+
+- `TourianEscapeProcessOam` now drives the first scene's four native explosion
+  animations and five falling debris objects directly from the ROM `FrameData`
+  tables. Their position cycling, animation timers and two-pixel room shake
+  follow the native handler through all three room views.
+- The 373-frame `TourianEscapeSamusInHerShip` stage is connected after Zebes:
+  Power/Varia palette selection, suited and suitless graphics, the expanding
+  brightness window at frame 56, three removal sounds, the BG0/BG1 alpha fade,
+  and the opened-eyes tilemap at frame 352 all run on the shared GBA PPU.
+- `--tourian-escape` starts this sequence directly for captures. Manual captures
+  verified the room explosions, the centred suited cockpit image and the
+  suitless cross-fade; the ROM-backed screen test covers their registers,
+  objects, audio requests, palettes and exact stage boundaries.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and stages 3-12 beginning with Samus looking around are not ported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

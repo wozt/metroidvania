@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-15T06:55:21+00:00",
+ "generated_at": "2026-10-15T07:10:31+00:00",
  "git": {
-  "commit": "2152639",
+  "commit": "b9320b3",
   "branch": "main",
   "dirty": true
  },
@@ -3695,10 +3695,12 @@
     "BackgroundEffectProcess",
     "ColorFadingProcess_TourianEscape",
     "TourianEscapeInit",
-    "TourianEscapeZebesExploding"
+    "TourianEscapeProcessOam",
+    "TourianEscapeZebesExploding",
+    "TourianEscapeSamusInHerShip"
    ],
-   "limitations": "Only the first of the twelve Tourian escape stages is connected. Its room views still omit the native block-layer tilemaps and their explosion/debris OAM animation; the authentic Zebes background, leaving ship and explosion objects begin at frame 248. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Both gameplay fade transitions use one host white overlay rather than applying brightness separately to selected GBA palette rows; the exit background effect therefore also whitens Samus before the global fade. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. At zero, the runtime freezes Samus and the countdown, fades all sounds and music over 60 frames, applies ColorFadingProcess_EscapeFailed's eight white levels, holds white for 61 frames, then enters the native Game Over screen. A successful gunship take-off applies the native exit fades and enters GM_TOURIAN_ESCAPE. TourianEscapeInit loads the native room, OBJ graphics and palettes; TourianEscapeZebesExploding switches from Tourian room 4 to Tourian room 5 and Crateria room 1 at frames 104 and 176, starts the cutscene music, then shows Zebes with the animated departing ship and scrolling explosion through frame 512. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
-   "next_action": "Complete the exploding-room block layers and OAM objects, then port TourianEscapeSamusInHerShip and the remaining ten stages before CUTSCENE_COULD_I_SURVIVE and Chozodia room 0.",
+   "limitations": "Two of the twelve Tourian escape stages are connected. The first stage's room views still omit their native block-layer tilemaps, although their explosion/debris OAM and camera shake are present. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Both gameplay fade transitions use one host white overlay rather than applying brightness separately to selected GBA palette rows; the exit background effect therefore also whitens Samus before the global fade. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. At zero, the runtime freezes Samus and the countdown, fades all sounds and music over 60 frames, applies ColorFadingProcess_EscapeFailed's eight white levels, holds white for 61 frames, then enters the native Game Over screen. A successful gunship take-off applies the native exit fades and enters GM_TOURIAN_ESCAPE. TourianEscapeInit loads the native room, OBJ graphics and palettes. TourianEscapeZebesExploding switches from Tourian room 4 to Tourian room 5 and Crateria room 1 at frames 104 and 176, animates four native explosion objects and five debris objects with the room shake, starts the cutscene music, then shows Zebes with the animated departing ship and scrolling explosion through frame 512. TourianEscapeSamusInHerShip runs through frame 372: it selects the Power or Varia palette, expands the native brightness window around suited Samus, reveals the suitless image with the three removal sounds, alpha-fades the flash, and switches to her opened eyes. The --tourian-escape runtime option exposes the sequence for direct captures. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
+   "next_action": "Port TourianEscapeSamusLookingAround, then the remaining nine stages before CUTSCENE_COULD_I_SURVIVE and Chozodia room 0; separately supply the first scene's room block tilemaps.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_hud.c",
@@ -9311,6 +9313,12 @@
  },
  "timeline": [
   {
+   "commit": "b9320b3",
+   "date": "2026-10-15",
+   "subject": "Port the first Tourian escape cutscene stage",
+   "scope": "project"
+  },
+  {
    "commit": "2152639",
    "date": "2026-10-15",
    "subject": "feat(mzm): connect successful Zebes exit fades",
@@ -9783,12 +9791,6 @@
    "date": "2026-10-11",
    "subject": "feat(mzm): native room backgrounds",
    "scope": "mzm"
-  },
-  {
-   "commit": "a681dda",
-   "date": "2026-10-11",
-   "subject": "feat(mzm): Chozodia searchlights, security lasers and searchlight eyes",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -9816,7 +9818,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1141,
+    "routines_cited_by_features": 1143,
     "call_edges": 6071
    },
    "aos": {

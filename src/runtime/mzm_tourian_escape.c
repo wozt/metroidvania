@@ -12,6 +12,7 @@ enum {
     BLDCNT_BG2_FIRST = 1 << 2, BLDCNT_BG3_FIRST = 1 << 3,
     BLDCNT_OBJ_FIRST = 1 << 4, BLDCNT_BACKDROP_FIRST = 1 << 5,
     BLDCNT_ALPHA = 1 << 6, BLDCNT_BRIGHTNESS_UP = 2 << 6,
+    BLDCNT_BRIGHTNESS_DOWN = 3 << 6,
     BLDCNT_SCREEN_FIRST = 0x3F, BLDCNT_SCREEN_SECOND = 0x3F << 8,
     WIN_ALL = 0x3F, WIN_ALL_NO_COLOR = 0x1F,
 };
@@ -1150,6 +1151,180 @@ static void update_samus_chased_firing(MzmTourianEscape *e, MzmScreen *s) {
     if (ended) reset_stage(e, s, 7);
 }
 
+static void draw_getting_shot_oam(MzmTourianEscape *e, MzmScreen *s) {
+    clear_oam_buffer(s);
+    int slot = 0;
+    if (e->object_active[0])
+        place_oam_address(s, &slot, e->object_oam_address[0],
+                          e->object_x[0], e->object_y[0], 0);
+    for (int i = 4; i < MZM_TOURIAN_ESCAPE_OBJECTS; ++i) {
+        if (!e->object_active[i]) continue;
+        place_oam_address(s, &slot, e->object_oam_address[i],
+                          e->object_x[i], e->object_y[i], 0);
+    }
+    s->next_oam_slot = (uint8_t)slot;
+    mzm_screen_copy_oam(s);
+}
+
+static void update_getting_shot_oscillation(MzmTourianEscape *e) {
+    switch (e->object_frame[1]) {
+    case 0:
+        if (--e->object_velocity[1] < -27) e->object_frame[1]++;
+        break;
+    case 1:
+        if (++e->object_velocity[1] == 0) e->object_frame[1]++;
+        break;
+    case 2:
+    case 5:
+        if (e->object_timer[3]++ > 3) {
+            e->object_frame[1] = e->object_frame[1] == 2 ? 3 : 0;
+            e->object_timer[3] = 0;
+        }
+        break;
+    case 3:
+        if (++e->object_velocity[1] > 39) e->object_frame[1]++;
+        break;
+    case 4:
+        if (--e->object_velocity[1] == 0) e->object_frame[1]++;
+        break;
+    default:
+        break;
+    }
+    int velocity = e->object_velocity[1];
+    if (velocity > 16) velocity = 16;
+    if (velocity < -16) velocity = -16;
+    e->object_x[1] = (uint16_t)(e->object_x[1] + velocity);
+    e->object_x[0] = e->object_x[1] / 32u;
+
+    switch (e->object_frame[2]) {
+    case 0:
+        if (--e->object_velocity[2] < -19) e->object_frame[2]++;
+        break;
+    case 1:
+        if (++e->object_velocity[2] == 0) e->object_frame[2]++;
+        break;
+    case 2:
+    case 5:
+        /* The native structure aliases this pause counter with particle 4's
+         * animation counter. Preserve that ordering and shared state. */
+        if (e->object_timer[4]++ > 3) {
+            e->object_frame[2] = e->object_frame[2] == 2 ? 3 : 0;
+            e->object_timer[4] = 0;
+        }
+        break;
+    case 3:
+        if (++e->object_velocity[2] > 19) e->object_frame[2]++;
+        break;
+    case 4:
+        if (--e->object_velocity[2] == 0) e->object_frame[2]++;
+        break;
+    default:
+        break;
+    }
+    velocity = e->object_velocity[2];
+    if (velocity > 8) velocity = 8;
+    if (velocity < -8) velocity = -8;
+    e->object_x[2] = (uint16_t)(e->object_x[2] + velocity);
+    e->object_y[0] = e->object_x[2] / 32u;
+}
+
+static void update_samus_getting_shot(MzmTourianEscape *e, MzmScreen *s) {
+    GbaPpu *p = &e->room.ppu;
+    bool ended = false;
+    uint16_t frame = e->timer++;
+    switch (frame) {
+    case 0:
+        decompress("sTourianEscapeSamusGettingShotGfx", p->vram + 0x8000,
+                   GBA_VRAM_SIZE - 0x8000);
+        break;
+    case 1:
+        decompress("sTourianEscapeSamusGettingShotShipGfx",
+                   p->vram + GBA_OBJ_VRAM, GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+        gba_ppu_write16(p, GBA_REG_BLDCNT,
+                        BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN);
+        gba_ppu_write16(p, GBA_REG_BLDY, 16);
+        break;
+    case 2:
+        decompress("sTourianEscapeSamusGettingShotTileTable",
+                   p->vram + 0xF000, GBA_VRAM_SIZE - 0xF000);
+        copy_obj_palette(e, "sTourianEscapeSamusGettingShotPal", 5 * 16);
+        e->bg0_x = 96;
+        e->bg0_y = 48;
+        e->effect_phase++;
+        break;
+    case 3: {
+        static const uint8_t active[6] = { 1, 2, 2, 1, 2, 1 };
+        gba_ppu_write16(p, GBA_REG_BG0CNT, 28 << 8);
+        dispcnt(e, GBA_DCNT_BG0 | GBA_DCNT_OBJ);
+        for (int i = 4; i < MZM_TOURIAN_ESCAPE_OBJECTS; ++i)
+            e->object_active[i] = active[i - 4];
+        break;
+    }
+    case 24:
+        e->object_active[0]++;
+        e->object_oam_address[0] = mzm_sym("sTourianEscape_47a904");
+        e->object_x[0] = 0x12D;
+        e->object_y[0] = 0xAE;
+        e->object_x[1] = (uint16_t)(e->object_x[0] * 32u);
+        e->object_x[2] = (uint16_t)(e->object_y[0] * 32u);
+        e->object_velocity[1] = 0x38;
+        e->object_velocity[2] = 0x1C;
+        break;
+    case 128:
+        e->object_velocity[1] = 0;
+        e->object_velocity[2] = 0;
+        /* Fall through: frames 128 and 136 advance the native state. */
+        /* fallthrough */
+    case 136:
+        e->object_active[0]++;
+        break;
+    case 336:
+        copy_bg_palette(e, "sTourianEscapeSamusGettingShotPal", 5 * 16);
+        gba_ppu_write16(p, GBA_REG_BG0CNT + 2, 1 | 2 << 2 | 30 << 8);
+        dispcnt(e, GBA_DCNT_BG1 | GBA_DCNT_OBJ);
+        e->object_active[0] = 0;
+        mzm_sfx_play(MZM_SOUND_TOURIAN_ESCAPE_DECISIVE_SHOT);
+        break;
+    case 400:
+        dispcnt(e, 0);
+        ended = true;
+        break;
+    default:
+        break;
+    }
+
+    if (e->effect_phase) {
+        uint16_t level = gba_ppu_read16(p, GBA_REG_BLDY);
+        if (level) {
+            if ((e->timer & 7) == 0)
+                gba_ppu_write16(p, GBA_REG_BLDY, (uint16_t)(level - 1));
+        } else {
+            gba_ppu_write16(p, GBA_REG_BLDCNT, 0);
+            e->effect_phase = 0;
+        }
+    }
+    if ((e->timer & 7) == 0) e->bg0_x--;
+    gba_ppu_write16(p, GBA_REG_BG0HOFS, (uint16_t)e->bg0_x & 0x1FF);
+    gba_ppu_write16(p, GBA_REG_BG0VOFS, (uint16_t)e->bg0_y & 0xFF);
+    if (e->object_active[4]) advance_chased_particles(e, false);
+
+    if (e->object_active[0] == 1) {
+        if (e->timer > 111) {
+            e->object_velocity[1]--;
+            if (e->timer & 1) e->object_velocity[2]--;
+        }
+        e->object_x[1] = (uint16_t)(e->object_x[1] - e->object_velocity[1]);
+        e->object_x[2] = (uint16_t)(e->object_x[2] - e->object_velocity[2]);
+        e->object_x[0] = e->object_x[1] / 32u;
+        e->object_y[0] = e->object_x[2] / 32u;
+    } else if (e->object_active[0] == 3) {
+        update_getting_shot_oscillation(e);
+    }
+
+    draw_getting_shot_oam(e, s);
+    if (ended) reset_stage(e, s, 8);
+}
+
 void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     if (!e || !e->ready || !s) return;
     if (e->stage == 0) update_zebes_exploding(e, s);
@@ -1159,4 +1334,5 @@ void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     else if (e->stage == 4) update_samus_flying_in(e, s);
     else if (e->stage == 5) update_samus_chased(e, s);
     else if (e->stage == 6) update_samus_chased_firing(e, s);
+    else if (e->stage == 7) update_samus_getting_shot(e, s);
 }

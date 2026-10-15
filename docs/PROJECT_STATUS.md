@@ -3191,6 +3191,29 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0339 - Tourian getting-shot scene
+
+- The 401-frame `TourianEscapeSamusGettingShot` stage now follows the firing
+  chase and reaches the going-to-crash boundary. It loads the dedicated
+  background, tilemap, ship graphics and five palette rows from the private
+  ROM bank while retaining the six projectile states carried between scenes.
+- The scene reproduces the native all-layer brightness fade, horizontal
+  starfield drift and projectile recycling. Samus enters on the exact
+  fixed-point deceleration curve, then follows the independent capped X/Y
+  oscillators after the hit, including the native alias between the vertical
+  pause counter and projectile 4's animation counter.
+- Frame 336 removes the ship, transfers the palette to BG memory, switches to
+  the dedicated BG1 impact view and plays the decisive-shot sound. The
+  ROM-backed regression test covers carried state, fade intervals, OAM,
+  trajectory and oscillator snapshots, both rendered views and the exact
+  transition after frame 400.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and stages 9-12 beginning with `TourianEscapeSamusGoingToCrash` are not
+  ported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

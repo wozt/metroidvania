@@ -875,6 +875,37 @@ int main(void) {
                                       .x = z.x, .y = z.y - 20};
     mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, NULL);
     assert(z.health == 20);
+    /* The emergency pistol's weak shot always produces an invincible hit.
+     * Its charged shot deals 12 to a compatible sprite, except that a Space
+     * Pirate is paralysed for one second without taking damage. */
+    memset(&fx, 0, sizeof fx);
+    z.health = 20;
+    z.isft = 0;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_PISTOL,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 20 && (z.isft & 0x7F) == 2 && !weapons.list[0].active &&
+           fx.particles[0].effect == MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+    z.isft = 0;
+    weapons.list[0] = (MzmProjectile){.active = true,
+                                      .type = MZM_PROJECTILE_CHARGED_PISTOL,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 8 && !weapons.list[0].active &&
+           fx.particles[1].effect == MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM);
+    z.health = 20;
+    z.isft = 0;
+    z.freeze_timer = 0;
+    z.samus_collision = 20;                 /* SSC_SPACE_PIRATE */
+    z.standing_on = MZM_STANDING_ON_SPRITE_ON;
+    weapons.list[0] = (MzmProjectile){.active = true,
+                                      .type = MZM_PROJECTILE_CHARGED_PISTOL,
+                                      .x = z.x, .y = z.y - 20};
+    mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
+    assert(z.health == 20 && z.freeze_timer == 60 && z.palette_row == 1 &&
+           z.absolute_palette_row == 1 && z.standing_on == MZM_STANDING_ON_SPRITE_OFF &&
+           fx.particles[2].effect == MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM);
+    z.samus_collision = 4;                  /* SSC_HURTS_SAMUS */
     /* Not weak to beams: the Long Beam only stuns. */
     weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_LONG_BEAM,
                                       .x = z.x, .y = z.y - 20};
@@ -890,10 +921,11 @@ int main(void) {
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = 0;
     mzm_sprite_init_primary(&z, MZM_PSPRITE_ZOOMER_YELLOW, 0, 9, 6, 0, 0);
     step(&z, 0);
+    memset(&fx, 0, sizeof fx);
     weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM,
                                       .x = z.x, .y = z.y - 20};
     mzm_sprites_projectile_hits(&z, 1, &weapons, &tables, &fx);
-    assert(fx.particles[2].effect == MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+    assert(fx.particles[0].effect == MZM_PE_HITTING_SOMETHING_INVINCIBLE);
     /* ProjectileIceBeamHittingSprite: weak and freezable with frame8 & flag
      * clear: 3 damage, frozen for 240 with the frozen row, the ice impact,
      * then the freezing particle and SOUND_FREEZING_SPRITE. */
@@ -2339,6 +2371,22 @@ int main(void) {
         px = ps[0].x;
         PIRATE_FRAME();
         assert(ps[0].x == px + 8);
+
+        /* A charged pistol freezes a pirate with the suitless-specific
+         * one-second countdown and black/purple warning flicker. */
+        equipment.suit = MZM_SUIT_SUITLESS;
+        ps[0].freeze_timer = 46;
+        ps[0].palette_row = ps[0].absolute_palette_row = 1;
+        px = ps[0].x;
+        frame.frame8 = 1;
+        PIRATE_FRAME();
+        assert(ps[0].freeze_timer == 45 && ps[0].x == px && ps[0].palette_row == 1 &&
+               ps[0].absolute_palette_row == 1 && ps[0].ignore_samus_timer == 1);
+        PIRATE_FRAME();
+        assert(ps[0].freeze_timer == 44 && ps[0].x == px && ps[0].palette_row == 0 &&
+               ps[0].absolute_palette_row == 0);
+        equipment.suit = MZM_SUIT_NORMAL;
+        frame.frame8 = 0;
 
         /* Samus four blocks ahead in its line of sight: alerted, the alarm
          * rings, it charges for 24 frames and fires two lasers forward. */

@@ -195,6 +195,7 @@ BEAM_VARIANTS = {
     "WaveIceBeam": ("WaveBeam", 2),
     "PlasmaBeam": ("PlasmaBeam", 4),
     "PlasmaIceBeam": ("PlasmaBeam", 2),
+    "Pistol": ("Pistol", 5),
 }
 # Particles drawn with the loaded beam graphics or the beam palette row.
 BEAM_PARTICLES = ("sParticleChargingBeamBeginOam", "sParticleChargingBeamChargedOam",
@@ -208,11 +209,12 @@ BEAM_PARTICLES = ("sParticleChargingBeamBeginOam", "sParticleChargingBeamCharged
                   "sParticleMissileTrailOam", "sParticleSuperMissileTrailOam",
                   "sParticleChargedLongBeamTrailOam", "sParticleChargedIceBeamTrailOam",
                   "sParticleChargedWaveBeamTrailOam", "sParticleChargedPlasmaBeamTrailOam",
-                  "sParticleChargedFullBeamTrailOam")
+                  "sParticleChargedFullBeamTrailOam", "sParticleChargedPistolTrailOam")
 # Particles only drawn with one graphics set (their tiles are blank in the
 # others): the charged Plasma Beam trails.
 PARTICLE_BEAM_SETS = {"sParticleChargedPlasmaBeamTrailOam": "PlasmaBeam",
-                      "sParticleChargedFullBeamTrailOam": "PlasmaBeam"}
+                      "sParticleChargedFullBeamTrailOam": "PlasmaBeam",
+                      "sParticleChargedPistolTrailOam": "Pistol"}
 
 
 def compose_beam_particles(rom: bytes, symbols, sink) -> dict:
@@ -222,6 +224,9 @@ def compose_beam_particles(rom: bytes, symbols, sink) -> dict:
     for variant, (beam, row) in BEAM_VARIANTS.items():
         vram, palette = stage(rom, symbols, beam, row)
         for table in BEAM_PARTICLES:
+            if beam == "Pistol" and table in ("sParticleChargedIceBeamTrailOam",
+                                               "sParticleChargedWaveBeamTrailOam"):
+                continue
             if PARTICLE_BEAM_SETS.get(table, beam) != beam:
                 continue
             try:

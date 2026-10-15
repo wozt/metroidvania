@@ -44,6 +44,7 @@ const char *mzm_particle_table(uint8_t effect) {
     case MZM_PE_CHARGED_WAVE_BEAM_TRAIL: return "ParticleChargedWaveBeamTrailOam";
     case MZM_PE_CHARGED_PLASMA_BEAM_TRAIL: return "ParticleChargedPlasmaBeamTrailOam";
     case MZM_PE_CHARGED_FULL_BEAM_TRAIL: return "ParticleChargedFullBeamTrailOam";
+    case MZM_PE_CHARGED_PISTOL_TRAIL: return "ParticleChargedPistolTrailOam";
     /* ParticleHittingSomethingWithFullBeamNoPlasma / FullBeam reuse the
      * Wave and Plasma impact tables. */
     case MZM_PE_HITTING_SOMETHING_WITH_WAVE_BEAM:

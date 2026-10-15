@@ -1315,6 +1315,85 @@ static void test_charge_beam(void) {
     assert(mzm_projectile_count(&weapons, MZM_PROJECTILE_CHARGED_LONG_BEAM) == 1);
 }
 
+/* SamusCheckFirePistol and the two pistol projectile processors. */
+static void test_suitless_pistol(void) {
+    World w;
+    world_init(&w);
+    w.equipment.suit = MZM_SUIT_SUITLESS;
+    place(&w, 64, 224);
+    step(&w, 0);
+    MzmWeapons weapons;
+    mzm_weapons_init(&weapons);
+
+    /* The first B press fires an uncharged shot. Its charge advances even
+     * without B, and firing uses the normal beam category until spawn. */
+    mzm_sfx_clear();
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, 0, MZM_KEY_B, &w.equipment));
+    assert(weapons.pending && weapons.pending_type == MZM_PROJECTILE_BEAM &&
+           weapons.charge_counter == 0);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    const MzmProjectile *shot = first_active(&weapons);
+    assert(shot && shot->type == MZM_PROJECTILE_PISTOL &&
+           weapons.cooldown == MZM_BEAM_COOLDOWN && weapons.shot_flash &&
+           mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_PISTOL_SHOT));
+
+    /* At 112 frames the shot is charged. It travels 22 subpixels per moving
+     * frame, has no short-beam lifetime, and emits its native trail. */
+    mzm_weapons_init(&weapons);
+    for (int i = 0; i < MZM_PISTOL_CHARGE_FULL - 1; ++i)
+        assert(!mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment));
+    assert(weapons.charge_counter == MZM_PISTOL_CHARGE_FULL - 1);
+    mzm_sfx_clear();
+    assert(mzm_weapons_begin_frame(&weapons, &w.samus, 0, MZM_KEY_B, &w.equipment));
+    assert(weapons.pending_type == MZM_PROJECTILE_CHARGED_BEAM);
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    shot = first_active(&weapons);
+    assert(shot && shot->type == MZM_PROJECTILE_CHARGED_PISTOL &&
+           mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHARGED_PISTOL_SHOT));
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    int32_t x = shot->x;
+    weapons.frame8 = 8;
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    assert(shot->x == x + 22 && weapons.trail_count == 1 &&
+           weapons.trails[0].effect == MZM_PE_CHARGED_PISTOL_TRAIL);
+    for (int i = 0; i < 14; ++i)
+        mzm_weapons_update(&weapons, &w.samus, &w.equipment, 18, -26, &w.collision, NULL);
+    assert(shot->active);
+
+    /* The maximum wraps back to the full threshold. Hurt poses pause the
+     * counter; the native non-interactive suitless poses clear it. */
+    mzm_weapons_init(&weapons);
+    weapons.charge_counter = MZM_PISTOL_CHARGE_MAX;
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment));
+    assert(weapons.charge_counter == MZM_PISTOL_CHARGE_FULL);
+    w.samus.pose = MZM_POSE_GETTING_HURT;
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment));
+    assert(weapons.charge_counter == MZM_PISTOL_CHARGE_FULL);
+    w.samus.pose = MZM_POSE_FACING_THE_BACKGROUND_SUITLESS;
+    assert(!mzm_weapons_begin_frame(&weapons, &w.samus, 0, 0, &w.equipment));
+    assert(weapons.charge_counter == 0);
+
+    int16_t top, bottom, left, right;
+    mzm_projectile_hitbox(MZM_PROJECTILE_PISTOL, MZM_AIM_FORWARD, 0,
+                          &top, &bottom, &left, &right);
+    assert(top == -4 && bottom == 4 && left == -4 && right == 4);
+    mzm_projectile_hitbox(MZM_PROJECTILE_CHARGED_PISTOL, MZM_AIM_FORWARD, 0,
+                          &top, &bottom, &left, &right);
+    assert(top == -12 && bottom == 12 && left == -12 && right == 12);
+
+    /* Pistol shots use CAA_BOMB_PISTOL when they touch a block. */
+    mzm_weapons_init(&weapons);
+    fill(&w.grid, 6, 0, 1, GRID_H);
+    w.collision.affect = record_affect;
+    affected_damage = 0;
+    weapons.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_PISTOL,
+                                      .x = 6 * 64, .y = 4 * 64,
+                                      .direction = MZM_AIM_FORWARD,
+                                      .stage = MZM_STAGE_MOVING};
+    mzm_weapons_update(&weapons, &w.samus, &w.equipment, 0, 0, &w.collision, NULL);
+    assert(!weapons.list[0].active && affected_damage == MZM_DAMAGE_BOMB_PISTOL);
+}
+
 /* SamusCheckNewProjectile's beam types and shot sounds, the Wave Beam
  * through walls, the Plasma Beam's walls, the trails and the hitboxes. */
 static void test_wave_and_plasma(void) {
@@ -1854,6 +1933,7 @@ int main(void) {
     test_shinespark();
     test_power_bomb();
     test_charge_beam();
+    test_suitless_pistol();
     test_standing_on_sprite();
     test_wave_and_plasma();
     test_tumbling_missile();

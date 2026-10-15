@@ -1973,7 +1973,9 @@ static void runtime_projectile_key(const MzmProjectile *projectile,uint32_t item
         [MZM_PROJECTILE_ICE_BEAM]="IceBeam",[MZM_PROJECTILE_CHARGED_ICE_BEAM]="ChargedIceBeam",
         [MZM_PROJECTILE_WAVE_BEAM]="WaveBeam",[MZM_PROJECTILE_CHARGED_WAVE_BEAM]="ChargedWaveBeam",
         [MZM_PROJECTILE_PLASMA_BEAM]="PlasmaBeam",
-        [MZM_PROJECTILE_CHARGED_PLASMA_BEAM]="ChargedPlasmaBeam"};
+        [MZM_PROJECTILE_CHARGED_PLASMA_BEAM]="ChargedPlasmaBeam",
+        [MZM_PROJECTILE_PISTOL]="Pistol",
+        [MZM_PROJECTILE_CHARGED_PISTOL]="ChargedPistol"};
     if(projectile->type==MZM_PROJECTILE_BOMB || projectile->type==MZM_PROJECTILE_POWER_BOMB) {
         /* s(Power)BombOam_Slow / _Fast, never flipped. */
         snprintf(key,size,"Projectile/%sOam_%s/none",
@@ -2009,7 +2011,9 @@ static int runtime_projectile_durations(void *context,const MzmProjectile *proje
     return count;
 }
 /* The beam graphics ProjectileLoadGraphics loads (the ported beams). */
-static const char *runtime_beam_variant(uint32_t items) {
+static const char *runtime_beam_variant(const MzmEquipment *equipment) {
+    if(equipment->suit==MZM_SUIT_SUITLESS)return "Pistol";
+    uint32_t items=equipment->items;
     bool ice=items&MZM_ITEM_ICE_BEAM;
     if(items&MZM_ITEM_PLASMA_BEAM)return ice?"PlasmaIceBeam":"PlasmaBeam";
     if(items&MZM_ITEM_WAVE_BEAM)return ice?"WaveIceBeam":"WaveBeam";
@@ -4891,7 +4895,7 @@ int main(int argc, char **argv) {
                 /* ParticleChargingBeam and ParticleShootingBeam*: their
                  * animations, at the arm cannon. */
                 char key[160];
-                const char *variant=runtime_beam_variant(equipment.items);
+                const char *variant=runtime_beam_variant(&equipment);
                 uint8_t stage=weapons.charge_particle.stage;
                 if(stage!=beam_fx.charge_stage){beam_fx.charge_frame=0;beam_fx.charge_counter=0;}
                 beam_fx.charge_stage=stage;
@@ -5001,7 +5005,9 @@ int main(int argc, char **argv) {
                     [MZM_PROJECTILE_ICE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM,
                     [MZM_PROJECTILE_CHARGED_ICE_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM,
                     [MZM_PROJECTILE_PLASMA_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM,
-                    [MZM_PROJECTILE_CHARGED_PLASMA_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM};
+                    [MZM_PROJECTILE_CHARGED_PLASMA_BEAM]=MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM,
+                    [MZM_PROJECTILE_PISTOL]=MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM,
+                    [MZM_PROJECTILE_CHARGED_PISTOL]=MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM};
                 /* ProjectileSetTrail's particles come first (ProjectileProcess). */
                 for(int i=0;i<weapons.trail_count;i++)
                     mzm_particle_set(&sprites.effects,(uint16_t)weapons.trails[i].y,
@@ -5473,7 +5479,7 @@ int main(int argc, char **argv) {
             char key[160];
             /* Particles drawn with the beam graphics or palette come from the
              * projectile library's loaded beam variant. */
-            snprintf(key,sizeof key,"Particle/%s/%s/none",table,runtime_beam_variant(equipment.items));
+            snprintf(key,sizeof key,"Particle/%s/%s/none",table,runtime_beam_variant(&equipment));
             RuntimeLibraryEntry *entry=runtime_library_find(&projectile_library,key);
             if(!entry) {
                 snprintf(key,sizeof key,"Particle/%s/none",table);
@@ -5491,7 +5497,7 @@ int main(int argc, char **argv) {
         }
         if(projectile_library.count>0) {
             /* ParticleChargingBeam (hidden while spinning) and the shot flash. */
-            const char *variant=runtime_beam_variant(equipment.items);
+            const char *variant=runtime_beam_variant(&equipment);
             for(int k=0;k<2;k++) {
                 char key[160];
                 int px,py;uint16_t fr;

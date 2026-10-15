@@ -15,7 +15,7 @@ game frontend.
 | Savepoints | Verified metadata | 29 MZM platform rooms and 17 Aria map-flag rooms |
 | MZM rooms | Partial, systematically audited | 331 descriptors: 330 partial renders, 1 unsupported sentinel, 0 errors |
 | Aria rooms | Partial, systematically audited | 343 descriptors: 342 partial renders, 1 unsupported affine/non-text room, 0 errors |
-| Character assets | Partial | canonical local Samus runtime library: 580 indexed sequences, 1,982 unique BMPs; Soma preview extraction |
+| Character assets | Partial | canonical local Samus runtime library: 1,072 indexed sequences, 2,640 unique BMPs; 566 projectile sequences; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
 | Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
@@ -3309,6 +3309,33 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
+
+## Patch 0344 - Suitless paralyzer pistol
+
+- `SamusCheckFirePistol` and the suitless branch of `SamusCheckNewProjectile`
+  now run in the weapon controller. The pistol charges automatically, fires a
+  normal shot before frame 112 or a charged shot afterwards, wraps from 127
+  back to 112, and pauses or clears the counter in the native pose groups.
+- `ProjectileProcessPistol` and `ProjectileProcessChargedPistol` use their
+  native six/two shot limits, seven-frame cooldown, directional hitboxes,
+  22-subpixel speed, unlimited lifetime, sounds and `CAA_BOMB_PISTOL` block
+  action. The charged shot emits `PE_CHARGED_PISTOL_TRAIL` every eight frames.
+- The weak shot never damages a sprite. The charged shot deals 12 damage to
+  compatible enemies, while a Space Pirate instead loses its standing state
+  and is paralysed for 60 suitless ticks with the native black/purple warning
+  flicker.
+- The projectile exporter now stages the pistol palette and graphics for its
+  muzzle effects and charged trail. A private rebuild produced 566 projectile
+  sequences and confirmed the pistol OAM, shot flash and trail entries.
+- ROM-free tests cover automatic charging and wrap, pose resets, spawn type,
+  movement, trail, hitboxes, block action, harmless hits, charged damage and
+  the Space Pirate-specific freeze and palette timing.
+- Remaining boundary: port the suitless item-acquisition map sequence between
+  the post-Tourian monologue and Chozodia, then capture and compare the pistol
+  against the original game in a pirate room.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  every rebuild task up to date, regenerated parity and dashboard data, fresh
+  generated-file checks, and the proprietary-file guard passed.
 
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 

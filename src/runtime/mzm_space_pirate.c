@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Zero Mission Space Pirates and their lasers (src/sprites_ai/space_pirate.c);
- * comments name the pinned decompilation's routines. Sounds, the alarm
- * music and palette, freezing and the waiting pirates' spawn at doors
- * (SpawnWaitingPirates) are not ported. */
+ * comments name the pinned decompilation's routines. The alarm music and
+ * palette and the power-bomb, black and escape-ship variants are not ported. */
 #include "mzm_sprite_ai.h"
 
 #include <stddef.h>
@@ -1866,9 +1865,16 @@ void ai_space_pirate(Ctx *c) {
     uint8_t *d = g->draw_order;
     if (s->pose < SPRITE_POSE_DESTROYED) {
         if (s->freeze_timer) {
-            /* The suitless branch (its own palette flicker) is not ported:
-             * the port has no suitless Samus. */
-            ai_update_freeze_timer(c);
+            if (c->f->equipment && c->f->equipment->suit == MZM_SUIT_SUITLESS) {
+                if (c->frame8 & 1) s->freeze_timer--;
+                if (s->freeze_timer == 0) s->adc--;
+                if (s->freeze_timer < 46) {
+                    s->palette_row = s->absolute_palette_row = s->freeze_timer & 1 ? 1 : 0;
+                }
+                s->ignore_samus_timer = 1;
+            } else {
+                ai_update_freeze_timer(c);
+            }
             check_colliding_with_laser(c);
             return;
         }

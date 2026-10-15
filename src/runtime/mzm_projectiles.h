@@ -5,10 +5,10 @@
  * missile branches of ProjectileUpdate, ProjectileInit, ProjectileMove,
  * ProjectileProcessNormalBeam/Missile/SuperMissile, ProjectileUpdateAnimation
  * and the distance part of ProjectileCheckDespawn from the pinned mzm
- * decompilation, and the bombs (ProjectileProcessBomb,
+ * decompilation, the suitless Pistol, and the bombs (ProjectileProcessBomb,
  * ProjectileCheckSamusBombBounce) and power bombs (ProjectileProcessPowerBomb,
- * the explosion in mzm_power_bomb). Charge beams, beam upgrades and tumbling
- * missiles are not implemented yet.
+ * the explosion in mzm_power_bomb), including charge and beam upgrades and
+ * tumbling missiles.
  * Projectile collision probes one point against the runtime's verified
  * Clipdata boxes instead of ClipdataProcess. No SDL dependency. */
 #ifndef MZM_PROJECTILES_H
@@ -23,6 +23,8 @@
 #define MZM_PROJECTILE_LIMIT_SUPER_MISSILE 4
 #define MZM_PROJECTILE_LIMIT_BOMB 4
 #define MZM_PROJECTILE_LIMIT_POWER_BOMB 1
+#define MZM_PROJECTILE_LIMIT_PISTOL 6
+#define MZM_PROJECTILE_LIMIT_CHARGED_PISTOL 2
 /* BOMB_EXPLOSION_TIMER, also each spin's duration. */
 #define MZM_BOMB_TIMER 16
 #define MZM_SHORT_BEAM_LIFETIME 12
@@ -44,7 +46,9 @@ typedef enum {
     MZM_PROJECTILE_WAVE_BEAM,
     MZM_PROJECTILE_CHARGED_WAVE_BEAM,
     MZM_PROJECTILE_PLASMA_BEAM,
-    MZM_PROJECTILE_CHARGED_PLASMA_BEAM
+    MZM_PROJECTILE_CHARGED_PLASMA_BEAM,
+    MZM_PROJECTILE_PISTOL,
+    MZM_PROJECTILE_CHARGED_PISTOL
 } MzmProjectileType;
 
 /* CHARGE_BEAM_START_THRESHOLD, CHARGE_BEAM_UNCHARGED_THRESHOLD,
@@ -54,6 +58,9 @@ typedef enum {
 #define MZM_CHARGE_FULL 64
 #define MZM_CHARGE_MAX (MZM_CHARGE_FULL + 15)
 #define MZM_PROJECTILE_LIMIT_CHARGED_BEAM 2
+/* CHARGE_PISTOL_THRESHOLD and CHARGE_PISTOL_MAX_THRESHOLD. */
+#define MZM_PISTOL_CHARGE_FULL 112
+#define MZM_PISTOL_CHARGE_MAX 127
 
 /* ParticleChargingBeam: 0 none, 1 beginning, 2 charged. */
 typedef struct {

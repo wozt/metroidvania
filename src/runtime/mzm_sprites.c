@@ -5523,7 +5523,8 @@ static void power_bomb_damage(MzmSprite *s, uint8_t weakness) {
 static uint8_t solid_hit_effect(uint8_t type, uint32_t items) {
     switch (type) {
     case MZM_PROJECTILE_LONG_BEAM:
-    case MZM_PROJECTILE_CHARGED_LONG_BEAM: return MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM;
+    case MZM_PROJECTILE_CHARGED_LONG_BEAM:
+    case MZM_PROJECTILE_CHARGED_PISTOL: return MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM;
     case MZM_PROJECTILE_ICE_BEAM:
     case MZM_PROJECTILE_CHARGED_ICE_BEAM: return MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM;
     case MZM_PROJECTILE_WAVE_BEAM:
@@ -5618,6 +5619,26 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
             if (!touching(top, bottom, left, right, (uint16_t)(py + ptop), (uint16_t)(py + pbottom),
                           (uint16_t)(px + pleft), (uint16_t)(px + pright)))
                 continue;
+            /* The uncharged pistol always has the immune-projectile result.
+             * A charged pistol instead paralyses a Space Pirate for one
+             * second, regardless of its normal projectile properties. */
+            if (proj->type == MZM_PROJECTILE_PISTOL) {
+                if ((s->isft & 0x7F) < 2) set_isft(s, 2);
+                if (effects) mzm_particle_set(effects, py, px, MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+                proj->active = false;
+                continue;
+            }
+            if (proj->type == MZM_PROJECTILE_CHARGED_PISTOL &&
+                s->samus_collision == SSC_SPACE_PIRATE) {
+                s->standing_on = MZM_STANDING_ON_SPRITE_OFF;
+                s->freeze_timer = 60;
+                s->palette_row = 1;
+                s->absolute_palette_row = 1;
+                if (effects)
+                    mzm_particle_set(effects, py, px, MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM);
+                proj->active = false;
+                continue;
+            }
             /* The Plasma Beam goes through the sprites it hits. */
             bool plasma = proj->type == MZM_PROJECTILE_PLASMA_BEAM ||
                           proj->type == MZM_PROJECTILE_CHARGED_PLASMA_BEAM;
@@ -5674,13 +5695,18 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
                 }
                 break;
             case MZM_PROJECTILE_CHARGED_BEAM:
-            case MZM_PROJECTILE_CHARGED_LONG_BEAM: {
+            case MZM_PROJECTILE_CHARGED_LONG_BEAM:
+            case MZM_PROJECTILE_CHARGED_PISTOL: {
                 /* ProjectileNonIceChargedHitSprite */
                 bool is_long = proj->type == MZM_PROJECTILE_CHARGED_LONG_BEAM;
                 if (weakness & (MZM_WEAKNESS_CHARGE_BEAM_PISTOL | MZM_WEAKNESS_BEAM_BOMBS)) {
-                    deal_damage(s, is_long ? CHARGED_LONG_BEAM_DAMAGE : CHARGED_NORMAL_BEAM_DAMAGE);
-                    effect = is_long ? MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM
-                                     : MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
+                    uint16_t damage = proj->type == MZM_PROJECTILE_CHARGED_PISTOL ?
+                        CHARGED_PISTOL_DAMAGE : is_long ? CHARGED_LONG_BEAM_DAMAGE :
+                        CHARGED_NORMAL_BEAM_DAMAGE;
+                    deal_damage(s, damage);
+                    effect = is_long || proj->type == MZM_PROJECTILE_CHARGED_PISTOL ?
+                        MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM :
+                        MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
                 } else {
                     hit_solid(s);
                 }
@@ -5733,6 +5759,7 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
             }
             case MZM_PROJECTILE_BOMB:
             case MZM_PROJECTILE_POWER_BOMB:
+            case MZM_PROJECTILE_PISTOL:
                 break;
             case MZM_PROJECTILE_SUPER_MISSILE:
                 if (weakness & (MZM_WEAKNESS_MISSILES | MZM_WEAKNESS_SUPER_MISSILES)) {

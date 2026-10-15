@@ -3235,6 +3235,30 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0341 - Tourian crashing scene
+
+- The 289-frame `TourianEscapeSamusCrashing` stage now follows the falling
+  ship and reaches the looking-at-sky boundary. It loads both native BG
+  layers, the complete 256-colour OBJ palette and the 24-part ship from the
+  private ROM bank.
+- A second object enters at frame 10, crosses the screen on the exact -4/+2
+  path and cycles through its four ROM OAM compositions every eight frames
+  before disappearing at frame 64. Both objects retain the native priority 2
+  override independently of their authored OAM priorities.
+- The collision at frame 104 swaps the ship composition, reveals the BG1
+  explosion, changes the seven BG palette rows and starts the collision sound.
+  Brightness then reaches 16 on frame 135 and remains fully white through the
+  native frame-288 boundary.
+- The ROM-backed regression test covers asset palettes, OAM counts and
+  priorities, every debris pose, both sounds, both rendered phases, brightness
+  cadence, the white hold and the exact transition state.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and stages 11-12 beginning with `TourianEscapeSamusLookingAtSky` are not
+  ported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

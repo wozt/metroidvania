@@ -31,8 +31,8 @@ typedef struct {
 
 /* TourianEscapeInit and the start of TourianEscapeUpdateStage. */
 bool mzm_tourian_escape_enter(MzmTourianEscape *escape, MzmScreen *screen, bool varia);
-/* Advances the current native scene. The first nine scenes stop at stage 9
- * until the following crashing scene is ported. */
+/* Advances the current native scene. The first ten scenes stop at stage 10
+ * until the following looking-at-sky scene is ported. */
 void mzm_tourian_escape_update(MzmTourianEscape *escape, MzmScreen *screen);
 
 #endif /* MZM_TOURIAN_ESCAPE_H */

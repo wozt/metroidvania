@@ -693,7 +693,7 @@ static void test_cutscene_bank(void) {
         return;
     }
     static MzmCutscene c;
-    assert(!mzm_cutscene_enter(&c, 3) && mzm_cutscene_enter(&c, MZM_CUTSCENE_INTRO_TEXT));
+    assert(!mzm_cutscene_enter(&c, 4) && mzm_cutscene_enter(&c, MZM_CUTSCENE_INTRO_TEXT));
     mzm_sfx_clear();
     int f;
     for (f = 0; f < 400 && !(c.stage == 4 && c.sub_stage == 1); ++f) {
@@ -721,6 +721,12 @@ static void test_cutscene_bank(void) {
         ended = mzm_cutscene_update(&c, &screen);
     }
     assert(ended && c.cutscene == MZM_CUTSCENE_NONE && screen.bldalpha_l == 0 && ppu.palette[15 * 16 + 1] == 0);
+    /* The post-Tourian monologue selects the third native story string. */
+    assert(mzm_cutscene_enter(&c, MZM_CUTSCENE_COULD_I_SURVIVE));
+    mzm_screen_input(&screen, 0);
+    assert(!mzm_cutscene_update(&c, &screen));
+    assert(!mzm_cutscene_update(&c, &screen));
+    assert(c.message.message_id == 2);
     mzm_rom_close();
 }
 
@@ -1491,6 +1497,55 @@ static void test_tourian_escape_bank(void) {
            gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS + 4) == 0 &&
            gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS + 8) == 160);
     assert(screen.next_oam_slot == 0 && screen.ppu->oam[0] == 0x200);
+
+    /* The final rain scene draws its story into OBJ VRAM, drifts both
+     * backgrounds, fades the completed text in and holds for A or B. */
+    for (int f = 0; f < 4; ++f)
+        assert(!mzm_tourian_escape_update(&escape, &screen));
+    assert(escape.timer == 4 && escape.stage == 11);
+    assert(screen.ppu->palette[159] ==
+           mzm_rom_u16(mzm_sym("sTourianEscapeSamusLookingAtMotherShipPal") + 318));
+    assert(screen.ppu->palette[256 + 15] ==
+           mzm_rom_u16(mzm_sym("sTourianEscapeRainPal") + 30));
+    assert(screen.ppu->palette[256 + 15 * 16 + 1] ==
+           mzm_rom_u16(mzm_sym("sStoryTextCutscenePal") + 2));
+    assert(escape.object_x[0] == 14 && escape.object_y[0] == 256 &&
+           escape.object_timer[1] == 7 && screen.next_oam_slot == 6);
+    assert(escape.object_oam_address[0] == mzm_sym("sTourianEscape_47ac18"));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDALPHA) == 16 << 8);
+    assert(!mzm_tourian_escape_update(&escape, &screen));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT) == 14 << 8);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT + 2) ==
+           (1 | 2 << 2 | 30 << 8));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (GBA_DCNT_BG0 | GBA_DCNT_BG1 | GBA_DCNT_OBJ));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDCNT) == 0xFCF);
+    while (escape.timer < 97)
+        assert(!mzm_tourian_escape_update(&escape, &screen));
+    assert(escape.effect_phase == 2 && escape.bg0_x == 11 && escape.bg1_x == 11);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0HOFS) == 11 &&
+           gba_ppu_read16(screen.ppu, GBA_REG_BG0HOFS + 4) == 11);
+    while (escape.timer < 167)
+        assert(!mzm_tourian_escape_update(&escape, &screen));
+    assert(escape.effect_phase == 3 && gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 4);
+    while (escape.timer < 225)
+        assert(!mzm_tourian_escape_update(&escape, &screen));
+    assert(escape.text_phase == 3 && escape.message.message_ended);
+    assert((gba_ppu_read16(screen.ppu, GBA_REG_BLDALPHA) & 31) == 1 &&
+           screen.next_oam_slot >= 12);
+    bool story_drawn = false;
+    for (int at = 0x13000; at < 0x18000; ++at)
+        story_drawn |= screen.ppu->vram[at] != 0;
+    assert(story_drawn);
+    while (escape.timer < 448)
+        assert(!mzm_tourian_escape_update(&escape, &screen));
+    assert(escape.timer == 448 && !escape.ending &&
+           gba_ppu_read16(screen.ppu, GBA_REG_BLDALPHA) == 16);
+    assert(!mzm_tourian_escape_update(&escape, &screen) && escape.timer == 448);
+    mzm_screen_input(&screen, 1);
+    assert(!mzm_tourian_escape_update(&escape, &screen) && escape.ending);
+    assert(mzm_tourian_escape_update(&escape, &screen));
+    mzm_screen_input(&screen, 0);
 
     /* The other equipment branch selects the Power Suit palette. */
     assert(mzm_tourian_escape_enter(&escape, &screen, false));

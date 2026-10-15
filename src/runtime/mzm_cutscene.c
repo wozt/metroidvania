@@ -33,6 +33,7 @@ static uint8_t story_text(uint8_t cutscene) {
     switch (cutscene) {
     case MZM_CUTSCENE_INTRO_TEXT: return STORY_TEXT_PLANET_ZEBES + 1;
     case MZM_CUTSCENE_MOTHERSHIP_MONOLOGUE: return STORY_TEXT_THE_TIMING + 1;
+    case MZM_CUTSCENE_COULD_I_SURVIVE: return STORY_TEXT_COULD_I_SURVIVE + 1;
     default: return 0;
     }
 }

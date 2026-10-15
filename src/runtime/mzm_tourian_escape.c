@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include "gba_input.h"
 #include "mzm_rom.h"
 #include "mzm_sfx.h"
 
@@ -63,6 +64,13 @@ static void copy_obj_palette(MzmTourianEscape *e, const char *name, int colors) 
     uint32_t address = mzm_sym(name);
     for (int i = 0; address && i < colors; ++i)
         e->room.ppu.palette[256 + i] = mzm_rom_u16(address + (uint32_t)i * 2u);
+}
+
+static void copy_obj_palette_row(MzmTourianEscape *e, const char *name, int row) {
+    uint32_t address = mzm_sym(name);
+    for (int i = 0; address && i < 16; ++i)
+        e->room.ppu.palette[256 + row * 16 + i] =
+            mzm_rom_u16(address + (uint32_t)i * 2u);
 }
 
 static void load_room_explosion_assets(MzmTourianEscape *e) {
@@ -256,6 +264,9 @@ static void reset_stage(MzmTourianEscape *e, MzmScreen *s, uint8_t stage) {
     e->flash_timer = 0;
     e->flash_level = 0;
     e->planet = false;
+    e->text_phase = 0;
+    e->text_timer = 0;
+    memset(&e->message, 0, sizeof e->message);
     memset(e->object_active, 0, sizeof e->object_active);
     memset(e->object_frame, 0, 4 * sizeof e->object_frame[0]);
     memset(e->object_timer, 0, sizeof e->object_timer);
@@ -1647,8 +1658,200 @@ static void update_samus_looking_at_sky(MzmTourianEscape *e, MzmScreen *s) {
     if (ended) reset_stage(e, s, 11);
 }
 
-void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
-    if (!e || !e->ready || !s) return;
+/* TextStartStory(STORY_TEXT_THE_TIMING) and TextProcessStory's fullscreen
+ * branch. The final image uses the generated tiles directly as OBJ graphics. */
+static bool process_timing_story(MzmTourianEscape *e, MzmScreen *s) {
+    MzmMessage *m = &e->message;
+    switch (m->stage) {
+    case 0:
+        m->stage = 2;
+        m->gfx_slot = 1;
+        break;
+    case 2: {
+        int characters = 6;
+        uint8_t *dst = NULL;
+        if (m->line < 10 && !m->message_ended)
+            dst = e->room.ppu.vram + GBA_OBJ_VRAM + 0x3000 + m->line * 0x800u;
+        else
+            characters = 0;
+        if (!characters) {
+            m->stage = 3;
+            break;
+        }
+        uint32_t pointers = mzm_sym("sEnglishTextPointers_Story");
+        uint32_t text = mzm_rom_u32(pointers + m->message_id * 4u);
+        while (characters-- > 0) {
+            int result = mzm_text_process_message(m, text, dst, s->button_input);
+            bool stop = false;
+            switch (result) {
+            case MZM_TEXT_ENDED:
+                m->stage++;
+                /* fallthrough */
+            case MZM_TEXT_NEW_LINE:
+            case MZM_TEXT_NEW_PAGE:
+                m->indent = 0;
+                stop = true;
+                break;
+            default:
+                break;
+            }
+            if (stop || m->line >= 10) break;
+        }
+        break;
+    }
+    case 3:
+        m->line++;
+        m->stage++;
+        return m->line != 0;
+    default:
+        return m->line != 0;
+    }
+    return false;
+}
+
+static void draw_mother_ship_oam(MzmTourianEscape *e, MzmScreen *s) {
+    clear_oam_buffer(s);
+    int slot = 0;
+    if (e->text_phase > 2)
+        place_blended_oam_address(s, &slot,
+                                  mzm_sym("sTourianEscapeOam_375d10_Frame0"),
+                                  GBA_SCREEN_W / 2 + 8, GBA_SCREEN_H / 2);
+    for (int i = 0; i < MZM_TOURIAN_ESCAPE_OBJECTS; ++i) {
+        if (!e->object_active[i]) continue;
+        place_oam_address(s, &slot, e->object_oam_address[i],
+                          e->object_x[i], e->object_y[i], 0);
+    }
+    s->next_oam_slot = (uint8_t)slot;
+    mzm_screen_copy_oam(s);
+}
+
+static void update_mother_ship_rain(MzmTourianEscape *e) {
+    uint32_t first = mzm_sym("sTourianEscape_47ac10");
+    uint32_t second = mzm_sym("sTourianEscape_47ac18");
+    uint32_t positions = mzm_sym("sTourianEscape_47cffe");
+    for (int i = 0; i < MZM_TOURIAN_ESCAPE_OBJECTS; ++i) {
+        if (!e->object_active[i]) continue;
+        if (e->object_timer[i]) {
+            e->object_timer[i]--;
+            continue;
+        }
+        e->object_x[i] = (uint16_t)(e->object_x[i] - 2u);
+        uint16_t position = e->object_y[i];
+        e->object_y[i] = (uint16_t)(e->object_y[i] + 4u);
+        position = (uint16_t)(position - 160u);
+        if (position < 13) {
+            e->object_x[i] = mzm_rom_u16(positions + (uint32_t)i * 2u);
+            e->object_y[i] = 252;
+        }
+        e->object_oam_address[i] = (e->timer & 7) < 4 ? first : second;
+    }
+}
+
+static void update_samus_looking_at_mother_ship(MzmTourianEscape *e,
+                                                 MzmScreen *s) {
+    GbaPpu *p = &e->room.ppu;
+    uint16_t frame = e->timer++;
+    switch (frame) {
+    case 0:
+        decompress("sTourianEscapeSamusLookingAtMotherShipGfx",
+                   p->vram, GBA_VRAM_SIZE);
+        break;
+    case 1:
+        decompress("sTourianEscapeSamusLookingAtMotherShipMotherShipGfx",
+                   p->vram + 0x8000, GBA_VRAM_SIZE - 0x8000);
+        break;
+    case 2:
+        decompress("sTourianEscapeSamusLookingAtMotherShipTileTable",
+                   p->vram + 0x7000, GBA_VRAM_SIZE - 0x7000);
+        decompress("sTourianEscapeSamusLookingAtMotherShipMotherShipTileTable",
+                   p->vram + 0xF000, GBA_VRAM_SIZE - 0xF000);
+        copy_bg_palette(e, "sTourianEscapeSamusLookingAtMotherShipPal", 10 * 16);
+        e->bg0_x = 16;
+        e->bg1_x = 0;
+        break;
+    case 3: {
+        memset(p->vram + GBA_OBJ_VRAM, 0, GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+        decompress("sTourianEscapeRainGfx", p->vram + GBA_OBJ_VRAM,
+                   GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+        copy_obj_palette_row(e, "sTourianEscapeRainPal", 0);
+        copy_obj_palette_row(e, "sStoryTextCutscenePal", 15);
+        uint32_t timers = mzm_sym("sTourianEscape_47cff4");
+        uint32_t positions = mzm_sym("sTourianEscape_47cffe");
+        for (int i = 0; i < MZM_TOURIAN_ESCAPE_OBJECTS; ++i) {
+            e->object_active[i] = 1;
+            e->object_timer[i] = mzm_rom_u8(timers + (uint32_t)i);
+            e->object_x[i] = mzm_rom_u16(positions + (uint32_t)i * 2u);
+            e->object_y[i] = 252;
+        }
+        gba_ppu_write16(p, GBA_REG_BLDALPHA, 16 << 8);
+        gba_ppu_write16(p, GBA_REG_BLDY, 0);
+        break;
+    }
+    case 4:
+        gba_ppu_write16(p, GBA_REG_BG0CNT, 14 << 8);
+        gba_ppu_write16(p, GBA_REG_BG0CNT + 2, 1 | 2 << 2 | 30 << 8);
+        dispcnt(e, GBA_DCNT_BG0 | GBA_DCNT_BG1 | GBA_DCNT_OBJ);
+        gba_ppu_write16(p, GBA_REG_BLDCNT,
+                        BLDCNT_BG0_FIRST | BLDCNT_BG1_FIRST |
+                        BLDCNT_BG2_FIRST | BLDCNT_BG3_FIRST |
+                        BLDCNT_BRIGHTNESS_DOWN | 0xF << 8);
+        /* Fall through: frame 4 starts the first effect phase. */
+        /* fallthrough */
+    case 96:
+    case 160:
+        e->effect_phase++;
+        break;
+    case 5:
+        memset(&e->message, 0, sizeof e->message);
+        e->message.message_id = 1; /* STORY_TEXT_THE_TIMING */
+        break;
+    case 6:
+    case 224:
+        e->text_phase++;
+        break;
+    case 448:
+        e->timer--;
+        break;
+    default:
+        break;
+    }
+
+    if (e->timer > 447 && (s->changed_input & (GBA_KEY_A | GBA_KEY_B)))
+        e->ending = true;
+
+    if (e->text_phase == 1) {
+        if (process_timing_story(e, s)) e->text_phase++;
+    } else if (e->text_phase == 3 && (e->text_timer++ & 3) == 0) {
+        uint16_t alpha = gba_ppu_read16(p, GBA_REG_BLDALPHA);
+        unsigned low = alpha & 31u;
+        if (low < 16) {
+            low++;
+            gba_ppu_write16(p, GBA_REG_BLDALPHA,
+                            (uint16_t)((16u - low) << 8 | low));
+        }
+    }
+
+    if (e->effect_phase < 2) {
+        uint8_t tick = (uint8_t)(e->effect_timer++ & 15u);
+        if (!tick) {
+            e->bg0_x--;
+            e->bg1_x++;
+        }
+        if (tick == 8) e->bg1_x++;
+    }
+    if (e->effect_phase == 3 && (e->timer & 1)) {
+        uint16_t level = gba_ppu_read16(p, GBA_REG_BLDY);
+        if (level < 4) gba_ppu_write16(p, GBA_REG_BLDY, (uint16_t)(level + 1));
+    }
+    gba_ppu_write16(p, GBA_REG_BG0HOFS, (uint16_t)e->bg0_x & 0x1FF);
+    gba_ppu_write16(p, GBA_REG_BG0HOFS + 4, (uint16_t)e->bg1_x & 0x1FF);
+    update_mother_ship_rain(e);
+    draw_mother_ship_oam(e, s);
+}
+
+bool mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
+    if (!e || !e->ready || !s) return false;
+    if (e->ending) return true;
     if (e->stage == 0) update_zebes_exploding(e, s);
     else if (e->stage == 1) update_samus_in_ship(e, s);
     else if (e->stage == 2) update_samus_looking_around(e, s);
@@ -1660,4 +1863,6 @@ void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     else if (e->stage == 8) update_samus_going_to_crash(e, s);
     else if (e->stage == 9) update_samus_crashing(e, s);
     else if (e->stage == 10) update_samus_looking_at_sky(e, s);
+    else if (e->stage == 11) update_samus_looking_at_mother_ship(e, s);
+    return false;
 }

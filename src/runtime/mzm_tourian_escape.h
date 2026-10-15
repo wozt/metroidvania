@@ -9,14 +9,16 @@
 
 #include "mzm_room_gfx.h"
 #include "mzm_screen.h"
+#include "mzm_text.h"
 
 enum { MZM_TOURIAN_ESCAPE_OBJECTS = 10 };
 
 typedef struct {
-    bool ready, planet, flash, varia;
+    bool ready, planet, flash, varia, ending;
     uint8_t stage, flash_timer, flash_level, effect_phase, effect_timer;
+    uint8_t text_phase, text_timer;
     uint16_t timer, explosion_timer, bg2_scale, object_scaling, secondary_scaling;
-    int16_t ship_x, explosion_x, bg0_x, bg0_y, bg1_y, bg2_y;
+    int16_t ship_x, explosion_x, bg0_x, bg0_y, bg1_x, bg1_y, bg2_y;
     int16_t firing_vertical_velocity, firing_vertical_acceleration;
     int16_t win0_left, win0_right, win0_top, win0_bottom;
     uint8_t object_active[MZM_TOURIAN_ESCAPE_OBJECTS];
@@ -26,13 +28,14 @@ typedef struct {
     uint16_t object_x[MZM_TOURIAN_ESCAPE_OBJECTS];
     uint16_t object_y[MZM_TOURIAN_ESCAPE_OBJECTS];
     int16_t object_velocity[MZM_TOURIAN_ESCAPE_OBJECTS];
+    MzmMessage message;
     MzmRoomGfx room;
 } MzmTourianEscape;
 
 /* TourianEscapeInit and the start of TourianEscapeUpdateStage. */
 bool mzm_tourian_escape_enter(MzmTourianEscape *escape, MzmScreen *screen, bool varia);
-/* Advances the current native scene. The first eleven scenes stop at stage 11
- * until the following looking-at-mother-ship scene is ported. */
-void mzm_tourian_escape_update(MzmTourianEscape *escape, MzmScreen *screen);
+/* Advances the twelve native scenes; true on the frame after A or B dismisses
+ * the final looking-at-the-mother-ship hold. */
+bool mzm_tourian_escape_update(MzmTourianEscape *escape, MzmScreen *screen);
 
 #endif /* MZM_TOURIAN_ESCAPE_H */

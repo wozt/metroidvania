@@ -4,9 +4,9 @@
  * fades, the backgrounds' positions and CutsceneVBlank, with the story text
  * cutscenes (cutscenes/story_text_cutscene.c, English text): Samus's
  * monologues drawn line by line with the native font, faded in by alpha
- * blending, dismissed with A or B. Only the two cutscenes without a
- * pre-cutscene palette fade are ported (the intro text and the mothership
- * monologue); the others and the gameplay cutscene types are not. */
+ * blending, dismissed with A or B. The intro, mothership and post-Tourian
+ * fullscreen stories are ported with their pre-cutscene palette fades
+ * skipped; the other stories and the gameplay cutscene types are not. */
 #ifndef MZM_CUTSCENE_H
 #define MZM_CUTSCENE_H
 
@@ -18,7 +18,8 @@
 
 /* Cutscene (constants/cutscene.h) */
 enum {
-    MZM_CUTSCENE_NONE = 0, MZM_CUTSCENE_INTRO_TEXT = 1, MZM_CUTSCENE_MOTHERSHIP_MONOLOGUE = 2
+    MZM_CUTSCENE_NONE = 0, MZM_CUTSCENE_INTRO_TEXT = 1,
+    MZM_CUTSCENE_MOTHERSHIP_MONOLOGUE = 2, MZM_CUTSCENE_COULD_I_SURVIVE = 3
 };
 
 /* struct CutsceneSpecialEffect, the parts the ported cutscenes use */

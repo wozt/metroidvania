@@ -3957,7 +3957,10 @@ int main(int argc, char **argv) {
     static MzmGameOver game_over;
     /* A state to switch to: a loaded file, or the game's start (the state
      * captured once Samus is spawned) for a new game. */
-    enum { RUNTIME_RESUME_NONE, RUNTIME_RESUME_SAVE, RUNTIME_RESUME_NEW_GAME, RUNTIME_RESUME_LANDING };
+    enum {
+        RUNTIME_RESUME_NONE, RUNTIME_RESUME_SAVE, RUNTIME_RESUME_NEW_GAME,
+        RUNTIME_RESUME_LANDING, RUNTIME_RESUME_POST_TOURIAN
+    };
     /* A new file's start (Sram_CheckLoadSaveFile): the gunship lands in
      * Crateria's first room, then the intro text leads to the game's start
      * (CutsceneEnd: Brinstar's first room, the runtime's starting state). */
@@ -3990,6 +3993,7 @@ int main(int argc, char **argv) {
     bool pause_music_reset=false;
     int pending_door_offset=0;
     int resume_request=RUNTIME_RESUME_NONE;
+    bool post_tourian_resume=false;
     static MzmSaveData resume_save, new_game_state;
     uint8_t pause_flag=MZM_PAUSE_FLAG_PAUSE;   /* gPauseScreenFlag of the open pause */
     /* The HUD reads its graphics from the ROM bank. */
@@ -4461,7 +4465,13 @@ int main(int argc, char **argv) {
                 if(mzm_cutscene_update(&cutscene,&screen)) {
                     cutscene_mode=false;
                     previous_held=held;
-                    if(sprites.globals.landing) {
+                    if(post_tourian_resume) {
+                        /* CutsceneEnd(CUTSCENE_COULD_I_SURVIVE): the native
+                         * map sequence is not ported, so enter Chozodia room
+                         * 0 directly with the suitless activation set. */
+                        post_tourian_resume=false;
+                        resume_request=RUNTIME_RESUME_POST_TOURIAN;
+                    } else if(sprites.globals.landing) {
                         /* CutsceneEnd: the game's start in Brinstar. */
                         resume_request=RUNTIME_RESUME_NEW_GAME;
                         sprites.globals.landing=false;
@@ -4498,7 +4508,33 @@ int main(int argc, char **argv) {
                 /* GM_TOURIAN_ESCAPE owns the non-gameplay PPU. */
                 mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                               capture_path?NULL:&gamepad));
-                mzm_tourian_escape_update(&tourian_escape,&screen);
+                if(mzm_tourian_escape_update(&tourian_escape,&screen)) {
+                    tourian_escape_mode=false;
+                    tourian_escape_pending=false;
+                    runtime_build_save(&resume_save,current_room,room,&samus,
+                                       &equipment,&sprites);
+                    snprintf(resume_save.room,sizeof resume_save.room,"chozodia_000");
+                    resume_save.area=6; /* AREA_CHOZODIA */
+                    resume_save.escaped_zebes=true;
+                    resume_save.equipment.unknown_items |=
+                        resume_save.equipment.items &
+                        ~(uint32_t)(MZM_ITEM_POWER_GRIP | MZM_ITEM_LONG_BEAM |
+                                    MZM_ITEM_CHARGE_BEAM);
+                    resume_save.equipment.items=MZM_ITEM_POWER_GRIP |
+                                                MZM_ITEM_LONG_BEAM |
+                                                MZM_ITEM_CHARGE_BEAM;
+                    resume_save.equipment.suit=MZM_SUIT_SUITLESS;
+                    resume_save.equipment.energy=99;
+                    post_tourian_resume=true;
+                    cutscene_mode=mzm_cutscene_enter(
+                        &cutscene,MZM_CUTSCENE_COULD_I_SURVIVE);
+                    if(!cutscene_mode) {
+                        post_tourian_resume=false;
+                        resume_request=RUNTIME_RESUME_POST_TOURIAN;
+                    }
+                    printf("Tourian escape ended; the Chozodia monologue started.\n");
+                    previous_held=held;
+                }
                 accumulator-=fixed_step;
                 continue;
             }
@@ -4524,14 +4560,16 @@ int main(int argc, char **argv) {
                         texture=next_texture;
                         snprintf(current_room,sizeof current_room,"%s",resume_save.room);
                     }
-                    runtime_sprites_spawn(&sprites,room,resume_request==RUNTIME_RESUME_NEW_GAME?0:-1);
+                    bool starts_at_door=resume_request==RUNTIME_RESUME_NEW_GAME ||
+                                        resume_request==RUNTIME_RESUME_POST_TOURIAN;
+                    runtime_sprites_spawn(&sprites,room,starts_at_door?0:-1);
                     sprites.banner.exists=false;
                     sprites.banner.cursor.exists=false;
                     runtime_apply_save(&resume_save,&equipment,&sprites,&samus,&collision,
                                        resume_request==RUNTIME_RESUME_SAVE);
                     sprites.globals.escape=(MzmEscape){0};
                     /* A new game starts at the room's door 0. */
-                    if(resume_request==RUNTIME_RESUME_NEW_GAME &&
+                    if(starts_at_door &&
                        !runtime_place_at_door(room,0,&samus,&equipment,&collision))
                         fprintf(stderr,"No door 0 exit in %s\n",current_room);
                     /* gLastDoorUsed 0 in the landing room; gHideHud is set
@@ -4559,7 +4597,9 @@ int main(int argc, char **argv) {
                     hud_room_alias[0]='\0';
                     runtime_hud.area_before_transition=0xFF;
                     printf("%s %s\n",resume_request==RUNTIME_RESUME_SAVE?"Loaded the save in":
-                           landing?"Gunship landing in":"New game in",current_room);
+                           landing?"Gunship landing in":
+                           resume_request==RUNTIME_RESUME_POST_TOURIAN?
+                           "Tourian escape continued in":"New game in",current_room);
                 } else {
                     if(next_texture)SDL_DestroyTexture(next_texture);
                     free(next);

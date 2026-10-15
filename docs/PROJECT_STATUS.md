@@ -3282,6 +3282,34 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0343 - Tourian final scene and Chozodia handoff
+
+- `TourianEscapeSamusLookingAtMotherShip` completes the twelfth native escape
+  stage. It loads both ROM-backed background images and tilemaps, their ten
+  palette rows, and ten delayed rain objects with the native alternating OAM
+  frames and diagonal movement.
+- `TextStartStory(STORY_TEXT_THE_TIMING)` and the fullscreen branch of
+  `TextProcessStory` now render the English message directly into OBJ VRAM.
+  At frame 224 its native twelve-part semitransparent composition fades over
+  the scene while the backgrounds stop drifting and the brightness decrease
+  reaches level four.
+- Frame 448 remains held until a newly pressed A or B. The following update
+  ends the Tourian mode and starts `CUTSCENE_COULD_I_SURVIVE`, which is now a
+  supported story-text cutscene rather than a diagnostic rejection.
+- Closing the monologue preserves the campaign state, activates the suitless
+  Power Grip plus Long/Charge Beam subset, and loads `chozodia_000` at door 0.
+  The native suitless item-acquisition map animation and paralyzer pistol are
+  still absent, so this handoff enters the room directly.
+- The ROM-backed regression test covers asset and palette destinations, rain
+  delay/OAM state, both background offsets, text generation, blending and
+  brightness thresholds, the exact held frame, edge-triggered dismissal and
+  selection of the post-Tourian story text.
+- Remaining boundary: supply the first Tourian scene's block-layer tilemaps,
+  then port the suitless acquisition screen and paralyzer pistol.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

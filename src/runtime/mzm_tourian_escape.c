@@ -1450,7 +1450,7 @@ static void update_samus_going_to_crash(MzmTourianEscape *e, MzmScreen *s) {
     if (ended) reset_stage(e, s, 9);
 }
 
-static void draw_crashing_oam(MzmTourianEscape *e, MzmScreen *s) {
+static void draw_priority_two_oam(MzmTourianEscape *e, MzmScreen *s) {
     clear_oam_buffer(s);
     int slot = 0;
     for (int i = 0; i < 2; ++i) {
@@ -1546,8 +1546,105 @@ static void update_samus_crashing(MzmTourianEscape *e, MzmScreen *s) {
     }
     gba_ppu_write16(p, GBA_REG_BG0HOFS, (uint16_t)e->bg0_x & 0x1FF);
     gba_ppu_write16(p, GBA_REG_BG0VOFS, (uint16_t)e->bg0_y & 0xFF);
-    draw_crashing_oam(e, s);
+    draw_priority_two_oam(e, s);
     if (ended) reset_stage(e, s, 10);
+}
+
+static void update_samus_looking_at_sky(MzmTourianEscape *e, MzmScreen *s) {
+    GbaPpu *p = &e->room.ppu;
+    bool ended = false;
+    uint16_t frame = e->timer++;
+    switch (frame) {
+    case 0:
+        decompress("sTourianEscapeSamusLookingAtSkyGfx",
+                   p->vram, GBA_VRAM_SIZE);
+        break;
+    case 1:
+        decompress("sTourianEscapeSamusLookingAtSkySkyBackgroundGfx",
+                   p->vram + 0x8000, GBA_VRAM_SIZE - 0x8000);
+        break;
+    case 2:
+        decompress("sTourianEscapeSamusLookingAtSkyPiratesShipGfx",
+                   p->vram + GBA_OBJ_VRAM, GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+        break;
+    case 3:
+        decompress("sTourianEscapeSamusLookingAtSkySkyBackgroundTileTable",
+                   p->vram + 0xE000, GBA_VRAM_SIZE - 0xE000);
+        decompress("sTourianEscapeSamusLookingAtSkyTopTileTable",
+                   p->vram + 0xF000, GBA_VRAM_SIZE - 0xF000);
+        decompress("sTourianEscapeSamusLookingAtSkyBottomTileTable",
+                   p->vram + 0xF800, GBA_VRAM_SIZE - 0xF800);
+        copy_palette(e, "sTourianEscapeSamusLookingAtSkyPal", 10 * 16);
+        e->bg0_y = 0;
+        e->bg1_y = 0;
+        e->bg2_y = 96;
+        break;
+    case 4:
+        gba_ppu_write16(p, GBA_REG_BG0CNT, 2 | 2 << 2 | 28 << 8);
+        gba_ppu_write16(p, GBA_REG_BG0CNT + 2, 1 | 30 << 8);
+        gba_ppu_write16(p, GBA_REG_BG0CNT + 4, 31 << 8);
+        dispcnt(e, GBA_DCNT_BG0 | GBA_DCNT_BG1 |
+                   GBA_DCNT_BG2 | GBA_DCNT_OBJ);
+        /* Fall through: the native scene starts its reveal on this frame. */
+        /* fallthrough */
+    case 160:
+        e->effect_phase++;
+        break;
+    case 16:
+        e->object_active[0] = 1;
+        e->object_oam_address[0] = mzm_sym("sTourianEscape_47abba");
+        e->object_x[0] = 112;
+        e->object_y[0] = 208;
+        mzm_sfx_play(MZM_SOUND_TOURIAN_ESCAPE_PIRATES_FLYING_OVER);
+        break;
+    case 24:
+        e->object_active[1] = 1;
+        e->object_oam_address[1] = mzm_sym("sTourianEscape_47abc8");
+        e->object_x[1] = 32;
+        e->object_y[1] = 208;
+        break;
+    case 96:
+        e->object_active[0] = 0;
+        break;
+    case 104:
+        e->object_active[1] = 0;
+        break;
+    case 432:
+        p->palette[0] = 0;
+        dispcnt(e, 0);
+        e->bg0_y = 0;
+        e->bg1_y = 0;
+        ended = true;
+        break;
+    default:
+        break;
+    }
+
+    if (e->effect_phase == 1) {
+        if (e->timer & 1) {
+            uint16_t level = gba_ppu_read16(p, GBA_REG_BLDY);
+            if (level)
+                gba_ppu_write16(p, GBA_REG_BLDY, (uint16_t)(level - 1));
+            else
+                gba_ppu_write16(p, GBA_REG_BLDCNT, 0);
+        }
+    } else if (e->effect_phase == 2) {
+        e->bg0_y++;
+        e->bg1_y++;
+        if (e->bg0_y >= 96) e->bg2_y++;
+        if (((uint16_t)e->bg2_y & 0xFF) == GBA_SCREEN_H)
+            e->effect_phase = 0;
+    }
+    for (int i = 0; i < 2; ++i) {
+        if (!e->object_active[i]) continue;
+        e->object_x[i] = (uint16_t)(e->object_x[i] + 2u);
+        e->object_y[i] = (uint16_t)(e->object_y[i] - 3u);
+    }
+    gba_ppu_write16(p, GBA_REG_BG0VOFS, (uint16_t)e->bg0_y & 0xFF);
+    gba_ppu_write16(p, GBA_REG_BG0VOFS + 4, (uint16_t)e->bg1_y & 0xFF);
+    gba_ppu_write16(p, GBA_REG_BG0VOFS + 8, (uint16_t)e->bg2_y & 0xFF);
+    draw_priority_two_oam(e, s);
+    if (ended) reset_stage(e, s, 11);
 }
 
 void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
@@ -1562,4 +1659,5 @@ void mzm_tourian_escape_update(MzmTourianEscape *e, MzmScreen *s) {
     else if (e->stage == 7) update_samus_getting_shot(e, s);
     else if (e->stage == 8) update_samus_going_to_crash(e, s);
     else if (e->stage == 9) update_samus_crashing(e, s);
+    else if (e->stage == 10) update_samus_looking_at_sky(e, s);
 }

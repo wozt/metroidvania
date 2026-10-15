@@ -3259,6 +3259,29 @@ No automatic reciprocal link or native engine encoder is implemented.
   all native rebuild tasks up to date, regenerated parity and dashboard data,
   fresh generated-file checks, and the proprietary-file guard passed.
 
+## Patch 0342 - Tourian looking-at-sky scene
+
+- The 433-frame `TourianEscapeSamusLookingAtSky` stage now follows the crash
+  and reaches the final mother-ship-view boundary. It loads the three native
+  tilemaps, their two character blocks, the pirate ship graphics and the ten
+  shared BG/OBJ palette rows from the private ROM bank.
+- The stage preserves the full-white state inherited from the collision and
+  reveals the new view on the native every-other-frame cadence. Two pirate
+  ships enter at frames 16 and 24, move +2/-3 per frame with priority 2 and
+  leave independently at frames 96 and 104.
+- Frame 160 begins the long pan: BG0 and BG1 move immediately, while BG2 waits
+  until their offset reaches 96 and stops the phase at 160. The resulting
+  159/159/160 offsets remain fixed until frame 432 clears the backdrop and
+  display to black.
+- The ROM-backed regression test covers palettes, BG configuration, reveal
+  cadence, both OAM passages, sound, rendered output, every pan threshold and
+  the exact final transition state.
+- Remaining boundary: the first scene's block-based room layers are absent,
+  and only stage 12, `TourianEscapeSamusLookingAtMotherShip`, remains unported.
+- Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
+  all native rebuild tasks up to date, regenerated parity and dashboard data,
+  fresh generated-file checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

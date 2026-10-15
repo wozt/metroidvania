@@ -16,7 +16,7 @@ typedef struct {
     bool ready, planet, flash, varia;
     uint8_t stage, flash_timer, flash_level, effect_phase, effect_timer;
     uint16_t timer, explosion_timer, bg2_scale, object_scaling, secondary_scaling;
-    int16_t ship_x, explosion_x, bg0_x, bg0_y;
+    int16_t ship_x, explosion_x, bg0_x, bg0_y, bg1_y, bg2_y;
     int16_t firing_vertical_velocity, firing_vertical_acceleration;
     int16_t win0_left, win0_right, win0_top, win0_bottom;
     uint8_t object_active[MZM_TOURIAN_ESCAPE_OBJECTS];
@@ -31,8 +31,8 @@ typedef struct {
 
 /* TourianEscapeInit and the start of TourianEscapeUpdateStage. */
 bool mzm_tourian_escape_enter(MzmTourianEscape *escape, MzmScreen *screen, bool varia);
-/* Advances the current native scene. The first ten scenes stop at stage 10
- * until the following looking-at-sky scene is ported. */
+/* Advances the current native scene. The first eleven scenes stop at stage 11
+ * until the following looking-at-mother-ship scene is ported. */
 void mzm_tourian_escape_update(MzmTourianEscape *escape, MzmScreen *screen);
 
 #endif /* MZM_TOURIAN_ESCAPE_H */

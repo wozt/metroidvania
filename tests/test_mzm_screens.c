@@ -1404,6 +1404,94 @@ static void test_tourian_escape_bank(void) {
            gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 16);
     assert(screen.next_oam_slot == 0 && screen.ppu->oam[0] == 0x200);
 
+    /* Looking at the sky: the crash's white screen reveals three native
+     * layers, two pirate ships cross overhead, then the whole view pans down
+     * until the final black cut. */
+    for (int f = 0; f < 4; ++f) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 10 && escape.timer == 4);
+    assert(escape.bg0_y == 0 && escape.bg1_y == 0 && escape.bg2_y == 96);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 16);
+    assert(screen.ppu->palette[159] == mzm_rom_u16(
+           mzm_sym("sTourianEscapeSamusLookingAtSkyPal") + 318));
+    assert(screen.ppu->palette[256 + 159] == mzm_rom_u16(
+           mzm_sym("sTourianEscapeSamusLookingAtSkyPal") + 318));
+    mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.timer == 5 && escape.effect_phase == 1);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) ==
+           (GBA_DCNT_BG0 | GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_OBJ));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT) ==
+           (2 | 2 << 2 | 28 << 8));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT + 2) == (1 | 30 << 8));
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0CNT + 4) == 31 << 8);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 15);
+
+    while (escape.timer < 17) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_active[0] == 1 && escape.object_x[0] == 114 &&
+           escape.object_y[0] == 205 && screen.next_oam_slot == 2);
+    assert(escape.object_oam_address[0] == mzm_sym("sTourianEscape_47abba"));
+    assert((screen.ppu->oam[2] & 0x3FF) == 0 &&
+           (screen.ppu->oam[2] & 3 << 10) == 2 << 10);
+    assert(count_requests(MZM_SFX_PLAY,
+                          MZM_SOUND_TOURIAN_ESCAPE_PIRATES_FLYING_OVER) == 1);
+    while (escape.timer < 25) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_x[0] == 130 && escape.object_y[0] == 181);
+    assert(escape.object_active[1] == 1 && escape.object_x[1] == 34 &&
+           escape.object_y[1] == 205 && screen.next_oam_slot == 4);
+    assert(escape.object_oam_address[1] == mzm_sym("sTourianEscape_47abc8") &&
+           (screen.ppu->oam[2 * 4 + 2] & 0x3FF) == 0xC);
+    while (escape.timer < 35) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDY) == 0 &&
+           gba_ppu_read16(screen.ppu, GBA_REG_BLDCNT) == 0xBF);
+    while (escape.timer < 37) mzm_tourian_escape_update(&escape, &screen);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BLDCNT) == 0);
+    drawn = 0;
+    for (int y = 0; y < GBA_SCREEN_H; y += 8) {
+        gba_ppu_render_line(screen.ppu, y, GBA_SCREEN_W, line);
+        for (int x = 0; x < GBA_SCREEN_W; ++x) drawn += (line[x] & 0x7FFF) != 0;
+    }
+    assert(drawn > GBA_SCREEN_W);
+
+    while (escape.timer < 96) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.object_x[0] == 272 && escape.object_y[0] == 65504);
+    assert(escape.object_x[1] == 176 && escape.object_y[1] == 65528 &&
+           screen.next_oam_slot == 4);
+    mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.timer == 97 && !escape.object_active[0] &&
+           escape.object_x[1] == 178 && escape.object_y[1] == 65525 &&
+           screen.next_oam_slot == 2);
+    while (escape.timer < 105) mzm_tourian_escape_update(&escape, &screen);
+    assert(!escape.object_active[1] && escape.object_x[1] == 192 &&
+           escape.object_y[1] == 65504 && screen.next_oam_slot == 0);
+
+    while (escape.timer < 160) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.effect_phase == 1 && escape.bg0_y == 0 &&
+           escape.bg1_y == 0 && escape.bg2_y == 96);
+    mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.timer == 161 && escape.effect_phase == 2);
+    assert(escape.bg0_y == 1 && escape.bg1_y == 1 && escape.bg2_y == 96);
+    while (escape.timer < 255) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.bg0_y == 95 && escape.bg1_y == 95 && escape.bg2_y == 96);
+    mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.timer == 256 && escape.bg0_y == 96 &&
+           escape.bg1_y == 96 && escape.bg2_y == 97);
+    while (escape.timer < 319) mzm_tourian_escape_update(&escape, &screen);
+    assert(!escape.effect_phase && escape.bg0_y == 159 &&
+           escape.bg1_y == 159 && escape.bg2_y == 160);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS) == 159 &&
+           gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS + 4) == 159 &&
+           gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS + 8) == 160);
+    while (escape.timer < 432) mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 10 && escape.bg0_y == 159 && escape.bg2_y == 160);
+    mzm_tourian_escape_update(&escape, &screen);
+    assert(escape.stage == 11 && escape.timer == 0);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_DISPCNT) == 0 &&
+           screen.ppu->palette[0] == 0);
+    assert(escape.bg0_y == 0 && escape.bg1_y == 0 && escape.bg2_y == 160);
+    assert(gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS) == 0 &&
+           gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS + 4) == 0 &&
+           gba_ppu_read16(screen.ppu, GBA_REG_BG0VOFS + 8) == 160);
+    assert(screen.next_oam_slot == 0 && screen.ppu->oam[0] == 0x200);
+
     /* The other equipment branch selects the Power Suit palette. */
     assert(mzm_tourian_escape_enter(&escape, &screen, false));
     for (int f = 0; f < 513 + 3; ++f) mzm_tourian_escape_update(&escape, &screen);

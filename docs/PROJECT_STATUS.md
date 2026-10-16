@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 1,072 indexed sequences, 2,640 unique BMPs; 566 projectile sequences; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Deorem, Acid Worm, Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Deorem, Acid Worm, Gadora, Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -3420,6 +3420,32 @@ No automatic reciprocal link or native engine encoder is implemented.
   passing and deliberately failing capture expectations, three private
   early-route smoke captures, refreshed dashboard data, generated-file
   checks, and the proprietary-file guard passed.
+
+## Patch 0350 - Zero Mission Gadora hatch encounters
+
+- Added the Kraid and Ridley Gadora primaries, their invisible vulnerable eye
+  and Ridley's beam to the native sprite engine. Both actors periodically
+  detect Samus in front, warn, open their eye for the native duration and
+  close immediately after a strong hit.
+- Gadora placement now suppresses the matching closed hatch through a room
+  hook. Killing the eye transfers the death to the body; its forty-frame
+  flashing sequence restores the hatch and persists event 28 or 36 so the
+  passage remains open after reloading the room.
+- The Kraid variant uses its high-priority graphics and one-health eye. The
+  Ridley variant selects the alternate palette, stays open longer and emits
+  the delayed horizontal beam, including collision explosion and sounds.
+- Normal death keeps the native two-drop behavior: the main actor may become
+  its weighted energy or missile drop and then creates the follower drop.
+  `scripts/mzm_sprites.py` exports all nine shared OAM tables while private
+  graphics and ROM data remain outside Git.
+- The focused sprite test covers both variants, eye exposure, forced body
+  death, persistent hatch restoration, the extra drop and beam delay/motion.
+  Native BG priority is represented by the runtime draw order, and direct
+  emulator comparison remains open.
+- Validation on 2026-10-16: warning-clean build, CTest 35/35, Python 473/473,
+  focused Kraid/Ridley Gadora assertions, regenerated parity/dashboard data
+  and the proprietary-file guard passed; both `kraid_029` and `ridley_011`
+  runtime room checks loaded their native collision successfully.
 
 ## Patch 0349 - Zero Mission Acid Worm encounter
 

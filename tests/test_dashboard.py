@@ -180,6 +180,8 @@ class OutputTests(unittest.TestCase):
         self.assertEqual(mapping["MORPH_BALL"], "mzm.items.item_sprites")
         self.assertEqual(mapping["MAP_STATION"], "mzm.environment.room_gadgets")
         self.assertEqual(mapping["ACID_WORM"], "mzm.enemies.acid_worm")
+        self.assertEqual(mapping["GADORA_KRAID"], "mzm.enemies.gadora")
+        self.assertEqual(mapping["GADORA_RIDLEY"], "mzm.enemies.gadora")
         # Drops take the MZM_FAMILY_DROP default, not a case label.
         self.assertNotIn("SMALL_ENERGY_DROP", mapping)
         self.assertTrue(set(mapping.values()).issubset(annotation_ids))

@@ -3041,6 +3041,23 @@ static void runtime_sprite_move_effect_y(void *context, int16_t delta) {
         runtime_room_gfx.effect_y_offset = runtime_effect_y_offset;
 }
 
+static void runtime_sprite_set_hatch_exists(void *context, uint16_t y, uint16_t x,
+                                            bool exists) {
+    RuntimeSprites *sprites = context;
+    Room *room = sprites->room;
+    if (!room) return;
+    int bx = x / MZM_BLOCK_SIZE;
+    int by = y / MZM_BLOCK_SIZE;
+    for (int i = 0; i < room->native_hatch_count; ++i) {
+        MzmHatch *hatch = &room->native_hatches[i];
+        if (hatch->state != MZM_HATCH_CLOSED || hatch->x != bx || by < hatch->y ||
+            by >= hatch->y + MZM_HATCH_VERTICAL_SIZE)
+            continue;
+        hatch->exists = exists;
+        break;
+    }
+}
+
 /* CAA_REMOVE_SOLID: the block's collision becomes air; the static background
  * keeps its graphics (BgClipSetBg1BlockValue is not reproduced). */
 static void runtime_sprite_apply_caa(void *context, uint16_t y, uint16_t x, uint8_t caa);
@@ -3084,7 +3101,7 @@ static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *ro
         if (room->doors[i].x0 == used->dest_x && room->doors[i].y1 == used->dest_y_end)
             no_hatch = !strcmp(room->doors[i].kind, "nohatch");
     static const MzmSpriteHooks hooks = {NULL, runtime_sprite_check_event, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL, NULL, NULL};
+                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL};
     MzmSpriteHooks bound = hooks;
     bound.context = sprites;
     mzm_spawn_waiting_pirates(sprites->live, RUNTIME_MAX_SPRITES, &sprites->globals, &bound, ids,
@@ -3240,11 +3257,12 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                               runtime_sprite_remove_solid, runtime_sprite_affect,
                                               runtime_sprite_apply_caa,
                                               runtime_sprite_spawn_message,
-                                              runtime_sprite_set_bg_block, NULL, NULL};
+                                              runtime_sprite_set_bg_block, NULL, NULL, NULL};
     MzmSpriteHooks hooks = hook_table;
     hooks.context = sprites;
     hooks.clear_event = runtime_sprite_clear_event;
     hooks.move_effect_y = runtime_sprite_move_effect_y;
+    hooks.set_hatch_exists = runtime_sprite_set_hatch_exists;
     /* Samus for the Chozo statues' hands (native y). */
     MzmSpriteSamusLink link = {
         samus->pose == MZM_POSE_MORPH_BALL ? MZM_LINK_POSE_MORPH_BALL :
@@ -3485,6 +3503,9 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                 (sprite->palette_row==3 || sprite->palette_row==5))
             /* Ridley's health rows (paletteRow 3 and 5). */
             shade=sprite->palette_row==3?"/row3":"/row5";
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_GADORA_RIDLEY &&
+                sprite->palette_row==1)
+            shade="/row1";
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_KRAID &&
                 sprite->palette_row>=1 && sprite->palette_row<=3) {
             /* Kraid's health rows (absolutePaletteRow 1 to 3). */

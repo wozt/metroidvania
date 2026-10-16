@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 75 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 76 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -380,6 +380,16 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.part
 Known divergences: The lava splashes of its rise and of the fireball, and the fireball's bgPriority from BG1CNT, are not ported; otherwise the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
 Evidence: in game: `norfair_022`.
+
+[~] **`mzm.enemies.gadora` — Kraid and Ridley Gadora hatch encounters.** Both native variants suppress their matching closed hatch, periodically detect Samus in front, warn and expose an otherwise projectile-immune eye. Destroying the eye runs the flashing death sequence, restores the hatch, persists event 28 or 36 and creates the native primary plus follower drop pair. The Ridley variant keeps its alternate palette, longer opening and delayed horizontal beam that explodes against room collision.
+
+Native evidence: `mzm:c:src/gadora_hatch.c:GadoraHatchUpdate`, `mzm:c:src/sprites_ai/gadora.c:Gadora`, `mzm:c:src/sprites_ai/gadora.c:GadoraBeam`, `mzm:c:src/sprites_ai/gadora.c:GadoraCheckClosingEyeAnimNearEnded`, `mzm:c:src/sprites_ai/gadora.c:GadoraCheckOpeningEyeAnimEnded`, `mzm:c:src/sprites_ai/gadora.c:GadoraCheckWarningAnimEnded`, `mzm:c:src/sprites_ai/gadora.c:GadoraDeath`, `mzm:c:src/sprites_ai/gadora.c:GadoraDeathGfxInit`, `mzm:c:src/sprites_ai/gadora.c:GadoraEye`, `mzm:c:src/sprites_ai/gadora.c:GadoraEyeOpened`, `mzm:c:src/sprites_ai/gadora.c:GadoraIdleInit`, `mzm:c:src/sprites_ai/gadora.c:GadoraInit`, `mzm:c:src/sprites_ai/gadora.c:GadoraSamusDetection`.  
+Local implementation: [`src/runtime/mzm_gadora.c`](../src/runtime/mzm_gadora.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.transitions.doors_and_hatches`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: The native BG priority is represented by the runtime draw order, and the encounter has not been compared frame by frame with an emulator.  
+Next action: Compare both encounters and their hatch alignment with an emulator.
+Evidence: in game: `kraid_029`, `ridley_011`.
 
 [+] **`mzm.enemies.geruta` — Gerutas.** Red and green Gerutas: init 3 pixels up facing Samus, waiting under a ceiling until Samus is low (72 subpixels below) and within 5 blocks on both axes, attacking at once without a ceiling, the warning and launching tables with their sounds, the dive at 3 pixels a frame drifting a pixel toward Samus (the going-down flag is SAMUS_COLLIDING), the floor bounce, the climb, the settle 52 subpixels under the ceiling and the death into drops. Checked in norfair_012: the two row-5 Gerutas attack at once, dive, bounce and settle under the row-3 ceiling at y 77 while the others wait for Samus.
 

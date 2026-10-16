@@ -90,6 +90,9 @@ static void test_affect(void *context, uint16_t y, uint16_t x, int damage) {
 }
 
 static int caa_calls, last_caa, messages[4], message_count, effect_y_delta;
+static int hatch_calls;
+static uint16_t last_hatch_y, last_hatch_x;
+static bool last_hatch_exists;
 
 static void test_apply_caa(void *context, uint16_t y, uint16_t x, uint8_t caa) {
     (void)context;
@@ -109,6 +112,14 @@ static void test_move_effect_y(void *context, int16_t delta) {
     effect_y_delta += delta;
 }
 
+static void test_set_hatch_exists(void *context, uint16_t y, uint16_t x, bool exists) {
+    (void)context;
+    ++hatch_calls;
+    last_hatch_y = y;
+    last_hatch_x = x;
+    last_hatch_exists = exists;
+}
+
 static int bg_blocks, last_bg_value;
 static void set_bg_block(void *context, uint8_t bg, uint16_t value, uint16_t y, uint16_t x) {
     (void)context;
@@ -123,7 +134,7 @@ static void set_bg_block(void *context, uint8_t bg, uint16_t value, uint16_t y, 
 static const MzmSpriteHooks test_hooks = {NULL, test_check_event, test_set_event,
                                           test_door_timer, test_remove_solid, test_affect,
                                           test_apply_caa, test_spawn_message, NULL, NULL,
-                                          test_move_effect_y};
+                                          test_move_effect_y, test_set_hatch_exists};
 
 static int leeches;
 
@@ -5178,6 +5189,91 @@ int main(void) {
         assert(!room[0].status && death_frames == 170 &&
                test_check_event(NULL, MZM_EVENT_ACID_WORM_KILLED) &&
                last_door_timer == -20 && effect_y_delta > 0);
+    }
+    /* Gadora: the Kraid seal exposes its eye, opens the hatch persistently
+     * when killed, and the Ridley variant fires its delayed beam. */
+    {
+        MzmSprite room[8] = {0};
+        MzmSpriteKind gadora_kind = {0};
+        for (int a = 0; a < MZM_GADORA_ANIMS; ++a) {
+            gadora_kind.counts[a] = 2;
+            gadora_kind.timers[a][0] = gadora_kind.timers[a][1] = 1;
+        }
+        memset(test_events, 0, sizeof test_events);
+        memset(tables.drops[MZM_PSPRITE_GADORA_KRAID], 0,
+               sizeof tables.drops[MZM_PSPRITE_GADORA_KRAID]);
+        tables.drops[MZM_PSPRITE_GADORA_KRAID][MZM_DROP_PROB_LARGE_ENERGY] = 1024;
+        tables.health[MZM_PSPRITE_GADORA_KRAID] = 1;
+        tables.health[MZM_PSPRITE_GADORA_RIDLEY] = 1;
+        tables.secondary_health[MZM_SSPRITE_GADORA_EYE] = 60;
+        hatch_calls = 0;
+        last_hatch_exists = true;
+        MzmSpriteFrame gf = frame;
+        gf.sprites = room;
+        gf.sprite_count = 8;
+        gf.hooks = &test_hooks;
+        gf.samus_x = 8 * 64;
+        gf.samus_y = 6 * 64;
+        gf.samus_hitbox_top = -64;
+        gf.kinds[MZM_FAMILY_GADORA] = &gadora_kind;
+
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GADORA_KRAID, 3, 5, 6, 2, 0);
+        mzm_sprite_update(&room[0], 0, &gf);
+        assert(room[0].pose == 0x8 && room[0].status & MZM_SPRITE_STATUS_HIGH_PRIORITY &&
+               room[0].status & MZM_SPRITE_STATUS_X_FLIP && room[0].health == 1);
+        assert(room[1].secondary && room[1].sprite_id == MZM_SSPRITE_GADORA_EYE &&
+               room[1].ram_slot == 0 && hatch_calls == 1 && !last_hatch_exists &&
+               last_hatch_y == room[0].y && last_hatch_x == room[0].x);
+        mzm_sprite_update(&room[1], 1, &gf);
+        assert(room[1].pose == 0x9 && room[1].health == 1 &&
+               room[1].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        mzm_sprite_update(&room[0], 0, &gf);
+        assert(room[0].pose == 0x9);
+        room[0].work0 = 1;
+        mzm_sprite_update(&room[0], 0, &gf);
+        assert(room[0].pose == 0x23 && room[0].anim == MZM_GADORA_WARNING);
+        int opening_frames = 0;
+        while (room[0].pose != 0x27 && opening_frames++ < 12)
+            mzm_sprite_update(&room[0], 0, &gf);
+        assert(room[0].pose == 0x27 && room[0].work0 == 60);
+        mzm_sprite_update(&room[1], 1, &gf);
+        assert(!(room[1].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+        room[1].health = 0;
+        mzm_sprite_update(&room[1], 1, &gf);
+        assert(room[1].pose == 0x67 && room[0].pose == 0x62 &&
+               room[0].health == 0);
+        mzm_sprite_update(&room[0], 0, &gf);
+        assert(room[0].pose == 0x67 && room[0].work0 == 40);
+        for (int i = 0; i < 40; ++i) mzm_sprite_update(&room[0], 0, &gf);
+        assert(test_check_event(NULL, MZM_EVENT_KRAID_GADORA_KILLED) &&
+               hatch_calls == 2 && last_hatch_exists &&
+               room[0].sprite_id == MZM_PSPRITE_LARGE_ENERGY_DROP);
+        bool follower_found = false;
+        for (int i = 2; i < 8; ++i)
+            follower_found |= room[i].sprite_id == MZM_PSPRITE_MISSILE_DROP;
+        assert(follower_found);
+
+        memset(room, 0, sizeof room);
+        memset(test_events, 0, sizeof test_events);
+        hatch_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GADORA_RIDLEY, 3, 5, 6, 2, 0);
+        mzm_sprite_update(&room[0], 0, &gf);
+        mzm_sprite_update(&room[1], 1, &gf);
+        assert(room[0].absolute_palette_row == 1 && room[1].absolute_palette_row == 1 &&
+               mzm_sprite_graphics_owner(&room[1]) == MZM_PSPRITE_GADORA_RIDLEY);
+        room[0].pose = 0x25;
+        room[0].anim = MZM_GADORA_OPENING_EYE;
+        room[0].frame = 1;
+        room[0].adc = 1;
+        mzm_sprite_update(&room[0], 0, &gf);
+        assert(room[0].pose == 0x27 && room[0].work0 == 88 &&
+               room[2].secondary && room[2].sprite_id == MZM_SSPRITE_GADORA_BEAM);
+        mzm_sprite_update(&room[2], 2, &gf);
+        assert(room[2].pose == 0x9 && room[2].work0 == 15 &&
+               room[2].absolute_palette_row == 1);
+        uint16_t beam_x = room[2].x;
+        for (int i = 0; i < 16; ++i) mzm_sprite_update(&room[2], 2, &gf);
+        assert(room[2].x == beam_x + MZM_PIXEL_SIZE * 3);
     }
     /* EscapeDetermineTimer, EscapeSetTimer and EscapeUpdateTimer: event
      * routing, difficulty lengths, banner pause and timeout. */

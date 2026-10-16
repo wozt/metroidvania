@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-16T21:40:16+00:00",
+ "generated_at": "2026-10-16T21:47:25+00:00",
  "git": {
-  "commit": "d6abc47",
+  "commit": "6a5b7e5",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 123,
+   "total": 124,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 54,
+    "partial": 55,
     "functional": 58,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 58,
-   "functional_or_better_percent": 47.2,
-   "with_passing_tests": 110,
-   "with_passing_tests_percent": 89.4,
+   "functional_or_better_percent": 46.8,
+   "with_passing_tests": 111,
+   "with_passing_tests_percent": 89.5,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -122,6 +122,7 @@
     "mzm.enemies.deorem",
     "mzm.enemies.dessgeega",
     "mzm.enemies.dragon",
+    "mzm.enemies.gadora",
     "mzm.enemies.geruta",
     "mzm.enemies.holtz",
     "mzm.enemies.kraid",
@@ -240,11 +241,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 75,
+   "total": 76,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 30,
+    "partial": 31,
     "functional": 45,
     "faithful": 0,
     "validated": 0,
@@ -252,8 +253,8 @@
     "unknown": 0
    },
    "functional_or_better": 45,
-   "functional_or_better_percent": 60.0,
-   "with_passing_tests": 74,
+   "functional_or_better_percent": 59.2,
+   "with_passing_tests": 75,
    "with_passing_tests_percent": 98.7,
    "unknown_or_blocked": 0,
    "features": [
@@ -270,6 +271,7 @@
     "mzm.enemies.deorem",
     "mzm.enemies.dessgeega",
     "mzm.enemies.dragon",
+    "mzm.enemies.gadora",
     "mzm.enemies.geruta",
     "mzm.enemies.holtz",
     "mzm.enemies.kraid",
@@ -1480,6 +1482,77 @@
     ],
     "in_game_check": [
      "norfair_022"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-16"
+   }
+  },
+  {
+   "id": "mzm.enemies.gadora",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Kraid and Ridley Gadora hatch encounters",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_gadora.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.transitions.doors_and_hatches",
+    "mzm.items.enemy_drops",
+    "mzm.animation.particles"
+   ],
+   "native_routines": [
+    "Gadora",
+    "GadoraInit",
+    "GadoraIdleInit",
+    "GadoraSamusDetection",
+    "GadoraCheckWarningAnimEnded",
+    "GadoraCheckOpeningEyeAnimEnded",
+    "GadoraEyeOpened",
+    "GadoraCheckClosingEyeAnimNearEnded",
+    "GadoraDeathGfxInit",
+    "GadoraDeath",
+    "GadoraEye",
+    "GadoraBeam",
+    "GadoraHatchUpdate"
+   ],
+   "limitations": "The native BG priority is represented by the runtime draw order, and the encounter has not been compared frame by frame with an emulator. Both native variants suppress their matching closed hatch, periodically detect Samus in front, warn and expose an otherwise projectile-immune eye. Destroying the eye runs the flashing death sequence, restores the hatch, persists event 28 or 36 and creates the native primary plus follower drop pair. The Ridley variant keeps its alternate palette, longer opening and delayed horizontal beam that explodes against room collision.",
+   "next_action": "Compare both encounters and their hatch alignment with an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_mzm_sprites.c"
+    ],
+    "in_game_check": [
+     "kraid_029",
+     "ridley_011"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -9634,6 +9707,12 @@
  },
  "timeline": [
   {
+   "commit": "6a5b7e5",
+   "date": "2026-10-16",
+   "subject": "Port the Acid Worm encounter",
+   "scope": "project"
+  },
+  {
    "commit": "d6abc47",
    "date": "2026-10-16",
    "subject": "Port the Deorem encounter",
@@ -10106,12 +10185,6 @@
    "date": "2026-10-12",
    "subject": "feat(mzm): Chozo statue refills and hints",
    "scope": "mzm"
-  },
-  {
-   "commit": "cc2316f",
-   "date": "2026-10-12",
-   "subject": "feat(mzm): item Chozo statues",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10139,7 +10212,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1179,
+    "routines_cited_by_features": 1192,
     "call_edges": 6071
    },
    "aos": {
@@ -11427,26 +11500,38 @@
      {
       "id": 173,
       "name": "Gadora Kraid",
-      "status": "not_started",
-      "note": "",
+      "status": "partial",
+      "note": "Kraid and Ridley Gadora hatch encounters",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_mzm_sprites.c"
+       ],
+       "in_game_check": [
+        "kraid_029",
+        "ridley_011"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "mzm.enemies.gadora"
      },
      {
       "id": 174,
       "name": "Gadora Ridley",
-      "status": "not_started",
-      "note": "",
+      "status": "partial",
+      "note": "Kraid and Ridley Gadora hatch encounters",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_mzm_sprites.c"
+       ],
+       "in_game_check": [
+        "kraid_029",
+        "ridley_011"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "mzm.enemies.gadora"
      },
      {
       "id": 182,

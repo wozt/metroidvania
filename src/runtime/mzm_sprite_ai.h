@@ -192,6 +192,8 @@ void ai_mother_brain(Ctx *c);
 void ai_deorem(Ctx *c);
 /* Acid Worm, its body parts and spit (mzm_acid_worm.c). */
 void ai_acid_worm(Ctx *c);
+/* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */
+void ai_gadora(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

@@ -721,6 +721,15 @@ enum {
 };
 extern const char *const mzm_acid_worm_anim_names[MZM_ACID_WORM_ANIMS];
 
+/* Kraid and Ridley's Gadoras, their invisible eye and Ridley's beam. */
+enum {
+    MZM_GADORA_EYE_CLOSED, MZM_GADORA_WARNING, MZM_GADORA_OPENING_EYE,
+    MZM_GADORA_BEAM_MOVING, MZM_GADORA_EYE_MOVING, MZM_GADORA_CLOSING_EYE,
+    MZM_GADORA_DEATH, MZM_GADORA_EYE_OPENED, MZM_GADORA_BEFORE_CLOSING,
+    MZM_GADORA_ANIMS,
+};
+extern const char *const mzm_gadora_anim_names[MZM_GADORA_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
@@ -734,7 +743,7 @@ enum {
     MZM_FAMILY_PARASITE, MZM_FAMILY_ATOMIC, MZM_FAMILY_POLYP, MZM_FAMILY_TOURIAN,
     MZM_FAMILY_WORKER_ROBOT, MZM_FAMILY_METROID, MZM_FAMILY_KRAID, MZM_FAMILY_RIDLEY,
     MZM_FAMILY_MOTHER_BRAIN, MZM_FAMILY_BOSS_STATUE, MZM_FAMILY_DEOREM,
-    MZM_FAMILY_ACID_WORM,
+    MZM_FAMILY_ACID_WORM, MZM_FAMILY_GADORA,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -805,6 +814,7 @@ enum {
     MZM_PSPRITE_CHOZO_STATUE_SPEEDBOOSTER_HINT = 42, MZM_PSPRITE_CHOZO_STATUE_SPEEDBOOSTER = 43, MZM_PSPRITE_CHOZO_STATUE_HIGH_JUMP_HINT = 44, MZM_PSPRITE_CHOZO_STATUE_HIGH_JUMP = 45, MZM_PSPRITE_CHOZO_STATUE_SCREW_HINT = 46, MZM_PSPRITE_CHOZO_STATUE_SCREW = 47, MZM_PSPRITE_CHOZO_STATUE_VARIA_HINT = 48, MZM_PSPRITE_CHOZO_STATUE_VARIA = 49,
     MZM_PSPRITE_CHOZO_STATUE_GRAVITY = 88, MZM_PSPRITE_CHOZO_STATUE_SPACE_JUMP = 89,
     MZM_PSPRITE_CHOZO_STATUE_PLASMA_BEAM = 148,
+    MZM_PSPRITE_GADORA_KRAID = 173, MZM_PSPRITE_GADORA_RIDLEY = 174,
 };
 
 /* SecondarySprite */
@@ -827,6 +837,7 @@ enum {
     MZM_SSPRITE_MOTHER_BRAIN_BLOCK = 75, MZM_SSPRITE_MOTHER_BRAIN_GLASS_BREAKING = 76, MZM_SSPRITE_METROID_SHELL = 26,
     MZM_SSPRITE_DEOREM_SEGMENT = 9, MZM_SSPRITE_DEOREM_EYE = 10, MZM_SSPRITE_DEOREM_THORN = 11,
     MZM_SSPRITE_ACID_WORM_PART = 37, MZM_SSPRITE_ACID_WORM_SPIT = 38,
+    MZM_SSPRITE_GADORA_EYE = 54, MZM_SSPRITE_GADORA_BEAM = 55,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 
@@ -912,6 +923,7 @@ enum {
     MZM_EVENT_DEOREM_FIRST_LOCATION = 24, MZM_EVENT_DEOREM_SECOND_LOCATION = 25,
     MZM_EVENT_DEOREM_KILLED_AT_SECOND_LOCATION = 26,
     MZM_EVENT_ACID_WORM_KILLED = 27,
+    MZM_EVENT_KRAID_GADORA_KILLED = 28, MZM_EVENT_RIDLEY_GADORA_KILLED = 36,
 };
 
 /* Game systems outside the sprite engine. */
@@ -941,6 +953,8 @@ typedef struct {
     void (*clear_event)(void *context, uint8_t event);
     /* gEffectYPositionOffset: move the room liquid surface in subpixels. */
     void (*move_effect_y)(void *context, int16_t delta);
+    /* GadoraHatchUpdate: enable or suppress the closed hatch at a point. */
+    void (*set_hatch_exists)(void *context, uint16_t y, uint16_t x, bool exists);
 } MzmSpriteHooks;
 
 /* ALARM_TIMER_ACTIVE_TIMER: CONVERT_SECONDS(8.f). */

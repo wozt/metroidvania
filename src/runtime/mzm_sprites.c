@@ -686,6 +686,17 @@ static const char *const chozo_statue_sprites[MZM_CHOZO_ANIMS] = {
     "CHOZO_STATUE_PLASMA_BEAM",
 };
 
+const char *const mzm_boss_statue_anim_names[MZM_BOSS_STATUE_ANIMS] = {
+    "KraidStatueOam_Idle", "KraidStatueOam_Activating", "KraidStatueOam_Activated",
+    "KraidStatueOam_Opening", "KraidStatueOam_Opened", "RidleyStatueOam_Idle",
+    "RidleyStatueOam_Activating", "RidleyStatueOam_Activated",
+    "RidleyStatueOam_Opening", "RidleyStatueOam_Opened",
+};
+static const char *const boss_statue_sprites[MZM_BOSS_STATUE_ANIMS] = {
+    "KRAID_STATUE", "KRAID_STATUE", "KRAID_STATUE", "KRAID_STATUE", "KRAID_STATUE",
+    "RIDLEY_STATUE", "RIDLEY_STATUE", "RIDLEY_STATUE", "RIDLEY_STATUE", "RIDLEY_STATUE",
+};
+
 const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ZOOMER] = {MZM_ZOOMER_ANIMS, mzm_zoomer_anim_names, zoomer_sprites},
     [MZM_FAMILY_ZEELA] = {MZM_ZEELA_ANIMS, mzm_zeela_anim_names, zeela_sprites},
@@ -731,6 +742,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
                                       chozodia_security_sprites},
     [MZM_FAMILY_CHOZO_STATUE] = {MZM_CHOZO_ANIMS, mzm_chozo_statue_anim_names,
                                  chozo_statue_sprites},
+    [MZM_FAMILY_BOSS_STATUE] = {MZM_BOSS_STATUE_ANIMS, mzm_boss_statue_anim_names,
+                                boss_statue_sprites},
 };
 
 
@@ -2017,6 +2030,34 @@ static void hook_doors(const Ctx *c, int8_t timer) {
 static void hook_remove_solid(const Ctx *c, uint16_t y, uint16_t x) {
     const MzmSpriteHooks *h = c->f->hooks;
     if (h && h->remove_solid) h->remove_solid(h->context, y, x);
+}
+
+/* KraidStatueInit / RidleyStatueInit. The early game only observes both
+ * idle statues; their post-boss activation and opening sequence is a later
+ * system. KraidStatueInit still performs the progression-critical side
+ * effect that makes the Long Beam Dessgeega exist on the return trip. */
+static void boss_statue(Ctx *c) {
+    MzmSprite *s = c->s;
+    bool kraid = s->sprite_id == MZM_PSPRITE_KRAID_STATUE;
+    s->ignore_samus_timer = 1;
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+        s->x = (uint16_t)(s->x + (kraid ? -HALF_BLOCK_SIZE : HALF_BLOCK_SIZE));
+        s->draw_top = kraid ? 96 : 88;
+        s->draw_bottom = 0;
+        s->draw_horizontal = 112;
+        s->hitbox_top = s->hitbox_bottom = 0;
+        s->hitbox_left = s->hitbox_right = 0;
+        s->samus_collision = SSC_NONE;
+        s->draw_order = 1;
+        ai_set_anim(s, kraid ? MZM_BOSS_STATUE_KRAID_IDLE : MZM_BOSS_STATUE_RIDLEY_IDLE);
+        s->pose = 0xF;             /* BOSS_STATUE_POSE_IDLE */
+        if (kraid && !ai_check_event(c, MZM_EVENT_VIEWED_STATUE_ROOM))
+            hook_set_event(c, MZM_EVENT_VIEWED_STATUE_ROOM);
+    }
+    if (ai_samus_nslr(c, BLOCK_SIZE * 10, BLOCK_SIZE * 13) != NSLR_OUT_OF_RANGE)
+        s->status |= MZM_SPRITE_STATUS_HIGH_PRIORITY;
+    else
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_HIGH_PRIORITY;
 }
 
 /* Sidehopper (sidehopper.c) and Dessgeega (dessgeega.c): the two routines
@@ -4902,6 +4943,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_KRAID: return MZM_FAMILY_KRAID;
     case MZM_PSPRITE_RIDLEY: return MZM_FAMILY_RIDLEY;
     case MZM_PSPRITE_MOTHER_BRAIN: return MZM_FAMILY_MOTHER_BRAIN;
+    case MZM_PSPRITE_KRAID_STATUE:
+    case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
     case MZM_PSPRITE_ZEBETITE_ONE_AND_THREE: case MZM_PSPRITE_ZEBETITE_TWO_AND_FOUR:
         return MZM_FAMILY_TOURIAN;
@@ -6013,6 +6056,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_KRAID: ai_kraid(&c); break;
     case MZM_FAMILY_RIDLEY: ai_ridley(&c); break;
     case MZM_FAMILY_MOTHER_BRAIN: ai_mother_brain(&c); break;
+    case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:
         if (sprite->secondary) skree_explosion(&c);

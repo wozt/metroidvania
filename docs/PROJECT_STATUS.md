@@ -3363,6 +3363,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   regenerated parity and dashboard data, fresh generated-file checks, and the
   proprietary-file guard passed.
 
+## Patch 0346 - Natural Long Beam encounter trigger
+
+- The Kraid and Ridley statues are now exported and instantiated in
+  `brinstar_010` with their native idle OAM, room placements, half-block
+  horizontal offsets, draw ranges, collision-free state and proximity-based
+  priority.
+- `KraidStatueInit` now performs its early-game progression side effect:
+  entering the room sets `EVENT_VIEWED_STATUE_ROOM` in the session event
+  flags. A same-process capture then teleported back to `brinstar_009` and
+  loaded `DESSGEEGA_AFTER_LONG_BEAM` automatically, without `--event`.
+- The sprite exporter treats both boss statues as non-freezable, X-flip-only
+  objects while reserving the three flashing palette rows for Chozo statues.
+  A private rebuild staged their ten native animation tables without emitting
+  spurious boss-statue palette variants.
+- Scripted captures can now display the debug menu safely: host input polling
+  accepts the intentionally absent gamepad used by capture mode. This also
+  makes the event-persistence room-chain regression possible.
+- ROM-free tests cover both statue placements, exporter registration, the
+  Kraid-only event, native offsets, idle animation, draw parameters and
+  priority range.
+- Remaining boundary: traverse the early Morph Ball-to-statue-to-Long Beam
+  route through ordinary doors and complete the Dessgeega encounter and Long
+  Beam acquisition without debug navigation. The statues' post-boss opening
+  sequences remain a later progression milestone.
+- Validation on 2026-10-16: warning-clean build, CTest 35/35, Python 438/438,
+  fresh private room and sprite rebuilds, direct statue-room and same-session
+  encounter captures, regenerated parity and dashboard data, generated-file
+  checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

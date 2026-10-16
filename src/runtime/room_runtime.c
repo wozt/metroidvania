@@ -3730,7 +3730,7 @@ static uint16_t runtime_held_buttons(const bool *keys,const GbaInput *pad) {
     if(keys[SDL_SCANCODE_Q] && !keys[SDL_SCANCODE_DOWN] &&
        !keys[SDL_SCANCODE_S] && !keys[SDL_SCANCODE_C])
         buttons&=(uint16_t)~MZM_KEY_DOWN;
-    buttons|=runtime_gba_buttons(gba_input_buttons(pad));
+    if(pad)buttons|=runtime_gba_buttons(gba_input_buttons(pad));
     /* A GBA D-pad cannot report opposite directions together. */
     if((buttons&(MZM_KEY_LEFT|MZM_KEY_RIGHT))==(MZM_KEY_LEFT|MZM_KEY_RIGHT))
         buttons&=(uint16_t)~(MZM_KEY_LEFT|MZM_KEY_RIGHT);

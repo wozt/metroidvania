@@ -80,6 +80,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_GEEGA_LEADER": 0, "PSPRITE_GEEGA_FOLLOWER": 0, "PSPRITE_ZEBBO_GREEN": 0,
           "PSPRITE_ZEBBO_YELLOW": 0, "PSPRITE_ZEBBO_GREEN_LEADER": 0,
           "PSPRITE_ZEBBO_GREEN_FOLLOWER": 0, "PSPRITE_REO_GREEN_WINGS": 0,
+          "PSPRITE_KRAID_STATUE": 0, "PSPRITE_RIDLEY_STATUE": 0,
           "PSPRITE_REO_PURPLE_WINGS": 0, "PSPRITE_MELLA": 0, "PSPRITE_HOLTZ": 0,
           "PSPRITE_MULTIVIOLA": 0, "PSPRITE_RINKA_ORANGE": 0, "PSPRITE_RINKA_GREEN": 0,
           "PSPRITE_SPACE_PIRATE": 0, "PSPRITE_SPACE_PIRATE_WAITING1": 0,
@@ -583,11 +584,14 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     for sprite, row, gfx, palette_symbol, tables in plan:
         vram, palette = stage(rom, symbols, gfx, palette_symbol, row)
         variants = {"": palette}
-        # Chozo statues are never frozen or stunned and only flip in X.
-        statue = sprite.startswith("PSPRITE_CHOZO_STATUE")
+        # Statues are never frozen or stunned and only flip in X. Only Chozo
+        # statues use the native flashing palette-row variants.
+        chozo_statue = sprite.startswith("PSPRITE_CHOZO_STATUE")
+        statue = (chozo_statue or
+                  sprite in ("PSPRITE_KRAID_STATUE", "PSPRITE_RIDLEY_STATUE"))
         if not statue:
             variants.update(shifted_palettes(palette, common_palette))
-        else:
+        elif chozo_statue:
             # sChozoStatueFlashingPaletteRows: the statue drawn with its
             # palette rows 1 to 3 (paletteRow added to each part's row).
             for flash in (1, 2, 3):

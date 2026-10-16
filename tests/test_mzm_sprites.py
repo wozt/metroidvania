@@ -43,6 +43,12 @@ class MzmSpriteDataTests(unittest.TestCase):
                           for variant in variants], [(0, 0), (1, 37), (2, 2)])
         self.assertEqual(len(variants[2]["sprites"]), 6)
 
+        statue_room = mzm_sprites.room_sprite_variants("Brinstar", 10, DECOMP)[0]
+        self.assertEqual([sprite["sprite"] for sprite in statue_room["sprites"]],
+                         ["PSPRITE_RIDLEY_STATUE", "PSPRITE_KRAID_STATUE"])
+        self.assertIn("PSPRITE_KRAID_STATUE", mzm_sprites.PORTED)
+        self.assertIn("PSPRITE_RIDLEY_STATUE", mzm_sprites.PORTED)
+
     def test_zoomer_data_file_and_tables(self):
         sprite_c = (DECOMP / "src/sprite.c").read_text(encoding="utf-8")
         graphics = mzm_sprites.pointer_table(sprite_c, "sSpritesGraphicsPointers")

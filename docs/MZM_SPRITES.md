@@ -101,9 +101,15 @@ read from the user's ROM at export time; nothing is stored in the repository.
   subpixels a frame, removes the three floor blocks it meets
   (`CAA_REMOVE_SOLID`) with dust and debris, and lands on the next floor.
   Events, door locks and block removal reach the game through
-  `MzmSpriteHooks`; the runtime keeps session event flags (nothing sets the
-  statue room event yet), reports door lock requests and turns removed blocks
-  into air without changing the static background.
+  `MzmSpriteHooks`; the runtime keeps session event flags, reports door lock
+  requests and turns removed blocks into air without changing the static
+  background.
+- The Kraid and Ridley boss statues in `brinstar_010` load their native idle
+  graphics, placements, horizontal offsets and priority range. The Kraid
+  statue runs the progression-critical part of `KraidStatueInit` on entry and
+  sets `EVENT_VIEWED_STATUE_ROOM`, so returning through `brinstar_009`
+  selects the Long Beam Dessgeega without a debug event. Their post-boss
+  activation, opening, debris and room modifications remain unported.
 - The runtime loads each family's OAM frame durations separately: a family
   missing from the library is reported by name and its sprites are not
   spawned, while the others keep working.

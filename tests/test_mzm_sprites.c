@@ -1525,6 +1525,33 @@ int main(void) {
     mzm_sprite_init_primary(&d, MZM_PSPRITE_DESSGEEGA_AFTER_LONG_BEAM, 0, 2, 8, 0, 0);
     step(&d, 0);
     assert(d.status == 0);
+
+    /* Entering the boss-statue room runs KraidStatueInit, which records the
+     * viewed-room event required by the Long Beam Dessgeega on the return
+     * trip. Both inactive statues use their native offsets and idle OAM. */
+    static MzmSpriteKind boss_statue_kind;
+    boss_statue_kind.counts[MZM_BOSS_STATUE_KRAID_IDLE] = 1;
+    boss_statue_kind.timers[MZM_BOSS_STATUE_KRAID_IDLE][0] = 1;
+    boss_statue_kind.counts[MZM_BOSS_STATUE_RIDLEY_IDLE] = 1;
+    boss_statue_kind.timers[MZM_BOSS_STATUE_RIDLEY_IDLE][0] = 1;
+    frame.kinds[MZM_FAMILY_BOSS_STATUE] = &boss_statue_kind;
+    memset(test_events, 0, sizeof test_events);
+    frame.samus_y = 8 * 64;
+    frame.samus_x = 17 * 64;
+    MzmSprite boss_statue;
+    mzm_sprite_init_primary(&boss_statue, MZM_PSPRITE_KRAID_STATUE, 0, 8, 17, 0, 0);
+    step(&boss_statue, 0);
+    assert(test_check_event(NULL, MZM_EVENT_VIEWED_STATUE_ROOM));
+    assert(boss_statue.pose == 0xF && boss_statue.x == 17 * 64 &&
+           boss_statue.anim == MZM_BOSS_STATUE_KRAID_IDLE && boss_statue.draw_top == 96 &&
+           boss_statue.draw_horizontal == 112 && boss_statue.samus_collision == 0 &&
+           boss_statue.status & MZM_SPRITE_STATUS_HIGH_PRIORITY);
+    memset(test_events, 0, sizeof test_events);
+    mzm_sprite_init_primary(&boss_statue, MZM_PSPRITE_RIDLEY_STATUE, 0, 8, 16, 0, 0);
+    step(&boss_statue, 0);
+    assert(!test_check_event(NULL, MZM_EVENT_VIEWED_STATUE_ROOM));
+    assert(boss_statue.pose == 0xF && boss_statue.x == 17 * 64 &&
+           boss_statue.anim == MZM_BOSS_STATUE_RIDLEY_IDLE && boss_statue.draw_top == 88);
     frame.hooks = NULL;
     frame.effects = NULL;
 

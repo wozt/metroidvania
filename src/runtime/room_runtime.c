@@ -2195,6 +2195,19 @@ static const struct { const char *label; uint32_t item; } debug_items[]={
 };
 #define DEBUG_ITEMS_COUNT (int)(sizeof debug_items/sizeof debug_items[0])
 
+/* The command-line spelling shared by --item and capture expectations. */
+static int runtime_debug_item_index(const char *name) {
+    for(int k=0;k<DEBUG_ITEMS_COUNT;k++) {
+        char slug[32];
+        size_t n=0;
+        for(const char *c=debug_items[k].label;*c && n+1<sizeof slug;c++)
+            slug[n++]=(char)(*c==' '?'-':(*c>='A'&&*c<='Z'?*c-'A'+'a':*c));
+        slug[n]=0;
+        if(!strcmp(slug,name))return k;
+    }
+    return -1;
+}
+
 static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
                        SDL_FRect viewport,float scale,const char *room_name,
                        const MzmSamus *samus,const MzmEquipment *equipment,long frame) {
@@ -3787,6 +3800,10 @@ int main(int argc, char **argv) {
     static char save_paths[3][4096];
     uint8_t save_slot=0;            /* gMostRecentSaveFile */
     const char *debug_input=NULL;
+    const char *expected_room=NULL;
+    uint8_t expected_events[32]={0};
+    uint32_t expected_items=0;
+    bool has_capture_expectations=false;
     /* --item NAME (repeatable): a debug menu item enabled at start, its label
      * in lower case with dashes (for example speed-booster). */
     uint32_t start_items=0;
@@ -3831,16 +3848,26 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--load")) load_save=true;
         else if (!strcmp(argv[i],"--item") && i+1<argc) {
             const char *name=argv[++i];
-            bool found=false;
-            for(int k=0;k<DEBUG_ITEMS_COUNT && !found;k++) {
-                char slug[32];
-                size_t n=0;
-                for(const char *c=debug_items[k].label;*c && n+1<sizeof slug;c++)
-                    slug[n++]=(char)(*c==' '?'-':(*c>='A'&&*c<='Z'?*c-'A'+'a':*c));
-                slug[n]=0;
-                if(!strcmp(slug,name)){start_items|=debug_items[k].item;found=true;}
-            }
-            if(!found){fprintf(stderr,"Unknown item: %s\n",name);return 2;}
+            int item=runtime_debug_item_index(name);
+            if(item<0){fprintf(stderr,"Unknown item: %s\n",name);return 2;}
+            start_items|=debug_items[item].item;
+        }
+        else if (!strcmp(argv[i],"--expect-room") && !expected_room && i+1<argc) {
+            expected_room=argv[++i];
+            has_capture_expectations=true;
+        }
+        else if (!strcmp(argv[i],"--expect-event") && i+1<argc) {
+            int event=atoi(argv[++i]);
+            if(event<=0||event>255){fprintf(stderr,"Invalid expected event: %d\n",event);return 2;}
+            expected_events[event/8]|=(uint8_t)(1u<<(event%8));
+            has_capture_expectations=true;
+        }
+        else if (!strcmp(argv[i],"--expect-item") && i+1<argc) {
+            const char *name=argv[++i];
+            int item=runtime_debug_item_index(name);
+            if(item<0){fprintf(stderr,"Unknown expected item: %s\n",name);return 2;}
+            expected_items|=debug_items[item].item;
+            has_capture_expectations=true;
         }
         else if (!strcmp(argv[i],"--event") && i+1<argc) {
             int event=atoi(argv[++i]);
@@ -3866,9 +3893,13 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
+    }
+    if(has_capture_expectations && !capture_path) {
+        fprintf(stderr,"Capture expectations require --capture.\n");
+        return 2;
     }
     if(start_tourian_escape && (check || title_mode || intro_mode || start_cutscene)) {
         fprintf(stderr,"--tourian-escape cannot be combined with another start mode.\n");
@@ -3982,7 +4013,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -4136,6 +4167,7 @@ int main(int argc, char **argv) {
     int shake_x=0,shake_y=0;
     SDL_Texture *screen_texture=NULL;
     int rc=1;
+    bool capture_expectation_failed=false;
     RuntimeLibrary library = {0};
     RuntimeLibrary projectile_library = {0};
     RuntimeLibrary sprite_library = {0};
@@ -5797,8 +5829,8 @@ frame_overlays:
             int live=0;
             for(int i=0;i<RUNTIME_MAX_SPRITES;i++)
                 live+=(sprites.live[i].status&MZM_SPRITE_STATUS_EXISTS)!=0;
-            printf("Captured frame %ld: %s (pose %s at %d,%d, energy %d, %d sprites)\n",
-                   capture_step,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
+            printf("Captured frame %ld in %s: %s (pose %s at %d,%d, energy %d, %d sprites)\n",
+                   capture_step,current_room,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
             if(intro_mode || title_mode || file_select_mode || pause_mode || game_over_mode ||
@@ -5827,12 +5859,32 @@ frame_overlays:
                            sprites.live[i].secondary?" part":"",sprites.live[i].x>>2,
                            sprites.live[i].y>>2,sprites.live[i].pose,sprites.live[i].status,
                            sprites.live[i].health,sprites.live[i].freeze_timer);
+            if(expected_room && strcmp(expected_room,current_room)) {
+                fprintf(stderr,"Capture expectation failed: room %s, expected %s.\n",
+                        current_room,expected_room);
+                capture_expectation_failed=true;
+            }
+            for(int event=1;event<=255;event++)
+                if((expected_events[event/8]&(1u<<(event%8))) &&
+                   !runtime_event_is_set(&sprites,event)) {
+                    fprintf(stderr,"Capture expectation failed: event %d is not set.\n",event);
+                    capture_expectation_failed=true;
+                }
+            for(int item=0;item<DEBUG_ITEMS_COUNT;item++)
+                if((expected_items&debug_items[item].item) &&
+                   !((equipment.items|equipment.unknown_items)&debug_items[item].item)) {
+                    fprintf(stderr,"Capture expectation failed: item %s is not acquired.\n",
+                            debug_items[item].label);
+                    capture_expectation_failed=true;
+                }
+            if(has_capture_expectations && !capture_expectation_failed)
+                printf("Capture expectations passed.\n");
             running=false;
         }
         SDL_RenderPresent(renderer);
         if(!capture_path)SDL_Delay(8);
     }
-    rc=0;
+    rc=capture_expectation_failed?3:0;
 cleanup:
     mzm_sfx_set_sink(NULL,NULL);
     runtime_audio_stream=NULL;

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-16T16:34:23+00:00",
+ "generated_at": "2026-10-16T17:07:41+00:00",
  "git": {
-  "commit": "36b29a9",
+  "commit": "bdf075c",
   "branch": "main",
   "dirty": true
  },
@@ -9515,6 +9515,12 @@
  },
  "timeline": [
   {
+   "commit": "bdf075c",
+   "date": "2026-10-16",
+   "subject": "Trigger the Long Beam encounter naturally",
+   "scope": "project"
+  },
+  {
    "commit": "36b29a9",
    "date": "2026-10-16",
    "subject": "Load event-driven Zero Mission room sprites",
@@ -9986,12 +9992,6 @@
    "commit": "8a566ac",
    "date": "2026-10-12",
    "subject": "feat(mzm): tumbling missiles",
-   "scope": "mzm"
-  },
-  {
-   "commit": "57f1c03",
-   "date": "2026-10-12",
-   "subject": "feat(mzm): Wave and Plasma Beams, beam and missile trails",
    "scope": "mzm"
   }
  ],

@@ -3392,6 +3392,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   encounter captures, regenerated parity and dashboard data, generated-file
   checks, and the proprietary-file guard passed.
 
+## Patch 0347 - Assertable early-game capture routes
+
+- Headless Zero Mission captures can now declare their required final state:
+  repeatable `--expect-event N` and `--expect-item NAME` checks plus
+  `--expect-room ALIAS`. A failed expectation reports the missing state and
+  exits with status 3; successful capture logs include the final room and an
+  explicit confirmation.
+- `--item` and `--expect-item` share one item-name parser, preventing their
+  command-line spellings from drifting. Acquired unknown items satisfy an
+  item expectation even while they remain inactive before the Fully Powered
+  Suit.
+- Private route probes now verify three early Long Beam segments: entering
+  `brinstar_010` sets event 42 and the real right hatch reaches
+  `brinstar_009`; killing the event Dessgeega sets event 43, unlocks the
+  hatch and reaches `brinstar_030`; the acquired Bomb hint state can be
+  crossed normally and its right hatch reaches `brinstar_003` while event 9
+  and Morph Ball remain present.
+- The full Bomb hint interaction was also replayed from its standing state:
+  Morph Ball grab, hint map, sitting animation, refill, banner dismissal and
+  release all complete. This room is a required progression interaction, not
+  an optional shortcut around the Dessgeega encounter.
+- Remaining boundary: descend `brinstar_003`, cross `brinstar_004`, enter
+  `brinstar_005`, and make a capture expectation pass only after the Long
+  Beam ball has been revealed and collected.
+- Validation on 2026-10-16: warning-clean build, CTest 35/35, Python 438/438,
+  passing and deliberately failing capture expectations, three private
+  early-route smoke captures, refreshed dashboard data, generated-file
+  checks, and the proprietary-file guard passed.
+
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
 - `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,

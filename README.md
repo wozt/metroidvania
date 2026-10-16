@@ -281,7 +281,8 @@ adds an item, `--ammo M S P` sets the ammunition and `--event N` sets a game
 event in every room. Rest
 in a statue's hand in the Morph Ball to be refilled; a hint statue grabs
 Samus, fades the music, flashes and sits down to its hint music, then
-replays the room's track (its map screen is not ported). The Wave Beam crosses walls and the Plasma Beam goes
+opens its target on the pause map and replays the room's track afterwards.
+The Wave Beam crosses walls and the Plasma Beam goes
 through enemies (both debug items, combinable with the other beams). With the Speed Booster
 (an item of the debug menu), a long run starts the speed boost: it
 breaks speed blocks and enemies, and releasing the direction skids (Down
@@ -356,14 +357,16 @@ For headless verification, `--capture out.bmp FRAMES BUTTONS REPEAT` runs
 FRAMES fixed 60 Hz updates with the given GBA button mask (right 0x1, left 0x2,
 up 0x4, down 0x8, A 0x10, B 0x20, L 0x40, R 0x80, Select 0x100), re-pressing A
 and B every REPEAT frames, and saves the rendered frame, for example
-`SDL_VIDEO_DRIVER=dummy ./build/fusion_room_runtime --room brinstar_033
+`SDL_VIDEODRIVER=dummy ./build/fusion_room_runtime --room brinstar_033
 --capture shot.bmp 40 0x20 6`. `--input-script MASK:FRAMES,...` replaces the held mask
 frame by frame (then the `--capture` mask applies), for example
 `--input-script 0:3,8:1,0:1,8:1,0:20,0x20:1` crouches, morphs and places a
 bomb. `--item NAME` enables a debug menu item at start (for example
 `--item morph-ball` or `--item speed-booster`), `--ammo M S P` sets the
 missiles, super missiles and power bombs, and `--energy N` starts with N
-energy.
+energy. Capture smoke tests can require their final state with repeatable
+`--expect-event N` and `--expect-item NAME`, plus `--expect-room ALIAS`; an
+unmet expectation is reported and exits with status 3.
 
 When Samus dies, the native game over screen offers to try again (from the
 most recent save file, or from the start without one) or to return to the

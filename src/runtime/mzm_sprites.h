@@ -856,6 +856,7 @@ typedef struct {
 
 /* EventFunction values read by the ported sprites (include/constants/event.h). */
 enum {
+    MZM_EVENT_EASY = 1, MZM_EVENT_HARD = 2,
     MZM_EVENT_VIEWED_STATUE_ROOM = 42, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED = 43,
     MZM_EVENT_MECHA_RIDLEY_KILLED = 74, MZM_EVENT_ZIPLINES_ACTIVATED = 46,
     MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED = 67, MZM_EVENT_GLASS_TUBE_BROKEN = 73,

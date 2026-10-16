@@ -2,15 +2,16 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Zero Mission room sprites and enemy sprite graphics.
 
-Room placements follow ``SpriteLoadRoomSprites`` / ``SpriteInitPrimary``: a
-room entry's default enemy data (``.pDefaultSpriteData``) lists
+Room placements follow ``RoomLoadEntry`` / ``SpriteLoadRoomSprites`` /
+``SpriteInitPrimary``: each room entry's default, first-event and
+second-event enemy data lists
 ``(y block, x block, slot)`` triples up to ``0xFF``; a slot above 16 selects
-entry ``(slot - 1) % 16`` of the room's default spriteset
-(``sSpritesetPointers[.defaultSpriteset]``: ``PSPRITE`` id and graphics
+entry ``(slot - 1) % 16`` of the selected spriteset
+(``sSpritesetPointers``: ``PSPRITE`` id and graphics
 slot, ``SpriteLoadSpriteset``), a lower slot is sprite ``slot - 1`` in
-graphics slot 0. The first and second event spritesets (hard mode and story
-events) are not exported. Everything is parsed from the pinned
-decompilation; no table is stored in this repository.
+graphics slot 0. The second event has native priority over the first one.
+Everything is parsed from the pinned decompilation; no table is stored in
+this repository.
 
 Sprite graphics follow ``SpriteLoadSpriteset`` and ``SpriteDraw``: the
 LZ77 graphics of ``sSpritesGraphicsPointers`` go to OBJ VRAM 0x4000 + slot *
@@ -346,6 +347,61 @@ def _room_entry_and_spriteset(area: str, number: int, decomp: Path):
     return entry, ids, sets, spriteset
 
 
+def _resolve_room_sprites(data: list[int], ids: dict[str, int],
+                          members: list[tuple[str, int]]) -> list[dict]:
+    """Resolve one RoomEntryRom enemy-data array against its spriteset."""
+    names = {value: name for name, value in ids.items()}
+    sprites = []
+    for index in range(0, len(data) - 2, 3):
+        y, x, slot = data[index:index + 3]
+        if y == 0xFF:
+            break
+        slot &= 0x7F
+        if slot > SPRITESET_ENTRY_TYPES:
+            choice = (slot - 1) % SPRITESET_ENTRY_TYPES
+            if choice >= len(members):
+                continue
+            sprite, gfx_slot = members[choice]
+            gfx_slot &= 7
+        else:
+            sprite, gfx_slot = names.get(slot - 1, f"PSPRITE_{slot - 1}"), 0
+        sprites.append({"y": y, "x": x, "slot": slot, "sprite": sprite,
+                        "gfx_slot": gfx_slot, "room_slot": index // 3})
+    return sprites
+
+
+def room_sprite_variants(area: str, number: int, decomp: Path = DECOMP) -> list[dict]:
+    """The three RoomLoadEntry sprite choices in native priority order.
+
+    Variant 0 is always the default. Variants 1 and 2 carry the numeric
+    event that selects them; ``RoomLoadEntry`` checks variant 2 first.
+    """
+    entry, ids, sets, default_set = _room_entry_and_spriteset(area, number, decomp)
+    events = enum_ids((decomp / "include/constants/event.h").read_text(encoding="utf-8"),
+                      "Event")
+    choices = [
+        (0, 0, entry["pDefaultSpriteData"], default_set),
+        (1, events.get(entry.get("firstSpritesetEvent", "EVENT_NONE"), 0),
+         entry.get("pFirstSpriteData", "sEnemyRoomData_Empty"),
+         int(entry.get("firstSpriteset", str(default_set)), 0)),
+        (2, events.get(entry.get("secondSpritesetEvent", "EVENT_NONE"), 0),
+         entry.get("pSecondSpriteData", "sEnemyRoomData_Empty"),
+         int(entry.get("secondSpriteset", str(default_set)), 0)),
+    ]
+    variants = []
+    for variant, event, symbol, spriteset in choices:
+        if variant and event == 0:
+            continue
+        if spriteset >= len(sets) - 1:
+            spriteset = len(sets) - 1
+        members = [(name, slot & 7) for name, slot in sets[spriteset]]
+        data = enemy_data(decomp / "src/data/rooms", symbol)
+        variants.append({"variant": variant, "event": event, "spriteset": spriteset,
+                         "members": members,
+                         "sprites": _resolve_room_sprites(data, ids, sets[spriteset])})
+    return variants
+
+
 def room_spriteset(area: str, number: int, decomp: Path = DECOMP) -> tuple[int, list]:
     """The room's default spriteset (SpriteLoadSpriteset: gSpriteset and
     gSpritesetSpritesId): its index and (PSPRITE name, graphics slot) entries."""
@@ -355,27 +411,7 @@ def room_spriteset(area: str, number: int, decomp: Path = DECOMP) -> tuple[int, 
 
 def room_sprites(area: str, number: int, decomp: Path = DECOMP) -> list[dict]:
     """Default sprites of a room: block position, PSPRITE and graphics slot."""
-    entry, ids, sets, spriteset = _room_entry_and_spriteset(area, number, decomp)
-    names = {value: name for name, value in ids.items()}
-    data = enemy_data(decomp / "src/data/rooms", entry["pDefaultSpriteData"])
-    sprites = []
-    for index in range(0, len(data) - 2, 3):
-        y, x, slot = data[index:index + 3]
-        if y == 0xFF:
-            break
-        slot &= 0x7F
-        if slot > SPRITESET_ENTRY_TYPES:
-            choice = (slot - 1) % SPRITESET_ENTRY_TYPES
-            members = sets[spriteset]
-            if choice >= len(members):
-                continue
-            sprite, gfx_slot = members[choice]
-            gfx_slot &= 7
-        else:
-            sprite, gfx_slot = names.get(slot - 1, f"PSPRITE_{slot - 1}"), 0
-        sprites.append({"y": y, "x": x, "slot": slot, "sprite": sprite, "gfx_slot": gfx_slot,
-                        "room_slot": index // 3})
-    return sprites
+    return room_sprite_variants(area, number, decomp)[0]["sprites"]
 
 
 def data_file(decomp: Path, gfx_symbol: str) -> Path:

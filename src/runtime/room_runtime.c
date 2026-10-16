@@ -80,11 +80,18 @@ typedef struct {
     bool open;
 } RoomHatch;
 
-/* One default room sprite (SpriteLoadRoomSprites), exported by
- * scripts/mzm_sprites.py: block position, sprite name, graphics slot. */
+/* One room sprite (SpriteLoadRoomSprites), exported by scripts/mzm_sprites.py:
+ * block position, sprite name, graphics slot. RoomLoadEntry chooses the
+ * default, first-event or second-event variant before loading the sprites. */
 #define MAX_ROOM_SPRITES 24
 #define MAX_SPRITESET_ENTRIES 15    /* MAX_AMOUNT_OF_SPRITE_TYPES */
+#define ROOM_SPRITE_VARIANTS 3
 typedef struct { int y, x, gfx_slot, room_slot; char name[64]; } RoomSprite;
+typedef struct {
+    int event, spriteset;
+    RoomSprite sprites[MAX_ROOM_SPRITES]; int sprite_count;
+    char spriteset_names[MAX_SPRITESET_ENTRIES][64]; int spriteset_count;
+} RoomSpriteVariant;
 /* One native collision type and transition behavior per 16-pixel block. */
 typedef struct { int width, height, resolution, room; char world[16], area[40];
     unsigned char types[MAX_ROOM_CELLS]; unsigned char behaviors[MAX_ROOM_CELLS];
@@ -93,7 +100,7 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     int never_reform_recorded;      /* blocks.never_reform entries remembered */
     RoomDoor doors[MAX_ROOM_DOORS]; int door_count;
     RoomHatch hatches[MAX_ROOM_HATCHES]; int hatch_count;
-    RoomSprite sprites[MAX_ROOM_SPRITES]; int sprite_count;
+    RoomSpriteVariant sprite_variants[ROOM_SPRITE_VARIANTS];
     /* Backgrounds (scripts/mzm_bg_layers.py): the tileset, the room's
      * transparency and BG properties, the block layers BG0 (when RLE), BG1
      * and BG2 as sheet indices, and the LZ77 text layers BG0 and BG3. */
@@ -117,8 +124,6 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
      * breakable block state (mzm_blocks). */
     unsigned short clip[MAX_ROOM_CELLS];
     MzmBlocks blocks;
-    /* The default spriteset (gSpriteset, gSpritesetSpritesId names). */
-    int spriteset; char spriteset_names[MAX_SPRITESET_ENTRIES][64]; int spriteset_count;
     /* The room entry's musicTrack (U line). */
     bool has_music; int music;
     size_t count; } Room;
@@ -357,14 +362,53 @@ static bool parse_native_room(const char *path, Room *room) {
             continue;
         }
         if (line[0] == 'P') {
+            RoomSpriteVariant *variant = &room->sprite_variants[0];
             RoomSprite sprite = {0};
-            if (room->sprite_count >= MAX_ROOM_SPRITES ||
+            if (variant->sprite_count >= MAX_ROOM_SPRITES ||
                 sscanf(line, "P\t%d\t%d\t%63[^\t]\t%d\t%d %c", &sprite.y, &sprite.x, sprite.name,
                        &sprite.gfx_slot, &sprite.room_slot, &extra) != 5 ||
                 sprite.x < 0 || sprite.x >= room->width / 16 || sprite.y < 0 ||
                 sprite.y >= room->height / 16 || sprite.gfx_slot < 0 || sprite.gfx_slot > 7)
                 goto failure;
-            room->sprites[room->sprite_count++] = sprite;
+            variant->sprites[variant->sprite_count++] = sprite;
+            continue;
+        }
+        if (line[0] == 'F') {
+            int index, event, spriteset;
+            if (sscanf(line, "F\t%d\t%d\t%d %c", &index, &event, &spriteset, &extra) != 3 ||
+                index < 1 || index >= ROOM_SPRITE_VARIANTS || event < 1 || event > 255 ||
+                spriteset < 0 || spriteset > 255 || room->sprite_variants[index].event != 0)
+                goto failure;
+            room->sprite_variants[index].event = event;
+            room->sprite_variants[index].spriteset = spriteset;
+            continue;
+        }
+        if (line[0] == 'J') {
+            int index;
+            RoomSprite sprite = {0};
+            if (sscanf(line, "J\t%d\t%d\t%d\t%63[^\t]\t%d\t%d %c", &index, &sprite.y,
+                       &sprite.x, sprite.name, &sprite.gfx_slot, &sprite.room_slot, &extra) != 6 ||
+                index < 1 || index >= ROOM_SPRITE_VARIANTS ||
+                room->sprite_variants[index].event == 0 ||
+                room->sprite_variants[index].sprite_count >= MAX_ROOM_SPRITES ||
+                sprite.x < 0 || sprite.x >= room->width / 16 || sprite.y < 0 ||
+                sprite.y >= room->height / 16 || sprite.gfx_slot < 0 || sprite.gfx_slot > 7)
+                goto failure;
+            RoomSpriteVariant *variant = &room->sprite_variants[index];
+            variant->sprites[variant->sprite_count++] = sprite;
+            continue;
+        }
+        if (line[0] == 'N') {
+            int index, gfx_slot;
+            char name[64];
+            if (sscanf(line, "N\t%d\t%63[^\t]\t%d %c", &index, name, &gfx_slot, &extra) != 3 ||
+                index < 1 || index >= ROOM_SPRITE_VARIANTS ||
+                room->sprite_variants[index].event == 0 || gfx_slot < 0 || gfx_slot > 7 ||
+                room->sprite_variants[index].spriteset_count >= MAX_SPRITESET_ENTRIES)
+                goto failure;
+            RoomSpriteVariant *variant = &room->sprite_variants[index];
+            snprintf(variant->spriteset_names[variant->spriteset_count++],
+                     sizeof variant->spriteset_names[0], "%s", name);
             continue;
         }
         if (line[0] == 'L') {
@@ -455,14 +499,15 @@ static bool parse_native_room(const char *path, Room *room) {
             continue;
         }
         if (line[0] == 'S') {
+            RoomSpriteVariant *variant = &room->sprite_variants[0];
             int index, gfx_slot;
-            if (room->spriteset_count >= MAX_SPRITESET_ENTRIES ||
+            if (variant->spriteset_count >= MAX_SPRITESET_ENTRIES ||
                 sscanf(line, "S\t%d\t%63[^\t]\t%d %c", &index,
-                       room->spriteset_names[room->spriteset_count], &gfx_slot, &extra) != 3 ||
+                       variant->spriteset_names[variant->spriteset_count], &gfx_slot, &extra) != 3 ||
                 index < 0 || index > 255 || gfx_slot < 0 || gfx_slot > 7)
                 goto failure;
-            room->spriteset = index;
-            room->spriteset_count++;
+            variant->spriteset = index;
+            variant->spriteset_count++;
             continue;
         }
         if (line[0] == 'E') {
@@ -1691,6 +1736,33 @@ static void runtime_bg2_moving_position(const Room *room, float cx, float cy, in
     *y = py / 4 - 32;
 }
 
+/* RoomLoadEntry helpers kept outside the SDL runtime so the native event
+ * selection can be covered by the ROM-free room contract test. */
+static bool runtime_event_flag(const uint8_t events[32], int event) {
+    return event > 0 && event < 256 &&
+           (events[event / 8] & (uint8_t)(1u << (event % 8))) != 0;
+}
+
+static const RoomSpriteVariant *runtime_room_sprite_variant_for_events(
+        const Room *room, const uint8_t events[32]) {
+    if (runtime_event_flag(events, room->sprite_variants[2].event))
+        return &room->sprite_variants[2];
+    if (runtime_event_flag(events, room->sprite_variants[1].event))
+        return &room->sprite_variants[1];
+    return &room->sprite_variants[0];
+}
+
+/* ColorFadingProcess_BeforeIntroText sets exactly one difficulty event
+ * before the opening story text. Keep it synchronized with the saved
+ * difficulty because the runtime approximates that in-game fade. */
+static void runtime_apply_difficulty_event(uint8_t events[32], uint8_t difficulty) {
+    events[MZM_EVENT_EASY / 8] &= (uint8_t)~(1u << (MZM_EVENT_EASY % 8));
+    events[MZM_EVENT_HARD / 8] &= (uint8_t)~(1u << (MZM_EVENT_HARD % 8));
+    uint8_t event = difficulty == 0 ? MZM_EVENT_EASY :
+                    difficulty == 2 ? MZM_EVENT_HARD : 0;
+    if (event) events[event / 8] |= (uint8_t)(1u << (event % 8));
+}
+
 #ifndef FUSION_RUNTIME_TEST
 /* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
 #define RUNTIME_LIBRARY_MAX 16384
@@ -2261,8 +2333,7 @@ typedef struct {
     /* Families whose OAM tables are all in the library; the others are
      * reported once and their sprites are not spawned. */
     bool family_ok[MZM_SPRITE_FAMILIES];
-    /* Native event flags of this session (EventFunction); nothing sets the
-     * story events yet, so they start clear as in a new game. */
+    /* Native event flags of this session (EventFunction). */
     uint8_t events[32];
     Room *room;                     /* the room the hooks change */
     /* gAlarmTimer and the other sprite globals; the alarm survives door
@@ -2317,6 +2388,7 @@ static void runtime_apply_save(const MzmSaveData *save,MzmEquipment *equipment,
                                const MzmCollision *collision,bool loading_file) {
     *equipment=save->equipment;
     memcpy(sprites->events,save->events,sizeof sprites->events);
+    runtime_apply_difficulty_event(sprites->events, save->difficulty);
     runtime_minimap=save->minimap;
     runtime_collected_items=save->items;
     runtime_restore_memories(save);
@@ -2596,26 +2668,37 @@ static bool runtime_sprite_kind_open(MzmSpriteKind *kind, RuntimeLibrary *librar
 }
 
 static bool runtime_effect_kind_open(uint8_t *timers, uint8_t *count, RuntimeLibrary *library,
+                                     RuntimeLibrary *fallback_library, const char *fallback_variant,
                                      const char *table) {
     char key[160];
     snprintf(key, sizeof key, "Particle/%s/none", table);
     RuntimeLibraryEntry *entry = runtime_library_find(library, key);
-    if (!entry || entry->count > MZM_EFFECT_MAX_FRAMES) return false;
+    if (!entry && fallback_library && fallback_variant) {
+        snprintf(key, sizeof key, "Particle/%s/%s/none", table, fallback_variant);
+        entry = runtime_library_find(fallback_library, key);
+    }
+    if (!entry || entry->count > MZM_EFFECT_MAX_FRAMES) {
+        fprintf(stderr, "Zero Mission effect library: %s (%s): %s\n", table, key,
+                entry ? "too many frames" : "missing");
+        return false;
+    }
     *count = (uint8_t)entry->count;
     for (int f = 0; f < entry->count; ++f) timers[f] = (uint8_t)entry->ticks[f];
     return true;
 }
 
-static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *library) {
+static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *library,
+                                      RuntimeLibrary *projectile_library) {
     MzmEffectKinds *effects = &sprites->effect_kinds;
     for (int e = 0; e < MZM_PARTICLE_EFFECTS; ++e) {
         const char *table = mzm_particle_table((uint8_t)e);
+        const char *variant = e == MZM_PE_CHARGED_PISTOL_TRAIL ? "Pistol" : NULL;
         if (table && !runtime_effect_kind_open(effects->timers[e], &effects->counts[e], library,
-                                               table))
+                                               projectile_library, variant, table))
             return false;
     }
     if (!runtime_effect_kind_open(effects->debris_timers, &effects->debris_count, library,
-                                  "SpriteDebrisOam"))
+                                  NULL, NULL, "SpriteDebrisOam"))
         return false;
     /* The banner's durations do not depend on its message. */
     sprites->banner_ok = sprites->message_names[MZM_MESSAGE_ENERGY_TANK_ACQUIRED][0] != '\0';
@@ -2646,15 +2729,27 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
     return true;
 }
 
-/* SpriteLoadRoomSprites: the ported sprites of the room. */
+/* RoomLoadEntry: the second event has priority, then the first one, then
+ * the default sprite data and spriteset. */
+static bool runtime_event_is_set(const RuntimeSprites *sprites, int event) {
+    return runtime_event_flag(sprites->events, event);
+}
+
+static const RoomSpriteVariant *runtime_room_sprite_variant(
+        const Room *room, const RuntimeSprites *sprites) {
+    return runtime_room_sprite_variant_for_events(room, sprites->events);
+}
+
+/* SpriteLoadRoomSprites: the ported sprites of the selected room variant. */
 /* LocationTextGetGfxSlot: the location text of a room entered through
  * `last_door` (gLastDoorUsed; -1: unknown), or -1. The save and map room
  * spritesets always name their room; otherwise a door with
  * DOOR_TYPE_DISPLAYS_ROOM_LOCATION names the room's area (LocationTextGet*). */
-static int runtime_location_text(const Room *room, int last_door) {
+static int runtime_location_text(const Room *room, const RoomSpriteVariant *variant,
+                                 int last_door) {
     enum { LT_BRINSTAR, LT_KRAID, LT_NORFAIR, LT_RIDLEY, LT_TOURIAN, LT_CRATERIA, LT_CHOZODIA,
            LT_MOTHERSHIP, LT_PLANET_ZEBES, LT_SAVE_ROOM, LT_RESEARCH_ROOM, LT_MAP_ROOM, LT_CHOZO_RUINS };
-    switch (room->spriteset) {
+    switch (variant->spriteset) {
     case 33: case 59: case 88: return LT_SAVE_ROOM;
     case 27: case 103: return LT_MAP_ROOM;
     default: break;
@@ -2712,9 +2807,10 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
     memset(sprites->live, 0, sizeof sprites->live);
     memset(&sprites->effects, 0, sizeof sprites->effects);
     if (!sprites->tables_ok) return;
+    const RoomSpriteVariant *variant = runtime_room_sprite_variant(room, sprites);
     int slot = 0;
     /* SpriteUtilInitLocationText: the area banner takes slot 0. */
-    int lt = runtime_location_text(room, last_door);
+    int lt = runtime_location_text(room, variant, last_door);
     if (lt >= 0 && sprites->family_ok[MZM_FAMILY_GADGET]) {
         MzmSprite *banner = &sprites->live[slot++];
         banner->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN | MZM_SPRITE_STATUS_NOT_DRAWN |
@@ -2727,17 +2823,18 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
         banner->draw_order = 1;
         banner->ignore_samus_timer = 1;
     }
-    for (int i = 0; i < room->sprite_count && slot < RUNTIME_MAX_SPRITES; ++i) {
+    for (int i = 0; i < variant->sprite_count && slot < RUNTIME_MAX_SPRITES; ++i) {
         for (int id = 0; id < 256; ++id) {
-            if (strcmp(sprites->names[id], room->sprites[i].name) ||
+            if (strcmp(sprites->names[id], variant->sprites[i].name) ||
                 !mzm_sprite_supported((uint8_t)id) ||
                 !sprites->family_ok[mzm_sprite_family((uint8_t)id, false)])
                 continue;
             /* SpriteInitPrimary: the sprite owns the slot it takes. */
             mzm_sprite_init_primary(&sprites->live[slot], (uint8_t)id,
-                                    (uint8_t)room->sprites[i].gfx_slot,
-                                    (uint16_t)room->sprites[i].y, (uint16_t)room->sprites[i].x,
-                                    (uint8_t)room->sprites[i].room_slot, (uint8_t)slot);
+                                    (uint8_t)variant->sprites[i].gfx_slot,
+                                    (uint16_t)variant->sprites[i].y,
+                                    (uint16_t)variant->sprites[i].x,
+                                    (uint8_t)variant->sprites[i].room_slot, (uint8_t)slot);
             slot++;
             break;
         }
@@ -2883,7 +2980,7 @@ static void runtime_sprite_metroid_drain(void *context, uint16_t damage, uint8_t
 /* MzmSpriteHooks of the runtime. */
 static bool runtime_sprite_check_event(void *context, uint8_t event) {
     const RuntimeSprites *sprites = context;
-    return sprites->events[event / 8] & (1u << (event % 8));
+    return runtime_event_is_set(sprites, event);
 }
 
 static void runtime_sprite_set_event(void *context, uint8_t event) {
@@ -2930,11 +3027,12 @@ static void runtime_sprite_remove_solid(void *context, uint16_t y, uint16_t x) {
 static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *room,
                                          const RoomDoor *used) {
     if (!sprites->tables_ok) return;
+    const RoomSpriteVariant *variant = runtime_room_sprite_variant(room, sprites);
     uint8_t ids[MAX_SPRITESET_ENTRIES];
     int count = 0;
-    for (int i = 0; i < room->spriteset_count; ++i)
+    for (int i = 0; i < variant->spriteset_count; ++i)
         for (int id = 0; id < 256; ++id)
-            if (!strcmp(sprites->names[id], room->spriteset_names[i])) {
+            if (!strcmp(sprites->names[id], variant->spriteset_names[i])) {
                 ids[count++] = (uint8_t)id;
                 break;
             }
@@ -2951,7 +3049,7 @@ static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *ro
     MzmSpriteHooks bound = hooks;
     bound.context = sprites;
     mzm_spawn_waiting_pirates(sprites->live, RUNTIME_MAX_SPRITES, &sprites->globals, &bound, ids,
-                              count, (uint8_t)room->spriteset, (uint16_t)y, (uint16_t)x,
+                              count, (uint8_t)variant->spriteset, (uint16_t)y, (uint16_t)x,
                               no_hatch);
 }
 
@@ -4093,7 +4191,7 @@ int main(int argc, char **argv) {
     sprites.tables_ok = runtime_sprite_tables_open(&sprites, RUNTIME_SPRITE_TABLES);
     sprites.kinds_ok = sprites.tables_ok &&
                        runtime_library_open(&sprite_library, RUNTIME_SPRITE_LIBRARY) &&
-                       runtime_sprite_kinds_open(&sprites, &sprite_library);
+                       runtime_sprite_kinds_open(&sprites, &sprite_library, &projectile_library);
     if (!sprites.kinds_ok)
         fprintf(stderr, "No Zero Mission sprites: python3 -m scripts.mzm_sprites\n");
     runtime_sprites_spawn(&sprites, room, -1);

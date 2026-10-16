@@ -43,6 +43,24 @@ class MzmRuntimeRoomTests(unittest.TestCase):
         ).splitlines()
         self.assertEqual(lines[-3:], ["S\t53\tSPACE_PIRATE\t0", "S\t53\tSEARCHLIGHT\t4", "END"])
 
+    def test_event_sprite_variants_are_encoded_even_when_empty(self):
+        tables = mzm_runtime_room.collision_tables(DECOMP)
+        variants = [
+            {"variant": 0, "event": 0, "spriteset": 1, "members": [], "sprites": []},
+            {"variant": 1, "event": 42, "spriteset": 94,
+             "members": [("PSPRITE_DESSGEEGA_AFTER_LONG_BEAM", 0)],
+             "sprites": [{"y": 3, "x": 40, "sprite": "PSPRITE_DESSGEEGA_AFTER_LONG_BEAM",
+                           "gfx_slot": 0, "room_slot": 0}]},
+            {"variant": 2, "event": 2, "spriteset": 0, "members": [], "sprites": []},
+        ]
+        lines = mzm_runtime_room.encode_room(
+            "Brinstar", 9, 64 * 16, 16 * 16, (64, 16, (0,) * (64 * 16)), tables,
+            sprite_variants=variants).splitlines()
+        self.assertIn("F\t1\t42\t94", lines)
+        self.assertIn("J\t1\t3\t40\tDESSGEEGA_AFTER_LONG_BEAM\t0\t0", lines)
+        self.assertIn("N\t1\tDESSGEEGA_AFTER_LONG_BEAM\t0", lines)
+        self.assertIn("F\t2\t2\t0", lines)
+
     def test_doors_export_their_own_exit(self):
         # RoomLoad places Samus by the used door's own xExit / yExit (door 0
         # at a new game's start), exported as X lines.

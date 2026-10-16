@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-15**.
+Last updated: **2026-10-16**.
 
 ## Current product state
 
@@ -3336,6 +3336,32 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-15: warning-clean build, CTest 35/35, Python 436/436,
   every rebuild task up to date, regenerated parity and dashboard data, fresh
   generated-file checks, and the proprietary-file guard passed.
+
+## Patch 0345 - Zero Mission event-driven room sprites
+
+- Room export now retains all three native sprite configurations: the default
+  placements and spriteset plus the first- and second-event variants. The
+  runtime parses the new `F`, `J` and `N` records and applies the native
+  second-event, first-event, default priority whenever a room is loaded.
+- Save difficulty is synchronized to `EVENT_EASY` and `EVENT_HARD`, allowing
+  the same mechanism to select difficulty-specific placements. Waiting Space
+  Pirates also consult the selected spriteset instead of the default one.
+- The projectile-only charged-pistol trail no longer disables the entire
+  enemy sprite engine: effect timing first uses the enemy sprite library and
+  may use the pistol variant from the projectile library, with an exact
+  missing-table diagnostic.
+- ROM-free tests cover variant extraction, private room serialization, event
+  priority and difficulty flags. A direct runtime capture of `brinstar_009`
+  contains no sprite by default and loads the native
+  `DESSGEEGA_AFTER_LONG_BEAM` placement when
+  `EVENT_VIEWED_STATUE_ROOM` is active.
+- Remaining boundary: port the statue-room interaction that sets
+  `EVENT_VIEWED_STATUE_ROOM` during ordinary play, then validate the early
+  Morph Ball-to-Long Beam progression without debug events.
+- Validation on 2026-10-16: warning-clean build, CTest 35/35, Python 438/438,
+  every private rebuild task up to date, direct default/event room captures,
+  regenerated parity and dashboard data, fresh generated-file checks, and the
+  proprietary-file guard passed.
 
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 

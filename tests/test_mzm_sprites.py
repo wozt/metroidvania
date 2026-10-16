@@ -28,6 +28,21 @@ class MzmSpriteDataTests(unittest.TestCase):
         launcher = next(item for item in sprites if item["sprite"] == "PSPRITE_MORPH_BALL_LAUNCHER")
         self.assertEqual(launcher["gfx_slot"], 4)
 
+    def test_room_event_variants_resolve_placements_and_priority(self):
+        variants = mzm_sprites.room_sprite_variants("Brinstar", 9, DECOMP)
+        self.assertEqual([(variant["variant"], variant["event"], variant["spriteset"])
+                          for variant in variants], [(0, 0, 94), (1, 42, 94)])
+        self.assertEqual(variants[0]["sprites"], [])
+        self.assertEqual([sprite["sprite"] for sprite in variants[1]["sprites"]],
+                         ["PSPRITE_DESSGEEGA_AFTER_LONG_BEAM"])
+
+        # RoomLoadEntry checks the second event before the first one. Both
+        # choices are exported, including their different room placements.
+        variants = mzm_sprites.room_sprite_variants("Brinstar", 2, DECOMP)
+        self.assertEqual([(variant["variant"], variant["event"])
+                          for variant in variants], [(0, 0), (1, 37), (2, 2)])
+        self.assertEqual(len(variants[2]["sprites"]), 6)
+
     def test_zoomer_data_file_and_tables(self):
         sprite_c = (DECOMP / "src/sprite.c").read_text(encoding="utf-8")
         graphics = mzm_sprites.pointer_table(sprite_c, "sSpritesGraphicsPointers")

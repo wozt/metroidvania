@@ -211,6 +211,35 @@ int main(void) {
                fresh.never_reform_count == 0 && !fresh.escaped_zebes && fresh.igt.hours == 0);
         for (int i = 0; i < MZM_SAVE_EVENTS; ++i) assert(fresh.events[i] == 0);
     }
+    /* RoomLoadEntry's event spriteset selection: the second event wins over
+     * the first, and the skipped opening fade still establishes the native
+     * easy/hard event used by early-room variants. */
+    {
+        Room variant_room = {0};
+        uint8_t variant_events[32] = {0};
+        variant_room.sprite_variants[0].spriteset = 1;
+        variant_room.sprite_variants[1].event = MZM_EVENT_VIEWED_STATUE_ROOM;
+        variant_room.sprite_variants[1].spriteset = 94;
+        variant_room.sprite_variants[2].event = MZM_EVENT_HARD;
+        variant_room.sprite_variants[2].spriteset = 84;
+        assert(runtime_room_sprite_variant_for_events(&variant_room, variant_events) ==
+               &variant_room.sprite_variants[0]);
+        variant_events[MZM_EVENT_VIEWED_STATUE_ROOM / 8] |=
+            (uint8_t)(1u << (MZM_EVENT_VIEWED_STATUE_ROOM % 8));
+        assert(runtime_room_sprite_variant_for_events(&variant_room, variant_events) ==
+               &variant_room.sprite_variants[1]);
+        runtime_apply_difficulty_event(variant_events, 2);
+        assert(runtime_event_flag(variant_events, MZM_EVENT_HARD) &&
+               !runtime_event_flag(variant_events, MZM_EVENT_EASY) &&
+               runtime_room_sprite_variant_for_events(&variant_room, variant_events) ==
+                   &variant_room.sprite_variants[2]);
+        runtime_apply_difficulty_event(variant_events, 0);
+        assert(runtime_event_flag(variant_events, MZM_EVENT_EASY) &&
+               !runtime_event_flag(variant_events, MZM_EVENT_HARD));
+        runtime_apply_difficulty_event(variant_events, 1);
+        assert(!runtime_event_flag(variant_events, MZM_EVENT_EASY) &&
+               !runtime_event_flag(variant_events, MZM_EVENT_HARD));
+    }
     /* RoomLoad at door 0 (Brinstar's first door: x 38, y 2, exit 16, 16):
      * x = 38 * 64 + (16 + 8) * 4, native y = 3 * 64 + 16 * 4 - 1, facing
      * the foreground, facing left. */

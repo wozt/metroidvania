@@ -332,7 +332,8 @@ def encode_room(area: str, number: int, width: int, height: int,
                 doors: list[dict] | None = None, hatches=None, sprites=None,
                 spriteset=None, backgrounds: list[str] | None = None,
                 music: int | None = None,
-                targets: dict[int, tuple[str, dict]] | None = None) -> str:
+                targets: dict[int, tuple[str, dict]] | None = None,
+                sprite_variants: list[dict] | None = None) -> str:
     clip_width, clip_height, cells = clip
     if clip_width * 16 != width or clip_height * 16 != height:
         raise ValueError("Clipdata dimensions differ from the rendered room")
@@ -381,17 +382,36 @@ def encode_room(area: str, number: int, width: int, height: int,
     for index, x, y, hatch, weakness, health in hatches or []:
         lines.append(f"H\t{index}\t{x}\t{y}\t{hatch[len('HATCH_'):].lower()}\t"
                      f"{weakness}\t{health}")
-    # Default room sprites (scripts.mzm_sprites.room_sprites): block y and x,
-    # sprite, graphics slot and room slot.
+    if sprite_variants:
+        default = next((variant for variant in sprite_variants
+                        if variant["variant"] == 0), None)
+        if default:
+            sprites = default["sprites"]
+            spriteset = (default["spriteset"], default["members"])
+    # Default room sprites: block y and x, sprite, graphics slot and room slot.
     for sprite in sprites or []:
         lines.append(f"P\t{sprite['y']}\t{sprite['x']}\t{sprite['sprite'][len('PSPRITE_'):]}\t"
                      f"{sprite['gfx_slot']}\t{sprite['room_slot']}")
-    # The default spriteset (scripts.mzm_sprites.room_spriteset): index,
-    # sprite and graphics slot of each entry.
+    # The default spriteset: index, sprite and graphics slot of each entry.
     if spriteset:
         index, members = spriteset
         for name, slot in members:
             lines.append(f"S\t{index}\t{name[len('PSPRITE_'):]}\t{slot}")
+    # RoomLoadEntry's first and second event variants. F carries the event
+    # and spriteset even when its enemy data is empty; J and N are the
+    # variant's placements and spriteset members. The runtime checks variant
+    # 2 before variant 1 like the native game.
+    for variant in sprite_variants or []:
+        number_variant = variant["variant"]
+        if number_variant == 0:
+            continue
+        lines.append(f"F\t{number_variant}\t{variant['event']}\t{variant['spriteset']}")
+        for sprite in variant["sprites"]:
+            lines.append(f"J\t{number_variant}\t{sprite['y']}\t{sprite['x']}\t"
+                         f"{sprite['sprite'][len('PSPRITE_'):]}\t{sprite['gfx_slot']}\t"
+                         f"{sprite['room_slot']}")
+        for name, slot in variant["members"]:
+            lines.append(f"N\t{number_variant}\t{name[len('PSPRITE_'):]}\t{slot}")
     # The room entry's musicTrack (CheckPlayRoomMusicTrack).
     if music is not None:
         lines.append(f"U\t{music}")
@@ -434,10 +454,9 @@ def produce(root: Path, area: str, number: int) -> dict:
     hatch_types, hatch_behaviors = hatch_tables()
     hatches = room_hatches(doors, number, clip, tables, hatch_types, hatch_behaviors)
     try:
-        sprites = mzm_sprites.room_sprites(area, number)
-        spriteset = mzm_sprites.room_spriteset(area, number)
+        sprite_variants = mzm_sprites.room_sprite_variants(area, number)
     except ValueError:
-        sprites, spriteset = [], None   # rooms outside the area tables (test rooms)
+        sprite_variants = []   # rooms outside the area tables (test rooms)
     # Block layers by property bit (BG0 and BG2 when RLE compressed).
     rle = mzm_bg_layers.bg_properties()["BG_PROP_RLE_COMPRESSED"]
     blocks = {"Bg1": layers["Bg1"]}
@@ -448,8 +467,9 @@ def produce(root: Path, area: str, number: int) -> dict:
     background_lines, images = mzm_bg_layers.room_background_lines(fields, blocks, tileset)
     background_lines += hatch_animation_lines(tables, hatch_behaviors)
     background_lines += hatch_lock_lines(area, number, doors)
-    text = encode_room(area, number, width, height, clip, tables, doors, hatches, sprites,
-                       spriteset, background_lines, room_music(fields), area_targets(area))
+    text = encode_room(area, number, width, height, clip, tables, doors, hatches,
+                       backgrounds=background_lines, music=room_music(fields),
+                       targets=area_targets(area), sprite_variants=sprite_variants)
     folder = private_path(Path(root), RUNTIME_ROOMS / f"{area.lower()}_{number:03}",
                           create=True)
     folder.mkdir(exist_ok=True)

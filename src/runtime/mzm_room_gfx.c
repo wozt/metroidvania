@@ -361,7 +361,7 @@ bool mzm_room_gfx_bg0_position(MzmRoomGfx *g, int bg1_x, int bg1_y, bool movemen
     }
     if (g->effect_y != MZM_ROOM_GFX_NO_EFFECT_Y) {
         *x = bg1_x;
-        int position = (g->effect_y - bg1_y * 4) >> 2;
+        int position = (g->effect_y + g->effect_y_offset - bg1_y * 4) >> 2;
         int wave = 0;
         uint32_t table = sym("sWaterLoopCounterArray");
         if (g->water_moving) {
@@ -395,7 +395,7 @@ bool mzm_room_gfx_bg0_position(MzmRoomGfx *g, int bg1_x, int bg1_y, bool movemen
 
 uint16_t mzm_room_gfx_effect_y(const MzmRoomGfx *g) {
     if (!g->ready || g->effect_y == MZM_ROOM_GFX_NO_EFFECT_Y) return 0;
-    int position = g->effect_y + g->water_y_offset;
+    int position = g->effect_y + g->effect_y_offset + g->water_y_offset;
     return (uint16_t)(position < 0 ? 0 : position);
 }
 

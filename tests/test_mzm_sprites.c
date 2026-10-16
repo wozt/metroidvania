@@ -6,6 +6,7 @@
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
 #include "mzm_projectiles.h"
+#include "mzm_samus.h"
 #include "mzm_sprites.h"
 #include "mzm_screen_shake.h"
 
@@ -88,7 +89,7 @@ static void test_affect(void *context, uint16_t y, uint16_t x, int damage) {
     last_affect_damage = damage;
 }
 
-static int caa_calls, last_caa, messages[4], message_count;
+static int caa_calls, last_caa, messages[4], message_count, effect_y_delta;
 
 static void test_apply_caa(void *context, uint16_t y, uint16_t x, uint8_t caa) {
     (void)context;
@@ -101,6 +102,11 @@ static void test_apply_caa(void *context, uint16_t y, uint16_t x, uint8_t caa) {
 static void test_spawn_message(void *context, uint8_t message) {
     (void)context;
     if (message_count < 4) messages[message_count++] = message;
+}
+
+static void test_move_effect_y(void *context, int16_t delta) {
+    (void)context;
+    effect_y_delta += delta;
 }
 
 static int bg_blocks, last_bg_value;
@@ -116,7 +122,8 @@ static void set_bg_block(void *context, uint8_t bg, uint16_t value, uint16_t y, 
 
 static const MzmSpriteHooks test_hooks = {NULL, test_check_event, test_set_event,
                                           test_door_timer, test_remove_solid, test_affect,
-                                          test_apply_caa, test_spawn_message, NULL, NULL};
+                                          test_apply_caa, test_spawn_message, NULL, NULL,
+                                          test_move_effect_y};
 
 static int leeches;
 
@@ -5106,6 +5113,71 @@ int main(void) {
         mzm_sprite_update(&room[0], 0, &item_frame);
         assert(room[0].pose == 0x23 && room[1].status == 0 && items.items & MZM_ITEM_CHARGE_BEAM &&
                messages[0] == 9 && test_events[20 / 8] & (1u << (20 % 8)));
+    }
+    /* Acid Worm: the activated zipline starts the native entrance, the
+     * weak body part owns damage, and death opens the arena persistently. */
+    {
+        MzmSprite room[20] = {0};
+        MzmSpriteGlobals globals = {0};
+        MzmSpriteSamusLink link = {.samus_pose = MZM_POSE_ON_ZIPLINE};
+        MzmSpriteKind acid_kind = {0};
+        for (int a = 0; a < MZM_ACID_WORM_ANIMS; ++a) {
+            acid_kind.counts[a] = 4;
+            for (int f = 0; f < 4; ++f) acid_kind.timers[a][f] = 2;
+        }
+        memset(test_events, 0, sizeof test_events);
+        test_events[MZM_EVENT_ZIPLINES_ACTIVATED / 8] =
+            (uint8_t)(1u << (MZM_EVENT_ZIPLINES_ACTIVATED % 8));
+        tables.health[MZM_PSPRITE_ACID_WORM] = 600;
+        tables.secondary_health[MZM_SSPRITE_ACID_WORM_PART] = 1;
+        tables.secondary_health[MZM_SSPRITE_ACID_WORM_SPIT] = 1;
+        effect_y_delta = caa_calls = door_timer_calls = 0;
+        room[0] = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN,
+                              .sprite_id = MZM_PSPRITE_ACID_WORM, .gfx_slot = 3,
+                              .ram_slot = 0, .y = 13 * 64, .x = 16 * 64};
+        MzmSpriteFrame af = frame;
+        af.sprites = room;
+        af.sprite_count = 20;
+        af.globals = &globals;
+        af.hooks = &test_hooks;
+        af.samus_link = &link;
+        af.samus_x = 16 * 64 + 32;
+        af.samus_y = 7 * 64;
+        af.kinds[MZM_FAMILY_ACID_WORM] = &acid_kind;
+        mzm_sprite_update(&room[0], 0, &af);
+        int parts = 0;
+        for (int i = 1; i < 20; ++i)
+            parts += room[i].status && room[i].sprite_id == MZM_SSPRITE_ACID_WORM_PART;
+        assert(room[0].pose == 0x1 && parts == 9 && door_timer_calls == 1 &&
+               last_door_timer == 1 && room[0].health == 600);
+        mzm_sprite_update(&room[0], 0, &af);
+        assert(room[0].pose == 0x42);
+        mzm_sprite_update(&room[0], 0, &af);
+        assert(room[0].pose == 0x43 && caa_calls == 6 && last_caa == MZM_CAA_REMOVE_SOLID);
+        int intro_frames = 0;
+        while (room[0].pose != 0x9 && intro_frames++ < 200)
+            mzm_sprite_update(&room[0], 0, &af);
+        assert(room[0].pose == 0x9 && intro_frames > 100 && effect_y_delta == 0);
+        MzmSprite *weak = NULL;
+        for (int i = 1; i < 20; ++i) {
+            mzm_sprite_update(&room[i], i, &af);
+            if (room[i].status && room[i].room_slot == 1) weak = &room[i];
+        }
+        assert(weak && weak->anim == MZM_ACID_WORM_PART_WEAK_POINT);
+        room[0].pose = 0x23;
+        weak->health = 1004;
+        mzm_sprite_update(weak, (int)(weak - room), &af);
+        assert(room[0].health == 580 && weak->health == 0x400 &&
+               !(weak->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+        room[0].health = 0;
+        mzm_sprite_update(&room[0], 0, &af);
+        assert(room[0].pose == 0x67);
+        int death_frames = 0;
+        while (room[0].status && death_frames++ < 220)
+            mzm_sprite_update(&room[0], 0, &af);
+        assert(!room[0].status && death_frames == 170 &&
+               test_check_event(NULL, MZM_EVENT_ACID_WORM_KILLED) &&
+               last_door_timer == -20 && effect_y_delta > 0);
     }
     /* EscapeDetermineTimer, EscapeSetTimer and EscapeUpdateTimer: event
      * routing, difficulty lengths, banner pause and timeout. */

@@ -43,6 +43,8 @@ enum {
     SSC_HURTS_KNOCKBACK_IF_INVINCIBLE = 10,
     SSC_SOLID_SIDEWAYS = 12,
     SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY = 15,
+    SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY_NO_CONTACT_DAMAGE = 21,
+    SSC_ACID_WORM_MOUTH = 22,
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT_NO_KNOCKBACK = 16,
     SSC_SPACE_PIRATE_LASER = 19,
     SSC_SPACE_PIRATE = 20,
@@ -188,6 +190,8 @@ void ai_ridley(Ctx *c);
 void ai_mother_brain(Ctx *c);
 /* Deorem, its segments, eye and thorns (mzm_deorem.c). */
 void ai_deorem(Ctx *c);
+/* Acid Worm, its body parts and spit (mzm_acid_worm.c). */
+void ai_acid_worm(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

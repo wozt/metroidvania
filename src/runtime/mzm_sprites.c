@@ -538,6 +538,20 @@ static const char *const deorem_sprites[MZM_DEOREM_ANIMS] = {
     "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION",
     "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION",
 };
+const char *const mzm_acid_worm_anim_names[MZM_ACID_WORM_ANIMS] = {
+    "AcidWormOam_Idle", "AcidWormOam_Moving", "AcidWormOam_Spitting",
+    "AcidWormOam_MouthClosed", "AcidWormPartOam_AroundMouth",
+    "AcidWormPartOam_WeakPoint", "AcidWormPartOam_Unused",
+    "AcidWormPartOam_BelowWeakPoint", "AcidWormPartOam_AboveSegments",
+    "AcidWormPartOam_Segment", "AcidWormPartOam_Unused2",
+    "AcidWormSpitOam_Moving", "AcidWormSpitOam_Exploding",
+    "AcidWormOam_Warning", "AcidWormOam_SpawnOnTop",
+};
+static const char *const acid_worm_sprites[MZM_ACID_WORM_ANIMS] = {
+    "ACID_WORM", "ACID_WORM", "ACID_WORM", "ACID_WORM", "ACID_WORM",
+    "ACID_WORM", "ACID_WORM", "ACID_WORM", "ACID_WORM", "ACID_WORM",
+    "ACID_WORM", "ACID_WORM", "ACID_WORM", "ACID_WORM", "ACID_WORM",
+};
 static const char *const mother_brain_sprites[MZM_MOTHER_BRAIN_ANIMS] = {
     "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN",
     "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN",
@@ -760,6 +774,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_BOSS_STATUE] = {MZM_BOSS_STATUE_ANIMS, mzm_boss_statue_anim_names,
                                 boss_statue_sprites},
     [MZM_FAMILY_DEOREM] = {MZM_DEOREM_ANIMS, mzm_deorem_anim_names, deorem_sprites},
+    [MZM_FAMILY_ACID_WORM] = {MZM_ACID_WORM_ANIMS, mzm_acid_worm_anim_names,
+                              acid_worm_sprites},
 };
 
 
@@ -4888,6 +4904,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_DEOREM_SEGMENT || sprite_id == MZM_SSPRITE_DEOREM_EYE ||
             sprite_id == MZM_SSPRITE_DEOREM_THORN)
             return MZM_FAMILY_DEOREM;
+        if (sprite_id == MZM_SSPRITE_ACID_WORM_PART ||
+            sprite_id == MZM_SSPRITE_ACID_WORM_SPIT)
+            return MZM_FAMILY_ACID_WORM;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -4964,6 +4983,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_MOTHER_BRAIN: return MZM_FAMILY_MOTHER_BRAIN;
     case MZM_PSPRITE_DEOREM_FIRST_LOCATION:
     case MZM_PSPRITE_DEOREM_SECOND_LOCATION: return MZM_FAMILY_DEOREM;
+    case MZM_PSPRITE_ACID_WORM: return MZM_FAMILY_ACID_WORM;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -5882,6 +5902,8 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_MOTHER_BRAIN) return MZM_PSPRITE_MOTHER_BRAIN;
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_DEOREM)
         return MZM_PSPRITE_DEOREM_FIRST_LOCATION;
+    if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_ACID_WORM)
+        return MZM_PSPRITE_ACID_WORM;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -6082,6 +6104,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_RIDLEY: ai_ridley(&c); break;
     case MZM_FAMILY_MOTHER_BRAIN: ai_mother_brain(&c); break;
     case MZM_FAMILY_DEOREM: ai_deorem(&c); break;
+    case MZM_FAMILY_ACID_WORM: ai_acid_worm(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

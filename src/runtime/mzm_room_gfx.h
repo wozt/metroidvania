@@ -46,6 +46,8 @@ typedef struct {
     bool water_moving;
     uint8_t water_stage, water_loop_counter;
     int16_t water_y_offset;
+    /* gEffectYPositionOffset, controlled by room actors such as Acid Worm. */
+    int16_t effect_y_offset;
     /* ColorFadingFinishDoorFade / ColorFadingProcess_DoorTransition: BG3
      * shows sDoorTransitionTilemap; the room's BG3 map and control are
      * kept to be restored. */

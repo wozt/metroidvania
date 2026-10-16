@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 1,072 indexed sequences, 2,640 unique BMPs; 566 projectile sequences; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Deorem, Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Deorem, Acid Worm, Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -3420,6 +3420,32 @@ No automatic reciprocal link or native engine encoder is implemented.
   passing and deliberately failing capture expectations, three private
   early-route smoke captures, refreshed dashboard data, generated-file
   checks, and the proprietary-file guard passed.
+
+## Patch 0349 - Zero Mission Acid Worm encounter
+
+- Added the `kraid_005` Acid Worm primary actor, its nine body actors and its
+  spit projectile to the native sprite engine. The actor now waits for the
+  activated zipline and for Samus to ride into range before locking and
+  opening the arena.
+- The entrance breaks the central column and raises the complete segmented
+  body through the acid. The combat alternates a hooked lunge with a
+  three-projectile spit volley; the exposed weak-point actor transfers damage
+  to the 600-health main actor while the mouth and remaining body stay immune.
+- The room effect surface now accepts the native-style subpixel offset used by
+  the entrance, attacks and death. Killing the worm sequences the body
+  explosions, lowers the acid, removes the two floor blocks, sets event 27 and
+  unlocks the doors. Reloading the completed room restores that open state.
+- `scripts/mzm_sprites.py` exports the fifteen Acid Worm OAM tables. The
+  runtime maps primary id 119 and secondary ids 37 and 38 to the new family;
+  private graphics and ROM data remain outside Git.
+- The current body curve is a compact interpolation rather than the native
+  sine/rotation tables. The optional late-fight acid raise cycle, exact
+  collision-abort motion, native debris layout, music changes and emulator
+  comparison remain open.
+- Validation on 2026-10-16: warning-clean build, the focused sprite test
+  replayed the zipline trigger, entrance, nine-part spawn, weak-point damage,
+  death event, arena opening and liquid movement; a `kraid_005` capture loaded
+  all thirteen room actors with their native graphics.
 
 ## Patch 0348 - Zero Mission Deorem encounter
 

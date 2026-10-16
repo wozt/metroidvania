@@ -1040,14 +1040,20 @@ static bool runtime_cant_use_elevator(const Room *room) {
 
 /* The native room backgrounds (mzm_room_gfx) of the current room. */
 static MzmRoomGfx runtime_room_gfx;
+static int16_t runtime_effect_y_offset;
 
 /* gEffectYPosition: the liquid surface with the water wave once the
  * native backgrounds hold this room, else the room entry's effectY. */
 static uint16_t runtime_effect_y(const Room *room) {
+    uint16_t base;
     if (runtime_room_gfx.ready && runtime_room_gfx.area == runtime_area_index(room->area) &&
         runtime_room_gfx.room == room->room)
         return mzm_room_gfx_effect_y(&runtime_room_gfx);
-    return room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
+    else
+        base = room->effect_y == 255 ? 0 : (uint16_t)(room->effect_y * 64);
+    if (!base) return 0;
+    int position = (int)base + runtime_effect_y_offset;
+    return (uint16_t)(position < 1 ? 1 : position > UINT16_MAX ? UINT16_MAX : position);
 }
 
 static uint8_t runtime_hazard(const Room *room, uint16_t y, uint16_t x) {
@@ -2818,6 +2824,8 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
     sprites->globals.lock_screen = false;
     sprites->globals.bg2_hidden = false;
     sprites->globals.bg_palette_row10 = -1;
+    runtime_effect_y_offset = 0;
+    runtime_room_gfx.effect_y_offset = 0;
     for (int i = 0; i < 32; ++i) sprites->events[i] |= runtime_debug_events[i];
     memset(sprites->live, 0, sizeof sprites->live);
     memset(&sprites->effects, 0, sizeof sprites->effects);
@@ -3022,6 +3030,17 @@ static void runtime_sprite_door_timer(void *context, int8_t timer) {
     runtime_hatch_locks.door_unlock_timer = timer;
 }
 
+static void runtime_sprite_move_effect_y(void *context, int16_t delta) {
+    RuntimeSprites *sprites = context;
+    int offset = (int)runtime_effect_y_offset + delta;
+    runtime_effect_y_offset = (int16_t)(offset < INT16_MIN ? INT16_MIN :
+                                        offset > INT16_MAX ? INT16_MAX : offset);
+    if (sprites->room && runtime_room_gfx.ready &&
+        runtime_room_gfx.area == runtime_area_index(sprites->room->area) &&
+        runtime_room_gfx.room == sprites->room->room)
+        runtime_room_gfx.effect_y_offset = runtime_effect_y_offset;
+}
+
 /* CAA_REMOVE_SOLID: the block's collision becomes air; the static background
  * keeps its graphics (BgClipSetBg1BlockValue is not reproduced). */
 static void runtime_sprite_apply_caa(void *context, uint16_t y, uint16_t x, uint8_t caa);
@@ -3065,7 +3084,7 @@ static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *ro
         if (room->doors[i].x0 == used->dest_x && room->doors[i].y1 == used->dest_y_end)
             no_hatch = !strcmp(room->doors[i].kind, "nohatch");
     static const MzmSpriteHooks hooks = {NULL, runtime_sprite_check_event, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL, NULL};
+                                         NULL, NULL, NULL, NULL, NULL, NULL};
     MzmSpriteHooks bound = hooks;
     bound.context = sprites;
     mzm_spawn_waiting_pirates(sprites->live, RUNTIME_MAX_SPRITES, &sprites->globals, &bound, ids,
@@ -3221,10 +3240,11 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                               runtime_sprite_remove_solid, runtime_sprite_affect,
                                               runtime_sprite_apply_caa,
                                               runtime_sprite_spawn_message,
-                                              runtime_sprite_set_bg_block, NULL};
+                                              runtime_sprite_set_bg_block, NULL, NULL};
     MzmSpriteHooks hooks = hook_table;
     hooks.context = sprites;
     hooks.clear_event = runtime_sprite_clear_event;
+    hooks.move_effect_y = runtime_sprite_move_effect_y;
     /* Samus for the Chozo statues' hands (native y). */
     MzmSpriteSamusLink link = {
         samus->pose == MZM_POSE_MORPH_BALL ? MZM_LINK_POSE_MORPH_BALL :
@@ -5081,6 +5101,7 @@ int main(int argc, char **argv) {
                                           runtime_sprite_check_event(&sprites,46),
                                           sprites.globals.alarm_timer!=0))
                         fprintf(stderr,"Native backgrounds unavailable for %s\n",current_room);
+                    runtime_room_gfx.effect_y_offset = runtime_effect_y_offset;
                 }
                 /* The zipline generator's gDisableAnimatedPalette = FALSE. */
                 if(sprites.globals.enable_animated_palette) {

@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 74 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 75 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -310,6 +310,16 @@ Evidence: in game: `brinstar_003`.
 ### Enemies
 
 [?] **`mzm.enemies.inventory-boundary` — source coverage.** The current classifier assigns 812 discovered routine(s) to this category (812 by source path). Category completeness has not been established.
+
+[~] **`mzm.enemies.acid_worm` — Acid Worm encounter.** The native kraid_005 placement waits for the activated zipline and Samus riding into range, opens its central column, attacks with a hooked lunge or three spit projectiles, takes damage through its exposed weak point, moves the acid surface and persists its opened arena through event 27 after death.
+
+Native evidence: `mzm:c:src/sprites_ai/acid_worm.c:AcidWorm`, `mzm:c:src/sprites_ai/acid_worm.c:AcidWormInit`, `mzm:c:src/sprites_ai/acid_worm.c:AcidWormPart`, `mzm:c:src/sprites_ai/acid_worm.c:AcidWormSpit`.  
+Local implementation: [`src/runtime/mzm_acid_worm.c`](../src/runtime/mzm_acid_worm.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.environment.room_gadgets`, `mzm.rooms.backgrounds`, `mzm.weapons.beams_and_missiles`.  
+Known divergences: The body uses a compact interpolated curve instead of the native sine/rotation tables; the optional late-fight acid raise cycle, exact collision-abort motion, native debris placement and music changes are not ported, and the encounter has not been compared with an emulator.  
+Next action: Restore the exact curved body rotation and late-fight acid raise cycle, then compare the whole fight with an emulator.
+Evidence: in game: `kraid_005`.
 
 [+] **`mzm.enemies.atomic` — Atomics.** Atomics (none on easy) hover around their spawn with sAtomicIdleYMovement / sAtomicIdleXMovement, flee Samus within five blocks (slowing every 16 frames, then back to the spawn by half pixels), charge every 3.33 seconds with the sAtomicDynamicPaletteData flashing (rows 0, 2 and 3, the silent charge sound at the intense part) and spawn their electricity, which follows them until the charge ends, then is shot horizontally, vertically or diagonally at Samus (SSC_HURTS_SAMUS_A_LOT: five times its damage and a stronger knockback) and explodes on the first block; while Samus charges a beam (chargeCounter 64 or more) they chase her arm cannon (AtomicSmoothMovement on last frame's gArmCannonY / gArmCannonX). Contact damage 30, health 40, weak to missiles and the screw attack. Checked by capture in chozodia_058 (the flashing Atomic and its electricity; Samus at 99 energy dies to them, as their damage says).
 

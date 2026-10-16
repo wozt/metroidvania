@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-16T21:24:48+00:00",
+ "generated_at": "2026-10-16T21:40:16+00:00",
  "git": {
-  "commit": "df49a93",
+  "commit": "d6abc47",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 122,
+   "total": 123,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 53,
+    "partial": 54,
     "functional": 58,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 58,
-   "functional_or_better_percent": 47.5,
-   "with_passing_tests": 109,
-   "with_passing_tests_percent": 89.3,
+   "functional_or_better_percent": 47.2,
+   "with_passing_tests": 110,
+   "with_passing_tests_percent": 89.4,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -115,6 +115,7 @@
     "mzm.collision.clipdata",
     "mzm.cutscenes.story_text",
     "mzm.death.game_over",
+    "mzm.enemies.acid_worm",
     "mzm.enemies.atomic",
     "mzm.enemies.boss_statue",
     "mzm.enemies.chozodia_security",
@@ -239,11 +240,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 74,
+   "total": 75,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 29,
+    "partial": 30,
     "functional": 45,
     "faithful": 0,
     "validated": 0,
@@ -251,9 +252,9 @@
     "unknown": 0
    },
    "functional_or_better": 45,
-   "functional_or_better_percent": 60.8,
-   "with_passing_tests": 73,
-   "with_passing_tests_percent": 98.6,
+   "functional_or_better_percent": 60.0,
+   "with_passing_tests": 74,
+   "with_passing_tests_percent": 98.7,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -262,6 +263,7 @@
     "mzm.collision.clipdata",
     "mzm.cutscenes.story_text",
     "mzm.death.game_over",
+    "mzm.enemies.acid_worm",
     "mzm.enemies.atomic",
     "mzm.enemies.boss_statue",
     "mzm.enemies.chozodia_security",
@@ -1009,6 +1011,67 @@
       "registered": true,
       "ctest": [
        "mzm_samus_controller"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-16"
+   }
+  },
+  {
+   "id": "mzm.enemies.acid_worm",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Acid Worm encounter",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_acid_worm.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.environment.room_gadgets",
+    "mzm.rooms.backgrounds",
+    "mzm.weapons.beams_and_missiles"
+   ],
+   "native_routines": [
+    "AcidWorm",
+    "AcidWormInit",
+    "AcidWormPart",
+    "AcidWormSpit"
+   ],
+   "limitations": "The body uses a compact interpolated curve instead of the native sine/rotation tables; the optional late-fight acid raise cycle, exact collision-abort motion, native debris placement and music changes are not ported, and the encounter has not been compared with an emulator. The native kraid_005 placement waits for the activated zipline and Samus riding into range, opens its central column, attacks with a hooked lunge or three spit projectiles, takes damage through its exposed weak point, moves the acid surface and persists its opened arena through event 27 after death.",
+   "next_action": "Restore the exact curved body rotation and late-fight acid raise cycle, then compare the whole fight with an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_mzm_sprites.c"
+    ],
+    "in_game_check": [
+     "kraid_005"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
       ],
       "outcome": "passed",
       "exists": true
@@ -9571,6 +9634,12 @@
  },
  "timeline": [
   {
+   "commit": "d6abc47",
+   "date": "2026-10-16",
+   "subject": "Port the Deorem encounter",
+   "scope": "project"
+  },
+  {
    "commit": "df49a93",
    "date": "2026-10-16",
    "subject": "Add assertions for gameplay capture routes",
@@ -10043,12 +10112,6 @@
    "date": "2026-10-12",
    "subject": "feat(mzm): item Chozo statues",
    "scope": "mzm"
-  },
-  {
-   "commit": "b04dc00",
-   "date": "2026-10-12",
-   "subject": "feat(mzm): tank pickups and the message banner",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10076,7 +10139,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1175,
+    "routines_cited_by_features": 1179,
     "call_edges": 6071
    },
    "aos": {
@@ -10971,14 +11034,19 @@
      {
       "id": 119,
       "name": "Acid Worm",
-      "status": "not_started",
-      "note": "",
+      "status": "partial",
+      "note": "Acid Worm encounter",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_mzm_sprites.c"
+       ],
+       "in_game_check": [
+        "kraid_005"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "mzm.enemies.acid_worm"
      },
      {
       "id": 121,

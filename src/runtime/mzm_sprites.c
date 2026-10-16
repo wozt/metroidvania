@@ -523,6 +523,21 @@ const char *const mzm_mother_brain_anim_names[MZM_MOTHER_BRAIN_ANIMS] = {
     "MotherBrainBeamOam_Moving", "MotherBrainPartOam_EyeClosing", "MotherBrainGlassBreakingOam_Breaking",
     "MotherBrainBlockOam",
 };
+
+const char *const mzm_deorem_anim_names[MZM_DEOREM_ANIMS] = {
+    "DeoremSegmentOam_Middle", "DeoremSegmentOam_Junction", "DeoremSegmentOam_Tail",
+    "DeoremThornOam_Idle", "DeoremEyeOam_Idle", "DeoremEyeOam_Pulsing",
+    "DeoremOam_ClosedSlow", "DeoremOam_Opening", "DeoremOam_OpenedSlow",
+    "DeoremOam_Closing", "DeoremOam_Warning", "DeoremOam_GoingDown",
+    "DeoremOam_OpenedFast", "DeoremOam_ClosedFast", "DeoremOam_Dying",
+};
+static const char *const deorem_sprites[MZM_DEOREM_ANIMS] = {
+    "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION",
+    "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION",
+    "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION",
+    "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION",
+    "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION", "DEOREM_FIRST_LOCATION",
+};
 static const char *const mother_brain_sprites[MZM_MOTHER_BRAIN_ANIMS] = {
     "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN",
     "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN", "MOTHER_BRAIN",
@@ -744,6 +759,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
                                  chozo_statue_sprites},
     [MZM_FAMILY_BOSS_STATUE] = {MZM_BOSS_STATUE_ANIMS, mzm_boss_statue_anim_names,
                                 boss_statue_sprites},
+    [MZM_FAMILY_DEOREM] = {MZM_DEOREM_ANIMS, mzm_deorem_anim_names, deorem_sprites},
 };
 
 
@@ -4869,6 +4885,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_MOTHER_BRAIN_PART || sprite_id == MZM_SSPRITE_MOTHER_BRAIN_BEAM ||
             sprite_id == MZM_SSPRITE_MOTHER_BRAIN_BLOCK || sprite_id == MZM_SSPRITE_MOTHER_BRAIN_GLASS_BREAKING)
             return MZM_FAMILY_MOTHER_BRAIN;
+        if (sprite_id == MZM_SSPRITE_DEOREM_SEGMENT || sprite_id == MZM_SSPRITE_DEOREM_EYE ||
+            sprite_id == MZM_SSPRITE_DEOREM_THORN)
+            return MZM_FAMILY_DEOREM;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -4943,6 +4962,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_KRAID: return MZM_FAMILY_KRAID;
     case MZM_PSPRITE_RIDLEY: return MZM_FAMILY_RIDLEY;
     case MZM_PSPRITE_MOTHER_BRAIN: return MZM_FAMILY_MOTHER_BRAIN;
+    case MZM_PSPRITE_DEOREM_FIRST_LOCATION:
+    case MZM_PSPRITE_DEOREM_SECOND_LOCATION: return MZM_FAMILY_DEOREM;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -5834,6 +5855,8 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         if (sprite->sprite_id == MZM_PSPRITE_FROZEN_METROID) return MZM_PSPRITE_METROID;
         if (sprite->sprite_id == MZM_PSPRITE_CANNON2 || sprite->sprite_id == MZM_PSPRITE_CANNON3)
             return MZM_PSPRITE_CANNON;
+        if (sprite->sprite_id == MZM_PSPRITE_DEOREM_SECOND_LOCATION)
+            return MZM_PSPRITE_DEOREM_FIRST_LOCATION;
         /* sRinkaZebetiteAndCannonGfx, exported with the cannon's tables. */
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_RINKA &&
             sprite->sprite_id != MZM_PSPRITE_RINKA_ORANGE && sprite->sprite_id != MZM_PSPRITE_RINKA_GREEN)
@@ -5857,6 +5880,8 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     /* The block uses SPRITE_GFX_SLOT_SPECIAL (the cannons' graphics). */
     if (sprite->sprite_id == MZM_SSPRITE_MOTHER_BRAIN_BLOCK) return MZM_PSPRITE_CANNON;
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_MOTHER_BRAIN) return MZM_PSPRITE_MOTHER_BRAIN;
+    if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_DEOREM)
+        return MZM_PSPRITE_DEOREM_FIRST_LOCATION;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -6056,6 +6081,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_KRAID: ai_kraid(&c); break;
     case MZM_FAMILY_RIDLEY: ai_ridley(&c); break;
     case MZM_FAMILY_MOTHER_BRAIN: ai_mother_brain(&c); break;
+    case MZM_FAMILY_DEOREM: ai_deorem(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

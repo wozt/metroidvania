@@ -186,6 +186,8 @@ void ai_kraid(Ctx *c);
 void ai_ridley(Ctx *c);
 /* Mother Brain, its parts, beam, block and glass (mzm_mother_brain.c). */
 void ai_mother_brain(Ctx *c);
+/* Deorem, its segments, eye and thorns (mzm_deorem.c). */
+void ai_deorem(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

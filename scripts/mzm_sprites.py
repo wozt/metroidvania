@@ -107,6 +107,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_ZIPLINE_GENERATOR": 0, "PSPRITE_SECURITY_GATE_DEFAULT_OPEN": 0,
           "PSPRITE_PISTON": 0, "PSPRITE_GLASS_TUBE": 0, "PSPRITE_RISING_CHOZO_PILLAR": 0,
           "PSPRITE_PARASITE": 0, "PSPRITE_PARASITE_MULTIPLE": 0,
+          "PSPRITE_DEOREM_FIRST_LOCATION": 0, "PSPRITE_DEOREM_SECOND_LOCATION": 0,
           "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0, "PSPRITE_RIDLEY": 0, "PSPRITE_MOTHER_BRAIN": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
@@ -185,7 +186,8 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sAtomicIdleYMovement", "sAtomicIdleXMovement",
              "sPolypProjectileYVelocity", "sWorkerRobotSleepingFallingSpeed",
              "sMetroidSpawningYMovement", "sMetroidSpawningXMovement", "sKraidPal",
-             "sRidleyIdleYOffsets", "sRidleySpawningSpittingFireballsYOffsets")
+             "sRidleyIdleYOffsets", "sRidleySpawningSpittingFireballsYOffsets",
+             "sDeoremSegmentXVelocity", "sDeoremThornYVelocity")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
 PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",

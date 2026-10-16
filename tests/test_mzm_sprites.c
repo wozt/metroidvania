@@ -116,7 +116,7 @@ static void set_bg_block(void *context, uint8_t bg, uint16_t value, uint16_t y, 
 
 static const MzmSpriteHooks test_hooks = {NULL, test_check_event, test_set_event,
                                           test_door_timer, test_remove_solid, test_affect,
-                                          test_apply_caa, test_spawn_message, NULL};
+                                          test_apply_caa, test_spawn_message, NULL, NULL};
 
 static int leeches;
 

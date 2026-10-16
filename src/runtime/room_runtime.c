@@ -2542,6 +2542,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sKraidPal", t->kraid_palette, 128, 128},
         {"sRidleyIdleYOffsets", t->ridley_idle_y, 65, 65},
         {"sRidleySpawningSpittingFireballsYOffsets", t->ridley_spawning_y, 81, 81},
+        {"sDeoremSegmentXVelocity", t->deorem_segment_x, 33, 33},
+        {"sDeoremThornYVelocity", t->deorem_thorn_y, 40, 40},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
         {mzm_debris_table_names[1], t->debris[1], 9, 9},
         {mzm_debris_table_names[2], t->debris[2], 9, 9},
@@ -3001,6 +3003,11 @@ static void runtime_sprite_set_event(void *context, uint8_t event) {
     sprites->events[event / 8] |= (uint8_t)(1u << (event % 8));
 }
 
+static void runtime_sprite_clear_event(void *context, uint8_t event) {
+    RuntimeSprites *sprites = context;
+    sprites->events[event / 8] &= (uint8_t)~(1u << (event % 8));
+}
+
 static uint8_t runtime_escape_kind(const RuntimeSprites *sprites) {
     return mzm_escape_determine(
         runtime_sprite_check_event((void *)sprites, MZM_EVENT_MOTHER_BRAIN_KILLED),
@@ -3058,7 +3065,7 @@ static void runtime_sprites_door_arrival(RuntimeSprites *sprites, const Room *ro
         if (room->doors[i].x0 == used->dest_x && room->doors[i].y1 == used->dest_y_end)
             no_hatch = !strcmp(room->doors[i].kind, "nohatch");
     static const MzmSpriteHooks hooks = {NULL, runtime_sprite_check_event, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL};
+                                         NULL, NULL, NULL, NULL, NULL};
     MzmSpriteHooks bound = hooks;
     bound.context = sprites;
     mzm_spawn_waiting_pirates(sprites->live, RUNTIME_MAX_SPRITES, &sprites->globals, &bound, ids,
@@ -3214,9 +3221,10 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                               runtime_sprite_remove_solid, runtime_sprite_affect,
                                               runtime_sprite_apply_caa,
                                               runtime_sprite_spawn_message,
-                                              runtime_sprite_set_bg_block};
+                                              runtime_sprite_set_bg_block, NULL};
     MzmSpriteHooks hooks = hook_table;
     hooks.context = sprites;
+    hooks.clear_event = runtime_sprite_clear_event;
     /* Samus for the Chozo statues' hands (native y). */
     MzmSpriteSamusLink link = {
         samus->pose == MZM_POSE_MORPH_BALL ? MZM_LINK_POSE_MORPH_BALL :

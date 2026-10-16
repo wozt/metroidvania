@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 1,072 indexed sequences, 2,640 unique BMPs; 566 projectile sequences; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Deorem, Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -3420,6 +3420,30 @@ No automatic reciprocal link or native engine encoder is implemented.
   passing and deliberately failing capture expectations, three private
   early-route smoke captures, refreshed dashboard data, generated-file
   checks, and the proprietary-file guard passed.
+
+## Patch 0348 - Zero Mission Deorem encounter
+
+- Added Deorem's two native room actors and its secondary segment, eye and
+  thorn actors to the sprite engine. The encounter now wakes when an
+  missile-equipped Samus reaches the arena centre, locks the camera and doors,
+  forms both body columns, exposes the missile-vulnerable eye, lunges and
+  retracts, throws four-thorn volleys and changes palette at low health.
+- The eye carries the native 60 health and encounter timer. A surviving
+  Deorem retreats between `brinstar_012` and `brinstar_019`, toggling events
+  24 and 25; killing it sets both encounter events (and event 26 at the second
+  location), removes the temporary arena walls, unlocks the doors and spawns
+  the collectible Charge Beam after the death sequence.
+- `scripts/mzm_sprites.py` now exports Deorem's fifteen OAM tables and its two
+  movement tables from the private ROM. The runtime maps both primary ids and
+  all three secondary ids to one graphics family without tracking any ROM
+  payload.
+- The long body-segment burrowing choreography is compacted while preserving
+  the encounter's visible phases and collision actors. Native music fades,
+  minimap updates and emulator comparison remain open.
+- Validation on 2026-10-16: warning-clean sprite and room-runtime builds, the
+  sprite unit binary passed, a direct `brinstar_012` capture reached the open
+  eye with all 20 room actors, and a missile capture killed Deorem, set event
+  24 and left the Charge Beam and its glow active.
 
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 

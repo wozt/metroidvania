@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 73 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 74 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -340,6 +340,16 @@ Dependencies: `mzm.enemies.space_pirate`, `mzm.collision.clipdata`, `mzm.weapons
 Known divergences: Searchlights are drawn opaque and above the backgrounds (natively they flicker behind BG1 with draw order 1), the BG0 transparency fades (PrimarySpriteB3, the security lasers' TransparencySpriteUpdateBldalpha; their fade state is kept in work2/work3) are not reproduced. The security gates keep their drawOrder 3 in front of Samus without their BG priority; their unused death (SecurityGateDeath) is ported but unreachable as natively.  
 Next action: Compare the event-placed systems with an emulator.
 Evidence: in game: `chozodia_003`, `chozodia_016`, `chozodia_030`, `chozodia_005`.
+
+[~] **`mzm.enemies.deorem` — Deorem two-location encounter.** Both native placements wake for a missile-equipped Samus, lock their arena, expose the 60-health missile-only eye, lunge, retract, throw thorn volleys, retreat between rooms through events 24 and 25, die through the location-dependent event branch and spawn the collectible Charge Beam.
+
+Native evidence: `mzm:c:src/sprites_ai/deorem.c:Deorem`, `mzm:c:src/sprites_ai/deorem.c:DeoremDyingInit`, `mzm:c:src/sprites_ai/deorem.c:DeoremEye`, `mzm:c:src/sprites_ai/deorem.c:DeoremHandler`, `mzm:c:src/sprites_ai/deorem.c:DeoremInit`, `mzm:c:src/sprites_ai/deorem.c:DeoremRetracting`, `mzm:c:src/sprites_ai/deorem.c:DeoremSegment`, `mzm:c:src/sprites_ai/deorem.c:DeoremSpawnChargeBeam`, `mzm:c:src/sprites_ai/deorem.c:DeoremStartLeaving`, `mzm:c:src/sprites_ai/deorem.c:DeoremThorn`, `mzm:c:src/sprites_ai/deorem.c:DeoremThrowingThorns`, `mzm:c:src/sprites_ai/deorem.c:DeoremWaitingForFight`.  
+Local implementation: [`src/runtime/mzm_deorem.c`](../src/runtime/mzm_deorem.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Tests: none recorded.
+Dependencies: `mzm.weapons.charge_beam`, `mzm.weapons.beams_and_missiles`.  
+Known divergences: The long per-segment burrowing choreography is compacted; native music fades and minimap updates are not ported, and the encounter has not been compared with an emulator.  
+Next action: Restore the exact segment-by-segment burrowing and death choreography, then compare both locations with an emulator.
+Evidence: in game: `brinstar_012`, `brinstar_019`.
 
 [~] **`mzm.enemies.dessgeega` — Dessgeegas and the Long Beam Dessgeega.** Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor removing three blocks with dust and debris, and lands on the next one. The door locks and unlocks go through the runtime's hatch locks (mzm.transitions.doors_and_hatches). The Long Beam Dessgeega's drop and landing start a vertical screen shake, with its spawning and floor-breaking sounds. Room export retains its first and second event sprite placements and spriteset membership, and RoomLoad selects second, first or default from the save events. Entering brinstar_010 now runs KraidStatueInit and sets EVENT_VIEWED_STATUE_ROOM; the return through brinstar_009 loads DESSGEEGA_AFTER_LONG_BEAM while the untouched default room stays empty.
 

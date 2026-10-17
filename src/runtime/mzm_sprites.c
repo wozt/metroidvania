@@ -549,6 +549,14 @@ static const char *const imago_larva_sprites[MZM_IMAGO_LARVA_ANIMS] = {
     "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT",
     "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT",
 };
+const char *const
+mzm_imago_larva_right_side_anim_names[MZM_IMAGO_LARVA_RIGHT_SIDE_ANIMS] = {
+    "ImagoLarvaRightSideOam",
+};
+static const char *const
+imago_larva_right_side_sprites[MZM_IMAGO_LARVA_RIGHT_SIDE_ANIMS] = {
+    "IMAGO_LARVA_RIGHT_SIDE",
+};
 const char *const mzm_imago_multi_names[MZM_IMAGO_MULTI_COUNT] = {
     "sImagoLarvaMultiSpriteData_Attacking",
     "sImagoLarvaMultiSpriteData_Idle",
@@ -830,6 +838,9 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_GADORA] = {MZM_GADORA_ANIMS, mzm_gadora_anim_names, gadora_sprites},
     [MZM_FAMILY_IMAGO_LARVA] = {MZM_IMAGO_LARVA_ANIMS, mzm_imago_larva_anim_names,
                                  imago_larva_sprites},
+    [MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE] = {
+        MZM_IMAGO_LARVA_RIGHT_SIDE_ANIMS, mzm_imago_larva_right_side_anim_names,
+        imago_larva_right_side_sprites},
 };
 
 
@@ -5046,6 +5057,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         return MZM_FAMILY_GADORA;
     case MZM_PSPRITE_IMAGO_LARVA_RIGHT: case MZM_PSPRITE_IMAGO_LARVA_LEFT:
         return MZM_FAMILY_IMAGO_LARVA;
+    case MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE:
+        return MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -6173,6 +6186,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_ACID_WORM: ai_acid_worm(&c); break;
     case MZM_FAMILY_GADORA: ai_gadora(&c); break;
     case MZM_FAMILY_IMAGO_LARVA: ai_imago_larva(&c); break;
+    case MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE: ai_imago_larva_right_side(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

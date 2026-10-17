@@ -754,6 +754,11 @@ enum {
 };
 extern const char *const mzm_imago_larva_anim_names[MZM_IMAGO_LARVA_ANIMS];
 
+/* The animated Imago larva remnant on the right side of the passage. */
+enum { MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE, MZM_IMAGO_LARVA_RIGHT_SIDE_ANIMS };
+extern const char *const
+    mzm_imago_larva_right_side_anim_names[MZM_IMAGO_LARVA_RIGHT_SIDE_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
@@ -768,6 +773,7 @@ enum {
     MZM_FAMILY_WORKER_ROBOT, MZM_FAMILY_METROID, MZM_FAMILY_KRAID, MZM_FAMILY_RIDLEY,
     MZM_FAMILY_MOTHER_BRAIN, MZM_FAMILY_BOSS_STATUE, MZM_FAMILY_DEOREM,
     MZM_FAMILY_ACID_WORM, MZM_FAMILY_GADORA, MZM_FAMILY_IMAGO_LARVA,
+    MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -839,7 +845,8 @@ enum {
     MZM_PSPRITE_CHOZO_STATUE_GRAVITY = 88, MZM_PSPRITE_CHOZO_STATUE_SPACE_JUMP = 89,
     MZM_PSPRITE_CHOZO_STATUE_PLASMA_BEAM = 148,
     MZM_PSPRITE_GADORA_KRAID = 173, MZM_PSPRITE_GADORA_RIDLEY = 174,
-    MZM_PSPRITE_IMAGO_LARVA_RIGHT = 77, MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,
+    MZM_PSPRITE_IMAGO_LARVA_RIGHT = 77, MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE = 127,
+    MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,
 };
 
 /* SecondarySprite */

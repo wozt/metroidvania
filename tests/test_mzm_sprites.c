@@ -5404,6 +5404,57 @@ int main(void) {
         mzm_sprite_update(&cleared, 0, &cleared_frame);
         assert(cleared.status == 0);
     }
+    /* The right-side larva remnant is a non-colliding environmental actor
+     * whose native 34-frame loop drives its shaking and heartbeat sounds. */
+    {
+        MzmSpriteKind right_side_kind = {0};
+        right_side_kind.counts[MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE] = 34;
+        for (int i = 0; i <= 10; ++i)
+            right_side_kind.timers[MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE][i] = 6;
+        for (int i = 11; i <= 17; ++i)
+            right_side_kind.timers[MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE][i] = 5;
+        right_side_kind.timers[MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE][18] = 60;
+        for (int i = 19; i <= 25; ++i)
+            right_side_kind.timers[MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE][i] = 5;
+        right_side_kind.timers[MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE][26] = 60;
+        for (int i = 27; i <= 33; ++i)
+            right_side_kind.timers[MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE][i] = 5;
+
+        MzmSprite remnant;
+        MzmSpriteFrame rf = frame;
+        rf.sprites = &remnant;
+        rf.sprite_count = 1;
+        rf.kinds[MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE] = &right_side_kind;
+        mzm_sprite_init_primary(&remnant, MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE,
+                                0, 9, 34, 0, 0);
+        mzm_sfx_clear();
+        mzm_sprite_update(&remnant, 0, &rf);
+        assert(remnant.pose == 0x9 &&
+               remnant.anim == MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE &&
+               remnant.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+               remnant.ignore_samus_timer == 1 && remnant.samus_collision == 0 &&
+               remnant.hitbox_top == -MZM_PIXEL_SIZE &&
+               remnant.hitbox_bottom == MZM_PIXEL_SIZE &&
+               remnant.hitbox_left == -MZM_PIXEL_SIZE &&
+               remnant.hitbox_right == MZM_PIXEL_SIZE &&
+               remnant.draw_top == 48 && remnant.draw_bottom == 8 &&
+               remnant.draw_horizontal == 48);
+        assert(!mzm_sfx_requested(MZM_SFX_PLAY,
+                                  MZM_SOUND_IMAGO_LARVA_RIGHT_SIDE_SHAKING));
+        mzm_sprite_update(&remnant, 0, &rf);
+        assert(mzm_sfx_requested(MZM_SFX_PLAY,
+                                 MZM_SOUND_IMAGO_LARVA_RIGHT_SIDE_SHAKING));
+
+        const uint8_t heartbeat_frames[] = {11, 15, 19, 23, 27, 31};
+        for (size_t i = 0; i < sizeof heartbeat_frames; ++i) {
+            mzm_sfx_clear();
+            remnant.frame = heartbeat_frames[i];
+            remnant.adc = 1;
+            mzm_sprite_update(&remnant, 0, &rf);
+            assert(mzm_sfx_requested(MZM_SFX_PLAY,
+                                     MZM_SOUND_IMAGO_LARVA_RIGHT_SIDE_CORE_BEATING));
+        }
+    }
     /* EscapeDetermineTimer, EscapeSetTimer and EscapeUpdateTimer: event
      * routing, difficulty lengths, banner pause and timeout. */
     {

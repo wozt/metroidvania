@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Zero Mission's paired Imago larvae (src/sprites_ai/imago_larva.c): the
+/* Zero Mission's Imago larva actors (src/sprites_ai/imago_larva.c and
+ * imago_larva_right_side.c): the
  * left larva starts the encounter and the right one blocks the passage,
  * retreats when its shell is hit, attacks after each stun, and completes
  * the Caterpillar event when killed. Both bodies drive five secondary
@@ -510,4 +511,26 @@ static void part_ai(Ctx *c) {
 void ai_imago_larva(Ctx *c) {
     if (c->s->secondary) part_ai(c);
     else body_ai(c);
+}
+
+void ai_imago_larva_right_side(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->ignore_samus_timer = 1;
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->hitbox_top = s->hitbox_left = -MZM_PIXEL_SIZE;
+        s->hitbox_bottom = s->hitbox_right = MZM_PIXEL_SIZE;
+        s->draw_top = s->draw_horizontal = 48;
+        s->draw_bottom = 8;
+        s->samus_collision = SSC_NONE;
+        ai_set_anim(s, MZM_IMAGO_LARVA_RIGHT_SIDE_IDLE);
+        s->pose = LARVA_IDLE;
+    }
+    if (s->adc != 1) return;
+    if (s->frame == 0) {
+        mzm_sfx_play(MZM_SOUND_IMAGO_LARVA_RIGHT_SIDE_SHAKING);
+    } else if (s->frame == 11 || s->frame == 15 || s->frame == 19 ||
+               s->frame == 23 || s->frame == 27 || s->frame == 31) {
+        mzm_sfx_play(MZM_SOUND_IMAGO_LARVA_RIGHT_SIDE_CORE_BEATING);
+    }
 }

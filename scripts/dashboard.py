@@ -385,6 +385,7 @@ MZM_FAMILY_ANNOTATIONS = {
     "MZM_FAMILY_GADGET": "mzm.environment.room_gadgets",
     "MZM_FAMILY_CHOZO_STATUE": "mzm.items.chozo_statues",
     "MZM_FAMILY_ITEM_SPRITE": "mzm.items.item_sprites",
+    "MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE": "mzm.enemies.imago_larva",
 }
 # Pickup families documented by the editor (patch notes) and the native entity
 # kinds 4/5/6; none has runtime behavior yet.

@@ -3477,6 +3477,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   cells. Parity/dashboard data were regenerated and the proprietary-file guard
   passed.
 
+## Patch 0352 - Zero Mission Imago right-side passage remnant
+
+- Added the separate `IMAGO_LARVA_RIGHT_SIDE` actor used by `norfair_046` to
+  the sprite exporter and native runtime. Its full 34-frame OAM loop is now
+  loaded from the private ROM-derived library without adding proprietary data
+  to Git.
+- The remnant keeps the native one-pixel hitbox, extended draw distances,
+  projectile immunity and disabled Samus collision. It remains present
+  independently of the Caterpillar event, matching the original actor rather
+  than incorrectly treating it as another combat larva.
+- Animation-frame starts now emit the native shaking cue at frame 0 and the
+  six core-heartbeat cues at frames 11, 15, 19, 23, 27 and 31. The focused
+  sprite regression covers the actor setup, all sound points and the exported
+  frame-duration pattern.
+- Consolidated the actor into the existing Imago parity record and dashboard
+  family instead of creating a second feature document. The real
+  `norfair_046` room check loaded its native 784x224 geometry and 554 collision
+  cells.
+- Validation on 2026-10-17: warning-clean full build, CTest 35/35 and Python
+  438/438 passed. Generated parity/dashboard data were fresh and the
+  proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

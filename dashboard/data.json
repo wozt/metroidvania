@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-17T02:35:15+00:00",
+ "generated_at": "2026-10-17T02:41:10+00:00",
  "git": {
-  "commit": "cd56ebb",
+  "commit": "bd7475b",
   "branch": "main",
   "dirty": true
  },
@@ -1699,7 +1699,7 @@
    "id": "mzm.enemies.imago_larva",
    "area": "mzm",
    "category": "enemies",
-   "title": "Imago larva encounter",
+   "title": "Imago larva encounter and passage remnant",
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
@@ -1744,16 +1744,18 @@
     "ImagoLarvaPartDotCheckDisappearingAnimEnded",
     "ImagoLarvaPartDotCheckShouldReappear",
     "ImagoLarvaPartDotCheckAppearingAnimEnded",
-    "ImagoLarvaPartDead"
+    "ImagoLarvaPartDead",
+    "ImagoLarvaRightSide"
    ],
-   "limitations": "The actors' native BG priority is represented by draw order, and the encounter has not been compared frame by frame with an emulator. The paired larvae in norfair_042 keep independent multi-sprite state. The left larva locks the room and starts the battle music; the right larva waits at the cocoon, warns when Samus approaches, retracts by one, four or eight subpixels after shell damage, waits longer after each retreat and lunges back to its spawn. Their shell, claws and three dots follow the six native multi-sprite tables; warning hides the dots and temporarily makes the shell immune to another retreat. Body damage triggers the 47-frame counterattack, death synchronizes all parts and their native drops, then event 31 persists the cleared passage, unlocks the doors and starts the boss-killed music.",
+   "limitations": "The actors' native BG priority is represented by draw order, and the encounter has not been compared frame by frame with an emulator. The paired larvae in norfair_042 keep independent multi-sprite state. The left larva locks the room and starts the battle music; the right larva waits at the cocoon, warns when Samus approaches, retracts by one, four or eight subpixels after shell damage, waits longer after each retreat and lunges back to its spawn. Their shell, claws and three dots follow the six native multi-sprite tables; warning hides the dots and temporarily makes the shell immune to another retreat. Body damage triggers the 47-frame counterattack, death synchronizes all parts and their native drops, then event 31 persists the cleared passage, unlocks the doors and starts the boss-killed music. The separate norfair_046 right-side remnant stays non-colliding and projectile-immune while its native 34-frame loop plays the shaking and six heartbeat cues.",
    "next_action": "Compare the complete encounter, palette cycle and part alignment with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c"
     ],
     "in_game_check": [
-     "norfair_042"
+     "norfair_042",
+     "norfair_046"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -9794,6 +9796,12 @@
  },
  "timeline": [
   {
+   "commit": "bd7475b",
+   "date": "2026-10-17",
+   "subject": "Port the Imago larva encounter",
+   "scope": "project"
+  },
+  {
    "commit": "cd56ebb",
    "date": "2026-10-16",
    "subject": "Port the Gadora hatch encounters",
@@ -10266,12 +10274,6 @@
    "date": "2026-10-12",
    "subject": "feat(mzm): item jingles in the sound engine",
    "scope": "mzm"
-  },
-  {
-   "commit": "67ad89c",
-   "date": "2026-10-12",
-   "subject": "feat(mzm): unknown item Chozo statues",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10299,7 +10301,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1220,
+    "routines_cited_by_features": 1221,
     "call_edges": 6071
    },
    "aos": {
@@ -10777,13 +10779,14 @@
       "id": 77,
       "name": "Imago Larva Right",
       "status": "functional",
-      "note": "Imago larva encounter",
+      "note": "Imago larva encounter and passage remnant",
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c"
        ],
        "in_game_check": [
-        "norfair_042"
+        "norfair_042",
+        "norfair_046"
        ],
        "emulator_compared": false,
        "played_through": false
@@ -11414,13 +11417,14 @@
       "id": 139,
       "name": "Imago Larva Left",
       "status": "functional",
-      "note": "Imago larva encounter",
+      "note": "Imago larva encounter and passage remnant",
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c"
        ],
        "in_game_check": [
-        "norfair_042"
+        "norfair_042",
+        "norfair_046"
        ],
        "emulator_compared": false,
        "played_through": false

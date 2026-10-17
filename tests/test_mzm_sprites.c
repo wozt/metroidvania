@@ -11,6 +11,7 @@
 #include "mzm_screen_shake.h"
 
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -5274,6 +5275,134 @@ int main(void) {
         uint16_t beam_x = room[2].x;
         for (int i = 0; i < 16; ++i) mzm_sprite_update(&room[2], 2, &gf);
         assert(room[2].x == beam_x + MZM_PIXEL_SIZE * 3);
+    }
+    /* Imago larvae: the left body starts the battle, the right body waits
+     * in its cocoon position, retreats from shell damage, attacks, and sets
+     * the persistent Caterpillar event after its synchronized death. */
+    {
+        MzmSprite room[20] = {0};
+        MzmSpriteGlobals larva_globals = {0};
+        MzmSpriteKind larva_kind = {0};
+        for (int a = 0; a < MZM_IMAGO_LARVA_ANIMS; ++a) {
+            larva_kind.counts[a] = 2;
+            larva_kind.timers[a][0] = larva_kind.timers[a][1] = 1;
+        }
+        for (int m = 0; m < MZM_IMAGO_MULTI_COUNT; ++m) {
+            for (int f = 0; f < 2; ++f) {
+                tables.imago_larva_multi[m].timers[f] = 2;
+                tables.imago_larva_multi[m].parts[f][0][0] = MZM_IMAGO_CLAWS_IDLE;
+                tables.imago_larva_multi[m].parts[f][1][0] = MZM_IMAGO_RIGHT_DOT_VISIBLE;
+                tables.imago_larva_multi[m].parts[f][2][0] = MZM_IMAGO_MIDDLE_DOT_VISIBLE;
+                tables.imago_larva_multi[m].parts[f][3][0] = MZM_IMAGO_LEFT_DOT_VISIBLE;
+                tables.imago_larva_multi[m].parts[f][4][0] = MZM_IMAGO_SHELL_IDLE;
+                tables.imago_larva_multi[m].parts[f][5][0] = MZM_IMAGO_IDLE;
+                for (int p = 0; p < 6; ++p) {
+                    tables.imago_larva_multi[m].parts[f][p][1] = (int16_t)(-8 * p);
+                    tables.imago_larva_multi[m].parts[f][p][2] = (int16_t)(4 * p);
+                }
+            }
+        }
+        tables.health[MZM_PSPRITE_IMAGO_LARVA_RIGHT] = 30;
+        tables.health[MZM_PSPRITE_IMAGO_LARVA_LEFT] = 30;
+        memset(tables.drops[MZM_PSPRITE_IMAGO_LARVA_RIGHT], 0,
+               sizeof tables.drops[MZM_PSPRITE_IMAGO_LARVA_RIGHT]);
+        tables.drops[MZM_PSPRITE_IMAGO_LARVA_RIGHT][MZM_DROP_PROB_LARGE_ENERGY] = 1024;
+        memset(test_events, 0, sizeof test_events);
+        door_timer_calls = 0;
+        last_door_timer = 0;
+        mzm_sfx_clear();
+        MzmSpriteFrame lf = frame;
+        lf.sprites = room;
+        lf.sprite_count = 20;
+        lf.globals = &larva_globals;
+        lf.hooks = &test_hooks;
+        lf.samus_x = 12 * 64;
+        lf.samus_y = 8 * 64;
+        lf.kinds[MZM_FAMILY_IMAGO_LARVA] = &larva_kind;
+
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_IMAGO_LARVA_RIGHT, 4, 9, 22, 0, 0);
+        uint16_t right_spawn_x = room[0].x;
+        mzm_sprite_update(&room[0], 0, &lf);
+        assert(room[0].pose == 0xF && room[0].health == 30 &&
+               larva_globals.sub1.x == right_spawn_x + 11 * 64 &&
+               room[0].room_slot == 5 && mzm_sprite_graphics_owner(&room[1]) ==
+               MZM_PSPRITE_IMAGO_LARVA_RIGHT);
+        int right_parts = 0;
+        MzmSprite *right_shell = NULL, *right_dot = NULL;
+        for (int i = 1; i < 20; ++i) {
+            if (!room[i].status || room[i].sprite_id != MZM_SSPRITE_IMAGO_LARVA_PART) continue;
+            ++right_parts;
+            if (room[i].room_slot == 4) right_shell = &room[i];
+            if (room[i].room_slot == 1) right_dot = &room[i];
+        }
+        assert(right_parts == 5 && right_shell && right_dot);
+        mzm_sprite_update(right_shell, (uint8_t)(right_shell - room), &lf);
+        mzm_sprite_update(right_dot, (uint8_t)(right_dot - room), &lf);
+        assert(right_shell->pose == 0x42 && right_shell->health == UCHAR_MAX &&
+               right_shell->samus_collision == 10);
+
+        /* A missile-sized shell hit retreats four subpixels a frame and
+         * lengthens the following stun by one eight-frame step. */
+        right_shell->health = UCHAR_MAX - 20;
+        right_shell->isft = 2;
+        mzm_sprite_update(right_shell, (uint8_t)(right_shell - room), &lf);
+        assert(room[0].pose == 0x22 && room[0].work0 == 16 && room[0].work1 == 8 &&
+               room[0].y_spawn == 4 && right_shell->health == UCHAR_MAX &&
+               larva_globals.sub1.work1 == 1);
+        uint16_t cocoon_x = larva_globals.sub1.x;
+        mzm_sprite_update(&room[0], 0, &lf);
+        assert(room[0].pose == 0x23 && larva_globals.sub1.x == cocoon_x + 4);
+
+        /* Warning makes the dots withdraw and prevents another retreat. */
+        room[0].pose = 0x26;
+        mzm_sprite_update(&room[0], 0, &lf);
+        assert(room[0].pose == 0x27 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_IMAGO_LARVA_WARNING));
+        mzm_sprite_update(right_dot, (uint8_t)(right_dot - room), &lf);
+        assert(right_dot->pose == 0x23 && larva_globals.sub1.work2 == 1);
+
+        /* Body damage selects the taking-damage multi table and the native
+         * 47-frame recovery before the counterattack. */
+        room[0].health = 10;
+        mzm_sprite_update(&room[0], 0, &lf);
+        assert(room[0].pose == 0x43 && room[0].work0 == 46 &&
+               larva_globals.sub1.multi == MZM_IMAGO_MULTI_TAKING_DAMAGE);
+
+        /* The left larva owns a separate gSubSpriteData2 state and starts
+         * both the door lock and encounter music. */
+        mzm_sprite_init_primary(&room[6], MZM_PSPRITE_IMAGO_LARVA_LEFT, 5, 5, 13, 1, 6);
+        mzm_sprite_update(&room[6], 6, &lf);
+        assert(room[6].pose == 0x9 && room[6].status & MZM_SPRITE_STATUS_X_FLIP &&
+               larva_globals.sub2.x == room[6].x_spawn && door_timer_calls == 1 &&
+               last_door_timer == 1 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_CATTERPILLARS_BATTLE_2));
+
+        /* Kill the right body, then let its parts observe the stationary
+         * dead pose before the body becomes a drop. */
+        room[0].health = 0;
+        room[0].pose = 0x62;
+        mzm_sprite_update(&room[0], 0, &lf);
+        assert(room[0].pose == 0x67 && room[0].health == 1 && room[0].work0 == 99 &&
+               room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        for (int i = 1; i <= 5; ++i) mzm_sprite_update(&room[i], (uint8_t)i, &lf);
+        for (int i = 0; i < 100 && room[0].pose == 0x67; ++i)
+            mzm_sprite_update(&room[0], 0, &lf);
+        assert(room[0].pose == 0x68 && room[0].work0 == 2);
+        for (int i = 1; i <= 5; ++i) mzm_sprite_update(&room[i], (uint8_t)i, &lf);
+        mzm_sprite_update(&room[0], 0, &lf);
+        mzm_sprite_update(&room[0], 0, &lf);
+        assert(test_check_event(NULL, MZM_EVENT_CATERPILLAR_KILLED) &&
+               last_door_timer == -60 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_BOSS_KILLED) &&
+               room[0].sprite_id == MZM_PSPRITE_LARGE_ENERGY_DROP);
+
+        MzmSprite cleared;
+        mzm_sprite_init_primary(&cleared, MZM_PSPRITE_IMAGO_LARVA_RIGHT, 4, 9, 22, 0, 0);
+        MzmSpriteFrame cleared_frame = lf;
+        cleared_frame.sprites = &cleared;
+        cleared_frame.sprite_count = 1;
+        mzm_sprite_update(&cleared, 0, &cleared_frame);
+        assert(cleared.status == 0);
     }
     /* EscapeDetermineTimer, EscapeSetTimer and EscapeUpdateTimer: event
      * routing, difficulty lengths, banner pause and timeout. */

@@ -516,6 +516,47 @@ const char *const mzm_ridley_multi_names[MZM_RIDLEY_MULTI_COUNT] = {
     "sRidleyTailMultiSpriteData_LastVerticalAttack",
     "sRidleyTailMultiSpriteData_BackToIdle",
 };
+const char *const mzm_imago_larva_anim_names[MZM_IMAGO_LARVA_ANIMS] = {
+    "ImagoLarvaPartOam_ShellAttacking",
+    "ImagoLarvaPartOam_ShellIdle",
+    "ImagoLarvaPartOam_ShellRetreating",
+    "ImagoLarvaPartOam_ShellDying",
+    "ImagoLarvaPartOam_ClawsAttacking",
+    "ImagoLarvaPartOam_ClawsIdle",
+    "ImagoLarvaPartOam_ClawsRetreating",
+    "ImagoLarvaPartOam_ClawsTakingDamage",
+    "ImagoLarvaPartOam_LeftDotAppearing",
+    "ImagoLarvaPartOam_MiddleDotAppearing",
+    "ImagoLarvaPartOam_RightDotAppearing",
+    "ImagoLarvaPartOam_LeftDotVisible",
+    "ImagoLarvaPartOam_MiddleDotVisible",
+    "ImagoLarvaPartOam_RightDotVisible",
+    "ImagoLarvaPartOam_LeftDotDisappearing",
+    "ImagoLarvaPartOam_MiddleDotDisappearing",
+    "ImagoLarvaPartOam_RightDotDisappearing",
+    "ImagoLarvaPartOam_ShellWarning",
+    "ImagoLarvaOam_Idle",
+    "ImagoLarvaPartOam_ClawsWarningFirstPart",
+    "ImagoLarvaPartOam_ClawsWarningSecondPart",
+    "ImagoLarvaOam_Warning",
+    "ImagoLarvaPartOam_ShellTakingDamage",
+};
+static const char *const imago_larva_sprites[MZM_IMAGO_LARVA_ANIMS] = {
+    "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT",
+    "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT",
+    "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT",
+    "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT",
+    "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT",
+    "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT", "IMAGO_LARVA_RIGHT",
+};
+const char *const mzm_imago_multi_names[MZM_IMAGO_MULTI_COUNT] = {
+    "sImagoLarvaMultiSpriteData_Attacking",
+    "sImagoLarvaMultiSpriteData_Idle",
+    "sImagoLarvaMultiSpriteData_Retreating",
+    "sImagoLarvaMultiSpriteData_Dying",
+    "sImagoLarvaMultiSpriteData_Warning",
+    "sImagoLarvaMultiSpriteData_TakingDamage",
+};
 const char *const mzm_mother_brain_anim_names[MZM_MOTHER_BRAIN_ANIMS] = {
     "MotherBrainOam_Idle", "MotherBrainOam_ChargingBeam", "MotherBrainPartOam_EyeClosed",
     "MotherBrainPartOam_2fa934", "MotherBrainPartOam_EyeOpening", "MotherBrainPartOam_2fa984",
@@ -787,6 +828,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ACID_WORM] = {MZM_ACID_WORM_ANIMS, mzm_acid_worm_anim_names,
                               acid_worm_sprites},
     [MZM_FAMILY_GADORA] = {MZM_GADORA_ANIMS, mzm_gadora_anim_names, gadora_sprites},
+    [MZM_FAMILY_IMAGO_LARVA] = {MZM_IMAGO_LARVA_ANIMS, mzm_imago_larva_anim_names,
+                                 imago_larva_sprites},
 };
 
 
@@ -1348,7 +1391,8 @@ static void zoomer_landing(Ctx *c) {
  * energy. */
 static uint8_t determine_drop(const Ctx *c) {
     const MzmEquipment *e = c->f->equipment;
-    const uint16_t *probs = c->tables->drops[c->s->sprite_id];
+    const uint16_t *probs = c->s->secondary ? c->tables->secondary_drops[c->s->sprite_id]
+                                            : c->tables->drops[c->s->sprite_id];
     bool full_life = e->energy == e->max_energy;
     uint16_t rng = (uint16_t)(c->rng * 256);
     rng = (uint16_t)(c->frame8 + c->f->frame16 + rng);
@@ -4920,6 +4964,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
             return MZM_FAMILY_ACID_WORM;
         if (sprite_id == MZM_SSPRITE_GADORA_EYE || sprite_id == MZM_SSPRITE_GADORA_BEAM)
             return MZM_FAMILY_GADORA;
+        if (sprite_id == MZM_SSPRITE_IMAGO_LARVA_PART) return MZM_FAMILY_IMAGO_LARVA;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -4999,6 +5044,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_ACID_WORM: return MZM_FAMILY_ACID_WORM;
     case MZM_PSPRITE_GADORA_KRAID: case MZM_PSPRITE_GADORA_RIDLEY:
         return MZM_FAMILY_GADORA;
+    case MZM_PSPRITE_IMAGO_LARVA_RIGHT: case MZM_PSPRITE_IMAGO_LARVA_LEFT:
+        return MZM_FAMILY_IMAGO_LARVA;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -5922,6 +5969,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_GADORA)
         return sprite->absolute_palette_row == 1 ? MZM_PSPRITE_GADORA_RIDLEY :
                                                    MZM_PSPRITE_GADORA_KRAID;
+    if (sprite->sprite_id == MZM_SSPRITE_IMAGO_LARVA_PART) return sprite->owner;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -6046,7 +6094,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
         return;
     /* The Space Pirates and the security systems need the game globals. */
     if ((family == MZM_FAMILY_SPACE_PIRATE || family == MZM_FAMILY_CHOZODIA_SECURITY ||
-         family == MZM_FAMILY_CHOZO_STATUE) &&
+         family == MZM_FAMILY_CHOZO_STATUE || family == MZM_FAMILY_IMAGO_LARVA) &&
         !frame->globals)
         return;
     Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],
@@ -6124,6 +6172,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_DEOREM: ai_deorem(&c); break;
     case MZM_FAMILY_ACID_WORM: ai_acid_worm(&c); break;
     case MZM_FAMILY_GADORA: ai_gadora(&c); break;
+    case MZM_FAMILY_IMAGO_LARVA: ai_imago_larva(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

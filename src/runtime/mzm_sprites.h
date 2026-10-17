@@ -141,6 +141,12 @@ extern const char *const mzm_kraid_multi_names[MZM_KRAID_MULTI_COUNT];
 enum { MZM_RIDLEY_MULTI_IDLE, MZM_RIDLEY_MULTI_SPITTING_FIREBALLS, MZM_RIDLEY_MULTI_TURNING_AROUND_FIRST_PART, MZM_RIDLEY_MULTI_TURNING_AROUND_SECOND_PART, MZM_RIDLEY_MULTI_TAIL_IDLE, MZM_RIDLEY_MULTI_TAIL_DYING, MZM_RIDLEY_MULTI_TAIL_MOVE_TO_ATTACK, MZM_RIDLEY_MULTI_TAIL_SETTING_UP_DIAGONAL, MZM_RIDLEY_MULTI_TAIL_CHARGING_DIAGONAL, MZM_RIDLEY_MULTI_TAIL_DIAGONAL, MZM_RIDLEY_MULTI_TAIL_CHARGING_VERTICAL, MZM_RIDLEY_MULTI_TAIL_VERTICAL, MZM_RIDLEY_MULTI_TAIL_LAST_VERTICAL, MZM_RIDLEY_MULTI_TAIL_BACK_TO_IDLE, MZM_RIDLEY_MULTI_COUNT };
 extern const char *const mzm_ridley_multi_names[MZM_RIDLEY_MULTI_COUNT];
 #define MZM_MOTHER_BRAIN_MULTI_NAME "sMotherBrainMultiSpriteData"
+enum {
+    MZM_IMAGO_MULTI_ATTACKING, MZM_IMAGO_MULTI_IDLE, MZM_IMAGO_MULTI_RETREATING,
+    MZM_IMAGO_MULTI_DYING, MZM_IMAGO_MULTI_WARNING, MZM_IMAGO_MULTI_TAKING_DAMAGE,
+    MZM_IMAGO_MULTI_COUNT,
+};
+extern const char *const mzm_imago_multi_names[MZM_IMAGO_MULTI_COUNT];
 
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
 typedef struct {
@@ -154,6 +160,7 @@ typedef struct {
     uint16_t secondary_damage[256]; /* sSecondarySpriteStats */
     uint16_t secondary_health[256];
     uint8_t secondary_weakness[256];
+    uint16_t secondary_drops[256][5];
     int16_t skree_falling[16];      /* sSkreeFallingSpeed (SHORT_MAX ends it) */
     int16_t zeela_eyes_up[16];      /* sZeelaEyesFallingFromUpSpeed */
     int16_t zeela_eyes_bottom[16];  /* sZeelaEyesFallingFromBottomSpeed */
@@ -197,6 +204,7 @@ typedef struct {
     int16_t ridley_spawning_y[81];  /* sRidleySpawningSpittingFireballsYOffsets */
     int16_t deorem_segment_x[33];   /* sDeoremSegmentXVelocity */
     int16_t deorem_thorn_y[40];     /* sDeoremThornYVelocity */
+    MzmMultiSprite imago_larva_multi[MZM_IMAGO_MULTI_COUNT];
     MzmMultiSprite mother_brain_multi;  /* sMotherBrainMultiSpriteData */
 } MzmSpriteTables;
 
@@ -730,6 +738,22 @@ enum {
 };
 extern const char *const mzm_gadora_anim_names[MZM_GADORA_ANIMS];
 
+/* The Imago larva body and its claws, shell and three glowing dots. */
+enum {
+    MZM_IMAGO_SHELL_ATTACKING, MZM_IMAGO_SHELL_IDLE, MZM_IMAGO_SHELL_RETREATING,
+    MZM_IMAGO_SHELL_DYING, MZM_IMAGO_CLAWS_ATTACKING, MZM_IMAGO_CLAWS_IDLE,
+    MZM_IMAGO_CLAWS_RETREATING, MZM_IMAGO_CLAWS_TAKING_DAMAGE,
+    MZM_IMAGO_LEFT_DOT_APPEARING, MZM_IMAGO_MIDDLE_DOT_APPEARING,
+    MZM_IMAGO_RIGHT_DOT_APPEARING, MZM_IMAGO_LEFT_DOT_VISIBLE,
+    MZM_IMAGO_MIDDLE_DOT_VISIBLE, MZM_IMAGO_RIGHT_DOT_VISIBLE,
+    MZM_IMAGO_LEFT_DOT_DISAPPEARING, MZM_IMAGO_MIDDLE_DOT_DISAPPEARING,
+    MZM_IMAGO_RIGHT_DOT_DISAPPEARING, MZM_IMAGO_SHELL_WARNING,
+    MZM_IMAGO_IDLE, MZM_IMAGO_CLAWS_WARNING_FIRST,
+    MZM_IMAGO_CLAWS_WARNING_SECOND, MZM_IMAGO_WARNING,
+    MZM_IMAGO_SHELL_TAKING_DAMAGE, MZM_IMAGO_LARVA_ANIMS,
+};
+extern const char *const mzm_imago_larva_anim_names[MZM_IMAGO_LARVA_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
@@ -743,7 +767,7 @@ enum {
     MZM_FAMILY_PARASITE, MZM_FAMILY_ATOMIC, MZM_FAMILY_POLYP, MZM_FAMILY_TOURIAN,
     MZM_FAMILY_WORKER_ROBOT, MZM_FAMILY_METROID, MZM_FAMILY_KRAID, MZM_FAMILY_RIDLEY,
     MZM_FAMILY_MOTHER_BRAIN, MZM_FAMILY_BOSS_STATUE, MZM_FAMILY_DEOREM,
-    MZM_FAMILY_ACID_WORM, MZM_FAMILY_GADORA,
+    MZM_FAMILY_ACID_WORM, MZM_FAMILY_GADORA, MZM_FAMILY_IMAGO_LARVA,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -815,6 +839,7 @@ enum {
     MZM_PSPRITE_CHOZO_STATUE_GRAVITY = 88, MZM_PSPRITE_CHOZO_STATUE_SPACE_JUMP = 89,
     MZM_PSPRITE_CHOZO_STATUE_PLASMA_BEAM = 148,
     MZM_PSPRITE_GADORA_KRAID = 173, MZM_PSPRITE_GADORA_RIDLEY = 174,
+    MZM_PSPRITE_IMAGO_LARVA_RIGHT = 77, MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,
 };
 
 /* SecondarySprite */
@@ -838,6 +863,7 @@ enum {
     MZM_SSPRITE_DEOREM_SEGMENT = 9, MZM_SSPRITE_DEOREM_EYE = 10, MZM_SSPRITE_DEOREM_THORN = 11,
     MZM_SSPRITE_ACID_WORM_PART = 37, MZM_SSPRITE_ACID_WORM_SPIT = 38,
     MZM_SSPRITE_GADORA_EYE = 54, MZM_SSPRITE_GADORA_BEAM = 55,
+    MZM_SSPRITE_IMAGO_LARVA_PART = 18,
     MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 = 44, MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE = 57,
 };
 
@@ -924,6 +950,7 @@ enum {
     MZM_EVENT_DEOREM_KILLED_AT_SECOND_LOCATION = 26,
     MZM_EVENT_ACID_WORM_KILLED = 27,
     MZM_EVENT_KRAID_GADORA_KILLED = 28, MZM_EVENT_RIDLEY_GADORA_KILLED = 36,
+    MZM_EVENT_CATERPILLAR_KILLED = 31,
 };
 
 /* Game systems outside the sprite engine. */
@@ -960,6 +987,13 @@ typedef struct {
 /* ALARM_TIMER_ACTIVE_TIMER: CONVERT_SECONDS(8.f). */
 #define MZM_ALARM_TIMER_ACTIVE 480
 
+typedef struct {
+    uint16_t y, x;
+    uint8_t multi, frame, adc;
+    uint8_t work1, work2, work3, work4, work5, work6;
+    uint16_t health;
+} MzmSubSpriteState;
+
 /* Game globals the sprites keep between frames. */
 typedef struct {
     uint16_t alarm_timer;           /* gAlarmTimer (the Chozodia alarm) */
@@ -970,17 +1004,9 @@ typedef struct {
     uint16_t boss_work2;            /* gBossWork.work2: the last pirate's x distance */
     /* gSubSpriteData1: the multi-sprite's position, table
      * (MZM_CHOZO_MULTI_*), frame, counter and work variables. */
-    struct {
-        uint16_t y, x;
-        uint8_t multi, frame, adc;
-        uint8_t work1, work2, work3, work4, work5, work6;
-        uint16_t health;
-    } sub1;
-    /* gSubSpriteData2 (Ridley's tail): position, table and animation. */
-    struct {
-        uint16_t y, x;
-        uint8_t multi, frame, adc;
-    } sub2;
+    MzmSubSpriteState sub1;
+    /* gSubSpriteData2: Ridley's tail or the left Imago larva. */
+    MzmSubSpriteState sub2;
     /* gBossWork.work1 and work3 (Ridley's spawn y and damage taken). */
     uint16_t boss_work1, boss_work3, boss_work4, boss_work5;
     /* gEnergyRefillAnimation, gMissileRefillAnimation,

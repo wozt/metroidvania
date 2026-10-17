@@ -194,6 +194,8 @@ void ai_deorem(Ctx *c);
 void ai_acid_worm(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */
 void ai_gadora(Ctx *c);
+/* The paired Imago larvae and their shell, claws and light parts. */
+void ai_imago_larva(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

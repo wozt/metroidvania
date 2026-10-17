@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-16**.
+Last updated: **2026-10-17**.
 
 ## Current product state
 
@@ -18,7 +18,7 @@ game frontend.
 | Character assets | Partial | canonical local Samus runtime library: 1,072 indexed sequences, 2,640 unique BMPs; 566 projectile sequences; Soma preview extraction |
 | GTK4 editor | Active | shared room documents, native-data overlays, catalog and area/world render audits |
 | Headless backend | Active foundation | stable CLI envelope plus room, tile, collision, door, transition, entity, story and audit operations |
-| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Deorem, Acid Worm, Gadora, Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
+| Native gameplay engines | Experimental MZM and Aria runtimes | MZM now boots through the intro, title and file select into its room runtime, with a broad but incomplete set of Samus systems, enemies and the Deorem, Acid Worm, Gadora, Imago Larva, Kraid, Ridley and Mother Brain encounters. Aria remains an experimental room/combat runtime. Neither campaign is complete and the crossover host is not implemented. |
 | Dual-character AI | Not started | story/design requirement only |
 | Cross-world travel | Not started | savepoint metadata exists; no native runtime loader |
 
@@ -3446,6 +3446,36 @@ No automatic reciprocal link or native engine encoder is implemented.
   focused Kraid/Ridley Gadora assertions, regenerated parity/dashboard data
   and the proprietary-file guard passed; both `kraid_029` and `ridley_011`
   runtime room checks loaded their native collision successfully.
+
+## Patch 0351 - Zero Mission Imago larva encounter
+
+- Added both `norfair_042` Imago larva primaries and their shared secondary
+  shell, claws and three light actors. The left and right bodies keep the
+  native independent `gSubSpriteData2` and `gSubSpriteData1` state while all
+  six native multi-sprite tables drive their exact part offsets and OAM.
+- The left larva now locks the room and starts the second Caterpillar battle
+  track. The right larva detects Samus from its cocoon, warns, withdraws its
+  lights, lunges back to the passage and retreats at one, four or eight
+  subpixels per frame according to shell damage. Each retreat extends the
+  following stun up to the native limit.
+- Body damage selects the taking-damage choreography and its 47-frame
+  counterattack. The 100-frame death synchronizes the parts and their native
+  weighted drops, persists event 31, unlocks the doors after one second and
+  starts the boss-killed music. Reloading the completed room removes both
+  larvae.
+- `scripts/mzm_sprites.py` exports the 23 Imago larva OAM tables, their palette
+  rows and the six multi-sprite tables. The runtime now also retains native
+  secondary-sprite drop probabilities instead of accidentally consulting a
+  primary sprite row with the same numeric id.
+- The focused sprite scenario covers both bodies, independent shared state,
+  shell retreat speed and delay, warning immunity, body damage, synchronized
+  death, drops, event persistence, door timing and music. The encounter still
+  needs a frame-by-frame emulator comparison for palette and part alignment.
+- Validation on 2026-10-17: warning-clean full build, CTest 35/35 and Python
+  438/438 passed. The focused sprite scenario passed, and the real
+  `norfair_042` room check loaded its native 784x224 geometry and 540 collision
+  cells. Parity/dashboard data were regenerated and the proprietary-file guard
+  passed.
 
 ## Patch 0349 - Zero Mission Acid Worm encounter
 

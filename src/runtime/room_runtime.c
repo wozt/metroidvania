@@ -2585,30 +2585,38 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             }
         } else if (!strcmp(line, "sstats")) {
             char name[64];
-            int id, health, damage, weakness;
-            if (sscanf(cursor, "%63s %d %d %d %d", name, &id, &health, &damage, &weakness) != 5 ||
+            int id, health, damage, weakness, no_drop, drops[5];
+            if (sscanf(cursor, "%63s %d %d %d %d %d %d %d %d %d %d", name, &id, &health,
+                       &damage, &weakness, &no_drop, &drops[0], &drops[1], &drops[2], &drops[3],
+                       &drops[4]) != 11 ||
                 id < 0 || id > 255) { ok = false; break; }
             sprites->tables.secondary_damage[id] = (uint16_t)damage;
             sprites->tables.secondary_health[id] = (uint16_t)health;
             sprites->tables.secondary_weakness[id] = (uint8_t)(weakness & 0xFF);
             sprites->tables.secondary_freeze[id] = (uint8_t)(weakness >> 8);
+            for (int d = 0; d < 5; ++d)
+                sprites->tables.secondary_drops[id][d] = (uint16_t)drops[d];
         } else if (!strcmp(line, "multi")) {
             /* multi <name> <frame> <timer> <oam,y,x> per part */
             char name[64];
             int index, timer, used = 0;
             if (sscanf(cursor, "%63s %d %d%n", name, &index, &timer, &used) != 3) continue;
             enum { CHOZO = MZM_CHOZO_MULTI_COUNT, KRAID = CHOZO + MZM_KRAID_MULTI_COUNT,
-                   RIDLEY = KRAID + MZM_RIDLEY_MULTI_COUNT, ALL = RIDLEY + 1 };
+                   RIDLEY = KRAID + MZM_RIDLEY_MULTI_COUNT,
+                   IMAGO = RIDLEY + MZM_IMAGO_MULTI_COUNT,
+                   MOTHER = IMAGO, ALL = MOTHER + 1 };
             for (int m = 0; m < ALL; ++m) {
                 const char *known = m < CHOZO ? mzm_chozo_multi_names[m]
                                     : m < KRAID ? mzm_kraid_multi_names[m - CHOZO]
                                     : m < RIDLEY ? mzm_ridley_multi_names[m - KRAID]
+                                    : m < IMAGO ? mzm_imago_multi_names[m - RIDLEY]
                                                  : MZM_MOTHER_BRAIN_MULTI_NAME;
                 if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
                 MzmMultiSprite *multi = m < CHOZO ? &sprites->tables.chozo_multi[m]
                                         : m < KRAID ? &sprites->tables.kraid_multi[m - CHOZO]
                                         : m < RIDLEY ? &sprites->tables.ridley_multi[m - KRAID]
+                                        : m < IMAGO ? &sprites->tables.imago_larva_multi[m - RIDLEY]
                                                      : &sprites->tables.mother_brain_multi;
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;
@@ -3506,6 +3514,10 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_GADORA_RIDLEY &&
                 sprite->palette_row==1)
             shade="/row1";
+        else if((mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO_LARVA_RIGHT ||
+                 mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO_LARVA_LEFT) &&
+                (sprite->palette_row==1 || sprite->palette_row==2))
+            shade=sprite->palette_row==1?"/row1":"/row2";
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_KRAID &&
                 sprite->palette_row>=1 && sprite->palette_row<=3) {
             /* Kraid's health rows (absolutePaletteRow 1 to 3). */

@@ -3557,6 +3557,36 @@ No automatic reciprocal link or native engine encoder is implemented.
   438/438 passed. The focused encounter scenario, real room capture,
   regenerated parity/dashboard data and proprietary-file guard all passed.
 
+## Patch 0355 - Zero Mission Imago cocoon collapse and passage unlock
+
+- Completed the active cocoon's second phase from the pinned native routines.
+  Once the dying multi-sprite animation exposes the body, it accelerates down,
+  emits the native ceiling-debris pattern, breaks the centre floor block, then
+  removes the two middle and two outer blocks at their original timings. The
+  lower-floor collision aligns the static body, restores its palette and scale,
+  shakes the screen, plays the crash and starts the 85-frame music fade.
+- After 90 visible frames the cocoon removes both right-side passage blocks,
+  sets the native negative door timer, plays the boss-killed music and enters
+  its four-frame breathing cycle. Decorative growths and the dying ceiling vine
+  now burst and disappear at the crash, while event 33 continues to restore the
+  persistent in-ground state on reload.
+- Added the native Winged Ripper actor. It uses the ROM-exported 320-value
+  `sSineTable`, native turn animations, direction flags and elliptical route;
+  the falling cocoon crushes it after the original delay and its death releases
+  a standing Samus. The shared standing bridge now carries both Samus
+  coordinates, so she follows the Ripper across the complete ellipse.
+- Extended the private sprite-table loader buffer to 4 KiB. The previous 1 KiB
+  line buffer truncated `sSineTable` and rejected it plus every following AI
+  table; a real load exposed the issue before capture.
+- The focused ROM-free scenario now covers the Ripper, staged five-block floor
+  destruction, landing, screen shakes, sounds, 90-frame delay, final two-block
+  opening, door timer and victory music. A real frame-3 `norfair_043` capture
+  loaded all tables and rendered 12 actors, including the moving Ripper beside
+  the complete cocoon.
+- Validation on 2026-10-17: warning-clean full build, CTest 35/35 and Python
+  438/438 passed. The private sprite rebuild, focused encounter scenario, real
+  room capture, regenerated parity data and proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

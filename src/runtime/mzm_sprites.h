@@ -205,6 +205,7 @@ typedef struct {
     MzmMultiSprite ridley_multi[MZM_RIDLEY_MULTI_COUNT];
     int16_t ridley_idle_y[65];      /* sRidleyIdleYOffsets (SHORT_MAX restarts it) */
     int16_t ridley_spawning_y[81];  /* sRidleySpawningSpittingFireballsYOffsets */
+    int16_t sine[320];              /* sSineTable (one turn plus a cosine quarter) */
     int16_t deorem_segment_x[33];   /* sDeoremSegmentXVelocity */
     int16_t deorem_thorn_y[40];     /* sDeoremThornYVelocity */
     MzmMultiSprite imago_larva_multi[MZM_IMAGO_MULTI_COUNT];
@@ -970,11 +971,14 @@ enum {
 /* gSamusData as SpriteUtilSamusStandingOnSprite sees and changes it:
  * `on_enemy` is standingStatus STANDING_ENEMY, `midair` STANDING_MIDAIR;
  * `y` (native subpixels) and `copy_y` (gSamusDataCopy.yPosition). Outputs:
- * `landing_request` (SamusSetPose(SPOSE_LANDING_REQUEST)) and `y_set`. */
+ * `landing_request` (SamusSetPose(SPOSE_LANDING_REQUEST)), `y_set`, and the
+ * carried `x`/`x_set` pair used by horizontally moving platforms. */
 typedef struct {
     bool on_enemy, midair;
     uint16_t y, copy_y;
     bool landing_request, y_set;
+    uint16_t x;
+    bool x_set;
 } MzmSpriteStanding;
 
 /* EventFunction values read by the ported sprites (include/constants/event.h). */

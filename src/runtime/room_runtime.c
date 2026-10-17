@@ -2504,7 +2504,8 @@ static uint8_t runtime_most_recent_save(char paths[3][4096]) {
 static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
-    char line[1024];
+    /* sSineTable alone is 320 signed values (about 1.3 KiB). */
+    char line[4096];
     bool ok = fgets(line, sizeof line, f) &&
               !strcmp(line, "schema\tmetroidvania-mzm-sprite-tables-v1\n");
     int random_count = 0, falling_count = 0;
@@ -2548,6 +2549,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sKraidPal", t->kraid_palette, 128, 128},
         {"sRidleyIdleYOffsets", t->ridley_idle_y, 65, 65},
         {"sRidleySpawningSpittingFireballsYOffsets", t->ridley_spawning_y, 81, 81},
+        {"sSineTable", t->sine, 320, 320},
         {"sDeoremSegmentXVelocity", t->deorem_segment_x, 33, 33},
         {"sDeoremThornYVelocity", t->deorem_thorn_y, 40, 40},
         {mzm_debris_table_names[0], t->debris[0], 9, 9},
@@ -3261,7 +3263,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                   !samus->on_enemy &&
                                       mzm_pose_standing(samus->pose) == MZM_STANDING_MIDAIR,
                                   (uint16_t)(samus->y - 1), (uint16_t)(samus->copy_y - 1),
-                                  false, false};
+                                  false, false, (uint16_t)samus->x, false};
     sprites->room = room;
     static const MzmSpriteHooks hook_table = {NULL, runtime_sprite_check_event,
                                               runtime_sprite_set_event, runtime_sprite_door_timer,
@@ -3329,6 +3331,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
         if (standing.landing_request)
             mzm_samus_land_on_sprite(samus, input, equipment, collision);
         if (standing.y_set) samus->y = (int32_t)standing.y + 1;
+        if (standing.x_set) samus->x = standing.x;
         samus->on_enemy = standing.on_enemy;
     }
     if (link.standing_enemy) samus->on_enemy = true;

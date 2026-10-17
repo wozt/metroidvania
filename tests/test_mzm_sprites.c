@@ -1116,7 +1116,8 @@ int main(void) {
     z.status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
     /* SpriteUtilSamusStandingOnSprite: a midair Samus gets the landing
      * request and STANDING_ENEMY; the flag is cleared every frame. */
-    MzmSpriteStanding standing = {false, true, solid.y, solid.y, false, false};
+    MzmSpriteStanding standing = {false, true, solid.y, solid.y, false, false,
+                                  solid.x, false};
     frame.standing = &standing;
     step(&z, 1);
     assert(standing.landing_request && standing.on_enemy && !standing.midair &&
@@ -5479,8 +5480,9 @@ int main(void) {
             MZM_IMAGO_COCOON_VINE_LEFT_RIGHT,
         };
         for (int m = 0; m < MZM_IMAGO_COCOON_MULTI_COUNT; ++m) {
-            for (int f = 0; f < 2; ++f) {
-                tables.imago_cocoon_multi[m].timers[f] = 2;
+            int frames = m == MZM_IMAGO_COCOON_MULTI_DYING ? 9 : 2;
+            for (int f = 0; f < frames; ++f) {
+                tables.imago_cocoon_multi[m].timers[f] = 1;
                 for (int p = 0; p < 10; ++p) {
                     tables.imago_cocoon_multi[m].parts[f][p][0] = cocoon_oam[p];
                     tables.imago_cocoon_multi[m].parts[f][p][1] = (int16_t)(p * 3);
@@ -5489,8 +5491,14 @@ int main(void) {
             }
         }
         tables.health[MZM_PSPRITE_IMAGO_COCOON] = 1;
+        tables.secondary_health[MZM_SSPRITE_WINGED_RIPPER] = 20;
         tables.secondary_health[MZM_SSPRITE_IMAGO_COCOON_VINE] = 50;
         tables.secondary_health[MZM_SSPRITE_IMAGO_COCOON_SPORE] = 1;
+        tables.sine[64] = 256;
+        tables.sine[128] = 0;
+        tables.sine[129] = -6;
+        tables.sine[192] = -256;
+        tables.sine[193] = -256;
         MzmSpriteFrame cf = frame;
         cf.hooks = &test_hooks;
         cf.kinds[MZM_FAMILY_IMAGO_COCOON] = &cocoon_kind;
@@ -5506,16 +5514,38 @@ int main(void) {
         cf.globals = &cocoon_globals;
         cf.samus_y = 12 * MZM_BLOCK_SIZE;
         cf.samus_x = 25 * MZM_BLOCK_SIZE;
+        clear();
         door_timer_calls = 0;
         mzm_sfx_clear();
         mzm_sprite_init_primary(&room[0], MZM_PSPRITE_IMAGO_COCOON, 0, 2, 23, 0, 0);
+        room[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
         mzm_sprite_update(&room[0], 0, &cf);
         int vines = 0;
+        MzmSprite *winged = NULL;
         for (int i = 1; i < 32; ++i)
-            vines += room[i].status && room[i].sprite_id == MZM_SSPRITE_IMAGO_COCOON_VINE;
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_IMAGO_COCOON_VINE)
+                ++vines;
+            else if (room[i].status && room[i].sprite_id == MZM_SSPRITE_WINGED_RIPPER)
+                winged = &room[i];
         assert(room[0].pose == 0x8 && room[0].room_slot == 4 && room[0].health == 1 &&
                room[0].scaling == 256 && cocoon_globals.sub1.health == 6 && vines == 9 &&
-               door_timer_calls == 1 && last_door_timer == 1);
+               winged && door_timer_calls == 1 && last_door_timer == 1);
+        mzm_sprite_update(winged, (uint8_t)(winged - room), &cf);
+        assert(winged->pose == 0x8 && winged->health == 20 && winged->scaling == 192 &&
+               winged->work1 == 128 && winged->samus_collision == 4 &&
+               winged->status & MZM_SPRITE_STATUS_FACING_RIGHT);
+        MzmSpriteStanding ripper_rider = {true, false, 600, 600, false, false,
+                                          500, false};
+        uint16_t winged_old_y = winged->y, winged_old_x = winged->x;
+        cf.standing = &ripper_rider;
+        winged->status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+        mzm_sprite_update(winged, (uint8_t)(winged - room), &cf);
+        assert(winged->pose == 0x9 && winged->anim == MZM_IMAGO_COCOON_WINGED_RIPPER_TURNING &&
+               winged->y == winged->y_spawn - 4 && winged->x == winged->x_spawn - 192);
+        assert(ripper_rider.y == (uint16_t)(600 + winged->y - winged_old_y) &&
+               ripper_rider.x == (uint16_t)(500 + winged->x - winged_old_x) &&
+               ripper_rider.y_set && ripper_rider.x_set);
+        cf.standing = NULL;
 
         MzmSprite *decoration = NULL;
         int destructible = 0;
@@ -5566,6 +5596,60 @@ int main(void) {
                room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
                test_check_event(NULL, MZM_EVENT_IMAGO_COCOON_KILLED) &&
                mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_IMAGO_COCOON_VINES_CRACKING));
+
+        /* The falling body crushes its ripper, removes five floor blocks,
+         * crashes on the lower floor and then opens the two-block passage. */
+        winged->work1 = 128;
+        winged->work3 = 2;
+        winged->y_spawn = (uint16_t)(room[0].y + 4);
+        winged->x_spawn = (uint16_t)(room[0].x + 192);
+        room[0].work3 = 17;
+        mzm_sprite_update(winged, (uint8_t)(winged - room), &cf);
+        assert(winged->pose == 0x62);
+        mzm_sprite_update(winged, (uint8_t)(winged - room), &cf);
+        assert(winged->status == 0);
+
+        cocoon_globals.sub1.frame = 8;
+        cocoon_globals.sub1.adc = 1;
+        MzmSprite *ceiling = &room[4];
+        mzm_sprite_update(ceiling, 4, &cf);
+        assert(ceiling->pose == 0x43);
+        unsigned floor_row = (cocoon_globals.sub1.y + MZM_BLOCK_SIZE * 6 + 8) /
+                             MZM_BLOCK_SIZE;
+        unsigned floor_column = cocoon_globals.sub1.x / MZM_BLOCK_SIZE;
+        assert(floor_row < ROWS && floor_column < COLUMNS);
+        grid[floor_row][floor_column] = MZM_CLIPDATA_SOLID;
+        caa_calls = 0;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &cf);
+        assert(room[0].pose == 0x23 && caa_calls == 1 &&
+               last_caa == MZM_CAA_REMOVE_SOLID &&
+               mzm_screen_shake.y.timer == 40 &&
+               mzm_sfx_requested(MZM_SFX_PLAY,
+                                 MZM_SOUND_IMAGO_COCOON_DESTROYING_BLOCKS));
+        int fall_frames = 0;
+        while (room[0].pose == 0x23 && fall_frames++ < 120) {
+            cf.frame8++;
+            mzm_sprite_update(&room[0], 0, &cf);
+        }
+        assert(room[0].pose == 0x25 && room[0].work0 == 90 &&
+               room[0].anim == MZM_IMAGO_COCOON_STATIC && room[0].scaling == 256 &&
+               caa_calls == 5 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_IMAGO_COCOON_CRASHING) &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_FADE, 0));
+        for (int i = 1; i <= 9; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &cf);
+        assert(!room[3].status && !ceiling->status);
+        mzm_sfx_clear();
+        int unlock_frames = 0;
+        while (room[0].pose == 0x25 && unlock_frames++ < 100) {
+            cf.frame8++;
+            room[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
+            mzm_sprite_update(&room[0], 0, &cf);
+        }
+        assert(room[0].pose == 0x27 && caa_calls == 7 && door_timer_calls == 2 &&
+               last_door_timer == -60 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_BOSS_KILLED));
 
         MzmSprite cleared_room[3] = {0};
         MzmSpriteGlobals cleared_globals = {0};

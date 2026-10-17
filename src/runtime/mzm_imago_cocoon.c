@@ -2,13 +2,19 @@
 /* Zero Mission's Imago cocoon actors (src/sprites_ai/imago_cocoon.c): the
  * active multi-sprite cocoon, its destructible vines and spore nests, the
  * tunnel discovery trigger, and the persistent post-fight remains. */
+#include "mzm_blocks.h"
 #include "mzm_sprite_ai.h"
+#include "mzm_screen_shake.h"
 
 enum {
     COCOON_IDLE = 0x8,
     COCOON_FALLING_BEFORE_BLOCKS = 0x9,
+    COCOON_FALLING_AFTER_BLOCKS = 0x23,
     COCOON_UNLOCK_PASSAGE = 0x25,
     COCOON_IN_GROUND = 0x27,
+
+    WINGED_RIPPER_MOVING_INIT = 0x8,
+    WINGED_RIPPER_MOVING = 0x9,
 
     VINE_IDLE = 0x8,
     VINE_SPAWN_SPORES = 0xE,
@@ -39,6 +45,8 @@ enum {
 };
 
 enum { MUSIC_STARTED, MUSIC_FADING, MUSIC_WAITING };
+
+enum { IMAGO_COCOON_SIZE = 0xE8, SINE_PI = 128 };
 
 static MzmSubSpriteState *cocoon_state(Ctx *c) {
     return &c->f->globals->sub1;
@@ -92,6 +100,12 @@ static void set_event(const Ctx *c, uint8_t event) {
     if (hooks && hooks->set_event) hooks->set_event(hooks->context, event);
 }
 
+static void apply_caa(const Ctx *c, uint16_t y, uint16_t x) {
+    const MzmSpriteHooks *hooks = c->f->hooks;
+    if (hooks && hooks->apply_caa)
+        hooks->apply_caa(hooks->context, y, x, MZM_CAA_REMOVE_SOLID);
+}
+
 static void change_scaling(MzmSprite *s, uint16_t limit, uint16_t value) {
     if (s->work2) {
         if (s->scaling > 256u - limit) s->scaling -= value;
@@ -111,6 +125,15 @@ static void spawn_vines(Ctx *c, uint16_t y, uint16_t x) {
     for (size_t i = 0; i < sizeof parts; ++i)
         ai_spawn_secondary(c, MZM_SSPRITE_IMAGO_COCOON_VINE, parts[i], c->s->gfx_slot,
                            y, x, 0);
+}
+
+static void spawn_winged_ripper(Ctx *c, uint16_t y, uint16_t x) {
+    int slot = ai_spawn_secondary(c, MZM_SSPRITE_WINGED_RIPPER, 0, c->s->gfx_slot,
+                                  (uint16_t)(y + BLOCK_SIZE * 4), x,
+                                  MZM_SPRITE_STATUS_X_FLIP);
+    if (slot < 0) return;
+    c->f->sprites[slot].y_spawn = (uint16_t)(y + BLOCK_SIZE * 6);
+    c->f->sprites[slot].x_spawn = (uint16_t)(x - BLOCK_SIZE * 3);
 }
 
 /* ImagoCocoonInit and the combat's idle phase. */
@@ -160,6 +183,7 @@ static void active_cocoon_init(Ctx *c) {
     s->pose = COCOON_IDLE;
     door_timer(c, 1);
     spawn_vines(c, state->y, state->x);
+    spawn_winged_ripper(c, state->y, state->x);
     c->f->globals->boss_work1 = MUSIC_WAITING;
 }
 
@@ -194,18 +218,175 @@ static void active_cocoon_idle(Ctx *c) {
     }
 }
 
+static void cocoon_fall(Ctx *c) {
+    if (c->s->work3 < 48) c->s->work3++;
+    cocoon_state(c)->y = (uint16_t)(cocoon_state(c)->y +
+                                    (c->s->work3 >> 2) + EIGHTH_BLOCK_SIZE);
+}
+
+static void cocoon_break_center(Ctx *c) {
+    uint16_t y = (uint16_t)(c->s->y_spawn + BLOCK_SIZE * 11);
+    uint16_t x = cocoon_state(c)->x;
+    apply_caa(c, (uint16_t)(y - HALF_BLOCK_SIZE), x);
+    ai_particle_set(c, (uint16_t)(y - HALF_BLOCK_SIZE), x,
+                    MZM_PE_SPRITE_EXPLOSION_HUGE);
+}
+
+static void cocoon_break_middle(Ctx *c) {
+    uint16_t y = (uint16_t)(c->s->y_spawn + BLOCK_SIZE * 11);
+    uint16_t x = cocoon_state(c)->x;
+    apply_caa(c, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE));
+    apply_caa(c, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x - BLOCK_SIZE));
+    ai_particle_set(c, y, (uint16_t)(x + BLOCK_SIZE + EIGHTH_BLOCK_SIZE),
+                    MZM_PE_SPRITE_EXPLOSION_HUGE);
+    ai_particle_set(c, y, (uint16_t)(x - BLOCK_SIZE - EIGHTH_BLOCK_SIZE),
+                    MZM_PE_SPRITE_EXPLOSION_HUGE);
+}
+
+static void cocoon_break_outer(Ctx *c) {
+    uint16_t y = (uint16_t)(c->s->y_spawn + BLOCK_SIZE * 11);
+    uint16_t x = cocoon_state(c)->x;
+    apply_caa(c, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x + BLOCK_SIZE * 2));
+    apply_caa(c, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x - BLOCK_SIZE * 2));
+    ai_particle_set(c, y, (uint16_t)(x + BLOCK_SIZE * 2),
+                    MZM_PE_SPRITE_EXPLOSION_HUGE);
+    ai_particle_set(c, y, (uint16_t)(x - BLOCK_SIZE * 2),
+                    MZM_PE_SPRITE_EXPLOSION_HUGE);
+}
+
+static void cocoon_unlock_blocks(Ctx *c) {
+    uint16_t y = (uint16_t)(c->s->y_spawn + BLOCK_SIZE * 13);
+    uint16_t x = (uint16_t)(cocoon_state(c)->x + BLOCK_SIZE * 9);
+    apply_caa(c, (uint16_t)(y + HALF_BLOCK_SIZE), x);
+    apply_caa(c, (uint16_t)(y + BLOCK_SIZE + HALF_BLOCK_SIZE), x);
+}
+
+static void cocoon_ceiling_debris(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(c->world->camera_y - BLOCK_SIZE);
+    uint16_t x = cocoon_state(c)->x;
+    uint8_t timer = ++s->work0;
+    uint8_t rng = c->rng;
+    if ((timer & 31u) == 0) {
+        if (timer & 32u)
+            ai_debris_init(c, 5, y, (uint16_t)(x + BLOCK_SIZE + HALF_BLOCK_SIZE -
+                                               PIXEL_SIZE - PIXEL_SIZE / 2 - rng * 8));
+        else
+            ai_debris_init(c, 7, y, (uint16_t)(x - BLOCK_SIZE - PIXEL_SIZE -
+                                               PIXEL_SIZE / 2 + rng * 8));
+    }
+    if (cocoon_state(c)->frame <= 3 || timer & 1u) return;
+    if (rng > 7) {
+        ai_debris_init(c, 8, y, (uint16_t)(x - BLOCK_SIZE * 2 - QUARTER_BLOCK_SIZE -
+                                           PIXEL_SIZE - PIXEL_SIZE / 2 + rng * 4));
+        ai_debris_init(c, 6, y, (uint16_t)(x + HALF_BLOCK_SIZE - rng * 4));
+    } else {
+        ai_debris_init(c, 6, y, (uint16_t)(x + BLOCK_SIZE * 2 + PIXEL_SIZE / 2 - rng * 4));
+        ai_debris_init(c, 8, y, (uint16_t)(x - HALF_BLOCK_SIZE + rng * 4));
+    }
+}
+
+static void active_cocoon_falling_before(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSubSpriteState *state = cocoon_state(c);
+    if ((c->frame8 & 31u) == 0) change_scaling(s, 1, 1);
+    if (state->frame <= 7) {
+        if (state->frame == 7 && state->adc == 6)
+            ai_spawn_secondary(c, MZM_SSPRITE_IMAGO_CEILING_VINE, 0, s->gfx_slot,
+                               state->y, state->x, 0);
+        cocoon_ceiling_debris(c);
+        return;
+    }
+    cocoon_fall(c);
+    if (!(ai_collision_at(c, (uint16_t)(state->y + BLOCK_SIZE * 6), state->x) &
+          MZM_COLLISION_FLAGS_F0)) return;
+    cocoon_break_center(c);
+    s->pose = COCOON_FALLING_AFTER_BLOCKS;
+    s->work0 = 0;
+    mzm_screen_shake_start_vertical(40, 0x81);
+    mzm_sfx_play(MZM_SOUND_IMAGO_COCOON_DESTROYING_BLOCKS);
+}
+
+static void active_cocoon_falling_after(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSubSpriteState *state = cocoon_state(c);
+    if ((c->frame8 & 1u) == 0) change_scaling(s, 1, 1);
+    cocoon_fall(c);
+    uint16_t y = (uint16_t)(state->y + IMAGO_COCOON_SIZE);
+    uint16_t x = state->x;
+    s->work0++;
+    if (s->work0 == 4) cocoon_break_middle(c);
+    else if (s->work0 == 8) cocoon_break_outer(c);
+    else if (s->work0 == 15) {
+        y = (uint16_t)(y + BLOCK_SIZE * 3);
+        ai_particle_set(c, y, (uint16_t)(x + BLOCK_SIZE + HALF_BLOCK_SIZE + PIXEL_SIZE),
+                        MZM_PE_TWO_MEDIUM_DUST);
+        ai_particle_set(c, y, (uint16_t)(x - BLOCK_SIZE - HALF_BLOCK_SIZE - PIXEL_SIZE),
+                        MZM_PE_TWO_MEDIUM_DUST);
+        ai_particle_set(c, y, x, MZM_PE_SPRITE_EXPLOSION_HUGE);
+        y = (uint16_t)(y - BLOCK_SIZE * 3);
+    }
+    uint16_t top = ai_check_vertical_slopes(c, y, x);
+    if (c->vertical == MZM_COLLISION_AIR) return;
+    ai_set_anim(s, MZM_IMAGO_COCOON_STATIC);
+    s->palette_row = s->absolute_palette_row = 0;
+    state->y = (uint16_t)(top - IMAGO_COCOON_SIZE);
+    s->pose = COCOON_UNLOCK_PASSAGE;
+    s->work0 = 90;
+    mzm_screen_shake_start_vertical(40, 0x81);
+    mzm_sfx_play(MZM_SOUND_IMAGO_COCOON_CRASHING);
+    s->scaling = 256;
+    s->work2 = 0;
+    mzm_sfx_music_fade(85);
+}
+
+static void active_cocoon_unlock(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (!(s->status & MZM_SPRITE_STATUS_ONSCREEN) || !s->work0) return;
+    if (--s->work0) return;
+    s->pose = COCOON_IN_GROUND;
+    cocoon_unlock_blocks(c);
+    door_timer(c, -60);
+    mzm_sfx_music_play(MZM_MUSIC_BOSS_KILLED, 0);
+}
+
+static void active_cocoon_in_ground(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSubSpriteState *state = cocoon_state(c);
+    if (c->frame8 & 3u) return;
+    if (s->work2) {
+        if (s->scaling > 252) {
+            s->scaling--;
+            state->y--;
+        } else {
+            s->work2 = 0;
+            mzm_sfx_play(MZM_SOUND_IMAGO_COCOON_IN_GROUND);
+        }
+    } else if (s->scaling < 260) {
+        s->scaling++;
+        state->y++;
+    } else {
+        s->work2 = 1;
+    }
+}
+
 static void active_cocoon(Ctx *c) {
     MzmSprite *s = c->s;
     MzmSubSpriteState *state = cocoon_state(c);
     if (s->pose == SPRITE_POSE_UNINITIALIZED) active_cocoon_init(c);
     else if (s->pose == COCOON_IDLE) active_cocoon_idle(c);
-    else if (s->pose == COCOON_IN_GROUND && (c->frame8 & 3) == 0) {
-        change_scaling(s, 4, 1);
-        state->y = (uint16_t)(state->y + (s->work2 ? -1 : 1));
-    }
+    else if (s->pose == COCOON_FALLING_BEFORE_BLOCKS) active_cocoon_falling_before(c);
+    else if (s->pose == COCOON_FALLING_AFTER_BLOCKS) active_cocoon_falling_after(c);
+    else if (s->pose == COCOON_UNLOCK_PASSAGE) active_cocoon_unlock(c);
+    else if (s->pose == COCOON_IN_GROUND) active_cocoon_in_ground(c);
     if (!s->status) return;
     update_cocoon_multi(c, state);
-    sync_cocoon_part(c, state);
+    if (s->pose >= COCOON_UNLOCK_PASSAGE) {
+        s->y = state->y;
+        s->x = state->x;
+    } else {
+        sync_cocoon_part(c, state);
+    }
 }
 
 static void vine_init(Ctx *c) {
@@ -309,20 +490,177 @@ static void spawn_spore_group(Ctx *c) {
 
 static void active_vine(Ctx *c) {
     MzmSprite *s = c->s;
+    MzmSprite *body = c->f->sprites && s->ram_slot < c->f->sprite_count ?
+                      &c->f->sprites[s->ram_slot] : NULL;
     if (s->pose == SPRITE_POSE_UNINITIALIZED) vine_init(c);
     else if (s->pose == SPRITE_POSE_DESTROYED) { vine_death(c); return; }
     else if (s->pose == VINE_IDLE && s->damaged) {
         s->damaged = false;
         ai_sound_onscreen_once(s, MZM_SOUND_IMAGO_COCOON_VINE_DAMAGED);
-    } else if (s->pose == VINE_SPAWN_SPORES) spawn_spore_group(c);
+    } else if (s->pose == VINE_SPAWN_SPORES) {
+        if (body && body->pose == COCOON_UNLOCK_PASSAGE) {
+            uint16_t x = (uint16_t)(s->x +
+                                    (s->room_slot == PART_DECORATIONS_LEFT ?
+                                     BLOCK_SIZE : -BLOCK_SIZE));
+            ai_particle_set(c, (uint16_t)(s->y - BLOCK_SIZE - HALF_BLOCK_SIZE - PIXEL_SIZE),
+                            x, MZM_PE_TWO_MEDIUM_DUST);
+            s->status = 0;
+            return;
+        }
+        spawn_spore_group(c);
+    }
     else if (s->pose == VINE_CEILING_IDLE && cocoon_state(c)->health == 0 &&
              cocoon_state(c)->frame > 7) {
         s->ignore_samus_timer = 1;
         s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
         s->samus_collision = SSC_NONE;
         s->pose = VINE_CEILING_DEATH;
+    } else if (s->pose == VINE_CEILING_DEATH && body &&
+               body->pose == COCOON_UNLOCK_PASSAGE) {
+        ai_particle_set(c, (uint16_t)(s->y + BLOCK_SIZE * 2 + HALF_BLOCK_SIZE), s->x,
+                        MZM_PE_SPRITE_EXPLOSION_HUGE);
+        s->status = 0;
+        return;
     }
     if (s->status) sync_cocoon_part(c, cocoon_state(c));
+}
+
+static MzmSprite *winged_parent(Ctx *c) {
+    return c->f->sprites && c->s->ram_slot < c->f->sprite_count ?
+           &c->f->sprites[c->s->ram_slot] : NULL;
+}
+
+static bool winged_hits_cocoon(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSprite *body = winged_parent(c);
+    if (!body || body->pose != COCOON_FALLING_BEFORE_BLOCKS || body->work3 <= 16)
+        return false;
+    int32_t top = (int32_t)s->y + s->hitbox_top;
+    int32_t bottom = (int32_t)s->y + s->hitbox_bottom;
+    int32_t left = (int32_t)s->x + s->hitbox_left;
+    int32_t right = (int32_t)s->x + s->hitbox_right;
+    int32_t body_top = (int32_t)body->y + body->hitbox_top;
+    int32_t body_bottom = (int32_t)body->y + body->hitbox_bottom;
+    int32_t body_left = (int32_t)body->x + body->hitbox_left;
+    int32_t body_right = (int32_t)body->x + body->hitbox_right;
+    if (right < body_left || body_right < left || bottom < body_top || body_bottom < top)
+        return false;
+    s->pose = SPRITE_POSE_DESTROYED;
+    return true;
+}
+
+static void winged_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
+    s->hitbox_bottom = PIXEL_SIZE;
+    s->hitbox_right = HALF_BLOCK_SIZE;
+    s->draw_top = 12;
+    s->draw_bottom = 8;
+    s->draw_horizontal = 16;
+    ai_set_anim(s, MZM_IMAGO_COCOON_WINGED_RIPPER_MOVING);
+    s->samus_collision = SSC_HURTS_SAMUS;
+    s->health = c->tables->secondary_health[s->sprite_id];
+    s->draw_order = 8;
+    s->pose = WINGED_RIPPER_MOVING_INIT;
+    s->scaling = 192;
+    s->work1 = SINE_PI;
+    s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+    s->work3 = 0;
+    s->frozen_row_offset = 4;
+}
+
+static void winged_move_init(MzmSprite *s) {
+    s->pose = WINGED_RIPPER_MOVING;
+    ai_set_anim(s, MZM_IMAGO_COCOON_WINGED_RIPPER_MOVING);
+}
+
+static void winged_turn(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
+        if (s->work1 == 0) {
+            s->x_spawn = (uint16_t)(s->x_spawn + BLOCK_SIZE * 6);
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->work1 = SINE_PI - 1;
+        } else if (s->work1 == SINE_PI) {
+            if (s->anim != MZM_IMAGO_COCOON_WINGED_RIPPER_TURNING)
+                ai_set_anim(s, MZM_IMAGO_COCOON_WINGED_RIPPER_TURNING);
+        } else if (s->anim == MZM_IMAGO_COCOON_WINGED_RIPPER_TURNING &&
+                   ai_animation_ending(c, 1)) {
+            if (s->status & MZM_SPRITE_STATUS_X_FLIP)
+                ai_set_anim(s, MZM_IMAGO_COCOON_WINGED_RIPPER_MOVING);
+            else
+                s->status |= MZM_SPRITE_STATUS_X_FLIP;
+        }
+    } else {
+        if (s->work1 == SINE_PI) {
+            s->x_spawn = (uint16_t)(s->x_spawn - BLOCK_SIZE * 6);
+            s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+            s->work1 = 1;
+        } else if (s->work1 == 0) {
+            if (s->anim != MZM_IMAGO_COCOON_WINGED_RIPPER_TURNING)
+                ai_set_anim(s, MZM_IMAGO_COCOON_WINGED_RIPPER_TURNING);
+        } else if (s->anim == MZM_IMAGO_COCOON_WINGED_RIPPER_TURNING &&
+                   ai_animation_ending(c, 1)) {
+            if (s->status & MZM_SPRITE_STATUS_X_FLIP)
+                s->status &= (uint16_t)~MZM_SPRITE_STATUS_X_FLIP;
+            else
+                ai_set_anim(s, MZM_IMAGO_COCOON_WINGED_RIPPER_MOVING);
+        }
+    }
+}
+
+static void winged_move(Ctx *c) {
+    MzmSprite *s = c->s;
+    winged_turn(c);
+    if (s->work3 & 1u) {
+        if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) s->work1++;
+        else s->work1--;
+    }
+    uint8_t angle = s->work1;
+    int32_t radius = (int16_t)s->scaling;
+    int32_t y = (int32_t)s->y_spawn + c->tables->sine[angle] * radius / 256;
+    int32_t x = (int32_t)s->x_spawn + c->tables->sine[angle + 64] * radius / 256;
+    int32_t dy = y - s->y;
+    int32_t dx = x - s->x;
+    s->y = (uint16_t)y;
+    s->x = (uint16_t)x;
+    if (s->status & MZM_SPRITE_STATUS_SAMUS_ON_TOP && c->f->standing) {
+        c->f->standing->y = (uint16_t)(c->f->standing->y + dy);
+        c->f->standing->copy_y = c->f->standing->y;
+        c->f->standing->y_set = true;
+        c->f->standing->x = (uint16_t)(c->f->standing->x + dx);
+        c->f->standing->x_set = true;
+    }
+    winged_hits_cocoon(c);
+}
+
+static void winged_death(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->standing_on != MZM_STANDING_ON_SPRITE_OFF) {
+        if (c->f->standing && c->f->standing->on_enemy) {
+            c->f->standing->on_enemy = false;
+            c->f->standing->midair = true;
+        }
+        s->standing_on = MZM_STANDING_ON_SPRITE_OFF;
+    }
+    ai_sprite_death_full(c, DEATH_NORMAL, (uint16_t)(s->y + EIGHTH_BLOCK_SIZE), s->x,
+                         true, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+}
+
+static void winged_ripper(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (s->freeze_timer) {
+        ai_update_freeze_timer(c);
+        if (!winged_hits_cocoon(c)) return;
+    }
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) winged_init(c);
+    else if (s->pose == WINGED_RIPPER_MOVING_INIT) {
+        winged_move_init(s);
+        winged_move(c);
+    } else if (s->pose == WINGED_RIPPER_MOVING) winged_move(c);
+    else winged_death(c);
+    s->work3++;
 }
 
 static MzmSprite *spore_parent(Ctx *c) {
@@ -506,7 +844,8 @@ static void cocoon_after_fight(Ctx *c) {
 
 void ai_imago_cocoon(Ctx *c) {
     if (c->s->secondary) {
-        if (c->s->sprite_id == MZM_SSPRITE_IMAGO_COCOON_VINE) active_vine(c);
+        if (c->s->sprite_id == MZM_SSPRITE_WINGED_RIPPER) winged_ripper(c);
+        else if (c->s->sprite_id == MZM_SSPRITE_IMAGO_COCOON_VINE) active_vine(c);
         else if (c->s->sprite_id == MZM_SSPRITE_IMAGO_COCOON_SPORE) active_spore(c);
         else if (c->s->sprite_id == MZM_SSPRITE_DEFEATED_IMAGO_COCOON) defeated_cocoon(c);
         else if (c->s->sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE) ceiling_vine(c);

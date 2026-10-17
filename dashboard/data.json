@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-17T08:49:39+00:00",
+ "generated_at": "2026-10-17T21:14:30+00:00",
  "git": {
-  "commit": "063b164",
+  "commit": "26114f4",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 56,
-    "functional": 59,
+    "partial": 55,
+    "functional": 60,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 59,
-   "functional_or_better_percent": 46.8,
+   "functional_or_better": 60,
+   "functional_or_better_percent": 47.6,
    "with_passing_tests": 113,
    "with_passing_tests_percent": 89.7,
    "unknown_or_blocked": 1,
@@ -247,15 +247,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 32,
-    "functional": 46,
+    "partial": 31,
+    "functional": 47,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 46,
-   "functional_or_better_percent": 59.0,
+   "functional_or_better": 47,
+   "functional_or_better_percent": 60.3,
    "with_passing_tests": 77,
    "with_passing_tests_percent": 98.7,
    "unknown_or_blocked": 0,
@@ -1702,8 +1702,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Imago cocoon encounter, passage and remains",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_imago_cocoon.c",
     "src/runtime/mzm_sprites.c",
@@ -1722,6 +1722,11 @@
     "ImagoCocoon",
     "ImagoCocoonInit",
     "ImagoCocoonIdle",
+    "ImagoCocoonFallingMovement",
+    "ImagoCocoonFallingBeforeBlocks",
+    "ImagoCocoonFallingAfterBlocks",
+    "ImagoCocoonUnlockPassage",
+    "ImagoCocoonInGround",
     "ImagoCocoonVine",
     "ImagoCocoonVineInit",
     "ImagoCocoonVineDeath",
@@ -1731,13 +1736,17 @@
     "ImagoCocoonSporeSpawning",
     "ImagoCocoonSporeNest",
     "ImagoCocoonSporeMove",
+    "WingedRipper",
+    "WingedRipperInit",
+    "WingedRipperMove",
+    "WingedRipperDeath",
     "EventTriggerDiscoveredImagoPassage",
     "ImagoCocoonAfterFight",
     "DefeatedImagoCocoon",
     "ImagoCocoonCeilingVine"
    ],
-   "limitations": "The Winged Ripper and the cocoon's fall, debris, floor destruction, crash, passage unlock and final music sequence are not ported, and the actors have not been compared with an emulator. The active norfair_043 cocoon uses its two native multi-sprite tables, locks the doors, changes palette after three of its six 50-health missile-vulnerable vines are destroyed, alternates eight-spore nests on both sides and persists event 33 when the last vine breaks. Its native idle, vine, spore and battle-music cues are connected. The invisible passage trigger persists event 32. Reloading the killed cocoon restores its in-ground state until the Ridley entrance demo; ridley_028 retains the post-fight remnant and broken actors.",
-   "next_action": "Port the Winged Ripper and complete the cocoon fall, floor destruction, crash and passage-unlock sequence.",
+   "limitations": "The encounter has not been compared frame by frame with an emulator. The active norfair_043 cocoon uses its two native multi-sprite tables, locks the doors, changes palette after three of its six 50-health missile-vulnerable vines are destroyed and alternates eight-spore nests on both sides. Its Winged Ripper follows the native ROM sine table, carries a standing Samus across both axes and is crushed by the falling cocoon. Breaking the last vine persists event 33, releases ceiling debris, removes the five central floor blocks in stages, crashes the cocoon into the lower floor, clears the two passage blocks after 90 on-screen frames, unlocks the doors and plays the boss-killed music. The native idle, vine, spore, destruction and battle-music cues are connected. The invisible passage trigger persists event 32. Reloading the killed cocoon restores its in-ground state until the Ridley entrance demo; ridley_028 retains the post-fight remnant and broken actors.",
+   "next_action": "Play the complete fight in game, verify the seven destroyed blocks and compare the choreography with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c"
@@ -9872,6 +9881,12 @@
  },
  "timeline": [
   {
+   "commit": "26114f4",
+   "date": "2026-10-17",
+   "subject": "Activate the Imago cocoon encounter",
+   "scope": "project"
+  },
+  {
    "commit": "063b164",
    "date": "2026-10-17",
    "subject": "Port the Imago tunnel discovery trigger",
@@ -10344,12 +10359,6 @@
    "date": "2026-10-13",
    "subject": "feat(mzm): Gamets",
    "scope": "mzm"
-  },
-  {
-   "commit": "9e4b9e8",
-   "date": "2026-10-12",
-   "subject": "feat(mzm): Squeepts and the room effect height",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10377,7 +10386,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1237,
+    "routines_cited_by_features": 1246,
     "call_edges": 6071
    },
    "aos": {
@@ -10872,7 +10881,7 @@
      {
       "id": 79,
       "name": "Imago Cocoon",
-      "status": "partial",
+      "status": "functional",
       "note": "Imago cocoon encounter, passage and remains",
       "evidence": {
        "unit_tests": [

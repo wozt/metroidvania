@@ -1546,14 +1546,21 @@ int main(void) {
     step(&d, 0);
     assert(d.status == 0);
 
-    /* Entering the boss-statue room runs KraidStatueInit, which records the
-     * viewed-room event required by the Long Beam Dessgeega on the return
-     * trip. Both inactive statues use their native offsets and idle OAM. */
+    /* Entering the boss-statue room records the viewed-room event required
+     * by the Long Beam Dessgeega. Both inactive statues use their native
+     * offsets and idle OAM. */
     static MzmSpriteKind boss_statue_kind;
-    boss_statue_kind.counts[MZM_BOSS_STATUE_KRAID_IDLE] = 1;
-    boss_statue_kind.timers[MZM_BOSS_STATUE_KRAID_IDLE][0] = 1;
-    boss_statue_kind.counts[MZM_BOSS_STATUE_RIDLEY_IDLE] = 1;
-    boss_statue_kind.timers[MZM_BOSS_STATUE_RIDLEY_IDLE][0] = 1;
+    memset(&boss_statue_kind, 0, sizeof boss_statue_kind);
+    for (int anim = 0; anim < MZM_BOSS_STATUE_ANIMS; ++anim) {
+        boss_statue_kind.counts[anim] = 1;
+        boss_statue_kind.timers[anim][0] = 255;
+    }
+    boss_statue_kind.counts[MZM_BOSS_STATUE_KRAID_OPENING] = 42;
+    boss_statue_kind.counts[MZM_BOSS_STATUE_RIDLEY_OPENING] = 42;
+    for (int f = 0; f < 42; ++f) {
+        boss_statue_kind.timers[MZM_BOSS_STATUE_KRAID_OPENING][f] = 1;
+        boss_statue_kind.timers[MZM_BOSS_STATUE_RIDLEY_OPENING][f] = 1;
+    }
     frame.kinds[MZM_FAMILY_BOSS_STATUE] = &boss_statue_kind;
     memset(test_events, 0, sizeof test_events);
     frame.samus_y = 8 * 64;
@@ -1572,6 +1579,84 @@ int main(void) {
     assert(!test_check_event(NULL, MZM_EVENT_VIEWED_STATUE_ROOM));
     assert(boss_statue.pose == 0xF && boss_statue.x == 17 * 64 &&
            boss_statue.anim == MZM_BOSS_STATUE_RIDLEY_IDLE && boss_statue.draw_top == 88);
+
+    /* After both bosses die, Kraid starts as activated, locks the doors and
+     * replaces its eight interior blocks. Centering the camera starts the
+     * complete opening animation and adds the temporary six-block wall. */
+    memset(test_events, 0, sizeof test_events);
+    test_set_event(NULL, MZM_EVENT_KRAID_KILLED);
+    test_set_event(NULL, MZM_EVENT_RIDLEY_KILLED);
+    door_timer_calls = caa_calls = 0;
+    memset(&fx, 0, sizeof fx);
+    globals.lock_screen = false;
+    frame.samus_y = 8 * 64;
+    frame.samus_x = 18 * 64;
+    world.camera_x = 0;
+    mzm_sprite_init_primary(&boss_statue, MZM_PSPRITE_KRAID_STATUE, 0, 8, 17, 0, 0);
+    step(&boss_statue, 0);
+    assert(boss_statue.pose == 0x9 && boss_statue.anim == MZM_BOSS_STATUE_KRAID_ACTIVATED &&
+           door_timer_calls == 1 && last_door_timer == 1 && caa_calls == 8 &&
+           last_caa == MZM_CAA_MAKE_NON_POWER_GRIP && globals.lock_screen &&
+           globals.lock_x == boss_statue.x + 32 && globals.lock_y == boss_statue.y);
+    world.camera_x = (uint16_t)(boss_statue.x + 32 - 120 * 4);
+    step(&boss_statue, 1);
+    assert(boss_statue.pose == 0xB && boss_statue.anim == MZM_BOSS_STATUE_KRAID_OPENING &&
+           caa_calls == 14 && last_caa == MZM_CAA_MAKE_NON_POWER_GRIP);
+    frames = 0;
+    while (boss_statue.pose == 0xB && frames < 200) {
+        step(&boss_statue, frames + 2);
+        ++frames;
+    }
+    assert(frames < 200 && boss_statue.pose == 0xF &&
+           boss_statue.anim == MZM_BOSS_STATUE_KRAID_OPENED &&
+           test_check_event(NULL, MZM_EVENT_KRAID_STATUE_OPENED));
+    /* Eight inside removals and three opened-floor writes; Ridley is dead
+     * but not open yet, so Kraid deliberately keeps the room locked. */
+    assert(caa_calls == 25 && last_caa == MZM_CAA_MAKE_NON_POWER_GRIP &&
+           door_timer_calls == 1 && fx.debris[0].exists);
+
+    /* Ridley waits one second after the same camera trigger, then opens.
+     * Its completion is the second half of the gate and unlocks the doors. */
+    MzmSprite ridley_statue;
+    caa_calls = 0;
+    mzm_sprite_init_primary(&ridley_statue, MZM_PSPRITE_RIDLEY_STATUE, 0, 8, 16, 0, 0);
+    step(&ridley_statue, 0);
+    assert(ridley_statue.pose == 0x9 &&
+           ridley_statue.anim == MZM_BOSS_STATUE_RIDLEY_ACTIVATED &&
+           door_timer_calls == 2 && caa_calls == 4);
+    step(&ridley_statue, 1);
+    assert(ridley_statue.pose == 0xB && ridley_statue.work0 == 60 && caa_calls == 10);
+    for (int i = 0; i < 60; ++i) step(&ridley_statue, i + 2);
+    assert(ridley_statue.work0 == 0 &&
+           ridley_statue.anim == MZM_BOSS_STATUE_RIDLEY_OPENING);
+    frames = 0;
+    while (ridley_statue.pose == 0xB && frames < 200) {
+        step(&ridley_statue, frames + 62);
+        ++frames;
+    }
+    assert(frames < 200 && ridley_statue.pose == 0xF &&
+           ridley_statue.anim == MZM_BOSS_STATUE_RIDLEY_OPENED &&
+           test_check_event(NULL, MZM_EVENT_RIDLEY_STATUE_OPENED));
+    assert(caa_calls == 23 && last_caa == MZM_CAA_REMOVE_SOLID &&
+           door_timer_calls == 3 && last_door_timer == -20);
+
+    /* Kraid releases its camera lock outside the opened-room range. Both
+     * opened events also survive a room reload and immediately restore the
+     * final three-block collision line without replaying either sequence. */
+    frame.samus_x = (uint16_t)(boss_statue.x + MZM_BLOCK_SIZE * 7);
+    step(&boss_statue, 0);
+    assert(!globals.lock_screen);
+    caa_calls = door_timer_calls = 0;
+    mzm_sprite_init_primary(&boss_statue, MZM_PSPRITE_KRAID_STATUE, 0, 8, 17, 0, 0);
+    step(&boss_statue, 0);
+    assert(boss_statue.pose == 0xF && boss_statue.anim == MZM_BOSS_STATUE_KRAID_OPENED &&
+           caa_calls == 3 && door_timer_calls == 0);
+    caa_calls = 0;
+    mzm_sprite_init_primary(&ridley_statue, MZM_PSPRITE_RIDLEY_STATUE, 0, 8, 16, 0, 0);
+    step(&ridley_statue, 0);
+    assert(ridley_statue.pose == 0xF &&
+           ridley_statue.anim == MZM_BOSS_STATUE_RIDLEY_OPENED && caa_calls == 3);
+    world.camera_x = 0;
     frame.hooks = NULL;
     frame.effects = NULL;
 

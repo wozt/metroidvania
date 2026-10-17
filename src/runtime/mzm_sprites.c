@@ -2,6 +2,7 @@
 /* Zero Mission sprites; comments name the pinned decompilation's routines. */
 #include "mzm_sprites.h"
 #include "mzm_sprite_ai.h"
+#include "mzm_blocks.h"
 #include "mzm_screen_shake.h"
 #include "mzm_sfx.h"
 
@@ -2167,10 +2168,137 @@ static void hook_remove_solid(const Ctx *c, uint16_t y, uint16_t x) {
     if (h && h->remove_solid) h->remove_solid(h->context, y, x);
 }
 
-/* KraidStatueInit / RidleyStatueInit. The early game only observes both
- * idle statues; their post-boss activation and opening sequence is a later
- * system. KraidStatueInit still performs the progression-critical side
- * effect that makes the Long Beam Dessgeega exist on the return trip. */
+static void boss_statue_apply_caa(const Ctx *c, uint16_t y, uint16_t x, uint8_t caa) {
+    const MzmSpriteHooks *h = c->f->hooks;
+    if (h && h->apply_caa) h->apply_caa(h->context, y, x, caa);
+}
+
+/* BossStatusSetWallBehindSamusCollision: the temporary six-block wall at
+ * the right edge of the statue room. */
+static void boss_statue_wall(Ctx *c, uint8_t caa) {
+    uint16_t y = (uint16_t)(c->s->y - HALF_BLOCK_SIZE);
+    uint16_t x = (uint16_t)(c->s->x + HALF_BLOCK_SIZE + BLOCK_SIZE * 8);
+    for (unsigned row = 0; row < 6; ++row)
+        boss_statue_apply_caa(c, (uint16_t)(y - BLOCK_SIZE * row), x, caa);
+}
+
+/* KraidStatueInsideChangeCcaa / RidleyStatueInsideChangeCcaa. */
+static void boss_statue_inside(Ctx *c, bool kraid, uint8_t caa) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y - HALF_BLOCK_SIZE);
+    uint16_t x = (uint16_t)(s->x + (kraid ? HALF_BLOCK_SIZE : -HALF_BLOCK_SIZE));
+    if (kraid) {
+        for (unsigned column = 2; column <= 5; ++column)
+            boss_statue_apply_caa(c, (uint16_t)(y - BLOCK_SIZE),
+                                  (uint16_t)(x + BLOCK_SIZE * column), caa);
+        for (unsigned column = 2; column <= 4; ++column)
+            boss_statue_apply_caa(c, (uint16_t)(y - BLOCK_SIZE * 2),
+                                  (uint16_t)(x + BLOCK_SIZE * column), caa);
+        boss_statue_apply_caa(c, (uint16_t)(y - BLOCK_SIZE * 3),
+                              (uint16_t)(x + BLOCK_SIZE * 3), caa);
+    } else {
+        for (unsigned row = 1; row <= 2; ++row) {
+            boss_statue_apply_caa(c, (uint16_t)(y - BLOCK_SIZE * row), x, caa);
+            boss_statue_apply_caa(c, (uint16_t)(y - BLOCK_SIZE * row),
+                                  (uint16_t)(x - BLOCK_SIZE), caa);
+        }
+    }
+}
+
+/* KraidStatueHorizontalLignThreeChangeCcaa / RidleyStatueChangeThreeCcaa. */
+static void boss_statue_opened_floor(Ctx *c, bool kraid) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y - HALF_BLOCK_SIZE - BLOCK_SIZE * 4);
+    uint16_t x = (uint16_t)(s->x + (kraid ? HALF_BLOCK_SIZE : -HALF_BLOCK_SIZE));
+    for (unsigned column = 2; column <= 4; ++column) {
+        uint16_t point = kraid ? (uint16_t)(x + BLOCK_SIZE * column)
+                               : (uint16_t)(x - BLOCK_SIZE * column);
+        boss_statue_apply_caa(c, y, point, MZM_CAA_MAKE_NON_POWER_GRIP);
+    }
+}
+
+static void boss_statue_opened_init(Ctx *c, bool kraid) {
+    ai_set_anim(c->s, kraid ? MZM_BOSS_STATUE_KRAID_OPENED
+                            : MZM_BOSS_STATUE_RIDLEY_OPENED);
+    c->s->pose = 0xF;              /* BOSS_STATUE_POSE_IDLE */
+    boss_statue_opened_floor(c, kraid);
+}
+
+/* The common debris stream of KraidStatueOpening / RidleyStatueOpening. */
+static void boss_statue_debris(Ctx *c, bool kraid) {
+    MzmSprite *s = c->s;
+    uint8_t r2 = ++s->work2;
+    uint8_t r1 = s->work1++;
+    if ((r1 & 31) == 0) mzm_screen_shake_start_vertical(10, 0x81);
+    /* The native routine reads work1 after incrementing it. */
+    r1 = s->work1;
+    uint16_t y = (uint16_t)(c->world->camera_y - BLOCK_SIZE);
+    uint16_t x = (uint16_t)(c->world->camera_x +
+                            (kraid ? BLOCK_SIZE * 9 - QUARTER_BLOCK_SIZE
+                                   : BLOCK_SIZE * 6 + QUARTER_BLOCK_SIZE));
+    uint8_t rng = c->rng;
+    if ((r2 & 31) == 0) {
+        if (r2 & 32) {
+            ai_debris_init(c, 5, y, (uint16_t)(x + BLOCK_SIZE * 2 - EIGHTH_BLOCK_SIZE -
+                                                rng * QUARTER_BLOCK_SIZE));
+            ai_debris_init(c, 8, y, (uint16_t)(x - (BLOCK_SIZE * 6 + QUARTER_BLOCK_SIZE) +
+                                                rng * EIGHTH_BLOCK_SIZE));
+        } else {
+            ai_debris_init(c, 7, y, (uint16_t)(x - (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) -
+                                                rng * QUARTER_BLOCK_SIZE));
+            ai_debris_init(c, 5, y, (uint16_t)(x - (BLOCK_SIZE * 4 + EIGHTH_BLOCK_SIZE * 5 + PIXEL_SIZE) +
+                                                rng * EIGHTH_BLOCK_SIZE));
+        }
+    }
+    if ((r1 & 15) == 0) {
+        if (rng > 7) {
+            ai_debris_init(c, 8, y, (uint16_t)(x - (BLOCK_SIZE * 7 + PIXEL_SIZE / 2) +
+                                                rng * HALF_BLOCK_SIZE));
+            ai_debris_init(c, 6, y, (uint16_t)(x + BLOCK_SIZE * 9 + QUARTER_BLOCK_SIZE -
+                                                PIXEL_SIZE / 2 - rng * HALF_BLOCK_SIZE));
+        } else {
+            ai_debris_init(c, 6, y, (uint16_t)(x + BLOCK_SIZE * 6 - PIXEL_SIZE -
+                                                rng * HALF_BLOCK_SIZE));
+            ai_debris_init(c, 8, y, (uint16_t)(x - (BLOCK_SIZE * 10 - EIGHTH_BLOCK_SIZE) +
+                                                rng * EIGHTH_BLOCK_SIZE));
+        }
+    }
+}
+
+static void boss_statue_opening(Ctx *c, bool kraid) {
+    MzmSprite *s = c->s;
+    if (c->f->samus_x > s->x + BLOCK_SIZE * 8 + HALF_BLOCK_SIZE)
+        boss_statue_wall(c, MZM_CAA_REMOVE_SOLID);
+
+    if (!kraid && s->work0) {
+        if (s->frame == 0 && s->adc == 1)
+            mzm_sfx_play(MZM_SOUND_BOSS_STATUES_EYE_TURNING_ON);
+        if (--s->work0 == 0) {
+            ai_set_anim(s, MZM_BOSS_STATUE_RIDLEY_OPENING);
+            s->work1 = s->work2 = 0;
+            mzm_sfx_play(MZM_SOUND_BOSS_STATUES_RIDLEY_STATUE_OPENING);
+        }
+        return;
+    }
+
+    if (s->frame == 29 && s->adc == 1)
+        boss_statue_inside(c, kraid, MZM_CAA_REMOVE_SOLID);
+    if (ai_animation_ending(c, 1)) {
+        boss_statue_opened_init(c, kraid);
+        hook_set_event(c, kraid ? MZM_EVENT_KRAID_STATUE_OPENED
+                                : MZM_EVENT_RIDLEY_STATUE_OPENED);
+        if (!kraid || !ai_check_event(c, MZM_EVENT_RIDLEY_KILLED) ||
+            ai_check_event(c, MZM_EVENT_RIDLEY_STATUE_OPENED)) {
+            hook_doors(c, -20);    /* ONE_THIRD_SECOND */
+            boss_statue_wall(c, MZM_CAA_REMOVE_SOLID);
+        }
+        return;
+    }
+    if (s->frame > 8 && s->frame < 40) boss_statue_debris(c, kraid);
+}
+
+/* KraidStatue / RidleyStatue, including the complete post-boss opening and
+ * its persistent collision changes. */
 static void boss_statue(Ctx *c) {
     MzmSprite *s = c->s;
     bool kraid = s->sprite_id == MZM_PSPRITE_KRAID_STATUE;
@@ -2184,15 +2312,68 @@ static void boss_statue(Ctx *c) {
         s->hitbox_left = s->hitbox_right = 0;
         s->samus_collision = SSC_NONE;
         s->draw_order = 1;
-        ai_set_anim(s, kraid ? MZM_BOSS_STATUE_KRAID_IDLE : MZM_BOSS_STATUE_RIDLEY_IDLE);
-        s->pose = 0xF;             /* BOSS_STATUE_POSE_IDLE */
         if (kraid && !ai_check_event(c, MZM_EVENT_VIEWED_STATUE_ROOM))
             hook_set_event(c, MZM_EVENT_VIEWED_STATUE_ROOM);
+        uint8_t opened = kraid ? MZM_EVENT_KRAID_STATUE_OPENED
+                               : MZM_EVENT_RIDLEY_STATUE_OPENED;
+        uint8_t killed = kraid ? MZM_EVENT_KRAID_KILLED : MZM_EVENT_RIDLEY_KILLED;
+        if (ai_check_event(c, opened)) {
+            boss_statue_opened_init(c, kraid);
+        } else {
+            if (ai_check_event(c, killed)) {
+                ai_set_anim(s, kraid ? MZM_BOSS_STATUE_KRAID_ACTIVATED
+                                     : MZM_BOSS_STATUE_RIDLEY_ACTIVATED);
+                s->pose = 0x9;     /* BOSS_STATUE_POSE_CHECK_START_OPEN */
+                hook_doors(c, 1);
+            } else {
+                ai_set_anim(s, kraid ? MZM_BOSS_STATUE_KRAID_IDLE
+                                     : MZM_BOSS_STATUE_RIDLEY_IDLE);
+                s->pose = 0xF;
+            }
+            boss_statue_inside(c, kraid, MZM_CAA_MAKE_NON_POWER_GRIP);
+        }
+    } else if (s->pose == 0x9) {
+        if (s->frame == 0 && s->adc == 1)
+            mzm_sfx_play(MZM_SOUND_BOSS_STATUES_EYE_TURNING_ON);
+        uint16_t sprite_x = (uint16_t)((s->x + HALF_BLOCK_SIZE) / PIXEL_SIZE);
+        uint16_t bg_x = (uint16_t)(c->world->camera_x / PIXEL_SIZE);
+        uint16_t distance = (uint16_t)(sprite_x - bg_x);
+        /* The gameplay viewport keeps the native 240-pixel trigger, while
+         * room_runtime's optional 320-pixel-wide view centres it at 160. */
+        if (distance == SCREEN_SIZE_X_SUB_PIXEL / PIXEL_SIZE / 2 || distance == 160) {
+            s->pose = 0xB;         /* BOSS_STATUE_POSE_OPENING */
+            boss_statue_wall(c, MZM_CAA_MAKE_NON_POWER_GRIP);
+            if (kraid) {
+                ai_set_anim(s, MZM_BOSS_STATUE_KRAID_OPENING);
+                s->work1 = s->work2 = 0;
+                mzm_sfx_play(MZM_SOUND_BOSS_STATUES_KRAID_STATUE_OPENING);
+            } else {
+                s->work0 = 60;     /* CONVERT_SECONDS(1.f) */
+            }
+        }
+    } else if (s->pose == 0xB) {
+        boss_statue_opening(c, kraid);
     }
     if (ai_samus_nslr(c, BLOCK_SIZE * 10, BLOCK_SIZE * 13) != NSLR_OUT_OF_RANGE)
         s->status |= MZM_SPRITE_STATUS_HIGH_PRIORITY;
     else
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_HIGH_PRIORITY;
+
+    /* KraidStatue owns the statue room's camera lock. */
+    if (kraid && c->f->globals) {
+        MzmSpriteGlobals *g = c->f->globals;
+        bool both_open = ai_check_event(c, MZM_EVENT_KRAID_STATUE_OPENED) &&
+                         ai_check_event(c, MZM_EVENT_RIDLEY_STATUE_OPENED);
+        uint8_t near = ai_samus_nslr(c, BLOCK_SIZE * 10,
+                                     both_open ? BLOCK_SIZE * 6 + QUARTER_BLOCK_SIZE
+                                               : BLOCK_SIZE * 8 - QUARTER_BLOCK_SIZE);
+        bool lock = both_open ? near != NSLR_OUT_OF_RANGE : near == NSLR_RIGHT;
+        g->lock_screen = lock;
+        if (lock) {
+            g->lock_y = s->y;
+            g->lock_x = (uint16_t)(s->x + HALF_BLOCK_SIZE);
+        }
+    }
 }
 
 /* Sidehopper (sidehopper.c) and Dessgeega (dessgeega.c): the two routines

@@ -3587,6 +3587,34 @@ No automatic reciprocal link or native engine encoder is implemented.
   438/438 passed. The private sprite rebuild, focused encounter scenario, real
   room capture, regenerated parity data and proprietary-file guard passed.
 
+## Patch 0356 - Zero Mission Kraid and Ridley boss statues
+
+- Completed both Brinstar boss-statue state machines. Their matching boss-death
+  events now activate the eyes, lock the doors and wait for the statue room to
+  be centred before Kraid opens immediately and Ridley starts his native
+  one-second delay.
+- Reproduced the shared temporary six-block wall, each statue's interior
+  Clipdata removal and final three-block floor writes. Kraid keeps the route
+  locked when Ridley is dead but not yet open; Ridley's completion persists the
+  second opened event, removes the wall and starts the native delayed unlock.
+- Added both opening debris streams, vertical screen shakes and eye/opening
+  sounds. Kraid owns the native room camera lock before the gate and releases it
+  outside the smaller range after both statues open. The host's optional
+  320-pixel-wide room view also accepts its 160-pixel centre alongside the
+  original 120-pixel GBA trigger.
+- Reloading `brinstar_010` with either opened event restores that statue's final
+  animation and collision immediately without replaying the sequence. The
+  focused test covers idle initialization, activation, both timings, every
+  Clipdata phase, shared door logic, camera lock and persistent reload state.
+- Remaining visual divergence: the original Kraid actor moves every active
+  projectile to low OAM priority while it exists; the runtime renderer does not
+  yet expose that per-projectile layer flag.
+- Validation on 2026-10-17: the warning-clean full build, CTest 35/35 and
+  Python 473/473 passed. A 600-frame real `brinstar_010` capture with boss
+  events 30 and 37 completed both animations, set opened events 53 and 54 and
+  rendered the cleared route. Generated-data checks were fresh and the
+  proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

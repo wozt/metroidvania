@@ -698,9 +698,7 @@ enum {
 };
 extern const char *const mzm_chozo_statue_anim_names[MZM_CHOZO_ANIMS];
 
-/* The two Brinstar boss statues (src/data/sprites/boss_statues.c). The
- * opening tables are exported now even though this first port only needs
- * their idle state for the early-game statue-room event. */
+/* The two Brinstar boss statues (src/data/sprites/boss_statues.c). */
 enum {
     MZM_BOSS_STATUE_KRAID_IDLE, MZM_BOSS_STATUE_KRAID_ACTIVATING,
     MZM_BOSS_STATUE_KRAID_ACTIVATED, MZM_BOSS_STATUE_KRAID_OPENING,
@@ -1001,6 +999,7 @@ enum {
     MZM_EVENT_KRAID_GADORA_KILLED = 28, MZM_EVENT_RIDLEY_GADORA_KILLED = 36,
     MZM_EVENT_CATERPILLAR_KILLED = 31, MZM_EVENT_IMAGO_TUNNEL_DISCOVERED = 32,
     MZM_EVENT_IMAGO_COCOON_KILLED = 33,
+    MZM_EVENT_KRAID_STATUE_OPENED = 53, MZM_EVENT_RIDLEY_STATUE_OPENED = 54,
 };
 
 /* Game systems outside the sprite engine. */

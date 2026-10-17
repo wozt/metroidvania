@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-17**.
+Last updated: **2026-10-18**.
 
 ## Current product state
 
@@ -3613,6 +3613,23 @@ No automatic reciprocal link or native engine encoder is implemented.
   Python 473/473 passed. A 600-frame real `brinstar_010` capture with boss
   events 30 and 37 completed both animations, set opened events 53 and 54 and
   rendered the cleared route. Generated-data checks were fresh and the
+  proprietary-file guard passed.
+
+## Patch 0357 - native low-OAM projectile pass
+
+- Added the native `PROJ_STATUS_LOW_OAM_PRIORITY` state to projectile slots.
+  Kraid's statue marks every active shot on every update, and a reused slot
+  clears the state through the existing projectile initialization path.
+- Split the SDL projectile renderer into the native high- and low-priority
+  passes. Ordinary low-priority shots are painted before the other OBJ actors,
+  while Wave, Wave-Plasma and tumbling shots retain their above-BG1 band and
+  are ordered before its regular projectiles.
+- Extended the statue regression with multiple active projectile slots and an
+  inactive control slot. A real 600-frame `brinstar_010` capture fired normal
+  beams throughout both openings, completed events 53 and 54, crossed the
+  unlocked right hatch and reached `brinstar_009`.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 473/473 passed. Generated-data checks were fresh and the
   proprietary-file guard passed.
 
 ## Patch 0349 - Zero Mission Acid Worm encounter

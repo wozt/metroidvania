@@ -2359,6 +2359,15 @@ static void boss_statue(Ctx *c) {
     else
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_HIGH_PRIORITY;
 
+    /* KraidStatue moves every live projectile to the final native OAM pass.
+     * The flag remains on that projectile until its slot is initialized for
+     * a new shot, matching PROJ_STATUS_LOW_OAM_PRIORITY. */
+    if (kraid && c->f->weapons) {
+        for (int i = 0; i < MZM_MAX_PROJECTILES; ++i)
+            if (c->f->weapons->list[i].active)
+                c->f->weapons->list[i].low_oam_priority = true;
+    }
+
     /* KraidStatue owns the statue room's camera lock. */
     if (kraid && c->f->globals) {
         MzmSpriteGlobals *g = c->f->globals;

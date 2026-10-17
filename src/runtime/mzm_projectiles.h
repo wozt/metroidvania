@@ -115,6 +115,9 @@ typedef struct {
     bool wave_oam;
     /* PROJ_STATUS_ON_SCREEN from the last ProjectileCheckDespawn. */
     bool on_screen;
+    /* PROJ_STATUS_LOW_OAM_PRIORITY: drawn after the native low-priority
+     * sprite pass, and therefore behind the other OBJ actors. */
+    bool low_oam_priority;
 } MzmProjectile;
 
 struct MzmProjectile;

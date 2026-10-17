@@ -2154,6 +2154,37 @@ static SDL_Texture *runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry 
     return frame->variants[slot];
 }
 
+/* ProjectileDrawAll_HighPriority / ProjectileDrawAll_LowPriority. The SDL
+ * painter runs back to front, so the native final (low OAM priority) pass is
+ * emitted before the other OBJ actors. `above_filter` is -1 for both BG1
+ * bands, 0 below BG1 and 1 above it. */
+static void runtime_draw_projectiles(SDL_Renderer *renderer,const MzmWeapons *weapons,
+                                     RuntimeLibrary *library,uint32_t items,
+                                     SDL_FRect viewport,float cx,float cy,float scale,
+                                     bool low,int above_filter) {
+    for(int i=0;i<MZM_MAX_PROJECTILES && library->count>0;i++) {
+        const MzmProjectile *projectile=&weapons->list[i];
+        if(!projectile->active || projectile->stage==MZM_STAGE_INIT || projectile->hidden ||
+           projectile->low_oam_priority!=low)continue;
+        bool above=projectile->type==MZM_PROJECTILE_WAVE_BEAM ||
+            projectile->type==MZM_PROJECTILE_CHARGED_WAVE_BEAM || projectile->wave_oam ||
+            projectile->stage==MZM_STAGE_TUMBLING;
+        if(above_filter>=0 && above!=(above_filter!=0))continue;
+        char key[160];
+        runtime_projectile_key(projectile,items,key,sizeof key);
+        RuntimeLibraryEntry *entry=runtime_library_find(library,key);
+        if(!entry || entry->count==0)continue;
+        int index=projectile->anim_frame<entry->count?projectile->anim_frame:0;
+        SDL_Texture *shot_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+        if(!shot_texture)continue;
+        const RuntimeLibraryFrame *art=&entry->frames[index];
+        SDL_FRect shot={viewport.x+((float)(projectile->x>>2)+(float)art->offset_x-cx)*scale,
+                        viewport.y+((float)(projectile->y>>2)+(float)art->offset_y-cy)*scale,
+                        (float)art->w*scale,(float)art->h*scale};
+        SDL_RenderTexture(renderer,shot_texture,NULL,&shot);
+    }
+}
+
 /* Palette variants in use: each slot caches one 32-color combination. */
 typedef struct {
     SDL_Color colors[RUNTIME_PALETTE_SLOTS][32];
@@ -5557,6 +5588,12 @@ int main(int argc, char **argv) {
         /* SpriteDrawAll_LowPriority: draw orders 9 to 16, behind Samus
          * (SUB_GAME_MODE_DYING draws Samus alone). */
         bool dying_mode=samus.pose==MZM_POSE_DYING;
+        /* ProjectileDrawAll_LowPriority is the last native OAM allocation
+         * pass. Paint its ordinary BG1 band first so every later OBJ actor
+         * wins overlaps. Above-BG1 shots stay in their front background band. */
+        if(!dying_mode)
+            runtime_draw_projectiles(renderer,&weapons,&projectile_library,equipment.items,
+                                     viewport,cx,cy,scale,true,0);
         if(!dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16,
                                  runtime_door_fade_shade(&door_fade),false,false);
@@ -5731,26 +5768,12 @@ int main(int argc, char **argv) {
         if(pass==1 && layered)
             runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
                                      cx,cy,viewport,scale,0,sprite_priority-1,&door_fade);
-        for(int i=0;i<MZM_MAX_PROJECTILES && projectile_library.count>0 && !dying_mode;i++) {
-            const MzmProjectile *projectile=&weapons.list[i];
-            if(!projectile->active || projectile->stage==MZM_STAGE_INIT ||
-               projectile->hidden)continue;
-            bool above=projectile->type==MZM_PROJECTILE_WAVE_BEAM ||
-                projectile->type==MZM_PROJECTILE_CHARGED_WAVE_BEAM || projectile->wave_oam ||
-                projectile->stage==MZM_STAGE_TUMBLING;
-            if(above!=(pass==1))continue;
-            char key[160];
-            runtime_projectile_key(projectile,equipment.items,key,sizeof key);
-            RuntimeLibraryEntry *entry=runtime_library_find(&projectile_library,key);
-            if(!entry || entry->count==0)continue;
-            int index=projectile->anim_frame<entry->count?projectile->anim_frame:0;
-            SDL_Texture *shot_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
-            if(!shot_texture)continue;
-            const RuntimeLibraryFrame *art=&entry->frames[index];
-            SDL_FRect shot={viewport.x+((float)(projectile->x>>2)+(float)art->offset_x-cx)*scale,
-                            viewport.y+((float)(projectile->y>>2)+(float)art->offset_y-cy)*scale,
-                            (float)art->w*scale,(float)art->h*scale};
-            SDL_RenderTexture(renderer,shot_texture,NULL,&shot);
+        if(!dying_mode) {
+            if(pass==1)
+                runtime_draw_projectiles(renderer,&weapons,&projectile_library,equipment.items,
+                                         viewport,cx,cy,scale,true,1);
+            runtime_draw_projectiles(renderer,&weapons,&projectile_library,equipment.items,
+                                     viewport,cx,cy,scale,false,pass);
         }
         }
         if(show_hitbox || !lib_entry) {

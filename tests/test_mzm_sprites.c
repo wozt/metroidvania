@@ -1586,6 +1586,10 @@ int main(void) {
     memset(test_events, 0, sizeof test_events);
     test_set_event(NULL, MZM_EVENT_KRAID_KILLED);
     test_set_event(NULL, MZM_EVENT_RIDLEY_KILLED);
+    MzmWeapons statue_weapons = {0};
+    statue_weapons.list[0].active = true;
+    statue_weapons.list[1].active = true;
+    frame.weapons = &statue_weapons;
     door_timer_calls = caa_calls = 0;
     memset(&fx, 0, sizeof fx);
     globals.lock_screen = false;
@@ -1598,6 +1602,9 @@ int main(void) {
            door_timer_calls == 1 && last_door_timer == 1 && caa_calls == 8 &&
            last_caa == MZM_CAA_MAKE_NON_POWER_GRIP && globals.lock_screen &&
            globals.lock_x == boss_statue.x + 32 && globals.lock_y == boss_statue.y);
+    assert(statue_weapons.list[0].low_oam_priority &&
+           statue_weapons.list[1].low_oam_priority &&
+           !statue_weapons.list[2].low_oam_priority);
     world.camera_x = (uint16_t)(boss_statue.x + 32 - 120 * 4);
     step(&boss_statue, 1);
     assert(boss_statue.pose == 0xB && boss_statue.anim == MZM_BOSS_STATUE_KRAID_OPENING &&
@@ -1657,6 +1664,7 @@ int main(void) {
     assert(ridley_statue.pose == 0xF &&
            ridley_statue.anim == MZM_BOSS_STATUE_RIDLEY_OPENED && caa_calls == 3);
     world.camera_x = 0;
+    frame.weapons = NULL;
     frame.hooks = NULL;
     frame.effects = NULL;
 

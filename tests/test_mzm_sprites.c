@@ -5220,6 +5220,142 @@ int main(void) {
         assert(room[0].pose == 0x23 && room[1].status == 0 && items.items & MZM_ITEM_CHARGE_BEAM &&
                messages[0] == 9 && test_events[20 / 8] & (1u << (20 % 8)));
     }
+    /* Deorem: the two body columns now emerge from the moving head instead
+     * of appearing at their final coordinates, grow their tail caps, follow
+     * the attack vertically, and burrow in separate directions on retreat. */
+    {
+        MzmSprite room[32] = {0};
+        MzmSpriteGlobals deorem_globals = {0};
+        MzmSpriteKind deorem_kind = {0};
+        MzmEquipment deorem_equipment = {.energy = 99, .max_energy = 99,
+                                          .missiles = 5, .max_missiles = 5};
+        for (int a = 0; a < MZM_DEOREM_ANIMS; ++a) {
+            deorem_kind.counts[a] = 2;
+            deorem_kind.timers[a][0] = deorem_kind.timers[a][1] = 2;
+        }
+        for (int i = 0; i < 33; ++i) tables.deorem_segment_x[i] = SHRT_MAX;
+        tables.deorem_segment_x[0] = MZM_PIXEL_SIZE;
+        tables.health[MZM_PSPRITE_DEOREM_FIRST_LOCATION] = 300;
+        tables.secondary_health[MZM_SSPRITE_DEOREM_EYE] = 60;
+        memset(test_events, 0, sizeof test_events);
+        door_timer_calls = caa_calls = 0;
+        MzmSpriteFrame df = frame;
+        df.sprites = room;
+        df.sprite_count = 32;
+        df.globals = &deorem_globals;
+        df.hooks = &test_hooks;
+        df.equipment = &deorem_equipment;
+        df.kinds[MZM_FAMILY_DEOREM] = &deorem_kind;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_DEOREM_FIRST_LOCATION,
+                                3, 6, 4, 0, 0);
+        mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x8 && room[0].health == 300);
+        df.samus_x = (uint16_t)(deorem_globals.boss_work2 + 13 * 64 / 2);
+        df.samus_y = room[0].y;
+        mzm_sprite_update(&room[0], 0, &df);
+        int segments = 0;
+        for (int i = 1; i < 32; ++i)
+            segments += room[i].status && room[i].sprite_id == MZM_SSPRITE_DEOREM_SEGMENT;
+        assert(room[0].pose == 0x9 && segments == 6 && door_timer_calls == 1 &&
+               caa_calls == 16 && deorem_globals.lock_screen);
+        uint16_t common_spawn_y = room[1].y;
+        for (int i = 1; i < 32; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(room[1].pose == 0x8 && room[1].y == common_spawn_y);
+
+        for (int tick = 0; tick < 46; ++tick)
+        for (int i = 0; i < 32; ++i)
+                if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(room[0].pose == 0x22 && room[1].pose == 0x9 &&
+               room[1].y == room[0].y - (64 + 32 + 4 + 64 + 4) -
+                                    room[1].room_slot * (64 + 32 + 4));
+        for (int tick = 0; tick < 10; ++tick)
+            for (int i = 0; i < 32; ++i)
+                if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        segments = 0;
+        for (int i = 1; i < 32; ++i)
+            segments += room[i].status && room[i].sprite_id == MZM_SSPRITE_DEOREM_SEGMENT;
+        assert(room[0].pose == 0x23 && segments == 12);
+        for (int tick = 0; tick < 50; ++tick)
+            for (int i = 0; i < 32; ++i)
+                if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(room[0].pose == 0x24 && room[7].pose == 0x23);
+        for (int tick = 0; tick < 60; ++tick)
+            for (int i = 0; i < 32; ++i)
+                if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(room[0].pose == 0x25);
+        int eye_slot = room[0].work3;
+        assert(room[eye_slot].sprite_id == MZM_SSPRITE_DEOREM_EYE);
+        int intro = 0;
+        while (room[0].pose != 0x26 && intro++ < 60)
+            for (int i = 0; i < 32; ++i)
+                if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(room[0].pose == 0x26 && intro > 20);
+
+        MzmSprite *down = NULL, *up = NULL, *neck = NULL, *tail = NULL, *cap = NULL;
+        segments = 0;
+        for (int i = 1; i < 32; ++i) {
+            if (!room[i].status || room[i].sprite_id != MZM_SSPRITE_DEOREM_SEGMENT) continue;
+            ++segments;
+            if (room[i].room_slot == 0) down = &room[i];
+            if (room[i].room_slot == 6) up = &room[i];
+            if (room[i].room_slot == 12) neck = &room[i];
+            if (room[i].room_slot == 18) tail = &room[i];
+            if (room[i].room_slot == 19) cap = &room[i];
+        }
+        assert(segments == 17 && down && up && neck && tail && cap &&
+               tail->anim == MZM_DEOREM_SEGMENT_TAIL &&
+               cap->status & MZM_SPRITE_STATUS_Y_FLIP);
+        assert(neck->y == room[0].y - (64 + 32 + 4 + 64 + 4));
+
+        room[0].pose = 0x2B;
+        room[0].work0 = 0;
+        for (int i = 0; i < 32; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(down->pose == 0x33 && up->pose == 0x35);
+        uint16_t down_y = down->y, up_y = up->y;
+        for (int i = 0; i < 32; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(down->y == down_y + MZM_PIXEL_SIZE && up->y == up_y - MZM_PIXEL_SIZE);
+        room[0].pose = 0x27;
+        room[0].work0 = 2;
+        for (int i = 0; i < 32; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        for (int i = 0; i < 32; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(down->pose == 0x35 && up->pose == 0x33);
+
+        room[0].pose = 0x43;
+        room[0].y = (uint16_t)(room[0].y_spawn - 64);
+        room[0].work0 = 0;
+        for (int i = 0; i < 32; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(room[0].pose == 0x44 && test_check_event(NULL, MZM_EVENT_DEOREM_FIRST_LOCATION));
+        int leaving_parts = 0;
+        for (int i = 1; i < 32; ++i)
+            leaving_parts += room[i].status && room[i].sprite_id == MZM_SSPRITE_DEOREM_SEGMENT &&
+                             room[i].room_slot >= 15 && room[i].room_slot <= 17;
+        assert(leaving_parts == 3 && down->pose == 0x46 && up->pose == 0x42 &&
+               neck->pose == 0x4A);
+        room[0].y = (uint16_t)(room[0].y_spawn + 10 * 64 + 64);
+        mzm_sprite_update(&room[0], 0, &df);
+        for (int i = 1; i < 32; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(room[0].pose == 0x45 && neck->pose == 0x4B);
+
+        /* The body does not disappear with the head: its pieces receive
+         * increasing native six-frame death delays from neck to tail. */
+        room[0].status |= MZM_SPRITE_STATUS_EXISTS;
+        room[0].pose = 0x68;
+        room[0].work0 = 60;
+        neck->status |= MZM_SPRITE_STATUS_EXISTS;
+        neck->pose = 0x24;
+        tail->status |= MZM_SPRITE_STATUS_EXISTS;
+        tail->pose = 0xF;
+        mzm_sprite_update(neck, (uint8_t)(neck - room), &df);
+        mzm_sprite_update(tail, (uint8_t)(tail - room), &df);
+        assert(neck->pose == 0x67 && tail->pose == 0x67 && tail->work0 > neck->work0);
+    }
     /* Acid Worm: the activated zipline starts the native entrance, the
      * weak body part owns damage, and death opens the arena persistently. */
     {

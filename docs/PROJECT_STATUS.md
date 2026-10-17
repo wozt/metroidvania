@@ -3632,6 +3632,34 @@ No automatic reciprocal link or native engine encoder is implemented.
   Python 473/473 passed. Generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0358 - native Deorem body choreography
+
+- Replaced Deorem's fixed body layout with the native staged construction.
+  The first six segments now descend from the initial head, the opposite six
+  rise only after the underground crossing, and the linked three-piece neck
+  appears with the eye before both columns grow their dedicated tail caps.
+- Each segment now consumes `sDeoremSegmentXVelocity` as a velocity stream,
+  follows the head vertically during attacks and reverses with the retracting
+  head. Thorn volleys still originate from the four correct segments on the
+  selected side.
+- Restored the retreat chain instead of deleting the body at once. The lower
+  column sinks, the upper column climbs and rolls its frames, the neck plus
+  three trailing pieces follow the centred head into the floor, and each part
+  uses its native despawn delay. Death likewise keeps the body and sequences
+  its explosions from the neck through both columns and tail.
+- Added a ROM-free encounter regression covering the ordered two-column
+  emergence, segment coordinates, neck linking, both movement directions,
+  tail caps, first-location retreat event, three-piece leaving chain, burrow
+  transition and staggered death timers.
+- Remaining divergence: the head attack uses compact host timing rather than
+  the original diagonal boundary choreography. Native music fades, minimap
+  updates and emulator comparison also remain open.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 473/473 passed. Real frame-260 captures in `brinstar_012` and
+  `brinstar_019` each reached the open-eye phase with all 17 body pieces and
+  the eye inside the real 24-slot sprite budget. Generated-data checks were
+  fresh and the proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

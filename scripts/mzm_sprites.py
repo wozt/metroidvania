@@ -176,6 +176,10 @@ MULTI_SPRITE_DATA = {
                                tuple("sImagoLarvaMultiSpriteData_" + name for name in (
                                    "Attacking", "Idle", "Retreating", "Dying", "Warning",
                                    "TakingDamage"))),
+    "sprites/imago_cocoon.c": (("sprites_ai/imago_cocoon.h", "data/sprites/imago_cocoon.h",
+                                 "structs/sprite.h"),
+                                ("sImagoCocoonMultiSpriteData_Idle",
+                                 "sImagoCocoonMultiSpriteData_Dying")),
     "sprites/unknown_item_chozo_statue.c": (
         ("sprites_ai/unknown_item_chozo_statue.h", "data/sprites/unknown_item_chozo_statue.h",
          "structs/sprite.h"),

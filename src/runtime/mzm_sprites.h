@@ -147,6 +147,9 @@ enum {
     MZM_IMAGO_MULTI_COUNT,
 };
 extern const char *const mzm_imago_multi_names[MZM_IMAGO_MULTI_COUNT];
+enum { MZM_IMAGO_COCOON_MULTI_IDLE, MZM_IMAGO_COCOON_MULTI_DYING,
+       MZM_IMAGO_COCOON_MULTI_COUNT };
+extern const char *const mzm_imago_cocoon_multi_names[MZM_IMAGO_COCOON_MULTI_COUNT];
 
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
 typedef struct {
@@ -205,6 +208,7 @@ typedef struct {
     int16_t deorem_segment_x[33];   /* sDeoremSegmentXVelocity */
     int16_t deorem_thorn_y[40];     /* sDeoremThornYVelocity */
     MzmMultiSprite imago_larva_multi[MZM_IMAGO_MULTI_COUNT];
+    MzmMultiSprite imago_cocoon_multi[MZM_IMAGO_COCOON_MULTI_COUNT];
     MzmMultiSprite mother_brain_multi;  /* sMotherBrainMultiSpriteData */
 } MzmSpriteTables;
 
@@ -976,6 +980,7 @@ typedef struct {
 /* EventFunction values read by the ported sprites (include/constants/event.h). */
 enum {
     MZM_EVENT_EASY = 1, MZM_EVENT_HARD = 2,
+    MZM_EVENT_ENTER_RIDLEY_DEMO_PLAYED = 5,
     MZM_EVENT_VIEWED_STATUE_ROOM = 42, MZM_EVENT_LONG_BEAM_DESSGEEGA_KILLED = 43,
     MZM_EVENT_MECHA_RIDLEY_KILLED = 74, MZM_EVENT_ZIPLINES_ACTIVATED = 46,
     MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED = 67, MZM_EVENT_GLASS_TUBE_BROKEN = 73,

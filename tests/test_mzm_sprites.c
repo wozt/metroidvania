@@ -5459,14 +5459,127 @@ int main(void) {
      * the Ridley-room cocoon remnant keeps its native idle sound cadence. */
     {
         MzmSpriteKind cocoon_kind = {0};
-        cocoon_kind.counts[MZM_IMAGO_COCOON_STATIC] = 1;
-        cocoon_kind.timers[MZM_IMAGO_COCOON_STATIC][0] = 1;
+        for (int a = 0; a < MZM_IMAGO_COCOON_ANIMS; ++a) {
+            cocoon_kind.counts[a] = 2;
+            cocoon_kind.timers[a][0] = cocoon_kind.timers[a][1] = 1;
+        }
         cocoon_kind.counts[MZM_IMAGO_COCOON_DEFEATED] = 8;
         for (int i = 0; i < 8; ++i)
             cocoon_kind.timers[MZM_IMAGO_COCOON_DEFEATED][i] = 1;
+        static const uint8_t cocoon_oam[] = {
+            MZM_IMAGO_COCOON_DECORATIVE_VINE_LEFT,
+            MZM_IMAGO_COCOON_VINE_LEFT_MIDDLE,
+            MZM_IMAGO_COCOON_VINE_RIGHT_MIDDLE,
+            MZM_IMAGO_COCOON_CEILING_VINE_MOTIONLESS,
+            MZM_IMAGO_COCOON_IDLE,
+            MZM_IMAGO_COCOON_DECORATIVE_VINE_RIGHT,
+            MZM_IMAGO_COCOON_VINE_RIGHT_RIGHT,
+            MZM_IMAGO_COCOON_VINE_LEFT_LEFT,
+            MZM_IMAGO_COCOON_VINE_RIGHT_LEFT,
+            MZM_IMAGO_COCOON_VINE_LEFT_RIGHT,
+        };
+        for (int m = 0; m < MZM_IMAGO_COCOON_MULTI_COUNT; ++m) {
+            for (int f = 0; f < 2; ++f) {
+                tables.imago_cocoon_multi[m].timers[f] = 2;
+                for (int p = 0; p < 10; ++p) {
+                    tables.imago_cocoon_multi[m].parts[f][p][0] = cocoon_oam[p];
+                    tables.imago_cocoon_multi[m].parts[f][p][1] = (int16_t)(p * 3);
+                    tables.imago_cocoon_multi[m].parts[f][p][2] = (int16_t)(p * 5);
+                }
+            }
+        }
+        tables.health[MZM_PSPRITE_IMAGO_COCOON] = 1;
+        tables.secondary_health[MZM_SSPRITE_IMAGO_COCOON_VINE] = 50;
+        tables.secondary_health[MZM_SSPRITE_IMAGO_COCOON_SPORE] = 1;
         MzmSpriteFrame cf = frame;
         cf.hooks = &test_hooks;
         cf.kinds[MZM_FAMILY_IMAGO_COCOON] = &cocoon_kind;
+        memset(test_events, 0, sizeof test_events);
+
+        /* The live cocoon drives its nine synchronized parts. Six vines
+         * are destructible; the left decoration alternates eight-spore
+         * nests, and the last vine starts the native falling sequence. */
+        MzmSprite room[32] = {0};
+        MzmSpriteGlobals cocoon_globals = {0};
+        cf.sprites = room;
+        cf.sprite_count = 32;
+        cf.globals = &cocoon_globals;
+        cf.samus_y = 12 * MZM_BLOCK_SIZE;
+        cf.samus_x = 25 * MZM_BLOCK_SIZE;
+        door_timer_calls = 0;
+        mzm_sfx_clear();
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_IMAGO_COCOON, 0, 2, 23, 0, 0);
+        mzm_sprite_update(&room[0], 0, &cf);
+        int vines = 0;
+        for (int i = 1; i < 32; ++i)
+            vines += room[i].status && room[i].sprite_id == MZM_SSPRITE_IMAGO_COCOON_VINE;
+        assert(room[0].pose == 0x8 && room[0].room_slot == 4 && room[0].health == 1 &&
+               room[0].scaling == 256 && cocoon_globals.sub1.health == 6 && vines == 9 &&
+               door_timer_calls == 1 && last_door_timer == 1);
+
+        MzmSprite *decoration = NULL;
+        int destructible = 0;
+        for (int i = 1; i <= 9; ++i) {
+            mzm_sprite_update(&room[i], (uint8_t)i, &cf);
+            if (room[i].room_slot == 0) decoration = &room[i];
+            if (room[i].room_slot == 1 || room[i].room_slot == 2 ||
+                room[i].room_slot >= 6) {
+                ++destructible;
+                assert(room[i].pose == 0x8 && room[i].health == 50 &&
+                       room[i].samus_collision == 4);
+            }
+            assert(mzm_sprite_graphics_owner(&room[i]) == MZM_PSPRITE_IMAGO_COCOON);
+        }
+        assert(decoration && decoration->pose == 0xE && destructible == 6);
+        decoration->y_spawn = 255;
+        mzm_sprite_update(decoration, (uint8_t)(decoration - room), &cf);
+        int spores = 0;
+        MzmSprite *first_spore = NULL;
+        for (int i = 10; i < 32; ++i) {
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_IMAGO_COCOON_SPORE) {
+                if (!first_spore) first_spore = &room[i];
+                ++spores;
+            }
+        }
+        assert(spores == 8 && first_spore && first_spore->ram_slot == decoration - room);
+        mzm_sprite_update(first_spore, (uint8_t)(first_spore - room), &cf);
+        assert(first_spore->pose == 0x9 && first_spore->anim == MZM_IMAGO_COCOON_SPORE_SPAWNING &&
+               first_spore->health == 1 && first_spore->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        mzm_sprite_update(first_spore, (uint8_t)(first_spore - room), &cf);
+        mzm_sprite_update(first_spore, (uint8_t)(first_spore - room), &cf);
+        assert(first_spore->pose == 0x23 && first_spore->work0 == 60);
+        first_spore->work0 = 1;
+        mzm_sprite_update(first_spore, (uint8_t)(first_spore - room), &cf);
+        assert(first_spore->pose == 0x25 && first_spore->kill_off_screen &&
+               first_spore->samus_collision == 6 &&
+               !(first_spore->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+
+        for (int i = 1; i <= 9; ++i) {
+            if (room[i].room_slot != 1 && room[i].room_slot != 2 && room[i].room_slot < 6)
+                continue;
+            room[i].pose = 0x62;
+            mzm_sprite_update(&room[i], (uint8_t)i, &cf);
+        }
+        assert(cocoon_globals.sub1.health == 0);
+        mzm_sprite_update(&room[0], 0, &cf);
+        assert(room[0].pose == 0x9 && room[0].absolute_palette_row == 2 &&
+               room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+               test_check_event(NULL, MZM_EVENT_IMAGO_COCOON_KILLED) &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_IMAGO_COCOON_VINES_CRACKING));
+
+        MzmSprite cleared_room[3] = {0};
+        MzmSpriteGlobals cleared_globals = {0};
+        cf.sprites = cleared_room;
+        cf.sprite_count = 3;
+        cf.globals = &cleared_globals;
+        mzm_sprite_init_primary(&cleared_room[0], MZM_PSPRITE_IMAGO_COCOON,
+                                0, 2, 23, 0, 0);
+        uint16_t cleared_y = cleared_room[0].y;
+        mzm_sprite_update(&cleared_room[0], 0, &cf);
+        assert(cleared_room[0].pose == 0x27 &&
+               cleared_globals.sub1.y == cleared_y + 15 * MZM_BLOCK_SIZE &&
+               cleared_room[1].sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE);
+
         memset(test_events, 0, sizeof test_events);
 
         MzmSprite trigger;

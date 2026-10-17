@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-17T02:49:53+00:00",
+ "generated_at": "2026-10-17T08:49:39+00:00",
  "git": {
-  "commit": "88c1515",
+  "commit": "063b164",
   "branch": "main",
   "dirty": true
  },
@@ -1701,7 +1701,7 @@
    "id": "mzm.enemies.imago_cocoon",
    "area": "mzm",
    "category": "enemies",
-   "title": "Imago cocoon passage and remains",
+   "title": "Imago cocoon encounter, passage and remains",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -1715,16 +1715,29 @@
    ],
    "dependencies": [
     "mzm.transitions.doors_and_hatches",
-    "mzm.audio.sound_engine"
+    "mzm.audio.sound_engine",
+    "mzm.animation.particles"
    ],
    "native_routines": [
+    "ImagoCocoon",
+    "ImagoCocoonInit",
+    "ImagoCocoonIdle",
+    "ImagoCocoonVine",
+    "ImagoCocoonVineInit",
+    "ImagoCocoonVineDeath",
+    "ImagoCocoonVineSpawnSpore",
+    "ImagoCocoonSpore",
+    "ImagoCocoonSporeInit",
+    "ImagoCocoonSporeSpawning",
+    "ImagoCocoonSporeNest",
+    "ImagoCocoonSporeMove",
     "EventTriggerDiscoveredImagoPassage",
     "ImagoCocoonAfterFight",
     "DefeatedImagoCocoon",
     "ImagoCocoonCeilingVine"
    ],
-   "limitations": "The active cocoon fight, its six destructible vines, spores, fall, floor destruction and music sequence are not ported, and the actors have not been compared with an emulator. The invisible norfair_043 trigger detects Samus with the native hitbox, persists event 32 and exposes the Ridley tunnel route. The ridley_028 post-fight remnant and its defeated cocoon and broken ceiling-vine secondary actors use their native OAM, collision flags and heartbeat timing.",
-   "next_action": "Port the active cocoon, six vines, spores, fall and floor-destruction sequence.",
+   "limitations": "The Winged Ripper and the cocoon's fall, debris, floor destruction, crash, passage unlock and final music sequence are not ported, and the actors have not been compared with an emulator. The active norfair_043 cocoon uses its two native multi-sprite tables, locks the doors, changes palette after three of its six 50-health missile-vulnerable vines are destroyed, alternates eight-spore nests on both sides and persists event 33 when the last vine breaks. Its native idle, vine, spore and battle-music cues are connected. The invisible passage trigger persists event 32. Reloading the killed cocoon restores its in-ground state until the Ridley entrance demo; ridley_028 retains the post-fight remnant and broken actors.",
+   "next_action": "Port the Winged Ripper and complete the cocoon fall, floor destruction, crash and passage-unlock sequence.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c"
@@ -9859,6 +9872,12 @@
  },
  "timeline": [
   {
+   "commit": "063b164",
+   "date": "2026-10-17",
+   "subject": "Port the Imago tunnel discovery trigger",
+   "scope": "project"
+  },
+  {
    "commit": "88c1515",
    "date": "2026-10-17",
    "subject": "Port the Imago right-side passage remnant",
@@ -10331,12 +10350,6 @@
    "date": "2026-10-12",
    "subject": "feat(mzm): Squeepts and the room effect height",
    "scope": "mzm"
-  },
-  {
-   "commit": "55324e1",
-   "date": "2026-10-12",
-   "subject": "feat(mzm): Gerutas and Ripper IIs",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10364,7 +10377,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1225,
+    "routines_cited_by_features": 1237,
     "call_edges": 6071
    },
    "aos": {
@@ -10859,14 +10872,20 @@
      {
       "id": 79,
       "name": "Imago Cocoon",
-      "status": "not_started",
-      "note": "",
+      "status": "partial",
+      "note": "Imago cocoon encounter, passage and remains",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_mzm_sprites.c"
+       ],
+       "in_game_check": [
+        "norfair_043",
+        "ridley_028"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "mzm.enemies.imago_cocoon"
      },
      {
       "id": 81,

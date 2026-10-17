@@ -3526,6 +3526,37 @@ No automatic reciprocal link or native engine encoder is implemented.
   parity/dashboard data were regenerated, and the proprietary-file guard
   found no tracked ROM-derived payload.
 
+## Patch 0354 - Zero Mission active Imago cocoon and spores
+
+- Dispatched the active `IMAGO_COCOON` placement in `norfair_043`. The actor
+  now locks the arena and drives its body, two decorative growths, central
+  ceiling vine and six destructible vines through the exact idle and dying
+  multi-sprite tables exported from the pinned decompilation.
+- The six combat vines use their native individual hitboxes, draw orders,
+  50 health, missile and power-bomb weakness from the secondary stats, damage
+  sound and huge death explosion. The cocoon turns to palette row 1 after the
+  third vine and row 2 after the sixth, persists event 33 and begins its native
+  falling animation with the vine-cracking sound.
+- The left decorative actor alternates the native left and right nests every
+  256 frames. Each nest contains eight synchronized spores; after the spawn
+  animation and one-second hold they become vulnerable, harmful projectiles
+  moving in the eight native directions, explode against solid Clipdata and
+  use the native spawn and release sounds.
+- The idle sound and two-stage encounter music trigger are connected. Reloading
+  event 33 restores the cocoon in the tunnel with the broken ceiling vine until
+  the Ridley entrance demo has played.
+- A real frame-3 capture in `norfair_043` now contains the visible cocoon and
+  all nine synchronized vine actors (11 room actors including the passage
+  trigger). The private graphics library remains 17,085 sequences and 101,548
+  frames; only the two compact multi-sprite tables were added to private
+  metadata.
+- Still open: the Winged Ripper, the falling movement, ceiling debris, five
+  floor blocks, crash, final two passage blocks, door unlock and boss-killed
+  music sequence.
+- Validation on 2026-10-17: warning-clean full build, CTest 35/35 and Python
+  438/438 passed. The focused encounter scenario, real room capture,
+  regenerated parity/dashboard data and proprietary-file guard all passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

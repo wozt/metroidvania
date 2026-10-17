@@ -2604,12 +2604,14 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
             enum { CHOZO = MZM_CHOZO_MULTI_COUNT, KRAID = CHOZO + MZM_KRAID_MULTI_COUNT,
                    RIDLEY = KRAID + MZM_RIDLEY_MULTI_COUNT,
                    IMAGO = RIDLEY + MZM_IMAGO_MULTI_COUNT,
-                   MOTHER = IMAGO, ALL = MOTHER + 1 };
+                   COCOON = IMAGO + MZM_IMAGO_COCOON_MULTI_COUNT,
+                   MOTHER = COCOON, ALL = MOTHER + 1 };
             for (int m = 0; m < ALL; ++m) {
                 const char *known = m < CHOZO ? mzm_chozo_multi_names[m]
                                     : m < KRAID ? mzm_kraid_multi_names[m - CHOZO]
                                     : m < RIDLEY ? mzm_ridley_multi_names[m - KRAID]
                                     : m < IMAGO ? mzm_imago_multi_names[m - RIDLEY]
+                                    : m < COCOON ? mzm_imago_cocoon_multi_names[m - IMAGO]
                                                  : MZM_MOTHER_BRAIN_MULTI_NAME;
                 if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
@@ -2617,6 +2619,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                                         : m < KRAID ? &sprites->tables.kraid_multi[m - CHOZO]
                                         : m < RIDLEY ? &sprites->tables.ridley_multi[m - KRAID]
                                         : m < IMAGO ? &sprites->tables.imago_larva_multi[m - RIDLEY]
+                                        : m < COCOON ? &sprites->tables.imago_cocoon_multi[m - IMAGO]
                                                      : &sprites->tables.mother_brain_multi;
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;

@@ -596,6 +596,10 @@ const char *const mzm_imago_multi_names[MZM_IMAGO_MULTI_COUNT] = {
     "sImagoLarvaMultiSpriteData_Warning",
     "sImagoLarvaMultiSpriteData_TakingDamage",
 };
+const char *const mzm_imago_cocoon_multi_names[MZM_IMAGO_COCOON_MULTI_COUNT] = {
+    "sImagoCocoonMultiSpriteData_Idle",
+    "sImagoCocoonMultiSpriteData_Dying",
+};
 const char *const mzm_mother_brain_anim_names[MZM_MOTHER_BRAIN_ANIMS] = {
     "MotherBrainOam_Idle", "MotherBrainOam_ChargingBeam", "MotherBrainPartOam_EyeClosed",
     "MotherBrainPartOam_2fa934", "MotherBrainPartOam_EyeOpening", "MotherBrainPartOam_2fa984",
@@ -5009,6 +5013,10 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_GADORA_EYE || sprite_id == MZM_SSPRITE_GADORA_BEAM)
             return MZM_FAMILY_GADORA;
         if (sprite_id == MZM_SSPRITE_IMAGO_LARVA_PART) return MZM_FAMILY_IMAGO_LARVA;
+        if (sprite_id == MZM_SSPRITE_WINGED_RIPPER ||
+            sprite_id == MZM_SSPRITE_IMAGO_COCOON_VINE ||
+            sprite_id == MZM_SSPRITE_IMAGO_COCOON_SPORE)
+            return MZM_FAMILY_IMAGO_COCOON;
         if (sprite_id == MZM_SSPRITE_DEFEATED_IMAGO_COCOON ||
             sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE)
             return MZM_FAMILY_IMAGO_COCOON;
@@ -5095,6 +5103,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         return MZM_FAMILY_IMAGO_LARVA;
     case MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE:
         return MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE;
+    case MZM_PSPRITE_IMAGO_COCOON:
     case MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT:
     case MZM_PSPRITE_DISCOVERED_IMAGO_PASSAGE_EVENT_TRIGGER:
         return MZM_FAMILY_IMAGO_COCOON;
@@ -6023,7 +6032,10 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
                                                    MZM_PSPRITE_GADORA_KRAID;
     if (sprite->sprite_id == MZM_SSPRITE_IMAGO_LARVA_PART) return sprite->owner;
     if (sprite->sprite_id == MZM_SSPRITE_DEFEATED_IMAGO_COCOON ||
-        sprite->sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE)
+        sprite->sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE ||
+        sprite->sprite_id == MZM_SSPRITE_WINGED_RIPPER ||
+        sprite->sprite_id == MZM_SSPRITE_IMAGO_COCOON_VINE ||
+        sprite->sprite_id == MZM_SSPRITE_IMAGO_COCOON_SPORE)
         return MZM_PSPRITE_IMAGO_COCOON;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
@@ -6149,7 +6161,8 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
         return;
     /* The Space Pirates and the security systems need the game globals. */
     if ((family == MZM_FAMILY_SPACE_PIRATE || family == MZM_FAMILY_CHOZODIA_SECURITY ||
-         family == MZM_FAMILY_CHOZO_STATUE || family == MZM_FAMILY_IMAGO_LARVA) &&
+         family == MZM_FAMILY_CHOZO_STATUE || family == MZM_FAMILY_IMAGO_LARVA ||
+         family == MZM_FAMILY_IMAGO_COCOON) &&
         !frame->globals)
         return;
     Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],

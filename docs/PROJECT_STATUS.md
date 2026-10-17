@@ -3499,6 +3499,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   438/438 passed. Generated parity/dashboard data were fresh and the
   proprietary-file guard passed.
 
+## Patch 0353 - Zero Mission Imago tunnel discovery and cocoon remains
+
+- Added the invisible `norfair_043` passage trigger with its native collision
+  box. Touching it persists event 32, removes the actor and exposes the door
+  route into Ridley's tunnel; an already discovered passage suppresses the
+  trigger when the room loads.
+- Added the `ridley_028` post-fight cocoon remnant and its defeated cocoon and
+  broken ceiling-vine secondary actors. They retain the native point hitboxes,
+  projectile immunity, collision behavior, OAM and heartbeat sound timing.
+- `scripts/mzm_sprites.py` now exports the complete 21-table Imago cocoon
+  graphics family and its body palette variants to the ignored private sprite
+  library. The active fight is deliberately not dispatched yet: its six
+  destructible vines, spores, fall, floor destruction and battle sequence are
+  the next implementation slice.
+- Raised the private runtime sprite-library capacity from 16,384 to 32,768
+  sequences. The complete current export contains 17,085 sequences and
+  101,548 frames, so the previous limit silently rejected the whole library
+  once the cocoon tables were added.
+- The focused regression covers trigger setup, event persistence, collision
+  activation, remnant setup and both heartbeat points. A real headless capture
+  in `norfair_043` reached the trigger, set event 32 and removed it; both that
+  room and `ridley_028` loaded their native geometry and collision data.
+- Validation on 2026-10-17: warning-clean full build, CTest 35/35 and Python
+  438/438 passed. The focused sprite scenario and real trigger capture passed,
+  parity/dashboard data were regenerated, and the proprietary-file guard
+  found no tracked ROM-derived payload.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

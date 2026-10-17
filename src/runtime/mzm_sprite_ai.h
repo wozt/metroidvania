@@ -197,6 +197,8 @@ void ai_gadora(Ctx *c);
 /* The paired Imago larvae, their parts and the animated passage remnant. */
 void ai_imago_larva(Ctx *c);
 void ai_imago_larva_right_side(Ctx *c);
+/* The Imago tunnel trigger and the cocoon actors (mzm_imago_cocoon.c). */
+void ai_imago_cocoon(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

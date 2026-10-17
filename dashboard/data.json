@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-17T02:41:10+00:00",
+ "generated_at": "2026-10-17T02:49:53+00:00",
  "git": {
-  "commit": "bd7475b",
+  "commit": "88c1515",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 125,
+   "total": 126,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 55,
+    "partial": 56,
     "functional": 59,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 59,
-   "functional_or_better_percent": 47.2,
-   "with_passing_tests": 112,
-   "with_passing_tests_percent": 89.6,
+   "functional_or_better_percent": 46.8,
+   "with_passing_tests": 113,
+   "with_passing_tests_percent": 89.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -125,6 +125,7 @@
     "mzm.enemies.gadora",
     "mzm.enemies.geruta",
     "mzm.enemies.holtz",
+    "mzm.enemies.imago_cocoon",
     "mzm.enemies.imago_larva",
     "mzm.enemies.kraid",
     "mzm.enemies.mella",
@@ -242,11 +243,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 77,
+   "total": 78,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 31,
+    "partial": 32,
     "functional": 46,
     "faithful": 0,
     "validated": 0,
@@ -254,8 +255,8 @@
     "unknown": 0
    },
    "functional_or_better": 46,
-   "functional_or_better_percent": 59.7,
-   "with_passing_tests": 76,
+   "functional_or_better_percent": 59.0,
+   "with_passing_tests": 77,
    "with_passing_tests_percent": 98.7,
    "unknown_or_blocked": 0,
    "features": [
@@ -275,6 +276,7 @@
     "mzm.enemies.gadora",
     "mzm.enemies.geruta",
     "mzm.enemies.holtz",
+    "mzm.enemies.imago_cocoon",
     "mzm.enemies.imago_larva",
     "mzm.enemies.kraid",
     "mzm.enemies.mella",
@@ -1670,6 +1672,67 @@
      "tests/test_mzm_sprites.c"
     ],
     "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-17"
+   }
+  },
+  {
+   "id": "mzm.enemies.imago_cocoon",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Imago cocoon passage and remains",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_imago_cocoon.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.transitions.doors_and_hatches",
+    "mzm.audio.sound_engine"
+   ],
+   "native_routines": [
+    "EventTriggerDiscoveredImagoPassage",
+    "ImagoCocoonAfterFight",
+    "DefeatedImagoCocoon",
+    "ImagoCocoonCeilingVine"
+   ],
+   "limitations": "The active cocoon fight, its six destructible vines, spores, fall, floor destruction and music sequence are not ported, and the actors have not been compared with an emulator. The invisible norfair_043 trigger detects Samus with the native hitbox, persists event 32 and exposes the Ridley tunnel route. The ridley_028 post-fight remnant and its defeated cocoon and broken ceiling-vine secondary actors use their native OAM, collision flags and heartbeat timing.",
+   "next_action": "Port the active cocoon, six vines, spores, fall and floor-destruction sequence.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_mzm_sprites.c"
+    ],
+    "in_game_check": [
+     "norfair_043",
+     "ridley_028"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -9796,6 +9859,12 @@
  },
  "timeline": [
   {
+   "commit": "88c1515",
+   "date": "2026-10-17",
+   "subject": "Port the Imago right-side passage remnant",
+   "scope": "project"
+  },
+  {
    "commit": "bd7475b",
    "date": "2026-10-17",
    "subject": "Port the Imago larva encounter",
@@ -10268,12 +10337,6 @@
    "date": "2026-10-12",
    "subject": "feat(mzm): Gerutas and Ripper IIs",
    "scope": "mzm"
-  },
-  {
-   "commit": "b661dad",
-   "date": "2026-10-12",
-   "subject": "feat(mzm): item jingles in the sound engine",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10301,7 +10364,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1221,
+    "routines_cited_by_features": 1225,
     "call_edges": 6071
    },
    "aos": {

@@ -185,6 +185,10 @@ class OutputTests(unittest.TestCase):
         self.assertEqual(mapping["IMAGO_LARVA_RIGHT"], "mzm.enemies.imago_larva")
         self.assertEqual(mapping["IMAGO_LARVA_LEFT"], "mzm.enemies.imago_larva")
         self.assertEqual(mapping["IMAGO_LARVA_RIGHT_SIDE"], "mzm.enemies.imago_larva")
+        self.assertEqual(mapping["IMAGO_COCOON_AFTER_FIGHT"],
+                         "mzm.enemies.imago_cocoon")
+        self.assertEqual(mapping["DISCOVERED_IMAGO_PASSAGE_EVENT_TRIGGER"],
+                         "mzm.enemies.imago_cocoon")
         # Drops take the MZM_FAMILY_DROP default, not a case label.
         self.assertNotIn("SMALL_ENERGY_DROP", mapping)
         self.assertTrue(set(mapping.values()).issubset(annotation_ids))

@@ -1771,7 +1771,7 @@ static void runtime_apply_difficulty_event(uint8_t events[32], uint8_t difficult
 
 #ifndef FUSION_RUNTIME_TEST
 /* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
-#define RUNTIME_LIBRARY_MAX 16384
+#define RUNTIME_LIBRARY_MAX 32768
 #define RUNTIME_LIBRARY_FRAME_MAX 256
 #define RUNTIME_ANIMATION_MAP_MAX 2048
 #define RUNTIME_INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1\n"

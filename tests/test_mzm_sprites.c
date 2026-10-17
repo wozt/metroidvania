@@ -5455,6 +5455,68 @@ int main(void) {
                                      MZM_SOUND_IMAGO_LARVA_RIGHT_SIDE_CORE_BEATING));
         }
     }
+    /* Crossing the hidden Norfair trigger persists the discovered tunnel;
+     * the Ridley-room cocoon remnant keeps its native idle sound cadence. */
+    {
+        MzmSpriteKind cocoon_kind = {0};
+        cocoon_kind.counts[MZM_IMAGO_COCOON_STATIC] = 1;
+        cocoon_kind.timers[MZM_IMAGO_COCOON_STATIC][0] = 1;
+        cocoon_kind.counts[MZM_IMAGO_COCOON_DEFEATED] = 8;
+        for (int i = 0; i < 8; ++i)
+            cocoon_kind.timers[MZM_IMAGO_COCOON_DEFEATED][i] = 1;
+        MzmSpriteFrame cf = frame;
+        cf.hooks = &test_hooks;
+        cf.kinds[MZM_FAMILY_IMAGO_COCOON] = &cocoon_kind;
+        memset(test_events, 0, sizeof test_events);
+
+        MzmSprite trigger;
+        cf.sprites = &trigger;
+        cf.sprite_count = 1;
+        mzm_sprite_init_primary(&trigger,
+                                MZM_PSPRITE_DISCOVERED_IMAGO_PASSAGE_EVENT_TRIGGER,
+                                0, 17, 33, 1, 0);
+        mzm_sprite_update(&trigger, 0, &cf);
+        assert(trigger.pose == 0x8 &&
+               trigger.status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               trigger.status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+               trigger.samus_collision == 30 && trigger.hitbox_top == -MZM_BLOCK_SIZE &&
+               trigger.hitbox_bottom == 0 && trigger.hitbox_left == -MZM_BLOCK_SIZE / 2 &&
+               trigger.hitbox_right == MZM_BLOCK_SIZE / 2);
+        trigger.status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        mzm_sprite_update(&trigger, 0, &cf);
+        assert(trigger.status == 0 &&
+               test_check_event(NULL, MZM_EVENT_IMAGO_TUNNEL_DISCOVERED));
+
+        MzmSprite already_discovered;
+        cf.sprites = &already_discovered;
+        mzm_sprite_init_primary(&already_discovered,
+                                MZM_PSPRITE_DISCOVERED_IMAGO_PASSAGE_EVENT_TRIGGER,
+                                0, 17, 33, 1, 0);
+        mzm_sprite_update(&already_discovered, 0, &cf);
+        assert(already_discovered.status == 0);
+
+        MzmSprite remains;
+        cf.sprites = &remains;
+        mzm_sprite_init_primary(&remains, MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT,
+                                2, 15, 8, 0, 0);
+        mzm_sfx_clear();
+        mzm_sprite_update(&remains, 0, &cf);
+        assert(remains.pose == 0x9 && remains.anim == MZM_IMAGO_COCOON_DEFEATED &&
+               remains.ignore_samus_timer == 1 && remains.samus_collision == 0 &&
+               remains.hitbox_top == -MZM_PIXEL_SIZE &&
+               remains.hitbox_bottom == MZM_PIXEL_SIZE &&
+               remains.draw_top == 48 && remains.draw_bottom == 16 &&
+               remains.draw_horizontal == 32);
+        mzm_sprite_update(&remains, 0, &cf);
+        assert(mzm_sfx_requested(MZM_SFX_PLAY,
+                                 MZM_SOUND_IMAGO_COCOON_IN_GROUND_IDLE));
+        mzm_sfx_clear();
+        remains.frame = 4;
+        remains.adc = 1;
+        mzm_sprite_update(&remains, 0, &cf);
+        assert(mzm_sfx_requested(MZM_SFX_PLAY,
+                                 MZM_SOUND_IMAGO_COCOON_IN_GROUND_IDLE));
+    }
     /* EscapeDetermineTimer, EscapeSetTimer and EscapeUpdateTimer: event
      * routing, difficulty lengths, banner pause and timeout. */
     {

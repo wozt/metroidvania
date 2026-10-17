@@ -557,6 +557,37 @@ static const char *const
 imago_larva_right_side_sprites[MZM_IMAGO_LARVA_RIGHT_SIDE_ANIMS] = {
     "IMAGO_LARVA_RIGHT_SIDE",
 };
+const char *const mzm_imago_cocoon_anim_names[MZM_IMAGO_COCOON_ANIMS] = {
+    "ImagoCocoonOam_CeilingVineMotionless",
+    "ImagoCocoonOam_CeilingVineMoving",
+    "ImagoCocoonOam_CeilingVineBroken",
+    "ImagoCocoonOam_DecorativeVinesLeft",
+    "ImagoCocoonOam_DecorativeVinesRight",
+    "ImagoCocoonVineOam_LeftMiddle",
+    "ImagoCocoonVineOam_RightMiddle",
+    "ImagoCocoonVineOam_LeftRight",
+    "ImagoCocoonVineOam_RightRight",
+    "ImagoCocoonVineOam_LeftLeft",
+    "ImagoCocoonVineOam_RightLeft",
+    "ImagoCocoonOam_Idle",
+    "ImagoCocoonOam_2e0bb0",
+    "ImagoCocoonOam_Static",
+    "ImagoCocoonSporeOam_Spawning",
+    "ImagoCocoonSporeOam_Nest",
+    "ImagoCocoonSporeOam_Moving",
+    "ImagoCocoonSporeOam_Exploding",
+    "WingedRipperOam_Moving",
+    "WingedRipperOam_TurningAround",
+    "DefeatedImagoCocoonOam",
+};
+static const char *const imago_cocoon_sprites[MZM_IMAGO_COCOON_ANIMS] = {
+    "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON",
+    "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON",
+    "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON",
+    "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON",
+    "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON", "IMAGO_COCOON",
+    "IMAGO_COCOON",
+};
 const char *const mzm_imago_multi_names[MZM_IMAGO_MULTI_COUNT] = {
     "sImagoLarvaMultiSpriteData_Attacking",
     "sImagoLarvaMultiSpriteData_Idle",
@@ -841,6 +872,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE] = {
         MZM_IMAGO_LARVA_RIGHT_SIDE_ANIMS, mzm_imago_larva_right_side_anim_names,
         imago_larva_right_side_sprites},
+    [MZM_FAMILY_IMAGO_COCOON] = {MZM_IMAGO_COCOON_ANIMS, mzm_imago_cocoon_anim_names,
+                                 imago_cocoon_sprites},
 };
 
 
@@ -4976,6 +5009,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_GADORA_EYE || sprite_id == MZM_SSPRITE_GADORA_BEAM)
             return MZM_FAMILY_GADORA;
         if (sprite_id == MZM_SSPRITE_IMAGO_LARVA_PART) return MZM_FAMILY_IMAGO_LARVA;
+        if (sprite_id == MZM_SSPRITE_DEFEATED_IMAGO_COCOON ||
+            sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE)
+            return MZM_FAMILY_IMAGO_COCOON;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -5059,6 +5095,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         return MZM_FAMILY_IMAGO_LARVA;
     case MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE:
         return MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE;
+    case MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT:
+    case MZM_PSPRITE_DISCOVERED_IMAGO_PASSAGE_EVENT_TRIGGER:
+        return MZM_FAMILY_IMAGO_COCOON;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -5983,6 +6022,9 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         return sprite->absolute_palette_row == 1 ? MZM_PSPRITE_GADORA_RIDLEY :
                                                    MZM_PSPRITE_GADORA_KRAID;
     if (sprite->sprite_id == MZM_SSPRITE_IMAGO_LARVA_PART) return sprite->owner;
+    if (sprite->sprite_id == MZM_SSPRITE_DEFEATED_IMAGO_COCOON ||
+        sprite->sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE)
+        return MZM_PSPRITE_IMAGO_COCOON;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -6187,6 +6229,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_GADORA: ai_gadora(&c); break;
     case MZM_FAMILY_IMAGO_LARVA: ai_imago_larva(&c); break;
     case MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE: ai_imago_larva_right_side(&c); break;
+    case MZM_FAMILY_IMAGO_COCOON: ai_imago_cocoon(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

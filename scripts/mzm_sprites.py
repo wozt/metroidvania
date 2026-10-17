@@ -112,6 +112,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_GADORA_KRAID": 0, "PSPRITE_GADORA_RIDLEY": 0,
           "PSPRITE_IMAGO_LARVA_RIGHT": 0, "PSPRITE_IMAGO_LARVA_LEFT": 0,
           "PSPRITE_IMAGO_LARVA_RIGHT_SIDE": 0,
+          "PSPRITE_IMAGO_COCOON": 0, "PSPRITE_IMAGO_COCOON_AFTER_FIGHT": 0,
           "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0, "PSPRITE_RIDLEY": 0, "PSPRITE_MOTHER_BRAIN": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
@@ -121,8 +122,13 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
 # Extra palette rows a ported AI sets (paletteRow), baked as ``/rowN``.
 # The tables a sprite's row variants apply to (by prefix; the others keep
 # their rows): only the Atomic's body flashes, not its electricity.
-ROW_VARIANT_TABLES = {"PSPRITE_ATOMIC": ("sAtomicOam_",), "PSPRITE_METROID": ("sMetroidOam_Spawning",)}
-ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
+ROW_VARIANT_TABLES = {
+    "PSPRITE_ATOMIC": ("sAtomicOam_",),
+    "PSPRITE_METROID": ("sMetroidOam_Spawning",),
+    "PSPRITE_IMAGO_COCOON": ("sImagoCocoonOam_Idle", "sImagoCocoonOam_2e0bb0",
+                              "sImagoCocoonOam_Static"),
+}
+ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
@@ -649,7 +655,11 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                 for flip in flips:
                     frames = []
                     for pointer, duration in entries:
-                        pixels = mzm_projectile_compose.render(rom, vram, colours, pointer, flip)
+                        try:
+                            pixels = mzm_projectile_compose.render(rom, vram, colours, pointer, flip)
+                        except ValueError as exc:
+                            raise ValueError(
+                                f"{sprite}/{table}{suffix}/{flip}: {exc}") from exc
                         bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
                         frames.append((bmp, duration, left, top))
                     library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}{suffix}",

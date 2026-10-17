@@ -47,7 +47,7 @@ fusion_enable_warnings(fusion_room_package_viewer)
 
 add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_samus.c
                src/runtime/mzm_projectiles.c src/runtime/gba_input.c src/runtime/debug_menu.c
-               src/runtime/mzm_sprites.c src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c src/runtime/mzm_deorem.c src/runtime/mzm_acid_worm.c src/runtime/mzm_gadora.c src/runtime/mzm_imago_larva.c
+               src/runtime/mzm_sprites.c src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c src/runtime/mzm_deorem.c src/runtime/mzm_acid_worm.c src/runtime/mzm_gadora.c src/runtime/mzm_imago_larva.c src/runtime/mzm_imago_cocoon.c
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c src/runtime/mzm_hatches.c
                src/runtime/mzm_blocks.c
                src/runtime/mzm_effects.c src/runtime/mzm_audio.c src/runtime/gba_psg.c
@@ -246,7 +246,7 @@ if(BUILD_TESTING)
     add_test(NAME mzm_items COMMAND fusion_mzm_items_tests)
 
     add_executable(fusion_mzm_sprites_tests tests/test_mzm_sprites.c src/runtime/mzm_sprites.c
-                   src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c src/runtime/mzm_deorem.c src/runtime/mzm_acid_worm.c src/runtime/mzm_gadora.c src/runtime/mzm_imago_larva.c
+                   src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c src/runtime/mzm_deorem.c src/runtime/mzm_acid_worm.c src/runtime/mzm_gadora.c src/runtime/mzm_imago_larva.c src/runtime/mzm_imago_cocoon.c
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c
                    src/runtime/mzm_effects.c src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c
                    src/runtime/mzm_escape.c

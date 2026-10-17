@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 77 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 78 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -409,6 +409,16 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+
+[~] **`mzm.enemies.imago_cocoon` — Imago cocoon passage and remains.** The invisible norfair_043 trigger detects Samus with the native hitbox, persists event 32 and exposes the Ridley tunnel route. The ridley_028 post-fight remnant and its defeated cocoon and broken ceiling-vine secondary actors use their native OAM, collision flags and heartbeat timing.
+
+Native evidence: `mzm:c:src/sprites_ai/imago_cocoon.c:DefeatedImagoCocoon`, `mzm:c:src/sprites_ai/imago_cocoon.c:EventTriggerDiscoveredImagoPassage`, `mzm:c:src/sprites_ai/imago_cocoon.c:ImagoCocoonAfterFight`, `mzm:c:src/sprites_ai/imago_cocoon.c:ImagoCocoonCeilingVine`.  
+Local implementation: [`src/runtime/mzm_imago_cocoon.c`](../src/runtime/mzm_imago_cocoon.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.transitions.doors_and_hatches`, `mzm.audio.sound_engine`.  
+Known divergences: The active cocoon fight, its six destructible vines, spores, fall, floor destruction and music sequence are not ported, and the actors have not been compared with an emulator.  
+Next action: Port the active cocoon, six vines, spores, fall and floor-destruction sequence.
+Evidence: in game: `norfair_043`, `ridley_028`.
 
 [+] **`mzm.enemies.imago_larva` — Imago larva encounter and passage remnant.** The paired larvae in norfair_042 keep independent multi-sprite state. The left larva locks the room and starts the battle music; the right larva waits at the cocoon, warns when Samus approaches, retracts by one, four or eight subpixels after shell damage, waits longer after each retreat and lunges back to its spawn. Their shell, claws and three dots follow the six native multi-sprite tables; warning hides the dots and temporarily makes the shell immune to another retreat. Body damage triggers the 47-frame counterattack, death synchronizes all parts and their native drops, then event 31 persists the cleared passage, unlocks the doors and starts the boss-killed music. The separate norfair_046 right-side remnant stays non-colliding and projectile-immune while its native 34-frame loop plays the shaking and six heartbeat cues.
 

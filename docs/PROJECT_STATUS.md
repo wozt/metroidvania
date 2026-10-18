@@ -3723,6 +3723,34 @@ No automatic reciprocal link or native engine encoder is implemented.
   reconstruction task completed or was up to date, generated-data checks were
   fresh and the proprietary-file guard passed.
 
+## Patch 0361 - native Deorem debris and retreat gate
+
+- Replaced the compact encounter debris approximation with the native fixed
+  entrance and exit groups plus `DeoremRandomSpriteDebris`. The exact type,
+  position, RNG, frame-counter and timer formulas now drive debris while
+  Deorem waits, descends, rises, exposes its head and leaves underground.
+- Restored the matching medium-dust particles, movement sounds and vertical
+  screen shakes for both directions of the body construction and the retreat.
+  The underground phase also refreshes the native Samus-collision guard until
+  its four-second timer expires.
+- `DeoremStartLeaving` now scans all live non-secondary actors for the five
+  native energy and ammunition drop types. Its one-second retreat countdown
+  remains paused until every drop is collected or despawns, then removes the
+  eye on the exact zero edge and starts the leaving segments on the following
+  frame, preserving the original current-sprite timing.
+- The ROM-free regression covers deterministic random debris, all four fixed
+  debris timer groups, the entrance dust, the active-drop gate, delayed eye
+  removal and the following-frame retreat transition. A real frame-40
+  `brinstar_012` capture retained the complete staged body and correct room
+  composition with the new effects active.
+- Remaining divergence: the two placements have not yet been compared frame
+  by frame with an emulator.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed. Dashboard generation reported 126 features, 61
+  functional or better and 114 with passing tests. Every reconstruction task
+  completed or was up to date, generated-data checks were fresh and the
+  proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

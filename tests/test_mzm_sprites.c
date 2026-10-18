@@ -5227,6 +5227,7 @@ int main(void) {
         MzmSprite room[32] = {0};
         MzmSpriteGlobals deorem_globals = {0};
         MzmSpriteKind deorem_kind = {0};
+        MzmEffects deorem_effects = {0};
         MzmEquipment deorem_equipment = {.energy = 99, .max_energy = 99,
                                           .missiles = 5, .max_missiles = 5};
         for (int a = 0; a < MZM_DEOREM_ANIMS; ++a) {
@@ -5245,6 +5246,7 @@ int main(void) {
         df.sprite_count = 32;
         df.globals = &deorem_globals;
         df.hooks = &test_hooks;
+        df.effects = &deorem_effects;
         df.equipment = &deorem_equipment;
         df.kinds[MZM_FAMILY_DEOREM] = &deorem_kind;
         mzm_sprite_init_primary(&room[0], MZM_PSPRITE_DEOREM_FIRST_LOCATION,
@@ -5253,6 +5255,18 @@ int main(void) {
         assert(room[0].pose == 0x8 && room[0].health == 300);
         df.samus_x = (uint16_t)(deorem_globals.boss_work2 + 13 * 64 / 2);
         df.samus_y = room[0].y;
+        deorem_equipment.max_missiles = deorem_equipment.missiles = 0;
+        room[0].work0 = 31;
+        memset(&deorem_effects, 0, sizeof deorem_effects);
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x8 && deorem_effects.debris[0].type == 7 &&
+               deorem_effects.debris[0].y == deorem_globals.boss_work1 + 32 - 100 &&
+               deorem_effects.debris[0].x == deorem_globals.boss_work2 + 416 + 26 &&
+               deorem_effects.debris[1].type == 6 &&
+               deorem_effects.debris[2].type == 5 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_190));
+        deorem_equipment.max_missiles = deorem_equipment.missiles = 5;
         mzm_sprite_update(&room[0], 0, &df);
         int segments = 0;
         for (int i = 1; i < 32; ++i)
@@ -5264,8 +5278,14 @@ int main(void) {
             if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
         assert(room[1].pose == 0x8 && room[1].y == common_spawn_y);
 
-        for (int tick = 0; tick < 46; ++tick)
+        memset(&deorem_effects, 0, sizeof deorem_effects);
         for (int i = 0; i < 32; ++i)
+            if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
+        assert(deorem_effects.particles[0].effect == MZM_PE_TWO_MEDIUM_DUST &&
+               deorem_effects.particles[0].y == deorem_globals.boss_work1 + 64 &&
+               deorem_effects.particles[0].x == room[0].x_spawn);
+        for (int tick = 1; tick < 46; ++tick)
+            for (int i = 0; i < 32; ++i)
                 if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
         assert(room[0].pose == 0x22 && room[1].pose == 0x9 &&
                room[1].y == room[0].y - (64 + 32 + 4 + 64 + 4) -
@@ -5273,6 +5293,10 @@ int main(void) {
                mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DEOREM_SPAWN_GOING_DOWN) &&
                mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DEOREM_SCREAMING) &&
                mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_WORMS_BATTLE));
+        const uint8_t spawn_debris[8] = {17, 18, 19, 4, 17, 18, 19, 4};
+        for (int i = 0; i < 8; ++i)
+            assert(deorem_effects.debris[i].exists &&
+                   deorem_effects.debris[i].type == spawn_debris[i]);
         for (int tick = 0; tick < 10; ++tick)
             for (int i = 0; i < 32; ++i)
                 if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
@@ -5538,9 +5562,25 @@ int main(void) {
         assert(room[0].pose == 0x27 && room[0].x < diagonal_x &&
                room[0].x >= deorem_globals.boss_work2 + 192 - 10);
 
+        int drop_slot = -1;
+        for (int i = 1; i < 32; ++i)
+            if (!(room[i].status & MZM_SPRITE_STATUS_EXISTS)) { drop_slot = i; break; }
+        assert(drop_slot >= 0);
+        room[drop_slot] = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS,
+                                      .sprite_id = MZM_PSPRITE_SMALL_ENERGY_DROP};
         room[0].pose = 0x43;
         room[0].y = (uint16_t)(room[0].y_spawn - 64);
-        room[0].work0 = 0;
+        room[0].work0 = 2;
+        memset(&deorem_effects, 0, sizeof deorem_effects);
+        mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x43 && room[0].work0 == 2 && room[eye_slot].status);
+        room[drop_slot].status = 0;
+        mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x43 && room[0].work0 == 1);
+        mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x43 && room[0].work0 == 0 && room[eye_slot].status == 0 &&
+               deorem_effects.debris[0].type == 17 &&
+               deorem_effects.debris[1].type == 18);
         for (int i = 0; i < 32; ++i)
             if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
         assert(room[0].pose == 0x44 && test_check_event(NULL, MZM_EVENT_DEOREM_FIRST_LOCATION) &&

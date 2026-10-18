@@ -217,6 +217,100 @@ static void move_diagonally_x(Ctx *c, uint8_t speed_cap, uint16_t destination) {
     }
 }
 
+static void random_sprite_debris(Ctx *c, uint8_t timer) {
+    if (!c->f->globals) return;
+    uint16_t y = (uint16_t)(c->f->globals->boss_work1 + HALF_BLOCK_SIZE);
+    uint16_t x = (uint16_t)(c->f->globals->boss_work2 + WIDTH / 2);
+    uint8_t rng = c->rng;
+    uint8_t frame = c->frame8;
+    if (rng & 1) {
+        ai_debris_init(c, 5,
+            (uint16_t)(y - (BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE - PIXEL_SIZE) + rng),
+            (uint16_t)(x + QUARTER_BLOCK_SIZE + PIXEL_SIZE + rng * HALF_BLOCK_SIZE));
+    } else {
+        ai_debris_init(c, 7,
+            (uint16_t)(y - (BLOCK_SIZE + HALF_BLOCK_SIZE + PIXEL_SIZE) + rng),
+            (uint16_t)(x + QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2 +
+                       rng * QUARTER_BLOCK_SIZE));
+    }
+    if (rng >= 8) {
+        ai_debris_init(c, 8, (uint16_t)(y - (BLOCK_SIZE + QUARTER_BLOCK_SIZE) + rng),
+                       (uint16_t)(x - (QUARTER_BLOCK_SIZE + PIXEL_SIZE / 2) -
+                                  rng * PIXEL_SIZE / 2));
+    } else {
+        ai_debris_init(c, 6,
+            (uint16_t)(y - (BLOCK_SIZE + QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE +
+                            PIXEL_SIZE / 2) + rng),
+            (uint16_t)(x - (QUARTER_BLOCK_SIZE + PIXEL_SIZE / 2) - rng * PIXEL_SIZE));
+        ai_debris_init(c, 5, (uint16_t)(y - (BLOCK_SIZE * 2 - EIGHTH_BLOCK_SIZE)),
+                       (uint16_t)(x - frame * PIXEL_SIZE / 2));
+    }
+    if (timer & 32) return;
+    if (rng & 1) {
+        ai_debris_init(c, 6, (uint16_t)(y - (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE)),
+                       (uint16_t)(x - frame * PIXEL_SIZE / 2));
+    } else {
+        ai_debris_init(c, 8, (uint16_t)(y - (HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE)),
+                       (uint16_t)(x - frame * PIXEL_SIZE / 2));
+    }
+    if (rng >= 12) {
+        ai_debris_init(c, 5, (uint16_t)(y - (EIGHTH_BLOCK_SIZE + PIXEL_SIZE / 2)),
+                       (uint16_t)(x + frame * PIXEL_SIZE / 2));
+        ai_debris_init(c, 6, (uint16_t)(y - (BLOCK_SIZE * 2 - EIGHTH_BLOCK_SIZE) + rng),
+                       (uint16_t)(x - rng * EIGHTH_BLOCK_SIZE));
+    } else {
+        ai_debris_init(c, 7, (uint16_t)(y - (BLOCK_SIZE - PIXEL_SIZE)),
+                       (uint16_t)(x + frame * PIXEL_SIZE / 2));
+    }
+}
+
+static void spawn_sprite_debris(Ctx *c, uint16_t y, uint16_t x, uint8_t timer) {
+    switch (timer) {
+    case 1:
+        ai_debris_init(c, 17, (uint16_t)(y - BLOCK_SIZE), x);
+        ai_debris_init(c, 18, (uint16_t)(y - QUARTER_BLOCK_SIZE),
+                       (uint16_t)(x + BLOCK_SIZE - PIXEL_SIZE / 2));
+        break;
+    case 3:
+        ai_debris_init(c, 19, (uint16_t)(y + HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE),
+                       (uint16_t)(x - (BLOCK_SIZE + HALF_BLOCK_SIZE - PIXEL_SIZE)));
+        ai_debris_init(c, 4, y, (uint16_t)(x + HALF_BLOCK_SIZE - PIXEL_SIZE / 2));
+        break;
+    case 7:
+        ai_debris_init(c, 17, (uint16_t)(y + QUARTER_BLOCK_SIZE + PIXEL_SIZE),
+                       (uint16_t)(x - (QUARTER_BLOCK_SIZE + PIXEL_SIZE)));
+        ai_debris_init(c, 18, (uint16_t)(y - (QUARTER_BLOCK_SIZE + PIXEL_SIZE)),
+                       (uint16_t)(x + BLOCK_SIZE + THREE_QUARTER_BLOCK_SIZE - PIXEL_SIZE / 2));
+        break;
+    case 12:
+        ai_debris_init(c, 19, (uint16_t)(y + HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE),
+                       (uint16_t)(x + HALF_BLOCK_SIZE - PIXEL_SIZE / 2));
+        ai_debris_init(c, 4, (uint16_t)(y - QUARTER_BLOCK_SIZE),
+                       (uint16_t)(x - (BLOCK_SIZE + HALF_BLOCK_SIZE + PIXEL_SIZE)));
+        break;
+    default:
+        break;
+    }
+}
+
+static bool active_drop(const Ctx *c) {
+    for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
+        const MzmSprite *s = &c->f->sprites[i];
+        if (!(s->status & MZM_SPRITE_STATUS_EXISTS) || s->secondary) continue;
+        switch (s->sprite_id) {
+        case MZM_PSPRITE_LARGE_ENERGY_DROP:
+        case MZM_PSPRITE_SMALL_ENERGY_DROP:
+        case MZM_PSPRITE_MISSILE_DROP:
+        case MZM_PSPRITE_SUPER_MISSILE_DROP:
+        case MZM_PSPRITE_POWER_BOMB_DROP:
+            return true;
+        default:
+            break;
+        }
+    }
+    return false;
+}
+
 static void init_head(Ctx *c) {
     MzmSprite *s = c->s;
     bool first = s->sprite_id == MZM_PSPRITE_DEOREM_FIRST_LOCATION;
@@ -257,10 +351,11 @@ static void waiting(Ctx *c) {
     bool has_missiles = c->f->equipment && c->f->equipment->max_missiles > 0;
     if (!has_missiles || c->f->samus_x < center - HALF_BLOCK_SIZE ||
         c->f->samus_x > center + HALF_BLOCK_SIZE) {
-        if ((uint8_t)(s->work0 % 32) == 0) {
-            mzm_screen_shake_start_vertical(10, 0x81);
-            ai_debris_init(c, (uint8_t)(5 + (c->rng & 3)), c->f->globals->boss_work1,
-                           (uint16_t)(center + (int8_t)c->rng * 2));
+        bool nearby = c->f->samus_x > center - (SCREEN_SIZE_X_SUB_PIXEL + BLOCK_SIZE) &&
+                      c->f->samus_x < center + (SCREEN_SIZE_X_SUB_PIXEL + BLOCK_SIZE);
+        if (nearby && c->rng == 0) mzm_screen_shake_start_vertical(10, 0x81);
+        if (nearby && (s->work0 & 31) == 0) {
+            random_sprite_debris(c, s->work0);
             mzm_sfx_play(MZM_SOUND_190);
         }
         return;
@@ -286,7 +381,20 @@ static void spawn_sequence(Ctx *c) {
     switch (s->pose) {
     case DEOREM_SPAWN_DOWN:
         s->y += QUARTER_BLOCK_SIZE;
+        if (s->work0 <= 15) {
+            spawn_sprite_debris(c, (uint16_t)(c->f->globals->boss_work1 + BLOCK_SIZE * 6),
+                                s->x_spawn, s->work0);
+            if (s->work0 == 8)
+                ai_particle_set(c, (uint16_t)(c->f->globals->boss_work1 + BLOCK_SIZE * 7),
+                                s->x_spawn, MZM_PE_TWO_MEDIUM_DUST);
+        } else {
+            uint8_t timer = (uint8_t)(46 - s->work0);
+            spawn_sprite_debris(c, (uint16_t)(c->f->globals->boss_work1 + BLOCK_SIZE),
+                                s->x_spawn, timer);
+        }
         if (s->work0 == 46) {
+            ai_particle_set(c, (uint16_t)(c->f->globals->boss_work1 + BLOCK_SIZE),
+                            s->x_spawn, MZM_PE_TWO_MEDIUM_DUST);
             mzm_sfx_play(MZM_SOUND_DEOREM_SPAWN_GOING_DOWN);
             mzm_sfx_play(MZM_SOUND_DEOREM_SCREAMING);
             mzm_sfx_music_play(MZM_MUSIC_WORMS_BATTLE, 0);
@@ -296,6 +404,8 @@ static void spawn_sequence(Ctx *c) {
             s->work0 = 10;
             s->status |= MZM_SPRITE_STATUS_Y_FLIP;
             s->x = (uint16_t)(s->x + (c->f->globals->boss_work3 ? -WIDTH : WIDTH));
+            mzm_screen_shake_start_vertical(40, 0x81);
+            mzm_sfx_play(MZM_SOUND_DEOREM_MOVING);
         }
         break;
     case DEOREM_SPAWN_DELAY:
@@ -304,19 +414,38 @@ static void spawn_sequence(Ctx *c) {
             s->work0 = 50;
             s->y = (uint16_t)(s->y_spawn + HEIGHT + HEAD_Y_OFFSET - PIXEL_SIZE);
             spawn_column(c, SEGMENT_UP_JUNCTION, SEGMENT_UP_5);
+            mzm_screen_shake_start_vertical(40, 0x81);
+            mzm_sfx_play(MZM_SOUND_DEOREM_MOVING);
         }
         break;
     case DEOREM_SPAWN_UP:
         s->y -= QUARTER_BLOCK_SIZE;
+        if (s->work0 <= 15) {
+            spawn_sprite_debris(c, (uint16_t)(c->f->globals->boss_work1 + BLOCK_SIZE),
+                                s->x, s->work0);
+            if (s->work0 == 8)
+                ai_particle_set(c, (uint16_t)(c->f->globals->boss_work1 + BLOCK_SIZE),
+                                s->x, MZM_PE_TWO_MEDIUM_DUST);
+        } else {
+            uint8_t timer = (uint8_t)(50 - s->work0);
+            spawn_sprite_debris(c, (uint16_t)(c->f->globals->boss_work1 + BLOCK_SIZE * 6),
+                                s->x, timer);
+            if (timer == 4)
+                ai_particle_set(c, (uint16_t)(c->f->globals->boss_work1 + BLOCK_SIZE * 7),
+                                s->x, MZM_PE_TWO_MEDIUM_DUST);
+        }
         if (--s->work0 == 0) {
             s->pose = DEOREM_HEAD_DELAY;
             s->work0 = 60;
             s->status = (uint16_t)((s->status & ~MZM_SPRITE_STATUS_Y_FLIP) |
                                    MZM_SPRITE_STATUS_NOT_DRAWN);
             s->x = (uint16_t)(s->x + (c->f->globals->boss_work3 ? WIDTH / 2 : -WIDTH / 2));
+            mzm_screen_shake_start_vertical(40, 0x81);
+            mzm_sfx_play(MZM_SOUND_DEOREM_MOVING);
         }
         break;
     case DEOREM_HEAD_DELAY:
+        if ((s->work0 & 31) == 0) random_sprite_debris(c, s->work0);
         if (--s->work0 == 0) {
             s->pose = DEOREM_HEAD_EMERGES;
             s->y = s->y_spawn;
@@ -326,6 +455,7 @@ static void spawn_sequence(Ctx *c) {
         }
         break;
     default:
+        if ((c->frame8 & 31) == 0) random_sprite_debris(c, c->frame8);
         if (s->y < s->y_spawn + HEAD_Y_OFFSET) { s->y += EIGHTH_BLOCK_SIZE; break; }
         if (s->work0 && --s->work0) break;
         s->pose = DEOREM_MAIN;
@@ -526,7 +656,13 @@ static void retreat(Ctx *c) {
     }
     if (s->pose == DEOREM_START_LEAVING) {
         if (s->y > s->y_spawn - BLOCK_SIZE) { s->y -= PIXEL_SIZE; return; }
-        if (s->work0 && --s->work0) return;
+        if (active_drop(c)) return;
+        if (s->work0) {
+            spawn_sprite_debris(c, (uint16_t)(c->f->globals->boss_work1 - HALF_BLOCK_SIZE),
+                                (uint16_t)(c->f->globals->boss_work2 + WIDTH / 2), s->work0);
+            if (--s->work0 == 0) remove_eye(c);
+            return;
+        }
         arena_walls(c, MZM_CAA_REMOVE_SOLID);
         door_timer(c, -1);
         c->f->globals->lock_screen = false;
@@ -537,7 +673,6 @@ static void retreat(Ctx *c) {
             clear_event(c, MZM_EVENT_DEOREM_FIRST_LOCATION);
             set_event(c, MZM_EVENT_DEOREM_SECOND_LOCATION);
         }
-        remove_eye(c);
         s->x = (uint16_t)(c->f->globals->boss_work2 + WIDTH / 2);
         spawn_segment(c, SEGMENT_LEAVING_3, s->y, s->x);
         spawn_segment(c, SEGMENT_LEAVING_2, s->y, s->x);
@@ -548,13 +683,23 @@ static void retreat(Ctx *c) {
         return;
     }
     if (s->pose == DEOREM_LEAVING) {
-        s->y += QUARTER_BLOCK_SIZE;
-        if (s->y >= s->y_spawn + HEIGHT + BLOCK_SIZE) {
-            s->pose = DEOREM_LEAVING_IN_GROUND;
-            s->work1 = 240;
-            s->status |= MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        if ((c->frame8 & 15) == 0) {
+            if ((c->frame8 & 31) == 0) random_sprite_debris(c, c->frame8);
+            mzm_screen_shake_start_vertical(20, 0x81);
         }
+        if (s->y < s->y_spawn + HEIGHT + BLOCK_SIZE) {
+            s->y += QUARTER_BLOCK_SIZE;
+            return;
+        }
+        s->pose = DEOREM_LEAVING_IN_GROUND;
+        s->work1 = 240;
+        s->status |= MZM_SPRITE_STATUS_NOT_DRAWN | MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
         return;
+    }
+    s->ignore_samus_timer = 1;
+    if ((c->frame8 & 15) == 0) {
+        if ((c->frame8 & 31) == 0) random_sprite_debris(c, c->frame8);
+        mzm_screen_shake_start_vertical(20, 0x81);
     }
     if (s->work1) --s->work1;
     if (s->work1 == 0) s->status = 0;

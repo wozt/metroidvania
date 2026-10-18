@@ -2652,7 +2652,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                    IMAGO = RIDLEY + MZM_IMAGO_MULTI_COUNT,
                    COCOON = IMAGO + MZM_IMAGO_COCOON_MULTI_COUNT,
                    MOTHER = COCOON, MECHA = MOTHER + 1,
-                   ALL = MECHA + MZM_MECHA_RIDLEY_MULTI_COUNT };
+                   TANGLE = MECHA + MZM_MECHA_RIDLEY_MULTI_COUNT, ALL = TANGLE + 1 };
             for (int m = 0; m < ALL; ++m) {
                 const char *known = m < CHOZO ? mzm_chozo_multi_names[m]
                                     : m < KRAID ? mzm_kraid_multi_names[m - CHOZO]
@@ -2660,7 +2660,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                                     : m < IMAGO ? mzm_imago_multi_names[m - RIDLEY]
                                     : m < COCOON ? mzm_imago_cocoon_multi_names[m - IMAGO]
                                     : m < MECHA ? MZM_MOTHER_BRAIN_MULTI_NAME
-                                                : mzm_mecha_ridley_multi_names[m - MECHA];
+                                    : m < TANGLE ? mzm_mecha_ridley_multi_names[m - MECHA]
+                                                 : MZM_TANGLE_VINE_MULTI_NAME;
                 if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
                 MzmMultiSprite *multi = m < CHOZO ? &sprites->tables.chozo_multi[m]
@@ -2669,7 +2670,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                                         : m < IMAGO ? &sprites->tables.imago_larva_multi[m - RIDLEY]
                                         : m < COCOON ? &sprites->tables.imago_cocoon_multi[m - IMAGO]
                                         : m < MECHA ? &sprites->tables.mother_brain_multi
-                                                    : &sprites->tables.mecha_ridley_multi[m - MECHA];
+                                        : m < TANGLE ? &sprites->tables.mecha_ridley_multi[m - MECHA]
+                                                     : &sprites->tables.tangle_vine_multi;
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;
                 for (int p = 0; p < MZM_MULTI_PARTS; ++p) {

@@ -6911,6 +6911,88 @@ int main(void) {
         assert(pair[2].status == 0);
         memset(test_events, 0, sizeof test_events);
     }
+    /* Tangle Vines: on the floor (row 10) or under the ceiling (row 2),
+     * and the vine holding a Geruta. */
+    {
+        MzmSpriteKind vine_kind = {0};
+        for (int a = 0; a < MZM_TANGLE_VINE_ANIMS; ++a) {
+            vine_kind.counts[a] = 2;
+            vine_kind.timers[a][0] = vine_kind.timers[a][1] = 4;
+        }
+        clear();
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = grid[2][x] = MZM_CLIPDATA_SOLID;
+        tables.health[MZM_PSPRITE_TANGLE_VINE_TALL] = 30;
+        tables.health[MZM_PSPRITE_TANGLE_VINE_SHORT] = 10;
+        tables.health[MZM_PSPRITE_TANGLE_VINE_GERUTA] = 40;
+        MzmSpriteFrame vf = frame;
+        vf.kinds[MZM_FAMILY_TANGLE_VINE] = &vine_kind;
+        MzmSprite tall;
+        mzm_sprite_init_primary(&tall, MZM_PSPRITE_TANGLE_VINE_TALL, 0, 9, 4, 0, 0);
+        mzm_sprite_update(&tall, 0, &vf);
+        assert(tall.anim == MZM_TANGLE_VINE_TALL_ON_GROUND && tall.hitbox_top == -248 &&
+               tall.hitbox_bottom == 0 && tall.samus_collision == 11 && tall.health == 30 &&
+               !(tall.status & MZM_SPRITE_STATUS_FACING_DOWN));
+        MzmSprite hanging;
+        mzm_sprite_init_primary(&hanging, MZM_PSPRITE_TANGLE_VINE_SHORT, 0, 3, 6, 0, 0);
+        uint16_t hang_y = hanging.y;
+        mzm_sprite_update(&hanging, 0, &vf);
+        assert(hanging.anim == MZM_TANGLE_VINE_SHORT_ON_CEILING && hanging.hitbox_top == 0 &&
+               hanging.hitbox_bottom == 136 && hanging.y == hang_y - MZM_BLOCK_SIZE &&
+               hanging.status & MZM_SPRITE_STATUS_FACING_DOWN);
+        mzm_sfx_clear();
+        hanging.damaged = true;
+        hanging.status |= MZM_SPRITE_STATUS_ONSCREEN;
+        hanging.pose = 0x62;
+        mzm_sprite_update(&hanging, 0, &vf);
+        assert(mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_TANGLE_VINE_DAMAGE));
+
+        /* The vine Geruta: the grip and the Geruta follow the multi-sprite;
+         * the Geruta killed leaves the bare vine; the vine killed frees
+         * the Geruta as a red Geruta. */
+        for (int f = 0; f < 4; ++f) {
+            tables.tangle_vine_multi.timers[f] = 10;
+            const int16_t parts[3][3] = {{MZM_TANGLE_VINE_GERUTA_GRIP, 0, (int16_t)(-8 + 8 * (f == 3))},
+                                         {MZM_TANGLE_VINE_GERUTA, (int16_t)(-200 + 4 * f), 32},
+                                         {MZM_TANGLE_VINE_GERUTA_ROOT, 0, 0}};
+            memcpy(tables.tangle_vine_multi.parts[f], parts, sizeof parts);
+        }
+        MzmSprite room[8] = {0};
+        MzmSpriteGlobals globals = {0};
+        vf.sprites = room;
+        vf.sprite_count = 8;
+        vf.globals = &globals;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_TANGLE_VINE_GERUTA, 0, 9, 8, 0, 0);
+        mzm_sprite_update(&room[0], 0, &vf);
+        assert(room[0].pose == 0x9 && room[0].room_slot == 2 && globals.sub1.health == 2 &&
+               room[0].anim == MZM_TANGLE_VINE_GERUTA_ROOT && room[1].room_slot == 0 &&
+               room[2].room_slot == 1 && room[2].sprite_id == MZM_SSPRITE_TANGLE_VINE_GERUTA_PART);
+        mzm_sprite_update(&room[1], 1, &vf);
+        mzm_sprite_update(&room[2], 2, &vf);
+        assert(room[1].anim == MZM_TANGLE_VINE_GERUTA_GRIP && room[1].x == globals.sub1.x - 8 &&
+               room[2].anim == MZM_TANGLE_VINE_GERUTA && room[2].y == globals.sub1.y - 200 &&
+               room[2].x == globals.sub1.x + 32 && room[2].health == 1 && room[2].samus_collision == 4);
+        room[2].health = 0;
+        mzm_sprite_update(&room[2], 2, &vf);
+        assert(room[2].status == 0 && globals.sub1.health == 1);
+        mzm_sprite_update(&room[0], 0, &vf);
+        mzm_sprite_update(&room[1], 1, &vf);
+        assert(room[0].pose == 0x23 && room[0].anim == MZM_TANGLE_VINE_GERUTA_FULL && room[1].status == 0);
+
+        memset(room, 0, sizeof room);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_TANGLE_VINE_GERUTA, 0, 9, 8, 0, 0);
+        mzm_sprite_update(&room[0], 0, &vf);
+        mzm_sprite_update(&room[2], 2, &vf);
+        room[0].pose = 0x62;
+        mzm_sprite_update(&room[0], 0, &vf);
+        assert(globals.sub1.health == 0);
+        uint16_t geruta_y = room[2].y;
+        mzm_sprite_update(&room[2], 2, &vf);
+        int red = -1;
+        for (int i = 0; i < 8; ++i)
+            if (room[i].status && !room[i].secondary && room[i].sprite_id == MZM_PSPRITE_GERUTA_RED) red = i;
+        assert(room[2].status == 0 && red >= 0 && room[red].room_slot == 0x80 &&
+               room[red].y == geruta_y + 32);
+    }
     /* The Brinstar hives: roots and four Mellows, shrinking phases,
      * replacement Mellows, death and the three-hives event. */
     {

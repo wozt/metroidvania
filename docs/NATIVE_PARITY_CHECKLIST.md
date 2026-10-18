@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 81 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 82 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -641,6 +641,16 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.part
 Known divergences: The room effect surface is the exported effectY without the gWaterMovement wave, and the lava splash particles (SpriteUtilSetSplashEffect) are not ported; otherwise the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Port the room effect wave and the splash particles; compare its behavior with the original game frame by frame.
 Evidence: in game: `norfair_010`.
+
+[~] **`mzm.enemies.tangle_vine` — Tangle Vines and the vine Geruta.** The four plain vines stand on the ground or hang a block higher from the ceiling with their native hitboxes, are solid and hurt on contact, and die with their native explosion heights. The red Geruta and larva vines keep their offsets and hitboxes. The vine Geruta animates its grip and Geruta through the ROM-exported multi-sprite table; killing the Geruta leaves the bare vine, killing the vine frees the Geruta as a red Geruta. A capture in norfair_024 shows the vines, red vines and a Geruta perched on a vine.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilSyncCurrentSpritePositionWithSubSpriteData1PositionAndOam`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineCurved`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineGeruta`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineGerutaPart`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineLarvaLeft`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineLarvaRight`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineMedium`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineRedGeruta`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineShort`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineSyncSprites`, `mzm:c:src/sprites_ai/tangle_vine.c:TangleVineTall`.  
+Local implementation: [`src/runtime/mzm_tangle_vine.c`](../src/runtime/mzm_tangle_vine.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.geruta`, `mzm.items.enemy_drops`.  
+Known divergences: Several vine Gerutas in one room share gSubSpriteData1, as natively. Not compared frame by frame with an emulator.  
+Next action: Compare norfair_024 and norfair_033 with an emulator.
+Evidence: in game: `norfair_024`, `norfair_033`.
 
 [+] **`mzm.enemies.tourian_defences` — Zebetites and Tourian cannons.** Zebetites (both ids, sharing the first's graphics) are solid sideways (SSC_SOLID_SIDEWAYS), change their look every 40 health lost after the first 20 (with the hurt sounds), heal 20 health every half second (a second on easy) while not hurt, and when destroyed explode, set their first event and come back 20 blocks left, the second destruction setting the next event; a pair already destroyed twice is removed. Cannons (Cannon, Cannon2, Cannon3) look away from an adjacent wall (else everywhere, random start), sweep through their five aims with a 1.1 s delay, shoot on arrival by chance (.625 sideways, .25 down, .125 diagonally) on screen, move to their other place 20 or 24 blocks away when Samus is past their range (Cannon3 a block higher there) and explode once Mother Brain is dead; their bullets leave from the mouth along the aim until a solid block. Checked by capture in tourian_004 (both Zebetites, cannons sweeping and firing).
 

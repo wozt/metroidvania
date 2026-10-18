@@ -3838,6 +3838,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0372 - Tangle Vines
+
+- Ported `sprites_ai/tangle_vine.c` in `mzm_tangle_vine.c`, which covers
+  three kinds of vines:
+  - the four plain vines (tall, medium, curved and short) stand on the
+    ground, or hang from the ceiling a block higher, with their native
+    hitboxes. They are solid, hurt on contact and explode at their native
+    heights;
+  - the red Geruta vine and the two larva vines keep their offsets and
+    hitboxes;
+  - the vine Geruta animates its grip and its Geruta through the
+    ROM-exported multi-sprite table. Killing the Geruta leaves a bare
+    vine; killing the vine frees the Geruta as a red Geruta.
+- Exported the fifteen vine tables and the vine Geruta multi-sprite table.
+- A ROM-free regression covers ground and ceiling placement, the damage
+  sound, and the vine Geruta's parts, multi-sprite offsets, Geruta death
+  and vine death.
+- A capture in `norfair_024` shows the vines, the red vines and a Geruta
+  perched on a vine.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0371 - Baristutes
 
 - Ported `sprites_ai/baristute.c` in `mzm_baristute.c`, covering the

@@ -54,6 +54,7 @@ enum {
     SSC_ZIPLINE = 26,
     SSC_SOLID_CHECK_COLLIDING = 27,
     SSC_RIDLEY_CLAW = 28,
+    SSC_MECHA_RIDLEY = 29,
     SSC_CHECK_COLLIDING = 30,
     SPRITE_POSE_STOPPED = 66,
     SSC_SMALL_ENERGY_DROP = 31,
@@ -200,6 +201,8 @@ void ai_imago_larva(Ctx *c);
 void ai_imago_larva_right_side(Ctx *c);
 /* The Imago tunnel trigger and the cocoon actors (mzm_imago_cocoon.c). */
 void ai_imago_cocoon(Ctx *c);
+/* Mecha Ridley, its synchronized body parts and weapons (mzm_mecha_ridley.c). */
+void ai_mecha_ridley(Ctx *c);
 /* mzm_gunship.c: the gunship and its parts. */
 void ai_gunship(Ctx *c);
 

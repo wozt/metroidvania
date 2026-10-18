@@ -3838,6 +3838,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0366 - Mecha Ridley entrance and multipart body
+
+- Added the native `chozodia_072` Mecha Ridley actor and its ten secondary
+  body actors. Their room slots, hitboxes, contact types, health, draw order
+  and graphics ownership now match the pinned Zero Mission implementation.
+- Exported all 63 Mecha Ridley OAM tables and the crawling-low and
+  standing-low multi-sprite tables. A private rebuild produced 17,856
+  sequences and 105,052 frames without tracking any ROM-derived output.
+- The encounter now honors event 74, locks the arena, waits five seconds,
+  crawls eleven blocks in from the right using both arm animation frames,
+  settles into its low stance and starts the battle music after the native
+  seven-stage entrance timing.
+- Added `SSC_MECHA_RIDLEY` contact damage and a ROM-free regression covering
+  the complete actor assembly, part metadata, crawl displacement, battle
+  transition and defeated-event removal.
+- A private frame-1000 capture in `chozodia_072` confirmed that all eleven
+  layers assemble at the native target position. The ignored local capture
+  is `captures/mecha-ridley/battle-idle.png`.
+- Remaining boundary: attacks, height transitions, the special cover/core
+  projectile handoff, death, grouped drops and the Chozodia escape start are
+  not connected yet. The next slice starts with the low-stance selector and
+  claw swipe before adding the three weapon actors.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed. Generated parity/dashboard data is fresh, the
+  proprietary-file guard passed, and both entrance and battle-idle captures
+  completed with all eleven actors present.
+
 ## Patch 0365 - grouped energy drop and Long Beam encounter audit
 
 - Added `PSPRITE_MULTIPLE_LARGE_ENERGY`, the grouped pickup emitted by Mecha

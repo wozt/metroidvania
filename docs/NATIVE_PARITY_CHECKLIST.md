@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 78 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 79 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -439,6 +439,16 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.weapons.bombs`.
 Known divergences: Not compared with an emulator; the fight was not played to its end in game (its death and drops are checked by a test). Not ported: the minimap chunk update and the statue opening cutscene of its death, the in-game timer at bosses. The runtime's camera is wider than the GBA screen and only centred on gLockScreen's position (not the native scrolling); BGCNT_LOW_PRIORITY sprites are drawn after BG3 and before the other backgrounds; SSC_HURTS_KNOCKBACK_IF_INVINCIBLE's hurt knocks Samus back even against a wall.  
 Next action: Fight it in game (damage, spikes on the platforms, death), then compare with an emulator.
 Evidence: in game: `kraid_030`.
+
+[~] **`mzm.enemies.mecha_ridley` — Mecha Ridley.** The native chozodia_072 placement now creates Mecha Ridley's core and ten secondary body actors, with their native room slots, health, hitboxes, collision types, draw order and shared graphics owner. Two ROM-exported multi-sprite tables keep all eleven layers aligned. The arena locks, the boss waits five seconds, crawls eleven blocks from the right according to both arm animation frames, settles into the low stance, runs the seven-stage entrance timing and starts the Mecha Ridley battle music. Event 74 removes the encounter on reload. A private capture reached the assembled battle idle at the native target position.
+
+Native evidence: `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidley`, `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidleyCrawling`, `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidleyDelayBeforeCrawling`, `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidleyInit`, `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidleyPart`, `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidleyPartInit`, `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidleyStartBattle`, `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidleyStartWalking`, `mzm:c:src/sprites_ai/mecha_ridley.c:MechaRidleySyncSubSprites`.  
+Local implementation: [`src/runtime/mzm_mecha_ridley.c`](../src/runtime/mzm_mecha_ridley.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.space_pirate`, `mzm.items.enemy_drops`.  
+Known divergences: The claw, height changes, missile launcher, fireball and laser attacks, cover-to-core damage handoff, death and escape start are not ported yet. The host renderer uses the baked OBJ palette instead of the entrance transparency and palette DMA. The 100-percent triple health and double contact damage rule is not exposed to the sprite engine.  
+Next action: Port the low-stance attack selector, claw swipe and height transitions, then add the missile, fireball and laser actors.
+Evidence: in game: `chozodia_072`.
 
 [~] **`mzm.enemies.mella` — Mellas.** Hovering under a ceiling with the ROM idle tables from an RNG offset, detection when Samus is low and within 8 blocks vertically and 3 across, a 7-frame delay, the swoop with the ROM going-down, going-up and horizontal speed tables (the going-down flag is SAMUS_COLLIDING, as in the game), the climb back half a block under the ceiling and the small explosion death.
 

@@ -2647,14 +2647,16 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                    RIDLEY = KRAID + MZM_RIDLEY_MULTI_COUNT,
                    IMAGO = RIDLEY + MZM_IMAGO_MULTI_COUNT,
                    COCOON = IMAGO + MZM_IMAGO_COCOON_MULTI_COUNT,
-                   MOTHER = COCOON, ALL = MOTHER + 1 };
+                   MOTHER = COCOON, MECHA = MOTHER + 1,
+                   ALL = MECHA + MZM_MECHA_RIDLEY_MULTI_COUNT };
             for (int m = 0; m < ALL; ++m) {
                 const char *known = m < CHOZO ? mzm_chozo_multi_names[m]
                                     : m < KRAID ? mzm_kraid_multi_names[m - CHOZO]
                                     : m < RIDLEY ? mzm_ridley_multi_names[m - KRAID]
                                     : m < IMAGO ? mzm_imago_multi_names[m - RIDLEY]
                                     : m < COCOON ? mzm_imago_cocoon_multi_names[m - IMAGO]
-                                                 : MZM_MOTHER_BRAIN_MULTI_NAME;
+                                    : m < MECHA ? MZM_MOTHER_BRAIN_MULTI_NAME
+                                                : mzm_mecha_ridley_multi_names[m - MECHA];
                 if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
                 MzmMultiSprite *multi = m < CHOZO ? &sprites->tables.chozo_multi[m]
@@ -2662,7 +2664,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                                         : m < RIDLEY ? &sprites->tables.ridley_multi[m - KRAID]
                                         : m < IMAGO ? &sprites->tables.imago_larva_multi[m - RIDLEY]
                                         : m < COCOON ? &sprites->tables.imago_cocoon_multi[m - IMAGO]
-                                                     : &sprites->tables.mother_brain_multi;
+                                        : m < MECHA ? &sprites->tables.mother_brain_multi
+                                                    : &sprites->tables.mecha_ridley_multi[m - MECHA];
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;
                 for (int p = 0; p < MZM_MULTI_PARTS; ++p) {

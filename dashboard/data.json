@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-18T19:44:31+00:00",
+ "generated_at": "2026-10-18T19:56:10+00:00",
  "git": {
-  "commit": "a95f566",
+  "commit": "e94e8b4",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 126,
+   "total": 127,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 52,
+    "partial": 53,
     "functional": 63,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 63,
-   "functional_or_better_percent": 50.0,
-   "with_passing_tests": 114,
-   "with_passing_tests_percent": 90.5,
+   "functional_or_better_percent": 49.6,
+   "with_passing_tests": 115,
+   "with_passing_tests_percent": 90.6,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -128,6 +128,7 @@
     "mzm.enemies.imago_cocoon",
     "mzm.enemies.imago_larva",
     "mzm.enemies.kraid",
+    "mzm.enemies.mecha_ridley",
     "mzm.enemies.mella",
     "mzm.enemies.metroid",
     "mzm.enemies.mother_brain",
@@ -243,11 +244,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 78,
+   "total": 79,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 28,
+    "partial": 29,
     "functional": 50,
     "faithful": 0,
     "validated": 0,
@@ -255,8 +256,8 @@
     "unknown": 0
    },
    "functional_or_better": 50,
-   "functional_or_better_percent": 64.1,
-   "with_passing_tests": 78,
+   "functional_or_better_percent": 63.3,
+   "with_passing_tests": 79,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -279,6 +280,7 @@
     "mzm.enemies.imago_cocoon",
     "mzm.enemies.imago_larva",
     "mzm.enemies.kraid",
+    "mzm.enemies.mecha_ridley",
     "mzm.enemies.mella",
     "mzm.enemies.metroid",
     "mzm.enemies.mother_brain",
@@ -2026,6 +2028,71 @@
     ],
     "in_game_check": [
      "kraid_030"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-18"
+   }
+  },
+  {
+   "id": "mzm.enemies.mecha_ridley",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Mecha Ridley",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_mecha_ridley.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.space_pirate",
+    "mzm.items.enemy_drops"
+   ],
+   "native_routines": [
+    "MechaRidley",
+    "MechaRidleyPart",
+    "MechaRidleySyncSubSprites",
+    "MechaRidleyInit",
+    "MechaRidleyStartWalking",
+    "MechaRidleyDelayBeforeCrawling",
+    "MechaRidleyCrawling",
+    "MechaRidleyStartBattle",
+    "MechaRidleyPartInit"
+   ],
+   "limitations": "The claw, height changes, missile launcher, fireball and laser attacks, cover-to-core damage handoff, death and escape start are not ported yet. The host renderer uses the baked OBJ palette instead of the entrance transparency and palette DMA. The 100-percent triple health and double contact damage rule is not exposed to the sprite engine. The native chozodia_072 placement now creates Mecha Ridley's core and ten secondary body actors, with their native room slots, health, hitboxes, collision types, draw order and shared graphics owner. Two ROM-exported multi-sprite tables keep all eleven layers aligned. The arena locks, the boss waits five seconds, crawls eleven blocks from the right according to both arm animation frames, settles into the low stance, runs the seven-stage entrance timing and starts the Mecha Ridley battle music. Event 74 removes the encounter on reload. A private capture reached the assembled battle idle at the native target position.",
+   "next_action": "Port the low-stance attack selector, claw swipe and height transitions, then add the missile, fireball and laser actors.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_mzm_sprites.c"
+    ],
+    "in_game_check": [
+     "chozodia_072"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -9968,6 +10035,12 @@
  },
  "timeline": [
   {
+   "commit": "e94e8b4",
+   "date": "2026-10-18",
+   "subject": "Port grouped large energy drops",
+   "scope": "project"
+  },
+  {
    "commit": "a95f566",
    "date": "2026-10-18",
    "subject": "Complete Acid Worm background layering",
@@ -10440,12 +10513,6 @@
    "date": "2026-10-13",
    "subject": "fix(mzm): let the audio device pull the sound",
    "scope": "mzm"
-  },
-  {
-   "commit": "8f55c8a",
-   "date": "2026-10-13",
-   "subject": "feat(mzm): elevators and area connections",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10473,7 +10540,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1310,
+    "routines_cited_by_features": 1319,
     "call_edges": 6071
    },
    "aos": {

@@ -6345,6 +6345,107 @@ int main(void) {
         assert(mzm_sfx_requested(MZM_SFX_PLAY,
                                  MZM_SOUND_IMAGO_COCOON_IN_GROUND_IDLE));
     }
+    /* Mecha Ridley's room actor creates and synchronizes all ten secondary
+     * parts, performs the delayed crawl and enters its battle idle. */
+    {
+        MzmSpriteKind mecha_kind = {0};
+        for (int a = 0; a < MZM_MECHA_RIDLEY_ANIMS; ++a) {
+            mecha_kind.counts[a] = 8;
+            for (int f = 0; f < 8; ++f) mecha_kind.timers[a][f] = 1;
+        }
+        static const uint8_t oam[11] = {
+            MZM_MECHA_RIDLEY_RIGHT_ARM_CRAWLING_FORWARD,
+            MZM_MECHA_RIDLEY_EYE_IDLE, MZM_MECHA_RIDLEY_HEAD_IDLE,
+            MZM_MECHA_RIDLEY_NECK_LOW, MZM_MECHA_RIDLEY_COVER,
+            MZM_MECHA_RIDLEY_CORE_IDLE, MZM_MECHA_RIDLEY_TORSO,
+            MZM_MECHA_RIDLEY_RING, MZM_MECHA_RIDLEY_LEFT_ARM_CRAWLING_FORWARD,
+            MZM_MECHA_RIDLEY_TAIL, MZM_MECHA_RIDLEY_LAUNCHER_CLOSED,
+        };
+        for (int m = 0; m < MZM_MECHA_RIDLEY_MULTI_COUNT; ++m) {
+            for (int f = 0; f < 2; ++f) {
+                tables.mecha_ridley_multi[m].timers[f] = 1;
+                for (int p = 0; p < 11; ++p) {
+                    tables.mecha_ridley_multi[m].parts[f][p][0] = oam[p];
+                    tables.mecha_ridley_multi[m].parts[f][p][1] = (int16_t)(p * 2);
+                    tables.mecha_ridley_multi[m].parts[f][p][2] = (int16_t)(p * 3);
+                }
+            }
+        }
+        tables.health[MZM_PSPRITE_MECHA_RIDLEY] = 360;
+        tables.secondary_health[MZM_SSPRITE_MECHA_RIDLEY_PART] = 200;
+        tables.damage[MZM_PSPRITE_MECHA_RIDLEY] = 150;
+        tables.secondary_damage[MZM_SSPRITE_MECHA_RIDLEY_PART] = 150;
+
+        MzmSprite room[16] = {0};
+        MzmSpriteGlobals globals = {0};
+        MzmSpriteFrame mf = frame;
+        mf.sprites = room;
+        mf.sprite_count = 16;
+        mf.globals = &globals;
+        mf.hooks = &test_hooks;
+        mf.kinds[MZM_FAMILY_MECHA_RIDLEY] = &mecha_kind;
+        memset(test_events, 0, sizeof test_events);
+        door_timer_calls = 0;
+        mzm_sfx_clear();
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_MECHA_RIDLEY, 0, 15, 11, 0, 0);
+        uint16_t spawn_x = room[0].x;
+        uint16_t spawn_y = room[0].y;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x1 && room[0].room_slot == 5 &&
+               room[0].health == 360 && room[0].draw_order == 10 &&
+               room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+               globals.boss_work2 == spawn_x + MZM_BLOCK_SIZE &&
+               globals.sub1.x == spawn_x + MZM_BLOCK_SIZE * 12 &&
+               globals.sub1.y == spawn_y && door_timer_calls == 1 && last_door_timer == 1);
+        int parts = 0;
+        for (int i = 1; i < 16; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_MECHA_RIDLEY_PART) ++parts;
+        assert(parts == 10 && globals.sub1.work4 == 1 && globals.sub1.work5 == 8);
+
+        for (int i = 1; i <= 10; ++i) mzm_sprite_update(&room[i], (uint8_t)i, &mf);
+        assert(room[1].pose == 0x8 && room[1].draw_order == 3 &&
+               room[2].pose == 0x26 && room[2].samus_collision == 0 &&
+               room[5].pose == 0x2A && room[5].health == 200 &&
+               room[8].pose == 0x22 && room[8].draw_order == 13 &&
+               room[10].pose == 0x28 && room[10].draw_order == 14);
+        assert(room[1].anim == MZM_MECHA_RIDLEY_RIGHT_ARM_CRAWLING_FORWARD &&
+               room[8].anim == MZM_MECHA_RIDLEY_LEFT_ARM_CRAWLING_FORWARD &&
+               mzm_sprite_graphics_owner(&room[5]) == MZM_PSPRITE_MECHA_RIDLEY);
+
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x2 && room[0].y_spawn == 300 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_ENTRANCE_CRAWL));
+        room[0].y_spawn = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x3);
+        room[1].frame = 6;
+        room[8].frame = 0;
+        uint16_t before_crawl = globals.sub1.x;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.sub1.x == before_crawl - 8);
+
+        globals.sub1.x = globals.boss_work2;
+        globals.sub1.frame = 1;
+        globals.sub1.adc = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x4 &&
+               globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_STANDING_LOW &&
+               room[0].work1 == 32);
+        mzm_sfx_clear();
+        for (int i = 0; i < 60 && room[0].pose != 0x9; ++i)
+            mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x9 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_MECHA_RIDLEY_BATTLE));
+
+        test_set_event(NULL, MZM_EVENT_MECHA_RIDLEY_KILLED);
+        MzmSprite cleared = {0};
+        mf.sprites = &cleared;
+        mf.sprite_count = 1;
+        mzm_sprite_init_primary(&cleared, MZM_PSPRITE_MECHA_RIDLEY, 0, 15, 11, 0, 0);
+        mzm_sprite_update(&cleared, 0, &mf);
+        assert(cleared.status == 0);
+        memset(test_events, 0, sizeof test_events);
+    }
     /* EscapeDetermineTimer, EscapeSetTimer and EscapeUpdateTimer: event
      * routing, difficulty lengths, banner pause and timeout. */
     {

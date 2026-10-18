@@ -603,6 +603,64 @@ const char *const mzm_imago_cocoon_multi_names[MZM_IMAGO_COCOON_MULTI_COUNT] = {
     "sImagoCocoonMultiSpriteData_Idle",
     "sImagoCocoonMultiSpriteData_Dying",
 };
+const char *const mzm_mecha_ridley_multi_names[MZM_MECHA_RIDLEY_MULTI_COUNT] = {
+    "sMechaRidleyMultiSpriteData_CrawlingForwardLow",
+    "sMechaRidleyMultiSpriteData_StandingLow",
+};
+const char *const mzm_mecha_ridley_anim_names[MZM_MECHA_RIDLEY_ANIMS] = {
+    "MechaRidleyPartOam_Tail", "MechaRidleyPartOam_Ring",
+    "MechaRidleyPartOam_Cover", "MechaRidleyPartOam_Torso", "MechaRidleyOam_Idle",
+    "MechaRidleyPartOam_HeadIdle", "MechaRidleyPartOam_HeadOpeningMouth",
+    "MechaRidleyPartOam_HeadSpittingFireballs", "MechaRidleyPartOam_HeadClosingMouth",
+    "MechaRidleyPartOam_EyeIdle", "MechaRidleyPartOam_EyeGlowing",
+    "MechaRidleyPartOam_EyeShootingLaserForward",
+    "MechaRidleyPartOam_EyeShootingLaserSlightlyDown",
+    "MechaRidleyPartOam_EyeShootingLaserDown",
+    "MechaRidleyPartOam_EyeShootingLaserSlightlyUp",
+    "MechaRidleyPartOam_EyeShootingLaserUp", "MechaRidleyPartOam_EyeInactive",
+    "MechaRidleyPartOam_LeftArmCrawlingForward",
+    "MechaRidleyPartOam_RightArmCrawlingForward",
+    "MechaRidleyPartOam_LeftArmHoldingUp", "MechaRidleyPartOam_RightArmHoldingUp",
+    "MechaRidleyPartOam_LeftArmHeldUp", "MechaRidleyPartOam_RightArmHeldUp",
+    "MechaRidleyPartOam_LeftArmLayingDown", "MechaRidleyPartOam_RightArmLayingDown",
+    "MechaRidleyPartOam_LeftArmTrembling", "MechaRidleyPartOam_RightArmTrembling",
+    "MechaRidleyPartOam_LeftArmIdle", "MechaRidleyPartOam_RightArmIdle",
+    "MechaRidleyPartOam_LeftArmSwinging", "MechaRidleyPartOam_NeckLow",
+    "MechaRidleyPartOam_NeckMiddle", "MechaRidleyPartOam_NeckHigh",
+    "MechaRidleyPartOam_NeckRotateLow", "MechaRidleyPartOam_NeckRotateMiddle",
+    "MechaRidleyPartOam_NeckRotateHigh", "MechaRidleyPartOam_NeckLowToMiddle",
+    "MechaRidleyPartOam_NeckMiddleToHigh", "MechaRidleyPartOam_NeckHighToMiddle",
+    "MechaRidleyPartOam_NeckMiddleToLow", "MechaRidleyPartOam_NeckLowToHigh",
+    "MechaRidleyPartOam_NeckHighToLow", "MechaRidleyPartOam_NeckLow_2",
+    "MechaRidleyPartOam_NeckMiddle_2", "MechaRidleyPartOam_NeckHigh_2",
+    "MechaRidleyPartOam_MissileLauncherClosed",
+    "MechaRidleyPartOam_MissileLauncherOpening",
+    "MechaRidleyPartOam_MissileLauncherOpened",
+    "MechaRidleyPartOam_MissileLauncherClosing", "MechaRidleyMissileOam",
+    "MechaRidleyFireballOam", "MechaRidleyLaserOam_Forward",
+    "MechaRidleyLaserOam_SlightlyDown", "MechaRidleyLaserOam_Down",
+    "MechaRidleyLaserOam_SlightlyUp", "MechaRidleyLaserOam_Up",
+    "MechaRidleyPartOam_LeftArmDying", "MechaRidleyPartOam_RightArmDying",
+    "MechaRidleyPartOam_NeckDying", "MechaRidleyPartOam_LeftArmCrawlingBackwards",
+    "MechaRidleyPartOam_RightArmCrawlingBackwards",
+    "MechaRidleyPartOam_LeftArmSwingingAtGround",
+    "MechaRidleyPartOam_LeftArmSwingingAtCloseGround",
+};
+static const char *const mecha_ridley_sprites[MZM_MECHA_RIDLEY_ANIMS] = {
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+};
 const char *const mzm_mother_brain_anim_names[MZM_MOTHER_BRAIN_ANIMS] = {
     "MotherBrainOam_Idle", "MotherBrainOam_ChargingBeam", "MotherBrainPartOam_EyeClosed",
     "MotherBrainPartOam_2fa934", "MotherBrainPartOam_EyeOpening", "MotherBrainPartOam_2fa984",
@@ -882,6 +940,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
         imago_larva_right_side_sprites},
     [MZM_FAMILY_IMAGO_COCOON] = {MZM_IMAGO_COCOON_ANIMS, mzm_imago_cocoon_anim_names,
                                  imago_cocoon_sprites},
+    [MZM_FAMILY_MECHA_RIDLEY] = {MZM_MECHA_RIDLEY_ANIMS, mzm_mecha_ridley_anim_names,
+                                 mecha_ridley_sprites},
 };
 
 
@@ -5228,6 +5288,11 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_DEFEATED_IMAGO_COCOON ||
             sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE)
             return MZM_FAMILY_IMAGO_COCOON;
+        if (sprite_id == MZM_SSPRITE_MECHA_RIDLEY_PART ||
+            sprite_id == MZM_SSPRITE_MECHA_RIDLEY_LASER ||
+            sprite_id == MZM_SSPRITE_MECHA_RIDLEY_MISSILE ||
+            sprite_id == MZM_SSPRITE_MECHA_RIDLEY_FIREBALL)
+            return MZM_FAMILY_MECHA_RIDLEY;
         if (sprite_id == MZM_SSPRITE_CANNON_BULLET) return MZM_FAMILY_TOURIAN;
         if (sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_BEAM2 ||
             sprite_id == MZM_SSPRITE_SEARCHLIGHT_EYE_PROJECTILE)
@@ -5315,6 +5380,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT:
     case MZM_PSPRITE_DISCOVERED_IMAGO_PASSAGE_EVENT_TRIGGER:
         return MZM_FAMILY_IMAGO_COCOON;
+    case MZM_PSPRITE_MECHA_RIDLEY: return MZM_FAMILY_MECHA_RIDLEY;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -5715,6 +5781,17 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             ignore = true;
             break;
         }
+        case SSC_MECHA_RIDLEY:
+            /* The native boss doubles contact damage at 100% completion.
+             * Completion percentage is not exposed to this shared contact
+             * pass yet, so the ordinary route uses its sprite stat damage. */
+            if (!samus->invincible && !contact_kills(s, samus, tables) && samus->hurt) {
+                samus->hurt(samus->context, damage_of(s, tables), on_left);
+                samus->invincible = true;
+            }
+            s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
+            ignore = true;
+            break;
         case SSC_KNOCKS_BACK_SAMUS:
             /* A knockback only, no damage. */
             if (contact_kills(s, samus, tables)) break;
@@ -6246,6 +6323,8 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         sprite->sprite_id == MZM_SSPRITE_IMAGO_COCOON_VINE ||
         sprite->sprite_id == MZM_SSPRITE_IMAGO_COCOON_SPORE)
         return MZM_PSPRITE_IMAGO_COCOON;
+    if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_MECHA_RIDLEY)
+        return MZM_PSPRITE_MECHA_RIDLEY;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -6458,6 +6537,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_IMAGO_LARVA: ai_imago_larva(&c); break;
     case MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE: ai_imago_larva_right_side(&c); break;
     case MZM_FAMILY_IMAGO_COCOON: ai_imago_cocoon(&c); break;
+    case MZM_FAMILY_MECHA_RIDLEY: ai_mecha_ridley(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

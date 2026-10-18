@@ -5238,6 +5238,7 @@ int main(void) {
         tables.health[MZM_PSPRITE_DEOREM_FIRST_LOCATION] = 300;
         tables.secondary_health[MZM_SSPRITE_DEOREM_EYE] = 60;
         memset(test_events, 0, sizeof test_events);
+        mzm_sfx_clear();
         door_timer_calls = caa_calls = 0;
         MzmSpriteFrame df = frame;
         df.sprites = room;
@@ -5268,7 +5269,10 @@ int main(void) {
                 if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
         assert(room[0].pose == 0x22 && room[1].pose == 0x9 &&
                room[1].y == room[0].y - (64 + 32 + 4 + 64 + 4) -
-                                    room[1].room_slot * (64 + 32 + 4));
+                                    room[1].room_slot * (64 + 32 + 4) &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DEOREM_SPAWN_GOING_DOWN) &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DEOREM_SCREAMING) &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_WORMS_BATTLE));
         for (int tick = 0; tick < 10; ++tick)
             for (int i = 0; i < 32; ++i)
                 if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
@@ -5308,29 +5312,118 @@ int main(void) {
                cap->status & MZM_SPRITE_STATUS_Y_FLIP);
         assert(neck->y == room[0].y - (64 + 32 + 4 + 64 + 4));
 
-        room[0].pose = 0x2B;
-        room[0].work0 = 0;
-        for (int i = 0; i < 32; ++i)
+        /* At full eye health the head uses the native straight plunge: two
+         * warning cycles, an eight-frame pullback, then the moving body. */
+        MzmSprite *eye = &room[eye_slot];
+        room[0].pose = 0x26;
+        room[0].work0 = 1;
+        room[0].anim = MZM_DEOREM_OPENED_FAST;
+        room[0].status &= (uint16_t)~(MZM_SPRITE_STATUS_FACING_DOWN |
+                                      MZM_SPRITE_STATUS_MOSAIC);
+        df.samus_x = room[0].x;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x26 && room[0].anim == MZM_DEOREM_WARNING &&
+               room[0].status & MZM_SPRITE_STATUS_FACING_DOWN && room[0].work0 == 8 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DEOREM_WARNING));
+        int warning = 0;
+        while (room[0].anim != MZM_DEOREM_GOING_DOWN && warning++ < 20)
+            mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].anim == MZM_DEOREM_GOING_DOWN && warning >= 4 &&
+               room[0].status & MZM_SPRITE_STATUS_MOSAIC);
+        uint16_t pullback_y = room[0].y;
+        for (int i = 0; i < 8; ++i) mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].work0 == 0 &&
+               room[0].y == pullback_y - 8 * MZM_EIGHTH_BLOCK_SIZE);
+        for (int i = 1; i < 32; ++i)
             if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
         assert(down->pose == 0x33 && up->pose == 0x35);
         uint16_t down_y = down->y, up_y = up->y;
-        for (int i = 0; i < 32; ++i)
+        mzm_sprite_update(&room[0], 0, &df);
+        for (int i = 1; i < 32; ++i)
             if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
         assert(down->y == down_y + MZM_PIXEL_SIZE && up->y == up_y - MZM_PIXEL_SIZE);
-        room[0].pose = 0x27;
-        room[0].work0 = 2;
-        for (int i = 0; i < 32; ++i)
+        int plunge = 0;
+        while (room[0].pose == 0x26 && plunge++ < 80)
+            mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x27 && room[0].x == df.samus_x &&
+               room[0].y >= room[0].y_spawn + 476 && room[0].work0 == 30);
+        for (int i = 1; i < 32; ++i)
             if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
-        for (int i = 0; i < 32; ++i)
+        assert(down->pose == 0xF && up->pose == 0x11);
+        for (int i = 0; i < 30; ++i) mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].work0 == 0 &&
+               !(room[0].status & MZM_SPRITE_STATUS_FACING_DOWN) &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DEOREM_RETRACTED));
+        mzm_sprite_update(&room[0], 0, &df);
+        for (int i = 1; i < 32; ++i)
             if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
         assert(down->pose == 0x35 && up->pose == 0x33);
+        int retraction = 0;
+        while (room[0].pose == 0x27 && retraction++ < 80)
+            mzm_sprite_update(&room[0], 0, &df);
+        assert((room[0].pose == 0x28 || room[0].pose == 0x29) &&
+               room[0].work0 == 255 && room[0].y == room[0].y_spawn + 160 &&
+               room[0].hitbox_left == -96 && room[0].hitbox_right == 96);
+
+        /* A damaged eye and distant Samus select the accelerating diagonal
+         * branch. Exercise both arena directions and their native bounds. */
+        uint16_t arena_center = (uint16_t)(deorem_globals.boss_work2 + 13 * 64 / 2);
+        eye->health = 40;
+        eye->y_spawn = 900;
+        room[0].pose = 0x26;
+        room[0].y = (uint16_t)(room[0].y_spawn + 160);
+        room[0].x = arena_center;
+        room[0].work0 = 1;
+        room[0].anim = MZM_DEOREM_OPENED_FAST;
+        room[0].status &= (uint16_t)~(MZM_SPRITE_STATUS_FACING_DOWN |
+                                      MZM_SPRITE_STATUS_MOSAIC);
+        df.samus_x = (uint16_t)(arena_center + 200);
+        mzm_sprite_update(&room[0], 0, &df);
+        assert(!(room[0].status & MZM_SPRITE_STATUS_FACING_DOWN) &&
+               room[0].status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+               room[0].scaling == df.samus_x && room[0].work2 == 1);
+        warning = 0;
+        while (room[0].anim != MZM_DEOREM_GOING_DOWN && warning++ < 20)
+            mzm_sprite_update(&room[0], 0, &df);
+        uint16_t diagonal_x = room[0].x;
+        plunge = 0;
+        while (room[0].pose == 0x26 && plunge++ < 100)
+            mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x27 && room[0].x > diagonal_x &&
+               room[0].x <= deorem_globals.boss_work2 + 640 + 10 &&
+               room[0].y >= room[0].y_spawn + 464);
+
+        eye->y_spawn = 900;
+        room[0].pose = 0x26;
+        room[0].y = (uint16_t)(room[0].y_spawn + 160);
+        room[0].x = arena_center;
+        room[0].work0 = 1;
+        room[0].anim = MZM_DEOREM_OPENED_FAST;
+        room[0].status &= (uint16_t)~(MZM_SPRITE_STATUS_FACING_DOWN |
+                                      MZM_SPRITE_STATUS_FACING_RIGHT |
+                                      MZM_SPRITE_STATUS_MOSAIC);
+        df.samus_x = (uint16_t)(arena_center - 200);
+        mzm_sprite_update(&room[0], 0, &df);
+        assert(!(room[0].status & MZM_SPRITE_STATUS_FACING_DOWN) &&
+               !(room[0].status & MZM_SPRITE_STATUS_FACING_RIGHT));
+        warning = 0;
+        while (room[0].anim != MZM_DEOREM_GOING_DOWN && warning++ < 20)
+            mzm_sprite_update(&room[0], 0, &df);
+        diagonal_x = room[0].x;
+        plunge = 0;
+        while (room[0].pose == 0x26 && plunge++ < 100)
+            mzm_sprite_update(&room[0], 0, &df);
+        assert(room[0].pose == 0x27 && room[0].x < diagonal_x &&
+               room[0].x >= deorem_globals.boss_work2 + 192 - 10);
 
         room[0].pose = 0x43;
         room[0].y = (uint16_t)(room[0].y_spawn - 64);
         room[0].work0 = 0;
         for (int i = 0; i < 32; ++i)
             if (room[i].status) mzm_sprite_update(&room[i], (uint8_t)i, &df);
-        assert(room[0].pose == 0x44 && test_check_event(NULL, MZM_EVENT_DEOREM_FIRST_LOCATION));
+        assert(room[0].pose == 0x44 && test_check_event(NULL, MZM_EVENT_DEOREM_FIRST_LOCATION) &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_FADE_AND_QUEUE, MZM_MUSIC_BRINSTAR));
         int leaving_parts = 0;
         for (int i = 1; i < 32; ++i)
             leaving_parts += room[i].status && room[i].sprite_id == MZM_SSPRITE_DEOREM_SEGMENT &&

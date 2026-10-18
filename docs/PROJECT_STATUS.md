@@ -3660,6 +3660,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   the eye inside the real 24-slot sprite budget. Generated-data checks were
   fresh and the proprietary-file guard passed.
 
+## Patch 0359 - native Deorem head attack
+
+- Replaced the compact Deorem lunge with the native head state machine. The
+  intact eye forces a straight plunge after two warning-animation cycles and
+  an eight-frame pullback; a damaged eye can instead select the accelerating
+  diagonal branch, retain Samus's initial destination and decelerate inside
+  the native arena bounds.
+- Restored the exact vertical ranges and health-dependent speeds, the
+  half-second exposed-eye pause, the short diagonal correction toward Samus,
+  both body-column reversals and the changing head hitbox during retraction.
+  The thorn branch now uses the original health and RNG selection, 255-frame
+  duration, health-dependent jaw-closing thresholds and one-second recovery.
+- The retreat now waits for the closing animations instead of a host timer.
+  Deorem starts the Worms Battle track on emergence and fades back to
+  Brinstar over 50 frames when retreating or dying. The earlier checklist
+  reference to missing minimap changes was removed: the native Deorem source
+  does not perform any minimap update.
+- Expanded the ROM-free encounter regression across the full-health plunge,
+  right and left diagonal attacks, warning mosaic, jaw vulnerability,
+  retraction, thorn selection, body direction changes and both music calls.
+- Remaining divergence: the eye still uses compact tracking, pulsing and
+  death movement. The random debris choreography and the retreat wait for
+  active item drops are also incomplete; emulator comparison remains open.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed. A real frame-400 `brinstar_012` capture reached the
+  retracting head with the eye exposed and all 17 body pieces active after
+  the native plunge. Every reconstruction task completed or was up to date,
+  generated-data checks were fresh and the proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

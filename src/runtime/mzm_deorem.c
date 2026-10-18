@@ -21,7 +21,6 @@ enum {
     DEOREM_THORNS_DOWN = 0x28,
     DEOREM_THORNS_UP = 0x29,
     DEOREM_AFTER_THORNS = 0x2A,
-    DEOREM_ATTACKING = 0x2B,
     DEOREM_WAIT_TO_LEAVE = 0x42,
     DEOREM_START_LEAVING = 0x43,
     DEOREM_LEAVING = 0x44,
@@ -53,6 +52,9 @@ enum {
     WIDTH = BLOCK_SIZE * 13,
     HEIGHT = BLOCK_SIZE * 10,
     HEAD_Y_OFFSET = BLOCK_SIZE * 2 + HALF_BLOCK_SIZE,
+    HEAD_SPACE_LEFT = BLOCK_SIZE * 3,
+    HEAD_SPACE_RIGHT = WIDTH - BLOCK_SIZE * 3,
+    DIAGONAL_ATTACK_RANGE = BLOCK_SIZE + HALF_BLOCK_SIZE,
     SEGMENT_SPACING = BLOCK_SIZE + HALF_BLOCK_SIZE + PIXEL_SIZE,
     SEGMENT_PADDING = SEGMENT_SPACING + BLOCK_SIZE + PIXEL_SIZE,
     EYE_Y_OFFSET = HALF_BLOCK_SIZE - PIXEL_SIZE,
@@ -175,6 +177,37 @@ static bool eye_timer_done(Ctx *c) {
     return !eye || !(eye->status & MZM_SPRITE_STATUS_EXISTS) || eye->y_spawn == 0;
 }
 
+static void move_diagonally_x(Ctx *c, uint8_t speed_cap, uint16_t destination) {
+    MzmSprite *s = c->s;
+    uint16_t left = (uint16_t)(c->f->globals->boss_work2 + HEAD_SPACE_LEFT);
+    uint16_t right = (uint16_t)(c->f->globals->boss_work2 + HEAD_SPACE_RIGHT);
+    if (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
+        if (s->work1 == 0) {
+            if (s->x > destination - PIXEL_SIZE) {
+                s->work1 = s->work2;
+            } else {
+                if (s->work2 < speed_cap) s->work2++;
+                if (s->x < right) s->x = (uint16_t)(s->x + s->work2 / 2);
+            }
+        } else {
+            if (s->work1 >= ONE_SUB_PIXEL * 2) s->work1 -= ONE_SUB_PIXEL;
+            if (s->x < right) s->x = (uint16_t)(s->x + s->work1 / 2);
+        }
+    } else {
+        if (s->work1 == 0) {
+            if (s->x < destination + PIXEL_SIZE) {
+                s->work1 = s->work2;
+            } else {
+                if (s->work2 < speed_cap) s->work2++;
+                if (s->x > left) s->x = (uint16_t)(s->x - s->work2 / 2);
+            }
+        } else {
+            if (s->work1 >= ONE_SUB_PIXEL * 2) s->work1 -= ONE_SUB_PIXEL;
+            if (s->x > left) s->x = (uint16_t)(s->x - s->work1 / 2);
+        }
+    }
+}
+
 static void init_head(Ctx *c) {
     MzmSprite *s = c->s;
     bool first = s->sprite_id == MZM_PSPRITE_DEOREM_FIRST_LOCATION;
@@ -244,6 +277,11 @@ static void spawn_sequence(Ctx *c) {
     switch (s->pose) {
     case DEOREM_SPAWN_DOWN:
         s->y += QUARTER_BLOCK_SIZE;
+        if (s->work0 == 46) {
+            mzm_sfx_play(MZM_SOUND_DEOREM_SPAWN_GOING_DOWN);
+            mzm_sfx_play(MZM_SOUND_DEOREM_SCREAMING);
+            mzm_sfx_music_play(MZM_MUSIC_WORMS_BATTLE, 0);
+        }
         if (--s->work0 == 0) {
             s->pose = DEOREM_SPAWN_DELAY;
             s->work0 = 10;
@@ -295,93 +333,186 @@ static void spawn_sequence(Ctx *c) {
 static void begin_retreat(Ctx *c) {
     MzmSprite *s = c->s;
     s->pose = DEOREM_WAIT_TO_LEAVE;
-    s->work0 = 30;
-    ai_set_anim(s, MZM_DEOREM_CLOSING);
-    s->hitbox_bottom = BLOCK_SIZE;
-    MzmSprite *eye = sprite_slot(c, s->work3);
-    if (eye) eye->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
-    mzm_sfx_play(MZM_SOUND_DEOREM_CLOSING_JAW);
+    if (s->anim != MZM_DEOREM_CLOSED_FAST && s->anim != MZM_DEOREM_CLOSING) {
+        ai_set_anim(s, MZM_DEOREM_CLOSING);
+        s->hitbox_bottom = BLOCK_SIZE;
+        MzmSprite *eye = sprite_slot(c, s->work3);
+        if (eye) eye->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        mzm_sfx_play(MZM_SOUND_DEOREM_CLOSING_JAW);
+    }
 }
 
 static void main_attack(Ctx *c) {
     MzmSprite *s = c->s;
     MzmSprite *eye = sprite_slot(c, s->work3);
-    if (eye_timer_done(c)) { begin_retreat(c); return; }
-    if (s->anim == MZM_DEOREM_OPENING && ai_animation_ending(c, 1))
-        ai_set_anim(s, MZM_DEOREM_OPENED_FAST);
-    if (s->work0 > 0 && --s->work0) {
-        if (s->work0 == 22) {
+    if (!eye || !(eye->status & MZM_SPRITE_STATUS_EXISTS)) {
+        begin_retreat(c);
+        return;
+    }
+    uint16_t health = eye->health;
+    if (s->work0 && !(s->status & MZM_SPRITE_STATUS_FACING_DOWN)) {
+        if (eye_timer_done(c)) {
+            begin_retreat(c);
+            return;
+        }
+        if (s->anim == MZM_DEOREM_CLOSING && ai_animation_ending(c, 1))
+            ai_set_anim(s, MZM_DEOREM_CLOSED_FAST);
+        else if (s->anim == MZM_DEOREM_OPENING && ai_animation_ending(c, 1))
+            ai_set_anim(s, MZM_DEOREM_OPENED_FAST);
+        --s->work0;
+        if (s->work0 == 0) {
+            ai_face_samus(c);
+            ai_set_anim(s, MZM_DEOREM_WARNING);
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_MOSAIC;
+            s->rotation = 0;
+            mzm_sfx_play(MZM_SOUND_DEOREM_WARNING);
+            int32_t distance = (int32_t)c->f->samus_x - s->x;
+            if (health == MAX_HEALTH ||
+                (distance > -DIAGONAL_ATTACK_RANGE && distance < DIAGONAL_ATTACK_RANGE)) {
+                s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+                s->work0 = 8;
+            } else {
+                s->work1 = 0;
+                s->work2 = 1;
+                s->scaling = c->f->samus_x;
+                mzm_screen_shake_start_vertical(20, 0x81);
+            }
+        } else if (s->work0 == 22 && s->anim == MZM_DEOREM_OPENED_FAST) {
             ai_set_anim(s, MZM_DEOREM_CLOSING);
             s->hitbox_bottom = BLOCK_SIZE;
-            if (eye) eye->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+            eye->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+            mzm_sfx_play(MZM_SOUND_DEOREM_CLOSING_JAW);
         }
         return;
     }
-    s->pose = DEOREM_ATTACKING;
-    s->work0 = 30;
-    ai_set_anim(s, MZM_DEOREM_WARNING);
-    ai_face_samus(c);
-    mzm_sfx_play(MZM_SOUND_DEOREM_WARNING);
-}
-
-static void attack(Ctx *c) {
-    MzmSprite *s = c->s;
-    if (s->work0 && --s->work0) return;
-    ai_set_anim(s, MZM_DEOREM_GOING_DOWN);
-    uint16_t bottom = (uint16_t)(s->y_spawn + HEIGHT - BLOCK_SIZE * 2);
-    if (s->y < bottom) {
-        s->y += EIGHTH_BLOCK_SIZE;
-        int16_t dx = (int16_t)(c->f->samus_x - s->x);
-        if (dx > PIXEL_SIZE) s->x += PIXEL_SIZE / 2;
-        else if (dx < -PIXEL_SIZE) s->x -= PIXEL_SIZE / 2;
+    if (s->anim == MZM_DEOREM_WARNING) {
+        if (ai_animation_ending(c, 1)) {
+            if (s->status & MZM_SPRITE_STATUS_MOSAIC) {
+                ai_set_anim(s, MZM_DEOREM_GOING_DOWN);
+                return;
+            }
+            s->status |= MZM_SPRITE_STATUS_MOSAIC;
+        }
+        return;
+    }
+    uint16_t y_range;
+    uint16_t movement;
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        y_range = HEIGHT - (BLOCK_SIZE * 2 + EIGHTH_BLOCK_SIZE + PIXEL_SIZE);
+        movement = health == MAX_HEALTH ? EIGHTH_BLOCK_SIZE
+                                        : EIGHTH_BLOCK_SIZE + EIGHTH_BLOCK_SIZE / 2;
+        if (s->work0) {
+            s->y = (uint16_t)(s->y - movement);
+            if (--s->work0 == 0) mzm_screen_shake_start_vertical(20, 0x81);
+            return;
+        }
+    } else {
+        move_diagonally_x(c, QUARTER_BLOCK_SIZE + PIXEL_SIZE, s->scaling);
+        y_range = HEIGHT - (BLOCK_SIZE * 3 - QUARTER_BLOCK_SIZE);
+        movement = EIGHTH_BLOCK_SIZE;
+    }
+    if (s->y < s->y_spawn + y_range) {
+        s->y = (uint16_t)(s->y + movement);
+        if (s->rotation) return;
+        s->rotation = 1;
+        mzm_sfx_play(movement > EIGHTH_BLOCK_SIZE ? MZM_SOUND_DEOREM_MOVEMENT_SMALL
+                                                   : MZM_SOUND_DEOREM_MOVEMENT_LONG);
         return;
     }
     s->pose = DEOREM_RETRACTING;
     s->work0 = 30;
     ai_set_anim(s, MZM_DEOREM_OPENING);
     s->hitbox_bottom = 0;
-    MzmSprite *eye = sprite_slot(c, s->work3);
-    if (eye) eye->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    eye->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    mzm_sfx_play(MZM_SOUND_DEOREM_OPENING_JAW);
 }
 
 static void retract(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->work0 && --s->work0) return;
+    MzmSprite *eye = sprite_slot(c, s->work3);
+    uint16_t health = eye && eye->status ? eye->health : 0;
+    if (s->work0) {
+        if (s->anim == MZM_DEOREM_OPENING && ai_animation_ending(c, 1)) {
+            ai_set_anim(s, MZM_DEOREM_OPENED_FAST);
+            s->hitbox_left = -(BLOCK_SIZE * 2 + QUARTER_BLOCK_SIZE);
+            s->hitbox_right = BLOCK_SIZE * 2 + QUARTER_BLOCK_SIZE;
+        }
+        --s->work0;
+        if (s->work0 > 24 && !(s->status & MZM_SPRITE_STATUS_FACING_DOWN))
+            move_diagonally_x(c, QUARTER_BLOCK_SIZE, c->f->samus_x);
+        else if (s->work0 == 0) {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+            mzm_sfx_play(MZM_SOUND_DEOREM_RETRACTED);
+        }
+        return;
+    }
     uint16_t top = (uint16_t)(s->y_spawn + HEAD_Y_OFFSET);
-    if (s->y > top) { s->y -= EIGHTH_BLOCK_SIZE; return; }
-    if (eye_timer_done(c)) { begin_retreat(c); return; }
-    s->pose = (c->rng & 1) ? DEOREM_THORNS_DOWN : DEOREM_THORNS_UP;
-    s->work0 = 255;
-    s->rotation = 0;
-    ai_set_anim(s, MZM_DEOREM_OPENED_FAST);
+    s->y = (uint16_t)(s->y - EIGHTH_BLOCK_SIZE);
+    if (s->y >= top) return;
+    s->y = top;
+    s->hitbox_left = -(BLOCK_SIZE + HALF_BLOCK_SIZE);
+    s->hitbox_right = BLOCK_SIZE + HALF_BLOCK_SIZE;
+    if (eye_timer_done(c)) {
+        begin_retreat(c);
+        return;
+    }
+    if (health == MAX_HEALTH || c->rng >= 11 || health <= MAX_HEALTH / 3) {
+        uint16_t center = (uint16_t)(s->x_spawn +
+                          (c->f->globals->boss_work3 ? -(WIDTH / 2) : WIDTH / 2));
+        bool down_side = c->f->globals->boss_work3 ? c->f->samus_x >= center
+                                                    : c->f->samus_x < center;
+        s->pose = down_side ? DEOREM_THORNS_DOWN : DEOREM_THORNS_UP;
+        s->work0 = 255;
+        s->rotation = 0;
+    } else {
+        s->pose = DEOREM_MAIN;
+        s->work0 = eye_open_time(c);
+    }
 }
 
 static void thorn_phase(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->work0) --s->work0;
+    MzmSprite *eye = sprite_slot(c, s->work3);
+    uint16_t health = eye && eye->status ? eye->health : 0;
+    uint8_t change = 230;
+    if (health > MAX_HEALTH / 3) change = health <= MAX_HEALTH * 2 / 3 ? 210 : 30;
+    if ((s->rotation & 15) == 0) mzm_sfx_play(MZM_SOUND_DEOREM_THROWING_THORNS);
+    s->rotation++;
+    if (s->work0 < change) {
+        if (s->anim == MZM_DEOREM_OPENED_FAST) {
+            ai_set_anim(s, MZM_DEOREM_CLOSING);
+            s->hitbox_bottom = BLOCK_SIZE;
+            if (eye) eye->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+            mzm_sfx_play(MZM_SOUND_DEOREM_CLOSING_JAW);
+        } else if (s->anim == MZM_DEOREM_CLOSING && ai_animation_ending(c, 1)) {
+            ai_set_anim(s, MZM_DEOREM_CLOSED_FAST);
+        }
+    }
     if (s->work0 == 0) {
         s->pose = DEOREM_AFTER_THORNS;
         s->work0 = 60;
-        ai_set_anim(s, MZM_DEOREM_CLOSED_FAST);
     }
 }
 
 static void after_thorns(Ctx *c) {
+    if (c->s->anim == MZM_DEOREM_CLOSING && ai_animation_ending(c, 1))
+        ai_set_anim(c->s, MZM_DEOREM_CLOSED_FAST);
     if (c->s->work0 && --c->s->work0) return;
     c->s->pose = DEOREM_MAIN;
     c->s->work0 = eye_open_time(c);
-    ai_set_anim(c->s, MZM_DEOREM_OPENING);
-    MzmSprite *eye = sprite_slot(c, c->s->work3);
-    if (eye) eye->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
 }
 
 static void retreat(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->pose == DEOREM_WAIT_TO_LEAVE) {
-        if (s->work0 && --s->work0) return;
-        s->pose = DEOREM_START_LEAVING;
-        s->work0 = 60;
-        ai_set_anim(s, MZM_DEOREM_CLOSED_SLOW);
+        if (s->anim == MZM_DEOREM_CLOSING || s->anim == MZM_DEOREM_CLOSED_FAST) {
+            if (ai_animation_ending(c, 1)) ai_set_anim(s, MZM_DEOREM_CLOSED_SLOW);
+        } else if (s->anim == MZM_DEOREM_CLOSED_SLOW) {
+            s->pose = DEOREM_START_LEAVING;
+            s->work0 = 60;
+            s->rotation = 0;
+        }
         return;
     }
     if (s->pose == DEOREM_START_LEAVING) {
@@ -404,6 +535,7 @@ static void retreat(Ctx *c) {
         spawn_segment(c, SEGMENT_LEAVING_1, s->y, s->x);
         s->pose = DEOREM_LEAVING;
         mzm_sfx_play(MZM_SOUND_DEOREM_LEAVING);
+        mzm_sfx_music_fade_and_queue(50, MZM_MUSIC_BRINSTAR);
         return;
     }
     if (s->pose == DEOREM_LEAVING) {
@@ -433,6 +565,7 @@ static void dying(Ctx *c) {
         if (s->sprite_id == MZM_PSPRITE_DEOREM_SECOND_LOCATION)
             set_event(c, MZM_EVENT_DEOREM_KILLED_AT_SECOND_LOCATION);
         mzm_sfx_play(MZM_SOUND_DEOREM_DYING);
+        mzm_sfx_music_fade_and_queue(50, MZM_MUSIC_BRINSTAR);
     }
     if (s->pose == DEOREM_DYING) {
         s->ignore_samus_timer = 1;
@@ -457,7 +590,6 @@ static void head(Ctx *c) {
     case DEOREM_SPAWN_DOWN: case DEOREM_SPAWN_DELAY: case DEOREM_SPAWN_UP:
     case DEOREM_HEAD_DELAY: case DEOREM_HEAD_EMERGES: spawn_sequence(c); break;
     case DEOREM_MAIN: main_attack(c); break;
-    case DEOREM_ATTACKING: attack(c); break;
     case DEOREM_RETRACTING: retract(c); break;
     case DEOREM_THORNS_DOWN: case DEOREM_THORNS_UP: thorn_phase(c); break;
     case DEOREM_AFTER_THORNS: after_thorns(c); break;
@@ -623,7 +755,7 @@ static void segment_idle(Ctx *c, MzmSprite *p, bool down) {
         segment_wave(c);
         return;
     }
-    if (p->pose == DEOREM_MAIN || p->pose == DEOREM_ATTACKING) {
+    if (p->pose == DEOREM_MAIN) {
         s->pose = down ? SEGMENT_GOING_DOWN : SEGMENT_GOING_UP;
         s->work0 = 25;
     } else if (p->pose == DEOREM_RETRACTING) {

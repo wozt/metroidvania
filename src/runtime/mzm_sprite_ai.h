@@ -212,6 +212,8 @@ void ai_baristute(Ctx *c);
 void ai_tangle_vine(Ctx *c);
 /* The Ruins Test (mzm_ruins_test.c). */
 void ai_ruins_test(Ctx *c);
+/* The falling Chozo pillar and the Power Bomb theft (mzm_chozodia_scripted.c). */
+void ai_chozodia_scripted(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */
 void ai_gadora(Ctx *c);
 /* The paired Imago larvae, their parts and the animated passage remnant. */

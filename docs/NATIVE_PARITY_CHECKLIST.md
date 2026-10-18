@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 83 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 84 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -350,6 +350,16 @@ Dependencies: `mzm.enemies.dessgeega`, `mzm.transitions.doors_and_hatches`.
 Known divergences: Not compared frame by frame with an emulator. The host's optional 320-pixel room view accepts its 160-pixel centre in addition to the native 120-pixel trigger.  
 Next action: Compare the complete opening choreography and projectile layering with an emulator.
 Evidence: in game: `brinstar_010`.
+
+[~] **`mzm.enemies.chozodia_scripted` — Falling Chozo pillar and the Power Bomb theft.** The falling pillar (behind BG1) appears once the suit animation ends and is on screen, then sinks 256 subpixels with a vertical shake and dust every 16 frames, a final one-second shake and its landing sound. The pirate carrying the Power Bomb shows once in each of its two rooms (events 71 and 72), walks right with its footsteps and vanishes at the next pirate zoneline. The Power Bomb on its pedestal and its invisible trigger disappear once Samus touches the trigger (event 70). A capture in chozodia_032 shows the Power Bomb on its statue.
+
+Native evidence: `mzm:c:src/sprites_ai/falling_chozo_pillar.c:FallingChozoPillar`, `mzm:c:src/sprites_ai/space_pirate_carrying_power_bomb.c:FakePowerBomb`, `mzm:c:src/sprites_ai/space_pirate_carrying_power_bomb.c:FakePowerBombEventTrigger`, `mzm:c:src/sprites_ai/space_pirate_carrying_power_bomb.c:SpacePirateCarryingPowerBomb`.  
+Local implementation: [`src/runtime/mzm_chozodia_scripted.c`](../src/runtime/mzm_chozodia_scripted.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.ruins_test`, `mzm.enemies.space_pirate`.  
+Known divergences: The pillar waits for the Ruins Test suit-animation stage, which needs the unported getting-fully-powered cutscene, so it does not fall in game yet. Not compared with an emulator.  
+Next action: Port the getting-fully-powered cutscene so the pillar falls in game; compare the theft rooms with an emulator.
+Evidence: in game: `chozodia_032`, `chozodia_046`, `chozodia_084`, `chozodia_091`.
 
 [+] **`mzm.enemies.chozodia_security` — Chozodia searchlights, security lasers, searchlight eyes and security gates.** Searchlights sweep diagonally half a pixel a frame between stop-enemy blocks, flickering, and ring the alarm on contact (SSC_CHECK_COLLIDING), then hold it; security lasers size themselves 2 to 5 blocks to the first block above or right, and when tripped mark the Space Pirates, fade out and hold the alarm; searchlight eyes (immune to projectiles until the Fully Powered Suit, SP_IMMUNE_TO_PROJECTILES with the invincible impact) move along their wall, cast a seven-block beam that rings the alarm unless a wall shields Samus, then shoot projectiles (16 damage) every 1.5 seconds. Checked in chozodia_003 (a tripped laser releases the waiting pirates), chozodia_016 and chozodia_030. Security gates (open by default, or closed by default for the event spritesets): four blocks tall, immune to projectiles, they close with their sound when the alarm rings (gAlarmTimer), become CAA_MAKE_NON_POWER_GRIP solid only once Samus no longer touches them (SpriteCheckCollidingWithSamus), and open again with CAA_REMOVE_SOLID two thirds of a second after the alarm stops; the default closed gates do the opposite. Checked by capture in chozodia_005 (Samus spotted, both gates close; the one around her stays passable).
 

@@ -722,6 +722,12 @@ const char *const mzm_ruins_test_anim_names[MZM_RUINS_TEST_ANIMS] = {
 static const char *const ruins_test_sprites[MZM_RUINS_TEST_ANIMS] = {
     "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST",
 };
+const char *const mzm_chozodia_scripted_anim_names[MZM_CHOZODIA_SCRIPTED_ANIMS] = {
+    "FallingChozoPillarOam_Falling", "FakePowerBombOam_Idle", "SpacePirateCarryingPowerBombOam",
+};
+static const char *const chozodia_scripted_sprites[MZM_CHOZODIA_SCRIPTED_ANIMS] = {
+    "FALLING_CHOZO_PILLAR", "FAKE_POWER_BOMB", "SPACE_PIRATE",
+};
 static const char *const mecha_ridley_sprites[MZM_MECHA_RIDLEY_ANIMS] = {
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
@@ -1023,6 +1029,8 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_BARISTUTE] = {MZM_BARISTUTE_ANIMS, mzm_baristute_anim_names, baristute_sprites},
     [MZM_FAMILY_TANGLE_VINE] = {MZM_TANGLE_VINE_ANIMS, mzm_tangle_vine_anim_names, tangle_vine_sprites},
     [MZM_FAMILY_RUINS_TEST] = {MZM_RUINS_TEST_ANIMS, mzm_ruins_test_anim_names, ruins_test_sprites},
+    [MZM_FAMILY_CHOZODIA_SCRIPTED] = {MZM_CHOZODIA_SCRIPTED_ANIMS, mzm_chozodia_scripted_anim_names,
+                                      chozodia_scripted_sprites},
 };
 
 
@@ -5596,6 +5604,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_TANGLE_VINE_LARVA_RIGHT: case MZM_PSPRITE_TANGLE_VINE_LARVA_LEFT:
         return MZM_FAMILY_TANGLE_VINE;
     case MZM_PSPRITE_RUINS_TEST: return MZM_FAMILY_RUINS_TEST;
+    case MZM_PSPRITE_FALLING_CHOZO_PILLAR: case MZM_PSPRITE_FAKE_POWER_BOMB:
+    case MZM_PSPRITE_FAKE_POWER_BOMB_EVENT_TRIGGER: case MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB:
+        return MZM_FAMILY_CHOZODIA_SCRIPTED;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -6562,6 +6573,8 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         /* sHiveGfx: the Mellows and their swarms. */
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_HIVE) return MZM_PSPRITE_HIVE;
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_BARISTUTE) return MZM_PSPRITE_BARISTUTE;
+        /* sSpacePirateGfx; the event trigger is never drawn. */
+        if (sprite->sprite_id == MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB) return MZM_PSPRITE_SPACE_PIRATE;
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_TANGLE_VINE)
             return MZM_PSPRITE_TANGLE_VINE_TALL;
         /* sRinkaZebetiteAndCannonGfx, exported with the cannon's tables. */
@@ -6820,6 +6833,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_BARISTUTE: ai_baristute(&c); break;
     case MZM_FAMILY_TANGLE_VINE: ai_tangle_vine(&c); break;
     case MZM_FAMILY_RUINS_TEST: ai_ruins_test(&c); break;
+    case MZM_FAMILY_CHOZODIA_SCRIPTED: ai_chozodia_scripted(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

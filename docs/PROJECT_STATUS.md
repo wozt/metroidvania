@@ -3838,6 +3838,27 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0375 - Falling Chozo pillar and the Power Bomb theft
+
+- Ported the scripted Chozodia sprites in `mzm_chozodia_scripted.c`:
+  - the falling pillar is drawn behind BG1. It appears once the Ruins
+    Test suit animation ends and it is on screen, then sinks 256
+    subpixels with a shake and dust every 16 frames, a final shake and its
+    landing sound;
+  - the pirate carrying the Power Bomb shows once in each of its two rooms
+    (events 71 and 72), walks right with its footsteps and vanishes at the
+    next pirate zoneline;
+  - the Power Bomb on its pedestal and its invisible trigger are removed
+    once Samus touches the trigger (event 70).
+- The pillar depends on the unported getting-fully-powered cutscene, so it
+  does not fall in game yet.
+- A ROM-free regression covers the pillar's wait, fall, timing and sounds,
+  the thief's once-per-room event, walk and zoneline exit, and the theft
+  event and reload removal.
+- A capture in `chozodia_032` shows the Power Bomb on its statue.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0374 - Ruins Test, second slice
 
 - Ported the rest of the Ruins Test's actors:

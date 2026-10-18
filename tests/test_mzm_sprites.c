@@ -7262,6 +7262,97 @@ int main(void) {
         mzm_sprite_update(&room[right], (uint8_t)right, &rf);
         assert(room[right].status == 0);
     }
+    /* Chozodia's scripted sprites: the falling pillar after the suit, the
+     * Power Bomb thief, the stolen Power Bomb and its trigger. */
+    {
+        MzmSpriteKind scripted_kind = {0};
+        for (int a = 0; a < MZM_CHOZODIA_SCRIPTED_ANIMS; ++a) {
+            scripted_kind.counts[a] = 2;
+            scripted_kind.timers[a][0] = scripted_kind.timers[a][1] = 8;
+        }
+        clear();
+        MzmSpriteGlobals globals = {0};
+        MzmSpriteFrame cf = frame;
+        cf.globals = &globals;
+        cf.hooks = &test_hooks;
+        cf.kinds[MZM_FAMILY_CHOZODIA_SCRIPTED] = &scripted_kind;
+        memset(test_events, 0, sizeof test_events);
+        /* The pillar waits for the suit animation, then sinks a block. */
+        MzmSprite pillar;
+        mzm_sprite_init_primary(&pillar, MZM_PSPRITE_FALLING_CHOZO_PILLAR, 0, 9, 8, 0, 0);
+        uint16_t px = pillar.x, py = pillar.y;
+        mzm_sprite_update(&pillar, 0, &cf);
+        assert(pillar.pose == 0x9 && pillar.x == px + 32 && pillar.y_spawn == 256 &&
+               pillar.status & MZM_SPRITE_STATUS_NOT_DRAWN);
+        mzm_sprite_update(&pillar, 0, &cf);
+        assert(pillar.pose == 0x9);
+        globals.sub1.work3 = 8;
+        mzm_sprite_update(&pillar, 0, &cf);
+        assert(pillar.pose == 0x23 && !(pillar.status & MZM_SPRITE_STATUS_NOT_DRAWN));
+        pillar.status |= MZM_SPRITE_STATUS_ONSCREEN;
+        mzm_sfx_clear();
+        mzm_sprite_update(&pillar, 0, &cf);
+        assert(pillar.pose == 0x25 && mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_PILLAR_FALLING));
+        int frames = 0;
+        while (pillar.pose == 0x25 && frames < 400) {
+            pillar.status |= MZM_SPRITE_STATUS_ONSCREEN;
+            mzm_sprite_update(&pillar, 0, &cf);
+            ++frames;
+        }
+        assert(pillar.pose == 0x27 && pillar.y == py + 256 && frames == 257 && pillar.work0 == 40);
+        pillar.work0 = 1;
+        mzm_sfx_clear();
+        mzm_sprite_update(&pillar, 0, &cf);
+        assert(pillar.pose == 0x29 && mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_PILLAR_FELL));
+        /* The thief: once per room, seen then gone at the pirate zoneline. */
+        cf.room = 32;
+        grid[9][14] = MZM_CLIPDATA_SOLID;
+        movement_grid[9][14] = MZM_CLIPDATA_MOVEMENT_SPACE_PIRATE_ZONELINE;
+        MzmSprite thief;
+        mzm_sprite_init_primary(&thief, MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB, 0, 9, 10, 0, 0);
+        mzm_sprite_update(&thief, 0, &cf);
+        assert(thief.pose == 0x9 && thief.status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+               thief.status & MZM_SPRITE_STATUS_X_FLIP &&
+               mzm_sprite_graphics_owner(&thief) == MZM_PSPRITE_SPACE_PIRATE);
+        thief.status |= MZM_SPRITE_STATUS_ONSCREEN;
+        mzm_sprite_update(&thief, 0, &cf);
+        assert(thief.pose == 0x23 && test_check_event(NULL, MZM_EVENT_SPACE_PIRATE_WITH_POWER_BOMB_ONE));
+        uint16_t tx = thief.x;
+        mzm_sprite_update(&thief, 0, &cf);
+        assert(thief.x == tx + 4);
+        frames = 0;
+        while (thief.status && frames < 300) {
+            thief.status |= MZM_SPRITE_STATUS_ONSCREEN;
+            mzm_sprite_update(&thief, 0, &cf);
+            ++frames;
+        }
+        assert(thief.status == 0 && thief.x + 64 >= 14 * 64);
+        mzm_sprite_init_primary(&thief, MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB, 0, 9, 10, 0, 0);
+        mzm_sprite_update(&thief, 0, &cf);
+        assert(thief.status == 0);
+        cf.room = 12;
+        mzm_sprite_init_primary(&thief, MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB, 0, 9, 10, 0, 0);
+        mzm_sprite_update(&thief, 0, &cf);
+        assert(thief.status == 0);
+        /* The Power Bomb and its trigger: touching it steals it. */
+        MzmSprite bomb, trigger;
+        mzm_sprite_init_primary(&bomb, MZM_PSPRITE_FAKE_POWER_BOMB, 0, 9, 4, 0, 0);
+        uint16_t bx = bomb.x;
+        mzm_sprite_update(&bomb, 0, &cf);
+        assert(bomb.pose == 0x9 && bomb.x == bx + 16 && bomb.draw_order == 5);
+        mzm_sprite_init_primary(&trigger, MZM_PSPRITE_FAKE_POWER_BOMB_EVENT_TRIGGER, 0, 9, 4, 0, 0);
+        mzm_sprite_update(&trigger, 0, &cf);
+        assert(trigger.pose == 0x8 && trigger.samus_collision == 30 &&
+               trigger.status & MZM_SPRITE_STATUS_NOT_DRAWN);
+        trigger.status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        mzm_sprite_update(&trigger, 0, &cf);
+        assert(trigger.status == 0 && test_check_event(NULL, MZM_EVENT_POWER_BOMB_STOLEN));
+        mzm_sprite_init_primary(&bomb, MZM_PSPRITE_FAKE_POWER_BOMB, 0, 9, 4, 0, 0);
+        mzm_sprite_update(&bomb, 0, &cf);
+        assert(bomb.status == 0);
+        memset(test_events, 0, sizeof test_events);
+        clear();
+    }
     /* Tangle Vines: on the floor (row 10) or under the ceiling (row 2),
      * and the vine holding a Geruta. */
     {

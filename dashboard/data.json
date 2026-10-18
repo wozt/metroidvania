@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-18T21:35:41+00:00",
+ "generated_at": "2026-10-18T21:41:46+00:00",
  "git": {
-  "commit": "cf361ea",
+  "commit": "0b06271",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 131,
+   "total": 132,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 57,
+    "partial": 58,
     "functional": 63,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 63,
-   "functional_or_better_percent": 48.1,
-   "with_passing_tests": 119,
-   "with_passing_tests_percent": 90.8,
+   "functional_or_better_percent": 47.7,
+   "with_passing_tests": 120,
+   "with_passing_tests_percent": 90.9,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -119,6 +119,7 @@
     "mzm.enemies.atomic",
     "mzm.enemies.baristute",
     "mzm.enemies.boss_statue",
+    "mzm.enemies.chozodia_scripted",
     "mzm.enemies.chozodia_security",
     "mzm.enemies.deorem",
     "mzm.enemies.dessgeega",
@@ -248,11 +249,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 83,
+   "total": 84,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 33,
+    "partial": 34,
     "functional": 50,
     "faithful": 0,
     "validated": 0,
@@ -260,8 +261,8 @@
     "unknown": 0
    },
    "functional_or_better": 50,
-   "functional_or_better_percent": 60.2,
-   "with_passing_tests": 83,
+   "functional_or_better_percent": 59.5,
+   "with_passing_tests": 84,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -275,6 +276,7 @@
     "mzm.enemies.atomic",
     "mzm.enemies.baristute",
     "mzm.enemies.boss_statue",
+    "mzm.enemies.chozodia_scripted",
     "mzm.enemies.chozodia_security",
     "mzm.enemies.deorem",
     "mzm.enemies.dessgeega",
@@ -1348,6 +1350,68 @@
       "kind": "python",
       "registered": true,
       "outcome": "passed"
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-18"
+   }
+  },
+  {
+   "id": "mzm.enemies.chozodia_scripted",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Falling Chozo pillar and the Power Bomb theft",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_chozodia_scripted.c",
+    "src/runtime/mzm_sprites.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.ruins_test",
+    "mzm.enemies.space_pirate"
+   ],
+   "native_routines": [
+    "FallingChozoPillar",
+    "SpacePirateCarryingPowerBomb",
+    "FakePowerBomb",
+    "FakePowerBombEventTrigger"
+   ],
+   "limitations": "The pillar waits for the Ruins Test suit-animation stage, which needs the unported getting-fully-powered cutscene, so it does not fall in game yet. Not compared with an emulator. The falling pillar (behind BG1) appears once the suit animation ends and is on screen, then sinks 256 subpixels with a vertical shake and dust every 16 frames, a final one-second shake and its landing sound. The pirate carrying the Power Bomb shows once in each of its two rooms (events 71 and 72), walks right with its footsteps and vanishes at the next pirate zoneline. The Power Bomb on its pedestal and its invisible trigger disappear once Samus touches the trigger (event 70). A capture in chozodia_032 shows the Power Bomb on its statue.",
+   "next_action": "Port the getting-fully-powered cutscene so the pillar falls in game; compare the theft rooms with an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_mzm_sprites.c"
+    ],
+    "in_game_check": [
+     "chozodia_032",
+     "chozodia_046",
+     "chozodia_084",
+     "chozodia_091"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10407,6 +10471,12 @@
  },
  "timeline": [
   {
+   "commit": "0b06271",
+   "date": "2026-10-18",
+   "subject": "Port the Ruins Test ghost, symbols, lightning and closing reflection",
+   "scope": "project"
+  },
+  {
    "commit": "cf361ea",
    "date": "2026-10-18",
    "subject": "Port the Ruins Test main actor and intro",
@@ -10879,12 +10949,6 @@
    "date": "2026-10-13",
    "subject": "feat(mzm): native intro before the title screen",
    "scope": "mzm"
-  },
-  {
-   "commit": "885e67e",
-   "date": "2026-10-13",
-   "subject": "feat(mzm): native game over screen and continue",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10912,7 +10976,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1443,
+    "routines_cited_by_features": 1447,
     "call_edges": 6071
    },
    "aos": {
@@ -12322,14 +12386,22 @@
      {
       "id": 182,
       "name": "Space Pirate Carrying Power Bomb",
-      "status": "not_started",
-      "note": "",
+      "status": "partial",
+      "note": "Falling Chozo pillar and the Power Bomb theft",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_mzm_sprites.c"
+       ],
+       "in_game_check": [
+        "chozodia_032",
+        "chozodia_046",
+        "chozodia_084",
+        "chozodia_091"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "mzm.enemies.chozodia_scripted"
      },
      {
       "id": 183,

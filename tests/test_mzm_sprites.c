@@ -6692,6 +6692,113 @@ int main(void) {
         mzm_sprite_update(flame, 13, &mf);
         assert(flame->status == 0 && globals.boss_work8 == 0 &&
                mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_FIREBALL_EXPLODING));
+        /* BlackSpacePirateProjectileCollision on the parts: beams are
+         * absorbed, missiles hurt the cover (only weak to missiles). */
+        tables.secondary_weakness[MZM_SSPRITE_MECHA_RIDLEY_PART] = MZM_WEAKNESS_MISSILES;
+        tables.weakness[MZM_PSPRITE_MECHA_RIDLEY] = MZM_WEAKNESS_MISSILES;
+        static MzmWeapons mecha_weapons;
+        memset(&mecha_weapons, 0, sizeof mecha_weapons);
+        mf.weapons = &mecha_weapons;
+        MzmSprite *cover = &room[5];
+        MzmProjectile *shot = &mecha_weapons.list[0];
+        *shot = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_PLASMA_BEAM,
+                                .stage = MZM_STAGE_MOVING, .y = cover->y, .x = cover->x};
+        mzm_sprite_update(cover, 5, &mf);
+        assert(!shot->active && cover->health == 200);
+        *shot = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                .stage = MZM_STAGE_MOVING, .y = cover->y, .x = cover->x};
+        mzm_sprite_update(cover, 5, &mf);
+        assert(!shot->active && cover->health == 180 && cover->isft);
+        mzm_sprite_update(cover, 5, &mf);
+        assert(globals.sub1.health == 180 && globals.sub1.work3 == 0);
+        /* An immune part makes missiles tumble without damage. */
+        *shot = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                .stage = MZM_STAGE_MOVING, .y = room[6].y, .x = room[6].x};
+        room[6].hitbox_top = -64; room[6].hitbox_bottom = 64;
+        room[6].hitbox_left = -64; room[6].hitbox_right = 64;
+        mzm_sprite_update(&room[6], 6, &mf);
+        assert(shot->stage == MZM_STAGE_TUMBLING && room[6].health == 1);
+        shot->active = false;
+        /* Below three quarters the cover enables the fireballs; at zero it
+         * explodes and exposes the core with the core's health. */
+        cover->health = 140;
+        mzm_sprite_update(cover, 5, &mf);
+        assert(globals.sub1.work3 == 1);
+        cover->health = 20;
+        *shot = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_MISSILE,
+                                .stage = MZM_STAGE_MOVING, .y = cover->y, .x = cover->x};
+        mzm_sfx_clear();
+        /* The collision runs before the pose switch: same frame. */
+        mzm_sprite_update(cover, 5, &mf);
+        assert(cover->health == 0 && cover->pose == 0x67 && cover->status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               !(room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES) &&
+               globals.sub1.work3 == 2 && globals.sub1.health == 360 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_SPRITE_EXPLOSION_SINGLE_THEN_BIG));
+        /* MechaRidley: the core's health sets the threshold, the parts
+         * take the matching damage tint. */
+        room[0].health = 170;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.sub1.health == 170 && globals.sub1.work3 == 4);
+        mzm_sprite_update(&room[6], 6, &mf);
+        assert(room[6].palette_row == 3);
+        room[0].health = 80;
+        mzm_sprite_update(&room[0], 0, &mf);
+        mzm_sprite_update(&room[6], 6, &mf);
+        assert(globals.sub1.work3 == 5 && room[6].palette_row == 4);
+        /* MechaRidleyDyingInit and Dying: the core vanishes, the parts
+         * become harmless and the eye goes idle. */
+        mzm_sfx_clear();
+        room[0].pose = 0x62;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x67 && room[0].health == 1 &&
+               room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_DYING_STANDING_LOW &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_DEATH_EXPLOSIONS) &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_FADE, 0));
+        mzm_sprite_update(&room[2], 2, &mf);
+        mzm_sprite_update(&room[1], 1, &mf);
+        assert(room[2].anim == MZM_MECHA_RIDLEY_EYE_IDLE && globals.boss_work4 == 7 &&
+               room[1].draw_order == 9 && room[1].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        room[0].isft = 0;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x64 && globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_DYING &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECA_RIDLEY_POWERING_OFF));
+        room[0].work0 = 200;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x68 && globals.boss_work4 == 5);
+        mzm_sprite_update(&room[2], 2, &mf);
+        assert(room[2].anim == MZM_MECHA_RIDLEY_EYE_INACTIVE);
+        /* MechaRidleySpawnDrops: grouped large energy at frames 30-39. */
+        for (int i = 11; i < 16; ++i) room[i].status = 0;
+        room[0].y_spawn = 30;
+        mzm_sprite_update(&room[0], 0, &mf);
+        int energy = 0;
+        for (int i = 11; i < 16; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_PSPRITE_MULTIPLE_LARGE_ENERGY) ++energy;
+        assert(energy == 1);
+        room[0].y_spawn = 360;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x69 && room[0].work0 == 30);
+        /* The eye glows, then the event, the escape banner, the doors and
+         * the escape music. */
+        mzm_sfx_clear();
+        room[0].work0 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x6A && room[0].work0 == 200 && globals.boss_work4 == 6 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_EYE_BEEPING));
+        mzm_sprite_update(&room[2], 2, &mf);
+        assert(room[2].anim == MZM_MECHA_RIDLEY_EYE_DYING);
+        message_count = 0;
+        door_timer_calls = 0;
+        room[0].work0 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(test_check_event(NULL, MZM_EVENT_MECHA_RIDLEY_KILLED) && message_count == 1 &&
+               messages[0] == MZM_MESSAGE_CHOZODIA_ESCAPE && door_timer_calls == 1 &&
+               last_door_timer == -20 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_ESCAPE));
+        memset(test_events, 0, sizeof test_events);
+        mf.weapons = frame.weapons;
         mf.equipment = frame.equipment;
 
         test_set_event(NULL, MZM_EVENT_MECHA_RIDLEY_KILLED);

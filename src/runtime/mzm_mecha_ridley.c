@@ -3,10 +3,11 @@
  * multipart entrance, arena lock, Samus height tracking, attack selection,
  * claw swipe, height transitions, retreat and fireball choreography, plus
  * the arm, neck, eye and missile launcher parts, and the laser, missile
- * and fireball actors. The cover/core damage handoff and the death
- * sequence are not ported yet. */
+ * and fireball actors, the cover/core damage handoff and the death up to
+ * the Chozodia escape. */
 #include "mzm_sprite_ai.h"
 #include "mzm_screen_shake.h"
+#include "mzm_message_banner.h"
 
 enum {
     MECHA_CRAWLING_INIT = 0x1,
@@ -25,12 +26,19 @@ enum {
     MECHA_FIREBALL_ATTACK = 0x39,
     MECHA_CLOSING_MOUTH = 0x3B,
     MECHA_RETRACTING_AFTER_FIREBALLS = 0x3D,
+    MECHA_DYING_INIT = 0x62,                       /* SPRITE_POSE_DESTROYED */
+    MECHA_DYING_GLOW_FADING = 0x64,
+    MECHA_DYING_STANDING_UP = 0x67,
+    MECHA_SPAWN_DROPS = 0x68,
+    MECHA_FIRST_EYE_GLOW = 0x69,
+    MECHA_SECOND_EYE_GLOW = 0x6A,
 };
 
 enum { SAMUS_LOW, SAMUS_MIDDLE, SAMUS_HIGH };      /* gBossWork.work3 */
 
 enum {                                             /* gBossWork.work4 */
     EYE_IDLE, EYE_BLINKING_INIT, EYE_LASER_ATTACK_INIT, EYE_LASER_ATTACK,
+    EYE_SET_IDLE, EYE_SET_INACTIVE, EYE_SET_DYING, EYE_SET_DONE,
 };
 
 enum {
@@ -77,6 +85,8 @@ enum {
     PART_COVER_IDLE = 0x2A,
     PART_HEAD_IDLE = 0x2C,
     PART_IDLE = 0x61,
+    PART_COVER_DESTROYED = 0x62,                   /* SPRITE_POSE_DESTROYED */
+    PART_COVER_BROKEN = 0x67,
 };
 
 static const MzmMultiSprite *multi(const Ctx *c, const MzmSubSpriteState *state) {
@@ -502,6 +512,117 @@ static void fireball_step(Ctx *c) {
     }
 }
 
+/* MechaRidleyDyingInit: the core disappears in a boss explosion and the
+ * music fades. */
+static void dying_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    set_multi(&c->f->globals->sub1, MZM_MECHA_RIDLEY_MULTI_DYING_STANDING_LOW);
+    s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES | MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->isft = 60;
+    s->health = 1;
+    s->pose = MECHA_DYING_STANDING_UP;
+    c->f->globals->boss_work4 = EYE_SET_IDLE;
+    ai_particle_set(c, (uint16_t)(s->y + BLOCK_SIZE), s->x, MZM_PE_MAIN_BOSS_DEATH);
+    mzm_sfx_play(MZM_SOUND_MECHA_RIDLEY_DEATH_EXPLOSIONS);
+    mzm_sfx_music_fade(60);
+}
+
+/* MechaRidleyDying: explosions every 16 frames for a second, then the
+ * collapse. */
+static void dying(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint8_t rng = (uint8_t)(c->rng * 2);
+    uint8_t isft = s->isft & 0x7F;
+    if (isft) {
+        if (!(isft & 15)) {
+            if (isft & 16)
+                ai_particle_set(c, (uint16_t)(s->y - (rng - BLOCK_SIZE)), (uint16_t)(s->x + rng),
+                                MZM_PE_MAIN_BOSS_DEATH);
+            else
+                ai_particle_set(c, (uint16_t)(s->y + rng + BLOCK_SIZE), (uint16_t)(s->x - rng),
+                                MZM_PE_MAIN_BOSS_DEATH);
+        }
+        return;
+    }
+    set_multi(&c->f->globals->sub1, MZM_MECHA_RIDLEY_MULTI_DYING);
+    s->pose = MECHA_DYING_GLOW_FADING;
+    s->work0 = 0;
+    mzm_sfx_play(MZM_SOUND_MECA_RIDLEY_POWERING_OFF);
+}
+
+/* MechaRidleyGlowFading: the destroyed graphics and palette copies are not
+ * ported; only the 200-frame timing. */
+static void glow_fading(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (++s->work0 > 200) {
+        s->y_spawn = 0;
+        s->work0 = 0;
+        s->pose = MECHA_SPAWN_DROPS;
+        c->f->globals->boss_work4 = EYE_SET_INACTIVE;
+    }
+}
+
+/* MechaRidleySpawnDrops: ten grouped large energy drops scattered around
+ * frames 30 to 39, then the eye glows after six seconds. */
+static void spawn_drops(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y - (BLOCK_SIZE + HALF_BLOCK_SIZE + PIXEL_SIZE));
+    uint16_t x = (uint16_t)(s->x - BLOCK_SIZE * 6);
+    uint8_t part = c->rng & 3;
+    uint8_t r1 = (uint8_t)(c->rng * 8);
+    uint8_t r2 = (uint8_t)((s->work0 & 15) * EIGHTH_BLOCK_SIZE);
+    s->work0++;
+    uint16_t stage = s->y_spawn++;
+    if (stage >= 30 && stage <= 39) {
+        uint16_t dy, dx;
+        if (stage == 30) { dy = (uint16_t)(y + r1); dx = (uint16_t)(x - r2); }
+        else if (stage == 31) { dy = (uint16_t)(y - r1); dx = (uint16_t)(x + r2); }
+        else if (stage & 1 || stage == 39) {
+            dy = (uint16_t)(y - r1 + r2 * 2);
+            dx = (uint16_t)(x + r2 + r1);
+        } else {
+            dy = (uint16_t)(y + r1 - r2 * 2);
+            dx = (uint16_t)(x - r2 - r1);
+        }
+        ai_spawn_drop_follower(c, MZM_PSPRITE_MULTIPLE_LARGE_ENERGY, part, 0, s->ram_slot, dy, dx, 0);
+    }
+    if (s->y_spawn > 360) {
+        s->work0 = 30;
+        s->work1 = 0;
+        s->work2 = 4;
+        s->pose = MECHA_FIRST_EYE_GLOW;
+    }
+}
+
+/* MechaRidleyFirstEyeGlow / SecondEyeGlow: the eye's palette blinking is
+ * not ported; after the second glow the event is set, the doors unlock and
+ * the Chozodia escape starts. */
+static void eye_glow(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (--s->work2 == 0) {
+        s->work2 = 4;
+        s->work1 = !s->work1;
+    }
+    if (s->pose == MECHA_FIRST_EYE_GLOW) {
+        if (--s->work0 == 0) {
+            s->pose = MECHA_SECOND_EYE_GLOW;
+            s->work0 = 200;
+            s->work1 = 0;
+            s->work2 = 4;
+            c->f->globals->boss_work4 = EYE_SET_DYING;
+            mzm_sfx_play(MZM_SOUND_MECHA_RIDLEY_EYE_BEEPING);
+        }
+        return;
+    }
+    if (s->work0 && --s->work0 == 0) {
+        const MzmSpriteHooks *h = c->f->hooks;
+        if (h && h->set_event) h->set_event(h->context, MZM_EVENT_MECHA_RIDLEY_KILLED);
+        if (h && h->spawn_message) h->spawn_message(h->context, MZM_MESSAGE_CHOZODIA_ESCAPE);
+        door_timer(c, -20);
+        mzm_sfx_music_play(MZM_MUSIC_ESCAPE, 0x40);
+    }
+}
+
 /* MechaRidley's Samus height tracking: below its feet is low after two
  * seconds, more than three blocks above is high at once, and between is
  * middle (at once from low, after two seconds from high). */
@@ -561,6 +682,12 @@ static void body(Ctx *c) {
     case MECHA_CLOSING_MOUTH:
     case MECHA_RETRACTING_AFTER_FIREBALLS: fireball_step(c); break;
     case MECHA_FIREBALL_ATTACK: fireballs_attack(c); break;
+    case MECHA_DYING_INIT: dying_init(c); break;
+    case MECHA_DYING_STANDING_UP: dying(c); break;
+    case MECHA_DYING_GLOW_FADING: glow_fading(c); break;
+    case MECHA_SPAWN_DROPS: spawn_drops(c); break;
+    case MECHA_FIRST_EYE_GLOW:
+    case MECHA_SECOND_EYE_GLOW: eye_glow(c); break;
     default: break;
     }
     if (!(s->status & MZM_SPRITE_STATUS_EXISTS)) return;
@@ -856,6 +983,23 @@ static void cover_idle(Ctx *c) {
     if (g->sub1.health < g->boss_work10 * 3 / 4) g->sub1.work3 = HEALTH_COVER_DAMAGED;
 }
 
+/* MechaRidleyPartCoreCoverExplosion: the core becomes vulnerable with its
+ * own health. */
+static void cover_explosion(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    MzmSprite *body = part_slot(c, s->ram_slot);
+    if (body) body->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    g->sub1.health = g->boss_work9;
+    g->boss_work7 = g->boss_work9;
+    g->sub1.work3 = HEALTH_COVER_BROKEN;
+    s->status |= MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->pose = PART_COVER_BROKEN;
+    ai_particle_set(c, (uint16_t)(s->y + (QUARTER_BLOCK_SIZE - PIXEL_SIZE)),
+                    (uint16_t)(s->x - QUARTER_BLOCK_SIZE), MZM_PE_SPRITE_EXPLOSION_HUGE);
+    mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+}
+
 /* MechaRidleyPartEyeIdle: the blink; the laser only once the cover is
  * broken. */
 static void eye_idle(Ctx *c) {
@@ -993,8 +1137,49 @@ static void launcher_idle(Ctx *c) {
  * during the entrance, the eye and launcher animate on their own. */
 static void part(Ctx *c) {
     MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
     const MzmSprite *body = part_slot(c, s->ram_slot);
     bool entrance = !body || body->pose < 8;
+    if (body && body->pose >= MECHA_DYING_INIT) {
+        /* The dying boss: the parts are harmless, flash with the core and
+         * follow the dying multi-sprite; the eye takes its last looks. */
+        static const uint8_t dead_order[PART_COUNT] = {9, 10, 11, 12, 0, 0, 13, 14, 15, 16, 16};
+        s->ignore_samus_timer = 1;
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->isft = body->isft;
+        if (s->room_slot < PART_COUNT && dead_order[s->room_slot])
+            s->draw_order = dead_order[s->room_slot];
+        if (s->room_slot != PART_EYE) {
+            sync_part(c);
+            return;
+        }
+        static const uint8_t looks[3] = {
+            MZM_MECHA_RIDLEY_EYE_IDLE, MZM_MECHA_RIDLEY_EYE_INACTIVE, MZM_MECHA_RIDLEY_EYE_DYING,
+        };
+        if (g->boss_work4 >= EYE_SET_IDLE && g->boss_work4 <= EYE_SET_DYING) {
+            ai_set_anim(s, looks[g->boss_work4 - EYE_SET_IDLE]);
+            g->boss_work4 = EYE_SET_DONE;
+        }
+        sync_position(c);
+        return;
+    }
+    if (s->pose != SPRITE_POSE_UNINITIALIZED && s->health != 0 && body) {
+        if (s->room_slot == PART_EYE) {
+            if (g->sub1.work3 > HEALTH_COVER_DAMAGED) s->isft = body->isft;
+        } else {
+            if (body->pose > MECHA_DELAY_BEFORE_CRAWLING) ai_projectile_collision_self(c);
+            if (g->sub1.work3 > HEALTH_COVER_DAMAGED) {
+                s->isft = body->isft;
+                /* The damage tints (the stun row is left alone). */
+                if (s->palette_row != 14) {
+                    uint8_t row = g->sub1.work3 > HEALTH_HALF ? 4 :
+                                  g->sub1.work3 > HEALTH_THREE_QUARTERS ? 3 :
+                                  g->sub1.work3 > HEALTH_COVER_BROKEN ? 2 : s->palette_row;
+                    s->palette_row = s->absolute_palette_row = row;
+                }
+            }
+        }
+    }
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED:
         part_init(c);
@@ -1015,6 +1200,8 @@ static void part(Ctx *c) {
     case PART_MISSILE_LAUNCHER_IDLE: launcher_idle(c); sync_position(c); break;
     case PART_COVER_IDLE: cover_idle(c); sync_part(c); break;
     case PART_HEAD_IDLE: load_fireballs_gfx(c); sync_part(c); break;
+    case PART_COVER_DESTROYED: cover_explosion(c); break;
+    case PART_COVER_BROKEN: break;
     default: sync_part(c); break;
     }
 }

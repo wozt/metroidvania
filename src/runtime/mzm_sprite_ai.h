@@ -147,6 +147,7 @@ bool ai_entered_room_effect(const Ctx *c, uint16_t old_y, uint16_t y);
 /* gCurrentAffectingClipdata.hazard after a ClipdataProcess at a point. */
 uint8_t ai_hazard_at(const Ctx *c, uint16_t y, uint16_t x);
 void ai_face_samus(const Ctx *c);
+void ai_projectile_collision_self(Ctx *c);
 uint8_t ai_face_target_rotation(uint8_t rotation, uint16_t target_y, uint16_t target_x,
                                 uint16_t sprite_y, uint16_t sprite_x);
 void ai_move_towards_target(Ctx *c, uint16_t target_y, uint16_t target_x, uint8_t y_speed,

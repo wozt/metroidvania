@@ -854,6 +854,8 @@ enum {
     MZM_MECHA_RIDLEY_RIGHT_ARM_CRAWLING_BACKWARDS,
     MZM_MECHA_RIDLEY_LEFT_ARM_SWINGING_AT_GROUND,
     MZM_MECHA_RIDLEY_LEFT_ARM_SWINGING_AT_CLOSE_GROUND,
+    /* Not in sMechaRidleyFrameDataPointers: set by the dying eye. */
+    MZM_MECHA_RIDLEY_EYE_DYING,
     MZM_MECHA_RIDLEY_ANIMS,
 };
 extern const char *const mzm_mecha_ridley_anim_names[MZM_MECHA_RIDLEY_ANIMS];

@@ -3610,6 +3610,12 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             shade=rows;
         }
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY &&
+                sprite->palette_row>=2 && sprite->palette_row<=4) {
+            /* MechaRidleyPart's damage tints (paletteRow 2 to 4). */
+            static const char *const tints[5]={"","","/row2","/row3","/row4"};
+            shade=tints[sprite->palette_row];
+        }
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY &&
                 (sprite->anim==MZM_MECHA_RIDLEY_MISSILE || sprite->anim==MZM_MECHA_RIDLEY_FIREBALL) &&
                 sprites->globals.mecha_weapon_gfx) {
             /* The weapon tiles last copied to OBJ VRAM 0x4280. */
@@ -3623,6 +3629,15 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                  sprites->names[mzm_sprite_graphics_owner(sprite)],
                  anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none",shade);
         RuntimeLibraryEntry *entry=runtime_library_find(sprite_library,key);
+        if((!entry || entry->count==0) && *shade &&
+           mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY) {
+            /* A damage tint not baked for this table (its rows overflow
+             * the sprite's palette): the untinted look. */
+            snprintf(key,sizeof key,"Sprite/%s/%s/%s",
+                     sprites->names[mzm_sprite_graphics_owner(sprite)],
+                     anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none");
+            entry=runtime_library_find(sprite_library,key);
+        }
         if(!entry || entry->count==0)continue;
         int index=sprite->frame<entry->count?sprite->frame:0;
         SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);

@@ -661,6 +661,7 @@ const char *const mzm_mecha_ridley_anim_names[MZM_MECHA_RIDLEY_ANIMS] = {
     "MechaRidleyPartOam_RightArmCrawlingBackwards",
     "MechaRidleyPartOam_LeftArmSwingingAtGround",
     "MechaRidleyPartOam_LeftArmSwingingAtCloseGround",
+    "MechaRidleyPartOam_EyeDying",
 };
 static const char *const mecha_ridley_sprites[MZM_MECHA_RIDLEY_ANIMS] = {
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
@@ -676,6 +677,7 @@ static const char *const mecha_ridley_sprites[MZM_MECHA_RIDLEY_ANIMS] = {
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
+    "MECHA_RIDLEY",
 };
 const char *const mzm_mother_brain_anim_names[MZM_MOTHER_BRAIN_ANIMS] = {
     "MotherBrainOam_Idle", "MotherBrainOam_ChargingBeam", "MotherBrainPartOam_EyeClosed",
@@ -6146,6 +6148,204 @@ static uint8_t solid_hit_effect(uint8_t type, uint32_t items) {
     }
 }
 
+/* What one projectile does to the sprite it touches (the hit routines of
+ * ProjectileCheckHittingSprite), the projectile at (py, px). */
+static void projectile_hit(MzmSprite *s, MzmProjectile *proj, MzmWeapons *weapons,
+                           const MzmSpriteTables *tables, MzmEffects *effects, uint8_t weakness,
+                           uint16_t py, uint16_t px) {
+    /* The uncharged pistol always has the immune-projectile result.
+     * A charged pistol instead paralyses a Space Pirate for one
+     * second, regardless of its normal projectile properties. */
+    if (proj->type == MZM_PROJECTILE_PISTOL) {
+        if ((s->isft & 0x7F) < 2) set_isft(s, 2);
+        if (effects) mzm_particle_set(effects, py, px, MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+        proj->active = false;
+        return;
+    }
+    if (proj->type == MZM_PROJECTILE_CHARGED_PISTOL &&
+        s->samus_collision == SSC_SPACE_PIRATE) {
+        s->standing_on = MZM_STANDING_ON_SPRITE_OFF;
+        s->freeze_timer = 60;
+        s->palette_row = 1;
+        s->absolute_palette_row = 1;
+        if (effects)
+            mzm_particle_set(effects, py, px, MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM);
+        proj->active = false;
+        return;
+    }
+    /* The Plasma Beam goes through the sprites it hits. */
+    bool plasma = proj->type == MZM_PROJECTILE_PLASMA_BEAM ||
+                  proj->type == MZM_PROJECTILE_CHARGED_PLASMA_BEAM;
+    /* The particle at the projectile: its impact, or the
+     * invincible impact when the sprite is not weak to it. */
+    uint8_t effect = MZM_PE_HITTING_SOMETHING_INVINCIBLE;
+    bool missile = proj->type == MZM_PROJECTILE_MISSILE ||
+                   proj->type == MZM_PROJECTILE_SUPER_MISSILE;
+    if (s->solid_for_projectiles) {
+        /* The SP_SOLID_FOR_PROJECTILES case of each hit routine:
+         * the projectile's own impact particle, the projectile
+         * removed (the Plasma Beam goes through). */
+        hit_solid(s);
+        if (effects) mzm_particle_set(effects, py, px, solid_hit_effect(proj->type, weapons->items));
+        if (!plasma) proj->active = false;
+        return;
+    }
+    if (s->immune_to_projectiles) {
+        /* ProjectileHitSpriteImmuneToProjectiles; missiles tumble. */
+        if ((s->isft & 0x7F) < 2) set_isft(s, 2);
+        if (effects) mzm_particle_set(effects, py, px, effect);
+        if (missile) mzm_projectile_start_tumbling(proj, s->x);
+        else if (!plasma) proj->active = false;
+        return;
+    }
+    uint8_t freeze_flag = s->secondary ? tables->secondary_freeze[s->sprite_id]
+                                       : tables->freeze[s->sprite_id];
+    switch (proj->type) {
+    case MZM_PROJECTILE_BEAM:   /* ProjectileHitSprite */
+        if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
+            deal_damage(s, NORMAL_BEAM_DAMAGE);
+            effect = MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
+        } else {
+            hit_solid(s);
+        }
+        break;
+    case MZM_PROJECTILE_MISSILE:    /* ProjectileMissileHitSprite */
+        if (weakness & MZM_WEAKNESS_MISSILES) {
+            deal_damage(s, MISSILE_DAMAGE);
+            effect = MZM_PE_HITTING_SOMETHING_WITH_MISSILE;
+        } else {
+            hit_solid(s);
+            if (effects) mzm_particle_set(effects, py, px, effect);
+            mzm_projectile_start_tumbling(proj, s->x);
+            return;
+        }
+        break;
+    case MZM_PROJECTILE_LONG_BEAM:  /* ProjectileHitSprite, LONG_BEAM_DAMAGE */
+        if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
+            deal_damage(s, LONG_BEAM_DAMAGE);
+            effect = MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM;
+        } else {
+            hit_solid(s);
+        }
+        break;
+    case MZM_PROJECTILE_CHARGED_BEAM:
+    case MZM_PROJECTILE_CHARGED_LONG_BEAM:
+    case MZM_PROJECTILE_CHARGED_PISTOL: {
+        /* ProjectileNonIceChargedHitSprite */
+        bool is_long = proj->type == MZM_PROJECTILE_CHARGED_LONG_BEAM;
+        if (weakness & (MZM_WEAKNESS_CHARGE_BEAM_PISTOL | MZM_WEAKNESS_BEAM_BOMBS)) {
+            uint16_t damage = proj->type == MZM_PROJECTILE_CHARGED_PISTOL ?
+                CHARGED_PISTOL_DAMAGE : is_long ? CHARGED_LONG_BEAM_DAMAGE :
+                CHARGED_NORMAL_BEAM_DAMAGE;
+            deal_damage(s, damage);
+            effect = is_long || proj->type == MZM_PROJECTILE_CHARGED_PISTOL ?
+                MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM :
+                MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
+        } else {
+            hit_solid(s);
+        }
+        break;
+    }
+    case MZM_PROJECTILE_ICE_BEAM:
+    case MZM_PROJECTILE_CHARGED_ICE_BEAM: {
+        bool charged = proj->type == MZM_PROJECTILE_CHARGED_ICE_BEAM;
+        bool is_long = weapons->items & MZM_ITEM_LONG_BEAM;
+        uint16_t damage = charged ? (is_long ? CHARGED_ICE_LONG_BEAM_DAMAGE : CHARGED_ICE_BEAM_DAMAGE)
+                                  : (is_long ? ICE_LONG_BEAM_DAMAGE : ICE_BEAM_DAMAGE);
+        ice_hit(s, weakness, freeze_flag, weapons->frame8, damage, charged, effects, py, px,
+                MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM);
+        proj->active = false;
+        return;
+    }
+    case MZM_PROJECTILE_WAVE_BEAM:
+    case MZM_PROJECTILE_CHARGED_WAVE_BEAM:
+    case MZM_PROJECTILE_PLASMA_BEAM:
+    case MZM_PROJECTILE_CHARGED_PLASMA_BEAM: {
+        /* The Wave and Plasma cases of ProjectileCheckHittingSprite:
+         * WAVE_* / PLASMA_* damage (3, one more per other beam;
+         * charged 12, four more per other beam), ice hits with the
+         * Ice Beam (the full beam particles), else ProjectileHitSprite
+         * or ProjectileNonIceChargedHitSprite. */
+        bool charged = proj->type == MZM_PROJECTILE_CHARGED_WAVE_BEAM ||
+                       proj->type == MZM_PROJECTILE_CHARGED_PLASMA_BEAM;
+        uint32_t items = weapons->items;
+        int extra = (items & MZM_ITEM_LONG_BEAM ? 1 : 0) + (items & MZM_ITEM_ICE_BEAM ? 1 : 0) +
+                    (plasma && items & MZM_ITEM_WAVE_BEAM ? 1 : 0);
+        uint16_t damage = (uint16_t)(charged ? 12 + 4 * extra : 3 + extra);
+        if (items & MZM_ITEM_ICE_BEAM) {
+            ice_hit(s, weakness, freeze_flag, weapons->frame8, damage, charged, effects, py, px,
+                    plasma ? MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM
+                           : MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM_NO_PLASMA);
+            if (!plasma) proj->active = false;
+            return;
+        }
+        if (weakness & (charged ? MZM_WEAKNESS_CHARGE_BEAM_PISTOL | MZM_WEAKNESS_BEAM_BOMBS
+                                : MZM_WEAKNESS_BEAM_BOMBS)) {
+            deal_damage(s, damage);
+            effect = plasma ? MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM
+                            : MZM_PE_HITTING_SOMETHING_WITH_WAVE_BEAM;
+        } else {
+            hit_solid(s);
+        }
+        if (effects) mzm_particle_set(effects, py, px, effect);
+        if (!plasma) proj->active = false;
+        return;
+    }
+    case MZM_PROJECTILE_BOMB:
+    case MZM_PROJECTILE_POWER_BOMB:
+    case MZM_PROJECTILE_PISTOL:
+        break;
+    case MZM_PROJECTILE_SUPER_MISSILE:
+        if (weakness & (MZM_WEAKNESS_MISSILES | MZM_WEAKNESS_SUPER_MISSILES)) {
+            deal_damage(s, SUPER_MISSILE_DAMAGE);
+            effect = MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE;
+        } else {
+            hit_solid(s);
+            if (effects) mzm_particle_set(effects, py, px, effect);
+            mzm_projectile_start_tumbling(proj, s->x);
+            return;
+        }
+        break;
+    }
+    if (effects) mzm_particle_set(effects, py, px, effect);
+    proj->active = false;
+}
+
+/* BlackSpacePirateProjectileCollision: a sprite ignoring the common pass
+ * tests the projectiles itself, by their position inside its hitbox. The
+ * Plasma Beam (removed here) and missiles hit as usual; every other beam is
+ * absorbed with the invincible particle. */
+void ai_projectile_collision_self(Ctx *c) {
+    MzmWeapons *weapons = c->f->weapons;
+    MzmSprite *s = c->s;
+    if (!weapons) return;
+    uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
+    uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
+    for (int p = 0; p < MZM_MAX_PROJECTILES; ++p) {
+        MzmProjectile *proj = &weapons->list[p];
+        if (!proj->active || proj->stage == MZM_STAGE_TUMBLING || proj->stage <= MZM_STAGE_SPAWNING ||
+            proj->type == MZM_PROJECTILE_BOMB || proj->type == MZM_PROJECTILE_POWER_BOMB)
+            continue;
+        uint16_t py = (uint16_t)proj->y, px = (uint16_t)proj->x;
+        if (!(px > left && px < right && py > top && py < bottom)) continue;
+        switch (proj->type) {
+        case MZM_PROJECTILE_PLASMA_BEAM:
+        case MZM_PROJECTILE_CHARGED_PLASMA_BEAM:
+            projectile_hit(s, proj, weapons, c->tables, c->f->effects, weakness_of(s, c->tables), py, px);
+            proj->active = false;
+            break;
+        case MZM_PROJECTILE_MISSILE:
+        case MZM_PROJECTILE_SUPER_MISSILE:
+            projectile_hit(s, proj, weapons, c->tables, c->f->effects, weakness_of(s, c->tables), py, px);
+            break;
+        default:
+            proj->active = false;
+            if (c->f->effects) mzm_particle_set(c->f->effects, py, px, MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+            break;
+        }
+    }
+}
+
 void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weapons,
                                  const MzmSpriteTables *tables, MzmEffects *effects) {
     /* ProjectileProcessPowerBomb clears every sprite's stunned flag. */
@@ -6224,162 +6424,7 @@ void mzm_sprites_projectile_hits(MzmSprite *sprites, int count, MzmWeapons *weap
             if (!touching(top, bottom, left, right, (uint16_t)(py + ptop), (uint16_t)(py + pbottom),
                           (uint16_t)(px + pleft), (uint16_t)(px + pright)))
                 continue;
-            /* The uncharged pistol always has the immune-projectile result.
-             * A charged pistol instead paralyses a Space Pirate for one
-             * second, regardless of its normal projectile properties. */
-            if (proj->type == MZM_PROJECTILE_PISTOL) {
-                if ((s->isft & 0x7F) < 2) set_isft(s, 2);
-                if (effects) mzm_particle_set(effects, py, px, MZM_PE_HITTING_SOMETHING_INVINCIBLE);
-                proj->active = false;
-                continue;
-            }
-            if (proj->type == MZM_PROJECTILE_CHARGED_PISTOL &&
-                s->samus_collision == SSC_SPACE_PIRATE) {
-                s->standing_on = MZM_STANDING_ON_SPRITE_OFF;
-                s->freeze_timer = 60;
-                s->palette_row = 1;
-                s->absolute_palette_row = 1;
-                if (effects)
-                    mzm_particle_set(effects, py, px, MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM);
-                proj->active = false;
-                continue;
-            }
-            /* The Plasma Beam goes through the sprites it hits. */
-            bool plasma = proj->type == MZM_PROJECTILE_PLASMA_BEAM ||
-                          proj->type == MZM_PROJECTILE_CHARGED_PLASMA_BEAM;
-            /* The particle at the projectile: its impact, or the
-             * invincible impact when the sprite is not weak to it. */
-            uint8_t effect = MZM_PE_HITTING_SOMETHING_INVINCIBLE;
-            bool missile = proj->type == MZM_PROJECTILE_MISSILE ||
-                           proj->type == MZM_PROJECTILE_SUPER_MISSILE;
-            if (s->solid_for_projectiles) {
-                /* The SP_SOLID_FOR_PROJECTILES case of each hit routine:
-                 * the projectile's own impact particle, the projectile
-                 * removed (the Plasma Beam goes through). */
-                hit_solid(s);
-                if (effects) mzm_particle_set(effects, py, px, solid_hit_effect(proj->type, weapons->items));
-                if (!plasma) proj->active = false;
-                continue;
-            }
-            if (s->immune_to_projectiles) {
-                /* ProjectileHitSpriteImmuneToProjectiles; missiles tumble. */
-                if ((s->isft & 0x7F) < 2) set_isft(s, 2);
-                if (effects) mzm_particle_set(effects, py, px, effect);
-                if (missile) mzm_projectile_start_tumbling(proj, s->x);
-                else if (!plasma) proj->active = false;
-                continue;
-            }
-            uint8_t freeze_flag = s->secondary ? tables->secondary_freeze[s->sprite_id]
-                                               : tables->freeze[s->sprite_id];
-            switch (proj->type) {
-            case MZM_PROJECTILE_BEAM:   /* ProjectileHitSprite */
-                if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
-                    deal_damage(s, NORMAL_BEAM_DAMAGE);
-                    effect = MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
-                } else {
-                    hit_solid(s);
-                }
-                break;
-            case MZM_PROJECTILE_MISSILE:    /* ProjectileMissileHitSprite */
-                if (weakness & MZM_WEAKNESS_MISSILES) {
-                    deal_damage(s, MISSILE_DAMAGE);
-                    effect = MZM_PE_HITTING_SOMETHING_WITH_MISSILE;
-                } else {
-                    hit_solid(s);
-                    if (effects) mzm_particle_set(effects, py, px, effect);
-                    mzm_projectile_start_tumbling(proj, s->x);
-                    continue;
-                }
-                break;
-            case MZM_PROJECTILE_LONG_BEAM:  /* ProjectileHitSprite, LONG_BEAM_DAMAGE */
-                if (weakness & MZM_WEAKNESS_BEAM_BOMBS) {
-                    deal_damage(s, LONG_BEAM_DAMAGE);
-                    effect = MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM;
-                } else {
-                    hit_solid(s);
-                }
-                break;
-            case MZM_PROJECTILE_CHARGED_BEAM:
-            case MZM_PROJECTILE_CHARGED_LONG_BEAM:
-            case MZM_PROJECTILE_CHARGED_PISTOL: {
-                /* ProjectileNonIceChargedHitSprite */
-                bool is_long = proj->type == MZM_PROJECTILE_CHARGED_LONG_BEAM;
-                if (weakness & (MZM_WEAKNESS_CHARGE_BEAM_PISTOL | MZM_WEAKNESS_BEAM_BOMBS)) {
-                    uint16_t damage = proj->type == MZM_PROJECTILE_CHARGED_PISTOL ?
-                        CHARGED_PISTOL_DAMAGE : is_long ? CHARGED_LONG_BEAM_DAMAGE :
-                        CHARGED_NORMAL_BEAM_DAMAGE;
-                    deal_damage(s, damage);
-                    effect = is_long || proj->type == MZM_PROJECTILE_CHARGED_PISTOL ?
-                        MZM_PE_HITTING_SOMETHING_WITH_LONG_BEAM :
-                        MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM;
-                } else {
-                    hit_solid(s);
-                }
-                break;
-            }
-            case MZM_PROJECTILE_ICE_BEAM:
-            case MZM_PROJECTILE_CHARGED_ICE_BEAM: {
-                bool charged = proj->type == MZM_PROJECTILE_CHARGED_ICE_BEAM;
-                bool is_long = weapons->items & MZM_ITEM_LONG_BEAM;
-                uint16_t damage = charged ? (is_long ? CHARGED_ICE_LONG_BEAM_DAMAGE : CHARGED_ICE_BEAM_DAMAGE)
-                                          : (is_long ? ICE_LONG_BEAM_DAMAGE : ICE_BEAM_DAMAGE);
-                ice_hit(s, weakness, freeze_flag, weapons->frame8, damage, charged, effects, py, px,
-                        MZM_PE_HITTING_SOMETHING_WITH_ICE_BEAM);
-                proj->active = false;
-                continue;
-            }
-            case MZM_PROJECTILE_WAVE_BEAM:
-            case MZM_PROJECTILE_CHARGED_WAVE_BEAM:
-            case MZM_PROJECTILE_PLASMA_BEAM:
-            case MZM_PROJECTILE_CHARGED_PLASMA_BEAM: {
-                /* The Wave and Plasma cases of ProjectileCheckHittingSprite:
-                 * WAVE_* / PLASMA_* damage (3, one more per other beam;
-                 * charged 12, four more per other beam), ice hits with the
-                 * Ice Beam (the full beam particles), else ProjectileHitSprite
-                 * or ProjectileNonIceChargedHitSprite. */
-                bool charged = proj->type == MZM_PROJECTILE_CHARGED_WAVE_BEAM ||
-                               proj->type == MZM_PROJECTILE_CHARGED_PLASMA_BEAM;
-                uint32_t items = weapons->items;
-                int extra = (items & MZM_ITEM_LONG_BEAM ? 1 : 0) + (items & MZM_ITEM_ICE_BEAM ? 1 : 0) +
-                            (plasma && items & MZM_ITEM_WAVE_BEAM ? 1 : 0);
-                uint16_t damage = (uint16_t)(charged ? 12 + 4 * extra : 3 + extra);
-                if (items & MZM_ITEM_ICE_BEAM) {
-                    ice_hit(s, weakness, freeze_flag, weapons->frame8, damage, charged, effects, py, px,
-                            plasma ? MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM
-                                   : MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM_NO_PLASMA);
-                    if (!plasma) proj->active = false;
-                    continue;
-                }
-                if (weakness & (charged ? MZM_WEAKNESS_CHARGE_BEAM_PISTOL | MZM_WEAKNESS_BEAM_BOMBS
-                                        : MZM_WEAKNESS_BEAM_BOMBS)) {
-                    deal_damage(s, damage);
-                    effect = plasma ? MZM_PE_HITTING_SOMETHING_WITH_PLASMA_BEAM
-                                    : MZM_PE_HITTING_SOMETHING_WITH_WAVE_BEAM;
-                } else {
-                    hit_solid(s);
-                }
-                if (effects) mzm_particle_set(effects, py, px, effect);
-                if (!plasma) proj->active = false;
-                continue;
-            }
-            case MZM_PROJECTILE_BOMB:
-            case MZM_PROJECTILE_POWER_BOMB:
-            case MZM_PROJECTILE_PISTOL:
-                break;
-            case MZM_PROJECTILE_SUPER_MISSILE:
-                if (weakness & (MZM_WEAKNESS_MISSILES | MZM_WEAKNESS_SUPER_MISSILES)) {
-                    deal_damage(s, SUPER_MISSILE_DAMAGE);
-                    effect = MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE;
-                } else {
-                    hit_solid(s);
-                    if (effects) mzm_particle_set(effects, py, px, effect);
-                    mzm_projectile_start_tumbling(proj, s->x);
-                    continue;
-                }
-                break;
-            }
-            if (effects) mzm_particle_set(effects, py, px, effect);
-            proj->active = false;
+            projectile_hit(s, proj, weapons, tables, effects, weakness, py, px);
         }
     }
     for (int p = 0; p < MZM_MAX_PROJECTILES; ++p) weapons->list[p].hits_sprites = false;

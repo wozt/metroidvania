@@ -3838,6 +3838,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0369 - Mecha Ridley cover, core, death and escape start
+
+- Ported `BlackSpacePirateProjectileCollision` for the Mecha Ridley parts:
+  they test projectile positions inside their own hitboxes. Beams other
+  than the Plasma Beam are absorbed, immune parts make missiles tumble, and
+  the cover takes the damage. The cover and the core are weak only to
+  missiles. The projectile hit routines were extracted into one shared
+  function, without changing the common pass.
+- Below three quarters of its health the cover enables the fireballs. At
+  zero it explodes, exposing the core with the core's own health; its
+  quarters set the health threshold and the parts' damage tints. The
+  exporter bakes the damage tints (palette rows 2 to 4). Tables whose rows
+  would overflow the eight-row palette keep their untinted look.
+- The death sequence runs from the boss explosion and music fade through
+  the timed explosions, the collapse, ten grouped large energy drops and
+  the eye's last looks (the missing `EyeDying` table is now exported). It
+  ends by setting event 74, showing the Chozodia escape banner (which starts
+  the escape), unlocking the doors and playing the escape music. The
+  palette and destroyed-graphics copies keep only their timing.
+- The ROM-free regression covers the beam absorption, missile damage and
+  tumbling, the cover threshold and explosion, core exposure, health
+  thresholds and tints, and every death stage up to the escape start.
+- A scripted super-missile fight in `chozodia_072` damaged the cover and
+  triggered the high-stance fireball attack in game (ignored
+  `captures/mecha-ridley/fireballs.png`). The scripted Samus died before
+  winning, so the core, death and escape are not yet confirmed in game.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0368 - Mecha Ridley laser, missiles and fireballs
 
 - Ported the three Mecha Ridley weapon actors. The eye's laser attack

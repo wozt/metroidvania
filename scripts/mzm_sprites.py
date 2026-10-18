@@ -150,7 +150,8 @@ def mecha_ridley_weapon_vram(vram: bytes, weapons: bytes, first_tile: int) -> by
     return bytes(staged)
 
 
-ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
+TINT_OVERFLOW_ALLOWED = ("PSPRITE_MECHA_RIDLEY",)
+ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_MECHA_RIDLEY": (2, 3, 4), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
@@ -700,14 +701,22 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                     continue
                 for flip in flips:
                     frames = []
-                    for pointer, duration in entries:
-                        try:
-                            pixels = mzm_projectile_compose.render(rom, vram, colours, pointer, flip)
-                        except ValueError as exc:
-                            raise ValueError(
-                                f"{sprite}/{table}{suffix}/{flip}: {exc}") from exc
-                        bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
-                        frames.append((bmp, duration, left, top))
+                    try:
+                        for pointer, duration in entries:
+                            try:
+                                pixels = mzm_projectile_compose.render(rom, vram, colours, pointer, flip)
+                            except ValueError as exc:
+                                raise ValueError(
+                                    f"{sprite}/{table}{suffix}/{flip}: {exc}") from exc
+                            bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+                            frames.append((bmp, duration, left, top))
+                    except ValueError:
+                        # A Mecha Ridley damage tint shifting a part past the
+                        # sprite's eight rows reads another sprite's OBJ row
+                        # natively; that table keeps its untinted look.
+                        if sprite in TINT_OVERFLOW_ALLOWED and suffix.startswith("/row"):
+                            continue
+                        raise
                     library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}{suffix}",
                                 frames)
             if sprite == "PSPRITE_MECHA_RIDLEY" and table in MECHA_RIDLEY_WEAPON_TABLES:

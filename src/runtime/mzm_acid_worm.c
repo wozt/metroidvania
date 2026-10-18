@@ -14,8 +14,8 @@ enum {
     AW_SPAWN_EXTEND = 0x43, AW_SPAWN_TOP = 0x45, AW_SPAWN_RETRACT = 0x47,
     AW_DYING_INIT = 0x62, AW_DYING_FLASH = 0x67, AW_DYING = 0x68,
     AW_PART_MOVING = 0x43, AW_PART_IDLE = 0x9, AW_PART_DYING = 0x67,
-    AW_SPIT_MOVING = 0x9, AW_SPIT_EXPLODING = 0x43,
-    AW_PARTS = 9, AW_WEAK_POINT = 1, AW_MAX_EXTENSION = BLOCK_SIZE * 4,
+    AW_SPIT_MOVING = 0x9, AW_SPIT_EXPLODING = 0x43, AW_SPIT_ACID = 0x45,
+    AW_PARTS = 9, AW_WEAK_POINT = 2,
 };
 
 static MzmSprite *slot(const Ctx *c, uint8_t index) {
@@ -60,10 +60,52 @@ static bool on_zipline(const Ctx *c) {
            pose == MZM_POSE_TURNING_ON_ZIPLINE || pose == MZM_POSE_MORPH_BALL_ON_ZIPLINE;
 }
 
+static void handle_rotation(Ctx *c, MzmSprite *s) {
+    uint8_t angle = (uint8_t)(s->rotation +
+        ((s->status & MZM_SPRITE_STATUS_FACING_RIGHT) ? 128 : 0));
+    int32_t base_radius = c->f->globals->sub1.work3 ? BLOCK_SIZE * 6 : BLOCK_SIZE * 4;
+    int32_t radius = base_radius;
+    uint8_t offset = s->work3;
+    int16_t swing = c->tables->acid_worm_swinging[offset];
+    if (swing == SHORT_MAX) {
+        offset = 0;
+        swing = c->tables->acid_worm_swinging[0];
+    }
+    s->work3 = (uint8_t)(offset + 1);
+    if (s->health)
+        radius += (int32_t)swing * 16 * (s->room_slot / 4 + 1);
+    else
+        radius += (int32_t)swing * 16;
+    int32_t sine = c->tables->sine[angle];
+    int32_t cosine = c->tables->sine[angle + 64];
+    int32_t x = c->f->globals->sub1.x;
+    x += s->status & MZM_SPRITE_STATUS_FACING_RIGHT ? base_radius : -base_radius;
+    s->y = (uint16_t)((int32_t)c->f->globals->sub1.y + sine * radius / 256);
+    s->x = (uint16_t)(x + cosine * radius / 256);
+}
+
+static void wiggle_horizontally(Ctx *c, MzmSprite *s) {
+    uint8_t offset = s->work2;
+    int16_t movement = c->tables->acid_worm_head_x[offset];
+    if (movement == SHORT_MAX) {
+        offset = 20;
+        movement = c->tables->acid_worm_head_x[20];
+    }
+    s->work2 = (uint8_t)(offset + 1);
+    s->x = (uint16_t)(s->x + movement);
+}
+
+static void splash_if_crossed(const Ctx *c, uint16_t old_y, uint16_t new_y) {
+    if (!c->world->effect_y) return;
+    if ((old_y < c->world->effect_y && new_y >= c->world->effect_y) ||
+        (old_y >= c->world->effect_y && new_y < c->world->effect_y))
+        mzm_sfx_play(MZM_SOUND_ACID_WORM_SPLASHING);
+}
+
 static void spawn_parts(Ctx *c) {
-    for (uint8_t part = 0; part < AW_PARTS; ++part)
+    for (uint8_t part = 1; part <= AW_PARTS; ++part)
         ai_spawn_secondary(c, MZM_SSPRITE_ACID_WORM_PART, part, c->s->gfx_slot,
-                           (uint16_t)(c->s->y_spawn + BLOCK_SIZE * (part + 1)),
+                           (uint16_t)(c->s->y_spawn + BLOCK_SIZE * part),
                            c->s->x_spawn, 0);
 }
 
@@ -102,6 +144,8 @@ static void init_main(Ctx *c) {
     c->f->globals->sub1.health = (uint16_t)(s->y_spawn - BLOCK_SIZE * 2);
     c->f->globals->sub1.work2 = 0;
     c->f->globals->sub1.work3 = 0;
+    s->work2 = 20;
+    s->work3 = 0;
     s->room_slot = 0;
     s->pose = AW_CHECK_ZIPLINE;
     door_timer(c, 1);
@@ -112,20 +156,29 @@ static void start_intro(Ctx *c) {
     MzmSprite *s = c->s;
     s->pose = AW_SPAWN_EXTEND;
     s->work0 = 0;
-    s->status &= ~MZM_SPRITE_STATUS_FACING_DOWN;
-    open_column(c, false);
+    s->status &= (uint16_t)~(MZM_SPRITE_STATUS_FACING_DOWN |
+                             MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+    c->f->globals->sub1.work2 = 1;
+    change_pair(c, s->y_spawn, s->x_spawn);
     mzm_screen_shake_start_vertical(60, 0x81);
     mzm_screen_shake_start_horizontal(60, 0x81);
     mzm_sfx_play(MZM_SOUND_ACID_WORM_DESTROYING_BLOCKS);
     mzm_sfx_play(MZM_SOUND_ACID_WORM_STRAIGHT_EXTEND);
+    mzm_sfx_music_play(MZM_MUSIC_WORMS_BATTLE, 0);
 }
 
 static void intro(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->pose == AW_SPAWN_EXTEND) {
-        if (s->y > s->y_spawn - BLOCK_SIZE * 7) {
+        if (s->y >= s->y_spawn - BLOCK_SIZE * 7) {
+            uint16_t old_y = s->y;
             s->y = (uint16_t)(s->y - QUARTER_BLOCK_SIZE);
+            splash_if_crossed(c, old_y, s->y);
             move_acid(c, 1);
+            if (++s->work0 == 4)
+                change_pair(c, (uint16_t)(s->y_spawn - BLOCK_SIZE), s->x_spawn);
+            else if (s->work0 == 8)
+                change_pair(c, (uint16_t)(s->y_spawn - BLOCK_SIZE * 2), s->x_spawn);
             return;
         }
         s->pose = AW_SPAWN_TOP;
@@ -135,7 +188,7 @@ static void intro(Ctx *c) {
         return;
     }
     if (s->pose == AW_SPAWN_TOP) {
-        s->x = (uint16_t)(s->x_spawn + ((c->f->frame8 >> 2) & 3) - 1);
+        wiggle_horizontally(c, s);
         if (s->work0 && --s->work0) return;
         s->pose = AW_SPAWN_RETRACT;
         ai_set_anim(s, MZM_ACID_WORM_MOUTH_CLOSED);
@@ -143,13 +196,19 @@ static void intro(Ctx *c) {
         return;
     }
     if (s->y < s->y_spawn) {
+        uint16_t old_y = s->y;
+        wiggle_horizontally(c, s);
         s->y = (uint16_t)(s->y + QUARTER_BLOCK_SIZE);
-        move_acid(c, -1);
+        splash_if_crossed(c, old_y, s->y);
+        if (c->world->effect_y > c->f->globals->sub1.health) move_acid(c, -1);
         return;
     }
     s->y = s->y_spawn;
     s->pose = AW_IDLE_INIT;
     s->work0 = 60;
+    s->status |= MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE;
+    s->scaling = 256;
+    s->rotation = 0;
 }
 
 static void idle(Ctx *c) {
@@ -161,11 +220,17 @@ static void idle(Ctx *c) {
         if (!s->work0) s->work0 = 60;
         return;
     }
+    if (c->world->effect_y > c->f->globals->sub1.health) move_acid(c, -1);
+    if (c->f->samus_y > c->world->effect_y || c->f->samus_y > s->y) {
+        s->work0 = 60;
+        return;
+    }
     if (s->work0 && --s->work0) return;
-    int dx = (int)c->f->samus_x - (int)s->x_spawn;
-    int dy = (int)s->y_spawn - (int)c->f->samus_y;
-    c->f->globals->sub1.work3 = dx < -BLOCK_SIZE * 7 || dx > BLOCK_SIZE * 7 ||
-                                      dy > BLOCK_SIZE * 4;
+    uint32_t vertical = (uint16_t)(s->y - c->f->samus_y -
+        (BLOCK_SIZE + QUARTER_BLOCK_SIZE + 1));
+    c->f->globals->sub1.work3 = vertical >= BLOCK_SIZE * 4 - QUARTER_BLOCK_SIZE - 1 ||
+        c->f->samus_x <= s->x_spawn - BLOCK_SIZE * 7 ||
+        c->f->samus_x >= s->x_spawn + BLOCK_SIZE * 7;
     ai_face_samus(c);
     s->status &= ~MZM_SPRITE_STATUS_FACING_DOWN;
     ai_set_anim(s, MZM_ACID_WORM_WARNING);
@@ -180,8 +245,8 @@ static void start_extension(Ctx *c) {
     s->pose = AW_EXTENDING;
     s->work0 = 8;
     s->work1 = 0;
-    mzm_sfx_play(c->f->globals->sub1.work3 ? MZM_SOUND_ACID_WORM_EXTEND_TO_SPIT :
-                                            MZM_SOUND_ACID_WORM_EXTEND_SLOW);
+    if (c->f->globals->sub1.health == s->y_spawn - BLOCK_SIZE * 3)
+        move_acid(c, -BLOCK_SIZE);
 }
 
 static void spawn_spit(Ctx *c, uint8_t behavior) {
@@ -193,67 +258,220 @@ static void spawn_spit(Ctx *c, uint8_t behavior) {
                        (uint16_t)(s->x + side), status);
 }
 
+static void play_retracting_sound(const Ctx *c) {
+    mzm_sfx_play(c->f->globals->sub1.work3 ? MZM_SOUND_ACID_WORM_RETRACT_FROM_SPIT :
+                                            MZM_SOUND_ACID_WORM_RETRACT);
+}
+
+static bool abort_extension_on_samus(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (!(s->status & MZM_SPRITE_STATUS_SAMUS_COLLIDING)) return false;
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+    ai_set_anim(s, MZM_ACID_WORM_MOUTH_CLOSED);
+    s->pose = AW_RETRACTING;
+    play_retracting_sound(c);
+    return true;
+}
+
+static void extension_crash(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t maximum = c->tables->health[s->sprite_id];
+    uint16_t y = s->y;
+    uint16_t x = (uint16_t)(s->x +
+        ((s->status & MZM_SPRITE_STATUS_FACING_RIGHT) ? BLOCK_SIZE : -BLOCK_SIZE));
+    if (s->health <= maximum / 4) {
+        mzm_screen_shake_start_vertical(40, 0x81);
+        mzm_screen_shake_start_horizontal(40, 0x81);
+        ai_debris_init(c, 17, (uint16_t)(y - BLOCK_SIZE - PIXEL_SIZE / 2),
+                       (uint16_t)(x - HALF_BLOCK_SIZE));
+        ai_debris_init(c, 4, y, x);
+        ai_debris_init(c, 18, y,
+                       (uint16_t)(x + BLOCK_SIZE - EIGHTH_BLOCK_SIZE - PIXEL_SIZE));
+        ai_debris_init(c, 19, (uint16_t)(y - BLOCK_SIZE - HALF_BLOCK_SIZE + PIXEL_SIZE),
+                       (uint16_t)(x - BLOCK_SIZE + PIXEL_SIZE / 2));
+        ai_debris_init(c, 4, (uint16_t)(y + HALF_BLOCK_SIZE),
+                       (uint16_t)(x + HALF_BLOCK_SIZE));
+        ai_debris_init(c, 18, (uint16_t)(y + BLOCK_SIZE), x);
+        ai_particle_set(c, (uint16_t)(y + HALF_BLOCK_SIZE), x,
+                        MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+        s->work0 = 120;
+        mzm_sfx_play(MZM_SOUND_ACID_WORM_CRASHING_FAST);
+    } else if (s->health <= maximum / 2) {
+        mzm_screen_shake_start_vertical(20, 0x81);
+        mzm_screen_shake_start_horizontal(20, 0x81);
+        ai_debris_init(c, 17, (uint16_t)(y - BLOCK_SIZE - PIXEL_SIZE / 2),
+                       (uint16_t)(x - HALF_BLOCK_SIZE));
+        ai_debris_init(c, 18, y,
+                       (uint16_t)(x + BLOCK_SIZE - EIGHTH_BLOCK_SIZE - PIXEL_SIZE));
+        ai_debris_init(c, 19, (uint16_t)(y - BLOCK_SIZE - HALF_BLOCK_SIZE + PIXEL_SIZE),
+                       (uint16_t)(x - BLOCK_SIZE + PIXEL_SIZE / 2));
+        ai_debris_init(c, 4, (uint16_t)(y + HALF_BLOCK_SIZE),
+                       (uint16_t)(x + HALF_BLOCK_SIZE));
+        ai_particle_set(c, (uint16_t)(y + HALF_BLOCK_SIZE), x,
+                        MZM_PE_SPRITE_EXPLOSION_BIG);
+        s->work0 = 140;
+        mzm_sfx_play(MZM_SOUND_ACID_WORM_CRASHING_NORMAL);
+    } else {
+        mzm_screen_shake_start_vertical(10, 0x81);
+        mzm_screen_shake_start_horizontal(10, 0x81);
+        ai_debris_init(c, 18, (uint16_t)(y - BLOCK_SIZE - PIXEL_SIZE / 2),
+                       (uint16_t)(x - HALF_BLOCK_SIZE));
+        ai_debris_init(c, 4, (uint16_t)(y + HALF_BLOCK_SIZE),
+                       (uint16_t)(x + HALF_BLOCK_SIZE));
+        ai_particle_set(c, (uint16_t)(y + HALF_BLOCK_SIZE), x,
+                        MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        s->work0 = 160;
+        mzm_sfx_play(MZM_SOUND_ACID_WORM_CRASHING_SLOW);
+    }
+    if (c->f->difficulty == 0) s->work0 = (uint8_t)(s->work0 + 60);
+    else if (c->f->difficulty == 2) s->work0 = (uint8_t)(s->work0 - 20);
+    s->work1 = 0;
+    ai_set_anim(s, MZM_ACID_WORM_MOUTH_CLOSED);
+}
+
 static void attack(Ctx *c) {
     MzmSprite *s = c->s;
     bool right = (s->status & MZM_SPRITE_STATUS_FACING_RIGHT) != 0;
     if (s->pose == AW_WARNING) {
-        if (s->work0 && --s->work0) return;
+        handle_rotation(c, s);
+        if (!ai_animation_ending(c, 1)) return;
         start_extension(c);
         return;
     }
     if (s->pose == AW_EXTENDING) {
-        if (s->work0 && --s->work0) return;
-        unsigned speed = s->health <= c->tables->health[s->sprite_id] / 4 ? 8 :
-                         s->health <= c->tables->health[s->sprite_id] / 2 ? 6 : 4;
-        unsigned extension = s->work1 * 4u + speed;
-        if (extension > AW_MAX_EXTENSION) extension = AW_MAX_EXTENSION;
-        s->work1 = (uint8_t)(extension / 4);
-        s->y = (uint16_t)(s->y_spawn - extension);
-        s->x = (uint16_t)(s->x_spawn + (right ? (int)extension * 3 / 4 :
-                                                -(int)extension * 3 / 4));
+        if (s->work0) {
+            if (--s->work0 == 0) {
+                uint16_t maximum = c->tables->health[s->sprite_id];
+                mzm_sfx_play(c->f->globals->sub1.work3 ? MZM_SOUND_ACID_WORM_EXTEND_TO_SPIT :
+                    s->health <= maximum / 4 ? MZM_SOUND_ACID_WORM_EXTEND_FAST :
+                    s->health <= maximum / 2 ? MZM_SOUND_ACID_WORM_EXTEND_NORMAL :
+                                               MZM_SOUND_ACID_WORM_EXTEND_SLOW);
+            }
+            return;
+        }
         move_acid(c, 1);
-        if (extension < AW_MAX_EXTENSION) return;
+        uint16_t maximum = c->tables->health[s->sprite_id];
+        uint8_t speed = c->f->globals->sub1.work3 ? 2 :
+                        s->health <= maximum / 4 ? 4 :
+                        s->health <= maximum / 2 ? 3 : 2;
+        unsigned checks = 0;
+        uint8_t rotation = (uint8_t)s->rotation;
+        if (right) {
+            if (rotation >= 63) checks++;
+            else s->rotation = (uint8_t)(rotation + speed);
+            if (c->f->globals->sub1.x < s->x_spawn + BLOCK_SIZE)
+                c->f->globals->sub1.x = (uint16_t)(c->f->globals->sub1.x + speed);
+            else checks++;
+        } else {
+            if ((uint8_t)(rotation - 1) <= 191) checks++;
+            else s->rotation = (uint8_t)(rotation - speed);
+            if (c->f->globals->sub1.x > s->x_spawn - BLOCK_SIZE)
+                c->f->globals->sub1.x = (uint16_t)(c->f->globals->sub1.x - speed);
+            else checks++;
+        }
+        if (c->f->globals->sub1.y > s->y_spawn - THREE_QUARTER_BLOCK_SIZE)
+            c->f->globals->sub1.y = (uint16_t)(c->f->globals->sub1.y - speed);
+        else checks++;
+        uint16_t old_y = s->y;
+        handle_rotation(c, s);
+        splash_if_crossed(c, old_y, s->y);
+        if (abort_extension_on_samus(c) || checks != 3) return;
         s->pose = AW_EXTENDED;
-        s->work0 = c->f->globals->sub1.work3 ? 90 :
-                   (uint8_t)(c->f->difficulty == 0 ? 180 : c->f->difficulty == 2 ? 100 : 140);
-        s->work2 = 0;
-        ai_set_anim(s, c->f->globals->sub1.work3 ? MZM_ACID_WORM_SPITTING :
-                                                  MZM_ACID_WORM_MOUTH_CLOSED);
-        mzm_screen_shake_start_vertical(20, 0x81);
-        mzm_screen_shake_start_horizontal(20, 0x81);
-        mzm_sfx_play(MZM_SOUND_ACID_WORM_CRASHING_SLOW);
+        if (c->f->globals->sub1.work3)
+            ai_set_anim(s, MZM_ACID_WORM_SPITTING);
+        else
+            extension_crash(c);
         return;
     }
     if (s->pose == AW_EXTENDED) {
+        handle_rotation(c, s);
         if (c->f->globals->sub1.work3) {
-            if (s->work2 == 18) { mzm_sfx_play(MZM_SOUND_ACID_WORM_SPITTING); spawn_spit(c, 0); }
-            if (s->work2 == 36) spawn_spit(c, 1);
-            if (s->work2 == 54) spawn_spit(c, 2);
-            s->work2++;
-        } else if ((s->work2++ & 31) == 0) {
-            mzm_sfx_play(MZM_SOUND_ACID_WORM_HOOKED_ON_BLOCK);
+            bool finished = c->f->samus_x > s->x_spawn - BLOCK_SIZE * 7 &&
+                            c->f->samus_x < s->x_spawn + BLOCK_SIZE * 7;
+            if (s->frame == 1 && s->adc == 1)
+                mzm_sfx_play(MZM_SOUND_ACID_WORM_OPENING_MOUTH_TO_SPIT);
+            else if (s->frame == 2 && s->adc == 1)
+                mzm_sfx_play(MZM_SOUND_ACID_WORM_SPITTING);
+            else if (s->frame == 5 && s->adc == 1) spawn_spit(c, 0);
+            else if (s->frame == 7 && s->adc == 1) spawn_spit(c, 1);
+            else if (s->frame == 9 && s->adc == 1) spawn_spit(c, 2);
+            if (!finished && !ai_animation_ending(c, 1)) return;
+        } else {
+            if (abort_extension_on_samus(c)) return;
+            if ((s->work1++ & 31) == 0) mzm_sfx_play(MZM_SOUND_ACID_WORM_HOOKED_ON_BLOCK);
+            if (s->work0 && --s->work0) return;
         }
-        if (s->work0 && --s->work0) return;
-        s->pose = AW_RETRACTING;
         ai_set_anim(s, MZM_ACID_WORM_MOUTH_CLOSED);
-        mzm_sfx_play(c->f->globals->sub1.work3 ? MZM_SOUND_ACID_WORM_RETRACT_FROM_SPIT :
-                                                MZM_SOUND_ACID_WORM_RETRACT);
+        s->pose = AW_RETRACTING;
+        play_retracting_sound(c);
         return;
     }
-    if (s->work1) {
-        unsigned extension = s->work1 * 4u;
-        extension = extension > 2 ? extension - 2 : 0;
-        s->work1 = (uint8_t)(extension / 4);
-        s->y = (uint16_t)(s->y_spawn - extension);
-        s->x = (uint16_t)(s->x_spawn + (right ? (int)extension * 3 / 4 :
-                                                -(int)extension * 3 / 4));
-        move_acid(c, -1);
-        return;
+    unsigned checks = 0;
+    uint8_t rotation = (uint8_t)s->rotation;
+    if (right) {
+        if (rotation < 3) { s->rotation = 0; checks++; }
+        else s->rotation = (uint8_t)(rotation - 2);
+        if (c->f->globals->sub1.x > s->x_spawn)
+            c->f->globals->sub1.x -= 2;
+        else { c->f->globals->sub1.x = s->x_spawn; checks++; }
+    } else {
+        if (rotation < 3) { s->rotation = 0; checks++; }
+        else s->rotation = (uint8_t)(rotation + 2);
+        if (c->f->globals->sub1.x < s->x_spawn)
+            c->f->globals->sub1.x += 2;
+        else { c->f->globals->sub1.x = s->x_spawn; checks++; }
     }
-    s->x = s->x_spawn;
-    s->y = s->y_spawn;
+    if (c->f->globals->sub1.y < s->y_spawn)
+        c->f->globals->sub1.y += 2;
+    else { c->f->globals->sub1.y = s->y_spawn; checks++; }
+    if (c->world->effect_y > c->f->globals->sub1.health) move_acid(c, -1);
+    uint16_t old_y = s->y;
+    handle_rotation(c, s);
+    splash_if_crossed(c, old_y, s->y);
+    if (checks != 3) return;
+    if (s->health <= c->tables->health[s->sprite_id] / 2 && c->f->difficulty != 0) {
+        s->status ^= MZM_SPRITE_STATUS_MOSAIC;
+        uint32_t vertical = (uint32_t)((int32_t)s->y - c->f->samus_y -
+                                      (BLOCK_SIZE + QUARTER_BLOCK_SIZE + 1));
+        if ((s->status & MZM_SPRITE_STATUS_MOSAIC) &&
+            vertical < BLOCK_SIZE * 4 - QUARTER_BLOCK_SIZE - 1 &&
+            c->f->samus_x > s->x_spawn - BLOCK_SIZE * 7 &&
+            c->f->samus_x < s->x_spawn + BLOCK_SIZE * 7) {
+            s->pose = AW_RAISE_ACID;
+            ai_set_anim(s, MZM_ACID_WORM_MOVING);
+            s->work0 = 40;
+            mzm_sfx_play(MZM_SOUND_ACID_WORM_RAISING_ACID);
+            return;
+        }
+        s->work0 = (uint8_t)(60 + (c->rng & 7) * 8);
+    } else {
+        s->work0 = (uint8_t)(80 + (c->rng & 7) * 8);
+    }
     s->pose = AW_IDLE_INIT;
-    s->work0 = (uint8_t)(80 + (c->rng & 31));
+}
+
+static void acid_cycle(Ctx *c) {
+    MzmSprite *s = c->s;
+    if ((c->frame8 & 15) == 0) mzm_screen_shake_start_horizontal(10, 0x81);
+    if (s->pose == AW_RAISE_ACID) {
+        if (s->work0) { --s->work0; return; }
+        move_acid(c, -1);
+        int32_t projected = (int32_t)c->world->effect_y - 1;
+        if (projected < (int32_t)s->y_spawn - BLOCK_SIZE * 5) {
+            s->pose = AW_LOWER_ACID;
+            mzm_sfx_play(MZM_SOUND_ACID_WORM_LOWERING_ACID);
+        }
+        return;
+    }
+    move_acid(c, 1);
+    int32_t projected = (int32_t)c->world->effect_y + 1;
+    if (projected > (int32_t)s->y_spawn - BLOCK_SIZE * 3) {
+        s->pose = AW_IDLE_INIT;
+        s->work0 = 1;
+        move_acid(c, (int16_t)((int32_t)s->y_spawn - BLOCK_SIZE * 3 - projected));
+        if (c->f->globals->sub1.health == s->y_spawn - BLOCK_SIZE * 2)
+            c->f->globals->sub1.health = (uint16_t)(s->y_spawn - BLOCK_SIZE * 3);
+    }
 }
 
 static void start_death(Ctx *c) {
@@ -297,7 +515,10 @@ static void main_ai(Ctx *c) {
     if (s->health == 0 && s->pose < AW_DYING_INIT) s->pose = AW_DYING_INIT;
     switch (s->pose) {
     case AW_CHECK_ZIPLINE:
-        if (on_zipline(c)) s->pose = AW_CHECK_SPAWN;
+        if (on_zipline(c)) {
+            s->pose = AW_CHECK_SPAWN;
+            mzm_sfx_music_fade(18);
+        }
         break;
     case AW_CHECK_SPAWN:
         if (on_zipline(c) && c->f->samus_x > s->x_spawn - (BLOCK_SIZE * 2 + 12) &&
@@ -306,6 +527,7 @@ static void main_ai(Ctx *c) {
     case AW_SPAWN_EXTEND: case AW_SPAWN_TOP: case AW_SPAWN_RETRACT: intro(c); break;
     case AW_IDLE_INIT: case AW_IDLE: idle(c); break;
     case AW_WARNING: case AW_EXTENDING: case AW_EXTENDED: case AW_RETRACTING: attack(c); break;
+    case AW_RAISE_ACID: case AW_LOWER_ACID: acid_cycle(c); break;
     case AW_DYING_INIT: start_death(c); break;
     case AW_DYING_FLASH: case AW_DYING: dying(c); break;
     default: s->pose = AW_IDLE_INIT; break;
@@ -320,54 +542,129 @@ static void init_part(Ctx *c) {
         MZM_ACID_WORM_PART_SEGMENT, MZM_ACID_WORM_PART_SEGMENT,
         MZM_ACID_WORM_PART_SEGMENT, MZM_ACID_WORM_PART_SEGMENT, MZM_ACID_WORM_PART_SEGMENT,
     };
-    s->status &= ~MZM_SPRITE_STATUS_NOT_DRAWN;
+    if (s->room_slot < 1 || s->room_slot > AW_PARTS) { s->status = 0; return; }
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
     s->pose = AW_PART_MOVING;
     s->draw_top = s->draw_bottom = s->draw_horizontal = 16;
-    s->draw_order = s->room_slot < 4 ? 3 : 5;
-    s->hitbox_top = s->hitbox_left = -(s->room_slot == AW_WEAK_POINT ? 48 : 32);
-    s->hitbox_bottom = s->hitbox_right = -s->hitbox_top;
-    s->samus_collision = SSC_HURTS_SAMUS;
+    s->samus_collision = SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY_NO_CONTACT_DAMAGE;
     s->health = 0x400;
     s->immune_to_projectiles = s->room_slot != AW_WEAK_POINT;
     s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
-    ai_set_anim(s, anim[s->room_slot < AW_PARTS ? s->room_slot : 0]);
+    s->work0 = (uint8_t)(s->room_slot * 8);
+    s->work2 = (uint8_t)(20 - s->room_slot * 2);
+    static const uint8_t swing_offsets[AW_PARTS] = {8, 16, 24, 32, 0, 8, 16, 24, 32};
+    s->work3 = swing_offsets[s->room_slot - 1];
+    if (s->room_slot == 1) {
+        s->hitbox_top = s->hitbox_left = -QUARTER_BLOCK_SIZE;
+        s->hitbox_bottom = s->hitbox_right = QUARTER_BLOCK_SIZE;
+        s->draw_order = 3;
+    } else if (s->room_slot == AW_WEAK_POINT) {
+        s->hitbox_top = s->hitbox_left = -(BLOCK_SIZE - QUARTER_BLOCK_SIZE);
+        s->hitbox_bottom = s->hitbox_right = BLOCK_SIZE - QUARTER_BLOCK_SIZE;
+        s->draw_order = 2;
+    } else if (s->room_slot == 3) {
+        s->hitbox_top = -(BLOCK_SIZE - QUARTER_BLOCK_SIZE);
+        s->hitbox_bottom = BLOCK_SIZE - QUARTER_BLOCK_SIZE;
+        s->hitbox_left = -(HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
+        s->hitbox_right = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+        s->draw_order = 3;
+    } else if (s->room_slot == 4) {
+        s->hitbox_top = s->hitbox_left = -(HALF_BLOCK_SIZE + PIXEL_SIZE / 2);
+        s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE + PIXEL_SIZE / 2;
+        s->draw_order = 4;
+    } else {
+        s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
+        s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE;
+        s->draw_order = 5;
+    }
+    ai_set_anim(s, anim[s->room_slot - 1]);
+}
+
+static void transfer_part_damage(Ctx *c, MzmSprite *main) {
+    MzmSprite *s = c->s;
+    if (s->room_slot != AW_WEAK_POINT || s->health >= 0x400) return;
+    uint16_t damage = (uint16_t)(0x400 - s->health);
+    main->isft = s->isft;
+    s->isft = 0;
+    if (damage >= main->health) {
+        main->health = 0;
+        main->pose = AW_DYING_INIT;
+        main->samus_collision = SSC_NONE;
+        s->health = 0;
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->ignore_samus_timer = 1;
+        mzm_sfx_play(MZM_SOUND_ACID_WORM_DYING);
+        return;
+    }
+    main->health = (uint16_t)(main->health - damage);
+    s->health = 0x400;
+    if (main->health <= c->tables->health[main->sprite_id] / 4) main->absolute_palette_row = 2;
+    else if (main->health <= c->tables->health[main->sprite_id] / 2) main->absolute_palette_row = 1;
+    mzm_sfx_play(MZM_SOUND_ACID_WORM_HURT);
 }
 
 static void part_ai(Ctx *c) {
     MzmSprite *s = c->s;
-    if (s->pose == SPRITE_POSE_UNINITIALIZED) init_part(c);
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) { init_part(c); return; }
     MzmSprite *main = slot(c, s->ram_slot);
     if (!main || !(main->status & MZM_SPRITE_STATUS_EXISTS)) { s->status = 0; return; }
-    unsigned part = s->room_slot + 1;
-    int dx = (int)main->x - (int)main->x_spawn;
-    int dy = (int)main->y - (int)main->y_spawn;
-    s->x = (uint16_t)(main->x_spawn + dx * (10 - (int)part) / 10 +
-                      (((c->f->frame8 + part * 5) >> 3) & 1 ? 2 : -2));
-    s->y = (uint16_t)(main->y_spawn + dy * (10 - (int)part) / 10 + part * BLOCK_SIZE);
     if (main->pose >= AW_DYING_INIT) {
         s->samus_collision = SSC_NONE;
         s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
-        if (s->pose != AW_PART_DYING) { s->pose = AW_PART_DYING; s->work0 = (uint8_t)(part * 7); }
+        if (s->pose != AW_PART_DYING) {
+            s->pose = AW_PART_DYING;
+            s->work0 = (uint8_t)(s->room_slot * 8);
+            s->health = 0;
+        }
+        handle_rotation(c, s);
         if (s->work0 && --s->work0) return;
         ai_sprite_death_full(c, DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP,
                              s->y, s->x, false, s->room_slot == AW_WEAK_POINT ?
                              MZM_PE_SPRITE_EXPLOSION_BIG : MZM_PE_SPRITE_EXPLOSION_MEDIUM);
         return;
     }
-    bool exposed = main->pose == AW_WARNING || main->pose == AW_EXTENDING ||
-                   main->pose == AW_EXTENDED || main->pose == AW_RETRACTING;
-    if (s->room_slot == AW_WEAK_POINT && exposed)
-        s->status &= ~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    if (s->pose == AW_PART_MOVING) {
+        if (main->pose == AW_SPAWN_EXTEND) {
+            uint16_t old_y = s->y;
+            s->y = (uint16_t)(s->y - QUARTER_BLOCK_SIZE);
+            if (!(s->room_slot & 1)) splash_if_crossed(c, old_y, s->y);
+        } else if (main->pose == AW_SPAWN_RETRACT) {
+            uint16_t old_y = s->y;
+            wiggle_horizontally(c, s);
+            s->y = (uint16_t)(s->y + QUARTER_BLOCK_SIZE);
+            if (!(s->room_slot & 1)) splash_if_crossed(c, old_y, s->y);
+        } else if (main->pose == AW_SPAWN_TOP) {
+            wiggle_horizontally(c, s);
+        } else if (main->pose == AW_IDLE_INIT) {
+            s->pose = AW_PART_IDLE;
+            s->status |= MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE;
+            s->scaling = 256;
+            s->rotation = 0;
+        }
+        if (main->pose > AW_CHECK_SPAWN)
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        transfer_part_damage(c, main);
+        return;
+    }
+    if (main->status & MZM_SPRITE_STATUS_FACING_RIGHT) {
+        s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+        s->rotation = (uint8_t)(main->rotation - s->work0);
+    } else {
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
+        s->rotation = (uint8_t)(main->rotation + s->work0);
+    }
+    if (!(main->status & MZM_SPRITE_STATUS_FACING_DOWN)) {
+        uint16_t old_y = s->y;
+        handle_rotation(c, s);
+        if ((main->pose == AW_EXTENDING || main->pose == AW_RETRACTING) &&
+            !(s->room_slot & 1))
+            splash_if_crossed(c, old_y, s->y);
+    }
+    transfer_part_damage(c, main);
+    if (s->room_slot == AW_WEAK_POINT && main->rotation != 0)
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
     else
         s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
-    if (s->room_slot == AW_WEAK_POINT && s->health < 0x400) {
-        uint16_t damage = (uint16_t)(0x400 - s->health);
-        if (damage >= main->health) main->health = 0;
-        else main->health = (uint16_t)(main->health - damage);
-        s->health = 0x400;
-        mzm_sfx_play(MZM_SOUND_ACID_WORM_HURT);
-    }
-    s->pose = main->pose == AW_IDLE_INIT ? AW_PART_IDLE : AW_PART_MOVING;
 }
 
 static void spit_ai(Ctx *c) {
@@ -388,23 +685,46 @@ static void spit_ai(Ctx *c) {
     }
     if (s->pose == SPRITE_POSE_STOPPED) {
         s->pose = AW_SPIT_EXPLODING;
-        s->work0 = 20;
         s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
         ai_set_anim(s, MZM_ACID_WORM_SPIT_EXPLODING);
         mzm_sfx_play(MZM_SOUND_ACID_WORM_SPIT_EXPLODING);
-    }
-    if (s->pose == AW_SPIT_EXPLODING) {
-        s->ignore_samus_timer = 1;
-        if (s->work0 && --s->work0) return;
-        s->status = 0;
         return;
     }
-    int speed = s->room_slot == 1 ? 10 : s->room_slot == 2 ? 2 : 6;
+    if (s->pose == AW_SPIT_EXPLODING || s->pose == AW_SPIT_ACID) {
+        if (s->pose == AW_SPIT_ACID) s->y = c->world->effect_y;
+        s->ignore_samus_timer = 1;
+        if (ai_animation_ending(c, 1)) s->status = 0;
+        return;
+    }
+    const int16_t *velocity;
+    unsigned count;
+    int speed;
+    if (s->room_slot == 2) {
+        velocity = c->tables->acid_worm_spit_close;
+        count = 16;
+        speed = 2;
+    } else if (s->room_slot == 1) {
+        velocity = c->tables->acid_worm_spit_far;
+        count = 26;
+        speed = 10;
+    } else {
+        velocity = c->tables->acid_worm_spit_middle;
+        count = 20;
+        speed = 6;
+    }
+    unsigned offset = s->work3;
+    if (offset >= count) offset = count - 1;
+    int16_t y_movement = velocity[offset];
+    if (y_movement == SHORT_MAX) y_movement = velocity[offset ? offset - 1 : 0];
+    else s->work3++;
     s->x = (uint16_t)(s->x + ((s->status & MZM_SPRITE_STATUS_X_FLIP) ? speed : -speed));
-    int age = s->work3++;
-    s->y = (uint16_t)(s->y + (age < 12 ? -6 + age / 3 : 3 + (age - 12) / 3));
-    if ((c->world->effect_y && s->y >= c->world->effect_y) ||
-        (ai_collision_at(c, s->y, s->x) & MZM_CLIPDATA_SOLID_FLAG)) {
+    s->y = (uint16_t)(s->y + y_movement);
+    if (c->world->effect_y && s->y >= c->world->effect_y) {
+        s->y = c->world->effect_y;
+        s->pose = AW_SPIT_ACID;
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        ai_set_anim(s, MZM_ACID_WORM_SPIT_EXPLODING);
+    } else if (ai_collision_at(c, s->y, s->x) & MZM_CLIPDATA_SOLID_FLAG) {
         s->pose = SPRITE_POSE_STOPPED;
     }
 }

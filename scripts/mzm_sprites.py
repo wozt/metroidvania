@@ -207,6 +207,9 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sMetroidSpawningYMovement", "sMetroidSpawningXMovement", "sKraidPal",
              "sRidleyIdleYOffsets", "sRidleySpawningSpittingFireballsYOffsets",
              "sSineTable",
+             "sAcidWormSpitCloseYVelocity", "sAcidWormSpitFarYVelocity",
+             "sAcidWormSpitMiddleYVelocity", "sAcidWormSwingingMovement",
+             "sAcidWormHeadRandomXVelocity",
              "sDeoremSegmentXVelocity", "sDeoremThornYVelocity")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).

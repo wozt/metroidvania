@@ -5627,6 +5627,28 @@ int main(void) {
         tables.health[MZM_PSPRITE_ACID_WORM] = 600;
         tables.secondary_health[MZM_SSPRITE_ACID_WORM_PART] = 1;
         tables.secondary_health[MZM_SSPRITE_ACID_WORM_SPIT] = 1;
+        const int16_t acid_swing[33] = {
+            0, 0, 0, 0, -1, -1, -1, -1, -2, -2, -2, -2, -1, -1, -1, -1,
+            0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, SHRT_MAX};
+        const int16_t acid_head_x[45] = {
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            -1, -1, -2, -2, -3, -4, -4, -3, -2, -2, -1, -1,
+            1, 1, 2, 2, 3, 4, 4, 3, 2, 2, 1, 1, SHRT_MAX};
+        const int16_t acid_spit_close[16] = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, SHRT_MAX};
+        const int16_t acid_spit_far[26] = {
+            -16, -12, -8, -4, -3, -2, -1, 0, 0, 0, 1, 2, 3, 4, 5, 6,
+            7, 8, 9, 10, 11, 12, 14, 16, 18, SHRT_MAX};
+        const int16_t acid_spit_middle[20] = {
+            0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18,
+            SHRT_MAX};
+        memcpy(tables.acid_worm_swinging, acid_swing, sizeof acid_swing);
+        memcpy(tables.acid_worm_head_x, acid_head_x, sizeof acid_head_x);
+        memcpy(tables.acid_worm_spit_close, acid_spit_close, sizeof acid_spit_close);
+        memcpy(tables.acid_worm_spit_far, acid_spit_far, sizeof acid_spit_far);
+        memcpy(tables.acid_worm_spit_middle, acid_spit_middle, sizeof acid_spit_middle);
+        tables.sine[128] = 0;
+        tables.sine[192] = -256;
         effect_y_delta = caa_calls = door_timer_calls = 0;
         room[0] = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN,
                               .sprite_id = MZM_PSPRITE_ACID_WORM, .gfx_slot = 3,
@@ -5640,7 +5662,10 @@ int main(void) {
         af.samus_x = 16 * 64 + 32;
         af.samus_y = 7 * 64;
         af.kinds[MZM_FAMILY_ACID_WORM] = &acid_kind;
+        MzmSpriteWorld acid_world = *af.world;
+        af.world = &acid_world;
         mzm_sprite_update(&room[0], 0, &af);
+        acid_world.effect_y = globals.sub1.health;
         int parts = 0;
         for (int i = 1; i < 20; ++i)
             parts += room[i].status && room[i].sprite_id == MZM_SSPRITE_ACID_WORM_PART;
@@ -5649,22 +5674,64 @@ int main(void) {
         mzm_sprite_update(&room[0], 0, &af);
         assert(room[0].pose == 0x42);
         mzm_sprite_update(&room[0], 0, &af);
-        assert(room[0].pose == 0x43 && caa_calls == 6 && last_caa == MZM_CAA_REMOVE_SOLID);
+        assert(room[0].pose == 0x43 && caa_calls == 2 && last_caa == MZM_CAA_REMOVE_SOLID &&
+               globals.sub1.work2 == 1 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_WORMS_BATTLE));
         int intro_frames = 0;
-        while (room[0].pose != 0x9 && intro_frames++ < 200)
-            mzm_sprite_update(&room[0], 0, &af);
-        assert(room[0].pose == 0x9 && intro_frames > 100 && effect_y_delta == 0);
+        while (room[0].pose != 0x9 && intro_frames++ < 200) {
+            for (int i = 0; i < 20; ++i)
+                if (room[i].status) mzm_sprite_update(&room[i], i, &af);
+        }
+        assert(room[0].pose == 0x9 && intro_frames > 100 && effect_y_delta > 0 &&
+               caa_calls == 6);
         MzmSprite *weak = NULL;
         for (int i = 1; i < 20; ++i) {
             mzm_sprite_update(&room[i], i, &af);
-            if (room[i].status && room[i].room_slot == 1) weak = &room[i];
+            if (room[i].status && room[i].room_slot == 2) weak = &room[i];
         }
         assert(weak && weak->anim == MZM_ACID_WORM_PART_WEAK_POINT);
+        room[0].status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+        room[0].status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+        room[0].rotation = 16;
+        weak->work3 = 0;
+        mzm_sprite_update(weak, (int)(weak - room), &af);
+        assert(weak->rotation == 0 && weak->x == globals.sub1.x && weak->y == globals.sub1.y);
         room[0].pose = 0x23;
+        room[0].rotation = 1;
         weak->health = 1004;
         mzm_sprite_update(weak, (int)(weak - room), &af);
         assert(room[0].health == 580 && weak->health == 0x400 &&
                !(weak->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+        room[0].pose = 0x27;
+        room[0].health = 300;
+        room[0].rotation = 0;
+        room[0].work3 = 0;
+        globals.sub1.x = room[0].x_spawn;
+        globals.sub1.y = room[0].y_spawn;
+        af.samus_x = room[0].x_spawn;
+        af.samus_y = (uint16_t)(room[0].y_spawn - 100);
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &af);
+        assert(room[0].pose == 0x29 && room[0].work0 == 40 &&
+               room[0].status & MZM_SPRITE_STATUS_MOSAIC &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ACID_WORM_RAISING_ACID));
+        room[0].work0 = 0;
+        acid_world.effect_y = (uint16_t)(room[0].y_spawn - MZM_BLOCK_SIZE * 5 - 1);
+        mzm_sprite_update(&room[0], 0, &af);
+        assert(room[0].pose == 0x2B &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ACID_WORM_LOWERING_ACID));
+        acid_world.effect_y = (uint16_t)(room[0].y_spawn - MZM_BLOCK_SIZE * 3 + 1);
+        mzm_sprite_update(&room[0], 0, &af);
+        assert(room[0].pose == 0x8 && room[0].work0 == 1 &&
+               globals.sub1.health == room[0].y_spawn - MZM_BLOCK_SIZE * 3);
+        MzmSprite spit = {.status = MZM_SPRITE_STATUS_EXISTS,
+                          .secondary = true,
+                          .sprite_id = MZM_SSPRITE_ACID_WORM_SPIT,
+                          .room_slot = 1, .ram_slot = 0, .y = 300, .x = 500};
+        acid_world.effect_y = 900;
+        mzm_sprite_update(&spit, 15, &af);
+        mzm_sprite_update(&spit, 15, &af);
+        assert(spit.pose == 0x9 && spit.y == 284 && spit.x == 490 && spit.work3 == 1);
         room[0].health = 0;
         mzm_sprite_update(&room[0], 0, &af);
         assert(room[0].pose == 0x67);

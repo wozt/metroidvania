@@ -3751,6 +3751,41 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0362 - native Acid Worm body and acid cycle
+
+- Replaced the interpolated head and body curve with
+  `AcidWormHandleRotation`. The runtime now loads the native sine, swinging
+  and horizontal-wiggle tables from the private ROM export, moves the shared
+  pivot and calculates the head plus all nine actors with their original
+  rotation offsets, phase starts, radii, hitboxes and draw order.
+- Restored the health-dependent lunge speeds, eight-frame warning delay,
+  Samus-contact abort, hooked hold timers and all three crash variants with
+  their exact debris groups, particles, sounds and screen shakes. The distant
+  attack now emits its three projectiles from the native animation frames;
+  close, middle and far spit use their separate ROM velocity tables.
+- Added the non-easy late-fight acid cycle. Alternate retractions below half
+  health test Samus's native vertical and horizontal ranges, wait 40 frames,
+  raise the surface five blocks with horizontal shakes, then lower and retain
+  the new three-block base. The entrance now fades the room music and starts
+  the Worms Battle track at the native trigger.
+- The entrance destroys the central column in its original two-block stages
+  at frames 0, 4 and 8. Body pieces use native room-slot identities 1 through
+  9, expose the weak point only while rotated and transfer damage plus both
+  low-health palette stages to the main actor.
+- The ROM-free regression covers the staged column, native body identity,
+  pivot rotation, weak-point transfer, acid raise/lower transition and the
+  first far-spit velocity. A real frame-360 `kraid_005` capture triggered the
+  fight from the zipline and rendered the complete curved body from the new
+  ROM tables with all thirteen room actors active.
+- Remaining divergence: the entrance's detailed block particles and upper
+  debris, the body-by-body death and final liquid/music choreography, spit
+  explosion BG priority and emulator comparison remain open.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed. Dashboard generation reported 126 features, 61
+  functional or better and 114 with passing tests. Every reconstruction task
+  completed or was up to date, generated-data checks were fresh and the
+  proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

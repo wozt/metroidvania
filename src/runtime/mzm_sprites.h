@@ -206,6 +206,11 @@ typedef struct {
     int16_t ridley_idle_y[65];      /* sRidleyIdleYOffsets (SHORT_MAX restarts it) */
     int16_t ridley_spawning_y[81];  /* sRidleySpawningSpittingFireballsYOffsets */
     int16_t sine[320];              /* sSineTable (one turn plus a cosine quarter) */
+    int16_t acid_worm_spit_close[16]; /* sAcidWormSpitCloseYVelocity */
+    int16_t acid_worm_spit_far[26];   /* sAcidWormSpitFarYVelocity */
+    int16_t acid_worm_spit_middle[20]; /* sAcidWormSpitMiddleYVelocity */
+    int16_t acid_worm_swinging[33];   /* sAcidWormSwingingMovement */
+    int16_t acid_worm_head_x[45];     /* sAcidWormHeadRandomXVelocity */
     int16_t deorem_segment_x[33];   /* sDeoremSegmentXVelocity */
     int16_t deorem_thorn_y[40];     /* sDeoremThornYVelocity */
     MzmMultiSprite imago_larva_multi[MZM_IMAGO_MULTI_COUNT];

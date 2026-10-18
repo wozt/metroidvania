@@ -503,6 +503,31 @@ int main(void) {
     assert(z.status == 0 && equipment.energy == 95 && hurts == 2);
     assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_GETTING_SMALL_ENERGY_DROP));
 
+    /* Mecha Ridley's grouped drop uses one of three OAM tables from its
+     * follower part, restores three large drops (60 energy), and copies
+     * BG1's live priority like every native enemy drop. */
+    world.bg1_priority = 1;
+    for (uint8_t part = 1; part <= 3; ++part) {
+        mzm_sprite_init_primary(&z, MZM_PSPRITE_MULTIPLE_LARGE_ENERGY, 0, 9, 6, part, 0);
+        step(&z, 0);
+        assert(z.pose == 9 && z.anim == MZM_DROP_MULTIPLE_LARGE_ENERGY_SLOT1 + part - 1 &&
+               z.samus_collision == 36 /* SSC_MULTIPLE_LARGE_ENERGY_DROP */ &&
+               z.draw_order == 1 &&
+               mzm_sprite_bg_priority(&z) == world.bg1_priority);
+        z.ignore_samus_timer = 0;
+        samus.x = samus.previous_x = z.x;
+        samus.y = (uint16_t)(z.y + 40);
+        mzm_sprites_samus_collision(&z, 1, &samus, &tables);
+        assert(z.status & MZM_SPRITE_STATUS_SAMUS_COLLIDING);
+        equipment.energy = part == 3 ? 80 : 10;
+        equipment.max_energy = 99;
+        mzm_sfx_clear();
+        step(&z, 0);
+        assert(z.status == 0 && equipment.energy == (part == 3 ? 99 : 70));
+        assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_GETTING_LARGE_ENERGY_DROP));
+    }
+    world.bg1_priority = 0;
+
     /* Left alone it blinks during its last 80 timer ticks and disappears
      * after 200 ticks counted every other frame. */
     z = drop;

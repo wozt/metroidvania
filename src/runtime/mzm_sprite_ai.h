@@ -61,6 +61,7 @@ enum {
     SSC_MISSILE_DROP = 33,
     SSC_SUPER_MISSILE_DROP = 34,
     SSC_POWER_BOMB_DROP = 35,
+    SSC_MULTIPLE_LARGE_ENERGY_DROP = 36,
     SPRITE_DROP_MAX_PROB = 1024,
     /* CONVERT_SECONDS of the combat timers. */
     ISFT_DAMAGED = 17,              /* .25f + 2 * DELTA_TIME */

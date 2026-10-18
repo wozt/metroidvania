@@ -370,10 +370,9 @@ ARIA_ENEMY_COUNT = 0x71
 ARIA_ENEMY_RE = re.compile(r"AOS_ENEMY_([A-Z0-9_]+)\s*=\s*0x([0-9A-Fa-f]+)")
 MZM_FAMILY_GROUP_RE = re.compile(
     r"((?:\s*case MZM_PSPRITE_[A-Z0-9_]+:)+)\s*return (MZM_FAMILY_[A-Z0-9_]+);")
-# The five enemy drops of is_drop() in src/runtime/mzm_sprites.c
-# (MZM_PSPRITE_LARGE_ENERGY_DROP..MZM_PSPRITE_POWER_BOMB_DROP).
+# The enemy drops handled by is_drop() in src/runtime/mzm_sprites.c.
 MZM_DROP_SPRITES = ("LARGE_ENERGY_DROP", "SMALL_ENERGY_DROP", "MISSILE_DROP",
-                    "SUPER_MISSILE_DROP", "POWER_BOMB_DROP")
+                    "SUPER_MISSILE_DROP", "POWER_BOMB_DROP", "MULTIPLE_LARGE_ENERGY")
 # Sprite families whose parity annotation is not mzm.enemies.<family>.
 MZM_FAMILY_ANNOTATIONS = {
     "MZM_FAMILY_DROP": "mzm.items.enemy_drops",

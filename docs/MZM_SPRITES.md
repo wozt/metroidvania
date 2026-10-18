@@ -401,8 +401,6 @@ Varia or Gravity Suit, the screw attack and any shot throw them off, and only
 bombs and power bombs kill them. The bug room's multiple Parasites lock its
 doors until the last one dies (`EVENT_BUGS_KILLED`).
 
-Not ported yet: the multiple large energy pickup,
-splashes in liquids, the hard-mode and event
-spritesets (where the Long Beam Dessgeega is placed), the door lock
-lifecycle, the Chozodia alarm's music and palette, and
-every other sprite AI.
+Not ported yet: several liquid splash effects, the Chozodia alarm's music
+and palette presentation, and the remaining sprite AIs listed in the native
+parity checklist.

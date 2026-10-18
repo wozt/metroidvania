@@ -2520,7 +2520,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   `SSC_HURTS_SAMUS` takes its real value (4).
 - `mzm_sprite_update` now takes an `MzmSpriteFrame` (world, tables, the
   Zoomer and drop OAM durations, the equipment, frame counters).
-- `scripts/mzm_sprites.py` exports the five drop tables from the common
+- `scripts/mzm_sprites.py` exports the eight drop tables from the common
   sprite graphics and palette; `sprites.tsv` drop columns are parsed.
   Captures print Samus's position.
 - Checked in brinstar_000 (`--spawn 230 496`, B and Down held): the Zoomer
@@ -2528,8 +2528,9 @@ No automatic reciprocal link or native engine encoder is implemented.
   shown from frame 350 next to Samus (knocked back to x 204, out of reach),
   blinking by frame 600; a later contact (-10) pushes Samus onto it and it
   is collected (+5): energy 89 to 84.
-- Not ported yet: death particles, debris and sounds, pickup sounds, power
-  bombs and their drops, the multiple large energy pickup.
+- The grouped Mecha Ridley pickup selects one of three OAM tables from its
+  follower part, restores 60 energy and clamps to the current maximum. Its
+  natural boss source remains unavailable until Mecha Ridley is ported.
 - Tests: `tests/test_mzm_sprites.c` adds one contact per frame, the ignore
   timer order, eight drop rolls, the drop spawn, projectile immunity,
   collection and the blink and despawn timing; `tests/test_mzm_sprites.py`
@@ -3836,6 +3837,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   functional or better and 114 with passing tests. Every reconstruction task
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
+
+## Patch 0365 - grouped energy drop and Long Beam encounter audit
+
+- Added `PSPRITE_MULTIPLE_LARGE_ENERGY`, the grouped pickup emitted by Mecha
+  Ridley. Its follower part selects one of the three native OAM tables, and
+  collection restores three large drops (60 energy) with the native sound
+  and maximum-energy clamp.
+- Enemy drops now copy BG1's live priority and use native draw order 1. The
+  private common-sprite export includes all three grouped-drop tables; a full
+  rebuild produced 17,088 sequences and 101,560 frames without tracking any
+  extracted graphics.
+- The focused regression covers all three follower parts, energy refill and
+  clamping, sound, draw order and background priority. The native sprite ID,
+  OAM tables and dashboard item classification are checked from tracked
+  sources.
+- Audited the preceding Long Beam route instead of duplicating it: the Chozo
+  statue already grants Long Beam and event 8, while `CAA_REMOVE_SOLID`
+  already clears both BG1 graphics and Clipdata for the Dessgeega's three
+  floor blocks. A real `brinstar_009` capture confirmed the open floor and
+  landed actor, so Dessgeega is now functional in the parity checklist.
+- Remaining boundary: Mecha Ridley is not ported, so the grouped pickup has no
+  natural in-game source yet. Port that boss encounter before claiming an
+  ordinary-play capture of this drop.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed. Every reconstruction task completed or was up to
+  date, the private library contained all three grouped-drop animations,
+  generated-data checks were fresh and the proprietary-file guard passed.
 
 ## Patch 0349 - Zero Mission Acid Worm encounter
 

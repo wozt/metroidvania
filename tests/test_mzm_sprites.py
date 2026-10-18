@@ -67,14 +67,16 @@ class MzmSpriteDataTests(unittest.TestCase):
             (DECOMP / "include/constants/sprite.h").read_text(encoding="utf-8"))
         runtime = {"PSPRITE_LARGE_ENERGY_DROP": 26, "PSPRITE_SMALL_ENERGY_DROP": 27,
                    "PSPRITE_MISSILE_DROP": 28, "PSPRITE_SUPER_MISSILE_DROP": 29,
-                   "PSPRITE_POWER_BOMB_DROP": 30}
+                   "PSPRITE_POWER_BOMB_DROP": 30,
+                   "PSPRITE_MULTIPLE_LARGE_ENERGY": 53}
         for name, value in runtime.items():
             self.assertEqual(ids[name], value)
         self.assertEqual(set(mzm_sprites.DROPS), set(runtime))
         source = (DECOMP / "src/data/sprites/enemy_drop.c").read_text(encoding="utf-8")
         tables = mzm_sprites.frame_tables(source)
-        for table in mzm_sprites.DROPS.values():
-            self.assertIn(table, tables)
+        for drop_tables in mzm_sprites.DROPS.values():
+            for table in drop_tables:
+                self.assertIn(table, tables)
         hud = (DECOMP / "src/hud_generic.c").read_text(encoding="utf-8")
         self.assertIn("sCommonSpritesGfx, VRAM_OBJ + 0x800", hud)
         self.assertEqual(mzm_sprites.COMMON_GFX_VRAM, 0x800)

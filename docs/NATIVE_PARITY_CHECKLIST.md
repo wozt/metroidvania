@@ -361,13 +361,13 @@ Known divergences: The encounter has not been compared with an emulator.
 Next action: Compare both locations with an emulator.
 Evidence: in game: `brinstar_012`, `brinstar_019`.
 
-[~] **`mzm.enemies.dessgeega` — Dessgeegas and the Long Beam Dessgeega.** Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor removing three blocks with dust and debris, and lands on the next one. The door locks and unlocks go through the runtime's hatch locks (mzm.transitions.doors_and_hatches). The Long Beam Dessgeega's drop and landing start a vertical screen shake, with its spawning and floor-breaking sounds. Room export retains its first and second event sprite placements and spriteset membership, and RoomLoad selects second, first or default from the save events. Entering brinstar_010 now runs KraidStatueInit and sets EVENT_VIEWED_STATUE_ROOM; the return through brinstar_009 loads DESSGEEGA_AFTER_LONG_BEAM while the untouched default room stays empty.
+[+] **`mzm.enemies.dessgeega` — Dessgeegas and the Long Beam Dessgeega.** Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor while clearing both the graphics and collision of three blocks with dust and debris, and lands on the next one. The door locks and unlocks go through the runtime's hatch locks (mzm.transitions.doors_and_hatches). The Long Beam Dessgeega's drop and landing start a vertical screen shake, with its spawning and floor-breaking sounds. Room export retains its first and second event sprite placements and spriteset membership, and RoomLoad selects second, first or default from the save events. Entering brinstar_010 now runs KraidStatueInit and sets EVENT_VIEWED_STATUE_ROOM; the return through brinstar_009 loads DESSGEEGA_AFTER_LONG_BEAM while the untouched default room stays empty. A real brinstar_009 capture confirmed the three-block opening and the landed actor.
 
-Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/dessgeega.c:Dessgeega`.  
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/dessgeega.c:Dessgeega`, `mzm:c:src/sprites_ai/dessgeega.c:DessgeegaDeath`, `mzm:c:src/sprites_ai/dessgeega.c:DessgeegaLongBeamDetectSamus`, `mzm:c:src/sprites_ai/dessgeega.c:DessgeegaLongBeamSpawning`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py), [`tests/test_mzm_runtime_room.py`](../tests/test_mzm_runtime_room.py), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
 Dependencies: `mzm.enemies.sidehopper`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: Removed floor blocks keep their background graphics; the encounter has not been compared with an emulator.  
+Known divergences: The encounter has not been compared frame by frame with an emulator.  
 Next action: Compare the complete encounter with an emulator.
 Evidence: in game: `brinstar_009`.
 
@@ -685,14 +685,14 @@ Known divergences: The background flashes (MakeBackgroundFlash), gSlowScrollingT
 Next action: Port the background flashes and the slow scrolling, then the fully powered suit's unknown item activation.
 Evidence: in game: `brinstar_005`, `brinstar_002`, `kraid_033`.
 
-[~] **`mzm.items.enemy_drops` — Enemy drops.** Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound.
+[~] **`mzm.items.enemy_drops` — Enemy drops.** Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, native BG1 priority, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound. Mecha Ridley's grouped pickup selects one of three native OAM tables from its follower slot, refills 60 energy and clamps to maximum.
 
 Native evidence: `mzm:c:src/hud_generic.c:HudGenericLoadCommonSpriteGfx`, `mzm:c:src/sprite.c:SpriteSpawnDropFollowers`, `mzm:c:src/sprite_util.c:SpriteUtilCheckHasDrops`, `mzm:c:src/sprite_util.c:SpriteUtilDetermineEnemyDrop`, `mzm:c:src/sprites_ai/enemy_drop.c:EnemyDrop`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
-Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.enemies.zoomer`.  
-Known divergences: PSPRITE_MULTIPLE_LARGE_ENERGY is not ported.  
-Next action: Port the multiple large energy pickup.
+Known divergences: The grouped energy drop has no natural in-game source until Mecha Ridley is ported; the drop behavior has not been compared with an emulator.  
+Next action: Port Mecha Ridley so its grouped energy drops become reachable in normal play, then compare their presentation with an emulator.
 
 [+] **`mzm.items.item_sprites` — Morph Ball, Power Grip and Charge Beam pickups.** The Morph Ball (outline sprite with the ball's status), the Power Grip (glow removed once it is taken, EVENT_POWER_GRIP_OBTAINED) and the Charge Beam (spawning table, glow following its height, the float of sChargeBeamIdleYMovement, EVENT_CHARGE_BEAM_OBTAINED): removed when owned, touched they give their item, hold Samus with SAMUS_ITEM_PMT and the item banner with its jingle, and flicker until the banner releases her. Checked in brinstar_000 (--spawn 212 496: the jump onto the pillar takes the Morph Ball and shows its banner) and crateria_012 ( the Power Grip from the statue's hands).
 

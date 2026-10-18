@@ -87,6 +87,8 @@ const char *const mzm_zoomer_anim_names[MZM_ZOOMER_ANIMS] = {
 const char *const mzm_drop_anim_names[MZM_DROP_ANIMS] = {
     "EnemyDropOam_SmallEnergy", "EnemyDropOam_LargeEnergy", "EnemyDropOam_Missile",
     "EnemyDropOam_SuperMissile", "EnemyDropOam_PowerBomb",
+    "EnemyDropOam_MultipleLargeEnergySlot1", "EnemyDropOam_MultipleLargeEnergySlot2",
+    "EnemyDropOam_MultipleLargeEnergySlot3",
 };
 
 const char *const mzm_ripper_anim_names[MZM_RIPPER_ANIMS] = {
@@ -793,7 +795,8 @@ static const char *const skree_sprites[MZM_SKREE_ANIMS] = {
 };
 static const char *const drop_sprites[MZM_DROP_ANIMS] = {
     "SMALL_ENERGY_DROP", "LARGE_ENERGY_DROP", "MISSILE_DROP", "SUPER_MISSILE_DROP",
-    "POWER_BOMB_DROP",
+    "POWER_BOMB_DROP", "MULTIPLE_LARGE_ENERGY", "MULTIPLE_LARGE_ENERGY",
+    "MULTIPLE_LARGE_ENERGY",
 };
 
 /* Every Chozo statue table has the same durations in each statue's graphics. */
@@ -5069,7 +5072,8 @@ static void rinka(Ctx *c) {
 }
 
 /* EnemyDropInit */
-static void enemy_drop_init(MzmSprite *s) {
+static void enemy_drop_init(Ctx *c) {
+    MzmSprite *s = c->s;
     s->ignore_samus_timer = 20;     /* ONE_THIRD_SECOND */
     s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
     s->pose = ENEMY_DROP_POSE_IDLE;
@@ -5078,6 +5082,8 @@ static void enemy_drop_init(MzmSprite *s) {
     s->adc = 0;
     s->frame = 0;
     s->draw_top = s->draw_bottom = s->draw_horizontal = HALF_BLOCK_SIZE / PIXEL_SIZE;
+    if (c->world) s->bg_priority_override = (uint8_t)(c->world->bg1_priority + 1);
+    s->draw_order = 1;
     switch (s->sprite_id) {
     case MZM_PSPRITE_POWER_BOMB_DROP:
         s->anim = MZM_DROP_POWER_BOMB;
@@ -5095,7 +5101,13 @@ static void enemy_drop_init(MzmSprite *s) {
         s->anim = MZM_DROP_LARGE_ENERGY;
         s->samus_collision = SSC_LARGE_ENERGY_DROP;
         break;
-    default:                        /* PSPRITE_MULTIPLE_LARGE_ENERGY is not ported */
+    case MZM_PSPRITE_MULTIPLE_LARGE_ENERGY:
+        s->anim = s->room_slot == 1 ? MZM_DROP_MULTIPLE_LARGE_ENERGY_SLOT1
+                                    : s->room_slot == 2 ? MZM_DROP_MULTIPLE_LARGE_ENERGY_SLOT2
+                                                       : MZM_DROP_MULTIPLE_LARGE_ENERGY_SLOT3;
+        s->samus_collision = SSC_MULTIPLE_LARGE_ENERGY_DROP;
+        break;
+    default:
         s->anim = MZM_DROP_SMALL_ENERGY;
         s->samus_collision = SSC_SMALL_ENERGY_DROP;
         break;
@@ -5143,6 +5155,10 @@ static void enemy_drop_idle(Ctx *c) {
             refill(&e->power_bombs, e->max_power_bombs, 1);     /* POWER_BOMB_DROP_REFILL */
             mzm_sfx_play(MZM_SOUND_GETTING_POWER_BOMB_DROP);
             break;
+        case SSC_MULTIPLE_LARGE_ENERGY_DROP:
+            refill(&e->energy, e->max_energy, 60);       /* LARGE_ENERGY_DROP_REFILL * 3 */
+            mzm_sfx_play(MZM_SOUND_GETTING_LARGE_ENERGY_DROP);
+            break;
         default: break;
         }
         s->status = 0;
@@ -5157,13 +5173,15 @@ static void enemy_drop_idle(Ctx *c) {
 
 /* EnemyDrop */
 static void enemy_drop(Ctx *c) {
-    if (c->s->pose == SPRITE_POSE_UNINITIALIZED) enemy_drop_init(c->s);
+    if (c->s->pose == SPRITE_POSE_UNINITIALIZED) enemy_drop_init(c);
     else if (c->s->pose == ENEMY_DROP_POSE_IDLE) enemy_drop_idle(c);
     c->s->x_spawn++;
 }
 
 static bool is_drop(uint8_t sprite_id) {
-    return sprite_id >= MZM_PSPRITE_LARGE_ENERGY_DROP && sprite_id <= MZM_PSPRITE_POWER_BOMB_DROP;
+    return (sprite_id >= MZM_PSPRITE_LARGE_ENERGY_DROP &&
+            sprite_id <= MZM_PSPRITE_POWER_BOMB_DROP) ||
+           sprite_id == MZM_PSPRITE_MULTIPLE_LARGE_ENERGY;
 }
 
 int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
@@ -5801,6 +5819,7 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
         case SSC_MISSILE_DROP:
         case SSC_SUPER_MISSILE_DROP:
         case SSC_POWER_BOMB_DROP:
+        case SSC_MULTIPLE_LARGE_ENERGY_DROP:
             s->status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
             ignore = true;
             break;

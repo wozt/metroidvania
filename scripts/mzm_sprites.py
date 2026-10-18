@@ -236,11 +236,16 @@ BANNER_SYMBOLS = ("sMessageBannerGfx", "sMessageBannerPal", "sMessageTextPointer
                   "sCharactersGfx", "sCharacterWidths")
 # Enemy drops (src/sprites_ai/enemy_drop.c, EnemyDropInit) and their table.
 DROPS = {
-    "PSPRITE_SMALL_ENERGY_DROP": "sEnemyDropOam_SmallEnergy",
-    "PSPRITE_LARGE_ENERGY_DROP": "sEnemyDropOam_LargeEnergy",
-    "PSPRITE_MISSILE_DROP": "sEnemyDropOam_Missile",
-    "PSPRITE_SUPER_MISSILE_DROP": "sEnemyDropOam_SuperMissile",
-    "PSPRITE_POWER_BOMB_DROP": "sEnemyDropOam_PowerBomb",
+    "PSPRITE_SMALL_ENERGY_DROP": ("sEnemyDropOam_SmallEnergy",),
+    "PSPRITE_LARGE_ENERGY_DROP": ("sEnemyDropOam_LargeEnergy",),
+    "PSPRITE_MISSILE_DROP": ("sEnemyDropOam_Missile",),
+    "PSPRITE_SUPER_MISSILE_DROP": ("sEnemyDropOam_SuperMissile",),
+    "PSPRITE_POWER_BOMB_DROP": ("sEnemyDropOam_PowerBomb",),
+    "PSPRITE_MULTIPLE_LARGE_ENERGY": (
+        "sEnemyDropOam_MultipleLargeEnergySlot1",
+        "sEnemyDropOam_MultipleLargeEnergySlot2",
+        "sEnemyDropOam_MultipleLargeEnergySlot3",
+    ),
 }
 # Sprites drawn with the common sprite graphics (particle_data.c tables).
 COMMON_SPRITES = {
@@ -526,7 +531,8 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     wanted.update(tables)
     wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES,
                    "sLocationTextPointers", "sAreaBannerLocationTextPal"])
-    wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal", *DROPS.values(), *PARTICLES])
+    wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal",
+                   *(table for tables in DROPS.values() for table in tables), *PARTICLES])
     wanted.update(table for tables in COMMON_SPRITES.values() for table in tables)
     banner_source = (decomp / "src/data/sprites/message_banner.c").read_text(encoding="utf-8")
     banner_tables = [t for t in frame_tables(banner_source)
@@ -705,13 +711,14 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                 frames.append((bmp, duration, left, top))
             library.add(f"Sprite/AREA_BANNER/{table[1:]}/none/lt{lt}", frames)
     vram, palette = stage_common(rom, symbols)
-    for sprite, table in DROPS.items():
-        frames = []
-        for pointer, duration in mzm_projectile_compose.frames(rom, symbols, table):
-            pixels = mzm_projectile_compose.render(rom, vram, palette, pointer, "none")
-            bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
-            frames.append((bmp, duration, left, top))
-        library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/none", frames)
+    for sprite, tables in DROPS.items():
+        for table in tables:
+            frames = []
+            for pointer, duration in mzm_projectile_compose.frames(rom, symbols, table):
+                pixels = mzm_projectile_compose.render(rom, vram, palette, pointer, "none")
+                bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+                frames.append((bmp, duration, left, top))
+            library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/none", frames)
     for sprite, sprite_tables in COMMON_SPRITES.items():
         for table in sprite_tables:
             frames = []

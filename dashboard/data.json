@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-18T19:32:32+00:00",
+ "generated_at": "2026-10-18T19:44:31+00:00",
  "git": {
-  "commit": "0ddeacb",
+  "commit": "a95f566",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 53,
-    "functional": 62,
+    "partial": 52,
+    "functional": 63,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 62,
-   "functional_or_better_percent": 49.2,
+   "functional_or_better": 63,
+   "functional_or_better_percent": 50.0,
    "with_passing_tests": 114,
    "with_passing_tests_percent": 90.5,
    "unknown_or_blocked": 1,
@@ -247,15 +247,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 29,
-    "functional": 49,
+    "partial": 28,
+    "functional": 50,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 49,
-   "functional_or_better_percent": 62.8,
+   "functional_or_better": 50,
+   "functional_or_better_percent": 64.1,
    "with_passing_tests": 78,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -1446,8 +1446,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Dessgeegas and the Long Beam Dessgeega",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
     "scripts/mzm_sprites.py",
@@ -1467,10 +1467,13 @@
    ],
    "native_routines": [
     "Dessgeega",
+    "DessgeegaLongBeamDetectSamus",
+    "DessgeegaLongBeamSpawning",
+    "DessgeegaDeath",
     "SpriteUtilCheckSamusNearSpriteLeftRight",
     "SpriteUtilMakeSpriteFaceSamusDirection"
    ],
-   "limitations": "Removed floor blocks keep their background graphics; the encounter has not been compared with an emulator. Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor removing three blocks with dust and debris, and lands on the next one. The door locks and unlocks go through the runtime's hatch locks (mzm.transitions.doors_and_hatches). The Long Beam Dessgeega's drop and landing start a vertical screen shake, with its spawning and floor-breaking sounds. Room export retains its first and second event sprite placements and spriteset membership, and RoomLoad selects second, first or default from the save events. Entering brinstar_010 now runs KraidStatueInit and sets EVENT_VIEWED_STATUE_ROOM; the return through brinstar_009 loads DESSGEEGA_AFTER_LONG_BEAM while the untouched default room stays empty.",
+   "limitations": "The encounter has not been compared frame by frame with an emulator. Ground and ceiling Dessgeegas share the Sidehopper state machine with their own tables and sizes; every ground Dessgeega death sets the Long Beam event and unlocks the doors (the game's bug, kept). The Long Beam variant checks its events, locks the doors, waits hidden from Samus and projectiles, drops through the floor while clearing both the graphics and collision of three blocks with dust and debris, and lands on the next one. The door locks and unlocks go through the runtime's hatch locks (mzm.transitions.doors_and_hatches). The Long Beam Dessgeega's drop and landing start a vertical screen shake, with its spawning and floor-breaking sounds. Room export retains its first and second event sprite placements and spriteset membership, and RoomLoad selects second, first or default from the save events. Entering brinstar_010 now runs KraidStatueInit and sets EVENT_VIEWED_STATUE_ROOM; the return through brinstar_009 loads DESSGEEGA_AFTER_LONG_BEAM while the untouched default room stays empty. A real brinstar_009 capture confirmed the three-block opening and the landed actor.",
    "next_action": "Compare the complete encounter with an emulator.",
    "evidence": {
     "unit_tests": [
@@ -4753,7 +4756,8 @@
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
-    "tests/test_mzm_sprites.c"
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_sprites.py"
    ],
    "dependencies": [
     "mzm.enemies.zoomer"
@@ -4765,11 +4769,12 @@
     "SpriteSpawnDropFollowers",
     "SpriteUtilCheckHasDrops"
    ],
-   "limitations": "PSPRITE_MULTIPLE_LARGE_ENERGY is not ported. Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound.",
-   "next_action": "Port the multiple large energy pickup.",
+   "limitations": "The grouped energy drop has no natural in-game source until Mecha Ridley is ported; the drop behavior has not been compared with an emulator. Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, native BG1 priority, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound. Mecha Ridley's grouped pickup selects one of three native OAM tables from its follower slot, refills 60 energy and clamps to maximum.",
+   "next_action": "Port Mecha Ridley so its grouped energy drops become reachable in normal play, then compare their presentation with an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_sprites.c"
+     "tests/test_mzm_sprites.c",
+     "tests/test_mzm_sprites.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -4790,6 +4795,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_mzm_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9957,6 +9968,12 @@
  },
  "timeline": [
   {
+   "commit": "a95f566",
+   "date": "2026-10-18",
+   "subject": "Complete Acid Worm background layering",
+   "scope": "project"
+  },
+  {
    "commit": "0ddeacb",
    "date": "2026-10-18",
    "subject": "Complete Acid Worm death choreography",
@@ -10429,12 +10446,6 @@
    "date": "2026-10-13",
    "subject": "feat(mzm): elevators and area connections",
    "scope": "mzm"
-  },
-  {
-   "commit": "4683ac3",
-   "date": "2026-10-13",
-   "subject": "feat(mzm): room gadgets (elevator pads, water drops, steam, Gerons, item blocks)",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10462,7 +10473,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1307,
+    "routines_cited_by_features": 1310,
     "call_edges": 6071
    },
    "aos": {
@@ -10864,7 +10875,7 @@
      {
       "id": 70,
       "name": "Dessgeega",
-      "status": "partial",
+      "status": "functional",
       "note": "Dessgeegas and the Long Beam Dessgeega",
       "evidence": {
        "unit_tests": [
@@ -10884,7 +10895,7 @@
      {
       "id": 71,
       "name": "Dessgeega After Long Beam",
-      "status": "partial",
+      "status": "functional",
       "note": "Dessgeegas and the Long Beam Dessgeega",
       "evidence": {
        "unit_tests": [
@@ -12007,7 +12018,8 @@
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
-        "tests/test_mzm_sprites.c"
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py"
        ],
        "in_game_check": [],
        "emulator_compared": false,
@@ -12022,7 +12034,8 @@
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
-        "tests/test_mzm_sprites.c"
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py"
        ],
        "in_game_check": [],
        "emulator_compared": false,
@@ -12037,7 +12050,8 @@
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
-        "tests/test_mzm_sprites.c"
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py"
        ],
        "in_game_check": [],
        "emulator_compared": false,
@@ -12052,7 +12066,8 @@
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
-        "tests/test_mzm_sprites.c"
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py"
        ],
        "in_game_check": [],
        "emulator_compared": false,
@@ -12067,7 +12082,8 @@
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
-        "tests/test_mzm_sprites.c"
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py"
        ],
        "in_game_check": [],
        "emulator_compared": false,
@@ -12261,6 +12277,22 @@
        "played_through": false
       },
       "feature": "mzm.items.chozo_statues"
+     },
+     {
+      "id": 53,
+      "name": "Multiple Large Energy",
+      "status": "partial",
+      "note": "Enemy drops",
+      "evidence": {
+       "unit_tests": [
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py"
+       ],
+       "in_game_check": [],
+       "emulator_compared": false,
+       "played_through": false
+      },
+      "feature": "mzm.items.enemy_drops"
      },
      {
       "id": 68,

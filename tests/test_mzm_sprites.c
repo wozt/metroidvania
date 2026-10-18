@@ -5617,6 +5617,7 @@ int main(void) {
         MzmSpriteGlobals globals = {0};
         MzmSpriteSamusLink link = {.samus_pose = MZM_POSE_ON_ZIPLINE};
         MzmSpriteKind acid_kind = {0};
+        MzmEffects acid_effects = {0};
         for (int a = 0; a < MZM_ACID_WORM_ANIMS; ++a) {
             acid_kind.counts[a] = 4;
             for (int f = 0; f < 4; ++f) acid_kind.timers[a][f] = 2;
@@ -5658,6 +5659,7 @@ int main(void) {
         af.sprite_count = 20;
         af.globals = &globals;
         af.hooks = &test_hooks;
+        af.effects = &acid_effects;
         af.samus_link = &link;
         af.samus_x = 16 * 64 + 32;
         af.samus_y = 7 * 64;
@@ -5673,6 +5675,7 @@ int main(void) {
                last_door_timer == 1 && room[0].health == 600);
         mzm_sprite_update(&room[0], 0, &af);
         assert(room[0].pose == 0x42);
+        memset(&acid_effects, 0, sizeof acid_effects);
         mzm_sprite_update(&room[0], 0, &af);
         assert(room[0].pose == 0x43 && caa_calls == 2 && last_caa == MZM_CAA_REMOVE_SOLID &&
                globals.sub1.work2 == 1 &&
@@ -5684,6 +5687,13 @@ int main(void) {
         }
         assert(room[0].pose == 0x9 && intro_frames > 100 && effect_y_delta > 0 &&
                caa_calls == 6);
+        const uint8_t entrance_debris[8] = {17, 18, 19, 4, 17, 18, 19, 4};
+        for (int i = 0; i < 8; ++i)
+            assert(acid_effects.debris[i].exists &&
+                   acid_effects.debris[i].type == entrance_debris[i]);
+        assert(acid_effects.particles[0].effect == MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG &&
+               acid_effects.particles[1].effect == MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG &&
+               acid_effects.particles[2].effect == MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
         MzmSprite *weak = NULL;
         for (int i = 1; i < 20; ++i) {
             mzm_sprite_update(&room[i], i, &af);
@@ -5732,15 +5742,45 @@ int main(void) {
         mzm_sprite_update(&spit, 15, &af);
         mzm_sprite_update(&spit, 15, &af);
         assert(spit.pose == 0x9 && spit.y == 284 && spit.x == 490 && spit.work3 == 1);
-        room[0].health = 0;
+        memset(&acid_effects, 0, sizeof acid_effects);
+        acid_world.effect_y = (uint16_t)(room[0].y_spawn - MZM_BLOCK_SIZE * 3);
+        effect_y_delta = 0;
+        mzm_sfx_clear();
+        room[0].health = 10;
+        weak->health = 1014;
+        mzm_sprite_update(weak, (int)(weak - room), &af);
+        assert(room[0].pose == 0x62 && room[0].health == 0 && weak->health == 0 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ACID_WORM_DYING));
         mzm_sprite_update(&room[0], 0, &af);
-        assert(room[0].pose == 0x67);
+        assert(room[0].pose == 0x67 && room[0].isft == 80);
+        MzmSprite *tail = NULL;
+        for (int i = 1; i < 20; ++i) {
+            if (room[i].status) mzm_sprite_update(&room[i], i, &af);
+            if (room[i].room_slot == 9) tail = &room[i];
+        }
+        assert(tail && globals.sub1.work2);
         int death_frames = 0;
-        while (room[0].status && death_frames++ < 220)
-            mzm_sprite_update(&room[0], 0, &af);
-        assert(!room[0].status && death_frames == 170 &&
+        int weak_death_frame = -1, tail_death_frame = -1;
+        while (room[0].status && death_frames < 600) {
+            int previous_delta = effect_y_delta;
+            af.frame8++;
+            for (int i = 0; i < 20; ++i)
+                if (room[i].status) mzm_sprite_update(&room[i], i, &af);
+            acid_world.effect_y = (uint16_t)(acid_world.effect_y +
+                                             effect_y_delta - previous_delta);
+            ++death_frames;
+            if (weak_death_frame < 0 && !(weak->status & MZM_SPRITE_STATUS_EXISTS))
+                weak_death_frame = death_frames;
+            if (tail_death_frame < 0 && !(tail->status & MZM_SPRITE_STATUS_EXISTS))
+                tail_death_frame = death_frames;
+        }
+        assert(!room[0].status && weak_death_frame > 0 &&
+               tail_death_frame - weak_death_frame == 56 &&
                test_check_event(NULL, MZM_EVENT_ACID_WORM_KILLED) &&
-               last_door_timer == -20 && effect_y_delta > 0);
+               last_door_timer == -20 && caa_calls == 8 && effect_y_delta > 0 &&
+               !globals.sub1.work2 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_FADE, 0) &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_BOSS_KILLED));
     }
     /* Gadora: the Kraid seal exposes its eye, opens the hatch persistently
      * when killed, and the Ridley variant fires its delayed beam. */

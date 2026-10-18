@@ -3786,6 +3786,32 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0363 - native Acid Worm destruction and death
+
+- Restored the three native entrance-destruction effects. Each removed block
+  pair now emits its original explosion, and the upper pair launches all eight
+  debris pieces with their exact types and offsets.
+- Replaced the compact boss removal with `AcidWormDeathGfxInit`,
+  `AcidWormDeathFlashingAnim` and `AcidWormPartDeath`. The curved body keeps
+  rotating through the 80-tick palette flash, then its nine actors explode in
+  room-slot order at eight-tick intervals.
+- The final tail explosion now owns the native encounter side effects: it
+  removes the floor pair, records event 27, opens the door and starts the
+  4.5-second music fade. The hidden main actor continues lowering the acid,
+  emits dust above the pit, shakes both axes and plays the death and
+  boss-killed cues at their native stages.
+- The ROM-free regression now verifies all eight entrance debris types, the
+  three block particles, lethal weak-point transfer, shared death flash, the
+  56-frame weak-point-to-tail interval, floor removal, persistent event, door
+  timer, acid descent and both music requests.
+- Remaining divergence: spit explosions do not yet inherit BG1's priority,
+  and the encounter has not been compared frame by frame with an emulator.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed. Dashboard generation reported 126 features, 61
+  functional or better and 114 with passing tests. Every reconstruction task
+  completed or was up to date, generated-data checks were fresh and the
+  proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

@@ -53,6 +53,49 @@ static void open_column(const Ctx *c, bool ground) {
     if (ground) change_pair(c, (uint16_t)(s->y_spawn + BLOCK_SIZE), s->x_spawn);
 }
 
+static void destroy_block_down(Ctx *c) {
+    MzmSprite *s = c->s;
+    change_pair(c, s->y_spawn, s->x_spawn);
+    if (!ai_check_event(c, MZM_EVENT_ACID_WORM_KILLED))
+        ai_particle_set(c, (uint16_t)(s->y_spawn - BLOCK_SIZE),
+                        (uint16_t)(s->x_spawn - QUARTER_BLOCK_SIZE),
+                        MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+}
+
+static void destroy_block_middle(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y_spawn - BLOCK_SIZE);
+    change_pair(c, y, s->x_spawn);
+    if (!ai_check_event(c, MZM_EVENT_ACID_WORM_KILLED))
+        ai_particle_set(c, (uint16_t)(y - BLOCK_SIZE),
+                        (uint16_t)(s->x_spawn + QUARTER_BLOCK_SIZE),
+                        MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+}
+
+static void destroy_block_top(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t y = (uint16_t)(s->y_spawn - BLOCK_SIZE * 2);
+    uint16_t x = s->x_spawn;
+    change_pair(c, y, x);
+    if (ai_check_event(c, MZM_EVENT_ACID_WORM_KILLED)) return;
+    ai_particle_set(c, (uint16_t)(y - BLOCK_SIZE), (uint16_t)(x - EIGHTH_BLOCK_SIZE),
+                    MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+    y = (uint16_t)(y - BLOCK_SIZE * 2);
+    ai_debris_init(c, 17, (uint16_t)(y - BLOCK_SIZE - PIXEL_SIZE / 2),
+                   (uint16_t)(x - HALF_BLOCK_SIZE));
+    ai_debris_init(c, 18, y, (uint16_t)(x - THREE_QUARTER_BLOCK_SIZE - PIXEL_SIZE));
+    ai_debris_init(c, 19, (uint16_t)(y - BLOCK_SIZE - HALF_BLOCK_SIZE + PIXEL_SIZE),
+                   (uint16_t)(x - BLOCK_SIZE + PIXEL_SIZE / 2));
+    ai_debris_init(c, 4, y, (uint16_t)(x - HALF_BLOCK_SIZE));
+    ai_debris_init(c, 17, (uint16_t)(y - HALF_BLOCK_SIZE - PIXEL_SIZE),
+                   (uint16_t)(x + BLOCK_SIZE + QUARTER_BLOCK_SIZE + PIXEL_SIZE / 2));
+    ai_debris_init(c, 18, (uint16_t)(y - BLOCK_SIZE - QUARTER_BLOCK_SIZE + PIXEL_SIZE),
+                   (uint16_t)(x + HALF_BLOCK_SIZE));
+    ai_debris_init(c, 19, y, (uint16_t)(x + BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
+    ai_debris_init(c, 4, (uint16_t)(y - BLOCK_SIZE - THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE),
+                   (uint16_t)(x + THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE));
+}
+
 static bool on_zipline(const Ctx *c) {
     if (!c->f->samus_link) return false;
     uint8_t pose = c->f->samus_link->samus_pose;
@@ -159,7 +202,7 @@ static void start_intro(Ctx *c) {
     s->status &= (uint16_t)~(MZM_SPRITE_STATUS_FACING_DOWN |
                              MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
     c->f->globals->sub1.work2 = 1;
-    change_pair(c, s->y_spawn, s->x_spawn);
+    destroy_block_down(c);
     mzm_screen_shake_start_vertical(60, 0x81);
     mzm_screen_shake_start_horizontal(60, 0x81);
     mzm_sfx_play(MZM_SOUND_ACID_WORM_DESTROYING_BLOCKS);
@@ -176,9 +219,9 @@ static void intro(Ctx *c) {
             splash_if_crossed(c, old_y, s->y);
             move_acid(c, 1);
             if (++s->work0 == 4)
-                change_pair(c, (uint16_t)(s->y_spawn - BLOCK_SIZE), s->x_spawn);
+                destroy_block_middle(c);
             else if (s->work0 == 8)
-                change_pair(c, (uint16_t)(s->y_spawn - BLOCK_SIZE * 2), s->x_spawn);
+                destroy_block_top(c);
             return;
         }
         s->pose = AW_SPAWN_TOP;
@@ -477,36 +520,60 @@ static void acid_cycle(Ctx *c) {
 static void start_death(Ctx *c) {
     MzmSprite *s = c->s;
     s->pose = AW_DYING_FLASH;
-    s->work0 = 80;
+    s->isft = 80;
     s->samus_collision = SSC_NONE;
-    s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
     ai_set_anim(s, MZM_ACID_WORM_MOVING);
-    mzm_sfx_play(MZM_SOUND_ACID_WORM_DYING);
 }
 
 static void dying(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->pose == AW_DYING_FLASH) {
         s->ignore_samus_timer = 1;
-        if ((s->work0 & 7) < 4) s->status ^= MZM_SPRITE_STATUS_NOT_DRAWN;
-        if (s->work0 && --s->work0) return;
-        s->status |= MZM_SPRITE_STATUS_NOT_DRAWN;
-        s->pose = AW_DYING;
-        s->work0 = 90;
-        ai_particle_set(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+        handle_rotation(c, s);
+        if (!(s->isft & 0x7F)) return;
+        uint8_t isft = --s->isft;
+        if (!(isft & 3)) {
+            if (isft & 4) {
+                s->palette_row = (uint8_t)(14 - s->gfx_slot - s->frozen_row_offset);
+            } else {
+                s->palette_row = s->absolute_palette_row;
+                if (isft == 0) {
+                    ai_particle_set(c, s->y, s->x,
+                                    MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+                    s->pose = AW_DYING;
+                    s->status |= MZM_SPRITE_STATUS_NOT_DRAWN;
+                    s->work0 = 1;
+                }
+            }
+        }
         return;
     }
-    move_acid(c, 4);
-    if ((s->work0 & 15) == 0) {
-        mzm_screen_shake_start_vertical(10, 0x81);
-        mzm_screen_shake_start_horizontal(10, 0x81);
+    if (c->world->effect_y > s->y_spawn + BLOCK_SIZE * 7 + HALF_BLOCK_SIZE) {
+        if (!c->f->globals->sub1.work2) {
+            s->status = 0;
+            mzm_sfx_music_play(MZM_MUSIC_BOSS_KILLED, 0);
+        }
+        return;
     }
-    if (s->work0 && --s->work0) return;
-    open_column(c, true);
-    set_event(c, MZM_EVENT_ACID_WORM_KILLED);
-    door_timer(c, -20);
-    mzm_sfx_play(MZM_SOUND_ACID_WORM_DEAD);
-    s->status = 0;
+    if (!c->f->globals->sub1.work2) {
+        if (c->world->effect_y < s->y_spawn) {
+            if ((c->frame8 & 31) == 0)
+                ai_particle_set(c,
+                    (uint16_t)(s->y_spawn + BLOCK_SIZE + EIGHTH_BLOCK_SIZE + c->rng * 8),
+                    s->x_spawn, MZM_PE_SECOND_TWO_MEDIUM_DUST);
+        } else {
+            move_acid(c, 1);
+        }
+    }
+    if (s->work0) {
+        if (--s->work0 == 0) mzm_sfx_play(MZM_SOUND_ACID_WORM_DEAD);
+    } else {
+        move_acid(c, 1);
+        if ((c->frame8 & 15) == 0) {
+            mzm_screen_shake_start_vertical(10, 0x81);
+            mzm_screen_shake_start_horizontal(10, 0x81);
+        }
+    }
 }
 
 static void main_ai(Ctx *c) {
@@ -613,14 +680,30 @@ static void part_ai(Ctx *c) {
         s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
         if (s->pose != AW_PART_DYING) {
             s->pose = AW_PART_DYING;
-            s->work0 = (uint8_t)(s->room_slot * 8);
             s->health = 0;
+            s->ignore_samus_timer = 1;
+            return;
         }
         handle_rotation(c, s);
-        if (s->work0 && --s->work0) return;
-        ai_sprite_death_full(c, DEATH_NO_DEATH_OR_RESPAWNING_ALREADY_HAS_DROP,
-                             s->y, s->x, false, s->room_slot == AW_WEAK_POINT ?
-                             MZM_PE_SPRITE_EXPLOSION_BIG : MZM_PE_SPRITE_EXPLOSION_MEDIUM);
+        if (main->isft & 0x7F) {
+            s->palette_row = main->palette_row;
+            return;
+        }
+        if (--s->work0) return;
+        uint8_t effect = s->room_slot == AW_WEAK_POINT ?
+                         MZM_PE_SPRITE_EXPLOSION_BIG : MZM_PE_SPRITE_EXPLOSION_MEDIUM;
+        if (s->room_slot == AW_PARTS) {
+            c->f->globals->sub1.work2 = 0;
+            ai_particle_set(c, (uint16_t)(main->y_spawn + BLOCK_SIZE + HALF_BLOCK_SIZE),
+                            main->x_spawn, MZM_PE_SPRITE_EXPLOSION_BIG);
+            ai_particle_set(c, (uint16_t)(main->y_spawn + BLOCK_SIZE),
+                            main->x_spawn, MZM_PE_SPRITE_EXPLOSION_BIG);
+            change_pair(c, (uint16_t)(main->y_spawn + BLOCK_SIZE), main->x_spawn);
+            set_event(c, MZM_EVENT_ACID_WORM_KILLED);
+            door_timer(c, -20);
+            mzm_sfx_music_fade(270);
+        }
+        ai_sprite_death_full(c, DEATH_NORMAL, s->y, s->x, false, effect);
         return;
     }
     if (s->pose == AW_PART_MOVING) {

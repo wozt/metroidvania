@@ -41,6 +41,8 @@ enum {
     SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT = 6,
     SSC_KNOCKS_BACK_SAMUS = 7,
     SSC_HURTS_KNOCKBACK_IF_INVINCIBLE = 10,
+    SSC_HURTS_SAMUS_SOLID = 11,
+    SSC_MELLOW = 18,
     SSC_SOLID_SIDEWAYS = 12,
     SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY = 15,
     SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY_NO_CONTACT_DAMAGE = 21,
@@ -125,6 +127,9 @@ void ai_sprite_death(Ctx *c, uint16_t y, uint16_t x, uint8_t effect);
 void ai_sprite_death_typed(Ctx *c, int type, uint16_t y, uint16_t x, uint8_t effect);
 /* SpriteUtilSpriteDeath with its playSound flag (the explosion sounds). */
 void ai_sprite_death_full(Ctx *c, int type, uint16_t y, uint16_t x, bool play_sound, uint8_t effect);
+/* SpriteSpawnPrimary: the new sprite's slot, or -1. */
+int ai_spawn_primary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot, uint16_t y,
+                     uint16_t x, uint16_t status);
 /* SpriteSpawnSecondary: the new sprite's slot, or -1. */
 int ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot, uint16_t y,
                        uint16_t x, uint16_t status);
@@ -199,6 +204,8 @@ void ai_mother_brain(Ctx *c);
 void ai_deorem(Ctx *c);
 /* Acid Worm, its body parts and spit (mzm_acid_worm.c). */
 void ai_acid_worm(Ctx *c);
+/* The hives, their roots, the Mellows and their swarms (mzm_hive.c). */
+void ai_hive(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */
 void ai_gadora(Ctx *c);
 /* The paired Imago larvae, their parts and the animated passage remnant. */

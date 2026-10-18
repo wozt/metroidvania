@@ -211,6 +211,8 @@ typedef struct {
     int16_t dragon_fireball_y[40];  /* sDragonFireballYMovement (SHORT_MAX ends it) */
     int16_t dragon_fireball_rotation[40]; /* sDragonFireballOamRotation */
     int16_t pirate_wall_jump[8];    /* sSpacePirateWallJumpingVelocity */
+    int16_t mellow_idle_y[65];      /* sMellowIdleYVelocity (SHORT_MAX ends it) */
+    int16_t mellow_idle_x[81];      /* sMellowIdleXVelocity (SHORT_MAX ends it) */
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
     int16_t pirate_jump_high[11];   /* sSpacePirate_2e105a */
@@ -860,6 +862,13 @@ enum {
 };
 extern const char *const mzm_mecha_ridley_anim_names[MZM_MECHA_RIDLEY_ANIMS];
 
+/* The Brinstar hives, their roots and the Mellows (sprites_ai/hive.c). */
+enum {
+    MZM_HIVE_MELLOW_IDLE, MZM_HIVE_MELLOW_SAMUS_DETECTED, MZM_HIVE_IDLE, MZM_HIVE_ROOTS_IDLE,
+    MZM_HIVE_PHASE2, MZM_HIVE_PHASE3, MZM_HIVE_DYING, MZM_HIVE_ANIMS,
+};
+extern const char *const mzm_hive_anim_names[MZM_HIVE_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
@@ -875,7 +884,7 @@ enum {
     MZM_FAMILY_MOTHER_BRAIN, MZM_FAMILY_BOSS_STATUE, MZM_FAMILY_DEOREM,
     MZM_FAMILY_ACID_WORM, MZM_FAMILY_GADORA, MZM_FAMILY_IMAGO_LARVA,
     MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE, MZM_FAMILY_IMAGO_COCOON,
-    MZM_FAMILY_MECHA_RIDLEY,
+    MZM_FAMILY_MECHA_RIDLEY, MZM_FAMILY_HIVE,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -951,6 +960,8 @@ enum {
     MZM_PSPRITE_CHOZO_STATUE_PLASMA_BEAM = 148,
     MZM_PSPRITE_GADORA_KRAID = 173, MZM_PSPRITE_GADORA_RIDLEY = 174,
     MZM_PSPRITE_IMAGO_LARVA_RIGHT = 77, MZM_PSPRITE_IMAGO_COCOON = 79,
+    MZM_PSPRITE_MELLOW = 74, MZM_PSPRITE_HIVE = 75, MZM_PSPRITE_MELLOW_SWARM = 132,
+    MZM_PSPRITE_MELLOW_SWARM_HEALTH_BASED = 133,
     MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT = 112,
     MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE = 127,
     MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,
@@ -979,7 +990,7 @@ enum {
     MZM_SSPRITE_DEOREM_SEGMENT = 9, MZM_SSPRITE_DEOREM_EYE = 10, MZM_SSPRITE_DEOREM_THORN = 11,
     MZM_SSPRITE_ACID_WORM_PART = 37, MZM_SSPRITE_ACID_WORM_SPIT = 38,
     MZM_SSPRITE_GADORA_EYE = 54, MZM_SSPRITE_GADORA_BEAM = 55,
-    MZM_SSPRITE_IMAGO_LARVA_PART = 18,
+    MZM_SSPRITE_IMAGO_LARVA_PART = 18, MZM_SSPRITE_HIVE_ROOTS = 17,
     MZM_SSPRITE_WINGED_RIPPER = 6, MZM_SSPRITE_IMAGO_COCOON_VINE = 20,
     MZM_SSPRITE_IMAGO_COCOON_SPORE = 21, MZM_SSPRITE_DEFEATED_IMAGO_COCOON = 42,
     MZM_SSPRITE_IMAGO_CEILING_VINE = 43,
@@ -1078,6 +1089,7 @@ enum {
     MZM_EVENT_DEOREM_KILLED_AT_SECOND_LOCATION = 26,
     MZM_EVENT_ACID_WORM_KILLED = 27,
     MZM_EVENT_KRAID_GADORA_KILLED = 28, MZM_EVENT_RIDLEY_GADORA_KILLED = 36,
+    MZM_EVENT_THREE_HIVES_DESTROYED = 44,
     MZM_EVENT_CATERPILLAR_KILLED = 31, MZM_EVENT_IMAGO_TUNNEL_DISCOVERED = 32,
     MZM_EVENT_IMAGO_COCOON_KILLED = 33,
     MZM_EVENT_KRAID_STATUE_OPENED = 53, MZM_EVENT_RIDLEY_STATUE_OPENED = 54,

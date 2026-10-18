@@ -3838,6 +3838,30 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0370 - Brinstar hives and Mellows
+
+- Ported `sprites_ai/hive.c` in `mzm_hive.c`, with four AIs:
+  - the hive spawns its roots and four Mellows, replaces any Mellow it
+    loses, and shrinks twice (under half, then a quarter of its health);
+  - its roots follow it and vanish at the first shrink;
+  - when the last hive dies, event 44 is set and its idle Mellows flee
+    and despawn off screen;
+  - Mellows hover on the ROM-exported idle tables, chase Samus around
+    four waypoints with the native acceleration, and push overlapping
+    Mellows apart;
+  - Mellow swarms keep five Mellows (or 3 to 15, by energy) diving from
+    above the camera.
+- Added a shared `SpriteSpawnPrimary` helper. Added the `SSC_HURTS_SAMUS_SOLID`
+  contact (solid side stop plus damage) and `SSC_MELLOW` contact.
+- Exported the hive graphics (seven tables) and the two Mellow idle tables.
+- A ROM-free regression covers the spawn, the idle hover, Samus detection
+  and the chase start, Mellow replacement, both shrinks, root removal,
+  death, event 44, fleeing, event-gated spawns and both swarm variants.
+- A capture in `brinstar_015` shows the hives on their pillars, with their
+  Mellows hovering and chasing Samus.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0369 - Mecha Ridley cover, core, death and escape start
 
 - Ported `BlackSpacePirateProjectileCollision` for the Mecha Ridley parts:

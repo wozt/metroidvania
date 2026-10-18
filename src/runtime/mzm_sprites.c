@@ -663,6 +663,13 @@ const char *const mzm_mecha_ridley_anim_names[MZM_MECHA_RIDLEY_ANIMS] = {
     "MechaRidleyPartOam_LeftArmSwingingAtCloseGround",
     "MechaRidleyPartOam_EyeDying",
 };
+const char *const mzm_hive_anim_names[MZM_HIVE_ANIMS] = {
+    "MellowOam_Idle", "MellowOam_SamusDetected", "HiveOam_Idle", "HiveRootsOam_Idle",
+    "HiveOam_Phase2", "HiveOam_Phase3", "HiveOam_Dying",
+};
+static const char *const hive_sprites[MZM_HIVE_ANIMS] = {
+    "HIVE", "HIVE", "HIVE", "HIVE", "HIVE", "HIVE", "HIVE",
+};
 static const char *const mecha_ridley_sprites[MZM_MECHA_RIDLEY_ANIMS] = {
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
@@ -960,6 +967,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
                                  imago_cocoon_sprites},
     [MZM_FAMILY_MECHA_RIDLEY] = {MZM_MECHA_RIDLEY_ANIMS, mzm_mecha_ridley_anim_names,
                                  mecha_ridley_sprites},
+    [MZM_FAMILY_HIVE] = {MZM_HIVE_ANIMS, mzm_hive_anim_names, hive_sprites},
 };
 
 
@@ -1943,6 +1951,28 @@ static void ripper2(Ctx *c) {
 }
 
 /* SpriteSpawnSecondary: the first free slot, or nothing. */
+int ai_spawn_primary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot, uint16_t y,
+                     uint16_t x, uint16_t status) {
+    for (int slot = 0; c->f->sprites && slot < c->f->sprite_count; ++slot) {
+        MzmSprite *n = &c->f->sprites[slot];
+        if (n->status & MZM_SPRITE_STATUS_EXISTS) continue;
+        memset(n, 0, sizeof *n);
+        n->status = status | MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
+                    MZM_SPRITE_STATUS_NOT_DRAWN;
+        n->gfx_slot = gfx_slot;
+        n->sprite_id = sprite_id;
+        n->y = y;
+        n->x = x;
+        n->room_slot = part;
+        n->draw_order = 4;
+        n->pose = SPRITE_POSE_UNINITIALIZED;
+        n->ignore_samus_timer = 1;
+        n->ram_slot = (uint8_t)slot;
+        return slot;
+    }
+    return -1;
+}
+
 int ai_spawn_secondary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
                        uint16_t y, uint16_t x, uint16_t status) {
     for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
@@ -5402,6 +5432,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_DEFEATED_IMAGO_COCOON ||
             sprite_id == MZM_SSPRITE_IMAGO_CEILING_VINE)
             return MZM_FAMILY_IMAGO_COCOON;
+        if (sprite_id == MZM_SSPRITE_HIVE_ROOTS) return MZM_FAMILY_HIVE;
         if (sprite_id == MZM_SSPRITE_MECHA_RIDLEY_PART ||
             sprite_id == MZM_SSPRITE_MECHA_RIDLEY_LASER ||
             sprite_id == MZM_SSPRITE_MECHA_RIDLEY_MISSILE ||
@@ -5495,6 +5526,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_DISCOVERED_IMAGO_PASSAGE_EVENT_TRIGGER:
         return MZM_FAMILY_IMAGO_COCOON;
     case MZM_PSPRITE_MECHA_RIDLEY: return MZM_FAMILY_MECHA_RIDLEY;
+    case MZM_PSPRITE_HIVE: case MZM_PSPRITE_MELLOW: case MZM_PSPRITE_MELLOW_SWARM:
+    case MZM_PSPRITE_MELLOW_SWARM_HEALTH_BASED:
+        return MZM_FAMILY_HIVE;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -5939,7 +5973,22 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;
             ignore = true;
             break;
+        case SSC_HURTS_SAMUS_SOLID: {
+            /* The hives: Samus stopped at their side, and hurt. */
+            if (contact_kills(s, samus, tables) || !samus->world) break;
+            if (on_left) stop_samus_left(samus, samus_y, left);
+            else stop_samus_right(samus, samus_y, right);
+            if (!samus->invincible) {
+                if (samus->hurt) {
+                    samus->hurt(samus->context, damage_of(s, tables), on_left);
+                    samus->invincible = true;
+                }
+                ignore = true;
+            }
+            break;
+        }
         case SSC_HURTS_SAMUS:
+        case SSC_MELLOW:
         case SSC_SPACE_PIRATE:      /* same as the hurt code */
             if (contact_kills(s, samus, tables)) break;
             if (!samus->invincible && samus->hurt) {
@@ -6443,6 +6492,8 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
             return MZM_PSPRITE_CANNON;
         if (sprite->sprite_id == MZM_PSPRITE_DEOREM_SECOND_LOCATION)
             return MZM_PSPRITE_DEOREM_FIRST_LOCATION;
+        /* sHiveGfx: the Mellows and their swarms. */
+        if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_HIVE) return MZM_PSPRITE_HIVE;
         /* sRinkaZebetiteAndCannonGfx, exported with the cannon's tables. */
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_RINKA &&
             sprite->sprite_id != MZM_PSPRITE_RINKA_ORANGE && sprite->sprite_id != MZM_PSPRITE_RINKA_GREEN)
@@ -6695,6 +6746,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE: ai_imago_larva_right_side(&c); break;
     case MZM_FAMILY_IMAGO_COCOON: ai_imago_cocoon(&c); break;
     case MZM_FAMILY_MECHA_RIDLEY: ai_mecha_ridley(&c); break;
+    case MZM_FAMILY_HIVE: ai_hive(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

@@ -2557,6 +2557,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sDessgeegaHighJumpYVelocity", t->dessgeega_high, 10, 10},
         {"sDessgeegaLowJumpYVelocity", t->dessgeega_low, 10, 10},
         {"sReoIdleYMovement", t->reo_idle_y, 65, 65},
+        {"sMellowIdleYVelocity", t->mellow_idle_y, 65, 65},
+        {"sMellowIdleXVelocity", t->mellow_idle_x, 81, 81},
         {"sReoIdleXMovement", t->reo_idle_x, 81, 81},
         {"sMellaIdleYMovement", t->mella_idle_y, 65, 65},
         {"sMellaIdleXMovement", t->mella_idle_x, 49, 49},

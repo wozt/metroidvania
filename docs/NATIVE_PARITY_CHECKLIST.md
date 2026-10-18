@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 79 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 80 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -400,6 +400,16 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.part
 Known divergences: The splash of SpriteUtilCheckInRoomEffect when it dives through a liquid surface is not ported; otherwise the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
 Evidence: in game: `norfair_012`.
+
+[~] **`mzm.enemies.hive` — Brinstar hives, roots, Mellows and Mellow swarms.** Each hive spawns its roots and four Mellows, replaces any lost Mellow, shrinks under half and a quarter of its health (the roots disappear with the first stage), and on death sets event 44 once no hive is left while its idle Mellows flee and despawn off screen. Mellows hover on the ROM-exported idle tables, swap in front of and behind the hive, detect Samus within five blocks and circle her around four waypoints with the native acceleration, pushing overlapping Mellows apart. Mellow swarms keep five (or 3 to 15 by energy) Mellows diving from above the camera. The hives are solid and hurt on contact (SSC_HURTS_SAMUS_SOLID), the Mellows hurt like ordinary enemies. A capture in brinstar_015 shows the hives on their pillars with their Mellows hovering and chasing Samus.
+
+Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilUpdateSecondarySpriteFreezeTimerOfCurrent`, `mzm:c:src/sprites_ai/hive.c:Hive`, `mzm:c:src/sprites_ai/hive.c:HiveCountMellows`, `mzm:c:src/sprites_ai/hive.c:HiveDead`, `mzm:c:src/sprites_ai/hive.c:HiveDying`, `mzm:c:src/sprites_ai/hive.c:HiveInit`, `mzm:c:src/sprites_ai/hive.c:HivePhase1`, `mzm:c:src/sprites_ai/hive.c:HivePhase2`, `mzm:c:src/sprites_ai/hive.c:HivePhase3`, `mzm:c:src/sprites_ai/hive.c:HiveRoots`, `mzm:c:src/sprites_ai/hive.c:HiveRootsIdle`, `mzm:c:src/sprites_ai/hive.c:HiveRootsInit`, `mzm:c:src/sprites_ai/hive.c:HiveSpawnParticle`, `mzm:c:src/sprites_ai/hive.c:Mellow`, `mzm:c:src/sprites_ai/hive.c:MellowFleeing`, `mzm:c:src/sprites_ai/hive.c:MellowIdle`, `mzm:c:src/sprites_ai/hive.c:MellowInit`, `mzm:c:src/sprites_ai/hive.c:MellowMove`, `mzm:c:src/sprites_ai/hive.c:MellowMoveInit`, `mzm:c:src/sprites_ai/hive.c:MellowSwarm`.  
+Local implementation: [`src/runtime/mzm_hive.c`](../src/runtime/mzm_hive.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.items.enemy_drops`, `mzm.animation.particles`.  
+Known divergences: The Mellows' BG priority uses the runtime's BG1 priority override. Not compared frame by frame with an emulator.  
+Next action: Compare a hive fight and a Mellow swarm room with an emulator.
+Evidence: in game: `brinstar_013`, `brinstar_014`, `brinstar_015`.
 
 [~] **`mzm.enemies.holtz` — Holtzes.** Hovering under a ceiling with its ROM idle table, aware or idle table by Samus height, warning when she is low and within 8 blocks vertically and 5 across, the swoop at 3 pixels a frame with the horizontal speed growing from 2 to 12 subpixels, the slide, the slowing climb, the bonk on the ceiling and the death into drops.
 

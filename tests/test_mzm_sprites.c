@@ -6810,6 +6810,121 @@ int main(void) {
         assert(cleared.status == 0);
         memset(test_events, 0, sizeof test_events);
     }
+    /* The Brinstar hives: roots and four Mellows, shrinking phases,
+     * replacement Mellows, death and the three-hives event. */
+    {
+        MzmSpriteKind hive_kind = {0};
+        for (int a = 0; a < MZM_HIVE_ANIMS; ++a) {
+            hive_kind.counts[a] = 2;
+            hive_kind.timers[a][0] = hive_kind.timers[a][1] = 8;
+        }
+        for (int i = 0; i < 65; ++i) tables.mellow_idle_y[i] = (int16_t)(i < 64 ? 1 : 32767);
+        for (int i = 0; i < 81; ++i) tables.mellow_idle_x[i] = (int16_t)(i < 80 ? 2 : 32767);
+        tables.health[MZM_PSPRITE_HIVE] = 100;
+        tables.health[MZM_PSPRITE_MELLOW] = 2;
+        MzmSprite room[24] = {0};
+        MzmSpriteGlobals globals = {0};
+        MzmSpriteFrame hf = frame;
+        hf.sprites = room;
+        hf.sprite_count = 24;
+        hf.globals = &globals;
+        hf.hooks = &test_hooks;
+        hf.kinds[MZM_FAMILY_HIVE] = &hive_kind;
+        memset(test_events, 0, sizeof test_events);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_HIVE, 1, 10, 10, 3, 0);
+        mzm_sprite_update(&room[0], 0, &hf);
+        assert(room[0].pose == 0x9 && room[0].health == 100 && room[0].samus_collision == 11 &&
+               room[0].draw_order == 5 && room[0].anim == MZM_HIVE_IDLE);
+        int roots = -1, mellows = 0;
+        for (int i = 1; i < 24; ++i) {
+            if (!room[i].status) continue;
+            if (room[i].secondary && room[i].sprite_id == MZM_SSPRITE_HIVE_ROOTS) roots = i;
+            if (!room[i].secondary && room[i].sprite_id == MZM_PSPRITE_MELLOW && room[i].room_slot == 3)
+                ++mellows;
+        }
+        assert(roots == 1 && mellows == 4 && room[2].y == room[0].y + MZM_BLOCK_SIZE &&
+               mzm_sprite_graphics_owner(&room[2]) == MZM_PSPRITE_HIVE);
+        for (int i = 1; i <= 5; ++i) mzm_sprite_update(&room[i], (uint8_t)i, &hf);
+        assert(room[1].anim == MZM_HIVE_ROOTS_IDLE && room[1].x == room[0].x &&
+               room[2].pose == 0x9 && room[2].samus_collision == 18 && room[2].health == 2);
+        /* MellowIdle hovers on its tables; Samus near makes it chase. */
+        uint16_t hover_y = room[2].y, hover_x = room[2].x;
+        hf.samus_y = (uint16_t)(room[0].y + MZM_BLOCK_SIZE * 20);
+        hf.samus_x = room[0].x;
+        mzm_sprite_update(&room[2], 2, &hf);
+        assert(room[2].y == hover_y + 1 && room[2].x == hover_x + 2 && room[2].pose == 0x9);
+        hf.samus_y = (uint16_t)(room[2].y + 1);
+        hf.samus_x = (uint16_t)(room[2].x + MZM_BLOCK_SIZE * 2);
+        mzm_sprite_update(&room[2], 2, &hf);
+        assert(room[2].pose == 0x22 && room[2].anim == MZM_HIVE_MELLOW_SAMUS_DETECTED &&
+               room[2].draw_order == 3);
+        mzm_sprite_update(&room[2], 2, &hf);
+        assert(room[2].pose == 0x23 && room[2].status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+               room[2].scaling == 31 && room[2].work2 == 2);
+        /* A lost Mellow is replaced at the hive. */
+        room[3].status = 0;
+        mzm_sprite_update(&room[0], 0, &hf);
+        assert(room[3].status && room[3].sprite_id == MZM_PSPRITE_MELLOW && room[3].y == room[0].y);
+        /* Under half its health the hive shrinks and loses its roots. */
+        mzm_sfx_clear();
+        room[0].health = 49;
+        mzm_sprite_update(&room[0], 0, &hf);
+        assert(room[0].pose == 0x23 && room[0].anim == MZM_HIVE_PHASE2 &&
+               room[0].frozen_row_offset == 2 &&
+               mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_HIVE_SHRINKING));
+        mzm_sprite_update(&room[1], 1, &hf);
+        assert(room[1].status == 0);
+        room[0].health = 24;
+        mzm_sprite_update(&room[0], 0, &hf);
+        assert(room[0].pose == 0x25 && room[0].anim == MZM_HIVE_PHASE3);
+        /* Killed: the last hive sets the event, its idle Mellows flee. */
+        room[4].pose = 0x9;
+        room[0].health = 0;
+        room[0].pose = 0x62;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &hf);
+        assert(room[0].pose == 0x67 && room[0].anim == MZM_HIVE_DYING && room[0].samus_collision == 0 &&
+               test_check_event(NULL, MZM_EVENT_THREE_HIVES_DESTROYED) &&
+               room[4].pose == 0x25 && room[4].kill_off_screen && room[2].pose == 0x23 &&
+               mzm_sfx_requested(MZM_SFX_PLAY_NOT_PLAYING, MZM_SOUND_HIVE_DEAD));
+        /* With the event set, new hives and Mellows never appear. */
+        MzmSprite gone = {0};
+        hf.sprites = &gone;
+        hf.sprite_count = 1;
+        mzm_sprite_init_primary(&gone, MZM_PSPRITE_MELLOW, 1, 4, 4, 3, 0);
+        mzm_sprite_update(&gone, 0, &hf);
+        assert(gone.status == 0);
+        memset(test_events, 0, sizeof test_events);
+
+        /* MellowSwarm: five Mellows from above the screen, then it waits. */
+        MzmSprite swarm_room[24] = {0};
+        hf.sprites = swarm_room;
+        hf.sprite_count = 24;
+        MzmEquipment swarm_eq = {.energy = 250, .max_energy = 299};
+        hf.equipment = &swarm_eq;
+        mzm_sprite_init_primary(&swarm_room[0], MZM_PSPRITE_MELLOW_SWARM_HEALTH_BASED, 1, 4, 4, 0, 0);
+        mzm_sprite_update(&swarm_room[0], 0, &hf);
+        assert(swarm_room[0].work2 == 9 && swarm_room[0].y_spawn == 0xF0 &&
+               swarm_room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN);
+        mzm_sprite_init_primary(&swarm_room[0], MZM_PSPRITE_MELLOW_SWARM, 1, 4, 4, 0, 0);
+        mzm_sprite_update(&swarm_room[0], 0, &hf);
+        assert(swarm_room[0].work2 == 5);
+        for (int i = 0; i < 5; ++i) {
+            mzm_sprite_update(&swarm_room[0], 0, &hf);
+            for (int j = 1; j < 24; ++j)
+                if (swarm_room[j].status && swarm_room[j].pose == 0)
+                    mzm_sprite_update(&swarm_room[j], (uint8_t)j, &hf);
+        }
+        int spawned = 0;
+        for (int j = 1; j < 24; ++j)
+            if (swarm_room[j].status && swarm_room[j].sprite_id == MZM_PSPRITE_MELLOW &&
+                swarm_room[j].room_slot == 0x88 && swarm_room[j].pose == 0x23)
+                ++spawned;
+        assert(spawned == 5);
+        mzm_sprite_update(&swarm_room[0], 0, &hf);
+        assert(swarm_room[0].status & MZM_SPRITE_STATUS_FACING_DOWN);
+        hf.equipment = frame.equipment;
+    }
     /* EscapeDetermineTimer, EscapeSetTimer and EscapeUpdateTimer: event
      * routing, difficulty lengths, banner pause and timeout. */
     {

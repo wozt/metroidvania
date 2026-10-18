@@ -5312,6 +5312,127 @@ int main(void) {
                cap->status & MZM_SPRITE_STATUS_Y_FLIP);
         assert(neck->y == room[0].y - (64 + 32 + 4 + 64 + 4));
 
+        /* The eye keeps the native two-step initialization, tracks Samus in
+         * eight angular sectors, rests between pulses and owns the complete
+         * spinning/recentring Charge Beam death sequence. */
+        {
+            MzmSprite eye_room[4] = {0};
+            MzmSpriteGlobals eye_globals = {.boss_work2 = 288};
+            MzmSpriteFrame ef = df;
+            ef.sprites = eye_room;
+            ef.sprite_count = 4;
+            ef.globals = &eye_globals;
+            MzmSprite *eye_head = &eye_room[0];
+            MzmSprite *test_eye = &eye_room[1];
+            eye_head->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN;
+            eye_head->sprite_id = MZM_PSPRITE_DEOREM_FIRST_LOCATION;
+            eye_head->pose = 0x26;
+            eye_head->x = 1000;
+            eye_head->y = 1000;
+            test_eye->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
+                               MZM_SPRITE_STATUS_NOT_DRAWN;
+            test_eye->secondary = true;
+            test_eye->sprite_id = MZM_SSPRITE_DEOREM_EYE;
+            test_eye->gfx_slot = 2;
+            test_eye->ram_slot = 0;
+            test_eye->x = 996;
+            test_eye->y = 972;
+            ef.samus_x = 900;
+            ef.samus_y = 1000;
+            memset(test_events, 0, sizeof test_events);
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->pose == 0x8 && test_eye->rotation == 128 &&
+                   test_eye->work0 == 128 && test_eye->y_spawn == 900 &&
+                   test_eye->anim == MZM_DEOREM_EYE_PULSING);
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->pose == 0x9 && test_eye->rotation == 128);
+
+            test_eye->work0 = test_eye->rotation = 0;
+            test_eye->anim = MZM_DEOREM_EYE_IDLE;
+            test_eye->work2 = 60;
+            ef.samus_x = 1128;
+            ef.samus_y = 944;       /* adjusted eye target is 128 above the head */
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->rotation == 254 && test_eye->work0 == 254 &&
+                   test_eye->x == 996 && test_eye->y == 972);
+            test_eye->work0 = test_eye->rotation = 0;
+            ef.samus_y = 1200;      /* adjusted eye target is 128 below the head */
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->rotation == 2 && test_eye->work0 == 2);
+
+            test_eye->anim = MZM_DEOREM_EYE_PULSING;
+            test_eye->frame = 1;
+            test_eye->adc = 2;
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->anim == MZM_DEOREM_EYE_IDLE && test_eye->work2 == 32);
+            test_eye->work2 = 1;
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->anim == MZM_DEOREM_EYE_PULSING);
+            test_eye->health = 40;
+            uint16_t fight_timer = test_eye->y_spawn;
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->y_spawn == fight_timer - 1);
+
+            test_eye->health = 20;
+            test_eye->isft = 17;
+            eye_head->anim = MZM_DEOREM_OPENED_FAST;
+            mzm_sfx_clear();
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert((test_eye->isft & 0x7F) == 16 && eye_head->isft == test_eye->isft &&
+                   eye_head->anim == MZM_DEOREM_CLOSED_FAST && eye_head->hitbox_bottom == 64 &&
+                   eye_head->absolute_palette_row == 2 &&
+                   test_eye->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+                   mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DEOREM_CLOSING_JAW_FAST));
+
+            test_eye->isft = 0;
+            test_eye->pose = 0x62;
+            test_eye->rotation = 0;
+            eye_head->pose = 0x26;
+            eye_head->x = 1000;
+            eye_head->y_spawn = 100;
+            eye_head->y = (uint16_t)(eye_head->y_spawn + 7 * 64 + 16);
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(eye_head->pose == 0x62 && test_eye->pose == 0x67 &&
+                   test_eye->anim == MZM_DEOREM_EYE_IDLE && test_eye->rotation == 4 &&
+                   test_eye->x == eye_head->x - 4 && test_eye->y == eye_head->y - 24);
+            mzm_sprite_update(eye_head, 0, &ef);
+            assert(eye_head->pose == 0x68 && eye_head->work0 == 60);
+            uint16_t spin = test_eye->rotation;
+            eye_head->work0 = 30;
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->rotation == spin + 8);
+            eye_head->x = (uint16_t)(eye_globals.boss_work2 + 13 * 64 / 2 - 96);
+            eye_head->work0 = 1;
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->pose == 0x68 && test_eye->work0 == 120);
+            uint16_t reward_y = test_eye->y;
+            uint16_t reward_x = test_eye->x;
+            test_eye->work0 = 5;
+            mzm_sprite_update(test_eye, 1, &ef);
+            assert(test_eye->work0 == 4 &&
+                   test_eye->palette_row == 14 - test_eye->gfx_slot - test_eye->frozen_row_offset);
+            test_eye->pose = 0x68;
+            test_eye->work0 = 120;
+            test_eye->y = reward_y;
+            test_eye->x = reward_x;
+            test_eye->palette_row = test_eye->absolute_palette_row;
+            mzm_sfx_clear();
+            for (int i = 0; i < 120; ++i) mzm_sprite_update(test_eye, 1, &ef);
+            uint16_t eye_center = (uint16_t)(eye_globals.boss_work2 + 13 * 64 / 2);
+            assert(!(test_eye->status & MZM_SPRITE_STATUS_EXISTS) &&
+                   test_eye->y == reward_y - 99 && test_eye->x >= eye_center - 2 &&
+                   test_eye->x <= eye_center + 2 &&
+                   mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_DEOREM_SPAWNING_CHARGE_BEAM));
+            int reward_slot = -1;
+            for (int i = 0; i < 4; ++i)
+                if (eye_room[i].status & MZM_SPRITE_STATUS_EXISTS &&
+                    !eye_room[i].secondary && eye_room[i].sprite_id == MZM_PSPRITE_CHARGE_BEAM)
+                    reward_slot = i;
+            assert(reward_slot >= 0 && eye_room[reward_slot].x == test_eye->x &&
+                   eye_room[reward_slot].y == test_eye->y);
+            memset(test_events, 0, sizeof test_events);
+        }
+
         /* At full eye health the head uses the native straight plunge: two
          * warning cycles, an eight-frame pullback, then the moving body. */
         MzmSprite *eye = &room[eye_slot];

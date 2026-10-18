@@ -28,6 +28,7 @@ enum {
     DEOREM_CALL_CHARGE_BEAM = 0x60,
     DEOREM_DYING = 0x67,
     DEOREM_DEATH = 0x68,
+    EYE_IDLE_INIT = 0x8,
     EYE_IDLE = 0x9,
     EYE_DYING = 0x67,
     EYE_REWARD = 0x68,
@@ -59,6 +60,11 @@ enum {
     SEGMENT_PADDING = SEGMENT_SPACING + BLOCK_SIZE + PIXEL_SIZE,
     EYE_Y_OFFSET = HALF_BLOCK_SIZE - PIXEL_SIZE,
     EYE_X_OFFSET = PIXEL_SIZE,
+    EYE_DYING_SPEED = PIXEL_SIZE / 2,
+    ROTATION_PI = 128,
+    ROTATION_PI_2 = ROTATION_PI / 2,
+    ROTATION_PI_4 = ROTATION_PI / 4,
+    ROTATION_PI_3_4 = ROTATION_PI * 3 / 4,
     MAX_HEALTH = MISSILE_DAMAGE * 3,
 };
 
@@ -117,6 +123,9 @@ static void remove_eye(const Ctx *c) {
 static MzmSprite *spawn_primary(Ctx *c, uint8_t id, uint16_t y, uint16_t x) {
     for (int i = 0; c->f->sprites && i < c->f->sprite_count; ++i) {
         MzmSprite *n = &c->f->sprites[i];
+        /* gCurrentSprite is copied back only after its AI on hardware, so a
+         * spawn cannot recycle the slot that is currently deleting itself. */
+        if (n == c->s) continue;
         if (n->status & MZM_SPRITE_STATUS_EXISTS) continue;
         memset(n, 0, sizeof *n);
         n->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
@@ -925,61 +934,166 @@ static void init_eye(Ctx *c) {
     s->frozen_row_offset = 4;
     s->samus_collision = SSC_NONE;
     ai_set_anim(s, MZM_DEOREM_EYE_PULSING);
-    s->pose = EYE_IDLE;
+    s->pose = EYE_IDLE_INIT;
     s->y_spawn = ai_check_event(c, MZM_EVENT_DEOREM_FIRST_LOCATION) ||
                          ai_check_event(c, MZM_EVENT_DEOREM_SECOND_LOCATION) ? 1800 : 900;
+    s->rotation = s->x > c->f->samus_x ? ROTATION_PI : 0;
+    s->work0 = (uint8_t)s->rotation;
+    s->work2 = 0;
+}
+
+static void eye_move(Ctx *c, MzmSprite *p) {
+    MzmSprite *s = c->s;
+    int32_t samus_y = (int16_t)(c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
+    int32_t samus_x = (int16_t)c->f->samus_x;
+    int32_t sprite_y = (int16_t)p->y;
+    int32_t sprite_x = (int16_t)p->x;
+    int32_t target;
+    int32_t rotation = s->work0;
+    if (samus_y < sprite_y) {
+        if (sprite_x - BLOCK_SIZE < samus_x && sprite_x + BLOCK_SIZE > samus_x)
+            target = ROTATION_PI + ROTATION_PI_2;
+        if (samus_x > sprite_x)
+            target = sprite_y - samus_y < BLOCK_SIZE ? 0
+                                                      : ROTATION_PI + ROTATION_PI_3_4;
+        else
+            target = sprite_y - samus_y < BLOCK_SIZE ? ROTATION_PI
+                                                      : ROTATION_PI + ROTATION_PI_4;
+    } else if (sprite_x - BLOCK_SIZE < samus_x && sprite_x + BLOCK_SIZE > samus_x) {
+        target = ROTATION_PI_2;
+    } else if (samus_x > sprite_x) {
+        target = samus_y - sprite_y < BLOCK_SIZE ? 0 : ROTATION_PI_4;
+    } else {
+        target = samus_y - sprite_y < BLOCK_SIZE ? ROTATION_PI : ROTATION_PI_3_4;
+    }
+    const int32_t delta = ROTATION_PI / 64;
+    if (target == 0) {
+        if ((uint16_t)(rotation - 1) < ROTATION_PI - 1) rotation -= delta;
+        else if (rotation >= ROTATION_PI) rotation += delta;
+    } else if (target == ROTATION_PI_4) {
+        if ((uint16_t)(rotation - ROTATION_PI_4 - 1) < ROTATION_PI - 1) rotation -= delta;
+        else if ((uint16_t)(rotation - ROTATION_PI_4) >= ROTATION_PI) rotation += delta;
+    } else if (target == ROTATION_PI_2) {
+        if ((uint16_t)(rotation - ROTATION_PI_2 - 1) < ROTATION_PI - 1) rotation -= delta;
+        else if ((uint16_t)(rotation - ROTATION_PI_2) >= ROTATION_PI) rotation += delta;
+    } else if (target == ROTATION_PI_3_4) {
+        if ((uint16_t)(rotation - ROTATION_PI_3_4 - 1) < ROTATION_PI - 1) rotation -= delta;
+        else if ((uint16_t)(rotation - ROTATION_PI_3_4) >= ROTATION_PI) rotation += delta;
+    } else if (target == ROTATION_PI) {
+        if ((uint16_t)(rotation - 1) < ROTATION_PI - 1) rotation += delta;
+        else if (rotation > ROTATION_PI) rotation -= delta;
+    } else if (target == ROTATION_PI + ROTATION_PI_4) {
+        if ((uint16_t)(rotation - ROTATION_PI_4 - 1) < ROTATION_PI - 1) rotation += delta;
+        else if ((uint16_t)(rotation - ROTATION_PI_4 - 1) >= ROTATION_PI) rotation -= delta;
+    } else if (target == ROTATION_PI + ROTATION_PI_2) {
+        if ((uint16_t)(rotation - ROTATION_PI_2 - 1) < ROTATION_PI - 1) rotation += delta;
+        else if ((uint16_t)(rotation - ROTATION_PI_2 - 1) >= ROTATION_PI) rotation -= delta;
+    } else if (target == ROTATION_PI + ROTATION_PI_3_4) {
+        if ((uint16_t)(rotation - ROTATION_PI_3_4 - 1) < ROTATION_PI - 1) rotation += delta;
+        else if ((uint16_t)(rotation - ROTATION_PI_3_4 - 1) >= ROTATION_PI) rotation -= delta;
+    }
+    s->work0 = (uint8_t)rotation;
+    s->rotation = s->work0;
+    s->y = (uint16_t)(p->y - EYE_Y_OFFSET);
+    s->x = (uint16_t)(p->x - EYE_X_OFFSET);
+}
+
+static void eye_idle(Ctx *c, MzmSprite *p) {
+    MzmSprite *s = c->s;
+    if (s->anim == MZM_DEOREM_EYE_PULSING) {
+        if (ai_animation_ending(c, 1) && c->rng < 10) {
+            ai_set_anim(s, MZM_DEOREM_EYE_IDLE);
+            s->work2 = (uint8_t)((c->rng + 8) * 4);
+        }
+    } else if (s->work2 && --s->work2 == 0) {
+        ai_set_anim(s, MZM_DEOREM_EYE_PULSING);
+    }
+    eye_move(c, p);
+    if ((ai_check_event(c, MZM_EVENT_DEOREM_FIRST_LOCATION) ||
+         ai_check_event(c, MZM_EVENT_DEOREM_SECOND_LOCATION) || s->health != MAX_HEALTH) &&
+        s->y_spawn)
+        s->y_spawn--;
+}
+
+static void eye_dying_spin(Ctx *c, MzmSprite *p) {
+    MzmSprite *s = c->s;
+    s->y = (uint16_t)(p->y - (EYE_Y_OFFSET - PIXEL_SIZE));
+    s->x = (uint16_t)(p->x - EYE_X_OFFSET);
+    if (p->pose == DEOREM_DEATH && p->work0 <= 30) s->rotation += ROTATION_PI / 16;
+    else s->rotation += ROTATION_PI / 32;
+    if (p->pose == DEOREM_DEATH && p->work0 < 2) {
+        s->pose = EYE_REWARD;
+        s->work0 = 120;
+    }
+}
+
+static void eye_dying_move(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->rotation += ROTATION_PI / 16 + ROTATION_PI / 32;
+    if (s->work0 < 100) s->y -= ONE_SUB_PIXEL;
+    uint16_t target = c->f->globals
+        ? (uint16_t)(c->f->globals->boss_work2 + WIDTH / 2) : s->x;
+    if (s->x < target - EYE_DYING_SPEED) s->x += EYE_DYING_SPEED;
+    else if (s->x > target + EYE_DYING_SPEED) s->x -= EYE_DYING_SPEED;
+    uint8_t timer = s->work0 ? --s->work0 : 0;
+    if ((timer & 3) == 0) {
+        if (timer & 4) {
+            s->palette_row = (uint8_t)(14 - s->gfx_slot - s->frozen_row_offset);
+        } else {
+            s->palette_row = s->absolute_palette_row;
+            if (timer != 0) return;
+            s->status = 0;
+            spawn_charge_beam(c, s->y, s->x);
+        }
+    }
 }
 
 static void eye(Ctx *c) {
     MzmSprite *s = c->s;
     MzmSprite *p = parent(c);
     s->ignore_samus_timer = 1;
-    if (!p || !(p->status & MZM_SPRITE_STATUS_EXISTS)) {
-        if (s->pose != EYE_REWARD) {
-            s->status = 0;
-            return;
-        }
-        s->rotation += 12;
-        s->y -= ONE_SUB_PIXEL;
-        if (s->work1 && --s->work1) return;
-        spawn_charge_beam(c, s->y, s->x);
+    if (!p) {
         s->status = 0;
         return;
     }
-    if (s->pose == SPRITE_POSE_UNINITIALIZED) init_eye(c);
-    if (s->pose == SPRITE_POSE_DESTROYED) {
+    if (s->pose < EYE_REWARD) {
+        uint8_t isft = s->isft & 0x7F;
+        if (isft && p->pose < SPRITE_POSE_DESTROYED) {
+            p->isft = s->isft;
+            if (isft == 16) {
+                ai_set_anim(p, MZM_DEOREM_CLOSED_FAST);
+                p->hitbox_bottom = BLOCK_SIZE;
+                if (s->health <= MAX_HEALTH / 3) p->absolute_palette_row = 2;
+                s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+                mzm_sfx_play(MZM_SOUND_DEOREM_CLOSING_JAW_FAST);
+            }
+        }
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        init_eye(c);
+        break;
+    case EYE_IDLE_INIT:
+        s->pose = EYE_IDLE;
+        break;
+    case EYE_IDLE:
+        eye_idle(c, p);
+        break;
+    case SPRITE_POSE_DESTROYED:
         p->pose = SPRITE_POSE_DESTROYED;
         s->pose = EYE_DYING;
-        s->work1 = 120;
-        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
         ai_set_anim(s, MZM_DEOREM_EYE_IDLE);
+        eye_dying_spin(c, p);
+        break;
+    case EYE_DYING:
+        eye_dying_spin(c, p);
+        break;
+    case EYE_REWARD:
+        eye_dying_move(c);
+        break;
+    default:
+        break;
     }
-    s->y = (uint16_t)(p->y - EYE_Y_OFFSET);
-    s->x = (uint16_t)(p->x - EYE_X_OFFSET);
-    if (s->pose == EYE_DYING) {
-        s->rotation += 8;
-        if (s->work1 && --s->work1) return;
-        s->pose = EYE_REWARD;
-        s->work1 = 60;
-        return;
-    }
-    if (s->pose == EYE_REWARD) {
-        s->rotation += 12;
-        s->y -= ONE_SUB_PIXEL;
-        if (s->work1 && --s->work1) return;
-        spawn_charge_beam(c, s->y, s->x);
-        s->status = 0;
-        return;
-    }
-    int16_t dx = (int16_t)(c->f->samus_x - s->x);
-    int16_t dy = (int16_t)(c->f->samus_y - s->y);
-    uint16_t target = dx >= 0 ? (dy >= 0 ? 32 : 224) : (dy >= 0 ? 96 : 160);
-    int16_t delta = (int16_t)(target - s->rotation);
-    s->rotation = (uint16_t)(s->rotation + (delta > 0 ? 1 : delta < 0 ? -1 : 0));
-    if ((s->health != MAX_HEALTH || ai_check_event(c, MZM_EVENT_DEOREM_FIRST_LOCATION) ||
-         ai_check_event(c, MZM_EVENT_DEOREM_SECOND_LOCATION)) && s->y_spawn)
-        s->y_spawn--;
-    if (s->damaged && s->health <= MAX_HEALTH / 3) p->absolute_palette_row = 2;
 }
 
 static void thorn(Ctx *c) {

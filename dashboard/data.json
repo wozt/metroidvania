@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-18T11:47:03+00:00",
+ "generated_at": "2026-10-18T12:14:34+00:00",
  "git": {
-  "commit": "9d39902",
+  "commit": "1d4ee19",
   "branch": "main",
   "dirty": true
  },
@@ -1346,6 +1346,13 @@
     "Deorem",
     "DeoremSegment",
     "DeoremEye",
+    "DeoremEyeInit",
+    "DeoremEyeIdleInit",
+    "DeoremEyeMove",
+    "DeoremEyeIdle",
+    "DeoremEyeDyingInit",
+    "DeoremEyeDyingSpinning",
+    "DeoremEyeDyingMoving",
     "DeoremThorn",
     "DeoremInit",
     "DeoremWaitingForFight",
@@ -1361,8 +1368,8 @@
     "DeoremStartLeaving",
     "DeoremSpawnChargeBeam"
    ],
-   "limitations": "The eye's tracking, pulsing and multi-stage death movement remain compact, as do the encounter debris patterns and the wait for active drops before retreat; the encounter has not been compared with an emulator. Both native placements wake for a missile-equipped Samus, lock their arena, expose the 60-health missile-only eye and reproduce the head's exact idle, double-warning, full-health vertical plunge, damaged diagonal acceleration, retract pause, health-dependent thorn cycle and animation-driven retreat. The staged body choreography, encounter and retreat music, event branch and collectible Charge Beam are connected.",
-   "next_action": "Port the exact eye tracking and death choreography, then restore the debris and active-drop retreat gate before emulator comparison.",
+   "limitations": "The encounter debris patterns and the wait for active drops before retreat remain compact; the encounter has not been compared with an emulator. Both native placements reproduce the complete head and body choreography. The eye now tracks Samus through the native eight angular sectors, alternates RNG-timed idle and pulsing animations, transfers missile hit stun and the low-health palette to the head, then spins with the dying body, recentres, rises, flashes and spawns the Charge Beam on its exact 120-frame timer.",
+   "next_action": "Restore the exact encounter debris choreography and active-drop retreat gate, then compare both locations with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c"
@@ -9912,6 +9919,12 @@
  },
  "timeline": [
   {
+   "commit": "1d4ee19",
+   "date": "2026-10-18",
+   "subject": "Restore Deorem head attack choreography",
+   "scope": "project"
+  },
+  {
    "commit": "9d39902",
    "date": "2026-10-18",
    "subject": "Restore Deorem body choreography",
@@ -10384,12 +10397,6 @@
    "date": "2026-10-13",
    "subject": "fix(mzm): missile origin, audio crackling, Chozo hint music",
    "scope": "mzm"
-  },
-  {
-   "commit": "c8f8a2f",
-   "date": "2026-10-13",
-   "subject": "feat(mzm): Dragons",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -10417,7 +10424,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1262,
+    "routines_cited_by_features": 1269,
     "call_edges": 6071
    },
    "aos": {

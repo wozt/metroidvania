@@ -3689,6 +3689,40 @@ No automatic reciprocal link or native engine encoder is implemented.
   the native plunge. Every reconstruction task completed or was up to date,
   generated-data checks were fresh and the proprietary-file guard passed.
 
+## Patch 0360 - native Deorem eye choreography
+
+- Replaced the eye's four-quadrant approximation with `DeoremEyeMove`. It now
+  selects the native eight angular sectors from Samus's adjusted centre and
+  rotates two units per frame along the original wraparound branches while
+  remaining anchored four subpixels left and 28 above the head.
+- Restored the separate idle-init frame and the eye's animation scheduler.
+  Each completed pulse has the native 10/16 chance to rest, with its RNG value
+  selecting a 32-to-68-frame delay before pulsing resumes. The 900/1800-frame
+  encounter timer still begins only after damage or a previous encounter.
+- Missile hit stun now transfers to the head on the exact 16-frame edge,
+  closes its jaw immediately, makes the eye temporarily projectile-immune,
+  plays the fast closing sound and selects the low-health body palette at 20
+  health or less.
+- Restored the death choreography: the eye follows and spins with the falling
+  head, doubles its spin during the final half-second, then spends 120 frames
+  moving toward the arena centre, rising for the final 99, alternating the
+  native stun palette and finally creating the Charge Beam with its sound.
+  Primary spawning also preserves the GBA's current-sprite copy semantics, so
+  the disappearing eye cannot recycle its own slot during that frame.
+- The ROM-free regression now covers initialization, two opposed tracking
+  sectors, pulse/rest timing, fight-timer activation, hit transfer, both spin
+  rates, palette flashing, recentering, ascent and the separate Charge Beam
+  actor. A real `brinstar_012` capture reached the thorn cycle with the new eye
+  logic and the complete 17-piece body active.
+- Remaining divergence: the encounter's timed debris patterns and its wait
+  for active item drops before retreat are still compact. Emulator comparison
+  also remains open.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed. The frame-700 real-room capture completed the native
+  thorn transition without losing the eye or any body actor. Every
+  reconstruction task completed or was up to date, generated-data checks were
+  fresh and the proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

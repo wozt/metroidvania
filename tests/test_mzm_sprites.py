@@ -117,6 +117,25 @@ class MzmSpriteDataTests(unittest.TestCase):
             self.assertRegex(sources, rf"const\s+struct\s+FrameData\s+{table}\s*\[")
 
 
+class MzmMechaRidleyWeaponTests(unittest.TestCase):
+    def test_weapon_stages_copy_four_tile_rows_to_0x4280(self):
+        weapons = bytes(range(256)) * 16
+        vram = mzm_sprites.mecha_ridley_weapon_vram(bytes(0x8000), weapons, 12 + 4 * 2)
+        for row in range(4):
+            target = 0x4280 + row * 1024
+            source = row * 1024 + 20 * 32
+            self.assertEqual(vram[target:target + 128], weapons[source:source + 128])
+        self.assertEqual(vram[0x4280 + 128], 0)
+        self.assertEqual(mzm_sprites.MECHA_RIDLEY_WEAPON_STAGES, (0, 4, 8, 12, 16, 20, 24))
+
+    def test_weapon_tables_exist_in_the_decomp(self):
+        source = (mzm_sprites.DECOMP / "src/data/sprites/mecha_ridley.c").read_text(encoding="utf-8")
+        tables = mzm_sprites.frame_tables(source)
+        for table in mzm_sprites.MECHA_RIDLEY_WEAPON_TABLES:
+            self.assertIn(table, tables)
+        self.assertIn("const u32 sMechaRidleyWeaponsGfx[32 * 32]", source)
+
+
 class MzmSpritePaletteVariantTests(unittest.TestCase):
     def test_frozen_and_stun_rows_shift_the_sprite_rows(self):
         palette = [None] * 256

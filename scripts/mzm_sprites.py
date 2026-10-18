@@ -129,6 +129,27 @@ ROW_VARIANT_TABLES = {
     "PSPRITE_IMAGO_COCOON": ("sImagoCocoonOam_Idle", "sImagoCocoonOam_2e0bb0",
                               "sImagoCocoonOam_Static"),
 }
+# MechaRidleyLoadMissilesGfx / LoadFireballsGfx: four 4-tile rows of
+# sMechaRidleyWeaponsGfx copied to OBJ VRAM 0x4280 + 1024 * row each frame,
+# from tile 4 * stage (missiles, stages 0-2, "/w0".."/w2") or 12 + 4 * stage
+# (fireballs, stages 0-3, "/w3".."/w6").
+MECHA_RIDLEY_WEAPONS = "sMechaRidleyWeaponsGfx"
+MECHA_RIDLEY_WEAPON_TABLES = ("sMechaRidleyMissileOam", "sMechaRidleyFireballOam")
+MECHA_RIDLEY_WEAPON_VRAM = 0x4280
+MECHA_RIDLEY_WEAPON_STAGES = tuple(4 * stage for stage in range(3)) + tuple(
+    12 + 4 * stage for stage in range(4))
+
+
+def mecha_ridley_weapon_vram(vram: bytes, weapons: bytes, first_tile: int) -> bytes:
+    """OBJ VRAM after one weapon graphics copy (4 tiles in each of 4 rows)."""
+    staged = bytearray(vram)
+    for row in range(4):
+        source = row * 1024 + first_tile * 32
+        target = MECHA_RIDLEY_WEAPON_VRAM + row * 1024
+        staged[target:target + 128] = weapons[source:source + 128]
+    return bytes(staged)
+
+
 ROW_VARIANTS = {"PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
@@ -539,6 +560,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         wanted.update([graphics[sprite], palettes[sprite], *tables])
     tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
     wanted.update(tables)
+    wanted.add(MECHA_RIDLEY_WEAPONS)
     wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES,
                    "sLocationTextPointers", "sAreaBannerLocationTextPal"])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal",
@@ -688,6 +710,17 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                         frames.append((bmp, duration, left, top))
                     library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}{suffix}",
                                 frames)
+            if sprite == "PSPRITE_MECHA_RIDLEY" and table in MECHA_RIDLEY_WEAPON_TABLES:
+                address, size = symbols[MECHA_RIDLEY_WEAPONS]
+                weapons = rom[rom_offset(address, rom):rom_offset(address, rom) + size]
+                for index, first_tile in enumerate(MECHA_RIDLEY_WEAPON_STAGES):
+                    staged = mecha_ridley_weapon_vram(vram, weapons, first_tile)
+                    frames = []
+                    for pointer, duration in entries:
+                        pixels = mzm_projectile_compose.render(rom, staged, palette, pointer, "none")
+                        bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
+                        frames.append((bmp, duration, left, top))
+                    library.add(f"Sprite/MECHA_RIDLEY/{table[1:]}/none/w{index}", frames)
     # The message banner (PSPRITE_MESSAGE_BANNER) with each message's text
     # in its graphics (TextProcessMessageBanner over SpriteLoadGfx's tiles).
     for name, vram in banners:

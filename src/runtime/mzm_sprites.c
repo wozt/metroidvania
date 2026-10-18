@@ -4033,6 +4033,102 @@ static bool swooper_detects(const Ctx *c, uint16_t x_range) {
            ai_samus_near_left_right(c, BLOCK_SIZE * 8, x_range);
 }
 
+/* SpriteUtilMakeSpriteFaceSamusRotation: turns `rotation` (u8, 256 a
+ * turn) by PI / 64 toward the nearest of eight directions to the target. */
+uint8_t ai_face_target_rotation(uint8_t rotation, uint16_t target_y, uint16_t target_x,
+                                uint16_t sprite_y, uint16_t sprite_x) {
+    enum { PI_ = 128, PI2 = 64, PI4 = 32, PI34 = 96, STEP = 2 };
+    int32_t r = rotation, dy = (int16_t)target_y, dx = (int16_t)target_x;
+    int32_t y = (int16_t)sprite_y, x = (int16_t)sprite_x, target;
+    bool column = x - BLOCK_SIZE < dx && x + BLOCK_SIZE > dx;
+    if (dy < y) {
+        if (column) target = PI_ + PI2;
+        else if (dx > x) target = y - dy < BLOCK_SIZE ? 0 : PI_ + PI34;
+        else target = y - dy < BLOCK_SIZE ? PI_ : PI_ + PI4;
+    } else {
+        if (column) target = PI2;
+        else if (dx > x) target = dy - y < BLOCK_SIZE ? 0 : PI4;
+        else target = dy - y < BLOCK_SIZE ? PI_ : PI34;
+    }
+    switch (target) {
+    case 0:
+        if ((uint16_t)(r - 1) < PI_ - 1) r -= STEP;
+        else if (r >= PI_) r += STEP;
+        break;
+    case PI4: case PI2: case PI34:
+        if ((uint16_t)(r - target - 1) < PI_ - 1) r -= STEP;
+        else if ((uint16_t)(r - target) >= PI_) r += STEP;
+        break;
+    case PI_:
+        if ((uint16_t)(r - 1) < PI_ - 1) r += STEP;
+        else if (r > PI_) r -= STEP;
+        break;
+    default:                                       /* PI + PI_4, PI_2, PI_3_4 */
+        if ((uint16_t)(r - (target - PI_) - 1) < PI_ - 1) r += STEP;
+        else if ((uint16_t)(r - (target - PI_) - 1) >= PI_) r -= STEP;
+        break;
+    }
+    return (uint8_t)r;
+}
+
+/* One axis of SpriteUtilMoveSpriteTowardsSamus: `brake` (work1 / work0)
+ * and `speed` (work2 / work3); true when the direction flips. */
+static bool move_towards_axis(uint16_t *position, bool positive, uint16_t target,
+                              uint8_t *brake, uint8_t *speed, uint8_t cap, uint8_t divisor) {
+    if (positive) {
+        if (*brake == 0) {
+            if (*position > target - PIXEL_SIZE) {
+                *brake = *speed;
+            } else {
+                if (*speed < cap) ++*speed;
+                *position = (uint16_t)(*position + (*speed >> divisor));
+            }
+        } else if (--*brake != 0) {
+            *position = (uint16_t)(*position + (*brake >> divisor));
+        } else {
+            return true;
+        }
+        return false;
+    }
+    uint8_t step;
+    if (*brake == 0) {
+        if (*position < target + PIXEL_SIZE) {
+            *brake = *speed;
+            return false;
+        }
+        if (*speed < cap) ++*speed;
+        step = (uint8_t)(*speed >> divisor);
+    } else if (--*brake != 0) {
+        step = (uint8_t)(*brake >> divisor);
+    } else {
+        return true;
+    }
+    uint32_t next = (uint32_t)(uint16_t)(*position - step);
+    if (next & 0x8000) {
+        *brake = 0;
+        return true;
+    }
+    *position = (uint16_t)next;
+    return false;
+}
+
+/* SpriteUtilMoveSpriteTowardsSamus: accelerates toward the target on each
+ * axis, brakes past it and turns around (work0-3 are the native ones). */
+void ai_move_towards_target(Ctx *c, uint16_t target_y, uint16_t target_x, uint8_t y_speed,
+                            uint8_t x_speed, uint8_t divisor) {
+    MzmSprite *s = c->s;
+    if (move_towards_axis(&s->x, s->status & MZM_SPRITE_STATUS_FACING_RIGHT, target_x,
+                          &s->work1, &s->work2, x_speed, divisor)) {
+        s->status ^= MZM_SPRITE_STATUS_FACING_RIGHT;
+        s->work2 = 1;
+    }
+    if (move_towards_axis(&s->y, s->status & MZM_SPRITE_STATUS_FACING_DOWN, target_y,
+                          &s->work0, &s->work3, y_speed, divisor)) {
+        s->status ^= MZM_SPRITE_STATUS_FACING_DOWN;
+        s->work3 = 1;
+    }
+}
+
 void ai_face_samus(const Ctx *c) {
     if (c->s->x > c->f->samus_x) c->s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_RIGHT;
     else c->s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;

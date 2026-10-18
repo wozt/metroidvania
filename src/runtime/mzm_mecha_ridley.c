@@ -2,9 +2,9 @@
 /* Zero Mission's Mecha Ridley (src/sprites_ai/mecha_ridley.c): the native
  * multipart entrance, arena lock, Samus height tracking, attack selection,
  * claw swipe, height transitions, retreat and fireball choreography, plus
- * the arm, neck, eye and missile launcher parts. The laser, missile and
- * fireball actors, the cover/core damage handoff and the death sequence are
- * not ported yet: their spawns find no AI and are cleared. */
+ * the arm, neck, eye and missile launcher parts, and the laser, missile
+ * and fireball actors. The cover/core damage handoff and the death
+ * sequence are not ported yet. */
 #include "mzm_sprite_ai.h"
 #include "mzm_screen_shake.h"
 
@@ -32,6 +32,13 @@ enum { SAMUS_LOW, SAMUS_MIDDLE, SAMUS_HIGH };      /* gBossWork.work3 */
 enum {                                             /* gBossWork.work4 */
     EYE_IDLE, EYE_BLINKING_INIT, EYE_LASER_ATTACK_INIT, EYE_LASER_ATTACK,
 };
+
+enum {
+    LASER_FORWARD, LASER_SLIGHTLY_DOWN, LASER_DOWN, LASER_SLIGHTLY_UP, LASER_UP,
+};
+
+/* The weapon actors' own poses. */
+enum { WEAPON_MOVING = 0x9, MISSILE_HOMING = 0x23, WEAPON_HIT_WALL = 0x44 };
 
 enum {                                             /* gBossWork.work5 */
     LAUNCHER_IDLE, LAUNCHER_ATTACK_INIT, LAUNCHER_OPENING, LAUNCHER_OPENED,
@@ -604,6 +611,7 @@ static void part_init(Ctx *c) {
         s->hitbox_bottom = BLOCK_SIZE + HALF_BLOCK_SIZE;
         s->hitbox_left = -HALF_BLOCK_SIZE; s->hitbox_right = HALF_BLOCK_SIZE;
         s->immune_to_projectiles = true; s->draw_order = 5; s->pose = PART_HEAD_IDLE;
+        s->work0 = s->work1 = s->work2 = s->work3 = 0;
         break;
     case PART_NECK:
         s->draw_top = 48; s->draw_bottom = 32; s->draw_horizontal = 64;
@@ -869,8 +877,58 @@ static void eye_idle(Ctx *c) {
         s->work0 = 40;                                 /* TWO_THIRD_SECOND */
         g->boss_work4 = EYE_LASER_ATTACK;
         break;
+    case EYE_LASER_ATTACK:
+        if (s->work0) {
+            if (--s->work0) break;
+            /* Each direction a quarter of the time; never straight up. */
+            static const uint8_t anims[4] = {
+                MZM_MECHA_RIDLEY_EYE_LASER_FORWARD, MZM_MECHA_RIDLEY_EYE_LASER_DOWN,
+                MZM_MECHA_RIDLEY_EYE_LASER_SLIGHTLY_UP, MZM_MECHA_RIDLEY_EYE_LASER_SLIGHTLY_DOWN,
+            };
+            static const uint8_t directions[4] = {
+                LASER_FORWARD, LASER_DOWN, LASER_SLIGHTLY_UP, LASER_SLIGHTLY_DOWN,
+            };
+            uint8_t quarter = c->rng >= 12 ? 3 : c->rng >= 8 ? 2 : c->rng >= 4 ? 1 : 0;
+            ai_set_anim(s, anims[quarter]);
+            s->work1 = directions[quarter];
+            mzm_sfx_play(MZM_SOUND_MECHA_RIDLEY_PREPARING_LASER);
+        } else if (ai_animation_ending(c, 1)) {
+            uint16_t y = s->y, x = s->x;
+            switch (s->work1) {
+            case LASER_SLIGHTLY_DOWN: y += BLOCK_SIZE; x -= 0x6C; break;
+            case LASER_DOWN: y += BLOCK_SIZE + HALF_BLOCK_SIZE; x -= BLOCK_SIZE + HALF_BLOCK_SIZE; break;
+            case LASER_SLIGHTLY_UP: y -= BLOCK_SIZE; x -= 0x6C; break;
+            case LASER_UP: y -= BLOCK_SIZE + HALF_BLOCK_SIZE; x -= BLOCK_SIZE + HALF_BLOCK_SIZE; break;
+            default: x -= BLOCK_SIZE * 2; break;
+            }
+            ai_spawn_secondary(c, MZM_SSPRITE_MECHA_RIDLEY_LASER, s->work1, s->gfx_slot, y, x, 0);
+            ai_set_anim(s, MZM_MECHA_RIDLEY_EYE_IDLE);
+            g->boss_work4 = EYE_IDLE;
+        }
+        break;
     default: break;
     }
+}
+
+/* MechaRidleyLoadMissilesGfx: the next of three missile graphics stages
+ * while missiles (and no fireballs) are alive. */
+static void load_missiles_gfx(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    if (g->boss_work8 != 0 || g->boss_work6 == 0) return;
+    s->work2++;
+    if (++s->work3 > 2) s->work3 = 0;
+    g->mecha_weapon_gfx = (uint8_t)(1 + s->work3);
+}
+
+/* MechaRidleyLoadFireballsGfx: the next of four fireball stages. */
+static void load_fireballs_gfx(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    if (g->boss_work6 != 0 || g->boss_work8 == 0) return;
+    s->work2++;
+    if (++s->work3 > 3) s->work3 = 0;
+    g->mecha_weapon_gfx = (uint8_t)(1 + 3 + s->work3);
 }
 
 /* MechaRidleyPartMissileLauncherIdle: the launcher only opens when the
@@ -879,6 +937,7 @@ static void launcher_idle(Ctx *c) {
     MzmSprite *s = c->s;
     MzmSpriteGlobals *g = c->f->globals;
     const MzmEquipment *eq = c->f->equipment;
+    load_missiles_gfx(c);
     switch (g->boss_work5) {
     case LAUNCHER_ATTACK_INIT:
         if (g->sub1.work3 >= HEALTH_COVER_BROKEN ||
@@ -955,7 +1014,154 @@ static void part(Ctx *c) {
     case PART_EYE_IDLE: eye_idle(c); sync_position(c); break;
     case PART_MISSILE_LAUNCHER_IDLE: launcher_idle(c); sync_position(c); break;
     case PART_COVER_IDLE: cover_idle(c); sync_part(c); break;
+    case PART_HEAD_IDLE: load_fireballs_gfx(c); sync_part(c); break;
     default: sync_part(c); break;
+    }
+}
+
+/* MechaRidleyLaser: flies straight in its direction until it hits a
+ * wall. */
+static void laser(Ctx *c) {
+    MzmSprite *s = c->s;
+    enum { SPEED = QUARTER_BLOCK_SIZE + PIXEL_SIZE };
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+        static const uint8_t anims[5] = {
+            MZM_MECHA_RIDLEY_LASER_FORWARD, MZM_MECHA_RIDLEY_LASER_SLIGHTLY_DOWN,
+            MZM_MECHA_RIDLEY_LASER_DOWN, MZM_MECHA_RIDLEY_LASER_SLIGHTLY_UP,
+            MZM_MECHA_RIDLEY_LASER_UP,
+        };
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = 8;
+        s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
+        s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE;
+        s->samus_collision = SSC_HURTS_SAMUS;
+        s->draw_order = 3;
+        s->pose = WEAPON_MOVING;
+        ai_set_anim(s, anims[s->room_slot < 5 ? s->room_slot : LASER_FORWARD]);
+    }
+    switch (s->room_slot) {
+    case LASER_SLIGHTLY_DOWN: s->y += SPEED * 3 / 10; s->x -= SPEED * 4 / 5; break;
+    case LASER_DOWN: s->y += SPEED * 3 / 4; s->x -= SPEED * 3 / 4; break;
+    case LASER_SLIGHTLY_UP: s->y -= SPEED * 3 / 10; s->x -= SPEED * 4 / 5; break;
+    case LASER_UP: s->y -= SPEED * 3 / 4; s->x -= SPEED * 3 / 4; break;
+    default: s->x -= SPEED; break;
+    }
+    if (ai_collision_at(c, s->y, s->x) != MZM_COLLISION_AIR) {
+        s->status = 0;
+        ai_particle_set(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_SMALL);
+        mzm_sfx_play(MZM_SOUND_MECHA_RIDLEY_LASER_EXPLODING);
+    }
+}
+
+/* MechaRidleyMissile: rises from the launcher, slowing down, then homes
+ * on Samus and turns to face her. */
+static void missile(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    uint16_t samus_y = (uint16_t)(c->f->samus_y - 1), samus_x = c->f->samus_x;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status |= MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = 16;
+        s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
+        s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE;
+        ai_set_anim(s, MZM_MECHA_RIDLEY_MISSILE);
+        s->health = c->tables->secondary_health[s->sprite_id];
+        s->rotation = 0xA0;
+        s->work0 = 30;
+        s->pose = WEAPON_MOVING;
+        s->samus_collision = SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT;
+        s->draw_order = 2;
+        g->boss_work6++;
+        break;
+    case WEAPON_MOVING: {
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        uint16_t movement = (uint16_t)(s->work0 / 2);
+        if (s->room_slot == 1) movement -= 2;
+        else if (s->room_slot == 2) movement += 2;
+        s->y = (uint16_t)(s->y - movement);
+        s->x = (uint16_t)(s->x - movement);
+        if (movement < 3)
+            s->rotation = ai_face_target_rotation((uint8_t)s->rotation,
+                                                  (uint16_t)(samus_y - BLOCK_SIZE), samus_x,
+                                                  s->y, s->x);
+        s->work0 = (uint8_t)(s->work0 - 2);
+        if (s->work0 < 2) {
+            s->pose = MISSILE_HOMING;
+            s->work1 = 0;
+            s->work2 = 1;
+            s->work0 = 0;
+            s->work3 = 1;
+        }
+        break;
+    }
+    case MISSILE_HOMING: {
+        uint16_t aim = s->room_slot == 1 ? BLOCK_SIZE : s->room_slot == 2 ? 0x5C : HALF_BLOCK_SIZE;
+        ai_move_towards_target(c, (uint16_t)(samus_y - HALF_BLOCK_SIZE), samus_x, 0x28, 0x28, 2);
+        s->rotation = ai_face_target_rotation((uint8_t)s->rotation, (uint16_t)(samus_y - aim),
+                                              samus_x, s->y, s->x);
+        if (ai_collision_at(c, s->y, s->x) != MZM_COLLISION_AIR) s->pose = WEAPON_HIT_WALL;
+        break;
+    }
+    case SPRITE_POSE_STOPPED:
+        ai_particle_set(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_HUGE);
+        s->status = 0;
+        g->boss_work6--;
+        mzm_sfx_play(MZM_SOUND_MECHA_RIDLEY_MISSILE_EXPLODING);
+        break;
+    case WEAPON_HIT_WALL:
+        ai_particle_set(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_SMALL);
+        s->status = 0;
+        g->boss_work6--;
+        mzm_sfx_play(MZM_SOUND_SPRITE_EXPLOSION_SMALL);
+        break;
+    default:
+        ai_sprite_death_full(c, DEATH_NORMAL, s->y, s->x, true, MZM_PE_SPRITE_EXPLOSION_SMALL);
+        g->boss_work6--;
+        break;
+    }
+}
+
+/* MechaRidleyFireball: a straight shot, slightly rising (high) or falling
+ * steeply (low), until it hits a wall or Samus. */
+static void fireball(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES | MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE;
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = 0x14;
+        s->hitbox_top = s->hitbox_left = -0x1C;
+        s->hitbox_bottom = s->hitbox_right = 0x1C;
+        ai_set_anim(s, MZM_MECHA_RIDLEY_FIREBALL);
+        s->health = c->tables->secondary_health[s->sprite_id];
+        s->work0 = 30;
+        s->pose = WEAPON_MOVING;
+        s->samus_collision = SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT;
+        s->draw_order = 2;
+        s->rotation = s->room_slot != FIREBALL_LOW ? 0x28 : 0;
+        g->boss_work8++;
+        break;
+    case WEAPON_MOVING:
+        if (s->room_slot != FIREBALL_LOW) s->y -= 2;
+        else s->y += 12;
+        s->x -= 12;
+        if (ai_collision_at(c, s->y, s->x) != MZM_COLLISION_AIR) s->pose = WEAPON_HIT_WALL;
+        break;
+    case MISSILE_HOMING: break;
+    case SPRITE_POSE_STOPPED:
+    case WEAPON_HIT_WALL:
+        ai_particle_set(c, s->y, s->x, s->pose == SPRITE_POSE_STOPPED ?
+                        MZM_PE_SPRITE_EXPLOSION_HUGE : MZM_PE_SPRITE_EXPLOSION_SMALL);
+        s->status = 0;
+        g->boss_work8--;
+        mzm_sfx_play(MZM_SOUND_MECHA_RIDLEY_FIREBALL_EXPLODING);
+        break;
+    default:
+        ai_sprite_death_full(c, DEATH_NORMAL, s->y, s->x, true, MZM_PE_SPRITE_EXPLOSION_SMALL);
+        g->boss_work8--;
+        break;
     }
 }
 
@@ -966,5 +1172,8 @@ void ai_mecha_ridley(Ctx *c) {
     }
     if (!c->s->secondary) body(c);
     else if (c->s->sprite_id == MZM_SSPRITE_MECHA_RIDLEY_PART) part(c);
+    else if (c->s->sprite_id == MZM_SSPRITE_MECHA_RIDLEY_LASER) laser(c);
+    else if (c->s->sprite_id == MZM_SSPRITE_MECHA_RIDLEY_MISSILE) missile(c);
+    else if (c->s->sprite_id == MZM_SSPRITE_MECHA_RIDLEY_FIREBALL) fireball(c);
     else c->s->status = 0;
 }

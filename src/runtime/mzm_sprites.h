@@ -1141,6 +1141,10 @@ typedef struct {
      * the health before the last retreat check, core and cover spawn
      * health). */
     uint16_t boss_work6, boss_work7, boss_work8, boss_work9, boss_work10;
+    /* The Mecha Ridley weapon graphics last copied to OBJ VRAM 0x4280
+     * (MechaRidleyLoadMissilesGfx / LoadFireballsGfx): 0 none, else 1 plus
+     * the baked "/wN" variant (0-2 missile stages, 3-6 fireball stages). */
+    uint8_t mecha_weapon_gfx;
     /* gEnergyRefillAnimation, gMissileRefillAnimation,
      * gSuperMissileRefillAnimation and gPowerBombRefillAnimation. */
     uint8_t refill_animation[4];

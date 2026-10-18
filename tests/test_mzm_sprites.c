@@ -6596,6 +6596,102 @@ int main(void) {
         globals.sub1.adc = 1;
         mzm_sprite_update(&room[0], 0, &mf);
         assert(room[0].pose == 0x9 && globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_STANDING_LOW);
+        /* MechaRidleyPartEyeIdle once the cover is broken: glow, aim (the
+         * random number zero picks forward), then the laser two blocks in
+         * front of the eye. */
+        globals.sub1.work3 = 2;
+        globals.boss_work4 = 2;
+        mzm_sprite_update(&room[2], 2, &mf);
+        assert(globals.boss_work4 == 3 && room[2].anim == MZM_MECHA_RIDLEY_EYE_GLOWING &&
+               room[2].work0 == 40);
+        mzm_sfx_clear();
+        room[2].work0 = 1;
+        mzm_sprite_update(&room[2], 2, &mf);
+        assert(room[2].anim == MZM_MECHA_RIDLEY_EYE_LASER_FORWARD && room[2].work1 == 0 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_PREPARING_LASER));
+        room[2].frame = 7;
+        room[2].adc = 1;
+        mzm_sprite_update(&room[2], 2, &mf);
+        int laser = -1;
+        for (int i = 11; i < 16; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_MECHA_RIDLEY_LASER) laser = i;
+        assert(laser >= 0 && globals.boss_work4 == 0 && room[2].anim == MZM_MECHA_RIDLEY_EYE_IDLE &&
+               room[laser].x == room[2].x - MZM_BLOCK_SIZE * 2 && room[laser].y == room[2].y);
+        globals.sub1.work3 = 0;
+        /* MechaRidleyLaser: 20 subpixels a frame forward. */
+        uint16_t laser_x = room[laser].x;
+        mzm_sprite_update(&room[laser], (uint8_t)laser, &mf);
+        assert(room[laser].pose == 0x9 && room[laser].x == laser_x - 20 &&
+               room[laser].anim == MZM_MECHA_RIDLEY_LASER_FORWARD &&
+               room[laser].samus_collision == 4);     /* SSC_HURTS_SAMUS */
+        room[laser].status = 0;
+        /* MechaRidleyMissile: counted, rises slowing down (the middle
+         * missile 2 subpixels slower), then homes. */
+        MzmSprite *rocket = &room[12];
+        memset(rocket, 0, sizeof *rocket);
+        rocket->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_NOT_DRAWN;
+        rocket->secondary = true;
+        rocket->sprite_id = MZM_SSPRITE_MECHA_RIDLEY_MISSILE;
+        rocket->room_slot = 1;
+        rocket->y = 0x400;
+        rocket->x = 0x800;
+        mzm_sprite_update(rocket, 12, &mf);
+        assert(globals.boss_work6 == 1 && rocket->rotation == 0xA0 && rocket->pose == 0x9 &&
+               rocket->samus_collision == 6 &&   /* SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT */
+               rocket->status & MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE);
+        mzm_sprite_update(rocket, 12, &mf);
+        assert(rocket->y == 0x400 - 13 && rocket->x == 0x800 - 13 && rocket->work0 == 28 &&
+               !(rocket->status & MZM_SPRITE_STATUS_NOT_DRAWN));
+        rocket->work0 = 2;
+        uint16_t rocket_y = rocket->y;
+        mzm_sprite_update(rocket, 12, &mf);
+        assert(rocket->y == rocket_y + 1 && rocket->pose == 0x23 && rocket->work2 == 1);
+        /* Homing: SpriteUtilMoveSpriteTowardsSamus accelerates toward her and
+         * SpriteUtilMakeSpriteFaceSamusRotation turns the short way, PI / 64
+         * a frame (Samus straight above: toward 3 PI / 2 through 254). */
+        uint16_t keep_y = mf.samus_y, keep_x = mf.samus_x;
+        mf.samus_x = rocket->x;
+        mf.samus_y = (uint16_t)(rocket->y - 0x200);
+        rocket->rotation = 0;
+        uint16_t homing_y = rocket->y;
+        mzm_sprite_update(rocket, 12, &mf);
+        assert(rocket->rotation == 254 && rocket->y == homing_y && rocket->work3 == 2 &&
+               rocket->pose == 0x23);
+        mzm_sprite_update(rocket, 12, &mf);
+        mzm_sprite_update(rocket, 12, &mf);
+        assert(rocket->rotation == 250 && rocket->y < homing_y);
+        mf.samus_y = keep_y;
+        mf.samus_x = keep_x;
+        /* MechaRidleyLoadMissilesGfx: the launcher cycles three stages. */
+        mzm_sprite_update(&room[10], 10, &mf);
+        assert(globals.mecha_weapon_gfx >= 1 && globals.mecha_weapon_gfx <= 3);
+        mzm_sfx_clear();
+        rocket->pose = 0x42;                     /* SPRITE_POSE_STOPPED */
+        mzm_sprite_update(rocket, 12, &mf);
+        assert(rocket->status == 0 && globals.boss_work6 == 0 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_MISSILE_EXPLODING));
+        /* MechaRidleyFireball: the high one rises 2 subpixels a frame. */
+        MzmSprite *flame = &room[13];
+        memset(flame, 0, sizeof *flame);
+        flame->status = MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_NOT_DRAWN;
+        flame->secondary = true;
+        flame->sprite_id = MZM_SSPRITE_MECHA_RIDLEY_FIREBALL;
+        flame->room_slot = 1;
+        flame->y = 0x400;
+        flame->x = 0x800;
+        mzm_sprite_update(flame, 13, &mf);
+        assert(globals.boss_work8 == 1 && flame->rotation == 0x28 &&
+               flame->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        mzm_sprite_update(flame, 13, &mf);
+        assert(flame->y == 0x400 - 2 && flame->x == 0x800 - 12);
+        /* MechaRidleyLoadFireballsGfx: the head cycles four stages. */
+        mzm_sprite_update(&room[3], 3, &mf);
+        assert(globals.mecha_weapon_gfx >= 4 && globals.mecha_weapon_gfx <= 7);
+        mzm_sfx_clear();
+        flame->pose = 0x44;
+        mzm_sprite_update(flame, 13, &mf);
+        assert(flame->status == 0 && globals.boss_work8 == 0 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_FIREBALL_EXPLODING));
         mf.equipment = frame.equipment;
 
         test_set_event(NULL, MZM_EVENT_MECHA_RIDLEY_KILLED);

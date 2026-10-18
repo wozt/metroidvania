@@ -3838,6 +3838,36 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0368 - Mecha Ridley laser, missiles and fireballs
+
+- Ported the three Mecha Ridley weapon actors. The eye's laser attack
+  glows, picks one of four random directions (never straight up) and
+  spawns a laser that flies 20 subpixels a frame until it meets a wall.
+  The launcher's three missiles rise and slow down, then home on Samus with
+  the native acceleration and turn toward her by PI / 64 a frame. High and
+  low fireballs follow their native trajectories. Missiles and fireballs
+  explode on walls and on contact, and keep the live counters that gate
+  the next attack.
+- Added the shared `SpriteUtilMakeSpriteFaceSamusRotation` and
+  `SpriteUtilMoveSpriteTowardsSamus` helpers.
+- The exporter now bakes the seven weapon graphics stages that
+  `MechaRidleyLoadMissilesGfx` and `LoadFireballsGfx` copy to OBJ VRAM
+  0x4280. The renderer draws the stage the launcher or head copied last.
+  Before this patch, both weapons rendered as empty 1x1 frames.
+- The ROM-free regressions cover the laser attack and actor, the missile
+  rise, homing, rotation and explosion, the fireball flight and explosion,
+  both graphics cycles, and the weapon staging in the exporter.
+- In `chozodia_072` with no ammunition, the user saw the missiles on the
+  third attack. A frame-1850 capture (ignored
+  `captures/mecha-ridley/missiles.png`) shows all three homing on Samus
+  with their animated exhaust.
+- Remaining boundary: the cover/core projectile handoff, the damage
+  palette rows, the head glow, death, drops and the escape start. The laser
+  and fireballs need a damaged or broken cover, so in game they still
+  depend on that handoff.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0367 - Mecha Ridley attack selection, claw and stances
 
 - Mecha Ridley now tracks Samus's height with the native hysteresis (high

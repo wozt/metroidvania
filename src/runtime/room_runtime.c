@@ -3609,6 +3609,14 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             if(f>=0) snprintf(rows+n,sizeof rows-(size_t)n,"f%d",f);
             shade=rows;
         }
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY &&
+                (sprite->anim==MZM_MECHA_RIDLEY_MISSILE || sprite->anim==MZM_MECHA_RIDLEY_FIREBALL) &&
+                sprites->globals.mecha_weapon_gfx) {
+            /* The weapon tiles last copied to OBJ VRAM 0x4280. */
+            static char weapon[8];
+            snprintf(weapon,sizeof weapon,"/w%d",sprites->globals.mecha_weapon_gfx-1);
+            shade=weapon;
+        }
         else if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
         else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
         snprintf(key,sizeof key,"Sprite/%s/%s/%s%s",

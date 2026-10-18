@@ -271,7 +271,8 @@ static void death(Ctx *c) {
     ai_spawn_drop_follower(c, drop, s->room_slot, 0, s->ram_slot,
                            (uint16_t)(y - (QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE) + rng),
                            (uint16_t)(x + (BLOCK_SIZE + QUARTER_BLOCK_SIZE - PIXEL_SIZE) - rng), 0);
-    drop = c->tables->random[c->rng & 31] & 1 ? MZM_PSPRITE_LARGE_ENERGY_DROP : MZM_PSPRITE_MISSILE_DROP;
+    /* sRandomNumberTable[gSpriteRng] */
+    drop = c->tables->generic_random[c->rng] & 1 ? MZM_PSPRITE_LARGE_ENERGY_DROP : MZM_PSPRITE_MISSILE_DROP;
     ai_spawn_drop_follower(c, drop, s->room_slot, 0, s->ram_slot,
                            (uint16_t)(y + (QUARTER_BLOCK_SIZE + PIXEL_SIZE) - rng),
                            (uint16_t)(x - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE) + rng), 0);

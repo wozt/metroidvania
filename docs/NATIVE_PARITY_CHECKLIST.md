@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 82 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 83 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -585,6 +585,16 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.part
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
 Evidence: in game: `norfair_017`.
+
+[~] **`mzm.enemies.ruins_test` — Ruins Test (Chozo ghost).** The main actor freezes Samus facing the background five blocks below it, waits for the four symbols (battle music, merge) to turn it into her reflection, spawns the reflection and its cover, frees Samus after half a second and starts when she turns. It then shows the shootable symbol for 2, 1.5, 1 or 2/3 seconds after a random delay from sRandomNumberTable (now exported); an uncharged pistol shot on it hurts Samus by 25, 50 or 100 energy by difficulty through the Ruins Test forced movement, and a charged one keeps it out. After the first symbol it spawns the outline and the ghost, then moves in the widening circle and, after two symbols, the six-arc atom pattern, triggering ground and standing lightning; the fourth symbol sends it back to the center, and its despawn removes the ceiling and sets event 67. A capture in chozodia_042 shows Samus frozen under the ghost during the symbol merge.
+
+Native evidence: `mzm:c:src/sprites_ai/ruins_test.c:RuinsTest`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestCalculateDelay`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestChangeCcaa`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestCheckHitByChargedPistol`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestCheckIsGhostDisappearing`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestCheckSamusHurting`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestCheckSamusNotFacingBackground`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestCheckSymbolShot`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestDespawn`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestFreeSamus`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestGhostMove`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestInit`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestMotionless`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestMoveAtomPattern`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestMoveCirclePattern`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestMoveToCenter`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestMoveToPosition`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestMovingInit`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestProjectileCollision`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestReflectionCover`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestSamusReflectionStart`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestSpawnGhost`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestSpawning`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestSymbol`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestTurningIntoReflection`, `mzm:c:src/sprites_ai/ruins_test.c:RuinsTestUpdateSymbol`.  
+Local implementation: [`src/runtime/mzm_ruins_test.c`](../src/runtime/mzm_ruins_test.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.player.samus_controller`, `mzm.weapons.paralyzer_pistol`, `mzm.events.escape_sequence`.  
+Known divergences: The ghost, ghost outline, lightning, shootable symbol and closing reflection actors (RuinsTestGhost, RuinsTestGhostOutline, RuinsTestLightning, RuinsTestShootableSymbol, RuinsTestSamusReflectionEnd) are not ported yet: their spawns are cleared, so the fight cannot be finished in game. The dynamic symbol palettes, the reflection palette and graphics DMA, the PE_SAMUS_REFLECTION particle, the in-game timer record and the getting-fully-powered cutscene request are not ported; the symbols are therefore not visible. Not compared with an emulator.  
+Next action: Port the ghost, outline, lightning, shootable symbol and closing reflection actors, then the symbol palettes.
+Evidence: in game: `chozodia_042`.
 
 [~] **`mzm.enemies.sidehopper` — Sidehoppers.** Ground and ceiling Sidehoppers: idle or head shake for 1 to 4 loops (work1 kept at 0 on spawn, as without BUGFIX), Samus detection within five blocks, jump warning, high or low jumps from the ROM tables with the head hitbox resized, wall bounces, falls when unsupported, landing and the single-then-big death explosion into drops.
 

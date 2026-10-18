@@ -2614,6 +2614,9 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         if (!strcmp(line, "random")) {
             for (random_count = 0; random_count < 32; ++random_count)
                 sprites->tables.random[random_count] = (uint8_t)strtol(cursor, &cursor, 10);
+        } else if (!strcmp(line, "generic_random")) {
+            for (int i = 0; i < 256; ++i)
+                sprites->tables.generic_random[i] = (uint8_t)strtol(cursor, &cursor, 10);
         } else if (!strcmp(line, "haze")) {
             for (int i = 0; i < 13 * 4; ++i)
                 runtime_haze[i / 4][i % 4] = (uint8_t)strtol(cursor, &cursor, 10);
@@ -3334,7 +3337,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                                           MZM_LINK_POSE_OTHER,
         (uint16_t)(samus->y - 1), (uint16_t)samus->x, false, false, false,
         samus->facing > 0, MZM_POSE_NONE, false, false, false, 0, (uint8_t)samus->pose, false,
-        false, 0, 0};
+        false, 0, 0, samus->invincibility, 0};
     MzmSpriteFrame frame = {&world, &sprites->tables, {NULL}, equipment, sprites->frame8,
                             sprites->frame16, (uint16_t)samus->x, (uint16_t)samus->y,
                             mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top,
@@ -3377,6 +3380,9 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     if (link.set_last_wall) samus->last_wall = link.last_wall;
     /* Ridley's claw: gSamusData.invincibilityTimer. */
     if (link.set_invincibility) samus->invincibility = link.set_invincibility;
+    /* The Ruins Test's hurt request (FORCED_MOVEMENT_DAMAGED_BY_RUINS_TEST,
+     * written before its SamusSetPose). */
+    if (link.set_forced) samus->forced = link.set_forced;
     if (samus->pose != MZM_POSE_DYING && !stopped) {
         if (standing.landing_request)
             mzm_samus_land_on_sprite(samus, input, equipment, collision);

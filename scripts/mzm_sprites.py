@@ -113,7 +113,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_IMAGO_LARVA_RIGHT": 0, "PSPRITE_IMAGO_LARVA_LEFT": 0,
           "PSPRITE_IMAGO_LARVA_RIGHT_SIDE": 0,
           "PSPRITE_IMAGO_COCOON": 0, "PSPRITE_IMAGO_COCOON_AFTER_FIGHT": 0,
-          "PSPRITE_MECHA_RIDLEY": 0, "PSPRITE_HIVE": 0, "PSPRITE_BARISTUTE": 0, "PSPRITE_TANGLE_VINE_TALL": 0,
+          "PSPRITE_MECHA_RIDLEY": 0, "PSPRITE_HIVE": 0, "PSPRITE_BARISTUTE": 0, "PSPRITE_TANGLE_VINE_TALL": 0, "PSPRITE_RUINS_TEST": 0,
           "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0, "PSPRITE_RIDLEY": 0, "PSPRITE_MOTHER_BRAIN": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
@@ -562,7 +562,8 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         tables = frame_tables(source)
         plan.append((sprite, row, graphics[sprite], palettes[sprite], tables))
         wanted.update([graphics[sprite], palettes[sprite], *tables])
-    tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats")
+    tables = ("sSpriteRandomNumberTable", "sSpritesFallingSpeed", "sPrimarySpriteStats",
+              "sRandomNumberTable")
     wanted.update(tables)
     wanted.add(MECHA_RIDLEY_WEAPONS)
     wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES,
@@ -611,6 +612,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         lines.append(f"message\t{value}\t{name[len('MESSAGE_'):]}\t{calls}")
         banners.append((name[len('MESSAGE_'):], vram.to_bytes()))
     lines.append("random\t" + "\t".join(map(str, words("sSpriteRandomNumberTable", False, 1))))
+    lines.append("generic_random\t" + "\t".join(map(str, words("sRandomNumberTable", False, 1))))
     lines.append("falling\t" + "\t".join(map(str, words("sSpritesFallingSpeed", True, 2))))
     stats = words("sPrimarySpriteStats", False, 2)
     count = ids.get("PSPRITE_COUNT", 0)

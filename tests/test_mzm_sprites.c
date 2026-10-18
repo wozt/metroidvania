@@ -3033,7 +3033,7 @@ int main(void) {
         MzmSprite *arm = &room[arm_slot];
         uint16_t hand = (uint16_t)(arm->x + 56);
         MzmSpriteSamusLink link = {MZM_LINK_POSE_MORPH_BALL, (uint16_t)(arm->y - 17), hand,
-                                   false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
+                                   false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0, 0, 0};
         statue_frame.samus_link = &link;
         /* Off by one subpixel in height: no grab. */
         link.y++;
@@ -3109,7 +3109,7 @@ int main(void) {
         assert(hint_arm && hint_arm->pose == 0x9);
         MzmSpriteSamusLink hint_link = {MZM_LINK_POSE_ROLLING, (uint16_t)(hint_arm->y - 17),
                                         (uint16_t)(hint_arm->x - 56), false, false, false,
-                                        false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
+                                        false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0, 0, 0};
         statue_frame.samus_link = &hint_link;
         mzm_sprite_update(hint_arm, 0, &statue_frame);
         assert(hint_link.grab && room[0].pose == 0x22 && hint_arm->pose == 0x23);
@@ -3462,7 +3462,7 @@ int main(void) {
         assert(room[1].anim == MZM_GADGET_MAP_STATION_BACK_SCREEN_IDLE);
         uint16_t station_x = (uint16_t)(room[0].x + 96), station_y = (uint16_t)(room[0].y + 128 - 1);
         MzmSpriteSamusLink station_link = {MZM_LINK_POSE_OTHER, station_y, (uint16_t)(station_x + 64),
-                                           false, false, false, true, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
+                                           false, false, false, true, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0, 0, 0};
         g.samus_link = &station_link;
         mzm_sfx_clear();
         mzm_sprite_update(&room[0], 0, &g);
@@ -3511,7 +3511,7 @@ int main(void) {
         mzm_sprite_update(&room[1], 1, &g);
         assert(room[1].pose == 0x43 && room[1].anim == MZM_GADGET_SAVE_PLATFORM_TOP_IDLE);
         MzmSpriteSamusLink save_link = {MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y - 65), (uint16_t)(room[0].x + 20),
-                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
+                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0, 0, 0};
         g.samus_link = &save_link;
         mzm_sfx_clear();
         for (int i = 0; i < 9; ++i) mzm_sprite_update(&room[0], 0, &g);
@@ -3604,7 +3604,7 @@ int main(void) {
         g.banner_pose = 0;
         g.banner_yes = false;
         MzmSpriteSamusLink ship_link = {MZM_LINK_POSE_OTHER, 0, 0, false, false, false, false, MZM_POSE_NONE,
-                                        false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0};
+                                        false, false, false, 0, MZM_POSE_STANDING, false, false, 0, 0, 0, 0};
         g.samus_link = &ship_link;
         mzm_sprite_init_primary(&room[0], MZM_PSPRITE_GUNSHIP, 0, 5, 5, 0, 0);
         uint16_t ship_ground = room[0].y;
@@ -3644,7 +3644,7 @@ int main(void) {
         g.equipment = &ship_items;
         ship_link = (MzmSpriteSamusLink){MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y - 196), (uint16_t)(room[0].x + 20),
                                          false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
-                                         MZM_POSE_STANDING, false, false, 0, 0};
+                                         MZM_POSE_STANDING, false, false, 0, 0, 0, 0};
         room[0].status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0x22 && room[0].draw_order == 4 && room[0].samus_collision == 0 &&
@@ -3740,7 +3740,7 @@ int main(void) {
         assert(room[0].pose == 0xC && room[0].anim == MZM_GADGET_MORPH_BALL_LAUNCHER_LAUNCHING);
         MzmSpriteSamusLink launch_link = {MZM_LINK_POSE_OTHER, (uint16_t)(room[0].y + 30), room[0].x,
                                           false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
-                                          MZM_POSE_DELAY_BEFORE_BALLSPARKING, false, false, 0, 0};
+                                          MZM_POSE_DELAY_BEFORE_BALLSPARKING, false, false, 0, 0, 0, 0};
         g.samus_link = &launch_link;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].work1 && room[2].sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART && room[2].room_slot == 1);
@@ -3776,7 +3776,7 @@ int main(void) {
                zip.previous_x == 352 && room[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING);
         MzmSpriteSamusLink zip_link = {MZM_LINK_POSE_OTHER, zip.y, zip.x, false, false, false, false,
                                        MZM_POSE_NONE, false, false, false, 0, MZM_POSE_ON_ZIPLINE,
-                                       false, false, 0, 0};
+                                       false, false, 0, 0, 0, 0};
         g.samus_link = &zip_link;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].work1 == 1 && room[0].anim == MZM_GADGET_ZIPLINE_OFF_GRABBING_SAMUS);
@@ -3875,7 +3875,7 @@ int main(void) {
         assert(room[1].pose == 0x61 && room[1].draw_order == 13 && !(room[1].status & MZM_SPRITE_STATUS_NOT_DRAWN));
         MzmSpriteSamusLink gen_link = {MZM_LINK_POSE_MORPH_BALL, (uint16_t)(room[0].y - 129), room[0].x,
                                        false, false, false, false, MZM_POSE_NONE, false, false, false, 0,
-                                       MZM_POSE_STANDING, false, false, 0, 0};
+                                       MZM_POSE_STANDING, false, false, 0, 0, 0, 0};
         g.samus_link = &gen_link;
         mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0x9);
@@ -5640,7 +5640,7 @@ int main(void) {
     {
         MzmSprite room[20] = {0};
         MzmSpriteGlobals globals = {0};
-        MzmSpriteSamusLink link = {.samus_pose = MZM_POSE_ON_ZIPLINE};
+        MzmSpriteSamusLink link = {.samus_pose = MZM_POSE_ON_ZIPLINE, 0, 0};
         MzmSpriteKind acid_kind = {0};
         MzmEffects acid_effects = {0};
         for (int a = 0; a < MZM_ACID_WORM_ANIMS; ++a) {
@@ -6909,6 +6909,160 @@ int main(void) {
         mzm_sprite_init_primary(&pair[2], MZM_PSPRITE_BARISTUTE_KRAID_UPPER, 0, 9, 8, 0, 2);
         mzm_sprite_update(&pair[2], 2, &bf);
         assert(pair[2].status == 0);
+        memset(test_events, 0, sizeof test_events);
+    }
+    /* The Ruins Test: the frozen intro, the merging symbols, the
+     * reflection, the shootable symbol and its reflected pistol shots, the
+     * ghost spawning, the patterns and the despawn awarding the suit. */
+    {
+        MzmSpriteKind ruins_kind = {0};
+        for (int a = 0; a < MZM_RUINS_TEST_ANIMS; ++a) {
+            ruins_kind.counts[a] = 8;
+            for (int f = 0; f < 8; ++f) ruins_kind.timers[a][f] = 4;
+        }
+        for (int i = 0; i < 256; ++i) tables.generic_random[i] = 0;
+        for (int i = 0; i < 320; ++i) tables.sine[i] = 0;
+        tables.sine[64] = 256;                       /* cos(0) */
+        MzmSprite room[16] = {0};
+        MzmSpriteGlobals globals = {0};
+        MzmSpriteSamusLink link = {0};
+        MzmEquipment suitless = {.energy = 99, .max_energy = 99};
+        static MzmWeapons pistol;
+        memset(&pistol, 0, sizeof pistol);
+        MzmSpriteFrame rf = frame;
+        rf.sprites = room;
+        rf.sprite_count = 16;
+        rf.globals = &globals;
+        rf.hooks = &test_hooks;
+        rf.samus_link = &link;
+        rf.equipment = &suitless;
+        rf.weapons = &pistol;
+        rf.difficulty = 1;
+        rf.kinds[MZM_FAMILY_RUINS_TEST] = &ruins_kind;
+        link.set_pose = MZM_POSE_NONE;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_RUINS_TEST, 0, 25, 24, 0, 0);
+        uint16_t ghost_y = (uint16_t)(room[0].y + 16);
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].pose == 0x1 && room[0].y == ghost_y && globals.boss_work1 == ghost_y &&
+               globals.sub1.y == ghost_y && room[0].health == 100 && room[0].draw_order == 12 &&
+               room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+               link.set_pose == MZM_POSE_FACING_THE_BACKGROUND_SUITLESS && link.moved &&
+               link.y == ghost_y + 64 * 5 - 16 - 1 && globals.boss_work5 == 120 &&
+               room[1].sprite_id == MZM_SSPRITE_RUINS_TEST_SYMBOL);
+        /* The symbols: a second of silence, the battle music, the merge
+         * that turns the ghost into Samus's reflection. */
+        mzm_sprite_update(&room[1], 1, &rf);
+        assert(room[1].pose == 0x8 && room[1].work0 == 60 && globals.disable_pause);
+        mzm_sfx_clear();
+        room[1].work0 = 1;
+        mzm_sprite_update(&room[1], 1, &rf);
+        assert(room[1].pose == 0x9 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_RUINS_TEST_BATTLE_WITH_INTRO));
+        room[1].frame = 7;
+        room[1].adc = 4;
+        mzm_sprite_update(&room[1], 1, &rf);
+        assert(room[1].pose == 0x23 && room[1].work0 == 120);
+        room[1].work0 = 61;
+        mzm_sprite_update(&room[1], 1, &rf);
+        assert(room[0].work0 == 2);
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].pose == 0x2 && room[0].anim == MZM_RUINS_TEST_TURNING_INTO_REFLECTION &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_RUINS_TEST_TURNING_INTO_FIRST_REFLECTION));
+        room[0].frame = 7;
+        room[0].adc = 1;
+        mzm_sprite_update(&room[0], 0, &rf);
+        room[0].adc = 4;
+        mzm_sprite_update(&room[0], 0, &rf);
+        int cover = -1, reflection = -1;
+        for (int i = 2; i < 16; ++i) {
+            if (room[i].sprite_id == MZM_SSPRITE_RUINS_TEST_REFLECTION_COVER) cover = i;
+            if (room[i].sprite_id == MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_START) reflection = i;
+        }
+        assert(cover > 0 && reflection > 0 && room[0].pose == 0x3 && room[0].work0 == 32 &&
+               room[0].anim == MZM_RUINS_TEST_SYMBOL);
+        /* Samus may turn after half a second; turning starts the fight. */
+        link.samus_pose = MZM_POSE_FACING_THE_BACKGROUND_SUITLESS;
+        mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
+        room[0].work0 = 1;
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].pose == 0x4 && link.set_last_wall && link.last_wall == 0);
+        link.samus_pose = MZM_POSE_STANDING;
+        mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
+        assert(!globals.disable_pause && room[reflection].pose == 0x9);
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].pose == 0x8 && globals.boss_work3 == 1799);   /* 1800, then the timer */
+        /* The cover hides the ghost while no symbol is out. */
+        mzm_sprite_update(&room[cover], (uint8_t)cover, &rf);
+        mzm_sprite_update(&room[cover], (uint8_t)cover, &rf);
+        assert(room[cover].x == room[0].x && !(room[cover].status & MZM_SPRITE_STATUS_NOT_DRAWN));
+        /* An uncharged pistol shot at the waiting symbol hurts Samus. */
+        globals.boss_work5 = 5;
+        pistol.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_PISTOL,
+                                         .stage = MZM_STAGE_MOVING, .y = room[0].y, .x = room[0].x};
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(suitless.energy == 49 && link.set_forced == MZM_FORCED_DAMAGED_BY_RUINS_TEST &&
+               link.set_pose == MZM_POSE_HURT_REQUEST && room[0].status & MZM_SPRITE_STATUS_MOSAIC &&
+               pistol.list[0].stage == MZM_STAGE_TUMBLING && globals.boss_work5 == 120);
+        /* While she is hurt the ghost waits. */
+        link.samus_pose = MZM_POSE_GETTING_HURT;
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(globals.boss_work5 == 120);
+        link.samus_pose = MZM_POSE_STANDING;
+        /* The delay over, the symbol stays out two seconds (first one). */
+        globals.boss_work5 = 0;
+        mzm_sprite_update(&room[0], 0, &rf);
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(globals.sub1.work1 == 119 && !(room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES));
+        mzm_sprite_update(&room[cover], (uint8_t)cover, &rf);
+        assert(room[cover].status & MZM_SPRITE_STATUS_NOT_DRAWN);
+        /* Shot: the first symbol, and the ghost appears. */
+        room[0].isft = 10;
+        room[0].health = 90;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(globals.sub1.health == 1 && globals.sub1.work1 == 128 && room[0].health == 100 &&
+               room[0].pose == 0x9 && room[0].work0 == 120 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_RUINS_TEST_SHOOTABLE_SYMBOL_SHOT));
+        globals.boss_work7 = 1;
+        room[0].work0 = 85;
+        mzm_sprite_update(&room[0], 0, &rf);
+        int outline = -1;
+        for (int i = 2; i < 16; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_RUINS_TEST_GHOST_OUTLINE) outline = i;
+        assert(outline > 0);
+        room[0].work0 = 1;
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].pose == 0x22 && globals.boss_work3 == 1199);
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].pose == 0x23 && room[0].scaling == 3 && room[0].status & MZM_SPRITE_STATUS_SAMUS_COLLIDING);
+        /* Back to the center after the last symbol, then the despawn. */
+        room[0].pose = 0x67;
+        room[0].isft = 0;
+        room[0].y = (uint16_t)(globals.boss_work1 + 2);
+        room[0].x = globals.boss_work2;
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].pose == 0x68 && globals.sub1.work3 == 2 && room[0].y == globals.boss_work1);
+        globals.sub1.work3 = 4;
+        mzm_sprite_update(&room[0], 0, &rf);
+        mzm_sprite_update(&room[cover], (uint8_t)cover, &rf);
+        mzm_sprite_update(&room[cover], (uint8_t)cover, &rf);
+        assert(room[0].pose == 0x69 && room[0].work0 == 100 && room[0].work1 == 34 && room[cover].status == 0);
+        room[0].work0 = 1;
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].anim == MZM_RUINS_TEST_DESPAWN);
+        room[0].work1 = 1;
+        mzm_sprite_update(&room[0], 0, &rf);
+        int reflection_end = -1;
+        for (int i = 2; i < 16; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_END) reflection_end = i;
+        assert(reflection_end > 0);
+        memset(test_events, 0, sizeof test_events);
+        caa_calls = 0;
+        globals.sub1.work3 = 5;
+        mzm_sprite_update(&room[0], 0, &rf);
+        assert(room[0].pose == 0x6A && caa_calls == 13 && last_caa == MZM_CAA_REMOVE_SOLID &&
+               test_check_event(NULL, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED));
         memset(test_events, 0, sizeof test_events);
     }
     /* Tangle Vines: on the floor (row 10) or under the ceiling (row 2),

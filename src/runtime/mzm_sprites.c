@@ -692,6 +692,36 @@ static const char *const tangle_vine_sprites[MZM_TANGLE_VINE_ANIMS] = {
     "TANGLE_VINE_TALL", "TANGLE_VINE_TALL", "TANGLE_VINE_TALL", "TANGLE_VINE_TALL",
     "TANGLE_VINE_TALL", "TANGLE_VINE_TALL", "TANGLE_VINE_TALL",
 };
+const char *const mzm_ruins_test_anim_names[MZM_RUINS_TEST_ANIMS] = {
+    "RuinsTestSamusReflectionOam",
+    "RuinsTestGhostOutlineOam_Spawning",
+    "RuinsTestGhostOam_NotMoving",
+    "RuinsTestGhostOam_Moving",
+    "RuinsTestGhostOam_SymbolPlaced",
+    "RuinsTestSymbolOam_FourSymbols",
+    "RuinsTestSymbolOam_Merging",
+    "RuinsTestSymbolOam_Disappearing",
+    "RuinsTestOam_TurningIntoReflection",
+    "RuinsTestReflectionCoverOam",
+    "RuinsTestOam_Symbol",
+    "RuinsTestShootableSymbolOam_Spawning",
+    "RuinsTestShootableSymbolOam_Spawned",
+    "RuinsTestShootableSymbolOam_Despawning",
+    "RuinsTestShootableSymbolOam_TurningIntoSymbol",
+    "RuinsTestGhostOam_SymbolShot",
+    "RuinsTestGhostOam_SymbolPlacing",
+    "RuinsTestOam_Despawn",
+    "RuinsTestOam_Unused",
+    "RuinsTestOam_Spawning",
+    "RuinsTestLightningOam_InAir",
+    "RuinsTestLightningOam_GoingOnGround",
+    "RuinsTestLightningOam_OnGroundHorizontal",
+    "RuinsTestLightningOam_OnGroundVertical",
+    "RuinsTestGhostOutlineOam_ShootingGroundLightning",
+};
+static const char *const ruins_test_sprites[MZM_RUINS_TEST_ANIMS] = {
+    "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST", "RUINS_TEST",
+};
 static const char *const mecha_ridley_sprites[MZM_MECHA_RIDLEY_ANIMS] = {
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
@@ -992,6 +1022,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_HIVE] = {MZM_HIVE_ANIMS, mzm_hive_anim_names, hive_sprites},
     [MZM_FAMILY_BARISTUTE] = {MZM_BARISTUTE_ANIMS, mzm_baristute_anim_names, baristute_sprites},
     [MZM_FAMILY_TANGLE_VINE] = {MZM_TANGLE_VINE_ANIMS, mzm_tangle_vine_anim_names, tangle_vine_sprites},
+    [MZM_FAMILY_RUINS_TEST] = {MZM_RUINS_TEST_ANIMS, mzm_ruins_test_anim_names, ruins_test_sprites},
 };
 
 
@@ -5458,6 +5489,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
             return MZM_FAMILY_IMAGO_COCOON;
         if (sprite_id == MZM_SSPRITE_HIVE_ROOTS) return MZM_FAMILY_HIVE;
         if (sprite_id == MZM_SSPRITE_TANGLE_VINE_GERUTA_PART) return MZM_FAMILY_TANGLE_VINE;
+        if (sprite_id >= MZM_SSPRITE_RUINS_TEST_SYMBOL && sprite_id <= MZM_SSPRITE_RUINS_TEST_LIGHTNING)
+            return MZM_FAMILY_RUINS_TEST;
         if (sprite_id == MZM_SSPRITE_MECHA_RIDLEY_PART ||
             sprite_id == MZM_SSPRITE_MECHA_RIDLEY_LASER ||
             sprite_id == MZM_SSPRITE_MECHA_RIDLEY_MISSILE ||
@@ -5562,6 +5595,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_TANGLE_VINE_RED_GERUTA: case MZM_PSPRITE_TANGLE_VINE_GERUTA:
     case MZM_PSPRITE_TANGLE_VINE_LARVA_RIGHT: case MZM_PSPRITE_TANGLE_VINE_LARVA_LEFT:
         return MZM_FAMILY_TANGLE_VINE;
+    case MZM_PSPRITE_RUINS_TEST: return MZM_FAMILY_RUINS_TEST;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -6785,6 +6819,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_HIVE: ai_hive(&c); break;
     case MZM_FAMILY_BARISTUTE: ai_baristute(&c); break;
     case MZM_FAMILY_TANGLE_VINE: ai_tangle_vine(&c); break;
+    case MZM_FAMILY_RUINS_TEST: ai_ruins_test(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

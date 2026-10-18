@@ -3838,6 +3838,40 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0373 - Ruins Test, first slice (and Baristute random fix)
+
+- Ported the Ruins Test's main actor, its symbol intro, the starting
+  reflection and the reflection cover in `mzm_ruins_test.c`:
+  - Samus is frozen facing the background, below the actor;
+  - the four symbols light up with the battle music and merge, turning
+    the ghost into her reflection, and Samus is freed once she turns;
+  - the shootable symbol appears after random delays drawn from
+    `sRandomNumberTable`. An uncharged pistol shot on it hurts Samus by
+    25, 50 or 100 energy (by difficulty), with the Ruins Test forced
+    movement; a charged shot keeps the symbol out;
+  - the ghost moves in the widening circle and then the atom pattern,
+    triggers ground and standing lightning, and returns to the center
+    after the fourth symbol;
+  - its despawn removes the ceiling and sets event 67.
+- The sprite link to Samus now carries her invincibility timer and the
+  forced movement of a hurt request.
+- `sRandomNumberTable` is now exported. The Baristute's second drop now
+  reads that table instead of the sprite random table.
+- Not ported yet: the ghost, outline, lightning, shootable symbol and
+  closing reflection actors (their spawns are cleared), and the dynamic
+  palettes and graphics DMA. The symbols are therefore invisible, and the
+  fight cannot be finished in game.
+- A ROM-free regression covers the intro, the symbol merge, the
+  reflection, freeing Samus, the cover, the reflected pistol damage, the
+  symbol timing and shot, the ghost spawning, the circle start, the return
+  to the center, the despawn, the ceiling removal and the event.
+- A capture in `chozodia_042` shows Samus frozen under the ghost during
+  the merge (ignored `captures/ruins-test/intro.png`). In that capture
+  suitless Samus is drawn with suit colours, which is a separate Samus
+  rendering issue.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0372 - Tangle Vines
 
 - Ported `sprites_ai/tangle_vine.c` in `mzm_tangle_vine.c`, which covers

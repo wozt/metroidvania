@@ -210,6 +210,8 @@ void ai_hive(Ctx *c);
 void ai_baristute(Ctx *c);
 /* The Tangle Vines and the vine Geruta (mzm_tangle_vine.c). */
 void ai_tangle_vine(Ctx *c);
+/* The Ruins Test (mzm_ruins_test.c). */
+void ai_ruins_test(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */
 void ai_gadora(Ctx *c);
 /* The paired Imago larvae, their parts and the animated passage remnant. */

@@ -178,6 +178,7 @@ extern const char *const mzm_mecha_ridley_multi_names[MZM_MECHA_RIDLEY_MULTI_COU
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
 typedef struct {
     uint8_t random[32];             /* sSpriteRandomNumberTable */
+    uint8_t generic_random[256];    /* sRandomNumberTable */
     int16_t falling[16];            /* sSpritesFallingSpeed */
     uint16_t health[256], damage[256];  /* sPrimarySpriteStats */
     uint8_t weakness[256];          /* SpriteWeakness (low byte of column 2) */
@@ -892,6 +893,37 @@ enum {
     MZM_TANGLE_VINE_LARVA_RIGHT, MZM_TANGLE_VINE_LARVA_LEFT, MZM_TANGLE_VINE_ANIMS,
 };
 extern const char *const mzm_tangle_vine_anim_names[MZM_TANGLE_VINE_ANIMS];
+
+/* The Ruins Test (Chozo ghost) and its actors (sprites_ai/ruins_test.c). */
+enum {
+    MZM_RUINS_TEST_SAMUS_REFLECTION,
+    MZM_RUINS_TEST_GHOST_OUTLINE_SPAWNING,
+    MZM_RUINS_TEST_GHOST_NOT_MOVING,
+    MZM_RUINS_TEST_GHOST_MOVING,
+    MZM_RUINS_TEST_GHOST_SYMBOL_PLACED,
+    MZM_RUINS_TEST_SYMBOL_FOUR_SYMBOLS,
+    MZM_RUINS_TEST_SYMBOL_MERGING,
+    MZM_RUINS_TEST_SYMBOL_DISAPPEARING,
+    MZM_RUINS_TEST_TURNING_INTO_REFLECTION,
+    MZM_RUINS_TEST_REFLECTION_COVER,
+    MZM_RUINS_TEST_SYMBOL,
+    MZM_RUINS_TEST_SHOOTABLE_SYMBOL_SPAWNING,
+    MZM_RUINS_TEST_SHOOTABLE_SYMBOL_SPAWNED,
+    MZM_RUINS_TEST_SHOOTABLE_SYMBOL_DESPAWNING,
+    MZM_RUINS_TEST_SHOOTABLE_SYMBOL_TURNING_INTO_SYMBOL,
+    MZM_RUINS_TEST_GHOST_SYMBOL_SHOT,
+    MZM_RUINS_TEST_GHOST_SYMBOL_PLACING,
+    MZM_RUINS_TEST_DESPAWN,
+    MZM_RUINS_TEST_UNUSED,
+    MZM_RUINS_TEST_SPAWNING,
+    MZM_RUINS_TEST_LIGHTNING_IN_AIR,
+    MZM_RUINS_TEST_LIGHTNING_GOING_ON_GROUND,
+    MZM_RUINS_TEST_LIGHTNING_ON_GROUND_HORIZONTAL,
+    MZM_RUINS_TEST_LIGHTNING_ON_GROUND_VERTICAL,
+    MZM_RUINS_TEST_GHOST_OUTLINE_SHOOTING_GROUND_LIGHTNING,
+    MZM_RUINS_TEST_ANIMS,
+};
+extern const char *const mzm_ruins_test_anim_names[MZM_RUINS_TEST_ANIMS];
 #define MZM_TANGLE_VINE_MULTI_NAME "sTangleVineGerutaMultiSpriteData_Idle"
 
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
@@ -910,7 +942,7 @@ enum {
     MZM_FAMILY_ACID_WORM, MZM_FAMILY_GADORA, MZM_FAMILY_IMAGO_LARVA,
     MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE, MZM_FAMILY_IMAGO_COCOON,
     MZM_FAMILY_MECHA_RIDLEY, MZM_FAMILY_HIVE, MZM_FAMILY_BARISTUTE,
-    MZM_FAMILY_TANGLE_VINE,
+    MZM_FAMILY_TANGLE_VINE, MZM_FAMILY_RUINS_TEST,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -993,6 +1025,7 @@ enum {
     MZM_PSPRITE_TANGLE_VINE_CURVED = 130, MZM_PSPRITE_TANGLE_VINE_SHORT = 131,
     MZM_PSPRITE_TANGLE_VINE_RED_GERUTA = 183, MZM_PSPRITE_TANGLE_VINE_GERUTA = 184,
     MZM_PSPRITE_TANGLE_VINE_LARVA_RIGHT = 185, MZM_PSPRITE_TANGLE_VINE_LARVA_LEFT = 186,
+    MZM_PSPRITE_RUINS_TEST = 109,
     MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT = 112,
     MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE = 127,
     MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,
@@ -1023,6 +1056,10 @@ enum {
     MZM_SSPRITE_GADORA_EYE = 54, MZM_SSPRITE_GADORA_BEAM = 55,
     MZM_SSPRITE_IMAGO_LARVA_PART = 18, MZM_SSPRITE_HIVE_ROOTS = 17,
     MZM_SSPRITE_TANGLE_VINE_GERUTA_PART = 45,
+    MZM_SSPRITE_RUINS_TEST_SYMBOL = 59, MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_START = 60,
+    MZM_SSPRITE_RUINS_TEST_REFLECTION_COVER = 61, MZM_SSPRITE_RUINS_TEST_GHOST_OUTLINE = 62,
+    MZM_SSPRITE_RUINS_TEST_GHOST = 63, MZM_SSPRITE_RUINS_TEST_SHOOTABLE_SYMBOL = 64,
+    MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_END = 65, MZM_SSPRITE_RUINS_TEST_LIGHTNING = 66,
     MZM_SSPRITE_WINGED_RIPPER = 6, MZM_SSPRITE_IMAGO_COCOON_VINE = 20,
     MZM_SSPRITE_IMAGO_COCOON_SPORE = 21, MZM_SSPRITE_DEFEATED_IMAGO_COCOON = 42,
     MZM_SSPRITE_IMAGO_CEILING_VINE = 43,
@@ -1187,6 +1224,9 @@ typedef struct {
      * the health before the last retreat check, core and cover spawn
      * health). */
     uint16_t boss_work6, boss_work7, boss_work8, boss_work9, boss_work10;
+    /* gPreviousYPosition / gPreviousXPosition as the Ruins Test reads
+     * them: Samus's position on its previous update. */
+    uint16_t previous_samus_y, previous_samus_x;
     /* The Mecha Ridley weapon graphics last copied to OBJ VRAM 0x4280
      * (MechaRidleyLoadMissilesGfx / LoadFireballsGfx): 0 none, else 1 plus
      * the baked "/wN" variant (0-2 missile stages, 3-6 fireball stages). */
@@ -1261,6 +1301,10 @@ typedef struct {
     uint16_t last_wall;
     /* Ridley's claw: gSamusData.invincibilityTimer written (0: not). */
     uint8_t set_invincibility;
+    /* The Ruins Test: gSamusData.invincibilityTimer in; out, the
+     * forcedMovement of its hurt request (0: none). */
+    uint8_t invincibility;
+    uint8_t set_forced;
 } MzmSpriteSamusLink;
 
 /* What SpriteUpdate shares with every sprite this frame. Enemy drops are

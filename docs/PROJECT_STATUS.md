@@ -3812,6 +3812,31 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0364 - native sprite background priority and Acid Worm impact
+
+- Added an explicit native OBJ background-priority override to `MzmSprite`
+  while retaining priority 2 for zero-initialized actors. `MzmSpriteWorld`
+  now supplies BG1's live priority from the room transparency setup.
+- Split the foreground renderer into priority 1 and priority 0 bands. A
+  priority-1 actor is now painted after BG1 but before BG0, matching the GBA
+  tie and allowing sprite AI to select either foreground band without
+  disturbing the existing priority-2 and Kraid priority-3 paths.
+- Ported `AcidWormSpitExplodingInit`: a spit that strikes a wall copies
+  BG1's priority before starting its explosion, while an impact in the acid
+  deliberately keeps the native default sprite priority.
+- The regression verifies the normal moving priority, the wall transition,
+  the copied BG1 priority and the explosion sound. A real frame-420
+  `kraid_005` capture retained the layered acid room, Samus and all thirteen
+  live encounter actors after the renderer split.
+- Acid Worm is now functionally complete in the native parity checklist.
+  Remaining validation: compare the full encounter frame by frame with an
+  emulator.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed. Dashboard generation reported 126 features, 62
+  functional or better and 114 with passing tests. Every reconstruction task
+  completed or was up to date, generated-data checks were fresh and the
+  proprietary-file guard passed.
+
 ## Patch 0349 - Zero Mission Acid Worm encounter
 
 - Added the `kraid_005` Acid Worm primary actor, its nine body actors and its

@@ -128,6 +128,10 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     bool has_music; int music;
     size_t count; } Room;
 
+#ifndef FUSION_RUNTIME_TEST
+static int runtime_bg_priority(const Room *room, int layer);
+#endif
+
 static void room_set_cell(Room *room, int x, int y, ClipType type) {
     int columns = room->width / 16;
     unsigned char *cell = &room->types[y * columns + x];
@@ -2941,7 +2945,7 @@ static uint32_t runtime_samus_clipdata(void *context, uint16_t y, uint16_t x) {
     const Room *room = context;
     if (x / 64 >= room->width / 16) return MZM_SAMUS_CLIP_SOLID_FLAG | CLIP_SOLID;
     if (y / 64 >= room->height / 16) return CLIP_AIR;
-    MzmSpriteWorld world = {(void *)room, runtime_sprite_block, 0, 0, NULL, 0, NULL, 0};
+    MzmSpriteWorld world = {(void *)room, runtime_sprite_block, 0, 0, NULL, 0, NULL, 0, 0};
     return mzm_clipdata_process(&world, y, x, MZM_ACTOR_SAMUS);
 }
 
@@ -3255,7 +3259,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     uint16_t effect_y = runtime_effect_y(room);
     MzmSpriteWorld world = {room, runtime_sprite_block, (uint16_t)((int)cx * 4),
                             (uint16_t)((int)cy * 4), runtime_sprite_movement, effect_y,
-                            runtime_sprite_hazard, runtime_room_track};
+                            runtime_sprite_hazard, runtime_room_track,
+                            (uint8_t)runtime_bg_priority(room, 1)};
     mzm_sprite_debris_process(&sprites->effects, &world, &sprites->tables,
                               &sprites->effect_kinds);
     /* SpriteUtilCheckStopSpritesPose: no Samus collision while movement is
@@ -3515,14 +3520,14 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                                  RuntimeLibrary *sprite_library,SDL_FRect viewport,float cx,
                                  float cy,float scale,bool show_hitbox,int first_order,
                                  int last_order,Uint8 shade_level,bool absolute_only,
-                                 bool low_only) {
+                                 int bg_priority) {
     /* Their OAM frame, mirrored by the X and Y flip statuses (SpriteDraw);
      * palette rows are baked per sprite by the exporter. */
     for(int order=last_order;order>=first_order;order--)
     for(int i=0;i<RUNTIME_MAX_SPRITES && sprites->kinds_ok;i++) {
         const MzmSprite *sprite=&sprites->live[i];
         if((sprite->draw_order?sprite->draw_order:4)!=order || sprite->absolute!=absolute_only ||
-           sprite->low_bg_priority!=low_only)continue;
+           (bg_priority>=0 && mzm_sprite_bg_priority(sprite)!=bg_priority))continue;
         const char *anim_name=mzm_sprite_anim_name(sprite);
         if(!(sprite->status&MZM_SPRITE_STATUS_EXISTS) ||
            sprite->status&MZM_SPRITE_STATUS_NOT_DRAWN || !anim_name)continue;
@@ -5575,7 +5580,7 @@ int main(int argc, char **argv) {
                                      cx,cy,viewport,scale,3,3,&door_fade);
             if(low_sprites)
                 runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,
-                                     1,16,runtime_door_fade_shade(&door_fade),false,true);
+                                     1,16,runtime_door_fade_shade(&door_fade),false,3);
             if(sprite_priority<3)
                 runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
                                          cx,cy,viewport,scale,sprite_priority,2,&door_fade);
@@ -5588,7 +5593,7 @@ int main(int argc, char **argv) {
         }
         if(!layered && low_sprites)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,
-                                 1,16,runtime_door_fade_shade(&door_fade),false,true);
+                                 1,16,runtime_door_fade_shade(&door_fade),false,3);
         if(pb_active)runtime_draw_power_bomb(renderer,&weapons.power_bomb,cx,cy,viewport,scale);
         /* SpriteDrawAll_LowPriority: draw orders 9 to 16, behind Samus
          * (SUB_GAME_MODE_DYING draws Samus alone). */
@@ -5601,7 +5606,7 @@ int main(int argc, char **argv) {
                                      viewport,cx,cy,scale,true,0);
         if(!dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16,
-                                 runtime_door_fade_shade(&door_fade),false,false);
+                                 runtime_door_fade_shade(&door_fade),false,2);
 
         RuntimeLibraryEntry *lib_entry=NULL;
         int frame=0;
@@ -5700,7 +5705,7 @@ int main(int argc, char **argv) {
          * 8, in front of Samus. */
         if(!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden) && !dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,8,
-                                 runtime_door_fade_shade(&door_fade),false,false);
+                                 runtime_door_fade_shade(&door_fade),false,2);
         /* SpriteDebrisDrawAll and ParticleDraw: the common sprite graphics. */
         for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok && !dying_mode;i++) {
             const char *table; uint16_t px,py,frame;
@@ -5769,17 +5774,26 @@ int main(int argc, char **argv) {
         /* PROJ_STATUS_ABOVE_BG1 (the Wave Beam, and the Plasma Beam with it)
          * draws in front of every background: those come after the front
          * layers. */
-        for(int pass=0;pass<2;pass++) {
-        if(pass==1 && layered)
-            runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
-                                     cx,cy,viewport,scale,0,sprite_priority-1,&door_fade);
-        if(!dying_mode) {
-            if(pass==1)
-                runtime_draw_projectiles(renderer,&weapons,&projectile_library,equipment.items,
-                                         viewport,cx,cy,scale,true,1);
+        if(!dying_mode)
             runtime_draw_projectiles(renderer,&weapons,&projectile_library,equipment.items,
-                                     viewport,cx,cy,scale,false,pass);
+                                     viewport,cx,cy,scale,false,0);
+        /* Explicit native OBJ priorities 1 and 0 are interleaved with the
+         * matching background bands. An OBJ wins a tie against BG1, while
+         * a priority-0 background still covers a priority-1 OBJ. */
+        for(int priority=sprite_priority-1;priority>=0;--priority) {
+            if(layered)
+                runtime_draw_backgrounds(renderer,&bg_art,native_layers_ready?room_layers:NULL,room,
+                                         cx,cy,viewport,scale,priority,priority,&door_fade);
+            if(!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden) && !dying_mode)
+                runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,
+                                     show_hitbox,1,16,runtime_door_fade_shade(&door_fade),false,
+                                     priority);
         }
+        if(!dying_mode) {
+            runtime_draw_projectiles(renderer,&weapons,&projectile_library,equipment.items,
+                                     viewport,cx,cy,scale,true,1);
+            runtime_draw_projectiles(renderer,&weapons,&projectile_library,equipment.items,
+                                     viewport,cx,cy,scale,false,1);
         }
         if(show_hitbox || !lib_entry) {
             float bx,by,bw,bh;
@@ -5831,7 +5845,7 @@ int main(int argc, char **argv) {
          * priority 0, in front of every background. */
         if(!dying_mode)
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,1,16,
-                                 runtime_door_fade_shade(&door_fade),true,false);
+                                 runtime_door_fade_shade(&door_fade),true,-1);
         if(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.cover) {
             /* BG3 at priority 0 over everything: the door transition
              * tilemap (alpha blended over the rest while it appears) or

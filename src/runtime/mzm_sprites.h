@@ -101,6 +101,8 @@ typedef struct {
     /* gMusicTrackInfo.currentRoomTrack, replayed after a Chozo hint (0:
      * none). */
     uint16_t room_track;
+    /* BGCNT_GET_PRIORITY(gIoRegistersBackup.BG1CNT). */
+    uint8_t bg1_priority;
 } MzmSpriteWorld;
 
 /* ClipdataMovement values the ported sprites read. */
@@ -959,6 +961,9 @@ typedef struct {
     /* bgPriority BGCNT_LOW_PRIORITY: drawn behind the backgrounds above
      * BG3 (Kraid's right arm and feet). */
     bool low_bg_priority;
+    /* Explicit native bgPriority plus one; zero keeps SpriteInit's default
+     * priority 2. This encoding preserves zero-initialized test actors. */
+    uint8_t bg_priority_override;
 } MzmSprite;
 
 /* SamusStandingOnSprite values; DROPPED (port only) is OFF after a kill
@@ -1271,6 +1276,8 @@ void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_s
                              uint8_t ram_slot);
 /* One SpriteUpdate step of sprite `slot`. */
 void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *frame);
+/* Native OBJ priority before gSamusOnTopOfBackgrounds adjusts it. */
+uint8_t mzm_sprite_bg_priority(const MzmSprite *sprite);
 /* The OAM table name of a sprite's animation, or NULL. */
 const char *mzm_sprite_anim_name(const MzmSprite *sprite);
 /* SpriteUtilSamusAndSpriteCollision over the sprite array (run at the start

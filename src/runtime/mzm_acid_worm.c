@@ -769,6 +769,7 @@ static void spit_ai(Ctx *c) {
     if (s->pose == SPRITE_POSE_STOPPED) {
         s->pose = AW_SPIT_EXPLODING;
         s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->bg_priority_override = (uint8_t)(c->world->bg1_priority + 1);
         ai_set_anim(s, MZM_ACID_WORM_SPIT_EXPLODING);
         mzm_sfx_play(MZM_SOUND_ACID_WORM_SPIT_EXPLODING);
         return;

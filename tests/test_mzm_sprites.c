@@ -165,7 +165,7 @@ static void hurt(void *context, uint16_t damage, bool sprite_on_left) {
 }
 
 int main(void) {
-    MzmSpriteWorld world = {NULL, block, 0, 0, movement, 0, NULL, 0};
+    MzmSpriteWorld world = {NULL, block, 0, 0, movement, 0, NULL, 0, 0};
 
     /* ClipdataConvertToCollision */
     clear();
@@ -5665,6 +5665,7 @@ int main(void) {
         af.samus_y = 7 * 64;
         af.kinds[MZM_FAMILY_ACID_WORM] = &acid_kind;
         MzmSpriteWorld acid_world = *af.world;
+        acid_world.bg1_priority = 1;
         af.world = &acid_world;
         mzm_sprite_update(&room[0], 0, &af);
         acid_world.effect_y = globals.sub1.health;
@@ -5734,6 +5735,15 @@ int main(void) {
         mzm_sprite_update(&room[0], 0, &af);
         assert(room[0].pose == 0x8 && room[0].work0 == 1 &&
                globals.sub1.health == room[0].y_spawn - MZM_BLOCK_SIZE * 3);
+        MzmSprite acid_spit = {.status = MZM_SPRITE_STATUS_EXISTS,
+                               .secondary = true,
+                               .sprite_id = MZM_SSPRITE_ACID_WORM_SPIT,
+                               .room_slot = 2, .ram_slot = 0, .y = 399, .x = 500};
+        acid_world.effect_y = 400;
+        mzm_sprite_update(&acid_spit, 14, &af);
+        mzm_sprite_update(&acid_spit, 14, &af);
+        assert(acid_spit.pose == 0x45 && acid_spit.y == 400 &&
+               acid_spit.bg_priority_override == 0 && mzm_sprite_bg_priority(&acid_spit) == 2);
         MzmSprite spit = {.status = MZM_SPRITE_STATUS_EXISTS,
                           .secondary = true,
                           .sprite_id = MZM_SSPRITE_ACID_WORM_SPIT,
@@ -5742,6 +5752,12 @@ int main(void) {
         mzm_sprite_update(&spit, 15, &af);
         mzm_sprite_update(&spit, 15, &af);
         assert(spit.pose == 0x9 && spit.y == 284 && spit.x == 490 && spit.work3 == 1);
+        assert(mzm_sprite_bg_priority(&spit) == 2);
+        spit.pose = 66;              /* SPRITE_POSE_STOPPED */
+        mzm_sprite_update(&spit, 15, &af);
+        assert(spit.pose == 0x43 && spit.anim == MZM_ACID_WORM_SPIT_EXPLODING &&
+               spit.bg_priority_override == 2 && mzm_sprite_bg_priority(&spit) == 1 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ACID_WORM_SPIT_EXPLODING));
         memset(&acid_effects, 0, sizeof acid_effects);
         acid_world.effect_y = (uint16_t)(room[0].y_spawn - MZM_BLOCK_SIZE * 3);
         effect_y_delta = 0;

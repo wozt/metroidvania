@@ -6251,6 +6251,12 @@ const char *mzm_sprite_anim_name(const MzmSprite *sprite) {
     return mzm_sprite_families[family].anims[sprite->anim];
 }
 
+uint8_t mzm_sprite_bg_priority(const MzmSprite *sprite) {
+    if (sprite->bg_priority_override)
+        return (uint8_t)(sprite->bg_priority_override - 1);
+    return sprite->low_bg_priority ? 3 : 2;
+}
+
 void mzm_sprite_init_primary(MzmSprite *sprite, uint8_t sprite_id, uint8_t gfx_slot,
                              uint16_t y_block, uint16_t x_block, uint8_t room_slot,
                              uint8_t ram_slot) {

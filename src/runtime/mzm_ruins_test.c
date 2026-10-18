@@ -4,11 +4,14 @@
  * merging symbols, the ghost's circle and atom patterns carrying the
  * symbol Samus must shoot with a charged pistol (an uncharged shot hurts
  * her), the return to the center and the despawn that awards the Fully
- * Powered Suit. The ghost, outline, lightning, shootable symbol and the
- * closing reflection actors follow in a later slice. The palette and
- * graphics DMA of the reflections and symbols are not ported. */
+ * Powered Suit, with the ghost, its outline and lightning, the shootable
+ * symbol, the four placed symbols and the closing reflection that turns
+ * Samus to face the background again. The palette and graphics DMA of the
+ * reflections and symbols, the ghost's alpha blending and the background
+ * flash are not ported. */
 #include "mzm_sprite_ai.h"
 #include "mzm_blocks.h"
+#include "mzm_message_banner.h"
 
 enum {
     POSE_SPAWNING = 0x1,
@@ -40,6 +43,38 @@ enum {
     GHOST_OUTLINE_PART_SHOOTING_LIGHTNING = 1,
     GHOST_OUTLINE_PART_SHOOTING_GROUND_LIGHTNING = 2,
     GHOST_PART_GHOST = 0,
+    GHOST_PART_FOURTH_SYMBOL = 4,
+
+    GHOST_POSE_GHOST_SPAWN = 0x8,
+    GHOST_POSE_GHOST_IDLE = 0x9,
+    GHOST_POSE_SYMBOL_MOVING = 0x23,
+    GHOST_POSE_SYMBOL_PLACING = 0x25,
+    GHOST_POSE_SYMBOL_SET_GHOST_DISAPPEARING = 0x26,
+    GHOST_POSE_SYMBOL_WAIT_FOR_END_OF_FIGHT = 0x27,
+    GHOST_POSE_SYMBOL_DELAY_BEFORE_PLACING_END = 0x29,
+    GHOST_POSE_SYMBOL_PLACING_END = 0x2B,
+    GHOST_POSE_GHOST_DESPAWN = 0x43,
+    GHOST_POSE_SYMBOL_DO_NOTHING = 0x6C,
+
+    SHOOTABLE_POSE_SPAWNING = 0x9,
+    SHOOTABLE_POSE_SPAWNED = 0x23,
+    SHOOTABLE_POSE_DESPAWNING = 0x25,
+    SHOOTABLE_POSE_TURNING_INTO_SYMBOL = 0x27,
+
+    REFLECTION_END_POSE_SUITLESS = 0x8,
+    REFLECTION_END_POSE_FULLSUIT = 0x9,
+    REFLECTION_END_POSE_UPDATE_PALETTE = 0x23,
+    REFLECTION_END_POSE_SET_FADING_STARTED = 0x25,
+
+    LIGHTNING_PART_GROUND_RIGHT = 0,
+    LIGHTNING_PART_GROUND = 1,
+    LIGHTNING_PART_STATIC = 2,
+    LIGHTNING_POSE_GOING_DOWN = 0x9,
+    LIGHTNING_POSE_GOING_ON_GROUND = 0x23,
+    LIGHTNING_POSE_ON_GROUND_HORIZONTAL = 0x25,
+    LIGHTNING_POSE_ON_GROUND_VERTICAL = 0x27,
+
+    BLDALPHA_MAX = 16,
 };
 
 /* RuinsTestFightStage (gSubSpriteData1.work3). */
@@ -656,6 +691,456 @@ static void reflection_cover(Ctx *c) {
     }
 }
 
+static MzmSprite *owner_of(const Ctx *c) {
+    const MzmSprite *s = c->s;
+    return c->f->sprites && s->ram_slot < c->f->sprite_count ? &c->f->sprites[s->ram_slot] : NULL;
+}
+
+/* RuinsTestGhostInit: the ghost fading in, or a shot symbol flying to
+ * its corner. */
+static void ghost_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    s->samus_collision = SSC_NONE;
+    if (s->room_slot == GHOST_PART_GHOST) {
+        s->draw_top = (BLOCK_SIZE * 5 + QUARTER_BLOCK_SIZE) / PIXEL_SIZE;
+        s->draw_bottom = BLOCK_SIZE / PIXEL_SIZE;
+        s->draw_horizontal = (BLOCK_SIZE * 3 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = -(BLOCK_SIZE * 4);
+        s->hitbox_bottom = BLOCK_SIZE;
+        s->hitbox_left = -(BLOCK_SIZE * 2 + HALF_BLOCK_SIZE);
+        s->hitbox_right = BLOCK_SIZE * 2 + HALF_BLOCK_SIZE;
+        s->draw_order = 13;
+        ai_set_anim(s, MZM_RUINS_TEST_GHOST_NOT_MOVING);
+        s->health = 1;
+        s->pose = GHOST_POSE_GHOST_SPAWN;
+        s->work0 = 0;
+        s->work1 = BLDALPHA_MAX;
+        s->work2 = 0;
+        return;
+    }
+    s->status |= MZM_SPRITE_STATUS_HIGH_PRIORITY;
+    s->draw_top = s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+    s->hitbox_top = s->hitbox_left = -BLOCK_SIZE;
+    s->hitbox_bottom = s->hitbox_right = BLOCK_SIZE;
+    s->draw_order = 1;
+    ai_set_anim(s, MZM_RUINS_TEST_GHOST_SYMBOL_SHOT);
+    s->pose = GHOST_POSE_SYMBOL_MOVING;
+    s->y_spawn = s->y;
+    s->x_spawn = s->x;
+    s->scaling = 0;
+    s->work0 = BLDALPHA_MAX / 4;
+    s->work1 = 0;
+}
+
+/* RuinsTestGhostSpawn: the blending fade-in timing (every 4 frames). */
+static void ghost_spawn(Ctx *c) {
+    MzmSprite *s = c->s;
+    if ((++s->work2 & 3) != 0) return;
+    if (s->work0 < BLDALPHA_MAX / 2) {
+        s->work0++;
+    } else if (s->work1 > BLDALPHA_MAX / 2 + 1) {
+        s->work1--;
+    } else {
+        s->pose = GHOST_POSE_GHOST_IDLE;
+        ai_set_anim(s, MZM_RUINS_TEST_GHOST_MOVING);
+        mzm_sfx_play(MZM_SOUND_RUINS_TEST_GHOST_SPANWING);
+    }
+}
+
+/* RuinsTestGhostIdle: follows the ghost actor and flashes with it; at the
+ * center it fades back, then out. */
+static void ghost_idle(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSubSpriteState *state = &c->f->globals->sub1;
+    if (state->work3 > STAGE_GHOST_AT_CENTER) {
+        if (s->isft) return;
+        if (--s->work0 == 0) {
+            s->work0 = 10;                             /* CONVERT_SECONDS(1.f / 6) */
+            if (s->work1++ >= BLDALPHA_MAX) {
+                s->pose = GHOST_POSE_GHOST_DESPAWN;
+                s->work1 = BLDALPHA_MAX;
+            }
+        }
+        return;
+    }
+    const MzmSprite *owner = owner_of(c);
+    if (owner) {
+        s->y = owner->y;
+        s->x = owner->x;
+        s->isft = owner->isft;
+    }
+    if (state->work3 == STAGE_GHOST_AT_CENTER) {
+        state->work3 = STAGE_GHOST_FADING_BACK;
+        s->work1 = 9;
+        s->work0 = 10;
+        ai_set_anim(s, MZM_RUINS_TEST_GHOST_NOT_MOVING);
+        mzm_sfx_play(MZM_SOUND_RUINS_TEST_GHOST_FADING_OUT);
+    }
+}
+
+/* RuinsTestGhostDespawn: the fade-out timing, then gone. */
+static void ghost_despawn(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (--s->work0 != 0) return;
+    s->work0 = 10;
+    if (s->work1-- == 0) s->status = 0;
+}
+
+/* RuinsTestGhostMoveSymbolToPlace: a shot symbol to its corner of the
+ * arena (2.75 blocks above or below, 5.5 to the side). */
+static void symbol_to_place(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    if (--s->work0 == 0) {
+        s->work0 = 4;
+        if (s->work1++ == 11) s->work1 = 0;
+    }
+    int dy = s->room_slot <= 2 ? -1 : 1, dx = s->room_slot & 1 ? -1 : 1;
+    uint16_t ty = (uint16_t)(g->boss_work1 + dy * (BLOCK_SIZE * 3 - QUARTER_BLOCK_SIZE));
+    uint16_t tx = (uint16_t)(g->boss_work2 + dx * (BLOCK_SIZE * 5 + HALF_BLOCK_SIZE));
+    uint16_t dist_x = tx > s->x ? (uint16_t)(tx - s->x) : (uint16_t)(s->x - tx);
+    uint16_t dist_y = ty > s->y ? (uint16_t)(ty - s->y) : (uint16_t)(s->y - ty);
+    if (dist_x < PIXEL_SIZE && dist_y < PIXEL_SIZE) {
+        s->y = ty;
+        s->x = tx;
+        s->pose = GHOST_POSE_SYMBOL_PLACING;
+        ai_set_anim(s, MZM_RUINS_TEST_GHOST_SYMBOL_PLACING);
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_HIGH_PRIORITY;
+        s->draw_order = 14;
+        mzm_sfx_play(MZM_SOUND_RUINS_TEST_SYMBOL_PLACED);
+    } else {
+        move_to_position(c, s->y_spawn, s->x_spawn, ty, tx, s->scaling++, PIXEL_SIZE);
+    }
+}
+
+/* RuinsTestGhostSymbolPlacing: placed (counted once), the fourth sends
+ * the ghost away. */
+static void symbol_placing(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (!ai_animation_ending(c, 1)) return;
+    ai_set_anim(s, MZM_RUINS_TEST_GHOST_SYMBOL_PLACED);
+    if (s->pose == GHOST_POSE_SYMBOL_PLACING_END) {
+        s->pose = GHOST_POSE_SYMBOL_DO_NOTHING;
+        return;
+    }
+    s->pose = s->room_slot == GHOST_PART_FOURTH_SYMBOL ? GHOST_POSE_SYMBOL_SET_GHOST_DISAPPEARING
+                                                       : GHOST_POSE_SYMBOL_WAIT_FOR_END_OF_FIGHT;
+    c->f->globals->boss_work7++;
+}
+
+/* RuinsTestGhost */
+static void ghost(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSubSpriteState *state = &c->f->globals->sub1;
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED: ghost_init(c); break;
+    case GHOST_POSE_GHOST_SPAWN: ghost_spawn(c); break;
+    case GHOST_POSE_GHOST_IDLE: ghost_idle(c); break;
+    case GHOST_POSE_GHOST_DESPAWN: ghost_despawn(c); break;
+    case GHOST_POSE_SYMBOL_MOVING: symbol_to_place(c); break;
+    case GHOST_POSE_SYMBOL_PLACING:
+    case GHOST_POSE_SYMBOL_PLACING_END: symbol_placing(c); break;
+    case GHOST_POSE_SYMBOL_SET_GHOST_DISAPPEARING:
+        if (state->work3 == STAGE_GHOST_FADING_BACK) {
+            state->work3 = STAGE_GHOST_STARTING_TO_DISAPPEAR;
+            s->pose = GHOST_POSE_SYMBOL_WAIT_FOR_END_OF_FIGHT;
+        }
+        break;
+    case GHOST_POSE_SYMBOL_WAIT_FOR_END_OF_FIGHT:
+        if (state->work3 == STAGE_GHOST_STARTING_TO_DISAPPEAR) {
+            s->work0 = 80;                             /* CONVERT_SECONDS(1.f) + ONE_THIRD_SECOND */
+            s->pose = GHOST_POSE_SYMBOL_DELAY_BEFORE_PLACING_END;
+        }
+        break;
+    case GHOST_POSE_SYMBOL_DELAY_BEFORE_PLACING_END:
+        if (--s->work0 == 0) {
+            s->pose = GHOST_POSE_SYMBOL_PLACING_END;
+            ai_set_anim(s, MZM_RUINS_TEST_GHOST_SYMBOL_PLACING);
+            mzm_sfx_play(MZM_SOUND_RUINS_TEST_SYMBOLS_LIGHTING_UP);
+        }
+        break;
+    default: break;
+    }
+}
+
+/* RuinsTestGhostOutline: the outline before the ghost, or the warning
+ * before a lightning strike (released with movement afterwards). */
+static void ghost_outline(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    if (s->pose == SPRITE_POSE_UNINITIALIZED) {
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        s->samus_collision = SSC_NONE;
+        if (s->room_slot != GHOST_OUTLINE_PART_OUTLINE) {
+            s->draw_order = 14;
+            ai_set_anim(s, s->room_slot == GHOST_OUTLINE_PART_SHOOTING_GROUND_LIGHTNING
+                               ? MZM_RUINS_TEST_GHOST_OUTLINE_SHOOTING_GROUND_LIGHTNING
+                               : MZM_RUINS_TEST_GHOST_OUTLINE_SPAWNING);
+            mzm_sfx_play(MZM_SOUND_RUINS_TEST_LIGHTNING_WARNING);
+        } else {
+            s->draw_order = 13;
+            ai_set_anim(s, MZM_RUINS_TEST_GHOST_OUTLINE_SPAWNING);
+            mzm_sfx_play(MZM_SOUND_RUINS_TEST_OUTLINE_SPAWNING);
+        }
+        s->pose = 0x9;
+        return;
+    }
+    if (s->room_slot != GHOST_OUTLINE_PART_OUTLINE && s->frame == 4 && s->adc == 8) {
+        /* MakeBackgroundFlash(BG_FLASH_QUICK_YELLOW) is not ported. */
+        if (s->room_slot == GHOST_OUTLINE_PART_SHOOTING_GROUND_LIGHTNING)
+            ai_spawn_secondary(c, MZM_SSPRITE_RUINS_TEST_LIGHTNING, LIGHTNING_PART_GROUND, s->gfx_slot,
+                               g->boss_work1, g->boss_work2, 0);
+        else if (s->room_slot == GHOST_OUTLINE_PART_SHOOTING_LIGHTNING)
+            ai_spawn_secondary(c, MZM_SSPRITE_RUINS_TEST_LIGHTNING, LIGHTNING_PART_STATIC, s->gfx_slot,
+                               g->boss_work1, c->f->samus_x, 0);
+    }
+    if (ai_animation_ending(c, 1)) {
+        s->status = 0;
+        if (s->room_slot != GHOST_OUTLINE_PART_OUTLINE) g->boss_work4 = 0;
+    }
+}
+
+/* RuinsTestShootableSymbol: on the ghost while shootable; a hit turns it
+ * into the next placed symbol. */
+static void shootable_symbol(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSubSpriteState *state = &c->f->globals->sub1;
+    s->y = state->y;
+    s->x = state->x;
+    if (s->pose != SPRITE_POSE_UNINITIALIZED && s->health != state->health) {
+        s->health = state->health;
+        ai_set_anim(s, MZM_RUINS_TEST_SHOOTABLE_SYMBOL_TURNING_INTO_SYMBOL);
+        s->pose = SHOOTABLE_POSE_TURNING_INTO_SYMBOL;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        s->draw_top = s->draw_bottom = s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        ai_set_anim(s, MZM_RUINS_TEST_SHOOTABLE_SYMBOL_SPAWNING);
+        s->pose = SHOOTABLE_POSE_SPAWNING;
+        s->samus_collision = SSC_NONE;
+        mzm_sfx_play(MZM_SOUND_RUINS_TEST_SHOOTABLE_SYMBOL);
+        break;
+    case SHOOTABLE_POSE_SPAWNING:
+        s->adc++;                                      /* twice the animation speed */
+        if (ai_animation_ending(c, 1)) {
+            ai_set_anim(s, MZM_RUINS_TEST_SHOOTABLE_SYMBOL_SPAWNED);
+            s->pose = SHOOTABLE_POSE_SPAWNED;
+        }
+        break;
+    case SHOOTABLE_POSE_SPAWNED:
+        if (state->work1 == 0) {
+            ai_set_anim(s, MZM_RUINS_TEST_SHOOTABLE_SYMBOL_DESPAWNING);
+            s->pose = SHOOTABLE_POSE_DESPAWNING;
+            mzm_sfx_fade(MZM_SOUND_RUINS_TEST_SHOOTABLE_SYMBOL, 40);
+        }
+        break;
+    case SHOOTABLE_POSE_DESPAWNING:
+        s->adc++;
+        if (ai_animation_ending(c, 1)) s->status = 0;
+        break;
+    case SHOOTABLE_POSE_TURNING_INTO_SYMBOL:
+        if (ai_animation_ending(c, 1)) {
+            state->work1 = 0;
+            s->status = 0;
+            ai_spawn_secondary(c, MZM_SSPRITE_RUINS_TEST_GHOST, (uint8_t)state->health, s->gfx_slot,
+                               state->y, state->x, 0);
+        }
+        break;
+    default: break;
+    }
+}
+
+/* RuinsTestSamusReflectionEnd: the last reflection; Samus standing on
+ * it is turned to face the background, the reflection becomes the
+ * suited one, then the cutscene fade starts. */
+static void reflection_end(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    if (g->sub1.work3 > STAGE_GHOST_STARTING_TO_DISAPPEAR) {
+        if (g->sub1.work3 == STAGE_STARTING_CUTSCENE) {
+            s->status = 0;
+            MzmSprite *owner = owner_of(c);
+            if (owner) owner->status = 0;
+            const MzmSpriteHooks *h = c->f->hooks;
+            if (h && h->spawn_message) h->spawn_message(h->context, MZM_MESSAGE_FULLY_POWERED_SUIT);
+        }
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->draw_top = (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->draw_bottom = 0;
+        s->draw_horizontal = BLOCK_SIZE / PIXEL_SIZE;
+        s->hitbox_top = s->hitbox_bottom = s->hitbox_left = s->hitbox_right = 0;
+        ai_set_anim(s, MZM_RUINS_TEST_SAMUS_REFLECTION);
+        s->pose = REFLECTION_END_POSE_SUITLESS;
+        s->samus_collision = SSC_NONE;
+        s->draw_order = 11;
+        s->work0 = s->work1 = s->work3 = 0;
+        s->work2 = 8;
+        break;
+    case REFLECTION_END_POSE_SUITLESS: {
+        /* The palette pulse's timing (the copies are not ported). */
+        if (--s->work2 == 0) {
+            s->work2 = 8;
+            if (!s->work1) {
+                if (++s->work0 > 9) s->work1 = 1;
+            } else if (--s->work0 == 0) {
+                s->work1 = 0;
+                if (s->work3) s->pose = REFLECTION_END_POSE_FULLSUIT;
+            }
+        }
+        if (s->pose == REFLECTION_END_POSE_FULLSUIT) {
+            s->work0 = 31;
+            break;
+        }
+        if (s->work3) break;
+        uint16_t samus_x = c->f->samus_x, samus_y = (uint16_t)(c->f->samus_y - 1);
+        MzmSpriteSamusLink *link = link_of(c);
+        if (s->x - (QUARTER_BLOCK_SIZE - PIXEL_SIZE) < samus_x && s->x + (QUARTER_BLOCK_SIZE - PIXEL_SIZE) > samus_x &&
+            samus_y == (uint16_t)(g->boss_work1 + (BLOCK_SIZE * 4 + THREE_QUARTER_BLOCK_SIZE - ONE_SUB_PIXEL)) && link) {
+            link->moved = true;
+            link->x = s->x;
+            link->y = samus_y;
+            link->set_pose = MZM_POSE_TURNING_FROM_FACING_THE_BACKGROUND_SUITLESS;
+            link->set_last_wall = true;
+            link->last_wall = 1;
+            s->work3++;
+            g->disable_pause = true;
+        }
+        break;
+    }
+    case REFLECTION_END_POSE_FULLSUIT:
+        if (--s->work0 == 0) {
+            s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+            s->pose = REFLECTION_END_POSE_UPDATE_PALETTE;
+            s->work0 = 1;
+            s->work1 = 12;                             /* CONVERT_SECONDS(.2f) */
+            mzm_sfx_music_fade(200);                   /* CONVERT_SECONDS(3.f) + ONE_THIRD_SECOND */
+        } else if (s->work0 == 30) {
+            s->status |= MZM_SPRITE_STATUS_NOT_DRAWN;
+        }
+        break;
+    case REFLECTION_END_POSE_UPDATE_PALETTE:
+        if (--s->work1 == 0) {
+            s->work1 = 12;
+            if (s->work0++ > 8) {
+                s->pose = REFLECTION_END_POSE_SET_FADING_STARTED;
+                s->work0 = 20;                         /* ONE_THIRD_SECOND */
+            }
+        }
+        break;
+    case REFLECTION_END_POSE_SET_FADING_STARTED:
+        if (--s->work0 == 0) {
+            g->sub1.work3 = STAGE_STARTING_CUTSCENE_FADE;
+            s->pose = 0;
+        }
+        break;
+    default: break;
+    }
+}
+
+static void lightning_on_ground(MzmSprite *s) {
+    ai_set_anim(s, MZM_RUINS_TEST_LIGHTNING_ON_GROUND_HORIZONTAL);
+    s->hitbox_top = -QUARTER_BLOCK_SIZE;
+    s->hitbox_bottom = 0;
+    s->hitbox_left = -(BLOCK_SIZE + HALF_BLOCK_SIZE);
+    s->hitbox_right = BLOCK_SIZE + HALF_BLOCK_SIZE;
+    s->pose = LIGHTNING_POSE_ON_GROUND_HORIZONTAL;
+}
+
+/* RuinsTestLightning: a bolt down to the ground (static: explodes there;
+ * ground: splits into two waves running along the floor and up the
+ * walls). */
+static void lightning(Ctx *c) {
+    MzmSprite *s = c->s;
+    enum { VELOCITY = QUARTER_BLOCK_SIZE };
+    if (c->f->globals->sub1.work3 != STAGE_ON_GOING) {
+        s->status = 0;
+        return;
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED:
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->draw_top = BLOCK_SIZE * 5 / PIXEL_SIZE;
+        s->draw_bottom = BLOCK_SIZE * 2 / PIXEL_SIZE;
+        s->draw_horizontal = (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+        s->samus_collision = SSC_HURTS_SAMUS;
+        if (s->room_slot != LIGHTNING_PART_GROUND_RIGHT) {
+            s->hitbox_top = -(BLOCK_SIZE * 4);
+            s->hitbox_bottom = 0;
+            s->hitbox_left = -QUARTER_BLOCK_SIZE;
+            s->hitbox_right = QUARTER_BLOCK_SIZE;
+            ai_set_anim(s, MZM_RUINS_TEST_LIGHTNING_IN_AIR);
+            s->pose = LIGHTNING_POSE_GOING_DOWN;
+        } else {
+            lightning_on_ground(s);
+            s->work0 = 0;
+        }
+        s->draw_order = 1;
+        break;
+    case LIGHTNING_POSE_GOING_DOWN: {
+        uint16_t top = ai_check_vertical_slopes(c, s->y, s->x);
+        if (c->vertical != MZM_COLLISION_AIR) {
+            s->y = top;
+            if (s->room_slot == LIGHTNING_PART_STATIC) {
+                s->status = 0;
+                ai_particle_set(c, s->y, s->x, MZM_PE_SPRITE_EXPLOSION_HUGE);
+                mzm_sfx_play(MZM_SOUND_RUINS_TEST_STATIC_LIGHTNING_HITTING_GROUND);
+            } else {
+                ai_set_anim(s, MZM_RUINS_TEST_LIGHTNING_GOING_ON_GROUND);
+                s->pose = LIGHTNING_POSE_GOING_ON_GROUND;
+                mzm_sfx_play(MZM_SOUND_RUINS_TEST_GROUND_LIGHTNING_MOVING);
+            }
+        } else {
+            s->y = (uint16_t)(s->y + VELOCITY);
+            if (!(s->status & MZM_SPRITE_STATUS_FACING_DOWN) && s->status & MZM_SPRITE_STATUS_ONSCREEN) {
+                s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+                mzm_sfx_play(MZM_SOUND_RUINS_TEST_SHOOTING_LIGHTNING);
+            }
+        }
+        break;
+    }
+    case LIGHTNING_POSE_GOING_ON_GROUND:
+        if (ai_animation_ending(c, 1)) {
+            lightning_on_ground(s);
+            ai_spawn_secondary(c, MZM_SSPRITE_RUINS_TEST_LIGHTNING, LIGHTNING_PART_GROUND_RIGHT, s->gfx_slot,
+                               s->y, s->x, MZM_SPRITE_STATUS_X_FLIP);
+        }
+        break;
+    case LIGHTNING_POSE_ON_GROUND_HORIZONTAL:
+        if (s->room_slot == LIGHTNING_PART_GROUND_RIGHT && (s->work0++ & 31) == 0)
+            mzm_sfx_play(MZM_SOUND_RUINS_TEST_GROUND_LIGHTNING_MOVING);
+        s->x = (uint16_t)(s->status & MZM_SPRITE_STATUS_X_FLIP ? s->x + VELOCITY : s->x - VELOCITY);
+        if (ai_collision_at(c, (uint16_t)(s->y - QUARTER_BLOCK_SIZE), s->x) != MZM_COLLISION_AIR) {
+            ai_set_anim(s, MZM_RUINS_TEST_LIGHTNING_ON_GROUND_VERTICAL);
+            s->hitbox_top = -(BLOCK_SIZE + HALF_BLOCK_SIZE);
+            s->hitbox_bottom = BLOCK_SIZE + HALF_BLOCK_SIZE;
+            s->hitbox_left = -QUARTER_BLOCK_SIZE;
+            s->hitbox_right = QUARTER_BLOCK_SIZE;
+            s->pose = LIGHTNING_POSE_ON_GROUND_VERTICAL;
+            s->x &= BLOCK_POSITION_FLAG;
+            if (!(s->status & MZM_SPRITE_STATUS_X_FLIP)) s->x = (uint16_t)(s->x + BLOCK_SIZE);
+        }
+        break;
+    case LIGHTNING_POSE_ON_GROUND_VERTICAL:
+        if (s->room_slot == LIGHTNING_PART_GROUND_RIGHT && (s->work0++ & 31) == 0)
+            mzm_sfx_play(MZM_SOUND_RUINS_TEST_GROUND_LIGHTNING_MOVING);
+        s->y = (uint16_t)(s->y - VELOCITY);
+        if (!(s->status & MZM_SPRITE_STATUS_ONSCREEN)) s->status = 0;
+        break;
+    default: break;
+    }
+}
+
 void ai_ruins_test(Ctx *c) {
     MzmSprite *s = c->s;
     if (!c->f->globals) {
@@ -670,6 +1155,11 @@ void ai_ruins_test(Ctx *c) {
     case MZM_SSPRITE_RUINS_TEST_SYMBOL: symbol(c); break;
     case MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_START: reflection_start(c); break;
     case MZM_SSPRITE_RUINS_TEST_REFLECTION_COVER: reflection_cover(c); break;
-    default: s->status = 0; break;              /* not ported yet */
+    case MZM_SSPRITE_RUINS_TEST_GHOST_OUTLINE: ghost_outline(c); break;
+    case MZM_SSPRITE_RUINS_TEST_GHOST: ghost(c); break;
+    case MZM_SSPRITE_RUINS_TEST_SHOOTABLE_SYMBOL: shootable_symbol(c); break;
+    case MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_END: reflection_end(c); break;
+    case MZM_SSPRITE_RUINS_TEST_LIGHTNING: lightning(c); break;
+    default: s->status = 0; break;
     }
 }

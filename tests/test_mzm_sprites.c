@@ -7064,6 +7064,203 @@ int main(void) {
         assert(room[0].pose == 0x6A && caa_calls == 13 && last_caa == MZM_CAA_REMOVE_SOLID &&
                test_check_event(NULL, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED));
         memset(test_events, 0, sizeof test_events);
+
+        /* The closing reflection: Samus standing on it is turned to face
+         * the background, then the suited reflection and the fade. */
+        MzmSprite *end = &room[reflection_end];
+        globals.sub1.work3 = 4;
+        mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
+        assert(end->pose == 0x8 && end->work2 == 8 && end->draw_order == 11);
+        memset(&link, 0, sizeof link);
+        link.set_pose = MZM_POSE_NONE;
+        rf.samus_x = end->x;
+        rf.samus_y = (uint16_t)(globals.boss_work1 + 64 * 4 + 48 - 1 + 1);
+        mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
+        assert(end->work3 == 1 && link.set_pose == MZM_POSE_TURNING_FROM_FACING_THE_BACKGROUND_SUITLESS &&
+               link.set_last_wall && link.last_wall == 1 && globals.disable_pause);
+        end->work1 = 1;
+        end->work0 = 1;
+        end->work2 = 1;
+        mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
+        assert(end->pose == 0x9 && end->work0 == 31);
+        end->work0 = 1;
+        mzm_sfx_clear();
+        mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
+        assert(end->pose == 0x23 && mzm_sfx_requested(MZM_SFX_MUSIC_FADE, 0));
+        end->work0 = 9;
+        end->work1 = 1;
+        mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
+        assert(end->pose == 0x25 && end->work0 == 20);
+        end->work0 = 1;
+        mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
+        assert(globals.sub1.work3 == 5);
+        globals.sub1.work3 = 6;
+        message_count = 0;
+        mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
+        assert(end->status == 0 && room[0].status == 0 && message_count == 1 &&
+               messages[0] == MZM_MESSAGE_FULLY_POWERED_SUIT);
+    }
+    /* The Ruins Test's ghost, outline, shootable symbol, placed symbols
+     * and lightning. */
+    {
+        MzmSpriteKind ruins_kind = {0};
+        for (int a = 0; a < MZM_RUINS_TEST_ANIMS; ++a) {
+            ruins_kind.counts[a] = 8;
+            for (int f = 0; f < 8; ++f) ruins_kind.timers[a][f] = 4;
+        }
+        clear();
+        for (int x = 0; x < COLUMNS; ++x) grid[12][x] = MZM_CLIPDATA_SOLID;
+        for (int y = 0; y < ROWS; ++y) grid[y][2] = grid[y][20] = MZM_CLIPDATA_SOLID;
+        MzmSprite room[16] = {0};
+        MzmSpriteGlobals globals = {0};
+        MzmSpriteFrame rf = frame;
+        rf.sprites = room;
+        rf.sprite_count = 16;
+        rf.globals = &globals;
+        rf.kinds[MZM_FAMILY_RUINS_TEST] = &ruins_kind;
+        globals.boss_work1 = 8 * 64;
+        globals.boss_work2 = 11 * 64;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_RUINS_TEST, 0, 7, 11, 0, 0);
+        room[0].pose = 0x23;
+        room[0].isft = 7;
+        /* The ghost fades in (blend timing), then follows the actor. */
+        MzmSprite *g = &room[1];
+        *g = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true,
+                         .sprite_id = MZM_SSPRITE_RUINS_TEST_GHOST, .ram_slot = 0};
+        mzm_sprite_update(g, 1, &rf);
+        assert(g->pose == 0x8 && g->draw_order == 13 && g->work1 == 16 && g->samus_collision == 0);
+        int frames = 0;
+        mzm_sfx_clear();
+        while (g->pose == 0x8 && frames < 200) {
+            mzm_sprite_update(g, 1, &rf);
+            ++frames;
+        }
+        assert(g->pose == 0x9 && frames == 4 * 16 && g->anim == MZM_RUINS_TEST_GHOST_MOVING &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_RUINS_TEST_GHOST_SPANWING));
+        mzm_sprite_update(g, 1, &rf);
+        assert(g->x == room[0].x && g->y == room[0].y && g->isft == room[0].isft);
+        globals.sub1.work3 = 2;
+        mzm_sprite_update(g, 1, &rf);
+        assert(globals.sub1.work3 == 3 && g->work1 == 9 && g->anim == MZM_RUINS_TEST_GHOST_NOT_MOVING);
+        g->isft = 0;
+        g->work1 = 16;
+        g->work0 = 1;
+        mzm_sprite_update(g, 1, &rf);
+        assert(g->pose == 0x43);
+        /* A shot symbol flies to its corner and is counted once placed. */
+        MzmSprite *sym = &room[2];
+        *sym = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true,
+                           .sprite_id = MZM_SSPRITE_RUINS_TEST_GHOST, .room_slot = 2, .ram_slot = 0,
+                           .y = 8 * 64, .x = 11 * 64};
+        mzm_sprite_update(sym, 2, &rf);
+        assert(sym->pose == 0x23 && sym->draw_order == 1);
+        frames = 0;
+        while (sym->pose == 0x23 && frames < 200) {
+            mzm_sprite_update(sym, 2, &rf);
+            ++frames;
+        }
+        assert(sym->pose == 0x25 && sym->y == 8 * 64 - 176 && sym->x == 11 * 64 + 352 &&
+               sym->draw_order == 14);
+        sym->frame = 7;
+        sym->adc = 4;
+        mzm_sprite_update(sym, 2, &rf);
+        assert(sym->pose == 0x27 && globals.boss_work7 == 1 && sym->anim == MZM_RUINS_TEST_GHOST_SYMBOL_PLACED);
+        /* The fourth symbol: the ghost starts to disappear. */
+        sym->room_slot = 4;
+        sym->pose = 0x25;
+        sym->frame = 7;
+        sym->adc = 4;
+        mzm_sprite_update(sym, 2, &rf);
+        assert(sym->pose == 0x26);
+        mzm_sprite_update(sym, 2, &rf);
+        assert(globals.sub1.work3 == 4 && sym->pose == 0x27);
+        mzm_sprite_update(sym, 2, &rf);
+        assert(sym->pose == 0x29 && sym->work0 == 80);
+        globals.sub1.work3 = 0;
+        /* The shootable symbol: out while shootable, then the next placed
+         * symbol when hit. */
+        MzmSprite *shoot = &room[3];
+        *shoot = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true,
+                             .sprite_id = MZM_SSPRITE_RUINS_TEST_SHOOTABLE_SYMBOL, .ram_slot = 0};
+        globals.sub1.y = 500;
+        globals.sub1.x = 600;
+        globals.sub1.health = 0;
+        globals.sub1.work1 = 50;
+        mzm_sfx_clear();
+        mzm_sprite_update(shoot, 3, &rf);
+        assert(shoot->pose == 0x9 && shoot->y == 500 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_RUINS_TEST_SHOOTABLE_SYMBOL));
+        globals.sub1.health = 1;
+        mzm_sprite_update(shoot, 3, &rf);
+        assert(shoot->pose == 0x27 && shoot->anim == MZM_RUINS_TEST_SHOOTABLE_SYMBOL_TURNING_INTO_SYMBOL);
+        shoot->frame = 7;
+        shoot->adc = 4;
+        for (int i = 4; i < 16; ++i) room[i].status = 0;
+        mzm_sprite_update(shoot, 3, &rf);
+        /* The placed symbol reuses the freed slot. */
+        assert(globals.sub1.work1 == 0 &&
+               room[3].sprite_id == MZM_SSPRITE_RUINS_TEST_GHOST && room[3].room_slot == 1 &&
+               room[3].status);
+        room[3].status = 0;
+        /* The lightning warning, its ground bolt splitting into two waves
+         * that climb the walls, then movement resumes. */
+        globals.boss_work4 = 1;
+        MzmSprite *warn = &room[4];
+        *warn = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true,
+                            .sprite_id = MZM_SSPRITE_RUINS_TEST_GHOST_OUTLINE, .room_slot = 2, .ram_slot = 0};
+        mzm_sprite_update(warn, 4, &rf);
+        assert(warn->draw_order == 14 && warn->anim == MZM_RUINS_TEST_GHOST_OUTLINE_SHOOTING_GROUND_LIGHTNING);
+        warn->frame = 4;
+        warn->adc = 8;
+        mzm_sprite_update(warn, 4, &rf);
+        int bolt = -1;
+        for (int i = 1; i < 16; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_RUINS_TEST_LIGHTNING) bolt = i;
+        assert(bolt > 0 && room[bolt].room_slot == 1 && room[bolt].y == 8 * 64);
+        warn->frame = 7;
+        warn->adc = 4;
+        mzm_sprite_update(warn, 4, &rf);
+        assert(warn->status == 0 && globals.boss_work4 == 0);
+        MzmSprite *b = &room[bolt];
+        mzm_sprite_update(b, (uint8_t)bolt, &rf);
+        assert(b->pose == 0x9 && b->samus_collision == 4 && b->hitbox_top == -256);
+        frames = 0;
+        while (b->pose == 0x9 && frames < 100) {
+            mzm_sprite_update(b, (uint8_t)bolt, &rf);
+            ++frames;
+        }
+        assert(b->pose == 0x23 && b->y == 12 * 64);
+        b->frame = 7;
+        b->adc = 4;
+        mzm_sprite_update(b, (uint8_t)bolt, &rf);
+        int right = -1;
+        for (int i = 1; i < 16; ++i)
+            if (i != bolt && room[i].status && room[i].sprite_id == MZM_SSPRITE_RUINS_TEST_LIGHTNING) right = i;
+        assert(b->pose == 0x25 && right > 0 && room[right].room_slot == 0 &&
+               room[right].status & MZM_SPRITE_STATUS_X_FLIP);
+        frames = 0;
+        while (b->pose == 0x25 && frames < 100) {
+            mzm_sprite_update(b, (uint8_t)bolt, &rf);
+            ++frames;
+        }
+        assert(b->pose == 0x27 && b->x == 3 * 64 && b->hitbox_top == -96);
+        mzm_sprite_update(&room[right], (uint8_t)right, &rf);
+        uint16_t rx = room[right].x;
+        mzm_sprite_update(&room[right], (uint8_t)right, &rf);
+        assert(room[right].pose == 0x25 && room[right].x == rx + 16);
+        /* A static bolt explodes on the ground. */
+        MzmSprite *st = &room[6];
+        *st = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true, .room_slot = 2,
+                          .sprite_id = MZM_SSPRITE_RUINS_TEST_LIGHTNING, .ram_slot = 0,
+                          .y = 11 * 64, .x = 10 * 64};
+        mzm_sfx_clear();
+        mzm_sprite_update(st, 6, &rf);
+        for (int i = 0; i < 20 && st->status; ++i) mzm_sprite_update(st, 6, &rf);
+        assert(st->status == 0 && mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_RUINS_TEST_STATIC_LIGHTNING_HITTING_GROUND));
+        /* Lightning ends with the fight. */
+        globals.sub1.work3 = 1;
+        mzm_sprite_update(&room[right], (uint8_t)right, &rf);
+        assert(room[right].status == 0);
     }
     /* Tangle Vines: on the floor (row 10) or under the ceiling (row 2),
      * and the vine holding a Geruta. */

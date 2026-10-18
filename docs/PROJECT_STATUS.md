@@ -3838,6 +3838,36 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0374 - Ruins Test, second slice
+
+- Ported the rest of the Ruins Test's actors:
+  - the ghost fades in (with the blend timing), follows the main actor and
+    flashes with it, then fades back and out at the center;
+  - the outline appears before the ghost and also warns of lightning;
+  - static lightning bolts explode on the ground, while ground bolts split
+    into two waves that run along the floor and up the walls, after which
+    the ghost moves again;
+  - the shootable symbol either despawns with a sound fade or, when hit,
+    flies to its corner of the arena as a placed symbol. The fourth
+    placed symbol sends the ghost away, and all four light up again;
+  - the closing reflection turns Samus, if she stands on it, to face the
+    background, runs the suited-reflection timing, fades the music and
+    starts the cutscene fade, and later shows the Fully Powered Suit
+    banner.
+- Not ported: the palette and graphics DMA, the ghost's alpha blending,
+  the background flash and the getting-fully-powered cutscene. Without
+  that cutscene the fight stops at the fade.
+- The ROM-free regression covers the ghost's fades and idle following,
+  the placement and counting of the symbols, the fourth symbol's
+  hand-off, the shootable symbol's lifecycle, the lightning warning,
+  ground split, wall climb and static explosion, and the closing
+  reflection up to the banner.
+- A capture in `chozodia_042` shows the fight started, with the ghost
+  under its cover after Samus turns (ignored
+  `captures/ruins-test/fight-start.png`).
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0373 - Ruins Test, first slice (and Baristute random fix)
 
 - Ported the Ruins Test's main actor, its symbol intro, the starting

@@ -206,6 +206,8 @@ void ai_deorem(Ctx *c);
 void ai_acid_worm(Ctx *c);
 /* The hives, their roots, the Mellows and their swarms (mzm_hive.c). */
 void ai_hive(Ctx *c);
+/* The Baristutes (mzm_baristute.c). */
+void ai_baristute(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */
 void ai_gadora(Ctx *c);
 /* The paired Imago larvae, their parts and the animated passage remnant. */

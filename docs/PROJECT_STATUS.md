@@ -3838,6 +3838,29 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0371 - Baristutes
+
+- Ported `sprites_ai/baristute.c` in `mzm_baristute.c`, covering the
+  Norfair Baristutes and Kraid's locked pair:
+  - after idling they face Samus and, with room in front, either jump
+    along the ROM-exported arc or walk six (or twelve) blocks;
+  - walls turn them around, and ledges make them fall along the falling
+    table;
+  - they land with a short screen shake;
+  - their health quarters set damage rows 1 to 3, which are baked as
+    palette variants, and switch them to the faster walk animations and
+    speeds;
+  - death leaves two extra energy or missile drops.
+- Kraid's pair behaves differently: the upper Baristute always walks and
+  the lower one always jumps. They lock the room until both are dead, then
+  set event 52 and unlock the doors.
+- A ROM-free regression covers the init, the jump arc and landing, the
+  hurt walk speed, wall stops, damage rows, falling, and the pair's lock,
+  event and reload removal.
+- A capture in `kraid_007` shows the pair walking and idling.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0370 - Brinstar hives and Mellows
 
 - Ported `sprites_ai/hive.c` in `mzm_hive.c`, with four AIs:

@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 80 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 81 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -330,6 +330,16 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.weapons.charge_beam`.
 Known divergences: Not compared with an emulator. The exploding electricity's BG priority is not modelled; the charge flashing is baked for the Atomic's body only (rows 2 and 3 of its own palette), the electricity keeping its rows.  
 Next action: Compare with an emulator.
 Evidence: in game: `chozodia_058`.
+
+[~] **`mzm.enemies.baristute` — Baristutes and Kraid's locked Baristute pair.** Baristutes idle, face Samus and, with room in front, jump along the ROM-exported arc or walk six (or twelve) blocks; walls turn them around and ledges make them fall along their falling table, landing with a short screen shake. Their health quarters set damage rows 1 to 3 (baked palette variants) and the faster walking animations and speeds. Death leaves two extra energy or missile drops. Kraid's upper Baristute always walks and the lower one always jumps; together they lock the room until both are dead, then set event 52 and unlock the doors. A capture in kraid_007 shows the pair walking and idling.
+
+Native evidence: `mzm:c:src/sprites_ai/baristute.c:Baristute`, `mzm:c:src/sprites_ai/baristute.c:BaristuteCheckBeforeJumpingAnimEnded`, `mzm:c:src/sprites_ai/baristute.c:BaristuteCheckLandingAnimNearEnded`, `mzm:c:src/sprites_ai/baristute.c:BaristuteCheckSamusInRange`, `mzm:c:src/sprites_ai/baristute.c:BaristuteDeath`, `mzm:c:src/sprites_ai/baristute.c:BaristuteFalling`, `mzm:c:src/sprites_ai/baristute.c:BaristuteFallingInit`, `mzm:c:src/sprites_ai/baristute.c:BaristuteIdle`, `mzm:c:src/sprites_ai/baristute.c:BaristuteIdleInit`, `mzm:c:src/sprites_ai/baristute.c:BaristuteInit`, `mzm:c:src/sprites_ai/baristute.c:BaristuteJumpWarningInit`, `mzm:c:src/sprites_ai/baristute.c:BaristuteJumping`, `mzm:c:src/sprites_ai/baristute.c:BaristuteLandingInit`, `mzm:c:src/sprites_ai/baristute.c:BaristutePlayWalkingSound`, `mzm:c:src/sprites_ai/baristute.c:BaristuteWalking`, `mzm:c:src/sprites_ai/baristute.c:BaristuteWalkingInit`.  
+Local implementation: [`src/runtime/mzm_baristute.c`](../src/runtime/mzm_baristute.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.items.enemy_drops`, `mzm.transitions.doors_and_hatches`.  
+Known divergences: Not compared frame by frame with an emulator.  
+Next action: Compare a Kraid pair fight with an emulator.
+Evidence: in game: `kraid_007`, `norfair_015`, `norfair_026`.
 
 [+] **`mzm.enemies.boss_statue` — Kraid and Ridley boss statues.** Both statues load from brinstar_010 with native graphics, placements, offsets and proximity priority. Kraid records the viewed-room event for the Long Beam Dessgeega. After their matching boss events, the eyes activate, doors lock and camera centring starts Kraid's opening plus Ridley's one-second delayed opening. Both sequences reproduce their temporary six-block wall, interior and final-floor Clipdata edits, sounds, shaking and debris. Kraid also moves every live projectile to the native low-OAM pass, keeping ordinary shots behind the other OBJ actors while above-BG1 shots retain their background band. Opened events persist both final collision states; Kraid waits for Ridley before unlocking the shared route, and the camera lock releases after both have opened. A real capture completed both sequences and events while Samus fired through the room.
 

@@ -6810,6 +6810,107 @@ int main(void) {
         assert(cleared.status == 0);
         memset(test_events, 0, sizeof test_events);
     }
+    /* Baristutes on a floor at row 10 between walls at columns 1 and 20,
+     * Samus far to the right. */
+    {
+        MzmSpriteKind baristute_kind = {0};
+        for (int a = 0; a < MZM_BARISTUTE_ANIMS; ++a) {
+            baristute_kind.counts[a] = 2;
+            baristute_kind.timers[a][0] = baristute_kind.timers[a][1] = 2;
+        }
+        const int16_t jump[10] = {-12, -16, -16, -8, -4, 0, 12, 18, 24, 32};
+        const int16_t fall[8] = {4, 8, 12, 16, 20, 24, 28, 32767};
+        memcpy(tables.baristute_jumping_y, jump, sizeof jump);
+        memcpy(tables.baristute_falling_y, fall, sizeof fall);
+        tables.health[MZM_PSPRITE_BARISTUTE] = 80;
+        tables.health[MZM_PSPRITE_BARISTUTE_KRAID_UPPER] = 80;
+        tables.health[MZM_PSPRITE_BARISTUTE_KRAID_LOWER] = 80;
+        memset(tables.random, 0, sizeof tables.random);
+        clear();
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        for (int y = 0; y < ROWS; ++y) grid[y][1] = grid[y][20] = MZM_CLIPDATA_SOLID;
+        MzmSpriteFrame bf = frame;
+        bf.kinds[MZM_FAMILY_BARISTUTE] = &baristute_kind;
+        bf.samus_x = 60000;
+        bf.samus_y = 640;
+        MzmSprite b;
+        mzm_sprite_init_primary(&b, MZM_PSPRITE_BARISTUTE, 0, 9, 8, 0, 0);
+        mzm_sprite_update(&b, 0, &bf);
+        assert(b.pose == 0xE && b.health == 80 && b.hitbox_top == -160 && b.hitbox_right == 84 &&
+               b.status & MZM_SPRITE_STATUS_FACING_RIGHT && b.samus_collision == 4);
+        /* Idle, then (random number 0) the warning and the jump. */
+        int frames = 0;
+        while (b.pose != 0x23 && frames < 50) {
+            mzm_sprite_update(&b, 0, &bf);
+            ++frames;
+        }
+        assert(b.pose == 0x23 && b.status & MZM_SPRITE_STATUS_X_FLIP &&
+               b.anim == MZM_BARISTUTE_JUMPING);
+        /* The arc: 10 subpixels across a frame, back on the floor. */
+        uint16_t bx = b.x, peak = b.y;
+        frames = 0;
+        while (b.pose == 0x23 && frames < 100) {
+            mzm_sprite_update(&b, 0, &bf);
+            if (b.y < peak) peak = b.y;
+            ++frames;
+        }
+        assert(b.pose == 0x24 && b.y == 640 && b.x == bx + 10 * frames && peak < 640 - 128);
+        mzm_sprite_update(&b, 0, &bf);
+        assert(b.pose == 0x25 && b.anim == MZM_BARISTUTE_LANDING);
+        /* Walking at its hurt speed (row 2: 8 subpixels a frame). */
+        b.pose = 0x26;
+        b.absolute_palette_row = 2;
+        uint16_t wx = b.x;
+        mzm_sprite_update(&b, 0, &bf);
+        assert(b.pose == 0x27 && b.work2 == 8 && b.x == wx + 8 &&
+               b.anim == MZM_BARISTUTE_WALKING_VERY_FAST && b.x_spawn == wx);
+        /* A wall ahead: one step back and idle. */
+        b.x = (uint16_t)(20 * 64 - 84 - 2);
+        mzm_sprite_update(&b, 0, &bf);
+        assert(b.pose == 0xE || b.pose == 0xF);
+        /* Damage rows by health quarter while flashing. */
+        b.isft = 10;
+        b.health = 20;
+        b.pose = 0xF;
+        mzm_sprite_update(&b, 0, &bf);
+        assert(b.absolute_palette_row == 3);
+        /* Off the floor: it falls along its table and lands. */
+        b.y = 400;
+        b.pose = 0xF;
+        mzm_sprite_update(&b, 0, &bf);
+        assert(b.pose == 0x1E);
+        frames = 0;
+        while ((b.pose == 0x1E || b.pose == 0x1F) && frames < 60) {
+            mzm_sprite_update(&b, 0, &bf);
+            ++frames;
+        }
+        assert(b.pose == 0x24 && b.y == 640);
+
+        /* Kraid's pair: locked doors; the event once both are dead. */
+        MzmSprite pair[4] = {0};
+        bf.sprites = pair;
+        bf.sprite_count = 4;
+        bf.hooks = &test_hooks;
+        memset(test_events, 0, sizeof test_events);
+        door_timer_calls = 0;
+        mzm_sprite_init_primary(&pair[0], MZM_PSPRITE_BARISTUTE_KRAID_UPPER, 0, 9, 8, 0, 0);
+        mzm_sprite_init_primary(&pair[1], MZM_PSPRITE_BARISTUTE_KRAID_LOWER, 0, 9, 12, 1, 1);
+        mzm_sprite_update(&pair[0], 0, &bf);
+        mzm_sprite_update(&pair[1], 1, &bf);
+        assert(door_timer_calls == 2 && last_door_timer == 1);
+        pair[0].health = 0;
+        pair[0].pose = 0x62;
+        mzm_sprite_update(&pair[0], 0, &bf);
+        assert(!test_check_event(NULL, MZM_EVENT_KRAID_BARISTUTES_KILLED));
+        pair[1].health = 0;
+        pair[1].pose = 0x62;
+        mzm_sprite_update(&pair[1], 1, &bf);
+        assert(test_check_event(NULL, MZM_EVENT_KRAID_BARISTUTES_KILLED) && last_door_timer == -20);
+        mzm_sprite_init_primary(&pair[2], MZM_PSPRITE_BARISTUTE_KRAID_UPPER, 0, 9, 8, 0, 2);
+        mzm_sprite_update(&pair[2], 2, &bf);
+        assert(pair[2].status == 0);
+        memset(test_events, 0, sizeof test_events);
+    }
     /* The Brinstar hives: roots and four Mellows, shrinking phases,
      * replacement Mellows, death and the three-hives event. */
     {

@@ -670,6 +670,15 @@ const char *const mzm_hive_anim_names[MZM_HIVE_ANIMS] = {
 static const char *const hive_sprites[MZM_HIVE_ANIMS] = {
     "HIVE", "HIVE", "HIVE", "HIVE", "HIVE", "HIVE", "HIVE",
 };
+const char *const mzm_baristute_anim_names[MZM_BARISTUTE_ANIMS] = {
+    "BaristuteOam_Idle", "BaristuteOam_Warning", "BaristuteOam_Jumping", "BaristuteOam_Landing",
+    "BaristuteOam_WalkingSlow", "BaristuteOam_WalkingFast", "BaristuteOam_WalkingVeryFast",
+    "BaristuteOam_WalkingExtremelyFast",
+};
+static const char *const baristute_sprites[MZM_BARISTUTE_ANIMS] = {
+    "BARISTUTE", "BARISTUTE", "BARISTUTE", "BARISTUTE",
+    "BARISTUTE", "BARISTUTE", "BARISTUTE", "BARISTUTE",
+};
 static const char *const mecha_ridley_sprites[MZM_MECHA_RIDLEY_ANIMS] = {
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
@@ -968,6 +977,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_MECHA_RIDLEY] = {MZM_MECHA_RIDLEY_ANIMS, mzm_mecha_ridley_anim_names,
                                  mecha_ridley_sprites},
     [MZM_FAMILY_HIVE] = {MZM_HIVE_ANIMS, mzm_hive_anim_names, hive_sprites},
+    [MZM_FAMILY_BARISTUTE] = {MZM_BARISTUTE_ANIMS, mzm_baristute_anim_names, baristute_sprites},
 };
 
 
@@ -5529,6 +5539,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_HIVE: case MZM_PSPRITE_MELLOW: case MZM_PSPRITE_MELLOW_SWARM:
     case MZM_PSPRITE_MELLOW_SWARM_HEALTH_BASED:
         return MZM_FAMILY_HIVE;
+    case MZM_PSPRITE_BARISTUTE: case MZM_PSPRITE_BARISTUTE_KRAID_UPPER:
+    case MZM_PSPRITE_BARISTUTE_KRAID_LOWER:
+        return MZM_FAMILY_BARISTUTE;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -6494,6 +6507,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
             return MZM_PSPRITE_DEOREM_FIRST_LOCATION;
         /* sHiveGfx: the Mellows and their swarms. */
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_HIVE) return MZM_PSPRITE_HIVE;
+        if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_BARISTUTE) return MZM_PSPRITE_BARISTUTE;
         /* sRinkaZebetiteAndCannonGfx, exported with the cannon's tables. */
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_RINKA &&
             sprite->sprite_id != MZM_PSPRITE_RINKA_ORANGE && sprite->sprite_id != MZM_PSPRITE_RINKA_GREEN)
@@ -6747,6 +6761,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_IMAGO_COCOON: ai_imago_cocoon(&c); break;
     case MZM_FAMILY_MECHA_RIDLEY: ai_mecha_ridley(&c); break;
     case MZM_FAMILY_HIVE: ai_hive(&c); break;
+    case MZM_FAMILY_BARISTUTE: ai_baristute(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

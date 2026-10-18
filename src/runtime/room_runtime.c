@@ -2559,6 +2559,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sReoIdleYMovement", t->reo_idle_y, 65, 65},
         {"sMellowIdleYVelocity", t->mellow_idle_y, 65, 65},
         {"sMellowIdleXVelocity", t->mellow_idle_x, 81, 81},
+        {"sBaristuteJumpingYVelocity", t->baristute_jumping_y, 10, 10},
+        {"sBaristuteFallingYVelocity", t->baristute_falling_y, 8, 8},
         {"sReoIdleXMovement", t->reo_idle_x, 81, 81},
         {"sMellaIdleYMovement", t->mella_idle_y, 65, 65},
         {"sMellaIdleXMovement", t->mella_idle_x, 49, 49},
@@ -3570,6 +3572,12 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                  mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO_LARVA_LEFT) &&
                 (sprite->palette_row==1 || sprite->palette_row==2))
             shade=sprite->palette_row==1?"/row1":"/row2";
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_BARISTUTE &&
+                sprite->palette_row>=1 && sprite->palette_row<=3) {
+            /* Baristute's damage rows (absolutePaletteRow 1 to 3). */
+            static const char *const hurt_rows[4]={"","/row1","/row2","/row3"};
+            shade=hurt_rows[sprite->palette_row];
+        }
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_KRAID &&
                 sprite->palette_row>=1 && sprite->palette_row<=3) {
             /* Kraid's health rows (absolutePaletteRow 1 to 3). */

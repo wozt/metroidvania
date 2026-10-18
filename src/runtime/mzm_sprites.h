@@ -213,6 +213,8 @@ typedef struct {
     int16_t pirate_wall_jump[8];    /* sSpacePirateWallJumpingVelocity */
     int16_t mellow_idle_y[65];      /* sMellowIdleYVelocity (SHORT_MAX ends it) */
     int16_t mellow_idle_x[81];      /* sMellowIdleXVelocity (SHORT_MAX ends it) */
+    int16_t baristute_jumping_y[10]; /* sBaristuteJumpingYVelocity */
+    int16_t baristute_falling_y[8]; /* sBaristuteFallingYVelocity (SHORT_MAX ends it) */
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
     int16_t pirate_jump_high[11];   /* sSpacePirate_2e105a */
@@ -869,6 +871,14 @@ enum {
 };
 extern const char *const mzm_hive_anim_names[MZM_HIVE_ANIMS];
 
+/* The Baristutes (sprites_ai/baristute.c). */
+enum {
+    MZM_BARISTUTE_IDLE, MZM_BARISTUTE_WARNING, MZM_BARISTUTE_JUMPING, MZM_BARISTUTE_LANDING,
+    MZM_BARISTUTE_WALKING_SLOW, MZM_BARISTUTE_WALKING_FAST, MZM_BARISTUTE_WALKING_VERY_FAST,
+    MZM_BARISTUTE_WALKING_EXTREMELY_FAST, MZM_BARISTUTE_ANIMS,
+};
+extern const char *const mzm_baristute_anim_names[MZM_BARISTUTE_ANIMS];
+
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
  * table, the exported sprite whose frame durations the family uses. */
 enum {
@@ -884,7 +894,7 @@ enum {
     MZM_FAMILY_MOTHER_BRAIN, MZM_FAMILY_BOSS_STATUE, MZM_FAMILY_DEOREM,
     MZM_FAMILY_ACID_WORM, MZM_FAMILY_GADORA, MZM_FAMILY_IMAGO_LARVA,
     MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE, MZM_FAMILY_IMAGO_COCOON,
-    MZM_FAMILY_MECHA_RIDLEY, MZM_FAMILY_HIVE,
+    MZM_FAMILY_MECHA_RIDLEY, MZM_FAMILY_HIVE, MZM_FAMILY_BARISTUTE,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -961,7 +971,8 @@ enum {
     MZM_PSPRITE_GADORA_KRAID = 173, MZM_PSPRITE_GADORA_RIDLEY = 174,
     MZM_PSPRITE_IMAGO_LARVA_RIGHT = 77, MZM_PSPRITE_IMAGO_COCOON = 79,
     MZM_PSPRITE_MELLOW = 74, MZM_PSPRITE_HIVE = 75, MZM_PSPRITE_MELLOW_SWARM = 132,
-    MZM_PSPRITE_MELLOW_SWARM_HEALTH_BASED = 133,
+    MZM_PSPRITE_MELLOW_SWARM_HEALTH_BASED = 133, MZM_PSPRITE_BARISTUTE = 147,
+    MZM_PSPRITE_BARISTUTE_KRAID_UPPER = 195, MZM_PSPRITE_BARISTUTE_KRAID_LOWER = 200,
     MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT = 112,
     MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE = 127,
     MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,
@@ -1089,7 +1100,7 @@ enum {
     MZM_EVENT_DEOREM_KILLED_AT_SECOND_LOCATION = 26,
     MZM_EVENT_ACID_WORM_KILLED = 27,
     MZM_EVENT_KRAID_GADORA_KILLED = 28, MZM_EVENT_RIDLEY_GADORA_KILLED = 36,
-    MZM_EVENT_THREE_HIVES_DESTROYED = 44,
+    MZM_EVENT_THREE_HIVES_DESTROYED = 44, MZM_EVENT_KRAID_BARISTUTES_KILLED = 52,
     MZM_EVENT_CATERPILLAR_KILLED = 31, MZM_EVENT_IMAGO_TUNNEL_DISCOVERED = 32,
     MZM_EVENT_IMAGO_COCOON_KILLED = 33,
     MZM_EVENT_KRAID_STATUE_OPENED = 53, MZM_EVENT_RIDLEY_STATUE_OPENED = 54,

@@ -6437,6 +6437,167 @@ int main(void) {
         assert(room[0].pose == 0x9 &&
                mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_MECHA_RIDLEY_BATTLE));
 
+        /* MechaRidleyIdle: every 64 frames a claw swipe (the sprite random
+         * numbers are all zero here), never twice in a row. */
+        MzmEquipment mecha_eq = {.energy = 1299, .max_energy = 1299, .missiles = 10};
+        mf.equipment = &mecha_eq;
+        mf.samus_y = (uint16_t)(globals.sub1.y + 1);       /* at its feet: low */
+        globals.boss_work3 = 0;
+        globals.sub1.multi = MZM_MECHA_RIDLEY_MULTI_STANDING_LOW;
+        globals.sub1.frame = globals.sub1.adc = 0;
+        room[0].work3 = 0;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x22 && room[0].work0 == 12 &&
+               room[0].status & MZM_SPRITE_STATUS_FACING_DOWN && globals.boss_work4 == 1 &&
+               globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_LOW_TO_HIGH &&
+               room[8].anim == MZM_MECHA_RIDLEY_LEFT_ARM_SWINGING_AT_CLOSE_GROUND);
+        /* MechaRidleyClawAttack: lunges a pixel per swing frame, then waits
+         * forward with the arm trembling. */
+        mzm_sfx_clear();
+        room[8].frame = 4;
+        room[8].adc = 1;
+        uint16_t lunge = globals.sub1.x;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.sub1.x == lunge - 4 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_CLAW_ATTACK));
+        room[8].frame = 7;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x23 && room[0].work0 == 160 &&
+               globals.sub1.x == globals.boss_work2 - MZM_BLOCK_SIZE &&
+               room[8].anim == MZM_MECHA_RIDLEY_LEFT_ARM_TREMBLING &&
+               globals.boss_work7 == globals.sub1.health);
+        /* The swipe's arm hitbox, sounds and ground shake. */
+        mzm_sfx_clear();
+        room[8].anim = MZM_MECHA_RIDLEY_LEFT_ARM_SWINGING_AT_CLOSE_GROUND;
+        room[8].frame = 7;
+        room[8].adc = 1;
+        mzm_sprite_update(&room[8], 8, &mf);
+        assert(room[8].hitbox_top == MZM_BLOCK_SIZE * 2 &&
+               room[8].hitbox_right == -MZM_BLOCK_SIZE * 3 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_ARM_SWIPE_HITTING_GROUND));
+        /* MechaRidleyStandingUp: raises the arm after the delay, then curls. */
+        room[0].work0 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[8].anim == MZM_MECHA_RIDLEY_LEFT_ARM_HOLDING_UP);
+        room[8].frame = 7;
+        room[8].adc = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x25 && room[8].anim == MZM_MECHA_RIDLEY_LEFT_ARM_HELD_UP);
+        /* MechaRidleyCurledUp: damage taken makes it crawl back to its
+         * spawn x, then stand low again. */
+        globals.sub1.multi = MZM_MECHA_RIDLEY_MULTI_STANDING_LOW;
+        globals.sub1.frame = globals.sub1.adc = 0;
+        globals.boss_work7 = (uint16_t)(globals.sub1.health + 1);
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x29 &&
+               globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_CRAWLING_BACKWARDS_LOW &&
+               room[1].anim == MZM_MECHA_RIDLEY_RIGHT_ARM_CRAWLING_BACKWARDS &&
+               room[8].anim == MZM_MECHA_RIDLEY_LEFT_ARM_CRAWLING_BACKWARDS);
+        uint16_t back = globals.sub1.x;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.sub1.x == back + 1);
+        globals.sub1.x = globals.boss_work2;
+        globals.sub1.frame = 1;
+        globals.sub1.adc = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x9 &&
+               globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_STANDING_LOW &&
+               room[1].anim == MZM_MECHA_RIDLEY_RIGHT_ARM_TREMBLING &&
+               room[8].anim == MZM_MECHA_RIDLEY_LEFT_ARM_HELD_UP);
+        /* After a swipe the laser is chosen; with the cover intact the eye
+         * only goes back to idle. The missile timer runs while idle. */
+        uint8_t missile_timer = globals.sub1.work2;
+        room[0].work3 = 0;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x9 && !(room[0].status & MZM_SPRITE_STATUS_FACING_DOWN) &&
+               globals.boss_work4 == 2 && globals.sub1.work2 == missile_timer + 1);
+        mzm_sprite_update(&room[2], 2, &mf);
+        assert(globals.boss_work4 == 0);
+        /* MechaRidleyPartMissileLauncherIdle: cancelled while Samus has
+         * missiles and 150 energy, opened otherwise. */
+        globals.boss_work5 = 1;
+        mzm_sprite_update(&room[10], 10, &mf);
+        assert(globals.boss_work5 == 0);
+        mecha_eq.energy = 100;
+        globals.boss_work5 = 1;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[10], 10, &mf);
+        assert(globals.boss_work5 == 2 && room[10].anim == MZM_MECHA_RIDLEY_LAUNCHER_OPENING &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_OPENING_MISSILE_LAUNCHER));
+        globals.boss_work5 = 0;
+        /* Samus more than three blocks above: high at once, and the body
+         * rises; between, middle only after two seconds. */
+        mf.samus_y = (uint16_t)(globals.sub1.y - MZM_BLOCK_SIZE * 5 + 1);
+        room[0].work3 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.boss_work3 == 2 &&
+               globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_LOW_TO_HIGH);
+        globals.sub1.frame = 1;
+        globals.sub1.adc = 1;
+        room[0].work3 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_STANDING_HIGH);
+        mf.samus_y = (uint16_t)(globals.sub1.y - MZM_BLOCK_SIZE * 3 + 1);
+        room[0].work3 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.boss_work3 == 2 && room[0].rotation == 120);
+        room[0].rotation = 1;
+        room[0].work3 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.boss_work3 == 1);
+        /* The neck plays its rise sound on its first frame. */
+        mzm_sfx_clear();
+        room[4].anim = MZM_MECHA_RIDLEY_NECK_LOW_TO_HIGH;
+        room[4].frame = 0;
+        room[4].adc = 1;
+        mzm_sprite_update(&room[4], 4, &mf);
+        assert(mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_NECK_LOW_TO_HIGH));
+        /* MechaRidleyCheckStartFireballAttack: with the cover damaged and
+         * Samus holding missiles, the fireball choreography. */
+        mf.samus_y = (uint16_t)(globals.sub1.y + 1);
+        globals.boss_work3 = 0;
+        globals.sub1.multi = MZM_MECHA_RIDLEY_MULTI_STANDING_LOW;
+        globals.sub1.frame = globals.sub1.adc = 0;
+        globals.sub1.work3 = 1;
+        room[0].status |= MZM_SPRITE_STATUS_FACING_DOWN;
+        room[0].work3 = 0;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x34);
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x35 && globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_LOW_TO_HIGH);
+        mzm_sfx_clear();
+        globals.sub1.frame = 1;
+        globals.sub1.adc = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x37 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_OPENING_MOUTH));
+        globals.sub1.frame = 1;
+        globals.sub1.adc = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x39 && room[0].work0 == 128 &&
+               globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_SPITTING_FIREBALLS_HIGH);
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &mf);
+        int fireball = -1;
+        for (int i = 11; i < 16; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_MECHA_RIDLEY_FIREBALL) fireball = i;
+        assert(fireball >= 0 && room[fireball].room_slot == 1 && room[0].work0 == 127 &&
+               room[fireball].y == globals.sub1.y - MZM_BLOCK_SIZE * 4 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_MECHA_RIDLEY_SPITTING_FIREBALL));
+        room[fireball].status = 0;
+        room[0].work0 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x3B);
+        globals.sub1.frame = 1;
+        globals.sub1.adc = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x3D && globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_HIGH_TO_LOW);
+        globals.sub1.frame = 1;
+        globals.sub1.adc = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x9 && globals.sub1.multi == MZM_MECHA_RIDLEY_MULTI_STANDING_LOW);
+        mf.equipment = frame.equipment;
+
         test_set_event(NULL, MZM_EVENT_MECHA_RIDLEY_KILLED);
         MzmSprite cleared = {0};
         mf.sprites = &cleared;

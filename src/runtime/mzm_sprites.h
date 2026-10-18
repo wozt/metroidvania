@@ -152,8 +152,27 @@ extern const char *const mzm_imago_multi_names[MZM_IMAGO_MULTI_COUNT];
 enum { MZM_IMAGO_COCOON_MULTI_IDLE, MZM_IMAGO_COCOON_MULTI_DYING,
        MZM_IMAGO_COCOON_MULTI_COUNT };
 extern const char *const mzm_imago_cocoon_multi_names[MZM_IMAGO_COCOON_MULTI_COUNT];
-enum { MZM_MECHA_RIDLEY_MULTI_CRAWLING_FORWARD_LOW,
-       MZM_MECHA_RIDLEY_MULTI_STANDING_LOW, MZM_MECHA_RIDLEY_MULTI_COUNT };
+enum {
+    MZM_MECHA_RIDLEY_MULTI_CRAWLING_FORWARD_LOW,
+    MZM_MECHA_RIDLEY_MULTI_STANDING_LOW,
+    MZM_MECHA_RIDLEY_MULTI_STANDING_MIDDLE,
+    MZM_MECHA_RIDLEY_MULTI_STANDING_HIGH,
+    MZM_MECHA_RIDLEY_MULTI_LOW_TO_MIDDLE,
+    MZM_MECHA_RIDLEY_MULTI_MIDDLE_TO_HIGH,
+    MZM_MECHA_RIDLEY_MULTI_HIGH_TO_MIDDLE,
+    MZM_MECHA_RIDLEY_MULTI_MIDDLE_TO_LOW,
+    MZM_MECHA_RIDLEY_MULTI_LOW_TO_HIGH,
+    MZM_MECHA_RIDLEY_MULTI_HIGH_TO_LOW,
+    MZM_MECHA_RIDLEY_MULTI_CRAWLING_BACKWARDS_LOW,
+    MZM_MECHA_RIDLEY_MULTI_OPENING_MOUTH_HIGH,
+    MZM_MECHA_RIDLEY_MULTI_SPITTING_FIREBALLS_HIGH,
+    MZM_MECHA_RIDLEY_MULTI_CLOSING_MOUTH_HIGH,
+    MZM_MECHA_RIDLEY_MULTI_DYING_STANDING_LOW,
+    MZM_MECHA_RIDLEY_MULTI_DYING_STANDING_MIDDLE,
+    MZM_MECHA_RIDLEY_MULTI_DYING_STANDING_HIGH,
+    MZM_MECHA_RIDLEY_MULTI_DYING,
+    MZM_MECHA_RIDLEY_MULTI_COUNT
+};
 extern const char *const mzm_mecha_ridley_multi_names[MZM_MECHA_RIDLEY_MULTI_COUNT];
 
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
@@ -1118,6 +1137,10 @@ typedef struct {
     MzmSubSpriteState sub2;
     /* gBossWork.work1 and work3 (Ridley's spawn y and damage taken). */
     uint16_t boss_work1, boss_work3, boss_work4, boss_work5;
+    /* gBossWork.work6..work10 (Mecha Ridley: missiles and fireballs alive,
+     * the health before the last retreat check, core and cover spawn
+     * health). */
+    uint16_t boss_work6, boss_work7, boss_work8, boss_work9, boss_work10;
     /* gEnergyRefillAnimation, gMissileRefillAnimation,
      * gSuperMissileRefillAnimation and gPowerBombRefillAnimation. */
     uint8_t refill_animation[4];

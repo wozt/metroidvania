@@ -3838,6 +3838,44 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0367 - Mecha Ridley attack selection, claw and stances
+
+- Mecha Ridley now tracks Samus's height with the native hysteresis (high
+  at once above three blocks, low or middle after two seconds) and moves
+  between its three stances through the six native transition tables.
+- Every 64 frames the battle idle chooses a claw swipe half of the time
+  (never twice in a row), the fireball attack once the cover is damaged and
+  Samus has missiles, or the laser. The claw lunges a pixel per swing frame,
+  waits forward with the native health-scaled delay, raises the arm and
+  curls; damage taken while standing or curled makes it retract and crawl
+  back to its spawn x. The fireball choreography (rise, open mouth, a
+  fireball every 16 frames alternating low and high, close, retract) and
+  the 170-frame missile timer are wired.
+- After the entrance the arms keep their own animations with the native
+  per-frame hitboxes, swipe sounds and ground shake; the neck has its
+  per-animation hitboxes and sounds; the eye blinks and only glows for the
+  laser once the cover is broken; the missile launcher opens only below 150
+  energy or without missiles. The parts now apply their multi-sprite offset
+  without their animation as SpriteUtilSyncCurrentSpritePositionWithSubSprite1Position does.
+- The exporter adds sixteen multi-sprite tables (stances, transitions,
+  backward crawl, high fireball mouth and the dying stances); a private
+  rebuild produced 17,856 sequences and 105,052 frames.
+- The ROM-free regression covers the claw selection, lunge, ground shake,
+  standing up, curling, retreat and crawl back, laser fallback, launcher
+  cancellation and opening, height hysteresis, neck sound and the whole
+  fireball choreography with its spawn.
+- Private captures in `chozodia_072` (ignored
+  `captures/mecha-ridley/claw-swipe.png` and `standing-up.png`) show the
+  high-stance swipe hitting Samus at frame 1000 and the raised arm in the
+  forward position at frame 1250.
+- Remaining boundary: the laser, missile and fireball actors and their
+  graphics swaps, the head glow, the cover/core projectile handoff, the
+  damage palette rows, death, drops and the escape start. Until the cover
+  can be damaged, the fireball and retreat branches are only reachable in
+  the regression.
+- Validation on 2026-10-18: the warning-clean full build, CTest 35/35 and
+  Python 438/438 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0366 - Mecha Ridley entrance and multipart body
 
 - Added the native `chozodia_072` Mecha Ridley actor and its ten secondary

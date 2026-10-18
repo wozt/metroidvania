@@ -606,6 +606,22 @@ const char *const mzm_imago_cocoon_multi_names[MZM_IMAGO_COCOON_MULTI_COUNT] = {
 const char *const mzm_mecha_ridley_multi_names[MZM_MECHA_RIDLEY_MULTI_COUNT] = {
     "sMechaRidleyMultiSpriteData_CrawlingForwardLow",
     "sMechaRidleyMultiSpriteData_StandingLow",
+    "sMechaRidleyMultiSpriteData_StandingMiddle",
+    "sMechaRidleyMultiSpriteData_StandingHigh",
+    "sMechaRidleyMultiSpriteData_LowToMiddle",
+    "sMechaRidleyMultiSpriteData_MiddleToHigh",
+    "sMechaRidleyMultiSpriteData_HighToMiddle",
+    "sMechaRidleyMultiSpriteData_MiddleToLow",
+    "sMechaRidleyMultiSpriteData_LowToHigh",
+    "sMechaRidleyMultiSpriteData_HighToLow",
+    "sMechaRidleyMultiSpriteData_CrawlingBackwardsLow",
+    "sMechaRidleyMultiSpriteData_OpeningMouthHigh",
+    "sMechaRidleyMultiSpriteData_SpittingFireballsHigh",
+    "sMechaRidleyMultiSpriteData_ClosingMouthHigh",
+    "sMechaRidleyMultiSpriteData_DyingStandingLow",
+    "sMechaRidleyMultiSpriteData_DyingStandingMiddle",
+    "sMechaRidleyMultiSpriteData_DyingStandingHigh",
+    "sMechaRidleyMultiSpriteData_Dying",
 };
 const char *const mzm_mecha_ridley_anim_names[MZM_MECHA_RIDLEY_ANIMS] = {
     "MechaRidleyPartOam_Tail", "MechaRidleyPartOam_Ring",

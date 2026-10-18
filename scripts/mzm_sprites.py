@@ -183,8 +183,13 @@ MULTI_SPRITE_DATA = {
                                  "sImagoCocoonMultiSpriteData_Dying")),
     "sprites/mecha_ridley.c": (("sprites_ai/mecha_ridley.h", "data/sprites/mecha_ridley.h",
                                  "structs/sprite.h"),
-                                ("sMechaRidleyMultiSpriteData_CrawlingForwardLow",
-                                 "sMechaRidleyMultiSpriteData_StandingLow")),
+                                tuple("sMechaRidleyMultiSpriteData_" + name for name in (
+                                    "CrawlingForwardLow", "StandingLow", "StandingMiddle",
+                                    "StandingHigh", "LowToMiddle", "MiddleToHigh",
+                                    "HighToMiddle", "MiddleToLow", "LowToHigh",
+                                    "HighToLow", "CrawlingBackwardsLow", "OpeningMouthHigh",
+                                    "SpittingFireballsHigh", "ClosingMouthHigh", "DyingStandingLow",
+                                    "DyingStandingMiddle", "DyingStandingHigh", "Dying"))),
     "sprites/unknown_item_chozo_statue.c": (
         ("sprites_ai/unknown_item_chozo_statue.h", "data/sprites/unknown_item_chozo_statue.h",
          "structs/sprite.h"),

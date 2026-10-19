@@ -233,6 +233,7 @@ static unsigned banner_update(MzmMessageBanner *b, const MzmBannerKind *kind, bo
          * is not ported. */
         if (animation_ended(b, kind)) {
             if (msg == MZM_MESSAGE_SAVE_COMPLETE) events |= MZM_BANNER_ENABLE_PAUSE;
+            else if (msg == MZM_MESSAGE_FULLY_POWERED_SUIT) events |= MZM_BANNER_START_SUIT_ANIM;
             else if (is_tank(msg)) mzm_sfx_retrieve_track2();
             b->exists = false;
             *prevent_movement = 0;

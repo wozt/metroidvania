@@ -17,6 +17,7 @@
 #include "mzm_game_over.h"
 #include "mzm_intro.h"
 #include "mzm_cutscene.h"
+#include "mzm_in_game_cutscene.h"
 #include "mzm_door_fade.h"
 #include "mzm_tourian_escape.h"
 #include "mzm_chozodia_escape.h"
@@ -740,14 +741,14 @@ static void test_cutscene_bank(void) {
     assert(!mzm_cutscene_update(&c, &screen));
     assert(c.stage == 1 && c.sub_stage == 0 && c.dispcnt == (GBA_DCNT_OBJ | GBA_DCNT_BG3) &&
            c.bgcnt[3] == (0x1F << 8 | 3) && c.bldcnt == (1 << 4 | 1 << 6 | 0x3F00) &&
-           c.oam[0].oam.oam_id == 1 && c.oam[0].oam.bound_background == 3 && ppu.palette[256 + 1] == 0);
+           c.oam[0].oam_id == 1 && c.oam[0].bound_background == 3 && ppu.palette[256 + 1] == 0);
     for (f = 0; f < 200 && c.sub_stage == 0; ++f) assert(!mzm_cutscene_update(&c, &screen));
     /* 32 fade steps, one a frame once 4 frames passed. */
     assert(c.sub_stage == 1 && f > 32 && f < 40 && ppu.palette[256 + 1] != 0);
-    for (f = 0; f < 200 && c.oam[0].actions < 2; ++f) assert(!mzm_cutscene_update(&c, &screen));
-    assert(c.oam[0].oam.oam_id == 2 && count_requests(MZM_SFX_PLAY, 0x253) == 1);
+    for (f = 0; f < 200 && c.oam_data[0].actions < 2; ++f) assert(!mzm_cutscene_update(&c, &screen));
+    assert(c.oam[0].oam_id == 2 && count_requests(MZM_SFX_PLAY, 0x253) == 1);
     for (f = 0; f < 400 && !c.graphics[0].active; ++f) assert(!mzm_cutscene_update(&c, &screen));
-    assert(c.oam[0].actions == 4 && count_requests(MZM_SFX_PLAY, 0x254) == 1);
+    assert(c.oam_data[0].actions == 4 && count_requests(MZM_SFX_PLAY, 0x254) == 1);
     uint16_t hofs = screen.bg_hofs[3];
     bool shaken = false, flickered = false;
     bool blue_ship_ended = false;
@@ -757,6 +758,36 @@ static void test_cutscene_bank(void) {
         flickered |= screen.bldalpha_l == 14 && screen.bldalpha_h == 2;
     }
     assert(blue_ship_ended && shaken && flickered && f > 90 && c.cutscene == MZM_CUTSCENE_NONE);
+    /* Getting the fully powered suit: Samus on BG2 over the BG3 backdrop,
+     * the ring rising with its cycled palette, window 1 following it, the
+     * scroll down to Samus, then the fade to white. */
+    assert(mzm_cutscene_enter(&c, MZM_CUTSCENE_GETTING_FULLY_POWERED));
+    mzm_sfx_clear();
+    assert(!mzm_cutscene_update(&c, &screen));
+    assert(!mzm_cutscene_update(&c, &screen));
+    assert(c.stage == 1 && c.dispcnt == (GBA_DCNT_OBJ | GBA_DCNT_WIN1 | GBA_DCNT_BG2 | GBA_DCNT_BG3) &&
+           c.bgcnt[2] == (0x8000 | 0x1E << 8 | 2) && c.bgcnt[3] == (0x8000 | 0x1C << 8 | 2 << 2 | 3) &&
+           c.oam[6].oam_id == 4 && c.oam[13].oam_id == 5 && c.oam[13].priority == 3 &&
+           c.oam[7].oam_id == 1 && c.oam[11].x == 64 * 3 && screen.bg_vofs[2] == 64 * 32 + 640 &&
+           gba_ppu_read16(&ppu, GBA_REG_WIN1V) == 160 && (gba_ppu_read16(&ppu, GBA_REG_WININ) >> 8) == 0x1F &&
+           count_requests(MZM_SFX_MUSIC_PLAY, 0x13) == 1 && ppu.palette[1] == ppu.palette[256 + 1]);
+    uint16_t ring_row[16];
+    memcpy(ring_row, &ppu.palette[256 + 160], sizeof ring_row);
+    bool ring_cycled = false, sparkled = false, window_moved = false, scrolled = false;
+    bool fully_powered_ended = false;
+    for (f = 0; f < 2000 && !fully_powered_ended; ++f) {
+        fully_powered_ended = mzm_cutscene_update(&c, &screen);
+        if (fully_powered_ended) break;
+        ring_cycled |= memcmp(ring_row, &ppu.palette[256 + 160], sizeof ring_row) != 0;
+        sparkled |= c.oam[0].oam_id == 2 || c.oam[0].oam_id == 3;
+        window_moved |= gba_ppu_read16(&ppu, GBA_REG_WIN1V) < 160 && gba_ppu_read16(&ppu, GBA_REG_WIN1V) > 0;
+        scrolled |= screen.bg_vofs[2] == 64 * 32 && screen.bg_vofs[3] == 64 * 32;
+        if (c.stage == 1) assert(c.oam[13].y == c.oam[6].y);
+    }
+    /* The bright light reached BLDY 12, then the whole screen faded to
+     * white and the ring flew away. */
+    assert(fully_powered_ended && ring_cycled && sparkled && window_moved && scrolled &&
+           c.cutscene == MZM_CUTSCENE_NONE && f > 300);
     mzm_rom_close();
 }
 
@@ -1881,6 +1912,60 @@ static void test_credits_bank(void) {
     mzm_rom_close();
 }
 
+/* InGameCutsceneUpgradingSuit for the fully powered suit: waits for the
+ * banner's suit animation stage, fades BG0 out and hides it, opens window 1
+ * on Samus, grows it to the screen, activates the Gravity Suit, shrinks it
+ * back, restores BG0 and gives control back on stage 19. */
+static void test_upgrading_suit(void) {
+    assert(mzm_suit_flash_offset(3, 10, 10) == 0x0303);
+    assert(mzm_suit_flash_offset(3, 10, 1) == 0x0300);
+    assert(mzm_suit_flash_offset(9, 2, 10) == 0x0109);
+    MzmUpgradingSuit c;
+    memset(&c, 0, sizeof c);
+    mzm_upgrading_suit_start(&c, MZM_ACQUISITION_GRAVITY);
+    assert(c.queued && !c.started && c.right == 240 && c.bottom == 160);
+    /* A second start is ignored while one is set. */
+    mzm_upgrading_suit_start(&c, MZM_ACQUISITION_VARIA);
+    assert(c.item == MZM_ACQUISITION_GRAVITY);
+    MzmEquipment e;
+    memset(&e, 0, sizeof e);
+    e.items = MZM_ITEM_VARIA_SUIT;
+    e.unknown_items = MZM_ITEM_GRAVITY_SUIT;
+    uint8_t ruins = 6;
+    /* Samus 100 pixels right and 120 below the screen's corner (feet). */
+    MzmUpgradingSuitInput in = {1000 * 4 + 400, 500 * 4 + 480, 1000 * 4, 500 * 4, true, 10, 6};
+    assert(!mzm_upgrading_suit_process(&c, &in, &e, &ruins) && !c.started);   /* a power bomb */
+    in.power_bomb = false;
+    assert(!mzm_upgrading_suit_process(&c, &in, &e, &ruins) && c.started && c.eva_backup == 10);
+    for (int f = 0; f < 10; ++f) assert(!mzm_upgrading_suit_process(&c, &in, &e, &ruins));
+    assert(c.stage == 0);
+    ruins = MZM_RUINS_TEST_STARTING_SUIT_ANIM;
+    mzm_sfx_clear();
+    bool hidden = false, grown = false, released = false;
+    int f, release_frame = -1, flash_start = -1;
+    for (f = 0; f < 600 && !released; ++f) {
+        released = mzm_upgrading_suit_process(&c, &in, &e, &ruins);
+        hidden |= c.bg0_hidden;
+        if (c.flash && flash_start < 0) {
+            /* 2 pixels at x 100, from 24 pixels above the feet */
+            assert(c.left == 100 && c.right == 102 && c.top == 96 && c.bottom == 98);
+            flash_start = f;
+        }
+        grown |= c.flash && c.left == 0 && c.right == 240 && c.top == 0 && c.bottom == 160;
+        if (c.stage == 3) assert(c.bldalpha_l == 0 && c.bldalpha_h == 16);
+        if (c.stage < 12) assert(!(e.items & MZM_ITEM_GRAVITY_SUIT));
+        if (released) release_frame = f;
+    }
+    assert(released && hidden && grown && flash_start > 0 && release_frame > flash_start);
+    assert(e.items == (MZM_ITEM_VARIA_SUIT | MZM_ITEM_GRAVITY_SUIT) && e.unknown_items == 0);
+    assert(ruins == MZM_RUINS_TEST_SUIT_ANIM_ENDED && !c.flash && !c.bg0_hidden && c.stage == 20 &&
+           c.bldalpha_l == 10 && c.bldalpha_h == 6 && c.right == 240);
+    assert(count_requests(MZM_SFX_PLAY, 0x223) == 1);
+    /* Stage 20: nothing more happens. */
+    for (f = 0; f < 10; ++f) assert(!mzm_upgrading_suit_process(&c, &in, &e, &ruins));
+    assert(c.stage == 20);
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
@@ -1896,6 +1981,7 @@ int main(void) {
     test_tourian_escape_bank();
     test_chozodia_escape_bank();
     test_credits_bank();
+    test_upgrading_suit();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

@@ -93,6 +93,11 @@ enum {
     MZM_BANNER_ENABLE_PAUSE = 1 << 4,
     /* EscapeStart: the escape banner has finished spawning. */
     MZM_BANNER_START_ESCAPE = 1 << 5,
+    /* The fully powered suit message is gone: gSubSpriteData1.work3 =
+     * RUINS_TEST_FIGHT_STAGE_STARTING_SUIT_ANIM and the falling Chozo
+     * pillar spawned (gfx slot 7) at gBossWork.work1 - 4 blocks,
+     * gBossWork.work2 + 12 blocks. */
+    MZM_BANNER_START_SUIT_ANIM = 1 << 6,
 };
 
 /* SpriteSpawnPrimary(PSPRITE_MESSAGE_BANNER, message, ...): spawned not

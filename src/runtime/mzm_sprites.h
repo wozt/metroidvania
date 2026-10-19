@@ -1378,8 +1378,8 @@ typedef struct {
     /* gLastDoorUsed == 0 as the runtime knows it: the room entered at a new
      * game's start (the gunship lands). */
     bool landing;
-    /* gHideHud and the StartEffectForCutscene request (EFFECT_CUTSCENE_*,
-     * 0: none) the runtime takes. */
+    /* gHideHud and the StartEffectForCutscene request the runtime takes
+     * (its own numbering, 0: none; MZM_CUTSCENE_EFFECT_*). */
     bool hide_hud;
     uint8_t cutscene_effect;
     /* The gunship's palette animations as last copied to OBJ rows 9 and 10
@@ -1635,6 +1635,14 @@ void mzm_spawn_waiting_pirates(MzmSprite *sprites, int count, MzmSpriteGlobals *
 /* Whether a PSPRITE has a ported AI. */
 bool mzm_sprite_supported(uint8_t sprite_id);
 /* The family of a sprite, or -1 without a ported AI. */
+/* SpriteSpawnPrimary into the first free slot (its graphics are the
+ * runtime's); the slot, or -1 when none is free. */
+/* MzmSpriteGlobals.cutscene_effect: 1 exiting Zebes, 2 escape failed,
+ * 3 intro text, 4 escaping Chozodia, 5 Samus in the blue ship, 6 getting
+ * the fully powered suit. */
+enum { MZM_CUTSCENE_EFFECT_GETTING_FULLY_POWERED = 6 };
+int mzm_sprites_spawn_primary(MzmSprite *sprites, int count, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
+                              uint16_t y, uint16_t x, uint16_t status);
 int mzm_sprite_family(uint8_t sprite_id, bool secondary);
 /* The PSPRITE whose exported graphics and palette draw the sprite (a
  * secondary sprite draws with its parent's graphics slot). */

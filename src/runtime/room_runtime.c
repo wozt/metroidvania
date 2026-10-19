@@ -34,6 +34,7 @@
 #include "mzm_file_select.h"
 #include "mzm_game_over.h"
 #include "mzm_cutscene.h"
+#include "mzm_in_game_cutscene.h"
 #include "mzm_door_fade.h"
 #include "mzm_intro.h"
 #include <sys/stat.h>
@@ -1793,6 +1794,41 @@ static void runtime_affine_whole_center(const int16_t sine[320], uint8_t rotatio
 }
 
 #ifndef FUSION_RUNTIME_TEST
+/* The end of the getting fully powered cutscene, standing in for
+ * StatusScreenFullyPoweredItems (not ported): UpdateSuitType(SUIT_FULLY_
+ * POWERED)'s refill, then every obtained item activated; then RoomLoad's
+ * PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS return: the Gravity Suit held back,
+ * Samus facing the foreground at (24.5, 31) blocks, the suit upgrade
+ * in-game cutscene started for it, pause disabled and the charge reset. */
+static void runtime_fully_powered_return(MzmEquipment *equipment,MzmSamus *samus,
+                                         const MzmCollision *collision,uint8_t *charge_counter,
+                                         MzmUpgradingSuit *upgrading_suit,bool *disable_pause) {
+    uint32_t owned=equipment->items|equipment->unknown_items;
+    equipment->suit=MZM_SUIT_FULLY_POWERED;
+    equipment->energy=equipment->max_energy;
+    equipment->missiles=equipment->max_missiles;
+    equipment->super_missiles=equipment->max_super_missiles;
+    equipment->power_bombs=equipment->max_power_bombs;
+    equipment->items=owned&~(uint32_t)MZM_ITEM_GRAVITY_SUIT;
+    equipment->unknown_items=owned&(uint32_t)MZM_ITEM_GRAVITY_SUIT;
+    mzm_samus_sprite_set_pose(samus,MZM_POSE_FACING_THE_FOREGROUND,equipment,collision);
+    samus->x=MZM_BLOCK_SIZE*24+MZM_BLOCK_SIZE/2;
+    samus->y=MZM_BLOCK_SIZE*31;                 /* native BLOCK_SIZE * 31 - 1 */
+    samus->last_wall=1;
+    memset(upgrading_suit,0,sizeof *upgrading_suit);
+    mzm_upgrading_suit_start(upgrading_suit,MZM_ACQUISITION_GRAVITY);
+    *disable_pause=true;
+    *charge_counter=0;
+}
+
+/* The suit flash's colour: BG0 tile 0xC0 of character base 1, palette 9
+ * (InGameCutsceneUpgradingSuit stage 4), from the room's VRAM. */
+static uint16_t runtime_suit_flash_color(const MzmRoomGfx *gfx) {
+    if(!gfx->ready)return 0x7FFF;
+    uint8_t index=gfx->ppu.vram[0x4000+0xC0*32]&15;
+    return gfx->ppu.palette[9*16+index];
+}
+
 /* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
 #define RUNTIME_LIBRARY_MAX 32768
 #define RUNTIME_LIBRARY_FRAME_MAX 256
@@ -4105,6 +4141,8 @@ static void runtime_draw_block_layer(SDL_Renderer *renderer, SDL_Texture *sheet,
  * priority, then BG3 to BG0 (a lower BG wins at equal priority). */
 /* MzmSpriteGlobals.bg23_eva for the frame being drawn (0: no blend). */
 static uint8_t runtime_bg23_eva;
+/* InGameCutsceneUpgradingSuit's DISPCNT without BG0 for the frame. */
+static bool runtime_bg0_hidden;
 
 static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt *art,
                                      SDL_Texture *const *native, const Room *room, float cx,
@@ -4114,6 +4152,7 @@ static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt 
     for (int priority = high; priority >= low; --priority)
         for (int layer = 3; layer >= 0; --layer) {
             if (runtime_bg_priority(room, layer) != priority) continue;
+            if (layer == 0 && runtime_bg0_hidden) continue;
             /* A door fade's hidden layers; its BG3 cover is drawn last. */
             if (fade->phase != MZM_DOOR_FADE_NONE && (!fade->show_bg[layer] || (layer == 3 && fade->cover)))
                 continue;
@@ -4270,6 +4309,9 @@ int main(int argc, char **argv) {
     int start_cutscene=0;     /* --cutscene N: a cutscene before the game */
     bool start_tourian_escape=false; /* --tourian-escape: post-Tourian diagnostic */
     bool start_chozodia_escape=false; /* --chozodia-escape: the ending sequence */
+    /* --ruins-test-end: a capture staging that sends the Ruins Test, once
+     * initialized, straight to its despawn (the fight skipped). */
+    bool stage_ruins_test_end=false;
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
@@ -4329,6 +4371,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--cutscene") && i+1<argc) start_cutscene=atoi(argv[++i]);
         else if (!strcmp(argv[i],"--tourian-escape")) start_tourian_escape=true;
         else if (!strcmp(argv[i],"--chozodia-escape")) start_chozodia_escape=true;
+        else if (!strcmp(argv[i],"--ruins-test-end")) stage_ruins_test_end=true;
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
@@ -4386,7 +4429,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -4512,7 +4555,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -4588,6 +4631,11 @@ int main(int argc, char **argv) {
      * out, then the in-gameplay cutscene, after which the game resumes as
      * it was (gPauseScreenFlag PAUSE_SCREEN_PAUSE_OR_CUTSCENE). */
     bool blue_ship_fade=false, in_game_cutscene=false;
+    /* The Ruins Test's EFFECT_CUTSCENE_GETTING_FULLY_POWERED: the game
+     * fading out, the cutscene, then the return to the room with the suit
+     * upgrade in-game cutscene (IGC_GETTING_FULLY_POWERED). */
+    bool fully_powered_fade=false, fully_powered_return=false;
+    static MzmUpgradingSuit upgrading_suit;
     static MzmCutscene cutscene;
     static MzmFileSelect file_select;
     static MzmGameOver game_over;
@@ -5128,6 +5176,13 @@ int main(int argc, char **argv) {
                     } else if(in_game_cutscene) {
                         /* Back in the game as it was, fading in. */
                         in_game_cutscene=false;
+                        if(fully_powered_return) {
+                            fully_powered_return=false;
+                            runtime_fully_powered_return(&equipment,&samus,&collision,&weapons.charge_counter,
+                                                         &upgrading_suit,
+                                                         &sprites.globals.disable_pause);
+                            printf("Fully powered suit cutscene ended.\n");
+                        }
                         mzm_door_fade_loaded(&door_fade,0,0);
                     } else if(sprites.globals.landing) {
                         /* CutsceneEnd: the game's start in Brinstar. */
@@ -5399,6 +5454,14 @@ int main(int argc, char **argv) {
                 blue_ship_fade=true;
                 mzm_door_fade_start_cancel(&door_fade);
             }
+            if(sprites.globals.cutscene_effect==MZM_CUTSCENE_EFFECT_GETTING_FULLY_POWERED &&
+               door_fade.phase==MZM_DOOR_FADE_NONE) {
+                /* COLOR_FADING_GETTING_FULLY_POWERED's white fade (the CANCEL
+                 * fade to black standing in). */
+                sprites.globals.cutscene_effect=0;
+                fully_powered_fade=true;
+                mzm_door_fade_start_cancel(&door_fade);
+            }
             if(sprites.globals.cutscene_effect==4 && screen_ready && door_fade.phase==MZM_DOOR_FADE_NONE) {
                 /* COLOR_FADING_CHOZODIA_ESCAPE (the CANCEL fade standing in),
                  * then the ending save and GM_CHOZODIA_ESCAPE. */
@@ -5576,6 +5639,15 @@ int main(int argc, char **argv) {
                 if(events&MZM_BANNER_FINISH_TANK) runtime_finish_collecting_tank(room);
                 if(events&MZM_BANNER_FINISH_ABILITY) runtime_finish_collecting_ability(room,&samus);
                 if(events&MZM_BANNER_ENABLE_PAUSE) sprites.globals.disable_pause=false;
+                if(events&MZM_BANNER_START_SUIT_ANIM) {
+                    /* MessageBannerRemovalAnimation: the suit animation and the
+                     * falling Chozo pillar. */
+                    sprites.globals.sub1.work3=MZM_RUINS_TEST_STARTING_SUIT_ANIM;
+                    mzm_sprites_spawn_primary(sprites.live,RUNTIME_MAX_SPRITES,
+                                              MZM_PSPRITE_FALLING_CHOZO_PILLAR,0,7,
+                                              (uint16_t)(sprites.globals.boss_work1-MZM_BLOCK_SIZE*4),
+                                              (uint16_t)(sprites.globals.boss_work2+MZM_BLOCK_SIZE*12),0);
+                }
                 if(events&MZM_BANNER_START_ESCAPE)
                     mzm_escape_start(&sprites.globals.escape, runtime_escape_kind(&sprites),
                                      runtime_difficulty);
@@ -5588,6 +5660,31 @@ int main(int argc, char **argv) {
                         printf("Saved the game to %s\n",path);
                     else
                         fprintf(stderr,"Could not save the game to %s\n",path);
+                }
+            }
+            if(stage_ruins_test_end) {
+                /* The staging: RuinsTestCheckIsGhostDisappearing reached with
+                 * the ghost gone (RUINS_TEST_FIGHT_STAGE_GHOST_STARTING_TO_
+                 * DISAPPEAR), the actor still at the arena's centre. */
+                for(int i=0;i<RUNTIME_MAX_SPRITES;i++) {
+                    MzmSprite *s=&sprites.live[i];
+                    if(!(s->status&MZM_SPRITE_STATUS_EXISTS) || s->secondary ||
+                       s->sprite_id!=MZM_PSPRITE_RUINS_TEST || s->pose==0)continue;
+                    s->pose=0x68;               /* RUINS_TEST_POSE_CHECK_GHOST_DISAPPEARING */
+                    sprites.globals.sub1.work3=4;
+                    stage_ruins_test_end=false;
+                    printf("Staged the Ruins Test's end.\n");
+                }
+            }
+            if(upgrading_suit.queued) {
+                /* InGameCutsceneProcess (RoomUpdate): BG1 is the GBA screen
+                 * centred in the runtime view. */
+                MzmUpgradingSuitInput in={samus.x,samus.y-1,((int)last_cx+40)*4,((int)last_cy+32)*4,
+                                          weapons.power_bomb.state!=MZM_PB_NONE,
+                                          runtime_room_gfx.eva,runtime_room_gfx.evb};
+                if(mzm_upgrading_suit_process(&upgrading_suit,&in,&equipment,&sprites.globals.sub1.work3)) {
+                    samus.last_wall=0;
+                    sprites.globals.disable_pause=false;
                 }
             }
             if(!escape_failure.active &&
@@ -5658,6 +5755,8 @@ int main(int argc, char **argv) {
              * RoomUpdateAnimatedGraphicsAndPalettes and the liquid BG0. */
             if(mzm_rom_ready() && room->has_backgrounds) {
                 if(strcmp(room_gfx_alias,current_room)) {
+                    /* A new room: no suit upgrade in progress. */
+                    memset(&upgrading_suit,0,sizeof upgrading_suit);
                     snprintf(room_gfx_alias,sizeof room_gfx_alias,"%s",current_room);
                     if(!mzm_room_gfx_load(&runtime_room_gfx,runtime_area_index(room->area),
                                           (uint8_t)room->room,false,
@@ -5808,6 +5907,31 @@ int main(int argc, char **argv) {
                 cutscene_mode=in_game_cutscene=
                     mzm_cutscene_enter(&cutscene,MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP);
                 if(!cutscene_mode)mzm_door_fade_loaded(&door_fade,0,0);
+            }
+            if(fully_powered_fade && door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
+                /* ColorFadingProcess_GettingFullyPowered's end: the cutscene,
+                 * the Ruins Test's STARTING_CUTSCENE stage and the Varia Suit
+                 * marked obtained (skipped when it was never collected). */
+                fully_powered_fade=false;
+                sprites.globals.sub1.work3=6;   /* RUINS_TEST_FIGHT_STAGE_STARTING_CUTSCENE */
+                runtime_sprite_set_event(&sprites,13);  /* EVENT_STATUE_VARIA_SUIT_GRABBED */
+                if(!runtime_sprite_check_event(&sprites,19)) {
+                    runtime_sprite_set_event(&sprites,19);  /* EVENT_VARIA_SUIT_OBTAINED */
+                    runtime_sprite_set_event(&sprites,68);  /* EVENT_SKIPPED_VARIA_SUIT */
+                }
+                if(!(equipment.items&MZM_ITEM_VARIA_SUIT))equipment.unknown_items|=MZM_ITEM_VARIA_SUIT;
+                fully_powered_return=true;
+                cutscene_mode=in_game_cutscene=screen_ready &&
+                    mzm_cutscene_enter(&cutscene,MZM_CUTSCENE_GETTING_FULLY_POWERED);
+                cutscene.frame8=sprites.frame8;
+                if(!cutscene_mode) {
+                    fully_powered_return=false;
+                    runtime_fully_powered_return(&equipment,&samus,&collision,&weapons.charge_counter,&upgrading_suit,
+                                                 &sprites.globals.disable_pause);
+                    mzm_door_fade_loaded(&door_fade,0,0);
+                } else {
+                    printf("Fully powered suit cutscene started.\n");
+                }
             }
             if(pause_fade_flag && door_fade.phase==MZM_DOOR_FADE_OUT) {
                 /* ColorFadingProcess_Default ended: the pause screen. */
@@ -6088,6 +6212,7 @@ int main(int argc, char **argv) {
         bool low_sprites=!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden) &&
                          samus.pose!=MZM_POSE_DYING;
         runtime_bg23_eva=sprites.globals.bg23_eva;
+        runtime_bg0_hidden=upgrading_suit.queued && upgrading_suit.bg0_hidden;
         if(layered) {
             /* Backgrounds at or behind the sprites' priority, with the
              * BGCNT_LOW_PRIORITY sprites (bgPriority 3) after BG3. */
@@ -6310,6 +6435,26 @@ int main(int argc, char **argv) {
             runtime_draw_projectiles(renderer,&weapons,&projectile_library,equipment.items,
                                      viewport,cx,cy,scale,false,1);
         }
+        if(upgrading_suit.queued && upgrading_suit.flash) {
+            /* The suit flash: BG0's bright tile added at 13/16 inside window 1
+             * (GBA screen pixels, centred in the view; a window edge on the
+             * screen's edge reaches the view's). */
+            uint16_t color=runtime_suit_flash_color(&runtime_room_gfx);
+            float left=upgrading_suit.left==0?0.f:upgrading_suit.left+40.f;
+            float right=upgrading_suit.right>=240?320.f:upgrading_suit.right+40.f;
+            float top=upgrading_suit.top==0?0.f:upgrading_suit.top+32.f;
+            float bottom=upgrading_suit.bottom>=160?224.f:upgrading_suit.bottom+32.f;
+            if(right>left && bottom>top) {
+                SDL_FRect rect={viewport.x+left*scale,viewport.y+top*scale,
+                                (right-left)*scale,(bottom-top)*scale};
+                SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_ADD);
+                SDL_SetRenderDrawColor(renderer,(Uint8)((color&31)*255/31*13/16),
+                                       (Uint8)((color>>5&31)*255/31*13/16),
+                                       (Uint8)((color>>10&31)*255/31*13/16),255);
+                SDL_RenderFillRect(renderer,&rect);
+                SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
+            }
+        }
         if(show_hitbox || !lib_entry) {
             float bx,by,bw,bh;
             mzm_samus_box(&samus,&bx,&by,&bw,&bh);
@@ -6462,6 +6607,11 @@ frame_overlays:
                 printf("  animated palette %u row %d disabled %d, alarm %u\n",
                        runtime_room_gfx.animated_palette,runtime_room_gfx.palette_row,
                        runtime_room_gfx.disable_animated_palette,sprites.globals.alarm_timer);
+            printf("  boss stage %u, suit %d items 0x%x unknown 0x%x, upgrading suit %s stage %u"
+                   " window %u-%u x %u-%u\n",sprites.globals.sub1.work3,(int)equipment.suit,
+                   (unsigned)equipment.items,(unsigned)equipment.unknown_items,
+                   upgrading_suit.queued?"queued":"none",upgrading_suit.stage,upgrading_suit.left,
+                   upgrading_suit.right,upgrading_suit.top,upgrading_suit.bottom);
             if(chozodia_escape_mode)
                 printf("  screen: Chozodia escape (mode %u stage %u timer %u)\n",chozodia_escape.sub_mode,
                        chozodia_escape.stage,chozodia_escape.timer);

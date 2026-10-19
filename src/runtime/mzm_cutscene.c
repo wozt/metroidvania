@@ -7,13 +7,14 @@
 
 #include "mzm_rom.h"
 #include "mzm_sfx.h"
+#include "mzm_sound_ids.h"
 
 enum {
     /* CUTSCENE_STAGE_* */
     STAGE_STARTING, STAGE_FADING_IN, STAGE_INIT, STAGE_ONGOING, STAGE_ENDING,
     /* CUTSCENE_SPECIAL_EFFECT_STATUS_* */
-    EFFECT_ON_BG = 1 << 2, EFFECT_BG_ENDED = 1 << 3,
-    BLDCNT_SCREEN_FIRST = 0x3F, BLDCNT_BRIGHTNESS_DOWN = 3 << 6, BLDCNT_ALPHA = 1 << 6,
+    EFFECT_ON_SPRITE = 1 << 0, EFFECT_SPRITE_ENDED = 1 << 1, EFFECT_ON_BG = 1 << 2, EFFECT_BG_ENDED = 1 << 3,
+    BLDCNT_SCREEN_FIRST = 0x3F, BLDCNT_BRIGHTNESS_UP = 2 << 6, BLDCNT_BRIGHTNESS_DOWN = 3 << 6, BLDCNT_ALPHA = 1 << 6,
     BLDCNT_BG0_FIRST = 1 << 0, BLDCNT_BACKDROP_SECOND = 1 << 13,
     BLDALPHA_MAX = 16, BLDY_MAX = 16,
     START_BG_POS = 64 * 32,                 /* NON_GAMEPLAY_START_BG_POS */
@@ -71,11 +72,23 @@ static uint8_t step_towards(uint8_t value, uint8_t target, uint8_t intensity) {
     return value;
 }
 
-/* CutsceneUpdateSpecialEffect, the background half (the sprite effects are
- * not used by the ported cutscenes). */
+/* CutsceneUpdateSpecialEffect: the sprite effect (BLDY) first, then the
+ * background one (BLDALPHA). */
 static void update_special_effect(MzmCutscene *c, MzmScreen *s) {
     MzmCutsceneEffect *e = &c->effect;
-    if (!(e->status & EFFECT_ON_BG)) return;
+    if (!(e->status & (EFFECT_ON_BG | EFFECT_ON_SPRITE))) return;
+    if (e->status & EFFECT_ON_SPRITE) {
+        if (e->s_timer > 0) {
+            e->s_timer--;
+            return;
+        }
+        e->s_timer = e->s_interval;
+        s->bldy = step_towards(s->bldy, e->s_bldy, e->s_intensity);
+        if (s->bldy != e->s_bldy) return;
+        e->status = (uint8_t)((e->status & ~EFFECT_ON_SPRITE) | EFFECT_SPRITE_ENDED);
+        if (e->status & EFFECT_ON_BG) c->bldcnt = e->bg_bldcnt;
+        return;
+    }
     if (e->bg_timer > 0) {
         e->bg_timer--;
         return;
@@ -293,6 +306,24 @@ static void fade_screen_to_black(MzmCutscene *c, MzmScreen *s) {
     c->bldcnt = BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN;
 }
 
+/* CutsceneFadeScreenToWhite */
+static void fade_screen_to_white(MzmCutscene *c, MzmScreen *s) {
+    c->dispcnt = 0;
+    s->bldy = BLDY_MAX;
+    c->bldcnt = BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_UP;
+}
+
+/* CutsceneStartSpriteEffect */
+static void start_sprite_effect(MzmCutscene *c, uint16_t bldcnt, uint8_t bldy, uint8_t interval,
+                                uint8_t intensity) {
+    MzmCutsceneEffect *e = &c->effect;
+    e->status = (uint8_t)((e->status & ~EFFECT_SPRITE_ENDED) | EFFECT_ON_SPRITE);
+    e->s_bldy = bldy;
+    e->s_intensity = intensity;
+    e->s_interval = e->s_timer = interval;
+    c->bldcnt = e->s_bldcnt = bldcnt;
+}
+
 /* PAL_TO_FADE and PAL_WITH_FADE: the BG then OBJ palettes at the start of
  * the EWRAM work area. */
 static uint16_t *pal_to_fade(MzmScreen *s) { return (uint16_t *)(void *)s->ewram; }
@@ -355,10 +386,35 @@ static bool transfer_and_update_fade(MzmCutscene *c, MzmScreen *s) {
     return update_fading(c, s);
 }
 
+/* CutsceneSetBgcntPageData */
+static void set_bgcnt_page(MzmCutscene *c, int bg, uint16_t screen_size, uint8_t priority, uint8_t tiletable,
+                           uint8_t graphics) {
+    c->bgcnt[bg] = (uint16_t)(screen_size | priority | tiletable << 8 | graphics << 2);
+}
+
+/* CutsceneReset's objects: sCutsceneOam_Empty (no bound background). */
+static void reset_objects(MzmCutscene *c) {
+    memset(c->oam, 0, sizeof c->oam);
+    memset(c->oam_data, 0, sizeof c->oam_data);
+    for (int i = 0; i < MZM_CUTSCENE_OBJECTS; ++i) c->oam[i].bound_background = 4;
+}
+
+/* CutsceneReset */
+static void cutscene_reset(MzmCutscene *c, MzmScreen *s) {
+    s->bldy = 0;
+    s->bldalpha_l = 16;
+    s->bldalpha_h = 0;
+    c->effect.status = 0;
+    c->bldcnt = 0;
+    reset_objects(c);
+    memset(c->graphics, 0, sizeof c->graphics);
+    memset(&c->palette, 0, sizeof c->palette);
+}
+
 /* UpdateCutsceneOamDataId */
-static void cutscene_oam_set_id(MzmCutsceneOam *o, uint8_t oam_id) {
-    o->oam.oam_id = oam_id;
-    o->oam.exists = oam_id ? 2 : 0;
+static void cutscene_oam_set_id(MzmMenuOam *o, uint8_t oam_id) {
+    o->oam_id = oam_id;
+    o->exists = oam_id ? 2 : 0;
 }
 
 enum {
@@ -384,24 +440,16 @@ static void blue_ship_init(MzmCutscene *c, MzmScreen *s) {
     mzm_lz77_from_rom(sym("sSamusInBlueShipControlsGfx"), ppu->vram + GBA_OBJ_VRAM, GBA_VRAM_SIZE - GBA_OBJ_VRAM);
     /* CutsceneSetBgcntPageData */
     c->bgcnt[BLUE_SHIP_BG_INDEX] = (uint16_t)(BLUE_SHIP_TILETABLE_PAGE << 8 | BLUE_SHIP_PRIORITY);
-    /* CutsceneReset */
-    s->bldy = 0;
-    s->bldalpha_l = 16;
-    s->bldalpha_h = 0;
-    c->effect.status = 0;
-    c->bldcnt = 0;
-    memset(c->oam, 0, sizeof c->oam);
-    c->oam[0].oam.bound_background = 4;
-    memset(c->graphics, 0, sizeof c->graphics);
+    cutscene_reset(c, s);
     c->bldcnt = BLDCNT_OBJ_FIRST | BLDCNT_ALPHA | BLDCNT_SCREEN_SECOND;
     s->bldalpha_l = BLDALPHA_MAX;
     s->bldalpha_h = 0;
     set_bg_position(s, true, true, BLUE_SHIP_BG_INDEX, START_BG_POS);
     cutscene_oam_set_id(&c->oam[0], 1);
-    c->oam[0].oam.x = START_BG_POS + 64 * 7 + 32;
-    c->oam[0].oam.y = START_BG_POS + 64 * 5 - 4;
-    c->oam[0].oam.priority = 0;
-    c->oam[0].oam.bound_background = 3;
+    c->oam[0].x = START_BG_POS + 64 * 7 + 32;
+    c->oam[0].y = START_BG_POS + 64 * 5 - 4;
+    c->oam[0].priority = 0;
+    c->oam[0].bound_background = 3;
     start_fading_cancel(c, s);
     c->dispcnt = GBA_DCNT_OBJ | BLUE_SHIP_BG;
     next_stage(c);
@@ -418,18 +466,18 @@ static void blue_ship_shake(MzmCutscene *c, MzmScreen *s) {
 
 /* SamusInBlueShipUpdateControlPanel: the panel lighting up, then its
  * glow flickering through sSamusInBlueShipPanelTransparency. */
-static void blue_ship_update_panel(MzmCutsceneOam *o, MzmScreen *s) {
+static void blue_ship_update_panel(MzmMenuOam *oam, MzmCutsceneOamData *o, MzmScreen *s) {
     static const uint8_t transparency[4] = {16, 15, 14, 15};
     switch (o->actions) {
     case 1:
-        cutscene_oam_set_id(o, 2);
+        cutscene_oam_set_id(oam, 2);
         mzm_sfx_play(SOUND_BLUE_SHIP_TURNING_ON);
         s->bldalpha_l = BLDALPHA_MAX;
         s->bldalpha_h = 0;
         o->actions++;
         break;
     case 2:
-        if (o->oam.ended) {
+        if (oam->ended) {
             o->timer = 0;
             o->actions++;
         }
@@ -466,13 +514,13 @@ static void blue_ship_powering_up(MzmCutscene *c, MzmScreen *s) {
         break;
     case 1:
         if (c->timer > 30) {                           /* CONVERT_SECONDS(.5f) */
-            c->oam[0].actions = 1;
+            c->oam_data[0].actions = 1;
             c->timer = 0;
             c->sub_stage++;
         }
         break;
     case 2:
-        if (c->oam[0].actions == 4) {
+        if (c->oam_data[0].actions == 4) {
             c->timer = 0;
             c->sub_stage++;
         }
@@ -500,7 +548,7 @@ static void blue_ship_powering_up(MzmCutscene *c, MzmScreen *s) {
         break;
     }
     blue_ship_shake(c, s);
-    blue_ship_update_panel(&c->oam[0], s);
+    blue_ship_update_panel(&c->oam[0], &c->oam_data[0], s);
 }
 
 /* SamusInBlueShipHandler: the stage, the backgrounds' positions, then
@@ -514,22 +562,298 @@ static bool blue_ship_handler(MzmCutscene *c, MzmScreen *s) {
     }
     update_backgrounds_position(c, s);
     s->next_oam_slot = 0;
-    MzmMenuOam *o = &c->oam[0].oam;
-    mzm_menu_oam_process(s, 1, o, sym("sSamusInBlueShipOam"));
+    mzm_menu_oam_process(s, 1, c->oam, sym("sSamusInBlueShipOam"));
+    mzm_reset_free_oam(s);
+    return ended;
+}
+
+enum {
+    /* sGettingFullyPoweredSuitPageData[0] (Samus) and [1] (background) */
+    FP_SAMUS_BG = 2, FP_SAMUS_TILETABLE = 0x1E, FP_SAMUS_PRIORITY = 2, FP_SAMUS_GRAPHICS = 0,
+    FP_BACK_BG = 3, FP_BACK_TILETABLE = 0x1C, FP_BACK_PRIORITY = 3, FP_BACK_GRAPHICS = 2,
+    FP_SCREEN_SIZE = 0x8000,
+    /* GETTING_FULLY_POWERED_SUIT_OAM_ID_* */
+    FP_OAM_SPARKLE_GOING_UP = 1, FP_OAM_SPARKLE_AROUND_RING1, FP_OAM_SPARKLE_AROUND_RING2,
+    FP_OAM_RING_BOTTOM, FP_OAM_RING_TOP,
+    /* The object slots */
+    FP_RING_SPARKLES = 6, FP_SLOT_RING_BOTTOM = 6, FP_UP_SPARKLES_START = 7, FP_UP_SPARKLES_END = 12,
+    FP_SLOT_RING_TOP = 13, FP_OAM_LENGTH = 14,
+    FP_RING_ACTION_MOVE = 2, FP_RING_ACTION_SCALING_VELOCITY = 4,
+    FP_RING_SPARKLE_SPAWN = 1, FP_RING_SPARKLE_FOLLOW = 2, FP_UP_SPARKLE_MOVE = 2,
+    FP_RING_SPEED = 4,                                  /* PIXEL_SIZE */
+    BLDCNT_BG2_FIRST = 1 << 2, BLDCNT_SECOND_ALL_BUT_BG2 = 0x3B00,
+    WIN0_ALL = 0x3F, WIN1_ALL_NO_COLOR_EFFECT = 0x1F,
+};
+
+/* sGettingFullyPoweredSuitRingSparklesPositions (u16, added to the ring's
+ * position) and sGettingFullyPoweredSuitUpSparklesXPositions */
+static const int16_t fp_ring_sparkle_offsets[FP_RING_SPARKLES][2] = {
+    {-(64 * 3 + 32 + 8), 0x18}, {-(64 + 32 + 8), 32 + 8}, {64 * 3 + 8, 0x18},
+    {64 + 16, 32 + 12}, {64 * 4 + 32 - 8, -16}, {-(64 * 4 + 32), -20},
+};
+static const int16_t fp_up_sparkle_x[6] = {64 * 6 + 32, 64 * 10 + 8, 64 * 5, 64 * 12 + 16, 64 * 3, 0};
+
+/* sRandomNumberTable */
+static uint8_t random_number(unsigned index) { return mzm_rom_u8(sym("sRandomNumberTable") + (index & 0xFF)); }
+
+/* sGettingFullyPoweredSuitBackgroundGfx's compressed bytes, read as noise */
+static uint8_t fp_background_byte(unsigned index) {
+    return mzm_rom_u8(sym("sGettingFullyPoweredSuitBackgroundGfx") + index);
+}
+
+/* GettingFullyPoweredSuitInit (the US fade to black) */
+static void fully_powered_init(MzmCutscene *c, MzmScreen *s) {
+    GbaPpu *ppu = s->ppu;
+    fade_screen_to_black(c, s);
+    mzm_copy_from_rom(&ppu->palette[0], sym("sGettingFullyPoweredSuitPal"), 11 * 32);
+    memcpy(&ppu->palette[256], &ppu->palette[0], 512);
+    ppu->palette[0] = 0;
+    mzm_lz77_from_rom(sym("sGettingFullyPoweredSuitSamusGfx"), ppu->vram + FP_SAMUS_GRAPHICS * 0x4000,
+                      GBA_OBJ_VRAM - FP_SAMUS_GRAPHICS * 0x4000);
+    mzm_lz77_from_rom(sym("sGettingFullyPoweredSuitSamusTileTable"), ppu->vram + FP_SAMUS_TILETABLE * 0x800,
+                      GBA_OBJ_VRAM - FP_SAMUS_TILETABLE * 0x800);
+    mzm_lz77_from_rom(sym("sGettingFullyPoweredSuitBackgroundGfx"), ppu->vram + FP_BACK_GRAPHICS * 0x4000,
+                      GBA_OBJ_VRAM - FP_BACK_GRAPHICS * 0x4000);
+    mzm_lz77_from_rom(sym("sGettingFullyPoweredSuitBackgroundTileTable"), ppu->vram + FP_BACK_TILETABLE * 0x800,
+                      GBA_OBJ_VRAM - FP_BACK_TILETABLE * 0x800);
+    mzm_lz77_from_rom(sym("sGettingFullyPoweredSuitRingSparklesGfx"), ppu->vram + GBA_OBJ_VRAM,
+                      GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+    set_bgcnt_page(c, FP_SAMUS_BG, FP_SCREEN_SIZE, FP_SAMUS_PRIORITY, FP_SAMUS_TILETABLE, FP_SAMUS_GRAPHICS);
+    set_bgcnt_page(c, FP_BACK_BG, FP_SCREEN_SIZE, FP_BACK_PRIORITY, FP_BACK_TILETABLE, FP_BACK_GRAPHICS);
+    cutscene_reset(c, s);
+    /* The light below the ring: Samus brightened outside window 1 */
+    c->bldcnt = BLDCNT_BG2_FIRST | BLDCNT_BRIGHTNESS_UP | BLDCNT_SECOND_ALL_BUT_BG2;
+    s->bldy = 0;
+    s->bldalpha_l = 0;
+    s->bldalpha_h = BLDALPHA_MAX;
+    set_bg_position(s, true, false, FP_SAMUS_BG, START_BG_POS);
+    set_bg_position(s, true, false, FP_BACK_BG, START_BG_POS);
+    set_bg_position(s, false, true, FP_SAMUS_BG, START_BG_POS + 64 * 10);
+    set_bg_position(s, false, true, FP_BACK_BG, START_BG_POS + 64 * 10);
+
+    MzmMenuOam *ring = &c->oam[FP_SLOT_RING_BOTTOM];
+    ring->x = 64 * 8 - 16;
+    ring->y = 64 * 22;
+    ring->priority = FP_SAMUS_PRIORITY;
+    ring->obj_mode = 0;
+    ring->bound_background = FP_SAMUS_BG;
+    cutscene_oam_set_id(ring, FP_OAM_RING_BOTTOM);
+    c->oam[FP_SLOT_RING_TOP] = *ring;
+    c->oam_data[FP_SLOT_RING_TOP] = c->oam_data[FP_SLOT_RING_BOTTOM];
+    c->oam[FP_SLOT_RING_TOP].priority = FP_SAMUS_PRIORITY + 1;
+    cutscene_oam_set_id(&c->oam[FP_SLOT_RING_TOP], FP_OAM_RING_TOP);
+    for (int i = 0; i < FP_RING_SPARKLES; ++i) {
+        c->oam[i].priority = FP_SAMUS_PRIORITY;
+        c->oam[i].bound_background = FP_SAMUS_BG;
+    }
+    MzmMenuOam *up = &c->oam[FP_UP_SPARKLES_START];
+    up->x = fp_up_sparkle_x[0];
+    up->y = 64 * 11;
+    up->priority = FP_SAMUS_PRIORITY;
+    /* The native loop variable still indexes the ring bottom here, so this
+     * timer lands on it rather than on the first rising sparkle. */
+    c->oam_data[FP_RING_SPARKLES].timer = random_number(c->frame8) & 63;
+    cutscene_oam_set_id(up, FP_OAM_SPARKLE_GOING_UP);
+    for (int i = FP_UP_SPARKLES_START + 1; i < FP_UP_SPARKLES_END; ++i) {
+        c->oam[i] = *up;
+        c->oam_data[i] = c->oam_data[FP_UP_SPARKLES_START];
+        c->oam[i].x = fp_up_sparkle_x[i - FP_UP_SPARKLES_START];
+        c->oam_data[i].timer = fp_background_byte(c->frame8 + (unsigned)i) & 63;
+    }
+    c->palette.active = true;
+    c->palette.timer = 0;
+    c->palette.row = 0;
+    c->palette.max_timer = 2;
+    c->dispcnt = GBA_DCNT_OBJ | GBA_DCNT_WIN1 | GBA_DCNT_BG2 | GBA_DCNT_BG3;
+    gba_ppu_write16(ppu, GBA_REG_WINOUT,
+                    (uint16_t)((gba_ppu_read16(ppu, GBA_REG_WINOUT) & 0xFF00) | WIN0_ALL));
+    gba_ppu_write16(ppu, GBA_REG_WININ,
+                    (uint16_t)((gba_ppu_read16(ppu, GBA_REG_WININ) & 0xFF) | WIN1_ALL_NO_COLOR_EFFECT << 8));
+    gba_ppu_write16(ppu, GBA_REG_WIN1H, 240);
+    gba_ppu_write16(ppu, GBA_REG_WIN1V, 160);
+    mzm_sfx_music_play(MZM_MUSIC_GETTING_FULLY_POWERED_SUIT_CUTSCENE, 0);
+    next_stage(c);
+}
+
+/* GettingFullyPoweredSuitUpdateRingPalette: sGettingFullyPoweredSuitRingPal
+ * cycled into OBJ row 10 every third frame. */
+static void fully_powered_update_ring_palette(MzmCutscene *c, MzmScreen *s) {
+    if (!c->palette.active) return;
+    if (c->palette.timer != 0) {
+        c->palette.timer--;
+        return;
+    }
+    c->palette.timer = c->palette.max_timer;
+    if (++c->palette.row >= 7) c->palette.row = 0;
+    mzm_copy_from_rom(&s->ppu->palette[256 + 10 * 16], sym("sGettingFullyPoweredSuitRingPal") + c->palette.row * 32u,
+                      32);
+}
+
+/* GettingFullyPoweredSuitUpdateRing */
+static void fully_powered_update_ring(MzmCutscene *c) {
+    MzmMenuOam *oam = &c->oam[FP_SLOT_RING_BOTTOM];
+    MzmCutsceneOamData *o = &c->oam_data[FP_SLOT_RING_BOTTOM];
+    if (o->actions & FP_RING_ACTION_SCALING_VELOCITY) {
+        uint16_t unk = ++o->unk_18;
+        o->y_velocity = (int16_t)(-FP_RING_SPEED - unk / FP_RING_SPEED);
+    } else {
+        o->y_velocity = -FP_RING_SPEED;
+        o->unk_18 = 0;
+    }
+    if (o->actions & FP_RING_ACTION_MOVE) {
+        oam->y = (int16_t)(oam->y + o->y_velocity);
+        if (oam->y <= -(64 * 3)) o->actions = 0;
+    }
+    c->oam[FP_SLOT_RING_TOP].y = oam->y;
+}
+
+/* GettingFullyPoweredSuitUpdateSparkleAroundRing */
+static void fully_powered_update_ring_sparkle(MzmCutscene *c, int id) {
+    MzmMenuOam *oam = &c->oam[id];
+    MzmCutsceneOamData *o = &c->oam_data[id];
+    if (o->actions == 0) {
+        o->timer = random_number((unsigned)(c->frame8 + id)) & 31;
+        o->actions = FP_RING_SPARKLE_SPAWN;
+    } else if (o->actions == FP_RING_SPARKLE_SPAWN) {
+        if (o->timer != 0) {
+            o->timer--;
+        } else {
+            cutscene_oam_set_id(oam, random_number(c->frame8) & 1 ? FP_OAM_SPARKLE_AROUND_RING2
+                                                                  : FP_OAM_SPARKLE_AROUND_RING1);
+            o->actions = FP_RING_SPARKLE_FOLLOW;
+        }
+    } else if (!oam->exists) {
+        o->actions = 0;
+    }
+    if (oam->exists) {
+        oam->x = (int16_t)(c->oam[FP_SLOT_RING_BOTTOM].x + fp_ring_sparkle_offsets[id][0]);
+        oam->y = (int16_t)(c->oam[FP_SLOT_RING_BOTTOM].y + fp_ring_sparkle_offsets[id][1]);
+    }
+}
+
+/* GettingFullyPoweredSuitUpdateSparkleGoingUp */
+static void fully_powered_update_up_sparkle(MzmCutscene *c, int id) {
+    MzmMenuOam *oam = &c->oam[id];
+    MzmCutsceneOamData *o = &c->oam_data[id];
+    if (o->actions & FP_UP_SPARKLE_MOVE) {
+        uint16_t unk = ++o->unk_18;
+        o->y_velocity = (int16_t)(o->y_velocity + unk / 16);
+        if (o->y_velocity > 32) o->y_velocity = 32;
+        oam->y = (int16_t)(oam->y - o->y_velocity);
+        if (oam->y <= -(64 * 3 + 32)) {
+            o->actions = 0;
+            o->timer = fp_background_byte(c->frame8 + (unsigned)id) & 63;
+        }
+    } else if (o->timer == 0) {
+        o->actions = FP_UP_SPARKLE_MOVE;
+        o->y_velocity = 0;
+        oam->x = (int16_t)(fp_up_sparkle_x[id - FP_UP_SPARKLES_START] + (random_number(c->frame8) & 63));
+        oam->y = 160 * 4 + 64;
+        o->unk_18 = 0;
+    } else {
+        o->timer--;
+    }
+}
+
+/* GettingFullyPoweredSuitAnimation */
+static void fully_powered_animation(MzmCutscene *c, MzmScreen *s) {
+    MzmMenuOam *ring = &c->oam[FP_SLOT_RING_BOTTOM];
+    switch (c->sub_stage) {
+    case 0:
+        start_sprite_effect(c, c->bldcnt, 12, 8, 1);
+        c->timer = 0;
+        c->sub_stage++;
+        break;
+    case 1:
+        if (c->timer > 20) {                            /* ONE_THIRD_SECOND */
+            c->oam_data[FP_SLOT_RING_BOTTOM].actions = FP_RING_ACTION_MOVE;
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 2:
+        if (ring->y <= 64 * 17) {
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 3:
+        if (s->bg_vofs[FP_SAMUS_BG] - FP_RING_SPEED > START_BG_POS) {
+            s->bg_vofs[FP_SAMUS_BG] -= FP_RING_SPEED;
+            break;
+        }
+        s->bg_vofs[FP_SAMUS_BG] = START_BG_POS;
+        c->timer = 0;
+        c->sub_stage++;
+        break;
+    case 4:
+        if (ring->y < 64 * 8) {
+            /* Window 1 off, against a white square during the final fade */
+            c->dispcnt ^= GBA_DCNT_WIN1;
+            start_sprite_effect(c, (uint16_t)(c->bldcnt | BLDCNT_SCREEN_FIRST), BLDY_MAX, 8, 1);
+            c->oam_data[FP_SLOT_RING_BOTTOM].actions |= FP_RING_ACTION_SCALING_VELOCITY;
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 5:
+        if (c->timer > 60) {
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 6:
+        fade_screen_to_white(c, s);
+        c->stage++;
+        c->sub_stage = 0;
+        c->timer = 0;
+        break;
+    default:
+        break;
+    }
+    fully_powered_update_ring_palette(c, s);
+    s->bg_vofs[FP_BACK_BG] = s->bg_vofs[FP_SAMUS_BG];
+    fully_powered_update_ring(c);
+    for (int i = 0; i < FP_RING_SPARKLES; ++i) fully_powered_update_ring_sparkle(c, i);
+    /* Window 1 ends half a block below the ring's centre. */
+    int line = s->bg_vofs[FP_SAMUS_BG] - START_BG_POS;
+    line = ((ring->y - line) >> 2) + 8;
+    if (line < 0) line = 0;
+    if (line > 160) line = 160;
+    gba_ppu_write16(s->ppu, GBA_REG_WIN1V, (uint16_t)line);
+    for (int i = FP_UP_SPARKLES_START; i < FP_UP_SPARKLES_END; ++i) fully_powered_update_up_sparkle(c, i);
+}
+
+/* GettingFullyPoweredSuitHandler then GettingFullyPoweredSuitProcessOam */
+static bool fully_powered_handler(MzmCutscene *c, MzmScreen *s) {
+    bool ended = false;
+    switch (c->stage) {
+    case 0: fully_powered_init(c, s); break;
+    case 1: fully_powered_animation(c, s); break;
+    default: ended = true; break;                      /* CutsceneEndFunction */
+    }
+    update_backgrounds_position(c, s);
+    s->next_oam_slot = 0;
+    mzm_menu_oam_process(s, c->stage < 2 ? FP_OAM_LENGTH : 0, c->oam, sym("sGettingFullyPoweredSuitCutsceneOam"));
     mzm_reset_free_oam(s);
     return ended;
 }
 
 static bool handler(MzmCutscene *c, MzmScreen *s) {
-    return c->cutscene == MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP ? blue_ship_handler(c, s) : story_handler(c, s);
+    switch (c->cutscene) {
+    case MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP: return blue_ship_handler(c, s);
+    case MZM_CUTSCENE_GETTING_FULLY_POWERED: return fully_powered_handler(c, s);
+    default: return story_handler(c, s);
+    }
 }
 
 /* CutsceneInit */
 static void cutscene_init(MzmCutscene *c, MzmScreen *s) {
-    uint8_t cutscene = c->cutscene, game_mode_stage = c->game_mode_stage;
+    uint8_t cutscene = c->cutscene, game_mode_stage = c->game_mode_stage, frame8 = c->frame8;
     memset(c, 0, sizeof *c);
     c->cutscene = cutscene;
     c->game_mode_stage = game_mode_stage;
+    c->frame8 = frame8;
     s->oam_x_offset = s->oam_y_offset = 0;
     s->next_oam_slot = 0;
     mzm_reset_free_oam(s);
@@ -547,7 +871,8 @@ bool mzm_cutscene_enter(MzmCutscene *c, uint8_t cutscene) {
     memset(c, 0, sizeof *c);
     c->cutscene = cutscene;
     c->game_mode_stage = STAGE_STARTING;
-    return story_text(cutscene) != 0 || cutscene == MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP;
+    return story_text(cutscene) != 0 || cutscene == MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP ||
+           cutscene == MZM_CUTSCENE_GETTING_FULLY_POWERED;
 }
 
 bool mzm_cutscene_update(MzmCutscene *c, MzmScreen *s) {
@@ -589,5 +914,6 @@ bool mzm_cutscene_update(MzmCutscene *c, MzmScreen *s) {
         break;
     }
     vblank(c, s);
+    c->frame8++;
     return false;
 }

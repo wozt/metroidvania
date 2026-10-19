@@ -214,8 +214,12 @@ is START; `--title` starts there), and START opens the file select with its
 three save files (`src/runtime/mzm_file_select.c`); a new game lands the
 gunship in Crateria (`src/runtime/mzm_gunship.c`) and plays the "Planet
 Zebes..." story text cutscene (`src/runtime/mzm_cutscene.c`) before Brinstar.
-The same module plays the post-Tourian monologues and, when Samus boards the
-Chozodia escape ship, the in-gameplay "Samus in the blue ship" cutscene. Once
+The same module plays the post-Tourian monologues, the Ruins Test's
+"getting the fully powered suit" cutscene (followed in the room by the suit
+upgrade flash, `src/runtime/mzm_in_game_cutscene.c`, and the falling Chozo
+pillar; `--ruins-test-end` stages the end of the fight for captures) and,
+when Samus boards the Chozodia escape ship, the in-gameplay "Samus in the
+blue ship" cutscene. Once
 the ship has flown off, the Chozodia escape sequence
 (`src/runtime/mzm_chozodia_escape.c`, or `--chozodia-escape` directly) ends
 with "MISSION ACCOMPLISHED!", followed by the credits and Samus's end
@@ -276,7 +280,7 @@ font), raising the capacities; collected tanks stay gone. Item Chozo statues
 hold their item in a ball: shoot it, then touch it to get the Long, Ice or
 Wave Beam, Bombs, Speed Booster, High Jump, Screw Attack or Varia Suit (the
 Plasma Beam, Space Jump and Gravity Suit statues give an "Unknown Item" that
-stays inactive, as in the game before the fully powered suit). The Morph
+stays inactive until the fully powered suit activates it). The Morph
 Ball, the Power Grip and the Charge Beam are their own item sprites, touched
 to be collected with their banner. Samus starts as the native game does (99
 energy, no item, no ammunition), whether from a new game or a direct

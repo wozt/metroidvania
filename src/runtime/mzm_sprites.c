@@ -2093,8 +2093,13 @@ static void ripper2(Ctx *c) {
 /* SpriteSpawnSecondary: the first free slot, or nothing. */
 int ai_spawn_primary(Ctx *c, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot, uint16_t y,
                      uint16_t x, uint16_t status) {
-    for (int slot = 0; c->f->sprites && slot < c->f->sprite_count; ++slot) {
-        MzmSprite *n = &c->f->sprites[slot];
+    return mzm_sprites_spawn_primary(c->f->sprites, c->f->sprite_count, sprite_id, part, gfx_slot, y, x, status);
+}
+
+int mzm_sprites_spawn_primary(MzmSprite *sprites, int count, uint8_t sprite_id, uint8_t part, uint8_t gfx_slot,
+                              uint16_t y, uint16_t x, uint16_t status) {
+    for (int slot = 0; sprites && slot < count; ++slot) {
+        MzmSprite *n = &sprites[slot];
         if (n->status & MZM_SPRITE_STATUS_EXISTS) continue;
         memset(n, 0, sizeof *n);
         n->status = status | MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |

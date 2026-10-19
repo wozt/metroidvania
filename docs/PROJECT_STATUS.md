@@ -3838,6 +3838,70 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0397 - getting the fully powered suit
+
+- Ported the "getting the fully powered suit" cutscene
+  (`GettingFullyPoweredSuit*`) in `src/runtime/mzm_cutscene.c`:
+  - Samus and the backdrop on BG2 and BG3;
+  - the rising ring with its palette cycled through OBJ row 10;
+  - the sparkles around the ring and the ones rising from below;
+  - window 1 following the ring, with Samus brightened below it;
+  - the scroll down to Samus, then the fade to white.
+- Supporting changes in the cutscene module:
+  - the sprite half of `CutsceneUpdateSpecialEffect` (BLDY steps);
+  - `CutsceneStartSpriteEffect` and `CutsceneFadeScreenToWhite`;
+  - 14 cutscene objects, with the per-object counters
+    (`MzmCutsceneOamData`) kept beside the menu objects.
+- New module `src/runtime/mzm_in_game_cutscene.c` for the suit upgrade
+  (`InGameCutsceneUpgradingSuit` and its start, process, init and
+  flash-offset helpers):
+  - BG0 faded out and hidden;
+  - window 1 opened on Samus and grown to the whole screen, with BG0's
+    tile 0xC0 blended over it;
+  - the Gravity Suit activated at stage 11;
+  - the window shrunk back and control given back.
+- The runtime chain from the Ruins Test, as request 6:
+  - its despawn requests the cutscene;
+  - the room fades out (the CANCEL fade stands in for the white fade);
+  - at the fade's end: the fight stage becomes STARTING_CUTSCENE, the Varia
+    events are set and Varia is marked obtained;
+  - the cutscene plays;
+  - stand-in for `StatusScreenFullyPoweredItems`, which is not ported: the
+    suit is refilled and every obtained item is activated at once, except
+    the Gravity Suit;
+  - Samus is placed facing the foreground and the suit upgrade is queued.
+- The fully powered suit banner's removal now emits
+  `MZM_BANNER_START_SUIT_ANIM`. The runtime then:
+  - sets the suit animation stage;
+  - spawns the falling Chozo pillar through the new
+    `mzm_sprites_spawn_primary`.
+- New capture staging: `--ruins-test-end` sends the initialized Ruins Test
+  straight to its despawn, so the fight is skipped.
+- The capture diagnostics now print:
+  - the fight stage;
+  - the suit and items;
+  - the upgrade stage and its window.
+- Checked in `chozodia_042`:
+  - the cutscene at frame 700;
+  - the return with the fully powered suit and the banner;
+  - after B, the window growing from x 120-122 and the purple flash at
+    stage 13. Tileset 56's tile is solid colour 0x7C19, so purple is the
+    native colour;
+  - the Gravity Suit active (items 0x60);
+  - the fight stage reaching 8;
+  - with Samus walking right, the pillar sinking 64 pixels into its shaft.
+- Unit tests:
+  - the whole cutscene on the ROM bank (`test_mzm_screens`);
+  - the suit upgrade's stages, window and offsets.
+- Registry changes:
+  - new `mzm.cutscenes.getting_fully_powered` (functional);
+  - `mzm.enemies.chozodia_scripted` moves to `functional`: the pillar now
+    falls in game;
+  - the Ruins Test, banner and Chozo statue notes are updated.
+  The parity inventory now contains 26 partial and 77 functional entries.
+- Captures: ignored `captures/fp/f700.bmp`, `f1000.bmp`, `g1360.bmp`,
+  `g1420.bmp`, `g1600.bmp`, `h1700.bmp` and `h2000.bmp`.
+
 ## Patch 0396 - graphics owners of secondary sprites
 
 - Fixed a rendering bug: `mzm_sprite_graphics_owner` had no mapping for the

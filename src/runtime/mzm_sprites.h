@@ -229,6 +229,7 @@ typedef struct {
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
     int16_t pirate_jump_high[11];   /* sSpacePirate_2e105a */
+    int16_t pirate_jump_black[12];  /* sSpacePirate_2e1070 (the black pirates) */
     int16_t gunship_taking_off[153]; /* sGunshipTakingOffYVelocity (SHORT_MAX ends it) */
     int16_t gunship_flying[22];     /* sGunshipFlyingYVelocity (SHORT_MAX ends it) */
     int16_t atomic_idle_y[65];      /* sAtomicIdleYMovement (SHORT_MAX ends it) */
@@ -1083,6 +1084,7 @@ enum {
     MZM_PSPRITE_FAKE_POWER_BOMB = 181, MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB = 182,
     MZM_PSPRITE_FALLING_CHOZO_PILLAR = 188, MZM_PSPRITE_KRAID_ELEVATOR_STATUE = 149,
     MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE = 150, MZM_PSPRITE_IMAGO = 134,
+    MZM_PSPRITE_BLACK_SPACE_PIRATE = 198,
     MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT = 112,
     MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE = 127,
     MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,

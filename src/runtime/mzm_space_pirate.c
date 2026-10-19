@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Zero Mission Space Pirates and their lasers (src/sprites_ai/space_pirate.c);
  * comments name the pinned decompilation's routines. The alarm music and
- * palette and the power-bomb, black and escape-ship variants are not ported. */
+ * palette and the power-bomb and escape-ship variants are not ported; the
+ * black pirates (src/sprites_ai/black_space_pirate.c) share their routines. */
 #include "mzm_sprite_ai.h"
 
 #include <stddef.h>
@@ -1271,8 +1272,9 @@ static int16_t jump_velocity(const int16_t *table, int size, uint8_t *offset) {
     return movement;
 }
 
-/* SpacePirateJumping (also the wall jumps) */
-static void jumping(Ctx *c) {
+/* SpacePirateJumping (also the wall jumps; BlackSpacePirateJumping when
+ * `black`). */
+static void jumping_of(Ctx *c, bool black) {
     MzmSprite *s = c->s;
     uint8_t *d = c->f->globals->draw_order;
     if (s->status & MZM_SPRITE_STATUS_DOUBLE_SIZE) {
@@ -1286,6 +1288,15 @@ static void jumping(Ctx *c) {
         } else if (!detect_samus(c)) {
             check_path(c);
             if (s->pose == P_JUMPING || s->pose == P_WALL_JUMPING) s->pose = P_WALKING_INIT;
+        }
+        /* BlackSpacePirateJumping: alerted, a jump or a crawl ahead away
+         * from Samus becomes a turn. */
+        if (black && s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+            if (s->pose == P_JUMPING_INIT) {
+                if (d[4] == (facing_right(s) ? false : true)) s->pose = P_TURNING_AROUND_ALERTED_INIT;
+            } else if (s->pose == P_STARTING_TO_CRAWL_INIT) {
+                s->pose = P_TURNING_AROUND_ALERTED_INIT;
+            }
         }
         return;
     }
@@ -1302,7 +1313,7 @@ static void jumping(Ctx *c) {
         if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
             movement = s->work2 / 4;
             if (movement < 6) movement = 5;
-            else if (movement > 8) movement = 9;
+            else if (movement > (black ? 11 : 8)) movement = black ? 12 : 9;
         } else {
             movement = 4;
         }
@@ -1354,6 +1365,7 @@ static void jumping(Ctx *c) {
     if (s->work1 == 1) velocity = jump_velocity(t->pirate_jump_low, 11, &s->work3);
     else if (s->work1 == 2) velocity = jump_velocity(t->pirate_jump, 10, &s->work3);
     else if (s->work1 == 3) velocity = jump_velocity(t->pirate_jump_high, 11, &s->work3);
+    else if (black && s->work1 == 4) velocity = jump_velocity(t->pirate_jump_black, 12, &s->work3);
     else velocity = jump_velocity(t->pirate_wall_jump, 8, &s->work3);
     s->y = (uint16_t)(s->y + velocity);
     if (velocity > 0) {
@@ -1363,6 +1375,8 @@ static void jumping(Ctx *c) {
         bonk(c);
     }
 }
+
+static void jumping(Ctx *c) { jumping_of(c, false); }
 
 /* SpacePirateChargingLaserInit */
 static void charging_laser_init(MzmSprite *s) {
@@ -2054,6 +2068,350 @@ void ai_space_pirate(Ctx *c) {
                                   MZM_SPRITE_STATUS_IGNORE_PROJECTILES)) ==
                       (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
                        MZM_SPRITE_STATUS_FACING_DOWN))
+        mzm_sfx_play_not_playing(MZM_SOUND_SPACE_PIRATE_GETTING_ALERTED);
+}
+
+/* BlackSpacePirateCollidingWithLaser: the other pirates' lasers burst on
+ * it. */
+static void black_colliding_with_laser(Ctx *c) {
+    MzmSprite *s = c->s;
+    if ((s->status & (MZM_SPRITE_STATUS_ONSCREEN | MZM_SPRITE_STATUS_NOT_DRAWN)) != MZM_SPRITE_STATUS_ONSCREEN ||
+        !c->f->sprites)
+        return;
+    uint16_t top = (uint16_t)(s->y + s->hitbox_top), bottom = (uint16_t)(s->y + s->hitbox_bottom);
+    uint16_t left = (uint16_t)(s->x + s->hitbox_left), right = (uint16_t)(s->x + s->hitbox_right);
+    for (int i = 0; i < c->f->sprite_count; ++i) {
+        MzmSprite *l = &c->f->sprites[i];
+        if (!(l->status & MZM_SPRITE_STATUS_EXISTS) || l->samus_collision != SSC_SPACE_PIRATE_LASER || l->work2)
+            continue;
+        if (touching(top, bottom, left, right, (uint16_t)(l->y - PIXEL_SIZE), (uint16_t)(l->y + PIXEL_SIZE),
+                     (uint16_t)(l->x - PIXEL_SIZE), (uint16_t)(l->x + PIXEL_SIZE))) {
+            l->status = 0;
+            ai_particle_set(c, l->y, l->x, MZM_PE_HITTING_SOMETHING_INVINCIBLE);
+            break;
+        }
+    }
+}
+
+/* BlackSpacePirateInit: the pirate in palette row 2, waiting to be on
+ * screen; only the Plasma Beam and missiles hurt it. */
+static void black_init(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->draw_top = BLOCK_SIZE * 4 / PIXEL_SIZE;
+    s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+    s->draw_horizontal = (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+    s->hitbox_top = -(BLOCK_SIZE * 2 + HALF_BLOCK_SIZE);
+    s->hitbox_bottom = 0;
+    s->health = s->y_spawn = c->tables->health[s->sprite_id];
+    s->scaling = 0x100;
+    s->work2 = 0;
+    s->rotation = 0;
+    s->samus_collision = SSC_SPACE_PIRATE;
+    s->absolute_palette_row = s->palette_row = 2;
+    set_anim(s, MZM_PIRATE_STANDING);
+    s->work0 = (uint8_t)(c->rng * 10 + ONE_SECOND);
+    s->work1 = AIM_FORWARD;
+    s->pose = 0x1;                                     /* BLACK_SPACE_PIRATE_POSE_INACTIVE */
+    s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+    if (s->room_slot & 0x80) {
+        if (s->status & MZM_SPRITE_STATUS_X_FLIP) s->status |= MZM_SPRITE_STATUS_FACING_RIGHT;
+    } else {
+        face_samus_direction(c);
+    }
+    flip(s);
+}
+
+/* BlackSpacePirateWalkingAlerted: hops over the pirate ahead when there
+ * is room above. */
+static void black_walking_alerted(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->adc++;
+    if (samus_in_shooting_range(c)) return;
+    check_path(c);
+    uint8_t *d = c->f->globals->draw_order;
+    if (s->pose != P_WALKING_ALERTED) {
+        if (s->pose == P_JUMPING_INIT) {
+            if (d[4] == (facing_right(s) ? false : true)) s->pose = P_TURNING_AROUND_ALERTED_INIT;
+        } else if (s->pose == P_STARTING_TO_CRAWL_INIT) {
+            s->pose = P_TURNING_AROUND_ALERTED_INIT;
+        }
+        return;
+    }
+    bool mosaic = s->status & MZM_SPRITE_STATUS_MOSAIC;
+    if (colliding_with_pirate_when_walking(c)) {
+        if (ai_collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE * 4 + THREE_QUARTER_BLOCK_SIZE - PIXEL_SIZE)), s->x) ==
+            MZM_COLLISION_AIR) {
+            if (ai_collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE * 4 - QUARTER_BLOCK_SIZE)), s->x) ==
+                MZM_COLLISION_AIR) {
+                s->work2 = mosaic ? QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE : THREE_QUARTER_BLOCK_SIZE;
+                s->work1 = 4;
+                jumping_init(c);
+                jumping_of(c, true);
+            }
+        } else if (s->anim == MZM_PIRATE_WALKING) {
+            set_anim(s, MZM_PIRATE_CROUCHED);
+        }
+        return;
+    }
+    if (s->anim == MZM_PIRATE_CROUCHED) {
+        if (!ended(c)) return;
+        set_anim(s, MZM_PIRATE_WALKING);
+        s->work2 = 0;
+    }
+    if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+        move_forward_on_slope(c, (int16_t)(s->work2 / 4));
+        if (s->work2 < THREE_QUARTER_BLOCK_SIZE + PIXEL_SIZE) s->work2 += 2;
+    } else {
+        s->pose = P_WALKING;
+    }
+    if (s->adc >= 6 && (s->frame & 3) == 0) ai_sound_onscreen_once(s, MZM_SOUND_SPACE_PIRATE_FOOTSTEPS);
+}
+
+/* BlackSpacePirateChargingLaserInit / ChargingLaser: twice as fast. */
+static void black_charging_laser_init(MzmSprite *s) {
+    charging_laser_init(s);
+    s->work0 = 12;                                     /* CONVERT_SECONDS(.2f) */
+}
+
+/* BlackSpacePirateShooting: twice as fast, firing a frame later. */
+static void black_shooting(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint8_t *d = c->f->globals->draw_order;
+    s->adc++;
+    if (s->frame == SHOOTING_FRAMES / 2 && s->adc == 2) fire_laser_ground(c);
+    ai_align_on_slope(c);
+    if (c->vertical == MZM_COLLISION_AIR) {
+        s->pose = P_FALLING_INIT;
+        return;
+    }
+    if (!nearly_ended(c)) return;
+    if (d[2] == false) {
+        s->pose = P_WALKING_ALERTED_INIT;
+        return;
+    }
+    uint8_t nslr = shooting_nslr(c);
+    uint8_t front = facing_right(s) ? NSLR_RIGHT : NSLR_LEFT;
+    uint8_t back = facing_right(s) ? NSLR_LEFT : NSLR_RIGHT;
+    if (nslr == front) {
+        s->pose = P_CHARGING_LASER_INIT;
+        s->work1 = d[0];
+    } else if (nslr == back) {
+        s->pose = P_TURNING_AROUND_ALERTED_INIT;
+    } else {
+        s->pose = P_WALKING_ALERTED_INIT;
+    }
+}
+
+/* BlackSpacePirateDeath: without the alarm bookkeeping of the others. */
+static void black_death(Ctx *c, bool play_sound) {
+    MzmSprite *s = c->s;
+    if (play_sound) ai_sound_onscreen(s, MZM_SOUND_SPACE_PIRATE_DYING);
+    ai_sprite_death_full(c, DEATH_NORMAL, (uint16_t)(s->y - (BLOCK_SIZE + HALF_BLOCK_SIZE)), s->x, true,
+                         MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
+}
+
+void ai_black_space_pirate(Ctx *c) {
+    MzmSprite *s = c->s;
+    MzmSpriteGlobals *g = c->f->globals;
+    uint8_t *d = g->draw_order;
+    ai_projectile_collision_self(c);
+    bool alerted = (s->status & MZM_SPRITE_STATUS_FACING_DOWN) != 0;
+    if (s->pose < SPRITE_POSE_DESTROYED) {
+        samus_detection(c);
+        if (s->status & MZM_SPRITE_STATUS_FACING_DOWN) {
+            if (d[2] == true) g->alarm_timer = ALARM_ACTIVE;
+            else if (!g->alarm_timer) s->status &= (uint16_t)~MZM_SPRITE_STATUS_FACING_DOWN;
+        } else if (g->alarm_timer && s->pose != SPRITE_POSE_UNINITIALIZED) {
+            s->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+        }
+        black_colliding_with_laser(c);
+    }
+    switch (s->pose) {
+    case SPRITE_POSE_UNINITIALIZED: black_init(c); break;
+    case 0x1:
+        if (s->status & MZM_SPRITE_STATUS_ONSCREEN) s->pose = P_IDLE;
+        break;
+    case P_WALKING_INIT: walking_init(s); break;
+    case P_WALKING: walking(c); break;
+    case P_IDLE: idle(c); break;
+    case P_IDLE_AT_DOOR: idle_at_door(c); break;
+    case P_WAITING_AT_DOOR: waiting_at_door(c); break;
+    case P_SHOOTING_AFTER_WAITING_AT_DOOR: shooting_after_waiting_at_door(c); break;
+    case P_0x2A: lookout_init(s); break;
+    case P_0x2B: lookout(c); break;
+    case P_FALLING_INIT:
+        falling_init(s);
+        /* fallthrough */
+    case P_FALLING: falling(c); break;
+    case P_0x1A:
+        stop_init(s, MZM_PIRATE_STANDING_ALERTED);
+        stopped(c);
+        break;
+    case P_0xE:
+        stop_init(s, MZM_PIRATE_CROUCHED);
+        stopped(c);
+        break;
+    case P_0xF: stopped(c); break;
+    case P_0x1C:
+        pause_init(s, MZM_PIRATE_STANDING_ALERTED);
+        pause_then_turn(c);
+        break;
+    case P_0x16:
+        pause_init(s, MZM_PIRATE_STANDING);
+        pause_then_turn(c);
+        break;
+    case P_0x10:
+        pause_init(s, MZM_PIRATE_CROUCHED);
+        pause_then_turn(c);
+        break;
+    case P_0x11: pause_then_turn(c); break;
+    case P_TURNING_AROUND_INIT:
+        turning_around_init(s);
+        /* fallthrough */
+    case P_TURNING_AROUND_FIRST_PART: turning_around_first_part(c, P_TURNING_AROUND_SECOND_PART); break;
+    case P_TURNING_AROUND_SECOND_PART: turning_around_second_part(c); break;
+    case P_WALKING_ALERTED_INIT:
+        walking_alerted_init(s);
+        /* fallthrough */
+    case P_WALKING_ALERTED: black_walking_alerted(c); break;
+    case P_CHARGING_LASER_INIT:
+        black_charging_laser_init(s);
+        /* fallthrough */
+    case P_CHARGING_LASER:
+        s->adc++;
+        charging_laser(c);
+        break;
+    case P_SHOOTING_LASER_INIT:
+        shooting_laser_init(s);
+        /* fallthrough */
+    case P_SHOOTING_LASER:
+        black_shooting(c);
+        /* After shooting, a jump at the room above (once per hit). */
+        if (s->pose != P_SHOOTING_LASER && s->pose != P_TURNING_AROUND_ALERTED_INIT &&
+            ai_collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE * 5 - QUARTER_BLOCK_SIZE - PIXEL_SIZE)), s->x) ==
+                MZM_COLLISION_AIR &&
+            ai_collision_at(c, (uint16_t)(s->y - (BLOCK_SIZE * 4 - QUARTER_BLOCK_SIZE)), s->x) == MZM_COLLISION_AIR &&
+            s->y_spawn != s->health) {
+            s->work2 = QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
+            s->work1 = 4;
+            jumping_init(c);
+            jumping_of(c, true);
+            s->y_spawn = s->health;
+        }
+        break;
+    case P_JUMPING_INIT:
+        jumping_init(c);
+        /* fallthrough */
+    case P_JUMPING:
+    case P_WALL_JUMPING: jumping_of(c, true); break;
+    case P_TURNING_AROUND_ALERTED_INIT:
+        turning_around_alerted_init(s);
+        /* fallthrough */
+    case P_TURNING_AROUND_ALERTED_FIRST_PART:
+        s->adc++;
+        turning_around_first_part(c, P_TURNING_AROUND_ALERTED_SECOND_PART);
+        break;
+    case P_TURNING_AROUND_ALERTED_SECOND_PART: turning_around_second_part_alerted(c); break;
+    case P_CLIMBING_UP_INIT:
+        climbing_up_init(s);
+        /* fallthrough */
+    case P_CLIMBING_UP: climbing_up(c); break;
+    case P_CLIMBING_DOWN_INIT:
+        climbing_down_init(s);
+        /* fallthrough */
+    case P_CLIMBING_DOWN: climbing_down(c); break;
+    case P_0x18:
+        wall_pause_init(s);
+        /* fallthrough */
+    case P_0x19: wall_pause(c); break;
+    case P_CLIMBING_CHARGING_LASER_INIT:
+        s->pose = P_CLIMBING_CHARGING_LASER;
+        set_anim(s, MZM_PIRATE_CLIMBING_CHARGING_LASER_FORWARD);
+        /* fallthrough */
+    case P_CLIMBING_CHARGING_LASER:
+        if (nearly_ended(c)) s->pose = P_CLIMBING_SHOOTING_LASER_INIT;
+        break;
+    case P_CLIMBING_SHOOTING_LASER_INIT:
+        s->pose = P_CLIMBING_SHOOTING_LASER;
+        set_anim(s, MZM_PIRATE_CLIMBING_SHOOTING_FORWARD);
+        s->work3++;
+        /* fallthrough */
+    case P_CLIMBING_SHOOTING_LASER: climbing_shooting_laser(c); break;
+    case P_TURNING_AROUND_TO_WALL_JUMP_INIT:
+        s->pose = P_TURNING_AROUND_TO_WALL_JUMP;
+        set_anim(s, MZM_PIRATE_TURNING_TO_AIM_WHILE_CLIMBING);
+        /* fallthrough */
+    case P_TURNING_AROUND_TO_WALL_JUMP: turning_around_to_wall_jump(c); break;
+    case P_DELAY_BEFORE_LAUNCHING_FROM_WALL: delay_before_launching(c); break;
+    case P_LAUNCHING_FROM_WALL_INIT:
+        s->pose = P_LAUNCHING_FROM_WALL;
+        set_anim(s, MZM_PIRATE_LAUNCHING_FROM_WALL);
+        /* fallthrough */
+    case P_LAUNCHING_FROM_WALL: launching_from_wall(c); break;
+    case P_STARTING_TO_CRAWL_INIT:
+        s->pose = P_STARTING_TO_CRAWL;
+        set_anim(s, MZM_PIRATE_STARTING_TO_CRAWL);
+        /* fallthrough */
+    case P_STARTING_TO_CRAWL: starting_to_crawl(c); break;
+    case P_CRAWLING: crawling(c); break;
+    case P_TURNING_AROUND_WHILE_CRAWLING_INIT:
+        s->pose = P_TURNING_AROUND_WHILE_CRAWLING_FIRST_PART;
+        set_anim(s, MZM_PIRATE_TURNING_WHILE_CRAWLING_FIRST_PART);
+        break;
+    case P_TURNING_AROUND_WHILE_CRAWLING_FIRST_PART:
+        if (ended(c)) {
+            s->pose = P_TURNING_AROUND_WHILE_CRAWLING_SECOND_PART;
+            set_anim(s, MZM_PIRATE_TURNING_WHILE_CRAWLING_SECOND_PART);
+            s->status ^= MZM_SPRITE_STATUS_FACING_RIGHT;
+            flip(s);
+        }
+        break;
+    case P_TURNING_AROUND_WHILE_CRAWLING_SECOND_PART:
+        if (ended(c)) {
+            s->pose = P_CRAWLING;
+            set_anim(s, MZM_PIRATE_CRAWLING);
+        }
+        break;
+    case P_STANDING_UP_INIT:
+        s->pose = P_STANDING_UP;
+        set_anim(s, MZM_PIRATE_STANDING_UP);
+        /* fallthrough */
+    case P_STANDING_UP: standing_up(c); break;
+    case P_CRAWLING_STOPPED_INIT:
+        s->pose = P_CRAWLING_STOPPED;
+        set_anim(s, MZM_PIRATE_CRAWLING_STOPPED);
+        /* fallthrough */
+    case P_CRAWLING_STOPPED:
+        if (nearly_ended(c)) s->pose = P_TURNING_AROUND_WHILE_CRAWLING_INIT;
+        break;
+    case P_FALLING_WHILE_CRAWLING_INIT:
+        s->pose = P_FALLING_WHILE_CRAWLING;
+        set_anim(s, MZM_PIRATE_STANDING_UP);
+        /* fallthrough */
+    case P_FALLING_WHILE_CRAWLING: falling_while_crawling(c); break;
+    case P_HIT_BY_LASER_INIT:
+        hit_by_laser_init(s);
+        /* fallthrough */
+    case P_HIT_BY_LASER: {
+        s->ignore_samus_timer = 1;
+        s->adc--;
+        uint8_t timer = --s->work0;
+        if (timer & 3) break;
+        if (timer & 4) {
+            s->palette_row = (uint8_t)(15 - s->gfx_slot - 1);
+        } else {
+            s->palette_row = s->absolute_palette_row;
+            if (timer == 0) black_death(c, false);
+        }
+        break;
+    }
+    default: black_death(c, true); break;
+    }
+    if (!alerted && (s->status & (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN |
+                                  MZM_SPRITE_STATUS_FACING_DOWN |
+                                  MZM_SPRITE_STATUS_IGNORE_PROJECTILES)) ==
+                      (MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN | MZM_SPRITE_STATUS_FACING_DOWN))
         mzm_sfx_play_not_playing(MZM_SOUND_SPACE_PIRATE_GETTING_ALERTED);
 }
 

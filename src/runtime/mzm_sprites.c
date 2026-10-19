@@ -5671,6 +5671,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SPACE_PIRATE_WAITING2:
     case MZM_PSPRITE_SPACE_PIRATE_WAITING3:
     case MZM_PSPRITE_SPACE_PIRATE2: return MZM_FAMILY_SPACE_PIRATE;
+    case MZM_PSPRITE_BLACK_SPACE_PIRATE: return MZM_FAMILY_SPACE_PIRATE;
     case MZM_PSPRITE_SECURITY_LASER_VERTICAL:
     case MZM_PSPRITE_SECURITY_LASER_HORIZONTAL:
     case MZM_PSPRITE_SECURITY_LASER_VERTICAL2:
@@ -6631,7 +6632,9 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_HIVE) return MZM_PSPRITE_HIVE;
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_BARISTUTE) return MZM_PSPRITE_BARISTUTE;
         /* sSpacePirateGfx; the event trigger is never drawn. */
-        if (sprite->sprite_id == MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB) return MZM_PSPRITE_SPACE_PIRATE;
+        if (sprite->sprite_id == MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB ||
+            sprite->sprite_id == MZM_PSPRITE_BLACK_SPACE_PIRATE)
+            return MZM_PSPRITE_SPACE_PIRATE;
         /* sElevatorStatuesGfx */
         if (sprite->sprite_id == MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE) return MZM_PSPRITE_KRAID_ELEVATOR_STATUE;
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_TANGLE_VINE)
@@ -6869,6 +6872,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_RINKA: rinka(&c); break;
     case MZM_FAMILY_SPACE_PIRATE:
         if (sprite->secondary) ai_space_pirate_laser(&c);
+        else if (sprite->sprite_id == MZM_PSPRITE_BLACK_SPACE_PIRATE) ai_black_space_pirate(&c);
         else ai_space_pirate(&c);
         break;
     case MZM_FAMILY_CHOZODIA_SECURITY: ai_chozodia_security(&c); break;

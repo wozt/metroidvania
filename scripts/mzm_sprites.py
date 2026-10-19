@@ -151,7 +151,7 @@ def mecha_ridley_weapon_vram(vram: bytes, weapons: bytes, first_tile: int) -> by
 
 
 TINT_OVERFLOW_ALLOWED = ("PSPRITE_MECHA_RIDLEY", "PSPRITE_IMAGO")
-ROW_VARIANTS = {"PSPRITE_IMAGO": (1, 2, 4, 5), "PSPRITE_BARISTUTE": (1, 2, 3), "PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_MECHA_RIDLEY": (2, 3, 4), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
+ROW_VARIANTS = {"PSPRITE_SPACE_PIRATE": (2,), "PSPRITE_IMAGO": (1, 2, 4, 5), "PSPRITE_BARISTUTE": (1, 2, 3), "PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_MECHA_RIDLEY": (2, 3, 4), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
@@ -233,7 +233,7 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
              "sSidehopperHighJumpVelocity", "sSidehopperLowJumpVelocity",
              "sDessgeegaHighJumpYVelocity", "sDessgeegaLowJumpYVelocity",
-             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sMellaIdleYMovement",
+             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sSpacePirate_2e1070", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sMellaIdleYMovement",
              "sMellaIdleXMovement", "sMellaGoingDownYMovement", "sMellaGoingUpYMovement",
              "sMellaMovingXMovement", "sHoltzIdleYVelocity", "sSqueeptRisingMovement",
              "sSqueeptFallingMovement", "sChargeBeamIdleYMovement",

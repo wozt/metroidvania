@@ -7262,6 +7262,80 @@ int main(void) {
         mzm_sprite_update(&room[right], (uint8_t)right, &rf);
         assert(room[right].status == 0);
     }
+    /* Black Space Pirates: waiting off screen in palette row 2, hurt only
+     * by the Plasma Beam and missiles, bursting the other pirates' lasers,
+     * shooting twice as fast and dying without the alarm bookkeeping. */
+    {
+        clear();
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+        tables.health[MZM_PSPRITE_BLACK_SPACE_PIRATE] = 600;
+        tables.weakness[MZM_PSPRITE_BLACK_SPACE_PIRATE] = MZM_WEAKNESS_BEAM_BOMBS | MZM_WEAKNESS_MISSILES;
+        const int16_t black_jump[12] = {-32, -28, -24, -20, -16, -8, -4, 8, 16, 24, 28, 32};
+        memcpy(tables.pirate_jump_black, black_jump, sizeof black_jump);
+        MzmSprite bp[8] = {0};
+        MzmSpriteGlobals bg = {0};
+        static MzmWeapons bw;
+        memset(&bw, 0, sizeof bw);
+        MzmSpriteFrame bf = frame;
+        bf.sprites = bp;
+        bf.sprite_count = 8;
+        bf.globals = &bg;
+        bf.weapons = &bw;
+        bf.samus_x = 20 * 64;
+        bf.samus_y = 640;
+        mzm_sprite_init_primary(&bp[0], MZM_PSPRITE_BLACK_SPACE_PIRATE, 0, 9, 5, 0x80, 0);
+        bp[0].status |= MZM_SPRITE_STATUS_X_FLIP;
+        mzm_sprite_update(&bp[0], 0, &bf);
+        assert(bp[0].pose == 0x1 && bp[0].palette_row == 2 && bp[0].absolute_palette_row == 2 &&
+               bp[0].health == 600 && bp[0].y_spawn == 600 && bp[0].samus_collision == 20 &&
+               bp[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES &&
+               bp[0].status & MZM_SPRITE_STATUS_FACING_RIGHT &&
+               mzm_sprite_graphics_owner(&bp[0]) == MZM_PSPRITE_SPACE_PIRATE);
+        /* On screen (the test camera covers it): it starts acting. */
+        bp[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
+        mzm_sprite_update(&bp[0], 0, &bf);
+        assert(bp[0].pose == 0x27);
+        /* A normal beam is absorbed, the Plasma Beam hurts and goes on. */
+        bw.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_BEAM, .stage = MZM_STAGE_MOVING,
+                                     .y = (int32_t)(bp[0].y - 64), .x = bp[0].x};
+        mzm_sprite_update(&bp[0], 0, &bf);
+        assert(!bw.list[0].active && bp[0].health == 600);
+        bw.list[0] = (MzmProjectile){.active = true, .type = MZM_PROJECTILE_PLASMA_BEAM, .stage = MZM_STAGE_MOVING,
+                                     .y = (int32_t)(bp[0].y - 64), .x = bp[0].x};
+        mzm_sprite_update(&bp[0], 0, &bf);
+        assert(!bw.list[0].active && bp[0].health == 597);
+        /* Another pirate's laser bursts on it. */
+        bp[1] = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true,
+                            .sprite_id = MZM_SSPRITE_SPACE_PIRATE_LASER, .samus_collision = 19,   /* SSC_SPACE_PIRATE_LASER */
+                            .y = (uint16_t)(bp[0].y - 64), .x = bp[0].x};
+        mzm_sprite_update(&bp[0], 0, &bf);
+        assert(bp[1].status == 0);
+        /* Charging: twice as fast (12 frames, the animation doubled). */
+        bp[0].pose = 0x34;
+        bp[0].work1 = 0;
+        mzm_sprite_update(&bp[0], 0, &bf);
+        assert(bp[0].pose == 0x35 && bp[0].work0 == 11 && bp[0].adc == 2);
+        /* Shooting: the laser on the second tick of the middle frame. */
+        bp[0].pose = 0x36;
+        mzm_sprite_update(&bp[0], 0, &bf);
+        bp[0].frame = 2;
+        bp[0].adc = 1;
+        mzm_sprite_update(&bp[0], 0, &bf);
+        int lasers = 0;
+        for (int i = 1; i < 8; ++i)
+            if (bp[i].status && bp[i].sprite_id == MZM_SSPRITE_SPACE_PIRATE_LASER) ++lasers;
+        assert(lasers == 2);
+        /* Hit by a laser: it flashes and dies, the alarm untouched. */
+        bg.alarm_timer = 100;
+        bp[0].pose = 0x6B;
+        bp[0].status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
+        mzm_sprite_update(&bp[0], 0, &bf);
+        assert(bp[0].pose == 0x6C && bp[0].health == 0 && bp[0].samus_collision == 0);
+        bp[0].work0 = 1;
+        mzm_sprite_update(&bp[0], 0, &bf);
+        assert(bp[0].status == 0 && bg.alarm_timer == 100);
+        clear();
+    }
     /* Imago: the eggs, its arrival, the sweep, the dive, the needles, its
      * death, the wall charge and the event after the Super Missiles. */
     {

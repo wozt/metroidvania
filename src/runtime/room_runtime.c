@@ -2561,6 +2561,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sMellowIdleXVelocity", t->mellow_idle_x, 81, 81},
         {"sBaristuteJumpingYVelocity", t->baristute_jumping_y, 10, 10},
         {"sBaristuteFallingYVelocity", t->baristute_falling_y, 8, 8},
+        {"sSpacePirate_2e1070", t->pirate_jump_black, 12, 12},
         {"sImagoAttackingXVelocity", t->imago_attacking_x, 49, 49},
         {"sImagoDamagedStingerFallingYVelocity", t->imago_stinger_falling_y, 10, 10},
         {"sImagoDynamicPaletteData", t->imago_core_palette, 9, 9},
@@ -3588,6 +3589,9 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                  mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO_LARVA_LEFT) &&
                 (sprite->palette_row==1 || sprite->palette_row==2))
             shade=sprite->palette_row==1?"/row1":"/row2";
+        else if(sprite->sprite_id==MZM_PSPRITE_BLACK_SPACE_PIRATE && !sprite->secondary &&
+                sprite->palette_row==2)
+            shade="/row2";              /* the black pirates' palette row */
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO &&
                 (sprite->palette_row==1 || sprite->palette_row==2 ||
                  sprite->palette_row==4 || sprite->palette_row==5)) {

@@ -175,6 +175,8 @@ uint16_t mzm_bios_sqrt(uint32_t value);
 
 /* mzm_space_pirate.c */
 void ai_space_pirate(Ctx *c);
+/* BlackSpacePirate (mzm_space_pirate.c). */
+void ai_black_space_pirate(Ctx *c);
 void ai_space_pirate_laser(Ctx *c);
 /* mzm_chozodia_security.c: searchlights, security lasers, searchlight eyes. */
 void ai_chozodia_security(Ctx *c);

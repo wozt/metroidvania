@@ -3838,6 +3838,27 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0378 - Black Space Pirates
+
+- Ported `sprites_ai/black_space_pirate.c` into `mzm_space_pirate.c`,
+  reusing the pirate routines. The black pirates appear after the Fully
+  Powered Suit:
+  - they use palette row 2, baked as a variant, and wait until they are on
+    screen;
+  - only the Plasma Beam and missiles hurt them; other beams are absorbed;
+  - the other pirates' lasers burst on contact with them;
+  - they charge and shoot twice as fast;
+  - they hop over the pirate in front, or jump after shooting, using their
+    own jump table (exported) and a higher top speed when alerted;
+  - they die without the alarm bookkeeping.
+- A ROM-free regression covers the waiting, the beam absorption and the
+  Plasma damage, the laser bursting, the double-speed charge, the shot
+  timing, and death after a laser hit with the alarm left untouched.
+- A capture in `chozodia_013` (event 67) shows two black pirates on the
+  walkway (ignored `captures/chozodia/black-pirates.png`).
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0377 - Imago
 
 - Ported the adult Imago boss (`sprites_ai/imago.c`) in `mzm_imago.c`,

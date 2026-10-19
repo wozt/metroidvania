@@ -7222,15 +7222,18 @@ int main(void) {
         mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
         /* The reflection's row 15: sRuinsTestPal_SamusReflection row 0 at
          * its spawn, then the next rows one a frame. */
-        assert(globals.ruins_test_reflection_palette == 1);
+        assert(globals.ruins_test_reflection_palette == 1 &&
+               globals.ruins_test_reflection_gfx == MZM_RUINS_TEST_REFLECTION_GFX_BASE);
         mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
         assert(globals.ruins_test_reflection_palette == 2);
         room[0].work0 = 1;
         mzm_sprite_update(&room[0], 0, &rf);
         assert(room[0].pose == 0x4 && link.set_last_wall && link.last_wall == 0);
         link.samus_pose = MZM_POSE_STANDING;
+        link.facing_right = true;
         mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
-        assert(!globals.disable_pause && room[reflection].pose == 0x9);
+        assert(!globals.disable_pause && room[reflection].pose == 0x9 &&
+               globals.ruins_test_reflection_gfx == MZM_RUINS_TEST_REFLECTION_GFX_TURNING_RIGHT);
         mzm_sprite_update(&room[0], 0, &rf);
         assert(room[0].pose == 0x8 && globals.boss_work3 == 1799);   /* 1800, then the timer */
         /* The cover hides the ghost while no symbol is out. */
@@ -7311,7 +7314,8 @@ int main(void) {
         MzmSprite *end = &room[reflection_end];
         globals.sub1.work3 = 4;
         mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
-        assert(end->pose == 0x8 && end->work2 == 8 && end->draw_order == 11);
+        assert(end->pose == 0x8 && end->work2 == 8 && end->draw_order == 11 &&
+               globals.ruins_test_reflection_gfx == MZM_RUINS_TEST_REFLECTION_GFX_SUITLESS);
         memset(&link, 0, sizeof link);
         link.set_pose = MZM_POSE_NONE;
         rf.samus_x = end->x;
@@ -7324,14 +7328,20 @@ int main(void) {
         end->work2 = 1;
         mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
         assert(end->pose == 0x9 && end->work0 == 31);
+        mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
+        assert(end->work0 == 30 && end->status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               globals.ruins_test_reflection_gfx == MZM_RUINS_TEST_REFLECTION_GFX_FULL_SUIT);
         end->work0 = 1;
         mzm_sfx_clear();
         mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
-        assert(end->pose == 0x23 && mzm_sfx_requested(MZM_SFX_MUSIC_FADE, 0));
+        assert(end->pose == 0x23 && globals.ruins_test_reflection_palette == 16 &&
+               !(end->status & MZM_SPRITE_STATUS_NOT_DRAWN) &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_FADE, 0));
         end->work0 = 9;
         end->work1 = 1;
         mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
-        assert(end->pose == 0x25 && end->work0 == 20);
+        assert(end->pose == 0x25 && end->work0 == 20 &&
+               globals.ruins_test_reflection_palette == 25);
         end->work0 = 1;
         mzm_sprite_update(end, (uint8_t)reflection_end, &rf);
         assert(globals.sub1.work3 == 5);

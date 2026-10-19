@@ -199,6 +199,14 @@ def mecha_ridley_weapon_vram(vram: bytes, weapons: bytes, first_tile: int) -> by
     return bytes(staged)
 
 
+def ruins_test_reflection_vram(vram: bytes, top: bytes, bottom: bytes) -> bytes:
+    """OBJ VRAM after the Ruins Test copies one reflection graphics set."""
+    staged = bytearray(vram)
+    staged[0x4280:0x4280 + len(top)] = top
+    staged[0x4680:0x4680 + len(bottom)] = bottom
+    return bytes(staged)
+
+
 TINT_OVERFLOW_ALLOWED = ("PSPRITE_IMAGO",)
 ROW_VARIANTS = {"PSPRITE_SPACE_PIRATE": (2,), "PSPRITE_IMAGO": (1, 2, 4, 5), "PSPRITE_BARISTUTE": (1, 2, 3), "PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
@@ -220,7 +228,19 @@ RUINS_TEST_DYNAMIC_ROW = 14
 # The reflections' OBJ row 15 rewritten with sRuinsTestPal_SamusReflection's
 # 15 rows, baked as "/r1" to "/r15" where a frame reads that row.
 RUINS_TEST_REFLECTION_PAL = "sRuinsTestPal_SamusReflection"
+RUINS_TEST_REFLECTION_FULL_PAL = "sRuinsTestPal_SamusReflectionFullSuit"
 RUINS_TEST_REFLECTION_ROW = 15
+RUINS_TEST_REFLECTION_TABLE = "sRuinsTestSamusReflectionOam"
+RUINS_TEST_REFLECTION_GFX = {
+    "tr": ("sRuinsTestGfx_SamusReflectionTurningRightTop",
+           "sRuinsTestGfx_SamusReflectionTurningRightBottom"),
+    "tl": ("sRuinsTestGfx_SamusReflectionTurningLeftTop",
+           "sRuinsTestGfx_SamusReflectionTurningLeftBottom"),
+    "u": ("sRuinsTestGfx_SamusReflectionSuitlessTop",
+          "sRuinsTestGfx_SamusReflectionSuitlessBottom"),
+    "f": ("sRuinsTestGfx_SamusReflectionFullSuitTop",
+          "sRuinsTestGfx_SamusReflectionFullSuitBottom"),
+}
 # The area banner (PSPRITE_AREA_BANNER) with each location text drawn in its
 # graphics (TextDrawLocation: the text in mask mode over 0x800 bytes of
 # 0xFF, its two tile rows copied to the graphics slot), baked as ``/ltN``;
@@ -690,7 +710,8 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     wanted.add(MECHA_RIDLEY_WEAPONS)
     wanted.add(MECHA_RIDLEY_DESTROYED)
     wanted.update(RUINS_TEST_SHOT_PALS)
-    wanted.add(RUINS_TEST_REFLECTION_PAL)
+    wanted.update((RUINS_TEST_REFLECTION_PAL, RUINS_TEST_REFLECTION_FULL_PAL,
+                   *(symbol for pair in RUINS_TEST_REFLECTION_GFX.values() for symbol in pair)))
     wanted.update([ESCAPE_GATE_GFX, ESCAPE_GATE_PAL, ESCAPE_GATE_FLASHING, ESCAPE_SHIP_FLASHING])
     wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES, *BYTE_PAIR_TABLES,
                    "sLocationTextPointers", "sAreaBannerLocationTextPal"])
@@ -936,6 +957,53 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                                         rom, pointer, part_index))
                                 oam_bounds.append(
                                     f"{part_key}\t0\t{x}\t{y}\t{width}\t{height}\t1")
+            if sprite == "PSPRITE_RUINS_TEST" and table == RUINS_TEST_REFLECTION_TABLE:
+                # The reflection actor rewrites its tiles at 0x4280/0x4680.
+                # Bake every graphics set with the palette rows it can use:
+                # normal reflection rows for turning/suitless, and the
+                # separate full-suit rows for the final reflection.
+                normal_palettes = [palette]
+                address, _ = symbols[RUINS_TEST_REFLECTION_PAL]
+                for index in range(15):
+                    colours = list(palette)
+                    row = RUINS_TEST_REFLECTION_ROW * 16
+                    colours[row:row + 16] = [bgr555(value) for value in struct.unpack_from(
+                        "<16H", rom, rom_offset(address, rom) + index * 32)]
+                    normal_palettes.append(colours)
+                address, _ = symbols[RUINS_TEST_REFLECTION_FULL_PAL]
+                full_palettes = []
+                for index in range(15):
+                    colours = list(palette)
+                    row = RUINS_TEST_REFLECTION_ROW * 16
+                    colours[row:row + 16] = [bgr555(value) for value in struct.unpack_from(
+                        "<16H", rom, rom_offset(address, rom) + index * 32)]
+                    full_palettes.append(colours)
+                for prefix, (top_name, bottom_name) in RUINS_TEST_REFLECTION_GFX.items():
+                    top_address, top_size = symbols[top_name]
+                    bottom_address, bottom_size = symbols[bottom_name]
+                    staged = ruins_test_reflection_vram(
+                        vram,
+                        rom[rom_offset(top_address, rom):rom_offset(top_address, rom) + top_size],
+                        rom[rom_offset(bottom_address, rom):
+                            rom_offset(bottom_address, rom) + bottom_size])
+                    palettes = full_palettes if prefix == "f" else normal_palettes
+                    for palette_index, colours in enumerate(palettes):
+                        suffix = f"/{prefix}{palette_index}"
+                        for flip in flips:
+                            frames = []
+                            for pointer, duration in entries:
+                                pixels = mzm_projectile_compose.render(
+                                    rom, staged, colours, pointer, flip)
+                                bmp, left, top = bmp_from_pixels(
+                                    pixels or {(0, 0): (0, 0, 0)})
+                                frames.append((bmp, duration, left, top))
+                            key = f"Sprite/RUINS_TEST/{table[1:]}/{flip}{suffix}"
+                            library.add(key, frames)
+                            for frame_index, (pointer, _) in enumerate(entries):
+                                left, top, width, height, parts = (
+                                    mzm_projectile_compose.object_bounds(rom, pointer, flip))
+                                oam_bounds.append(
+                                    f"{key}\t{frame_index}\t{left}\t{top}\t{width}\t{height}\t{parts}")
     # The message banner (PSPRITE_MESSAGE_BANNER) with each message's text
     # in its graphics (TextProcessMessageBanner over SpriteLoadGfx's tiles).
     for name, vram in banners:

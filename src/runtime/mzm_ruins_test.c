@@ -7,10 +7,9 @@
  * Powered Suit, with the ghost, its outline and lightning, the shootable
  * symbol, the four placed symbols and the closing reflection that turns
  * Samus to face the background again. The symbols' dynamic palette (OBJ
- * row 14, MzmSpriteGlobals.ruins_test_palette) and the reflections'
- * sRuinsTestPal_SamusReflection rows (OBJ row 15) are ported; the full
- * suit reflection's palette and the reflections' graphics DMA, the ghost's
- * alpha blending and the background flash are not. */
+ * row 14, MzmSpriteGlobals.ruins_test_palette), the reflections' OBJ row
+ * 15 palettes and their graphics DMA at OBJ VRAM 0x4280/0x4680 are ported;
+ * the ghost's alpha blending and the background flash are not. */
 #include "mzm_sprite_ai.h"
 #include "mzm_blocks.h"
 #include "mzm_message_banner.h"
@@ -657,6 +656,7 @@ static void reflection_start(Ctx *c) {
         s->samus_collision = SSC_NONE;
         s->draw_order = 3;
         s->work0 = 1;
+        c->f->globals->ruins_test_reflection_gfx = MZM_RUINS_TEST_REFLECTION_GFX_BASE;
         c->f->globals->ruins_test_reflection_palette = 1;  /* sRuinsTestPal_SamusReflection row 0 */
         break;
     case REFLECTION_START_POSE_WAITING:
@@ -669,6 +669,10 @@ static void reflection_start(Ctx *c) {
             c->f->globals->disable_pause = false;
             s->work0 = 2;                              /* CONVERT_SECONDS(1.f / 30) */
             s->pose = REFLECTION_START_POSE_LEAVING;
+            MzmSpriteSamusLink *link = link_of(c);
+            c->f->globals->ruins_test_reflection_gfx = link && link->facing_right
+                ? MZM_RUINS_TEST_REFLECTION_GFX_TURNING_RIGHT
+                : MZM_RUINS_TEST_REFLECTION_GFX_TURNING_LEFT;
         }
         break;
     case REFLECTION_START_POSE_LEAVING:
@@ -1014,6 +1018,7 @@ static void reflection_end(Ctx *c) {
         s->draw_order = 11;
         s->work0 = s->work1 = s->work3 = 0;
         s->work2 = 8;
+        g->ruins_test_reflection_gfx = MZM_RUINS_TEST_REFLECTION_GFX_SUITLESS;
         g->ruins_test_reflection_palette = 1;          /* sRuinsTestPal_SamusReflection row 0 */
         break;
     case REFLECTION_END_POSE_SUITLESS: {
@@ -1054,15 +1059,19 @@ static void reflection_end(Ctx *c) {
             s->pose = REFLECTION_END_POSE_UPDATE_PALETTE;
             s->work0 = 1;
             s->work1 = 12;                             /* CONVERT_SECONDS(.2f) */
+            g->ruins_test_reflection_palette = 16;     /* full-suit row 0 */
             mzm_sfx_music_fade(200);                   /* CONVERT_SECONDS(3.f) + ONE_THIRD_SECOND */
         } else if (s->work0 == 30) {
             s->status |= MZM_SPRITE_STATUS_NOT_DRAWN;
+            g->ruins_test_reflection_gfx = MZM_RUINS_TEST_REFLECTION_GFX_FULL_SUIT;
         }
         break;
     case REFLECTION_END_POSE_UPDATE_PALETTE:
         if (--s->work1 == 0) {
             s->work1 = 12;
-            if (s->work0++ > 8) {
+            uint8_t offset = s->work0++;
+            g->ruins_test_reflection_palette = (uint8_t)(16 + offset);
+            if (offset > 8) {
                 s->pose = REFLECTION_END_POSE_SET_FADING_STARTED;
                 s->work0 = 20;                         /* ONE_THIRD_SECOND */
             }

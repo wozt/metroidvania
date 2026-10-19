@@ -188,6 +188,30 @@ class MzmMechaRidleyWeaponTests(unittest.TestCase):
         self.assertIn("const u32 sMechaRidleyWeaponsGfx[32 * 32]", source)
 
 
+class MzmRuinsTestReflectionTests(unittest.TestCase):
+    def test_reflection_graphics_replace_the_two_native_vram_ranges(self):
+        base = bytes([0x33]) * 0x8000
+        top = bytes([0x55]) * 384
+        bottom = bytes([0x77]) * 256
+        staged = mzm_sprites.ruins_test_reflection_vram(base, top, bottom)
+        self.assertEqual(staged[0x4280:0x4280 + 384], top)
+        self.assertEqual(staged[0x4680:0x4680 + 256], bottom)
+        self.assertEqual(staged[0x4280 - 1], 0x33)
+        self.assertEqual(staged[0x4280 + 384], 0x33)
+        self.assertEqual(staged[0x4680 - 1], 0x33)
+        self.assertEqual(staged[0x4680 + 256], 0x33)
+
+    def test_reflection_sources_and_full_suit_palette_exist(self):
+        source = (mzm_sprites.DECOMP / "src/data/sprites/ruins_test.c").read_text(
+            encoding="utf-8")
+        self.assertIn(f"const u16 {mzm_sprites.RUINS_TEST_REFLECTION_FULL_PAL}[15 * 16]", source)
+        self.assertRegex(source, rf"const struct FrameData "
+                         rf"{mzm_sprites.RUINS_TEST_REFLECTION_TABLE}\[\d+\]")
+        for pair in mzm_sprites.RUINS_TEST_REFLECTION_GFX.values():
+            for symbol in pair:
+                self.assertRegex(source, rf"const u32 {symbol}\[\d+\]")
+
+
 class MzmSpritePaletteVariantTests(unittest.TestCase):
     def test_frozen_and_stun_rows_shift_the_sprite_rows(self):
         palette = [None] * 256

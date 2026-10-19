@@ -3838,6 +3838,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0403 - Ruins Test native reflection graphics
+
+- Ported every graphics DMA used by the Ruins Test reflections:
+  - the opening reflection switches to the native turning-right or
+    turning-left tiles when Samus turns away from the background;
+  - the closing reflection starts with the suitless tiles, is hidden while
+    the native full-suit tiles are copied, then reappears as the fully
+    powered suit.
+- Ported `sRuinsTestPal_SamusReflectionFullSuit`: OBJ row 15 starts at row
+  0, then advances through rows 1 to 9 every 12 frames.
+- `scripts/mzm_sprites.py` now bakes the ROM-derived copies at OBJ VRAM
+  `0x4280` and `0x4680` as `/tr`, `/tl`, `/u` and `/f` variants. The runtime
+  selects them with `MzmSpriteGlobals.ruins_test_reflection_gfx` and the
+  existing reflection palette state.
+- Unit tests cover both VRAM ranges, every source symbol and the runtime
+  transitions through the hidden copy and full-suit palette.
+- Checked in `chozodia_042` with `--ruins-test-end`: captures at frames 140,
+  310, 350 and 430 show the suitless silhouette, the deliberately hidden
+  copy, the pale full suit and its final colours.
+- Still partial: the ghost's alpha blending, `MakeBackgroundFlash`, the
+  reflection particle and the in-game timer record remain unported.
+
 ## Patch 0402 - Ruins Test reflection palette
 
 - Ported the reflections' OBJ row 15 copies of

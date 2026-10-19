@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T21:21:18+00:00",
+ "generated_at": "2026-10-19T21:35:48+00:00",
  "git": {
-  "commit": "45297b5",
+  "commit": "14efac5",
   "branch": "main",
   "dirty": true
  },
@@ -3917,7 +3917,8 @@
     "src/runtime/mzm_in_game_cutscene.c"
    ],
    "tests": [
-    "tests/test_mzm_sprites.c"
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_sprites.py"
    ],
    "dependencies": [
     "mzm.player.samus_controller",
@@ -3967,11 +3968,12 @@
     "RuinsTestLightningOnGroundInit",
     "RuinsTestLightning"
    ],
-   "limitations": "The full suit reflection's palette (sRuinsTestPal_SamusReflectionFullSuit), the reflections' graphics DMA (the turning, suitless and full suit tiles at OBJ VRAM 0x4280), the ghost's alpha blending (its timing is kept), MakeBackgroundFlash, the PE_SAMUS_REFLECTION particle, and the in-game timer record (gInGameTimerAtBosses) are not ported. Not compared with an emulator. The main actor freezes Samus facing the background five blocks below it, waits for the four symbols (battle music, merge) to turn it into her reflection, spawns the reflection and its cover, frees Samus after half a second and starts when she turns. It then shows the shootable symbol for 2, 1.5, 1 or 2/3 seconds after a random delay from sRandomNumberTable (now exported); an uncharged pistol shot on it hurts Samus by 25, 50 or 100 energy by difficulty through the Ruins Test forced movement, and a charged one keeps it out. After the first symbol it spawns the outline and the ghost, then moves in the widening circle and, after two symbols, the six-arc atom pattern, triggering ground and standing lightning; the fourth symbol sends it back to the center, and its despawn removes the ceiling and sets event 67. The ghost fades in and follows the actor, flashing with it, then fades back and out at the center; the outline precedes the ghost and warns of lightning, whose bolts explode on the ground (static) or split into two waves along the floor and up the walls, releasing movement afterwards. The shootable symbol spawns at double speed, despawns with a sound fade or, when hit, becomes a placed symbol flying to its corner of the arena (counted once placed); the fourth sends the ghost away and all four light up again. The closing reflection turns Samus standing on it to face the background, runs the suited reflection timing and fades the music before the cutscene fade, then shows the Fully Powered Suit banner. Captures in chozodia_042 show Samus frozen under the ghost during the merge and the fight started with the ghost under its cover. (Before patch 0396 its secondary sprites fell back to the Skree graphics owner and were not drawn.) Its despawn now requests EFFECT_CUTSCENE_GETTING_FULLY_POWERED (the runtime's request 6), which plays the cutscene and the suit upgrade (mzm.cutscenes.getting_fully_powered); a capture in chozodia_042 with the `--ruins-test-end` staging (the fight skipped) follows the despawn, the closing reflection turning Samus, the cutscene, the banner, the suit upgrade and the fight stage reaching SUIT_ANIM_ENDED. The symbols' dynamic palette is ported: every RUINS_TEST_TRANSFER_DYNAMIC_PAL of the four symbols' lighting, merging and disappearing, the shot symbol's flight (a 4-frame pulse through the base and the six shot palettes) and its placing flash sets MzmSpriteGlobals.ruins_test_palette, and the renderer draws the tables that read OBJ row 14's first eight colours with the baked /s1 to /s6 variants (reset with the spriteset). A capture sequence in chozodia_042 shows the four symbols turning from purple to light blue as they light up, then merging. (The earlier note that the symbols were invisible predated patch 0396's graphics owners; they were drawn with the base palette since.) The reflections' row 15 is ported for sRuinsTestPal_SamusReflection: the starting reflection fades through its 15 rows one a frame then back to sRuinsTestPal's row 7, and the closing reflection pulses through rows 0-10 every 8 frames (MzmSpriteGlobals.ruins_test_reflection_palette, baked /r1 to /r15 for sRuinsTestSamusReflectionOam); unit-tested, not yet checked by a capture.",
-   "next_action": "Capture the reflection fade; port the full suit reflection palette, the reflections' graphics DMA and the ghost alpha blending; compare the fight with an emulator.",
+   "limitations": "The ghost's alpha blending (its timing is kept), MakeBackgroundFlash, the PE_SAMUS_REFLECTION particle, and the in-game timer record (gInGameTimerAtBosses) are not ported. Not compared with an emulator. The main actor freezes Samus facing the background five blocks below it, waits for the four symbols (battle music, merge) to turn it into her reflection, spawns the reflection and its cover, frees Samus after half a second and starts when she turns. It then shows the shootable symbol for 2, 1.5, 1 or 2/3 seconds after a random delay from sRandomNumberTable (now exported); an uncharged pistol shot on it hurts Samus by 25, 50 or 100 energy by difficulty through the Ruins Test forced movement, and a charged one keeps it out. After the first symbol it spawns the outline and the ghost, then moves in the widening circle and, after two symbols, the six-arc atom pattern, triggering ground and standing lightning; the fourth symbol sends it back to the center, and its despawn removes the ceiling and sets event 67. The ghost fades in and follows the actor, flashing with it, then fades back and out at the center; the outline precedes the ghost and warns of lightning, whose bolts explode on the ground (static) or split into two waves along the floor and up the walls, releasing movement afterwards. The shootable symbol spawns at double speed, despawns with a sound fade or, when hit, becomes a placed symbol flying to its corner of the arena (counted once placed); the fourth sends the ghost away and all four light up again. The closing reflection turns Samus standing on it to face the background, runs the suited reflection timing and fades the music before the cutscene fade, then shows the Fully Powered Suit banner. Captures in chozodia_042 show Samus frozen under the ghost during the merge and the fight started with the ghost under its cover. (Before patch 0396 its secondary sprites fell back to the Skree graphics owner and were not drawn.) Its despawn now requests EFFECT_CUTSCENE_GETTING_FULLY_POWERED (the runtime's request 6), which plays the cutscene and the suit upgrade (mzm.cutscenes.getting_fully_powered); a capture in chozodia_042 with the `--ruins-test-end` staging (the fight skipped) follows the despawn, the closing reflection turning Samus, the cutscene, the banner, the suit upgrade and the fight stage reaching SUIT_ANIM_ENDED. The symbols' dynamic palette is ported: every RUINS_TEST_TRANSFER_DYNAMIC_PAL of the four symbols' lighting, merging and disappearing, the shot symbol's flight (a 4-frame pulse through the base and the six shot palettes) and its placing flash sets MzmSpriteGlobals.ruins_test_palette, and the renderer draws the tables that read OBJ row 14's first eight colours with the baked /s1 to /s6 variants (reset with the spriteset). A capture sequence in chozodia_042 shows the four symbols turning from purple to light blue as they light up, then merging. (The earlier note that the symbols were invisible predated patch 0396's graphics owners; they were drawn with the base palette since.) The reflections now reproduce every native OBJ update: the opening actor fades through sRuinsTestPal_SamusReflection and switches to the direction-specific turning tiles; the closing actor starts with the suitless tiles and palette pulse, is hidden while the full-suit tiles are copied to OBJ VRAM 0x4280/0x4680, then fades through sRuinsTestPal_SamusReflectionFullSuit. The exporter bakes the /tr, /tl, /u and /f variants from the ROM and the runtime selects them through MzmSpriteGlobals.ruins_test_reflection_gfx and ruins_test_reflection_palette. A chozodia_042 `--ruins-test-end` capture sequence shows the suitless silhouette, the hidden copy, the pale full suit and its final colours.",
+   "next_action": "Port the ghost alpha blending and MakeBackgroundFlash; compare the fight with an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_sprites.c"
+     "tests/test_mzm_sprites.c",
+     "tests/test_mzm_sprites.py"
     ],
     "in_game_check": [
      "chozodia_042"
@@ -3994,6 +3996,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_mzm_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10982,9 +10990,9 @@
    {
     "file": "tests/test_mzm_sprites.py",
     "module": "tests.test_mzm_sprites",
-    "test_count": 13,
+    "test_count": 15,
     "outcome": "passed",
-    "passed": 13
+    "passed": 15
    },
    {
     "file": "tests/test_mzm_world_atlas.py",
@@ -11233,12 +11241,18 @@
    }
   ],
   "summary": {
-   "passed": 479,
+   "passed": 481,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "14efac5",
+   "date": "2026-10-19",
+   "subject": "Port the Ruins Test reflections' palette rows",
+   "scope": "project"
+  },
   {
    "commit": "45297b5",
    "date": "2026-10-19",
@@ -11712,12 +11726,6 @@
    "date": "2026-10-14",
    "subject": "unfinished job of kimi, we were working on better HTML CSS advancement following sheet",
    "scope": "project"
-  },
-  {
-   "commit": "17967de",
-   "date": "2026-10-14",
-   "subject": "feat(mzm): Mother Brain",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -12653,7 +12661,8 @@
       "note": "Ruins Test (Chozo ghost)",
       "evidence": {
        "unit_tests": [
-        "tests/test_mzm_sprites.c"
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py"
        ],
        "in_game_check": [
         "chozodia_042"

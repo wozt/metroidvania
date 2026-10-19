@@ -954,6 +954,13 @@ enum {
     MZM_RUINS_TEST_ANIMS,
 };
 extern const char *const mzm_ruins_test_anim_names[MZM_RUINS_TEST_ANIMS];
+enum {
+    MZM_RUINS_TEST_REFLECTION_GFX_BASE,
+    MZM_RUINS_TEST_REFLECTION_GFX_TURNING_RIGHT,
+    MZM_RUINS_TEST_REFLECTION_GFX_TURNING_LEFT,
+    MZM_RUINS_TEST_REFLECTION_GFX_SUITLESS,
+    MZM_RUINS_TEST_REFLECTION_GFX_FULL_SUIT,
+};
 
 /* Chozodia's scripted sprites: the falling Chozo pillar and the Power
  * Bomb theft (sprites_ai/falling_chozo_pillar.c and
@@ -1397,8 +1404,12 @@ typedef struct {
      * sRuinsTestPal_SymbolShot_Frame1-6. */
     uint8_t ruins_test_palette;
     /* Its OBJ row 15 (the reflections): 0 sRuinsTestPal's row 7, 1-15
-     * sRuinsTestPal_SamusReflection's rows 0-14. */
+     * sRuinsTestPal_SamusReflection's rows 0-14, 16-30 the full-suit
+     * reflection's rows 0-14. */
     uint8_t ruins_test_reflection_palette;
+    /* The graphics last copied into the reflection's OBJ tiles at 0x4280
+     * and 0x4680 (MZM_RUINS_TEST_REFLECTION_GFX_*). */
+    uint8_t ruins_test_reflection_gfx;
     /* The escape ship's and the escape gates' flashing rows as last copied
      * (sEscapeShipFlashingPal / sEscapeGateFlashingPal row, -1: none yet). */
     int8_t escape_ship_palette, escape_gate_palette;

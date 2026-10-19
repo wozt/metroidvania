@@ -7947,6 +7947,13 @@ int main(void) {
         assert(hanging.anim == MZM_TANGLE_VINE_SHORT_ON_CEILING && hanging.hitbox_top == 0 &&
                hanging.hitbox_bottom == 136 && hanging.y == hang_y - MZM_BLOCK_SIZE &&
                hanging.status & MZM_SPRITE_STATUS_FACING_DOWN);
+        tables.health[MZM_PSPRITE_TANGLE_VINE_RED_GARUTA] = 20;
+        MzmSprite red_vine;
+        mzm_sprite_init_primary(&red_vine, MZM_PSPRITE_TANGLE_VINE_RED_GARUTA, 0, 9, 7, 0, 0);
+        mzm_sprite_update(&red_vine, 0, &vf);
+        assert(red_vine.pose == 0x9 && red_vine.anim == MZM_TANGLE_VINE_RED_GERUTA &&
+               red_vine.health == 20 && red_vine.samus_collision == 11 &&
+               red_vine.hitbox_top == -272 && red_vine.hitbox_left == -36);
         mzm_sfx_clear();
         hanging.damaged = true;
         hanging.status |= MZM_SPRITE_STATUS_ONSCREEN;
@@ -8000,6 +8007,68 @@ int main(void) {
             if (room[i].status && !room[i].secondary && room[i].sprite_id == MZM_PSPRITE_GERUTA_RED) red = i;
         assert(room[2].status == 0 && red >= 0 && room[red].room_slot == 0x80 &&
                room[red].y == geruta_y + 32);
+    }
+    /* The final two native monster ids are unused prototypes: Crocomire
+     * assembles its six actors and loops the screaming composition, while
+     * Gekitai Machine removes itself immediately. */
+    {
+        MzmSpriteKind crocomire_kind = {0};
+        for (int a = 0; a < MZM_CROCOMIRE_ANIMS; ++a) {
+            crocomire_kind.counts[a] = 2;
+            crocomire_kind.timers[a][0] = crocomire_kind.timers[a][1] = 4;
+        }
+        static const int16_t parts[6][3] = {
+            {MZM_CROCOMIRE_LEFT_ARM_SCREAMING, -200, -4},
+            {MZM_CROCOMIRE_SCREAMING, -300, -100},
+            {MZM_CROCOMIRE_LEGS_IDLE, 0, 0},
+            {MZM_CROCOMIRE_BODY_IDLE, 0, -96},
+            {MZM_CROCOMIRE_TONGUE, -280, -96},
+            {MZM_CROCOMIRE_LEFT_ARM_SCREAMING, -220, 4},
+        };
+        for (int m = 0; m < MZM_CROCOMIRE_MULTI_COUNT; ++m) {
+            tables.crocomire_multi[m].timers[0] = 16;
+            tables.crocomire_multi[m].timers[1] = 16;
+            memcpy(tables.crocomire_multi[m].parts[0], parts, sizeof parts);
+            memcpy(tables.crocomire_multi[m].parts[1], parts, sizeof parts);
+        }
+        tables.health[MZM_PSPRITE_CROCOMIRE] = 100;
+        MzmSprite room[8] = {0};
+        MzmSpriteGlobals globals = {0};
+        MzmSpriteFrame cf = frame;
+        cf.sprites = room;
+        cf.sprite_count = 8;
+        cf.globals = &globals;
+        cf.kinds[MZM_FAMILY_CROCOMIRE] = &crocomire_kind;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_CROCOMIRE, 0, 10, 10, 0, 0);
+        mzm_sprite_update(&room[0], 0, &cf);
+        assert(room[0].pose == 0x9 && room[0].health == 100 && room[0].room_slot == 1 &&
+               room[0].anim == MZM_CROCOMIRE_SCREAMING &&
+               globals.sub1.multi == MZM_CROCOMIRE_MULTI_SCREAMING &&
+               room[0].samus_collision == 4);
+        for (int i = 1; i <= 5; ++i) mzm_sprite_update(&room[i], (uint8_t)i, &cf);
+        assert(room[1].secondary && room[1].sprite_id == MZM_SSPRITE_CROCOMIRE_PART &&
+               room[1].room_slot == 0 && room[1].anim == MZM_CROCOMIRE_LEFT_ARM_SCREAMING &&
+               room[1].draw_order == 2 && room[2].room_slot == 2 &&
+               room[2].anim == MZM_CROCOMIRE_LEGS_IDLE && room[3].room_slot == 3 &&
+               room[4].room_slot == 4 && room[4].samus_collision == 0 &&
+               room[5].room_slot == 5 &&
+               mzm_sprite_graphics_owner(&room[5]) == MZM_PSPRITE_CROCOMIRE);
+        room[0].pose = 0x62;
+        room[0].isft = 11;
+        mzm_sprite_update(&room[1], 1, &cf);
+        assert(room[1].pose == 0x67 && room[1].isft == 11 &&
+               room[1].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES);
+        room[0].pose = 0x8;
+        mzm_sprite_update(&room[0], 0, &cf);
+        assert(room[0].pose == 0x9 && globals.sub1.multi == MZM_CROCOMIRE_MULTI_IDLE);
+
+        MzmSprite gekitai;
+        mzm_sprite_init_primary(&gekitai, MZM_PSPRITE_GEKITAI_MACHINE, 0, 4, 4, 0, 0);
+        MzmSpriteFrame gf = cf;
+        gf.globals = NULL;
+        gf.kinds[MZM_FAMILY_CROCOMIRE] = NULL;
+        mzm_sprite_update(&gekitai, 0, &gf);
+        assert(gekitai.status == 0 && mzm_sprite_supported(MZM_PSPRITE_GEKITAI_MACHINE));
     }
     /* The Brinstar hives: roots and four Mellows, shrinking phases,
      * replacement Mellows, death and the three-hives event. */

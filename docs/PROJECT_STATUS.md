@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-18**.
+Last updated: **2026-10-19**.
 
 ## Current product state
 
@@ -3836,6 +3836,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   Python 438/438 passed. Dashboard generation reported 126 features, 62
   functional or better and 114 with passing tests. Every reconstruction task
   completed or was up to date, generated-data checks were fresh and the
+  proprietary-file guard passed.
+
+## Patch 0383 - unused native monster prototypes
+
+- Ported the complete native scope of the unused Crocomire prototype: all 25
+  OAM tables, six composition tables, the primary head and five secondary
+  body actors, native hitboxes, draw order, immunity and dying-state
+  propagation. The ROM contains no attack or movement state for this actor,
+  so the runtime deliberately does not invent a Crocomire encounter.
+- Ported Gekitai Machine's complete native one-line AI, which immediately
+  removes the unused actor.
+- Added a direct Red Garuta regression covering its native health, pose,
+  animation, collision and hitbox. Red Garuta was already routed through the
+  Tangle Vine family; it is now explicitly represented in the final monster
+  coverage proof.
+- Corrected the native `GARUTA` identifier and the dashboard classification;
+  the bestiary now lists Red Garuta, Crocomire and Gekitai Machine under their
+  implemented families instead of leaving either prototype or Red Garuta out.
+- Every named retail primary monster id now has a runtime route. The two
+  remaining Zero Mission deliverables are both post-credits screens: the
+  ending image with clear time and item rate, then the unlocked-options
+  pop-up and its save flow.
+- The private sprite rebuild now contains 20,394 sequences, 119,591 frames
+  and 29,062 unique BMPs.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed. The dashboard reports 139 features, 64 functional or
+  better and 127 with passing tests; generated-data checks are fresh and the
   proprietary-file guard passed.
 
 ## Patch 0382 - Credits and end screen

@@ -222,6 +222,8 @@ void ai_chozodia_scripted(Ctx *c);
 void ai_elevator_statue(Ctx *c);
 /* The Chozodia escape ship and its gates (mzm_escape_ship.c). */
 void ai_escape_ship(Ctx *c);
+/* The unused Crocomire and Gekitai Machine prototypes (mzm_crocomire.c). */
+void ai_crocomire(Ctx *c);
 /* Imago, its parts, needles, damaged stinger and eggs (mzm_imago.c). */
 void ai_imago(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */

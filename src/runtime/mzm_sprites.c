@@ -623,6 +623,14 @@ const char *const mzm_mecha_ridley_multi_names[MZM_MECHA_RIDLEY_MULTI_COUNT] = {
     "sMechaRidleyMultiSpriteData_DyingStandingHigh",
     "sMechaRidleyMultiSpriteData_Dying",
 };
+const char *const mzm_crocomire_multi_names[MZM_CROCOMIRE_MULTI_COUNT] = {
+    "sCrocomireMultiSpriteData_Idle",
+    "sCrocomireMultiSpriteData_WalkingForward",
+    "sCrocomireMultiSpriteData_WalkingBackwards",
+    "sCrocomireMultiSpriteData_Screaming",
+    "sCrocomireMultiSpriteData_Dying",
+    "sCrocomireMultiSpriteData_Angry",
+};
 const char *const mzm_mecha_ridley_anim_names[MZM_MECHA_RIDLEY_ANIMS] = {
     "MechaRidleyPartOam_Tail", "MechaRidleyPartOam_Ring",
     "MechaRidleyPartOam_Cover", "MechaRidleyPartOam_Torso", "MechaRidleyOam_Idle",
@@ -765,6 +773,27 @@ const char *const mzm_imago_anim_names[MZM_IMAGO_ANIMS] = {
 };
 static const char *const imago_sprites[MZM_IMAGO_ANIMS] = {
     "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO",
+};
+const char *const mzm_crocomire_anim_names[MZM_CROCOMIRE_ANIMS] = {
+    "CrocomirePartOam_BodyIdle", "CrocomirePartOam_BodyAngry",
+    "CrocomireOam_Idle", "CrocomireOam_Screaming", "CrocomireOam_Dying",
+    "CrocomirePartOam_RightArmIdle", "CrocomirePartOam_LeftArmIdle",
+    "CrocomirePartOam_LeftArmScreaming", "CrocomirePartOam_RightArmWalkingForward",
+    "CrocomirePartOam_LeftArmWalkingForward", "CrocomirePartOam_RightArmWalkingBackwards",
+    "CrocomirePartOam_LeftArmWalkingBackwards", "CrocomirePartOam_RightArmDying",
+    "CrocomirePartOam_LeftArmDying", "CrocomirePartOam_LegsIdle",
+    "CrocomirePartOam_LegsWalkingForward", "CrocomirePartOam_LegsWalkingBackwards",
+    "CrocomirePartOam_LegsDying", "CrocomirePartOam_Tongue",
+    "CrocomirePartOam_TongueDying", "CrocomireProjectileOam",
+    "CrocomirePartOam_307028", "CrocomirePartOam_307058",
+    "CrocomirePartOam_307088", "CrocomirePartOam_3070b8",
+};
+static const char *const crocomire_sprites[MZM_CROCOMIRE_ANIMS] = {
+    "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE",
+    "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE",
+    "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE",
+    "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE",
+    "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE", "CROCOMIRE",
 };
 const char *const mzm_imago_adult_multi_names[MZM_IMAGO_ADULT_MULTI_COUNT] = {
     "sImagoMultiSpriteData_Idle", "sImagoMultiSpriteData_ShootingNeedles", "sImagoMultiSpriteData_RechargingNeedles", "sImagoMultiSpriteData_Dying",
@@ -1076,6 +1105,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
                                     elevator_statue_sprites},
     [MZM_FAMILY_IMAGO] = {MZM_IMAGO_ANIMS, mzm_imago_anim_names, imago_sprites},
     [MZM_FAMILY_ESCAPE_SHIP] = {MZM_ESCAPE_SHIP_ANIMS, mzm_escape_ship_anim_names, escape_ship_sprites},
+    [MZM_FAMILY_CROCOMIRE] = {MZM_CROCOMIRE_ANIMS, mzm_crocomire_anim_names, crocomire_sprites},
 };
 
 
@@ -5542,6 +5572,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
             return MZM_FAMILY_IMAGO_COCOON;
         if (sprite_id == MZM_SSPRITE_HIVE_ROOTS) return MZM_FAMILY_HIVE;
         if (sprite_id == MZM_SSPRITE_TANGLE_VINE_GERUTA_PART) return MZM_FAMILY_TANGLE_VINE;
+        if (sprite_id == MZM_SSPRITE_CROCOMIRE_PART) return MZM_FAMILY_CROCOMIRE;
         if (sprite_id == MZM_SSPRITE_ELEVATOR_STATUE_DEBRIS) return MZM_FAMILY_ELEVATOR_STATUE;
         if (sprite_id == MZM_SSPRITE_ESCAPE_SHIP_PART) return MZM_FAMILY_ESCAPE_SHIP;
         if (sprite_id == MZM_SSPRITE_IMAGO_PART || sprite_id == MZM_SSPRITE_IMAGO_NEEDLE ||
@@ -5650,7 +5681,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         return MZM_FAMILY_BARISTUTE;
     case MZM_PSPRITE_TANGLE_VINE_TALL: case MZM_PSPRITE_TANGLE_VINE_MEDIUM:
     case MZM_PSPRITE_TANGLE_VINE_CURVED: case MZM_PSPRITE_TANGLE_VINE_SHORT:
-    case MZM_PSPRITE_TANGLE_VINE_RED_GERUTA: case MZM_PSPRITE_TANGLE_VINE_GERUTA:
+    case MZM_PSPRITE_TANGLE_VINE_RED_GARUTA: case MZM_PSPRITE_TANGLE_VINE_GERUTA:
     case MZM_PSPRITE_TANGLE_VINE_LARVA_RIGHT: case MZM_PSPRITE_TANGLE_VINE_LARVA_LEFT:
         return MZM_FAMILY_TANGLE_VINE;
     case MZM_PSPRITE_RUINS_TEST: return MZM_FAMILY_RUINS_TEST;
@@ -5660,6 +5691,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_KRAID_ELEVATOR_STATUE: case MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE:
         return MZM_FAMILY_ELEVATOR_STATUE;
     case MZM_PSPRITE_IMAGO: return MZM_FAMILY_IMAGO;
+    case MZM_PSPRITE_GEKITAI_MACHINE: case MZM_PSPRITE_CROCOMIRE:
+        return MZM_FAMILY_CROCOMIRE;
     case MZM_PSPRITE_ESCAPE_SHIP: case MZM_PSPRITE_ESCAPE_GATE1: case MZM_PSPRITE_ESCAPE_GATE2:
         return MZM_FAMILY_ESCAPE_SHIP;
     case MZM_PSPRITE_KRAID_STATUE:
@@ -6695,6 +6728,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         return MZM_PSPRITE_IMAGO_COCOON;
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_MECHA_RIDLEY)
         return MZM_PSPRITE_MECHA_RIDLEY;
+    if (sprite->sprite_id == MZM_SSPRITE_CROCOMIRE_PART) return MZM_PSPRITE_CROCOMIRE;
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
@@ -6821,13 +6855,15 @@ static uint16_t damaged_sound(int family) {
 
 void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *frame) {
     int family = mzm_sprite_family(sprite->sprite_id, sprite->secondary);
+    bool gekitai = !sprite->secondary && sprite->sprite_id == MZM_PSPRITE_GEKITAI_MACHINE;
     /* A family without frame durations (not exported) is not updated. */
-    if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || family < 0 || !frame->kinds[family])
+    if (!(sprite->status & MZM_SPRITE_STATUS_EXISTS) || family < 0 ||
+        (!frame->kinds[family] && !gekitai))
         return;
     /* The Space Pirates and the security systems need the game globals. */
     if ((family == MZM_FAMILY_SPACE_PIRATE || family == MZM_FAMILY_CHOZODIA_SECURITY ||
          family == MZM_FAMILY_CHOZO_STATUE || family == MZM_FAMILY_IMAGO_LARVA ||
-         family == MZM_FAMILY_IMAGO_COCOON) &&
+         family == MZM_FAMILY_IMAGO_COCOON || (family == MZM_FAMILY_CROCOMIRE && !gekitai)) &&
         !frame->globals)
         return;
     Ctx c = {sprite, frame, frame->world, frame->tables, frame->kinds[family],
@@ -6918,6 +6954,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_ELEVATOR_STATUE: ai_elevator_statue(&c); break;
     case MZM_FAMILY_IMAGO: ai_imago(&c); break;
     case MZM_FAMILY_ESCAPE_SHIP: ai_escape_ship(&c); break;
+    case MZM_FAMILY_CROCOMIRE: ai_crocomire(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

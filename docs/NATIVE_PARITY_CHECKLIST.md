@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 90 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 91 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -370,6 +370,16 @@ Dependencies: `mzm.enemies.space_pirate`, `mzm.collision.clipdata`, `mzm.weapons
 Known divergences: Searchlights are drawn opaque and above the backgrounds (natively they flicker behind BG1 with draw order 1), the BG0 transparency fades (PrimarySpriteB3, the security lasers' TransparencySpriteUpdateBldalpha; their fade state is kept in work2/work3) are not reproduced. The security gates keep their drawOrder 3 in front of Samus without their BG priority; their unused death (SecurityGateDeath) is ported but unreachable as natively.  
 Next action: Compare the event-placed systems with an emulator.
 Evidence: in game: `chozodia_003`, `chozodia_016`, `chozodia_030`, `chozodia_005`.
+
+[+] **`mzm.enemies.crocomire` — Unused Crocomire and Gekitai Machine prototypes.** Crocomire loads its native graphics, all 25 OAM tables and all six composition tables, spawns its five secondary body actors, loops the native screaming composition and accepts the externally requested idle composition. Its body actors retain the original hitboxes, draw order, immunity and dying-state propagation. Gekitai Machine performs its complete native one-line AI and removes itself immediately. Together with the directly tested Red Garuta path, every named retail primary monster id now has a runtime route.
+
+Native evidence: `mzm:c:src/sprites_ai/crocomire.c:Crocomire`, `mzm:c:src/sprites_ai/crocomire.c:CrocomireIdleInit`, `mzm:c:src/sprites_ai/crocomire.c:CrocomireInit`, `mzm:c:src/sprites_ai/crocomire.c:CrocomirePart`, `mzm:c:src/sprites_ai/crocomire.c:CrocomirePartInit`, `mzm:c:src/sprites_ai/crocomire.c:CrocomireSyncSubSprites`, `mzm:c:src/sprites_ai/gekitai_machine.c:GekitaiMachine`.  
+Local implementation: [`src/runtime/mzm_crocomire.c`](../src/runtime/mzm_crocomire.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.zoomer`.  
+Known divergences: The native Crocomire implementation contains no attack or movement state and Gekitai Machine deletes itself; the port deliberately does not invent behavior. Neither is placed in the retail campaign.  
+Next action: Keep the unused prototypes out of campaign rooms unless an authored debug room explicitly requests them.
+Evidence: in game: `debug spritesets 75 and 92`.
 
 [~] **`mzm.enemies.deorem` — Deorem two-location encounter.** Both native placements reproduce the complete head, body, eye and retreat choreography. The encounter emits its exact fixed and RNG-selected debris groups while entering, waiting, emerging and leaving, with the native dust, sound and screen-shake timing. Deorem waits for every active primary item drop before its retreat countdown resumes. The eye tracks Samus through the native eight angular sectors, alternates RNG-timed idle and pulsing animations, transfers missile hit stun and the low-health palette to the head, then spins with the dying body, recentres, rises, flashes and spawns the Charge Beam on its exact 120-frame timer.
 

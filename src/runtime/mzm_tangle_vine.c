@@ -104,7 +104,7 @@ static void special_vine(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->pose == SPRITE_POSE_UNINITIALIZED) {
         switch (s->sprite_id) {
-        case MZM_PSPRITE_TANGLE_VINE_RED_GERUTA:
+        case MZM_PSPRITE_TANGLE_VINE_RED_GARUTA:
             s->draw_top = (BLOCK_SIZE * 4 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
             s->draw_bottom = 0;
             s->draw_horizontal = (BLOCK_SIZE + HALF_BLOCK_SIZE) / PIXEL_SIZE;
@@ -147,7 +147,7 @@ static void special_vine(Ctx *c) {
     if (s->pose < SPRITE_POSE_DESTROYED) return;
     uint16_t y = s->y, x = s->x;
     switch (s->sprite_id) {
-    case MZM_PSPRITE_TANGLE_VINE_RED_GERUTA:
+    case MZM_PSPRITE_TANGLE_VINE_RED_GARUTA:
         ai_particle_set(c, (uint16_t)(y - HALF_BLOCK_SIZE), (uint16_t)(x + QUARTER_BLOCK_SIZE),
                         MZM_PE_SPRITE_EXPLOSION_SINGLE_THEN_BIG);
         ai_sprite_death_full(c, DEATH_NORMAL, (uint16_t)(y - (BLOCK_SIZE * 2 + QUARTER_BLOCK_SIZE + PIXEL_SIZE / 2)),
@@ -311,7 +311,7 @@ void ai_tangle_vine(Ctx *c) {
         if (c->f->globals) geruta_vine(c);
         else s->status = 0;
         break;
-    case MZM_PSPRITE_TANGLE_VINE_RED_GERUTA:
+    case MZM_PSPRITE_TANGLE_VINE_RED_GARUTA:
     case MZM_PSPRITE_TANGLE_VINE_LARVA_RIGHT:
     case MZM_PSPRITE_TANGLE_VINE_LARVA_LEFT:
         damaged_sound(s);

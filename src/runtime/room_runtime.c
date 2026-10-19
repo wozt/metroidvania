@@ -2664,7 +2664,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                    COCOON = IMAGO + MZM_IMAGO_COCOON_MULTI_COUNT,
                    MOTHER = COCOON, MECHA = MOTHER + 1,
                    TANGLE = MECHA + MZM_MECHA_RIDLEY_MULTI_COUNT, IMAGO_ADULT = TANGLE + 1,
-                   ALL = IMAGO_ADULT + MZM_IMAGO_ADULT_MULTI_COUNT };
+                   CROCOMIRE = IMAGO_ADULT + MZM_IMAGO_ADULT_MULTI_COUNT,
+                   ALL = CROCOMIRE + MZM_CROCOMIRE_MULTI_COUNT };
             for (int m = 0; m < ALL; ++m) {
                 const char *known = m < CHOZO ? mzm_chozo_multi_names[m]
                                     : m < KRAID ? mzm_kraid_multi_names[m - CHOZO]
@@ -2674,7 +2675,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                                     : m < MECHA ? MZM_MOTHER_BRAIN_MULTI_NAME
                                     : m < TANGLE ? mzm_mecha_ridley_multi_names[m - MECHA]
                                     : m < IMAGO_ADULT ? MZM_TANGLE_VINE_MULTI_NAME
-                                                      : mzm_imago_adult_multi_names[m - IMAGO_ADULT];
+                                    : m < CROCOMIRE ? mzm_imago_adult_multi_names[m - IMAGO_ADULT]
+                                                    : mzm_crocomire_multi_names[m - CROCOMIRE];
                 if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
                 MzmMultiSprite *multi = m < CHOZO ? &sprites->tables.chozo_multi[m]
@@ -2685,7 +2687,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                                         : m < MECHA ? &sprites->tables.mother_brain_multi
                                         : m < TANGLE ? &sprites->tables.mecha_ridley_multi[m - MECHA]
                                         : m < IMAGO_ADULT ? &sprites->tables.tangle_vine_multi
-                                                          : &sprites->tables.imago_adult_multi[m - IMAGO_ADULT];
+                                        : m < CROCOMIRE ? &sprites->tables.imago_adult_multi[m - IMAGO_ADULT]
+                                                        : &sprites->tables.crocomire_multi[m - CROCOMIRE];
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;
                 for (int p = 0; p < MZM_MULTI_PARTS; ++p) {

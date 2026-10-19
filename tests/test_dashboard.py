@@ -145,6 +145,9 @@ class OutputTests(unittest.TestCase):
         self.assertIn("Sidehopper", mzm_done)
         self.assertIn("Mother Brain", mzm_done)
         self.assertIn("Acid Worm", mzm_done)
+        self.assertIn("Tangle Vine Red Garuta", mzm_done)
+        self.assertIn("Crocomire", mzm_done)
+        self.assertIn("Gekitai Machine", mzm_done)
         mzm_items = {row["name"]: row["status"] for row in mzm["items"]}
         self.assertEqual(mzm_items["Small Energy Drop"], "partial")
         self.assertEqual(mzm_items["Missile Drop"], "partial")
@@ -191,6 +194,10 @@ class OutputTests(unittest.TestCase):
         self.assertEqual(mapping["IMAGO_COCOON"], "mzm.enemies.imago_cocoon")
         self.assertEqual(mapping["DISCOVERED_IMAGO_PASSAGE_EVENT_TRIGGER"],
                          "mzm.enemies.imago_cocoon")
+        self.assertEqual(mapping["TANGLE_VINE_RED_GARUTA"],
+                         "mzm.enemies.tangle_vine")
+        self.assertEqual(mapping["CROCOMIRE"], "mzm.enemies.crocomire")
+        self.assertEqual(mapping["GEKITAI_MACHINE"], "mzm.enemies.crocomire")
         # Drops take the MZM_FAMILY_DROP default, not a case label.
         self.assertNotIn("SMALL_ENERGY_DROP", mapping)
         self.assertTrue(set(mapping.values()).issubset(annotation_ids))

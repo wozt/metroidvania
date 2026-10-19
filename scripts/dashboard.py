@@ -373,6 +373,9 @@ MZM_FAMILY_GROUP_RE = re.compile(
 # The enemy drops handled by is_drop() in src/runtime/mzm_sprites.c.
 MZM_DROP_SPRITES = ("LARGE_ENERGY_DROP", "SMALL_ENERGY_DROP", "MISSILE_DROP",
                     "SUPER_MISSILE_DROP", "POWER_BOMB_DROP", "MULTIPLE_LARGE_ENERGY")
+# Native actor prototypes without combat stats that still belong in the
+# monster inventory rather than the general object catalog.
+MZM_MONSTER_EXCEPTIONS = ("GEKITAI_MACHINE",)
 # Sprite families whose parity annotation is not mzm.enemies.<family>.
 MZM_FAMILY_ANNOTATIONS = {
     "MZM_FAMILY_DROP": "mzm.items.enemy_drops",
@@ -474,7 +477,7 @@ def bestiary() -> dict:
     for record in object_catalog.build_mzm():
         symbol = record["native_type"].removeprefix("PSPRITE_")
         is_drop = symbol in MZM_DROP_SPRITES
-        if record["category"] == "Enemy / actor":
+        if record["category"] == "Enemy / actor" or symbol in MZM_MONSTER_EXCEPTIONS:
             monsters.append(row(record["native_id"], record["name"],
                                 sprite_annotations.get(symbol)))
         elif record["category"] == "Item / pickup" or is_drop:

@@ -113,7 +113,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_IMAGO_LARVA_RIGHT": 0, "PSPRITE_IMAGO_LARVA_LEFT": 0,
           "PSPRITE_IMAGO_LARVA_RIGHT_SIDE": 0,
           "PSPRITE_IMAGO_COCOON": 0, "PSPRITE_IMAGO_COCOON_AFTER_FIGHT": 0,
-          "PSPRITE_MECHA_RIDLEY": 0, "PSPRITE_HIVE": 0, "PSPRITE_BARISTUTE": 0, "PSPRITE_TANGLE_VINE_TALL": 0, "PSPRITE_RUINS_TEST": 0, "PSPRITE_FALLING_CHOZO_PILLAR": 0, "PSPRITE_FAKE_POWER_BOMB": 0, "PSPRITE_KRAID_ELEVATOR_STATUE": 0, "PSPRITE_IMAGO": 0, "PSPRITE_ESCAPE_SHIP": 0, "PSPRITE_ESCAPE_GATE1": 0,
+          "PSPRITE_MECHA_RIDLEY": 0, "PSPRITE_HIVE": 0, "PSPRITE_BARISTUTE": 0, "PSPRITE_TANGLE_VINE_TALL": 0, "PSPRITE_RUINS_TEST": 0, "PSPRITE_FALLING_CHOZO_PILLAR": 0, "PSPRITE_FAKE_POWER_BOMB": 0, "PSPRITE_KRAID_ELEVATOR_STATUE": 0, "PSPRITE_IMAGO": 0, "PSPRITE_CROCOMIRE": 0, "PSPRITE_ESCAPE_SHIP": 0, "PSPRITE_ESCAPE_GATE1": 0,
           "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0, "PSPRITE_RIDLEY": 0, "PSPRITE_MOTHER_BRAIN": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
@@ -231,6 +231,11 @@ MULTI_SPRITE_DATA = {
     "sprites/tangle_vine.c": (("sprites_ai/tangle_vine.h", "data/sprites/tangle_vine.h",
                                "structs/sprite.h"),
                               ("sTangleVineGerutaMultiSpriteData_Idle",)),
+    "sprites/crocomire.c": (("sprites_ai/crocomire.h", "data/sprites/crocomire.h",
+                              "structs/sprite.h"),
+                             tuple("sCrocomireMultiSpriteData_" + name for name in (
+                                 "Idle", "WalkingForward", "WalkingBackwards", "Screaming",
+                                 "Dying", "Angry"))),
     "sprites/unknown_item_chozo_statue.c": (
         ("sprites_ai/unknown_item_chozo_statue.h", "data/sprites/unknown_item_chozo_statue.h",
          "structs/sprite.h"),

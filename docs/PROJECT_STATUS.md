@@ -3866,6 +3866,9 @@ No automatic reciprocal link or native engine encoder is implemented.
   explosions, the conditional event and the reload.
 - **In game.** A capture in `ridley_019` shows the eggs before the fight
   (ignored `captures/imago/eggs.png`).
+- Follow-up fix: the u8 `sImagoDynamicPaletteData` moved from `AI_TABLES`
+  (whose s16 declaration test it broke in the first Imago commit) to a
+  dedicated `BYTE_PAIR_TABLES` export with its own declaration test.
 - Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
   Python 440/440 passed; generated parity and dashboard data are fresh.
 

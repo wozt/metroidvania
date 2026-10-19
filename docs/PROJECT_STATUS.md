@@ -3838,6 +3838,25 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0392 - in-game checks for Gadora and Deorem
+
+- A capture in `kraid_029` shows Gadora's eye closed on its hatch, then
+  opening once Samus comes within seven blocks in front of it.
+- A capture in `brinstar_012` shows Deorem waking:
+  - its trigger needs missiles and Samus standing under its centre;
+  - it spawns, its head emerges between its spiked segments, then it
+    retracts.
+- Both move from `partial` to `functional`; the parity inventory now
+  contains 31 partial and 71 functional entries.
+- The worker robot stays `partial`. Its sleeping is confirmed in
+  `chozodia_014`, but the spawn points left Samus crouched in a low passage
+  and no captured shot reached it. Its immune-projectile wake path matches
+  `ProjectileHitSpriteImmuneToProjectiles` and is unit tested.
+- Captures: ignored `captures/enemies/gadora-eye.png` and
+  `deorem-gadora.png`.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 444/444 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0391 - in-game checks for four bosses and gadgets
 
 - Baristute (`kraid_007`), the hives with their Mellows (`brinstar_015`)

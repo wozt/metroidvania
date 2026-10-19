@@ -107,15 +107,40 @@ def frames(rom: bytes, symbols, table: str) -> list[tuple[int, int]]:
     return result
 
 
-def render(rom: bytes, vram: bytes, palette, pointer: int, flip: str):
-    """Pixels relative to the projectile position for one OAM frame."""
+def oam_entries(rom: bytes, pointer: int) -> list[dict]:
+    """Decode the non-affine OBJ entries stored by one native frame."""
     count = struct.unpack("<H", _slice(rom, pointer, 2, "projectile OAM"))[0]
     # At most the 128 hardware OAM entries (the glass tube uses over 32).
     if not 1 <= count <= 128:
         raise ValueError("invalid projectile OAM part count")
     raw = _slice(rom, pointer + 2, count * 6, "projectile OAM entries")
-    entries = [unpack_oam(struct.pack("<HHHH", *struct.unpack_from("<HHH", raw, i * 6), 0))
-               for i in range(count)]
+    return [unpack_oam(struct.pack("<HHHH", *struct.unpack_from("<HHH", raw, i * 6), 0))
+            for i in range(count)]
+
+
+def object_bounds(rom: bytes, pointer: int, flip: str) -> tuple[int, int, int, int, int]:
+    """Return the full OAM box union after ``SpriteDraw``'s global flip.
+
+    Unlike the cropped bitmap bounds, these include transparent edge pixels.
+    Affine OBJ hardware clips rotated pixels to these object rectangles.
+    """
+    entries = oam_entries(rom, pointer)
+    flip_x, flip_y = FLIPS[flip]
+    boxes = []
+    for entry in entries:
+        x = -entry["x"] - entry["w"] if flip_x else entry["x"]
+        y = -entry["y"] - entry["h"] if flip_y else entry["y"]
+        boxes.append((x, y, x + entry["w"], y + entry["h"]))
+    left = min(box[0] for box in boxes)
+    top = min(box[1] for box in boxes)
+    right = max(box[2] for box in boxes)
+    bottom = max(box[3] for box in boxes)
+    return left, top, right - left, bottom - top, len(entries)
+
+
+def render(rom: bytes, vram: bytes, palette, pointer: int, flip: str):
+    """Pixels relative to the projectile position for one OAM frame."""
+    entries = oam_entries(rom, pointer)
     flip_x, flip_y = FLIPS[flip]
     pixels = {}
     for entry in reversed(entries):  # OAM slot zero has the highest priority.

@@ -3838,6 +3838,31 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0387 - native affine clipping for Zeela eyes
+
+- Added a ROM-local `oam_bounds.tsv` sidecar to the Zero Mission enemy
+  sprite extraction. It records the full native OBJ rectangles after global
+  flips, including transparent edge pixels that the tightly cropped BMPs
+  intentionally omit; the shared bitmap index remains backward compatible.
+- The runtime now loads and validates those bounds and uses the native OBJ
+  center for single-part affine sprites. Rotation and Q8.8 scaling happen
+  around that center, and SDL output is clipped to the original hardware
+  window (or its double-size window) while preserving any existing renderer
+  clip.
+- This completes the thrown red-Zeela eyes: their 8x8 OAM object no longer
+  grows outside the hardware box while spinning. A capture in `kraid_017`
+  destroys a red Zeela with Screw Attack and shows both secondary eyes in
+  their moving state, so `mzm.enemies.zeela` moves from `partial` to
+  `functional`. The parity inventory now contains 47 partial and 55
+  functional entries.
+- Added a ROM-free regression for full OAM bounds, transparent edges and X/Y
+  global flips. The ignored private sprite library was rebuilt successfully;
+  no extracted data is tracked.
+- Validation on 2026-10-19: the warning-clean build, CTest 35/35 and Python
+  441/441 passed. The dashboard reports 139 features and 68 functional or
+  better, with 127 passing tests; generated-data checks and the
+  proprietary-file guard pass.
+
 ## Patch 0386 - supported unlock scope and native liquid splashes
 
 - Removed the bundled NES game from the runtime scope. A first clear now

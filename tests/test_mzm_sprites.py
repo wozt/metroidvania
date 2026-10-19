@@ -2,14 +2,29 @@
 """ROM-free tests of the Zero Mission sprite placements and data parsing."""
 from pathlib import Path
 import unittest
+from unittest import mock
 
-from scripts import mzm_sprites
+from scripts import mzm_projectile_compose, mzm_sprites
 
 DECOMP = Path(__file__).resolve().parents[1] / "third_party/mzm"
 
 
 @unittest.skipUnless((DECOMP / "src/sprite.c").is_file(), "pinned MZM decompilation missing")
 class MzmSpriteDataTests(unittest.TestCase):
+    def test_oam_bounds_keep_transparent_edges_and_follow_global_flips(self):
+        entries = [
+            {"x": -5, "y": -4, "w": 8, "h": 8},
+            {"x": 4, "y": -2, "w": 16, "h": 8},
+        ]
+        with mock.patch.object(mzm_projectile_compose, "oam_entries",
+                               return_value=entries):
+            self.assertEqual(mzm_projectile_compose.object_bounds(b"", 0, "none"),
+                             (-5, -4, 25, 10, 2))
+            self.assertEqual(mzm_projectile_compose.object_bounds(b"", 0, "x"),
+                             (-20, -4, 25, 10, 2))
+            self.assertEqual(mzm_projectile_compose.object_bounds(b"", 0, "y"),
+                             (-5, -6, 25, 10, 2))
+
     def test_psprite_enum_matches_the_runtime_ids(self):
         ids = mzm_sprites.psprite_ids(
             (DECOMP / "include/constants/sprite.h").read_text(encoding="utf-8"))

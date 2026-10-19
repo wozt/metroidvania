@@ -1781,6 +1781,7 @@ static void runtime_apply_difficulty_event(uint8_t events[32], uint8_t difficult
 #define RUNTIME_LIBRARY_FRAME_MAX 256
 #define RUNTIME_ANIMATION_MAP_MAX 2048
 #define RUNTIME_INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1\n"
+#define RUNTIME_OAM_BOUNDS_SCHEMA "schema\tmetroidvania-oam-bounds-v1\n"
 #define RUNTIME_CANNON_SCHEMA "schema\tmetroidvania-samus-cannon-offsets-v1\n"
 /* One native frame: duration, top-left offset from the character's draw
  * origin, an optional arm cannon offset and the private BMP. */
@@ -1788,6 +1789,8 @@ static void runtime_apply_difficulty_event(uint8_t events[32], uint8_t difficult
 typedef struct {
     unsigned int ticks;
     int offset_x,offset_y;
+    bool has_oam_bounds;
+    int oam_x,oam_y,oam_w,oam_h,oam_parts;
     bool has_cannon;
     int cannon_x,cannon_y;
     char path[256];
@@ -1912,6 +1915,38 @@ static RuntimeLibraryEntry *runtime_library_find(RuntimeLibrary *lib,const char 
         if(order<0)low=middle+1; else high=middle-1;
     }
     return NULL;
+}
+/* Full native OBJ rectangles accompany the tightly cropped sprite bitmaps.
+ * They are required for affine hardware clipping, where transparent edge
+ * pixels still determine the pivot and the visible object window. */
+static bool runtime_oam_bounds_open(RuntimeLibrary *lib,const char *path) {
+    FILE *f=fopen(path,"rb");
+    if(!f)return false;
+    char line[512];
+    bool ok=fgets(line,sizeof line,f) && !strcmp(line,RUNTIME_OAM_BOUNDS_SCHEMA);
+    int rows=0;
+    while(ok && fgets(line,sizeof line,f)) {
+        char key[160];unsigned int index;int x,y,w,h,parts,consumed=0;
+        if(sscanf(line,"%159[^\t]\t%u\t%d\t%d\t%d\t%d\t%d%n",
+                  key,&index,&x,&y,&w,&h,&parts,&consumed)!=7 ||
+           (line[consumed]!='\n' && line[consumed]!='\r') ||
+           x < -256 || x > 256 || y < -256 || y > 256 ||
+           w < 1 || w > 512 || h < 1 || h > 512 || parts < 1 || parts > 128) {
+            ok=false;break;
+        }
+        RuntimeLibraryEntry *entry=runtime_library_find(lib,key);
+        if(!entry || index>=(unsigned)entry->count || entry->frames[index].has_oam_bounds) {
+            ok=false;break;
+        }
+        RuntimeLibraryFrame *frame=&entry->frames[index];
+        frame->has_oam_bounds=true;
+        frame->oam_x=x;frame->oam_y=y;frame->oam_w=w;frame->oam_h=h;
+        frame->oam_parts=parts;
+        rows++;
+    }
+    if(ferror(f))ok=false;
+    fclose(f);
+    return ok && rows>0;
 }
 /* Per-frame arm cannon offsets written by the Samus pipeline. */
 static bool runtime_cannon_offsets_open(RuntimeLibrary *lib,const char *path) {
@@ -2378,6 +2413,7 @@ static int runtime_room_music(const Room *room) {
 
 #define RUNTIME_SPRITE_TABLES "assets/extracted/metroid/metadata/sprites.tsv"
 #define RUNTIME_SPRITE_LIBRARY "assets/extracted/metroid/sprites/enemies/runtime/runtime_index.tsv"
+#define RUNTIME_SPRITE_OAM_BOUNDS "assets/extracted/metroid/sprites/enemies/runtime/oam_bounds.tsv"
 #define RUNTIME_MAX_SPRITES 24
 typedef struct {
     MzmSpriteTables tables;
@@ -3743,23 +3779,58 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                                      (double)(sprite->rotation&0xFF)*360.0/256.0,&center,
                                      SDL_FLIP_NONE);
         } else if(sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE) {
-            /* Each part turns around its own centre after its flip; the
-             * composed frame turns around its centre (exact for
-             * single-part frames, unclipped); the Q8.8 scaling shrinks the
-             * composed frame around its centre, where the GBA shrinks each
-             * part around its own (0 is taken as 1 for the AIs that never
-             * set it). */
-            if(sprite->scaling && sprite->scaling!=0x100) {
-                float k=(float)sprite->scaling/256.f;
-                float cxm=box.x+box.w/2.f,cym=box.y+box.h/2.f;
-                box.w*=k;
-                box.h*=k;
-                box.x=cxm-box.w/2.f;
-                box.y=cym-box.h/2.f;
+            /* Affine OBJ transforms are centred on the full hardware box,
+             * including transparent edges, then clipped to that box. The
+             * exported bounds make this exact for single-part frames. */
+            if(art->has_oam_bounds && art->oam_parts==1) {
+                float origin_x=box.x-(float)art->offset_x*scale;
+                float origin_y=box.y-(float)art->offset_y*scale;
+                float center_x=(float)art->oam_x+(float)art->oam_w/2.f;
+                float center_y=(float)art->oam_y+(float)art->oam_h/2.f;
+                float k=sprite->scaling?(float)sprite->scaling/256.f:1.f;
+                box.x=origin_x+(center_x+((float)art->offset_x-center_x)*k)*scale;
+                box.y=origin_y+(center_y+((float)art->offset_y-center_y)*k)*scale;
+                box.w=(float)art->w*k*scale;box.h=(float)art->h*k*scale;
+                SDL_FPoint center={(center_x-(float)art->offset_x)*k*scale,
+                                   (center_y-(float)art->offset_y)*k*scale};
+                float clip_x=origin_x+(float)art->oam_x*scale;
+                float clip_y=origin_y+(float)art->oam_y*scale;
+                float clip_w=(float)art->oam_w*scale,clip_h=(float)art->oam_h*scale;
+                if(sprite->status&MZM_SPRITE_STATUS_DOUBLE_SIZE) {
+                    clip_x-=clip_w/2.f;clip_y-=clip_h/2.f;
+                    clip_w*=2.f;clip_h*=2.f;
+                }
+                SDL_Rect clip={(int)SDL_floorf(clip_x),(int)SDL_floorf(clip_y),
+                               (int)SDL_ceilf(clip_x+clip_w)-(int)SDL_floorf(clip_x),
+                               (int)SDL_ceilf(clip_y+clip_h)-(int)SDL_floorf(clip_y)};
+                SDL_Rect previous={0};
+                bool had_clip=SDL_RenderClipEnabled(renderer);
+                if(had_clip) {
+                    SDL_GetRenderClipRect(renderer,&previous);
+                    int x0=clip.x>previous.x?clip.x:previous.x;
+                    int y0=clip.y>previous.y?clip.y:previous.y;
+                    int x1=clip.x+clip.w<previous.x+previous.w?
+                           clip.x+clip.w:previous.x+previous.w;
+                    int y1=clip.y+clip.h<previous.y+previous.h?
+                           clip.y+clip.h:previous.y+previous.h;
+                    clip=(SDL_Rect){x0,y0,x1>x0?x1-x0:0,y1>y0?y1-y0:0};
+                }
+                SDL_SetRenderClipRect(renderer,&clip);
+                SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
+                                         (double)(sprite->rotation&0xFF)*360.0/256.0,
+                                         &center,SDL_FLIP_NONE);
+                SDL_SetRenderClipRect(renderer,had_clip?&previous:NULL);
+            } else {
+                /* Multi-part frames still need per-part extracted objects. */
+                if(sprite->scaling && sprite->scaling!=0x100) {
+                    float k=(float)sprite->scaling/256.f;
+                    float cxm=box.x+box.w/2.f,cym=box.y+box.h/2.f;
+                    box.w*=k;box.h*=k;box.x=cxm-box.w/2.f;box.y=cym-box.h/2.f;
+                }
+                SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
+                                         (double)(sprite->rotation&0xFF)*360.0/256.0,NULL,
+                                         SDL_FLIP_NONE);
             }
-            SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
-                                     (double)(sprite->rotation&0xFF)*360.0/256.0,NULL,
-                                     SDL_FLIP_NONE);
         } else {
             SDL_RenderTexture(renderer,art_texture,NULL,&box);
         }
@@ -4460,6 +4531,7 @@ int main(int argc, char **argv) {
     sprites.tables_ok = runtime_sprite_tables_open(&sprites, RUNTIME_SPRITE_TABLES);
     sprites.kinds_ok = sprites.tables_ok &&
                        runtime_library_open(&sprite_library, RUNTIME_SPRITE_LIBRARY) &&
+                       runtime_oam_bounds_open(&sprite_library, RUNTIME_SPRITE_OAM_BOUNDS) &&
                        runtime_sprite_kinds_open(&sprites, &sprite_library, &projectile_library);
     if (!sprites.kinds_ok)
         fprintf(stderr, "No Zero Mission sprites: python3 -m scripts.mzm_sprites\n");

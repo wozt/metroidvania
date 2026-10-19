@@ -65,6 +65,7 @@ from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset  # noqa: E402
 from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic  # noqa: E402
 
 ENEMIES_RUNTIME = METROID_SPRITES / "enemies" / "runtime"
+OAM_BOUNDS_SCHEMA = "metroidvania-oam-bounds-v1"
 DECOMP = ROOT / "third_party/mzm"
 # Sprites with a ported AI, and the palette row it selects (ZoomerInit:
 # the red Zoomer sets paletteRow and absolutePaletteRow to 1; the Rippers
@@ -684,6 +685,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     folder.mkdir(parents=True, exist_ok=True)
     write_atomic(folder / "sprites.tsv", "\n".join(lines) + "\n")
     library = LibraryWriter(root, ENEMIES_RUNTIME)
+    oam_bounds = ["schema\t" + OAM_BOUNDS_SCHEMA]
     _, common_palette = stage_common(rom, symbols)
     for sprite, row, gfx, palette_symbol, tables in plan:
         vram, palette = stage(rom, symbols, gfx, palette_symbol, row)
@@ -780,8 +782,13 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                         if sprite in TINT_OVERFLOW_ALLOWED and suffix.startswith("/row"):
                             continue
                         raise
-                    library.add(f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}{suffix}",
-                                frames)
+                    key = f"Sprite/{sprite[len('PSPRITE_'):]}/{table[1:]}/{flip}{suffix}"
+                    library.add(key, frames)
+                    for index, (pointer, _) in enumerate(entries):
+                        left, top, width, height, parts = mzm_projectile_compose.object_bounds(
+                            rom, pointer, flip)
+                        oam_bounds.append(
+                            f"{key}\t{index}\t{left}\t{top}\t{width}\t{height}\t{parts}")
             if sprite == "PSPRITE_MECHA_RIDLEY" and table in MECHA_RIDLEY_WEAPON_TABLES:
                 address, size = symbols[MECHA_RIDLEY_WEAPONS]
                 weapons = rom[rom_offset(address, rom):rom_offset(address, rom) + size]
@@ -792,7 +799,13 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                         pixels = mzm_projectile_compose.render(rom, staged, palette, pointer, "none")
                         bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
                         frames.append((bmp, duration, left, top))
-                    library.add(f"Sprite/MECHA_RIDLEY/{table[1:]}/none/w{index}", frames)
+                    key = f"Sprite/MECHA_RIDLEY/{table[1:]}/none/w{index}"
+                    library.add(key, frames)
+                    for frame_index, (pointer, _) in enumerate(entries):
+                        left, top, width, height, parts = mzm_projectile_compose.object_bounds(
+                            rom, pointer, "none")
+                        oam_bounds.append(
+                            f"{key}\t{frame_index}\t{left}\t{top}\t{width}\t{height}\t{parts}")
     # The message banner (PSPRITE_MESSAGE_BANNER) with each message's text
     # in its graphics (TextProcessMessageBanner over SpriteLoadGfx's tiles).
     for name, vram in banners:
@@ -849,6 +862,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
             bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
             frames.append((bmp, duration, left, top))
         library.add(f"Particle/{table[1:]}/none", frames)
+    library.write_text("oam_bounds.tsv", "\n".join(oam_bounds) + "\n")
     return library.finish()
 
 

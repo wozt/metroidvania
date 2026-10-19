@@ -677,8 +677,11 @@ static void reflection_start(Ctx *c) {
         }
         break;
     case REFLECTION_START_POSE_LEAVING:
-        /* The PE_SAMUS_REFLECTION particle is not ported. */
-        if (--s->work0 == 0) s->status = 0;
+        if (--s->work0 == 0) {
+            s->status = 0;
+            ai_particle_set(c, (uint16_t)(s->y - (BLOCK_SIZE + HALF_BLOCK_SIZE - PIXEL_SIZE)),
+                            s->x, MZM_PE_SAMUS_REFLECTION);
+        }
         break;
     default: break;
     }
@@ -1210,6 +1213,10 @@ void ai_ruins_test(Ctx *c) {
     }
     if (!s->secondary) {
         ruins_test(c);
+        mzm_samus_reflection_target(c->f->effects, c->f->globals->sub1.y,
+                                    c->f->globals->sub1.x,
+                                    c->f->globals->sub1.work1 != 0,
+                                    c->f->globals->sub1.work3 == STAGE_LAST_SYMBOL_HIT);
         return;
     }
     switch (s->sprite_id) {

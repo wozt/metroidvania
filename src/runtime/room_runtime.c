@@ -6544,17 +6544,34 @@ int main(int argc, char **argv) {
                                  runtime_door_fade_shade(&door_fade),false,2);
         /* SpriteDebrisDrawAll and ParticleDraw: the common sprite graphics. */
         for(int i=0;i<MZM_MAX_SPRITE_DEBRIS+MZM_MAX_PARTICLES && sprites.kinds_ok && !dying_mode;i++) {
-            const char *table; uint16_t px,py,frame;
+            const char *table; uint16_t px,py,effect_frame;
             if(i<MZM_MAX_SPRITE_DEBRIS) {
                 const MzmSpriteDebris *d=&sprites.effects.debris[i];
                 if(!d->exists || d->frame_counter==0)continue;
-                table="SpriteDebrisOam";px=d->x;py=d->y;frame=d->frame;
+                table="SpriteDebrisOam";px=d->x;py=d->y;effect_frame=d->frame;
             } else {
                 const MzmParticle *p=&sprites.effects.particles[i-MZM_MAX_SPRITE_DEBRIS];
                 if((p->status&(MZM_PARTICLE_EXISTS|MZM_PARTICLE_ONSCREEN))!=
                    (MZM_PARTICLE_EXISTS|MZM_PARTICLE_ONSCREEN) ||
                    p->status&MZM_PARTICLE_NOT_DRAWN)continue;
-                table=mzm_particle_table(p->effect);px=p->x;py=p->y;frame=p->frame;
+                table=mzm_particle_table(p->effect);px=p->x;py=p->y;effect_frame=p->frame;
+                /* ParticleSamusReflection copies Samus's current body OAM
+                 * every frame and ParticleDraw mirrors each part around the
+                 * Ruins Test owner. Mirror the composed body bounds around
+                 * that same anchor instead of looking up a static table. */
+                if(p->effect==MZM_PE_SAMUS_REFLECTION) {
+                    if(!sprite || !lib_entry || lib_entry->count==0)continue;
+                    int body_frame=frame<lib_entry->count?frame:lib_entry->count-1;
+                    const RuntimeLibraryFrame *art=&lib_entry->frames[body_frame];
+                    SDL_FRect box={viewport.x+((float)(px>>2)-(float)art->offset_x-
+                                                (float)art->w-cx)*scale,
+                                   viewport.y+((float)(py>>2)+(float)art->offset_y-cy)*scale,
+                                   (float)art->w*scale,(float)art->h*scale};
+                    SDL_RenderTextureRotated(renderer,sprite,NULL,&box,0.0,NULL,
+                                             p->status&MZM_PARTICLE_X_FLIP?
+                                             SDL_FLIP_HORIZONTAL:SDL_FLIP_NONE);
+                    continue;
+                }
             }
             if(!table)continue;
             char key[160];
@@ -6567,7 +6584,7 @@ int main(int argc, char **argv) {
                 entry=runtime_library_find(&sprite_library,key);
             }
             if(!entry || entry->count==0)continue;
-            int index=frame<entry->count?frame:0;
+            int index=effect_frame<entry->count?effect_frame:0;
             SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
             if(!art_texture)continue;
             const RuntimeLibraryFrame *art=&entry->frames[index];

@@ -823,6 +823,26 @@ int main(void) {
            fx.particles[5].x == 100);
     memset(&fx, 0, sizeof fx);
 
+    /* ParticleSamusReflection has no static OAM table: it follows the
+     * Ruins Test owner, stays alive off screen, hides while a symbol is
+     * shootable and dies when the last symbol is hit. */
+    mzm_particle_set(&fx, 0, 0, MZM_PE_SAMUS_REFLECTION);
+    mzm_samus_reflection_target(&fx, 300, 400, false, false);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(fx.particles[0].status & MZM_PARTICLE_LIVE_OFF_SCREEN &&
+           fx.particles[0].status & MZM_PARTICLE_LOW_BG_PRIORITY &&
+           fx.particles[0].status & MZM_PARTICLE_X_FLIP &&
+           !(fx.particles[0].status & MZM_PARTICLE_NOT_DRAWN) &&
+           fx.particles[0].y == 392 && fx.particles[0].x == 400);
+    mzm_samus_reflection_target(&fx, 304, 404, true, false);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(fx.particles[0].status & MZM_PARTICLE_NOT_DRAWN &&
+           fx.particles[0].y == 396 && fx.particles[0].x == 404);
+    mzm_samus_reflection_target(&fx, 304, 404, true, true);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(fx.particles[0].status == 0);
+    memset(&fx, 0, sizeof fx);
+
     /* Debris type 0x11 arcs left with sDebris11YVelocity (each value twice)
      * onto the floor (row 10), then bounces with the bouncing table. */
     const int16_t debris_tables[MZM_DEBRIS_TABLES][9] = {
@@ -7160,6 +7180,7 @@ int main(void) {
         tables.sine[64] = 256;                       /* cos(0) */
         MzmSprite room[16] = {0};
         MzmSpriteGlobals globals = {0};
+        MzmEffects ruins_effects = {0};
         MzmSpriteSamusLink link = {0};
         MzmEquipment suitless = {.energy = 99, .max_energy = 99};
         static MzmWeapons pistol;
@@ -7172,6 +7193,7 @@ int main(void) {
         rf.samus_link = &link;
         rf.equipment = &suitless;
         rf.weapons = &pistol;
+        rf.effects = &ruins_effects;
         rf.difficulty = 1;
         rf.kinds[MZM_FAMILY_RUINS_TEST] = &ruins_kind;
         link.set_pose = MZM_POSE_NONE;
@@ -7241,6 +7263,14 @@ int main(void) {
                globals.ruins_test_reflection_gfx == MZM_RUINS_TEST_REFLECTION_GFX_TURNING_RIGHT);
         mzm_sprite_update(&room[0], 0, &rf);
         assert(room[0].pose == 0x8 && globals.boss_work3 == 1799);   /* 1800, then the timer */
+        /* Two frames after Samus turns, the static reflection hands over
+         * to the persistent particle that mirrors her current body. */
+        mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
+        assert(room[reflection].status);
+        mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
+        assert(!room[reflection].status &&
+               ruins_effects.particles[0].status == MZM_PARTICLE_EXISTS &&
+               ruins_effects.particles[0].effect == MZM_PE_SAMUS_REFLECTION);
         /* The cover hides the ghost while no symbol is out. */
         mzm_sprite_update(&room[cover], (uint8_t)cover, &rf);
         mzm_sprite_update(&room[cover], (uint8_t)cover, &rf);

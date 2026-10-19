@@ -128,7 +128,26 @@ static bool update_animation(MzmParticle *p, const MzmEffectKinds *kinds) {
  * ParticleShinesparkDestroyed, ParticleSpeedboosterDestroyed,
  * ParticleHittingSomething*): removed when their table ends; the explosions
  * move to the high OAM priority on their first frame. */
-static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
+static void process(MzmEffects *effects, MzmParticle *p, const MzmEffectKinds *kinds) {
+    /* ParticleSamusReflection: dynamically uses Samus's current body OAM,
+     * mirrors it around the Ruins Test owner, and remains alive off screen.
+     * The renderer supplies that dynamic frame instead of an exported table. */
+    if (p->effect == MZM_PE_SAMUS_REFLECTION) {
+        if (p->stage == 0) {
+            p->stage = 1;
+            p->status |= MZM_PARTICLE_LIVE_OFF_SCREEN | MZM_PARTICLE_LOW_BG_PRIORITY |
+                         MZM_PARTICLE_X_FLIP;
+        }
+        p->y = (uint16_t)(effects->samus_reflection_y + BLOCK_SIZE + BLOCK_SIZE / 2 - 4);
+        p->x = effects->samus_reflection_x;
+        if (!effects->samus_reflection_symbol_active)
+            p->status &= (uint8_t)~MZM_PARTICLE_NOT_DRAWN;
+        else {
+            p->status |= MZM_PARTICLE_NOT_DRAWN;
+            if (effects->samus_reflection_fight_ended) p->status = 0;
+        }
+        return;
+    }
     /* ParticleFreezingSpriteWith*: drawn every other frame. */
     if (p->effect == MZM_PE_FREEZING_SPRITE_WITH_ICE ||
         p->effect == MZM_PE_FREEZING_SPRITE_WITH_CHARGED_ICE)
@@ -207,7 +226,19 @@ static void check_on_screen(MzmParticle *p, uint16_t camera_x, uint16_t camera_y
     uint16_t left = (uint16_t)(base_x - SCREEN_X_BLOCK_PADDING);
     uint16_t right = (uint16_t)(base_x + SCREEN_SIZE_X_SUB_PIXEL + SCREEN_X_BLOCK_PADDING);
     if (left < x && x < right && bottom < y && y < top) p->status |= MZM_PARTICLE_ONSCREEN;
-    else p->status = 0;
+    else if (p->status & MZM_PARTICLE_LIVE_OFF_SCREEN)
+        p->status &= (uint8_t)~MZM_PARTICLE_ONSCREEN;
+    else
+        p->status = 0;
+}
+
+void mzm_samus_reflection_target(MzmEffects *effects, uint16_t y, uint16_t x,
+                                 bool symbol_active, bool fight_ended) {
+    if (!effects) return;
+    effects->samus_reflection_y = y;
+    effects->samus_reflection_x = x;
+    effects->samus_reflection_symbol_active = symbol_active;
+    effects->samus_reflection_fight_ended = fight_ended;
 }
 
 void mzm_particles_process(MzmEffects *effects, const MzmEffectKinds *kinds,
@@ -219,7 +250,7 @@ void mzm_particles_process(MzmEffects *effects, const MzmEffectKinds *kinds,
             MzmParticle *p = &effects->particles[i];
             if ((p->status & (MZM_PARTICLE_EXISTS | MZM_PARTICLE_HIGH_OAM_PRIORITY)) != wanted)
                 continue;
-            process(p, kinds);
+            process(effects, p, kinds);
             if (p->status & MZM_PARTICLE_EXISTS) check_on_screen(p, camera_x, camera_y);
         }
     }

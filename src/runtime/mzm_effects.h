@@ -70,6 +70,7 @@ enum {
      * the normal priority). */
     MZM_PE_SECOND_MEDIUM_DUST = 56,
     MZM_PE_SECOND_TWO_MEDIUM_DUST = 57,
+    MZM_PE_SAMUS_REFLECTION = 58,
 };
 
 /* ParticleStatus */
@@ -78,7 +79,9 @@ enum {
     MZM_PARTICLE_ONSCREEN = 1 << 1,
     MZM_PARTICLE_HIGH_OAM_PRIORITY = 1 << 2,
     MZM_PARTICLE_NOT_DRAWN = 1 << 3,
+    MZM_PARTICLE_LIVE_OFF_SCREEN = 1 << 4,
     MZM_PARTICLE_LOW_BG_PRIORITY = 1 << 5,
+    MZM_PARTICLE_X_FLIP = 1 << 7,
 };
 
 typedef struct {
@@ -104,6 +107,10 @@ typedef struct {
 typedef struct {
     MzmParticle particles[MZM_MAX_PARTICLES];
     MzmSpriteDebris debris[MZM_MAX_SPRITE_DEBRIS];
+    /* gSubSpriteData1 as read by ParticleSamusReflection. */
+    uint16_t samus_reflection_y, samus_reflection_x;
+    bool samus_reflection_symbol_active;
+    bool samus_reflection_fight_ended;
 } MzmEffects;
 
 /* Frame durations of each effect's OAM table (by ParticleEffectId) and of
@@ -120,6 +127,10 @@ const char *mzm_particle_table(uint8_t effect);
 
 /* ParticleSet */
 void mzm_particle_set(MzmEffects *effects, uint16_t y, uint16_t x, uint8_t effect);
+/* Supply the Ruins Test owner's current state to its persistent reflection
+ * particle. The particle itself adds the native vertical anchor offset. */
+void mzm_samus_reflection_target(MzmEffects *effects, uint16_t y, uint16_t x,
+                                 bool symbol_active, bool fight_ended);
 /* ParticleProcessAll during gameplay: the high OAM priority particles, then
  * the others; each runs its effect, then ParticleCheckOnScreen against the
  * camera (subpixels). */

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-19**.
+Last updated: **2026-10-20**.
 
 ## Current product state
 
@@ -3837,6 +3837,29 @@ No automatic reciprocal link or native engine encoder is implemented.
   functional or better and 114 with passing tests. Every reconstruction task
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
+
+## Patch 0406 - dynamic Ruins Test Samus reflection
+
+- Ported `ParticleSamusReflection`, the persistent mirror image that replaces
+  the opening reflection two frames after Samus turns away from the
+  background.
+- The particle follows `gSubSpriteData1`, mirrors Samus's current body frame
+  around the ghost's horizontal anchor, uses her live suit palette, remains
+  alive outside the camera and keeps the native low-background priority and
+  X-flip status.
+- Its visibility now follows the shootable-symbol timer: the mirror is visible
+  while no symbol is available, hidden while one can be shot and destroyed
+  when the fourth symbol is hit.
+- ROM-free coverage checks the actor-to-particle handoff, target following,
+  native status bits, visibility changes and terminal removal. A real
+  `chozodia_042` capture after turning and running right shows the mirrored
+  running pose following the ghost at the arena centre.
+- The Ruins Test remains partial only for its `gInGameTimerAtBosses` record and
+  an emulator comparison.
+- Validation on 2026-10-20: the warning-clean full build, CTest 36/36 and
+  Python 446/446 passed. Dashboard generation reported 140 features, 92
+  functional or better and 128 with passing tests. Generated-data checks were
+  fresh and the proprietary-file guard passed.
 
 ## Patch 0405 - native palette background flashes
 

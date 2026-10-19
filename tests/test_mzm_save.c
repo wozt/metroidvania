@@ -9,6 +9,7 @@
 #include "mzm_save.h"
 
 static MzmSaveData data, back;
+static MzmUnlockData unlocks, unlocks_back;
 
 int main(void) {
     memset(&data, 0, sizeof data);
@@ -90,6 +91,24 @@ int main(void) {
     assert(mzm_save_read(path, &back) && back.equipment.max_missiles == 15 && back.escaped_zebes);
     remove(path);
     assert(!mzm_save_read(path, &back));
+    /* FileScreenOptionsUnlocked is a separate global, checksummed file. */
+    const char *unlock_path = "test_mzm_unlocks.sav";
+    unlocks.gallery_images = 0x81;
+    unlocks.fusion_gallery_images = 0x12;
+    unlocks.sound_test_and_original_metroid = 7;
+    unlocks.time_attack = 0x89ABCDEFu;
+    assert(mzm_unlocks_write(unlock_path, &unlocks));
+    assert(mzm_unlocks_read(unlock_path, &unlocks_back));
+    assert(unlocks_back.gallery_images == 0x81 && unlocks_back.fusion_gallery_images == 0x12 &&
+           unlocks_back.sound_test_and_original_metroid == 7 &&
+           unlocks_back.time_attack == 0x89ABCDEFu);
+    FILE *corrupt = fopen(unlock_path, "r+b");
+    assert(corrupt && fseek(corrupt, 20, SEEK_SET) == 0);
+    int byte = fgetc(corrupt);
+    assert(byte != EOF && fseek(corrupt, 20, SEEK_SET) == 0 && fputc(byte ^ 1, corrupt) != EOF);
+    fclose(corrupt);
+    assert(!mzm_unlocks_read(unlock_path, &unlocks_back));
+    remove(unlock_path);
     printf("mzm_save: ok\n");
     return 0;
 }

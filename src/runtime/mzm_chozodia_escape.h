@@ -3,9 +3,9 @@
  * non-gameplay screen from the ROM bank: the blue ship leaving the mother
  * ship, the mother ship heating up inside its growing explosion (the
  * H-blank window becomes a per-line WIN0H), blowing up, the ship leaving
- * Zebes and the "MISSION ACCOMPLISHED" letters. The ending flags, the
- * gallery and time attack unlocks, their save and the credits that follow
- * are not ported. */
+ * Zebes and the "MISSION ACCOMPLISHED" letters. The runtime surrounding
+ * this screen saves the completion and gallery/difficulty unlock state,
+ * then starts the credits. */
 #ifndef MZM_CHOZODIA_ESCAPE_H
 #define MZM_CHOZODIA_ESCAPE_H
 

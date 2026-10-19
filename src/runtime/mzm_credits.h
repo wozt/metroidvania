@@ -3,8 +3,7 @@
  * screen from the ROM bank: the credits scrolling over the dark Chozo
  * wall, the wall scrolling down and zooming into the Chozo drawing, the
  * end screen with Samus posing, then the ending image with the clear time
- * and collection rate. The unlocked-options pop-up that follows is not
- * ported. */
+ * and collection rate, followed by the unlocked-options pop-up. */
 #ifndef MZM_CREDITS_H
 #define MZM_CREDITS_H
 
@@ -12,6 +11,7 @@
 #include <stdint.h>
 
 #include "mzm_screen.h"
+#include "mzm_text.h"
 
 /* What ChozodiaEscapeGetItemCountAndEndingNumber reads: gEquipment's
  * maximums and abilities (suitMisc, beams and bombs: 14 at most),
@@ -27,7 +27,14 @@ typedef struct {
  * missile (16-23) and energy (24-31) tank counts. 0 without the ROM bank. */
 uint32_t mzm_ending_item_count_and_number(const MzmEndingStats *stats);
 
-enum { MZM_ENDING_OAM = 30 };
+enum {
+    MZM_ENDING_OAM = 30,
+    MZM_ENDING_FLAG_NEW_TIME_ATTACK_RECORD = 1 << 0,
+    MZM_ENDING_FLAG_UNKNOWN = 1 << 4,
+    MZM_ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR = 1 << 5,
+    MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR = 1 << 6,
+    MZM_ENDING_FLAG_FIRST_CLEAR = 1 << 7,
+};
 
 /* struct EndingData, the parts the ported credits and ending image use. */
 typedef struct {
@@ -43,7 +50,7 @@ typedef struct {
     uint8_t letter_palette_timer[MZM_ENDING_OAM];
     uint16_t oam_x[MZM_ENDING_OAM], oam_y[MZM_ENDING_OAM];
     uint32_t oam_frame[MZM_ENDING_OAM];
-    uint8_t pose_palette_timer;
+    uint8_t pose_palette_timer, has_new_record, new_record_palette_timer;
     uint16_t dispcnt, bldcnt;
 } MzmEndingData;
 
@@ -51,7 +58,10 @@ typedef struct {
     uint8_t sub_mode;               /* gSubGameMode1 */
     uint32_t pen;                   /* the item count and ending number */
     uint8_t igt_hours, igt_minutes, igt_seconds;
+    uint8_t ending_flags;           /* gEndingFlags */
     MzmEndingData data;             /* ENDING_DATA */
+    MzmMessage popup_message;       /* gCurrentMessage */
+    uint32_t popup_text;            /* English file-screen text in ROM */
     uint16_t bg_x[4], bg_y[4];      /* gBg0-3X/YPosition */
 } MzmCredits;
 
@@ -60,8 +70,11 @@ typedef struct {
 bool mzm_credits_enter(MzmCredits *c, MzmScreen *s, uint32_t pen);
 /* gInGameTimer shown by EndingImageLoadIGTAndPercentageGraphics. */
 void mzm_credits_set_time(MzmCredits *c, uint8_t hours, uint8_t minutes, uint8_t seconds);
+/* Transient flags selected while ChozodiaEscapeInit updates the persistent
+ * unlock state. They select the new-record badge and unlocked pop-ups. */
+void mzm_credits_set_ending_flags(MzmCredits *c, uint8_t flags);
 /* CreditsHandler, then the current V-blank, for one frame; true once the
- * ending image ended (the unlocked-options pop-up follows natively). */
+ * ending image and any unlocked-options pop-ups ended. */
 bool mzm_credits_update(MzmCredits *c, MzmScreen *s);
 
 #endif /* MZM_CREDITS_H */

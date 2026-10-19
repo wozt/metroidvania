@@ -53,6 +53,16 @@ typedef struct {
     uint8_t completed_game;
 } MzmSaveData;
 
+/* The native FileScreenOptionsUnlocked block is global rather than owned by
+ * one of the three game files. The runtime keeps the fields used by the
+ * ending and reserves the remaining native unlock groups for later menus. */
+typedef struct {
+    uint16_t gallery_images;
+    uint16_t fusion_gallery_images;
+    uint8_t sound_test_and_original_metroid;
+    uint32_t time_attack;
+} MzmUnlockData;
+
 /* The serialized form; `size` receives its length. Returns a malloc'ed
  * buffer (NULL on failure). */
 uint8_t *mzm_save_encode(const MzmSaveData *data, size_t *size);
@@ -62,5 +72,9 @@ bool mzm_save_decode(const uint8_t *bytes, size_t size, MzmSaveData *data);
 /* Writes (through a temporary file renamed over `path`) or reads a save. */
 bool mzm_save_write(const char *path, const MzmSaveData *data);
 bool mzm_save_read(const char *path, MzmSaveData *data);
+
+/* Versioned, checksummed global unlock file (separate from the game slots). */
+bool mzm_unlocks_write(const char *path, const MzmUnlockData *data);
+bool mzm_unlocks_read(const char *path, MzmUnlockData *data);
 
 #endif

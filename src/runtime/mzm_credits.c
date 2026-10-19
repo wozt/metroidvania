@@ -22,12 +22,18 @@ enum {
     BLDY_MAX = 16, BLDALPHA_MAX = 16,
     /* gSubGameMode1 of CreditsHandler */
     MODE_CREDITS = 2, MODE_END_SCREEN_INIT = 4, MODE_END_SCREEN = 6, MODE_ENDING_IMAGE_INIT = 8,
-    MODE_ENDING_IMAGE_FADE_IN = 9, MODE_ENDING_IMAGE = 10,
+    MODE_ENDING_IMAGE_FADE_IN = 9, MODE_ENDING_IMAGE = 10, MODE_UNLOCKED_FADE_OUT = 11,
+    MODE_UNLOCKED_INIT = 12, MODE_UNLOCKED_FADE_IN = 13, MODE_UNLOCKED_POP_UP = 14,
+    MODE_UNLOCKED_END = 15,
     ENDING_OAM_NONE = 0, ENDING_OAM_CHAR = 1, ENDING_OAM_LINE = 2,
     ENDING_LINE_CLEAR_TIME = 0, ENDING_LINE_TIMER, ENDING_LINE_YOUR_RATE,
     ENDING_LINE_COLLECTING, ENDING_LINE_PERCENTAGE, ENDING_LINE_NEXT_MISSION,
     ENDING_LINE_COUNT,
     LANGUAGE_ENGLISH = 2,
+    FILE_TEXT_GALLERY_UNLOCK = 33, FILE_TEXT_TIME_ATTACK_RECORD_UNLOCK = 34,
+    FILE_TEXT_SOUND_TEST_UNLOCK = 35, FILE_TEXT_NES_METROID_UNLOCK = 36,
+    POPUP_FLAGS = MZM_ENDING_FLAG_UNKNOWN | MZM_ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR |
+                  MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR | MZM_ENDING_FLAG_FIRST_CLEAR,
 };
 
 static uint32_t sym(const char *name) { return mzm_rom_symbol(name, NULL); }
@@ -122,6 +128,15 @@ static void credits_vblank(MzmCredits *c, MzmScreen *s) {
 static void end_screen_vblank(MzmCredits *c, MzmScreen *s) {
     write_common(c, s);
     for (int bg = 1; bg < 4; ++bg) write_bg(s, bg, false, c->bg_x[bg] & 0x1FF);
+}
+
+/* UnlockedOptionsVBlank */
+static void unlocked_options_vblank(MzmCredits *c, MzmScreen *s) {
+    write_common(c, s);
+    gba_ppu_write16(s->ppu, GBA_REG_WIN0H,
+                    (uint16_t)(c->data.oam_x[0] << 8 | (c->data.oam_x[1] & 0xFF)));
+    gba_ppu_write16(s->ppu, GBA_REG_WIN0V,
+                    (uint16_t)(c->data.oam_y[0] << 8 | (c->data.oam_y[1] & 0xFF)));
 }
 
 /* CreditsInit */
@@ -745,6 +760,13 @@ static void ending_display_text(MzmEndingData *d, MzmScreen *s) {
         }
         slot = ending_draw_frame(s, slot, d->oam_frame[i], d->oam_x[i], d->oam_y[i], palette);
     }
+    if (d->has_new_record) {
+        if (d->new_record_palette_timer++ > 70) d->new_record_palette_timer = 0;
+        uint8_t palette = mzm_rom_u8(sym("sEndingImageNewRecordPalettes") +
+                                     d->new_record_palette_timer / 6u);
+        slot = ending_draw_frame(s, slot, sym("sEndingImageOam_NewRecordEnglish"),
+                                 48, 59, palette);
+    }
     s->next_oam_slot = (uint8_t)slot;
 }
 
@@ -759,7 +781,10 @@ static bool ending_image_display(MzmCredits *c, MzmScreen *s) {
         d->unk_1 = 1;
         break;
     case 110: ending_display_line_permanently(d, ENDING_LINE_CLEAR_TIME); break;
-    case 180: ending_display_line_permanently(d, ENDING_LINE_TIMER); break;
+    case 180:
+        ending_display_line_permanently(d, ENDING_LINE_TIMER);
+        if (c->ending_flags & MZM_ENDING_FLAG_NEW_TIME_ATTACK_RECORD) d->has_new_record++;
+        break;
     case 330: ending_load_text_oam(d, "sEndingImageOam_YourRate_English", 11); break;
     case 375: ending_display_line_permanently(d, ENDING_LINE_YOUR_RATE); break;
     case 380: ending_load_text_oam(d, "sEndingImageOam_Collecting_English", 17); break;
@@ -792,6 +817,142 @@ static bool ending_image_display(MzmCredits *c, MzmScreen *s) {
     return ended;
 }
 
+static uint32_t popup_text_address(uint8_t message) {
+    uint32_t pointers = sym("sEnglishTextPointers_FileScreen");
+    return pointers ? mzm_rom_u32(pointers + (uint32_t)message * 4u) : 0;
+}
+
+/* TextStartFileScreen and TextProcessFileScreenPopUp, for the English ROM. */
+static void popup_start_text(MzmCredits *c, uint8_t message) {
+    c->popup_message = mzm_text_message_from_rom(sym("sMessageFileScreen_Empty"));
+    c->popup_message.message_id = message;
+    c->popup_text = popup_text_address(message);
+}
+
+static uint8_t popup_process_text(MzmCredits *c, MzmScreen *s) {
+    MzmMessage *m = &c->popup_message;
+    if (m->stage == 0) {
+        if (m->line > 3 || m->message_ended) {
+            m->stage = 1;
+            return 0;
+        }
+        uint8_t *dst = s->ppu->vram + (uint32_t)m->line * 0x800u;
+        for (int i = 0; i < 8; ++i) {
+            int state = mzm_text_process_message(m, c->popup_text, dst, s->button_input);
+            if (state == MZM_TEXT_ENDED) {
+                m->stage++;
+                m->indent = 0;
+                break;
+            }
+            if (state == MZM_TEXT_NEW_LINE || state == MZM_TEXT_NEW_PAGE) {
+                m->indent = 0;
+                break;
+            }
+            if (m->line > 3) break;
+        }
+        return 0;
+    }
+    if (m->stage == 1) {
+        m->line++;
+        m->stage++;
+    }
+    return m->line;
+}
+
+/* UnlockedOptionsInit. */
+static void unlocked_options_init(MzmCredits *c, MzmScreen *s) {
+    MzmEndingData *d = &c->data;
+    gba_ppu_write16(s->ppu, GBA_REG_DISPCNT, 0);
+    memset(d, 0, sizeof *d);
+    mzm_clear_gfx_ram(s);
+    decompress(s, "sUnlockedOptionsTileTable", 0x8000);
+    memset(s->ppu->vram + 0x7FE0, 0xFF, 0x20);
+    for (uint32_t i = 0; i < 0x800; i += 4) {
+        s->ppu->vram[0x8800 + i] = 0xFF;
+        s->ppu->vram[0x8800 + i + 1] = 0xF3;
+        s->ppu->vram[0x8800 + i + 2] = 0xFF;
+        s->ppu->vram[0x8800 + i + 3] = 0xF3;
+    }
+    copy_palette(s, "sUnlockedOptionsPal", 15 * 16);
+    bgcnt(s, 0, 0, 16, 0, 0);
+    bgcnt(s, 1, 0, 17, 1, 0);
+    s->next_oam_slot = 0;
+    mzm_reset_free_oam(s);
+    write_bg(s, 0, false, 0);
+    write_bg(s, 0, true, 0);
+    d->dispcnt = 0;
+    d->bldcnt = 0;
+    s->bldalpha_l = BLDALPHA_MAX;
+    s->bldalpha_h = 0;
+    s->bldy = BLDY_MAX;
+    unlocked_options_vblank(c, s);
+}
+
+/* UnlockedOptionsPopUp: 0 running, 1 show the first-clear second pop-up,
+ * 2 all pop-ups ended. */
+static uint8_t unlocked_options_popup(MzmCredits *c, MzmScreen *s) {
+    MzmEndingData *d = &c->data;
+    uint8_t ended = 0;
+    switch (d->timer++) {
+    case 0: {
+        memset(s->ppu->vram, 0, 0x2000);
+        uint8_t message = c->ending_flags & MZM_ENDING_FLAG_FIRST_CLEAR ? FILE_TEXT_GALLERY_UNLOCK :
+                          c->ending_flags & MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR ? FILE_TEXT_SOUND_TEST_UNLOCK :
+                          c->ending_flags & MZM_ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR ?
+                              FILE_TEXT_TIME_ATTACK_RECORD_UNLOCK : FILE_TEXT_NES_METROID_UNLOCK;
+        popup_start_text(c, message);
+        d->oam_types[0] = 0;
+        break;
+    }
+    case 32:
+        d->dispcnt = GBA_DCNT_BG1 | GBA_DCNT_WIN0;
+        gba_ppu_write16(s->ppu, GBA_REG_WININ, 3);
+        gba_ppu_write16(s->ppu, GBA_REG_WINOUT, 0);
+        d->unk_1++;
+        d->oam_x[0] = d->oam_x[1] = GBA_SCREEN_W / 2;
+        d->oam_y[0] = d->oam_y[1] = GBA_SCREEN_H / 2;
+        break;
+    case 128:
+        d->timer--;
+        break;
+    default:
+        break;
+    }
+    if (d->oam_types[0] == 0) d->oam_types[0] = popup_process_text(c, s);
+    if (d->unk_1 == 1) {
+        if (d->oam_x[0] > 0x30) {
+            d->oam_x[0] -= 8;
+            d->oam_x[1] += 8;
+            d->oam_y[0] -= 4;
+            d->oam_y[1] += 4;
+        } else {
+            d->dispcnt = GBA_DCNT_BG0 | GBA_DCNT_BG1 | GBA_DCNT_WIN0;
+            d->oam_x[0] = 0x2C;
+            d->oam_x[1] = 0xBC;
+            d->oam_y[0] = 0x2C;
+            d->oam_y[1] = 0x74;
+            d->unk_1++;
+        }
+    } else if (d->unk_1 == 2) {
+        if (s->changed_input & GBA_KEY_A) {
+            d->dispcnt = GBA_DCNT_BG1 | GBA_DCNT_WIN0;
+            d->unk_1++;
+            d->timer++;
+        }
+    } else if (d->unk_1 == 3) {
+        if (d->oam_x[0] < 0x70) {
+            d->oam_x[0] += 8;
+            d->oam_x[1] -= 8;
+            d->oam_y[0] += 4;
+            d->oam_y[1] -= 4;
+        } else {
+            d->dispcnt = 0;
+            ended = c->ending_flags & MZM_ENDING_FLAG_FIRST_CLEAR ? 1 : 2;
+        }
+    }
+    return ended;
+}
+
 bool mzm_credits_enter(MzmCredits *c, MzmScreen *s, uint32_t pen) {
     memset(c, 0, sizeof *c);
     c->pen = pen;
@@ -804,7 +965,9 @@ void mzm_credits_set_time(MzmCredits *c, uint8_t hours, uint8_t minutes, uint8_t
     c->igt_seconds = seconds;
 }
 
-/* CreditsHandler, up to the unlocked-options pop-up. */
+void mzm_credits_set_ending_flags(MzmCredits *c, uint8_t flags) { c->ending_flags = flags; }
+
+/* CreditsHandler. */
 bool mzm_credits_update(MzmCredits *c, MzmScreen *s) {
     MzmEndingData *d = &c->data;
     d->unk_6 = 0;
@@ -861,14 +1024,55 @@ bool mzm_credits_update(MzmCredits *c, MzmScreen *s) {
         }
         break;
     case MODE_ENDING_IMAGE:
-        finished = ending_image_display(c, s);
+        if (ending_image_display(c, s)) {
+            if (c->ending_flags & POPUP_FLAGS) {
+                d->bldcnt = BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN;
+                s->bldy = 0;
+                c->sub_mode++;
+            } else {
+                finished = true;
+            }
+        }
         mzm_reset_free_oam(s);
+        break;
+    case MODE_UNLOCKED_FADE_OUT:
+        if (s->bldy < BLDY_MAX) s->bldy++;
+        else c->sub_mode++;
+        break;
+    case MODE_UNLOCKED_INIT:
+        unlocked_options_init(c, s);
+        c->sub_mode++;
+        return false;
+    case MODE_UNLOCKED_FADE_IN:
+        if (s->bldy) {
+            s->bldy--;
+        } else {
+            d->bldcnt = 0;
+            c->sub_mode++;
+        }
+        break;
+    case MODE_UNLOCKED_POP_UP: {
+        uint8_t result = unlocked_options_popup(c, s);
+        if (result) {
+            c->ending_flags = 0;
+            d->stage++;
+            d->unk_1 = 0;
+            d->end_screen_timer = 0;
+            d->timer = 0;
+            if (result > 1) c->sub_mode++;
+        }
+        mzm_reset_free_oam(s);
+        break;
+    }
+    case MODE_UNLOCKED_END:
+        finished = true;
         break;
     default:
         c->sub_mode++;                                 /* 1, 3 */
         break;
     }
-    if (end_screen) end_screen_vblank(c, s);
+    if (c->sub_mode >= MODE_UNLOCKED_INIT) unlocked_options_vblank(c, s);
+    else if (end_screen) end_screen_vblank(c, s);
     else credits_vblank(c, s);
     return finished;
 }

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T05:45:26+00:00",
+ "generated_at": "2026-10-19T14:15:29+00:00",
  "git": {
-  "commit": "2ea63ad",
+  "commit": "0c94fa4",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 64,
-    "functional": 64,
+    "partial": 63,
+    "functional": 65,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 64,
-   "functional_or_better_percent": 46.0,
+   "functional_or_better": 65,
+   "functional_or_better_percent": 46.8,
    "with_passing_tests": 127,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -260,15 +260,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 40,
-    "functional": 51,
+    "partial": 39,
+    "functional": 52,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 51,
-   "functional_or_better_percent": 56.0,
+   "functional_or_better": 52,
+   "functional_or_better_percent": 57.1,
    "with_passing_tests": 91,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -914,10 +914,13 @@
     "src/runtime/mzm_chozodia_escape.h",
     "src/runtime/mzm_screen.c",
     "src/runtime/gba_ppu.c",
-    "src/runtime/room_runtime.c"
+    "src/runtime/room_runtime.c",
+    "src/runtime/mzm_save.c",
+    "src/runtime/mzm_save.h"
    ],
    "tests": [
-    "tests/test_mzm_screens.c"
+    "tests/test_mzm_screens.c",
+    "tests/test_mzm_save.c"
    ],
    "dependencies": [
     "mzm.enemies.escape_ship",
@@ -940,13 +943,16 @@
     "ChozodiaEscapeMissionAccomplished",
     "ApplyMonochromeToPalette",
     "ProcessComplexOam",
-    "CalculateOamPart4"
+    "CalculateOamPart4",
+    "SramProcessEndingSave",
+    "SramWrite_FileScreenOptionsUnlocked"
    ],
-   "limitations": "The H-blank WIN0H writes are a per-line table read by the PPU (line y takes the value computed for line y - 1, line 0 its own), and the register keeps the last line's value once the H-blank stops. The ending flags, the gallery, difficulty and time attack unlocks (CheckUnlockTimeAttack, SramWrite_FileScreenOptionsUnlocked), the soft reset lock, the ending save and the non-English letters are not ported; GM_CREDITS follows (mzm.cutscenes.credits). Not compared with an emulator. The escape ship's EFFECT_CUTSCENE_ESCAPING_CHOZODIA freezes the room, fades it out and enters the sequence on the non-gameplay screen from the ROM bank; --chozodia-escape starts it directly. After a 16-step fade in it plays the five native stages with their lengths (312, 224, 304, 280 frames, then the letters up to 472): the mother ship door opening and the blue ship growing out of it and diving (double-sized affine objects, matrix 0), then climbing away; the mother ship heating up (sChozodiaEscapeShipHeatingUpPal / GroundHeatingUpPal rows, ever faster shaking), its white explosion growing as an ellipse (sHaze_PowerBomb_WindowValuesPointers stretched by 1.2, window 0 with brightness up inside); the crater with the decaying mother ship, its explosions and the flash fading by alpha then to black; Zebes with the ship far away, then flying past the camera with the escape music; Samus in her ship turning grey (ApplyMonochromeToPalette of sChozodiaEscapeMissionAccomplishedPal) with the English MISSION ACCOMPLISHED letters revealed one every four frames, and the fade out. Its five sounds, the music fade and the escape music play. A bank-backed test checks the fades, stage lengths, sounds, explosion window, grey palette and letters; captures of every stage and one from the escape ship in chozodia_092 show the sequence.",
-   "next_action": "Port the ending flags and unlocks; compare the sequence with an emulator.",
+   "limitations": "The H-blank WIN0H writes are a per-line table read by the PPU (line y takes the value computed for line y - 1, line 0 its own), and the register keeps the last line's value once the H-blank stops. The completion flag, gallery image and difficulty unlocks are saved, but CheckUnlockTimeAttack and its per-boss validity data, Time Attack records, the soft-reset lock and non-English letters are not ported; GM_CREDITS follows (mzm.cutscenes.credits). Not compared with an emulator. The escape ship's EFFECT_CUTSCENE_ESCAPING_CHOZODIA freezes the room, fades it out and enters the sequence on the non-gameplay screen from the ROM bank; --chozodia-escape starts it directly. After a 16-step fade in it plays the five native stages with their lengths (312, 224, 304, 280 frames, then the letters up to 472): the mother ship door opening and the blue ship growing out of it and diving (double-sized affine objects, matrix 0), then climbing away; the mother ship heating up (sChozodiaEscapeShipHeatingUpPal / GroundHeatingUpPal rows, ever faster shaking), its white explosion growing as an ellipse (sHaze_PowerBomb_WindowValuesPointers stretched by 1.2, window 0 with brightness up inside); the crater with the decaying mother ship, its explosions and the flash fading by alpha then to black; Zebes with the ship far away, then flying past the camera with the escape music; Samus in her ship turning grey (ApplyMonochromeToPalette of sChozodiaEscapeMissionAccomplishedPal) with the English MISSION ACCOMPLISHED letters revealed one every four frames, and the fade out. Its five sounds, the music fade and the escape music play. Before the sequence, the current slot receives the English completion bit for its difficulty and a separate versioned, checksummed options file receives the ending gallery bit and difficulty clear; first-clear and first-hard transient flags feed the later pop-ups. A bank-backed test checks the fades, stage lengths, sounds, explosion window, grey palette and letters; captures of every stage and one from the escape ship in chozodia_092 show the sequence.",
+   "next_action": "Port Time Attack validity, records and unlock generation; compare the sequence with an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_screens.c"
+     "tests/test_mzm_screens.c",
+     "tests/test_mzm_save.c"
     ],
     "in_game_check": [
      "chozodia_092"
@@ -969,6 +975,16 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_mzm_save.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_save"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -981,15 +997,18 @@
    "area": "mzm",
    "category": "cutscenes",
    "title": "Credits and ending screens (GM_CREDITS)",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_credits.c",
     "src/runtime/mzm_credits.h",
-    "src/runtime/room_runtime.c"
+    "src/runtime/room_runtime.c",
+    "src/runtime/mzm_save.c",
+    "src/runtime/mzm_save.h"
    ],
    "tests": [
-    "tests/test_mzm_screens.c"
+    "tests/test_mzm_screens.c",
+    "tests/test_mzm_save.c"
    ],
    "dependencies": [
     "mzm.cutscenes.chozodia_escape"
@@ -1012,13 +1031,17 @@
     "EndingImageUpdateLettersSpawnDelay",
     "EndingImageDisplayText",
     "EndingImageDisplay",
+    "UnlockedOptionsInit",
+    "UnlockedOptionsPopUp",
+    "UnlockedOptionsVBlank",
     "ChozodiaEscapeGetItemCountAndEndingNumber"
    ],
-   "limitations": "The unlocked-options pop-up, ending flags and new-time-record badge, the end of the soft reset lock and the gallery are not ported: after the ending image the runtime returns to the intro. The ability count reads the obtained items, unknown ones included, as gEquipment.suitMisc and beamBombs hold them. Ending text is English only. Not compared with an emulator. After the Chozodia escape, ChozodiaEscapeGetItemCountAndEndingNumber computes the ending from the maximums (sTankIncreaseAmount of the difficulty), the abilities, the difficulty and the in-game hours, and GM_CREDITS plays from the ROM bank with the credits music: the US sCredits lines scroll at 7/16 pixel a frame over the dark Chozo wall, each built from sCreditsCharactersGfx (white, blue and red rows, the two-row white names, the copyright lines) and written by the V-blank into BG0, or BG1 half a tile aside for an odd width; at the end line the wall fades in and the text out, the wall scrolls down to its bottom (513 frames), zooms into the Chozo drawing and fades to black (961 frames). The end screen then slides and blends Samus's poses (sEndingSamusPosingGfx_1 to _5), the last by ending (full suit for image 0, helmet off for 1, suitless otherwise, through the white palettes), with the drifting space background, and fades out. EndingImageInit then selects one of the eight native ending illustrations, loads the English text and the exact clear-time and collection-rate digits into OBJ VRAM, slides both background halves into place and reveals CLEAR TIME, the timer, YOUR RATE FOR COLLECTING ITEMS IS, the percentage and NEXT MISSION letter by letter on their native schedule. At 22.93 seconds it waits for A, B or START, fades the music over 256 frames and ends at frame 1664. A bank-backed test checks the ending numbers, the first credit line, stage lengths, final pose, image number, 03:04:05 and 100% graphics, letter promotion, permanent lines, input gate, music fade and exact ending frame.",
-   "next_action": "Port the unlocked-options pop-up and its save/unlock flow; compare the credits with an emulator.",
+   "limitations": "Time Attack cannot yet generate its first-clear or new-record flags because that mode and its per-boss record data are not ported. The soft-reset lock and the Gallery, Sound Test, Original Metroid and Time Attack Options entries themselves are not ported. The ability count reads the obtained items, unknown ones included, as gEquipment.suitMisc and beamBombs hold them. Ending and pop-up text is English only. Not compared with an emulator. After the Chozodia escape, ChozodiaEscapeGetItemCountAndEndingNumber computes the ending from the maximums (sTankIncreaseAmount of the difficulty), the abilities, the difficulty and the in-game hours, and GM_CREDITS plays from the ROM bank with the credits music: the US sCredits lines scroll at 7/16 pixel a frame over the dark Chozo wall, each built from sCreditsCharactersGfx (white, blue and red rows, the two-row white names, the copyright lines) and written by the V-blank into BG0, or BG1 half a tile aside for an odd width; at the end line the wall fades in and the text out, the wall scrolls down to its bottom (513 frames), zooms into the Chozo drawing and fades to black (961 frames). The end screen then slides and blends Samus's poses (sEndingSamusPosingGfx_1 to _5), the last by ending (full suit for image 0, helmet off for 1, suitless otherwise, through the white palettes), with the drifting space background, and fades out. EndingImageInit then selects one of the eight native ending illustrations, loads the English text and the exact clear-time and collection-rate digits into OBJ VRAM, slides both background halves into place and reveals CLEAR TIME, the timer, YOUR RATE FOR COLLECTING ITEMS IS, the percentage and NEXT MISSION letter by letter on their native schedule. At 22.93 seconds it waits for A, B or START, fades the music over 256 frames and ends at frame 1664. A bank-backed test checks the ending numbers, the first credit line, stage lengths, final pose, image number, 03:04:05 and 100% graphics, letter promotion, permanent lines, input gate, music fade and exact ending frame. UnlockedOptionsInit then opens the native window over its blue panel; the English Gallery, Original Metroid, Sound Test or Time Attack Records message is drawn eight characters per frame, A closes the panel at frame 128, and a first clear shows Gallery followed by Original Metroid. The new-record OAM badge is also supported. The first-clear, difficulty-clear and gallery-image state persists in a separate versioned, checksummed global options file, while the current slot persists its difficulty completion bit. The tests check the two first-clear panels, their window geometry and rendered pixels, the other message priorities and the unlock file's checksum.",
+   "next_action": "Port the Options entries and Time Attack mode/record generation; compare the credits with an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_screens.c"
+     "tests/test_mzm_screens.c",
+     "tests/test_mzm_save.c"
     ],
     "in_game_check": [
      "chozodia_092"
@@ -1038,6 +1061,16 @@
       "registered": true,
       "ctest": [
        "mzm_screens"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_save.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_save"
       ],
       "outcome": "passed",
       "exists": true
@@ -11011,6 +11044,12 @@
  },
  "timeline": [
   {
+   "commit": "0c94fa4",
+   "date": "2026-10-19",
+   "subject": "Port the Zero Mission ending result image",
+   "scope": "project"
+  },
+  {
    "commit": "2ea63ad",
    "date": "2026-10-19",
    "subject": "Port the remaining native monster prototypes",
@@ -11483,12 +11522,6 @@
    "date": "2026-10-13",
    "subject": "feat(mzm): screen shakes, pistons and the glass tube",
    "scope": "mzm"
-  },
-  {
-   "commit": "dc8dbec",
-   "date": "2026-10-13",
-   "subject": "feat(mzm): Chozodia security gates",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -11516,7 +11549,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1572,
+    "routines_cited_by_features": 1577,
     "call_edges": 6071
    },
    "aos": {

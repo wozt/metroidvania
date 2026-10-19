@@ -3838,6 +3838,36 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0385 - ending unlock pop-ups and persistence
+
+- Completed `GM_CREDITS` with `UnlockedOptionsInit`,
+  `UnlockedOptionsPopUp` and `UnlockedOptionsVBlank`. The native blue panel
+  expands through window 0, reveals its English text eight characters per
+  frame, waits for A at frame 128 and contracts before leaving the ending.
+- A first clear shows the native two-step sequence: `Gallery` followed by
+  `Original Metroid`. A later first Hard clear selects `Sound Test`, and the
+  Time Attack Records message is ready for the future Time Attack completion
+  flag. The ending result image also renders the animated `NEW RECORD` OAM
+  badge when that native flag is supplied.
+- Added a separate versioned, checksummed `options.sav` for the global
+  `FileScreenOptionsUnlocked` state. Ending the game records the gallery
+  image and cleared difficulty there, while the current game slot receives
+  its completed-difficulty bit before the Chozodia escape starts.
+- Preserved completion flags through later save-station writes. The previous
+  runtime save builder cleared this already-supported field whenever it
+  rebuilt a loaded save.
+- Extended the bank-backed screen regression through both first-clear
+  panels, their exact window geometry, rendered pixels, A gate and the
+  Sound Test and Time Attack Records priorities. The save regression checks
+  the global unlock round trip and rejects a corrupted checksum.
+- A real runtime capture shows the correctly colored `Gallery has been
+  added to the OPTIONS screen` panel. Time Attack validity and record
+  generation and the actual Options entries remain future work.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35
+  and Python 440/440 passed. The dashboard reports 139 features, 65
+  functional or better and 127 with passing tests; generated-data checks
+  are fresh and the proprietary-file guard passed.
+
 ## Patch 0384 - ending result image
 
 - Extended `GM_CREDITS` past Samus's final pose into the native ending image.

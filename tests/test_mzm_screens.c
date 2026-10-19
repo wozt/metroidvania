@@ -1789,6 +1789,8 @@ static void test_credits_bank(void) {
     mzm_sfx_clear();
     assert(mzm_credits_enter(&c, &screen, pen));
     mzm_credits_set_time(&c, 3, 4, 5);
+    mzm_credits_set_ending_flags(&c, MZM_ENDING_FLAG_NEW_TIME_ATTACK_RECORD |
+                                      MZM_ENDING_FLAG_FIRST_CLEAR);
     assert(!mzm_credits_update(&c, &screen));
     assert(c.sub_mode == 1 && screen.bldy == 16 && c.data.unk_e == 0x80 &&
            gba_ppu_read16(&ppu, GBA_REG_BG0VOFS) == 0x100 && count_requests(MZM_SFX_MUSIC_PLAY, 0x1B) == 1);
@@ -1826,7 +1828,7 @@ static void test_credits_bank(void) {
     while (c.data.timer < 111) assert(!mzm_credits_update(&c, &screen));
     assert(c.data.oam_length == 6 && c.data.oam_types[0] == 2);
     while (c.data.timer < 181) assert(!mzm_credits_update(&c, &screen));
-    assert(c.data.oam_types[1] == 2);
+    assert(c.data.oam_types[1] == 2 && c.data.has_new_record && screen.next_oam_slot > 0);
     while (c.data.timer < 1376) assert(!mzm_credits_update(&c, &screen));
     mzm_screen_input(&screen, 0);
     assert(!mzm_credits_update(&c, &screen) && c.data.timer == 1376);
@@ -1834,9 +1836,56 @@ static void test_credits_bank(void) {
     assert(!mzm_credits_update(&c, &screen) && c.data.timer == 1377 &&
            count_requests(MZM_SFX_MUSIC_FADE, 0) == 1);
     mzm_screen_input(&screen, 0);
-    bool ended = false;
-    for (f = 0; !ended && f < 400; ++f) ended = mzm_credits_update(&c, &screen);
-    assert(ended && f == 288 && c.sub_mode == 10 && c.data.timer == 1665);
+    for (f = 0; c.sub_mode < 11 && f < 400; ++f) assert(!mzm_credits_update(&c, &screen));
+    assert(f == 288 && c.sub_mode == 11 && c.data.timer == 1665 && screen.bldy == 0);
+    /* First clear: fade to the Gallery pop-up, expand its native window,
+     * wait at frame 128, close it, then show Original Metroid. */
+    for (f = 0; c.sub_mode < 12 && f < 30; ++f) assert(!mzm_credits_update(&c, &screen));
+    assert(f == 17 && screen.bldy == 16);
+    assert(!mzm_credits_update(&c, &screen) && c.sub_mode == 13);
+    for (f = 0; c.sub_mode < 14 && f < 30; ++f) assert(!mzm_credits_update(&c, &screen));
+    assert(f == 17 && screen.bldy == 0);
+    mzm_screen_input(&screen, 0);
+    while (c.data.unk_1 < 2) assert(!mzm_credits_update(&c, &screen));
+    assert(c.popup_text == mzm_rom_symbol("sEnglishText_FileScreen_GalleryUnlock", NULL) &&
+           c.data.oam_x[0] == 0x2C && c.data.oam_x[1] == 0xBC &&
+           c.data.oam_y[0] == 0x2C && c.data.oam_y[1] == 0x74);
+    uint16_t popup_line[GBA_SCREEN_W];
+    int popup_drawn = 0, popup_changes = 0;
+    for (int y = 44; y < 116; ++y) {
+        gba_ppu_render_line(&ppu, y, GBA_SCREEN_W, popup_line);
+        for (int x = 44; x < 188; ++x) {
+            popup_drawn += (popup_line[x] & 0x7FFF) != 0;
+            if (x > 44) popup_changes += popup_line[x] != popup_line[x - 1];
+        }
+    }
+    assert(popup_drawn > 8000 && popup_changes > 100);
+    while (c.data.timer < 128) assert(!mzm_credits_update(&c, &screen));
+    assert(!mzm_credits_update(&c, &screen) && c.data.timer == 128);
+    mzm_screen_input(&screen, GBA_KEY_A);
+    assert(!mzm_credits_update(&c, &screen) && c.data.unk_1 == 3);
+    mzm_screen_input(&screen, 0);
+    while (c.data.stage == 0) assert(!mzm_credits_update(&c, &screen));
+    assert(c.sub_mode == 14 && c.data.timer == 0 && c.ending_flags == 0);
+    assert(!mzm_credits_update(&c, &screen));
+    assert(c.popup_text == mzm_rom_symbol("sEnglishText_FileScreen_NesMetroidUnlock", NULL));
+    while (c.data.unk_1 < 2) assert(!mzm_credits_update(&c, &screen));
+    while (c.data.timer < 128) assert(!mzm_credits_update(&c, &screen));
+    mzm_screen_input(&screen, GBA_KEY_A);
+    assert(!mzm_credits_update(&c, &screen));
+    mzm_screen_input(&screen, 0);
+    while (c.sub_mode < 15) assert(!mzm_credits_update(&c, &screen));
+    assert(mzm_credits_update(&c, &screen));
+    /* The other native one-pop-up priorities select their own text. */
+    memset(&c.data, 0, sizeof c.data);
+    c.sub_mode = 14;
+    c.ending_flags = MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR;
+    assert(!mzm_credits_update(&c, &screen));
+    assert(c.popup_text == mzm_rom_symbol("sEnglishText_FileScreen_SoundTestUnlock", NULL));
+    memset(&c.data, 0, sizeof c.data);
+    c.ending_flags = MZM_ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR;
+    assert(!mzm_credits_update(&c, &screen));
+    assert(c.popup_text == mzm_rom_symbol("sEnglishText_FileScreen_TimeAttackRecordUnlock", NULL));
     mzm_rom_close();
 }
 

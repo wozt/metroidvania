@@ -10,6 +10,8 @@
 
 enum { VERSION = 2, HEADER = 8 + 4 + 4, TRAILER = 4 };
 static const char MAGIC[8] = {'M', 'V', 'Z', 'M', 'S', 'A', 'V', 'E'};
+static const char UNLOCK_MAGIC[8] = {'M', 'V', 'Z', 'M', 'U', 'N', 'L', 'K'};
+enum { UNLOCK_VERSION = 1, UNLOCK_PAYLOAD = 12, UNLOCK_SIZE = HEADER + UNLOCK_PAYLOAD + TRAILER };
 
 typedef struct {
     uint8_t *bytes;         /* NULL while measuring */
@@ -156,6 +158,13 @@ static uint32_t get32(const uint8_t *p) {
     return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
+static void put16(uint8_t *p, uint16_t v) {
+    p[0] = (uint8_t)v;
+    p[1] = (uint8_t)(v >> 8);
+}
+
+static uint16_t get16(const uint8_t *p) { return (uint16_t)(p[0] | (uint16_t)p[1] << 8); }
+
 uint8_t *mzm_save_encode(const MzmSaveData *data, size_t *size) {
     MzmSaveData copy = *data;
     Io measure = {NULL, NULL, 0, 0, true, VERSION};
@@ -227,4 +236,48 @@ bool mzm_save_read(const char *path, MzmSaveData *data) {
     ok = ok && mzm_save_decode(bytes, size, data);
     free(bytes);
     return ok;
+}
+
+static bool write_bytes(const char *path, const uint8_t *bytes, size_t size) {
+    char temporary[4096];
+    int n = snprintf(temporary, sizeof temporary, "%s.tmp", path);
+    bool ok = n > 0 && (size_t)n < sizeof temporary;
+    FILE *file = ok ? fopen(temporary, "wb") : NULL;
+    ok = file && fwrite(bytes, 1, size, file) == size;
+    if (file && fclose(file) != 0) ok = false;
+    if (ok) ok = rename(temporary, path) == 0;
+    else if (file) remove(temporary);
+    return ok;
+}
+
+bool mzm_unlocks_write(const char *path, const MzmUnlockData *data) {
+    uint8_t bytes[UNLOCK_SIZE] = {0};
+    memcpy(bytes, UNLOCK_MAGIC, sizeof UNLOCK_MAGIC);
+    put32(bytes + 8, UNLOCK_VERSION);
+    put32(bytes + 12, UNLOCK_PAYLOAD);
+    put16(bytes + HEADER, data->gallery_images);
+    put16(bytes + HEADER + 2, data->fusion_gallery_images);
+    bytes[HEADER + 4] = data->sound_test_and_original_metroid;
+    put32(bytes + HEADER + 8, data->time_attack);
+    put32(bytes + HEADER + UNLOCK_PAYLOAD, crc32(bytes + HEADER, UNLOCK_PAYLOAD));
+    return write_bytes(path, bytes, sizeof bytes);
+}
+
+bool mzm_unlocks_read(const char *path, MzmUnlockData *data) {
+    uint8_t bytes[UNLOCK_SIZE];
+    FILE *file = fopen(path, "rb");
+    if (!file) return false;
+    bool ok = fread(bytes, 1, sizeof bytes, file) == sizeof bytes && fgetc(file) == EOF;
+    fclose(file);
+    if (!ok || memcmp(bytes, UNLOCK_MAGIC, sizeof UNLOCK_MAGIC) != 0 ||
+        get32(bytes + 8) != UNLOCK_VERSION || get32(bytes + 12) != UNLOCK_PAYLOAD ||
+        crc32(bytes + HEADER, UNLOCK_PAYLOAD) != get32(bytes + HEADER + UNLOCK_PAYLOAD))
+        return false;
+    MzmUnlockData parsed = {0};
+    parsed.gallery_images = get16(bytes + HEADER);
+    parsed.fusion_gallery_images = get16(bytes + HEADER + 2);
+    parsed.sound_test_and_original_metroid = bytes[HEADER + 4];
+    parsed.time_attack = get32(bytes + HEADER + 8);
+    *data = parsed;
+    return true;
 }

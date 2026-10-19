@@ -2411,6 +2411,7 @@ typedef struct {
 static struct { uint8_t hours, minutes, seconds, frames; } runtime_igt;
 static bool runtime_max_igt;
 static uint8_t runtime_difficulty=1;
+static uint8_t runtime_completed_game;
 /* gArmCannonY / gArmCannonX (native subpixels), set by ProjectileUpdate
  * after the sprites: they see last frame's. */
 static uint16_t runtime_arm_cannon_y,runtime_arm_cannon_x;
@@ -2455,6 +2456,7 @@ static void runtime_apply_save(const MzmSaveData *save,MzmEquipment *equipment,
     runtime_igt.frames=save->igt.frames;
     runtime_max_igt=save->max_igt;
     runtime_difficulty=save->difficulty;
+    runtime_completed_game=save->completed_game;
     mzm_samus_init(samus,save->samus_x,save->samus_y,save->facing);
     sprites->globals.disable_pause=false;
     sprites->globals.pause_screen_flag=0;
@@ -2486,6 +2488,29 @@ static void runtime_build_save(MzmSaveData *save,const char *alias,const Room *r
     save->igt.seconds=runtime_igt.seconds;
     save->igt.frames=runtime_igt.frames;
     save->max_igt=runtime_max_igt;
+    save->completed_game=runtime_completed_game;
+}
+
+static uint32_t runtime_ending_pen(const MzmEquipment *equipment) {
+    uint32_t owned=(equipment->items|equipment->unknown_items)&0x3FFFu;
+    int abilities=0;
+    for(;owned;owned&=owned-1)abilities++;
+    MzmEndingStats stats={equipment->max_energy,equipment->max_missiles,
+                          equipment->max_super_missiles,equipment->max_power_bombs,
+                          abilities,runtime_difficulty,runtime_igt.hours};
+    return mzm_ending_item_count_and_number(&stats);
+}
+
+/* ChozodiaEscapeInit's persistent unlock updates. Time Attack remains zero
+ * until its run mode and per-boss validity data are ported. */
+static uint8_t runtime_update_ending_unlocks(MzmUnlockData *unlocks,uint32_t pen) {
+    uint8_t flags=0;
+    if(unlocks->gallery_images==0)flags|=MZM_ENDING_FLAG_FIRST_CLEAR;
+    if(runtime_difficulty==2 && !(unlocks->sound_test_and_original_metroid&(1u<<2)))
+        flags|=MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR;
+    unlocks->sound_test_and_original_metroid|=(uint8_t)(1u<<runtime_difficulty);
+    unlocks->gallery_images|=(uint16_t)(1u<<(pen&0xFu));
+    return flags;
 }
 
 /* SramWrite_FileInfo: what the file select screen shows of a save. */
@@ -3989,7 +4014,10 @@ int main(int argc, char **argv) {
     bool load_save=false;
     static MzmSaveData loaded_save;
     static char save_paths[3][4096];
+    static char unlock_path[4096];
+    static MzmUnlockData unlocks;
     uint8_t save_slot=0;            /* gMostRecentSaveFile */
+    uint8_t ending_flags=0;         /* gEndingFlags */
     const char *debug_input=NULL;
     const char *expected_room=NULL;
     uint8_t expected_events[32]={0};
@@ -4129,8 +4157,10 @@ int main(int argc, char **argv) {
         const char *separator=length && folder[length-1]!='/' && folder[length-1]!='\\'?"/":"";
         for (int i=0;folder && i<3;i++)
             snprintf(save_paths[i],sizeof save_paths[i],"%s%sfile_%c.sav",folder,separator,'a'+i);
+        if(folder)snprintf(unlock_path,sizeof unlock_path,"%s%soptions.sav",folder,separator);
         SDL_free(pref);
         save_slot=runtime_most_recent_save(save_paths);
+        if(unlock_path[0] && !mzm_unlocks_read(unlock_path,&unlocks))memset(&unlocks,0,sizeof unlocks);
     }
     if (load_save) {
         /* SramLoadFile: the game resumes in the room it was saved in. */
@@ -4473,6 +4503,9 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
     if(start_chozodia_escape) {
+        /* A diagnostic behaves like the first clear, but never mutates the
+         * user's persistent unlock file. */
+        ending_flags=MZM_ENDING_FLAG_FIRST_CLEAR;
         chozodia_escape_mode=screen_ready && mzm_chozodia_escape_enter(&chozodia_escape,&screen);
         if(chozodia_escape_mode) printf("Chozodia escape started.\n");
         else fprintf(stderr,"The Chozodia escape is unavailable.\n");
@@ -4864,17 +4897,12 @@ int main(int argc, char **argv) {
                     chozodia_escape_mode=false;
                     screen.ppu->win0h_per_line=false;
                     /* GM_CREDITS with ChozodiaEscapeGetItemCountAndEndingNumber. */
-                    uint32_t owned=(equipment.items|equipment.unknown_items)&0x3FFFu;
-                    int abilities=0;
-                    for(;owned;owned&=owned-1)abilities++;
-                    MzmEndingStats stats={equipment.max_energy,equipment.max_missiles,
-                                          equipment.max_super_missiles,equipment.max_power_bombs,
-                                          abilities,runtime_difficulty,runtime_igt.hours};
-                    credits_mode=mzm_credits_enter(&credits,&screen,
-                                                   mzm_ending_item_count_and_number(&stats));
-                    if(credits_mode)
+                    credits_mode=mzm_credits_enter(&credits,&screen,runtime_ending_pen(&equipment));
+                    if(credits_mode) {
                         mzm_credits_set_time(&credits,runtime_igt.hours,runtime_igt.minutes,
                                              runtime_igt.seconds);
+                        mzm_credits_set_ending_flags(&credits,ending_flags);
+                    }
                     if(!credits_mode) {
                         fprintf(stderr,"The credits are unavailable.\n");
                         intro_mode=true;
@@ -4886,13 +4914,12 @@ int main(int argc, char **argv) {
                 continue;
             }
             if(credits_mode) {
-                /* GM_CREDITS through the ending image; the unlocked options
-                 * are not ported, so the intro follows it instead. */
+                /* GM_CREDITS through the ending image and unlock pop-ups. */
                 mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                               capture_path?NULL:&gamepad));
                 if(mzm_credits_update(&credits,&screen)) {
                     credits_mode=false;
-                    fprintf(stderr,"The ending image ended; unlocked options are not ported.\n");
+                    fprintf(stderr,"The ending sequence ended.\n");
                     intro_mode=true;
                     mzm_intro_enter(&intro);
                     previous_held=held;
@@ -5088,8 +5115,7 @@ int main(int argc, char **argv) {
              * EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP fades the game out
              * (COLOR_FADING_CANCEL's fade standing in for
              * COLOR_FADING_SAMUS_IN_BLUE_SHIP) before its cutscene;
-             * EFFECT_CUTSCENE_ESCAPING_CHOZODIA (the Chozodia escape and
-             * the credits) is not ported, the room keeps running. */
+             * EFFECT_CUTSCENE_ESCAPING_CHOZODIA starts the ending flow. */
             if(sprites.globals.cutscene_effect==5 && screen_ready && door_fade.phase==MZM_DOOR_FADE_NONE) {
                 sprites.globals.cutscene_effect=0;
                 blue_ship_fade=true;
@@ -5097,7 +5123,7 @@ int main(int argc, char **argv) {
             }
             if(sprites.globals.cutscene_effect==4 && screen_ready && door_fade.phase==MZM_DOOR_FADE_NONE) {
                 /* COLOR_FADING_CHOZODIA_ESCAPE (the CANCEL fade standing in),
-                 * then GM_CHOZODIA_ESCAPE; the ending save is not ported. */
+                 * then the ending save and GM_CHOZODIA_ESCAPE. */
                 sprites.globals.cutscene_effect=0;
                 chozodia_escape_fade=true;
                 mzm_door_fade_start_cancel(&door_fade);
@@ -5477,8 +5503,23 @@ int main(int argc, char **argv) {
             if(door_fade.phase==MZM_DOOR_FADE_NONE)
                 mzm_hatches_check_unlock(&runtime_hatch_locks,&room->hatch_env);
             if(chozodia_escape_fade && door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
-                /* ColorFadingProcess_ChozodiaEscape ended: GM_CHOZODIA_ESCAPE. */
+                /* SramProcessEndingSave, then ChozodiaEscapeInit's global
+                 * gallery/difficulty unlock update. */
                 chozodia_escape_fade=false;
+                runtime_completed_game|=(uint8_t)(1u<<runtime_difficulty);
+                static MzmSaveData ending_save;
+                const char *ending_path=save_paths[save_slot];
+                if(!ending_path[0] || !mzm_save_read(ending_path,&ending_save))
+                    runtime_build_save(&ending_save,current_room,room,&samus,&equipment,&sprites);
+                ending_save.completed_game=runtime_completed_game;
+                if(!ending_path[0] || !mzm_save_write(ending_path,&ending_save))
+                    fprintf(stderr,"Could not save the completed game to %s\n",
+                            ending_path[0]?ending_path:"(none)");
+                uint32_t pen=runtime_ending_pen(&equipment);
+                ending_flags=runtime_update_ending_unlocks(&unlocks,pen);
+                if(!unlock_path[0] || !mzm_unlocks_write(unlock_path,&unlocks))
+                    fprintf(stderr,"Could not save the ending unlocks to %s\n",
+                            unlock_path[0]?unlock_path:"(none)");
                 chozodia_escape_mode=mzm_chozodia_escape_enter(&chozodia_escape,&screen);
                 if(!chozodia_escape_mode)mzm_door_fade_loaded(&door_fade,0,0);
             }

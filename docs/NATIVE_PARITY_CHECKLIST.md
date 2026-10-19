@@ -797,14 +797,15 @@ Known divergences: The background flashes (MakeBackgroundFlash), gSlowScrollingT
 Next action: Port the background flashes and the slow scrolling, then the fully powered suit's unknown item activation.
 Evidence: in game: `brinstar_005`, `brinstar_002`, `kraid_033`.
 
-[~] **`mzm.items.enemy_drops` — Enemy drops.** Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, native BG1 priority, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound. Mecha Ridley's grouped pickup selects one of three native OAM tables from its follower slot, refills 60 energy and clamps to maximum.
+[+] **`mzm.items.enemy_drops` — Enemy drops.** Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, native BG1 priority, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound. Mecha Ridley's grouped pickup selects one of three native OAM tables from its follower slot, refills 60 energy and clamps to maximum. A capture in brinstar_000 shows a Zoomer shot dead leaving a large energy drop, which Samus collects by walking over it (energy 50 to 70).
 
 Native evidence: `mzm:c:src/hud_generic.c:HudGenericLoadCommonSpriteGfx`, `mzm:c:src/sprite.c:SpriteSpawnDropFollowers`, `mzm:c:src/sprite_util.c:SpriteUtilCheckHasDrops`, `mzm:c:src/sprite_util.c:SpriteUtilDetermineEnemyDrop`, `mzm:c:src/sprites_ai/enemy_drop.c:EnemyDrop`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
 Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py).
 Dependencies: `mzm.enemies.zoomer`.  
-Known divergences: The grouped energy drop has no natural in-game source until Mecha Ridley is ported; the drop behavior has not been compared with an emulator.  
-Next action: Port Mecha Ridley so its grouped energy drops become reachable in normal play, then compare their presentation with an emulator.
+Known divergences: The grouped energy drops come only from Mecha Ridley's death, which is covered by the sprite regression, not by an in-game capture; the drop behavior has not been compared with an emulator.  
+Next action: Compare the drops' presentation and probabilities with an emulator.
+Evidence: in game: `brinstar_000`.
 
 [+] **`mzm.items.item_sprites` — Morph Ball, Power Grip and Charge Beam pickups.** The Morph Ball (outline sprite with the ball's status), the Power Grip (glow removed once it is taken, EVENT_POWER_GRIP_OBTAINED) and the Charge Beam (spawning table, glow following its height, the float of sChargeBeamIdleYMovement, EVENT_CHARGE_BEAM_OBTAINED): removed when owned, touched they give their item, hold Samus with SAMUS_ITEM_PMT and the item banner with its jingle, and flicker until the banner releases her. Checked in brinstar_000 (--spawn 212 496: the jump onto the pillar takes the Morph Ball and shows its banner) and crateria_012 ( the Power Grip from the statue's hands).
 

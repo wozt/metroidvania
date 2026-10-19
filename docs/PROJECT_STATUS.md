@@ -3838,6 +3838,21 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0395 - in-game check for enemy drops
+
+- With the runtime's input masks, a capture in `brinstar_000` follows a full
+  drop in game:
+  - crouched shots kill a yellow Zoomer;
+  - it leaves a large energy drop;
+  - Samus walks over it and collects it (energy 50 to 70).
+- Mecha Ridley is ported, so its grouped energy drops now have a natural
+  source; their death sequence is covered by the sprite regression.
+- `mzm.items.enemy_drops` moves to `functional`; the parity inventory now
+  contains 28 partial and 74 functional entries.
+- Capture: ignored `captures/enemies/drop-collected.png`.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 444/444 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0394 - Chozodia alarm presentation
 
 - `DecrementChozodiaAlarm` and `DisableChozodiaAlarm` now follow the native

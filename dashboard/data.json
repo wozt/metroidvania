@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T15:46:24+00:00",
+ "generated_at": "2026-10-19T15:51:35+00:00",
  "git": {
-  "commit": "292a62b",
+  "commit": "04c67c1",
   "branch": "main",
   "dirty": true
  },
@@ -96,17 +96,17 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 42,
-    "functional": 86,
+    "partial": 41,
+    "functional": 87,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 86,
-   "functional_or_better_percent": 61.9,
-   "with_passing_tests": 127,
-   "with_passing_tests_percent": 91.4,
+   "functional_or_better": 87,
+   "functional_or_better_percent": 62.6,
+   "with_passing_tests": 122,
+   "with_passing_tests_percent": 87.8,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -260,17 +260,17 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 18,
-    "functional": 73,
+    "partial": 17,
+    "functional": 74,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 73,
-   "functional_or_better_percent": 80.2,
-   "with_passing_tests": 91,
-   "with_passing_tests_percent": 100.0,
+   "functional_or_better": 74,
+   "functional_or_better_percent": 81.3,
+   "with_passing_tests": 89,
+   "with_passing_tests_percent": 97.8,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -458,8 +458,8 @@
    },
    "functional_or_better": 4,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 10,
-   "with_passing_tests_percent": 83.3,
+   "with_passing_tests": 9,
+   "with_passing_tests_percent": 75.0,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -555,8 +555,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 2,
-   "with_passing_tests_percent": 66.7,
+   "with_passing_tests": 0,
+   "with_passing_tests_percent": 0.0,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -5900,12 +5900,14 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "passed"
+      "outcome": "failed"
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-10-19"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -5913,8 +5915,8 @@
    "area": "mzm",
    "category": "items",
    "title": "Enemy drops",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
     "scripts/mzm_sprites.py",
@@ -5935,14 +5937,16 @@
     "SpriteSpawnDropFollowers",
     "SpriteUtilCheckHasDrops"
    ],
-   "limitations": "The grouped energy drop has no natural in-game source until Mecha Ridley is ported; the drop behavior has not been compared with an emulator. Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, native BG1 priority, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound. Mecha Ridley's grouped pickup selects one of three native OAM tables from its follower slot, refills 60 energy and clamps to maximum.",
-   "next_action": "Port Mecha Ridley so its grouped energy drops become reachable in normal play, then compare their presentation with an emulator.",
+   "limitations": "The grouped energy drops come only from Mecha Ridley's death, which is covered by the sprite regression, not by an in-game capture; the drop behavior has not been compared with an emulator. Drop rolls from the ROM probabilities (as the sprite or, for respawning sprites, as a drop following its slot) with the full energy and ammunition substitutions, the hidden spawn, pickup refills, blinking and despawn timers, native BG1 priority, and the common sprite graphics are ported. Power bomb drops spawn and refill one power bomb with their sound. Mecha Ridley's grouped pickup selects one of three native OAM tables from its follower slot, refills 60 energy and clamps to maximum. A capture in brinstar_000 shows a Zoomer shot dead leaving a large energy drop, which Samus collects by walking over it (energy 50 to 70).",
+   "next_action": "Compare the drops' presentation and probabilities with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
      "tests/test_mzm_sprites.py"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "brinstar_000"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -6039,12 +6043,14 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "passed"
+      "outcome": "failed"
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-10-19"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9014,12 +9020,14 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "passed"
+      "outcome": "failed"
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-10-19"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10162,12 +10170,14 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "passed"
+      "outcome": "failed"
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-10-19"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10205,12 +10215,14 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "passed"
+      "outcome": "failed"
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-10-19"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10480,7 +10492,7 @@
    {
     "name": "python_tooling_and_data",
     "files": [],
-    "outcome": "passed"
+    "outcome": "failed"
    },
    {
     "name": "no_proprietary_files",
@@ -10640,8 +10652,8 @@
     "file": "tests/test_dashboard.py",
     "module": "tests.test_dashboard",
     "test_count": 14,
-    "outcome": "passed",
-    "passed": 14
+    "outcome": "failed",
+    "passed": 13
    },
    {
     "file": "tests/test_deferred_room_save_0109.py",
@@ -11128,12 +11140,18 @@
    }
   ],
   "summary": {
-   "passed": 479,
-   "failed": 0,
+   "passed": 477,
+   "failed": 2,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "04c67c1",
+   "date": "2026-10-19",
+   "subject": "Port the Chozodia alarm presentation",
+   "scope": "project"
+  },
   {
    "commit": "292a62b",
    "date": "2026-10-19",
@@ -11606,12 +11624,6 @@
    "commit": "f938da6",
    "date": "2026-10-14",
    "subject": "fix(mzm): no more 60 Hz audio buzz",
-   "scope": "mzm"
-  },
-  {
-   "commit": "a13f71d",
-   "date": "2026-10-14",
-   "subject": "feat(mzm): Zebetites and Tourian cannons",
    "scope": "mzm"
   }
  ],
@@ -13394,14 +13406,16 @@
      {
       "id": 26,
       "name": "Large Energy Drop",
-      "status": "partial",
+      "status": "functional",
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_mzm_sprites.py"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "brinstar_000"
+       ],
        "emulator_compared": false,
        "played_through": false
       },
@@ -13410,14 +13424,16 @@
      {
       "id": 27,
       "name": "Small Energy Drop",
-      "status": "partial",
+      "status": "functional",
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_mzm_sprites.py"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "brinstar_000"
+       ],
        "emulator_compared": false,
        "played_through": false
       },
@@ -13426,14 +13442,16 @@
      {
       "id": 28,
       "name": "Missile Drop",
-      "status": "partial",
+      "status": "functional",
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_mzm_sprites.py"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "brinstar_000"
+       ],
        "emulator_compared": false,
        "played_through": false
       },
@@ -13442,14 +13460,16 @@
      {
       "id": 29,
       "name": "Super Missile Drop",
-      "status": "partial",
+      "status": "functional",
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_mzm_sprites.py"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "brinstar_000"
+       ],
        "emulator_compared": false,
        "played_through": false
       },
@@ -13458,14 +13478,16 @@
      {
       "id": 30,
       "name": "Power Bomb Drop",
-      "status": "partial",
+      "status": "functional",
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_mzm_sprites.py"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "brinstar_000"
+       ],
        "emulator_compared": false,
        "played_through": false
       },
@@ -13661,14 +13683,16 @@
      {
       "id": 53,
       "name": "Multiple Large Energy",
-      "status": "partial",
+      "status": "functional",
       "note": "Enemy drops",
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_mzm_sprites.py"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "brinstar_000"
+       ],
        "emulator_compared": false,
        "played_through": false
       },

@@ -2123,10 +2123,51 @@ static uint16_t DetermineNewMusicTrack(uint16_t musicTrack) {
 /* SOUND_A9, the default track of CheckSetNewMusicTrack. */
 static uint16_t g_default_track = 0xA9;
 
-/* CheckSetNewMusicTrack (unk_378c, for alarm priorities, is not ported). */
+enum { MUSIC_STEALTH = 0x46, MUSIC_CHOZODIA_DETECTED = 0x49, MUSIC_STEALTH_FIRST = 0x5A };
+
+/* unk_378c: CheckSetNewMusicTrack under the stealth and alarm priorities
+ * (0x10 stealth, 0x20 detected, 0x40 alarm). The stealth area tracks
+ * (0x5A to 0x63) keep the stealth or detected music; under the alarm a
+ * stealth track is only remembered for after it. */
+static void unk_378c(uint16_t musicTrack) {
+    if (gMusicInfo.occupied) return;
+    gMusicInfo.occupied = 1;
+    ApplyMusicSoundFading(sMusicTrackDataRom[6].pTrack, 10);
+    ApplyMusicSoundFading(sMusicTrackDataRom[8].pTrack, 10);
+    if (gSoundQueue[6].exists & 3) gSoundQueue[6].exists = 0;
+    if (gSoundQueue[8].exists & 3) gSoundQueue[8].exists = 0;
+    bool change;
+    if (gMusicInfo.priority & 0x30) {
+        if ((uint16_t)(gMusicInfo.musicTrack - MUSIC_STEALTH_FIRST) < 10) {
+            if ((uint16_t)(musicTrack - MUSIC_STEALTH_FIRST) >= 10)
+                musicTrack = gMusicInfo.priority & 0x10 ? MUSIC_STEALTH : MUSIC_CHOZODIA_DETECTED;
+            change = true;
+        } else {
+            change = (uint16_t)(musicTrack - MUSIC_STEALTH_FIRST) < 10;
+        }
+    } else if (gMusicInfo.priority & 0x40) {
+        if ((uint16_t)(musicTrack - MUSIC_STEALTH_FIRST) < 10) gMusicInfo.musicTrackOnTransition = musicTrack;
+        change = false;
+    } else {
+        change = true;
+    }
+    if (change) {
+        TrackData *pTrack = sMusicTrackDataRom[0].pTrack;
+        if (entry_header(DetermineNewMusicTrack(musicTrack)) != pTrack->pHeader) {
+            ApplyMusicSoundFading(pTrack, 30);
+            gMusicInfo.musicTrackOnTransition = musicTrack;
+        }
+    }
+    gMusicInfo.occupied = 0;
+}
+
+/* CheckSetNewMusicTrack */
 void mzm_music_check_set_new_track(uint16_t musicTrack) {
     if (gMusicInfo.priority & 4) return;
-    if (gMusicInfo.priority & 0x70) return;
+    if (gMusicInfo.priority & 0x70) {
+        unk_378c(musicTrack);
+        return;
+    }
     if (gMusicInfo.priority != 0 || gMusicInfo.occupied) return;
     gMusicInfo.occupied = 1;
     ApplyMusicSoundFading(sMusicTrackDataRom[6].pTrack, 10);
@@ -2143,16 +2184,42 @@ void mzm_music_check_set_new_track(uint16_t musicTrack) {
     gMusicInfo.occupied = 0;
 }
 
-/* CheckPlayTransitionMusicTrack (unk_38d8 for alarm priorities is not
- * ported). */
+/* unk_38d8: the transition track under the stealth priorities (none under
+ * the alarm). */
+static void unk_38d8(void) {
+    if (!(gMusicInfo.priority & 0x40) && gMusicInfo.musicTrackOnTransition != 0) {
+        InitTrack(sMusicTrackDataRom[0].pTrack, entry_header(DetermineNewMusicTrack(gMusicInfo.musicTrackOnTransition)));
+        gMusicInfo.unk_20 = 0;
+        gMusicInfo.musicTrack = gMusicInfo.musicTrackOnTransition;
+    }
+    gMusicInfo.musicTrackOnTransition = 0;
+}
+
+/* CheckPlayTransitionMusicTrack */
 void mzm_music_check_play_transition_track(void) {
-    if (gMusicInfo.priority & 4 || gMusicInfo.priority & 0x70) return;
+    if (gMusicInfo.priority & 4) return;
+    if (gMusicInfo.priority & 0x70) {
+        unk_38d8();
+        return;
+    }
     if (gMusicInfo.priority == 0 && gMusicInfo.musicTrackOnTransition != 0) {
         InitTrack(sMusicTrackDataRom[0].pTrack, entry_header(gMusicInfo.musicTrackOnTransition));
         gMusicInfo.unk_20 = 0;
         gMusicInfo.musicTrack = gMusicInfo.musicTrackOnTransition;
         gMusicInfo.musicTrackOnTransition = 0;
     }
+}
+
+/* UpdateMusicAfterAlarmDisable: back to the stealth track remembered under
+ * the alarm, else to the detected music. */
+void mzm_music_after_alarm_disable(void) {
+    gMusicInfo.priority = 0x20;
+    if (gMusicInfo.musicTrackOnTransition == 0 ||
+        (uint16_t)(gMusicInfo.musicTrackOnTransition - MUSIC_STEALTH_FIRST) >= 10) {
+        mzm_music_fade_and_queue(5, MUSIC_CHOZODIA_DETECTED, 0x20);
+        return;
+    }
+    ApplyMusicSoundFading(sMusicTrackDataRom[0].pTrack, 5);
 }
 
 uint16_t mzm_music_current(void) {

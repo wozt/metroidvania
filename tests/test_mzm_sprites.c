@@ -2644,7 +2644,7 @@ int main(void) {
                ps[1].samus_collision == 19 && ps[1].pose == 0x9 &&
                ps[1].status & MZM_SPRITE_STATUS_X_FLIP && ps[1].y == y0 - 52 &&
                ps[1].x == x0 + 68 && ps[2].y == y0 - 120 && ps[2].x == x0 + 120 &&
-               ps[1].ram_slot == 0 && ps[1].work2 == 10);
+               ps[1].ram_slot == 0 && ps[1].work2 == 10 && ps[1].draw_order == 3);
         affects = 0;
         PIRATE_FRAME();
         assert(ps[1].x == x0 + 68 + 20 && ps[1].work2 == 9 && affects == 2 &&
@@ -2663,7 +2663,8 @@ int main(void) {
         assert(hurts == 1 && last_damage == 100 && ps[1].pose == 0x42);
         PIRATE_FRAME();
         assert(ps[1].pose == 0x43 && ps[1].anim == MZM_PIRATE_LASER_EXPLODING &&
-               ps[1].samus_collision == 0);
+               ps[1].samus_collision == 0 &&
+               mzm_sprite_bg_priority(&ps[1]) == frame.world->bg1_priority);
         for (int i = 0; i < 16; ++i) PIRATE_FRAME();
         assert(!(ps[1].status & MZM_SPRITE_STATUS_EXISTS));
         /* The other laser explodes on a wall (on screen). */
@@ -2700,8 +2701,32 @@ int main(void) {
         /* With Mecha Ridley dead the alarm never stops. */
         test_events[MZM_EVENT_MECHA_RIDLEY_KILLED / 8] |= 1u << (MZM_EVENT_MECHA_RIDLEY_KILLED % 8);
         globals.alarm_timer = 1;
+        globals.animated_palette_written = false;
         mzm_sprites_end_frame(&globals, &test_hooks);
-        assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE);
+        assert(globals.alarm_timer == MZM_ALARM_TIMER_ACTIVE && !globals.animated_palette_written);
+        memset(test_events, 0, sizeof test_events);
+        /* DecrementChozodiaAlarm: the alarm's palette and music while it
+         * rings, then its palette stops after the cycle and the stealth
+         * music comes back; with the Fully Powered Suit, no music. */
+        globals.alarm_timer = 2;
+        mzm_sfx_clear();
+        mzm_sprites_end_frame(&globals, &test_hooks);
+        assert(globals.alarm_timer == 1 && globals.animated_palette_written &&
+               globals.disable_animated_palette == 0 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_ALARM_ACTIVATED));
+        globals.animated_palette_written = false;
+        mzm_sprites_end_frame(&globals, &test_hooks);
+        assert(globals.alarm_timer == 0 && globals.animated_palette_written &&
+               globals.disable_animated_palette == -1 &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_AFTER_ALARM, 0));
+        test_set_event(NULL, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED);
+        globals.alarm_timer = 2;
+        mzm_sfx_clear();
+        mzm_sprites_end_frame(&globals, &test_hooks);
+        mzm_sprites_end_frame(&globals, &test_hooks);
+        assert(globals.alarm_timer == 0 && globals.disable_animated_palette == -1 &&
+               !mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_ALARM_ACTIVATED) &&
+               !mzm_sfx_requested(MZM_SFX_MUSIC_AFTER_ALARM, 0));
         memset(test_events, 0, sizeof test_events);
         globals.alarm_timer = 0;
 
@@ -3950,7 +3975,8 @@ int main(void) {
         for (int i = 0; i < 30; ++i) mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].work3 == 3 && room[3].room_slot == 2 && room[3].y == room[0].y - 384);
         for (int i = 0; i < 74; ++i) mzm_sprite_update(&room[0], 0, &g);
-        assert(room[0].work0 == 16 && zip_globals.enable_animated_palette && room[2].pose == 0xB &&
+        assert(room[0].work0 == 16 && zip_globals.animated_palette_written &&
+               zip_globals.disable_animated_palette == 0 && room[2].pose == 0xB &&
                room[2].anim == MZM_GADGET_ZIPLINE_GENERATOR_MORPH_SYMBOL_ACTIVATED);
         for (int i = 0; i < 16; ++i) mzm_sprite_update(&room[0], 0, &g);
         assert(room[0].pose == 0xC && gen_link.set_pose == MZM_POSE_MORPH_BALL && room[3].status == 0 &&

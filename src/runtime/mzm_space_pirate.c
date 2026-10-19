@@ -151,10 +151,23 @@ static bool mecha_ridley_killed(const MzmSpriteHooks *hooks) {
            hooks->check_event(hooks->context, MZM_EVENT_MECHA_RIDLEY_KILLED);
 }
 
-/* DisableChozodiaAlarm (the animated palette and music are not ported): the
- * escape keeps it ringing. */
+static bool fully_powered(const MzmSpriteHooks *hooks) {
+    return hooks && hooks->check_event &&
+           hooks->check_event(hooks->context, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED);
+}
+
+/* DisableChozodiaAlarm: the escape keeps it ringing; otherwise the alarm's
+ * animated palette stops after its cycle and, in stealth (before the Fully
+ * Powered Suit), the music goes back (UpdateMusicAfterAlarmDisable). */
 static void disable_chozodia_alarm(MzmSpriteGlobals *g, const MzmSpriteHooks *hooks) {
-    g->alarm_timer = mecha_ridley_killed(hooks) ? ALARM_ACTIVE : 0;
+    if (mecha_ridley_killed(hooks)) {
+        g->alarm_timer = ALARM_ACTIVE;
+        return;
+    }
+    g->alarm_timer = 0;
+    g->animated_palette_written = true;
+    g->disable_animated_palette = -1;
+    if (!fully_powered(hooks)) mzm_sfx_music_after_alarm_disable();
 }
 
 static void disable_alarm(const Ctx *c) {
@@ -208,12 +221,16 @@ void mzm_sprites_end_frame(MzmSpriteGlobals *globals, const MzmSpriteHooks *hook
     if (!globals) return;
     /* gParasiteRelated */
     if (globals->parasite_related) globals->parasite_related--;
-    /* DecrementChozodiaAlarm */
+    /* DecrementChozodiaAlarm: while it rings, the alarm's animated palette
+     * runs and, in stealth, the alarm music plays. */
     if (globals->alarm_timer) {
-        globals->alarm_timer--;
-        if (!globals->alarm_timer && hooks && hooks->check_event &&
-            hooks->check_event(hooks->context, MZM_EVENT_MECHA_RIDLEY_KILLED))
-            globals->alarm_timer = ALARM_ACTIVE;
+        if (--globals->alarm_timer == 0) {
+            disable_chozodia_alarm(globals, hooks);
+        } else {
+            globals->animated_palette_written = true;
+            globals->disable_animated_palette = 0;
+            if (!fully_powered(hooks)) mzm_sfx_music_play(MZM_MUSIC_ALARM_ACTIVATED, 0x40);
+        }
     }
     for (int i = 0; i < 5; ++i) globals->draw_order[i] = 0;
 }
@@ -2486,7 +2503,7 @@ static void laser_init(Ctx *c) {
     s->work3 = 0;
     s->work2 = 10;
     s->pose = LASER_POSE_MOVING;
-    /* drawOrder 3: drawn before the default sprites (not reproduced). */
+    s->draw_order = 3;
     switch (s->room_slot) {
     case LASER_FORWARD: s->anim = MZM_PIRATE_LASER_FORWARD; break;
     case LASER_DIAGONALLY_UP: s->anim = MZM_PIRATE_LASER_DIAGONAL; break;
@@ -2501,16 +2518,17 @@ static void laser_init(Ctx *c) {
         s->samus_collision = SSC_NONE;
         s->work0 = 4;               /* CONVERT_SECONDS(1.f / 15) */
         s->ignore_samus_timer = (uint8_t)(s->work0 + 1);
-        break;
+        return;
     default:
         s->status = 0;
-        break;
+        return;
     }
     ai_sound_onscreen_once(s, MZM_SOUND_SPACE_PIRATE_FIRING_LASER);
 }
 
-/* SpacePirateLaserExplodingInit (the BG1 priority is not reproduced). */
-static void laser_exploding_init(MzmSprite *s) {
+/* SpacePirateLaserExplodingInit: the burst at BG1's priority. */
+static void laser_exploding_init(Ctx *c) {
+    MzmSprite *s = c->s;
     if (!(s->status & MZM_SPRITE_STATUS_ONSCREEN)) {
         s->status = 0;
         return;
@@ -2519,6 +2537,7 @@ static void laser_exploding_init(MzmSprite *s) {
     s->samus_collision = SSC_NONE;
     s->pose = LASER_POSE_EXPLODING;
     s->ignore_samus_timer = 1;
+    if (c->f->world) s->bg_priority_override = (uint8_t)(c->f->world->bg1_priority + 1);
     mzm_sfx_play_not_playing(MZM_SOUND_SPACE_PIRATE_LASER_EXPLODING);
 }
 
@@ -2547,7 +2566,7 @@ static void laser_move(Ctx *c) {
     if (hooks && hooks->affect) hooks->affect(hooks->context, s->y, s->x, MZM_DAMAGE_BOMB_PISTOL);
     if (collision != MZM_COLLISION_AIR) {
         if (s->room_slot == LASER_FROM_DOOR) s->status = 0;
-        else laser_exploding_init(s);
+        else laser_exploding_init(c);
     } else if (s->room_slot != LASER_FROM_DOOR) {
         if (!(s->status & MZM_SPRITE_STATUS_ONSCREEN) && !--s->work0) s->status = 0;
     } else if (!--s->work0) {
@@ -2559,7 +2578,7 @@ void ai_space_pirate_laser(Ctx *c) {
     MzmSprite *s = c->s;
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED: laser_init(c); break;
-    case LASER_POSE_EXPLODING_INIT: laser_exploding_init(s); break;
+    case LASER_POSE_EXPLODING_INIT: laser_exploding_init(c); break;
     case LASER_POSE_EXPLODING:
         s->ignore_samus_timer = 1;
         if (ended(c)) s->status = 0;

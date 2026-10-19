@@ -3838,6 +3838,41 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0394 - Chozodia alarm presentation
+
+- `DecrementChozodiaAlarm` and `DisableChozodiaAlarm` now follow the native
+  code:
+  - while the alarm rings, it enables the room's animated alarm palette
+    and, before the Fully Powered Suit, plays the alarm music at priority
+    0x40 every frame;
+  - when it stops, the palette is disabled after its cycle (-1) and the
+    music returns through `UpdateMusicAfterAlarmDisable`;
+  - Mecha Ridley's death keeps it ringing.
+- The sprites now relay their writes of `gDisableAnimatedPalette` (value
+  plus a written flag) to the room's animated palette: the alarm, Mecha
+  Ridley's death, battle start and escape, and the zipline generator.
+  This replaces the generator-only flag.
+- Ported the stealth and alarm music branches: `unk_378c` in
+  `CheckSetNewMusicTrack`, `unk_38d8` in `CheckPlayTransitionMusicTrack`,
+  and `UpdateMusicAfterAlarmDisable` as a new sound request.
+- A new game (not a loaded file) clears the alarm before the room's sprites
+  load, as `SpriteLoadAllData` does.
+- The pirate lasers get draw order 3. Their burst takes BG1's priority, and
+  the invisible hatch shot no longer plays the firing sound.
+- Capture output now prints the room's animated palette, its row and state,
+  and the alarm timer.
+- Tests:
+  - the alarm countdown (palette, music, disable, Fully Powered Suit);
+  - the laser's draw order and burst priority;
+  - in the audio test, the alarm priority holding the track through a room
+    change.
+- A capture in `chozodia_013` (event 67) shows the black pirates firing with
+  the alarm ringing and the room's palette 10 cycling (rows 2, 3, -7, 5).
+- `mzm.enemies.space_pirate` moves to `functional`; the parity inventory now
+  contains 29 partial and 73 functional entries.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 444/444 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0393 - in-game check for the worker robot
 
 - The earlier attempts had used the GBA key bits in `--input-script`. The

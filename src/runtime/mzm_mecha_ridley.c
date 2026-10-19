@@ -248,6 +248,9 @@ static void start_battle(Ctx *c) {
     if (row >= 7) {
         s->pose = MECHA_IDLE;
         mzm_sfx_music_play(MZM_MUSIC_MECHA_RIDLEY_BATTLE, 0);
+        /* The alarm's palette again. */
+        c->f->globals->animated_palette_written = true;
+        c->f->globals->disable_animated_palette = 0;
     } else {
         if (row == 1) mzm_sfx_play(MZM_SOUND_2AD);
         c->f->globals->mecha_palette.fading_row = (uint8_t)(row + 1);
@@ -562,6 +565,9 @@ static void dying(Ctx *c) {
     s->pose = MECHA_DYING_GLOW_FADING;
     s->work0 = 0;
     mzm_sfx_play(MZM_SOUND_MECA_RIDLEY_POWERING_OFF);
+    /* The alarm's palette stops after its cycle. */
+    c->f->globals->animated_palette_written = true;
+    c->f->globals->disable_animated_palette = -1;
 }
 
 /* MechaRidleyGlowFading: the destroyed graphics copied over seven frames,
@@ -650,6 +656,8 @@ static void eye_glow(Ctx *c) {
         if (h && h->set_event) h->set_event(h->context, MZM_EVENT_MECHA_RIDLEY_KILLED);
         if (h && h->spawn_message) h->spawn_message(h->context, MZM_MESSAGE_CHOZODIA_ESCAPE);
         door_timer(c, -20);
+        c->f->globals->animated_palette_written = true;
+        c->f->globals->disable_animated_palette = 0;
         mzm_sfx_music_play(MZM_MUSIC_ESCAPE, 0x40);
     }
 }

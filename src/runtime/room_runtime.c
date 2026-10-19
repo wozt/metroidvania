@@ -2438,6 +2438,7 @@ static void runtime_sfx_sink(void *context, MzmSfxAction action, uint16_t sound,
     case MZM_SFX_MUSIC_FADE: mzm_music_fade(timer); break;
     case MZM_SFX_MUSIC_FADE_AND_QUEUE: mzm_music_fade_and_queue(timer, sound, 0); break;
     case MZM_SFX_MUSIC_PRIORITY: mzm_music_update_priority((uint8_t)timer); break;
+    case MZM_SFX_MUSIC_AFTER_ALARM: mzm_music_after_alarm_disable(); break;
     }
     runtime_audio_unlock();
 }
@@ -5258,6 +5259,10 @@ int main(int argc, char **argv) {
                     }
                     bool starts_at_door=resume_request==RUNTIME_RESUME_NEW_GAME ||
                                         resume_request==RUNTIME_RESUME_POST_TOURIAN;
+                    /* SpriteLoadAllData: gSubGameMode3 == 0 without
+                     * gIsLoadingFile (a new game, not a loaded file) stops
+                     * the alarm. */
+                    if(resume_request!=RUNTIME_RESUME_SAVE)sprites.globals.alarm_timer=0;
                     runtime_sprites_spawn(&sprites,room,starts_at_door?0:-1);
                     sprites.banner.exists=false;
                     sprites.banner.cursor.exists=false;
@@ -5661,10 +5666,11 @@ int main(int argc, char **argv) {
                         fprintf(stderr,"Native backgrounds unavailable for %s\n",current_room);
                     runtime_room_gfx.effect_y_offset = runtime_effect_y_offset;
                 }
-                /* The zipline generator's gDisableAnimatedPalette = FALSE. */
-                if(sprites.globals.enable_animated_palette) {
-                    runtime_room_gfx.disable_animated_palette=0;
-                    sprites.globals.enable_animated_palette=false;
+                /* The sprites' writes of gDisableAnimatedPalette (the zipline
+                 * generator, the Chozodia alarm, Mecha Ridley). */
+                if(sprites.globals.animated_palette_written) {
+                    runtime_room_gfx.disable_animated_palette=sprites.globals.disable_animated_palette;
+                    sprites.globals.animated_palette_written=false;
                 }
                 mzm_room_gfx_animate(&runtime_room_gfx,prevent_movement!=0,
                                      weapons.power_bomb.state!=MZM_PB_NONE,
@@ -6452,6 +6458,10 @@ frame_overlays:
                    capture_step,current_room,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
+            if(runtime_room_gfx.animated_palette)
+                printf("  animated palette %u row %d disabled %d, alarm %u\n",
+                       runtime_room_gfx.animated_palette,runtime_room_gfx.palette_row,
+                       runtime_room_gfx.disable_animated_palette,sprites.globals.alarm_timer);
             if(chozodia_escape_mode)
                 printf("  screen: Chozodia escape (mode %u stage %u timer %u)\n",chozodia_escape.sub_mode,
                        chozodia_escape.stage,chozodia_escape.timer);

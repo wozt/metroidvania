@@ -343,6 +343,15 @@ static void test_engine(void) {
     mzm_music_check_set_new_track(0);
     mzm_music_check_play_transition_track();
     CHECK(mzm_music_current() == 1);
+    /* Under the alarm priority (0x40) a room's track neither fades nor
+     * starts on the transition (unk_378c, unk_38d8). */
+    mzm_audio_stop_all();
+    mzm_music_play(3, 0x40);
+    mzm_music_check_set_new_track(5);
+    render(40, &peak, &crossings);
+    CHECK(mzm_audio_player_playing(0));
+    mzm_music_check_play_transition_track();
+    CHECK(mzm_music_current() == 3);
 
     mzm_audio_close();
     CHECK(!mzm_audio_ready());

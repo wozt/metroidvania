@@ -234,7 +234,10 @@ read from the user's ROM at export time; nothing is stored in the repository.
   `SPACE_PIRATE_ZONELINE` blocks once they reacted (`MOSAIC`, the native
   flag) while the alarm is off. A pirate that sees Samus is alerted, rings
   the alarm (`gAlarmTimer`, 480 frames, counted down at the end of
-  `SpriteUpdate` and re-armed after Mecha Ridley's death), charges for 24
+  `SpriteUpdate` and re-armed after Mecha Ridley's death; while it rings
+  the room's alarm palette animates and, in stealth, the alarm music
+  plays, and when it stops the palette ends its cycle and the stealth or
+  detected music returns; a new game clears it), charges for 24
   frames and fires two lasers (forward, diagonally up or down, or from a
   wall) on the third frame of its shooting table. Lasers move 20 subpixels a
   frame (15 per axis diagonally), apply `CAA_BOMB_PISTOL` to the block they

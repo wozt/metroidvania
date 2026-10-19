@@ -1721,7 +1721,10 @@ static void zipline_generator(Ctx *c) {
             MzmSprite *symbol = &c->f->sprites[s->work2];
             ai_set_anim(symbol, MZM_GADGET_ZIPLINE_GENERATOR_MORPH_SYMBOL_ACTIVATED);
             symbol->pose = ZIPLINE_GENERATOR_PART_POSE_MORPH_SYMBOL_ACTIVATING;
-            if (c->f->globals) c->f->globals->enable_animated_palette = true;
+            if (c->f->globals) {
+                c->f->globals->animated_palette_written = true;
+                c->f->globals->disable_animated_palette = 0;
+            }
         }
         break;
     default:

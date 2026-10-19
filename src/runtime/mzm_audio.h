@@ -57,6 +57,8 @@ void mzm_audio_retrieve_track2(void);
 /* CheckSetNewMusicTrack (a door transition starts: the room's track) and
  * CheckPlayTransitionMusicTrack (the new room is shown). */
 void mzm_music_check_set_new_track(uint16_t music);
+/* UpdateMusicAfterAlarmDisable */
+void mzm_music_after_alarm_disable(void);
 void mzm_music_check_play_transition_track(void);
 /* gMusicInfo.musicTrack */
 uint16_t mzm_music_current(void);

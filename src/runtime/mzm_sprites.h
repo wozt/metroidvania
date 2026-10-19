@@ -1395,9 +1395,12 @@ typedef struct {
     /* The escape ship's and the escape gates' flashing rows as last copied
      * (sEscapeShipFlashingPal / sEscapeGateFlashingPal row, -1: none yet). */
     int8_t escape_ship_palette, escape_gate_palette;
-    /* gDisableAnimatedPalette = FALSE of the zipline generator (the
-     * runtime takes the request). */
-    bool enable_animated_palette;
+    /* A sprite's write of gDisableAnimatedPalette (the zipline generator,
+     * the Chozodia alarm, Mecha Ridley): `animated_palette_written` with
+     * the value (0 enabled, 1 disabled, -1 disabled after the cycle); the
+     * runtime applies it to the room's animated palette. */
+    bool animated_palette_written;
+    int8_t disable_animated_palette;
     /* gBg2Movement (subpixels): BG2's offset from BG1 in the rooms whose
      * BG2 is BG_PROP_MOVING (the rising Chozo pillar); cleared by the room
      * load. */

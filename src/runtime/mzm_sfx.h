@@ -14,7 +14,8 @@
 typedef enum {
     MZM_SFX_PLAY, MZM_SFX_PLAY_NOT_PLAYING, MZM_SFX_STOP, MZM_SFX_FADE, MZM_SFX_STOP_ALL,
     MZM_SFX_MUSIC_PLAY, MZM_SFX_MUSIC_INSERT, MZM_SFX_BACKUP_TRACK2, MZM_SFX_RETRIEVE_TRACK2,
-    MZM_SFX_MUSIC_FADE_AND_QUEUE, MZM_SFX_MUSIC_FADE, MZM_SFX_MUSIC_PRIORITY, MZM_SFX_FADE_ALL
+    MZM_SFX_MUSIC_FADE_AND_QUEUE, MZM_SFX_MUSIC_FADE, MZM_SFX_MUSIC_PRIORITY, MZM_SFX_FADE_ALL,
+    MZM_SFX_MUSIC_AFTER_ALARM
 } MzmSfxAction;
 typedef struct { MzmSfxAction action; uint16_t sound, timer; } MzmSfxRequest;
 typedef void (*MzmSfxSink)(void *context, MzmSfxAction action, uint16_t sound, uint16_t timer);
@@ -44,6 +45,8 @@ void mzm_sfx_music_priority(uint8_t priority);
 void mzm_sfx_music_fade(uint16_t timer);
 /* FadeCurrentMusicAndQueueNextMusic with priority 0 */
 void mzm_sfx_music_fade_and_queue(uint16_t timer, uint16_t music);
+/* UpdateMusicAfterAlarmDisable */
+void mzm_sfx_music_after_alarm_disable(void);
 /* BackupTrackData2SoundChannels */
 void mzm_sfx_backup_track2(void);
 /* RetrieveTrackData2SoundChannels */

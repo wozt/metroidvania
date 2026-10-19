@@ -3838,6 +3838,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0393 - in-game check for the worker robot
+
+- The earlier attempts had used the GBA key bits in `--input-script`. The
+  runtime's script masks are its own key set: right 1, left 2, up 4,
+  down 8, A 16, B 32. With B as 32, a capture in `chozodia_051` shows a
+  worker robot asleep, woken by two beam shots (`WAKING_UP`), then walking
+  away along the corridor.
+- `mzm.enemies.worker_robot` moves from `partial` to `functional`; the
+  parity inventory now contains 30 partial and 72 functional entries.
+- Capture: ignored `captures/enemies/worker-robot-wake.png`.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 444/444 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0392 - in-game checks for Gadora and Deorem
 
 - A capture in `kraid_029` shows Gadora's eye closed on its hatch, then

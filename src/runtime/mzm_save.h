@@ -55,11 +55,13 @@ typedef struct {
 
 /* The native FileScreenOptionsUnlocked block is global rather than owned by
  * one of the three game files. The runtime keeps the fields used by the
- * ending and reserves the remaining native unlock groups for later menus. */
+ * ending. The byte at offset four keeps the native difficulty-clear bits so
+ * existing runtime save files remain compatible; the bundled NES game is not
+ * part of this project's scope. */
 typedef struct {
     uint16_t gallery_images;
     uint16_t fusion_gallery_images;
-    uint8_t sound_test_and_original_metroid;
+    uint8_t difficulty_clears;
     uint32_t time_attack;
 } MzmUnlockData;
 

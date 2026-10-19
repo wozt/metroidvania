@@ -3,9 +3,9 @@
  *
  * Particles follow src/particle.c: ParticleSet (the first free slot, or the
  * oldest particle), ParticleUpdateAnimation and ParticleCheckOnScreen, for
- * the one-shot effects the ported sprites and projectiles set: sprite
- * explosions, the screw attack kill, projectile impacts and dust. Their sounds and
- * the super missile screen shake are not ported. Sprite debris
+ * the one-shot effects the ported sprites and projectiles set: liquid
+ * splashes, sprite explosions, the screw attack kill, projectile impacts and
+ * dust. Sprite debris
  * (src/sprite_debris.c) is stored here and processed by mzm_sprites, which
  * owns the collision helpers it needs. Frame durations come from the OAM
  * tables exported by scripts/mzm_sprites.py. */
@@ -22,6 +22,15 @@
 
 /* ParticleEffectId values of the ported effects. */
 enum {
+    MZM_PE_SPRITE_SPLASH_WATER_SMALL = 0,
+    MZM_PE_SPRITE_SPLASH_WATER_BIG = 1,
+    MZM_PE_SPRITE_SPLASH_WATER_HUGE = 2,
+    MZM_PE_SPRITE_SPLASH_LAVA_SMALL = 3,
+    MZM_PE_SPRITE_SPLASH_LAVA_BIG = 4,
+    MZM_PE_SPRITE_SPLASH_LAVA_HUGE = 5,
+    MZM_PE_SPRITE_SPLASH_ACID_SMALL = 6,
+    MZM_PE_SPRITE_SPLASH_ACID_BIG = 7,
+    MZM_PE_SPRITE_SPLASH_ACID_HUGE = 8,
     MZM_PE_BOMB = 19,
     MZM_PE_MISSILE_TRAIL = 20,
     MZM_PE_SUPER_MISSILE_TRAIL = 21,
@@ -69,6 +78,7 @@ enum {
     MZM_PARTICLE_ONSCREEN = 1 << 1,
     MZM_PARTICLE_HIGH_OAM_PRIORITY = 1 << 2,
     MZM_PARTICLE_NOT_DRAWN = 1 << 3,
+    MZM_PARTICLE_LOW_BG_PRIORITY = 1 << 5,
 };
 
 typedef struct {

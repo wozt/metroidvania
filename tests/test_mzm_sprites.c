@@ -34,6 +34,15 @@ static uint8_t movement(void *context, uint16_t y, uint16_t x) {
                                           : MZM_CLIPDATA_MOVEMENT_NONE;
 }
 
+static uint8_t test_hazard;
+
+static uint8_t hazard(void *context, uint16_t y, uint16_t x) {
+    (void)context;
+    (void)y;
+    (void)x;
+    return test_hazard;
+}
+
 static void clear(void) {
     /* A new room: RoomLoad's sScreenShake_Empty. */
     mzm_screen_shake_clear();
@@ -732,11 +741,14 @@ int main(void) {
     static MzmEffectKinds fx_kinds;
     memset(&fx, 0, sizeof fx);
     fx_kinds.counts[MZM_PE_SPRITE_EXPLOSION_MEDIUM] = 3;
+    fx_kinds.counts[MZM_PE_SPRITE_SPLASH_WATER_SMALL] = 2;
     fx_kinds.counts[MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM] = 2;
     for (int f = 0; f < 3; ++f) {
         fx_kinds.timers[MZM_PE_SPRITE_EXPLOSION_MEDIUM][f] = 2;
         fx_kinds.timers[MZM_PE_HITTING_SOMETHING_WITH_NORMAL_BEAM][f] = 2;
     }
+    fx_kinds.timers[MZM_PE_SPRITE_SPLASH_WATER_SMALL][0] = 2;
+    fx_kinds.timers[MZM_PE_SPRITE_SPLASH_WATER_SMALL][1] = 2;
     fx_kinds.debris_count = 4;
     for (int f = 0; f < 4; ++f) fx_kinds.debris_timers[f] = 3;
     mzm_particle_set(&fx, 300, 400, MZM_PE_SPRITE_EXPLOSION_MEDIUM);
@@ -753,6 +765,13 @@ int main(void) {
     assert(pe->status && pe->frame == 2);
     mzm_particles_process(&fx, &fx_kinds, 0, 0);
     assert(pe->status == 0);
+    /* Liquid splashes use their native table and low BG priority. */
+    mzm_particle_set(&fx, 300, 400, MZM_PE_SPRITE_SPLASH_WATER_SMALL);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(!strcmp(mzm_particle_table(MZM_PE_SPRITE_SPLASH_WATER_SMALL),
+                   "ParticleSpriteSplashWaterSmallOam"));
+    assert(fx.particles[0].status & MZM_PARTICLE_LOW_BG_PRIORITY);
+    memset(&fx, 0, sizeof fx);
     /* ParticleFreezingSpriteWithIce: high priority, drawn every other
      * frame. ParticleBeamTrailingRight / Left drift one subpixel sideways
      * and one pixel down a frame after their first. */
@@ -1808,6 +1827,24 @@ int main(void) {
     assert(so.frame == 2);
     step(&so, 0);
     assert(so.x - before == 2);
+    /* A falling Sova crossing the room effect creates the hazard-specific
+     * big splash at the liquid surface. */
+    clear();
+    memset(&fx, 0, sizeof fx);
+    world.effect_y = 500;
+    world.hazard = hazard;
+    test_hazard = MZM_HAZARD_WATER;
+    frame.effects = &fx;
+    so.pose = 0x1F;
+    so.y = 498;
+    so.x = 6 * 64;
+    so.work3 = 0;
+    step(&so, 0);
+    assert(fx.particles[0].effect == MZM_PE_SPRITE_SPLASH_WATER_BIG &&
+           fx.particles[0].y == 500 && fx.particles[0].x == so.x);
+    world.effect_y = 0;
+    world.hazard = NULL;
+    frame.effects = NULL;
 
     /* Zebs and Geegas: pipe bugs. A Zeb in a pipe at block (9, 10) waits
      * hidden from Samus and projectiles. */
@@ -2066,6 +2103,29 @@ int main(void) {
     uint16_t re2x = re2->x, re2y = re2->y;
     step(re, 0);
     assert(re2->x == re2x + 4 && re2->y == re2y + 4);
+    /* Reos use a small splash in water, lava/weak acid and strong acid,
+     * both when entering and leaving the room effect. */
+    memset(&fx, 0, sizeof fx);
+    world.effect_y = 500;
+    world.hazard = hazard;
+    test_hazard = MZM_HAZARD_STRONG_ACID;
+    frame.effects = &fx;
+    frame.sprite_count = 1;
+    re->pose = 0x23;
+    re->y = 498;
+    re->x = 5 * 64;
+    re->status |= MZM_SPRITE_STATUS_FACING_DOWN;
+    re->work0 = 0;
+    re->work3 = 16;
+    re->scaling = 2;
+    frame.samus_y = 1000;
+    frame.samus_hitbox_top = 0;
+    step(re, 0);
+    assert(fx.particles[0].effect == MZM_PE_SPRITE_SPLASH_ACID_SMALL &&
+           fx.particles[0].y == 500);
+    world.effect_y = 0;
+    world.hazard = NULL;
+    frame.effects = NULL;
 
     /* Mellas and Holtzes swoop from a ceiling (row 2) to the floor (row 10)
      * and climb back. */

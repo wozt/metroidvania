@@ -2506,9 +2506,9 @@ static uint32_t runtime_ending_pen(const MzmEquipment *equipment) {
 static uint8_t runtime_update_ending_unlocks(MzmUnlockData *unlocks,uint32_t pen) {
     uint8_t flags=0;
     if(unlocks->gallery_images==0)flags|=MZM_ENDING_FLAG_FIRST_CLEAR;
-    if(runtime_difficulty==2 && !(unlocks->sound_test_and_original_metroid&(1u<<2)))
+    if(runtime_difficulty==2 && !(unlocks->difficulty_clears&(1u<<2)))
         flags|=MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR;
-    unlocks->sound_test_and_original_metroid|=(uint8_t)(1u<<runtime_difficulty);
+    unlocks->difficulty_clears|=(uint8_t)(1u<<runtime_difficulty);
     unlocks->gallery_images|=(uint16_t)(1u<<(pen&0xFu));
     return flags;
 }

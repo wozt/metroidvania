@@ -18,6 +18,15 @@ enum {
 
 const char *mzm_particle_table(uint8_t effect) {
     switch (effect) {
+    case MZM_PE_SPRITE_SPLASH_WATER_SMALL: return "ParticleSpriteSplashWaterSmallOam";
+    case MZM_PE_SPRITE_SPLASH_WATER_BIG: return "ParticleSpriteSplashWaterBigOam";
+    case MZM_PE_SPRITE_SPLASH_WATER_HUGE: return "ParticleSpriteSplashWaterHugeOam";
+    case MZM_PE_SPRITE_SPLASH_LAVA_SMALL: return "ParticleSpriteSplashLavaSmallOam";
+    case MZM_PE_SPRITE_SPLASH_LAVA_BIG: return "ParticleSpriteSplashLavaBigOam";
+    case MZM_PE_SPRITE_SPLASH_LAVA_HUGE: return "ParticleSpriteSplashLavaHugeOam";
+    case MZM_PE_SPRITE_SPLASH_ACID_SMALL: return "ParticleSpriteSplashAcidSmallOam";
+    case MZM_PE_SPRITE_SPLASH_ACID_BIG: return "ParticleSpriteSplashAcidBigOam";
+    case MZM_PE_SPRITE_SPLASH_ACID_HUGE: return "ParticleSpriteSplashAcidHugeOam";
     case MZM_PE_BOMB: return "ParticleBombOam";
     case MZM_PE_SPRITE_EXPLOSION_HUGE: return "ParticleSpriteExplosionHugeOam";
     case MZM_PE_MAIN_BOSS_DEATH: return "ParticleMainBossDeathOam";
@@ -137,6 +146,8 @@ static void process(MzmParticle *p, const MzmEffectKinds *kinds) {
     }
     if (p->stage == 0) {
         p->stage++;
+        if (p->effect <= MZM_PE_SPRITE_SPLASH_ACID_HUGE)
+            p->status |= MZM_PARTICLE_LOW_BG_PRIORITY;
         if (p->effect == MZM_PE_BOMB ||
             (p->effect >= MZM_PE_SPRITE_EXPLOSION_HUGE && p->effect <= MZM_PE_SPEEDBOOSTER_DESTROYED) ||
             p->effect == MZM_PE_FREEZING_SPRITE_WITH_ICE ||

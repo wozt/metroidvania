@@ -257,7 +257,7 @@ bool mzm_unlocks_write(const char *path, const MzmUnlockData *data) {
     put32(bytes + 12, UNLOCK_PAYLOAD);
     put16(bytes + HEADER, data->gallery_images);
     put16(bytes + HEADER + 2, data->fusion_gallery_images);
-    bytes[HEADER + 4] = data->sound_test_and_original_metroid;
+    bytes[HEADER + 4] = data->difficulty_clears;
     put32(bytes + HEADER + 8, data->time_attack);
     put32(bytes + HEADER + UNLOCK_PAYLOAD, crc32(bytes + HEADER, UNLOCK_PAYLOAD));
     return write_bytes(path, bytes, sizeof bytes);
@@ -276,7 +276,7 @@ bool mzm_unlocks_read(const char *path, MzmUnlockData *data) {
     MzmUnlockData parsed = {0};
     parsed.gallery_images = get16(bytes + HEADER);
     parsed.fusion_gallery_images = get16(bytes + HEADER + 2);
-    parsed.sound_test_and_original_metroid = bytes[HEADER + 4];
+    parsed.difficulty_clears = bytes[HEADER + 4];
     parsed.time_attack = get32(bytes + HEADER + 8);
     *data = parsed;
     return true;

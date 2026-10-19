@@ -272,7 +272,12 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sDeoremSegmentXVelocity", "sDeoremThornYVelocity")
 # Particle effects and sprite debris drawn from the common sprite graphics
 # (ParticleDraw, SpriteDebrisDraw: no palette row or graphics slot added).
-PARTICLES = ("sParticleBombOam", "sParticleFreezingSpriteWithIceOam",
+PARTICLES = ("sParticleSpriteSplashWaterSmallOam", "sParticleSpriteSplashWaterBigOam",
+             "sParticleSpriteSplashWaterHugeOam", "sParticleSpriteSplashLavaSmallOam",
+             "sParticleSpriteSplashLavaBigOam", "sParticleSpriteSplashLavaHugeOam",
+             "sParticleSpriteSplashAcidSmallOam", "sParticleSpriteSplashAcidBigOam",
+             "sParticleSpriteSplashAcidHugeOam", "sParticleBombOam",
+             "sParticleFreezingSpriteWithIceOam",
              "sParticleFreezingSpriteWithChargedIceBeamOam", "sParticleBeamTrailingOam",
              "sParticleHittingSomethingWithIceBeamOam",
              "sParticleHittingSomethingWithWaveBeamOam",

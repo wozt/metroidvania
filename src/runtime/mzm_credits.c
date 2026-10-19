@@ -31,8 +31,8 @@ enum {
     ENDING_LINE_COUNT,
     LANGUAGE_ENGLISH = 2,
     FILE_TEXT_GALLERY_UNLOCK = 33, FILE_TEXT_TIME_ATTACK_RECORD_UNLOCK = 34,
-    FILE_TEXT_SOUND_TEST_UNLOCK = 35, FILE_TEXT_NES_METROID_UNLOCK = 36,
-    POPUP_FLAGS = MZM_ENDING_FLAG_UNKNOWN | MZM_ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR |
+    FILE_TEXT_SOUND_TEST_UNLOCK = 35,
+    POPUP_FLAGS = MZM_ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR |
                   MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR | MZM_ENDING_FLAG_FIRST_CLEAR,
 };
 
@@ -888,8 +888,9 @@ static void unlocked_options_init(MzmCredits *c, MzmScreen *s) {
     unlocked_options_vblank(c, s);
 }
 
-/* UnlockedOptionsPopUp: 0 running, 1 show the first-clear second pop-up,
- * 2 all pop-ups ended. */
+/* UnlockedOptionsPopUp: 0 while running, 2 once the supported pop-up ends.
+ * The bundled NES game is deliberately outside this runtime's scope, so a
+ * first clear only announces the gallery. */
 static uint8_t unlocked_options_popup(MzmCredits *c, MzmScreen *s) {
     MzmEndingData *d = &c->data;
     uint8_t ended = 0;
@@ -898,8 +899,7 @@ static uint8_t unlocked_options_popup(MzmCredits *c, MzmScreen *s) {
         memset(s->ppu->vram, 0, 0x2000);
         uint8_t message = c->ending_flags & MZM_ENDING_FLAG_FIRST_CLEAR ? FILE_TEXT_GALLERY_UNLOCK :
                           c->ending_flags & MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR ? FILE_TEXT_SOUND_TEST_UNLOCK :
-                          c->ending_flags & MZM_ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR ?
-                              FILE_TEXT_TIME_ATTACK_RECORD_UNLOCK : FILE_TEXT_NES_METROID_UNLOCK;
+                          FILE_TEXT_TIME_ATTACK_RECORD_UNLOCK;
         popup_start_text(c, message);
         d->oam_types[0] = 0;
         break;
@@ -947,7 +947,7 @@ static uint8_t unlocked_options_popup(MzmCredits *c, MzmScreen *s) {
             d->oam_y[1] -= 4;
         } else {
             d->dispcnt = 0;
-            ended = c->ending_flags & MZM_ENDING_FLAG_FIRST_CLEAR ? 1 : 2;
+            ended = 2;
         }
     }
     return ended;

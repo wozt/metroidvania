@@ -1633,11 +1633,11 @@ static void zoomer_falling_init(MzmSprite *s) {
 }
 
 /* ZoomerFalling: sSpritesFallingSpeed until its SHORT_MAX end, then the last
- * speed; landing on any collision (the splash of SpriteUtilCheckInRoomEffect
- * is not ported). */
+ * speed; landing on any collision. */
 static void zoomer_falling(Ctx *c) {
     MzmSprite *s = c->s;
     if (is_zeela(s)) s->adc++;      /* ZeelaFalling doubles the animation speed */
+    uint16_t old_y = s->y;
     uint8_t offset = s->work3;
     int16_t movement = offset < 16 ? c->tables->falling[offset] : SHORT_MAX;
     if (movement == SHORT_MAX) {
@@ -1651,6 +1651,8 @@ static void zoomer_falling(Ctx *c) {
         s->y = top;
         s->pose = ZOOMER_POSE_LANDING;
         ai_random_x_direction(c);
+    } else if (ai_entered_room_effect(c, old_y, s->y)) {
+        ai_room_effect_splash(c, s->x, 2);             /* SPLASH_BIG */
     }
 }
 
@@ -3593,9 +3595,10 @@ static void sova_falling_init(MzmSprite *s) {
     ai_set_anim(s, MZM_SOVA_FALLING);
 }
 
-/* SovaFalling (the splash of SpriteUtilCheckInRoomEffect is not ported) */
+/* SovaFalling */
 static void sova_falling(Ctx *c) {
     MzmSprite *s = c->s;
+    uint16_t old_y = s->y;
     uint8_t offset = s->work3;
     int16_t movement = offset < 16 ? c->tables->falling[offset] : SHORT_MAX;
     if (movement == SHORT_MAX) {
@@ -3608,6 +3611,8 @@ static void sova_falling(Ctx *c) {
     if (c->vertical != MZM_COLLISION_AIR) {
         s->y = top;
         sova_landing_init(c);
+    } else if (ai_entered_room_effect(c, old_y, s->y)) {
+        ai_room_effect_splash(c, s->x, 2);             /* SPLASH_BIG */
     }
 }
 
@@ -4035,8 +4040,7 @@ static void reo_axis(uint16_t *position, uint8_t *braking, uint8_t *speed, uint1
 }
 
 /* ReoMove: pushing the next overlapping Reo of its kind apart, turning at
- * walls, and homing on a point 72 subpixels above Samus's feet (the splash
- * effects and the moving sound are not ported). */
+ * walls, and homing on a point 72 subpixels above Samus's feet. */
 static void reo_move(Ctx *c) {
     MzmSprite *s = c->s;
     const int offset = HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
@@ -4081,10 +4085,15 @@ static void reo_move(Ctx *c) {
     }
     bool purple = s->sprite_id == MZM_PSPRITE_REO_PURPLE_WINGS;
     uint16_t target_y = (uint16_t)(c->f->samus_y - (BLOCK_SIZE + EIGHTH_BLOCK_SIZE));
+    uint16_t old_y = s->y;
+    bool moving_down = s->status & MZM_SPRITE_STATUS_FACING_DOWN;
     reo_axis(&s->x, &s->work1, &s->work2, &s->status, MZM_SPRITE_STATUS_FACING_RIGHT,
              c->f->samus_x, purple ? BLOCK_SIZE : QUARTER_BLOCK_SIZE + EIGHTH_BLOCK_SIZE);
     reo_axis(&s->y, &s->work0, &s->work3, &s->status, MZM_SPRITE_STATUS_FACING_DOWN, target_y,
              purple ? HALF_BLOCK_SIZE : QUARTER_BLOCK_SIZE);
+    if ((moving_down && ai_entered_room_effect(c, old_y, s->y)) ||
+        (!moving_down && ai_left_room_effect(c, old_y, s->y)))
+        ai_room_effect_splash(c, s->x, 1);             /* SPLASH_SMALL */
     if (--s->scaling == 0) {
         s->scaling = 32;
         ai_sound_onscreen_once(s, MZM_SOUND_REO_MOVING);
@@ -4592,8 +4601,7 @@ static void geruta(Ctx *c) {
 }
 
 /* SpriteUtilCheckOutOfRoomEffect and SpriteUtilCheckInRoomEffect: whether a
- * vertical move crossed the room effect's surface upward or downward (their
- * splash particles are not ported). */
+ * vertical move crossed the room effect's surface upward or downward. */
 bool ai_left_room_effect(const Ctx *c, uint16_t old_y, uint16_t y) {
     uint16_t effect = c->world->effect_y;
     return old_y > effect && y <= effect;
@@ -4601,6 +4609,20 @@ bool ai_left_room_effect(const Ctx *c, uint16_t old_y, uint16_t y) {
 bool ai_entered_room_effect(const Ctx *c, uint16_t old_y, uint16_t y) {
     uint16_t effect = c->world->effect_y;
     return old_y < effect && y >= effect;
+}
+
+/* SpriteUtilSetSplashEffect. The hazard is sampled one block into the room
+ * effect, equivalent to the native collision query made at a crossing. */
+void ai_room_effect_splash(const Ctx *c, uint16_t x, uint8_t size) {
+    if (!c->f->effects || size < 1 || size > 3 || !c->world->effect_y) return;
+    uint8_t hazard = ai_hazard_at(c, (uint16_t)(c->world->effect_y + BLOCK_SIZE), x);
+    uint8_t effect;
+    if (hazard == MZM_HAZARD_WATER) effect = MZM_PE_SPRITE_SPLASH_WATER_SMALL;
+    else if (hazard == MZM_HAZARD_LAVA || hazard == MZM_HAZARD_WEAK_ACID)
+        effect = MZM_PE_SPRITE_SPLASH_LAVA_SMALL;
+    else if (hazard == MZM_HAZARD_STRONG_ACID) effect = MZM_PE_SPRITE_SPLASH_ACID_SMALL;
+    else return;
+    ai_particle_set(c, c->world->effect_y, x, (uint8_t)(effect + size - 1));
 }
 
 /* gCurrentAffectingClipdata.hazard after a ClipdataProcess at a point. */

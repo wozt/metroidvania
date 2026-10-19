@@ -3838,17 +3838,45 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0386 - supported unlock scope and native liquid splashes
+
+- Removed the bundled NES game from the runtime scope. A first clear now
+  shows only the Gallery unlock panel; the historical fallback flag can no
+  longer start an unsupported second panel. The supported Hard and future
+  Time Attack messages are unchanged.
+- Renamed the global unlock byte to `difficulty_clears` while preserving its
+  serialized offset and version, so existing `options.sav` files remain
+  readable without presenting the excluded game as a runtime feature.
+- Added all nine native small, big and huge water, lava and acid splash OAM
+  tables to `scripts/mzm_sprites.py`. The ignored local sprite library was
+  rebuilt successfully with 20,403 sequences, 119,663 frames and 29,128
+  unique BMPs; no extracted data is tracked.
+- Ported `SpriteUtilSetSplashEffect` selection and connected it to Reo room
+  effect crossings and the falling paths of Sova and Zeela. The particles
+  spawn on the live liquid surface, use the correct hazard family and carry
+  the native low-BG-priority flag.
+- Added regressions for the splash table, priority, Sova's big water splash,
+  Reo's small strong-acid splash and the single first-clear panel. Reo and
+  Sova move from `partial` to `functional`; Zeela remains `partial` only
+  because its thrown eyes still lack native affine clipping. The parity
+  inventory now contains 48 partial and 54 functional entries.
+- Validation on 2026-10-19: the warning-clean build, CTest 35/35 and Python
+  440/440 passed. The dashboard reports 139 features, 67 functional or
+  better and 127 with passing tests; generated-data checks are fresh and the
+  proprietary-file guard passed.
+
 ## Patch 0385 - ending unlock pop-ups and persistence
 
 - Completed `GM_CREDITS` with `UnlockedOptionsInit`,
   `UnlockedOptionsPopUp` and `UnlockedOptionsVBlank`. The native blue panel
   expands through window 0, reveals its English text eight characters per
   frame, waits for A at frame 128 and contracts before leaving the ending.
-- A first clear shows the native two-step sequence: `Gallery` followed by
-  `Original Metroid`. A later first Hard clear selects `Sound Test`, and the
-  Time Attack Records message is ready for the future Time Attack completion
-  flag. The ending result image also renders the animated `NEW RECORD` OAM
-  badge when that native flag is supplied.
+- At the time of this patch, a first clear showed the native two-step unlock
+  sequence. Patch 0386 deliberately removed its bundled NES-game half from
+  project scope, leaving only `Gallery`. A later first Hard clear selects
+  `Sound Test`, and the Time Attack Records message is ready for the future
+  Time Attack completion flag. The ending result image also renders the
+  animated `NEW RECORD` OAM badge when that native flag is supplied.
 - Added a separate versioned, checksummed `options.sav` for the global
   `FileScreenOptionsUnlocked` state. Ending the game records the gallery
   image and cleared difficulty there, while the current game slot receives

@@ -734,6 +734,32 @@ const char *const mzm_elevator_statue_anim_names[MZM_ELEVATOR_STATUE_ANIMS] = {
 static const char *const elevator_statue_sprites[MZM_ELEVATOR_STATUE_ANIMS] = {
     "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE",
 };
+const char *const mzm_imago_anim_names[MZM_IMAGO_ANIMS] = {
+    "ImagoPartOam_BodyIdle",
+    "ImagoPartOam_BodyGrowling",
+    "ImagoOam_BrokenStinger",
+    "ImagoPartOam_LeftWingIdle",
+    "ImagoPartOam_LeftWingShootingNeedles",
+    "ImagoPartOam_LeftWingDying",
+    "ImagoPartOam_RightWingIdle",
+    "ImagoPartOam_RightWingShootingNeedles",
+    "ImagoPartOam_RightWingDying",
+    "ImagoPartOam_Core",
+    "ImagoOam_Flying",
+    "ImagoOam_ShootingNeedles",
+    "ImagoOam_RechargingNeedles",
+    "ImagoDamagedStingerOam",
+    "ImagoNeedleOam",
+    "ImagoDamagedStingerOam_Unused",
+    "ImagoEggOam_Breaking",
+    "ImagoEggOam_Standing",
+};
+static const char *const imago_sprites[MZM_IMAGO_ANIMS] = {
+    "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO", "IMAGO",
+};
+const char *const mzm_imago_adult_multi_names[MZM_IMAGO_ADULT_MULTI_COUNT] = {
+    "sImagoMultiSpriteData_Idle", "sImagoMultiSpriteData_ShootingNeedles", "sImagoMultiSpriteData_RechargingNeedles", "sImagoMultiSpriteData_Dying",
+};
 static const char *const mecha_ridley_sprites[MZM_MECHA_RIDLEY_ANIMS] = {
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
     "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY", "MECHA_RIDLEY",
@@ -1039,6 +1065,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
                                       chozodia_scripted_sprites},
     [MZM_FAMILY_ELEVATOR_STATUE] = {MZM_ELEVATOR_STATUE_ANIMS, mzm_elevator_statue_anim_names,
                                     elevator_statue_sprites},
+    [MZM_FAMILY_IMAGO] = {MZM_IMAGO_ANIMS, mzm_imago_anim_names, imago_sprites},
 };
 
 
@@ -5506,6 +5533,9 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_HIVE_ROOTS) return MZM_FAMILY_HIVE;
         if (sprite_id == MZM_SSPRITE_TANGLE_VINE_GERUTA_PART) return MZM_FAMILY_TANGLE_VINE;
         if (sprite_id == MZM_SSPRITE_ELEVATOR_STATUE_DEBRIS) return MZM_FAMILY_ELEVATOR_STATUE;
+        if (sprite_id == MZM_SSPRITE_IMAGO_PART || sprite_id == MZM_SSPRITE_IMAGO_NEEDLE ||
+            sprite_id == MZM_SSPRITE_IMAGO_DAMAGED_STINGER || sprite_id == MZM_SSPRITE_IMAGO_EGG)
+            return MZM_FAMILY_IMAGO;
         if (sprite_id >= MZM_SSPRITE_RUINS_TEST_SYMBOL && sprite_id <= MZM_SSPRITE_RUINS_TEST_LIGHTNING)
             return MZM_FAMILY_RUINS_TEST;
         if (sprite_id == MZM_SSPRITE_MECHA_RIDLEY_PART ||
@@ -5618,6 +5648,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         return MZM_FAMILY_CHOZODIA_SCRIPTED;
     case MZM_PSPRITE_KRAID_ELEVATOR_STATUE: case MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE:
         return MZM_FAMILY_ELEVATOR_STATUE;
+    case MZM_PSPRITE_IMAGO: return MZM_FAMILY_IMAGO;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -6033,6 +6064,21 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             /* A knockback only, no damage. */
             if (contact_kills(s, samus, tables)) break;
             if (samus->knockback) samus->knockback(samus->context, on_left);
+            ignore = true;
+            break;
+        case SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT_BIG_KNOCKBACK:
+            s->pose = SPRITE_POSE_STOPPED;
+            /* fallthrough */
+        case SSC_HURTS_BIG_KNOCKBACK:
+            /* The hurt code with a quarter-block knockback (Imago). */
+            if (contact_kills(s, samus, tables)) break;
+            if (!samus->invincible && samus->hurt) {
+                samus->big_knockback = true;
+                samus->hurt(samus->context, damage_of(s, tables), on_left);
+                samus->big_knockback = false;
+                samus->invincible = true;
+            }
+            s->ignore_samus_timer = 15;                /* CONVERT_SECONDS(.25f) */
             ignore = true;
             break;
         case SSC_HURTS_SAMUS_A_LOT:
@@ -6848,6 +6894,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_RUINS_TEST: ai_ruins_test(&c); break;
     case MZM_FAMILY_CHOZODIA_SCRIPTED: ai_chozodia_scripted(&c); break;
     case MZM_FAMILY_ELEVATOR_STATUE: ai_elevator_statue(&c); break;
+    case MZM_FAMILY_IMAGO: ai_imago(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

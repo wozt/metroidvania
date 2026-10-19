@@ -3838,6 +3838,37 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0377 - Imago
+
+- Ported the adult Imago boss (`sprites_ai/imago.c`) in `mzm_imago.c`,
+  together with its parts, needles, damaged stinger and five eggs. It was
+  the last major boss not yet ported.
+- **Waiting.** Imago sits in the ceiling until the last egg is broken.
+  Then the battle starts and its body becomes vulnerable.
+- **Movement.** It sweeps the room low, hovering over the floor and its
+  slopes, and gets faster as it is hurt. It climbs back at either end and
+  dives at Samus near that end, otherwise it turns around.
+- **Needles and colours.** Below two thirds of its health, or when Samus
+  has no missiles, it shoots needles, faster below one third. Its body
+  reddens and its core flashes through the ROM-exported row table.
+- **Death.** When killed it drops its stinger and keeps flying while
+  burning. It waits for Samus at the Super Missile, then breaks through
+  the wall column by column and explodes. Event 35 is set and the doors
+  unlock once the Super Missiles are collected.
+- **Contact and assets.** Added the big-knockback contact (`SSC_HURTS_BIG_KNOCKBACK`
+  and its stop variant). Exported the four multi-sprite tables, the
+  sway, stinger and core-palette tables, and the palette rows 1, 2, 4
+  and 5.
+- **Tests.** A ROM-free regression covers the eggs and the wake-up, body
+  vulnerability, the descent to the floor, the sweep, needles, body tint,
+  the climb with a dive or turn, death with the stinger, the wait at the
+  Super Missile, the wall charge (block counts and timing), the
+  explosions, the conditional event and the reload.
+- **In game.** A capture in `ridley_019` shows the eggs before the fight
+  (ignored `captures/imago/eggs.png`).
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0376 - Elevator statues
 
 - Ported `sprites_ai/elevator_statue.c` in `mzm_elevator_statue.c`,

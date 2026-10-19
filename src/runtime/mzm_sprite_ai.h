@@ -44,6 +44,8 @@ enum {
     SSC_HURTS_SAMUS_SOLID = 11,
     SSC_MELLOW = 18,
     SSC_SOLID_SIDEWAYS = 12,
+    SSC_HURTS_BIG_KNOCKBACK = 13,
+    SSC_HURTS_SAMUS_STOP_DIES_WHEN_HIT_BIG_KNOCKBACK = 14,
     SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY = 15,
     SSC_HURTS_SAMUS_IGNORE_INVINCIBILITY_NO_CONTACT_DAMAGE = 21,
     SSC_ACID_WORM_MOUTH = 22,
@@ -216,6 +218,8 @@ void ai_ruins_test(Ctx *c);
 void ai_chozodia_scripted(Ctx *c);
 /* The Kraid and Ridley elevator statues (mzm_elevator_statue.c). */
 void ai_elevator_statue(Ctx *c);
+/* Imago, its parts, needles, damaged stinger and eggs (mzm_imago.c). */
+void ai_imago(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */
 void ai_gadora(Ctx *c);
 /* The paired Imago larvae, their parts and the animated passage remnant. */

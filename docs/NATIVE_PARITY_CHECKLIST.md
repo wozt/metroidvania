@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 85 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 86 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -449,6 +449,16 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+
+[~] **`mzm.enemies.imago` — Imago (adult wasp boss).** Imago waits in the ceiling until the last of its five eggs is broken (touched or shot), fades the music and starts the battle music; its body turns vulnerable. It comes down, sweeps the room low (faster as it is hurt, hovering over the floor and its slopes), climbs back at either end and dives at Samus near that end with the ROM-exported sway, turns otherwise. Under two thirds (or when Samus has no missiles) it shoots needles at her, faster under a third, and its body reddens (rows 4 and 5) while its core flashes through sImagoDynamicPaletteData. Killed, it drops its burning stinger, keeps flying while burning, waits for Samus at the Super Missile, charges and breaks the wall column by column, explodes with the boss-killed music, and sets event 35 and unlocks the doors once Samus picks the Super Missiles up. Contact uses the big-knockback hurt (SSC_HURTS_BIG_KNOCKBACK, now handled). A capture in ridley_019 shows the eggs before the fight.
+
+Native evidence: `mzm:c:src/sprites_ai/imago.c:Imago`, `mzm:c:src/sprites_ai/imago.c:ImagoAttackingGoingDown`, `mzm:c:src/sprites_ai/imago.c:ImagoAttackingGoingUp`, `mzm:c:src/sprites_ai/imago.c:ImagoAttackingInit`, `mzm:c:src/sprites_ai/imago.c:ImagoChargeThroughWall`, `mzm:c:src/sprites_ai/imago.c:ImagoCheckSamusAtSuperMissile`, `mzm:c:src/sprites_ai/imago.c:ImagoComingDown`, `mzm:c:src/sprites_ai/imago.c:ImagoComingDownInit`, `mzm:c:src/sprites_ai/imago.c:ImagoCoreFlashingAnim`, `mzm:c:src/sprites_ai/imago.c:ImagoDamagedStinger`, `mzm:c:src/sprites_ai/imago.c:ImagoDestroyWall`, `mzm:c:src/sprites_ai/imago.c:ImagoDying`, `mzm:c:src/sprites_ai/imago.c:ImagoDyingInit`, `mzm:c:src/sprites_ai/imago.c:ImagoEgg`, `mzm:c:src/sprites_ai/imago.c:ImagoGoingUp`, `mzm:c:src/sprites_ai/imago.c:ImagoInit`, `mzm:c:src/sprites_ai/imago.c:ImagoMoveHorizontally`, `mzm:c:src/sprites_ai/imago.c:ImagoNeedle`, `mzm:c:src/sprites_ai/imago.c:ImagoPart`, `mzm:c:src/sprites_ai/imago.c:ImagoPartBodySpawn`, `mzm:c:src/sprites_ai/imago.c:ImagoPartInit`, `mzm:c:src/sprites_ai/imago.c:ImagoPartSetBodySidesHitbox`, `mzm:c:src/sprites_ai/imago.c:ImagoPartSyncPalette`, `mzm:c:src/sprites_ai/imago.c:ImagoPartUpdateBodyPalette`, `mzm:c:src/sprites_ai/imago.c:ImagoSetEvent`, `mzm:c:src/sprites_ai/imago.c:ImagoSetSidesHitbox`, `mzm:c:src/sprites_ai/imago.c:ImagoShootNeedles`, `mzm:c:src/sprites_ai/imago.c:ImagoSpawn`, `mzm:c:src/sprites_ai/imago.c:ImagoSyncSubSprites`, `mzm:c:src/sprites_ai/imago.c:ImagoWaitForLastEgg`.  
+Local implementation: [`src/runtime/mzm_imago.c`](../src/runtime/mzm_imago.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.imago_cocoon`, `mzm.items.tanks`, `mzm.transitions.doors_and_hatches`.  
+Known divergences: Palette rows that would overflow its six-row palette keep the untinted look. Not compared with an emulator.  
+Next action: Compare the fight and the wall charge with an emulator.
+Evidence: in game: `ridley_019`, `ridley_027`.
 
 [+] **`mzm.enemies.imago_cocoon` — Imago cocoon encounter, passage and remains.** The active norfair_043 cocoon uses its two native multi-sprite tables, locks the doors, changes palette after three of its six 50-health missile-vulnerable vines are destroyed and alternates eight-spore nests on both sides. Its Winged Ripper follows the native ROM sine table, carries a standing Samus across both axes and is crushed by the falling cocoon. Breaking the last vine persists event 33, releases ceiling debris, removes the five central floor blocks in stages, crashes the cocoon into the lower floor, clears the two passage blocks after 90 on-screen frames, unlocks the doors and plays the boss-killed music. The native idle, vine, spore, destruction and battle-music cues are connected. The invisible passage trigger persists event 32. Reloading the killed cocoon restores its in-ground state until the Ridley entrance demo; ridley_028 retains the post-fight remnant and broken actors.
 

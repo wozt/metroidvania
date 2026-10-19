@@ -174,6 +174,11 @@ enum {
     MZM_MECHA_RIDLEY_MULTI_COUNT
 };
 extern const char *const mzm_mecha_ridley_multi_names[MZM_MECHA_RIDLEY_MULTI_COUNT];
+/* sImagoMultiSpriteData_* (the adult Imago). */
+enum { MZM_IMAGO_ADULT_MULTI_IDLE, MZM_IMAGO_ADULT_MULTI_SHOOTING_NEEDLES,
+       MZM_IMAGO_ADULT_MULTI_RECHARGING_NEEDLES, MZM_IMAGO_ADULT_MULTI_DYING,
+       MZM_IMAGO_ADULT_MULTI_COUNT };
+extern const char *const mzm_imago_adult_multi_names[MZM_IMAGO_ADULT_MULTI_COUNT];
 
 /* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
 typedef struct {
@@ -216,6 +221,11 @@ typedef struct {
     int16_t mellow_idle_x[81];      /* sMellowIdleXVelocity (SHORT_MAX ends it) */
     int16_t baristute_jumping_y[10]; /* sBaristuteJumpingYVelocity */
     int16_t baristute_falling_y[8]; /* sBaristuteFallingYVelocity (SHORT_MAX ends it) */
+    int16_t imago_attacking_x[49];  /* sImagoAttackingXVelocity (SHORT_MAX ends it) */
+    int16_t imago_stinger_falling_y[10]; /* sImagoDamagedStingerFallingYVelocity */
+    /* sImagoDynamicPaletteData (u8 [9][2]) read as halfwords: the row in
+     * the low byte, the delay in the high byte; row 0x80 ends it. */
+    int16_t imago_core_palette[9];
     int16_t pirate_jump_low[11];    /* sSpacePirate_2e1030 */
     int16_t pirate_jump[10];        /* sSpacePirateJumpingVelocity */
     int16_t pirate_jump_high[11];   /* sSpacePirate_2e105a */
@@ -246,6 +256,7 @@ typedef struct {
     MzmMultiSprite imago_cocoon_multi[MZM_IMAGO_COCOON_MULTI_COUNT];
     MzmMultiSprite mother_brain_multi;  /* sMotherBrainMultiSpriteData */
     MzmMultiSprite tangle_vine_multi;   /* sTangleVineGerutaMultiSpriteData_Idle */
+    MzmMultiSprite imago_adult_multi[MZM_IMAGO_ADULT_MULTI_COUNT];
     MzmMultiSprite mecha_ridley_multi[MZM_MECHA_RIDLEY_MULTI_COUNT];
 } MzmSpriteTables;
 
@@ -941,6 +952,31 @@ enum {
     MZM_ELEVATOR_DEBRIS_RIDLEY, MZM_ELEVATOR_RIDLEY_FALLEN, MZM_ELEVATOR_DEBRIS_DUST, MZM_ELEVATOR_STATUE_ANIMS,
 };
 extern const char *const mzm_elevator_statue_anim_names[MZM_ELEVATOR_STATUE_ANIMS];
+
+/* Imago, in sImagoFrameDataPointers order, then the standing egg
+ * (sprites_ai/imago.c). */
+enum {
+    MZM_IMAGO_BODY_IDLE,
+    MZM_IMAGO_BODY_GROWLING,
+    MZM_IMAGO_BROKEN_STINGER,
+    MZM_IMAGO_LEFT_WING_IDLE,
+    MZM_IMAGO_LEFT_WING_SHOOTING_NEEDLES,
+    MZM_IMAGO_LEFT_WING_DYING,
+    MZM_IMAGO_RIGHT_WING_IDLE,
+    MZM_IMAGO_RIGHT_WING_SHOOTING_NEEDLES,
+    MZM_IMAGO_RIGHT_WING_DYING,
+    MZM_IMAGO_CORE,
+    MZM_IMAGO_FLYING,
+    MZM_IMAGO_SHOOTING_NEEDLES,
+    MZM_IMAGO_RECHARGING_NEEDLES,
+    MZM_IMAGO_DAMAGED_STINGER,
+    MZM_IMAGO_NEEDLE,
+    MZM_IMAGO_DAMAGED_STINGER_UNUSED,
+    MZM_IMAGO_EGG_BREAKING,
+    MZM_IMAGO_EGG_STANDING,
+    MZM_IMAGO_ANIMS,
+};
+extern const char *const mzm_imago_anim_names[MZM_IMAGO_ANIMS];
 #define MZM_TANGLE_VINE_MULTI_NAME "sTangleVineGerutaMultiSpriteData_Idle"
 
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
@@ -960,7 +996,7 @@ enum {
     MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE, MZM_FAMILY_IMAGO_COCOON,
     MZM_FAMILY_MECHA_RIDLEY, MZM_FAMILY_HIVE, MZM_FAMILY_BARISTUTE,
     MZM_FAMILY_TANGLE_VINE, MZM_FAMILY_RUINS_TEST,
-    MZM_FAMILY_CHOZODIA_SCRIPTED, MZM_FAMILY_ELEVATOR_STATUE,
+    MZM_FAMILY_CHOZODIA_SCRIPTED, MZM_FAMILY_ELEVATOR_STATUE, MZM_FAMILY_IMAGO,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -1046,7 +1082,7 @@ enum {
     MZM_PSPRITE_RUINS_TEST = 109, MZM_PSPRITE_FAKE_POWER_BOMB_EVENT_TRIGGER = 118,
     MZM_PSPRITE_FAKE_POWER_BOMB = 181, MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB = 182,
     MZM_PSPRITE_FALLING_CHOZO_PILLAR = 188, MZM_PSPRITE_KRAID_ELEVATOR_STATUE = 149,
-    MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE = 150,
+    MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE = 150, MZM_PSPRITE_IMAGO = 134,
     MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT = 112,
     MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE = 127,
     MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,
@@ -1077,6 +1113,8 @@ enum {
     MZM_SSPRITE_GADORA_EYE = 54, MZM_SSPRITE_GADORA_BEAM = 55,
     MZM_SSPRITE_IMAGO_LARVA_PART = 18, MZM_SSPRITE_HIVE_ROOTS = 17,
     MZM_SSPRITE_TANGLE_VINE_GERUTA_PART = 45, MZM_SSPRITE_ELEVATOR_STATUE_DEBRIS = 48,
+    MZM_SSPRITE_IMAGO_PART = 41, MZM_SSPRITE_IMAGO_NEEDLE = 47, MZM_SSPRITE_IMAGO_DAMAGED_STINGER = 49,
+    MZM_SSPRITE_IMAGO_EGG = 51,
     MZM_SSPRITE_RUINS_TEST_SYMBOL = 59, MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_START = 60,
     MZM_SSPRITE_RUINS_TEST_REFLECTION_COVER = 61, MZM_SSPRITE_RUINS_TEST_GHOST_OUTLINE = 62,
     MZM_SSPRITE_RUINS_TEST_GHOST = 63, MZM_SSPRITE_RUINS_TEST_SHOOTABLE_SYMBOL = 64,
@@ -1181,7 +1219,7 @@ enum {
     MZM_EVENT_KRAID_GADORA_KILLED = 28, MZM_EVENT_RIDLEY_GADORA_KILLED = 36,
     MZM_EVENT_THREE_HIVES_DESTROYED = 44, MZM_EVENT_KRAID_BARISTUTES_KILLED = 52,
     MZM_EVENT_KRAID_ELEVATOR_STATUE_DESTROYED = 31, MZM_EVENT_RIDLEY_ELEVATOR_STATUE_DESTROYED = 38,
-    MZM_EVENT_POWER_BOMB_STOLEN = 70, MZM_EVENT_SPACE_PIRATE_WITH_POWER_BOMB_ONE = 71,
+    MZM_EVENT_IMAGO_KILLED = 35, MZM_EVENT_POWER_BOMB_STOLEN = 70, MZM_EVENT_SPACE_PIRATE_WITH_POWER_BOMB_ONE = 71,
     MZM_EVENT_SPACE_PIRATE_WITH_POWER_BOMB_TWO = 72,
     MZM_EVENT_CATERPILLAR_KILLED = 31, MZM_EVENT_IMAGO_TUNNEL_DISCOVERED = 32,
     MZM_EVENT_IMAGO_COCOON_KILLED = 33,

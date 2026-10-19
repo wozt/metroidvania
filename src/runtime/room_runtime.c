@@ -2561,6 +2561,9 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sMellowIdleXVelocity", t->mellow_idle_x, 81, 81},
         {"sBaristuteJumpingYVelocity", t->baristute_jumping_y, 10, 10},
         {"sBaristuteFallingYVelocity", t->baristute_falling_y, 8, 8},
+        {"sImagoAttackingXVelocity", t->imago_attacking_x, 49, 49},
+        {"sImagoDamagedStingerFallingYVelocity", t->imago_stinger_falling_y, 10, 10},
+        {"sImagoDynamicPaletteData", t->imago_core_palette, 9, 9},
         {"sReoIdleXMovement", t->reo_idle_x, 81, 81},
         {"sMellaIdleYMovement", t->mella_idle_y, 65, 65},
         {"sMellaIdleXMovement", t->mella_idle_x, 49, 49},
@@ -2655,7 +2658,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                    IMAGO = RIDLEY + MZM_IMAGO_MULTI_COUNT,
                    COCOON = IMAGO + MZM_IMAGO_COCOON_MULTI_COUNT,
                    MOTHER = COCOON, MECHA = MOTHER + 1,
-                   TANGLE = MECHA + MZM_MECHA_RIDLEY_MULTI_COUNT, ALL = TANGLE + 1 };
+                   TANGLE = MECHA + MZM_MECHA_RIDLEY_MULTI_COUNT, IMAGO_ADULT = TANGLE + 1,
+                   ALL = IMAGO_ADULT + MZM_IMAGO_ADULT_MULTI_COUNT };
             for (int m = 0; m < ALL; ++m) {
                 const char *known = m < CHOZO ? mzm_chozo_multi_names[m]
                                     : m < KRAID ? mzm_kraid_multi_names[m - CHOZO]
@@ -2664,7 +2668,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                                     : m < COCOON ? mzm_imago_cocoon_multi_names[m - IMAGO]
                                     : m < MECHA ? MZM_MOTHER_BRAIN_MULTI_NAME
                                     : m < TANGLE ? mzm_mecha_ridley_multi_names[m - MECHA]
-                                                 : MZM_TANGLE_VINE_MULTI_NAME;
+                                    : m < IMAGO_ADULT ? MZM_TANGLE_VINE_MULTI_NAME
+                                                      : mzm_imago_adult_multi_names[m - IMAGO_ADULT];
                 if (strcmp(name, known) || index < 0 || index >= MZM_MULTI_FRAMES)
                     continue;
                 MzmMultiSprite *multi = m < CHOZO ? &sprites->tables.chozo_multi[m]
@@ -2674,7 +2679,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                                         : m < COCOON ? &sprites->tables.imago_cocoon_multi[m - IMAGO]
                                         : m < MECHA ? &sprites->tables.mother_brain_multi
                                         : m < TANGLE ? &sprites->tables.mecha_ridley_multi[m - MECHA]
-                                                     : &sprites->tables.tangle_vine_multi;
+                                        : m < IMAGO_ADULT ? &sprites->tables.tangle_vine_multi
+                                                          : &sprites->tables.imago_adult_multi[m - IMAGO_ADULT];
                 multi->timers[index] = (uint8_t)timer;
                 const char *part = cursor + used;
                 for (int p = 0; p < MZM_MULTI_PARTS; ++p) {
@@ -3020,8 +3026,10 @@ static void runtime_sprite_hurt(void *context, uint16_t damage, bool sprite_on_l
     bool alive = runtime_take_sprite_damage(hurt->equipment, damage, runtime_difficulty);
     mzm_samus_hurt(hurt->samus, hurt->collision, !alive);
     /* SUB_PIXEL_TO_VELOCITY(EIGHTH_BLOCK_SIZE) away from the sprite
-     * (EIGHTH_BLOCK_SIZE + ONE_SUB_PIXEL for SSC_HURTS_SAMUS_A_LOT). */
-    int16_t knockback = hurt->view && hurt->view->hurts_a_lot ? 72 : 64;
+     * (EIGHTH_BLOCK_SIZE + ONE_SUB_PIXEL for SSC_HURTS_SAMUS_A_LOT,
+     * QUARTER_BLOCK_SIZE for SSC_HURTS_BIG_KNOCKBACK). */
+    int16_t knockback = hurt->view && hurt->view->big_knockback ? 128 :
+                        hurt->view && hurt->view->hurts_a_lot ? 72 : 64;
     if (alive) hurt->samus->x_velocity = (int16_t)(sprite_on_left ? -knockback : knockback);
 }
 
@@ -3580,6 +3588,13 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                  mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO_LARVA_LEFT) &&
                 (sprite->palette_row==1 || sprite->palette_row==2))
             shade=sprite->palette_row==1?"/row1":"/row2";
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO &&
+                (sprite->palette_row==1 || sprite->palette_row==2 ||
+                 sprite->palette_row==4 || sprite->palette_row==5)) {
+            /* Imago's core flashing rows and the body's health rows. */
+            static const char *const imago_rows[6]={"","/row1","/row2","","/row4","/row5"};
+            shade=imago_rows[sprite->palette_row];
+        }
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_BARISTUTE &&
                 sprite->palette_row>=1 && sprite->palette_row<=3) {
             /* Baristute's damage rows (absolutePaletteRow 1 to 3). */
@@ -3648,7 +3663,8 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                  anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none",shade);
         RuntimeLibraryEntry *entry=runtime_library_find(sprite_library,key);
         if((!entry || entry->count==0) && *shade &&
-           mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY) {
+           (mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY ||
+            mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO)) {
             /* A damage tint not baked for this table (its rows overflow
              * the sprite's palette): the untinted look. */
             snprintf(key,sizeof key,"Sprite/%s/%s/%s",

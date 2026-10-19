@@ -7262,6 +7262,215 @@ int main(void) {
         mzm_sprite_update(&room[right], (uint8_t)right, &rf);
         assert(room[right].status == 0);
     }
+    /* Imago: the eggs, its arrival, the sweep, the dive, the needles, its
+     * death, the wall charge and the event after the Super Missiles. */
+    {
+        MzmSpriteKind imago_kind = {0};
+        for (int a = 0; a < MZM_IMAGO_ANIMS; ++a) {
+            imago_kind.counts[a] = 4;
+            for (int f = 0; f < 4; ++f) imago_kind.timers[a][f] = 4;
+        }
+        for (int m = 0; m < MZM_IMAGO_ADULT_MULTI_COUNT; ++m) {
+            memset(&tables.imago_adult_multi[m], 0, sizeof tables.imago_adult_multi[m]);
+            for (int f = 0; f < 2; ++f) {
+                tables.imago_adult_multi[m].timers[f] = 4;
+                for (int p = 0; p < 7; ++p) {
+                    tables.imago_adult_multi[m].parts[f][p][0] = (int16_t)(p == 6 ? MZM_IMAGO_FLYING : MZM_IMAGO_BODY_IDLE);
+                    tables.imago_adult_multi[m].parts[f][p][2] = (int16_t)(p * 4);
+                }
+            }
+        }
+        const int16_t core_pal[9] = {0x0C02, 0x0601, 0x0800, 0x0401, 0x1602, 0x0601, 0x0800, 0x0401, -32640};
+        memcpy(tables.imago_core_palette, core_pal, sizeof core_pal);
+        const int16_t sting[10] = {0, 1, 2, 4, 8, 12, 16, 20, 24, 32767};
+        memcpy(tables.imago_stinger_falling_y, sting, sizeof sting);
+        for (int i = 0; i < 49; ++i) tables.imago_attacking_x[i] = (int16_t)(i < 48 ? (i < 24 ? -1 : 1) : 32767);
+        tables.health[MZM_PSPRITE_IMAGO] = 300;
+        tables.secondary_health[MZM_SSPRITE_IMAGO_NEEDLE] = 1;
+        clear();
+        for (int x = 0; x < COLUMNS; ++x) grid[15][x] = MZM_CLIPDATA_SOLID;
+        MzmSprite room[24] = {0};
+        MzmSpriteGlobals globals = {0};
+        MzmEquipment eq = {.energy = 99, .max_energy = 99, .missiles = 10, .super_missiles = 2,
+                           .max_super_missiles = 2};
+        MzmSpriteFrame imf = frame;
+        imf.sprites = room;
+        imf.sprite_count = 24;
+        imf.globals = &globals;
+        imf.hooks = &test_hooks;
+        imf.equipment = &eq;
+        imf.kinds[MZM_FAMILY_IMAGO] = &imago_kind;
+        memset(test_events, 0, sizeof test_events);
+        door_timer_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_IMAGO, 0, 14, 2, 0, 0);
+        uint16_t iy = room[0].y;
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x1 && room[0].y == iy - 64 * 6 && room[0].health == 300 &&
+               globals.sub1.health == 300 && globals.sub1.work4 == 2 && door_timer_calls == 1 &&
+               room[0].samus_collision == 13 &&
+               room[0].status & MZM_SPRITE_STATUS_X_FLIP && room[0].hitbox_left == -64 &&
+               room[0].hitbox_right == 24 && room[0].room_slot == 6);
+        int parts = 0, eggs = 0, last = -1;
+        for (int i = 1; i < 24; ++i) {
+            if (room[i].sprite_id == MZM_SSPRITE_IMAGO_PART) ++parts;
+            if (room[i].sprite_id == MZM_SSPRITE_IMAGO_EGG) {
+                ++eggs;
+                if (room[i].room_slot == 0x80) last = i;
+            }
+        }
+        assert(parts == 6 && eggs == 5 && last > 0);
+        /* The last egg broken by Samus wakes Imago. */
+        mzm_sprite_update(&room[last], (uint8_t)last, &imf);
+        assert(room[last].pose == 0x9 && room[last].samus_collision == 27);
+        room[last].status |= MZM_SPRITE_STATUS_SAMUS_COLLIDING;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[last], (uint8_t)last, &imf);
+        assert(room[last].pose == 0x23 && globals.sub1.work3 == 1 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_IMAGO_EGG_BREAKING));
+        room[last].frame = 3;
+        mzm_sprite_update(&room[last], (uint8_t)last, &imf);
+        assert(room[last].pose == 0x25 && room[last].work0 == 180);
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x2);
+        room[0].work0 = 1;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x8 && !(room[0].status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES) &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_IMAGO_BATTLE));
+        /* The body part turns vulnerable with the fight. */
+        MzmSprite *body = NULL;
+        for (int i = 1; i < 24; ++i)
+            if (room[i].sprite_id == MZM_SSPRITE_IMAGO_PART && room[i].room_slot == 2) body = &room[i];
+        assert(body);
+        mzm_sprite_update(body, (uint8_t)(body - room), &imf);
+        mzm_sprite_update(body, (uint8_t)(body - room), &imf);
+        assert(body->pose == 0x8 && !(body->status & MZM_SPRITE_STATUS_IGNORE_PROJECTILES) &&
+               body->immune_to_projectiles && body->x == globals.sub1.x - 8);
+        /* Coming down to the floor (the arena made shorter). */
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x9 && room[0].work2 == 0);
+        room[0].y_spawn = 0;
+        globals.sub1.y = 600;
+        int frames = 0;
+        while (room[0].pose == 0x9 && frames < 100) {
+            mzm_sprite_update(&room[0], 0, &imf);
+            ++frames;
+        }
+        assert(room[0].pose == 0x23 && globals.sub1.y == 15 * 64 - 256);
+        /* The sweep accelerates; under two thirds it shoots needles at
+         * Samus ahead. */
+        uint16_t sweep_x = globals.sub1.x;
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(globals.sub1.x > sweep_x || room[0].work2 == 1);
+        imf.samus_x = (uint16_t)(globals.sub1.x + 600);
+        room[0].health = 150;
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(globals.sub1.multi == MZM_IMAGO_ADULT_MULTI_SHOOTING_NEEDLES);
+        room[0].frame = 9;
+        room[0].adc = 1;
+        globals.sub1.frame = 0;
+        globals.sub1.adc = 0;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &imf);
+        int needle = -1;
+        for (int i = 1; i < 24; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_IMAGO_NEEDLE) needle = i;
+        assert(needle > 0 && room[needle].status & MZM_SPRITE_STATUS_X_FLIP);
+        uint16_t nx = room[needle].x, ny = room[needle].y;
+        mzm_sprite_update(&room[needle], (uint8_t)needle, &imf);
+        mzm_sprite_update(&room[needle], (uint8_t)needle, &imf);
+        assert(room[needle].x == nx + 24 && room[needle].y == ny + 12 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_IMAGO_NEEDLE_SHOT));
+        room[needle].status = 0;
+        /* The body reddens under two thirds. */
+        mzm_sprite_update(body, (uint8_t)(body - room), &imf);
+        assert(body->palette_row == 4);
+        /* Up at the far end: Samus beyond it, it dives. */
+        globals.sub1.x = (uint16_t)(room[0].x_spawn + 64 * 47);
+        room[0].y_spawn = 100;
+        globals.sub1.y = 104;
+        room[0].pose = 0x25;
+        room[0].work3 = 8;
+        imf.samus_x = (uint16_t)(room[0].x_spawn + 64 * 49);
+        mzm_sprite_update(&room[0], 0, &imf);
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x26 && globals.sub1.x == room[0].x_spawn + 64 * 46);
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x27 && globals.sub1.y == room[0].y_spawn + 20);
+        /* Samus behind it: it turns and comes down instead. */
+        imf.samus_x = 0;
+        room[0].pose = 0x25;
+        globals.sub1.y = 99;
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x8 && !(room[0].status & MZM_SPRITE_STATUS_X_FLIP));
+        room[0].y_spawn = 0;
+        /* Killed: the stinger drops and it goes on burning. */
+        room[0].pose = 0x23;
+        mzm_sprite_update(&room[0], 0, &imf);
+        room[0].health = 0;
+        room[0].pose = 0x62;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &imf);
+        int stinger = -1;
+        for (int i = 1; i < 24; ++i)
+            if (room[i].status && room[i].sprite_id == MZM_SSPRITE_IMAGO_DAMAGED_STINGER) stinger = i;
+        assert(stinger > 0 && room[0].pose == 0x23 && room[0].samus_collision == 0 &&
+               globals.sub1.multi == MZM_IMAGO_ADULT_MULTI_DYING);
+        mzm_sprite_update(&room[stinger], (uint8_t)stinger, &imf);
+        assert(room[stinger].pose == 0x9 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_IMAGO_DAMAGED_STINGER_DETACHING));
+        /* Heading left while dead it waits for Samus at the Super Missile,
+         * then charges the wall. */
+        room[0].pose = 0x8;
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x67);
+        imf.samus_x = (uint16_t)(room[0].x_spawn + 64);
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x68 && globals.sub1.x == room[0].x_spawn + 64 * 16 && room[0].draw_order == 12);
+        uint16_t cx = globals.sub1.x;
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x68 && globals.sub1.x == cx - 16);
+        grid[globals.sub1.y / 64][(globals.sub1.x - 192) / 64] = MZM_CLIPDATA_SOLID;
+        caa_calls = 0;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].pose == 0x69 && caa_calls == 7 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_IMAGO_DESTROYING_WALL));
+        frames = 0;
+        while (room[0].pose == 0x69 && frames < 40) {
+            mzm_sprite_update(&room[0], 0, &imf);
+            ++frames;
+        }
+        assert(room[0].pose == 0x6A && frames == 29 && caa_calls == 7 + 7 + 9 + 6 + 7);
+        frames = 0;
+        mzm_sfx_clear();
+        while (room[0].pose == 0x6A && frames < 80) {
+            mzm_sprite_update(&room[0], 0, &imf);
+            ++frames;
+        }
+        assert(room[0].pose == 0x6C && frames == 55 && room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_BOSS_KILLED));
+        /* The parts explode once it is gone. */
+        mzm_sprite_update(body, (uint8_t)(body - room), &imf);
+        assert(body->pose == 0x62 || body->status == 0 || body->ignore_samus_timer);
+        /* The event waits for the Super Missiles' pickup. */
+        door_timer_calls = 0;
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].status && !test_check_event(NULL, MZM_EVENT_IMAGO_KILLED));
+        eq.max_super_missiles = 7;
+        mzm_sprite_update(&room[0], 0, &imf);
+        assert(room[0].status == 0 && test_check_event(NULL, MZM_EVENT_IMAGO_KILLED) &&
+               door_timer_calls == 1 && last_door_timer == -60);
+        /* Reloaded: gone. */
+        MzmSprite again;
+        mzm_sprite_init_primary(&again, MZM_PSPRITE_IMAGO, 0, 14, 2, 0, 0);
+        imf.sprites = &again;
+        imf.sprite_count = 1;
+        mzm_sprite_update(&again, 0, &imf);
+        assert(again.status == 0);
+        memset(test_events, 0, sizeof test_events);
+        clear();
+    }
     /* The elevator statues: standing (solid) until their boss dies, then
      * crumbling into rubble; fallen on reload. */
     {

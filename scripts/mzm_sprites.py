@@ -113,7 +113,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_IMAGO_LARVA_RIGHT": 0, "PSPRITE_IMAGO_LARVA_LEFT": 0,
           "PSPRITE_IMAGO_LARVA_RIGHT_SIDE": 0,
           "PSPRITE_IMAGO_COCOON": 0, "PSPRITE_IMAGO_COCOON_AFTER_FIGHT": 0,
-          "PSPRITE_MECHA_RIDLEY": 0, "PSPRITE_HIVE": 0, "PSPRITE_BARISTUTE": 0, "PSPRITE_TANGLE_VINE_TALL": 0, "PSPRITE_RUINS_TEST": 0, "PSPRITE_FALLING_CHOZO_PILLAR": 0, "PSPRITE_FAKE_POWER_BOMB": 0, "PSPRITE_KRAID_ELEVATOR_STATUE": 0,
+          "PSPRITE_MECHA_RIDLEY": 0, "PSPRITE_HIVE": 0, "PSPRITE_BARISTUTE": 0, "PSPRITE_TANGLE_VINE_TALL": 0, "PSPRITE_RUINS_TEST": 0, "PSPRITE_FALLING_CHOZO_PILLAR": 0, "PSPRITE_FAKE_POWER_BOMB": 0, "PSPRITE_KRAID_ELEVATOR_STATUE": 0, "PSPRITE_IMAGO": 0,
           "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0, "PSPRITE_RIDLEY": 0, "PSPRITE_MOTHER_BRAIN": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
@@ -150,8 +150,8 @@ def mecha_ridley_weapon_vram(vram: bytes, weapons: bytes, first_tile: int) -> by
     return bytes(staged)
 
 
-TINT_OVERFLOW_ALLOWED = ("PSPRITE_MECHA_RIDLEY",)
-ROW_VARIANTS = {"PSPRITE_BARISTUTE": (1, 2, 3), "PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_MECHA_RIDLEY": (2, 3, 4), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
+TINT_OVERFLOW_ALLOWED = ("PSPRITE_MECHA_RIDLEY", "PSPRITE_IMAGO")
+ROW_VARIANTS = {"PSPRITE_IMAGO": (1, 2, 4, 5), "PSPRITE_BARISTUTE": (1, 2, 3), "PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_MECHA_RIDLEY": (2, 3, 4), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
@@ -212,6 +212,9 @@ MULTI_SPRITE_DATA = {
                                     "HighToLow", "CrawlingBackwardsLow", "OpeningMouthHigh",
                                     "SpittingFireballsHigh", "ClosingMouthHigh", "DyingStandingLow",
                                     "DyingStandingMiddle", "DyingStandingHigh", "Dying"))),
+    "sprites/imago.c": (("sprites_ai/imago.h", "data/sprites/imago.h", "structs/sprite.h"),
+                        tuple("sImagoMultiSpriteData_" + name for name in (
+                            "Idle", "ShootingNeedles", "RechargingNeedles", "Dying"))),
     "sprites/tangle_vine.c": (("sprites_ai/tangle_vine.h", "data/sprites/tangle_vine.h",
                                "structs/sprite.h"),
                               ("sTangleVineGerutaMultiSpriteData_Idle",)),
@@ -227,7 +230,7 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
              "sSidehopperHighJumpVelocity", "sSidehopperLowJumpVelocity",
              "sDessgeegaHighJumpYVelocity", "sDessgeegaLowJumpYVelocity",
-             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sMellaIdleYMovement",
+             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sImagoDynamicPaletteData", "sMellaIdleYMovement",
              "sMellaIdleXMovement", "sMellaGoingDownYMovement", "sMellaGoingUpYMovement",
              "sMellaMovingXMovement", "sHoltzIdleYVelocity", "sSqueeptRisingMovement",
              "sSqueeptFallingMovement", "sChargeBeamIdleYMovement",

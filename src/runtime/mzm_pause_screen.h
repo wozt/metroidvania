@@ -13,9 +13,12 @@
  * (PAUSE_SCREEN_CHOZO_HINT, pause_screen_sub_menus.c): the hint screen's
  * background, the target travelling from the statue to its item on the map
  * (through the elevators to other areas), the map following it, and the
- * activated targets on the map and the world map. The item toggling of the
- * suitless and item acquisition sequences and the completion info are not
- * ported yet. */
+ * activated targets on the map and the world map; and the fully powered
+ * suit items (PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS, status_screen.c): the
+ * status screen opened on its own, the wireframe faded to the full suit,
+ * the normal items enabled one by one, then each unknown item flashed,
+ * enabled and described until A. The item toggling of the suitless and item
+ * acquisition sequences and the completion info are not ported yet. */
 #ifndef MZM_PAUSE_SCREEN_H
 #define MZM_PAUSE_SCREEN_H
 
@@ -27,16 +30,22 @@
 #include "mzm_text.h"
 
 /* gPauseScreenFlag values the pause screen handles. */
-enum { MZM_PAUSE_FLAG_PAUSE = 2, MZM_PAUSE_FLAG_CHOZO_HINT = 4, MZM_PAUSE_FLAG_MAP_DOWNLOAD = 5 };
+enum {
+    MZM_PAUSE_FLAG_PAUSE = 2, MZM_PAUSE_FLAG_CHOZO_HINT = 4, MZM_PAUSE_FLAG_MAP_DOWNLOAD = 5,
+    MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS = 8
+};
 
 /* What the pause screen reads from the game. */
 typedef struct {
     MzmHud *hud;                    /* the minimap (gDecompressedMinimapVisitedTiles...) */
     uint8_t area;                   /* gCurrentArea */
-    const MzmEquipment *equipment;  /* gEquipment */
+    /* gEquipment: the fully powered suit sequence changes the suit and the
+     * activated items. */
+    MzmEquipment *equipment;
     bool (*check_event)(void *context, uint8_t event);
     void *context;
     uint8_t flag;                   /* gPauseScreenFlag (MZM_PAUSE_FLAG_*) */
+    uint8_t item_being_acquired;    /* gCurrentItemBeingAcquired */
 } MzmPauseGame;
 
 /* struct ChozoHintMapData */
@@ -77,6 +86,11 @@ typedef struct {
     uint8_t is_fading, bld_alpha_step_level, bld_alpha_step_timer, target_l, target_h;
     uint16_t target_bld_alpha;
     MzmMessage message;             /* gCurrentMessage */
+    /* stateInfo.fadeWireframeStage / Timer, unknownItemDynamicPalette and
+     * notPlayingEnablingNormalItemSound (the fully powered suit items) */
+    uint8_t fade_wireframe_stage, fade_wireframe_timer;
+    struct { uint8_t timer, flashing; int8_t row; } unknown_palette;
+    bool not_playing_enabling_sound;
     /* Easy sleep */
     int8_t easy_sleep_text_state;
     /* The Chozo hints: chozoHintTarget, the moving target's trail

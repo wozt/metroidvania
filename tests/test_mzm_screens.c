@@ -203,7 +203,7 @@ static void test_pause_bank(void) {
     MzmHudFrame frame = {&equipment, 0, false, 0, 0, 13 * 64, 31 * 64, NULL, NULL, NULL, NULL};
     MzmHudRoom room = {0, 0, map_x, map_y, 79, 44};
     mzm_hud_room_entered(&hud, &room, &frame);
-    MzmPauseGame game = {&hud, 0, &equipment, pause_event, NULL, MZM_PAUSE_FLAG_PAUSE};
+    MzmPauseGame game = {&hud, 0, &equipment, pause_event, NULL, MZM_PAUSE_FLAG_PAUSE, 0};
     mzm_pause_enter(&pause);
     mzm_sfx_clear();
     int f;
@@ -1689,7 +1689,7 @@ static void test_chozo_hint_bank(void) {
     mzm_hud_room_entered(&hud, &room, &frame);
     hud.minimap_x = 9;
     hud.minimap_y = 15;
-    MzmPauseGame game = {&hud, 0, &equipment, hint_event, NULL, MZM_PAUSE_FLAG_CHOZO_HINT};
+    MzmPauseGame game = {&hud, 0, &equipment, hint_event, NULL, MZM_PAUSE_FLAG_CHOZO_HINT, 0};
     mzm_pause_enter(&pause);
     mzm_sfx_clear();
     int f;
@@ -1912,6 +1912,63 @@ static void test_credits_bank(void) {
     mzm_rom_close();
 }
 
+/* PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS on the exported bank: the status
+ * screen alone, the suitless wireframe faded to the full suit, the normal
+ * items enabled one by one, then the Plasma Beam, the Gravity Suit and the
+ * Space Jump flashed, enabled and described until A; every item active at
+ * the end. */
+static void test_fully_powered_items_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the fully powered items checks are skipped\n");
+        return;
+    }
+    static GbaPpu hud_ppu;
+    static MzmHud hud;
+    static MzmMinimapProgress progress;
+    static MzmPauseScreen pause;
+    mzm_hud_init(&hud, &hud_ppu, &progress, 240);
+    uint8_t map_x, map_y;
+    assert(mzm_hud_room_map(0, 0, &map_x, &map_y));
+    uint32_t known = MZM_ITEM_LONG_BEAM | MZM_ITEM_CHARGE_BEAM | MZM_ITEM_VARIA_SUIT | MZM_ITEM_MORPH_BALL |
+                     MZM_ITEM_BOMBS | MZM_ITEM_POWER_GRIP,
+             unknown = MZM_ITEM_PLASMA_BEAM | MZM_ITEM_GRAVITY_SUIT | MZM_ITEM_SPACE_JUMP;
+    MzmEquipment equipment = {.suit = MZM_SUIT_SUITLESS, .energy = 40, .max_energy = 299, .missiles = 3,
+                              .max_missiles = 30, .items = MZM_ITEM_POWER_GRIP | MZM_ITEM_LONG_BEAM,
+                              .unknown_items = (known & ~(uint32_t)(MZM_ITEM_POWER_GRIP | MZM_ITEM_LONG_BEAM)) |
+                                               unknown};
+    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 13 * 64, 31 * 64, NULL, NULL, NULL, NULL};
+    MzmHudRoom room = {0, 0, map_x, map_y, 79, 44};
+    mzm_hud_room_entered(&hud, &room, &frame);
+    MzmPauseGame game = {&hud, 6, &equipment, pause_event, NULL, MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS, 0};
+    mzm_pause_enter(&pause);
+    mzm_sfx_clear();
+    mzm_screen_input(&screen, 0);
+    assert(!mzm_pause_update(&pause, &screen, &game));
+    /* UpdateSuitType(SUIT_FULLY_POWERED): refilled, nothing active yet */
+    assert(equipment.suit == MZM_SUIT_FULLY_POWERED && equipment.energy == 299 && equipment.missiles == 30 &&
+           equipment.items == 0 && equipment.unknown_items == (known | unknown));
+    bool gravity_mid = false, flashed = false, left = false;
+    int a_presses = 0, f;
+    uint16_t row12[16];
+    memcpy(row12, &ppu.palette[256 + 192], sizeof row12);
+    for (f = 0; f < 6000 && !left; ++f) {
+        /* A for each line of a described unknown item, then to go on */
+        bool waiting = pause.description_stage == 3 || pause.message.message_ended;
+        uint16_t keys = pause.state == 6 && pause.stage == 9 && waiting && !(f & 1) ? 1 : 0;
+        a_presses += keys != 0 && pause.message.message_ended;
+        mzm_screen_input(&screen, keys);
+        left = mzm_pause_update(&pause, &screen, &game);
+        if (equipment.items & MZM_ITEM_GRAVITY_SUIT && equipment.unknown_items) gravity_mid = true;
+        flashed |= memcmp(row12, &ppu.palette[256 + 192], sizeof row12) != 0;
+    }
+    assert(left && gravity_mid && flashed && a_presses == 3);
+    assert(equipment.items == (known | unknown) && equipment.unknown_items == 0);
+    assert(count_requests(MZM_SFX_PLAY, 0x215) == 1 && count_requests(MZM_SFX_PLAY, 0x214) == 3 &&
+           count_requests(MZM_SFX_PLAY, 0x1F7) == 3);
+    mzm_rom_close();
+}
+
 /* InGameCutsceneUpgradingSuit for the fully powered suit: waits for the
  * banner's suit animation stage, fades BG0 out and hides it, opens window 1
  * on Samus, grows it to the screen, activates the Gravity Suit, shrinks it
@@ -1982,6 +2039,7 @@ int main(void) {
     test_chozodia_escape_bank();
     test_credits_bank();
     test_upgrading_suit();
+    test_fully_powered_items_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

@@ -1794,23 +1794,30 @@ static void runtime_affine_whole_center(const int16_t sine[320], uint8_t rotatio
 }
 
 #ifndef FUSION_RUNTIME_TEST
-/* The end of the getting fully powered cutscene, standing in for
- * StatusScreenFullyPoweredItems (not ported): UpdateSuitType(SUIT_FULLY_
- * POWERED)'s refill, then every obtained item activated; then RoomLoad's
- * PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS return: the Gravity Suit held back,
- * Samus facing the foreground at (24.5, 31) blocks, the suit upgrade
- * in-game cutscene started for it, pause disabled and the charge reset. */
-static void runtime_fully_powered_return(MzmEquipment *equipment,MzmSamus *samus,
-                                         const MzmCollision *collision,uint8_t *charge_counter,
-                                         MzmUpgradingSuit *upgrading_suit,bool *disable_pause) {
-    uint32_t owned=equipment->items|equipment->unknown_items;
+/* StatusScreenFullyPoweredItems' result when the pause screen cannot run
+ * (no ROM bank): UpdateSuitType(SUIT_FULLY_POWERED)'s refill and every
+ * obtained item activated at once. */
+static void runtime_fully_powered_items_stand_in(MzmEquipment *equipment) {
     equipment->suit=MZM_SUIT_FULLY_POWERED;
     equipment->energy=equipment->max_energy;
     equipment->missiles=equipment->max_missiles;
     equipment->super_missiles=equipment->max_super_missiles;
     equipment->power_bombs=equipment->max_power_bombs;
-    equipment->items=owned&~(uint32_t)MZM_ITEM_GRAVITY_SUIT;
-    equipment->unknown_items=owned&(uint32_t)MZM_ITEM_GRAVITY_SUIT;
+    equipment->items|=equipment->unknown_items;
+    equipment->unknown_items=0;
+}
+
+/* RoomLoad's PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS return: the Gravity
+ * Suit held back, Samus facing the foreground at (24.5, 31) blocks, the
+ * suit upgrade in-game cutscene started for it, pause disabled and the
+ * charge reset. */
+static void runtime_fully_powered_return(MzmEquipment *equipment,MzmSamus *samus,
+                                         const MzmCollision *collision,uint8_t *charge_counter,
+                                         MzmUpgradingSuit *upgrading_suit,bool *disable_pause) {
+    if(equipment->items&MZM_ITEM_GRAVITY_SUIT) {
+        equipment->items&=~(uint32_t)MZM_ITEM_GRAVITY_SUIT;
+        equipment->unknown_items|=MZM_ITEM_GRAVITY_SUIT;
+    }
     mzm_samus_sprite_set_pose(samus,MZM_POSE_FACING_THE_FOREGROUND,equipment,collision);
     samus->x=MZM_BLOCK_SIZE*24+MZM_BLOCK_SIZE/2;
     samus->y=MZM_BLOCK_SIZE*31;                 /* native BLOCK_SIZE * 31 - 1 */
@@ -4635,6 +4642,7 @@ int main(int argc, char **argv) {
      * fading out, the cutscene, then the return to the room with the suit
      * upgrade in-game cutscene (IGC_GETTING_FULLY_POWERED). */
     bool fully_powered_fade=false, fully_powered_return=false;
+    uint8_t item_being_acquired=0;             /* gCurrentItemBeingAcquired */
     static MzmUpgradingSuit upgrading_suit;
     static MzmCutscene cutscene;
     static MzmFileSelect file_select;
@@ -5177,13 +5185,16 @@ int main(int argc, char **argv) {
                         /* Back in the game as it was, fading in. */
                         in_game_cutscene=false;
                         if(fully_powered_return) {
+                            /* CutsceneEnd: PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS,
+                             * the status screen's item sequence. */
                             fully_powered_return=false;
-                            runtime_fully_powered_return(&equipment,&samus,&collision,&weapons.charge_counter,
-                                                         &upgrading_suit,
-                                                         &sprites.globals.disable_pause);
                             printf("Fully powered suit cutscene ended.\n");
+                            pause_mode=true;
+                            pause_flag=MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS;
+                            mzm_pause_enter(&pause_screen);
+                        } else {
+                            mzm_door_fade_loaded(&door_fade,0,0);
                         }
-                        mzm_door_fade_loaded(&door_fade,0,0);
                     } else if(sprites.globals.landing) {
                         /* CutsceneEnd: the game's start in Brinstar. */
                         resume_request=RUNTIME_RESUME_NEW_GAME;
@@ -5318,6 +5329,7 @@ int main(int argc, char **argv) {
                      * gIsLoadingFile (a new game, not a loaded file) stops
                      * the alarm. */
                     if(resume_request!=RUNTIME_RESUME_SAVE)sprites.globals.alarm_timer=0;
+                    item_being_acquired=0;
                     runtime_sprites_spawn(&sprites,room,starts_at_door?0:-1);
                     sprites.banner.exists=false;
                     sprites.banner.cursor.exists=false;
@@ -5382,7 +5394,8 @@ int main(int argc, char **argv) {
                                                               capture_path?NULL:&gamepad));
                 MzmPauseGame pause_game={&runtime_hud,runtime_area_index(room->area),
                                          &equipment,
-                                         runtime_sprite_check_event,&sprites,pause_flag};
+                                         runtime_sprite_check_event,&sprites,pause_flag,
+                                         item_being_acquired};
                 bool was_sleeping=pause_screen.sleeping;
                 bool left_pause=mzm_pause_update(&pause_screen,&screen,&pause_game);
                 /* Easy sleep stops the GBA: no sound until it wakes. */
@@ -5397,6 +5410,11 @@ int main(int argc, char **argv) {
                      * the pause's music volume is reset at its end. */
                     if(pause_flag!=MZM_PAUSE_FLAG_PAUSE) sprites.globals.pause_screen_flag=0;
                     else pause_music_reset=true;
+                    if(pause_flag==MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS) {
+                        runtime_fully_powered_return(&equipment,&samus,&collision,&weapons.charge_counter,
+                                                     &upgrading_suit,&sprites.globals.disable_pause);
+                        printf("Fully powered suit items shown.\n");
+                    }
                     mzm_door_fade_loaded(&door_fade,0,0);
                     previous_held=held;
                 }
@@ -5636,6 +5654,9 @@ int main(int argc, char **argv) {
                                                   input.pressed,
                                                   runtime_tank_collection.collecting,
                                                   &prevent_movement);
+                if(events&(MZM_BANNER_FINISH_TANK|MZM_BANNER_FINISH_ABILITY) &&
+                   sprites.banner.message<=MZM_MESSAGE_POWER_GRIP)
+                    item_being_acquired=sprites.banner.message;   /* TextProcessMessageBanner */
                 if(events&MZM_BANNER_FINISH_TANK) runtime_finish_collecting_tank(room);
                 if(events&MZM_BANNER_FINISH_ABILITY) runtime_finish_collecting_ability(room,&samus);
                 if(events&MZM_BANNER_ENABLE_PAUSE) sprites.globals.disable_pause=false;
@@ -5926,6 +5947,7 @@ int main(int argc, char **argv) {
                 cutscene.frame8=sprites.frame8;
                 if(!cutscene_mode) {
                     fully_powered_return=false;
+                    runtime_fully_powered_items_stand_in(&equipment);
                     runtime_fully_powered_return(&equipment,&samus,&collision,&weapons.charge_counter,&upgrading_suit,
                                                  &sprites.globals.disable_pause);
                     mzm_door_fade_loaded(&door_fade,0,0);

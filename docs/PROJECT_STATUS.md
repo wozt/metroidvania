@@ -3838,6 +3838,45 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0398 - fully powered suit items on the status screen
+
+- Ported `StatusScreenFullyPoweredItems` and the routines it needs in
+  `src/runtime/mzm_pause_screen.c`:
+  - `PauseScreenSuitChangingStart`;
+  - `StatusScreenFindUnknownItemSlot`;
+  - `StatusScreenUpdateUnknownItemPalette`;
+  - `StatusScreenEnableUnknownItem`;
+  - the suit-change form of `StatusScreenGetSlotForNewItem`;
+  - `PauseScreenFadeWireframeSamus`;
+  - the fully powered case of `UpdateSuitType`.
+- The pause screen now opens directly on the status screen for
+  `PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS`, with the native blending and the
+  wireframe option 0 (suitless before the fade).
+- During the sequence, Plasma Beam, Gravity Suit and Space Jump stay
+  unknown rows and the missile rows stay inactive, as natively.
+- The sequence:
+  - the normal items are enabled one by one;
+  - each unknown item flashes, is enabled and is described until A;
+  - the Gravity Suit fades the wireframe to its palette;
+  - every item is activated at the end.
+- The getting-fully-powered chain now runs this screen between the
+  cutscene and the room return. It replaces the previous stand-in, which
+  is kept only without the ROM bank.
+- The runtime tracks `gCurrentItemBeingAcquired` from the item and tank
+  banners and clears it when a file is loaded.
+- Unit test: the whole sequence on the ROM bank, with three unknown items.
+  It checks the equipment, the sounds and the palette flash.
+- Checked in `chozodia_042` (`--ruins-test-end` with test items):
+  - the Plasma Beam and the Space Jump shown unknown;
+  - the Plasma Beam revealed with its description;
+  - the Space Jump revealed with "Somersault continually";
+  - back in the room with every item active.
+- Registry changes: `mzm.menus.status_screen`,
+  `mzm.cutscenes.getting_fully_powered` and `mzm.items.chozo_statues` are
+  updated.
+- Captures: ignored `captures/fp/r975.bmp`, `r1160.bmp`, `r1330.bmp` and
+  `q1500.bmp`.
+
 ## Patch 0397 - getting the fully powered suit
 
 - Ported the "getting the fully powered suit" cutscene

@@ -7,6 +7,7 @@
 
 #include "mzm_rom.h"
 #include "mzm_sfx.h"
+#include "mzm_sound_ids.h"
 
 enum {
     BLOCK = 64, HALF_BLOCK = 32, QUARTER_BLOCK = 16, MINIMAP = 32, MINIMAP_TILE_BACKGROUND = 0x140,
@@ -17,9 +18,10 @@ enum {
     STATE_EASY_SLEEP_LEAVING = 17, STATE_WAIT_TO_LEAVE = 3, STATE_MAP_DOWNLOAD = 9,
     STATE_MAP_DOWNLOAD_ENDED = 18, STATE_LEAVING_AFTER_HINT = 2, STATE_CHOZO_HINT = 8,
     STATE_CHOZO_HINT_ENDED = 14, STATE_CHOZO_HINT_INIT = 15,
+    STATE_FULLY_POWERED_ITEMS = 6, STATE_FULLY_POWERED_ITEMS_ENDED = 7, STATE_FULLY_POWERED_ITEMS_INIT = 20,
     /* PauseScreenType */
     TYPE_ON_MAP_SCREEN = 1 << 1, TYPE_CHOZO_STATUE_HINT = 1 << 4, TYPE_DOWNLOADING_MAP = 1 << 5,
-    TYPE_ON_STATUS_SCREEN = 1 << 7,
+    TYPE_ON_STATUS_SCREEN = 1 << 7, TYPE_GETTING_NEW_ITEM = 1 << 8, TYPE_GETTING_FULLY_POWERED = 1 << 10,
     /* PauseScreenFading */
     FADING_NONE = 0, FADING_INIT, FADING_IN_INIT, FADING_IN, FADING_OUT_INIT, FADING_OUT,
     /* OAM ids */
@@ -29,6 +31,8 @@ enum {
     MISC_MAP_DOWNLOAD_LINE_TRAIL = 10, MISC_MAP_DOWNLOAD_LINE = 11, MISC_TEXT_MARKER_DOWN = 4, MISC_TEXT_MARKER_UP = 5, MISC_ITEM_CURSOR_FOCUSING = 6,
     MISC_GUN_HEADER = 41, MISC_POWER_SUIT_WIREFRAME = 44, MISC_FULL_SUIT_WIREFRAME = 45,
     MISC_SUITLESS_WIREFRAME = 46, OVERLAY_R_PROMPT_PRESSED = 15, OVERLAY_L_PROMPT_PRESSED = 16,
+    MISC_ITEM_CURSOR_FOCUSING_DESTROY = 13, MISC_PLASMA_UNKNOWN = 47, MISC_SPACE_JUMP_UNKNOWN = 49,
+    MISC_GRAVITY_UNKNOWN = 51,
     /* Sounds */
     SOUND_MOVING_MAP = 512, SOUND_MOVING_MAP_MUFFLED = 513, SOUND_OPENING_WORLD_MAP = 514,
     SOUND_CLOSING_WORLD_MAP = 515, SOUND_MAP_SCREEN_CHANGE_MAP = 516, SOUND_OPENING_STATUS_SCREEN = 500,
@@ -408,11 +412,17 @@ static void determine_maps_viewable(MzmPauseScreen *p, MzmScreen *s, const MzmPa
 }
 
 /* PauseScreenLoadAreaNamesAndIcons (the pause from the game) */
-static void load_area_names_and_icons(MzmPauseScreen *p, const MzmPauseGame *g) {
+static bool update_status_oam(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g, int option);
+
+static void load_area_names_and_icons(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     MzmMenuOam empty = mzm_menu_oam_from_rom(sym("sMenuOamData_Empty"));
     for (int i = 0; i < 23; ++i) p->misc[i] = empty;
     for (int i = 0; i < 4; ++i) p->overlay[i] = p->arrows[i] = empty;
     for (int i = 0; i < 24; ++i) p->world_map[i] = empty;
+    if (p->type_flags & TYPE_GETTING_NEW_ITEM) {
+        update_status_oam(p, s, g, 0);
+        return;
+    }
     p->samus_icon[0].oam_id = suitless(g) ? SAMUS_ICON_SUITLESS : SAMUS_ICON_SUIT;
     p->samus_icon[0].exists = 1;
     p->samus_icon[0].x = (int16_t)(g->hud->minimap_x * HALF_BLOCK);
@@ -507,7 +517,7 @@ enum {
     GROUP_MAX_ENERGY, GROUP_CURRENT_MISSILES, GROUP_MAX_MISSILES, GROUP_CURRENT_SUPER_MISSILES,
     GROUP_MAX_SUPER_MISSILES, GROUP_CURRENT_POWER_BOMBS, GROUP_MAX_POWER_BOMBS,
     /* StatusSlots */
-    SLOT_0 = 0, SLOT_BEAM = 1, SLOT_MISSILE = 6, SLOT_BOMB = 8, SLOT_SUIT = 10, SLOT_MISC = 12,
+    SLOT_0 = 0, SLOT_BEAM = 1, SLOT_MISSILE = 6, SLOT_BOMB = 8, SLOT_SUIT = 10, SLOT_MISC = 12, SLOT_COUNT = 18,
     /* BeamBombFlags, SuitMiscFlags */
     BBF_LONG_BEAM = 1 << 0, BBF_ICE_BEAM = 1 << 1, BBF_WAVE_BEAM = 1 << 2, BBF_PLASMA_BEAM = 1 << 3,
     BBF_CHARGE_BEAM = 1 << 4, BBF_BOMBS = 1 << 7,
@@ -1151,7 +1161,7 @@ static void set_group_visibility(MzmPauseScreen *p, MzmScreen *s, const MzmPause
         uint8_t flag = flag_order(group, i);
         int j = i;
         uint32_t src = 0;
-        if (g->equipment->suit != MZM_SUIT_FULLY_POWERED) {
+        if (g->equipment->suit != MZM_SUIT_FULLY_POWERED || g->flag == MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS) {
             if (beams && flag == BBF_PLASMA_BEAM) j = 9, src = 10;
             if (!beams && flag == SMF_GRAVITY_SUIT) j = 3;
         }
@@ -1171,7 +1181,7 @@ static void set_group_visibility(MzmPauseScreen *p, MzmScreen *s, const MzmPause
 }
 
 /* StatusScreenSetMiscsVisibility (the space jump stays an unknown item
- * before the fully powered suit) */
+ * before the fully powered suit and during its items sequence) */
 static void set_miscs_visibility(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     Abilities a = abilities(g);
     Box b = group_box(GROUP_MISC), u = unknown_box(GROUP_MISC);
@@ -1181,7 +1191,9 @@ static void set_miscs_visibility(MzmPauseScreen *p, MzmScreen *s, const MzmPause
     for (int i = 0; i < size; ++i) {
         uint8_t flag = flag_order(GROUP_MISC, i);
         int k = i + 1;
-        if (flag == SMF_SPACE_JUMP && g->equipment->suit != MZM_SUIT_FULLY_POWERED) k = -1;
+        if (flag == SMF_SPACE_JUMP &&
+            (g->equipment->suit != MZM_SUIT_FULLY_POWERED || g->flag == MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS))
+            k = -1;
         uint32_t src = (uint32_t)(u.top + k) * STATUS_ROW + u.left;
         uint32_t dst = (uint32_t)(b.top + 1 + j) * STATUS_ROW + b.left;
         if (!(a.suit_misc & flag)) continue;
@@ -1267,7 +1279,11 @@ static void set_missiles_visibility(MzmPauseScreen *p, MzmScreen *s, const MzmPa
             value = p->status.missiles[1];
         }
         if (value == 0) continue;
-        update_row(p, s, GROUP_MISSILES, i, value == (MISSILE_HAS_AMMO | MISSILE_COLLECTED), false);
+        /* Not activated while the fully powered suit's items are shown */
+        update_row(p, s, GROUP_MISSILES, i,
+                   value == (MISSILE_HAS_AMMO | MISSILE_COLLECTED) &&
+                       g->flag != MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS,
+                   false);
     }
     copy_row(p->status_tilemap, (uint32_t)(b.top + count) * STATUS_ROW + b.left, u.bottom * STATUS_ROW + u.left, &b);
     if (p->status.current_slot == SLOT_0) p->status.current_slot = SLOT_MISSILE;
@@ -1373,12 +1389,21 @@ static void update_top_visor(MzmPauseScreen *p, MzmScreen *s, uint8_t oam_id) {
     vram_from16(s, 0xC800, &p->visor_overlay[0x280 + offset * 0x40], 0x80);
 }
 
-/* PauseScreenUpdateWireframeSamus (the suit change fade, option 2, only
- * follows an item toggle) */
-static void update_wireframe(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
+/* PauseScreenUpdateWireframeSamus: option 0 for a new item (the suitless
+ * wireframe before the fully powered suit's), 1 without a suit change, 2
+ * starts the fade to the new suit (PauseScreenFadeWireframeSamus). */
+static void update_wireframe(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g, int option) {
+    if (option == 2) {
+        if (p->fade_wireframe_stage == 0) {
+            p->fade_wireframe_stage = 1;
+            p->fade_wireframe_timer = 0;
+        }
+        return;
+    }
     uint8_t oam_id = MISC_POWER_SUIT_WIREFRAME;
     if (g->equipment->suit == MZM_SUIT_FULLY_POWERED) oam_id = MISC_FULL_SUIT_WIREFRAME;
     else if (suitless(g)) oam_id = MISC_SUITLESS_WIREFRAME;
+    if (option == 0 && g->flag == MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS) oam_id = MISC_SUITLESS_WIREFRAME;
     p->misc[8].oam_id = oam_id;
     p->misc[8].exists = OAM_ID_CHANGED;
     p->misc[9] = p->misc[8];
@@ -1412,12 +1437,23 @@ static int16_t wireframe(int part, uint32_t offset) {
     return (int16_t)mzm_rom_u16(sym("sSamusWireframeData") + (uint32_t)part * 16u + offset);
 }
 
-/* PauseScreenUpdateStatusScreenOam (the getting new item option 0 is not
- * used) */
+/* PauseScreenUpdateStatusScreenOam */
 static bool update_status_oam(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g, int option) {
     bool result = false;
     MzmMenuOam *o = &p->misc[2];
     switch (option) {
+    case 0:
+        /* PAUSE_SCREEN_TYPE_GETTING_NEW_ITEM: the parts at their final
+         * positions */
+        for (int i = 0; i < WIREFRAME_PARTS; ++i, ++o) {
+            o->oam_id = (uint8_t)wireframe(i, 0);
+            o->x = wireframe(i, 2);
+            o->y = wireframe(i, 4);
+            o->obj_mode = (uint8_t)wireframe(i, 8);
+            o->exists = should_draw_header(p, g, i);
+        }
+        update_wireframe(p, s, g, 0);
+        break;
     case 1:
         for (int i = 0; i < WIREFRAME_PARTS; ++i, ++o) {
             o->oam_id = (uint8_t)wireframe(i, 0);
@@ -1426,7 +1462,7 @@ static bool update_status_oam(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGam
             o->obj_mode = (uint8_t)wireframe(i, 8);
             o->exists = should_draw_header(p, g, i);
         }
-        update_wireframe(p, s, g);
+        update_wireframe(p, s, g, 1);
         p->dispcnt |= GBA_DCNT_OBJWIN;
         p->samus_icon[0].exists = 0;
         break;
@@ -1493,7 +1529,7 @@ static uint8_t toggle_item(MzmPauseScreen *p) {
 static void init_cursor_and_items(MzmPauseScreen *p) {
     if (p->status.current_slot == SLOT_0) return;
     update_cursor_position(p, p->status.current_slot);
-    mzm_menu_oam_set_id(&p->misc[0], MISC_ITEM_CURSOR_FOCUSING);
+    if (!(p->type_flags & TYPE_GETTING_NEW_ITEM)) mzm_menu_oam_set_id(&p->misc[0], MISC_ITEM_CURSOR_FOCUSING);
     toggle_item(p);
 }
 
@@ -1656,6 +1692,8 @@ static void process_description(MzmPauseScreen *p, MzmScreen *s, const MzmPauseG
         if (marker) {
             p->misc[1].x = (int16_t)((m->indent + 10) * 4);
             p->misc[1].y = marker == MISC_TEXT_MARKER_DOWN ? BLOCK * 9 : BLOCK * 8 + HALF_BLOCK + 4;
+            /* No end marker while getting a new item */
+            if (marker == MISC_TEXT_MARKER_UP && p->type_flags & TYPE_GETTING_NEW_ITEM) marker = 0;
             mzm_menu_oam_set_id(&p->misc[1], marker);
         }
         break;
@@ -2206,6 +2244,356 @@ static bool map_download(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g)
 
 /* PauseScreenInit (the pause from the game, the Chozo hints and the map
  * download) */
+
+/* UpdateSuitType(SUIT_FULLY_POWERED): refilled, every item obtained but
+ * not activated. */
+static void update_suit_type_fully_powered(MzmEquipment *e) {
+    e->suit = MZM_SUIT_FULLY_POWERED;
+    e->energy = e->max_energy;
+    e->missiles = e->max_missiles;
+    e->super_missiles = e->max_super_missiles;
+    e->power_bombs = e->max_power_bombs;
+    e->unknown_items |= e->items;
+    e->items = 0;
+}
+
+/* WINOUT's high byte (the OBJ window's layers). */
+static void winout_obj(MzmScreen *s, uint8_t value) {
+    gba_ppu_write16(s->ppu, GBA_REG_WINOUT,
+                    (uint16_t)((gba_ppu_read16(s->ppu, GBA_REG_WINOUT) & 0xFF) | value << 8));
+}
+
+/* PauseScreenFadeWireframeSamus: the wireframe faded out, changed, then
+ * faded back in. */
+static void fade_wireframe(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
+    p->fade_wireframe_timer++;
+    switch (p->fade_wireframe_stage) {
+    case 1:
+        p->bldcnt &= (uint16_t)~BLDCNT_BG2_FIRST;
+        winout_obj(s, 0xD0);
+        p->fade_wireframe_stage++;
+        break;
+    case 2:
+        if (s->bldalpha_h < 16) s->bldalpha_h += 2;
+        if (s->bldalpha_h > 16) s->bldalpha_h = 16;
+        s->bldalpha_l = (uint8_t)(16 - s->bldalpha_h);
+        if (s->bldalpha_l == 0) {
+            p->fade_wireframe_stage++;
+            p->fade_wireframe_timer = 0;
+        }
+        break;
+    case 3:
+        update_wireframe(p, s, g, 1);
+        p->fade_wireframe_stage++;
+        p->fade_wireframe_timer = 0;
+        break;
+    case 4:
+        p->fade_wireframe_stage++;
+        p->fade_wireframe_timer = 0;
+        /* fall through */
+    case 5:
+        if (s->bldalpha_l < 16) s->bldalpha_l += 2;
+        if (s->bldalpha_l > 16) s->bldalpha_l = 16;
+        s->bldalpha_h = (uint8_t)(16 - s->bldalpha_l);
+        if (s->bldalpha_h == 0) {
+            p->fade_wireframe_stage++;
+            p->fade_wireframe_timer = 0;
+        }
+        break;
+    case 6:
+        p->bldcnt = BLDCNT_BG2_FIRST | BLDCNT_ALPHA | BLDCNT_BG2_SECOND | BLDCNT_BG3_SECOND | BLDCNT_OBJ_SECOND |
+                    BLDCNT_BACKDROP_SECOND;
+        winout_obj(s, 1 << 3 | 1 << 4);
+        p->fade_wireframe_stage = 0;
+        break;
+    default:
+        break;
+    }
+}
+
+/* StatusScreenGetSlotForNewItem(2, item): the item's slot for a suit
+ * change. */
+static uint8_t slot_for_suit_change(MzmPauseScreen *p, uint8_t item) {
+    if (item >= 22) return SLOT_0;
+    uint32_t at = sym("sStatusScreenItemsAcquisitionData") + item * 4u;
+    uint8_t kind = mzm_rom_u8(at), group = mzm_rom_u8(at + 1), offset = mzm_rom_u8(at + 2);
+    uint8_t slot = mzm_rom_u8(at + 3);
+    if (kind != 3) return slot;
+    uint8_t *activation;
+    switch (group) {
+    case GROUP_BEAMS: activation = p->status.beam; break;
+    case GROUP_BOMBS: activation = p->status.bomb; break;
+    case GROUP_SUITS: activation = p->status.suit; break;
+    case GROUP_MISC: activation = p->status.misc; break;
+    default: return slot;
+    }
+    uint8_t flag = flag_order(group, offset);
+    for (int i = 0; i < flags_size(group); ++i, ++slot)
+        if (activation[i] == flag) break;
+    return slot;
+}
+
+/* StatusScreenFindUnknownItemSlot: 0 an invalid slot, 1 found (an unknown
+ * item when `want_unknown`, else a normal one), 2 every slot searched. */
+static int find_unknown_item_slot(MzmPauseScreen *p, bool want_unknown) {
+    for (;; p->status.current_slot++) {
+        if (p->status.current_slot >= SLOT_COUNT) return 2;
+        int slot = p->status.current_slot;
+        const uint8_t *activation;
+        uint8_t item;
+        switch (item_data(slot, 0)) {
+        case GROUP_BEAMS: activation = p->status.beam; item = BBF_PLASMA_BEAM; break;
+        case GROUP_MISSILES: activation = p->status.missiles; item = 0xFF; break;
+        case GROUP_BOMBS: activation = p->status.bomb; item = 0xFF; break;
+        case GROUP_SUITS: activation = p->status.suit; item = SMF_GRAVITY_SUIT; break;
+        case GROUP_MISC: activation = p->status.misc; item = SMF_SPACE_JUMP; break;
+        default: return 0;
+        }
+        uint8_t activated = activation[item_data(slot, 1)];
+        if (!activated) continue;
+        if (!want_unknown ? activated != item : activated == item) return 1;
+    }
+}
+
+/* StatusScreenUpdateUnknownItemPalette: OBJ row 12 flashed white (two
+ * partial flashes, a full one, back down), then the name's idle cycle. */
+static bool update_unknown_palette(MzmPauseScreen *p, MzmScreen *s, int stage) {
+    bool ended = false;
+    uint32_t offset = 0;
+    uint16_t *row = &s->ppu->palette[256 + 12 * 16];
+    p->unknown_palette.timer++;
+    switch (stage) {
+    case 0:
+        p->unknown_palette.timer = 0;
+        p->unknown_palette.row = 0;
+        p->unknown_palette.flashing = 0;
+        break;
+    case 1:
+        if (p->unknown_palette.flashing < 2) {
+            if (p->unknown_palette.timer > 3) {                 /* CONVERT_SECONDS(.05f) */
+                p->unknown_palette.timer = 0;
+                p->unknown_palette.row++;
+                if ((uint8_t)p->unknown_palette.row >= 8) {
+                    p->unknown_palette.flashing++;
+                    p->unknown_palette.row = 0;
+                }
+                offset = rom8("sStatusScreenUnknownItemsPartialFlash", (uint8_t)p->unknown_palette.row) * 16u;
+            }
+        } else if (p->unknown_palette.timer >= 3) {
+            p->unknown_palette.timer = 0;
+            p->unknown_palette.row++;
+            if ((uint8_t)p->unknown_palette.row >= 6) {
+                p->unknown_palette.row = 5;
+                p->unknown_palette.flashing++;
+                ended = true;
+            }
+            offset = rom8("sStatusScreenUnknownItemsFullFlash", (uint8_t)p->unknown_palette.row) * 16u;
+        }
+        if (offset == 0) break;
+        mzm_copy_from_rom(row, sym("sStatusScreenUnknownItemsWhiteFlashingPal") + offset * 2, 32);
+        break;
+    case 2:
+        if (p->unknown_palette.timer < 2) break;               /* CONVERT_SECONDS(1.f / 30) */
+        p->unknown_palette.timer = 0;
+        p->unknown_palette.row--;
+        if (p->unknown_palette.row == 0) ended = true;
+        offset = rom8("sStatusScreenUnknownItemsFullFlash", (uint8_t)p->unknown_palette.row) * 16u;
+        mzm_copy_from_rom(row, sym("sStatusScreenUnknownItemsWhiteFlashingPal") + offset * 2, 32);
+        break;
+    case 3:
+        if (p->unknown_palette.timer <= 3) break;
+        p->unknown_palette.timer = 0;
+        p->unknown_palette.row++;
+        if ((uint8_t)p->unknown_palette.row >= 4) p->unknown_palette.row = 0;
+        offset = rom8("sStatusScreenUnknownItemsNamesFlash", (uint8_t)p->unknown_palette.row) * 16u;
+        mzm_copy_from_rom(row, sym("sStatusScreenUnknownItemsNamesFlashingPal") + offset * 2, 32);
+        break;
+    default:
+        break;
+    }
+    return ended;
+}
+
+/* StatusScreenEnableUnknownItem: the row's name written from the unknown
+ * items' last row of the status tile map. */
+static void enable_unknown_item(MzmPauseScreen *p, MzmScreen *s, int group, int row) {
+    if (group != GROUP_BEAMS && group != GROUP_SUITS && group != GROUP_MISC) return;
+    Box u = unknown_box(group), b = group_box(group);
+    uint32_t position = (uint32_t)(u.bottom - 1) * STATUS_ROW + u.left;
+    if (position == 0) return;
+    uint16_t *dst = vram16(s, 0xC000) + (b.top + row) * STATUS_ROW + b.left + 1;
+    position++;
+    for (int i = 1; i < b.right - b.left; ++i) *dst++ = p->status_tilemap[position++];
+}
+
+/* PauseScreenSuitChangingStart: the headers, the rows revealed, the
+ * cursor on the acquired item's slot and the text background. */
+static bool suit_changing_start(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
+    int stage = 0;
+    switch (p->stage) {
+    case 0:
+        stage = 0x100;
+        break;
+    case 1:
+        update_status_oam(p, s, g, 3);
+        stage = 0x100;
+        break;
+    case 2:
+        if (draw_items(p, s, (uint8_t)(p->timer - 1))) stage = 0x100;
+        break;
+    case 3:
+        p->status.current_slot = slot_for_suit_change(p, g->item_being_acquired);
+        init_cursor_and_items(p);
+        p->dispcnt |= GBA_DCNT_BG0;
+        clear_text(s);
+        stage = -1;
+        break;
+    default:
+        break;
+    }
+    return advance_stage(p, stage) != 0;
+}
+
+enum {
+    /* FullyPoweredItemsStage */
+    FP_CHECK_ENABLE_SUIT = 0, FP_DELAY, FP_CHECK_NEXT_SLOT, FP_ACTIVATE_NORMAL_SLOT, FP_SEARCH_FOR_UNKNOWN_ITEM,
+    FP_ENABLE_UNKNOWN_ITEM_INIT, FP_UNKNOWN_ITEM_ANIMATION_PART1, FP_ENABLE_UNKNOWN_ITEM,
+    FP_UNKNOWN_ITEM_ANIMATION_PART2, FP_UNKNOWN_ITEM_DESCRIPTION, FP_FINISH,
+};
+
+static void remember_slot(MzmPauseScreen *p) {
+    if (p->status.current_slot >= SLOT_BOMB) p->status.previous_right_slot = p->status.current_slot;
+    else p->status.previous_left_slot = p->status.current_slot;
+}
+
+/* StatusScreenFullyPoweredItems */
+static bool fully_powered_items(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
+    MzmEquipment *e = g->equipment;
+    if (p->fade_wireframe_stage != 0) {
+        fade_wireframe(p, s, g);
+        return false;
+    }
+    int slot = p->status.current_slot, result;
+    switch (p->stage) {
+    case FP_CHECK_ENABLE_SUIT:
+        if (p->timer > 50) {                                /* CONVERT_SECONDS(5.f / 6) */
+            update_wireframe(p, s, g, 2);
+            p->timer = 0;
+            p->stage++;
+        }
+        break;
+    case FP_DELAY:
+        if (p->timer > 30) {
+            p->status.current_slot = SLOT_BEAM;
+            p->not_playing_enabling_sound = true;
+            p->timer = 0;
+            p->stage++;
+        }
+        break;
+    case FP_CHECK_NEXT_SLOT:
+        result = find_unknown_item_slot(p, false);
+        if (result == 2) {
+            p->status.current_slot = SLOT_BEAM;
+            if (!p->not_playing_enabling_sound) mzm_sfx_fade(MZM_SOUND_ENABLING_NORMAL_ITEM, 15);
+        }
+        p->stage = (uint8_t)(p->stage + result);
+        p->timer = 0;
+        break;
+    case FP_ACTIVATE_NORMAL_SLOT:
+        if (p->timer <= 6) break;                           /* CONVERT_SECONDS(.1f) */
+        update_row(p, s, item_data(slot, 0), item_data(slot, 2), true, true);
+        update_cursor_position(p, slot);
+        mzm_menu_oam_set_id(&p->misc[0], MISC_ITEM_CURSOR_FOCUSING_DESTROY);
+        remember_slot(p);
+        if (p->not_playing_enabling_sound) {
+            mzm_sfx_play(MZM_SOUND_ENABLING_NORMAL_ITEM);
+            p->not_playing_enabling_sound = false;
+        }
+        p->status.current_slot++;
+        p->stage--;
+        p->timer = 0;
+        break;
+    case FP_SEARCH_FOR_UNKNOWN_ITEM:
+        if (find_unknown_item_slot(p, true) == 1) {
+            clear_text(s);
+            p->stage++;
+        } else {
+            p->stage = FP_FINISH;
+        }
+        p->timer = 0;
+        break;
+    case FP_ENABLE_UNKNOWN_ITEM_INIT: {
+        int group = item_data(slot, 0);
+        mzm_menu_oam_set_id(&p->misc[10], group == GROUP_BEAMS   ? MISC_PLASMA_UNKNOWN
+                                          : group == GROUP_SUITS ? MISC_GRAVITY_UNKNOWN
+                                                                 : MISC_SPACE_JUMP_UNKNOWN);
+        Box b = group_box(group);
+        p->misc[10].y = (int16_t)((b.top + item_data(slot, 2)) * HALF_BLOCK);
+        p->misc[10].x = (int16_t)((b.left + 1) * HALF_BLOCK);
+        update_unknown_palette(p, s, 0);
+        mzm_sfx_play(MZM_SOUND_ENABLING_UNKNOWN_ITEM);
+        p->stage++;
+        p->timer = 0;
+        break;
+    }
+    case FP_UNKNOWN_ITEM_ANIMATION_PART1:
+        if (update_unknown_palette(p, s, 1)) {
+            p->stage++;
+            p->timer = 0;
+        }
+        break;
+    case FP_ENABLE_UNKNOWN_ITEM:
+        enable_unknown_item(p, s, item_data(slot, 0), item_data(slot, 2));
+        update_cursor_position(p, slot);
+        mzm_menu_oam_set_id(&p->misc[0], MISC_ITEM_CURSOR_FOCUSING);
+        mzm_sfx_play(MZM_SOUND_TOGGLING_ITEM_ON);
+        remember_slot(p);
+        p->stage++;
+        p->timer = 0;
+        p->misc[10].oam_id++;
+        if (item_data(slot, 0) == GROUP_SUITS) {
+            /* The wireframe turns to the Gravity Suit. */
+            e->items |= MZM_ITEM_GRAVITY_SUIT;
+            e->unknown_items &= ~(uint32_t)MZM_ITEM_GRAVITY_SUIT;
+            update_wireframe(p, s, g, 2);
+        }
+        break;
+    case FP_UNKNOWN_ITEM_ANIMATION_PART2:
+        if (update_unknown_palette(p, s, 2)) {
+            p->stage++;
+            p->timer = 0;
+        }
+        break;
+    case FP_UNKNOWN_ITEM_DESCRIPTION:
+        update_unknown_palette(p, s, 3);
+        if (p->message.message_ended) {
+            if (s->changed_input & KEY_A) {
+                p->status.current_slot++;
+                p->message.message_ended = false;
+                mzm_menu_oam_set_id(&p->misc[10], 0);
+                mzm_menu_oam_set_id(&p->misc[0], 0);
+                p->stage = FP_SEARCH_FOR_UNKNOWN_ITEM;
+            }
+            break;
+        }
+        process_description(p, s, g);
+        break;
+    case FP_FINISH:
+        /* Every obtained item activated */
+        e->items |= e->unknown_items;
+        e->unknown_items = 0;
+        if (p->status.previous_right_slot != 0) p->status.current_slot = p->status.previous_right_slot;
+        else if (p->status.previous_left_slot != 0) p->status.current_slot = p->status.previous_left_slot;
+        else p->status.current_slot = p->status.previous_right_slot;
+        p->stage++;
+        p->timer = 0;
+        break;
+    default:
+        return true;
+    }
+    return false;
+}
+
 static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     GbaPpu *ppu = s->ppu;
     gba_ppu_write16(ppu, GBA_REG_BLDCNT, BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN);
@@ -2222,6 +2610,10 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     p->current_area = g->area;
     if (g->flag == MZM_PAUSE_FLAG_CHOZO_HINT) p->type_flags |= TYPE_ON_MAP_SCREEN | TYPE_CHOZO_STATUE_HINT;
     if (g->flag == MZM_PAUSE_FLAG_MAP_DOWNLOAD) p->type_flags |= TYPE_ON_MAP_SCREEN | TYPE_DOWNLOADING_MAP;
+    if (g->flag == MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS) {
+        update_suit_type_fully_powered(g->equipment);
+        p->type_flags = TYPE_ON_STATUS_SCREEN | TYPE_GETTING_NEW_ITEM | TYPE_GETTING_FULLY_POWERED;
+    }
     bool downloading = p->type_flags & TYPE_DOWNLOADING_MAP;
     bool hint = p->type_flags & TYPE_CHOZO_STATUE_HINT;
     p->map_x = g->hud->minimap_x;
@@ -2285,6 +2677,8 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
         p->state = STATE_MAP_DOWNLOAD;
         mzm_hud_area_map(g->hud, g->area, g->hud->minimap_visited, g->check_event, g->context);
         init_map_download(p);
+    } else if (p->type_flags & TYPE_GETTING_FULLY_POWERED) {
+        p->state = STATE_FULLY_POWERED_ITEMS_INIT;
     }
     /* PauseScreenGetAllMinimapData */
     for (int i = 0; i < AREAS; ++i)
@@ -2310,6 +2704,12 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
         p->target_bld_alpha = 7 << 8 | 9;
         s->bldalpha_h = 7;
         s->bldalpha_l = 9;
+    } else if (p->type_flags & TYPE_GETTING_NEW_ITEM) {
+        p->bldcnt = BLDCNT_BG2_FIRST | BLDCNT_ALPHA | BLDCNT_BG2_SECOND | BLDCNT_BG3_SECOND | BLDCNT_OBJ_SECOND |
+                    BLDCNT_BACKDROP_SECOND;
+        p->target_bld_alpha = 0 << 8 | 22;
+        s->bldalpha_h = 0;
+        s->bldalpha_l = 22;
     } else {
         p->bldcnt = 1 << 2 | BLDCNT_ALPHA | 1 << 11 | 1 << 12 | 1 << 13;
         p->target_bld_alpha = 6 << 8 | 10;
@@ -2347,9 +2747,14 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
         p->bg3cnt = p->unk_6c;
         p->bg1cnt = p->unk_70;
         p->bg0cnt = p->unk_6a;
-        p->bg2cnt = p->unk_72;
+        if (p->type_flags & TYPE_GETTING_NEW_ITEM) {
+            p->dispcnt = GBA_DCNT_BG2 | GBA_DCNT_OBJ | GBA_DCNT_OBJWIN;
+            p->bg2cnt = p->unk_74;
+        } else {
+            p->bg2cnt = p->unk_72;
+        }
     }
-    load_area_names_and_icons(p, g);
+    load_area_names_and_icons(p, s, g);
     s->oam_y_offset = s->oam_x_offset = 4;
     update_map_arrows(p, g);
     update_boss_icons(p, g);
@@ -2545,6 +2950,21 @@ static bool call_state_handler(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGa
         break;
     case STATE_WAIT_TO_LEAVE:
         return s->changed_input & (KEY_START | KEY_A | KEY_B) && !p->on_world_map;
+    case STATE_FULLY_POWERED_ITEMS_INIT:
+        if (suit_changing_start(p, s, g)) {
+            p->state = STATE_FULLY_POWERED_ITEMS;
+            p->stage = 0;
+            p->timer = 0;
+        }
+        break;
+    case STATE_FULLY_POWERED_ITEMS:
+        if (fully_powered_items(p, s, g)) {
+            p->timer = 0;
+            p->state = STATE_FULLY_POWERED_ITEMS_ENDED;
+        }
+        break;
+    case STATE_FULLY_POWERED_ITEMS_ENDED:
+        return p->timer > 12;                           /* CONVERT_SECONDS(.2f) */
     case STATE_EASY_SLEEP_INIT:
         if (p->is_fading) {
             apply_fading(p, s);

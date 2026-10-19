@@ -215,8 +215,9 @@ three save files (`src/runtime/mzm_file_select.c`); a new game lands the
 gunship in Crateria (`src/runtime/mzm_gunship.c`) and plays the "Planet
 Zebes..." story text cutscene (`src/runtime/mzm_cutscene.c`) before Brinstar.
 The same module plays the post-Tourian monologues, the Ruins Test's
-"getting the fully powered suit" cutscene (followed in the room by the suit
-upgrade flash, `src/runtime/mzm_in_game_cutscene.c`, and the falling Chozo
+"getting the fully powered suit" cutscene (followed by the status screen
+enabling the items and revealing the unknown ones, then in the room by the
+suit upgrade flash, `src/runtime/mzm_in_game_cutscene.c`, and the falling Chozo
 pillar; `--ruins-test-end` stages the end of the fight for captures) and,
 when Samus boards the Chozodia escape ship, the in-gameplay "Samus in the
 blue ship" cutscene. Once

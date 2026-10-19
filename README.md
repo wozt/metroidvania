@@ -218,8 +218,9 @@ The same module plays the post-Tourian monologues and, when Samus boards the
 Chozodia escape ship, the in-gameplay "Samus in the blue ship" cutscene. Once
 the ship has flown off, the Chozodia escape sequence
 (`src/runtime/mzm_chozodia_escape.c`, or `--chozodia-escape` directly) ends
-with "MISSION ACCOMPLISHED!"; the credits are not ported, so the runtime
-returns to the intro. The demos and the other cutscenes are not ported yet.
+with "MISSION ACCOMPLISHED!", followed by the credits and Samus's end
+screen (`src/runtime/mzm_credits.c`); the ending image and the unlocked
+options are not ported, so the runtime then returns to the intro. The demos and the other cutscenes are not ported yet.
 
 Run the experimental SDL3 Zero Mission room/animation integration with:
 

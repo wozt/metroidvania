@@ -24,6 +24,7 @@
 #include "mzm_room_gfx.h"
 #include "mzm_tourian_escape.h"
 #include "mzm_chozodia_escape.h"
+#include "mzm_credits.h"
 #include "mzm_samus.h"
 #include "mzm_screen_shake.h"
 #include "mzm_screen.h"
@@ -4311,6 +4312,9 @@ int main(int argc, char **argv) {
      * EFFECT_CUTSCENE_ESCAPING_CHOZODIA fade (`chozodia_escape_fade`). */
     bool chozodia_escape_mode=false, chozodia_escape_fade=false;
     static MzmChozodiaEscape chozodia_escape;
+    /* GM_CREDITS after it. */
+    bool credits_mode=false;
+    static MzmCredits credits;
     /* A door's fade (ConnectionCheckEnterDoor): Samus waits while the room
      * fades out, then the door's room is loaded and fades in. */
     static MzmDoorFade door_fade;
@@ -4504,6 +4508,7 @@ int main(int argc, char **argv) {
     printf("Diagnostics: F1 debug menu (keyboard only).\n");
     /* The first room's music starts at once (after the title screen). */
     if (!title_mode && !intro_mode && !cutscene_mode && !tourian_escape_mode && !chozodia_escape_mode &&
+        !credits_mode &&
         runtime_room_music(room)) {
         runtime_audio_lock();
         mzm_music_check_play_transition_track();
@@ -4855,7 +4860,33 @@ int main(int argc, char **argv) {
                 if(mzm_chozodia_escape_update(&chozodia_escape,&screen)) {
                     chozodia_escape_mode=false;
                     screen.ppu->win0h_per_line=false;
-                    fprintf(stderr,"The Chozodia escape ended; the credits are not ported.\n");
+                    /* GM_CREDITS with ChozodiaEscapeGetItemCountAndEndingNumber. */
+                    uint32_t owned=(equipment.items|equipment.unknown_items)&0x3FFFu;
+                    int abilities=0;
+                    for(;owned;owned&=owned-1)abilities++;
+                    MzmEndingStats stats={equipment.max_energy,equipment.max_missiles,
+                                          equipment.max_super_missiles,equipment.max_power_bombs,
+                                          abilities,runtime_difficulty,runtime_igt.hours};
+                    credits_mode=mzm_credits_enter(&credits,&screen,
+                                                   mzm_ending_item_count_and_number(&stats));
+                    if(!credits_mode) {
+                        fprintf(stderr,"The credits are unavailable.\n");
+                        intro_mode=true;
+                        mzm_intro_enter(&intro);
+                    }
+                    previous_held=held;
+                }
+                accumulator-=fixed_step;
+                continue;
+            }
+            if(credits_mode) {
+                /* GM_CREDITS up to the end screen; the ending image and the
+                 * unlocked options are not ported: the intro instead. */
+                mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                              capture_path?NULL:&gamepad));
+                if(mzm_credits_update(&credits,&screen)) {
+                    credits_mode=false;
+                    fprintf(stderr,"The credits ended; the ending image is not ported.\n");
                     intro_mode=true;
                     mzm_intro_enter(&intro);
                     previous_held=held;
@@ -5594,7 +5625,7 @@ int main(int argc, char **argv) {
         SDL_FRect viewport={(ow-320.f*scale)*0.5f,(oh-224.f*scale)*0.5f,
                             320.f*scale,224.f*scale};
         if(intro_mode || title_mode || pause_mode || file_select_mode || game_over_mode ||
-           cutscene_mode || tourian_escape_mode || chozodia_escape_mode) {
+           cutscene_mode || tourian_escape_mode || chozodia_escape_mode || credits_mode) {
             /* The 240x160 GBA screen, fitted to the view. */
             SDL_SetRenderDrawColor(renderer,0,0,0,255);
             SDL_RenderClear(renderer);
@@ -6103,6 +6134,9 @@ frame_overlays:
             if(chozodia_escape_mode)
                 printf("  screen: Chozodia escape (mode %u stage %u timer %u)\n",chozodia_escape.sub_mode,
                        chozodia_escape.stage,chozodia_escape.timer);
+            if(credits_mode)
+                printf("  screen: credits (mode %u stage %u timer %u, ending %u, pen %#x)\n",credits.sub_mode,
+                       credits.data.stage,credits.data.timer,(unsigned)(credits.pen&0xF),credits.pen);
             if(intro_mode || title_mode || file_select_mode || pause_mode || game_over_mode ||
                cutscene_mode || tourian_escape_mode)
                 printf("  screen: cutscene %d (stage %d sub stage %d), intro %d (stage %d timer %d), title %d, file select %d (mode %d, sub menu %d "

@@ -19,6 +19,7 @@
 #include "mzm_door_fade.h"
 #include "mzm_tourian_escape.h"
 #include "mzm_chozodia_escape.h"
+#include "mzm_credits.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -1760,6 +1761,57 @@ static void test_chozodia_escape_bank(void) {
     mzm_rom_close();
 }
 
+/* GM_CREDITS on the exported bank: the ending number, the credit lines
+ * set in BG0 or BG1, the wall and the zoom with their native lengths, then
+ * Samus posing to the end. */
+static void test_credits_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the credits checks are skipped\n");
+        return;
+    }
+    screen.ppu = &ppu;
+    /* 100% on normal under two hours: image 4, with the tank counts. */
+    MzmEndingStats full = {1299, 250, 30, 18, 14, 1, 1};
+    uint32_t pen = mzm_ending_item_count_and_number(&full);
+    assert(pen == ((12u << 24) + (50u << 16) + (15u << 12) + (9u << 8) + (14u << 4) + 4u));
+    full.igt_hours = 3;
+    assert((mzm_ending_item_count_and_number(&full) & 0xF) == 3);
+    MzmEndingStats low = {99, 0, 0, 0, 3, 2, 5};
+    assert((mzm_ending_item_count_and_number(&low) & 0xF) == 7);
+    low.difficulty = 0;
+    assert((mzm_ending_item_count_and_number(&low) & 0xF) == 0);
+    MzmEndingStats any = {599, 50, 10, 6, 10, 1, 3};
+    assert((mzm_ending_item_count_and_number(&any) & 0xF) == 1);
+
+    static MzmCredits c;
+    mzm_sfx_clear();
+    assert(mzm_credits_enter(&c, &screen, 1));
+    assert(!mzm_credits_update(&c, &screen));
+    assert(c.sub_mode == 1 && screen.bldy == 16 && c.data.unk_e == 0x80 &&
+           gba_ppu_read16(&ppu, GBA_REG_BG0VOFS) == 0x100 && count_requests(MZM_SFX_MUSIC_PLAY, 0x1B) == 1);
+    /* The first line is written once a row has scrolled. */
+    bool line_written = false;
+    int f;
+    for (f = 0; f < 60 && !line_written; ++f) {
+        assert(!mzm_credits_update(&c, &screen));
+        line_written = c.data.current_line == 1;
+    }
+    assert(line_written && c.data.line_offset_1 == 0xF500 && c.data.line_offset_2 == 0xF540);
+    for (f = 0; c.data.stage == 0 && f < 20000; ++f) assert(!mzm_credits_update(&c, &screen));
+    assert(c.data.stage == 1 && c.data.dispcnt == (GBA_DCNT_BG2 | GBA_DCNT_BG3) && c.data.current_line > 100);
+    for (f = 0; c.data.stage == 1 && f < 1000; ++f) assert(!mzm_credits_update(&c, &screen));
+    assert(f == 513 && c.bg_y[2] == 64 * 56);
+    for (f = 0; c.sub_mode == 2 && f < 2000; ++f) assert(!mzm_credits_update(&c, &screen));
+    assert(f == 961 && c.sub_mode == 3);
+    /* The end screen, ending 1: helmet off. */
+    bool ended = false;
+    for (f = 0; !ended && f < 4000; ++f) ended = mzm_credits_update(&c, &screen);
+    assert(ended && c.sub_mode == 8 && c.data.ending_number == 1 && screen.bldy == 16 &&
+           c.data.dispcnt == (GBA_DCNT_BG2 | GBA_DCNT_BG3));
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
@@ -1774,6 +1826,7 @@ int main(void) {
     test_cutscene_bank();
     test_tourian_escape_bank();
     test_chozodia_escape_bank();
+    test_credits_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

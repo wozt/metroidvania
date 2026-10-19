@@ -3838,6 +3838,38 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0382 - Credits and end screen
+
+- Ported the first half of `ending_and_gallery.c`'s GM_CREDITS in
+  `mzm_credits.c`, on the non-gameplay screen from the ROM bank, with the
+  credits music:
+  - the US credit lines scroll over the dark Chozo wall. Each line is
+    built from the credits characters in white, blue or red, with
+    two-row names and the copyright lines. The V-blank writes it into BG0,
+    or into BG1 half a tile aside when its width is odd;
+  - after the last line, the wall fades in and the text fades out;
+  - the wall scrolls down to its bottom (513 frames), then zooms into the
+    Chozo drawing and fades to black (961 frames);
+  - the end screen slides and blends Samus's poses over the drifting
+    space background. The last pose depends on the ending: full suit,
+    helmet off, or suitless after the white palettes. It then fades out.
+- `ChozodiaEscapeGetItemCountAndEndingNumber` is ported: the ending number
+  comes from the tank maximums of the difficulty, the abilities, the
+  difficulty and the in-game hours.
+- In game, the Chozodia escape now continues into the credits.
+- Not ported: the ending image with the clear time and rate, and the
+  unlocked options pop-up. The runtime returns to the intro after the end
+  screen.
+- A bank-backed test checks:
+  - the ending number in five cases;
+  - where the first credit line is placed;
+  - the lengths of the credits stages;
+  - the end screen through to its end.
+- Captures of the credit lines, the wall, the zoom and the poses are in the
+  ignored `captures/chozodia/credits-lines.png` and `credits-end.png`.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0381 - Chozodia escape sequence
 
 - Ported `chozodia_escape.c` (GM_CHOZODIA_ESCAPE) in

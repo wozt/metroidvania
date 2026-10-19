@@ -461,7 +461,7 @@ Known divergences: The Mellows' BG priority uses the runtime's BG1 priority over
 Next action: Compare a hive fight and a Mellow swarm room with an emulator.
 Evidence: in game: `brinstar_013`, `brinstar_014`, `brinstar_015`.
 
-[~] **`mzm.enemies.holtz` — Holtzes.** Hovering under a ceiling with its ROM idle table, aware or idle table by Samus height, warning when she is low and within 8 blocks vertically and 5 across, the swoop at 3 pixels a frame with the horizontal speed growing from 2 to 12 subpixels, the slide, the slowing climb, the bonk on the ceiling and the death into drops.
+[+] **`mzm.enemies.holtz` — Holtzes.** Hovering under a ceiling with its ROM idle table, aware or idle table by Samus height, warning when she is low and within 8 blocks vertically and 5 across, the swoop at 3 pixels a frame with the horizontal speed growing from 2 to 12 subpixels, the slide, the slowing climb, the bonk on the ceiling and the death into drops. A capture in ridley_003 shows a Holtz leaving the ceiling and swooping toward Samus.
 
 Native evidence: `mzm:c:src/sprites_ai/holtz.c:Holtz`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
@@ -469,6 +469,7 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+Evidence: in game: `ridley_003`.
 
 [~] **`mzm.enemies.imago` — Imago (adult wasp boss).** Imago waits in the ceiling until the last of its five eggs is broken (touched or shot), fades the music and starts the battle music; its body turns vulnerable. It comes down, sweeps the room low (faster as it is hurt, hovering over the floor and its slopes), climbs back at either end and dives at Samus near that end with the ROM-exported sway, turns otherwise. Under two thirds (or when Samus has no missiles) it shoots needles at her, faster under a third, and its body reddens (rows 4 and 5) while its core flashes through sImagoDynamicPaletteData. Killed, it drops its burning stinger, keeps flying while burning, waits for Samus at the Super Missile, charges and breaks the wall column by column, explodes with the boss-killed music, and sets event 35 and unlocks the doors once Samus picks the Super Missiles up. Contact uses the big-knockback hurt (SSC_HURTS_BIG_KNOCKBACK, now handled). A capture in ridley_019 shows the eggs before the fight.
 
@@ -520,7 +521,7 @@ Known divergences: MechaRidleyGlowFading's seven one-frame copies of sMechaRidle
 Next action: Port the room animated palettes (with the alarm toggles); compare the fight and its palettes with an emulator.
 Evidence: in game: `chozodia_072`.
 
-[~] **`mzm.enemies.mella` — Mellas.** Hovering under a ceiling with the ROM idle tables from an RNG offset, detection when Samus is low and within 8 blocks vertically and 3 across, a 7-frame delay, the swoop with the ROM going-down, going-up and horizontal speed tables (the going-down flag is SAMUS_COLLIDING, as in the game), the climb back half a block under the ceiling and the small explosion death.
+[+] **`mzm.enemies.mella` — Mellas.** Hovering under a ceiling with the ROM idle tables from an RNG offset, detection when Samus is low and within 8 blocks vertically and 3 across, a 7-frame delay, the swoop with the ROM going-down, going-up and horizontal speed tables (the going-down flag is SAMUS_COLLIDING, as in the game), the climb back half a block under the ceiling and the small explosion death. A capture in norfair_001 shows the Mellas leaving their ceiling and swarming toward Samus.
 
 Native evidence: `mzm:c:src/sprites_ai/mella.c:Mella`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
@@ -528,6 +529,7 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+Evidence: in game: `norfair_001`.
 
 [+] **`mzm.enemies.metroid` — Metroids.** Metroids lock their room (rooms 14, 15, 19, 1, 2, 16 of Tourian, one event each) and are removed once its event is set; once on screen they wobble along sMetroidSpawningY/XMovement and, after a random delay, grow from a quarter of their size (palette rows 3, 2, 1, baked as /rowN), then chase Samus's head with a speed that builds up to its cap and a momentum that runs down every other frame, reversing on walls and pushing overlapping Metroids (MetroidCheckBouncingOnMetroid). Samus under a Metroid's middle is grabbed (SSC_METROID): it drains SpriteUtilTakeDamageFromSprite's damage with an invincibility of 1, 4 or 8 frames by suits, rides her head, cycles sMetroidPal_SamusGrabbed in OBJ row 12 (baked as /gN), plays the sucking sounds by suits and slows her (gEquipment.grabbedByMetroid, outside liquids as in the unfixed game) until an exploding bomb ejects it. Frozen, it becomes PSPRITE_FROZEN_METROID (missiles hurt it) with a bigger hitbox and thaws twice as fast except on easy; dead, it and its shell explode (PE_FREEZING_SPRITE_WITH_CHARGED_ICE) and the last one sets the room's event and unlocks the doors. Checked by capture in tourian_014 (the growth, the chase and the grab).
 
@@ -549,7 +551,7 @@ Known divergences: Not compared with an emulator; the fight was not won in game.
 Next action: Win the fight and escape to the gunship in game, then compare with an emulator.
 Evidence: in game: `tourian_004`.
 
-[~] **`mzm.enemies.multiviola` — Multiviolas.** Bouncing diagonally off every surface at 3 subpixels a frame on both axes, starting toward Samus, its 56-frame animation starting at twice its slot, and the big explosion death into drops.
+[+] **`mzm.enemies.multiviola` — Multiviolas.** Bouncing diagonally off every surface at 3 subpixels a frame on both axes, starting toward Samus, its 56-frame animation starting at twice its slot, and the big explosion death into drops. A capture in norfair_020 shows the Multiviola bouncing around the room.
 
 Native evidence: `mzm:c:src/sprites_ai/multiviola.c:Multiviola`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
@@ -557,6 +559,7 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: Its unused secondary sprite is not ported.  
 Next action: Port its unused secondary sprite only if a room uses it; compare its behavior with the original game frame by frame.
+Evidence: in game: `norfair_020`.
 
 [+] **`mzm.enemies.parasite` — Parasites (single and multiple).** Single Parasites crawl (faster for 1.5 seconds once Samus came within range, gParasiteRelated), hop or jump on their frame-counter timer with their three jumping sounds on screen, turn at walls, fall and land, and die crushed under a ceiling. Touching Samus (SSC_PARASITE, a point hitbox) they grab her and crawl over her from her top left corner; with more than three on her and neither the Varia nor the Gravity Suit, the leech takes the forced 1 energy (no knockback, the hurt pose only when it kills), 16 invincible frames, the leeching sound and every fourth time the hurt sound. The screw attack throws them off; any hit (a beam kills them at health 1) throws them away instead, and only an exploding bomb touching them or a power bomb kills them (ParasiteBombCollision). They grab Gerons the same way and are thrown off by their destruction. The multiple Parasites (the bug room) work on ClipdataProcess, the main one spawning five more (SpriteSpawnPrimary), lock the doors when Samus has the Bombs, and the last one killed sets EVENT_BUGS_KILLED and unlocks them. gParasiteRelated runs down at the end of every sprite update, the frozen one included, and is cleared by the room load. Checked by capture in brinstar_016 (four on Samus drain her), brinstar_023 (Gerons destroyed) and brinstar_024 (24 multiple Parasites).
 
@@ -617,7 +620,7 @@ Known divergences: The green Rinka mosaic effect is not reproduced (MOSAIC is ke
 Next action: Port the Mother Brain Rinkas with Mother Brain.
 Evidence: in game: `tourian_004`.
 
-[~] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops.
+[+] **`mzm.enemies.ripper` — Rippers.** Brown and purple Rippers: init, random direction, horizontal patrol with wall turns, two-part turn animation, damage only from super missiles and the screw attack, death with its explosion into drops. A capture in brinstar_001 shows the brown Ripper flying across the room (x 118 to 163 in 90 frames).
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilChooseRandomXFlip`, `mzm:c:src/sprites_ai/ripper.c:Ripper`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
@@ -625,6 +628,7 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+Evidence: in game: `brinstar_001`.
 
 [+] **`mzm.enemies.ripper2` — Ripper IIs.** Init with its hitbox and random direction, the patrol at two pixels a frame with a wall probe 44 subpixels ahead a quarter block above its feet, the two-part turn with its sound, the damaged sound and the death into drops. Checked in norfair_017: six Ripper IIs cross the room and turn at its walls.
 
@@ -646,7 +650,7 @@ Known divergences: The dynamic symbol palettes, the reflection palette and graph
 Next action: Port the symbol and reflection palette DMA, the ghost alpha blending and the getting-fully-powered cutscene; compare the fight with an emulator.
 Evidence: in game: `chozodia_042`.
 
-[~] **`mzm.enemies.sidehopper` — Sidehoppers.** Ground and ceiling Sidehoppers: idle or head shake for 1 to 4 loops (work1 kept at 0 on spawn, as without BUGFIX), Samus detection within five blocks, jump warning, high or low jumps from the ROM tables with the head hitbox resized, wall bounces, falls when unsupported, landing and the single-then-big death explosion into drops.
+[+] **`mzm.enemies.sidehopper` — Sidehoppers.** Ground and ceiling Sidehoppers: idle or head shake for 1 to 4 loops (work1 kept at 0 on spawn, as without BUGFIX), Samus detection within five blocks, jump warning, high or low jumps from the ROM tables with the head hitbox resized, wall bounces, falls when unsupported, landing and the single-then-big death explosion into drops. A capture in kraid_001 shows the Sidehoppers hopping on floor and ceiling.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/sidehopper.c:Sidehopper`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
@@ -654,6 +658,7 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_m
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+Evidence: in game: `kraid_001`.
 
 [+] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen. Each explosion frame is now extracted as separate OBJ art; the renderer rotates every OBJ center with the ROM sine table and native signed Q8.8 rounding, keeps OAM priority, ignores affine Y flip and clips each object to its double-size hardware window. Checked by capture in brinstar_004: a green Skree dives, crashes, releases all four rotating secondary parts and removes them when their animation ends.
 
@@ -723,7 +728,7 @@ Known divergences: Not compared with an emulator. Mother Brain and the Rinkas ar
 Next action: Port Mother Brain and the Rinkas, then compare with an emulator.
 Evidence: in game: `tourian_004`.
 
-[~] **`mzm.enemies.viola` — Violas.** Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops.
+[+] **`mzm.enemies.viola` — Violas.** Blue and orange Violas (half a pixel and a pixel a frame): placement onto the floor, ceiling or a wall around them, crawling along floors with slopes, ceilings and walls with their native corner turns and block snapping, falling when unsupported and dying into drops. A capture in ridley_002 shows the blue and orange Violas crawling around their rock.
 
 Native evidence: `mzm:c:src/sprites_ai/viola.c:Viola`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
@@ -731,8 +736,9 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+Evidence: in game: `ridley_002`.
 
-[~] **`mzm.enemies.waver` — Wavers.** Wavers start toward Samus and bounce diagonally between surfaces at their native speeds, dying into drops.
+[+] **`mzm.enemies.waver` — Wavers.** Wavers start toward Samus and bounce diagonally between surfaces at their native speeds, dying into drops. A capture in brinstar_017 shows the three Wavers flying their wave paths.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusXFlip`, `mzm:c:src/sprites_ai/waver.c:Waver`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
@@ -740,6 +746,7 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.animation.particles`.  
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
+Evidence: in game: `brinstar_017`.
 
 [~] **`mzm.enemies.worker_robot` — Worker Robots.** Worker Robots are solid (SSC_SOLID: Samus stands on them and is carried) and immune to projectiles; they sleep facing away from Samus until a hit's stun flash wakes them, stand half a second, then walk a subpixel a frame until Samus is in front of them, a ledge or a wall on a slope stops them, when they go back to sleep lying the other way. A missile (half a second) or a super missile (a second) touching them from the side, in their own pass before ProjectileCheckHittingSprite, is removed with its impact particle and pushes them away at up to two pixels a frame with five times the animation speed and the footstep sound. Without a floor they fall (sSpritesFallingSpeed awake, sWorkerRobotSleepingFallingSpeed asleep) and land with their sound. The runtime now runs ProjectileCheckHittingSprite where ProjectileUpdate does, after the spawn and before the projectile loop, which their missile pass depends on.
 
@@ -760,7 +767,7 @@ Known divergences: Not compared with an emulator.
 Next action: Compare the eyes and liquid deaths with an emulator frame by frame.
 Evidence: in game: `kraid_017`.
 
-[~] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits (missiles tumbling off the sprites they cannot hurt), stuns with the stun palette flash (SpriteUtilUpdateStunTimer), freezing (SpriteUtilUpdateFreezeTimer in every ported AI, the frozen and stun rows baked as /frozen and /stun library variants), frozen and SSC_SOLID / SSC_SOLID_CHECK_COLLIDING sprites as solid platforms (SpriteUtilSamusStandingOnSprite: Samus stands on them, is pushed below them or stopped at their sides), SSC_ZIPLINE grabs (SPOSE_ON_ZIPLINE under the zipline from mid-air or spinning, SPOSE_MORPH_BALL_ON_ZIPLINE inside it from morph ball mid-air or ballsparking, gPreviousXPosition moved with her), frozen sprites dropping Samus from a zipline (SPOSE_MID_AIR_REQUEST), SP_SOLID_FOR_PROJECTILES sprites (every projectile only sets their solid hit, with its own impact particle; the Plasma Beam goes through), and death with its explosion particle into enemy drops are ported. Sprites draw by drawOrder (1 in front), orders 9 and above behind Samus (SpriteDrawAll_LowPriority before SamusDraw) and the others in front of her; SSC_CAN_STAND_ON_TOP sprites only let Samus stand on them; SP_ALWAYS_ACTIVE sprites keep running while gPreventMovementTimer stops the others; secondary sprites draw with their spawning sprite's graphics. During any screen shake, Zoomers and Zeelas on the screen stop crawling and those on walls or ceilings fall (SpriteUtilShouldFall). SSC_HURTS_SAMUS_A_LOT hurts with five times the stats damage and a knockback a subpixel stronger; the contact damage follows the difficulty (halved on easy, doubled on hard, after the suits) and the sprites see gSamusWeaponInfo.chargeCounter, last frame's gArmCannonY / gArmCannonX and gDifficulty.
+[+] **`mzm.enemies.zoomer` — Sprite engine core, the Zoomer and sprite combat.** Room sprite placements, sprite graphics, the sprite RNG, animation and collision core, sprite families (a family whose OAM tables are missing is reported and disabled alone), secondary sprites (SpriteSpawnSecondary), whole and per-part rotation, the Zoomer crawl, turns and falls, Samus contact damage with knockback and screw attack kills (one hurting contact per frame), beam and missile hits (missiles tumbling off the sprites they cannot hurt), stuns with the stun palette flash (SpriteUtilUpdateStunTimer), freezing (SpriteUtilUpdateFreezeTimer in every ported AI, the frozen and stun rows baked as /frozen and /stun library variants), frozen and SSC_SOLID / SSC_SOLID_CHECK_COLLIDING sprites as solid platforms (SpriteUtilSamusStandingOnSprite: Samus stands on them, is pushed below them or stopped at their sides), SSC_ZIPLINE grabs (SPOSE_ON_ZIPLINE under the zipline from mid-air or spinning, SPOSE_MORPH_BALL_ON_ZIPLINE inside it from morph ball mid-air or ballsparking, gPreviousXPosition moved with her), frozen sprites dropping Samus from a zipline (SPOSE_MID_AIR_REQUEST), SP_SOLID_FOR_PROJECTILES sprites (every projectile only sets their solid hit, with its own impact particle; the Plasma Beam goes through), and death with its explosion particle into enemy drops are ported. Sprites draw by drawOrder (1 in front), orders 9 and above behind Samus (SpriteDrawAll_LowPriority before SamusDraw) and the others in front of her; SSC_CAN_STAND_ON_TOP sprites only let Samus stand on them; SP_ALWAYS_ACTIVE sprites keep running while gPreventMovementTimer stops the others; secondary sprites draw with their spawning sprite's graphics. During any screen shake, Zoomers and Zeelas on the screen stop crawling and those on walls or ceilings fall (SpriteUtilShouldFall). SSC_HURTS_SAMUS_A_LOT hurts with five times the stats damage and a knockback a subpixel stronger; the contact damage follows the difficulty (halved on easy, doubled on hard, after the suits) and the sprites see gSamusWeaponInfo.chargeCounter, last frame's gArmCannonY / gArmCannonX and gDifficulty. A capture in brinstar_000 and brinstar_001 shows the yellow and red Zoomers crawling along floors, walls and ceilings (one climbs a wall from y 406 to 451 in 90 frames).
 
 Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/projectile_util.c:ProjectileCheckHittingSprite`, `mzm:c:src/projectile_util.c:ProjectileDealDamage`, `mzm:c:src/projectile_util.c:ProjectileHitSolidSprite`, `mzm:c:src/projectile_util.c:ProjectileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileMissileHitSprite`, `mzm:c:src/projectile_util.c:ProjectileSuperMissileHitSprite`, `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteDrawAll_LowPriority`, `mzm:c:src/sprite.c:SpriteDrawAll_MediumPriority`, `mzm:c:src/sprite.c:SpriteInitPrimary`, `mzm:c:src/sprite.c:SpriteLoadRoomSprites`, `mzm:c:src/sprite.c:SpriteUpdate`, `mzm:c:src/sprite.c:SpriteUpdateAnimation`, `mzm:c:src/sprite_util.c:SpriteUtilAlignYPositionOnSlopeAtOrigin`, `mzm:c:src/sprite_util.c:SpriteUtilCheckOnZipline`, `mzm:c:src/sprite_util.c:SpriteUtilCheckPullingSelfUp`, `mzm:c:src/sprite_util.c:SpriteUtilCheckStopSamusAgainstSolidSpriteLeft`, `mzm:c:src/sprite_util.c:SpriteUtilCheckStopSamusAgainstSolidSpriteRight`, `mzm:c:src/sprite_util.c:SpriteUtilCheckVerticalCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilGetCollisionAtPosition`, `mzm:c:src/sprite_util.c:SpriteUtilIsSpriteStunned`, `mzm:c:src/sprite_util.c:SpriteUtilSamusAndSpriteCollision`, `mzm:c:src/sprite_util.c:SpriteUtilSamusStandingOnSprite`, `mzm:c:src/sprite_util.c:SpriteUtilShouldFall`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteDeath`, `mzm:c:src/sprite_util.c:SpriteUtilSpriteTakeDamageFromSamusContact`, `mzm:c:src/sprite_util.c:SpriteUtilTakeDamageFromSprite`, `mzm:c:src/sprite_util.c:SpriteUtilUpdateFreezeTimer`, `mzm:c:src/sprite_util.c:SpriteUtilUpdateStunTimer`, `mzm:c:src/sprites_ai/zoomer.c:Zoomer`, `mzm:c:src/sprites_ai/zoomer.c:ZoomerDeath`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
@@ -768,6 +775,7 @@ Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_m
 Dependencies: `mzm.collision.clipdata`.  
 Known divergences: SpriteCheckOnScreen uses the GBA screen size while the runtime view is wider.  
 Next action: Port the Metroids, the Mother Brain Rinkas and the remaining Space Pirates.
+Evidence: in game: `brinstar_000`, `brinstar_001`.
 
 ### Bosses
 

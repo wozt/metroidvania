@@ -3838,6 +3838,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0390 - in-game checks for eight common enemies
+
+- Recorded in-game captures for enemies that were already ported and unit
+  tested but had no in-game check. The runtime output tracks each sprite's
+  pose and position between two frames, and the images confirm the
+  behaviour:
+  - the Zoomers (`brinstar_000`, `brinstar_001`) crawl along floors, walls
+    and ceilings;
+  - the Ripper crosses `brinstar_001`;
+  - the Wavers fly their wave paths (`brinstar_017`);
+  - the Violas crawl around their rock (`ridley_002`);
+  - the Sidehoppers hop on floor and ceiling (`kraid_001`);
+  - a Holtz dives from the ceiling and climbs back (`ridley_003`, y 42 to
+    130 and back);
+  - the Mellas swarm from their ceiling (`norfair_001`);
+  - the Multiviola bounces (`norfair_020`).
+- These eight entries move from `partial` to `functional`; the parity
+  inventory now contains 37 partial and 65 functional entries. Their
+  divergences are unchanged (Zoomer's on-screen check keeps the GBA screen
+  size; the unused Multiviola secondary sprite).
+- The worker robot stays `partial`: it sleeps in `chozodia_014` as it should,
+  but the capture did not land a shot to wake it.
+- Captures: ignored `captures/enemies/zoomer-ripper.png` and
+  `simple-enemies.png`.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 444/444 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0389 - Mecha Ridley palettes and 100% rule
 
 - Mecha Ridley is now exported as 8-bit OBJ palette indices. The exported

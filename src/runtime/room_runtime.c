@@ -6680,6 +6680,12 @@ frame_overlays:
                 printf("  animated palette %u row %d disabled %d, alarm %u\n",
                        runtime_room_gfx.animated_palette,runtime_room_gfx.palette_row,
                        runtime_room_gfx.disable_animated_palette,sprites.globals.alarm_timer);
+            printf("  charge %u, projectiles:",weapons.charge_counter);
+            for(int i=0;i<MZM_MAX_PROJECTILES;i++)
+                if(weapons.list[i].active)
+                    printf(" type %d at %d,%d",(int)weapons.list[i].type,(int)weapons.list[i].x/4,
+                           (int)weapons.list[i].y/4);
+            printf("\n");
             printf("  boss stage %u, suit %d items 0x%x unknown 0x%x, upgrading suit %s stage %u"
                    " window %u-%u x %u-%u\n",sprites.globals.sub1.work3,(int)equipment.suit,
                    (unsigned)equipment.items,(unsigned)equipment.unknown_items,

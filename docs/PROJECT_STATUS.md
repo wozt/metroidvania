@@ -3838,6 +3838,24 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0400 - in-game check for the paralyzer pistol
+
+- Checked in `chozodia_000`, reached through the Tourian escape and the
+  suitless status screen:
+  - a tap of B fires the uncharged pistol shot;
+  - 130 frames later, a second tap fires the charged shot. The pistol
+    charges by itself and B does not need to be held, as natively;
+  - the charged shot leaves its trail particles as it flies left, and the
+    counter restarts from 0.
+- Corrected a false divergence: the charged trail never had a native low
+  BG priority. `ParticleChargedPistolTrail` never sets
+  `PARTICLE_STATUS_LOW_BG_PRIORITY`, so the runtime's priority 0 matches.
+- The capture diagnostics now print the charge counter and the active
+  projectiles.
+- `mzm.weapons.paralyzer_pistol` moves to `functional`. The parity
+  inventory now contains 24 partial and 79 functional entries.
+- Captures: ignored `captures/fp/x4322.bmp`, `x4334.bmp` and `x4346.bmp`.
+
 ## Patch 0399 - item acquisition and suitless status screens
 
 - Ported in `src/runtime/mzm_pause_screen.c`:

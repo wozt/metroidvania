@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T20:48:56+00:00",
+ "generated_at": "2026-10-19T20:59:26+00:00",
  "git": {
-  "commit": "d31e679",
+  "commit": "fd38cf8",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 38,
-    "functional": 91,
+    "partial": 37,
+    "functional": 92,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 91,
-   "functional_or_better_percent": 65.0,
+   "functional_or_better": 92,
+   "functional_or_better_percent": 65.7,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 14,
-    "functional": 78,
+    "partial": 13,
+    "functional": 79,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 78,
-   "functional_or_better_percent": 84.8,
+   "functional_or_better": 79,
+   "functional_or_better_percent": 85.9,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -7862,8 +7862,8 @@
    "area": "mzm",
    "category": "weapons",
    "title": "Suitless paralyzer pistol",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_projectiles.c",
     "src/runtime/mzm_sprites.c",
@@ -7891,15 +7891,17 @@
     "ProjectileCheckHittingSprite",
     "ParticleChargedPistolTrail"
    ],
-   "limitations": "The charged pistol trail is drawn at the normal particle priority instead of its native low BG priority; no direct Chozodia capture is recorded yet. Suitless Samus automatically charges the pistol every frame: B fires the harmless normal shot before 112 frames or the charged shot from 112 through the 127-to-112 wrap, with the native two/six projectile limits, seven-frame cooldown and shot sounds. Both shots use CAA_BOMB_PISTOL, travel 22 subpixels per moving frame without the short-beam lifetime and use their native directional OAM and hitboxes; the charged shot drops PE_CHARGED_PISTOL_TRAIL every eight frames. The normal shot always produces an invincible hit. The charged shot deals 12 to sprites weak to charge shots or beams, but a Space Pirate is instead paralysed for 60 ticks with the suitless black/purple flicker and no damage. The projectile exporter stages the pistol graphics and palette for its muzzle flash and charged trail.",
-   "next_action": "Port the suitless item-acquisition map sequence, then validate the weapon in Chozodia against an emulator.",
+   "limitations": "Not compared with an emulator. (An earlier note claimed the charged trail had a native low BG priority: ParticleChargedPistolTrail never sets PARTICLE_STATUS_LOW_BG_PRIORITY, so its bgPriority is 0, as the runtime draws it.) Suitless Samus automatically charges the pistol every frame: B fires the harmless normal shot before 112 frames or the charged shot from 112 through the 127-to-112 wrap, with the native two/six projectile limits, seven-frame cooldown and shot sounds. Both shots use CAA_BOMB_PISTOL, travel 22 subpixels per moving frame without the short-beam lifetime and use their native directional OAM and hitboxes; the charged shot drops PE_CHARGED_PISTOL_TRAIL every eight frames. The normal shot always produces an invincible hit. The charged shot deals 12 to sprites weak to charge shots or beams, but a Space Pirate is instead paralysed for 60 ticks with the suitless black/purple flicker and no damage. The projectile exporter stages the pistol graphics and palette for its muzzle flash and charged trail. Checked in chozodia_000 after the Tourian escape and the suitless status screen: facing left, a tap of B fires the uncharged shot; 130 frames later (the counter charges by itself, without B held) a second tap fires the charged shot, whose PE_CHARGED_PISTOL_TRAIL particles follow it left at 66 pixels per 12 frames while the counter restarts from 0. The capture diagnostics now list the charge counter and the projectiles.",
+   "next_action": "Capture a Space Pirate paralysed in game; compare the weapon with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_samus.c",
      "tests/test_mzm_sprites.c",
      "tests/test_mzm_projectile_compose.py"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "chozodia_000"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -11238,6 +11240,12 @@
  },
  "timeline": [
   {
+   "commit": "fd38cf8",
+   "date": "2026-10-19",
+   "subject": "Port the item acquisition and suitless status screens",
+   "scope": "project"
+  },
+  {
    "commit": "d31e679",
    "date": "2026-10-19",
    "subject": "Port the fully powered suit items sequence on the status screen",
@@ -11709,12 +11717,6 @@
    "commit": "aa23543",
    "date": "2026-10-14",
    "subject": "fix(mzm): blocks removed by sprites vanish from BG1",
-   "scope": "mzm"
-  },
-  {
-   "commit": "a677cea",
-   "date": "2026-10-14",
-   "subject": "fix(mzm): Kraid's sprites follow its health palette",
    "scope": "mzm"
   }
  ],

@@ -214,6 +214,8 @@ void ai_tangle_vine(Ctx *c);
 void ai_ruins_test(Ctx *c);
 /* The falling Chozo pillar and the Power Bomb theft (mzm_chozodia_scripted.c). */
 void ai_chozodia_scripted(Ctx *c);
+/* The Kraid and Ridley elevator statues (mzm_elevator_statue.c). */
+void ai_elevator_statue(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */
 void ai_gadora(Ctx *c);
 /* The paired Imago larvae, their parts and the animated passage remnant. */

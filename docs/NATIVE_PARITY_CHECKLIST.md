@@ -25,7 +25,7 @@ regenerate this view.
 
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
-| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 84 |
+| Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 85 |
 | Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
@@ -400,6 +400,16 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.part
 Known divergences: The lava splashes of its rise and of the fireball, and the fireball's bgPriority from BG1CNT, are not ported; otherwise the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
 Evidence: in game: `norfair_022`.
+
+[~] **`mzm.enemies.elevator_statue` — Kraid and Ridley elevator statues.** Each statue stands by its elevator as solid, non-grippable blocks (BG priority 1, always active, solid for projectiles). Once its boss is dead and Samus is off the elevator, it waits a quarter second, sets its event (31 or 38), removes its blocks with a horizontal shake and crumbling sound, drops the boss head debris, shrinks its draw height, lands with dust and a vertical shake, and leaves two rubble blocks; on reload it is already rubble. A capture in brinstar_008 shows the Kraid statue standing with Samus on its column.
+
+Native evidence: `mzm:c:src/sprites_ai/elevator_statue.c:ElevatorStatueChangeTwoGroundCcaa`, `mzm:c:src/sprites_ai/elevator_statue.c:ElevatorStatueDebris`, `mzm:c:src/sprites_ai/elevator_statue.c:KraidElevatorStatue`, `mzm:c:src/sprites_ai/elevator_statue.c:KraidElevatorStatueChangeCAA`, `mzm:c:src/sprites_ai/elevator_statue.c:KraidElevatorStatueCheckShouldFall`, `mzm:c:src/sprites_ai/elevator_statue.c:KraidElevatorStatueDelayBeforeFalling`, `mzm:c:src/sprites_ai/elevator_statue.c:KraidElevatorStatueFallenInit`, `mzm:c:src/sprites_ai/elevator_statue.c:KraidElevatorStatueFalling`, `mzm:c:src/sprites_ai/elevator_statue.c:KraidElevatorStatueInit`, `mzm:c:src/sprites_ai/elevator_statue.c:RidleyElevatorStatue`, `mzm:c:src/sprites_ai/elevator_statue.c:RidleyElevatorStatueChangeCcaa`, `mzm:c:src/sprites_ai/elevator_statue.c:RidleyElevatorStatueCheckShouldFall`, `mzm:c:src/sprites_ai/elevator_statue.c:RidleyElevatorStatueDelayBeforeFalling`, `mzm:c:src/sprites_ai/elevator_statue.c:RidleyElevatorStatueFallenInit`, `mzm:c:src/sprites_ai/elevator_statue.c:RidleyElevatorStatueFalling`, `mzm:c:src/sprites_ai/elevator_statue.c:RidleyElevatorStatueInit`.  
+Local implementation: [`src/runtime/mzm_elevator_statue.c`](../src/runtime/mzm_elevator_statue.c), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Dependencies: `mzm.enemies.kraid`, `mzm.enemies.ridley`, `mzm.environment.room_gadgets`.  
+Known divergences: Not compared with an emulator.  
+Next action: Compare both statues crumbling with an emulator.
+Evidence: in game: `brinstar_008`, `norfair_035`.
 
 [~] **`mzm.enemies.gadora` — Kraid and Ridley Gadora hatch encounters.** Both native variants suppress their matching closed hatch, periodically detect Samus in front, warn and expose an otherwise projectile-immune eye. Destroying the eye runs the flashing death sequence, restores the hatch, persists event 28 or 36 and creates the native primary plus follower drop pair. The Ridley variant keeps its alternate palette, longer opening and delayed horizontal beam that explodes against room collision.
 

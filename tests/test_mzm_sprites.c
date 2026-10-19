@@ -7262,6 +7262,80 @@ int main(void) {
         mzm_sprite_update(&room[right], (uint8_t)right, &rf);
         assert(room[right].status == 0);
     }
+    /* The elevator statues: standing (solid) until their boss dies, then
+     * crumbling into rubble; fallen on reload. */
+    {
+        MzmSpriteKind statue_kind = {0};
+        for (int a = 0; a < MZM_ELEVATOR_STATUE_ANIMS; ++a) {
+            statue_kind.counts[a] = 8;
+            for (int f = 0; f < 8; ++f) statue_kind.timers[a][f] = 4;
+        }
+        MzmSprite room[8] = {0};
+        MzmSpriteFrame ef = frame;
+        ef.sprites = room;
+        ef.sprite_count = 8;
+        ef.hooks = &test_hooks;
+        ef.kinds[MZM_FAMILY_ELEVATOR_STATUE] = &statue_kind;
+        memset(test_events, 0, sizeof test_events);
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_KRAID_ELEVATOR_STATUE, 0, 9, 15, 0, 0);
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x8 && room[0].anim == MZM_ELEVATOR_KRAID_IDLE && room[0].always_active &&
+               room[0].solid_for_projectiles && room[0].draw_order == 2 &&
+               mzm_sprite_bg_priority(&room[0]) == 1 && caa_calls == 4 &&
+               last_caa == MZM_CAA_MAKE_NON_POWER_GRIP);
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x8);
+        /* Kraid dead, but Samus on the elevator: it waits. */
+        test_set_event(NULL, MZM_EVENT_KRAID_KILLED);
+        ef.samus_using_elevator = true;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x8);
+        ef.samus_using_elevator = false;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x9 && room[0].work0 == 16);
+        room[0].work0 = 1;
+        caa_calls = 0;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0xB && room[0].anim == MZM_ELEVATOR_KRAID_FALLING && caa_calls == 4 &&
+               last_caa == MZM_CAA_REMOVE_SOLID &&
+               test_check_event(NULL, MZM_EVENT_KRAID_ELEVATOR_STATUE_DESTROYED) &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_KRAID_ELEVATOR_STATUE_CRUMBLING));
+        /* The head debris, then the dust and the shake on landing. */
+        room[0].frame = 1;
+        room[0].adc = 3;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[1].status && room[1].sprite_id == MZM_SSPRITE_ELEVATOR_STATUE_DEBRIS && room[1].room_slot == 0);
+        mzm_sprite_update(&room[1], 1, &ef);
+        assert(room[1].anim == MZM_ELEVATOR_DEBRIS_KRAID && room[1].draw_order == 5);
+        room[0].frame = 6;
+        room[0].adc = 2;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[2].status && room[2].room_slot == 2 && room[0].draw_top == 48);
+        room[0].frame = 7;
+        room[0].adc = 4;
+        caa_calls = 0;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0xF && room[0].anim == MZM_ELEVATOR_KRAID_FALLEN && caa_calls == 2 &&
+               room[0].hitbox_left == -256);
+        room[1].frame = 7;
+        room[1].adc = 4;
+        mzm_sprite_update(&room[1], 1, &ef);
+        assert(room[1].status == 0);
+        /* Reloaded: already rubble. The Ridley statue waits for Ridley. */
+        MzmSprite again;
+        mzm_sprite_init_primary(&again, MZM_PSPRITE_KRAID_ELEVATOR_STATUE, 0, 9, 15, 0, 0);
+        mzm_sprite_update(&again, 0, &ef);
+        assert(again.pose == 0xF && again.anim == MZM_ELEVATOR_KRAID_FALLEN);
+        MzmSprite ridley_statue;
+        mzm_sprite_init_primary(&ridley_statue, MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE, 0, 9, 15, 0, 0);
+        mzm_sprite_update(&ridley_statue, 0, &ef);
+        mzm_sprite_update(&ridley_statue, 0, &ef);
+        assert(ridley_statue.pose == 0x8 && ridley_statue.anim == MZM_ELEVATOR_RIDLEY_IDLE &&
+               mzm_sprite_graphics_owner(&ridley_statue) == MZM_PSPRITE_KRAID_ELEVATOR_STATUE);
+        memset(test_events, 0, sizeof test_events);
+    }
     /* Chozodia's scripted sprites: the falling pillar after the suit, the
      * Power Bomb thief, the stolen Power Bomb and its trigger. */
     {

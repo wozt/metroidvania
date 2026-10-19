@@ -3838,6 +3838,24 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0376 - Elevator statues
+
+- Ported `sprites_ai/elevator_statue.c` in `mzm_elevator_statue.c`,
+  covering the Kraid and Ridley statues and their debris:
+  - each statue stands as solid, non-grippable blocks;
+  - once its boss is dead and Samus is off the elevator, it sets its event
+    (31 or 38), removes its blocks with a horizontal shake and sound, drops
+    the head debris, lands with dust and a vertical shake, and leaves two
+    rubble blocks;
+  - on reload it is already rubble.
+- The ROM-free regression covers the standing blocks, the elevator and
+  boss conditions, the crumbling event, sound and blocks, the debris, the
+  landing, the rubble and the reload.
+- A capture in `brinstar_008` shows the Kraid statue standing, with Samus
+  on its column (ignored `captures/elevator-statue/kraid-standing.png`).
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0375 - Falling Chozo pillar and the Power Bomb theft
 
 - Ported the scripted Chozodia sprites in `mzm_chozodia_scripted.c`:

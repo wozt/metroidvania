@@ -655,14 +655,15 @@ Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.part
 Known divergences: None specific beyond the shared sprite engine limits (mzm.enemies.zoomer).  
 Next action: Compare its behavior with the original game frame by frame.
 
-[~] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.
+[+] **`mzm.enemies.skree` — Skrees and their explosion.** Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen. Each explosion frame is now extracted as separate OBJ art; the renderer rotates every OBJ center with the ROM sine table and native signed Q8.8 rounding, keeps OAM priority, ignores affine Y flip and clips each object to its double-size hardware window. Checked by capture in brinstar_004: a green Skree dives, crashes, releases all four rotating secondary parts and removes them when their animation ends.
 
 Native evidence: `mzm:c:src/sprite.c:SpriteCheckOnScreen`, `mzm:c:src/sprite.c:SpriteSpawnSecondary`, `mzm:c:src/sprites_ai/skree.c:Skree`, `mzm:c:src/sprites_ai/skree.c:SkreeExplosion`.  
-Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
-Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c).
+Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`scripts/mzm_sprites.py`](../scripts/mzm_sprites.py), [`scripts/mzm_projectile_compose.py`](../scripts/mzm_projectile_compose.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_mzm_sprites.py`](../tests/test_mzm_sprites.py), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
-Known divergences: The explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping).  
-Next action: Reproduce the per-part rotation of the explosion parts.
+Known divergences: Not compared with an emulator.  
+Next action: Compare the dive, impact and rotating fragments with an emulator frame by frame.
+Evidence: in game: `brinstar_004`.
 
 [+] **`mzm.enemies.skultera` — Skulteras.** Random direction, the head and tail side hitboxes, the patrol a pixel every three frames up to eight blocks from where it last turned, the turn at walls and toward Samus (with its sound), the chase every two frames when she is ahead within 3 blocks up or down and 5 across (but not within a block across and 10 up or down), rising half a pixel a frame only while the point above is water and sinking toward her, and the big explosion death. Checked in crateria_007: the nine Skulteras patrol the flooded room and hurt Samus on contact.
 

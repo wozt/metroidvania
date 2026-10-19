@@ -25,6 +25,22 @@ class MzmSpriteDataTests(unittest.TestCase):
             self.assertEqual(mzm_projectile_compose.object_bounds(b"", 0, "y"),
                              (-5, -6, 25, 10, 2))
 
+    def test_affine_whole_part_ignores_native_y_flip(self):
+        entry = {"x": -5, "y": 6, "w": 8, "h": 8, "tile": 0, "bank": 0,
+                 "hflip": False, "vflip": True, "priority": 0}
+        vram = bytes([0x01]) + bytes(31)
+        palette = [None] * 256
+        palette[1] = (1, 2, 3)
+        with mock.patch.object(mzm_projectile_compose, "oam_entries",
+                               return_value=[entry]):
+            pixels = mzm_projectile_compose.render_affine_whole_part(
+                b"", vram, palette, 0, 0)
+            self.assertIn((-5, 6), pixels)
+            self.assertNotIn((-5, 13), pixels)
+            self.assertEqual(
+                mzm_projectile_compose.affine_whole_part_bounds(b"", 0, 0),
+                (-5, 6, 8, 8, 1))
+
     def test_psprite_enum_matches_the_runtime_ids(self):
         ids = mzm_sprites.psprite_ids(
             (DECOMP / "include/constants/sprite.h").read_text(encoding="utf-8"))

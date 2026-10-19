@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T14:44:18+00:00",
+ "generated_at": "2026-10-19T14:53:55+00:00",
  "git": {
-  "commit": "b3b979d",
+  "commit": "0861385",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 60,
-    "functional": 68,
+    "partial": 59,
+    "functional": 69,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 68,
-   "functional_or_better_percent": 48.9,
+   "functional_or_better": 69,
+   "functional_or_better_percent": 49.6,
    "with_passing_tests": 127,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -260,15 +260,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 36,
-    "functional": 55,
+    "partial": 35,
+    "functional": 56,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 55,
-   "functional_or_better_percent": 60.4,
+   "functional_or_better": 56,
+   "functional_or_better_percent": 61.5,
    "with_passing_tests": 91,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -3973,16 +3973,19 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Skrees and their explosion",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
     "scripts/mzm_sprites.py",
+    "scripts/mzm_projectile_compose.py",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
-    "tests/test_mzm_sprites.c"
+    "tests/test_mzm_sprites.c",
+    "tests/test_mzm_sprites.py",
+    "tests/test_runtime_steep_slopes.c"
    ],
    "dependencies": [
     "mzm.enemies.zoomer",
@@ -3995,13 +3998,17 @@
     "SpriteSpawnSecondary",
     "SpriteCheckOnScreen"
    ],
-   "limitations": "The explosion parts are drawn by rotating the composed frame around the sprite position (the native per-part position rotation, without its integer rounding or affine clipping). Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen.",
-   "next_action": "Reproduce the per-part rotation of the explosion parts.",
+   "limitations": "Not compared with an emulator. Green and blue Skrees: detection range, spin, dive with sSkreeFallingSpeed and the growing drift toward Samus, landing, the four impact debris, the crash timing, the huge explosion and the four spinning explosion parts as secondary sprites with their own damage, removed off screen. Each explosion frame is now extracted as separate OBJ art; the renderer rotates every OBJ center with the ROM sine table and native signed Q8.8 rounding, keeps OAM priority, ignores affine Y flip and clips each object to its double-size hardware window. Checked by capture in brinstar_004: a green Skree dives, crashes, releases all four rotating secondary parts and removes them when their animation ends.",
+   "next_action": "Compare the dive, impact and rotating fragments with an emulator frame by frame.",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_sprites.c"
+     "tests/test_mzm_sprites.c",
+     "tests/test_mzm_sprites.py",
+     "tests/test_runtime_steep_slopes.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "brinstar_004"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -4017,6 +4024,22 @@
       "registered": true,
       "ctest": [
        "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_runtime_steep_slopes.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "runtime_steep_slopes"
       ],
       "outcome": "passed",
       "exists": true
@@ -10810,9 +10833,9 @@
    {
     "file": "tests/test_mzm_sprites.py",
     "module": "tests.test_mzm_sprites",
-    "test_count": 10,
+    "test_count": 11,
     "outcome": "passed",
-    "passed": 10
+    "passed": 11
    },
    {
     "file": "tests/test_mzm_world_atlas.py",
@@ -11061,12 +11084,18 @@
    }
   ],
   "summary": {
-   "passed": 476,
+   "passed": 477,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "0861385",
+   "date": "2026-10-19",
+   "subject": "Complete native Zeela eye affine clipping",
+   "scope": "project"
+  },
   {
    "commit": "b3b979d",
    "date": "2026-10-19",
@@ -11540,12 +11569,6 @@
    "date": "2026-10-14",
    "subject": "feat(mzm): native new game, F1-only debug and a gameplay-only gamepad",
    "scope": "mzm"
-  },
-  {
-   "commit": "110d619",
-   "date": "2026-10-14",
-   "subject": "feat(mzm): Parasites",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -11755,13 +11778,17 @@
      {
       "id": 31,
       "name": "Skree Green",
-      "status": "partial",
+      "status": "functional",
       "note": "Skrees and their explosion",
       "evidence": {
        "unit_tests": [
-        "tests/test_mzm_sprites.c"
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py",
+        "tests/test_runtime_steep_slopes.c"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "brinstar_004"
+       ],
        "emulator_compared": false,
        "played_through": false
       },
@@ -11770,13 +11797,17 @@
      {
       "id": 32,
       "name": "Skree Blue",
-      "status": "partial",
+      "status": "functional",
       "note": "Skrees and their explosion",
       "evidence": {
        "unit_tests": [
-        "tests/test_mzm_sprites.c"
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_sprites.py",
+        "tests/test_runtime_steep_slopes.c"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "brinstar_004"
+       ],
        "emulator_compared": false,
        "played_through": false
       },

@@ -2303,6 +2303,7 @@ static void skree_explosion(Ctx *c) {
         s->samus_collision = SSC_HURTS_SAMUS;
         s->y += HALF_BLOCK_SIZE + EIGHTH_BLOCK_SIZE;
         s->status |= MZM_SPRITE_STATUS_DOUBLE_SIZE | MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE;
+        s->scaling = 0x100;
         s->rotation = 0;
         s->anim = s->room_slot != SKREE_EXPLOSION_PART_GOING_UP ? MZM_SKREE_EXPLOSION_GOING_DOWN
                                                                 : MZM_SKREE_EXPLOSION_GOING_UP;

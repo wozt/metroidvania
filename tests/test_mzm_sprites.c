@@ -695,6 +695,7 @@ int main(void) {
         ++parts;
         assert(group[j].secondary && group[j].sprite_id == MZM_SSPRITE_SKREE_EXPLOSION);
         assert(group[j].status & MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE);
+        assert(group[j].scaling == 0x100);
         assert(mzm_sprite_graphics_owner(&group[j]) == MZM_PSPRITE_SKREE_GREEN);
     }
     assert(parts == 4);

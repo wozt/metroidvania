@@ -16,6 +16,16 @@ int main(void) {
     (void)parse_room; (void)parse_native_source; (void)find_spawn;
     (void)clampf; (void)runtime_blocks_frame; (void)runtime_blocks_load;
     (void)runtime_block_tables_open; (void)runtime_power_bomb_apply; (void)runtime_draw_power_bomb;
+    {
+        int16_t sine[320] = {0};
+        sine[0] = 0; sine[64] = 256; sine[128] = 0;
+        int x, y;
+        assert(runtime_asr8(-1) == -1 && runtime_asr8(-257) == -2);
+        runtime_affine_whole_center(sine, 0, -6, -10, 8, 16, 256, &x, &y);
+        assert(x == -2 && y == -2);
+        runtime_affine_whole_center(sine, 64, -6, -10, 8, 16, 256, &x, &y);
+        assert(x == 2 && y == -2);
+    }
     /* The save file keeps the opened hatches and the destroyed
      * never-reform blocks. */
     {

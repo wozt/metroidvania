@@ -66,6 +66,10 @@ from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic 
 
 ENEMIES_RUNTIME = METROID_SPRITES / "enemies" / "runtime"
 OAM_BOUNDS_SCHEMA = "metroidvania-oam-bounds-v1"
+AFFINE_WHOLE_PART_TABLES = {
+    "sSkreeExplosionOam_GoingDown",
+    "sSkreeExplosionOam_GoingUp",
+}
 DECOMP = ROOT / "third_party/mzm"
 # Sprites with a ported AI, and the palette row it selects (ZoomerInit:
 # the red Zoomer sets paletteRow and absolutePaletteRow to 1; the Rippers
@@ -789,6 +793,23 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                             rom, pointer, flip)
                         oam_bounds.append(
                             f"{key}\t{index}\t{left}\t{top}\t{width}\t{height}\t{parts}")
+                    if table in AFFINE_WHOLE_PART_TABLES and flip == "none":
+                        for frame_index, (pointer, duration) in enumerate(entries):
+                            part_count = len(mzm_projectile_compose.oam_entries(rom, pointer))
+                            for part_index in range(part_count):
+                                pixels = mzm_projectile_compose.render_affine_whole_part(
+                                    rom, vram, colours, pointer, part_index)
+                                bmp, left, top = bmp_from_pixels(
+                                    pixels or {(0, 0): (0, 0, 0)})
+                                part_key = (
+                                    f"OamPart/{sprite[len('PSPRITE_'):]}/{table[1:]}/"
+                                    f"none{suffix}/frame{frame_index}/part{part_index}")
+                                library.add(part_key, [(bmp, duration, left, top)])
+                                x, y, width, height, _ = (
+                                    mzm_projectile_compose.affine_whole_part_bounds(
+                                        rom, pointer, part_index))
+                                oam_bounds.append(
+                                    f"{part_key}\t0\t{x}\t{y}\t{width}\t{height}\t1")
             if sprite == "PSPRITE_MECHA_RIDLEY" and table in MECHA_RIDLEY_WEAPON_TABLES:
                 address, size = symbols[MECHA_RIDLEY_WEAPONS]
                 weapons = rom[rom_offset(address, rom):rom_offset(address, rom) + size]

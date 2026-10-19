@@ -3838,6 +3838,32 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0388 - native per-OBJ rotation for Skree explosions
+
+- Extended the ROM-local Zero Mission sprite extraction with separate OBJ
+  art for both Skree explosion tables. Only the affine-whole tables opt in,
+  so normal sprite sequences keep the existing compact representation; all
+  palette variants still resolve through the same content-addressed object
+  store.
+- Replaced the composed-frame approximation for those tables with
+  `SpriteDraw`'s per-object transform: centers are scaled and rotated through
+  the extracted 320-value sine table, negative Q8.8 values use the GBA's
+  arithmetic-shift rounding, OAM priority is preserved and every part is
+  clipped independently to its double-size affine window. The affine use of
+  the original flip bits is also respected, including the ignored Y flip.
+- Restored the explosion sprites' native Q8.8 scaling value. A capture in
+  `brinstar_004` follows a green Skree through its dive and crash, observes
+  all four rotating secondary sprites and their animation-table removal.
+  `mzm.enemies.skree` therefore moves from `partial` to `functional`; the
+  parity inventory now contains 46 partial and 56 functional entries.
+- Added regressions for affine-part extraction, ignored Y flip, signed Q8.8
+  center rounding, quarter-turn placement and the native Skree scaling
+  initialization. No ROM or extracted asset is tracked.
+- Validation on 2026-10-19: the warning-clean build, CTest 35/35 and Python
+  442/442 passed. The dashboard reports 139 features, 69 functional or
+  better and 127 with passing tests; generated-data checks and the
+  proprietary-file guard pass.
+
 ## Patch 0387 - native affine clipping for Zeela eyes
 
 - Added a ROM-local `oam_bounds.tsv` sidecar to the Zero Mission enemy

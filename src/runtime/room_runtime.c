@@ -1775,6 +1775,23 @@ static void runtime_apply_difficulty_event(uint8_t events[32], uint8_t difficult
     if (event) events[event / 8] |= (uint8_t)(1u << (event % 8));
 }
 
+/* Q_8_8_TO_S16 uses an arithmetic right shift on the GBA. Keep its floor
+ * behavior for negative rotated centers instead of C's truncating division. */
+static int runtime_asr8(int value) {
+    return value >= 0 ? value / 256 : -((-value + 255) / 256);
+}
+
+static void runtime_affine_whole_center(const int16_t sine[320], uint8_t rotation,
+                                        int x, int y, int w, int h, int scaling,
+                                        int *out_x, int *out_y) {
+    int center_x = ((x + w / 2) * scaling) / 256;
+    int center_y = ((y + h / 2) * scaling) / 256;
+    int sin_value = sine[rotation];
+    int cos_value = sine[rotation + 64];
+    *out_x = runtime_asr8(center_x * cos_value - center_y * sin_value);
+    *out_y = runtime_asr8(center_x * sin_value + center_y * cos_value);
+}
+
 #ifndef FUSION_RUNTIME_TEST
 /* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
 #define RUNTIME_LIBRARY_MAX 32768
@@ -3554,6 +3571,81 @@ static bool runtime_samus_on_top(const Room *room) {
     return t >= 6 && t <= 0x33 && (t & 3) >= 2;
 }
 
+static void runtime_render_rotated_clipped(SDL_Renderer *renderer,SDL_Texture *texture,
+                                           const SDL_FRect *box,double angle,
+                                           const SDL_FPoint *center,SDL_FRect bounds) {
+    SDL_Rect clip={(int)SDL_floorf(bounds.x),(int)SDL_floorf(bounds.y),
+                   (int)SDL_ceilf(bounds.x+bounds.w)-(int)SDL_floorf(bounds.x),
+                   (int)SDL_ceilf(bounds.y+bounds.h)-(int)SDL_floorf(bounds.y)};
+    SDL_Rect previous={0};
+    bool had_clip=SDL_RenderClipEnabled(renderer);
+    if(had_clip) {
+        SDL_GetRenderClipRect(renderer,&previous);
+        int x0=clip.x>previous.x?clip.x:previous.x;
+        int y0=clip.y>previous.y?clip.y:previous.y;
+        int x1=clip.x+clip.w<previous.x+previous.w?
+               clip.x+clip.w:previous.x+previous.w;
+        int y1=clip.y+clip.h<previous.y+previous.h?
+               clip.y+clip.h:previous.y+previous.h;
+        clip=(SDL_Rect){x0,y0,x1>x0?x1-x0:0,y1>y0?y1-y0:0};
+    }
+    SDL_SetRenderClipRect(renderer,&clip);
+    SDL_RenderTextureRotated(renderer,texture,NULL,box,angle,center,SDL_FLIP_NONE);
+    SDL_SetRenderClipRect(renderer,had_clip?&previous:NULL);
+}
+
+/* SpriteDraw's ROTATION_SCALING_WHOLE transforms each OBJ center around the
+ * sprite origin, then lets the affine hardware rotate that OBJ independently
+ * inside its normal or double-size window. */
+static bool runtime_draw_affine_whole_parts(SDL_Renderer *renderer,RuntimeSprites *sprites,
+                                            RuntimeLibrary *library,const MzmSprite *sprite,
+                                            const char *owner,const char *anim,const char *shade,
+                                            int frame,const RuntimeLibraryFrame *composed,
+                                            float origin_x,float origin_y,float scale,
+                                            Uint8 shade_level) {
+    if(!composed->has_oam_bounds || composed->oam_parts<1 || composed->oam_parts>128)
+        return false;
+    RuntimeLibraryEntry *parts[128];
+    for(int part=0;part<composed->oam_parts;part++) {
+        char key[256];
+        snprintf(key,sizeof key,"OamPart/%s/%s/none%s/frame%d/part%d",
+                 owner,anim,shade,frame,part);
+        parts[part]=runtime_library_find(library,key);
+        if(!parts[part] || parts[part]->count!=1 ||
+           !parts[part]->frames[0].has_oam_bounds)return false;
+    }
+    int scaling=sprite->scaling?sprite->scaling:256;
+    float k=(float)scaling/256.f;
+    double angle=(double)(sprite->rotation&0xFF)*360.0/256.0;
+    for(int part=composed->oam_parts-1;part>=0;part--) {
+        RuntimeLibraryFrame *art=&parts[part]->frames[0];
+        SDL_Texture *texture=runtime_library_texture(renderer,parts[part],0,-1,NULL);
+        if(!texture)continue;
+        SDL_SetTextureColorMod(texture,shade_level,shade_level,shade_level);
+        int rotated_x,rotated_y;
+        runtime_affine_whole_center(sprites->tables.sine,(uint8_t)sprite->rotation,
+                                    art->oam_x,art->oam_y,art->oam_w,art->oam_h,
+                                    scaling,&rotated_x,&rotated_y);
+        float output_x=origin_x+(float)rotated_x*scale;
+        float output_y=origin_y+(float)rotated_y*scale;
+        float object_center_x=(float)art->oam_x+(float)art->oam_w/2.f;
+        float object_center_y=(float)art->oam_y+(float)art->oam_h/2.f;
+        SDL_FPoint center={(object_center_x-(float)art->offset_x)*k*scale,
+                           (object_center_y-(float)art->offset_y)*k*scale};
+        SDL_FRect box={output_x-center.x,output_y-center.y,
+                       (float)art->w*k*scale,(float)art->h*k*scale};
+        float half_w=(float)art->oam_w/2.f*scale;
+        float half_h=(float)art->oam_h/2.f*scale;
+        if(sprite->status&MZM_SPRITE_STATUS_DOUBLE_SIZE) {
+            half_w*=2.f;half_h*=2.f;
+        }
+        SDL_FRect clip={output_x-half_w,output_y-half_h,half_w*2.f,half_h*2.f};
+        runtime_render_rotated_clipped(renderer,texture,&box,angle,&center,clip);
+        SDL_SetTextureColorMod(texture,255,255,255);
+    }
+    return true;
+}
+
 /* The BG0 alpha blend (BLDALPHA): additive at EVA/16 when EVB is 16,
  * else a mix at EVA = 16 - EVB; none below 8 or with transparency
  * disabled. Returns false for an opaque BG0. */
@@ -3773,11 +3865,19 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             box.y=viewport.y+((float)sprite->y+(224-160)/2.f+(float)art->offset_y)*scale;
         }
         if(rotated) {
-            /* Clockwise around the sprite position, 256 units a turn. */
-            SDL_FPoint center={-(float)art->offset_x*scale,-(float)art->offset_y*scale};
-            SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
-                                     (double)(sprite->rotation&0xFF)*360.0/256.0,&center,
-                                     SDL_FLIP_NONE);
+            float origin_x=box.x-(float)art->offset_x*scale;
+            float origin_y=box.y-(float)art->offset_y*scale;
+            if(!runtime_draw_affine_whole_parts(
+                    renderer,sprites,sprite_library,sprite,
+                    sprites->names[mzm_sprite_graphics_owner(sprite)],anim_name,shade,index,art,
+                    origin_x,origin_y,scale,shade_level)) {
+                /* Fallback for whole-affine tables whose individual OBJ art
+                 * has not been extracted yet. */
+                SDL_FPoint center={-(float)art->offset_x*scale,-(float)art->offset_y*scale};
+                SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
+                                         (double)(sprite->rotation&0xFF)*360.0/256.0,&center,
+                                         SDL_FLIP_NONE);
+            }
         } else if(sprite->status&MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE) {
             /* Affine OBJ transforms are centred on the full hardware box,
              * including transparent edges, then clipped to that box. The
@@ -3800,26 +3900,10 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
                     clip_x-=clip_w/2.f;clip_y-=clip_h/2.f;
                     clip_w*=2.f;clip_h*=2.f;
                 }
-                SDL_Rect clip={(int)SDL_floorf(clip_x),(int)SDL_floorf(clip_y),
-                               (int)SDL_ceilf(clip_x+clip_w)-(int)SDL_floorf(clip_x),
-                               (int)SDL_ceilf(clip_y+clip_h)-(int)SDL_floorf(clip_y)};
-                SDL_Rect previous={0};
-                bool had_clip=SDL_RenderClipEnabled(renderer);
-                if(had_clip) {
-                    SDL_GetRenderClipRect(renderer,&previous);
-                    int x0=clip.x>previous.x?clip.x:previous.x;
-                    int y0=clip.y>previous.y?clip.y:previous.y;
-                    int x1=clip.x+clip.w<previous.x+previous.w?
-                           clip.x+clip.w:previous.x+previous.w;
-                    int y1=clip.y+clip.h<previous.y+previous.h?
-                           clip.y+clip.h:previous.y+previous.h;
-                    clip=(SDL_Rect){x0,y0,x1>x0?x1-x0:0,y1>y0?y1-y0:0};
-                }
-                SDL_SetRenderClipRect(renderer,&clip);
-                SDL_RenderTextureRotated(renderer,art_texture,NULL,&box,
-                                         (double)(sprite->rotation&0xFF)*360.0/256.0,
-                                         &center,SDL_FLIP_NONE);
-                SDL_SetRenderClipRect(renderer,had_clip?&previous:NULL);
+                runtime_render_rotated_clipped(
+                    renderer,art_texture,&box,
+                    (double)(sprite->rotation&0xFF)*360.0/256.0,&center,
+                    (SDL_FRect){clip_x,clip_y,clip_w,clip_h});
             } else {
                 /* Multi-part frames still need per-part extracted objects. */
                 if(sprite->scaling && sprite->scaling!=0x100) {

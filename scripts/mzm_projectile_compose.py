@@ -138,9 +138,39 @@ def object_bounds(rom: bytes, pointer: int, flip: str) -> tuple[int, int, int, i
     return left, top, right - left, bottom - top, len(entries)
 
 
-def render(rom: bytes, vram: bytes, palette, pointer: int, flip: str):
-    """Pixels relative to the projectile position for one OAM frame."""
+def render_affine_whole_part(rom: bytes, vram: bytes, palette, pointer: int,
+                             part: int):
+    """Render one OBJ as affine-whole mode reads it.
+
+    In affine mode the OAM flip bits become matrix-number bits. The native
+    whole-sprite path supports an X-flipped matrix separately; callers in
+    this pipeline currently require unflipped parts and reject that case.
+    The original Y flip is always ignored.
+    """
     entries = oam_entries(rom, pointer)
+    if not 0 <= part < len(entries):
+        raise ValueError("OAM part index outside frame")
+    entry = dict(entries[part])
+    if entry["hflip"]:
+        raise ValueError("affine-whole X-flipped OBJ is not supported")
+    entry["vflip"] = False
+    return _render_entries(vram, palette, [entry], "none")
+
+
+def affine_whole_part_bounds(rom: bytes, pointer: int, part: int
+                             ) -> tuple[int, int, int, int, int]:
+    """Full unrotated box of one affine-whole OBJ."""
+    entries = oam_entries(rom, pointer)
+    if not 0 <= part < len(entries):
+        raise ValueError("OAM part index outside frame")
+    entry = entries[part]
+    if entry["hflip"]:
+        raise ValueError("affine-whole X-flipped OBJ is not supported")
+    return entry["x"], entry["y"], entry["w"], entry["h"], 1
+
+
+def _render_entries(vram: bytes, palette, entries: list[dict], flip: str):
+    """Render decoded OAM entries relative to their sprite origin."""
     flip_x, flip_y = FLIPS[flip]
     pixels = {}
     for entry in reversed(entries):  # OAM slot zero has the highest priority.
@@ -162,6 +192,12 @@ def render(rom: bytes, vram: bytes, palette, pointer: int, flip: str):
                 # ProjectileDraw mirrors parts around the projectile position.
                 pixels[(-1 - x if flip_x else x, -1 - y if flip_y else y)] = color
     return pixels
+
+
+def render(rom: bytes, vram: bytes, palette, pointer: int, flip: str):
+    """Pixels relative to the projectile position for one OAM frame."""
+    entries = oam_entries(rom, pointer)
+    return _render_entries(vram, palette, entries, flip)
 
 
 # The beam sets the Ice Beam recolours (ProjectileLoadGraphics loads its

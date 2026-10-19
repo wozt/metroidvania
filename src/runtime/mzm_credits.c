@@ -5,6 +5,7 @@
 
 #include <string.h>
 
+#include "gba_input.h"
 #include "mzm_rom.h"
 #include "mzm_sfx.h"
 #include "mzm_sound_ids.h"
@@ -21,6 +22,12 @@ enum {
     BLDY_MAX = 16, BLDALPHA_MAX = 16,
     /* gSubGameMode1 of CreditsHandler */
     MODE_CREDITS = 2, MODE_END_SCREEN_INIT = 4, MODE_END_SCREEN = 6, MODE_ENDING_IMAGE_INIT = 8,
+    MODE_ENDING_IMAGE_FADE_IN = 9, MODE_ENDING_IMAGE = 10,
+    ENDING_OAM_NONE = 0, ENDING_OAM_CHAR = 1, ENDING_OAM_LINE = 2,
+    ENDING_LINE_CLEAR_TIME = 0, ENDING_LINE_TIMER, ENDING_LINE_YOUR_RATE,
+    ENDING_LINE_COLLECTING, ENDING_LINE_PERCENTAGE, ENDING_LINE_NEXT_MISSION,
+    ENDING_LINE_COUNT,
+    LANGUAGE_ENGLISH = 2,
 };
 
 static uint32_t sym(const char *name) { return mzm_rom_symbol(name, NULL); }
@@ -56,6 +63,10 @@ static void decompress(MzmScreen *s, const char *name, uint32_t offset) {
     mzm_lz77_from_rom(sym(name), s->ppu->vram + offset, GBA_VRAM_SIZE - offset);
 }
 
+static void decompress_address(MzmScreen *s, uint32_t address, uint32_t offset) {
+    mzm_lz77_from_rom(address, s->ppu->vram + offset, GBA_VRAM_SIZE - offset);
+}
+
 static void copy_colors(MzmScreen *s, uint32_t address, int colors) {
     for (int i = 0; i < colors && i < 256; ++i) s->ppu->palette[i] = mzm_rom_u16(address + (uint32_t)i * 2u);
 }
@@ -63,6 +74,11 @@ static void copy_colors(MzmScreen *s, uint32_t address, int colors) {
 static void copy_palette(MzmScreen *s, const char *name, int first) {
     uint32_t size = 0, address = mzm_rom_symbol(name, &size);
     for (int i = 0; i < (int)(size / 2) && first + i < 512; ++i)
+        s->ppu->palette[first + i] = mzm_rom_u16(address + (uint32_t)i * 2u);
+}
+
+static void copy_palette_address(MzmScreen *s, uint32_t address, int first, int colors) {
+    for (int i = 0; i < colors && first + i < 512; ++i)
         s->ppu->palette[first + i] = mzm_rom_u16(address + (uint32_t)i * 2u);
 }
 
@@ -503,9 +519,9 @@ static int end_screen_samus_posing(MzmCredits *c, MzmScreen *s) {
         }
         break;
     case 3: {
-        uint8_t stage = ++d->unk_160;
+        uint8_t stage = ++d->pose_palette_timer;
         if (stage >= 16) {
-            d->unk_160 = 0;
+            d->pose_palette_timer = 0;
             d->oam_types[1] = 16;
             break;
         }
@@ -594,18 +610,207 @@ static int end_screen_samus_posing(MzmCredits *c, MzmScreen *s) {
     return ended;
 }
 
+/* The US ROM's struct EndingImageOam entries are twelve bytes. */
+static void ending_load_oam_entry(MzmEndingData *d, int slot, uint32_t address) {
+    if (slot < 0 || slot >= MZM_ENDING_OAM) return;
+    d->oam_types[slot] = mzm_rom_u8(address);
+    d->ending_letters_spawn_delay[slot] = mzm_rom_u8(address + 1u);
+    d->letter_palette_timer[slot] = mzm_rom_u8(address + 2u);
+    d->oam_x[slot] = mzm_rom_u16(address + 4u);
+    d->oam_y[slot] = mzm_rom_u16(address + 6u);
+    d->oam_frame[slot] = mzm_rom_u32(address + 8u);
+}
+
+/* EndingImageLoadTextOam, using the English tables of the pinned US ROM. */
+static void ending_load_text_oam(MzmEndingData *d, const char *name, int count) {
+    uint32_t address = sym(name);
+    if (!address || count + ENDING_LINE_COUNT > MZM_ENDING_OAM) return;
+    d->oam_length = (uint8_t)(count + ENDING_LINE_COUNT);
+    for (int i = 0; i < count; ++i)
+        ending_load_oam_entry(d, i + ENDING_LINE_COUNT, address + (uint32_t)i * 12u);
+}
+
+/* EndingImageDisplayLinePermanently. */
+static void ending_display_line_permanently(MzmEndingData *d, int line) {
+    uint32_t address = sym("sEndingImageOam_FullLines_English");
+    if (!address || line < 0 || line >= ENDING_LINE_COUNT) return;
+    ending_load_oam_entry(d, line, address + (uint32_t)line * 12u);
+    for (int i = ENDING_LINE_COUNT; i < d->oam_length; ++i) d->oam_types[i] = ENDING_OAM_NONE;
+    d->oam_length = ENDING_LINE_COUNT;
+}
+
+static void ending_copy_digit(MzmScreen *s, int digit, uint32_t upper_offset) {
+    if (digit < 0 || digit > 9) return;
+    uint32_t source = (uint32_t)digit * 64u;
+    mzm_copy_from_rom(s->ppu->vram + GBA_OBJ_VRAM + upper_offset,
+                      sym("sEndingImageNumbersGfx_Upper") + source, 64);
+    mzm_copy_from_rom(s->ppu->vram + GBA_OBJ_VRAM + upper_offset + 0x400u,
+                      sym("sEndingImageNumbersGfx_Lower") + source, 64);
+}
+
+/* EndingImageLoadIGTAndPercentageGraphics. */
+static void ending_load_numbers(MzmCredits *c, MzmScreen *s) {
+    int hours = c->igt_hours > 99 ? 99 : c->igt_hours;
+    int minutes = c->igt_minutes > 59 ? 59 : c->igt_minutes;
+    int seconds = c->igt_seconds > 59 ? 59 : c->igt_seconds;
+    int percentage = c->data.completion_percentage;
+    if (hours / 10) ending_copy_digit(s, hours / 10, 0x000);
+    ending_copy_digit(s, hours % 10, 0x040);
+    ending_copy_digit(s, minutes / 10, 0x0A0);
+    ending_copy_digit(s, minutes % 10, 0x0E0);
+    ending_copy_digit(s, seconds / 10, 0x140);
+    ending_copy_digit(s, seconds % 10, 0x180);
+    if (percentage / 100) ending_copy_digit(s, percentage / 100, 0x1C0);
+    if (percentage >= 10) ending_copy_digit(s, percentage / 10 % 10, 0x200);
+    ending_copy_digit(s, percentage % 10, 0x240);
+}
+
+/* EndingImageInit. */
+static void ending_image_init(MzmCredits *c, MzmScreen *s) {
+    MzmEndingData *d = &c->data;
+    uint32_t pen = c->pen;
+    uint8_t ending = (uint8_t)(pen & 7u);
+    memset(d, 0, sizeof *d);
+    d->ending_number = ending;
+    d->completion_percentage = (uint8_t)(((pen >> 24) & 0xFFu) + ((pen >> 16) & 0xFFu) +
+                                         ((pen >> 12) & 0xFu) + ((pen >> 8) & 0xFu) +
+                                         ((pen >> 4) & 0xFu));
+    d->language = LANGUAGE_ENGLISH;
+    decompress_address(s, mzm_rom_u32(sym("sEndingImagesTopGfxPointers") + ending * 4u), 0);
+    decompress_address(s, mzm_rom_u32(sym("sEndingImagesBottomGfxPointers") + ending * 4u), 0x8000);
+    decompress_address(s, mzm_rom_u32(sym("sEndingImagesTopTileTablePointers") + ending * 4u), 0xE000);
+    decompress_address(s, mzm_rom_u32(sym("sEndingImagesHalfTileTablePointers") + ending * 4u), 0xF800);
+    for (uint32_t i = 0; i < 0x800; i += 2) {
+        s->ppu->vram[0xE800 + i] = 0xFF;
+        s->ppu->vram[0xE800 + i + 1] = 0x04;
+    }
+    copy_palette_address(s, mzm_rom_u32(sym("sEndingImagesPalPointers") + ending * 4u), 0, 256);
+    decompress(s, "sEndingImageNumbersMiscEnglishGfx", GBA_OBJ_VRAM);
+    decompress(s, "sEndingImageTextEnglishGfx", GBA_OBJ_VRAM + 0x1000);
+    copy_palette(s, "sEndingImageTextPal", 256);
+    ending_load_numbers(c, s);
+    bgcnt(s, 0, 0, 28, 0, 1);
+    bgcnt(s, 1, 2, 30, 1, 1);
+    s->next_oam_slot = 0;
+    mzm_reset_free_oam(s);
+    memset(c->bg_x, 0, sizeof c->bg_x);
+    memset(c->bg_y, 0, sizeof c->bg_y);
+    c->bg_y[0] = c->bg_y[1] = 0x1000;
+    d->dispcnt = GBA_DCNT_OBJ | GBA_DCNT_BG0 | GBA_DCNT_BG1;
+    d->bldcnt = BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN;
+    s->bldalpha_l = BLDALPHA_MAX;
+    s->bldalpha_h = 0;
+    s->bldy = BLDY_MAX;
+    credits_vblank(c, s);
+}
+
+static void ending_update_letter_delay(MzmEndingData *d, int slot) {
+    if (d->oam_types[slot] == ENDING_OAM_NONE) return;
+    if (d->ending_letters_spawn_delay[slot] &&
+        --d->ending_letters_spawn_delay[slot] == 0)
+        d->oam_types[slot]++;
+}
+
+static int ending_draw_frame(MzmScreen *s, int slot, uint32_t frame, uint16_t x, uint16_t y,
+                             uint8_t palette) {
+    int count = mzm_rom_u16(frame) & 0xFF;
+    if (slot + count > 0x7F) count = 0x7F - slot;
+    uint32_t source = frame + 2u;
+    for (int i = 0; i < count; ++i, source += 6u) {
+        uint16_t a0 = mzm_rom_u16(source);
+        uint16_t a1 = mzm_rom_u16(source + 2u);
+        uint16_t a2 = mzm_rom_u16(source + 4u);
+        uint16_t *target = &s->oam[(slot + i) * 4];
+        target[0] = (uint16_t)((a0 & 0xFF00u) | ((a0 + y) & 0xFFu));
+        target[1] = (uint16_t)((a1 & 0xFE00u) | ((a1 + x) & 0x1FFu));
+        target[2] = (uint16_t)((a2 & 0x0FFFu) | (uint16_t)palette << 12);
+    }
+    return slot + count;
+}
+
+/* EndingImageDisplayText. */
+static void ending_display_text(MzmEndingData *d, MzmScreen *s) {
+    int slot = 0;
+    for (int i = 0; i < d->oam_length && i < MZM_ENDING_OAM; ++i) {
+        if (d->oam_types[i] == ENDING_OAM_NONE || d->oam_types[i] == ENDING_OAM_CHAR) continue;
+        if (d->letter_palette_timer[i] < 64) d->letter_palette_timer[i]++;
+        uint8_t palette = 0;
+        if (i > 5) {
+            if (d->letter_palette_timer[i] < 4) palette = 11;
+            else if (d->letter_palette_timer[i] < 8) palette = 12;
+            else if (d->letter_palette_timer[i] < 12) palette = 13;
+        } else if (i == 5) {
+            d->letter_palette_timer[i] &= 0x3F;
+            palette = mzm_rom_u8(sym("sEndingImage_54e2dc") + d->letter_palette_timer[i] / 8u);
+        }
+        slot = ending_draw_frame(s, slot, d->oam_frame[i], d->oam_x[i], d->oam_y[i], palette);
+    }
+    s->next_oam_slot = (uint8_t)slot;
+}
+
+/* EndingImageDisplay. */
+static bool ending_image_display(MzmCredits *c, MzmScreen *s) {
+    MzmEndingData *d = &c->data;
+    bool ended = false;
+    switch (d->timer++) {
+    case 0: d->unk_8++; break;
+    case 30:
+        ending_load_text_oam(d, "sEndingImageOam_ClearTime_English", 9);
+        d->unk_1 = 1;
+        break;
+    case 110: ending_display_line_permanently(d, ENDING_LINE_CLEAR_TIME); break;
+    case 180: ending_display_line_permanently(d, ENDING_LINE_TIMER); break;
+    case 330: ending_load_text_oam(d, "sEndingImageOam_YourRate_English", 11); break;
+    case 375: ending_display_line_permanently(d, ENDING_LINE_YOUR_RATE); break;
+    case 380: ending_load_text_oam(d, "sEndingImageOam_Collecting_English", 17); break;
+    case 460: ending_display_line_permanently(d, ENDING_LINE_COLLECTING); break;
+    case 530: ending_display_line_permanently(d, ENDING_LINE_PERCENTAGE); break;
+    case 780: ending_display_line_permanently(d, ENDING_LINE_NEXT_MISSION); break;
+    case 1376:
+        if (s->changed_input & (GBA_KEY_A | GBA_KEY_B | GBA_KEY_START))
+            mzm_sfx_music_fade(256);
+        else
+            d->timer--;
+        break;
+    case 1664: ended = true; break;
+    default: break;
+    }
+    if (d->unk_8) {
+        if (c->bg_y[0] > 6) {
+            c->bg_y[0] = (uint16_t)(c->bg_y[0] - 6);
+            c->bg_y[1] = (uint16_t)(c->bg_y[1] - 6);
+        } else {
+            c->bg_y[0] = c->bg_y[1] = 0;
+            d->unk_8 = 0;
+        }
+    }
+    if (d->timer > 1380 || (d->timer >= 810 && s->button_input & (GBA_KEY_R | GBA_KEY_L)))
+        return ended;
+    if (d->unk_1)
+        for (int i = ENDING_LINE_COUNT; i < d->oam_length; ++i) ending_update_letter_delay(d, i);
+    ending_display_text(d, s);
+    return ended;
+}
+
 bool mzm_credits_enter(MzmCredits *c, MzmScreen *s, uint32_t pen) {
     memset(c, 0, sizeof *c);
     c->pen = pen;
     return s && s->ppu && sym("sCredits") != 0;
 }
 
-/* CreditsHandler, up to the ending image */
+void mzm_credits_set_time(MzmCredits *c, uint8_t hours, uint8_t minutes, uint8_t seconds) {
+    c->igt_hours = hours;
+    c->igt_minutes = minutes;
+    c->igt_seconds = seconds;
+}
+
+/* CreditsHandler, up to the unlocked-options pop-up. */
 bool mzm_credits_update(MzmCredits *c, MzmScreen *s) {
     MzmEndingData *d = &c->data;
     d->unk_6 = 0;
     s->next_oam_slot = 0;
-    bool end_screen = c->sub_mode >= MODE_END_SCREEN_INIT;
+    bool end_screen = c->sub_mode >= MODE_END_SCREEN_INIT && c->sub_mode < MODE_ENDING_IMAGE_INIT;
+    bool finished = false;
     switch (c->sub_mode) {
     case 0:
         credits_init(c, s);
@@ -643,12 +848,27 @@ bool mzm_credits_update(MzmCredits *c, MzmScreen *s) {
     case MODE_END_SCREEN:
         if (end_screen_samus_posing(c, s)) c->sub_mode++;
         break;
-    case MODE_ENDING_IMAGE_INIT: return true;          /* EndingImageInit: not ported */
+    case MODE_ENDING_IMAGE_INIT:
+        ending_image_init(c, s);
+        c->sub_mode++;
+        return false;
+    case MODE_ENDING_IMAGE_FADE_IN:
+        if (s->bldy) {
+            s->bldy--;
+        } else {
+            d->bldcnt = 0;
+            c->sub_mode++;
+        }
+        break;
+    case MODE_ENDING_IMAGE:
+        finished = ending_image_display(c, s);
+        mzm_reset_free_oam(s);
+        break;
     default:
         c->sub_mode++;                                 /* 1, 3 */
         break;
     }
     if (end_screen) end_screen_vblank(c, s);
     else credits_vblank(c, s);
-    return false;
+    return finished;
 }

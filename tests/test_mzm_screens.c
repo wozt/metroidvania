@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "gba_ppu.h"
+#include "gba_input.h"
 #include "mzm_rom.h"
 #include "mzm_screen.h"
 #include "mzm_sfx.h"
@@ -1762,8 +1763,8 @@ static void test_chozodia_escape_bank(void) {
 }
 
 /* GM_CREDITS on the exported bank: the ending number, the credit lines
- * set in BG0 or BG1, the wall and the zoom with their native lengths, then
- * Samus posing to the end. */
+ * set in BG0 or BG1, the wall and the zoom with their native lengths,
+ * Samus posing, then the ending image, clear time and collection rate. */
 static void test_credits_bank(void) {
     if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
                       "assets/extracted/metroid/rom/rom_symbols.tsv")) {
@@ -1786,7 +1787,8 @@ static void test_credits_bank(void) {
 
     static MzmCredits c;
     mzm_sfx_clear();
-    assert(mzm_credits_enter(&c, &screen, 1));
+    assert(mzm_credits_enter(&c, &screen, pen));
+    mzm_credits_set_time(&c, 3, 4, 5);
     assert(!mzm_credits_update(&c, &screen));
     assert(c.sub_mode == 1 && screen.bldy == 16 && c.data.unk_e == 0x80 &&
            gba_ppu_read16(&ppu, GBA_REG_BG0VOFS) == 0x100 && count_requests(MZM_SFX_MUSIC_PLAY, 0x1B) == 1);
@@ -1804,11 +1806,37 @@ static void test_credits_bank(void) {
     assert(f == 513 && c.bg_y[2] == 64 * 56);
     for (f = 0; c.sub_mode == 2 && f < 2000; ++f) assert(!mzm_credits_update(&c, &screen));
     assert(f == 961 && c.sub_mode == 3);
-    /* The end screen, ending 1: helmet off. */
-    bool ended = false;
-    for (f = 0; !ended && f < 4000; ++f) ended = mzm_credits_update(&c, &screen);
-    assert(ended && c.sub_mode == 8 && c.data.ending_number == 1 && screen.bldy == 16 &&
+    /* The end screen, ending 4: the suitless final pose. */
+    for (f = 0; c.sub_mode < 8 && f < 4000; ++f) assert(!mzm_credits_update(&c, &screen));
+    assert(c.sub_mode == 8 && c.data.ending_number == 4 && screen.bldy == 16 &&
            c.data.dispcnt == (GBA_DCNT_BG2 | GBA_DCNT_BG3));
+    /* EndingImageInit loads image 4 and the 03:04:05 / 100% digits. */
+    assert(!mzm_credits_update(&c, &screen));
+    assert(c.sub_mode == 9 && c.data.ending_number == 4 && c.data.completion_percentage == 100 &&
+           c.data.dispcnt == (GBA_DCNT_OBJ | GBA_DCNT_BG0 | GBA_DCNT_BG1) && screen.bldy == 16);
+    uint32_t upper = mzm_rom_symbol("sEndingImageNumbersGfx_Upper", NULL);
+    assert(!memcmp(ppu.vram + GBA_OBJ_VRAM + 0x040, mzm_rom_ptr(upper + 3 * 64, 64), 64));
+    assert(!memcmp(ppu.vram + GBA_OBJ_VRAM + 0x0E0, mzm_rom_ptr(upper + 4 * 64, 64), 64));
+    assert(!memcmp(ppu.vram + GBA_OBJ_VRAM + 0x180, mzm_rom_ptr(upper + 5 * 64, 64), 64));
+    assert(!memcmp(ppu.vram + GBA_OBJ_VRAM + 0x1C0, mzm_rom_ptr(upper + 1 * 64, 64), 64));
+    for (f = 0; c.sub_mode < 10 && f < 30; ++f) assert(!mzm_credits_update(&c, &screen));
+    assert(f == 17 && screen.bldy == 0);
+    while (c.data.timer < 31) assert(!mzm_credits_update(&c, &screen));
+    assert(c.data.oam_length == 15 && c.data.oam_types[6] == 2 && screen.next_oam_slot > 0);
+    while (c.data.timer < 111) assert(!mzm_credits_update(&c, &screen));
+    assert(c.data.oam_length == 6 && c.data.oam_types[0] == 2);
+    while (c.data.timer < 181) assert(!mzm_credits_update(&c, &screen));
+    assert(c.data.oam_types[1] == 2);
+    while (c.data.timer < 1376) assert(!mzm_credits_update(&c, &screen));
+    mzm_screen_input(&screen, 0);
+    assert(!mzm_credits_update(&c, &screen) && c.data.timer == 1376);
+    mzm_screen_input(&screen, GBA_KEY_A);
+    assert(!mzm_credits_update(&c, &screen) && c.data.timer == 1377 &&
+           count_requests(MZM_SFX_MUSIC_FADE, 0) == 1);
+    mzm_screen_input(&screen, 0);
+    bool ended = false;
+    for (f = 0; !ended && f < 400; ++f) ended = mzm_credits_update(&c, &screen);
+    assert(ended && f == 288 && c.sub_mode == 10 && c.data.timer == 1665);
     mzm_rom_close();
 }
 

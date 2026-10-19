@@ -3838,6 +3838,31 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0384 - ending result image
+
+- Extended `GM_CREDITS` past Samus's final pose into the native ending image.
+  The runtime selects one of the eight illustrations from the ending number,
+  loads both background halves and their palette, and slides them into place.
+- Ported `EndingImageLoadIGTAndPercentageGraphics`: the saved in-game hours,
+  minutes and seconds and the item count encoded by
+  `ChozodiaEscapeGetItemCountAndEndingNumber` now populate the native upper
+  and lower number tiles in OBJ VRAM.
+- Ported the English text choreography of `EndingImageDisplay`: `CLEAR TIME`,
+  the timer, `YOUR RATE FOR COLLECTING ITEMS IS`, the percentage and
+  `NEXT MISSION` appear through the native per-letter delay and palette
+  sequence, then remain as their full-line OAM frames.
+- The screen waits at frame 1,376 for A, B or START, starts the native
+  256-frame music fade and ends at frame 1,664. The runtime then returns to
+  the intro because the unlocked-options pop-up remains the final missing
+  post-credits screen.
+- The bank-backed regression checks image 4, a `03:04:05` clear time, a 100%
+  collection rate, animated and permanent text, the input gate, music fade
+  and exact ending frame.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed. The dashboard reports 139 features, 64 functional or
+  better and 127 with passing tests; generated-data checks are fresh and the
+  proprietary-file guard passed.
+
 ## Patch 0383 - unused native monster prototypes
 
 - Ported the complete native scope of the unused Crocomire prototype: all 25

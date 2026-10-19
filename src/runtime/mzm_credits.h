@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Zero Mission's GM_CREDITS (ending_and_gallery.c), on the non-gameplay
  * screen from the ROM bank: the credits scrolling over the dark Chozo
- * wall, the wall scrolling down and zooming into the Chozo drawing, then
- * the end screen (Samus posing, her last pose chosen by the ending
- * number). The ending image with the clear time and rate, and the
- * unlocked options pop-up that follow, are not ported. */
+ * wall, the wall scrolling down and zooming into the Chozo drawing, the
+ * end screen with Samus posing, then the ending image with the clear time
+ * and collection rate. The unlocked-options pop-up that follows is not
+ * ported. */
 #ifndef MZM_CREDITS_H
 #define MZM_CREDITS_H
 
@@ -27,7 +27,9 @@ typedef struct {
  * missile (16-23) and energy (24-31) tank counts. 0 without the ROM bank. */
 uint32_t mzm_ending_item_count_and_number(const MzmEndingStats *stats);
 
-/* struct EndingData, the parts the ported credits use */
+enum { MZM_ENDING_OAM = 30 };
+
+/* struct EndingData, the parts the ported credits and ending image use. */
 typedef struct {
     uint8_t stage, unk_1, end_screen_timer;
     uint16_t timer;
@@ -35,15 +37,20 @@ typedef struct {
     uint16_t unk_8, unk_a, current_line, unk_e;
     uint16_t line_tilemap_1[32], line_tilemap_2[32];
     uint32_t line_offset_1, line_offset_2;
-    uint8_t ending_number;
-    uint8_t oam_types[2];
-    uint8_t unk_160;
+    uint8_t ending_number, completion_percentage, language, oam_length;
+    uint8_t oam_types[MZM_ENDING_OAM];
+    uint8_t ending_letters_spawn_delay[MZM_ENDING_OAM];
+    uint8_t letter_palette_timer[MZM_ENDING_OAM];
+    uint16_t oam_x[MZM_ENDING_OAM], oam_y[MZM_ENDING_OAM];
+    uint32_t oam_frame[MZM_ENDING_OAM];
+    uint8_t pose_palette_timer;
     uint16_t dispcnt, bldcnt;
 } MzmEndingData;
 
 typedef struct {
     uint8_t sub_mode;               /* gSubGameMode1 */
     uint32_t pen;                   /* the item count and ending number */
+    uint8_t igt_hours, igt_minutes, igt_seconds;
     MzmEndingData data;             /* ENDING_DATA */
     uint16_t bg_x[4], bg_y[4];      /* gBg0-3X/YPosition */
 } MzmCredits;
@@ -51,8 +58,10 @@ typedef struct {
 /* gMainGameMode = GM_CREDITS with the ending's item count and number;
  * false without the ROM bank. */
 bool mzm_credits_enter(MzmCredits *c, MzmScreen *s, uint32_t pen);
+/* gInGameTimer shown by EndingImageLoadIGTAndPercentageGraphics. */
+void mzm_credits_set_time(MzmCredits *c, uint8_t hours, uint8_t minutes, uint8_t seconds);
 /* CreditsHandler, then the current V-blank, for one frame; true once the
- * ported part ended (the ending image follows natively). */
+ * ending image ended (the unlocked-options pop-up follows natively). */
 bool mzm_credits_update(MzmCredits *c, MzmScreen *s);
 
 #endif /* MZM_CREDITS_H */

@@ -4857,7 +4857,7 @@ int main(int argc, char **argv) {
             }
             if(chozodia_escape_mode) {
                 /* GM_CHOZODIA_ESCAPE owns the non-gameplay PPU; GM_CREDITS
-                 * that follows is not ported: the intro instead. */
+                 * follows through its ending image. */
                 mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                               capture_path?NULL:&gamepad));
                 if(mzm_chozodia_escape_update(&chozodia_escape,&screen)) {
@@ -4872,6 +4872,9 @@ int main(int argc, char **argv) {
                                           abilities,runtime_difficulty,runtime_igt.hours};
                     credits_mode=mzm_credits_enter(&credits,&screen,
                                                    mzm_ending_item_count_and_number(&stats));
+                    if(credits_mode)
+                        mzm_credits_set_time(&credits,runtime_igt.hours,runtime_igt.minutes,
+                                             runtime_igt.seconds);
                     if(!credits_mode) {
                         fprintf(stderr,"The credits are unavailable.\n");
                         intro_mode=true;
@@ -4883,13 +4886,13 @@ int main(int argc, char **argv) {
                 continue;
             }
             if(credits_mode) {
-                /* GM_CREDITS up to the end screen; the ending image and the
-                 * unlocked options are not ported: the intro instead. */
+                /* GM_CREDITS through the ending image; the unlocked options
+                 * are not ported, so the intro follows it instead. */
                 mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                               capture_path?NULL:&gamepad));
                 if(mzm_credits_update(&credits,&screen)) {
                     credits_mode=false;
-                    fprintf(stderr,"The credits ended; the ending image is not ported.\n");
+                    fprintf(stderr,"The ending image ended; unlocked options are not ported.\n");
                     intro_mode=true;
                     mzm_intro_enter(&intro);
                     previous_held=held;

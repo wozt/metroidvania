@@ -19,9 +19,11 @@ enum {
     STATE_MAP_DOWNLOAD_ENDED = 18, STATE_LEAVING_AFTER_HINT = 2, STATE_CHOZO_HINT = 8,
     STATE_CHOZO_HINT_ENDED = 14, STATE_CHOZO_HINT_INIT = 15,
     STATE_FULLY_POWERED_ITEMS = 6, STATE_FULLY_POWERED_ITEMS_ENDED = 7, STATE_FULLY_POWERED_ITEMS_INIT = 20,
+    STATE_SUITLESS_ITEMS = 4, STATE_SUITLESS_ITEMS_ENDED = 5, STATE_SUITLESS_ITEMS_INIT = 19,
     /* PauseScreenType */
     TYPE_ON_MAP_SCREEN = 1 << 1, TYPE_CHOZO_STATUE_HINT = 1 << 4, TYPE_DOWNLOADING_MAP = 1 << 5,
-    TYPE_ON_STATUS_SCREEN = 1 << 7, TYPE_GETTING_NEW_ITEM = 1 << 8, TYPE_GETTING_FULLY_POWERED = 1 << 10,
+    TYPE_ON_STATUS_SCREEN = 1 << 7, TYPE_GETTING_NEW_ITEM = 1 << 8, TYPE_GETTING_SUITLESS = 1 << 9,
+    TYPE_GETTING_FULLY_POWERED = 1 << 10,
     /* PauseScreenFading */
     FADING_NONE = 0, FADING_INIT, FADING_IN_INIT, FADING_IN, FADING_OUT_INIT, FADING_OUT,
     /* OAM ids */
@@ -32,7 +34,13 @@ enum {
     MISC_GUN_HEADER = 41, MISC_POWER_SUIT_WIREFRAME = 44, MISC_FULL_SUIT_WIREFRAME = 45,
     MISC_SUITLESS_WIREFRAME = 46, OVERLAY_R_PROMPT_PRESSED = 15, OVERLAY_L_PROMPT_PRESSED = 16,
     MISC_ITEM_CURSOR_FOCUSING_DESTROY = 13, MISC_PLASMA_UNKNOWN = 47, MISC_SPACE_JUMP_UNKNOWN = 49,
-    MISC_GRAVITY_UNKNOWN = 51,
+    MISC_GRAVITY_UNKNOWN = 51, OVERLAY_SELECT_ON = 17, OVERLAY_SELECT_OFF = 18,
+    /* ItemAcquisition */
+    ITEM_ACQUISITION_MISSILES = 3, ITEM_ACQUISITION_SUPER_MISSILES = 5, ITEM_ACQUISITION_POWER_BOMB = 7,
+    ITEM_ACQUISITION_LONG_BEAM = 8, ITEM_ACQUISITION_PLASMA_BEAM = 12, ITEM_ACQUISITION_GRAVITY = 15,
+    ITEM_ACQUISITION_SPACE_JUMP = 20,
+    /* ItemToggleAction */
+    TOGGLE_CHECKING = 0, TOGGLE_TOGGLING, TOGGLE_CHECKING2,
     /* Sounds */
     SOUND_MOVING_MAP = 512, SOUND_MOVING_MAP_MUFFLED = 513, SOUND_OPENING_WORLD_MAP = 514,
     SOUND_CLOSING_WORLD_MAP = 515, SOUND_MAP_SCREEN_CHANGE_MAP = 516, SOUND_OPENING_STATUS_SCREEN = 500,
@@ -74,6 +82,11 @@ static void vram_from16(MzmScreen *s, uint32_t vram, const uint16_t *src, uint32
 static uint16_t *vram16(MzmScreen *s, uint32_t vram) { return (uint16_t *)(s->ppu->vram + vram); }
 
 static bool suitless(const MzmPauseGame *g) { return g->equipment->suit == MZM_SUIT_SUITLESS; }
+/* gCurrentItemBeingAcquired: the suitless sequence sets the Long Beam
+ * (PauseScreenInit). */
+static uint8_t item_being_acquired(const MzmPauseGame *g) {
+    return g->flag == MZM_PAUSE_FLAG_SUITLESS_ITEMS ? 8 : g->item_being_acquired;
+}
 
 /* CREATE_BGCNT with sPauseScreen_BgCntPriority */
 static uint16_t bgcnt(int char_base, int screen_base, int priority, int size) {
@@ -1242,8 +1255,12 @@ static void set_bombs_visibility(MzmPauseScreen *p, MzmScreen *s, const MzmPause
             value = *bomb;
         }
         if (value == 0) continue;
-        update_row(p, s, GROUP_BOMBS, i,
-                   value == (BOMB_MORPH_ACTIVATED | BOMB_HAS_AMMO | BOMB_ACTIVATED | BOMB_COLLECTED), false);
+        bool on = value == (BOMB_MORPH_ACTIVATED | BOMB_HAS_AMMO | BOMB_ACTIVATED | BOMB_COLLECTED);
+        /* The power bomb being acquired shows inactive */
+        if (g->flag == MZM_PAUSE_FLAG_ITEM_ACQUISITION && g->item_being_acquired == ITEM_ACQUISITION_POWER_BOMB &&
+            i == 2)
+            on = false;
+        update_row(p, s, GROUP_BOMBS, i, on, false);
     }
     uint32_t dst = (uint32_t)(b.top + count) * STATUS_ROW + b.left;
     if (count != 2) count++;
@@ -1280,10 +1297,16 @@ static void set_missiles_visibility(MzmPauseScreen *p, MzmScreen *s, const MzmPa
         }
         if (value == 0) continue;
         /* Not activated while the fully powered suit's items are shown */
-        update_row(p, s, GROUP_MISSILES, i,
-                   value == (MISSILE_HAS_AMMO | MISSILE_COLLECTED) &&
-                       g->flag != MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS,
-                   false);
+        bool on = value == (MISSILE_HAS_AMMO | MISSILE_COLLECTED);
+        /* The missiles being acquired show inactive */
+        if (g->flag == MZM_PAUSE_FLAG_ITEM_ACQUISITION) {
+            if ((i == 1 && g->item_being_acquired == ITEM_ACQUISITION_MISSILES) ||
+                (i == 3 && g->item_being_acquired == ITEM_ACQUISITION_SUPER_MISSILES))
+                on = false;
+        } else if (g->flag == MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS) {
+            on = false;
+        }
+        update_row(p, s, GROUP_MISSILES, i, on, false);
     }
     copy_row(p->status_tilemap, (uint32_t)(b.top + count) * STATUS_ROW + b.left, u.bottom * STATUS_ROW + u.left, &b);
     if (p->status.current_slot == SLOT_0) p->status.current_slot = SLOT_MISSILE;
@@ -1517,20 +1540,123 @@ static void update_cursor_position(MzmPauseScreen *p, int slot) {
     p->misc[0].x = (int16_t)((b.left + 1) * HALF_BLOCK);
 }
 
-/* StatusScreenToggleItem: the items only toggle in the suitless and item
- * acquisition sequences, so in the pause it only clears the SELECT prompt
- * (flag 0: no OAM, 0xFF). */
-static uint8_t toggle_item(MzmPauseScreen *p) {
-    mzm_menu_oam_set_id(&p->overlay[3], 0);
-    return 0xFF;
+/* The equipment item of a gEquipment.beamBombs or suitMisc flag. */
+static uint32_t item_of_flag(bool beam_bombs, uint8_t flag) {
+    static const struct { uint8_t flag; bool beam_bombs; uint32_t item; } map[] = {
+        {BBF_LONG_BEAM, true, MZM_ITEM_LONG_BEAM}, {BBF_ICE_BEAM, true, MZM_ITEM_ICE_BEAM},
+        {BBF_WAVE_BEAM, true, MZM_ITEM_WAVE_BEAM}, {BBF_PLASMA_BEAM, true, MZM_ITEM_PLASMA_BEAM},
+        {BBF_CHARGE_BEAM, true, MZM_ITEM_CHARGE_BEAM}, {BBF_BOMBS, true, MZM_ITEM_BOMBS},
+        {SMF_HIGH_JUMP, false, MZM_ITEM_HIGH_JUMP}, {SMF_SPEEDBOOSTER, false, MZM_ITEM_SPEED_BOOSTER},
+        {SMF_SPACE_JUMP, false, MZM_ITEM_SPACE_JUMP}, {SMF_SCREW_ATTACK, false, MZM_ITEM_SCREW_ATTACK},
+        {SMF_VARIA_SUIT, false, MZM_ITEM_VARIA_SUIT}, {SMF_GRAVITY_SUIT, false, MZM_ITEM_GRAVITY_SUIT},
+        {SMF_MORPH_BALL, false, MZM_ITEM_MORPH_BALL}, {SMF_POWER_GRIP, false, MZM_ITEM_POWER_GRIP},
+    };
+    uint32_t items = 0;
+    for (size_t i = 0; i < sizeof map / sizeof map[0]; ++i)
+        if (map[i].beam_bombs == beam_bombs && flag & map[i].flag) items |= map[i].item;
+    return items;
+}
+
+/* The activation (gEquipment.*Activation) of an obtained item set: an
+ * inactive item is kept obtained among the unknown items. */
+static void set_items_active(MzmEquipment *e, uint32_t items, bool active) {
+    if (active) {
+        e->items |= items;
+        e->unknown_items &= ~items;
+    } else {
+        e->unknown_items |= e->items & items;
+        e->items &= ~items;
+    }
+}
+
+static void update_wireframe(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g, int option);
+static void fade_wireframe(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g);
+
+/* StatusScreenToggleItem: TRUE / FALSE whether the slot's item is on after
+ * checking or toggling it, 0xFF when it cannot be toggled (only in the
+ * suitless and item acquisition sequences can it be). */
+static uint8_t toggle_item(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g, int slot, int action) {
+    MzmEquipment *e = g->equipment;
+    Abilities a = abilities(g);
+    bool fully_powered = e->suit == MZM_SUIT_FULLY_POWERED;
+    int group = item_data(slot, 0), offset = item_data(slot, 1);
+    uint8_t flag = 0, activation = 0;
+    bool beam_bombs = true;
+    switch (group) {
+    case GROUP_BEAMS:
+        flag = p->status.beam[offset];
+        activation = a.beam_bombs_activation;
+        if (flag == BBF_PLASMA_BEAM && !fully_powered) flag = 0;
+        break;
+    case GROUP_BOMBS:
+        if (slot == SLOT_BOMB && a.suit_misc_activation & SMF_MORPH_BALL && !(a.beam_bombs_activation & BBF_BOMBS)) {
+            flag = BBF_BOMBS;
+            activation = a.beam_bombs_activation;
+        }
+        break;
+    case GROUP_SUITS:
+        flag = p->status.suit[offset];
+        activation = a.suit_misc_activation;
+        beam_bombs = false;
+        if (flag == SMF_GRAVITY_SUIT && !fully_powered) flag = 0;
+        if (flag && activation & flag) flag = 0;
+        break;
+    case GROUP_MISC:
+        flag = p->status.misc[offset];
+        activation = a.suit_misc_activation;
+        beam_bombs = false;
+        if (flag == SMF_SPACE_JUMP && !fully_powered) flag = 0;
+        break;
+    default:
+        break;
+    }
+    if (!(p->type_flags & TYPE_GETTING_SUITLESS) && g->flag != MZM_PAUSE_FLAG_ITEM_ACQUISITION) flag = 0;
+    uint8_t activated = 0xFF, oam_id = 0;
+    if (flag != 0) {
+        if (action == TOGGLE_CHECKING || action == TOGGLE_CHECKING2) {
+            activated = (activation & flag) != 0;
+        } else {
+            activated = !(activation & flag);
+            set_items_active(e, item_of_flag(beam_bombs, flag), activated);
+            update_row(p, s, group, item_data(slot, 2), activated, true);
+            if (group == GROUP_MISC && flag & SMF_MORPH_BALL) {
+                for (int i = 0; i < 2; ++i) {
+                    uint8_t *bomb = &p->status.bomb[i];
+                    if (!(*bomb & BOMB_COLLECTED)) continue;
+                    *bomb = (uint8_t)((*bomb & (BOMB_HAS_AMMO | BOMB_ACTIVATED | BOMB_COLLECTED)) | activated << 3);
+                    update_row(p, s, GROUP_BOMBS, i + 1,
+                               *bomb == (BOMB_MORPH_ACTIVATED | BOMB_HAS_AMMO | BOMB_ACTIVATED | BOMB_COLLECTED), true);
+                }
+            } else if (group == GROUP_SUITS) {
+                update_wireframe(p, s, g, 2);
+            } else if (group == GROUP_BOMBS) {
+                p->status.bomb[0] = (uint8_t)((p->status.bomb[0] & (BOMB_MORPH_ACTIVATED | BOMB_HAS_AMMO |
+                                                                   BOMB_COLLECTED)) | activated * 2);
+                if (p->status.bomb[1] & BOMB_COLLECTED) {
+                    p->status.bomb[1] = (uint8_t)((p->status.bomb[1] & (BOMB_MORPH_ACTIVATED | BOMB_HAS_AMMO |
+                                                                       BOMB_COLLECTED)) | activated * 2);
+                    update_row(p, s, GROUP_BOMBS, 2,
+                               p->status.bomb[1] ==
+                                   (BOMB_MORPH_ACTIVATED | BOMB_HAS_AMMO | BOMB_ACTIVATED | BOMB_COLLECTED),
+                               true);
+                }
+            }
+        }
+        if (group == GROUP_BOMBS || group == GROUP_SUITS) activated = 0xFF;
+        else if (group == GROUP_MISC && flag == SMF_SPACE_JUMP && !fully_powered) activated = 0xFF;
+        oam_id = activated == 1 ? OVERLAY_SELECT_ON : activated == 0 ? OVERLAY_SELECT_OFF : 0;
+    }
+    if (p->type_flags & TYPE_GETTING_NEW_ITEM) oam_id = 0;
+    mzm_menu_oam_set_id(&p->overlay[3], oam_id);
+    return activated;
 }
 
 /* StatusScreenInitCursorAndItems */
-static void init_cursor_and_items(MzmPauseScreen *p) {
+static void init_cursor_and_items(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     if (p->status.current_slot == SLOT_0) return;
     update_cursor_position(p, p->status.current_slot);
     if (!(p->type_flags & TYPE_GETTING_NEW_ITEM)) mzm_menu_oam_set_id(&p->misc[0], MISC_ITEM_CURSOR_FOCUSING);
-    toggle_item(p);
+    toggle_item(p, s, g, p->status.current_slot, TOGGLE_CHECKING);
 }
 
 /* StatusScreenGetDestinationSlot */
@@ -1583,7 +1709,7 @@ static uint8_t destination_slot(MzmPauseScreen *p, int offset, uint8_t previous)
 }
 
 /* StatusScreenMoveCursor */
-static void move_cursor(MzmPauseScreen *p, MzmScreen *s) {
+static void move_cursor(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     if (p->misc[0].oam_id == MISC_ITEM_CURSOR_FOCUSING) return;
     uint8_t slot = p->status.current_slot;
     int offset;
@@ -1603,7 +1729,7 @@ static void move_cursor(MzmPauseScreen *p, MzmScreen *s) {
     if (p->status.current_slot == slot) return;
     p->status.current_slot = slot;
     update_cursor_position(p, slot);
-    toggle_item(p);
+    toggle_item(p, s, g, slot, TOGGLE_CHECKING);
     mzm_menu_oam_set_id(&p->misc[0], MISC_ITEM_CURSOR_FOCUSING);
     mzm_sfx_play(SOUND_STATUS_SCREEN_CURSOR_MOVING);
 }
@@ -1729,9 +1855,16 @@ static void status_screen(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g
         p->stage = 0;
         return;
     }
-    if (p->status.current_slot != SLOT_0) {
-        if (s->changed_input & KEY_SELECT) toggle_item(p);
-        else move_cursor(p, s);
+    if (p->fade_wireframe_stage != 0) {
+        fade_wireframe(p, s, g);
+    } else if (p->status.current_slot != SLOT_0) {
+        if (s->changed_input & KEY_SELECT) {
+            uint8_t result = toggle_item(p, s, g, p->status.current_slot, TOGGLE_TOGGLING);
+            if (result == 1) mzm_sfx_play(MZM_SOUND_TOGGLING_ITEM_ON);
+            else if (result == 0) mzm_sfx_play(MZM_SOUND_TOGGLING_ITEM_OFF);
+        } else {
+            move_cursor(p, s, g);
+        }
     }
     process_description(p, s, g);
 }
@@ -1790,7 +1923,7 @@ static bool status_screen_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGa
         if (draw_items(p, s, (uint8_t)(p->timer - 1))) stage = 0x100;
         break;
     case 8:
-        init_cursor_and_items(p);
+        init_cursor_and_items(p, s, g);
         p->dispcnt |= GBA_DCNT_BG0;
         clear_text(s);
         stage = -1;
@@ -2426,6 +2559,106 @@ static void enable_unknown_item(MzmPauseScreen *p, MzmScreen *s, int group, int 
     for (int i = 1; i < b.right - b.left; ++i) *dst++ = p->status_tilemap[position++];
 }
 
+/* StatusScreenGetSlotForNewItem(1, item): the new item deactivated so its
+ * toggling shows it (STATUS_SLOT_BEAM when it was active, else 0). */
+static uint8_t slot_for_new_item(const MzmPauseGame *g, uint8_t item) {
+    if (item >= 22) return SLOT_0;
+    uint32_t at = sym("sStatusScreenItemsAcquisitionData") + item * 4u;
+    uint8_t kind = mzm_rom_u8(at), group = mzm_rom_u8(at + 1), offset = mzm_rom_u8(at + 2);
+    if (kind < 2) return SLOT_0;
+    const char *order;
+    switch (group) {
+    case GROUP_BEAMS: order = "sStatusScreenBeamFlagsOrder"; break;
+    case GROUP_BOMBS: order = "sStatusScreenBombFlagsOrder"; break;
+    case GROUP_SUITS: order = "sStatusScreenSuitFlagsOrder"; break;
+    case GROUP_MISC: order = "sStatusScreenMiscFlagsOrder"; break;
+    default: return SLOT_0;
+    }
+    uint32_t items = item_of_flag(group == GROUP_BEAMS || group == GROUP_BOMBS, rom8(order, offset));
+    uint8_t slot = g->equipment->items & items ? SLOT_BEAM : SLOT_0;
+    set_items_active(g->equipment, items, false);
+    return slot;
+}
+
+/* UpdateSuitType(SUIT_SUITLESS): 99 energy, only the Power Grip, the Long
+ * Beam and the Charge Beam active (the pistol). */
+static void update_suit_type_suitless(MzmEquipment *e) {
+    uint32_t owned = e->items | e->unknown_items;
+    e->suit = MZM_SUIT_SUITLESS;
+    e->energy = 99;
+    e->items = MZM_ITEM_POWER_GRIP | MZM_ITEM_LONG_BEAM | MZM_ITEM_CHARGE_BEAM;
+    e->unknown_items = owned & ~e->items;
+}
+
+enum {
+    /* StatusScreenSuitlessItems' stages */
+    NEW_ITEM_CHECK = 0, NEW_ITEM_TOGGLE, NEW_ITEM_WAIT_FADE, NEW_ITEM_DEMO_DESCRIPTION, NEW_ITEM_DEMO_END,
+    NEW_ITEM_DESCRIPTION, NEW_ITEM_UNUSED, NEW_ITEM_DONE,
+};
+
+/* StatusScreenSuitlessItems (also the item acquisition): the new item's
+ * slot toggled on with its sound, then its description; any key ends it
+ * once described. No demo runs, so the demo stages are never used. */
+static bool suitless_items(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
+    if (p->stage > NEW_ITEM_DESCRIPTION && s->changed_input != 0) return true;
+    if (p->fade_wireframe_stage != 0) {
+        fade_wireframe(p, s, g);
+        return false;
+    }
+    int slot = p->status.current_slot;
+    switch (p->stage) {
+    case NEW_ITEM_CHECK:
+        if (p->timer <= 16) break;                          /* CONVERT_SECONDS(4.f / 15) */
+        if (slot != SLOT_0) {
+            mzm_menu_oam_set_id(&p->misc[0], MISC_ITEM_CURSOR_FOCUSING);
+            /* The native result (u32, 0xFF when it cannot toggle) is stored
+             * in an s32 and tested below 0, which never holds: the toggle
+             * stage always follows. */
+            toggle_item(p, s, g, slot, TOGGLE_CHECKING2);
+            p->stage = NEW_ITEM_TOGGLE;
+            p->message.message_ended = false;
+        } else {
+            p->message.message_ended = true;
+            p->stage = NEW_ITEM_DONE;
+        }
+        p->timer = 0;
+        break;
+    case NEW_ITEM_TOGGLE:
+        if (p->timer <= 8) break;                           /* CONVERT_SECONDS(2.f / 15) */
+        toggle_item(p, s, g, slot, TOGGLE_TOGGLING);
+        switch (g->item_being_acquired) {
+        case ITEM_ACQUISITION_PLASMA_BEAM:
+        case ITEM_ACQUISITION_GRAVITY:
+        case ITEM_ACQUISITION_SPACE_JUMP:
+            mzm_sfx_play(MZM_SOUND_UNKNOWN_ITEM_ACQUISITION);
+            break;
+        case ITEM_ACQUISITION_MISSILES:
+        case ITEM_ACQUISITION_SUPER_MISSILES:
+        case ITEM_ACQUISITION_POWER_BOMB:
+            update_row(p, s, item_data(slot, 0), item_data(slot, 2), true, true);
+            /* fall through */
+        default:
+            mzm_sfx_play(MZM_SOUND_TOGGLING_ITEM_ON);
+            break;
+        }
+        p->timer = 0;
+        p->stage++;
+        break;
+    case NEW_ITEM_WAIT_FADE:
+        if (p->fade_wireframe_stage != 0) break;
+        p->timer = 0;
+        p->stage = NEW_ITEM_DESCRIPTION;
+        break;
+    case NEW_ITEM_DESCRIPTION:
+        process_description(p, s, g);
+        if (p->message.message_ended) p->stage = NEW_ITEM_DONE;
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
 /* PauseScreenSuitChangingStart: the headers, the rows revealed, the
  * cursor on the acquired item's slot and the text background. */
 static bool suit_changing_start(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
@@ -2442,8 +2675,8 @@ static bool suit_changing_start(MzmPauseScreen *p, MzmScreen *s, const MzmPauseG
         if (draw_items(p, s, (uint8_t)(p->timer - 1))) stage = 0x100;
         break;
     case 3:
-        p->status.current_slot = slot_for_suit_change(p, g->item_being_acquired);
-        init_cursor_and_items(p);
+        p->status.current_slot = slot_for_suit_change(p, item_being_acquired(g));
+        init_cursor_and_items(p, s, g);
         p->dispcnt |= GBA_DCNT_BG0;
         clear_text(s);
         stage = -1;
@@ -2610,6 +2843,11 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
     p->current_area = g->area;
     if (g->flag == MZM_PAUSE_FLAG_CHOZO_HINT) p->type_flags |= TYPE_ON_MAP_SCREEN | TYPE_CHOZO_STATUE_HINT;
     if (g->flag == MZM_PAUSE_FLAG_MAP_DOWNLOAD) p->type_flags |= TYPE_ON_MAP_SCREEN | TYPE_DOWNLOADING_MAP;
+    if (g->flag == MZM_PAUSE_FLAG_ITEM_ACQUISITION) p->type_flags |= TYPE_ON_STATUS_SCREEN | TYPE_GETTING_NEW_ITEM;
+    if (g->flag == MZM_PAUSE_FLAG_SUITLESS_ITEMS) {
+        update_suit_type_suitless(g->equipment);
+        p->type_flags = TYPE_ON_STATUS_SCREEN | TYPE_GETTING_NEW_ITEM | TYPE_GETTING_SUITLESS;
+    }
     if (g->flag == MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS) {
         update_suit_type_fully_powered(g->equipment);
         p->type_flags = TYPE_ON_STATUS_SCREEN | TYPE_GETTING_NEW_ITEM | TYPE_GETTING_FULLY_POWERED;
@@ -2679,6 +2917,9 @@ static void pause_init(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGame *g) {
         init_map_download(p);
     } else if (p->type_flags & TYPE_GETTING_FULLY_POWERED) {
         p->state = STATE_FULLY_POWERED_ITEMS_INIT;
+    } else if (p->type_flags & TYPE_GETTING_NEW_ITEM) {
+        p->state = STATE_SUITLESS_ITEMS_INIT;
+        slot_for_new_item(g, item_being_acquired(g));
     }
     /* PauseScreenGetAllMinimapData */
     for (int i = 0; i < AREAS; ++i)
@@ -2950,6 +3191,22 @@ static bool call_state_handler(MzmPauseScreen *p, MzmScreen *s, const MzmPauseGa
         break;
     case STATE_WAIT_TO_LEAVE:
         return s->changed_input & (KEY_START | KEY_A | KEY_B) && !p->on_world_map;
+    case STATE_SUITLESS_ITEMS_INIT:
+        if (suit_changing_start(p, s, g)) {
+            p->state = STATE_SUITLESS_ITEMS;
+            p->stage = 0;
+            p->timer = 0;
+        }
+        break;
+    case STATE_SUITLESS_ITEMS:
+        if (suitless_items(p, s, g)) {
+            update_status_oam(p, s, g, 4);
+            p->timer = 0;
+            p->state = STATE_SUITLESS_ITEMS_ENDED;
+        }
+        break;
+    case STATE_SUITLESS_ITEMS_ENDED:
+        return p->timer > 12;                           /* CONVERT_SECONDS(.2f) */
     case STATE_FULLY_POWERED_ITEMS_INIT:
         if (suit_changing_start(p, s, g)) {
             p->state = STATE_FULLY_POWERED_ITEMS;

@@ -1969,6 +1969,72 @@ static void test_fully_powered_items_bank(void) {
     mzm_rom_close();
 }
 
+/* Runs a status screen sequence to its end, pressing A for each
+ * description line and once it is described. */
+static int run_new_item_pause(MzmPauseScreen *pause, MzmPauseGame *game, bool *faded) {
+    int f;
+    bool left = false;
+    mzm_pause_enter(pause);
+    for (f = 0; f < 3000 && !left; ++f) {
+        bool waiting = pause->description_stage == 3 || pause->stage == 7;
+        mzm_screen_input(&screen, pause->state == 4 && waiting && !(f & 1) ? 1 : 0);
+        left = mzm_pause_update(pause, &screen, game);
+        if (faded) *faded |= pause->fade_wireframe_stage != 0;
+    }
+    return left ? f : -1;
+}
+
+/* PAUSE_SCREEN_ITEM_ACQUISITION and PAUSE_SCREEN_SUITLESS_ITEMS on the
+ * exported bank: the Varia Suit deactivated, toggled back on with the
+ * wireframe fade and its sound; a missile tank only described; the
+ * suitless sequence turns Samus suitless with the pistol's items. */
+static void test_new_item_pause_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the item acquisition checks are skipped\n");
+        return;
+    }
+    static GbaPpu hud_ppu;
+    static MzmHud hud;
+    static MzmMinimapProgress progress;
+    static MzmPauseScreen pause;
+    mzm_hud_init(&hud, &hud_ppu, &progress, 240);
+    uint8_t map_x, map_y;
+    assert(mzm_hud_room_map(0, 0, &map_x, &map_y));
+    MzmEquipment equipment = {.energy = 99, .max_energy = 199, .missiles = 10, .max_missiles = 10,
+                              .items = MZM_ITEM_LONG_BEAM | MZM_ITEM_MORPH_BALL | MZM_ITEM_VARIA_SUIT};
+    MzmHudFrame frame = {&equipment, 0, false, 0, 0, 13 * 64, 31 * 64, NULL, NULL, NULL, NULL};
+    MzmHudRoom room = {0, 0, map_x, map_y, 79, 44};
+    mzm_hud_room_entered(&hud, &room, &frame);
+    /* The Varia Suit (ITEM_ACQUISITION_VARIA) */
+    MzmPauseGame game = {&hud, 1, &equipment, pause_event, NULL, MZM_PAUSE_FLAG_ITEM_ACQUISITION, 14};
+    mzm_sfx_clear();
+    bool faded = false;
+    mzm_pause_enter(&pause);
+    mzm_screen_input(&screen, 0);
+    assert(!mzm_pause_update(&pause, &screen, &game));
+    assert(!(equipment.items & MZM_ITEM_VARIA_SUIT) && equipment.unknown_items == MZM_ITEM_VARIA_SUIT);
+    assert(run_new_item_pause(&pause, &game, &faded) > 0 && faded);
+    assert(equipment.items == (MZM_ITEM_LONG_BEAM | MZM_ITEM_MORPH_BALL | MZM_ITEM_VARIA_SUIT) &&
+           equipment.unknown_items == 0 && count_requests(MZM_SFX_PLAY, 0x1F7) == 1);
+    /* A first missile tank (ITEM_ACQUISITION_MISSILES): its row lit, the
+     * toggle sound, nothing toggled */
+    game.item_being_acquired = 3;
+    mzm_sfx_clear();
+    assert(run_new_item_pause(&pause, &game, NULL) > 0);
+    assert(equipment.items == (MZM_ITEM_LONG_BEAM | MZM_ITEM_MORPH_BALL | MZM_ITEM_VARIA_SUIT) &&
+           count_requests(MZM_SFX_PLAY, 0x1F7) == 1);
+    /* The suitless sequence: the pistol's items */
+    game.flag = MZM_PAUSE_FLAG_SUITLESS_ITEMS;
+    game.item_being_acquired = 0;
+    equipment.suit = MZM_SUIT_NORMAL;
+    assert(run_new_item_pause(&pause, &game, NULL) > 0);
+    assert(equipment.suit == MZM_SUIT_SUITLESS && equipment.energy == 99 &&
+           equipment.items == (MZM_ITEM_POWER_GRIP | MZM_ITEM_LONG_BEAM | MZM_ITEM_CHARGE_BEAM) &&
+           equipment.unknown_items == (MZM_ITEM_MORPH_BALL | MZM_ITEM_VARIA_SUIT));
+    mzm_rom_close();
+}
+
 /* InGameCutsceneUpgradingSuit for the fully powered suit: waits for the
  * banner's suit animation stage, fades BG0 out and hides it, opens window 1
  * on Samus, grows it to the screen, activates the Gravity Suit, shrinks it
@@ -2040,6 +2106,7 @@ int main(void) {
     test_credits_bank();
     test_upgrading_suit();
     test_fully_powered_items_bank();
+    test_new_item_pause_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

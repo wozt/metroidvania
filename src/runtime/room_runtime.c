@@ -1828,6 +1828,26 @@ static void runtime_fully_powered_return(MzmEquipment *equipment,MzmSamus *samus
     *charge_counter=0;
 }
 
+/* RoomLoad's PAUSE_SCREEN_ITEM_ACQUISITION return for the Varia Suit: the
+ * suit held back, Samus facing the foreground at (10 blocks - 8, 8 blocks),
+ * IGC_GETTING_VARIA started, pause disabled and the charge reset. */
+static void runtime_varia_return(MzmEquipment *equipment,MzmSamus *samus,const MzmCollision *collision,
+                                 uint8_t *charge_counter,MzmUpgradingSuit *upgrading_suit,
+                                 bool *disable_pause) {
+    if(equipment->items&MZM_ITEM_VARIA_SUIT) {
+        equipment->items&=~(uint32_t)MZM_ITEM_VARIA_SUIT;
+        equipment->unknown_items|=MZM_ITEM_VARIA_SUIT;
+    }
+    mzm_samus_sprite_set_pose(samus,MZM_POSE_FACING_THE_FOREGROUND,equipment,collision);
+    samus->x=MZM_BLOCK_SIZE*10-8;
+    samus->y=MZM_BLOCK_SIZE*8;                  /* native BLOCK_SIZE * 8 - 1 */
+    memset(upgrading_suit,0,sizeof *upgrading_suit);
+    mzm_upgrading_suit_start(upgrading_suit,MZM_ACQUISITION_VARIA);
+    *disable_pause=true;
+    *charge_counter=0;
+    samus->last_wall=1;
+}
+
 /* The suit flash's colour: BG0 tile 0xC0 of character base 1, palette 9
  * (InGameCutsceneUpgradingSuit stage 4), from the room's VRAM. */
 static uint16_t runtime_suit_flash_color(const MzmRoomGfx *gfx) {
@@ -4690,6 +4710,7 @@ int main(int argc, char **argv) {
      * faded back in (UpdateMusicAfterPause). */
     int pause_fade_flag=0;
     bool pause_music_reset=false;
+    bool pause_music_retrieve=false;
     int pending_door_offset=0;
     int resume_request=RUNTIME_RESUME_NONE;
     bool post_tourian_resume=false;
@@ -5176,11 +5197,17 @@ int main(int argc, char **argv) {
                     cutscene_mode=false;
                     previous_held=held;
                     if(post_tourian_resume) {
-                        /* CutsceneEnd(CUTSCENE_COULD_I_SURVIVE): the native
-                         * map sequence is not ported, so enter Chozodia room
-                         * 0 directly with the suitless activation set. */
+                        /* CutsceneEnd(CUTSCENE_COULD_I_SURVIVE):
+                         * PAUSE_SCREEN_SUITLESS_ITEMS's status screen on the
+                         * Chozodia state, then Chozodia room 0. */
                         post_tourian_resume=false;
-                        resume_request=RUNTIME_RESUME_POST_TOURIAN;
+                        if(screen_ready && runtime_hud.ready) {
+                            pause_mode=true;
+                            pause_flag=MZM_PAUSE_FLAG_SUITLESS_ITEMS;
+                            mzm_pause_enter(&pause_screen);
+                        } else {
+                            resume_request=RUNTIME_RESUME_POST_TOURIAN;
+                        }
                     } else if(in_game_cutscene) {
                         /* Back in the game as it was, fading in. */
                         in_game_cutscene=false;
@@ -5393,7 +5420,8 @@ int main(int argc, char **argv) {
                 mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                               capture_path?NULL:&gamepad));
                 MzmPauseGame pause_game={&runtime_hud,runtime_area_index(room->area),
-                                         &equipment,
+                                         pause_flag==MZM_PAUSE_FLAG_SUITLESS_ITEMS?
+                                             &resume_save.equipment:&equipment,
                                          runtime_sprite_check_event,&sprites,pause_flag,
                                          item_being_acquired};
                 bool was_sleeping=pause_screen.sleeping;
@@ -5410,6 +5438,20 @@ int main(int argc, char **argv) {
                      * the pause's music volume is reset at its end. */
                     if(pause_flag!=MZM_PAUSE_FLAG_PAUSE) sprites.globals.pause_screen_flag=0;
                     else pause_music_reset=true;
+                    if(pause_flag==MZM_PAUSE_FLAG_SUITLESS_ITEMS) {
+                        /* The game then starts in Chozodia. */
+                        resume_request=RUNTIME_RESUME_POST_TOURIAN;
+                        accumulator-=fixed_step;
+                        continue;
+                    }
+                    if(pause_flag==MZM_PAUSE_FLAG_ITEM_ACQUISITION) {
+                        /* UpdateMusicAfterPause: player 2 back at the fade's
+                         * end; RoomLoad's Varia Suit cutscene. */
+                        pause_music_retrieve=true;
+                        if(item_being_acquired==MZM_ACQUISITION_VARIA)
+                            runtime_varia_return(&equipment,&samus,&collision,&weapons.charge_counter,
+                                                 &upgrading_suit,&sprites.globals.disable_pause);
+                    }
                     if(pause_flag==MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS) {
                         runtime_fully_powered_return(&equipment,&samus,&collision,&weapons.charge_counter,
                                                      &upgrading_suit,&sprites.globals.disable_pause);
@@ -5520,8 +5562,10 @@ int main(int argc, char **argv) {
              * download (gPauseScreenFlag set during the last frame). */
             if(screen_ready && runtime_hud.ready && door_fade.phase==MZM_DOOR_FADE_NONE &&
                (sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_MAP_DOWNLOAD ||
-                sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_CHOZO_HINT)) {
-                /* ...or a Chozo statue's hint, after the game's fade out. */
+                sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_CHOZO_HINT ||
+                sprites.globals.pause_screen_flag==MZM_PAUSE_FLAG_ITEM_ACQUISITION)) {
+                /* ...or a Chozo statue's hint, or a new item's status screen,
+                 * after the game's fade out. */
                 pause_fade_flag=sprites.globals.pause_screen_flag;
                 mzm_door_fade_start_cancel(&door_fade);
             }
@@ -5660,6 +5704,8 @@ int main(int argc, char **argv) {
                 if(events&MZM_BANNER_FINISH_TANK) runtime_finish_collecting_tank(room);
                 if(events&MZM_BANNER_FINISH_ABILITY) runtime_finish_collecting_ability(room,&samus);
                 if(events&MZM_BANNER_ENABLE_PAUSE) sprites.globals.disable_pause=false;
+                if(events&MZM_BANNER_ITEM_ACQUISITION)
+                    sprites.globals.pause_screen_flag=MZM_PAUSE_FLAG_ITEM_ACQUISITION;
                 if(events&MZM_BANNER_START_SUIT_ANIM) {
                     /* MessageBannerRemovalAnimation: the suit animation and the
                      * falling Chozo pillar. */
@@ -5965,6 +6011,11 @@ int main(int argc, char **argv) {
                 }
             }
             bool fade_in_ended=door_fade.phase==MZM_DOOR_FADE_IN && mzm_door_fade_in(&door_fade);
+            if(fade_in_ended && pause_music_retrieve) {
+                /* RetrieveTrackData2SoundChannels after an item's screen */
+                pause_music_retrieve=false;
+                mzm_sfx_retrieve_track2();
+            }
             if(fade_in_ended && pause_music_reset) {
                 /* ColorFadingFinishDoorTransition: UpdateMusicAfterPause */
                 pause_music_reset=false;

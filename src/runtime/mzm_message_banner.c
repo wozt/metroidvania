@@ -229,8 +229,7 @@ static unsigned banner_update(MzmMessageBanner *b, const MzmBannerKind *kind, bo
         b->pose = MZM_BANNER_POSE_REMOVAL_ANIMATION;
         break;
     case MZM_BANNER_POSE_REMOVAL_ANIMATION:
-        /* MessageBannerRemovalAnimation: the item acquisition pause screen
-         * is not ported. */
+        /* MessageBannerRemovalAnimation */
         if (animation_ended(b, kind)) {
             if (msg == MZM_MESSAGE_SAVE_COMPLETE) events |= MZM_BANNER_ENABLE_PAUSE;
             else if (msg == MZM_MESSAGE_FULLY_POWERED_SUIT) events |= MZM_BANNER_START_SUIT_ANIM;
@@ -238,6 +237,7 @@ static unsigned banner_update(MzmMessageBanner *b, const MzmBannerKind *kind, bo
             b->exists = false;
             *prevent_movement = 0;
             events |= MZM_BANNER_REMOVED;
+            if (b->new_item) events |= MZM_BANNER_ITEM_ACQUISITION;
             return events;
         }
         break;

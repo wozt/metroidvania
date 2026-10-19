@@ -283,7 +283,10 @@ Wave Beam, Bombs, Speed Booster, High Jump, Screw Attack or Varia Suit (the
 Plasma Beam, Space Jump and Gravity Suit statues give an "Unknown Item" that
 stays inactive until the fully powered suit activates it). The Morph
 Ball, the Power Grip and the Charge Beam are their own item sprites, touched
-to be collected with their banner. Samus starts as the native game does (99
+to be collected with their banner. A new item's or first tank's banner then
+opens the status screen, which switches the item on and describes it; the
+Varia Suit then flashes onto Samus in the room, and after the post-Tourian
+monologue the same screen turns Samus suitless. Samus starts as the native game does (99
 energy, no item, no ammunition), whether from a new game or a direct
 `--room` start; a new game lands the gunship in Crateria, shows the intro
 text, then starts at Brinstar's door 0 (SamusInit's pose facing the

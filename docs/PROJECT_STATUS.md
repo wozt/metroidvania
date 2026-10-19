@@ -3838,6 +3838,46 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0399 - item acquisition and suitless status screens
+
+- Ported in `src/runtime/mzm_pause_screen.c`:
+  - `StatusScreenSuitlessItems`;
+  - the whole of `StatusScreenToggleItem`;
+  - the new-item form of `StatusScreenGetSlotForNewItem`;
+  - the suitless case of `UpdateSuitType`.
+- The pause screen opens on its own for two flags:
+  - `PAUSE_SCREEN_ITEM_ACQUISITION`: the new item is deactivated, then
+    toggled back on with its sound (a suit fades the wireframe; a missile or
+    bomb row lights up), then described until a key is pressed;
+  - `PAUSE_SCREEN_SUITLESS_ITEMS`: the same, after Samus is turned
+    suitless with the pistol's items.
+- A native quirk is kept: the toggle result (`u32` 0xFF) is stored in an
+  `s32` and tested below 0, which never holds, so the toggle stage always
+  runs.
+- The message banner emits `MZM_BANNER_ITEM_ACQUISITION` when a new item's
+  or first tank's banner is removed. The runtime then:
+  - fades the game out and opens the screen;
+  - retrieves player 2 at the end of the fade back in. Before this patch,
+    track 2 was never retrieved after a new item.
+- `RoomLoad`'s Varia Suit return is ported: Samus faces the foreground and
+  `IGC_GETTING_VARIA` plays through the suit upgrade module.
+- The post-Tourian monologue is now followed by the suitless status screen
+  before Chozodia room 0.
+- Unit tests on the ROM bank: the Varia Suit, a first missile tank and the
+  suitless sequence.
+- Checked in game:
+  - in `brinstar_027`: the Varia Suit taken from its statue; the banner,
+    then the status screen ("Decreases damage taken from enemies."), then
+    the suit flash and Samus in the Varia Suit;
+  - after the Tourian escape: the suitless status screen describing the
+    pistol, then `chozodia_000` with the Power Grip and the Long and Charge
+    Beams active.
+- `mzm.interface.message_banner` moves to `functional`. The status screen,
+  escape sequence, Chozo statue and fully powered entries are updated. The
+  parity inventory now contains 25 partial and 78 functional entries.
+- Captures: ignored `captures/fp/w200.bmp`, `w520.bmp`, `w780.bmp`,
+  `w900.bmp`, `t3800.bmp` and `t3950.bmp`.
+
 ## Patch 0398 - fully powered suit items on the status screen
 
 - Ported `StatusScreenFullyPoweredItems` and the routines it needs in

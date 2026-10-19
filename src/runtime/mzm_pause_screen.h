@@ -17,8 +17,10 @@
  * suit items (PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS, status_screen.c): the
  * status screen opened on its own, the wireframe faded to the full suit,
  * the normal items enabled one by one, then each unknown item flashed,
- * enabled and described until A. The item toggling of the suitless and item
- * acquisition sequences and the completion info are not ported yet. */
+ * enabled and described until A; the item acquisition and suitless
+ * sequences (PAUSE_SCREEN_ITEM_ACQUISITION, PAUSE_SCREEN_SUITLESS_ITEMS):
+ * the new item toggled on with StatusScreenToggleItem, then described. The
+ * completion info is not ported yet. */
 #ifndef MZM_PAUSE_SCREEN_H
 #define MZM_PAUSE_SCREEN_H
 
@@ -32,6 +34,7 @@
 /* gPauseScreenFlag values the pause screen handles. */
 enum {
     MZM_PAUSE_FLAG_PAUSE = 2, MZM_PAUSE_FLAG_CHOZO_HINT = 4, MZM_PAUSE_FLAG_MAP_DOWNLOAD = 5,
+    MZM_PAUSE_FLAG_ITEM_ACQUISITION = 6, MZM_PAUSE_FLAG_SUITLESS_ITEMS = 7,
     MZM_PAUSE_FLAG_FULLY_POWERED_SUIT_ITEMS = 8
 };
 

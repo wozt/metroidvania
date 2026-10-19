@@ -98,6 +98,9 @@ enum {
      * pillar spawned (gfx slot 7) at gBossWork.work1 - 4 blocks,
      * gBossWork.work2 + 12 blocks. */
     MZM_BANNER_START_SUIT_ANIM = 1 << 6,
+    /* A new item's or first tank's banner is gone: gPauseScreenFlag =
+     * PAUSE_SCREEN_ITEM_ACQUISITION. */
+    MZM_BANNER_ITEM_ACQUISITION = 1 << 7,
 };
 
 /* SpriteSpawnPrimary(PSPRITE_MESSAGE_BANNER, message, ...): spawned not

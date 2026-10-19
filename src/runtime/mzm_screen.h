@@ -87,6 +87,11 @@ void mzm_apply_fading_color(uint8_t type, uint8_t color, const uint16_t *src, ui
 bool mzm_lz77_from_rom(uint32_t address, uint8_t *dst, size_t dst_size);
 /* DmaTransfer of ROM bytes (missing bytes leave `dst` unchanged). */
 void mzm_copy_from_rom(void *dst, uint32_t address, size_t size);
+/* ProcessComplexOam (double-sized) on gOamData[slot], and
+ * CalculateOamPart4's sixteen affine parameters from `slot`. */
+void mzm_process_complex_oam(MzmScreen *s, int slot, int16_t x_position, int16_t y_position,
+                             uint16_t rotation, int16_t scaling, uint16_t matrix);
+void mzm_calculate_oam_part4(MzmScreen *s, uint16_t rotation, int16_t scaling, int slot);
 /* A ROM symbol's address, 0 if unknown. */
 uint32_t mzm_sym(const char *name);
 

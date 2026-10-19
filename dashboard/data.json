@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T04:38:10+00:00",
+ "generated_at": "2026-10-19T04:49:43+00:00",
  "git": {
-  "commit": "8967249",
+  "commit": "4a3cfa4",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 136,
+   "total": 137,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 62,
+    "partial": 63,
     "functional": 63,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 63,
-   "functional_or_better_percent": 46.3,
-   "with_passing_tests": 124,
+   "functional_or_better_percent": 46.0,
+   "with_passing_tests": 125,
    "with_passing_tests_percent": 91.2,
    "unknown_or_blocked": 1,
    "features": [
@@ -113,6 +113,7 @@
     "mzm.animation.samus_runtime_library",
     "mzm.audio.sound_engine",
     "mzm.collision.clipdata",
+    "mzm.cutscenes.chozodia_escape",
     "mzm.cutscenes.samus_in_blue_ship",
     "mzm.cutscenes.story_text",
     "mzm.death.game_over",
@@ -253,11 +254,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 88,
+   "total": 89,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 38,
+    "partial": 39,
     "functional": 50,
     "faithful": 0,
     "validated": 0,
@@ -265,8 +266,8 @@
     "unknown": 0
    },
    "functional_or_better": 50,
-   "functional_or_better_percent": 56.8,
-   "with_passing_tests": 88,
+   "functional_or_better_percent": 56.2,
+   "with_passing_tests": 89,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -274,6 +275,7 @@
     "mzm.animation.samus_runtime_library",
     "mzm.audio.sound_engine",
     "mzm.collision.clipdata",
+    "mzm.cutscenes.chozodia_escape",
     "mzm.cutscenes.samus_in_blue_ship",
     "mzm.cutscenes.story_text",
     "mzm.death.game_over",
@@ -886,6 +888,80 @@
       "registered": true,
       "ctest": [
        "runtime_steep_slopes"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
+   }
+  },
+  {
+   "id": "mzm.cutscenes.chozodia_escape",
+   "area": "mzm",
+   "category": "cutscenes",
+   "title": "Chozodia escape sequence (GM_CHOZODIA_ESCAPE)",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_chozodia_escape.c",
+    "src/runtime/mzm_chozodia_escape.h",
+    "src/runtime/mzm_screen.c",
+    "src/runtime/gba_ppu.c",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_screens.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.escape_ship",
+    "mzm.technical.ppu_and_rom_bank"
+   ],
+   "native_routines": [
+    "ChozodiaEscapeHandler",
+    "ChozodiaEscapeInit",
+    "ChozodiaEscapeVBlank",
+    "ChozodiaEscapeHBlank",
+    "ChozodiaEscapeSetHBlank",
+    "ChozodiaEscapeSetupHBlankRegisters",
+    "ChozodiaEscapeUpdateExplosionHaze",
+    "ChozodiaEscapeProcessOam_1",
+    "ChozodiaEscapeProcessOam_2",
+    "ChozodiaEscapeShipLeaving",
+    "ChozodiaEscapeShipHeatingUp",
+    "ChozodiaEscapeShipBlowingUp",
+    "ChozodiaEscapeShipLeavingPlanet",
+    "ChozodiaEscapeMissionAccomplished",
+    "ApplyMonochromeToPalette",
+    "ProcessComplexOam",
+    "CalculateOamPart4"
+   ],
+   "limitations": "The H-blank WIN0H writes are a per-line table read by the PPU (line y takes the value computed for line y - 1, line 0 its own), and the register keeps the last line's value once the H-blank stops. The ending flags, the gallery, difficulty and time attack unlocks (ChozodiaEscapeGetItemCountAndEndingNumber, CheckUnlockTimeAttack, SramWrite_FileScreenOptionsUnlocked), the soft reset lock, the ending save and the non-English letters are not ported; GM_CREDITS that follows is not ported, the runtime returns to the intro. Not compared with an emulator. The escape ship's EFFECT_CUTSCENE_ESCAPING_CHOZODIA freezes the room, fades it out and enters the sequence on the non-gameplay screen from the ROM bank; --chozodia-escape starts it directly. After a 16-step fade in it plays the five native stages with their lengths (312, 224, 304, 280 frames, then the letters up to 472): the mother ship door opening and the blue ship growing out of it and diving (double-sized affine objects, matrix 0), then climbing away; the mother ship heating up (sChozodiaEscapeShipHeatingUpPal / GroundHeatingUpPal rows, ever faster shaking), its white explosion growing as an ellipse (sHaze_PowerBomb_WindowValuesPointers stretched by 1.2, window 0 with brightness up inside); the crater with the decaying mother ship, its explosions and the flash fading by alpha then to black; Zebes with the ship far away, then flying past the camera with the escape music; Samus in her ship turning grey (ApplyMonochromeToPalette of sChozodiaEscapeMissionAccomplishedPal) with the English MISSION ACCOMPLISHED letters revealed one every four frames, and the fade out. Its five sounds, the music fade and the escape music play. A bank-backed test checks the fades, stage lengths, sounds, explosion window, grey palette and letters; captures of every stage and one from the escape ship in chozodia_092 show the sequence.",
+   "next_action": "Port the credits and the ending flags and unlocks; compare the sequence with an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_mzm_screens.c"
+    ],
+    "in_game_check": [
+     "chozodia_092"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_screens.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_screens"
       ],
       "outcome": "passed",
       "exists": true
@@ -1909,7 +1985,8 @@
    "dependencies": [
     "mzm.enemies.space_pirate",
     "mzm.enemies.mecha_ridley",
-    "mzm.cutscenes.samus_in_blue_ship"
+    "mzm.cutscenes.samus_in_blue_ship",
+    "mzm.cutscenes.chozodia_escape"
    ],
    "native_routines": [
     "EscapeShip",
@@ -1923,8 +2000,8 @@
     "EscapeGateChangeCcaa",
     "SpriteUtilCountPrimarySprites"
    ],
-   "limitations": "EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP plays its cutscene (mzm.cutscenes.samus_in_blue_ship) after the COLOR_FADING_CANCEL fade standing in for COLOR_FADING_SAMUS_IN_BLUE_SHIP; EFFECT_CUTSCENE_ESCAPING_CHOZODIA once the ship is gone reaches the runtime, which reports it as not ported and keeps the room running: its fade, the Chozodia escape sequence and the credits do not play. The escape timer gfx sharing the gates' tiles is not drawn. Not compared with an emulator. Once Mecha Ridley is dead and Samus is up to 12 blocks above and less than 4 blocks left of it, the ship opens (sound) and spawns its pirate; from the 7th opening frame Samus can stand on it, and landing on it sets EVENT_ESCAPED_CHOZODIA, clears her invincibility and sets SPOSE_IN_ESCAPE_SHIP (or the turning pose when she faces left). From then on it holds Samus in the cockpit (43 subpixels up, 80 right), keeps every sprite from touching her, bursts the pirate lasers it touches and draws the pirates behind it. It closes after 20 frames, waits, spawns its flames and nudges right, sways on sEscapeShipHoveringY/XMovement while lifting off, signals the second gate, opens its shutters, and accelerates right for 200 frames, destroying the pirates in its way. Its top part goes in front of Samus once she is in, its tail flashes sEscapeShipFlashingPal rows (baked /f0-/f2, twice as fast once hovering) and its flames hide once it escapes. The first gate (solid grippable blocks) loads sEscapeGateAndTimerGfx and spawns the two black pirates, opens once they are dead and Samus is within 6 blocks to its left (blocks removed on the 5th opening frame), then spawns the pirate that chases the ship; it flashes sEscapeGateFlashingPal (baked from the gate tiles at OBJ VRAM 0x7800 and the last OBJ row). The second gate opens once the ship hovers. A capture in chozodia_092 (event 74) shows the first gate, its two black pirates and the ship. A capture sequence in chozodia_092 (event 74, energy 1299) shows Samus jumping into the open ship, the blue-ship cutscene, then the ship lifting off with the cockpit closed.",
-   "next_action": "Port the Chozodia escape sequence (GM_CHOZODIA_ESCAPE) and the credits; compare the escape with an emulator.",
+   "limitations": "EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP plays its cutscene (mzm.cutscenes.samus_in_blue_ship) after the COLOR_FADING_CANCEL fade standing in for COLOR_FADING_SAMUS_IN_BLUE_SHIP; EFFECT_CUTSCENE_ESCAPING_CHOZODIA once the ship is gone freezes the room, fades it out with the same CANCEL fade (standing in for COLOR_FADING_CHOZODIA_ESCAPE, without its ending save) and starts the Chozodia escape (mzm.cutscenes.chozodia_escape); the credits do not play. The escape timer gfx sharing the gates' tiles is not drawn. Not compared with an emulator. Once Mecha Ridley is dead and Samus is up to 12 blocks above and less than 4 blocks left of it, the ship opens (sound) and spawns its pirate; from the 7th opening frame Samus can stand on it, and landing on it sets EVENT_ESCAPED_CHOZODIA, clears her invincibility and sets SPOSE_IN_ESCAPE_SHIP (or the turning pose when she faces left). From then on it holds Samus in the cockpit (43 subpixels up, 80 right), keeps every sprite from touching her, bursts the pirate lasers it touches and draws the pirates behind it. It closes after 20 frames, waits, spawns its flames and nudges right, sways on sEscapeShipHoveringY/XMovement while lifting off, signals the second gate, opens its shutters, and accelerates right for 200 frames, destroying the pirates in its way. Its top part goes in front of Samus once she is in, its tail flashes sEscapeShipFlashingPal rows (baked /f0-/f2, twice as fast once hovering) and its flames hide once it escapes. The first gate (solid grippable blocks) loads sEscapeGateAndTimerGfx and spawns the two black pirates, opens once they are dead and Samus is within 6 blocks to its left (blocks removed on the 5th opening frame), then spawns the pirate that chases the ship; it flashes sEscapeGateFlashingPal (baked from the gate tiles at OBJ VRAM 0x7800 and the last OBJ row). The second gate opens once the ship hovers. A capture in chozodia_092 (event 74) shows the first gate, its two black pirates and the ship. A capture sequence in chozodia_092 (event 74, energy 1299) shows Samus jumping into the open ship, the blue-ship cutscene, then the ship lifting off with the cockpit closed.",
+   "next_action": "Port the credits; compare the escape with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c"
@@ -6615,7 +6692,8 @@
     "src/runtime/gba_ppu.c",
     "src/runtime/mzm_rom.c",
     "scripts/mzm_rom_bank.py",
-    "scripts/rebuild.py"
+    "scripts/rebuild.py",
+    "src/runtime/mzm_screen.c"
    ],
    "tests": [
     "tests/test_mzm_hud.c",
@@ -6627,7 +6705,7 @@
     "CallLZ77UncompVram",
     "CallLZ77UncompWram"
    ],
-   "limitations": "The bitmap modes 3 to 5 are not rendered; the window and blending registers are read once per frame (no mid-frame register changes or HBlank effects); the affine backgrounds use the reference point plus the line times PB/PD instead of the latched internal registers; objects beyond 128 per frame, the per-line object cycle limit and the affine object mosaic are not modelled. The ROM bank holds the whole verified ROM (private, never committed). The register bank keeps the BG2/BG3 affine range at 0x20-0x3F independent from the lower display registers; a ROM-free PPU test and the Tourian surrounded test exercise BG2PA, BG2PD, BG2X and BG2Y while DISPCNT remains live. gba_ppu renders the GBA display memories as GBATEK describes them: text backgrounds (four sizes, 16 and 256 colors, flips, scrolling, mosaic), affine backgrounds (wrap, overflow), regular and affine objects (all shapes and sizes, 1D and 2D mapping, flips, double size, semi-transparency, the object window, mosaic), the front-most two layers per pixel by priority, window 0, window 1, the object window and the outside, alpha blending, brightness up and down, and forced blank. scripts/mzm_rom_bank.py copies the verified ROM into a private bank and lists the 14462 sized data objects of the reference ELF (name, GBA address, size); mzm_rom looks them up by name and reads them by address, and decompresses the BIOS LZ77 and run-length streams.",
+   "limitations": "The bitmap modes 3 to 5 are not rendered; the window and blending registers are read once per frame (no mid-frame register changes or HBlank effects, except a per-line WIN0H table standing in for an H-blank handler rewriting it); the affine backgrounds use the reference point plus the line times PB/PD instead of the latched internal registers; objects beyond 128 per frame, the per-line object cycle limit and the affine object mosaic are not modelled. The ROM bank holds the whole verified ROM (private, never committed). The register bank keeps the BG2/BG3 affine range at 0x20-0x3F independent from the lower display registers; a ROM-free PPU test and the Tourian surrounded test exercise BG2PA, BG2PD, BG2X and BG2Y while DISPCNT remains live. gba_ppu renders the GBA display memories as GBATEK describes them: text backgrounds (four sizes, 16 and 256 colors, flips, scrolling, mosaic), affine backgrounds (wrap, overflow), regular and affine objects (all shapes and sizes, 1D and 2D mapping, flips, double size, semi-transparency, the object window, mosaic), the front-most two layers per pixel by priority, window 0, window 1, the object window and the outside, alpha blending, brightness up and down, and forced blank. scripts/mzm_rom_bank.py copies the verified ROM into a private bank and lists the 14462 sized data objects of the reference ELF (name, GBA address, size); mzm_rom looks them up by name and reads them by address, and decompresses the BIOS LZ77 and run-length streams. A per-line WIN0H table (win0h_per_line) stands in for the Chozodia escape's H-blank handler. ProcessComplexOam and CalculateOamPart4 are shared by the Tourian and Chozodia escapes (mzm_screen.c).",
    "next_action": "Finish the remaining native screens and compare the affine scenes with an emulator.",
    "evidence": {
     "unit_tests": [
@@ -10795,6 +10873,12 @@
  },
  "timeline": [
   {
+   "commit": "4a3cfa4",
+   "date": "2026-10-19",
+   "subject": "Port the Samus in the blue ship cutscene",
+   "scope": "project"
+  },
+  {
    "commit": "8967249",
    "date": "2026-10-19",
    "subject": "Port the Chozodia escape ship and escape gates",
@@ -11267,12 +11351,6 @@
    "date": "2026-10-13",
    "subject": "feat(mzm): area and room name banners",
    "scope": "mzm"
-  },
-  {
-   "commit": "9788192",
-   "date": "2026-10-13",
-   "subject": "feat(mzm): game fades around the pause screen",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -11300,7 +11378,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1532,
+    "routines_cited_by_features": 1547,
     "call_edges": 6071
    },
    "aos": {

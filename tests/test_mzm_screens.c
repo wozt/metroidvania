@@ -18,6 +18,7 @@
 #include "mzm_cutscene.h"
 #include "mzm_door_fade.h"
 #include "mzm_tourian_escape.h"
+#include "mzm_chozodia_escape.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -1702,6 +1703,63 @@ static void test_chozo_hint_bank(void) {
     mzm_rom_close();
 }
 
+/* GM_CHOZODIA_ESCAPE on the exported bank: the fade in, the five stages
+ * with their native lengths, the explosion's per-line window, the grey
+ * palette and the letters, then the fade out. */
+static void test_chozodia_escape_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the Chozodia escape checks are skipped\n");
+        return;
+    }
+    screen.ppu = &ppu;
+    static MzmChozodiaEscape e;
+    mzm_sfx_clear();
+    assert(mzm_chozodia_escape_enter(&e, &screen));
+    assert(!mzm_chozodia_escape_update(&e, &screen));
+    assert(e.sub_mode == 1 && screen.bldy == 16 &&
+           gba_ppu_read16(&ppu, GBA_REG_DISPCNT) == (GBA_DCNT_BG0 | GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_OBJ) &&
+           gba_ppu_read16(&ppu, GBA_REG_BG0CNT + 4) == (2 << 14 | 22 << 8 | 2) && e.oam_types[1] == 1 &&
+           e.oam_types[2] == 1 && e.scaling == 32);
+    int f = 0;
+    while (e.sub_mode == 1 && f < 40) {
+        assert(!mzm_chozodia_escape_update(&e, &screen));
+        ++f;
+    }
+    assert(f == 17 && screen.bldy == 0 && e.bldcnt == 0);
+    /* Each stage's length; the explosion's window from 152 to 224. */
+    const int lengths[4] = {313, 225, 305, 281};
+    bool window_seen = false, grey = false;
+    for (int stage = 0; stage < 4; ++stage) {
+        for (f = 0; e.stage == stage && f < 400; ++f) {
+            assert(!mzm_chozodia_escape_update(&e, &screen));
+            if (stage == 1 && e.timer == 200) {
+                window_seen = ppu.win0h_per_line && (gba_ppu_read16(&ppu, GBA_REG_DISPCNT) & GBA_DCNT_WIN0) &&
+                              ppu.win0h_lines[80] != 0 && e.semi_minor_axis > 100;
+            }
+        }
+        assert(f == lengths[stage]);
+    }
+    assert(window_seen && !ppu.win0h_per_line);
+    assert(count_requests(MZM_SFX_PLAY, 0x255) == 1 && count_requests(MZM_SFX_PLAY, 0x256) == 1 &&
+           count_requests(MZM_SFX_PLAY, 0x257) == 1 && count_requests(MZM_SFX_PLAY, 0x28B) == 1 &&
+           count_requests(MZM_SFX_PLAY, 0x28C) == 1);
+    /* MISSION ACCOMPLISHED: the grey palette, the letters one by one. */
+    for (f = 0; e.sub_mode == 2 && f < 600; ++f) {
+        assert(!mzm_chozodia_escape_update(&e, &screen));
+        if (e.timer == 100) {
+            uint16_t c = ppu.palette[1];
+            grey = (c & 31) == (c >> 5 & 31) && (c & 31) == (c >> 10 & 31) && e.oam_frames[4] > 1 &&
+                   e.oam_frames[4] < 48;
+        }
+    }
+    assert(f == 473 && grey && e.oam_frames[4] == 48);
+    bool ended = false;
+    for (f = 0; !ended && f < 40; ++f) ended = mzm_chozodia_escape_update(&e, &screen);
+    assert(ended && f == 17 && screen.bldy == 16);
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
@@ -1715,6 +1773,7 @@ int main(void) {
     test_intro_bank();
     test_cutscene_bank();
     test_tourian_escape_bank();
+    test_chozodia_escape_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

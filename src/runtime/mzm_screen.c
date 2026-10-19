@@ -253,3 +253,73 @@ void mzm_copy_from_rom(void *dst, uint32_t address, size_t size) {
     const uint8_t *src = mzm_rom_ptr(address, (uint32_t)size);
     if (src) memcpy(dst, src, size);
 }
+
+/* ProcessComplexOam and CalculateOamPart4's helpers */
+enum { COMPLEX_OAM_BLOCK = 64, COMPLEX_OAM_PI_2 = 64 };
+
+static uint16_t *complex_oam_attributes(MzmScreen *s, int slot) { return &s->oam[slot * 4]; }
+
+static int16_t affine_sine(uint16_t angle) {
+    return (int16_t)mzm_rom_u16(mzm_sym("sSineTable") + (uint32_t)angle * 2u);
+}
+
+static int16_t fixed_multiply(int16_t a, int16_t b) {
+    return (int16_t)(((int32_t)a * b) >> 8);
+}
+
+static int16_t fixed_inverse(int16_t value) {
+    return (int16_t)(65536 / value);
+}
+
+void mzm_process_complex_oam(MzmScreen *s, int slot, int16_t x_position, int16_t y_position,
+                             uint16_t rotation, int16_t scaling, uint16_t matrix) {
+    uint16_t *a = complex_oam_attributes(s, slot);
+    int32_t x_origin = (int16_t)((uint16_t)x_position + COMPLEX_OAM_BLOCK);
+    int32_t y_origin = (int16_t)((uint16_t)y_position + COMPLEX_OAM_BLOCK);
+    int shape = a[0] >> 14, size = a[1] >> 14;
+    uint32_t radius = mzm_sym("sSpriteXHalfRadius") + (uint32_t)(shape * 4 + size);
+    uint8_t x_half = mzm_rom_u8(radius);
+    uint8_t y_half = mzm_rom_u8(mzm_sym("sSpriteYHalfRadius") +
+                                (uint32_t)(shape * 4 + size));
+    int32_t x = (int16_t)(((a[1] & 0x1FF) + x_origin) & 511);
+    int32_t y = (int16_t)(((a[0] & 0xFF) + y_origin) & 255);
+    int32_t local_x = (int16_t)(x - x_origin + x_half);
+    int32_t local_y = (int16_t)(y - y_origin + y_half);
+    x += (int16_t)(((local_x * scaling) >> 8) - local_x);
+    y += (int16_t)(((local_y * scaling) >> 8) - local_y);
+    int32_t u = (int16_t)(x - x_origin + x_half);
+    int32_t v = (int16_t)(y - y_origin + y_half);
+    int32_t cosine = affine_sine((uint16_t)(rotation + COMPLEX_OAM_PI_2));
+    int32_t sine = affine_sine(rotation);
+    x = (int16_t)((u * cosine - v * sine) >> 8);
+    y = (int16_t)((u * sine + v * cosine) >> 8);
+    a[0] = (uint16_t)((a[0] & ~(3 << 8)) | 3 << 8);
+    x -= x_half * 2;
+    y -= y_half * 2;
+    a[1] = (uint16_t)((a[1] & 0xFE00) | ((x + x_origin - COMPLEX_OAM_BLOCK) & 0x1FF));
+    a[0] = (uint16_t)((a[0] & 0xFF00) | ((y + y_origin - COMPLEX_OAM_BLOCK) & 0xFF));
+    bool x_flip = (a[1] & 1 << 12) != 0;
+    bool y_flip = (a[1] & 1 << 13) != 0;
+    uint16_t number = (uint16_t)(matrix +
+        (x_flip ? (y_flip ? 3 : 1) : (y_flip ? 2 : 0)));
+    a[1] = (uint16_t)((a[1] & ~(0x1F << 9)) | (number & 0x1F) << 9);
+}
+
+void mzm_calculate_oam_part4(MzmScreen *s, uint16_t rotation, int16_t scaling, int slot) {
+    int16_t cosine = affine_sine((uint16_t)(rotation + COMPLEX_OAM_PI_2));
+    int16_t sine = affine_sine(rotation);
+    int16_t inverse = fixed_inverse(scaling);
+    int16_t negative_inverse = fixed_inverse((int16_t)-scaling);
+    int16_t dy1 = fixed_multiply(cosine, inverse);
+    int16_t dmy1 = fixed_multiply(sine, inverse);
+    int16_t dx1 = fixed_multiply((int16_t)-sine, inverse);
+    int16_t dmx1 = fixed_multiply(cosine, negative_inverse);
+    int16_t dy2 = fixed_multiply(sine, negative_inverse);
+    int16_t dmy2 = fixed_multiply((int16_t)-sine, negative_inverse);
+    const int16_t parameters[16] = {
+        dy1, dmy1, dx1, dy1, dmx1, dy2, dx1, dy1,
+        dy1, dmy1, dmy2, dmx1, dmx1, dy2, dmy2, dmx1,
+    };
+    for (int i = 0; i < 16; ++i)
+        complex_oam_attributes(s, slot + i)[3] = (uint16_t)parameters[i];
+}

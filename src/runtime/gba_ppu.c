@@ -292,7 +292,8 @@ void gba_ppu_render_line(const GbaPpu *p, int y, int width, uint16_t *out) {
                 if (in_range(x, h >> 8, h & 0xFF)) enabled = (uint8_t)(winin >> 8 & 0x3F);
             }
             if (in_win[0]) {
-                uint16_t h = reg(p, GBA_REG_WIN0H);
+                uint16_t h = p->win0h_per_line && y < GBA_SCREEN_H ? p->win0h_lines[y]
+                                                                   : reg(p, GBA_REG_WIN0H);
                 if (in_range(x, h >> 8, h & 0xFF)) enabled = (uint8_t)(winin & 0x3F);
             }
         }

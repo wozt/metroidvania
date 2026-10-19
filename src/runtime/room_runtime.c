@@ -23,6 +23,7 @@
 #include "mzm_rom.h"
 #include "mzm_room_gfx.h"
 #include "mzm_tourian_escape.h"
+#include "mzm_chozodia_escape.h"
 #include "mzm_samus.h"
 #include "mzm_screen_shake.h"
 #include "mzm_screen.h"
@@ -3966,6 +3967,7 @@ int main(int argc, char **argv) {
     bool title_mode=argc==1, intro_mode=argc==1;
     int start_cutscene=0;     /* --cutscene N: a cutscene before the game */
     bool start_tourian_escape=false; /* --tourian-escape: post-Tourian diagnostic */
+    bool start_chozodia_escape=false; /* --chozodia-escape: the ending sequence */
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
@@ -4021,6 +4023,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--intro")) title_mode=intro_mode=true;
         else if (!strcmp(argv[i],"--cutscene") && i+1<argc) start_cutscene=atoi(argv[++i]);
         else if (!strcmp(argv[i],"--tourian-escape")) start_tourian_escape=true;
+        else if (!strcmp(argv[i],"--chozodia-escape")) start_chozodia_escape=true;
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
@@ -4078,7 +4081,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -4088,6 +4091,10 @@ int main(int argc, char **argv) {
     }
     if(start_tourian_escape && (check || title_mode || intro_mode || start_cutscene)) {
         fprintf(stderr,"--tourian-escape cannot be combined with another start mode.\n");
+        return 2;
+    }
+    if(start_chozodia_escape && (check || title_mode || intro_mode || start_cutscene || start_tourian_escape)) {
+        fprintf(stderr,"--chozodia-escape cannot be combined with another start mode.\n");
         return 2;
     }
     if (library_check) {
@@ -4198,7 +4205,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -4300,6 +4307,10 @@ int main(int argc, char **argv) {
     bool tourian_escape_mode=false;
     bool tourian_escape_pending=false;
     static MzmTourianEscape tourian_escape;
+    /* GM_CHOZODIA_ESCAPE, entered after the escape ship's
+     * EFFECT_CUTSCENE_ESCAPING_CHOZODIA fade (`chozodia_escape_fade`). */
+    bool chozodia_escape_mode=false, chozodia_escape_fade=false;
+    static MzmChozodiaEscape chozodia_escape;
     /* A door's fade (ConnectionCheckEnterDoor): Samus waits while the room
      * fades out, then the door's room is loaded and fades in. */
     static MzmDoorFade door_fade;
@@ -4454,6 +4465,11 @@ int main(int argc, char **argv) {
         fprintf(stderr,"No free avatar spawn found\n");
         goto cleanup;
     }
+    if(start_chozodia_escape) {
+        chozodia_escape_mode=screen_ready && mzm_chozodia_escape_enter(&chozodia_escape,&screen);
+        if(chozodia_escape_mode) printf("Chozodia escape started.\n");
+        else fprintf(stderr,"The Chozodia escape is unavailable.\n");
+    }
     if(start_tourian_escape) {
         tourian_escape_mode=screen_ready &&
             mzm_tourian_escape_enter(&tourian_escape,&screen,
@@ -4487,7 +4503,7 @@ int main(int argc, char **argv) {
            "(Select) toggles super missiles.\n");
     printf("Diagnostics: F1 debug menu (keyboard only).\n");
     /* The first room's music starts at once (after the title screen). */
-    if (!title_mode && !intro_mode && !cutscene_mode && !tourian_escape_mode &&
+    if (!title_mode && !intro_mode && !cutscene_mode && !tourian_escape_mode && !chozodia_escape_mode &&
         runtime_room_music(room)) {
         runtime_audio_lock();
         mzm_music_check_play_transition_track();
@@ -4831,6 +4847,22 @@ int main(int argc, char **argv) {
                 accumulator-=fixed_step;
                 continue;
             }
+            if(chozodia_escape_mode) {
+                /* GM_CHOZODIA_ESCAPE owns the non-gameplay PPU; GM_CREDITS
+                 * that follows is not ported: the intro instead. */
+                mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
+                                                              capture_path?NULL:&gamepad));
+                if(mzm_chozodia_escape_update(&chozodia_escape,&screen)) {
+                    chozodia_escape_mode=false;
+                    screen.ppu->win0h_per_line=false;
+                    fprintf(stderr,"The Chozodia escape ended; the credits are not ported.\n");
+                    intro_mode=true;
+                    mzm_intro_enter(&intro);
+                    previous_held=held;
+                }
+                accumulator-=fixed_step;
+                continue;
+            }
             if(tourian_escape_mode) {
                 /* GM_TOURIAN_ESCAPE owns the non-gameplay PPU. */
                 mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
@@ -5026,6 +5058,13 @@ int main(int argc, char **argv) {
                 blue_ship_fade=true;
                 mzm_door_fade_start_cancel(&door_fade);
             }
+            if(sprites.globals.cutscene_effect==4 && screen_ready && door_fade.phase==MZM_DOOR_FADE_NONE) {
+                /* COLOR_FADING_CHOZODIA_ESCAPE (the CANCEL fade standing in),
+                 * then GM_CHOZODIA_ESCAPE; the ending save is not ported. */
+                sprites.globals.cutscene_effect=0;
+                chozodia_escape_fade=true;
+                mzm_door_fade_start_cancel(&door_fade);
+            }
             if(sprites.globals.cutscene_effect==4 || sprites.globals.cutscene_effect==5) {
                 fprintf(stderr,"The %s cutscene is not ported.\n",
                         sprites.globals.cutscene_effect==5?"Samus in the escape ship":"Chozodia escape");
@@ -5175,7 +5214,7 @@ int main(int argc, char **argv) {
             if(!door_frozen && !dying)runtime_igt_update();
             /* StartEffectForCutscene's SUB_GAME_MODE_LOADING_ROOM: only the
              * fade runs before the blue ship cutscene. */
-            if(!dying && !blue_ship_fade)
+            if(!dying && !blue_ship_fade && !chozodia_escape_fade)
                 runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, &previous_x,
                                        &equipment, &collision, &weapons, &input, movement_prevented,
                                        &prevent_movement);
@@ -5400,6 +5439,12 @@ int main(int argc, char **argv) {
             /* ConnectionCheckUnlockDoors (RoomUpdate) */
             if(door_fade.phase==MZM_DOOR_FADE_NONE)
                 mzm_hatches_check_unlock(&runtime_hatch_locks,&room->hatch_env);
+            if(chozodia_escape_fade && door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
+                /* ColorFadingProcess_ChozodiaEscape ended: GM_CHOZODIA_ESCAPE. */
+                chozodia_escape_fade=false;
+                chozodia_escape_mode=mzm_chozodia_escape_enter(&chozodia_escape,&screen);
+                if(!chozodia_escape_mode)mzm_door_fade_loaded(&door_fade,0,0);
+            }
             if(blue_ship_fade && door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
                 /* ColorFadingProcess_BeforeBlueShip ended: the cutscene. */
                 blue_ship_fade=false;
@@ -5443,7 +5488,8 @@ int main(int argc, char **argv) {
                 runtime_door_fade_offsets(door,last_cx,last_cy,right,&fade_x,&fade_y);
                 mzm_door_fade_start(&door_fade,!strcmp(door->kind,"hatch"),fade_x,fade_y);
                 door_lock=true;
-            } else if(!pause_fade_flag && !blue_ship_fade && !cutscene_mode &&
+            } else if(!pause_fade_flag && !blue_ship_fade && !chozodia_escape_fade && !cutscene_mode &&
+                      !chozodia_escape_mode &&
                       door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
                 /* ColorFadingProcess ended: RoomLoad. */
                 door_offset=pending_door_offset;
@@ -5548,7 +5594,7 @@ int main(int argc, char **argv) {
         SDL_FRect viewport={(ow-320.f*scale)*0.5f,(oh-224.f*scale)*0.5f,
                             320.f*scale,224.f*scale};
         if(intro_mode || title_mode || pause_mode || file_select_mode || game_over_mode ||
-           cutscene_mode || tourian_escape_mode) {
+           cutscene_mode || tourian_escape_mode || chozodia_escape_mode) {
             /* The 240x160 GBA screen, fitted to the view. */
             SDL_SetRenderDrawColor(renderer,0,0,0,255);
             SDL_RenderClear(renderer);
@@ -6054,6 +6100,9 @@ frame_overlays:
                    capture_step,current_room,capture_path,mzm_pose_name(samus.pose),(int)(samus.x>>2),
                    (int)(samus.y>>2),equipment.energy,live);
             if(samus.on_enemy)printf("  Samus stands on a sprite\n");
+            if(chozodia_escape_mode)
+                printf("  screen: Chozodia escape (mode %u stage %u timer %u)\n",chozodia_escape.sub_mode,
+                       chozodia_escape.stage,chozodia_escape.timer);
             if(intro_mode || title_mode || file_select_mode || pause_mode || game_over_mode ||
                cutscene_mode || tourian_escape_mode)
                 printf("  screen: cutscene %d (stage %d sub stage %d), intro %d (stage %d timer %d), title %d, file select %d (mode %d, sub menu %d "

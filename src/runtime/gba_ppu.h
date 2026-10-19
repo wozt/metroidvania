@@ -42,6 +42,10 @@ typedef struct {
     uint16_t palette[512];          /* BG colors 0-255, OBJ colors 256-511 */
     uint16_t oam[512];              /* 128 entries of four halfwords */
     uint16_t io[0x30];              /* display registers 0x00-0x5F */
+    /* WIN0H rewritten by an H-blank handler: with `win0h_per_line`, line y
+     * uses win0h_lines[y] instead of the register. */
+    bool win0h_per_line;
+    uint16_t win0h_lines[GBA_SCREEN_H];
 } GbaPpu;
 
 void gba_ppu_reset(GbaPpu *ppu);

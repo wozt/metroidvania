@@ -215,8 +215,11 @@ three save files (`src/runtime/mzm_file_select.c`); a new game lands the
 gunship in Crateria (`src/runtime/mzm_gunship.c`) and plays the "Planet
 Zebes..." story text cutscene (`src/runtime/mzm_cutscene.c`) before Brinstar.
 The same module plays the post-Tourian monologues and, when Samus boards the
-Chozodia escape ship, the in-gameplay "Samus in the blue ship" cutscene. The
-demos and the other cutscenes are not ported yet.
+Chozodia escape ship, the in-gameplay "Samus in the blue ship" cutscene. Once
+the ship has flown off, the Chozodia escape sequence
+(`src/runtime/mzm_chozodia_escape.c`, or `--chozodia-escape` directly) ends
+with "MISSION ACCOMPLISHED!"; the credits are not ported, so the runtime
+returns to the intro. The demos and the other cutscenes are not ported yet.
 
 Run the experimental SDL3 Zero Mission room/animation integration with:
 

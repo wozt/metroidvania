@@ -3838,6 +3838,47 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0381 - Chozodia escape sequence
+
+- Ported `chozodia_escape.c` (GM_CHOZODIA_ESCAPE) in
+  `mzm_chozodia_escape.c`, on the non-gameplay screen from the ROM bank.
+  After a fade in, the five stages play with their native lengths:
+  - the mother ship's door opens and the blue ship grows out of it as a
+    double-sized affine object, dives, then climbs away;
+  - the mother ship reddens and shakes ever faster, then a white explosion
+    grows over it as an ellipse;
+  - the crater, the decaying mother ship and its explosions, with the flash
+    fading by alpha and then to black;
+  - the ship over Zebes, far away and then past the camera, with the escape
+    music;
+  - Samus in her ship turning grey, the English "MISSION ACCOMPLISHED!"
+    letters appearing one by one, and the fade out.
+- Supporting changes:
+  - the PPU takes a per-line WIN0H table, standing in for the native
+    H-blank handler that draws the explosion ellipse;
+  - `ProcessComplexOam` and `CalculateOamPart4` moved from the Tourian
+    escape into `mzm_screen.c` so both escapes share them.
+- In game:
+  - when the escape ship has flown off, its request freezes the room, fades
+    it out and starts the sequence; `--chozodia-escape` starts it directly;
+  - at the end the runtime returns to the intro, because the credits are
+    not ported.
+- Not ported:
+  - the ending flags, the gallery, difficulty and time attack unlocks and
+    their save;
+  - the soft-reset lock;
+  - the non-English letters;
+  - the credits.
+- Approximation: the H-blank's one-line delay is mirrored, but line 0 takes
+  its own value.
+- A bank-backed test checks the fades, the stage lengths, the sounds, the
+  explosion window, the grey palette and the letters.
+- Captures of every stage, and of the sequence reached from the escape ship
+  in `chozodia_092`, are in the ignored `captures/chozodia/chozodia-escape.png`
+  and `chozodia-escape-from-ship.png`.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0380 - Samus in the blue ship cutscene
 
 - Ported `cutscenes/samus_in_blue_ship.c` in `mzm_cutscene.c`, with the

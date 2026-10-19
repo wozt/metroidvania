@@ -334,7 +334,7 @@ int main(void) {
     /* SpriteInitPrimary's one-frame ignore timer runs down in the collision
      * routine, not in the sprite's update. */
     assert(z.status & MZM_SPRITE_STATUS_ONSCREEN && z.ignore_samus_timer == 1);
-    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+    MzmSpriteSamus away = {NULL, 0, 0, 0, -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
     mzm_sprites_samus_collision(&z, 1, &away, &tables);
     assert(z.ignore_samus_timer == 0 && hurts == 0);
 
@@ -342,7 +342,7 @@ int main(void) {
      * the stats damage, pushed away (the sprite is on her right, "on left"
      * in the native flag naming), then 15 frames of ignored contact. */
     MzmSpriteSamus samus = {NULL, (uint16_t)(z.x - 40), 640, (uint16_t)(z.x - 40),
-                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+                            -96, 0, -24, 24, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
     mzm_sprites_samus_collision(&z, 1, &samus, &tables);
     assert(hurts == 1 && last_damage == 8 && last_on_left && samus.invincible);
     /* Set to 15, then run down once at the end of the routine. */
@@ -495,7 +495,7 @@ int main(void) {
     assert(weapons.list[0].active);
     weapons.list[0].active = false;
     samus = (MzmSpriteSamus){NULL, z.x, (uint16_t)(z.y + 40), z.x, -96, 0, -24, 24,
-                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+                             false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
     for (int i = 0; i < 19; ++i) {
         mzm_sprites_samus_collision(&z, 1, &samus, &tables);
         step(&z, 0);
@@ -708,7 +708,7 @@ int main(void) {
     /* It hurts Samus with the secondary damage, but not the screw attack. */
     hurts = 0;
     MzmSpriteSamus near = {NULL, part->x, (uint16_t)(part->y + 20), part->x, -96, 0, -24, 24,
-                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+                           true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
     part->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(group, 8, &near, &tables);
     assert(hurts == 1 && last_damage == 2);
@@ -1146,7 +1146,7 @@ int main(void) {
     const uint16_t zleft = (uint16_t)(z.x + z.hitbox_left);
     MzmSpriteSamus solid = {NULL, z.x, (uint16_t)(ztop + 8), z.x, -124, 0, -28, 28,
                             false, false, false, hurt, false, false, 0, NULL,
-                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+                            &world, -10, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
     hurts = 0;
     mzm_sprites_samus_collision(&z, 1, &solid, &tables);
     assert(hurts == 0 && solid.y == ztop + 1 && z.status & MZM_SPRITE_STATUS_SAMUS_ON_TOP &&
@@ -1211,7 +1211,7 @@ int main(void) {
     memset(&fx, 0, sizeof fx);
     tables.weakness[MZM_PSPRITE_ZOOMER_YELLOW] = MZM_WEAKNESS_SPEEDBOOSTER_SCREW_ATTACK;
     MzmSpriteSamus screw = {NULL, z.x, (uint16_t)(z.y + 20), z.x, -96, 0, -24, 24,
-                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+                            true, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
     z.ignore_samus_timer = 0;
     mzm_sprites_samus_collision(&z, 1, &screw, &tables);
     assert(z.pose == 0x65 && z.damaged);
@@ -1353,7 +1353,7 @@ int main(void) {
      * harmless, and gone when the table ends. */
     hurts = 0;
     MzmSpriteSamus touch = {NULL, eye_l->x, (uint16_t)(eye_l->y + 20), eye_l->x, -96, 0, -24, 24,
-                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+                            false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
     eye_l->ignore_samus_timer = 0;
     mzm_sprites_samus_collision(eye_l, 1, &touch, &tables);
     assert(hurts == 1 && last_damage == 3 && eye_l->pose == 66);
@@ -2653,7 +2653,7 @@ int main(void) {
          * with the laser's damage, then explodes. */
         hurts = 0;
         MzmSpriteSamus laser_hit = {NULL, ps[1].x, (uint16_t)(ps[1].y + 20), ps[1].x,
-                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+                                    -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
         /* The spawn's ignore timer runs down on the first collision pass. */
         MzmSpriteSamus far_away = laser_hit;
         far_away.x = 60000;
@@ -2892,7 +2892,7 @@ int main(void) {
         /* Samus in its light rings the alarm, then it holds it. */
         hurts = 0;
         MzmSpriteSamus in_light = {NULL, ps[0].x, (uint16_t)(ps[0].y + 20), ps[0].x,
-                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false};
+                                   -40, 0, -20, 20, false, false, false, hurt, false, false, 0, NULL, NULL, 0, false, false, 1, true, false, false, MZM_POSE_STANDING, MZM_POSE_NONE, false, NULL, NULL, false, NULL, NULL, 0, false, 0};
         ps[0].status |= MZM_SPRITE_STATUS_ONSCREEN;
         MzmSpriteSamus out_of_light = in_light;
         out_of_light.x = 60000;
@@ -6405,6 +6405,138 @@ int main(void) {
         mzm_sprite_update(&remains, 0, &cf);
         assert(mzm_sfx_requested(MZM_SFX_PLAY,
                                  MZM_SOUND_IMAGO_COCOON_IN_GROUND_IDLE));
+    }
+    /* Mecha Ridley's palette DMAs and the 100% rule: the entrance fade
+     * rows, the head's green glow cycle, the destroyed graphics and colors,
+     * the eye's drop and glow colors; at 100% completion the core has three
+     * times its health and the contact doubles its damage. */
+    {
+        MzmSpriteKind mecha_kind = {0};
+        for (int a = 0; a < MZM_MECHA_RIDLEY_ANIMS; ++a) {
+            mecha_kind.counts[a] = 8;
+            for (int f = 0; f < 8; ++f) mecha_kind.timers[a][f] = 1;
+        }
+        tables.health[MZM_PSPRITE_MECHA_RIDLEY] = 360;
+        tables.secondary_health[MZM_SSPRITE_MECHA_RIDLEY_PART] = 200;
+        MzmSprite room[16] = {0};
+        MzmSpriteGlobals globals = {0};
+        MzmSpriteFrame mf = frame;
+        mf.sprites = room;
+        mf.sprite_count = 16;
+        mf.globals = &globals;
+        mf.hooks = &test_hooks;
+        mf.kinds[MZM_FAMILY_MECHA_RIDLEY] = &mecha_kind;
+        /* Normal difficulty, every tank and ability: 100%. */
+        MzmEquipment full = {.max_energy = 1299, .max_missiles = 250, .max_super_missiles = 30,
+                             .max_power_bombs = 18, .items = 0x3FFF};
+        assert(mzm_final_completion_percentage(&full, 1) == 100);
+        MzmEquipment hard_full = {.max_energy = 699, .max_missiles = 100, .max_super_missiles = 15,
+                                  .max_power_bombs = 9, .unknown_items = 0x3FFF};
+        assert(mzm_final_completion_percentage(&hard_full, 2) == 100 &&
+               mzm_final_completion_percentage(&hard_full, 1) < 100);
+        mf.equipment = &full;
+        mf.difficulty = 1;
+        memset(test_events, 0, sizeof test_events);
+        globals.mecha_palette.fading_row = 5;
+        globals.mecha_palette.destroyed_gfx = 3;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_MECHA_RIDLEY, 0, 15, 11, 0, 0);
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.boss_work11 == 100 && room[0].health == 1080 && globals.boss_work9 == 1080 &&
+               globals.mecha_palette.fading_row == 0 && globals.mecha_palette.destroyed_gfx == 0 &&
+               globals.bg23_eva == 10);
+        MzmSprite *cover = NULL, *head = NULL;
+        for (int i = 1; i < 16; ++i) {
+            if (room[i].sprite_id != MZM_SSPRITE_MECHA_RIDLEY_PART || !room[i].status) continue;
+            mzm_sprite_update(&room[i], (uint8_t)i, &mf);
+            if (room[i].pose == 0x2A) cover = &room[i];
+            if (room[i].pose == 0x2C) head = &room[i];
+        }
+        assert(cover && cover->health == 600 && globals.boss_work10 == 600 && head);
+        /* MechaRidleyStartWalking, then MechaRidleyStartBattle's rows. */
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(room[0].pose == 0x2 && globals.mecha_palette.fading_row == 1);
+        room[0].pose = 0x4;
+        room[0].work0 = 0;
+        room[0].work1 = 1;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.fading_row == 2 && room[0].work1 == 2 && globals.bg23_eva == 11 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_2AD));
+        /* MechaRidleyPartGreenGlow: row 0 for 16 frames, then rows 1, 2, 3,
+         * 2, 1 for 10 frames each, in the head's palette row. */
+        uint8_t head_slot = (uint8_t)(head - room);
+        mzm_sprite_update(head, head_slot, &mf);
+        assert(globals.mecha_palette.glow_row[0] == 1 && head->work0 == 16);
+        for (int i = 0; i < 17; ++i) mzm_sprite_update(head, head_slot, &mf);
+        assert(globals.mecha_palette.glow_row[0] == 2);
+        for (int i = 0; i < 11 * 4; ++i) mzm_sprite_update(head, head_slot, &mf);
+        assert(globals.mecha_palette.glow_row[0] == 2 && head->work1 == 6);
+        for (int i = 0; i < 11; ++i) mzm_sprite_update(head, head_slot, &mf);
+        assert(globals.mecha_palette.glow_row[0] == 1 && head->work1 == 1);
+        head->absolute_palette_row = head->palette_row = 3;
+        head->work0 = 0;
+        mzm_sprite_update(head, head_slot, &mf);
+        assert(globals.mecha_palette.glow_row[3] == 2);
+        /* MechaRidleyGlowFading: seven graphics copies, then the colors. */
+        room[0].pose = 0x64;
+        room[0].work0 = 0;
+        for (int i = 0; i < 7; ++i) mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.destroyed_gfx == 7 && globals.mecha_palette.destroyed_colors == 0);
+        for (int i = 0; i < 2; ++i) mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.destroyed_colors == 1);
+        for (int i = 0; i < 8; ++i) mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.destroyed_colors == 2);
+        /* MechaRidleySpawnDrops: the eye's colors dim at 1, 6 and 12. */
+        room[0].pose = 0x68;
+        room[0].y_spawn = 0;
+        mzm_sprite_update(&room[0], 0, &mf);
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.eye_colors == MZM_MECHA_EYE_AAA);
+        for (int i = 0; i < 5; ++i) mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.eye_colors == MZM_MECHA_EYE_GLOW_0);
+        for (int i = 0; i < 6; ++i) mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.eye_colors == MZM_MECHA_EYE_GLOW_1);
+        /* The first eye glow blinks green, the second red. */
+        room[0].pose = 0x69;
+        room[0].work0 = 30;
+        room[0].work1 = 0;
+        room[0].work2 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.eye_colors == MZM_MECHA_EYE_GLOW_3 && room[0].work1 == 1);
+        for (int i = 0; i < 4; ++i) mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.eye_colors == MZM_MECHA_EYE_GLOW_2);
+        room[0].pose = 0x6A;
+        room[0].work0 = 200;
+        room[0].work1 = 0;
+        room[0].work2 = 1;
+        mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.eye_colors == MZM_MECHA_EYE_B4A);
+        for (int i = 0; i < 4; ++i) mzm_sprite_update(&room[0], 0, &mf);
+        assert(globals.mecha_palette.eye_colors == MZM_MECHA_EYE_GLOW_3);
+        /* The contact: double damage at 100%. */
+        tables.damage[MZM_PSPRITE_MECHA_RIDLEY] = 40;
+        MzmSprite body = {0};
+        mzm_sprite_init_primary(&body, MZM_PSPRITE_MECHA_RIDLEY, 0, 10, 10, 0, 0);
+        body.status |= MZM_SPRITE_STATUS_EXISTS | MZM_SPRITE_STATUS_ONSCREEN;
+        body.pose = 0x9;
+        body.samus_collision = 29;                     /* SSC_MECHA_RIDLEY */
+        body.ignore_samus_timer = 0;
+        body.hitbox_top = body.hitbox_left = -64;
+        body.hitbox_bottom = body.hitbox_right = 64;
+        MzmSpriteSamus touch = {.x = body.x, .y = (uint16_t)(body.y + 20), .previous_x = body.x,
+                                .hitbox_top = -96, .hitbox_left = -24, .hitbox_right = 24,
+                                .hurt = hurt, .has_energy = true, .pose = MZM_POSE_STANDING,
+                                .set_pose = MZM_POSE_NONE, .facing = 1};
+        hurts = 0;
+        mzm_sprites_samus_collision(&body, 1, &touch, &tables);
+        assert(hurts == 1 && last_damage == 40);
+        touch.completion_percentage = 100;
+        touch.invincible = false;
+        body.ignore_samus_timer = 0;
+        mzm_sprites_samus_collision(&body, 1, &touch, &tables);
+        assert(hurts == 2 && last_damage == 80);
+        memset(test_events, 0, sizeof test_events);
+        mzm_sfx_clear();
     }
     /* Mecha Ridley's room actor creates and synchronizes all ten secondary
      * parts, performs the delayed crawl and enters its battle idle. */

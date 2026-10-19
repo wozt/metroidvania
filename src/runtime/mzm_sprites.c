@@ -2400,6 +2400,24 @@ bool ai_refill(int *current, int max, int divisor, int cap) {
     return true;
 }
 
+uint8_t mzm_final_completion_percentage(const MzmEquipment *e, uint8_t difficulty) {
+    /* sTankIncreaseAmount: energy, missile, super missile, power bomb. */
+    static const uint8_t tanks[3][4] = {{100, 5, 2, 2}, {100, 5, 2, 2}, {50, 2, 1, 1}};
+    if (!e || difficulty > 2) return 0;
+    const uint8_t *t = tanks[difficulty];
+    /* ChozodiaEscapeGetItemCountAndEndingNumber's fields, truncated to
+     * their bit widths as SpriteUtilGetFinalCompletionPercentage reads them. */
+    uint32_t energy = (uint32_t)(e->max_energy - 99) / t[0];
+    uint32_t missiles = (uint32_t)e->max_missiles / t[1];
+    uint32_t supers = (uint32_t)e->max_super_missiles / t[2];
+    uint32_t power_bombs = (uint32_t)e->max_power_bombs / t[3];
+    uint32_t owned = (e->items | e->unknown_items) & 0x3FFFu, abilities = 0;
+    for (; owned; owned &= owned - 1) abilities++;
+    uint32_t pen = (energy << 24) + (missiles << 16) + (supers << 12) + (power_bombs << 8) + (abilities << 4);
+    return (uint8_t)((pen >> 24 & 0xFF) + (pen >> 16 & 0xFF) + (pen >> 12 & 0xF) + (pen >> 8 & 0xF) +
+                     (pen >> 4 & 0xF));
+}
+
 bool ai_check_event(const Ctx *c, uint8_t event) {
     return c->f->hooks && c->f->hooks->check_event &&
            c->f->hooks->check_event(c->f->hooks->context, event);
@@ -6121,11 +6139,11 @@ void mzm_sprites_samus_collision(MzmSprite *sprites, int count, MzmSpriteSamus *
             break;
         }
         case SSC_MECHA_RIDLEY:
-            /* The native boss doubles contact damage at 100% completion.
-             * Completion percentage is not exposed to this shared contact
-             * pass yet, so the ordinary route uses its sprite stat damage. */
+            /* Double damage at 100% completion. */
             if (!samus->invincible && !contact_kills(s, samus, tables) && samus->hurt) {
-                samus->hurt(samus->context, damage_of(s, tables), on_left);
+                uint16_t damage = damage_of(s, tables);
+                if (samus->completion_percentage == 100) damage = (uint16_t)(damage * 2);
+                samus->hurt(samus->context, damage, on_left);
                 samus->invincible = true;
             }
             s->ignore_samus_timer = IGNORE_SAMUS_AFTER_HIT;

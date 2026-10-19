@@ -3838,6 +3838,45 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0389 - Mecha Ridley palettes and 100% rule
+
+- Mecha Ridley is now exported as 8-bit OBJ palette indices. The exported
+  frames cover the base look, the damage tints, the frozen and stun rows,
+  the destroyed graphics alone and tinted (`/d`, `/d/rowN`) and the seven
+  weapon stages, together with their OAM bounds. The room's OBJ palette is
+  written as an `objpal` line, with the six palette DMA tables as AI
+  tables.
+- The renderer rebuilds Mecha Ridley's live palette each frame from the
+  DMAs the AI records, and caches the colorized textures by palette
+  version. Those DMAs are:
+  - the entrance fade through the seven `sMechaRidleyFadingPal` rows, with
+    `SOUND_2AD`;
+  - the head's `MechaRidleyPartGreenGlow` cycle, in its current palette
+    row;
+  - the death's destroyed graphics and colors;
+  - the eye dimming during the drops, then its green and red blinking.
+- `TransparencySpriteUpdateBldalpha`'s entrance blend dims BG2 and BG3 from
+  10/16 back to full brightness as the battle starts.
+- `SpriteUtilGetFinalCompletionPercentage` is ported: at 100% the core and
+  cover get triple health, and the contact damage is doubled.
+- The missiles and fireballs start at Q8.8 scale 1. They are single-OBJ
+  frames with exported bounds, so they rotate through the native affine
+  window.
+- The sprite-table loader no longer limits itself to 64 AI tables: it now
+  tracks them with a flag array instead of a 64-bit mask.
+- A ROM-free regression drives each palette DMA from its native pose and
+  timing, plus the 100% health and contact rule. Python tests cover the
+  index shifts and the destroyed-graphics copies. A capture in
+  `chozodia_072` shows the dark, faded body crawling in and its full colors
+  once the battle starts (ignored `captures/chozodia/mecha-ridley-fade.png`).
+- `mzm.enemies.mecha_ridley` moves from `partial` to `functional`; the
+  parity inventory now contains 45 partial and 57 functional entries.
+  Remaining divergences:
+  - the seven one-frame destroyed-graphics copies show their final result;
+  - the Chozodia alarm toggle waits for the room animated palettes.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 444/444 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0388 - native per-OBJ rotation for Skree explosions
 
 - Extended the ROM-local Zero Mission sprite extraction with separate OBJ

@@ -5,6 +5,8 @@
  * the arm, neck, eye and missile launcher parts, and the laser, missile
  * and fireball actors, the cover/core damage handoff and the death up to
  * the Chozodia escape. */
+#include <string.h>
+
 #include "mzm_sprite_ai.h"
 #include "mzm_screen_shake.h"
 #include "mzm_message_banner.h"
@@ -163,6 +165,9 @@ static void body_init(Ctx *c) {
         s->status = 0;
         return;
     }
+    /* The room load's sMechaRidleyPal; BG2 and BG3 blended at 10/16. */
+    memset(&globals->mecha_palette, 0, sizeof globals->mecha_palette);
+    globals->bg23_eva = 10;
 
     s->x = (uint16_t)(s->x + BLOCK_SIZE);
     globals->boss_work1 = s->y;
@@ -181,7 +186,10 @@ static void body_init(Ctx *c) {
     s->draw_order = 10;
     s->frozen_row_offset = 5;
     s->samus_collision = SSC_NONE;
+    /* Triple health at 100% completion (gBossWork.work11). */
+    globals->boss_work11 = mzm_final_completion_percentage(c->f->equipment, c->f->difficulty);
     s->health = c->tables->health[s->sprite_id];
+    if (globals->boss_work11 == 100) s->health = (uint16_t)(s->health * 3);
     globals->boss_work9 = s->health;
     s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES;
     s->y_spawn = 300;
@@ -229,15 +237,21 @@ static void crawl(Ctx *c) {
     state->x = movement >= remaining ? target : (uint16_t)(state->x - movement);
 }
 
-/* MechaRidleyStartBattle: palette DMA/transparency are represented by the
- * native timing; the host renderer already draws baked OBJ palettes. */
+/* MechaRidleyStartBattle: the body fading in through the rows of
+ * sMechaRidleyFadingPal while BG2 and BG3 brighten back to 16/16, then the
+ * battle music. */
 static void start_battle(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->work1 && --s->work1) return;
     s->work1 = 2;
-    if (++s->work0 >= 7) {
+    uint8_t row = ++s->work0;
+    if (row >= 7) {
         s->pose = MECHA_IDLE;
         mzm_sfx_music_play(MZM_MUSIC_MECHA_RIDLEY_BATTLE, 0);
+    } else {
+        if (row == 1) mzm_sfx_play(MZM_SOUND_2AD);
+        c->f->globals->mecha_palette.fading_row = (uint8_t)(row + 1);
+        c->f->globals->bg23_eva = (uint8_t)(row + 10);
     }
 }
 
@@ -550,11 +564,16 @@ static void dying(Ctx *c) {
     mzm_sfx_play(MZM_SOUND_MECA_RIDLEY_POWERING_OFF);
 }
 
-/* MechaRidleyGlowFading: the destroyed graphics and palette copies are not
- * ported; only the 200-frame timing. */
+/* MechaRidleyGlowFading: the destroyed graphics copied over seven frames,
+ * the destroyed colors, then the drops after 200 frames. */
 static void glow_fading(Ctx *c) {
     MzmSprite *s = c->s;
-    if (++s->work0 > 200) {
+    MzmMechaPalette *p = &c->f->globals->mecha_palette;
+    uint8_t step = s->work0++;
+    if (step <= 6) p->destroyed_gfx = (uint8_t)(step + 1);
+    else if (step == 8) p->destroyed_colors = 1;
+    else if (step == 16) p->destroyed_colors = 2;
+    if (s->work0 > 200) {
         s->y_spawn = 0;
         s->work0 = 0;
         s->pose = MECHA_SPAWN_DROPS;
@@ -573,6 +592,10 @@ static void spawn_drops(Ctx *c) {
     uint8_t r2 = (uint8_t)((s->work0 & 15) * EIGHTH_BLOCK_SIZE);
     s->work0++;
     uint16_t stage = s->y_spawn++;
+    /* The eye's colors (OBJ row 9) dimming. */
+    if (stage == 1) c->f->globals->mecha_palette.eye_colors = MZM_MECHA_EYE_AAA;
+    else if (stage == 6) c->f->globals->mecha_palette.eye_colors = MZM_MECHA_EYE_GLOW_0;
+    else if (stage == 12) c->f->globals->mecha_palette.eye_colors = MZM_MECHA_EYE_GLOW_1;
     if (stage >= 30 && stage <= 39) {
         uint16_t dy, dx;
         if (stage == 30) { dy = (uint16_t)(y + r1); dx = (uint16_t)(x - r2); }
@@ -594,14 +617,22 @@ static void spawn_drops(Ctx *c) {
     }
 }
 
-/* MechaRidleyFirstEyeGlow / SecondEyeGlow: the eye's palette blinking is
- * not ported; after the second glow the event is set, the doors unlock and
- * the Chozodia escape starts. */
+/* MechaRidleyFirstEyeGlow / SecondEyeGlow: the eye blinking green, then
+ * red; after the second glow the event is set, the doors unlock and the
+ * Chozodia escape starts. */
 static void eye_glow(Ctx *c) {
     MzmSprite *s = c->s;
     if (--s->work2 == 0) {
         s->work2 = 4;
-        s->work1 = !s->work1;
+        bool first = s->pose == MECHA_FIRST_EYE_GLOW;
+        uint8_t *eye = &c->f->globals->mecha_palette.eye_colors;
+        if (s->work1) {
+            s->work1 = 0;
+            *eye = first ? MZM_MECHA_EYE_GLOW_2 : MZM_MECHA_EYE_GLOW_3;
+        } else {
+            s->work1 = 1;
+            *eye = first ? MZM_MECHA_EYE_GLOW_3 : MZM_MECHA_EYE_B4A;
+        }
     }
     if (s->pose == MECHA_FIRST_EYE_GLOW) {
         if (--s->work0 == 0) {
@@ -662,8 +693,11 @@ static void body(Ctx *c) {
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED: body_init(c); break;
     case MECHA_CRAWLING_INIT:
+        /* MechaRidleyStartWalking: the faded body (sMechaRidleyFadingPal
+         * row 0). */
         s->pose = MECHA_DELAY_BEFORE_CRAWLING;
         mzm_sfx_play(MZM_SOUND_MECHA_RIDLEY_ENTRANCE_CRAWL);
+        g->mecha_palette.fading_row = 1;
         break;
     case MECHA_DELAY_BEFORE_CRAWLING:
         if (s->y_spawn && --s->y_spawn == 0) s->pose = MECHA_CRAWLING;
@@ -752,6 +786,7 @@ static void part_init(Ctx *c) {
         s->hitbox_bottom = BLOCK_SIZE - QUARTER_BLOCK_SIZE;
         s->hitbox_left = -(BLOCK_SIZE - QUARTER_BLOCK_SIZE); s->hitbox_right = BLOCK_SIZE;
         s->health = c->tables->secondary_health[s->sprite_id];
+        if (c->f->globals->boss_work11 == 100) s->health = (uint16_t)(s->health * 3);
         c->f->globals->boss_work10 = state->health = c->f->globals->boss_work7 = s->health;
         s->draw_order = 9; s->pose = PART_COVER_IDLE;
         break;
@@ -1075,6 +1110,28 @@ static void load_fireballs_gfx(Ctx *c) {
     g->mecha_weapon_gfx = (uint8_t)(1 + 3 + s->work3);
 }
 
+/* MechaRidleyPartGreenGlow: the head's three glowing colors cycling
+ * through sMechaRidleyGreenGlowPal rows 0-3-0 (sMechaRidleyGreenGlowPaletteData),
+ * written to the head's current palette row. */
+static void green_glow(Ctx *c) {
+    static const uint8_t data[7][2] = {{0, 16}, {1, 10}, {2, 10}, {3, 10}, {2, 10}, {1, 10}, {128, 128}};
+    MzmSprite *s = c->s;
+    if (s->work0) {
+        s->work0--;
+        return;
+    }
+    uint8_t stage = s->work1++;
+    if (stage > 6) stage = 6;
+    uint8_t row = data[stage][0];
+    if (row == 128) {
+        s->work1 = 1;
+        stage = 0;
+        row = data[0][0];
+    }
+    s->work0 = data[stage][1];
+    c->f->globals->mecha_palette.glow_row[s->absolute_palette_row & 7] = (uint8_t)(row + 1);
+}
+
 /* MechaRidleyPartMissileLauncherIdle: the launcher only opens when the
  * cover is broken, Samus is under 150 energy or out of missiles. */
 static void launcher_idle(Ctx *c) {
@@ -1199,7 +1256,11 @@ static void part(Ctx *c) {
     case PART_EYE_IDLE: eye_idle(c); sync_position(c); break;
     case PART_MISSILE_LAUNCHER_IDLE: launcher_idle(c); sync_position(c); break;
     case PART_COVER_IDLE: cover_idle(c); sync_part(c); break;
-    case PART_HEAD_IDLE: load_fireballs_gfx(c); sync_part(c); break;
+    case PART_HEAD_IDLE:
+        load_fireballs_gfx(c);
+        green_glow(c);
+        sync_part(c);
+        break;
     case PART_COVER_DESTROYED: cover_explosion(c); break;
     case PART_COVER_BROKEN: break;
     default: sync_part(c); break;
@@ -1249,6 +1310,7 @@ static void missile(Ctx *c) {
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED:
         s->status |= MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE;
+        s->scaling = 0x100;                            /* Q_8_8(1.f) */
         s->draw_top = s->draw_bottom = s->draw_horizontal = 16;
         s->hitbox_top = s->hitbox_left = -HALF_BLOCK_SIZE;
         s->hitbox_bottom = s->hitbox_right = HALF_BLOCK_SIZE;
@@ -1318,6 +1380,7 @@ static void fireball(Ctx *c) {
     case SPRITE_POSE_UNINITIALIZED:
         s->status |= MZM_SPRITE_STATUS_IGNORE_PROJECTILES | MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE;
         s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+        s->scaling = 0x100;                            /* Q_8_8(1.f) */
         s->draw_top = s->draw_bottom = s->draw_horizontal = 0x14;
         s->hitbox_top = s->hitbox_left = -0x1C;
         s->hitbox_bottom = s->hitbox_right = 0x1C;

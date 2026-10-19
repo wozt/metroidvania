@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T14:53:55+00:00",
+ "generated_at": "2026-10-19T15:20:14+00:00",
  "git": {
-  "commit": "0861385",
+  "commit": "0328bcb",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 59,
-    "functional": 69,
+    "partial": 58,
+    "functional": 70,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 69,
-   "functional_or_better_percent": 49.6,
+   "functional_or_better": 70,
+   "functional_or_better_percent": 50.4,
    "with_passing_tests": 127,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -260,15 +260,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 35,
-    "functional": 56,
+    "partial": 34,
+    "functional": 57,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 56,
-   "functional_or_better_percent": 61.5,
+   "functional_or_better": 57,
+   "functional_or_better_percent": 62.6,
    "with_passing_tests": 91,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -2846,8 +2846,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Mecha Ridley",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_mecha_ridley.c",
     "src/runtime/mzm_sprites.c",
@@ -2909,10 +2909,13 @@
     "MechaRidleySpawnDrops",
     "MechaRidleyFirstEyeGlow",
     "MechaRidleySecondEyeGlow",
-    "BlackSpacePirateProjectileCollision"
+    "BlackSpacePirateProjectileCollision",
+    "MechaRidleyPartGreenGlow",
+    "SpriteUtilGetFinalCompletionPercentage",
+    "TransparencySpriteUpdateBldalpha"
    ],
-   "limitations": "The head green glow, the destroyed graphics and the glow-fading, drop and eye-glow palette copies are not ported (only their timing); the alarm palette toggles are not ported. Damage tints that shift a part past the sprite's eight palette rows (natively another sprite's OBJ row) keep the untinted look; the bare core is affected. The missile and fireball rotation uses the renderer's rotation without the native affine scaling. The host renderer uses the baked OBJ palette instead of the entrance transparency and palette DMA. The 100-percent triple health and double contact damage rule is not exposed to the sprite engine. The native chozodia_072 placement creates Mecha Ridley's core and ten secondary body actors, with their native room slots, health, hitboxes, collision types, draw order and shared graphics owner. Eighteen ROM-exported multi-sprite tables keep all eleven layers aligned through the entrance, the three stances, their six transitions, the backward crawl and the high fireball mouth. The arena locks, the boss crawls in, starts the battle music, then tracks Samus's height with the native two-second hysteresis and changes stance. Every 64 frames it swipes its claw (lunging a pixel per swing frame, then waiting forward with the native health-scaled delay before raising the arm), or picks the laser, or the fireball choreography once the cover is damaged; damage while curled up makes it retract and crawl back. The arms keep their own animations after the entrance with the native per-frame hitboxes, swipe sounds and ground shake; the neck has its per-animation hitboxes and sounds; the eye blinks; the missile launcher opens only under 150 energy or without missiles and runs its open/fire/close timing. The eye laser (glow, one of four random directions, the actor flying 20 subpixels a frame until a wall), the three launcher missiles (rising and slowing, then homing on Samus with the native acceleration and turning PI / 64 a frame toward her) and the fireballs (high and low trajectories, wall and contact explosions, live counters) are ported. The exporter bakes the seven weapon graphics stages that MechaRidleyLoadMissilesGfx and LoadFireballsGfx copy to OBJ VRAM, and the renderer draws the stage last copied. The parts test the projectiles themselves (BlackSpacePirateProjectileCollision): beams other than the Plasma Beam are absorbed, immune parts make missiles tumble, and the cover, weak only to missiles, takes the damage; below three quarters it enables the fireballs, at zero it explodes and exposes the core with its own health, whose quarters set the threshold and the parts' damage tints. The death runs the boss explosion, the music fade, the timed explosions, the collapse, ten grouped large energy drops, the eye's last looks, then sets event 74, shows the Chozodia escape banner (which starts the escape), unlocks the doors and plays the escape music. Event 74 removes the encounter on reload. Private captures show the high-stance claw swipe hitting Samus at frame 1000 and the arm being raised in the forward position at frame 1250, and the user and a frame-1850 capture saw the three missiles homing on Samus with their animated exhaust. A scripted super-missile fight damaged the cover in game and triggered the high-stance fireball attack (frame 2400); the core, death and escape are only covered by the regression, as the scripted Samus died before winning.",
-   "next_action": "Win the fight in game (manual play or a stronger input script) to confirm the core damage, death, drops and escape start, then port the remaining palette effects (head glow, destroyed graphics, eye glow).",
+   "limitations": "MechaRidleyGlowFading's seven one-frame copies of sMechaRidleyDestroyedGfx are drawn as their final result (\"/d\"), so the first six of those frames already show it. A damage tint shifting a part past OBJ row 15 wraps to an OBJ row Mecha Ridley does not load (natively another sprite's colors) and keeps the untinted look. gDisableAnimatedPalette (the Chozodia alarm's room palette) is not recorded because room animated palettes are not ported. The entrance BG2/BG3 blend is drawn as a color modulation of those layers. Not compared with an emulator. The native chozodia_072 placement creates Mecha Ridley's core and ten secondary body actors, with their native room slots, health, hitboxes, collision types, draw order and shared graphics owner. Eighteen ROM-exported multi-sprite tables keep all eleven layers aligned through the entrance, the three stances, their six transitions, the backward crawl and the high fireball mouth. The arena locks, the boss crawls in, starts the battle music, then tracks Samus's height with the native two-second hysteresis and changes stance. Every 64 frames it swipes its claw (lunging a pixel per swing frame, then waiting forward with the native health-scaled delay before raising the arm), or picks the laser, or the fireball choreography once the cover is damaged; damage while curled up makes it retract and crawl back. The arms keep their own animations after the entrance with the native per-frame hitboxes, swipe sounds and ground shake; the neck has its per-animation hitboxes and sounds; the eye blinks; the missile launcher opens only under 150 energy or without missiles and runs its open/fire/close timing. The eye laser (glow, one of four random directions, the actor flying 20 subpixels a frame until a wall), the three launcher missiles (rising and slowing, then homing on Samus with the native acceleration and turning PI / 64 a frame toward her) and the fireballs (high and low trajectories, wall and contact explosions, live counters) are ported. The exporter bakes the seven weapon graphics stages that MechaRidleyLoadMissilesGfx and LoadFireballsGfx copy to OBJ VRAM, and the renderer draws the stage last copied. The parts test the projectiles themselves (BlackSpacePirateProjectileCollision): beams other than the Plasma Beam are absorbed, immune parts make missiles tumble, and the cover, weak only to missiles, takes the damage; below three quarters it enables the fireballs, at zero it explodes and exposes the core with its own health, whose quarters set the threshold and the parts' damage tints. The death runs the boss explosion, the music fade, the timed explosions, the collapse, ten grouped large energy drops, the eye's last looks, then sets event 74, shows the Chozodia escape banner (which starts the escape), unlocks the doors and plays the escape music. Event 74 removes the encounter on reload. Private captures show the high-stance claw swipe hitting Samus at frame 1000 and the arm being raised in the forward position at frame 1250, and the user and a frame-1850 capture saw the three missiles homing on Samus with their animated exhaust. A scripted super-missile fight damaged the cover in game and triggered the high-stance fireball attack (frame 2400); the core, death and escape are only covered by the regression, as the scripted Samus died before winning. Its frames are exported as 8-bit OBJ palette indices with the room's palette (objpal), so the renderer rebuilds its live palette from the DMAs the AI records: the entrance fade through the seven sMechaRidleyFadingPal rows (with SOUND_2AD and BG2/BG3 dimmed from 10/16 back to 16/16 as TransparencySpriteUpdateBldalpha does), the head's green glow cycling sMechaRidleyGreenGlowPal rows 0-3-0 in its current palette row, the destroyed graphics and colors of the death, the eye's dimming during the drops and its green then red blinking. At 100% completion (SpriteUtilGetFinalCompletionPercentage, from the difficulty's tank amounts and the abilities) the core and cover have triple health and the contact doubles its damage. The missiles and fireballs start at Q8.8 scale 1 and, as single-OBJ frames with exported OAM bounds, rotate through the native affine window. A regression drives each palette DMA from its native pose and timing and the 100% rule; a capture in chozodia_072 shows the dark, faded body crawling in and its full colors once the battle starts.",
+   "next_action": "Port the room animated palettes (with the alarm toggles); compare the fight and its palettes with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
@@ -10833,9 +10836,9 @@
    {
     "file": "tests/test_mzm_sprites.py",
     "module": "tests.test_mzm_sprites",
-    "test_count": 11,
+    "test_count": 13,
     "outcome": "passed",
-    "passed": 11
+    "passed": 13
    },
    {
     "file": "tests/test_mzm_world_atlas.py",
@@ -11084,12 +11087,18 @@
    }
   ],
   "summary": {
-   "passed": 477,
+   "passed": 479,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "0328bcb",
+   "date": "2026-10-19",
+   "subject": "Complete native Skree explosion rotation",
+   "scope": "project"
+  },
   {
    "commit": "0861385",
    "date": "2026-10-19",
@@ -11563,12 +11572,6 @@
    "date": "2026-10-14",
    "subject": "fix(mzm): block tables load again",
    "scope": "mzm"
-  },
-  {
-   "commit": "7d9aff7",
-   "date": "2026-10-14",
-   "subject": "feat(mzm): native new game, F1-only debug and a gameplay-only gamepad",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -11596,7 +11599,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1586,
+    "routines_cited_by_features": 1589,
     "call_edges": 6071
    },
    "aos": {

@@ -151,6 +151,25 @@ class MzmSpriteDataTests(unittest.TestCase):
 
 
 class MzmMechaRidleyWeaponTests(unittest.TestCase):
+    def test_index_palette_shifts_rows_and_skips_unloaded_ones(self):
+        raw = [None] * 256
+        for index in range(128, 256):
+            raw[index] = index
+        base = mzm_sprites.index_palette(raw, 0)
+        self.assertEqual(base[8 * 16 + 5], 8 * 16 + 5)
+        self.assertIsNone(base[5])
+        tinted = mzm_sprites.index_palette(raw, 4)
+        self.assertEqual(tinted[8 * 16 + 1], 12 * 16 + 1)
+        # Bank 12 + 4 wraps to row 0, which Mecha Ridley does not load.
+        self.assertIsNone(tinted[12 * 16 + 1])
+
+    def test_destroyed_graphics_take_the_seven_native_copies(self):
+        destroyed = bytes(range(256)) * 6
+        vram = mzm_sprites.mecha_ridley_destroyed_vram(bytes(0x8000), destroyed[:1344])
+        for source, target, size in mzm_sprites.MECHA_RIDLEY_DESTROYED_COPIES:
+            self.assertEqual(vram[target:target + size], destroyed[source:source + size])
+        self.assertEqual(mzm_sprites.MECHA_RIDLEY_DESTROYED_COPIES[-1], (1216, 0x5580 + 6144 + 64, 128))
+
     def test_weapon_stages_copy_four_tile_rows_to_0x4280(self):
         weapons = bytes(range(256)) * 16
         vram = mzm_sprites.mecha_ridley_weapon_vram(bytes(0x8000), weapons, 12 + 4 * 2)

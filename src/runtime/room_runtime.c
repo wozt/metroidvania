@@ -1814,6 +1814,10 @@ typedef struct {
     SDL_Texture *texture;            /* 32-bit frames */
     SDL_Surface *indexed;            /* palette-indexed frames */
     SDL_Texture *variants[RUNTIME_PALETTE_SLOTS];
+    /* An indexed frame colorized with a whole OBJ palette, and that
+     * palette's version. */
+    SDL_Texture *object_palette_texture;
+    uint32_t object_palette_version;
     int w,h;
 } RuntimeLibraryFrame;
 typedef struct {
@@ -1839,6 +1843,7 @@ static void runtime_library_free(RuntimeLibrary *lib) {
             if(frame->texture) SDL_DestroyTexture(frame->texture);
             for(int k=0;k<RUNTIME_PALETTE_SLOTS;k++)
                 if(frame->variants[k]) SDL_DestroyTexture(frame->variants[k]);
+            if(frame->object_palette_texture) SDL_DestroyTexture(frame->object_palette_texture);
             if(frame->indexed) SDL_DestroySurface(frame->indexed);
         }
         free(entry->frames);
@@ -2212,6 +2217,31 @@ static SDL_Texture *runtime_library_texture(SDL_Renderer *r,RuntimeLibraryEntry 
     return frame->variants[slot];
 }
 
+/* Texture of one frame of a sprite drawn with a live OBJ palette: indexed
+ * frames are colorized with all 256 `colors`, rebuilt when `version`
+ * changes; 32-bit frames are returned as they are. */
+static SDL_Texture *runtime_library_texture_palette(SDL_Renderer *r,RuntimeLibraryEntry *entry,
+                                                    int index,const SDL_Color colors[256],
+                                                    uint32_t version) {
+    RuntimeLibraryFrame *frame=&entry->frames[index];
+    if(!frame->texture && !frame->indexed && !runtime_library_texture(r,entry,index,-1,NULL) &&
+       !frame->indexed)
+        return NULL;
+    if(frame->texture)return frame->texture;
+    if(frame->object_palette_texture && frame->object_palette_version==version)
+        return frame->object_palette_texture;
+    SDL_Palette *palette=SDL_GetSurfacePalette(frame->indexed);
+    if(!palette || !SDL_SetPaletteColors(palette,colors,0,256))return NULL;
+    SDL_Texture *t=SDL_CreateTextureFromSurface(r,frame->indexed);
+    if(!t)return NULL;
+    SDL_SetTextureScaleMode(t,SDL_SCALEMODE_NEAREST);
+    SDL_SetTextureBlendMode(t,SDL_BLENDMODE_BLEND);
+    if(frame->object_palette_texture)SDL_DestroyTexture(frame->object_palette_texture);
+    frame->object_palette_texture=t;
+    frame->object_palette_version=version;
+    return t;
+}
+
 /* ProjectileDrawAll_HighPriority / ProjectileDrawAll_LowPriority. The SDL
  * painter runs back to front, so the native final (low OAM priority) pass is
  * emitted before the other OBJ actors. `above_filter` is -1 for both BG1
@@ -2458,6 +2488,10 @@ typedef struct {
     char message_names[MZM_MESSAGE_COUNT][40];
     bool banner_ok;
     MzmMessageBanner banner;
+    /* Mecha Ridley's exported OBJ palette (BGR555, -1: not loaded) for its
+     * palette-indexed frames. */
+    int32_t mecha_objpal[256];
+    bool mecha_objpal_ok;
 } RuntimeSprites;
 
 /* gInGameTimer, gMaxInGameTimerFlag and gDifficulty of the current game. */
@@ -2646,6 +2680,12 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sImagoDamagedStingerFallingYVelocity", t->imago_stinger_falling_y, 10, 10},
         {"sImagoDynamicPaletteData", t->imago_core_palette, 9, 9},
         {"sEscapeShipHoveringYMovement", t->escape_ship_hovering_y, 65, 65},
+        {"sMechaRidleyFadingPal", t->mecha_fading_pal, 112, 112},
+        {"sMechaRidleyGreenGlowPal", t->mecha_glow_pal, 64, 64},
+        {"sMechaRidley_8323aaa_Pal", t->mecha_pal_aaa, 12, 12},
+        {"sMechaRidley_8323b42_Pal", t->mecha_pal_b42, 4, 4},
+        {"sMechaRidley_8323b4a_Pal", t->mecha_pal_b4a, 12, 12},
+        {"sMechaRidley_8323b62_Pal", t->mecha_pal_b62, 3, 3},
         {"sEscapeShipHoveringXMovement", t->escape_ship_hovering_x, 57, 57},
         {"sReoIdleXMovement", t->reo_idle_x, 81, 81},
         {"sMellaIdleYMovement", t->mella_idle_y, 65, 65},
@@ -2692,7 +2732,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {mzm_debris_table_names[7], t->debris[7], 9, 9},
         {mzm_debris_table_names[8], t->debris[8], 9, 9},
     };
-    unsigned long long found = 0;
+    bool found[sizeof ai_tables / sizeof ai_tables[0]] = {false};
     while (ok && fgets(line, sizeof line, f)) {
         char *cursor = strchr(line, '\t');
         if (!cursor) continue;
@@ -2700,6 +2740,15 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         if (!strcmp(line, "random")) {
             for (random_count = 0; random_count < 32; ++random_count)
                 sprites->tables.random[random_count] = (uint8_t)strtol(cursor, &cursor, 10);
+        } else if (!strcmp(line, "objpal")) {
+            char *values = strchr(cursor, '\t');
+            if (!values) { ok = false; break; }
+            *values++ = '\0';
+            if (!strcmp(cursor, "MECHA_RIDLEY")) {
+                for (int i = 0; i < 256; ++i)
+                    sprites->mecha_objpal[i] = (int32_t)strtol(values, &values, 10);
+                sprites->mecha_objpal_ok = true;
+            }
         } else if (!strcmp(line, "generic_random")) {
             for (int i = 0; i < 256; ++i)
                 sprites->tables.generic_random[i] = (uint8_t)strtol(cursor, &cursor, 10);
@@ -2793,7 +2842,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
                     values = end;
                 }
                 if (count != ai_tables[t].length) { ok = false; break; }
-                found |= 1ull << t;
+                found[t] = true;
             }
         } else if (!strcmp(line, "stats")) {
             char name[64];
@@ -2813,12 +2862,14 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         }
     }
     fclose(f);
+    bool all_found = true;
     for (size_t i = 0; i < sizeof ai_tables / sizeof ai_tables[0]; ++i)
-        if (!(found & (1ull << i)))
+        if (!found[i]) {
+            all_found = false;
             fprintf(stderr, "Zero Mission sprite tables: %s missing (python3 -m scripts.mzm_sprites)\n",
                     ai_tables[i].name);
-    return ok && random_count == 32 && falling_count == 16 &&
-           found == (1ull << (sizeof ai_tables / sizeof ai_tables[0])) - 1;
+        }
+    return ok && random_count == 32 && falling_count == 16 && all_found;
 }
 
 /* Frame durations of OAM tables from the sprite library. */
@@ -3393,7 +3444,8 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
                                runtime_sprite_leech, &sprites->globals.sub1.work2, false,
                                runtime_sprite_knockback, runtime_sprite_metroid_drain,
                                samus->invincibility,
-                               false};
+                               false,
+                               mzm_final_completion_percentage(equipment,runtime_difficulty)};
         hurt.view = &view;
         mzm_sprites_samus_collision(sprites->live, RUNTIME_MAX_SPRITES, &view, &sprites->tables);
         /* The solid (frozen) sprites' pushes and the zipline grabs. */
@@ -3697,6 +3749,44 @@ static int runtime_intro_fade_stage(int frame) {
     return stages[frame / 4 < 15 ? frame / 4 : 14];
 }
 
+/* Mecha Ridley's live OBJ palette: the exported rows with the palette DMAs
+ * the AI recorded (the entrance fade, the head's green glow, the eye and
+ * drop colors, the destroyed colors); returns a version hash. */
+static uint32_t runtime_mecha_palette(const RuntimeSprites *sprites,SDL_Color colors[256]) {
+    int32_t raw[256];
+    memcpy(raw,sprites->mecha_objpal,sizeof raw);
+    const MzmMechaPalette *p=&sprites->globals.mecha_palette;
+    const MzmSpriteTables *t=&sprites->tables;
+    if(p->fading_row>0 && p->fading_row<=7)
+        for(int i=0;i<13;i++)raw[128+i]=(uint16_t)t->mecha_fading_pal[(p->fading_row-1)*16+i];
+    for(int r=0;r<8;r++)
+        if(p->glow_row[r]>0 && p->glow_row[r]<=4)
+            for(int i=0;i<3;i++)
+                raw[(8+r)*16+13+i]=(uint16_t)t->mecha_glow_pal[(p->glow_row[r]-1)*16+i];
+    const int16_t *eye=NULL;
+    switch(p->eye_colors) {
+    case MZM_MECHA_EYE_AAA: eye=t->mecha_pal_aaa; break;
+    case MZM_MECHA_EYE_GLOW_0: eye=&t->mecha_glow_pal[4]; break;
+    case MZM_MECHA_EYE_GLOW_1: eye=&t->mecha_glow_pal[20]; break;
+    case MZM_MECHA_EYE_GLOW_2: eye=&t->mecha_glow_pal[36]; break;
+    case MZM_MECHA_EYE_GLOW_3: eye=&t->mecha_glow_pal[52]; break;
+    case MZM_MECHA_EYE_B4A: eye=t->mecha_pal_b4a; break;
+    default: break;
+    }
+    for(int i=0;eye && i<6;i++)raw[9*16+1+i]=(uint16_t)eye[i];
+    const int16_t *destroyed=p->destroyed_colors==1?t->mecha_pal_b42:
+                             p->destroyed_colors==2?t->mecha_pal_b62:NULL;
+    for(int i=0;destroyed && i<3;i++)raw[12*16+13+i]=(uint16_t)destroyed[i];
+    uint32_t hash=2166136261u;
+    for(int i=0;i<256;i++) {
+        uint16_t c=raw[i]<0?0:(uint16_t)raw[i];
+        colors[i]=(SDL_Color){(Uint8)((c&31)*255/31),(Uint8)((c>>5&31)*255/31),
+                              (Uint8)((c>>10&31)*255/31),255};
+        hash=(hash^(uint32_t)(raw[i]+1))*16777619u;
+    }
+    return hash;
+}
+
 /* SpriteDrawAll_*: the sprites whose draw order is in [first_order,
  * last_order]; draw order 1 goes in front, so the higher orders are painted
  * first (slot order within an order). */
@@ -3833,6 +3923,15 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         }
         else if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
         else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
+        bool mecha=mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY;
+        static char destroyed[24];
+        if(mecha && sprites->globals.mecha_palette.destroyed_gfx>=7 && strncmp(shade,"/w",2) &&
+           strcmp(shade,"/frozen") && strcmp(shade,"/stun")) {
+            /* MechaRidleyGlowFading's sMechaRidleyDestroyedGfx copies (the
+             * baked result of all seven). */
+            snprintf(destroyed,sizeof destroyed,"/d%s",shade);
+            shade=destroyed;
+        }
         snprintf(key,sizeof key,"Sprite/%s/%s/%s%s",
                  sprites->names[mzm_sprite_graphics_owner(sprite)],
                  anim_name,fx&&fy?"xy":fx?"x":fy?"y":"none",shade);
@@ -3849,7 +3948,15 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         }
         if(!entry || entry->count==0)continue;
         int index=sprite->frame<entry->count?sprite->frame:0;
-        SDL_Texture *art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+        SDL_Texture *art_texture=NULL;
+        if(mecha && sprites->mecha_objpal_ok) {
+            /* Mecha Ridley's indexed frames in its live OBJ palette. */
+            static SDL_Color mecha_colors[256];
+            uint32_t version=runtime_mecha_palette(sprites,mecha_colors);
+            art_texture=runtime_library_texture_palette(renderer,entry,index,mecha_colors,version);
+        } else {
+            art_texture=runtime_library_texture(renderer,entry,index,-1,NULL);
+        }
         if(!art_texture)continue;
         /* A door fade's darkened OBJ rows (ApplySpecialBackgroundFadingColor
          * as a colour modulation). */
@@ -3995,6 +4102,9 @@ static void runtime_draw_block_layer(SDL_Renderer *renderer, SDL_Texture *sheet,
 
 /* The backgrounds whose priority lies in [low, high], back to front: by
  * priority, then BG3 to BG0 (a lower BG wins at equal priority). */
+/* MzmSpriteGlobals.bg23_eva for the frame being drawn (0: no blend). */
+static uint8_t runtime_bg23_eva;
+
 static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt *art,
                                      SDL_Texture *const *native, const Room *room, float cx,
                                      float cy, SDL_FRect viewport, float scale, int low,
@@ -4014,8 +4124,15 @@ static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt 
                 if (!texture) continue;
                 Uint8 level = (Uint8)(eva * 255 / 16);
                 SDL_SetTextureBlendMode(texture, blend && additive ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
-                if (blend && additive) SDL_SetTextureColorMod(texture, level, level, level);
-                else SDL_SetTextureColorMod(texture, 255, 255, 255);
+                if (blend && additive) {
+                    SDL_SetTextureColorMod(texture, level, level, level);
+                } else if ((layer == 2 || layer == 3) && runtime_bg23_eva && runtime_bg23_eva < 16) {
+                    /* BG2/BG3 first targets with EVB 0: EVA/16 of their color. */
+                    Uint8 dim = (Uint8)(runtime_bg23_eva * 255 / 16);
+                    SDL_SetTextureColorMod(texture, dim, dim, dim);
+                } else {
+                    SDL_SetTextureColorMod(texture, 255, 255, 255);
+                }
                 SDL_SetTextureAlphaMod(texture, blend && !additive ? level : 255);
                 SDL_RenderTexture(renderer, texture, NULL, &viewport);
                 continue;
@@ -5964,6 +6081,7 @@ int main(int argc, char **argv) {
         SDL_RenderClear(renderer);
         bool low_sprites=!(door_fade.phase!=MZM_DOOR_FADE_NONE && door_fade.sprites_hidden) &&
                          samus.pose!=MZM_POSE_DYING;
+        runtime_bg23_eva=sprites.globals.bg23_eva;
         if(layered) {
             /* Backgrounds at or behind the sprites' priority, with the
              * BGCNT_LOW_PRIORITY sprites (bgPriority 3) after BG3. */

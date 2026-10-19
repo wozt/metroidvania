@@ -232,6 +232,13 @@ typedef struct {
     int16_t imago_attacking_x[49];  /* sImagoAttackingXVelocity (SHORT_MAX ends it) */
     int16_t imago_stinger_falling_y[10]; /* sImagoDamagedStingerFallingYVelocity */
     int16_t escape_ship_hovering_y[65]; /* sEscapeShipHoveringYMovement (SHORT_MAX ends it) */
+    /* Mecha Ridley's palette DMA sources (BGR555). */
+    int16_t mecha_fading_pal[7 * 16];   /* sMechaRidleyFadingPal */
+    int16_t mecha_glow_pal[4 * 16];     /* sMechaRidleyGreenGlowPal */
+    int16_t mecha_pal_aaa[12];          /* sMechaRidley_8323aaa_Pal */
+    int16_t mecha_pal_b42[4];           /* sMechaRidley_8323b42_Pal */
+    int16_t mecha_pal_b4a[12];          /* sMechaRidley_8323b4a_Pal */
+    int16_t mecha_pal_b62[3];           /* sMechaRidley_8323b62_Pal */
     int16_t escape_ship_hovering_x[57]; /* sEscapeShipHoveringXMovement (SHORT_MAX ends it) */
     /* sImagoDynamicPaletteData (u8 [9][2]) read as halfwords: the row in
      * the low byte, the delay in the high byte; row 0x80 ends it. */
@@ -1312,6 +1319,25 @@ typedef struct {
     uint16_t health;
 } MzmSubSpriteState;
 
+/* Mecha Ridley's OBJ palette copies. */
+enum {
+    MZM_MECHA_EYE_NONE, MZM_MECHA_EYE_AAA, MZM_MECHA_EYE_GLOW_0, MZM_MECHA_EYE_GLOW_1,
+    MZM_MECHA_EYE_GLOW_2, MZM_MECHA_EYE_GLOW_3, MZM_MECHA_EYE_B4A,
+};
+typedef struct {
+    /* sMechaRidleyFadingPal row + 1 in OBJ row 8 colors 0-12. */
+    uint8_t fading_row;
+    /* sMechaRidleyGreenGlowPal row + 1 in colors 13-15 of OBJ row 8 + i
+     * (MechaRidleyPartGreenGlow writes the head's absolutePaletteRow). */
+    uint8_t glow_row[8];
+    /* OBJ row 9 colors 1-6 (MZM_MECHA_EYE_*): the drops' and eye's copies. */
+    uint8_t eye_colors;
+    /* OBJ row 12 colors 13-15: 1 sMechaRidley_8323b42_Pal, 2 _8323b62_Pal. */
+    uint8_t destroyed_colors;
+    /* MechaRidleyGlowFading's destroyed-graphics copies done (0-7). */
+    uint8_t destroyed_gfx;
+} MzmMechaPalette;
+
 /* Game globals the sprites keep between frames. */
 typedef struct {
     uint16_t alarm_timer;           /* gAlarmTimer (the Chozodia alarm) */
@@ -1331,6 +1357,9 @@ typedef struct {
      * the health before the last retreat check, core and cover spawn
      * health). */
     uint16_t boss_work6, boss_work7, boss_work8, boss_work9, boss_work10;
+    /* gBossWork.work11: Mecha Ridley's SpriteUtilGetFinalCompletionPercentage
+     * at its spawn (100 triples its core and cover health). */
+    uint8_t boss_work11;
     /* gPreviousYPosition / gPreviousXPosition as the Ruins Test reads
      * them: Samus's position on its previous update. */
     uint16_t previous_samus_y, previous_samus_x;
@@ -1356,6 +1385,13 @@ typedef struct {
     /* The gunship's palette animations as last copied to OBJ rows 9 and 10
      * (its entrance and flames palette offsets, -1: still sGunshipPal). */
     int8_t gunship_entrance_palette, gunship_flames_palette;
+    /* Mecha Ridley's OBJ palette DMAs as last done (0: not done). The
+     * renderer rebuilds its rows from the sprite's palette with them. */
+    MzmMechaPalette mecha_palette;
+    /* TransparencySpriteUpdateBldalpha's EVA with BG2 and BG3 as the
+     * first targets of an alpha blend with no EVB (Mecha Ridley's room
+     * dimmed to EVA/16 until its battle starts; 0: no such blend). */
+    uint8_t bg23_eva;
     /* The escape ship's and the escape gates' flashing rows as last copied
      * (sEscapeShipFlashingPal / sEscapeGateFlashingPal row, -1: none yet). */
     int8_t escape_ship_palette, escape_gate_palette;
@@ -1539,6 +1575,9 @@ typedef struct {
      * knockback of an eighth of a block a frame instead of a pixel. */
     uint8_t invincibility_timer;
     bool big_knockback;
+    /* SpriteUtilGetFinalCompletionPercentage: 100 doubles SSC_MECHA_RIDLEY
+     * contact damage. */
+    uint8_t completion_percentage;
 } MzmSpriteSamus;
 
 /* ClipdataProcess for an actor: the ClipdataType, plus the solid flag when
@@ -1597,5 +1636,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary);
 /* The PSPRITE whose exported graphics and palette draw the sprite (a
  * secondary sprite draws with its parent's graphics slot). */
 uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite);
+/* SpriteUtilGetFinalCompletionPercentage: the tanks (sTankIncreaseAmount of
+ * the difficulty, 0 easy, 1 normal, 2 hard) and abilities collected. */
+uint8_t mzm_final_completion_percentage(const MzmEquipment *equipment, uint8_t difficulty);
 
 #endif /* MZM_SPRITES_H */

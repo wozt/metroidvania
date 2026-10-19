@@ -153,9 +153,40 @@ ESCAPE_GATE_VRAM = 0x7800
 ESCAPE_SHIP_FLASHING = "sEscapeShipFlashingPal"
 FLASHING_ROWS = 3
 MECHA_RIDLEY_WEAPON_TABLES = ("sMechaRidleyMissileOam", "sMechaRidleyFireballOam")
+# Mecha Ridley is exported as 8-bit OBJ palette indices (its own rows 8-15
+# and the common rows), so the runtime applies its palette DMAs (the head's
+# green glow, the entrance fade, the eye and drop colours, the destroyed
+# colours) to the `objpal` line. MechaRidleyGlowFading's seven copies of
+# sMechaRidleyDestroyedGfx to OBJ VRAM 0x5580 are baked as "/d".
+MECHA_RIDLEY_DESTROYED = "sMechaRidleyDestroyedGfx"
+MECHA_RIDLEY_DESTROYED_COPIES = ((0, 0x5580, 128), (192, 0x5580 + 1024, 192),
+                                 (384, 0x5580 + 2048, 192), (576, 0x5580 + 3072, 192),
+                                 (768, 0x5580 + 4096, 192), (1024, 0x5580 + 5120 + 64, 128),
+                                 (1216, 0x5580 + 6144 + 64, 128))
 MECHA_RIDLEY_WEAPON_VRAM = 0x4280
 MECHA_RIDLEY_WEAPON_STAGES = tuple(4 * stage for stage in range(3)) + tuple(
     12 + 4 * stage for stage in range(4))
+
+
+def mecha_ridley_destroyed_vram(vram: bytes, destroyed: bytes) -> bytes:
+    """OBJ VRAM after MechaRidleyGlowFading's seven destroyed-graphics copies."""
+    staged = bytearray(vram)
+    for source, target, size in MECHA_RIDLEY_DESTROYED_COPIES:
+        staged[target:target + size] = destroyed[source:source + size]
+    return bytes(staged)
+
+
+def index_palette(raw: list, shift: int) -> list:
+    """The OBJ palette indices a part of bank b reads with ``shift`` added to
+    its row (SpriteDraw's paletteRow, 4 bits): None where that row is not
+    loaded."""
+    indices = [None] * 256
+    for bank in range(8, 16):
+        target = (bank + shift) % 16
+        for colour in range(16):
+            if raw[target * 16 + colour] is not None:
+                indices[bank * 16 + colour] = target * 16 + colour
+    return indices
 
 
 def mecha_ridley_weapon_vram(vram: bytes, weapons: bytes, first_tile: int) -> bytes:
@@ -168,8 +199,8 @@ def mecha_ridley_weapon_vram(vram: bytes, weapons: bytes, first_tile: int) -> by
     return bytes(staged)
 
 
-TINT_OVERFLOW_ALLOWED = ("PSPRITE_MECHA_RIDLEY", "PSPRITE_IMAGO")
-ROW_VARIANTS = {"PSPRITE_SPACE_PIRATE": (2,), "PSPRITE_IMAGO": (1, 2, 4, 5), "PSPRITE_BARISTUTE": (1, 2, 3), "PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_MECHA_RIDLEY": (2, 3, 4), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
+TINT_OVERFLOW_ALLOWED = ("PSPRITE_IMAGO",)
+ROW_VARIANTS = {"PSPRITE_SPACE_PIRATE": (2,), "PSPRITE_IMAGO": (1, 2, 4, 5), "PSPRITE_BARISTUTE": (1, 2, 3), "PSPRITE_ATOMIC": (2, 3), "PSPRITE_KRAID": (1, 2, 3), "PSPRITE_RIDLEY": (3, 5), "PSPRITE_GADORA_RIDLEY": (1,), "PSPRITE_IMAGO_LARVA_RIGHT": (1, 2), "PSPRITE_IMAGO_LARVA_LEFT": (1, 2), "PSPRITE_IMAGO_COCOON": (1, 2), "PSPRITE_MOTHER_BRAIN": (2, 3, 4), "PSPRITE_METROID": (1, 2, 3), "PSPRITE_SAVE_PLATFORM": (2,), "PSPRITE_SAVE_PLATFORM_CHOZODIA": (2,)}
 # The gunship's palette animations: GunshipEntranceFlashingAnim copies
 # sGunshipFlashingPal[0x38 + 16 * e] (8 colors) to OBJ row 9 colors 8-15
 # (e 0-4) and GunshipFlickerFlames sGunshipFlashingPal[16 * f] to OBJ row 10
@@ -256,7 +287,7 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
              "sSidehopperHighJumpVelocity", "sSidehopperLowJumpVelocity",
              "sDessgeegaHighJumpYVelocity", "sDessgeegaLowJumpYVelocity",
-             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sSpacePirate_2e1070", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sEscapeShipHoveringYMovement", "sEscapeShipHoveringXMovement", "sMellaIdleYMovement",
+             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sSpacePirate_2e1070", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sEscapeShipHoveringYMovement", "sEscapeShipHoveringXMovement", "sMechaRidleyFadingPal", "sMechaRidleyGreenGlowPal", "sMechaRidley_8323aaa_Pal", "sMechaRidley_8323b42_Pal", "sMechaRidley_8323b4a_Pal", "sMechaRidley_8323b62_Pal", "sMellaIdleYMovement",
              "sMellaIdleXMovement", "sMellaGoingDownYMovement", "sMellaGoingUpYMovement",
              "sMellaMovingXMovement", "sHoltzIdleYVelocity", "sSqueeptRisingMovement",
              "sSqueeptFallingMovement", "sChargeBeamIdleYMovement",
@@ -580,6 +611,53 @@ def stage_common(rom: bytes, symbols):
     return bytes(vram), palette
 
 
+def produce_mecha_ridley(rom: bytes, symbols, vram: bytes, raw: list, tables, library,
+                         oam_bounds: list) -> None:
+    """Mecha Ridley's frames as OBJ palette indices: the base look, the
+    damage tints (rows 2-4), the stun and frozen rows, the destroyed
+    graphics (``/d``, alone or tinted) and the weapon graphics stages
+    (``/wN``). A variant
+    reading a row that is not loaded is skipped (natively another sprite's
+    palette)."""
+    from scripts.sprite_library import bmp8_from_indices
+    preview = [(0, 0, 0) if value is None else bgr555(value) for value in raw]
+    address, size = symbols[MECHA_RIDLEY_DESTROYED]
+    destroyed_vram = mecha_ridley_destroyed_vram(
+        vram, rom[rom_offset(address, rom):rom_offset(address, rom) + size])
+    address, size = symbols[MECHA_RIDLEY_WEAPONS]
+    weapons = rom[rom_offset(address, rom):rom_offset(address, rom) + size]
+    shifts = {"": 0, "/row2": 2, "/row3": 3, "/row4": 4, "/frozen": 15, "/stun": 14}
+    for table in tables:
+        entries = mzm_projectile_compose.frames(rom, symbols, table)
+        stages = [(suffix, vram, shift) for suffix, shift in shifts.items()]
+        stages += [("/d" + suffix, destroyed_vram, shift) for suffix, shift in shifts.items()
+                   if shift in (0, 2, 3, 4)]
+        if table in MECHA_RIDLEY_WEAPON_TABLES:
+            stages += [(f"/w{index}", mecha_ridley_weapon_vram(vram, weapons, first_tile), 0)
+                       for index, first_tile in enumerate(MECHA_RIDLEY_WEAPON_STAGES)]
+        for suffix, staged, shift in stages:
+            indices = index_palette(raw, shift)
+            frames = []
+            try:
+                for pointer, duration in entries:
+                    pixels = mzm_projectile_compose.render(rom, staged, indices, pointer, "none")
+                    if pixels:
+                        bmp, left, top = bmp8_from_indices(pixels, preview)
+                    else:
+                        bmp, left, top = bmp_from_pixels({(0, 0): (0, 0, 0)})
+                    frames.append((bmp, duration, left, top))
+            except ValueError:
+                if suffix:
+                    continue
+                raise
+            key = f"Sprite/MECHA_RIDLEY/{table[1:]}/none{suffix}"
+            library.add(key, frames)
+            for index, (pointer, _) in enumerate(entries):
+                left, top, width, height, parts = mzm_projectile_compose.object_bounds(
+                    rom, pointer, "none")
+                oam_bounds.append(f"{key}\t{index}\t{left}\t{top}\t{width}\t{height}\t{parts}")
+
+
 def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
             nm: str = "arm-none-eabi-nm", objcopy: str = "arm-none-eabi-objcopy") -> dict:
     from scripts.mzm_samus_pipeline import _elf_image, _run_nm
@@ -601,6 +679,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
               "sRandomNumberTable")
     wanted.update(tables)
     wanted.add(MECHA_RIDLEY_WEAPONS)
+    wanted.add(MECHA_RIDLEY_DESTROYED)
     wanted.update([ESCAPE_GATE_GFX, ESCAPE_GATE_PAL, ESCAPE_GATE_FLASHING, ESCAPE_SHIP_FLASHING])
     wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES, *BYTE_PAIR_TABLES,
                    "sLocationTextPointers", "sAreaBannerLocationTextPal"])
@@ -687,12 +766,27 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                                          *(",".join(map(str, part)) for part in parts)]))
     folder = private_path(Path(root), METROID_METADATA, create=True)
     folder.mkdir(parents=True, exist_ok=True)
+    # Mecha Ridley's OBJ palette (BGR555, -1: not loaded) for its indexed
+    # frames: the common rows and its own rows 8-15.
+    mecha_raw = [None] * 256
+    address, size = symbols["sCommonSpritesPal"]
+    for index in range(size // 2):
+        mecha_raw[COMMON_PALETTE_ROW * 16 + index] = struct.unpack_from(
+            "<H", rom, rom_offset(address, rom) + index * 2)[0]
+    address, size = symbols[palettes["PSPRITE_MECHA_RIDLEY"]]
+    for index in range(min(size // 2, 128)):
+        mecha_raw[128 + index] = struct.unpack_from("<H", rom, rom_offset(address, rom) + index * 2)[0]
+    lines.append("\t".join(["objpal", "MECHA_RIDLEY",
+                             *(str(-1 if value is None else value) for value in mecha_raw)]))
     write_atomic(folder / "sprites.tsv", "\n".join(lines) + "\n")
     library = LibraryWriter(root, ENEMIES_RUNTIME)
     oam_bounds = ["schema\t" + OAM_BOUNDS_SCHEMA]
     _, common_palette = stage_common(rom, symbols)
     for sprite, row, gfx, palette_symbol, tables in plan:
         vram, palette = stage(rom, symbols, gfx, palette_symbol, row)
+        if sprite == "PSPRITE_MECHA_RIDLEY":
+            produce_mecha_ridley(rom, symbols, vram, mecha_raw, tables, library, oam_bounds)
+            continue
         variants = {"": palette}
         # Statues are never frozen or stunned and only flip in X. Only Chozo
         # statues use the native flashing palette-row variants.
@@ -810,23 +904,6 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                                         rom, pointer, part_index))
                                 oam_bounds.append(
                                     f"{part_key}\t0\t{x}\t{y}\t{width}\t{height}\t1")
-            if sprite == "PSPRITE_MECHA_RIDLEY" and table in MECHA_RIDLEY_WEAPON_TABLES:
-                address, size = symbols[MECHA_RIDLEY_WEAPONS]
-                weapons = rom[rom_offset(address, rom):rom_offset(address, rom) + size]
-                for index, first_tile in enumerate(MECHA_RIDLEY_WEAPON_STAGES):
-                    staged = mecha_ridley_weapon_vram(vram, weapons, first_tile)
-                    frames = []
-                    for pointer, duration in entries:
-                        pixels = mzm_projectile_compose.render(rom, staged, palette, pointer, "none")
-                        bmp, left, top = bmp_from_pixels(pixels or {(0, 0): (0, 0, 0)})
-                        frames.append((bmp, duration, left, top))
-                    key = f"Sprite/MECHA_RIDLEY/{table[1:]}/none/w{index}"
-                    library.add(key, frames)
-                    for frame_index, (pointer, _) in enumerate(entries):
-                        left, top, width, height, parts = mzm_projectile_compose.object_bounds(
-                            rom, pointer, "none")
-                        oam_bounds.append(
-                            f"{key}\t{frame_index}\t{left}\t{top}\t{width}\t{height}\t{parts}")
     # The message banner (PSPRITE_MESSAGE_BANNER) with each message's text
     # in its graphics (TextProcessMessageBanner over SpriteLoadGfx's tiles).
     for name, vram in banners:

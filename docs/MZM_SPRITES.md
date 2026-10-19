@@ -366,7 +366,12 @@ of its states. `SpriteUtilUpdateStunTimer` flashes the stun row (14 - slot).
 The exporter bakes `/frozen` and `/stun` variants of every sprite frame (a
 part of row b drawn with OBJ row (b + 15) % 16 or (b + 14) % 16, taking
 `frozenPaletteRowOffset` as 0); the runtime picks them from the sprite's
-palette row. Frozen sprites are solid (the frozen branch of
+palette row. Mecha Ridley is the exception: its frames are 8-bit OBJ
+palette indices (its tints, frozen and stun rows as index shifts, `/d` for
+its destroyed graphics, `/wN` for its weapon stages), and the runtime
+colorizes them with the room's exported OBJ palette (`objpal`) plus the
+palette DMAs its AI recorded (entrance fade, head glow, eye and destroyed
+colors). Frozen sprites are solid (the frozen branch of
 `SpriteUtilSamusAndSpriteCollision`): after the contact damage, a falling
 Samus whose feet are within 6 pixels of the top is set on it
 (`SAMUS_ON_TOP`), rising into its bottom pushes her under it, and walking

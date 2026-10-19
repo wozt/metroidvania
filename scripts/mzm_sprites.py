@@ -217,6 +217,10 @@ METROID_GRABBED = "sMetroidPal_SamusGrabbed"
 # baked as "/sN" where a frame reads them.
 RUINS_TEST_SHOT_PALS = tuple(f"sRuinsTestPal_SymbolShot_Frame{index}" for index in range(1, 7))
 RUINS_TEST_DYNAMIC_ROW = 14
+# The reflections' OBJ row 15 rewritten with sRuinsTestPal_SamusReflection's
+# 15 rows, baked as "/r1" to "/r15" where a frame reads that row.
+RUINS_TEST_REFLECTION_PAL = "sRuinsTestPal_SamusReflection"
+RUINS_TEST_REFLECTION_ROW = 15
 # The area banner (PSPRITE_AREA_BANNER) with each location text drawn in its
 # graphics (TextDrawLocation: the text in mask mode over 0x800 bytes of
 # 0xFF, its two tile rows copied to the graphics slot), baked as ``/ltN``;
@@ -686,6 +690,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     wanted.add(MECHA_RIDLEY_WEAPONS)
     wanted.add(MECHA_RIDLEY_DESTROYED)
     wanted.update(RUINS_TEST_SHOT_PALS)
+    wanted.add(RUINS_TEST_REFLECTION_PAL)
     wanted.update([ESCAPE_GATE_GFX, ESCAPE_GATE_PAL, ESCAPE_GATE_FLASHING, ESCAPE_SHIP_FLASHING])
     wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES, *BYTE_PAIR_TABLES,
                    "sLocationTextPointers", "sAreaBannerLocationTextPal"])
@@ -868,6 +873,13 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                 colours[row:row + 8] = [bgr555(value) for value in struct.unpack_from(
                     "<8H", rom, rom_offset(address, rom))]
                 variants[f"/s{index}"] = colours
+            row = RUINS_TEST_REFLECTION_ROW * 16
+            address, _ = symbols[RUINS_TEST_REFLECTION_PAL]
+            for index in range(15):
+                colours = list(palette)
+                colours[row:row + 16] = [bgr555(value) for value in struct.unpack_from(
+                    "<16H", rom, rom_offset(address, rom) + index * 32)]
+                variants[f"/r{index + 1}"] = colours
         for table in tables:
             entries = mzm_projectile_compose.frames(rom, symbols, table)
             for suffix, colours in variants.items():
@@ -894,7 +906,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                         if sprite in TINT_OVERFLOW_ALLOWED and suffix.startswith("/row"):
                             continue
                         raise
-                    if suffix.startswith("/s") and all(
+                    if suffix.startswith(("/s", "/r")) and sprite == "PSPRITE_RUINS_TEST" and all(
                             mzm_projectile_compose.render(rom, vram, colours, pointer, flip) ==
                             mzm_projectile_compose.render(rom, vram, palette, pointer, flip)
                             for pointer, _ in entries):

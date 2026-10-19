@@ -379,7 +379,9 @@ colors of OBJ row 14, rewritten by `RUINS_TEST_TRANSFER_DYNAMIC_PAL` with
 `sRuinsTestPal_SymbolShot_Frame1` to `6`) is baked as `/s1` to `/s6` for
 the tables that read those colors (the four symbols, the shootable
 symbol's turning, the placed symbols); the runtime picks the variant its
-AI last selected. Frozen sprites are solid (the frozen branch of
+AI last selected. The reflections' OBJ row 15 is baked the same way
+as `/r1` to `/r15` (`sRuinsTestPal_SamusReflection`'s rows) for
+`sRuinsTestSamusReflectionOam`. Frozen sprites are solid (the frozen branch of
 `SpriteUtilSamusAndSpriteCollision`): after the contact damage, a falling
 Samus whose feet are within 6 pixels of the top is set on it
 (`SAMUS_ON_TOP`), rising into its bottom pushes her under it, and walking

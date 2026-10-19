@@ -1396,6 +1396,9 @@ typedef struct {
      * (RUINS_TEST_TRANSFER_DYNAMIC_PAL): 0 sRuinsTestPal's row 6, 1-6
      * sRuinsTestPal_SymbolShot_Frame1-6. */
     uint8_t ruins_test_palette;
+    /* Its OBJ row 15 (the reflections): 0 sRuinsTestPal's row 7, 1-15
+     * sRuinsTestPal_SamusReflection's rows 0-14. */
+    uint8_t ruins_test_reflection_palette;
     /* The escape ship's and the escape gates' flashing rows as last copied
      * (sEscapeShipFlashingPal / sEscapeGateFlashingPal row, -1: none yet). */
     int8_t escape_ship_palette, escape_gate_palette;

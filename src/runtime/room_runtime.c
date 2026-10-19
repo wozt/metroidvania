@@ -3094,6 +3094,7 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
     sprites->globals.parasite_related = 0;
     sprites->globals.metroid_grab_palette = -1;
     sprites->globals.ruins_test_palette = 0;   /* SpriteLoadPal of the spriteset */
+    sprites->globals.ruins_test_reflection_palette = 0;
     sprites->globals.lock_screen = false;
     sprites->globals.bg2_hidden = false;
     sprites->globals.bg_palette_row10 = -1;
@@ -3985,6 +3986,15 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             static char weapon[8];
             snprintf(weapon,sizeof weapon,"/w%d",sprites->globals.mecha_weapon_gfx-1);
             shade=weapon;
+        }
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_RUINS_TEST &&
+                sprites->globals.ruins_test_reflection_palette &&
+                (sprite->sprite_id==MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_START ||
+                 sprite->sprite_id==MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_END) && sprite->secondary) {
+            /* The reflection rows last copied to OBJ row 15 */
+            static char reflection[8];
+            snprintf(reflection,sizeof reflection,"/r%d",sprites->globals.ruins_test_reflection_palette);
+            shade=reflection;
         }
         else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_RUINS_TEST &&
                 sprites->globals.ruins_test_palette) {

@@ -7,9 +7,10 @@
  * Powered Suit, with the ghost, its outline and lightning, the shootable
  * symbol, the four placed symbols and the closing reflection that turns
  * Samus to face the background again. The symbols' dynamic palette (OBJ
- * row 14, MzmSpriteGlobals.ruins_test_palette) is ported; the palette and
- * graphics DMA of the reflections, the ghost's alpha blending and the
- * background flash are not. */
+ * row 14, MzmSpriteGlobals.ruins_test_palette) and the reflections'
+ * sRuinsTestPal_SamusReflection rows (OBJ row 15) are ported; the full
+ * suit reflection's palette and the reflections' graphics DMA, the ghost's
+ * alpha blending and the background flash are not. */
 #include "mzm_sprite_ai.h"
 #include "mzm_blocks.h"
 #include "mzm_message_banner.h"
@@ -656,9 +657,14 @@ static void reflection_start(Ctx *c) {
         s->samus_collision = SSC_NONE;
         s->draw_order = 3;
         s->work0 = 1;
+        c->f->globals->ruins_test_reflection_palette = 1;  /* sRuinsTestPal_SamusReflection row 0 */
         break;
     case REFLECTION_START_POSE_WAITING:
-        if (s->work0 < 16) s->work0++;
+        if (s->work0 < 16) {
+            /* Row 15 faded through the reflection rows, then sRuinsTestPal's row 7 */
+            int timer = s->work0++;
+            c->f->globals->ruins_test_reflection_palette = (uint8_t)(timer > 14 ? 0 : timer + 1);
+        }
         if (c->f->samus_link && c->f->samus_link->samus_pose != MZM_POSE_FACING_THE_BACKGROUND_SUITLESS) {
             c->f->globals->disable_pause = false;
             s->work0 = 2;                              /* CONVERT_SECONDS(1.f / 30) */
@@ -1008,9 +1014,10 @@ static void reflection_end(Ctx *c) {
         s->draw_order = 11;
         s->work0 = s->work1 = s->work3 = 0;
         s->work2 = 8;
+        g->ruins_test_reflection_palette = 1;          /* sRuinsTestPal_SamusReflection row 0 */
         break;
     case REFLECTION_END_POSE_SUITLESS: {
-        /* The palette pulse's timing (the copies are not ported). */
+        /* The palette pulse through the reflection rows */
         if (--s->work2 == 0) {
             s->work2 = 8;
             if (!s->work1) {
@@ -1019,6 +1026,7 @@ static void reflection_end(Ctx *c) {
                 s->work1 = 0;
                 if (s->work3) s->pose = REFLECTION_END_POSE_FULLSUIT;
             }
+            g->ruins_test_reflection_palette = (uint8_t)(s->work0 + 1);
         }
         if (s->pose == REFLECTION_END_POSE_FULLSUIT) {
             s->work0 = 31;

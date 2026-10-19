@@ -7220,6 +7220,11 @@ int main(void) {
         /* Samus may turn after half a second; turning starts the fight. */
         link.samus_pose = MZM_POSE_FACING_THE_BACKGROUND_SUITLESS;
         mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
+        /* The reflection's row 15: sRuinsTestPal_SamusReflection row 0 at
+         * its spawn, then the next rows one a frame. */
+        assert(globals.ruins_test_reflection_palette == 1);
+        mzm_sprite_update(&room[reflection], (uint8_t)reflection, &rf);
+        assert(globals.ruins_test_reflection_palette == 2);
         room[0].work0 = 1;
         mzm_sprite_update(&room[0], 0, &rf);
         assert(room[0].pose == 0x4 && link.set_last_wall && link.last_wall == 0);

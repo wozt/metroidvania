@@ -3838,6 +3838,21 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0402 - Ruins Test reflection palette
+
+- Ported the reflections' OBJ row 15 copies of
+  `sRuinsTestPal_SamusReflection`:
+  - the starting reflection fades through its 15 rows, one a frame, then
+    returns to `sRuinsTestPal`'s row 7;
+  - the closing reflection pulses through rows 0 to 10 every 8 frames.
+  The state is held in `MzmSpriteGlobals.ruins_test_reflection_palette`,
+  and the exporter bakes `/r1` to `/r15` for
+  `sRuinsTestSamusReflectionOam`.
+- Not ported:
+  - the full suit reflection's palette;
+  - the reflections' graphics DMA.
+- Unit test: the reflection's first two rows. No capture recorded yet.
+
 ## Patch 0401 - Ruins Test symbol palette
 
 - Ported the Ruins Test's dynamic palette (`RUINS_TEST_TRANSFER_DYNAMIC_PAL`:

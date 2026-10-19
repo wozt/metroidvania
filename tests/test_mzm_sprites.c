@@ -7379,25 +7379,42 @@ int main(void) {
         *g = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true,
                          .sprite_id = MZM_SSPRITE_RUINS_TEST_GHOST, .ram_slot = 0};
         mzm_sprite_update(g, 1, &rf);
-        assert(g->pose == 0x8 && g->draw_order == 13 && g->work1 == 16 && g->samus_collision == 0);
+        assert(g->pose == 0x8 && g->draw_order == 13 && g->work1 == 16 &&
+               g->samus_collision == 0 && g->status & MZM_SPRITE_STATUS_ALPHA_BLENDING &&
+               globals.ruins_test_ghost_eva == 16 && globals.ruins_test_ghost_evb == 0);
         int frames = 0;
         mzm_sfx_clear();
+        for (; frames < 4; ++frames) mzm_sprite_update(g, 1, &rf);
+        assert(globals.ruins_test_ghost_eva == 16 && globals.ruins_test_ghost_evb == 1);
         while (g->pose == 0x8 && frames < 200) {
             mzm_sprite_update(g, 1, &rf);
             ++frames;
         }
         assert(g->pose == 0x9 && frames == 4 * 16 && g->anim == MZM_RUINS_TEST_GHOST_MOVING &&
+               globals.ruins_test_ghost_eva == 9 && globals.ruins_test_ghost_evb == 8 &&
                mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_RUINS_TEST_GHOST_SPANWING));
         mzm_sprite_update(g, 1, &rf);
-        assert(g->x == room[0].x && g->y == room[0].y && g->isft == room[0].isft);
+        assert(g->x == room[0].x && g->y == room[0].y && g->isft == room[0].isft &&
+               !(g->status & MZM_SPRITE_STATUS_ALPHA_BLENDING));
+        room[0].isft = 0;
+        mzm_sprite_update(g, 1, &rf);
+        assert(g->status & MZM_SPRITE_STATUS_ALPHA_BLENDING);
         globals.sub1.work3 = 2;
         mzm_sprite_update(g, 1, &rf);
         assert(globals.sub1.work3 == 3 && g->work1 == 9 && g->anim == MZM_RUINS_TEST_GHOST_NOT_MOVING);
         g->isft = 0;
-        g->work1 = 16;
+        for (int i = 0; i < 7; ++i) {
+            g->work0 = 1;
+            mzm_sprite_update(g, 1, &rf);
+        }
+        assert(g->work1 == 16 && globals.ruins_test_ghost_eva == 16 &&
+               globals.ruins_test_ghost_evb == 16);
         g->work0 = 1;
         mzm_sprite_update(g, 1, &rf);
         assert(g->pose == 0x43);
+        g->work0 = 1;
+        mzm_sprite_update(g, 1, &rf);
+        assert(globals.ruins_test_ghost_eva == 15 && globals.ruins_test_ghost_evb == 16);
         /* A shot symbol flies to its corner and is counted once placed. */
         MzmSprite *sym = &room[2];
         *sym = (MzmSprite){.status = MZM_SPRITE_STATUS_EXISTS, .secondary = true,

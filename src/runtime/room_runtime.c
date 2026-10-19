@@ -3096,6 +3096,8 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
     sprites->globals.ruins_test_palette = 0;   /* SpriteLoadPal of the spriteset */
     sprites->globals.ruins_test_reflection_palette = 0;
     sprites->globals.ruins_test_reflection_gfx = MZM_RUINS_TEST_REFLECTION_GFX_BASE;
+    sprites->globals.ruins_test_ghost_eva = 16;
+    sprites->globals.ruins_test_ghost_evb = 0;
     sprites->globals.lock_screen = false;
     sprites->globals.bg2_hidden = false;
     sprites->globals.bg_palette_row10 = -1;
@@ -3854,6 +3856,21 @@ static uint32_t runtime_mecha_palette(const RuntimeSprites *sprites,SDL_Color co
     return hash;
 }
 
+/* Semi-transparent OBJ blending: RGB = OBJ * EVA/16 + target * EVB/16.
+ * The texture's RGB modulation carries EVA. Its alpha carries 1-EVB so
+ * ONE_MINUS_SRC_ALPHA is EVB on opaque sprite pixels and 1 outside them. */
+static SDL_BlendMode runtime_sprite_alpha_blend(void) {
+    static SDL_BlendMode mode;
+    static bool initialized;
+    if(!initialized) {
+        mode=SDL_ComposeCustomBlendMode(
+            SDL_BLENDFACTOR_ONE,SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,SDL_BLENDOPERATION_ADD,
+            SDL_BLENDFACTOR_ONE,SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,SDL_BLENDOPERATION_ADD);
+        initialized=true;
+    }
+    return mode;
+}
+
 /* SpriteDrawAll_*: the sprites whose draw order is in [first_order,
  * last_order]; draw order 1 goes in front, so the higher orders are painted
  * first (slot order within an order). */
@@ -4062,8 +4079,22 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         }
         if(!art_texture)continue;
         /* A door fade's darkened OBJ rows (ApplySpecialBackgroundFadingColor
-         * as a colour modulation). */
-        SDL_SetTextureColorMod(art_texture,shade_level,shade_level,shade_level);
+         * as a colour modulation), plus semi-transparent OBJ EVA/EVB. */
+        bool alpha_blended=sprite->status&MZM_SPRITE_STATUS_ALPHA_BLENDING;
+        Uint8 color_level=shade_level;
+        if(alpha_blended) {
+            uint8_t eva=sprites->globals.ruins_test_ghost_eva;
+            uint8_t evb=sprites->globals.ruins_test_ghost_evb;
+            if(eva>16)eva=16;
+            if(evb>16)evb=16;
+            color_level=(Uint8)((unsigned)shade_level*eva/16);
+            SDL_SetTextureAlphaMod(art_texture,(Uint8)((16-evb)*255/16));
+            SDL_SetTextureBlendMode(art_texture,runtime_sprite_alpha_blend());
+        } else {
+            SDL_SetTextureAlphaMod(art_texture,255);
+            SDL_SetTextureBlendMode(art_texture,SDL_BLENDMODE_BLEND);
+        }
+        SDL_SetTextureColorMod(art_texture,color_level,color_level,color_level);
         const RuntimeLibraryFrame *art=&entry->frames[index];
         SDL_FRect box={viewport.x+((float)(sprite->x>>2)+(float)art->offset_x-cx)*scale,
                        viewport.y+((float)(sprite->y>>2)+(float)art->offset_y-cy)*scale,
@@ -4129,6 +4160,8 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             SDL_RenderTexture(renderer,art_texture,NULL,&box);
         }
         SDL_SetTextureColorMod(art_texture,255,255,255);
+        SDL_SetTextureAlphaMod(art_texture,255);
+        SDL_SetTextureBlendMode(art_texture,SDL_BLENDMODE_BLEND);
         if(show_hitbox) {
             SDL_FRect hit={viewport.x+((float)((sprite->x+sprite->hitbox_left)>>2)-cx)*scale,
                            viewport.y+((float)((sprite->y+sprite->hitbox_top)>>2)-cy)*scale,
@@ -4378,6 +4411,9 @@ int main(int argc, char **argv) {
     /* --ruins-test-end: a capture staging that sends the Ruins Test, once
      * initialized, straight to its despawn (the fight skipped). */
     bool stage_ruins_test_end=false;
+    /* --ruins-test-ghost: isolate the ghost's native alpha fade without
+     * scripting the whole fight. */
+    bool stage_ruins_test_ghost=false;
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
@@ -4438,6 +4474,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--tourian-escape")) start_tourian_escape=true;
         else if (!strcmp(argv[i],"--chozodia-escape")) start_chozodia_escape=true;
         else if (!strcmp(argv[i],"--ruins-test-end")) stage_ruins_test_end=true;
+        else if (!strcmp(argv[i],"--ruins-test-ghost")) stage_ruins_test_ghost=true;
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
@@ -4495,7 +4532,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -4621,7 +4658,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -5782,6 +5819,33 @@ int main(int argc, char **argv) {
                     printf("Staged the Ruins Test's end.\n");
                 }
             }
+            if(stage_ruins_test_ghost) {
+                for(int i=0;i<RUNTIME_MAX_SPRITES;i++) {
+                    MzmSprite *owner=&sprites.live[i];
+                    if(!(owner->status&MZM_SPRITE_STATUS_EXISTS) || owner->secondary ||
+                       owner->sprite_id!=MZM_PSPRITE_RUINS_TEST || owner->pose==0)continue;
+                    int slot=-1;
+                    for(int j=0;j<RUNTIME_MAX_SPRITES;j++) {
+                        if(j!=i) sprites.live[j].status=0;
+                        if(j!=i && slot<0)slot=j;
+                    }
+                    owner->status|=MZM_SPRITE_STATUS_NOT_DRAWN;
+                    if(slot>=0) {
+                        sprites.live[slot]=(MzmSprite){
+                            .status=MZM_SPRITE_STATUS_EXISTS,
+                            .secondary=true,
+                            .sprite_id=MZM_SSPRITE_RUINS_TEST_GHOST,
+                            .gfx_slot=owner->gfx_slot,
+                            .ram_slot=(uint8_t)i,
+                            .y=owner->y,
+                            .x=owner->x,
+                        };
+                    }
+                    stage_ruins_test_ghost=false;
+                    printf("Staged the Ruins Test ghost's alpha fade.\n");
+                    break;
+                }
+            }
             if(upgrading_suit.queued) {
                 /* InGameCutsceneProcess (RoomUpdate): BG1 is the GBA screen
                  * centred in the runtime view. */
@@ -6730,6 +6794,9 @@ frame_overlays:
                    (unsigned)equipment.items,(unsigned)equipment.unknown_items,
                    upgrading_suit.queued?"queued":"none",upgrading_suit.stage,upgrading_suit.left,
                    upgrading_suit.right,upgrading_suit.top,upgrading_suit.bottom);
+            printf("  ruins ghost blend EVA %u EVB %u\n",
+                   sprites.globals.ruins_test_ghost_eva,
+                   sprites.globals.ruins_test_ghost_evb);
             if(chozodia_escape_mode)
                 printf("  screen: Chozodia escape (mode %u stage %u timer %u)\n",chozodia_escape.sub_mode,
                        chozodia_escape.stage,chozodia_escape.timer);

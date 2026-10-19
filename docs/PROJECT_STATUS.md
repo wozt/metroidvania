@@ -3838,6 +3838,31 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0404 - Ruins Test ghost alpha blending
+
+- Corrected the native sprite status split: high priority is bit 4, while
+  bit 13 marks a semi-transparent OBJ. This removes the earlier accidental
+  alias between two independent hardware flags.
+- Ported the ghost's exact `BLDALPHA` sequence: its spawn progresses from
+  16/0 through 16/8 to 9/8 every four frames, its return progresses from
+  10/16 to 16/16 every ten frames, and its despawn reaches 0/16. Damage
+  flashes temporarily disable semi-transparency like the native routine.
+- The SDL renderer now reproduces the independent coefficients with the
+  custom equation `OBJ * EVA / 16 + target * EVB / 16`, rather than treating
+  the native alpha flag as ordinary source-alpha blending.
+- Added `--ruins-test-ghost` capture staging so the visual routine can be
+  checked without scripting or bypassing the whole encounter. Captures in
+  `chozodia_042` at EVA/EVB 16/0, 16/4, 14/8 and 9/8 show the expected
+  progressive blend over the arena.
+- Unit coverage verifies every fade phase, the native frame intervals, the
+  damage-flash alpha toggle and the transition into despawn.
+- Still partial: `MakeBackgroundFlash`, the `PE_SAMUS_REFLECTION` particle,
+  the in-game boss timer record and emulator comparison remain.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 446/446 passed. Dashboard generation reported 140 features, 92
+  functional or better and 128 with passing tests. Generated-data checks
+  were fresh and the proprietary-file guard passed.
+
 ## Patch 0403 - Ruins Test native reflection graphics
 
 - Ported every graphics DMA used by the Ruins Test reflections:

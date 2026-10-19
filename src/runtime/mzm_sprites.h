@@ -41,6 +41,7 @@ enum {
     MZM_SPRITE_STATUS_ONSCREEN = 1 << 1,
     MZM_SPRITE_STATUS_NOT_DRAWN = 1 << 2,
     MZM_SPRITE_STATUS_ROTATION_SCALING_WHOLE = 1 << 3,
+    MZM_SPRITE_STATUS_HIGH_PRIORITY = 1 << 4,
     MZM_SPRITE_STATUS_MOSAIC = 1 << 5,
     MZM_SPRITE_STATUS_X_FLIP = 1 << 6,
     MZM_SPRITE_STATUS_ROTATION_SCALING_SINGLE = 1 << 7,
@@ -49,7 +50,7 @@ enum {
     MZM_SPRITE_STATUS_FACING_DOWN = 1 << 10,
     MZM_SPRITE_STATUS_SAMUS_COLLIDING = 1 << 11,
     MZM_SPRITE_STATUS_SAMUS_ON_TOP = 1 << 12,
-    MZM_SPRITE_STATUS_HIGH_PRIORITY = 1 << 13,
+    MZM_SPRITE_STATUS_ALPHA_BLENDING = 1 << 13,
     MZM_SPRITE_STATUS_DOUBLE_SIZE = 1 << 14,
     MZM_SPRITE_STATUS_IGNORE_PROJECTILES = 1 << 15,
 };
@@ -1410,6 +1411,9 @@ typedef struct {
     /* The graphics last copied into the reflection's OBJ tiles at 0x4280
      * and 0x4680 (MZM_RUINS_TEST_REFLECTION_GFX_*). */
     uint8_t ruins_test_reflection_gfx;
+    /* TransparencySpriteUpdateBldalpha's coefficients for the Ruins Test
+     * ghost, whose semi-transparent OBJ targets BG2 and the backdrop. */
+    uint8_t ruins_test_ghost_eva, ruins_test_ghost_evb;
     /* The escape ship's and the escape gates' flashing rows as last copied
      * (sEscapeShipFlashingPal / sEscapeGateFlashingPal row, -1: none yet). */
     int8_t escape_ship_palette, escape_gate_palette;

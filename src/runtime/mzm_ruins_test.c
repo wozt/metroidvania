@@ -8,8 +8,8 @@
  * symbol, the four placed symbols and the closing reflection that turns
  * Samus to face the background again. The symbols' dynamic palette (OBJ
  * row 14, MzmSpriteGlobals.ruins_test_palette), the reflections' OBJ row
- * 15 palettes and their graphics DMA at OBJ VRAM 0x4280/0x4680 are ported;
- * the ghost's alpha blending and the background flash are not. */
+ * 15 palettes, their graphics DMA at OBJ VRAM 0x4280/0x4680 and the ghost's
+ * native EVA/EVB alpha blending are ported; the background flash is not. */
 #include "mzm_sprite_ai.h"
 #include "mzm_blocks.h"
 #include "mzm_message_banner.h"
@@ -719,6 +719,11 @@ static MzmSprite *owner_of(const Ctx *c) {
     return c->f->sprites && s->ram_slot < c->f->sprite_count ? &c->f->sprites[s->ram_slot] : NULL;
 }
 
+static void ghost_blend(Ctx *c, uint8_t eva, uint8_t evb) {
+    c->f->globals->ruins_test_ghost_eva = eva;
+    c->f->globals->ruins_test_ghost_evb = evb;
+}
+
 /* RuinsTestGhostInit: the ghost fading in, or a shot symbol flying to
  * its corner. */
 static void ghost_init(Ctx *c) {
@@ -738,9 +743,11 @@ static void ghost_init(Ctx *c) {
         ai_set_anim(s, MZM_RUINS_TEST_GHOST_NOT_MOVING);
         s->health = 1;
         s->pose = GHOST_POSE_GHOST_SPAWN;
+        s->status |= MZM_SPRITE_STATUS_ALPHA_BLENDING;
         s->work0 = 0;
         s->work1 = BLDALPHA_MAX;
         s->work2 = 0;
+        ghost_blend(c, BLDALPHA_MAX, 0);
         return;
     }
     s->status |= MZM_SPRITE_STATUS_HIGH_PRIORITY;
@@ -763,8 +770,10 @@ static void ghost_spawn(Ctx *c) {
     if ((++s->work2 & 3) != 0) return;
     if (s->work0 < BLDALPHA_MAX / 2) {
         s->work0++;
+        ghost_blend(c, BLDALPHA_MAX, s->work0);
     } else if (s->work1 > BLDALPHA_MAX / 2 + 1) {
         s->work1--;
+        ghost_blend(c, s->work1, BLDALPHA_MAX / 2);
     } else {
         s->pose = GHOST_POSE_GHOST_IDLE;
         ai_set_anim(s, MZM_RUINS_TEST_GHOST_MOVING);
@@ -781,7 +790,9 @@ static void ghost_idle(Ctx *c) {
         if (s->isft) return;
         if (--s->work0 == 0) {
             s->work0 = 10;                             /* CONVERT_SECONDS(1.f / 6) */
-            if (s->work1++ >= BLDALPHA_MAX) {
+            if (s->work1++ < BLDALPHA_MAX) {
+                ghost_blend(c, s->work1, BLDALPHA_MAX);
+            } else {
                 s->pose = GHOST_POSE_GHOST_DESPAWN;
                 s->work1 = BLDALPHA_MAX;
             }
@@ -794,11 +805,16 @@ static void ghost_idle(Ctx *c) {
         s->x = owner->x;
         s->isft = owner->isft;
     }
+    if (s->isft)
+        s->status &= (uint16_t)~MZM_SPRITE_STATUS_ALPHA_BLENDING;
+    else
+        s->status |= MZM_SPRITE_STATUS_ALPHA_BLENDING;
     if (state->work3 == STAGE_GHOST_AT_CENTER) {
         state->work3 = STAGE_GHOST_FADING_BACK;
         s->work1 = 9;
         s->work0 = 10;
         ai_set_anim(s, MZM_RUINS_TEST_GHOST_NOT_MOVING);
+        s->status |= MZM_SPRITE_STATUS_ALPHA_BLENDING;
         mzm_sfx_play(MZM_SOUND_RUINS_TEST_GHOST_FADING_OUT);
     }
 }
@@ -808,7 +824,12 @@ static void ghost_despawn(Ctx *c) {
     MzmSprite *s = c->s;
     if (--s->work0 != 0) return;
     s->work0 = 10;
-    if (s->work1-- == 0) s->status = 0;
+    if (s->work1 != 0) {
+        s->work1--;
+        ghost_blend(c, s->work1, BLDALPHA_MAX);
+    } else {
+        s->status = 0;
+    }
 }
 
 /* RuinsTestGhostMoveSymbolToPlace: a shot symbol to its corner of the

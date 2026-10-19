@@ -1872,8 +1872,53 @@ static void hit_by_laser(Ctx *c) {
     }
 }
 
+/* EscapeShipSpacePirateInit: mid-jump out of the escape ship, unseen. */
+static void escape_ship_pirate_init(MzmSprite *s) {
+    s->draw_top = BLOCK_SIZE * 4 / PIXEL_SIZE;
+    s->draw_bottom = HALF_BLOCK_SIZE / PIXEL_SIZE;
+    s->draw_horizontal = (BLOCK_SIZE * 2 + HALF_BLOCK_SIZE) / PIXEL_SIZE;
+    s->hitbox_top = -(BLOCK_SIZE * 2 + HALF_BLOCK_SIZE);
+    s->hitbox_bottom = 0;
+    s->health = 0;
+    s->scaling = 0x100;
+    s->work2 = 0;
+    s->rotation = 0;
+    s->samus_collision = SSC_NONE;
+    set_anim(s, MZM_PIRATE_JUMPING);
+    s->frame = 6;
+    s->pose = 0x1;                                     /* ESCAPE_SHIP_SPACE_PIRATE_SPAWN */
+    flip(s);
+}
+
+/* EscapeShipSpacePirateSpawn */
+static void escape_ship_pirate_spawn(Ctx *c) {
+    MzmSprite *s = c->s;
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_NOT_DRAWN;
+    s->work0 = 6;                                      /* CONVERT_SECONDS(.1f) */
+    s->pose = 0x2;                                     /* ..._DELAY_BEFORE_JUMPING */
+    s->samus_collision = SSC_SPACE_PIRATE;
+    s->health = c->tables->health[s->sprite_id];
+    s->draw_order = 12;
+}
+
+/* EscapeShipSpacePirateDelayBeforeJumping: the jump out, its momentum
+ * lost when Samus is behind. */
+static void escape_ship_pirate_delay_before_jumping(Ctx *c) {
+    MzmSprite *s = c->s;
+    if (--s->work0) return;
+    s->draw_order = 4;
+    s->pose = P_JUMPING;
+    s->work1 = 3;
+    s->work3 = 0;
+    s->work0 = 0;
+    s->status &= (uint16_t)~MZM_SPRITE_STATUS_DOUBLE_SIZE;
+    if (facing_right(s) ? c->f->samus_x < s->x : c->f->samus_x > s->x) s->work2 = 0;
+}
+
 void ai_space_pirate(Ctx *c) {
     MzmSprite *s = c->s;
+    /* EscapeShipSpacePirate: the same AI behind its own first poses. */
+    bool escape = s->sprite_id == MZM_PSPRITE_ESCAPE_SHIP_SPACE_PIRATE;
     bool alerted = (s->status & MZM_SPRITE_STATUS_FACING_DOWN) != 0;
     MzmSpriteGlobals *g = c->f->globals;
     uint8_t *d = g->draw_order;
@@ -1913,7 +1958,18 @@ void ai_space_pirate(Ctx *c) {
         check_colliding_with_laser(c);
     }
     switch (s->pose) {
-    case SPRITE_POSE_UNINITIALIZED: pirate_init(c); break;
+    case SPRITE_POSE_UNINITIALIZED:
+        if (escape) escape_ship_pirate_init(s);
+        else pirate_init(c);
+        break;
+    case 0x1:
+        if (escape) escape_ship_pirate_spawn(c);
+        else death(c, true);
+        break;
+    case 0x2:
+        if (escape) escape_ship_pirate_delay_before_jumping(c);
+        else death(c, true);
+        break;
     case P_WALKING_INIT: walking_init(s); break;
     case P_WALKING: walking(c); break;
     case P_IDLE: idle(c); break;

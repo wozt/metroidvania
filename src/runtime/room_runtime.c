@@ -2565,6 +2565,8 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
         {"sImagoAttackingXVelocity", t->imago_attacking_x, 49, 49},
         {"sImagoDamagedStingerFallingYVelocity", t->imago_stinger_falling_y, 10, 10},
         {"sImagoDynamicPaletteData", t->imago_core_palette, 9, 9},
+        {"sEscapeShipHoveringYMovement", t->escape_ship_hovering_y, 65, 65},
+        {"sEscapeShipHoveringXMovement", t->escape_ship_hovering_x, 57, 57},
         {"sReoIdleXMovement", t->reo_idle_x, 81, 81},
         {"sMellaIdleYMovement", t->mella_idle_y, 65, 65},
         {"sMellaIdleXMovement", t->mella_idle_x, 49, 49},
@@ -3634,6 +3636,17 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             static char location[8];
             snprintf(location,sizeof location,"/lt%d",sprite->room_slot);
             shade=location;
+        } else if((mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_ESCAPE_SHIP &&
+                   sprites->globals.escape_ship_palette>=0) ||
+                  (mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_ESCAPE_GATE1 &&
+                   sprites->globals.escape_gate_palette>=0)) {
+            /* The escape ship's (OBJ row 9 + slot) and the gates' (last
+             * OBJ row) flashing rows as last copied. */
+            static char flash[8];
+            snprintf(flash,sizeof flash,"/f%d",
+                     mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_ESCAPE_SHIP?
+                     sprites->globals.escape_ship_palette:sprites->globals.escape_gate_palette);
+            shade=flash;
         } else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_GUNSHIP) {
             /* The gunship's entrance lights and flames as last copied to
              * OBJ rows 9 and 10. */
@@ -4993,6 +5006,15 @@ int main(int argc, char **argv) {
                     accumulator-=fixed_step;
                     continue;
                 }
+            }
+            /* The escape ship's StartEffectForCutscene requests
+             * (EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP, then
+             * EFFECT_CUTSCENE_ESCAPING_CHOZODIA): their fades and
+             * cutscenes are not ported, the room keeps running. */
+            if(sprites.globals.cutscene_effect==4 || sprites.globals.cutscene_effect==5) {
+                fprintf(stderr,"The %s cutscene is not ported.\n",
+                        sprites.globals.cutscene_effect==5?"Samus in the escape ship":"Chozodia escape");
+                sprites.globals.cutscene_effect=0;
             }
             /* StartEffectForCutscene(EFFECT_CUTSCENE_INTRO_TEXT): the
              * fades, then the intro text cutscene. */

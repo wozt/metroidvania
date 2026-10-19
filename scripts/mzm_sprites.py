@@ -113,7 +113,7 @@ PORTED = {"PSPRITE_ZOOMER_YELLOW": 0, "PSPRITE_ZOOMER_RED": 1,
           "PSPRITE_IMAGO_LARVA_RIGHT": 0, "PSPRITE_IMAGO_LARVA_LEFT": 0,
           "PSPRITE_IMAGO_LARVA_RIGHT_SIDE": 0,
           "PSPRITE_IMAGO_COCOON": 0, "PSPRITE_IMAGO_COCOON_AFTER_FIGHT": 0,
-          "PSPRITE_MECHA_RIDLEY": 0, "PSPRITE_HIVE": 0, "PSPRITE_BARISTUTE": 0, "PSPRITE_TANGLE_VINE_TALL": 0, "PSPRITE_RUINS_TEST": 0, "PSPRITE_FALLING_CHOZO_PILLAR": 0, "PSPRITE_FAKE_POWER_BOMB": 0, "PSPRITE_KRAID_ELEVATOR_STATUE": 0, "PSPRITE_IMAGO": 0,
+          "PSPRITE_MECHA_RIDLEY": 0, "PSPRITE_HIVE": 0, "PSPRITE_BARISTUTE": 0, "PSPRITE_TANGLE_VINE_TALL": 0, "PSPRITE_RUINS_TEST": 0, "PSPRITE_FALLING_CHOZO_PILLAR": 0, "PSPRITE_FAKE_POWER_BOMB": 0, "PSPRITE_KRAID_ELEVATOR_STATUE": 0, "PSPRITE_IMAGO": 0, "PSPRITE_ESCAPE_SHIP": 0, "PSPRITE_ESCAPE_GATE1": 0,
           "PSPRITE_SAVE_PLATFORM_CHOZODIA": 0, "PSPRITE_ATOMIC": 0, "PSPRITE_POLYP": 0, "PSPRITE_CANNON": 0, "PSPRITE_ZEBETITE_ONE_AND_THREE": 0, "PSPRITE_WORKER_ROBOT": 0, "PSPRITE_METROID": 0, "PSPRITE_KRAID": 0, "PSPRITE_RIDLEY": 0, "PSPRITE_MOTHER_BRAIN": 0,
           **{f"PSPRITE_CHOZO_STATUE_{item}{hint}": 0
              for item in ("LONG", "ICE", "WAVE", "BOMB", "SPEEDBOOSTER", "HIGH_JUMP", "SCREW",
@@ -134,6 +134,19 @@ ROW_VARIANT_TABLES = {
 # from tile 4 * stage (missiles, stages 0-2, "/w0".."/w2") or 12 + 4 * stage
 # (fireballs, stages 0-3, "/w3".."/w6").
 MECHA_RIDLEY_WEAPONS = "sMechaRidleyWeaponsGfx"
+# The escape gates draw sEscapeGateAndTimerGfx, which EscapeGate copies to
+# OBJ VRAM 0x7800 with sEscapeGateAndTimerPal in the last OBJ row (their
+# spriteset entry names the Zeela graphics); sEscapeGateFlashingPal rows 0
+# to 2 then replace that row. The escape ship's tail copies
+# sEscapeShipFlashingPal rows 0 to 2 to the ship's palette row 1. Both are
+# baked as "/fN" variants.
+ESCAPE_GATE_TABLES = "escape_gate.c"
+ESCAPE_GATE_GFX = "sEscapeGateAndTimerGfx"
+ESCAPE_GATE_PAL = "sEscapeGateAndTimerPal"
+ESCAPE_GATE_FLASHING = "sEscapeGateFlashingPal"
+ESCAPE_GATE_VRAM = 0x7800
+ESCAPE_SHIP_FLASHING = "sEscapeShipFlashingPal"
+FLASHING_ROWS = 3
 MECHA_RIDLEY_WEAPON_TABLES = ("sMechaRidleyMissileOam", "sMechaRidleyFireballOam")
 MECHA_RIDLEY_WEAPON_VRAM = 0x4280
 MECHA_RIDLEY_WEAPON_STAGES = tuple(4 * stage for stage in range(3)) + tuple(
@@ -233,7 +246,7 @@ AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
              "sSidehopperHighJumpVelocity", "sSidehopperLowJumpVelocity",
              "sDessgeegaHighJumpYVelocity", "sDessgeegaLowJumpYVelocity",
-             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sSpacePirate_2e1070", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sMellaIdleYMovement",
+             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sSpacePirate_2e1070", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sEscapeShipHoveringYMovement", "sEscapeShipHoveringXMovement", "sMellaIdleYMovement",
              "sMellaIdleXMovement", "sMellaGoingDownYMovement", "sMellaGoingUpYMovement",
              "sMellaMovingXMovement", "sHoltzIdleYVelocity", "sSqueeptRisingMovement",
              "sSqueeptFallingMovement", "sChargeBeamIdleYMovement",
@@ -564,7 +577,8 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
     plan = []
     wanted = set()
     for sprite, row in PORTED.items():
-        source = data_file(decomp, graphics[sprite]).read_text(encoding="utf-8")
+        source = (decomp / "src/data/sprites" / ESCAPE_GATE_TABLES if sprite == "PSPRITE_ESCAPE_GATE1"
+                  else data_file(decomp, graphics[sprite])).read_text(encoding="utf-8")
         tables = frame_tables(source)
         plan.append((sprite, row, graphics[sprite], palettes[sprite], tables))
         wanted.update([graphics[sprite], palettes[sprite], *tables])
@@ -572,6 +586,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
               "sRandomNumberTable")
     wanted.update(tables)
     wanted.add(MECHA_RIDLEY_WEAPONS)
+    wanted.update([ESCAPE_GATE_GFX, ESCAPE_GATE_PAL, ESCAPE_GATE_FLASHING, ESCAPE_SHIP_FLASHING])
     wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES, *BYTE_PAIR_TABLES,
                    "sLocationTextPointers", "sAreaBannerLocationTextPal"])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal",
@@ -697,6 +712,29 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
                         colours[10 * 16:11 * 16] = flashing[16 * flames:16 * flames + 16]
                         suffix += f"f{flames}"
                     variants["/" + suffix if suffix else ""] = colours
+            flips = ("none",)
+        if sprite in ("PSPRITE_ESCAPE_SHIP", "PSPRITE_ESCAPE_GATE1"):
+            # Never frozen, stunned or flipped.
+            gate = sprite == "PSPRITE_ESCAPE_GATE1"
+            address, size = symbols[ESCAPE_GATE_FLASHING if gate else ESCAPE_SHIP_FLASHING]
+            flashing = [bgr555(value) for value in struct.unpack_from(
+                f"<{size // 2}H", rom, rom_offset(address, rom))]
+            row = 15 if gate else 9
+            if gate:
+                staged = bytearray(vram)
+                address, size = symbols[ESCAPE_GATE_GFX]
+                staged[ESCAPE_GATE_VRAM:ESCAPE_GATE_VRAM + size] = rom[rom_offset(address, rom):
+                                                                       rom_offset(address, rom) + size]
+                vram = bytes(staged)
+                address, size = symbols[ESCAPE_GATE_PAL]
+                palette = list(palette)
+                palette[row * 16:row * 16 + 16] = [bgr555(value) for value in struct.unpack_from(
+                    "<16H", rom, rom_offset(address, rom))]
+            variants = {"": palette}
+            for index in range(FLASHING_ROWS):
+                colours = list(palette)
+                colours[row * 16:row * 16 + 16] = flashing[16 * index:16 * index + 16]
+                variants[f"/f{index}"] = colours
             flips = ("none",)
         if sprite == "PSPRITE_METROID":
             address, size = symbols[METROID_GRABBED]

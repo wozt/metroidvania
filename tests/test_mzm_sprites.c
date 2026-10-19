@@ -7619,6 +7619,215 @@ int main(void) {
                mzm_sprite_graphics_owner(&ridley_statue) == MZM_PSPRITE_KRAID_ELEVATOR_STATUE);
         memset(test_events, 0, sizeof test_events);
     }
+    /* The Chozodia escape: the ship opens once Mecha Ridley is dead and
+     * Samus is near, spawns its pirate, takes Samus in, closes, hovers and
+     * flies off; the first gate spawns the black pirates and opens once
+     * they are dead and Samus is near, the second once the ship hovers. */
+    {
+        MzmSpriteKind escape_kind = {0};
+        for (int a = 0; a < MZM_ESCAPE_SHIP_ANIMS; ++a) {
+            escape_kind.counts[a] = 8;
+            for (int f = 0; f < 8; ++f) escape_kind.timers[a][f] = 4;
+        }
+        clear();
+        const int16_t sway_y[3] = {1, -1, 32767}, sway_x[2] = {2, 32767};
+        memcpy(tables.escape_ship_hovering_y, sway_y, sizeof sway_y);
+        memcpy(tables.escape_ship_hovering_x, sway_x, sizeof sway_x);
+        tables.health[MZM_PSPRITE_ESCAPE_SHIP_SPACE_PIRATE] = 30;
+        MzmSprite room[12] = {0};
+        MzmSpriteGlobals eg = {0};
+        MzmSpriteSamusLink el = {0};
+        MzmSpriteFrame ef = frame;
+        ef.sprites = room;
+        ef.sprite_count = 12;
+        ef.globals = &eg;
+        ef.hooks = &test_hooks;
+        ef.samus_link = &el;
+        ef.kinds[MZM_FAMILY_ESCAPE_SHIP] = &escape_kind;
+        memset(test_events, 0, sizeof test_events);
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_ESCAPE_SHIP, 3, 9, 20, 2, 0);
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x8 && room[0].anim == MZM_ESCAPE_SHIP_IDLE && room[0].draw_order == 11 &&
+               eg.escape_ship_palette == -1 && room[1].sprite_id == MZM_SSPRITE_ESCAPE_SHIP_PART &&
+               room[1].room_slot == 0 && room[2].room_slot == 2 && room[2].gfx_slot == 3 &&
+               mzm_sprite_graphics_owner(&room[2]) == MZM_PSPRITE_ESCAPE_SHIP);
+        mzm_sprite_update(&room[1], 1, &ef);
+        mzm_sprite_update(&room[2], 2, &ef);
+        assert(room[1].pose == 0xE && room[1].draw_order == 10 && room[2].pose == 0x8 &&
+               room[2].anim == MZM_ESCAPE_SHIP_PART_TAIL && room[2].draw_order == 13);
+        /* The tail's lights: the first flashing row after 4 frames. */
+        for (int i = 0; i < 4; ++i) mzm_sprite_update(&room[2], 2, &ef);
+        assert(eg.escape_ship_palette == 1 && room[2].work2 == 8);
+        /* Samus near, but Mecha Ridley alive: closed. */
+        uint16_t ship_y = room[0].y, ship_x = room[0].x;
+        ef.samus_y = (uint16_t)(ship_y - 200 + 1);
+        ef.samus_x = (uint16_t)(ship_x - 100);
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x8);
+        test_set_event(NULL, MZM_EVENT_MECHA_RIDLEY_KILLED);
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x9 && room[0].anim == MZM_ESCAPE_SHIP_OPENING &&
+               room[3].sprite_id == MZM_PSPRITE_ESCAPE_SHIP_SPACE_PIRATE && room[3].room_slot == 2 &&
+               room[3].y == ship_y - 4 && room[3].x == ship_x + 112 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ESCAPE_SHIP_OPENING));
+        /* Its pirate: mid-jump (the 7th jumping frame), then shown and
+         * hurting, then jumping. */
+        uint8_t jumping_frames = pirate_kind.counts[MZM_PIRATE_JUMPING];
+        pirate_kind.counts[MZM_PIRATE_JUMPING] = 8;
+        for (int f = 0; f < 8; ++f) pirate_kind.timers[MZM_PIRATE_JUMPING][f] = 4;
+        mzm_sprite_update(&room[3], 3, &ef);
+        assert(room[3].pose == 0x1 && room[3].anim == MZM_PIRATE_JUMPING && room[3].frame == 6 &&
+               room[3].samus_collision == 0 && mzm_sprite_graphics_owner(&room[3]) == MZM_PSPRITE_SPACE_PIRATE);
+        mzm_sprite_update(&room[3], 3, &ef);
+        assert(room[3].pose == 0x2 && room[3].work0 == 6 && room[3].health == 30 &&
+               room[3].samus_collision == 20 && room[3].draw_order == 12 &&
+               !(room[3].status & MZM_SPRITE_STATUS_NOT_DRAWN));
+        room[3].work0 = 1;
+        mzm_sprite_update(&room[3], 3, &ef);
+        assert(room[3].draw_order == 4 && room[3].work1 == 3);
+        pirate_kind.counts[MZM_PIRATE_JUMPING] = jumping_frames;
+        /* Opened from the 7th frame: Samus lands in it. */
+        room[0].frame = 7;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x22 && room[0].samus_collision == 2);
+        room[0].status |= MZM_SPRITE_STATUS_SAMUS_ON_TOP;
+        el.facing_right = true;
+        el.invincibility = 5;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x23 && room[0].work0 == 20 && room[0].draw_order == 4 &&
+               room[0].samus_collision == 0 && !(room[0].status & MZM_SPRITE_STATUS_SAMUS_ON_TOP) &&
+               el.set_pose == MZM_POSE_IN_ESCAPE_SHIP && el.clear_invincibility &&
+               test_check_event(NULL, MZM_EVENT_ESCAPED_CHOZODIA) && el.moved &&
+               el.y == ship_y - 43 && el.x == ship_x + 80 && room[3].ignore_samus_timer == 15 &&
+               room[3].draw_order == 2 && room[0].hitbox_right == 320);
+        mzm_sprite_update(&room[1], 1, &ef);
+        assert(room[1].draw_order == 3);
+        room[0].work0 = 1;
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x24 && mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ESCAPE_SHIP_CLOSING));
+        room[0].frame = 7;
+        room[0].adc = 4;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x25 && room[0].work0 == 30 && room[0].work1 == 90 && eg.sub1.work3 == 1);
+        /* Closed: the blue ship cutscene request, the flames, then a nudge
+         * right. */
+        for (int i = 0; i < 18; ++i) mzm_sprite_update(&room[0], 0, &ef);
+        assert(eg.cutscene_effect == 5 && room[4].status == 0);
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[4].sprite_id == MZM_SSPRITE_ESCAPE_SHIP_PART && room[4].room_slot == 3 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ESCAPE_SHIP_FLYING));
+        for (int i = 0; i < 10; ++i) mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].work0 == 1 && room[0].x == ship_x + 20);
+        mzm_sprite_update(&room[2], 2, &ef);
+        assert(room[2].pose == 0x9 && room[2].anim == MZM_ESCAPE_SHIP_PART_TAIL_MOVING);
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].work0 == 0 && room[0].x == ship_x + 22);
+        /* Lifting off: 90 frames of sway, a nudge right, then rising. */
+        int frames = 0;
+        while (room[0].pose == 0x25 && frames < 200) {
+            mzm_sprite_update(&room[0], 0, &ef);
+            ++frames;
+        }
+        assert(frames == 90 && room[0].pose == 0x26 && room[0].work0 == 200 && room[0].work1 == 100 &&
+               room[0].x == ship_x + 22 + 187 && room[0].y == ship_y - 60 &&
+               el.y == room[0].y - 43 && el.x == room[0].x + 80);
+        /* Hovering: the second gate's signal, the shutters, then away. */
+        frames = 0;
+        mzm_sfx_clear();
+        while (room[0].pose == 0x26 && frames < 400) {
+            mzm_sprite_update(&room[0], 0, &ef);
+            ++frames;
+        }
+        assert(frames == 300 && room[0].pose == 0x27 && eg.sub1.work3 == 2 &&
+               room[0].anim == MZM_ESCAPE_SHIP_FLYING && room[0].y_spawn == 200 && room[0].work1 == 4 &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ESCAPE_SHIP_SHUTTER_OPENING) &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ESCAPE_SHIP_FLYING_FAST));
+        /* The tail's lights flash twice as fast once it hovers. */
+        room[2].work2 = 1;
+        mzm_sprite_update(&room[2], 2, &ef);
+        assert(room[2].work2 == 4);
+        frames = 0;
+        while (room[0].pose == 0x27 && frames < 400) {
+            mzm_sprite_update(&room[0], 0, &ef);
+            ++frames;
+        }
+        assert(frames == 200 && room[0].pose == 0x28 && room[0].work1 == 64 && eg.cutscene_effect == 4);
+        mzm_sprite_update(&room[4], 4, &ef);
+        mzm_sprite_update(&room[4], 4, &ef);
+        assert(room[4].status & MZM_SPRITE_STATUS_NOT_DRAWN);
+        /* Flying fast: it bursts a laser and runs over a pirate. */
+        room[5] = (MzmSprite){0};
+        room[5].status = MZM_SPRITE_STATUS_EXISTS;
+        room[5].samus_collision = 19;
+        room[5].y = (uint16_t)(room[0].y - 40);
+        room[5].x = (uint16_t)(room[0].x + 100);
+        room[6] = room[5];
+        room[6].samus_collision = 20;
+        room[6].hitbox_top = -100;
+        room[6].hitbox_left = -20;
+        room[6].hitbox_right = 20;
+        room[6].pose = 0x27;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[5].status == 0 && room[6].pose == 0x62);
+
+        /* The gates. */
+        memset(room, 0, sizeof room);
+        memset(&eg, 0, sizeof eg);
+        caa_calls = 0;
+        mzm_sprite_init_primary(&room[0], MZM_PSPRITE_ESCAPE_GATE1, 0, 9, 20, 1, 0);
+        uint16_t gate_x = room[0].x;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x1 && room[0].x == gate_x + 32 && caa_calls == 8 &&
+               last_caa == MZM_CAA_MAKE_SOLID_GRIPPABLE && room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN &&
+               eg.escape_gate_palette == 1);
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x9 && !(room[0].status & MZM_SPRITE_STATUS_NOT_DRAWN) &&
+               room[1].sprite_id == MZM_PSPRITE_BLACK_SPACE_PIRATE && room[1].room_slot == 0x80 &&
+               room[1].x == gate_x + 32 - 128 && room[2].x == gate_x + 32 - 640 &&
+               room[2].status & MZM_SPRITE_STATUS_X_FLIP && eg.escape_gate_palette == -1);
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x9);
+        room[1].status = room[2].status = 0;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x22);
+        /* Samus to its left within 6 blocks. */
+        ef.samus_y = (uint16_t)(room[0].y + 1);
+        ef.samus_x = (uint16_t)(room[0].x - 200);
+        mzm_sfx_clear();
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x23 && room[0].anim == MZM_ESCAPE_GATE_OPENING &&
+               mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_ESCAPE_GATE_OPENING));
+        caa_calls = 0;
+        room[0].frame = 4;
+        room[0].adc = 10;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(caa_calls == 8 && last_caa == MZM_CAA_REMOVE_SOLID);
+        room[0].frame = 7;
+        room[0].adc = 4;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x25 && room[0].anim == MZM_ESCAPE_GATE_OPENED);
+        /* The ship closed: the chasing pirate. */
+        eg.sub1.work3 = 1;
+        mzm_sprite_update(&room[0], 0, &ef);
+        assert(room[0].pose == 0x27 && room[1].sprite_id == MZM_PSPRITE_SPACE_PIRATE_WAITING1 &&
+               room[1].room_slot == 0x81 && room[1].x == room[0].x - 160);
+        MzmSprite second;
+        mzm_sprite_init_primary(&second, MZM_PSPRITE_ESCAPE_GATE2, 0, 9, 30, 0, 0);
+        eg.sub1.work3 = 1;
+        mzm_sprite_update(&second, 0, &ef);
+        mzm_sprite_update(&second, 0, &ef);
+        mzm_sprite_update(&second, 0, &ef);
+        assert(second.pose == 0x9 && eg.sub1.work3 == 0 && mzm_sprite_graphics_owner(&second) == MZM_PSPRITE_ESCAPE_GATE1);
+        eg.sub1.work3 = 2;
+        mzm_sprite_update(&second, 0, &ef);
+        mzm_sprite_update(&second, 0, &ef);
+        assert(second.pose == 0x23);
+        memset(test_events, 0, sizeof test_events);
+        clear();
+    }
     /* Chozodia's scripted sprites: the falling pillar after the suit, the
      * Power Bomb thief, the stolen Power Bomb and its trigger. */
     {

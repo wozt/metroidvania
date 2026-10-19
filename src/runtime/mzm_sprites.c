@@ -734,6 +734,15 @@ const char *const mzm_elevator_statue_anim_names[MZM_ELEVATOR_STATUE_ANIMS] = {
 static const char *const elevator_statue_sprites[MZM_ELEVATOR_STATUE_ANIMS] = {
     "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE", "KRAID_ELEVATOR_STATUE",
 };
+const char *const mzm_escape_ship_anim_names[MZM_ESCAPE_SHIP_ANIMS] = {
+    "EscapeShipOam_Idle", "EscapeShipOam_Opening", "EscapeShipOam_Closing", "EscapeShipOam_Flying",
+    "EscapeShipPartOam_Top", "EscapeShipPartOam_Flames", "EscapeShipPartOam_Tail",
+    "EscapeShipPartOam_TailMoving", "EscapeGateOam_Closed", "EscapeGateOam_Opening", "EscapeGateOam_Opened",
+};
+static const char *const escape_ship_sprites[MZM_ESCAPE_SHIP_ANIMS] = {
+    "ESCAPE_SHIP", "ESCAPE_SHIP", "ESCAPE_SHIP", "ESCAPE_SHIP", "ESCAPE_SHIP", "ESCAPE_SHIP",
+    "ESCAPE_SHIP", "ESCAPE_SHIP", "ESCAPE_GATE1", "ESCAPE_GATE1", "ESCAPE_GATE1",
+};
 const char *const mzm_imago_anim_names[MZM_IMAGO_ANIMS] = {
     "ImagoPartOam_BodyIdle",
     "ImagoPartOam_BodyGrowling",
@@ -1066,6 +1075,7 @@ const MzmSpriteFamily mzm_sprite_families[MZM_SPRITE_FAMILIES] = {
     [MZM_FAMILY_ELEVATOR_STATUE] = {MZM_ELEVATOR_STATUE_ANIMS, mzm_elevator_statue_anim_names,
                                     elevator_statue_sprites},
     [MZM_FAMILY_IMAGO] = {MZM_IMAGO_ANIMS, mzm_imago_anim_names, imago_sprites},
+    [MZM_FAMILY_ESCAPE_SHIP] = {MZM_ESCAPE_SHIP_ANIMS, mzm_escape_ship_anim_names, escape_ship_sprites},
 };
 
 
@@ -5533,6 +5543,7 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
         if (sprite_id == MZM_SSPRITE_HIVE_ROOTS) return MZM_FAMILY_HIVE;
         if (sprite_id == MZM_SSPRITE_TANGLE_VINE_GERUTA_PART) return MZM_FAMILY_TANGLE_VINE;
         if (sprite_id == MZM_SSPRITE_ELEVATOR_STATUE_DEBRIS) return MZM_FAMILY_ELEVATOR_STATUE;
+        if (sprite_id == MZM_SSPRITE_ESCAPE_SHIP_PART) return MZM_FAMILY_ESCAPE_SHIP;
         if (sprite_id == MZM_SSPRITE_IMAGO_PART || sprite_id == MZM_SSPRITE_IMAGO_NEEDLE ||
             sprite_id == MZM_SSPRITE_IMAGO_DAMAGED_STINGER || sprite_id == MZM_SSPRITE_IMAGO_EGG)
             return MZM_FAMILY_IMAGO;
@@ -5649,6 +5660,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_KRAID_ELEVATOR_STATUE: case MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE:
         return MZM_FAMILY_ELEVATOR_STATUE;
     case MZM_PSPRITE_IMAGO: return MZM_FAMILY_IMAGO;
+    case MZM_PSPRITE_ESCAPE_SHIP: case MZM_PSPRITE_ESCAPE_GATE1: case MZM_PSPRITE_ESCAPE_GATE2:
+        return MZM_FAMILY_ESCAPE_SHIP;
     case MZM_PSPRITE_KRAID_STATUE:
     case MZM_PSPRITE_RIDLEY_STATUE: return MZM_FAMILY_BOSS_STATUE;
     case MZM_PSPRITE_CANNON: case MZM_PSPRITE_CANNON2: case MZM_PSPRITE_CANNON3:
@@ -5671,7 +5684,8 @@ int mzm_sprite_family(uint8_t sprite_id, bool secondary) {
     case MZM_PSPRITE_SPACE_PIRATE_WAITING2:
     case MZM_PSPRITE_SPACE_PIRATE_WAITING3:
     case MZM_PSPRITE_SPACE_PIRATE2: return MZM_FAMILY_SPACE_PIRATE;
-    case MZM_PSPRITE_BLACK_SPACE_PIRATE: return MZM_FAMILY_SPACE_PIRATE;
+    case MZM_PSPRITE_BLACK_SPACE_PIRATE:
+    case MZM_PSPRITE_ESCAPE_SHIP_SPACE_PIRATE: return MZM_FAMILY_SPACE_PIRATE;
     case MZM_PSPRITE_SECURITY_LASER_VERTICAL:
     case MZM_PSPRITE_SECURITY_LASER_HORIZONTAL:
     case MZM_PSPRITE_SECURITY_LASER_VERTICAL2:
@@ -6633,10 +6647,13 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_BARISTUTE) return MZM_PSPRITE_BARISTUTE;
         /* sSpacePirateGfx; the event trigger is never drawn. */
         if (sprite->sprite_id == MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB ||
-            sprite->sprite_id == MZM_PSPRITE_BLACK_SPACE_PIRATE)
+            sprite->sprite_id == MZM_PSPRITE_BLACK_SPACE_PIRATE ||
+            sprite->sprite_id == MZM_PSPRITE_ESCAPE_SHIP_SPACE_PIRATE)
             return MZM_PSPRITE_SPACE_PIRATE;
         /* sElevatorStatuesGfx */
         if (sprite->sprite_id == MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE) return MZM_PSPRITE_KRAID_ELEVATOR_STATUE;
+        /* sEscapeGateAndTimerGfx, exported with the first gate. */
+        if (sprite->sprite_id == MZM_PSPRITE_ESCAPE_GATE2) return MZM_PSPRITE_ESCAPE_GATE1;
         if (mzm_sprite_family(sprite->sprite_id, false) == MZM_FAMILY_TANGLE_VINE)
             return MZM_PSPRITE_TANGLE_VINE_TALL;
         /* sRinkaZebetiteAndCannonGfx, exported with the cannon's tables. */
@@ -6683,6 +6700,7 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||
         sprite->sprite_id == MZM_SSPRITE_MAP_STATION_PART || sprite->sprite_id == MZM_SSPRITE_SAVE_PLATFORM_PART ||
         sprite->sprite_id == MZM_SSPRITE_GUNSHIP_PART || sprite->sprite_id == MZM_SSPRITE_MORPH_BALL_LAUNCHER_PART ||
+        sprite->sprite_id == MZM_SSPRITE_ESCAPE_SHIP_PART ||
         sprite->sprite_id == MZM_SSPRITE_ZIPLINE_GENERATOR_PART ||
         sprite->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM ||
         sprite->sprite_id == MZM_SSPRITE_CHOZO_PILLAR_PLATFORM_SHADOW ||
@@ -6899,6 +6917,7 @@ void mzm_sprite_update(MzmSprite *sprite, uint8_t slot, const MzmSpriteFrame *fr
     case MZM_FAMILY_CHOZODIA_SCRIPTED: ai_chozodia_scripted(&c); break;
     case MZM_FAMILY_ELEVATOR_STATUE: ai_elevator_statue(&c); break;
     case MZM_FAMILY_IMAGO: ai_imago(&c); break;
+    case MZM_FAMILY_ESCAPE_SHIP: ai_escape_ship(&c); break;
     case MZM_FAMILY_BOSS_STATUE: boss_statue(&c); break;
     case MZM_FAMILY_CHOZO_STATUE: ai_chozo_statue(&c); break;
     case MZM_FAMILY_SKREE:

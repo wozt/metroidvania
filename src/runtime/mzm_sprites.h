@@ -223,6 +223,8 @@ typedef struct {
     int16_t baristute_falling_y[8]; /* sBaristuteFallingYVelocity (SHORT_MAX ends it) */
     int16_t imago_attacking_x[49];  /* sImagoAttackingXVelocity (SHORT_MAX ends it) */
     int16_t imago_stinger_falling_y[10]; /* sImagoDamagedStingerFallingYVelocity */
+    int16_t escape_ship_hovering_y[65]; /* sEscapeShipHoveringYMovement (SHORT_MAX ends it) */
+    int16_t escape_ship_hovering_x[57]; /* sEscapeShipHoveringXMovement (SHORT_MAX ends it) */
     /* sImagoDynamicPaletteData (u8 [9][2]) read as halfwords: the row in
      * the low byte, the delay in the high byte; row 0x80 ends it. */
     int16_t imago_core_palette[9];
@@ -978,6 +980,16 @@ enum {
     MZM_IMAGO_ANIMS,
 };
 extern const char *const mzm_imago_anim_names[MZM_IMAGO_ANIMS];
+
+/* The Chozodia escape ship and its gates (sprites_ai/escape_ship.c,
+ * sprites_ai/escape_gate.c). */
+enum {
+    MZM_ESCAPE_SHIP_IDLE, MZM_ESCAPE_SHIP_OPENING, MZM_ESCAPE_SHIP_CLOSING, MZM_ESCAPE_SHIP_FLYING,
+    MZM_ESCAPE_SHIP_PART_TOP, MZM_ESCAPE_SHIP_PART_FLAMES, MZM_ESCAPE_SHIP_PART_TAIL,
+    MZM_ESCAPE_SHIP_PART_TAIL_MOVING, MZM_ESCAPE_GATE_CLOSED, MZM_ESCAPE_GATE_OPENING,
+    MZM_ESCAPE_GATE_OPENED, MZM_ESCAPE_SHIP_ANIMS,
+};
+extern const char *const mzm_escape_ship_anim_names[MZM_ESCAPE_SHIP_ANIMS];
 #define MZM_TANGLE_VINE_MULTI_NAME "sTangleVineGerutaMultiSpriteData_Idle"
 
 /* Sprites sharing an AI and its OAM tables. `library_sprites` names, per
@@ -998,6 +1010,7 @@ enum {
     MZM_FAMILY_MECHA_RIDLEY, MZM_FAMILY_HIVE, MZM_FAMILY_BARISTUTE,
     MZM_FAMILY_TANGLE_VINE, MZM_FAMILY_RUINS_TEST,
     MZM_FAMILY_CHOZODIA_SCRIPTED, MZM_FAMILY_ELEVATOR_STATUE, MZM_FAMILY_IMAGO,
+    MZM_FAMILY_ESCAPE_SHIP,
     MZM_SPRITE_FAMILIES,
 };
 typedef struct {
@@ -1084,7 +1097,9 @@ enum {
     MZM_PSPRITE_FAKE_POWER_BOMB = 181, MZM_PSPRITE_SPACE_PIRATE_CARRYING_POWER_BOMB = 182,
     MZM_PSPRITE_FALLING_CHOZO_PILLAR = 188, MZM_PSPRITE_KRAID_ELEVATOR_STATUE = 149,
     MZM_PSPRITE_RIDLEY_ELEVATOR_STATUE = 150, MZM_PSPRITE_IMAGO = 134,
-    MZM_PSPRITE_BLACK_SPACE_PIRATE = 198,
+    MZM_PSPRITE_BLACK_SPACE_PIRATE = 198, MZM_PSPRITE_ESCAPE_SHIP = 120,
+    MZM_PSPRITE_ESCAPE_GATE1 = 196, MZM_PSPRITE_ESCAPE_GATE2 = 197,
+    MZM_PSPRITE_ESCAPE_SHIP_SPACE_PIRATE = 199,
     MZM_PSPRITE_IMAGO_COCOON_AFTER_FIGHT = 112,
     MZM_PSPRITE_IMAGO_LARVA_RIGHT_SIDE = 127,
     MZM_PSPRITE_IMAGO_LARVA_LEFT = 139,
@@ -1115,6 +1130,7 @@ enum {
     MZM_SSPRITE_GADORA_EYE = 54, MZM_SSPRITE_GADORA_BEAM = 55,
     MZM_SSPRITE_IMAGO_LARVA_PART = 18, MZM_SSPRITE_HIVE_ROOTS = 17,
     MZM_SSPRITE_TANGLE_VINE_GERUTA_PART = 45, MZM_SSPRITE_ELEVATOR_STATUE_DEBRIS = 48,
+    MZM_SSPRITE_ESCAPE_SHIP_PART = 69,
     MZM_SSPRITE_IMAGO_PART = 41, MZM_SSPRITE_IMAGO_NEEDLE = 47, MZM_SSPRITE_IMAGO_DAMAGED_STINGER = 49,
     MZM_SSPRITE_IMAGO_EGG = 51,
     MZM_SSPRITE_RUINS_TEST_SYMBOL = 59, MZM_SSPRITE_RUINS_TEST_SAMUS_REFLECTION_START = 60,
@@ -1313,6 +1329,9 @@ typedef struct {
     /* The gunship's palette animations as last copied to OBJ rows 9 and 10
      * (its entrance and flames palette offsets, -1: still sGunshipPal). */
     int8_t gunship_entrance_palette, gunship_flames_palette;
+    /* The escape ship's and the escape gates' flashing rows as last copied
+     * (sEscapeShipFlashingPal / sEscapeGateFlashingPal row, -1: none yet). */
+    int8_t escape_ship_palette, escape_gate_palette;
     /* gDisableAnimatedPalette = FALSE of the zipline generator (the
      * runtime takes the request). */
     bool enable_animated_palette;

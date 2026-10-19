@@ -220,6 +220,8 @@ void ai_ruins_test(Ctx *c);
 void ai_chozodia_scripted(Ctx *c);
 /* The Kraid and Ridley elevator statues (mzm_elevator_statue.c). */
 void ai_elevator_statue(Ctx *c);
+/* The Chozodia escape ship and its gates (mzm_escape_ship.c). */
+void ai_escape_ship(Ctx *c);
 /* Imago, its parts, needles, damaged stinger and eggs (mzm_imago.c). */
 void ai_imago(Ctx *c);
 /* Kraid and Ridley's Gadoras, eye and beam (mzm_gadora.c). */

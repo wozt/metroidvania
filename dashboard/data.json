@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T04:11:14+00:00",
+ "generated_at": "2026-10-19T04:27:33+00:00",
  "git": {
-  "commit": "2c8d03d",
+  "commit": "2eb8321",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 134,
+   "total": 135,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 60,
+    "partial": 61,
     "functional": 63,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 63,
-   "functional_or_better_percent": 47.0,
-   "with_passing_tests": 122,
-   "with_passing_tests_percent": 91.0,
+   "functional_or_better_percent": 46.7,
+   "with_passing_tests": 123,
+   "with_passing_tests_percent": 91.1,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -125,6 +125,7 @@
     "mzm.enemies.dessgeega",
     "mzm.enemies.dragon",
     "mzm.enemies.elevator_statue",
+    "mzm.enemies.escape_ship",
     "mzm.enemies.gadora",
     "mzm.enemies.geruta",
     "mzm.enemies.hive",
@@ -251,11 +252,11 @@
    "areas": [
     "mzm"
    ],
-   "total": 86,
+   "total": 87,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 36,
+    "partial": 37,
     "functional": 50,
     "faithful": 0,
     "validated": 0,
@@ -263,8 +264,8 @@
     "unknown": 0
    },
    "functional_or_better": 50,
-   "functional_or_better_percent": 58.1,
-   "with_passing_tests": 86,
+   "functional_or_better_percent": 57.5,
+   "with_passing_tests": 87,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -284,6 +285,7 @@
     "mzm.enemies.dessgeega",
     "mzm.enemies.dragon",
     "mzm.enemies.elevator_statue",
+    "mzm.enemies.escape_ship",
     "mzm.enemies.gadora",
     "mzm.enemies.geruta",
     "mzm.enemies.hive",
@@ -1790,6 +1792,72 @@
     "in_game_check": [
      "brinstar_008",
      "norfair_035"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_mzm_sprites.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_sprites"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
+   }
+  },
+  {
+   "id": "mzm.enemies.escape_ship",
+   "area": "mzm",
+   "category": "enemies",
+   "title": "Chozodia escape ship and escape gates",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/mzm_escape_ship.c",
+    "src/runtime/mzm_sprites.c",
+    "src/runtime/room_runtime.c",
+    "scripts/mzm_sprites.py"
+   ],
+   "tests": [
+    "tests/test_mzm_sprites.c"
+   ],
+   "dependencies": [
+    "mzm.enemies.space_pirate",
+    "mzm.enemies.mecha_ridley"
+   ],
+   "native_routines": [
+    "EscapeShip",
+    "EscapeShipPart",
+    "EscapeShipPartUpdatePalette",
+    "EscapeShipSetIgnoreSamus",
+    "EscapeShipSetPirateDrawOrder",
+    "EscapeShipPirateCollision",
+    "EscapeShipCheckCollidingWithLaser",
+    "EscapeGate",
+    "EscapeGateChangeCcaa",
+    "SpriteUtilCountPrimarySprites"
+   ],
+   "limitations": "The StartEffectForCutscene requests (EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP when the flames start, EFFECT_CUTSCENE_ESCAPING_CHOZODIA once the ship is gone) reach the runtime, which reports them as not ported and keeps the room running: their colour fades, the blue-ship cutscene and the ending do not play. The escape timer gfx sharing the gates' tiles is not drawn. Not compared with an emulator. Once Mecha Ridley is dead and Samus is up to 12 blocks above and less than 4 blocks left of it, the ship opens (sound) and spawns its pirate; from the 7th opening frame Samus can stand on it, and landing on it sets EVENT_ESCAPED_CHOZODIA, clears her invincibility and sets SPOSE_IN_ESCAPE_SHIP (or the turning pose when she faces left). From then on it holds Samus in the cockpit (43 subpixels up, 80 right), keeps every sprite from touching her, bursts the pirate lasers it touches and draws the pirates behind it. It closes after 20 frames, waits, spawns its flames and nudges right, sways on sEscapeShipHoveringY/XMovement while lifting off, signals the second gate, opens its shutters, and accelerates right for 200 frames, destroying the pirates in its way. Its top part goes in front of Samus once she is in, its tail flashes sEscapeShipFlashingPal rows (baked /f0-/f2, twice as fast once hovering) and its flames hide once it escapes. The first gate (solid grippable blocks) loads sEscapeGateAndTimerGfx and spawns the two black pirates, opens once they are dead and Samus is within 6 blocks to its left (blocks removed on the 5th opening frame), then spawns the pirate that chases the ship; it flashes sEscapeGateFlashingPal (baked from the gate tiles at OBJ VRAM 0x7800 and the last OBJ row). The second gate opens once the ship hovers. A capture in chozodia_092 (event 74) shows the first gate, its two black pirates and the ship.",
+   "next_action": "Port the blue-ship and Chozodia escape cutscene effects; compare the escape with an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_mzm_sprites.c"
+    ],
+    "in_game_check": [
+     "chozodia_092"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -3797,10 +3865,14 @@
     "BlackSpacePirateWalkingAlerted",
     "BlackSpacePirateDeath",
     "BlackSpacePirateHitByLaserInit",
-    "BlackSpacePirateHitByLaser"
+    "BlackSpacePirateHitByLaser",
+    "EscapeShipSpacePirate",
+    "EscapeShipSpacePirateInit",
+    "EscapeShipSpacePirateSpawn",
+    "EscapeShipSpacePirateDelayBeforeJumping"
    ],
-   "limitations": "SpawnWaitingPirates runs on door transitions, not on the debug teleport; the alarm music and palette animation and the laser's draw order and BG priority are not reproduced; the Space Pirate carrying a power bomb, the black and escape-ship pirates are not ported; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset. The five SpacePirate sprites (normal, three waiting, the faster-shooting variant) and SSPRITE_SPACE_PIRATE_LASER: line-of-sight detection on the clipdata grid (forward rows, diagonals up and down, crawling and climbing cases) through the gSpriteDrawOrder scratch flags, walking with acceleration and slope slowdown, the obstacle probes (jumps from the four ROM tables, crawling under low ceilings, turns), zonelines and wall jump points from the exported clipdata movement (M lines), climbing, wall pauses, wall jumps, crawling, alerted walking, charging and two-laser volleys on the ground and on walls, lasers hurting Samus and other pirates, the Chozodia alarm timer (set on sight, 480 frames, stopped by the last pirate's death, kept after Mecha Ridley) and the laser's CAA_BOMB_PISTOL on hatches. With the alarm on (or Mecha Ridley dead), every door transition spawns a waiting pirate at the arrival point (half a block back toward the door; graphics slot 5 in spritesets 88 and 103; crawling out of hatchless doors), and a room whose spriteset has no pirate stops the alarm. Rooms export their default, first-event and second-event spritesets; RoomLoad and waiting-pirate arrivals use the active variant, with second-event priority as in SpriteLoadRoomSprites. The charged paralyzer pistol drops a pirate's standing state, freezes it for 60 suitless ticks and flickers its black/purple rows near release. Smoke-run in the 47 Chozodia rooms with pirates. The black pirates (after the Fully Powered Suit) share the pirate routines in palette row 2 (baked), wait until on screen, take damage only from the Plasma Beam and missiles (other beams are absorbed), burst the other pirates' lasers, charge and shoot twice as fast, hop over the pirate ahead or jump after shooting with their own jump table and faster alerted jumps, and die without the alarm bookkeeping; a capture in chozodia_013 (event 67) shows two of them on the walkway.",
-   "next_action": "Port the power-bomb, black and escape-ship pirates; reproduce the alarm presentation.",
+   "limitations": "SpawnWaitingPirates runs on door transitions, not on the debug teleport; the alarm music and palette animation and the laser's draw order and BG priority are not reproduced; the runtime keeps the alarm across room loads without SpriteLoadAllData's new-game reset. The five SpacePirate sprites (normal, three waiting, the faster-shooting variant) and SSPRITE_SPACE_PIRATE_LASER: line-of-sight detection on the clipdata grid (forward rows, diagonals up and down, crawling and climbing cases) through the gSpriteDrawOrder scratch flags, walking with acceleration and slope slowdown, the obstacle probes (jumps from the four ROM tables, crawling under low ceilings, turns), zonelines and wall jump points from the exported clipdata movement (M lines), climbing, wall pauses, wall jumps, crawling, alerted walking, charging and two-laser volleys on the ground and on walls, lasers hurting Samus and other pirates, the Chozodia alarm timer (set on sight, 480 frames, stopped by the last pirate's death, kept after Mecha Ridley) and the laser's CAA_BOMB_PISTOL on hatches. With the alarm on (or Mecha Ridley dead), every door transition spawns a waiting pirate at the arrival point (half a block back toward the door; graphics slot 5 in spritesets 88 and 103; crawling out of hatchless doors), and a room whose spriteset has no pirate stops the alarm. Rooms export their default, first-event and second-event spritesets; RoomLoad and waiting-pirate arrivals use the active variant, with second-event priority as in SpriteLoadRoomSprites. The charged paralyzer pistol drops a pirate's standing state, freezes it for 60 suitless ticks and flickers its black/purple rows near release. Smoke-run in the 47 Chozodia rooms with pirates. The black pirates (after the Fully Powered Suit) share the pirate routines in palette row 2 (baked), wait until on screen, take damage only from the Plasma Beam and missiles (other beams are absorbed), burst the other pirates' lasers, charge and shoot twice as fast, hop over the pirate ahead or jump after shooting with their own jump table and faster alerted jumps, and die without the alarm bookkeeping; a capture in chozodia_013 (event 67) shows two of them on the walkway. The escape-ship pirate (spawned by the opening escape ship) runs the same routines behind its own first poses: hidden mid-jump on the seventh jumping frame, shown and hurting after a frame (draw order 12), then a jump out after 6 frames with jump table 3, its momentum dropped when Samus is behind.",
+   "next_action": "Reproduce the alarm presentation.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
@@ -6157,7 +6229,7 @@
     "ClipdataCheckCantUseElevator",
     "BgClipCheckTouchingTransitionOnElevator"
    ],
-   "limitations": "Not compared frame by frame with the original game. The liquid enter and exit effects (SamusUpdateEnvironmentalEffect) are not ported, and nothing enters the save, map download, zipline, escape ship or facing-the-background poses (their handlers are ported). The environmental effect sprites (gSamusEnvironmentalEffects) are not drawn, only their sounds play. The native probes allow transient overlaps (a spin broken under a low ceiling), which the tests accept for under a second. A transliteration of src/samus.c: the 67 poses of sSamusCollisionData with their hitboxes and standing statuses, every handler of sSamusPoseFunctionPointers and sSamusPoseGfxFunctionPointers, SamusSetPose with SamusSetMidAir, SamusSetLandingPose, the hurt and knockback poses and SamusCheckCarryFromCopy, SamusUpdatePhysics, the velocity update with DIV_SHIFT and the slope speeds, and the native point-probe collisions of SamusUpdateHitboxMovingDirection (the side, top, landing and ground probes, the corner nudges, slopes, the walk-off-ledge rule, the Power Grip ledge grab with the non power grip blocks). SamusAimCannon gives the running diagonals (Up or Down with the direction) and the no-aim run (ACD_NONE); the hanging poses turn to aim on Up, Down, L or the outward direction, climb after ten frames of Up without A, hide the arm cannon, pull into a morph ball tunnel under a block and shoot up or down. The animations time with sSamusAnimPointers_PowerSuit[pose] (or the suitless and the special tables) and the runtime draws the body animation of SamusUpdateGraphicsOam by its library key, whose arm cannon offsets place the shots (the Running [ACD_NONE - 2] rows are now exported); the shots take the offsets of the unarmed key, since the armed graphics variants have none and placed missiles at Samus's feet. The screw and speed booster block damage runs at the start of SamusCheckCollisions. Checked in brinstar_009 (--spawn 466 192: hanging, the Up+toward climb without A, a shot up from the hanging cannon) and brinstar_005 (a diagonal shot while running left). The hazards of ClipdataUpdateCurrentAffecting (the water, lava and acid blocks, and the room effect's hazard above or below its surface from the exported sHazeData) drive the liquid slowing of SamusUpdatePhysics (halved speeds and gravity, no Gravity Suit) and SamusTakeHazardDamage (the per-suit damage rates, the submerged sound, the cold knockback, the death). Checked in crateria_007: Samus runs at the slowed cap in the water. Elevator blocks work in the rooms of sElevatorRoomPairs (ClipdataCheckCantUseElevator, from the ROM bank; the second Crateria to Tourian route only after EVENT_ESCAPED_ZEBES): Up or Down on one turns Samus to the foreground, rides at the elevator speed with its sound, takes the area connection through BgClipCheckTouchingTransitionOnElevator and RoomLoad moves her three blocks on in the new room until the opposite elevator block stops her. Checked by capture: brinstar_026 to norfair_000. SamusDying's timer reaching 120 (after the animation's frame 23) flags the game over (gMainGameMode = GM_GAMEOVER). The shinespark and ballspark collisions start the shared screen shake (mzm_screen_shake), whose horizontal timer still drops Samus from a ledge.",
+   "limitations": "Not compared frame by frame with the original game. The liquid enter and exit effects (SamusUpdateEnvironmentalEffect) are not ported, and nothing enters the save, map download, zipline or facing-the-background poses (their handlers are ported); the escape ship (mzm.enemies.escape_ship) enters the escape-ship poses. The environmental effect sprites (gSamusEnvironmentalEffects) are not drawn, only their sounds play. The native probes allow transient overlaps (a spin broken under a low ceiling), which the tests accept for under a second. A transliteration of src/samus.c: the 67 poses of sSamusCollisionData with their hitboxes and standing statuses, every handler of sSamusPoseFunctionPointers and sSamusPoseGfxFunctionPointers, SamusSetPose with SamusSetMidAir, SamusSetLandingPose, the hurt and knockback poses and SamusCheckCarryFromCopy, SamusUpdatePhysics, the velocity update with DIV_SHIFT and the slope speeds, and the native point-probe collisions of SamusUpdateHitboxMovingDirection (the side, top, landing and ground probes, the corner nudges, slopes, the walk-off-ledge rule, the Power Grip ledge grab with the non power grip blocks). SamusAimCannon gives the running diagonals (Up or Down with the direction) and the no-aim run (ACD_NONE); the hanging poses turn to aim on Up, Down, L or the outward direction, climb after ten frames of Up without A, hide the arm cannon, pull into a morph ball tunnel under a block and shoot up or down. The animations time with sSamusAnimPointers_PowerSuit[pose] (or the suitless and the special tables) and the runtime draws the body animation of SamusUpdateGraphicsOam by its library key, whose arm cannon offsets place the shots (the Running [ACD_NONE - 2] rows are now exported); the shots take the offsets of the unarmed key, since the armed graphics variants have none and placed missiles at Samus's feet. The screw and speed booster block damage runs at the start of SamusCheckCollisions. Checked in brinstar_009 (--spawn 466 192: hanging, the Up+toward climb without A, a shot up from the hanging cannon) and brinstar_005 (a diagonal shot while running left). The hazards of ClipdataUpdateCurrentAffecting (the water, lava and acid blocks, and the room effect's hazard above or below its surface from the exported sHazeData) drive the liquid slowing of SamusUpdatePhysics (halved speeds and gravity, no Gravity Suit) and SamusTakeHazardDamage (the per-suit damage rates, the submerged sound, the cold knockback, the death). Checked in crateria_007: Samus runs at the slowed cap in the water. Elevator blocks work in the rooms of sElevatorRoomPairs (ClipdataCheckCantUseElevator, from the ROM bank; the second Crateria to Tourian route only after EVENT_ESCAPED_ZEBES): Up or Down on one turns Samus to the foreground, rides at the elevator speed with its sound, takes the area connection through BgClipCheckTouchingTransitionOnElevator and RoomLoad moves her three blocks on in the new room until the opposite elevator block stops her. Checked by capture: brinstar_026 to norfair_000. SamusDying's timer reaching 120 (after the animation's frame 23) flags the game over (gMainGameMode = GM_GAMEOVER). The shinespark and ballspark collisions start the shared screen shake (mzm_screen_shake), whose horizontal timer still drops Samus from a ledge.",
    "next_action": "Port the room effect wave, the liquid enter and exit effects, and the save platforms and map stations that enter their poses; compare with the original game frame by frame.",
    "evidence": {
     "unit_tests": [
@@ -10650,6 +10722,12 @@
  },
  "timeline": [
   {
+   "commit": "2eb8321",
+   "date": "2026-10-19",
+   "subject": "Port the Black Space Pirates",
+   "scope": "project"
+  },
+  {
    "commit": "2c8d03d",
    "date": "2026-10-19",
    "subject": "Note the Imago byte-pair table fix in the project status",
@@ -11122,12 +11200,6 @@
    "date": "2026-10-13",
    "subject": "feat(mzm): death fades to black then white",
    "scope": "mzm"
-  },
-  {
-   "commit": "26b0b56",
-   "date": "2026-10-13",
-   "subject": "feat(mzm): Chozo statue hint screen and map targets",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -11155,7 +11227,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1506,
+    "routines_cited_by_features": 1519,
     "call_edges": 6071
    },
    "aos": {
@@ -12692,14 +12764,18 @@
      {
       "id": 199,
       "name": "Escape Ship Space Pirate",
-      "status": "not_started",
-      "note": "",
+      "status": "partial",
+      "note": "Space Pirates and their lasers",
       "evidence": {
-       "unit_tests": [],
+       "unit_tests": [
+        "tests/test_mzm_sprites.c",
+        "tests/test_mzm_runtime_room.py"
+       ],
        "in_game_check": [],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "mzm.enemies.space_pirate"
      },
      {
       "id": 200,

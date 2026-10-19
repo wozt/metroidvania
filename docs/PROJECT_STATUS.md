@@ -3838,6 +3838,42 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0379 - Chozodia escape ship and gates
+
+- Ported `sprites_ai/escape_ship.c` and `sprites_ai/escape_gate.c` in
+  `mzm_escape_ship.c`, and the escape-ship pirate
+  (`sprites_ai/escape_ship_pirate.c`) as its own first poses in
+  `ai_space_pirate`:
+  - once Mecha Ridley is dead and Samus is close, the ship opens and
+    spawns its pirate, which jumps out;
+  - landing on the open ship sets `EVENT_ESCAPED_CHOZODIA`, clears Samus's
+    invincibility and puts her in the cockpit, where the ship holds her
+    while it closes, lifts off swaying (`sEscapeShipHoveringY/XMovement`,
+    exported), hovers and flies off right;
+  - while Samus is inside, the ship keeps sprites from touching her,
+    bursts pirate lasers, draws the pirates behind it and, once it flies
+    fast, destroys the pirates in its way;
+  - the ship's top goes in front of Samus, its tail flashes and its flames
+    hide once it is gone;
+  - the first gate loads its own graphics, spawns the two black pirates,
+    opens once they are dead and Samus is near, then spawns the pirate
+    chasing the ship; the second gate opens once the ship hovers.
+- The exporter bakes the ship's and the gate's flashing palette rows as
+  `/f0`-`/f2` variants, the gate drawn from `sEscapeGateAndTimerGfx` at
+  OBJ VRAM 0x7800 with its palette in the last OBJ row.
+- Not ported: the blue-ship and Chozodia escape cutscene effects. The
+  runtime receives both requests, reports them as not ported and keeps the
+  room running.
+- A ROM-free regression follows the ship from closed to escaped (the
+  pirate's first poses, Samus's capture, the timings, the sway, the
+  cutscene requests, laser and pirate collisions) and both gates through
+  their black pirates, blocks and openings.
+- A capture in `chozodia_092` (event 74) shows the first gate, its two
+  black pirates and the ship's nose (ignored
+  `captures/chozodia/escape-gate.png`).
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0378 - Black Space Pirates
 
 - Ported `sprites_ai/black_space_pirate.c` into `mzm_space_pirate.c`,

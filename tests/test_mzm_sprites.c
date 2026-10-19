@@ -6432,6 +6432,17 @@ int main(void) {
         assert(mzm_sfx_requested(MZM_SFX_PLAY,
                                  MZM_SOUND_IMAGO_COCOON_IN_GROUND_IDLE));
     }
+    /* Every secondary sprite of a ported family is drawn with a graphics
+     * owner of its own (the Skree explosions alone fall back to Skree). */
+    for (int id = 0; id < 256; ++id) {
+        int family = mzm_sprite_family((uint8_t)id, true);
+        if (family < 0 || family == MZM_FAMILY_SKREE) continue;
+        MzmSprite secondary = {.sprite_id = (uint8_t)id, .secondary = true, .owner = 1};
+        uint8_t owner = mzm_sprite_graphics_owner(&secondary);
+        if (owner == MZM_PSPRITE_SKREE_GREEN || owner == MZM_PSPRITE_SKREE_BLUE)
+            fprintf(stderr, "secondary %d (family %d) falls back to Skree\n", id, family);
+        assert(owner != MZM_PSPRITE_SKREE_GREEN && owner != MZM_PSPRITE_SKREE_BLUE);
+    }
     /* Mecha Ridley's palette DMAs and the 100% rule: the entrance fade
      * rows, the head's green glow cycle, the destroyed graphics and colors,
      * the eye's drop and glow colors; at 100% completion the core has three

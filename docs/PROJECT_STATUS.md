@@ -3838,6 +3838,35 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0396 - graphics owners of secondary sprites
+
+- Fixed a rendering bug: `mzm_sprite_graphics_owner` had no mapping for the
+  secondary sprites of five families, so they fell back to the Skree
+  graphics and were not drawn at all:
+  - the hive roots;
+  - the vine Geruta's parts;
+  - the elevator statue debris;
+  - Imago's parts, needles, damaged stinger and eggs;
+  - the Ruins Test's symbols and ghost.
+  They now use their family's graphics.
+- A regression now checks every secondary sprite of a ported family: none
+  may fall back to Skree except the Skree explosions themselves.
+- Correction to earlier notes: the Imago capture of patch 0377 described
+  eggs that were in fact background decoration, and the elevator statue
+  capture of patch 0391 showed no debris. The notes are corrected.
+- New captures:
+  - in `ridley_019`, the glowing eggs; once Samus walks into the last one,
+    Imago descends with its wings and stinger and strikes her (energy 99
+    to 89);
+  - in `brinstar_008`, the Kraid statue's head debris falling and turning
+    to dust.
+- `mzm.enemies.imago` moves to `functional`; the parity inventory now
+  contains 27 partial and 75 functional entries.
+- Captures: ignored `captures/enemies/imago-fight.png`,
+  `imago-eggs-before-after.png` and `elevator-statue-debris.png`.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 444/444 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0395 - in-game check for enemy drops
 
 - With the runtime's input masks, a capture in `brinstar_000` follows a full

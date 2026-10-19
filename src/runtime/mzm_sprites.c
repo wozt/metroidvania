@@ -6770,6 +6770,17 @@ uint8_t mzm_sprite_graphics_owner(const MzmSprite *sprite) {
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_MECHA_RIDLEY)
         return MZM_PSPRITE_MECHA_RIDLEY;
     if (sprite->sprite_id == MZM_SSPRITE_CROCOMIRE_PART) return MZM_PSPRITE_CROCOMIRE;
+    /* The secondaries drawn with their family's graphics: the hive roots,
+     * the vine Geruta's parts, the statue debris, Imago's parts, needles,
+     * stinger and eggs, and the Ruins Test's symbols and ghost. */
+    switch (mzm_sprite_family(sprite->sprite_id, true)) {
+    case MZM_FAMILY_HIVE: return MZM_PSPRITE_HIVE;
+    case MZM_FAMILY_TANGLE_VINE: return MZM_PSPRITE_TANGLE_VINE_TALL;
+    case MZM_FAMILY_ELEVATOR_STATUE: return MZM_PSPRITE_KRAID_ELEVATOR_STATUE;
+    case MZM_FAMILY_IMAGO: return MZM_PSPRITE_IMAGO;
+    case MZM_FAMILY_RUINS_TEST: return MZM_PSPRITE_RUINS_TEST;
+    default: break;
+    }
     /* The Chozo statue parts and ball, the map station's screens and the
      * unknown item block's light use their spawner's graphics. */
     if (mzm_sprite_family(sprite->sprite_id, true) == MZM_FAMILY_CHOZO_STATUE ||

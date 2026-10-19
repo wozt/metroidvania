@@ -51,7 +51,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c src/runtime/mzm_hatches.c
                src/runtime/mzm_blocks.c
                src/runtime/mzm_effects.c src/runtime/mzm_audio.c src/runtime/gba_psg.c
-               src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c src/runtime/mzm_escape.c src/runtime/mzm_power_bomb.c
+               src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c src/runtime/mzm_background_effect.c src/runtime/mzm_escape.c src/runtime/mzm_power_bomb.c
                src/runtime/mzm_items.c src/runtime/mzm_message_banner.c
                src/runtime/gba_ppu.c src/runtime/mzm_rom.c src/runtime/mzm_hud.c
                src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c src/runtime/mzm_room_gfx.c src/runtime/mzm_tourian_escape.c src/runtime/mzm_chozodia_escape.c src/runtime/mzm_credits.c
@@ -197,6 +197,12 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_mzm_power_bomb_tests)
     add_test(NAME mzm_power_bomb COMMAND fusion_mzm_power_bomb_tests)
 
+    add_executable(fusion_mzm_background_effect_tests tests/test_mzm_background_effect.c
+                   src/runtime/mzm_background_effect.c)
+    target_include_directories(fusion_mzm_background_effect_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_mzm_background_effect_tests)
+    add_test(NAME mzm_background_effect COMMAND fusion_mzm_background_effect_tests)
+
     add_executable(fusion_mzm_screens_tests tests/test_mzm_screens.c src/runtime/gba_ppu.c
                    src/runtime/mzm_rom.c src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c
                    src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c src/runtime/mzm_hud.c src/runtime/mzm_pause_screen.c
@@ -249,6 +255,7 @@ if(BUILD_TESTING)
                    src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c src/runtime/mzm_deorem.c src/runtime/mzm_acid_worm.c src/runtime/mzm_gadora.c src/runtime/mzm_imago_larva.c src/runtime/mzm_imago_cocoon.c src/runtime/mzm_mecha_ridley.c src/runtime/mzm_hive.c src/runtime/mzm_baristute.c src/runtime/mzm_tangle_vine.c src/runtime/mzm_ruins_test.c src/runtime/mzm_chozodia_scripted.c src/runtime/mzm_elevator_statue.c src/runtime/mzm_imago.c src/runtime/mzm_escape_ship.c src/runtime/mzm_crocomire.c
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c
                    src/runtime/mzm_effects.c src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c
+                   src/runtime/mzm_background_effect.c
                    src/runtime/mzm_escape.c
                    src/runtime/mzm_projectiles.c src/runtime/mzm_samus.c
                    src/runtime/mzm_power_bomb.c)

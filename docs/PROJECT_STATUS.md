@@ -3838,6 +3838,33 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0405 - native palette background flashes
+
+- Added a shared `mzm_background_effect` implementation of
+  `BackgroundEffectStart`, `BackgroundEffectUpdate` and
+  `BackgroundEffectProcess` for all three palette-based
+  `MakeBackgroundFlash` variants.
+- The processor snapshots BG palette rows 0 to 14, executes the native
+  behavior tables one command per frame, interpolates each 5-bit RGB
+  component toward white, blue or yellow, and restores the exact starting
+  palette at stage zero. Animated BG row 15, OBJ palettes, sprites and the
+  HUD remain untouched.
+- Connected the quick flash to Ruins Test lightning and both points in
+  Mother Brain's death sequence. Connected the slight-yellow flash to the
+  normal and Long Beam Chozo hint sequence; the Long Beam hint's separate
+  long transparency is still not ported.
+- Background effects pause during power bombs and transitions, reject a new
+  request while one is active, and reset on room load like the native global.
+- Added `--background-flash quick|slight|heavy` capture staging. A
+  `chozodia_042` sequence shows the quick table at white 16/16, blue 16/16,
+  white 14/16, white 6/16 and the original palette restored.
+- ROM-free tests cover the three tables, timing, exclusion of palette row 15,
+  palette restoration, request arbitration and each connected sprite AI.
+- Validation on 2026-10-19: the warning-clean full build, CTest 36/36 and
+  Python 446/446 passed. Dashboard generation reported 140 features, 92
+  functional or better and 128 with passing tests. Generated-data checks
+  were fresh and the proprietary-file guard passed.
+
 ## Patch 0404 - Ruins Test ghost alpha blending
 
 - Corrected the native sprite status split: high priority is bit 4, while

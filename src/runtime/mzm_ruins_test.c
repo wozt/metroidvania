@@ -9,7 +9,8 @@
  * Samus to face the background again. The symbols' dynamic palette (OBJ
  * row 14, MzmSpriteGlobals.ruins_test_palette), the reflections' OBJ row
  * 15 palettes, their graphics DMA at OBJ VRAM 0x4280/0x4680 and the ghost's
- * native EVA/EVB alpha blending are ported; the background flash is not. */
+ * native EVA/EVB alpha blending and quick background flash are ported. */
+#include "mzm_background_effect.h"
 #include "mzm_sprite_ai.h"
 #include "mzm_blocks.h"
 #include "mzm_message_banner.h"
@@ -943,7 +944,7 @@ static void ghost_outline(Ctx *c) {
         return;
     }
     if (s->room_slot != GHOST_OUTLINE_PART_OUTLINE && s->frame == 4 && s->adc == 8) {
-        /* MakeBackgroundFlash(BG_FLASH_QUICK_YELLOW) is not ported. */
+        mzm_background_effect_start(MZM_BACKGROUND_EFFECT_QUICK_FLASH);
         if (s->room_slot == GHOST_OUTLINE_PART_SHOOTING_GROUND_LIGHTNING)
             ai_spawn_secondary(c, MZM_SSPRITE_RUINS_TEST_LIGHTNING, LIGHTNING_PART_GROUND, s->gfx_slot,
                                g->boss_work1, g->boss_work2, 0);

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Zero Mission sprite engine and the Zoomer. */
 #include "mzm_sfx.h"
+#include "mzm_background_effect.h"
 #include "mzm_blocks.h"
 #include "mzm_escape.h"
 #include "mzm_items.h"
@@ -46,6 +47,7 @@ static uint8_t hazard(void *context, uint16_t y, uint16_t x) {
 static void clear(void) {
     /* A new room: RoomLoad's sScreenShake_Empty. */
     mzm_screen_shake_clear();
+    mzm_background_effect_clear();
     memset(grid, 0, sizeof grid);
     memset(movement_grid, 0, sizeof movement_grid);
 }
@@ -3216,6 +3218,8 @@ int main(void) {
         assert(room[0].pose == 0x24 && flashes > 0 && room[0].palette_row == 0 &&
                mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_STATUE_HINT) &&
                mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_CHOZO_STATUE_HINT));
+        assert(mzm_background_effect.type == MZM_BACKGROUND_EFFECT_SLIGHT_YELLOW);
+        mzm_background_effect_clear();
         mzm_sprite_update(&room[0], 0, &statue_frame);
         assert(room[0].pose == 0x25 && globals.sub1.multi == MZM_CHOZO_MULTI_SITTING &&
                mzm_sfx_requested(MZM_SFX_PLAY, MZM_SOUND_CHOZO_STATUE_SITTING_DOWN));
@@ -4941,7 +4945,8 @@ int main(void) {
             mb_frames = 0;
             while (b->status && mb_frames++ < 400) mzm_sprite_update(b, 0, &mf);
             assert(b->status == 0 && message_count == 1 && messages[0] == 33 &&
-                   mb_globals.sub1.work3 == 3 && mb_globals.escape.explosion.active);
+                   mb_globals.sub1.work3 == 3 && mb_globals.escape.explosion.active &&
+                   mzm_background_effect.type == MZM_BACKGROUND_EFFECT_QUICK_FLASH);
             test_events[MZM_EVENT_MOTHER_BRAIN_KILLED / 8] &= (uint8_t)~(1u << (MZM_EVENT_MOTHER_BRAIN_KILLED % 8));
             clear();
         }
@@ -7485,6 +7490,8 @@ int main(void) {
         warn->frame = 4;
         warn->adc = 8;
         mzm_sprite_update(warn, 4, &rf);
+        assert(mzm_background_effect.type == MZM_BACKGROUND_EFFECT_QUICK_FLASH);
+        mzm_background_effect_clear();
         int bolt = -1;
         for (int i = 1; i < 16; ++i)
             if (room[i].status && room[i].sprite_id == MZM_SSPRITE_RUINS_TEST_LIGHTNING) bolt = i;

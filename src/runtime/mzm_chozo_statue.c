@@ -4,9 +4,10 @@
  * ChozoStatueRefill), their item ball (chozo_ball.c: ChozoBall) and the
  * sitting echo (chozo_statue_movement.c); comments name the pinned
  * decompilation's routines. A hint statue opens the hint's map screen
- * (PAUSE_SCREEN_CHOZO_HINT, mzm_pause_screen.c) before sitting down; the
- * background flashes (MakeBackgroundFlash) and the slow scrolling are not
- * ported. */
+ * (PAUSE_SCREEN_CHOZO_HINT, mzm_pause_screen.c) before sitting down. Its
+ * slight-yellow palette flash is ported; the Long Beam hint's long
+ * transparency and the slow scrolling are not. */
+#include "mzm_background_effect.h"
 #include "mzm_items.h"
 #include "mzm_sprite_ai.h"
 
@@ -410,8 +411,8 @@ static void statue(Ctx *c) {
     switch (s->pose) {
     case SPRITE_POSE_UNINITIALIZED: statue_init(c); break;
     case STATUE_REGISTER_HINT: {
-        /* ChozoStatueRegisterHint (MakeBackgroundFlash is not ported; the
-         * Long Beam hint keeps its longer delay). */
+        /* ChozoStatueRegisterHint: the Long Beam hint's separate long
+         * transparency remains unported, but its longer delay is kept. */
         MzmSprite *eye = slot(c, s->work1);
         if (eye) eye->pose = PART_EYE_OPENING_INIT;
         s->pose = STATUE_HINT_FLASHING;
@@ -436,7 +437,10 @@ static void statue(Ctx *c) {
             mzm_sfx_music_play(MZM_MUSIC_CHOZO_STATUE_HINT, 0);
             break;
         }
-        if (s->work0 == DELAY_BEFORE_HINT - 1) mzm_sfx_play(MZM_SOUND_CHOZO_STATUE_HINT);
+        if (s->work0 == DELAY_BEFORE_HINT - 1) {
+            mzm_background_effect_start(MZM_BACKGROUND_EFFECT_SLIGHT_YELLOW);
+            mzm_sfx_play(MZM_SOUND_CHOZO_STATUE_HINT);
+        }
         else if (s->work0 >= DELAY_BEFORE_HINT) break;
         flash_palette(s, 12);
         break;

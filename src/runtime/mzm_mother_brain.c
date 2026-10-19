@@ -4,8 +4,9 @@
  * glass (the bottom part's health, drawn on BG0 in four stages), then hit
  * its eye, which closes after enough damage while it charges and fires its
  * beam; its death flashes it, removes it and starts the escape. Comments
- * name the pinned decompilation's routines. Not ported: MakeBackgroundFlash
- * and the in-game timer at bosses. */
+ * name the pinned decompilation's routines. Not ported: the in-game timer at
+ * bosses. */
+#include "mzm_background_effect.h"
 #include "mzm_sprite_ai.h"
 
 enum {
@@ -261,7 +262,8 @@ static void death(Ctx *c) {
     MzmSpriteGlobals *g = c->f->globals;
     MzmSprite *eye = slot(c, g->sub1.work5), *bottom = slot(c, g->sub1.work6);
     if (s->isft != 0) {
-        /* (MakeBackgroundFlash is not ported) */
+        if ((s->isft & 63) == 0)
+            mzm_background_effect_start(MZM_BACKGROUND_EFFECT_QUICK_FLASH);
         if (eye) eye->palette_row = s->palette_row;
         if (bottom) bottom->palette_row = s->palette_row;
         return;
@@ -276,6 +278,7 @@ static void death(Ctx *c) {
     ai_particle_set(c, (uint16_t)(g->sub1.y + BLOCK_SIZE - PIXEL_SIZE),
                     (uint16_t)(g->sub1.x + BLOCK_SIZE + QUARTER_BLOCK_SIZE), MZM_PE_MAIN_BOSS_DEATH);
     mzm_sfx_play(MZM_SOUND_MOTHER_BRAIN_DEATH_EXPLOSION);
+    mzm_background_effect_start(MZM_BACKGROUND_EFFECT_QUICK_FLASH);
 }
 
 /* MotherBrainStartEscape */

@@ -13,6 +13,7 @@
 #include "mzm_blocks.h"
 #include "mzm_audio.h"
 #include "mzm_sfx.h"
+#include "mzm_background_effect.h"
 #include "mzm_power_bomb.h"
 #include "mzm_hatches.h"
 #include "gba_ppu.h"
@@ -3090,6 +3091,7 @@ static uint8_t runtime_debug_events[32];
 static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int last_door) {
     /* RoomLoad: sScreenShake_Empty and gBg2Movement cleared. */
     mzm_screen_shake_clear();
+    mzm_background_effect_clear();
     sprites->globals.bg2_offset_x = sprites->globals.bg2_offset_y = 0;
     sprites->globals.parasite_related = 0;
     sprites->globals.metroid_grab_palette = -1;
@@ -4414,6 +4416,9 @@ int main(int argc, char **argv) {
     /* --ruins-test-ghost: isolate the ghost's native alpha fade without
      * scripting the whole fight. */
     bool stage_ruins_test_ghost=false;
+    /* --background-flash TYPE: capture one native palette behavior without
+     * scripting the actor that requests it (quick, slight or heavy). */
+    MzmBackgroundEffectType staged_background_effect=MZM_BACKGROUND_EFFECT_NONE;
     const char *library_check=NULL,*capture_path=NULL;
     long capture_frames=0,capture_repeat=0;
     /* --input-script MASK:FRAMES,...: the GBA buttons of each captured frame
@@ -4475,6 +4480,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--chozodia-escape")) start_chozodia_escape=true;
         else if (!strcmp(argv[i],"--ruins-test-end")) stage_ruins_test_end=true;
         else if (!strcmp(argv[i],"--ruins-test-ghost")) stage_ruins_test_ghost=true;
+        else if (!strcmp(argv[i],"--background-flash") && i+1<argc) {
+            const char *type=argv[++i];
+            if(!strcmp(type,"quick"))staged_background_effect=MZM_BACKGROUND_EFFECT_QUICK_FLASH;
+            else if(!strcmp(type,"slight"))staged_background_effect=MZM_BACKGROUND_EFFECT_SLIGHT_YELLOW;
+            else if(!strcmp(type,"heavy"))staged_background_effect=MZM_BACKGROUND_EFFECT_HEAVY_YELLOW;
+            else {fprintf(stderr,"Unknown background flash: %s\n",type);return 2;}
+        }
         else if (!strcmp(argv[i],"--samus-assets") && !samus_assets && i+1<argc) samus_assets=argv[++i];
         else if (!strcmp(argv[i],"--samus-library") && !library_index && i+1<argc) library_index=argv[++i];
         else if (!strcmp(argv[i],"--samus-map") && !animation_map_index && i+1<argc) animation_map_index=argv[++i];
@@ -4532,7 +4544,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -4658,7 +4670,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -5846,6 +5858,11 @@ int main(int argc, char **argv) {
                     break;
                 }
             }
+            if(staged_background_effect!=MZM_BACKGROUND_EFFECT_NONE &&
+               mzm_background_effect_start(staged_background_effect)) {
+                printf("Staged background flash %u.\n",staged_background_effect);
+                staged_background_effect=MZM_BACKGROUND_EFFECT_NONE;
+            }
             if(upgrading_suit.queued) {
                 /* InGameCutsceneProcess (RoomUpdate): BG1 is the GBA screen
                  * centred in the runtime view. */
@@ -5941,8 +5958,11 @@ int main(int argc, char **argv) {
                     runtime_room_gfx.disable_animated_palette=sprites.globals.disable_animated_palette;
                     sprites.globals.animated_palette_written=false;
                 }
+                bool power_bomb_active=weapons.power_bomb.state!=MZM_PB_NONE;
+                mzm_background_effect_update(runtime_room_gfx.ppu.palette,
+                                             door_frozen || dying || power_bomb_active);
                 mzm_room_gfx_animate(&runtime_room_gfx,prevent_movement!=0,
-                                     weapons.power_bomb.state!=MZM_PB_NONE,
+                                     power_bomb_active,
                                      room->hatch_env.unlocking);
                 room_bg0_custom=mzm_room_gfx_bg0_position(&runtime_room_gfx,(int)last_cx,(int)last_cy,
                                                           prevent_movement!=0,&room_bg0_x,
@@ -6797,6 +6817,9 @@ frame_overlays:
             printf("  ruins ghost blend EVA %u EVB %u\n",
                    sprites.globals.ruins_test_ghost_eva,
                    sprites.globals.ruins_test_ghost_evb);
+            printf("  background effect %u stage %u timer %u color %u\n",
+                   mzm_background_effect.type,mzm_background_effect.stage,
+                   mzm_background_effect.timer,mzm_background_effect.color_stage);
             if(chozodia_escape_mode)
                 printf("  screen: Chozodia escape (mode %u stage %u timer %u)\n",chozodia_escape.sub_mode,
                        chozodia_escape.stage,chozodia_escape.timer);

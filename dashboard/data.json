@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T15:51:35+00:00",
+ "generated_at": "2026-10-19T15:52:31+00:00",
  "git": {
-  "commit": "04c67c1",
+  "commit": "988d011",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 87,
    "functional_or_better_percent": 62.6,
-   "with_passing_tests": 122,
-   "with_passing_tests_percent": 87.8,
+   "with_passing_tests": 127,
+   "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -269,8 +269,8 @@
    },
    "functional_or_better": 74,
    "functional_or_better_percent": 81.3,
-   "with_passing_tests": 89,
-   "with_passing_tests_percent": 97.8,
+   "with_passing_tests": 91,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -458,8 +458,8 @@
    },
    "functional_or_better": 4,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 9,
-   "with_passing_tests_percent": 75.0,
+   "with_passing_tests": 10,
+   "with_passing_tests_percent": 83.3,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -555,8 +555,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 0,
-   "with_passing_tests_percent": 0.0,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -5900,14 +5900,12 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -6043,14 +6041,12 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -9020,14 +9016,12 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -10170,14 +10164,12 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -10215,14 +10207,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -10492,7 +10482,7 @@
    {
     "name": "python_tooling_and_data",
     "files": [],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "no_proprietary_files",
@@ -10652,8 +10642,8 @@
     "file": "tests/test_dashboard.py",
     "module": "tests.test_dashboard",
     "test_count": 14,
-    "outcome": "failed",
-    "passed": 13
+    "outcome": "passed",
+    "passed": 14
    },
    {
     "file": "tests/test_deferred_room_save_0109.py",
@@ -11140,12 +11130,18 @@
    }
   ],
   "summary": {
-   "passed": 477,
-   "failed": 2,
+   "passed": 479,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "988d011",
+   "date": "2026-10-19",
+   "subject": "Record an in-game check for enemy drops",
+   "scope": "project"
+  },
   {
    "commit": "04c67c1",
    "date": "2026-10-19",
@@ -11618,12 +11614,6 @@
    "commit": "b36ba1c",
    "date": "2026-10-14",
    "subject": "feat(mzm): Worker Robots, native projectile hit order",
-   "scope": "mzm"
-  },
-  {
-   "commit": "f938da6",
-   "date": "2026-10-14",
-   "subject": "fix(mzm): no more 60 Hz audio buzz",
    "scope": "mzm"
   }
  ],

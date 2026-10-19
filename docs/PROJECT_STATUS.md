@@ -3838,6 +3838,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0401 - Ruins Test symbol palette
+
+- Ported the Ruins Test's dynamic palette (`RUINS_TEST_TRANSFER_DYNAMIC_PAL`:
+  the first eight colours of OBJ row 14) in `src/runtime/mzm_ruins_test.c`:
+  - the four symbols lighting up, merging and disappearing;
+  - the shot symbol's flight, a 4-frame pulse through the base and the six
+    shot palettes;
+  - the placed symbol's flash.
+  Each copy sets `MzmSpriteGlobals.ruins_test_palette`, which is reset
+  with the spriteset.
+- The exporter bakes `/s1` to `/s6` variants, only for the tables whose
+  pixels read those colours: the four symbols, merging, disappearing, the
+  shootable symbol's turning, the placed symbol and the shot symbol. The
+  renderer picks the variant the AI last selected.
+- Corrected a stale note: the symbols have been drawn since patch 0396's
+  graphics owners; only their palette changes were missing.
+- Unit tests: a symbol lighting frame selects its palette, and the
+  flying symbol cycles through all seven palettes.
+- Checked in `chozodia_042`: the four symbols turn from purple to light
+  blue as they light up, then merge.
+- Captures: ignored `captures/fp/rs30.bmp` to `rs140.bmp`.
+
 ## Patch 0400 - in-game check for the paralyzer pistol
 
 - Checked in `chozodia_000`, reached through the Tourian escape and the

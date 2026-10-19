@@ -7188,6 +7188,12 @@ int main(void) {
         mzm_sprite_update(&room[1], 1, &rf);
         assert(room[1].pose == 0x9 &&
                mzm_sfx_requested(MZM_SFX_MUSIC_PLAY, MZM_MUSIC_RUINS_TEST_BATTLE_WITH_INTRO));
+        /* The symbols light up through the dynamic palette (frame 4: the
+         * third shot palette). */
+        room[1].frame = 4;
+        room[1].adc = 1;
+        mzm_sprite_update(&room[1], 1, &rf);
+        assert(globals.ruins_test_palette == 3);
         room[1].frame = 7;
         room[1].adc = 4;
         mzm_sprite_update(&room[1], 1, &rf);
@@ -7385,10 +7391,14 @@ int main(void) {
         mzm_sprite_update(sym, 2, &rf);
         assert(sym->pose == 0x23 && sym->draw_order == 1);
         frames = 0;
+        unsigned palettes_seen = 0;
         while (sym->pose == 0x23 && frames < 200) {
             mzm_sprite_update(sym, 2, &rf);
+            palettes_seen |= 1u << globals.ruins_test_palette;
             ++frames;
         }
+        /* The flying symbol pulses through the base and the six shot palettes. */
+        assert(palettes_seen == 0x7F);
         assert(sym->pose == 0x25 && sym->y == 8 * 64 - 176 && sym->x == 11 * 64 + 352 &&
                sym->draw_order == 14);
         sym->frame = 7;

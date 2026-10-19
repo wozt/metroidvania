@@ -374,7 +374,12 @@ palette indices (its tints, frozen and stun rows as index shifts, `/d` for
 its destroyed graphics, `/wN` for its weapon stages), and the runtime
 colorizes them with the room's exported OBJ palette (`objpal`) plus the
 palette DMAs its AI recorded (entrance fade, head glow, eye and destroyed
-colors). Frozen sprites are solid (the frozen branch of
+colors). The Ruins Test's dynamic palette (the first eight
+colors of OBJ row 14, rewritten by `RUINS_TEST_TRANSFER_DYNAMIC_PAL` with
+`sRuinsTestPal_SymbolShot_Frame1` to `6`) is baked as `/s1` to `/s6` for
+the tables that read those colors (the four symbols, the shootable
+symbol's turning, the placed symbols); the runtime picks the variant its
+AI last selected. Frozen sprites are solid (the frozen branch of
 `SpriteUtilSamusAndSpriteCollision`): after the contact damage, a falling
 Samus whose feet are within 6 pixels of the top is set on it
 (`SAMUS_ON_TOP`), rising into its bottom pushes her under it, and walking

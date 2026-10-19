@@ -6,9 +6,10 @@
  * her), the return to the center and the despawn that awards the Fully
  * Powered Suit, with the ghost, its outline and lightning, the shootable
  * symbol, the four placed symbols and the closing reflection that turns
- * Samus to face the background again. The palette and graphics DMA of the
- * reflections and symbols, the ghost's alpha blending and the background
- * flash are not ported. */
+ * Samus to face the background again. The symbols' dynamic palette (OBJ
+ * row 14, MzmSpriteGlobals.ruins_test_palette) is ported; the palette and
+ * graphics DMA of the reflections, the ghost's alpha blending and the
+ * background flash are not. */
 #include "mzm_sprite_ai.h"
 #include "mzm_blocks.h"
 #include "mzm_message_banner.h"
@@ -607,6 +608,10 @@ static void symbol(Ctx *c) {
         }
         break;
     case SYMBOL_POSE_UPDATE_PALETTE:
+        if (s->adc == 1 && s->frame >= 2 && s->frame <= 10) {
+            static const uint8_t lighting[11] = {0, 0, 1, 2, 3, 4, 5, 6, 5, 4, 3};
+            c->f->globals->ruins_test_palette = lighting[s->frame];
+        }
         if (s->adc == 1 && s->frame == 10) mzm_sfx_play(MZM_SOUND_RUINS_TEST_SYMBOLS_MERGING);
         if (ai_animation_ending(c, 1)) {
             ai_set_anim(s, MZM_RUINS_TEST_SYMBOL_MERGING);
@@ -615,6 +620,7 @@ static void symbol(Ctx *c) {
         }
         break;
     case SYMBOL_POSE_MERGING:
+        if (s->adc == 1) c->f->globals->ruins_test_palette = s->frame == 0 ? 4 : 6;
         if (--s->work0 == 0) {
             ai_set_anim(s, MZM_RUINS_TEST_SYMBOL_DISAPPEARING);
             s->pose = SYMBOL_POSE_DISAPPEARING;
@@ -624,6 +630,10 @@ static void symbol(Ctx *c) {
         else if (owner && s->work0 == 110) owner->work0 = 1;  /* CONVERT_SECONDS(2.f - 1.f / 6) */
         break;
     case SYMBOL_POSE_DISAPPEARING:
+        if (s->adc == 1 && s->frame <= 2) {
+            static const uint8_t fading[3] = {4, 2, 0};
+            c->f->globals->ruins_test_palette = fading[s->frame];
+        }
         if (ai_animation_ending(c, 1)) s->status = 0;
         break;
     default: break;
@@ -797,7 +807,10 @@ static void symbol_to_place(Ctx *c) {
     MzmSprite *s = c->s;
     MzmSpriteGlobals *g = c->f->globals;
     if (--s->work0 == 0) {
+        /* The dynamic palette pulsing through the shot frames */
+        static const uint8_t pulse[12] = {0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1};
         s->work0 = 4;
+        g->ruins_test_palette = pulse[s->work1 < 12 ? s->work1 : 0];
         if (s->work1++ == 11) s->work1 = 0;
     }
     int dy = s->room_slot <= 2 ? -1 : 1, dx = s->room_slot & 1 ? -1 : 1;
@@ -822,6 +835,12 @@ static void symbol_to_place(Ctx *c) {
  * the ghost away. */
 static void symbol_placing(Ctx *c) {
     MzmSprite *s = c->s;
+    if (s->adc == 1 && s->frame <= 12) {
+        /* The placed symbol's flash: frames 1-6 up, 7-11 down, 0 and 12
+         * the base colours */
+        static const uint8_t flash[13] = {0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0};
+        c->f->globals->ruins_test_palette = flash[s->frame];
+    }
     if (!ai_animation_ending(c, 1)) return;
     ai_set_anim(s, MZM_RUINS_TEST_GHOST_SYMBOL_PLACED);
     if (s->pose == GHOST_POSE_SYMBOL_PLACING_END) {

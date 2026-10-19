@@ -1392,6 +1392,10 @@ typedef struct {
      * first targets of an alpha blend with no EVB (Mecha Ridley's room
      * dimmed to EVA/16 until its battle starts; 0: no such blend). */
     uint8_t bg23_eva;
+    /* The Ruins Test's dynamic OBJ row 14 colours as last copied
+     * (RUINS_TEST_TRANSFER_DYNAMIC_PAL): 0 sRuinsTestPal's row 6, 1-6
+     * sRuinsTestPal_SymbolShot_Frame1-6. */
+    uint8_t ruins_test_palette;
     /* The escape ship's and the escape gates' flashing rows as last copied
      * (sEscapeShipFlashingPal / sEscapeGateFlashingPal row, -1: none yet). */
     int8_t escape_ship_palette, escape_gate_palette;

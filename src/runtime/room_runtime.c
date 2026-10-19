@@ -3093,6 +3093,7 @@ static void runtime_sprites_spawn(RuntimeSprites *sprites, const Room *room, int
     sprites->globals.bg2_offset_x = sprites->globals.bg2_offset_y = 0;
     sprites->globals.parasite_related = 0;
     sprites->globals.metroid_grab_palette = -1;
+    sprites->globals.ruins_test_palette = 0;   /* SpriteLoadPal of the spriteset */
     sprites->globals.lock_screen = false;
     sprites->globals.bg2_hidden = false;
     sprites->globals.bg_palette_row10 = -1;
@@ -3985,6 +3986,14 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
             snprintf(weapon,sizeof weapon,"/w%d",sprites->globals.mecha_weapon_gfx-1);
             shade=weapon;
         }
+        else if(mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_RUINS_TEST &&
+                sprites->globals.ruins_test_palette) {
+            /* RUINS_TEST_TRANSFER_DYNAMIC_PAL's last copy to OBJ row 14;
+             * tables that never read those colours keep the base look. */
+            static char dynamic[8];
+            snprintf(dynamic,sizeof dynamic,"/s%d",sprites->globals.ruins_test_palette);
+            shade=dynamic;
+        }
         else if(sprite->palette_row && sprite->palette_row==(uint8_t)(15-sprite->gfx_slot))shade="/frozen";
         else if(sprite->palette_row && sprite->palette_row==(uint8_t)(14-sprite->gfx_slot))shade="/stun";
         bool mecha=mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY;
@@ -4002,7 +4011,8 @@ static void runtime_draw_sprites(SDL_Renderer *renderer,RuntimeSprites *sprites,
         RuntimeLibraryEntry *entry=runtime_library_find(sprite_library,key);
         if((!entry || entry->count==0) && *shade &&
            (mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_MECHA_RIDLEY ||
-            mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO)) {
+            mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_IMAGO ||
+            mzm_sprite_graphics_owner(sprite)==MZM_PSPRITE_RUINS_TEST)) {
             /* A damage tint not baked for this table (its rows overflow
              * the sprite's palette): the untinted look. */
             snprintf(key,sizeof key,"Sprite/%s/%s/%s",

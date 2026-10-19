@@ -727,6 +727,33 @@ static void test_cutscene_bank(void) {
     assert(!mzm_cutscene_update(&c, &screen));
     assert(!mzm_cutscene_update(&c, &screen));
     assert(c.message.message_id == 2);
+    /* Samus in the blue ship: BG3 and the control panel object faded in
+     * from black, the panel lighting up and flickering, the shake, then
+     * the end. */
+    assert(mzm_cutscene_enter(&c, MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP));
+    mzm_sfx_clear();
+    mzm_screen_input(&screen, 0);
+    assert(!mzm_cutscene_update(&c, &screen));
+    assert(!mzm_cutscene_update(&c, &screen));
+    assert(c.stage == 1 && c.sub_stage == 0 && c.dispcnt == (GBA_DCNT_OBJ | GBA_DCNT_BG3) &&
+           c.bgcnt[3] == (0x1F << 8 | 3) && c.bldcnt == (1 << 4 | 1 << 6 | 0x3F00) &&
+           c.oam[0].oam.oam_id == 1 && c.oam[0].oam.bound_background == 3 && ppu.palette[256 + 1] == 0);
+    for (f = 0; f < 200 && c.sub_stage == 0; ++f) assert(!mzm_cutscene_update(&c, &screen));
+    /* 32 fade steps, one a frame once 4 frames passed. */
+    assert(c.sub_stage == 1 && f > 32 && f < 40 && ppu.palette[256 + 1] != 0);
+    for (f = 0; f < 200 && c.oam[0].actions < 2; ++f) assert(!mzm_cutscene_update(&c, &screen));
+    assert(c.oam[0].oam.oam_id == 2 && count_requests(MZM_SFX_PLAY, 0x253) == 1);
+    for (f = 0; f < 400 && !c.graphics[0].active; ++f) assert(!mzm_cutscene_update(&c, &screen));
+    assert(c.oam[0].actions == 4 && count_requests(MZM_SFX_PLAY, 0x254) == 1);
+    uint16_t hofs = screen.bg_hofs[3];
+    bool shaken = false, flickered = false;
+    bool blue_ship_ended = false;
+    for (f = 0; f < 200 && !blue_ship_ended; ++f) {
+        blue_ship_ended = mzm_cutscene_update(&c, &screen);
+        shaken |= screen.bg_hofs[3] != hofs;
+        flickered |= screen.bldalpha_l == 14 && screen.bldalpha_h == 2;
+    }
+    assert(blue_ship_ended && shaken && flickered && f > 90 && c.cutscene == MZM_CUTSCENE_NONE);
     mzm_rom_close();
 }
 

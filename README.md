@@ -214,7 +214,9 @@ is START; `--title` starts there), and START opens the file select with its
 three save files (`src/runtime/mzm_file_select.c`); a new game lands the
 gunship in Crateria (`src/runtime/mzm_gunship.c`) and plays the "Planet
 Zebes..." story text cutscene (`src/runtime/mzm_cutscene.c`) before Brinstar.
-The demos and the other cutscenes are not ported yet.
+The same module plays the post-Tourian monologues and, when Samus boards the
+Chozodia escape ship, the in-gameplay "Samus in the blue ship" cutscene. The
+demos and the other cutscenes are not ported yet.
 
 Run the experimental SDL3 Zero Mission room/animation integration with:
 

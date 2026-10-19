@@ -4270,6 +4270,10 @@ int main(int argc, char **argv) {
     bool pause_mode=false, screen_ready=false, file_select_mode=false, game_over_mode=false;
     /* A non-gameplay cutscene, then the pending resume request. */
     bool cutscene_mode=false;
+    /* The escape ship's EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP: the game fading
+     * out, then the in-gameplay cutscene, after which the game resumes as
+     * it was (gPauseScreenFlag PAUSE_SCREEN_PAUSE_OR_CUTSCENE). */
+    bool blue_ship_fade=false, in_game_cutscene=false;
     static MzmCutscene cutscene;
     static MzmFileSelect file_select;
     static MzmGameOver game_over;
@@ -4790,6 +4794,10 @@ int main(int argc, char **argv) {
                          * 0 directly with the suitless activation set. */
                         post_tourian_resume=false;
                         resume_request=RUNTIME_RESUME_POST_TOURIAN;
+                    } else if(in_game_cutscene) {
+                        /* Back in the game as it was, fading in. */
+                        in_game_cutscene=false;
+                        mzm_door_fade_loaded(&door_fade,0,0);
                     } else if(sprites.globals.landing) {
                         /* CutsceneEnd: the game's start in Brinstar. */
                         resume_request=RUNTIME_RESUME_NEW_GAME;
@@ -5007,10 +5015,17 @@ int main(int argc, char **argv) {
                     continue;
                 }
             }
-            /* The escape ship's StartEffectForCutscene requests
-             * (EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP, then
-             * EFFECT_CUTSCENE_ESCAPING_CHOZODIA): their fades and
-             * cutscenes are not ported, the room keeps running. */
+            /* The escape ship's StartEffectForCutscene requests:
+             * EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP fades the game out
+             * (COLOR_FADING_CANCEL's fade standing in for
+             * COLOR_FADING_SAMUS_IN_BLUE_SHIP) before its cutscene;
+             * EFFECT_CUTSCENE_ESCAPING_CHOZODIA (the Chozodia escape and
+             * the credits) is not ported, the room keeps running. */
+            if(sprites.globals.cutscene_effect==5 && screen_ready && door_fade.phase==MZM_DOOR_FADE_NONE) {
+                sprites.globals.cutscene_effect=0;
+                blue_ship_fade=true;
+                mzm_door_fade_start_cancel(&door_fade);
+            }
             if(sprites.globals.cutscene_effect==4 || sprites.globals.cutscene_effect==5) {
                 fprintf(stderr,"The %s cutscene is not ported.\n",
                         sprites.globals.cutscene_effect==5?"Samus in the escape ship":"Chozodia escape");
@@ -5158,7 +5173,9 @@ int main(int argc, char **argv) {
              * arm cannon offset above is the one SamusUpdate left. */
             /* InGameTimerUpdate */
             if(!door_frozen && !dying)runtime_igt_update();
-            if(!dying)
+            /* StartEffectForCutscene's SUB_GAME_MODE_LOADING_ROOM: only the
+             * fade runs before the blue ship cutscene. */
+            if(!dying && !blue_ship_fade)
                 runtime_sprites_update(&sprites, room, last_cx, last_cy, &samus, &previous_x,
                                        &equipment, &collision, &weapons, &input, movement_prevented,
                                        &prevent_movement);
@@ -5383,6 +5400,13 @@ int main(int argc, char **argv) {
             /* ConnectionCheckUnlockDoors (RoomUpdate) */
             if(door_fade.phase==MZM_DOOR_FADE_NONE)
                 mzm_hatches_check_unlock(&runtime_hatch_locks,&room->hatch_env);
+            if(blue_ship_fade && door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
+                /* ColorFadingProcess_BeforeBlueShip ended: the cutscene. */
+                blue_ship_fade=false;
+                cutscene_mode=in_game_cutscene=
+                    mzm_cutscene_enter(&cutscene,MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP);
+                if(!cutscene_mode)mzm_door_fade_loaded(&door_fade,0,0);
+            }
             if(pause_fade_flag && door_fade.phase==MZM_DOOR_FADE_OUT) {
                 /* ColorFadingProcess_Default ended: the pause screen. */
                 if(mzm_door_fade_out(&door_fade)) {
@@ -5419,7 +5443,8 @@ int main(int argc, char **argv) {
                 runtime_door_fade_offsets(door,last_cx,last_cy,right,&fade_x,&fade_y);
                 mzm_door_fade_start(&door_fade,!strcmp(door->kind,"hatch"),fade_x,fade_y);
                 door_lock=true;
-            } else if(!pause_fade_flag && door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
+            } else if(!pause_fade_flag && !blue_ship_fade && !cutscene_mode &&
+                      door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
                 /* ColorFadingProcess ended: RoomLoad. */
                 door_offset=pending_door_offset;
                 RoomDoor used=pending_door;

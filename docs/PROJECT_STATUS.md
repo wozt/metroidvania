@@ -3838,6 +3838,37 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0380 - Samus in the blue ship cutscene
+
+- Ported `cutscenes/samus_in_blue_ship.c` in `mzm_cutscene.c`, with the
+  cutscene utilities it needs:
+  - the COLOR_FADING_CANCEL case of `CutsceneStartBackgroundFading` and the
+    fade-in stages of `CutsceneUpdateFading`, on the EWRAM palette copies;
+  - `CutsceneFadeScreenToBlack`, `CutsceneReset`, `UpdateCutsceneOamDataId`;
+  - `ProcessCutsceneOam` through the existing menu object routine.
+- The cutscene reads the ROM bank: BG3 holds Samus at the controls, and the
+  control panel object is alpha-blended over it. In order:
+  - it fades in from black;
+  - the panel lights up with its sound, then flickers;
+  - BG3 shakes with the powering-up sound;
+  - it ends after 1.5 seconds.
+- The escape ship's request now freezes the room (no sprite update, as in
+  `SUB_GAME_MODE_LOADING_ROOM`) while the game fades out. After the
+  cutscene, the game fades back in as it was, as after the pause screen
+  (`PAUSE_SCREEN_PAUSE_OR_CUTSCENE`).
+- Divergence: the native blue-ship fade with its BG gradients is
+  approximated by the pause screen's COLOR_FADING_CANCEL fade.
+- Not ported: the Chozodia escape request at the end of the ship's flight.
+  It is still reported as not ported.
+- A bank-backed test follows the stages, the sounds, the fade length, the
+  flicker, the shake and the end.
+- Captures in `chozodia_092` (event 74, energy 1299, a short jump into the
+  open ship) show the cockpit with the panel lighting up, then the ship
+  lifting off (ignored `captures/chozodia/blue-ship-cutscene.png` and
+  `escape-ship-lift-off.png`).
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 440/440 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0379 - Chozodia escape ship and gates
 
 - Ported `sprites_ai/escape_ship.c` and `sprites_ai/escape_gate.c` in

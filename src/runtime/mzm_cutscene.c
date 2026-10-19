@@ -286,6 +286,244 @@ static bool story_handler(MzmCutscene *c, MzmScreen *s) {
     return ended;
 }
 
+/* CutsceneFadeScreenToBlack */
+static void fade_screen_to_black(MzmCutscene *c, MzmScreen *s) {
+    c->dispcnt = 0;
+    s->bldy = BLDY_MAX;
+    c->bldcnt = BLDCNT_SCREEN_FIRST | BLDCNT_BRIGHTNESS_DOWN;
+}
+
+/* PAL_TO_FADE and PAL_WITH_FADE: the BG then OBJ palettes at the start of
+ * the EWRAM work area. */
+static uint16_t *pal_to_fade(MzmScreen *s) { return (uint16_t *)(void *)s->ewram; }
+static uint16_t *pal_with_fade(MzmScreen *s) { return (uint16_t *)(void *)(s->ewram + 0x400); }
+
+/* CutsceneStartBackgroundFading(COLOR_FADING_CANCEL), the only fade the
+ * ported cutscene starts: from black, one step every frame after 4. */
+static void start_fading_cancel(MzmCutscene *c, MzmScreen *s) {
+    c->fading_color = 0;
+    c->fading_ready = false;
+    c->fading_delay = 0;
+    memcpy(pal_to_fade(s), s->ppu->palette, sizeof s->ppu->palette);
+    memset(s->ppu->palette, 0, sizeof s->ppu->palette);
+    memcpy(pal_with_fade(s), s->ppu->palette, sizeof s->ppu->palette);
+    c->fading_stage = 0;
+    c->fading_intensity = 1;
+    c->fading_max_delay = 4;
+    c->fading_type = MZM_FADING_IN;
+}
+
+/* CutsceneUpdateFading, stages 0 and 1 (the fade in) */
+static bool update_fading(MzmCutscene *c, MzmScreen *s) {
+    c->fading_delay++;
+    switch (c->fading_stage) {
+    case 0:
+        if (c->fading_ready || c->fading_delay < c->fading_max_delay) break;
+        if (c->fading_color < 32) {
+            mzm_apply_fading_color(c->fading_type, c->fading_color, pal_to_fade(s), pal_with_fade(s), 0xFFFF);
+            mzm_apply_fading_color(c->fading_type, c->fading_color, pal_to_fade(s) + 256, pal_with_fade(s) + 256,
+                                   0xFFFF);
+            c->fading_ready = true;
+            if (c->fading_color == 31) c->fading_color++;
+            else c->fading_color = (uint8_t)(c->fading_color + c->fading_intensity > 31
+                                                 ? 31 : c->fading_color + c->fading_intensity);
+        } else {
+            memcpy(pal_with_fade(s), pal_to_fade(s), 0x400);
+            c->fading_ready = true;
+            c->fading_stage++;
+        }
+        break;
+    case 1:
+        if (!c->fading_ready) {
+            c->fading_color = 0;
+            c->fading_stage = 0;
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
+/* CutsceneTransferAndUpdateFade */
+static bool transfer_and_update_fade(MzmCutscene *c, MzmScreen *s) {
+    if (c->fading_ready) {
+        memcpy(s->ppu->palette, pal_with_fade(s), 0x400);
+        c->fading_ready = false;
+    }
+    return update_fading(c, s);
+}
+
+/* UpdateCutsceneOamDataId */
+static void cutscene_oam_set_id(MzmCutsceneOam *o, uint8_t oam_id) {
+    o->oam.oam_id = oam_id;
+    o->oam.exists = oam_id ? 2 : 0;
+}
+
+enum {
+    /* sSamusInBlueShipPageData[0] */
+    BLUE_SHIP_BG = GBA_DCNT_BG3, BLUE_SHIP_BG_INDEX = 3, BLUE_SHIP_TILETABLE_PAGE = 0x1F,
+    BLUE_SHIP_PRIORITY = 3,
+    BLDCNT_OBJ_FIRST = 1 << 4, BLDCNT_SCREEN_SECOND = 0x3F00,
+    SOUND_BLUE_SHIP_TURNING_ON = 0x253, SOUND_BLUE_SHIP_POWERING_UP = 0x254,
+};
+
+/* SamusInBlueShipInit */
+static void blue_ship_init(MzmCutscene *c, MzmScreen *s) {
+    GbaPpu *ppu = s->ppu;
+    fade_screen_to_black(c, s);
+    uint32_t size = 0, palette = mzm_rom_symbol("sSamusInBlueShipPal", &size);
+    if (size > 0x200) size = 0x200;
+    mzm_copy_from_rom(&ppu->palette[256], palette, size);
+    mzm_copy_from_rom(&ppu->palette[0], palette, size);
+    ppu->palette[0] = 0;
+    mzm_lz77_from_rom(sym("sSamusInBlueShipSamusGfx"), ppu->vram, GBA_OBJ_VRAM);
+    mzm_lz77_from_rom(sym("sSamusInBlueShipSamusTileTable"), ppu->vram + BLUE_SHIP_TILETABLE_PAGE * 0x800,
+                      GBA_OBJ_VRAM - BLUE_SHIP_TILETABLE_PAGE * 0x800);
+    mzm_lz77_from_rom(sym("sSamusInBlueShipControlsGfx"), ppu->vram + GBA_OBJ_VRAM, GBA_VRAM_SIZE - GBA_OBJ_VRAM);
+    /* CutsceneSetBgcntPageData */
+    c->bgcnt[BLUE_SHIP_BG_INDEX] = (uint16_t)(BLUE_SHIP_TILETABLE_PAGE << 8 | BLUE_SHIP_PRIORITY);
+    /* CutsceneReset */
+    s->bldy = 0;
+    s->bldalpha_l = 16;
+    s->bldalpha_h = 0;
+    c->effect.status = 0;
+    c->bldcnt = 0;
+    memset(c->oam, 0, sizeof c->oam);
+    c->oam[0].oam.bound_background = 4;
+    memset(c->graphics, 0, sizeof c->graphics);
+    c->bldcnt = BLDCNT_OBJ_FIRST | BLDCNT_ALPHA | BLDCNT_SCREEN_SECOND;
+    s->bldalpha_l = BLDALPHA_MAX;
+    s->bldalpha_h = 0;
+    set_bg_position(s, true, true, BLUE_SHIP_BG_INDEX, START_BG_POS);
+    cutscene_oam_set_id(&c->oam[0], 1);
+    c->oam[0].oam.x = START_BG_POS + 64 * 7 + 32;
+    c->oam[0].oam.y = START_BG_POS + 64 * 5 - 4;
+    c->oam[0].oam.priority = 0;
+    c->oam[0].oam.bound_background = 3;
+    start_fading_cancel(c, s);
+    c->dispcnt = GBA_DCNT_OBJ | BLUE_SHIP_BG;
+    next_stage(c);
+}
+
+/* SamusInBlueShipShakeScreen: BG3 shaking a pixel either way. */
+static void blue_ship_shake(MzmCutscene *c, MzmScreen *s) {
+    if (!c->graphics[0].active) return;
+    c->graphics[0].timer++;
+    if (c->graphics[0].timer & 1) return;
+    if (c->graphics[0].timer & 2) s->bg_hofs[BLUE_SHIP_BG_INDEX] += 4;
+    else s->bg_hofs[BLUE_SHIP_BG_INDEX] -= 4;
+}
+
+/* SamusInBlueShipUpdateControlPanel: the panel lighting up, then its
+ * glow flickering through sSamusInBlueShipPanelTransparency. */
+static void blue_ship_update_panel(MzmCutsceneOam *o, MzmScreen *s) {
+    static const uint8_t transparency[4] = {16, 15, 14, 15};
+    switch (o->actions) {
+    case 1:
+        cutscene_oam_set_id(o, 2);
+        mzm_sfx_play(SOUND_BLUE_SHIP_TURNING_ON);
+        s->bldalpha_l = BLDALPHA_MAX;
+        s->bldalpha_h = 0;
+        o->actions++;
+        break;
+    case 2:
+        if (o->oam.ended) {
+            o->timer = 0;
+            o->actions++;
+        }
+        break;
+    case 3:
+        o->unk_1a = 0;
+        o->unk_1e = 2;
+        o->timer = 0;
+        o->actions++;
+        break;
+    case 4:
+        if (o->unk_1a == 0) {
+            o->unk_1a = o->unk_1e;
+            if (++o->timer >= 4) o->timer = 0;
+            s->bldalpha_l = transparency[o->timer];
+            s->bldalpha_h = (uint8_t)(BLDALPHA_MAX - s->bldalpha_l);
+        } else {
+            o->unk_1a--;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+/* SamusInBlueShipPoweringUp */
+static void blue_ship_powering_up(MzmCutscene *c, MzmScreen *s) {
+    switch (c->sub_stage) {
+    case 0:
+        if (transfer_and_update_fade(c, s)) {
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 1:
+        if (c->timer > 30) {                           /* CONVERT_SECONDS(.5f) */
+            c->oam[0].actions = 1;
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 2:
+        if (c->oam[0].actions == 4) {
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 3:
+        if (c->timer > 30) {
+            mzm_sfx_play(SOUND_BLUE_SHIP_POWERING_UP);
+            c->graphics[0].active = true;
+            c->graphics[0].timer = 0;
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 4:
+        if (c->timer > 90) {                           /* CONVERT_SECONDS(1.5f) */
+            c->timer = 0;
+            c->sub_stage++;
+        }
+        break;
+    case 5:
+        fade_screen_to_black(c, s);
+        next_stage(c);
+        break;
+    default:
+        break;
+    }
+    blue_ship_shake(c, s);
+    blue_ship_update_panel(&c->oam[0], s);
+}
+
+/* SamusInBlueShipHandler: the stage, the backgrounds' positions, then
+ * SamusInBlueShipProcessOam. */
+static bool blue_ship_handler(MzmCutscene *c, MzmScreen *s) {
+    bool ended = false;
+    switch (c->stage) {
+    case 0: blue_ship_init(c, s); break;
+    case 1: blue_ship_powering_up(c, s); break;
+    default: ended = true; break;                      /* CutsceneEndFunction */
+    }
+    update_backgrounds_position(c, s);
+    s->next_oam_slot = 0;
+    MzmMenuOam *o = &c->oam[0].oam;
+    mzm_menu_oam_process(s, 1, o, sym("sSamusInBlueShipOam"));
+    mzm_reset_free_oam(s);
+    return ended;
+}
+
+static bool handler(MzmCutscene *c, MzmScreen *s) {
+    return c->cutscene == MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP ? blue_ship_handler(c, s) : story_handler(c, s);
+}
+
 /* CutsceneInit */
 static void cutscene_init(MzmCutscene *c, MzmScreen *s) {
     uint8_t cutscene = c->cutscene, game_mode_stage = c->game_mode_stage;
@@ -302,14 +540,14 @@ static void cutscene_init(MzmCutscene *c, MzmScreen *s) {
     for (int bg = 0; bg < 4; ++bg) s->bg_hofs[bg] = s->bg_vofs[bg] = START_BG_POS;
     c->stage = 0;
     c->timer = 0;
-    story_handler(c, s);
+    handler(c, s);
 }
 
 bool mzm_cutscene_enter(MzmCutscene *c, uint8_t cutscene) {
     memset(c, 0, sizeof *c);
     c->cutscene = cutscene;
     c->game_mode_stage = STAGE_STARTING;
-    return story_text(cutscene) != 0;
+    return story_text(cutscene) != 0 || cutscene == MZM_CUTSCENE_SAMUS_IN_BLUE_SHIP;
 }
 
 bool mzm_cutscene_update(MzmCutscene *c, MzmScreen *s) {
@@ -326,7 +564,7 @@ bool mzm_cutscene_update(MzmCutscene *c, MzmScreen *s) {
     case STAGE_ONGOING:
         c->timer++;
         update_special_effect(c, s);
-        if (story_handler(c, s)) {
+        if (handler(c, s)) {
             c->dispcnt = 0;
             c->game_mode_stage++;
         }

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T15:28:00+00:00",
+ "generated_at": "2026-10-19T15:29:55+00:00",
  "git": {
-  "commit": "91dea2a",
+  "commit": "a381306",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 50,
-    "functional": 78,
+    "partial": 46,
+    "functional": 82,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 78,
-   "functional_or_better_percent": 56.1,
+   "functional_or_better": 82,
+   "functional_or_better_percent": 59.0,
    "with_passing_tests": 127,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -260,15 +260,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 26,
-    "functional": 65,
+    "partial": 22,
+    "functional": 69,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 65,
-   "functional_or_better_percent": 71.4,
+   "functional_or_better": 69,
+   "functional_or_better_percent": 75.8,
    "with_passing_tests": 91,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -1482,8 +1482,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Baristutes and Kraid's locked Baristute pair",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_baristute.c",
     "src/runtime/mzm_sprites.c",
@@ -2078,8 +2078,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Kraid and Ridley elevator statues",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_elevator_statue.c",
     "src/runtime/mzm_sprites.c",
@@ -2111,7 +2111,7 @@
     "RidleyElevatorStatueDelayBeforeFalling",
     "RidleyElevatorStatueFalling"
    ],
-   "limitations": "Not compared with an emulator. Each statue stands by its elevator as solid, non-grippable blocks (BG priority 1, always active, solid for projectiles). Once its boss is dead and Samus is off the elevator, it waits a quarter second, sets its event (31 or 38), removes its blocks with a horizontal shake and crumbling sound, drops the boss head debris, shrinks its draw height, lands with dust and a vertical shake, and leaves two rubble blocks; on reload it is already rubble. A capture in brinstar_008 shows the Kraid statue standing with Samus on its column.",
+   "limitations": "Not compared with an emulator. Each statue stands by its elevator as solid, non-grippable blocks (BG priority 1, always active, solid for projectiles). Once its boss is dead and Samus is off the elevator, it waits a quarter second, sets its event (31 or 38), removes its blocks with a horizontal shake and crumbling sound, drops the boss head debris, shrinks its draw height, lands with dust and a vertical shake, and leaves two rubble blocks; on reload it is already rubble. A capture in brinstar_008 shows the Kraid statue standing with Samus on its column. A capture in brinstar_008 with Kraid's event set shows the statue crumbling (poses 0x9, 0xB, 0xF) with its debris and falling into rubble.",
    "next_action": "Compare both statues crumbling with an emulator.",
    "evidence": {
     "unit_tests": [
@@ -2348,8 +2348,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Brinstar hives, roots, Mellows and Mellow swarms",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_hive.c",
     "src/runtime/mzm_sprites.c",
@@ -4347,8 +4347,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Tangle Vines and the vine Geruta",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_tangle_vine.c",
     "src/runtime/mzm_sprites.c",
@@ -11111,6 +11111,12 @@
  },
  "timeline": [
   {
+   "commit": "a381306",
+   "date": "2026-10-19",
+   "subject": "Record in-game checks for eight common enemies",
+   "scope": "project"
+  },
+  {
    "commit": "91dea2a",
    "date": "2026-10-19",
    "subject": "Complete Mecha Ridley's palettes and 100% rule",
@@ -11582,12 +11588,6 @@
    "commit": "dde1c21",
    "date": "2026-10-14",
    "subject": "feat(mzm): Atomics",
-   "scope": "mzm"
-  },
-  {
-   "commit": "29642ba",
-   "date": "2026-10-14",
-   "subject": "feat(mzm): Chozodia save platforms",
    "scope": "mzm"
   }
  ],
@@ -12109,7 +12109,7 @@
      {
       "id": 74,
       "name": "Mellow",
-      "status": "partial",
+      "status": "functional",
       "note": "Brinstar hives, roots, Mellows and Mellow swarms",
       "evidence": {
        "unit_tests": [
@@ -12128,7 +12128,7 @@
      {
       "id": 75,
       "name": "Hive",
-      "status": "partial",
+      "status": "functional",
       "note": "Brinstar hives, roots, Mellows and Mellow swarms",
       "evidence": {
        "unit_tests": [
@@ -12710,7 +12710,7 @@
      {
       "id": 128,
       "name": "Tangle Vine Tall",
-      "status": "partial",
+      "status": "functional",
       "note": "Tangle Vines and the vine Geruta",
       "evidence": {
        "unit_tests": [
@@ -12728,7 +12728,7 @@
      {
       "id": 129,
       "name": "Tangle Vine Medium",
-      "status": "partial",
+      "status": "functional",
       "note": "Tangle Vines and the vine Geruta",
       "evidence": {
        "unit_tests": [
@@ -12746,7 +12746,7 @@
      {
       "id": 130,
       "name": "Tangle Vine Curved",
-      "status": "partial",
+      "status": "functional",
       "note": "Tangle Vines and the vine Geruta",
       "evidence": {
        "unit_tests": [
@@ -12764,7 +12764,7 @@
      {
       "id": 131,
       "name": "Tangle Vine Short",
-      "status": "partial",
+      "status": "functional",
       "note": "Tangle Vines and the vine Geruta",
       "evidence": {
        "unit_tests": [
@@ -12782,7 +12782,7 @@
      {
       "id": 132,
       "name": "Mellow Swarm",
-      "status": "partial",
+      "status": "functional",
       "note": "Brinstar hives, roots, Mellows and Mellow swarms",
       "evidence": {
        "unit_tests": [
@@ -12801,7 +12801,7 @@
      {
       "id": 133,
       "name": "Mellow Swarm Health Based",
-      "status": "partial",
+      "status": "functional",
       "note": "Brinstar hives, roots, Mellows and Mellow swarms",
       "evidence": {
        "unit_tests": [
@@ -12890,7 +12890,7 @@
      {
       "id": 147,
       "name": "Baristute",
-      "status": "partial",
+      "status": "functional",
       "note": "Baristutes and Kraid's locked Baristute pair",
       "evidence": {
        "unit_tests": [
@@ -13120,7 +13120,7 @@
      {
       "id": 183,
       "name": "Tangle Vine Red Garuta",
-      "status": "partial",
+      "status": "functional",
       "note": "Tangle Vines and the vine Geruta",
       "evidence": {
        "unit_tests": [
@@ -13138,7 +13138,7 @@
      {
       "id": 184,
       "name": "Tangle Vine Geruta",
-      "status": "partial",
+      "status": "functional",
       "note": "Tangle Vines and the vine Geruta",
       "evidence": {
        "unit_tests": [
@@ -13156,7 +13156,7 @@
      {
       "id": 185,
       "name": "Tangle Vine Larva Right",
-      "status": "partial",
+      "status": "functional",
       "note": "Tangle Vines and the vine Geruta",
       "evidence": {
        "unit_tests": [
@@ -13174,7 +13174,7 @@
      {
       "id": 186,
       "name": "Tangle Vine Larva Left",
-      "status": "partial",
+      "status": "functional",
       "note": "Tangle Vines and the vine Geruta",
       "evidence": {
        "unit_tests": [
@@ -13192,7 +13192,7 @@
      {
       "id": 195,
       "name": "Baristute Kraid Upper",
-      "status": "partial",
+      "status": "functional",
       "note": "Baristutes and Kraid's locked Baristute pair",
       "evidence": {
        "unit_tests": [
@@ -13243,7 +13243,7 @@
      {
       "id": 200,
       "name": "Baristute Kraid Lower",
-      "status": "partial",
+      "status": "functional",
       "note": "Baristutes and Kraid's locked Baristute pair",
       "evidence": {
        "unit_tests": [

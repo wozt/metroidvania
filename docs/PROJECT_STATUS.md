@@ -3838,6 +3838,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0391 - in-game checks for four bosses and gadgets
+
+- Baristute (`kraid_007`), the hives with their Mellows (`brinstar_015`)
+  and the Tangle Vines (`norfair_024`) already had ported AIs, unit tests
+  and recorded in-game captures. Their remaining notes only say that they
+  were not compared with an emulator, so they move to `functional`.
+- A new capture in `brinstar_008`, with Kraid's event set, shows the Kraid
+  elevator statue crumbling (poses 0x9, 0xB then 0xF) with its debris and
+  settling into rubble. The elevator statues move to `functional`.
+- Gadora (`kraid_029`) and Deorem (`brinstar_012`) stay `partial`: their
+  captures only showed them waiting for Samus to come close.
+- The parity inventory now contains 33 partial and 69 functional entries.
+- Capture: ignored `captures/enemies/elevator-statue-crumbling.png`.
+- Validation on 2026-10-19: the warning-clean full build, CTest 35/35 and
+  Python 444/444 passed; generated parity and dashboard data are fresh.
+
 ## Patch 0390 - in-game checks for eight common enemies
 
 - Recorded in-game captures for enemies that were already ported and unit

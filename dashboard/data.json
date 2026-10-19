@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T03:58:38+00:00",
+ "generated_at": "2026-10-19T04:02:17+00:00",
  "git": {
-  "commit": "91b4d3d",
+  "commit": "7305b5e",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 63,
    "functional_or_better_percent": 47.0,
-   "with_passing_tests": 113,
-   "with_passing_tests_percent": 84.3,
+   "with_passing_tests": 122,
+   "with_passing_tests_percent": 91.0,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -264,8 +264,8 @@
    },
    "functional_or_better": 50,
    "functional_or_better_percent": 58.1,
-   "with_passing_tests": 79,
-   "with_passing_tests_percent": 91.9,
+   "with_passing_tests": 86,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -411,8 +411,8 @@
    },
    "functional_or_better": 7,
    "functional_or_better_percent": 58.3,
-   "with_passing_tests": 11,
-   "with_passing_tests_percent": 91.7,
+   "with_passing_tests": 12,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "assets.aria_objects",
@@ -545,8 +545,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 1,
-   "with_passing_tests_percent": 33.3,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -1353,14 +1353,12 @@
       "test": "tests/test_mzm_sprites.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -1662,7 +1660,7 @@
       "test": "tests/test_mzm_sprites.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      },
      {
       "test": "tests/test_mzm_runtime_room.py",
@@ -1681,11 +1679,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -2550,12 +2546,12 @@
       "test": "tests/test_mzm_sprites.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -3564,12 +3560,12 @@
       "test": "tests/test_mzm_sprites.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -4360,12 +4356,12 @@
       "test": "tests/test_mzm_sprites.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -5472,12 +5468,12 @@
       "test": "tests/test_mzm_sprites.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -7251,14 +7247,12 @@
       "test": "tests/test_mzm_sprites.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -9309,12 +9303,12 @@
       "test": "tests/test_mzm_sprites.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -9712,14 +9706,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-19"
    }
   },
   {
@@ -9989,7 +9981,7 @@
    {
     "name": "python_tooling_and_data",
     "files": [],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "no_proprietary_files",
@@ -10387,8 +10379,8 @@
     "file": "tests/test_mzm_sprites.py",
     "module": "tests.test_mzm_sprites",
     "test_count": 9,
-    "outcome": "failed",
-    "passed": 8
+    "outcome": "passed",
+    "passed": 9
    },
    {
     "file": "tests/test_mzm_world_atlas.py",
@@ -10637,12 +10629,18 @@
    }
   ],
   "summary": {
-   "passed": 473,
-   "failed": 2,
+   "passed": 475,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "7305b5e",
+   "date": "2026-10-19",
+   "subject": "Port Imago",
+   "scope": "project"
+  },
   {
    "commit": "91b4d3d",
    "date": "2026-10-19",
@@ -11115,12 +11113,6 @@
    "commit": "50f3801",
    "date": "2026-10-13",
    "subject": "feat(mzm): native door fades and the door transition tube",
-   "scope": "mzm"
-  },
-  {
-   "commit": "bcedf0a",
-   "date": "2026-10-13",
-   "subject": "feat(mzm): gunship, its parts and the new game's landing",
    "scope": "mzm"
   }
  ],

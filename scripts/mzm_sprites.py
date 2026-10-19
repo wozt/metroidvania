@@ -225,12 +225,15 @@ MULTI_SPRITE_DATA = {
          "sUnknownItemChozoStatueMultiSpriteData_Sitting",
          "sUnknownItemChozoStatueMultiSpriteData_Seated")),
 }
+# u8 [n][2] tables an AI reads, written as ``table`` lines of halfwords
+# (the first byte low, the second high), as the runtime reads them.
+BYTE_PAIR_TABLES = ("sImagoDynamicPaletteData",)
 # s16 (or small u16) tables an AI reads, written as ``table`` lines.
 AI_TABLES = ("sSkreeFallingSpeed", "sZeelaEyesFallingFromUpSpeed",
              "sZeelaEyesFallingFromBottomSpeed", "sSpritesFallingCeilingSpeed",
              "sSidehopperHighJumpVelocity", "sSidehopperLowJumpVelocity",
              "sDessgeegaHighJumpYVelocity", "sDessgeegaLowJumpYVelocity",
-             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sImagoDynamicPaletteData", "sMellaIdleYMovement",
+             "sReoIdleYMovement", "sReoIdleXMovement", "sMellowIdleYVelocity", "sMellowIdleXVelocity", "sBaristuteJumpingYVelocity", "sBaristuteFallingYVelocity", "sImagoAttackingXVelocity", "sImagoDamagedStingerFallingYVelocity", "sMellaIdleYMovement",
              "sMellaIdleXMovement", "sMellaGoingDownYMovement", "sMellaGoingUpYMovement",
              "sMellaMovingXMovement", "sHoltzIdleYVelocity", "sSqueeptRisingMovement",
              "sSqueeptFallingMovement", "sChargeBeamIdleYMovement",
@@ -569,7 +572,7 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
               "sRandomNumberTable")
     wanted.update(tables)
     wanted.add(MECHA_RIDLEY_WEAPONS)
-    wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES,
+    wanted.update(["sSecondarySpriteStats", "sHazeData", GUNSHIP_FLASHING, METROID_GRABBED, *AI_TABLES, *BYTE_PAIR_TABLES,
                    "sLocationTextPointers", "sAreaBannerLocationTextPal"])
     wanted.update(["sCommonSpritesGfx", "sCommonSpritesPal",
                    *(table for tables in DROPS.values() for table in tables), *PARTICLES])
@@ -638,6 +641,10 @@ def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
         lines.append("\t".join(["sstats", name[len("SSPRITE_"):], str(value), *map(str, row)]))
     for table in AI_TABLES:
         lines.append("\t".join(["table", table, *map(str, words(table, True, 2))]))
+    for table in BYTE_PAIR_TABLES:
+        pairs = words(table, False, 1)
+        lines.append("\t".join(["table", table, *(str(low | high << 8) for low, high in
+                                                    zip(pairs[0::2], pairs[1::2]))]))
     # sHazeData[EFFECT_HAZE_COUNT][4]: haze value, damage effect, water
     # movement and blending kind of each room effect (HazeSetBackgroundEffect).
     lines.append("\t".join(["haze", *map(str, words("sHazeData", False, 1))]))

@@ -113,6 +113,8 @@ class MzmSpriteDataTests(unittest.TestCase):
                           for path in sorted((DECOMP / "src/data").rglob("*.c")))
         for table in mzm_sprites.AI_TABLES:
             self.assertRegex(sources, rf"const\s+[su]16\s+{table}\s*\[")
+        for table in mzm_sprites.BYTE_PAIR_TABLES:
+            self.assertRegex(sources, rf"const\s+u8\s+{table}\s*\[\d+\]\[2\]")
         for table in mzm_sprites.PARTICLES:
             self.assertRegex(sources, rf"const\s+struct\s+FrameData\s+{table}\s*\[")
 

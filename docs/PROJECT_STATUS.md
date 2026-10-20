@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0422 - Aria title interactive input stage
+
+- `aos_title_input.c` ports the bounded stage-8 input/idle-timer decisions
+  from `GameModeTitleScreenUpdate` (10-second timer, up/down repeat,
+  A/START acceptance, B submenu return and timeout).
+- The code is device-independent and covered by `aos_title_input` CTest.
+- It is not yet connected to the SDL room viewer: original boot,
+  title graphics, title entity state, menu animations and fades remain.
+- Native annotations stay partial; derived checklist and web dashboard
+  are regenerated in that order after testing.
+
 ## Patch 0421 - Aria mode dispatch and title destination foundation
 
 - Added `aos_game_mode.c`: native `SetGameMode`, `IncrementGameMode`

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 12 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 13 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -1106,6 +1106,15 @@ Next action: Port original title screen stages, graphics and selection and wire 
 ### Title screen
 
 [?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 28 discovered routine(s) to this category (7 by native name, 21 by exclusive referrers). Category completeness has not been established.
+
+[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Ported stage-8 ten-second idle counter, directional repeat refresh, A/START accept, B submenu return and title exit decision as a device-free C helper.
+
+Native evidence: not attached yet.  
+Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c).  
+Tests: [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c).
+Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`.  
+Known divergences: Only stage-8 timer and branching rules; no title assets, affine animation, intro, menu renderer or complete state machine.  
+Next action: Implement native GameModeTitleScreenUpdate full stage state machine with original graphics, sound and mode routing; compare against recorded game.
 
 ### Menus and options
 

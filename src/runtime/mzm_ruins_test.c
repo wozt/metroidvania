@@ -491,8 +491,9 @@ static void despawn(Ctx *c) {
         change_ceiling(c, MZM_CAA_REMOVE_SOLID);
         const MzmSpriteHooks *h = c->f->hooks;
         if (h && h->set_event) h->set_event(h->context, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED);
+        g->igt_at_bosses[2] = g->igt;
         /* StartEffectForCutscene(EFFECT_CUTSCENE_GETTING_FULLY_POWERED), the
-         * runtime's request 6 (gInGameTimerAtBosses is not kept). */
+         * runtime's request 6. */
         g->cutscene_effect = MZM_CUTSCENE_EFFECT_GETTING_FULLY_POWERED;
     }
 }

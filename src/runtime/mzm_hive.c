@@ -168,7 +168,7 @@ static void hive(Ctx *c) {
         s->work0 = s->freeze_timer;
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -452,7 +452,7 @@ static void mellow(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }

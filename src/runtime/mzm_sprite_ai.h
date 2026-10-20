@@ -24,8 +24,9 @@ enum {
     SCREEN_SIZE_X_SUB_PIXEL = 240 * 4,
     SCREEN_SIZE_Y_SUB_PIXEL = 160 * 4,
     HALF_SCREEN_BLOCKS_SUB_PIXEL = 8 * BLOCK_SIZE,  /* CEIL(SCREEN_SIZE_X_BLOCKS / 2) */
-    /* SpriteUtilIsSpriteStunned on easy and normal: CONVERT_SECONDS(.15f). */
-    STUN_THRESHOLD = 9,
+    /* SpriteUtilIsSpriteStunned: CONVERT_SECONDS(.15f) on easy and normal,
+     * CONVERT_SECONDS(.24f) on hard (ai_stun_threshold). */
+    STUN_THRESHOLD = 9, STUN_THRESHOLD_HARD = 14,
     SPRITE_POSE_UNINITIALIZED = 0,
     SPRITE_POSE_DESTROYED = 0x62,
     SPRITE_POSE_SHINESPARK_DESTROYED = 0x63,
@@ -166,6 +167,10 @@ void ai_move_towards_target(Ctx *c, uint16_t target_y, uint16_t target_x, uint8_
 void ai_update_freeze_timer(Ctx *c);
 /* `if (status & SPRITE_STATUS_ONSCREEN) SoundPlay(sound)` and its
  * SoundPlayNotAlreadyPlaying form. */
+/* SpriteUtilIsSpriteStunned's threshold for gDifficulty. */
+static inline int ai_stun_threshold(const Ctx *c) {
+    return c->f->difficulty == 2 ? STUN_THRESHOLD_HARD : STUN_THRESHOLD;
+}
 static inline void ai_sound_onscreen(const MzmSprite *s, uint16_t sound) {
     if (s->status & MZM_SPRITE_STATUS_ONSCREEN) mzm_sfx_play(sound);
 }

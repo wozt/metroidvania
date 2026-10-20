@@ -51,6 +51,8 @@ typedef struct {
     struct { uint8_t hours, minutes, seconds, frames; } igt;
     bool max_igt;
     uint8_t completed_game;
+    /* Version 3: gInGameTimerAtBosses (zero in older files). */
+    struct { uint8_t hours, minutes, seconds, frames; } igt_at_bosses[5];
 } MzmSaveData;
 
 /* The native FileScreenOptionsUnlocked block is global rather than owned by

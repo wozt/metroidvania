@@ -83,6 +83,12 @@ enum {
 enum { MZM_ACTOR_SAMUS, MZM_ACTOR_NON_SPRITE, MZM_ACTOR_SPRITE };
 
 /* The room as sprites see it. */
+/* struct InGameTimer; MAX_AMOUNT_OF_IGT_AT_BOSSES */
+typedef struct {
+    uint8_t hours, minutes, seconds, frames;
+} MzmInGameTimer;
+enum { MZM_IGT_AT_BOSSES = 5 };
+
 typedef struct {
     void *context;
     /* Native ClipdataType of the block at a subpixel point (air outside the
@@ -1404,6 +1410,10 @@ typedef struct {
      * (RUINS_TEST_TRANSFER_DYNAMIC_PAL): 0 sRuinsTestPal's row 6, 1-6
      * sRuinsTestPal_SymbolShot_Frame1-6. */
     uint8_t ruins_test_palette;
+    /* gInGameTimer as the runtime last counted it, and gInGameTimerAtBosses
+     * (Kraid 0, Mother Brain 1, the Ruins Test 2, Mecha Ridley 3; the
+     * fifth is never written). */
+    MzmInGameTimer igt, igt_at_bosses[MZM_IGT_AT_BOSSES];
     /* Its OBJ row 15 (the reflections): 0 sRuinsTestPal's row 7, 1-15
      * sRuinsTestPal_SamusReflection's rows 0-14, 16-30 the full-suit
      * reflection's rows 0-14. */

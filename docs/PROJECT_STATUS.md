@@ -3838,6 +3838,28 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0407 - boss timers and the hard stun threshold
+
+- Ported `gInGameTimerAtBosses`:
+  - Kraid, Mother Brain, the Ruins Test and Mecha Ridley record the
+    in-game timer at their native points (slots 0 to 3);
+  - the runtime copies the timer into `MzmSpriteGlobals.igt` every frame;
+  - the save file moves to version 3 and stores the five timers. Versions
+    1 and 2 are still read, with zero timers.
+- `SpriteUtilIsSpriteStunned`'s threshold now follows the difficulty:
+  `CONVERT_SECONDS(.24f)` on hard, so the stun ends sooner. This applies
+  to the 21 AIs that check it.
+- Corrected a stale divergence: the difficulty's contact damage was
+  already applied, and no native drop depends on the difficulty.
+- Unit tests:
+  - the save round trip of the boss timers and the version check;
+  - the Ruins Test despawn's timer;
+  - a Zoomer stunned 3 frames on hard against 8 on normal.
+- Status changes: `mzm.enemies.ruins_test` and `mzm.technical.save_file`
+  move to `functional`. The save file's in-game check is the brinstar_033
+  save and reload. The parity inventory now contains 22 partial and 81
+  functional entries.
+
 ## Patch 0406 - dynamic Ruins Test Samus reflection
 
 - Ported `ParticleSamusReflection`, the persistent mirror image that replaces

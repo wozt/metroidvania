@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { VERSION = 2, HEADER = 8 + 4 + 4, TRAILER = 4 };
+enum { VERSION = 3, HEADER = 8 + 4 + 4, TRAILER = 4 };
 static const char MAGIC[8] = {'M', 'V', 'Z', 'M', 'S', 'A', 'V', 'E'};
 static const char UNLOCK_MAGIC[8] = {'M', 'V', 'Z', 'M', 'U', 'N', 'L', 'K'};
 enum { UNLOCK_VERSION = 1, UNLOCK_PAYLOAD = 12, UNLOCK_SIZE = HEADER + UNLOCK_PAYLOAD + TRAILER };
@@ -139,6 +139,13 @@ static void visit(Io *io, MzmSaveData *d) {
     u8(io, &d->igt.frames);
     flag(io, &d->max_igt);
     u8(io, &d->completed_game);
+    if (io->version < 3) return;
+    for (int i = 0; i < 5; ++i) {
+        u8(io, &d->igt_at_bosses[i].hours);
+        u8(io, &d->igt_at_bosses[i].minutes);
+        u8(io, &d->igt_at_bosses[i].seconds);
+        u8(io, &d->igt_at_bosses[i].frames);
+    }
 }
 
 static uint32_t crc32(const uint8_t *p, size_t n) {

@@ -655,6 +655,7 @@ static void eye_glow(Ctx *c) {
         const MzmSpriteHooks *h = c->f->hooks;
         if (h && h->set_event) h->set_event(h->context, MZM_EVENT_MECHA_RIDLEY_KILLED);
         if (h && h->spawn_message) h->spawn_message(h->context, MZM_MESSAGE_CHOZODIA_ESCAPE);
+        c->f->globals->igt_at_bosses[3] = c->f->globals->igt;
         door_timer(c, -20);
         c->f->globals->animated_palette_written = true;
         c->f->globals->disable_animated_palette = 0;

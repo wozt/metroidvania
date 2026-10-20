@@ -2607,6 +2607,9 @@ static void runtime_apply_save(const MzmSaveData *save,MzmEquipment *equipment,
     runtime_igt.seconds=save->igt.seconds;
     runtime_igt.frames=save->igt.frames;
     runtime_max_igt=save->max_igt;
+    for(int i=0;i<MZM_IGT_AT_BOSSES;i++)
+        sprites->globals.igt_at_bosses[i]=(MzmInGameTimer){save->igt_at_bosses[i].hours,
+            save->igt_at_bosses[i].minutes,save->igt_at_bosses[i].seconds,save->igt_at_bosses[i].frames};
     runtime_difficulty=save->difficulty;
     runtime_completed_game=save->completed_game;
     mzm_samus_init(samus,save->samus_x,save->samus_y,save->facing);
@@ -2641,6 +2644,13 @@ static void runtime_build_save(MzmSaveData *save,const char *alias,const Room *r
     save->igt.frames=runtime_igt.frames;
     save->max_igt=runtime_max_igt;
     save->completed_game=runtime_completed_game;
+    for(int i=0;i<MZM_IGT_AT_BOSSES;i++) {
+        const MzmInGameTimer *b=&sprites->globals.igt_at_bosses[i];
+        save->igt_at_bosses[i].hours=b->hours;
+        save->igt_at_bosses[i].minutes=b->minutes;
+        save->igt_at_bosses[i].seconds=b->seconds;
+        save->igt_at_bosses[i].frames=b->frames;
+    }
 }
 
 static uint32_t runtime_ending_pen(const MzmEquipment *equipment) {
@@ -5766,6 +5776,8 @@ int main(int argc, char **argv) {
              * arm cannon offset above is the one SamusUpdate left. */
             /* InGameTimerUpdate */
             if(!door_frozen && !dying)runtime_igt_update();
+            sprites.globals.igt=(MzmInGameTimer){runtime_igt.hours,runtime_igt.minutes,
+                                                 runtime_igt.seconds,runtime_igt.frames};
             /* StartEffectForCutscene's SUB_GAME_MODE_LOADING_ROOM: only the
              * fade runs before the blue ship cutscene. */
             if(!dying && !blue_ship_fade && !chozodia_escape_fade)

@@ -598,6 +598,7 @@ static void before_death(Ctx *c) {
                              MZM_PE_MAIN_BOSS_DEATH);
         mzm_sfx_music_fade_and_queue(20, MZM_MUSIC_BOSS_KILLED);   /* ONE_THIRD_SECOND */
         g->bg2_hidden = true;
+        g->igt_at_bosses[0] = g->igt;
     }
 }
 

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-19T22:13:32+00:00",
+ "generated_at": "2026-10-20T01:03:25+00:00",
  "git": {
-  "commit": "4953090",
+  "commit": "7f8dbf6",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 37,
-    "functional": 92,
+    "partial": 35,
+    "functional": 94,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 92,
-   "functional_or_better_percent": 65.7,
+   "functional_or_better": 94,
+   "functional_or_better_percent": 67.1,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 13,
-    "functional": 79,
+    "partial": 11,
+    "functional": 81,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 79,
-   "functional_or_better_percent": 85.9,
+   "functional_or_better": 81,
+   "functional_or_better_percent": 88.0,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -649,7 +649,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -717,7 +717,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -852,7 +852,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -916,7 +916,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1006,7 +1006,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1095,7 +1095,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1143,7 +1143,7 @@
     "InGameCutsceneUpgradingSuit",
     "InGameCutsceneCalculateSuitFlashOffset"
    ],
-   "limitations": "US version (the cutscene opens with a fade to black; the upgrade's stage 19 returns IGC_RESULT_NEXT_STAGE and stage 20 keeps running). COLOR_FADING_GETTING_FULLY_POWERED's white fade is stood in by the COLOR_FADING_CANCEL fade to black. At the cutscene's end the status screen's fully powered items sequence runs (mzm.menus.status_screen); without the ROM bank every obtained item is activated at once instead. The upgrade's BG0 alpha fade (stages 2 and 18) is kept as state but the room's BG0 keeps its own blend when drawn; the flash is an additive rectangle, stretched to the view's edges when window 1 reaches the GBA screen's, and the HUD is drawn above it. The upgrade is cleared on a room change; gInGameTimerAtBosses is not recorded. Not compared with an emulator. The Ruins Test's despawn requests the cutscene: the room freezes and fades out; at the fade's end (ColorFadingProcess_GettingFullyPowered) the fight stage becomes STARTING_CUTSCENE, EVENT_STATUE_VARIA_SUIT_GRABBED is set (with EVENT_VARIA_SUIT_OBTAINED and EVENT_SKIPPED_VARIA_SUIT when the Varia Suit was skipped) and the Varia Suit is obtained. The cutscene runs from the ROM bank on the non-gameplay screen: Samus on BG2 and the backdrop on BG3 (pages 0x1E and 0x1C, 512-pixel-high maps), sGettingFullyPoweredSuitPal in both palettes, the ring and sparkles in OBJ VRAM; Samus brightened (BLDY to 12 by the sprite effect) outside window 1, which ends half a block below the ring; the ring rises at a pixel a frame with its palette cycled through OBJ row 10 every third frame, six sparkles spawn around it after random delays (sRandomNumberTable) and five rise from below the screen (delays read from the background graphics' bytes, as natively, including the first timer landing on the ring); BG2 and BG3 scroll down to Samus, window 1 is switched off, the whole screen brightens to white while the ring flies away faster, then the end after a second (MUSIC_GETTING_FULLY_POWERED_SUIT_CUTSCENE). The status screen then shows the items being enabled (mzm.menus.status_screen); back in the room (RoomLoad's PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS return) the Gravity Suit is held back, Samus facing the foreground at (24.5, 31) blocks with pause disabled and the charge reset; the closing reflection shows the banner, whose removal starts the suit upgrade (InGameCutsceneUpgradingSuit, waiting for no power bomb): BG0 faded out and hidden, window 1 opened two pixels wide on Samus, grown vertically by 4 then horizontally by 7 pixels a frame with BG0's tile 0xC0 (palette 9) blended at 13/16 over the screen inside it and SOUND_ACQUIRING_GRAVITY, the Gravity Suit activated at stage 11 (Samus's graphics follow), the window shrunk back (InGameCutsceneCalculateSuitFlashOffset), BG0 restored, then RUINS_TEST_FIGHT_STAGE_SUIT_ANIM_ENDED, lastWallTouchedMidAir and gDisablePause cleared. Checked in chozodia_042 with the `--ruins-test-end` staging (the actor sent straight to RUINS_TEST_POSE_CHECK_GHOST_DISAPPEARING): the cutscene at frame 700 shows the ring, its sparkles and the brightened Samus; the return shows the fully powered suit and the banner at 392,496; after B the window grows from x 120-122, the purple flash (tileset 56's tile is solid colour 0x7C19) covers the screen at stage 13, the Gravity Suit is active (items 0x60) and the fight stage reaches 8, after which the pillar falls. The same in-game cutscene module plays IGC_GETTING_VARIA after the Varia Suit's status screen (brinstar_027: the window at x 118-120 growing, then shrinking at stage 14, the suit active).",
+   "limitations": "US version (the cutscene opens with a fade to black; the upgrade's stage 19 returns IGC_RESULT_NEXT_STAGE and stage 20 keeps running). COLOR_FADING_GETTING_FULLY_POWERED's white fade is stood in by the COLOR_FADING_CANCEL fade to black. At the cutscene's end the status screen's fully powered items sequence runs (mzm.menus.status_screen); without the ROM bank every obtained item is activated at once instead. The upgrade's BG0 alpha fade (stages 2 and 18) is kept as state but the room's BG0 keeps its own blend when drawn; the flash is an additive rectangle, stretched to the view's edges when window 1 reaches the GBA screen's, and the HUD is drawn above it. The upgrade is cleared on a room change. Not compared with an emulator. The Ruins Test's despawn requests the cutscene: the room freezes and fades out; at the fade's end (ColorFadingProcess_GettingFullyPowered) the fight stage becomes STARTING_CUTSCENE, EVENT_STATUE_VARIA_SUIT_GRABBED is set (with EVENT_VARIA_SUIT_OBTAINED and EVENT_SKIPPED_VARIA_SUIT when the Varia Suit was skipped) and the Varia Suit is obtained. The cutscene runs from the ROM bank on the non-gameplay screen: Samus on BG2 and the backdrop on BG3 (pages 0x1E and 0x1C, 512-pixel-high maps), sGettingFullyPoweredSuitPal in both palettes, the ring and sparkles in OBJ VRAM; Samus brightened (BLDY to 12 by the sprite effect) outside window 1, which ends half a block below the ring; the ring rises at a pixel a frame with its palette cycled through OBJ row 10 every third frame, six sparkles spawn around it after random delays (sRandomNumberTable) and five rise from below the screen (delays read from the background graphics' bytes, as natively, including the first timer landing on the ring); BG2 and BG3 scroll down to Samus, window 1 is switched off, the whole screen brightens to white while the ring flies away faster, then the end after a second (MUSIC_GETTING_FULLY_POWERED_SUIT_CUTSCENE). The status screen then shows the items being enabled (mzm.menus.status_screen); back in the room (RoomLoad's PAUSE_SCREEN_FULLY_POWERED_SUIT_ITEMS return) the Gravity Suit is held back, Samus facing the foreground at (24.5, 31) blocks with pause disabled and the charge reset; the closing reflection shows the banner, whose removal starts the suit upgrade (InGameCutsceneUpgradingSuit, waiting for no power bomb): BG0 faded out and hidden, window 1 opened two pixels wide on Samus, grown vertically by 4 then horizontally by 7 pixels a frame with BG0's tile 0xC0 (palette 9) blended at 13/16 over the screen inside it and SOUND_ACQUIRING_GRAVITY, the Gravity Suit activated at stage 11 (Samus's graphics follow), the window shrunk back (InGameCutsceneCalculateSuitFlashOffset), BG0 restored, then RUINS_TEST_FIGHT_STAGE_SUIT_ANIM_ENDED, lastWallTouchedMidAir and gDisablePause cleared. Checked in chozodia_042 with the `--ruins-test-end` staging (the actor sent straight to RUINS_TEST_POSE_CHECK_GHOST_DISAPPEARING): the cutscene at frame 700 shows the ring, its sparkles and the brightened Samus; the return shows the fully powered suit and the banner at 392,496; after B the window grows from x 120-122, the purple flash (tileset 56's tile is solid colour 0x7C19) covers the screen at stage 13, the Gravity Suit is active (items 0x60) and the fight stage reaches 8, after which the pillar falls. The same in-game cutscene module plays IGC_GETTING_VARIA after the Varia Suit's status screen (brinstar_027: the window at x 118-120 growing, then shrinking at stage 14, the suit active).",
    "next_action": "Port the white colour fade; compare with an emulator.",
    "evidence": {
     "unit_tests": [
@@ -1174,7 +1174,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1244,7 +1244,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1317,7 +1317,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1395,7 +1395,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1487,7 +1487,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1561,7 +1561,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1635,7 +1635,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1713,7 +1713,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1778,7 +1778,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1860,7 +1860,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -1922,7 +1922,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2010,7 +2010,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2101,7 +2101,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2160,7 +2160,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2233,7 +2233,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2301,7 +2301,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2372,7 +2372,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2430,7 +2430,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2508,7 +2508,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2566,7 +2566,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2654,7 +2654,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2737,7 +2737,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2824,7 +2824,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -2930,7 +2930,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3044,7 +3044,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3102,7 +3102,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3177,7 +3177,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3270,7 +3270,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3328,7 +3328,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3423,7 +3423,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3487,7 +3487,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3557,7 +3557,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3617,7 +3617,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3729,7 +3729,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3796,7 +3796,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3856,7 +3856,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3915,7 +3915,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -3923,8 +3923,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Ruins Test (Chozo ghost)",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_ruins_test.c",
     "src/runtime/mzm_sprites.c",
@@ -3988,8 +3988,8 @@
     "RuinsTestLightning",
     "ParticleSamusReflection"
    ],
-   "limitations": "The in-game timer record (gInGameTimerAtBosses) is not ported. Not compared with an emulator. The main actor freezes Samus facing the background five blocks below it, waits for the four symbols (battle music, merge) to turn it into her reflection, spawns the reflection and its cover, frees Samus after half a second and starts when she turns. It then shows the shootable symbol for 2, 1.5, 1 or 2/3 seconds after a random delay from sRandomNumberTable (now exported); an uncharged pistol shot on it hurts Samus by 25, 50 or 100 energy by difficulty through the Ruins Test forced movement, and a charged one keeps it out. After the first symbol it spawns the outline and the ghost, then moves in the widening circle and, after two symbols, the six-arc atom pattern, triggering ground and standing lightning; the fourth symbol sends it back to the center, and its despawn removes the ceiling and sets event 67. The ghost fades in and follows the actor, flashing with it, then fades back and out at the center; the outline precedes the ghost and warns of lightning, whose bolts explode on the ground (static) or split into two waves along the floor and up the walls, releasing movement afterwards. The shootable symbol spawns at double speed, despawns with a sound fade or, when hit, becomes a placed symbol flying to its corner of the arena (counted once placed); the fourth sends the ghost away and all four light up again. The closing reflection turns Samus standing on it to face the background, runs the suited reflection timing and fades the music before the cutscene fade, then shows the Fully Powered Suit banner. Captures in chozodia_042 show Samus frozen under the ghost during the merge and the fight started with the ghost under its cover. (Before patch 0396 its secondary sprites fell back to the Skree graphics owner and were not drawn.) Its despawn now requests EFFECT_CUTSCENE_GETTING_FULLY_POWERED (the runtime's request 6), which plays the cutscene and the suit upgrade (mzm.cutscenes.getting_fully_powered); a capture in chozodia_042 with the `--ruins-test-end` staging (the fight skipped) follows the despawn, the closing reflection turning Samus, the cutscene, the banner, the suit upgrade and the fight stage reaching SUIT_ANIM_ENDED. The symbols' dynamic palette is ported: every RUINS_TEST_TRANSFER_DYNAMIC_PAL of the four symbols' lighting, merging and disappearing, the shot symbol's flight (a 4-frame pulse through the base and the six shot palettes) and its placing flash sets MzmSpriteGlobals.ruins_test_palette, and the renderer draws the tables that read OBJ row 14's first eight colours with the baked /s1 to /s6 variants (reset with the spriteset). A capture sequence in chozodia_042 shows the four symbols turning from purple to light blue as they light up, then merging. (The earlier note that the symbols were invisible predated patch 0396's graphics owners; they were drawn with the base palette since.) The reflections now reproduce every native OBJ update: the opening actor fades through sRuinsTestPal_SamusReflection and switches to the direction-specific turning tiles; the closing actor starts with the suitless tiles and palette pulse, is hidden while the full-suit tiles are copied to OBJ VRAM 0x4280/0x4680, then fades through sRuinsTestPal_SamusReflectionFullSuit. The exporter bakes the /tr, /tl, /u and /f variants from the ROM and the runtime selects them through MzmSpriteGlobals.ruins_test_reflection_gfx and ruins_test_reflection_palette. A chozodia_042 `--ruins-test-end` capture sequence shows the suitless silhouette, the hidden copy, the pale full suit and its final colours. The ghost now reproduces each native `BLDALPHA` phase: 16/0 to 16/8 then 9/8 on spawn, 10/16 to 16/16 while fading back, and 15/16 to 0/16 while despawning; its damage flash disables alpha temporarily. The renderer evaluates `OBJ * EVA / 16 + target * EVB / 16` with independent coefficients. A `--ruins-test-ghost` capture sequence in chozodia_042 verifies the visible progression at 16/0, 16/4, 14/8 and 9/8. The lightning warning now starts BG_FLASH_QUICK_YELLOW at its native OAM frame: the shared palette processor snapshots rows 0 to 14, applies white 16/16, blue 16/16 and the falling white stages 14, 12, 8, 6, 4 and 2, then restores the snapshot; a `--background-flash quick` sequence verifies the full visual transition. The opening reflection now hands off after two frames to ParticleSamusReflection: it mirrors Samus's current animated body around the moving ghost, stays alive off screen, hides while a symbol is shootable and is removed when the last symbol is hit. A chozodia_042 capture shows Samus running right while the mirror runs left at the arena centre.",
-   "next_action": "Port the in-game timer record; compare the fight with an emulator.",
+   "limitations": "Not compared with an emulator. The main actor freezes Samus facing the background five blocks below it, waits for the four symbols (battle music, merge) to turn it into her reflection, spawns the reflection and its cover, frees Samus after half a second and starts when she turns. It then shows the shootable symbol for 2, 1.5, 1 or 2/3 seconds after a random delay from sRandomNumberTable (now exported); an uncharged pistol shot on it hurts Samus by 25, 50 or 100 energy by difficulty through the Ruins Test forced movement, and a charged one keeps it out. After the first symbol it spawns the outline and the ghost, then moves in the widening circle and, after two symbols, the six-arc atom pattern, triggering ground and standing lightning; the fourth symbol sends it back to the center, and its despawn removes the ceiling and sets event 67. The ghost fades in and follows the actor, flashing with it, then fades back and out at the center; the outline precedes the ghost and warns of lightning, whose bolts explode on the ground (static) or split into two waves along the floor and up the walls, releasing movement afterwards. The shootable symbol spawns at double speed, despawns with a sound fade or, when hit, becomes a placed symbol flying to its corner of the arena (counted once placed); the fourth sends the ghost away and all four light up again. The closing reflection turns Samus standing on it to face the background, runs the suited reflection timing and fades the music before the cutscene fade, then shows the Fully Powered Suit banner. Captures in chozodia_042 show Samus frozen under the ghost during the merge and the fight started with the ghost under its cover. (Before patch 0396 its secondary sprites fell back to the Skree graphics owner and were not drawn.) Its despawn now requests EFFECT_CUTSCENE_GETTING_FULLY_POWERED (the runtime's request 6), which plays the cutscene and the suit upgrade (mzm.cutscenes.getting_fully_powered); a capture in chozodia_042 with the `--ruins-test-end` staging (the fight skipped) follows the despawn, the closing reflection turning Samus, the cutscene, the banner, the suit upgrade and the fight stage reaching SUIT_ANIM_ENDED. The symbols' dynamic palette is ported: every RUINS_TEST_TRANSFER_DYNAMIC_PAL of the four symbols' lighting, merging and disappearing, the shot symbol's flight (a 4-frame pulse through the base and the six shot palettes) and its placing flash sets MzmSpriteGlobals.ruins_test_palette, and the renderer draws the tables that read OBJ row 14's first eight colours with the baked /s1 to /s6 variants (reset with the spriteset). A capture sequence in chozodia_042 shows the four symbols turning from purple to light blue as they light up, then merging. (The earlier note that the symbols were invisible predated patch 0396's graphics owners; they were drawn with the base palette since.) The reflections now reproduce every native OBJ update: the opening actor fades through sRuinsTestPal_SamusReflection and switches to the direction-specific turning tiles; the closing actor starts with the suitless tiles and palette pulse, is hidden while the full-suit tiles are copied to OBJ VRAM 0x4280/0x4680, then fades through sRuinsTestPal_SamusReflectionFullSuit. The exporter bakes the /tr, /tl, /u and /f variants from the ROM and the runtime selects them through MzmSpriteGlobals.ruins_test_reflection_gfx and ruins_test_reflection_palette. A chozodia_042 `--ruins-test-end` capture sequence shows the suitless silhouette, the hidden copy, the pale full suit and its final colours. The ghost now reproduces each native `BLDALPHA` phase: 16/0 to 16/8 then 9/8 on spawn, 10/16 to 16/16 while fading back, and 15/16 to 0/16 while despawning; its damage flash disables alpha temporarily. The renderer evaluates `OBJ * EVA / 16 + target * EVB / 16` with independent coefficients. A `--ruins-test-ghost` capture sequence in chozodia_042 verifies the visible progression at 16/0, 16/4, 14/8 and 9/8. The lightning warning now starts BG_FLASH_QUICK_YELLOW at its native OAM frame: the shared palette processor snapshots rows 0 to 14, applies white 16/16, blue 16/16 and the falling white stages 14, 12, 8, 6, 4 and 2, then restores the snapshot; a `--background-flash quick` sequence verifies the full visual transition. The opening reflection now hands off after two frames to ParticleSamusReflection: it mirrors Samus's current animated body around the moving ghost, stays alive off screen, hides while a symbol is shootable and is removed when the last symbol is hit. A chozodia_042 capture shows Samus running right while the mirror runs left at the arena centre. The despawn records gInGameTimerAtBosses[2] (MzmSpriteGlobals.igt_at_bosses, saved with the file); unit-tested.",
+   "next_action": "Compare the fight with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
@@ -4037,7 +4037,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4105,7 +4105,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4187,7 +4187,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4245,7 +4245,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4304,7 +4304,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4423,7 +4423,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4485,7 +4485,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4553,7 +4553,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4612,7 +4612,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4670,7 +4670,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4728,7 +4728,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4818,7 +4818,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4887,7 +4887,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -4983,7 +4983,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5070,7 +5070,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5183,7 +5183,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5252,7 +5252,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5378,7 +5378,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5477,7 +5477,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5591,7 +5591,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5639,7 +5639,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5714,7 +5714,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5812,7 +5812,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -5900,7 +5900,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6045,7 +6045,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6113,7 +6113,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6186,7 +6186,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6261,7 +6261,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6322,7 +6322,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6410,7 +6410,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6473,7 +6473,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6567,7 +6567,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6663,7 +6663,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6849,7 +6849,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -6938,7 +6938,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7057,7 +7057,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7112,7 +7112,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7186,7 +7186,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7194,8 +7194,8 @@
    "area": "mzm",
    "category": "technical",
    "title": "Save file",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_save.c",
     "src/runtime/room_runtime.c"
@@ -7215,15 +7215,17 @@
     "SramWrite_FileInfo",
     "InGameTimerUpdate"
    ],
-   "limitations": "The runtime writes its own versioned little-endian files (header, payload, CRC-32; version 2, version 1 still read) instead of the GBA SRAM layout with its copies and checksums; a file keeps the room alias, Samus's position and facing, the equipment, the events, the minimap progress, the collected items, the opened hatches, the never-reform blocks, the area, the difficulty, the in-game timer and the completed game flags, but not the music or the rest of gSamusData. gMostRecentSaveFile is the newest of the three files. The save completes in one frame instead of the multi-frame SramSaveFile stages. The difficulty is kept but its damage and drop effects are not applied (the runtime plays the normal difficulty). Three files, file_a.sav to file_c.sav in --save-dir (else SDL's preference folder). YES on a save platform's prompt writes the current file through a temporary file renamed over it. The file select screen reads their info (SramWrite_FileInfo: existence, area, energy, missiles, suit, timer, completed flags, difficulty) and continues one: its room is loaded and its state restored with Samus in SPOSE_SAVING_LOADING_GAME and gIsLoadingFile set for the room's first sprite update, so the save platform releases her; --load does the same at start with the most recent file. The in-game timer runs each game frame as InGameTimerUpdate does (frames, seconds, minutes, hours, capped at 99:59:59 with gMaxInGameTimerFlag). Truncated, corrupted, foreign or newer files are rejected. The file select screen's copy and erase menus copy a save file over another or delete it. The game over's continue loads the most recent file the same way, or restarts the game's start without one.",
-   "next_action": "Port the intro, then compare the files' timer and contents with an emulator.",
+   "limitations": "The runtime writes its own versioned little-endian files (header, payload, CRC-32; version 3 with gInGameTimerAtBosses, versions 1 and 2 still read) instead of the GBA SRAM layout with its copies and checksums; a file keeps the room alias, Samus's position and facing, the equipment, the events, the minimap progress, the collected items, the opened hatches, the never-reform blocks, the area, the difficulty, the in-game timer, the timers at the four bosses and the completed game flags, but not the music or the rest of gSamusData. gMostRecentSaveFile is the newest of the three files. The save completes in one frame instead of the multi-frame SramSaveFile stages. The difficulty is kept and applied: the contact damage (halved on easy, doubled on hard), the tank increases, the stun threshold (CONVERT_SECONDS(.24f) on hard) and the bosses' difficulty branches. Three files, file_a.sav to file_c.sav in --save-dir (else SDL's preference folder). YES on a save platform's prompt writes the current file through a temporary file renamed over it. The file select screen reads their info (SramWrite_FileInfo: existence, area, energy, missiles, suit, timer, completed flags, difficulty) and continues one: its room is loaded and its state restored with Samus in SPOSE_SAVING_LOADING_GAME and gIsLoadingFile set for the room's first sprite update, so the save platform releases her; --load does the same at start with the most recent file. The in-game timer runs each game frame as InGameTimerUpdate does (frames, seconds, minutes, hours, capped at 99:59:59 with gMaxInGameTimerFlag). Truncated, corrupted, foreign or newer files are rejected. The file select screen's copy and erase menus copy a save file over another or delete it. The game over's continue loads the most recent file the same way, or restarts the game's start without one. Version 3 adds gInGameTimerAtBosses (Kraid, Mother Brain, the Ruins Test and Mecha Ridley record the in-game timer at their death, as natively). Checked in game through the save platform of brinstar_033 (the prompt, the save, then the reloaded file).",
+   "next_action": "Compare the files' timer and contents with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_save.c",
      "tests/test_runtime_steep_slopes.c",
      "tests/test_mzm_screens.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "brinstar_033"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -7266,7 +7268,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7343,7 +7345,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7422,7 +7424,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7564,7 +7566,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7647,7 +7649,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7724,7 +7726,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7823,7 +7825,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -7923,7 +7925,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8009,7 +8011,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8109,7 +8111,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8211,7 +8213,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8260,7 +8262,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8321,7 +8323,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8374,7 +8376,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8431,7 +8433,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8494,7 +8496,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8544,7 +8546,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8603,7 +8605,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8662,7 +8664,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8710,7 +8712,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8759,7 +8761,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -8817,7 +8819,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9147,7 +9149,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9193,7 +9195,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9242,7 +9244,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9285,7 +9287,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9330,7 +9332,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9382,7 +9384,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9426,7 +9428,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9478,7 +9480,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9522,7 +9524,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9566,7 +9568,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9673,7 +9675,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9718,7 +9720,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9772,7 +9774,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9818,7 +9820,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9863,7 +9865,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9936,7 +9938,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -9981,7 +9983,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -10026,7 +10028,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -10084,7 +10086,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -10155,7 +10157,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -10209,7 +10211,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -10254,7 +10256,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -10298,7 +10300,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -10341,7 +10343,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -10384,7 +10386,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-19"
+    "verified_on": "2026-10-20"
    }
   },
   {
@@ -11316,6 +11318,12 @@
  },
  "timeline": [
   {
+   "commit": "7f8dbf6",
+   "date": "2026-10-20",
+   "subject": "Port the dynamic Ruins Test reflection",
+   "scope": "project"
+  },
+  {
    "commit": "4953090",
    "date": "2026-10-19",
    "subject": "Port native palette background flashes",
@@ -11787,12 +11795,6 @@
    "commit": "64b56c8",
    "date": "2026-10-14",
    "subject": "feat(mzm): connect escape failure game over",
-   "scope": "mzm"
-  },
-  {
-   "commit": "af7b29e",
-   "date": "2026-10-14",
-   "subject": "feat(mzm): render native escape timer objects",
    "scope": "mzm"
   }
  ],
@@ -12725,7 +12727,7 @@
      {
       "id": 109,
       "name": "Ruins Test",
-      "status": "partial",
+      "status": "functional",
       "note": "Ruins Test (Chozo ghost)",
       "evidence": {
        "unit_tests": [

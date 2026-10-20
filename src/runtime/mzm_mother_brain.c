@@ -277,6 +277,7 @@ static void death(Ctx *c) {
                     (uint16_t)(g->sub1.x - (BLOCK_SIZE - PIXEL_SIZE)), MZM_PE_MAIN_BOSS_DEATH);
     ai_particle_set(c, (uint16_t)(g->sub1.y + BLOCK_SIZE - PIXEL_SIZE),
                     (uint16_t)(g->sub1.x + BLOCK_SIZE + QUARTER_BLOCK_SIZE), MZM_PE_MAIN_BOSS_DEATH);
+    g->igt_at_bosses[1] = g->igt;
     mzm_sfx_play(MZM_SOUND_MOTHER_BRAIN_DEATH_EXPLOSION);
     mzm_background_effect_start(MZM_BACKGROUND_EFFECT_QUICK_FLASH);
 }

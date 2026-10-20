@@ -399,6 +399,16 @@ int main(void) {
     assert(z.health == 1 && (z.isft & 0x7F) == 17 && !weapons.list[0].active &&
            weapons.list[1].active);
     x0 = z.x;
+    /* On hard the threshold is CONVERT_SECONDS(.24f): the stun ends sooner. */
+    MzmSprite hard = z;
+    frame.difficulty = 2;
+    int hard_steps = 0;
+    while (hard.x == x0 && hard_steps < 20) {
+        step(&hard, 0);
+        ++hard_steps;
+    }
+    frame.difficulty = 1;
+    assert(hard_steps == 3);
     step(&z, 0);
     assert(z.x == x0);  /* stunned */
     for (int i = 0; i < 6; ++i) step(&z, 0);
@@ -7339,9 +7349,13 @@ int main(void) {
         memset(test_events, 0, sizeof test_events);
         caa_calls = 0;
         globals.sub1.work3 = 5;
+        globals.igt = (MzmInGameTimer){1, 2, 3, 4};
         mzm_sprite_update(&room[0], 0, &rf);
         assert(room[0].pose == 0x6A && caa_calls == 13 && last_caa == MZM_CAA_REMOVE_SOLID &&
                test_check_event(NULL, MZM_EVENT_FULLY_POWERED_SUIT_OBTAINED));
+        /* gInGameTimerAtBosses[2] and the cutscene request */
+        assert(globals.igt_at_bosses[2].hours == 1 && globals.igt_at_bosses[2].frames == 4 &&
+               globals.cutscene_effect == MZM_CUTSCENE_EFFECT_GETTING_FULLY_POWERED);
         memset(test_events, 0, sizeof test_events);
 
         /* The closing reflection: Samus standing on it is turned to face

@@ -1905,7 +1905,7 @@ static void zoomer(Ctx *c) {
         return;
     }
     /* SpriteUtilIsSpriteStunned */
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -1985,7 +1985,7 @@ static void ripper(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -2025,7 +2025,7 @@ static void ripper2(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -2258,7 +2258,7 @@ static void skree(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -2337,7 +2337,7 @@ static void waver(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -2990,7 +2990,7 @@ static void hopper(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -3247,7 +3247,7 @@ static void viola(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -3648,7 +3648,7 @@ static void sova(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -3937,7 +3937,7 @@ static void pipe_bug(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -4131,7 +4131,7 @@ static void reo(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -4347,7 +4347,7 @@ static void mella(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -4427,7 +4427,7 @@ static void holtz(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -4535,7 +4535,7 @@ static void geruta(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -4723,7 +4723,7 @@ static void skultera(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -4856,7 +4856,7 @@ static void dragon(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -5063,7 +5063,7 @@ static void squeept(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -5154,7 +5154,7 @@ static void multiviola(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }
@@ -5425,7 +5425,7 @@ static void rinka(Ctx *c) {
         ai_update_freeze_timer(c);
         return;
     }
-    if ((s->isft & 0x7F) > STUN_THRESHOLD && s->pose < SPRITE_POSE_DESTROYED) {
+    if ((s->isft & 0x7F) > ai_stun_threshold(c) && s->pose < SPRITE_POSE_DESTROYED) {
         if (s->adc) s->adc--;
         return;
     }

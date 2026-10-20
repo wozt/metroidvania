@@ -4527,8 +4527,8 @@ enum {
 /* Geruta: waits on its ceiling (attacking at once without one), warns when
  * Samus is low and within 5 blocks, launches, dives at 3 pixels a frame
  * drifting a pixel a frame toward her, bounces off the floor and climbs
- * back (GerutaXMovement and GerutaYMovement are the Holtz's movements; the
- * splash of SpriteUtilCheckInRoomEffect is not ported). */
+ * back (GerutaXMovement and GerutaYMovement are the Holtz's movements),
+ * with a big splash diving into the room's liquid. */
 static void geruta(Ctx *c) {
     MzmSprite *s = c->s;
     if (s->freeze_timer) {
@@ -4593,13 +4593,17 @@ static void geruta(Ctx *c) {
             ai_sound_onscreen_once(s, MZM_SOUND_GERUTA_GOING_DOWN);
         }
         break;
-    case GERUTA_POSE_GOING_DOWN:
+    case GERUTA_POSE_GOING_DOWN: {
+        /* GerutaGoingDown */
+        uint16_t old_y = s->y;
         swooper_x_movement(c, PIXEL_SIZE);
         if (swooper_y_movement(c, 3 * PIXEL_SIZE, height)) {
             s->pose = GERUTA_POSE_BOUNCING;
             ai_set_anim(s, MZM_GERUTA_BOUNCING);
         }
+        if (ai_entered_room_effect(c, old_y, s->y)) ai_room_effect_splash(c, s->x, 2);  /* SPLASH_BIG */
         break;
+    }
     case GERUTA_POSE_BOUNCING:
         if (ai_animation_ending(c, 1)) {
             s->pose = GERUTA_POSE_GOING_UP;
@@ -4829,14 +4833,18 @@ enum {
     DRAGON_STATUS_RISING = MZM_SPRITE_STATUS_FACING_DOWN,
 };
 
-/* DragonYMovement: up to two blocks above its spawn, back down to it; the
- * splashes are not ported. */
-static void dragon_y_movement(MzmSprite *s) {
-    uint16_t spawn = s->y_spawn;
+/* DragonYMovement: up to two blocks above its spawn, back down to it, with
+ * a small splash leaving or entering the room's liquid
+ * (SpriteUtilCheckOutOfRoomEffect / SpriteUtilCheckInRoomEffect). */
+static void dragon_y_movement(Ctx *c) {
+    MzmSprite *s = c->s;
+    uint16_t spawn = s->y_spawn, old_y = s->y;
     if (s->status & DRAGON_STATUS_RISING) {
         if ((uint16_t)(spawn - (BLOCK_SIZE * 2 - ONE_SUB_PIXEL)) < s->y) s->y -= PIXEL_SIZE / 2;
-    } else if ((uint16_t)(spawn - PIXEL_SIZE / 2) > s->y) {
-        s->y += PIXEL_SIZE / 2;
+        if (ai_left_room_effect(c, old_y, s->y)) ai_room_effect_splash(c, s->x, 1);    /* SPLASH_SMALL */
+    } else {
+        if ((uint16_t)(spawn - PIXEL_SIZE / 2) > s->y) s->y += PIXEL_SIZE / 2;
+        if (ai_entered_room_effect(c, old_y, s->y)) ai_room_effect_splash(c, s->x, 1);
     }
 }
 
@@ -4883,7 +4891,7 @@ static void dragon(Ctx *c) {
     case DRAGON_POSE_IDLE: {
         /* DragonIdle */
         if (s->work0) s->work0--;
-        dragon_y_movement(s);
+        dragon_y_movement(c);
         s->status &= (uint16_t)~DRAGON_STATUS_RISING;
         if (c->f->samus_y > s->y) break;
         uint8_t nslr = ai_samus_nslr(c, BLOCK_SIZE * 6, BLOCK_SIZE * 6);
@@ -4917,7 +4925,7 @@ static void dragon(Ctx *c) {
         ai_set_anim(s, MZM_DRAGON_TURNING_AROUND);
         /* fallthrough */
     case DRAGON_POSE_TURN_AROUND_FIRST_HALF:
-        dragon_y_movement(s);
+        dragon_y_movement(c);
         if (ai_animation_ending(c, 1)) {
             s->pose = DRAGON_POSE_TURN_AROUND_SECOND_HALF;
             ai_set_anim(s, MZM_DRAGON_TURNING_AROUND_PART2);
@@ -4925,7 +4933,7 @@ static void dragon(Ctx *c) {
         }
         break;
     case DRAGON_POSE_TURN_AROUND_SECOND_HALF:
-        dragon_y_movement(s);
+        dragon_y_movement(c);
         if (ai_animation_ending(c, 2)) s->pose = DRAGON_POSE_WARNING_INIT;
         break;
     case DRAGON_POSE_WARNING_INIT:
@@ -4934,7 +4942,7 @@ static void dragon(Ctx *c) {
         s->work0 = 30;              /* CONVERT_SECONDS(.5f) */
         /* fallthrough */
     case DRAGON_POSE_WARNING:
-        dragon_y_movement(s);
+        dragon_y_movement(c);
         if (--s->work0 == 0) {
             s->pose = DRAGON_POSE_SPIT;
             ai_set_anim(s, MZM_DRAGON_SPITTING);
@@ -5114,7 +5122,10 @@ static void squeept(Ctx *c) {
             s->work3++;
             s->y = (uint16_t)(s->y + movement);
         }
-        if (ai_left_room_effect(c, old_y, s->y)) ai_sound_onscreen(s, MZM_SOUND_SQUEEPT_LEAVING_LAVA);
+        if (ai_left_room_effect(c, old_y, s->y)) {
+            ai_room_effect_splash(c, s->x, 1);             /* SPLASH_SMALL */
+            ai_sound_onscreen(s, MZM_SOUND_SQUEEPT_LEAVING_LAVA);
+        }
         break;
     }
     case SQUEEPT_POSE_TURNING_AROUND:
@@ -5135,7 +5146,10 @@ static void squeept(Ctx *c) {
             s->work3++;
             s->y = (uint16_t)(s->y + movement);
         }
-        if (ai_entered_room_effect(c, old_y, s->y)) ai_sound_onscreen(s, MZM_SOUND_SQUEEPT_ENTERING_LAVA);
+        if (ai_entered_room_effect(c, old_y, s->y)) {
+            ai_room_effect_splash(c, s->x, 2);             /* SPLASH_BIG */
+            ai_sound_onscreen(s, MZM_SOUND_SQUEEPT_ENTERING_LAVA);
+        }
         if (s->y_spawn < s->y) {
             s->y = s->y_spawn;
             squeept_idle_init(s);
@@ -7057,13 +7071,29 @@ void mzm_sprite_debris_init(MzmEffects *effects, uint8_t type, uint16_t y, uint1
 
 /* A falling arc: on landing (after `min_frames` for the half arcs) it
  * bounces with the given direction. */
-static void debris_fall(Ctx *c, MzmSpriteDebris *d, const int16_t *velocity, unsigned offset,
-                        int dx, uint8_t bounce, uint8_t min_frames) {
+/* SpriteDebrisSetSplash: a piece entering the room's liquid makes a small
+ * splash there (SpriteUtilSetSplashEffect with the hazard of the collision
+ * query just made at the piece). */
+static void debris_splash(const Ctx *c, MzmEffects *effects, uint16_t old_y, const MzmSpriteDebris *d) {
+    uint16_t surface = c->world->effect_y;
+    if (!effects || !surface || !(old_y < surface && d->y >= surface)) return;
+    uint8_t hazard = ai_hazard_at(c, d->y, d->x), effect;
+    if (hazard == MZM_HAZARD_WATER) effect = MZM_PE_SPRITE_SPLASH_WATER_SMALL;
+    else if (hazard == MZM_HAZARD_LAVA || hazard == MZM_HAZARD_WEAK_ACID) effect = MZM_PE_SPRITE_SPLASH_LAVA_SMALL;
+    else if (hazard == MZM_HAZARD_STRONG_ACID) effect = MZM_PE_SPRITE_SPLASH_ACID_SMALL;
+    else return;
+    mzm_particle_set(effects, d->y, d->x, effect);
+}
+
+static void debris_fall(Ctx *c, MzmEffects *effects, MzmSpriteDebris *d, const int16_t *velocity,
+                        unsigned offset, int dx, uint8_t bounce, uint8_t min_frames) {
+    uint16_t old_y = d->y;
     d->y = (uint16_t)(d->y + velocity[offset]);
     d->x = (uint16_t)(d->x + dx);
     uint16_t top = ai_check_vertical_slopes(c, d->y, d->x);
-    /* SpriteDebrisSetSplash: room liquids are not ported. */
-    if (c->vertical != MZM_COLLISION_AIR && d->frame_counter >= min_frames) {
+    if (c->vertical == MZM_COLLISION_AIR) {
+        debris_splash(c, effects, old_y, d);
+    } else if (d->frame_counter >= min_frames) {
         d->y = top;
         d->type = (uint8_t)(SPRITE_DEBRIS_BOUNCING | bounce);
         d->offset = 0;
@@ -7071,7 +7101,7 @@ static void debris_fall(Ctx *c, MzmSpriteDebris *d, const int16_t *velocity, uns
 }
 
 /* SpriteDebrisProcess */
-static void debris_process(Ctx *c, MzmSpriteDebris *d) {
+static void debris_process(Ctx *c, MzmEffects *effects, MzmSpriteDebris *d) {
     const int16_t (*v)[9] = c->tables->debris;
     if (++d->frame_counter == 0) {
         d->exists = false;
@@ -7083,27 +7113,29 @@ static void debris_process(Ctx *c, MzmSpriteDebris *d) {
     case 1:
         if (d->frame_counter <= 8) return;  /* CONVERT_SECONDS(2.f / 15) */
         /* fallthrough */
-    case 0x11: debris_fall(c, d, v[MZM_DEBRIS_11], offset, -1, 1, 0); break;
+    case 0x11: debris_fall(c, effects, d, v[MZM_DEBRIS_11], offset, -1, 1, 0); break;
     case 2:
         if (d->frame_counter <= 5) return;  /* CONVERT_SECONDS(1.f / 12) */
         /* fallthrough */
-    case 0x12: debris_fall(c, d, v[MZM_DEBRIS_12], offset, 1, 2, 0); break;
+    case 0x12: debris_fall(c, effects, d, v[MZM_DEBRIS_12], offset, 1, 2, 0); break;
     case 3:
         if (d->frame_counter <= 2) return;  /* CONVERT_SECONDS(1.f / 30) */
         /* fallthrough */
-    case 0x13: debris_fall(c, d, v[MZM_DEBRIS_13], offset, 2, 3, 0); break;
-    case 4: debris_fall(c, d, v[MZM_DEBRIS_4], offset, -2, 4, 0); break;
-    case 5: debris_fall(c, d, v[MZM_DEBRIS_5], offset, -1, 1, 20); break;
-    case 6: debris_fall(c, d, v[MZM_DEBRIS_6], offset, 1, 2, 20); break;
-    case 7: debris_fall(c, d, v[MZM_DEBRIS_7], offset, 1, 3, 20); break;
-    case 8: debris_fall(c, d, v[MZM_DEBRIS_8], offset, -1, 4, 20); break;
+    case 0x13: debris_fall(c, effects, d, v[MZM_DEBRIS_13], offset, 2, 3, 0); break;
+    case 4: debris_fall(c, effects, d, v[MZM_DEBRIS_4], offset, -2, 4, 0); break;
+    case 5: debris_fall(c, effects, d, v[MZM_DEBRIS_5], offset, -1, 1, 20); break;
+    case 6: debris_fall(c, effects, d, v[MZM_DEBRIS_6], offset, 1, 2, 20); break;
+    case 7: debris_fall(c, effects, d, v[MZM_DEBRIS_7], offset, 1, 3, 20); break;
+    case 8: debris_fall(c, effects, d, v[MZM_DEBRIS_8], offset, -1, 4, 20); break;
     case SPRITE_DEBRIS_BOUNCING | 1:
     case SPRITE_DEBRIS_BOUNCING | 2:
     case SPRITE_DEBRIS_BOUNCING | 3:
     case SPRITE_DEBRIS_BOUNCING | 4: {
         static const int8_t dx[5] = {0, -1, 1, 2, -2};
+        uint16_t old_y = d->y;
         d->y = (uint16_t)(d->y + v[MZM_DEBRIS_BOUNCING][offset]);
         d->x = (uint16_t)(d->x + dx[d->type & 7]);
+        if (ai_collision_at(c, d->y, d->x) == MZM_COLLISION_AIR) debris_splash(c, effects, old_y, d);
         break;
     }
     default:
@@ -7119,7 +7151,7 @@ void mzm_sprite_debris_process(MzmEffects *effects, const MzmSpriteWorld *world,
     for (int i = 0; i < MZM_MAX_SPRITE_DEBRIS; ++i) {
         MzmSpriteDebris *d = &effects->debris[i];
         if (!d->exists) continue;
-        debris_process(&c, d);
+        debris_process(&c, effects, d);
         /* SpriteDebrisProcessAll animates even a piece that just ended. */
         d->adc++;
         uint8_t current = d->frame < kinds->debris_count ? kinds->debris_timers[d->frame] : 0;

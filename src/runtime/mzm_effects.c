@@ -67,6 +67,8 @@ const char *mzm_particle_table(uint8_t effect) {
     case MZM_PE_HITTING_SOMETHING_WITH_MISSILE: return "ParticleHittingSomethingWithMissileOam";
     case MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE:
         return "ParticleHittingSomethingWithSuperMissileOam";
+    case MZM_PE_SMALL_DUST:
+    case MZM_PE_SECOND_SMALL_DUST: return "ParticleSmallDustOam";
     case MZM_PE_MEDIUM_DUST:
     case MZM_PE_SECOND_MEDIUM_DUST: return "ParticleMediumDustOam";
     case MZM_PE_TWO_MEDIUM_DUST:
@@ -165,7 +167,8 @@ static void process(MzmEffects *effects, MzmParticle *p, const MzmEffectKinds *k
     }
     if (p->stage == 0) {
         p->stage++;
-        if (p->effect <= MZM_PE_SPRITE_SPLASH_ACID_HUGE)
+        if (p->effect <= MZM_PE_SPRITE_SPLASH_ACID_HUGE ||
+            (p->effect >= MZM_PE_SECOND_SMALL_DUST && p->effect <= MZM_PE_SECOND_TWO_MEDIUM_DUST))
             p->status |= MZM_PARTICLE_LOW_BG_PRIORITY;
         if (p->effect == MZM_PE_BOMB ||
             (p->effect >= MZM_PE_SPRITE_EXPLOSION_HUGE && p->effect <= MZM_PE_SPEEDBOOSTER_DESTROYED) ||

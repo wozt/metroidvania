@@ -252,6 +252,7 @@ static bool landed(Ctx *c, uint16_t *top) {
 static void expelled_down(Ctx *c) {
     MzmSprite *s = c->s;
     int16_t velocity = (int16_t)s->work3;
+    uint16_t old_y = s->y;
     if (velocity < QUARTER_BLOCK_SIZE + PIXEL_SIZE) s->work3 = (uint8_t)(velocity + PIXEL_SIZE / 2);
     s->y = (uint16_t)(s->y + velocity);
     uint16_t top;
@@ -267,6 +268,8 @@ static void expelled_down(Ctx *c) {
         return;
     }
     move_ahead(c, s->y, s->x);
+    /* SpriteUtilCheckInRoomEffect, SPLASH_SMALL */
+    if (ai_entered_room_effect(c, old_y, s->y)) ai_room_effect_splash(c, s->x, 1);
 }
 
 /* ParasiteJumpingDown (and multiple) */
@@ -277,6 +280,7 @@ static void jumping_down(Ctx *c) {
         return;
     }
     int32_t velocity = s->work3;
+    uint16_t old_y = s->y;
     if (velocity < QUARTER_BLOCK_SIZE) s->work3 = (uint8_t)(velocity + PIXEL_SIZE / 2);
     s->y = (uint16_t)(s->y + velocity);
     uint16_t top;
@@ -287,6 +291,8 @@ static void jumping_down(Ctx *c) {
         return;
     }
     move_ahead(c, s->y, s->x);
+    /* SpriteUtilCheckInRoomEffect, SPLASH_SMALL */
+    if (ai_entered_room_effect(c, old_y, s->y)) ai_room_effect_splash(c, s->x, 1);
 }
 
 /* ParasiteIdleInit */
@@ -386,6 +392,7 @@ static void landing(Ctx *c) {
 static void falling(Ctx *c) {
     MzmSprite *s = c->s;
     const int16_t *speeds = c->tables->falling;
+    uint16_t old_y = s->y;
     int16_t movement = speeds[s->work3];
     if (movement == SHORT_MAX) {
         s->y = (uint16_t)(s->y + speeds[s->work3 - 1]);
@@ -397,6 +404,8 @@ static void falling(Ctx *c) {
     if (c->vertical != MZM_COLLISION_AIR) {
         s->y = top;
         s->pose = PARASITE_POSE_LANDING_INIT;
+    } else if (ai_entered_room_effect(c, old_y, s->y)) {
+        ai_room_effect_splash(c, s->x, 1);             /* SPLASH_SMALL */
     }
 }
 

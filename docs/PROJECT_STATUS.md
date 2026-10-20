@@ -3838,6 +3838,31 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0411 - liquid splashes and dusts
+
+- Ported `SpriteDebrisSetSplash`: a falling or bouncing debris piece that
+  enters the room's liquid leaves a small splash at its own position. As
+  natively, a type 5 to 8 piece that collides before 20 frames neither
+  bounces nor splashes.
+- Ported the remaining `SpriteUtilCheckInRoomEffect` /
+  `CheckOutOfRoomEffect` splashes:
+  - the Dragon rising and sinking (small);
+  - the Geruta diving (big);
+  - the Squeept leaving (small) and entering (big) its lava;
+  - the Parasites falling (small);
+  - the Acid Worm (huge).
+- Fixed the Acid Worm: only its body plays `SOUND_ACID_WORM_SPLASHING`.
+  Its parts no longer play it, as natively.
+- Ported `ParticleSmallDust` and `ParticleSecondSmallDust`. The game never
+  spawns them, but they are now exported with `sParticleSmallDustOam`.
+- The second dusts now take the native low BG priority.
+- Unit tests: the debris splash, the Dragon's splash and the dusts'
+  priorities.
+- `mzm.animation.particles` moves to `functional`. Its remaining
+  differences are structural: the shot and charge effects do not use
+  particle slots, and the splash is placed at the surface. The parity
+  inventory now contains 18 partial and 85 functional entries.
+
 ## Patch 0410 - every sound of the bank checked
 
 - New bank-backed test: each of the 708 `sSoundDataEntries` is played

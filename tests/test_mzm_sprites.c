@@ -785,6 +785,21 @@ int main(void) {
                    "ParticleSpriteSplashWaterSmallOam"));
     assert(fx.particles[0].status & MZM_PARTICLE_LOW_BG_PRIORITY);
     memset(&fx, 0, sizeof fx);
+    /* The dusts: sParticleSmallDustOam; the second ones behind BG1. */
+    assert(!strcmp(mzm_particle_table(MZM_PE_SMALL_DUST), "ParticleSmallDustOam") &&
+           !strcmp(mzm_particle_table(MZM_PE_SECOND_SMALL_DUST), "ParticleSmallDustOam"));
+    fx_kinds.counts[MZM_PE_SMALL_DUST] = fx_kinds.counts[MZM_PE_SECOND_MEDIUM_DUST] = 2;
+    fx_kinds.counts[MZM_PE_SECOND_SMALL_DUST] = 2;
+    fx_kinds.timers[MZM_PE_SMALL_DUST][0] = fx_kinds.timers[MZM_PE_SECOND_MEDIUM_DUST][0] = 4;
+    fx_kinds.timers[MZM_PE_SECOND_SMALL_DUST][0] = 4;
+    mzm_particle_set(&fx, 300, 400, MZM_PE_SMALL_DUST);
+    mzm_particle_set(&fx, 300, 400, MZM_PE_SECOND_SMALL_DUST);
+    mzm_particle_set(&fx, 300, 400, MZM_PE_SECOND_MEDIUM_DUST);
+    mzm_particles_process(&fx, &fx_kinds, 0, 0);
+    assert(fx.particles[0].status && !(fx.particles[0].status & MZM_PARTICLE_LOW_BG_PRIORITY) &&
+           fx.particles[1].status & MZM_PARTICLE_LOW_BG_PRIORITY &&
+           fx.particles[2].status & MZM_PARTICLE_LOW_BG_PRIORITY);
+    memset(&fx, 0, sizeof fx);
     /* ParticleFreezingSpriteWithIce: high priority, drawn every other
      * frame. ParticleBeamTrailingRight / Left drift one subpixel sideways
      * and one pixel down a frame after their first. */
@@ -890,6 +905,25 @@ int main(void) {
     assert(fx.debris[1].y == 600 && fx.debris[1].frame_counter == 8);
     mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
     assert(fx.debris[1].y == 596);
+    /* SpriteDebrisSetSplash: a falling piece crossing the liquid's surface
+     * leaves a small splash at its own position (here lava). */
+    {
+        MzmEffects splash_fx;
+        memset(&splash_fx, 0, sizeof splash_fx);
+        clear();
+        world.effect_y = 620;
+        world.hazard = hazard;
+        test_hazard = MZM_HAZARD_LAVA;
+        mzm_sprite_debris_init(&splash_fx, 0x12, 600, 400);
+        int guard = 0;
+        while (splash_fx.particles[0].status == 0 && splash_fx.debris[0].exists && guard++ < 60)
+            mzm_sprite_debris_process(&splash_fx, &world, &tables, &fx_kinds);
+        assert(splash_fx.particles[0].effect == MZM_PE_SPRITE_SPLASH_LAVA_SMALL &&
+               splash_fx.particles[0].y >= 620 && splash_fx.particles[0].x == splash_fx.debris[0].x);
+        world.effect_y = 0;
+        world.hazard = NULL;
+        for (int x = 0; x < COLUMNS; ++x) grid[10][x] = MZM_CLIPDATA_SOLID;
+    }
     /* Far below the camera: removed by the draw range check. */
     world.camera_y = 2000;
     mzm_sprite_debris_process(&fx, &world, &tables, &fx_kinds);
@@ -3377,8 +3411,20 @@ int main(void) {
         assert(room[0].pose == 8 && room[0].status & MZM_SPRITE_STATUS_X_FLIP &&
                room[0].y_spawn == room[0].y && room[0].health == 18);
         uint16_t spawn = room[0].y;
+        /* Rising out of its lava: a small splash (SpriteUtilCheckOutOfRoomEffect). */
+        static MzmEffects dragon_fx;
+        memset(&dragon_fx, 0, sizeof dragon_fx);
+        world.effect_y = (uint16_t)(spawn - 32);
+        world.hazard = hazard;
+        test_hazard = MZM_HAZARD_LAVA;
+        dragon_frame.effects = &dragon_fx;
         int frames = 0;
         while (room[0].pose != 0x35 && frames++ < 200) mzm_sprite_update(&room[0], 0, &dragon_frame);
+        assert(dragon_fx.particles[0].effect == MZM_PE_SPRITE_SPLASH_LAVA_SMALL &&
+               dragon_fx.particles[0].status);
+        world.effect_y = 0;
+        world.hazard = NULL;
+        dragon_frame.effects = NULL;
         /* The 100-frame spit interval while rising two blocks at most. */
         assert(room[0].pose == 0x35 && frames >= 99 && room[0].y < spawn &&
                room[0].y >= spawn - (2 * 64 - 1));

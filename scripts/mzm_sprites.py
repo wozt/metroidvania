@@ -357,7 +357,8 @@ PARTICLES = ("sParticleSpriteSplashWaterSmallOam", "sParticleSpriteSplashWaterBi
              "sParticleHittingSomethingWithLongBeamOam", "sParticlePseudoScrewDestroyedOam",
              "sParticleHittingSomethingInvincibleOam",
              "sParticleHittingSomethingWithMissileOam",
-             "sParticleHittingSomethingWithSuperMissileOam", "sParticleMediumDustOam",
+             "sParticleHittingSomethingWithSuperMissileOam", "sParticleSmallDustOam",
+             "sParticleMediumDustOam",
              "sParticleTwoMediumDustOam", "sSpriteDebrisOam")
 SPRITE_VRAM = 0x4000
 # The message banner's graphics and the text the banner draws into them.

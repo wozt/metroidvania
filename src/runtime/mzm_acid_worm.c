@@ -138,11 +138,15 @@ static void wiggle_horizontally(Ctx *c, MzmSprite *s) {
     s->x = (uint16_t)(s->x + movement);
 }
 
-static void splash_if_crossed(const Ctx *c, uint16_t old_y, uint16_t new_y) {
-    if (!c->world->effect_y) return;
-    if ((old_y < c->world->effect_y && new_y >= c->world->effect_y) ||
-        (old_y >= c->world->effect_y && new_y < c->world->effect_y))
-        mzm_sfx_play(MZM_SOUND_ACID_WORM_SPLASHING);
+/* SpriteUtilCheckOutOfRoomEffect / SpriteUtilCheckInRoomEffect with
+ * SPLASH_HUGE; the body also plays SOUND_ACID_WORM_SPLASHING, the parts
+ * only splash. */
+static void splash_if_crossed(const Ctx *c, uint16_t old_y, uint16_t new_y, bool sound) {
+    uint16_t surface = c->world->effect_y;
+    if (!surface) return;
+    if (!(old_y > surface && new_y <= surface) && !(old_y < surface && new_y >= surface)) return;
+    ai_room_effect_splash(c, c->s->x, 3);
+    if (sound) mzm_sfx_play(MZM_SOUND_ACID_WORM_SPLASHING);
 }
 
 static void spawn_parts(Ctx *c) {
@@ -216,7 +220,7 @@ static void intro(Ctx *c) {
         if (s->y >= s->y_spawn - BLOCK_SIZE * 7) {
             uint16_t old_y = s->y;
             s->y = (uint16_t)(s->y - QUARTER_BLOCK_SIZE);
-            splash_if_crossed(c, old_y, s->y);
+            splash_if_crossed(c, old_y, s->y, true);
             move_acid(c, 1);
             if (++s->work0 == 4)
                 destroy_block_middle(c);
@@ -242,7 +246,7 @@ static void intro(Ctx *c) {
         uint16_t old_y = s->y;
         wiggle_horizontally(c, s);
         s->y = (uint16_t)(s->y + QUARTER_BLOCK_SIZE);
-        splash_if_crossed(c, old_y, s->y);
+        splash_if_crossed(c, old_y, s->y, true);
         if (c->world->effect_y > c->f->globals->sub1.health) move_acid(c, -1);
         return;
     }
@@ -417,7 +421,7 @@ static void attack(Ctx *c) {
         else checks++;
         uint16_t old_y = s->y;
         handle_rotation(c, s);
-        splash_if_crossed(c, old_y, s->y);
+        splash_if_crossed(c, old_y, s->y, true);
         if (abort_extension_on_samus(c) || checks != 3) return;
         s->pose = AW_EXTENDED;
         if (c->f->globals->sub1.work3)
@@ -470,7 +474,7 @@ static void attack(Ctx *c) {
     if (c->world->effect_y > c->f->globals->sub1.health) move_acid(c, -1);
     uint16_t old_y = s->y;
     handle_rotation(c, s);
-    splash_if_crossed(c, old_y, s->y);
+    splash_if_crossed(c, old_y, s->y, true);
     if (checks != 3) return;
     if (s->health <= c->tables->health[s->sprite_id] / 2 && c->f->difficulty != 0) {
         s->status ^= MZM_SPRITE_STATUS_MOSAIC;
@@ -710,12 +714,12 @@ static void part_ai(Ctx *c) {
         if (main->pose == AW_SPAWN_EXTEND) {
             uint16_t old_y = s->y;
             s->y = (uint16_t)(s->y - QUARTER_BLOCK_SIZE);
-            if (!(s->room_slot & 1)) splash_if_crossed(c, old_y, s->y);
+            if (!(s->room_slot & 1)) splash_if_crossed(c, old_y, s->y, false);
         } else if (main->pose == AW_SPAWN_RETRACT) {
             uint16_t old_y = s->y;
             wiggle_horizontally(c, s);
             s->y = (uint16_t)(s->y + QUARTER_BLOCK_SIZE);
-            if (!(s->room_slot & 1)) splash_if_crossed(c, old_y, s->y);
+            if (!(s->room_slot & 1)) splash_if_crossed(c, old_y, s->y, false);
         } else if (main->pose == AW_SPAWN_TOP) {
             wiggle_horizontally(c, s);
         } else if (main->pose == AW_IDLE_INIT) {
@@ -741,7 +745,7 @@ static void part_ai(Ctx *c) {
         handle_rotation(c, s);
         if ((main->pose == AW_EXTENDING || main->pose == AW_RETRACTING) &&
             !(s->room_slot & 1))
-            splash_if_crossed(c, old_y, s->y);
+            splash_if_crossed(c, old_y, s->y, false);
     }
     transfer_part_damage(c, main);
     if (s->room_slot == AW_WEAK_POINT && main->rotation != 0)

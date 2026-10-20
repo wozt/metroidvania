@@ -64,10 +64,12 @@ enum {
     MZM_PE_HITTING_SOMETHING_WITH_SUPER_MISSILE = 49,
     MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM_NO_PLASMA = 50,
     MZM_PE_HITTING_SOMETHING_WITH_FULL_BEAM = 51,
+    /* The dusts (PE_SMALL_DUST has no caller in the game); the second ones
+     * are the same dust behind BG1 (PARTICLE_STATUS_LOW_BG_PRIORITY). */
+    MZM_PE_SMALL_DUST = 52,
     MZM_PE_MEDIUM_DUST = 53,
     MZM_PE_TWO_MEDIUM_DUST = 54,
-    /* The same dust behind BG1 (PARTICLE_STATUS_LOW_BG_PRIORITY, drawn at
-     * the normal priority). */
+    MZM_PE_SECOND_SMALL_DUST = 55,
     MZM_PE_SECOND_MEDIUM_DUST = 56,
     MZM_PE_SECOND_TWO_MEDIUM_DUST = 57,
     MZM_PE_SAMUS_REFLECTION = 58,

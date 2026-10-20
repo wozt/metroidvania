@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T01:27:36+00:00",
+ "generated_at": "2026-10-20T01:40:34+00:00",
  "git": {
-  "commit": "f782e54",
+  "commit": "34a2899",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 32,
-    "functional": 97,
+    "partial": 31,
+    "functional": 98,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 97,
-   "functional_or_better_percent": 69.3,
+   "functional_or_better": 98,
+   "functional_or_better_percent": 70.0,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 8,
-    "functional": 84,
+    "partial": 7,
+    "functional": 85,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 84,
-   "functional_or_better_percent": 91.3,
+   "functional_or_better": 85,
+   "functional_or_better_percent": 92.4,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -573,15 +573,17 @@
    "area": "mzm",
    "category": "animation",
    "title": "Sprite particles and debris",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_effects.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/mzm_projectiles.c",
     "scripts/mzm_sprites.py",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm_parasite.c",
+    "src/runtime/mzm_acid_worm.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -616,10 +618,15 @@
     "SpriteDebrisProcess",
     "SpriteDebrisProcessAll",
     "SpriteDebrisDraw",
-    "SpriteUtilRandomSpriteDebris"
+    "SpriteUtilRandomSpriteDebris",
+    "ParticleSmallDust",
+    "ParticleSecondSmallDust",
+    "SpriteDebrisSetSplash",
+    "SpriteUtilCheckInRoomEffect",
+    "SpriteUtilCheckOutOfRoomEffect"
    ],
-   "limitations": "Small dust and debris splashes are not ported; with all debris slots taken the game writes past its array while the port drops the piece. The shooting flashes and charging beam use dedicated runtime state rather than particle slots. One-shot particles for the nine small, big and huge water, lava and acid splashes, the bomb explosion, sprite explosions, the screw attack kill and projectile impacts on walls and sprites, and the medium dust effects, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range. The super missile impact starts a sixth-of-a-second screen shake both ways. PE_SECOND_MEDIUM_DUST and PE_SECOND_TWO_MEDIUM_DUST reuse the dust tables (their low BG priority is not drawn). ParticleSamusReflection persistently mirrors Samus's live body frame at the Ruins Test owner, follows its position, hides while a shootable symbol is active and dies with the fourth symbol; a chozodia_042 capture shows its mirrored running pose.",
-   "next_action": "Port the remaining small dust and debris liquid splashes; reconcile the dedicated charging and shooting effects with particle slots.",
+   "limitations": "With all debris slots taken the game writes past its array while the port drops the piece. The shooting flashes and the charging beam are drawn from dedicated runtime state rather than particle slots, so they never take or evict a slot. The splashes are placed at the liquid's surface rather than at the crossing sprite's position (at most one frame's movement apart). Not compared with an emulator. One-shot particles for the nine small, big and huge water, lava and acid splashes, the bomb explosion, sprite explosions, the screw attack kill and projectile impacts on walls and sprites, and the medium dust effects, with slot reuse, animation, priority and the on-screen window; sprite debris with its eight arcs, bounces, animation and draw range. The super missile impact starts a sixth-of-a-second screen shake both ways. PE_SECOND_MEDIUM_DUST and PE_SECOND_TWO_MEDIUM_DUST reuse the dust tables (their low BG priority is not drawn). ParticleSamusReflection persistently mirrors Samus's live body frame at the Ruins Test owner, follows its position, hides while a shootable symbol is active and dies with the fourth symbol; a chozodia_042 capture shows its mirrored running pose. The small dusts (ParticleSmallDust, never spawned by the game, and its second variant) are ported with sParticleSmallDustOam, and the second dusts now take PARTICLE_STATUS_LOW_BG_PRIORITY as natively. SpriteDebrisSetSplash is ported: a falling or bouncing piece entering the room's liquid leaves a small splash at its position. The remaining SpriteUtilCheckInRoomEffect / CheckOutOfRoomEffect splashes are ported: the Dragon rising and sinking (small), the Geruta diving (big), the Squeept leaving (small) and entering (big) its lava, the Parasites falling (small) and the Acid Worm (huge; only its body plays SOUND_ACID_WORM_SPLASHING, its parts no longer do). Unit tests cover the debris splash, the Dragon's splash and the dusts' priorities.",
+   "next_action": "Compare the effects with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c"
@@ -11328,6 +11335,12 @@
  },
  "timeline": [
   {
+   "commit": "34a2899",
+   "date": "2026-10-20",
+   "subject": "Check every sound of the bank and mark the engine functional",
+   "scope": "project"
+  },
+  {
    "commit": "f782e54",
    "date": "2026-10-20",
    "subject": "Port the native fades before the blue ship and the Chozodia escape",
@@ -11800,12 +11813,6 @@
    "date": "2026-10-15",
    "subject": "Port Tourian looking-around sequence",
    "scope": "project"
-  },
-  {
-   "commit": "1d429dd",
-   "date": "2026-10-15",
-   "subject": "Port Tourian cockpit and explosion sequences",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -11833,7 +11840,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1624,
+    "routines_cited_by_features": 1627,
     "call_edges": 6071
    },
    "aos": {

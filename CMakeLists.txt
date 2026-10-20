@@ -270,6 +270,11 @@ if(BUILD_TESTING)
     add_test(NAME mzm_sprites COMMAND fusion_mzm_sprites_tests)
 
     # Device-free shared gamepad mapping (SDL3 headers and string tables only).
+    add_executable(fusion_aos_title_motion_tests tests/test_aos_title_motion.c src/runtime/aos_title_motion.c)
+    target_include_directories(fusion_aos_title_motion_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_title_motion_tests)
+    add_test(NAME aos_title_motion COMMAND fusion_aos_title_motion_tests)
+
     add_executable(fusion_aos_title_fade_tests tests/test_aos_title_fade.c src/runtime/aos_title_fade.c)
     target_include_directories(fusion_aos_title_fade_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_title_fade_tests)

@@ -1107,14 +1107,14 @@ Next action: Port original title screen stages, graphics and selection and wire 
 
 [?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 28 discovered routine(s) to this category (7 by native name, 21 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** The stage-8 navigation helper and initial stage-0/stage-2 BLDY brightness decrease (16 to 0 over 33 calls including stage-1 fallthrough) are independently tested in native C.
+[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Device-free native title helpers reproduce brightness fade, interactive idle/input conditions, and stage-3 0x2000 motion steps, affine scale, palette event and threshold transition.
 
 Native evidence: not attached yet.  
-Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c).  
-Tests: [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c).
+Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c).  
+Tests: [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c), [`tests/test_aos_title_motion.c`](../tests/test_aos_title_motion.c).
 Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`.  
-Known divergences: Stage-0 brightness initialization and stage-2 fade timing are ported; original VRAM, sprites, affine animation, stage-1 setup, full title lifecycle and menu graphics remain absent.  
-Next action: Port title graphic resource loading, sprite entities and stage 3-7 affine animations; wire native title lifecycle and test in-game.
+Known divergences: Stage-3 title fixed-point motion and affine scale are now tested alongside stage-0/2 fade and stage-8 input; the stage-3 palette side effect is represented by an event flag only. Native sprites, render integration, stages 4-7 and complete title/menu lifecycle remain absent.  
+Next action: Port remaining native stage-4 through stage-7 motion and synchronize original title graphics, sprites and menu lifecycle.
 
 ### Menus and options
 

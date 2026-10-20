@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0424 - Aria title stage-three motion
+
+- Reproduces stage-3 native title entity fixed-point motion, scale,
+  palette trigger at 0x40000 and stage-four entry below 0x30000.
+- Device-free `aos_title_motion` tests verify coordinates, flags,
+  affine scale and thresholds. This does not render any title assets;
+  native sprite, palette, remaining stages and SDL integration remain.
+- Native parity stays partial; checklist and web dashboard regenerated.
+
 ## Patch 0423 - Aria title brightness fade foundation
 
 - Ports the bounded `GameModeTitleScreenUpdate` stage-0 initial

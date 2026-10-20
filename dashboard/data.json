@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T04:05:12+00:00",
+ "generated_at": "2026-10-20T04:07:05+00:00",
  "git": {
-  "commit": "083525b",
+  "commit": "3897fab",
   "branch": "main",
   "dirty": true
  },
@@ -8947,23 +8947,26 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_title_input.c",
-    "src/runtime/aos_title_fade.c"
+    "src/runtime/aos_title_fade.c",
+    "src/runtime/aos_title_motion.c"
    ],
    "tests": [
     "tests/test_aos_title_input.c",
-    "tests/test_aos_title_fade.c"
+    "tests/test_aos_title_fade.c",
+    "tests/test_aos_title_motion.c"
    ],
    "dependencies": [
     "aos.startup.mode_dispatch",
     "aos.input.gamepad"
    ],
    "native_routines": [],
-   "limitations": "Stage-0 brightness initialization and stage-2 fade timing are ported; original VRAM, sprites, affine animation, stage-1 setup, full title lifecycle and menu graphics remain absent. The stage-8 navigation helper and initial stage-0/stage-2 BLDY brightness decrease (16 to 0 over 33 calls including stage-1 fallthrough) are independently tested in native C.",
-   "next_action": "Port title graphic resource loading, sprite entities and stage 3-7 affine animations; wire native title lifecycle and test in-game.",
+   "limitations": "Stage-3 title fixed-point motion and affine scale are now tested alongside stage-0/2 fade and stage-8 input; the stage-3 palette side effect is represented by an event flag only. Native sprites, render integration, stages 4-7 and complete title/menu lifecycle remain absent. Device-free native title helpers reproduce brightness fade, interactive idle/input conditions, and stage-3 0x2000 motion steps, affine scale, palette event and threshold transition.",
+   "next_action": "Port remaining native stage-4 through stage-7 motion and synchronize original title graphics, sprites and menu lifecycle.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_title_input.c",
-     "tests/test_aos_title_fade.c"
+     "tests/test_aos_title_fade.c",
+     "tests/test_aos_title_motion.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -8991,6 +8994,16 @@
       "registered": true,
       "ctest": [
        "aos_title_fade"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_title_motion.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_title_motion"
       ],
       "outcome": "passed",
       "exists": true
@@ -10799,6 +10812,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_title_motion",
+    "files": [
+     "tests/test_aos_title_motion.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_title_fade",
     "files": [
      "tests/test_aos_title_fade.c"
@@ -11591,12 +11611,18 @@
    }
   ],
   "summary": {
-   "passed": 489,
+   "passed": 490,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "3897fab",
+   "date": "2026-10-20",
+   "subject": "Port the initial Aria title brightness fade",
+   "scope": "project"
+  },
   {
    "commit": "083525b",
    "date": "2026-10-20",
@@ -12069,12 +12095,6 @@
    "commit": "d6abc47",
    "date": "2026-10-16",
    "subject": "Port the Deorem encounter",
-   "scope": "project"
-  },
-  {
-   "commit": "df49a93",
-   "date": "2026-10-16",
-   "subject": "Add assertions for gameplay capture routes",
    "scope": "project"
   }
  ],

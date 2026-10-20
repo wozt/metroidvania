@@ -3510,9 +3510,7 @@ aos:c:src/m4a.c:sub_080D92B4	sub_080D92B4	audio	path			c_function	0x080D92B4	src
 aos:c:src/main.c:AgbMain	AgbMain	unclassified				c_function	0x080001F4	src/main.c	45	0	17
 aos:c:src/main.c:EmptyInterrupt	EmptyInterrupt	unclassified				c_function	0x080004BC	src/main.c	187	0	0
 aos:c:src/main.c:GameModeUpdate	GameModeUpdate	startup	name			c_function	0x08000500	src/main.c	209	1	19
-aos:c:src/main.c:IncrementGameMode	IncrementGameMode	unclassified				c_function	0x08000640	src/main.c	328	0	0
 aos:c:src/main.c:InitializeGame	InitializeGame	unclassified		saves	exclusive_callees	c_function	0x08000804	src/main.c	399	1	4
-aos:c:src/main.c:SetGameMode	SetGameMode	startup	name			c_function	0x0800062C	src/main.c	318	1	0
 aos:c:src/main.c:VblankInterrupt	VblankInterrupt	unclassified				c_function	0x08000384	src/main.c	115	0	3
 aos:c:src/main.c:VcountInterrupt	VcountInterrupt	unclassified				c_function	0x080004C0	src/main.c	196	0	0
 aos:c:src/main.c:sub_08000424	sub_08000424	unclassified				c_function	0x08000424	src/main.c	141	1	0

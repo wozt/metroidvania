@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 11 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 12 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 51 | 3522 |
+| Castlevania: Aria of Sorrow | 53 | 3520 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1094,6 +1094,14 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 ### Startup and initialization
 
 [?] **`aos.startup.inventory-boundary` — source coverage.** The current classifier assigns 5 discovered routine(s) to this category (2 by native name, 3 by exclusive referrers). Category completeness has not been established.
+
+[~] **`aos.startup.mode_dispatch` — Aria game mode dispatcher.** Native mode set, increment and GameModeUpdate result handling; the title destination ordering is catalogued but its screen handler is not ported.
+
+Native evidence: `aos:c:src/main.c:IncrementGameMode`, `aos:c:src/main.c:SetGameMode`.  
+Local implementation: [`src/runtime/aos_game_mode.c`](../src/runtime/aos_game_mode.c).  
+Tests: [`tests/test_aos_game_mode.c`](../tests/test_aos_game_mode.c).
+Known divergences: Only state/result transitions ported; graphical modes and boot missing.  
+Next action: Port original title screen stages, graphics and selection and wire into boot.
 
 ### Title screen
 

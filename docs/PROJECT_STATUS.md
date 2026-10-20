@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0421 - Aria mode dispatch and title destination foundation
+
+- Added `aos_game_mode.c`: native `SetGameMode`, `IncrementGameMode`
+  and the result-handling tail of `GameModeUpdate` from `main.c`.
+- Captured the five title-mode destinations in the original ordering
+  (main menu, soul trade, logo, boss rush, sound test), without
+  claiming that `GameModeTitleScreenUpdate` or menu graphics are ported.
+- Device-free C tests cover transitions, reset stages and selection bounds.
+- Original title art, animation, saved-game menus, display effects and
+  the boot integration remain to be implemented and capture-tested.
+- Updated native tracking; web dashboard regenerated after checklist.
+
 ## Patch 0420 - Aria native soft reset detection
 
 - `aos_input_soft_reset_check` ports `SoftResetCheck` from native `main.c`,

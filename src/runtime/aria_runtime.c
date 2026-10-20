@@ -49,6 +49,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
 
 #define MAX_TRANSITIONS 32
 #define MAX_ENTITIES 128
+#define MAX_FLAMES 32       /* death flames (sub_0806E524) alive at once */
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 
@@ -69,6 +70,8 @@ typedef struct {
     size_t transition_count;
     AriaEntity entities[MAX_ENTITIES];
     size_t entity_count;
+    AosFlame flames[MAX_FLAMES];
+    size_t flame_count;
 } AriaRoom;
 
 static void free_room(AriaRoom *room) {
@@ -383,6 +386,7 @@ typedef struct {
     const AosWeaponEntity *weapon;
     const AosWeaponFrames *weapon_frames;
     AriaPlayerStats *player;
+    const AosAnimSet *flame;                    /* Effect/flame, NULL when not loaded */
 } AriaCombat;
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
@@ -414,6 +418,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 AosEnemy *spawner = &room->entities[e->spawner].enemy;
                 if (spawner->spawned_count) spawner->spawned_count--;
             }
+            /* Death flames, updated after the entities of this frame (their
+             * slot order against the enemies' is not traced). */
+            for (int c = 0; c < hit.flame_count && combat->flame && room->flame_count < MAX_FLAMES;
+                 ++c)
+                room->flames[room->flame_count++] = hit.flames[c];
             /* Child entities of this kind (grenades, axes, arrows, debris). */
             for (int c = 0; c < hit.child_count && room->entity_count < MAX_ENTITIES; ++c)
                 room->entities[room->entity_count++] = (AriaEntity){
@@ -445,6 +454,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         int played = aos_door_update(&e->door, layer, soma, input);
         if (played) sound = played;
     }
+    size_t kept = 0;
+    for (size_t i = 0; combat->flame && i < room->flame_count; ++i)
+        if (aos_flame_update(&room->flames[i], combat->flame)) room->flames[kept++] = room->flames[i];
+    room->flame_count = kept;
     return sound;
 }
 
@@ -471,6 +484,12 @@ typedef struct {
         AriaFrame statics[ENEMY_STATIC_FRAMES];
         int static_count;
     } enemies[ENEMY_KINDS];
+    struct {
+        AriaFrame frames[MAX_FRAMES];
+        uint8_t ticks[MAX_FRAMES];
+        AosAnimDef def;
+        AosAnimSet set;
+    } flame;                /* Effect/flame/anim_0 */
 } AriaObjects;
 
 /* enemy_frames.tsv (boxes, death blink, margins) and enemies.tsv (stats). */
@@ -631,6 +650,20 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
             }
             continue;
         }
+        if (sscanf(line, "Effect/flame/anim_%d\t%d\t%d\t%d\t%d\t%511s", &style, &frame, &ticks,
+                   &ox, &oy, frame_path) == 6) {
+            if (style != 0 || frame != objects->flame.def.count || frame >= MAX_FRAMES ||
+                ticks < 1 || ticks > 255 ||
+                !load_frame(&objects->flame.frames[frame], frame_path, ox, oy, renderer)) {
+                ok = false;
+                break;
+            }
+            objects->flame.ticks[frame] = (uint8_t)ticks;
+            objects->flame.def.durations = objects->flame.ticks;
+            objects->flame.def.count++;
+            objects->flame.set = (AosAnimSet){&objects->flame.def, 1};
+            continue;
+        }
         if (sscanf(line, "Enemy/%15[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
             for (int id = 0; id < ENEMY_KINDS; ++id) {
@@ -683,6 +716,8 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->enemies[id].frames[i][j].texture)
                     SDL_DestroyTexture(objects->enemies[id].frames[i][j].texture);
+    for (int i = 0; i < MAX_FRAMES; ++i)
+        if (objects->flame.frames[i].texture) SDL_DestroyTexture(objects->flame.frames[i].texture);
     for (int id = 0; id < ENEMY_KINDS; ++id)
         for (int i = 0; i < objects->enemies[id].static_count; ++i)
             if (objects->enemies[id].statics[i].texture)
@@ -758,6 +793,23 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             degrees = -(double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, degrees,
                                  degrees != 0 ? &centre : NULL, mode);
+    }
+}
+
+/* Death flames (sub_0806E524), in front of the enemies (priority - 1);
+ * flipped when + 0x58 bit 0x40 (drawn at random) is set. */
+static void draw_flames(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
+                        int cam_x, int cam_y) {
+    for (size_t i = 0; i < room->flame_count; ++i) {
+        const AosFlame *f = &room->flames[i];
+        if (f->anim.frame >= objects->flame.def.count) continue;
+        const AriaFrame *frame = &objects->flame.frames[f->anim.frame];
+        if (!frame->texture) continue;
+        int fx = f->x >> 16, fy = f->y >> 16;
+        float x = f->mirrored ? (float)(fx - frame->offset_x) - frame->w : (float)(fx + frame->offset_x);
+        SDL_FRect rect = {x - (float)cam_x, (float)(fy + frame->offset_y - cam_y), frame->w, frame->h};
+        SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
+                                 f->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
     }
 }
 
@@ -1149,7 +1201,8 @@ int main(int argc, char **argv) {
     bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
     AosWeaponEntity weapon_entity = {0};
     AriaCombat combat = {{NULL}, {NULL}, &weapon_entity,
-                         weapon_loaded ? &weapon_sprite.data : NULL, &player_stats};
+                         weapon_loaded ? &weapon_sprite.data : NULL, &player_stats, NULL};
+    if (objects_ok && objects.flame.def.count) combat.flame = &objects.flame.set;
     for (int id = 0; enemies_ok && id < ENEMY_KINDS; ++id) {
         if (!objects.enemies[id].loaded) continue;
         combat.kinds[id] = &objects.enemies[id].kind;
@@ -1310,6 +1363,7 @@ int main(int argc, char **argv) {
         SDL_RenderTexture(renderer, background, &src, &dst);
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
+        if (objects_ok) draw_flames(renderer, &room, &objects, cam_x, cam_y);
         if (show_hitboxes) {
             AosRect hurt = aos_player_rect(soma.hurtbox, soma.x >> 16, soma.y >> 16,
                                            soma.facing_left, false);

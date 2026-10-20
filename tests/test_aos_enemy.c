@@ -13,6 +13,10 @@ static const AosCollision layer = {2, 1, W, H, cells, NULL, false};
 
 static uint32_t never_zero(void) { return 1; }
 static uint32_t always_zero(void) { return 0; }
+/* A scripted RandomNumberGenerator. */
+static const uint32_t *script;
+static int script_at;
+static uint32_t scripted(void) { return script[script_at++]; }
 
 static void zombie_tests(void) {
     /* Floor at cell row 20 (top 160), a wall at cells x 40.. */
@@ -103,12 +107,22 @@ static void zombie_tests(void) {
     AosHitReport hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100,
                                         48, always_zero);
     assert(hit.enemy_hit && hit.killed && z.state == 1 && z.anim.id == 3 && z.timer == 0x28);
+    /* sub_0806AEAC: a flame every 4 frames (timer 40, 36 .. 4), over 16 x
+     * 12 pixels centred 6 pixels above it. */
     frames = 0;
+    int flames = 0;
     while (!z.removed && frames < 100) {
-        aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 48, always_zero);
+        int32_t zx = z.x, zy = z.y;
+        hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 48,
+                               always_zero);
+        if (hit.flame_count) {
+            assert(hit.flame_count == 1 && hit.flames[0].x == zx - 0x80000);
+            assert(hit.flames[0].y == zy - 0x60000 - 0x60000 && !hit.flames[0].mirrored);
+            ++flames;
+        }
         ++frames;
     }
-    assert(frames == 40);
+    assert(frames == 40 && flames == 10);
 }
 
 static void crow_tests(void) {
@@ -723,6 +737,64 @@ int main(void) {
         ++dying;
     }
     assert(dying == 64 && bat.vflip);
+
+    /* sub_0806BE74(bat, 15, 8.0, 6.0): flames at timer 60, 45, 30 and 15,
+     * at x + rand % 8.0 - 4.0 and y - 6 + rand % 6.0 - 3.0, mirrored by a
+     * third draw. */
+    assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    bat.y = AOS_FIXED(170);
+    aos_enemy_update(&bat, &soma, &layer, &kind, &weapon, &blade, 10, 0, 0, 0, never_zero);
+    assert(bat.state == 3);
+    static const uint32_t draws[] = {0x80005, 0x60003, 3, 0x7FFFF, 0, 2, 1, 2, 3, 4, 5, 6};
+    script = draws;
+    script_at = 0;
+    int flame_frames[4], flame_count = 0;
+    AosFlame first = {0}, second = {0};
+    dying = 0;
+    while (!bat.removed && dying < 100) {
+        int32_t by = bat.y;
+        hit = aos_enemy_update(&bat, &soma, &layer, &kind, &weapon, &blade, 10, 0, 0, 0, scripted);
+        if (hit.flame_count) {
+            assert(hit.flame_count == 1 && flame_count < 4);
+            if (flame_count == 0) {
+                first = hit.flames[0];
+                assert(first.y == by + 0x8000 - 0x60000 + 3 - 0x30000);
+            }
+            if (flame_count == 1) second = hit.flames[0];
+            flame_frames[flame_count++] = dying;
+        }
+        ++dying;
+    }
+    assert(flame_count == 4 && script_at == 12);
+    assert(flame_frames[0] == 4 && flame_frames[1] == 19 && flame_frames[3] == 49);
+    assert(first.x == bat.x + 5 - 0x40000 && first.mirrored);
+    assert(second.x == bat.x + 0x7FFFF - 0x40000 && !second.mirrored);
+
+    /* sub_0806E524: animation 0 played once, rising 0.5 per frame after
+     * the first, deleted on the frame the animation ends. */
+    static const uint8_t puff[] = {3, 4, 6, 4, 3};
+    const AosAnimDef puff_def = {5, puff};
+    const AosAnimSet puff_set = {&puff_def, 1};
+    AosFlame flame = {.x = AOS_FIXED(50), .y = AOS_FIXED(50)};
+    int lifetime = 0;
+    while (aos_flame_update(&flame, &puff_set) && lifetime < 100) ++lifetime;
+    assert(lifetime == 19 && flame.y == AOS_FIXED(50) - 19 * 0x8000);
+    AosFlame bare = {0};
+    const AosAnimSet empty = {NULL, 0};
+    assert(!aos_flame_update(&bare, &empty));
+
+    /* Under gEwramData + 0x8E bit 0x40 the bat stays in state 4: no
+     * ceiling search, animation 1, no collision pass. */
+    aos_enemy_set_flag_8e_40(true);
+    soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(60), NULL);
+    assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(bat.state == 4 && (bat.y >> 16) == 100);
+    bat.y = AOS_FIXED(40);
+    for (int i = 0; i < 5; ++i) {
+        hit = aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(!hit.soma_hit && bat.state == 4 && bat.anim.id == 1 && bat.step == 1);
+    }
 
     /* Damage formulas. */
     assert(aos_enemy_damage(10, 0, 0x0001, 0, 0x0001) == 12);   /* weak, element 1 */

@@ -13,7 +13,8 @@ looping sequence: its sprite frame colorized with each bank of the script.
 Enemies whose create routine is traced (``ENEMIES``) are exported the same
 way: every animation of their descriptor, colorized with their palette bank,
 as ``Enemy/<name>/anim_<n>``, with per-frame boxes (frame record +4 / +8) in
-``enemy_frames.tsv``. Offsets are relative to the entity position (the door
+``enemy_frames.tsv``. Shared effects (``EFFECTS``, the death flame) are
+exported as ``Effect/<name>/anim_<n>``. Offsets are relative to the entity position (the door
 base); components
 listed first are drawn on top (assumed OAM order; the door's components do
 not overlap). Output is private:
@@ -83,6 +84,14 @@ ENEMIES = {
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
     "zombie_soldier": {"id": 0x0C, "graphics": 0x081CC024, "palette": 0x0820AA48, "bank": 0,
                        "frames": 0x082215C4, "static_frames": (18,)},
+}
+# Shared effects: sub_0800C5D8 loads the common tile sheet 0x081C15F4 (the
+# graphics of languages 2 and 3 differ) and OBJ palette row 7 with bank 3 of
+# 0x082099FC (sUnk_084F0DD8); the death flame sub_0806E524 plays animation 0
+# of the frame list 0x0820ED60 with that row.
+EFFECTS = {
+    "flame": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 3,
+              "frames": 0x0820ED60, "animations": (0,)},
 }
 SCREEN_MARGINS = 0x08118D08    # sub_0806D128: 7 (x, y) s16 margins
 WOODEN_DOOR = {
@@ -195,7 +204,9 @@ def descriptor_animations(rom: bytes, entity: dict) -> list[list[dict]]:
     tiles, sheet_width, _ = tile_sheet(rom, entity["graphics"])
     colors = palette_bank(rom, entity["palette"], entity["bank"])
     result = []
-    for index in range(animation_count):
+    for index in entity.get("animations", range(animation_count)):
+        if not 0 <= index < animation_count:
+            raise ValueError("entity animation outside its descriptor")
         pointer = struct.unpack("<I", _rom_slice(rom, table + index * 4, 4, "animation"))[0]
         count, encoding = struct.unpack("<HH", _rom_slice(rom, pointer, 4, "animation header"))
         if encoding != 1 or not 0 < count <= 64:
@@ -290,6 +301,13 @@ def produce(root: Path, rom_path: Path) -> dict:
                                       colors) or {(0, 0): (0, 0, 0)}
                 bmp, left, top = bmp_from_pixels(pixels)
                 library.add(f"Enemy/{name}/frame_{frame_id}", [(bmp, 1, left, top)])
+    for name, entity in EFFECTS.items():
+        for number, animation in zip(entity["animations"], descriptor_animations(rom, entity)):
+            sprites = []
+            for frame in animation:
+                bmp, left, top = bmp_from_pixels(frame["pixels"] or {(0, 0): (0, 0, 0)})
+                sprites.append((bmp, frame["duration"], left, top))
+            library.add(f"Effect/{name}/anim_{number}", sprites)
     blink = _rom_slice(rom, DEATH_BLINK, 40, "death blink pattern")
     lines.append("blink\t" + "".join(str(b & 1) for b in blink))
     margins = struct.unpack("<14h", _rom_slice(rom, SCREEN_MARGINS, 28, "screen margins"))

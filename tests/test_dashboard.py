@@ -170,9 +170,12 @@ class OutputTests(unittest.TestCase):
         self.assertNotIn("Long Beam Hint (Chozo statue)", mzm_items)
         # Not one of the five enemy drops of is_drop().
         self.assertNotIn("Water Drop", mzm_items)
-        aos_done = {row["name"] for row in aos["monsters"] if row["status"] == "partial"}
-        self.assertEqual(aos_done, {"Bat", "Zombie", "Axe Armor", "Skull Archer",
-                                    "Blue Crow", "Zombie Soldier"})
+        aos_partial = {row["name"] for row in aos["monsters"] if row["status"] == "partial"}
+        self.assertEqual(aos_partial, {"Zombie", "Axe Armor", "Skull Archer", "Blue Crow",
+                                       "Zombie Soldier"})
+        aos_functional = {row["name"] for row in aos["monsters"]
+                          if row["status"] == "functional"}
+        self.assertEqual(aos_functional, {"Bat"})
         unnamed = [row for row in aos["monsters"] if row["status"] == "not_started"]
         self.assertTrue(all(row["name"].startswith("Enemy 0x") for row in unnamed))
         self.assertEqual(len(aos["items"]), len(dashboard.ARIA_ITEM_FAMILIES))

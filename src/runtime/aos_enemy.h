@@ -18,8 +18,10 @@
  * mirrored: enemy sprites face left by default. Combat: the frame boxes of
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
  * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
- * sub_0806E218) and its death (state 3, sub_080AD5B8 / sub_0806BE74).
- * Hit stun, damage numbers, particles and drops are NOT ported. No SDL. */
+ * sub_0806E218) and its death (state 3, sub_080AD5B8 / sub_0806BE74),
+ * and the death flames of sub_0806BE74 / sub_0806AEAC (sub_0806E524).
+ * Hit stun, damage numbers, other particles and drops are NOT ported.
+ * No SDL. */
 #ifndef AOS_ENEMY_H
 #define AOS_ENEMY_H
 
@@ -121,6 +123,18 @@ typedef struct {
     AosAnimState anim;
 } AosEnemy;
 
+/* The death flame sub_0806E524: animation 0 of the shared effect frames
+ * 0x0820ED60 (Effect/flame), rising 0.5 per frame after its first one,
+ * deleted when the animation ends. */
+typedef struct {
+    int32_t x, y;           /* + 0x40, + 0x44 */
+    bool mirrored;          /* + 0x58 bit 0x40, at random */
+    bool started;           /* + 0x0A: 0 on the first update */
+    AosAnimState anim;
+} AosFlame;
+
+#define AOS_ENEMY_MAX_FLAMES 2
+
 /* What one collision pass did. */
 typedef struct {
     bool soma_hit;          /* the enemy's attack hit Soma */
@@ -132,6 +146,8 @@ typedef struct {
     int32_t spawn_x, spawn_y;   /* room pixels */
     uint8_t child_count;    /* child entities to add to the room */
     AosEnemy children[AOS_ENEMY_MAX_CHILDREN];
+    uint8_t flame_count;    /* death flames to add (sub_0806E524) */
+    AosFlame flames[AOS_ENEMY_MAX_FLAMES];
 } AosHitReport;
 
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. The seed
@@ -142,6 +158,13 @@ void aos_random_seed(uint32_t seed);
 int32_t aos_sine(uint32_t angle);
 /* ArcTan2 (BIOS call 0x0A): the angle of (x, y), 0x10000 per turn. */
 uint16_t aos_arctan2(int16_t x, int16_t y);
+/* gEwramData + 0x8E bit 0x40, read by EnemyBatCreate (a bat created while
+ * it is set stays in state 4, inert). It is set by sub_0804C404 (reached
+ * through the table 0x085254D8) and cleared by sub_0804CC14; its meaning is
+ * not traced. Cleared by default. */
+void aos_enemy_set_flag_8e_40(bool set);
+/* sub_0806E524 for one frame; false once the flame is deleted. */
+bool aos_flame_update(AosFlame *flame, const AosAnimSet *anims);
 /* Creates enemy `id` at a record position; false for unported enemies. */
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,

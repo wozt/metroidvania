@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0430 - Aria death flames and the bat's state 4
+
+- Ported the death flame `sub_0806E524` and its spawners: `sub_0806BE74`
+  (bat every 15 frames over 8 x 6 pixels, blue crow every 6 over 8 x 8) and
+  the generic death `sub_0806AEAC` (every 4 frames over 16 x 12), with the
+  native random draws (x, y, then the mirror flag).
+- Traced the flame's art: the common sheet `0x081C15F4`, frames
+  `0x0820ED60` animation 0, and OBJ palette row 7, which `sub_0800C5D8`
+  fills with bank 3 of `0x082099FC`; `scripts/aos_object_sprites.py`
+  exports it as `Effect/flame/anim_0` and `fusion_aria_runtime` updates
+  and draws flames after the enemies.
+- Ported the bat's state 4 (`sub_080AD6AC`), entered at creation while
+  gEwramData + 0x8E bit 0x40 is set (set by `sub_0804C404`, cleared by
+  `sub_0804CC14`; its meaning is not traced).
+- Checked in room 0/5 (`--spawn 210 260 --atk 50 --repeat 2`): the knife
+  kills a bat near frame 200 and the flames rise from the falling bat in
+  captures at frames 212, 228 and 245 (ignored `captures/aria/`). The bat
+  is now functional; its sound 0x72, palette bits and `sub_080683BC`
+  remain open.
+
 ## Patch 0429 - Aria interactive options and held-key navigation
 
 - The diagnostic SDL Options screen now toggles locally provided title art

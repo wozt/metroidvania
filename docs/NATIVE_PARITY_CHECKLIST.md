@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 53 | 3520 |
+| Castlevania: Aria of Sorrow | 56 | 3517 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1191,16 +1191,18 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: The axe's on-screen rotation direction is inferred; sub_0803E058 is not traced.  
 Next action: Port the death explosions of sub_08045CEC and the one-way platform mode of sub_0806C828.
 
-[~] **`aos.enemies.bat` — Bat enemy.** Bat hanging, swoop, combat and falling death are ported; its explosion particles and the global 0x8E & 0x40 state are not.
+[+] **`aos.enemies.bat` — Bat enemy.** Hanging, swoop, combat, the falling death with its flames (sub_0806BE74 over 8 x 6 pixels every 15 frames, sub_0806E524 with animation 0 of the shared effect frames 0x0820ED60, palette row 7 = bank 3 of 0x082099FC) and the inert state 4 under gEwramData + 0x8E bit 0x40 are ported.
 
-Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyBatCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyBatUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD364`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD44C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD5B8`.  
-Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c).  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_080A0A8C.s:EnemyBatCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyBatUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD364`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD44C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD5B8`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD6AC`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Next action: Port the bat explosion particles and its special state.
+Known divergences: Sound 0x72, the palette bits of + 0x5A and sub_080683BC are not ported. The meaning of gEwramData + 0x8E bit 0x40 (set by sub_0804C404, cleared by sub_0804CC14) is not traced; the runtime never sets it. The flames are updated after the enemies of their frame; their native slot order is not traced.  
+Next action: Port sound 0x72 and the palette bits once the Aria sound and palette paths exist.
+Evidence: in game: `aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245`.
 
-[~] **`aos.enemies.blue_crow` — Blue crow enemy.** Perching, the homing flight behind the player and the falling death are ported; the feathers, sounds, hit stun and the unentered glide step are not.
+[~] **`aos.enemies.blue_crow` — Blue crow enemy.** Perching, the homing flight behind the player and the falling death with its flames (sub_0806BE74 every 6 frames over 8 x 8 pixels) are ported; the feathers, sounds, hit stun and the unentered glide step are not.
 
-Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080694B8`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9AF4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9D68`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA030`.  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080694B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9AF4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9D68`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA030`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.zombie`.  
@@ -1216,9 +1218,9 @@ Dependencies: `aos.enemies.axe_armor`.
 Known divergences: The pieces' attacker position is Soma's, standing for the weapon entity.  
 Next action: Port the strike and dust effects of sub_0806D5C0 / sub_08045CEC.
 
-[~] **`aos.enemies.zombie` — Zombie and generic enemy death.** Zombie spawning, terrain walking and generic death are covered; the complete enemy framework is not.
+[~] **`aos.enemies.zombie` — Zombie and generic enemy death.** Zombie spawning, terrain walking and the generic death with its flames (a flame every 4 frames over 16 x 12 pixels) are covered; the complete enemy framework is not.
 
-Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08069A00`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`.  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08069A00`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Next action: Extend the generic enemy framework to further native enemies.

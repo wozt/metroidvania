@@ -448,9 +448,12 @@ with probability 1/128 per frame. State 2 (`sub_080AD44C`): a hop away at
 animation twice per frame) until within 39 pixels of his height, then a
 flight at 0.75 accelerating by 0x50 per frame with a sine wave (`+0x14`
 advancing 0x200 per frame) until it leaves the screen bounds read from
-the integer part of vx (+ 40 / + 240), which deletes it. State 3 (death:
-sound 0x72, fall and fade) and state 4 (global `0x8E & 0x40`) are not
-ported. `src/runtime/aos_enemy.c` ports the framework parts above and the
+the integer part of vx (+ 40 / + 240), which deletes it. State 3 is the
+death below. A bat created while gEwramData + 0x8E bit 0x40 is set (by
+`sub_0804C404`, reached through the table `0x085254D8`; cleared by
+`sub_0804CC14`; meaning not traced) skips the ceiling search and the hit
+callback and stays in state 4 (`sub_080AD6AC`): animation 1, no activity
+window, no collision pass. `src/runtime/aos_enemy.c` ports the framework parts above and the
 bat; `scripts/aos_object_sprites.py` exports its animations and boxes.
 
 Collisions and damage. Every entity has a collision block at `+0x70`
@@ -518,8 +521,22 @@ with DEF the enemy's `record + 0x14`; `+0x2D` = 8 and HP `+0x34` drops; at
 above 0x3F (`+0x38` rules), damage numbers and hit sparks are not ported.
 The bat dies in state 3 (`sub_080AD5B8`): animation 2 frame 2, vy 0.5,
 vertical flip, 64 frames of fall during which `sub_0806BE74` blinks it with
-the pattern `0x08118CE0` (frames below 40) and spawns a particle every 15
-frames, then deletes it. `src/runtime/aos_combat.c` ports the boxes,
+the pattern `0x08118CE0` (frames below 40) and spawns a flame every 15
+frames, then deletes it.
+
+Death flames. `sub_0806BE74(e, period, w, h)` spawns, when the death timer
+`+0x0D` is a multiple of the period, an entity `sub_0806E524`
+(`EntityCreateInRange(0x49, 0xCF)`) at `x + rand % w - w / 2`,
+`y - 6 + rand % h - h / 2` (16.16), mirrored by a third draw only when the
+slot was found, priority `+0x5C - 1`; the bat uses (15, 8, 6), the crow
+(6, 8, 8). The generic death `sub_0806AEAC` does the same every 4 frames
+over 16 x 12 pixels. The flame plays animation 0 of the shared frame list
+`0x0820ED60` (5 frames, 20 ticks) once, from the common tile sheet
+`0x081C15F4` (languages 2 and 3 use `0x0826F8A4` / `0x082718A8`) with OBJ
+palette row 7, which `sub_0800C5D8` fills with bank 3 of `0x082099FC`
+(`sUnk_084F0DD8` maps rows 4 to 9 and 14); it rises 0.5 per frame after
+its first and is deleted when the animation ends. The export names it
+`Effect/flame/anim_0`; the runtime updates flames after the enemies. `src/runtime/aos_combat.c` ports the boxes,
 overlaps, slots and formulas; the new-game stats are not traced, so the
 runtime takes ATK, DEF and HP as diagnostic options.
 

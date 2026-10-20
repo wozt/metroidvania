@@ -1107,14 +1107,14 @@ Next action: Port original title screen stages, graphics and selection and wire 
 
 [?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 28 discovered routine(s) to this category (7 by native name, 21 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Tests cover title stages 0/2 fade, stage 3-5 motion, stage 6 secondary-object fade and stage 7 reveal handoff; stage 8 input/idle handling remains an isolated helper.
+[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Runnable opt-in SDL host and device-free tests exist; controls restart the diagnostic preview instead of entering a non-existent main menu.
 
 Native evidence: not attached yet.  
-Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c), [`src/runtime/aos_title_stages.c`](../src/runtime/aos_title_stages.c).  
+Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c), [`src/runtime/aos_title_stages.c`](../src/runtime/aos_title_stages.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c).  
 Tests: [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c), [`tests/test_aos_title_motion.c`](../tests/test_aos_title_motion.c), [`tests/test_aos_title_stages.c`](../tests/test_aos_title_stages.c).
 Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`.  
-Known divergences: Stages 4-7 state transitions, counters, alpha and reveal deceleration are device-free C ports; native trig affine computation, display register effects, ROM-built artwork, sprites and boot/menu wiring remain absent.  
-Next action: Connect the stages into a native SDL title frontend using legally provided ROM-derived runtime graphics, then port menu navigation.
+Known divergences: Separate SDL3 title preview optionally displays a local BMP and drives the native stage-2 brightness fade and stage-8 input helper. It lacks original boot, sprite stages, menu renderers and verified visual parity.  
+Next action: Render ROM-derived original title sprites and backgrounds, connect actual stages 3-7, then implement main menu and file select.
 
 ### Menus and options
 

@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0427 - Aria runnable SDL title preview
+
+- Added `fusion_aria_title_preview`, a separate SDL3 executable which
+  displays a locally supplied BMP, runs the native stage-2 fade and
+  stage-8 input helper at 60 Hz, and offers an asset-free placeholder.
+- Invoke `build/fusion_aria_title_preview --title-bmp /path/to/title.bmp`
+  (or without arguments for a diagnostic blank-art preview).
+- The preview is **not** the original title render: stages 3-7 graphics,
+  sprite entities, real menu actions and integrated boot remain absent.
+- Native parity stays partial; checklist and dashboard regenerated.
+
 ## Patch 0426 - Aria title stages six and seven
 
 - Extended `aos_title_stages` with native stage-6 secondary-object

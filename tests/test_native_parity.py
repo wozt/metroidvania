@@ -299,6 +299,13 @@ class NativeParityTests(unittest.TestCase):
         self.assertIn("aos:c:src/main.c:AgbMain", unassigned_ids)
         self.assertNotIn("aos:c:src/code/code_080C0A1C.c:EnemyBatCreate",
                          unassigned_ids)
+        columns = {name: index for index, name in enumerate(rows[0].split("\t"))}
+        suggestions = [row.split("\t") for row in rows[1:]
+                       if row.split("\t")[columns["suggested_category"]]]
+        self.assertGreater(len(suggestions), 400)
+        self.assertTrue(all(row[columns["category"]] == "unclassified" and
+                            row[columns["suggestion_evidence"]] == "exclusive_callees"
+                            for row in suggestions))
 
     def test_annotation_tsv_round_trip_is_stable(self):
         text = native_parity.ANNOTATIONS.read_text(encoding="utf-8")

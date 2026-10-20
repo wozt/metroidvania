@@ -27,8 +27,9 @@ AOS_UNASSIGNED_ROUTINES = ROOT / "data/native_parity/aos_unassigned_routines.tsv
 INVENTORY_SCHEMA = native_inventory.SCHEMA
 
 UNASSIGNED_COLUMNS = (
-    "id", "symbol", "category", "category_evidence", "kind", "address",
-    "source", "line", "direct_callers", "direct_callees",
+    "id", "symbol", "category", "category_evidence", "suggested_category",
+    "suggestion_evidence", "kind", "address", "source", "line",
+    "direct_callers", "direct_callees",
 )
 
 ANNOTATION_COLUMNS = (
@@ -435,6 +436,25 @@ def render_unassigned_routines(inventory: dict, annotations: dict,
     game_data = inventory["games"][game]
     features = annotations["games"][game]["features"]
     assigned = assigned_routine_ids(game_data, features)
+    by_id = {routine["id"]: routine for routine in game_data["routines"]}
+    suggestions = {}
+    while True:
+        batch = {}
+        for routine in game_data["routines"]:
+            if routine["category"] != "unclassified" or routine["id"] in suggestions:
+                continue
+            targets = set(routine.get("calls", []))
+            targets |= set(routine.get("address_references", []))
+            targets |= {item["target"] for item in routine.get("member_callbacks", [])}
+            categories = {
+                suggestions.get(target, by_id.get(target, {}).get("category"))
+                for target in targets
+            } - {None, "unclassified"}
+            if len(categories) == 1:
+                batch[routine["id"]] = categories.pop()
+        if not batch:
+            break
+        suggestions.update(batch)
     incoming = defaultdict(int)
     for routine in game_data["routines"]:
         for target in routine.get("calls", []):
@@ -448,6 +468,9 @@ def render_unassigned_routines(inventory: dict, annotations: dict,
             "symbol": routine["symbol"],
             "category": routine.get("category", "unclassified"),
             "category_evidence": routine.get("category_evidence", ""),
+            "suggested_category": suggestions.get(routine["id"], ""),
+            "suggestion_evidence": ("exclusive_callees"
+                                    if routine["id"] in suggestions else ""),
             "kind": routine["kind"],
             "address": routine.get("address", ""),
             "source": routine["source"],

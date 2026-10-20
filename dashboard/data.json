@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T03:09:09+00:00",
+ "generated_at": "2026-10-20T03:12:38+00:00",
  "git": {
-  "commit": "85ccbe9",
+  "commit": "c26648a",
   "branch": "main",
   "dirty": true
  },
@@ -9507,7 +9507,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Lexical analysis: dynamic dispatch and runtime evidence are not indexed. The generated Aria backlog lists every routine not yet attached to a reviewed parity feature.",
+   "limitations": "Lexical analysis: dynamic dispatch and runtime evidence are not indexed. The generated Aria backlog lists every routine not yet attached to a reviewed parity feature and keeps call-graph category suggestions separate from proven categories.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -11436,6 +11436,12 @@
  },
  "timeline": [
   {
+   "commit": "c26648a",
+   "date": "2026-10-20",
+   "subject": "Track every unassigned Aria routine",
+   "scope": "project"
+  },
+  {
    "commit": "85ccbe9",
    "date": "2026-10-20",
    "subject": "Validate the final MZM parity entries",
@@ -11907,12 +11913,6 @@
    "commit": "6972306",
    "date": "2026-10-15",
    "subject": "Port Tourian looking-at-sky scene",
-   "scope": "project"
-  },
-  {
-   "commit": "4a5362a",
-   "date": "2026-10-15",
-   "subject": "Port Tourian crashing scene",
    "scope": "project"
   }
  ],

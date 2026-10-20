@@ -143,8 +143,11 @@ and must never be edited by hand. The same pass writes
 `data/native_parity/aos_unassigned_routines.tsv`: one compact row for every
 Aria C or assembly function that is not yet attached to a reviewed parity
 feature, including its stable id, category, address, source location and
-direct call counts. This is a generated reconstruction backlog, not a claim
-that each low-level helper needs its own feature.
+direct call counts. For an unclassified routine whose known outgoing targets
+all share one category, the report adds that category as a triage suggestion;
+it never overwrites the proven classification. This is a generated
+reconstruction backlog, not a claim that each low-level helper needs its own
+feature.
 
 The second static pass links header declarations to definitions, inventories
 data/type/constant records and proves indirect edges when a lexical table and

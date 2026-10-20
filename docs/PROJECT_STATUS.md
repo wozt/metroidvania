@@ -3838,6 +3838,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0418 - conservative Aria category suggestions
+
+- Extended the generated Aria backlog with `suggested_category` and
+  `suggestion_evidence` columns. Suggestions are restricted to unclassified
+  routines whose known outgoing calls, address references and member callbacks
+  all resolve to one category; propagation runs to a fixed point.
+- This identifies 498 additional triage candidates without changing any
+  canonical inventory category: 395 technical, 52 audio, 18 inventory, 15
+  rooms, 15 saves, two menus and one input routine. Ambiguous and disconnected
+  functions remain blank rather than receiving a guess.
+- The generator test enforces that suggestions only annotate unclassified
+  rows and are explicitly labelled `exclusive_callees`. No runtime or audio
+  implementation changed.
+- Validation on 2026-10-20: all 485 dashboard-recorded checks passed, the
+  proprietary-file guard passed and every generated file was fresh.
+
 ## Patch 0417 - exhaustive Aria routine backlog
 
 - Added `data/native_parity/aos_unassigned_routines.tsv`, a deterministic

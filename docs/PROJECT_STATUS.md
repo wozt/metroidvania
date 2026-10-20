@@ -3838,6 +3838,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0415 - clipdata audit
+
+- Audited `clipdata.c` against the runtime:
+  - every routine is ported, except `ClipdataSetupCode`, which only
+    copies `ClipdataConvertToCollision` into IWRAM for speed;
+  - the special blocks are covered by the breakable block and room gadget
+    entries;
+  - the hazards and ground effects have recorded captures: `norfair_022`
+    (death in the lava) and `crateria_007` (water).
+- `mzm.collision.clipdata` moves to `functional`; its vague "incomplete"
+  note is replaced by the inventory. The parity inventory now contains 14
+  partial and 89 functional entries.
+
 ## Patch 0414 - escape timer and gate graphics
 
 - Checked the last escape ship difference against the ROM. The escape

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T01:55:57+00:00",
+ "generated_at": "2026-10-20T01:57:12+00:00",
  "git": {
-  "commit": "16a8733",
+  "commit": "55612e4",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 28,
-    "functional": 101,
+    "partial": 27,
+    "functional": 102,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 101,
-   "functional_or_better_percent": 72.1,
+   "functional_or_better": 102,
+   "functional_or_better_percent": 72.9,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 4,
-    "functional": 88,
+    "partial": 3,
+    "functional": 89,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 88,
-   "functional_or_better_percent": 95.7,
+   "functional_or_better": 89,
+   "functional_or_better_percent": 96.7,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -869,8 +869,8 @@
    "area": "mzm",
    "category": "collision",
    "title": "Samus and room Clipdata collision",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_samus.c",
     "src/runtime/room_runtime.c"
@@ -883,16 +883,23 @@
    "native_routines": [
     "ClipdataConvertToCollision",
     "ClipdataProcess",
-    "ClipdataProcessForSamus"
+    "ClipdataProcessForSamus",
+    "ClipdataCheckCurrentAffectingAtPosition",
+    "ClipdataUpdateCurrentAffecting",
+    "ClipdataCheckCantUseElevator",
+    "ClipdataCheckGroundEffect"
    ],
-   "limitations": "Room Clipdata and the Samus collision subset are active; special blocks and all environmental effects remain incomplete.",
-   "next_action": "Port special blocks and environmental Clipdata effects.",
+   "limitations": "ClipdataSetupCode (the copy of ClipdataConvertToCollision into IWRAM for speed) has no counterpart: the conversion runs from the runtime's code. The special blocks themselves are covered by mzm.environment.breakable_blocks and mzm.environment.room_gadgets. Not compared with an emulator. Every routine of clipdata.c is ported: ClipdataConvertToCollision (the solidity of a subpixel inside a block, slopes included), ClipdataProcessForSamus and ClipdataProcess, ClipdataCheckCurrentAffectingAtPosition (a block's movement and hazard), ClipdataUpdateCurrentAffecting (the hazard blocks, else the room effect's hazard above or below gEffectYPosition), ClipdataCheckCantUseElevator (sElevatorRoomPairs, the second Crateria to Tourian route only after the escape) and ClipdataCheckGroundEffect (sGroundEffectsClipdataValues). Checked in game by every room capture's collisions, by the steep slopes, and by the hazards: norfair_022 (death in the lava) and crateria_007 (water over Samus).",
+   "next_action": "Compare the collisions with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_samus.c",
      "tests/test_runtime_steep_slopes.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "norfair_022",
+     "crateria_007"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -11386,6 +11393,12 @@
  },
  "timeline": [
   {
+   "commit": "55612e4",
+   "date": "2026-10-20",
+   "subject": "Resolve the escape timer graphics difference",
+   "scope": "project"
+  },
+  {
    "commit": "16a8733",
    "date": "2026-10-20",
    "subject": "Port the Time Attack unlock, records and code",
@@ -11858,12 +11871,6 @@
    "date": "2026-10-15",
    "subject": "Port Tourian getting-shot scene",
    "scope": "project"
-  },
-  {
-   "commit": "8cc7ecd",
-   "date": "2026-10-15",
-   "subject": "Port Tourian pirates-firing scene",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -11891,7 +11898,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1653,
+    "routines_cited_by_features": 1654,
     "call_edges": 6071
    },
    "aos": {

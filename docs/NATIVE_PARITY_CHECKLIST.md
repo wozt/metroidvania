@@ -222,12 +222,14 @@ Next action: Extend coverage to native effects and the remaining poses.
 
 [?] **`mzm.collision.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`mzm.collision.clipdata` — Samus and room Clipdata collision.** Room Clipdata and the Samus collision subset are active; special blocks and all environmental effects remain incomplete.
+[+] **`mzm.collision.clipdata` — Samus and room Clipdata collision.** Every routine of clipdata.c is ported: ClipdataConvertToCollision (the solidity of a subpixel inside a block, slopes included), ClipdataProcessForSamus and ClipdataProcess, ClipdataCheckCurrentAffectingAtPosition (a block's movement and hazard), ClipdataUpdateCurrentAffecting (the hazard blocks, else the room effect's hazard above or below gEffectYPosition), ClipdataCheckCantUseElevator (sElevatorRoomPairs, the second Crateria to Tourian route only after the escape) and ClipdataCheckGroundEffect (sGroundEffectsClipdataValues). Checked in game by every room capture's collisions, by the steep slopes, and by the hazards: norfair_022 (death in the lava) and crateria_007 (water over Samus).
 
-Native evidence: `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/clipdata.c:ClipdataProcess`, `mzm:c:src/clipdata.c:ClipdataProcessForSamus`.  
+Native evidence: `mzm:c:src/clipdata.c:ClipdataCheckCantUseElevator`, `mzm:c:src/clipdata.c:ClipdataCheckCurrentAffectingAtPosition`, `mzm:c:src/clipdata.c:ClipdataCheckGroundEffect`, `mzm:c:src/clipdata.c:ClipdataConvertToCollision`, `mzm:c:src/clipdata.c:ClipdataProcess`, `mzm:c:src/clipdata.c:ClipdataProcessForSamus`, `mzm:c:src/clipdata.c:ClipdataUpdateCurrentAffecting`.  
 Local implementation: [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
-Next action: Port special blocks and environmental Clipdata effects.
+Known divergences: ClipdataSetupCode (the copy of ClipdataConvertToCollision into IWRAM for speed) has no counterpart: the conversion runs from the runtime's code. The special blocks themselves are covered by mzm.environment.breakable_blocks and mzm.environment.room_gadgets. Not compared with an emulator.  
+Next action: Compare the collisions with an emulator.
+Evidence: in game: `norfair_022`, `crateria_007`.
 
 ### Weapons and projectiles
 

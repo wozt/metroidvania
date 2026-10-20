@@ -53,6 +53,7 @@ int main(void) {
     data.completed_game = 0x12;
     data.igt_at_bosses[2].minutes = 42;
     data.igt_at_bosses[3].frames = 7;
+    data.time_attack = true;
 
     size_t size = 0;
     uint8_t *bytes = mzm_save_encode(&data, &size);
@@ -72,15 +73,15 @@ int main(void) {
     assert(back.area == 5 && back.difficulty == 2 && back.igt.hours == 1 && back.igt.minutes == 23 &&
            back.igt.seconds == 45 && back.igt.frames == 59 && back.completed_game == 0x12);
     assert(back.igt_at_bosses[2].minutes == 42 && back.igt_at_bosses[3].frames == 7 &&
-           back.igt_at_bosses[0].hours == 0);
+           back.igt_at_bosses[0].hours == 0 && back.time_attack);
     /* A changed byte, a truncated file, a newer version, a bad count. */
     bytes[100] ^= 1;
     assert(!mzm_save_decode(bytes, size, &back));
     bytes[100] ^= 1;
     assert(!mzm_save_decode(bytes, size - 1, &back));
-    bytes[8] = 4;
+    bytes[8] = 5;
     assert(!mzm_save_decode(bytes, size, &back));
-    bytes[8] = 3;
+    bytes[8] = 4;
     assert(mzm_save_decode(bytes, size, &back));
     free(bytes);
     data.never_reform_count = MZM_SAVE_NEVER_REFORM + 1;
@@ -101,11 +102,17 @@ int main(void) {
     unlocks.fusion_gallery_images = 0x12;
     unlocks.difficulty_clears = 7;
     unlocks.time_attack = 0x89ABCDEFu;
+    memset(&unlocks.record, 0xFF, sizeof unlocks.record);
+    memcpy(unlocks.record.password, "7PSVYPKBBPQV6F6L3N70", 20);
+    unlocks.record.igt = (MzmTimeAttackTimer){2, 31, 4, 5};
     assert(mzm_unlocks_write(unlock_path, &unlocks));
     assert(mzm_unlocks_read(unlock_path, &unlocks_back));
     assert(unlocks_back.gallery_images == 0x81 && unlocks_back.fusion_gallery_images == 0x12 &&
            unlocks_back.difficulty_clears == 7 &&
            unlocks_back.time_attack == 0x89ABCDEFu);
+    /* Version 2: gTimeAttackRecord */
+    assert(!memcmp(unlocks_back.record.password, "7PSVYPKBBPQV6F6L3N70", 20) &&
+           unlocks_back.record.igt.minutes == 31 && unlocks_back.record.igt100.hours == 0xFF);
     FILE *corrupt = fopen(unlock_path, "r+b");
     assert(corrupt && fseek(corrupt, 20, SEEK_SET) == 0);
     int byte = fgetc(corrupt);

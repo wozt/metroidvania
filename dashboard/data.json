@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T01:45:16+00:00",
+ "generated_at": "2026-10-20T01:54:09+00:00",
  "git": {
-  "commit": "39299bb",
+  "commit": "346f6bf",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 30,
-    "functional": 99,
+    "partial": 29,
+    "functional": 100,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 99,
-   "functional_or_better_percent": 70.7,
+   "functional_or_better": 100,
+   "functional_or_better_percent": 71.4,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 6,
-    "functional": 86,
+    "partial": 5,
+    "functional": 87,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 86,
-   "functional_or_better_percent": 93.5,
+   "functional_or_better": 87,
+   "functional_or_better_percent": 94.6,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -933,8 +933,8 @@
    "area": "mzm",
    "category": "cutscenes",
    "title": "Chozodia escape sequence (GM_CHOZODIA_ESCAPE)",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_chozodia_escape.c",
     "src/runtime/mzm_chozodia_escape.h",
@@ -942,11 +942,14 @@
     "src/runtime/gba_ppu.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_save.c",
-    "src/runtime/mzm_save.h"
+    "src/runtime/mzm_save.h",
+    "src/runtime/mzm_time_attack.c",
+    "src/runtime/mzm_time_attack.h"
    ],
    "tests": [
     "tests/test_mzm_screens.c",
-    "tests/test_mzm_save.c"
+    "tests/test_mzm_save.c",
+    "tests/test_mzm_time_attack.c"
    ],
    "dependencies": [
     "mzm.enemies.escape_ship",
@@ -972,14 +975,38 @@
     "CalculateOamPart4",
     "SramProcessEndingSave",
     "SramWrite_FileScreenOptionsUnlocked",
-    "ColorFadingProcess_ChozodiaEscape"
+    "ColorFadingProcess_ChozodiaEscape",
+    "CheckUnlockTimeAttack",
+    "TimeAttackCheckSaveFileValidity",
+    "TimeAttackCheckSetNewRecord",
+    "TimeAttackGenerateSeed",
+    "TimeAttackRandomizeSeed",
+    "TimeAttackGeneratePassword",
+    "TimeAttackEorSeed",
+    "TimeAttackGetGarbledSeedValue",
+    "TimeAttackGarbleSeedValue",
+    "TimeAttackGarbleRandomSeedValues",
+    "TimeAttackSeedRandomFunc1",
+    "TimeAttackSeedRandomFunc2",
+    "TimeAttackSeedRandomFunc3",
+    "TimeAttackSeedRandomFunc4",
+    "TimeAttackSeedRandomFunc5",
+    "TimeAttackSeedShuffleFunc1",
+    "TimeAttackSeedShuffleFunc2",
+    "TimeAttackSeedShuffleFunc3",
+    "TimeAttackSeedShuffleFunc4",
+    "TimeAttackSeedShuffleFunc5",
+    "TimeAttackSeedShuffleFunc6",
+    "TimeAttackSeedShuffleFunc7",
+    "TimeAttackSeedShuffleFunc8"
    ],
-   "limitations": "The H-blank WIN0H writes are a per-line table read by the PPU (line y takes the value computed for line y - 1, line 0 its own), and the register keeps the last line's value once the H-blank stops. The completion flag, gallery image and difficulty unlocks are saved, but CheckUnlockTimeAttack and its per-boss validity data, Time Attack records, the soft-reset lock and non-English letters are not ported; GM_CREDITS follows (mzm.cutscenes.credits). Not compared with an emulator. The escape ship's EFFECT_CUTSCENE_ESCAPING_CHOZODIA freezes the room, fades it out and enters the sequence on the non-gameplay screen from the ROM bank; --chozodia-escape starts it directly. After a 16-step fade in it plays the five native stages with their lengths (312, 224, 304, 280 frames, then the letters up to 472): the mother ship door opening and the blue ship growing out of it and diving (double-sized affine objects, matrix 0), then climbing away; the mother ship heating up (sChozodiaEscapeShipHeatingUpPal / GroundHeatingUpPal rows, ever faster shaking), its white explosion growing as an ellipse (sHaze_PowerBomb_WindowValuesPointers stretched by 1.2, window 0 with brightness up inside); the crater with the decaying mother ship, its explosions and the flash fading by alpha then to black; Zebes with the ship far away, then flying past the camera with the escape music; Samus in her ship turning grey (ApplyMonochromeToPalette of sChozodiaEscapeMissionAccomplishedPal) with the English MISSION ACCOMPLISHED letters revealed one every four frames, and the fade out. Its five sounds, the music fade and the escape music play. Before the sequence, the current slot receives the English completion bit for its difficulty and a separate versioned, checksummed options file receives the ending gallery bit and difficulty clear; first-clear and first-hard transient flags feed the later pop-ups. A bank-backed test checks the fades, stage lengths, sounds, explosion window, grey palette and letters; captures of every stage and one from the escape ship in chozodia_092 show the sequence. It is entered through ColorFadingProcess_ChozodiaEscape: the screen cut to black at once, then the ending save (unit-tested, captured in chozodia_092).",
-   "next_action": "Port Time Attack validity, records and unlock generation; compare the sequence with an emulator.",
+   "limitations": "The H-blank WIN0H writes are a per-line table read by the PPU (line y takes the value computed for line y - 1, line 0 its own), and the register keeps the last line's value once the H-blank stops. The runtime has no soft reset, so gDisableSoftReset's lock has nothing to lock. The ending text is English only. The Time Attack record is kept in the runtime's unlock file (version 2) rather than its own SRAM block. GM_CREDITS follows (mzm.cutscenes.credits). Not compared with an emulator. The escape ship's EFFECT_CUTSCENE_ESCAPING_CHOZODIA freezes the room, fades it out and enters the sequence on the non-gameplay screen from the ROM bank; --chozodia-escape starts it directly. After a 16-step fade in it plays the five native stages with their lengths (312, 224, 304, 280 frames, then the letters up to 472): the mother ship door opening and the blue ship growing out of it and diving (double-sized affine objects, matrix 0), then climbing away; the mother ship heating up (sChozodiaEscapeShipHeatingUpPal / GroundHeatingUpPal rows, ever faster shaking), its white explosion growing as an ellipse (sHaze_PowerBomb_WindowValuesPointers stretched by 1.2, window 0 with brightness up inside); the crater with the decaying mother ship, its explosions and the flash fading by alpha then to black; Zebes with the ship far away, then flying past the camera with the escape music; Samus in her ship turning grey (ApplyMonochromeToPalette of sChozodiaEscapeMissionAccomplishedPal) with the English MISSION ACCOMPLISHED letters revealed one every four frames, and the fade out. Its five sounds, the music fade and the escape music play. Before the sequence, the current slot receives the English completion bit for its difficulty and a separate versioned, checksummed options file receives the ending gallery bit and difficulty clear; first-clear and first-hard transient flags feed the later pop-ups. A bank-backed test checks the fades, stage lengths, sounds, explosion window, grey palette and letters; captures of every stage and one from the escape ship in chozodia_092 show the sequence. It is entered through ColorFadingProcess_ChozodiaEscape: the screen cut to black at once, then the ending save (unit-tested, captured in chozodia_092). The Time Attack is ported (mzm_time_attack.c): TimeAttackCheckSaveFileValidity (the first four bosses in order, each past sTimeAttackAntiCheatTimes), CheckUnlockTimeAttack's unlock value (the sums of the boss timers' fields shuffled with the region, sanity checks on the tanks and abilities), and for a Time Attack run TimeAttackCheckSetNewRecord: the Any% and 100% records with their 20-character password from TimeAttackGenerateSeed (88 seed bits; the native 62-byte array is written past its end and read back), its eight shuffles and TimeAttackRandomizeSeed, ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR (the empty 0xFF record) and ENDING_FLAG_NEW_TIME_ATTACK_RECORD. The port was compiled against the decompilation's own time_attack.c with stub globals: identical results on 200 000 random cases (24 185 unlocks, 150 201 records); three of those vectors are a unit test.",
+   "next_action": "Compare the sequence with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_screens.c",
-     "tests/test_mzm_save.c"
+     "tests/test_mzm_save.c",
+     "tests/test_mzm_time_attack.c"
     ],
     "in_game_check": [
      "chozodia_092"
@@ -1009,6 +1036,16 @@
       "registered": true,
       "ctest": [
        "mzm_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_time_attack.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_time_attack"
       ],
       "outcome": "passed",
       "exists": true
@@ -1063,8 +1100,8 @@
     "UnlockedOptionsVBlank",
     "ChozodiaEscapeGetItemCountAndEndingNumber"
    ],
-   "limitations": "Time Attack cannot yet generate its first-clear or new-record flags because that mode and its per-boss record data are not ported. The soft-reset lock and the Gallery, Sound Test and Time Attack Options entries themselves are not ported. The bundled NES game is deliberately outside the project scope. The ability count reads the obtained items, unknown ones included, as gEquipment.suitMisc and beamBombs hold them. Ending and pop-up text is English only. Not compared with an emulator. After the Chozodia escape, ChozodiaEscapeGetItemCountAndEndingNumber computes the ending from the maximums (sTankIncreaseAmount of the difficulty), the abilities, the difficulty and the in-game hours, and GM_CREDITS plays from the ROM bank with the credits music: the US sCredits lines scroll at 7/16 pixel a frame over the dark Chozo wall, each built from sCreditsCharactersGfx (white, blue and red rows, the two-row white names, the copyright lines) and written by the V-blank into BG0, or BG1 half a tile aside for an odd width; at the end line the wall fades in and the text out, the wall scrolls down to its bottom (513 frames), zooms into the Chozo drawing and fades to black (961 frames). The end screen then slides and blends Samus's poses (sEndingSamusPosingGfx_1 to _5), the last by ending (full suit for image 0, helmet off for 1, suitless otherwise, through the white palettes), with the drifting space background, and fades out. EndingImageInit then selects one of the eight native ending illustrations, loads the English text and the exact clear-time and collection-rate digits into OBJ VRAM, slides both background halves into place and reveals CLEAR TIME, the timer, YOUR RATE FOR COLLECTING ITEMS IS, the percentage and NEXT MISSION letter by letter on their native schedule. At 22.93 seconds it waits for A, B or START, fades the music over 256 frames and ends at frame 1664. A bank-backed test checks the ending numbers, the first credit line, stage lengths, final pose, image number, 03:04:05 and 100% graphics, letter promotion, permanent lines, input gate, music fade and exact ending frame. UnlockedOptionsInit then opens the native window over its blue panel; the English Gallery, Sound Test or Time Attack Records message is drawn eight characters per frame, A closes the panel at frame 128, and a first clear shows only Gallery. The new-record OAM badge is also supported. The first-clear, difficulty-clear and gallery-image state persists in a separate versioned, checksummed global options file, while the current slot persists its difficulty completion bit. The tests check the first-clear panel, its window geometry and rendered pixels, the other message priorities and the unlock file's checksum.",
-   "next_action": "Port the supported Options entries and Time Attack mode/record generation; compare the credits with an emulator.",
+   "limitations": "The soft-reset lock and the Gallery, Sound Test and Time Attack Records Options entries are not ported (the records are saved but cannot be viewed yet). The bundled NES game is deliberately outside the project scope. The ability count reads the obtained items, unknown ones included, as gEquipment.suitMisc and beamBombs hold them. Ending and pop-up text is English only. Not compared with an emulator. After the Chozodia escape, ChozodiaEscapeGetItemCountAndEndingNumber computes the ending from the maximums (sTankIncreaseAmount of the difficulty), the abilities, the difficulty and the in-game hours, and GM_CREDITS plays from the ROM bank with the credits music: the US sCredits lines scroll at 7/16 pixel a frame over the dark Chozo wall, each built from sCreditsCharactersGfx (white, blue and red rows, the two-row white names, the copyright lines) and written by the V-blank into BG0, or BG1 half a tile aside for an odd width; at the end line the wall fades in and the text out, the wall scrolls down to its bottom (513 frames), zooms into the Chozo drawing and fades to black (961 frames). The end screen then slides and blends Samus's poses (sEndingSamusPosingGfx_1 to _5), the last by ending (full suit for image 0, helmet off for 1, suitless otherwise, through the white palettes), with the drifting space background, and fades out. EndingImageInit then selects one of the eight native ending illustrations, loads the English text and the exact clear-time and collection-rate digits into OBJ VRAM, slides both background halves into place and reveals CLEAR TIME, the timer, YOUR RATE FOR COLLECTING ITEMS IS, the percentage and NEXT MISSION letter by letter on their native schedule. At 22.93 seconds it waits for A, B or START, fades the music over 256 frames and ends at frame 1664. A bank-backed test checks the ending numbers, the first credit line, stage lengths, final pose, image number, 03:04:05 and 100% graphics, letter promotion, permanent lines, input gate, music fade and exact ending frame. UnlockedOptionsInit then opens the native window over its blue panel; the English Gallery, Sound Test or Time Attack Records message is drawn eight characters per frame, A closes the panel at frame 128, and a first clear shows only Gallery. The new-record OAM badge is also supported. The first-clear, difficulty-clear and gallery-image state persists in a separate versioned, checksummed global options file, while the current slot persists its difficulty completion bit. The tests check the first-clear panel, its window geometry and rendered pixels, the other message priorities and the unlock file's checksum. A Time Attack run now produces ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR and ENDING_FLAG_NEW_TIME_ATTACK_RECORD (mzm.cutscenes.chozodia_escape).",
+   "next_action": "Port the supported Options entries (sound test, gallery, Time Attack records); compare the credits with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_screens.c",
@@ -6396,9 +6433,10 @@
     "FileSelectFileCopyChooseBaseDestinationFile",
     "FileSelectFindFirstNonEmptyFile",
     "SramCopyFile",
-    "SramDeleteFile"
+    "SramDeleteFile",
+    "FileSelectCheckInputtingTimeAttackCode"
    ],
-   "limitations": "The corrupted file handling, the supported options (stereo, sound test, gallery, time attack records and Fusion link) and the time attack code are not ported: the options entry is shown but A on it does nothing. The bundled NES game is deliberately outside the project scope. The Japanese text menu is skipped as in the US version. A new game plays the gunship's landing in Crateria (mzm.environment.gunship) and the intro text cutscene (mzm.cutscenes.story_text), then starts in the runtime's first room. FileSelectCopyFileHandler is ported from its NON_MATCHING C version. The text buffers' fills follow the US binary, which adds their offsets in bytes where the decompiled source's u32 pointers would scale them (checked in the disassembly of mzm_us.elf). Not compared with an emulator. \"START on the title enters the US file select screen on the native screen PPU: the Chozo background, the menu and panel tilemaps from the ROM bank, the three files with their energy and tanks (HudDrawEnergy into the file's tiles), timer or dashes, difficulty and area, the Metroid logos of completed files, the music, and the fade in. UP and DOWN move between the files and the enabled entries (with the maintained input repeat) with the file markers and Samus's head cursor; B fades out to the intro (GM_INTRO). A on a file opens its \"\"Start game\"\" panel (the window, the alpha fade and the BG2 scroll), whose text is drawn line by line with the native font; A there continues a saved file (the start animation, then the save is loaded), or on a completed file offers continue / new game / time attack and the overwrite confirmation, and on a new file opens the difficulty panel (hard once unlocked, completed difficulties highlighted) before the start; B closes the panels back. Checked by capture: the files, the panels, a new game and a continued file. Copy (with at least one file) chooses a source among the used files (a time attack file is refused with its message) and a destination among the other files (the first empty one, else A/B), shown by the green markers and the arrow, confirms the overwrite of a used destination, copies the file (SramCopyFile) and redraws it; erase chooses a used file, confirms it (NO by default) and deletes it (SramDeleteFile) before redrawing; B leaves each step. The runtime copies and deletes the save files themselves.\"",
+   "limitations": "The corrupted file handling and the supported options (stereo, sound test, gallery, time attack records and Fusion link) are not ported: the options entry is shown but A on it does nothing. The bundled NES game is deliberately outside the project scope. The Japanese text menu is skipped as in the US version. A new game plays the gunship's landing in Crateria (mzm.environment.gunship) and the intro text cutscene (mzm.cutscenes.story_text), then starts in the runtime's first room. FileSelectCopyFileHandler is ported from its NON_MATCHING C version. The text buffers' fills follow the US binary, which adds their offsets in bytes where the decompiled source's u32 pointers would scale them (checked in the disassembly of mzm_us.elf). Not compared with an emulator. \"START on the title enters the US file select screen on the native screen PPU: the Chozo background, the menu and panel tilemaps from the ROM bank, the three files with their energy and tanks (HudDrawEnergy into the file's tiles), timer or dashes, difficulty and area, the Metroid logos of completed files, the music, and the fade in. UP and DOWN move between the files and the enabled entries (with the maintained input repeat) with the file markers and Samus's head cursor; B fades out to the intro (GM_INTRO). A on a file opens its \"\"Start game\"\" panel (the window, the alpha fade and the BG2 scroll), whose text is drawn line by line with the native font; A there continues a saved file (the start animation, then the save is loaded), or on a completed file offers continue / new game / time attack and the overwrite confirmation, and on a new file opens the difficulty panel (hard once unlocked, completed difficulties highlighted) before the start; B closes the panels back. Checked by capture: the files, the panels, a new game and a continued file. Copy (with at least one file) chooses a source among the used files (a time attack file is refused with its message) and a destination among the other files (the first empty one, else A/B), shown by the green markers and the arrow, confirms the overwrite of a used destination, copies the file (SramCopyFile) and redraws it; erase chooses a used file, confirms it (NO by default) and deletes it (SramDeleteFile) before redrawing; B leaves each step. The runtime copies and deletes the save files themselves.\" The Time Attack code is ported (FileSelectCheckInputtingTimeAttackCode: UP, LEFT, RIGHT, DOWN one key at a time in a completed file's Start game panel once gFileScreenOptionsUnlocked.timeAttack bit 0 is set, a wrong key restarting it after half a second): it opens Continue / New / New Time Attack on New Time Attack, and a new Time Attack game keeps SaveFile.timeAttack (save version 4) for gTimeAttackFlag. A bank-backed test enters the code.",
    "next_action": "Port the supported options screen (stereo, sound test, gallery and time attack records), then compare the screen with an emulator.",
    "evidence": {
     "unit_tests": [
@@ -10549,6 +10587,13 @@
     "outcome": "passed"
    },
    {
+    "name": "mzm_time_attack",
+    "files": [
+     "tests/test_mzm_time_attack.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "mzm_audio",
     "files": [
      "tests/test_mzm_audio.c"
@@ -11334,12 +11379,18 @@
    }
   ],
   "summary": {
-   "passed": 482,
+   "passed": 483,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "346f6bf",
+   "date": "2026-10-20",
+   "subject": "Test the Tourian escape's initial room tilemaps",
+   "scope": "project"
+  },
   {
    "commit": "39299bb",
    "date": "2026-10-20",
@@ -11813,12 +11864,6 @@
    "date": "2026-10-15",
    "subject": "Port Tourian chased-by-pirates scene",
    "scope": "project"
-  },
-  {
-   "commit": "bc5426e",
-   "date": "2026-10-15",
-   "subject": "Port Tourian ship flying-in scene",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -11846,7 +11891,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1629,
+    "routines_cited_by_features": 1653,
     "call_edges": 6071
    },
    "aos": {

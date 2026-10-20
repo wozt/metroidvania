@@ -8,10 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { VERSION = 3, HEADER = 8 + 4 + 4, TRAILER = 4 };
+enum { VERSION = 4, HEADER = 8 + 4 + 4, TRAILER = 4 };
 static const char MAGIC[8] = {'M', 'V', 'Z', 'M', 'S', 'A', 'V', 'E'};
 static const char UNLOCK_MAGIC[8] = {'M', 'V', 'Z', 'M', 'U', 'N', 'L', 'K'};
-enum { UNLOCK_VERSION = 1, UNLOCK_PAYLOAD = 12, UNLOCK_SIZE = HEADER + UNLOCK_PAYLOAD + TRAILER };
+enum {
+    UNLOCK_VERSION = 2, UNLOCK_PAYLOAD_V1 = 12, UNLOCK_RECORD = 48,
+    UNLOCK_PAYLOAD = UNLOCK_PAYLOAD_V1 + UNLOCK_RECORD, UNLOCK_SIZE = HEADER + UNLOCK_PAYLOAD + TRAILER
+};
 
 typedef struct {
     uint8_t *bytes;         /* NULL while measuring */
@@ -146,6 +149,8 @@ static void visit(Io *io, MzmSaveData *d) {
         u8(io, &d->igt_at_bosses[i].seconds);
         u8(io, &d->igt_at_bosses[i].frames);
     }
+    if (io->version < 4) return;
+    flag(io, &d->time_attack);
 }
 
 static uint32_t crc32(const uint8_t *p, size_t n) {
@@ -257,6 +262,8 @@ static bool write_bytes(const char *path, const uint8_t *bytes, size_t size) {
     return ok;
 }
 
+_Static_assert(sizeof(MzmTimeAttackRecord) == UNLOCK_RECORD, "the Time Attack record is 48 bytes");
+
 bool mzm_unlocks_write(const char *path, const MzmUnlockData *data) {
     uint8_t bytes[UNLOCK_SIZE] = {0};
     memcpy(bytes, UNLOCK_MAGIC, sizeof UNLOCK_MAGIC);
@@ -266,6 +273,7 @@ bool mzm_unlocks_write(const char *path, const MzmUnlockData *data) {
     put16(bytes + HEADER + 2, data->fusion_gallery_images);
     bytes[HEADER + 4] = data->difficulty_clears;
     put32(bytes + HEADER + 8, data->time_attack);
+    memcpy(bytes + HEADER + UNLOCK_PAYLOAD_V1, &data->record, UNLOCK_RECORD);
     put32(bytes + HEADER + UNLOCK_PAYLOAD, crc32(bytes + HEADER, UNLOCK_PAYLOAD));
     return write_bytes(path, bytes, sizeof bytes);
 }
@@ -274,13 +282,17 @@ bool mzm_unlocks_read(const char *path, MzmUnlockData *data) {
     uint8_t bytes[UNLOCK_SIZE];
     FILE *file = fopen(path, "rb");
     if (!file) return false;
-    bool ok = fread(bytes, 1, sizeof bytes, file) == sizeof bytes && fgetc(file) == EOF;
+    size_t size = fread(bytes, 1, sizeof bytes, file);
+    bool ok = fgetc(file) == EOF;
     fclose(file);
-    if (!ok || memcmp(bytes, UNLOCK_MAGIC, sizeof UNLOCK_MAGIC) != 0 ||
-        get32(bytes + 8) != UNLOCK_VERSION || get32(bytes + 12) != UNLOCK_PAYLOAD ||
-        crc32(bytes + HEADER, UNLOCK_PAYLOAD) != get32(bytes + HEADER + UNLOCK_PAYLOAD))
+    if (!ok || size < HEADER + TRAILER || memcmp(bytes, UNLOCK_MAGIC, sizeof UNLOCK_MAGIC) != 0) return false;
+    uint32_t version = get32(bytes + 8), payload = get32(bytes + 12);
+    if (!((version == 1 && payload == UNLOCK_PAYLOAD_V1) || (version == 2 && payload == UNLOCK_PAYLOAD)) ||
+        size != HEADER + payload + TRAILER || crc32(bytes + HEADER, payload) != get32(bytes + HEADER + payload))
         return false;
     MzmUnlockData parsed = {0};
+    memset(&parsed.record, 0xFF, sizeof parsed.record);
+    if (version == 2) memcpy(&parsed.record, bytes + HEADER + UNLOCK_PAYLOAD_V1, UNLOCK_RECORD);
     parsed.gallery_images = get16(bytes + HEADER);
     parsed.fusion_gallery_images = get16(bytes + HEADER + 2);
     parsed.difficulty_clears = bytes[HEADER + 4];

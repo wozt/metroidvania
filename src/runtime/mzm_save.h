@@ -14,6 +14,7 @@
 #include "mzm_hud.h"
 #include "mzm_items.h"
 #include "mzm_samus.h"
+#include "mzm_time_attack.h"
 
 enum {
     MZM_SAVE_ALIAS = 48,
@@ -53,6 +54,8 @@ typedef struct {
     uint8_t completed_game;
     /* Version 3: gInGameTimerAtBosses (zero in older files). */
     struct { uint8_t hours, minutes, seconds, frames; } igt_at_bosses[5];
+    /* Version 4: SaveFile.timeAttack (gTimeAttackFlag, a Time Attack run). */
+    bool time_attack;
 } MzmSaveData;
 
 /* The native FileScreenOptionsUnlocked block is global rather than owned by
@@ -65,6 +68,9 @@ typedef struct {
     uint16_t fusion_gallery_images;
     uint8_t difficulty_clears;
     uint32_t time_attack;
+    /* Version 2: gTimeAttackRecord (SramWrite_TimeAttack); a version 1 file
+     * reads it as the empty record, all 0xFF. */
+    MzmTimeAttackRecord record;
 } MzmUnlockData;
 
 /* The serialized form; `size` receives its length. Returns a malloc'ed

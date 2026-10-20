@@ -55,7 +55,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
                src/runtime/mzm_items.c src/runtime/mzm_message_banner.c
                src/runtime/gba_ppu.c src/runtime/mzm_rom.c src/runtime/mzm_hud.c
                src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c src/runtime/mzm_room_gfx.c src/runtime/mzm_tourian_escape.c src/runtime/mzm_chozodia_escape.c src/runtime/mzm_credits.c
-               src/runtime/mzm_pause_screen.c src/runtime/mzm_text.c src/runtime/mzm_save.c
+               src/runtime/mzm_pause_screen.c src/runtime/mzm_text.c src/runtime/mzm_save.c src/runtime/mzm_time_attack.c
                src/runtime/mzm_file_select.c src/runtime/mzm_game_over.c
                src/runtime/mzm_intro.c src/runtime/mzm_cutscene.c src/runtime/mzm_in_game_cutscene.c src/runtime/mzm_door_fade.c)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
@@ -176,7 +176,7 @@ if(BUILD_TESTING)
                    src/runtime/mzm_blocks.c src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c src/runtime/mzm_power_bomb.c
                    src/runtime/mzm_items.c src/runtime/mzm_message_banner.c
                    src/runtime/gba_ppu.c src/runtime/mzm_rom.c src/runtime/mzm_hud.c
-                   src/runtime/mzm_room_gfx.c src/runtime/mzm_save.c
+                   src/runtime/mzm_room_gfx.c src/runtime/mzm_save.c src/runtime/mzm_time_attack.c
                    src/runtime/mzm_screen.c)
     target_include_directories(fusion_runtime_steep_slopes_tests PRIVATE src/runtime)
     target_compile_definitions(fusion_runtime_steep_slopes_tests PRIVATE
@@ -214,7 +214,7 @@ if(BUILD_TESTING)
     add_test(NAME mzm_screens COMMAND fusion_mzm_screens_tests
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
-    add_executable(fusion_mzm_save_tests tests/test_mzm_save.c src/runtime/mzm_save.c)
+    add_executable(fusion_mzm_save_tests tests/test_mzm_save.c src/runtime/mzm_save.c src/runtime/mzm_time_attack.c)
     target_include_directories(fusion_mzm_save_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_save_tests)
     add_test(NAME mzm_save COMMAND fusion_mzm_save_tests)
@@ -237,6 +237,11 @@ if(BUILD_TESTING)
     target_include_directories(fusion_mzm_audio_tests PRIVATE src/runtime)
     target_link_libraries(fusion_mzm_audio_tests PRIVATE m)
     fusion_enable_warnings(fusion_mzm_audio_tests)
+    add_executable(fusion_mzm_time_attack_tests tests/test_mzm_time_attack.c src/runtime/mzm_time_attack.c)
+    target_include_directories(fusion_mzm_time_attack_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_mzm_time_attack_tests)
+    add_test(NAME mzm_time_attack COMMAND fusion_mzm_time_attack_tests)
+
     add_test(NAME mzm_audio COMMAND fusion_mzm_audio_tests
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

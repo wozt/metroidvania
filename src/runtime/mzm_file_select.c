@@ -722,9 +722,11 @@ static void init(MzmFileSelect *f, MzmScreen *s) {
     bool (*copy_file)(void *, int, int) = f->copy_file;
     bool (*erase_file)(void *, int) = f->erase_file_callback;
     void *context = f->context;
+    uint32_t time_attack_unlocked = f->time_attack_unlocked;
     memset(f, 0, sizeof *f);
     memcpy(f->files, files, sizeof files);
     f->most_recent = most_recent;
+    f->time_attack_unlocked = time_attack_unlocked;
     f->copy_file = copy_file;
     f->erase_file_callback = erase_file;
     f->context = context;
@@ -1250,6 +1252,32 @@ static void fade_bldalpha(MzmScreen *s, int target_l, int target_h, bool *done) 
     }
 }
 
+/* FileSelectCheckInputtingTimeAttackCode: sTimeAttackButtonCode (UP, LEFT,
+ * RIGHT, DOWN) pressed one key at a time; a wrong key restarts it after half
+ * a second. */
+static bool check_time_attack_code(MzmFileSelect *f, MzmScreen *s) {
+    static const uint16_t code[] = {KEY_UP, KEY_LEFT, KEY_RIGHT, KEY_DOWN, 0xFFFF};
+    uint16_t input = s->changed_input;
+    if (!f->inputting_time_attack) {
+        if (f->time_attack_cooldown != 0) {
+            f->time_attack_cooldown--;
+        } else if (input == code[0]) {
+            f->inputting_time_attack = true;
+            f->time_attack_inputs = 1;
+        } else if (input) {
+            f->time_attack_cooldown = 30;                   /* CONVERT_SECONDS(.5f) */
+        }
+    } else if (input == code[f->time_attack_inputs]) {
+        f->time_attack_inputs++;
+        if (code[f->time_attack_inputs] == 0xFFFF) return true;
+    } else if (input) {
+        f->inputting_time_attack = false;
+        f->time_attack_inputs = 0;
+        f->time_attack_cooldown = 30;
+    }
+    return false;
+}
+
 /* FileSelectProcessFileSelection (US: no Japanese text menu); returns 1
  * when back on the files, 2 when the game starts. */
 static int process_file_selection(MzmFileSelect *f, MzmScreen *s) {
@@ -1311,11 +1339,15 @@ static int process_file_selection(MzmFileSelect *f, MzmScreen *s) {
         f->sub_menu_stage = 6;
         break;
     case 6:
+        f->inputting_time_attack = false;
+        f->time_attack_inputs = 0;
+        f->time_attack_cooldown = 0;
+        f->inputted_time_attack = false;
         f->sub_menu_stage = 7;
         /* fall through */
     case 7:
-        /* "Start game": A, or B back (the time attack code is not
-         * ported) */
+        /* "Start game": A, B back, or the Time Attack code on a completed
+         * file */
         action = 0xFF;
         if (s->changed_input & KEY_A) {
             action = 0x80;
@@ -1329,12 +1361,18 @@ static int process_file_selection(MzmFileSelect *f, MzmScreen *s) {
         } else if (s->changed_input & KEY_B) {
             action = 0x81;
             f->sub_menu_stage = 39;
+        } else if (f->time_attack_unlocked & 1 && file->completed_game && check_time_attack_code(f, s)) {
+            action = 0x80;
+            f->cursors.completed_file_options = 2;
+            f->inputted_time_attack = true;
+            f->sub_menu_stage = 8;
         }
         if (action != 0xFF) sub_cursor(f, 0, (uint8_t)action);
         break;
     case 8:
         if (file->exists || file->intro_played) {
-            f->continue_new_message = file->time_attack ? MESSAGE_CONTINUE_NEW_TIME_ATTACK : MESSAGE_CONTINUE_NEW;
+            f->continue_new_message = file->time_attack || f->inputted_time_attack
+                                          ? MESSAGE_CONTINUE_NEW_TIME_ATTACK : MESSAGE_CONTINUE_NEW;
             f->sub_menu_stage = 9;
         } else {
             f->sub_menu_stage = 21;

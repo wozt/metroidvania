@@ -1795,6 +1795,8 @@ static void runtime_affine_whole_center(const int16_t sine[320], uint8_t rotatio
 }
 
 #ifndef FUSION_RUNTIME_TEST
+/* gTimeAttackFlag: this file is a Time Attack run (SaveFile.timeAttack). */
+static bool runtime_time_attack;
 /* StatusScreenFullyPoweredItems' result when the pause screen cannot run
  * (no ROM bank): UpdateSuitType(SUIT_FULLY_POWERED)'s refill and every
  * obtained item activated at once. */
@@ -2607,6 +2609,7 @@ static void runtime_apply_save(const MzmSaveData *save,MzmEquipment *equipment,
     runtime_igt.seconds=save->igt.seconds;
     runtime_igt.frames=save->igt.frames;
     runtime_max_igt=save->max_igt;
+    runtime_time_attack=save->time_attack;
     for(int i=0;i<MZM_IGT_AT_BOSSES;i++)
         sprites->globals.igt_at_bosses[i]=(MzmInGameTimer){save->igt_at_bosses[i].hours,
             save->igt_at_bosses[i].minutes,save->igt_at_bosses[i].seconds,save->igt_at_bosses[i].frames};
@@ -2643,6 +2646,7 @@ static void runtime_build_save(MzmSaveData *save,const char *alias,const Room *r
     save->igt.seconds=runtime_igt.seconds;
     save->igt.frames=runtime_igt.frames;
     save->max_igt=runtime_max_igt;
+    save->time_attack=runtime_time_attack;
     save->completed_game=runtime_completed_game;
     for(int i=0;i<MZM_IGT_AT_BOSSES;i++) {
         const MzmInGameTimer *b=&sprites->globals.igt_at_bosses[i];
@@ -2663,15 +2667,40 @@ static uint32_t runtime_ending_pen(const MzmEquipment *equipment) {
     return mzm_ending_item_count_and_number(&stats);
 }
 
-/* ChozodiaEscapeInit's persistent unlock updates. Time Attack remains zero
- * until its run mode and per-boss validity data are ported. */
-static uint8_t runtime_update_ending_unlocks(MzmUnlockData *unlocks,uint32_t pen) {
+/* ChozodiaEscapeInit's persistent unlock updates: the first clears, the
+ * difficulty, CheckUnlockTimeAttack, the gallery image, then a Time Attack
+ * run's TimeAttackCheckSetNewRecord. */
+static uint8_t runtime_update_ending_unlocks(MzmUnlockData *unlocks,uint32_t pen,
+                                             const MzmInGameTimer at_bosses[MZM_IGT_AT_BOSSES],
+                                             uint8_t frame8) {
     uint8_t flags=0;
     if(unlocks->gallery_images==0)flags|=MZM_ENDING_FLAG_FIRST_CLEAR;
     if(runtime_difficulty==2 && !(unlocks->difficulty_clears&(1u<<2)))
         flags|=MZM_ENDING_FLAG_FIRST_HARD_MODE_CLEAR;
     unlocks->difficulty_clears|=(uint8_t)(1u<<runtime_difficulty);
+    MzmTimeAttackTimer bosses[4];
+    for(int i=0;i<4;i++)
+        bosses[i]=(MzmTimeAttackTimer){at_bosses[i].hours,at_bosses[i].minutes,at_bosses[i].seconds,
+                                       at_bosses[i].frames};
+    /* PEN: energy, missile, super missile and power bomb tanks, abilities */
+    MzmTimeAttackItems items={(uint8_t)(pen>>24),(uint8_t)(pen>>16),(uint8_t)(pen>>12&15),
+                              (uint8_t)(pen>>8&15),(uint8_t)(pen>>4&15)};
+    uint32_t anti_cheat[4],table=mzm_rom_symbol("sTimeAttackAntiCheatTimes",NULL);
+    uint8_t characters[32];
+    uint32_t chars=mzm_rom_symbol("sTimeAttackPasswordCharacters",NULL);
+    for(int i=0;i<4;i++)anti_cheat[i]=mzm_rom_u32(table+4u*(uint32_t)i);
+    for(int i=0;i<32;i++)characters[i]=mzm_rom_u8(chars+(uint32_t)i);
+    if(table)
+        unlocks->time_attack=mzm_time_attack_unlock(unlocks->time_attack,bosses,anti_cheat,&items,
+                                                    MZM_TIME_ATTACK_REGION_US);
     unlocks->gallery_images|=(uint16_t)(1u<<(pen&0xFu));
+    if(runtime_time_attack && table && chars) {
+        if(unlocks->record.igt.hours>100)flags|=MZM_ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR;
+        MzmTimeAttackTimer igt={runtime_igt.hours,runtime_igt.minutes,runtime_igt.seconds,runtime_igt.frames};
+        if(mzm_time_attack_check_record(&unlocks->record,unlocks->time_attack,igt,&items,bosses,
+                                        anti_cheat,frame8,characters))
+            flags|=MZM_ENDING_FLAG_NEW_TIME_ATTACK_RECORD;
+    }
     return flags;
 }
 
@@ -2694,6 +2723,7 @@ static MzmSaveFileInfo runtime_save_info(const char *path) {
     info.igt_seconds=save.igt.seconds;
     info.completed_game=save.completed_game;
     info.difficulty=save.difficulty;
+    info.time_attack=save.time_attack;
     return info;
 }
 
@@ -4448,6 +4478,7 @@ int main(int argc, char **argv) {
     static char save_paths[3][4096];
     static char unlock_path[4096];
     static MzmUnlockData unlocks;
+    memset(&unlocks.record,0xFF,sizeof unlocks.record);   /* no Time Attack record yet */
     uint8_t save_slot=0;            /* gMostRecentSaveFile */
     uint8_t ending_flags=0;         /* gEndingFlags */
     const char *debug_input=NULL;
@@ -4601,7 +4632,10 @@ int main(int argc, char **argv) {
         if(folder)snprintf(unlock_path,sizeof unlock_path,"%s%soptions.sav",folder,separator);
         SDL_free(pref);
         save_slot=runtime_most_recent_save(save_paths);
-        if(unlock_path[0] && !mzm_unlocks_read(unlock_path,&unlocks))memset(&unlocks,0,sizeof unlocks);
+        if(unlock_path[0] && !mzm_unlocks_read(unlock_path,&unlocks)) {
+            memset(&unlocks,0,sizeof unlocks);
+            memset(&unlocks.record,0xFF,sizeof unlocks.record);
+        }
     }
     if (load_save) {
         /* SramLoadFile: the game resumes in the room it was saved in. */
@@ -5253,6 +5287,7 @@ int main(int argc, char **argv) {
                         MzmSaveFileInfo infos[3];
                         for(int i=0;i<3;i++)infos[i]=runtime_save_info(save_paths[i]);
                         mzm_file_select_enter(&file_select,infos,save_slot);
+                        file_select.time_attack_unlocked=unlocks.time_attack;
                         file_select.copy_file=runtime_copy_save;
                         file_select.erase_file_callback=runtime_erase_save;
                         file_select.context=save_paths;
@@ -5280,6 +5315,8 @@ int main(int argc, char **argv) {
                         /* A new game on the file: the gunship's landing. */
                         resume_save=new_game_state;
                         resume_save.difficulty=file_select.cursors.difficulty;
+                        /* "New Time Attack": gTimeAttackFlag for the run */
+                        resume_save.time_attack=file_select.files[save_slot].time_attack;
                         resume_request=RUNTIME_RESUME_LANDING;
                     }
                     previous_held=held;
@@ -6095,7 +6132,7 @@ int main(int argc, char **argv) {
                     fprintf(stderr,"Could not save the completed game to %s\n",
                             ending_path[0]?ending_path:"(none)");
                 uint32_t pen=runtime_ending_pen(&equipment);
-                ending_flags=runtime_update_ending_unlocks(&unlocks,pen);
+                ending_flags=runtime_update_ending_unlocks(&unlocks,pen,sprites.globals.igt_at_bosses,sprites.frame8);
                 if(!unlock_path[0] || !mzm_unlocks_write(unlock_path,&unlocks))
                     fprintf(stderr,"Could not save the ending unlocks to %s\n",
                             unlock_path[0]?unlock_path:"(none)");

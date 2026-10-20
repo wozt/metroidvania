@@ -3838,6 +3838,38 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0413 - Time Attack
+
+- New module `src/runtime/mzm_time_attack.c`, ported from `time_attack.c`:
+  - the save file validity: the first four bosses beaten in order, each
+    after its anti-cheat time;
+  - the unlock value of `CheckUnlockTimeAttack`;
+  - for a Time Attack run, `TimeAttackCheckSetNewRecord`: the Any% and
+    100% records and their 20-character password (`TimeAttackGenerateSeed`,
+    its eight shuffles and `TimeAttackRandomizeSeed`). The native 62-byte
+    seed array is written past its end and read back, so it is a full
+    88-bit seed here.
+- The port was cross-checked against the decompilation's own
+  `time_attack.c`, compiled with stub globals: identical results on
+  200 000 random cases. Three of those vectors are now a unit test
+  (`tests/test_mzm_time_attack.c`).
+- The ending sets the Time Attack unlock and, for a Time Attack run,
+  `ENDING_FLAG_FIRST_TIME_ATTACK_CLEAR` and
+  `ENDING_FLAG_NEW_TIME_ATTACK_RECORD`.
+- Save formats:
+  - the save file moves to version 4 with `SaveFile.timeAttack`;
+  - the unlock file moves to version 2 with the record. A version 1 file
+    is still read, with the empty 0xFF record; this was checked with a file
+    written by the previous code.
+- The file select ports the Time Attack code (UP, LEFT, RIGHT, DOWN on a
+  completed file once Time Attack is unlocked). It opens Continue / New /
+  New Time Attack. Fixed while testing: the screen's init reset the unlock
+  value.
+- Status changes: `mzm.cutscenes.chozodia_escape` moves to `functional`.
+  The Options screens, where the records are viewed, and the runtime's
+  missing soft reset stay listed. The parity inventory now contains 16
+  partial and 87 functional entries.
+
 ## Patch 0412 - Tourian escape room layers and exit fade
 
 - Ported `LoadRoomCutscene`'s `RoomSetInitialTilemap(0 to 2)` as

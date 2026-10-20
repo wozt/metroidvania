@@ -5,9 +5,10 @@
  * "Start game" panel, the continue / new game choice of a completed file,
  * the difficulty panel, the start animation, the panels' texts (drawn with
  * the native font), the fades, and the copy and erase menus (the files
- * themselves are copied and deleted through callbacks). The corrupted
- * files, the options and the time attack are not ported: the options entry
- * stays but does nothing. */
+ * themselves are copied and deleted through callbacks), and the Time
+ * Attack code (UP, LEFT, RIGHT, DOWN on a completed file once Time Attack
+ * is unlocked) with its "New Time Attack" choice. The corrupted files and
+ * the options are not ported: the options entry stays but does nothing. */
 #ifndef MZM_FILE_SELECT_H
 #define MZM_FILE_SELECT_H
 
@@ -69,6 +70,13 @@ typedef struct {
     bool (*copy_file)(void *context, int source, int destination);
     bool (*erase_file_callback)(void *context, int file);
     void *context;
+    /* gFileScreenOptionsUnlocked.timeAttack (bit 0: the Time Attack code
+     * works), and the code's input state (inputtingTimeAttack,
+     * numberOfTimeAttackInputs, timeAttackInputCooldown,
+     * inputtedTimeAttack). */
+    uint32_t time_attack_unlocked;
+    bool inputting_time_attack, inputted_time_attack;
+    uint8_t time_attack_inputs, time_attack_cooldown;
 } MzmFileSelect;
 
 /* gSubGameMode1 = 0 with the files' info and gMostRecentSaveFile; the

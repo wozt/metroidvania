@@ -496,6 +496,37 @@ static void test_file_select_bank(void) {
     }
     assert(result == MZM_FILE_SELECT_NEW_GAME && fs.most_recent == 1 && fs.cursors.difficulty == 1 &&
            count_requests(MZM_SFX_PLAY, 0x1FF) == 1 && count_requests(MZM_SFX_MUSIC_FADE, 0) == 1);
+    /* The Time Attack code (UP, LEFT, RIGHT, DOWN) on a completed file once
+     * Time Attack is unlocked: "Continue / New / New Time Attack" with the
+     * cursor on New Time Attack. */
+    {
+        MzmSaveFileInfo completed[3];
+        memcpy(completed, files, sizeof completed);
+        completed[0].completed_game = 1;
+        mzm_file_select_enter(&fs, completed, 0);
+        fs.time_attack_unlocked = 0x16264365u;
+        for (f = 0; f < 60 && fs.sub_mode1 != 2; ++f) {
+            mzm_screen_input(&screen, 0);
+            mzm_file_select_update(&fs, &screen);
+        }
+        mzm_screen_input(&screen, 1);
+        mzm_file_select_update(&fs, &screen);
+        for (f = 0; f < 200 && fs.sub_menu_stage != 7; ++f) {
+            mzm_screen_input(&screen, 0);
+            mzm_file_select_update(&fs, &screen);
+        }
+        assert(fs.sub_menu_stage == 7);
+        const uint16_t code[4] = {1 << 6, 1 << 5, 1 << 4, 1 << 7};
+        for (int i = 0; i < 4; ++i) {
+            mzm_screen_input(&screen, code[i]);
+            mzm_file_select_update(&fs, &screen);
+            mzm_screen_input(&screen, 0);
+            if (i < 3) mzm_file_select_update(&fs, &screen);
+        }
+        assert(fs.inputted_time_attack && fs.cursors.completed_file_options == 2);
+        mzm_file_select_update(&fs, &screen);
+        assert(fs.continue_new_message == 16);      /* MESSAGE_CONTINUE_NEW_TIME_ATTACK */
+    }
     /* B on the files goes back to the title after the fade. */
     mzm_file_select_enter(&fs, files, 0);
     for (f = 0; f < 60 && fs.sub_mode1 != 2; ++f) {

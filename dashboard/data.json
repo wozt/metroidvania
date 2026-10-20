@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T04:09:24+00:00",
+ "generated_at": "2026-10-20T04:11:32+00:00",
  "git": {
-  "commit": "b9fda40",
+  "commit": "0716350",
   "branch": "main",
   "dirty": true
  },
@@ -8962,8 +8962,8 @@
     "aos.input.gamepad"
    ],
    "native_routines": [],
-   "limitations": "Title stages 4 and 5 motion, affine values and transitions are now tested; the actual native sprites, palettes, BG effects, stages 6 and 7, menu renderer and boot lifecycle are still missing. Device-free C tests cover title brightness, stage-3 motion, stage-4 to stage-5 same-tick fallthrough, stage-5 64-frame counter and stage-6 handoff, and stage-8 input conditions.",
-   "next_action": "Port stage-6/7 transitions and affine oscillation, then integrate original title graphics in a real runtime.",
+   "limitations": "Stages 4-7 state transitions, counters, alpha and reveal deceleration are device-free C ports; native trig affine computation, display register effects, ROM-built artwork, sprites and boot/menu wiring remain absent. Tests cover title stages 0/2 fade, stage 3-5 motion, stage 6 secondary-object fade and stage 7 reveal handoff; stage 8 input/idle handling remains an isolated helper.",
+   "next_action": "Connect the stages into a native SDL title frontend using legally provided ROM-derived runtime graphics, then port menu navigation.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_title_input.c",
@@ -11638,6 +11638,12 @@
  },
  "timeline": [
   {
+   "commit": "0716350",
+   "date": "2026-10-20",
+   "subject": "Port Aria title stages four and five transitions",
+   "scope": "project"
+  },
+  {
    "commit": "b9fda40",
    "date": "2026-10-20",
    "subject": "Port Aria title stage three affine motion",
@@ -12109,12 +12115,6 @@
    "commit": "cd56ebb",
    "date": "2026-10-16",
    "subject": "Port the Gadora hatch encounters",
-   "scope": "project"
-  },
-  {
-   "commit": "6a5b7e5",
-   "date": "2026-10-16",
-   "subject": "Port the Acid Worm encounter",
    "scope": "project"
   }
  ],

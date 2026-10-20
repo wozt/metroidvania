@@ -19,8 +19,16 @@ typedef struct {
     uint16_t stage_timer;
     int32_t affine_scale;
     uint16_t alpha;
+    uint16_t affine_angle;
+    int32_t reveal_motion;
+    bool show_bg0;
+    bool show_bg1;
+    bool palette_event;
+    uint16_t idle_timer;
 } AosTitleStages;
 
 void aos_title_stage4(AosTitleStages *state);
 void aos_title_stage5(AosTitleStages *state);
+void aos_title_stage6(AosTitleStages *state);
+void aos_title_stage7(AosTitleStages *state);
 #endif

@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0426 - Aria title stages six and seven
+
+- Extended `aos_title_stages` with native stage-6 secondary-object
+  fade (0x88 counter, alpha every eight frames) and stage-7 reveal
+  deceleration and 600-frame idle timer handoff.
+- CTest checks the counters, reveal, flags and 6->7->8 transitions.
+- Native trig affine values, original title graphics, SDL frontend
+  and file menus remain unported; Aria title parity stays partial.
+- Checklist and local web dashboard regenerate after tests.
+
 ## Patch 0425 - Aria title motion stages four and five
 
 - `aos_title_stages.c` implements the native stage-4 movement and

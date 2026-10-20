@@ -30,6 +30,32 @@ int main(void) {
     assert(s.affine_scale == 0x118 - 64);
     aos_title_stage5(&s);
     assert(s.stage == 6 && s.other_timer == 0x88);
-    puts("Aria title stages 4-5 passed");
+
+    /* Stage 6 changes the alpha every eight ticks and enters stage 7
+     * one call after the countdown reaches zero, as in the decompilation. */
+    AosTitleStages transition = {.stage=6, .other_timer=0x88};
+    for (int i = 0; i < 0x88; ++i) {
+        aos_title_stage6(&transition);
+        assert(transition.stage == 6);
+    }
+    assert(transition.other_timer == 0 && transition.alpha == 0);
+    aos_title_stage6(&transition);
+    assert(transition.stage == 7 && transition.show_bg1);
+    assert((transition.other_flags & 4) && transition.alpha == 16);
+    assert(transition.affine_angle == (0x89 * 0x40));
+
+    transition.reveal_motion = 0x400;
+    aos_title_stage7(&transition);
+    assert(transition.reveal_motion < 0x400 && transition.stage == 7);
+    transition.reveal_motion = 0x37f;
+    aos_title_stage7(&transition);
+    assert(transition.other_flags & 2);
+    transition.reveal_motion = 0xc0;
+    aos_title_stage7(&transition);
+    assert(transition.reveal_motion == 0);
+    aos_title_stage7(&transition);
+    assert(transition.stage == 8 && transition.show_bg0);
+    assert(transition.idle_timer == 600 && transition.palette_event);
+    puts("Aria title stages 4-7 passed");
     return 0;
 }

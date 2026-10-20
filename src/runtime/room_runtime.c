@@ -5604,13 +5604,12 @@ int main(int argc, char **argv) {
             }
             /* The escape ship's StartEffectForCutscene requests:
              * EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP fades the game out
-             * (COLOR_FADING_CANCEL's fade standing in for
-             * COLOR_FADING_SAMUS_IN_BLUE_SHIP) before its cutscene;
+             * (COLOR_FADING_SAMUS_IN_BLUE_SHIP) before its cutscene;
              * EFFECT_CUTSCENE_ESCAPING_CHOZODIA starts the ending flow. */
             if(sprites.globals.cutscene_effect==5 && screen_ready && door_fade.phase==MZM_DOOR_FADE_NONE) {
                 sprites.globals.cutscene_effect=0;
                 blue_ship_fade=true;
-                mzm_door_fade_start_cancel(&door_fade);
+                mzm_door_fade_start_before_blue_ship(&door_fade);
             }
             if(sprites.globals.cutscene_effect==MZM_CUTSCENE_EFFECT_GETTING_FULLY_POWERED &&
                door_fade.phase==MZM_DOOR_FADE_NONE) {
@@ -5621,11 +5620,11 @@ int main(int argc, char **argv) {
                 mzm_door_fade_start_cancel(&door_fade);
             }
             if(sprites.globals.cutscene_effect==4 && screen_ready && door_fade.phase==MZM_DOOR_FADE_NONE) {
-                /* COLOR_FADING_CHOZODIA_ESCAPE (the CANCEL fade standing in),
+                /* COLOR_FADING_CHOZODIA_ESCAPE: the screen cut to black,
                  * then the ending save and GM_CHOZODIA_ESCAPE. */
                 sprites.globals.cutscene_effect=0;
                 chozodia_escape_fade=true;
-                mzm_door_fade_start_cancel(&door_fade);
+                mzm_door_fade_start_chozodia_escape(&door_fade);
             }
             if(sprites.globals.cutscene_effect==4 || sprites.globals.cutscene_effect==5) {
                 fprintf(stderr,"The %s cutscene is not ported.\n",
@@ -6102,6 +6101,11 @@ int main(int argc, char **argv) {
                             unlock_path[0]?unlock_path:"(none)");
                 chozodia_escape_mode=mzm_chozodia_escape_enter(&chozodia_escape,&screen);
                 if(!chozodia_escape_mode)mzm_door_fade_loaded(&door_fade,0,0);
+            }
+            if(door_fade.stop_animated_palette) {
+                /* gAnimatedGraphicsEntry.palette = ANIMATED_PALETTE_ID_NONE */
+                door_fade.stop_animated_palette=false;
+                runtime_room_gfx.animated_palette=0;
             }
             if(blue_ship_fade && door_fade.phase==MZM_DOOR_FADE_OUT && mzm_door_fade_out(&door_fade)) {
                 /* ColorFadingProcess_BeforeBlueShip ended: the cutscene. */

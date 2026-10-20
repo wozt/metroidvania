@@ -1638,6 +1638,24 @@ static void test_tourian_escape_bank(void) {
 /* The door fades' state machines (no ROM data). */
 static void test_door_fade(void) {
     static MzmDoorFade f;
+    /* COLOR_FADING_SAMUS_IN_BLUE_SHIP: the CANCEL fade's colours with one
+     * more stage, which stops the animated palette. */
+    int cancel_frames = 0, blue_frames = 0;
+    bool stopped = false;
+    mzm_door_fade_start_cancel(&f);
+    while (!mzm_door_fade_out(&f) && cancel_frames < 100) cancel_frames++;
+    mzm_door_fade_start_before_blue_ship(&f);
+    assert(f.obj_mask == 0xFFFF && f.bg_mask == 0xFFFF);
+    while (!mzm_door_fade_out(&f) && blue_frames < 100) {
+        stopped |= f.stop_animated_palette;
+        blue_frames++;
+    }
+    assert(blue_frames == cancel_frames + 1 && stopped && f.cover);
+    /* COLOR_FADING_CHOZODIA_ESCAPE: black at once, done on the fourth frame. */
+    mzm_door_fade_start_chozodia_escape(&f);
+    assert(!mzm_door_fade_out(&f) && f.cover && f.sprites_hidden && f.faded && f.color == 0 &&
+           !f.show_bg[0] && !f.show_bg[3]);
+    assert(!mzm_door_fade_out(&f) && !mzm_door_fade_out(&f) && mzm_door_fade_out(&f));
     /* A hatch: one setup frame, 16 colors out, the frame ending it, BG2/BG3
      * off, the tilemap on BG3, 8 blending frames and one hiding BG1, then
      * the load. */

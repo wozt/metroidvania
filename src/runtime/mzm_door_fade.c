@@ -96,9 +96,17 @@ static bool process_door_transition(MzmDoorFade *f) {
     return false;
 }
 
-/* ColorFadingProcess_Default and ColorFadingFinishDoorFade */
+/* ColorFadingProcess_Default and ColorFadingFinishDoorFade, or
+ * ColorFadingProcess_BeforeBlueShip (its stage 1 stops the animated
+ * palette; its ColorFadingGradients(7) only matters in haze rooms). */
 static bool process_default(MzmDoorFade *f) {
-    switch (f->stage) {
+    if (f->before_blue_ship && f->stage == 1) {
+        f->stop_animated_palette = true;
+        f->stage = 2;
+        return false;
+    }
+    int stage = f->before_blue_ship && f->stage >= 2 ? f->stage - 1 : f->stage;
+    switch (stage) {
     case 0:
         f->stage++;
         break;
@@ -121,9 +129,44 @@ void mzm_door_fade_start_cancel(MzmDoorFade *f) {
     f->obj_mask = 0xFFFF;
 }
 
+void mzm_door_fade_start_chozodia_escape(MzmDoorFade *f) {
+    mzm_door_fade_start_cancel(f);
+    f->chozodia_escape = true;
+}
+
+/* ColorFadingProcess_ChozodiaEscape (SramProcessEndingSave completes in
+ * one frame here). */
+static bool process_chozodia_escape(MzmDoorFade *f) {
+    switch (f->stage) {
+    case 0:
+        /* SET_BACKDROP_COLOR(COLOR_BLACK), BG0-3 and OBJ off */
+        for (int bg = 0; bg < 4; ++bg) f->show_bg[bg] = false;
+        f->cover = true;
+        f->sprites_hidden = true;
+        f->faded = true;
+        f->fading_type = MZM_FADING_IN;
+        f->color = 0;
+        f->stage++;
+        return false;
+    case 1:
+    case 2:
+        f->stage++;
+        return false;
+    default:
+        f->stage = 0;
+        return true;
+    }
+}
+
+void mzm_door_fade_start_before_blue_ship(MzmDoorFade *f) {
+    mzm_door_fade_start_cancel(f);
+    f->before_blue_ship = true;
+}
+
 bool mzm_door_fade_out(MzmDoorFade *f) {
     if (f->phase != MZM_DOOR_FADE_OUT) return false;
     if (f->unk_3 != 0xFF) f->unk_3++;
+    if (f->chozodia_escape) return process_chozodia_escape(f);
     return f->hatch ? process_door_transition(f) : process_default(f);
 }
 

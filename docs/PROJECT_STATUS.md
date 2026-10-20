@@ -3838,6 +3838,31 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0409 - native fades before the blue ship and the Chozodia escape
+
+- `COLOR_FADING_SAMUS_IN_BLUE_SHIP` replaces the CANCEL stand-in. Its
+  `ColorFadingProcess_BeforeBlueShip` uses the CANCEL colours (colour set
+  0, `COLOR_FADING_FUNCTION_2`, to black) with one more stage, which stops
+  the room's animated palette.
+- `COLOR_FADING_CHOZODIA_ESCAPE` replaces the CANCEL stand-in. Its
+  `ColorFadingProcess_ChozodiaEscape` has no colour fade: the screen is cut
+  to black at once, then the ending save stages run.
+- Unit tests: the blue ship fade is one frame longer than CANCEL and stops
+  the animated palette; the Chozodia escape cut is black on its first frame
+  and ends on its fourth.
+- Checked in `chozodia_092` (event 74, energy 1299, `--spawn 362 420`,
+  input `0:70,17:25,1:15`):
+  - Samus boards the ship;
+  - the fade leads to the blue ship cutscene;
+  - the ship lifts off;
+  - the screen's average brightness drops from 168 to 0 in one frame
+    (1112), and the Chozodia escape starts two frames later.
+- `mzm.cutscenes.samus_in_blue_ship` moves to `functional`. As natively
+  (`playRoomMusic` FALSE), the room music keeps playing. The parity
+  inventory now contains 20 partial and 83 functional entries.
+- Captures: ignored `captures/fp/bs300.bmp` to `bs900.bmp` and
+  `ce1104.bmp` to `ce1120.bmp`.
+
 ## Patch 0408 - ProcessComplexMenuOam
 
 - Ported `ProcessComplexMenuOam` as `mzm_complex_menu_oam_process`. It

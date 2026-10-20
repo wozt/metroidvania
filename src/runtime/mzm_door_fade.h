@@ -45,6 +45,12 @@ typedef struct {
      * tiles (`cover` alone). */
     bool cover;
     uint8_t eva, evb;
+    /* ColorFadingProcess_BeforeBlueShip instead of _Default (the same fade
+     * with one more stage), and its gAnimatedGraphicsEntry.palette =
+     * ANIMATED_PALETTE_ID_NONE, for the runtime to apply. */
+    bool before_blue_ship, stop_animated_palette;
+    /* ColorFadingProcess_ChozodiaEscape: no colour fade at all. */
+    bool chozodia_escape;
 } MzmDoorFade;
 
 /* ConnectionCheckEnterDoor: a door's fade. `door_x` and `door_y` are the
@@ -54,6 +60,14 @@ typedef struct {
 void mzm_door_fade_start(MzmDoorFade *f, bool hatch, int door_x, int door_y);
 /* ColorFadingStart(COLOR_FADING_CANCEL) of ProcessPauseButtonPress. */
 void mzm_door_fade_start_cancel(MzmDoorFade *f);
+/* ColorFadingStart(COLOR_FADING_SAMUS_IN_BLUE_SHIP): the CANCEL fade's
+ * colours (colour set 0, COLOR_FADING_FUNCTION_2, to black) through
+ * ColorFadingProcess_BeforeBlueShip. */
+void mzm_door_fade_start_before_blue_ship(MzmDoorFade *f);
+/* ColorFadingStart(COLOR_FADING_CHOZODIA_ESCAPE): the screen cut to black
+ * at once (the backgrounds and objects off, the backdrop black), then
+ * unk_5d09c and the ending save stages; true on the fourth frame. */
+void mzm_door_fade_start_chozodia_escape(MzmDoorFade *f);
 /* ColorFadingProcess, once a frame; true once the room is to be loaded. */
 bool mzm_door_fade_out(MzmDoorFade *f);
 /* RoomLoad's ColorFadingTransferPaletteOnTransition, with the arrival

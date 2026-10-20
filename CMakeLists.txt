@@ -64,7 +64,7 @@ fusion_enable_warnings(fusion_room_runtime)
 add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
                src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c
-               src/runtime/gba_input.c src/runtime/debug_menu.c)
+               src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/debug_menu.c)
 target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_aria_runtime)
 
@@ -270,6 +270,11 @@ if(BUILD_TESTING)
     add_test(NAME mzm_sprites COMMAND fusion_mzm_sprites_tests)
 
     # Device-free shared gamepad mapping (SDL3 headers and string tables only).
+    add_executable(fusion_aos_input_tests tests/test_aos_input.c src/runtime/aos_input.c)
+    target_include_directories(fusion_aos_input_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_input_tests)
+    add_test(NAME aos_input COMMAND fusion_aos_input_tests)
+
     add_executable(fusion_gba_input_tests tests/test_gba_input.c src/runtime/gba_input.c)
     target_include_directories(fusion_gba_input_tests PRIVATE src/runtime)
     target_link_libraries(fusion_gba_input_tests PRIVATE SDL3::SDL3)

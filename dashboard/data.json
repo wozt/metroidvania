@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T03:12:38+00:00",
+ "generated_at": "2026-10-20T03:43:26+00:00",
  "git": {
-  "commit": "c26648a",
+  "commit": "27b478a",
   "branch": "main",
   "dirty": true
  },
@@ -8779,18 +8779,24 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/gba_input.c",
+    "src/runtime/aos_input.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
-    "tests/test_gba_input.c"
+    "tests/test_gba_input.c",
+    "tests/test_aos_input.c"
    ],
    "dependencies": [],
-   "native_routines": [],
-   "limitations": "Host input layer: SDL3 devices are mapped to the GBA KEYINPUT bits; the native key reading and repeat logic are not ported. Hot-plugged SDL3 gamepads, a remappable GBA layout and the keyboard drive Soma; no in-game controls menu yet.",
-   "next_action": "Port the native input routines and add an in-game controls menu.",
+   "native_routines": [
+    "UpdateInput",
+    "SetPlayerInput"
+   ],
+   "limitations": "SDL3 maps hardware into an active-high key mask. The native room-transition routine sub_080106DC is not ported: only its SetPlayerInput(1, 0) input-suppression call is covered. No in-game capture comparison. UpdateInput rising edges, held inputs, 32/6-frame repeats and priority reset, plus SetPlayerInput priority/override semantics are ported in device-free C. The SDL3 host remains separate from the native Aria input state.",
+   "next_action": "Port the complete sub_080106DC transition state machine with room/camera effects, then compare controls and repeat timing against recorded gameplay.",
    "evidence": {
     "unit_tests": [
-     "tests/test_gba_input.c"
+     "tests/test_gba_input.c",
+     "tests/test_aos_input.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -8808,6 +8814,16 @@
       "registered": true,
       "ctest": [
        "gba_input"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_input.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_input"
       ],
       "outcome": "passed",
       "exists": true
@@ -10665,6 +10681,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_input",
+    "files": [
+     "tests/test_aos_input.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "gba_input",
     "files": [
      "tests/test_gba_input.c"
@@ -11429,12 +11452,18 @@
    }
   ],
   "summary": {
-   "passed": 485,
+   "passed": 486,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "27b478a",
+   "date": "2026-10-20",
+   "subject": "Suggest categories for unassigned Aria routines",
+   "scope": "project"
+  },
   {
    "commit": "c26648a",
    "date": "2026-10-20",
@@ -11908,12 +11937,6 @@
    "date": "2026-10-15",
    "subject": "Complete Tourian escape handoff",
    "scope": "project"
-  },
-  {
-   "commit": "6972306",
-   "date": "2026-10-15",
-   "subject": "Port Tourian looking-at-sky scene",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -11974,9 +11997,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 48,
-    "routines_attached_to_features": 48,
-    "unassigned_routines": 3525,
+    "routines_cited_by_features": 50,
+    "routines_attached_to_features": 50,
+    "unassigned_routines": 3523,
     "call_edges": 14228
    }
   },

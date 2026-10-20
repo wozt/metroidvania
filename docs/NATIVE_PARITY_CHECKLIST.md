@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 48 | 3525 |
+| Castlevania: Aria of Sorrow | 50 | 3523 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1107,13 +1107,13 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 
 [?] **`aos.input.inventory-boundary` — source coverage.** The current classifier assigns 2 discovered routine(s) to this category (2 by native name). Category completeness has not been established.
 
-[~] **`aos.input.gamepad` — Keyboard and gamepad input.** Hot-plugged SDL3 gamepads, a remappable GBA layout and the keyboard drive Soma; no in-game controls menu yet.
+[~] **`aos.input.gamepad` — Keyboard and gamepad input.** UpdateInput rising edges, held inputs, 32/6-frame repeats and priority reset, plus SetPlayerInput priority/override semantics are ported in device-free C. The SDL3 host remains separate from the native Aria input state.
 
-Native evidence: not attached yet.  
-Local implementation: [`src/runtime/gba_input.c`](../src/runtime/gba_input.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
-Tests: [`tests/test_gba_input.c`](../tests/test_gba_input.c).
-Known divergences: Host input layer: SDL3 devices are mapped to the GBA KEYINPUT bits; the native key reading and repeat logic are not ported.  
-Next action: Port the native input routines and add an in-game controls menu.
+Native evidence: `aos:c:src/code_080009A0.c:SetPlayerInput`, `aos:c:src/main.c:UpdateInput`.  
+Local implementation: [`src/runtime/gba_input.c`](../src/runtime/gba_input.c), [`src/runtime/aos_input.c`](../src/runtime/aos_input.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_gba_input.c`](../tests/test_gba_input.c), [`tests/test_aos_input.c`](../tests/test_aos_input.c).
+Known divergences: SDL3 maps hardware into an active-high key mask. The native room-transition routine sub_080106DC is not ported: only its SetPlayerInput(1, 0) input-suppression call is covered. No in-game capture comparison.  
+Next action: Port the complete sub_080106DC transition state machine with room/camera effects, then compare controls and repeat timing against recorded gameplay.
 
 ### HUD and interface
 

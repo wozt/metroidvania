@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0419 - Aria native input foundation
+
+- `aos_input_update` ports Aria's `UpdateInput` held/new inputs, native
+  repeat countdown and the one-frame player-input override reset.
+- `aos_input_set_player` ports `SetPlayerInput` priority and edge rules.
+- `sub_080106DC` is a room transition with fades and camera movement,
+  not an input polling routine. Only its `SetPlayerInput(1, 0)` call
+  is covered; do not classify it as ported or remove it from backlog.
+- SDL3 sampling remains in `aria_runtime.c`; tests cover repeat,
+  release/repress, priority arbitration and input suppression.
+- Aria gamepad parity remains partial pending recorded in-game checks.
+- The dashboard is regenerated after the native parity checklist.
+
 ## Current product state
 
 The repository is a native-content reconstruction and editor project. It is not

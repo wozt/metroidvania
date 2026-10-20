@@ -15,6 +15,7 @@
 #include "aos_weapon.h"
 #include "debug_menu.h"
 #include "gba_input.h"
+#include "aos_input.h"
 
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -1155,10 +1156,11 @@ int main(int argc, char **argv) {
         combat.stats[id] = &objects.enemies[id].stats;
     }
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
-    uint16_t previous = 0;
+    /* Native Aria input state is tracked separately from SDL. */
     AosForcedInput forced = {0};
     bool announced_death = false;
     long step = 0;
+    AosInput aria_input = {0};
     Uint64 last = SDL_GetTicksNS(), accumulator = 0;
     const Uint64 frame_ns = 1000000000ull / 60;
     bool running = true;
@@ -1279,8 +1281,9 @@ int main(int argc, char **argv) {
             if (debug.open && !capture_path) held = 0;     /* a menu frame step */
             if (forced.active) held = forced.held;
             forced.active = false;
-            aos_soma_update(&soma, &layer, held, (uint16_t)(held & ~previous));
-            previous = held;
+            aos_input_update(&aria_input, held);
+            aos_soma_update(&soma, &layer, aria_input.player_held_input,
+                            aria_input.player_new_input);
             ++step;
             if (soma.state == 16 && !announced_death) {
                 /* The game-over mode (0x42C |= 0x10) is not ported. */

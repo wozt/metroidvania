@@ -2946,7 +2946,6 @@ aos:c:src/code_080009A0.c:EntityGetSlot_Inline	EntityGetSlot_Inline	technical	na
 aos:c:src/code_080009A0.c:EntityUpdateNothing	EntityUpdateNothing	technical	name			c_function	0x08000F38	src/code_080009A0.c	484	0	0
 aos:c:src/code_080009A0.c:RandomNumberGenerator	RandomNumberGenerator	technical	name			c_function	0x08000A90	src/code_080009A0.c	173	418	0
 aos:c:src/code_080009A0.c:RandomNumberGenerator2	RandomNumberGenerator2	enemies	referrers			c_function	0x08000AB0	src/code_080009A0.c	183	7	0
-aos:c:src/code_080009A0.c:SetPlayerInput	SetPlayerInput	input	name			c_function	0x080009A0	src/code_080009A0.c	38	33	0
 aos:c:src/code_080009A0.c:sub_080009E4	sub_080009E4	unclassified				c_function	0x080009E4	src/code_080009A0.c	127	216	0
 aos:c:src/code_080009A0.c:sub_08000B64	sub_08000B64	unclassified		technical	exclusive_callees	c_function	0x08000B64	src/code_080009A0.c	238	22	3
 aos:c:src/code_080009A0.c:sub_08000C28	sub_08000C28	unclassified		technical	exclusive_callees	c_function	0x08000C28	src/code_080009A0.c	288	1	1
@@ -3515,7 +3514,6 @@ aos:c:src/main.c:IncrementGameMode	IncrementGameMode	unclassified				c_function	
 aos:c:src/main.c:InitializeGame	InitializeGame	unclassified		saves	exclusive_callees	c_function	0x08000804	src/main.c	399	1	4
 aos:c:src/main.c:SetGameMode	SetGameMode	startup	name			c_function	0x0800062C	src/main.c	318	1	0
 aos:c:src/main.c:SoftResetCheck	SoftResetCheck	unclassified				c_function	0x08000950	src/main.c	467	1	0
-aos:c:src/main.c:UpdateInput	UpdateInput	input	name			c_function	0x080008B0	src/main.c	423	1	0
 aos:c:src/main.c:VblankInterrupt	VblankInterrupt	unclassified				c_function	0x08000384	src/main.c	115	0	3
 aos:c:src/main.c:VcountInterrupt	VcountInterrupt	unclassified				c_function	0x080004C0	src/main.c	196	0	0
 aos:c:src/main.c:sub_08000424	sub_08000424	unclassified				c_function	0x08000424	src/main.c	141	1	0

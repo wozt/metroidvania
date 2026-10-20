@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T01:54:09+00:00",
+ "generated_at": "2026-10-20T01:55:57+00:00",
  "git": {
-  "commit": "346f6bf",
+  "commit": "16a8733",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 29,
-    "functional": 100,
+    "partial": 28,
+    "functional": 101,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 100,
-   "functional_or_better_percent": 71.4,
+   "functional_or_better": 101,
+   "functional_or_better_percent": 72.1,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 5,
-    "functional": 87,
+    "partial": 4,
+    "functional": 88,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 87,
-   "functional_or_better_percent": 94.6,
+   "functional_or_better": 88,
+   "functional_or_better_percent": 95.7,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -2290,8 +2290,8 @@
    "area": "mzm",
    "category": "enemies",
    "title": "Chozodia escape ship and escape gates",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_escape_ship.c",
     "src/runtime/mzm_sprites.c",
@@ -2320,8 +2320,8 @@
     "EscapeGateChangeCcaa",
     "SpriteUtilCountPrimarySprites"
    ],
-   "limitations": "EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP fades out with COLOR_FADING_SAMUS_IN_BLUE_SHIP before its cutscene (mzm.cutscenes.samus_in_blue_ship); EFFECT_CUTSCENE_ESCAPING_CHOZODIA once the ship is gone cuts the screen to black (COLOR_FADING_CHOZODIA_ESCAPE has no colour fade), runs the ending save and starts the Chozodia escape (mzm.cutscenes.chozodia_escape), then the credits. The escape timer gfx sharing the gates' tiles is not drawn. Not compared with an emulator. Once Mecha Ridley is dead and Samus is up to 12 blocks above and less than 4 blocks left of it, the ship opens (sound) and spawns its pirate; from the 7th opening frame Samus can stand on it, and landing on it sets EVENT_ESCAPED_CHOZODIA, clears her invincibility and sets SPOSE_IN_ESCAPE_SHIP (or the turning pose when she faces left). From then on it holds Samus in the cockpit (43 subpixels up, 80 right), keeps every sprite from touching her, bursts the pirate lasers it touches and draws the pirates behind it. It closes after 20 frames, waits, spawns its flames and nudges right, sways on sEscapeShipHoveringY/XMovement while lifting off, signals the second gate, opens its shutters, and accelerates right for 200 frames, destroying the pirates in its way. Its top part goes in front of Samus once she is in, its tail flashes sEscapeShipFlashingPal rows (baked /f0-/f2, twice as fast once hovering) and its flames hide once it escapes. The first gate (solid grippable blocks) loads sEscapeGateAndTimerGfx and spawns the two black pirates, opens once they are dead and Samus is within 6 blocks to its left (blocks removed on the 5th opening frame), then spawns the pirate that chases the ship; it flashes sEscapeGateFlashingPal (baked from the gate tiles at OBJ VRAM 0x7800 and the last OBJ row). The second gate opens once the ship hovers. A capture in chozodia_092 (event 74) shows the first gate, its two black pirates and the ship. A capture sequence in chozodia_092 (event 74, energy 1299) shows Samus jumping into the open ship, the blue-ship cutscene, then the ship lifting off with the cockpit closed. The capture sequence was repeated with the native fades: the screen drops from an average brightness of 168 to 0 in one frame (1112) and the Chozodia escape starts two frames later.",
-   "next_action": "Draw the escape timer graphics shared with the gates; compare the escape with an emulator.",
+   "limitations": "EFFECT_CUTSCENE_SAMUS_IN_BLUE_SHIP fades out with COLOR_FADING_SAMUS_IN_BLUE_SHIP before its cutscene (mzm.cutscenes.samus_in_blue_ship); EFFECT_CUTSCENE_ESCAPING_CHOZODIA once the ship is gone cuts the screen to black (COLOR_FADING_CHOZODIA_ESCAPE has no colour fade), runs the ending save and starts the Chozodia escape (mzm.cutscenes.chozodia_escape), then the credits. The escape timer and the gates share OBJ VRAM 0x7800 natively, while the runtime keeps the timer's digits (sEscapeTimerDigitsGfx) and the gates' tiles (sEscapeGateAndTimerGfx) apart; this changes nothing on screen, see the notes. Not compared with an emulator. Once Mecha Ridley is dead and Samus is up to 12 blocks above and less than 4 blocks left of it, the ship opens (sound) and spawns its pirate; from the 7th opening frame Samus can stand on it, and landing on it sets EVENT_ESCAPED_CHOZODIA, clears her invincibility and sets SPOSE_IN_ESCAPE_SHIP (or the turning pose when she faces left). From then on it holds Samus in the cockpit (43 subpixels up, 80 right), keeps every sprite from touching her, bursts the pirate lasers it touches and draws the pirates behind it. It closes after 20 frames, waits, spawns its flames and nudges right, sways on sEscapeShipHoveringY/XMovement while lifting off, signals the second gate, opens its shutters, and accelerates right for 200 frames, destroying the pirates in its way. Its top part goes in front of Samus once she is in, its tail flashes sEscapeShipFlashingPal rows (baked /f0-/f2, twice as fast once hovering) and its flames hide once it escapes. The first gate (solid grippable blocks) loads sEscapeGateAndTimerGfx and spawns the two black pirates, opens once they are dead and Samus is within 6 blocks to its left (blocks removed on the 5th opening frame), then spawns the pirate that chases the ship; it flashes sEscapeGateFlashingPal (baked from the gate tiles at OBJ VRAM 0x7800 and the last OBJ row). The second gate opens once the ship hovers. A capture in chozodia_092 (event 74) shows the first gate, its two black pirates and the ship. A capture sequence in chozodia_092 (event 74, energy 1299) shows Samus jumping into the open ship, the blue-ship cutscene, then the ship lifting off with the cockpit closed. The capture sequence was repeated with the native fades: the screen drops from an average brightness of 168 to 0 in one frame (1112) and the Chozodia escape starts two frames later. The shared VRAM was checked against the ROM: SpriteLoadAllData's EscapeCheckReloadGraphics copies sEscapeTimerDigitsGfx to OBJ VRAM 0x7800 before the room's sprites, then the first gate copies sEscapeGateAndTimerGfx over it; the eleven digit tiles the timer draws (0x3C0-0x3CA, both rows) are byte-identical in the two graphics, and the timer uses OBJ palette row 3, not the gates' row 15, so drawing them apart gives the same picture.",
+   "next_action": "Compare the escape with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c"
@@ -11386,6 +11386,12 @@
  },
  "timeline": [
   {
+   "commit": "16a8733",
+   "date": "2026-10-20",
+   "subject": "Port the Time Attack unlock, records and code",
+   "scope": "project"
+  },
+  {
    "commit": "346f6bf",
    "date": "2026-10-20",
    "subject": "Test the Tourian escape's initial room tilemaps",
@@ -11857,12 +11863,6 @@
    "commit": "8cc7ecd",
    "date": "2026-10-15",
    "subject": "Port Tourian pirates-firing scene",
-   "scope": "project"
-  },
-  {
-   "commit": "37406fa",
-   "date": "2026-10-15",
-   "subject": "Port Tourian chased-by-pirates scene",
    "scope": "project"
   }
  ],

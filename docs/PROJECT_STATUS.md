@@ -3838,6 +3838,19 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0414 - escape timer and gate graphics
+
+- Checked the last escape ship difference against the ROM. The escape
+  timer and the gates share OBJ VRAM 0x7800 natively:
+  - `SpriteLoadAllData` copies `sEscapeTimerDigitsGfx` there, then the
+    first gate copies `sEscapeGateAndTimerGfx` over it;
+  - the eleven digit tiles the timer draws are byte-identical in the two
+    graphics;
+  - the timer uses OBJ palette row 3, not the gates' row 15.
+  The runtime draws them apart, which gives the same picture.
+- `mzm.enemies.escape_ship` moves to `functional`. The parity inventory
+  now contains 15 partial and 88 functional entries.
+
 ## Patch 0413 - Time Attack
 
 - New module `src/runtime/mzm_time_attack.c`, ported from `time_attack.c`:

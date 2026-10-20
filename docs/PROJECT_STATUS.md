@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0423 - Aria title brightness fade foundation
+
+- Ports the bounded `GameModeTitleScreenUpdate` stage-0 initial
+  brightness and stage-2 16-to-0 brightness fade, including the
+  native fallthrough tick, stage transition and 33-call timing.
+- The implementation is a device-free state helper, tested by
+  `aos_title_fade`; native graphics, sprite initialization, stage
+  3-7 animations, SDL integration and saved-game menus remain absent.
+- Native parity remains partial. Checklist and local HTML dashboard
+  are regenerated after all tests.
+
 ## Patch 0422 - Aria title interactive input stage
 
 - `aos_title_input.c` ports the bounded stage-8 input/idle-timer decisions

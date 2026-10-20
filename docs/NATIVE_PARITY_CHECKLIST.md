@@ -1107,14 +1107,14 @@ Next action: Port original title screen stages, graphics and selection and wire 
 
 [?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 28 discovered routine(s) to this category (7 by native name, 21 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Ported stage-8 ten-second idle counter, directional repeat refresh, A/START accept, B submenu return and title exit decision as a device-free C helper.
+[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** The stage-8 navigation helper and initial stage-0/stage-2 BLDY brightness decrease (16 to 0 over 33 calls including stage-1 fallthrough) are independently tested in native C.
 
 Native evidence: not attached yet.  
-Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c).  
-Tests: [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c).
+Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c).  
+Tests: [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c).
 Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`.  
-Known divergences: Only stage-8 timer and branching rules; no title assets, affine animation, intro, menu renderer or complete state machine.  
-Next action: Implement native GameModeTitleScreenUpdate full stage state machine with original graphics, sound and mode routing; compare against recorded game.
+Known divergences: Stage-0 brightness initialization and stage-2 fade timing are ported; original VRAM, sprites, affine animation, stage-1 setup, full title lifecycle and menu graphics remain absent.  
+Next action: Port title graphic resource loading, sprite entities and stage 3-7 affine animations; wire native title lifecycle and test in-game.
 
 ### Menus and options
 

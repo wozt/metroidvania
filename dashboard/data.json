@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T04:00:08+00:00",
+ "generated_at": "2026-10-20T04:05:12+00:00",
  "git": {
-  "commit": "9f488c4",
+  "commit": "083525b",
   "branch": "main",
   "dirty": true
  },
@@ -8946,21 +8946,24 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_title_input.c"
+    "src/runtime/aos_title_input.c",
+    "src/runtime/aos_title_fade.c"
    ],
    "tests": [
-    "tests/test_aos_title_input.c"
+    "tests/test_aos_title_input.c",
+    "tests/test_aos_title_fade.c"
    ],
    "dependencies": [
     "aos.startup.mode_dispatch",
     "aos.input.gamepad"
    ],
    "native_routines": [],
-   "limitations": "Only stage-8 timer and branching rules; no title assets, affine animation, intro, menu renderer or complete state machine. Ported stage-8 ten-second idle counter, directional repeat refresh, A/START accept, B submenu return and title exit decision as a device-free C helper.",
-   "next_action": "Implement native GameModeTitleScreenUpdate full stage state machine with original graphics, sound and mode routing; compare against recorded game.",
+   "limitations": "Stage-0 brightness initialization and stage-2 fade timing are ported; original VRAM, sprites, affine animation, stage-1 setup, full title lifecycle and menu graphics remain absent. The stage-8 navigation helper and initial stage-0/stage-2 BLDY brightness decrease (16 to 0 over 33 calls including stage-1 fallthrough) are independently tested in native C.",
+   "next_action": "Port title graphic resource loading, sprite entities and stage 3-7 affine animations; wire native title lifecycle and test in-game.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_title_input.c"
+     "tests/test_aos_title_input.c",
+     "tests/test_aos_title_fade.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -8978,6 +8981,16 @@
       "registered": true,
       "ctest": [
        "aos_title_input"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_title_fade.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_title_fade"
       ],
       "outcome": "passed",
       "exists": true
@@ -10786,6 +10799,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_title_fade",
+    "files": [
+     "tests/test_aos_title_fade.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_title_input",
     "files": [
      "tests/test_aos_title_input.c"
@@ -11571,12 +11591,18 @@
    }
   ],
   "summary": {
-   "passed": 488,
+   "passed": 489,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "083525b",
+   "date": "2026-10-20",
+   "subject": "Port Aria title idle timer and selection transition",
+   "scope": "project"
+  },
   {
    "commit": "9f488c4",
    "date": "2026-10-20",
@@ -12049,12 +12075,6 @@
    "commit": "df49a93",
    "date": "2026-10-16",
    "subject": "Add assertions for gameplay capture routes",
-   "scope": "project"
-  },
-  {
-   "commit": "bdf075c",
-   "date": "2026-10-16",
-   "subject": "Trigger the Long Beam encounter naturally",
    "scope": "project"
   }
  ],

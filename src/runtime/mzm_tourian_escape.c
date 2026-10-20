@@ -36,6 +36,8 @@ static bool load_room(MzmTourianEscape *e, MzmScreen *s, uint8_t area, uint8_t r
     if (!mzm_room_gfx_load(&e->room, area, room, false, false, false)) return false;
     s->ppu = &e->room.ppu;
     for (int bg = 0; bg < 4; ++bg) mzm_room_gfx_scroll(&e->room, bg, x, y);
+    /* LoadRoomCutscene's RoomSetInitialTilemap(0 to 2) */
+    mzm_room_gfx_initial_tilemaps(&e->room, x, y);
     dispcnt(e, GBA_DCNT_BG1 | GBA_DCNT_BG2 | GBA_DCNT_BG3 | GBA_DCNT_OBJ);
     return true;
 }

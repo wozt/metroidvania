@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T01:40:34+00:00",
+ "generated_at": "2026-10-20T01:44:12+00:00",
  "git": {
-  "commit": "34a2899",
+  "commit": "1a8f8b7",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 31,
-    "functional": 98,
+    "partial": 30,
+    "functional": 99,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 98,
-   "functional_or_better_percent": 70.0,
+   "functional_or_better": 99,
+   "functional_or_better_percent": 70.7,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 7,
-    "functional": 85,
+    "partial": 6,
+    "functional": 86,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 85,
-   "functional_or_better_percent": 92.4,
+   "functional_or_better": 86,
+   "functional_or_better_percent": 93.5,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -5498,8 +5498,8 @@
    "area": "mzm",
    "category": "events",
    "title": "Escape countdown and Zebes destruction",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_escape.c",
     "src/runtime/mzm_escape.h",
@@ -5509,7 +5509,8 @@
     "src/runtime/mzm_mother_brain.c",
     "src/runtime/mzm_tourian_escape.c",
     "src/runtime/mzm_tourian_escape.h",
-    "src/runtime/room_runtime.c"
+    "src/runtime/room_runtime.c",
+    "src/runtime/mzm_room_gfx.c"
    ],
    "tests": [
     "tests/test_mzm_hud.c",
@@ -5551,17 +5552,22 @@
     "TourianEscapeSamusLookingAtSky",
     "TourianEscapeSamusLookingAtMotherShip",
     "TourianEscapeUpdateStage",
-    "TourianEscapeHandler"
+    "TourianEscapeHandler",
+    "LoadRoomCutscene",
+    "RoomSetInitialTilemap",
+    "RoomRleDecompress"
    ],
-   "limitations": "All twelve Tourian escape stages and their post-cutscene handoff are connected. The first stage's room views still omit their native block-layer tilemaps, although their explosion/debris OAM and camera shake are present. The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. Both gameplay fade transitions use one host white overlay rather than applying brightness separately to selected GBA palette rows; the exit background effect therefore also whitens Samus before the global fade. The post-Tourian monologue is followed by the suitless status screen sequence (mzm.menus.status_screen), then Chozodia room 0; the paralyzer pistol is covered by mzm.weapons.paralyzer_pistol. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. At zero, the runtime freezes Samus and the countdown, fades all sounds and music over 60 frames, applies ColorFadingProcess_EscapeFailed's eight white levels, holds white for 61 frames, then enters the native Game Over screen. A successful gunship take-off applies the native exit fades and enters GM_TOURIAN_ESCAPE. TourianEscapeInit loads the native room, OBJ graphics and palettes. TourianEscapeZebesExploding switches from Tourian room 4 to Tourian room 5 and Crateria room 1 at frames 104 and 176, animates four native explosion objects and five debris objects with the room shake, starts the cutscene music, then shows Zebes with the animated departing ship and scrolling explosion through frame 512. TourianEscapeSamusInHerShip runs through frame 372: it selects the Power or Varia palette, expands the native brightness window around suited Samus, reveals the suitless image with the three removal sounds, alpha-fades the flash, and switches to her opened eyes. TourianEscapeSamusLookingAround runs for 57 frames: its two alpha-blended OAM halves converge vertically on the centre of the cockpit while BG0 switches from the left to the right native tilemap. TourianEscapeSamusSurrounded runs for 113 frames: a fixed BG0 cockpit surrounds a centred affine BG2 view that zooms out from Samus's ship to reveal the pirate formation between frames 32 and 47. TourianEscapeSamusFlyingIn reuses the intro starfield, ship graphics and complex affine OAM for 33 frames: the two six/nine-part ship poses alternate as its vertical speed eases and its scale rises from 32 to 480. TourianEscapeSamusChasedByPirates runs for 257 frames: six alternating particles recycle across the scrolling starfield while Samus and three pirate ships cross in both directions with their native OAM poses, coordinates and four sound cues. TourianEscapeSamusChasedByPiratesFiring runs for 385 frames: inherited projectiles rise and recycle while Samus follows eight native accelerated paths, both formations use complex affine OAM, the pirate group shrinks away and three sound cues cover the firing, dodging and departure. TourianEscapeSamusGettingShot runs for 401 frames: a brightness fade reveals Samus and six inherited projectiles over the scrolling starfield, the ship decelerates then oscillates after the hit, and the decisive shot switches to the dedicated BG1 view and sound. TourianEscapeSamusGoingToCrash runs for 81 frames: the damaged ship and its two looping smoke trails are alpha-blended over Zebes, while their native OAM offsets and alternating fire palette accompany a six-frame background drift and the free-falling sound. TourianEscapeSamusCrashing runs for 289 frames: the falling ship crosses a foreground view with four debris poses, the collision reveals the explosion layer and raises every layer to full white before the long native hold. TourianEscapeSamusLookingAtSky runs for 433 frames: the crash white reveals three native layers, two pirate ships cross diagonally, the layers pan at their independent thresholds and the scene ends on black. TourianEscapeSamusLookingAtMotherShip runs its two drifting native backgrounds under diagonal rain, renders \"\"The timing...\"\" into OBJ VRAM, alpha-fades its twelve-part text composition over the image, darkens the view and holds frame 448 until A or B. The following frame starts CUTSCENE_COULD_I_SURVIVE; dismissing it activates suitless Samus and loads Chozodia room 0. The --tourian-escape runtime option exposes the sequence for direct captures. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active.",
-   "next_action": "Supply the first scene's room block tilemaps; apply the fades' brightness to the native palette rows.",
+   "limitations": "The explosion actor is stored outside gSpriteData, so its RNG omits the native free sprite slot. The gameplay fades are a white overlay rather than per-palette-row brightness: during BACKGROUND_EFFECT_EXIT_ZEBES_FADE it is drawn just before Samus (the native mask 0xFFFC spares her OBJ rows), so the objects drawn after her are spared too; the colour fade that follows covers everything, as natively. The post-Tourian monologue is followed by the suitless status screen sequence (mzm.menus.status_screen), then Chozodia room 0; the paralyzer pistol is covered by mzm.weapons.paralyzer_pistol. Not compared with an emulator. Mother Brain's death starts the invisible Zebes explosion actor at its native offset. It follows the native 16-frame particle and debris cadence, camera-relative positions, Samus-height correction, four explosion sounds and ten-frame two-axis shakes. When the Zebes escape banner finishes spawning, EscapeStart and EscapeSetTimer select the event-driven escape and difficulty duration (easy 3:00, normal 2:00, hard 1:00); the native hundredths and seconds cadence freezes outside gameplay or while movement is prevented. ParticleEscape copies both rows of sEscapeTimerDigitsGfx to their native OBJ VRAM addresses and draws the eight 8x16 OAM objects at their absolute HUD position. At zero, the runtime freezes Samus and the countdown, fades all sounds and music over 60 frames, applies ColorFadingProcess_EscapeFailed's eight white levels, holds white for 61 frames, then enters the native Game Over screen. A successful gunship take-off applies the native exit fades and enters GM_TOURIAN_ESCAPE. TourianEscapeInit loads the native room, OBJ graphics and palettes. TourianEscapeZebesExploding switches from Tourian room 4 to Tourian room 5 and Crateria room 1 at frames 104 and 176, animates four native explosion objects and five debris objects with the room shake, starts the cutscene music, then shows Zebes with the animated departing ship and scrolling explosion through frame 512. TourianEscapeSamusInHerShip runs through frame 372: it selects the Power or Varia palette, expands the native brightness window around suited Samus, reveals the suitless image with the three removal sounds, alpha-fades the flash, and switches to her opened eyes. TourianEscapeSamusLookingAround runs for 57 frames: its two alpha-blended OAM halves converge vertically on the centre of the cockpit while BG0 switches from the left to the right native tilemap. TourianEscapeSamusSurrounded runs for 113 frames: a fixed BG0 cockpit surrounds a centred affine BG2 view that zooms out from Samus's ship to reveal the pirate formation between frames 32 and 47. TourianEscapeSamusFlyingIn reuses the intro starfield, ship graphics and complex affine OAM for 33 frames: the two six/nine-part ship poses alternate as its vertical speed eases and its scale rises from 32 to 480. TourianEscapeSamusChasedByPirates runs for 257 frames: six alternating particles recycle across the scrolling starfield while Samus and three pirate ships cross in both directions with their native OAM poses, coordinates and four sound cues. TourianEscapeSamusChasedByPiratesFiring runs for 385 frames: inherited projectiles rise and recycle while Samus follows eight native accelerated paths, both formations use complex affine OAM, the pirate group shrinks away and three sound cues cover the firing, dodging and departure. TourianEscapeSamusGettingShot runs for 401 frames: a brightness fade reveals Samus and six inherited projectiles over the scrolling starfield, the ship decelerates then oscillates after the hit, and the decisive shot switches to the dedicated BG1 view and sound. TourianEscapeSamusGoingToCrash runs for 81 frames: the damaged ship and its two looping smoke trails are alpha-blended over Zebes, while their native OAM offsets and alternating fire palette accompany a six-frame background drift and the free-falling sound. TourianEscapeSamusCrashing runs for 289 frames: the falling ship crosses a foreground view with four debris poses, the collision reveals the explosion layer and raises every layer to full white before the long native hold. TourianEscapeSamusLookingAtSky runs for 433 frames: the crash white reveals three native layers, two pirate ships cross diagonally, the layers pan at their independent thresholds and the scene ends on black. TourianEscapeSamusLookingAtMotherShip runs its two drifting native backgrounds under diagonal rain, renders \"\"The timing...\"\" into OBJ VRAM, alpha-fades its twelve-part text composition over the image, darkens the view and holds frame 448 until A or B. The following frame starts CUTSCENE_COULD_I_SURVIVE; dismissing it activates suitless Samus and loads Chozodia room 0. The --tourian-escape runtime option exposes the sequence for direct captures. The same timer core includes Mecha Ridley's 5:00 or hard 3:00 route. Save platforms initialize in their native off state while either escape is active. The first stage's room views now have their block layers: LoadRoomCutscene's RoomSetInitialTilemap(0 to 2) is ported as mzm_room_gfx_initial_tilemaps, which RLE-decompresses (RoomRleDecompress, the BG form) each room's own BG0-BG2 block data from the ROM and writes the 21 x 16 blocks around the view. Captures of --tourian-escape at frames 40, 130 and 200 show Tourian rooms 4 and 5 and Crateria room 1 with their walls, pipes and rocks under the explosions (the earlier capture showed garbage tiles).",
+   "next_action": "Compare the escape with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_hud.c",
      "tests/test_mzm_sprites.c",
      "tests/test_mzm_screens.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "tourian_000 (--tourian-escape)"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -11335,6 +11341,12 @@
  },
  "timeline": [
   {
+   "commit": "1a8f8b7",
+   "date": "2026-10-20",
+   "subject": "Port the liquid splashes of debris and sprites and the small dusts",
+   "scope": "project"
+  },
+  {
    "commit": "34a2899",
    "date": "2026-10-20",
    "subject": "Check every sound of the bank and mark the engine functional",
@@ -11807,12 +11819,6 @@
    "date": "2026-10-15",
    "subject": "Port Tourian surrounded affine scene",
    "scope": "project"
-  },
-  {
-   "commit": "bd44a87",
-   "date": "2026-10-15",
-   "subject": "Port Tourian looking-around sequence",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -11840,7 +11846,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1627,
+    "routines_cited_by_features": 1629,
     "call_edges": 6071
    },
    "aos": {

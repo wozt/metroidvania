@@ -3838,6 +3838,27 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0412 - Tourian escape room layers and exit fade
+
+- Ported `LoadRoomCutscene`'s `RoomSetInitialTilemap(0 to 2)` as
+  `mzm_room_gfx_initial_tilemaps`:
+  - each room's own BG0 to BG2 block data is RLE-decompressed from the ROM
+    (the BG form of `RoomRleDecompress`, without a size byte);
+  - its block values become sheet indices (0x400 marks a common block);
+  - the 21 x 16 blocks around the view are written.
+- The Tourian escape's first stage now shows Tourian rooms 4 and 5 and
+  Crateria room 1 with their block layers. Before, it showed garbage
+  tiles.
+- `BACKGROUND_EFFECT_EXIT_ZEBES_FADE` no longer whitens Samus. The native
+  mask 0xFFFC spares her OBJ rows, so the overlay is now drawn just before
+  her. The colour fade that follows still covers everything.
+- Captures: `--tourian-escape` at frames 40, 130 and 200, before and after
+  (ignored `captures/fp/te*.bmp`).
+- `mzm.events.escape_sequence` moves to `functional`. Its remaining
+  differences are the explosion actor's RNG slot and the overlay standing
+  in for per-row brightness. The parity inventory now contains 17 partial
+  and 86 functional entries.
+
 ## Patch 0411 - liquid splashes and dusts
 
 - Ported `SpriteDebrisSetSplash`: a falling or bouncing debris piece that

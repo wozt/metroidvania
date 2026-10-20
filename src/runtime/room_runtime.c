@@ -6460,6 +6460,15 @@ int main(int argc, char **argv) {
             runtime_draw_sprites(renderer,&sprites,&sprite_library,viewport,cx,cy,scale,show_hitbox,9,16,
                                  runtime_door_fade_shade(&door_fade),false,2);
 
+        if(escape_exit.active && escape_exit.phase==0 && escape_exit.level) {
+            /* BACKGROUND_EFFECT_EXIT_ZEBES_FADE whitens the backgrounds and
+             * OBJ rows 2 to 15 (mask 0xFFFC): Samus, drawn next, keeps her
+             * colours until the colour fade. */
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer,255,255,255,(Uint8)(escape_exit.level*255/32));
+            SDL_RenderFillRect(renderer,&viewport);
+            SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
+        }
         RuntimeLibraryEntry *lib_entry=NULL;
         int frame=0;
         if(animation_browser && library.count>0) {
@@ -6804,10 +6813,10 @@ int main(int argc, char **argv) {
             SDL_RenderFillRect(renderer,&viewport);
             SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
         }
-        if((escape_exit.active || tourian_escape_pending) && escape_exit.level) {
-            /* The native background effect excludes Samus's OBJ rows before
-             * the global fade; the host composite applies the same white
-             * level to the completed view. */
+        if((escape_exit.active || tourian_escape_pending) && escape_exit.level &&
+           !(escape_exit.active && escape_exit.phase==0)) {
+            /* ColorFadingProcess_TourianEscape: every BG and OBJ row,
+             * Samus's included. */
             SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_BLEND);
             SDL_SetRenderDrawColor(renderer,255,255,255,
                                    (Uint8)(escape_exit.level*255/32));

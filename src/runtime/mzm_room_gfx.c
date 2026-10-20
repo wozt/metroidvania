@@ -105,6 +105,10 @@ bool mzm_room_gfx_load(MzmRoomGfx *g, uint8_t area, uint8_t room, bool mother_sh
     g->tileset = e[0];
     for (int i = 0; i < 4; ++i) g->bg_prop[i] = e[1 + i];
     uint32_t bg0 = (uint32_t)(e[8] | e[9] << 8 | e[10] << 16 | (uint32_t)e[11] << 24);
+    for (int bg = 0; bg < 3; ++bg) {
+        const uint8_t *q = e + 8 + 4 * bg;
+        g->bg_data[bg] = (uint32_t)(q[0] | q[1] << 8 | q[2] << 16 | (uint32_t)q[3] << 24);
+    }
     uint32_t bg3 = (uint32_t)(e[24] | e[25] << 8 | e[26] << 16 | (uint32_t)e[27] << 24);
     g->bg3_scrolling = e[28];
     g->transparency = e[29];
@@ -413,9 +417,10 @@ void mzm_room_gfx_render(MzmRoomGfx *g, int bg, int width, int height, uint32_t 
 
 /* RoomRleDecompress(FALSE, ...): the size byte, then the low and the high
  * bytes, each run-length coded with 1 or 2 byte counts. */
-static void rle_decompress(uint32_t src, uint8_t *dst, size_t size) {
+/* RoomRleDecompress: `is_bg` data has no leading size byte. */
+static void rle_decompress_data(uint32_t src, uint8_t *dst, size_t size, bool is_bg) {
     memset(dst, 0, size);
-    src++;
+    if (!is_bg) src++;
     for (int plane = 0; plane < 2; ++plane) {
         size_t at = (size_t)plane;
         bool wide = mzm_rom_u8(src++) != 1;
@@ -437,6 +442,31 @@ static void rle_decompress(uint32_t src, uint8_t *dst, size_t size) {
             value = wide ? (uint32_t)(mzm_rom_u8(src) << 8 | mzm_rom_u8(src + 1)) : mzm_rom_u8(src);
             src += wide ? 2 : 1;
         }
+    }
+}
+
+static void rle_decompress(uint32_t src, uint8_t *dst, size_t size) {
+    rle_decompress_data(src, dst, size, false);
+}
+
+void mzm_room_gfx_initial_tilemaps(MzmRoomGfx *g, int x, int y) {
+    if (!g->ready) return;
+    static uint8_t raw[0x3000];
+    static uint16_t sheets[0x3000 / 2];
+    for (int bg = 0; bg < 3; ++bg) {
+        if (!(g->bg_prop[bg] & BG_PROP_RLE) || !g->bg_data[bg]) continue;
+        int width = mzm_rom_u8(g->bg_data[bg]), height = mzm_rom_u8(g->bg_data[bg] + 1);
+        if (width * height * 2 > (int)sizeof raw) continue;
+        rle_decompress_data(g->bg_data[bg] + 2, raw, sizeof raw, true);
+        for (int i = 0; i < width * height; ++i) {
+            /* The block value as a sheet index: 0x400 marks a common block. */
+            uint16_t value = (uint16_t)(raw[2 * i] | raw[2 * i + 1] << 8);
+            int sheet = value & 0x400 ? 1024 + (value - 0x400) : value;
+            if (sheet >= 1024 + 208 || (!(value & 0x400) && value >= 1024)) sheet = 0;
+            sheets[i] = (uint16_t)sheet;
+        }
+        /* 21 x 16 blocks from three blocks before the position */
+        mzm_room_gfx_blocks(g, bg, sheets, width, height, x - 3 * 16, y - 3 * 16, 20 * 16, 15 * 16);
     }
 }
 

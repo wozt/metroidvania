@@ -33,6 +33,7 @@ typedef struct {
     uint8_t bg0_size, bg3_size;
     uint16_t effect_y;              /* subpixels, MZM_ROOM_GFX_NO_EFFECT_Y: none */
     uint32_t tilemap, common_tilemap;   /* ROM: gTilemap and gCommonTilemap */
+    uint32_t bg_data[3];            /* ROM: RoomEntryRom.pBg0Data ... pBg2Data */
     bool mother_ship_doors;         /* gUseMotherShipDoors */
     /* gAnimatedGraphicsData, gTankAnimations, the animated palette */
     MzmAnimatedGfx animated[MZM_ROOM_GFX_ANIMATED];
@@ -70,6 +71,10 @@ bool mzm_room_gfx_load(MzmRoomGfx *g, uint8_t area, uint8_t room, bool mother_sh
  * the end of a power bomb; the hatch flashing runs while `hatches_unlocking`. */
 void mzm_room_gfx_animate(MzmRoomGfx *g, bool movement_prevented, bool power_bomb,
                           bool hatches_unlocking);
+/* RoomSetInitialTilemap for BG0 to BG2 from the room's own RLE block data
+ * (LoadRoomCutscene's rooms, which the runtime has not exported as layers),
+ * with the layers at (x, y) pixels. */
+void mzm_room_gfx_initial_tilemaps(MzmRoomGfx *g, int x, int y);
 /* Writes the block layer `bg` (0-2) around the view: `blocks` are the
  * runtime's sheet indices (tileset blocks, then 1024 + common blocks), the
  * view's top-left corner is at (x, y) pixels of the layer. */

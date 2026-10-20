@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0425 - Aria title motion stages four and five
+
+- `aos_title_stages.c` implements the native stage-4 movement and
+  stage-4-to-5 same-call fallthrough once the sprite flag is set.
+- Stage 5 reproduces the affine contraction, 64-step counter,
+  secondary entity flags and transition to stage 6.
+- Device-free CTest covers precise state changes; sprite and BG
+  rendering, stages 6/7 and the complete title lifecycle remain.
+- Native parity remains partial; checklist and web dashboard are
+  regenerated after testing.
+
 ## Patch 0424 - Aria title stage-three motion
 
 - Reproduces stage-3 native title entity fixed-point motion, scale,

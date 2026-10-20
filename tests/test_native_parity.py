@@ -276,13 +276,29 @@ class NativeParityTests(unittest.TestCase):
 
         diagnostics = native_parity.validate(inventory, annotations)
         generated = native_parity.render(inventory, annotations)
+        unassigned = native_parity.render_unassigned_routines(inventory, annotations)
 
         self.assertEqual(diagnostics, [])
         self.assertEqual(native_parity.CHECKLIST.read_text(encoding="utf-8"),
                          generated)
+        self.assertEqual(native_parity.AOS_UNASSIGNED_ROUTINES.read_text(
+            encoding="utf-8"), unassigned)
         self.assertIn("mzm.player.samus_controller", generated)
         self.assertIn("aos.enemies.zombie", generated)
         self.assertIn("not game fidelity percentages", generated)
+
+        rows = unassigned.splitlines()
+        self.assertEqual(rows[0].split("\t"), list(native_parity.UNASSIGNED_COLUMNS))
+        unassigned_ids = {row.split("\t", 1)[0] for row in rows[1:]}
+        aos = inventory["games"]["aos"]
+        assigned = {symbol for feature in annotations["games"]["aos"]["features"]
+                    for symbol in feature["native_symbols"]}
+        expected = {routine["id"] for routine in aos["routines"]
+                    if routine["symbol"] not in assigned}
+        self.assertEqual(unassigned_ids, expected)
+        self.assertIn("aos:c:src/main.c:AgbMain", unassigned_ids)
+        self.assertNotIn("aos:c:src/code/code_080C0A1C.c:EnemyBatCreate",
+                         unassigned_ids)
 
     def test_annotation_tsv_round_trip_is_stable(self):
         text = native_parity.ANNOTATIONS.read_text(encoding="utf-8")

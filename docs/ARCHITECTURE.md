@@ -139,7 +139,12 @@ unique, game-prefixed stable ids; validation rejects unknown games, statuses,
 categories, dependency ids, missing local paths, and native symbols that no
 longer exist in the regenerated inventory (renamed or removed routines
 surface as orphaned references). The Markdown checklist is a generated view
-and must never be edited by hand.
+and must never be edited by hand. The same pass writes
+`data/native_parity/aos_unassigned_routines.tsv`: one compact row for every
+Aria C or assembly function that is not yet attached to a reviewed parity
+feature, including its stable id, category, address, source location and
+direct call counts. This is a generated reconstruction backlog, not a claim
+that each low-level helper needs its own feature.
 
 The second static pass links header declarations to definitions, inventories
 data/type/constant records and proves indirect edges when a lexical table and

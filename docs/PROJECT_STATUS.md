@@ -3838,6 +3838,32 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0417 - exhaustive Aria routine backlog
+
+- Added `data/native_parity/aos_unassigned_routines.tsv`, a deterministic
+  generated backlog of every cvaos C or assembly function not yet attached to
+  a reviewed Aria parity feature. Each row carries its stable inventory id,
+  symbol, category and classification evidence, kind, ROM address when known,
+  source location and direct caller/callee counts.
+- The initial exhaustive pass finds 3,573 native routines: 48 are attached to
+  the existing 11 Aria features and 3,525 are not. Of the latter, 2,555 are
+  assembly and 970 C functions; 2,902 have a source address. The largest
+  queues are enemies (1,478), unclassified (1,375), environment (249),
+  abilities (137) and audio (101). This is classification coverage, not a
+  claim that 3,525 independent gameplay features must be ported.
+- The native parity generator now writes and checks the backlog alongside the
+  Markdown checklist. The incremental rebuild graph owns both outputs, and a
+  changed cvaos source or annotation invalidates both. Tests prove that the
+  report is exactly the set difference between discovered and attached
+  routine ids.
+- The development dashboard now exposes attached and unassigned routine
+  counts for both games. The tooling registry and architecture documentation
+  describe the new tracking boundary. No runtime, ROM-derived asset or audio
+  implementation changed in this inventory-only cycle.
+- Validation on 2026-10-20: all 485 recorded checks passed (448 Python and 37
+  CTest), the proprietary-file guard passed, and the checklist, Aria backlog
+  and dashboard generated files were fresh.
+
 ## Patch 0416 - final MZM partial-feature audit
 
 - Promoted the last three partial Zero Mission entries to `functional` after

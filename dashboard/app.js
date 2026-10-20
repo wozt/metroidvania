@@ -181,11 +181,14 @@
     const cards = ["mzm", "aos"].map((game) => {
       const g = inv.games[game];
       const unclassified = g.by_category.unclassified || 0;
+      const attached = g.routines_attached_to_features ?? g.routines_cited_by_features;
+      const unassigned = g.unassigned_routines ?? (g.routines - attached);
       return `<div class="card ${game}"><header><h3>${esc(g.title)}</h3><span class="muted">native source inventory</span></header>
         <div class="big">${g.routines.toLocaleString("en")}<span class="muted" style="font-size:1rem"> routines discovered</span></div>
         <p class="muted" style="margin:8px 0 0">${(g.routines - unclassified).toLocaleString("en")} classified,
-        ${unclassified.toLocaleString("en")} unclassified; ${g.routines_cited_by_features} cited as evidence by feature
-        records; ${g.call_edges.toLocaleString("en")} call edges. Discovered is not ported: porting is tracked by the features above.</p></div>`;
+        ${unclassified.toLocaleString("en")} unclassified; ${attached.toLocaleString("en")} attached to reviewed features,
+        ${unassigned.toLocaleString("en")} not yet attached; ${g.call_edges.toLocaleString("en")} call edges.
+        Discovered and attached do not mean ported: implementation is tracked by the features above.</p></div>`;
     });
     return `<h2>Native source inventory</h2><div class="grid">${cards.join("")}</div>`;
   }

@@ -23,7 +23,13 @@ ROOT = Path(__file__).resolve().parents[1]
 INVENTORY = ROOT / "data/native_parity/inventory.json"
 ANNOTATIONS = ROOT / "data/native_parity/annotations.tsv"
 CHECKLIST = ROOT / "docs/NATIVE_PARITY_CHECKLIST.md"
+AOS_UNASSIGNED_ROUTINES = ROOT / "data/native_parity/aos_unassigned_routines.tsv"
 INVENTORY_SCHEMA = native_inventory.SCHEMA
+
+UNASSIGNED_COLUMNS = (
+    "id", "symbol", "category", "category_evidence", "kind", "address",
+    "source", "line", "direct_callers", "direct_callees",
+)
 
 ANNOTATION_COLUMNS = (
     "game",
@@ -264,6 +270,14 @@ def _evidence_text(counts: dict) -> str:
     return f" ({', '.join(parts)})" if parts else ""
 
 
+def assigned_routine_ids(game_data: dict, features: list[dict]) -> set[str]:
+    """Routine records attached to at least one reviewed feature by symbol."""
+    symbols = {symbol for feature in features
+               for symbol in feature.get("native_symbols", [])}
+    return {routine["id"] for routine in game_data["routines"]
+            if routine["symbol"] in symbols}
+
+
 def render(inventory: dict, annotations: dict) -> str:
     lines = [
         "# Native parity checklist",
@@ -320,6 +334,24 @@ def render(inventory: dict, annotations: dict) -> str:
         "The machine-readable manifest and its checksummed record fragments, stable",
         "routine IDs and call edges are rooted at",
         "[`data/native_parity/inventory.json`](../data/native_parity/inventory.json).",
+        "",
+        "### Reviewed routine attachment",
+        "",
+        "| Game | Attached to features | Not yet attached |",
+        "|---|---:|---:|",
+    ])
+    for game in ("mzm", "aos"):
+        game_data = inventory["games"][game]
+        attached = assigned_routine_ids(
+            game_data, annotations["games"][game]["features"])
+        lines.append(
+            f"| {game_data['title']} | {len(attached)} | "
+            f"{len(game_data['routines']) - len(attached)} |")
+    lines.extend([
+        "",
+        "The complete generated Aria backlog is",
+        "[`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).",
+        "Routine attachment measures reviewed classification, not implementation fidelity.",
         "",
     ])
 
@@ -397,6 +429,36 @@ def render(inventory: dict, annotations: dict) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_unassigned_routines(inventory: dict, annotations: dict,
+                               game: str = "aos") -> str:
+    """List every native routine not attached to a reviewed parity feature."""
+    game_data = inventory["games"][game]
+    features = annotations["games"][game]["features"]
+    assigned = assigned_routine_ids(game_data, features)
+    incoming = defaultdict(int)
+    for routine in game_data["routines"]:
+        for target in routine.get("calls", []):
+            incoming[target] += 1
+    rows = []
+    for routine in game_data["routines"]:
+        if routine["id"] in assigned:
+            continue
+        values = {
+            "id": routine["id"],
+            "symbol": routine["symbol"],
+            "category": routine.get("category", "unclassified"),
+            "category_evidence": routine.get("category_evidence", ""),
+            "kind": routine["kind"],
+            "address": routine.get("address", ""),
+            "source": routine["source"],
+            "line": str(routine.get("line", "")),
+            "direct_callers": str(incoming[routine["id"]]),
+            "direct_callees": str(len(routine.get("calls", []))),
+        }
+        rows.append("\t".join(values[column] for column in UNASSIGNED_COLUMNS))
+    return "\t".join(UNASSIGNED_COLUMNS) + "\n" + "\n".join(rows) + "\n"
+
+
 def write_checklist(text: str, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(output.suffix + ".tmp")
@@ -410,6 +472,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--inventory", type=Path, default=INVENTORY)
     parser.add_argument("--annotations", type=Path, default=ANNOTATIONS)
     parser.add_argument("--output", type=Path, default=CHECKLIST)
+    parser.add_argument("--aos-unassigned-output", type=Path,
+                        default=AOS_UNASSIGNED_ROUTINES)
     parser.add_argument("--check", action="store_true",
                         help="fail when the generated checklist differs")
     args = parser.parse_args(argv)
@@ -418,17 +482,26 @@ def main(argv: list[str] | None = None) -> int:
         annotations = _load(args.annotations)
         diagnostics = validate(inventory, annotations, args.root.resolve())
         generated = render(inventory, annotations)
+        unassigned = render_unassigned_routines(inventory, annotations)
         if args.check:
             existing = args.output.read_text(encoding="utf-8")
             if existing != generated:
                 raise ValueError(f"generated checklist is stale: {args.output}")
+            existing_unassigned = args.aos_unassigned_output.read_text(encoding="utf-8")
+            if existing_unassigned != unassigned:
+                raise ValueError(
+                    "generated unassigned-routine report is stale: "
+                    f"{args.aos_unassigned_output}")
         else:
             write_checklist(generated, args.output)
+            write_checklist(unassigned, args.aos_unassigned_output)
     except ValueError as exc:
         parser.error(str(exc))
     for diagnostic in diagnostics:
         print(f"warning: {diagnostic}")
     print(f"Checklist {'checked' if args.check else 'written'}: {args.output}")
+    print("Aria unassigned routines "
+          f"{'checked' if args.check else 'written'}: {args.aos_unassigned_output}")
     return 0
 
 

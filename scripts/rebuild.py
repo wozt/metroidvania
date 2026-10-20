@@ -81,6 +81,9 @@ def _write_checklist() -> None:
     native_parity.validate(inventory, annotations, ROOT)
     native_parity.write_checklist(
         native_parity.render(inventory, annotations), native_parity.CHECKLIST)
+    native_parity.write_checklist(
+        native_parity.render_unassigned_routines(inventory, annotations),
+        native_parity.AOS_UNASSIGNED_ROUTINES)
 
 
 TASKS = {
@@ -95,10 +98,10 @@ TASKS = {
     ),
     "checklist": Task(
         name="checklist",
-        version=3,
+        version=4,
         dependencies=("inventory",),
         inputs=_checklist_inputs,
-        outputs=(native_parity.CHECKLIST,),
+        outputs=(native_parity.CHECKLIST, native_parity.AOS_UNASSIGNED_ROUTINES),
         action=_write_checklist,
     ),
 }

@@ -37,6 +37,17 @@ The machine-readable manifest and its checksummed record fragments, stable
 routine IDs and call edges are rooted at
 [`data/native_parity/inventory.json`](../data/native_parity/inventory.json).
 
+### Reviewed routine attachment
+
+| Game | Attached to features | Not yet attached |
+|---|---:|---:|
+| Metroid: Zero Mission | 1655 | 1315 |
+| Castlevania: Aria of Sorrow | 48 | 3525 |
+
+The complete generated Aria backlog is
+[`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
+Routine attachment measures reviewed classification, not implementation fidelity.
+
 ## Metroid: Zero Mission
 
 Pinned source: `third_party/mzm` at `43b7fd52f552e4d38c1521ff9d4df5ee57e61493`.

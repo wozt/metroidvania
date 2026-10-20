@@ -347,12 +347,15 @@ def inventory_summary() -> dict:
         cited = {symbol for item in annotations["games"][game]["features"]
                  for symbol in item.get("native_symbols", [])}
         statistics = data["statistics"]
+        attached = sum(routine["symbol"] in cited for routine in data["routines"])
         games[game] = {
             "title": data["title"],
             "routines": statistics["routines"],
             "by_category": statistics["by_category"],
             "by_category_evidence": statistics.get("by_category_evidence", {}),
             "routines_cited_by_features": len(cited),
+            "routines_attached_to_features": attached,
+            "unassigned_routines": statistics["routines"] - attached,
             "call_edges": statistics.get("resolved_call_edges", 0),
         }
     return {"available": True, "schema": inventory["schema"], "games": games,

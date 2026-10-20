@@ -126,6 +126,14 @@ class OutputTests(unittest.TestCase):
         native = [item for item in data["features"]
                   if item["source"] == "data/native_parity/annotations.tsv"]
         self.assertTrue(native)
+        aos_inventory = data["inventory"]["games"]["aos"]
+        self.assertEqual(aos_inventory["routines_attached_to_features"] +
+                         aos_inventory["unassigned_routines"],
+                         aos_inventory["routines"])
+        report_rows = len((ROOT / "data/native_parity/aos_unassigned_routines.tsv")
+                          .read_text(encoding="utf-8").splitlines()) - 1
+        self.assertEqual(aos_inventory["unassigned_routines"], report_rows)
+        self.assertGreater(report_rows, 3000)
         self.assertFalse(data["tests"]["ran"])
 
     def test_bestiary_lists_monsters_and_items_from_tracked_sources(self):

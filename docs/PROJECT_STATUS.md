@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0428 - Interactive Aria SDL menu preview
+
+- The SDL title host now shows an interactive diagnostic main menu.
+- Navigate with arrows, confirm with A/START and return with B.
+- New Game, Continue and Options explicitly remain placeholders.
+- Pure C menu navigation has a dedicated CTest. This does NOT port
+  native GameModeMainMenuUpdate or real save screens.
+- Native parity stays partial; checklist/dashboard regenerated.
+
 ## Patch 0427 - Aria runnable SDL title preview
 
 - Added `fusion_aria_title_preview`, a separate SDL3 executable which

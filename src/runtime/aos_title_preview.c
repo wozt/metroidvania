@@ -8,6 +8,7 @@
 #include <string.h>
 #include "aos_title_fade.h"
 #include "aos_title_input.h"
+#include "aos_menu_preview.h"
 
 enum { GBA_W = 240, GBA_H = 160, SCALE = 3 };
 enum { KEY_A = 1, KEY_B = 2, KEY_START = 8, KEY_UP = 64, KEY_DOWN = 128 };
@@ -67,6 +68,8 @@ int main(int argc, char **argv) {
     }
     AosTitleFade fade = {0};
     AosTitleInput input = {0};
+    AosMenuPreview menu = {0};
+    aos_menu_preview_init(&menu);
     aos_title_fade_init(&fade);
     aos_title_fade_begin(&fade);
     aos_title_input_enter(&input);
@@ -90,15 +93,13 @@ int main(int argc, char **argv) {
             aos_title_fade_tick(&fade);
         } else {
             interactive = true;
-            AosTitleAction action = aos_title_input_tick(&input, edge,
-                (uint16_t)((frame % 6u == 0u) ? held : 0u), false, false, false);
-            if (action == AOS_TITLE_EXIT) {
-                /* No native menu renderer yet; explicitly restart this
-                 * diagnostic preview rather than pretending to open one. */
-                aos_title_fade_init(&fade);
-                aos_title_fade_begin(&fade);
-                aos_title_input_enter(&input);
-                interactive = false;
+            if (menu.screen == AOS_PREVIEW_TITLE) {
+                AosTitleAction action = aos_title_input_tick(&input, edge,
+                    (uint16_t)((frame % 6u == 0u) ? held : 0u), false, false, false);
+                if (action == AOS_TITLE_EXIT)
+                    aos_menu_preview_press(&menu, KEY_START);
+            } else {
+                aos_menu_preview_press(&menu, edge);
             }
         }
         SDL_SetRenderDrawColor(renderer, 18, 14, 28, 255);
@@ -114,6 +115,29 @@ int main(int argc, char **argv) {
             SDL_SetRenderDrawColor(renderer, 140, 130, 155, 255);
             SDL_FRect stripe = {23, 76, 194, 7};
             SDL_RenderFillRect(renderer, &stripe);
+        }
+        /* SDL diagnostic text, not original Aria menu art or game startup. */
+        if (menu.screen != AOS_PREVIEW_TITLE) {
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer, 10, 12, 24, 235);
+            SDL_FRect sheet = {12, 15, 216, 130};
+            SDL_RenderFillRect(renderer, &sheet);
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+            SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
+            if (menu.screen == AOS_PREVIEW_MENU) {
+                const char *entries[] = {"NEW GAME", "CONTINUE", "OPTIONS", "BACK"};
+                SDL_RenderDebugText(renderer, 30, 24, "ARIA MENU PREVIEW");
+                for (unsigned i = 0; i < 4; ++i) {
+                    SDL_RenderDebugText(renderer, 32, 47 + 20 * (float)i, entries[i]);
+                    if (menu.selected == i)
+                        SDL_RenderDebugText(renderer, 19, 47 + 20 * (float)i, ">");
+                }
+            } else {
+                const char *names[] = {"NEW GAME", "CONTINUE", "OPTIONS"};
+                SDL_RenderDebugText(renderer, 30, 38, names[menu.notice_kind]);
+                SDL_RenderDebugText(renderer, 30, 64, "NOT IMPLEMENTED YET");
+                SDL_RenderDebugText(renderer, 30, 96, "A/B: BACK");
+            }
         }
         uint8_t darkness = (uint8_t)(fade.stage == 2 ? fade.brightness : 0);
         if (darkness > 0) {

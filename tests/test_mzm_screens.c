@@ -22,6 +22,7 @@
 #include "mzm_tourian_escape.h"
 #include "mzm_chozodia_escape.h"
 #include "mzm_credits.h"
+#include "mzm_room_gfx.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;
@@ -2125,6 +2126,25 @@ static void test_upgrading_suit(void) {
     assert(c.stage == 20);
 }
 
+/* LoadRoomCutscene's RoomSetInitialTilemap on the exported bank: Tourian
+ * room 4's BG1 blocks written from its own RLE data. */
+static void test_initial_tilemaps_bank(void) {
+    if (!mzm_rom_open("assets/extracted/metroid/rom/rom_bank.bin",
+                      "assets/extracted/metroid/rom/rom_symbols.tsv")) {
+        printf("mzm_screens: no ROM bank, the initial tilemap checks are skipped\n");
+        return;
+    }
+    static MzmRoomGfx room;
+    assert(mzm_room_gfx_load(&room, 4, 4, false, false, false));
+    int written = 0;
+    for (int i = 0; i < 0x1000; i += 2) written += room.ppu.vram[0x1000 + i] || room.ppu.vram[0x1001 + i];
+    assert(written == 0);           /* an RLE layer is left for RoomSetInitialTilemap */
+    mzm_room_gfx_initial_tilemaps(&room, 80, 160);
+    for (int i = 0; i < 0x1000; i += 2) written += room.ppu.vram[0x1000 + i] || room.ppu.vram[0x1001 + i];
+    assert(written > 0x800 / 2);
+    mzm_rom_close();
+}
+
 int main(void) {
     assert(mzm_screen_init(&screen, &ppu));
     test_fading();
@@ -2143,6 +2163,7 @@ int main(void) {
     test_upgrading_suit();
     test_fully_powered_items_bank();
     test_new_item_pause_bank();
+    test_initial_tilemaps_bank();
     mzm_screen_free(&screen);
     printf("mzm_screens: ok\n");
     return 0;

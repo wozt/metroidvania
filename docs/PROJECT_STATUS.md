@@ -3854,6 +3854,8 @@ No automatic reciprocal link or native engine encoder is implemented.
   her. The colour fade that follows still covers everything.
 - Captures: `--tourian-escape` at frames 40, 130 and 200, before and after
   (ignored `captures/fp/te*.bmp`).
+- Bank-backed test: Tourian room 4's empty RLE BG1 layer is filled by
+  `mzm_room_gfx_initial_tilemaps`.
 - `mzm.events.escape_sequence` moves to `functional`. Its remaining
   differences are the explosion actor's RNG slot and the overlay standing
   in for per-row brightness. The parity inventory now contains 17 partial

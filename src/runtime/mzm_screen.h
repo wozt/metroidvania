@@ -76,6 +76,10 @@ void mzm_menu_oam_set_id(MzmMenuOam *oam, uint8_t oam_id);
 MzmMenuOam mzm_menu_oam_from_rom(uint32_t address);
 /* ProcessMenuOam with the struct OamArray table at a ROM address. */
 void mzm_menu_oam_process(MzmScreen *s, int length, MzmMenuOam *oam, uint32_t oam_array);
+/* ProcessComplexMenuOam: the same, an object with rotation_scaling placed by
+ * ProcessComplexOam with gCurrentOamRotation / gCurrentOamScaling. */
+void mzm_complex_menu_oam_process(MzmScreen *s, int length, MzmMenuOam *oam, uint32_t oam_array,
+                                  uint16_t rotation, int16_t scaling);
 
 /* ApplySpecialBackgroundFadingColor on 256 colors: rows of 16 whose bit
  * is set in `mask` take `color` (0-31) of the fade from `src` to `dst`. */

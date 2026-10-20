@@ -3838,6 +3838,20 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0408 - ProcessComplexMenuOam
+
+- Ported `ProcessComplexMenuOam` as `mzm_complex_menu_oam_process`. It
+  works as `ProcessMenuOam`, except that an object with `rotationScaling`
+  is placed by `ProcessComplexOam` (double-sized, matrix 0) with the
+  current rotation and scaling.
+- The game over screen, its only native user, now draws its head through
+  it. The head is never rotated, so the output is unchanged.
+- Bank-backed test: the unrotated head matches `ProcessMenuOam`, and a
+  rotated one becomes a double-size affine object.
+- `mzm.technical.non_gameplay_screens` moves to `functional`. Its helpers
+  run on every captured non-gameplay screen. The parity inventory now
+  contains 21 partial and 82 functional entries.
+
 ## Patch 0407 - boss timers and the hard stun threshold
 
 - Ported `gInGameTimerAtBosses`:

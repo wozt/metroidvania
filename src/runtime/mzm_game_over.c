@@ -236,10 +236,10 @@ int mzm_game_over_update(MzmGameOver *g, MzmScreen *s) {
         break;
     }
     if (result != MZM_GAME_OVER_STAY) return result;
-    /* GameOverProcessOam (ProcessComplexMenuOam: the head is never
-     * rotated or scaled) */
+    /* GameOverProcessOam (gCurrentOamRotation 0, gCurrentOamScaling 1.0:
+     * the head is never rotated or scaled) */
     s->next_oam_slot = 0;
-    mzm_menu_oam_process(s, 1, g->oam, sym("sGameOverOam"));
+    mzm_complex_menu_oam_process(s, 1, g->oam, sym("sGameOverOam"), 0, 0x100);
     mzm_reset_free_oam(s);
     vblank(g, s);
     return result;

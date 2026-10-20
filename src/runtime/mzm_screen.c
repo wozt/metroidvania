@@ -84,7 +84,11 @@ static uint8_t pre_action(uint32_t oam_array, uint8_t id) { return mzm_rom_u8(oa
 static uint8_t frame_timer(uint32_t frames, uint8_t frame) { return mzm_rom_u8(frames + frame * 8u + 4); }
 static uint32_t frame_oam(uint32_t frames, uint8_t frame) { return mzm_rom_u32(frames + frame * 8u); }
 
-void mzm_menu_oam_process(MzmScreen *s, int length, MzmMenuOam *o, uint32_t oam_array) {
+/* ProcessMenuOam, or ProcessComplexMenuOam when `complex`: an object with
+ * rotationScaling then goes through ProcessComplexOam (double-sized,
+ * matrix 0) with gCurrentOamRotation and gCurrentOamScaling. */
+static void process_menu_oam(MzmScreen *s, int length, MzmMenuOam *o, uint32_t oam_array, bool complex,
+                             uint16_t rotation, int16_t scaling) {
     int next = s->next_oam_slot, current = next;
     for (int i = 0; i < length; ++i, ++o) {
         if (o->oam_id == 0 || !o->exists) continue;
@@ -198,8 +202,19 @@ void mzm_menu_oam_process(MzmScreen *s, int length, MzmMenuOam *o, uint32_t oam_
         for (; current < next; ++current, src += 6) {
             uint16_t *dst = &s->oam[current * 4];
             uint16_t a0 = mzm_rom_u16(src), a1 = mzm_rom_u16(src + 2), a2 = mzm_rom_u16(src + 4);
-            a0 = (uint16_t)((a0 & 0xFF00) | ((a0 + y) & 0xFF));
-            a1 = (uint16_t)((a1 & 0xFE00) | ((a1 + x) & 0x1FF));
+            if (complex && o->rotation_scaling) {
+                /* The raw part, then the affine placement */
+                dst[0] = a0;
+                dst[1] = a1;
+                dst[2] = a2;
+                mzm_process_complex_oam(s, current, (int16_t)x, (int16_t)y, rotation, scaling, 0);
+                a0 = dst[0];
+                a1 = dst[1];
+                a2 = dst[2];
+            } else {
+                a0 = (uint16_t)((a0 & 0xFF00) | ((a0 + y) & 0xFF));
+                a1 = (uint16_t)((a1 & 0xFE00) | ((a1 + x) & 0x1FF));
+            }
             a2 = (uint16_t)((a2 & ~(3 << 10)) | (o->priority & 3) << 10);
             a0 = (uint16_t)((a0 & ~(3 << 10)) | (o->obj_mode & 3) << 10);
             dst[0] = a0;
@@ -208,6 +223,15 @@ void mzm_menu_oam_process(MzmScreen *s, int length, MzmMenuOam *o, uint32_t oam_
         }
     }
     s->next_oam_slot = (uint8_t)next;
+}
+
+void mzm_menu_oam_process(MzmScreen *s, int length, MzmMenuOam *o, uint32_t oam_array) {
+    process_menu_oam(s, length, o, oam_array, false, 0, 0x100);
+}
+
+void mzm_complex_menu_oam_process(MzmScreen *s, int length, MzmMenuOam *o, uint32_t oam_array,
+                                  uint16_t rotation, int16_t scaling) {
+    process_menu_oam(s, length, o, oam_array, true, rotation, scaling);
 }
 
 void mzm_apply_fading_color(uint8_t type, uint8_t color, const uint16_t *src, uint16_t *dst,

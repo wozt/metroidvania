@@ -629,6 +629,24 @@ static void test_game_over_bank(void) {
         result = mzm_game_over_update(&go, &screen);
     }
     assert(result == MZM_GAME_OVER_CONTINUE);
+    /* ProcessComplexMenuOam: the unrotated head is placed as ProcessMenuOam
+     * places it; a rotated one becomes a double-size affine object. */
+    MzmMenuOam head = go.oam[0], plain = go.oam[0];
+    head.exists = plain.exists = 1;
+    if (!head.oam_id) head.oam_id = plain.oam_id = 1;
+    screen.next_oam_slot = 0;
+    mzm_menu_oam_process(&screen, 1, &plain, mzm_sym("sGameOverOam"));
+    uint16_t expected[3] = {screen.oam[0], screen.oam[1], screen.oam[2]};
+    screen.next_oam_slot = 0;
+    mzm_complex_menu_oam_process(&screen, 1, &head, mzm_sym("sGameOverOam"), 0, 0x100);
+    assert(screen.oam[0] == expected[0] && screen.oam[1] == expected[1] && screen.oam[2] == expected[2]);
+    head = go.oam[0];
+    head.exists = 1;
+    if (!head.oam_id) head.oam_id = 1;
+    head.rotation_scaling = true;
+    screen.next_oam_slot = 0;
+    mzm_complex_menu_oam_process(&screen, 1, &head, mzm_sym("sGameOverOam"), 0x40, 0x100);
+    assert((screen.oam[0] >> 8 & 3) == 3 && screen.oam[2] == expected[2]);
     mzm_rom_close();
 }
 

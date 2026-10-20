@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T01:03:25+00:00",
+ "generated_at": "2026-10-20T01:05:22+00:00",
  "git": {
-  "commit": "7f8dbf6",
+  "commit": "51be67e",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 35,
-    "functional": 94,
+    "partial": 34,
+    "functional": 95,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 94,
-   "functional_or_better_percent": 67.1,
+   "functional_or_better": 95,
+   "functional_or_better_percent": 67.9,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 11,
-    "functional": 81,
+    "partial": 10,
+    "functional": 82,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 81,
-   "functional_or_better_percent": 88.0,
+   "functional_or_better": 82,
+   "functional_or_better_percent": 89.1,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -7065,10 +7065,11 @@
    "area": "mzm",
    "category": "technical",
    "title": "Non-gameplay screen helpers",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_screen.c"
+    "src/runtime/mzm_screen.c",
+    "src/runtime/mzm_game_over.c"
    ],
    "tests": [
     "tests/test_mzm_screens.c"
@@ -7081,15 +7082,18 @@
     "ResetFreeOam",
     "UpdateMenuOamDataId",
     "ApplySpecialBackgroundFadingColor",
-    "ClearGfxRam"
+    "ClearGfxRam",
+    "ProcessComplexMenuOam"
    ],
-   "limitations": "ProcessComplexMenuOam (rotation and scaling) is not ported yet. The screens render at the native 240x160 size, fitted to the runtime view. MzmScreen holds what the menus and cutscenes share: the GbaPpu they draw on, gOamData and gNextOamSlot, the *_NonGameplay background offsets and blending values, the EWRAM work area and gChangedInput / gButtonInput in GBA key bits. ProcessMenuOam runs the menu object animations from the ROM's struct OamArray and FrameData tables with all their pre-actions and writes the OAM parts at the object's position minus its bound background's offset, with its priority and object mode; ResetFreeOam, UpdateMenuOamDataId, ClearGfxRam and ApplySpecialBackgroundFadingColor (in, flash, out and the unnamed fade) are ported; MenuOamData records are read from their 16-byte ROM layout.",
-   "next_action": "Port ProcessComplexMenuOam with the first screen that needs it.",
+   "limitations": "The screens render at the native 240x160 size, fitted to the runtime view. Not compared with an emulator. MzmScreen holds what the menus and cutscenes share: the GbaPpu they draw on, gOamData and gNextOamSlot, the *_NonGameplay background offsets and blending values, the EWRAM work area and gChangedInput / gButtonInput in GBA key bits. ProcessMenuOam runs the menu object animations from the ROM's struct OamArray and FrameData tables with all their pre-actions and writes the OAM parts at the object's position minus its bound background's offset, with its priority and object mode; ResetFreeOam, UpdateMenuOamDataId, ClearGfxRam and ApplySpecialBackgroundFadingColor (in, flash, out and the unnamed fade) are ported; MenuOamData records are read from their 16-byte ROM layout. ProcessComplexMenuOam is ported (mzm_complex_menu_oam_process): ProcessMenuOam with an object's rotationScaling sent through ProcessComplexOam (double-sized, matrix 0) with gCurrentOamRotation and gCurrentOamScaling; the game over screen draws its head with it (never rotated, so placed as ProcessMenuOam places it). A bank-backed test checks both cases. The helpers run on every captured non-gameplay screen (the title screen, the file select, the game over, the cutscenes).",
+   "next_action": "Compare the screens with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_screens.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "runtime capture"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -11318,6 +11322,12 @@
  },
  "timeline": [
   {
+   "commit": "51be67e",
+   "date": "2026-10-20",
+   "subject": "Record boss timers and apply the hard stun threshold",
+   "scope": "project"
+  },
+  {
    "commit": "7f8dbf6",
    "date": "2026-10-20",
    "subject": "Port the dynamic Ruins Test reflection",
@@ -11790,12 +11800,6 @@
    "date": "2026-10-15",
    "subject": "feat(mzm): connect successful Zebes exit fades",
    "scope": "mzm"
-  },
-  {
-   "commit": "64b56c8",
-   "date": "2026-10-14",
-   "subject": "feat(mzm): connect escape failure game over",
-   "scope": "mzm"
   }
  ],
  "inventory": {
@@ -11823,7 +11827,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1621,
+    "routines_cited_by_features": 1622,
     "call_edges": 6071
    },
    "aos": {

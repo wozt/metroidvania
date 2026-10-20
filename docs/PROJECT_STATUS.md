@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0429 - Aria interactive options and held-key navigation
+
+- The diagnostic SDL Options screen now toggles locally provided title art
+  visibility using A; B returns to the diagnostic menu.
+- Up/down held-key navigation repeats after 32 frames and every six frames;
+  confirm/back remain rising-edge actions and are device-free tested.
+- Original GameModeMainMenuUpdate, ROM graphics, save selection and game
+  startup are still unported; native parity remains partial.
+- Native checklist and web dashboard are regenerated after test execution.
+
 ## Patch 0428 - Interactive Aria SDL menu preview
 
 - The SDL title host now shows an interactive diagnostic main menu.

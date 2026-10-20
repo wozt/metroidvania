@@ -99,12 +99,12 @@ int main(int argc, char **argv) {
                 if (action == AOS_TITLE_EXIT)
                     aos_menu_preview_press(&menu, KEY_START);
             } else {
-                aos_menu_preview_press(&menu, edge);
+                aos_menu_preview_tick(&menu, held, edge);
             }
         }
         SDL_SetRenderDrawColor(renderer, 18, 14, 28, 255);
         SDL_RenderClear(renderer);
-        if (art) {
+        if (art && menu.show_background) {
             SDL_FRect dst = {0, 0, GBA_W, GBA_H};
             SDL_RenderTexture(renderer, art, NULL, &dst);
         } else {
@@ -135,7 +135,13 @@ int main(int argc, char **argv) {
             } else {
                 const char *names[] = {"NEW GAME", "CONTINUE", "OPTIONS"};
                 SDL_RenderDebugText(renderer, 30, 38, names[menu.notice_kind]);
-                SDL_RenderDebugText(renderer, 30, 64, "NOT IMPLEMENTED YET");
+                if (menu.notice_kind == 2) {
+                    SDL_RenderDebugText(renderer, 20, 64,
+                        menu.show_background ? "ART: VISIBLE" : "ART: HIDDEN");
+                    SDL_RenderDebugText(renderer, 20, 84, "A: TOGGLE ART");
+                } else {
+                    SDL_RenderDebugText(renderer, 30, 64, "NOT IMPLEMENTED YET");
+                }
                 SDL_RenderDebugText(renderer, 30, 96, "A/B: BACK");
             }
         }

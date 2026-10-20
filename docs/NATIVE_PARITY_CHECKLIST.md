@@ -1107,14 +1107,14 @@ Next action: Port original title screen stages, graphics and selection and wire 
 
 [?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 28 discovered routine(s) to this category (7 by native name, 21 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Title preview navigates into a separately tested SDL diagnostic menu.
+[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Visible SDL preview with diagnostic menu, edge-triggered activation, 32/6-frame held-key navigation and working display option; device-free tests.
 
 Native evidence: not attached yet.  
 Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c), [`src/runtime/aos_title_stages.c`](../src/runtime/aos_title_stages.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_menu_preview.c`](../src/runtime/aos_menu_preview.c).  
 Tests: [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c), [`tests/test_aos_title_motion.c`](../tests/test_aos_title_motion.c), [`tests/test_aos_title_stages.c`](../tests/test_aos_title_stages.c), [`tests/test_aos_menu_preview.c`](../tests/test_aos_menu_preview.c).
 Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`.  
-Known divergences: Diagnostic SDL menu with New Game, Continue and Options placeholders; not the original GameModeMainMenuUpdate. Native assets, save flow and full game mode transitions are still missing.  
-Next action: Implement authentic native menu state, original assets, save slots and startup.
+Known divergences: SDL diagnostic title/menu navigation now supports held-key cursor repeat and art visibility options; native game menu, save flow, boot and graphics remain absent.  
+Next action: Port genuine GameModeMainMenuUpdate states, original extracted menu assets and file select, without presenting diagnostic UI as native parity.
 
 ### Menus and options
 

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T04:31:16+00:00",
+ "generated_at": "2026-10-20T04:40:53+00:00",
  "git": {
-  "commit": "4c1c50f",
+  "commit": "ca58551",
   "branch": "main",
   "dirty": true
  },
@@ -8965,8 +8965,8 @@
     "aos.input.gamepad"
    ],
    "native_routines": [],
-   "limitations": "Diagnostic SDL menu with New Game, Continue and Options placeholders; not the original GameModeMainMenuUpdate. Native assets, save flow and full game mode transitions are still missing. Title preview navigates into a separately tested SDL diagnostic menu.",
-   "next_action": "Implement authentic native menu state, original assets, save slots and startup.",
+   "limitations": "SDL diagnostic title/menu navigation now supports held-key cursor repeat and art visibility options; native game menu, save flow, boot and graphics remain absent. Visible SDL preview with diagnostic menu, edge-triggered activation, 32/6-frame held-key navigation and working display option; device-free tests.",
+   "next_action": "Port genuine GameModeMainMenuUpdate states, original extracted menu assets and file select, without presenting diagnostic UI as native parity.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_title_input.c",
@@ -11659,6 +11659,12 @@
  },
  "timeline": [
   {
+   "commit": "ca58551",
+   "date": "2026-10-20",
+   "subject": "Add navigable Aria SDL menu preview",
+   "scope": "project"
+  },
+  {
    "commit": "4c1c50f",
    "date": "2026-10-20",
    "subject": "Add runnable SDL Aria title preview frontend",
@@ -12130,12 +12136,6 @@
    "commit": "063b164",
    "date": "2026-10-17",
    "subject": "Port the Imago tunnel discovery trigger",
-   "scope": "project"
-  },
-  {
-   "commit": "88c1515",
-   "date": "2026-10-17",
-   "subject": "Port the Imago right-side passage remnant",
    "scope": "project"
   }
  ],

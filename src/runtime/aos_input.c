@@ -38,3 +38,18 @@ bool aos_input_set_player(AosInput *state, int32_t priority, uint16_t held) {
     }
     return false;
 }
+
+/* Native SoftResetCheck, main.c, called before UpdateInput. The original
+ * requests a soft reset only when the A+B+Select+Start chord is currently
+ * held AND this frame has a new key edge (but not all four newly pressed).
+ * Its single-use inhibit flag is cleared on the first call. */
+bool aos_input_soft_reset_check(const AosInput *state, bool *inhibit_once) {
+    const uint16_t chord = 0x000fu;
+    if (*inhibit_once) {
+        *inhibit_once = false;
+        return false;
+    }
+    if ((state->new_input & chord) == chord) return false;
+    if (state->new_input == 0) return false;
+    return (state->held_input & chord) == chord;
+}

@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 50 | 3523 |
+| Castlevania: Aria of Sorrow | 51 | 3522 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1107,13 +1107,13 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 
 [?] **`aos.input.inventory-boundary` — source coverage.** The current classifier assigns 2 discovered routine(s) to this category (2 by native name). Category completeness has not been established.
 
-[~] **`aos.input.gamepad` — Keyboard and gamepad input.** UpdateInput rising edges, held inputs, 32/6-frame repeats and priority reset, plus SetPlayerInput priority/override semantics are ported in device-free C. The SDL3 host remains separate from the native Aria input state.
+[~] **`aos.input.gamepad` — Keyboard and gamepad input.** UpdateInput rising edges, held inputs, 32/6-frame repeats and priority reset, plus SetPlayerInput priority/override semantics are ported in device-free C. The SDL3 host remains separate from the native Aria input state. SoftResetCheck now reproduces the native one-shot inhibit flag, new-input gate and four-key chord detection without restarting the host.
 
-Native evidence: `aos:c:src/code_080009A0.c:SetPlayerInput`, `aos:c:src/main.c:UpdateInput`.  
+Native evidence: `aos:c:src/code_080009A0.c:SetPlayerInput`, `aos:c:src/main.c:SoftResetCheck`, `aos:c:src/main.c:UpdateInput`.  
 Local implementation: [`src/runtime/gba_input.c`](../src/runtime/gba_input.c), [`src/runtime/aos_input.c`](../src/runtime/aos_input.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
 Tests: [`tests/test_gba_input.c`](../tests/test_gba_input.c), [`tests/test_aos_input.c`](../tests/test_aos_input.c).
-Known divergences: SDL3 maps hardware into an active-high key mask. The native room-transition routine sub_080106DC is not ported: only its SetPlayerInput(1, 0) input-suppression call is covered. No in-game capture comparison.  
-Next action: Port the complete sub_080106DC transition state machine with room/camera effects, then compare controls and repeat timing against recorded gameplay.
+Known divergences: SDL3 supplies active-high key bits. SoftResetCheck is ported and unit-tested, but the incomplete Aria boot lifecycle cannot perform the original console reset. The transition routine sub_080106DC still lacks its fades and camera state machine; no in-game capture comparison.  
+Next action: Implement original boot/soft-reset lifecycle and complete sub_080106DC room transitions; validate both against gameplay captures.
 
 ### HUD and interface
 

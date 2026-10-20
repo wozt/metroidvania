@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0420 - Aria native soft reset detection
+
+- `aos_input_soft_reset_check` ports `SoftResetCheck` from native `main.c`,
+  including its one-shot inhibit bit, newly pressed key gate, and the
+  A+B+Select+Start chord semantics (all four rising together do not reset).
+- Device-free assertions test held, simultaneous, staggered and inhibited
+  combinations. Native `sub_080106DC` remains a separate unported room
+  transition, not an input function.
+- The Aria game startup/reset lifecycle is not implemented, so this cycle
+  intentionally does not trigger a host reset or claim in-game parity.
+- Native parity checklist and local web dashboard are regenerated together.
+
 ## Patch 0419 - Aria native input foundation
 
 - `aos_input_update` ports Aria's `UpdateInput` held/new inputs, native

@@ -41,6 +41,30 @@ int main(void) {
     aos_input_update(&in, 0);
     aos_input_update(&in, 0x20);
     assert(in.player_new_input == 0x20);
+    /* The original main loop calls SoftResetCheck before UpdateInput.
+     * A four-key chord pressed simultaneously must not reset. A delayed
+     * final chord key does reset; repeated held frames have no new edge. */
+    const uint16_t chord = 0x000fu;
+    bool inhibit = false;
+    AosInput reset = {0};
+    aos_input_update(&reset, chord);
+    assert(!aos_input_soft_reset_check(&reset, &inhibit));
+    aos_input_update(&reset, chord);
+    assert(!aos_input_soft_reset_check(&reset, &inhibit));
+    aos_input_update(&reset, 0);
+    aos_input_update(&reset, 0x0007);
+    assert(!aos_input_soft_reset_check(&reset, &inhibit));
+    aos_input_update(&reset, chord);
+    assert(aos_input_soft_reset_check(&reset, &inhibit));
+    inhibit = true;
+    assert(!aos_input_soft_reset_check(&reset, &inhibit));
+    assert(!inhibit);
+    assert(aos_input_soft_reset_check(&reset, &inhibit));
+    aos_input_update(&reset, chord);
+    assert(!aos_input_soft_reset_check(&reset, &inhibit));
+    /* Another key's rising edge also triggers a held reset chord. */
+    aos_input_update(&reset, chord | 0x0020);
+    assert(aos_input_soft_reset_check(&reset, &inhibit));
     puts("Aria native input tests passed");
     return 0;
 }

@@ -5,6 +5,7 @@
 #include "gba_psg.h"
 #include "mzm_audio.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -359,9 +360,53 @@ static void test_engine(void) {
     remove(tables_path);
 }
 
+/* With the extracted sound bank: every one of the 708 sSoundDataEntries
+ * plays through the engine. All are audible within four seconds except the
+ * 95 that the ROM itself leaves silent: the empty song shared by the unused
+ * entries (no track), the songs whose tracks set VOL 0 (placeholders such as
+ * SOUND_ATOMIC_CHARGE_SILENT), and MUSIC_33, 38 and 47 (VOL 6 or 7 with
+ * velocity 12, below the 8-bit mixer's resolution). */
+static void test_whole_bank(void) {
+    if (!mzm_audio_open("assets/extracted/metroid/sound/runtime/sound_bank.bin",
+                        "assets/extracted/metroid/sound/runtime/sound_tables.tsv")) {
+        puts("mzm_audio: no sound bank, the whole bank check is skipped");
+        return;
+    }
+    static const uint16_t silent[] = {
+        29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 51, 56, 71,
+        81, 82, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 169, 198, 199, 264, 316,
+        317, 318, 319, 330, 331, 394, 499, 534, 535, 536, 537, 538, 539, 548, 560, 575, 577, 578, 579,
+        608, 615, 626, 627, 628, 629, 635, 636, 637, 638, 639, 640, 641, 642, 643, 644, 645, 646, 647,
+        648, 649, 650, 664, 665, 666, 667, 668, 669, 680, 685};
+    static int16_t buffer[2048];
+    size_t next_silent = 0;
+    int audible = 0;
+    for (uint16_t id = 1; id < 708; ++id) {
+        mzm_audio_initialize();
+        mzm_sound_play(id);
+        int peak = 0;
+        for (int frame = 0; frame < 240 && peak < 64; ++frame) {
+            mzm_audio_update();
+            int count = mzm_audio_render(buffer, 1024, 48000);
+            for (int i = 0; i < count * 2; ++i)
+                if (abs(buffer[i]) > peak) peak = abs(buffer[i]);
+        }
+        bool expected_silent = next_silent < sizeof silent / sizeof silent[0] && silent[next_silent] == id;
+        if (expected_silent) next_silent++;
+        else audible++;
+        if (expected_silent != (peak < 64)) {
+            fprintf(stderr, "sound 0x%X: peak %d\n", id, peak);
+            failures++;
+        }
+    }
+    CHECK(audible == 612);
+    mzm_audio_close();
+}
+
 int main(void) {
     test_psg_square();
     test_engine();
+    test_whole_bank();
     if (failures) {
         fprintf(stderr, "%d failure(s)\n", failures);
         return 1;

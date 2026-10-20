@@ -237,7 +237,8 @@ if(BUILD_TESTING)
     target_include_directories(fusion_mzm_audio_tests PRIVATE src/runtime)
     target_link_libraries(fusion_mzm_audio_tests PRIVATE m)
     fusion_enable_warnings(fusion_mzm_audio_tests)
-    add_test(NAME mzm_audio COMMAND fusion_mzm_audio_tests)
+    add_test(NAME mzm_audio COMMAND fusion_mzm_audio_tests
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
     add_executable(fusion_mzm_hatches_tests tests/test_mzm_hatches.c src/runtime/mzm_hatches.c
                    src/runtime/mzm_sfx.c src/runtime/mzm_screen_shake.c)

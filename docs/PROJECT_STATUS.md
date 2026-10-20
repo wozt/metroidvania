@@ -3838,6 +3838,22 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0410 - every sound of the bank checked
+
+- New bank-backed test: each of the 708 `sSoundDataEntries` is played
+  through the engine.
+  - 612 are audible within four seconds.
+  - The 95 silent entries are silent in the ROM itself:
+    - the empty song shared by the unused entries;
+    - songs whose tracks set `VOL 0`, such as
+      `SOUND_ATOMIC_CHARGE_SILENT`;
+    - `MUSIC_33`, `MUSIC_38` and `MUSIC_47`, at `VOL` 6 or 7 with velocity
+      12, below the 8-bit mixer's resolution.
+- The audio test now runs from the source directory.
+- `mzm.audio.sound_engine` moves to `functional`, on this test and the
+  user's review of the in-game playback. The parity inventory now
+  contains 19 partial and 84 functional entries.
+
 ## Patch 0409 - native fades before the blue ship and the Chozodia escape
 
 - `COLOR_FADING_SAMUS_IN_BLUE_SHIP` replaces the CANCEL stand-in. Its

@@ -72,6 +72,9 @@ uint16_t gba_pad_map_buttons(const GbaPadMap *map, const bool pressed[SDL_GAMEPA
 bool gba_pad_map_debug(const GbaPadMap *map, const bool pressed[SDL_GAMEPAD_BUTTON_COUNT]);
 /* A GBA key name ("a", "select", "up"...) to its bit, or 0. */
 uint16_t gba_key_from_name(const char *name);
+/* UpdateInput's active-high host equivalent: return the newly pressed keys
+ * and replace the previous held mask with the current one. */
+uint16_t gba_input_changed(uint16_t held, uint16_t *previous);
 
 /* Opens the first connected gamepad (SDL_INIT_GAMEPAD must be on). */
 void gba_input_init(GbaInput *input, const GbaPadMap *map);

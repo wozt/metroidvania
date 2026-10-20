@@ -16,6 +16,12 @@ uint16_t gba_key_from_name(const char *name) {
     return 0;
 }
 
+uint16_t gba_input_changed(uint16_t held, uint16_t *previous) {
+    uint16_t changed = (uint16_t)(held & ~*previous);
+    *previous = held;
+    return changed;
+}
+
 /* Positional names first (unambiguous next to the GBA "a" / "b"), then
  * SDL's own names ("a" south, "b" east, "x" west, "y" north, "dpup"...). */
 static SDL_GamepadButton button_from_name(const char *name) {

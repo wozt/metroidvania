@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T01:57:12+00:00",
+ "generated_at": "2026-10-20T02:50:56+00:00",
  "git": {
-  "commit": "55612e4",
+  "commit": "07d816b",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 27,
-    "functional": 102,
+    "partial": 24,
+    "functional": 105,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 102,
-   "functional_or_better_percent": 72.9,
+   "functional_or_better": 105,
+   "functional_or_better_percent": 75.0,
    "with_passing_tests": 128,
    "with_passing_tests_percent": 91.4,
    "unknown_or_blocked": 1,
@@ -261,15 +261,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 3,
-    "functional": 89,
+    "partial": 0,
+    "functional": 92,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 89,
-   "functional_or_better_percent": 96.7,
+   "functional_or_better": 92,
+   "functional_or_better_percent": 100.0,
    "with_passing_tests": 92,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -664,10 +664,12 @@
    "area": "mzm",
    "category": "animation",
    "title": "Samus animation and palette reconstruction",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "scripts/mzm_samus_pipeline.py",
+    "scripts/mzm_samus_compose.py",
+    "src/runtime/mzm_samus.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -681,15 +683,19 @@
     "SamusUpdateGraphicsOam",
     "SamusUpdatePalette"
    ],
-   "limitations": "The deterministic private library maps the currently supported semantic actions; native effects and every pose are not yet covered. SPOSE_SAVING_LOADING_GAME with lastWallTouchedMidAir (Samus in her gunship) draws the native in-ship tables (sSamusAnim_256484, sSamusAnim_27f430, sSamusAnim_2b0bf4), exported as the InShip table.",
-   "next_action": "Extend coverage to native effects and the remaining poses.",
+   "limitations": "Not compared frame by frame with an emulator. The hash-gated private library exports all 832 native body/cannon variants: 1,072 sequences, 4,670 frames and every one of the 67 real SPOSE rows for the Power, Full and Suitless families where they exist. Its semantic map resolves 662 gameplay bindings with no missing binding; the 18 suitless speedboost, skid, screw attack and shinespark combinations are explicitly unavailable because those abilities cannot coexist with the suitless campaign state. All palette rows and their native effects are exported and selected by SamusUpdatePalette. SamusUpdateGraphicsOam selects the per-ACD tables and falls back to the exact pose row; SPOSE_SAVING_LOADING_GAME with lastWallTouchedMidAir selects the three native InShip tables. Unit tests audit the decompilation's pose enum against the pointer tables, the body/cannon composition and palette banks; gameplay captures cover suited and suitless movement, weapons, palette effects and the Ruins Test reflection.",
+   "next_action": "Compare representative animation and palette sequences frame by frame with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_samus_pipeline.py",
      "tests/test_mzm_samus_palette_banks.py",
      "tests/test_mzm_samus.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "brinstar_000",
+     "chozodia_000",
+     "chozodia_042"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -5662,24 +5668,31 @@
    "area": "mzm",
    "category": "input",
    "title": "Keyboard and gamepad input",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/gba_input.c",
-    "src/runtime/room_runtime.c"
+    "src/runtime/room_runtime.c",
+    "src/runtime/mzm_screen.c"
    ],
    "tests": [
-    "tests/test_gba_input.c"
+    "tests/test_gba_input.c",
+    "tests/test_mzm_screens.c"
    ],
    "dependencies": [],
-   "native_routines": [],
-   "limitations": "Host input layer: SDL3 devices are mapped to the GBA KEYINPUT bits; the native key reading and repeat logic are not ported. Hot-plugged SDL3 gamepads, a remappable GBA layout and the keyboard drive Samus; no in-game controls menu yet.",
-   "next_action": "Port the native input routines and add an in-game controls menu.",
+   "native_routines": [
+    "UpdateInput"
+   ],
+   "limitations": "SDL3 supplies an active-high host mask instead of reading the GBA's active-low KEYINPUT register. Screen-specific menu repeat remains in each native screen handler, as in the game. UpdateInput's exact held, previous and rising-edge semantics are shared by gameplay and tested without a device. Keyboard and hot-plugged SDL3 gamepads feed the same ten GBA bits; the default layout, remapping file, analog dead zone, impossible opposite-direction cancellation and debug chord are covered. The intro, title, file select, gameplay and pause/status screens all consume this path, and recorded gameplay captures were driven through it. An in-game controls menu is an optional host feature, not a missing native routine.",
+   "next_action": "Add a graphical host control-remapping menu if desired.",
    "evidence": {
     "unit_tests": [
-     "tests/test_gba_input.c"
+     "tests/test_gba_input.c",
+     "tests/test_mzm_screens.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "brinstar_000"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -5695,6 +5708,16 @@
       "registered": true,
       "ctest": [
        "gba_input"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_screens.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_screens"
       ],
       "outcome": "passed",
       "exists": true
@@ -7188,8 +7211,8 @@
    "area": "mzm",
    "category": "technical",
    "title": "GBA picture processing unit and ROM data bank",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/gba_ppu.c",
     "src/runtime/mzm_rom.c",
@@ -7200,22 +7223,28 @@
    "tests": [
     "tests/test_mzm_hud.c",
     "tests/test_mzm_screens.c",
-    "tests/test_mzm_rom_bank.py"
+    "tests/test_mzm_rom_bank.py",
+    "tests/test_mzm_technical_audit.py"
    ],
    "dependencies": [],
    "native_routines": [
     "CallLZ77UncompVram",
     "CallLZ77UncompWram"
    ],
-   "limitations": "The bitmap modes 3 to 5 are not rendered; the window and blending registers are read once per frame (no mid-frame register changes or HBlank effects, except a per-line WIN0H table standing in for an H-blank handler rewriting it); the affine backgrounds use the reference point plus the line times PB/PD instead of the latched internal registers; objects beyond 128 per frame, the per-line object cycle limit and the affine object mosaic are not modelled. The ROM bank holds the whole verified ROM (private, never committed). The register bank keeps the BG2/BG3 affine range at 0x20-0x3F independent from the lower display registers; a ROM-free PPU test and the Tourian surrounded test exercise BG2PA, BG2PD, BG2X and BG2Y while DISPCNT remains live. gba_ppu renders the GBA display memories as GBATEK describes them: text backgrounds (four sizes, 16 and 256 colors, flips, scrolling, mosaic), affine backgrounds (wrap, overflow), regular and affine objects (all shapes and sizes, 1D and 2D mapping, flips, double size, semi-transparency, the object window, mosaic), the front-most two layers per pixel by priority, window 0, window 1, the object window and the outside, alpha blending, brightness up and down, and forced blank. scripts/mzm_rom_bank.py copies the verified ROM into a private bank and lists the 14462 sized data objects of the reference ELF (name, GBA address, size); mzm_rom looks them up by name and reads them by address, and decompresses the BIOS LZ77 and run-length streams. A per-line WIN0H table (win0h_per_line) stands in for the Chozodia escape's H-blank handler. ProcessComplexOam and CalculateOamPart4 are shared by the Tourian and Chozodia escapes (mzm_screen.c).",
-   "next_action": "Finish the remaining native screens and compare the affine scenes with an emulator.",
+   "limitations": "The bitmap modes 3 to 5 are not rendered, but a source audit proves the pinned MZM program never selects them. Registers are sampled by the host renderer rather than hardware dots; the Chozodia escape's only required H-blank rewrite is represented by its per-line WIN0H table. Affine reference latching, the object cycle limit and affine-object mosaic are not hardware-cycle emulated. The ROM bank contains the whole verified ROM privately and is never committed. The register bank keeps BG2/BG3 affine registers independent from the lower display registers. The renderer covers every display path selected by MZM: modes 0 to 2 text/affine backgrounds, all regular and affine object shapes, 1D/2D mapping, flips, double size, windows and object windows, alpha and brightness effects, mosaic, priority and forced blank. The intro, title, file select, pause/status, Game Over, credits, Tourian escape and Chozodia escape run through it and have tests and recorded captures. The hash-gated private bank indexes 14,462 sized ELF objects; mzm_rom resolves names and GBA addresses and implements the BIOS LZ77 and run-length streams. ProcessComplexOam and CalculateOamPart4 are shared by the affine escape scenes. The technical audit rejects any future use of unsupported bitmap modes.",
+   "next_action": "Compare representative affine and blended scenes with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_hud.c",
      "tests/test_mzm_screens.c",
-     "tests/test_mzm_rom_bank.py"
+     "tests/test_mzm_rom_bank.py",
+     "tests/test_mzm_technical_audit.py"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "brinstar_000",
+     "tourian_000",
+     "chozodia_092"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -7247,6 +7276,12 @@
      },
      {
       "test": "tests/test_mzm_rom_bank.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_mzm_technical_audit.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -11121,9 +11156,9 @@
    {
     "file": "tests/test_mzm_samus_pipeline.py",
     "module": "tests.test_mzm_samus_pipeline",
-    "test_count": 11,
+    "test_count": 12,
     "outcome": "passed",
-    "passed": 11
+    "passed": 12
    },
    {
     "file": "tests/test_mzm_samus_sprite.py",
@@ -11138,6 +11173,13 @@
     "test_count": 15,
     "outcome": "passed",
     "passed": 15
+   },
+   {
+    "file": "tests/test_mzm_technical_audit.py",
+    "module": "tests.test_mzm_technical_audit",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
    },
    {
     "file": "tests/test_mzm_world_atlas.py",
@@ -11386,12 +11428,18 @@
    }
   ],
   "summary": {
-   "passed": 483,
+   "passed": 485,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "07d816b",
+   "date": "2026-10-20",
+   "subject": "Audit the clipdata routines and mark the entry functional",
+   "scope": "project"
+  },
   {
    "commit": "55612e4",
    "date": "2026-10-20",
@@ -11865,12 +11913,6 @@
    "date": "2026-10-15",
    "subject": "Port Tourian going-to-crash scene",
    "scope": "project"
-  },
-  {
-   "commit": "1be30e0",
-   "date": "2026-10-15",
-   "subject": "Port Tourian getting-shot scene",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -11898,7 +11940,7 @@
     "by_category_evidence": {
      "path": 2970
     },
-    "routines_cited_by_features": 1654,
+    "routines_cited_by_features": 1655,
     "call_edges": 6071
    },
    "aos": {

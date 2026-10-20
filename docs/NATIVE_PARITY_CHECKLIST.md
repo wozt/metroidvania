@@ -127,13 +127,14 @@ Evidence: in game: `brinstar_000`, `brinstar_027`, `chozodia_000`, `chozodia_042
 
 [?] **`mzm.input.inventory-boundary` — source coverage.** The current classifier assigns 9 discovered routine(s) to this category (9 by source path). Category completeness has not been established.
 
-[~] **`mzm.input.gamepad` — Keyboard and gamepad input.** Hot-plugged SDL3 gamepads, a remappable GBA layout and the keyboard drive Samus; no in-game controls menu yet.
+[+] **`mzm.input.gamepad` — Keyboard and gamepad input.** UpdateInput's exact held, previous and rising-edge semantics are shared by gameplay and tested without a device. Keyboard and hot-plugged SDL3 gamepads feed the same ten GBA bits; the default layout, remapping file, analog dead zone, impossible opposite-direction cancellation and debug chord are covered. The intro, title, file select, gameplay and pause/status screens all consume this path, and recorded gameplay captures were driven through it. An in-game controls menu is an optional host feature, not a missing native routine.
 
-Native evidence: not attached yet.  
-Local implementation: [`src/runtime/gba_input.c`](../src/runtime/gba_input.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
-Tests: [`tests/test_gba_input.c`](../tests/test_gba_input.c).
-Known divergences: Host input layer: SDL3 devices are mapped to the GBA KEYINPUT bits; the native key reading and repeat logic are not ported.  
-Next action: Port the native input routines and add an in-game controls menu.
+Native evidence: `mzm:c:src/update_input.c:UpdateInput`.  
+Local implementation: [`src/runtime/gba_input.c`](../src/runtime/gba_input.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_screen.c`](../src/runtime/mzm_screen.c).  
+Tests: [`tests/test_gba_input.c`](../tests/test_gba_input.c), [`tests/test_mzm_screens.c`](../tests/test_mzm_screens.c).
+Known divergences: SDL3 supplies an active-high host mask instead of reading the GBA's active-low KEYINPUT register. Screen-specific menu repeat remains in each native screen handler, as in the game.  
+Next action: Add a graphical host control-remapping menu if desired.
+Evidence: in game: `brinstar_000`.
 
 ### HUD and interface
 
@@ -211,12 +212,14 @@ Known divergences: With all debris slots taken the game writes past its array wh
 Next action: Compare the effects with an emulator.
 Evidence: in game: `chozodia_042`.
 
-[~] **`mzm.animation.samus_runtime_library` — Samus animation and palette reconstruction.** The deterministic private library maps the currently supported semantic actions; native effects and every pose are not yet covered. SPOSE_SAVING_LOADING_GAME with lastWallTouchedMidAir (Samus in her gunship) draws the native in-ship tables (sSamusAnim_256484, sSamusAnim_27f430, sSamusAnim_2b0bf4), exported as the InShip table.
+[+] **`mzm.animation.samus_runtime_library` — Samus animation and palette reconstruction.** The hash-gated private library exports all 832 native body/cannon variants: 1,072 sequences, 4,670 frames and every one of the 67 real SPOSE rows for the Power, Full and Suitless families where they exist. Its semantic map resolves 662 gameplay bindings with no missing binding; the 18 suitless speedboost, skid, screw attack and shinespark combinations are explicitly unavailable because those abilities cannot coexist with the suitless campaign state. All palette rows and their native effects are exported and selected by SamusUpdatePalette. SamusUpdateGraphicsOam selects the per-ACD tables and falls back to the exact pose row; SPOSE_SAVING_LOADING_GAME with lastWallTouchedMidAir selects the three native InShip tables. Unit tests audit the decompilation's pose enum against the pointer tables, the body/cannon composition and palette banks; gameplay captures cover suited and suitless movement, weapons, palette effects and the Ruins Test reflection.
 
 Native evidence: `mzm:c:src/samus.c:SamusUpdateAnimation`, `mzm:c:src/samus.c:SamusUpdateGraphicsOam`, `mzm:c:src/samus.c:SamusUpdatePalette`.  
-Local implementation: [`scripts/mzm_samus_pipeline.py`](../scripts/mzm_samus_pipeline.py), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
+Local implementation: [`scripts/mzm_samus_pipeline.py`](../scripts/mzm_samus_pipeline.py), [`scripts/mzm_samus_compose.py`](../scripts/mzm_samus_compose.py), [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
 Tests: [`tests/test_mzm_samus_pipeline.py`](../tests/test_mzm_samus_pipeline.py), [`tests/test_mzm_samus_palette_banks.py`](../tests/test_mzm_samus_palette_banks.py), [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c).
-Next action: Extend coverage to native effects and the remaining poses.
+Known divergences: Not compared frame by frame with an emulator.  
+Next action: Compare representative animation and palette sequences frame by frame with an emulator.
+Evidence: in game: `brinstar_000`, `chozodia_000`, `chozodia_042`.
 
 ### Collisions, hitboxes and hurtboxes
 
@@ -1048,13 +1051,14 @@ Known divergences: The screens render at the native 240x160 size, fitted to the 
 Next action: Compare the screens with an emulator.
 Evidence: in game: `runtime capture`.
 
-[~] **`mzm.technical.ppu_and_rom_bank` — GBA picture processing unit and ROM data bank.** The register bank keeps the BG2/BG3 affine range at 0x20-0x3F independent from the lower display registers; a ROM-free PPU test and the Tourian surrounded test exercise BG2PA, BG2PD, BG2X and BG2Y while DISPCNT remains live. gba_ppu renders the GBA display memories as GBATEK describes them: text backgrounds (four sizes, 16 and 256 colors, flips, scrolling, mosaic), affine backgrounds (wrap, overflow), regular and affine objects (all shapes and sizes, 1D and 2D mapping, flips, double size, semi-transparency, the object window, mosaic), the front-most two layers per pixel by priority, window 0, window 1, the object window and the outside, alpha blending, brightness up and down, and forced blank. scripts/mzm_rom_bank.py copies the verified ROM into a private bank and lists the 14462 sized data objects of the reference ELF (name, GBA address, size); mzm_rom looks them up by name and reads them by address, and decompresses the BIOS LZ77 and run-length streams. A per-line WIN0H table (win0h_per_line) stands in for the Chozodia escape's H-blank handler. ProcessComplexOam and CalculateOamPart4 are shared by the Tourian and Chozodia escapes (mzm_screen.c).
+[+] **`mzm.technical.ppu_and_rom_bank` — GBA picture processing unit and ROM data bank.** The register bank keeps BG2/BG3 affine registers independent from the lower display registers. The renderer covers every display path selected by MZM: modes 0 to 2 text/affine backgrounds, all regular and affine object shapes, 1D/2D mapping, flips, double size, windows and object windows, alpha and brightness effects, mosaic, priority and forced blank. The intro, title, file select, pause/status, Game Over, credits, Tourian escape and Chozodia escape run through it and have tests and recorded captures. The hash-gated private bank indexes 14,462 sized ELF objects; mzm_rom resolves names and GBA addresses and implements the BIOS LZ77 and run-length streams. ProcessComplexOam and CalculateOamPart4 are shared by the affine escape scenes. The technical audit rejects any future use of unsupported bitmap modes.
 
 Native evidence: `mzm:c:src/syscall_wrappers.c:CallLZ77UncompVram`, `mzm:c:src/syscall_wrappers.c:CallLZ77UncompWram`.  
 Local implementation: [`src/runtime/gba_ppu.c`](../src/runtime/gba_ppu.c), [`src/runtime/mzm_rom.c`](../src/runtime/mzm_rom.c), [`scripts/mzm_rom_bank.py`](../scripts/mzm_rom_bank.py), [`scripts/rebuild.py`](../scripts/rebuild.py), [`src/runtime/mzm_screen.c`](../src/runtime/mzm_screen.c).  
-Tests: [`tests/test_mzm_hud.c`](../tests/test_mzm_hud.c), [`tests/test_mzm_screens.c`](../tests/test_mzm_screens.c), [`tests/test_mzm_rom_bank.py`](../tests/test_mzm_rom_bank.py).
-Known divergences: The bitmap modes 3 to 5 are not rendered; the window and blending registers are read once per frame (no mid-frame register changes or HBlank effects, except a per-line WIN0H table standing in for an H-blank handler rewriting it); the affine backgrounds use the reference point plus the line times PB/PD instead of the latched internal registers; objects beyond 128 per frame, the per-line object cycle limit and the affine object mosaic are not modelled. The ROM bank holds the whole verified ROM (private, never committed).  
-Next action: Finish the remaining native screens and compare the affine scenes with an emulator.
+Tests: [`tests/test_mzm_hud.c`](../tests/test_mzm_hud.c), [`tests/test_mzm_screens.c`](../tests/test_mzm_screens.c), [`tests/test_mzm_rom_bank.py`](../tests/test_mzm_rom_bank.py), [`tests/test_mzm_technical_audit.py`](../tests/test_mzm_technical_audit.py).
+Known divergences: The bitmap modes 3 to 5 are not rendered, but a source audit proves the pinned MZM program never selects them. Registers are sampled by the host renderer rather than hardware dots; the Chozodia escape's only required H-blank rewrite is represented by its per-line WIN0H table. Affine reference latching, the object cycle limit and affine-object mosaic are not hardware-cycle emulated. The ROM bank contains the whole verified ROM privately and is never committed.  
+Next action: Compare representative affine and blended scenes with an emulator.
+Evidence: in game: `brinstar_000`, `tourian_000`, `chozodia_092`.
 
 [+] **`mzm.technical.save_file` — Save file.** Three files, file_a.sav to file_c.sav in --save-dir (else SDL's preference folder). YES on a save platform's prompt writes the current file through a temporary file renamed over it. The file select screen reads their info (SramWrite_FileInfo: existence, area, energy, missiles, suit, timer, completed flags, difficulty) and continues one: its room is loaded and its state restored with Samus in SPOSE_SAVING_LOADING_GAME and gIsLoadingFile set for the room's first sprite update, so the save platform releases her; --load does the same at start with the most recent file. The in-game timer runs each game frame as InGameTimerUpdate does (frames, seconds, minutes, hours, capped at 99:59:59 with gMaxInGameTimerFlag). Truncated, corrupted, foreign or newer files are rejected. The file select screen's copy and erase menus copy a save file over another or delete it. The game over's continue loads the most recent file the same way, or restarts the game's start without one. Version 3 adds gInGameTimerAtBosses (Kraid, Mother Brain, the Ruins Test and Mecha Ridley record the in-game timer at their death, as natively). Checked in game through the save platform of brinstar_033 (the prompt, the save, then the reloaded file).
 

@@ -5722,9 +5722,9 @@ int main(int argc, char **argv) {
             }
             mzm_screen_input(&screen,runtime_native_keys(held,capture_path?NULL:keys,
                                                           capture_path?NULL:&gamepad));
-            MzmInput input={held,(uint16_t)((held&~previous_held)|latched),false,0,0};
+            uint16_t changed=gba_input_changed(held,&previous_held);
+            MzmInput input={held,(uint16_t)(changed|latched),false,0,0};
             latched=0;
-            previous_held=held;
             if(damage_queued) {
                 if(samus.pose!=MZM_POSE_DYING && samus.invincibility==0) {
                     bool alive=mzm_equipment_damage(&equipment,20);

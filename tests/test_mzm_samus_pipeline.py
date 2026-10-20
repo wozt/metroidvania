@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """ROM-free tests for the table-driven Samus composer and canonical pipeline."""
 import hashlib
+import re
 import struct
 import tempfile
 import unittest
@@ -118,6 +119,23 @@ def variants_by_key():
 
 
 class ComposerTableTests(unittest.TestCase):
+    def test_native_pose_table_exports_every_real_pose(self):
+        root = Path(__file__).resolve().parents[1]
+        constants = (root / "third_party/mzm/include/constants/samus.h").read_text(
+            encoding="utf-8")
+        pose_block = constants.split("MAKE_ENUM(u8, SamusPose) {", 1)[1].split(
+            "SPOSE_COUNT", 1)[0]
+        native_poses = set(re.findall(r"\bSPOSE_[A-Z0-9_]+\b", pose_block))
+        tables = parse_tables(
+            (root / "third_party/mzm/src/data/samus/samus_animation_pointers.c")
+            .read_text(encoding="utf-8"))
+        variants, problems = build_variants(tables)
+        exported_poses = {variant.selector for variant in variants
+                          if variant.table == "pose"}
+        self.assertEqual(problems, [])
+        self.assertEqual(len(native_poses), 67)
+        self.assertEqual(exported_poses, native_poses)
+
     def test_body_cannon_and_graphics_follow_native_selection(self):
         variants, problems = variants_by_key()
         running_right = variants[("PowerSuit", "Running", "ACD_DIAGONALLY_UP", "right")]
@@ -235,6 +253,8 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("screw_attack_space\tPowerSuit\tright\tnone\tloop\t"
                       "PowerSuit/ScrewAttacking/TRUE/right\n", content)
         self.assertIn("spin/Suitless/left/none", report["missing"])
+        self.assertNotIn("run_speedboost/Suitless/left/forward", report["missing"])
+        self.assertIn("run_speedboost/Suitless/left/forward", report["unavailable"])
         self.assertEqual(report["graphics_by_suit"]["GravitySuit"], "FullSuit")
         self.assertEqual(report["palette_by_suit"]["VariaSuit"],
                          "sSamusPal_VariaSuit_Default")

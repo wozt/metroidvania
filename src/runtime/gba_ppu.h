@@ -3,8 +3,9 @@
  * OAM) and registers that the native screens (HUD, menus, cutscenes) write,
  * and a scanline renderer for the tile modes 0 to 2 (text and affine
  * backgrounds, regular and affine objects, the two windows and the object
- * window, alpha blending, brightness and mosaic). The bitmap modes 3 to 5
- * are not rendered. */
+ * window, alpha blending, brightness and mosaic). The pinned MZM program
+ * never selects the unimplemented bitmap modes 3 to 5; a source audit keeps
+ * that boundary checked. */
 #ifndef GBA_PPU_H
 #define GBA_PPU_H
 

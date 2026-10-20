@@ -88,12 +88,21 @@ SIMPLE_ACTIONS = {
     "grabbed_by_chozo_statue": ("pose", "SPOSE_GRABBED_BY_CHOZO_STATUE", "loop"),
 }
 
+# These abilities cannot coexist with the suitless part of the campaign. The
+# native graphics tables consequently have no suitless rows for them; reporting
+# those combinations as missing made a complete extraction look incomplete.
+SUITLESS_UNAVAILABLE_ACTIONS = {
+    "run_speedboost", "skid", "screw_attack", "screw_attack_space",
+    "shinespark", "shinespark_side", "shinespark_diagonal",
+}
+
 
 def build_animation_map(keys) -> tuple[str, dict]:
     """Resolve gameplay semantics to exact native composition keys."""
     available = set(keys)
     rows = []
     missing = []
+    unavailable = []
     for suit in SUITS:
         family = VISUAL_SUITS[suit][0]
         for side in ("left", "right"):
@@ -103,13 +112,21 @@ def build_animation_map(keys) -> tuple[str, dict]:
                     if key in available:
                         rows.append((action, suit, side, aim, mode, key))
                     elif aim in ("forward", "diagonalup", "diagonaldown"):
-                        missing.append(f"{action}/{suit}/{side}/{aim}")
+                        label = f"{action}/{suit}/{side}/{aim}"
+                        if suit == "Suitless" and action in SUITLESS_UNAVAILABLE_ACTIONS:
+                            unavailable.append(label)
+                        else:
+                            missing.append(label)
             for action, (table, selector, mode) in SIMPLE_ACTIONS.items():
                 key = f"{family}/{table}/{selector}/{side}"
                 if key in available:
                     rows.append((action, suit, side, "none", mode, key))
                 else:
-                    missing.append(f"{action}/{suit}/{side}/none")
+                    label = f"{action}/{suit}/{side}/none"
+                    if suit == "Suitless" and action in SUITLESS_UNAVAILABLE_ACTIONS:
+                        unavailable.append(label)
+                    else:
+                        missing.append(label)
     content = f"schema\t{MAP_SCHEMA}\n"
     content += "action\tsuit\tfacing\taim\tmode\tkey\n"
     content += "".join("\t".join(row) + "\n" for row in rows)
@@ -118,6 +135,7 @@ def build_animation_map(keys) -> tuple[str, dict]:
         "rows": len(rows),
         "actions": len(AIM_ACTIONS) + len(SIMPLE_ACTIONS),
         "missing": missing,
+        "unavailable": unavailable,
         "graphics_by_suit": {suit: VISUAL_SUITS[suit][0] for suit in SUITS},
         "palette_by_suit": {suit: VISUAL_SUITS[suit][2] for suit in SUITS},
     }

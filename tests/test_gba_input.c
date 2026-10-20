@@ -7,6 +7,17 @@
 #include <string.h>
 
 int main(void) {
+    /* UpdateInput: held keys are level-triggered, changed keys only contain
+     * rising edges, and releasing a key prepares the next press. */
+    uint16_t previous = 0;
+    assert(gba_input_changed(GBA_KEY_A | GBA_KEY_RIGHT, &previous) ==
+           (GBA_KEY_A | GBA_KEY_RIGHT));
+    assert(previous == (GBA_KEY_A | GBA_KEY_RIGHT));
+    assert(gba_input_changed(GBA_KEY_A | GBA_KEY_RIGHT, &previous) == 0);
+    assert(gba_input_changed(GBA_KEY_RIGHT | GBA_KEY_B, &previous) == GBA_KEY_B);
+    assert(gba_input_changed(0, &previous) == 0 && previous == 0);
+    assert(gba_input_changed(GBA_KEY_A, &previous) == GBA_KEY_A);
+
     GbaPadMap map;
     gba_pad_map_default(&map);
     bool pressed[SDL_GAMEPAD_BUTTON_COUNT] = {0};

@@ -3838,6 +3838,31 @@ No automatic reciprocal link or native engine encoder is implemented.
   completed or was up to date, generated-data checks were fresh and the
   proprietary-file guard passed.
 
+## Patch 0416 - final MZM partial-feature audit
+
+- Promoted the last three partial Zero Mission entries to `functional` after
+  checking their actual native boundary; audio was deliberately left untouched:
+  - the private Samus library contains all 832 native body/cannon variants,
+    1,072 sequences, 4,670 frames and all 67 real pose rows. Its 662 semantic
+    bindings have no missing entry; the 18 former misses are suitless states
+    that cannot occur because they require the Speed Booster, Screw Attack or
+    shinespark;
+  - `UpdateInput` now has one tested helper for the native held/previous/rising
+    edge calculation, used by gameplay after SDL keyboard or gamepad mapping;
+  - the PPU covers every mode used by the pinned game. A source audit confirms
+    that MZM never selects the unimplemented bitmap modes 3 to 5, while the
+    existing screen tests and captures cover its text, affine, object, window,
+    blend and brightness paths and the private ROM bank.
+- Added regression coverage for all native Samus pose-table rows, the input
+  edge sequence and the display-mode boundary. Hardware-cycle details that do
+  not affect an MZM-selected display path remain documented as divergences.
+- Zero Mission now has 92 functional entries and no partial entries. The 11
+  remaining partial entries in the joint inventory all belong to Aria.
+- Validation on 2026-10-20: the warning-clean build, Python 448/448 and CTest
+  37/37 passed; the proprietary-file guard passed, all generated files were
+  fresh, and the dashboard reported 140 features, 105 functional or better
+  and 128 with passing tests.
+
 ## Patch 0415 - clipdata audit
 
 - Audited `clipdata.c` against the runtime:

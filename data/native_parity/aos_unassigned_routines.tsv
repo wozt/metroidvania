@@ -1484,8 +1484,6 @@ aos:asm:asm/code/code_08090914.s:EnemyStolasCreate	EnemyStolasCreate	enemies	nam
 aos:asm:asm/code/code_08090914.s:EnemyStolasUpdate	EnemyStolasUpdate	enemies	name			asm_function		asm/code/code_08090914.s	19507	0	17
 aos:asm:asm/code/code_08090914.s:EnemySuccubusCreate	EnemySuccubusCreate	enemies	name			asm_function		asm/code/code_08090914.s	6575	0	10
 aos:asm:asm/code/code_08090914.s:EnemySuccubusUpdate	EnemySuccubusUpdate	enemies	name			asm_function		asm/code/code_08090914.s	6453	0	10
-aos:asm:asm/code/code_08090914.s:EnemyZombieOfficerCreate	EnemyZombieOfficerCreate	enemies	name			asm_function		asm/code/code_08090914.s	3286	0	10
-aos:asm:asm/code/code_08090914.s:EnemyZombieOfficerUpdate	EnemyZombieOfficerUpdate	enemies	name			asm_function		asm/code/code_08090914.s	3068	0	9
 aos:asm:asm/code/code_08090914.s:sub_08090914	sub_08090914	enemies	referrers			asm_function	0x08090914	asm/code/code_08090914.s	5	1	17
 aos:asm:asm/code/code_08090914.s:sub_08091204	sub_08091204	enemies	referrers			asm_function	0x08091204	asm/code/code_08090914.s	1047	1	5
 aos:asm:asm/code/code_08090914.s:sub_08091430	sub_08091430	enemies	referrers			asm_function	0x08091430	asm/code/code_08090914.s	1305	1	3
@@ -1509,13 +1507,6 @@ aos:asm:asm/code/code_08090914.s:sub_08092048	sub_08092048	enemies	referrers			a
 aos:asm:asm/code/code_08090914.s:sub_08092064	sub_08092064	enemies	referrers			asm_function	0x08092064	asm/code/code_08090914.s	2917	0	1
 aos:asm:asm/code/code_08090914.s:sub_08092090	sub_08092090	enemies	referrers			asm_function	0x08092090	asm/code/code_08090914.s	2941	0	4
 aos:asm:asm/code/code_08090914.s:sub_080920D8	sub_080920D8	enemies	referrers			asm_function	0x080920D8	asm/code/code_08090914.s	2976	1	2
-aos:asm:asm/code/code_08090914.s:sub_080923E4	sub_080923E4	enemies	referrers			asm_function	0x080923E4	asm/code/code_08090914.s	3355	1	3
-aos:asm:asm/code/code_08090914.s:sub_080924AC	sub_080924AC	enemies	referrers			asm_function	0x080924AC	asm/code/code_08090914.s	3462	1	2
-aos:asm:asm/code/code_08090914.s:sub_0809252C	sub_0809252C	enemies	referrers			asm_function	0x0809252C	asm/code/code_08090914.s	3532	0	6
-aos:asm:asm/code/code_08090914.s:sub_080925B4	sub_080925B4	enemies	referrers			asm_function	0x080925B4	asm/code/code_08090914.s	3598	1	3
-aos:asm:asm/code/code_08090914.s:sub_08092660	sub_08092660	enemies	referrers			asm_function	0x08092660	asm/code/code_08090914.s	3682	0	2
-aos:asm:asm/code/code_08090914.s:sub_08092680	sub_08092680	enemies	referrers			asm_function	0x08092680	asm/code/code_08090914.s	3700	1	3
-aos:asm:asm/code/code_08090914.s:sub_080926CC	sub_080926CC	enemies	referrers			asm_function	0x080926CC	asm/code/code_08090914.s	3737	0	1
 aos:asm:asm/code/code_08090914.s:sub_08093098	sub_08093098	enemies	referrers			asm_function	0x08093098	asm/code/code_08090914.s	4949	0	2
 aos:asm:asm/code/code_08090914.s:sub_080930E0	sub_080930E0	enemies	referrers			asm_function	0x080930E0	asm/code/code_08090914.s	4987	0	2
 aos:asm:asm/code/code_08090914.s:sub_08093100	sub_08093100	enemies	referrers			asm_function	0x08093100	asm/code/code_08090914.s	5004	1	3

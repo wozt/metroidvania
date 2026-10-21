@@ -85,6 +85,10 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # sub_08092680 (EnemyZombieOfficerCreate 0x08092350); its gibs
+    # (sub_080925B4) show frames 0x0F to 0x11.
+    "zombie_officer": {"id": 0x20, "graphics": 0x081CC01C, "palette": 0x0820AA24, "bank": 0,
+                       "frames": 0x08220F84, "static_frames": (0x0F, 0x10, 0x11)},
     # sub_08093B68 (EnemyMedusaHeadCreate 0x080938E8): palette bank 1 for
     # gold heads (parameter 1 bit 0), exported as a second sequence set.
     "medusa_head": {"id": 0x39, "graphics": 0x081CC034, "palette": 0x0820AAB0, "bank": 0,

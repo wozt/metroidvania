@@ -830,6 +830,24 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Zombie officer (enemy 0x20, `EnemyZombieOfficerCreate` /
+`EnemyZombieOfficerUpdate`): `sub_08092680` loads tiles `0x081CC01C`,
+palette `0x0820AA24` and frames `0x08220F84`; animations 0 walk, 1 attack, 2
+death. Create: walk animation and one step, stats, the soldier's collision
+setup and frame boxes, the floor snap, state 0 (state 3, animation only,
+under the global `0x8E & 0x40`). Inside the activity window: state 0
+(`sub_080923E4`) at the start of walk frames 3 and 7 faces the player
+(`sub_0806CF2C`) and attacks when he is in the box (x - 50, y - 64, 100, 70)
+of `sub_0806CFFC`, else sets vx = 0.625 toward its facing, vy = 1.0,
+`+0x54` = 0x2800; frames 2 and 6 stop it; then `sub_08069A00(e, 1.0, -32,
+8.0, 10)`. State 1 (`sub_080924AC`) plays animation 1 once (sound 0x85 at
+frame 4) and walks again. The hit callback `sub_0809252C` (sound 0x70)
+plays animation 2 for 40 frames of state 2; at timer 0x28 three gibs of
+`sub_080925B4` (as `sub_08092FCC`, with the officer's graphics): frames
+0x10 and 0x11 drawn like the soldier's, then 0x0F at (-6, or +6 when
+mirrored, -13) with the usual vx and vy = -1.0 - (r & 0xFFFF); then the
+generic death. Contact `sub_080926CC`: type 0, element 0.
+
 Medusa head (enemy 0x39, `EnemyMedusaHeadCreate` / `EnemyMedusaHeadUpdate`):
 `sub_08093B68` loads tiles `0x081CC034`, palette `0x0820AAB0` (bank 1 with
 parameter 1 bit 0, a gold head) and frames `0x08221978`; animations 0 and 1

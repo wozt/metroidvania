@@ -37,11 +37,12 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 64     /* enemy ids 0, 1, 4, 5, 9, 12 and 63 */
+#define ENEMY_KINDS 64     /* enemy ids 0, 1, 4, 5, 9, 12, 32, 57 and 63 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
                                                      [12] = "zombie_soldier",
+                                                     [32] = "zombie_officer",
                                                      [57] = "medusa_head",
                                                      [63] = "needles"};
 /* The second palette of the Medusa head (parameter 1 bit 0: gold). */

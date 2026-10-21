@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0443 - Aria zombie officer
+
+- Ported the zombie officer (enemy 0x20) on the soldier's building blocks:
+  the 0.625 walk, the close attack within 50 pixels, its three gibs at
+  death and its inert state 3; the exporter adds its sprites and gib
+  frames.
+- Checked in room 3/4: the officer walks in and slashes (frame 47); a knife
+  kill at frame 59 shows its flames and gibs (frames 63 and 73).
+
 ## Patch 0442 - Aria Medusa heads
 
 - Ported the Medusa head (enemy 0x39) and its spawner: heads appear at the

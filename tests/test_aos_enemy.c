@@ -908,6 +908,84 @@ static void archer_tests(void) {
     assert(bone.x - a.x < AOS_FIXED(40));
 }
 
+static void officer_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t walk[] = {4, 4, 4, 4, 4, 4, 4, 4}, attack[] = {3, 3, 3, 3, 3, 3},
+                         death[] = {200};
+    const AosAnimDef defs[3] = {{8, walk}, {6, attack}, {1, death}};
+    const AosAnimSet anims = {defs, 3};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -40, 16, 40};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {30, 24, 6, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(159), NULL);
+
+    /* EnemyZombieOfficerCreate: snapped to the floor, state 0. At the start
+     * of walk frame 3 it faces the player and steps at 0.625. */
+    AosEnemy z;
+    assert(aos_enemy_create(&z, AOS_ENEMY_ZOMBIE_OFFICER, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(z.state == 0 && (z.y >> 16) == 159);
+    int frames = 0;
+    while (!(z.anim.frame == 3 && z.anim.tick == 0) && frames < 50) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    int32_t x0 = z.x;
+    aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(z.mirrored && z.vx == 0xA000 && z.x == x0 + 0xA000);
+
+    /* Soma within 50 pixels: at the next frame 3 or 7 it attacks
+     * (animation 1 once), then walks again. */
+    soma.x = z.x + AOS_FIXED(30);
+    frames = 0;
+    while (z.state == 0 && frames < 80) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(z.state == 1 && z.step == 0);
+    aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(z.anim.id == 1 && z.step == 1);
+    frames = 0;
+    while (z.state == 1 && frames < 80) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(z.state == 0 && z.anim.id == 0 && frames == 18);
+
+    /* The killing blow: animation 2, then three gibs (0x10, 0x11, 0x0F at
+     * (+6 mirrored, -13)) and the 40-frame generic death. */
+    soma = aos_soma_spawn(z.x, z.y, NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 40, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    z.hp = 1;
+    AosHitReport hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.killed && z.state == 2 && z.anim.id == 2 && z.timer == 0x28);
+    hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
+    assert(hit.child_count == 3 && hit.children[2].static_frame == 0x0F);
+    int32_t dx = z.mirrored ? 0x60000 : -0x60000;
+    assert(hit.children[2].x == z.x + dx && hit.children[2].y == z.y - 0xD0000);
+    assert(hit.children[2].vy == -0x10000 && hit.children[0].static_frame == 0x10);
+    int dying = 1;
+    while (!z.removed && dying < 100) {
+        aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
+        ++dying;
+    }
+    assert(dying == 0x28);
+}
+
 static void medusa_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t two[] = {4, 4}, death[] = {200};
@@ -1283,6 +1361,7 @@ int main(void) {
     armor_tests();
     archer_tests();
     needles_tests();
+    officer_tests();
     medusa_tests();
     puts("aos_enemy: ok");
     return 0;

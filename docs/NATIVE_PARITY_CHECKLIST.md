@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 15 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 16 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 112 | 3461 |
+| Castlevania: Aria of Sorrow | 121 | 3452 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1251,6 +1251,16 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Known divergences: Sounds (0x70), palette bits, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced).  
 Next action: Play the zombie's sounds once the Aria sound path exists.
 Evidence: in game: `aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189`.
+
+[+] **`aos.enemies.zombie_officer` — Zombie officer.** Walking at 0.625 with the zombie walker (half width 10), the close attack in a 100 x 70 box, the frame boxes, death with flames and its three gibs (frames 0x10, 0x11, 0x0F), and state 3 under gEwramData + 0x8E bit 0x40 are ported.
+
+Native evidence: `aos:asm:asm/code/code_08090914.s:EnemyZombieOfficerCreate`, `aos:asm:asm/code/code_08090914.s:EnemyZombieOfficerUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080923E4`, `aos:asm:asm/code/code_08090914.s:sub_080924AC`, `aos:asm:asm/code/code_08090914.s:sub_0809252C`, `aos:asm:asm/code/code_08090914.s:sub_080925B4`, `aos:asm:asm/code/code_08090914.s:sub_08092660`, `aos:asm:asm/code/code_08090914.s:sub_08092680`, `aos:asm:asm/code/code_08090914.s:sub_080926CC`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie_soldier`.  
+Known divergences: Sounds 0x70 and 0x85, the palette bits and sub_080683BC are not ported.  
+Next action: Play the sounds once the Aria sound path exists.
+Evidence: in game: `aria area_03_room_004: the officer at x 464 walks in and slashes (frame 47); a knife kill (--spawn 420 191 --atk 200 --repeat 2, buttons 0x12) at frame 59 shows flames and gibs at frames 63 and 73`.
 
 [+] **`aos.enemies.zombie_soldier` — Zombie soldier and its grenade.** Walking, close attack, grenade throw, bounce, explosion box, the burst and explosion particles (smoke, dark smoke and flame particles of sub_08068F78), death with its flames and two gibs (sub_08092FCC), and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 

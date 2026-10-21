@@ -137,9 +137,15 @@ typedef struct {
  *   row 5: Effect/dark_smoke) and sub_0806D644 (animation 0, row 7: the
  *   flame art): + 0x18 bit 0 / 1 keeps 7/8 of vx / vy each frame, then
  *   sub_0806D3D8(e, 8.0) moves them, bit 2 blinks them with 0x08118CE0
- *   over 40 frames; deleted on the update after their animation ends. */
+ *   over 40 frames; deleted on the update after their animation ends;
+ * - the drifting effects of sub_08045CEC(x, y, animation, row) updated by
+ *   sub_08045C9C (`drift`): x += vx, vx += ax, y += vy, vy += ay, then the
+ *   animation step, deleted when it ends; priority 0x0D. Used with
+ *   animation 1, row 8 (Effect/fire), 16, row 6 (Effect/spark) and 4,
+ *   row 6 (Effect/dust). */
 enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
-       AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_KINDS = 4 };
+       AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_FIRE = 4, AOS_EFFECT_SPARK = 5,
+       AOS_EFFECT_DUST = 6, AOS_EFFECT_KINDS = 7 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */
@@ -147,6 +153,8 @@ typedef struct {
     bool mirrored;          /* + 0x58 bit 0x40, at random */
     bool started;           /* + 0x0A: 0 on the first update */
     bool particle;          /* sub_08068F78 */
+    bool drift;             /* sub_08045C9C */
+    int32_t ax, ay;         /* + 0x50, + 0x54 of a drifting effect */
     uint8_t flags;          /* + 0x18 of a particle */
     int32_t vx, vy;         /* + 0x48, + 0x4C of a particle */
     uint8_t timer;          /* + 0x0D: blink counter of a particle */

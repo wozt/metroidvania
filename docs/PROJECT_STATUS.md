@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0434 - Aria axe armor and skull archer effects
+
+- Ported the drifting effect `sub_08045CEC` / `sub_08045C9C` and the
+  strike flame `sub_0806D5C0`. The axe armor's death now raises its fire
+  column and sparks (`sub_080B11DC`: fire on even frames along a sine,
+  a spark every 8 frames, during 32 frames); a struck axe or arrow leaves a
+  flame; the archer's flung pieces leave a dust puff where they land.
+- Ported the inert states under gEwramData + 0x8E bit 0x40: armor state 3
+  and archer state 4.
+- The exporter adds `Effect/fire`, `Effect/spark` and `Effect/dust`.
+- Checked in room 0/15 (armor killed at frame 63, fire and sparks at
+  frames 72, 82 and 94) and room 0/24 (archer killed at frame 159, dust at
+  frames 199 and 213). Both enemies are now functional; sounds, palette
+  bits and the global pause `0x4BE` remain open, and the axe's rotation
+  direction is still inferred.
+
 ## Patch 0433 - Aria grenade burst and explosion particles
 
 - Ported the particle entity `sub_08068F78` (7/8 speed decay, motion,

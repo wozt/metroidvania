@@ -51,7 +51,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
 #define MAX_ENTITIES 128
 #define MAX_EFFECTS 32      /* shared effects (flames, blood) alive at once */
 static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "smoke",
-                                                          "dark_smoke"};
+                                                          "dark_smoke", "fire", "spark",
+                                                          "dust"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 
@@ -1381,7 +1382,7 @@ int main(int argc, char **argv) {
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
-        for (int k = AOS_EFFECT_SMOKE; objects_ok && k <= AOS_EFFECT_DARK_SMOKE; ++k)
+        for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);
         if (show_hitboxes) {

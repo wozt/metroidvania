@@ -13,7 +13,8 @@ looping sequence: its sprite frame colorized with each bank of the script.
 Enemies whose create routine is traced (``ENEMIES``) are exported the same
 way: every animation of their descriptor, colorized with their palette bank,
 as ``Enemy/<name>/anim_<n>``, with per-frame boxes (frame record +4 / +8) in
-``enemy_frames.tsv``. Shared effects (``EFFECTS``: the death flame, the blood splash and two smoke particles) are
+``enemy_frames.tsv``. Shared effects (``EFFECTS``: the death flame, the blood splash, smoke particles and the
+drifting fire, spark and dust) are
 exported as ``Effect/<name>/anim_<n>``. Offsets are relative to the entity position (the door
 base); components
 listed first are drawn on top (assumed OAM order; the door's components do
@@ -104,6 +105,15 @@ EFFECTS = {
               "frames": 0x0820ED60, "animations": (5,)},
     "dark_smoke": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 1,
                    "frames": 0x0820ED60, "animations": (5,)},
+    # Drifting effects of sub_08045CEC(x, y, animation, row): the axe
+    # armor's death (sub_080B11DC: 1 / row 8, 16 / row 6) and the debris
+    # impact of sub_0806C5AC (4 / row 6).
+    "fire": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 4,
+             "frames": 0x0820ED60, "animations": (1,)},
+    "spark": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 2,
+              "frames": 0x0820ED60, "animations": (16,)},
+    "dust": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 2,
+             "frames": 0x0820ED60, "animations": (4,)},
 }
 SCREEN_MARGINS = 0x08118D08    # sub_0806D128: 7 (x, y) s16 margins
 WOODEN_DOOR = {

@@ -706,10 +706,24 @@ moving, vanishes when struck (`sub_080B13BC`) and is deleted beyond screen
 margin 4. Being type 0xA, it uses its own slot in Soma's recent hits (121
 frames). Hit callback: the armor turns to the attacker on every hit; at 0 HP,
 state 2 (`sub_080B11DC`, sound 0x6F) plays animation 4 and deletes it when it
-ends. Not ported: the death explosions (`sub_08045CEC`), the strike effect
-`sub_0806D5C0`, the palette bits, the global pause `0x4BE` and state 3. The
-on-screen direction of the axe's rotation is inferred (`sub_0803E058` is not
-traced).
+ends. Its first death frame sets `+0x4C` = -40.0 and `+0x48` = 0, then
+each frame (timer `+0x0D` incremented) the height `y + +0x4C` is taken
+before `+0x4C` grows by 0x12000 and the phase `+0x48` before it grows by
+0x5000; during the first 32 frames, on even frames a fire
+(`sub_08045CEC(x, y, 1, 8)`: animation 1 of `0x0820ED60`, OBJ row 8,
+priority 0x0D, vy 0.5, ay -0x1000) appears at x + (sin(phase + 0x4800) << 4)
++ `sub_0802D5EC(0x40000)` (`(random & (n - 1)) - n / 2`) and that height,
+and every 8 frames (sound 0x6E) a spark (`sub_08045CEC(.., 16, 6)`) at x +
+`sub_0802D5EC(16)` and the height + `sub_0802D5EC(4)` pixels. The drifting
+effect `sub_08045C9C` adds vx to x, ax to vx, vy to y and ay to vy, steps its
+animation and is deleted when it ends. A struck axe leaves a flame of
+`sub_0806D5C0(x, y, 8.0, 8.0)`: `sub_0806E524` at a random point of the w x h
+area around (x, y), mirrored by a third draw. Under the global `0x8E & 0x40`
+the armor is created in state 3 (animation only; no hit callback or floor
+snap). Not ported: the palette bits, the global pause `0x4BE` and the
+sounds. The walker's one-way platform bit (mode bit 1) is not used by the
+armor (mode 0x14) or the archer (0xC, 0xD). The on-screen direction of the
+axe's rotation is inferred (`sub_0803E058` is not traced).
 
 Skull archer (enemy 0x05, `EnemySkullArcherCreate` /
 `EnemySkullArcherUpdate`): tiles `0x081E419C`, palette `0x0820B78C`, frames
@@ -743,9 +757,16 @@ throws seven pieces (animations 5 to 11) and deletes the archer: vx =
 it vanishes when the centre of its sprite's last OAM component
 (`sub_0806C48C`), 4 pixels lower, is in a solid cell (`sub_080020A0`: bit 0;
 sound 0x162) or when it leaves the screen widened by 32 pixels; it never
-collides. The attacker is the weapon entity; Soma's position stands for it.
-Not ported: the strike and dust effects, the arrow's `+0x0F` change, the
-global pause and state 4.
+collides. When it hits the floor it leaves a dust puff
+(`sub_08045CEC(x, y, 4, 6)`) at the probe point (4 pixels higher): vy =
+`sub_0802D5EC(0x1000)` - 0.25 with ay = vy / 32, vx = `sub_0802D5EC(0x2000)`
+minus the piece's vx with ax = -vx / 64 (the draws only when the puff is
+created; its `+0x0F` = 1 is not modelled). A struck arrow leaves a flame of
+`sub_0806D5C0` within 4 x 4 pixels of (x + 8 vx, y - 22). Under the global
+`0x8E & 0x40` the archer is created in state 4 (animation only, no hit
+callback or floor snap). The attacker is the weapon entity; Soma's position
+stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
+the sounds.
 
 Entity positions in the game are screen-relative: the collision probes add
 the camera (`gEwramData + 0xA094 + 6 / + 0xA`) and screen tests compare them

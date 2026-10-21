@@ -56,8 +56,25 @@ static bool particle_update(AosEffect *p, const AosAnimSet *anims, const uint8_t
     return true;
 }
 
+/* sub_08045C9C: the animation started at creation, then each frame the
+ * motion and the step; deleted when the animation ends. */
+static bool drift_update(AosEffect *e, const AosAnimSet *anims) {
+    if (!e->started) {
+        if (!aos_anim_start(&e->anim, anims, 0, false)) return false;
+        e->anim.id = 0;
+        e->started = true;
+    }
+    e->x += e->vx;
+    e->vx += e->ax;
+    e->y += e->vy;
+    e->vy += e->ay;
+    int result = aos_anim_step(&e->anim, anims);
+    return result != 3 && result != 0;
+}
+
 bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t *blink) {
     if (effect->particle) return particle_update(effect, anims, blink);
+    if (effect->drift) return drift_update(effect, anims);
     if (!effect->started) {
         /* State 0: the graphics set up, the animation played once. */
         aos_anim_start(&effect->anim, anims, 0, false);
@@ -79,6 +96,20 @@ static void spawn_particle(uint8_t kind, uint8_t flags, int32_t x, int32_t y, in
     if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
     report->effects[report->effect_count++] = (AosEffect){
         .kind = kind, .x = x, .y = y, .particle = true, .flags = flags, .vx = vx, .vy = vy};
+}
+
+/* sub_08045CEC(x, y, animation, row): a drifting effect, NULL when no
+ * slot is left (EntityCreateInRange(0x49, 0xCF) failing). */
+static AosEffect *spawn_drift(uint8_t kind, int32_t x, int32_t y, AosHitReport *report) {
+    if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return NULL;
+    AosEffect *e = &report->effects[report->effect_count++];
+    *e = (AosEffect){.kind = kind, .x = x, .y = y, .drift = true};
+    return e;
+}
+
+/* sub_0802D5EC(n): (random & (n - 1)) - n / 2. */
+static int32_t random_centred(uint32_t (*random)(void), uint32_t n) {
+    return (int32_t)(random() & (n - 1)) - (int32_t)(n >> 1);
 }
 
 /* A unit vector at a random angle: (sin(a + 0x4000), sin(a)) times 1.0
@@ -117,14 +148,19 @@ static void spawn_blood(int x, int y, uint32_t (*random)(void), AosHitReport *re
  * 0x49, 0xCF, sub_0806E524) at a random point of a w x h area (16.16)
  * centred 6 pixels above the entity, mirrored at random (a third random
  * draw, only when the entity was created); priority + 0x5C - 1. */
-static void spawn_flame(const AosEnemy *e, uint32_t w, uint32_t h, uint32_t (*random)(void),
-                        AosHitReport *report) {
-    int32_t x = e->x + (int32_t)(random() % w) - (int32_t)(w / 2);
-    int32_t y = e->y - 0x60000 + (int32_t)(random() % h) - (int32_t)(h / 2);
+static void spawn_flame_at(int32_t cx, int32_t cy, uint32_t w, uint32_t h,
+                           uint32_t (*random)(void), AosHitReport *report) {
+    int32_t x = cx + (int32_t)(random() % w) - (int32_t)(w / 2);
+    int32_t y = cy + (int32_t)(random() % h) - (int32_t)(h / 2);
     if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
     AosEffect *flame = &report->effects[report->effect_count++];
     *flame = (AosEffect){.kind = AOS_EFFECT_FLAME, .x = x, .y = y};
     flame->mirrored = random() & 1;
+}
+
+static void spawn_flame(const AosEnemy *e, uint32_t w, uint32_t h, uint32_t (*random)(void),
+                        AosHitReport *report) {
+    spawn_flame_at(e->x, e->y - 0x60000, w, h, random, report);
 }
 
 /* sub_0806BE74(e, period, w, h): a flame when the death timer is a multiple
@@ -461,9 +497,14 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     if (id == AOS_ENEMY_SKULL_ARCHER) {
         /* EnemySkullArcherCreate: idle animation, floor snap plus one
          * pixel; a record with parameter 0 patrols (state 2, animation 1),
-         * otherwise it stands (state 0). State 4 is not ported. */
+         * otherwise it stands (state 0). Under the global 0x8E & 0x40,
+         * state 4 (animation only, no hit callback, no floor snap). */
         play(enemy, anims, 0);
         step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 4;
+            return true;
+        }
         snap_to_floor(enemy, layer);
         enemy->y += 0x10000;
         enemy->state = 0;
@@ -475,10 +516,14 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     }
     if (id == AOS_ENEMY_AXE_ARMOR) {
         /* EnemyAxeArmorCreate: walk animation, floor snap, then one pixel
-         * down; state 0 (state 3 under the global 0x8E & 0x40 is not
-         * ported). */
+         * down; state 0, or state 3 (animation only, no hit callback, no
+         * floor snap) under the global 0x8E & 0x40. */
         play(enemy, anims, 0);
         step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 3;
+            return true;
+        }
         snap_to_floor(enemy, layer);
         enemy->y += 0x10000;
         enemy->state = 0;
@@ -1564,17 +1609,19 @@ static void armor_attack(AosEnemy *a, const AosSoma *soma, const AosCollision *l
  * flight: vx 2.5 toward the throw, decelerated by 0x800 per frame (it comes
  * back), a spin of 0x800 per frame (a high throw starts 20 pixels higher
  * and spins the other way), one hit point and a 16 x 16 box (type 0xA).
- * Later updates run the collision pass first: struck, it vanishes (the
- * effect of sub_0806D5C0 is not ported). It is deleted beyond screen margin
- * 4. The global pause of gEwramData + 0x4BE is not ported. */
+ * Later updates run the collision pass first: struck, it vanishes with a
+ * flame of sub_0806D5C0 within 8 x 8 pixels. It is deleted beyond screen
+ * margin 4. The global pause of gEwramData + 0x4BE is not ported. */
 static AosHitReport axe_update(AosEnemy *axe, AosSoma *soma, const AosEnemyKind *kind,
                                const AosWeaponEntity *weapon,
                                const AosWeaponFrames *weapon_frames, int soma_atk,
-                               int soma_def, int cam_x, int cam_y) {
+                               int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
     AosHitReport report = {0};
     if (axe->state != 0) {
         report = collide(axe, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
         if (axe->hp <= 0) {
+            /* sub_0806D5C0(x, y, 8.0, 8.0): a flame where it was struck. */
+            spawn_flame_at(axe->x, axe->y, 0x80000, 0x80000, random, &report);
             axe->removed = true;
             aos_combat_tick(&axe->combat);
             return report;
@@ -1614,15 +1661,45 @@ static AosHitReport axe_update(AosEnemy *axe, AosSoma *soma, const AosEnemyKind 
 }
 
 /* sub_080B11DC: death animation 4 (sound 0x6F) until it ends, then the
- * deletion; the explosions of sub_08045CEC are not ported. */
-static void armor_die(AosEnemy *a, const AosEnemyKind *kind) {
+ * deletion. + 0x4C (from -40.0, + 0x12000 per frame) is the height of the
+ * effects and + 0x48 (from 0, + 0x5000) their phase: during the first 32
+ * frames, on even frames a fire (sub_08045CEC animation 1, row 8, vy 0.5,
+ * ay -0x1000) at x + 16 * sin(phase + 0x4800) +/- 2.0, and every 8 frames
+ * (sound 0x6E) a spark (animation 16, row 6) at x +/- 8 and the height
+ * +/- 2 pixels. */
+static void armor_die(AosEnemy *a, const AosEnemyKind *kind, uint32_t (*random)(void),
+                      AosHitReport *report) {
     if (a->step == 0) {
         play_loop(a, kind->anims, 4, false);
         a->step = 1;
+        a->vy = (int32_t)0xFFD80000;
+        a->vx = 0;
         return;
     }
     a->timer++;
-    if (a->anim.flags & AOS_ANIM_ENDED) a->removed = true;
+    int32_t height = a->y + a->vy;
+    a->vy += 0x12000;
+    int32_t phase = a->vx;
+    a->vx += 0x5000;
+    if (a->anim.flags & AOS_ANIM_ENDED) {
+        a->removed = true;
+        return;
+    }
+    if (a->timer > 0x20) return;
+    if ((a->timer & 1) == 0) {
+        int32_t offset = aos_sine((uint32_t)(phase + 0x4800)) << 4;
+        int32_t x = a->x + offset + random_centred(random, 0x40000);
+        AosEffect *fire = spawn_drift(AOS_EFFECT_FIRE, x, height, report);
+        if (fire) {
+            fire->vy = 0x8000;
+            fire->ay = -0x1000;
+        }
+    }
+    if ((a->timer & 7) == 0) {
+        int32_t x = a->x + (int32_t)((uint32_t)random_centred(random, 16) << 16);
+        int32_t y = height + (int32_t)((uint32_t)random_centred(random, 4) << 16);
+        spawn_drift(AOS_EFFECT_SPARK, x, y, report);
+    }
 }
 
 /* EnemyAxeArmorUpdate: inside the activity window, the state, then the
@@ -1638,8 +1715,11 @@ static AosHitReport armor_update(AosEnemy *a, AosSoma *soma, const AosCollision 
     case 0: armor_walk(a, soma, layer, kind); break;
     case 1: armor_attack(a, soma, layer, kind, random, &spawned); break;
     case 2:
-        armor_die(a, kind);
-        if (a->removed) return report;
+        armor_die(a, kind, random, &spawned);
+        if (a->removed) {
+            take_effects(&report, &spawned);
+            return report;
+        }
         break;
     default:
         step_anim(a, kind->anims);
@@ -1653,6 +1733,7 @@ static AosHitReport armor_update(AosEnemy *a, AosSoma *soma, const AosCollision 
     aos_combat_tick(&a->combat);
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
+    take_effects(&report, &spawned);
     return report;
 }
 
@@ -1748,13 +1829,15 @@ static void archer_patrol(AosEnemy *a, const AosSoma *soma, const AosCollision *
 
 /* sub_080AF7EC: flying at 3.0 toward its facing with the collision pass;
  * stuck to Soma after a hit (state 1, 30 frames; the + 0x0F change at 10
- * frames left is not traced); struck (no hit point), it vanishes (state 2;
- * the effect of sub_0806D5C0 is not ported). Deleted beyond screen margin
- * 4. The global pause 0x4BE is not ported. */
+ * frames left is not traced); struck (no hit point), it vanishes (state 2)
+ * with a flame of sub_0806D5C0 within 4 x 4 pixels of (x + 8 * vx,
+ * y - 22). Deleted beyond screen margin 4. The global pause 0x4BE is not
+ * ported. */
 static AosHitReport arrow_update(AosEnemy *arrow, AosSoma *soma, const AosEnemyKind *kind,
                                  const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk,
-                                 int soma_def, int cam_x, int cam_y) {
+                                 int soma_def, int cam_x, int cam_y,
+                                 uint32_t (*random)(void)) {
     AosHitReport report = {0};
     if (arrow->state != 2 && arrow->hp <= 0) arrow->state = 2;
     if (outside_margins(kind, 4, (arrow->x >> 16) - cam_x, (arrow->y >> 16) - cam_y)) {
@@ -1774,6 +1857,8 @@ static AosHitReport arrow_update(AosEnemy *arrow, AosSoma *soma, const AosEnemyK
         else arrow->removed = true;
         break;
     default:
+        spawn_flame_at(arrow->x + arrow->vx * 8, arrow->y - 0x160000, 0x40000, 0x40000, random,
+                       &report);
         arrow->removed = true;
         return report;
     }
@@ -1799,10 +1884,14 @@ static AosEnemy make_debris(const AosEnemy *parent, const AosAnimSet *anims, uns
 /* sub_0806C5AC: a piece keeps 79/80 of vx, adds its accelerations (both
  * clamped to 8.0) and moves; it vanishes when the centre of its sprite's
  * last OAM component, 4 pixels lower (sub_0806C48C), is in a solid cell
- * (sub_080020A0; sound 0x162, the effect of sub_08045CEC is not ported), or
- * when it leaves the screen widened by 32 pixels. It never collides. */
+ * (sub_080020A0; sound 0x162), leaving a dust puff of sub_08045CEC
+ * (animation 4, row 6) at that centre: vy = -0.25 +/- 0x800 with ay = vy / 32,
+ * vx = +/- 0x1000 - the piece's vx with ax = -vx / 64 (the random draws are
+ * made only when the puff is created; its + 0x0F = 1 is not modelled). It
+ * also vanishes when it leaves the screen widened by 32 pixels. It never
+ * collides. */
 static void debris_update(AosEnemy *d, const AosCollision *layer, const AosEnemyKind *kind,
-                          int cam_x, int cam_y) {
+                          int cam_x, int cam_y, uint32_t (*random)(void), AosHitReport *report) {
     d->vx = d->vx * 79 / 80 + d->ax;
     if (d->ax >= 0 ? d->vx > 0x80000 : d->vx < -0x80000) d->vx = d->ax >= 0 ? 0x80000 : -0x80000;
     d->vy += d->ay;
@@ -1818,6 +1907,14 @@ static void debris_update(AosEnemy *d, const AosCollision *layer, const AosEnemy
     if (d->vflip) ay = -ay;
     int32_t px = (d->x >> 16) + ax, py = (d->y >> 16) + ay + 4;
     if (aos_collision_cell(layer, px, py) & 1) {
+        AosEffect *dust = spawn_drift(AOS_EFFECT_DUST, d->x + (int32_t)((uint32_t)ax << 16),
+                                      d->y + (int32_t)((uint32_t)ay << 16), report);
+        if (dust) {
+            dust->vy = random_centred(random, 0x1000) - 0x4000;
+            dust->ay = dust->vy / 32;
+            dust->vx = random_centred(random, 0x2000) - d->vx;
+            dust->ax = -dust->vx / 64;
+        }
         d->removed = true;
         return;
     }
@@ -1895,19 +1992,19 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
         return report;
     }
     if (enemy->role == AOS_ROLE_DEBRIS) {
-        debris_update(enemy, layer, kind, cam_x, cam_y);
+        debris_update(enemy, layer, kind, cam_x, cam_y, random, &report);
         if (!enemy->removed) step_anim(enemy, anims);
         return report;
     }
     if (enemy->role == AOS_ROLE_ARROW)
         return arrow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
-                            cam_y);
+                            cam_y, random);
     if (enemy->id == AOS_ENEMY_SKULL_ARCHER)
         return archer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_AXE)
         return axe_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
-                          cam_y);
+                          cam_y, random);
     if (enemy->id == AOS_ENEMY_AXE_ARMOR)
         return armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                             cam_x, cam_y, random);

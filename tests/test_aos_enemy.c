@@ -578,6 +578,9 @@ static void armor_tests(void) {
     soma.y = struck.y + AOS_FIXED(30);
     hit = aos_enemy_update(&struck, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
     assert(hit.enemy_hit && struck.removed);
+    /* sub_0806D5C0: a flame within 8 x 8 pixels of the struck axe. */
+    assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_FLAME);
+    assert(hit.effects[0].x == struck.x + 1 - 0x40000 && hit.effects[0].y == struck.y + 1 - 0x40000);
 
     /* A killing blow: the armor turns to the attacker, plays its death
      * animation and is deleted when it ends. */
@@ -588,12 +591,61 @@ static void armor_tests(void) {
     a.mirrored = true;
     hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
     assert(hit.killed && a.state == 2 && a.defeated && !a.mirrored);
-    int dying = 0;
+    /* sub_080B11DC: fire on even frames up to 32 (16 x sin(phase +
+     * 0x4800) beside it, the height climbing from 40 pixels above), sparks
+     * every 8 frames. random() = 1: +/- offsets of 1 - n / 2. */
+    int dying = 0, fires = 0, sparks = 0;
+    int32_t ax0 = a.x, ay0 = a.y;
     while (!a.removed && dying < 200) {
-        aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
+        hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
         ++dying;
+        for (int i = 0; i < hit.effect_count; ++i) {
+            const AosEffect *e = &hit.effects[i];
+            assert(e->drift && dying >= 2 && dying - 1 <= 0x20);
+            int t = dying - 1;      /* + 0x0D after the increment */
+            int32_t height = ay0 - 0x280000 + (t - 1) * 0x12000;
+            if (e->kind == AOS_EFFECT_FIRE) {
+                int32_t phase = (t - 1) * 0x5000;
+                assert(t % 2 == 0 && e->vy == 0x8000 && e->ay == -0x1000 && e->y == height);
+                assert(e->x == ax0 + (aos_sine((uint32_t)(phase + 0x4800)) << 4) + 1 - 0x20000);
+                ++fires;
+            } else {
+                assert(e->kind == AOS_EFFECT_SPARK && t % 8 == 0);
+                assert(e->x == ax0 - 7 * 0x10000 && e->y == height - 0x10000);
+                ++sparks;
+            }
+        }
     }
     assert(a.removed && a.anim.id == 4 && dying >= 11 * 5);
+    assert(fires == 16 && sparks == 4);
+
+    /* Under gEwramData + 0x8E bit 0x40: state 3, no floor snap, animation
+     * only. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy idle;
+    assert(aos_enemy_create(&idle, AOS_ENEMY_AXE_ARMOR, 60, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(idle.state == 3 && idle.y == AOS_FIXED(100));
+    soma.x = idle.x;
+    soma.y = idle.y;
+    for (int i = 0; i < 10; ++i) {
+        hit = aos_enemy_update(&idle, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(!hit.soma_hit && idle.state == 3 && idle.x == AOS_FIXED(60));
+    }
+
+    /* sub_08045C9C: position then velocity, the animation step; deleted
+     * when it ends. */
+    static const uint8_t fire_steps[] = {3, 5};
+    const AosAnimDef fire_def = {2, fire_steps};
+    const AosAnimSet fire_set = {&fire_def, 1};
+    AosEffect fire = {.kind = AOS_EFFECT_FIRE, .drift = true, .y = AOS_FIXED(40), .vy = 0x8000,
+                      .ay = -0x1000};
+    int life = 1;
+    assert(aos_effect_update(&fire, &fire_set, NULL) && fire.y == AOS_FIXED(40) + 0x8000);
+    assert(fire.vy == 0x7000);
+    while (aos_effect_update(&fire, &fire_set, NULL) && life < 50) ++life;
+    assert(life == 7);
 }
 
 static void archer_tests(void) {
@@ -691,6 +743,29 @@ static void archer_tests(void) {
         ++stuck;
     }
     assert(stuck == 31);
+    /* A struck arrow (no hit point) vanishes with a flame of sub_0806D5C0
+     * within 4 x 4 pixels of (x + 8 * vx, y - 22). */
+    AosEnemy struck_arrow = arrow;
+    struck_arrow.removed = false;
+    struck_arrow.state = 0;
+    struck_arrow.hp = 0;
+    struck_arrow.vx = 0x30000;
+    hit = aos_enemy_update(&struck_arrow, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+    assert(struck_arrow.removed && hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_FLAME);
+    assert(hit.effects[0].x == struck_arrow.x + 8 * 0x30000 + 1 - 0x20000);
+    assert(hit.effects[0].y == struck_arrow.y - 0x160000 + 1 - 0x20000);
+
+    /* Under gEwramData + 0x8E bit 0x40: state 4, animation only. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy inert;
+    assert(aos_enemy_create(&inert, AOS_ENEMY_SKULL_ARCHER, 200, 150, 1, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(inert.state == 4 && inert.y == AOS_FIXED(150));
+    for (int i = 0; i < 10; ++i) {
+        hit = aos_enemy_update(&inert, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+        assert(!hit.soma_hit && !hit.child_count && inert.state == 4 && inert.x == AOS_FIXED(200));
+    }
 
     /* A patrolling archer walks at 0.25, backs away at 0.75 from the
      * player ahead within 79 pixels and shoots once he is beyond 99. */
@@ -744,11 +819,20 @@ static void archer_tests(void) {
     int32_t rise = bone.y, top = bone.y;
     int falling = 0;
     while (!bone.removed && falling < 200) {
-        aos_enemy_update(&bone, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0, never_zero);
+        hit = aos_enemy_update(&bone, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0,
+                               never_zero);
         if (bone.y < top) top = bone.y;
         ++falling;
     }
     assert(bone.removed && top < rise && (bone.y >> 16) - 6 + 4 >= 160);
+    /* The impact leaves a dust puff at the anchor (sub_08045CEC 4, row 6):
+     * random() = 1 gives vy = 1 - 0x800 - 0x4000, vx = 1 - 0x1000 - vx. */
+    assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_DUST);
+    const AosEffect *dust = &hit.effects[0];
+    assert(dust->x == bone.x + (bone.mirrored ? AOS_FIXED(4) : -AOS_FIXED(4)));
+    assert(dust->y == bone.y - AOS_FIXED(6));
+    assert(dust->vy == 1 - 0x800 - 0x4000 && dust->ay == dust->vy / 32);
+    assert(dust->vx == 1 - 0x1000 - bone.vx && dust->ax == -dust->vx / 64);
     assert(bone.x - a.x < AOS_FIXED(40));
 }
 

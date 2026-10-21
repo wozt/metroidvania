@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0432 - Aria zombie soldier gibs and state 3
+
+- The soldier's first death frame now creates its two gibs
+  (`sub_08092FCC` / `sub_08093078`: sprite frames 0x13 and 0x14 with the
+  native random offsets and speeds, falling with ay 0x1800 until below the
+  soldier's y), before the generic death's flames.
+- Ported state 3 under gEwramData + 0x8E bit 0x40 (no collision block or
+  floor snap, animation only). The exporter adds frames 0x13 and 0x14.
+- Checked in room 0/15 (`--spawn 250 430 --atk 80 --repeat 2`): the kill
+  at frame 241 shows the gibs and flames at frames 243, 249 and 257. The
+  grenade's explosion particles remain open, so the soldier stays partial.
+
 ## Patch 0431 - Aria blue crow feathers, blood and hit stun
 
 - The crow's death now creates its two feathers (`sub_080C9E2C` /

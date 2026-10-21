@@ -647,8 +647,17 @@ burst harmlessly (state 1, hidden, 7 frames). The explosion (state 2, hidden)
 sets its attack box to 2 + t / 2 pixels around it while t <= 14, switches the
 hurtbox off, collides while t <= 18 and ends after t = 24. Death
 (`sub_08092B38`): sound 0x70, animation 3, 40 frames, state 2 and the
-generic death `sub_0806AEAC`; the gibs of `sub_08092FCC`, the explosion
-particles and state 3 are not ported. Framework corrections found on the
+generic death `sub_0806AEAC`. On the first death frame (timer 0x28) the
+update creates two gibs with `sub_08092FCC(e, dx, dy, vx, vy, frame)`
+(`EntityCreateInRange(0x49, 0xCF, sub_08093078)`, sprite frame 0x13 then
+0x14, mirrored like the soldier, ay 0x1800): dx = (r & 0xFFFFF) - 8.0, dy =
+-1.0 - (r & 0xFFFFF) for the first and -(r % 24.0) for the second, vx =
+0.5 + (r & 0x7FFF) (negated when mirrored), vy = -1.5 - r % 1.5, drawn in
+that order; `sub_08093078` moves them with `sub_0806D3D8(e, 8.0)` (velocity,
+clamp, then position) and deletes them once below the soldier's y at the
+time (`+0x1C`). Under the global `0x8E & 0x40` the soldier is created in
+state 3 without its collision block or floor snap, and only steps its
+animation. The grenade's explosion particles are not ported. Framework corrections found on the
 way: starting an animation (`sub_0803F2C8`) clears `+0x59` bit 0, and
 `sub_080683BC` (rewards, not ported) sets `+0x3E` bit 1 at death, which makes
 `sub_0806E314` skip the collision pass, so a defeated zombie, soldier or bat

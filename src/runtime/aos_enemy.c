@@ -419,9 +419,14 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     }
     if (id == AOS_ENEMY_ZOMBIE_SOLDIER) {
         /* EnemyZombieSoldierCreate: walk animation 0, snapped to the floor,
-         * state 0 (state 3 under the global 0x8E & 0x40 is not ported). */
+         * state 0; under the global 0x8E & 0x40, state 3 without the
+         * collision block or the floor snap. */
         play(enemy, anims, 0);
         step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 3;
+            return true;
+        }
         snap_to_floor(enemy, layer);
         enemy->state = 0;
         return true;
@@ -1202,9 +1207,65 @@ static void soldier_attack(AosEnemy *z, const AosSoma *soma, const AosAnimSet *a
     }
 }
 
+/* sub_08092FCC(e, dx, dy, vx, vy, frame): a gib (EntityCreateInRange(0x49,
+ * 0xCF, sub_08093078)) showing a sprite frame of the soldier, at its
+ * position + (dx, dy), mirrored like it, falling with ay 0x1800; it keeps
+ * the soldier's y (+ 0x1C) and is deleted once lower. Priority - 1. */
+static AosEnemy make_gib(const AosEnemy *z, int32_t dx, int32_t dy, int32_t vx, int32_t vy,
+                         int16_t frame) {
+    AosEnemy g = {0};
+    g.id = z->id;
+    g.role = AOS_ROLE_GIB;
+    g.static_frame = frame;
+    g.x = z->x + dx;
+    g.y = z->y + dy;
+    g.walk_timer = z->y;
+    g.mirrored = z->mirrored;
+    g.ay = 0x1800;
+    g.vx = vx;
+    g.vy = vy;
+    g.combat.attack_off = g.combat.hurt_off = true;
+    return g;
+}
+
+/* The X speed of a gib: 0.5 to 1.0, backward when mirrored. */
+static int32_t gib_speed(const AosEnemy *z, uint32_t (*random)(void)) {
+    int32_t r = (int32_t)(random() & 0x7FFF);
+    return z->mirrored ? -0x8000 - r : r + 0x8000;
+}
+
+/* EnemyZombieSoldierUpdate state 2 at timer 0x28: two gibs, frames 0x13
+ * (dx -8..8, dy -1..-17, vy -1.5..-3) and 0x14 (dy 0..-24), the random
+ * draws in the order dx, dy, vx, vy. */
+static void soldier_gibs(const AosEnemy *z, uint32_t (*random)(void), AosHitReport *report) {
+    for (int i = 0; i < 2; ++i) {
+        int32_t dx = (int32_t)(random() & 0xFFFFF) - 0x80000;
+        int32_t dy = i == 0 ? -0x10000 - (int32_t)(random() & 0xFFFFF)
+                            : -(int32_t)(random() % 0x180000u);
+        int32_t vx = gib_speed(z, random);
+        int32_t vy = -(int32_t)(random() % 0x18000u) - 0x18000;
+        if (report->child_count < AOS_ENEMY_MAX_CHILDREN)
+            report->children[report->child_count++] =
+                make_gib(z, dx, dy, vx, vy, (int16_t)(i == 0 ? 0x13 : 0x14));
+    }
+}
+
+/* sub_08093078: sub_0806D3D8(e, 8.0) (velocity, clamped, then position),
+ * deleted below the soldier's y. */
+static void gib_update(AosEnemy *g) {
+    g->vx += g->ax;
+    if (g->ax >= 0 ? g->vx > 0x80000 : g->vx < -0x80000) g->vx = g->ax >= 0 ? 0x80000 : -0x80000;
+    g->vy += g->ay;
+    if (g->ay >= 0 ? g->vy > 0x80000 : g->vy < -0x80000) g->vy = g->ay >= 0 ? 0x80000 : -0x80000;
+    g->x += g->vx;
+    g->y += g->vy;
+    if (g->y > g->walk_timer) g->removed = true;
+}
+
 /* EnemyZombieSoldierUpdate: within the activity window of sub_0806CC20,
- * state 0 walks, 1 attacks, 2 dies (the gibs of sub_08092FCC are not
- * ported), then the animation step and the on-screen collision pass. */
+ * state 0 walks, 1 attacks, 2 dies (gibs on its first frame, then the
+ * generic death), then the animation step and the on-screen collision
+ * pass; state 3 only steps its animation. */
 static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollision *layer,
                                    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -1215,7 +1276,13 @@ static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollisio
     switch (z->state) {
     case 0: soldier_walk(z, soma, layer, kind->anims, random); break;
     case 1: soldier_attack(z, soma, kind->anims, &spawned); break;
-    case 2: generic_death(z, kind, random, &spawned); break;
+    case 2:
+        if (z->timer == 0x28) soldier_gibs(z, random, &spawned);
+        generic_death(z, kind, random, &spawned);
+        break;
+    case 3:
+        step_anim(z, kind->anims);
+        return report;
     default: break;
     }
     if (!z->removed) {
@@ -1750,6 +1817,10 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                              cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_FEATHER) {
         feather_update(enemy);
+        return report;
+    }
+    if (enemy->role == AOS_ROLE_GIB) {
+        gib_update(enemy);
         return report;
     }
     if (enemy->role == AOS_ROLE_DEBRIS) {

@@ -85,7 +85,8 @@ enum {
 /* What an AosEnemy slot holds: the enemy itself or a child entity of its
  * kind (sharing its sprites and record). */
 enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3,
-       AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5 };
+       AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5,
+       AOS_ROLE_GIB = 6 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -103,7 +104,7 @@ typedef struct {
     bool hidden;            /* + 0x58 bit 0x20 */
     int16_t hp;             /* + 0x34 */
     int16_t param0, param1; /* + 0x30, + 0x32: record parameters */
-    int32_t walk_timer;     /* + 0x1C */
+    int32_t walk_timer;     /* + 0x1C (a gib: its parent's y at spawn) */
     uint8_t spawned_count;  /* + 0x18 of a spawner */
     bool attack_off;        /* + 0x72 bit 1 */
     bool cycle_done;        /* + 0x59 bit 0: the animation looped or ended */

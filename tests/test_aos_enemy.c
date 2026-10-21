@@ -394,13 +394,52 @@ static void soldier_tests(void) {
     /* The camera follows it: off-screen, the activity window pauses it. */
     int cam = (z.x >> 16) - 120;
     hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, 0, never_zero);
-    assert(hit.killed && z.state == 2 && z.anim.id == 3 && z.timer <= 0x28);
-    int dying = 0;
+    assert(hit.killed && z.state == 2 && z.anim.id == 3 && z.timer == 0x28);
+    /* First death frame: two gibs from the draws dx, dy, vx, vy each, then
+     * the generic death's flame (timer 0x28). */
+    static const uint32_t gib_draws[] = {0x90000, 0x30000, 0x1234, 0x10000,
+                                         0x7FFFF, 0x200000, 0xFFFFF, 0x2FFFF, 0, 0, 0};
+    script = gib_draws;
+    script_at = 0;
+    int32_t zx = z.x, zy = z.y;
+    hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, 0, scripted);
+    assert(hit.child_count == 2 && hit.effect_count == 1 && script_at == 11);
+    AosEnemy g0 = hit.children[0], g1 = hit.children[1];
+    int32_t back = z.mirrored ? -1 : 1;
+    assert(g0.role == AOS_ROLE_GIB && g0.static_frame == 0x13 && g1.static_frame == 0x14);
+    assert(g0.x == zx + 0x10000 && g0.y == zy - 0x10000 - 0x30000);
+    assert(g0.vx == back * (0x8000 + 0x1234));
+    assert(g0.vy == -0x10000 - 0x18000 && g0.ay == 0x1800 && g0.mirrored == z.mirrored);
+    assert(g1.x == zx - 1 && g1.y == zy - 0x80000 && g1.vy == -0x17FFF - 0x18000);
+    assert(g1.vx == back * (0x8000 + 0x7FFF));
+    /* sub_08093078: it rises, falls back and goes once below the soldier. */
+    int gib_frames = 0;
+    while (!g0.removed && gib_frames < 200) {
+        aos_enemy_update(&g0, &soma, &layer, &kind, NULL, NULL, 10, 4, cam, 0, never_zero);
+        if (!g0.removed) assert(g0.y <= zy);
+        ++gib_frames;
+    }
+    assert(g0.removed && gib_frames > 10 && g0.y > zy);
+    int dying = 1;
     while (!z.removed && dying < 100) {
         aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, 0, never_zero);
         ++dying;
     }
     assert(z.removed && dying == 0x28);
+
+    /* Under gEwramData + 0x8E bit 0x40: state 3, no floor snap, only the
+     * animation step. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy idle;
+    assert(aos_enemy_create(&idle, AOS_ENEMY_ZOMBIE_SOLDIER, 60, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(idle.state == 3 && idle.y == AOS_FIXED(100));
+    for (int i = 0; i < 20; ++i) {
+        hit = aos_enemy_update(&idle, &soma, &layer, &kind, NULL, NULL, 10, 4, cam, 0, never_zero);
+        assert(!hit.soma_hit && idle.state == 3 && idle.x == AOS_FIXED(60));
+    }
+    assert(idle.anim.frame == 3);
 }
 
 static uint32_t always_one(void) { return 1; }

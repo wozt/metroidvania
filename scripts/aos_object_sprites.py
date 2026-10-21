@@ -84,7 +84,8 @@ ENEMIES = {
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
     "zombie_soldier": {"id": 0x0C, "graphics": 0x081CC024, "palette": 0x0820AA48, "bank": 0,
-                       "frames": 0x082215C4, "static_frames": (18,)},
+                       "frames": 0x082215C4,
+                       "static_frames": (18, 0x13, 0x14)},  # grenade, gibs (sub_08092FCC)
 }
 # Shared effects: sub_0800C5D8 loads the common tile sheet 0x081C15F4 (the
 # graphics of languages 2 and 3 differ) and OBJ palette rows 4 to 9 and 14

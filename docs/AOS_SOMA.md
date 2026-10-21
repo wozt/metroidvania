@@ -657,7 +657,20 @@ that order; `sub_08093078` moves them with `sub_0806D3D8(e, 8.0)` (velocity,
 clamp, then position) and deletes them once below the soldier's y at the
 time (`+0x1C`). Under the global `0x8E & 0x40` the soldier is created in
 state 3 without its collision block or floor snap, and only steps its
-animation. The grenade's explosion particles are not ported. Framework corrections found on the
+animation. The grenade's burst (state 1, every frame) and explosion
+(state 2, while its timer, carried over from the bounces, is at most 8)
+emit particles after incrementing the timer: `sub_0806D894` with a random
+direction (angle `r & 0xFFFF`, speed (sin(a + 0x4000), sin(a)) through
+`sub_0803E86C` at 1.0; animation 5 of `0x0820ED60`, OBJ row 6, `+0x18` = 7),
+`sub_0806D930(x, y, 0, 0, p, 1, 7, 5)` at timer 3 (animation 5, row 5), and
+on odd timers `sub_0806D644` with a second random direction (animation 0,
+row 7, `+0x18` = 3). Their update `sub_08068F78` keeps 7/8 of vx / vy
+(`+0x18` bits 0 / 1, `sub_0806D490` / `sub_0806D4A8`), moves with
+`sub_0806D3D8(e, 8.0)`, blinks with `0x08118CE0[0x28 - t]` (bit 2, t
+counting to 0x28, `sub_0806D518`), draws random flips by `+0x19` (unused
+here) and is deleted on the update after its animation ends (`+0x59` bit
+0). Row 5 renders black; the OBJ blending that may apply to it is not
+modelled. Framework corrections found on the
 way: starting an animation (`sub_0803F2C8`) clears `+0x59` bit 0, and
 `sub_080683BC` (rewards, not ported) sets `+0x3E` bit 1 at death, which makes
 `sub_0806E314` skip the collision pass, so a defeated zombie, soldier or bat

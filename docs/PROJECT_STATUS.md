@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0433 - Aria grenade burst and explosion particles
+
+- Ported the particle entity `sub_08068F78` (7/8 speed decay, motion,
+  40-frame blink, deletion after its animation) and the grenade's
+  emitters: `sub_0806D894` smoke at a random direction every frame,
+  `sub_0806D930` dark smoke at timer 3 and `sub_0806D644` flame particles on
+  odd timers, during the burst and the explosion's first 8 frames.
+- The exporter adds `Effect/smoke` and `Effect/dark_smoke` (animation 5,
+  OBJ rows 6 and 5); `fusion_aria_runtime` draws them and reports the live
+  effect count on the capture line.
+- Checked in room 0/15 (`--spawn 170 430`): a grenade bursts on Soma at
+  frame 232 (3 effects, then 12 at frames 238 and 246). The zombie soldier
+  is now functional; its sounds and the possible blending of the dark
+  smoke remain open.
+
 ## Patch 0432 - Aria zombie soldier gibs and state 3
 
 - The soldier's first death frame now creates its two gibs

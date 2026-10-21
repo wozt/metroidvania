@@ -359,13 +359,27 @@ static void soldier_tests(void) {
         }
     }
     assert(bounces == 1 && flying.state == 2 && flying.timer == 2);
-    int blast = 0;
+    int blast = 0, kinds[AOS_EFFECT_KINDS] = {0};
     while (!flying.removed && blast < 100) {
-        aos_enemy_update(&flying, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        hit = aos_enemy_update(&flying, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
         ++blast;
         if (flying.timer == 14) assert(flying.own_attack.x == -9 && flying.own_attack.w == 18);
+        for (int i = 0; i < hit.effect_count; ++i) {
+            const AosEffect *e = &hit.effects[i];
+            assert(e->particle && e->x == flying.x && e->y == flying.y);
+            ++kinds[e->kind];
+            if (e->kind == AOS_EFFECT_SMOKE) {
+                /* A random angle (1): (cos, sin) at 1.0, + 0x18 = 7. */
+                assert(e->flags == 7 && e->vx == aos_sine(0x4001) && e->vy == aos_sine(1));
+            }
+            if (e->kind == AOS_EFFECT_DARK_SMOKE) assert(flying.timer == 3 && e->vx == 0);
+            if (e->kind == AOS_EFFECT_FLAME) assert(e->flags == 3 && flying.timer & 1);
+        }
     }
     assert(flying.hidden && blast == 0x18 - 2);
+    /* Timers 3 to 8: smoke each frame, dark smoke at 3, flames at 3, 5, 7. */
+    assert(kinds[AOS_EFFECT_SMOKE] == 6 && kinds[AOS_EFFECT_DARK_SMOKE] == 1 &&
+           kinds[AOS_EFFECT_FLAME] == 3 && kinds[AOS_EFFECT_BLOOD] == 0);
 
     /* A grenade reaching Soma knocks him back (type 1) and bursts. */
     AosEnemy direct = g;
@@ -375,9 +389,13 @@ static void soldier_tests(void) {
     hit = aos_enemy_update(&direct, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.soma_hit && hit.soma_damage == aos_player_damage(14, 4));
     assert(soma.pending_type == 1 && direct.state == 1);
-    for (int i = 0; i < 7; ++i)
-        aos_enemy_update(&direct, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(direct.removed);
+    int burst = 0;
+    for (int i = 0; i < 7; ++i) {
+        hit = aos_enemy_update(&direct, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        burst += hit.effect_count;
+    }
+    /* The burst's timers 1 to 7: 7 smoke, 1 dark smoke, 4 flames. */
+    assert(direct.removed && burst == 12);
 
     /* A killing blow: death animation 3, state 2 and the generic death. */
     soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
@@ -885,11 +903,26 @@ int main(void) {
     const AosAnimSet puff_set = {&puff_def, 1};
     AosEffect flame = {.x = AOS_FIXED(50), .y = AOS_FIXED(50)};
     int lifetime = 0;
-    while (aos_effect_update(&flame, &puff_set) && lifetime < 100) ++lifetime;
+    while (aos_effect_update(&flame, &puff_set, NULL) && lifetime < 100) ++lifetime;
     assert(lifetime == 19 && flame.y == AOS_FIXED(50) - 19 * 0x8000);
+    /* sub_08068F78: + 0x18 = 7 keeps 7/8 of each speed before moving and
+     * blinks from 0x08118CE0[0x28 - t]; deleted on the update after the
+     * animation ends. */
+    static uint8_t pattern[40];
+    pattern[0x27] = 1;
+    AosEffect smoke = {.kind = AOS_EFFECT_SMOKE, .particle = true, .flags = 7,
+                       .x = AOS_FIXED(50), .y = AOS_FIXED(50), .vx = 0x10000, .vy = -0x8000};
+    assert(aos_effect_update(&smoke, &puff_set, pattern));
+    assert(smoke.vx == 0xE000 && smoke.vy == -0x7000 && smoke.x == AOS_FIXED(50) + 0xE000);
+    assert(smoke.timer == 1 && smoke.hidden);
+    assert(aos_effect_update(&smoke, &puff_set, pattern) && smoke.vx == 0xC400 && !smoke.hidden);
+    lifetime = 2;
+    while (aos_effect_update(&smoke, &puff_set, pattern) && lifetime < 100) ++lifetime;
+    /* 20 ticks: two steps on the creation frame, ended on call 19. */
+    assert(lifetime == 19);
     AosEffect bare = {0};
     const AosAnimSet empty = {NULL, 0};
-    assert(!aos_effect_update(&bare, &empty));
+    assert(!aos_effect_update(&bare, &empty, NULL));
 
     /* Under gEwramData + 0x8E bit 0x40 the bat stays in state 4: no
      * ceiling search, animation 1, no collision pass. */

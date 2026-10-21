@@ -13,7 +13,7 @@ looping sequence: its sprite frame colorized with each bank of the script.
 Enemies whose create routine is traced (``ENEMIES``) are exported the same
 way: every animation of their descriptor, colorized with their palette bank,
 as ``Enemy/<name>/anim_<n>``, with per-frame boxes (frame record +4 / +8) in
-``enemy_frames.tsv``. Shared effects (``EFFECTS``: the death flame and the blood splash) are
+``enemy_frames.tsv``. Shared effects (``EFFECTS``: the death flame, the blood splash and two smoke particles) are
 exported as ``Effect/<name>/anim_<n>``. Offsets are relative to the entity position (the door
 base); components
 listed first are drawn on top (assumed OAM order; the door's components do
@@ -89,7 +89,7 @@ ENEMIES = {
 }
 # Shared effects: sub_0800C5D8 loads the common tile sheet 0x081C15F4 (the
 # graphics of languages 2 and 3 differ) and OBJ palette rows 4 to 9 and 14
-# with banks of 0x082099FC (sUnk_084F0DD8: row 7 bank 3, row 8 bank 4). The
+# with banks of 0x082099FC (sUnk_084F0DD8: rows 5 to 8 banks 1 to 4). The
 # death flame sub_0806E524 plays animation 0 of the frame list 0x0820ED60
 # with row 7; sub_0806B5DC of type 1 (table 0x08526D0C: animation, row)
 # plays animation 13 with row 8.
@@ -98,6 +98,12 @@ EFFECTS = {
               "frames": 0x0820ED60, "animations": (0,)},
     "blood": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 4,
               "frames": 0x0820ED60, "animations": (13,)},
+    # Particles of sub_08068F78: sub_0806D894 (animation 5, row 6) and
+    # sub_0806D930 as the grenade calls it (animation 5, row 5).
+    "smoke": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 2,
+              "frames": 0x0820ED60, "animations": (5,)},
+    "dark_smoke": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 1,
+                   "frames": 0x0820ED60, "animations": (5,)},
 }
 SCREEN_MARGINS = 0x08118D08    # sub_0806D128: 7 (x, y) s16 margins
 WOODEN_DOOR = {

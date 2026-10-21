@@ -50,7 +50,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
 #define MAX_TRANSITIONS 32
 #define MAX_ENTITIES 128
 #define MAX_EFFECTS 32      /* shared effects (flames, blood) alive at once */
-static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood"};
+static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "smoke",
+                                                          "dark_smoke"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 
@@ -455,9 +456,13 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         int played = aos_door_update(&e->door, layer, soma, input);
         if (played) sound = played;
     }
+    /* The blink pattern 0x08118CE0, shared by every enemy kind. */
+    const uint8_t *blink = NULL;
+    for (int id = 0; id < ENEMY_KINDS && !blink; ++id)
+        if (combat->kinds[id]) blink = combat->kinds[id]->blink;
     size_t kept = 0;
     for (size_t i = 0; i < room->effect_count; ++i)
-        if (aos_effect_update(&room->effects[i], combat->effects[room->effects[i].kind]))
+        if (aos_effect_update(&room->effects[i], combat->effects[room->effects[i].kind], blink))
             room->effects[kept++] = room->effects[i];
     room->effect_count = kept;
     return sound;
@@ -805,13 +810,15 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
 }
 
 /* Shared effects of one kind, flipped when + 0x58 bit 0x40 (drawn at
- * random) is set. Flames (priority + 0x5C - 1) are drawn in front of the
- * enemies, blood (priority 3) behind them. */
+ * random) is set. Flames and smoke (priority + 0x5C or the creator's) are
+ * drawn in front of the enemies, blood (priority 3) behind them; OBJ
+ * blending is not modelled. */
 static void draw_effects(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
                          int kind, int cam_x, int cam_y) {
     for (size_t i = 0; i < room->effect_count; ++i) {
         const AosEffect *f = &room->effects[i];
-        if (f->kind != kind || f->anim.frame >= objects->effects[kind].def.count) continue;
+        if (f->kind != kind || f->hidden || f->anim.frame >= objects->effects[kind].def.count)
+            continue;
         const AriaFrame *frame = &objects->effects[kind].frames[f->anim.frame];
         if (!frame->texture) continue;
         int fx = f->x >> 16, fy = f->y >> 16;
@@ -1374,6 +1381,8 @@ int main(int argc, char **argv) {
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
+        for (int k = AOS_EFFECT_SMOKE; objects_ok && k <= AOS_EFFECT_DARK_SMOKE; ++k)
+            draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);
         if (show_hitboxes) {
             AosRect hurt = aos_player_rect(soma.hurtbox, soma.x >> 16, soma.y >> 16,
@@ -1446,9 +1455,10 @@ int main(int argc, char **argv) {
             bool saved = shot && SDL_SaveBMP(shot, capture_path);
             if (shot) SDL_DestroySurface(shot);
             if (!saved) { fprintf(stderr, "Capture failed: %s\n", SDL_GetError()); goto cleanup; }
-            printf("Captured frame %ld: %s (x=%d y=%d state=%u anim=%u frame=%u flags=%08x)\n",
+            printf("Captured frame %ld: %s (x=%d y=%d state=%u anim=%u frame=%u flags=%08x "
+                   "effects=%zu)\n",
                    step, capture_path, sx, sy, soma.state, soma.anim.id, soma.anim.frame,
-                   (unsigned)soma.flags);
+                   (unsigned)soma.flags, room.effect_count);
             running = false;
         }
         SDL_RenderPresent(renderer);

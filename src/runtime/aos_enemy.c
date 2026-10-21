@@ -22,7 +22,42 @@ void aos_enemy_set_flag_8e_40(bool set) {
     flag_8e_40 = set;
 }
 
-bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims) {
+/* sub_0803F17C with the + 0x59 bit 0 of a particle. */
+static int effect_step(AosEffect *effect, const AosAnimSet *anims) {
+    bool ended = effect->anim.flags & AOS_ANIM_ENDED;
+    int result = aos_anim_step(&effect->anim, anims);
+    if (result == 4 || (result == 3 && !ended)) effect->cycle_done = true;
+    return result;
+}
+
+/* sub_08068F78 */
+static bool particle_update(AosEffect *p, const AosAnimSet *anims, const uint8_t *blink) {
+    if (!p->started) {
+        /* sub_0806D894 / sub_0806D930 / sub_0806D644: start and one step. */
+        if (!aos_anim_start(&p->anim, anims, 0, false)) return false;
+        p->anim.id = 0;
+        effect_step(p, anims);
+        p->started = true;
+    }
+    if (p->flags & 1) p->vx = p->vx * 7 / 8;    /* sub_0806D490(e, 8) */
+    if (p->flags & 2) p->vy = p->vy * 7 / 8;    /* sub_0806D4A8(e, 8) */
+    /* sub_0806D3D8(e, 8.0) without accelerations */
+    if (p->vx > 0x80000) p->vx = 0x80000;
+    if (p->vy > 0x80000) p->vy = 0x80000;
+    p->x += p->vx;
+    p->y += p->vy;
+    if (p->flags & 4) {
+        if (p->timer <= 0x27) p->timer++;
+        int index = 0x28 - p->timer;    /* sub_0806D518 */
+        p->hidden = blink && index >= 0 && index <= 0x27 ? blink[index] & 1 : false;
+    }
+    if (p->cycle_done) return false;
+    effect_step(p, anims);
+    return true;
+}
+
+bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t *blink) {
+    if (effect->particle) return particle_update(effect, anims, blink);
     if (!effect->started) {
         /* State 0: the graphics set up, the animation played once. */
         aos_anim_start(&effect->anim, anims, 0, false);
@@ -34,6 +69,38 @@ bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims) {
     /* sub_0803F17C: deleted when the animation ends (3). */
     int result = aos_anim_step(&effect->anim, anims);
     return result != 3 && result != 0;
+}
+
+/* sub_0806D894 (smoke, + 0x18 = 7), sub_0806D930(x, y, 0, 0, p, 1, 7, 5)
+ * (dark smoke) and sub_0806D644 (flame art, + 0x18 = 3): EntityCreateInRange(
+ * 0x49, 0xCF, sub_08068F78) at (x, y) with (vx, vy). */
+static void spawn_particle(uint8_t kind, uint8_t flags, int32_t x, int32_t y, int32_t vx,
+                           int32_t vy, AosHitReport *report) {
+    if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
+    report->effects[report->effect_count++] = (AosEffect){
+        .kind = kind, .x = x, .y = y, .particle = true, .flags = flags, .vx = vx, .vy = vy};
+}
+
+/* A unit vector at a random angle: (sin(a + 0x4000), sin(a)) times 1.0
+ * (sub_0803E86C). */
+static void random_direction(uint32_t (*random)(void), int32_t *vx, int32_t *vy) {
+    uint32_t a = random() & 0xFFFF;
+    *vx = (int32_t)(((int64_t)aos_sine(a + 0x4000) * 0x10000) >> 16);
+    *vy = (int32_t)(((int64_t)aos_sine(a) * 0x10000) >> 16);
+}
+
+/* The grenade's burst particles of sub_08092CCC for timer t (already
+ * incremented): smoke at a random direction, dark smoke at t = 3, a flame
+ * particle at another random direction when t is odd. */
+static void grenade_particles(const AosEnemy *g, uint32_t (*random)(void), AosHitReport *report) {
+    int32_t vx, vy;
+    random_direction(random, &vx, &vy);
+    spawn_particle(AOS_EFFECT_SMOKE, 7, g->x, g->y, vx, vy, report);
+    if (g->timer == 3) spawn_particle(AOS_EFFECT_DARK_SMOKE, 7, g->x, g->y, 0, 0, report);
+    if (g->timer & 1) {
+        random_direction(random, &vx, &vy);
+        spawn_particle(AOS_EFFECT_FLAME, 3, g->x, g->y, vx, vy, report);
+    }
 }
 
 /* sub_0806E664(x, y, 1): EntityCreateInRange(0x49, 0xCF, sub_0806B5DC) at
@@ -1072,14 +1139,14 @@ static AosEnemy make_grenade(const AosEnemy *soldier, int32_t dx, int32_t dy, in
  * 0x11B; a second floor hit or a ceiling makes it explode, sound 0x76),
  * the harmless burst of state 1 (7 frames) and the explosion of state 2,
  * whose attack box grows to 2 + t / 2 pixels around it until t = 14, hits
- * until t = 18 and ends at t = 24. The explosion particles of
- * sub_0806D894 / sub_0806D644 / sub_0806D930 are not ported, so nothing is
- * drawn while it bursts. */
+ * until t = 18 and ends at t = 24. The burst and the explosion's first 8
+ * frames create the particles of grenade_particles. */
 static AosHitReport grenade_update(AosEnemy *g, AosSoma *soma, const AosCollision *layer,
                                    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
-                                   int soma_def, int cam_x, int cam_y) {
-    AosHitReport report = {0};
+                                   int soma_def, int cam_x, int cam_y,
+                                   uint32_t (*random)(void)) {
+    AosHitReport report = {0}, particles = {0};
     switch (g->state) {
     case 0: {
         int flags = projectile_collide(g, layer, g->vy / 3, (int32_t)0xFFFC0000);
@@ -1101,11 +1168,14 @@ static AosHitReport grenade_update(AosEnemy *g, AosSoma *soma, const AosCollisio
     }
     case 1:
         g->hidden = true;
-        if (++g->timer > 6) g->removed = true;
+        ++g->timer;
+        grenade_particles(g, random, &report);
+        if (g->timer > 6) g->removed = true;
         break;
     case 2:
         g->hidden = true;
         ++g->timer;
+        if (g->timer <= 8) grenade_particles(g, random, &particles);
         if (g->timer <= 14) {
             int r = 2 + g->timer / 2;
             g->own_attack = (AosBox){(int8_t)-r, (int8_t)-r, (uint8_t)(2 * r), (uint8_t)(2 * r)};
@@ -1118,6 +1188,7 @@ static AosHitReport grenade_update(AosEnemy *g, AosSoma *soma, const AosCollisio
         if (g->timer <= 0x12) report = collide(g, soma, kind, weapon, weapon_frames, soma_atk,
                                                soma_def);
         else g->combat.attack_off = true;
+        take_effects(&report, &particles);
         break;
     default:
         break;
@@ -1842,7 +1913,7 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                             cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_GRENADE)
         return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                              cam_x, cam_y);
+                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER)
         return soldier_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);

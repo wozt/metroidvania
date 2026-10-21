@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 66 | 3507 |
+| Castlevania: Aria of Sorrow | 71 | 3502 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1226,13 +1226,15 @@ Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c).
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Next action: Extend the generic enemy framework to further native enemies.
 
-[~] **`aos.enemies.zombie_soldier` — Zombie soldier and its grenade.** Walking, close attack, grenade throw, bounce, explosion box, death with its flames and two gibs (sub_08092FCC, sprite frames 0x13 and 0x14), and state 3 under gEwramData + 0x8E bit 0x40 are ported; the grenade's explosion particles and the sounds are not drawn or played.
+[+] **`aos.enemies.zombie_soldier` — Zombie soldier and its grenade.** Walking, close attack, grenade throw, bounce, explosion box, the burst and explosion particles (smoke, dark smoke and flame particles of sub_08068F78), death with its flames and two gibs (sub_08092FCC), and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 
-Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08069770`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_08090914.s:EnemyZombieSoldierCreate`, `aos:asm:asm/code/code_08090914.s:EnemyZombieSoldierUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080928FC`, `aos:asm:asm/code/code_08090914.s:sub_08092A28`, `aos:asm:asm/code/code_08090914.s:sub_08092B38`, `aos:asm:asm/code/code_08090914.s:sub_08092BC0`, `aos:asm:asm/code/code_08090914.s:sub_08092CCC`, `aos:asm:asm/code/code_08090914.s:sub_08092FCC`, `aos:asm:asm/code/code_08090914.s:sub_08093078`.  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08068F78`, `aos:asm:asm/code/code_08060B98.s:sub_08069770`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806D644`, `aos:asm:asm/code/code_08060B98.s:sub_0806D894`, `aos:asm:asm/code/code_08060B98.s:sub_0806D930`, `aos:asm:asm/code/code_08090914.s:EnemyZombieSoldierCreate`, `aos:asm:asm/code/code_08090914.s:EnemyZombieSoldierUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080928FC`, `aos:asm:asm/code/code_08090914.s:sub_08092A28`, `aos:asm:asm/code/code_08090914.s:sub_08092B38`, `aos:asm:asm/code/code_08090914.s:sub_08092BC0`, `aos:asm:asm/code/code_08090914.s:sub_08092CCC`, `aos:asm:asm/code/code_08090914.s:sub_08092FCC`, `aos:asm:asm/code/code_08090914.s:sub_08093078`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.zombie`.  
-Next action: Port the grenade explosion particles of sub_0806D894 / sub_0806D930 / sub_0806D644 (sub_08068F78).
+Known divergences: Sounds (0x70, 0x76, 0x11B) are not played; the dark smoke of sub_0806D930 (OBJ row 5) is drawn opaque, OBJ blending is not modelled; particles are updated after the enemies of their frame (native slot order not traced).  
+Next action: Play the soldier's sounds once the Aria sound path exists.
+Evidence: in game: `aria area_00_room_015: knife kill at frame 241 (--spawn 250 430 --atk 80 --repeat 2) with gibs at frames 243, 249 and 257; a grenade bursting on Soma at frames 232, 238 and 246 (--spawn 170 430, effects 3 then 12)`.
 
 ### Bosses
 

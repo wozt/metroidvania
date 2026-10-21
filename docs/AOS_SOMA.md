@@ -830,6 +830,28 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Gargoyle (enemy 0x57, `EnemyGargoyleCreate` / `EnemyGargoyleUpdate`):
+`sub_08086900` loads tiles `0x081CBFDC`, palette `0x0820A804` (bank 0 for
+id 0x57, else 1) and frames `0x0821C688`. Create: animation 0 looping and
+one step, frame boxes, state 0 (state 2, animation only, under the global
+`0x8E & 0x40`). Inside the activity window, state 0 (`sub_08086534`): step
+0 faces the player, vx = 0.5 that way, vy = 0, `+0x50` = 0x1000, `+0x54` =
+1.0; step 1 aims at the player's position (`sub_0806CD38` / `sub_0806CD78`)
+64 pixels higher: on each axis beyond 8 pixels the speed moves by `+0x50`
+toward it, clamped to `+0x54`; it faces its vx and moves; once its timer
+`+0x0D` (signed) runs out, with the target within 8 pixels vertically and
+96 horizontally it plays animation 3 (step 2). Step 2 faces the player,
+keeps 9/10 of both speeds for 21 frames, then plays animation 1, sets
+(`+0x50`, `+0x54`) = (0xC00 toward the facing, 0x1800), sound 0x87 (step
+3): `sub_0806D3D8(e, 2.0)` for 25 frames; step 4 doubles `+0x50`, moves X
+with `sub_0806D430(e, 2.0)`, keeps 15/16 of vy for 61 frames (in steps 3
+and 4 animation 2 one frame in 256), then sets 0x1000 / 1.5 and animation
+0 (step 5): it chases on X and climbs while the target point is above,
+returning to step 1 with a 20-frame timer. Hit callback `sub_08086878`
+(sound 0x6E): state 1, 40 frames, `+0x50` = 0, `+0x54` = 0x1000; state 1
+keeps 9/10 of vx, falls with `sub_0806D3D8(e, 3.0)` and runs the generic
+death. Contact `sub_08086964`: type 0, element 0.
+
 Zombie officer (enemy 0x20, `EnemyZombieOfficerCreate` /
 `EnemyZombieOfficerUpdate`): `sub_08092680` loads tiles `0x081CC01C`,
 palette `0x0820AA24` and frames `0x08220F84`; animations 0 walk, 1 attack, 2

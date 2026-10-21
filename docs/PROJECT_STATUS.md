@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0444 - Aria gargoyle
+
+- Ported the gargoyle (enemy 0x57): its pursuit of the point above the
+  player, the brake, the swoop and the climb back, the falling generic
+  death and its inert state 2; the runtime registers enemy ids up to 87.
+- Checked in room 8/12: both gargoyles leave their perches, swoop onto
+  Soma and knock him back, then fly off and climb back (frames 30, 90,
+  150 and 210).
+
 ## Patch 0443 - Aria zombie officer
 
 - Ported the zombie officer (enemy 0x20) on the soldier's building blocks:

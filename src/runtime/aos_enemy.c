@@ -421,7 +421,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
-        id != AOS_ENEMY_ZOMBIE_OFFICER)
+        id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -519,6 +519,15 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         snap_to_floor(enemy, layer);
         enemy->y += 0x10000;
         enemy->state = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_GARGOYLE) {
+        /* EnemyGargoyleCreate (sub_08086900 graphics): animation 0 looping
+         * and one step, frame boxes, state 0; state 2 (inert) under the
+         * global 0x8E & 0x40. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        enemy->state = flag_8e_40 ? 2 : 0;
         return true;
     }
     if (id == AOS_ENEMY_ZOMBIE_OFFICER) {
@@ -702,6 +711,14 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_GARGOYLE) {
+                    /* sub_08086878: state 1, 40 frames, falling with
+                     * + 0x54 = 0x1000 (sound 0x6E). */
+                    enemy->timer = 0x28;
+                    enemy->state = 1;
+                    enemy->step = 0;
+                    enemy->ax = 0;
+                    enemy->ay = 0x1000;
                 } else if (enemy->id == AOS_ENEMY_ZOMBIE_OFFICER) {
                     /* sub_0809252C: death animation 2 and the generic death
                      * in state 2 (sound 0x70; sub_080683BC is not ported). */
@@ -1549,6 +1566,160 @@ static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollisio
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
     take_effects(&report, &spawned);
+    return report;
+}
+
+/* sub_0806D3D8(e, limit): velocity plus acceleration, clamped toward the
+ * acceleration's sign, then the move. */
+static void accel_move(AosEnemy *e, int32_t limit) {
+    e->vx += e->ax;
+    if (e->ax >= 0 ? e->vx > limit : e->vx < -limit) e->vx = e->ax >= 0 ? limit : -limit;
+    e->vy += e->ay;
+    if (e->ay >= 0 ? e->vy > limit : e->vy < -limit) e->vy = e->ay >= 0 ? limit : -limit;
+    e->x += e->vx;
+    e->y += e->vy;
+}
+
+/* The gargoyle's pursuit of one axis: beyond 8 pixels the speed moves
+ * toward the target by + 0x50, up to + 0x54. */
+static void gargoyle_chase(int32_t *v, int32_t delta, int32_t a, int32_t max) {
+    if (delta < -0x80000) {
+        *v -= a;
+        if (*v <= -max) *v = -max;
+    } else if (delta > 0x80000) {
+        *v += a;
+        if (*v >= max) *v = max;
+    }
+}
+
+/* sub_08086534: step 0 faces the player at 0.5; step 1 chases the point
+ * 64 pixels above him (+ 0x50 = 0x1000 up to 1.0 per axis) until, once its
+ * timer runs out, he is within 8 pixels vertically and 96 horizontally:
+ * animation 3; step 2 brakes (9/10 per frame) for 21 frames, then plays
+ * animation 1 and dives (sound 0x87) with accelerations (+/- 0xC00,
+ * 0x1800) clamped to 2.0 for 25 frames; step 4 doubles the X acceleration,
+ * keeps 15/16 of vy for 61 frames (animation 2 one frame in 256 in steps 3
+ * and 4); step 5 climbs (0x1000 up to 1.5) until level with or below that
+ * point, then chases again after 20 frames. */
+static void gargoyle_fly(AosEnemy *g, const AosSoma *soma, const AosAnimSet *anims,
+                         uint32_t (*random)(void)) {
+    int32_t dx, dy;
+    switch (g->step) {
+    case 0:
+        soldier_face(g, soma);
+        g->vx = g->mirrored ? 0x8000 : -0x8000;
+        g->vy = 0;
+        g->ax = 0x1000;
+        g->ay = 0x10000;
+        g->timer = 0;
+        g->step = 1;
+        /* fall through */
+    case 1:
+        dx = soma->x - g->x;
+        dy = soma->y - (g->y + 0x400000);
+        gargoyle_chase(&g->vx, dx, g->ax, g->ay);
+        gargoyle_chase(&g->vy, dy, g->ax, g->ay);
+        g->mirrored = g->vx >= 0;
+        g->x += g->vx;
+        g->y += g->vy;
+        if ((int8_t)--g->timer > 0) return;
+        g->timer = 0;
+        if ((uint32_t)(dy + 0x7FFFF) > 0xFFFFE) return;
+        if ((dx < 0 ? -dx : dx) > 0x5FFFFF) return;
+        g->step = 2;
+        play_loop(g, anims, 3, false);
+        return;
+    case 2:
+        soldier_face(g, soma);
+        g->vx = g->vx * 9 / 10;
+        g->vy = g->vy * 9 / 10;
+        g->x += g->vx;
+        g->y += g->vy;
+        if (g->timer++ <= 0x13) return;
+        g->step = 3;
+        g->timer = 0;
+        play_loop(g, anims, 1, false);
+        g->ax = g->mirrored ? 0xC00 : -0xC00;
+        g->ay = 0x1800;
+        return;
+    case 3:
+        if (!(random() & 0xFF)) play_loop(g, anims, 2, false);
+        accel_move(g, 0x20000);
+        if (g->timer++ <= 0x17) return;
+        g->step = 4;
+        g->timer = 0;
+        g->ax *= 2;
+        return;
+    case 4:
+        if (!(random() & 0xFF)) play_loop(g, anims, 2, false);
+        /* sub_0806D430(e, 2.0), sub_0806D4A8(e, 16), sub_0806D3CC */
+        g->vx += g->ax;
+        if (g->ax >= 0 ? g->vx > 0x20000 : g->vx < -0x20000) g->vx = g->ax >= 0 ? 0x20000 : -0x20000;
+        g->x += g->vx;
+        g->vy = g->vy * 15 / 16;
+        g->y += g->vy;
+        if (g->timer++ <= 0x3B) return;
+        g->step = 5;
+        g->timer = 0;
+        g->ax = 0x1000;
+        g->ay = 0x18000;
+        play(g, anims, 0);
+        return;
+    case 5:
+        dx = soma->x - g->x;
+        dy = soma->y - (g->y + 0x400000);
+        gargoyle_chase(&g->vx, dx, g->ax, g->ay);
+        if (dy < 0) {
+            g->vy -= g->ax;
+            if (g->vy <= -g->ay) g->vy = -g->ay;
+        } else {
+            g->step = 1;
+            g->timer = 0x14;
+            g->ax = 0x1000;
+            g->ay = 0x10000;
+        }
+        g->mirrored = g->vx >= 0;
+        g->x += g->vx;
+        g->y += g->vy;
+        return;
+    default:
+        return;
+    }
+}
+
+/* EnemyGargoyleUpdate: inside the activity window, state 0 flies, state 1
+ * dies (9/10 of vx, a fall with 0x1000 clamped to 3.0, the generic death),
+ * state 2 only steps its animation; then the animation step and the
+ * collision pass. Contact sub_08086964: type 0, element 0. */
+static AosHitReport gargoyle_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind *kind,
+                                    const AosWeaponEntity *weapon,
+                                    const AosWeaponFrames *weapon_frames, int soma_atk,
+                                    int soma_def, int cam_x, int cam_y,
+                                    uint32_t (*random)(void)) {
+    AosHitReport report = {0}, effects = {0};
+    int sx = (g->x >> 16) - cam_x, sy = (g->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    switch (g->state) {
+    case 0: gargoyle_fly(g, soma, kind->anims, random); break;
+    case 1:
+        g->vx = g->vx * 9 / 10;
+        accel_move(g, 0x30000);
+        generic_death(g, kind, random, &effects);
+        if (g->removed) return effects;
+        break;
+    case 2:
+        step_anim(g, kind->anims);
+        return report;
+    default:
+        break;
+    }
+    step_anim(g, kind->anims);
+    sx = (g->x >> 16) - cam_x;
+    sy = (g->y >> 16) - cam_y;
+    if (!g->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(g, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&g->combat);
+    take_effects(&report, &effects);
     return report;
 }
 
@@ -2466,6 +2637,9 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->role == AOS_ROLE_GRENADE)
         return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_GARGOYLE)
+        return gargoyle_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                               cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ZOMBIE_OFFICER)
         return officer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);

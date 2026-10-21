@@ -908,6 +908,93 @@ static void archer_tests(void) {
     assert(bone.x - a.x < AOS_FIXED(40));
 }
 
+static void gargoyle_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t flap[] = {4, 4}, swoop[] = {6, 6}, death[] = {200};
+    const AosAnimDef defs[4] = {{2, flap}, {2, swoop}, {2, flap}, {1, death}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {30, 20, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(159), NULL);
+
+    /* State 0 step 0: facing the player (right), 0.5; step 1 chases the
+     * point 64 pixels above him by 0x1000 per frame. */
+    AosEnemy g;
+    assert(aos_enemy_create(&g, AOS_ENEMY_GARGOYLE, 100, 60, 0, 0, &soma, &layer, &kind, &stats));
+    assert(g.state == 0);
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.step == 1 && g.mirrored && g.vx == 0x9000 && g.vy == 0x1000);
+    /* It ends level with the point (within 8 pixels) and within 96
+     * horizontally: animation 3 and the brake (step 2). */
+    int frames = 0;
+    while (g.step == 1 && frames < 400) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    int32_t dy = soma.y - (g.y + 0x400000), dx = soma.x - g.x;
+    assert(g.step == 2 && g.anim.id == 3 && dy >= -0x80000 && dy <= 0x80000);
+    assert((dx < 0 ? -dx : dx) <= 0x600000);
+    /* 21 frames of braking, then the swoop: animation 1, (0xC00, 0x1800)
+     * up to 2.0 for 25 frames, then 15/16 of vy for 61 frames, then the
+     * climb. */
+    frames = 0;
+    while (g.step == 2 && frames < 100) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 21 && g.step == 3 && g.anim.id == 1 && g.ay == 0x1800);
+    assert(g.ax == (g.mirrored ? 0xC00 : -0xC00));
+    int32_t y_dive = g.y;
+    frames = 0;
+    while (g.step == 3 && frames < 100) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 25 && g.y > y_dive && g.vy == 0x20000);
+    frames = 0;
+    while (g.step == 4 && frames < 100) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 61 && g.step == 5 && g.anim.id == 0 && g.ay == 0x18000);
+    frames = 0;
+    while (g.step == 5 && frames < 400) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(g.step == 1 && g.timer == 0x14 && g.ax == 0x1000 && g.ay == 0x10000);
+    assert(soma.y - (g.y + 0x400000) >= 0);
+
+    /* The killing blow: state 1, 9/10 of vx, falling, 40 frames. */
+    soma = aos_soma_spawn(g.x, g.y + AOS_FIXED(20), NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 40, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    g.hp = 1;
+    int cam = (g.x >> 16) - 120;    /* the collision pass needs it on screen */
+    AosHitReport hit = aos_enemy_update(&g, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, 0,
+                                        always_zero);
+    assert(hit.killed && g.state == 1 && g.ay == 0x1000 && g.timer == 0x28);
+    int32_t y_fall = g.y;
+    int dying = 0;
+    while (!g.removed && dying < 100) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, cam, 0, always_zero);
+        ++dying;
+    }
+    assert(dying == 0x28 && g.y > y_fall);
+}
+
 static void officer_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
@@ -1362,6 +1449,7 @@ int main(void) {
     archer_tests();
     needles_tests();
     officer_tests();
+    gargoyle_tests();
     medusa_tests();
     puts("aos_enemy: ok");
     return 0;

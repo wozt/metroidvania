@@ -85,6 +85,9 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # sub_08086900 (EnemyGargoyleCreate 0x080864A0): bank 0 for id 0x57.
+    "gargoyle": {"id": 0x57, "graphics": 0x081CBFDC, "palette": 0x0820A804, "bank": 0,
+                 "frames": 0x0821C688},
     # sub_08092680 (EnemyZombieOfficerCreate 0x08092350); its gibs
     # (sub_080925B4) show frames 0x0F to 0x11.
     "zombie_officer": {"id": 0x20, "graphics": 0x081CC01C, "palette": 0x0820AA24, "bank": 0,

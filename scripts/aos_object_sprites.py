@@ -85,6 +85,14 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # sub_080C2E74 (EnemyGhostDancerCreate 0x080C2DF8): palette bank =
+    # parameter 0 (0 to 2 in the rooms), banks 1 and 2 as <name>_bank<N>.
+    "ghost_dancer": {"id": 0x1D, "graphics": 0x081F4244, "palette": 0x0820BDD8, "bank": 0,
+                     "frames": 0x0824BC84},
+    "ghost_dancer_bank1": {"id": 0x1D, "graphics": 0x081F4244, "palette": 0x0820BDD8,
+                           "bank": 1, "frames": 0x0824BC84},
+    "ghost_dancer_bank2": {"id": 0x1D, "graphics": 0x081F4244, "palette": 0x0820BDD8,
+                           "bank": 2, "frames": 0x0824BC84},
     # sub_08086900 (EnemyGargoyleCreate 0x080864A0): bank 0 for id 0x57.
     "gargoyle": {"id": 0x57, "graphics": 0x081CBFDC, "palette": 0x0820A804, "bank": 0,
                  "frames": 0x0821C688},
@@ -93,10 +101,10 @@ ENEMIES = {
     "zombie_officer": {"id": 0x20, "graphics": 0x081CC01C, "palette": 0x0820AA24, "bank": 0,
                        "frames": 0x08220F84, "static_frames": (0x0F, 0x10, 0x11)},
     # sub_08093B68 (EnemyMedusaHeadCreate 0x080938E8): palette bank 1 for
-    # gold heads (parameter 1 bit 0), exported as a second sequence set.
+    # gold heads (parameter 1 bit 0), exported as <name>_bank1.
     "medusa_head": {"id": 0x39, "graphics": 0x081CC034, "palette": 0x0820AAB0, "bank": 0,
                     "frames": 0x08221978},
-    "medusa_head_gold": {"id": 0x39, "graphics": 0x081CC034, "palette": 0x0820AAB0, "bank": 1,
+    "medusa_head_bank1": {"id": 0x39, "graphics": 0x081CC034, "palette": 0x0820AAB0, "bank": 1,
                          "frames": 0x08221978},
     # EnemyNeedlesCreate 0x080CB518; its pieces (sub_080CB6BC) show frames
     # 2 to 5.

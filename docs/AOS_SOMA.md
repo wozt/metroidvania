@@ -830,6 +830,27 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Ghost Dancer (enemy 0x1D, `EnemyGhostDancerCreate` /
+`EnemyGhostDancerUpdate`): `sub_080C2E74` loads tiles `0x081F4244`, palette
+`0x0820BDD8` with bank = parameter 0 (0 to 2 in the rooms) and frames
+`0x0824BC84`; animations 0 and 1 dance, 2 dies. Create: animation 0
+looping and one step, state 1, `+0x5A` bits 1-2 cleared then set to 2,
+`+0x14` = 0, `+0x16` = 0, `+0x17` = 1, `+0x18` = `+0x19` = 0; state 5
+(animation only) under the global `0x8E & 0x40`. The update (no activity
+window): hidden beyond margin entry 4; unless dying, the fade of `+0x18`:
+0 opaque, 1 semi-transparent on even `+0x19` frames for 33 frames, 2
+semi-transparent, 3 the reverse, then 0 (`+0x5A` bits 1-2 = 2 is the
+semi-transparent OBJ mode); `sub_0806AD24` (stun); states 1-2
+(`sub_080C3190`): step 0 plays animation 0, stops, faces the player
+(`sub_0806BD64`), clears `+0x14`; step 1: vx = 2 sin(`+0x14` + 0x4000), x +=
+vx, y += sin(4 `+0x14`) + vy, `+0x14` += 0x80 (`+0x16` counts the turns);
+when vx is 0 it swaps animations 0 and 1; whenever `+0x14` % 0x8000 is 0
+with `+0x18` even, `+0x17` flips and `+0x18` advances. Then the animation
+step and, except in state 3, the collision pass (`sub_080421AC`). Hit
+callback `sub_080C32EC`: sound 0x6D, state 3 through `sub_080C327C`
+(animation 2 once, semi-transparent), deleted when it ends. Contact
+`sub_080C339C`: type 0, element 0.
+
 Gargoyle (enemy 0x57, `EnemyGargoyleCreate` / `EnemyGargoyleUpdate`):
 `sub_08086900` loads tiles `0x081CBFDC`, palette `0x0820A804` (bank 0 for
 id 0x57, else 1) and frames `0x0821C688`. Create: animation 0 looping and

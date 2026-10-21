@@ -37,18 +37,29 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 88     /* enemy ids 0, 1, 4, 5, 9, 12, 32, 57, 63 and 87 */
+#define ENEMY_KINDS 88     /* enemy ids 0, 1, 4, 5, 9, 12, 29, 32, 57, 63 and 87 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
                                                      [12] = "zombie_soldier",
+                                                     [29] = "ghost_dancer",
                                                      [32] = "zombie_officer",
                                                      [57] = "medusa_head",
                                                      [87] = "gargoyle",
                                                      [63] = "needles"};
-/* The second palette of the Medusa head (parameter 1 bit 0: gold). */
-#define GOLD_MEDUSA_NAME "medusa_head_gold"
-#define MEDUSA_HEAD_ID 57
+/* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
+ * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
+#define VARIANT_ARTS 4
+static const struct { int id, bank; } variant_keys[VARIANT_ARTS] = {
+    {57, 1}, {29, 1}, {29, 2}, {-1, 0},
+};
+
+/* The palette bank an enemy is drawn with. */
+static int enemy_bank(const AosEnemy *enemy) {
+    if (enemy->id == AOS_ENEMY_MEDUSA_HEAD) return enemy->param1 & 1;
+    if (enemy->id == AOS_ENEMY_GHOST_DANCER) return enemy->param0 & 0xFF;
+    return 0;
+}
 #define ENEMY_STATIC_FRAMES 4  /* single sprite frames of child entities per kind */
 #define ARIA_KIND_ENEMY 1
 
@@ -505,7 +516,7 @@ typedef struct {
         int static_ids[ENEMY_STATIC_FRAMES];
         AriaFrame statics[ENEMY_STATIC_FRAMES];
         int static_count;
-    } enemies[ENEMY_KINDS], gold_medusa;
+    } enemies[ENEMY_KINDS], variants[VARIANT_ARTS];
     struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];
@@ -692,13 +703,20 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         }
         if (sscanf(line, "Enemy/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
-            for (int id = 0; id <= ENEMY_KINDS; ++id) {
-                bool gold = id == ENEMY_KINDS;
-                if (gold ? strcmp(enemy_name, GOLD_MEDUSA_NAME)
-                         : !enemy_names[id] || strcmp(enemy_name, enemy_names[id]))
-                    continue;
-                __typeof__(objects->enemies[0]) *art = gold ? &objects->gold_medusa
-                                                            : &objects->enemies[id];
+            for (int id = 0; id < ENEMY_KINDS + VARIANT_ARTS; ++id) {
+                __typeof__(objects->enemies[0]) *art;
+                if (id < ENEMY_KINDS) {
+                    if (!enemy_names[id] || strcmp(enemy_name, enemy_names[id])) continue;
+                    art = &objects->enemies[id];
+                } else {
+                    int v = id - ENEMY_KINDS, key = variant_keys[v].id;
+                    char variant[32];
+                    if (key < 0 || !enemy_names[key]) continue;
+                    snprintf(variant, sizeof variant, "%s_bank%d", enemy_names[key],
+                             variant_keys[v].bank);
+                    if (strcmp(enemy_name, variant)) continue;
+                    art = &objects->variants[v];
+                }
                 if (style < 0 || style >= AOS_ENEMY_MAX_ANIMS || frame != art->defs[style].count ||
                     frame >= MAX_FRAMES || ticks < 1 || ticks > 255 ||
                     !load_frame(&art->frames[style][frame], frame_path, ox, oy, renderer)) {
@@ -734,7 +752,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     }
     fclose(f);
     for (int id = 0; id < ENEMY_KINDS; ++id) objects->enemies[id].set.anims = objects->enemies[id].defs;
-    objects->gold_medusa.set.anims = objects->gold_medusa.defs;
+    for (int v = 0; v < VARIANT_ARTS; ++v) objects->variants[v].set.anims = objects->variants[v].defs;
     return ok;
 }
 
@@ -747,10 +765,11 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->enemies[id].frames[i][j].texture)
                     SDL_DestroyTexture(objects->enemies[id].frames[i][j].texture);
-    for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
-        for (int j = 0; j < MAX_FRAMES; ++j)
-            if (objects->gold_medusa.frames[i][j].texture)
-                SDL_DestroyTexture(objects->gold_medusa.frames[i][j].texture);
+    for (int v = 0; v < VARIANT_ARTS; ++v)
+        for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
+            for (int j = 0; j < MAX_FRAMES; ++j)
+                if (objects->variants[v].frames[i][j].texture)
+                    SDL_DestroyTexture(objects->variants[v].frames[i][j].texture);
     for (int k = 0; k < AOS_EFFECT_KINDS; ++k)
         for (int i = 0; i < MAX_FRAMES; ++i)
             if (objects->effects[k].frames[i].texture)
@@ -809,8 +828,11 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             e->enemy.anim.frame >= MAX_FRAMES)
             continue;
         const AriaFrame *frame = &objects->enemies[e->id].frames[e->enemy.anim.id][e->enemy.anim.frame];
-        if (e->id == MEDUSA_HEAD_ID && (e->enemy.param1 & 1) && objects->gold_medusa.loaded)
-            frame = &objects->gold_medusa.frames[e->enemy.anim.id][e->enemy.anim.frame];
+        int bank = enemy_bank(&e->enemy);
+        for (int v = 0; bank && v < VARIANT_ARTS; ++v)
+            if (variant_keys[v].id == (int)e->id && variant_keys[v].bank == bank &&
+                objects->variants[v].loaded)
+                frame = &objects->variants[v].frames[e->enemy.anim.id][e->enemy.anim.frame];
         if (e->enemy.static_frame >= 0) {
             /* A child entity shows one sprite frame of its kind (+ 0x65). */
             frame = NULL;
@@ -836,8 +858,12 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
         if (e->enemy.role == AOS_ROLE_AXE)
             degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
+        /* + 0x5A bits 1-2 = 2: a semi-transparent OBJ; the room's blend
+         * coefficients are not traced, half alpha stands for them. */
+        if (e->enemy.translucent) SDL_SetTextureAlphaMod(frame->texture, 128);
         SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, degrees,
                                  degrees != 0 ? &centre : NULL, mode);
+        if (e->enemy.translucent) SDL_SetTextureAlphaMod(frame->texture, 255);
     }
 }
 

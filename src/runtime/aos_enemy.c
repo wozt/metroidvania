@@ -421,7 +421,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
-        id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE)
+        id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -519,6 +519,16 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         snap_to_floor(enemy, layer);
         enemy->y += 0x10000;
         enemy->state = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_GHOST_DANCER) {
+        /* EnemyGhostDancerCreate (sub_080C2E74: palette bank = parameter
+         * 0): animation 0 looping and one step, state 1, opaque (+ 0x18 =
+         * 0); state 5 (animation only) under the global 0x8E & 0x40. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        enemy->state = flag_8e_40 ? 5 : 1;
+        enemy->phase = 0;
         return true;
     }
     if (id == AOS_ENEMY_GARGOYLE) {
@@ -711,6 +721,14 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_GHOST_DANCER) {
+                    /* sub_080C32EC (sound 0x6D) -> sub_080C327C: animation
+                     * 2 once, semi-transparent, state 3; deleted when the
+                     * animation ends. */
+                    play_loop(enemy, kind->anims, 2, false);
+                    enemy->translucent = true;
+                    enemy->state = 3;
+                    enemy->step = 1;
                 } else if (enemy->id == AOS_ENEMY_GARGOYLE) {
                     /* sub_08086878: state 1, 40 frames, falling with
                      * + 0x54 = 0x1000 (sound 0x6E). */
@@ -1566,6 +1584,86 @@ static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollisio
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
     take_effects(&report, &spawned);
+    return report;
+}
+
+/* sub_080C3190: step 0 plays animation 0, stops and faces the player;
+ * step 1 dances a figure of eight: vx = 2 sin(+ 0x14 + 0x4000), x += vx,
+ * y += sin(4 * + 0x14) + vy, + 0x14 += 0x80; when vx is 0 the animation
+ * switches between 0 and 1; every half turn (+ 0x14 % 0x8000 == 0) with
+ * + 0x18 even, + 0x18 advances (the fade starts). */
+static void ghost_dance(AosEnemy *g, const AosSoma *soma, const AosAnimSet *anims) {
+    if (g->step == 0) {
+        play(g, anims, 0);
+        g->vx = g->vy = 0;
+        g->mirrored = (g->x >> 16) < (soma->x >> 16);
+        g->phase = 0;
+        g->timer = 0;
+        g->step = 1;
+        return;
+    }
+    g->vx = aos_sine((uint32_t)g->phase + 0x4000) * 2;
+    g->x += g->vx;
+    g->y += aos_sine((uint32_t)g->phase * 4) + g->vy;
+    g->phase = (uint16_t)(g->phase + 0x80);
+    if (g->vx == 0) play(g, anims, (unsigned)(1 - g->anim.id));
+    if (g->phase % 0x8000 == 0 && !(g->fade & 1)) {
+        g->fade++;
+        g->fade_timer = 0;
+    }
+}
+
+/* EnemyGhostDancerUpdate's fade (+ 0x18): 0 opaque, 1 alternating
+ * semi-transparent / opaque frames for 33 frames, 2 semi-transparent, 3
+ * alternating back, then 0. */
+static void ghost_fade(AosEnemy *g) {
+    switch (g->fade) {
+    case 0: g->translucent = false; break;
+    case 1:
+    case 3:
+        g->translucent = (g->fade == 1) == !(g->fade_timer & 1);
+        if ((int8_t)g->fade_timer++ > 0x20) {
+            g->fade = g->fade == 1 ? 2 : 0;
+            g->fade_timer = 0;
+        }
+        break;
+    case 2: g->translucent = true; break;
+    default: break;
+    }
+}
+
+/* EnemyGhostDancerUpdate: state 5 steps its animation; otherwise it is
+ * hidden beyond the margins of sub_0806D128(e, 4), fades (not while dying),
+ * is stunned by sub_0806AD24, dances (states 1 and 2) or dies (state 3:
+ * deleted when its animation ends), then the animation step and, except
+ * while dying, the collision pass (sub_080421AC: no on-screen test).
+ * Contact sub_080C339C: type 0, element 0. */
+static AosHitReport ghost_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind *kind,
+                                 const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+                                 int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    if (g->state == 5) {
+        step_anim(g, kind->anims);
+        return report;
+    }
+    g->hidden = outside_margins(kind, 4, (g->x >> 16) - cam_x, (g->y >> 16) - cam_y);
+    if (g->state != 3) ghost_fade(g);
+    if (g->hp > 0 && g->hit_flash) {
+        g->hit_flash--;
+        if (g->state != 3) report = collide(g, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        aos_combat_tick(&g->combat);
+        return report;
+    }
+    if (g->state == 1 || g->state == 2) {
+        ghost_dance(g, soma, kind->anims);
+    } else if (g->state == 3 && g->cycle_done) {
+        g->removed = true;
+        return report;
+    }
+    step_anim(g, kind->anims);
+    if (g->state != 3) report = collide(g, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&g->combat);
     return report;
 }
 
@@ -2590,6 +2688,9 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->id == AOS_ENEMY_MEDUSA_HEAD && enemy->role == AOS_ROLE_ENEMY)
         return medusa_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                              cam_y, random);
+    if (enemy->id == AOS_ENEMY_GHOST_DANCER)
+        return ghost_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+                            cam_y);
     if (enemy->id == AOS_ENEMY_ZOMBIE && enemy->role == AOS_ROLE_ENEMY)
         return zombie_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);

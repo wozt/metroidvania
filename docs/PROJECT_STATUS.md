@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0445 - Aria Ghost Dancer and palette-bank variants
+
+- Ported the Ghost Dancer (enemy 0x1D): its figure-of-eight dance, the
+  fade between opaque and semi-transparent every half turn, the margin
+  hiding, the hit stun, its death animation and inert state 5.
+- Enemies now carry `translucent` (OBJ semi-transparency, drawn at half
+  alpha: the blend coefficients are not traced); the runtime draws other
+  palette banks from `Enemy/<name>_bank<N>` (gold Medusa heads, Ghost
+  Dancer banks 1 and 2 by parameter 0).
+- Checked in room 3/6: dancers of the three palettes dance opaque (frame
+  60) and semi-transparent (frames 300 and 330).
+
 ## Patch 0444 - Aria gargoyle
 
 - Ported the gargoyle (enemy 0x57): its pursuit of the point above the

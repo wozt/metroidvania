@@ -908,6 +908,83 @@ static void archer_tests(void) {
     assert(bone.x - a.x < AOS_FIXED(40));
 }
 
+static void ghost_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t dance[] = {6, 6}, death[] = {5, 5};
+    const AosAnimDef defs[3] = {{2, dance}, {2, dance}, {2, death}};
+    const AosAnimSet anims = {defs, 3};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    kind.margins[4][0] = kind.margins[4][1] = 48;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 32};
+        }
+    const AosEnemyStats stats = {25, 15, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(159), NULL);
+
+    /* State 1: step 0 faces the player; then a figure of eight, x +=
+     * 2 sin(phase + 0x4000), y += sin(4 phase), phase += 0x80. */
+    AosEnemy g;
+    assert(aos_enemy_create(&g, AOS_ENEMY_GHOST_DANCER, 100, 80, 1, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(g.state == 1 && !g.translucent);
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.step == 1 && g.mirrored);
+    int32_t x0 = g.x, y0 = g.y;
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.x == x0 + 2 * aos_sine(0x4000) && g.y == y0 + aos_sine(0) && g.phase == 0x80);
+    /* After half a turn (256 frames) the fade starts: 33 alternating
+     * frames, then semi-transparent; a full turn later it fades back. */
+    int frames = 0;
+    while (g.fade == 0 && frames < 400) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 255 && g.fade == 1);
+    frames = 0;
+    while (g.fade == 1 && frames < 100) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 34 && g.fade == 2);
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.translucent);
+    frames = 0;
+    while (g.fade != 0 && frames < 600) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.fade == 0 && !g.translucent);
+
+    /* The killing blow: animation 2 once, semi-transparent, deleted when it
+     * ends; no flames. */
+    soma = aos_soma_spawn(g.x, g.y + AOS_FIXED(20), NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-20, -60, 40, 60, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    g.hp = 1;
+    int cam = (g.x >> 16) - 120, cam_y = (g.y >> 16) - 80;
+    AosHitReport hit = aos_enemy_update(&g, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam,
+                                        cam_y, always_zero);
+    assert(hit.killed && g.state == 3 && g.anim.id == 2 && g.translucent);
+    int dying = 0;
+    while (!g.removed && dying < 50) {
+        hit = aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, cam, cam_y,
+                               always_zero);
+        assert(hit.effect_count == 0);
+        ++dying;
+    }
+    /* 10 ticks of animation 2; the update after it ends deletes it. */
+    assert(dying == 11);
+}
+
 static void gargoyle_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t flap[] = {4, 4}, swoop[] = {6, 6}, death[] = {200};
@@ -1450,6 +1527,7 @@ int main(void) {
     needles_tests();
     officer_tests();
     gargoyle_tests();
+    ghost_tests();
     medusa_tests();
     puts("aos_enemy: ok");
     return 0;

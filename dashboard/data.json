@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-20T08:36:12+00:00",
+ "generated_at": "2026-10-21T19:31:09+00:00",
  "git": {
-  "commit": "ffa5b85",
+  "commit": "45273a7",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 25,
-    "functional": 106,
+    "partial": 24,
+    "functional": 107,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 106,
-   "functional_or_better_percent": 74.6,
+   "functional_or_better": 107,
+   "functional_or_better_percent": 75.4,
    "with_passing_tests": 130,
    "with_passing_tests_percent": 91.5,
    "unknown_or_blocked": 1,
@@ -380,15 +380,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 12,
-    "functional": 1,
+    "partial": 11,
+    "functional": 2,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 1,
-   "functional_or_better_percent": 7.7,
+   "functional_or_better": 2,
+   "functional_or_better_percent": 15.4,
    "with_passing_tests": 13,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -660,7 +660,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -734,7 +734,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -871,7 +871,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -942,7 +942,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1070,7 +1070,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1159,7 +1159,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1238,7 +1238,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1310,7 +1310,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1383,7 +1383,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1461,7 +1461,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1553,7 +1553,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1627,7 +1627,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1701,7 +1701,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1779,7 +1779,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1844,7 +1844,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1926,7 +1926,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -1988,7 +1988,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2076,7 +2076,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2167,7 +2167,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2226,7 +2226,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2299,7 +2299,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2368,7 +2368,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2439,7 +2439,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2497,7 +2497,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2575,7 +2575,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2633,7 +2633,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2721,7 +2721,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2804,7 +2804,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2891,7 +2891,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -2997,7 +2997,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3111,7 +3111,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3169,7 +3169,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3244,7 +3244,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3337,7 +3337,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3395,7 +3395,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3490,7 +3490,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3554,7 +3554,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3624,7 +3624,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3684,7 +3684,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3796,7 +3796,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3863,7 +3863,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3923,7 +3923,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -3982,7 +3982,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4104,7 +4104,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4172,7 +4172,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4254,7 +4254,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4312,7 +4312,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4371,7 +4371,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4490,7 +4490,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4552,7 +4552,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4620,7 +4620,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4679,7 +4679,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4737,7 +4737,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4795,7 +4795,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4885,7 +4885,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -4954,7 +4954,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5050,7 +5050,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5137,7 +5137,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5250,7 +5250,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5319,7 +5319,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5445,7 +5445,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5544,7 +5544,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5664,7 +5664,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5729,7 +5729,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5804,7 +5804,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5902,7 +5902,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -5990,7 +5990,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6135,7 +6135,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6203,7 +6203,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6276,7 +6276,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6351,7 +6351,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6412,7 +6412,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6501,7 +6501,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6564,7 +6564,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6658,7 +6658,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6754,7 +6754,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -6940,7 +6940,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7029,7 +7029,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7148,7 +7148,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7207,7 +7207,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7293,7 +7293,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7375,7 +7375,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7452,7 +7452,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7531,7 +7531,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7673,7 +7673,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7756,7 +7756,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7833,7 +7833,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -7932,7 +7932,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8032,7 +8032,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8118,7 +8118,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8218,7 +8218,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8320,7 +8320,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8369,7 +8369,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8430,7 +8430,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8490,7 +8490,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8498,10 +8498,11 @@
    "area": "aos",
    "category": "enemies",
    "title": "Blue crow enemy",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
     "scripts/aos_object_sprites.py"
    ],
    "tests": [
@@ -8518,15 +8519,24 @@
     "sub_080CA030",
     "sub_080694B8",
     "sub_0806BE74",
-    "sub_0806E524"
+    "sub_0806E524",
+    "sub_080C9E2C",
+    "sub_080C9ED4",
+    "sub_0806E664",
+    "sub_0806B5DC",
+    "sub_0806AD24",
+    "sub_0806AE54",
+    "sub_080C9FFC"
    ],
-   "limitations": "ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Perching, the homing flight behind the player and the falling death with its flames (sub_0806BE74 every 6 frames over 8 x 8 pixels) are ported; the feathers, sounds, hit stun and the unentered glide step are not.",
-   "next_action": "Port the crow feathers of sub_080C9E2C and the hit stun of sub_0806AD24.",
+   "limitations": "ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Sounds 0x72 and 0x8B, the palette bits of + 0x5A (death, hit flash and the feathers' end), the global pause 0x4BE (taken as 0), the + 0x38 bit 0x100 stop, the tracking list of sub_08021924, sub_080683BC and the unentered glide step are not ported. Blood splashes are drawn behind all enemies (OBJ priority 3 against the backgrounds is not modelled). Perching, the homing flight behind the player, the hit stun of sub_0806AD24 (8 frames frozen while alive), state 3 under gEwramData + 0x8E bit 0x40 and the falling death are ported: two feathers (sprite frame 8, sub_080C9ED4), blood splashes of sub_0806E664 (sub_0806B5DC type 1: animation 13 of 0x0820ED60, OBJ row 8 = bank 4 of 0x082099FC) at death and every 16 frames, and flames every 6 frames over 8 x 8 pixels.",
+   "next_action": "Port the crow's sounds and palette bits once the Aria sound and palette paths exist.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -8549,7 +8559,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8612,7 +8622,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8663,7 +8673,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8722,7 +8732,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8781,7 +8791,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8846,7 +8856,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8895,7 +8905,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -8945,7 +8955,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9048,7 +9058,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9106,7 +9116,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9436,7 +9446,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9482,7 +9492,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9531,7 +9541,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9574,7 +9584,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9619,7 +9629,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9671,7 +9681,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9716,7 +9726,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9768,7 +9778,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9812,7 +9822,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9856,7 +9866,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9963,7 +9973,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -9983,7 +9993,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie, blue crow, zombie soldier and its grenade frame, axe armor with its walker probe table, skull archer with its volley table and arrow frame), plus the shared death flame effect (common sheet 0x081C15F4, frames 0x0820ED60 animation 0, OBJ row 7 = bank 3 of 0x082099FC).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie, blue crow, zombie soldier and its grenade frame, axe armor with its walker probe table, skull archer with its volley table and arrow frame), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) and the blood splash (animation 13, OBJ row 8 = bank 4).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -10008,7 +10018,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10062,7 +10072,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10108,7 +10118,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10153,7 +10163,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10226,7 +10236,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10271,7 +10281,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10316,7 +10326,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10374,7 +10384,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10445,7 +10455,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10499,7 +10509,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10544,7 +10554,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10588,7 +10598,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10631,7 +10641,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -10674,7 +10684,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-20"
+    "verified_on": "2026-10-21"
    }
   },
   {
@@ -11669,6 +11679,12 @@
  },
  "timeline": [
   {
+   "commit": "45273a7",
+   "date": "2026-10-20",
+   "subject": "Port Aria death flames and the bat's state 4",
+   "scope": "project"
+  },
+  {
    "commit": "ffa5b85",
    "date": "2026-10-20",
    "subject": "Improve Aria SDL preview menu controls and options",
@@ -12141,12 +12157,6 @@
    "date": "2026-10-17",
    "subject": "Complete the Imago cocoon collapse",
    "scope": "project"
-  },
-  {
-   "commit": "26114f4",
-   "date": "2026-10-17",
-   "subject": "Activate the Imago cocoon encounter",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12207,9 +12217,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 56,
-    "routines_attached_to_features": 56,
-    "unassigned_routines": 3517,
+    "routines_cited_by_features": 63,
+    "routines_attached_to_features": 63,
+    "unassigned_routines": 3510,
     "call_edges": 14228
    }
   },
@@ -14554,13 +14564,15 @@
      {
       "id": 9,
       "name": "Blue Crow",
-      "status": "partial",
+      "status": "functional",
       "note": "Blue crow enemy",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits"
+       ],
        "emulator_compared": false,
        "played_through": false
       },

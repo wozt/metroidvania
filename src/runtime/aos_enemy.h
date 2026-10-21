@@ -19,7 +19,8 @@
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
  * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
  * sub_0806E218) and its death (state 3, sub_080AD5B8 / sub_0806BE74),
- * and the death flames of sub_0806BE74 / sub_0806AEAC (sub_0806E524).
+ * the death flames of sub_0806BE74 / sub_0806AEAC (sub_0806E524), the
+ * blood splash of sub_0806E664 (sub_0806B5DC) and the crow's feathers.
  * Hit stun, damage numbers, other particles and drops are NOT ported.
  * No SDL. */
 #ifndef AOS_ENEMY_H
@@ -84,7 +85,7 @@ enum {
 /* What an AosEnemy slot holds: the enemy itself or a child entity of its
  * kind (sharing its sprites and record). */
 enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3,
-       AOS_ROLE_DEBRIS = 4 };
+       AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -123,17 +124,24 @@ typedef struct {
     AosAnimState anim;
 } AosEnemy;
 
-/* The death flame sub_0806E524: animation 0 of the shared effect frames
- * 0x0820ED60 (Effect/flame), rising 0.5 per frame after its first one,
- * deleted when the animation ends. */
+/* Shared effects drawn from the common frames 0x0820ED60, each with its
+ * own animation set (one animation, index 0):
+ * - the death flame sub_0806E524 (animation 0, OBJ row 7: Effect/flame),
+ *   rising 0.5 per frame after its first one;
+ * - the effect sub_0806B5DC of type 1 (sub_0806E664(x, y, 1); table
+ *   0x08526D0C: animation 13, OBJ row 8: Effect/blood), still, priority 3.
+ * Both are deleted when their animation ends. */
+enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_KINDS = 2 };
+
 typedef struct {
+    uint8_t kind;           /* AOS_EFFECT_* */
     int32_t x, y;           /* + 0x40, + 0x44 */
     bool mirrored;          /* + 0x58 bit 0x40, at random */
     bool started;           /* + 0x0A: 0 on the first update */
     AosAnimState anim;
-} AosFlame;
+} AosEffect;
 
-#define AOS_ENEMY_MAX_FLAMES 2
+#define AOS_ENEMY_MAX_EFFECTS 4
 
 /* What one collision pass did. */
 typedef struct {
@@ -146,8 +154,8 @@ typedef struct {
     int32_t spawn_x, spawn_y;   /* room pixels */
     uint8_t child_count;    /* child entities to add to the room */
     AosEnemy children[AOS_ENEMY_MAX_CHILDREN];
-    uint8_t flame_count;    /* death flames to add (sub_0806E524) */
-    AosFlame flames[AOS_ENEMY_MAX_FLAMES];
+    uint8_t effect_count;   /* shared effects to add */
+    AosEffect effects[AOS_ENEMY_MAX_EFFECTS];
 } AosHitReport;
 
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. The seed
@@ -163,8 +171,9 @@ uint16_t aos_arctan2(int16_t x, int16_t y);
  * through the table 0x085254D8) and cleared by sub_0804CC14; its meaning is
  * not traced. Cleared by default. */
 void aos_enemy_set_flag_8e_40(bool set);
-/* sub_0806E524 for one frame; false once the flame is deleted. */
-bool aos_flame_update(AosFlame *flame, const AosAnimSet *anims);
+/* sub_0806E524 / sub_0806B5DC for one frame with the effect kind's
+ * animation set; false once the effect is deleted. */
+bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims);
 /* Creates enemy `id` at a record position; false for unported enemies. */
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,

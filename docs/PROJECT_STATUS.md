@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0431 - Aria blue crow feathers, blood and hit stun
+
+- The crow's death now creates its two feathers (`sub_080C9E2C` /
+  `sub_080C9ED4`, sprite frame 8, 49 + 25 frames of drift and blink) and
+  blood splashes (`sub_0806E664` / `sub_0806B5DC` type 1: animation 13 of
+  the shared frames, OBJ row 8 = bank 4 of `0x082099FC`) at death and every
+  16 frames, beside its flames.
+- Ported the hit stun of `sub_0806AD24` / `sub_0806AE54` (flight and
+  animation frozen while `+0x2D` counts down from 8) and state 3
+  (`sub_080C9FFC`) under gEwramData + 0x8E bit 0x40.
+- Shared effects are generalized (`AosEffect`: flame or blood, one
+  animation set per kind); the exporter adds `Effect/blood/anim_13` and the
+  crow's frame 8.
+- Checked in room 0/12 (`--spawn 100 750 --atk 50 --repeat 2`, buttons
+  0x22): the kill at frame 195 shows feathers, blood and flames at frames
+  198, 215 and 240; with `--atk 3` the crow survives five hits. The crow is
+  now functional; sounds, palette bits, the global pause `0x4BE` and the
+  tracking list of `sub_08021924` remain open.
+
 ## Patch 0430 - Aria death flames and the bat's state 4
 
 - Ported the death flame `sub_0806E524` and its spawners: `sub_0806BE74`

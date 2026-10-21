@@ -115,9 +115,9 @@ static void zombie_tests(void) {
         int32_t zx = z.x, zy = z.y;
         hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 48,
                                always_zero);
-        if (hit.flame_count) {
-            assert(hit.flame_count == 1 && hit.flames[0].x == zx - 0x80000);
-            assert(hit.flames[0].y == zy - 0x60000 - 0x60000 && !hit.flames[0].mirrored);
+        if (hit.effect_count) {
+            assert(hit.effect_count == 1 && hit.effects[0].x == zx - 0x80000);
+            assert(hit.effects[0].y == zy - 0x60000 - 0x60000 && !hit.effects[0].mirrored);
             ++flames;
         }
         ++frames;
@@ -152,6 +152,22 @@ static void crow_tests(void) {
     assert(aos_enemy_create(&crow, AOS_ENEMY_BLUE_CROW, 100, 100, 0, 0, &soma, &layer, &kind,
                             &stats));
     assert(crow.state == 1 && crow.anim.id == 0 && crow.mirrored);
+    /* Under gEwramData + 0x8E bit 0x40: state 3 (sub_080C9FFC), animation
+     * 0 stepped in place, no collision pass. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy idle;
+    assert(aos_enemy_create(&idle, AOS_ENEMY_BLUE_CROW, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(idle.state == 3);
+    AosSoma near = aos_soma_spawn(idle.x, idle.y, NULL);
+    for (int i = 0; i < 10; ++i) {
+        AosHitReport idle_hit = aos_enemy_update(&idle, &near, &layer, &kind, NULL, NULL, 10, 4, 0,
+                                                 0, never_zero);
+        assert(!idle_hit.soma_hit && idle.state == 3 && idle.step == 1 && idle.x == AOS_FIXED(100));
+    }
+    /* Ten steps of the 4 + 4 tick flap: back on frame 0. */
+    assert(idle.anim.frame == 0 && idle.anim.flags & AOS_ANIM_LOOP);
     aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(crow.step == 1);
     soma.x = AOS_FIXED(160);
@@ -196,7 +212,6 @@ static void crow_tests(void) {
     ex = (crow.x >> 16) - (100 + 32);
     assert(ex >= -2 && ex <= 2);
 
-    /* A killing blow: state 2, a 64-frame fall at 0.5, then the deletion. */
     soma.facing_left = false;
     soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
     soma.x = crow.x;
@@ -207,16 +222,70 @@ static void crow_tests(void) {
     const AosHitbox blade_box[] = {{-10, -40, 20, 20, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    AosHitReport hit = aos_enemy_update(&crow, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
+    /* sub_0806AD24: a blow it survives freezes its flight and animation
+     * while sub_0806AE54 counts + 0x2D down from 8. */
+    const AosCombat unhit = crow.combat;
+    AosHitReport hit = aos_enemy_update(&crow, &soma, &layer, &kind, &weapon, &blade, 1, 4, 0, 0,
                                         never_zero);
+    assert(hit.enemy_hit && !hit.killed && crow.hp == 5 && crow.hit_flash == 8);
+    AosEnemy frozen = crow;
+    for (int i = 0; i < 8; ++i) {
+        aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 1, 4, 0, 0, never_zero);
+        assert(crow.x == frozen.x && crow.y == frozen.y && crow.anim.tick == frozen.anim.tick);
+        assert(crow.hit_flash == 7 - i);
+    }
+    aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 1, 4, 0, 0, never_zero);
+    assert(crow.anim.tick != frozen.anim.tick || crow.anim.frame != frozen.anim.frame);
+    crow.combat = unhit;            /* clear the weapon's recent-hit slot */
+    soma.x = crow.x;
+    soma.y = crow.y + AOS_FIXED(30);
+
+    /* A killing blow: state 2, a 64-frame fall at 0.5, then the deletion. */
+    hit = aos_enemy_update(&crow, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
     assert(hit.killed && crow.state == 2 && crow.step == 0);
-    int32_t y0 = crow.y;
-    int dying = 0;
+    int32_t x0 = crow.x, y0 = crow.y;
+    int dying = 0, blood = 0, flames = 0;
+    AosEnemy feathers[2];
     while (!crow.removed && dying < 100) {
-        aos_enemy_update(&crow, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
+        hit = aos_enemy_update(&crow, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
+                               never_zero);
+        if (dying == 0) {
+            /* sub_080C9E2C: two feathers; sub_0806E664 at the crow, then 4
+             * pixels below its new position (timer 0x40). */
+            assert(hit.child_count == 2 && hit.effect_count == 2);
+            feathers[0] = hit.children[0];
+            feathers[1] = hit.children[1];
+            assert(hit.effects[0].kind == AOS_EFFECT_BLOOD && hit.effects[0].y == (y0 >> 16) << 16);
+            assert(hit.effects[1].y == (((y0 + 0x8000) >> 16) + 4) << 16 && hit.effects[1].mirrored);
+        }
+        for (int i = 0; i < hit.effect_count; ++i) {
+            blood += hit.effects[i].kind == AOS_EFFECT_BLOOD;
+            flames += hit.effects[i].kind == AOS_EFFECT_FLAME;
+        }
         ++dying;
     }
     assert(dying == 64 && crow.anim.id == 3 && crow.y == y0 + 64 * 0x8000);
+    assert(blood == 5 && flames == 10);
+
+    /* sub_080C9ED4: frame 8, (x + 8, y + 4) drifting right and (x - 8,
+     * y - 4) mirrored drifting left; 49 + 25 frames, blinking on bit 0. */
+    assert(feathers[0].role == AOS_ROLE_FEATHER && feathers[0].static_frame == 8);
+    assert(feathers[0].x == ((x0 >> 16) + 8) << 16 && feathers[0].y == ((y0 >> 16) + 4) << 16);
+    assert(feathers[1].x == ((x0 >> 16) - 8) << 16 && feathers[1].y == ((y0 >> 16) - 4) << 16);
+    AosEnemy right = feathers[0], left = feathers[1];
+    aos_enemy_update(&right, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    aos_enemy_update(&left, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(right.x == feathers[0].x + 0x4000 && right.y == feathers[0].y + 0x2000);
+    assert(right.vx == 0x4000 - 0x300 && right.hidden && !right.mirrored);
+    assert(left.x == feathers[1].x - 0x4000 && left.vx == -0x4000 + 0x300 && left.mirrored);
+    int life = 1;
+    while (!right.removed && life < 200) {
+        hit = aos_enemy_update(&right, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(!hit.soma_hit);
+        if (life == 48) assert(right.state == 2 && right.timer == 0x18);
+        ++life;
+    }
+    assert(life == 74);
 }
 
 static void soldier_tests(void) {
@@ -748,24 +817,24 @@ int main(void) {
     static const uint32_t draws[] = {0x80005, 0x60003, 3, 0x7FFFF, 0, 2, 1, 2, 3, 4, 5, 6};
     script = draws;
     script_at = 0;
-    int flame_frames[4], flame_count = 0;
-    AosFlame first = {0}, second = {0};
+    int flame_frames[4], effect_count = 0;
+    AosEffect first = {0}, second = {0};
     dying = 0;
     while (!bat.removed && dying < 100) {
         int32_t by = bat.y;
         hit = aos_enemy_update(&bat, &soma, &layer, &kind, &weapon, &blade, 10, 0, 0, 0, scripted);
-        if (hit.flame_count) {
-            assert(hit.flame_count == 1 && flame_count < 4);
-            if (flame_count == 0) {
-                first = hit.flames[0];
+        if (hit.effect_count) {
+            assert(hit.effect_count == 1 && effect_count < 4);
+            if (effect_count == 0) {
+                first = hit.effects[0];
                 assert(first.y == by + 0x8000 - 0x60000 + 3 - 0x30000);
             }
-            if (flame_count == 1) second = hit.flames[0];
-            flame_frames[flame_count++] = dying;
+            if (effect_count == 1) second = hit.effects[0];
+            flame_frames[effect_count++] = dying;
         }
         ++dying;
     }
-    assert(flame_count == 4 && script_at == 12);
+    assert(effect_count == 4 && script_at == 12);
     assert(flame_frames[0] == 4 && flame_frames[1] == 19 && flame_frames[3] == 49);
     assert(first.x == bat.x + 5 - 0x40000 && first.mirrored);
     assert(second.x == bat.x + 0x7FFFF - 0x40000 && !second.mirrored);
@@ -775,13 +844,13 @@ int main(void) {
     static const uint8_t puff[] = {3, 4, 6, 4, 3};
     const AosAnimDef puff_def = {5, puff};
     const AosAnimSet puff_set = {&puff_def, 1};
-    AosFlame flame = {.x = AOS_FIXED(50), .y = AOS_FIXED(50)};
+    AosEffect flame = {.x = AOS_FIXED(50), .y = AOS_FIXED(50)};
     int lifetime = 0;
-    while (aos_flame_update(&flame, &puff_set) && lifetime < 100) ++lifetime;
+    while (aos_effect_update(&flame, &puff_set) && lifetime < 100) ++lifetime;
     assert(lifetime == 19 && flame.y == AOS_FIXED(50) - 19 * 0x8000);
-    AosFlame bare = {0};
+    AosEffect bare = {0};
     const AosAnimSet empty = {NULL, 0};
-    assert(!aos_flame_update(&bare, &empty));
+    assert(!aos_effect_update(&bare, &empty));
 
     /* Under gEwramData + 0x8E bit 0x40 the bat stays in state 4: no
      * ceiling search, animation 1, no collision pass. */

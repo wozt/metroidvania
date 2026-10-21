@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 56 | 3517 |
+| Castlevania: Aria of Sorrow | 63 | 3510 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1200,14 +1200,15 @@ Known divergences: Sound 0x72, the palette bits of + 0x5A and sub_080683BC are n
 Next action: Port sound 0x72 and the palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245`.
 
-[~] **`aos.enemies.blue_crow` — Blue crow enemy.** Perching, the homing flight behind the player and the falling death with its flames (sub_0806BE74 every 6 frames over 8 x 8 pixels) are ported; the feathers, sounds, hit stun and the unentered glide step are not.
+[+] **`aos.enemies.blue_crow` — Blue crow enemy.** Perching, the homing flight behind the player, the hit stun of sub_0806AD24 (8 frames frozen while alive), state 3 under gEwramData + 0x8E bit 0x40 and the falling death are ported: two feathers (sprite frame 8, sub_080C9ED4), blood splashes of sub_0806E664 (sub_0806B5DC type 1: animation 13 of 0x0820ED60, OBJ row 8 = bank 4 of 0x082099FC) at death and every 16 frames, and flames every 6 frames over 8 x 8 pixels.
 
-Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080694B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9AF4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9D68`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA030`.  
-Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080694B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806B5DC`, `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_08060B98.s:sub_0806E664`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9AF4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9D68`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9E2C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9ED4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9FFC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA030`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself.  
-Next action: Port the crow feathers of sub_080C9E2C and the hit stun of sub_0806AD24.
+Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Sounds 0x72 and 0x8B, the palette bits of + 0x5A (death, hit flash and the feathers' end), the global pause 0x4BE (taken as 0), the + 0x38 bit 0x100 stop, the tracking list of sub_08021924, sub_080683BC and the unentered glide step are not ported. Blood splashes are drawn behind all enemies (OBJ priority 3 against the backgrounds is not modelled).  
+Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
+Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
 
 [~] **`aos.enemies.skull_archer` — Skull archer and its arrows.** Standing, volleys from the ROM table, patrol and retreat, sticking arrows, death and the flung pieces (generic debris) are ported.
 

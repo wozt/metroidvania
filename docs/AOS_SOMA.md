@@ -593,11 +593,26 @@ checked against the BIOS itself. Step 2 (a glide built from the current
 velocity) is not entered by any code read and is not ported. Hit callback
 `sub_080CA030`: at 0 HP, state 2 (`sub_080C9D68`): sound 0x72, death
 animation 3, vy = 0.5 with no gravity, and the blink and deletion of
-`sub_0806BE74` over 64 frames. Its two feathers (`sub_080C9E2C` /
-`sub_080C9ED4`: crow sprites drifting at 0.25 with a 0.0117 pull back,
-blinking every frame for 49 + 25 frames), the `+0x5A` palette bits, the
-particles, `sub_080683BC`, the hit stun and state 3 (global `0x8E & 0x40`)
-are not ported.
+`sub_0806BE74` over 64 frames (a flame every 6 frames over 8 x 8 pixels).
+On its first frame `sub_080C9E2C` creates two feathers
+(`EntityCreateInRange(0x1B, 0x48, sub_080C9ED4)`: sprite frame 8 at
+(x + 8, y + 4) and, mirrored, at (x - 8, y - 4) in whole pixels) that drift
+at 0.25 sideways and 0.125 down, losing 0x300 of X speed per frame, and
+blink on the timer's bit 0 for 49 + 25 frames (the palette bits set
+between the two are not ported). `sub_0806E664(x, y, 1)` adds a blood
+splash at the crow, then 4 pixels lower whenever the timer is a multiple
+of 16: `sub_0806B5DC` reads (animation, palette row) from `0x08526D0C`
+(type 1: animation 13 of `0x0820ED60`, row 8 = bank 4 of `0x082099FC`),
+priority 3, mirrored by a random draw, deleted when the animation ends.
+While alive, `sub_0806AD24` stuns it: with `+0x2D` (8 after a hit) non-zero,
+`sub_0806AE54` counts it down and writes the flash palette bits, and the
+flight and animation step are skipped (the collision pass still runs);
+with the global pause `0x4BE` (unless `0x8E & 0x40`) and the record's
+`+0x1C` bit 0x400, or `+0x38` bit 0x100, it is also stopped (not ported).
+`sub_08021924` registers it in a four-entry tracking list (not ported).
+Under the global `0x8E & 0x40` the crow starts in state 3 (`sub_080C9FFC`:
+animation 0 stepped in place, no hit callback, no collision pass). Sounds,
+the `+0x5A` palette bits and `sub_080683BC` are not ported.
 
 Zombie soldier (enemy 0x0C, `EnemyZombieSoldierCreate` /
 `EnemyZombieSoldierUpdate`): tiles `0x081CC024`, palette `0x0820AA48`, frames

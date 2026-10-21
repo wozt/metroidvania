@@ -22,18 +22,28 @@ void aos_enemy_set_flag_8e_40(bool set) {
     flag_8e_40 = set;
 }
 
-bool aos_flame_update(AosFlame *flame, const AosAnimSet *anims) {
-    if (!flame->started) {
-        /* State 0: sub_0806E0D0-like setup, animation 0 played once. */
-        aos_anim_start(&flame->anim, anims, 0, false);
-        flame->anim.id = 0;
-        flame->started = true;
-    } else {
-        flame->y -= 0x8000;
+bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims) {
+    if (!effect->started) {
+        /* State 0: the graphics set up, the animation played once. */
+        aos_anim_start(&effect->anim, anims, 0, false);
+        effect->anim.id = 0;
+        effect->started = true;
+    } else if (effect->kind == AOS_EFFECT_FLAME) {
+        effect->y -= 0x8000;
     }
     /* sub_0803F17C: deleted when the animation ends (3). */
-    int result = aos_anim_step(&flame->anim, anims);
+    int result = aos_anim_step(&effect->anim, anims);
     return result != 3 && result != 0;
+}
+
+/* sub_0806E664(x, y, 1): EntityCreateInRange(0x49, 0xCF, sub_0806B5DC) at
+ * integer pixels, mirrored by a random draw made only when created. */
+static void spawn_blood(int x, int y, uint32_t (*random)(void), AosHitReport *report) {
+    if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
+    AosEffect *blood = &report->effects[report->effect_count++];
+    *blood = (AosEffect){.kind = AOS_EFFECT_BLOOD, .x = (int32_t)((uint32_t)x << 16),
+                         .y = (int32_t)((uint32_t)y << 16)};
+    blood->mirrored = random() & 1;
 }
 
 /* The flame spawn of sub_0806BE74 and sub_0806AEAC: EntityCreateInRange(
@@ -44,9 +54,9 @@ static void spawn_flame(const AosEnemy *e, uint32_t w, uint32_t h, uint32_t (*ra
                         AosHitReport *report) {
     int32_t x = e->x + (int32_t)(random() % w) - (int32_t)(w / 2);
     int32_t y = e->y - 0x60000 + (int32_t)(random() % h) - (int32_t)(h / 2);
-    if (report->flame_count >= AOS_ENEMY_MAX_FLAMES) return;
-    AosFlame *flame = &report->flames[report->flame_count++];
-    *flame = (AosFlame){.x = x, .y = y};
+    if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
+    AosEffect *flame = &report->effects[report->effect_count++];
+    *flame = (AosEffect){.kind = AOS_EFFECT_FLAME, .x = x, .y = y};
     flame->mirrored = random() & 1;
 }
 
@@ -61,9 +71,9 @@ static bool death_flames(AosEnemy *e, const AosEnemyKind *kind, int period, uint
     return e->removed;
 }
 
-static void take_flames(AosHitReport *to, const AosHitReport *from) {
-    to->flame_count = from->flame_count;
-    memcpy(to->flames, from->flames, sizeof from->flames[0] * from->flame_count);
+static void take_effects(AosHitReport *to, const AosHitReport *from) {
+    to->effect_count = from->effect_count;
+    memcpy(to->effects, from->effects, sizeof from->effects[0] * from->effect_count);
 }
 
 /* sSineTable: every entry is floor(sin(i * pi / 2048) * 65536), which was
@@ -417,10 +427,10 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         return true;
     }
     if (id == AOS_ENEMY_BLUE_CROW) {
-        /* EnemyBlueCrowCreate: animation 0, state 1 (state 3 under the
-         * global 0x8E & 0x40 is not ported). */
+        /* EnemyBlueCrowCreate: animation 0, state 1, or state 3 without
+         * the hit callback under the global 0x8E & 0x40. */
         play(enemy, anims, 0);
-        enemy->state = 1;
+        enemy->state = flag_8e_40 ? 3 : 1;
         return true;
     }
     /* EnemyBatCreate: hang from the ceiling above the record; under the
@@ -785,14 +795,14 @@ static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision
     default: return report;
     }
     if (z->removed) return report;
-    AosHitReport flames = report;
+    AosHitReport effects = report;
     step_anim(z, kind->anims);
     z->attack_off = z->state == 0 && (z->step == 0 || z->step == 3);
     int sx = (z->x >> 16) - cam_x, sy = (z->y >> 16) - cam_y;
     if (!z->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
         report = collide(z, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     aos_combat_tick(&z->combat);
-    take_flames(&report, &flames);
+    take_effects(&report, &effects);
     return report;
 }
 
@@ -873,35 +883,109 @@ static void crow_fly(AosEnemy *c, const AosSoma *soma, const AosAnimSet *anims) 
     integrate(c);
 }
 
-/* sub_080C9D68: animation 3, a fall at 0.5 per frame and sub_0806BE74 over
- * 64 frames (a flame every 6 frames over 8 x 8 pixels), then the deletion.
- * Sound 0x72, the two feathers of sub_080C9E2C / sub_080C9ED4, the feather
- * of sub_0806E664 every 16 frames, the palette bits of + 0x5A and
- * sub_080683BC are not ported. */
+/* sub_080C9E2C: two feathers (EntityCreateInRange(0x1B, 0x48,
+ * sub_080C9ED4)), sprite frame 8 of the crow, at (x + 8, y + 4) and
+ * (x - 8, y - 4) in whole pixels, parameter 0 = 0 / 1. */
+static void crow_feathers(const AosEnemy *c, AosHitReport *report) {
+    for (int i = 0; i < 2 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
+        AosEnemy f = {0};
+        f.id = c->id;
+        f.role = AOS_ROLE_FEATHER;
+        f.static_frame = 8;
+        f.param0 = (int16_t)i;
+        f.x = (int32_t)((uint32_t)((c->x >> 16) + (i ? -8 : 8)) << 16);
+        f.y = (int32_t)((uint32_t)((c->y >> 16) + (i ? -4 : 4)) << 16);
+        f.combat.attack_off = f.combat.hurt_off = true;
+        report->children[report->child_count++] = f;
+    }
+}
+
+/* sub_080C9ED4: a feather drifts at 0.25 to the side (parameter 1:
+ * mirrored, to the left) and 0.125 down, its X speed decreasing by 0x300
+ * per frame; after 49 frames (state 1) and 25 more (state 2) it is
+ * deleted; it blinks on the timer's bit 0. The palette bits set at the end
+ * of state 1 (+ 0x5A = 2) are not ported. */
+static void feather_update(AosEnemy *f) {
+    switch (f->state) {
+    case 0:
+        f->vx = 0x4000;
+        f->vy = 0x2000;
+        f->ax = -0x300;
+        if (f->param0) {
+            f->vx = -f->vx;
+            f->ax = -f->ax;
+            f->mirrored = true;
+        }
+        f->timer = 0x30;
+        f->state = 1;
+        /* fall through */
+    case 1:
+        if (--f->timer == 0xFF) {
+            f->timer = 0x18;
+            f->state = 2;
+        }
+        break;
+    case 2:
+        if (--f->timer == 0xFF) f->removed = true;
+        break;
+    default:
+        break;
+    }
+    f->x += f->vx;
+    f->y += f->vy;
+    f->vx += f->ax;
+    f->vy += f->ay;
+    f->hidden = f->timer & 1;
+}
+
+/* sub_080C9D68: the feathers, animation 3, a blood splash of
+ * sub_0806E664 at the crow, then a fall at 0.5 per frame with a splash
+ * 4 pixels lower every 16 frames and sub_0806BE74 over 64 frames (a flame
+ * every 6 frames over 8 x 8 pixels), then the deletion. Sound 0x72, the
+ * palette bits of + 0x5A and sub_080683BC are not ported. */
 static void crow_die(AosEnemy *c, const AosEnemyKind *kind, uint32_t (*random)(void),
                      AosHitReport *report) {
     if (c->step == 0) {
-        play_loop(c, kind->anims, 3, false);
+        crow_feathers(c, report);
+        if (c->anim.id != 3) play_loop(c, kind->anims, 3, false);
         stop(c);
         c->vy = 0x8000;
         c->timer = 0x40;
         c->step = 1;
         c->substep = 0;
+        spawn_blood(c->x >> 16, c->y >> 16, random, report);
     }
     c->y += c->vy;
+    if ((c->timer & 0xF) == 0) spawn_blood(c->x >> 16, (c->y >> 16) + 4, random, report);
     if (death_flames(c, kind, 6, 0x80000, 0x80000, random, report)) return;
     step_anim(c, kind->anims);
 }
 
 /* EnemyBlueCrowUpdate: no activity window and no on-screen test before the
- * collision pass (sub_080421AC). The hit stun of sub_0806AD24 is not
- * ported. */
+ * collision pass (sub_080421AC). sub_0806AD24 stuns it while alive: with
+ * + 0x2D (set to 8 by a hit) non-zero, sub_0806AE54 decrements it and the
+ * flight and the animation step are skipped; the palette flash it writes,
+ * the global pause 0x4BE (taken as 0), the + 0x38 bit 0x100 stop and the
+ * tracking list of sub_08021924 are not ported. */
 static AosHitReport crow_update(AosEnemy *c, AosSoma *soma, const AosEnemyKind *kind,
                                 const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
                                 int soma_atk, int soma_def, uint32_t (*random)(void)) {
     AosHitReport report = {0};
+    if (c->state == 3) {
+        /* sub_080C9FFC: animation 0 (unless playing), stepped each frame;
+         * no collision pass. */
+        if (c->step == 0) {
+            if (c->anim.id != 0) play(c, kind->anims, 0);
+            c->step = 1;
+        }
+        step_anim(c, kind->anims);
+        return report;
+    }
     if (c->state == 2) {
         crow_die(c, kind, random, &report);
+    } else if (c->hp > 0 && c->hit_flash) {
+        c->hit_flash--;
+        report = collide(c, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     } else {
         crow_fly(c, soma, kind->anims);
         step_anim(c, kind->anims);
@@ -1144,7 +1228,7 @@ static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollisio
     }
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
-    take_flames(&report, &spawned);
+    take_effects(&report, &spawned);
     return report;
 }
 
@@ -1658,12 +1742,16 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
+    if (enemy->id == AOS_ENEMY_BLUE_CROW && enemy->role == AOS_ROLE_ENEMY)
+        return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);
     if (enemy->hit_flash) enemy->hit_flash--;
     if (enemy->id == AOS_ENEMY_ZOMBIE)
         return zombie_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
-    if (enemy->id == AOS_ENEMY_BLUE_CROW)
-        return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);
+    if (enemy->role == AOS_ROLE_FEATHER) {
+        feather_update(enemy);
+        return report;
+    }
     if (enemy->role == AOS_ROLE_DEBRIS) {
         debris_update(enemy, layer, kind, cam_x, cam_y);
         if (!enemy->removed) step_anim(enemy, anims);

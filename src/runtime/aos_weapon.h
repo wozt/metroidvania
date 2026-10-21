@@ -1,12 +1,17 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Aria of Sorrow weapon entity of classes 0, 2 and 3.
+/* Aria of Sorrow weapon entity of classes 0 to 3.
  *
- * Port of the lifetime and placement of cvaos sub_080221CC: created with
- * the attack (sub_080230A8), it plays its animation once at Soma's position
- * (13 pixels lower when he was crouched), facing as he did when it was
- * created, and is deleted when Soma's attack flag 0x20 clears or its
- * animation ends. Its hitbox comes from the current frame record. Damage
- * (sub_0802346C), the sounds and classes 1, 4 and 5 are not ported. No SDL. */
+ * Port of the lifetime and placement of cvaos sub_080221CC (classes 0, 2
+ * and 3): created with the attack (sub_080230A8), it plays its animation
+ * once at Soma's position (13 pixels lower when he was crouched), facing as
+ * he did when it was created, and is deleted when Soma's attack flag 0x20
+ * clears or its animation ends. Class 1 (sub_080224BC) swings: it sits 25
+ * pixels above Soma (13 when crouched) and 1 to 3 pixels ahead, turns its
+ * affine angle from -0x3000 by 0x980 (variant 0, 15 frames) or 0xCC0 (11
+ * frames), mirrored when facing left, and lives 26 or 21 frames
+ * (0x080E13B8[variant]) regardless of its animation. The hitbox comes from
+ * the current frame record, unrotated. Damage (sub_0802346C), the sounds
+ * and classes 4 and 5 are not ported. No SDL. */
 #ifndef AOS_WEAPON_H
 #define AOS_WEAPON_H
 
@@ -30,7 +35,13 @@ typedef struct {
 typedef struct {
     bool active;
     bool facing_left;
-    int y_offset;
+    int x_offset, y_offset;     /* from Soma's position, pixels */
+    uint8_t weapon_class;
+    uint8_t timer;              /* + 0x0D (class 1) */
+    uint8_t swing_frames;       /* + 0x0B: the angle turns while timer < it */
+    uint8_t divisor;            /* + 0x0C: x offset = min(timer / it + 1, 3) */
+    uint8_t lifetime;           /* + 0x19 */
+    int32_t angle, angle_step;  /* + 0x1C, + 0x20: affine angle, 0x10000 a turn */
     AosAnimState anim;
 } AosWeaponEntity;
 

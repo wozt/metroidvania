@@ -24,7 +24,7 @@ int main(void) {
     const AosWeaponFrames frames = {&weapon_set, boxes};
 
     AosSoma soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(159), &body);
-    soma.weapon = (AosWeapon){0, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 15};
+    soma.weapon = (AosWeapon){0, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0};
     AosWeaponEntity weapon = {0};
     uint16_t previous = 0;
     int created = -1, deleted = -1, hits = 0;
@@ -50,7 +50,7 @@ int main(void) {
     /* Crouched attack facing left: 13 pixels lower, mirrored hitbox; the
      * entity is deleted as soon as the attack flag clears. */
     soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(159), &body);
-    soma.weapon = (AosWeapon){0, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 15};
+    soma.weapon = (AosWeapon){0, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0};
     soma.facing_left = true;
     weapon = (AosWeaponEntity){0};
     aos_soma_update(&soma, &layer, AOS_KEY_DOWN, AOS_KEY_DOWN);
@@ -65,6 +65,48 @@ int main(void) {
     soma.flags &= ~(uint32_t)AOS_FLAG_ATTACKING;
     aos_weapon_update(&weapon, &soma, &frames);
     assert(!weapon.active && !soma.weapon_active);
+
+    /* Class 1 (sub_080224BC), variant 0: 25 pixels above Soma, 1 to 3
+     * pixels ahead (timer / 5 + 1), the angle turning from -0x3000 by 0x980
+     * while the timer is below 16, deleted on timer 26 whatever its
+     * animation (Soma's attack flag held here). */
+    soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(159), &body);
+    soma.weapon = (AosWeapon){1, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0};
+    weapon = (AosWeaponEntity){0};
+    aos_soma_update(&soma, &layer, AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    aos_weapon_update(&weapon, &soma, &frames);
+    assert(weapon.active && weapon.weapon_class == 1 && weapon.timer == 1);
+    assert(weapon.y_offset == -25 && weapon.x_offset == 1 && weapon.angle == -0x3000 + 0x980);
+    assert(aos_weapon_hitbox(&weapon, &soma, &frames, &x, &y, &w, &h) == false);
+    aos_weapon_update(&weapon, &soma, &frames);
+    assert(aos_weapon_hitbox(&weapon, &soma, &frames, &x, &y, &w, &h));
+    assert(x == 100 + 1 + 3 && y == 159 - 25 - 32);
+    int life = 2;
+    while (weapon.active && life < 100) {
+        soma.flags |= AOS_FLAG_ATTACKING;
+        aos_weapon_update(&weapon, &soma, &frames);
+        if (weapon.timer == 10) assert(weapon.x_offset == 3);
+        ++life;
+    }
+    assert(life == 26 && weapon.angle == -0x3000 + 15 * 0x980 && !soma.weapon_active);
+
+    /* Variant 1, facing left and crouched: 13 pixels above, the angle from
+     * +0x3000 by -0xCC0 for 11 frames, 21 frames of life. */
+    soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(159), &body);
+    soma.weapon = (AosWeapon){1, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 1};
+    soma.facing_left = true;
+    weapon = (AosWeaponEntity){0};
+    aos_soma_update(&soma, &layer, AOS_KEY_DOWN, AOS_KEY_DOWN);
+    aos_soma_update(&soma, &layer, AOS_KEY_DOWN | AOS_KEY_ATTACK, AOS_KEY_ATTACK);
+    aos_weapon_update(&weapon, &soma, &frames);
+    assert(weapon.y_offset == -13 && weapon.x_offset == -1 && weapon.angle == 0x3000 - 0xCC0);
+    life = 1;
+    while (weapon.active && life < 100) {
+        soma.flags |= AOS_FLAG_ATTACKING;
+        aos_weapon_update(&weapon, &soma, &frames);
+        ++life;
+    }
+    assert(life == 21 && weapon.angle == 0x3000 - 11 * 0xCC0);
     puts("aos_weapon: ok");
     return 0;
 }

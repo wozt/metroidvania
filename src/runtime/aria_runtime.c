@@ -802,13 +802,15 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         SDL_FlipMode mode = (SDL_FlipMode)((flip ? SDL_FLIP_HORIZONTAL : 0) |
                                            (e->enemy.vflip ? SDL_FLIP_VERTICAL : 0));
         /* A spinning child (the axe): its affine angle, 0x10000 per turn.
-         * The on-screen direction of the GBA rotation is inferred, not
-         * traced (sub_0803E058 is not ported); rotation is about the
-         * entity position. */
+         * sub_0803E058 builds pa = cos, pb = sin, pc = -sin, pd = cos
+         * (texture from screen) and negates pa / pb for a horizontal flip:
+         * the texture is flipped, then turned clockwise by the angle, as
+         * SDL does with positive degrees. Rotation is about the entity
+         * position (the affine double-size placement is not modelled). */
         double degrees = 0;
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
         if (e->enemy.role == AOS_ROLE_AXE)
-            degrees = -(double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
+            degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, degrees,
                                  degrees != 0 ? &centre : NULL, mode);
     }
@@ -1016,7 +1018,7 @@ static bool load_weapon(const char *path, const char *name, AosWeapon *weapon) {
             continue;
         *weapon = (AosWeapon){(uint8_t)cls, (uint16_t)flags,
                               {(uint8_t)a[0], (uint8_t)a[1], (uint8_t)a[2], (uint8_t)a[3],
-                               (uint8_t)a[4]}, (uint8_t)interval};
+                               (uint8_t)a[4]}, (uint8_t)interval, (uint8_t)variant};
         found = true;
     }
     fclose(f);
@@ -1217,8 +1219,7 @@ int main(int argc, char **argv) {
     }
     /* Only the class 0, 2 and 3 entity (sub_080221CC) is ported. */
     static AriaWeaponSprite weapon_sprite;
-    bool weapon_ported = soma.weapon.weapon_class == 0 || soma.weapon.weapon_class == 2 ||
-                         soma.weapon.weapon_class == 3;
+    bool weapon_ported = soma.weapon.weapon_class <= 3;
     bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
     AosWeaponEntity weapon_entity = {0};
     AriaCombat combat = {{NULL}, {NULL}, &weapon_entity,
@@ -1438,12 +1439,19 @@ int main(int argc, char **argv) {
         }
         if (weapon_loaded && weapon_entity.active && weapon_entity.anim.frame < weapon_sprite.count) {
             const AriaFrame *blade = &weapon_sprite.frames[weapon_entity.anim.frame];
-            int wy = sy + weapon_entity.y_offset;
-            float x = weapon_entity.facing_left ? (float)(sx - blade->offset_x) - blade->w
-                                                : (float)(sx + blade->offset_x);
+            int wx = sx + weapon_entity.x_offset, wy = sy + weapon_entity.y_offset;
+            float x = weapon_entity.facing_left ? (float)(wx - blade->offset_x) - blade->w
+                                                : (float)(wx + blade->offset_x);
             SDL_FRect rect = {x - (float)cam_x, (float)(wy + blade->offset_y - cam_y), blade->w,
                               blade->h};
-            SDL_RenderTextureRotated(renderer, blade->texture, NULL, &rect, 0, NULL,
+            /* Class 1: the affine angle of sub_0803E058 (clockwise after the
+             * flip, see draw_enemies) about the entity position. */
+            double degrees = weapon_entity.weapon_class == 1
+                                 ? (double)(weapon_entity.angle & 0xFFFF) * 360.0 / 65536.0
+                                 : 0;
+            SDL_FPoint centre = {(float)(wx - cam_x) - rect.x, (float)(wy - cam_y) - rect.y};
+            SDL_RenderTextureRotated(renderer, blade->texture, NULL, &rect, degrees,
+                                     degrees != 0 ? &centre : NULL,
                                      weapon_entity.facing_left ? SDL_FLIP_HORIZONTAL
                                                                : SDL_FLIP_NONE);
             int hx, hy, hw, hh;

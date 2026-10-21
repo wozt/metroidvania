@@ -122,7 +122,7 @@ static void zombie_tests(void) {
     z.walk_timer = 600;
     z.hp = 1;
     soma.x = AOS_FIXED(240);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -285,7 +285,7 @@ static void crow_tests(void) {
     assert(ex >= -2 && ex <= 2);
 
     soma.facing_left = false;
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
     soma.x = crow.x;
     soma.y = crow.y + AOS_FIXED(30);
     static const uint8_t blade_steps[] = {8};
@@ -470,7 +470,7 @@ static void soldier_tests(void) {
     assert(direct.removed && burst == 12);
 
     /* A killing blow: death animation 3, state 2 and the generic death. */
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
     soma.x = z.x;
     soma.y = z.y + AOS_FIXED(20);
     soma.facing_left = false;
@@ -635,7 +635,7 @@ static void armor_tests(void) {
     assert(hit.soma_hit && hit.soma_damage == aos_player_damage(15, 4) && soma.pending_type == 0);
 
     /* A weapon destroys it. */
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
     soma.facing_left = false;
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
@@ -861,7 +861,7 @@ static void archer_tests(void) {
     assert(p.state == 1 && p.anim.id == 2);
 
     /* Killed, it shatters on the next update. */
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
     soma.facing_left = false;
     soma.x = a.x - AOS_FIXED(5);
     soma.y = a.y + AOS_FIXED(20);
@@ -1001,7 +1001,7 @@ int main(void) {
     /* The weapon's hitbox kills it: power 10 * 1.25 (weak to element 1),
      * defence 0 -> 12 damage against 10 HP; it falls, blinks and goes. */
     soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(200), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     bat.y = AOS_FIXED(170);
     static const uint8_t blade_steps[] = {8};

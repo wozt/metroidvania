@@ -247,10 +247,26 @@ the hitbox at its pointer `+8` (signed x, y, width, height) through
 `0x03004564`): byte `+8` is shape | size << 4, `+9` selects an alternate tile
 base only in animation mode 2, `+0xA` bit 0 flips vertically and bit 1
 inverts the entity's horizontal flip, `+0xB` masks a palette offset; when the
-entity faces left, components are mirrored around the record's X. Classes 1
-(`sub_080224BC`), 4 and 5 use other entities. `src/runtime/aos_weapon.c`
-ports the class 0/2/3 lifetime and hitbox; the runtime draws the blade
-(`--hitboxes` outlines the active hitbox).
+entity faces left, components are mirrored around the record's X.
+
+Class 1 (`sub_080224BC`, records 18 to 39) shares the graphics setup but
+swings: `+0x1C` (the affine angle) starts at -0x3000 and `+0x20` is 0x980
+with `+0x0B` = 16 and `+0x0C` = 5 for variant 0, else 0xCC0, 12 and 4 (both
+negated when facing left); `+0x19` = `0x080E13B8[variant]` (26, 21, 21) is
+its lifetime and `+0x4E` = -25 (-13 with Soma's `0x400`). Each frame the
+timer `+0x0D` grows, the entity sits at Soma's Y + `+0x4E` and X + min(timer
+/ `+0x0C` + 1, 3) (negated when facing left), the angle grows while the
+timer is below `+0x0B`, the animation steps (it is not deleted at its end)
+and the entity is deleted when the timer reaches `+0x19` or Soma's `0x20`
+clears; on frame changes the hitbox comes from the frame record, unrotated.
+`sub_0803E058(angle, sx, sy, hflip, vflip, slot)` writes the affine
+parameters pa = cos / sx, pb = sin / sx, pc = -sin / sy, pd = cos / sy and
+negates pa and pb for hflip (pc, pd for vflip): the texture is flipped,
+then turned clockwise by the angle on screen (the axe uses the same call).
+Classes 4 (`sub_08022A54`, a projectile with wall collisions and effects)
+and 5 (`sub_08022DEC`) are not ported. `src/runtime/aos_weapon.c` ports
+classes 0 to 3; the runtime draws the blade, rotating class 1 about the
+entity position (`--hitboxes` outlines the active hitbox).
 
 Earlier revisions called the slide a "probable backdash" and the case
 `_0801C410` the air state; case 1 is an attack state (weapon animations,
@@ -744,8 +760,8 @@ area around (x, y), mirrored by a third draw. Under the global `0x8E & 0x40`
 the armor is created in state 3 (animation only; no hit callback or floor
 snap). Not ported: the palette bits, the global pause `0x4BE` and the
 sounds. The walker's one-way platform bit (mode bit 1) is not used by the
-armor (mode 0x14) or the archer (0xC, 0xD). The on-screen direction of the
-axe's rotation is inferred (`sub_0803E058` is not traced).
+armor (mode 0x14) or the archer (0xC, 0xD). The axe's affine rotation
+follows `sub_0803E058` (see the class 1 weapon).
 
 Skull archer (enemy 0x05, `EnemySkullArcherCreate` /
 `EnemySkullArcherUpdate`): tiles `0x081E419C`, palette `0x0820B78C`, frames

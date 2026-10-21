@@ -110,6 +110,7 @@ typedef struct {
                              * attacks on landing */
     uint8_t anims[5];
     uint8_t interval;       /* record + 0x17: recent-hit cooldown (0x1307C) */
+    uint8_t variant;        /* record + 0x16 */
 } AosWeapon;
 
 enum { AOS_WEAPON_LANDING_ATTACK = 0x2000 };

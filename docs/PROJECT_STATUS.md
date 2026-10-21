@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0437 - Aria class 1 weapon swing and traced affine rotation
+
+- Ported the class 1 weapon entity `sub_080224BC` (records 18 to 39): the
+  swing above Soma, its turning affine angle, its x drift and its 26 / 21
+  / 21-frame lifetime; `AosWeapon` gains the record's variant and the
+  runtime now runs weapon classes 0 to 3.
+- Traced `sub_0803E058`: pa = cos, pb = sin, pc = -sin, pd = cos with a
+  flip negating a row, so a positive angle turns the flipped texture
+  clockwise. The axe and class 1 swords now rotate that way (the axe's
+  direction was previously inferred the other way).
+- Checked in room 0/15 with weapon 18 (`--spawn 120 446 --weapon 18
+  --hitboxes`, captures at frames 3, 7, 11 and 16): the blade sweeps from
+  overhead to the front and floor, following its hitboxes. Classes 4 and 5
+  remain open, so the weapon entity stays partial.
+
 ## Patch 0436 - Aria wooden door visibility and passage flags
 
 - `aos_door_update` now takes the camera and hides the door outside

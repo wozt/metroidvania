@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 89 | 3484 |
+| Castlevania: Aria of Sorrow | 91 | 3482 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1163,12 +1163,13 @@ Next action: Port the remaining native Soma states.
 
 [?] **`aos.weapons.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`aos.weapons.weapon_entity` — Soma weapon entity and attack boxes.** Weapon classes 0, 2 and 3 are represented; the other native classes and their effects remain open.
+[~] **`aos.weapons.weapon_entity` — Soma weapon entity and attack boxes.** Weapon classes 0, 2 and 3 (sub_080221CC) and class 1 (sub_080224BC: the swing 25 pixels above Soma, 1 to 3 pixels ahead, the affine angle from -0x3000 by 0x980 or 0xCC0 for 15 or 11 frames, the 26 / 21 / 21-frame lifetime of 0x080E13B8) are ported with their frame-record hitboxes; classes 4 (sub_08022A54, a projectile) and 5 (sub_08022DEC) remain open.
 
-Native evidence: `aos:c:src/code/code_080211F0.c:sub_080221CC`.  
+Native evidence: `aos:c:src/code/code_080211F0.c:sub_080221CC`, `aos:c:src/code/code_080211F0.c:sub_080224BC`, `aos:c:src/code/code_08039340.c:sub_0803E058`.  
 Local implementation: [`src/runtime/aos_weapon.c`](../src/runtime/aos_weapon.c), [`scripts/aos_weapons.py`](../scripts/aos_weapons.py).  
 Tests: [`tests/test_aos_weapon.c`](../tests/test_aos_weapon.c), [`tests/test_aos_soma_sprite.py`](../tests/test_aos_soma_sprite.py).
-Next action: Port the remaining native weapon classes and effects.
+Known divergences: The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage of sub_0802346C beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268) and the sounds are not ported.  
+Next action: Port the class 4 projectile of sub_08022A54 and the class 5 entity of sub_08022DEC.
 
 ### Upgrades and equipment
 
@@ -1184,12 +1185,12 @@ Next action: Port the remaining native weapon classes and effects.
 
 [+] **`aos.enemies.axe_armor` — Axe armor, its axe and the probe walker.** Walking with the native probe walker, patrols, high and low throws, the returning axe with its strike flame (sub_0806D5C0), the death with its fire column and sparks (sub_080B11DC / sub_08045CEC: animation 1 row 8, animation 16 row 6) and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 
-Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_08045C9C`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_0806C828`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0D5C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0F1C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1030`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B11DC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1370`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B13BC`.  
+Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_08045C9C`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_0806C828`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0D5C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0F1C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1030`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B11DC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1370`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B13BC`, `aos:c:src/code/code_08039340.c:sub_0803E058`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: The axe's on-screen rotation direction is inferred; sub_0803E058 is not traced. Sounds (0x6E, 0x6F, 0x86), the palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported.  
-Next action: Trace sub_0803E058 to confirm the axe's rotation direction; play the sounds once the Aria sound path exists.
+Known divergences: The axe turns clockwise for a positive angle after its horizontal flip (sub_0803E058 traced); the affine double-size placement is not modelled. Sounds (0x6E, 0x6F, 0x86), the palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported.  
+Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)`.
 
 [+] **`aos.enemies.bat` — Bat enemy.** Hanging, swoop, combat, the falling death with its flames (sub_0806BE74 over 8 x 6 pixels every 15 frames, sub_0806E524 with animation 0 of the shared effect frames 0x0820ED60, palette row 7 = bank 3 of 0x082099FC) and the inert state 4 under gEwramData + 0x8E bit 0x40 are ported.

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-21T21:00:43+00:00",
+ "generated_at": "2026-10-21T21:05:38+00:00",
  "git": {
-  "commit": "4607132",
+  "commit": "6a75246",
   "branch": "main",
   "dirty": true
  },
@@ -8404,10 +8404,11 @@
     "sub_08045CEC",
     "sub_08045C9C",
     "sub_0802D5EC",
-    "sub_0806D5C0"
+    "sub_0806D5C0",
+    "sub_0803E058"
    ],
-   "limitations": "The axe's on-screen rotation direction is inferred; sub_0803E058 is not traced. Sounds (0x6E, 0x6F, 0x86), the palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported. Walking with the native probe walker, patrols, high and low throws, the returning axe with its strike flame (sub_0806D5C0), the death with its fire column and sparks (sub_080B11DC / sub_08045CEC: animation 1 row 8, animation 16 row 6) and state 3 under gEwramData + 0x8E bit 0x40 are ported.",
-   "next_action": "Trace sub_0803E058 to confirm the axe's rotation direction; play the sounds once the Aria sound path exists.",
+   "limitations": "The axe turns clockwise for a positive angle after its horizontal flip (sub_0803E058 traced); the affine double-size placement is not modelled. Sounds (0x6E, 0x6F, 0x86), the palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported. Walking with the native probe walker, patrols, high and low throws, the returning axe with its strike flame (sub_0806D5C0), the death with its fire column and sparks (sub_080B11DC / sub_08045CEC: animation 1 row 8, animation 16 row 6) and state 3 under gEwramData + 0x8E bit 0x40 are ported.",
+   "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
@@ -9122,10 +9123,12 @@
    ],
    "dependencies": [],
    "native_routines": [
-    "sub_080221CC"
+    "sub_080221CC",
+    "sub_080224BC",
+    "sub_0803E058"
    ],
-   "limitations": "Weapon classes 0, 2 and 3 are represented; the other native classes and their effects remain open.",
-   "next_action": "Port the remaining native weapon classes and effects.",
+   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage of sub_0802346C beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268) and the sounds are not ported. Weapon classes 0, 2 and 3 (sub_080221CC) and class 1 (sub_080224BC: the swing 25 pixels above Soma, 1 to 3 pixels ahead, the affine angle from -0x3000 by 0x980 or 0xCC0 for 15 or 11 frames, the 26 / 21 / 21-frame lifetime of 0x080E13B8) are ported with their frame-record hitboxes; classes 4 (sub_08022A54, a projectile) and 5 (sub_08022DEC) remain open.",
+   "next_action": "Port the class 4 projectile of sub_08022A54 and the class 5 entity of sub_08022DEC.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_weapon.c",
@@ -11723,6 +11726,12 @@
  },
  "timeline": [
   {
+   "commit": "6a75246",
+   "date": "2026-10-21",
+   "subject": "Hide Aria wooden doors off screen and expose their passage flags",
+   "scope": "project"
+  },
+  {
    "commit": "4607132",
    "date": "2026-10-21",
    "subject": "Port Aria zombie drips, puddles, gore and hit stun",
@@ -12195,12 +12204,6 @@
    "date": "2026-10-18",
    "subject": "Complete Deorem debris choreography",
    "scope": "project"
-  },
-  {
-   "commit": "bc3b6dd",
-   "date": "2026-10-18",
-   "subject": "Restore Deorem eye choreography",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12261,9 +12264,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 89,
-    "routines_attached_to_features": 89,
-    "unassigned_routines": 3484,
+    "routines_cited_by_features": 91,
+    "routines_attached_to_features": 91,
+    "unassigned_routines": 3482,
     "call_edges": 14228
    }
   },

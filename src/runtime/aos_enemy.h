@@ -14,7 +14,8 @@
  * (sub_08092BC0 / sub_08092CCC and the projectile collision sub_08069770),
  * and the axe armor (enemy 0x04) with its axe (sub_080B0D5C) and the probe
  * walker sub_0806CAF8 / sub_0806C828, and the skull archer (enemy 0x05) with
- * its arrows (sub_080AF7EC), and Needles (enemy 0x3F) with its pieces
+ * its arrows (sub_080AF7EC), the Medusa head (enemy 0x39) with its
+ * spawner, and Needles (enemy 0x3F) with its pieces
  * (sub_080CB6BC / sub_080CB7C8). Facing flag 0x40 of + 0x58 means
  * mirrored: enemy sprites face left by default. Combat: the frame boxes of
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
@@ -82,6 +83,7 @@ enum {
     AOS_ENEMY_SKULL_ARCHER = 0x05,
     AOS_ENEMY_BLUE_CROW = 0x09,
     AOS_ENEMY_ZOMBIE_SOLDIER = 0x0C,
+    AOS_ENEMY_MEDUSA_HEAD = 0x39,
     AOS_ENEMY_NEEDLES = 0x3F,
 };
 
@@ -140,6 +142,7 @@ typedef struct {
     bool killed;
     bool spawn;             /* a zombie spawner created a zombie here */
     int32_t spawn_x, spawn_y;   /* room pixels */
+    int16_t spawn_param1;       /* + 0x32 of the spawned enemy */
     uint8_t child_count;    /* child entities to add to the room */
     AosEnemy children[AOS_ENEMY_MAX_CHILDREN];
     uint8_t effect_count;   /* shared effects to add */

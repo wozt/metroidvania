@@ -420,7 +420,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
-        id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES)
+        id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -433,6 +433,41 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     enemy->combat.type = AOS_TYPE_ENEMY;
     if (id == AOS_ENEMY_ZOMBIE) {
         zombie_create(enemy, soma, layer, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_MEDUSA_HEAD) {
+        /* EnemyMedusaHeadCreate: animation 0 looping and one step; both
+         * boxes are the bytes of 0x0A0AFBFB, (-5, -5, 10, 10); parameter 1
+         * bit 0 picks palette bank 1 (a gold head) and bit 1 makes a hidden
+         * spawner without boxes (state 3); otherwise state 0, facing the
+         * player (sub_0806CF2C), vx 0.75 + (r & 0x3FFF) toward its facing,
+         * + 0x54 = 0xC00, + 0x20 = r & 1, + 0x22 = 45 + (r & 0xF) and
+         * + 0x21 = + 0x22 / 2. State 4 (inert) under the global
+         * 0x8E & 0x40. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 4;
+            return true;
+        }
+        enemy->own_boxes = true;
+        enemy->own_hurt = enemy->own_attack = (AosBox){-5, -5, 10, 10};
+        if (param1 & 2) {
+            enemy->state = 3;
+            enemy->hidden = true;
+            enemy->combat.attack_off = enemy->combat.hurt_off = true;
+            enemy->own_boxes = false;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->mirrored = (enemy->x >> 16) < (soma->x >> 16);
+        int32_t speed = (int32_t)(aos_random() & 0x3FFF) + 0xC000;
+        enemy->vx = enemy->mirrored ? speed : -speed;
+        enemy->ay = 0xC00;
+        enemy->dropped = aos_random() & 1;                     /* + 0x20 */
+        enemy->volley_count = 0;                                /* + 0x21 */
+        enemy->shot = (uint8_t)((aos_random() & 0xF) + 0x2D);  /* + 0x22 */
+        enemy->volley_count = (int8_t)(enemy->shot / 2);
         return true;
     }
     if (id == AOS_ENEMY_NEEDLES) {
@@ -648,6 +683,13 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 } else if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER) {
                     /* sub_08092B38: death animation 3 and the generic death
                      * in state 2 (sound 0x70; sub_080683BC is not ported). */
+                    play_loop(enemy, kind->anims, 3, false);
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_MEDUSA_HEAD) {
+                    /* sub_08093AE0: death animation 3, 40 frames of the
+                     * generic death in state 2 (sound 0x72). */
                     play_loop(enemy, kind->anims, 3, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
@@ -2045,6 +2087,91 @@ static AosHitReport archer_update(AosEnemy *a, AosSoma *soma, const AosCollision
     return report;
 }
 
+/* sub_08093A3C: vy swings by + 0x54 (subtracted while + 0x20 is set),
+ * + 0x20 flips every + 0x22 frames (+ 0x21 counts), then the move
+ * (sub_0806D3AC); rising it plays animation 2, falling animation 0 or 1
+ * at random. */
+static void medusa_fly(AosEnemy *m, const AosAnimSet *anims, uint32_t (*random)(void)) {
+    if (m->step != 0) return;
+    m->vy += m->dropped ? -m->ay : m->ay;
+    if (++m->volley_count >= (int8_t)m->shot) {
+        m->volley_count = 0;
+        m->dropped = !m->dropped;
+    }
+    m->x += m->vx;
+    m->y += m->vy;
+    if (m->vy >= 0) {
+        if (m->anim.id == 2) play(m, anims, (random() & 1) ? 0 : 1);
+    } else if (m->anim.id != 2) {
+        play(m, anims, 2);
+    }
+}
+
+/* EnemyMedusaHeadUpdate state 3: a spawner creates a head one frame in 32,
+ * while fewer than parameter 0 exist (+ 0x18), at screen X 256 when Soma's
+ * screen X is at most 0x67, or at most 0x88 facing right (sub_0806CEC0),
+ * else at -16, and screen Y 64 + (r & 0x3F); the head takes parameter 1
+ * bit 0 (gold). */
+static void medusa_spawner(AosEnemy *spawner, const AosSoma *soma, int cam_x, int cam_y,
+                           uint32_t (*random)(void), AosHitReport *report) {
+    if (random() & 0x1F) return;
+    if (spawner->spawned_count >= spawner->param0) return;
+    spawner->spawned_count++;
+    int px = (soma->x >> 16) - cam_x;
+    int sx = px <= 0x67 || (px <= 0x88 && !soma->facing_left) ? 256 : -16;
+    report->spawn = true;
+    report->spawn_x = cam_x + sx;
+    report->spawn_y = cam_y + (int32_t)(random() & 0x3F) + 0x40;
+    report->spawn_param1 = (int16_t)(spawner->param1 & 1);
+}
+
+/* EnemyMedusaHeadUpdate: outside the margins of sub_0806D128(e, 4) a head
+ * dies at once (state 2, timer 1); sub_0806AD24 stuns it; state 0 flies,
+ * 2 is the generic death, 3 the spawner, 4 inert; then the animation step
+ * and the collision pass (sub_0806E314). The contact callback sub_08093BF0
+ * uses element 0x100 for gold heads (its petrification is not ported) and
+ * the tracking list of sub_08021924 is not. */
+static AosHitReport medusa_update(AosEnemy *m, AosSoma *soma, const AosEnemyKind *kind,
+                                  const AosWeaponEntity *weapon,
+                                  const AosWeaponFrames *weapon_frames, int soma_atk,
+                                  int soma_def, int cam_x, int cam_y,
+                                  uint32_t (*random)(void)) {
+    AosHitReport report = {0}, spawned = {0};
+    if (m->state != 3 &&
+        outside_margins(kind, 4, (m->x >> 16) - cam_x, (m->y >> 16) - cam_y)) {
+        m->state = 2;
+        m->timer = 1;
+    }
+    if (m->hp > 0 && m->hit_flash) {
+        m->hit_flash--;
+        if (m->state != 2) report = collide(m, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        aos_combat_tick(&m->combat);
+        return report;
+    }
+    switch (m->state) {
+    case 0: medusa_fly(m, kind->anims, random); break;
+    case 2:
+        generic_death(m, kind, random, &spawned);
+        if (m->removed) return spawned;
+        break;
+    case 3:
+        medusa_spawner(m, soma, cam_x, cam_y, random, &report);
+        return report;
+    case 4:
+        step_anim(m, kind->anims);
+        return report;
+    default:
+        break;
+    }
+    step_anim(m, kind->anims);
+    int sx = (m->x >> 16) - cam_x, sy = (m->y >> 16) - cam_y;
+    if (!m->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(m, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&m->combat);
+    take_effects(&report, &spawned);
+    return report;
+}
+
 /* sub_080CB5E0: the animation loops with a pause of 0 to 127 frames
  * (RandomNumberGenerator & 0x7F) after every cycle; with parameter 0 set
  * it bobs: y += sin(phase + 0x4000) / 4 (rounded toward zero), phase +=
@@ -2165,6 +2292,9 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->removed) return report;
     if (enemy->id == AOS_ENEMY_BLUE_CROW && enemy->role == AOS_ROLE_ENEMY)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);
+    if (enemy->id == AOS_ENEMY_MEDUSA_HEAD && enemy->role == AOS_ROLE_ENEMY)
+        return medusa_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+                             cam_y, random);
     if (enemy->id == AOS_ENEMY_ZOMBIE && enemy->role == AOS_ROLE_ENEMY)
         return zombie_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);

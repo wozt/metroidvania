@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0442 - Aria Medusa heads
+
+- Ported the Medusa head (enemy 0x39) and its spawner: heads appear at the
+  screen edge chosen by Soma's position and facing, swing in their native
+  wave, die off screen, are stunned by hits and die with the generic
+  death; gold heads use palette bank 1 (their petrification is not
+  ported).
+- `AosHitReport` carries the spawned enemy's parameter 1; the runtime
+  draws gold heads from a second exported sequence set.
+- Checked in room 6/13: gold heads arrive from the right and swing toward
+  Soma (frames 60, 90, 150 and 200).
+
 ## Patch 0441 - Aria Needles enemy
 
 - Ported Needles (enemy 0x3F, the most frequent enemy record: 47 across

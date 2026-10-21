@@ -85,6 +85,12 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # sub_08093B68 (EnemyMedusaHeadCreate 0x080938E8): palette bank 1 for
+    # gold heads (parameter 1 bit 0), exported as a second sequence set.
+    "medusa_head": {"id": 0x39, "graphics": 0x081CC034, "palette": 0x0820AAB0, "bank": 0,
+                    "frames": 0x08221978},
+    "medusa_head_gold": {"id": 0x39, "graphics": 0x081CC034, "palette": 0x0820AAB0, "bank": 1,
+                         "frames": 0x08221978},
     # EnemyNeedlesCreate 0x080CB518; its pieces (sub_080CB6BC) show frames
     # 2 to 5.
     "needles": {"id": 0x3F, "graphics": 0x081F4284, "palette": 0x0820BF78, "bank": 0,

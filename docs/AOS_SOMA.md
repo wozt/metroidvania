@@ -830,6 +830,30 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Medusa head (enemy 0x39, `EnemyMedusaHeadCreate` / `EnemyMedusaHeadUpdate`):
+`sub_08093B68` loads tiles `0x081CC034`, palette `0x0820AAB0` (bank 1 with
+parameter 1 bit 0, a gold head) and frames `0x08221978`; animations 0 and 1
+fall, 2 rises, 3 dies. Create: animation 0 looping and one step; under the
+global `0x8E & 0x40` state 4 (animation only); both boxes from the bytes of
+`0x0A0AFBFB` (-5, -5, 10, 10); parameter 1 bit 1 makes a hidden spawner
+without boxes (state 3), otherwise state 0 faces the player
+(`sub_0806CF2C`), vx = 0.75 + (r & 0x3FFF) toward the facing, `+0x54` =
+0xC00, `+0x20` = r & 1, `+0x22` = 45 + (r & 0xF), `+0x21` = `+0x22` / 2. The
+update: on screen, `sub_08021924` (tracking list); outside margin entry 4
+(not for the spawner) state 2 with timer 1; `sub_0806AD24` (stun: only the
+collision pass); state 0 `sub_08093A3C`: vy -= / += `+0x54` by `+0x20`,
+which flips each time `+0x21` reaches `+0x22`, x += vx, y += vy
+(`sub_0806D3AC`), animation 2 while vy < 0, else 0 or 1 at random once it
+stops rising; state 2 the generic death, decrementing the spawner's
+`+0x18` (through `+0x1C`, id 0x39) when deleted; state 3 the spawner: one
+frame in 32 (`r & 0x1F`), while `+0x18` < parameter 0, a head at screen X
+256 when Soma's screen X (`sub_0806CDB8`) is at most 0x67, or at most 0x88
+facing right (`sub_0806CEC0`), else -16, screen Y 64 + (r & 0x3F), with
+parameter 1 & 1. Then the animation step and the collision pass. Hit
+callback `sub_08093AE0`: at 0 HP sound 0x72, animation 3, 40 frames of
+state 2. Contact `sub_08093BF0`: type 0, element 0x100 for gold heads
+(petrification, not ported).
+
 Needles (enemy 0x3F, `EnemyNeedlesCreate` / `EnemyNeedlesUpdate`): tiles
 `0x081F4284`, palette `0x0820BF78` bank 0, frames `0x0824FB10`; one hit
 point, contact attack 38. Create: animation 0 looping, not mirrored, state

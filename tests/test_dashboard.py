@@ -175,7 +175,8 @@ class OutputTests(unittest.TestCase):
         aos_functional = {row["name"] for row in aos["monsters"]
                           if row["status"] == "functional"}
         self.assertEqual(aos_functional, {"Bat", "Zombie", "Blue Crow", "Zombie Soldier",
-                                          "Axe Armor", "Skull Archer", "Needles"})
+                                          "Axe Armor", "Skull Archer", "Needles",
+                                          "Medusa Head"})
         unnamed = [row for row in aos["monsters"] if row["status"] == "not_started"]
         self.assertTrue(all(row["name"].startswith("Enemy 0x") for row in unnamed))
         self.assertEqual(len(aos["items"]), len(dashboard.ARIA_ITEM_FAMILIES))

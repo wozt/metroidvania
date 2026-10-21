@@ -908,6 +908,101 @@ static void archer_tests(void) {
     assert(bone.x - a.x < AOS_FIXED(40));
 }
 
+static void medusa_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t two[] = {4, 4}, death[] = {200};
+    const AosAnimDef defs[4] = {{2, two}, {2, two}, {2, two}, {1, death}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    kind.margins[4][0] = kind.margins[4][1] = 48;
+    const AosEnemyStats stats = {12, 20, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(60), AOS_FIXED(159), NULL);
+
+    /* A spawner (parameter 1 bit 1): hidden, state 3. One frame in 32 it
+     * spawns at screen X 256 (Soma at screen X 60 <= 0x67), Y 64 + (r &
+     * 0x3F), up to parameter 0 heads; gold (bit 0) passes on. */
+    AosEnemy spawner;
+    assert(aos_enemy_create(&spawner, AOS_ENEMY_MEDUSA_HEAD, 0, 0, 2, 3, &soma, &layer, &kind,
+                            &stats));
+    assert(spawner.state == 3 && spawner.hidden && !spawner.own_boxes);
+    static const uint32_t draws[] = {1, 0, 5, 0, 7, 0};
+    script = draws;
+    script_at = 0;
+    AosHitReport hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                        scripted);
+    assert(!hit.spawn && script_at == 1);
+    hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(hit.spawn && hit.spawn_x == 256 && hit.spawn_y == 64 + 5 && hit.spawn_param1 == 1);
+    hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(hit.spawn && spawner.spawned_count == 2);
+    hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!hit.spawn);
+    /* Soma at screen X 0x89 or facing left between 0x68 and 0x88: X -16. */
+    spawner.spawned_count = 0;
+    soma.x = AOS_FIXED(0x78);
+    soma.facing_left = true;
+    hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(hit.spawn && hit.spawn_x == -16);
+
+    /* A head created at the right edge faces the player (left): vx -0.75 -
+     * (r & 0x3FFF), + 0x54 0xC00; vy swings, flipping every + 0x22 frames;
+     * rising it plays animation 2. */
+    aos_random_seed(0);
+    AosEnemy head;
+    assert(aos_enemy_create(&head, AOS_ENEMY_MEDUSA_HEAD, 200, 100, 0, 1, &soma, &layer, &kind,
+                            &stats));
+    assert(head.state == 0 && !head.mirrored && head.vx <= -0xC000 && head.vx > -0x10000);
+    assert(head.ay == 0xC00 && head.shot >= 45 && head.shot <= 60 &&
+           head.volley_count == head.shot / 2);
+    int32_t x0 = head.x;
+    bool flipped = false;
+    int8_t start = head.volley_count;
+    bool down = head.dropped;
+    for (int i = 0; i < 40; ++i) {
+        aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (head.dropped != down) flipped = true;
+    }
+    assert(flipped == (start + 40 >= (int8_t)head.shot) && head.x == x0 + 40 * head.vx);
+    if (head.vy < 0) assert(head.anim.id == 2);
+    else assert(head.anim.id != 2);
+
+    /* Beyond the screen margins (entry 4) it dies at once. */
+    AosEnemy far = head;
+    aos_enemy_update(&far, &soma, &layer, &kind, NULL, NULL, 10, 4, 1000, 0, always_zero);
+    assert(far.removed);
+
+    /* A blow it survives stuns it 8 frames; the killing blow plays the
+     * death animation 3 and the 40-frame generic death. */
+    soma = aos_soma_spawn(head.x, head.y + AOS_FIXED(20), NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 40, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    head.hp = 30;
+    AosCombat unhit = head.combat;
+    hit = aos_enemy_update(&head, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
+    assert(hit.enemy_hit && !hit.killed && head.hit_flash == 8);
+    int32_t frozen = head.x;
+    aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(head.x == frozen && head.hit_flash == 7);
+    head.combat = unhit;
+    head.hit_flash = 0;
+    head.hp = 1;
+    hit = aos_enemy_update(&head, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
+    assert(hit.killed && head.state == 2 && head.anim.id == 3 && head.timer == 0x28);
+    int dying = 0;
+    while (!head.removed && dying < 100) {
+        aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++dying;
+    }
+    assert(dying == 0x28);
+}
+
 static void needles_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t spin[] = {4, 4};
@@ -1188,6 +1283,7 @@ int main(void) {
     armor_tests();
     archer_tests();
     needles_tests();
+    medusa_tests();
     puts("aos_enemy: ok");
     return 0;
 }

@@ -42,7 +42,11 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
                                                      [12] = "zombie_soldier",
+                                                     [57] = "medusa_head",
                                                      [63] = "needles"};
+/* The second palette of the Medusa head (parameter 1 bit 0: gold). */
+#define GOLD_MEDUSA_NAME "medusa_head_gold"
+#define MEDUSA_HEAD_ID 57
 #define ENEMY_STATIC_FRAMES 4  /* single sprite frames of child entities per kind */
 #define ARIA_KIND_ENEMY 1
 
@@ -439,8 +443,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (hit.spawn && room->entity_count < MAX_ENTITIES) {
                 AriaEntity *child = &room->entities[room->entity_count];
                 *child = (AriaEntity){.kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.spawn_x,
-                                      .y = hit.spawn_y, .spawned = true, .spawner = (int)i};
-                if (aos_enemy_create(&child->enemy, (uint8_t)e->id, hit.spawn_x, hit.spawn_y, 0, 0,
+                                      .y = hit.spawn_y, .param1 = hit.spawn_param1,
+                                      .spawned = true, .spawner = (int)i};
+                if (aos_enemy_create(&child->enemy, (uint8_t)e->id, hit.spawn_x, hit.spawn_y, 0,
+                                     hit.spawn_param1,
                                      soma, layer, kind, combat->stats[e->id]))
                     room->entity_count++;
             }
@@ -497,7 +503,7 @@ typedef struct {
         int static_ids[ENEMY_STATIC_FRAMES];
         AriaFrame statics[ENEMY_STATIC_FRAMES];
         int static_count;
-    } enemies[ENEMY_KINDS];
+    } enemies[ENEMY_KINDS], gold_medusa;
     struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];
@@ -649,7 +655,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     while (ok && fgets(line, sizeof line, f)) {
         char frame_path[512];
         int style, frame, ticks, ox, oy;
-        char enemy_name[16];
+        char enemy_name[24];
         if (sscanf(line, "Enemy/%15[^/]/frame_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style,
                    &frame, &ticks, &ox, &oy, frame_path) == 7) {
             for (int id = 0; id < ENEMY_KINDS; ++id) {
@@ -682,11 +688,15 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
             }
             continue;
         }
-        if (sscanf(line, "Enemy/%15[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
+        if (sscanf(line, "Enemy/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
-            for (int id = 0; id < ENEMY_KINDS; ++id) {
-                if (!enemy_names[id] || strcmp(enemy_name, enemy_names[id])) continue;
-                __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
+            for (int id = 0; id <= ENEMY_KINDS; ++id) {
+                bool gold = id == ENEMY_KINDS;
+                if (gold ? strcmp(enemy_name, GOLD_MEDUSA_NAME)
+                         : !enemy_names[id] || strcmp(enemy_name, enemy_names[id]))
+                    continue;
+                __typeof__(objects->enemies[0]) *art = gold ? &objects->gold_medusa
+                                                            : &objects->enemies[id];
                 if (style < 0 || style >= AOS_ENEMY_MAX_ANIMS || frame != art->defs[style].count ||
                     frame >= MAX_FRAMES || ticks < 1 || ticks > 255 ||
                     !load_frame(&art->frames[style][frame], frame_path, ox, oy, renderer)) {
@@ -722,6 +732,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     }
     fclose(f);
     for (int id = 0; id < ENEMY_KINDS; ++id) objects->enemies[id].set.anims = objects->enemies[id].defs;
+    objects->gold_medusa.set.anims = objects->gold_medusa.defs;
     return ok;
 }
 
@@ -734,6 +745,10 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->enemies[id].frames[i][j].texture)
                     SDL_DestroyTexture(objects->enemies[id].frames[i][j].texture);
+    for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
+        for (int j = 0; j < MAX_FRAMES; ++j)
+            if (objects->gold_medusa.frames[i][j].texture)
+                SDL_DestroyTexture(objects->gold_medusa.frames[i][j].texture);
     for (int k = 0; k < AOS_EFFECT_KINDS; ++k)
         for (int i = 0; i < MAX_FRAMES; ++i)
             if (objects->effects[k].frames[i].texture)
@@ -792,6 +807,8 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             e->enemy.anim.frame >= MAX_FRAMES)
             continue;
         const AriaFrame *frame = &objects->enemies[e->id].frames[e->enemy.anim.id][e->enemy.anim.frame];
+        if (e->id == MEDUSA_HEAD_ID && (e->enemy.param1 & 1) && objects->gold_medusa.loaded)
+            frame = &objects->gold_medusa.frames[e->enemy.anim.id][e->enemy.anim.frame];
         if (e->enemy.static_frame >= 0) {
             /* A child entity shows one sprite frame of its kind (+ 0x65). */
             frame = NULL;

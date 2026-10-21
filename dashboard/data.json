@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-21T21:20:31+00:00",
+ "generated_at": "2026-10-21T21:24:37+00:00",
  "git": {
-  "commit": "b6d57bc",
+  "commit": "2770ad1",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 143,
+   "total": 144,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 115,
+    "functional": 116,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 115,
-   "functional_or_better_percent": 80.4,
-   "with_passing_tests": 131,
-   "with_passing_tests_percent": 91.6,
+   "functional_or_better": 116,
+   "functional_or_better_percent": 80.6,
+   "with_passing_tests": 132,
+   "with_passing_tests_percent": 91.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -205,6 +205,7 @@
     "aos.enemies.axe_armor",
     "aos.enemies.bat",
     "aos.enemies.blue_crow",
+    "aos.enemies.medusa_head",
     "aos.enemies.needles",
     "aos.enemies.skull_archer",
     "aos.enemies.zombie",
@@ -377,20 +378,20 @@
    "areas": [
     "aos"
    ],
-   "total": 14,
+   "total": 15,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 9,
+    "functional": 10,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 9,
-   "functional_or_better_percent": 64.3,
-   "with_passing_tests": 14,
+   "functional_or_better": 10,
+   "functional_or_better_percent": 66.7,
+   "with_passing_tests": 15,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -398,6 +399,7 @@
     "aos.enemies.axe_armor",
     "aos.enemies.bat",
     "aos.enemies.blue_crow",
+    "aos.enemies.medusa_head",
     "aos.enemies.needles",
     "aos.enemies.skull_archer",
     "aos.enemies.zombie",
@@ -8573,6 +8575,70 @@
    }
   },
   {
+   "id": "aos.enemies.medusa_head",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Medusa head and its spawner",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.zombie"
+   ],
+   "native_routines": [
+    "EnemyMedusaHeadCreate",
+    "EnemyMedusaHeadUpdate",
+    "sub_08093A3C",
+    "sub_08093AE0",
+    "sub_08093B68",
+    "sub_08093BCC",
+    "sub_08093BF0",
+    "sub_0806D3AC",
+    "sub_0806AD24",
+    "sub_0806AEAC"
+   ],
+   "limitations": "The petrification of gold heads (contact element 0x100), sound 0x72, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; state 1 (sub_08093BCC) is not entered by any code read. Spawned heads are created after their spawner's update (native slot order not traced). The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported.",
+   "next_action": "Port the petrification of gold heads with Soma's status effects.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-21"
+   }
+  },
+  {
    "id": "aos.enemies.needles",
    "area": "aos",
    "category": "enemies",
@@ -10114,7 +10180,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -11800,6 +11866,12 @@
  },
  "timeline": [
   {
+   "commit": "2770ad1",
+   "date": "2026-10-21",
+   "subject": "Port the Aria Needles enemy",
+   "scope": "project"
+  },
+  {
    "commit": "b6d57bc",
    "date": "2026-10-21",
    "subject": "Mark the Aria weapon sprite asset functional",
@@ -12272,12 +12344,6 @@
    "date": "2026-10-18",
    "subject": "Port Mecha Ridley entrance and body",
    "scope": "project"
-  },
-  {
-   "commit": "e94e8b4",
-   "date": "2026-10-18",
-   "subject": "Port grouped large energy drops",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12338,9 +12404,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 104,
-    "routines_attached_to_features": 104,
-    "unassigned_routines": 3469,
+    "routines_cited_by_features": 112,
+    "routines_attached_to_features": 112,
+    "unassigned_routines": 3461,
     "call_edges": 14228
    }
   },
@@ -15276,15 +15342,20 @@
      },
      {
       "id": 57,
-      "name": "Enemy 0x39",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Medusa Head",
+      "status": "functional",
+      "note": "Medusa head and its spawner",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.medusa_head"
      },
      {
       "id": 58,

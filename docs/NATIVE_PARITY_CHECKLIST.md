@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 14 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 15 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 104 | 3469 |
+| Castlevania: Aria of Sorrow | 112 | 3461 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1212,6 +1212,16 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Sounds 0x72 and 0x8B, the palette bits of + 0x5A (death, hit flash and the feathers' end), the global pause 0x4BE (taken as 0), the + 0x38 bit 0x100 stop, the tracking list of sub_08021924, sub_080683BC and the unentered glide step are not ported. Blood splashes are drawn behind all enemies (OBJ priority 3 against the backgrounds is not modelled).  
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
+
+[+] **`aos.enemies.medusa_head` — Medusa head and its spawner.** The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3AC`, `aos:asm:asm/code/code_08090914.s:EnemyMedusaHeadCreate`, `aos:asm:asm/code/code_08090914.s:EnemyMedusaHeadUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093A3C`, `aos:asm:asm/code/code_08090914.s:sub_08093AE0`, `aos:asm:asm/code/code_08090914.s:sub_08093B68`, `aos:asm:asm/code/code_08090914.s:sub_08093BCC`, `aos:asm:asm/code/code_08090914.s:sub_08093BF0`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie`.  
+Known divergences: The petrification of gold heads (contact element 0x100), sound 0x72, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; state 1 (sub_08093BCC) is not entered by any code read. Spawned heads are created after their spawner's update (native slot order not traced).  
+Next action: Port the petrification of gold heads with Soma's status effects.
+Evidence: in game: `aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP`.
 
 [+] **`aos.enemies.needles` — Needles and its pieces.** The looping animation with its random pauses, the optional bobbing (parameter 0), the (-8, -8, 16, 16) boxes packed in 0x1010F8F8, the contact damage, the shattering into the five pieces of 0x08528B44 and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 

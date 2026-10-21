@@ -37,11 +37,12 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 13     /* enemy ids 0, 1, 4, 5, 9 and 12 */
+#define ENEMY_KINDS 64     /* enemy ids 0, 1, 4, 5, 9, 12 and 63 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
-                                                     [12] = "zombie_soldier"};
+                                                     [12] = "zombie_soldier",
+                                                     [63] = "needles"};
 #define ENEMY_STATIC_FRAMES 4  /* single sprite frames of child entities per kind */
 #define ARIA_KIND_ENEMY 1
 
@@ -417,7 +418,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
             if (!was_removed && e->enemy.removed && e->spawner >= 0) {
-                /* A spawned zombie leaves: its spawner's count drops. */
+                /* A spawned zombie or a Needles piece leaves: its spawner's count
+             * drops. */
                 AosEnemy *spawner = &room->entities[e->spawner].enemy;
                 if (spawner->spawned_count) spawner->spawned_count--;
             }
@@ -430,7 +432,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             for (int c = 0; c < hit.child_count && room->entity_count < MAX_ENTITIES; ++c)
                 room->entities[room->entity_count++] = (AriaEntity){
                     .kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.children[c].x >> 16,
-                    .y = hit.children[c].y >> 16, .spawned = true, .spawner = -1,
+                    .y = hit.children[c].y >> 16, .spawned = true,
+                    /* Needles pieces count down their parent's + 0x13. */
+                    .spawner = hit.children[c].role == AOS_ROLE_NEEDLE_PIECE ? (int)i : -1,
                     .enemy = hit.children[c]};
             if (hit.spawn && room->entity_count < MAX_ENTITIES) {
                 AriaEntity *child = &room->entities[room->entity_count];

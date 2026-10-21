@@ -85,6 +85,10 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # EnemyNeedlesCreate 0x080CB518; its pieces (sub_080CB6BC) show frames
+    # 2 to 5.
+    "needles": {"id": 0x3F, "graphics": 0x081F4284, "palette": 0x0820BF78, "bank": 0,
+                "frames": 0x0824FB10, "static_frames": (2, 3, 4, 5)},
     "zombie_soldier": {"id": 0x0C, "graphics": 0x081CC024, "palette": 0x0820AA48, "bank": 0,
                        "frames": 0x082215C4,
                        "static_frames": (18, 0x13, 0x14)},  # grenade, gibs (sub_08092FCC)

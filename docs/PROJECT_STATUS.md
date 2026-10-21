@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0441 - Aria Needles enemy
+
+- Ported Needles (enemy 0x3F, the most frequent enemy record: 47 across
+  the exported rooms): the looping animation with random pauses, the
+  optional bobbing, its boxes packed in the constant 0x1010F8F8, contact
+  damage, the five pieces of `0x08528B44` at death and its inert state 3.
+- The runtime registers enemy ids up to 63; Needles pieces count down
+  their parent like spawned zombies; the exporter adds Needles and its
+  piece frames.
+- Checked in room 6/33 (`--spawn 130 159 --atk 50 --repeat 2`, buttons
+  0x82): a crouched knife kills the Needles at x 152 on frame 5 and its
+  pieces fly at frames 7, 13 and 21.
+
 ## Patch 0440 - Aria weapon sprites asset functional
 
 - `assets.aria_weapons` no longer lists only classes 0, 2 and 3: every

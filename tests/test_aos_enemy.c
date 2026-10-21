@@ -908,6 +908,88 @@ static void archer_tests(void) {
     assert(bone.x - a.x < AOS_FIXED(40));
 }
 
+static void needles_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t spin[] = {4, 4};
+    const AosAnimDef defs[1] = {{2, spin}};
+    const AosAnimSet anims = {defs, 1};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    const AosEnemyStats stats = {1, 38, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(159), NULL);
+
+    /* EnemyNeedlesCreate: state 1, not mirrored, (-8, -8, 16, 16) boxes. */
+    AosEnemy n;
+    assert(aos_enemy_create(&n, AOS_ENEMY_NEEDLES, 100, 150, 0, 0, &soma, &layer, &kind, &stats));
+    assert(n.state == 1 && !n.mirrored && n.own_boxes && n.own_attack.w == 16 &&
+           n.own_hurt.x == -8);
+    /* sub_080CB5E0: the first update pauses the animation for random() &
+     * 0x7F frames (1 here), then a cycle of 8 ticks plays and it pauses
+     * again. */
+    script = (const uint32_t[]){1, 0x82, 0};
+    script_at = 0;
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(n.substep == 1 && n.timer == 1 && (n.anim.flags & 2));
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, scripted);
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(n.substep == 0 && !(n.anim.flags & 2));
+    int frames = 0;
+    while (n.substep == 0 && frames < 50) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, scripted);
+        ++frames;
+    }
+    assert(n.substep == 1 && n.timer == 2 && frames == 8 && n.y == AOS_FIXED(150));
+
+    /* Parameter 0 set: it bobs, y += sin(phase + 0x4000) / 4. */
+    AosEnemy bob;
+    assert(aos_enemy_create(&bob, AOS_ENEMY_NEEDLES, 100, 150, 1, 0, &soma, &layer, &kind,
+                            &stats));
+    bob.phase = 0;
+    aos_enemy_update(&bob, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(bob.y == AOS_FIXED(150) + 0x4000 && bob.phase == 0x400);
+
+    /* A contact costs 38 against defence 4. */
+    soma.x = n.x;
+    soma.y = n.y + AOS_FIXED(10);
+    AosHitReport hit = aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.soma_hit && hit.soma_damage == aos_player_damage(38, 4));
+
+    /* One hit point: the weapon shatters it into five pieces from
+     * 0x08528B44, then it waits for them (+ 0x13). */
+    soma = aos_soma_spawn(n.x, n.y + AOS_FIXED(10), NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 40, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
+    assert(hit.killed && n.state == 2);
+    hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
+    assert(n.hidden && !n.removed && hit.child_count == 5 && n.spawned_count == 5);
+    const AosEnemy *p = &hit.children[0];
+    assert(p->role == AOS_ROLE_NEEDLE_PIECE && p->static_frame == 5 && p->x == n.x - 0x40000);
+    assert(p->y == n.y - 0x40000 && p->vx == -0x8000 && p->vy == -0x30000 && p->timer == 60);
+    /* sub_080CB7C8: the second piece (30 frames) falls with vy += 0x3000
+     * (camera 100 pixels down: it stays above screen Y 0xAA). */
+    AosEnemy piece = hit.children[1];
+    int life = 0;
+    while (!piece.removed && life < 100) {
+        aos_enemy_update(&piece, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 100, always_zero);
+        ++life;
+    }
+    assert(life == 31 && piece.vy == -0x18000 + 30 * 0x3000);
+    /* Below screen Y 0xAA a piece goes at once. */
+    piece = hit.children[1];
+    aos_enemy_update(&piece, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, -30, always_zero);
+    assert(piece.removed);
+    n.spawned_count = 0;
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.removed);
+}
+
 int main(void) {
     /* sub_080009E4 */
     assert(aos_sine(0) == 0 && aos_sine(0x4000) == 0x10000 && aos_sine(0xC000) == -0x10000);
@@ -1105,6 +1187,7 @@ int main(void) {
     soldier_tests();
     armor_tests();
     archer_tests();
+    needles_tests();
     puts("aos_enemy: ok");
     return 0;
 }

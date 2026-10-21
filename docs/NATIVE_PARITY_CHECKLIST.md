@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 13 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 14 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 96 | 3477 |
+| Castlevania: Aria of Sorrow | 104 | 3469 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1212,6 +1212,16 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Sounds 0x72 and 0x8B, the palette bits of + 0x5A (death, hit flash and the feathers' end), the global pause 0x4BE (taken as 0), the + 0x38 bit 0x100 stop, the tracking list of sub_08021924, sub_080683BC and the unentered glide step are not ported. Blood splashes are drawn behind all enemies (OBJ priority 3 against the backgrounds is not modelled).  
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
+
+[+] **`aos.enemies.needles` — Needles and its pieces.** The looping animation with its random pauses, the optional bobbing (parameter 0), the (-8, -8, 16, 16) boxes packed in 0x1010F8F8, the contact damage, the shattering into the five pieces of 0x08528B44 and state 3 under gEwramData + 0x8E bit 0x40 are ported.
+
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyNeedlesCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNeedlesUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB5E0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB6BC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB7C8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB894`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB8FC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB930`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie`.  
+Known divergences: Sound 0x70, the palette bits and sub_080683BC are not ported; pieces are updated after the enemies of their frame (native slot order not traced).  
+Next action: Play the sound once the Aria sound path exists.
+Evidence: in game: `aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21`.
 
 [+] **`aos.enemies.skull_archer` — Skull archer and its arrows.** Standing, volleys from the ROM table, patrol and retreat, sticking arrows and their strike flame (sub_0806D5C0), death and the flung pieces (generic debris) with their floor dust (sub_08045CEC animation 4, row 6), and state 4 under gEwramData + 0x8E bit 0x40 are ported.
 

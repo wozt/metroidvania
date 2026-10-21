@@ -14,7 +14,8 @@
  * (sub_08092BC0 / sub_08092CCC and the projectile collision sub_08069770),
  * and the axe armor (enemy 0x04) with its axe (sub_080B0D5C) and the probe
  * walker sub_0806CAF8 / sub_0806C828, and the skull archer (enemy 0x05) with
- * its arrows (sub_080AF7EC). Facing flag 0x40 of + 0x58 means
+ * its arrows (sub_080AF7EC), and Needles (enemy 0x3F) with its pieces
+ * (sub_080CB6BC / sub_080CB7C8). Facing flag 0x40 of + 0x58 means
  * mirrored: enemy sprites face left by default. Combat: the frame boxes of
  * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
  * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
@@ -81,13 +82,14 @@ enum {
     AOS_ENEMY_SKULL_ARCHER = 0x05,
     AOS_ENEMY_BLUE_CROW = 0x09,
     AOS_ENEMY_ZOMBIE_SOLDIER = 0x0C,
+    AOS_ENEMY_NEEDLES = 0x3F,
 };
 
 /* What an AosEnemy slot holds: the enemy itself or a child entity of its
  * kind (sharing its sprites and record). */
 enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3,
        AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5,
-       AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8 };
+       AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8, AOS_ROLE_NEEDLE_PIECE = 9 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */

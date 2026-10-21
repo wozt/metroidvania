@@ -830,6 +830,27 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Needles (enemy 0x3F, `EnemyNeedlesCreate` / `EnemyNeedlesUpdate`): tiles
+`0x081F4284`, palette `0x0820BF78` bank 0, frames `0x0824FB10`; one hit
+point, contact attack 38. Create: animation 0 looping, not mirrored, state
+1 (state 3, only stepping its animation, under the global `0x8E & 0x40`);
+`sub_08042884` and `sub_080428F0` receive the constant `0x1010F8F8`, whose
+bytes are the hurt and attack boxes (-8, -8, 16, 16); with parameter 0 set
+`+0x14` starts at `RandomNumberGenerator % 0xFFFF`. The update (inside the
+activity window) runs `sub_080CB5E0`, the animation step and the
+collision pass. `sub_080CB5E0` marks the cycle done at once; every time a
+cycle ends it pauses the animation (`+0x6C` bit 1) for
+`RandomNumberGenerator & 0x7F` + 1 frames; with parameter 0 set it bobs:
+dy = sin(`+0x14` + 0x4000) / 4 (rounded toward zero), `+0x14` += 0x400, x
++= vx, y += dy. The hit callback `sub_080CB930` sends it to state 2
+(`sub_080CB894`): sound 0x70, hidden, `sub_080683BC`, the palette bits,
+then `sub_080CB6BC` creates five pieces (`sub_080CB7C8`) from `0x08528B44`
+(s8 dx, s8 dy, sprite frame, s8 vx, s8 upward vy in 1/16 pixels, frames;
+dx and vx negated when mirrored), counting them in `+0x13`; it is deleted
+when they are all gone. A piece is deleted outside `sub_08068AD4(e, -128,
+-64, 0x1F0, 0x120)`, when its timer underflows or below screen Y 0xAA, and
+otherwise moves and falls with vy += 0x3000.
+
 Entity positions in the game are screen-relative: the collision probes add
 the camera (`gEwramData + 0xA094 + 6 / + 0xA`) and screen tests compare them
 directly. The port keeps room coordinates and subtracts the camera wherever

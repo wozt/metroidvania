@@ -420,7 +420,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
-        id != AOS_ENEMY_SKULL_ARCHER)
+        id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -433,6 +433,21 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     enemy->combat.type = AOS_TYPE_ENEMY;
     if (id == AOS_ENEMY_ZOMBIE) {
         zombie_create(enemy, soma, layer, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_NEEDLES) {
+        /* EnemyNeedlesCreate: animation 0 looping, not mirrored, state 1
+         * (state 3, inert, under the global 0x8E & 0x40); both boxes are
+         * the bytes of 0x1010F8F8, (-8, -8, 16, 16) (sub_08042884 /
+         * sub_080428F0); with parameter 0 set it bobs from a random phase
+         * (RandomNumberGenerator % 0xFFFF). */
+        play(enemy, anims, 0);
+        enemy->mirrored = false;
+        enemy->state = flag_8e_40 ? 3 : 1;
+        if (flag_8e_40) return true;
+        enemy->own_boxes = true;
+        enemy->own_hurt = enemy->own_attack = (AosBox){-8, -8, 16, 16};
+        if (param0) enemy->phase = (uint16_t)(aos_random() % 0xFFFF);
         return true;
     }
     if (id == AOS_ENEMY_SKULL_ARCHER) {
@@ -637,6 +652,10 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_NEEDLES) {
+                    /* sub_080CB930: it shatters (state 2). */
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_BLUE_CROW) {
                     /* sub_080CA030: the crow dies. */
                     enemy->state = 2;
@@ -2026,6 +2045,117 @@ static AosHitReport archer_update(AosEnemy *a, AosSoma *soma, const AosCollision
     return report;
 }
 
+/* sub_080CB5E0: the animation loops with a pause of 0 to 127 frames
+ * (RandomNumberGenerator & 0x7F) after every cycle; with parameter 0 set
+ * it bobs: y += sin(phase + 0x4000) / 4 (rounded toward zero), phase +=
+ * 0x400. */
+static void needles_idle(AosEnemy *n, const AosAnimSet *anims, uint32_t (*random)(void)) {
+    if (n->step == 0) {
+        if (n->anim.id != 0) play(n, anims, 0);
+        n->cycle_done = true;
+        n->step = 1;
+        n->substep = 0;
+    }
+    if (n->substep == 0) {
+        if (n->cycle_done) {
+            n->substep = 1;
+            n->timer = (uint8_t)(random() & 0x7F);
+            n->cycle_done = false;
+            n->anim.flags |= 2;
+        }
+    } else if (--n->timer == 0xFF) {
+        n->substep = 0;
+        n->anim.flags &= (uint8_t)~2;
+    }
+    if (!n->param0) return;
+    int32_t s = aos_sine((uint32_t)n->phase + 0x4000);
+    int32_t dy = (s < 0 ? s + 3 : s) >> 2;
+    n->phase = (uint16_t)(n->phase + 0x400);
+    n->x += n->vx;
+    n->y += dy;
+    n->vx += n->ax;
+    n->vy = dy + n->ay;
+}
+
+/* sub_080CB6BC: five pieces from 0x08528B44 (s8 dx, s8 dy, sprite frame,
+ * s8 vx >> 12, s8 vy >> 12 upward, frames), mirrored with the body. */
+static void needles_shatter(const AosEnemy *n, AosHitReport *report) {
+    static const int8_t pieces[5][6] = {
+        {-4, -4, 5, -8, 48, 60}, {0, 0, 5, 8, 24, 30}, {0, 0, 4, -8, 40, 38},
+        {0, 0, 3, 8, 40, 48}, {0, 0, 2, 0, 48, 48},
+    };
+    for (int i = 0; i < 5 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
+        AosEnemy p = {0};
+        p.id = n->id;
+        p.role = AOS_ROLE_NEEDLE_PIECE;
+        p.static_frame = pieces[i][2];
+        p.mirrored = n->mirrored;
+        int dx = pieces[i][0];
+        p.vx = pieces[i][3] * 0x1000;
+        if (p.mirrored) {
+            p.vx = -p.vx;
+            dx = -dx;
+        }
+        p.x = n->x + (int32_t)((uint32_t)dx << 16);
+        p.y = n->y + (int32_t)((uint32_t)pieces[i][1] << 16);
+        p.vy = -(pieces[i][4] * 0x1000);
+        p.timer = (uint8_t)pieces[i][5];
+        p.combat.attack_off = p.combat.hurt_off = true;
+        report->children[report->child_count++] = p;
+    }
+}
+
+/* sub_080CB7C8: a piece is deleted outside sub_08068AD4(e, -128, -64,
+ * 0x1F0, 0x120), when its timer runs out or below screen Y 0xAA; otherwise
+ * it moves and falls (vy += 0x3000). */
+static void needle_piece_update(AosEnemy *p, int cam_x, int cam_y) {
+    int sx = (p->x >> 16) - cam_x, sy = (p->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120 || --p->timer == 0xFF ||
+        sy > 0xAA) {
+        p->removed = true;
+        return;
+    }
+    p->x += p->vx;
+    p->y += p->vy;
+    p->vy += 0x3000;
+}
+
+/* EnemyNeedlesUpdate: state 3 steps the animation; state 2 (sub_080CB894)
+ * hides it, throws its pieces (sound 0x70; sub_080683BC is not ported) and
+ * deletes it once they are gone (+ 0x13); otherwise, inside the activity
+ * window, sub_080CB5E0, the animation step and the collision pass. */
+static AosHitReport needles_update(AosEnemy *n, AosSoma *soma, const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames, int soma_atk,
+                                   int soma_def, int cam_x, int cam_y,
+                                   uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (n->state == 3) {
+        step_anim(n, kind->anims);
+        return report;
+    }
+    if (n->state == 2) {
+        if (n->step == 0) {
+            n->hidden = true;
+            needles_shatter(n, &report);
+            n->spawned_count = report.child_count;
+            n->step = 1;
+        }
+        if (n->spawned_count == 0) n->removed = true;
+        return report;
+    }
+    int sx = (n->x >> 16) - cam_x, sy = (n->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    needles_idle(n, kind->anims, random);
+    step_anim(n, kind->anims);
+    sx = (n->x >> 16) - cam_x;
+    sy = (n->y >> 16) - cam_y;
+    if (!n->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(n, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&n->combat);
+    return report;
+}
+
 AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
@@ -2055,6 +2185,13 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
         gib_update(enemy);
         return report;
     }
+    if (enemy->role == AOS_ROLE_NEEDLE_PIECE) {
+        needle_piece_update(enemy, cam_x, cam_y);
+        return report;
+    }
+    if (enemy->id == AOS_ENEMY_NEEDLES)
+        return needles_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+                              cam_y, random);
     if (enemy->role == AOS_ROLE_DEBRIS) {
         debris_update(enemy, layer, kind, cam_x, cam_y, random, &report);
         if (!enemy->removed) step_anim(enemy, anims);

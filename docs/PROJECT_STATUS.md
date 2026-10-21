@@ -2,6 +2,13 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0440 - Aria weapon sprites asset functional
+
+- `assets.aria_weapons` no longer lists only classes 0, 2 and 3: every
+  record's sprites are exported and the runtime draws classes 0 to 5
+  (classes 1 and 4 checked in room 0/15 in patches 0437 and 0438), so the
+  asset is functional.
+
 ## Patch 0439 - Aria class 5 weapon entity; weapon entity functional
 
 - Ported class 5 (`sub_08022DEC`): class 0 without the deletion on Soma's

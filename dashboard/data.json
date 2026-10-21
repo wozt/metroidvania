@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-21T21:12:50+00:00",
+ "generated_at": "2026-10-21T21:15:22+00:00",
  "git": {
-  "commit": "0ee5754",
+  "commit": "4a38355",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 18,
-    "functional": 113,
+    "partial": 17,
+    "functional": 114,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 113,
-   "functional_or_better_percent": 79.6,
+   "functional_or_better": 114,
+   "functional_or_better_percent": 80.3,
    "with_passing_tests": 130,
    "with_passing_tests_percent": 91.5,
    "unknown_or_blocked": 1,
@@ -418,15 +418,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 5,
-    "functional": 7,
+    "partial": 4,
+    "functional": 8,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 7,
-   "functional_or_better_percent": 58.3,
+   "functional_or_better": 8,
+   "functional_or_better_percent": 66.7,
    "with_passing_tests": 12,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -10183,7 +10183,7 @@
    "area": "assets",
    "category": "sprites",
    "title": "Soma weapon records and blade sprites",
-   "status": "partial",
+   "status": "functional",
    "fidelity": "faithful",
    "local_sources": [
     "scripts/aos_weapons.py"
@@ -10195,7 +10195,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Blades of classes 0, 2 and 3 only.",
+   "limitations": "All 59 weapon records and their sprites are exported; class 1 blades rotate about the entity position (the affine double-size placement is not modelled) and the class 4 casing and impact come from the object library.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -11736,6 +11736,12 @@
  },
  "timeline": [
   {
+   "commit": "4a38355",
+   "date": "2026-10-21",
+   "subject": "Port the Aria class 5 weapon entity",
+   "scope": "project"
+  },
+  {
    "commit": "0ee5754",
    "date": "2026-10-21",
    "subject": "Port Aria class 4 guns and move shared effects to their own module",
@@ -12207,12 +12213,6 @@
    "commit": "a95f566",
    "date": "2026-10-18",
    "subject": "Complete Acid Worm background layering",
-   "scope": "project"
-  },
-  {
-   "commit": "0ddeacb",
-   "date": "2026-10-18",
-   "subject": "Complete Acid Worm death choreography",
    "scope": "project"
   }
  ],

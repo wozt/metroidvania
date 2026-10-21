@@ -283,8 +283,11 @@ The casing checks its cell first (bits 8 and 1: deleted), shows common
 frame 0x35 with row 8 and ay 0x3000, moves with `sub_0806D430` /
 `sub_0806D460`, bounces once on a solid cell 2 pixels below (vy = -(vy / 2),
 vx += `sub_0802D5EC(0x4000)`, sound 0x14F) and is deleted off screen
-(`sub_08068AD4(e, -16, -16, 0x110, 0xC0)`). Class 5 (`sub_08022DEC`) is not
-ported. `src/runtime/aos_weapon.c` ports classes 0 to 4 and
+(`sub_08068AD4(e, -16, -16, 0x110, 0xC0)`). Class 5 (`sub_08022DEC`,
+record 58) is class 0 without the deletion when Soma's `0x20` clears; the
+attack refuses class 5 and only `sub_08033F58`, a player copy driven by
+`gEwramData + 0x4DC`, calls `sub_080230A8` otherwise. `src/runtime/aos_weapon.c`
+ports classes 0 to 5 and
 `src/runtime/aos_effect.c` the shared effects; the runtime draws the blade
 or gun, rotating class 1 about the entity position (`--hitboxes` outlines
 the active hitbox).

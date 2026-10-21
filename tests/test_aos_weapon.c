@@ -172,6 +172,23 @@ int main(void) {
         ++frames_alive;
     }
     assert(bounced && frames_alive < 200 && (casing.y >> 16) > 160);
+
+    /* Class 5 (sub_08022DEC): created like class 0 but kept when Soma's
+     * attack flag clears, until its animation ends (6 frames). */
+    soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(159), &body);
+    soma.weapon = (AosWeapon){5, 1, {0x30, 0x31, 0x32, 0x33, 0x34}, 7, 0};
+    soma.weapon_active = true;
+    soma.flags |= AOS_FLAG_ATTACKING;
+    weapon = (AosWeaponEntity){0};
+    aos_weapon_update(&weapon, &soma, &frames, NULL, NULL);
+    assert(weapon.active && weapon.weapon_class == 5);
+    soma.flags &= ~(uint32_t)AOS_FLAG_ATTACKING;
+    life = 1;
+    while (weapon.active && life < 50) {
+        aos_weapon_update(&weapon, &soma, &frames, NULL, NULL);
+        ++life;
+    }
+    assert(life == 6 && !soma.weapon_active);
     puts("aos_weapon: ok");
     return 0;
 }

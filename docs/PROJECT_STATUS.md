@@ -2,6 +2,14 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0439 - Aria class 5 weapon entity; weapon entity functional
+
+- Ported class 5 (`sub_08022DEC`): class 0 without the deletion on Soma's
+  `0x20`; only `sub_08033F58` (a player copy driven by `gEwramData +
+  0x4DC`, not ported) creates it, so it is unit-tested only.
+- Checked classes 0, 2 and 3 in room 0/15 (weapons 0, 40 and 50 at frames
+  6 and 10) beside classes 1 and 4: the weapon entity is now functional.
+
 ## Patch 0438 - Aria class 4 guns, shared effect module
 
 - Ported the class 4 weapon entity `sub_08022A54` (records 55 and 56):

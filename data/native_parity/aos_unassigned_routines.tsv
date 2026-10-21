@@ -2624,7 +2624,6 @@ aos:c:src/code/code_080211F0.c:sub_08022184	sub_08022184	enemies	referrers			c_f
 aos:c:src/code/code_080211F0.c:sub_080221B0	sub_080221B0	unclassified				c_function	0x080221B0	src/code/code_080211F0.c	1078	0	0
 aos:c:src/code/code_080211F0.c:sub_080221C8	sub_080221C8	unclassified				c_function	0x080221C8	src/code/code_080211F0.c	1087	0	0
 aos:c:src/code/code_080211F0.c:sub_08022A54_inline_0	sub_08022A54_inline_0	unclassified				c_function		src/code/code_080211F0.c	1489	1	1
-aos:c:src/code/code_080211F0.c:sub_08022DEC	sub_08022DEC	unclassified		technical	exclusive_callees	c_function	0x08022DEC	src/code/code_080211F0.c	1674	0	13
 aos:c:src/code/code_080211F0.c:sub_080230A8	sub_080230A8	unclassified		technical	exclusive_callees	c_function	0x080230A8	src/code/code_080211F0.c	1806	2	2
 aos:c:src/code/code_080211F0.c:sub_08023144	sub_08023144	unclassified		technical	exclusive_callees	c_function	0x08023144	src/code/code_080211F0.c	1832	0	6
 aos:c:src/code/code_080211F0.c:sub_0802326C	sub_0802326C	unclassified		technical	exclusive_callees	c_function	0x0802326C	src/code/code_080211F0.c	1890	1	1

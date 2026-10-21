@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 95 | 3478 |
+| Castlevania: Aria of Sorrow | 96 | 3477 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1163,13 +1163,14 @@ Next action: Port the remaining native Soma states.
 
 [?] **`aos.weapons.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
 
-[~] **`aos.weapons.weapon_entity` — Soma weapon entity and attack boxes.** Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime) and class 4 (sub_08022A54: the gun sprite at Soma's hand, the accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, its wall impact and the bouncing shell casing of sub_080228F8) are ported; class 5 (sub_08022DEC) remains open.
+[+] **`aos.weapons.weapon_entity` — Soma weapon entity and attack boxes.** Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime), class 4 (sub_08022A54: the gun, its accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, the wall impact and the bouncing casing of sub_080228F8) and class 5 (sub_08022DEC: class 0 without the deletion on Soma's 0x20) are ported.
 
-Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_08031EA4`, `aos:asm:asm/code/code_08040A38.s:sub_08042884`, `aos:c:src/code/code_080211F0.c:sub_080221CC`, `aos:c:src/code/code_080211F0.c:sub_080224BC`, `aos:c:src/code/code_080211F0.c:sub_080228F8`, `aos:c:src/code/code_080211F0.c:sub_08022A54`, `aos:c:src/code/code_08039340.c:sub_0803E058`.  
+Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_08031EA4`, `aos:asm:asm/code/code_08040A38.s:sub_08042884`, `aos:c:src/code/code_080211F0.c:sub_080221CC`, `aos:c:src/code/code_080211F0.c:sub_080224BC`, `aos:c:src/code/code_080211F0.c:sub_080228F8`, `aos:c:src/code/code_080211F0.c:sub_08022A54`, `aos:c:src/code/code_080211F0.c:sub_08022DEC`, `aos:c:src/code/code_08039340.c:sub_0803E058`.  
 Local implementation: [`src/runtime/aos_weapon.c`](../src/runtime/aos_weapon.c), [`src/runtime/aos_effect.c`](../src/runtime/aos_effect.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_weapons.py`](../scripts/aos_weapons.py), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_weapon.c`](../tests/test_aos_weapon.c), [`tests/test_aos_soma_sprite.py`](../tests/test_aos_soma_sprite.py).
-Known divergences: The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported.  
-Next action: Port the class 5 entity of sub_08022DEC.
+Known divergences: The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only.  
+Next action: Port sub_08033F58's player copy if its data source is traced; play the sounds once the Aria sound path exists.
+Evidence: in game: `aria area_00_room_015 (--spawn 120 446 --hitboxes): weapons 0, 40 and 50 (classes 0, 2, 3) at frames 6 and 10, weapon 18 (class 1) sweeping at frames 3, 7, 11 and 16, weapon 55 (class 4) firing at frames 4, 6, 9 and 14`.
 
 ### Upgrades and equipment
 

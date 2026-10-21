@@ -102,7 +102,8 @@ void aos_weapon_update(AosWeaponEntity *weapon, AosSoma *soma, const AosWeaponFr
         if (weapon->weapon_class == 4) start_shot(weapon, soma, random);
         aos_anim_start(&weapon->anim, frames->anims, 0, false);
     }
-    if (!(soma->flags & AOS_FLAG_ATTACKING)) {
+    /* sub_08022DEC (class 5) keeps following without the 0x20 check. */
+    if (!(soma->flags & AOS_FLAG_ATTACKING) && weapon->weapon_class != 5) {
         delete_weapon(weapon, soma);
         return;
     }

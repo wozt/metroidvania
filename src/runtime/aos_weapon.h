@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Aria of Sorrow weapon entity of classes 0 to 3.
+/* Aria of Sorrow weapon entity of classes 0 to 5.
  *
  * Port of the lifetime and placement of cvaos sub_080221CC (classes 0, 2
  * and 3): created with the attack (sub_080230A8), it plays its animation
@@ -16,8 +16,10 @@
  * accelerating by 8.0 per frame from its fourth frame, with the box
  * (-8, -4, 16, 8) of sub_08042884(e, 0x0810FCF8) live from its third frame
  * until it meets a wall (an impact effect there); a shell casing is
- * ejected at creation. Damage (sub_0802346C / sub_080234B0), the sounds and
- * class 5 are not ported. No SDL. */
+ * ejected at creation. Class 5 (sub_08022DEC) is class 0 without the
+ * deletion on Soma's 0x20; only sub_08033F58 (a player copy driven by
+ * gEwramData + 0x4DC) creates it, as the attack refuses class 5. Damage
+ * (sub_0802346C / sub_080234B0) and the sounds are not ported. No SDL. */
 #ifndef AOS_WEAPON_H
 #define AOS_WEAPON_H
 

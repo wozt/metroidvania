@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-21T21:11:02+00:00",
+ "generated_at": "2026-10-21T21:12:50+00:00",
  "git": {
-  "commit": "d6f0be3",
+  "commit": "0ee5754",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 19,
-    "functional": 112,
+    "partial": 18,
+    "functional": 113,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 112,
-   "functional_or_better_percent": 78.9,
+   "functional_or_better": 113,
+   "functional_or_better_percent": 79.6,
    "with_passing_tests": 130,
    "with_passing_tests_percent": 91.5,
    "unknown_or_blocked": 1,
@@ -380,15 +380,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 6,
-    "functional": 7,
+    "partial": 5,
+    "functional": 8,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 7,
-   "functional_or_better_percent": 53.8,
+   "functional_or_better": 8,
+   "functional_or_better_percent": 61.5,
    "with_passing_tests": 13,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -9111,8 +9111,8 @@
    "area": "aos",
    "category": "weapons",
    "title": "Soma weapon entity and attack boxes",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_weapon.c",
     "src/runtime/aos_effect.c",
@@ -9129,19 +9129,22 @@
     "sub_080221CC",
     "sub_080224BC",
     "sub_08022A54",
+    "sub_08022DEC",
     "sub_080228F8",
     "sub_08031EA4",
     "sub_08042884",
     "sub_0803E058"
    ],
-   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime) and class 4 (sub_08022A54: the gun sprite at Soma's hand, the accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, its wall impact and the bouncing shell casing of sub_080228F8) are ported; class 5 (sub_08022DEC) remains open.",
-   "next_action": "Port the class 5 entity of sub_08022DEC.",
+   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only. Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime), class 4 (sub_08022A54: the gun, its accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, the wall impact and the bouncing casing of sub_080228F8) and class 5 (sub_08022DEC: class 0 without the deletion on Soma's 0x20) are ported.",
+   "next_action": "Port sub_08033F58's player copy if its data source is traced; play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_weapon.c",
      "tests/test_aos_soma_sprite.py"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "aria area_00_room_015 (--spawn 120 446 --hitboxes): weapons 0, 40 and 50 (classes 0, 2, 3) at frames 6 and 10, weapon 18 (class 1) sweeping at frames 3, 7, 11 and 16, weapon 55 (class 4) firing at frames 4, 6, 9 and 14"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -11733,6 +11736,12 @@
  },
  "timeline": [
   {
+   "commit": "0ee5754",
+   "date": "2026-10-21",
+   "subject": "Port Aria class 4 guns and move shared effects to their own module",
+   "scope": "project"
+  },
+  {
    "commit": "d6f0be3",
    "date": "2026-10-21",
    "subject": "Port the Aria class 1 weapon swing and trace the affine rotation",
@@ -12205,12 +12214,6 @@
    "date": "2026-10-18",
    "subject": "Complete Acid Worm death choreography",
    "scope": "project"
-  },
-  {
-   "commit": "8fd1d44",
-   "date": "2026-10-18",
-   "subject": "Restore native Acid Worm body motion",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12271,9 +12274,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 95,
-    "routines_attached_to_features": 95,
-    "unassigned_routines": 3478,
+    "routines_cited_by_features": 96,
+    "routines_attached_to_features": 96,
+    "unassigned_routines": 3477,
     "call_edges": 14228
    }
   },

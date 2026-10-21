@@ -772,11 +772,14 @@ static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void 
     }
 }
 
-/* Enemies: sprites face left; mirrored ones are flipped around x. */
+/* Enemies: sprites face left; mirrored ones are flipped around x. The
+ * zombie's puddles (priority + 1) are drawn first, behind the others. */
 static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
                          int cam_x, int cam_y) {
-    for (size_t i = 0; i < room->entity_count; ++i) {
+    for (size_t n = 0; n < 2 * room->entity_count; ++n) {
+        size_t i = n % room->entity_count;
         const AriaEntity *e = &room->entities[i];
+        if ((e->enemy.role == AOS_ROLE_PUDDLE) != (n < room->entity_count)) continue;
         if (!e->spawned || e->kind != ARIA_KIND_ENEMY || e->id >= ENEMY_KINDS ||
             e->enemy.removed || e->enemy.hidden || e->enemy.anim.id >= AOS_ENEMY_MAX_ANIMS ||
             e->enemy.anim.frame >= MAX_FRAMES)

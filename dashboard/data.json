@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-21T19:59:38+00:00",
+ "generated_at": "2026-10-21T20:05:20+00:00",
  "git": {
-  "commit": "2e96b8d",
+  "commit": "dfc7571",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 21,
-    "functional": 110,
+    "partial": 20,
+    "functional": 111,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 110,
-   "functional_or_better_percent": 77.5,
+   "functional_or_better": 111,
+   "functional_or_better_percent": 78.2,
    "with_passing_tests": 130,
    "with_passing_tests_percent": 91.5,
    "unknown_or_blocked": 1,
@@ -380,15 +380,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 8,
-    "functional": 5,
+    "partial": 7,
+    "functional": 6,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 5,
-   "functional_or_better_percent": 38.5,
+   "functional_or_better": 6,
+   "functional_or_better_percent": 46.2,
    "with_passing_tests": 13,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -8642,27 +8642,43 @@
    "area": "aos",
    "category": "enemies",
    "title": "Zombie and generic enemy death",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/aos_enemy.c"
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
    ],
    "tests": [
     "tests/test_aos_enemy.c"
    ],
    "dependencies": [],
    "native_routines": [
+    "EnemyZombieCreate",
+    "EnemyZombieUpdate",
+    "sub_0807AD28",
+    "sub_0807B034",
+    "sub_0807B0DC",
+    "sub_0807B1CC",
+    "sub_0807B258",
+    "sub_0807B33C",
+    "sub_0807B310",
+    "sub_0807B3C8",
+    "sub_0807B3E4",
     "sub_08069A00",
     "sub_0806AEAC",
+    "sub_0806AD24",
     "sub_0806E524"
    ],
-   "limitations": "Zombie spawning, terrain walking and the generic death with its flames (a flame every 4 frames over 16 x 12 pixels) are covered; the complete enemy framework is not.",
-   "next_action": "Extend the generic enemy framework to further native enemies.",
+   "limitations": "Sounds (0x70), palette bits, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced). Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported.",
+   "next_action": "Play the zombie's sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -10016,7 +10032,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark and dust of sub_08045CEC (animations 1, 16 and 4).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark and dust of sub_08045CEC (animations 1, 16 and 4).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -11702,6 +11718,12 @@
  },
  "timeline": [
   {
+   "commit": "dfc7571",
+   "date": "2026-10-21",
+   "subject": "Port Aria axe armor and skull archer death effects",
+   "scope": "project"
+  },
+  {
    "commit": "2e96b8d",
    "date": "2026-10-21",
    "subject": "Port Aria grenade burst and explosion particles",
@@ -12174,12 +12196,6 @@
    "date": "2026-10-18",
    "subject": "Restore Deorem head attack choreography",
    "scope": "project"
-  },
-  {
-   "commit": "9d39902",
-   "date": "2026-10-18",
-   "subject": "Restore Deorem body choreography",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12240,9 +12256,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 75,
-    "routines_attached_to_features": 75,
-    "unassigned_routines": 3498,
+    "routines_cited_by_features": 86,
+    "routines_attached_to_features": 86,
+    "unassigned_routines": 3487,
     "call_edges": 14228
    }
   },
@@ -14482,13 +14498,15 @@
      {
       "id": 1,
       "name": "Zombie",
-      "status": "partial",
+      "status": "functional",
       "note": "Zombie and generic enemy death",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c"
        ],
-       "in_game_check": [],
+       "in_game_check": [
+        "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"
+       ],
        "emulator_compared": false,
        "played_through": false
       },

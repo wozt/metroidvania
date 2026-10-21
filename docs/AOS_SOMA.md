@@ -565,10 +565,25 @@ off while rising and sinking. `EnemyZombieUpdate` also makes it vanish
 outside the screen margins of `sub_0806D128` (table `0x08118D08`, entry 4:
 48 x 48). Hit callback `sub_0807B0DC`: damage as above; at 0 HP, sound
 0x70, death animation 3 and the generic death `sub_0806AEAC` (state 1: a
-40-frame blink with the same pattern, particles every 4 frames, then the
-deletion; the gore of `sub_0807B258` and `sub_080683BC` are not ported). The
-dust effects `sub_0807B1CC` / `sub_0807B33C` and state 2 (global
-`0x8E & 0x40`) are not ported.
+40-frame blink with the same pattern, flames every 4 frames, then the
+deletion; `sub_080683BC` is not ported). At 0 HP it also throws two pieces
+of `sub_0807B258` (sprite frame 0xD at x - 4 + (r & 0x7FFFF), y - 26 +
+(r & 0x3FFFF); once created, vx = (r & 0x1FFFF) - 1.0, vy = -1.0 -
+(r & 0xFFFF), ay 0x1800, moved by `sub_0806D3D8` and deleted below the
+zombie's y). While walking (step 1), on walk frame 0 it drops a drip
+(`sub_0807B1CC`: frame 0xD at (+9 / -9, -24) for animation 4, (-9 / +7,
+-22) for animation 1, unmirrored / mirrored; ay 0xA00 through
+`sub_0806D384` / `sub_0806D3CC`, 31 updates) and on frames 0 and 2 a puddle
+(`sub_0807B33C`: frame 0 at its feet, priority + 1, 121 updates), each once
+until frames 1 or 3 re-arm them (`+0x14`, `+0x15`). `EnemyZombieUpdate`
+calls `sub_0806AD24`: alive with `+0x2D` set (8 after a hit), it counts it
+down and only runs the collision pass (not while dying). Under the global
+`0x8E & 0x40` it is created in state 2 (`sub_0807B034`) without the
+collision block, the floor snap or the facing: once the rise ends it plays
+walk animation 1 or 4 in place, dropping a drip ((-7 / +7, -22) for
+animation 1) whenever the animation is at frame 0, tick 0, with no
+collision pass. Sounds, palette bits and the tracking list of
+`sub_08021924` are not ported.
 
 Blue crow (enemy 0x09, `EnemyBlueCrowCreate` / `EnemyBlueCrowUpdate`):
 tiles `0x081F4274`, palette `0x0820BF10` bank 0, frames `0x0824EC04`;

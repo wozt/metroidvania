@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0435 - Aria zombie drips, puddles, gore and hit stun
+
+- A walking zombie now drops drips (`sub_0807B1CC`, sprite frame 0xD) and
+  leaves puddles (`sub_0807B33C`, frame 0, drawn behind enemies); its death
+  throws two gore pieces (`sub_0807B258`) beside the generic death's
+  flames.
+- Ported the hit stun of `sub_0806AD24` for the zombie and its state 2
+  (`sub_0807B034`) under gEwramData + 0x8E bit 0x40.
+- Checked in room 0/3 (`--spawn 160 176 --atk 80 --repeat 2`, buttons
+  0x12): puddle trails and drips while walking, the kill at frame 169 with
+  gore and flames at frames 175 and 189. The zombie is now functional, so
+  every ported Aria enemy is functional; sounds, palette bits and the
+  tracking list remain open for all of them.
+
 ## Patch 0434 - Aria axe armor and skull archer effects
 
 - Ported the drifting effect `sub_08045CEC` / `sub_08045C9C` and the

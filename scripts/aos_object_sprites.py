@@ -65,7 +65,8 @@ ENEMIES = {
     "bat": {"id": 0x00, "graphics": 0x081F422C, "palette": 0x0820BD4C, "bank": 0,
             "frames": 0x0824B2C4},     # EnemyBatCreate 0x080AD2A8
     "zombie": {"id": 0x01, "graphics": 0x081CBF8C, "palette": 0x0820A62C, "bank": 0,
-               "frames": 0x082178B8},  # sub_0807B404 (EnemyZombieCreate 0x0807ABEC)
+               "frames": 0x082178B8,  # sub_0807B404 (EnemyZombieCreate 0x0807ABEC)
+               "static_frames": (0, 0xD)},  # puddle (sub_0807B33C), drip and gore
     "blue_crow": {"id": 0x09, "graphics": 0x081F4274, "palette": 0x0820BF10, "bank": 0,
                   "frames": 0x0824EC04,   # EnemyBlueCrowCreate 0x080C9A6C
                   "static_frames": (8,)},  # its feathers (sub_080C9E2C)

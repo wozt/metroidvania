@@ -86,7 +86,7 @@ enum {
  * kind (sharing its sprites and record). */
 enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3,
        AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5,
-       AOS_ROLE_GIB = 6 };
+       AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -119,6 +119,7 @@ typedef struct {
     int8_t volley_count;    /* + 0x14 of a shooter: volleys fired, 0..4 */
     uint8_t volley, shot;   /* current volley list and entry (+ 0x1C) */
     int8_t away;            /* + 0x20 at death: +1 / -1, away from the attacker */
+    bool dropped, puddled;  /* + 0x14, + 0x15 of a walking zombie */
     AosBox own_hurt, own_attack;
     AosEnemyStats stats;
     AosCombat combat;

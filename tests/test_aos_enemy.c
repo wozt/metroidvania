@@ -47,10 +47,35 @@ static void zombie_tests(void) {
         ++frames;
     }
     assert(z.step == 1 && z.anim.id == 4 && z.walk_timer == 600);
-    /* It walks left in bursts of 2.0 that decay by 3/4 per frame. */
+    /* It walks left in bursts of 2.0 that decay by 3/4 per frame; on walk
+     * frame 0 it drops a drip at (+9, -24) (animation 4, unmirrored) and a
+     * puddle at its feet, once each. */
     int32_t x0 = z.x;
-    aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+    AosHitReport walk_hit = aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48,
+                                             always_zero);
     assert(z.x < x0 && (z.y >> 16) == 159);
+    assert(walk_hit.child_count == 2);
+    AosEnemy drip = walk_hit.children[0], puddle = walk_hit.children[1];
+    assert(drip.role == AOS_ROLE_DRIP && drip.static_frame == 0xD && drip.x == z.x + 0x90000);
+    assert(drip.y == z.y - 0x180000 && drip.timer == 0x1E && drip.ay == 0xA00);
+    assert(puddle.role == AOS_ROLE_PUDDLE && puddle.static_frame == 0 && puddle.x == z.x);
+    walk_hit = aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+    assert(walk_hit.child_count == 0);
+    /* sub_0807B310: the drip falls for 31 updates; sub_0807B3C8: the puddle
+     * stays 121. */
+    int life = 0;
+    int32_t dy0 = drip.y;
+    while (!drip.removed && life < 100) {
+        aos_enemy_update(&drip, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+        ++life;
+    }
+    assert(life == 31 && drip.y > dy0 && drip.vy == 31 * 0xA00);
+    life = 0;
+    while (!puddle.removed && life < 300) {
+        aos_enemy_update(&puddle, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+        ++life;
+    }
+    assert(life == 121);
     /* Turned toward a wall on the right, it stops there and sinks, then
      * vanishes after the 60-frame pause and the sink animation. */
     z.mirrored = true;
@@ -104,9 +129,31 @@ static void zombie_tests(void) {
     const AosHitbox blade_box[] = {{0, -30, 30, 20, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
+    /* A blow it survives: 8 frames frozen (sub_0806AD24), the collision
+     * pass still running. */
+    z.hp = 30;
+    AosEnemy before = z;
     AosHitReport hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100,
                                         48, always_zero);
+    assert(hit.enemy_hit && !hit.killed && z.hit_flash == 8);
+    AosEnemy frozen = z;
+    for (int i = 0; i < 8; ++i) {
+        aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+        assert(z.x == frozen.x && z.anim.tick == frozen.anim.tick && z.hit_flash == 7 - i);
+    }
+    z = before;
+    z.hp = 1;
+    /* The killing blow: sub_0807B258 throws two pieces (frame 0xD) from
+     * x - 4 and y - 26 (random() = 0). */
+    hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 48, always_zero);
     assert(hit.enemy_hit && hit.killed && z.state == 1 && z.anim.id == 3 && z.timer == 0x28);
+    /* (The walk of that frame may also drop a drip and a puddle first.) */
+    assert(hit.child_count >= 2);
+    const AosEnemy *gore = &hit.children[hit.child_count - 2];
+    assert(gore[0].role == AOS_ROLE_GIB && gore[1].role == AOS_ROLE_GIB);
+    assert(gore[0].static_frame == 0xD && gore[0].x == z.x - 0x40000);
+    assert(gore[0].y == z.y - 0x1A0000 && gore[0].vx == -0x10000);
+    assert(gore[0].vy == -0x10000 && gore[0].walk_timer == z.y);
     /* sub_0806AEAC: a flame every 4 frames (timer 40, 36 .. 4), over 16 x
      * 12 pixels centred 6 pixels above it. */
     frames = 0;
@@ -123,6 +170,31 @@ static void zombie_tests(void) {
         ++frames;
     }
     assert(frames == 40 && flames == 10);
+
+    /* Under gEwramData + 0x8E bit 0x40: state 2 (sub_0807B034), no floor
+     * snap; once the rise ends it walks in place with a drip at the start
+     * of each cycle, without a collision pass. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy idle;
+    assert(aos_enemy_create(&idle, AOS_ENEMY_ZOMBIE, 250, 140, 0, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(idle.state == 2 && (idle.y >> 16) == 140);
+    int drips = 0;
+    soma.x = idle.x;
+    soma.y = idle.y;
+    for (int i = 0; i < 40; ++i) {
+        hit = aos_enemy_update(&idle, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 48, always_zero);
+        assert(!hit.soma_hit && idle.x == AOS_FIXED(250));
+        for (int c = 0; c < hit.child_count; ++c) {
+            assert(hit.children[c].role == AOS_ROLE_DRIP);
+            assert(hit.children[c].x == idle.x + 0x90000);
+            ++drips;
+        }
+    }
+    /* The walk starts already stepped (tick 1) on the frame it is played,
+     * so only the later returns to frame 0, tick 0 drip within 40 frames
+     * of a 12-tick cycle. */
+    assert(idle.step == 1 && idle.anim.id == 4 && drips == 2);
 }
 
 static void crow_tests(void) {

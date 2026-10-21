@@ -10,8 +10,14 @@
  * affine angle from -0x3000 by 0x980 (variant 0, 15 frames) or 0xCC0 (11
  * frames), mirrored when facing left, and lives 26 or 21 frames
  * (0x080E13B8[variant]) regardless of its animation. The hitbox comes from
- * the current frame record, unrotated. Damage (sub_0802346C), the sounds
- * and classes 4 and 5 are not ported. No SDL. */
+ * the current frame record, unrotated. Class 4 (sub_08022A54) fires: its
+ * sprite plays at Soma's position (12 pixels lower when crouched) while
+ * the entity itself, the shot, moves from Soma + 8.0, 28 pixels above,
+ * accelerating by 8.0 per frame from its fourth frame, with the box
+ * (-8, -4, 16, 8) of sub_08042884(e, 0x0810FCF8) live from its third frame
+ * until it meets a wall (an impact effect there); a shell casing is
+ * ejected at creation. Damage (sub_0802346C / sub_080234B0), the sounds and
+ * class 5 are not ported. No SDL. */
 #ifndef AOS_WEAPON_H
 #define AOS_WEAPON_H
 
@@ -19,6 +25,8 @@
 #include <stdint.h>
 
 #include "aos_anim.h"
+#include "aos_collision.h"
+#include "aos_effect.h"
 #include "aos_soma.h"
 
 typedef struct {
@@ -42,11 +50,21 @@ typedef struct {
     uint8_t divisor;            /* + 0x0C: x offset = min(timer / it + 1, 3) */
     uint8_t lifetime;           /* + 0x19 */
     int32_t angle, angle_step;  /* + 0x1C, + 0x20: affine angle, 0x10000 a turn */
+    /* Class 4: the shot's offset from Soma (+ 0x48, + 0x4C, 16.16), its
+     * acceleration (+ 0x50), + 0x1C (a wall was hit) and its attack box. */
+    int32_t shot_x, shot_y, shot_ax;
+    bool shot_stopped, shot_box;
+    /* Effects created by this update (impact, casing). */
+    uint8_t effect_count;
+    AosEffect effects[2];
     AosAnimState anim;
 } AosWeaponEntity;
 
-/* Runs after aos_soma_update, like the entity update loop. */
-void aos_weapon_update(AosWeaponEntity *weapon, AosSoma *soma, const AosWeaponFrames *frames);
+/* Runs after aos_soma_update, like the entity update loop; the layer and
+ * random() (RandomNumberGenerator) serve class 4 and may be NULL for the
+ * other classes. */
+void aos_weapon_update(AosWeaponEntity *weapon, AosSoma *soma, const AosWeaponFrames *frames,
+                       const AosCollision *layer, uint32_t (*random)(void));
 /* Active hitbox in room pixels; false when the frame has none. */
 bool aos_weapon_hitbox(const AosWeaponEntity *weapon, const AosSoma *soma,
                        const AosWeaponFrames *frames, int *x, int *y, int *w, int *h);

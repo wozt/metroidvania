@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0438 - Aria class 4 guns, shared effect module
+
+- Ported the class 4 weapon entity `sub_08022A54` (records 55 and 56):
+  the gun drawn at Soma's hand, the accelerating shot with the box packed
+  in the pointer `0x0810FCF8` (-8, -4, 16, 8), its wall impact and the
+  bouncing shell casing `sub_080228F8`.
+- Moved the shared effects to `src/runtime/aos_effect.c` / `.h` (weapons
+  now emit them too) and added the impact and casing; the exporter adds
+  `Effect/impact` and `Effect/casing`.
+- Checked in room 0/15 with weapon 55 (`--spawn 120 446 --weapon 55
+  --hitboxes`, frames 4, 6, 9 and 14): the gun fires with its muzzle flash
+  and the shot box leaves the barrel. Class 5 remains open.
+
 ## Patch 0437 - Aria class 1 weapon swing and traced affine rotation
 
 - Ported the class 1 weapon entity `sub_080224BC` (records 18 to 39): the

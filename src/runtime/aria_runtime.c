@@ -52,7 +52,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
 #define MAX_EFFECTS 32      /* shared effects (flames, blood) alive at once */
 static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "smoke",
                                                           "dark_smoke", "fire", "spark",
-                                                          "dust"};
+                                                          "dust", "impact", "casing"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 
@@ -461,9 +461,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     const uint8_t *blink = NULL;
     for (int id = 0; id < ENEMY_KINDS && !blink; ++id)
         if (combat->kinds[id]) blink = combat->kinds[id]->blink;
+    const AosEffectWorld world = {layer, cam_x, cam_y, aos_random};
     size_t kept = 0;
     for (size_t i = 0; i < room->effect_count; ++i)
-        if (aos_effect_update(&room->effects[i], combat->effects[room->effects[i].kind], blink))
+        if (aos_effect_update(&room->effects[i], combat->effects[room->effects[i].kind], blink,
+                              &world))
             room->effects[kept++] = room->effects[i];
     room->effect_count = kept;
     return sound;
@@ -1219,7 +1221,7 @@ int main(int argc, char **argv) {
     }
     /* Only the class 0, 2 and 3 entity (sub_080221CC) is ported. */
     static AriaWeaponSprite weapon_sprite;
-    bool weapon_ported = soma.weapon.weapon_class <= 3;
+    bool weapon_ported = soma.weapon.weapon_class <= 4;
     bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
     AosWeaponEntity weapon_entity = {0};
     AriaCombat combat = {{NULL}, {NULL}, &weapon_entity,
@@ -1375,7 +1377,14 @@ int main(int argc, char **argv) {
             aos_combat_tick(&soma.combat);
             follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
             /* Entity slots: the weapon entity updates before the enemies. */
-            if (weapon_loaded) aos_weapon_update(&weapon_entity, &soma, &weapon_sprite.data);
+            if (weapon_loaded) {
+                aos_weapon_update(&weapon_entity, &soma, &weapon_sprite.data, &layer, aos_random);
+                /* Its impact and casing join the room's effects. */
+                for (int k = 0; k < weapon_entity.effect_count && room.effect_count < MAX_EFFECTS;
+                     ++k)
+                    if (combat.effects[weapon_entity.effects[k].kind])
+                        room.effects[room.effect_count++] = weapon_entity.effects[k];
+            }
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
         }
 

@@ -411,7 +411,7 @@ through its edge loads the native neighbour at the native arrival position;
 point is a test placement (a floor near the room centre, or `--spawn X Y`).
 Arrows (or a gamepad, see "Gamepads") move, Down crouches, X/F attacks (B; `--weapon none|INDEX` after
 `python3 -m scripts.aos_weapons`, unarmed by default; blades of weapon
-classes 0 to 3 are drawn (class 1 swings with its affine rotation), `--hitboxes` outlines their hitbox),
+classes 0 to 4 are drawn (class 1 swings with its affine rotation, class 4 fires), `--hitboxes` outlines their hitbox),
 Space/Z jumps (A), Down + jump drops through
 one-way platforms or slides, Q/Left Shift is L (backdash; Up + L high jump),
 jump in the air jumps again and Down + jump after it dive-kicks. All five

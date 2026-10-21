@@ -32,6 +32,7 @@
 #include "aos_anim.h"
 #include "aos_collision.h"
 #include "aos_combat.h"
+#include "aos_effect.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
 
@@ -126,44 +127,6 @@ typedef struct {
     AosAnimState anim;
 } AosEnemy;
 
-/* Shared effects drawn from the common frames 0x0820ED60, each with its
- * own animation set (one animation, index 0):
- * - the death flame sub_0806E524 (animation 0, OBJ row 7: Effect/flame),
- *   rising 0.5 per frame after its first one;
- * - the effect sub_0806B5DC of type 1 (sub_0806E664(x, y, 1); table
- *   0x08526D0C: animation 13, OBJ row 8: Effect/blood), still, priority 3;
- * both deleted when their animation ends;
- * - the particles of sub_08068F78 (`particle`), created by sub_0806D894
- *   (animation 5, OBJ row 6: Effect/smoke), sub_0806D930 (here animation 5,
- *   row 5: Effect/dark_smoke) and sub_0806D644 (animation 0, row 7: the
- *   flame art): + 0x18 bit 0 / 1 keeps 7/8 of vx / vy each frame, then
- *   sub_0806D3D8(e, 8.0) moves them, bit 2 blinks them with 0x08118CE0
- *   over 40 frames; deleted on the update after their animation ends;
- * - the drifting effects of sub_08045CEC(x, y, animation, row) updated by
- *   sub_08045C9C (`drift`): x += vx, vx += ax, y += vy, vy += ay, then the
- *   animation step, deleted when it ends; priority 0x0D. Used with
- *   animation 1, row 8 (Effect/fire), 16, row 6 (Effect/spark) and 4,
- *   row 6 (Effect/dust). */
-enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
-       AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_FIRE = 4, AOS_EFFECT_SPARK = 5,
-       AOS_EFFECT_DUST = 6, AOS_EFFECT_KINDS = 7 };
-
-typedef struct {
-    uint8_t kind;           /* AOS_EFFECT_*: the art */
-    int32_t x, y;           /* + 0x40, + 0x44 */
-    bool mirrored;          /* + 0x58 bit 0x40, at random */
-    bool started;           /* + 0x0A: 0 on the first update */
-    bool particle;          /* sub_08068F78 */
-    bool drift;             /* sub_08045C9C */
-    int32_t ax, ay;         /* + 0x50, + 0x54 of a drifting effect */
-    uint8_t flags;          /* + 0x18 of a particle */
-    int32_t vx, vy;         /* + 0x48, + 0x4C of a particle */
-    uint8_t timer;          /* + 0x0D: blink counter of a particle */
-    bool hidden;            /* + 0x58 bit 0x20 */
-    bool cycle_done;        /* + 0x59 bit 0 */
-    AosAnimState anim;
-} AosEffect;
-
 #define AOS_ENEMY_MAX_EFFECTS 4  /* at most 3 per frame (sub_08092CCC) */
 
 /* What one collision pass did. */
@@ -194,12 +157,6 @@ uint16_t aos_arctan2(int16_t x, int16_t y);
  * through the table 0x085254D8) and cleared by sub_0804CC14; its meaning is
  * not traced. Cleared by default. */
 void aos_enemy_set_flag_8e_40(bool set);
-/* sub_0806E524 / sub_0806B5DC / sub_08068F78 for one frame with the
- * effect kind's animation set and the blink pattern 0x08118CE0 (NULL:
- * never hidden); false once the effect is deleted. A particle's first call
- * also performs its creation (animation start and step), which the game
- * does in the creating entity's frame. */
-bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t *blink);
 /* Creates enemy `id` at a record position; false for unported enemies. */
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,

@@ -714,9 +714,9 @@ static void armor_tests(void) {
     AosEffect fire = {.kind = AOS_EFFECT_FIRE, .drift = true, .y = AOS_FIXED(40), .vy = 0x8000,
                       .ay = -0x1000};
     int life = 1;
-    assert(aos_effect_update(&fire, &fire_set, NULL) && fire.y == AOS_FIXED(40) + 0x8000);
+    assert(aos_effect_update(&fire, &fire_set, NULL, NULL) && fire.y == AOS_FIXED(40) + 0x8000);
     assert(fire.vy == 0x7000);
-    while (aos_effect_update(&fire, &fire_set, NULL) && life < 50) ++life;
+    while (aos_effect_update(&fire, &fire_set, NULL, NULL) && life < 50) ++life;
     assert(life == 7);
 }
 
@@ -1059,7 +1059,7 @@ int main(void) {
     const AosAnimSet puff_set = {&puff_def, 1};
     AosEffect flame = {.x = AOS_FIXED(50), .y = AOS_FIXED(50)};
     int lifetime = 0;
-    while (aos_effect_update(&flame, &puff_set, NULL) && lifetime < 100) ++lifetime;
+    while (aos_effect_update(&flame, &puff_set, NULL, NULL) && lifetime < 100) ++lifetime;
     assert(lifetime == 19 && flame.y == AOS_FIXED(50) - 19 * 0x8000);
     /* sub_08068F78: + 0x18 = 7 keeps 7/8 of each speed before moving and
      * blinks from 0x08118CE0[0x28 - t]; deleted on the update after the
@@ -1068,17 +1068,17 @@ int main(void) {
     pattern[0x27] = 1;
     AosEffect smoke = {.kind = AOS_EFFECT_SMOKE, .particle = true, .flags = 7,
                        .x = AOS_FIXED(50), .y = AOS_FIXED(50), .vx = 0x10000, .vy = -0x8000};
-    assert(aos_effect_update(&smoke, &puff_set, pattern));
+    assert(aos_effect_update(&smoke, &puff_set, pattern, NULL));
     assert(smoke.vx == 0xE000 && smoke.vy == -0x7000 && smoke.x == AOS_FIXED(50) + 0xE000);
     assert(smoke.timer == 1 && smoke.hidden);
-    assert(aos_effect_update(&smoke, &puff_set, pattern) && smoke.vx == 0xC400 && !smoke.hidden);
+    assert(aos_effect_update(&smoke, &puff_set, pattern, NULL) && smoke.vx == 0xC400 && !smoke.hidden);
     lifetime = 2;
-    while (aos_effect_update(&smoke, &puff_set, pattern) && lifetime < 100) ++lifetime;
+    while (aos_effect_update(&smoke, &puff_set, pattern, NULL) && lifetime < 100) ++lifetime;
     /* 20 ticks: two steps on the creation frame, ended on call 19. */
     assert(lifetime == 19);
     AosEffect bare = {0};
     const AosAnimSet empty = {NULL, 0};
-    assert(!aos_effect_update(&bare, &empty, NULL));
+    assert(!aos_effect_update(&bare, &empty, NULL, NULL));
 
     /* Under gEwramData + 0x8E bit 0x40 the bat stays in state 4: no
      * ceiling search, animation 1, no collision pass. */

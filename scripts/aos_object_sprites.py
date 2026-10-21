@@ -13,8 +13,8 @@ looping sequence: its sprite frame colorized with each bank of the script.
 Enemies whose create routine is traced (``ENEMIES``) are exported the same
 way: every animation of their descriptor, colorized with their palette bank,
 as ``Enemy/<name>/anim_<n>``, with per-frame boxes (frame record +4 / +8) in
-``enemy_frames.tsv``. Shared effects (``EFFECTS``: the death flame, the blood splash, smoke particles and the
-drifting fire, spark and dust) are
+``enemy_frames.tsv``. Shared effects (``EFFECTS``: the death flame, the blood splash, smoke particles, the
+drifting fire, spark, dust and impact, and the shell casing) are
 exported as ``Effect/<name>/anim_<n>``. Offsets are relative to the entity position (the door
 base); components
 listed first are drawn on top (assumed OAM order; the door's components do
@@ -115,6 +115,13 @@ EFFECTS = {
               "frames": 0x0820ED60, "animations": (16,)},
     "dust": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 2,
              "frames": 0x0820ED60, "animations": (4,)},
+    # A class 4 shot meeting a wall (sub_08022A54: sub_08045CEC(.., 7, 8)).
+    "impact": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 4,
+               "frames": 0x0820ED60, "animations": (7,)},
+    # The shell casing sub_080228F8: sprite frame 0x35 with row 8, exported
+    # as a one-frame sequence.
+    "casing": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 4,
+               "frames": 0x0820ED60, "static_frame": 0x35},
 }
 SCREEN_MARGINS = 0x08118D08    # sub_0806D128: 7 (x, y) s16 margins
 WOODEN_DOOR = {
@@ -325,6 +332,15 @@ def produce(root: Path, rom_path: Path) -> dict:
                 bmp, left, top = bmp_from_pixels(pixels)
                 library.add(f"Enemy/{name}/frame_{frame_id}", [(bmp, 1, left, top)])
     for name, entity in EFFECTS.items():
+        if "static_frame" in entity:
+            tiles, sheet_width, _ = tile_sheet(rom, entity["graphics"])
+            colors = palette_bank(rom, entity["palette"], entity["bank"])
+            pixels = render_frame(tiles, sheet_width,
+                                  frame_components(rom, entity["frames"], entity["static_frame"]),
+                                  colors) or {(0, 0): (0, 0, 0)}
+            bmp, left, top = bmp_from_pixels(pixels)
+            library.add(f"Effect/{name}/anim_0", [(bmp, 1, left, top)])
+            continue
         for number, animation in zip(entity["animations"], descriptor_animations(rom, entity)):
             sprites = []
             for frame in animation:

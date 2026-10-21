@@ -63,7 +63,7 @@ fusion_enable_warnings(fusion_room_runtime)
 
 add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
-               src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c
+               src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
                src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/debug_menu.c)
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
@@ -350,14 +350,14 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_door_tests)
     add_test(NAME aos_door COMMAND fusion_aos_door_tests)
 
-    add_executable(fusion_aos_weapon_tests tests/test_aos_weapon.c src/runtime/aos_weapon.c
+    add_executable(fusion_aos_weapon_tests tests/test_aos_weapon.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
                    src/runtime/aos_soma.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_weapon_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_weapon_tests)
     add_test(NAME aos_weapon COMMAND fusion_aos_weapon_tests)
 
     add_executable(fusion_aos_enemy_tests tests/test_aos_enemy.c src/runtime/aos_enemy.c
-                   src/runtime/aos_weapon.c
+                   src/runtime/aos_weapon.c src/runtime/aos_effect.c
                    src/runtime/aos_soma.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_enemy_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_enemy_tests PRIVATE m)

@@ -263,10 +263,31 @@ clears; on frame changes the hitbox comes from the frame record, unrotated.
 parameters pa = cos / sx, pb = sin / sx, pc = -sin / sy, pd = cos / sy and
 negates pa and pb for hflip (pc, pd for vflip): the texture is flipped,
 then turned clockwise by the angle on screen (the axe uses the same call).
-Classes 4 (`sub_08022A54`, a projectile with wall collisions and effects)
-and 5 (`sub_08022DEC`) are not ported. `src/runtime/aos_weapon.c` ports
-classes 0 to 3; the runtime draws the blade, rotating class 1 about the
-entity position (`--hitboxes` outlines the active hitbox).
+Class 4 (`sub_08022A54`, records 55 and 56: guns) draws its sprite with
+`sub_08023508`, which puts the entity at Soma's X and Y + `+0x4C` (12 when
+crouched, else 0) only for the draw: the entity itself is the shot.
+Creation sets `+0x50` = 8.0 (negated facing left) and adds it to `+0x48`
+once, sets the hurtbox by `sub_08042884(e, 0x0810FCF8)`, which copies the
+pointer's own bytes F8 FC 10 08 as the box (-8, -4, 16, 8), leaves the attack
+box off, and creates a casing (`sub_080228F8`, placed by
+`sub_08031EA4(e, soma, 8, +0x4E - 26)`: 8 pixels ahead, mirrored like Soma;
+vx = (r & 0x7FFF) - 1.0 negated when facing left, vy = -1.25 - (r & 0x7FFF),
+the draws only when it is created). Each frame: the timer grows; at 3 (and
+no wall yet) the attack box goes on; above 3 `+0x48` += `+0x50`; the shot
+sits at Soma + (`+0x48`, `+0x4C` - 28); until `+0x1C` is set it probes the
+wall ahead (`sub_080020D8` moving right, `sub_0800210C` left, i.e. the
+pushes of `sub_080022E8` / `sub_080022A8` in mode 0) and on a push creates
+the impact `sub_08045CEC(x + push, y, 7, 8)`, sets `+0x1C` (sound 0x14E) and
+afterwards keeps the attack box off; it is deleted when its animation ends.
+The casing checks its cell first (bits 8 and 1: deleted), shows common
+frame 0x35 with row 8 and ay 0x3000, moves with `sub_0806D430` /
+`sub_0806D460`, bounces once on a solid cell 2 pixels below (vy = -(vy / 2),
+vx += `sub_0802D5EC(0x4000)`, sound 0x14F) and is deleted off screen
+(`sub_08068AD4(e, -16, -16, 0x110, 0xC0)`). Class 5 (`sub_08022DEC`) is not
+ported. `src/runtime/aos_weapon.c` ports classes 0 to 4 and
+`src/runtime/aos_effect.c` the shared effects; the runtime draws the blade
+or gun, rotating class 1 about the entity position (`--hitboxes` outlines
+the active hitbox).
 
 Earlier revisions called the slide a "probable backdash" and the case
 `_0801C410` the air state; case 1 is an attack state (weapon animations,

@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0436 - Aria wooden door visibility and passage flags
+
+- `aos_door_update` now takes the camera and hides the door outside
+  `sub_08068AD4(e, -32, 0, 0x130, 0xD0)`; the runtime skips hidden doors.
+- The door exposes `holding` while it holds `gEwramData + 0x42C` bits
+  0x101 and clears `0xA074` bit 1 (`sub_0800C5A8`) during a passage.
+- Checked in room 0/16: walking right, the door at x 1272 opens at frame
+  40, Soma walks through by frame 110 and arrives in room 0/28 at frame
+  150. The wooden door is now functional; the cleanup state 0x63 and the
+  readers of the two global flags remain untraced.
+
 ## Patch 0435 - Aria zombie drips, puddles, gore and hit stun
 
 - A walking zombie now drops drips (`sub_0807B1CC`, sprite frame 0xD) and

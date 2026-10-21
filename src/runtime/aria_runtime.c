@@ -454,7 +454,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_door_create(&e->door, layer, e->x, e->y, soma, cam_x, input);
             continue;
         }
-        int played = aos_door_update(&e->door, layer, soma, input);
+        int played = aos_door_update(&e->door, layer, soma, input, cam_x, cam_y);
         if (played) sound = played;
     }
     /* The blink pattern 0x08118CE0, shared by every enemy kind. */
@@ -743,7 +743,8 @@ static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void 
     const AriaObjects *objects = objects_ptr;
     for (size_t i = 0; i < room->entity_count; ++i) {
         const AriaEntity *e = &room->entities[i];
-        if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id != ARIA_OBJECT_WOODEN_DOOR)
+        if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id != ARIA_OBJECT_WOODEN_DOOR ||
+            e->door.hidden)
             continue;
         int style = e->param0 ? 1 : 0;
         if (objects && objects->counts[style]) {

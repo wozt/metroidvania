@@ -461,7 +461,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804D2C8	sub_0804D2C8	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_0804D73C	sub_0804D73C	unclassified				asm_function	0x0804D73C	asm/code/code_08040A38.s	24808	2	0
 aos:asm:asm/code/code_08040A38.s:sub_0804D768	sub_0804D768	unclassified				asm_function	0x0804D768	asm/code/code_08040A38.s	24831	1	1
 aos:asm:asm/code/code_08040A38.s:sub_0804D794	sub_0804D794	unclassified				asm_function	0x0804D794	asm/code/code_08040A38.s	24854	0	4
-aos:asm:asm/code/code_08040A38.s:sub_0804D8F0	sub_0804D8F0	unclassified		technical	exclusive_callees	asm_function	0x0804D8F0	asm/code/code_08040A38.s	25028	2	3
 aos:asm:asm/code/code_08040A38.s:sub_0804DD84	sub_0804DD84	unclassified				asm_function	0x0804DD84	asm/code/code_08040A38.s	25600	0	3
 aos:asm:asm/code/code_08040A38.s:sub_0804DE60	sub_0804DE60	unclassified		technical	exclusive_callees	asm_function	0x0804DE60	asm/code/code_08040A38.s	25708	0	1
 aos:asm:asm/code/code_08040A38.s:sub_0804DEA0	sub_0804DEA0	environment	referrers			asm_function	0x0804DEA0	asm/code/code_08040A38.s	25742	0	1
@@ -909,7 +908,6 @@ aos:asm:asm/code/code_08060B98.s:sub_08068AA0	sub_08068AA0	unclassified				asm_f
 aos:asm:asm/code/code_08060B98.s:sub_08068AB4	sub_08068AB4	unclassified				asm_function	0x08068AB4	asm/code/code_08060B98.s	16127	0	0
 aos:asm:asm/code/code_08060B98.s:sub_08068ABC	sub_08068ABC	unclassified				asm_function	0x08068ABC	asm/code/code_08060B98.s	16134	0	0
 aos:asm:asm/code/code_08060B98.s:sub_08068AC8	sub_08068AC8	unclassified				asm_function	0x08068AC8	asm/code/code_08060B98.s	16143	0	0
-aos:asm:asm/code/code_08060B98.s:sub_08068AD4	sub_08068AD4	unclassified				asm_function	0x08068AD4	asm/code/code_08060B98.s	16152	119	0
 aos:asm:asm/code/code_08060B98.s:sub_08068B14	sub_08068B14	unclassified				asm_function	0x08068B14	asm/code/code_08060B98.s	16189	0	0
 aos:asm:asm/code/code_08060B98.s:sub_08068B44	sub_08068B44	unclassified				asm_function	0x08068B44	asm/code/code_08060B98.s	16218	0	0
 aos:asm:asm/code/code_08060B98.s:sub_08068B74	sub_08068B74	unclassified		technical	exclusive_callees	asm_function	0x08068B74	asm/code/code_08060B98.s	16247	0	1
@@ -3089,7 +3087,6 @@ aos:c:src/code_0800B700.c:GameModeSoundTestMenu_inline_3	GameModeSoundTestMenu_i
 aos:c:src/code_0800B700.c:GameModeUnk3Update	GameModeUnk3Update	startup	referrers			c_function	0x0800C5D4	src/code_0800B700.c	1219	1	0
 aos:c:src/code_0800B700.c:UpdateInGameTimer	UpdateInGameTimer	unclassified				c_function	0x0800CADC	src/code_0800B700.c	1511	5	0
 aos:c:src/code_0800B700.c:sub_0800B700	sub_0800B700	menus	referrers			c_function	0x0800B700	src/code_0800B700.c	48	1	15
-aos:c:src/code_0800B700.c:sub_0800C5A8	sub_0800C5A8	unclassified				c_function	0x0800C5A8	src/code_0800B700.c	1207	30	0
 aos:c:src/code_0800B700.c:sub_0800C5D8	sub_0800C5D8	unclassified		technical	exclusive_callees	c_function	0x0800C5D8	src/code_0800B700.c	1232	4	9
 aos:c:src/code_0800B700.c:sub_0800C6F8	sub_0800C6F8	unclassified				c_function	0x0800C6F8	src/code_0800B700.c	1295	1	1
 aos:c:src/code_0800B700.c:sub_0800C72C	sub_0800C72C	unclassified				c_function	0x0800C72C	src/code_0800B700.c	1313	1	2

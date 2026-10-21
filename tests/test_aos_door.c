@@ -18,7 +18,7 @@ static int step(AosSoma *soma, AosDoor *door, AosForcedInput *input, uint16_t us
     input->active = false;
     aos_soma_update(soma, &layer, held, (uint16_t)(held & ~*previous));
     *previous = held;
-    return aos_door_update(door, &layer, soma, input);
+    return aos_door_update(door, &layer, soma, input, 0, 0);
 }
 
 int main(void) {
@@ -42,7 +42,7 @@ int main(void) {
         ++frames;
     }
     /* Contact starts 20 pixels before the door, before the blocks stop him. */
-    assert(door.state == 1 && sound == 0x115 && (soma.x >> 16) == 180);
+    assert(door.state == 1 && sound == 0x115 && (soma.x >> 16) == 180 && door.holding);
     int opening = 0;
     while (door.state == 1) {
         int32_t x = soma.x;
@@ -60,12 +60,12 @@ int main(void) {
     aos_door_create(&door, &layer, 200, 160, &soma, 0, &input);
     soma.x = AOS_FIXED(183);
     soma.facing_left = true;
-    assert(aos_door_update(&door, &layer, &soma, &input) == 0 && door.state == 0);
+    assert(aos_door_update(&door, &layer, &soma, &input, 0, 0) == 0 && door.state == 0);
     soma.facing_left = false;
     soma.flags |= AOS_FLAG_BACKDASH;
-    assert(aos_door_update(&door, &layer, &soma, &input) == 0 && door.state == 0);
+    assert(aos_door_update(&door, &layer, &soma, &input, 0, 0) == 0 && door.state == 0);
     soma.flags &= ~(uint32_t)AOS_FLAG_BACKDASH;
-    assert(aos_door_update(&door, &layer, &soma, &input) == 0x115 && door.state == 1);
+    assert(aos_door_update(&door, &layer, &soma, &input, 0, 0) == 0x115 && door.state == 1);
 
     /* Entering through a door: it starts open, walks Soma into the room,
      * then closes behind him (sound 0x114) and blocks again. */
@@ -73,7 +73,7 @@ int main(void) {
     layer.blocks_active = false;
     soma = aos_soma_spawn(AOS_FIXED(205), AOS_FIXED(159), NULL);
     aos_door_create(&door, &layer, 200, 160, &soma, 0, &input);
-    assert(door.state == 10 && door.swing == 0x4000 && input.active &&
+    assert(door.state == 10 && door.swing == 0x4000 && input.active && door.holding &&
            input.held == AOS_KEY_LEFT);
     assert(aos_collision_cell(&layer, 200, 152) == 0);
     frames = 0;
@@ -84,7 +84,22 @@ int main(void) {
     }
     assert(door.state == 11 && sound == 0x114 && (soma.x >> 16) < 180);
     while (door.state == 11) step(&soma, &door, &input, AOS_KEY_RIGHT, &previous);
-    assert(door.swing == 0 && aos_collision_cell(&layer, 200, 152) == 3);
+    assert(door.swing == 0 && aos_collision_cell(&layer, 200, 152) == 3 && !door.holding);
+
+    /* Hidden outside the screen widened by 32 pixels on each side and 48
+     * below (sub_08068AD4(e, -32, 0, 0x130, 0xD0)). */
+    aos_door_update(&door, &layer, &soma, &input, 200 - 272, 0);
+    assert(!door.hidden);
+    aos_door_update(&door, &layer, &soma, &input, 200 - 273, 0);
+    assert(door.hidden);
+    aos_door_update(&door, &layer, &soma, &input, 232, 0);
+    assert(!door.hidden);
+    aos_door_update(&door, &layer, &soma, &input, 233, 0);
+    assert(door.hidden);
+    aos_door_update(&door, &layer, &soma, &input, 0, 160 - 0xD0);
+    assert(!door.hidden);
+    aos_door_update(&door, &layer, &soma, &input, 0, 161);
+    assert(door.hidden);
     puts("aos_door: ok");
     return 0;
 }

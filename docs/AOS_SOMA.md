@@ -400,9 +400,16 @@ blocks; otherwise it marks the blocks at y - 8, y - 24 and y - 40 at once.
 Closed (state 0), contact with h 2 while Soma faces the door, without
 `0x13260 & 0x200` or a backdash, locks his input (`SetPlayerInput(1, 0)`),
 plays `0x115` and opens it (state 1: `+0x14` += `0x100` for 64 frames, then
-clears the blocks); state 2 walks Soma through it. `src/runtime/aos_door.c`
-ports this; the enemy pause `sub_0800C5A8`, the `0x42C` flags and the
-off-screen state `0x63` are not modelled.
+clears the blocks); state 2 walks Soma through it. While Soma passes (from
+the opening or the open start until it closes again) the door sets
+`gEwramData + 0x42C` bits 0x101 and clears `gEwramData + 0xA074` bit 1
+through `sub_0800C5A8(0)` (`sub_0800C5A8(1)` restores it); every update
+hides it (`+0x58` bit 0x20) unless `sub_08068AD4(e, -32, 0, 0x130, 0xD0)`
+holds on its screen position. With `+0x59` bit 2 clear it enters state
+`0x63`: input locked, the `0x42C` bits cleared, the entity deleted and its
+graphics slots freed (`sub_0803E6BC`). `src/runtime/aos_door.c` ports this
+except state `0x63` (the setter of that bit is not traced); the global
+flags are exposed as `holding`, their readers are not traced.
 
 Door graphics: `sub_0806E0D0` is the generic object setup (tiles through
 `sub_0803B800`, palette through `sub_08068264`, frame list through

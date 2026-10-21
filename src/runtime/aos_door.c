@@ -35,6 +35,7 @@ void aos_door_create(AosDoor *door, AosCollision *layer, int32_t x, int32_t y,
         /* Soma enters through this door: it starts open. */
         door->swing = 0x4000;
         door->state = 10;
+        door->holding = true;
         force(input, away_from_door(door));
     } else {
         set_blocks(door, layer, true);
@@ -43,7 +44,10 @@ void aos_door_create(AosDoor *door, AosCollision *layer, int32_t x, int32_t y,
 
 /* Object00Update (sound ids: 0x115 opening, 0x114 closing). */
 int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
-                    AosForcedInput *input) {
+                    AosForcedInput *input, int32_t camera_x, int32_t camera_y) {
+    /* sub_08068AD4(e, -32, 0, 0x130, 0xD0) on the screen position. */
+    door->hidden = !((uint16_t)(door->x - camera_x + 0x20) <= 0x130 &&
+                     (uint16_t)(door->y - camera_y) <= 0xD0);
     int height = door->state <= 9 ? 2 : 0x28;
     bool touching = near_point(door, (soma->x >> 16) - 0x14, soma->y >> 16, 0x28, height);
     switch (door->state) {
@@ -52,6 +56,7 @@ int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
             (soma->abilities & 0x200u) || (soma->flags & AOS_FLAG_BACKDASH))
             return 0;
         force(input, 0);
+        door->holding = true;
         door->state = 1;
         return 0x115;
     case 1:
@@ -76,6 +81,7 @@ int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
         if (door->swing > 0) return 0;
         door->swing = 0;
         set_blocks(door, layer, true);
+        door->holding = false;
         door->state = 0;
         return 0;
     default:

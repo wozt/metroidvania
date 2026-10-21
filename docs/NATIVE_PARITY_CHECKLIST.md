@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 86 | 3487 |
+| Castlevania: Aria of Sorrow | 89 | 3484 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1252,12 +1252,14 @@ Evidence: in game: `aria area_00_room_015: knife kill at frame 241 (--spawn 250 
 
 [?] **`aos.environment.inventory-boundary` — source coverage.** The current classifier assigns 251 discovered routine(s) to this category (112 by native name, 139 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.environment.wooden_doors` — Native wooden doors.** Wooden and green doors are functional in exported rooms; this does not cover every transition or special door.
+[+] **`aos.environment.wooden_doors` — Native wooden doors.** Object00 is ported: creation open or closed with its three blocks, opening on contact while facing it (not on a backdash), walking Soma through or out, closing, the off-screen hiding of sub_08068AD4(e, -32, 0, 0x130, 0xD0) and the global flags held while Soma passes; wooden and green door graphics with their palette cycles are exported.
 
-Native evidence: `aos:asm:asm/code/code_08040A38.s:Object00Create`, `aos:asm:asm/code/code_08040A38.s:Object00Update`.  
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object00Create`, `aos:asm:asm/code/code_08040A38.s:Object00Update`, `aos:asm:asm/code/code_08040A38.s:sub_0804D8F0`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_0800B700.c:sub_0800C5A8`.  
 Local implementation: [`src/runtime/aos_door.c`](../src/runtime/aos_door.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_door.c`](../tests/test_aos_door.c), [`tests/test_aos_object_sprites.py`](../tests/test_aos_object_sprites.py).
-Next action: Cover the remaining native transition and special door kinds.
+Known divergences: The cleanup state 0x63 (entered when + 0x59 bit 2 is clear; its setter is not traced) and the readers of gEwramData + 0x42C bits 0x101 and + 0xA074 bit 1 (exposed as `holding`) are not modelled; sounds 0x114 / 0x115 are reported, not played. Other door kinds are separate objects outside this entry.  
+Next action: Trace the setter of + 0x59 bit 2 to model the cleanup state 0x63.
+Evidence: in game: `aria area_00_room_016: walking right from (1200, 150) the door at x 1272 opens (frame 40), Soma walks through (frame 110) and arrives in room 0/28 (frame 150)`.
 
 ### Rooms, areas and maps
 

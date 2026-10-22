@@ -908,6 +908,70 @@ static void archer_tests(void) {
     assert(bone.x - a.x < AOS_FIXED(40));
 }
 
+static void curly_tests(void) {
+    /* Floor top 160 from x 0 to 199, a drop beyond. */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < 25; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t walk[] = {4, 4, 4, 4, 4, 4, 4, 4}, bite[] = {3, 3, 3, 3, 3, 3},
+                         death[] = {200};
+    const AosAnimDef defs[3] = {{8, walk}, {6, bite}, {1, death}};
+    const AosAnimSet anims = {defs, 3};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {40, 30, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(40), AOS_FIXED(159), NULL);
+
+    /* It snaps to the floor and paces at 0.5 (frames 0-3), still on 4-7;
+     * facing right it turns at the drop past x 199. */
+    AosEnemy c;
+    assert(aos_enemy_create(&c, AOS_ENEMY_CURLY, 150, 140, 0, 0, &soma, &layer, &kind, &stats));
+    assert(c.state == 0 && (c.y >> 16) == 159);
+    c.mirrored = true;
+    soma.x = AOS_FIXED(1000);
+    bool turned = false;
+    int32_t far = c.x;
+    for (int i = 0; i < 300 && !turned; ++i) {
+        aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (c.x > far) far = c.x;
+        if (!c.mirrored) turned = true;
+    }
+    assert(turned && (far >> 16) <= 200 && (c.y >> 16) == 159);
+    /* Unhurt it ignores the player; hurt (hp below its record), step 1
+     * faces him at each frame start. */
+    assert(c.step == 0);
+    c.hp = 10;
+    aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(c.step == 1);
+
+    /* With the player within (x - 50, y - 64, 100, 70) on walk frame 1:
+     * the attack (animation 1), a lunge at 1.0 for 8 frames. */
+    AosEnemy b;
+    assert(aos_enemy_create(&b, AOS_ENEMY_CURLY, 100, 140, 0, 0, &soma, &layer, &kind, &stats));
+    soma.x = b.x + AOS_FIXED(20);
+    b.mirrored = true;
+    int frames = 0;
+    while (b.state == 0 && frames < 60) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(b.state == 1 && b.anim.id == 1);
+    int32_t x0 = b.x;
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(b.vx == 0x10000 && b.x == x0 + 0x10000);
+    frames = 0;
+    while (b.state == 1 && frames < 60) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(b.state == 0 && b.anim.id == 0 && frames == 17);
+}
+
 static void ghost_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t dance[] = {6, 6}, death[] = {5, 5};
@@ -1528,6 +1592,7 @@ int main(void) {
     officer_tests();
     gargoyle_tests();
     ghost_tests();
+    curly_tests();
     medusa_tests();
     puts("aos_enemy: ok");
     return 0;

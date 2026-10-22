@@ -85,6 +85,9 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # sub_08093540 (EnemyCurlyCreate 0x08093178): bank 1 for id 0x2B.
+    "curly": {"id": 0x2B, "graphics": 0x081CC02C, "palette": 0x0820AA6C, "bank": 1,
+              "frames": 0x0822184C},
     # sub_080C2E74 (EnemyGhostDancerCreate 0x080C2DF8): palette bank =
     # parameter 0 (0 to 2 in the rooms), banks 1 and 2 as <name>_bank<N>.
     "ghost_dancer": {"id": 0x1D, "graphics": 0x081F4244, "palette": 0x0820BDD8, "bank": 0,

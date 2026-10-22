@@ -830,6 +830,28 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Curly (enemy 0x2B, `EnemyCurlyCreate` / `EnemyCurlyUpdate`):
+`sub_08093540` loads tiles `0x081CC02C`, palette `0x0820AA6C` (bank 1 for
+id 0x2B, else 0) and frames `0x0822184C`, with the draw routine
+`sub_0806CCE8` in area 4 rooms 12 and 13 (`sub_0803B9D0` elsewhere);
+animations 0 walk, 1 attack, 2 death. Create: animation 0 looping and one
+step, the collision setup, frame boxes, the floor snap, state 0, vy = 1.0,
+`+0x54` = 0x2800 (state 3, animation only, under the global `0x8E & 0x40`).
+Inside the activity window, state 0 (`sub_08093218`): step 0 moves to step
+1 once it is hurt (`sub_0806D54C`: HP below the record's). Outside walk
+frames 4 to 7, each frame start (step 1 facing the player first) sets vx =
+0.5 toward its facing through `sub_0806AC5C` (halved on a type 1 slope, 2/3
+on type 2, only uphill), and on frame 1 the player in (x - 50, y - 64,
+100, 70) with `r & 0x7F` <= 0x5F starts the attack (state 1, animation 1);
+frames 4 to 7 stand still; sound 0x85 at frame 4. It moves with
+`sub_08069A00(e, 1.0, -32, 8.0, 8)`; in step 0, on the floor, a wall, a
+drop or wall one pixel ahead (`sub_0806B1A0`) or a column outside [1,
+width - 1] (`sub_0806D188`, 30 columns for one screen) turns it around.
+State 1 (`sub_08093460`) lunges at 1.0 for 8 frames, then stops, and walks
+again when the animation ends. Hit callback `sub_080935E8` (sound 0x1C3):
+animation 2 and 40 frames of the generic death (state 2). Contact
+`sub_08093674`: type 0, element 0.
+
 Ghost Dancer (enemy 0x1D, `EnemyGhostDancerCreate` /
 `EnemyGhostDancerUpdate`): `sub_080C2E74` loads tiles `0x081F4244`, palette
 `0x0820BDD8` with bank = parameter 0 (0 to 2 in the rooms) and frames

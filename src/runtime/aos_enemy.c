@@ -421,7 +421,8 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
-        id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER)
+        id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
+        id != AOS_ENEMY_CURLY)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -519,6 +520,24 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         snap_to_floor(enemy, layer);
         enemy->y += 0x10000;
         enemy->state = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_CURLY) {
+        /* EnemyCurlyCreate (sub_08093540: tiles 0x081CC02C, palette
+         * 0x0820AA6C bank 1, frames 0x0822184C): animation 0 looping and
+         * one step, frame boxes, the floor snap, state 0 with vy 1.0 and
+         * + 0x54 = 0x2800; state 3 (animation only) under the global
+         * 0x8E & 0x40. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 3;
+            return true;
+        }
+        snap_to_floor(enemy, layer);
+        enemy->state = 0;
+        enemy->vy = 0x10000;
+        enemy->ay = 0x2800;
         return true;
     }
     if (id == AOS_ENEMY_GHOST_DANCER) {
@@ -718,6 +737,13 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     /* sub_08092B38: death animation 3 and the generic death
                      * in state 2 (sound 0x70; sub_080683BC is not ported). */
                     play_loop(enemy, kind->anims, 3, false);
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_CURLY) {
+                    /* sub_080935E8: death animation 2 and the generic death
+                     * in state 2 (sound 0x1C3). */
+                    play_loop(enemy, kind->anims, 2, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = 0;
@@ -1584,6 +1610,143 @@ static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollisio
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
     take_effects(&report, &spawned);
+    return report;
+}
+
+/* sub_0806AC5C: a walking speed halved (slope type 1) or cut to 2/3 (type
+ * 2) when climbing the slope under the entity (the cell at its feet, or
+ * one pixel lower when empty; bit 2 the slope's direction). */
+static int32_t slope_speed(const AosEnemy *e, const AosCollision *layer, int32_t speed) {
+    int32_t x = e->x >> 16, y = e->y >> 16;
+    uint8_t cell = aos_collision_cell(layer, x, y);
+    if (!cell) cell = aos_collision_cell(layer, x, y + 1);
+    int type = (cell & 0xC0) >> 6;
+    if (!type) return speed;
+    bool uphill = e->mirrored ? (cell & 4) != 0 : (cell & 4) == 0;
+    if (!uphill) return speed;
+    if (type == 1) return speed / 2;
+    if (type == 2) return speed * 2 / 3;
+    return speed;
+}
+
+/* sub_0806B1A0: no floor 8 pixels below an empty cell ahead (a drop), or a
+ * wall ahead that is not a slope. */
+static bool blocked_ahead(const AosCollision *layer, int32_t x, int32_t y) {
+    if (!aos_collision_cell(layer, x, y)) {
+        if (!aos_collision_cell(layer, x, y + 8)) return true;
+        return aos_collision_cell(layer, x, y - 7) != 0;
+    }
+    uint8_t above = aos_collision_cell(layer, x, y - 7);
+    return above && !(above & 0xC0);
+}
+
+/* sub_0806D188(e, 1): the entity's cell column outside [1, width - 1]
+ * (a one-screen room counts 30 columns). */
+static bool at_room_edge(const AosEnemy *e, const AosCollision *layer) {
+    int32_t column = (e->x >> 16) >> 3;
+    int width = layer->width_cells == 32 ? 0x1E : layer->width_cells;
+    return column < 1 || column > width - 1;
+}
+
+/* Curly's walk speed (0.5) toward its facing, slowed uphill. */
+static void curly_pace(AosEnemy *c, const AosCollision *layer) {
+    c->vx = slope_speed(c, layer, c->mirrored ? 0x8000 : -0x8000);
+}
+
+/* sub_08093218: step 0 (unhurt) paces, turning at walls, drops and the
+ * room's edges; step 1 (hurt, sub_0806D54C) faces the player at every
+ * frame start. Outside walk frames 4 to 7 each frame start sets the pace
+ * and on frame 1, with the player in (x - 50, y - 64, 100, 70), three
+ * chances in four (r & 0x7F <= 0x5F) start the attack (animation 1); frames
+ * 4 to 7 stand still. It moves with sub_08069A00(e, 1.0, -32, 8.0, 8). */
+static void curly_walk(AosEnemy *c, const AosSoma *soma, const AosCollision *layer,
+                       const AosAnimSet *anims, uint32_t (*random)(void)) {
+    if (c->step == 0 && c->hp < c->stats.hp) {
+        c->step = 1;
+        return;
+    }
+    uint8_t frame = c->anim.frame;
+    bool start = c->anim.tick == 0;
+    if ((uint8_t)(frame - 4) > 3) {
+        if (start) {
+            if (c->step == 1) soldier_face(c, soma);
+            curly_pace(c, layer);
+            int32_t x = c->x >> 16, y = c->y >> 16;
+            if (frame == 1 &&
+                player_near(soma, (int16_t)(x - 0x32), (int16_t)(y - 0x40), 0x64, 0x46) &&
+                (random() & 0x7F) <= 0x5F) {
+                c->state = 1;
+                c->step = 0;
+                c->timer = 0;
+                play_loop(c, anims, 1, false);
+                return;
+            }
+        }
+    } else if (start) {
+        c->vx = 0;
+    }
+    int result = walk_collide(c, layer, 0x10000, (int32_t)0xFFE00000, 0x80000, 8);
+    if (c->step != 0 || !(result & 4)) return;
+    int32_t ahead = (c->x >> 16) + (c->mirrored ? 1 : -1);
+    if ((result & 3) || blocked_ahead(layer, ahead, c->y >> 16) || at_room_edge(c, layer)) {
+        c->mirrored = !c->mirrored;
+        curly_pace(c, layer);
+    }
+}
+
+/* sub_08093460: a lunge at 1.0 for 8 frames, then still; back to the walk
+ * when animation 1 ends (sound 0x85 at frames 4, 7, 10 and 13). */
+static void curly_attack(AosEnemy *c, const AosCollision *layer, const AosAnimSet *anims) {
+    if (c->step != 0) return;
+    if (c->timer <= 7) {
+        c->timer++;
+        c->vx = slope_speed(c, layer, c->mirrored ? 0x10000 : -0x10000);
+        c->vy = 0x10000;
+    } else {
+        c->vx = 0;
+    }
+    c->ay = 0x2800;
+    walk_collide(c, layer, 0x10000, (int32_t)0xFFE00000, 0x80000, 8);
+    if (c->cycle_done) {
+        play(c, anims, 0);
+        c->state = c->step = 0;
+        curly_pace(c, layer);
+        c->vy = 0x10000;
+        c->ay = 0x2800;
+    }
+}
+
+/* EnemyCurlyUpdate: inside the activity window, state 0 walks, 1 attacks,
+ * 2 runs the generic death, 3 only steps its animation; then the
+ * animation step and the collision pass. Contact sub_08093674: type 0,
+ * element 0. */
+static AosHitReport curly_update(AosEnemy *c, AosSoma *soma, const AosCollision *layer,
+                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk,
+                                 int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
+    AosHitReport report = {0}, effects = {0};
+    int sx = (c->x >> 16) - cam_x, sy = (c->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    switch (c->state) {
+    case 0: curly_walk(c, soma, layer, kind->anims, random); break;
+    case 1: curly_attack(c, layer, kind->anims); break;
+    case 2:
+        generic_death(c, kind, random, &effects);
+        if (c->removed) return effects;
+        break;
+    case 3:
+        step_anim(c, kind->anims);
+        return report;
+    default:
+        break;
+    }
+    step_anim(c, kind->anims);
+    sx = (c->x >> 16) - cam_x;
+    sy = (c->y >> 16) - cam_y;
+    if (!c->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(c, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&c->combat);
+    take_effects(&report, &effects);
     return report;
 }
 
@@ -2738,6 +2901,9 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->role == AOS_ROLE_GRENADE)
         return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_CURLY)
+        return curly_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                            cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_GARGOYLE)
         return gargoyle_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                cam_x, cam_y, random);

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 18 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 19 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 138 | 3435 |
+| Castlevania: Aria of Sorrow | 149 | 3424 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1212,6 +1212,16 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Sounds 0x72 and 0x8B, the palette bits of + 0x5A (death, hit flash and the feathers' end), the global pause 0x4BE (taken as 0), the + 0x38 bit 0x100 stop, the tracking list of sub_08021924, sub_080683BC and the unentered glide step are not ported. Blood splashes are drawn behind all enemies (OBJ priority 3 against the backgrounds is not modelled).  
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
+
+[+] **`aos.enemies.curly` — Curly.** Pacing at 0.5 slowed uphill (sub_0806AC5C), turning at walls, drops and the room's edges, chasing the player once hurt, the lunging attack with three chances in four, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AC5C`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1A0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D188`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyCreate`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093218`, `aos:asm:asm/code/code_08090914.s:sub_08093460`, `aos:asm:asm/code/code_08090914.s:sub_08093540`, `aos:asm:asm/code/code_08090914.s:sub_080935E8`, `aos:asm:asm/code/code_08090914.s:sub_08093674`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie`.  
+Known divergences: Sounds 0x85 and 0x1C3, the palette bits and sub_080683BC are not ported; the special draw routine sub_0806CCE8 used in area 4 rooms 12 and 13 is not ported (the generic draw is used).  
+Next action: Trace the area 4 draw routine sub_0806CCE8.
+Evidence: in game: `aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly walks down the stairs and wounds Soma (frames 30, 90, 150); with --atk 200 --repeat 2 (button 2) the knife kills it at frame 99, burning at frames 102 and 113`.
 
 [+] **`aos.enemies.gargoyle` — Gargoyle.** The pursuit of the point 64 pixels above the player, the brake, the swoop and its climb back (sub_08086534 steps 0 to 5), the frame boxes, the falling generic death with flames and state 2 under gEwramData + 0x8E bit 0x40 are ported.
 

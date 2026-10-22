@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0446 - Aria Curly
+
+- Ported Curly (enemy 0x2B) with three shared helpers: the uphill
+  slowdown `sub_0806AC5C`, the drop and wall test `sub_0806B1A0` and the
+  room edge test `sub_0806D188`. It paces and turns, chases once hurt,
+  lunges at the player and dies with the generic death.
+- Checked in room 4/14: Curly walks down the stairs and wounds Soma; the
+  knife kills it at frame 99 and it burns.
+
 ## Patch 0445 - Aria Ghost Dancer and palette-bank variants
 
 - Ported the Ghost Dancer (enemy 0x1D): its figure-of-eight dance, the

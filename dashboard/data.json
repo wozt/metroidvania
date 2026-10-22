@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T00:31:38+00:00",
+ "generated_at": "2026-10-22T00:46:17+00:00",
  "git": {
-  "commit": "3f5cadc",
+  "commit": "b8449d0",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 150,
+   "total": 152,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 122,
+    "functional": 124,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 122,
-   "functional_or_better_percent": 81.3,
-   "with_passing_tests": 138,
-   "with_passing_tests_percent": 92.0,
+   "functional_or_better": 124,
+   "functional_or_better_percent": 81.6,
+   "with_passing_tests": 140,
+   "with_passing_tests_percent": 92.1,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -207,8 +207,10 @@
     "aos.enemies.blue_crow",
     "aos.enemies.curly",
     "aos.enemies.durga",
+    "aos.enemies.erinys",
     "aos.enemies.gargoyle",
     "aos.enemies.ghost_dancer",
+    "aos.enemies.gremlin",
     "aos.enemies.medusa_head",
     "aos.enemies.needles",
     "aos.enemies.skull_archer",
@@ -384,20 +386,20 @@
    "areas": [
     "aos"
    ],
-   "total": 21,
+   "total": 23,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 16,
+    "functional": 18,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 16,
-   "functional_or_better_percent": 76.2,
-   "with_passing_tests": 21,
+   "functional_or_better": 18,
+   "functional_or_better_percent": 78.3,
+   "with_passing_tests": 23,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -407,8 +409,10 @@
     "aos.enemies.blue_crow",
     "aos.enemies.curly",
     "aos.enemies.durga",
+    "aos.enemies.erinys",
     "aos.enemies.gargoyle",
     "aos.enemies.ghost_dancer",
+    "aos.enemies.gremlin",
     "aos.enemies.medusa_head",
     "aos.enemies.needles",
     "aos.enemies.skull_archer",
@@ -8708,6 +8712,62 @@
    }
   },
   {
+   "id": "aos.enemies.erinys",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Erinys (the Valkyrie's routines)",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.valkyrie"
+   ],
+   "native_routines": [
+    "EnemyErinysCreate",
+    "EnemyErinysUpdate"
+   ],
+   "limitations": "As the Valkyrie. EnemyErinysCreate and EnemyErinysUpdate only call the Valkyrie's routines; sub_0806EB34 gives it palette bank 1 and sub_0806EBDC's recoil is reserved to id 0x29, so Erinys keeps striking when struck.",
+   "next_action": "Follow the Valkyrie's open items.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.gargoyle",
    "area": "aos",
    "category": "enemies",
@@ -8807,6 +8867,62 @@
     ],
     "in_game_check": [
      "aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
+   "id": "aos.enemies.gremlin",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Gremlin (the gargoyle's routines)",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.gargoyle"
+   ],
+   "native_routines": [
+    "EnemyGremlinCreate",
+    "EnemyGremlinUpdate"
+   ],
+   "limitations": "As the gargoyle. EnemyGremlinCreate and EnemyGremlinUpdate only call the gargoyle's routines; sub_08086900 gives it palette bank 1.",
+   "next_action": "Follow the gargoyle's open items.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -10567,7 +10683,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12253,6 +12369,12 @@
  },
  "timeline": [
   {
+   "commit": "b8449d0",
+   "date": "2026-10-22",
+   "subject": "Port the Aria Valkyrie",
+   "scope": "project"
+  },
+  {
    "commit": "3f5cadc",
    "date": "2026-10-22",
    "subject": "Register the Aria Durga on Curly's port",
@@ -12725,12 +12847,6 @@
    "date": "2026-10-18",
    "subject": "Port the Ruins Test main actor and intro",
    "scope": "project"
-  },
-  {
-   "commit": "d87c8e5",
-   "date": "2026-10-18",
-   "subject": "Port Tangle Vines and the vine Geruta",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12791,9 +12907,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 162,
-    "routines_attached_to_features": 162,
-    "unassigned_routines": 3411,
+    "routines_cited_by_features": 166,
+    "routines_attached_to_features": 166,
+    "unassigned_routines": 3407,
     "call_edges": 14228
    }
   },
@@ -15730,15 +15846,20 @@
      },
      {
       "id": 55,
-      "name": "Enemy 0x37",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Gremlin",
+      "status": "functional",
+      "note": "Gremlin (the gargoyle's routines)",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.gremlin"
      },
      {
       "id": 56,
@@ -16261,15 +16382,20 @@
      },
      {
       "id": 98,
-      "name": "Enemy 0x62",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Erinys",
+      "status": "functional",
+      "note": "Erinys (the Valkyrie's routines)",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.erinys"
      },
      {
       "id": 99,

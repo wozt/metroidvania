@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 21 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 23 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 162 | 3411 |
+| Castlevania: Aria of Sorrow | 166 | 3407 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1233,6 +1233,16 @@ Known divergences: As Curly: sounds, palette bits and sub_080683BC are not porte
 Next action: Follow Curly's open items.
 Evidence: in game: `aria area_02_room_019 (--spawn 250 184 --hp 9999): both Durgas pace toward Soma and attack in reach at frames 30 and 120`.
 
+[+] **`aos.enemies.erinys` — Erinys (the Valkyrie's routines).** EnemyErinysCreate and EnemyErinysUpdate only call the Valkyrie's routines; sub_0806EB34 gives it palette bank 1 and sub_0806EBDC's recoil is reserved to id 0x29, so Erinys keeps striking when struck.
+
+Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyErinysCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyErinysUpdate`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.valkyrie`.  
+Known divergences: As the Valkyrie.  
+Next action: Follow the Valkyrie's open items.
+Evidence: in game: `aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)`.
+
 [+] **`aos.enemies.gargoyle` — Gargoyle.** The pursuit of the point 64 pixels above the player, the brake, the swoop and its climb back (sub_08086534 steps 0 to 5), the frame boxes, the falling generic death with flames and state 2 under gEwramData + 0x8E bit 0x40 are ported.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806CD38`, `aos:asm:asm/code/code_08060B98.s:sub_0806CD78`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_080809C0.s:EnemyGargoyleCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGargoyleUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08086534`, `aos:asm:asm/code/code_080809C0.s:sub_08086878`, `aos:asm:asm/code/code_080809C0.s:sub_08086900`, `aos:asm:asm/code/code_080809C0.s:sub_08086964`.  
@@ -1252,6 +1262,16 @@ Dependencies: `aos.enemies.medusa_head`.
 Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the room's blend coefficients are not traced); sound 0x6D, the palette bits of + 0x5A bits 3-6 and sub_080683BC are not ported; sub_080C305C is not reached from the code read.  
 Next action: Trace the room blend coefficients for semi-transparent sprites.
 Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330`.
+
+[+] **`aos.enemies.gremlin` — Gremlin (the gargoyle's routines).** EnemyGremlinCreate and EnemyGremlinUpdate only call the gargoyle's routines; sub_08086900 gives it palette bank 1.
+
+Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinUpdate`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.gargoyle`.  
+Known divergences: As the gargoyle.  
+Next action: Follow the gargoyle's open items.
+Evidence: in game: `aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)`.
 
 [+] **`aos.enemies.medusa_head` — Medusa head and its spawner.** The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported.
 

@@ -1080,6 +1080,22 @@ static void valkyrie_tests(void) {
         ++dying;
     }
     assert(dying == 0x28);
+
+    /* Erinys runs the Valkyrie's routines, but sub_0806EBDC's recoil is
+     * for id 0x29 only: struck mid-strike it keeps striking. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_ERINYS, 100, 60, 0, 0, &soma, &layer, &kind, &stats));
+    assert(e.state == 0);
+    e.state = 1;
+    e.step = 4;
+    e.hp = 60;
+    soma = aos_soma_spawn(e.x, e.y + AOS_FIXED(20), NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    cam = (e.x >> 16) - 120;
+    cam_y = (e.y >> 16) - 80;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, cam_y,
+                           always_zero);
+    assert(hit.enemy_hit && !hit.killed && e.state == 1);
 }
 
 static void ghost_tests(void) {
@@ -1244,6 +1260,13 @@ static void gargoyle_tests(void) {
         ++dying;
     }
     assert(dying == 0x28 && g.y > y_fall);
+
+    /* The Gremlin runs the gargoyle's routines. */
+    AosEnemy gr;
+    soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(159), NULL);
+    assert(aos_enemy_create(&gr, AOS_ENEMY_GREMLIN, 100, 60, 0, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_update(&gr, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(gr.step == 1 && gr.mirrored && gr.vx == 0x9000);
 }
 
 static void officer_tests(void) {

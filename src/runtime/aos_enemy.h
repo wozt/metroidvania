@@ -16,7 +16,8 @@
  * walker sub_0806CAF8 / sub_0806C828, and the skull archer (enemy 0x05) with
  * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
- * code), the Valkyrie (enemy 0x29), the gargoyle
+ * code), the Valkyrie (enemy 0x29) and Erinys (0x62, the same code), the
+ * gargoyle and the Gremlin (0x37, the same code)
  * (enemy 0x57), the Medusa head (enemy 0x39) with its
  * spawner, and Needles (enemy 0x3F) with its pieces
  * (sub_080CB6BC / sub_080CB7C8). Facing flag 0x40 of + 0x58 means
@@ -91,8 +92,10 @@ enum {
     AOS_ENEMY_ZOMBIE_OFFICER = 0x20,
     AOS_ENEMY_VALKYRIE = 0x29,
     AOS_ENEMY_CURLY = 0x2B,
+    AOS_ENEMY_GREMLIN = 0x37,
     AOS_ENEMY_MEDUSA_HEAD = 0x39,
     AOS_ENEMY_GARGOYLE = 0x57,
+    AOS_ENEMY_ERINYS = 0x62,
     AOS_ENEMY_NEEDLES = 0x3F,
 };
 

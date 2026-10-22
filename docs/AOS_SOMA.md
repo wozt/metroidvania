@@ -856,6 +856,10 @@ facing the player again above -1.25, state 0 above -0.125). Contact
 `sub_0806ECA8`: type 0, its attack halved except during frames 4 to 6 of
 the strike.
 
+Erinys (enemy 0x62) and the Gremlin (enemy 0x37) only call the
+Valkyrie's and the gargoyle's routines, both with palette bank 1; the
+Valkyrie's recoil is reserved to id 0x29.
+
 Curly (enemy 0x2B, `EnemyCurlyCreate` / `EnemyCurlyUpdate`):
 `sub_08093540` loads tiles `0x081CC02C`, palette `0x0820AA6C` (bank 1 for
 id 0x2B, else 0) and frames `0x0822184C`, with the draw routine

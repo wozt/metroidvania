@@ -422,7 +422,8 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
-        id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE)
+        id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
+        id != AOS_ENEMY_ERINYS && id != AOS_ENEMY_GREMLIN)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -522,7 +523,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         enemy->state = 0;
         return true;
     }
-    if (id == AOS_ENEMY_VALKYRIE) {
+    if (id == AOS_ENEMY_VALKYRIE || id == AOS_ENEMY_ERINYS) {
         /* EnemyValkyrieCreate (sub_0806EB34: tiles 0x081CBF2C, palette
          * 0x0820A3FC bank 0, frames 0x0821285C): animation 0 looping and
          * one step, frame boxes, state 0; state 4 (animation only) under
@@ -561,7 +562,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         enemy->phase = 0;
         return true;
     }
-    if (id == AOS_ENEMY_GARGOYLE) {
+    if (id == AOS_ENEMY_GARGOYLE || id == AOS_ENEMY_GREMLIN) {
         /* EnemyGargoyleCreate (sub_08086900 graphics): animation 0 looping
          * and one step, frame boxes, state 0; state 2 (inert) under the
          * global 0x8E & 0x40. */
@@ -758,7 +759,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = 0;
-                } else if (enemy->id == AOS_ENEMY_VALKYRIE) {
+                } else if (enemy->id == AOS_ENEMY_VALKYRIE || enemy->id == AOS_ENEMY_ERINYS) {
                     /* sub_0806EBDC: death animation 2, 40 frames of state
                      * 2 falling with + 0x54 = 0x1000 (sound 0x1CD). */
                     play_loop(enemy, kind->anims, 2, false);
@@ -781,7 +782,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->translucent = true;
                     enemy->state = 3;
                     enemy->step = 1;
-                } else if (enemy->id == AOS_ENEMY_GARGOYLE) {
+                } else if (enemy->id == AOS_ENEMY_GARGOYLE || enemy->id == AOS_ENEMY_GREMLIN) {
                     /* sub_08086878: state 1, 40 frames, falling with
                      * + 0x54 = 0x1000 (sound 0x6E). */
                     enemy->timer = 0x28;
@@ -850,7 +851,7 @@ contact:
         /* sub_0806ECA8: the Valkyrie's contact is halved outside frames 4
          * to 6 of its attack animation (state 1, animation 1). */
         int contact = enemy->stats.contact;
-        if (enemy->id == AOS_ENEMY_VALKYRIE &&
+        if ((enemy->id == AOS_ENEMY_VALKYRIE || enemy->id == AOS_ENEMY_ERINYS) &&
             !(enemy->state == 1 && enemy->anim.id == 1 && (uint8_t)(enemy->anim.frame - 4) <= 2))
             contact >>= 1;
         report.soma_damage = aos_soma_take_hit(soma, contact, soma_def, enemy->x, 0);
@@ -3114,13 +3115,14 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->role == AOS_ROLE_GRENADE)
         return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
-    if (enemy->id == AOS_ENEMY_VALKYRIE && enemy->role == AOS_ROLE_ENEMY)
+    if ((enemy->id == AOS_ENEMY_VALKYRIE || enemy->id == AOS_ENEMY_ERINYS) &&
+        enemy->role == AOS_ROLE_ENEMY)
         return valkyrie_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_CURLY || enemy->id == AOS_ENEMY_DURGA)
         return curly_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                             cam_x, cam_y, random);
-    if (enemy->id == AOS_ENEMY_GARGOYLE)
+    if (enemy->id == AOS_ENEMY_GARGOYLE || enemy->id == AOS_ENEMY_GREMLIN)
         return gargoyle_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ZOMBIE_OFFICER)

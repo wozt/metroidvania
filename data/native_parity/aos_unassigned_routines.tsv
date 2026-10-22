@@ -1624,13 +1624,9 @@ aos:asm:asm/code/code_080A0A8C.s:EnemyChaosCreate	EnemyChaosCreate	enemies	name	
 aos:asm:asm/code/code_080A0A8C.s:EnemyChaosUpdate	EnemyChaosUpdate	enemies	name			asm_function		asm/code/code_080A0A8C.s	7190	0	10
 aos:asm:asm/code/code_080A0A8C.s:EnemyDryadCreate	EnemyDryadCreate	enemies	name			asm_function		asm/code/code_080A0A8C.s	28115	0	8
 aos:asm:asm/code/code_080A0A8C.s:EnemyDryadUpdate	EnemyDryadUpdate	enemies	name			asm_function		asm/code/code_080A0A8C.s	28227	0	7
-aos:asm:asm/code/code_080A0A8C.s:EnemyErinysCreate	EnemyErinysCreate	enemies	name			asm_function		asm/code/code_080A0A8C.s	13073	0	1
-aos:asm:asm/code/code_080A0A8C.s:EnemyErinysUpdate	EnemyErinysUpdate	enemies	name			asm_function		asm/code/code_080A0A8C.s	13065	0	1
 aos:asm:asm/code/code_080A0A8C.s:EnemyGiantWormCreate	EnemyGiantWormCreate	enemies	name			asm_function		asm/code/code_080A0A8C.s	27160	0	1
 aos:asm:asm/code/code_080A0A8C.s:EnemyGiantWormUpdate	EnemyGiantWormUpdate	enemies	name			asm_function		asm/code/code_080A0A8C.s	27168	0	1
 aos:asm:asm/code/code_080A0A8C.s:EnemyGladiatorUpdate	EnemyGladiatorUpdate	enemies	name			asm_function		asm/code/code_080A0A8C.s	2409	0	10
-aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinCreate	EnemyGremlinCreate	enemies	name			asm_function		asm/code/code_080A0A8C.s	15120	0	1
-aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinUpdate	EnemyGremlinUpdate	enemies	name			asm_function		asm/code/code_080A0A8C.s	15112	0	1
 aos:asm:asm/code/code_080A0A8C.s:EnemyPoisonWormCreate	EnemyPoisonWormCreate	enemies	name			asm_function		asm/code/code_080A0A8C.s	27176	0	1
 aos:asm:asm/code/code_080A0A8C.s:EnemyPoisonWormUpdate	EnemyPoisonWormUpdate	enemies	name			asm_function		asm/code/code_080A0A8C.s	27184	0	1
 aos:asm:asm/code/code_080A0A8C.s:EnemySkyFishCreate	EnemySkyFishCreate	enemies	name			asm_function		asm/code/code_080A0A8C.s	14425	0	12

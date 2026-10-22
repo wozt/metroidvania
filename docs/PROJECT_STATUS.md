@@ -2,6 +2,14 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0449 - Aria Erinys and Gremlin
+
+- Erinys (enemy 0x62) and the Gremlin (enemy 0x37) only call the
+  Valkyrie's and the gargoyle's routines with palette bank 1; they run on
+  those ports (Erinys without the id 0x29 recoil). The runtime registers
+  enemy ids up to 98.
+- Checked in rooms 9/9 (Erinys) and 6/14 (Gremlin).
+
 ## Patch 0448 - Aria Valkyrie
 
 - Ported the Valkyrie (enemy 0x29) with the shared range test

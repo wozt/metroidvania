@@ -88,6 +88,9 @@ ENEMIES = {
     # sub_0806EB34 (EnemyValkyrieCreate 0x0806E714): bank 0 for id 0x29.
     "valkyrie": {"id": 0x29, "graphics": 0x081CBF2C, "palette": 0x0820A3FC, "bank": 0,
                  "frames": 0x0821285C},
+    # EnemyErinysCreate / Update call the Valkyrie's routines: bank 1.
+    "erinys": {"id": 0x62, "graphics": 0x081CBF2C, "palette": 0x0820A3FC, "bank": 1,
+               "frames": 0x0821285C},
     # sub_08093540 (EnemyCurlyCreate 0x08093178): bank 1 for id 0x2B, bank 0
     # for Durga (EnemyDurgaCreate calls EnemyCurlyCreate).
     "durga": {"id": 0x11, "graphics": 0x081CC02C, "palette": 0x0820AA6C, "bank": 0,
@@ -105,6 +108,9 @@ ENEMIES = {
     # sub_08086900 (EnemyGargoyleCreate 0x080864A0): bank 0 for id 0x57.
     "gargoyle": {"id": 0x57, "graphics": 0x081CBFDC, "palette": 0x0820A804, "bank": 0,
                  "frames": 0x0821C688},
+    # EnemyGremlinCreate / Update call the gargoyle's routines: bank 1.
+    "gremlin": {"id": 0x37, "graphics": 0x081CBFDC, "palette": 0x0820A804, "bank": 1,
+                "frames": 0x0821C688},
     # sub_08092680 (EnemyZombieOfficerCreate 0x08092350); its gibs
     # (sub_080925B4) show frames 0x0F to 0x11.
     "zombie_officer": {"id": 0x20, "graphics": 0x081CC01C, "palette": 0x0820AA24, "bank": 0,

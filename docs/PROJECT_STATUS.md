@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0451 - Aria dead warrior
+
+- Ported the dead warrior (enemy 0x2F): its charge on the probe walker,
+  the braking with dust and the turn, and its death thrown back in fire
+  (a new `Effect/ember`: animation 1, OBJ row 7).
+- The exporter accepts animations of up to 128 frames and the runtime up
+  to 80 (the warrior's death has 70).
+- Checked in room 5/3: it charges, brakes in a cloud of dust, turns and
+  charges off (frames 30, 80, 130 and 170).
+
 ## Patch 0450 - Aria skeleton knight
 
 - Ported the skeleton knight (enemy 0x0D) with the shared room edge clamp

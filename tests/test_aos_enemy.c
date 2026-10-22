@@ -1099,6 +1099,76 @@ static void valkyrie_tests(void) {
     assert(hit.enemy_hit && !hit.killed && e.state == 1);
 }
 
+static void warrior_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t idle[] = {4, 4, 4, 4}, charge[] = {3, 3, 3, 3}, brake[] = {20, 20},
+                         death[] = {30, 30};
+    const AosAnimDef defs[4] = {{4, idle}, {4, charge}, {2, brake}, {2, death}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    kind.probes = (AosProbes){1, -20, -1, 7, {-10}};
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -32, 16, 32};
+        }
+    const AosEnemyStats stats = {50, 30, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(240), AOS_FIXED(159), NULL);
+
+    /* EnemyDeadWarriorCreate: on the floor plus one pixel, + 0x1C = 50. */
+    AosEnemy w;
+    assert(aos_enemy_create(&w, AOS_ENEMY_DEAD_WARRIOR, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(w.state == 0 && (w.y >> 16) == 160 && w.shot == 50);
+    /* It walks with + 0x18 rising by 0x4000 to 2.0; past + 0x1C 100 it
+     * brakes (animation 2). */
+    int frames = 0;
+    while (w.step != 3 && frames < 200) {
+        aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(w.step == 3 && frames == 51 && w.anim.id == 2 && w.walk_timer == 0x20000);
+    /* Braking: dust every 4 frames, then it turns around and walks again. */
+    bool mirrored = w.mirrored;
+    int dust = 0;
+    frames = 0;
+    while (w.step == 3 && frames < 100) {
+        AosHitReport r = aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+        dust += r.effect_count;
+        ++frames;
+    }
+    assert(w.step == 0 && w.mirrored != mirrored && dust == 10 && w.walk_timer < 0x20000);
+
+    /* The killing blow: thrown back and up, fire every 4 frames. */
+    soma = aos_soma_spawn(w.x, w.y, NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-20, -40, 40, 40, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    w.hp = 1;
+    AosHitReport hit = aos_enemy_update(&w, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.killed && w.state == 1);
+    hit = aos_enemy_update(&w, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
+    assert(w.anim.id == 3 && w.vy == -0x28000 + 0x2000 && w.ay == 0x2000);
+    int fires = 0, dying = 1;
+    while (!w.removed && dying < 200) {
+        hit = aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        for (int i = 0; i < hit.effect_count; ++i)
+            if (hit.effects[i].kind == AOS_EFFECT_EMBER) ++fires;
+        ++dying;
+    }
+    /* Deleted on the update after its 60-tick death animation ends (or off
+     * screen first). */
+    assert(w.removed && fires >= 10);
+}
+
 static void knight_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
@@ -1784,6 +1854,7 @@ int main(void) {
     gargoyle_tests();
     ghost_tests();
     knight_tests();
+    warrior_tests();
     valkyrie_tests();
     curly_tests();
     medusa_tests();

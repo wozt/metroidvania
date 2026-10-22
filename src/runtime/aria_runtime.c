@@ -26,7 +26,7 @@
 #define VIEW_H 160
 #define MAX_FILE_BYTES (8L * 1024 * 1024)
 #define MAX_ANIMS 256
-#define MAX_FRAMES 64
+#define MAX_FRAMES 80
 #define INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1"
 #define DEFAULT_ROOMS "assets/extracted/aria/rooms/runtime"
 #define DEFAULT_LIBRARY "assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv"
@@ -37,7 +37,7 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 99     /* enemy ids 0-1, 4-5, 9, 12-13, 17, 29, 32, 41, 43, 55, 57, 63, 87, 98 */
+#define ENEMY_KINDS 99     /* enemy ids 0-1, 4-5, 9, 12-13, 17, 29, 32, 41, 43, 47, 55, 57, 63, 87, 98 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
@@ -48,6 +48,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [32] = "zombie_officer",
                                                      [41] = "valkyrie",
                                                      [43] = "curly",
+                                                     [47] = "dead_warrior",
                                                      [55] = "gremlin",
                                                      [57] = "medusa_head",
                                                      [87] = "gargoyle",
@@ -76,7 +77,8 @@ static int enemy_bank(const AosEnemy *enemy) {
 #define MAX_EFFECTS 32      /* shared effects (flames, blood) alive at once */
 static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "smoke",
                                                           "dark_smoke", "fire", "spark",
-                                                          "dust", "impact", "casing"};
+                                                          "dust", "impact", "casing",
+                                                          "ember"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 

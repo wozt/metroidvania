@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 24 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 25 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 174 | 3399 |
+| Castlevania: Aria of Sorrow | 181 | 3392 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1222,6 +1222,16 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: Sounds 0x85 and 0x1C3, the palette bits and sub_080683BC are not ported; the special draw routine sub_0806CCE8 used in area 4 rooms 12 and 13 is not ported (the generic draw is used).  
 Next action: Trace the area 4 draw routine sub_0806CCE8.
 Evidence: in game: `aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly walks down the stairs and wounds Soma (frames 30, 90, 150); with --atk 200 --repeat 2 (button 2) the knife kills it at frame 99, burning at frames 102 and 113`.
+
+[+] **`aos.enemies.dead_warrior` — Dead warrior.** The probe-walker charge accelerating to 2.0, the brake after 100 frames with its dust and the turn, the hiding above screen Y -16, the collision pass before the animation step, the death thrown back with its fire (animation 1, row 7: Effect/ember) and state 2 under gEwramData + 0x8E bit 0x40 are ported.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E4F8`, `aos:asm:asm/code/code_080B0AD4.s:EnemyDeadWarriorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyDeadWarriorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B72F8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B747C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7644`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_effect.c`](../src/runtime/aos_effect.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.axe_armor`.  
+Known divergences: Sounds 0x6E, 0x7D and 0x127, the death's palette flash, sub_080683BC and the dust's + 0x0F are not ported.  
+Next action: Play the sounds once the Aria sound path exists.
+Evidence: in game: `aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)`.
 
 [+] **`aos.enemies.durga` — Durga (Curly's routines).** EnemyDurgaCreate and EnemyDurgaUpdate only call EnemyCurlyCreate and EnemyCurlyUpdate; sub_08093540 picks palette bank 0 for any id other than 0x2B. Durga therefore shares Curly's port with its own record stats and palette.
 

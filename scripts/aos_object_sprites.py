@@ -85,6 +85,9 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # EnemyDeadWarriorCreate 0x080B7594: walker probes 0x08528830.
+    "dead_warrior": {"id": 0x2F, "graphics": 0x081EC1F4, "palette": 0x0820BBD4, "bank": 0,
+                     "frames": 0x08246F00, "probes": 0x08528830},
     # sub_0808F120 (EnemySkeletonKnightCreate 0x0808EC64).
     "skeleton_knight": {"id": 0x0D, "graphics": 0x081CC00C, "palette": 0x0820A95C, "bank": 0,
                         "frames": 0x0821FA5C},
@@ -161,6 +164,9 @@ EFFECTS = {
     # A class 4 shot meeting a wall (sub_08022A54: sub_08045CEC(.., 7, 8)).
     "impact": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 4,
                "frames": 0x0820ED60, "animations": (7,)},
+    # The dead warrior's death fire (sub_080B747C: sub_08045CEC(.., 1, 7)).
+    "ember": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 3,
+              "frames": 0x0820ED60, "animations": (1,)},
     # The shell casing sub_080228F8: sprite frame 0x35 with row 8, exported
     # as a one-frame sequence.
     "casing": {"graphics": 0x081C15F4, "palette": 0x082099FC, "bank": 4,
@@ -282,7 +288,7 @@ def descriptor_animations(rom: bytes, entity: dict) -> list[list[dict]]:
             raise ValueError("entity animation outside its descriptor")
         pointer = struct.unpack("<I", _rom_slice(rom, table + index * 4, 4, "animation"))[0]
         count, encoding = struct.unpack("<HH", _rom_slice(rom, pointer, 4, "animation header"))
-        if encoding != 1 or not 0 < count <= 64:
+        if encoding != 1 or not 0 < count <= 128:
             raise ValueError("unsupported entity animation encoding")
         frames = []
         for step in range(count):

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T00:49:21+00:00",
+ "generated_at": "2026-10-22T01:31:44+00:00",
  "git": {
-  "commit": "7a0d56b",
+  "commit": "4da9ca9",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 153,
+   "total": 154,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 125,
+    "functional": 126,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 125,
-   "functional_or_better_percent": 81.7,
-   "with_passing_tests": 141,
+   "functional_or_better": 126,
+   "functional_or_better_percent": 81.8,
+   "with_passing_tests": 142,
    "with_passing_tests_percent": 92.2,
    "unknown_or_blocked": 1,
    "features": [
@@ -206,6 +206,7 @@
     "aos.enemies.bat",
     "aos.enemies.blue_crow",
     "aos.enemies.curly",
+    "aos.enemies.dead_warrior",
     "aos.enemies.durga",
     "aos.enemies.erinys",
     "aos.enemies.gargoyle",
@@ -387,20 +388,20 @@
    "areas": [
     "aos"
    ],
-   "total": 24,
+   "total": 25,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 19,
+    "functional": 20,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 19,
-   "functional_or_better_percent": 79.2,
-   "with_passing_tests": 24,
+   "functional_or_better": 20,
+   "functional_or_better_percent": 80.0,
+   "with_passing_tests": 25,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -409,6 +410,7 @@
     "aos.enemies.bat",
     "aos.enemies.blue_crow",
     "aos.enemies.curly",
+    "aos.enemies.dead_warrior",
     "aos.enemies.durga",
     "aos.enemies.erinys",
     "aos.enemies.gargoyle",
@@ -8658,6 +8660,68 @@
    }
   },
   {
+   "id": "aos.enemies.dead_warrior",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Dead warrior",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aos_effect.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.axe_armor"
+   ],
+   "native_routines": [
+    "EnemyDeadWarriorCreate",
+    "EnemyDeadWarriorUpdate",
+    "sub_080B72F8",
+    "sub_080B747C",
+    "sub_080B7644",
+    "sub_0806E29C",
+    "sub_0806E4F8"
+   ],
+   "limitations": "Sounds 0x6E, 0x7D and 0x127, the death's palette flash, sub_080683BC and the dust's + 0x0F are not ported. The probe-walker charge accelerating to 2.0, the brake after 100 frames with its dust and the turn, the hiding above screen Y -16, the collision pass before the animation step, the death thrown back with its fire (animation 1, row 7: Effect/ember) and state 2 under gEwramData + 0x8E bit 0x40 are ported.",
+   "next_action": "Play the sounds once the Aria sound path exists.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.durga",
    "area": "aos",
    "category": "enemies",
@@ -10747,7 +10811,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12433,6 +12497,12 @@
  },
  "timeline": [
   {
+   "commit": "4da9ca9",
+   "date": "2026-10-22",
+   "subject": "Port the Aria skeleton knight",
+   "scope": "project"
+  },
+  {
    "commit": "7a0d56b",
    "date": "2026-10-22",
    "subject": "Register the Aria Erinys and Gremlin on existing ports",
@@ -12905,12 +12975,6 @@
    "date": "2026-10-18",
    "subject": "Port the falling Chozo pillar and the Power Bomb theft",
    "scope": "project"
-  },
-  {
-   "commit": "0b06271",
-   "date": "2026-10-18",
-   "subject": "Port the Ruins Test ghost, symbols, lightning and closing reflection",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12971,9 +13035,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 174,
-    "routines_attached_to_features": 174,
-    "unassigned_routines": 3399,
+    "routines_cited_by_features": 181,
+    "routines_attached_to_features": 181,
+    "unassigned_routines": 3392,
     "call_edges": 14228
    }
   },
@@ -15819,15 +15883,20 @@
      },
      {
       "id": 47,
-      "name": "Enemy 0x2F",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Dead Warrior",
+      "status": "functional",
+      "note": "Dead warrior",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.dead_warrior"
      },
      {
       "id": 48,

@@ -830,6 +830,27 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Dead warrior (enemy 0x2F, `EnemyDeadWarriorCreate` /
+`EnemyDeadWarriorUpdate`): tiles `0x081EC1F4`, palette `0x0820BBD4`,
+frames `0x08246F00` (animation 3, the death, has 70 frames); walker probes
+`0x08528830`. Create: animation 0 looping and one step, the floor snap plus
+one pixel, state 0 with `+0x1C` = 50 (state 2 under the global `0x8E &
+0x40`). The update (inside the activity window) hides it above screen Y -16
+(`sub_0806E4F8`), runs the state, then the collision pass before the
+animation step. State 0 (`sub_080B72F8`) first walks with
+`sub_0806CAF8(e, +0x18, 0x08528830, 4)`; step 0 clears `+0x18`; step 1
+starts the charge (animation 1, step 2) with the player in the centred 100
+x 60 box (`sub_0806E29C`) at walk frame 0, tick 1; steps 1 and 2 add 0x4000
+to `+0x18` up to 2.0, play sound 0x7D every 25 frames on screen and count
+`+0x1C`: past 100, sound 0x127, animation 2 (step 3), which removes 0x1000
+per frame from `+0x18` and every 4 frames raises dust
+(`sub_08045CEC(x, y, 4 + (r & 1), 6)`, vx 0.5 backward); when it ends the
+warrior turns around and walks again. Hit callback `sub_080B7644`: state
+1 (`sub_080B747C`): animation 3, vx 2.5 backward, vy -2.5, `+0x54` =
+0x2000 through `sub_0806D3D8(e, 8.0)`, a palette flash for 40 frames, sound
+0x6E every 8 frames, a fire `sub_08045CEC(x +/- 8, y - 32 +/- 8, 1, 7)` every
+4, deleted off screen or once the animation ended within 128 frames.
+
 Skeleton knight (enemy 0x0D, `EnemySkeletonKnightCreate` /
 `EnemySkeletonKnightUpdate`): `sub_0808F120` loads tiles `0x081CC00C`,
 palette `0x0820A95C` and frames `0x0821FA5C`; animations 0 idle, 1 walk, 2

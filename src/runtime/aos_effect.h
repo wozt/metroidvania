@@ -27,13 +27,14 @@
  *   sub_08045C9C (`drift`): x += vx, vx += ax, y += vy, vy += ay, then the
  *   animation step, deleted when it ends; priority 0x0D. Used with
  *   animation 1, row 8 (Effect/fire), 16, row 6 (Effect/spark), 4, row 6
- *   (Effect/dust) and 7, row 8 (Effect/impact, a class 4 shot on a wall);
+ *   (Effect/dust), 7, row 8 (Effect/impact, a class 4 shot on a wall) and
+ *   1, row 7 (Effect/ember, the dead warrior's death);
  * - the shell casing sub_080228F8 (`casing`): sprite frame 0x35 with row 8
  *   (Effect/casing, a looping one-frame animation), see aos_effect_update. */
 enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_FIRE = 4, AOS_EFFECT_SPARK = 5,
        AOS_EFFECT_DUST = 6, AOS_EFFECT_IMPACT = 7, AOS_EFFECT_CASING = 8,
-       AOS_EFFECT_KINDS = 9 };
+       AOS_EFFECT_EMBER = 9, AOS_EFFECT_KINDS = 10 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */

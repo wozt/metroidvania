@@ -1256,8 +1256,6 @@ aos:asm:asm/code/code_080709D8.s:sub_0807E8EC	sub_0807E8EC	enemies	referrers			a
 aos:asm:asm/code/code_080709D8.s:sub_0807F494	sub_0807F494	enemies	referrers			asm_function	0x0807F494	asm/code/code_080709D8.s	30021	1	10
 aos:asm:asm/code/code_080809C0.s:EnemyCatoblepasCreate	EnemyCatoblepasCreate	enemies	name			asm_function		asm/code/code_080809C0.s	18503	0	1
 aos:asm:asm/code/code_080809C0.s:EnemyCatoblepasUpdate	EnemyCatoblepasUpdate	enemies	name			asm_function		asm/code/code_080809C0.s	18495	0	1
-aos:asm:asm/code/code_080809C0.s:EnemyDeadCrusaderCreate	EnemyDeadCrusaderCreate	enemies	name			asm_function		asm/code/code_080809C0.s	29455	0	10
-aos:asm:asm/code/code_080809C0.s:EnemyDeadCrusaderUpdate	EnemyDeadCrusaderUpdate	enemies	name			asm_function		asm/code/code_080809C0.s	29343	0	12
 aos:asm:asm/code/code_080809C0.s:EnemyDevilCreate	EnemyDevilCreate	enemies	name			asm_function		asm/code/code_080809C0.s	30400	3	18
 aos:asm:asm/code/code_080809C0.s:EnemyDevilUpdate	EnemyDevilUpdate	enemies	name			asm_function		asm/code/code_080809C0.s	30297	3	10
 aos:asm:asm/code/code_080809C0.s:EnemyFinalGuardCreate	EnemyFinalGuardCreate	enemies	name			asm_function		asm/code/code_080809C0.s	28598	0	1
@@ -1412,10 +1410,6 @@ aos:asm:asm/code/code_080809C0.s:sub_0808EB3C	sub_0808EB3C	enemies	referrers			a
 aos:asm:asm/code/code_080809C0.s:sub_0808EB90	sub_0808EB90	enemies	referrers			asm_function	0x0808EB90	asm/code/code_080809C0.s	28503	0	1
 aos:asm:asm/code/code_080809C0.s:sub_0808EBD8	sub_0808EBD8	enemies	referrers			asm_function	0x0808EBD8	asm/code/code_080809C0.s	28543	0	4
 aos:asm:asm/code/code_080809C0.s:sub_0808EC08	sub_0808EC08	enemies	referrers			asm_function	0x0808EC08	asm/code/code_080809C0.s	28566	0	1
-aos:asm:asm/code/code_080809C0.s:sub_0808F364	sub_0808F364	enemies	referrers			asm_function	0x0808F364	asm/code/code_080809C0.s	29524	1	9
-aos:asm:asm/code/code_080809C0.s:sub_0808F6E8	sub_0808F6E8	enemies	referrers			asm_function	0x0808F6E8	asm/code/code_080809C0.s	29978	1	4
-aos:asm:asm/code/code_080809C0.s:sub_0808F848	sub_0808F848	enemies	referrers			asm_function	0x0808F848	asm/code/code_080809C0.s	30155	0	5
-aos:asm:asm/code/code_080809C0.s:sub_0808F8EC	sub_0808F8EC	enemies	referrers			asm_function	0x0808F8EC	asm/code/code_080809C0.s	30236	1	3
 aos:asm:asm/code/code_080809C0.s:sub_0808F938	sub_0808F938	enemies	referrers			asm_function	0x0808F938	asm/code/code_080809C0.s	30273	0	1
 aos:asm:asm/code/code_080809C0.s:sub_0808FE10	sub_0808FE10	enemies	referrers			asm_function	0x0808FE10	asm/code/code_080809C0.s	30883	1	18
 aos:asm:asm/code/code_08090914.s:EnemyArcDemonCreate	EnemyArcDemonCreate	enemies	name			asm_function		asm/code/code_08090914.s	3044	0	1
@@ -2464,7 +2458,6 @@ aos:c:src/code/code_080211F0.c:sub_080211F4	sub_080211F4	unclassified				c_funct
 aos:c:src/code/code_080211F0.c:sub_08021214	sub_08021214	unclassified				c_function	0x08021214	src/code/code_080211F0.c	58	1	0
 aos:c:src/code/code_080211F0.c:sub_08021248	sub_08021248	unclassified				c_function	0x08021248	src/code/code_080211F0.c	72	8	0
 aos:c:src/code/code_080211F0.c:sub_08021278	sub_08021278	unclassified				c_function	0x08021278	src/code/code_080211F0.c	87	20	0
-aos:c:src/code/code_080211F0.c:sub_080212C8	sub_080212C8	unclassified				c_function	0x080212C8	src/code/code_080211F0.c	102	12	0
 aos:c:src/code/code_080211F0.c:sub_080212F4	sub_080212F4	enemies	referrers			c_function	0x080212F4	src/code/code_080211F0.c	118	1	1
 aos:c:src/code/code_080211F0.c:sub_08021304	sub_08021304	environment	referrers			c_function	0x08021304	src/code/code_080211F0.c	128	5	0
 aos:c:src/code/code_080211F0.c:sub_08021344	sub_08021344	unclassified				c_function	0x08021344	src/code/code_080211F0.c	156	4	2

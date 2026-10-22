@@ -2,6 +2,14 @@
 
 Last updated: **2026-10-22**.
 
+## Patch 0455 - Aria dead crusader
+
+- Ported the dead crusader (enemy 0x52) on the skeleton knight's walk: a
+  faster pace, a shield raised while Soma attacks (blows deal 0 damage)
+  and its thrust or slash attack, drawn with palette bank 1.
+- Checked in room 8/13: it walks to Soma and strikes him, and raises its
+  shield against his blows (two blocked over 300 frames).
+
 ## Patch 0454 - Aria Mimic
 
 - Ported the Mimic (enemy 0x60): the placed closed chest that opens when

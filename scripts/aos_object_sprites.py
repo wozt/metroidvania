@@ -98,6 +98,9 @@ ENEMIES = {
     # sub_0808F120 (EnemySkeletonKnightCreate 0x0808EC64).
     "skeleton_knight": {"id": 0x0D, "graphics": 0x081CC00C, "palette": 0x0820A95C, "bank": 0,
                         "frames": 0x0821FA5C},
+    # sub_0808F8EC (EnemyDeadCrusaderCreate): the knight's sheet, bank 1.
+    "dead_crusader": {"id": 0x52, "graphics": 0x081CC00C, "palette": 0x0820A95C, "bank": 1,
+                      "frames": 0x0821FA5C},
     # sub_0806EB34 (EnemyValkyrieCreate 0x0806E714): bank 0 for id 0x29.
     "valkyrie": {"id": 0x29, "graphics": 0x081CBF2C, "palette": 0x0820A3FC, "bank": 0,
                  "frames": 0x0821285C},

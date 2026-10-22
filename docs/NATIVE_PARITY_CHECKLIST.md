@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 28 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 29 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 207 | 3366 |
+| Castlevania: Aria of Sorrow | 214 | 3359 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1222,6 +1222,16 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: Sounds 0x85 and 0x1C3, the palette bits and sub_080683BC are not ported; the special draw routine sub_0806CCE8 used in area 4 rooms 12 and 13 is not ported (the generic draw is used).  
 Next action: Trace the area 4 draw routine sub_0806CCE8.
 Evidence: in game: `aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly walks down the stairs and wounds Soma (frames 30, 90, 150); with --atk 200 --repeat 2 (button 2) the knife kills it at frame 99, burning at frames 102 and 113`.
+
+[+] **`aos.enemies.dead_crusader` — Dead crusader.** The skeleton knight's wait, walk and back-off at 0.75, the guard while Soma's + 0x10 flags & 0x360 are set (animation 7 for 61 frames, blows dealing 0 damage), the attack (animation 2 for 39 frames, then a thrust with animations 3 and 4 or a slash with animation 6 four times), the generic death and state 3 under gEwramData + 0x8E bit 0x40 are ported, drawn with palette bank 1 of the knight's sheet.
+
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyDeadCrusaderCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyDeadCrusaderUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_0808F364`, `aos:asm:asm/code/code_080809C0.s:sub_0808F6E8`, `aos:asm:asm/code/code_080809C0.s:sub_0808F848`, `aos:asm:asm/code/code_080809C0.s:sub_0808F8EC`, `aos:c:src/code/code_080211F0.c:sub_080212C8`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.skeleton_knight`.  
+Known divergences: Sounds 0x69, 0x72 and 0x85, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; the hit stun of sub_0806D4C0 needs the global pause 0x4BE, taken as 0.  
+Next action: Check a kill in game (the capture input cannot stop attacking, which keeps it guarding); compare against an emulator.
+Evidence: in game: `aria area_08_room_013 (--spawn 100 176 --hp 9999): it waits (frame 30), walks to Soma and strikes him (frames 20 and 60 walking right); attacking with --repeat 2 it raises its shield (frames 80 and 140) and two blows deal 0 damage over 300 frames`.
 
 [+] **`aos.enemies.dead_warrior` — Dead warrior.** The probe-walker charge accelerating to 2.0, the brake after 100 frames with its dust and the turn, the hiding above screen Y -16, the collision pass before the animation step, the death thrown back with its fire (animation 1, row 7: Effect/ember) and state 2 under gEwramData + 0x8E bit 0x40 are ported.
 

@@ -16,7 +16,8 @@
  * walker sub_0806CAF8 / sub_0806C828, and the skull archer (enemy 0x05) with
  * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
- * code), the skeleton knight (enemy 0x0D), the dead warrior (enemy 0x2F),
+ * code), the skeleton knight (enemy 0x0D), the dead crusader (enemy 0x52),
+ * the dead warrior (enemy 0x2F),
  * the Fleaman (enemy 0x18), the Mimic (enemy 0x60) with its hidden trigger,
  * the red crow (enemy 0x2D, the blue crow's death), the Valkyrie (enemy 0x29) and Erinys (0x62, the same code), the
  * gargoyle and the Gremlin (0x37, the same code)
@@ -98,6 +99,7 @@ enum {
     AOS_ENEMY_CURLY = 0x2B,
     AOS_ENEMY_RED_CROW = 0x2D,
     AOS_ENEMY_DEAD_WARRIOR = 0x2F,
+    AOS_ENEMY_DEAD_CRUSADER = 0x52,
     AOS_ENEMY_GREMLIN = 0x37,
     AOS_ENEMY_MEDUSA_HEAD = 0x39,
     AOS_ENEMY_GARGOYLE = 0x57,
@@ -145,6 +147,7 @@ typedef struct {
     uint8_t volley, shot;   /* current volley list and entry (+ 0x1C) */
     int8_t away;            /* + 0x20 at death: +1 / -1, away from the attacker */
     bool dropped, puddled;  /* + 0x14, + 0x15 of a walking zombie */
+    bool guarding;          /* + 0x21 of the dead crusader: blows deal 0 */
     bool translucent;       /* + 0x5A bits 1-2 = 2: semi-transparent OBJ */
     uint8_t fade, fade_timer;   /* + 0x18, + 0x19 of a Ghost Dancer */
     AosBox own_hurt, own_attack;

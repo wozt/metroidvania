@@ -691,6 +691,20 @@ beyond 120 pixels it waits for the animation's cycle, plays animation 4
 once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
+Dead crusader (enemy 0x52, `EnemyDeadCrusaderCreate` /
+`EnemyDeadCrusaderUpdate`): the skeleton knight's sheet, palette and frames
+with palette bank 1 (`sub_0808F8EC`). Its walk `sub_0808F364` is the
+knight's at 0.75 with a guard: on the floor, while `sub_080212C8` (the
+player's + 0x10 flags when he is the current player) & 0x360 is set, it
+plays animation 7 once, stops and sets + 0x21 (step 5); in step 5 it
+faces the player, keeps + 0x21 and walks on after 60 frames on the floor.
+The update clears + 0x21 each frame and does nothing while alive beyond
+margin entry 4; its hit callback `sub_0808F848` deals 0 damage (sound
+0x69) while + 0x21 is set. The attack `sub_0808F6E8`: animation 2 for 39
+frames, animation 3, then one chance in two a thrust (sound 0x85 at the
+12th frame, 31 frames, animation 4 for 21) or a slash (sound 0x85, 13
+frames, then animation 6 four times 13 frames), then the walk again.
+
 Mimic (enemy 0x60, `EnemyMimicCreate` / `EnemyMimicUpdate`): tiles
 `0x081CC04C`, palette `0x0820AB7C` with bank = parameter 1, frames
 `0x08223698` (`sub_08099430`). With parameter 0 set it is a closed chest

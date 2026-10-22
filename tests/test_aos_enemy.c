@@ -1470,6 +1470,113 @@ static void knight_tests(void) {
     assert(k.x == x0 - 0x8000);
 }
 
+static void crusader_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t idle[] = {8}, walk[] = {6, 6, 6, 6}, swing[] = {4, 4, 4};
+    const AosAnimDef defs[8] = {{1, idle},  {4, walk},  {3, swing}, {3, swing},
+                                {3, swing}, {3, swing}, {3, swing}, {3, swing}};
+    const AosAnimSet anims = {defs, 8};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    kind.margins[4][0] = kind.margins[4][1] = 48;
+    for (int a = 0; a < 8; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -40, 16, 40};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {180, 30, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
+
+    /* It waits beyond (x - 90, y - 48, 180, 96), then walks at 0.75. */
+    AosEnemy k;
+    assert(aos_enemy_create(&k, AOS_ENEMY_DEAD_CRUSADER, 150, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(k.state == 0 && (k.y >> 16) == 159);
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(k.step == 0);
+    soma.x = AOS_FIXED(230);
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(k.step == 1 && k.anim.id == 1);
+    int32_t x0 = k.x;
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(k.x == x0 + 0xC000);
+    /* Within (x - 40, y - 40, 80, 80): r & 0x7F <= 0x40 attacks; r & 0x7F
+     * <= 0x3F then thrusts: 39 + 31 + 21 frames of animations 2, 3, 4. */
+    int frames = 0;
+    while (k.state == 0 && frames < 300) {
+        aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(k.state == 1 && ((soma.x - k.x) >> 16) <= 40);
+    frames = 0;
+    while (k.state == 1 && frames < 200) {
+        aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (k.step == 3) assert(k.anim.id == 4);
+        ++frames;
+    }
+    assert(frames == 1 + 39 + 31 + 21 && k.step == 1 && k.anim.id == 1);
+    /* Otherwise it slashes: 13 frames, then animation 6 four times 13. */
+    k.state = 1;
+    k.step = 0;
+    frames = 0;
+    bool slashed = false;
+    while (k.state == 1 && frames < 200) {
+        aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+        slashed |= k.anim.id == 6;
+        ++frames;
+    }
+    assert(slashed && frames == 1 + 39 + 13 + 4 * 13 && k.step == 1);
+    /* r & 0x7F > 0x40 within reach: it backs away (step 2) at 0.75. */
+    frames = 0;
+    while (k.step == 1 && frames < 300) {
+        aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+        ++frames;
+    }
+    assert(k.step == 2 && k.state == 0);
+    x0 = k.x;
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+    assert(k.x == x0 + (k.mirrored ? -0xC000 : 0xC000));
+
+    /* While Soma attacks it guards (animation 7, step 5): his blows deal 0
+     * damage; after 61 frames it walks on. */
+    soma.flags |= AOS_FLAG_ATTACKING;
+    soma.facing_left = false;
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.x = k.x - AOS_FIXED(30);
+    soma.y = AOS_FIXED(159);
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{20, -40, 20, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosHitReport hit = aos_enemy_update(&k, &soma, &layer, &kind, &weapon, &blade, 50, 4, 0, 0,
+                                        always_one_hundred);
+    assert(k.step == 5 && k.guarding && k.anim.id == 7 && k.vx == 0);
+    assert(hit.enemy_hit && hit.enemy_damage == 0 && k.hp == 180);
+    soma.flags &= ~(uint32_t)AOS_FLAG_ATTACKING;
+    frames = 1;
+    while (k.step == 5 && frames < 100) {
+        aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+        ++frames;
+    }
+    assert(frames == 62 && k.step == 1 && k.anim.id == 1);
+    /* Unguarded, the same blow wounds it; a killing one runs the generic
+     * death. */
+    k.combat = (AosCombat){0};
+    soma.x = k.x - AOS_FIXED(30);
+    hit = aos_enemy_update(&k, &soma, &layer, &kind, &weapon, &blade, 50, 4, 0, 0,
+                           always_one_hundred);
+    assert(hit.enemy_hit && hit.enemy_damage > 0 && k.hp < 180 && !k.guarding);
+    k.combat = (AosCombat){0};
+    soma.x = k.x - AOS_FIXED(30);
+    hit = aos_enemy_update(&k, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0,
+                           always_one_hundred);
+    assert(hit.killed && k.state == 2 && k.timer == 0x28);
+}
+
 static void ghost_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t dance[] = {6, 6}, death[] = {5, 5};
@@ -2092,6 +2199,7 @@ int main(void) {
     crow_tests();
     red_crow_tests();
     mimic_tests();
+    crusader_tests();
     soldier_tests();
     armor_tests();
     archer_tests();

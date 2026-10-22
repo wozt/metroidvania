@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0462 - Aria Nemesis technical effect slots
+
+- Ported the three visual child slots created by `sub_080C7B54` (native
+  sequence identities 9, 12 and 6) into the Aria room entity list.
+- The slots now follow their Nemesis owner, mirror its direct frame, remain
+  non-combat and render with the native translucent OBJ mode; they are removed
+  with the owner.
+- Extended Nemesis static-frame extraction to include all four direct records
+  and added ROM-free coverage for the three identities and synchronized draw
+  state. A room 6/13 capture still shows the encounter and Soma's 52-damage
+  contact hit at frame 180.
+- Palette callbacks, native sound calls and exact animation-table timing remain
+  open for the next Nemesis pass.
+
 ## Patch 0461 - Aria Nemesis linked helper
 
 - Ported the linked Nemesis helper created by `sub_080C76D4` and updated by

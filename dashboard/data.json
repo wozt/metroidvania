@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T22:30:58+00:00",
+ "generated_at": "2026-10-22T23:08:15+00:00",
  "git": {
-  "commit": "1bbce5a",
+  "commit": "bfdb517",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 137,
    "functional_or_better_percent": 83.0,
-   "with_passing_tests": 145,
-   "with_passing_tests_percent": 87.9,
+   "with_passing_tests": 153,
+   "with_passing_tests_percent": 92.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -295,8 +295,8 @@
    },
    "functional_or_better": 92,
    "functional_or_better_percent": 100.0,
-   "with_passing_tests": 90,
-   "with_passing_tests_percent": 97.8,
+   "with_passing_tests": 92,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -473,8 +473,8 @@
    },
    "functional_or_better": 8,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 11,
-   "with_passing_tests_percent": 91.7,
+   "with_passing_tests": 12,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "assets.aria_objects",
@@ -510,8 +510,8 @@
    },
    "functional_or_better": 4,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 7,
-   "with_passing_tests_percent": 58.3,
+   "with_passing_tests": 10,
+   "with_passing_tests_percent": 83.3,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -607,8 +607,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 0,
-   "with_passing_tests_percent": 0.0,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -6176,14 +6176,12 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
    }
   },
   {
@@ -6319,14 +6317,12 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
    }
   },
   {
@@ -9734,14 +9730,14 @@
     "sub_080C7AB8",
     "sub_080C7B54"
    ],
-   "limitations": "The four direct OAM records and collision boxes are ported; the linked helper from sub_080C76D4/sub_080C7784 now follows its parent with static frames and native offsets, while the three sub_080C7B54 technical effects, palette callbacks and native sounds remain outside the body slot. Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning and the global 0x8E & 0x40 inert path are ported; each direct frame and helper static anchor is exported from the compact descriptor.",
-   "next_action": "Trace the three sub_080C7B54 effect slots and compare helper state timings against an emulator.",
+   "limitations": "The four direct OAM records and collision boxes are ported; the linked helper from sub_080C76D4/sub_080C7784 follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots now follow the owner as translucent non-combat children. Palette callbacks, native sounds and exact animation-table timing remain outside the body slot. Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6) and the global 0x8E & 0x40 inert path are ported; each direct frame and helper/effect static anchor is exported from the compact descriptor.",
+   "next_action": "Trace the effect palette callbacks and exact animation-table timing; compare all Nemesis child slots against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis sprites and linked helper render; Soma hit for 52 damage by frame 180"
+     "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent effect children render; Soma hit for 52 damage by frame 180"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -11050,14 +11046,12 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
    }
   },
   {
@@ -11286,14 +11280,12 @@
       "test": "tests/test_native_parity.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
    }
   },
   {
@@ -11384,14 +11376,12 @@
       "test": "tests/test_native_parity.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
    }
   },
   {
@@ -11562,7 +11552,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames and linked-helper static anchors, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, helper anchors and translucent technical effect children, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12162,14 +12152,12 @@
       "test": "tests/test_native_parity.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
    }
   },
   {
@@ -12207,14 +12195,12 @@
       "test": "tests/test_dashboard.py",
       "kind": "python",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
    }
   },
   {
@@ -12252,14 +12238,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
    }
   },
   {
@@ -12592,7 +12576,7 @@
    {
     "name": "python_tooling_and_data",
     "files": [],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "no_proprietary_files",
@@ -12752,8 +12736,8 @@
     "file": "tests/test_dashboard.py",
     "module": "tests.test_dashboard",
     "test_count": 14,
-    "outcome": "failed",
-    "passed": 13
+    "outcome": "passed",
+    "passed": 14
    },
    {
     "file": "tests/test_deferred_room_save_0109.py",
@@ -13018,8 +13002,8 @@
     "file": "tests/test_native_parity.py",
     "module": "tests.test_native_parity",
     "test_count": 17,
-    "outcome": "failed",
-    "passed": 16
+    "outcome": "passed",
+    "passed": 17
    },
    {
     "file": "tests/test_native_room_viewer_demo_0125c.py",
@@ -13247,12 +13231,18 @@
    }
   ],
   "summary": {
-   "passed": 489,
-   "failed": 3,
+   "passed": 492,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "bfdb517",
+   "date": "2026-10-23",
+   "subject": "Port the Aria Nemesis linked helper",
+   "scope": "project"
+  },
   {
    "commit": "1bbce5a",
    "date": "2026-10-23",
@@ -13725,12 +13715,6 @@
    "commit": "0c94fa4",
    "date": "2026-10-19",
    "subject": "Port the Zero Mission ending result image",
-   "scope": "project"
-  },
-  {
-   "commit": "2ea63ad",
-   "date": "2026-10-19",
-   "subject": "Port the remaining native monster prototypes",
    "scope": "project"
   }
  ],
@@ -16747,7 +16731,7 @@
         "tests/test_aos_enemy.c"
        ],
        "in_game_check": [
-        "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis sprites and linked helper render; Soma hit for 52 damage by frame 180"
+        "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent effect children render; Soma hit for 52 damage by frame 180"
        ],
        "emulator_compared": false,
        "played_through": false

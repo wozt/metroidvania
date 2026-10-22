@@ -1999,9 +1999,16 @@ static void nemesis_tests(void) {
     n.attack_wait = 0;
     AosHitReport helper_report =
         aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(helper_report.child_count == 1 && helper_report.children[0].role == AOS_ROLE_NEMESIS_HELPER &&
+    assert(helper_report.child_count == 4);
+    assert(helper_report.children[0].role == AOS_ROLE_NEMESIS_HELPER &&
            helper_report.children[0].state == 1 && helper_report.children[0].static_frame == 1);
     AosEnemy helper = helper_report.children[0];
+    assert(helper_report.children[1].role == AOS_ROLE_NEMESIS_EFFECT &&
+           helper_report.children[1].variant == 9);
+    assert(helper_report.children[2].role == AOS_ROLE_NEMESIS_EFFECT &&
+           helper_report.children[2].variant == 12);
+    assert(helper_report.children[3].role == AOS_ROLE_NEMESIS_EFFECT &&
+           helper_report.children[3].variant == 6);
     helper.parent = &n;
     aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(!helper.hidden && helper.static_frame == 1 && helper.x == n.x && helper.y == n.y);
@@ -2014,6 +2021,12 @@ static void nemesis_tests(void) {
     helper.step = 0;
     aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(helper.static_frame == 3 && helper.y == n.y - AOS_FIXED(4));
+    AosEnemy effect = helper_report.children[1];
+    effect.parent = &n;
+    n.anim.frame = 2;
+    aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!effect.hidden && effect.translucent && effect.static_frame == 2 && effect.x == n.x &&
+           effect.y == n.y && effect.combat.attack_off && effect.combat.hurt_off);
     n.defeated = true;
     aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(helper.removed);

@@ -454,7 +454,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Linked child entities follow their owner's room slot. */
             if ((e->enemy.role == AOS_ROLE_FIN || e->enemy.role == AOS_ROLE_BEAM ||
                  e->enemy.role == AOS_ROLE_BEAM_FLASH ||
-                 e->enemy.role == AOS_ROLE_NEMESIS_HELPER) &&
+                 e->enemy.role == AOS_ROLE_NEMESIS_HELPER ||
+                 e->enemy.role == AOS_ROLE_NEMESIS_EFFECT) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
@@ -484,7 +485,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_BEAM ||
                                        hit.children[c].role == AOS_ROLE_BEAM_FLASH ||
                                        hit.children[c].role == AOS_ROLE_DOLL_PIECE ||
-                                       hit.children[c].role == AOS_ROLE_NEMESIS_HELPER
+                                       hit.children[c].role == AOS_ROLE_NEMESIS_HELPER ||
+                                       hit.children[c].role == AOS_ROLE_NEMESIS_EFFECT
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};

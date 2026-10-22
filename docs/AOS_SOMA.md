@@ -792,9 +792,11 @@ helper from `sub_080C76D4`/`sub_080C7784` is emitted as a parent-linked child:
 its static frames 1-3 use the exported native anchors, follow the parent's
 fixed-point position and mirror, and reproduce the +9/+10 pixel horizontal,
 +37/-4 pixel vertical and 10/40-frame/flicker timings. The three technical
-effect slots created by `sub_080C7B54`, palette callbacks and native sound
-calls remain outside this body slot; death uses the shared 40-frame flame and
-blink sequence.
+effect slots created by `sub_080C7B54` (sequence identities 9, 12 and 6) are
+also emitted as translucent, non-combat children: each follows the owner's
+position, mirror and current direct frame, and is removed with the owner.
+Their palette callbacks, native sound calls and exact animation-table timing
+remain open; death uses the shared 40-frame flame and blink sequence.
 
 Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63) share
 `sub_080B7E80` (create: tiles `0x081F4214`, palette `0x0820BCA0`, the

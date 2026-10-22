@@ -1532,6 +1532,25 @@ static void nemesis_helper_update(AosEnemy *h) {
     }
 }
 
+/* The three visual slots made by sub_080C7B54 (sequence indices 9, 12 and
+ * 6). sub_08045748 copies the owning Nemesis position, mirror and current
+ * sprite record into each translucent child; their collision callbacks are
+ * disabled. Keeping the sequence index in `variant` preserves the native
+ * identity while the compact descriptor selects the current direct frame. */
+static void nemesis_effect_update(AosEnemy *effect) {
+    const AosEnemy *parent = effect->parent;
+    if (!parent || parent->removed || parent->defeated) {
+        effect->removed = true;
+        return;
+    }
+    effect->hidden = parent->hidden;
+    effect->x = parent->x;
+    effect->y = parent->y;
+    effect->mirrored = parent->mirrored;
+    effect->translucent = true;
+    effect->static_frame = parent->anim.frame < 4 ? parent->anim.frame : 0;
+}
+
 /* EnemyNemesisUpdate (sub_080C67CC and states 0..6): the original uses a
  * compact four-frame descriptor and several linked helper entities. The
  * observable body routine keeps the idle hover, homing approach, short
@@ -1544,6 +1563,7 @@ static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
                                    int soma_def, uint32_t (*random)(void)) {
     AosHitReport report = {0};
     bool emit_helper = !n->helper_spawned && n->state != 7;
+    bool emit_effects = !n->technical_effects_spawned && n->state != 7;
     if (n->state == 7) {
         if (n->anim.id != 0) play(n, kind->anims, 0);
         step_anim(n, kind->anims);
@@ -1634,6 +1654,31 @@ static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
         report.children[report.child_count++] = helper;
         n->helper_spawned = true;
         n->spawned_count = 1;
+    }
+    if (emit_effects) {
+        static const uint8_t sequences[] = {9, 12, 6};
+        for (unsigned i = 0; i < sizeof sequences &&
+                              report.child_count < AOS_ENEMY_MAX_CHILDREN;
+             ++i) {
+            AosEnemy effect = {0};
+            effect.id = n->id;
+            effect.role = AOS_ROLE_NEMESIS_EFFECT;
+            effect.variant = sequences[i];
+            effect.static_frame = n->anim.frame < 4 ? n->anim.frame : 0;
+            effect.anim.id = 0;
+            effect.x = n->x;
+            effect.y = n->y;
+            effect.mirrored = n->mirrored;
+            effect.hidden = n->hidden;
+            effect.translucent = true;
+            effect.combat.attack_off = true;
+            effect.combat.hurt_off = true;
+            report.children[report.child_count++] = effect;
+        }
+        if (report.child_count >= 4) {
+            n->technical_effects_spawned = true;
+            n->spawned_count = report.child_count;
+        }
     }
     return report;
 }
@@ -5715,6 +5760,10 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     }
     if (enemy->role == AOS_ROLE_NEMESIS_HELPER) {
         nemesis_helper_update(enemy);
+        return report;
+    }
+    if (enemy->role == AOS_ROLE_NEMESIS_EFFECT) {
+        nemesis_effect_update(enemy);
         return report;
     }
     if (enemy->id == AOS_ENEMY_KILLER_DOLL && enemy->role == AOS_ROLE_ENEMY)

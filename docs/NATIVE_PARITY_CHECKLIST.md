@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 34 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 35 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 259 | 3314 |
+| Castlevania: Aria of Sorrow | 273 | 3300 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1322,6 +1322,15 @@ Dependencies: `aos.enemies.gargoyle`.
 Known divergences: As the gargoyle.  
 Next action: Follow the gargoyle's open items.
 Evidence: in game: `aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)`.
+
+[+] **`aos.enemies.killer_doll` — Killer Doll.** The close-range wake-up and rise, random bounded flight legs, pauses, aimed charge, timed landing and takeoff, inert animation under gEwramData + 0x8E bit 0x40, and death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BAC8`, `aos:asm:asm/code/code_08060B98.s:sub_0806BF78`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080C0A1C.s:EnemyKillerDollCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyKillerDollUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7C04`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7C94`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7CE4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C81AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8244`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C82F4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C86A0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C88B4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8914`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C893C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8968`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_aos_object_sprites.py`](../tests/test_aos_object_sprites.py).
+Known divergences: Sounds 0x6E and 0x153, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; child effects and pieces are updated after the enemies of their frame (native slot order not traced).  
+Next action: Compare against an emulator.
+Evidence: in game: `aria area_06_room_026: from --spawn 200 159 it wakes and flies (frame 240); from --spawn 145 159 it charges Soma for 66 damage by frame 480; with --spawn 85 159 --atk 999 --weapon 0 --repeat 2 and right + B, one blow scatters it into five burning pieces by frame 90`.
 
 [+] **`aos.enemies.lightning_doll` — Lightning Doll.** The dormant wake-up, the six random bounded flight paths, the electrical charge with its native attack box and a spark following Soma, the timed landing and takeoff, the inert animation cycle under gEwramData + 0x8E bit 0x40, and the death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported.
 

@@ -1845,6 +1845,139 @@ static void beam_tests(void) {
     assert(b.removed);
 }
 
+static void killer_doll_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t rest[] = {200}, wake[] = {2, 2}, rise[] = {20}, pause[] = {2, 2},
+                         fly[] = {9, 9}, attack[] = {5, 5}, land[] = {8, 8};
+    const AosAnimDef defs[7] = {{1, rest}, {2, wake},   {1, rise}, {2, pause},
+                                {2, fly}, {2, attack}, {2, land}};
+    const AosAnimSet anims = {defs, 7};
+    static const uint8_t flame_ticks[] = {4, 4, 4};
+    const AosAnimDef flame_def = {3, flame_ticks};
+    const AosAnimSet flame_set = {&flame_def, 1};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    kind.flame_anims = &flame_set;
+    for (int a = 0; a < 7; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -24, 16, 24};
+            kind.sprites[a][f] = (uint8_t)(a * 2 + f);
+        }
+    const AosEnemyStats stats = {200, 40, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(159), NULL);
+
+    /* It rests on the floor, then wakes within 60 pixels, rises and
+     * pauses before the first flight leg. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_KILLER_DOLL, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(d.state == 1 && (d.y >> 16) == 159 && d.attack_wait >= 0x80 &&
+           d.attack_wait <= 0x87F && d.leg >= 0x20 && d.leg <= 0x11F &&
+           d.flight >= 0x100 && d.flight <= 0x2FF);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.step == 0 && d.anim.id == 0);
+    soma.x = AOS_FIXED(150);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.step == 1 && d.anim.id == 1);
+    int frames = 0;
+    while (d.step == 1 && frames < 30) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.step == 2 && d.anim.id == 2 && d.vy == -0x4000);
+    while (d.step == 2 && frames < 100) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.step == 4 && d.anim.id == 4);
+    while (d.step == 4 && frames < 150) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.step == 3 && d.anim.id == 3 && d.leg == 0x20);
+
+    /* Random pattern zero flies horizontally away from the player at
+     * 1.0, with the sprite turned away. */
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.substep == 1 && d.vx == -0x10000 && d.vy == 0 && !d.mirrored && d.anim.id == 4);
+
+    /* With its attack wait over and the player ahead, it enters animation
+     * 5 and flies at 1.0 toward his upper body for the horizontal travel
+     * time. */
+    d.step = 3;
+    d.substep = 1;
+    d.vx = d.vy = 0;
+    d.attack_wait = 0;
+    d.leg = 100;
+    d.flight = 100;
+    d.mirrored = true;
+    soma.x = d.x + AOS_FIXED(15);
+    soma.y = d.y;
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.step == 5 && d.substep == 0);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.anim.id == 5 && d.substep == 1 && d.vx > 0 && d.timer > 0 && d.timer <= 32);
+    frames = 0;
+    while (d.step == 5 && frames < 100) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert((d.step == 3 || d.step == 4) && d.attack_wait == 0x80 && d.leg > 0 &&
+           d.flight > 0);
+
+    /* When its flight expires it sinks to a solid cell, rests in animation
+     * 6 and rises again with a new 512-frame minimum flight timer. */
+    d.step = 3;
+    d.substep = 1;
+    d.flight = 1;
+    d.leg = 100;
+    d.attack_wait = 100;
+    d.vx = d.vy = 0;
+    d.y = AOS_FIXED(150);
+    soma.x = AOS_FIXED(600);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.step == 6);
+    frames = 0;
+    while (d.step == 6 && d.anim.id != 6 && frames < 100) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.anim.id == 6 && (d.y >> 16) == 160);
+    while (d.step == 6 && frames < 200) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.step == 1 && d.anim.id == 1 && d.flight == 0x200);
+
+    /* A killing blow hides it and creates the five Killer Doll frames.
+     * The shared piece routine keeps the parent until all five leave. */
+    AosEnemy dead;
+    soma = aos_soma_spawn(AOS_FIXED(70), AOS_FIXED(159), NULL);
+    assert(aos_enemy_create(&dead, AOS_ENEMY_KILLER_DOLL, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    soma.facing_left = false;
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{20, -40, 20, 30, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosHitReport hit = aos_enemy_update(&dead, &soma, &layer, &kind, &weapon, &blade, 999, 4,
+                                        0, 0, always_zero);
+    assert(hit.killed && dead.state == 0xFF && dead.hidden && hit.child_count == 5 &&
+           dead.spawned_count == 5);
+    for (int i = 0; i < 5; ++i) {
+        AosEnemy piece = hit.children[i];
+        aos_enemy_update(&piece, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        assert(piece.role == AOS_ROLE_DOLL_PIECE && piece.static_frame == 13 + i &&
+               piece.glow.started);
+    }
+}
+
 static void doll_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
@@ -2641,6 +2774,7 @@ int main(void) {
     crusader_tests();
     skull_tests();
     beam_tests();
+    killer_doll_tests();
     doll_tests();
     soldier_tests();
     armor_tests();

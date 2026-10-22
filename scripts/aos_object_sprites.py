@@ -107,6 +107,10 @@ ENEMIES = {
                  "frames": 0x0824A334, "static_frames": (0xD,)},
     "lubicant": {"id": 0x63, "graphics": 0x081F4214, "palette": 0x0820BCA0, "bank": 1,
                  "frames": 0x0824A334, "static_frames": (0xD,)},
+    # sub_080C7C04 (EnemyKillerDollCreate): its pieces show sprite frames
+    # 13 to 17 (records at 0x08528AC4).
+    "killer_doll": {"id": 0x3A, "graphics": 0x081F426C, "palette": 0x0820BEEC, "bank": 0,
+                    "frames": 0x0824DB0C, "static_frames": tuple(range(13, 18))},
     # sub_080C8A18 (EnemyLightningDollCreate): its pieces show sprite
     # frames 20 to 24 (records at 0x08528AE4).
     "lightning_doll": {"id": 0x3B, "graphics": 0x081F426C, "palette": 0x0820BEEC, "bank": 0,

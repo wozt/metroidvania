@@ -693,6 +693,34 @@ beyond 120 pixels it waits for the animation's cycle, plays animation 4
 once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
+Killer Doll (enemy 0x3A, `EnemyKillerDollCreate` /
+`EnemyKillerDollUpdate`): tiles `0x081F426C`, palette `0x0820BEEC` bank 0
+and frames `0x0824DB0C`. Creation starts animation 0, snaps it to the floor
+and seeds the attack wait (+ 0x14) to 128..2175 frames, the current leg (+
+0x16) to 32..287 and the flight timer (+ 0x18) to 256..767. `sub_080C7CE4`
+wakes it when the player is within 60 pixels on both axes, plays animation
+1 once and rises at 0.25 through animation 2 for 34 frames. Animation 3 is
+the pause between flight legs. Each leg is chosen with r & 3: zero flies
+horizontally away from the player at 1.0, while the other values fly
+diagonally toward him at 0.53125; `sub_080C86A0` reflects it at the room
+edges and stops the applicable speed at walls, floors and ceilings. With
+the attack wait expired, the player ahead and within 40 pixels on both
+axes, animation 5 sends it at 1.0 toward the player's position 16 pixels
+higher until it crosses his X. When the flight timer expires it sinks into
+a solid cell, rests in animation 6 for 64..127 frames and rises again with
+a new 512..1535-frame flight timer.
+
+Its hit callback `sub_080C81AC` hides it and `sub_080C8968` creates five
+pieces from `0x08528AC4` (sprite frames 13..17). `sub_080C82F4` applies
+each record's velocity and timer; piece 1 alone bounces against the floor
+and stops when slow, while every piece blinks near the end and emits the
+flame and dust of `sub_0806D5C0` at its record's intervals. Each keeps a
+looping death-flame glow (`sub_080C8244`) 16 pixels above it, and the hidden
+parent leaves only after all five pieces and their glows finish. Under
+global `0x8E & 0x40`, `sub_080C8914` only loops animation 0. Sounds 0x6E
+and 0x153, palette flags, the tracking list and `sub_080683BC` rewards are
+not ported.
+
 Lightning Doll (enemy 0x3B, `EnemyLightningDollCreate` /
 `EnemyLightningDollUpdate`): tiles `0x081F426C`, palette `0x0820BEEC` bank
 0 and frames `0x0824E7F4`. Creation starts animation 0, snaps it to the

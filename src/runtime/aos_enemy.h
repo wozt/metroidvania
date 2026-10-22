@@ -17,7 +17,7 @@
  * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
  * code), the skeleton knight (enemy 0x0D), the dead crusader (enemy 0x52),
- * the Lightning Doll (0x3B) with its burning pieces, the beam skeleton
+ * the Killer Doll (0x3A) and Lightning Doll (0x3B) with their burning pieces, the beam skeleton
  * (0x59) with its beam and bones, Skull Millione (0x5B),
  * Cagnazzo (0x49, with its fin) and Lubicant (0x63,
  * with its fin; the same code),
@@ -112,6 +112,7 @@ enum {
     AOS_ENEMY_DEAD_CRUSADER = 0x52,
     AOS_ENEMY_GREMLIN = 0x37,
     AOS_ENEMY_CAGNAZZO = 0x49,
+    AOS_ENEMY_KILLER_DOLL = 0x3A,
     AOS_ENEMY_LIGHTNING_DOLL = 0x3B,
     AOS_ENEMY_BEAM_SKELETON = 0x59,
     AOS_ENEMY_SKULL_MILLIONE = 0x5B,
@@ -173,8 +174,8 @@ typedef struct AosEnemy {
     bool firing;            /* + 0x1A bit 0: its beam lives */
     uint16_t scale;         /* + 0x20: the vertical scale of its affine slot */
     bool scaled;            /* + 0x59 bit 0x10: drawn with the owner's scale */
-    uint16_t attack_wait, flight;   /* + 0x14, + 0x18 of a Lightning Doll */
-    int16_t leg;            /* + 0x16: frames of its current drift */
+    uint16_t attack_wait, flight;   /* + 0x14, + 0x18 of either Doll */
+    int16_t leg;            /* + 0x16: drift / rest timer of either Doll */
     AosEffect glow;         /* a doll piece's flame (sub_080C9058) */
     bool translucent;       /* + 0x5A bits 1-2 = 2: semi-transparent OBJ */
     uint8_t fade, fade_timer;   /* + 0x18, + 0x19 of a Ghost Dancer */

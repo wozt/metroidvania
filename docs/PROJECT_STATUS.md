@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-22**.
 
+## Patch 0459 - Aria Killer Doll
+
+- Ported the Killer Doll (enemy 0x3A): its close-range wake-up, rise,
+  bounded random flight, pauses, aimed charge and timed landing cycle.
+- Exported its native animations and five piece frames; its killing blow
+  now scatters those pieces with their native trajectories, bounce, flame
+  glows, dust and delayed owner removal.
+- Checked in room 6/26: it wakes and flies, hits Soma for 66 damage, and a
+  killing blow breaks it into its five burning pieces.
+
 ## Patch 0458 - Aria Lightning Doll
 
 - Ported the Lightning Doll (enemy 0x3B): its dormant wake-up, random

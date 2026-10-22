@@ -970,6 +970,15 @@ static void curly_tests(void) {
         ++frames;
     }
     assert(b.state == 0 && b.anim.id == 0 && frames == 17);
+
+    /* EnemyDurgaCreate / EnemyDurgaUpdate call Curly's routines. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_DURGA, 100, 140, 0, 0, &soma, &layer, &kind, &stats));
+    assert(d.state == 0 && (d.y >> 16) == 159 && d.vy == 0x10000 && d.ay == 0x2800);
+    for (int i = 0; i < 20 && d.vx == 0; ++i)
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    /* At the next walk frame start: 0.5 toward its facing. */
+    assert(d.vx == (d.mirrored ? 0x8000 : -0x8000));
 }
 
 static void ghost_tests(void) {

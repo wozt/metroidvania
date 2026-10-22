@@ -2,6 +2,13 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0447 - Aria Durga
+
+- Durga (enemy 0x11) only calls Curly's create and update routines with
+  palette bank 0; the runtime and exporter register it on Curly's port.
+- Checked in room 2/19: both Durgas pace toward Soma and attack in reach
+  (frames 30 and 120).
+
 ## Patch 0446 - Aria Curly
 
 - Ported Curly (enemy 0x2B) with three shared helpers: the uphill

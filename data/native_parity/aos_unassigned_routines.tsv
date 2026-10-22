@@ -1448,8 +1448,6 @@ aos:asm:asm/code/code_08090914.s:EnemyCreakingSkullCreate	EnemyCreakingSkullCrea
 aos:asm:asm/code/code_08090914.s:EnemyCreakingSkullUpdate	EnemyCreakingSkullUpdate	enemies	name			asm_function		asm/code/code_08090914.s	9325	1	12
 aos:asm:asm/code/code_08090914.s:EnemyDemonLordCreate	EnemyDemonLordCreate	enemies	name			asm_function		asm/code/code_08090914.s	3060	0	1
 aos:asm:asm/code/code_08090914.s:EnemyDemonLordUpdate	EnemyDemonLordUpdate	enemies	name			asm_function		asm/code/code_08090914.s	3052	0	1
-aos:asm:asm/code/code_08090914.s:EnemyDurgaCreate	EnemyDurgaCreate	enemies	name			asm_function		asm/code/code_08090914.s	5790	0	1
-aos:asm:asm/code/code_08090914.s:EnemyDurgaUpdate	EnemyDurgaUpdate	enemies	name			asm_function		asm/code/code_08090914.s	5782	0	1
 aos:asm:asm/code/code_08090914.s:EnemyEctoplasmCreate	EnemyEctoplasmCreate	enemies	name			asm_function		asm/code/code_08090914.s	17631	0	9
 aos:asm:asm/code/code_08090914.s:EnemyEctoplasmUpdate	EnemyEctoplasmUpdate	enemies	name			asm_function		asm/code/code_08090914.s	17523	0	13
 aos:asm:asm/code/code_08090914.s:EnemyFlameDemonCreate	EnemyFlameDemonCreate	enemies	name			asm_function		asm/code/code_08090914.s	3028	0	1

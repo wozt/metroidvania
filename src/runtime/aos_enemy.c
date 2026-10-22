@@ -422,7 +422,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
-        id != AOS_ENEMY_CURLY)
+        id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -522,9 +522,10 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         enemy->state = 0;
         return true;
     }
-    if (id == AOS_ENEMY_CURLY) {
-        /* EnemyCurlyCreate (sub_08093540: tiles 0x081CC02C, palette
-         * 0x0820AA6C bank 1, frames 0x0822184C): animation 0 looping and
+    if (id == AOS_ENEMY_CURLY || id == AOS_ENEMY_DURGA) {
+        /* EnemyCurlyCreate, also EnemyDurgaCreate (sub_08093540: tiles
+         * 0x081CC02C, palette 0x0820AA6C bank 1 for Curly, 0 for Durga,
+         * frames 0x0822184C): animation 0 looping and
          * one step, frame boxes, the floor snap, state 0 with vy 1.0 and
          * + 0x54 = 0x2800; state 3 (animation only) under the global
          * 0x8E & 0x40. */
@@ -740,7 +741,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = 0;
-                } else if (enemy->id == AOS_ENEMY_CURLY) {
+                } else if (enemy->id == AOS_ENEMY_CURLY || enemy->id == AOS_ENEMY_DURGA) {
                     /* sub_080935E8: death animation 2 and the generic death
                      * in state 2 (sound 0x1C3). */
                     play_loop(enemy, kind->anims, 2, false);
@@ -2901,7 +2902,7 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->role == AOS_ROLE_GRENADE)
         return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
-    if (enemy->id == AOS_ENEMY_CURLY)
+    if (enemy->id == AOS_ENEMY_CURLY || enemy->id == AOS_ENEMY_DURGA)
         return curly_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                             cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_GARGOYLE)

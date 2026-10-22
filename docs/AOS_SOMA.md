@@ -852,6 +852,9 @@ again when the animation ends. Hit callback `sub_080935E8` (sound 0x1C3):
 animation 2 and 40 frames of the generic death (state 2). Contact
 `sub_08093674`: type 0, element 0.
 
+Durga (enemy 0x11): `EnemyDurgaCreate` and `EnemyDurgaUpdate` only call
+Curly's routines; `sub_08093540` gives it palette bank 0.
+
 Ghost Dancer (enemy 0x1D, `EnemyGhostDancerCreate` /
 `EnemyGhostDancerUpdate`): `sub_080C2E74` loads tiles `0x081F4244`, palette
 `0x0820BDD8` with bank = parameter 0 (0 to 2 in the rooms) and frames

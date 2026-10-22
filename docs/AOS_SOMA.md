@@ -830,6 +830,32 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Valkyrie (enemy 0x29, `EnemyValkyrieCreate` / `EnemyValkyrieUpdate`):
+`sub_0806EB34` loads tiles `0x081CBF2C`, palette `0x0820A3FC` (bank 0 for
+id 0x29, else 1) and frames `0x0821285C` (the area 4 rooms 12-13 draw
+routine as Curly); animations 0 hover, 1 strike, 2 death. Create:
+animation 0 looping and one step, frame boxes, state 0 (state 4 under the
+global `0x8E & 0x40`). The update has no activity window: `sub_0806AD24`
+(stun), then state 0 (`sub_0806E7A8`): it faces the player; step 0 waits
+until he is within 120 pixels (`sub_0806CEF8` / `sub_080689F8`: Sqrt of the
+whole-pixel deltas) or it is hurt; step 1 heads at 2.0 (`sub_080696B0`:
+v = delta * speed / distance, whole pixels) for the point 64 pixels in front
+of him and 48 above, striking (state 1) once there or once within 60
+pixels of him on both axes while more than 32 pixels above. State 1
+(`sub_0806E8AC`): animation 1 once, speeds kept at 5/6 through
+`sub_0806D3D8(e, 3.0)`; frame 2 is held (its tick reset) for 16 frames,
+then the tick is set to 100; at frame 3 (sound 0x87) vx = 3.0 forward, vy =
+2.5, after frame 7 `+0x54` = -0x4000; when the animation ends animation 0,
+31/32 of vx for 20 frames (or until the player leaves 120 pixels), then 48
+frames facing him at 7/8 speeds back to state 0 step 1. Hit callback
+`sub_0806EBDC`: at 0 HP sound 0x1CD, animation 2, 40 frames of state 2
+(9/10 of vx, a fall with 0x1000 clamped to 3.0, the generic death); alive,
+struck by an attacker of type 3 or 4 during state 1, it plays animation 0
+and recoils (state 3, `sub_0806EA8C`: 3.0 away and up, 11/12 per frame,
+facing the player again above -1.25, state 0 above -0.125). Contact
+`sub_0806ECA8`: type 0, its attack halved except during frames 4 to 6 of
+the strike.
+
 Curly (enemy 0x2B, `EnemyCurlyCreate` / `EnemyCurlyUpdate`):
 `sub_08093540` loads tiles `0x081CC02C`, palette `0x0820AA6C` (bank 1 for
 id 0x2B, else 0) and frames `0x0822184C`, with the draw routine

@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0448 - Aria Valkyrie
+
+- Ported the Valkyrie (enemy 0x29) with the shared range test
+  `sub_0806CEF8` and the straight homing move `sub_080696B0`: its approach
+  above the player, the held strike and 3.0 charge, the hover back, the
+  recoil when struck mid-strike, the halved contact outside the strike
+  frames and the falling death.
+- Checked in room 4/8: the Valkyrie hovers in, takes position above Soma
+  and charges with its spear (frames 40, 100, 140 and 200).
+
 ## Patch 0447 - Aria Durga
 
 - Durga (enemy 0x11) only calls Curly's create and update routines with

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 20 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 21 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 151 | 3422 |
+| Castlevania: Aria of Sorrow | 162 | 3411 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1282,6 +1282,16 @@ Dependencies: `aos.enemies.axe_armor`.
 Known divergences: The pieces' attacker position is Soma's, standing for the weapon entity. The arrow's + 0x0F change, the dust's + 0x0F, the global pause 0x4BE and the sounds are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_00_room_024: kill at frame 159 (--spawn 200 176 --atk 80 --repeat 2, buttons 0x12), the pieces and their dust captured at frames 199 and 213`.
+
+[+] **`aos.enemies.valkyrie` — Valkyrie.** The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:EnemyValkyrieCreate`, `aos:asm:asm/code/code_08060B98.s:EnemyValkyrieUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_080689F8`, `aos:asm:asm/code/code_08060B98.s:sub_080696B0`, `aos:asm:asm/code/code_08060B98.s:sub_0806CEF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E7A8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E8AC`, `aos:asm:asm/code/code_08060B98.s:sub_0806EA8C`, `aos:asm:asm/code/code_08060B98.s:sub_0806EB34`, `aos:asm:asm/code/code_08060B98.s:sub_0806EBDC`, `aos:asm:asm/code/code_08060B98.s:sub_0806ECA8`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.curly`.  
+Known divergences: Sounds 0x87 and 0x1CD, the palette bits, the tracking list of sub_08021924, sub_080683BC and the area 4 rooms 12-13 draw routine sub_0806CCE8 are not ported; a zero distance in sub_080696B0 (a division by zero natively) leaves it still.  
+Next action: Play the sounds once the Aria sound path exists.
+Evidence: in game: `aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)`.
 
 [+] **`aos.enemies.zombie` — Zombie and generic enemy death.** Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported.
 

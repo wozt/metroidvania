@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T00:27:56+00:00",
+ "generated_at": "2026-10-22T00:31:38+00:00",
  "git": {
-  "commit": "72838a3",
+  "commit": "3f5cadc",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 149,
+   "total": 150,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 121,
+    "functional": 122,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 121,
-   "functional_or_better_percent": 81.2,
-   "with_passing_tests": 137,
-   "with_passing_tests_percent": 91.9,
+   "functional_or_better": 122,
+   "functional_or_better_percent": 81.3,
+   "with_passing_tests": 138,
+   "with_passing_tests_percent": 92.0,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -212,6 +212,7 @@
     "aos.enemies.medusa_head",
     "aos.enemies.needles",
     "aos.enemies.skull_archer",
+    "aos.enemies.valkyrie",
     "aos.enemies.zombie",
     "aos.enemies.zombie_officer",
     "aos.enemies.zombie_soldier",
@@ -383,20 +384,20 @@
    "areas": [
     "aos"
    ],
-   "total": 20,
+   "total": 21,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 15,
+    "functional": 16,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 15,
-   "functional_or_better_percent": 75.0,
-   "with_passing_tests": 20,
+   "functional_or_better": 16,
+   "functional_or_better_percent": 76.2,
+   "with_passing_tests": 21,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -411,6 +412,7 @@
     "aos.enemies.medusa_head",
     "aos.enemies.needles",
     "aos.enemies.skull_archer",
+    "aos.enemies.valkyrie",
     "aos.enemies.zombie",
     "aos.enemies.zombie_officer",
     "aos.enemies.zombie_soldier",
@@ -9026,6 +9028,71 @@
    }
   },
   {
+   "id": "aos.enemies.valkyrie",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Valkyrie",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.curly"
+   ],
+   "native_routines": [
+    "EnemyValkyrieCreate",
+    "EnemyValkyrieUpdate",
+    "sub_0806E7A8",
+    "sub_0806E8AC",
+    "sub_0806EA8C",
+    "sub_0806EB34",
+    "sub_0806EBDC",
+    "sub_0806ECA8",
+    "sub_080696B0",
+    "sub_0806CEF8",
+    "sub_080689F8"
+   ],
+   "limitations": "Sounds 0x87 and 0x1CD, the palette bits, the tracking list of sub_08021924, sub_080683BC and the area 4 rooms 12-13 draw routine sub_0806CCE8 are not ported; a zero distance in sub_080696B0 (a division by zero natively) leaves it still. The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported.",
+   "next_action": "Play the sounds once the Aria sound path exists.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.zombie",
    "area": "aos",
    "category": "enemies",
@@ -10500,7 +10567,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12186,6 +12253,12 @@
  },
  "timeline": [
   {
+   "commit": "3f5cadc",
+   "date": "2026-10-22",
+   "subject": "Register the Aria Durga on Curly's port",
+   "scope": "project"
+  },
+  {
    "commit": "72838a3",
    "date": "2026-10-22",
    "subject": "Port the Aria Curly enemy",
@@ -12658,12 +12731,6 @@
    "date": "2026-10-18",
    "subject": "Port Tangle Vines and the vine Geruta",
    "scope": "project"
-  },
-  {
-   "commit": "50e19f8",
-   "date": "2026-10-18",
-   "subject": "Port Baristutes and Kraid's Baristute pair",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12724,9 +12791,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 151,
-    "routines_attached_to_features": 151,
-    "unassigned_routines": 3422,
+    "routines_cited_by_features": 162,
+    "routines_attached_to_features": 162,
+    "unassigned_routines": 3411,
     "call_edges": 14228
    }
   },
@@ -15485,15 +15552,20 @@
      },
      {
       "id": 41,
-      "name": "Enemy 0x29",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Valkyrie",
+      "status": "functional",
+      "note": "Valkyrie",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.valkyrie"
      },
      {
       "id": 42,

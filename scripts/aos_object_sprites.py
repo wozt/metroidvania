@@ -85,6 +85,9 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # sub_0806EB34 (EnemyValkyrieCreate 0x0806E714): bank 0 for id 0x29.
+    "valkyrie": {"id": 0x29, "graphics": 0x081CBF2C, "palette": 0x0820A3FC, "bank": 0,
+                 "frames": 0x0821285C},
     # sub_08093540 (EnemyCurlyCreate 0x08093178): bank 1 for id 0x2B, bank 0
     # for Durga (EnemyDurgaCreate calls EnemyCurlyCreate).
     "durga": {"id": 0x11, "graphics": 0x081CC02C, "palette": 0x0820AA6C, "bank": 0,

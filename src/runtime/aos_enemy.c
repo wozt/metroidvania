@@ -422,7 +422,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
-        id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA)
+        id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -520,6 +520,16 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         snap_to_floor(enemy, layer);
         enemy->y += 0x10000;
         enemy->state = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_VALKYRIE) {
+        /* EnemyValkyrieCreate (sub_0806EB34: tiles 0x081CBF2C, palette
+         * 0x0820A3FC bank 0, frames 0x0821285C): animation 0 looping and
+         * one step, frame boxes, state 0; state 4 (animation only) under
+         * the global 0x8E & 0x40. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        enemy->state = flag_8e_40 ? 4 : 0;
         return true;
     }
     if (id == AOS_ENEMY_CURLY || id == AOS_ENEMY_DURGA) {
@@ -712,6 +722,13 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                                                    soma->weapon.flags);
             enemy->hit_flash = 8;
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
+            if (enemy->hp > 0 && enemy->id == AOS_ENEMY_VALKYRIE && enemy->state == 1) {
+                /* sub_0806EBDC: struck by a weapon (attacker type 3 or 4)
+                 * during its attack, it recoils (state 3). */
+                play(enemy, kind->anims, 0);
+                enemy->state = 3;
+                enemy->step = 0;
+            }
             if (enemy->hp <= 0) {
                 report.killed = true;
                 /* sub_080683BC (rewards, not ported) marks it defeated
@@ -741,6 +758,14 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_VALKYRIE) {
+                    /* sub_0806EBDC: death animation 2, 40 frames of state
+                     * 2 falling with + 0x54 = 0x1000 (sound 0x1CD). */
+                    play_loop(enemy, kind->anims, 2, false);
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->ax = 0;
+                    enemy->ay = 0x1000;
                 } else if (enemy->id == AOS_ENEMY_CURLY || enemy->id == AOS_ENEMY_DURGA) {
                     /* sub_080935E8: death animation 2 and the generic death
                      * in state 2 (sound 0x1C3). */
@@ -822,7 +847,13 @@ contact:
         /* The contact callbacks sub_0806E1B8, the zombie soldier's
          * sub_0809314C and the axe's sub_0806E1E8 (element 1) ->
          * sub_08021654 (type 0). */
-        report.soma_damage = aos_soma_take_hit(soma, enemy->stats.contact, soma_def, enemy->x, 0);
+        /* sub_0806ECA8: the Valkyrie's contact is halved outside frames 4
+         * to 6 of its attack animation (state 1, animation 1). */
+        int contact = enemy->stats.contact;
+        if (enemy->id == AOS_ENEMY_VALKYRIE &&
+            !(enemy->state == 1 && enemy->anim.id == 1 && (uint8_t)(enemy->anim.frame - 4) <= 2))
+            contact >>= 1;
+        report.soma_damage = aos_soma_take_hit(soma, contact, soma_def, enemy->x, 0);
     }
     return report;
 }
@@ -1614,6 +1645,198 @@ static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollisio
     return report;
 }
 
+/* sub_0806D3D8(e, limit): velocity plus acceleration, clamped toward the
+ * acceleration's sign, then the move. */
+static void accel_move(AosEnemy *e, int32_t limit) {
+    e->vx += e->ax;
+    if (e->ax >= 0 ? e->vx > limit : e->vx < -limit) e->vx = e->ax >= 0 ? limit : -limit;
+    e->vy += e->ay;
+    if (e->ay >= 0 ? e->vy > limit : e->vy < -limit) e->vy = e->ay >= 0 ? limit : -limit;
+    e->x += e->vx;
+    e->y += e->vy;
+}
+
+/* sub_080689F8 / sub_0806CEF8(e, range): the player's distance (whole
+ * pixels, through Sqrt) within `range` (16.16). */
+static bool player_in_range(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
+    int32_t dx = (e->x - soma->x) >> 16, dy = (e->y - soma->y) >> 16;
+    return (uint32_t)isqrt((uint32_t)(dx * dx + dy * dy)) << 16 <= range;
+}
+
+/* sub_080696B0(e, tx, ty, speed): v = delta * speed / distance (whole
+ * pixels), then the move; true once the distance is within `speed`. A
+ * zero distance (a division by zero natively) leaves it still. */
+static bool head_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
+    int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
+    int32_t distance = (int32_t)isqrt((uint32_t)(dx * dx + dy * dy));
+    e->vx = distance ? dx * speed / distance : 0;
+    e->vy = distance ? dy * speed / distance : 0;
+    e->x += e->vx;
+    e->y += e->vy;
+    return (distance << 16) <= speed;
+}
+
+/* sub_0806E7A8: step 0 faces the player and waits until he is within 120
+ * pixels or it is hurt; step 1 heads at 2.0 for the point 64 pixels in
+ * front of him and 48 above, attacking (state 1) when it gets there or
+ * when it is within 60 pixels of him on both axes and more than 32 above. */
+static void valkyrie_hover(AosEnemy *v, const AosSoma *soma) {
+    soldier_face(v, soma);
+    if (v->step == 0) {
+        if (player_in_range(v, soma, 0x780000) || v->hp < v->stats.hp) v->step = 1;
+        return;
+    }
+    int32_t tx = soma->x + (v->mirrored ? (int32_t)0xFFC00000 : 0x400000);
+    if (head_toward(v, tx, soma->y + (int32_t)0xFFD00000, 0x20000)) {
+        v->state = 1;
+        v->step = 0;
+        return;
+    }
+    int32_t dx = soma->x - v->x, dy = soma->y - v->y;
+    if ((dx < 0 ? -dx : dx) <= 0x3BFFFF && v->y < soma->y - 0x200000 &&
+        (dy < 0 ? -dy : dy) <= 0x3BFFFF) {
+        v->state = 1;
+        v->step = 0;
+    }
+}
+
+/* sub_0806E8AC: animation 1 once; it slows (5/6) and holds frame 2 for 16
+ * frames, then (frame 3, sound 0x87) charges at 3.0 forward and 2.5 down,
+ * pulled up by 0x4000 from frame 8, plays animation 0 when the attack
+ * ends, slows by 31/32 for 20 frames (or until the player leaves 120
+ * pixels), then hovers back (7/8) for 48 frames to state 0, step 1. All
+ * moves go through sub_0806D3D8(e, 3.0). */
+static void valkyrie_attack(AosEnemy *v, const AosSoma *soma, const AosAnimSet *anims) {
+    switch (v->step) {
+    case 0:
+        play_loop(v, anims, 1, false);
+        v->step = 1;
+        v->ax = v->ay = 0;
+        v->timer = 0;
+        /* fall through */
+    case 1:
+        v->vx = v->vx * 5 / 6;
+        v->vy = v->vy * 5 / 6;
+        accel_move(v, 0x30000);
+        if (v->anim.frame != 2) return;
+        if (v->timer++ > 0xF) {
+            v->anim.tick = 0x64;
+            v->step = 2;
+        } else {
+            v->anim.tick = 0;
+        }
+        return;
+    case 2:
+        v->vx = v->vx * 5 / 6;
+        v->vy = v->vy * 5 / 6;
+        accel_move(v, 0x30000);
+        if (v->anim.frame <= 2) return;
+        v->step = 3;
+        v->vx = v->mirrored ? 0x30000 : -0x30000;
+        v->vy = 0x28000;
+        v->ax = v->ay = 0;
+        /* fall through */
+    case 3:
+        accel_move(v, 0x30000);
+        if (v->anim.frame <= 7) return;
+        v->step = 4;
+        v->ay = -0x4000;
+        return;
+    case 4:
+        accel_move(v, 0x30000);
+        if (!v->cycle_done) return;
+        v->step = 5;
+        play(v, anims, 0);
+        v->walk_timer = 0;
+        return;
+    case 5:
+        accel_move(v, 0x30000);
+        v->vx = v->vx * 31 / 32;
+        if (!player_in_range(v, soma, 0x780000)) {
+            v->step = 6;
+            v->walk_timer = 0;
+            v->ay = 0;
+        }
+        if (++v->walk_timer > 0x13) {
+            v->step++;
+            v->walk_timer = 0;
+            v->ay = 0;
+        }
+        return;
+    case 6:
+        soldier_face(v, soma);
+        v->vx = v->vx * 7 / 8;
+        v->vy = v->vy * 7 / 8;
+        accel_move(v, 0x30000);
+        if (++v->walk_timer > 0x2F) {
+            v->state = 0;
+            v->step = 1;
+        }
+        return;
+    default:
+        return;
+    }
+}
+
+/* sub_0806EA8C: the recoil, 3.0 up and away from the player, slowing by
+ * 11/12, facing him again below -1.25 and back to state 0 above -0.125. */
+static void valkyrie_recoil(AosEnemy *v, const AosSoma *soma) {
+    if (v->step == 0) {
+        v->mirrored = !((v->x >> 16) < (soma->x >> 16));
+        v->vx = v->mirrored ? 0x30000 : -0x30000;
+        v->vy = -0x30000;
+        v->step = 1;
+        return;
+    }
+    v->vx = v->vx * 11 / 12;
+    v->vy = v->vy * 11 / 12;
+    v->x += v->vx;
+    v->y += v->vy;
+    if (v->vy > (int32_t)0xFFFEC000) soldier_face(v, soma);
+    if (v->vy > (int32_t)0xFFFFE000) v->state = v->step = 0;
+}
+
+/* EnemyValkyrieUpdate (no activity window): sub_0806AD24 stuns it; state
+ * 0 hovers, 1 attacks, 2 dies (9/10 of vx, falling, the generic death), 3
+ * recoils, 4 only steps its animation; then the animation step and the
+ * collision pass. */
+static AosHitReport valkyrie_update(AosEnemy *v, AosSoma *soma, const AosEnemyKind *kind,
+                                    const AosWeaponEntity *weapon,
+                                    const AosWeaponFrames *weapon_frames, int soma_atk,
+                                    int soma_def, int cam_x, int cam_y,
+                                    uint32_t (*random)(void)) {
+    AosHitReport report = {0}, effects = {0};
+    if (v->hp > 0 && v->hit_flash) {
+        v->hit_flash--;
+        if (v->state != 2) report = collide(v, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        aos_combat_tick(&v->combat);
+        return report;
+    }
+    switch (v->state) {
+    case 0: valkyrie_hover(v, soma); break;
+    case 1: valkyrie_attack(v, soma, kind->anims); break;
+    case 2:
+        v->vx = v->vx * 9 / 10;
+        accel_move(v, 0x30000);
+        generic_death(v, kind, random, &effects);
+        if (v->removed) return effects;
+        break;
+    case 3: valkyrie_recoil(v, soma); break;
+    case 4:
+        step_anim(v, kind->anims);
+        return report;
+    default:
+        break;
+    }
+    step_anim(v, kind->anims);
+    int sx = (v->x >> 16) - cam_x, sy = (v->y >> 16) - cam_y;
+    if (!v->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(v, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&v->combat);
+    take_effects(&report, &effects);
+    return report;
+}
+
 /* sub_0806AC5C: a walking speed halved (slope type 1) or cut to 2/3 (type
  * 2) when climbing the slope under the entity (the cell at its feet, or
  * one pixel lower when empty; bit 2 the slope's direction). */
@@ -1829,17 +2052,6 @@ static AosHitReport ghost_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind 
     if (g->state != 3) report = collide(g, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     aos_combat_tick(&g->combat);
     return report;
-}
-
-/* sub_0806D3D8(e, limit): velocity plus acceleration, clamped toward the
- * acceleration's sign, then the move. */
-static void accel_move(AosEnemy *e, int32_t limit) {
-    e->vx += e->ax;
-    if (e->ax >= 0 ? e->vx > limit : e->vx < -limit) e->vx = e->ax >= 0 ? limit : -limit;
-    e->vy += e->ay;
-    if (e->ay >= 0 ? e->vy > limit : e->vy < -limit) e->vy = e->ay >= 0 ? limit : -limit;
-    e->x += e->vx;
-    e->y += e->vy;
 }
 
 /* The gargoyle's pursuit of one axis: beyond 8 pixels the speed moves
@@ -2902,6 +3114,9 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->role == AOS_ROLE_GRENADE)
         return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_VALKYRIE && enemy->role == AOS_ROLE_ENEMY)
+        return valkyrie_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                               cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_CURLY || enemy->id == AOS_ENEMY_DURGA)
         return curly_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                             cam_x, cam_y, random);

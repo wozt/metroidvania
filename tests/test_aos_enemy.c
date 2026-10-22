@@ -981,6 +981,107 @@ static void curly_tests(void) {
     assert(d.vx == (d.mirrored ? 0x8000 : -0x8000));
 }
 
+static void valkyrie_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t hover[] = {4, 4}, strike[] = {3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
+                         death[] = {200};
+    const AosAnimDef defs[3] = {{2, hover}, {10, strike}, {1, death}};
+    const AosAnimSet anims = {defs, 3};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 10; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {60, 40, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
+
+    /* It waits beyond 120 pixels, then heads at 2.0 for the point 64
+     * pixels in front of the player and 48 above. */
+    AosEnemy v;
+    assert(aos_enemy_create(&v, AOS_ENEMY_VALKYRIE, 100, 60, 0, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(v.state == 0 && v.step == 0);
+    soma.x = AOS_FIXED(150);       /* sqrt(50^2 + 99^2) = 110 pixels */
+    aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(v.step == 1);
+    int32_t x0 = v.x;
+    aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    /* Facing right, its target is 64 pixels left of the player (x 86). */
+    assert(v.x < x0 && v.vx < 0 && v.vx >= -0x20000 && v.vy > 0);
+    int frames = 0;
+    while (v.state == 0 && frames < 200) {
+        aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(v.state == 1);
+    /* The attack: frame 2 held 16 frames, then the 3.0 charge. */
+    frames = 0;
+    while (v.step < 3 && frames < 100) {
+        aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(v.step == 3 && v.vy > 0 && (v.vx == 0x30000 || v.vx == -0x30000 || v.vx > 0x28000));
+    frames = 0;
+    while (v.state == 1 && frames < 300) {
+        aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(v.state == 0 && v.step == 1);
+
+    /* Contact: halved outside the strike frames 4 to 6. */
+    soma = aos_soma_spawn(v.x, v.y + AOS_FIXED(8), NULL);
+    AosHitReport hit = aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    if (hit.soma_hit) assert(hit.soma_damage == aos_player_damage(20, 4));
+
+    /* Struck during its attack, it recoils (state 3) up and away. */
+    soma = aos_soma_spawn(v.x, v.y + AOS_FIXED(20), NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-20, -60, 40, 60, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    v.state = 1;
+    v.step = 4;
+    v.hp = 60;
+    v.combat = (AosCombat){.type = AOS_TYPE_ENEMY};
+    int cam = (v.x >> 16) - 120, cam_y = (v.y >> 16) - 80;
+    hit = aos_enemy_update(&v, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, cam_y,
+                           always_zero);
+    assert(hit.enemy_hit && !hit.killed && v.state == 3 && v.step == 0);
+    v.hit_flash = 0;
+    aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, cam, cam_y, always_zero);
+    assert(v.step == 1 && v.vy == -0x30000);
+    frames = 0;
+    while (v.state == 3 && frames < 100) {
+        aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, cam, cam_y, always_zero);
+        ++frames;
+    }
+    assert(v.state == 0 && v.step == 0);
+
+    /* The killing blow: animation 2, the falling generic death. */
+    v.hp = 1;
+    v.combat = (AosCombat){.type = AOS_TYPE_ENEMY};
+    soma = aos_soma_spawn(v.x, v.y + AOS_FIXED(20), NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    cam = (v.x >> 16) - 120;
+    cam_y = (v.y >> 16) - 80;
+    hit = aos_enemy_update(&v, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, cam_y,
+                           always_zero);
+    assert(hit.killed && v.state == 2 && v.anim.id == 2 && v.ay == 0x1000);
+    int dying = 0;
+    while (!v.removed && dying < 100) {
+        aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, cam, cam_y, always_zero);
+        ++dying;
+    }
+    assert(dying == 0x28);
+}
+
 static void ghost_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t dance[] = {6, 6}, death[] = {5, 5};
@@ -1601,6 +1702,7 @@ int main(void) {
     officer_tests();
     gargoyle_tests();
     ghost_tests();
+    valkyrie_tests();
     curly_tests();
     medusa_tests();
     puts("aos_enemy: ok");

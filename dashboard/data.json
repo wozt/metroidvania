@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T23:17:14+00:00",
+ "generated_at": "2026-10-22T23:23:57+00:00",
  "git": {
-  "commit": "50bd4db",
+  "commit": "dcf3e50",
   "branch": "main",
   "dirty": true
  },
@@ -9704,6 +9704,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy.h",
     "src/runtime/aria_runtime.c",
     "scripts/aos_object_sprites.py"
    ],
@@ -9728,16 +9729,17 @@
     "sub_080C7784",
     "sub_080C7A3C",
     "sub_080C7AB8",
-    "sub_080C7B54"
+    "sub_080C7B54",
+    "sub_08045748"
    ],
-   "limitations": "The four direct OAM records and collision boxes are ported; the linked helper follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots follow the owner as translucent non-combat children. Their state-0 to state-2 activation and per-child timer now match sub_08045748; the scratch OAM composition, palette callbacks and native sounds remain outside the body slot. Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6), their active-child lifecycle and the global 0x8E & 0x40 inert path are ported; direct frames and helper/effect fallback anchors are exported.",
-   "next_action": "Reconstruct the sub_08045748 scratch OAM composition and compare all Nemesis child slots against an emulator.",
+   "limitations": "The four direct OAM records and collision boxes are ported; the linked helper follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots follow the owner as translucent non-combat children. Their state-0 to state-2 activation, per-child timer and 24-record integer-position/frame/mirror history now match sub_08045748; palette callbacks and native sounds remain outside the body slot. Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6), their active-child lifecycle, temporary OAM history selection and the global 0x8E & 0x40 inert path are ported; direct frames and helper/effect anchors are exported.",
+   "next_action": "Compare the three delayed effect trails and palette behavior against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent effect children render; Soma hit for 52 damage by frame 180"
+     "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent delayed effect children render; Soma hit for 52 damage by frame 180"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -13238,6 +13240,12 @@
  },
  "timeline": [
   {
+   "commit": "dcf3e50",
+   "date": "2026-10-23",
+   "subject": "Match Nemesis effect child timing",
+   "scope": "project"
+  },
+  {
    "commit": "50bd4db",
    "date": "2026-10-23",
    "subject": "Port Nemesis technical effect slots",
@@ -13710,12 +13718,6 @@
    "date": "2026-10-19",
    "subject": "Remove NES unlock and complete native liquid splashes",
    "scope": "project"
-  },
-  {
-   "commit": "362fb13",
-   "date": "2026-10-19",
-   "subject": "Complete the Zero Mission ending unlock flow",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -13776,9 +13778,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 290,
-    "routines_attached_to_features": 290,
-    "unassigned_routines": 3283,
+    "routines_cited_by_features": 291,
+    "routines_attached_to_features": 291,
+    "unassigned_routines": 3282,
     "call_edges": 14228
    }
   },
@@ -16731,7 +16733,7 @@
         "tests/test_aos_enemy.c"
        ],
        "in_game_check": [
-        "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent effect children render; Soma hit for 52 damage by frame 180"
+        "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent delayed effect children render; Soma hit for 52 damage by frame 180"
        ],
        "emulator_compared": false,
        "played_through": false

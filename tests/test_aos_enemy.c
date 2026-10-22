@@ -1986,6 +1986,7 @@ static void nemesis_tests(void) {
     static AosEnemyKind kind;
     memset(&kind, 0, sizeof kind);
     kind.anims = &anims;
+    kind.sprites[0][2] = 2;
     for (int a = 1; a < 4; ++a) {
         kind.modes[a][0] = 1;
         kind.hurt[a][0] = kind.attack[a][0] = (AosBox){-8, -16, 16, 24};
@@ -2026,10 +2027,14 @@ static void nemesis_tests(void) {
     n.anim.frame = 2;
     aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(effect.state == 2 && effect.timer == 1 && effect.step == 9 && !effect.hidden &&
-           effect.translucent && effect.static_frame == 2 && effect.x == n.x && effect.y == n.y &&
+           effect.translucent && effect.static_frame == 0 && effect.x == 0 && effect.y == 0 &&
            effect.combat.attack_off && effect.combat.hurt_off);
     aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(effect.timer == 2 && effect.static_frame == 2);
+    assert(effect.timer == 2 && effect.static_frame == 0);
+    for (int i = 0; i < 8; ++i)
+        aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(effect.timer == 10 && effect.static_frame == 2 && effect.x == n.x &&
+           effect.y == (n.y >> 16) * 65536);
     n.defeated = true;
     aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(helper.removed);

@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0464 - Aria Nemesis temporary OAM history
+
+- Reconstructed the zero-filled 24-record scratch table allocated for each
+  Nemesis technical child by `sub_080458E4`.
+- Each callback now shifts the owner's integer position, sprite-frame id and
+  mirror backwards, then selects the native delayed records 9, 12 and 6. The
+  first callbacks retain the native zero-filled history instead of drawing the
+  owner immediately.
+- Added regression coverage for delayed frame selection and sprite-id mapping,
+  and checked room 6/13 through frame 180 (Soma takes 52 damage). Palette
+  callbacks and native sounds remain the next Nemesis gaps.
+
 ## Patch 0463 - Aria Nemesis effect lifecycle timing
 
 - Matched the native technical-child lifecycle: each Nemesis effect starts in

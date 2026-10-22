@@ -60,6 +60,7 @@ typedef struct {
 #define AOS_ENEMY_MAX_ANIMS 12
 #define AOS_ENEMY_MAX_CHILDREN 8
 #define AOS_ENEMY_MAX_FRAMES 24
+#define AOS_NEMESIS_EFFECT_HISTORY 24
 
 /* The probe table of the walker sub_0806C828 (ROM, e.g. 0x08528708). */
 typedef struct {
@@ -182,6 +183,14 @@ typedef struct AosEnemy {
     int16_t leg;            /* + 0x16: drift / rest timer of either Doll */
     AosEffect glow;         /* a doll piece's flame (sub_080C9058) */
     bool translucent;       /* + 0x5A bits 1-2 = 2: semi-transparent OBJ */
+    /* The temporary 24-record OAM history allocated by sub_080458E4.  The
+     * native effect callback shifts records 0..22 to 1..23, writes the
+     * owner's current integer position/frame at record 0, then selects the
+     * child sequence index (9, 12 or 6). */
+    int16_t nemesis_history_x[AOS_NEMESIS_EFFECT_HISTORY];
+    int16_t nemesis_history_y[AOS_NEMESIS_EFFECT_HISTORY];
+    uint8_t nemesis_history_frame[AOS_NEMESIS_EFFECT_HISTORY];
+    uint8_t nemesis_history_mirror[AOS_NEMESIS_EFFECT_HISTORY];
     uint8_t fade, fade_timer;   /* + 0x18, + 0x19 of a Ghost Dancer */
     AosBox own_hurt, own_attack;
     AosEnemyStats stats;

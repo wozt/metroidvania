@@ -1536,26 +1536,45 @@ static void nemesis_helper_update(AosEnemy *h) {
  * 6). sub_08045748 copies the owning Nemesis position, mirror and current
  * sprite record into each translucent child; their collision callbacks are
  * disabled. Keeping the sequence index in `variant` preserves the native
- * identity while the compact descriptor selects the current direct frame. */
-static void nemesis_effect_update(AosEnemy *effect) {
+ * identity while the child scratch history selects a delayed direct frame. */
+static void nemesis_effect_update(AosEnemy *effect, const AosEnemyKind *kind) {
     const AosEnemy *parent = effect->parent;
     if (!parent || parent->removed || parent->defeated) {
         effect->removed = true;
         return;
     }
     /* sub_08045748 starts a newly allocated child in state 0, promotes it to
-     * state 2 on the first callback and advances +0x0D every callback. The
-     * compact runtime keeps that lifecycle even though the scratch OAM buffer
-     * is not yet reconstructed. */
+     * state 2 on the first callback and advances +0x0D every callback. */
     if (effect->state == 0) effect->state = 2;
     effect->timer = (uint8_t)(effect->timer + 1);
     effect->hidden = parent->hidden;
-    effect->x = parent->x;
-    effect->y = parent->y;
-    effect->mirrored = parent->mirrored;
     effect->vflip = parent->vflip;
     effect->translucent = true;
-    effect->static_frame = parent->anim.frame < 4 ? parent->anim.frame : 0;
+
+    /* The child owns a zero-filled 0x31-word scratch allocation.  The native
+     * callback copies records backwards so record 0 remains the newest sample
+     * and records 1..23 are the preceding frames.  This is the source of the
+     * Nemesis motion trail; it is not a separate animation descriptor. */
+    for (int i = AOS_NEMESIS_EFFECT_HISTORY - 1; i > 0; --i) {
+        effect->nemesis_history_x[i] = effect->nemesis_history_x[i - 1];
+        effect->nemesis_history_y[i] = effect->nemesis_history_y[i - 1];
+        effect->nemesis_history_frame[i] = effect->nemesis_history_frame[i - 1];
+        effect->nemesis_history_mirror[i] = effect->nemesis_history_mirror[i - 1];
+    }
+    effect->nemesis_history_x[0] = (int16_t)(parent->x >> 16);
+    effect->nemesis_history_y[0] = (int16_t)(parent->y >> 16);
+    uint8_t frame = parent->anim.frame;
+    if (kind && parent->anim.id < AOS_ENEMY_MAX_ANIMS && parent->anim.frame < AOS_ENEMY_MAX_FRAMES)
+        frame = kind->sprites[parent->anim.id][parent->anim.frame];
+    effect->nemesis_history_frame[0] = frame;
+    effect->nemesis_history_mirror[0] = parent->mirrored ? 1 : 0;
+
+    int index = effect->variant;
+    if (index < 0 || index >= AOS_NEMESIS_EFFECT_HISTORY) index = 0;
+    effect->x = AOS_FIXED(effect->nemesis_history_x[index]);
+    effect->y = AOS_FIXED(effect->nemesis_history_y[index]);
+    effect->mirrored = effect->nemesis_history_mirror[index] != 0;
+    effect->static_frame = effect->nemesis_history_frame[index];
 }
 
 /* EnemyNemesisUpdate (sub_080C67CC and states 0..6): the original uses a
@@ -5773,7 +5792,7 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
         return report;
     }
     if (enemy->role == AOS_ROLE_NEMESIS_EFFECT) {
-        nemesis_effect_update(enemy);
+        nemesis_effect_update(enemy, kind);
         return report;
     }
     if (enemy->id == AOS_ENEMY_KILLER_DOLL && enemy->role == AOS_ROLE_ENEMY)

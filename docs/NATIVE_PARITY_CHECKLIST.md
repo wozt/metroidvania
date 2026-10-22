@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 290 | 3283 |
+| Castlevania: Aria of Sorrow | 291 | 3282 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1380,14 +1380,14 @@ Known divergences: Sound 0x70, the palette bits and sub_080683BC are not ported;
 Next action: Play the sound once the Aria sound path exists.
 Evidence: in game: `aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21`.
 
-[+] **`aos.enemies.nemesis` — Nemesis.** Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6), their active-child lifecycle and the global 0x8E & 0x40 inert path are ported; direct frames and helper/effect fallback anchors are exported.
+[+] **`aos.enemies.nemesis` — Nemesis.** Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6), their active-child lifecycle, temporary OAM history selection and the global 0x8E & 0x40 inert path are ported; direct frames and helper/effect anchors are exported.
 
-Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6714`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C68AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6AA8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6D0C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6F64`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C70F0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C722C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C73F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C750C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7604`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C76D4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7784`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7A3C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7AB8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7B54`.  
-Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08045748`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6714`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C68AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6AA8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6D0C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6F64`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C70F0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C722C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C73F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C750C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7604`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C76D4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7784`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7A3C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7AB8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7B54`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_enemy.h`](../src/runtime/aos_enemy.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Known divergences: The four direct OAM records and collision boxes are ported; the linked helper follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots follow the owner as translucent non-combat children. Their state-0 to state-2 activation and per-child timer now match sub_08045748; the scratch OAM composition, palette callbacks and native sounds remain outside the body slot.  
-Next action: Reconstruct the sub_08045748 scratch OAM composition and compare all Nemesis child slots against an emulator.
-Evidence: in game: `aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent effect children render; Soma hit for 52 damage by frame 180`.
+Known divergences: The four direct OAM records and collision boxes are ported; the linked helper follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots follow the owner as translucent non-combat children. Their state-0 to state-2 activation, per-child timer and 24-record integer-position/frame/mirror history now match sub_08045748; palette callbacks and native sounds remain outside the body slot.  
+Next action: Compare the three delayed effect trails and palette behavior against an emulator.
+Evidence: in game: `aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent delayed effect children render; Soma hit for 52 damage by frame 180`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.
 

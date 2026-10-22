@@ -793,12 +793,15 @@ its static frames 1-3 use the exported native anchors, follow the parent's
 fixed-point position and mirror, and reproduce the +9/+10 pixel horizontal,
 +37/-4 pixel vertical and 10/40-frame/flicker timings. The three technical
 effect slots created by `sub_080C7B54` (sequence identities 9, 12 and 6) are
-also emitted as translucent, non-combat children: each follows the owner's
-position, mirror, vertical flip and current direct frame; each enters the
-native active child state on its first callback, advances its own timer and is
-removed with the owner.
-Their palette callbacks, native sound calls and exact animation-table timing
-remain open; death uses the shared 40-frame flame and blink sequence.
+also emitted as translucent, non-combat children. `sub_080458E4` allocates a
+zero-filled 24-record scratch table for each child; `sub_08045748` shifts that
+table backwards, writes the owner's integer position, sprite-frame id and
+mirror at record 0, then selects the child sequence index. The runtime keeps
+that history per child, so the three slots render delayed trails (9, 12 and 6
+frames), including the native first-frame zero-filled records. Their state-0 to
+state-2 activation, timer, visibility, vertical flip and owner removal match
+the callback. Palette callbacks and native sound calls remain open; death uses
+the shared 40-frame flame and blink sequence.
 
 Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63) share
 `sub_080B7E80` (create: tiles `0x081F4214`, palette `0x0820BCA0`, the

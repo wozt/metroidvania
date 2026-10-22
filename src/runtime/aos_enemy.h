@@ -17,7 +17,8 @@
  * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
  * code), the skeleton knight (enemy 0x0D), the dead crusader (enemy 0x52),
- * the beam skeleton (0x59) with its beam and bones, Skull Millione (0x5B),
+ * the Lightning Doll (0x3B) with its burning pieces, the beam skeleton
+ * (0x59) with its beam and bones, Skull Millione (0x5B),
  * Cagnazzo (0x49, with its fin) and Lubicant (0x63,
  * with its fin; the same code),
  * the dead warrior (enemy 0x2F),
@@ -80,6 +81,8 @@ typedef struct {
     int8_t anchors[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES][2];
     /* The same for single sprite frames shown by children (+ 0x65 < 64). */
     int8_t static_anchors[64][2];
+    /* The death flame's animation (Effect/flame), for a doll piece's glow. */
+    const AosAnimSet *flame_anims;
     /* Sprite frame number (+ 0x65) of each animation frame. */
     uint8_t sprites[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES];
     /* 0x08118D08: the (x, y) screen margins of sub_0806D128(e, n). */
@@ -109,6 +112,7 @@ enum {
     AOS_ENEMY_DEAD_CRUSADER = 0x52,
     AOS_ENEMY_GREMLIN = 0x37,
     AOS_ENEMY_CAGNAZZO = 0x49,
+    AOS_ENEMY_LIGHTNING_DOLL = 0x3B,
     AOS_ENEMY_BEAM_SKELETON = 0x59,
     AOS_ENEMY_SKULL_MILLIONE = 0x5B,
     AOS_ENEMY_LUBICANT = 0x63,
@@ -125,7 +129,7 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5,
        AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8, AOS_ROLE_NEEDLE_PIECE = 9,
        AOS_ROLE_MIMIC_TRIGGER = 10, AOS_ROLE_FIN = 11, AOS_ROLE_BEAM = 12,
-       AOS_ROLE_BEAM_FLASH = 13 };
+       AOS_ROLE_BEAM_FLASH = 13, AOS_ROLE_DOLL_PIECE = 14 };
 
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */
@@ -169,6 +173,9 @@ typedef struct AosEnemy {
     bool firing;            /* + 0x1A bit 0: its beam lives */
     uint16_t scale;         /* + 0x20: the vertical scale of its affine slot */
     bool scaled;            /* + 0x59 bit 0x10: drawn with the owner's scale */
+    uint16_t attack_wait, flight;   /* + 0x14, + 0x18 of a Lightning Doll */
+    int16_t leg;            /* + 0x16: frames of its current drift */
+    AosEffect glow;         /* a doll piece's flame (sub_080C9058) */
     bool translucent;       /* + 0x5A bits 1-2 = 2: semi-transparent OBJ */
     uint8_t fade, fade_timer;   /* + 0x18, + 0x19 of a Ghost Dancer */
     AosBox own_hurt, own_attack;

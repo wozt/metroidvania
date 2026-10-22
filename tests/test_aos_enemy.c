@@ -1845,6 +1845,177 @@ static void beam_tests(void) {
     assert(b.removed);
 }
 
+static void doll_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t rest[] = {200}, rise[] = {20, 9, 20}, fly[] = {9, 9, 9, 9},
+                         charge[] = {12, 12, 8}, spark[] = {1, 2, 1}, land[] = {16, 20};
+    const AosAnimDef defs[6] = {{1, rest},   {3, rise},  {4, fly},
+                                {3, charge}, {3, spark}, {2, land}};
+    const AosAnimSet anims = {defs, 6};
+    static const uint8_t flame_ticks[] = {4, 4, 4};
+    const AosAnimDef flame_def = {3, flame_ticks};
+    const AosAnimSet flame_set = {&flame_def, 1};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    kind.flame_anims = &flame_set;
+    for (int a = 0; a < 6; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -24, 16, 24};
+            kind.sprites[a][f] = (uint8_t)(a * 4 + f);
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {200, 40, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(159), NULL);
+
+    /* It rests on the floor until the player is in its 0xF0 x 0x80 box. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_LIGHTNING_DOLL, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(d.state == 1 && (d.y >> 16) == 159 && d.attack_wait >= 0x10 &&
+           d.attack_wait <= 0x2F && d.flight >= 0x200 && d.flight <= 0x5FF);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.step == 0 && d.anim.id == 0);
+    soma.x = AOS_FIXED(180);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.step == 1 && d.anim.id == 1);
+    d.attack_wait = 0x200;      /* (r & 0x3FF) == 0 would attack at once */
+    int frames = 0;
+    while (d.step == 1 && frames < 100) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.step == 2);
+    /* r % 6 = 0: 0.5 diagonally toward the player (up and right here) for
+     * (r & 0xFF) + 0x80 frames, facing its vx. */
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.substep == 1 && d.vx == 0x8000 && d.vy == 0x8000 && d.leg == 0x80 &&
+           d.anim.id == 2);
+    /* Below him (y 159 against 159: not above), it heads down into the
+     * floor and bounces off it (sub_080C9788). */
+    int32_t y0 = d.y;
+    for (int i = 0; i < 4; ++i)
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.vy < 0 && d.y <= y0 + 0x10000 && d.mirrored);
+
+    /* With its attack wait over and the player ahead within 20 pixels it
+     * charges (animation 3), then sparks (animation 4 with the attack box
+     * (-14, -32, 30, 28)) for (r & 0xFF) + 0x80 frames. */
+    d.attack_wait = 0;
+    d.flight = 0x300;
+    soma.x = d.x + AOS_FIXED(15);
+    soma.y = d.y;
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.step == 3 && d.substep == 0);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.anim.id == 3 && d.vx == 0 && d.vy == 0 && d.timer == 0x80);
+    frames = 0;
+    while (d.anim.id != 4 && frames < 100) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    frames = 0;
+    bool boxed = false, sparked = false;
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    while (d.step == 3 && frames < 400) {
+        AosHitReport hit =
+            aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (d.own_boxes && d.own_attack.x == -14 && d.own_attack.w == 30) boxed = true;
+        for (int i = 0; i < hit.effect_count; ++i)
+            if (hit.effects[i].kind == AOS_EFFECT_SPARK && hit.effects[i].follow) sparked = true;
+        ++frames;
+    }
+    assert(boxed && sparked && frames == 0x80 + 2 && d.step == 2);
+
+    /* Out of flight it sinks a pixel a frame to a cell, rests (animation 5)
+     * and rises again. */
+    d.flight = 1;
+    d.attack_wait = 0x40;
+    d.substep = 1;
+    d.leg = 100;
+    d.y = AOS_FIXED(150);
+    soma.x = AOS_FIXED(600);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.step == 4);
+    frames = 0;
+    while (d.step == 4 && d.anim.id != 5 && frames < 100) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.anim.id == 5 && (d.y >> 16) == 160);
+    frames = 0;
+    while (d.step == 4 && frames < 200) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.step == 1 && d.anim.id == 1 && d.flight == 0x200 && frames == 1 + 0x41);
+
+    /* A killing blow: hidden, five pieces (the doll waits for them). */
+    soma.facing_left = false;
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.x = d.x - AOS_FIXED(30);
+    soma.y = d.y + AOS_FIXED(10);
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{20, -40, 20, 30, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    d.hit_flash = 0;
+    AosHitReport hit =
+        aos_enemy_update(&d, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0, always_zero);
+    assert(hit.killed && d.state == 0xFF && d.hidden && hit.child_count == 5 &&
+           d.spawned_count == 5);
+    AosEnemy pieces[5];
+    for (int i = 0; i < 5; ++i) pieces[i] = hit.children[i];
+    /* First update: frame, speed (pointing right: the player is left of
+     * the doll), the glow lit 16 pixels up. */
+    for (int i = 0; i < 5; ++i) {
+        aos_enemy_update(&pieces[i], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        assert(pieces[i].state == 1 && pieces[i].static_frame == 20 + i &&
+               pieces[i].vy == -0x18000 && pieces[i].ay == 0x1800 && pieces[i].glow.started);
+    }
+    assert(pieces[0].vx == 0x8000 && pieces[4].vx == -0x8000 && pieces[1].timer == 0x80);
+    /* Piece 1 bounces on the floor and comes to rest; the others fall
+     * through. Each ends hidden and goes once its glow has cycled. */
+    int flames = 0, dust = 0;
+    for (int f = 0; f < 200; ++f)
+        for (int i = 0; i < 5; ++i) {
+            if (pieces[i].removed) continue;
+            hit = aos_enemy_update(&pieces[i], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                   always_zero);
+            for (int k = 0; k < hit.effect_count; ++k) {
+                flames += hit.effects[k].kind == AOS_EFFECT_FLAME;
+                dust += hit.effects[k].kind == AOS_EFFECT_DUST && hit.effects[k].particle;
+            }
+            if (pieces[i].removed && d.spawned_count) d.spawned_count--;
+        }
+    for (int i = 0; i < 5; ++i) assert(pieces[i].removed);
+    /* Piece 1 rests with its probe (y - 15) on the floor; piece 2 starts
+     * below timer 0x30, so four flames and dust puffs. */
+    assert((pieces[1].y >> 16) >= 170 && (pieces[1].y >> 16) <= 175 && flames == 4 &&
+           dust == 4);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.removed);
+
+    /* The spark held on the player (sub_080C9198). */
+    static const uint8_t spark_ticks[] = {3, 3};
+    const AosAnimDef spark_def = {2, spark_ticks};
+    const AosAnimSet spark_set = {&spark_def, 1};
+    const AosEffectWorld world = {&layer, 0, 0, always_zero, AOS_FIXED(77), 120};
+    AosEffect s = {.kind = AOS_EFFECT_SPARK, .follow = true};
+    assert(aos_effect_update(&s, &spark_set, NULL, &world));
+    frames = 0;
+    while (aos_effect_update(&s, &spark_set, NULL, &world) && frames < 50) {
+        /* Its integer y is reset to 128 each frame, the fraction kept. */
+        assert(s.x == AOS_FIXED(77) && (s.y >> 16) >= 128 + (s.timer - 1) / 2 &&
+               (s.y >> 16) <= 129 + (s.timer - 1) / 2);
+        ++frames;
+    }
+    assert(frames == 5);
+}
+
 static void ghost_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t dance[] = {6, 6}, death[] = {5, 5};
@@ -2470,6 +2641,7 @@ int main(void) {
     crusader_tests();
     skull_tests();
     beam_tests();
+    doll_tests();
     soldier_tests();
     armor_tests();
     archer_tests();

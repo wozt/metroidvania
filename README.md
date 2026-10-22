@@ -398,12 +398,13 @@ python3 -m scripts.aos_weapons
 ```
 
 Soma uses the movement, collision, jump, crouch, landing, ability-move and
-animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); attacks,
-souls and the game-over screen are not implemented; bats, zombies (with their
-spawners), blue crows, zombie soldiers (with their grenades) axe armors (with their returning axes) and skull archers (with their arrows) attack Soma (he flinches, is knocked back, or dies at 0 HP) and
-die to his weapon with native rules (other enemies are not ported
-yet; `--atk/--def/--hp` set diagnostic stats, the new-game stats are not
-traced); wooden doors open natively with
+animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); soul
+inventory and progression and the complete game-over flow are not implemented.
+The growing native enemy subset recorded in `docs/NATIVE_PARITY_CHECKLIST.md`,
+including the Lightning Doll and its burning pieces, attacks Soma (he flinches,
+is knocked back, or dies at 0 HP) and dies to his weapon with native rules
+(`--atk/--def/--hp` set diagnostic stats, the new-game stats are not traced);
+wooden doors open natively with
 their native sprite and palette cycle (`python3 -m scripts.aos_object_sprites`).
 Leaving a room
 through its edge loads the native neighbour at the native arrival position;

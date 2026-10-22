@@ -37,7 +37,7 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 100    /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 55, 57, 63,
+#define ENEMY_KINDS 100    /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 55, 57, 59, 63,
                               73, 82, 87, 89, 91, 96, 98, 99 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
@@ -58,6 +58,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [99] = "lubicant",
                                                      [82] = "dead_crusader",
                                                      [57] = "medusa_head",
+                                                     [59] = "lightning_doll",
                                                      [87] = "gargoyle",
                                                      [89] = "beam_skeleton",
                                                      [96] = "mimic",
@@ -478,7 +479,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_MIMIC_TRIGGER ||
                                        hit.children[c].role == AOS_ROLE_FIN ||
                                        hit.children[c].role == AOS_ROLE_BEAM ||
-                                       hit.children[c].role == AOS_ROLE_BEAM_FLASH
+                                       hit.children[c].role == AOS_ROLE_BEAM_FLASH ||
+                                       hit.children[c].role == AOS_ROLE_DOLL_PIECE
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};
@@ -518,7 +520,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     const uint8_t *blink = NULL;
     for (int id = 0; id < ENEMY_KINDS && !blink; ++id)
         if (combat->kinds[id]) blink = combat->kinds[id]->blink;
-    const AosEffectWorld world = {layer, cam_x, cam_y, aos_random};
+    /* sub_0801CFB0 (its gEwramData + 0x13260 mode, y - 0x10, is not
+     * modelled). */
+    int16_t top = (int16_t)((soma->y >> 16) - ((soma->flags & AOS_FLAG_CROUCH) ? 0x16 : 0x22));
+    const AosEffectWorld world = {layer, cam_x, cam_y, aos_random, soma->x, top};
     size_t kept = 0;
     for (size_t i = 0; i < room->effect_count; ++i)
         if (aos_effect_update(&room->effects[i], combat->effects[room->effects[i].kind], blink,
@@ -673,6 +678,9 @@ static bool load_enemy_data(AriaObjects *objects) {
     for (int id = 0; id < ENEMY_KINDS; ++id) {
         AosEnemyKind *kind = &objects->enemies[id].kind;
         kind->anims = &objects->enemies[id].set;
+        kind->flame_anims = objects->effects[AOS_EFFECT_FLAME].def.count
+                                ? &objects->effects[AOS_EFFECT_FLAME].set
+                                : NULL;
         memcpy(kind->blink, blink, sizeof blink);
         for (int i = 0; i < 7; ++i) {
             kind->margins[i][0] = (int16_t)margins[2 * i];
@@ -928,19 +936,30 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
  * random) is set. Flames and smoke (priority + 0x5C or the creator's) are
  * drawn in front of the enemies, blood (priority 3) behind them; OBJ
  * blending is not modelled. */
+static void draw_effect(SDL_Renderer *renderer, const AriaObjects *objects, const AosEffect *f,
+                        int cam_x, int cam_y) {
+    if (f->hidden || f->anim.frame >= objects->effects[f->kind].def.count) return;
+    const AriaFrame *frame = &objects->effects[f->kind].frames[f->anim.frame];
+    if (!frame->texture) return;
+    int fx = f->x >> 16, fy = f->y >> 16;
+    float x = f->mirrored ? (float)(fx - frame->offset_x) - frame->w : (float)(fx + frame->offset_x);
+    SDL_FRect rect = {x - (float)cam_x, (float)(fy + frame->offset_y - cam_y), frame->w, frame->h};
+    SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
+                             f->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+}
+
 static void draw_effects(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
                          int kind, int cam_x, int cam_y) {
-    for (size_t i = 0; i < room->effect_count; ++i) {
-        const AosEffect *f = &room->effects[i];
-        if (f->kind != kind || f->hidden || f->anim.frame >= objects->effects[kind].def.count)
-            continue;
-        const AriaFrame *frame = &objects->effects[kind].frames[f->anim.frame];
-        if (!frame->texture) continue;
-        int fx = f->x >> 16, fy = f->y >> 16;
-        float x = f->mirrored ? (float)(fx - frame->offset_x) - frame->w : (float)(fx + frame->offset_x);
-        SDL_FRect rect = {x - (float)cam_x, (float)(fy + frame->offset_y - cam_y), frame->w, frame->h};
-        SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
-                                 f->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+    for (size_t i = 0; i < room->effect_count; ++i)
+        if (room->effects[i].kind == kind) draw_effect(renderer, objects, &room->effects[i], cam_x, cam_y);
+    if (kind != AOS_EFFECT_FLAME) return;
+    /* The glow of a Lightning Doll's piece (sub_080C9058), its own entity
+     * in the game. */
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        const AosEnemy *e = &room->entities[i].enemy;
+        if (room->entities[i].kind == ARIA_KIND_ENEMY && e->role == AOS_ROLE_DOLL_PIECE &&
+            !e->removed && e->glow.started)
+            draw_effect(renderer, objects, &e->glow, cam_x, cam_y);
     }
 }
 

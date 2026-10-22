@@ -85,9 +85,32 @@ static bool casing_update(AosEffect *e, const AosAnimSet *anims, const AosEffect
     return (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)(sy + 0x10) <= 0xC0;
 }
 
+/* sub_080C9198 */
+static bool follow_update(AosEffect *e, const AosAnimSet *anims, const AosEffectWorld *world) {
+    if (!world) return false;
+    if (!e->started) {
+        if (!aos_anim_start(&e->anim, anims, 0, false)) return false;
+        e->anim.id = 0;
+        effect_step(e, anims);
+        e->mirrored = world->random() & 1;
+        e->timer = 0;
+        e->started = true;
+        return true;
+    }
+    if ((e->timer & 1) == 0) e->mirrored = !e->mirrored;
+    e->x = world->player_x;
+    e->y = (int32_t)((uint32_t)(world->player_top + 8) << 16) | (e->y & 0xFFFF);
+    e->y += (int32_t)e->timer << 15;
+    if (e->cycle_done) return false;
+    e->timer++;
+    effect_step(e, anims);
+    return true;
+}
+
 bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t *blink,
                        const AosEffectWorld *world) {
     if (effect->casing) return casing_update(effect, anims, world);
+    if (effect->follow) return follow_update(effect, anims, world);
     if (effect->particle) return particle_update(effect, anims, blink);
     if (effect->drift) return drift_update(effect, anims);
     if (!effect->started) {

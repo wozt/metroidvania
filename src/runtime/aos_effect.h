@@ -44,6 +44,7 @@ typedef struct {
     bool particle;          /* sub_08068F78 */
     bool drift;             /* sub_08045C9C */
     bool casing;            /* sub_080228F8 */
+    bool follow;            /* sub_080C9198: a spark held on the player */
     uint8_t state;          /* + 0x0A of a casing: 1 falling, 2 bounced */
     int32_t ax, ay;         /* + 0x50, + 0x54 of a drifting effect */
     uint8_t flags;          /* + 0x18 of a particle */
@@ -61,6 +62,8 @@ typedef struct {
     const AosCollision *layer;
     int32_t cam_x, cam_y;
     uint32_t (*random)(void);
+    int32_t player_x;       /* the player's + 0x40 */
+    int16_t player_top;     /* sub_0801CFB0: his y - 0x22 (- 0x16 crouching) */
 } AosEffectWorld;
 
 /* sub_0806E524 / sub_0806B5DC / sub_08068F78 / sub_08045C9C /
@@ -68,7 +71,12 @@ typedef struct {
  * blink pattern 0x08118CE0 (NULL: never hidden); false once the effect is
  * deleted. A particle's first call also performs its creation (animation
  * start and step), which the game does in the creating entity's frame.
- * `world` may be NULL except for a casing.
+ * `world` may be NULL except for a casing or a follower.
+ *
+ * A follower (sub_080C9198) plays its animation once from its first
+ * update (a random flip); then each frame it turns over on even timers, sits
+ * at the player's x and sub_0801CFB0 + 8 + timer / 2, and is deleted once
+ * its animation has ended.
  *
  * A casing's first update deletes it inside a cell with bits 8 and 1
  * (sub_08002028), else sets ay = 0x3000; then (states 1 and 2) it moves with

@@ -107,6 +107,10 @@ ENEMIES = {
                  "frames": 0x0824A334, "static_frames": (0xD,)},
     "lubicant": {"id": 0x63, "graphics": 0x081F4214, "palette": 0x0820BCA0, "bank": 1,
                  "frames": 0x0824A334, "static_frames": (0xD,)},
+    # sub_080C8A18 (EnemyLightningDollCreate): its pieces show sprite
+    # frames 20 to 24 (records at 0x08528AE4).
+    "lightning_doll": {"id": 0x3B, "graphics": 0x081F426C, "palette": 0x0820BEEC, "bank": 0,
+                       "frames": 0x0824E7F4, "static_frames": tuple(range(20, 25))},
     # EnemyBeamSkeletonCreate 0x080CA5EC: walker probes 0x08528B04; its
     # muzzle flash (frame 0x15), beam (0x16, 0x17) and bones (0x18 to 0x1E,
     # the records at 0x08528B17).

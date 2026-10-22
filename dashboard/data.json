@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T08:34:24+00:00",
+ "generated_at": "2026-10-22T13:53:13+00:00",
  "git": {
-  "commit": "6018568",
+  "commit": "720819d",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 162,
+   "total": 163,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 134,
+    "functional": 135,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 134,
-   "functional_or_better_percent": 82.7,
-   "with_passing_tests": 150,
+   "functional_or_better": 135,
+   "functional_or_better_percent": 82.8,
+   "with_passing_tests": 151,
    "with_passing_tests_percent": 92.6,
    "unknown_or_blocked": 1,
    "features": [
@@ -216,6 +216,7 @@
     "aos.enemies.gargoyle",
     "aos.enemies.ghost_dancer",
     "aos.enemies.gremlin",
+    "aos.enemies.lightning_doll",
     "aos.enemies.lubicant",
     "aos.enemies.medusa_head",
     "aos.enemies.mimic",
@@ -396,20 +397,20 @@
    "areas": [
     "aos"
    ],
-   "total": 33,
+   "total": 34,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 28,
+    "functional": 29,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 28,
-   "functional_or_better_percent": 84.8,
-   "with_passing_tests": 33,
+   "functional_or_better": 29,
+   "functional_or_better_percent": 85.3,
+   "with_passing_tests": 34,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -428,6 +429,7 @@
     "aos.enemies.gargoyle",
     "aos.enemies.ghost_dancer",
     "aos.enemies.gremlin",
+    "aos.enemies.lightning_doll",
     "aos.enemies.lubicant",
     "aos.enemies.medusa_head",
     "aos.enemies.mimic",
@@ -8577,7 +8579,7 @@
     "sub_0806BD64",
     "sub_0806BBC4"
    ],
-   "limitations": "Sounds 0x6B and the 0x66 beam loop, the palette bits and sub_080683BC are not ported; the box of sub_08042884 with + 0x72 bit 2 is taken as the beam's attack box (the beam then hurts, as in the game) and its weapon hurtbox is off (no hit callback); the affine slot is drawn as a vertical scale about the sprite's centre (double-size placement not modelled); the RandomNumberGenerator draw for + 0x1E, which nothing reads, is kept. The patrol at 0.375 around its home column (turning 40 pixels away, at walls and the room's edges), the closing in at a random braked pace toward or away from the player with its wait (+ 0x1C) and patience (+ 0x19), the pause, the attack (animation 2, 33 frames charging, animation 4 firing at sprite frame 0x13, 43 frames of full beam, 64 frames shrinking), the beam (12.0 bolts from the eye looping beyond 92 pixels, 3/2 of its contact attack, harmless once shrinking) with the translucent muzzle flash, and the death (hidden, seven bones of sub_0806C5AC from 0x08528B17 flung away from the player) are ported, with state 4 under gEwramData + 0x8E bit 0x40.",
+   "limitations": "Sounds 0x6B and the 0x66 beam loop, the palette bits and sub_080683BC are not ported; the beam only has the attack box of sub_08042884 (slot + 0, read as the attacker's box by sub_08041864; + 0x72 bit 2 marks a box given by value) and no hurtbox; the affine slot is drawn as a vertical scale about the sprite's centre (double-size placement not modelled); the RandomNumberGenerator draw for + 0x1E, which nothing reads, is kept. The patrol at 0.375 around its home column (turning 40 pixels away, at walls and the room's edges), the closing in at a random braked pace toward or away from the player with its wait (+ 0x1C) and patience (+ 0x19), the pause, the attack (animation 2, 33 frames charging, animation 4 firing at sprite frame 0x13, 43 frames of full beam, 64 frames shrinking), the beam (12.0 bolts from the eye looping beyond 92 pixels, 3/2 of its contact attack, harmless once shrinking) with the translucent muzzle flash, and the death (hidden, seven bones of sub_0806C5AC from 0x08528B17 flung away from the player) are ported, with state 4 under gEwramData + 0x8E bit 0x40.",
    "next_action": "Compare against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -9275,6 +9277,83 @@
       ],
       "outcome": "passed",
       "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
+   "id": "aos.enemies.lightning_doll",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Lightning Doll",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aos_effect.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_aos_object_sprites.py"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyLightningDollCreate",
+    "EnemyLightningDollUpdate",
+    "sub_080C8A18",
+    "sub_080C8B3C",
+    "sub_080C8FBC",
+    "sub_080C9058",
+    "sub_080C9108",
+    "sub_080C9198",
+    "sub_080C9284",
+    "sub_080C9630",
+    "sub_080C9788",
+    "sub_080C9938",
+    "sub_080C99E4",
+    "sub_080C9A24",
+    "sub_0806BAC8",
+    "sub_0806D5C0"
+   ],
+   "limitations": "Sounds 0x75, 0x6E and 0x153, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; the doubled native draw during animation 5 is drawn once; child effects and pieces are updated after the enemies of their frame (native slot order not traced). The dormant wake-up, the six random bounded flight paths, the electrical charge with its native attack box and a spark following Soma, the timed landing and takeoff, the inert animation cycle under gEwramData + 0x8E bit 0x40, and the death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported.",
+   "next_action": "Compare against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_aos_object_sprites.py"
+    ],
+    "in_game_check": [
+     "aria area_06_room_020 (--spawn 112 159 --hp 9999): both dolls wake, fly and attack Soma for 60 damage by frame 240; with --atk 999 --weapon 0 --repeat 2 and right + B, one shatters into five burning pieces by frame 120"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_object_sprites.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11324,7 +11403,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Skull Millione, Cagnazzo and Lubicant with the fin frame, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Lightning Doll with its five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13010,6 +13089,12 @@
  },
  "timeline": [
   {
+   "commit": "720819d",
+   "date": "2026-10-22",
+   "subject": "Port the Aria beam skeleton",
+   "scope": "project"
+  },
+  {
    "commit": "6018568",
    "date": "2026-10-22",
    "subject": "Port Aria Skull Millione, Cagnazzo and Lubicant",
@@ -13482,12 +13567,6 @@
    "date": "2026-10-19",
    "subject": "Port the Samus in the blue ship cutscene",
    "scope": "project"
-  },
-  {
-   "commit": "8967249",
-   "date": "2026-10-19",
-   "subject": "Port the Chozodia escape ship and escape gates",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -13548,9 +13627,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 244,
-    "routines_attached_to_features": 244,
-    "unassigned_routines": 3329,
+    "routines_cited_by_features": 259,
+    "routines_attached_to_features": 259,
+    "unassigned_routines": 3314,
     "call_edges": 14228
    }
   },
@@ -16565,15 +16644,21 @@
      },
      {
       "id": 59,
-      "name": "Enemy 0x3B",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Lightning Doll",
+      "status": "functional",
+      "note": "Lightning Doll",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_aos_object_sprites.py"
+       ],
+       "in_game_check": [
+        "aria area_06_room_020 (--spawn 112 159 --hp 9999): both dolls wake, fly and attack Soma for 60 damage by frame 240; with --atk 999 --weapon 0 --repeat 2 and right + B, one shatters into five burning pieces by frame 120"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.lightning_doll"
      },
      {
       "id": 60,

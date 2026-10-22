@@ -267,9 +267,11 @@ Class 4 (`sub_08022A54`, records 55 and 56: guns) draws its sprite with
 `sub_08023508`, which puts the entity at Soma's X and Y + `+0x4C` (12 when
 crouched, else 0) only for the draw: the entity itself is the shot.
 Creation sets `+0x50` = 8.0 (negated facing left) and adds it to `+0x48`
-once, sets the hurtbox by `sub_08042884(e, 0x0810FCF8)`, which copies the
-pointer's own bytes F8 FC 10 08 as the box (-8, -4, 16, 8), leaves the attack
-box off, and creates a casing (`sub_080228F8`, placed by
+once, sets its attack box (slot + 0, the box `sub_08041864` reads for the
+attacker; `sub_080428F0` sets the hurtbox at slot + 4) by
+`sub_08042884(e, 0x0810FCF8)`, which copies the pointer's own bytes F8 FC 10
+08 as the box (-8, -4, 16, 8), keeps that box off (+ 0x72 bit 1), and
+creates a casing (`sub_080228F8`, placed by
 `sub_08031EA4(e, soma, 8, +0x4E - 26)`: 8 pixels ahead, mirrored like Soma;
 vx = (r & 0x7FFF) - 1.0 negated when facing left, vy = -1.25 - (r & 0x7FFF),
 the draws only when it is created). Each frame: the timer grows; at 3 (and
@@ -690,6 +692,36 @@ hovers again; after an odd round other than the first with the player
 beyond 120 pixels it waits for the animation's cycle, plays animation 4
 once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
+
+Lightning Doll (enemy 0x3B, `EnemyLightningDollCreate` /
+`EnemyLightningDollUpdate`): tiles `0x081F426C`, palette `0x0820BEEC` bank
+0 and frames `0x0824E7F4`. Creation starts animation 0, snaps it to the
+floor and seeds the attack wait (+ 0x14) to 16..47 frames and the flight
+timer (+ 0x18) to 512..1535 frames. `sub_080C8B3C` wakes it when the player
+enters its 240 x 128 box, plays animation 1 once, then flies in bounded
+random legs: three patterns move diagonally toward the player at 0.5, one
+moves horizontally away at 0.25 and two use `sub_0806BAC8` to fly at 1.0
+toward a point 16 pixels above him. `sub_080C9788` reflects those paths at
+the room edges, walls, floor and ceiling. When its attack wait expires with
+the player ahead within 20 pixels (or on a one-in-1024 random draw), it
+charges with animation 3 and then loops electrical animation 4 for 128..383
+frames with attack box (-14, -32, 30, 28). Contact during either animation
+creates the common spark animation 16 (`sub_080C9108` / `sub_080C9198`),
+which follows the player's upper body while rising and alternating its
+horizontal flip. When its flight timer expires the doll sinks into a solid
+cell, rests in animation 5 for 64..127 frames and rises into flight again.
+
+Its hit callback `sub_080C8FBC` hides it and `sub_080C9A24` creates the five
+pieces described at `0x08528AE4` (sprite frames 20..24). `sub_080C9284`
+applies each record's velocity and timer; piece 1 alone bounces against the
+floor and stops when slow, while every piece blinks near the end and emits
+the flame and dust of `sub_0806D5C0` at its record's intervals. Each piece
+keeps a looping death-flame glow (`sub_080C9058`) 16 pixels above it, and the
+hidden parent is removed only after all five pieces and their glows finish.
+Under global `0x8E & 0x40`, `sub_080C9630` cycles the six animations in
+place. Sounds 0x75, 0x6E and 0x153, palette flags, the tracking list and
+`sub_080683BC` rewards are not ported; the native doubled draw during the
+land animation is represented by one sprite.
 
 Beam skeleton (enemy 0x59, `EnemyBeamSkeletonCreate` /
 `EnemyBeamSkeletonUpdate`): tiles `0x081F427C`, palette `0x0820BF54`, frames
@@ -1146,7 +1178,7 @@ Needles (enemy 0x3F, `EnemyNeedlesCreate` / `EnemyNeedlesUpdate`): tiles
 point, contact attack 38. Create: animation 0 looping, not mirrored, state
 1 (state 3, only stepping its animation, under the global `0x8E & 0x40`);
 `sub_08042884` and `sub_080428F0` receive the constant `0x1010F8F8`, whose
-bytes are the hurt and attack boxes (-8, -8, 16, 16); with parameter 0 set
+bytes are the attack and hurt boxes (-8, -8, 16, 16); with parameter 0 set
 `+0x14` starts at `RandomNumberGenerator % 0xFFFF`. The update (inside the
 activity window) runs `sub_080CB5E0`, the animation step and the
 collision pass. `sub_080CB5E0` marks the cycle done at once; every time a

@@ -158,7 +158,7 @@ int main(void) {
     static const uint8_t still[] = {1};
     const AosAnimDef casing_def = {1, still};
     const AosAnimSet casing_set = {&casing_def, 1};
-    const AosEffectWorld world = {&layer, 0, 0, rng};
+    const AosEffectWorld world = {&layer, 0, 0, rng, 0, 0};
     AosEffect casing = {.kind = AOS_EFFECT_CASING, .casing = true, .x = AOS_FIXED(60),
                         .y = AOS_FIXED(150), .vx = -0x8000, .vy = -0x10000};
     int frames_alive = 0;

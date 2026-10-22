@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-22**.
 
+## Patch 0458 - Aria Lightning Doll
+
+- Ported the Lightning Doll (enemy 0x3B): its dormant wake-up, random
+  bounded flight, electrical attack, landing and return to flight.
+- Ported its contact spark attached to Soma and its death into five native
+  pieces, including the piece-specific trajectories, bounce, flame glows,
+  dust and delayed owner removal.
+- Checked in room 6/20: both dolls wake and attack Soma for 60 damage; a
+  killing blow scatters one into its five burning pieces.
+
 ## Patch 0457 - Aria beam skeleton
 
 - Ported the beam skeleton (enemy 0x59): its patrol, its random closing in

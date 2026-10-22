@@ -1543,10 +1543,17 @@ static void nemesis_effect_update(AosEnemy *effect) {
         effect->removed = true;
         return;
     }
+    /* sub_08045748 starts a newly allocated child in state 0, promotes it to
+     * state 2 on the first callback and advances +0x0D every callback. The
+     * compact runtime keeps that lifecycle even though the scratch OAM buffer
+     * is not yet reconstructed. */
+    if (effect->state == 0) effect->state = 2;
+    effect->timer = (uint8_t)(effect->timer + 1);
     effect->hidden = parent->hidden;
     effect->x = parent->x;
     effect->y = parent->y;
     effect->mirrored = parent->mirrored;
+    effect->vflip = parent->vflip;
     effect->translucent = true;
     effect->static_frame = parent->anim.frame < 4 ? parent->anim.frame : 0;
 }
@@ -1664,6 +1671,9 @@ static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
             effect.id = n->id;
             effect.role = AOS_ROLE_NEMESIS_EFFECT;
             effect.variant = sequences[i];
+            effect.step = sequences[i];
+            effect.state = 0;
+            effect.timer = 0;
             effect.static_frame = n->anim.frame < 4 ? n->anim.frame : 0;
             effect.anim.id = 0;
             effect.x = n->x;

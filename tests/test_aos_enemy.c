@@ -2025,8 +2025,11 @@ static void nemesis_tests(void) {
     effect.parent = &n;
     n.anim.frame = 2;
     aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(!effect.hidden && effect.translucent && effect.static_frame == 2 && effect.x == n.x &&
-           effect.y == n.y && effect.combat.attack_off && effect.combat.hurt_off);
+    assert(effect.state == 2 && effect.timer == 1 && effect.step == 9 && !effect.hidden &&
+           effect.translucent && effect.static_frame == 2 && effect.x == n.x && effect.y == n.y &&
+           effect.combat.attack_off && effect.combat.hurt_off);
+    aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(effect.timer == 2 && effect.static_frame == 2);
     n.defeated = true;
     aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(helper.removed);

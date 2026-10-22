@@ -794,7 +794,9 @@ fixed-point position and mirror, and reproduce the +9/+10 pixel horizontal,
 +37/-4 pixel vertical and 10/40-frame/flicker timings. The three technical
 effect slots created by `sub_080C7B54` (sequence identities 9, 12 and 6) are
 also emitted as translucent, non-combat children: each follows the owner's
-position, mirror and current direct frame, and is removed with the owner.
+position, mirror, vertical flip and current direct frame; each enters the
+native active child state on its first callback, advances its own timer and is
+removed with the owner.
 Their palette callbacks, native sound calls and exact animation-table timing
 remain open; death uses the shared 40-frame flame and blink sequence.
 

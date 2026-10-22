@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0463 - Aria Nemesis effect lifecycle timing
+
+- Matched the native technical-child lifecycle: each Nemesis effect starts in
+  state 0, enters the active state 2 on its first callback and advances its
+  private timer every frame.
+- Preserved the native sequence identities in both the child step and variant
+  fields, and synchronized the owner's vertical flip in addition to position,
+  mirror, visibility and direct frame.
+- Added regression coverage for first-frame activation and timer progression.
+  The scratch OAM composition selected by `sub_08045748` remains the next
+  visual-fidelity gap; the current renderer still uses the owner's exported
+  direct frame as a ROM-free fallback.
+
 ## Patch 0462 - Aria Nemesis technical effect slots
 
 - Ported the three visual child slots created by `sub_080C7B54` (native

@@ -37,7 +37,7 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 99     /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 55, 57, 63, 87, 98 */
+#define ENEMY_KINDS 99     /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 55, 57, 63, 87, 96, 98 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
@@ -54,6 +54,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [55] = "gremlin",
                                                      [57] = "medusa_head",
                                                      [87] = "gargoyle",
+                                                     [96] = "mimic",
                                                      [98] = "erinys",
                                                      [63] = "needles"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
@@ -460,9 +461,18 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 room->entities[room->entity_count++] = (AriaEntity){
                     .kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.children[c].x >> 16,
                     .y = hit.children[c].y >> 16, .spawned = true,
-                    /* Needles pieces count down their parent's + 0x13. */
-                    .spawner = hit.children[c].role == AOS_ROLE_NEEDLE_PIECE ? (int)i : -1,
+                    /* Needles pieces count down their parent's + 0x13; a
+                     * Mimic's trigger wakes its parent. */
+                    .spawner = hit.children[c].role == AOS_ROLE_NEEDLE_PIECE ||
+                                       hit.children[c].role == AOS_ROLE_MIMIC_TRIGGER
+                                   ? (int)i
+                                   : -1,
                     .enemy = hit.children[c]};
+            if (hit.wake_spawner && e->spawner >= 0) {
+                /* sub_080993EC: a waiting Mimic (state 0, step 0) wakes. */
+                AosEnemy *mimic = &room->entities[e->spawner].enemy;
+                if (mimic->state == 0 && mimic->step == 0) mimic->step++;
+            }
             if (hit.spawn && room->entity_count < MAX_ENTITIES) {
                 AriaEntity *child = &room->entities[room->entity_count];
                 *child = (AriaEntity){.kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.spawn_x,

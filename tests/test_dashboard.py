@@ -180,7 +180,7 @@ class OutputTests(unittest.TestCase):
                                           "Ghost Dancer", "Curly", "Durga",
                                           "Valkyrie", "Erinys", "Gremlin",
                                           "Skeleton Knight", "Dead Warrior",
-                                          "Fleaman", "Red Crow"})
+                                          "Fleaman", "Red Crow", "Mimic"})
         unnamed = [row for row in aos["monsters"] if row["status"] == "not_started"]
         self.assertTrue(all(row["name"].startswith("Enemy 0x") for row in unnamed))
         self.assertEqual(len(aos["items"]), len(dashboard.ARIA_ITEM_FAMILIES))

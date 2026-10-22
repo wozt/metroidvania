@@ -17,7 +17,8 @@
  * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
  * code), the skeleton knight (enemy 0x0D), the dead warrior (enemy 0x2F),
- * the Fleaman (enemy 0x18), the red crow (enemy 0x2D, the blue crow's death), the Valkyrie (enemy 0x29) and Erinys (0x62, the same code), the
+ * the Fleaman (enemy 0x18), the Mimic (enemy 0x60) with its hidden trigger,
+ * the red crow (enemy 0x2D, the blue crow's death), the Valkyrie (enemy 0x29) and Erinys (0x62, the same code), the
  * gargoyle and the Gremlin (0x37, the same code)
  * (enemy 0x57), the Medusa head (enemy 0x39) with its
  * spawner, and Needles (enemy 0x3F) with its pieces
@@ -100,6 +101,7 @@ enum {
     AOS_ENEMY_GREMLIN = 0x37,
     AOS_ENEMY_MEDUSA_HEAD = 0x39,
     AOS_ENEMY_GARGOYLE = 0x57,
+    AOS_ENEMY_MIMIC = 0x60,
     AOS_ENEMY_ERINYS = 0x62,
     AOS_ENEMY_NEEDLES = 0x3F,
 };
@@ -108,7 +110,8 @@ enum {
  * kind (sharing its sprites and record). */
 enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3,
        AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5,
-       AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8, AOS_ROLE_NEEDLE_PIECE = 9 };
+       AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8, AOS_ROLE_NEEDLE_PIECE = 9,
+       AOS_ROLE_MIMIC_TRIGGER = 10 };
 
 typedef struct {
     uint8_t id;             /* + 0x36 */
@@ -164,6 +167,7 @@ typedef struct {
     int16_t spawn_param1;       /* + 0x32 of the spawned enemy */
     uint8_t child_count;    /* child entities to add to the room */
     AosEnemy children[AOS_ENEMY_MAX_CHILDREN];
+    bool wake_spawner;      /* a Mimic trigger was struck (sub_080993EC) */
     uint8_t effect_count;   /* shared effects to add */
     AosEffect effects[AOS_ENEMY_MAX_EFFECTS];
 } AosHitReport;

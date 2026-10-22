@@ -102,6 +102,10 @@ ENEMIES = {
     "valkyrie": {"id": 0x29, "graphics": 0x081CBF2C, "palette": 0x0820A3FC, "bank": 0,
                  "frames": 0x0821285C},
     # EnemyErinysCreate / Update call the Valkyrie's routines: bank 1.
+    # sub_08099430 (EnemyMimicCreate): palette bank = parameter 1 (0 in
+    # the rooms); a closed chest holds sprite frame 0.
+    "mimic": {"id": 0x60, "graphics": 0x081CC04C, "palette": 0x0820AB7C, "bank": 0,
+              "frames": 0x08223698, "static_frames": (0,)},
     "erinys": {"id": 0x62, "graphics": 0x081CBF2C, "palette": 0x0820A3FC, "bank": 1,
                "frames": 0x0821285C},
     # sub_08093540 (EnemyCurlyCreate 0x08093178): bank 1 for id 0x2B, bank 0

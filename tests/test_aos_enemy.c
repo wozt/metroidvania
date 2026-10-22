@@ -416,6 +416,110 @@ static void red_crow_tests(void) {
     assert(c.step == 1 && c.anim.id == 0);
 }
 
+static void mimic_tests(void) {
+    /* Floor at cell row 20 (top 160). */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t open_ticks[] = {2, 4, 5}, bite[] = {7, 3}, death[] = {200};
+    const AosAnimDef defs[4] = {{3, open_ticks}, {2, bite}, {1, death}, {1, death}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 3; ++f) {
+            kind.modes[a][f] = 2;
+            kind.hurt[a][f] = (AosBox){-14, -32, 28, 32};
+            kind.attack[a][f] = (AosBox){-14, -32, 28, 32};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {30, 20, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
+
+    /* A placed chest (parameter 0 set) sits closed on the floor: sprite
+     * frame 0, its own hurtbox, no attack box. */
+    AosEnemy m;
+    assert(aos_enemy_create(&m, AOS_ENEMY_MIMIC, 100, 150, 1, 0, &soma, &layer, &kind, &stats));
+    assert(m.state == 0 && m.step == 3 && m.static_frame == 0 && (m.y >> 16) == 159);
+    assert(m.own_boxes && m.combat.attack_off);
+    for (int i = 0; i < 10; ++i)
+        aos_enemy_update(&m, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(m.step == 3 && m.static_frame == 0);
+    /* The player in (x - 16, y - 20, 32, 20) opens it: animation 0 once,
+     * then animation 1 with the frame boxes. */
+    soma.x = AOS_FIXED(110);
+    soma.y = AOS_FIXED(159);
+    aos_enemy_update(&m, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(m.step == 4 && m.static_frame < 0 && !m.own_boxes && !m.combat.attack_off);
+    int frames = 0;
+    while (m.step == 4 && frames < 50) {
+        aos_enemy_update(&m, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(m.step == 5 && m.anim.id == 1 && frames == 11);
+
+    /* A struck chest opens with animation 3 (2 once open) into the generic
+     * death; its contact is a knockback. */
+    soma.x = AOS_FIXED(400);
+    AosEnemy c;
+    assert(aos_enemy_create(&c, AOS_ENEMY_MIMIC, 100, 150, 1, 0, &soma, &layer, &kind, &stats));
+    soma.facing_left = false;
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.x = AOS_FIXED(70);
+    soma.y = c.y + AOS_FIXED(30);
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{20, -40, 20, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosHitReport hit = aos_enemy_update(&c, &soma, &layer, &kind, &weapon, &blade, 50, 4, 0, 0,
+                                        never_zero);
+    assert(hit.enemy_hit && hit.killed && c.state == 1 && c.anim.id == 3 && c.timer == 0x28);
+
+    /* A hidden Mimic (parameter 0 clear) waits in step 0 behind its
+     * trigger, created on its first update. */
+    soma.x = AOS_FIXED(400);
+    soma.y = AOS_FIXED(159);
+    AosEnemy h;
+    assert(aos_enemy_create(&h, AOS_ENEMY_MIMIC, 100, 60, 0, 0, &soma, &layer, &kind, &stats));
+    assert(h.step == 0 && h.hidden);
+    hit = aos_enemy_update(&h, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.child_count == 1 && hit.children[0].role == AOS_ROLE_MIMIC_TRIGGER);
+    AosEnemy trigger = hit.children[0];
+    assert(trigger.hidden && trigger.own_boxes && trigger.combat.attack_off);
+    assert(trigger.x == h.x && trigger.y == h.y);
+    hit = aos_enemy_update(&h, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.child_count == 0 && h.step == 0);
+
+    /* Striking the trigger reports the wake and bursts: flames every 4
+     * frames above 30, deleted after 41 frames. */
+    soma.x = AOS_FIXED(70);
+    soma.y = trigger.y + AOS_FIXED(30);
+    hit = aos_enemy_update(&trigger, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
+                           never_zero);
+    assert(hit.wake_spawner && trigger.state == 1 && trigger.timer == 0x28);
+    int flames = 0;
+    frames = 0;
+    while (!trigger.removed && frames < 100) {
+        hit = aos_enemy_update(&trigger, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               never_zero);
+        flames += hit.effect_count;
+        ++frames;
+    }
+    assert(frames == 41 && flames == 3);
+
+    /* Woken, it falls as a closed chest and lands in step 3. */
+    h.step = 1;
+    aos_enemy_update(&h, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(h.step == 2 && !h.hidden && h.vy == 0x2000 && h.static_frame == 0);
+    frames = 0;
+    while (h.step == 2 && frames < 200) {
+        aos_enemy_update(&h, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(h.step == 3 && (h.y >> 16) == 159 && h.vy == 0x10000 && h.own_boxes);
+}
+
 static void soldier_tests(void) {
     /* Floor at cell row 20 (top 160). */
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
@@ -1987,6 +2091,7 @@ int main(void) {
     zombie_tests();
     crow_tests();
     red_crow_tests();
+    mimic_tests();
     soldier_tests();
     armor_tests();
     archer_tests();

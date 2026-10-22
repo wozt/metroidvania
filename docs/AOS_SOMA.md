@@ -691,6 +691,26 @@ beyond 120 pixels it waits for the animation's cycle, plays animation 4
 once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
+Mimic (enemy 0x60, `EnemyMimicCreate` / `EnemyMimicUpdate`): tiles
+`0x081CC04C`, palette `0x0820AB7C` with bank = parameter 1, frames
+`0x08223698` (`sub_08099430`). With parameter 0 set it is a closed chest
+(sprite frame 0, its own hurtbox `0x0E10F2F8` = (-8, -14, 16, 14), no
+attack box, step 3, floor snap); otherwise it waits hidden in step 0
+behind a trigger entity (`sub_080992C8` / `sub_0809937C`: hurtbox
+`0x100CF8FA` = (-6, -8, 12, 16), type 8). A struck trigger
+(`sub_080993EC`) sets state 1 with a 40-frame timer, steps its waiting
+parent (state 0, step 0) to step 1, and hidden sends flames of
+`sub_0806D5C0` (8 x 8) every 4 frames above 30. Steps (`sub_080990D8`):
+1 shows the chest with `+0x54` 0x2000; 2 falls with `sub_080698A8(e, 1.0,
+-16, 4.0)` (each axis only with a speed or acceleration, the ceiling only
+rising, the floor only falling) and lands into step 3 with its own boxes;
+3 opens when the player is in (x - 16, y - 20, 32, 20) (animation 0 once,
+step 4), then animation 1 (step 5) with the frame boxes. A hit
+(`sub_0809922C`, sound 0x72) plays animation 3 in step 3 or 2 after and
+runs the generic death for 40 frames; the contact (`sub_080994B0`) is a
+knockback (type 1). Under gEwramData + 0x8E bit 0x40: state 2, animation
+0 once, then animation 1.
+
 Zombie soldier (enemy 0x0C, `EnemyZombieSoldierCreate` /
 `EnemyZombieSoldierUpdate`): tiles `0x081CC024`, palette `0x0820AA48`, frames
 `0x082215C4` (`sub_08093100`); animations 0 walk, 1 close attack, 2 throw,

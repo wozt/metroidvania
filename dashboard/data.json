@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T02:25:41+00:00",
+ "generated_at": "2026-10-22T04:17:32+00:00",
  "git": {
-  "commit": "560cb1f",
+  "commit": "b48f615",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 156,
+   "total": 157,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 128,
+    "functional": 129,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 128,
-   "functional_or_better_percent": 82.1,
-   "with_passing_tests": 144,
-   "with_passing_tests_percent": 92.3,
+   "functional_or_better": 129,
+   "functional_or_better_percent": 82.2,
+   "with_passing_tests": 145,
+   "with_passing_tests_percent": 92.4,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -214,6 +214,7 @@
     "aos.enemies.ghost_dancer",
     "aos.enemies.gremlin",
     "aos.enemies.medusa_head",
+    "aos.enemies.mimic",
     "aos.enemies.needles",
     "aos.enemies.red_crow",
     "aos.enemies.skeleton_knight",
@@ -390,20 +391,20 @@
    "areas": [
     "aos"
    ],
-   "total": 27,
+   "total": 28,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 22,
+    "functional": 23,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 22,
-   "functional_or_better_percent": 81.5,
-   "with_passing_tests": 27,
+   "functional_or_better": 23,
+   "functional_or_better_percent": 82.1,
+   "with_passing_tests": 28,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -420,6 +421,7 @@
     "aos.enemies.ghost_dancer",
     "aos.enemies.gremlin",
     "aos.enemies.medusa_head",
+    "aos.enemies.mimic",
     "aos.enemies.needles",
     "aos.enemies.red_crow",
     "aos.enemies.skeleton_knight",
@@ -9147,6 +9149,71 @@
    }
   },
   {
+   "id": "aos.enemies.mimic",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Mimic",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.zombie"
+   ],
+   "native_routines": [
+    "EnemyMimicCreate",
+    "EnemyMimicUpdate",
+    "sub_08099430",
+    "sub_080990D8",
+    "sub_08099480",
+    "sub_080698A8",
+    "sub_0809922C",
+    "sub_080994B0",
+    "sub_080992C8",
+    "sub_0809937C",
+    "sub_080993EC"
+   ],
+   "limitations": "Sound 0x72 and the palette bank of parameter 1 beyond bank 0 are not ported; the trigger's common sprite (animation 3, row 7) and its draw routine sub_08046100 are not traced, so it is not drawn; the trigger's slot is a room entity whose index stands for the parent pointer. The placed closed chest (parameter 0 set: sprite frame 0, the hurtbox 0x0E10F2F8, no attack box, floor snap), the hidden Mimic with its trigger (hurtbox 0x100CF8FA) that bursts in flames and wakes it, the fall of sub_080698A8 (vy + 0x2000 up to 4.0, landing at vy 1.0), the opening when the player is in (x - 16, y - 20, 32, 20) (animation 0 once, then animation 1), the hit into the generic death (animation 3 closed, 2 open), the knockback contact and the inert state 2 under gEwramData + 0x8E bit 0x40 are ported.",
+   "next_action": "Trace sub_08046100 to draw the trigger; compare against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.needles",
    "area": "aos",
    "category": "enemies",
@@ -10940,7 +11007,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12626,6 +12693,12 @@
  },
  "timeline": [
   {
+   "commit": "b48f615",
+   "date": "2026-10-22",
+   "subject": "Port the Aria red crow",
+   "scope": "project"
+  },
+  {
    "commit": "560cb1f",
    "date": "2026-10-22",
    "subject": "Port the Aria Fleaman",
@@ -13098,12 +13171,6 @@
    "date": "2026-10-19",
    "subject": "Export Imago's palette table as a byte-pair table",
    "scope": "project"
-  },
-  {
-   "commit": "7305b5e",
-   "date": "2026-10-19",
-   "subject": "Port Imago",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -13164,9 +13231,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 196,
-    "routines_attached_to_features": 196,
-    "unassigned_routines": 3377,
+    "routines_cited_by_features": 207,
+    "routines_attached_to_features": 207,
+    "unassigned_routines": 3366,
     "call_edges": 14228
    }
   },
@@ -16635,15 +16702,20 @@
      },
      {
       "id": 96,
-      "name": "Enemy 0x60",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Mimic",
+      "status": "functional",
+      "note": "Mimic",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.mimic"
      },
      {
       "id": 97,

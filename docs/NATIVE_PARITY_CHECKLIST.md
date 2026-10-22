@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 27 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 28 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 196 | 3377 |
+| Castlevania: Aria of Sorrow | 207 | 3366 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1302,6 +1302,16 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: The petrification of gold heads (contact element 0x100), sound 0x72, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; state 1 (sub_08093BCC) is not entered by any code read. Spawned heads are created after their spawner's update (native slot order not traced).  
 Next action: Port the petrification of gold heads with Soma's status effects.
 Evidence: in game: `aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP`.
+
+[+] **`aos.enemies.mimic` — Mimic.** The placed closed chest (parameter 0 set: sprite frame 0, the hurtbox 0x0E10F2F8, no attack box, floor snap), the hidden Mimic with its trigger (hurtbox 0x100CF8FA) that bursts in flames and wakes it, the fall of sub_080698A8 (vy + 0x2000 up to 4.0, landing at vy 1.0), the opening when the player is in (x - 16, y - 20, 32, 20) (animation 0 once, then animation 1), the hit into the generic death (animation 3 closed, 2 open), the knockback contact and the inert state 2 under gEwramData + 0x8E bit 0x40 are ported.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080698A8`, `aos:asm:asm/code/code_08090914.s:EnemyMimicCreate`, `aos:asm:asm/code/code_08090914.s:EnemyMimicUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080990D8`, `aos:asm:asm/code/code_08090914.s:sub_0809922C`, `aos:asm:asm/code/code_08090914.s:sub_080992C8`, `aos:asm:asm/code/code_08090914.s:sub_0809937C`, `aos:asm:asm/code/code_08090914.s:sub_080993EC`, `aos:asm:asm/code/code_08090914.s:sub_08099430`, `aos:asm:asm/code/code_08090914.s:sub_08099480`, `aos:asm:asm/code/code_08090914.s:sub_080994B0`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie`.  
+Known divergences: Sound 0x72 and the palette bank of parameter 1 beyond bank 0 are not ported; the trigger's common sprite (animation 3, row 7) and its draw routine sub_08046100 are not traced, so it is not drawn; the trigger's slot is a room entity whose index stands for the parent pointer.  
+Next action: Trace sub_08046100 to draw the trigger; compare against an emulator.
+Evidence: in game: `aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)`.
 
 [+] **`aos.enemies.needles` — Needles and its pieces.** The looping animation with its random pauses, the optional bobbing (parameter 0), the (-8, -8, 16, 16) boxes packed in 0x1010F8F8, the contact damage, the shattering into the five pieces of 0x08528B44 and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 

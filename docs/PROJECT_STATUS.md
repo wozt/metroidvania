@@ -1,6 +1,14 @@
 # Project status
 
-Last updated: **2026-10-20**.
+Last updated: **2026-10-22**.
+
+## Patch 0454 - Aria Mimic
+
+- Ported the Mimic (enemy 0x60): the placed closed chest that opens when
+  Soma walks up and bites with a knockback, and the hidden Mimic whose
+  trigger bursts in flames when struck and drops it to the floor.
+- Checked in rooms 3/16 (the chest opens and knocks Soma back) and 11/5
+  (a jump attack wakes the hidden Mimic, which falls and opens).
 
 ## Patch 0453 - Aria red crow
 

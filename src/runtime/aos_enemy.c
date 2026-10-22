@@ -424,7 +424,8 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
         id != AOS_ENEMY_ERINYS && id != AOS_ENEMY_GREMLIN && id != AOS_ENEMY_SKELETON_KNIGHT &&
-        id != AOS_ENEMY_DEAD_WARRIOR && id != AOS_ENEMY_FLEAMAN && id != AOS_ENEMY_RED_CROW)
+        id != AOS_ENEMY_DEAD_WARRIOR && id != AOS_ENEMY_FLEAMAN && id != AOS_ENEMY_RED_CROW &&
+        id != AOS_ENEMY_MIMIC)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -522,6 +523,37 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         snap_to_floor(enemy, layer);
         enemy->y += 0x10000;
         enemy->state = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_MIMIC) {
+        /* EnemyMimicCreate (sub_08099430: tiles 0x081CC04C, palette
+         * 0x0820AB7C bank parameter 1, frames 0x08223698): not mirrored;
+         * with parameter 0 set a closed chest on the floor (sprite frame 0,
+         * the hurtbox of the bytes 0x0E10F2F8 = (-8, -14, 16, 14), no
+         * attack box; step 3), otherwise hidden in step 0 with its trigger
+         * (created by the first update here). Under the global 0x8E & 0x40
+         * state 2: animation 0 once, then animation 1. */
+        enemy->mirrored = false;
+        if (flag_8e_40) {
+            enemy->state = 2;
+            play_loop(enemy, anims, 0, false);
+            step_anim(enemy, anims);
+            return true;
+        }
+        enemy->state = 0;
+        if (param0) {
+            enemy->static_frame = 0;
+            enemy->own_boxes = true;
+            enemy->own_hurt = enemy->own_attack = (AosBox){-8, -14, 16, 14};
+            enemy->combat.attack_off = true;
+            enemy->step = 3;
+            snap_to_floor(enemy, layer);
+            return true;
+        }
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        enemy->hidden = true;
+        enemy->step = 0;
         return true;
     }
     if (id == AOS_ENEMY_FLEAMAN) {
@@ -751,6 +783,15 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             /* sub_0802346C (weapon callback): the kick-hit flag. */
             soma->flags |= AOS_FLAG_KICK_HIT;
             report.enemy_hit = true;
+            if (enemy->role == AOS_ROLE_MIMIC_TRIGGER) {
+                /* sub_080993EC: the trigger bursts (state 1, 40 frames)
+                 * and wakes its Mimic. */
+                enemy->state = 1;
+                enemy->step = 0;
+                enemy->timer = 0x28;
+                report.wake_spawner = true;
+                goto contact;
+            }
             if (enemy->role == AOS_ROLE_AXE || enemy->role == AOS_ROLE_ARROW) {
                 /* sub_080B13BC / sub_080AFD8C: a struck axe or arrow loses
                  * its single hit point. */
@@ -808,6 +849,16 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     play_loop(enemy, kind->anims, 3, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
+                    enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_MIMIC) {
+                    /* sub_0809922C (sound 0x72): animation 3 when struck
+                     * closed (step 3), else 2; 40 frames of the generic
+                     * death (state 1). */
+                    play_loop(enemy, kind->anims, enemy->step == 3 ? 3 : 2, false);
+                    enemy->static_frame = -1;
+                    enemy->own_boxes = false;
+                    enemy->timer = 0x28;
+                    enemy->state = 1;
                     enemy->step = 0;
                 } else if (enemy->id == AOS_ENEMY_FLEAMAN) {
                     /* sub_080C2458 -> sub_080C2388: state 0xFF. */
@@ -919,7 +970,9 @@ contact:
         if ((enemy->id == AOS_ENEMY_VALKYRIE || enemy->id == AOS_ENEMY_ERINYS) &&
             !(enemy->state == 1 && enemy->anim.id == 1 && (uint8_t)(enemy->anim.frame - 4) <= 2))
             contact >>= 1;
-        report.soma_damage = aos_soma_take_hit(soma, contact, soma_def, enemy->x, 0);
+        /* sub_080994B0: the Mimic's contact is a knockback (type 1). */
+        report.soma_damage = aos_soma_take_hit(soma, contact, soma_def, enemy->x,
+                                               enemy->id == AOS_ENEMY_MIMIC ? 1 : 0);
     }
     return report;
 }
@@ -2170,6 +2223,192 @@ static AosHitReport warrior_update(AosEnemy *w, AosSoma *soma, const AosCollisio
     step_anim(w, kind->anims);
     aos_combat_tick(&w->combat);
     take_effects(&report, &effects);
+    return report;
+}
+
+/* sub_080698A8(e, floor_vy, head, limit): sub_08069770 with its own limit,
+ * moving each axis only when its speed or acceleration is set; the ceiling
+ * only while rising, the floor only while falling (subpixel cleared, vy =
+ * floor_vy). */
+static int fall_collide(AosEnemy *e, const AosCollision *layer, int32_t floor_vy, int32_t head,
+                        int32_t limit) {
+    int result = 0;
+    if (e->vx || e->ax) {
+        e->vx += e->ax;
+        if (e->ax >= 0 ? e->vx > limit : e->vx < -limit) e->vx = e->ax >= 0 ? limit : -limit;
+        e->x += e->vx;
+        if (e->vx < 0) {
+            int push = aos_wall_push_right(layer, e->x >> 16, e->y >> 16);
+            if (push) {
+                e->x += (int32_t)((uint32_t)push << 16);
+                result = 2;
+            }
+        }
+        if (e->vx > 0) {
+            int push = aos_wall_push_left(layer, e->x >> 16, e->y >> 16);
+            if (push) {
+                e->x += (int32_t)((uint32_t)push << 16);
+                result |= 1;
+            }
+        }
+    }
+    if (!e->vy && !e->ay) return result;
+    e->vy += e->ay;
+    if (e->ay >= 0 ? e->vy > limit : e->vy < -limit) e->vy = e->ay >= 0 ? limit : -limit;
+    e->y += e->vy;
+    if (e->vy < 0) {
+        int32_t head_y = e->y + head;
+        int depth = aos_ceiling_depth(layer, e->x >> 16,
+                                      head_y < 0 ? -((-head_y) >> 16) : head_y >> 16, 0, false);
+        if (depth) {
+            e->y += (int32_t)((uint32_t)depth << 16);
+            result |= 8;
+        }
+    }
+    if (e->vy > 0) {
+        int depth = aos_floor_depth(layer, e->x >> 16, e->y >> 16, 0, false);
+        if (depth) {
+            e->y = (int32_t)((uint32_t)((e->y >> 16) + depth) << 16);
+            e->vy = floor_vy;
+            result |= 4;
+        }
+    }
+    return result;
+}
+
+/* sub_080992C8: the Mimic's trigger, a hidden entity at its position with
+ * the hurtbox of the bytes 0x100CF8FA (-6, -8, 12, 16), no attack box;
+ * its common sprite (animation 3, row 7) and its draw routine sub_08046100
+ * are not drawn. */
+static AosEnemy mimic_trigger(const AosEnemy *m) {
+    AosEnemy t = {0};
+    t.id = m->id;
+    t.role = AOS_ROLE_MIMIC_TRIGGER;
+    t.static_frame = -1;
+    t.x = m->x;
+    t.y = m->y;
+    t.hidden = true;
+    t.hp = 1;
+    t.combat.type = AOS_TYPE_ENEMY;
+    t.combat.attack_off = true;
+    t.own_boxes = true;
+    t.own_hurt = t.own_attack = (AosBox){-6, -8, 12, 16};
+    return t;
+}
+
+/* sub_0809937C: the trigger collides until struck; then, hidden, it sends
+ * flames of sub_0806D5C0 (8 x 8) every 4 frames while its timer is above
+ * 30 and is deleted after 41 frames. */
+static AosHitReport trigger_update(AosEnemy *t, AosSoma *soma, const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames, int soma_atk,
+                                   int soma_def, uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (t->state == 0) {
+        report = collide(t, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        aos_combat_tick(&t->combat);
+        return report;
+    }
+    t->hidden = true;
+    if (t->timer > 0x1E && (t->timer & 3) == 0)
+        spawn_flame_at(t->x, t->y, 0x80000, 0x80000, random, &report);
+    if (--t->timer == 0xFF) t->removed = true;
+    return report;
+}
+
+/* sub_080990D8: step 0 waits hidden without collisions (its trigger made
+ * on the first update); woken (step 1) it shows itself and falls as a
+ * closed chest (step 2: sprite frame 0, sub_080698A8(e, 1.0, -16, 4.0)
+ * with + 0x54 0x2000) until it lands; step 3 sits closed until the player
+ * is in (x - 16, y - 20, 32, 20), then opens (animation 0 once, step 4)
+ * and plays animation 1 (step 5), hidden beyond margin entry 4. Returns
+ * whether its collisions are off this frame (+ 0x18 bit 0). */
+static bool mimic_act(AosEnemy *m, const AosSoma *soma, const AosCollision *layer,
+                      const AosEnemyKind *kind, int cam_x, int cam_y, AosHitReport *report) {
+    switch (m->step) {
+    case 0:
+        if (!m->dropped) {
+            m->dropped = true;
+            if (report->child_count < AOS_ENEMY_MAX_CHILDREN)
+                report->children[report->child_count++] = mimic_trigger(m);
+        }
+        m->hidden = true;
+        return true;
+    case 1:
+        m->step = 2;
+        m->hidden = false;
+        m->ay = 0x2000;
+        /* fall through */
+    case 2:
+        m->static_frame = 0;
+        if (fall_collide(m, layer, 0x10000, (int32_t)0xFFF00000, 0x40000) & 4) {
+            m->step = 3;
+            m->own_boxes = true;
+            m->own_hurt = m->own_attack = (AosBox){-8, -14, 16, 14};
+            m->combat.attack_off = true;
+            m->combat.hurt_off = false;
+        }
+        return true;
+    case 3:
+        m->static_frame = 0;
+        if (player_in(soma, (int16_t)((m->x >> 16) - 0x10), (int16_t)((m->y >> 16) - 0x14), 0x20,
+                      0x14)) {
+            m->static_frame = -1;
+            m->own_boxes = false;
+            m->combat.attack_off = false;
+            play_loop(m, kind->anims, 0, false);
+            m->step = 4;
+        }
+        return false;
+    case 4:
+        if (m->cycle_done) {
+            play(m, kind->anims, 1);
+            m->step = 5;
+        }
+        return false;
+    case 5:
+        m->hidden = outside_margins(kind, 4, (m->x >> 16) - cam_x, (m->y >> 16) - cam_y);
+        return false;
+    default:
+        return false;
+    }
+}
+
+/* EnemyMimicUpdate: inside the activity window, state 0 acts, 1 runs the
+ * generic death, 2 (inert) plays animation 1 once animation 0 ends; then
+ * the animation step (a closed chest holds sprite frame 0) and, unless
+ * dying or with collisions off, the collision pass. */
+static AosHitReport mimic_update(AosEnemy *m, AosSoma *soma, const AosCollision *layer,
+                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+                                 int cam_x, int cam_y, uint32_t (*random)(void)) {
+    AosHitReport report = {0}, spawned = {0};
+    int sx = (m->x >> 16) - cam_x, sy = (m->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    bool quiet = false;
+    switch (m->state) {
+    case 0: quiet = mimic_act(m, soma, layer, kind, cam_x, cam_y, &spawned); break;
+    case 1:
+        generic_death(m, kind, random, &spawned);
+        if (m->removed) return spawned;
+        break;
+    case 2:
+        if (m->step == 0 && m->cycle_done) {
+            play(m, kind->anims, 1);
+            m->step = 1;
+        }
+        step_anim(m, kind->anims);
+        return report;
+    default:
+        break;
+    }
+    if (m->static_frame < 0) step_anim(m, kind->anims);
+    if (m->state != 1 && !quiet)
+        report = collide(m, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&m->combat);
+    report.child_count = spawned.child_count;
+    memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
+    take_effects(&report, &spawned);
     return report;
 }
 
@@ -3665,6 +3904,12 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if ((enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) &&
         enemy->role == AOS_ROLE_ENEMY)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);
+    if (enemy->role == AOS_ROLE_MIMIC_TRIGGER)
+        return trigger_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                              random);
+    if (enemy->id == AOS_ENEMY_MIMIC)
+        return mimic_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                            cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_FLEAMAN)
         return flea_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            random);

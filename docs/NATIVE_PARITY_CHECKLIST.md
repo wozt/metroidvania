@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 25 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 26 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 181 | 3392 |
+| Castlevania: Aria of Sorrow | 188 | 3385 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1252,6 +1252,16 @@ Dependencies: `aos.enemies.valkyrie`.
 Known divergences: As the Valkyrie.  
 Next action: Follow the Valkyrie's open items.
 Evidence: in game: `aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)`.
+
+[+] **`aos.enemies.fleaman` — Fleaman.** The four random jumps by r % 30 (hop, long, high, straight up) with their speeds, gravities and hand-set animation frames, the ceiling and wall pushes in the air, the landing, the 7-frame hit stun, the death with the blink and flames of sub_0806BE74 and state 3 under gEwramData + 0x8E bit 0x40 are ported.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_080C0A1C.s:EnemyFleamanCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyFleamanUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C1E88`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C1FBC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2388`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C242C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2458`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.bat`.  
+Known divergences: Sound 0x72, the palette bits, sub_080683BC, the global pause of sub_0806D4C0 (taken as 0) and the carrier of a carried Fleaman (parameters 0xFF: its slot-record check never passes in the code read, so it waits in step 1) are not ported; the death starts on the update after the killing blow instead of inside the hit callback.  
+Next action: Find what releases a carried Fleaman (step 1).
+Evidence: in game: `aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)`.
 
 [+] **`aos.enemies.gargoyle` — Gargoyle.** The pursuit of the point 64 pixels above the player, the brake, the swoop and its climb back (sub_08086534 steps 0 to 5), the frame boxes, the falling generic death with flames and state 2 under gEwramData + 0x8E bit 0x40 are ported.
 

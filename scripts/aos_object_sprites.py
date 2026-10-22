@@ -85,6 +85,9 @@ ENEMIES = {
     "skull_archer": {"id": 0x05, "graphics": 0x081E419C, "palette": 0x0820B78C, "bank": 0,
                      "frames": 0x0823A52C, "probes": 0x08528620,
                      "volleys": (0x08528614, 3), "static_frames": (25,)},
+    # sub_080C1E88 (EnemyFleamanCreate 0x080C1E0C).
+    "fleaman": {"id": 0x18, "graphics": 0x081F423C, "palette": 0x0820BD94, "bank": 0,
+                "frames": 0x0824B92C},
     # EnemyDeadWarriorCreate 0x080B7594: walker probes 0x08528830.
     "dead_warrior": {"id": 0x2F, "graphics": 0x081EC1F4, "palette": 0x0820BBD4, "bank": 0,
                      "frames": 0x08246F00, "probes": 0x08528830},

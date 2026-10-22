@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T01:31:44+00:00",
+ "generated_at": "2026-10-22T02:05:07+00:00",
  "git": {
-  "commit": "4da9ca9",
+  "commit": "bb2032a",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 154,
+   "total": 155,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 126,
+    "functional": 127,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 126,
-   "functional_or_better_percent": 81.8,
-   "with_passing_tests": 142,
-   "with_passing_tests_percent": 92.2,
+   "functional_or_better": 127,
+   "functional_or_better_percent": 81.9,
+   "with_passing_tests": 143,
+   "with_passing_tests_percent": 92.3,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -209,6 +209,7 @@
     "aos.enemies.dead_warrior",
     "aos.enemies.durga",
     "aos.enemies.erinys",
+    "aos.enemies.fleaman",
     "aos.enemies.gargoyle",
     "aos.enemies.ghost_dancer",
     "aos.enemies.gremlin",
@@ -388,20 +389,20 @@
    "areas": [
     "aos"
    ],
-   "total": 25,
+   "total": 26,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 20,
+    "functional": 21,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 20,
-   "functional_or_better_percent": 80.0,
-   "with_passing_tests": 25,
+   "functional_or_better": 21,
+   "functional_or_better_percent": 80.8,
+   "with_passing_tests": 26,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -413,6 +414,7 @@
     "aos.enemies.dead_warrior",
     "aos.enemies.durga",
     "aos.enemies.erinys",
+    "aos.enemies.fleaman",
     "aos.enemies.gargoyle",
     "aos.enemies.ghost_dancer",
     "aos.enemies.gremlin",
@@ -8834,6 +8836,69 @@
    }
   },
   {
+   "id": "aos.enemies.fleaman",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Fleaman",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.bat"
+   ],
+   "native_routines": [
+    "EnemyFleamanCreate",
+    "EnemyFleamanUpdate",
+    "sub_080C1E88",
+    "sub_080C1FBC",
+    "sub_080C2388",
+    "sub_080C242C",
+    "sub_080C2458",
+    "sub_0806AE54",
+    "sub_0806BE74"
+   ],
+   "limitations": "Sound 0x72, the palette bits, sub_080683BC, the global pause of sub_0806D4C0 (taken as 0) and the carrier of a carried Fleaman (parameters 0xFF: its slot-record check never passes in the code read, so it waits in step 1) are not ported; the death starts on the update after the killing blow instead of inside the hit callback. The four random jumps by r % 30 (hop, long, high, straight up) with their speeds, gravities and hand-set animation frames, the ceiling and wall pushes in the air, the landing, the 7-frame hit stun, the death with the blink and flames of sub_0806BE74 and state 3 under gEwramData + 0x8E bit 0x40 are ported.",
+   "next_action": "Find what releases a carried Fleaman (step 1).",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.gargoyle",
    "area": "aos",
    "category": "enemies",
@@ -10811,7 +10876,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12497,6 +12562,12 @@
  },
  "timeline": [
   {
+   "commit": "bb2032a",
+   "date": "2026-10-22",
+   "subject": "Port the Aria dead warrior",
+   "scope": "project"
+  },
+  {
    "commit": "4da9ca9",
    "date": "2026-10-22",
    "subject": "Port the Aria skeleton knight",
@@ -12969,12 +13040,6 @@
    "date": "2026-10-19",
    "subject": "Port the Kraid and Ridley elevator statues",
    "scope": "project"
-  },
-  {
-   "commit": "c80c2ad",
-   "date": "2026-10-18",
-   "subject": "Port the falling Chozo pillar and the Power Bomb theft",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -13035,9 +13100,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 181,
-    "routines_attached_to_features": 181,
-    "unassigned_routines": 3392,
+    "routines_cited_by_features": 188,
+    "routines_attached_to_features": 188,
+    "unassigned_routines": 3385,
     "call_edges": 14228
    }
   },
@@ -15587,15 +15652,20 @@
      },
      {
       "id": 24,
-      "name": "Enemy 0x18",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Fleaman",
+      "status": "functional",
+      "note": "Fleaman",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.fleaman"
      },
      {
       "id": 25,

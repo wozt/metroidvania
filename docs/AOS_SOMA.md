@@ -830,6 +830,33 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Fleaman (enemy 0x18, `EnemyFleamanCreate` / `EnemyFleamanUpdate`):
+`sub_080C1E88` loads tiles `0x081F423C`, palette `0x0820BD94` and frames
+`0x0824B92C`; animations 0 hop, 2 death, 3 jump. Create: state 1, `+0x14`
+= 1 when parameter 0 & parameter 1 is 0xFF (carried; no floor snap),
+otherwise the floor snap; state 3 (animation 0 only) under the global
+`0x8E & 0x40`. The update (no activity window): `sub_0806AE54` counts
+`+0x2D` down, and while it is set (and not dying) only the collision pass
+runs; state 1 `sub_080C1FBC`, state 0xFF the death `sub_080C2388`, then
+the animation step and, unless dying, the collision pass. `sub_080C1FBC`:
+step 0 plays animation 0 paused, vx 0.5 toward the facing, then step 4
+(or 1 for a carried one, which waits: its check of the slot record at
+`gEwramData + 0x4E4 + 0x84 * +0x12` never sees zero); step 2 falls with
+animation 3, frame 3, until its cell is solid, snaps to the floor and rests
+16 frames on frame 0 (step 3). Step 4 moves, faces the player
+(`sub_0806BD64`) and jumps by `r % 30`: below 10 a hop (0.8125, -3.0,
+`+0x54` 0xA000, animation 0, step 6); 10 a long jump (1.625, -3.0, 0x2800);
+11 to 13 a high jump (0.8125, -5.0, 0x3C00); otherwise straight up (0,
+-3.0, 0x5000, frame 1); these three play animation 3 paused (step 5); vx
+is negated when facing left. Steps 5 and 6 move with gravity; step 5 shows
+frame 2 near the apex (|vy| <= `+0x54`), else frame 1 from 0 and 3 from 2;
+the ceiling probe `sub_08001C1C` at y - 10 and the wall probes 8 pixels
+ahead and 8 up push it out; a solid cell at its feet lands it (step 4,
+frame 0 for step 5). Hit callback `sub_080C2458`: at 0 HP `sub_080C2388`
+(sound 0x72, animation 2, timer 50, state 0xFF, still with `+0x54`
+0x2000; a carrier's `+0x19` is decremented), then `sub_0806BE74(e, 15,
+8.0, 6.0)`. Contact `sub_080C242C`: type 0.
+
 Dead warrior (enemy 0x2F, `EnemyDeadWarriorCreate` /
 `EnemyDeadWarriorUpdate`): tiles `0x081EC1F4`, palette `0x0820BBD4`,
 frames `0x08246F00` (animation 3, the death, has 70 frames); walker probes

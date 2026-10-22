@@ -2047,8 +2047,6 @@ aos:asm:asm/code/code_080C0A1C.s:EnemyBelmontCreate	EnemyBelmontCreate	enemies	n
 aos:asm:asm/code/code_080C0A1C.s:EnemyBelmontUpdate	EnemyBelmontUpdate	enemies	name			asm_function		asm/code/code_080C0A1C.s	31850	0	19
 aos:asm:asm/code/code_080C0A1C.s:EnemyBuerCreate	EnemyBuerCreate	enemies	name			asm_function		asm/code/code_080C0A1C.s	22779	0	9
 aos:asm:asm/code/code_080C0A1C.s:EnemyBuerUpdate	EnemyBuerUpdate	enemies	name			asm_function		asm/code/code_080C0A1C.s	24078	0	7
-aos:asm:asm/code/code_080C0A1C.s:EnemyFleamanCreate	EnemyFleamanCreate	enemies	name			asm_function		asm/code/code_080C0A1C.s	2596	0	4
-aos:asm:asm/code/code_080C0A1C.s:EnemyFleamanUpdate	EnemyFleamanUpdate	enemies	name			asm_function		asm/code/code_080C0A1C.s	2731	0	8
 aos:asm:asm/code/code_080C0A1C.s:EnemyImpCreate	EnemyImpCreate	enemies	name			asm_function		asm/code/code_080C0A1C.s	7928	0	6
 aos:asm:asm/code/code_080C0A1C.s:EnemyImpUpdate	EnemyImpUpdate	enemies	name			asm_function		asm/code/code_080C0A1C.s	8057	0	11
 aos:asm:asm/code/code_080C0A1C.s:EnemyKillerDollCreate	EnemyKillerDollCreate	enemies	name			asm_function		asm/code/code_080C0A1C.s	14769	0	5
@@ -2090,11 +2088,6 @@ aos:asm:asm/code/code_080C0A1C.s:sub_080C1D38	sub_080C1D38	enemies	referrers			a
 aos:asm:asm/code/code_080C0A1C.s:sub_080C1D70	sub_080C1D70	enemies	referrers			asm_function	0x080C1D70	asm/code/code_080C0A1C.s	2513	1	1
 aos:asm:asm/code/code_080C0A1C.s:sub_080C1D88	sub_080C1D88	enemies	referrers			asm_function	0x080C1D88	asm/code/code_080C0A1C.s	2527	1	4
 aos:asm:asm/code/code_080C0A1C.s:sub_080C1DF0	sub_080C1DF0	enemies	referrers			asm_function	0x080C1DF0	asm/code/code_080C0A1C.s	2577	1	0
-aos:asm:asm/code/code_080C0A1C.s:sub_080C1E88	sub_080C1E88	enemies	referrers			asm_function	0x080C1E88	asm/code/code_080C0A1C.s	2660	1	7
-aos:asm:asm/code/code_080C0A1C.s:sub_080C1FBC	sub_080C1FBC	enemies	referrers			asm_function	0x080C1FBC	asm/code/code_080C0A1C.s	2816	1	10
-aos:asm:asm/code/code_080C0A1C.s:sub_080C2388	sub_080C2388	enemies	referrers			asm_function	0x080C2388	asm/code/code_080C0A1C.s	3298	2	4
-aos:asm:asm/code/code_080C0A1C.s:sub_080C242C	sub_080C242C	enemies	referrers			asm_function	0x080C242C	asm/code/code_080C0A1C.s	3381	0	1
-aos:asm:asm/code/code_080C0A1C.s:sub_080C2458	sub_080C2458	enemies	referrers			asm_function	0x080C2458	asm/code/code_080C0A1C.s	3405	0	4
 aos:asm:asm/code/code_080C0A1C.s:sub_080C25F8	sub_080C25F8	enemies	referrers			asm_function	0x080C25F8	asm/code/code_080C0A1C.s	3615	1	11
 aos:asm:asm/code/code_080C0A1C.s:sub_080C2A18	sub_080C2A18	enemies	referrers			asm_function	0x080C2A18	asm/code/code_080C0A1C.s	4149	2	4
 aos:asm:asm/code/code_080C0A1C.s:sub_080C2ABC	sub_080C2ABC	enemies	referrers			asm_function	0x080C2ABC	asm/code/code_080C0A1C.s	4232	1	6

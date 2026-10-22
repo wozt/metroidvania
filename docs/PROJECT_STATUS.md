@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0452 - Aria Fleaman
+
+- Ported the Fleaman (enemy 0x18): its four random jumps with hand-set
+  animation frames, the ceiling and wall pushes, the landing, the hit stun
+  and the death with blink and flames. A carried Fleaman (parameters
+  0xFF) waits, its carrier not being traced.
+- Checked in room 3/3: four Fleamen hop about toward Soma (frames 20, 45,
+  70 and 100).
+
 ## Patch 0451 - Aria dead warrior
 
 - Ported the dead warrior (enemy 0x2F): its charge on the probe walker,

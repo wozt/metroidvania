@@ -1099,6 +1099,91 @@ static void valkyrie_tests(void) {
     assert(hit.enemy_hit && !hit.killed && e.state == 1);
 }
 
+static void flea_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t two[] = {4, 4}, four[] = {4, 4, 4, 4};
+    const AosAnimDef defs[4] = {{2, two}, {2, two}, {2, two}, {4, four}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-6, -12, 12, 12};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {20, 15, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(159), NULL);
+
+    /* On the floor, state 1; step 0 then step 4. */
+    AosEnemy f;
+    assert(aos_enemy_create(&f, AOS_ENEMY_FLEAMAN, 100, 140, 0, 0, &soma, &layer, &kind, &stats));
+    assert(f.state == 1 && (f.y >> 16) == 159 && !f.dropped);
+    aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(f.step == 4);
+    /* random() % 30 = 0: a hop at 0.8125 toward the player, vy -3.0. */
+    aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(f.step == 6 && f.mirrored && f.vx == 0xD000 && f.vy == -0x30000 && f.ay == 0xA000);
+    int frames = 0;
+    int32_t top = f.y;
+    while (f.step == 6 && frames < 100) {
+        aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (f.y < top) top = f.y;
+        ++frames;
+    }
+    assert(f.step == 4 && top < AOS_FIXED(159) && (f.y >> 16) >= 160);
+    /* random() % 30 = 14 or more: straight up with animation 3, frame 1,
+     * paused; the apex sets frame 2. */
+    static const uint32_t up[] = {20};
+    script = up;
+    script_at = 0;
+    aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(f.step == 5 && f.vx == 0 && f.vy == -0x30000 && f.ay == 0x5000 && f.anim.id == 3 &&
+           f.anim.frame == 1 && (f.anim.flags & 2));
+    frames = 0;
+    bool apex = false;
+    while (f.step == 5 && frames < 100) {
+        aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (f.anim.frame == 2) apex = true;
+        ++frames;
+    }
+    assert(apex && f.step == 4 && f.anim.frame == 0);
+
+    /* A carried Fleaman (parameters 0xFF) waits in step 1. */
+    AosEnemy carried;
+    assert(aos_enemy_create(&carried, AOS_ENEMY_FLEAMAN, 100, 60, 0xFF, 0xFF, &soma, &layer, &kind,
+                            &stats));
+    for (int i = 0; i < 5; ++i)
+        aos_enemy_update(&carried, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(carried.dropped && carried.step == 1 && carried.y == AOS_FIXED(60));
+
+    /* The killing blow: state 0xFF, animation 2, the blink and flames of
+     * sub_0806BE74 from timer 50. */
+    soma = aos_soma_spawn(f.x, f.y, NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-20, -40, 40, 40, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    f.hp = 1;
+    f.step = 4;
+    AosHitReport hit;
+    frames = 0;
+    do {
+        hit = aos_enemy_update(&f, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
+    } while (!hit.killed && ++frames < 10);
+    assert(hit.killed && f.state == 0xFF);
+    int dying = 0;
+    while (!f.removed && dying < 100) {
+        aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++dying;
+    }
+    assert(dying == 0x32 && f.anim.id == 2);
+}
+
 static void warrior_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
@@ -1855,6 +1940,7 @@ int main(void) {
     ghost_tests();
     knight_tests();
     warrior_tests();
+    flea_tests();
     valkyrie_tests();
     curly_tests();
     medusa_tests();

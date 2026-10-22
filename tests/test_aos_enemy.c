@@ -1997,6 +1997,27 @@ static void nemesis_tests(void) {
     assert(aos_enemy_create(&n, AOS_ENEMY_NEMESIS, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(n.state == 0 && n.anim.id == 0 && n.attack_wait >= 0x40 && n.attack_wait <= 0xBF);
     n.attack_wait = 0;
+    AosHitReport helper_report =
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(helper_report.child_count == 1 && helper_report.children[0].role == AOS_ROLE_NEMESIS_HELPER &&
+           helper_report.children[0].state == 1 && helper_report.children[0].static_frame == 1);
+    AosEnemy helper = helper_report.children[0];
+    helper.parent = &n;
+    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!helper.hidden && helper.static_frame == 1 && helper.x == n.x && helper.y == n.y);
+    helper.state = 2;
+    helper.step = 0;
+    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(helper.static_frame == 2 && helper.y == n.y + AOS_FIXED(37) &&
+           (helper.x == n.x - AOS_FIXED(9) || helper.x == n.x + AOS_FIXED(9)));
+    helper.state = 3;
+    helper.step = 0;
+    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(helper.static_frame == 3 && helper.y == n.y - AOS_FIXED(4));
+    n.defeated = true;
+    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(helper.removed);
+    n.defeated = false;
     aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(n.state == 1);
     aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);

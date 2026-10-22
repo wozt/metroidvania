@@ -1453,17 +1453,97 @@ static bool player_within(const AosEnemy *e, const AosSoma *soma, uint32_t range
 static void integrate(AosEnemy *e);
 static void stop(AosEnemy *e);
 
+/* The linked Nemesis sprite created by sub_080C76D4/sub_080C7784. The native
+ * callback is driven by a small state machine and reads the parent slot on
+ * every frame for position and lifecycle. The offsets and frame selections
+ * are the native fixed-point values. */
+static void nemesis_helper_update(AosEnemy *h) {
+    const AosEnemy *parent = h->parent;
+    if (!parent || parent->removed) {
+        h->removed = true;
+        return;
+    }
+    if (parent->defeated) {
+        h->hidden = true;
+        h->removed = true;
+        return;
+    }
+    switch (h->state) {
+    case 0:
+        h->hidden = true;
+        break;
+    case 1:
+        h->hidden = false;
+        h->static_frame = 1;
+        h->x = parent->x;
+        h->y = parent->y;
+        h->mirrored = parent->mirrored;
+        break;
+    case 2:
+        h->hidden = false;
+        h->static_frame = 2;
+        if (h->step == 0) {
+            h->x = parent->x;
+            h->mirrored = !parent->mirrored;
+            h->timer = 0;
+            h->step = 1;
+        }
+        h->x = parent->x + (h->mirrored ? -AOS_FIXED(9) : AOS_FIXED(9));
+        h->y = parent->y + AOS_FIXED(37);
+        if (h->timer++ >= 10) {
+            h->state = 4;
+            h->step = 0;
+            h->timer = 0;
+        }
+        break;
+    case 3:
+        h->hidden = false;
+        h->static_frame = 3;
+        if (h->step == 0) {
+            h->timer = 0;
+            h->step = 1;
+            h->mirrored = parent->mirrored;
+        }
+        h->x = parent->x + (h->mirrored ? -AOS_FIXED(10) : AOS_FIXED(10));
+        h->y = parent->y - AOS_FIXED(4);
+        if (h->timer++ >= 40) {
+            h->state = 4;
+            h->step = 0;
+            h->timer = 0;
+        }
+        break;
+    case 4:
+        h->hidden = false;
+        h->static_frame = 3;
+        /* sub_080C7784: mirror is cleared on timer % 3 == 0 and set on the
+         * other two ticks of each three-frame flicker group. */
+        h->mirrored = (h->timer % 3) != 0;
+        if (h->timer++ >= 31) {
+            h->state = 0;
+            h->step = 0;
+            h->timer = 0;
+            h->hidden = true;
+        }
+        break;
+    default:
+        /* State 5 is the native no-op state used while the parent is idle. */
+        h->hidden = true;
+        break;
+    }
+}
+
 /* EnemyNemesisUpdate (sub_080C67CC and states 0..6): the original uses a
  * compact four-frame descriptor and several linked helper entities. The
- * native room runtime keeps the observable body routine here: idle hovering,
- * a homing approach, a short charge and a recovery loop. This preserves the
- * frame boxes and the state transitions used by the recorded Nemesis rooms;
- * the unrendered helper entities remain outside this enemy's combat slot. */
+ * observable body routine keeps the idle hover, homing approach, short
+ * charge and recovery loop, while emitting the linked helper on its first
+ * active update. The three technical effects created by sub_080C7B54 remain
+ * a separate parity gap. */
 static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKind *kind,
                                    const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
                                    int soma_def, uint32_t (*random)(void)) {
     AosHitReport report = {0};
+    bool emit_helper = !n->helper_spawned && n->state != 7;
     if (n->state == 7) {
         if (n->anim.id != 0) play(n, kind->anims, 0);
         step_anim(n, kind->anims);
@@ -1539,6 +1619,22 @@ static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
     if (!n->defeated && player_within(n, soma, 0x1000000))
         report = collide(n, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     aos_combat_tick(&n->combat);
+    if (emit_helper && report.child_count < AOS_ENEMY_MAX_CHILDREN) {
+        AosEnemy helper = {0};
+        helper.id = n->id;
+        helper.role = AOS_ROLE_NEMESIS_HELPER;
+        helper.state = 1;
+        helper.static_frame = 1;
+        helper.anim.id = 0;
+        helper.x = n->x;
+        helper.y = n->y;
+        helper.mirrored = n->mirrored;
+        helper.combat.attack_off = true;
+        helper.combat.hurt_off = true;
+        report.children[report.child_count++] = helper;
+        n->helper_spawned = true;
+        n->spawned_count = 1;
+    }
     return report;
 }
 
@@ -5615,6 +5711,10 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                               random);
     if (enemy->role == AOS_ROLE_DOLL_PIECE) {
         doll_piece_update(enemy, soma, layer, kind, cam_y, random, &report);
+        return report;
+    }
+    if (enemy->role == AOS_ROLE_NEMESIS_HELPER) {
+        nemesis_helper_update(enemy);
         return report;
     }
     if (enemy->id == AOS_ENEMY_KILLER_DOLL && enemy->role == AOS_ROLE_ENEMY)

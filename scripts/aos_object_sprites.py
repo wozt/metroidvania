@@ -118,7 +118,7 @@ ENEMIES = {
     # EnemyNemesisCreate 0x080C664C: the floating Nemesis uses the shared
     # machine sheet, palette and frame descriptor loaded by sub_080C6714.
     "nemesis": {"id": 0x36, "graphics": 0x081F4264, "palette": 0x0820BEC8, "bank": 0,
-                "frames": 0x0824D2D8},
+                "frames": 0x0824D2D8, "static_frames": (1, 2, 3)},
     # EnemyBeamSkeletonCreate 0x080CA5EC: walker probes 0x08528B04; its
     # muzzle flash (frame 0x15), beam (0x16, 0x17) and bones (0x18 to 0x1E,
     # the records at 0x08528B17).

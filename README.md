@@ -401,7 +401,7 @@ Soma uses the movement, collision, jump, crouch, landing, ability-move and
 animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); soul
 inventory and progression and the complete game-over flow are not implemented.
 The growing native enemy subset recorded in `docs/NATIVE_PARITY_CHECKLIST.md`,
-including Nemesis, the Killer and Lightning Dolls and their burning pieces, attacks Soma (he flinches,
+including Nemesis and its linked helper, the Killer and Lightning Dolls and their burning pieces, attacks Soma (he flinches,
 is knocked back, or dies at 0 HP) and dies to his weapon with native rules
 (`--atk/--def/--hp` set diagnostic stats, the new-game stats are not traced);
 wooden doors open natively with

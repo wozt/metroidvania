@@ -131,7 +131,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5,
        AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8, AOS_ROLE_NEEDLE_PIECE = 9,
        AOS_ROLE_MIMIC_TRIGGER = 10, AOS_ROLE_FIN = 11, AOS_ROLE_BEAM = 12,
-       AOS_ROLE_BEAM_FLASH = 13, AOS_ROLE_DOLL_PIECE = 14 };
+       AOS_ROLE_BEAM_FLASH = 13, AOS_ROLE_DOLL_PIECE = 14,
+       AOS_ROLE_NEMESIS_HELPER = 15 };
 
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */
@@ -169,6 +170,7 @@ typedef struct AosEnemy {
     uint8_t variant;        /* + 0x14 of a Skull Millione, Cagnazzo or Lubicant */
     int32_t speed;          /* + 0x20 of their chase */
     const struct AosEnemy *parent;  /* a fin's or beam's owner, set by the caller */
+    bool helper_spawned;    /* the Nemesis body has emitted its linked helper */
     int16_t home, home_right, home_left;  /* + 0x22, + 0x14, + 0x16 of a beam skeleton */
     uint16_t rest;          /* + 0x1C of a beam skeleton: frames before it may fire */
     uint8_t patience;       /* + 0x19 */

@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0461 - Aria Nemesis linked helper
+
+- Ported the linked Nemesis helper created by `sub_080C76D4` and updated by
+  `sub_080C7784`: it now follows its parent slot, selects the native static
+  frames 1-3, applies the +9/+10 pixel horizontal and +37/-4 pixel vertical
+  offsets, and runs the 10/40-frame and 31-frame flicker windows.
+- Extended the private object exporter with Nemesis static-frame anchors and
+  wired the new parent-linked role through the Aria room runtime.
+- Added ROM-free coverage for helper creation, offsets, frame selection and
+  removal on parent defeat. A 180-frame room 6/13 capture still renders the
+  Nemesis encounter and Soma's native 52-damage contact hit.
+- The three technical effect slots created by `sub_080C7B54`, palette
+  callbacks and native sound calls remain the next Nemesis gaps.
+
 ## Patch 0460 - Aria Nemesis
 
 - Ported Nemesis (enemy `0x36`) into the native Aria runtime: its compact

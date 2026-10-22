@@ -788,9 +788,13 @@ hurt and attack boxes. The runtime ports the observable body loop from
 `sub_080C67CC`: an idle hover, a homing approach, a short charge and a
 recovery pause, with the native facing, sine bob and collision pass. The
 global `0x8E & 0x40` path keeps the idle frame without combat. The linked
-helper entities created by `sub_080C7A3C`, `sub_080C7AB8` and `sub_080C7B54`,
-their palette callbacks and the native sound calls remain outside this body
-slot; death uses the shared 40-frame flame and blink sequence.
+helper from `sub_080C76D4`/`sub_080C7784` is emitted as a parent-linked child:
+its static frames 1-3 use the exported native anchors, follow the parent's
+fixed-point position and mirror, and reproduce the +9/+10 pixel horizontal,
++37/-4 pixel vertical and 10/40-frame/flicker timings. The three technical
+effect slots created by `sub_080C7B54`, palette callbacks and native sound
+calls remain outside this body slot; death uses the shared 40-frame flame and
+blink sequence.
 
 Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63) share
 `sub_080B7E80` (create: tiles `0x081F4214`, palette `0x0820BCA0`, the

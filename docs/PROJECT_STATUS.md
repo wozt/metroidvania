@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-22**.
 
+## Patch 0456 - Aria Skull Millione, Cagnazzo and Lubicant
+
+- Ported the shared routines of Skull Millione (0x5B), Cagnazzo (0x49)
+  and Lubicant (0x63) from their ROM records: the bob, the chase above
+  the player, the dive, Cagnazzo's circling, the death with blood and the
+  turning trident of the last two, flung off when they die.
+- Checked in rooms 8/9, 7/54 and 8/13: they chase and dive onto Soma, and
+  a killed Lubicant bleeds, loses its trident and sinks in flames.
+
 ## Patch 0455 - Aria dead crusader
 
 - Ported the dead crusader (enemy 0x52) on the skeleton knight's walk: a

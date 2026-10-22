@@ -1796,8 +1796,6 @@ aos:asm:asm/code/code_080B0AD4.s:EnemyBomberArmorCreate	EnemyBomberArmorCreate	e
 aos:asm:asm/code/code_080B0AD4.s:EnemyBomberArmorUpdate	EnemyBomberArmorUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	4806	0	8
 aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarCreate	EnemyBonePillarCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	6733	0	1
 aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarUpdate	EnemyBonePillarUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	6741	0	1
-aos:asm:asm/code/code_080B0AD4.s:EnemyCagnazzoCreate	EnemyCagnazzoCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	15160	0	2
-aos:asm:asm/code/code_080B0AD4.s:EnemyCagnazzoUpdate	EnemyCagnazzoUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	15176	0	1
 aos:asm:asm/code/code_080B0AD4.s:EnemyChronomageCreate	EnemyChronomageCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	13209	0	9
 aos:asm:asm/code/code_080B0AD4.s:EnemyChronomageUpdate	EnemyChronomageUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	13302	0	10
 aos:asm:asm/code/code_080B0AD4.s:EnemyCockatriceCreate	EnemyCockatriceCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	23492	0	1
@@ -1814,8 +1812,6 @@ aos:asm:asm/code/code_080B0AD4.s:EnemyKickerSkeletonCreate	EnemyKickerSkeletonCr
 aos:asm:asm/code/code_080B0AD4.s:EnemyKickerSkeletonUpdate	EnemyKickerSkeletonUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	31902	0	11
 aos:asm:asm/code/code_080B0AD4.s:EnemyKillerMantleCreate	EnemyKillerMantleCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	22160	0	9
 aos:asm:asm/code/code_080B0AD4.s:EnemyKillerMantleUpdate	EnemyKillerMantleUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	22293	0	8
-aos:asm:asm/code/code_080B0AD4.s:EnemyLubicantCreate	EnemyLubicantCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	15184	0	2
-aos:asm:asm/code/code_080B0AD4.s:EnemyLubicantUpdate	EnemyLubicantUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	15200	0	1
 aos:asm:asm/code/code_080B0AD4.s:EnemyManEaterCreate	EnemyManEaterCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	20788	0	8
 aos:asm:asm/code/code_080B0AD4.s:EnemyManEaterUpdate	EnemyManEaterUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	20934	0	19
 aos:asm:asm/code/code_080B0AD4.s:EnemyMinotaurCreate	EnemyMinotaurCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	292	0	1
@@ -1826,8 +1822,6 @@ aos:asm:asm/code/code_080B0AD4.s:EnemyRedMinotaurCreate	EnemyRedMinotaurCreate	e
 aos:asm:asm/code/code_080B0AD4.s:EnemyRedMinotaurUpdate	EnemyRedMinotaurUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	316	0	1
 aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorCreate	EnemyRockArmorCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	4570	0	8
 aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorUpdate	EnemyRockArmorUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	4858	0	8
-aos:asm:asm/code/code_080B0AD4.s:EnemySkullMillioneCreate	EnemySkullMillioneCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	15136	0	2
-aos:asm:asm/code/code_080B0AD4.s:EnemySkullMillioneUpdate	EnemySkullMillioneUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	15152	0	1
 aos:asm:asm/code/code_080B0AD4.s:EnemyStudentWitchCreate	EnemyStudentWitchCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	16743	0	8
 aos:asm:asm/code/code_080B0AD4.s:EnemyStudentWitchUpdate	EnemyStudentWitchUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	16824	0	11
 aos:asm:asm/code/code_080B0AD4.s:EnemyWitchCreate	EnemyWitchCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	18914	0	7
@@ -1914,15 +1908,6 @@ aos:asm:asm/code/code_080B0AD4.s:sub_080B6FB8	sub_080B6FB8	enemies	referrers			a
 aos:asm:asm/code/code_080B0AD4.s:sub_080B70B4	sub_080B70B4	enemies	referrers			asm_function	0x080B70B4	asm/code/code_080B0AD4.s	13143	1	2
 aos:asm:asm/code/code_080B0AD4.s:sub_080B72B8	sub_080B72B8	enemies	referrers			asm_function	0x080B72B8	asm/code/code_080B0AD4.s	13399	0	2
 aos:asm:asm/code/code_080B0AD4.s:sub_080B76E4	sub_080B76E4	enemies	referrers			asm_function	0x080B76E4	asm/code/code_080B0AD4.s	13937	0	1
-aos:asm:asm/code/code_080B0AD4.s:sub_080B7780	sub_080B7780	enemies	referrers			asm_function	0x080B7780	asm/code/code_080B0AD4.s	14017	0	6
-aos:asm:asm/code/code_080B0AD4.s:sub_080B7988	sub_080B7988	enemies	referrers			asm_function	0x080B7988	asm/code/code_080B0AD4.s	14278	1	4
-aos:asm:asm/code/code_080B0AD4.s:sub_080B7A34	sub_080B7A34	enemies	referrers			asm_function	0x080B7A34	asm/code/code_080B0AD4.s	14363	1	4
-aos:asm:asm/code/code_080B0AD4.s:sub_080B7AEC	sub_080B7AEC	enemies	referrers			asm_function	0x080B7AEC	asm/code/code_080B0AD4.s	14458	1	7
-aos:asm:asm/code/code_080B0AD4.s:sub_080B7BC8	sub_080B7BC8	enemies	referrers			asm_function	0x080B7BC8	asm/code/code_080B0AD4.s	14569	1	8
-aos:asm:asm/code/code_080B0AD4.s:sub_080B7D90	sub_080B7D90	enemies	referrers			asm_function	0x080B7D90	asm/code/code_080B0AD4.s	14795	1	8
-aos:asm:asm/code/code_080B0AD4.s:sub_080B7E80	sub_080B7E80	enemies	referrers			asm_function	0x080B7E80	asm/code/code_080B0AD4.s	14917	3	7
-aos:asm:asm/code/code_080B0AD4.s:sub_080B7F40	sub_080B7F40	enemies	referrers			asm_function	0x080B7F40	asm/code/code_080B0AD4.s	15009	3	11
-aos:asm:asm/code/code_080B0AD4.s:sub_080B8004	sub_080B8004	enemies	referrers			asm_function	0x080B8004	asm/code/code_080B0AD4.s	15102	0	2
 aos:asm:asm/code/code_080B0AD4.s:sub_080B80BC	sub_080B80BC	enemies	referrers			asm_function	0x080B80BC	asm/code/code_080B0AD4.s	15208	1	8
 aos:asm:asm/code/code_080B0AD4.s:sub_080B8240	sub_080B8240	enemies	referrers			asm_function	0x080B8240	asm/code/code_080B0AD4.s	15399	1	8
 aos:asm:asm/code/code_080B0AD4.s:sub_080B85E8	sub_080B85E8	enemies	referrers			asm_function	0x080B85E8	asm/code/code_080B0AD4.s	15851	0	2

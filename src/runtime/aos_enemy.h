@@ -17,6 +17,8 @@
  * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
  * code), the skeleton knight (enemy 0x0D), the dead crusader (enemy 0x52),
+ * Skull Millione (0x5B), Cagnazzo (0x49, with its fin) and Lubicant (0x63,
+ * with its fin; the same code),
  * the dead warrior (enemy 0x2F),
  * the Fleaman (enemy 0x18), the Mimic (enemy 0x60) with its hidden trigger,
  * the red crow (enemy 0x2D, the blue crow's death), the Valkyrie (enemy 0x29) and Erinys (0x62, the same code), the
@@ -101,6 +103,9 @@ enum {
     AOS_ENEMY_DEAD_WARRIOR = 0x2F,
     AOS_ENEMY_DEAD_CRUSADER = 0x52,
     AOS_ENEMY_GREMLIN = 0x37,
+    AOS_ENEMY_CAGNAZZO = 0x49,
+    AOS_ENEMY_SKULL_MILLIONE = 0x5B,
+    AOS_ENEMY_LUBICANT = 0x63,
     AOS_ENEMY_MEDUSA_HEAD = 0x39,
     AOS_ENEMY_GARGOYLE = 0x57,
     AOS_ENEMY_MIMIC = 0x60,
@@ -113,9 +118,9 @@ enum {
 enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3,
        AOS_ROLE_DEBRIS = 4, AOS_ROLE_FEATHER = 5,
        AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8, AOS_ROLE_NEEDLE_PIECE = 9,
-       AOS_ROLE_MIMIC_TRIGGER = 10 };
+       AOS_ROLE_MIMIC_TRIGGER = 10, AOS_ROLE_FIN = 11 };
 
-typedef struct {
+typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */
     int32_t x, y;           /* + 0x40, + 0x44 (room pixels, 16.16) */
     int32_t vx, vy;         /* + 0x48, + 0x4C */
@@ -148,6 +153,9 @@ typedef struct {
     int8_t away;            /* + 0x20 at death: +1 / -1, away from the attacker */
     bool dropped, puddled;  /* + 0x14, + 0x15 of a walking zombie */
     bool guarding;          /* + 0x21 of the dead crusader: blows deal 0 */
+    uint8_t variant;        /* + 0x14 of a Skull Millione, Cagnazzo or Lubicant */
+    int32_t speed;          /* + 0x20 of their chase */
+    const struct AosEnemy *parent;  /* + 0x14 of a fin: its owner, set by the caller */
     bool translucent;       /* + 0x5A bits 1-2 = 2: semi-transparent OBJ */
     uint8_t fade, fade_timer;   /* + 0x18, + 0x19 of a Ghost Dancer */
     AosBox own_hurt, own_attack;

@@ -98,6 +98,15 @@ ENEMIES = {
     # sub_0808F120 (EnemySkeletonKnightCreate 0x0808EC64).
     "skeleton_knight": {"id": 0x0D, "graphics": 0x081CC00C, "palette": 0x0820A95C, "bank": 0,
                         "frames": 0x0821FA5C},
+    # sub_080B7E80 (EnemySkullMillioneCreate, EnemyCagnazzoCreate,
+    # EnemyLubicantCreate): frames and bank of the records at 0x0852883C;
+    # the fin of Cagnazzo and Lubicant is sprite frame 0xD (sub_080B7988).
+    "skull_millione": {"id": 0x5B, "graphics": 0x081F4214, "palette": 0x0820BCA0, "bank": 2,
+                       "frames": 0x0824A8E0},
+    "cagnazzo": {"id": 0x49, "graphics": 0x081F4214, "palette": 0x0820BCA0, "bank": 0,
+                 "frames": 0x0824A334, "static_frames": (0xD,)},
+    "lubicant": {"id": 0x63, "graphics": 0x081F4214, "palette": 0x0820BCA0, "bank": 1,
+                 "frames": 0x0824A334, "static_frames": (0xD,)},
     # sub_0808F8EC (EnemyDeadCrusaderCreate): the knight's sheet, bank 1.
     "dead_crusader": {"id": 0x52, "graphics": 0x081CC00C, "palette": 0x0820A95C, "bank": 1,
                       "frames": 0x0821FA5C},

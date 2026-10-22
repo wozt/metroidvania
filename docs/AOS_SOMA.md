@@ -691,6 +691,28 @@ beyond 120 pixels it waits for the animation's cycle, plays animation 4
 once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
+Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63) share
+`sub_080B7E80` (create: tiles `0x081F4214`, palette `0x0820BCA0`, the
+variant's 20-byte record at `0x0852883C`: frames, bank, flags, lead, wait,
+top speed, dive speed; records 0 `0x0824A8E0` bank 2 flags 0 lead 4 wait
+32 top 16.0 dive 5.0, 1 `0x0824A334` bank 0 flags 3 lead 2 wait 32 top
+20.0 dive 4.0, 2 `0x0824A334` bank 1 flags 1 lead 8 wait 0 top 24.0 dive
+4.0) and `sub_080B7F40` (update, no activity window; two animation steps
+a frame outside the death). State 0 (`sub_080B7A34`) bobs with vy = sin(+
+0x18 * 0x5B0) / 2 and, after the wait, chases once the player is in the
+0xDC x 0xA0 box centred 40 pixels below. State 1 (`sub_080B7AEC`) heads
+(`sub_080694B8`) at a speed growing by 0x2000 a frame for 80 pixels
+above the player, the speed short of him, plus his vx times the lead.
+State 2 (`sub_080B7BC8`) rises with animation 1 (vy -2.0, + 0x54 0x1000)
+and plunges at the dive speed from its frame 4 (+ 0x54 -0x2000, sound
+0x87) until the animation ends, then recovers; flag bit 1 first circles
+the player for 64 frames with animation 3. State 3 (`sub_080B7D90`, set
+by `sub_080B8004`) plays animation 2, three blood splashes over 32 frames,
+then sinks through the generic death. Flag bit 0 adds a fin
+(`sub_080B7988` / `sub_080B7780`): sprite frame 0xD, held 12 pixels ahead
+and 6 above while its owner plays animation 3, turning by 0x1200 a frame,
+then flung off when it dies.
+
 Dead crusader (enemy 0x52, `EnemyDeadCrusaderCreate` /
 `EnemyDeadCrusaderUpdate`): the skeleton knight's sheet, palette and frames
 with palette bank 1 (`sub_0808F8EC`). Its walk `sub_0808F364` is the

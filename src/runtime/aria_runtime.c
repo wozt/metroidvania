@@ -37,7 +37,8 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 99     /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 55, 57, 63, 82, 87, 96, 98 */
+#define ENEMY_KINDS 100    /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 55, 57, 63,
+                              73, 82, 87, 91, 96, 98, 99 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
@@ -52,6 +53,9 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [45] = "red_crow",
                                                      [47] = "dead_warrior",
                                                      [55] = "gremlin",
+                                                     [73] = "cagnazzo",
+                                                     [91] = "skull_millione",
+                                                     [99] = "lubicant",
                                                      [82] = "dead_crusader",
                                                      [57] = "medusa_head",
                                                      [87] = "gargoyle",
@@ -443,6 +447,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 continue;
             }
             bool was_removed = e->enemy.removed;
+            /* A fin follows its owner's slot (+ 0x14). */
+            if (e->enemy.role == AOS_ROLE_FIN && e->spawner >= 0)
+                e->enemy.parent = &room->entities[e->spawner].enemy;
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
@@ -465,7 +472,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     /* Needles pieces count down their parent's + 0x13; a
                      * Mimic's trigger wakes its parent. */
                     .spawner = hit.children[c].role == AOS_ROLE_NEEDLE_PIECE ||
-                                       hit.children[c].role == AOS_ROLE_MIMIC_TRIGGER
+                                       hit.children[c].role == AOS_ROLE_MIMIC_TRIGGER ||
+                                       hit.children[c].role == AOS_ROLE_FIN
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};
@@ -877,7 +885,7 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
          * position (the affine double-size placement is not modelled). */
         double degrees = 0;
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
-        if (e->enemy.role == AOS_ROLE_AXE)
+        if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN)
             degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         /* + 0x5A bits 1-2 = 2: a semi-transparent OBJ; the room's blend
          * coefficients are not traced, half alpha stands for them. */

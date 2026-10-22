@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 29 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 32 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 214 | 3359 |
+| Castlevania: Aria of Sorrow | 229 | 3344 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1213,6 +1213,16 @@ Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not chec
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
 
+[+] **`aos.enemies.cagnazzo` — Cagnazzo (Lubicant's routines).** Record 1 of 0x0852883C (frames 0x0824A334, bank 0, a fin, the hover attack): before each dive it circles the player for 64 frames with animation 3 (+ 0x50 +/- 0x3000 up to 2.5, + 0x54 0x1800 or -0x3000 up to 0.5), with a lead of 2 and a dive speed of 4.0.
+
+Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyCagnazzoCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyCagnazzoUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7BC8`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.lubicant`.  
+Known divergences: As the Lubicant.  
+Next action: Follow the Lubicant's open items.
+Evidence: in game: `aria area_07_room_054 (--spawn 250 191 --hp 9999): the two Cagnazzos bob (frame 40), circle above Soma with their tridents turning (frame 100) and dive head first (frame 160)`.
+
 [+] **`aos.enemies.curly` — Curly.** Pacing at 0.5 slowed uphill (sub_0806AC5C), turning at walls, drops and the room's edges, chasing the player once hurt, the lunging attack with three chances in four, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AC5C`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1A0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D188`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyCreate`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093218`, `aos:asm:asm/code/code_08090914.s:sub_08093460`, `aos:asm:asm/code/code_08090914.s:sub_08093540`, `aos:asm:asm/code/code_08090914.s:sub_080935E8`, `aos:asm:asm/code/code_08090914.s:sub_08093674`.  
@@ -1303,6 +1313,15 @@ Known divergences: As the gargoyle.
 Next action: Follow the gargoyle's open items.
 Evidence: in game: `aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)`.
 
+[+] **`aos.enemies.lubicant` — Lubicant.** Record 2 of 0x0852883C (frames 0x0824A334, bank 1, a fin): the bob (vy = sin / 2), the chase (sub_080694B8) toward 80 pixels above the player led by his speed times 8 with animation 3 and its turning trident fin, the dive (rise, plunge at 4.0 from animation frame 4, recovery), the two animation steps a frame, the stun, and the death (animation 2, three blood splashes, the sinking generic death, the fin flung off) are ported, with state 4 under gEwramData + 0x8E bit 0x40.
+
+Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyLubicantCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyLubicantUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7780`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7988`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7A34`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7AEC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7BC8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7D90`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7E80`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7F40`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B8004`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: Sounds 0x87, 0x1BA and 0x1BC, the palette bits, sub_080683BC, the tracking list of sub_08021924 and the routine sub_08021654 of the draw callback sub_080B76E4 are not ported; the stun of sub_0806AD24 takes the global pause 0x4BE as 0; the fin's affine double-size placement is not modelled and it is made on the first update rather than at creation.  
+Next action: Trace sub_08021654; compare against an emulator.
+Evidence: in game: `aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubicants bob, chase with their turning tridents and dive onto Soma (frames 30, 80, 120 and 180); with --atk 999 --repeat 2 and B a blow kills one: blood, the trident flung off turning, then the sinking flames (frames 85, 100, 115 and 140)`.
+
 [+] **`aos.enemies.medusa_head` — Medusa head and its spawner.** The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3AC`, `aos:asm:asm/code/code_08090914.s:EnemyMedusaHeadCreate`, `aos:asm:asm/code/code_08090914.s:EnemyMedusaHeadUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093A3C`, `aos:asm:asm/code/code_08090914.s:sub_08093AE0`, `aos:asm:asm/code/code_08090914.s:sub_08093B68`, `aos:asm:asm/code/code_08090914.s:sub_08093BCC`, `aos:asm:asm/code/code_08090914.s:sub_08093BF0`.  
@@ -1362,6 +1381,16 @@ Dependencies: `aos.enemies.axe_armor`.
 Known divergences: The pieces' attacker position is Soma's, standing for the weapon entity. The arrow's + 0x0F change, the dust's + 0x0F, the global pause 0x4BE and the sounds are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_00_room_024: kill at frame 159 (--spawn 200 176 --atk 80 --repeat 2, buttons 0x12), the pieces and their dust captured at frames 199 and 213`.
+
+[+] **`aos.enemies.skull_millione` — Skull Millione (Lubicant's routines).** Record 0 of 0x0852883C (frames 0x0824A8E0, bank 2, no fin): the Lubicant's bob after a 32-frame wait, chase (lead 4) and dive at 5.0.
+
+Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemySkullMillioneCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemySkullMillioneUpdate`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.lubicant`.  
+Known divergences: As the Lubicant.  
+Next action: Follow the Lubicant's open items.
+Evidence: in game: `aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Millione drops from above (frame 40), dives onto Soma (frame 100) and rises again (frame 160)`.
 
 [+] **`aos.enemies.valkyrie` — Valkyrie.** The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported.
 

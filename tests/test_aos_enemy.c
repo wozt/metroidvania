@@ -1577,6 +1577,128 @@ static void crusader_tests(void) {
     assert(hit.killed && k.state == 2 && k.timer == 0x28);
 }
 
+static void skull_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t bob[] = {10, 10, 13, 10}, dive[] = {5, 12, 10, 9, 5, 21, 2},
+                         death[] = {200}, spin[] = {9, 9, 9, 9};
+    const AosAnimDef defs[4] = {{4, bob}, {7, dive}, {1, death}, {4, spin}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    kind.margins[4][0] = kind.margins[4][1] = 48;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 7; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-10, -30, 20, 30};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {500, 50, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(159), NULL);
+
+    /* A Lubicant bobs in place (vy = sin / 2) with its fin, made on the
+     * first update. */
+    AosEnemy l;
+    assert(aos_enemy_create(&l, AOS_ENEMY_LUBICANT, 100, 60, 0, 0, &soma, &layer, &kind, &stats));
+    assert(l.state == 0 && l.variant == 2);
+    AosHitReport hit = aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.child_count == 1 && hit.children[0].role == AOS_ROLE_FIN);
+    AosEnemy fin = hit.children[0];
+    fin.parent = &l;
+    assert(fin.static_frame == 0xD && fin.hidden);
+    int32_t low = l.y, high = l.y;
+    for (int i = 0; i < 60; ++i) {
+        aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (l.y < low) low = l.y;
+        if (l.y > high) high = l.y;
+    }
+    assert(l.state == 0 && high - low > AOS_FIXED(4) && high - low < AOS_FIXED(10));
+    /* The player in the 0xDC x 0xA0 box 40 pixels below: it faces him and
+     * chases with animation 3 and its fin turning 12 pixels ahead. */
+    soma.x = AOS_FIXED(150);
+    soma.y = AOS_FIXED(159);
+    aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(l.state == 1 && l.anim.id == 3 && l.mirrored);
+    aos_enemy_update(&fin, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!fin.hidden && fin.state == 1 && (fin.x >> 16) == (l.x >> 16) + 12 &&
+           (fin.y >> 16) == (l.y >> 16) - 6 && fin.angle == 0x1200);
+    /* It speeds up toward 80 pixels above him and dives on arrival. */
+    int frames = 0;
+    while (l.state == 1 && frames < 600) {
+        aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(l.state == 2 && ((soma.y - l.y) >> 16) >= 70 && ((soma.y - l.y) >> 16) <= 90);
+    aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(l.step == 2 && l.anim.id == 1 && l.ay == 0x1000);
+    /* Rising, then at animation frame 4 the plunge at 4.0. */
+    frames = 0;
+    while (l.step == 2 && frames < 100) {
+        aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(l.step == 3 && l.anim.frame == 4 && l.ay == -0x2000);
+    int32_t top = l.y;
+    frames = 0;
+    while (l.state == 2 && frames < 200) {
+        aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(l.state == 0 && l.anim.id == 0 && l.y > top && l.vy == 0);
+
+    /* A killing blow: animation 2, three blood splashes over 33 frames,
+     * the fin flung off, then the sinking generic death. */
+    soma.facing_left = false;
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.x = l.x - AOS_FIXED(30);
+    soma.y = l.y + AOS_FIXED(30);
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{20, -50, 20, 30, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    hit = aos_enemy_update(&l, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0, always_zero);
+    assert(hit.killed && l.state == 3 && l.step == 0);
+    fin.state = 1;
+    aos_enemy_update(&fin, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fin.state == 3 && !fin.hidden && fin.vy == -0x38000 - 0x8000 + 0x2000 && fin.ay == 0x2000);
+    int blood = 0;
+    frames = 0;
+    while (!l.removed && frames < 200) {
+        hit = aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        for (int i = 0; i < hit.effect_count; ++i) blood += hit.effects[i].kind == AOS_EFFECT_BLOOD;
+        if (frames == 0) assert(l.anim.id == 2);
+        ++frames;
+    }
+    assert(blood == 3 && l.removed && frames > 33 + 40);
+
+    /* Cagnazzo circles the player for 64 frames (animation 3) before its
+     * dive; Skull Millione has no fin. */
+    soma.x = AOS_FIXED(150);
+    soma.y = AOS_FIXED(159);
+    AosEnemy c;
+    assert(aos_enemy_create(&c, AOS_ENEMY_CAGNAZZO, 150, 79, 0, 0, &soma, &layer, &kind, &stats));
+    c.state = 2;
+    c.step = 0;
+    hit = aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(hit.child_count == 1 && c.step == 5 && c.anim.id == 3);
+    frames = 1;
+    while (c.step == 5 && frames < 100) {
+        aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        assert(c.vx >= -0x28000 && c.vx <= 0x28000 && c.vy >= -0x8000 && c.vy <= 0x8000);
+        ++frames;
+    }
+    assert(frames == 66 && c.step == 1);
+    aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(c.step == 2 && c.anim.id == 1 && c.vy == -0x20000 + 0x1000);
+    AosEnemy m;
+    assert(aos_enemy_create(&m, AOS_ENEMY_SKULL_MILLIONE, 100, 60, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    hit = aos_enemy_update(&m, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(hit.child_count == 0 && m.variant == 0);
+}
+
 static void ghost_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t dance[] = {6, 6}, death[] = {5, 5};
@@ -2200,6 +2322,7 @@ int main(void) {
     red_crow_tests();
     mimic_tests();
     crusader_tests();
+    skull_tests();
     soldier_tests();
     armor_tests();
     archer_tests();

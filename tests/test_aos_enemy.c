@@ -13,6 +13,7 @@ static const AosCollision layer = {2, 1, W, H, cells, NULL, false};
 
 static uint32_t never_zero(void) { return 1; }
 static uint32_t always_zero(void) { return 0; }
+static uint32_t always_one_hundred(void) { return 100; }
 /* A scripted RandomNumberGenerator. */
 static const uint32_t *script;
 static int script_at;
@@ -1098,6 +1099,63 @@ static void valkyrie_tests(void) {
     assert(hit.enemy_hit && !hit.killed && e.state == 1);
 }
 
+static void knight_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t idle[] = {8}, walk[] = {6, 6, 6, 6}, swing[] = {4, 4, 4};
+    const AosAnimDef defs[5] = {{1, idle}, {4, walk}, {3, swing}, {3, swing}, {3, swing}};
+    const AosAnimSet anims = {defs, 5};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    kind.margins[4][0] = kind.margins[4][1] = 48;
+    for (int a = 0; a < 5; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -40, 16, 40};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {80, 30, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
+
+    /* It waits beyond (x - 90, y - 48, 180, 96), then walks at 0.5. */
+    AosEnemy k;
+    assert(aos_enemy_create(&k, AOS_ENEMY_SKELETON_KNIGHT, 150, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(k.state == 0 && (k.y >> 16) == 159);
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(k.step == 0);
+    soma.x = AOS_FIXED(230);
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(k.step == 1 && k.anim.id == 1);
+    int32_t x0 = k.x;
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(k.x == x0 + 0x8000);
+    /* Within (x - 40, y - 40, 80, 80): r & 0x7F <= 0x40 attacks. */
+    int frames = 0;
+    while (k.state == 0 && frames < 300) {
+        aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(k.state == 1 && ((soma.x - k.x) >> 16) <= 40);
+    /* 45 + 31 + 21 frames of animations 2, 3 and 4, then walking again. */
+    frames = 0;
+    while (k.state == 1 && frames < 200) {
+        aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 1 + 45 + 31 + 21 && k.step == 1 && k.anim.id == 1);
+    /* r & 0x7F > 0x40 within reach: it backs away (step 2) facing him. */
+    frames = 0;
+    while (k.step == 1 && frames < 300) {
+        aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+        ++frames;
+    }
+    assert(k.step == 2 && k.state == 0 && k.mirrored);
+    x0 = k.x;
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+    assert(k.x == x0 - 0x8000);
+}
+
 static void ghost_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t dance[] = {6, 6}, death[] = {5, 5};
@@ -1546,7 +1604,7 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x0D, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x02, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 
@@ -1725,6 +1783,7 @@ int main(void) {
     officer_tests();
     gargoyle_tests();
     ghost_tests();
+    knight_tests();
     valkyrie_tests();
     curly_tests();
     medusa_tests();

@@ -830,6 +830,29 @@ callback or floor snap). The attacker is the weapon entity; Soma's position
 stands for it. Not ported: the arrow's `+0x0F` change, the global pause and
 the sounds.
 
+Skeleton knight (enemy 0x0D, `EnemySkeletonKnightCreate` /
+`EnemySkeletonKnightUpdate`): `sub_0808F120` loads tiles `0x081CC00C`,
+palette `0x0820A95C` and frames `0x0821FA5C`; animations 0 idle, 1 walk, 2
+to 4 the sword attack. Create: animation 0 looping and one step, the
+collision setup, frame boxes, the floor snap, state 0 (state 3 under the
+global `0x8E & 0x40`). Inside the activity window, state 0
+(`sub_0808ECF8`): step 0 waits for the player in (x - 90, y - 48, 180, 96)
+or a wound, then plays animation 1 with vy 1.0 (step 1). Steps 1 and 2
+face the player whenever their timer passes 60 frames and move at 0.5
+(forward in step 1, backward in step 2) with `sub_08069A00(e, 1.0, -32,
+8.0, 8)`, `+0x54` = 0x2800. On the floor, step 1 with the player in (x -
+40, y - 40, 80, 80) attacks (`r & 0x7F` <= 0x40) or backs away (step 2);
+otherwise past the room's edge (`sub_0806B120(e, 1)`: clamped back to
+column 1 or width - 1, 30 columns for one screen) it backs away, and
+beyond margin entry 4 it plays animation 0 and waits again. Step 2
+advances again (step 1) once the player leaves (x - 60, y - 40, 120, 80)
+or its timer passes 60, at the room's edge or at a wall, and attacks him
+within (x - 40, y - 40, 80, 80) when its timer passed 60 with the same
+chance. State 1 (`sub_0808EFD8`) faces him and plays animation 2 for 45
+frames, 3 for 31 (sound 0x85 at the 12th) and 4 for 21, then walks again.
+Hit callback `sub_0808F0A4` (sound 0x72): 40 frames of the generic death
+(state 2). Contact `sub_0808F16C`: type 0, element 0.
+
 Valkyrie (enemy 0x29, `EnemyValkyrieCreate` / `EnemyValkyrieUpdate`):
 `sub_0806EB34` loads tiles `0x081CBF2C`, palette `0x0820A3FC` (bank 0 for
 id 0x29, else 1) and frames `0x0821285C` (the area 4 rooms 12-13 draw

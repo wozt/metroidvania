@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T00:46:17+00:00",
+ "generated_at": "2026-10-22T00:49:21+00:00",
  "git": {
-  "commit": "b8449d0",
+  "commit": "7a0d56b",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 152,
+   "total": 153,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 124,
+    "functional": 125,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 124,
-   "functional_or_better_percent": 81.6,
-   "with_passing_tests": 140,
-   "with_passing_tests_percent": 92.1,
+   "functional_or_better": 125,
+   "functional_or_better_percent": 81.7,
+   "with_passing_tests": 141,
+   "with_passing_tests_percent": 92.2,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -213,6 +213,7 @@
     "aos.enemies.gremlin",
     "aos.enemies.medusa_head",
     "aos.enemies.needles",
+    "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
     "aos.enemies.valkyrie",
     "aos.enemies.zombie",
@@ -386,20 +387,20 @@
    "areas": [
     "aos"
    ],
-   "total": 23,
+   "total": 24,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 18,
+    "functional": 19,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 18,
-   "functional_or_better_percent": 78.3,
-   "with_passing_tests": 23,
+   "functional_or_better": 19,
+   "functional_or_better_percent": 79.2,
+   "with_passing_tests": 24,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -415,6 +416,7 @@
     "aos.enemies.gremlin",
     "aos.enemies.medusa_head",
     "aos.enemies.needles",
+    "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
     "aos.enemies.valkyrie",
     "aos.enemies.zombie",
@@ -9076,6 +9078,68 @@
    }
   },
   {
+   "id": "aos.enemies.skeleton_knight",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Skeleton knight",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.zombie"
+   ],
+   "native_routines": [
+    "EnemySkeletonKnightCreate",
+    "EnemySkeletonKnightUpdate",
+    "sub_0808ECF8",
+    "sub_0808EFD8",
+    "sub_0808F0A4",
+    "sub_0808F120",
+    "sub_0808F16C",
+    "sub_0806B120"
+   ],
+   "limitations": "Sounds 0x72 and 0x85, the palette bits and sub_080683BC are not ported. The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.",
+   "next_action": "Play the sounds once the Aria sound path exists.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_00_room_015 (--spawn 180 280 --hp 9999): the skeleton knight walks toward Soma (frame 30), backs away facing him (frame 90) and raises its sword (frame 160)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.skull_archer",
    "area": "aos",
    "category": "enemies",
@@ -10683,7 +10747,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12369,6 +12433,12 @@
  },
  "timeline": [
   {
+   "commit": "7a0d56b",
+   "date": "2026-10-22",
+   "subject": "Register the Aria Erinys and Gremlin on existing ports",
+   "scope": "project"
+  },
+  {
    "commit": "b8449d0",
    "date": "2026-10-22",
    "subject": "Port the Aria Valkyrie",
@@ -12841,12 +12911,6 @@
    "date": "2026-10-18",
    "subject": "Port the Ruins Test ghost, symbols, lightning and closing reflection",
    "scope": "project"
-  },
-  {
-   "commit": "cf361ea",
-   "date": "2026-10-18",
-   "subject": "Port the Ruins Test main actor and intro",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -12907,9 +12971,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 166,
-    "routines_attached_to_features": 166,
-    "unassigned_routines": 3407,
+    "routines_cited_by_features": 174,
+    "routines_attached_to_features": 174,
+    "unassigned_routines": 3399,
     "call_edges": 14228
    }
   },
@@ -15317,15 +15381,20 @@
      },
      {
       "id": 13,
-      "name": "Enemy 0x0D",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Skeleton Knight",
+      "status": "functional",
+      "note": "Skeleton knight",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_00_room_015 (--spawn 180 280 --hp 9999): the skeleton knight walks toward Soma (frame 30), backs away facing him (frame 90) and raises its sword (frame 160)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.skeleton_knight"
      },
      {
       "id": 14,

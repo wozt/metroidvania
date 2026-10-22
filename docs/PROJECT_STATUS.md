@@ -2,6 +2,14 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0450 - Aria skeleton knight
+
+- Ported the skeleton knight (enemy 0x0D) with the shared room edge clamp
+  `sub_0806B120`: its advance and retreat around the player, the sword
+  attack in three animations and the generic death.
+- Checked in room 0/15: it walks toward Soma, backs away facing him and
+  raises its sword (frames 30, 90 and 160).
+
 ## Patch 0449 - Aria Erinys and Gremlin
 
 - Erinys (enemy 0x62) and the Gremlin (enemy 0x37) only call the

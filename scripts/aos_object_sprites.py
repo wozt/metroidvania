@@ -107,6 +107,12 @@ ENEMIES = {
                  "frames": 0x0824A334, "static_frames": (0xD,)},
     "lubicant": {"id": 0x63, "graphics": 0x081F4214, "palette": 0x0820BCA0, "bank": 1,
                  "frames": 0x0824A334, "static_frames": (0xD,)},
+    # EnemyBeamSkeletonCreate 0x080CA5EC: walker probes 0x08528B04; its
+    # muzzle flash (frame 0x15), beam (0x16, 0x17) and bones (0x18 to 0x1E,
+    # the records at 0x08528B17).
+    "beam_skeleton": {"id": 0x59, "graphics": 0x081F427C, "palette": 0x0820BF54, "bank": 0,
+                      "frames": 0x0824F9AC, "probes": 0x08528B04,
+                      "static_frames": tuple(range(0x15, 0x1F))},
     # sub_0808F8EC (EnemyDeadCrusaderCreate): the knight's sheet, bank 1.
     "dead_crusader": {"id": 0x52, "graphics": 0x081CC00C, "palette": 0x0820A95C, "bank": 1,
                       "frames": 0x0821FA5C},
@@ -403,6 +409,10 @@ def produce(root: Path, rom_path: Path) -> dict:
                                       colors) or {(0, 0): (0, 0, 0)}
                 bmp, left, top = bmp_from_pixels(pixels)
                 library.add(f"Enemy/{name}/frame_{frame_id}", [(bmp, 1, left, top)])
+                # The debris probe point of a piece showing this frame.
+                lines.append("\t".join(map(str, ("static_anchor", name, frame_id,
+                                                  *frame_anchor(rom, entity["frames"],
+                                                                frame_id)))))
     for name, entity in EFFECTS.items():
         if "static_frame" in entity:
             tiles, sheet_width, _ = tile_sheet(rom, entity["graphics"])

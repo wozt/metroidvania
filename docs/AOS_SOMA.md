@@ -691,6 +691,35 @@ beyond 120 pixels it waits for the animation's cycle, plays animation 4
 once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
+Beam skeleton (enemy 0x59, `EnemyBeamSkeletonCreate` /
+`EnemyBeamSkeletonUpdate`): tiles `0x081F427C`, palette `0x0820BF54`, frames
+`0x0824F9AC`, walker probes `0x08528B04`; an affine slot, + 0x5C 0x11, the
+floor snap and a patrol home (+ 0x22, bounds + 0x14 / + 0x16 at +/- 64).
+State 0 (`sub_080CA770`) patrols at 0.375 (`sub_0806CAF8` mode 12),
+turning 40 pixels from home, at walls and the room's edges, until the
+player is in its 0xC0 x 0x80 box. State 1 (`sub_080CA884`) returns to the
+patrol with the player more than 32 pixels above or below
+(`sub_0806BDEC`), else waits r & 0x1F frames (+ 0x1C) and takes 20-frame
+steps at (r & 0x3FFF) + 0x8000 braked by 1/16 (away from him when he is in
+the ((r & 0x7F) + 0x40) x 0x80 box of `sub_0806C1B0`); after a step it
+fires with the wait over and him in its 100 x 40 box, else its + 0x19
+grows and r % 40 below it either (him beyond 48 pixels, `sub_0806BD64`)
+clears it and pauses 60 frames (`sub_080CA9E0`) when r % 50 <= 14, or
+halves it. State 3 (`sub_080CAA2C`): animation 2 to its end, animation 3
+for 33 frames, then + 0x1A bit 0 and animation 4 at full slot scale (+
+0x20 = 0xFFFF) until sprite frame 0x13 makes the flash (`sub_080CB0D0`,
+frame 0x15, translucent) and the beam (`sub_080CAE74`, frame 0x16 then
+0x17, + 0x3C = 3/2 of its own, box (-4, -6, 8, 12)) 11 pixels ahead and
+17 above; animation 5 for 43 frames, then the scale shrinks by 0x400 a
+frame and 9 frames later + 0x1A clears. The beam waits at the eye, shoots
+at 12.0 and restarts there beyond 92 pixels; it collides while the scale
+is above 0x400, is drawn scaled (`sub_0803E058`: 1 / scale, nothing at
+0x400 or less) and stops hurting (+ 0x72 bit 1) once the scale leaves
+0xFFFF. Its hit callback `sub_080CB4F0` (sound 0x6B) hides it and throws
+seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
+0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
+player to its right their x and vx point left).
+
 Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63) share
 `sub_080B7E80` (create: tiles `0x081F4214`, palette `0x0820BCA0`, the
 variant's 20-byte record at `0x0852883C`: frames, bank, flags, lead, wait,

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T05:35:29+00:00",
+ "generated_at": "2026-10-22T08:34:24+00:00",
  "git": {
-  "commit": "c911697",
+  "commit": "6018568",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 161,
+   "total": 162,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 133,
+    "functional": 134,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 133,
-   "functional_or_better_percent": 82.6,
-   "with_passing_tests": 149,
-   "with_passing_tests_percent": 92.5,
+   "functional_or_better": 134,
+   "functional_or_better_percent": 82.7,
+   "with_passing_tests": 150,
+   "with_passing_tests_percent": 92.6,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -204,6 +204,7 @@
     "aos.death.soma",
     "aos.enemies.axe_armor",
     "aos.enemies.bat",
+    "aos.enemies.beam_skeleton",
     "aos.enemies.blue_crow",
     "aos.enemies.cagnazzo",
     "aos.enemies.curly",
@@ -395,26 +396,27 @@
    "areas": [
     "aos"
    ],
-   "total": 32,
+   "total": 33,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 27,
+    "functional": 28,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 27,
-   "functional_or_better_percent": 84.4,
-   "with_passing_tests": 32,
+   "functional_or_better": 28,
+   "functional_or_better_percent": 84.8,
+   "with_passing_tests": 33,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "aos.death.soma",
     "aos.enemies.axe_armor",
     "aos.enemies.bat",
+    "aos.enemies.beam_skeleton",
     "aos.enemies.blue_crow",
     "aos.enemies.cagnazzo",
     "aos.enemies.curly",
@@ -8540,6 +8542,76 @@
    }
   },
   {
+   "id": "aos.enemies.beam_skeleton",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Beam skeleton",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.skull_archer"
+   ],
+   "native_routines": [
+    "EnemyBeamSkeletonCreate",
+    "EnemyBeamSkeletonUpdate",
+    "sub_080CA770",
+    "sub_080CA884",
+    "sub_080CA9E0",
+    "sub_080CAA2C",
+    "sub_080CAC34",
+    "sub_080CAE74",
+    "sub_080CB0D0",
+    "sub_080CB144",
+    "sub_080CB1B4",
+    "sub_080CB4C0",
+    "sub_080CB4F0",
+    "sub_0806C1B0",
+    "sub_0806BD64",
+    "sub_0806BBC4"
+   ],
+   "limitations": "Sounds 0x6B and the 0x66 beam loop, the palette bits and sub_080683BC are not ported; the box of sub_08042884 with + 0x72 bit 2 is taken as the beam's attack box (the beam then hurts, as in the game) and its weapon hurtbox is off (no hit callback); the affine slot is drawn as a vertical scale about the sprite's centre (double-size placement not modelled); the RandomNumberGenerator draw for + 0x1E, which nothing reads, is kept. The patrol at 0.375 around its home column (turning 40 pixels away, at walls and the room's edges), the closing in at a random braked pace toward or away from the player with its wait (+ 0x1C) and patience (+ 0x19), the pause, the attack (animation 2, 33 frames charging, animation 4 firing at sprite frame 0x13, 43 frames of full beam, 64 frames shrinking), the beam (12.0 bolts from the eye looping beyond 92 pixels, 3/2 of its contact attack, harmless once shrinking) with the translucent muzzle flash, and the death (hidden, seven bones of sub_0806C5AC from 0x08528B17 flung away from the player) are ported, with state 4 under gEwramData + 0x8E bit 0x40.",
+   "next_action": "Compare against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrols (frames 30 to 200); from --spawn 560 191 it closes in and fires its beam at Soma, who takes 130 damage (frames 120 to 200, the beam thinning at the end); with --atk 999 --repeat 2 and right + B a blow shatters it into its seven bones flung away from Soma (frames 70 to 100)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.blue_crow",
    "area": "aos",
    "category": "enemies",
@@ -11252,7 +11324,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Skull Millione, Cagnazzo and Lubicant with the fin frame), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Skull Millione, Cagnazzo and Lubicant with the fin frame, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12938,6 +13010,12 @@
  },
  "timeline": [
   {
+   "commit": "6018568",
+   "date": "2026-10-22",
+   "subject": "Port Aria Skull Millione, Cagnazzo and Lubicant",
+   "scope": "project"
+  },
+  {
    "commit": "c911697",
    "date": "2026-10-22",
    "subject": "Port the Aria dead crusader",
@@ -13410,12 +13488,6 @@
    "date": "2026-10-19",
    "subject": "Port the Chozodia escape ship and escape gates",
    "scope": "project"
-  },
-  {
-   "commit": "2eb8321",
-   "date": "2026-10-19",
-   "subject": "Port the Black Space Pirates",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -13476,9 +13548,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 229,
-    "routines_attached_to_features": 229,
-    "unassigned_routines": 3344,
+    "routines_cited_by_features": 244,
+    "routines_attached_to_features": 244,
+    "unassigned_routines": 3329,
     "call_edges": 14228
    }
   },
@@ -16873,15 +16945,20 @@
      },
      {
       "id": 89,
-      "name": "Enemy 0x59",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Beam Skeleton",
+      "status": "functional",
+      "note": "Beam skeleton",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrols (frames 30 to 200); from --spawn 560 191 it closes in and fires its beam at Soma, who takes 130 damage (frames 120 to 200, the beam thinning at the end); with --atk 999 --repeat 2 and right + B a blow shatters it into its seven bones flung away from Soma (frames 70 to 100)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.beam_skeleton"
      },
      {
       "id": 90,

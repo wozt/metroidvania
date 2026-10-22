@@ -38,7 +38,7 @@
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
 #define ENEMY_KINDS 100    /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 55, 57, 63,
-                              73, 82, 87, 91, 96, 98, 99 */
+                              73, 82, 87, 89, 91, 96, 98, 99 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
@@ -59,6 +59,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [82] = "dead_crusader",
                                                      [57] = "medusa_head",
                                                      [87] = "gargoyle",
+                                                     [89] = "beam_skeleton",
                                                      [96] = "mimic",
                                                      [98] = "erinys",
                                                      [63] = "needles"};
@@ -75,7 +76,7 @@ static int enemy_bank(const AosEnemy *enemy) {
     if (enemy->id == AOS_ENEMY_GHOST_DANCER) return enemy->param0 & 0xFF;
     return 0;
 }
-#define ENEMY_STATIC_FRAMES 4  /* single sprite frames of child entities per kind */
+#define ENEMY_STATIC_FRAMES 10 /* single sprite frames of child entities per kind */
 #define ARIA_KIND_ENEMY 1
 
 
@@ -447,8 +448,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 continue;
             }
             bool was_removed = e->enemy.removed;
-            /* A fin follows its owner's slot (+ 0x14). */
-            if (e->enemy.role == AOS_ROLE_FIN && e->spawner >= 0)
+            /* A fin follows its owner's slot (+ 0x14), a beam its (+ 0x12). */
+            if ((e->enemy.role == AOS_ROLE_FIN || e->enemy.role == AOS_ROLE_BEAM ||
+                 e->enemy.role == AOS_ROLE_BEAM_FLASH) &&
+                e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
@@ -473,7 +476,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                      * Mimic's trigger wakes its parent. */
                     .spawner = hit.children[c].role == AOS_ROLE_NEEDLE_PIECE ||
                                        hit.children[c].role == AOS_ROLE_MIMIC_TRIGGER ||
-                                       hit.children[c].role == AOS_ROLE_FIN
+                                       hit.children[c].role == AOS_ROLE_FIN ||
+                                       hit.children[c].role == AOS_ROLE_BEAM ||
+                                       hit.children[c].role == AOS_ROLE_BEAM_FLASH
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};
@@ -582,6 +587,19 @@ static bool load_enemy_data(AriaObjects *objects) {
                 }
             continue;
         }
+        if (!strncmp(line, "static_anchor\t", 14)) {
+            char anchor_name[16];
+            int sprite, ax, ay;
+            if (sscanf(line + 14, "%15s %d %d %d", anchor_name, &sprite, &ax, &ay) != 4 ||
+                sprite < 0 || sprite >= 64)
+                continue;
+            for (int id = 0; id < ENEMY_KINDS; ++id)
+                if (enemy_names[id] && !strcmp(anchor_name, enemy_names[id])) {
+                    objects->enemies[id].kind.static_anchors[sprite][0] = (int8_t)ax;
+                    objects->enemies[id].kind.static_anchors[sprite][1] = (int8_t)ay;
+                }
+            continue;
+        }
         if (!strncmp(line, "volley\t", 7)) {
             /* A shooter's volley: number, then (frame, y offset) pairs. */
             char volley_name[16];
@@ -645,6 +663,7 @@ static bool load_enemy_data(AriaObjects *objects) {
             if (!enemy_names[id] || strcmp(name, enemy_names[id])) continue;
             AosEnemyKind *kind = &objects->enemies[id].kind;
             kind->modes[anim][index] = (uint8_t)mode;
+            kind->sprites[anim][index] = (uint8_t)frame;
             kind->hurt[anim][index] = (AosBox){(int8_t)h[0], (int8_t)h[1], (uint8_t)h[2], (uint8_t)h[3]};
             kind->attack[anim][index] = (AosBox){(int8_t)a[0], (int8_t)a[1], (uint8_t)a[2],
                                                  (uint8_t)a[3]};
@@ -875,6 +894,15 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         float x = flip ? (float)(ex - frame->offset_x) - frame->w : (float)(ex + frame->offset_x);
         SDL_FRect rect = {x - (float)cam_x, (float)(ey + frame->offset_y - cam_y), frame->w, frame->h};
         if (e->enemy.vflip) rect.y = (float)(ey - frame->offset_y - cam_y) - frame->h;
+        if (e->enemy.scaled) {
+            /* The owner's affine slot scales it vertically about the
+             * sprite's centre; sub_0803E058 leaves a scale of 0x400 or
+             * less with an out-of-range matrix (nothing shown). */
+            if (e->enemy.scale <= 0x400) continue;
+            float h = rect.h * (float)e->enemy.scale / 65536.0f;
+            rect.y += (rect.h - h) / 2;
+            rect.h = h;
+        }
         SDL_FlipMode mode = (SDL_FlipMode)((flip ? SDL_FLIP_HORIZONTAL : 0) |
                                            (e->enemy.vflip ? SDL_FLIP_VERTICAL : 0));
         /* A spinning child (the axe): its affine angle, 0x10000 per turn.

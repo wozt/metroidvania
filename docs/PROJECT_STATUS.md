@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-22**.
 
+## Patch 0457 - Aria beam skeleton
+
+- Ported the beam skeleton (enemy 0x59): its patrol, its random closing in
+  and pauses, the charged beam with its muzzle flash, drawn with the
+  shrinking vertical scale of its affine slot, and its death in seven
+  bones.
+- The exporter writes the probe points of single sprite frames and the
+  runtime keeps each animation frame's sprite number; it takes up to ten
+  single frames per kind.
+- Checked in room 8/3: it patrols, closes in and fires at Soma, and a
+  killing blow scatters its bones.
+
 ## Patch 0456 - Aria Skull Millione, Cagnazzo and Lubicant
 
 - Ported the shared routines of Skull Millione (0x5B), Cagnazzo (0x49)

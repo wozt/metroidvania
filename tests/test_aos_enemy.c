@@ -1699,6 +1699,152 @@ static void skull_tests(void) {
     assert(hit.child_count == 0 && m.variant == 0);
 }
 
+static void beam_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t idle[] = {10, 10, 10}, walk[] = {11, 11, 11, 11}, raise[] = {8, 6, 6},
+                         charge[] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+                         shoot[] = {3, 3, 4, 3, 3, 24}, hold[] = {4, 4};
+    const AosAnimDef defs[6] = {{3, idle},    {4, walk},  {3, raise},
+                                {17, charge}, {6, shoot}, {2, hold}};
+    const AosAnimSet anims = {defs, 6};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    kind.probes = (AosProbes){1, -30, -1, 8, {-15}};
+    for (int a = 0; a < 6; ++a)
+        for (int f = 0; f < 17; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -40, 16, 40};
+        }
+    for (int f = 0; f < 6; ++f) kind.sprites[4][f] = (uint8_t)(14 + f);   /* frame 5: 0x13 */
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {100, 30, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(159), NULL);
+
+    /* It patrols at 0.375, turning 40 pixels from its home column. */
+    AosEnemy b;
+    assert(aos_enemy_create(&b, AOS_ENEMY_BEAM_SKELETON, 200, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(b.state == 0 && (b.y >> 16) == 159 && b.home == 200 && b.home_right == 264 &&
+           b.home_left == 136);
+    int32_t lo = b.x, hi = b.x;
+    for (int i = 0; i < 600; ++i) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (b.x < lo) lo = b.x;
+        if (b.x > hi) hi = b.x;
+    }
+    assert(b.state == 0 && b.anim.id == 1 && (lo >> 16) >= 158 && (lo >> 16) <= 160 &&
+           (hi >> 16) >= 240 && (hi >> 16) <= 242);
+
+    /* The player in its 0xC0 x 0x80 box: it closes in at a random pace,
+     * backing away when he is near, then fires once its wait is over and
+     * he is in its 100 x 40 box. */
+    b.x = AOS_FIXED(200);
+    soma.x = AOS_FIXED(240);
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(b.state == 1 && b.vx == 0);
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(b.step == 2 && b.timer == 0x13 && b.mirrored && b.speed == 0x8000 - 0x800);
+    int32_t x0 = b.x;
+    int frames = 0;
+    while (b.state == 1 && frames < 100) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(b.state == 3 && b.x > x0 && frames == 20);
+
+    /* Animation 2 to its end, 33 frames of animation 3, then animation 4
+     * at full scale until its sprite frame 0x13 fires the flash and the
+     * beam. */
+    AosHitReport hit = {0};
+    AosEnemy flash = {0}, beam = {0};
+    frames = 0;
+    while (b.state == 3 && b.step < 3 && frames < 200) {
+        hit = aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (b.step == 1) assert(b.scale == 0);
+        ++frames;
+    }
+    assert(b.step == 3 && b.firing && b.scale == 0xFFFF && hit.child_count == 2);
+    flash = hit.children[0];
+    beam = hit.children[1];
+    flash.parent = beam.parent = &b;
+    assert(flash.role == AOS_ROLE_BEAM_FLASH && flash.static_frame == 0x15 && flash.translucent);
+    assert(beam.role == AOS_ROLE_BEAM && beam.static_frame == 0x16 && beam.stats.contact == 45 &&
+           beam.x == b.x + 0xB0000 && beam.y == b.y - 0x110000);
+    /* The beam waits at the eye, then shoots at 12.0 and loops back
+     * beyond 92 pixels. */
+    for (int i = 0; i < 5; ++i)
+        aos_enemy_update(&beam, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(beam.state == 3 && beam.x == b.x + 0xB0000 + 0xC0000 && beam.static_frame == 0x16);
+    aos_enemy_update(&beam, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(beam.x == b.x + 0xB0000 + 2 * 0xC0000 && beam.static_frame == 0x17);
+    int32_t far = 0;
+    for (int i = 0; i < 12; ++i) {
+        aos_enemy_update(&beam, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (beam.x - b.x > far) far = beam.x - b.x;
+    }
+    assert((far >> 16) <= 0x5C + 12 && (far >> 16) > 0x5C - 12 && beam.x < b.x + far);
+    /* Its blast hurts the player in its path at 3/2 of the contact. */
+    soma.x = b.x + AOS_FIXED(40);
+    soma.y = b.y;
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    int hits = 0;
+    for (int i = 0; i < 10; ++i) {
+        hit = aos_enemy_update(&beam, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        hits += hit.soma_hit;
+    }
+    assert(hits >= 1);
+    soma.x = AOS_FIXED(600);
+    /* 43 frames at full scale, then 64 shrinking, the beam harmless and
+     * scaled; 9 frames later the beam is gone and it closes in again. */
+    frames = 0;
+    while (b.scale == 0xFFFF && frames < 100) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 44 && b.scale == 0xFFFF - 0x400);
+    aos_enemy_update(&beam, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_update(&flash, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(beam.combat.attack_off && beam.scaled && flash.scaled && !beam.removed);
+    frames = 0;
+    while (b.state == 3 && frames < 200) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 63 + 9 && b.state == 1 && !b.firing);
+    aos_enemy_update(&beam, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_update(&flash, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(beam.removed && flash.removed);
+
+    /* A killing blow: hidden, seven bones flung away from the player (to
+     * its right here), deleted on the next update. */
+    soma.facing_left = false;
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.x = b.x - AOS_FIXED(30);
+    soma.y = b.y;
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{20, -40, 20, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    b.state = 0;
+    b.step = 1;
+    hit = aos_enemy_update(&b, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0, always_zero);
+    assert(hit.killed && b.state == 0xFF && b.hidden && hit.child_count == 7);
+    for (int i = 0; i < 7; ++i) {
+        assert(hit.children[i].role == AOS_ROLE_DEBRIS && hit.children[i].vx > 0 &&
+               hit.children[i].ay == 0x3000 && hit.children[i].static_frame >= 0x18 &&
+               hit.children[i].static_frame <= 0x1E);
+    }
+    /* The table's offsets as they are: bone 3 at x + 4, bone 5 at x - 4. */
+    assert((hit.children[3].x >> 16) == (b.x >> 16) + 4 &&
+           (hit.children[5].x >> 16) == (b.x >> 16) - 4);
+    assert(hit.children[0].vy == -(50 << 12) - 0x10 && hit.children[0].vx == 20 << 12);
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(b.removed);
+}
+
 static void ghost_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t dance[] = {6, 6}, death[] = {5, 5};
@@ -2323,6 +2469,7 @@ int main(void) {
     mimic_tests();
     crusader_tests();
     skull_tests();
+    beam_tests();
     soldier_tests();
     armor_tests();
     archer_tests();

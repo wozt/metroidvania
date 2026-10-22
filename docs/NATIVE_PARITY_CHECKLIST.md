@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 32 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 33 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 229 | 3344 |
+| Castlevania: Aria of Sorrow | 244 | 3329 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1202,6 +1202,16 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Known divergences: Sound 0x72, the palette bits of + 0x5A and sub_080683BC are not ported. The meaning of gEwramData + 0x8E bit 0x40 (set by sub_0804C404, cleared by sub_0804CC14) is not traced; the runtime never sets it. The flames are updated after the enemies of their frame; their native slot order is not traced.  
 Next action: Port sound 0x72 and the palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245`.
+
+[+] **`aos.enemies.beam_skeleton` — Beam skeleton.** The patrol at 0.375 around its home column (turning 40 pixels away, at walls and the room's edges), the closing in at a random braked pace toward or away from the player with its wait (+ 0x1C) and patience (+ 0x19), the pause, the attack (animation 2, 33 frames charging, animation 4 firing at sprite frame 0x13, 43 frames of full beam, 64 frames shrinking), the beam (12.0 bolts from the eye looping beyond 92 pixels, 3/2 of its contact attack, harmless once shrinking) with the translucent muzzle flash, and the death (hidden, seven bones of sub_0806C5AC from 0x08528B17 flung away from the player) are ported, with state 4 under gEwramData + 0x8E bit 0x40.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BBC4`, `aos:asm:asm/code/code_08060B98.s:sub_0806BD64`, `aos:asm:asm/code/code_08060B98.s:sub_0806C1B0`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBeamSkeletonCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBeamSkeletonUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA770`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA884`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA9E0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CAA2C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CAC34`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CAE74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB0D0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB144`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB1B4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB4C0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB4F0`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.skull_archer`.  
+Known divergences: Sounds 0x6B and the 0x66 beam loop, the palette bits and sub_080683BC are not ported; the box of sub_08042884 with + 0x72 bit 2 is taken as the beam's attack box (the beam then hurts, as in the game) and its weapon hurtbox is off (no hit callback); the affine slot is drawn as a vertical scale about the sprite's centre (double-size placement not modelled); the RandomNumberGenerator draw for + 0x1E, which nothing reads, is kept.  
+Next action: Compare against an emulator.
+Evidence: in game: `aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrols (frames 30 to 200); from --spawn 560 191 it closes in and fires its beam at Soma, who takes 130 damage (frames 120 to 200, the beam thinning at the end); with --atk 999 --repeat 2 and right + B a blow shatters it into its seven bones flung away from Soma (frames 70 to 100)`.
 
 [+] **`aos.enemies.blue_crow` — Blue crow enemy.** Perching, the homing flight behind the player, the hit stun of sub_0806AD24 (8 frames frozen while alive), state 3 under gEwramData + 0x8E bit 0x40 and the falling death are ported: two feathers (sprite frame 8, sub_080C9ED4), blood splashes of sub_0806E664 (sub_0806B5DC type 1: animation 13 of 0x0820ED60, OBJ row 8 = bank 4 of 0x082099FC) at death and every 16 frames, and flames every 6 frames over 8 x 8 pixels.
 

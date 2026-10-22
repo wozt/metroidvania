@@ -182,7 +182,7 @@ class OutputTests(unittest.TestCase):
                                           "Skeleton Knight", "Dead Warrior",
                                           "Fleaman", "Red Crow", "Mimic",
                                           "Dead Crusader", "Cagnazzo", "Skull Millione",
-                                          "Lubicant", "Killer Doll", "Lightning Doll",
+                                          "Lubicant", "Killer Doll", "Lightning Doll", "Nemesis",
                                           "Beam Skeleton"})
         unnamed = [row for row in aos["monsters"] if row["status"] == "not_started"]
         self.assertTrue(all(row["name"].startswith("Enemy 0x") for row in unnamed))

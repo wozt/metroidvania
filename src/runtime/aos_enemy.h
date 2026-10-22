@@ -18,7 +18,7 @@
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
  * code), the skeleton knight (enemy 0x0D), the dead crusader (enemy 0x52),
  * the Killer Doll (0x3A) and Lightning Doll (0x3B) with their burning pieces, the beam skeleton
- * (0x59) with its beam and bones, Skull Millione (0x5B),
+ * (0x59) with its beam and bones, Nemesis (0x36), Skull Millione (0x5B),
  * Cagnazzo (0x49, with its fin) and Lubicant (0x63,
  * with its fin; the same code),
  * the dead warrior (enemy 0x2F),
@@ -114,6 +114,7 @@ enum {
     AOS_ENEMY_CAGNAZZO = 0x49,
     AOS_ENEMY_KILLER_DOLL = 0x3A,
     AOS_ENEMY_LIGHTNING_DOLL = 0x3B,
+    AOS_ENEMY_NEMESIS = 0x36,
     AOS_ENEMY_BEAM_SKELETON = 0x59,
     AOS_ENEMY_SKULL_MILLIONE = 0x5B,
     AOS_ENEMY_LUBICANT = 0x63,

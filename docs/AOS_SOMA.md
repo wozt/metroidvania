@@ -780,6 +780,18 @@ seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
 0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
 player to its right their x and vx point left).
 
+Nemesis (enemy 0x36, `EnemyNemesisCreate` / `EnemyNemesisUpdate`) uses the
+compact direct-frame descriptor `0x0824D2D8`, loaded from graphics
+`0x081F4264` and palette `0x0820BEC8` by `sub_080C6714`. Its four native OAM
+records are exported as one-frame animation states, preserving the recorded
+hurt and attack boxes. The runtime ports the observable body loop from
+`sub_080C67CC`: an idle hover, a homing approach, a short charge and a
+recovery pause, with the native facing, sine bob and collision pass. The
+global `0x8E & 0x40` path keeps the idle frame without combat. The linked
+helper entities created by `sub_080C7A3C`, `sub_080C7AB8` and `sub_080C7B54`,
+their palette callbacks and the native sound calls remain outside this body
+slot; death uses the shared 40-frame flame and blink sequence.
+
 Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63) share
 `sub_080B7E80` (create: tiles `0x081F4214`, palette `0x0820BCA0`, the
 variant's 20-byte record at `0x0852883C`: frames, bank, flags, lead, wait,

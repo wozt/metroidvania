@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T21:21:05+00:00",
+ "generated_at": "2026-10-22T22:18:45+00:00",
  "git": {
-  "commit": "40cf4ca",
+  "commit": "1660b5a",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 164,
+   "total": 165,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 136,
+    "functional": 137,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 136,
-   "functional_or_better_percent": 82.9,
-   "with_passing_tests": 152,
+   "functional_or_better": 137,
+   "functional_or_better_percent": 83.0,
+   "with_passing_tests": 153,
    "with_passing_tests_percent": 92.7,
    "unknown_or_blocked": 1,
    "features": [
@@ -222,6 +222,7 @@
     "aos.enemies.medusa_head",
     "aos.enemies.mimic",
     "aos.enemies.needles",
+    "aos.enemies.nemesis",
     "aos.enemies.red_crow",
     "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
@@ -398,20 +399,20 @@
    "areas": [
     "aos"
    ],
-   "total": 35,
+   "total": 36,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 30,
+    "functional": 31,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 30,
-   "functional_or_better_percent": 85.7,
-   "with_passing_tests": 35,
+   "functional_or_better": 31,
+   "functional_or_better_percent": 86.1,
+   "with_passing_tests": 36,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -436,6 +437,7 @@
     "aos.enemies.medusa_head",
     "aos.enemies.mimic",
     "aos.enemies.needles",
+    "aos.enemies.nemesis",
     "aos.enemies.red_crow",
     "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
@@ -9694,6 +9696,75 @@
    }
   },
   {
+   "id": "aos.enemies.nemesis",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Nemesis",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyNemesisCreate",
+    "EnemyNemesisUpdate",
+    "sub_080C6714",
+    "sub_080C68AC",
+    "sub_080C6AA8",
+    "sub_080C6D0C",
+    "sub_080C6F64",
+    "sub_080C70F0",
+    "sub_080C722C",
+    "sub_080C73F8",
+    "sub_080C750C",
+    "sub_080C7604",
+    "sub_080C76D4",
+    "sub_080C7784",
+    "sub_080C7A3C",
+    "sub_080C7AB8",
+    "sub_080C7B54"
+   ],
+   "limitations": "The compact direct-frame descriptor is ported with its four OAM records and collision boxes; the linked helper entities, palette callbacks and native sounds remain outside the body slot. Idle hover, homing approach, charge, recovery, facing, collision, shared death flames and the global 0x8E & 0x40 inert path are ported; each direct frame is exported as a one-frame animation state.",
+   "next_action": "Trace the linked helper entities and compare the state timings against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis sprites hover and hit Soma for 52 damage by frame 240"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.red_crow",
    "area": "aos",
    "category": "enemies",
@@ -11481,7 +11552,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13167,6 +13238,12 @@
  },
  "timeline": [
   {
+   "commit": "1660b5a",
+   "date": "2026-10-22",
+   "subject": "Port the Aria Killer Doll",
+   "scope": "project"
+  },
+  {
    "commit": "40cf4ca",
    "date": "2026-10-22",
    "subject": "Port the Aria Lightning Doll",
@@ -13639,12 +13716,6 @@
    "date": "2026-10-19",
    "subject": "Port the credits and the end screen",
    "scope": "project"
-  },
-  {
-   "commit": "efea459",
-   "date": "2026-10-19",
-   "subject": "Port the Chozodia escape sequence",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -13705,9 +13776,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 273,
-    "routines_attached_to_features": 273,
-    "unassigned_routines": 3300,
+    "routines_cited_by_features": 290,
+    "routines_attached_to_features": 290,
+    "unassigned_routines": 3283,
     "call_edges": 14228
    }
   },
@@ -16652,15 +16723,20 @@
      },
      {
       "id": 54,
-      "name": "Enemy 0x36",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Nemesis",
+      "status": "functional",
+      "note": "Nemesis",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis sprites hover and hit Soma for 52 damage by frame 240"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.nemesis"
      },
      {
       "id": 55,

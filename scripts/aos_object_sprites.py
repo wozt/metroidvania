@@ -115,6 +115,10 @@ ENEMIES = {
     # frames 20 to 24 (records at 0x08528AE4).
     "lightning_doll": {"id": 0x3B, "graphics": 0x081F426C, "palette": 0x0820BEEC, "bank": 0,
                        "frames": 0x0824E7F4, "static_frames": tuple(range(20, 25))},
+    # EnemyNemesisCreate 0x080C664C: the floating Nemesis uses the shared
+    # machine sheet, palette and frame descriptor loaded by sub_080C6714.
+    "nemesis": {"id": 0x36, "graphics": 0x081F4264, "palette": 0x0820BEC8, "bank": 0,
+                "frames": 0x0824D2D8},
     # EnemyBeamSkeletonCreate 0x080CA5EC: walker probes 0x08528B04; its
     # muzzle flash (frame 0x15), beam (0x16, 0x17) and bones (0x18 to 0x1E,
     # the records at 0x08528B17).
@@ -320,6 +324,26 @@ def descriptor_animations(rom: bytes, entity: dict) -> list[list[dict]]:
     tiles, sheet_width, _ = tile_sheet(rom, entity["graphics"])
     colors = palette_bank(rom, entity["palette"], entity["bank"])
     result = []
+    # Nemesis uses the compact four-frame form consumed by sub_0803B924:
+    # there is no animation table, and each record is selected directly by
+    # sub_0803E058. Treat each record as a one-frame animation so the native
+    # runtime can select the same visual states without inventing frames.
+    if animation_count == 0:
+        for frame_id in range(record_count):
+            record = _rom_slice(rom, records + frame_id * 16, 16, "object frame record")
+            box = attack = None
+            if record[4]:
+                box_pointer = struct.unpack_from("<I", record, 8)[0]
+                box = struct.unpack("<bbBB", _rom_slice(rom, box_pointer, 4, "frame box"))
+                attack = box
+                if record[4] == 2:
+                    attack = struct.unpack("<bbBB", _rom_slice(rom, box_pointer + 4, 4,
+                                                                "attack box"))
+            pixels = render_frame(tiles, sheet_width,
+                                  frame_components(rom, entity["frames"], frame_id), colors)
+            result.append([{"frame": frame_id, "duration": 1, "pixels": pixels,
+                            "box": box, "attack": attack, "mode": record[4]}])
+        return result
     for index in entity.get("animations", range(animation_count)):
         if not 0 <= index < animation_count:
             raise ValueError("entity animation outside its descriptor")

@@ -1,6 +1,19 @@
 # Project status
 
-Last updated: **2026-10-22**.
+Last updated: **2026-10-23**.
+
+## Patch 0460 - Aria Nemesis
+
+- Ported Nemesis (enemy `0x36`) into the native Aria runtime: its compact
+  four-frame OAM descriptor, idle hover, homing approach, charge, recovery,
+  facing, contact boxes and shared death flames are now represented in C.
+- Extended the private object exporter for Nemesis's direct-frame descriptor;
+  each native record is emitted as a one-frame animation state.
+- Added ROM-free state, collision and death coverage and checked it in room
+  6/13, where the Nemesis sprites hover and hit Soma for 52 damage by frame
+  240.
+- The linked helper entities and native sound callbacks remain explicitly
+  documented as the next parity gap.
 
 ## Patch 0459 - Aria Killer Doll
 

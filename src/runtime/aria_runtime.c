@@ -37,7 +37,7 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 100    /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 55, 57-59, 63,
+#define ENEMY_KINDS 100    /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 54-55, 57-59, 63,
                               73, 82, 87, 89, 91, 96, 98, 99 */
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [4] = "axe_armor", [5] = "skull_archer",
@@ -52,6 +52,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [43] = "curly",
                                                      [45] = "red_crow",
                                                      [47] = "dead_warrior",
+                                                     [54] = "nemesis",
                                                      [55] = "gremlin",
                                                      [73] = "cagnazzo",
                                                      [91] = "skull_millione",

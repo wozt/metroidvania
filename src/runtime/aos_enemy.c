@@ -435,7 +435,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         id != AOS_ENEMY_MIMIC && id != AOS_ENEMY_DEAD_CRUSADER && id != AOS_ENEMY_CAGNAZZO &&
         id != AOS_ENEMY_SKULL_MILLIONE && id != AOS_ENEMY_LUBICANT &&
         id != AOS_ENEMY_BEAM_SKELETON && id != AOS_ENEMY_LIGHTNING_DOLL &&
-        id != AOS_ENEMY_KILLER_DOLL)
+        id != AOS_ENEMY_KILLER_DOLL && id != AOS_ENEMY_NEMESIS)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -638,6 +638,23 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         enemy->attack_wait = (uint16_t)((aos_random() & 0x1F) + 0x10);
         enemy->flight = (uint16_t)((aos_random() & 0x3FF) + 0x200);
         enemy->leg = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_NEMESIS) {
+        /* EnemyNemesisCreate / sub_080C6714: four direct OAM frames from
+         * 0x0824D2D8, with no animation table. The native state machine
+         * selects those records directly while orbiting and charging at
+         * Soma; the exporter exposes each record as a one-frame animation.
+         * Nemesis starts in state 0, with the global 0x8E & 0x40 path using
+         * the same idle frame without combat. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        enemy->state = flag_8e_40 ? 7 : 0;
+        enemy->phase = (uint16_t)(aos_random() & 0xFFFF);
+        enemy->attack_wait = (uint16_t)((aos_random() & 0x7F) + 0x40);
+        enemy->flight = (uint16_t)((aos_random() & 0x7F) + 0x40);
+        enemy->leg = 0;
+        enemy->own_boxes = false;
         return true;
     }
     if (id == AOS_ENEMY_BEAM_SKELETON) {
@@ -1431,6 +1448,98 @@ static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision
 static bool player_within(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
     int32_t dx = e->x - soma->x, dy = e->y - soma->y;
     return (uint32_t)(dx < 0 ? -dx : dx) <= range && (uint32_t)(dy < 0 ? -dy : dy) <= range;
+}
+
+static void integrate(AosEnemy *e);
+static void stop(AosEnemy *e);
+
+/* EnemyNemesisUpdate (sub_080C67CC and states 0..6): the original uses a
+ * compact four-frame descriptor and several linked helper entities. The
+ * native room runtime keeps the observable body routine here: idle hovering,
+ * a homing approach, a short charge and a recovery loop. This preserves the
+ * frame boxes and the state transitions used by the recorded Nemesis rooms;
+ * the unrendered helper entities remain outside this enemy's combat slot. */
+static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames, int soma_atk,
+                                   int soma_def, uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (n->state == 7) {
+        if (n->anim.id != 0) play(n, kind->anims, 0);
+        step_anim(n, kind->anims);
+        return report;
+    }
+    if (n->defeated) {
+        generic_death(n, kind, random, &report);
+        aos_combat_tick(&n->combat);
+        return report;
+    }
+    if (n->hit_flash) n->hit_flash--;
+    if (n->attack_wait) n->attack_wait--;
+    switch (n->state) {
+    case 0: {
+        if (n->anim.id != 0) play(n, kind->anims, 0);
+        n->phase = (uint16_t)(n->phase + 0x300);
+        n->y += aos_sine(n->phase) / 8;
+        face_player(n, soma);
+        if (player_within(n, soma, 0xC00000) && !n->attack_wait) {
+            n->state = 1;
+            n->step = 0;
+            n->timer = 0x20;
+        }
+        break;
+    }
+    case 1:
+        if (n->anim.id != 1) play(n, kind->anims, 1);
+        if (n->step == 0) {
+            n->timer = 0x20;
+            n->step = 1;
+        }
+        face_player(n, soma);
+        (void)move_toward(n, soma->x, soma->y - 0x180000, 0x8000);
+        integrate(n);
+        if (n->timer == 0 || --n->timer == 0 || player_within(n, soma, 0x180000)) {
+            n->state = 2;
+            n->step = 0;
+        }
+        break;
+    case 2:
+        if (n->anim.id != 2) play(n, kind->anims, 2);
+        if (n->step == 0) {
+            face_player(n, soma);
+            (void)move_toward(n, soma->x, soma->y, 0x18000);
+            n->timer = 0x18;
+            n->step = 1;
+        }
+        integrate(n);
+        if (n->timer && --n->timer == 0) {
+            n->state = 3;
+            n->step = 0;
+        }
+        break;
+    case 3:
+        if (n->anim.id != 3) play(n, kind->anims, 3);
+        stop(n);
+        if (n->step == 0) {
+            n->timer = 0x1C;
+            n->step = 1;
+        }
+        if (n->timer && --n->timer == 0) {
+            n->state = 0;
+            n->step = 0;
+            n->attack_wait = 0x40;
+        }
+        break;
+    default:
+        n->state = 0;
+        n->step = 0;
+        break;
+    }
+    step_anim(n, kind->anims);
+    if (!n->defeated && player_within(n, soma, 0x1000000))
+        report = collide(n, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&n->combat);
+    return report;
 }
 
 static void integrate(AosEnemy *e) {
@@ -5511,6 +5620,9 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     if (enemy->id == AOS_ENEMY_KILLER_DOLL && enemy->role == AOS_ROLE_ENEMY)
         return killer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              random);
+    if (enemy->id == AOS_ENEMY_NEMESIS && enemy->role == AOS_ROLE_ENEMY)
+        return nemesis_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                              random);
     if (enemy->id == AOS_ENEMY_LIGHTNING_DOLL && enemy->role == AOS_ROLE_ENEMY)
         return doll_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            random);

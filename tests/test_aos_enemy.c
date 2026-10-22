@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* ROM-free tests for the Aria of Sorrow enemy framework, the bat, the zombie
- * and the blue crow. */
+/* ROM-free tests for the Aria of Sorrow enemy framework and its ported enemy
+ * state machines, including Nemesis. */
 #include "aos_enemy.h"
 
 #include <assert.h>
@@ -1978,6 +1978,74 @@ static void killer_doll_tests(void) {
     }
 }
 
+static void nemesis_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t ticks[] = {1};
+    const AosAnimDef defs[4] = {{1, ticks}, {1, ticks}, {1, ticks}, {1, ticks}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 1; a < 4; ++a) {
+        kind.modes[a][0] = 1;
+        kind.hurt[a][0] = kind.attack[a][0] = (AosBox){-8, -16, 16, 24};
+    }
+    const AosEnemyStats stats = {440, 40, 24, 0x0181, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(100), NULL);
+    AosEnemy n;
+    aos_enemy_set_flag_8e_40(false);
+    assert(aos_enemy_create(&n, AOS_ENEMY_NEMESIS, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(n.state == 0 && n.anim.id == 0 && n.attack_wait >= 0x40 && n.attack_wait <= 0xBF);
+    n.attack_wait = 0;
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.state == 1);
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.anim.id == 1 && n.vx > 0);
+    int frames = 0;
+    while (n.state == 1 && frames++ < 80)
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.state == 2);
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.anim.id == 2);
+    while (n.state == 2 && frames++ < 120)
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.state == 3);
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.anim.id == 3);
+    while (n.state == 3 && frames++ < 180)
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.state == 0 && n.attack_wait == 0x40);
+
+    /* The direct frame-1 box participates in the normal weapon collision. */
+    n.state = 1;
+    n.step = 1;
+    n.timer = 0x20;
+    n.x = soma.x;
+    n.y = soma.y;
+    n.hp = 1;
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-8, -16, 16, 24, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    AosHitReport hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0,
+                                        always_zero);
+    assert(hit.enemy_hit && hit.killed && n.defeated && n.timer == 0x28 && n.anim.id == 3);
+    frames = 0;
+    while (!n.removed && frames++ < 50)
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.removed && frames == 40);
+
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&n, AOS_ENEMY_NEMESIS, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(n.state == 7);
+    aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0, always_zero);
+    assert(n.state == 7 && !n.defeated);
+}
+
 static void doll_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
@@ -2775,6 +2843,7 @@ int main(void) {
     skull_tests();
     beam_tests();
     killer_doll_tests();
+    nemesis_tests();
     doll_tests();
     soldier_tests();
     armor_tests();

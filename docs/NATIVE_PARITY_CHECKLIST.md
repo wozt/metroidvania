@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 35 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 36 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 273 | 3300 |
+| Castlevania: Aria of Sorrow | 290 | 3283 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1379,6 +1379,15 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: Sound 0x70, the palette bits and sub_080683BC are not ported; pieces are updated after the enemies of their frame (native slot order not traced).  
 Next action: Play the sound once the Aria sound path exists.
 Evidence: in game: `aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21`.
+
+[+] **`aos.enemies.nemesis` — Nemesis.** Idle hover, homing approach, charge, recovery, facing, collision, shared death flames and the global 0x8E & 0x40 inert path are ported; each direct frame is exported as a one-frame animation state.
+
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6714`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C68AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6AA8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6D0C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6F64`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C70F0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C722C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C73F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C750C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7604`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C76D4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7784`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7A3C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7AB8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7B54`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The compact direct-frame descriptor is ported with its four OAM records and collision boxes; the linked helper entities, palette callbacks and native sounds remain outside the body slot.  
+Next action: Trace the linked helper entities and compare the state timings against an emulator.
+Evidence: in game: `aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis sprites hover and hit Soma for 52 damage by frame 240`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.
 

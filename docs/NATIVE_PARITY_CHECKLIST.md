@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 26 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 27 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 188 | 3385 |
+| Castlevania: Aria of Sorrow | 196 | 3377 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1312,6 +1312,16 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: Sound 0x70, the palette bits and sub_080683BC are not ported; pieces are updated after the enemies of their frame (native slot order not traced).  
 Next action: Play the sound once the Aria sound path exists.
 Evidence: in game: `aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21`.
+
+[+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.
+
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRedCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRedCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA0D4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA308`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA3CC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA474`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA59C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA5D0`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.blue_crow`.  
+Known divergences: As the blue crow: sounds 0x72 and 0x8B, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported.  
+Next action: Follow the blue crow's open items.
+Evidence: in game: `aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)`.
 
 [+] **`aos.enemies.skeleton_knight` — Skeleton knight.** The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 

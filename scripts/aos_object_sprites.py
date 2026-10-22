@@ -70,6 +70,10 @@ ENEMIES = {
     "blue_crow": {"id": 0x09, "graphics": 0x081F4274, "palette": 0x0820BF10, "bank": 0,
                   "frames": 0x0824EC04,   # EnemyBlueCrowCreate 0x080C9A6C
                   "static_frames": (8,)},  # its feathers (sub_080C9E2C)
+    # EnemyRedCrowCreate 0x080CA04C: the blue crow's sheet with bank 1; its
+    # feathers (sub_080CA3CC) show frame 8.
+    "red_crow": {"id": 0x2D, "graphics": 0x081F4274, "palette": 0x0820BF10, "bank": 1,
+                 "frames": 0x0824EC04, "static_frames": (8,)},
     # sub_08093100 (EnemyZombieSoldierCreate 0x08092868); its grenade
     # (sub_08092BC0) shows sprite frame 18 of the same list (entity + 0x65).
     # EnemyAxeArmorCreate 0x080B12C4; its axe (sub_080B0D5C) plays animation 3.

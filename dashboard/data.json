@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T02:05:07+00:00",
+ "generated_at": "2026-10-22T02:25:41+00:00",
  "git": {
-  "commit": "bb2032a",
+  "commit": "560cb1f",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 155,
+   "total": 156,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 17,
-    "functional": 127,
+    "functional": 128,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 127,
-   "functional_or_better_percent": 81.9,
-   "with_passing_tests": 143,
+   "functional_or_better": 128,
+   "functional_or_better_percent": 82.1,
+   "with_passing_tests": 144,
    "with_passing_tests_percent": 92.3,
    "unknown_or_blocked": 1,
    "features": [
@@ -215,6 +215,7 @@
     "aos.enemies.gremlin",
     "aos.enemies.medusa_head",
     "aos.enemies.needles",
+    "aos.enemies.red_crow",
     "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
     "aos.enemies.valkyrie",
@@ -389,20 +390,20 @@
    "areas": [
     "aos"
    ],
-   "total": 26,
+   "total": 27,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 5,
-    "functional": 21,
+    "functional": 22,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 21,
-   "functional_or_better_percent": 80.8,
-   "with_passing_tests": 26,
+   "functional_or_better": 22,
+   "functional_or_better_percent": 81.5,
+   "with_passing_tests": 27,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -420,6 +421,7 @@
     "aos.enemies.gremlin",
     "aos.enemies.medusa_head",
     "aos.enemies.needles",
+    "aos.enemies.red_crow",
     "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
     "aos.enemies.valkyrie",
@@ -9207,6 +9209,68 @@
    }
   },
   {
+   "id": "aos.enemies.red_crow",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Red crow",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.blue_crow"
+   ],
+   "native_routines": [
+    "EnemyRedCrowCreate",
+    "EnemyRedCrowUpdate",
+    "sub_080CA0D4",
+    "sub_080CA308",
+    "sub_080CA3CC",
+    "sub_080CA474",
+    "sub_080CA59C",
+    "sub_080CA5D0"
+   ],
+   "limitations": "As the blue crow: sounds 0x72 and 0x8B, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported. The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.",
+   "next_action": "Follow the blue crow's open items.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-22"
+   }
+  },
+  {
    "id": "aos.enemies.skeleton_knight",
    "area": "aos",
    "category": "enemies",
@@ -10876,7 +10940,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12562,6 +12626,12 @@
  },
  "timeline": [
   {
+   "commit": "560cb1f",
+   "date": "2026-10-22",
+   "subject": "Port the Aria Fleaman",
+   "scope": "project"
+  },
+  {
    "commit": "bb2032a",
    "date": "2026-10-22",
    "subject": "Port the Aria dead warrior",
@@ -13034,12 +13104,6 @@
    "date": "2026-10-19",
    "subject": "Port Imago",
    "scope": "project"
-  },
-  {
-   "commit": "91b4d3d",
-   "date": "2026-10-19",
-   "subject": "Port the Kraid and Ridley elevator statues",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -13100,9 +13164,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 188,
-    "routines_attached_to_features": 188,
-    "unassigned_routines": 3385,
+    "routines_cited_by_features": 196,
+    "routines_attached_to_features": 196,
+    "unassigned_routines": 3377,
     "call_edges": 14228
    }
   },
@@ -15929,15 +15993,20 @@
      },
      {
       "id": 45,
-      "name": "Enemy 0x2D",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Red Crow",
+      "status": "functional",
+      "note": "Red crow",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.red_crow"
      },
      {
       "id": 46,

@@ -424,7 +424,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
         id != AOS_ENEMY_ERINYS && id != AOS_ENEMY_GREMLIN && id != AOS_ENEMY_SKELETON_KNIGHT &&
-        id != AOS_ENEMY_DEAD_WARRIOR && id != AOS_ENEMY_FLEAMAN)
+        id != AOS_ENEMY_DEAD_WARRIOR && id != AOS_ENEMY_FLEAMAN && id != AOS_ENEMY_RED_CROW)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -648,9 +648,10 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         enemy->state = 0;
         return true;
     }
-    if (id == AOS_ENEMY_BLUE_CROW) {
-        /* EnemyBlueCrowCreate: animation 0, state 1, or state 3 without
-         * the hit callback under the global 0x8E & 0x40. */
+    if (id == AOS_ENEMY_BLUE_CROW || id == AOS_ENEMY_RED_CROW) {
+        /* EnemyBlueCrowCreate / EnemyRedCrowCreate (palette bank 1):
+         * animation 0, state 1, or state 3 without the hit callback under
+         * the global 0x8E & 0x40. */
         play(enemy, anims, 0);
         enemy->state = flag_8e_40 ? 3 : 1;
         return true;
@@ -872,7 +873,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     /* sub_080CB930: it shatters (state 2). */
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
-                } else if (enemy->id == AOS_ENEMY_BLUE_CROW) {
+                } else if (enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) {
                     /* sub_080CA030: the crow dies. */
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
@@ -1394,6 +1395,91 @@ static void crow_die(AosEnemy *c, const AosEnemyKind *kind, uint32_t (*random)(v
     step_anim(c, kind->anims);
 }
 
+/* sub_080CA0D4: the red crow perches facing the player until he is within
+ * 120 pixels on both axes (sub_0806BF78); then it hovers (animation 2,
+ * still) for 128 frames, turning to him (odd rounds, + 0x14) or away (even
+ * ones) halfway, and swoops (animation 1, sound 0x8B): vx 0.5 toward its
+ * facing with + 0x50 0x1000 that way, vy 2.0 with + 0x54 -0x1000, for 64
+ * frames, then hovers again; after an odd round other than the first,
+ * with the player beyond 120 pixels, it plays animation 4 once and
+ * perches again. It always moves by its velocity, then accelerates. */
+static void red_crow_fly(AosEnemy *c, const AosSoma *soma, const AosAnimSet *anims) {
+    switch (c->step) {
+    case 0:
+        c->volley_count = 0;
+        face_player(c, soma);
+        if (c->anim.id != 0) play(c, anims, 0);
+        c->step = 1;
+        c->substep = 0;
+        c->timer = 0;
+        /* fall through */
+    case 1:
+        if (player_within(c, soma, 0x780000)) {
+            c->step = 3;
+            c->substep = 0;
+        }
+        break;
+    case 2:
+        if (c->substep == 0) {
+            if (c->anim.id != 1) play(c, anims, 1);
+            c->vx = 0x8000;
+            c->vy = 0x20000;
+            c->ax = 0x1000;
+            c->ay = -0x1000;
+            if (!c->mirrored) {
+                c->vx = -0x8000;
+                c->ax = -0x1000;
+            }
+            c->timer = (uint8_t)((c->vy / c->ay < 0 ? -(c->vy / c->ay) : c->vy / c->ay) * 2);
+            c->substep = 1;
+        }
+        if (--c->timer == 0xFF) {
+            c->step = 3;
+            c->substep = 0;
+        }
+        break;
+    case 3:
+        if (c->substep == 0) {
+            c->volley_count++;
+            if (c->anim.id != 2) play(c, anims, 2);
+            c->vx = c->vy = c->ax = c->ay = 0;
+            c->timer = 0x80;
+            c->substep = 1;
+        }
+        if (c->timer == 0x40) {
+            if (c->volley_count & 1) face_player(c, soma);
+            else c->mirrored = !c->mirrored;
+        }
+        if (--c->timer == 0xFF) {
+            c->step = 2;
+            c->substep = 0;
+            if ((c->volley_count & 1) && c->volley_count != 1 &&
+                !player_within(c, soma, 0x780000)) {
+                c->step = 4;
+                c->cycle_done = false;
+            }
+        }
+        break;
+    case 4:
+        if (c->substep == 0) {
+            if (c->cycle_done) c->substep = 1;
+        } else if (c->substep == 1) {
+            if (c->anim.id != 4) play_loop(c, anims, 4, false);
+            c->substep = 2;
+            if (c->cycle_done) c->step = c->substep = 0;
+        } else if (c->cycle_done) {
+            c->step = c->substep = 0;
+        }
+        break;
+    default:
+        break;
+    }
+    c->x += c->vx;
+    c->y += c->vy;
+    c->vx += c->ax;
+    c->vy += c->ay;
+}
+
 /* EnemyBlueCrowUpdate: no activity window and no on-screen test before the
  * collision pass (sub_080421AC). sub_0806AD24 stuns it while alive: with
  * + 0x2D (set to 8 by a hit) non-zero, sub_0806AE54 decrements it and the
@@ -1420,7 +1506,8 @@ static AosHitReport crow_update(AosEnemy *c, AosSoma *soma, const AosEnemyKind *
         c->hit_flash--;
         report = collide(c, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     } else {
-        crow_fly(c, soma, kind->anims);
+        if (c->id == AOS_ENEMY_RED_CROW) red_crow_fly(c, soma, kind->anims);
+        else crow_fly(c, soma, kind->anims);
         step_anim(c, kind->anims);
         report = collide(c, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     }
@@ -3575,7 +3662,8 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
-    if (enemy->id == AOS_ENEMY_BLUE_CROW && enemy->role == AOS_ROLE_ENEMY)
+    if ((enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) &&
+        enemy->role == AOS_ROLE_ENEMY)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);
     if (enemy->id == AOS_ENEMY_FLEAMAN)
         return flea_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,

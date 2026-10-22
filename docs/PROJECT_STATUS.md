@@ -2,6 +2,14 @@
 
 Last updated: **2026-10-20**.
 
+## Patch 0453 - Aria red crow
+
+- Ported the red crow (enemy 0x2D) on the blue crow's port: its own hover
+  and V-shaped swoop with the return to its perch, and the blue crow's
+  death, feathers and stun, drawn with palette bank 1.
+- Checked in room 5/2: it hovers, swoops onto Soma and hovers off (frames
+  60, 160, 200 and 240).
+
 ## Patch 0452 - Aria Fleaman
 
 - Ported the Fleaman (enemy 0x18): its four random jumps with hand-set

@@ -676,6 +676,21 @@ Under the global `0x8E & 0x40` the crow starts in state 3 (`sub_080C9FFC`:
 animation 0 stepped in place, no hit callback, no collision pass). Sounds,
 the `+0x5A` palette bits and `sub_080683BC` are not ported.
 
+Red crow (enemy 0x2D, `EnemyRedCrowCreate` / `EnemyRedCrowUpdate`): the
+blue crow's sheet, frames and palette `0x0820BF10` with bank 1; its update,
+death (`sub_080CA308`), feathers (`sub_080CA3CC` / `sub_080CA474`) and inert
+state 3 copy the blue crow's. Its flight `sub_080CA0D4`: step 0 clears the
+round counter `+0x14`, faces the player and perches (animation 0); step 1
+waits for him within 120 pixels on both axes (`sub_0806BF78`), then step 3
+counts a round, hovers still (animation 2) for 128 frames, at 64 left
+facing him (odd rounds) or turning away (even), then swoops (step 2:
+animation 1, sound 0x8B, vx 0.5 toward the facing with `+0x50` 0x1000 that
+way, vy 2.0 with `+0x54` -0x1000, for |vy / `+0x54`| * 2 = 64 frames) and
+hovers again; after an odd round other than the first with the player
+beyond 120 pixels it waits for the animation's cycle, plays animation 4
+once and perches again (step 0). Each frame it moves by its velocity, then
+adds its accelerations.
+
 Zombie soldier (enemy 0x0C, `EnemyZombieSoldierCreate` /
 `EnemyZombieSoldierUpdate`): tiles `0x081CC024`, palette `0x0820AA48`, frames
 `0x082215C4` (`sub_08093100`); animations 0 walk, 1 close attack, 2 throw,

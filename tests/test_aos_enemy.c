@@ -361,6 +361,61 @@ static void crow_tests(void) {
     assert(life == 74);
 }
 
+static void red_crow_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t flap[] = {4, 4}, land[] = {5, 5}, death[] = {200};
+    const AosAnimDef defs[5] = {{2, flap}, {2, flap}, {2, flap}, {1, death}, {2, land}};
+    const AosAnimSet anims = {defs, 5};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {30, 20, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
+
+    /* It perches until the player is within 120 pixels, then hovers 128
+     * frames (animation 2) and swoops 64 (animation 1). */
+    AosEnemy c;
+    assert(aos_enemy_create(&c, AOS_ENEMY_RED_CROW, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(c.state == 1);
+    aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(c.step == 1);
+    soma.x = AOS_FIXED(200);
+    aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(c.step == 3);
+    int frames = 0;
+    while (c.step == 3 && frames < 300) {
+        aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(frames == 129 && c.step == 2 && c.volley_count == 1);
+    aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(c.anim.id == 1 && c.vy == 0x20000 - 0x1000 && c.timer == 63);
+    int32_t y0 = c.y;
+    frames = 0;
+    int32_t low = c.y;
+    while (c.step == 2 && frames < 100) {
+        aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        if (c.y > low) low = c.y;
+        ++frames;
+    }
+    /* A V-shaped swoop: down, then back up. */
+    assert(c.step == 3 && low > y0 && c.y < low);
+    /* An odd round other than the first with the player away: it lands. */
+    soma.x = AOS_FIXED(1000);
+    frames = 0;
+    while (c.step != 4 && frames < 1000) {
+        aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(c.step == 4 && c.volley_count == 3);
+    frames = 0;
+    while (c.step != 1 && frames < 100) {
+        aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(c.step == 1 && c.anim.id == 0);
+}
+
 static void soldier_tests(void) {
     /* Floor at cell row 20 (top 160). */
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
@@ -1931,6 +1986,7 @@ int main(void) {
     assert(aos_player_damage(6, 10) == 2 && aos_player_damage(1, 50) == 1);
     zombie_tests();
     crow_tests();
+    red_crow_tests();
     soldier_tests();
     armor_tests();
     archer_tests();

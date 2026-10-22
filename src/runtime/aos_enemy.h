@@ -17,7 +17,7 @@
  * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
  * code), the skeleton knight (enemy 0x0D), the dead warrior (enemy 0x2F),
- * the Fleaman (enemy 0x18), the Valkyrie (enemy 0x29) and Erinys (0x62, the same code), the
+ * the Fleaman (enemy 0x18), the red crow (enemy 0x2D, the blue crow's death), the Valkyrie (enemy 0x29) and Erinys (0x62, the same code), the
  * gargoyle and the Gremlin (0x37, the same code)
  * (enemy 0x57), the Medusa head (enemy 0x39) with its
  * spawner, and Needles (enemy 0x3F) with its pieces
@@ -95,6 +95,7 @@ enum {
     AOS_ENEMY_ZOMBIE_OFFICER = 0x20,
     AOS_ENEMY_VALKYRIE = 0x29,
     AOS_ENEMY_CURLY = 0x2B,
+    AOS_ENEMY_RED_CROW = 0x2D,
     AOS_ENEMY_DEAD_WARRIOR = 0x2F,
     AOS_ENEMY_GREMLIN = 0x37,
     AOS_ENEMY_MEDUSA_HEAD = 0x39,

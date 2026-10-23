@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-23T16:40:40+00:00",
+ "generated_at": "2026-10-23T16:50:42+00:00",
  "git": {
-  "commit": "2fde524",
+  "commit": "b7f4b08",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 19,
-    "functional": 143,
+    "partial": 17,
+    "functional": 145,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 143,
-   "functional_or_better_percent": 82.7,
+   "functional_or_better": 145,
+   "functional_or_better_percent": 83.8,
    "with_passing_tests": 161,
    "with_passing_tests_percent": 93.1,
    "unknown_or_blocked": 1,
@@ -411,15 +411,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 7,
-    "functional": 37,
+    "partial": 5,
+    "functional": 39,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 37,
-   "functional_or_better_percent": 84.1,
+   "functional_or_better": 39,
+   "functional_or_better_percent": 88.6,
    "with_passing_tests": 44,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -9842,8 +9842,8 @@
    "area": "aos",
    "category": "enemies",
    "title": "Merman",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
@@ -9856,16 +9856,28 @@
    "native_routines": [
     "EnemyMermanCreate",
     "EnemyMermanUpdate",
-    "sub_08070AC4"
+    "sub_080709D8",
+    "sub_08070A08",
+    "sub_08070A30",
+    "sub_08070AC4",
+    "sub_08070B10",
+    "sub_08070E68",
+    "sub_080714A4",
+    "sub_080715B4",
+    "sub_08071648",
+    "sub_08071764",
+    "sub_08071830",
+    "sub_08071870",
+    "sub_0807188C"
    ],
-   "limitations": "The water exit trigger, hidden spawner production, exact timers, attack, collision probes, death callback, sounds and palette effects are not ported. Native identity, graphics, palette, animations, active and hidden constructor forms, initial jump, frame boxes, combat, generic death and global inert state are connected.",
-   "next_action": "Port the water-aware spawn and attack states from EnemyMermanUpdate.",
+   "limitations": "The collision export has no independent room-water height, so surface crossings use the native timed phases around the record Y; sounds, palette callbacks and rewards are not ported. The active body now runs its submerged wait, rise, ballistic water arcs, animation-3 attack and animation-6 horizontal shot. Parameter 1 creates the hidden producer, capped at three linked bodies whose removal releases its count. The specialized 40-frame falling death, combat, global inert state, graphics, palettes, animations and frame boxes are connected.",
+   "next_action": "Compare the water-surface crossing height and spawner screen coordinates against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_07_room_002 (--spawn 160 175 --hp 9999): the active Merman row renders, moves and damages Soma for 14 HP twice by frame 120"
+     "aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -10157,8 +10169,8 @@
    "area": "aos",
    "category": "enemies",
    "title": "Ripper",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
@@ -10172,16 +10184,23 @@
    ],
    "native_routines": [
     "EnemyRipperCreate",
-    "EnemyRipperUpdate"
+    "EnemyRipperUpdate",
+    "sub_080C25F8",
+    "sub_080C2A18",
+    "sub_080C2ABC",
+    "sub_080C2B74",
+    "sub_080C2D20",
+    "sub_080C2D70",
+    "sub_080C2DC4"
    ],
-   "limitations": "Its exact random jump table, hit callback, death timing, sounds and palette effects are not ported. Native constructor-table identity, Fleaman sheet palette bank 1, animations, frame boxes, grounded jumps toward Soma, combat, generic death and global inert state are connected.",
-   "next_action": "Port the exact jump selection and death callback from EnemyRipperUpdate.",
+   "limitations": "Animation-marker timing is represented by the exported animation frame/cycle state; sounds, palette callbacks and rewards are not ported. The exact six-way random jump table, close-player reversal, carried drop, landing delay, attack animation, accelerating linked blade and its falling collision state are ported. Ripper uses its native animation-2 50-frame falling death, frame boxes, combat and global inert state.",
+   "next_action": "Compare the blade animation marker and acceleration rounding frame by frame with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_07_room_055 (--spawn 224 159 --hp 9999): the Ripper group renders, jumps and damages Soma for 80 HP twice by frame 120"
+     "aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -12053,7 +12072,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, Merman, Blue Crow, Siren and Harpy with shot/death frames 8..14, Tiny Devil and Imp with Imp death frame 0x15, Gorgon and Catoblepas with breath/death frames 17..26, Ripper, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, helper anchors and translucent technical effect children, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, Merman with its animation-6 shot, Blue Crow, Siren and Harpy with shot/death frames 8..14, Tiny Devil and Imp with Imp death frame 0x15, Gorgon and Catoblepas with breath/death frames 17..26, Ripper with its animation-1 blade, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, helper anchors and translucent technical effect children, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12063,7 +12082,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-10-23",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -13739,6 +13758,12 @@
  },
  "timeline": [
   {
+   "commit": "b7f4b08",
+   "date": "2026-10-23",
+   "subject": "Port Tiny Devil and Imp state machines",
+   "scope": "project"
+  },
+  {
    "commit": "2fde524",
    "date": "2026-10-23",
    "subject": "Port Harpy and Gorgon enemy families",
@@ -14211,12 +14236,6 @@
    "date": "2026-10-19",
    "subject": "Record in-game checks for eight common enemies",
    "scope": "project"
-  },
-  {
-   "commit": "91dea2a",
-   "date": "2026-10-19",
-   "subject": "Complete Mecha Ridley's palettes and 100% rule",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -14277,9 +14296,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 352,
-    "routines_attached_to_features": 352,
-    "unassigned_routines": 3221,
+    "routines_cited_by_features": 371,
+    "routines_attached_to_features": 371,
+    "unassigned_routines": 3202,
     "call_edges": 14228
    }
   },
@@ -16548,14 +16567,14 @@
      {
       "id": 3,
       "name": "Merman",
-      "status": "partial",
+      "status": "functional",
       "note": "Merman",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c"
        ],
        "in_game_check": [
-        "aria area_07_room_002 (--spawn 160 175 --hp 9999): the active Merman row renders, moves and damages Soma for 14 HP twice by frame 120"
+        "aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts"
        ],
        "emulator_compared": false,
        "played_through": false
@@ -17537,14 +17556,14 @@
      {
       "id": 74,
       "name": "Ripper",
-      "status": "partial",
+      "status": "functional",
       "note": "Ripper",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c"
        ],
        "in_game_check": [
-        "aria area_07_room_055 (--spawn 224 159 --hp 9999): the Ripper group renders, jumps and damages Soma for 80 HP twice by frame 120"
+        "aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts"
        ],
        "emulator_compared": false,
        "played_through": false

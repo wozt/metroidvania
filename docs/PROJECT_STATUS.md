@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0468 - Aria Merman and Ripper state machines
+
+- Removed the last provisional `batch_enemy_update` path. Ripper now uses its
+  six-way native random jump table, close-player reversal, carried drop,
+  landing delay and attack animation, which emits an owner-linked accelerating
+  blade with its own collision and falling state.
+- Ported Merman's submerged wait, rise and ballistic phases, animation-3
+  attack and animation-6 shot. Its parameter-1 record is now the hidden room
+  producer, capped at three linked bodies; their removal releases the
+  producer's count.
+- Connected Merman's 40-frame and Ripper's 50-frame falling deaths. ROM-free
+  tests cover both attack children, the producer cap path, Ripper's distinct
+  jump constants and both death timers. The exported collision layer has no
+  independent room-water height, so Merman's surface crossings use the native
+  timing around its record Y; this remains an explicit fidelity limit.
+- Recorded Ripper and its emitted blades in area 7 room 55 at frame 180, and
+  active Mermen with two horizontal shots in area 7 room 2 at frame 240. Both
+  entries now meet the project's functional evidence rule; no connected Aria
+  bestiary entry remains partially functional.
+
 ## Patch 0467 - Aria Tiny Devil and Imp
 
 - Replaced the shared provisional flight with the two native state-machine

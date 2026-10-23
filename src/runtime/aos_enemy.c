@@ -570,9 +570,10 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         return true;
     }
     if (id == AOS_ENEMY_MERMAN) {
-        /* EnemyMermanCreate: OBJ priority 4, animation 0 and a 60-frame
-         * idle. Parameter 1 selects the hidden room-spawner form; the active
-         * form starts its native jump setup with upward velocity and gravity. */
+        /* EnemyMermanCreate: OBJ priority 4 and animation 0. Parameter 1
+         * selects the hidden room-spawner form. A room body (parameter 0 is
+         * zero) starts at step 10 in its upward water arc; a body produced by
+         * the spawner starts at step 0 and waits 60 frames below the surface. */
         play(enemy, anims, 0);
         step_anim(enemy, anims);
         if (flag_8e_40) {
@@ -586,10 +587,12 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             return true;
         }
         enemy->state = 0;
-        enemy->timer = 60;
-        enemy->vy = -0x8000;
-        enemy->ay = 0x1800;
-        face_player(enemy, soma);
+        if (!param0) {
+            enemy->step = 10;
+            enemy->vy = -0x8000;
+            enemy->ay = 0x1800;
+            face_player(enemy, soma);
+        }
         return true;
     }
     if (id == AOS_ENEMY_HARPY || id == AOS_ENEMY_SIREN) {
@@ -1073,6 +1076,20 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->own_boxes = false;
                     enemy->timer = 0x28;
                     enemy->state = 1;
+                    enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_MERMAN &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080715B4: animation 1, 40-frame falling death. */
+                    play_loop(enemy, kind->anims, 1, false);
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = 0;
+                    enemy->vx = enemy->ax = enemy->vy = 0;
+                    enemy->ay = 0x2000;
+                } else if (enemy->id == AOS_ENEMY_RIPPER &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080C2D70 -> sub_080C2A18: state 0xFF. */
+                    enemy->state = 0xFF;
                     enemy->step = 0;
                 } else if (enemy->id == AOS_ENEMY_FLEAMAN) {
                     /* sub_080C2458 -> sub_080C2388: state 0xFF. */
@@ -6520,57 +6537,323 @@ static AosHitReport devil_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
     return report;
 }
 
-/* Remaining first native-observable pass: Merman and Ripper keep their
- * provisional locomotion until their complete state machines are ported. */
-static AosHitReport batch_enemy_update(AosEnemy *e, AosSoma *soma,
-                                       const AosCollision *layer, const AosEnemyKind *kind,
-                                       const AosWeaponEntity *weapon,
-                                       const AosWeaponFrames *weapon_frames, int soma_atk,
-                                       int soma_def, int cam_x, int cam_y,
-                                       uint32_t (*random)(void)) {
+/* sub_080C2ABC / sub_080C2B74: Ripper's short-range blade child. It is
+ * placed twelve pixels toward the body's facing, accelerates horizontally,
+ * and falls away after a weapon or player collision. */
+static void ripper_blade(const AosEnemy *owner, const AosEnemyKind *kind,
+                         AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy blade = {0};
+    blade.id = owner->id;
+    blade.role = AOS_ROLE_RIPPER_BLADE;
+    blade.parent = owner;
+    blade.x = owner->x + (owner->mirrored ? AOS_FIXED(12) : -AOS_FIXED(12));
+    blade.y = owner->y - AOS_FIXED(12);
+    blade.mirrored = owner->mirrored;
+    blade.vx = owner->mirrored ? 0x30000 : -0x30000;
+    blade.ax = owner->mirrored ? 0x50 : -0x50;
+    blade.state = 4;
+    blade.static_frame = -1;
+    blade.stats = owner->stats;
+    blade.hp = owner->hp;
+    blade.combat.type = AOS_TYPE_ENEMY;
+    blade.own_boxes = true;
+    blade.own_hurt = blade.own_attack = (AosBox){-8, -8, 16, 16};
+    play(&blade, kind->anims, 1);
+    report->children[report->child_count++] = blade;
+}
+
+static AosHitReport ripper_blade_update(AosEnemy *b, AosSoma *soma,
+                                        const AosEnemyKind *kind,
+                                        const AosWeaponEntity *weapon,
+                                        const AosWeaponFrames *weapon_frames, int soma_atk,
+                                        int soma_def, int cam_x, int cam_y) {
     AosHitReport report = {0};
-    if (e->defeated) {
+    if (b->state == 4) {
+        b->vx += b->ax;
+        b->x += b->vx;
+    } else {
+        b->vy += b->ay;
+        b->y += b->vy;
+    }
+    step_anim(b, kind->anims);
+    int sx = (b->x >> 16) - cam_x, sy = (b->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) {
+        b->removed = true;
+        return report;
+    }
+    report = collide(b, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (report.enemy_hit || report.soma_hit) {
+        b->state = 6;
+        b->vx = b->ax = 0;
+        b->vy = 0x8000;
+        b->ay = 0x1000;
+        b->combat.attack_off = b->combat.hurt_off = true;
+    }
+    aos_combat_tick(&b->combat);
+    return report;
+}
+
+/* sub_080C25F8 and sub_080C2A18. */
+static AosHitReport ripper_update(AosEnemy *e, AosSoma *soma,
+                                  const AosCollision *layer, const AosEnemyKind *kind,
+                                  const AosWeaponEntity *weapon,
+                                  const AosWeaponFrames *weapon_frames, int soma_atk,
+                                  int soma_def, int cam_x, int cam_y,
+                                  uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (e->state == 3) {
+        step_anim(e, kind->anims);
+        return report;
+    }
+    if (e->state == 0xFF) {
+        if (e->step == 0) {
+            play(e, kind->anims, 2);
+            e->timer = 50;
+            e->vx = e->ax = e->vy = 0;
+            e->ay = 0x2000;
+            e->step = 1;
+        }
+        e->vy += e->ay;
+        e->y += e->vy;
         generic_death(e, kind, random, &report);
         aos_combat_tick(&e->combat);
         return report;
     }
-    bool inert = (e->id == AOS_ENEMY_MERMAN && e->state == 4) ||
-                 (e->id == AOS_ENEMY_RIPPER && e->state == 3);
-    if (inert) {
-        step_anim(e, kind->anims);
-        return report;
-    }
-    if (e->id == AOS_ENEMY_MERMAN && e->param1) return report;
-
     int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
 
-    if (e->id == AOS_ENEMY_RIPPER) {
-        if (e->state == 1) {
-            face_player(e, soma);
-            e->vx = toward_facing(e, 0xC000);
-            e->vy = -0x28000;
-            e->ay = 0x3000;
-            e->state = 0;
-        }
-        if (walk_collide(e, layer, 0x10000, (int32_t)0xFFE00000, 0xC000, 8) & 4) {
-            stop(e);
-            e->state = 1;
-        }
-    } else { /* Merman */
-        face_player(e, soma);
+    if (e->step == 0) {
+        play(e, kind->anims, 0);
+        e->phase = 0;
         e->vx = toward_facing(e, 0x8000);
-        if (walk_collide(e, layer, 0x10000, (int32_t)0xFFE00000, 0x8000, 8) & 4) {
-            e->vy = -0x20000;
-            e->ay = 0x1800;
+        e->step = e->dropped ? 1 : 4;
+    }
+    if (e->step == 1) {
+        e->vy = e->ay = 0x2000;
+        e->step = 2;
+    } else if (e->step == 2) {
+        if (e->phase != 3) {
+            play(e, kind->anims, 3);
+            e->phase = 3;
+        }
+        if (walk_collide(e, layer, 0, -AOS_FIXED(10), 0, 8) & 4) {
+            snap_to_floor(e, layer);
+            e->timer = 0;
+            e->step = 3;
+        }
+    } else if (e->step == 3) {
+        if (++e->timer > 15) {
+            e->step = 4;
+            e->phase = 0;
+            play(e, kind->anims, 0);
+        }
+    } else if (e->step == 4) {
+        e->x += e->vx;
+        face_player(e, soma);
+        uint32_t jump = random() % 6;
+        int32_t speed = jump == 3 ? 0x1A000 : 0xD000;
+        e->vx = toward_facing(e, speed);
+        e->vy = -0x30000;
+        if (jump == 3) e->ay = 0x2800;
+        else if (jump == 4) e->ay = 0x1400;
+        else e->ay = 0xA000;
+        if (jump == 3 || jump == 4) {
+            play(e, kind->anims, 3);
+            e->phase = 3;
+            e->firing = false;
+            e->step = 5;
+        } else {
+            play(e, kind->anims, 0);
+            e->phase = 0;
+            e->step = 6;
+        }
+        int dx = (e->x >> 16) - (soma->x >> 16);
+        if (dx >= -63 && dx <= 63 && (e->x >> 16) > 0 && (e->x >> 16) < 239)
+            e->vx = -e->vx;
+    } else if (e->step == 5 || e->step == 6) {
+        if (e->step == 5 && e->phase == 3 && !e->firing && e->vy >= -e->ay && e->vy <= e->ay) {
+            play_loop(e, kind->anims, 1, false);
+            e->phase = 1;
+            e->firing = true;
+        }
+        if (e->step == 5 && e->phase == 1 && (e->cycle_done || e->anim.frame > 0)) {
+            ripper_blade(e, kind, &report);
+            play(e, kind->anims, 3);
+            e->phase = 3;
+        }
+        int collision = walk_collide(e, layer, 0, -AOS_FIXED(10), 0, 8);
+        if (collision) {
+            if (collision & 4) snap_to_floor(e, layer);
+            e->step = 4;
+            e->phase = 0;
+            e->firing = false;
+            play(e, kind->anims, 0);
         }
     }
 
     step_anim(e, kind->anims);
     sx = (e->x >> 16) - cam_x;
     sy = (e->y >> 16) - cam_y;
-    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
-        report = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0) {
+        AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        merge_enemy_hit(&report, hit);
+    }
+    aos_combat_tick(&e->combat);
+    return report;
+}
+
+/* sub_08071648 / sub_08071764: the projectile emitted after Merman's
+ * animation-3 wind-up. */
+static void merman_shot(const AosEnemy *owner, const AosEnemyKind *kind,
+                        AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy shot = {0};
+    shot.id = owner->id;
+    shot.role = AOS_ROLE_MERMAN_SHOT;
+    shot.x = owner->x + (owner->mirrored ? AOS_FIXED(5) : -AOS_FIXED(5));
+    shot.y = owner->y - AOS_FIXED(24);
+    shot.vx = owner->mirrored ? 0x20000 : -0x20000;
+    shot.mirrored = owner->mirrored;
+    shot.static_frame = -1;
+    shot.stats = owner->stats;
+    shot.hp = owner->hp;
+    shot.combat.type = AOS_TYPE_ENEMY;
+    play(&shot, kind->anims, 6);
+    report->children[report->child_count++] = shot;
+}
+
+static AosHitReport merman_shot_update(AosEnemy *shot, AosSoma *soma,
+                                       const AosEnemyKind *kind,
+                                       const AosWeaponEntity *weapon,
+                                       const AosWeaponFrames *weapon_frames, int soma_atk,
+                                       int soma_def, int cam_x, int cam_y,
+                                       uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (shot->state == 2) {
+        generic_death(shot, kind, random, &report);
+        return report;
+    }
+    shot->x += shot->vx;
+    step_anim(shot, kind->anims);
+    int sx = (shot->x >> 16) - cam_x, sy = (shot->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x10) > 0x110 || (uint16_t)sy > 0xB0) {
+        shot->removed = true;
+        return report;
+    }
+    report = collide(shot, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if ((report.enemy_hit || report.soma_hit) && !shot->removed) {
+        shot->state = 2;
+        shot->timer = 40;
+        shot->combat.attack_off = shot->combat.hurt_off = true;
+    }
+    aos_combat_tick(&shot->combat);
+    return report;
+}
+
+/* EnemyMermanUpdate, sub_08070E68 and sub_080714A4. The collision layer
+ * does not encode the separate room-water height, so the native surface
+ * crossings are represented by their exact timed phases around the spawn
+ * Y while the solid probes remain native BG1 probes. */
+static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
+                                  const AosCollision *layer, const AosEnemyKind *kind,
+                                  const AosWeaponEntity *weapon,
+                                  const AosWeaponFrames *weapon_frames, int soma_atk,
+                                  int soma_def, int cam_x, int cam_y,
+                                  uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (e->state == 4) {
+        step_anim(e, kind->anims);
+        return report;
+    }
+    if (e->state == 2) {
+        e->vy += e->ay;
+        e->y += e->vy;
+        generic_death(e, kind, random, &report);
+        aos_combat_tick(&e->combat);
+        return report;
+    }
+    if (e->state == 3) {
+        if ((random() & 7) == 0 && e->spawned_count < 3 && e->param0 == 1) {
+            report.spawn = true;
+            report.spawn_x = cam_x + 0x90 + (int32_t)(random() & 0xFF);
+            report.spawn_y = (e->y >> 16) + 0x20;
+            report.spawn_param1 = 0;
+            e->spawned_count++;
+            e->timer = 60;
+        }
+        return report;
+    }
+
+    int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    if (e->state == 1) {
+        if (e->step == 0) {
+            play_loop(e, kind->anims, 3, false);
+            e->step = 1;
+        } else if (e->step == 1 && e->cycle_done) {
+            merman_shot(e, kind, &report);
+            e->step = 2;
+        } else if (e->step == 2 && e->cycle_done) {
+            e->state = 0;
+            e->step = e->param0 ? 0 : 6;
+            e->timer = 0;
+            e->vy = -0x40000;
+            e->ay = 0x1800;
+            e->vx = toward_facing(e, 0x8000);
+            play(e, kind->anims, 2);
+        }
+    } else if (e->step == 0) {
+        if (++e->timer > 60) {
+            e->timer = 0;
+            e->step = 1;
+            e->vy = -0x8000;
+        }
+    } else if (e->step == 1) {
+        e->y += e->vy;
+        e->vy -= 0x8000;
+        if (++e->timer >= 8) {
+            e->step = 2;
+            e->timer = 0;
+        }
+    } else if (e->step == 2) {
+        face_player(e, soma);
+        e->vx = toward_facing(e, 0x8000);
+        e->vy = -0x30000;
+        e->ay = 0x1800;
+        play(e, kind->anims, 2);
+        e->step = 6;
+    } else if (e->step == 4) {
+        if (++e->timer > 32) {
+            e->step = 2;
+            e->timer = 0;
+        }
+    } else { /* Steps 5, 6, 9 and 10 are the native ballistic phases. */
+        int collision = walk_collide(e, layer, 0x10000, (int32_t)0xFFE00000, 0, 8);
+        if (collision & 4) {
+            if (++e->timer > 60) {
+                e->timer = 0;
+                if ((random() & 3) == 0) {
+                    e->state = 1;
+                    e->step = 0;
+                    stop(e);
+                } else {
+                    face_player(e, soma);
+                    e->vx = toward_facing(e, 0x8000);
+                    e->vy = -0x30000;
+                    e->ay = 0x1800;
+                }
+            }
+        }
+    }
+
+    step_anim(e, kind->anims);
+    sx = (e->x >> 16) - cam_x;
+    sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0) {
+        AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        merge_enemy_hit(&report, hit);
+    }
     aos_combat_tick(&e->combat);
     return report;
 }
@@ -6603,6 +6886,12 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
         imp_death_child_update(enemy, kind, cam_y);
         return report;
     }
+    if (enemy->role == AOS_ROLE_MERMAN_SHOT)
+        return merman_shot_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                                  cam_x, cam_y, random);
+    if (enemy->role == AOS_ROLE_RIPPER_BLADE)
+        return ripper_blade_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                                   cam_x, cam_y);
     if ((enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN) &&
         enemy->role == AOS_ROLE_ENEMY)
         return harpy_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
@@ -6615,10 +6904,12 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
         enemy->role == AOS_ROLE_ENEMY)
         return devil_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
-    if (enemy->role == AOS_ROLE_ENEMY &&
-        (enemy->id == AOS_ENEMY_MERMAN || enemy->id == AOS_ENEMY_RIPPER))
-        return batch_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
-                                  soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_MERMAN && enemy->role == AOS_ROLE_ENEMY)
+        return merman_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                             cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_RIPPER && enemy->role == AOS_ROLE_ENEMY)
+        return ripper_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                             cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) &&
         enemy->role == AOS_ROLE_ENEMY)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);

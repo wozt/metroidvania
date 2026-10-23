@@ -694,10 +694,17 @@ once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
 The constructor-table audit also connected an eight-enemy batch. Merman
-(0x03) and Ripper (0x4A) currently stop at their native identities, graphics,
-palettes, animation descriptors, frame boxes, room records, contact combat,
-basic locomotion and global inert states; their specialized attacks remain
-partial.
+(0x03) runs its submerged wait, rise, ballistic water arcs and animation-3
+attack, which emits its animation-6 horizontal shot. Its parameter-1 form is
+the hidden room producer, capped at three linked bodies, and its specialized
+death falls for 40 frames. The collision export does not preserve the room's
+independent water height, so the surface transitions retain their native
+timing around the entity record Y rather than querying that height. Ripper
+(0x4A) uses its exact six-way random jump table, close-player reversal,
+landing delay, attack animation and accelerating linked blade, followed by
+the native 50-frame falling death. Both retain their native graphics,
+palettes, frame boxes, combat and global inert states. Sounds, palette
+callbacks and rewards remain outside the runtime.
 
 Tiny Devil (0x10) and Imp (0x31) share one sheet with palette banks 1 and 0,
 including the per-component OBJ palette-row byte used by their OAM records,

@@ -55,6 +55,95 @@ static void batch_enemy_tests(void) {
         assert(e.x != x0 || e.y != y0);
     }
 
+    /* Ripper uses the native six-way jump table: draw 0 is the steep
+     * animation-0 hop, draw 3 is the long shallow attack hop. Its one-shot
+     * animation creates the linked accelerating blade near the apex. */
+    AosEnemy ripper;
+    assert(aos_enemy_create(&ripper, AOS_ENEMY_RIPPER, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_update(&ripper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(ripper.step == 6 && ripper.vx == 0xD000 && ripper.vy == -0x30000 &&
+           ripper.ay == 0xA000 && ripper.anim.id == 0);
+    assert(aos_enemy_create(&ripper, AOS_ENEMY_RIPPER, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    static const uint32_t ripper_draws[] = {3};
+    script = ripper_draws;
+    script_at = 0;
+    AosHitReport hit = aos_enemy_update(&ripper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                        scripted);
+    assert(ripper.step == 5 && ripper.vx == 0x1A000 && ripper.ay == 0x2800 && script_at == 1);
+    AosEnemy blade = {0};
+    bool got_blade = false;
+    for (int frame = 0; frame < 80 && !got_blade; ++frame) {
+        hit = aos_enemy_update(&ripper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               never_zero);
+        if (hit.child_count) {
+            assert(hit.child_count == 1 && hit.children[0].role == AOS_ROLE_RIPPER_BLADE);
+            blade = hit.children[0];
+            got_blade = true;
+        }
+    }
+    assert(got_blade && blade.parent == &ripper && blade.vx == 0x30000);
+    int32_t blade_x = blade.x;
+    aos_enemy_update(&blade, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(blade.x > blade_x && blade.vx > 0x30000);
+    soma.x = blade.x + blade.vx;
+    soma.y = blade.y;
+    hit = aos_enemy_update(&blade, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.soma_hit && blade.state == 6 && blade.vy == 0x8000 && blade.ay == 0x1000);
+    soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(159), NULL);
+    ripper.state = 0xFF;
+    ripper.step = 0;
+    aos_enemy_update(&ripper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(ripper.step == 1 && ripper.anim.id == 2 && ripper.timer == 49 && ripper.ay == 0x2000);
+
+    /* Merman's hidden form produces at most three waiting bodies. The body
+     * attack plays animation 3 and launches its animation-6 horizontal shot;
+     * state 2 is its 40-frame falling death. */
+    AosEnemy spawner;
+    assert(aos_enemy_create(&spawner, AOS_ENEMY_MERMAN, 100, 100, 1, 1, &soma, &layer, &kind,
+                            &stats));
+    hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(hit.spawn && hit.spawn_x == 0x90 && hit.spawn_y == 132 &&
+           spawner.spawned_count == 1);
+    hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(hit.spawn && spawner.spawned_count == 2);
+    hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(hit.spawn && spawner.spawned_count == 3);
+    hit = aos_enemy_update(&spawner, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(!hit.spawn && spawner.spawned_count == 3);
+    AosEnemy merman;
+    assert(aos_enemy_create(&merman, AOS_ENEMY_MERMAN, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    merman.state = 1;
+    merman.step = 0;
+    AosEnemy merman_projectile = {0};
+    bool got_projectile = false;
+    for (int frame = 0; frame < 20 && !got_projectile; ++frame) {
+        hit = aos_enemy_update(&merman, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               never_zero);
+        if (hit.child_count) {
+            assert(hit.child_count == 1 && hit.children[0].role == AOS_ROLE_MERMAN_SHOT);
+            merman_projectile = hit.children[0];
+            got_projectile = true;
+        }
+    }
+    assert(got_projectile && merman_projectile.anim.id == 6 && merman_projectile.vx == 0x20000);
+    int32_t shot_x = merman_projectile.x;
+    aos_enemy_update(&merman_projectile, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                     never_zero);
+    assert(merman_projectile.x > shot_x);
+    merman.state = 2;
+    merman.timer = 40;
+    merman.vy = 0;
+    merman.ay = 0x2000;
+    aos_enemy_update(&merman, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(merman.timer == 39 && merman.vy == 0x2000);
+
     /* The two native aliases execute the same locomotion from equal state. */
     AosEnemy harpy, siren, gorgon, catoblepas;
     assert(aos_enemy_create(&harpy, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer, &kind,

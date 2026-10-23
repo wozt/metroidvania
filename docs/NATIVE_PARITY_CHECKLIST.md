@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 352 | 3221 |
+| Castlevania: Aria of Sorrow | 371 | 3202 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1397,14 +1397,14 @@ Known divergences: The petrification of gold heads (contact element 0x100), soun
 Next action: Port the petrification of gold heads with Soma's status effects.
 Evidence: in game: `aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP`.
 
-[~] **`aos.enemies.merman` — Merman.** Native identity, graphics, palette, animations, active and hidden constructor forms, initial jump, frame boxes, combat, generic death and global inert state are connected.
+[+] **`aos.enemies.merman` — Merman.** The active body now runs its submerged wait, rise, ballistic water arcs, animation-3 attack and animation-6 horizontal shot. Parameter 1 creates the hidden producer, capped at three linked bodies whose removal releases its count. The specialized 40-frame falling death, combat, global inert state, graphics, palettes, animations and frame boxes are connected.
 
-Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyMermanCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyMermanUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`.  
+Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyMermanCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyMermanUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080709D8`, `aos:asm:asm/code/code_080709D8.s:sub_08070A08`, `aos:asm:asm/code/code_080709D8.s:sub_08070A30`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`, `aos:asm:asm/code/code_080709D8.s:sub_08070B10`, `aos:asm:asm/code/code_080709D8.s:sub_08070E68`, `aos:asm:asm/code/code_080709D8.s:sub_080714A4`, `aos:asm:asm/code/code_080709D8.s:sub_080715B4`, `aos:asm:asm/code/code_080709D8.s:sub_08071648`, `aos:asm:asm/code/code_080709D8.s:sub_08071764`, `aos:asm:asm/code/code_080709D8.s:sub_08071830`, `aos:asm:asm/code/code_080709D8.s:sub_08071870`, `aos:asm:asm/code/code_080709D8.s:sub_0807188C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Known divergences: The water exit trigger, hidden spawner production, exact timers, attack, collision probes, death callback, sounds and palette effects are not ported.  
-Next action: Port the water-aware spawn and attack states from EnemyMermanUpdate.
-Evidence: in game: `aria area_07_room_002 (--spawn 160 175 --hp 9999): the active Merman row renders, moves and damages Soma for 14 HP twice by frame 120`.
+Known divergences: The collision export has no independent room-water height, so surface crossings use the native timed phases around the record Y; sounds, palette callbacks and rewards are not ported.  
+Next action: Compare the water-surface crossing height and spawner screen coordinates against an emulator.
+Evidence: in game: `aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts`.
 
 [+] **`aos.enemies.mimic` — Mimic.** The placed closed chest (parameter 0 set: sprite frame 0, the hurtbox 0x0E10F2F8, no attack box, floor snap), the hidden Mimic with its trigger (hurtbox 0x100CF8FA) that bursts in flames and wakes it, the fall of sub_080698A8 (vy + 0x2000 up to 4.0, landing at vy 1.0), the opening when the player is in (x - 16, y - 20, 32, 20) (animation 0 once, then animation 1), the hit into the generic death (animation 3 closed, 2 open), the knockback contact and the inert state 2 under gEwramData + 0x8E bit 0x40 are ported.
 
@@ -1445,15 +1445,15 @@ Known divergences: As the blue crow: sounds 0x72 and 0x8B, the palette bits, the
 Next action: Follow the blue crow's open items.
 Evidence: in game: `aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)`.
 
-[~] **`aos.enemies.ripper` — Ripper.** Native constructor-table identity, Fleaman sheet palette bank 1, animations, frame boxes, grounded jumps toward Soma, combat, generic death and global inert state are connected.
+[+] **`aos.enemies.ripper` — Ripper.** The exact six-way random jump table, close-player reversal, carried drop, landing delay, attack animation, accelerating linked blade and its falling collision state are ported. Ripper uses its native animation-2 50-frame falling death, frame boxes, combat and global inert state.
 
-Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperUpdate`.  
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C25F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2A18`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2ABC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2B74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2D20`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2D70`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2DC4`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.fleaman`.  
-Known divergences: Its exact random jump table, hit callback, death timing, sounds and palette effects are not ported.  
-Next action: Port the exact jump selection and death callback from EnemyRipperUpdate.
-Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): the Ripper group renders, jumps and damages Soma for 80 HP twice by frame 120`.
+Known divergences: Animation-marker timing is represented by the exported animation frame/cycle state; sounds, palette callbacks and rewards are not ported.  
+Next action: Compare the blade animation marker and acceleration rounding frame by frame with an emulator.
+Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts`.
 
 [+] **`aos.enemies.siren` — Siren (Harpy's routines).** The native constructor and updater alias Harpy with palette bank 1. It uses the shared flight, recoil and death states plus its distinct three-note frame 14/13/14 fan and repeating 16-frame angular bend.
 

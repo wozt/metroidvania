@@ -461,7 +461,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_BEAM_FLASH ||
                  e->enemy.role == AOS_ROLE_NEMESIS_HELPER ||
                  e->enemy.role == AOS_ROLE_NEMESIS_EFFECT ||
-                 e->enemy.role == AOS_ROLE_IMP_HELPER) &&
+                 e->enemy.role == AOS_ROLE_IMP_HELPER ||
+                 e->enemy.role == AOS_ROLE_RIPPER_BLADE) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
@@ -500,7 +501,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_DOLL_PIECE ||
                                        hit.children[c].role == AOS_ROLE_NEMESIS_HELPER ||
                                        hit.children[c].role == AOS_ROLE_NEMESIS_EFFECT ||
-                                       hit.children[c].role == AOS_ROLE_IMP_HELPER
+                                       hit.children[c].role == AOS_ROLE_IMP_HELPER ||
+                                       hit.children[c].role == AOS_ROLE_RIPPER_BLADE
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};
@@ -514,7 +516,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 *child = (AriaEntity){.kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.spawn_x,
                                       .y = hit.spawn_y, .param1 = hit.spawn_param1,
                                       .spawned = true, .spawner = (int)i};
-                if (aos_enemy_create(&child->enemy, (uint8_t)e->id, hit.spawn_x, hit.spawn_y, 0,
+                /* Merman's hidden producer writes parameter 0 = 1 on its
+                 * children, selecting their 60-frame submerged wait. */
+                int16_t child_param0 = e->id == AOS_ENEMY_MERMAN ? 1 : 0;
+                if (aos_enemy_create(&child->enemy, (uint8_t)e->id, hit.spawn_x, hit.spawn_y,
+                                     child_param0,
                                      hit.spawn_param1,
                                      soma, layer, kind, combat->stats[e->id]))
                     room->entity_count++;

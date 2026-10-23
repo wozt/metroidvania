@@ -20,7 +20,8 @@
  * Harpy (0x38) and Siren (0x0F, the same code) with their distinct volleys,
  * Gorgon (0x33) and Catoblepas (0x1C, the same code) with their breath clouds,
  * Tiny Devil (0x10) with its aimed orb, Imp (0x31) with its linked helper
- * and forced-attack state,
+ * and forced-attack state, Merman (0x03) with its hidden producer and shot,
+ * and Ripper (0x4A) with its accelerating blade,
  * the Killer Doll (0x1F) and Lightning Doll (0x3B) with their burning pieces, the beam skeleton
  * (0x59) with its beam and bones, Nemesis (0x26), Skull Millione (0x5B),
  * Cagnazzo (0x49, with its fin) and Lubicant (0x63,
@@ -149,7 +150,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_HARPY_SHOT = 17, AOS_ROLE_SIREN_SHOT = 18,
        AOS_ROLE_GORGON_BREATH = 19, AOS_ROLE_GORGON_DEBRIS = 20,
        AOS_ROLE_TINY_DEVIL_ORB = 21, AOS_ROLE_IMP_HELPER = 22,
-       AOS_ROLE_IMP_DEATH = 23 };
+       AOS_ROLE_IMP_DEATH = 23, AOS_ROLE_MERMAN_SHOT = 24,
+       AOS_ROLE_RIPPER_BLADE = 25 };
 
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */

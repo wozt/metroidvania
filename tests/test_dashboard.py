@@ -171,7 +171,7 @@ class OutputTests(unittest.TestCase):
         # Not one of the five enemy drops of is_drop().
         self.assertNotIn("Water Drop", mzm_items)
         aos_partial = {row["name"] for row in aos["monsters"] if row["status"] == "partial"}
-        self.assertEqual(aos_partial, {"Merman", "Ripper"})
+        self.assertEqual(aos_partial, set())
         aos_functional = {row["name"] for row in aos["monsters"]
                           if row["status"] == "functional"}
         self.assertEqual(aos_functional, {"Bat", "Zombie", "Blue Crow", "Zombie Soldier",
@@ -184,7 +184,7 @@ class OutputTests(unittest.TestCase):
                                           "Dead Crusader", "Cagnazzo", "Skull Millione",
                                           "Lubicant", "Killer Doll", "Lightning Doll", "Nemesis",
                                           "Beam Skeleton", "Siren", "Catoblepas", "Gorgon",
-                                          "Harpy", "Tiny Devil", "Imp"})
+                                          "Harpy", "Tiny Devil", "Imp", "Merman", "Ripper"})
         unnamed = [row for row in aos["monsters"] if row["status"] == "not_started"]
         self.assertTrue(all(row["name"].startswith("Enemy 0x") for row in unnamed))
         self.assertEqual(len(aos["items"]), len(dashboard.ARIA_ITEM_FAMILIES))

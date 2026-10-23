@@ -6048,6 +6048,10 @@ static void white_dragon_children(const AosEnemy *owner, const AosAnimSet *anims
         child.static_frame = -1;
         child.variant = (uint8_t)i;
         child.angle = owner->phase + i * 0x1000u;
+        /* sub_080771C8 assigns the middle body record the shared affine
+         * matrix at unit scale; the other records remain regular OAM. */
+        child.scaled = i == 5;
+        child.scale = child.scaled ? 0xFFFF : 0;
         child.x = owner->x + (owner->mirrored ? 1 : -1) * (int32_t)((i + 1) * 0x80000);
         child.y = owner->y + (int32_t)(aos_sine(child.angle) / 8);
         child.mirrored = owner->mirrored;
@@ -6087,6 +6091,8 @@ static AosHitReport linked_early_child_update(AosEnemy *child, const AosEnemyKin
     int32_t curve = 0x20000 + (int32_t)i * 0x8000;
     int32_t side = owner->mirrored ? 1 : -1;
     child->angle = (uint16_t)(bend + (owner->mirrored ? 0x8000u : 0));
+    child->scaled = i == 5;
+    child->scale = child->scaled ? 0xFFFF : 0;
     child->x = owner->x + side * (spacing + fixed_mul(aos_sine(bend + 0x4000u), curve));
     child->y = owner->y + fixed_mul(aos_sine(bend), curve);
     step_anim(child, kind->anims);

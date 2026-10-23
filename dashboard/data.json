@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-23T20:15:22+00:00",
+ "generated_at": "2026-10-23T20:21:00+00:00",
  "git": {
-  "commit": "0cd80bc",
+  "commit": "e921b7c",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 187,
+   "total": 188,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 31,
+    "partial": 32,
     "functional": 145,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 145,
-   "functional_or_better_percent": 77.5,
-   "with_passing_tests": 175,
+   "functional_or_better_percent": 77.1,
+   "with_passing_tests": 176,
    "with_passing_tests_percent": 93.6,
    "unknown_or_blocked": 1,
    "features": [
@@ -285,6 +285,7 @@
     "assets.aria_rooms",
     "assets.aria_soma",
     "assets.aria_weapons",
+    "assets.aria_white_dragon_affine_slot_0473",
     "assets.audio",
     "assets.enemy_sprites_mzm",
     "assets.mzm_projectiles",
@@ -500,11 +501,11 @@
    "areas": [
     "assets"
    ],
-   "total": 16,
+   "total": 17,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 8,
+    "partial": 9,
     "functional": 8,
     "faithful": 0,
     "validated": 0,
@@ -512,8 +513,8 @@
     "unknown": 0
    },
    "functional_or_better": 8,
-   "functional_or_better_percent": 50.0,
-   "with_passing_tests": 16,
+   "functional_or_better_percent": 47.1,
+   "with_passing_tests": 17,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -525,6 +526,7 @@
     "assets.aria_rooms",
     "assets.aria_soma",
     "assets.aria_weapons",
+    "assets.aria_white_dragon_affine_slot_0473",
     "assets.audio",
     "assets.enemy_sprites_mzm",
     "assets.mzm_projectiles",
@@ -11111,8 +11113,8 @@
     "sub_08077458",
     "sub_080773AC"
    ],
-   "limitations": "The native affine scale/matrix choreography, articulated hit callbacks, palette callbacks and sounds are not ported. The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles forwarded to the renderer.",
-   "next_action": "Trace the native affine scale/matrix sequence, damage callbacks and attack state machine.",
+   "limitations": "The native affine scale/matrix choreography beyond the shared unit slot, articulated hit callbacks, palette callbacks and sounds are not ported. The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles, with variant 5 using the shared unit-scale affine slot.",
+   "next_action": "Trace the remaining affine scale/matrix sequence, damage callbacks and attack state machine.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
@@ -13059,6 +13061,56 @@
    }
   },
   {
+   "id": "assets.aria_white_dragon_affine_slot_0473",
+   "area": "assets",
+   "category": "gameplay",
+   "title": "Aria White Dragon central affine slot",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "assets.aria_polar_affine_motion_0472"
+   ],
+   "native_routines": [],
+   "limitations": "The middle linked body record uses the native shared unit-scale affine slot and tracked angle; full scale/matrix choreography, attack timing, damage callbacks, fades, sounds and rewards remain open.",
+   "next_action": "",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": "2026-10-23",
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
    "id": "assets.audio",
    "area": "assets",
    "category": "audio",
@@ -14571,6 +14623,12 @@
  },
  "timeline": [
   {
+   "commit": "e921b7c",
+   "date": "2026-10-23",
+   "subject": "Advance Aria polar and articulated enemy motion",
+   "scope": "project"
+  },
+  {
    "commit": "0cd80bc",
    "date": "2026-10-23",
    "subject": "Wire Aria early enemy motion controllers",
@@ -15042,12 +15100,6 @@
    "commit": "988d011",
    "date": "2026-10-19",
    "subject": "Record an in-game check for enemy drops",
-   "scope": "project"
-  },
-  {
-   "commit": "04c67c1",
-   "date": "2026-10-19",
-   "subject": "Port the Chozodia alarm presentation",
    "scope": "project"
   }
  ],

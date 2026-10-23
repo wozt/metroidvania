@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0473 - Aria White Dragon central affine slot
+
+- Connected the White Dragon's native shared affine slot to the middle linked
+  body record (variant 5): it is rendered at unit scale with its tracked body
+  angle, while the other eight records stay regular OAM sprites.
+- Added a ROM-free assertion for the affine record and kept the existing
+  curved chain, two-batch emission and parent lifetime behavior unchanged.
+- This is a narrow graphics/controller slice, not full White Dragon parity;
+  the complete scale/matrix choreography, damage callbacks, attack states,
+  sounds and rewards remain partial, as do the Peeping Eye attack states.
+- Next: trace the Peeping Eye attack state table and finish the White Dragon
+  affine damage/attack callbacks before moving to the next linked family.
+
 ## Patch 0472 - Aria polar and articulated early-enemy motion
 
 - Connected the Peeping Eye's target-oriented polar segment pass: the parent

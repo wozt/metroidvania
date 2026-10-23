@@ -78,6 +78,7 @@ static void early_enemy_batch_tests(void) {
     for (unsigned i = 0; i < dragon_parts.child_count; ++i)
         assert(dragon_parts.children[i].role == AOS_ROLE_WHITE_DRAGON_PART &&
                dragon_parts.children[i].anim.id == 1);
+    assert(dragon_parts.children[5].scaled && dragon_parts.children[5].scale == 0xFFFF);
     dragon_parts = aos_enemy_update(&dragon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                                     never_zero);
     assert(dragon_parts.child_count == 1 && dragon.spawned_count == 9);

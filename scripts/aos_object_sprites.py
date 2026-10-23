@@ -101,15 +101,15 @@ ENEMIES = {
     # EnemyHarpyCreate and EnemySirenCreate share code and graphics; Siren
     # selects the second palette bank.
     "harpy": {"id": 0x38, "graphics": 0x081CBF6C, "palette": 0x0820A53C, "bank": 0,
-              "frames": 0x08216060},
+              "frames": 0x08216060, "static_frames": tuple(range(8, 15))},
     "siren": {"id": 0x0F, "graphics": 0x081CBF6C, "palette": 0x0820A53C, "bank": 1,
-              "frames": 0x08216060},
+              "frames": 0x08216060, "static_frames": tuple(range(8, 15))},
     # EnemyGorgonCreate and EnemyCatoblepasCreate share their state machine;
     # Catoblepas uses palette bank 1.
     "gorgon": {"id": 0x33, "graphics": 0x081CBFF4, "palette": 0x0820A890, "bank": 0,
-               "frames": 0x0821ECE8},
+               "frames": 0x0821ECE8, "static_frames": tuple(range(17, 27))},
     "catoblepas": {"id": 0x1C, "graphics": 0x081CBFF4, "palette": 0x0820A890, "bank": 1,
-                   "frames": 0x0821ECE8},
+                   "frames": 0x0821ECE8, "static_frames": tuple(range(17, 27))},
     # Tiny Devil and Imp share a sheet and frame descriptor with different
     # palette banks.
     "tiny_devil": {"id": 0x10, "graphics": 0x081F4254, "palette": 0x0820BE60, "bank": 1,

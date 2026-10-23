@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-23T00:44:59+00:00",
+ "generated_at": "2026-10-23T16:26:42+00:00",
  "git": {
-  "commit": "74ca309",
+  "commit": "e124fa9",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 25,
-    "functional": 137,
+    "partial": 21,
+    "functional": 141,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 137,
-   "functional_or_better_percent": 79.2,
+   "functional_or_better": 141,
+   "functional_or_better_percent": 81.5,
    "with_passing_tests": 161,
    "with_passing_tests_percent": 93.1,
    "unknown_or_blocked": 1,
@@ -411,15 +411,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 13,
-    "functional": 31,
+    "partial": 9,
+    "functional": 35,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 31,
-   "functional_or_better_percent": 70.5,
+   "functional_or_better": 35,
+   "functional_or_better_percent": 79.5,
    "with_passing_tests": 44,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -8764,8 +8764,8 @@
    "area": "aos",
    "category": "enemies",
    "title": "Catoblepas (Gorgon's routines)",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
@@ -8781,14 +8781,14 @@
     "EnemyCatoblepasCreate",
     "EnemyCatoblepasUpdate"
    ],
-   "limitations": "The Gorgon's attacks, petrifying breath, exact timers, collision probes, death callback, sounds and palette effects are not ported. The native constructor and updater alias Gorgon; palette bank 1, room identity, frame boxes, grounded patrol, combat, generic death and the global inert state are connected.",
-   "next_action": "Port the shared Gorgon attack state machine and collision probes.",
+   "limitations": "The exact native gait table, slope and edge probes, particle offsets, random flips, entity-slot ordering, sounds 0x67/0x71, palette callbacks and rewards are not modelled. The native constructor and updater alias Gorgon. Palette bank 1, grounded patrol, attack trigger and wind-up, the 21-cloud petrifying-breath stream, cloud frame transition and alternating collision, six-piece death, combat and global inert state are connected.",
+   "next_action": "Refine the shared gait and collision probes when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_00_room_039: Catoblepas renders with its native palette and damages Soma for 50 HP during a 180-frame capture"
+     "aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -9309,8 +9309,8 @@
    "area": "aos",
    "category": "enemies",
    "title": "Gorgon",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
@@ -9323,16 +9323,23 @@
    "native_routines": [
     "EnemyGorgonCreate",
     "EnemyGorgonUpdate",
+    "sub_080890E8",
+    "sub_08089560",
+    "sub_080896D8",
+    "sub_0808975C",
+    "sub_0808982C",
+    "sub_0808990C",
+    "sub_080899FC",
     "sub_08089A50"
    ],
-   "limitations": "Its attacks, petrifying breath, exact timers, collision probes, death callback, sounds and palette effects are not ported. The native constructor identity, graphics, palette, animations, frame boxes, grounded patrol, combat, generic death and global inert state are connected; Catoblepas shares this path.",
-   "next_action": "Port the attack state machine and collision probes from EnemyGorgonUpdate.",
+   "limitations": "The native custom gait table is represented by exported animation sequences. Exact slope and edge probes, particle offsets, random flips, entity-slot ordering, sounds 0x67/0x71, palette callbacks and rewards are not modelled. Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path.",
+   "next_action": "Refine the gait and collision probes when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_05_room_000 (--spawn 300 223 --hp 9999): both Gorgons render, patrol and one damages Soma for 66 HP by frame 120"
+     "aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon renders, emits the visible breath stream by frame 205 and damages Soma for 66 HP"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -9420,8 +9427,8 @@
    "area": "aos",
    "category": "enemies",
    "title": "Harpy",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
@@ -9434,16 +9441,29 @@
    "native_routines": [
     "EnemyHarpyCreate",
     "EnemyHarpyUpdate",
-    "sub_0807628C"
+    "sub_080756FC",
+    "sub_0807594C",
+    "sub_08075BD8",
+    "sub_08075CAC",
+    "sub_08075D90",
+    "sub_08075E40",
+    "sub_08075EDC",
+    "sub_08076244",
+    "sub_0807628C",
+    "sub_08076320",
+    "sub_08076390",
+    "sub_080763DC",
+    "sub_0807642C",
+    "sub_08076464"
    ],
-   "limitations": "The native attack selection, acceleration curves, timers, projectiles, death callback, sounds and palette effects are not ported. Native identity, palette bank 0, animations, frame boxes, aerial pursuit, combat, generic death and global inert state are connected; Siren shares this path.",
-   "next_action": "Port the complete Harpy attack state machine.",
+   "limitations": "Exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds 0x87/0x89/0x8B/0x1C3, palette callbacks and rewards are not modelled. Random flight or volley selection, target approach and braking, the two-stage five-feather volley with native frames 8..12 and boxes, weapon-hit recoil, four-fragment falling death, combat and global inert state are connected; Siren shares the body path.",
+   "next_action": "Refine acceleration and activity-region clamping when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_06_room_000 (--spawn 256 159 --hp 9999): both Harpies render, pursue Soma and one damages him for 40 HP by frame 120"
+     "aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -10180,8 +10200,8 @@
    "area": "aos",
    "category": "enemies",
    "title": "Siren (Harpy's routines)",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
@@ -10197,14 +10217,14 @@
     "EnemySirenCreate",
     "EnemySirenUpdate"
    ],
-   "limitations": "As Harpy: the native attack selection, acceleration curves, timers, projectiles, death callback, sounds and palette effects are not ported. The native constructor and updater alias Harpy; palette bank 1, room identity, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.",
-   "next_action": "Follow the Harpy's open items.",
+   "limitations": "As Harpy, exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds, palette callbacks and rewards are not modelled. The native constructor and updater alias Harpy with palette bank 1. It uses the shared flight, recoil and death states plus its distinct three-note frame 14/13/14 fan and repeating 16-frame angular bend.",
+   "next_action": "Refine the shared acceleration and activity-region clamping when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_00_room_009: the three Sirens render with their native palette and pursue Soma during a 180-frame capture"
+     "aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren renders with its native palette, its three-note fan is visible by frame 40 and contact damages Soma for 40 HP"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -12011,7 +12031,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, Merman, Blue Crow, Siren and Harpy, Tiny Devil and Imp, Gorgon and Catoblepas, Ripper, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, helper anchors and translucent technical effect children, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, Merman, Blue Crow, Siren and Harpy with shot/death frames 8..14, Tiny Devil and Imp, Gorgon and Catoblepas with breath/death frames 17..26, Ripper, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, helper anchors and translucent technical effect children, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13697,6 +13717,12 @@
  },
  "timeline": [
   {
+   "commit": "e124fa9",
+   "date": "2026-10-23",
+   "subject": "Connect ten Aria enemy identities",
+   "scope": "project"
+  },
+  {
    "commit": "74ca309",
    "date": "2026-10-23",
    "subject": "Port Nemesis delayed effect history",
@@ -14169,12 +14195,6 @@
    "date": "2026-10-19",
    "subject": "Complete native Skree explosion rotation",
    "scope": "project"
-  },
-  {
-   "commit": "0861385",
-   "date": "2026-10-19",
-   "subject": "Complete native Zeela eye affine clipping",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -14235,9 +14255,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 310,
-    "routines_attached_to_features": 310,
-    "unassigned_routines": 3263,
+    "routines_cited_by_features": 330,
+    "routines_attached_to_features": 330,
+    "unassigned_routines": 3243,
     "call_edges": 14228
    }
   },
@@ -16680,14 +16700,14 @@
      {
       "id": 15,
       "name": "Siren",
-      "status": "partial",
+      "status": "functional",
       "note": "Siren (Harpy's routines)",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c"
        ],
        "in_game_check": [
-        "aria area_00_room_009: the three Sirens render with their native palette and pursue Soma during a 180-frame capture"
+        "aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren renders with its native palette, its three-note fan is visible by frame 40 and contact damages Soma for 40 HP"
        ],
        "emulator_compared": false,
        "played_through": false
@@ -16856,14 +16876,14 @@
      {
       "id": 28,
       "name": "Catoblepas",
-      "status": "partial",
+      "status": "functional",
       "note": "Catoblepas (Gorgon's routines)",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c"
        ],
        "in_game_check": [
-        "aria area_00_room_039: Catoblepas renders with its native palette and damages Soma for 50 HP during a 180-frame capture"
+        "aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP"
        ],
        "emulator_compared": false,
        "played_through": false
@@ -17183,14 +17203,14 @@
      {
       "id": 51,
       "name": "Gorgon",
-      "status": "partial",
+      "status": "functional",
       "note": "Gorgon",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c"
        ],
        "in_game_check": [
-        "aria area_05_room_000 (--spawn 300 223 --hp 9999): both Gorgons render, patrol and one damages Soma for 66 HP by frame 120"
+        "aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon renders, emits the visible breath stream by frame 205 and damages Soma for 66 HP"
        ],
        "emulator_compared": false,
        "played_through": false
@@ -17253,14 +17273,14 @@
      {
       "id": 56,
       "name": "Harpy",
-      "status": "partial",
+      "status": "functional",
       "note": "Harpy",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c"
        ],
        "in_game_check": [
-        "aria area_06_room_000 (--spawn 256 159 --hp 9999): both Harpies render, pursue Soma and one damages him for 40 HP by frame 120"
+        "aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP"
        ],
        "emulator_compared": false,
        "played_through": false

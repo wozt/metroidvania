@@ -693,18 +693,32 @@ beyond 120 pixels it waits for the animation's cycle, plays animation 4
 once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
-The constructor-table audit also connects an eight-enemy batch without
-overstating its fidelity. Merman (0x03), Siren (0x0F), Tiny Devil (0x10),
-Catoblepas (0x1C), Imp (0x31), Gorgon (0x33), Harpy (0x38) and Ripper (0x4A)
-now use their native identities, graphics, palettes, animation descriptors,
-frame boxes, room records, contact combat and global inert states. Siren calls
-the Harpy routines, while Catoblepas calls the Gorgon routines; their second
-palette banks are preserved. Tiny Devil and Imp share one sheet with palette
-banks 1 and 0, including the per-component OBJ palette-row byte that their OAM
-records use. The current behavior layer deliberately stops at basic aerial or
-ground locomotion and generic death. Their individual attack selections,
-projectiles, exact timers, collision probes and specialized death callbacks
-remain partial and are listed separately in the parity registry.
+The constructor-table audit also connected an eight-enemy batch. Merman
+(0x03), Tiny Devil (0x10), Imp (0x31) and Ripper (0x4A) currently stop at
+their native identities, graphics, palettes, animation descriptors, frame
+boxes, room records, contact combat, basic locomotion and global inert states;
+their specialized attacks remain partial. Tiny Devil and Imp share one sheet
+with palette banks 1 and 0, including the per-component OBJ palette-row byte
+used by their OAM records.
+
+Harpy (0x38) and Siren (0x0F) share `EnemyHarpyUpdate`. They idle facing Soma,
+choose between the native animation-2 flight toward his position 24 pixels
+above and the animation-1 ranged attack, brake back to idle, recoil when hit,
+and fall through the 40-frame flame/blink death with four fragments. Harpy's
+two-stage volley uses frames 12/10/8 followed by 11/9 at speed 0.75; Siren uses
+its palette-bank-1 sheet and fires the frames 14/13/14 angular notes, whose
+heading bends for 16 frames in each direction. Each shot carries its native
+6x6 box, can be struck and leaves at the activity margin.
+
+Gorgon (0x33) and Catoblepas (0x1C) share `EnemyGorgonUpdate`, with palette
+banks 0 and 1. They patrol on the floor, turn at collision, wind up through
+animation 2 when Soma is within 80 by 24 pixels, then emit the 21-cloud
+30..70-frame breath stream. A cloud changes from static frame 25 to 26 at 25
+frames, checks its native 14x14 box on alternating frames and expires at 40.
+Death emits static frames 17..22 before the 60-frame flame/blink lifetime.
+The exact hand-authored native gait-frame table is represented by the exported
+animation sequences; sounds, palette flashes and native slot ordering remain
+outside the runtime.
 
 Killer Doll (enemy 0x1F, `EnemyKillerDollCreate` /
 `EnemyKillerDollUpdate`): tiles `0x081F426C`, palette `0x0820BEEC` bank 0

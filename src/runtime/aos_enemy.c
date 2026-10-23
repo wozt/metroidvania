@@ -600,6 +600,11 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         enemy->phase = (uint16_t)(aos_random() & 0xFFFF);
         enemy->home = (int16_t)(enemy->y >> 16);
         enemy->state = flag_8e_40 ? 4 : 0;
+        enemy->step = flag_8e_40 ? 0 : 10;
+        if (!flag_8e_40 && anims && anims->count && anims->anims[0].count) {
+            enemy->anim.tick = (uint8_t)(aos_random() & 0xF);
+            enemy->anim.frame = (uint8_t)(aos_random() % anims->anims[0].count);
+        }
         return true;
     }
     if (id == AOS_ENEMY_GORGON || id == AOS_ENEMY_CATOBLEPAS) {
@@ -1014,6 +1019,14 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 report.enemy_damage = 0;
             enemy->hit_flash = 8;
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
+            if (enemy->hp > 0 &&
+                (enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN)) {
+                /* sub_08075CAC: a surviving weapon hit throws the flyer
+                 * into its short recoil state. */
+                enemy->state = 3;
+                enemy->step = enemy->substep = 0;
+                enemy->timer = 0;
+            }
             if (enemy->hp > 0 && enemy->id == AOS_ENEMY_VALKYRIE && enemy->state == 1) {
                 /* sub_0806EBDC: struck by a weapon (attacker type 3 or 4)
                  * during its attack, it recoils (state 3). */
@@ -1153,6 +1166,20 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) {
                     /* sub_080CA030: the crow dies. */
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN) {
+                    /* sub_08075CAC: animation 3 and a 40-frame falling
+                     * death, with four fragments emitted by its updater. */
+                    play_loop(enemy, kind->anims, 3, false);
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_GORGON ||
+                           enemy->id == AOS_ENEMY_CATOBLEPAS) {
+                    /* sub_080896D8: a 60-frame death whose first update
+                     * emits six native sprite fragments. */
+                    enemy->timer = 0x3C;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                 } else {
@@ -5846,6 +5873,350 @@ static AosHitReport needles_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
     return report;
 }
 
+static void make_static_child(AosEnemy *child, const AosEnemy *owner, uint8_t role,
+                              int frame) {
+    *child = (AosEnemy){.id = owner->id,
+                        .x = owner->x,
+                        .y = owner->y,
+                        .role = role,
+                        .static_frame = (int16_t)frame,
+                        .mirrored = owner->mirrored,
+                        .stats = owner->stats};
+    child->combat.type = AOS_TYPE_ENEMY;
+}
+
+/* sub_08075EDC: the five Harpy feathers (frames 12 down to 8), and
+ * sub_08076054: the Siren's three notes (frames 14, 13, 14). */
+static void harpy_shot(AosEnemy *owner, int variant, AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    static const uint16_t harpy_angles[2][5] = {
+        {0x4000, 0x5000, 0x6000, 0x7000, 0x8000},
+        {0x4000, 0x3000, 0x2000, 0x1000, 0x0000},
+    };
+    static const uint16_t siren_angles[2][3] = {
+        {0x438E, 0x6000, 0x7C72},
+        {0x3C72, 0x2000, 0x038E},
+    };
+    bool siren = owner->id == AOS_ENEMY_SIREN;
+    int count = siren ? 3 : 5;
+    if (variant < 0 || variant >= count) return;
+    AosEnemy child;
+    make_static_child(&child, owner, siren ? AOS_ROLE_SIREN_SHOT : AOS_ROLE_HARPY_SHOT,
+                      siren ? (variant == 1 ? 13 : 14) : 12 - variant);
+    child.variant = (uint8_t)variant;
+    child.angle = siren ? siren_angles[owner->mirrored][variant]
+                        : harpy_angles[owner->mirrored][variant];
+    int32_t speed = siren ? 0x8000 : 0xC000;
+    child.vx = fixed_mul(aos_sine(child.angle + 0x4000u), speed);
+    child.vy = fixed_mul(aos_sine(child.angle), speed);
+    child.x += owner->mirrored ? 0x10000 : -0x10000;
+    child.y += 0x20000;
+    child.own_boxes = true;
+    child.own_hurt = child.own_attack = (AosBox){-3, -3, 6, 6};
+    report->children[report->child_count++] = child;
+}
+
+static AosHitReport harpy_shot_update(AosEnemy *shot, AosSoma *soma,
+                                      const AosEnemyKind *kind,
+                                      const AosWeaponEntity *weapon,
+                                      const AosWeaponFrames *weapon_frames, int soma_atk,
+                                      int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    if (shot->role == AOS_ROLE_SIREN_SHOT) {
+        /* sub_080761B8: bend for 16 frames in one direction, then for 16
+         * in the other, repeating the angular wave. */
+        if ((shot->timer++ & 0x1F) < 16)
+            shot->angle += 0x400;
+        else
+            shot->angle -= 0x400;
+        shot->vx = fixed_mul(aos_sine(shot->angle + 0x4000u), 0x8000);
+        shot->vy = fixed_mul(aos_sine(shot->angle), 0x8000);
+    }
+    integrate(shot);
+    int sx = (shot->x >> 16) - cam_x, sy = (shot->y >> 16) - cam_y;
+    if (sx < -32 || sx > 272 || sy < -32 || sy > 192) {
+        shot->removed = true;
+        return report;
+    }
+    report = collide(shot, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (report.enemy_hit) shot->removed = true;
+    aos_combat_tick(&shot->combat);
+    return report;
+}
+
+static void falling_fragment(AosEnemy *owner, int frame, AosHitReport *report,
+                             uint32_t (*random)(void)) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy child;
+    make_static_child(&child, owner, AOS_ROLE_GORGON_DEBRIS, frame);
+    child.vx = (int32_t)(random() & 0xFFFF) - 0x8000;
+    child.vy = frame == 8 ? (int32_t)(random() & 0x3FFFF) - 0x20000 : 0;
+    child.ay = 0x1400;
+    child.timer = (uint8_t)((random() & 0xF) + 0x28);
+    child.combat.attack_off = child.combat.hurt_off = true;
+    report->children[report->child_count++] = child;
+}
+
+static void falling_fragment_update(AosEnemy *piece, int cam_x, int cam_y) {
+    integrate(piece);
+    int sx = (piece->x >> 16) - cam_x, sy = (piece->y >> 16) - cam_y;
+    piece->hidden = piece->timer < 12 && (piece->timer & 1);
+    if (--piece->timer == 0 || sx < -32 || sx > 272 || sy > 192) piece->removed = true;
+}
+
+static AosHitReport harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+                                 const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk,
+                                 int soma_def, int cam_x, int cam_y,
+                                 uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (e->state == 4) {
+        step_anim(e, kind->anims);
+        return report;
+    }
+    int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    if (e->state == 2) {
+        if (e->step == 0) {
+            for (int i = 0; i < 4; ++i) falling_fragment(e, 8, &report, random);
+            face_player(e, soma);
+            e->vx = e->mirrored ? -0x10000 : 0x10000;
+            e->vy = -0x20000;
+            e->ay = 0x2000;
+            e->step = 1;
+        }
+        integrate(e);
+        generic_death(e, kind, random, &report);
+        aos_combat_tick(&e->combat);
+        return report;
+    }
+    if (e->state == 3) {
+        if (e->step == 0) {
+            face_player(e, soma);
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0xC000);
+            e->vy = -0x30000;
+            e->ay = 0x2000;
+            e->timer = 0;
+            e->step = 1;
+        }
+        integrate(e);
+        if (++e->timer >= 24) {
+            stop(e);
+            play(e, kind->anims, 0);
+            e->state = 0;
+            e->step = 10;
+            e->timer = 0;
+        }
+    } else if (e->state == 0) {
+        face_player(e, soma);
+        e->y += aos_sine(e->phase) / 32;
+        e->phase = (uint16_t)(e->phase + 0x180);
+        int dx = (int)((soma->x - e->x) >> 16);
+        if (dx < 0) dx = -dx;
+        if (++e->timer >= 30 && dx <= 0x59) {
+            stop(e);
+            e->state = 1;
+            e->step = 0;
+            e->timer = 0;
+        }
+    } else if (e->state == 1) {
+        face_player(e, soma);
+        if (e->step == 0) {
+            if (random() & 1) {
+                /* sub_0807594C steps 0..3: fly to Soma's X and 24 pixels
+                 * above him, then brake back into the idle state. */
+                play_loop(e, kind->anims, 2, false);
+                e->walk_timer = soma->x;
+                e->speed = soma->y - 0x180000;
+                e->step = 1;
+            } else {
+                play(e, kind->anims, 1);
+                e->step = 10;
+            }
+            e->timer = 0;
+        } else if (e->step == 1) {
+            if (move_toward(e, e->walk_timer, e->speed, 0xC000)) {
+                e->step = 2;
+                e->timer = 0;
+            }
+            integrate(e);
+        } else if (e->step == 2) {
+            e->vx -= e->vx / 8;
+            e->vy -= e->vy / 8;
+            integrate(e);
+            int32_t avx = e->vx < 0 ? -e->vx : e->vx;
+            int32_t avy = e->vy < 0 ? -e->vy : e->vy;
+            if (++e->timer > 60 || (avx <= 0x7FFF && avy <= 0x7FFF)) e->step = 3;
+        } else if (e->step == 3) {
+            e->vx -= e->vx / 4;
+            e->vy -= e->vy / 4;
+            integrate(e);
+            int32_t avx = e->vx < 0 ? -e->vx : e->vx;
+            int32_t avy = e->vy < 0 ? -e->vy : e->vy;
+            if (avx <= 0x7FFF && avy <= 0x7FFF) {
+                stop(e);
+                play(e, kind->anims, 0);
+                e->state = 0;
+                e->step = 10;
+                e->timer = 0;
+            }
+        } else if (e->step == 10 && ++e->timer > 3) {
+            for (int i = 0; i < 3; ++i)
+                harpy_shot(e, e->id == AOS_ENEMY_SIREN ? i : i * 2, &report);
+            e->step = 11;
+            e->timer = 0;
+        } else if (e->step == 11 && ++e->timer > 7) {
+            if (e->id == AOS_ENEMY_HARPY) {
+                harpy_shot(e, 1, &report);
+                harpy_shot(e, 3, &report);
+            }
+            e->step = 12;
+            e->timer = 0;
+        } else if (e->step == 12 && ++e->timer > 3) {
+            play(e, kind->anims, 0);
+            e->state = 0;
+            e->step = 10;
+            e->timer = 0;
+        }
+    }
+    step_anim(e, kind->anims);
+    sx = (e->x >> 16) - cam_x;
+    sy = (e->y >> 16) - cam_y;
+    if (!e->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0) {
+        AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        if (!report.child_count) report = hit;
+        else {
+            report.soma_hit = hit.soma_hit;
+            report.soma_damage = hit.soma_damage;
+            report.enemy_hit = hit.enemy_hit;
+            report.enemy_damage = hit.enemy_damage;
+            report.killed = hit.killed;
+        }
+    }
+    aos_combat_tick(&e->combat);
+    return report;
+}
+
+static void gorgon_breath(AosEnemy *owner, AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy child;
+    make_static_child(&child, owner, AOS_ROLE_GORGON_BREATH, 25);
+    child.x += owner->mirrored ? 0x2A0000 : -0x2A0000;
+    child.y -= 0x120000;
+    child.angle = owner->phase;
+    child.vx = fixed_mul(aos_sine(child.angle + 0x4000u), 0xC000);
+    child.vy = fixed_mul(aos_sine(child.angle), 0xC000);
+    child.own_boxes = true;
+    child.own_hurt = child.own_attack = (AosBox){-7, -7, 14, 14};
+    report->children[report->child_count++] = child;
+    owner->phase = (uint16_t)(owner->phase + 0x400);
+}
+
+static AosHitReport gorgon_breath_update(AosEnemy *breath, AosSoma *soma,
+                                         const AosEnemyKind *kind,
+                                         const AosWeaponEntity *weapon,
+                                         const AosWeaponFrames *weapon_frames, int soma_atk,
+                                         int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    integrate(breath);
+    if (++breath->timer == 25) breath->static_frame = 26;
+    int sx = (breath->x >> 16) - cam_x, sy = (breath->y >> 16) - cam_y;
+    if (breath->timer > 40 || sx < -32 || sx > 272 || sy < -32 || sy > 192) {
+        breath->removed = true;
+        return report;
+    }
+    if (breath->timer & 1)
+        report = collide(breath, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (report.enemy_hit) breath->removed = true;
+    aos_combat_tick(&breath->combat);
+    return report;
+}
+
+static AosHitReport gorgon_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
+                                  const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                  const AosWeaponFrames *weapon_frames, int soma_atk,
+                                  int soma_def, int cam_x, int cam_y,
+                                  uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (e->state == 3) {
+        step_anim(e, kind->anims);
+        return report;
+    }
+    int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+    if (e->state == 2) {
+        if (e->step == 0) {
+            for (int frame = 17; frame <= 22; ++frame)
+                falling_fragment(e, frame, &report, random);
+            e->step = 1;
+        }
+        generic_death(e, kind, random, &report);
+        aos_combat_tick(&e->combat);
+        return report;
+    }
+    if (e->state == 1) {
+        if (e->step == 0) {
+            play_loop(e, kind->anims, 2, false);
+            e->step = 1;
+            e->timer = 0;
+            e->phase = e->mirrored ? 0x4000 : 0xC000;
+        } else if (e->step == 1) {
+            if (e->cycle_done || ++e->timer >= 48) {
+                e->step = 2;
+                e->timer = 0;
+            }
+        } else if (e->step == 2) {
+            if (e->timer >= 30 && e->timer <= 70 && !(e->timer & 1))
+                gorgon_breath(e, &report);
+            if (++e->timer > 76) {
+                play(e, kind->anims, 0);
+                e->state = 0;
+                e->step = 1;
+                e->timer = 0;
+            }
+        }
+    } else {
+        if (e->step == 0) {
+            snap_to_floor(e, layer);
+            e->step = 1;
+            face_player(e, soma);
+        }
+        if (!e->vx) e->vx = toward_facing(e, 0x8000);
+        if (walk_collide(e, layer, 0x10000, (int32_t)0xFFE00000, 0x8000, 12) & 3) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0x8000);
+        }
+        int dx = (int)((soma->x - e->x) >> 16);
+        int dy = (int)((soma->y - e->y) >> 16);
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if (++e->timer >= 45 && dx <= 0x50 && dy <= 0x18 && random() % 100 <= 50) {
+            stop(e);
+            face_player(e, soma);
+            e->state = 1;
+            e->step = 0;
+            e->timer = 0;
+        }
+    }
+    step_anim(e, kind->anims);
+    sx = (e->x >> 16) - cam_x;
+    sy = (e->y >> 16) - cam_y;
+    if (!e->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0) {
+        AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        if (!report.child_count) report = hit;
+        else {
+            report.soma_hit = hit.soma_hit;
+            report.soma_damage = hit.soma_damage;
+            report.enemy_hit = hit.enemy_hit;
+            report.enemy_damage = hit.enemy_damage;
+            report.killed = hit.killed;
+        }
+    }
+    aos_combat_tick(&e->combat);
+    return report;
+}
+
 /* First native-observable pass for the six newly connected enemy state
  * machines. Siren aliases Harpy, Catoblepas aliases Gorgon, and Tiny Devil
  * shares its resources and aerial locomotion family with Imp. More elaborate
@@ -5942,11 +6313,27 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
+    if (enemy->role == AOS_ROLE_HARPY_SHOT || enemy->role == AOS_ROLE_SIREN_SHOT)
+        return harpy_shot_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                                 cam_x, cam_y);
+    if (enemy->role == AOS_ROLE_GORGON_BREATH)
+        return gorgon_breath_update(enemy, soma, kind, weapon, weapon_frames, soma_atk,
+                                    soma_def, cam_x, cam_y);
+    if (enemy->role == AOS_ROLE_GORGON_DEBRIS) {
+        falling_fragment_update(enemy, cam_x, cam_y);
+        return report;
+    }
+    if ((enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN) &&
+        enemy->role == AOS_ROLE_ENEMY)
+        return harpy_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+                            cam_y, random);
+    if ((enemy->id == AOS_ENEMY_GORGON || enemy->id == AOS_ENEMY_CATOBLEPAS) &&
+        enemy->role == AOS_ROLE_ENEMY)
+        return gorgon_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                             cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_ENEMY &&
-        (enemy->id == AOS_ENEMY_MERMAN || enemy->id == AOS_ENEMY_SIREN ||
-         enemy->id == AOS_ENEMY_TINY_DEVIL || enemy->id == AOS_ENEMY_CATOBLEPAS ||
-         enemy->id == AOS_ENEMY_IMP || enemy->id == AOS_ENEMY_GORGON ||
-         enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_RIPPER))
+        (enemy->id == AOS_ENEMY_MERMAN || enemy->id == AOS_ENEMY_TINY_DEVIL ||
+         enemy->id == AOS_ENEMY_IMP || enemy->id == AOS_ENEMY_RIPPER))
         return batch_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                   soma_def, cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) &&

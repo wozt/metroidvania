@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0466 - Aria Harpy and Gorgon families
+
+- Completed the shared Harpy/Siren body state machine: random flight-versus-
+  volley selection, target approach and braking, weapon-hit recoil, the
+  two-stage five-feather Harpy volley, the Siren's bending three-note fan and
+  the four-fragment falling death are now connected.
+- Completed the shared Gorgon/Catoblepas path with grounded patrol and wall
+  turns, its attack wind-up, all 21 clouds in the native even-frame breath
+  window, the cloud sprite transition and intermittent collision, and its
+  specialized six-piece death.
+- Extended the private object export with Harpy/Siren projectile and death
+  frames 8-14 and Gorgon/Catoblepas breath and death frames 17-26. ROM-free
+  regression tests cover each shared and distinct behavior.
+- Recorded all four identities in native rooms with their attacks visible.
+  They now meet the project's functional evidence rule; exact gait and
+  acceleration rounding, collision-probe nuances, sounds, palette callbacks
+  and reward plumbing remain documented fidelity refinements.
+
 ## Patch 0465 - Aria ten-enemy constructor-table batch
 
 - Audited the ROM constructor table and corrected two historical identity

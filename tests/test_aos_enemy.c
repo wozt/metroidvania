@@ -72,6 +72,104 @@ static void batch_enemy_tests(void) {
     aos_enemy_update(&catoblepas, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(gorgon.x == catoblepas.x && gorgon.y == catoblepas.y);
 
+    /* Harpy's two native volleys are frames 12/10/8 then 11/9. Siren
+     * aliases the body state machine but fires its three-note 14/13/14 fan. */
+    soma.x = AOS_FIXED(140);
+    AosEnemy flyer;
+    assert(aos_enemy_create(&flyer, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    int harpy_shots = 0;
+    for (int frame = 0; frame < 60; ++frame) {
+        AosHitReport hit = aos_enemy_update(&flyer, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                                            0, always_zero);
+        for (int i = 0; i < hit.child_count; ++i) {
+            assert(hit.children[i].role == AOS_ROLE_HARPY_SHOT);
+            assert(hit.children[i].static_frame >= 8 && hit.children[i].static_frame <= 12);
+            ++harpy_shots;
+        }
+    }
+    assert(harpy_shots == 5 && flyer.state == 0);
+    assert(aos_enemy_create(&flyer, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    for (int frame = 0; frame < 30; ++frame)
+        aos_enemy_update(&flyer, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                         always_zero);
+    int32_t dive_x = flyer.x;
+    aos_enemy_update(&flyer, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(flyer.state == 1 && flyer.step == 1 && flyer.anim.id == 2);
+    aos_enemy_update(&flyer, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(flyer.x != dive_x);
+    assert(aos_enemy_create(&flyer, AOS_ENEMY_SIREN, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    int siren_shots = 0;
+    AosEnemy note = {0};
+    for (int frame = 0; frame < 60; ++frame) {
+        AosHitReport hit = aos_enemy_update(&flyer, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                                            0, always_zero);
+        for (int i = 0; i < hit.child_count; ++i) {
+            assert(hit.children[i].role == AOS_ROLE_SIREN_SHOT);
+            assert(hit.children[i].static_frame == 13 || hit.children[i].static_frame == 14);
+            note = hit.children[i];
+            ++siren_shots;
+        }
+    }
+    assert(siren_shots == 3 && flyer.state == 0);
+    uint32_t note_angle = note.angle;
+    int32_t note_x = note.x;
+    aos_enemy_update(&note, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(note.angle == (uint16_t)(note_angle + 0x400) && note.x != note_x);
+
+    /* Gorgon and Catoblepas share the animation-2 wind-up and the native
+     * 30..70-frame breath stream (one child every even frame). */
+    assert(aos_enemy_create(&gorgon, AOS_ENEMY_GORGON, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    int breaths = 0;
+    AosEnemy cloud = {0};
+    for (int frame = 0; frame < 180 && breaths < 21; ++frame) {
+        AosHitReport hit = aos_enemy_update(&gorgon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                                            0, always_zero);
+        for (int i = 0; i < hit.child_count; ++i) {
+            assert(hit.children[i].role == AOS_ROLE_GORGON_BREATH);
+            assert(hit.children[i].static_frame == 25);
+            cloud = hit.children[i];
+            ++breaths;
+        }
+    }
+    assert(breaths == 21 && gorgon.state == 1);
+    for (int frame = 0; frame < 16 && gorgon.state == 1; ++frame)
+        aos_enemy_update(&gorgon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                         always_zero);
+    assert(gorgon.state == 0);
+    for (int i = 0; i < 25; ++i)
+        aos_enemy_update(&cloud, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(cloud.static_frame == 26 && !cloud.removed);
+    for (int i = 0; i < 16; ++i)
+        aos_enemy_update(&cloud, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(cloud.removed);
+
+    /* The specialized deaths emit four Harpy fragments or six Gorgon
+     * frames before their generic flame/blink lifetime. */
+    flyer.state = 2;
+    flyer.step = 0;
+    flyer.timer = 0x28;
+    flyer.defeated = true;
+    AosHitReport death = aos_enemy_update(&flyer, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+    assert(death.child_count == 4);
+    for (int i = 0; i < 4; ++i)
+        assert(death.children[i].role == AOS_ROLE_GORGON_DEBRIS &&
+               death.children[i].static_frame == 8);
+    gorgon.state = 2;
+    gorgon.step = 0;
+    gorgon.timer = 0x3C;
+    gorgon.defeated = true;
+    death = aos_enemy_update(&gorgon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                             always_zero);
+    assert(death.child_count == 6);
+    for (int i = 0; i < 6; ++i)
+        assert(death.children[i].role == AOS_ROLE_GORGON_DEBRIS &&
+               death.children[i].static_frame == 17 + i);
+
     aos_enemy_set_flag_8e_40(true);
     AosEnemy frozen;
     assert(aos_enemy_create(&frozen, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer, &kind,

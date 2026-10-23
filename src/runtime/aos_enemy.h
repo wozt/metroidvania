@@ -17,6 +17,8 @@
  * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
  * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
  * code), the skeleton knight (enemy 0x0D), the dead crusader (enemy 0x52),
+ * Harpy (0x38) and Siren (0x0F, the same code) with their distinct volleys,
+ * Gorgon (0x33) and Catoblepas (0x1C, the same code) with their breath clouds,
  * the Killer Doll (0x1F) and Lightning Doll (0x3B) with their burning pieces, the beam skeleton
  * (0x59) with its beam and bones, Nemesis (0x26), Skull Millione (0x5B),
  * Cagnazzo (0x49, with its fin) and Lubicant (0x63,
@@ -141,7 +143,9 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_GIB = 6, AOS_ROLE_DRIP = 7, AOS_ROLE_PUDDLE = 8, AOS_ROLE_NEEDLE_PIECE = 9,
        AOS_ROLE_MIMIC_TRIGGER = 10, AOS_ROLE_FIN = 11, AOS_ROLE_BEAM = 12,
        AOS_ROLE_BEAM_FLASH = 13, AOS_ROLE_DOLL_PIECE = 14,
-       AOS_ROLE_NEMESIS_HELPER = 15, AOS_ROLE_NEMESIS_EFFECT = 16 };
+       AOS_ROLE_NEMESIS_HELPER = 15, AOS_ROLE_NEMESIS_EFFECT = 16,
+       AOS_ROLE_HARPY_SHOT = 17, AOS_ROLE_SIREN_SHOT = 18,
+       AOS_ROLE_GORGON_BREATH = 19, AOS_ROLE_GORGON_DEBRIS = 20 };
 
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */

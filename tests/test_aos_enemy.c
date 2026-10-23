@@ -28,10 +28,11 @@ static void batch_enemy_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
     static const uint8_t ticks[] = {2, 2};
-    const AosAnimDef defs[5] = {{2, ticks}, {2, ticks}, {2, ticks}, {2, ticks}, {2, ticks}};
-    const AosAnimSet anims = {defs, 5};
+    const AosAnimDef defs[7] = {{2, ticks}, {2, ticks}, {2, ticks}, {2, ticks},
+                                {2, ticks}, {2, ticks}, {2, ticks}};
+    const AosAnimSet anims = {defs, 7};
     AosEnemyKind kind = {.anims = &anims};
-    for (int a = 0; a < 5; ++a)
+    for (int a = 0; a < 7; ++a)
         for (int f = 0; f < 2; ++f) {
             kind.modes[a][f] = 1;
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
@@ -146,6 +147,97 @@ static void batch_enemy_tests(void) {
     for (int i = 0; i < 16; ++i)
         aos_enemy_update(&cloud, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(cloud.removed);
+
+    /* Tiny Devil waits through its native-range cooldown, performs the
+     * 31-frame approach and creates one aimed animation-4 orb. The orb
+     * charges through animations 5/6, travels and expires after 60 frames. */
+    AosEnemy devil;
+    assert(aos_enemy_create(&devil, AOS_ENEMY_TINY_DEVIL, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    AosEnemy orb = {0};
+    bool got_orb = false;
+    for (int frame = 0; frame < 220 && !got_orb; ++frame) {
+        AosHitReport hit = aos_enemy_update(&devil, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                                            0, always_zero);
+        for (int i = 0; i < hit.child_count; ++i)
+            if (hit.children[i].role == AOS_ROLE_TINY_DEVIL_ORB) {
+                orb = hit.children[i];
+                got_orb = true;
+            }
+    }
+    assert(got_orb && orb.anim.id == 4 && orb.own_attack.w == 10 && orb.own_attack.h == 10);
+    int orb_frames = 0;
+    bool launched = false;
+    while (!orb.removed && orb_frames < 200) {
+        aos_enemy_update(&orb, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (orb.state == 2) launched = true;
+        ++orb_frames;
+    }
+    assert(launched && orb.removed && orb_frames > 60);
+
+    /* Imp creates its hidden linked helper on the first update, then moves
+     * through the approach and possession states. At Soma it reproduces
+     * SetPlayerInput(1, 0/B) on alternating frames. */
+    AosEnemy imp;
+    assert(aos_enemy_create(&imp, AOS_ENEMY_IMP, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    AosHitReport imp_hit = aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                            always_zero);
+    assert(imp_hit.child_count == 1 &&
+           imp_hit.children[0].role == AOS_ROLE_IMP_HELPER && imp_hit.children[0].hidden);
+    AosEnemy helper = imp_hit.children[0];
+    bool forced_attack = false, forced_release = false, helper_visible = false;
+    for (int frame = 0; frame < 420 && !(forced_attack && forced_release); ++frame) {
+        imp_hit = aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                   always_zero);
+        if (imp_hit.force_input) {
+            forced_attack |= imp_hit.forced_held == AOS_KEY_ATTACK;
+            forced_release |= imp_hit.forced_held == 0;
+        }
+        helper.parent = &imp;
+        aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        helper_visible |= !helper.hidden;
+    }
+    assert(forced_attack && forced_release && helper_visible);
+    assert(imp.state == 3 && imp.step == 1 && imp.patience == 0);
+    soma.state = 12;
+    for (int frame = 0; frame < 30 && imp.step == 1; ++frame)
+        aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(imp.step == 2 && imp.patience == 21);
+    for (int frame = 0; frame < 50 && imp.state == 3; ++frame)
+        aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(imp.state == 1);
+    soma.state = 0;
+
+    /* Both bodies use the 50-frame falling death; Imp also emits direct
+     * frame 0x15 as its separate falling child. */
+    devil.defeated = true;
+    devil.state = 0xFF;
+    devil.step = 0;
+    devil.timer = 0x32;
+    devil.vy = 0x8000;
+    for (int frame = 0; frame < 50 && !devil.removed; ++frame) {
+        AosHitReport devil_death = aos_enemy_update(&devil, &soma, &layer, &kind, NULL, NULL,
+                                                    10, 4, 0, 0, always_zero);
+        assert(devil_death.child_count == 0);
+    }
+    assert(devil.removed);
+    imp.defeated = true;
+    imp.state = 0xFF;
+    imp.step = 0;
+    imp.timer = 0x32;
+    imp.vy = 0x8000;
+    imp.helper_spawned = true;
+    AosHitReport imp_death = aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                                              0, always_zero);
+    assert(imp_death.child_count == 1 &&
+           imp_death.children[0].role == AOS_ROLE_IMP_DEATH &&
+           imp_death.children[0].static_frame == 0x15);
+    AosEnemy imp_piece = imp_death.children[0];
+    for (int frame = 0; frame < 50 && !imp_piece.removed; ++frame)
+        aos_enemy_update(&imp_piece, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                         always_zero);
+    assert(imp_piece.removed);
 
     /* The specialized deaths emit four Harpy fragments or six Gorgon
      * frames before their generic flame/blink lifetime. */

@@ -632,6 +632,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         enemy->phase = (uint16_t)(aos_random() & 0xFFFF);
         enemy->home = (int16_t)(enemy->y >> 16);
         enemy->state = flag_8e_40 ? (id == AOS_ENEMY_TINY_DEVIL ? 3 : 4) : 1;
+        enemy->step = 0;
         return true;
     }
     if (id == AOS_ENEMY_RIPPER) {
@@ -1182,6 +1183,16 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->timer = 0x3C;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_TINY_DEVIL ||
+                           enemy->id == AOS_ENEMY_IMP) {
+                    /* sub_080C580C / sub_080C4ED4: both bodies enter the
+                     * 50-frame falling death state. Imp additionally emits
+                     * its direct-frame child from the state updater. */
+                    enemy->timer = 0x32;
+                    enemy->state = 0xFF;
+                    enemy->step = enemy->substep = 0;
+                    enemy->vx = enemy->ax = enemy->ay = 0;
+                    enemy->vy = 0x8000;
                 } else {
                     /* sub_0807B0DC: death animation 3, 40 frames (sound 0x70;
                      * sub_080683BC and the gore of sub_0807B258 are not
@@ -6217,10 +6228,300 @@ static AosHitReport gorgon_update(AosEnemy *e, AosSoma *soma, const AosCollision
     return report;
 }
 
-/* First native-observable pass for the six newly connected enemy state
- * machines. Siren aliases Harpy, Catoblepas aliases Gorgon, and Tiny Devil
- * shares its resources and aerial locomotion family with Imp. More elaborate
- * attacks remain itemized as parity gaps rather than being guessed here. */
+static void merge_enemy_hit(AosHitReport *report, AosHitReport hit) {
+    report->soma_hit = hit.soma_hit;
+    report->soma_damage = hit.soma_damage;
+    report->enemy_hit = hit.enemy_hit;
+    report->enemy_damage = hit.enemy_damage;
+    report->killed = hit.killed;
+}
+
+/* sub_080C5898: the Tiny Devil holds an aimed animation-4 orb beside its
+ * body. The orb cycles animation 5 a short random number of times, changes
+ * to animation 6 and then travels for 60 frames. */
+static void tiny_devil_orb(AosEnemy *owner, const AosSoma *soma,
+                           const AosEnemyKind *kind, AosHitReport *report,
+                           uint32_t (*random)(void)) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy orb;
+    make_static_child(&orb, owner, AOS_ROLE_TINY_DEVIL_ORB, -1);
+    orb.x += owner->x < soma->x ? 0x100000 : -0x100000;
+    orb.y += 0x80000;
+    (void)move_toward(&orb, soma->x, soma->y - 0x200000, 0x20000);
+    orb.state = 0;
+    orb.variant = (uint8_t)((random() % 5) + 1);
+    orb.hp = 1;
+    orb.own_boxes = true;
+    orb.own_hurt = orb.own_attack = (AosBox){-5, -5, 10, 10};
+    play_loop(&orb, kind->anims, 4, false);
+    report->children[report->child_count++] = orb;
+}
+
+static AosHitReport tiny_devil_orb_update(AosEnemy *orb, AosSoma *soma,
+                                           const AosEnemyKind *kind,
+                                           const AosWeaponEntity *weapon,
+                                           const AosWeaponFrames *weapon_frames, int soma_atk,
+                                           int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    if (orb->state == 0) {
+        step_anim(orb, kind->anims);
+        if (orb->cycle_done) {
+            play(orb, kind->anims, 5);
+            orb->state = 1;
+            orb->phase = 0;
+        }
+    } else if (orb->state == 1) {
+        step_anim(orb, kind->anims);
+        if (orb->cycle_done) {
+            orb->cycle_done = false;
+            if (++orb->phase > orb->variant) {
+                play_loop(orb, kind->anims, 6, false);
+                orb->state = 2;
+                orb->timer = 0;
+                orb->scaled = true;
+            }
+        }
+    } else {
+        integrate(orb);
+        step_anim(orb, kind->anims);
+        int sx = (orb->x >> 16) - cam_x, sy = (orb->y >> 16) - cam_y;
+        if (++orb->timer > 60 || sx < -32 || sx > 272 || sy < -32 || sy > 192) {
+            orb->removed = true;
+            return report;
+        }
+    }
+    report = collide(orb, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (report.enemy_hit) orb->removed = true;
+    aos_combat_tick(&orb->combat);
+    return report;
+}
+
+/* sub_080C5010: Imp owns a hidden technical child for its entire lifetime.
+ * State 3 makes it visible at Soma's position, 40 pixels above his feet. */
+static void imp_helper(AosEnemy *owner, const AosEnemyKind *kind, AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy helper;
+    make_static_child(&helper, owner, AOS_ROLE_IMP_HELPER, -1);
+    helper.parent = owner;
+    helper.hidden = true;
+    helper.combat.attack_off = helper.combat.hurt_off = true;
+    play(&helper, kind->anims, 3);
+    report->children[report->child_count++] = helper;
+    owner->helper_spawned = true;
+}
+
+static void imp_helper_update(AosEnemy *helper, const AosSoma *soma,
+                              const AosEnemyKind *kind) {
+    if (!helper->parent || helper->parent->removed || helper->parent->defeated) {
+        helper->removed = true;
+        return;
+    }
+    bool active = helper->parent->state == 3 && helper->parent->step <= 2;
+    if (active && helper->hidden) play(helper, kind->anims, 3);
+    helper->hidden = !active;
+    if (active) {
+        helper->x = soma->x;
+        helper->y = soma->y - 0x280000;
+        step_anim(helper, kind->anims);
+    }
+}
+
+/* sub_080C50EC: Imp's death creates direct sprite frame 0x15, falling at
+ * one and a half times the body's initial death velocity. */
+static void imp_death_child(AosEnemy *owner, AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy child;
+    make_static_child(&child, owner, AOS_ROLE_IMP_DEATH, 0x15);
+    child.y += 0x100000;
+    child.vy = owner->vy + owner->vy / 2;
+    child.timer = 0x32;
+    child.combat.attack_off = child.combat.hurt_off = true;
+    report->children[report->child_count++] = child;
+}
+
+static void imp_death_child_update(AosEnemy *child, const AosEnemyKind *kind,
+                                   int cam_y) {
+    child->y += child->vy;
+    child->hidden = kind->blink[child->timer] & 1;
+    if (--child->timer == 0 || (child->y >> 16) - cam_y > 0xAA) child->removed = true;
+}
+
+static void devil_idle(AosEnemy *e, const AosSoma *soma, const AosEnemyKind *kind,
+                       int cam_x, int cam_y, uint32_t (*random)(void)) {
+    bool imp = e->id == AOS_ENEMY_IMP;
+    face_player(e, soma);
+    if (e->step == 0) {
+        if (!e->rest) e->rest = (uint16_t)(100 + random() % (imp ? 360 : 500));
+        int32_t side = imp ? 0x460000 : 0x190000;
+        e->walk_timer = soma->x + (e->mirrored ? -side : side);
+        e->speed = soma->y + (imp ? -0x2D0000 : -0x460000);
+        e->timer = 0;
+        e->step = 1;
+    }
+    bool arrived = move_toward(e, e->walk_timer, e->speed, imp ? 0xA000 : 0xC000);
+    integrate(e);
+    if (arrived || ++e->timer >= 60) e->step = 0;
+    if (e->rest) --e->rest;
+    int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+    if (!e->rest && !outside_margins(kind, 4, sx, sy)) {
+        stop(e);
+        e->state = 2;
+        e->step = 0;
+        e->timer = 0;
+    }
+}
+
+static void tiny_devil_attack(AosEnemy *e, const AosSoma *soma,
+                              const AosEnemyKind *kind, int cam_x, int cam_y,
+                              AosHitReport *report, uint32_t (*random)(void)) {
+    if (e->step == 0) {
+        bool player_right = soma->x > e->x;
+        e->vx = player_right ? 0x20000 : -0x20000;
+        e->ax = player_right ? -0x800 : 0x800;
+        e->vy = -0x10000;
+        e->ay = 0x800;
+        e->timer = 0;
+        e->step = 1;
+    } else if (e->step == 1) {
+        integrate(e);
+        int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+        if (sx < 8 || sx > 0xE8 || sy < 8 || sy > 0x98) {
+            e->state = 1;
+            e->step = 0;
+            e->rest = 0;
+        } else if (++e->timer > 30) {
+            play(e, kind->anims, 2);
+            tiny_devil_orb(e, soma, kind, report, random);
+            stop(e);
+            e->timer = 0;
+            e->step = 2;
+        }
+    } else if (++e->timer > 80) {
+        e->state = 1;
+        e->step = 0;
+        e->rest = 0;
+    } else if (e->timer == 40) {
+        play(e, kind->anims, 1);
+    }
+}
+
+static void imp_approach(AosEnemy *e, const AosSoma *soma) {
+    if (e->step == 0) {
+        bool player_right = soma->x > e->x;
+        e->vx = player_right ? 0x20000 : -0x20000;
+        e->ax = player_right ? -0x800 : 0x800;
+        e->vy = 0x20000;
+        e->ay = -0x800;
+        e->timer = 0;
+        e->step = 1;
+    } else if (e->step == 1) {
+        integrate(e);
+        if (++e->timer > 30) {
+            stop(e);
+            e->walk_timer = soma->x;
+            e->speed = soma->y - 0x200000;
+            (void)move_toward(e, e->walk_timer, e->speed, 0x4000);
+            e->timer = 0;
+            e->step = 2;
+        }
+    } else if (e->step == 2) {
+        integrate(e);
+        if (++e->timer > 80) {
+            e->ax = e->vx > 0 ? -0x800 : 0x800;
+            e->ay = e->vy > 0 ? -0x800 : 0x800;
+            e->step = 3;
+        }
+    } else {
+        int32_t old_vx = e->vx, old_vy = e->vy;
+        integrate(e);
+        if ((old_vx <= 0 && e->vx >= 0) || (old_vx >= 0 && e->vx <= 0))
+            e->vx = e->ax = 0;
+        if ((old_vy <= 0 && e->vy >= 0) || (old_vy >= 0 && e->vy <= 0))
+            e->vy = e->ay = 0;
+        if (!e->vx && !e->vy) {
+            e->state = 3;
+            e->step = 0;
+            e->timer = 0;
+        }
+    }
+}
+
+static void imp_control(AosEnemy *e, AosSoma *soma, AosHitReport *report) {
+    if (e->step == 0) {
+        stop(e);
+        e->timer = 0;
+        e->patience = 0;
+        e->step = 1;
+    } else if (e->step == 1) {
+        int32_t tx = soma->x + (soma->facing_left ? -0x100000 : 0x100000);
+        bool arrived = move_toward(e, tx, soma->y - 0x200000, 0x20000);
+        integrate(e);
+        if (arrived) {
+            report->force_input = true;
+            report->forced_held = (e->timer & 1) ? AOS_KEY_ATTACK : 0;
+            ++e->timer;
+            /* sub_080C4D34 waits until the forced B presses have put Soma
+             * outside his neutral states 0, 4 and 8 for 20 frames. */
+            if (soma->state != 0 && soma->state != 4 && soma->state != 8 &&
+                ++e->patience > 20) {
+                e->vx = e->x < soma->x ? -0x10000 : 0x10000;
+                e->vy = -0x10000;
+                e->timer = 0;
+                e->step = 2;
+            }
+        }
+    } else if (e->step == 2) {
+        integrate(e);
+        if (++e->timer > 40) e->step = 3;
+    } else {
+        stop(e);
+        e->state = 1;
+        e->step = 0;
+        e->rest = 0;
+    }
+}
+
+static AosHitReport devil_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+                                 const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk,
+                                 int soma_def, int cam_x, int cam_y,
+                                 uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    bool imp = e->id == AOS_ENEMY_IMP;
+    if (imp && !e->helper_spawned) imp_helper(e, kind, &report);
+    if ((imp && e->state == 4) || (!imp && e->state == 3)) {
+        step_anim(e, kind->anims);
+        return report;
+    }
+    if (e->state == 0xFF) {
+        if (e->step == 0) {
+            if (imp) imp_death_child(e, &report);
+            e->step = 1;
+        }
+        e->y += e->vy;
+        generic_death(e, kind, random, &report);
+        aos_combat_tick(&e->combat);
+        return report;
+    }
+    int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x10) > 0x110 || (uint16_t)sy > 0xB0) return report;
+    if (e->state == 1)
+        devil_idle(e, soma, kind, cam_x, cam_y, random);
+    else if (!imp && e->state == 2)
+        tiny_devil_attack(e, soma, kind, cam_x, cam_y, &report, random);
+    else if (imp && e->state == 2)
+        imp_approach(e, soma);
+    else if (imp && e->state == 3)
+        imp_control(e, soma, &report);
+    step_anim(e, kind->anims);
+    AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    merge_enemy_hit(&report, hit);
+    aos_combat_tick(&e->combat);
+    return report;
+}
+
+/* Remaining first native-observable pass: Merman and Ripper keep their
+ * provisional locomotion until their complete state machines are ported. */
 static AosHitReport batch_enemy_update(AosEnemy *e, AosSoma *soma,
                                        const AosCollision *layer, const AosEnemyKind *kind,
                                        const AosWeaponEntity *weapon,
@@ -6234,11 +6535,7 @@ static AosHitReport batch_enemy_update(AosEnemy *e, AosSoma *soma,
         return report;
     }
     bool inert = (e->id == AOS_ENEMY_MERMAN && e->state == 4) ||
-                 ((e->id == AOS_ENEMY_HARPY || e->id == AOS_ENEMY_SIREN ||
-                   e->id == AOS_ENEMY_IMP) && e->state == 4) ||
-                 ((e->id == AOS_ENEMY_GORGON || e->id == AOS_ENEMY_CATOBLEPAS ||
-                   e->id == AOS_ENEMY_TINY_DEVIL || e->id == AOS_ENEMY_RIPPER) &&
-                  e->state == 3);
+                 (e->id == AOS_ENEMY_RIPPER && e->state == 3);
     if (inert) {
         step_anim(e, kind->anims);
         return report;
@@ -6248,35 +6545,7 @@ static AosHitReport batch_enemy_update(AosEnemy *e, AosSoma *soma,
     int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
 
-    if (e->id == AOS_ENEMY_HARPY || e->id == AOS_ENEMY_SIREN) {
-        face_player(e, soma);
-        int32_t tx = soma->x + (e->mirrored ? -0x280000 : 0x280000);
-        int32_t ty = soma->y - 0x300000 + aos_sine(e->phase) * 8;
-        (void)move_toward(e, tx, ty, 0xC000);
-        e->phase = (uint16_t)(e->phase + 0x180);
-        integrate(e);
-    } else if (e->id == AOS_ENEMY_TINY_DEVIL || e->id == AOS_ENEMY_IMP) {
-        face_player(e, soma);
-        int32_t side = e->id == AOS_ENEMY_IMP ? 0x300000 : 0x240000;
-        int32_t tx = soma->x + (e->mirrored ? -side : side);
-        int32_t ty = soma->y - 0x200000 + aos_sine(e->phase) * 6;
-        (void)move_toward(e, tx, ty, e->id == AOS_ENEMY_IMP ? 0xA000 : 0xC000);
-        e->phase = (uint16_t)(e->phase + 0x200);
-        integrate(e);
-    } else if (e->id == AOS_ENEMY_GORGON || e->id == AOS_ENEMY_CATOBLEPAS) {
-        if (!e->vx) e->vx = toward_facing(e, 0x6000);
-        if ((e->x >> 16) <= e->home_left) {
-            e->mirrored = true;
-            e->vx = 0x6000;
-        } else if ((e->x >> 16) >= e->home_right) {
-            e->mirrored = false;
-            e->vx = -0x6000;
-        }
-        if (walk_collide(e, layer, 0x10000, (int32_t)0xFFE00000, 0x6000, 12) & 3) {
-            e->mirrored = !e->mirrored;
-            e->vx = toward_facing(e, 0x6000);
-        }
-    } else if (e->id == AOS_ENEMY_RIPPER) {
+    if (e->id == AOS_ENEMY_RIPPER) {
         if (e->state == 1) {
             face_player(e, soma);
             e->vx = toward_facing(e, 0xC000);
@@ -6323,6 +6592,17 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
         falling_fragment_update(enemy, cam_x, cam_y);
         return report;
     }
+    if (enemy->role == AOS_ROLE_TINY_DEVIL_ORB)
+        return tiny_devil_orb_update(enemy, soma, kind, weapon, weapon_frames, soma_atk,
+                                     soma_def, cam_x, cam_y);
+    if (enemy->role == AOS_ROLE_IMP_HELPER) {
+        imp_helper_update(enemy, soma, kind);
+        return report;
+    }
+    if (enemy->role == AOS_ROLE_IMP_DEATH) {
+        imp_death_child_update(enemy, kind, cam_y);
+        return report;
+    }
     if ((enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN) &&
         enemy->role == AOS_ROLE_ENEMY)
         return harpy_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
@@ -6331,9 +6611,12 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
         enemy->role == AOS_ROLE_ENEMY)
         return gorgon_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
+    if ((enemy->id == AOS_ENEMY_TINY_DEVIL || enemy->id == AOS_ENEMY_IMP) &&
+        enemy->role == AOS_ROLE_ENEMY)
+        return devil_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+                            cam_y, random);
     if (enemy->role == AOS_ROLE_ENEMY &&
-        (enemy->id == AOS_ENEMY_MERMAN || enemy->id == AOS_ENEMY_TINY_DEVIL ||
-         enemy->id == AOS_ENEMY_IMP || enemy->id == AOS_ENEMY_RIPPER))
+        (enemy->id == AOS_ENEMY_MERMAN || enemy->id == AOS_ENEMY_RIPPER))
         return batch_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                   soma_def, cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) &&

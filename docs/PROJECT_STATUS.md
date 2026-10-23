@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0467 - Aria Tiny Devil and Imp
+
+- Replaced the shared provisional flight with the two native state-machine
+  families. Tiny Devil now uses its randomized rest, approach, animation-4
+  orb charge, animation-5/6 transition, aimed launch, native 10x10 collision
+  box and 60-frame projectile lifetime.
+- Added Imp's persistent linked helper, approach and braking states, visible
+  control phase above Soma, alternating forced B/release input, native Soma
+  state gate and retreat. The existing forced-input path is shared with the
+  wooden doors rather than bypassing the player controller.
+- Ported both 50-frame falling deaths and Imp's separate direct-frame `0x15`
+  death child. The private sprite export and ROM-free regression coverage now
+  include every new child lifecycle.
+- Captured Tiny Devil's aimed orb and 26-damage hit in room 0/24 and Imp
+  visibly forcing Soma's attack with no user input in room 4/1. Both entries
+  now meet the project's functional evidence rule; acceleration rounding,
+  affine details, sounds, palette callbacks and rewards remain documented
+  refinements.
+
 ## Patch 0466 - Aria Harpy and Gorgon families
 
 - Completed the shared Harpy/Siren body state machine: random flight-versus-

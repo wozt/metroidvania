@@ -115,7 +115,7 @@ ENEMIES = {
     "tiny_devil": {"id": 0x10, "graphics": 0x081F4254, "palette": 0x0820BE60, "bank": 1,
                    "frames": 0x0824CF0C},
     "imp": {"id": 0x31, "graphics": 0x081F4254, "palette": 0x0820BE60, "bank": 0,
-            "frames": 0x0824CF0C},
+            "frames": 0x0824CF0C, "static_frames": (0x15,)},
     # EnemyDeadWarriorCreate 0x080B7594: walker probes 0x08528830.
     "dead_warrior": {"id": 0x2F, "graphics": 0x081EC1F4, "palette": 0x0820BBD4, "bank": 0,
                      "frames": 0x08246F00, "probes": 0x08528830},

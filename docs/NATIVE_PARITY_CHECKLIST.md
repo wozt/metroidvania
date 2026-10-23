@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 330 | 3243 |
+| Castlevania: Aria of Sorrow | 352 | 3221 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1351,14 +1351,14 @@ Known divergences: Exact native acceleration rounding, activity-region clamping,
 Next action: Refine acceleration and activity-region clamping when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP`.
 
-[~] **`aos.enemies.imp` — Imp.** Native identity, palette bank 0, animations including palette-row OAM attributes, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.
+[+] **`aos.enemies.imp` — Imp.** Palette bank 0, randomized rest, approach and braking, the persistent linked animation-3 helper, Soma-following control phase, alternating SetPlayerInput B/release calls, native Soma-state gate, retreat, contact combat, global inert state, 50-frame falling death and direct-frame 0x15 death child are connected.
 
-Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyImpCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyImpUpdate`.  
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyImpCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyImpUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4768`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C48B4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4B88`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4D34`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4ED4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4F8C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5010`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C50EC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5200`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5220`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5250`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C52A4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C52CC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Known divergences: Its native child, attack selection, exact acceleration, timers, death callback, sounds and palette effects are not ported.  
-Next action: Port the Imp child and complete attack state machine.
-Evidence: in game: `aria area_04_room_001 (--spawn 400 703 --hp 9999): the Imp renders with its native palette during a 180-frame room capture`.
+Known divergences: Exact randomized acceleration rounding, native entity-slot ordering, helper OAM flags, sounds 0x72, palette callbacks and rewards are not modelled.  
+Next action: Refine acceleration and helper OAM flags when direct frame-by-frame comparison is available.
+Evidence: in game: `aria area_04_room_001 (--spawn 400 703 --hp 9999, no buttons): Imp's helper is visible above Soma and forces him into attack animation 14 by frame 350; native-stat contact deals 60 damage`.
 
 [+] **`aos.enemies.killer_doll` — Killer Doll.** The close-range wake-up and rise, random bounded flight legs, pauses, aimed charge, timed landing and takeoff, inert animation under gEwramData + 0x8E bit 0x40, and death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported at its constructor-table ID 0x1F.
 
@@ -1495,14 +1495,14 @@ Known divergences: As the Lubicant.
 Next action: Follow the Lubicant's open items.
 Evidence: in game: `aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Millione drops from above (frame 40), dives onto Soma (frame 100) and rises again (frame 160)`.
 
-[~] **`aos.enemies.tiny_devil` — Tiny Devil.** Native identity, palette bank 1, animations including palette-row OAM attributes, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.
+[+] **`aos.enemies.tiny_devil` — Tiny Devil.** Palette bank 1, randomized 100..599-frame rest, 31-frame approach, animation-4 orb creation, animation-5/6 charge transition, aimed launch, native 10x10 projectile box, 60-frame projectile lifetime, contact combat, global inert state and 50-frame falling death are connected.
 
-Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyTinyDevilCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyTinyDevilUpdate`.  
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyTinyDevilCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyTinyDevilUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C542C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C56F0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C580C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5898`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5A44`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5B18`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5B40`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5B5C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5BA4`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Known divergences: Its native attack choice, exact acceleration, timers, effect children, death callback, sounds and palette effects are not ported.  
-Next action: Port the complete Tiny Devil attack state machine.
-Evidence: in game: `aria area_00_room_024: all three Tiny Devils render with their native palette and pursue Soma during a 180-frame capture`.
+Known divergences: Exact randomized acceleration rounding, the orb's affine angle and scale, native entity-slot ordering, sound 0x89, palette callbacks and rewards are not modelled.  
+Next action: Refine acceleration and the orb affine transform when direct frame-by-frame comparison is available.
+Evidence: in game: `aria area_00_room_024 (--spawn 160 159 --hp 9999): the aimed orb crosses its native room around frames 560..570 and deals 26 damage with no player input`.
 
 [+] **`aos.enemies.valkyrie` — Valkyrie.** The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported.
 

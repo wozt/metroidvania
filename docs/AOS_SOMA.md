@@ -694,12 +694,24 @@ once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
 The constructor-table audit also connected an eight-enemy batch. Merman
-(0x03), Tiny Devil (0x10), Imp (0x31) and Ripper (0x4A) currently stop at
-their native identities, graphics, palettes, animation descriptors, frame
-boxes, room records, contact combat, basic locomotion and global inert states;
-their specialized attacks remain partial. Tiny Devil and Imp share one sheet
-with palette banks 1 and 0, including the per-component OBJ palette-row byte
-used by their OAM records.
+(0x03) and Ripper (0x4A) currently stop at their native identities, graphics,
+palettes, animation descriptors, frame boxes, room records, contact combat,
+basic locomotion and global inert states; their specialized attacks remain
+partial.
+
+Tiny Devil (0x10) and Imp (0x31) share one sheet with palette banks 1 and 0,
+including the per-component OBJ palette-row byte used by their OAM records,
+but have distinct attack paths. Tiny Devil wanders for the native 100..599
+frame rest range, performs its 31-frame approach, holds an aimed animation-4
+orb through animations 5 and 6, then launches it for 60 frames with its
+native 10x10 box. Imp uses the 100..459 frame rest range, approaches Soma,
+brakes, makes its persistent animation-3 helper visible above him and calls
+the runtime equivalent of `SetPlayerInput(1, 0/B)` on alternating frames. It
+waits until the forced presses have put Soma outside neutral states 0, 4 and
+8 for 20 frames before retreating. Both use their 50-frame falling death;
+Imp also emits direct frame 0x15 as a separate falling child. Exact random
+acceleration rounding, the orb's affine transform, sounds and palette effects
+remain outside the runtime.
 
 Harpy (0x38) and Siren (0x0F) share `EnemyHarpyUpdate`. They idle facing Soma,
 choose between the native animation-2 flight toward his position 24 pixels

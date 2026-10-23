@@ -460,12 +460,20 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if ((e->enemy.role == AOS_ROLE_FIN || e->enemy.role == AOS_ROLE_BEAM ||
                  e->enemy.role == AOS_ROLE_BEAM_FLASH ||
                  e->enemy.role == AOS_ROLE_NEMESIS_HELPER ||
-                 e->enemy.role == AOS_ROLE_NEMESIS_EFFECT) &&
+                 e->enemy.role == AOS_ROLE_NEMESIS_EFFECT ||
+                 e->enemy.role == AOS_ROLE_IMP_HELPER) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
+            /* EnemyImpUpdate calls SetPlayerInput(1, B/0) on alternating
+             * frames while its linked helper controls Soma. As with doors,
+             * the forced value is consumed on the following frame. */
+            if (hit.force_input && !input->active) {
+                input->active = true;
+                input->held = hit.forced_held;
+            }
             if (!was_removed && e->enemy.removed && e->spawner >= 0) {
                 /* A spawned zombie or a Needles piece leaves: its spawner's count
              * drops. */
@@ -491,7 +499,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_BEAM_FLASH ||
                                        hit.children[c].role == AOS_ROLE_DOLL_PIECE ||
                                        hit.children[c].role == AOS_ROLE_NEMESIS_HELPER ||
-                                       hit.children[c].role == AOS_ROLE_NEMESIS_EFFECT
+                                       hit.children[c].role == AOS_ROLE_NEMESIS_EFFECT ||
+                                       hit.children[c].role == AOS_ROLE_IMP_HELPER
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};

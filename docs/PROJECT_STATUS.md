@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0482 - C11 GBA header metadata reader
+
+- Added a bounded native reader for the standard GBA title, game code, maker
+  code, unit/device and software-version fields.
+- Added complement-checksum calculation and a fixed-header-marker check while
+  preserving the raw metadata bytes in caller-owned, NUL-terminated fields.
+- Added a ROM-free synthetic-header CTest covering valid fields, malformed
+  markers, short input and checksum failure.
+- This is an input-contract foundation only; Python remains authoritative for
+  extraction and no gameplay or resource-equivalence status changed.
+- Next: port one small ROM-backed metadata extractor and compare its output to
+  a Python fixture before connecting it to production import tasks.
+
 ## Patch 0481 - C11 GBA binary and compression primitives
 
 - Added a reusable bounds-checked little-endian binary reader to

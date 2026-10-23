@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-23T23:53:13+00:00",
+ "generated_at": "2026-10-23T23:55:08+00:00",
  "git": {
-  "commit": "55af25f",
+  "commit": "7aba020",
   "branch": "main",
   "dirty": true
  },
@@ -12475,21 +12475,24 @@
     "include/fusion/assets/rom.h",
     "src/assets/core/rom.c",
     "src/assets/gba/decompress.c",
+    "src/assets/gba/header.c",
     "src/tools/fusion_importer.c"
    ],
    "tests": [
     "tests/test_fusion_assets_gba.c",
+    "tests/test_fusion_assets_gba_header.c",
     "tests/test_fusion_assets_rom.c"
    ],
    "dependencies": [
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies the two supported 8 MiB USA ROMs and provides bounded little-endian, GBA LZ77 and GBA RLE primitives; the CLI exposes list, verify and dry-run planning. Python remains authoritative for extraction, caches and all resource equivalence until each migration gate is proven.",
+   "limitations": "The C11 library verifies the two supported 8 MiB USA ROMs, reads bounded GBA header metadata and checksum state, and provides little-endian, GBA LZ77 and GBA RLE primitives; the CLI exposes list, verify and dry-run planning. Python remains authoritative for extraction, caches and all resource equivalence until each migration gate is proven.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_gba.c",
+     "tests/test_fusion_assets_gba_header.c",
      "tests/test_fusion_assets_rom.c"
     ],
     "in_game_check": [],
@@ -12508,6 +12511,16 @@
       "registered": true,
       "ctest": [
        "fusion_assets_gba"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_gba_header.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_assets_gba_header"
       ],
       "outcome": "passed",
       "exists": true
@@ -14161,6 +14174,13 @@
     "outcome": "passed"
    },
    {
+    "name": "fusion_assets_gba_header",
+    "files": [
+     "tests/test_fusion_assets_gba_header.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "fusion_importer_list",
     "files": [],
     "outcome": "passed"
@@ -15134,12 +15154,18 @@
    }
   ],
   "summary": {
-   "passed": 501,
+   "passed": 502,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "7aba020",
+   "date": "2026-10-24",
+   "subject": "Add bounded C11 GBA decoding primitives",
+   "scope": "project"
+  },
   {
    "commit": "55af25f",
    "date": "2026-10-24",
@@ -15612,12 +15638,6 @@
    "commit": "760989c",
    "date": "2026-10-19",
    "subject": "Port native Ruins Test reflection graphics",
-   "scope": "project"
-  },
-  {
-   "commit": "14efac5",
-   "date": "2026-10-19",
-   "subject": "Port the Ruins Test reflections' palette rows",
    "scope": "project"
   }
  ],

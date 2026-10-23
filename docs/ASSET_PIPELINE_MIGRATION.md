@@ -9,8 +9,9 @@ unit tests and an engine/editor integration check.
 ## Current foundation
 
 `libfusion_assets` is the first native layer. Its public headers are
-`include/fusion/assets/rom.h`; the implementation is split into generic
-SHA-1, bounded ROM loading and GBA primitives under `src/assets/`.
+`include/fusion/assets/rom.h` and `include/fusion/assets/gba.h`; the
+implementation is split into generic SHA-1, bounded ROM loading and GBA
+primitives under `src/assets/`.
 It currently:
 
 - recognizes the pinned USA revisions of Zero Mission and Aria of Sorrow;
@@ -22,6 +23,8 @@ It currently:
 - provides a bounded little-endian binary reader; and
 - decodes standard GBA 0x10 LZ77 and 0x30 RLE streams into caller-owned
   buffers without silently accepting output overflow.
+- reads the fixed GBA title, game code, maker code and version fields with
+  strict header bounds, and exposes the standard complement-checksum result.
 
 `fusion_importer` exposes the first orchestration contract:
 
@@ -42,6 +45,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/verify_roms.py` | `fusion/assets/rom.h`, `src/assets/core/rom.c` | foundation complete | C SHA-1 vector, local ROM verification, malformed-file tests |
 | `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | not started | symbol-table byte and bounds comparison |
 | `scripts/mzm_room_render.py` (GBA LZ77/RLE inputs) | `src/assets/gba/decompress.c` | primitive only | compressed bytes, output length and malformed-stream comparison |
+| GBA cartridge header fields (shared input contract) | `src/assets/gba/header.c` | metadata reader complete | synthetic header fields, fixed marker and complement checksum |
 | `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | not started | room structure and semantic render comparison |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
@@ -55,10 +59,9 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next native layers should add generic bounded binary readers and GBA
-decompression primitives, then port one small metadata extractor at a time.
-Each task must declare its ROM inputs, generated private outputs, extractor
-version and dependencies. A C task becomes authoritative only after its
+The next native layer should port one small ROM-backed metadata extractor at a
+time. Each task must declare its ROM inputs, generated private outputs,
+extractor version and dependencies. A C task becomes authoritative only after its
 Python output has been compared structurally and semantically (and byte-for-
 byte where the format requires it). Until then the Python task remains the
 production fallback and the native CLI must report that boundary clearly.

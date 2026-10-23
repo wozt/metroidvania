@@ -196,12 +196,14 @@ usable on a ROM-free checkout. Private outputs stay below the ignored
 
 ### Native asset foundation
 
-`fusion_assets` (`include/fusion/assets/rom.h` and `src/assets/core/`) is the
+`fusion_assets` (`include/fusion/assets/rom.h`, `include/fusion/assets/gba.h`
+and `src/assets/`) is the
 first C11 layer of the native import pipeline. It owns only generic ROM
 verification for the two pinned USA revisions so far: bounded loading,
 expected-size checks, SHA-1 fingerprints, error reporting and zeroing on
 release. Its generic GBA layer also owns a bounds-checked little-endian
-reader and standard BIOS 0x10 LZ77 / 0x30 RLE decoders. `fusion_importer`
+reader, standard BIOS 0x10 LZ77 / 0x30 RLE decoders and bounded GBA header
+metadata/checksum parsing. `fusion_importer`
 (`src/tools/fusion_importer.c`) exposes `--list`,
 `--verify`, and an explicit dry-run plan for future extraction tasks. The
 Python extractors remain authoritative until each replacement passes the

@@ -43,9 +43,13 @@ paths. New files start at the native new-game location, area 0 room 0.
 `metroidvania-aos-save-v1` text schema instead of claiming compatibility with
 the original six 0x47C-byte SRAM records. The runtime accepts `--save FILE`
 and restores the room, optional spawn, HP and the currently exposed movement
-mask. Inventory, equipment, souls, event flags, map state and native save-room
-writes are not represented yet; those fields will be added as their runtime
-owners are ported.
+mask. `scripts.aos_runtime_room` now emits schema version 4's global-map save
+and warp bits. Runtime compatibility also recognizes the native room object
+`0x1C` in older exports. Holding Up inside Object1C's verified rectangle
+(`x=104..136`, `y=128..183`) restores HP and atomically updates the selected
+portable file with the current room, spawn and play time. The native healing
+animation, Yes/No question, object graphics, audio, inventory, equipment,
+souls, event flags, map state and SRAM layout remain open reconstruction work.
 
 ## Explicitly unresolved
 

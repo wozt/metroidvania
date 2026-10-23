@@ -74,8 +74,9 @@ explicitly measured and resolved.
 Current progress: the experimental runtime covers bounded Soma movement and
 combat states, several weapon classes, room transitions, wooden doors and a
 growing enemy set. The SDL title host can now select one of three portable
-files and launch New Game or Continue into the actual room runtime. That host
-bridge is not native menu/SRAM parity: save rooms, pause/inventory/map flows,
+files and launch New Game or Continue into the actual room runtime. Native
+save-room detection now restores HP and writes the selected portable slot;
+that host bridge is not native menu/SRAM parity: pause/inventory/map flows,
 full progression and most of the original game lifecycle remain absent.
 
 Exit criterion: Aria is normally completable through every native final branch

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-23T23:04:57+00:00",
+ "generated_at": "2026-10-23T23:48:41+00:00",
  "git": {
-  "commit": "7ee74ce",
+  "commit": "8d1bfdd",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 194,
+   "total": 195,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 38,
+    "partial": 39,
     "functional": 145,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 145,
-   "functional_or_better_percent": 74.7,
-   "with_passing_tests": 182,
+   "functional_or_better_percent": 74.4,
+   "with_passing_tests": 183,
    "with_passing_tests_percent": 93.8,
    "unknown_or_blocked": 1,
    "features": [
@@ -289,6 +289,7 @@
     "assets.aria_peeping_eye_timed_entry_0475",
     "assets.aria_polar_affine_motion_0472",
     "assets.aria_rooms",
+    "assets.aria_save_rooms_0479",
     "assets.aria_soma",
     "assets.aria_weapons",
     "assets.aria_white_dragon_affine_slot_0473",
@@ -508,11 +509,11 @@
    "areas": [
     "assets"
    ],
-   "total": 22,
+   "total": 23,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 14,
+    "partial": 15,
     "functional": 8,
     "faithful": 0,
     "validated": 0,
@@ -520,8 +521,8 @@
     "unknown": 0
    },
    "functional_or_better": 8,
-   "functional_or_better_percent": 36.4,
-   "with_passing_tests": 22,
+   "functional_or_better_percent": 34.8,
+   "with_passing_tests": 23,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -536,6 +537,7 @@
     "assets.aria_peeping_eye_timed_entry_0475",
     "assets.aria_polar_affine_motion_0472",
     "assets.aria_rooms",
+    "assets.aria_save_rooms_0479",
     "assets.aria_soma",
     "assets.aria_weapons",
     "assets.aria_white_dragon_affine_slot_0473",
@@ -11603,11 +11605,13 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_save.c",
+    "src/runtime/aos_save_room.c",
     "src/runtime/aos_title_preview.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
-    "tests/test_aos_save.c"
+    "tests/test_aos_save.c",
+    "tests/test_aos_save_room.c"
    ],
    "dependencies": [
     "aos.startup.mode_dispatch"
@@ -11616,13 +11620,17 @@
     "SaveData_LoadSlotFromSram",
     "SaveData_SaveSlotToSram",
     "SaveData_ClearSlotInSram",
-    "sub_080127F0"
+    "sub_080127F0",
+    "Object1CCreate",
+    "Object1CUpdate",
+    "sub_08068AD4"
    ],
-   "limitations": "The ROM-free text schema is intentionally not the native six-slot 0x47C-byte SRAM layout. Only three frontend files and room, optional spawn, HP and movement mask are represented; inventory, equipment, souls, map/event state, play time updates and save-room writes are absent. Checksummed atomic host files can be created and loaded; the selected file launches the room runtime at its recorded area and room.",
-   "next_action": "Port save-room interaction and the remaining progression fields before reconstructing native SRAM serialization.",
+   "limitations": "The ROM-free text schema is intentionally not the native six-slot 0x47C-byte SRAM layout. Only three frontend files, room, optional spawn, HP, movement mask and play time are represented; inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent. Checksummed atomic host files can be created and loaded; the selected file launches the room runtime at its recorded area and room. In a room carrying the native save bit or object 0x1C, Up in the verified Object1C rectangle restores HP and writes the selected portable slot.",
+   "next_action": "Port the native save-room animation/question and remaining SRAM progression fields before reconstructing native serialization.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_save.c"
+     "tests/test_aos_save.c",
+     "tests/test_aos_save_room.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -11640,6 +11648,16 @@
       "registered": true,
       "ctest": [
        "aos_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_save_room.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_save_room"
       ],
       "outcome": "passed",
       "exists": true
@@ -13306,6 +13324,65 @@
    }
   },
   {
+   "id": "assets.aria_save_rooms_0479",
+   "area": "assets",
+   "category": "gameplay",
+   "title": "Aria native save-room detection and portable checkpoint writes",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "scripts/aos_runtime_room.py",
+    "src/runtime/aos_save_room.c",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_runtime_room.py",
+    "tests/test_aos_save_room.c"
+   ],
+   "dependencies": [
+    "assets.aria_frontend_save_0478"
+   ],
+   "native_routines": [],
+   "limitations": "The room exporter now carries the global-map save/warp bits in schema v4, while runtime v3 exports remain compatible and detect object 0x1C. Up inside the native Object1C rectangle restores HP and writes room, spawn, HP, moves and play time to the selected portable slot. Native healing animation, Yes/No prompt, object art, sounds, inventory, souls, event/map state and SRAM parity remain open.",
+   "next_action": "",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_runtime_room.py",
+     "tests/test_aos_save_room.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": "2026-10-24",
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_runtime_room.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_aos_save_room.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_save_room"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
    "id": "assets.aria_soma",
    "area": "assets",
    "category": "sprites",
@@ -14153,6 +14230,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_save_room",
+    "files": [
+     "tests/test_aos_save_room.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_title_stages",
     "files": [
      "tests/test_aos_title_stages.c"
@@ -14344,9 +14428,9 @@
    {
     "file": "tests/test_aos_runtime_room.py",
     "module": "tests.test_aos_runtime_room",
-    "test_count": 4,
+    "test_count": 5,
     "outcome": "passed",
-    "passed": 4
+    "passed": 5
    },
    {
     "file": "tests/test_aos_soma_sprite.py",
@@ -14959,12 +15043,18 @@
    }
   ],
   "summary": {
-   "passed": 495,
+   "passed": 497,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "8d1bfdd",
+   "date": "2026-10-24",
+   "subject": "Connect Aria file selection to the runtime",
+   "scope": "project"
+  },
   {
    "commit": "7ee74ce",
    "date": "2026-10-24",
@@ -15438,12 +15528,6 @@
    "date": "2026-10-19",
    "subject": "Record an in-game check for the paralyzer pistol",
    "scope": "project"
-  },
-  {
-   "commit": "fd38cf8",
-   "date": "2026-10-19",
-   "subject": "Port the item acquisition and suitless status screens",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -15504,9 +15588,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 426,
-    "routines_attached_to_features": 426,
-    "unassigned_routines": 3147,
+    "routines_cited_by_features": 428,
+    "routines_attached_to_features": 428,
+    "unassigned_routines": 3145,
     "call_edges": 14228
    }
   },

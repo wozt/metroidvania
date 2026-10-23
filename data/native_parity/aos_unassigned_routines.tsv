@@ -510,8 +510,6 @@ aos:asm:asm/code/code_08050A3C.s:Object1ACreate	Object1ACreate	environment	name	
 aos:asm:asm/code/code_08050A3C.s:Object1AUpdate	Object1AUpdate	environment	name			asm_function		asm/code/code_08050A3C.s	6915	0	0
 aos:asm:asm/code/code_08050A3C.s:Object1BCreate	Object1BCreate	environment	name			asm_function		asm/code/code_08050A3C.s	6743	0	6
 aos:asm:asm/code/code_08050A3C.s:Object1BUpdate	Object1BUpdate	environment	name			asm_function		asm/code/code_08050A3C.s	6809	0	6
-aos:asm:asm/code/code_08050A3C.s:Object1CCreate	Object1CCreate	environment	name			asm_function		asm/code/code_08050A3C.s	7618	0	12
-aos:asm:asm/code/code_08050A3C.s:Object1CUpdate	Object1CUpdate	environment	name			asm_function		asm/code/code_08050A3C.s	7733	0	20
 aos:asm:asm/code/code_08050A3C.s:Object1DCreate	Object1DCreate	environment	name			asm_function		asm/code/code_08050A3C.s	9364	0	6
 aos:asm:asm/code/code_08050A3C.s:Object1DUpdate	Object1DUpdate	environment	name			asm_function		asm/code/code_08050A3C.s	9568	0	0
 aos:asm:asm/code/code_08050A3C.s:Object1ECreate	Object1ECreate	environment	name			asm_function		asm/code/code_08050A3C.s	9661	0	0

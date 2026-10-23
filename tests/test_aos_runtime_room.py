@@ -2,7 +2,7 @@
 """ROM-free tests for the Aria runtime room export."""
 import unittest
 
-from scripts.aos_runtime_room import encode_room, native_cell
+from scripts.aos_runtime_room import ROOM_FLAG_SAVE, ROOM_FLAG_WARP, encode_room, native_cell
 
 
 class AriaRuntimeRoomTests(unittest.TestCase):
@@ -18,7 +18,14 @@ class AriaRuntimeRoomTests(unittest.TestCase):
                       "height_screens": 1, "collision": [0, 0x41, 0x03, 0xFF],
                       "collision_xflip": [False, True, False, False]}
         self.assertEqual(encode_room(3, 7, background).splitlines(), [
-            "AOSROOM-NATIVE\t3\t3\t7\t1\t1\t2\t2", "R\t0045", "R\t03ff", "END"])
+            "AOSROOM-NATIVE\t4\t3\t7\t1\t1\t2\t2\t0", "R\t0045", "R\t03ff", "END"])
+
+    def test_header_carries_native_map_room_flags(self):
+        background = {"width_tiles": 1, "height_tiles": 1, "width_screens": 1,
+                      "height_screens": 1, "collision": [0], "collision_xflip": [False]}
+        flags = ROOM_FLAG_SAVE | ROOM_FLAG_WARP
+        self.assertEqual(encode_room(0, 14, background, room_flags=flags).splitlines()[0],
+                         "AOSROOM-NATIVE\t4\t0\t14\t1\t1\t1\t1\t3")
 
     def test_transitions_follow_the_rows_with_a_signed_x_adjustment(self):
         background = {"width_tiles": 1, "height_tiles": 1, "width_screens": 1,

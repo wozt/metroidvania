@@ -11,8 +11,9 @@ not applied. Each ``T`` line is one entry of the room's transition list
 (``sub_08010350``): source screen X and Y, the signed X adjustment at +6, the
 BG1 position at +0xA/+0xC loaded in the target room, and the target area and
 room. Each ``E`` line is one entity record of the room (kind, id, x, y, the
-two parameters and the flags byte), spawned by ``sub_0800F1FC``. Output stays
-private:
+two parameters and the flags byte), spawned by ``sub_0800F1FC``. Header
+version 4 adds the global-map room flags (bit 0 save, bit 1 warp). Output
+stays private:
 
     assets/extracted/aria/rooms/runtime/area_<AA>_room_<RRR>/room.tsv
     assets/extracted/aria/rooms/runtime/export_index.tsv (``--all``)
@@ -34,6 +35,8 @@ from scripts.sprite_library import write_atomic
 
 RUNTIME_ROOMS = ARIA_ROOMS / "runtime"
 ROOM_SCHEMA = "AOSROOM-NATIVE"
+ROOM_FLAG_SAVE = 1 << 0
+ROOM_FLAG_WARP = 1 << 1
 
 
 def native_cell(value: int, xflip: bool) -> int:
@@ -48,11 +51,11 @@ def _signed16(value: int) -> int:
 
 
 def encode_room(area: int, room: int, background: dict, transitions=(),
-                entities=()) -> str:
+                entities=(), room_flags: int = 0) -> str:
     width, height = background["width_tiles"], background["height_tiles"]
     cells, flips = background["collision"], background["collision_xflip"]
-    lines = [f"{ROOM_SCHEMA}\t3\t{area}\t{room}\t{background['width_screens']}\t"
-             f"{background['height_screens']}\t{width}\t{height}"]
+    lines = [f"{ROOM_SCHEMA}\t4\t{area}\t{room}\t{background['width_screens']}\t"
+             f"{background['height_screens']}\t{width}\t{height}\t{room_flags}"]
     for y in range(height):
         row = cells[y * width:(y + 1) * width]
         flip = flips[y * width:(y + 1) * width]
@@ -85,9 +88,14 @@ def produce(root: Path, area: int, room: int, rom: bytes, world=None) -> dict:
     folder = private_path(Path(root), RUNTIME_ROOMS / f"area_{area:02}_room_{room:03}",
                           create=True)
     folder.mkdir(exist_ok=True)
+    room_flags = 0
+    if any(cell["save"] for cell in entry["map_cells"]):
+        room_flags |= ROOM_FLAG_SAVE
+    if any(cell["warp"] for cell in entry["map_cells"]):
+        room_flags |= ROOM_FLAG_WARP
     write_atomic(folder / "room.tsv",
                  encode_room(area, room, background, entry["transitions"],
-                             entry["entities"]))
+                             entry["entities"], room_flags))
     write_atomic(folder / "background.bmp", render.bmp24(width, height, composite))
     return {"folder": folder, "width": width, "height": height,
             "cells": background["width_tiles"] * background["height_tiles"]}

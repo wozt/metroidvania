@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 426 | 3147 |
+| Castlevania: Aria of Sorrow | 428 | 3145 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1095,14 +1095,14 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 
 [?] **`aos.startup.inventory-boundary` — source coverage.** The current classifier assigns 5 discovered routine(s) to this category (2 by native name, 3 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.saves.portable_slots` — Portable frontend save slots.** Checksummed atomic host files can be created and loaded; the selected file launches the room runtime at its recorded area and room.
+[~] **`aos.saves.portable_slots` — Portable frontend save slots.** Checksummed atomic host files can be created and loaded; the selected file launches the room runtime at its recorded area and room. In a room carrying the native save bit or object 0x1C, Up in the verified Object1C rectangle restores HP and writes the selected portable slot.
 
-Native evidence: `aos:c:src/code_08012744.c:SaveData_ClearSlotInSram`, `aos:c:src/code_08012744.c:SaveData_LoadSlotFromSram`, `aos:c:src/code_08012744.c:SaveData_SaveSlotToSram`, `aos:c:src/code_08012744.c:sub_080127F0`.  
-Local implementation: [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
-Tests: [`tests/test_aos_save.c`](../tests/test_aos_save.c).
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object1CCreate`, `aos:asm:asm/code/code_08050A3C.s:Object1CUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_08012744.c:SaveData_ClearSlotInSram`, `aos:c:src/code_08012744.c:SaveData_LoadSlotFromSram`, `aos:c:src/code_08012744.c:SaveData_SaveSlotToSram`, `aos:c:src/code_08012744.c:sub_080127F0`.  
+Local implementation: [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/runtime/aos_save_room.c`](../src/runtime/aos_save_room.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_save.c`](../tests/test_aos_save.c), [`tests/test_aos_save_room.c`](../tests/test_aos_save_room.c).
 Dependencies: `aos.startup.mode_dispatch`.  
-Known divergences: The ROM-free text schema is intentionally not the native six-slot 0x47C-byte SRAM layout. Only three frontend files and room, optional spawn, HP and movement mask are represented; inventory, equipment, souls, map/event state, play time updates and save-room writes are absent.  
-Next action: Port save-room interaction and the remaining progression fields before reconstructing native SRAM serialization.
+Known divergences: The ROM-free text schema is intentionally not the native six-slot 0x47C-byte SRAM layout. Only three frontend files, room, optional spawn, HP, movement mask and play time are represented; inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent.  
+Next action: Port the native save-room animation/question and remaining SRAM progression fields before reconstructing native serialization.
 
 [~] **`aos.startup.mode_dispatch` — Aria game mode dispatcher.** Native mode set, increment and GameModeUpdate result handling; the title destination ordering is catalogued but its screen handler is not ported.
 

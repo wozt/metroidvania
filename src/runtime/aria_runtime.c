@@ -13,6 +13,7 @@
 #include "aos_enemy.h"
 #include "aos_room.h"
 #include "aos_save.h"
+#include "aos_save_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
 #include "debug_menu.h"
@@ -120,6 +121,7 @@ typedef struct {
 typedef struct {
     int area, number;
     int width_screens, height_screens, width_cells, height_cells;
+    uint8_t room_flags;
     uint8_t *cells;
     uint8_t *blocks;        /* gEwramData + 0xF0C0, cleared on every load */
     AosTransition transitions[MAX_TRANSITIONS];
@@ -158,17 +160,27 @@ static bool load_room(const char *path, AriaRoom *room) {
     FILE *f = fopen(path, "rb");
     if (!f) { perror(path); return false; }
     char line[4096], extra;
-    int version, area, number, row = 0;
+    int version, area, number, room_flags = 0, row = 0;
     bool ended = false;
-    if (!fgets(line, sizeof line, f) ||
-        sscanf(line, "AOSROOM-NATIVE\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c", &version, &area, &number,
-               &room->width_screens, &room->height_screens, &room->width_cells,
-               &room->height_cells, &extra) != 7 || version != 3 ||
+    if (!fgets(line, sizeof line, f)) goto failure;
+    int fields = sscanf(line, "AOSROOM-NATIVE\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c", &version,
+                        &area, &number, &room->width_screens, &room->height_screens,
+                        &room->width_cells, &room->height_cells, &room_flags, &extra);
+    bool valid_header = version == 4 && fields == 8 && room_flags >= 0 && room_flags <= 3;
+    if (!valid_header) {
+        room_flags = 0;
+        fields = sscanf(line, "AOSROOM-NATIVE\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c", &version,
+                        &area, &number, &room->width_screens, &room->height_screens,
+                        &room->width_cells, &room->height_cells, &extra);
+        valid_header = version == 3 && fields == 7;
+    }
+    if (!valid_header ||
         room->width_cells < 1 || room->height_cells < 1 ||
         room->width_cells > 1024 || room->height_cells > 1024)
         goto failure;
     room->area = area;
     room->number = number;
+    room->room_flags = (uint8_t)room_flags;
     room->transition_count = 0;
     room->entity_count = 0;
     room->blocks = NULL;
@@ -189,6 +201,8 @@ static bool load_room(const char *path, AriaRoom *room) {
                 e->kind < 0 || e->kind > 255 || e->id < 0 || e->id > 255)
                 goto failure;
             e->spawned = false;
+            if (e->kind == ARIA_KIND_SPECIAL && e->id == AOS_OBJECT_SAVE_POINT)
+                room->room_flags |= AOS_ROOM_FLAG_SAVE;
             room->entity_count++;
             continue;
         }
@@ -223,6 +237,30 @@ failure:
     free_room(room);
     fprintf(stderr, "Invalid Aria runtime room: %s\n", path);
     return false;
+}
+
+static bool room_has_save_point(const AriaRoom *room) {
+    return room && (room->room_flags & AOS_ROOM_FLAG_SAVE) != 0;
+}
+
+/* Temporary host presentation around Object1C's native fixed room position.
+ * The original sprite, healing animation and save question are separate work. */
+static void draw_save_point(SDL_Renderer *renderer, const AriaRoom *room, int cam_x, int cam_y,
+                            bool player_inside, long step) {
+    if (!room_has_save_point(room)) return;
+    float x = 120.0f - (float)cam_x;
+    float y = 104.0f - (float)cam_y;
+    float pulse = (float)((step / 4) % 8);
+    if (pulse > 4.0f) pulse = 8.0f - pulse;
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, player_inside ? 130 : 80, 255, 255, 210);
+    SDL_FRect core = {x - 3.0f, y - 3.0f, 6.0f, 6.0f};
+    SDL_RenderFillRect(renderer, &core);
+    SDL_SetRenderDrawColor(renderer, 100, 210, 255, 130);
+    SDL_FRect glow = {x - 8.0f - pulse, y - 8.0f - pulse,
+                      16.0f + pulse * 2.0f, 16.0f + pulse * 2.0f};
+    SDL_RenderRect(renderer, &glow);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
 /* Reads the sprite index; textures are created only with a renderer. */
@@ -1287,6 +1325,8 @@ int main(int argc, char **argv) {
     const char *debug_input = NULL;
     /* Diagnostic combat stats (new-game values are not traced). */
     AriaPlayerStats player_stats = {10, 4, 320, 320};
+    AosSaveData active_save = {0};
+    bool has_active_save = false;
     long repeat = 0;
     GbaPadMap pad_map;
     gba_pad_map_default(&pad_map);
@@ -1338,23 +1378,23 @@ int main(int argc, char **argv) {
         if (end && *end) { usage(argv[0]); return 2; }
     }
     if (save_path) {
-        AosSaveData save;
         char error[256];
-        if (!aos_save_load(save_path, &save, error, sizeof error)) {
+        if (!aos_save_load(save_path, &active_save, error, sizeof error)) {
             fprintf(stderr, "Cannot load Aria save: %s\n", error);
             return 1;
         }
-        if (area < 0) area = save.area;
-        if (room_number < 0) room_number = save.room;
-        if (!spawn_override && save.spawn_x >= 0 && save.spawn_y >= 0) {
-            spawn_x = save.spawn_x;
-            spawn_y = save.spawn_y;
+        has_active_save = true;
+        if (area < 0) area = active_save.area;
+        if (room_number < 0) room_number = active_save.room;
+        if (!spawn_override && active_save.spawn_x >= 0 && active_save.spawn_y >= 0) {
+            spawn_x = active_save.spawn_x;
+            spawn_y = active_save.spawn_y;
         }
         if (!hp_override) {
-            player_stats.hp = save.hp;
-            player_stats.max_hp = save.max_hp;
+            player_stats.hp = active_save.hp;
+            player_stats.max_hp = active_save.max_hp;
         }
-        if (!moves_override) moves = save.moves;
+        if (!moves_override) moves = active_save.moves;
     }
     char folder_buffer[512], room_path[600];
     if (!folder) {
@@ -1432,6 +1472,7 @@ int main(int argc, char **argv) {
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     /* Native Aria input state is tracked separately from SDL. */
     AosForcedInput forced = {0};
+    AosSaveRoom save_room = {0};
     bool announced_death = false;
     long step = 0;
     AosInput aria_input = {0};
@@ -1529,6 +1570,7 @@ int main(int argc, char **argv) {
                 if (debug_teleport(renderer, &room, &background, &soma, &library.set, debug_area,
                                    debug_room)) {
                     layer = room_layer(&room);
+                    save_room = (AosSaveRoom){0};
                     follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
                 }
                 break;
@@ -1559,6 +1601,7 @@ int main(int argc, char **argv) {
             aos_soma_update(&soma, &layer, aria_input.player_held_input,
                             aria_input.player_new_input);
             ++step;
+            if (has_active_save) active_save.play_frames++;
             if (soma.state == 16 && !announced_death) {
                 /* The game-over mode (0x42C |= 0x10) is not ported. */
                 printf("Soma died (frame %ld)\n", step);
@@ -1568,6 +1611,30 @@ int main(int argc, char **argv) {
                                  soma.y >> 16)) {
                 if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;
                 layer = room_layer(&room);
+                save_room = (AosSaveRoom){0};
+            }
+            if (aos_save_room_update(&save_room, room_has_save_point(&room), soma.x >> 16,
+                                     soma.y >> 16, aria_input.player_held_input)) {
+                soma.hp = soma.max_hp;
+                player_stats.hp = soma.hp;
+                if (has_active_save) {
+                    active_save.area = (uint8_t)room.area;
+                    active_save.room = (uint16_t)room.number;
+                    active_save.spawn_x = (int16_t)(soma.x >> 16);
+                    active_save.spawn_y = (int16_t)(soma.y >> 16);
+                    active_save.hp = soma.hp;
+                    active_save.max_hp = soma.max_hp;
+                    active_save.moves = soma.moves;
+                    char error[256];
+                    if (aos_save_store(save_path, &active_save, error, sizeof error))
+                        printf("Saved Aria file %u in room %d/%d at %d,%d (frame %ld)\n",
+                               active_save.slot + 1u, room.area, room.number, soma.x >> 16,
+                               soma.y >> 16, step);
+                    else
+                        fprintf(stderr, "Cannot write Aria save: %s\n", error);
+                } else {
+                    printf("Save point restored HP; launch from a file slot to persist it\n");
+                }
             }
             /* sub_080426B0 after the player update. */
             aos_combat_tick(&soma.combat);
@@ -1589,6 +1656,8 @@ int main(int argc, char **argv) {
         SDL_RenderClear(renderer);
         SDL_FRect src = {(float)cam_x, (float)cam_y, VIEW_W, VIEW_H}, dst = {0, 0, VIEW_W, VIEW_H};
         SDL_RenderTexture(renderer, background, &src, &dst);
+        draw_save_point(renderer, &room, cam_x, cam_y,
+                        aos_save_room_player_inside(sx, sy), step);
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);

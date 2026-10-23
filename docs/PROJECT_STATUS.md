@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0479 - Aria save-room checkpoints
+
+- Added `aos_save_room`, a device-free controller for the native Object1C
+  activation rectangle (`x=104..136`, `y=128..183`) and its Up edge.
+- Runtime room exports now use schema version 4 with global-map save and warp
+  flags. Existing version-3 private exports remain readable and their Object1C
+  records still identify save rooms.
+- In a detected save room, Up restores Soma's HP and atomically writes the
+  selected portable file's room, spawn, HP, movement mask and play time. A
+  small procedural marker makes the host checkpoint visible without importing
+  ROM-derived graphics.
+- Native healing animation, save Yes/No prompt, object art, audio, inventory,
+  event/map flags and the original SRAM format remain intentionally partial.
+- Next: port the first pause/status inventory state and then extend the save
+  record only as its native owners become available.
+
 ## Patch 0478 - Aria file selection and runtime launch bridge
 
 - Replaced the New Game and Continue placeholders in the SDL title host with

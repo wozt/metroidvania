@@ -24,7 +24,9 @@ It currently:
 - decodes standard GBA 0x10 LZ77 and 0x30 RLE streams into caller-owned
   buffers without silently accepting output overflow.
 - reads the fixed GBA title, game code, maker code and version fields with
-  strict header bounds, and exposes the standard complement-checksum result.
+  strict header bounds, and exposes the standard complement-checksum result;
+- exposes that reader through verified `FusionRom` buffers, and reports the
+  identity during `fusion_importer --verify`.
 
 `fusion_importer` exposes the first orchestration contract:
 
@@ -45,7 +47,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/verify_roms.py` | `fusion/assets/rom.h`, `src/assets/core/rom.c` | foundation complete | C SHA-1 vector, local ROM verification, malformed-file tests |
 | `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | not started | symbol-table byte and bounds comparison |
 | `scripts/mzm_room_render.py` (GBA LZ77/RLE inputs) | `src/assets/gba/decompress.c` | primitive only | compressed bytes, output length and malformed-stream comparison |
-| GBA cartridge header fields (shared input contract) | `src/assets/gba/header.c`, `fusion_importer --header` | metadata reader complete | Python-generated synthetic header, native CLI field comparison, fixed marker and complement checksum |
+| GBA cartridge header fields (shared input contract) | `src/assets/gba/header.c`, `fusion_importer --header`, `fusion_rom_read_gba_header` | metadata reader complete | Python-generated synthetic header, native CLI field comparison, verified local ROM identity, fixed marker and complement checksum |
 | `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | not started | room structure and semantic render comparison |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
@@ -59,11 +61,12 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next native layer should port one small ROM-backed metadata extractor at a
-time. The first header extractor is intentionally diagnostic: it reads a
-caller-supplied file and does not replace verified game import. Each task must
-declare its ROM inputs, generated private outputs, extractor version and
-dependencies. A C task becomes authoritative only after its
+The next native layer should port one small game-specific metadata extractor at
+a time. The header extractor is intentionally diagnostic: it reads a
+caller-supplied file and now also runs on verified game imports, but does not
+replace room or asset extraction. Each task must declare its ROM inputs,
+generated private outputs, extractor version and dependencies. A C task becomes
+authoritative only after its
 Python output has been compared structurally and semantically (and byte-for-
 byte where the format requires it). Until then the Python task remains the
 production fallback and the native CLI must report that boundary clearly.

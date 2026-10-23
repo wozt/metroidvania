@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "fusion/assets/gba.h"
+
 typedef enum {
     FUSION_ASSET_GAME_METROID = 0,
     FUSION_ASSET_GAME_ARIA = 1,
@@ -40,5 +42,8 @@ bool fusion_rom_sha1_hex(const uint8_t *data, size_t size, char out[41]);
 bool fusion_rom_open(FusionAssetGame game, const char *path, FusionRom *rom,
                      char *error, size_t error_size);
 void fusion_rom_close(FusionRom *rom);
+
+/* Reads the standard header from an already verified private ROM buffer. */
+bool fusion_rom_read_gba_header(const FusionRom *rom, FusionGbaHeader *header);
 
 #endif /* FUSION_ASSETS_ROM_H */

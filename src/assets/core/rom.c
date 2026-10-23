@@ -131,3 +131,7 @@ bool fusion_rom_open(FusionAssetGame game, const char *path, FusionRom *rom,
 }
 
 void fusion_rom_close(FusionRom *rom) { clear_rom(rom); }
+
+bool fusion_rom_read_gba_header(const FusionRom *rom, FusionGbaHeader *header) {
+    return rom && fusion_gba_read_header(rom->data, rom->size, header);
+}

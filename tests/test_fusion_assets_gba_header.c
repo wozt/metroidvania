@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "fusion/assets/gba.h"
+#include "fusion/assets/rom.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -30,6 +31,10 @@ int main(void) {
     assert(header.main_unit_code == 1 && header.device_type == 2);
     assert(header.software_version == 3 && header.checksum_valid);
     assert(fusion_gba_header_checksum_valid(rom, sizeof rom));
+    FusionRom verified_buffer = {rom, sizeof rom, FUSION_ASSET_GAME_ARIA};
+    FusionGbaHeader wrapped;
+    assert(fusion_rom_read_gba_header(&verified_buffer, &wrapped));
+    assert(!strcmp(wrapped.game_code, "ABCD"));
 
     rom[0xBD] ^= 1;
     assert(fusion_gba_read_header(rom, sizeof rom, &header));

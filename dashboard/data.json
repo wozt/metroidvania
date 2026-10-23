@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-23T23:56:34+00:00",
+ "generated_at": "2026-10-23T23:57:45+00:00",
  "git": {
-  "commit": "779f0d4",
+  "commit": "76c8ec5",
   "branch": "main",
   "dirty": true
  },
@@ -12488,7 +12488,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies the two supported 8 MiB USA ROMs, reads bounded GBA header metadata and checksum state, and provides little-endian, GBA LZ77 and GBA RLE primitives; the CLI exposes list, verify, dry-run and diagnostic header inspection. Python remains authoritative for extraction, caches and all resource equivalence until each migration gate is proven.",
+   "limitations": "The C11 library verifies the two supported 8 MiB USA ROMs, exposes bounded GBA header metadata through verified buffers, and provides little-endian, GBA LZ77 and GBA RLE primitives; the CLI reports verified identity and offers list, verify, dry-run and diagnostic header inspection. Python remains authoritative for extraction, caches and all resource equivalence until each migration gate is proven.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -15176,6 +15176,12 @@
  },
  "timeline": [
   {
+   "commit": "76c8ec5",
+   "date": "2026-10-24",
+   "subject": "Expose native GBA header inspection",
+   "scope": "project"
+  },
+  {
    "commit": "779f0d4",
    "date": "2026-10-24",
    "subject": "Add native GBA header metadata reader",
@@ -15647,12 +15653,6 @@
    "commit": "4953090",
    "date": "2026-10-19",
    "subject": "Port native palette background flashes",
-   "scope": "project"
-  },
-  {
-   "commit": "7d1e874",
-   "date": "2026-10-19",
-   "subject": "Port Ruins Test ghost alpha blending",
    "scope": "project"
   }
  ],

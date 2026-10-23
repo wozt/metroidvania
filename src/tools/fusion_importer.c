@@ -43,7 +43,16 @@ static int verify_games(const char *rom_dir, const char *aria_path, const char *
         }
         FusionRom rom = {0};
         if (fusion_rom_open((FusionAssetGame)i, paths[i], &rom, error, sizeof error)) {
-            printf("%s: valid ROM (%s)\n", spec->id, spec->sha1);
+            FusionGbaHeader header;
+            if (!fusion_rom_read_gba_header(&rom, &header)) {
+                fprintf(stderr, "%s: verified ROM has an invalid GBA header\n", spec->id);
+                fusion_rom_close(&rom);
+                ++failures;
+                continue;
+            }
+            printf("%s: valid ROM (%s), title=%s, game_code=%s, version=%u, checksum=%s\n",
+                   spec->id, spec->sha1, header.title, header.game_code,
+                   header.software_version, header.checksum_valid ? "valid" : "invalid");
             fusion_rom_close(&rom);
         } else {
             fprintf(stderr, "%s: %s\n", spec->id, error);

@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0483 - Connect verified ROMs to GBA metadata
+
+- Added `fusion_rom_read_gba_header`, which exposes the bounded GBA header
+  reader through an already SHA-1-verified `FusionRom` buffer.
+- `fusion_importer --verify` now reports each verified ROM's native title, game
+  code, software version and header checksum state.
+- Extended the ROM-free CTest to cover the verified-buffer wrapper and checked
+  both installed local USA ROMs without committing them.
+- This remains identity/diagnostic metadata; Python still owns all extraction
+  and no room, sprite, audio or gameplay parity status changed.
+- Next: use the verified game identity to select one small game-specific native
+  metadata table and compare it against a Python fixture.
+
 ## Patch 0482 - C11 GBA header metadata reader
 
 - Added a bounded native reader for the standard GBA title, game code, maker

@@ -205,7 +205,8 @@ release. Its generic GBA layer also owns a bounds-checked little-endian
 reader, standard BIOS 0x10 LZ77 / 0x30 RLE decoders and bounded GBA header
 metadata/checksum parsing. `fusion_importer`
 (`src/tools/fusion_importer.c`) exposes `--list`,
-`--verify`, and an explicit dry-run plan for future extraction tasks. The
+`--verify` reports the parsed identity after ROM fingerprint validation, and
+an explicit dry-run plan remains available for future extraction tasks. The
 Python extractors remain authoritative until each replacement passes the
 equivalence gates in `docs/ASSET_PIPELINE_MIGRATION.md`.
 

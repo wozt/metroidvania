@@ -706,6 +706,19 @@ the native 50-frame falling death. Both retain their native graphics,
 palettes, frame boxes, combat and global inert states. Sounds, palette
 callbacks and rewards remain outside the runtime.
 
+The next constructor-table batch connects ten early bestiary identities:
+Skeleton (0x02), Peeping Eye (0x06), Killer Fish (0x07), Bone Pillar (0x08),
+Buer (0x0A), White Dragon (0x0B), Ghost (0x0E), Rock Armor (0x12), Giant Ghost
+(0x13) and Winged Skeleton (0x14). `scripts/aos_object_sprites.py` exports
+their native sheets, palettes, animation descriptors, direct child frames and
+frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
+floor placement, facing, parameter clamps, hidden producer forms and inert
+states, and supplies deliberately small observable patrol, swimming, hovering
+and homing loops. The ten parity rows remain partial because the Peeping Eye
+segments, White Dragon body chain, Giant Ghost visual children, Bone Pillar
+tower, Buer fire component, probes, attacks, fades, sounds and rewards still
+need their own native state machines.
+
 Tiny Devil (0x10) and Imp (0x31) share one sheet with palette banks 1 and 0,
 including the per-component OBJ palette-row byte used by their OAM records,
 but have distinct attack paths. Tiny Devil wanders for the native 100..599

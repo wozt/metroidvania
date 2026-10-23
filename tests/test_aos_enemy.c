@@ -19,6 +19,70 @@ static const uint32_t *script;
 static int script_at;
 static uint32_t scripted(void) { return script[script_at++]; }
 
+static void early_enemy_batch_tests(void) {
+    assert(AOS_ENEMY_SKELETON == 0x02 && AOS_ENEMY_PEEPING_EYE == 0x06 &&
+           AOS_ENEMY_KILLER_FISH == 0x07 && AOS_ENEMY_BONE_PILLAR == 0x08 &&
+           AOS_ENEMY_BUER == 0x0A && AOS_ENEMY_WHITE_DRAGON == 0x0B &&
+           AOS_ENEMY_GHOST == 0x0E && AOS_ENEMY_ROCK_ARMOR == 0x12 &&
+           AOS_ENEMY_GIANT_GHOST == 0x13 && AOS_ENEMY_WINGED_SKELETON == 0x14);
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2, 2};
+    const AosAnimDef defs[4] = {{2, ticks}, {2, ticks}, {2, ticks}, {2, ticks}};
+    const AosAnimSet anims = {defs, 4};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
+        }
+    const AosEnemyStats stats = {30, 16, 2, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
+    const uint8_t ids[] = {AOS_ENEMY_SKELETON, AOS_ENEMY_PEEPING_EYE,
+                           AOS_ENEMY_KILLER_FISH, AOS_ENEMY_BONE_PILLAR,
+                           AOS_ENEMY_BUER, AOS_ENEMY_WHITE_DRAGON, AOS_ENEMY_GHOST,
+                           AOS_ENEMY_ROCK_ARMOR, AOS_ENEMY_GIANT_GHOST,
+                           AOS_ENEMY_WINGED_SKELETON};
+    for (unsigned i = 0; i < sizeof ids; ++i) {
+        AosEnemy e;
+        assert(aos_enemy_create(&e, ids[i], 100, 100, ids[i] == AOS_ENEMY_BONE_PILLAR ? 4 : 0,
+                                0, &soma, &layer, &kind, &stats));
+        assert(e.id == ids[i] && e.hp == stats.hp);
+        int32_t x0 = e.x, y0 = e.y;
+        uint8_t frame0 = e.anim.frame, tick0 = e.anim.tick;
+        aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(e.x != x0 || e.y != y0 || e.anim.frame != frame0 || e.anim.tick != tick0);
+    }
+
+    AosEnemy producer;
+    assert(aos_enemy_create(&producer, AOS_ENEMY_GHOST, 100, 100, 0, 1, &soma, &layer, &kind,
+                            &stats));
+    assert(producer.state == 3 && producer.hidden && producer.combat.attack_off &&
+           producer.combat.hurt_off);
+    assert(aos_enemy_create(&producer, AOS_ENEMY_WINGED_SKELETON, 100, 100, 0, 1, &soma,
+                            &layer, &kind, &stats));
+    assert(producer.state == 3 && producer.hidden);
+
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy inert;
+    assert(aos_enemy_create(&inert, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(inert.state == 5);
+    int32_t inert_x = inert.x;
+    aos_enemy_update(&inert, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(inert.x == inert_x);
+
+    AosEnemy pillar;
+    assert(aos_enemy_create(&pillar, AOS_ENEMY_BONE_PILLAR, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(pillar.param0 == 1);
+    assert(aos_enemy_create(&pillar, AOS_ENEMY_BONE_PILLAR, 100, 100, 12, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(pillar.param0 == 8);
+}
+
 static void batch_enemy_tests(void) {
     assert(AOS_ENEMY_MERMAN == 0x03 && AOS_ENEMY_SIREN == 0x0F &&
            AOS_ENEMY_TINY_DEVIL == 0x10 && AOS_ENEMY_CATOBLEPAS == 0x1C &&
@@ -3049,7 +3113,7 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x02, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x15, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 
@@ -3219,6 +3283,7 @@ int main(void) {
     assert(aos_enemy_damage(10, 4, 0, 0, 0x0001) == 7);         /* (10 - 2) * 252 >> 8 */
     assert(aos_enemy_damage(1, 8, 0, 0, 1) == 1);
     assert(aos_player_damage(6, 10) == 2 && aos_player_damage(1, 50) == 1);
+    early_enemy_batch_tests();
     batch_enemy_tests();
     zombie_tests();
     crow_tests();

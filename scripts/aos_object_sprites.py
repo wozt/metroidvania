@@ -67,12 +67,36 @@ ENEMIES = {
     "zombie": {"id": 0x01, "graphics": 0x081CBF8C, "palette": 0x0820A62C, "bank": 0,
                "frames": 0x082178B8,  # sub_0807B404 (EnemyZombieCreate 0x0807ABEC)
                "static_frames": (0, 0xD)},  # puddle (sub_0807B33C), drip and gore
+    "skeleton": {"id": 0x02, "graphics": 0x081F424C, "palette": 0x0820BE3C, "bank": 0,
+                 "frames": 0x0824C910},  # EnemySkeletonCreate 0x080C33C8
     # sub_08070AC4 (EnemyMermanCreate): the native Merman sheet and frames.
     "merman": {"id": 0x03, "graphics": 0x081CBF3C, "palette": 0x0820A464, "bank": 0,
                "frames": 0x08212FB4},
+    "peeping_eye": {"id": 0x06, "graphics": 0x081CBFEC, "palette": 0x0820A86C,
+                    "bank": 0, "frames": 0x0821D7B4,
+                    "static_frames": (0xB, 0xC, 0xD, 0xE)},  # sub_08088E08
+    # EnemyKillerFishCreate uses the Merman sheet and frame descriptor.
+    "killer_fish": {"id": 0x07, "graphics": 0x081CBF3C, "palette": 0x0820A464,
+                    "bank": 0, "frames": 0x08212FB4},
+    # Variant 0 of the descriptor table at 0x081193DC (sub_080B3BAC).
+    "bone_pillar": {"id": 0x08, "graphics": 0x081E41D4, "palette": 0x0820B8E8,
+                    "bank": 0, "frames": 0x08242F8C},
     "blue_crow": {"id": 0x09, "graphics": 0x081F4274, "palette": 0x0820BF10, "bank": 0,
                   "frames": 0x0824EC04,   # EnemyBlueCrowCreate 0x080C9A6C
                   "static_frames": (8,)},  # its feathers (sub_080C9E2C)
+    "buer": {"id": 0x0A, "graphics": 0x081F428C, "palette": 0x0820BF9C, "bank": 0,
+             "frames": 0x0824FDB0, "static_frames": (0, 1)},  # EnemyBuerCreate
+    "white_dragon": {"id": 0x0B, "graphics": 0x081CBF74, "palette": 0x0820A580,
+                     "bank": 0, "frames": 0x0821631C,
+                     "static_frames": (0,)},  # sub_08077C40
+    "ghost": {"id": 0x0E, "graphics": 0x081CBFFC, "palette": 0x0820A8D4, "bank": 0,
+              "frames": 0x0821EE0C},  # sub_0808A1AC
+    "rock_armor": {"id": 0x12, "graphics": 0x081E41BC, "palette": 0x0820B83C,
+                   "bank": 1, "frames": 0x0823FFD8},  # EnemyRockArmorCreate
+    "giant_ghost": {"id": 0x13, "graphics": 0x081CBFA4, "palette": 0x0820A698,
+                    "bank": 0, "frames": 0x08219140},  # sub_0807E2CC
+    "winged_skeleton": {"id": 0x14, "graphics": 0x081CBF64, "palette": 0x0820A518,
+                        "bank": 0, "frames": 0x08215CBC},  # sub_080754E0
     # EnemyRedCrowCreate 0x080CA04C: the blue crow's sheet with bank 1; its
     # feathers (sub_080CA3CC) show frame 8.
     "red_crow": {"id": 0x2D, "graphics": 0x081F4274, "palette": 0x0820BF10, "bank": 1,

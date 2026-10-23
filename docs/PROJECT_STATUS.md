@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0469 - Aria constructor-table batch: ten early enemies
+
+- Connected the native constructor identities, private sheets, palettes,
+  animation tables and frame-box metadata for Skeleton, Peeping Eye, Killer
+  Fish, Bone Pillar, Buer, White Dragon, Ghost, Rock Armor, Giant Ghost and
+  Winged Skeleton (IDs `0x02`, `0x06`-`0x0B`, `0x0E`, `0x12`-`0x14`). The
+  exporter now produces 346 object sequences and the runtime accepts the
+  larger native animation/frame ranges required by Skeleton and Rock Armor.
+- Added the first observable native loops: floor placement, facing, bounded
+  patrol/swim, hover, homing, direct child-frame rendering, parameter clamps,
+  hidden producer forms and the documented inert states. These entries remain
+  `partial`; articulated children, attacks, palette/fade callbacks, probes,
+  sounds and rewards are explicitly not claimed.
+- ROM-free tests cover all ten constructors, animation or motion progress,
+  producer and inert branches, parameter clamping and descriptor addresses.
+  Native-room captures verified the loaded Skeleton, Buer and Giant Ghost
+  renders; capture files remain private and ignored.
+- Next: port the linked children and attack state machines, starting with the
+  Peeping Eye segments and White Dragon body chain, then promote each enemy
+  only after an in-game capture proves its complete routine.
+
 ## Patch 0468 - Aria Merman and Ripper state machines
 
 - Removed the last provisional `batch_enemy_update` path. Ripper now uses its

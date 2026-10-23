@@ -422,10 +422,19 @@ static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollis
     if (zombie->y <= y0 - 0x80000) zombie_vanish(zombie);
 }
 
+static bool is_early_enemy(uint8_t id) {
+    return id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_PEEPING_EYE ||
+           id == AOS_ENEMY_KILLER_FISH || id == AOS_ENEMY_BONE_PILLAR ||
+           id == AOS_ENEMY_BUER || id == AOS_ENEMY_WHITE_DRAGON || id == AOS_ENEMY_GHOST ||
+           id == AOS_ENEMY_ROCK_ARMOR || id == AOS_ENEMY_GIANT_GHOST ||
+           id == AOS_ENEMY_WINGED_SKELETON;
+}
+
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
-    if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
+    if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && !is_early_enemy(id) &&
+        id != AOS_ENEMY_BLUE_CROW &&
         id != AOS_ENEMY_MERMAN && id != AOS_ENEMY_SIREN && id != AOS_ENEMY_TINY_DEVIL &&
         id != AOS_ENEMY_CATOBLEPAS && id != AOS_ENEMY_IMP && id != AOS_ENEMY_GORGON &&
         id != AOS_ENEMY_HARPY && id != AOS_ENEMY_RIPPER &&
@@ -449,6 +458,99 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     enemy->stats = *stats;
     enemy->hp = stats->hp;
     enemy->combat.type = AOS_TYPE_ENEMY;
+    if (is_early_enemy(id)) {
+        /* Constructor-table batch. These initial states, animations, boxes,
+         * floor offsets and producer forms come directly from the ten native
+         * create routines. Their multipart children and attack states remain
+         * deliberately outside this first pass. */
+        unsigned animation = id == AOS_ENEMY_KILLER_FISH ? 1 :
+                             id == AOS_ENEMY_WINGED_SKELETON ? 2 : 0;
+        bool direct_frame = id == AOS_ENEMY_BUER || id == AOS_ENEMY_WHITE_DRAGON;
+        if (direct_frame) enemy->static_frame = 0;
+        else {
+            play(enemy, anims, animation);
+            step_anim(enemy, anims);
+        }
+        if (flag_8e_40) {
+            enemy->state = id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_KILLER_FISH ? 5 :
+                           id == AOS_ENEMY_BUER || id == AOS_ENEMY_WINGED_SKELETON ? 4 :
+                           id == AOS_ENEMY_GIANT_GHOST || id == AOS_ENEMY_ROCK_ARMOR ? 3 : 2;
+            if (id == AOS_ENEMY_GHOST) enemy->y -= AOS_FIXED(36);
+            return true;
+        }
+        if ((id == AOS_ENEMY_GHOST || id == AOS_ENEMY_WINGED_SKELETON) && param1) {
+            enemy->state = 3;
+            enemy->hidden = true;
+            enemy->combat.attack_off = enemy->combat.hurt_off = true;
+            return true;
+        }
+        face_player(enemy, soma);
+        switch (id) {
+        case AOS_ENEMY_SKELETON:
+            enemy->state = 1;
+            snap_to_floor(enemy, layer);
+            enemy->home = (int16_t)(enemy->x >> 16);
+            enemy->home_left = enemy->home - 32;
+            enemy->home_right = enemy->home + 32;
+            enemy->vx = toward_facing(enemy, 0x8000);
+            break;
+        case AOS_ENEMY_PEEPING_EYE:
+            enemy->own_boxes = true;
+            enemy->own_hurt = enemy->own_attack = (AosBox){-7, -7, 14, 14};
+            snap_to_floor(enemy, layer);
+            enemy->y -= AOS_FIXED(8);
+            enemy->home = (int16_t)(enemy->y >> 16);
+            break;
+        case AOS_ENEMY_KILLER_FISH:
+            enemy->vx = toward_facing(enemy, 0xC000);
+            enemy->home = (int16_t)(enemy->y >> 16);
+            break;
+        case AOS_ENEMY_BONE_PILLAR:
+            if (enemy->param0 < 1) enemy->param0 = 1;
+            if (enemy->param0 > 8) enemy->param0 = 8;
+            snap_to_floor(enemy, layer);
+            break;
+        case AOS_ENEMY_BUER:
+            enemy->state = param0 ? 2 : 1;
+            enemy->own_boxes = true;
+            enemy->own_hurt = enemy->own_attack = (AosBox){-20, -20, 40, 40};
+            snap_to_floor(enemy, layer);
+            enemy->y -= AOS_FIXED(24);
+            enemy->home = (int16_t)(enemy->y >> 16);
+            enemy->home_left = (int16_t)((enemy->x >> 16) - 64);
+            enemy->home_right = (int16_t)((enemy->x >> 16) + 64);
+            enemy->vx = toward_facing(enemy, 0x18000);
+            break;
+        case AOS_ENEMY_WHITE_DRAGON:
+            enemy->own_boxes = true;
+            enemy->own_hurt = enemy->own_attack = (AosBox){-8, -8, 16, 12};
+            enemy->mirrored = param0 != 0;
+            enemy->home = (int16_t)(enemy->y >> 16);
+            break;
+        case AOS_ENEMY_GHOST:
+            enemy->state = 0;
+            break;
+        case AOS_ENEMY_ROCK_ARMOR:
+            enemy->state = 0;
+            snap_to_floor(enemy, layer);
+            enemy->y += AOS_FIXED(1);
+            enemy->home = (int16_t)(enemy->x >> 16);
+            enemy->home_left = enemy->home - 48;
+            enemy->home_right = enemy->home + 48;
+            enemy->vx = toward_facing(enemy, 0x6000);
+            break;
+        case AOS_ENEMY_GIANT_GHOST:
+            enemy->state = 0;
+            break;
+        case AOS_ENEMY_WINGED_SKELETON:
+            enemy->state = 0;
+            enemy->home = (int16_t)(enemy->y >> 16);
+            enemy->vx = toward_facing(enemy, (int32_t)(0xC000 + (aos_random() & 0x3FFF)));
+            break;
+        default: break;
+        }
+        return true;
+    }
     if (id == AOS_ENEMY_ZOMBIE) {
         zombie_create(enemy, soma, layer, anims);
         return true;
@@ -6858,6 +6960,114 @@ static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
     return report;
 }
 
+static bool early_enemy_inert(const AosEnemy *e) {
+    if ((e->id == AOS_ENEMY_SKELETON || e->id == AOS_ENEMY_KILLER_FISH) && e->state == 5)
+        return true;
+    if ((e->id == AOS_ENEMY_BUER || e->id == AOS_ENEMY_WINGED_SKELETON) && e->state == 4)
+        return true;
+    if ((e->id == AOS_ENEMY_ROCK_ARMOR || e->id == AOS_ENEMY_GIANT_GHOST) && e->state == 3)
+        return true;
+    return (e->id == AOS_ENEMY_PEEPING_EYE || e->id == AOS_ENEMY_BONE_PILLAR ||
+            e->id == AOS_ENEMY_WHITE_DRAGON || e->id == AOS_ENEMY_GHOST) && e->state == 2;
+}
+
+/* First observable loops for the ten constructor-table enemies introduced
+ * together. This deliberately stops at the boundary documented in the
+ * parity rows: linked multipart bodies and enemy-specific attacks are not
+ * treated as ported by this shared path. */
+static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
+                                       const AosCollision *layer, const AosEnemyKind *kind,
+                                       const AosWeaponEntity *weapon,
+                                       const AosWeaponFrames *weapon_frames, int soma_atk,
+                                       int soma_def, int cam_x, int cam_y,
+                                       uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    (void)layer;
+    if (e->defeated) {
+        generic_death(e, kind, random, &report);
+        aos_combat_tick(&e->combat);
+        return report;
+    }
+    if (early_enemy_inert(e)) {
+        if (e->static_frame < 0) step_anim(e, kind->anims);
+        return report;
+    }
+    if (e->hidden) return report;
+    int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+
+    switch (e->id) {
+    case AOS_ENEMY_SKELETON:
+    case AOS_ENEMY_ROCK_ARMOR:
+        e->x += e->vx;
+        if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, e->id == AOS_ENEMY_SKELETON ? 0x8000 : 0x6000);
+        }
+        break;
+    case AOS_ENEMY_PEEPING_EYE:
+        e->phase += 0x180;
+        e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
+        face_player(e, soma);
+        break;
+    case AOS_ENEMY_KILLER_FISH:
+        e->x += e->vx;
+        e->phase += 0x300;
+        e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 16;
+        if (outside_margins(kind, 0, (e->x >> 16) - cam_x, (e->y >> 16) - cam_y)) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0xC000);
+        }
+        break;
+    case AOS_ENEMY_BONE_PILLAR:
+        face_player(e, soma);
+        break;
+    case AOS_ENEMY_BUER:
+        e->x += e->vx;
+        if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0x18000);
+        }
+        e->phase += 0x400;
+        e->y = AOS_FIXED(e->home) - abs(aos_sine(e->phase) / 8);
+        break;
+    case AOS_ENEMY_WHITE_DRAGON:
+        face_player(e, soma);
+        e->phase += 0x100;
+        e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
+        break;
+    case AOS_ENEMY_GHOST:
+        move_toward(e, soma->x, soma->y - AOS_FIXED(16), 0x6000);
+        e->x += e->vx;
+        e->y += e->vy;
+        face_player(e, soma);
+        break;
+    case AOS_ENEMY_GIANT_GHOST:
+        move_toward(e, soma->x, soma->y - AOS_FIXED(24), 0x4000);
+        e->x += e->vx;
+        e->y += e->vy;
+        face_player(e, soma);
+        break;
+    case AOS_ENEMY_WINGED_SKELETON:
+        e->x += e->vx;
+        e->phase += 0x280;
+        e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 12;
+        if (outside_margins(kind, 0, (e->x >> 16) - cam_x, (e->y >> 16) - cam_y)) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0xC000);
+        }
+        break;
+    default: break;
+    }
+    if (e->static_frame < 0) step_anim(e, kind->anims);
+    sx = (e->x >> 16) - cam_x;
+    sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&e->combat);
+    return report;
+}
+
 AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
@@ -6865,6 +7075,9 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
+    if (is_early_enemy(enemy->id) && enemy->role == AOS_ROLE_ENEMY)
+        return early_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+                                  soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_HARPY_SHOT || enemy->role == AOS_ROLE_SIREN_SHOT)
         return harpy_shot_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                  cam_x, cam_y);

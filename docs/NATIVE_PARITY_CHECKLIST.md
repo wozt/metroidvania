@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 44 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 54 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 371 | 3202 |
+| Castlevania: Aria of Sorrow | 419 | 3154 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1223,6 +1223,24 @@ Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not chec
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
 
+[~] **`aos.enemies.bone_pillar` — Bone Pillar.** The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement and animation loop are connected.
+
+Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3BAC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3DCC`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The articulated tower segments, variant collision and damage callbacks are not ported.  
+Next action: Port the segment construction and tower collision.
+Evidence: in game: `aria area_01_room_003: Bone Pillar record at x 352, y 767`.
+
+[~] **`aos.enemies.buer` — Buer.** The native direct frames, contact box, parameter-selected state, floor-relative placement and bounded rolling loop are connected.
+
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CBA30`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC3F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC4E4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC514`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The linked fire component, native bounce timing, sounds and palette callbacks are not ported.  
+Next action: Port the fire child and bounce state machine.
+Evidence: in game: `aria area_00_room_012: Buer record at x 128, y 504`.
+
 [+] **`aos.enemies.cagnazzo` — Cagnazzo (Lubicant's routines).** Record 1 of 0x0852883C (frames 0x0824A334, bank 0, a fin, the hover attack): before each dive it circles the player for 64 frames with animation 3 (+ 0x50 +/- 0x3000 up to 2.5, + 0x54 0x1800 or -0x3000 up to 0.5), with a lead of 2 and a dive speed of 4.0.
 
 Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyCagnazzoCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyCagnazzoUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7BC8`.  
@@ -1313,6 +1331,15 @@ Known divergences: Sounds 0x6E and 0x87, the palette bits and sub_080683BC are n
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_08_room_012: both gargoyles leave their perches (frame 30), swoop onto Soma and knock him back (frame 90), fly off and climb back (frames 150 and 210)`.
 
+[~] **`aos.enemies.ghost` — Ghost.** The native sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and basic homing loop are connected.
+
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyGhostCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGhostUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_0808A030`, `aos:asm:asm/code/code_080809C0.s:sub_0808A0C8`, `aos:asm:asm/code/code_080809C0.s:sub_0808A1AC`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The native fade, palette transitions, room spawner behavior and sounds are not ported.  
+Next action: Port the fade and attack state machine.
+Evidence: in game: `aria area_00_room_018: Ghost producer record at x 0, y 0`.
+
 [+] **`aos.enemies.ghost_dancer` — Ghost Dancer.** The figure-of-eight dance, its animation swap, the fade between opaque and semi-transparent every half turn, the margin hiding, the hit stun, the death animation and state 5 under gEwramData + 0x8E bit 0x40 are ported; palette banks 0 to 2 follow parameter 0.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BD64`, `aos:asm:asm/code/code_080C0A1C.s:EnemyGhostDancerCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyGhostDancerUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2E74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C3190`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C327C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C32EC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C336C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C339C`.  
@@ -1322,6 +1349,15 @@ Dependencies: `aos.enemies.medusa_head`.
 Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the room's blend coefficients are not traced); sound 0x6D, the palette bits of + 0x5A bits 3-6 and sub_080683BC are not ported; sub_080C305C is not reached from the code read.  
 Next action: Trace the room blend coefficients for semi-transparent sprites.
 Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330`.
+
+[~] **`aos.enemies.giant_ghost` — Giant Ghost.** The native sheet, palette, frame descriptor and basic homing loop are connected.
+
+Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807D9B8`, `aos:asm:asm/code/code_080709D8.s:sub_0807DBB4`, `aos:asm:asm/code/code_080709D8.s:sub_0807DE14`, `aos:asm:asm/code/code_080709D8.s:sub_0807E2CC`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The three linked visual children, palette script, fade and attack states are not ported.  
+Next action: Port the three children and palette/fade behavior.
+Evidence: in game: `aria area_01_room_008: Giant Ghost record at x 160, y 224`.
 
 [+] **`aos.enemies.gorgon` — Gorgon.** Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path.
 
@@ -1368,6 +1404,16 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_aos_o
 Known divergences: Sounds 0x6E and 0x153, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; child effects and pieces are updated after the enemies of their frame (native slot order not traced).  
 Next action: Compare against an emulator.
 Evidence: in game: `aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames`.
+
+[~] **`aos.enemies.killer_fish` — Killer Fish.** The native Merman sheet and frame descriptor are reused with the Killer Fish identity, inert state and a bounded swimming loop.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishCreate`, `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_08070168`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`, `aos:asm:asm/code/code_080709D8.s:sub_08070B10`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.merman`.  
+Known divergences: The water-height probe, multi-fish producer, attack phases and sounds are not ported.  
+Next action: Port the water probe and linked fish producer.
+Evidence: in game: `aria area_00_room_016: Killer Fish record at x 384, y 184`.
 
 [+] **`aos.enemies.lightning_doll` — Lightning Doll.** The dormant wake-up, the six random bounded flight paths, the electrical charge with its native attack box and a spark following Soma, the timed landing and takeoff, the inert animation cycle under gEwramData + 0x8E bit 0x40, and the death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported.
 
@@ -1435,6 +1481,15 @@ Known divergences: The four direct OAM records and collision boxes are ported; t
 Next action: Compare the three delayed effect trails and palette behavior against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180`.
 
+[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The native sheet, direct child frames, palette, contact box and hovering facing loop are connected.
+
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The six linked eye segments, ceiling probing, sounds and attack cycle are not ported.  
+Next action: Port the eyeball and six segment child state machines.
+Evidence: in game: `aria area_00_room_018: Peeping Eye record at x 568, y 176`.
+
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRedCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRedCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA0D4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA308`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA3CC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA474`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA59C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA5D0`.  
@@ -1455,6 +1510,15 @@ Known divergences: Animation-marker timing is represented by the exported animat
 Next action: Compare the blade animation marker and acceleration rounding frame by frame with an emulator.
 Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts`.
 
+[~] **`aos.enemies.rock_armor` — Rock Armor.** The native bank-1 sheet, palette, frame boxes, inert state, floor placement and bounded patrol are connected.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2F10`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The native armor hit reactions, walk probes, debris and sounds are not ported.  
+Next action: Port the probe walker and armor attack/reaction states.
+Evidence: in game: `aria area_00_room_024: Rock Armor record at x 576, y 184`.
+
 [+] **`aos.enemies.siren` — Siren (Harpy's routines).** The native constructor and updater alias Harpy with palette bank 1. It uses the shared flight, recoil and death states plus its distinct three-note frame 14/13/14 fan and repeating 16-frame angular bend.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemySirenCreate`, `aos:asm:asm/code/code_080709D8.s:EnemySirenUpdate`.  
@@ -1464,6 +1528,16 @@ Dependencies: `aos.enemies.harpy`.
 Known divergences: As Harpy, exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds, palette callbacks and rewards are not modelled.  
 Next action: Refine the shared acceleration and activity-region clamping when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren renders with its native palette, its three-note fan is visible by frame 40 and contact damages Soma for 40 HP`.
+
+[~] **`aos.enemies.skeleton` — Skeleton.** The native sheet, palette, frame boxes, floor placement, facing and bounded walking loop are connected; global inert state 5 is preserved.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_080C0A1C.s:EnemySkeletonCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemySkeletonUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4148`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4624`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.zombie`.  
+Known divergences: The native bone children, throws, sounds and reward callback are not ported.  
+Next action: Port the bone children and attack timing.
+Evidence: in game: `aria area_00_room_006: skeleton record at x 128, y 176`.
 
 [+] **`aos.enemies.skeleton_knight` — Skeleton knight.** The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 
@@ -1513,6 +1587,24 @@ Dependencies: `aos.enemies.curly`.
 Known divergences: Sounds 0x87 and 0x1CD, the palette bits, the tracking list of sub_08021924, sub_080683BC and the area 4 rooms 12-13 draw routine sub_0806CCE8 are not ported; a zero distance in sub_080696B0 (a division by zero natively) leaves it still.  
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)`.
+
+[~] **`aos.enemies.white_dragon` — White Dragon.** The native head sheet, palette, frame descriptor, direct frame and facing/hover loop are connected.
+
+Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080773AC`, `aos:asm:asm/code/code_080709D8.s:sub_08077458`, `aos:asm:asm/code/code_080709D8.s:sub_08077C40`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The nine linked body children, articulated motion, palette callbacks and sounds are not ported.  
+Next action: Port the nine body children and articulated movement.
+Evidence: in game: `aria area_00_room_013: White Dragon record at x 208, y 104`.
+
+[~] **`aos.enemies.winged_skeleton` — Winged Skeleton.** The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and facing-dependent initial speed are connected.
+
+Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWingedSkeletonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWingedSkeletonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080751B4`, `aos:asm:asm/code/code_080709D8.s:sub_080754E0`, `aos:asm:asm/code/code_080709D8.s:sub_0807552C`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The native wing probes, dive attack, producer behavior and sounds are not ported.  
+Next action: Port the wing probes and dive attack.
+Evidence: in game: `aria area_00_room_002: Winged Skeleton producer record at x 0, y 0`.
 
 [+] **`aos.enemies.zombie` — Zombie and generic enemy death.** Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported.
 

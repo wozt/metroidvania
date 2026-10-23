@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0476 - Aria Peeping Eye random target steering
+
+- Ported the target choice following the timed entry: its horizontal point is
+  randomly 64 to 112 pixels to either side, while the vertical point is 32 to
+  80 pixels above the Eye.
+- Added the traced state-3 steering core: both axes damp by 31/32, accelerate
+  outside the four-pixel target tolerance, cap at two pixels per frame, and
+  choose another point upon arrival or after the native timeout.
+- The state-3 visual variant sequence, ceiling probes, damage callbacks,
+  sounds and rewards remain unported. This remains a partial controller pass.
+- Next: trace the Peeping Eye state-3 visual variant sequence and ceiling
+  probe, then trace White Dragon damage and attack transitions.
+
 ## Patch 0475 - Aria Peeping Eye timed entry sequence
 
 - Replaced the temporary 30/20/30-frame polar envelope with the ten-stage,
@@ -9,9 +22,8 @@ Last updated: **2026-10-23**.
   drive the already-linked polar tendrils exactly through the observed stage
   order and durations.
 - The ROM's following random-target selection, state-3 variant branch table,
-  ceiling probes, damage callbacks, sounds and rewards remain unported. When
-  the timed entry completes, the compact controller returns to idle instead of
-  inventing a patrol or attack state.
+  ceiling probes, damage callbacks, sounds and rewards remain unported at this
+  earlier checkpoint.
 - ROM-free enemy tests cover the trigger, early stage transition, final
   20-frame hold and state-2 handoff.
 - Next: trace the Peeping Eye random target and state-3 variant selection,

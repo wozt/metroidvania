@@ -1481,14 +1481,14 @@ Known divergences: The four direct OAM records and collision boxes are ported; t
 Next action: Compare the three delayed effect trails and palette behavior against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180`.
 
-[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence through two eye overlays and six linked polar frames.
+[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence, then selects and steers toward the traced random upper-side target through two eye overlays and six linked polar frames.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: The random target selection, state-3 variant table, ceiling probing, sounds and callbacks are not ported.  
-Next action: Trace random targeting, state-3 variant selection and the ceiling probe.
+Known divergences: The state-3 visual variant table, ceiling probing, sounds and callbacks are not ported.  
+Next action: Trace the state-3 visual variant selection and ceiling probe.
 Evidence: in game: `aria area_00_room_018: Peeping Eye record at x 568, y 176`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.

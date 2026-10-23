@@ -200,6 +200,9 @@ typedef struct AosEnemy {
     uint8_t variant;        /* + 0x14 of a Skull Millione, Cagnazzo or Lubicant */
     int32_t speed;          /* + 0x20 of their chase */
     const struct AosEnemy *parent;  /* a fin's or beam's owner, set by the caller */
+    /* A compact target location for controllers that have an explicit native
+     * random destination rather than following Soma directly. */
+    int32_t target_x, target_y;
     bool helper_spawned;    /* the Nemesis body has emitted its linked helper */
     bool technical_effects_spawned; /* the three Nemesis visual effect slots */
     int16_t home, home_right, home_left;  /* + 0x22, + 0x14, + 0x16 of a beam skeleton */

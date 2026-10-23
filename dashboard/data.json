@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-23T21:43:21+00:00",
+ "generated_at": "2026-10-23T21:52:16+00:00",
  "git": {
-  "commit": "415b9f9",
+  "commit": "ac13cd4",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 190,
+   "total": 191,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 34,
+    "partial": 35,
     "functional": 145,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 145,
-   "functional_or_better_percent": 76.3,
-   "with_passing_tests": 178,
+   "functional_or_better_percent": 75.9,
+   "with_passing_tests": 179,
    "with_passing_tests_percent": 93.7,
    "unknown_or_blocked": 1,
    "features": [
@@ -282,6 +282,7 @@
     "assets.aria_linked_enemy_children_0470",
     "assets.aria_objects",
     "assets.aria_peeping_eye_attack_entry_0474",
+    "assets.aria_peeping_eye_target_0476",
     "assets.aria_peeping_eye_timed_entry_0475",
     "assets.aria_polar_affine_motion_0472",
     "assets.aria_rooms",
@@ -503,11 +504,11 @@
    "areas": [
     "assets"
    ],
-   "total": 19,
+   "total": 20,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 11,
+    "partial": 12,
     "functional": 8,
     "faithful": 0,
     "validated": 0,
@@ -515,8 +516,8 @@
     "unknown": 0
    },
    "functional_or_better": 8,
-   "functional_or_better_percent": 42.1,
-   "with_passing_tests": 19,
+   "functional_or_better_percent": 40.0,
+   "with_passing_tests": 20,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -525,6 +526,7 @@
     "assets.aria_linked_enemy_children_0470",
     "assets.aria_objects",
     "assets.aria_peeping_eye_attack_entry_0474",
+    "assets.aria_peeping_eye_target_0476",
     "assets.aria_peeping_eye_timed_entry_0475",
     "assets.aria_polar_affine_motion_0472",
     "assets.aria_rooms",
@@ -10449,8 +10451,8 @@
     "sub_08088E08",
     "sub_08088D28"
    ],
-   "limitations": "The random target selection, state-3 variant table, ceiling probing, sounds and callbacks are not ported. The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence through two eye overlays and six linked polar frames.",
-   "next_action": "Trace random targeting, state-3 variant selection and the ceiling probe.",
+   "limitations": "The state-3 visual variant table, ceiling probing, sounds and callbacks are not ported. The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence, then selects and steers toward the traced random upper-side target through two eye overlays and six linked polar frames.",
+   "next_action": "Trace the state-3 visual variant selection and ceiling probe.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
@@ -12919,6 +12921,56 @@
    }
   },
   {
+   "id": "assets.aria_peeping_eye_target_0476",
+   "area": "assets",
+   "category": "gameplay",
+   "title": "Aria Peeping Eye random target steering",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy.h"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "assets.aria_peeping_eye_timed_entry_0475"
+   ],
+   "native_routines": [],
+   "limitations": "The Peeping Eye now picks its traced 64..112-pixel sideways, 32..80-pixel upward target and steers with native damping, tolerance, speed cap and timeout. The state-3 visual variant table, probes, damage callbacks, fades, sounds and rewards remain open.",
+   "next_action": "",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": "2026-10-23",
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
    "id": "assets.aria_peeping_eye_timed_entry_0475",
    "area": "assets",
    "category": "gameplay",
@@ -14725,6 +14777,12 @@
  },
  "timeline": [
   {
+   "commit": "ac13cd4",
+   "date": "2026-10-23",
+   "subject": "Trace Aria Peeping Eye timed entry",
+   "scope": "project"
+  },
+  {
    "commit": "415b9f9",
    "date": "2026-10-23",
    "subject": "Add Aria Peeping Eye attack entry pass",
@@ -15196,12 +15254,6 @@
    "commit": "9311e7c",
    "date": "2026-10-19",
    "subject": "Port the getting-fully-powered cutscene and suit upgrade",
-   "scope": "project"
-  },
-  {
-   "commit": "d490e33",
-   "date": "2026-10-19",
-   "subject": "Map the graphics owners of five secondary sprite families",
    "scope": "project"
   }
  ],

@@ -80,6 +80,11 @@ static void early_enemy_batch_tests(void) {
                                  never_zero);
     assert(eye.step == 2 && eye.timer == 0);
     assert(eye_parts.child_count == 0);
+    int32_t eye_x = eye.x, eye_y = eye.y;
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 3 && eye.target_x > eye.x && eye.target_y < eye.y);
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.x > eye_x && eye.y < eye_y);
 
     AosEnemy dragon;
     assert(aos_enemy_create(&dragon, AOS_ENEMY_WHITE_DRAGON, 100, 100, 0, 0, &soma, &layer,

@@ -7065,7 +7065,8 @@ static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
     return report;
 }
 
-static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma) {
+static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma,
+                                   uint32_t (*random)(void)) {
     int32_t dx = pixel_delta(soma->x, e->x), dy = pixel_delta(soma->y, e->y);
     e->angle = aos_arctan2((int16_t)dx, (int16_t)dy);
     /* sub_08088168 begins its attack when Soma enters the 180 by 200
@@ -7083,20 +7084,50 @@ static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma) {
             e->timer = 0;
             if (++e->substep == sizeof peeping_eye_intro / sizeof peeping_eye_intro[0]) {
                 e->substep = 0;
-                /* Native state 2 picks a random movement target. The target
-                 * selection and following state-3 branch table are not yet
-                 * represented, so finish the faithfully timed intro without
-                 * inventing a replacement patrol. */
+                /* State 2 below picks the next random target. The following
+                 * state-3 visual-variant table remains outside this compact
+                 * motion pass. */
                 e->step = 2;
             }
         }
     } else if (e->step == 2) {
+        /* Native state 2 chooses its next point 64..112 pixels left or
+         * right and 32..80 pixels upward, then immediately enters the
+         * steering state. */
+        int32_t horizontal = AOS_FIXED(64) + (int32_t)(random() % AOS_FIXED(48));
+        e->target_x = e->x + ((random() & 1) ? horizontal : -horizontal);
+        e->target_y = e->y - AOS_FIXED(32) - (int32_t)(random() % AOS_FIXED(48));
+        e->vx = e->vy = 0;
         e->phase = (uint16_t)(e->phase + 0x200);
-        e->step = 0;
+        e->timer = (uint8_t)(random() & 0x3F);
+        e->step = 3;
+    } else if (e->step == 3) {
+        /* sub_08088168 damps both axes by 31/32, accelerates only while the
+         * target is more than four pixels away, and caps the result at two
+         * pixels per frame. Its state-3 visual variant table is still open. */
+        int32_t dx = e->target_x - e->x;
+        int32_t dy = e->target_y - e->y;
+        e->ax = dx > AOS_FIXED(4) ? 0x8000 : dx < -AOS_FIXED(4) ? -0x800 : 0;
+        e->ay = dy > AOS_FIXED(4) ? 0x8000 : dy < -AOS_FIXED(4) ? -0x800 : 0;
+        e->vx = e->vx * 31 / 32 + e->ax;
+        e->vy = e->vy * 31 / 32 + e->ay;
+        if (e->vx > 0x20000) e->vx = 0x20000;
+        if (e->vx < -0x20000) e->vx = -0x20000;
+        if (e->vy > 0x20000) e->vy = 0x20000;
+        if (e->vy < -0x20000) e->vy = -0x20000;
+        e->x += e->vx;
+        e->y += e->vy;
+        e->phase = (uint16_t)(e->phase + 0x200);
+        if ((dx < 0 ? -dx : dx) <= AOS_FIXED(4) &&
+            (dy < 0 ? -dy : dy) <= AOS_FIXED(4)) {
+            e->step = 2;
+        } else if (e->timer++ >= 120) {
+            e->step = 2;
+        }
     } else {
         e->phase = (uint16_t)(e->phase + 0x180);
     }
-    e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
+    if (e->step != 3) e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
     face_player(e, soma);
 }
 
@@ -7207,7 +7238,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         rock_armor_controller(e, soma);
         break;
     case AOS_ENEMY_PEEPING_EYE:
-        peeping_eye_controller(e, soma);
+        peeping_eye_controller(e, soma, random);
         break;
     case AOS_ENEMY_KILLER_FISH:
         e->x += e->vx;
